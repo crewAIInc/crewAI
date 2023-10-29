@@ -1,0 +1,20 @@
+[tool.poetry]
+name = "crewai"
+version = "0.1.0"
+description = ""
+authors = ["Joao Moura <joaomdmoura@gmail.com>"]
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = ">=3.8.1,<4.0"
+pydantic = "^2.4.2"
+langchain = "^0.0.314"
+openai = "^0.28.1"
+
+[tool.poetry.group.test.dependencies]
+pytest = "^7.4"
+pytest-vcr = "^1.0.2"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"

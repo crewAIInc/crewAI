@@ -1,0 +1,94 @@
+interactions:
+- request:
+    body: '{"messages": [{"role": "user", "content": "You are test role.\ntest backstory\n\nYour
+      main goal is: test goal\n\nTOOLS:\n------\n\nYou have access to the following
+      tools:\n\n\n\nTo use a tool, please use the following format:\n\n```\nThought:
+      Do I need to use a tool? Yes\nAction: the action to take, should be one of []\nAction
+      Input: the input to the action\nObservation: the result of the action\n```\n\nWhen
+      you have a response for your task, or if you do not need to use a tool, you
+      MUST use the format:\n\n```\nThought: Do I need to use a tool? No\nFinal Answer:
+      [your response here]\n```\n\nBegin!\n\nCurrent Task: How much is 1 + 1?\n\n"}],
+      "model": "gpt-4", "max_tokens": null, "stream": false, "n": 1, "temperature":
+      0.7, "stop": ["\nObservation"]}'
+    headers:
+      Accept:
+      - '*/*'
+      Accept-Encoding:
+      - gzip, deflate
+      Authorization:
+      - Bearer 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
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '758'
+      Content-Type:
+      - application/json
+      User-Agent:
+      - OpenAI/v1 PythonBindings/0.28.1
+      X-OpenAI-Client-User-Agent:
+      - '{"bindings_version": "0.28.1", "httplib": "requests", "lang": "python", "lang_version":
+        "3.9.7", "platform": "macOS-10.16-x86_64-i386-64bit", "publisher": "openai",
+        "uname": "Darwin 22.4.0 Darwin Kernel Version 22.4.0: Mon Mar  6 21:00:17
+        PST 2023; root:xnu-8796.101.5~3/RELEASE_X86_64 x86_64"}'
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    body:
+      string: !!binary |
+        H4sIAAAAAAAAA1SQS0/DMBCE7/kVqz23KGmbkOaCgCoSHCohcQNUGWdJXBxviLfipf535PTJxYf5
+        dsaz+xsBoKmwANSNEt12dpyXORuh2U/9vUiXDzflVOLSre8/ktssx1Fw8OuatBxcF5rbzpIYdjus
+        e1JCITXJ5nmWzNN4NoCWK7LBVncyno3jLJnuHQ0bTR4LeIoAAH6HN3RzFX1hAfHooLTkvaoJi+MQ
+        APZsg4LKe+NFOcHRCWp2Qm6o+9jwpm6kgAXDHTiiCoRh4wkUCLO9giU/u9I4ZeHa+U/qC5jgPmp7
+        7PBmnPHNqifl2YVcL9ztxrYRwMuw0+ZfTex6bjtZCb+TC4smabrLw9P5zujlHgqLsuf6JAqfbKM/
+        AAAA//8DAD/1vhO7AQAA
+    headers:
+      CF-Cache-Status:
+      - DYNAMIC
+      CF-RAY:
+      - 81def25b4addf8f1-NVT
+      Cache-Control:
+      - no-cache, must-revalidate
+      Connection:
+      - keep-alive
+      Content-Encoding:
+      - gzip
+      Content-Type:
+      - application/json
+      Date:
+      - Sun, 29 Oct 2023 22:45:05 GMT
+      Server:
+      - cloudflare
+      Transfer-Encoding:
+      - chunked
+      access-control-allow-origin:
+      - '*'
+      alt-svc:
+      - h3=":443"; ma=86400
+      openai-model:
+      - gpt-4-0613
+      openai-organization:
+      - clearbit-2
+      openai-processing-ms:
+      - '950'
+      openai-version:
+      - '2020-10-01'
+      strict-transport-security:
+      - max-age=15724800; includeSubDomains
+      x-ratelimit-limit-requests:
+      - '100'
+      x-ratelimit-limit-tokens:
+      - '150000'
+      x-ratelimit-remaining-requests:
+      - '99'
+      x-ratelimit-remaining-tokens:
+      - '149840'
+      x-ratelimit-reset-requests:
+      - 600ms
+      x-ratelimit-reset-tokens:
+      - 64ms
+      x-request-id:
+      - b6484701bea444a976e49f353baf7be5
+    status:
+      code: 200
+      message: OK
+version: 1
