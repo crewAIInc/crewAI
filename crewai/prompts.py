@@ -15,6 +15,14 @@ class Prompts(BaseModel):
 		{agent_scratchpad}
 	""")
 
+	MEMORY_SLICE: ClassVar[str] = dedent("""\
+		This is the summary of your work so far:
+        {chat_history}
+
+        This is your understanding of the current situation:
+        {entities}
+	""")
+
 	ROLE_PLAYING_SLICE: ClassVar[str] = dedent("""\
 		You are {role}.
 		{backstory}
@@ -47,6 +55,20 @@ class Prompts(BaseModel):
 		```
 	""")
 
-	AGENT_EXECUTION_PROMPT: ClassVar[str] = PromptTemplate.from_template(
-		ROLE_PLAYING_SLICE + TOOLS_SLICE + TASK_SLICE
+	VOTING_SLICE: ClassVar[str] = dedent("""\
+		You are working on a crew with your co-workers and need to decide who will execute the task.
+
+		These are tyour format instructions:
+		{format_instructions}
+
+		These are your co-workers and their roles:
+		{coworkers}
+	""")
+
+	TASK_EXECUTION_PROMPT: ClassVar[str] = PromptTemplate.from_template(
+		ROLE_PLAYING_SLICE + TOOLS_SLICE + MEMORY_SLICE + TASK_SLICE
+	)
+	
+	CONSENSUNS_VOTING_PROMPT: ClassVar[str] = PromptTemplate.from_template(
+		ROLE_PLAYING_SLICE + VOTING_SLICE + TASK_SLICE
 	)
