@@ -1,39 +1,52 @@
 """Prompts for generic agent."""
 
+from textwrap import dedent
+from typing import ClassVar
+from pydantic import BaseModel
 from langchain.prompts import PromptTemplate
 
-AGENT_EXECUTION_PROMPT = PromptTemplate.from_template(
-"""You are {role}.
-{backstory}
+class Prompts(BaseModel):
+	"""Prompts for generic agent."""
 
-Your main goal is: {goal}
+	TASK_SLICE: ClassVar[str] = dedent("""\
+		Begin!
 
-TOOLS:
-------
+		Current Task: {input}
+		{agent_scratchpad}
+	""")
 
-You have access to the following tools:
+	ROLE_PLAYING_SLICE: ClassVar[str] = dedent("""\
+		You are {role}.
+		{backstory}
 
-{tools}
+		Your main goal is: {goal}
+	""")
 
-To use a tool, please use the following format:
+	TOOLS_SLICE: ClassVar[str] = dedent("""\
+		TOOLS:
+		------
 
-```
-Thought: Do I need to use a tool? Yes
-Action: the action to take, should be one of [{tool_names}]
-Action Input: the input to the action
-Observation: the result of the action
-```
+		You have access to the following tools:
 
-When you have a response for your task, or if you do not need to use a tool, you MUST use the format:
+		{tools}
 
-```
-Thought: Do I need to use a tool? No
-Final Answer: [your response here]
-```
+		To use a tool, please use the following format:
 
-Begin!
+		```
+		Thought: Do I need to use a tool? Yes
+		Action: the action to take, should be one of [{tool_names}]
+		Action Input: the input to the action
+		Observation: the result of the action
+		```
 
-Current Task: {input}
-{agent_scratchpad}
-"""
-)
+		When you have a response for your task, or if you do not need to use a tool, you MUST use the format:
+
+		```
+		Thought: Do I need to use a tool? No
+		Final Answer: [your response here]
+		```
+	""")
+
+	AGENT_EXECUTION_PROMPT: ClassVar[str] = PromptTemplate.from_template(
+		ROLE_PLAYING_SLICE + TOOLS_SLICE + TASK_SLICE
+	)

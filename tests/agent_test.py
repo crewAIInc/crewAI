@@ -5,14 +5,12 @@ import pytest
 from langchain.chat_models import ChatOpenAI as OpenAI
 
 from ..crewai import Agent
-from ..crewai import prompts
 
 def test_agent_creation():
 	agent = Agent(
 		role="test role",
 		goal="test goal",
-		backstory="test backstory",
-		tools=[],
+		backstory="test backstory"
 	)
 
 	assert agent.role == "test role"
@@ -24,8 +22,7 @@ def test_agent_default_value():
 	agent = Agent(
 		role="test role",
 		goal="test goal",
-		backstory="test backstory",
-		tools=[],
+		backstory="test backstory"
 	)
 
 	assert isinstance(agent.llm, OpenAI)
@@ -38,8 +35,7 @@ def test_agent_execution():
 	agent = Agent(
 		role="test role",
 		goal="test goal",
-		backstory="test backstory",
-		tools=[],
+		backstory="test backstory"
 	)
 
 	output = agent.execute("How much is 1 + 1?")
