@@ -1,5 +1,6 @@
 from typing import List, Optional
-from pydantic import BaseModel, Field, model_validator
+from pydantic.v1 import BaseModel, Field
+from pydantic import model_validator
 
 from langchain.tools import Tool
 

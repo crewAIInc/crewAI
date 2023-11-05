@@ -1,7 +1,7 @@
 """Generic agent."""
 
 from typing import List
-from pydantic import BaseModel, Field
+from pydantic.v1 import BaseModel, Field 
 
 from langchain.tools import Tool
 from langchain.agents import AgentExecutor
@@ -16,7 +16,6 @@ from langchain.memory import (
 )
 
 from .prompts import Prompts
-from .agents.agent_vote import AgentVote
 
 class Agent(BaseModel):
 	"""Generic agent implementation."""
@@ -28,11 +27,7 @@ class Agent(BaseModel):
 		description="Tools at agents disposal",
 		default=[]
 	)
-	prompts: Prompts = Field(
-		description="Prompts class for the agent.",
-		default=Prompts
-	)
-	llm: str = Field(
+	llm: OpenAI = Field(
 		description="LLM that will run the agent", 
 		default=OpenAI(
 			temperature=0.7,
@@ -53,7 +48,7 @@ class Agent(BaseModel):
 		inner_agent = {
 			"input": lambda x: x["input"],
 			"tools": lambda x: x["tools"],
-        	"entities": lambda x: x["entities"],
+			"entities": lambda x: x["entities"],
 			"tool_names": lambda x: x["tool_names"],
 			"chat_history": lambda x: x["chat_history"],
 			"agent_scratchpad": lambda x: format_log_to_str(x['intermediate_steps']),

@@ -1,4 +1,4 @@
-from pydantic import BaseModel, Field
+from pydantic.v1 import BaseModel, Field
 
 class AgentVote(BaseModel):
     task: str = Field(description="Task to be executed by the agent")

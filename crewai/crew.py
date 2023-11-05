@@ -1,5 +1,5 @@
 from typing import List
-from pydantic import BaseModel, Field
+from pydantic.v1 import BaseModel, Field
 
 from .process import Process
 from .agent import Agent
@@ -21,4 +21,19 @@ class Crew(BaseModel):
 			Returns:
 				output (List[str]): Output of the crew for each task.
 		"""
+		# if self.process == Process.consensual:
+
 		return "Crew is executing task"
+
+	def __consensual_loop(self) -> str:
+		"""
+		Loop that executes the consensual process.
+			Returns:
+				output (str): Output of the crew.
+		"""
+		
+		# The group of agents need to decide which agent will execute each task
+		# in the self.task list. This is done by a voting process between all the
+		# agents in self.agents. The agent with the most votes will execute the
+		# task.
+		pass

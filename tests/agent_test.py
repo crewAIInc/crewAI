@@ -30,6 +30,21 @@ def test_agent_default_value():
 	assert agent.llm.temperature == 0.7
 	assert agent.llm.verbose == True
 
+def test_custom_llm():
+	agent = Agent(
+		role="test role",
+		goal="test goal",
+		backstory="test backstory",
+		llm=OpenAI(
+			temperature=0,
+			model="gpt-3.5"
+		)
+	)
+
+	assert isinstance(agent.llm, OpenAI)
+	assert agent.llm.model_name == "gpt-3.5"
+	assert agent.llm.temperature == 0
+
 @pytest.mark.vcr()
 def test_agent_execution():
 	agent = Agent(
@@ -38,5 +53,5 @@ def test_agent_execution():
 		backstory="test backstory"
 	)
 
-	output = agent.execute("How much is 1 + 1?")
-	assert output == "2"
+	output = agent.execute_task("How much is 1 + 1?")
+	assert output == "1 + 1 equals 2."
