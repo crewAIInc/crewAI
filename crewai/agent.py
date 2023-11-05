@@ -1,6 +1,6 @@
 """Generic agent."""
 
-from typing import List, Any
+from typing import List
 from pydantic import BaseModel, Field
 
 from langchain.tools import Tool
@@ -10,21 +10,39 @@ from langchain.tools.render import render_text_description
 from langchain.agents.format_scratchpad import format_log_to_str
 from langchain.agents.output_parsers import ReActSingleInputOutputParser
 
-from .prompts import AGENT_EXECUTION_PROMPT
+from .prompts import Prompts
 
 class Agent(BaseModel):
+	"""Generic agent implementation."""
 	role: str = Field(description="Role of the agent")
 	goal: str = Field(description="Objective of the agent")
 	backstory: str = Field(description="Backstory of the agent")
-	tools: List[Tool] = Field(description="Tools at agents disposal")
-	llm: str = Field(description="LLM of the agent", default=OpenAI(
-		temperature=0.7,
-		model="gpt-4",
-		verbose=True
-	))
+	tools: List[Tool] = Field(
+		description="Tools at agents disposal",
+		default=[]
+	)
+	prompts: Prompts = Field(
+		description="Prompts class for the agent.",
+		default=Prompts
+	)
+	llm: str = Field(
+		description="LLM of the agent", 
+		default=OpenAI(
+			temperature=0.7,
+			model="gpt-4",
+			verbose=True
+		)
+	)
   
 	def execute(self, task: str) -> str:
-		prompt = AGENT_EXECUTION_PROMPT.partial(
+		"""
+		Execute a task with the agent.
+			Parameters:
+				task (str): Task to execute
+			Returns:
+				output (str): Output of the agent
+		"""
+		prompt = Prompts.AGENT_EXECUTION_PROMPT.partial(
 			tools=render_text_description(self.tools),
 			tool_names=self.__tools_names(),
 			backstory=self.backstory,
