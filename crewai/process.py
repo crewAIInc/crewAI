@@ -5,5 +5,5 @@ class Process(str, Enum):
 	Class representing the different processes that can be used to tackle tasks
 	"""
 	sequential = 'sequential'
-	consensual = 'consensual'
-	hierarchical = 'hierarchical'
+	# TODO: consensual = 'consensual'
+	# TODO: hierarchical = 'hierarchical'
