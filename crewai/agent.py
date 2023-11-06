@@ -3,7 +3,6 @@
 from typing import List, Any
 from pydantic.v1 import BaseModel, Field 
 
-from langchain.tools import Tool
 from langchain.agents import AgentExecutor
 from langchain.chat_models import ChatOpenAI as OpenAI
 from langchain.tools.render import render_text_description
