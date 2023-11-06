@@ -1,6 +1,6 @@
 """Generic agent."""
 
-from typing import List
+from typing import List, Any
 from pydantic.v1 import BaseModel, Field 
 
 from langchain.tools import Tool
@@ -23,7 +23,7 @@ class Agent(BaseModel):
 	role: str = Field(description="Role of the agent")
 	goal: str = Field(description="Objective of the agent")
 	backstory: str = Field(description="Backstory of the agent")
-	tools: List[Tool] = Field(
+	tools: List[Any] = Field(
 		description="Tools at agents disposal",
 		default=[]
 	)
@@ -66,7 +66,7 @@ class Agent(BaseModel):
 			handle_parsing_errors=True
 		)
 
-	def execute_task(self, task: str) -> str:
+	def execute_task(self, task: str, context: str = None) -> str:
 		"""
 		Execute a task with the agent.
 			Parameters:
@@ -74,6 +74,13 @@ class Agent(BaseModel):
 			Returns:
 				output (str): Output of the agent
 		"""
+		if context:
+			task = "\n".join([
+				task,
+				"\nThis is the context you are working with:",
+				context
+			])
+
 		return self.agent_executor.invoke({
 			"input": task,
 			"tool_names": self.__tools_names(),
