@@ -9,7 +9,7 @@ class Prompts(BaseModel):
 	"""Prompts for generic agent."""
 
 	TASK_SLICE: ClassVar[str] = dedent("""\
-		Begin!
+		Begin! This is VERY important to you!
 
 		Current Task: {input}
 		{agent_scratchpad}
