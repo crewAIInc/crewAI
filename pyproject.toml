@@ -8,7 +8,7 @@ readme = "README.md"
 [tool.poetry.dependencies]
 python = ">=3.8.1,<4.0"
 pydantic = "^2.4.2"
-langchain = "^0.0.314"
+langchain = "^0.0.331"
 openai = "^0.28.1"
 
 [tool.poetry.group.test.dependencies]
