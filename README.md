@@ -1,5 +1,11 @@
 # CrewAI
 
+## Installing Dependencies
+```bash
+poetry lock
+poetry install
+```
+
 ## Virtual Env
 ```bash
 poetry shell
@@ -20,6 +26,7 @@ poetry build
 pip install dist/*.tar.gz
 ```
 
+RolaPLaying
 
 # CrewAI
 
