@@ -1,0 +1,1646 @@
+interactions:
+- request:
+    body: '{"messages": [{"role": "user", "content": "You are an AI assistant reading
+      the transcript of a conversation between an AI and a human. Extract all of the
+      proper nouns from the last line of conversation. As a guideline, a proper noun
+      is generally capitalized. You should definitely extract all names and places.\n\nThe
+      conversation history is provided just in case of a coreference (e.g. \"What
+      do you know about him\" where \"him\" is defined in a previous line) -- ignore
+      items mentioned there that are not in the last line.\n\nReturn the output as
+      a single comma-separated list, or NONE if there is nothing of note to return
+      (e.g. the user is just issuing a greeting or having a simple conversation).\n\nEXAMPLE\nConversation
+      history:\nPerson #1: how''s it going today?\nAI: \"It''s going great! How about
+      you?\"\nPerson #1: good! busy working on Langchain. lots to do.\nAI: \"That
+      sounds like a lot of work! What kind of things are you doing to make Langchain
+      better?\"\nLast line:\nPerson #1: i''m trying to improve Langchain''s interfaces,
+      the UX, its integrations with various products the user might want ... a lot
+      of stuff.\nOutput: Langchain\nEND OF EXAMPLE\n\nEXAMPLE\nConversation history:\nPerson
+      #1: how''s it going today?\nAI: \"It''s going great! How about you?\"\nPerson
+      #1: good! busy working on Langchain. lots to do.\nAI: \"That sounds like a lot
+      of work! What kind of things are you doing to make Langchain better?\"\nLast
+      line:\nPerson #1: i''m trying to improve Langchain''s interfaces, the UX, its
+      integrations with various products the user might want ... a lot of stuff. I''m
+      working with Person #2.\nOutput: Langchain, Person #2\nEND OF EXAMPLE\n\nConversation
+      history (for reference only):\n\nLast line of conversation (for extraction):\nHuman:
+      Give me a list of 5 interesting ideas to explore for na article, what makes
+      them unique and interesting.\n\nOutput:"}], "model": "gpt-4", "max_tokens":
+      null, "stream": false, "n": 1, "temperature": 0.7}'
+    headers:
+      Accept:
+      - '*/*'
+      Accept-Encoding:
+      - gzip, deflate
+      Authorization:
+      - Bearer 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
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '1965'
+      Content-Type:
+      - application/json
+      User-Agent:
+      - OpenAI/v1 PythonBindings/0.28.1
+      X-OpenAI-Client-User-Agent:
+      - '{"bindings_version": "0.28.1", "httplib": "requests", "lang": "python", "lang_version":
+        "3.9.7", "platform": "macOS-10.16-x86_64-i386-64bit", "publisher": "openai",
+        "uname": "Darwin 22.4.0 Darwin Kernel Version 22.4.0: Mon Mar  6 21:00:17
+        PST 2023; root:xnu-8796.101.5~3/RELEASE_X86_64 x86_64"}'
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    body:
+      string: !!binary |
+        H4sIAAAAAAAAA1SQTU+EMBCG7/yKyZzBLAob4KaGGL/WeDAxMWZTS4UqdBo6osmG/27Ksoteepjn
+        fWbedBcAoK6wAJSNYNnZNsquTSkfry6+L9Ph9rm+q8/N0A/l/c1TnKYYeoPePpTkg3UiqbOtYk1m
+        j2WvBCu/NV7neZLlWZpMoKNKtV6rLUdJtFrHZ7PRkJbKYQEvAQDAbnp9N1OpHyxgFR4mnXJO1AqL
+        YwgAe2r9BIVz2rEwjOECJRlWZqq7ediUOJPxuPJdG+2aba+EI+NjjsnuY2MA8DpV/Pp3FW1PneUt
+        06cyvndyOlfE5TcWGs+MiUX7V4oDf2MMfgEAAP//AwB6KgtHiQEAAA==
+    headers:
+      CF-Cache-Status:
+      - DYNAMIC
+      CF-RAY:
+      - 8231f3258d8a02e9-GRU
+      Cache-Control:
+      - no-cache, must-revalidate
+      Connection:
+      - keep-alive
+      Content-Encoding:
+      - gzip
+      Content-Type:
+      - application/json
+      Date:
+      - Thu, 09 Nov 2023 00:30:54 GMT
+      Server:
+      - cloudflare
+      Set-Cookie:
+      - __cf_bm=omt5hOnsQkeg7bY0srmDk9.plAPmA8M4A2avjnRJqnc-1699489854-0-AT3mgzRgrYaYWpOG/jTYc9vzQHoiqYltUoBg0LPYVxsbN/4GrMkFITZSN+42iHF8q9RV/7KDN7ZZEGmps+YZtus=;
+        path=/; expires=Thu, 09-Nov-23 01:00:54 GMT; domain=.api.openai.com; HttpOnly;
+        Secure; SameSite=None
+      Transfer-Encoding:
+      - chunked
+      access-control-allow-origin:
+      - '*'
+      alt-svc:
+      - h3=":443"; ma=86400
+      openai-model:
+      - gpt-4-0613
+      openai-organization:
+      - clearbit-2
+      openai-processing-ms:
+      - '384'
+      openai-version:
+      - '2020-10-01'
+      strict-transport-security:
+      - max-age=15724800; includeSubDomains
+      x-ratelimit-limit-requests:
+      - '100'
+      x-ratelimit-limit-tokens:
+      - '300000'
+      x-ratelimit-remaining-requests:
+      - '99'
+      x-ratelimit-remaining-tokens:
+      - '299535'
+      x-ratelimit-reset-requests:
+      - 600ms
+      x-ratelimit-reset-tokens:
+      - 93ms
+      x-request-id:
+      - 73eba3e609e12dd5cc0f5455b4684480
+    status:
+      code: 200
+      message: OK
+- request:
+    body: '{"messages": [{"role": "user", "content": "You are Researcher.\nYou''re
+      an expert researcher, specialized in technology, software engineering, AI and
+      startups. You work as a freelancer and is now working on doing research and
+      analysis for a new customer.\n\nYour personal goal is: Make the best research
+      and analysis on content about AI and AI agents\nTOOLS:\n------\n\nYou have access
+      to the following tools:\n\n\n\nTo use a tool, please use the following format:\n\n```\nThought:
+      Do I need to use a tool? Yes\nAction: the action to take, should be one of []\nAction
+      Input: the input to the action\nObservation: the result of the action\n```\n\nWhen
+      you have a response for your task, or if you do not need to use a tool, you
+      MUST use the format:\n\n```\nThought: Do I need to use a tool? No\nFinal Answer:
+      [your response here]\n```\n\t\tThis is the summary of your work so far:\n        \n\n        This
+      is your understanding of the current situation:\n        {}\nBegin! This is
+      VERY important to you, your job depends on it!\n\nCurrent Task: Give me a list
+      of 5 interesting ideas to explore for na article, what makes them unique and
+      interesting.\n\n"}], "model": "gpt-4", "max_tokens": null, "stream": false,
+      "n": 1, "temperature": 0.7, "stop": ["\nObservation"]}'
+    headers:
+      Accept:
+      - '*/*'
+      Accept-Encoding:
+      - gzip, deflate
+      Authorization:
+      - Bearer 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
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '1267'
+      Content-Type:
+      - application/json
+      Cookie:
+      - __cf_bm=omt5hOnsQkeg7bY0srmDk9.plAPmA8M4A2avjnRJqnc-1699489854-0-AT3mgzRgrYaYWpOG/jTYc9vzQHoiqYltUoBg0LPYVxsbN/4GrMkFITZSN+42iHF8q9RV/7KDN7ZZEGmps+YZtus=
+      User-Agent:
+      - OpenAI/v1 PythonBindings/0.28.1
+      X-OpenAI-Client-User-Agent:
+      - '{"bindings_version": "0.28.1", "httplib": "requests", "lang": "python", "lang_version":
+        "3.9.7", "platform": "macOS-10.16-x86_64-i386-64bit", "publisher": "openai",
+        "uname": "Darwin 22.4.0 Darwin Kernel Version 22.4.0: Mon Mar  6 21:00:17
+        PST 2023; root:xnu-8796.101.5~3/RELEASE_X86_64 x86_64"}'
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    body:
+      string: !!binary |
+        H4sIAAAAAAAAA4SSTW/bMAyG7/kVhM5JkC4fTXxLh6E1hgHFUGAYlqFQJcbSJpOGRDcLivz3QXYS
+        b6deLOul3oeUyLcRgPJWFaCM02LqJkzWJX2yj7O729eHhRy+xceHL5jum6/u+/L+RY2zg19+oZGL
+        a2q4bgKKZ+rDJqIWzNSb1WazWG/Wy2UXqNliyLaqkcliMlvdzM8Ox95gUgX8GAEAvHXfXBtZ/KMK
+        mI0vSo0p6QpVcT0EoCKHrCidkk+iSdR4CBomQerKfXLcVk4KeGIwXCO0DRy8OPAkGDGJpwq8RZ1g
+        zxE0gY7iTcAxlECIFoShJYsxZ7EgDsG0MSIJSESyCbKs7asmgzWSJPAE27KT81JlbQolHHwI0CaE
+        +gjCHLqEERPqaFxPIR2Oyaecs9LiMII4n4F7jrXO7z3d0Y62Jv8W8JHJtkZAgziO+aIDj6mrNWjB
+        JO/Xd4FCSU0rBXzG44Gj7V8lg65gw22w4MmE1iLsVGb8Q9+p8Vmshu25im15xfQ61hir3IFtCYLG
+        EQeuPHYuFDPdkTp39XQdh70nn9xzRJ2YcouTcNMfO40Afnbj1f43MaqJXDfyLPwbKc/ch8Wm56lh
+        kofo+vYcFBYdBn0+X41yktPoLwAAAP//AwBYKzlNRgMAAA==
+    headers:
+      CF-Cache-Status:
+      - DYNAMIC
+      CF-RAY:
+      - 8231f32a2b6602e9-GRU
+      Cache-Control:
+      - no-cache, must-revalidate
+      Connection:
+      - keep-alive
+      Content-Encoding:
+      - gzip
+      Content-Type:
+      - application/json
+      Date:
+      - Thu, 09 Nov 2023 00:30:58 GMT
+      Server:
+      - cloudflare
+      Transfer-Encoding:
+      - chunked
+      access-control-allow-origin:
+      - '*'
+      alt-svc:
+      - h3=":443"; ma=86400
+      openai-model:
+      - gpt-4-0613
+      openai-organization:
+      - clearbit-2
+      openai-processing-ms:
+      - '3681'
+      openai-version:
+      - '2020-10-01'
+      strict-transport-security:
+      - max-age=15724800; includeSubDomains
+      x-ratelimit-limit-requests:
+      - '100'
+      x-ratelimit-limit-tokens:
+      - '300000'
+      x-ratelimit-remaining-requests:
+      - '99'
+      x-ratelimit-remaining-tokens:
+      - '299714'
+      x-ratelimit-reset-requests:
+      - 600ms
+      x-ratelimit-reset-tokens:
+      - 57ms
+      x-request-id:
+      - 67ed71410f2e5e671133b78b5362bd39
+    status:
+      code: 200
+      message: OK
+- request:
+    body: '{"messages": [{"role": "user", "content": "You are Researcher.\nYou''re
+      an expert researcher, specialized in technology, software engineering, AI and
+      startups. You work as a freelancer and is now working on doing research and
+      analysis for a new customer.\n\nYour personal goal is: Make the best research
+      and analysis on content about AI and AI agents\nTOOLS:\n------\n\nYou have access
+      to the following tools:\n\n\n\nTo use a tool, please use the following format:\n\n```\nThought:
+      Do I need to use a tool? Yes\nAction: the action to take, should be one of []\nAction
+      Input: the input to the action\nObservation: the result of the action\n```\n\nWhen
+      you have a response for your task, or if you do not need to use a tool, you
+      MUST use the format:\n\n```\nThought: Do I need to use a tool? No\nFinal Answer:
+      [your response here]\n```\n\t\tThis is the summary of your work so far:\n        \n\n        This
+      is your understanding of the current situation:\n        {}\nBegin! This is
+      VERY important to you, your job depends on it!\n\nCurrent Task: Give me a list
+      of 5 interesting ideas to explore for na article, what makes them unique and
+      interesting.\nThought: To come up with interesting ideas for an article, I need
+      to understand the current trends and advancements in AI and AI agents. I will
+      use my tool for research and analysis to gather this information.\n\nAction:
+      Conduct a thorough research on the latest advancements in AI and AI agents.\nAction
+      Input: Keywords for the research could include \"AI advancements\", \"AI agents\",
+      \"latest AI research\", \"emerging AI technologies\", etc.\n\nObservation: Conduct
+      a thorough research on the latest advancements in AI and AI agents. is not a
+      valid tool, try one of [].\nThought: \n"}], "model": "gpt-4", "max_tokens":
+      null, "stream": false, "n": 1, "temperature": 0.7, "stop": ["\nObservation"]}'
+    headers:
+      Accept:
+      - '*/*'
+      Accept-Encoding:
+      - gzip, deflate
+      Authorization:
+      - Bearer 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
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '1852'
+      Content-Type:
+      - application/json
+      Cookie:
+      - __cf_bm=omt5hOnsQkeg7bY0srmDk9.plAPmA8M4A2avjnRJqnc-1699489854-0-AT3mgzRgrYaYWpOG/jTYc9vzQHoiqYltUoBg0LPYVxsbN/4GrMkFITZSN+42iHF8q9RV/7KDN7ZZEGmps+YZtus=
+      User-Agent:
+      - OpenAI/v1 PythonBindings/0.28.1
+      X-OpenAI-Client-User-Agent:
+      - '{"bindings_version": "0.28.1", "httplib": "requests", "lang": "python", "lang_version":
+        "3.9.7", "platform": "macOS-10.16-x86_64-i386-64bit", "publisher": "openai",
+        "uname": "Darwin 22.4.0 Darwin Kernel Version 22.4.0: Mon Mar  6 21:00:17
+        PST 2023; root:xnu-8796.101.5~3/RELEASE_X86_64 x86_64"}'
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    body:
+      string: !!binary |
+        H4sIAAAAAAAAA3xVwW7jRgy95ysIXfaSGMkmcRLfjGB36x4KFGjRQ7dYUDO0hs1oqJ2h7ASL/HvB
+        kRwnRdqLYYnDR773yNGPE4CGfbOCxgVU1w/x7HaTPoUv+P3n3/GXJSFfLr9cP3S3v+7z/flNc2oZ
+        0v5NTg9ZCyf9EElZ0hR2mVDJUC+Wd3dXt3e313c10IunaGndoGdXZ+fLi8s5Iwg7Ks0K/jwBAPhR
+        f6235OmxWcH56eFNT6VgR83q5RBAkyXamwZL4aKYtDk9Bp0kpVTb3UCPngATUM6SgRP0TzBk2rGM
+        BTTI2AVdwAa8pA8KiciDCoyFAEFFoj056QnGAfasAdgTFthKNlTMyi6SAThMMAkBGqiHFgt5kFrw
+        Ick+ku+sEw/0OFBmSo6sHw0EW6boF1/T1/SZE0ZYp7KnvAJ7c7GA9cYO/kQYNTjMtILfAhdQGdgB
+        FxgTfx8JsAAr9JQ7KqB7AZdZ2WGEQk4ll1NQciFJlO6pdhIq5AL+oNo+PQ5RMkGQfa1ZgPshy45T
+        B56xS1LYQIxlT0krxoDK9t8aW/yrMU5KmYoaQEsOTVZWCFjAcyanViCyQ5ulYmKFsccEkbeTVHuK
+        8awlTl1V5+MCPmmolDZvErew3vyHKq/qesJYJhdN9V4yxsmRGdRzpL7HAoOYee0TrDfGiV6YQGQq
+        B9tajGgutqR7onRUt4Kh31n0RahDESepsKc89V55XR48vo/c2wTdB0xd9ZlmHolK5alHjodWZrvM
+        wZZsdP08tC0qSKIpzfgWtdkvxfzoorQYgUsZqcAZuLm0q6UXsNEPbw30Ixkuq8ljC8aWngzRs6tH
+        jGaPCTt7eAtYaZMRcTSRvqqkLWWddTbvXdvmsSyVRO3I5pklGbG6crxjnSb6OODvMJgWxAWMkVI3
+        A2pGz4ZmbDwhaEC1xbZmEIYxU3ya55KSJ9xJrv1fT5PxedQx0zSCsO4oafnf/Xy9aFb/qOV2QrK7
+        rVQy3A/odB5vwIptS7LDXK8vLAPNcRkzRN4dEpMfi2am8o4Kr5TltJNoSQY0xjqR01LPnko6hTJg
+        fqiGjpmlVKVbGRX2JlS9vqbGe3yCINEvmvkufn65xLecuIRvmbBIsou5qAzTsecTgL/qR2F8c883
+        Q5Z+0G8qD5TsS3G5vJnwmuP35xj9eHMxR1UU4zGwvLw9sSrPJ/8AAAD//wMA7G4kNP0GAAA=
+    headers:
+      CF-Cache-Status:
+      - DYNAMIC
+      CF-RAY:
+      - 8231f3430e4e02e9-GRU
+      Cache-Control:
+      - no-cache, must-revalidate
+      Connection:
+      - keep-alive
+      Content-Encoding:
+      - gzip
+      Content-Type:
+      - application/json
+      Date:
+      - Thu, 09 Nov 2023 00:31:11 GMT
+      Server:
+      - cloudflare
+      Transfer-Encoding:
+      - chunked
+      access-control-allow-origin:
+      - '*'
+      alt-svc:
+      - h3=":443"; ma=86400
+      openai-model:
+      - gpt-4-0613
+      openai-organization:
+      - clearbit-2
+      openai-processing-ms:
+      - '12053'
+      openai-version:
+      - '2020-10-01'
+      strict-transport-security:
+      - max-age=15724800; includeSubDomains
+      x-ratelimit-limit-requests:
+      - '100'
+      x-ratelimit-limit-tokens:
+      - '300000'
+      x-ratelimit-remaining-requests:
+      - '99'
+      x-ratelimit-remaining-tokens:
+      - '299571'
+      x-ratelimit-reset-requests:
+      - 600ms
+      x-ratelimit-reset-tokens:
+      - 85ms
+      x-request-id:
+      - 7e46d3e18547977d51d0295984e8d6c4
+    status:
+      code: 200
+      message: OK
+- request:
+    body: '{"messages": [{"role": "user", "content": "Progressively summarize the
+      lines of conversation provided, adding onto the previous summary returning a
+      new summary.\n\nEXAMPLE\nCurrent summary:\nThe human asks what the AI thinks
+      of artificial intelligence. The AI thinks artificial intelligence is a force
+      for good.\n\nNew lines of conversation:\nHuman: Why do you think artificial
+      intelligence is a force for good?\nAI: Because artificial intelligence will
+      help humans reach their full potential.\n\nNew summary:\nThe human asks what
+      the AI thinks of artificial intelligence. The AI thinks artificial intelligence
+      is a force for good because it will help humans reach their full potential.\nEND
+      OF EXAMPLE\n\nCurrent summary:\n\n\nNew lines of conversation:\nHuman: Give
+      me a list of 5 interesting ideas to explore for na article, what makes them
+      unique and interesting.\nAI: 1. AI in Healthcare: This topic is unique as it
+      merges two critical sectors, technology and health. We can explore how AI is
+      improving diagnosis, treatment and patient care. This topic is interesting because
+      it has direct implications on human life and well-being.\n\n2. Ethical Implications
+      of AI: This topic is unique because it deals with the moral and ethical dilemmas
+      posed by AI. The interest lies in the balance between technological advancement
+      and ethical considerations.\n\n3. AI in Climate Change: The uniqueness of this
+      topic lies in how AI can be used to combat one of the most pressing global issues
+      - climate change. It''s interesting due to its potential in predicting and managing
+      climate change consequences.\n\n4. AI and Art: This is unique because it explores
+      the intersection of creativity and technology. It''s interesting as it challenges
+      the traditional idea that art is a purely human endeavor.\n\n5. The Future of
+      AI Agents: This topic is unique as it can explore the potential future roles
+      and impacts of AI agents on various aspects of our lives and industries. It''s
+      interesting because it involves speculation and prediction, sparking curiosity
+      about what the future may hold.\n\nNew summary:"}], "model": "gpt-4", "max_tokens":
+      null, "stream": false, "n": 1, "temperature": 0.7}'
+    headers:
+      Accept:
+      - '*/*'
+      Accept-Encoding:
+      - gzip, deflate
+      Authorization:
+      - Bearer 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
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '2179'
+      Content-Type:
+      - application/json
+      Cookie:
+      - __cf_bm=omt5hOnsQkeg7bY0srmDk9.plAPmA8M4A2avjnRJqnc-1699489854-0-AT3mgzRgrYaYWpOG/jTYc9vzQHoiqYltUoBg0LPYVxsbN/4GrMkFITZSN+42iHF8q9RV/7KDN7ZZEGmps+YZtus=
+      User-Agent:
+      - OpenAI/v1 PythonBindings/0.28.1
+      X-OpenAI-Client-User-Agent:
+      - '{"bindings_version": "0.28.1", "httplib": "requests", "lang": "python", "lang_version":
+        "3.9.7", "platform": "macOS-10.16-x86_64-i386-64bit", "publisher": "openai",
+        "uname": "Darwin 22.4.0 Darwin Kernel Version 22.4.0: Mon Mar  6 21:00:17
+        PST 2023; root:xnu-8796.101.5~3/RELEASE_X86_64 x86_64"}'
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    body:
+      string: !!binary |
+        H4sIAAAAAAAAA1RTXWvcMBB8v1+x+C3ghLiXpPfxdISUXgkUSkgppYQ9eW1tI0uudn1JCPnvQbIv
+        R18M8uzM7K5GrzOAgutiBYWxqKbr3eli629UX77HH/52OK9uf23j/befzf0tqeOiTIyw+0tGD6wz
+        E7rekXLwI2wioVJSra6Wy4vFcvG5ykAXanKJ1vZ6enF6flXNJ4YNbEiKFfyeAQC85m/qzdf0XKzg
+        vDz86UgEWypWH0UARQwu/SlQhEXRa1EeQRO8ks/t3lkCO3ToAeVRQC3BZgtNiIDgWBRCA5cweP43
+        EKCvgb1SJFH2LXBNKKAB6Ll3IdLI84BR2Tg6g7tRToa2JVFZQXWSzuzhK6FTazBSCU+WjYWOYksC
+        Ssb64EL7ku1srkse3PUx7AlqxtYHYSlB01o78lrm2h6VySsk1TV8OoEbtWzQwbbrHRtM9yFpoM22
+        hJrQpRmeOMlbgh069IZgR/pE5I+NZAms9wlNZtmLJmkTvHBNcRRfw/ww4LXjDpXg2qJvqYQmmEGS
+        YfDZbhAaW0nFJnQ7zCs1E81k2housl5y3EQtp0WnwqSR70LIJO8klmPGe9Zxd8dVrvP58iRfyJdB
+        h3gw37TkVUqQnszgxh6mDvuQQsLooBkZKVMyhqDr0agcB9hj5DAIYNIZAcfNITH1IBpfzoopgW8f
+        0W3Ys9iHSCjBpziKhn4se5sB/MlPYfgv3UUfQ9frg4ZH8ul9zBeLUa84vrojWs2rCdWg6I7AZbWc
+        JZe32TsAAAD//wMAznk1cvMDAAA=
+    headers:
+      CF-Cache-Status:
+      - DYNAMIC
+      CF-RAY:
+      - 8231f3906a4802e9-GRU
+      Cache-Control:
+      - no-cache, must-revalidate
+      Connection:
+      - keep-alive
+      Content-Encoding:
+      - gzip
+      Content-Type:
+      - application/json
+      Date:
+      - Thu, 09 Nov 2023 00:31:18 GMT
+      Server:
+      - cloudflare
+      Transfer-Encoding:
+      - chunked
+      access-control-allow-origin:
+      - '*'
+      alt-svc:
+      - h3=":443"; ma=86400
+      openai-model:
+      - gpt-4-0613
+      openai-organization:
+      - clearbit-2
+      openai-processing-ms:
+      - '6445'
+      openai-version:
+      - '2020-10-01'
+      strict-transport-security:
+      - max-age=15724800; includeSubDomains
+      x-ratelimit-limit-requests:
+      - '100'
+      x-ratelimit-limit-tokens:
+      - '300000'
+      x-ratelimit-remaining-requests:
+      - '99'
+      x-ratelimit-remaining-tokens:
+      - '299478'
+      x-ratelimit-reset-requests:
+      - 600ms
+      x-ratelimit-reset-tokens:
+      - 104ms
+      x-request-id:
+      - c0fb0902571d831d249d1db13bd7e1b0
+    status:
+      code: 200
+      message: OK
+- request:
+    body: '{"messages": [{"role": "user", "content": "You are an AI assistant reading
+      the transcript of a conversation between an AI and a human. Extract all of the
+      proper nouns from the last line of conversation. As a guideline, a proper noun
+      is generally capitalized. You should definitely extract all names and places.\n\nThe
+      conversation history is provided just in case of a coreference (e.g. \"What
+      do you know about him\" where \"him\" is defined in a previous line) -- ignore
+      items mentioned there that are not in the last line.\n\nReturn the output as
+      a single comma-separated list, or NONE if there is nothing of note to return
+      (e.g. the user is just issuing a greeting or having a simple conversation).\n\nEXAMPLE\nConversation
+      history:\nPerson #1: how''s it going today?\nAI: \"It''s going great! How about
+      you?\"\nPerson #1: good! busy working on Langchain. lots to do.\nAI: \"That
+      sounds like a lot of work! What kind of things are you doing to make Langchain
+      better?\"\nLast line:\nPerson #1: i''m trying to improve Langchain''s interfaces,
+      the UX, its integrations with various products the user might want ... a lot
+      of stuff.\nOutput: Langchain\nEND OF EXAMPLE\n\nEXAMPLE\nConversation history:\nPerson
+      #1: how''s it going today?\nAI: \"It''s going great! How about you?\"\nPerson
+      #1: good! busy working on Langchain. lots to do.\nAI: \"That sounds like a lot
+      of work! What kind of things are you doing to make Langchain better?\"\nLast
+      line:\nPerson #1: i''m trying to improve Langchain''s interfaces, the UX, its
+      integrations with various products the user might want ... a lot of stuff. I''m
+      working with Person #2.\nOutput: Langchain, Person #2\nEND OF EXAMPLE\n\nConversation
+      history (for reference only):\n\nLast line of conversation (for extraction):\nHuman:
+      Write a 1 amazing paragraph highlight for each idea that showcases how good
+      an article about this topic could be. Return the list of ideas with their paragraph
+      and your notes.\n\nThis is the context you are working with:\n1. AI in Healthcare:
+      This topic is unique as it merges two critical sectors, technology and health.
+      We can explore how AI is improving diagnosis, treatment and patient care. This
+      topic is interesting because it has direct implications on human life and well-being.\n\n2.
+      Ethical Implications of AI: This topic is unique because it deals with the moral
+      and ethical dilemmas posed by AI. The interest lies in the balance between technological
+      advancement and ethical considerations.\n\n3. AI in Climate Change: The uniqueness
+      of this topic lies in how AI can be used to combat one of the most pressing
+      global issues - climate change. It''s interesting due to its potential in predicting
+      and managing climate change consequences.\n\n4. AI and Art: This is unique because
+      it explores the intersection of creativity and technology. It''s interesting
+      as it challenges the traditional idea that art is a purely human endeavor.\n\n5.
+      The Future of AI Agents: This topic is unique as it can explore the potential
+      future roles and impacts of AI agents on various aspects of our lives and industries.
+      It''s interesting because it involves speculation and prediction, sparking curiosity
+      about what the future may hold.\n\nOutput:"}], "model": "gpt-4", "max_tokens":
+      null, "stream": false, "n": 1, "temperature": 0.7}'
+    headers:
+      Accept:
+      - '*/*'
+      Accept-Encoding:
+      - gzip, deflate
+      Authorization:
+      - Bearer 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
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '3286'
+      Content-Type:
+      - application/json
+      Cookie:
+      - __cf_bm=omt5hOnsQkeg7bY0srmDk9.plAPmA8M4A2avjnRJqnc-1699489854-0-AT3mgzRgrYaYWpOG/jTYc9vzQHoiqYltUoBg0LPYVxsbN/4GrMkFITZSN+42iHF8q9RV/7KDN7ZZEGmps+YZtus=
+      User-Agent:
+      - OpenAI/v1 PythonBindings/0.28.1
+      X-OpenAI-Client-User-Agent:
+      - '{"bindings_version": "0.28.1", "httplib": "requests", "lang": "python", "lang_version":
+        "3.9.7", "platform": "macOS-10.16-x86_64-i386-64bit", "publisher": "openai",
+        "uname": "Darwin 22.4.0 Darwin Kernel Version 22.4.0: Mon Mar  6 21:00:17
+        PST 2023; root:xnu-8796.101.5~3/RELEASE_X86_64 x86_64"}'
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    body:
+      string: !!binary |
+        H4sIAAAAAAAAA1RQyU7DMBC95ytGPqeoSUtIcouqFnJkkRBCqDLONDZ17MieCqqq/46cdIHLHN4y
+        8+YdIgCmGlYCE5KT6Ho9yWuzmn5vl/vH+6ciw61LZfq6LJK0fX7bszg47OcXCjq7boTteo2krBlp
+        4ZAThq1JVhTzvMjv8oHobIM62NqeJvPJNEtmJ4e0SqBnJbxHAACHYYZspsEfVsI0PiMdes9bZOVF
+        BMCc1QFh3HvliRti8ZUU1hCaIW5VgzLwgFyTFNxhDEuSSnANdddrJXh4woPdQFXHMKoXWnWcEBaS
+        mxYHlJsGKkcxvEiE1Y52DkcPVC0a8ux0/HhJvVFGebl2yL01IYkn24+yYwTwMbSw+/cY653telqT
+        3aIJ1WRZPu5j18KvbHp7IskS139cxSwKR47RLwAAAP//AwBinwsm7QEAAA==
+    headers:
+      CF-Cache-Status:
+      - DYNAMIC
+      CF-RAY:
+      - 8231f3ba4df202e9-GRU
+      Cache-Control:
+      - no-cache, must-revalidate
+      Connection:
+      - keep-alive
+      Content-Encoding:
+      - gzip
+      Content-Type:
+      - application/json
+      Date:
+      - Thu, 09 Nov 2023 00:31:20 GMT
+      Server:
+      - cloudflare
+      Transfer-Encoding:
+      - chunked
+      access-control-allow-origin:
+      - '*'
+      alt-svc:
+      - h3=":443"; ma=86400
+      openai-model:
+      - gpt-4-0613
+      openai-organization:
+      - clearbit-2
+      openai-processing-ms:
+      - '1913'
+      openai-version:
+      - '2020-10-01'
+      strict-transport-security:
+      - max-age=15724800; includeSubDomains
+      x-ratelimit-limit-requests:
+      - '100'
+      x-ratelimit-limit-tokens:
+      - '300000'
+      x-ratelimit-remaining-requests:
+      - '99'
+      x-ratelimit-remaining-tokens:
+      - '299208'
+      x-ratelimit-reset-requests:
+      - 600ms
+      x-ratelimit-reset-tokens:
+      - 158ms
+      x-request-id:
+      - 0d5d4ed34702a98537c5b4b74278f3f9
+    status:
+      code: 200
+      message: OK
+- request:
+    body: '{"messages": [{"role": "user", "content": "You are Senior Content Officer.\nYou''re
+      a senior content officer, specialized in technology, software engineering, AI
+      and startups. You work as a freelancer and are now working on writing content
+      for a new customer.\n\nYour personal goal is: Write the best content about AI
+      and AI agents.\nTOOLS:\n------\n\nYou have access to the following tools:\n\n\n\nTo
+      use a tool, please use the following format:\n\n```\nThought: Do I need to use
+      a tool? Yes\nAction: the action to take, should be one of []\nAction Input:
+      the input to the action\nObservation: the result of the action\n```\n\nWhen
+      you have a response for your task, or if you do not need to use a tool, you
+      MUST use the format:\n\n```\nThought: Do I need to use a tool? No\nFinal Answer:
+      [your response here]\n```\n\t\tThis is the summary of your work so far:\n        \n\n        This
+      is your understanding of the current situation:\n        {''AI in Healthcare'':
+      '''', ''Ethical Implications of AI'': '''', ''AI in Climate Change'': '''',
+      ''AI and Art'': '''', ''The Future of AI Agents'': ''''}\nBegin! This is VERY
+      important to you, your job depends on it!\n\nCurrent Task: Write a 1 amazing
+      paragraph highlight for each idea that showcases how good an article about this
+      topic could be. Return the list of ideas with their paragraph and your notes.\n\nThis
+      is the context you are working with:\n1. AI in Healthcare: This topic is unique
+      as it merges two critical sectors, technology and health. We can explore how
+      AI is improving diagnosis, treatment and patient care. This topic is interesting
+      because it has direct implications on human life and well-being.\n\n2. Ethical
+      Implications of AI: This topic is unique because it deals with the moral and
+      ethical dilemmas posed by AI. The interest lies in the balance between technological
+      advancement and ethical considerations.\n\n3. AI in Climate Change: The uniqueness
+      of this topic lies in how AI can be used to combat one of the most pressing
+      global issues - climate change. It''s interesting due to its potential in predicting
+      and managing climate change consequences.\n\n4. AI and Art: This is unique because
+      it explores the intersection of creativity and technology. It''s interesting
+      as it challenges the traditional idea that art is a purely human endeavor.\n\n5.
+      The Future of AI Agents: This topic is unique as it can explore the potential
+      future roles and impacts of AI agents on various aspects of our lives and industries.
+      It''s interesting because it involves speculation and prediction, sparking curiosity
+      about what the future may hold.\n\n"}], "model": "gpt-4", "max_tokens": null,
+      "stream": false, "n": 1, "temperature": 0.7, "stop": ["\nObservation"]}'
+    headers:
+      Accept:
+      - '*/*'
+      Accept-Encoding:
+      - gzip, deflate
+      Authorization:
+      - Bearer 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
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '2703'
+      Content-Type:
+      - application/json
+      Cookie:
+      - __cf_bm=omt5hOnsQkeg7bY0srmDk9.plAPmA8M4A2avjnRJqnc-1699489854-0-AT3mgzRgrYaYWpOG/jTYc9vzQHoiqYltUoBg0LPYVxsbN/4GrMkFITZSN+42iHF8q9RV/7KDN7ZZEGmps+YZtus=
+      User-Agent:
+      - OpenAI/v1 PythonBindings/0.28.1
+      X-OpenAI-Client-User-Agent:
+      - '{"bindings_version": "0.28.1", "httplib": "requests", "lang": "python", "lang_version":
+        "3.9.7", "platform": "macOS-10.16-x86_64-i386-64bit", "publisher": "openai",
+        "uname": "Darwin 22.4.0 Darwin Kernel Version 22.4.0: Mon Mar  6 21:00:17
+        PST 2023; root:xnu-8796.101.5~3/RELEASE_X86_64 x86_64"}'
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    body:
+      string: !!binary |
+        H4sIAAAAAAAAA2RWTY/jRg69968gdJmLbcxXJt3eQ8OYj8R7CJBMdoNgexHQJVpid4kUipQ9nsH8
+        9wVLdncHe9FBxSIfH/nI+nYF0HDbrKFJPXoaxry83sqn11+73/69ffjl5r796X7z6+c///wpvf/i
+        /KZZxA3d3VPyy61V0mHM5KwyH6dC6BReX727uXl7fXN9/bIeDNpSjmvd6Mu3y5fvXp0dpl45kTVr
+        +M8VAMC3+g1s0tKXZg31fv0zkBl21KwfjQCaojn+NGjG5ijeLJ4Ok4qTVLi/9zp1va/hg8IWhKgF
+        V5iMAMFV8y38ondyJ59YMMNG7EhlHT9erWCzBRb4mTB7n7DQGj7wgYDFFVCAvoxZC7qWE9zrVIRO
+        cOypEBhnTiowELmBOXmvlnSkBUxS8ECZpYNej7ApzntOjBm24pQzdySJgA0KHTRPwTF/DXPvCfpH
+        LMDSTubltIJPRQcgLPkELWMnamyge8i8p6X3tTQSHlo2QiMLBkYqpoKZvwYjYTOQOIwZxRY1cwNR
+        h/vJPJJ95PkfwP7CYEdJh3CKNY7hgcoKtgN2LMHtUUtuz3Q4pV40a3eCVsnkxcVt9QmtJtdisJsc
+        aBj1SMVgRGcStwXofk/lTMAAgxaCqG/RDHqgEr+5nJkBlBaOlPNyRyzdKgr5egUfvecUFA9j5oTB
+        aWVos13Dv4SweF/pHbRghoGF9ky5Be/Rg4sezwkH7eA9G/jcV8ux6EEfAt7IlGgFG4PN9oVBwhF3
+        nNmZDLqixwWYQqs1EJ0BtZxpGNBW8LnXKbcwYOpZyGDAB6rMghZoCb2HlhJbQL+F91ERAcydFvZ+
+        gB3BjtGovYU/eoUdYYkOslHFuMI4wV4LbLbLaJxELejkkZHdwj+VBSYDNDgSCB64Q6cAagTDVB5O
+        cESnYgvYYUZJl3a0hJkqk48lrmlhe0BJVDsqKnJJ9++AanXeXGT2PvMQUd/3KB2t4Q92IbNZJbUd
+        n1pOovvZRhLDXSbAnE9zZQj23PUO2CGLOaSz11S9nrWy10IJzcPXMailEv3mVMQq3rFQy6meC/pU
+        aqUMLTgI8ejoPMyqJKHSneaBUm/qoPWiTebIUvGNBZPHuLsoK7qmkhilAoQOB1rOGMsKPtbBQjX1
+        2myCloLLZ0JKKNBTHqNu5hQ60COW1gBnjTyPv598KlT5flv5Dqib4mv4OOywPIAKIOzREgtW9JfZ
+        xipR3lnHdcrzIXppnmxJW1rNzXjp3NmI6o/gq6riFn7WY9V+BE895kzSEehUwAu2HHEwx8C5SBOL
+        38IHypd5G6WdZ0rV7bIL4mPnhOXiDPBRDwYxIuMOFmfzc1n5C+WnoxEzudMCxsn6S0vvdJIWC89t
+        fYwBcKwDx7ilAncNFr9rKpU/rOD3nuBTJXeGBZsuhtYaPjuNT8ALYR7CwkZKU55pfd5oKpcUjnTm
+        /oxRY5HFetg/D4M1zKrSeuScw/YE1uP4uBg4uo1ln6e6UILqFjmfIPMhjqouDyRQqKV9VC5MJmmp
+        xJxvgxDdw13Dz/bSXXMLH6XDrg5CrL7q2rGkUwkNlODvDN3OSg8ya7ZUONs8VatU/z8lGKp8e83t
+        qjkv9O+PL4E9C1v/VyE0ldju5jrOZt+vAP5bXxbT3x4LTShy9L9cH0jiufHD6+vZX/P0iHk6ffPj
+        5dTVMT8d3Lx8dxVRvl/9DwAA//8DANyyOI5CCQAA
+    headers:
+      CF-Cache-Status:
+      - DYNAMIC
+      CF-RAY:
+      - 8231f3c83a5002e9-GRU
+      Cache-Control:
+      - no-cache, must-revalidate
+      Connection:
+      - keep-alive
+      Content-Encoding:
+      - gzip
+      Content-Type:
+      - application/json
+      Date:
+      - Thu, 09 Nov 2023 00:31:37 GMT
+      Server:
+      - cloudflare
+      Transfer-Encoding:
+      - chunked
+      access-control-allow-origin:
+      - '*'
+      alt-svc:
+      - h3=":443"; ma=86400
+      openai-model:
+      - gpt-4-0613
+      openai-organization:
+      - clearbit-2
+      openai-processing-ms:
+      - '16637'
+      openai-version:
+      - '2020-10-01'
+      strict-transport-security:
+      - max-age=15724800; includeSubDomains
+      x-ratelimit-limit-requests:
+      - '100'
+      x-ratelimit-limit-tokens:
+      - '300000'
+      x-ratelimit-remaining-requests:
+      - '99'
+      x-ratelimit-remaining-tokens:
+      - '299358'
+      x-ratelimit-reset-requests:
+      - 600ms
+      x-ratelimit-reset-tokens:
+      - 128ms
+      x-request-id:
+      - b91432d8e848317abf8d7d068c5e44cd
+    status:
+      code: 200
+      message: OK
+- request:
+    body: '{"messages": [{"role": "user", "content": "You are an AI assistant helping
+      a human keep track of facts about relevant people, places, and concepts in their
+      life. Update the summary of the provided entity in the \"Entity\" section based
+      on the last line of your conversation with the human. If you are writing the
+      summary for the first time, return a single sentence.\nThe update should only
+      include facts that are relayed in the last line of conversation about the provided
+      entity, and should only contain facts about the provided entity.\n\nIf there
+      is no new information about the provided entity or the information is not worth
+      noting (not an important or relevant fact to remember long-term), return the
+      existing summary unchanged.\n\nFull conversation history (for context):\nHuman:
+      Write a 1 amazing paragraph highlight for each idea that showcases how good
+      an article about this topic could be. Return the list of ideas with their paragraph
+      and your notes.\n\nThis is the context you are working with:\n1. AI in Healthcare:
+      This topic is unique as it merges two critical sectors, technology and health.
+      We can explore how AI is improving diagnosis, treatment and patient care. This
+      topic is interesting because it has direct implications on human life and well-being.\n\n2.
+      Ethical Implications of AI: This topic is unique because it deals with the moral
+      and ethical dilemmas posed by AI. The interest lies in the balance between technological
+      advancement and ethical considerations.\n\n3. AI in Climate Change: The uniqueness
+      of this topic lies in how AI can be used to combat one of the most pressing
+      global issues - climate change. It''s interesting due to its potential in predicting
+      and managing climate change consequences.\n\n4. AI and Art: This is unique because
+      it explores the intersection of creativity and technology. It''s interesting
+      as it challenges the traditional idea that art is a purely human endeavor.\n\n5.
+      The Future of AI Agents: This topic is unique as it can explore the potential
+      future roles and impacts of AI agents on various aspects of our lives and industries.
+      It''s interesting because it involves speculation and prediction, sparking curiosity
+      about what the future may hold.\nAI: 1. AI in Healthcare: Dive into an exploratory
+      journey where silicon meets stethoscope, unraveling how Artificial Intelligence
+      is revolutionizing the healthcare industry. From early diagnosis of life-threatening
+      diseases to personalized treatment plans, AI is not just an assistant; it''s
+      becoming a lifesaver. Imagine a world where technology doesn''t just assist
+      doctors but empowers patients, offering them more control over their health
+      and well-being.\n\n2. Ethical Implications of AI: Unearth the moral minefield
+      that AI has become in this thought-provoking piece. As AI''s capabilities grow,
+      so do the ethical dilemmas. Should machines make life or death decisions? Can
+      an algorithm be biased? Who bears responsibility for AI-induced outcomes? Join
+      us as we navigate these murky waters, balancing the scales of technological
+      advancement and ethical responsibility.\n\n3. AI in Climate Change: Witness
+      how AI is becoming an indispensable ally in the fight against climate change.
+      From forecasting weather patterns and predicting natural disasters to optimizing
+      energy use and promoting sustainable practices, AI is proving to be a game-changer.
+      Explore how this nascent technology can help us steer towards a more sustainable
+      future.\n\n4. AI and Art: Embark on a fascinating exploration of where creativity
+      meets code. Can a machine create a masterpiece? How does AI challenge our traditional
+      notions of art? Delve into the world of AI-generated art, where algorithms are
+      the artists and pixels are the palette, pushing the boundaries of what we consider
+      \"art\".\n\n5. The Future of AI Agents: Step into the realm of speculation and
+      prediction, where we explore the potential future of AI agents. How will they
+      shape industries, influence our daily lives, and even redefine our understanding
+      of \"intelligence\"? Engage in a lively discourse around the possibilities and
+      perils that the future of AI agents might hold.\n\nEntity to summarize:\nAI
+      in Healthcare\n\nExisting summary of AI in Healthcare:\n\n\nLast line of conversation:\nHuman:
+      Write a 1 amazing paragraph highlight for each idea that showcases how good
+      an article about this topic could be. Return the list of ideas with their paragraph
+      and your notes.\n\nThis is the context you are working with:\n1. AI in Healthcare:
+      This topic is unique as it merges two critical sectors, technology and health.
+      We can explore how AI is improving diagnosis, treatment and patient care. This
+      topic is interesting because it has direct implications on human life and well-being.\n\n2.
+      Ethical Implications of AI: This topic is unique because it deals with the moral
+      and ethical dilemmas posed by AI. The interest lies in the balance between technological
+      advancement and ethical considerations.\n\n3. AI in Climate Change: The uniqueness
+      of this topic lies in how AI can be used to combat one of the most pressing
+      global issues - climate change. It''s interesting due to its potential in predicting
+      and managing climate change consequences.\n\n4. AI and Art: This is unique because
+      it explores the intersection of creativity and technology. It''s interesting
+      as it challenges the traditional idea that art is a purely human endeavor.\n\n5.
+      The Future of AI Agents: This topic is unique as it can explore the potential
+      future roles and impacts of AI agents on various aspects of our lives and industries.
+      It''s interesting because it involves speculation and prediction, sparking curiosity
+      about what the future may hold.\nUpdated summary:"}], "model": "gpt-4", "max_tokens":
+      null, "stream": false, "n": 1, "temperature": 0.7}'
+    headers:
+      Accept:
+      - '*/*'
+      Accept-Encoding:
+      - gzip, deflate
+      Authorization:
+      - Bearer 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
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '5795'
+      Content-Type:
+      - application/json
+      Cookie:
+      - __cf_bm=omt5hOnsQkeg7bY0srmDk9.plAPmA8M4A2avjnRJqnc-1699489854-0-AT3mgzRgrYaYWpOG/jTYc9vzQHoiqYltUoBg0LPYVxsbN/4GrMkFITZSN+42iHF8q9RV/7KDN7ZZEGmps+YZtus=
+      User-Agent:
+      - OpenAI/v1 PythonBindings/0.28.1
+      X-OpenAI-Client-User-Agent:
+      - '{"bindings_version": "0.28.1", "httplib": "requests", "lang": "python", "lang_version":
+        "3.9.7", "platform": "macOS-10.16-x86_64-i386-64bit", "publisher": "openai",
+        "uname": "Darwin 22.4.0 Darwin Kernel Version 22.4.0: Mon Mar  6 21:00:17
+        PST 2023; root:xnu-8796.101.5~3/RELEASE_X86_64 x86_64"}'
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    body:
+      string: !!binary |
+        H4sIAAAAAAAAA1xSwW4TQQy95yusOW+qBkKb5MYFtVyKECAhhKrJrLPrMmNPx96mBfXf0UzSlnKZ
+        w3t+fm9s/5kBOOrdBlwYvYWU43x1yR8+yret8vLs6vv2s/pbvrj7esW8/fTbdVUh2xsM9qQ6CZJy
+        RCPhAx0KesPadXG2Xi9X69X6vBFJeoxVNmSbL+enZ4u3R8UoFFDdBn7MAAD+tLdm4x7v3QZOuyck
+        oaof0G2eiwBckVgR51VJzbO57oUMwobc4r6/BGK4QB9tDL4gkIKHiel2QjDJFMBGb5CwDKhge4FQ
+        yCj4CIrBpGgHhmFkiTI8gOcextatA7zPUQrxAKPsoTopUMpF7irWkx9YlKq+jichW9f02RshG9Q8
+        J/BlJAWd2oBrh+yLUZiiL/EBiA0LqrWGLTGQKfRUWnXKkYKve1AQhnFKniHSDpvPHmOcb5F4qC4I
+        kyLIDg4jGV+NhMXgZlIDT33zkvZ12E4GPqoApix7bJ89xtcOZLc7QDZigiQFoY6+SAS5w1JhKken
+        /xO547oen/e8IyYdrwt6Fa67U5N8KHucAfxsdzO9OgWXi6Rs1ya/kOsxLU7PV4eG7uVGX+jz5ZE0
+        MR//kS3evZlVm8fZXwAAAP//AwDWFVK3IQMAAA==
+    headers:
+      CF-Cache-Status:
+      - DYNAMIC
+      CF-RAY:
+      - 8231f4325a3302e9-GRU
+      Cache-Control:
+      - no-cache, must-revalidate
+      Connection:
+      - keep-alive
+      Content-Encoding:
+      - gzip
+      Content-Type:
+      - application/json
+      Date:
+      - Thu, 09 Nov 2023 00:31:41 GMT
+      Server:
+      - cloudflare
+      Transfer-Encoding:
+      - chunked
+      access-control-allow-origin:
+      - '*'
+      alt-svc:
+      - h3=":443"; ma=86400
+      openai-model:
+      - gpt-4-0613
+      openai-organization:
+      - clearbit-2
+      openai-processing-ms:
+      - '3753'
+      openai-version:
+      - '2020-10-01'
+      strict-transport-security:
+      - max-age=15724800; includeSubDomains
+      x-ratelimit-limit-requests:
+      - '100'
+      x-ratelimit-limit-tokens:
+      - '300000'
+      x-ratelimit-remaining-requests:
+      - '99'
+      x-ratelimit-remaining-tokens:
+      - '298580'
+      x-ratelimit-reset-requests:
+      - 600ms
+      x-ratelimit-reset-tokens:
+      - 284ms
+      x-request-id:
+      - 0afddcc6f73671f4c6f6c47c08283034
+    status:
+      code: 200
+      message: OK
+- request:
+    body: '{"messages": [{"role": "user", "content": "You are an AI assistant helping
+      a human keep track of facts about relevant people, places, and concepts in their
+      life. Update the summary of the provided entity in the \"Entity\" section based
+      on the last line of your conversation with the human. If you are writing the
+      summary for the first time, return a single sentence.\nThe update should only
+      include facts that are relayed in the last line of conversation about the provided
+      entity, and should only contain facts about the provided entity.\n\nIf there
+      is no new information about the provided entity or the information is not worth
+      noting (not an important or relevant fact to remember long-term), return the
+      existing summary unchanged.\n\nFull conversation history (for context):\nHuman:
+      Write a 1 amazing paragraph highlight for each idea that showcases how good
+      an article about this topic could be. Return the list of ideas with their paragraph
+      and your notes.\n\nThis is the context you are working with:\n1. AI in Healthcare:
+      This topic is unique as it merges two critical sectors, technology and health.
+      We can explore how AI is improving diagnosis, treatment and patient care. This
+      topic is interesting because it has direct implications on human life and well-being.\n\n2.
+      Ethical Implications of AI: This topic is unique because it deals with the moral
+      and ethical dilemmas posed by AI. The interest lies in the balance between technological
+      advancement and ethical considerations.\n\n3. AI in Climate Change: The uniqueness
+      of this topic lies in how AI can be used to combat one of the most pressing
+      global issues - climate change. It''s interesting due to its potential in predicting
+      and managing climate change consequences.\n\n4. AI and Art: This is unique because
+      it explores the intersection of creativity and technology. It''s interesting
+      as it challenges the traditional idea that art is a purely human endeavor.\n\n5.
+      The Future of AI Agents: This topic is unique as it can explore the potential
+      future roles and impacts of AI agents on various aspects of our lives and industries.
+      It''s interesting because it involves speculation and prediction, sparking curiosity
+      about what the future may hold.\nAI: 1. AI in Healthcare: Dive into an exploratory
+      journey where silicon meets stethoscope, unraveling how Artificial Intelligence
+      is revolutionizing the healthcare industry. From early diagnosis of life-threatening
+      diseases to personalized treatment plans, AI is not just an assistant; it''s
+      becoming a lifesaver. Imagine a world where technology doesn''t just assist
+      doctors but empowers patients, offering them more control over their health
+      and well-being.\n\n2. Ethical Implications of AI: Unearth the moral minefield
+      that AI has become in this thought-provoking piece. As AI''s capabilities grow,
+      so do the ethical dilemmas. Should machines make life or death decisions? Can
+      an algorithm be biased? Who bears responsibility for AI-induced outcomes? Join
+      us as we navigate these murky waters, balancing the scales of technological
+      advancement and ethical responsibility.\n\n3. AI in Climate Change: Witness
+      how AI is becoming an indispensable ally in the fight against climate change.
+      From forecasting weather patterns and predicting natural disasters to optimizing
+      energy use and promoting sustainable practices, AI is proving to be a game-changer.
+      Explore how this nascent technology can help us steer towards a more sustainable
+      future.\n\n4. AI and Art: Embark on a fascinating exploration of where creativity
+      meets code. Can a machine create a masterpiece? How does AI challenge our traditional
+      notions of art? Delve into the world of AI-generated art, where algorithms are
+      the artists and pixels are the palette, pushing the boundaries of what we consider
+      \"art\".\n\n5. The Future of AI Agents: Step into the realm of speculation and
+      prediction, where we explore the potential future of AI agents. How will they
+      shape industries, influence our daily lives, and even redefine our understanding
+      of \"intelligence\"? Engage in a lively discourse around the possibilities and
+      perils that the future of AI agents might hold.\n\nEntity to summarize:\nEthical
+      Implications of AI\n\nExisting summary of Ethical Implications of AI:\n\n\nLast
+      line of conversation:\nHuman: Write a 1 amazing paragraph highlight for each
+      idea that showcases how good an article about this topic could be. Return the
+      list of ideas with their paragraph and your notes.\n\nThis is the context you
+      are working with:\n1. AI in Healthcare: This topic is unique as it merges two
+      critical sectors, technology and health. We can explore how AI is improving
+      diagnosis, treatment and patient care. This topic is interesting because it
+      has direct implications on human life and well-being.\n\n2. Ethical Implications
+      of AI: This topic is unique because it deals with the moral and ethical dilemmas
+      posed by AI. The interest lies in the balance between technological advancement
+      and ethical considerations.\n\n3. AI in Climate Change: The uniqueness of this
+      topic lies in how AI can be used to combat one of the most pressing global issues
+      - climate change. It''s interesting due to its potential in predicting and managing
+      climate change consequences.\n\n4. AI and Art: This is unique because it explores
+      the intersection of creativity and technology. It''s interesting as it challenges
+      the traditional idea that art is a purely human endeavor.\n\n5. The Future of
+      AI Agents: This topic is unique as it can explore the potential future roles
+      and impacts of AI agents on various aspects of our lives and industries. It''s
+      interesting because it involves speculation and prediction, sparking curiosity
+      about what the future may hold.\nUpdated summary:"}], "model": "gpt-4", "max_tokens":
+      null, "stream": false, "n": 1, "temperature": 0.7}'
+    headers:
+      Accept:
+      - '*/*'
+      Accept-Encoding:
+      - gzip, deflate
+      Authorization:
+      - Bearer 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
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '5815'
+      Content-Type:
+      - application/json
+      Cookie:
+      - __cf_bm=omt5hOnsQkeg7bY0srmDk9.plAPmA8M4A2avjnRJqnc-1699489854-0-AT3mgzRgrYaYWpOG/jTYc9vzQHoiqYltUoBg0LPYVxsbN/4GrMkFITZSN+42iHF8q9RV/7KDN7ZZEGmps+YZtus=
+      User-Agent:
+      - OpenAI/v1 PythonBindings/0.28.1
+      X-OpenAI-Client-User-Agent:
+      - '{"bindings_version": "0.28.1", "httplib": "requests", "lang": "python", "lang_version":
+        "3.9.7", "platform": "macOS-10.16-x86_64-i386-64bit", "publisher": "openai",
+        "uname": "Darwin 22.4.0 Darwin Kernel Version 22.4.0: Mon Mar  6 21:00:17
+        PST 2023; root:xnu-8796.101.5~3/RELEASE_X86_64 x86_64"}'
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    body:
+      string: !!binary |
+        H4sIAAAAAAAAA1RSwY4aMQy98xVWzoBAhS1w20NXpVIrtarUQ1WtMokhLkk8jT0FtOLfq8ywC734
+        YPvZz8/vZQRgyJsNGBesutTGyWqbn76sdofjstl/2/34NGNcfVx+Pbkn/mzNuCK4+Y1OX1FTx6mN
+        qMR5KLuCVrFOnT+s14vVej2b94XEHmOF7VudLCazh/m7KyIwORSzgZ8jAICXPlZu2ePJbGA2fs0k
+        FLF7NJu3JgBTONaMsSIkarOa8a3oOCvmnu73gKDckgPewQcN5GyEbWojOVv5S80/bsGjjQJH0gAa
+        EBIXG8FmD3jFeIqYkhVoWdBDc+77rP9rs8OEWa+DFF3IHHl/nsJWAU9t5IICfzqUYaF0LoAVOAbU
+        gAWSdYEyCkjgLnpI9oAQaYfApfLSAB4dSQWP+60t1/PIRmjI9hfYuOdCGpKMe9bHwNCgLQIFpeUs
+        1FAkPcOOCzxuJ5R959ADd+o4oUyhCkVZsaAoUAYNJFflIqEMKYTGxnowNKhHxHw7txfpXo578Vxl
+        4LEMkk/N9VWXtx/vKJOE54JWONe/iXI7tF1GAL96z3T/2cC0hVOrz8oHzNVI89lqMQw0N3/eyu+v
+        jjLKauMdbL5cjOqay+gfAAAA//8DAK2x0EsdAwAA
+    headers:
+      CF-Cache-Status:
+      - DYNAMIC
+      CF-RAY:
+      - 8231f44b8a7a02e9-GRU
+      Cache-Control:
+      - no-cache, must-revalidate
+      Connection:
+      - keep-alive
+      Content-Encoding:
+      - gzip
+      Content-Type:
+      - application/json
+      Date:
+      - Thu, 09 Nov 2023 00:31:45 GMT
+      Server:
+      - cloudflare
+      Transfer-Encoding:
+      - chunked
+      access-control-allow-origin:
+      - '*'
+      alt-svc:
+      - h3=":443"; ma=86400
+      openai-model:
+      - gpt-4-0613
+      openai-organization:
+      - clearbit-2
+      openai-processing-ms:
+      - '4141'
+      openai-version:
+      - '2020-10-01'
+      strict-transport-security:
+      - max-age=15724800; includeSubDomains
+      x-ratelimit-limit-requests:
+      - '100'
+      x-ratelimit-limit-tokens:
+      - '300000'
+      x-ratelimit-remaining-requests:
+      - '99'
+      x-ratelimit-remaining-tokens:
+      - '298575'
+      x-ratelimit-reset-requests:
+      - 600ms
+      x-ratelimit-reset-tokens:
+      - 285ms
+      x-request-id:
+      - 55285c4d562878dc4fc396a02baf7514
+    status:
+      code: 200
+      message: OK
+- request:
+    body: '{"messages": [{"role": "user", "content": "You are an AI assistant helping
+      a human keep track of facts about relevant people, places, and concepts in their
+      life. Update the summary of the provided entity in the \"Entity\" section based
+      on the last line of your conversation with the human. If you are writing the
+      summary for the first time, return a single sentence.\nThe update should only
+      include facts that are relayed in the last line of conversation about the provided
+      entity, and should only contain facts about the provided entity.\n\nIf there
+      is no new information about the provided entity or the information is not worth
+      noting (not an important or relevant fact to remember long-term), return the
+      existing summary unchanged.\n\nFull conversation history (for context):\nHuman:
+      Write a 1 amazing paragraph highlight for each idea that showcases how good
+      an article about this topic could be. Return the list of ideas with their paragraph
+      and your notes.\n\nThis is the context you are working with:\n1. AI in Healthcare:
+      This topic is unique as it merges two critical sectors, technology and health.
+      We can explore how AI is improving diagnosis, treatment and patient care. This
+      topic is interesting because it has direct implications on human life and well-being.\n\n2.
+      Ethical Implications of AI: This topic is unique because it deals with the moral
+      and ethical dilemmas posed by AI. The interest lies in the balance between technological
+      advancement and ethical considerations.\n\n3. AI in Climate Change: The uniqueness
+      of this topic lies in how AI can be used to combat one of the most pressing
+      global issues - climate change. It''s interesting due to its potential in predicting
+      and managing climate change consequences.\n\n4. AI and Art: This is unique because
+      it explores the intersection of creativity and technology. It''s interesting
+      as it challenges the traditional idea that art is a purely human endeavor.\n\n5.
+      The Future of AI Agents: This topic is unique as it can explore the potential
+      future roles and impacts of AI agents on various aspects of our lives and industries.
+      It''s interesting because it involves speculation and prediction, sparking curiosity
+      about what the future may hold.\nAI: 1. AI in Healthcare: Dive into an exploratory
+      journey where silicon meets stethoscope, unraveling how Artificial Intelligence
+      is revolutionizing the healthcare industry. From early diagnosis of life-threatening
+      diseases to personalized treatment plans, AI is not just an assistant; it''s
+      becoming a lifesaver. Imagine a world where technology doesn''t just assist
+      doctors but empowers patients, offering them more control over their health
+      and well-being.\n\n2. Ethical Implications of AI: Unearth the moral minefield
+      that AI has become in this thought-provoking piece. As AI''s capabilities grow,
+      so do the ethical dilemmas. Should machines make life or death decisions? Can
+      an algorithm be biased? Who bears responsibility for AI-induced outcomes? Join
+      us as we navigate these murky waters, balancing the scales of technological
+      advancement and ethical responsibility.\n\n3. AI in Climate Change: Witness
+      how AI is becoming an indispensable ally in the fight against climate change.
+      From forecasting weather patterns and predicting natural disasters to optimizing
+      energy use and promoting sustainable practices, AI is proving to be a game-changer.
+      Explore how this nascent technology can help us steer towards a more sustainable
+      future.\n\n4. AI and Art: Embark on a fascinating exploration of where creativity
+      meets code. Can a machine create a masterpiece? How does AI challenge our traditional
+      notions of art? Delve into the world of AI-generated art, where algorithms are
+      the artists and pixels are the palette, pushing the boundaries of what we consider
+      \"art\".\n\n5. The Future of AI Agents: Step into the realm of speculation and
+      prediction, where we explore the potential future of AI agents. How will they
+      shape industries, influence our daily lives, and even redefine our understanding
+      of \"intelligence\"? Engage in a lively discourse around the possibilities and
+      perils that the future of AI agents might hold.\n\nEntity to summarize:\nAI
+      in Climate Change\n\nExisting summary of AI in Climate Change:\n\n\nLast line
+      of conversation:\nHuman: Write a 1 amazing paragraph highlight for each idea
+      that showcases how good an article about this topic could be. Return the list
+      of ideas with their paragraph and your notes.\n\nThis is the context you are
+      working with:\n1. AI in Healthcare: This topic is unique as it merges two critical
+      sectors, technology and health. We can explore how AI is improving diagnosis,
+      treatment and patient care. This topic is interesting because it has direct
+      implications on human life and well-being.\n\n2. Ethical Implications of AI:
+      This topic is unique because it deals with the moral and ethical dilemmas posed
+      by AI. The interest lies in the balance between technological advancement and
+      ethical considerations.\n\n3. AI in Climate Change: The uniqueness of this topic
+      lies in how AI can be used to combat one of the most pressing global issues
+      - climate change. It''s interesting due to its potential in predicting and managing
+      climate change consequences.\n\n4. AI and Art: This is unique because it explores
+      the intersection of creativity and technology. It''s interesting as it challenges
+      the traditional idea that art is a purely human endeavor.\n\n5. The Future of
+      AI Agents: This topic is unique as it can explore the potential future roles
+      and impacts of AI agents on various aspects of our lives and industries. It''s
+      interesting because it involves speculation and prediction, sparking curiosity
+      about what the future may hold.\nUpdated summary:"}], "model": "gpt-4", "max_tokens":
+      null, "stream": false, "n": 1, "temperature": 0.7}'
+    headers:
+      Accept:
+      - '*/*'
+      Accept-Encoding:
+      - gzip, deflate
+      Authorization:
+      - Bearer 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
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '5803'
+      Content-Type:
+      - application/json
+      Cookie:
+      - __cf_bm=omt5hOnsQkeg7bY0srmDk9.plAPmA8M4A2avjnRJqnc-1699489854-0-AT3mgzRgrYaYWpOG/jTYc9vzQHoiqYltUoBg0LPYVxsbN/4GrMkFITZSN+42iHF8q9RV/7KDN7ZZEGmps+YZtus=
+      User-Agent:
+      - OpenAI/v1 PythonBindings/0.28.1
+      X-OpenAI-Client-User-Agent:
+      - '{"bindings_version": "0.28.1", "httplib": "requests", "lang": "python", "lang_version":
+        "3.9.7", "platform": "macOS-10.16-x86_64-i386-64bit", "publisher": "openai",
+        "uname": "Darwin 22.4.0 Darwin Kernel Version 22.4.0: Mon Mar  6 21:00:17
+        PST 2023; root:xnu-8796.101.5~3/RELEASE_X86_64 x86_64"}'
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    body:
+      string: !!binary |
+        H4sIAAAAAAAAA1RSy04cQQy871eU5jyg3QQIyw0hRaAkhyQoiRRFyNvjnemkx27aHgFB/HvUw4bH
+        paV2uWyXXfcLoIldc4ImDORhzGnv+ELef1mV718vU/fm8/mnnLbfxg/nH7P88G3TVoZufnPw/6z9
+        oGNO7FHlEQ6FyblWXR2t1wfH6/XycAZG7ThVWp9972BvebR6u2MMGgNbc4KfCwC4n986m3R825xg
+        2f6PjGxGPTcnT0lAUzTVSENm0ZzEm/YZDCrOMo97eoEoOEtxJGecDSQ9IxoIk8TrieGaY4AP5ODb
+        nLSwYdAbnF4gkGDDmIw7uCLouCFH2NUKc60WKgzdwgfGqObIhc2i9OiTbighmk1s+7gcoiFKSFPH
+        huiGrHXKWHOk0roYvBJJOowk1NfP63YIKsbXE0tga7HVwoFsZt0w+cAFmdy5iLUvSwr5VCihi0bm
+        XKyFZo9j/FtRFi79XRXazs1z0VFnnk3mFIU2iZELBa9Hq1oYUZwLm9fhvWp73GSKVZ3MO5zDQhZY
+        HM5hEE3a382LHThlmDMXTJV7Q6WrZxm18Ku228mnwvvN7rwPT77YRok2XBUmU6m3Ntf8mPawAH7N
+        PpteWaepyrJfuf5hqeZbLY93RmuePf0Mv1vvQFen9IK2OlwvapuHxT8AAAD//wMAl9xtYVEDAAA=
+    headers:
+      CF-Cache-Status:
+      - DYNAMIC
+      CF-RAY:
+      - 8231f46728db02e9-GRU
+      Cache-Control:
+      - no-cache, must-revalidate
+      Connection:
+      - keep-alive
+      Content-Encoding:
+      - gzip
+      Content-Type:
+      - application/json
+      Date:
+      - Thu, 09 Nov 2023 00:31:49 GMT
+      Server:
+      - cloudflare
+      Transfer-Encoding:
+      - chunked
+      access-control-allow-origin:
+      - '*'
+      alt-svc:
+      - h3=":443"; ma=86400
+      openai-model:
+      - gpt-4-0613
+      openai-organization:
+      - clearbit-2
+      openai-processing-ms:
+      - '3493'
+      openai-version:
+      - '2020-10-01'
+      strict-transport-security:
+      - max-age=15724800; includeSubDomains
+      x-ratelimit-limit-requests:
+      - '100'
+      x-ratelimit-limit-tokens:
+      - '300000'
+      x-ratelimit-remaining-requests:
+      - '99'
+      x-ratelimit-remaining-tokens:
+      - '298578'
+      x-ratelimit-reset-requests:
+      - 600ms
+      x-ratelimit-reset-tokens:
+      - 284ms
+      x-request-id:
+      - fe4876009ae0a36e3eb01138e672a9a2
+    status:
+      code: 200
+      message: OK
+- request:
+    body: '{"messages": [{"role": "user", "content": "You are an AI assistant helping
+      a human keep track of facts about relevant people, places, and concepts in their
+      life. Update the summary of the provided entity in the \"Entity\" section based
+      on the last line of your conversation with the human. If you are writing the
+      summary for the first time, return a single sentence.\nThe update should only
+      include facts that are relayed in the last line of conversation about the provided
+      entity, and should only contain facts about the provided entity.\n\nIf there
+      is no new information about the provided entity or the information is not worth
+      noting (not an important or relevant fact to remember long-term), return the
+      existing summary unchanged.\n\nFull conversation history (for context):\nHuman:
+      Write a 1 amazing paragraph highlight for each idea that showcases how good
+      an article about this topic could be. Return the list of ideas with their paragraph
+      and your notes.\n\nThis is the context you are working with:\n1. AI in Healthcare:
+      This topic is unique as it merges two critical sectors, technology and health.
+      We can explore how AI is improving diagnosis, treatment and patient care. This
+      topic is interesting because it has direct implications on human life and well-being.\n\n2.
+      Ethical Implications of AI: This topic is unique because it deals with the moral
+      and ethical dilemmas posed by AI. The interest lies in the balance between technological
+      advancement and ethical considerations.\n\n3. AI in Climate Change: The uniqueness
+      of this topic lies in how AI can be used to combat one of the most pressing
+      global issues - climate change. It''s interesting due to its potential in predicting
+      and managing climate change consequences.\n\n4. AI and Art: This is unique because
+      it explores the intersection of creativity and technology. It''s interesting
+      as it challenges the traditional idea that art is a purely human endeavor.\n\n5.
+      The Future of AI Agents: This topic is unique as it can explore the potential
+      future roles and impacts of AI agents on various aspects of our lives and industries.
+      It''s interesting because it involves speculation and prediction, sparking curiosity
+      about what the future may hold.\nAI: 1. AI in Healthcare: Dive into an exploratory
+      journey where silicon meets stethoscope, unraveling how Artificial Intelligence
+      is revolutionizing the healthcare industry. From early diagnosis of life-threatening
+      diseases to personalized treatment plans, AI is not just an assistant; it''s
+      becoming a lifesaver. Imagine a world where technology doesn''t just assist
+      doctors but empowers patients, offering them more control over their health
+      and well-being.\n\n2. Ethical Implications of AI: Unearth the moral minefield
+      that AI has become in this thought-provoking piece. As AI''s capabilities grow,
+      so do the ethical dilemmas. Should machines make life or death decisions? Can
+      an algorithm be biased? Who bears responsibility for AI-induced outcomes? Join
+      us as we navigate these murky waters, balancing the scales of technological
+      advancement and ethical responsibility.\n\n3. AI in Climate Change: Witness
+      how AI is becoming an indispensable ally in the fight against climate change.
+      From forecasting weather patterns and predicting natural disasters to optimizing
+      energy use and promoting sustainable practices, AI is proving to be a game-changer.
+      Explore how this nascent technology can help us steer towards a more sustainable
+      future.\n\n4. AI and Art: Embark on a fascinating exploration of where creativity
+      meets code. Can a machine create a masterpiece? How does AI challenge our traditional
+      notions of art? Delve into the world of AI-generated art, where algorithms are
+      the artists and pixels are the palette, pushing the boundaries of what we consider
+      \"art\".\n\n5. The Future of AI Agents: Step into the realm of speculation and
+      prediction, where we explore the potential future of AI agents. How will they
+      shape industries, influence our daily lives, and even redefine our understanding
+      of \"intelligence\"? Engage in a lively discourse around the possibilities and
+      perils that the future of AI agents might hold.\n\nEntity to summarize:\nAI
+      and Art\n\nExisting summary of AI and Art:\n\n\nLast line of conversation:\nHuman:
+      Write a 1 amazing paragraph highlight for each idea that showcases how good
+      an article about this topic could be. Return the list of ideas with their paragraph
+      and your notes.\n\nThis is the context you are working with:\n1. AI in Healthcare:
+      This topic is unique as it merges two critical sectors, technology and health.
+      We can explore how AI is improving diagnosis, treatment and patient care. This
+      topic is interesting because it has direct implications on human life and well-being.\n\n2.
+      Ethical Implications of AI: This topic is unique because it deals with the moral
+      and ethical dilemmas posed by AI. The interest lies in the balance between technological
+      advancement and ethical considerations.\n\n3. AI in Climate Change: The uniqueness
+      of this topic lies in how AI can be used to combat one of the most pressing
+      global issues - climate change. It''s interesting due to its potential in predicting
+      and managing climate change consequences.\n\n4. AI and Art: This is unique because
+      it explores the intersection of creativity and technology. It''s interesting
+      as it challenges the traditional idea that art is a purely human endeavor.\n\n5.
+      The Future of AI Agents: This topic is unique as it can explore the potential
+      future roles and impacts of AI agents on various aspects of our lives and industries.
+      It''s interesting because it involves speculation and prediction, sparking curiosity
+      about what the future may hold.\nUpdated summary:"}], "model": "gpt-4", "max_tokens":
+      null, "stream": false, "n": 1, "temperature": 0.7}'
+    headers:
+      Accept:
+      - '*/*'
+      Accept-Encoding:
+      - gzip, deflate
+      Authorization:
+      - Bearer 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
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '5783'
+      Content-Type:
+      - application/json
+      Cookie:
+      - __cf_bm=omt5hOnsQkeg7bY0srmDk9.plAPmA8M4A2avjnRJqnc-1699489854-0-AT3mgzRgrYaYWpOG/jTYc9vzQHoiqYltUoBg0LPYVxsbN/4GrMkFITZSN+42iHF8q9RV/7KDN7ZZEGmps+YZtus=
+      User-Agent:
+      - OpenAI/v1 PythonBindings/0.28.1
+      X-OpenAI-Client-User-Agent:
+      - '{"bindings_version": "0.28.1", "httplib": "requests", "lang": "python", "lang_version":
+        "3.9.7", "platform": "macOS-10.16-x86_64-i386-64bit", "publisher": "openai",
+        "uname": "Darwin 22.4.0 Darwin Kernel Version 22.4.0: Mon Mar  6 21:00:17
+        PST 2023; root:xnu-8796.101.5~3/RELEASE_X86_64 x86_64"}'
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    body:
+      string: !!binary |
+        H4sIAAAAAAAAA1RSTWsbMRC9+1cMOq/NLjau1zeXUjCEXNrm0pQwkSYrJVqNKs36g+D/XrS24/Si
+        g57ex8zT+wRAOaPWoLRF0X3009U2fH/od/Jj8dV82zSLX/OHu/v653Fx99oPqioMfn4lLVfWTHMf
+        PYnjcIZ1IhQqqs2ybRertq3bEejZkC+0Lsp0Ma2XzfzCsOw0ZbWG3xMAgPfxLNmCoYNaQ11db3rK
+        GTtS649HACqxLzcKc3ZZMIiqbqDmIBTGuJstYDCwSQIuA8IQ3N+BQDg6DWJRgA7Rc6IMYglcEEqZ
+        dBkN+AXGwdzOyXGUEdI2sOfuWIG26D2FzoVupEpC4woPPThDeFbHq3EcEvkj2KHHABQM4Y7TDLYC
+        hvyOcrHmUWjPyZtivtlOOwqUymqLUAV7S4kAfcfJie0zYKKRg0lcljyGjO5A/gZF9CRCFcQh22vY
+        Zx6CweQoF6N9Sbon0ByyM5TgUWGSRzVTl52ePsp4ccFl+5QIM4ey4Cwcz89OE4A/Y7nDf32pmLiP
+        8iT8RqE03tRfVmdBdftIN3h5qV4JC/pPtGa+mhSb0+QfAAAA//8DAHnlutXGAgAA
+    headers:
+      CF-Cache-Status:
+      - DYNAMIC
+      CF-RAY:
+      - 8231f47e9a3c02e9-GRU
+      Cache-Control:
+      - no-cache, must-revalidate
+      Connection:
+      - keep-alive
+      Content-Encoding:
+      - gzip
+      Content-Type:
+      - application/json
+      Date:
+      - Thu, 09 Nov 2023 00:31:53 GMT
+      Server:
+      - cloudflare
+      Transfer-Encoding:
+      - chunked
+      access-control-allow-origin:
+      - '*'
+      alt-svc:
+      - h3=":443"; ma=86400
+      openai-model:
+      - gpt-4-0613
+      openai-organization:
+      - clearbit-2
+      openai-processing-ms:
+      - '3417'
+      openai-version:
+      - '2020-10-01'
+      strict-transport-security:
+      - max-age=15724800; includeSubDomains
+      x-ratelimit-limit-requests:
+      - '100'
+      x-ratelimit-limit-tokens:
+      - '300000'
+      x-ratelimit-remaining-requests:
+      - '99'
+      x-ratelimit-remaining-tokens:
+      - '298582'
+      x-ratelimit-reset-requests:
+      - 600ms
+      x-ratelimit-reset-tokens:
+      - 283ms
+      x-request-id:
+      - d0b815b8d1256928deb92416335a3f4e
+    status:
+      code: 200
+      message: OK
+- request:
+    body: '{"messages": [{"role": "user", "content": "You are an AI assistant helping
+      a human keep track of facts about relevant people, places, and concepts in their
+      life. Update the summary of the provided entity in the \"Entity\" section based
+      on the last line of your conversation with the human. If you are writing the
+      summary for the first time, return a single sentence.\nThe update should only
+      include facts that are relayed in the last line of conversation about the provided
+      entity, and should only contain facts about the provided entity.\n\nIf there
+      is no new information about the provided entity or the information is not worth
+      noting (not an important or relevant fact to remember long-term), return the
+      existing summary unchanged.\n\nFull conversation history (for context):\nHuman:
+      Write a 1 amazing paragraph highlight for each idea that showcases how good
+      an article about this topic could be. Return the list of ideas with their paragraph
+      and your notes.\n\nThis is the context you are working with:\n1. AI in Healthcare:
+      This topic is unique as it merges two critical sectors, technology and health.
+      We can explore how AI is improving diagnosis, treatment and patient care. This
+      topic is interesting because it has direct implications on human life and well-being.\n\n2.
+      Ethical Implications of AI: This topic is unique because it deals with the moral
+      and ethical dilemmas posed by AI. The interest lies in the balance between technological
+      advancement and ethical considerations.\n\n3. AI in Climate Change: The uniqueness
+      of this topic lies in how AI can be used to combat one of the most pressing
+      global issues - climate change. It''s interesting due to its potential in predicting
+      and managing climate change consequences.\n\n4. AI and Art: This is unique because
+      it explores the intersection of creativity and technology. It''s interesting
+      as it challenges the traditional idea that art is a purely human endeavor.\n\n5.
+      The Future of AI Agents: This topic is unique as it can explore the potential
+      future roles and impacts of AI agents on various aspects of our lives and industries.
+      It''s interesting because it involves speculation and prediction, sparking curiosity
+      about what the future may hold.\nAI: 1. AI in Healthcare: Dive into an exploratory
+      journey where silicon meets stethoscope, unraveling how Artificial Intelligence
+      is revolutionizing the healthcare industry. From early diagnosis of life-threatening
+      diseases to personalized treatment plans, AI is not just an assistant; it''s
+      becoming a lifesaver. Imagine a world where technology doesn''t just assist
+      doctors but empowers patients, offering them more control over their health
+      and well-being.\n\n2. Ethical Implications of AI: Unearth the moral minefield
+      that AI has become in this thought-provoking piece. As AI''s capabilities grow,
+      so do the ethical dilemmas. Should machines make life or death decisions? Can
+      an algorithm be biased? Who bears responsibility for AI-induced outcomes? Join
+      us as we navigate these murky waters, balancing the scales of technological
+      advancement and ethical responsibility.\n\n3. AI in Climate Change: Witness
+      how AI is becoming an indispensable ally in the fight against climate change.
+      From forecasting weather patterns and predicting natural disasters to optimizing
+      energy use and promoting sustainable practices, AI is proving to be a game-changer.
+      Explore how this nascent technology can help us steer towards a more sustainable
+      future.\n\n4. AI and Art: Embark on a fascinating exploration of where creativity
+      meets code. Can a machine create a masterpiece? How does AI challenge our traditional
+      notions of art? Delve into the world of AI-generated art, where algorithms are
+      the artists and pixels are the palette, pushing the boundaries of what we consider
+      \"art\".\n\n5. The Future of AI Agents: Step into the realm of speculation and
+      prediction, where we explore the potential future of AI agents. How will they
+      shape industries, influence our daily lives, and even redefine our understanding
+      of \"intelligence\"? Engage in a lively discourse around the possibilities and
+      perils that the future of AI agents might hold.\n\nEntity to summarize:\nThe
+      Future of AI Agents\n\nExisting summary of The Future of AI Agents:\n\n\nLast
+      line of conversation:\nHuman: Write a 1 amazing paragraph highlight for each
+      idea that showcases how good an article about this topic could be. Return the
+      list of ideas with their paragraph and your notes.\n\nThis is the context you
+      are working with:\n1. AI in Healthcare: This topic is unique as it merges two
+      critical sectors, technology and health. We can explore how AI is improving
+      diagnosis, treatment and patient care. This topic is interesting because it
+      has direct implications on human life and well-being.\n\n2. Ethical Implications
+      of AI: This topic is unique because it deals with the moral and ethical dilemmas
+      posed by AI. The interest lies in the balance between technological advancement
+      and ethical considerations.\n\n3. AI in Climate Change: The uniqueness of this
+      topic lies in how AI can be used to combat one of the most pressing global issues
+      - climate change. It''s interesting due to its potential in predicting and managing
+      climate change consequences.\n\n4. AI and Art: This is unique because it explores
+      the intersection of creativity and technology. It''s interesting as it challenges
+      the traditional idea that art is a purely human endeavor.\n\n5. The Future of
+      AI Agents: This topic is unique as it can explore the potential future roles
+      and impacts of AI agents on various aspects of our lives and industries. It''s
+      interesting because it involves speculation and prediction, sparking curiosity
+      about what the future may hold.\nUpdated summary:"}], "model": "gpt-4", "max_tokens":
+      null, "stream": false, "n": 1, "temperature": 0.7}'
+    headers:
+      Accept:
+      - '*/*'
+      Accept-Encoding:
+      - gzip, deflate
+      Authorization:
+      - Bearer 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
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '5809'
+      Content-Type:
+      - application/json
+      Cookie:
+      - __cf_bm=omt5hOnsQkeg7bY0srmDk9.plAPmA8M4A2avjnRJqnc-1699489854-0-AT3mgzRgrYaYWpOG/jTYc9vzQHoiqYltUoBg0LPYVxsbN/4GrMkFITZSN+42iHF8q9RV/7KDN7ZZEGmps+YZtus=
+      User-Agent:
+      - OpenAI/v1 PythonBindings/0.28.1
+      X-OpenAI-Client-User-Agent:
+      - '{"bindings_version": "0.28.1", "httplib": "requests", "lang": "python", "lang_version":
+        "3.9.7", "platform": "macOS-10.16-x86_64-i386-64bit", "publisher": "openai",
+        "uname": "Darwin 22.4.0 Darwin Kernel Version 22.4.0: Mon Mar  6 21:00:17
+        PST 2023; root:xnu-8796.101.5~3/RELEASE_X86_64 x86_64"}'
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    body:
+      string: !!binary |
+        H4sIAAAAAAAAA1SSQW/bMAyF7/kVhM5JEDdZm+TWFSvQw4BhK3bYMBSMzMRcbFETqbRFkf8+yHGa
+        7WJAenwfn0i/jQAc124NzjdovovtZPkQ7n8svuf5jexvVnfPn780H3Gz+GTyTb+6cXHI5jd5O7um
+        XrrYkrGEk+wToVGhVter1WK5WlXzXuikprbYdtEmi8nsupoPjkbYk7o1/BwBALz135It1PTi1jAb
+        n286UsUdufV7EYBL0pYbh6qshsHc+CJ6CUahj/vYENxny4lAtnD7ALc7CqbACgg58J9MYBLZgzVo
+        QC+xlUQK1hBEKRTGFrYnQmmqgKEG7iJ604GJJ6YEOGBiyQqokQZdcoKWD2djqLNaYtIpPDasQ3Pu
+        SzkYJVKDuk8FbAoFlFs0PlAPiIlq9v0xYEk1Bo2Y9hx24HNiUbZXwI1kg+fypPKSIX+Hr9BIW0/d
+        MKvj+5C3HFibp0SoEsrg1CSeyo4jgF/90vJ/e3AxSRftyWRPoWyymi2vTkB3+UEu8odqEE0M239s
+        1Xw+Km2Oo78AAAD//wMA6XTgcp4CAAA=
+    headers:
+      CF-Cache-Status:
+      - DYNAMIC
+      CF-RAY:
+      - 8231f4957ff802e9-GRU
+      Cache-Control:
+      - no-cache, must-revalidate
+      Connection:
+      - keep-alive
+      Content-Encoding:
+      - gzip
+      Content-Type:
+      - application/json
+      Date:
+      - Thu, 09 Nov 2023 00:31:55 GMT
+      Server:
+      - cloudflare
+      Transfer-Encoding:
+      - chunked
+      access-control-allow-origin:
+      - '*'
+      alt-svc:
+      - h3=":443"; ma=86400
+      openai-model:
+      - gpt-4-0613
+      openai-organization:
+      - clearbit-2
+      openai-processing-ms:
+      - '2400'
+      openai-version:
+      - '2020-10-01'
+      strict-transport-security:
+      - max-age=15724800; includeSubDomains
+      x-ratelimit-limit-requests:
+      - '100'
+      x-ratelimit-limit-tokens:
+      - '300000'
+      x-ratelimit-remaining-requests:
+      - '99'
+      x-ratelimit-remaining-tokens:
+      - '298575'
+      x-ratelimit-reset-requests:
+      - 600ms
+      x-ratelimit-reset-tokens:
+      - 284ms
+      x-request-id:
+      - bab5b80f4038c3229f7d7f26750ff52e
+    status:
+      code: 200
+      message: OK
+- request:
+    body: '{"messages": [{"role": "user", "content": "Progressively summarize the
+      lines of conversation provided, adding onto the previous summary returning a
+      new summary.\n\nEXAMPLE\nCurrent summary:\nThe human asks what the AI thinks
+      of artificial intelligence. The AI thinks artificial intelligence is a force
+      for good.\n\nNew lines of conversation:\nHuman: Why do you think artificial
+      intelligence is a force for good?\nAI: Because artificial intelligence will
+      help humans reach their full potential.\n\nNew summary:\nThe human asks what
+      the AI thinks of artificial intelligence. The AI thinks artificial intelligence
+      is a force for good because it will help humans reach their full potential.\nEND
+      OF EXAMPLE\n\nCurrent summary:\n\n\nNew lines of conversation:\nHuman: Write
+      a 1 amazing paragraph highlight for each idea that showcases how good an article
+      about this topic could be. Return the list of ideas with their paragraph and
+      your notes.\n\nThis is the context you are working with:\n1. AI in Healthcare:
+      This topic is unique as it merges two critical sectors, technology and health.
+      We can explore how AI is improving diagnosis, treatment and patient care. This
+      topic is interesting because it has direct implications on human life and well-being.\n\n2.
+      Ethical Implications of AI: This topic is unique because it deals with the moral
+      and ethical dilemmas posed by AI. The interest lies in the balance between technological
+      advancement and ethical considerations.\n\n3. AI in Climate Change: The uniqueness
+      of this topic lies in how AI can be used to combat one of the most pressing
+      global issues - climate change. It''s interesting due to its potential in predicting
+      and managing climate change consequences.\n\n4. AI and Art: This is unique because
+      it explores the intersection of creativity and technology. It''s interesting
+      as it challenges the traditional idea that art is a purely human endeavor.\n\n5.
+      The Future of AI Agents: This topic is unique as it can explore the potential
+      future roles and impacts of AI agents on various aspects of our lives and industries.
+      It''s interesting because it involves speculation and prediction, sparking curiosity
+      about what the future may hold.\nAI: 1. AI in Healthcare: Dive into an exploratory
+      journey where silicon meets stethoscope, unraveling how Artificial Intelligence
+      is revolutionizing the healthcare industry. From early diagnosis of life-threatening
+      diseases to personalized treatment plans, AI is not just an assistant; it''s
+      becoming a lifesaver. Imagine a world where technology doesn''t just assist
+      doctors but empowers patients, offering them more control over their health
+      and well-being.\n\n2. Ethical Implications of AI: Unearth the moral minefield
+      that AI has become in this thought-provoking piece. As AI''s capabilities grow,
+      so do the ethical dilemmas. Should machines make life or death decisions? Can
+      an algorithm be biased? Who bears responsibility for AI-induced outcomes? Join
+      us as we navigate these murky waters, balancing the scales of technological
+      advancement and ethical responsibility.\n\n3. AI in Climate Change: Witness
+      how AI is becoming an indispensable ally in the fight against climate change.
+      From forecasting weather patterns and predicting natural disasters to optimizing
+      energy use and promoting sustainable practices, AI is proving to be a game-changer.
+      Explore how this nascent technology can help us steer towards a more sustainable
+      future.\n\n4. AI and Art: Embark on a fascinating exploration of where creativity
+      meets code. Can a machine create a masterpiece? How does AI challenge our traditional
+      notions of art? Delve into the world of AI-generated art, where algorithms are
+      the artists and pixels are the palette, pushing the boundaries of what we consider
+      \"art\".\n\n5. The Future of AI Agents: Step into the realm of speculation and
+      prediction, where we explore the potential future of AI agents. How will they
+      shape industries, influence our daily lives, and even redefine our understanding
+      of \"intelligence\"? Engage in a lively discourse around the possibilities and
+      perils that the future of AI agents might hold.\n\nNew summary:"}], "model":
+      "gpt-4", "max_tokens": null, "stream": false, "n": 1, "temperature": 0.7}'
+    headers:
+      Accept:
+      - '*/*'
+      Accept-Encoding:
+      - gzip, deflate
+      Authorization:
+      - Bearer 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
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '4219'
+      Content-Type:
+      - application/json
+      Cookie:
+      - __cf_bm=omt5hOnsQkeg7bY0srmDk9.plAPmA8M4A2avjnRJqnc-1699489854-0-AT3mgzRgrYaYWpOG/jTYc9vzQHoiqYltUoBg0LPYVxsbN/4GrMkFITZSN+42iHF8q9RV/7KDN7ZZEGmps+YZtus=
+      User-Agent:
+      - OpenAI/v1 PythonBindings/0.28.1
+      X-OpenAI-Client-User-Agent:
+      - '{"bindings_version": "0.28.1", "httplib": "requests", "lang": "python", "lang_version":
+        "3.9.7", "platform": "macOS-10.16-x86_64-i386-64bit", "publisher": "openai",
+        "uname": "Darwin 22.4.0 Darwin Kernel Version 22.4.0: Mon Mar  6 21:00:17
+        PST 2023; root:xnu-8796.101.5~3/RELEASE_X86_64 x86_64"}'
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    body:
+      string: !!binary |
+        H4sIAAAAAAAAA1ySQW8TQQyF7/kV1ly4pFUDpU1yy6VSxAEJigAhVDmzzo7p7HgYe9OGqv8dzW6a
+        UC6rle339rP3PU0AHDduCc4HNN/leDZfpxv/Ley+fn+4334haT9syvvPnz726G/2bloVsvlF3l5U
+        5166HMlY0tj2hdCous6uFovL+WIxuxoanTQUq6zNdnZ5dnE1e3dQBGFP6pbwYwIA8DQ8K1tq6NEt
+        4WL6UulIFVtyy+MQgCsSa8WhKqthMjc9Nb0kozTg3gaC0HeYAPVewQLBag0m8FDYCBDqKhQjpxYy
+        FmwL5gBbKUDoA8gWtrwj6BP/7gm4IVTAjfQGq/UUOPnYN1W7WgMnCITRgsdCUyAL7DECdzmyx3os
+        rX5VN077yB0agQ+YWhqqmBrAYtPhpcJue+sLjTrAlpLpOdyOW0hvkRMpBHkYLBUK7ST29Vv8p2K9
+        AnrMUQqNR3ihazhS16FCFqUGNvuBr2H1vSoprNZvFOqxB2DpNmjV93/0huKOFDiZDPacjIqSryQV
+        fggI79j242bkQ5Io7b7aHhfWTL6PaKQg6d/1K4AOI9xl9KavD+IOv/75mJktJ9ZwVwhVUs2BmuRx
+        7HkC8HPIYP8qVi4X6bLdmdxTqsG8vn47+rlT3E/dxfzQNDGMp/r8+mJSP/I8+QsAAP//AwD/WK+3
+        awMAAA==
+    headers:
+      CF-Cache-Status:
+      - DYNAMIC
+      CF-RAY:
+      - 8231f4a6ef2202e9-GRU
+      Cache-Control:
+      - no-cache, must-revalidate
+      Connection:
+      - keep-alive
+      Content-Encoding:
+      - gzip
+      Content-Type:
+      - application/json
+      Date:
+      - Thu, 09 Nov 2023 00:32:01 GMT
+      Server:
+      - cloudflare
+      Transfer-Encoding:
+      - chunked
+      access-control-allow-origin:
+      - '*'
+      alt-svc:
+      - h3=":443"; ma=86400
+      openai-model:
+      - gpt-4-0613
+      openai-organization:
+      - clearbit-2
+      openai-processing-ms:
+      - '5199'
+      openai-version:
+      - '2020-10-01'
+      strict-transport-security:
+      - max-age=15724800; includeSubDomains
+      x-ratelimit-limit-requests:
+      - '100'
+      x-ratelimit-limit-tokens:
+      - '300000'
+      x-ratelimit-remaining-requests:
+      - '99'
+      x-ratelimit-remaining-tokens:
+      - '298970'
+      x-ratelimit-reset-requests:
+      - 600ms
+      x-ratelimit-reset-tokens:
+      - 205ms
+      x-request-id:
+      - b7423e17a12737e42f614d46bda5aefd
+    status:
+      code: 200
+      message: OK
+version: 1

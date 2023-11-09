@@ -28,7 +28,7 @@ def test_agent_default_value():
 	assert isinstance(agent.llm, OpenAI)
 	assert agent.llm.model_name == "gpt-4"
 	assert agent.llm.temperature == 0.7
-	assert agent.llm.verbose == True
+	assert agent.llm.verbose == False
 
 def test_custom_llm():
 	agent = Agent(
@@ -55,3 +55,26 @@ def test_agent_execution():
 
 	output = agent.execute_task("How much is 1 + 1?")
 	assert output == "1 + 1 equals 2."
+
+@pytest.mark.vcr()
+def test_agent_execution_with_tools():
+	from langchain.tools import tool
+
+	@tool
+	def multiplier(numbers) -> float:
+			"""Useful for when you need to multiply two numbers together. 
+			The input to this tool should be a comma separated list of numbers of 
+			length two, representing the two numbers you want to multiply together. 
+			For example, `1,2` would be the input if you wanted to multiply 1 by 2."""
+			a, b = numbers.split(',')
+			return int(a) * int(b)
+
+	agent = Agent(
+		role="test role",
+		goal="test goal",
+		backstory="test backstory",
+		tools=[multiplier]
+	)
+
+	output = agent.execute_task("What is 3 times 4")
+	assert output == "3 times 4 is 12."

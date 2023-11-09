@@ -1,0 +1,410 @@
+interactions:
+- request:
+    body: '{"messages": [{"role": "user", "content": "You are an AI assistant reading
+      the transcript of a conversation between an AI and a human. Extract all of the
+      proper nouns from the last line of conversation. As a guideline, a proper noun
+      is generally capitalized. You should definitely extract all names and places.\n\nThe
+      conversation history is provided just in case of a coreference (e.g. \"What
+      do you know about him\" where \"him\" is defined in a previous line) -- ignore
+      items mentioned there that are not in the last line.\n\nReturn the output as
+      a single comma-separated list, or NONE if there is nothing of note to return
+      (e.g. the user is just issuing a greeting or having a simple conversation).\n\nEXAMPLE\nConversation
+      history:\nPerson #1: how''s it going today?\nAI: \"It''s going great! How about
+      you?\"\nPerson #1: good! busy working on Langchain. lots to do.\nAI: \"That
+      sounds like a lot of work! What kind of things are you doing to make Langchain
+      better?\"\nLast line:\nPerson #1: i''m trying to improve Langchain''s interfaces,
+      the UX, its integrations with various products the user might want ... a lot
+      of stuff.\nOutput: Langchain\nEND OF EXAMPLE\n\nEXAMPLE\nConversation history:\nPerson
+      #1: how''s it going today?\nAI: \"It''s going great! How about you?\"\nPerson
+      #1: good! busy working on Langchain. lots to do.\nAI: \"That sounds like a lot
+      of work! What kind of things are you doing to make Langchain better?\"\nLast
+      line:\nPerson #1: i''m trying to improve Langchain''s interfaces, the UX, its
+      integrations with various products the user might want ... a lot of stuff. I''m
+      working with Person #2.\nOutput: Langchain, Person #2\nEND OF EXAMPLE\n\nConversation
+      history (for reference only):\n\nLast line of conversation (for extraction):\nHuman:
+      What is 3 times 4\n\nOutput:"}], "model": "gpt-4", "max_tokens": null, "stream":
+      false, "n": 1, "temperature": 0.7}'
+    headers:
+      Accept:
+      - '*/*'
+      Accept-Encoding:
+      - gzip, deflate
+      Authorization:
+      - Bearer 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
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '1878'
+      Content-Type:
+      - application/json
+      User-Agent:
+      - OpenAI/v1 PythonBindings/0.28.1
+      X-OpenAI-Client-User-Agent:
+      - '{"bindings_version": "0.28.1", "httplib": "requests", "lang": "python", "lang_version":
+        "3.9.7", "platform": "macOS-10.16-x86_64-i386-64bit", "publisher": "openai",
+        "uname": "Darwin 22.4.0 Darwin Kernel Version 22.4.0: Mon Mar  6 21:00:17
+        PST 2023; root:xnu-8796.101.5~3/RELEASE_X86_64 x86_64"}'
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    body:
+      string: !!binary |
+        H4sIAAAAAAAAA1SQMW+DMBCFd37F6WaoIKEksLVShi5k6VZVkWuc4NT4LHxJq0b898qQhHa54b73
+        3j3dJQJA3WAFKFvBsnMmWb9Yf8rq8379s3pyZ7Mpno3Q29e6Lb5SjIODPo5K8s31IKlzRrEmO2HZ
+        K8EqpGZFWeblYvm4GEFHjTLBdnCc5ElaZMuroyUtlccK3iIAgMs4QzfbqG+sII1vm055Lw4Kq7sI
+        AHsyYYPCe+1ZWMZ4hpIsKzvWrbf1Bq9kuEfutdW+3fVKeLJB5pncJBsigPex4unfVXQ9dY53TJ/K
+        ht55Wkx5OH9jptmVMbEwf02rKNwYol8AAAD//wMAtfp4RYkBAAA=
+    headers:
+      CF-Cache-Status:
+      - DYNAMIC
+      CF-RAY:
+      - 82323023acba0182-GRU
+      Cache-Control:
+      - no-cache, must-revalidate
+      Connection:
+      - keep-alive
+      Content-Encoding:
+      - gzip
+      Content-Type:
+      - application/json
+      Date:
+      - Thu, 09 Nov 2023 01:12:33 GMT
+      Server:
+      - cloudflare
+      Set-Cookie:
+      - __cf_bm=pggttVzpKyQR4nT.B1yq6_bhIXPGndjWgQ1FDQWrqmI-1699492353-0-AdtCtI4A9MJL7HNTV51tlyV/nXd/jR6ewJjLEbxTXtzvv5pNZJ/AcBybsdljMBmcKJ+MAD1bX9NwEjuW0k7E6F8=;
+        path=/; expires=Thu, 09-Nov-23 01:42:33 GMT; domain=.api.openai.com; HttpOnly;
+        Secure; SameSite=None
+      Transfer-Encoding:
+      - chunked
+      access-control-allow-origin:
+      - '*'
+      alt-svc:
+      - h3=":443"; ma=86400
+      openai-model:
+      - gpt-4-0613
+      openai-organization:
+      - clearbit-2
+      openai-processing-ms:
+      - '433'
+      openai-version:
+      - '2020-10-01'
+      strict-transport-security:
+      - max-age=15724800; includeSubDomains
+      x-ratelimit-limit-requests:
+      - '100'
+      x-ratelimit-limit-tokens:
+      - '300000'
+      x-ratelimit-remaining-requests:
+      - '99'
+      x-ratelimit-remaining-tokens:
+      - '299557'
+      x-ratelimit-reset-requests:
+      - 600ms
+      x-ratelimit-reset-tokens:
+      - 88ms
+      x-request-id:
+      - 222744a81f853802353e390dd40173ea
+    status:
+      code: 200
+      message: OK
+- request:
+    body: '{"messages": [{"role": "user", "content": "You are test role.\ntest backstory\n\nYour
+      personal goal is: test goal\nTOOLS:\n------\n\nYou have access to the following
+      tools:\n\nmultiplier: multiplier(numbers) -> float - Useful for when you need
+      to multiply two numbers together. \n\t\t\tThe input to this tool should be a
+      comma separated list of numbers of \n\t\t\tlength two, representing the two
+      numbers you want to multiply together. \n\t\t\tFor example, `1,2` would be the
+      input if you wanted to multiply 1 by 2.\n\nTo use a tool, please use the following
+      format:\n\n```\nThought: Do I need to use a tool? Yes\nAction: the action to
+      take, should be one of [multiplier]\nAction Input: the input to the action\nObservation:
+      the result of the action\n```\n\nWhen you have a response for your task, or
+      if you do not need to use a tool, you MUST use the format:\n\n```\nThought:
+      Do I need to use a tool? No\nFinal Answer: [your response here]\n```\n\t\tThis
+      is the summary of your work so far:\n        \n\n        This is your understanding
+      of the current situation:\n        {}\nBegin! This is VERY important to you,
+      your job depends on it!\n\nCurrent Task: What is 3 times 4\n\n"}], "model":
+      "gpt-4", "max_tokens": null, "stream": false, "n": 1, "temperature": 0.7, "stop":
+      ["\nObservation"]}'
+    headers:
+      Accept:
+      - '*/*'
+      Accept-Encoding:
+      - gzip, deflate
+      Authorization:
+      - Bearer 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
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '1293'
+      Content-Type:
+      - application/json
+      Cookie:
+      - __cf_bm=pggttVzpKyQR4nT.B1yq6_bhIXPGndjWgQ1FDQWrqmI-1699492353-0-AdtCtI4A9MJL7HNTV51tlyV/nXd/jR6ewJjLEbxTXtzvv5pNZJ/AcBybsdljMBmcKJ+MAD1bX9NwEjuW0k7E6F8=
+      User-Agent:
+      - OpenAI/v1 PythonBindings/0.28.1
+      X-OpenAI-Client-User-Agent:
+      - '{"bindings_version": "0.28.1", "httplib": "requests", "lang": "python", "lang_version":
+        "3.9.7", "platform": "macOS-10.16-x86_64-i386-64bit", "publisher": "openai",
+        "uname": "Darwin 22.4.0 Darwin Kernel Version 22.4.0: Mon Mar  6 21:00:17
+        PST 2023; root:xnu-8796.101.5~3/RELEASE_X86_64 x86_64"}'
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    body:
+      string: !!binary |
+        H4sIAAAAAAAAA1RQy2rDMBC8+ysWnZ1ix3ZS61IKbSFQeuoltCWo8jZWK2uFtQ6BkH8vct6XPczs
+        7MzsLgEQphEShG4V687byf3ChY3bvGX1tsr0srLP8xdVZZxXr5yLNCro+xc1n1R3mjpvkQ25A617
+        VIzxaj6r67KeFlUxEh01aKNs7XlSTrJZXhwVLRmNQUj4SAAAduOM2VyDWyEhS09IhyGoNQp5XgIQ
+        PdmICBWCCawci/RCanKMboz73tKwblnCE8ECHGIDTDAEBAVMZB9gieHTPepYRkI3WDbeGuxPGCyc
+        H1hCkZbi6LA/R/sxzoR21aMK5KJdYPKHtX0C8DVWHW7SC99T53nF9Icu9p/O88M9cfnqFVscSSZW
+        9gqvyySa7JN/AAAA//8DAGryDPHSAQAA
+    headers:
+      CF-Cache-Status:
+      - DYNAMIC
+      CF-RAY:
+      - 823230284a450182-GRU
+      Cache-Control:
+      - no-cache, must-revalidate
+      Connection:
+      - keep-alive
+      Content-Encoding:
+      - gzip
+      Content-Type:
+      - application/json
+      Date:
+      - Thu, 09 Nov 2023 01:12:34 GMT
+      Server:
+      - cloudflare
+      Transfer-Encoding:
+      - chunked
+      access-control-allow-origin:
+      - '*'
+      alt-svc:
+      - h3=":443"; ma=86400
+      openai-model:
+      - gpt-4-0613
+      openai-organization:
+      - clearbit-2
+      openai-processing-ms:
+      - '1120'
+      openai-version:
+      - '2020-10-01'
+      strict-transport-security:
+      - max-age=15724800; includeSubDomains
+      x-ratelimit-limit-requests:
+      - '100'
+      x-ratelimit-limit-tokens:
+      - '300000'
+      x-ratelimit-remaining-requests:
+      - '99'
+      x-ratelimit-remaining-tokens:
+      - '299710'
+      x-ratelimit-reset-requests:
+      - 600ms
+      x-ratelimit-reset-tokens:
+      - 57ms
+      x-request-id:
+      - 00d0dced84c81ed56d116437daa60a72
+    status:
+      code: 200
+      message: OK
+- request:
+    body: '{"messages": [{"role": "user", "content": "You are test role.\ntest backstory\n\nYour
+      personal goal is: test goal\nTOOLS:\n------\n\nYou have access to the following
+      tools:\n\nmultiplier: multiplier(numbers) -> float - Useful for when you need
+      to multiply two numbers together. \n\t\t\tThe input to this tool should be a
+      comma separated list of numbers of \n\t\t\tlength two, representing the two
+      numbers you want to multiply together. \n\t\t\tFor example, `1,2` would be the
+      input if you wanted to multiply 1 by 2.\n\nTo use a tool, please use the following
+      format:\n\n```\nThought: Do I need to use a tool? Yes\nAction: the action to
+      take, should be one of [multiplier]\nAction Input: the input to the action\nObservation:
+      the result of the action\n```\n\nWhen you have a response for your task, or
+      if you do not need to use a tool, you MUST use the format:\n\n```\nThought:
+      Do I need to use a tool? No\nFinal Answer: [your response here]\n```\n\t\tThis
+      is the summary of your work so far:\n        \n\n        This is your understanding
+      of the current situation:\n        {}\nBegin! This is VERY important to you,
+      your job depends on it!\n\nCurrent Task: What is 3 times 4\nThought: Do I need
+      to use a tool? Yes\nAction: multiplier\nAction Input: 3,4\nObservation: 12\nThought:
+      \n"}], "model": "gpt-4", "max_tokens": null, "stream": false, "n": 1, "temperature":
+      0.7, "stop": ["\nObservation"]}'
+    headers:
+      Accept:
+      - '*/*'
+      Accept-Encoding:
+      - gzip, deflate
+      Authorization:
+      - Bearer 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
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '1397'
+      Content-Type:
+      - application/json
+      Cookie:
+      - __cf_bm=pggttVzpKyQR4nT.B1yq6_bhIXPGndjWgQ1FDQWrqmI-1699492353-0-AdtCtI4A9MJL7HNTV51tlyV/nXd/jR6ewJjLEbxTXtzvv5pNZJ/AcBybsdljMBmcKJ+MAD1bX9NwEjuW0k7E6F8=
+      User-Agent:
+      - OpenAI/v1 PythonBindings/0.28.1
+      X-OpenAI-Client-User-Agent:
+      - '{"bindings_version": "0.28.1", "httplib": "requests", "lang": "python", "lang_version":
+        "3.9.7", "platform": "macOS-10.16-x86_64-i386-64bit", "publisher": "openai",
+        "uname": "Darwin 22.4.0 Darwin Kernel Version 22.4.0: Mon Mar  6 21:00:17
+        PST 2023; root:xnu-8796.101.5~3/RELEASE_X86_64 x86_64"}'
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    body:
+      string: !!binary |
+        H4sIAAAAAAAAA1SQW08CQQyF3/dXNPMMBHZXhH0x3ghoNCSoMVFDxtkKg7PTzbYEE7L/3cxy05c+
+        9Os5Pe02AlA2Vxkos9RiitK1BxPPm5fRbDy4Wr0OzqfT2/vn8dPD7Hoc31nVCgr6XKGRg6pjqCgd
+        iiW/w6ZCLRhce/3hMB3GyVnagIJydEG2KKWdtrv9XrJXLMkaZJXBWwQAsG1qyOZz/FEZdFuHToHM
+        eoEqOw4BqIpc6CjNbFm0F9U6QUNe0Ddxbwgm4BFzEII1I2gQIncBj/TuR9ZrB5eeN1hlkIDYAhlS
+        sAy9uKP2hvUxyZf1lpfzCjWTD+4sVO7G6gjgo7ls/S+sKisqSpkLfaMP5ybddOenTk880TjeQyHR
+        7o8q7kdhSR39AgAA//8DAGQ+69zBAQAA
+    headers:
+      CF-Cache-Status:
+      - DYNAMIC
+      CF-RAY:
+      - 82323030ddb90182-GRU
+      Cache-Control:
+      - no-cache, must-revalidate
+      Connection:
+      - keep-alive
+      Content-Encoding:
+      - gzip
+      Content-Type:
+      - application/json
+      Date:
+      - Thu, 09 Nov 2023 01:12:36 GMT
+      Server:
+      - cloudflare
+      Transfer-Encoding:
+      - chunked
+      access-control-allow-origin:
+      - '*'
+      alt-svc:
+      - h3=":443"; ma=86400
+      openai-model:
+      - gpt-4-0613
+      openai-organization:
+      - clearbit-2
+      openai-processing-ms:
+      - '1128'
+      openai-version:
+      - '2020-10-01'
+      strict-transport-security:
+      - max-age=15724800; includeSubDomains
+      x-ratelimit-limit-requests:
+      - '100'
+      x-ratelimit-limit-tokens:
+      - '300000'
+      x-ratelimit-remaining-requests:
+      - '99'
+      x-ratelimit-remaining-tokens:
+      - '299685'
+      x-ratelimit-reset-requests:
+      - 600ms
+      x-ratelimit-reset-tokens:
+      - 62ms
+      x-request-id:
+      - 2edfda088d7c07b018426c91a4506903
+    status:
+      code: 200
+      message: OK
+- request:
+    body: '{"messages": [{"role": "user", "content": "Progressively summarize the
+      lines of conversation provided, adding onto the previous summary returning a
+      new summary.\n\nEXAMPLE\nCurrent summary:\nThe human asks what the AI thinks
+      of artificial intelligence. The AI thinks artificial intelligence is a force
+      for good.\n\nNew lines of conversation:\nHuman: Why do you think artificial
+      intelligence is a force for good?\nAI: Because artificial intelligence will
+      help humans reach their full potential.\n\nNew summary:\nThe human asks what
+      the AI thinks of artificial intelligence. The AI thinks artificial intelligence
+      is a force for good because it will help humans reach their full potential.\nEND
+      OF EXAMPLE\n\nCurrent summary:\n\n\nNew lines of conversation:\nHuman: What
+      is 3 times 4\nAI: 3 times 4 is 12.\n\nNew summary:"}], "model": "gpt-4", "max_tokens":
+      null, "stream": false, "n": 1, "temperature": 0.7}'
+    headers:
+      Accept:
+      - '*/*'
+      Accept-Encoding:
+      - gzip, deflate
+      Authorization:
+      - Bearer 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
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '905'
+      Content-Type:
+      - application/json
+      Cookie:
+      - __cf_bm=pggttVzpKyQR4nT.B1yq6_bhIXPGndjWgQ1FDQWrqmI-1699492353-0-AdtCtI4A9MJL7HNTV51tlyV/nXd/jR6ewJjLEbxTXtzvv5pNZJ/AcBybsdljMBmcKJ+MAD1bX9NwEjuW0k7E6F8=
+      User-Agent:
+      - OpenAI/v1 PythonBindings/0.28.1
+      X-OpenAI-Client-User-Agent:
+      - '{"bindings_version": "0.28.1", "httplib": "requests", "lang": "python", "lang_version":
+        "3.9.7", "platform": "macOS-10.16-x86_64-i386-64bit", "publisher": "openai",
+        "uname": "Darwin 22.4.0 Darwin Kernel Version 22.4.0: Mon Mar  6 21:00:17
+        PST 2023; root:xnu-8796.101.5~3/RELEASE_X86_64 x86_64"}'
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    body:
+      string: !!binary |
+        H4sIAAAAAAAAA1SQMW/CQAyF9/wK62ZAJEAE2TpUAqlSFzrQqkLXi0sO7s5R7EhFiP9eXQKkXTz4
+        e89+9iUBULZUBShTaTG+duPlJvDZro+Hrffr12x3fntpps/y3hrOd2oUHfR1RCN318SQrx2KpdBj
+        06AWjFPTfLWar7LZIu+ApxJdtB1qGc/H0zyd3RwVWYOsCvhIAAAuXY3ZQok/qoDp6N7xyKwPqIqH
+        CEA15GJHaWbLooOo0QANBcHQxd1WCFXrdQDNJwapEJ42IARGO9M6LQgzEOuRYT6BbY8b5JpCGeVa
+        Bg6WIc0m6rbo+kj4bYPlat+gZgpxKwvVveyaAHx2F7f/jlB1Q76WvdAJQ3xDulj089Tw3IFm+Q0K
+        iXZ/XMs0iUuuyS8AAAD//wMAmwGlztkBAAA=
+    headers:
+      CF-Cache-Status:
+      - DYNAMIC
+      CF-RAY:
+      - 8232303a294a0182-GRU
+      Cache-Control:
+      - no-cache, must-revalidate
+      Connection:
+      - keep-alive
+      Content-Encoding:
+      - gzip
+      Content-Type:
+      - application/json
+      Date:
+      - Thu, 09 Nov 2023 01:12:37 GMT
+      Server:
+      - cloudflare
+      Transfer-Encoding:
+      - chunked
+      access-control-allow-origin:
+      - '*'
+      alt-svc:
+      - h3=":443"; ma=86400
+      openai-model:
+      - gpt-4-0613
+      openai-organization:
+      - clearbit-2
+      openai-processing-ms:
+      - '1025'
+      openai-version:
+      - '2020-10-01'
+      strict-transport-security:
+      - max-age=15724800; includeSubDomains
+      x-ratelimit-limit-requests:
+      - '100'
+      x-ratelimit-limit-tokens:
+      - '300000'
+      x-ratelimit-remaining-requests:
+      - '99'
+      x-ratelimit-remaining-tokens:
+      - '299794'
+      x-ratelimit-reset-requests:
+      - 600ms
+      x-ratelimit-reset-tokens:
+      - 41ms
+      x-request-id:
+      - 8f752eda873d901ecec28888cdeb318d
+    status:
+      code: 200
+      message: OK
+version: 1

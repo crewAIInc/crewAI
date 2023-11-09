@@ -10,7 +10,6 @@ class Crew(BaseModel):
 	Class that represents a group of agents, how they should work together and
 	their tasks.
 	"""
-	goal: str = Field(description="Objective of the crew being created.")
 	tasks: List[Task] = Field(description="List of tasks")
 	agents: List[Agent] = Field(description="List of agents in this crew.")
 	process: Process = Field(

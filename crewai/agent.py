@@ -30,8 +30,8 @@ class Agent(BaseModel):
 		description="LLM that will run the agent", 
 		default=OpenAI(
 			temperature=0.7,
-			model="gpt-4",
-			verbose=True
+			model_name="gpt-4",
+			verbose=False
 		)
 	)
 
@@ -61,7 +61,7 @@ class Agent(BaseModel):
 			agent=inner_agent,
 			tools=self.tools,
 			memory=memory,
-			verbose=True,
+			verbose=False,
 			handle_parsing_errors=True
 		)
 
@@ -80,6 +80,7 @@ class Agent(BaseModel):
 				context
 			])
 
+		print(f"Executing task: {task}")
 		return self.agent_executor.invoke({
 			"input": task,
 			"tool_names": self.__tools_names(),
