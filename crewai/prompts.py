@@ -18,9 +18,6 @@ class Prompts(BaseModel):
 	MEMORY_SLICE: ClassVar[str] = dedent("""\
 		This is the summary of your work so far:
         {chat_history}
-
-        This is your understanding of the current situation:
-        {entities}
 	""")
 
 	ROLE_PLAYING_SLICE: ClassVar[str] = dedent("""\
