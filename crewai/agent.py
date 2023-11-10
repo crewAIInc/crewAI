@@ -8,11 +8,7 @@ from langchain.chat_models import ChatOpenAI as OpenAI
 from langchain.tools.render import render_text_description
 from langchain.agents.format_scratchpad import format_log_to_str
 from langchain.agents.output_parsers import ReActSingleInputOutputParser
-from langchain.memory import (
-  ConversationSummaryMemory,
-  ConversationEntityMemory,
-  CombinedMemory
-)
+from langchain.memory import ConversationSummaryMemory
 
 from .prompts import Prompts
 
@@ -22,6 +18,10 @@ class Agent(BaseModel):
 	role: str = Field(description="Role of the agent")
 	goal: str = Field(description="Objective of the agent")
 	backstory: str = Field(description="Backstory of the agent")
+	allow_delegation: bool = Field(
+		description="Allow delegation of tasks to agents",
+		default=True
+	)
 	tools: List[Any] = Field(
 		description="Tools at agents disposal",
 		default=[]
@@ -30,8 +30,7 @@ class Agent(BaseModel):
 		description="LLM that will run the agent", 
 		default=OpenAI(
 			temperature=0.7,
-			model_name="gpt-4",
-			verbose=False
+			model_name="gpt-4"
 		)
 	)
 
@@ -47,25 +46,25 @@ class Agent(BaseModel):
 		inner_agent = {
 			"input": lambda x: x["input"],
 			"tools": lambda x: x["tools"],
-			"entities": lambda x: x["entities"],
 			"tool_names": lambda x: x["tool_names"],
 			"chat_history": lambda x: x["chat_history"],
 			"agent_scratchpad": lambda x: format_log_to_str(x['intermediate_steps']),
 		} | execution_prompt | llm_with_bind | ReActSingleInputOutputParser()
 
-		summary_memory = ConversationSummaryMemory(llm=self.llm, memory_key='chat_history', input_key="input")
-		entity_memory = ConversationEntityMemory(llm=self.llm, input_key="input")
-		memory = CombinedMemory(memories=[entity_memory, summary_memory])
+		summary_memory = ConversationSummaryMemory(
+			llm=self.llm,
+			memory_key='chat_history',
+			input_key="input"
+		)
 
 		self.agent_executor = AgentExecutor(
 			agent=inner_agent,
 			tools=self.tools,
-			memory=memory,
-			verbose=False,
+			memory=summary_memory,
 			handle_parsing_errors=True
 		)
 
-	def execute_task(self, task: str, context: str = None) -> str:
+	def execute_task(self, task: str, context: str = None, tools: List[Any] = None) -> str:
 		"""
 		Execute a task with the agent.
 			Parameters:
@@ -80,12 +79,13 @@ class Agent(BaseModel):
 				context
 			])
 
-		print(f"Executing task: {task}")
+		tools = tools or self.tools
+		self.agent_executor.tools = tools
 		return self.agent_executor.invoke({
 			"input": task,
-			"tool_names": self.__tools_names(),
-			"tools": render_text_description(self.tools),
+			"tool_names": self.__tools_names(tools),
+			"tools": render_text_description(tools),
 		})['output']
 
-	def __tools_names(self) -> str:
-		return ", ".join([t.name for t in self.tools])
+	def __tools_names(self, tools) -> str:
+		return ", ".join([t.name for t in tools])
