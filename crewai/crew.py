@@ -4,6 +4,7 @@ from pydantic.v1 import BaseModel, Field
 from .process import Process
 from .agent import Agent
 from .task import Task
+from .tools.agent_tools import AgentTools
 
 class Crew(BaseModel):
 	"""
@@ -35,6 +36,10 @@ class Crew(BaseModel):
 		"""
 		task_outcome = None
 		for task in self.tasks:
+			# Add delegation tools to the task if the agent allows it
+			if task.agent.allow_delegation:
+				tools = AgentTools(agents=self.agents).tools()
+				task.tools += tools
 			task_outcome = task.execute(task_outcome)
 		
 		return task_outcome

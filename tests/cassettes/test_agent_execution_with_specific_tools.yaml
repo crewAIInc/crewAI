@@ -29,8 +29,6 @@ interactions:
       - '1217'
       Content-Type:
       - application/json
-      Cookie:
-      - __cf_bm=gkc3fZTvDPQQcvL6AsOb5ZabV_BJygyXmsJKgi0mtCU-1699493210-0-AWKdSYb5U/QGRawJ4wWK6DvEWiy6+l7vXFmP3RnnSvAVR+kc3AFmDrcnMowxNcJdOH8DqFD/H8jQAb6ZfMNSE3E=
       User-Agent:
       - OpenAI/v1 PythonBindings/0.28.1
       X-OpenAI-Client-User-Agent:
@@ -43,17 +41,17 @@ interactions:
   response:
     body:
       string: !!binary |
-        H4sIAAAAAAAAA1RQTUvDQBC951cMe06lTWJo9iKlglQEL2IRLWW7GZvVzc6SnYBS+t9l008vc3hv
-        3rz3ZpcACFMLCUI3inXr7Wi6oLJ9yuduWWavv3OznD0/Fo3ql25TP4g0KmjzhZpPqhtNrbfIhtyB
-        1h0qxnh1UlZVUeXZJBuIlmq0Ubb1PCpG43KSHxUNGY1BSHhPAAB2w4zZXI0/QsI4PSEthqC2KOR5
-        CUB0ZCMiVAgmsHIs0gupyTG6Ie5LQ/22YQn3BAtwiDUwQR8QFDCRvYM3DB9upmMZCW1v2XhrsDth
-        sHC+Zwl5Woijw/4c7dM4E5p1hyqQi3aByR/W9gnAaqja/0svfEet5zXTN7rYP7utDvfE5atXbH4k
-        mVjZK3yaJdFkn/wBAAD//wMAU+pOotIBAAA=
+        H4sIAAAAAAAAA1RQy2rDMBC8+ysWnZ1SN66JfSmBQHEOSaFpIW1KUORtrFbWCmsNgZB/L3Kevexh
+        ZmdnZvcRgNCVKECoWrJqnBmMpq9Juix3i810+TEr1aae5W8vz+P5/H3SijgoaPODis+qO0WNM8ia
+        7JFWLUrGcDXJ8jxLsywZ9URDFZog2zoepIP7LBmeFDVphV4U8BkBAOz7GbLZCneigPv4jDTovdyi
+        KC5LAKIlExAhvdeepWURX0lFltH2cRc1dduaC5gQlGARK2CCziNIYCLzBEv0KztWoUwBTWdYO6Ox
+        PWNQWtdxAcM4XVlx8jhcwn1rq329blF6ssHQM7nj2iEC+OrLdv/yC9dS43jN9Is2fODhMT/eE9e/
+        3rDpiWRiaW7w0TAKJofoDwAA//8DAHj9RNPUAQAA
     headers:
       CF-Cache-Status:
       - DYNAMIC
       CF-RAY:
-      - 823245216f2f520b-GRU
+      - 8240e667dda81d40-GIG
       Cache-Control:
       - no-cache, must-revalidate
       Connection:
@@ -63,9 +61,13 @@ interactions:
       Content-Type:
       - application/json
       Date:
-      - Thu, 09 Nov 2023 01:26:53 GMT
+      - Fri, 10 Nov 2023 20:03:40 GMT
       Server:
       - cloudflare
+      Set-Cookie:
+      - __cf_bm=qYjHtObHmnuj7bUr95x9cwbTcVmcUYOIypCLBKdVYs4-1699646620-0-AQeu11iFH6nTGNmgj6ZfcaJImCKZh6t5u20SP71vsQESEAE6zlxJ6ZkKJQmIkv3sR37LF/PKPhzLydE3f+srokY=;
+        path=/; expires=Fri, 10-Nov-23 20:33:40 GMT; domain=.api.openai.com; HttpOnly;
+        Secure; SameSite=None
       Transfer-Encoding:
       - chunked
       access-control-allow-origin:
@@ -77,25 +79,25 @@ interactions:
       openai-organization:
       - clearbit-2
       openai-processing-ms:
-      - '1105'
+      - '1274'
       openai-version:
       - '2020-10-01'
       strict-transport-security:
       - max-age=15724800; includeSubDomains
       x-ratelimit-limit-requests:
-      - '100'
+      - '10000'
       x-ratelimit-limit-tokens:
       - '300000'
       x-ratelimit-remaining-requests:
-      - '99'
+      - '9999'
       x-ratelimit-remaining-tokens:
       - '299729'
       x-ratelimit-reset-requests:
-      - 600ms
+      - 6ms
       x-ratelimit-reset-tokens:
       - 54ms
       x-request-id:
-      - 951ac7b6b78d0178415f15e6576c49e6
+      - dc4e4c53dc93ab456ba5f5f66282131f
     status:
       code: 200
       message: OK
@@ -114,9 +116,9 @@ interactions:
       Do I need to use a tool? No\nFinal Answer: [your response here]\n```\n\t\tThis
       is the summary of your work so far:\n        \nBegin! This is VERY important
       to you, your job depends on it!\n\nCurrent Task: What is 3 times 4\nThought:
-      Do I need to use a tool? Yes\nAction: multiplier\nAction Input: 3,4\nObservation:
-      12\nThought: \n"}], "model": "gpt-4", "max_tokens": null, "stream": false, "n":
-      1, "temperature": 0.7, "stop": ["\nObservation"]}'
+      Do I need to use a tool? Yes\nAction: multiplier\nAction Input: 3,4\n\nObservation:
+      multiplier is not a valid tool, try one of [].\nThought: \n"}], "model": "gpt-4",
+      "max_tokens": null, "stream": false, "n": 1, "temperature": 0.7, "stop": ["\nObservation"]}'
     headers:
       Accept:
       - '*/*'
@@ -127,11 +129,11 @@ interactions:
       Connection:
       - keep-alive
       Content-Length:
-      - '1321'
+      - '1367'
       Content-Type:
       - application/json
       Cookie:
-      - __cf_bm=gkc3fZTvDPQQcvL6AsOb5ZabV_BJygyXmsJKgi0mtCU-1699493210-0-AWKdSYb5U/QGRawJ4wWK6DvEWiy6+l7vXFmP3RnnSvAVR+kc3AFmDrcnMowxNcJdOH8DqFD/H8jQAb6ZfMNSE3E=
+      - __cf_bm=qYjHtObHmnuj7bUr95x9cwbTcVmcUYOIypCLBKdVYs4-1699646620-0-AQeu11iFH6nTGNmgj6ZfcaJImCKZh6t5u20SP71vsQESEAE6zlxJ6ZkKJQmIkv3sR37LF/PKPhzLydE3f+srokY=
       User-Agent:
       - OpenAI/v1 PythonBindings/0.28.1
       X-OpenAI-Client-User-Agent:
@@ -144,17 +146,19 @@ interactions:
   response:
     body:
       string: !!binary |
-        H4sIAAAAAAAAA1SQS0/DQAyE7/kV1p5b1DwUSC6oqKpUIXHgCqhaNibdNrFD7NJKVf872vQFlz3M
-        55kd+xABGF+ZEoxbWXVt14wfFpyT/DzNdt9I06zevM6f11b32/t57c0oOPhzjU4vrjvHbdegeqYT
-        dj1axZAa50WRFWkSpwNoucIm2OpOx9l4ksfp2bFi71BMCW8RAMBheEM3qnBvSpiMLkqLIrZGU16H
-        AEzPTVCMFfGiltSMbtAxKdJQd8awAEKsQBm2gmBBmZtHeOF3mnuyDUxJdtiXkIL6FgUy8AJxYs55
-        x2uRL09eVsserTCFcFHuTmPHCOBjWGz7r6vpem47XSpvkMK2SZGc8szthn9ofIbKapubnsZpFD45
-        Rr8AAAD//wMAIwC1ssABAAA=
+        H4sIAAAAAAAAA1SRS2/bMBCE7/oVA15ysQ3LsoVGlyJAUMQ9pK8UPTRBQElbizEfKncVpw383wvK
+        TtxcCHBnvuVw9zkDlGlVBdV0WhrX2+m7j9/y8lNx+bD6emWK1bWtzffVzfbvj4vPX+ZqkohQP1Aj
+        L9SsCa63JCb4g9xE0kKpa16en5fLslzMR8GFlmzCNr1Ml9N5mRdHogumIVYVfmYA8DyeKZtv6UlV
+        GPmx4ohZb0hVryZAxWBTRWlmw6K9qMlJbIIX8mPcm44igYkcQwJqgoZLxJZmWGOnGfTUUyPGb5Jh
+        4OSQEGy6ucGK6e0fSEfwg6sp8gT1IDAC3fekIyct0hlDe1CMIUL7dgTGLob9mUA/amN1bWmGq7Cj
+        R4oTrLH1YQfptKCAGEeMJej3oC0jX8xu/WXAGp6ofZvsPa7Drf9gvLa48LyjWCFfqOP/96+D+2W8
+        4e4+kubg0zBYQn+w7TPgblzE8Ga2qo/B9XIvYUs+baeY54d+6rTzk1oujqIE0fY/qiyy9Mg++wcA
+        AP//AwAOHyo+cAIAAA==
     headers:
       CF-Cache-Status:
       - DYNAMIC
       CF-RAY:
-      - 8232452a2e6e520b-GRU
+      - 8240e671495c1d40-GIG
       Cache-Control:
       - no-cache, must-revalidate
       Connection:
@@ -164,7 +168,7 @@ interactions:
       Content-Type:
       - application/json
       Date:
-      - Thu, 09 Nov 2023 01:26:55 GMT
+      - Fri, 10 Nov 2023 20:03:44 GMT
       Server:
       - cloudflare
       Transfer-Encoding:
@@ -178,25 +182,25 @@ interactions:
       openai-organization:
       - clearbit-2
       openai-processing-ms:
-      - '1095'
+      - '3513'
       openai-version:
       - '2020-10-01'
       strict-transport-security:
       - max-age=15724800; includeSubDomains
       x-ratelimit-limit-requests:
-      - '100'
+      - '10000'
       x-ratelimit-limit-tokens:
       - '300000'
       x-ratelimit-remaining-requests:
-      - '99'
+      - '9999'
       x-ratelimit-remaining-tokens:
-      - '299704'
+      - '299693'
       x-ratelimit-reset-requests:
-      - 600ms
+      - 6ms
       x-ratelimit-reset-tokens:
-      - 59ms
+      - 61ms
       x-request-id:
-      - aa5df5b29842f6d68339b5c4887eeecc
+      - 4a2658b98a181b090c362f6ce027ab4b
     status:
       code: 200
       message: OK
@@ -211,8 +215,8 @@ interactions:
       the AI thinks of artificial intelligence. The AI thinks artificial intelligence
       is a force for good because it will help humans reach their full potential.\nEND
       OF EXAMPLE\n\nCurrent summary:\n\n\nNew lines of conversation:\nHuman: What
-      is 3 times 4\nAI: 3 times 4 is 12\n\nNew summary:"}], "model": "gpt-4", "max_tokens":
-      null, "stream": false, "n": 1, "temperature": 0.7}'
+      is 3 times 4\nAI: 12\n\nNew summary:"}], "model": "gpt-4", "max_tokens": null,
+      "stream": false, "n": 1, "temperature": 0.7}'
     headers:
       Accept:
       - '*/*'
@@ -223,11 +227,11 @@ interactions:
       Connection:
       - keep-alive
       Content-Length:
-      - '904'
+      - '891'
       Content-Type:
       - application/json
       Cookie:
-      - __cf_bm=gkc3fZTvDPQQcvL6AsOb5ZabV_BJygyXmsJKgi0mtCU-1699493210-0-AWKdSYb5U/QGRawJ4wWK6DvEWiy6+l7vXFmP3RnnSvAVR+kc3AFmDrcnMowxNcJdOH8DqFD/H8jQAb6ZfMNSE3E=
+      - __cf_bm=qYjHtObHmnuj7bUr95x9cwbTcVmcUYOIypCLBKdVYs4-1699646620-0-AQeu11iFH6nTGNmgj6ZfcaJImCKZh6t5u20SP71vsQESEAE6zlxJ6ZkKJQmIkv3sR37LF/PKPhzLydE3f+srokY=
       User-Agent:
       - OpenAI/v1 PythonBindings/0.28.1
       X-OpenAI-Client-User-Agent:
@@ -240,17 +244,17 @@ interactions:
   response:
     body:
       string: !!binary |
-        H4sIAAAAAAAAA1SQu27DMAxFd38FodkJYuftrR1aZAzarSgCRWZsNbIomHQfCPLvhZyH24UD7z3k
-        JU8JgLKlKkCZWotpghutNrQIj9q9PG+PT9uKpeoO9udrv/zMNlalkaD9Bxq5UWNDTXAolvxFNi1q
-        wTg1W6zXs/U0z+a90FCJLmJVkNFsNFlk0ytRkzXIqoC3BADg1NeYzZf4rQqYpLdOg8y6QlXcTQCq
-        JRc7SjNbFu1FpYNoyAv6Pu5rjVB3jfag+cggNcLDBoTAaGc6pwVhCmIbZJiloH15s7TIgXwZES2D
-        ByxDlo/Vddn5nvJgveV616Jm8nEzC4WL7ZwAvPdXd/8OUaGlJshO6Ig+viKbzy/z1PDgQc2XV1FI
-        tPtDrfIkLjknvwAAAP//AwC2/4B/3QEAAA==
+        H4sIAAAAAAAAA1SQT0/DMAzF7/0UVs7dtG6lsN4GCI0dJiQQEkJoylKzhjZxlHgaY9p3R+n+wcWH
+        9/Ozn71LAISuRAlC1ZKVcW3vZvacTWY/d3PVIMm3e5y+TR/o9nXerPhJpNFByy9UfHL1FRnXImuy
+        B6w8SsY4NSvG4yIvimHeAUMVttG2ctzLe4MiGx0dNWmFQZTwngAA7Loas9kKv0UJg/SkGAxBrlCU
+        5yYA4amNipAh6MDSskgvUJFltF3clxqhXhtpQYYmANcIk0dgArNuWbt2CyNYbiFPQdrqhD0GR7YK
+        sNFcd6Ii71ExSBs26FPIhn1x3Lc/B/3UVod64VEGsnF5YHKHtn0C8NEdvv53i3CejOMFU4M2fiPL
+        x4d54vLjCx1eHSETy/aP6zpP4pJ98gsAAP//AwA0pTz34AEAAA==
     headers:
       CF-Cache-Status:
       - DYNAMIC
       CF-RAY:
-      - 823245332d7b520b-GRU
+      - 8240e688ca6e1d40-GIG
       Cache-Control:
       - no-cache, must-revalidate
       Connection:
@@ -260,7 +264,7 @@ interactions:
       Content-Type:
       - application/json
       Date:
-      - Thu, 09 Nov 2023 01:26:56 GMT
+      - Fri, 10 Nov 2023 20:03:45 GMT
       Server:
       - cloudflare
       Transfer-Encoding:
@@ -274,25 +278,25 @@ interactions:
       openai-organization:
       - clearbit-2
       openai-processing-ms:
-      - '1275'
+      - '1515'
       openai-version:
       - '2020-10-01'
       strict-transport-security:
       - max-age=15724800; includeSubDomains
       x-ratelimit-limit-requests:
-      - '100'
+      - '10000'
       x-ratelimit-limit-tokens:
       - '300000'
       x-ratelimit-remaining-requests:
-      - '99'
+      - '9999'
       x-ratelimit-remaining-tokens:
-      - '299794'
+      - '299797'
       x-ratelimit-reset-requests:
-      - 600ms
+      - 6ms
       x-ratelimit-reset-tokens:
-      - 41ms
+      - 40ms
       x-request-id:
-      - ac804646da74e95835f869ebd5313225
+      - 76574b94ab5a1c54d1ac4d372a830eb9
     status:
       code: 200
       message: OK
