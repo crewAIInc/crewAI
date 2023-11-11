@@ -2,5 +2,5 @@
 .pytest_cache
 __pycache__
 dist/
-tests/cassettes/*
-tests/agent_tools/cassettes/*
+*/**/cassettes/*
+.env
