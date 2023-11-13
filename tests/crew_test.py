@@ -63,6 +63,32 @@ def test_crew_config_conditional_requirement():
 	assert [agent.role for agent in crew.agents] == [agent['role'] for agent in parsed_config['agents']]
 	assert [task.description for task in crew.tasks] == [task['description'] for task in parsed_config['tasks']]
 
+def test_crew_config_with_wrong_keys():
+	no_tasks_config = json.dumps({
+		"agents": [
+			{
+				"role": "Senior Researcher",
+				"goal": "Make the best research and analysis on content about AI and AI agents",
+				"backstory": "You're an expert researcher, specialized in technology, software engineering, AI and startups. You work as a freelancer and is now working on doing research and analysis for a new customer."
+			}
+		]
+	})
+
+	no_agents_config = json.dumps({
+		"tasks": [
+			{
+				"description": "Give me a list of 5 interesting ideas to explore for na article, what makes them unique and interesting.",
+				"agent": "Senior Researcher"
+			}
+		]		
+	})
+	with pytest.raises(ValueError):
+		Crew(process=Process.sequential, config='{"wrong_key": "wrong_value"}')
+	with pytest.raises(ValueError):
+		Crew(process=Process.sequential, config=no_tasks_config)
+	with pytest.raises(ValueError):
+		Crew(process=Process.sequential, config=no_agents_config)
+
 @pytest.mark.vcr()
 def test_crew_creation():
 	tasks = [

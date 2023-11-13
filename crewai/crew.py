@@ -32,7 +32,7 @@ class Crew(BaseModel):
 		
 		if values.get('config'):
 			config = json.loads(values.get('config'))
-			if not config['agents'] or not config['tasks']:
+			if not config.get('agents') or not config.get('tasks'):
 				raise ValueError('Config should have agents and tasks.')
 			
 			values['agents'] = [Agent(**agent) for agent in config['agents']]
