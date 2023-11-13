@@ -1,24 +1,70 @@
 """Test Agent creation and execution basic functionality."""
 
+import json
 import pytest
 from ..crewai import Agent, Crew, Task, Process
 
+ceo = Agent(
+	role="CEO",
+	goal="Make sure the writers in your company produce amazing content.",
+	backstory="You're an long time CEO of a content creation agency with a Senior Writer on the team. You're now working on a new project and want to make sure the content produced is amazing.",
+	allow_delegation=True
+)
+
+researcher = Agent(
+	role="Researcher",
+	goal="Make the best research and analysis on content about AI and AI agents",
+	backstory="You're an expert researcher, specialized in technology, software engineering, AI and startups. You work as a freelancer and is now working on doing research and analysis for a new customer.",
+	allow_delegation=False
+)
+
+writer = Agent(
+	role="Senior Writer",
+	goal="Write the best content about AI and AI agents.",
+	backstory="You're a senior writer, specialized in technology, software engineering, AI and startups. You work as a freelancer and are now working on writing content for a new customer.",
+	allow_delegation=False
+)
+
+def test_crew_config_conditional_requirement():
+	with pytest.raises(ValueError):
+		Crew(process=Process.sequential)
+	
+	config = json.dumps({
+		"agents": [
+			{
+				"role": "Senior Researcher",
+				"goal": "Make the best research and analysis on content about AI and AI agents",
+				"backstory": "You're an expert researcher, specialized in technology, software engineering, AI and startups. You work as a freelancer and is now working on doing research and analysis for a new customer."
+			},
+			{
+				"role": "Senior Writer",
+				"goal": "Write the best content about AI and AI agents.",
+				"backstory": "You're a senior writer, specialized in technology, software engineering, AI and startups. You work as a freelancer and are now working on writing content for a new customer."
+			}
+		],
+		"tasks": [
+			{
+				"description": "Give me a list of 5 interesting ideas to explore for na article, what makes them unique and interesting.",
+				"agent": "Senior Researcher"
+			},
+			{
+				"description": "Write a 1 amazing paragraph highlight for each idead that showcases how good an article about this topic could be, check references if necessary or search for more content but make sure it's unique, interesting and well written. Return the list of ideas with their paragraph and your notes.",
+				"agent": "Senior Writer"
+			}
+		]		
+	})
+	parsed_config = json.loads(config)
+
+	try:
+			crew = Crew(process=Process.sequential, config=config)			
+	except ValueError:
+			pytest.fail("Unexpected ValidationError raised")
+	
+	assert [agent.role for agent in crew.agents] == [agent['role'] for agent in parsed_config['agents']]
+	assert [task.description for task in crew.tasks] == [task['description'] for task in parsed_config['tasks']]
+
 @pytest.mark.vcr()
 def test_crew_creation():
-	researcher = Agent(
-		role="Researcher",
-		goal="Make the best research and analysis on content about AI and AI agents",
-		backstory="You're an expert researcher, specialized in technology, software engineering, AI and startups. You work as a freelancer and is now working on doing research and analysis for a new customer.",
-		allow_delegation=False
-	)
-
-	writer = Agent(
-		role="Senior Writer",
-		goal="Write the best content about AI and AI agents.",
-		backstory="You're a senior writer, specialized in technology, software engineering, AI and startups. You work as a freelancer and are now working on writing content for a new customer.",
-		allow_delegation=False
-	)
-
 	tasks = [
 		Task(
 			description="Give me a list of 5 interesting ideas to explore for na article, what makes them unique and interesting.",
@@ -48,20 +94,6 @@ def test_crew_creation():
 
 @pytest.mark.vcr()
 def test_crew_with_delegating_agents():
-	ceo = Agent(
-		role="CEO",
-		goal="Make sure the writers in your company produce amazing content.",
-		backstory="You're an long time CEO of a content creation agency with a Senior Writer on the team. You're now working on a new project and want to make sure the content produced is amazing.",
-		allow_delegation=True
-	)
-
-	writer = Agent(
-		role="Senior Writer",
-		goal="Write the best content about AI and AI agents.",
-		backstory="You're a senior writr, specialized in technology, software engineering, AI and startups. You work as a freelancer and are now working on writing content for a new customer.",
-		allow_delegation=False
-	)
-
 	tasks = [
 		Task(
 			description="Produce and amazing 1 paragraph draft of an article about AI Agents.",

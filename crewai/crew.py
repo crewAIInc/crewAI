@@ -1,5 +1,6 @@
-from typing import List, Any
-from pydantic.v1 import BaseModel, Field
+import json
+from typing import List, Optional
+from pydantic.v1 import BaseModel, Field, Json, root_validator
 
 from .process import Process
 from .agent import Agent
@@ -11,12 +12,39 @@ class Crew(BaseModel):
 	Class that represents a group of agents, how they should work together and
 	their tasks.
 	"""
-	tasks: List[Task] = Field(description="List of tasks")
-	agents: List[Agent] = Field(description="List of agents in this crew.")
+	config: Optional[Json] = Field(description="Configuration of the crew.")
+	tasks: Optional[List[Task]] = Field(description="List of tasks")
+	agents: Optional[List[Agent]] = Field(description="List of agents in this crew.")
 	process: Process = Field(
 		description="Process that the crew will follow.",
 		default=Process.sequential
 	)
+
+	@root_validator(pre=True)
+	def check_config(_cls, values):
+		if (
+			not values.get('config') 
+			and (
+				not values.get('agents') and not values.get('tasks')
+			)
+		):
+			raise ValueError('Either agents and task need to be set or config.')
+		
+		if values.get('config'):
+			config = json.loads(values.get('config'))
+			if not config['agents'] or not config['tasks']:
+				raise ValueError('Config should have agents and tasks.')
+			
+			values['agents'] = [Agent(**agent) for agent in config['agents']]
+			
+			tasks = []
+			for task in config['tasks']:
+				task_agent = [agt for agt in values['agents'] if agt.role == task['agent']][0]
+				del task['agent']
+				tasks.append(Task(**task, agent=task_agent))
+			
+			values['tasks'] = tasks
+		return values
 
 	def kickoff(self) -> str:
 		"""
