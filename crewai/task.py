@@ -21,7 +21,7 @@ class Task(BaseModel):
 	)
 
 	@root_validator(pre=False)
-	def _set_tools(cls, values):
+	def _set_tools(_cls, values):
 		if (values.get('agent')) and not (values.get('tools')):
 			values['tools'] = values.get('agent').tools
 		return values

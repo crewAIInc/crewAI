@@ -1,7 +1,7 @@
 """Generic agent."""
 
-from typing import List, Any
-from pydantic.v1 import BaseModel, Field 
+from typing import List, Any, Optional
+from pydantic.v1 import BaseModel, Field, root_validator
 
 from langchain.agents import AgentExecutor
 from langchain.chat_models import ChatOpenAI as OpenAI
@@ -18,6 +18,11 @@ class Agent(BaseModel):
 	role: str = Field(description="Role of the agent")
 	goal: str = Field(description="Objective of the agent")
 	backstory: str = Field(description="Backstory of the agent")
+	llm: Optional[OpenAI] = Field(description="LLM that will run the agent")
+	verbose: bool = Field(
+		description="Verbose mode for the Agent Execution",
+		default=False
+	)
 	allow_delegation: bool = Field(
 		description="Allow delegation of tasks to agents",
 		default=True
@@ -26,13 +31,15 @@ class Agent(BaseModel):
 		description="Tools at agents disposal",
 		default=[]
 	)
-	llm: OpenAI = Field(
-		description="LLM that will run the agent", 
-		default=OpenAI(
-			temperature=0.7,
-			model_name="gpt-4"
-		)
-	)
+
+	@root_validator(pre=True)
+	def check_llm(_cls, values):
+		if not values.get('llm'):
+			values['llm'] = OpenAI(
+				temperature=0.7,
+				model_name="gpt-4"
+			)
+		return values
 
 	def __init__(self, **data):
 		super().__init__(**data)
@@ -61,7 +68,8 @@ class Agent(BaseModel):
 			agent=inner_agent,
 			tools=self.tools,
 			memory=summary_memory,
-			handle_parsing_errors=True
+			verbose=self.verbose,
+			handle_parsing_errors=True,
 		)
 
 	def execute_task(self, task: str, context: str = None, tools: List[Any] = None) -> str:
