@@ -5,7 +5,7 @@
 ## Why CrewAI?
 
 The power of AI collaboration has too much to offer.
-CrewAI is designed to bridge to enable AI agents to assume roles, share goals, and operate in a cohesive unit - much like a well-oiled crew. Whether you're building a smart assistant platform, an automated customer service ensemble, or a multi-agent research team, CrewAI provides the backbone for sophisticated multi-agent interactions.
+CrewAI is designed to enable AI agents to assume roles, share goals, and operate in a cohesive unit - much like a well-oiled crew. Whether you're building a smart assistant platform, an automated customer service ensemble, or a multi-agent research team, CrewAI provides the backbone for sophisticated multi-agent interactions.
 
 ## Getting Started
 
@@ -23,8 +23,16 @@ pip install crewai
 from crewai import Agent, Task, Crew, Process
 
 # Define your agents with roles and goals
-researcher = Agent(role='Researcher', goal='Discover new insights')
-writer = Agent(role='Writer', goal='Create engaging content')
+researcher = Agent(
+  role='Researcher',
+  goal='Discover new insights',
+  backstory="You're a world cvlass researcher working on a amjor data science company"
+)
+writer = Agent(
+  role='Writer',
+  goal='Create engaging content',
+  backstory="You're a famous technical writer, specialized on writing data related content"
+)
 
 # Create tasks for your agents
 task1 = Task(description='Investigate the latest AI trends', agent=researcher)
