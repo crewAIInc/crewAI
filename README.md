@@ -26,12 +26,14 @@ from crewai import Agent, Task, Crew, Process
 researcher = Agent(
   role='Researcher',
   goal='Discover new insights',
-  backstory="You're a world cvlass researcher working on a amjor data science company"
+  backstory="You're a world class researcher working on a amjor data science company",
+  verbose=True
 )
 writer = Agent(
   role='Writer',
   goal='Create engaging content',
   backstory="You're a famous technical writer, specialized on writing data related content"
+  verbose=True
 )
 
 # Create tasks for your agents
