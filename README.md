@@ -69,5 +69,33 @@ CrewAI is open-source and we welcome contributions. If you're looking to contrib
 - Send a pull request.
 - We appreciate your input!
 
+### Installing Dependencies
+```bash
+poetry lock
+poetry install
+```
+
+### Virtual Env
+```bash
+poetry shell
+```
+
+### Running Tests
+```bash
+poetry run pytest
+```
+
+### Packaging
+```bash
+poetry build
+```
+
+### Installing Locally
+```bash
+pip install dist/*.tar.gz
+```
+
 ## License
 CrewAI is released under the MIT License
+
+
