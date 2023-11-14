@@ -7,6 +7,8 @@
 The power of AI collaboration has too much to offer.
 CrewAI is designed to enable AI agents to assume roles, share goals, and operate in a cohesive unit - much like a well-oiled crew. Whether you're building a smart assistant platform, an automated customer service ensemble, or a multi-agent research team, CrewAI provides the backbone for sophisticated multi-agent interactions.
 
+[Documention Wiki](https://github.com/joaomdmoura/CrewAI/wiki)
+
 ## Getting Started
 
 To get started with CrewAI, follow these simple steps:
@@ -44,12 +46,14 @@ task2 = Task(description='Write a blog post on AI advancements', agent=writer)
 crew = Crew(
   agents=[researcher, writer],
   tasks=[task1, task2],
-  process=Process.sequential
+  process=Process.sequential # Sequential process will have tasks executed one after the other and the outcome of the previous one is passed as extra content into this next.
 )
 
 # Get your crew to work!
 crew.kickoff()
 ```
+
+Currently the only supported process is `Process.sequential`, where one task is executed after the other and the outcome of one is passed as extra content into this next.
 
 ## Key Features
 
