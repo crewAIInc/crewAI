@@ -19,6 +19,10 @@ class Crew(BaseModel):
 		description="Process that the crew will follow.",
 		default=Process.sequential
 	)
+	verbose: bool = Field(
+		description="Verbose mode for the Agent Execution",
+		default=False
+	)
 
 	@root_validator(pre=True)
 	def check_config(_cls, values):
@@ -54,7 +58,6 @@ class Crew(BaseModel):
 		"""
 		if self.process == Process.sequential:
 			return self.__sequential_loop()
-		return "Crew is executing task"
 
 	def __sequential_loop(self) -> str:
 		"""
@@ -68,6 +71,14 @@ class Crew(BaseModel):
 			if task.agent.allow_delegation:
 				tools = AgentTools(agents=self.agents).tools()
 				task.tools += tools
+
+			if self.verbose:
+				print(f"Working Agent: {task.agent.role}")
+				print(f"Starting Task: {task.description} ...")
+
 			task_outcome = task.execute(task_outcome)
+
+			if self.verbose:	
+				print(f"Task output: {task_outcome}")
 		
 		return task_outcome
