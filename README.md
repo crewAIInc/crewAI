@@ -50,7 +50,7 @@ crew = Crew(
 )
 
 # Get your crew to work!
-crew.kickoff()
+result = crew.kickoff()
 ```
 
 Currently the only supported process is `Process.sequential`, where one task is executed after the other and the outcome of one is passed as extra content into this next.
