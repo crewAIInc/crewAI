@@ -7,6 +7,7 @@
 The power of AI collaboration has too much to offer.
 CrewAI is designed to enable AI agents to assume roles, share goals, and operate in a cohesive unit - much like a well-oiled crew. Whether you're building a smart assistant platform, an automated customer service ensemble, or a multi-agent research team, CrewAI provides the backbone for sophisticated multi-agent interactions.
 
+[Talk with the Docs](https://chat.openai.com/g/g-qqTuUWsBY-crewai-assistant)
 [Documention Wiki](https://github.com/joaomdmoura/CrewAI/wiki)
 
 ## Getting Started
