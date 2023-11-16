@@ -29,8 +29,8 @@ from crewai import Agent, Task, Crew, Process
 researcher = Agent(
   role='Researcher',
   goal='Discover new insights',
-  backstory="You're a world class researcher working on a amjor data science company",
-  verbose=True # Agent verbose mode will show you the chain of thought for an Agent.
+  backstory="You're a world class researcher working on a major data science company",
+  verbose=True
 )
 writer = Agent(
   role='Writer',
