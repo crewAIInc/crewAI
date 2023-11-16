@@ -28,7 +28,7 @@ from crewai import Agent, Task, Crew, Process
 researcher = Agent(
   role='Researcher',
   goal='Discover new insights',
-  backstory="You're a world class researcher working on a amjor data science company",
+  backstory="You're a world class researcher working on a major data science company",
   verbose=True
 )
 writer = Agent(
