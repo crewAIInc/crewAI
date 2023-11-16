@@ -34,13 +34,13 @@ def test_delegate_work_to_wrong_agent():
 		command="writer|share your take on AI Agents|I heard you hate them"
 	)
 
-	assert result == "Error executing tool."
+	assert result == "Error executing tool. Co-worker not found, double check the co-worker."
 
 def test_ask_question_to_wrong_agent():
 	result = tools.ask_question(
 		command="writer|do you hate AI Agents?|I heard you LOVE them"
 	)
 
-	assert result == "Error executing tool."
+	assert result == "Error executing tool. Co-worker not found, double check the co-worker."
 
 

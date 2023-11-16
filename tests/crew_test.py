@@ -134,3 +134,43 @@ def test_crew_with_delegating_agents():
 	)
 
 	assert crew.kickoff() == 'The Senior Writer produced an amazing paragraph about AI Agents: "Artificial Intelligence (AI) agents, the cutting-edge technology that is reshaping the digital landscape, are software entities that autonomously perform tasks to achieve specific goals. These agents, programmed to make decisions based on their environment, are the driving force behind a multitude of innovations, from self-driving cars to personalized recommendations in e-commerce. They are pushing boundaries in various sectors, mitigating human error, increasing efficiency, and revolutionizing customer experience. The importance of AI agents is underscored by their ability to adapt and learn, ushering in a new era of technology where machines can mimic, and often surpass, human intelligence. Understanding AI agents is akin to peering into the future, a future where technology is seamless, intuitive, and astoundingly smart."'
+
+@pytest.mark.vcr()
+def test_crew_verbose_output(capsys):
+		tasks = [
+				Task(
+						description="Research AI advancements.",
+						agent=researcher
+				),
+				Task(
+						description="Write about AI in healthcare.",
+						agent=writer
+				)
+		]
+
+		crew = Crew(
+				agents=[researcher, writer],
+				tasks=tasks,
+				process=Process.sequential,
+				verbose=True
+		)
+
+		crew.kickoff()
+		captured = capsys.readouterr()
+		expected_strings = [
+			"Working Agent: Researcher",
+			"Starting Task: Research AI advancements. ...",
+			"Task output:",
+			"Working Agent: Senior Writer",
+			"Starting Task: Write about AI in healthcare. ...",
+			"Task output:"
+		]
+
+		for expected_string in expected_strings:
+			assert expected_string in captured.out
+
+		# Now test with verbose set to False
+		crew.verbose = False
+		crew.kickoff()
+		captured = capsys.readouterr()
+		assert captured.out == ""
