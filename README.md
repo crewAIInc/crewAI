@@ -35,7 +35,7 @@ researcher = Agent(
 writer = Agent(
   role='Writer',
   goal='Create engaging content',
-  backstory="You're a famous technical writer, specialized on writing data related content"
+  backstory="You're a famous technical writer, specialized on writing data related content",
   verbose=True 
 )
 
