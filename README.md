@@ -35,7 +35,7 @@ researcher = Agent(
 writer = Agent(
   role='Writer',
   goal='Create engaging content',
-  backstory="You're a famous technical writer, specialized on writing data related content"
+  backstory="You're a famous technical writer, specialized on writing data related content",
   verbose=True 
 )
 
@@ -47,7 +47,7 @@ task2 = Task(description='Write a blog post on AI advancements', agent=writer)
 crew = Crew(
   agents=[researcher, writer],
   tasks=[task1, task2],
-  verbose=True # Crew verbose more will let you know what tasks arebeing worked on
+  verbose=True, # Crew verbose more will let you know what tasks arebeing worked on
   process=Process.sequential # Sequential process will have tasks executed one after the other and the outcome of the previous one is passed as extra content into this next.
 )
 
