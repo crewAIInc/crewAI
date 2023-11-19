@@ -72,13 +72,15 @@ class Crew(BaseModel):
 				tools = AgentTools(agents=self.agents).tools()
 				task.tools += tools
 
-			if self.verbose:
-				print(f"Working Agent: {task.agent.role}")
-				print(f"Starting Task: {task.description} ...")
+			self.__log(f"\nWorking Agent: {task.agent.role}")
+			self.__log(f"Starting Task: {task.description} ...")
 
 			task_outcome = task.execute(task_outcome)
 
-			if self.verbose:	
-				print(f"Task output: {task_outcome}")
+			self.__log(f"Task output: {task_outcome}")
 		
 		return task_outcome
+	
+	def __log(self, message):
+		if self.verbose:
+			print(message)

@@ -7,8 +7,8 @@
 The power of AI collaboration has too much to offer.
 CrewAI is designed to enable AI agents to assume roles, share goals, and operate in a cohesive unit - much like a well-oiled crew. Whether you're building a smart assistant platform, an automated customer service ensemble, or a multi-agent research team, CrewAI provides the backbone for sophisticated multi-agent interactions.
 
-[Talk with the Docs](https://chat.openai.com/g/g-qqTuUWsBY-crewai-assistant)
-[Documention Wiki](https://github.com/joaomdmoura/CrewAI/wiki)
+- 🤖 [Talk with the Docs](https://chat.openai.com/g/g-qqTuUWsBY-crewai-assistant)
+- 📄 [Documention Wiki](https://github.com/joaomdmoura/CrewAI/wiki)
 
 ## Getting Started
 
@@ -31,6 +31,7 @@ researcher = Agent(
   goal='Discover new insights',
   backstory="You're a world class researcher working on a major data science company",
   verbose=True
+  # llm=OpenAI(temperature=0.7, model_name="gpt-4"). It uses langchain.chat_models, default is GPT4 
 )
 writer = Agent(
   role='Writer',
@@ -47,7 +48,7 @@ task2 = Task(description='Write a blog post on AI advancements', agent=writer)
 crew = Crew(
   agents=[researcher, writer],
   tasks=[task1, task2],
-  verbose=True, # Crew verbose more will let you know what tasks arebeing worked on
+  verbose=True # Crew verbose more will let you know what tasks are being worked on
   process=Process.sequential # Sequential process will have tasks executed one after the other and the outcome of the previous one is passed as extra content into this next.
 )
 
