@@ -2,6 +2,13 @@
 
 🤖 Cutting-edge framework for orchestrating role-playing, autonomous AI agents. By fostering collaborative intelligence, CrewAI empowers agents to work together seamlessly, tackling complex tasks.
 
+- [Why CrewAI](#why-crewai)
+- [Getting Started](#getting-started)
+- [Key Features](#key-features)
+- [CrewAI x AutoGen x ChatDev](#how-crewai-compares)
+- [Contribution](#contribution)
+- [License](#license)
+
 ## Why CrewAI?
 
 The power of AI collaboration has too much to offer.
