@@ -18,7 +18,7 @@ class Agent(BaseModel):
 	role: str = Field(description="Role of the agent")
 	goal: str = Field(description="Objective of the agent")
 	backstory: str = Field(description="Backstory of the agent")
-	llm: Optional[OpenAI] = Field(description="LLM that will run the agent")
+	llm: Optional[Any] = Field(description="LLM that will run the agent")
 	verbose: bool = Field(
 		description="Verbose mode for the Agent Execution",
 		default=False
