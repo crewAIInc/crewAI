@@ -19,6 +19,10 @@ class Agent(BaseModel):
 	goal: str = Field(description="Objective of the agent")
 	backstory: str = Field(description="Backstory of the agent")
 	llm: Optional[Any] = Field(description="LLM that will run the agent")
+	memory: bool = Field(
+		description="Whether the agent should have memory or not",
+		default=True
+	)
 	verbose: bool = Field(
 		description="Verbose mode for the Agent Execution",
 		default=False
@@ -64,12 +68,18 @@ class Agent(BaseModel):
 			input_key="input"
 		)
 
+		args = {
+			"tools": self.tools,
+			"verbose": self.verbose,
+			"handle_parsing_errors": True,
+		}
+
+		if self.memory:
+			args['memory'] = summary_memory
+
 		self.agent_executor = AgentExecutor(
 			agent=inner_agent,
-			tools=self.tools,
-			memory=summary_memory,
-			verbose=self.verbose,
-			handle_parsing_errors=True,
+			**args
 		)
 
 	def execute_task(self, task: str, context: str = None, tools: List[Any] = None) -> str:
