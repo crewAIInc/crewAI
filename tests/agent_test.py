@@ -38,13 +38,38 @@ def test_custom_llm():
 		backstory="test backstory",
 		llm=OpenAI(
 			temperature=0,
-			model="gpt-3.5"
+			model="gpt-4"
 		)
 	)
 
 	assert isinstance(agent.llm, OpenAI)
-	assert agent.llm.model_name == "gpt-3.5"
+	assert agent.llm.model_name == "gpt-4"
 	assert agent.llm.temperature == 0
+
+def test_agent_without_memory():
+	no_memory_agent = Agent(
+		role="test role",
+		goal="test goal",
+		backstory="test backstory",
+		memory=False,
+		llm=OpenAI(
+			temperature=0,
+			model="gpt-4"
+		)
+	)
+
+	memory_agent = Agent(
+		role="test role",
+		goal="test goal",
+		backstory="test backstory",
+		memory=True,
+		llm=OpenAI(
+			temperature=0,
+			model="gpt-4"
+		)
+	)
+	assert no_memory_agent.agent_executor.memory is None
+	assert memory_agent.agent_executor.memory is not None
 
 @pytest.mark.vcr()
 def test_agent_execution():

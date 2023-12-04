@@ -17,7 +17,7 @@ class Prompts(BaseModel):
 
 	MEMORY_SLICE: ClassVar[str] = dedent("""\
 		This is the summary of your work so far:
-        {chat_history}
+    {chat_history}
 	""")
 
 	ROLE_PLAYING_SLICE: ClassVar[str] = dedent("""\
@@ -28,19 +28,20 @@ class Prompts(BaseModel):
 	""")
 
 	TOOLS_SLICE: ClassVar[str] = dedent("""\
+
 		TOOLS:
 		------
-
 		You have access to the following tools:
 
 		{tools}
 
-		To use a tool, please use the following format:
+		To use a tool, please use the exact following format:
 
 		```
 		Thought: Do I need to use a tool? Yes
 		Action: the action to take, should be one of [{tool_names}]
 		Action Input: the input to the action
+		---
 		Observation: the result of the action
 		```
 
