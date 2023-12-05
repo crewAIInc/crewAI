@@ -43,9 +43,13 @@ class AgentTools(BaseModel):
 
 	def __execute(self, command):
 		"""Execute the command."""
-		agent, task, information = command.split("|")
+		try:
+			agent, task, information = command.split("|")
+		except ValueError:
+			return "Error executing tool. Missing exact 3 pipe (|) separated values."
+		
 		if not agent or not task or not information:
-			return "Error executing tool. Missing 3 pipe (|) separated values."
+			return "Error executing tool. Missing exact 3 pipe (|) separated values."
 		
 		agent = [available_agent for available_agent in self.agents if available_agent.role == agent]
 		
