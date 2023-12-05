@@ -29,6 +29,13 @@ def test_ask_question():
 
 	assert result == "As a researcher, my feelings towards AI Agents are neutral. I neither love nor hate them. I study and analyze them objectively to understand their potential, capabilities, and limitations. While I appreciate the technological advancement they represent, my job is to approach them from an analytical and scientific perspective."
 
+def test_delegate_work_with_wrong_input():
+	result = tools.ask_question(
+		command="writer|share your take on AI Agents"
+	)
+
+	assert result == "Error executing tool. Missing exact 3 pipe (|) separated values."
+
 def test_delegate_work_to_wrong_agent():
 	result = tools.ask_question(
 		command="writer|share your take on AI Agents|I heard you hate them"

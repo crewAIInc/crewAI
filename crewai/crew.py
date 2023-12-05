@@ -12,7 +12,6 @@ class Crew(BaseModel):
 	Class that represents a group of agents, how they should work together and
 	their tasks.
 	"""
-	config: Optional[Json] = Field(description="Configuration of the crew.")
 	tasks: Optional[List[Task]] = Field(description="List of tasks")
 	agents: Optional[List[Agent]] = Field(description="List of agents in this crew.")
 	process: Process = Field(
@@ -22,6 +21,10 @@ class Crew(BaseModel):
 	verbose: bool = Field(
 		description="Verbose mode for the Agent Execution",
 		default=False
+	)
+	config: Optional[Json] = Field(
+		description="Configuration of the crew.",
+		default=None
 	)
 
 	@root_validator(pre=True)
