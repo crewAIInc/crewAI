@@ -14,7 +14,7 @@ Repository = "https://github.com/joaomdmoura/crewai"
 [tool.poetry.dependencies]
 python = ">=3.8.1,<4.0"
 pydantic = "^2.4.2"
-langchain = "^0.0.335"
+langchain = "^0.0.350"
 openai = "^0.28.1"
 
 [tool.poetry.group.test.dependencies]

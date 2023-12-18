@@ -45,6 +45,7 @@ writer = Agent(
   goal='Create engaging content',
   backstory="You're a famous technical writer, specialized on writing data related content",
   verbose=True 
+  delegate=False # This agent can delegate tasks to other agents
 )
 
 # Create tasks for your agents
