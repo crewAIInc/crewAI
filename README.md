@@ -1,10 +1,11 @@
-# CrewAI
+# crewAI
 
 🤖 Cutting-edge framework for orchestrating role-playing, autonomous AI agents. By fostering collaborative intelligence, CrewAI empowers agents to work together seamlessly, tackling complex tasks.
 
 - [Why CrewAI](#why-crewai)
 - [Getting Started](#getting-started)
 - [Key Features](#key-features)
+- [Local Open Source Models](#local-open-source-models)
 - [CrewAI x AutoGen x ChatDev](#how-crewai-compares)
 - [Contribution](#contribution)
 - [License](#license)
@@ -76,6 +77,34 @@ Currently the only supported process is `Process.sequential`, where one task is 
 
 ![CrewAI Mind Map](/crewAI-mindmap.png "CrewAI Mind Map")
 
+## Local Open Source Models
+crewAI supports integration with local models, thorugh tools such as [Ollama](https://ollama.ai/), for enhanced flexibility and customization. This allows you to utilize your own models, which can be particularly useful for specialized tasks or data privacy concerns.
+
+### Setting Up Ollama
+- **Install Ollama**: Ensure that Ollama is properly installed in your environment. Follow the installation guide provided by Ollama for detailed instructions.
+- **Configure Ollama**: Set up Ollama to work with your local model. You will probably need to [tweak the model using a Modelfile](https://github.com/jmorganca/ollama/blob/main/docs/modelfile.md). I'd recommend adding `Observation` as a stop word and playing with `top_p` and `temperature`.
+
+### Integrating Ollama with CrewAI
+- Instantiate Ollama Model: Create an instance of the Ollama model. You can specify the model and the base URL during instantiation. For example:
+
+```python
+from langchain.llms import Ollama
+ollama_openhermes = Ollama(model="agent")
+# Pass Ollama Model to Agents: When creating your agents within the CrewAI framework, you can pass the Ollama model as an argument to the Agent constructor. For instance:
+
+local_expert = Agent(
+  role='Local Expert at this city',
+  goal='Provide the BEST insights about the selected city',
+  backstory="""A knowledgeable local guide with extensive information
+  about the city, it's attractions and customs""",
+  tools=[
+    SearchTools.search_internet,
+    BrowserTools.scrape_and_summarize_website,
+  ],
+  llm=ollama_openhermes, # Ollama model passed here
+  verbose=True
+)
+```
 
 ## How CrewAI Compares
 
