@@ -19,7 +19,7 @@ def test_delegate_work():
 		command="researcher|share your take on AI Agents|I heard you hate them"
 	)
 
-	assert result == "As a technology researcher, it's important to maintain objectivity. AI agents have their own merits and demerits. On the positive side, they can automate routine tasks, improve efficiency, and enable new forms of communication and decision-making. However, there are potential downsides, like job displacement due to automation and concerns about privacy and security. It's not accurate to say that I hate them, but rather, I recognize the potential implications - both positive and negative - of their use."
+	assert result == "It seems there is a misunderstanding. As a researcher, my stance on AI agents is not based on personal emotions like love or hate. I study and analyze them objectively based on their capabilities, how they function, their limitations, and their potential for future development. AI agents are powerful tools that, when developed and used properly, can greatly benefit society in numerous ways such as improving efficiency, optimizing processes, and opening up new possibilities for innovation. However, like any other technology, it's also important to consider ethical implications and possible risks."
 
 @pytest.mark.vcr()
 def test_ask_question():
@@ -27,7 +27,7 @@ def test_ask_question():
 		command="researcher|do you hate AI Agents?|I heard you LOVE them"
 	)
 
-	assert result == "As a researcher, my feelings towards AI Agents are neutral. I neither love nor hate them. I study and analyze them objectively to understand their potential, capabilities, and limitations. While I appreciate the technological advancement they represent, my job is to approach them from an analytical and scientific perspective."
+	assert result == "As an AI, I don't have personal emotions, so I don't hate or love anything. However, I can analyze and provide insights about AI agents based on the data and information available. AI agents are a fascinating area of study in the field of technology, offering potential for significant advancements in various sectors. It's important to note that while they can be highly beneficial, they should be developed and used responsibly, considering ethical implications and potential risks."
 
 def test_delegate_work_with_wrong_input():
 	result = tools.ask_question(

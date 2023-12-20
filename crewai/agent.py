@@ -1,7 +1,7 @@
 """Generic agent."""
 
 from typing import List, Any, Optional
-from pydantic.v1 import BaseModel, Field, root_validator
+from pydantic.v1 import BaseModel, PrivateAttr, Field, root_validator
 
 from langchain.agents import AgentExecutor
 from langchain.chat_models import ChatOpenAI as OpenAI
@@ -35,6 +35,7 @@ class Agent(BaseModel):
 		description="Tools at agents disposal",
 		default=[]
 	)
+	_task_calls: List[Any] = PrivateAttr()
 
 	@root_validator(pre=True)
 	def check_llm(_cls, values):
@@ -47,39 +48,42 @@ class Agent(BaseModel):
 
 	def __init__(self, **data):
 		super().__init__(**data)
-		execution_prompt = Prompts.TASK_EXECUTION_PROMPT.partial(
-			goal=self.goal,
-			role=self.role,
-			backstory=self.backstory,
-		)
-
-		llm_with_bind = self.llm.bind(stop=["\nObservation"])
-		inner_agent = {
+		agent_args = {
 			"input": lambda x: x["input"],
 			"tools": lambda x: x["tools"],
 			"tool_names": lambda x: x["tool_names"],
-			"chat_history": lambda x: x["chat_history"],
 			"agent_scratchpad": lambda x: format_log_to_str(x['intermediate_steps']),
-		} | execution_prompt | llm_with_bind | ReActSingleInputOutputParser()
-
-		summary_memory = ConversationSummaryMemory(
-			llm=self.llm,
-			memory_key='chat_history',
-			input_key="input"
-		)
-
-		args = {
+		}
+		executor_args = {
 			"tools": self.tools,
 			"verbose": self.verbose,
 			"handle_parsing_errors": True,
 		}
 
+		llm_with_bind = self.llm.bind(stop=["\nObservation"])
+
 		if self.memory:
-			args['memory'] = summary_memory
+			summary_memory = ConversationSummaryMemory(
+				llm=self.llm,
+				memory_key='chat_history',
+				input_key="input"
+			)
+			executor_args['memory'] = summary_memory
+			agent_args['chat_history'] = lambda x: x["chat_history"]
+			prompt = Prompts.TASK_EXECUTION_WITH_MEMORY_PROMPT
+		else:
+			prompt = Prompts.TASK_EXECUTION_PROMPT
+
+		execution_prompt = prompt.partial(
+			goal=self.goal,
+			role=self.role,
+			backstory=self.backstory,
+		)
+		inner_agent = agent_args | execution_prompt | llm_with_bind | ReActSingleInputOutputParser()
 
 		self.agent_executor = AgentExecutor(
 			agent=inner_agent,
-			**args
+			**executor_args
 		)
 
 	def execute_task(self, task: str, context: str = None, tools: List[Any] = None) -> str:
