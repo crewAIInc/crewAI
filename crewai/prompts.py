@@ -62,8 +62,12 @@ class Prompts(BaseModel):
 		{coworkers}
 	""")
 
-	TASK_EXECUTION_PROMPT: ClassVar[str] = PromptTemplate.from_template(
+	TASK_EXECUTION_WITH_MEMORY_PROMPT: ClassVar[str] = PromptTemplate.from_template(
 		ROLE_PLAYING_SLICE + TOOLS_SLICE + MEMORY_SLICE + TASK_SLICE
+	)
+
+	TASK_EXECUTION_PROMPT: ClassVar[str] = PromptTemplate.from_template(
+		ROLE_PLAYING_SLICE + TOOLS_SLICE + TASK_SLICE
 	)
 	
 	CONSENSUNS_VOTING_PROMPT: ClassVar[str] = PromptTemplate.from_template(

@@ -68,6 +68,10 @@ def test_agent_without_memory():
 			model="gpt-4"
 		)
 	)
+
+	result = no_memory_agent.execute_task("How much is 1 + 1?")
+
+	assert result == "2"
 	assert no_memory_agent.agent_executor.memory is None
 	assert memory_agent.agent_executor.memory is not None
 
@@ -81,7 +85,7 @@ def test_agent_execution():
 	)
 
 	output = agent.execute_task("How much is 1 + 1?")
-	assert output == "1 + 1 = 2"
+	assert output == "1 + 1 equals 2."
 
 @pytest.mark.vcr()
 def test_agent_execution_with_tools():
@@ -105,7 +109,7 @@ def test_agent_execution_with_tools():
 	)
 
 	output = agent.execute_task("What is 3 times 4")
-	assert output == "3 times 4 is 12"
+	assert output == "3 times 4 equals to 12."
 
 @pytest.mark.vcr()
 def test_agent_execution_with_specific_tools():
@@ -131,4 +135,4 @@ def test_agent_execution_with_specific_tools():
 		task="What is 3 times 4",
 		tools=[multiplier]
 	)
-	assert output == "12"
+	assert output == "3 times 4 is 12."
