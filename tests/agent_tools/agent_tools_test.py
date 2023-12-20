@@ -19,7 +19,7 @@ def test_delegate_work():
 		command="researcher|share your take on AI Agents|I heard you hate them"
 	)
 
-	assert result == "It seems there is a misunderstanding. As a researcher, my stance on AI agents is not based on personal emotions like love or hate. I study and analyze them objectively based on their capabilities, how they function, their limitations, and their potential for future development. AI agents are powerful tools that, when developed and used properly, can greatly benefit society in numerous ways such as improving efficiency, optimizing processes, and opening up new possibilities for innovation. However, like any other technology, it's also important to consider ethical implications and possible risks."
+	assert result == "I apologize if my previous statements have given you the impression that I hate AI agents. As a technology researcher, I don't hold personal sentiments towards AI or any other technology. Rather, I analyze them objectively based on their capabilities, applications, and implications. AI agents, in particular, are a fascinating domain of research. They hold tremendous potential in automating and optimizing various tasks across industries. However, like any other technology, they come with their own set of challenges, such as ethical considerations around privacy and decision-making. My objective is to understand these technologies in depth and provide a balanced view."
 
 @pytest.mark.vcr()
 def test_ask_question():
@@ -27,7 +27,7 @@ def test_ask_question():
 		command="researcher|do you hate AI Agents?|I heard you LOVE them"
 	)
 
-	assert result == "As an AI, I don't have personal emotions, so I don't hate or love anything. However, I can analyze and provide insights about AI agents based on the data and information available. AI agents are a fascinating area of study in the field of technology, offering potential for significant advancements in various sectors. It's important to note that while they can be highly beneficial, they should be developed and used responsibly, considering ethical implications and potential risks."
+	assert result == "As an AI, I don't possess feelings or emotions, so I don't love or hate anything. However, I can provide detailed analysis and research on AI agents. They are a fascinating field of study with the potential to revolutionize many industries, although they also present certain challenges and ethical considerations."
 
 def test_delegate_work_with_wrong_input():
 	result = tools.ask_question(

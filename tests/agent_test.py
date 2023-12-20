@@ -46,6 +46,7 @@ def test_custom_llm():
 	assert agent.llm.model_name == "gpt-4"
 	assert agent.llm.temperature == 0
 
+@pytest.mark.vcr()
 def test_agent_without_memory():
 	no_memory_agent = Agent(
 		role="test role",
@@ -71,7 +72,7 @@ def test_agent_without_memory():
 
 	result = no_memory_agent.execute_task("How much is 1 + 1?")
 
-	assert result == "2"
+	assert result == "1 + 1 equals 2."
 	assert no_memory_agent.agent_executor.memory is None
 	assert memory_agent.agent_executor.memory is not None
 
@@ -85,7 +86,7 @@ def test_agent_execution():
 	)
 
 	output = agent.execute_task("How much is 1 + 1?")
-	assert output == "1 + 1 equals 2."
+	assert output == "2"
 
 @pytest.mark.vcr()
 def test_agent_execution_with_tools():
@@ -93,9 +94,9 @@ def test_agent_execution_with_tools():
 
 	@tool
 	def multiplier(numbers) -> float:
-			"""Useful for when you need to multiply two numbers together. 
-			The input to this tool should be a comma separated list of numbers of 
-			length two, representing the two numbers you want to multiply together. 
+			"""Useful for when you need to multiply two numbers together.
+			The input to this tool should be a comma separated list of numbers of
+			length two, representing the two numbers you want to multiply together.
 			For example, `1,2` would be the input if you wanted to multiply 1 by 2."""
 			a, b = numbers.split(',')
 			return int(a) * int(b)
@@ -109,7 +110,7 @@ def test_agent_execution_with_tools():
 	)
 
 	output = agent.execute_task("What is 3 times 4")
-	assert output == "3 times 4 equals to 12."
+	assert output == "12"
 
 @pytest.mark.vcr()
 def test_agent_execution_with_specific_tools():
@@ -117,9 +118,9 @@ def test_agent_execution_with_specific_tools():
 
 	@tool
 	def multiplier(numbers) -> float:
-			"""Useful for when you need to multiply two numbers together. 
-			The input to this tool should be a comma separated list of numbers of 
-			length two, representing the two numbers you want to multiply together. 
+			"""Useful for when you need to multiply two numbers together.
+			The input to this tool should be a comma separated list of numbers of
+			length two, representing the two numbers you want to multiply together.
 			For example, `1,2` would be the input if you wanted to multiply 1 by 2."""
 			a, b = numbers.split(',')
 			return int(a) * int(b)

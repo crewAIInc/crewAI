@@ -28,7 +28,7 @@ writer = Agent(
 def test_crew_config_conditional_requirement():
 	with pytest.raises(ValueError):
 		Crew(process=Process.sequential)
-	
+
 	config = json.dumps({
 		"agents": [
 			{
@@ -51,15 +51,15 @@ def test_crew_config_conditional_requirement():
 				"description": "Write a 1 amazing paragraph highlight for each idead that showcases how good an article about this topic could be, check references if necessary or search for more content but make sure it's unique, interesting and well written. Return the list of ideas with their paragraph and your notes.",
 				"agent": "Senior Writer"
 			}
-		]		
+		]
 	})
 	parsed_config = json.loads(config)
 
 	try:
-			crew = Crew(process=Process.sequential, config=config)			
+			crew = Crew(process=Process.sequential, config=config)
 	except ValueError:
 			pytest.fail("Unexpected ValidationError raised")
-	
+
 	assert [agent.role for agent in crew.agents] == [agent['role'] for agent in parsed_config['agents']]
 	assert [task.description for task in crew.tasks] == [task['description'] for task in parsed_config['tasks']]
 
@@ -80,7 +80,7 @@ def test_crew_config_with_wrong_keys():
 				"description": "Give me a list of 5 interesting ideas to explore for na article, what makes them unique and interesting.",
 				"agent": "Senior Researcher"
 			}
-		]		
+		]
 	})
 	with pytest.raises(ValueError):
 		Crew(process=Process.sequential, config='{"wrong_key": "wrong_value"}')
@@ -108,20 +108,15 @@ def test_crew_creation():
 		tasks=tasks,
 	)
 
-	assert crew.kickoff() == """1. AI and Ethical Dilemmas: 
-Facing the future, we grapple with moral quandaries brought forth by AI. This article will delve into the ethical dilemmas posed by AI, such as data privacy, algorithmic bias, and the responsibility of AI’s decisions. It will provide a compelling narrative about the necessity of considering ethical aspects in AI development and how they might shape the future of humanity.
+	assert crew.kickoff() == """1. **The Evolution of AI: From Old Concepts to New Frontiers** - Journey with us as we traverse the fascinating timeline of artificial intelligence - from its philosophical and mathematical infancy to the sophisticated, problem-solving tool it has become today. This riveting account will not only educate but also inspire, as we delve deep into the milestones that brought us here and shine a beacon on the potential that lies ahead.
 
-2. AI in Healthcare:
-Imagine a world where diagnosis and treatment are not limited by human errors or geographical boundaries. This article will explore the transformative role of AI in healthcare, from robotic surgeries to personalized medicine. It will offer fascinating insights into how AI can revolutionize healthcare, save countless lives, and bring about a new era of medical science.
+2. **AI Agents in Healthcare: The Future of Medicine** - Imagine a world where illnesses are diagnosed before symptoms appear, where patient outcomes are not mere guesses but accurate predictions. This is the world AI is crafting in healthcare - a revolution that's saving lives and changing the face of medicine as we know it. This article will spotlight this transformative journey, underlining the profound impact AI is having on our health and well-being.
 
-3. The Role of AI in Climate Change:
-As our planet faces an unprecedented climate crisis, we turn to AI for solutions. This article will illuminate the role of AI in combating climate change by optimizing renewable energy, predicting weather patterns, and managing resources. It will underscore the pivotal role that AI plays in our fight against climate change, painting a hopeful picture of the future.
+3. **AI and Ethics: Navigating the Moral Landscape of Artificial Intelligence** - As AI becomes an integral part of our lives, it brings along a plethora of ethical dilemmas. This thought-provoking piece will navigate the complex moral landscape of AI, addressing critical concerns like privacy, job displacement, and decision-making biases. It serves as a much-needed discussion platform for the societal implications of AI, urging us to look beyond the technology and into the mirror.
 
-4. AI in Art and Creativity:
-Art and AI may seem like odd companions, but they are pushing the boundaries of creativity. This article will highlight the influence of AI in art and creativity, from creating original art pieces to enhancing human creativity. It will delve into the intriguing intersection of technology and art, showcasing the unexpected harmony between AI and human creativity.
+4. **Demystifying AI Algorithms: A Deep Dive into Machine Learning** - Ever wondered what goes on behind the scenes of AI? This enlightening article will break down the complex world of machine learning algorithms into digestible insights, unraveling the mystery of AI's 'black box'. It's a rare opportunity for the non-technical audience to appreciate the inner workings of AI, fostering a deeper understanding of this revolutionary technology.
 
-5. The Future of Jobs with AI:
-With the advent of AI, the job market is poised for a seismic shift. This article will delve into the implications of AI on the future of jobs, discussing the jobs AI will create and those it may render obsolete. It will provide a thought-provoking examination of how AI could redefine our workplaces and our understanding of work itself."""
+5. **AI Startups: The Game Changers of the Tech Industry** - In the world of tech, AI startups are the bold pioneers charting new territories. This article will spotlight these game changers, showcasing how their innovative products and services are driving the AI revolution. It's a unique opportunity to catch a glimpse of the entrepreneurial side of AI, offering inspiration for the tech enthusiasts and dreamers alike."""
 
 @pytest.mark.vcr()
 def test_crew_with_delegating_agents():
@@ -138,7 +133,7 @@ def test_crew_with_delegating_agents():
 		tasks=tasks,
 	)
 
-	assert crew.kickoff() == 'AI agents represent a significant stride in the evolution of artificial intelligence. These entities are designed to act autonomously, learn from their environment, and make decisions based on a set of predefined rules or through machine learning techniques. The potential of AI agents is tremendous and their versatility is unparalleled. They can be deployed in various sectors, from healthcare to finance, performing tasks with efficiency and accuracy that surpass human capabilities. In healthcare, AI agents can predict patient deterioration, offer personalized treatment suggestions, and manage patient flow. In finance, they can detect fraudulent transactions, manage investments, and provide personalized financial advice. Furthermore, the adaptability of AI agents allows them to learn and improve over time, becoming more proficient and effective in their tasks. This dynamic nature of AI agents is what sets them apart and posits them as a revolutionary force in the AI landscape. As we continue to explore and harness the capabilities of AI agents, we can expect them to play an increasingly integral role in shaping our world and the way we live.'
+	assert crew.kickoff() == 'The Senior Writer has created a compelling and engaging 1 paragraph draft about AI agents. The paragraph provides a brief yet comprehensive overview of AI agents, their uses, and implications in the current world. It emphasizes their potential and the role they can play in the future. The tone is informative but captivating, meeting the objectives of the task.'
 
 @pytest.mark.vcr()
 def test_crew_verbose_output(capsys):
