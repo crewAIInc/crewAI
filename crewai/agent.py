@@ -4,7 +4,7 @@ from typing import List, Any, Optional
 from pydantic.v1 import BaseModel, PrivateAttr, Field, root_validator
 
 from langchain.agents import AgentExecutor
-from langchain.chat_models import ChatOpenAI as OpenAI
+from langchain.chat_models import ChatOpenAI
 from langchain.tools.render import render_text_description
 from langchain.agents.format_scratchpad import format_log_to_str
 from langchain.agents.output_parsers import ReActSingleInputOutputParser
@@ -40,7 +40,7 @@ class Agent(BaseModel):
 	@root_validator(pre=True)
 	def check_llm(_cls, values):
 		if not values.get('llm'):
-			values['llm'] = OpenAI(
+			values['llm'] = ChatOpenAI(
 				temperature=0.7,
 				model_name="gpt-4"
 			)
@@ -60,8 +60,6 @@ class Agent(BaseModel):
 			"handle_parsing_errors": True,
 		}
 
-		llm_with_bind = self.llm.bind(stop=["\nObservation"])
-
 		if self.memory:
 			summary_memory = ConversationSummaryMemory(
 				llm=self.llm,
@@ -79,7 +77,9 @@ class Agent(BaseModel):
 			role=self.role,
 			backstory=self.backstory,
 		)
-		inner_agent = agent_args | execution_prompt | llm_with_bind | ReActSingleInputOutputParser()
+
+		bind = self.llm.bind(stop=["\nObservation"])
+		inner_agent = agent_args | execution_prompt | bind | ReActSingleInputOutputParser()
 
 		self.agent_executor = AgentExecutor(
 			agent=inner_agent,
