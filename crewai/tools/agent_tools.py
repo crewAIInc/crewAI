@@ -14,10 +14,10 @@ class AgentTools(BaseModel):
 			Tool.from_function(
 				func=self.delegate_work,
 				name="Delegate Work to Co-Worker",
-				description=dedent(f"""Useful to delegate a specific task to one of the 
+				description=dedent(f"""Useful to delegate a specific task to one of the
 				following co-workers: [{', '.join([agent.role for agent in self.agents])}].
 				The input to this tool should be a pipe (|) separated text of length
-				three, representing the role you want to delegate it to,  the task and 
+				three, representing the role you want to delegate it to, the task and
 				information necessary. For example, `coworker|task|information`.
 				""")
 			),
@@ -25,9 +25,9 @@ class AgentTools(BaseModel):
 				func=self.ask_question,
 				name="Ask Question to Co-Worker",
 				description=dedent(f"""Useful to ask a question, opinion or take from on
-				of the following co-workers: [{', '.join([agent.role for agent in self.agents])}]. 
-				The input to this tool should be a pipe (|) separated text of length 
-				three, representing the role you want to ask it to,  the question and 
+				of the following co-workers: [{', '.join([agent.role for agent in self.agents])}].
+				The input to this tool should be a pipe (|) separated text of length
+				three, representing the role you want to ask it to, the question and
 				information necessary. For example, `coworker|question|information`.
 				""")
 			),
@@ -46,16 +46,16 @@ class AgentTools(BaseModel):
 		try:
 			agent, task, information = command.split("|")
 		except ValueError:
-			return "Error executing tool. Missing exact 3 pipe (|) separated values."
-		
+			return "Error executing tool. Missing exact 3 pipe (|) separated values. For example, `coworker|task|information`."
+
 		if not agent or not task or not information:
-			return "Error executing tool. Missing exact 3 pipe (|) separated values."
-		
+			return "Error executing tool. Missing exact 3 pipe (|) separated values. For example, `coworker|question|information`."
+
 		agent = [available_agent for available_agent in self.agents if available_agent.role == agent]
-		
+
 		if len(agent) == 0:
 			return "Error executing tool. Co-worker not found, double check the co-worker."
 
 		agent = agent[0]
-		result = agent.execute_task(task, information)	
+		result = agent.execute_task(task, information)
 		return result
