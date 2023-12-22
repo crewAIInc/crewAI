@@ -31,7 +31,10 @@ pip install crewai
 2. **Setting Up Your Crew**:
 
 ```python
+import os
 from crewai import Agent, Task, Crew, Process
+
+os.environ["OPENAI_API_KEY"] = "Your Key"
 
 # Define your agents with roles and goals
 researcher = Agent(
