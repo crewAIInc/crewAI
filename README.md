@@ -38,7 +38,7 @@ researcher = Agent(
   role='Researcher',
   goal='Discover new insights',
   backstory="You're a world class researcher working on a major data science company",
-  verbose=True
+  verbose=True,
   allow_delegation=False
   # llm=OpenAI(temperature=0.7, model_name="gpt-4"). It uses langchain.chat_models, default is GPT4 
 )
@@ -46,7 +46,7 @@ writer = Agent(
   role='Writer',
   goal='Create engaging content',
   backstory="You're a famous technical writer, specialized on writing data related content",
-  verbose=True 
+  verbose=True,
   allow_delegation=False
 )
 
