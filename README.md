@@ -5,6 +5,7 @@
 - [Why CrewAI](#why-crewai)
 - [Getting Started](#getting-started)
 - [Key Features](#key-features)
+- [Examples](#examples)
 - [Local Open Source Models](#local-open-source-models)
 - [CrewAI x AutoGen x ChatDev](#how-crewai-compares)
 - [Contribution](#contribution)
@@ -79,6 +80,9 @@ Currently the only supported process is `Process.sequential`, where one task is 
 - **Processes Driven**: Currently only supports `sequential` task execution but more complex processes like consensual and hierarchical being worked on.
 
 ![CrewAI Mind Map](/crewAI-mindmap.png "CrewAI Mind Map")
+
+## Examples
+You can test different real life examples of AI crews [in the examples repo](https://github.com/joaomdmoura/crewAI-examples?tab=readme-ov-file)
 
 ## Local Open Source Models
 crewAI supports integration with local models, thorugh tools such as [Ollama](https://ollama.ai/), for enhanced flexibility and customization. This allows you to utilize your own models, which can be particularly useful for specialized tasks or data privacy concerns.
