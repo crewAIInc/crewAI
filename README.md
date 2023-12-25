@@ -1,5 +1,7 @@
 # crewAI
 
+![Logo of crewAI, tow people rowing on a boat](./crewai_logo.png)
+
 🤖 Cutting-edge framework for orchestrating role-playing, autonomous AI agents. By fostering collaborative intelligence, CrewAI empowers agents to work together seamlessly, tackling complex tasks.
 
 - [Why CrewAI](#why-crewai)
@@ -44,7 +46,7 @@ researcher = Agent(
   backstory="You're a world class researcher working on a major data science company",
   verbose=True,
   allow_delegation=False
-  # llm=OpenAI(temperature=0.7, model_name="gpt-4"). It uses langchain.chat_models, default is GPT4 
+  # llm=OpenAI(temperature=0.7, model_name="gpt-4"). It uses langchain.chat_models, default is GPT4
 )
 writer = Agent(
   role='Writer',

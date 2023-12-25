@@ -4,3 +4,4 @@ __pycache__
 dist/
 */**/cassettes/*
 .env
+assets/*
