@@ -13,7 +13,22 @@ from langchain.memory import ConversationSummaryMemory
 from .prompts import Prompts
 
 class Agent(BaseModel):
-	"""Generic agent implementation."""
+	"""
+    	Represents an agent in a system.
+
+    	Each agent has a role, a goal, a backstory, and an optional language model (llm).
+    	The agent can also have memory, can operate in verbose mode, and can delegate tasks to other agents.
+
+    	Attributes:
+	        agent_executor: An instance of the AgentExecutor class.
+	        role: The role of the agent.
+	        goal: The objective of the agent.
+	        backstory: The backstory of the agent.
+	        llm: The language model that will run the agent.
+	        memory: Whether the agent should have memory or not.
+	        verbose: Whether the agent execution should be in verbose mode.
+	        allow_delegation: Whether the agent is allowed to delegate tasks to other agents.
+    	"""
 	agent_executor: AgentExecutor = None
 	role: str = Field(description="Role of the agent")
 	goal: str = Field(description="Objective of the agent")
