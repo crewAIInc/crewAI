@@ -55,7 +55,7 @@ class Prompts(BaseModel):
 	VOTING_SLICE: ClassVar[str] = dedent("""\
 		You are working on a crew with your co-workers and need to decide who will execute the task.
 
-		These are tyour format instructions:
+		These are your format instructions:
 		{format_instructions}
 
 		These are your co-workers and their roles:
@@ -69,7 +69,7 @@ class Prompts(BaseModel):
 	TASK_EXECUTION_PROMPT: ClassVar[str] = PromptTemplate.from_template(
 		ROLE_PLAYING_SLICE + TOOLS_SLICE + TASK_SLICE
 	)
-	
+
 	CONSENSUNS_VOTING_PROMPT: ClassVar[str] = PromptTemplate.from_template(
 		ROLE_PLAYING_SLICE + VOTING_SLICE + TASK_SLICE
 	)
