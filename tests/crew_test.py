@@ -89,7 +89,7 @@ def test_crew_config_with_wrong_keys():
 	with pytest.raises(ValueError):
 		Crew(process=Process.sequential, config=no_agents_config)
 
-@pytest.mark.vcr()
+@pytest.mark.vcr(filter_headers=["authorization"])
 def test_crew_creation():
 	tasks = [
 		Task(
@@ -118,7 +118,7 @@ def test_crew_creation():
 
 5. **AI Startups: The Game Changers of the Tech Industry** - In the world of tech, AI startups are the bold pioneers charting new territories. This article will spotlight these game changers, showcasing how their innovative products and services are driving the AI revolution. It's a unique opportunity to catch a glimpse of the entrepreneurial side of AI, offering inspiration for the tech enthusiasts and dreamers alike."""
 
-@pytest.mark.vcr()
+@pytest.mark.vcr(filter_headers=["authorization"])
 def test_crew_with_delegating_agents():
 	tasks = [
 		Task(
@@ -135,7 +135,7 @@ def test_crew_with_delegating_agents():
 
 	assert crew.kickoff() == 'The Senior Writer has created a compelling and engaging 1 paragraph draft about AI agents. The paragraph provides a brief yet comprehensive overview of AI agents, their uses, and implications in the current world. It emphasizes their potential and the role they can play in the future. The tone is informative but captivating, meeting the objectives of the task.'
 
-@pytest.mark.vcr()
+@pytest.mark.vcr(filter_headers=["authorization"])
 def test_crew_verbose_output(capsys):
 		tasks = [
 				Task(
