@@ -2,32 +2,41 @@
 
 from textwrap import dedent
 from typing import ClassVar
-from pydantic.v1 import BaseModel
+
 from langchain.prompts import PromptTemplate
+from pydantic.v1 import BaseModel
+
 
 class Prompts(BaseModel):
-	"""Prompts for generic agent."""
+    """Prompts for generic agent."""
 
-	TASK_SLICE: ClassVar[str] = dedent("""\
+    TASK_SLICE: ClassVar[str] = dedent(
+        """\
 		Begin! This is VERY important to you, your job depends on it!
 
 		Current Task: {input}
 		{agent_scratchpad}
-	""")
+	"""
+    )
 
-	MEMORY_SLICE: ClassVar[str] = dedent("""\
+    MEMORY_SLICE: ClassVar[str] = dedent(
+        """\
 		This is the summary of your work so far:
     {chat_history}
-	""")
+	"""
+    )
 
-	ROLE_PLAYING_SLICE: ClassVar[str] = dedent("""\
+    ROLE_PLAYING_SLICE: ClassVar[str] = dedent(
+        """\
 		You are {role}.
 		{backstory}
 
 		Your personal goal is: {goal}
-	""")
+	"""
+    )
 
-	TOOLS_SLICE: ClassVar[str] = dedent("""\
+    TOOLS_SLICE: ClassVar[str] = dedent(
+        """\
 
 		TOOLS:
 		------
@@ -50,9 +59,11 @@ class Prompts(BaseModel):
 		Thought: Do I need to use a tool? No
 		Final Answer: [your response here]
 		```
-	""")
+	"""
+    )
 
-	VOTING_SLICE: ClassVar[str] = dedent("""\
+    VOTING_SLICE: ClassVar[str] = dedent(
+        """\
 		You are working on a crew with your co-workers and need to decide who will execute the task.
 
 		These are your format instructions:
@@ -60,16 +71,17 @@ class Prompts(BaseModel):
 
 		These are your co-workers and their roles:
 		{coworkers}
-	""")
+	"""
+    )
 
-	TASK_EXECUTION_WITH_MEMORY_PROMPT: ClassVar[str] = PromptTemplate.from_template(
-		ROLE_PLAYING_SLICE + TOOLS_SLICE + MEMORY_SLICE + TASK_SLICE
-	)
+    TASK_EXECUTION_WITH_MEMORY_PROMPT: ClassVar[str] = PromptTemplate.from_template(
+        ROLE_PLAYING_SLICE + TOOLS_SLICE + MEMORY_SLICE + TASK_SLICE
+    )
 
-	TASK_EXECUTION_PROMPT: ClassVar[str] = PromptTemplate.from_template(
-		ROLE_PLAYING_SLICE + TOOLS_SLICE + TASK_SLICE
-	)
+    TASK_EXECUTION_PROMPT: ClassVar[str] = PromptTemplate.from_template(
+        ROLE_PLAYING_SLICE + TOOLS_SLICE + TASK_SLICE
+    )
 
-	CONSENSUNS_VOTING_PROMPT: ClassVar[str] = PromptTemplate.from_template(
-		ROLE_PLAYING_SLICE + VOTING_SLICE + TASK_SLICE
-	)
+    CONSENSUNS_VOTING_PROMPT: ClassVar[str] = PromptTemplate.from_template(
+        ROLE_PLAYING_SLICE + VOTING_SLICE + TASK_SLICE
+    )
