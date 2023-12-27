@@ -3,7 +3,7 @@ from typing import List, Optional
 from langchain.tools import Tool
 from pydantic.v1 import BaseModel, Field, root_validator
 
-from .agent import Agent
+from crewai.agent import Agent
 
 
 class Task(BaseModel):

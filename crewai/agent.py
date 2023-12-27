@@ -10,7 +10,7 @@ from langchain.memory import ConversationSummaryMemory
 from langchain.tools.render import render_text_description
 from pydantic.v1 import BaseModel, Field, PrivateAttr, root_validator
 
-from .prompts import Prompts
+from crewai.prompts import Prompts
 
 
 class Agent(BaseModel):

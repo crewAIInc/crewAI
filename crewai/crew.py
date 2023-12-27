@@ -3,10 +3,10 @@ from typing import List, Optional
 
 from pydantic.v1 import BaseModel, Field, Json, root_validator
 
-from .agent import Agent
-from .process import Process
-from .task import Task
-from .tools.agent_tools import AgentTools
+from crewai.agent import Agent
+from crewai.process import Process
+from crewai.task import Task
+from crewai.tools.agent_tools import AgentTools
 
 
 class Crew(BaseModel):

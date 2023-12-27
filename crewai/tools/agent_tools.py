@@ -4,7 +4,7 @@ from typing import List
 from langchain.tools import Tool
 from pydantic.v1 import BaseModel, Field
 
-from ..agent import Agent
+from crewai.agent import Agent
 
 
 class AgentTools(BaseModel):
