@@ -1,0 +1,113 @@
+interactions:
+- request:
+    body: '{"messages": [{"role": "user", "content": "You are test role.\ntest backstory\n\nYour
+      personal goal is: test goal\n\nTOOLS:\n------\nYou have access to the following
+      tools:\n\n\n\nTo use a tool, please use the exact following format:\n\n```\nThought:
+      Do I need to use a tool? Yes\nAction: the action to take, should be one of []\nAction
+      Input: the input to the action\nObservation: the result of the action\n```\n\nWhen
+      you have a response for your task, or if you do not need to use a tool, you
+      MUST use the format:\n\n```\nThought: Do I need to use a tool? No\nFinal Answer:
+      [your response here]\n```\nBegin! This is VERY important to you, your job depends
+      on it!\n\nCurrent Task: How much is 1 + 1?\n\n"}], "model": "gpt-4", "n": 1,
+      "stop": ["\nObservation"], "stream": false, "temperature": 0.0}'
+    headers:
+      accept:
+      - application/json
+      accept-encoding:
+      - gzip, deflate
+      connection:
+      - keep-alive
+      content-length:
+      - '799'
+      content-type:
+      - application/json
+      host:
+      - api.openai.com
+      user-agent:
+      - OpenAI/Python 1.6.0
+      x-stainless-arch:
+      - arm64
+      x-stainless-async:
+      - 'false'
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - MacOS
+      x-stainless-package-version:
+      - 1.6.0
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.11.7
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    content: "{\n  \"id\": \"chatcmpl-8XwKQzRwByjmOhHcKQk32biG9bslO\",\n  \"object\":
+      \"chat.completion\",\n  \"created\": 1703099730,\n  \"model\": \"gpt-4-0613\",\n
+      \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
+      \"assistant\",\n        \"content\": \"Thought: Do I need to use a tool? No\\nFinal
+      Answer: 1 + 1 equals 2.\"\n      },\n      \"logprobs\": null,\n      \"finish_reason\":
+      \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 169,\n    \"completion_tokens\":
+      24,\n    \"total_tokens\": 193\n  },\n  \"system_fingerprint\": null\n}\n"
+    headers:
+      CF-Cache-Status:
+      - DYNAMIC
+      CF-RAY:
+      - 838a36e258f71a90-GRU
+      Cache-Control:
+      - no-cache, must-revalidate
+      Connection:
+      - keep-alive
+      Content-Encoding:
+      - gzip
+      Content-Type:
+      - application/json
+      Date:
+      - Wed, 20 Dec 2023 19:15:33 GMT
+      Server:
+      - cloudflare
+      Set-Cookie:
+      - __cf_bm=MXonvOWhzu2xzqqQW6loCrPxpu3htpmRm9QULnV6Uic-1703099733-1-AXiceGXQ09SeMmJaW7hk60DzeZec+Bojjr+ptfpQQRQa0K6o+0oZS2Nhjv6TgYOas6QVkjTabKLwlzoS7qAeJoM=;
+        path=/; expires=Wed, 20-Dec-23 19:45:33 GMT; domain=.api.openai.com; HttpOnly;
+        Secure; SameSite=None
+      - _cfuvid=0hRVC1wV9ReH4cnY21jU6QE6m7DIZOjDOkZSBykI7yI-1703099733905-0-604800000;
+        path=/; domain=.api.openai.com; HttpOnly; Secure; SameSite=None
+      Transfer-Encoding:
+      - chunked
+      access-control-allow-origin:
+      - '*'
+      alt-svc:
+      - h3=":443"; ma=86400
+      openai-model:
+      - gpt-4-0613
+      openai-organization:
+      - user-z7g4wmlazxqvc5wjyaaaocfz
+      openai-processing-ms:
+      - '3423'
+      openai-version:
+      - '2020-10-01'
+      strict-transport-security:
+      - max-age=15724800; includeSubDomains
+      x-ratelimit-limit-requests:
+      - '10000'
+      x-ratelimit-limit-tokens:
+      - '300000'
+      x-ratelimit-limit-tokens_usage_based:
+      - '300000'
+      x-ratelimit-remaining-requests:
+      - '9999'
+      x-ratelimit-remaining-tokens:
+      - '299825'
+      x-ratelimit-remaining-tokens_usage_based:
+      - '299825'
+      x-ratelimit-reset-requests:
+      - 6ms
+      x-ratelimit-reset-tokens:
+      - 35ms
+      x-ratelimit-reset-tokens_usage_based:
+      - 35ms
+      x-request-id:
+      - b8aea1a1a2f28a89da6e56213d29152c
+    http_version: HTTP/1.1
+    status_code: 200
+version: 1

@@ -46,7 +46,7 @@ def test_custom_llm():
 	assert agent.llm.model_name == "gpt-4"
 	assert agent.llm.temperature == 0
 
-@pytest.mark.vcr()
+@pytest.mark.vcr(filter_headers=["authorization"])
 def test_agent_without_memory():
 	no_memory_agent = Agent(
 		role="test role",
@@ -76,7 +76,7 @@ def test_agent_without_memory():
 	assert no_memory_agent.agent_executor.memory is None
 	assert memory_agent.agent_executor.memory is not None
 
-@pytest.mark.vcr()
+@pytest.mark.vcr(filter_headers=["authorization"])
 def test_agent_execution():
 	agent = Agent(
 		role="test role",
@@ -88,7 +88,7 @@ def test_agent_execution():
 	output = agent.execute_task("How much is 1 + 1?")
 	assert output == "2"
 
-@pytest.mark.vcr()
+@pytest.mark.vcr(filter_headers=["authorization"])
 def test_agent_execution_with_tools():
 	from langchain.tools import tool
 
@@ -112,7 +112,7 @@ def test_agent_execution_with_tools():
 	output = agent.execute_task("What is 3 times 4")
 	assert output == "12"
 
-@pytest.mark.vcr()
+@pytest.mark.vcr(filter_headers=["authorization"])
 def test_agent_execution_with_specific_tools():
 	from langchain.tools import tool
 
