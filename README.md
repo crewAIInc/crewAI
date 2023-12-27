@@ -144,6 +144,12 @@ poetry install
 poetry shell
 ```
 
+### Pre-commit hooks
+
+```bash
+pre-commit install
+```
+
 ### Running Tests
 ```bash
 poetry run pytest
