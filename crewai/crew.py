@@ -5,6 +5,7 @@ from pydantic import BaseModel, Field, Json, field_validator, model_validator
 from pydantic_core import PydanticCustomError
 
 from .agent import Agent
+from .agents import CacheHandler
 from .process import Process
 from .task import Task
 from .tools.agent_tools import AgentTools
@@ -12,6 +13,9 @@ from .tools.agent_tools import AgentTools
 
 class Crew(BaseModel):
     """Class that represents a group of agents, how they should work together and their tasks."""
+
+    class Config:
+        arbitrary_types_allowed = True
 
     tasks: List[Task] = Field(description="List of tasks", default_factory=list)
     agents: List[Agent] = Field(
@@ -25,6 +29,9 @@ class Crew(BaseModel):
     )
     config: Optional[Union[Json, Dict[str, Any]]] = Field(
         description="Configuration of the crew.", default=None
+    )
+    cache_handler: Optional[InstanceOf[CacheHandler]] = Field(
+        default=None, description="An instance of the CacheHandler class."
     )
 
     @classmethod
@@ -60,12 +67,20 @@ class Crew(BaseModel):
             self.tasks = tasks
         return self
 
+    def __init__(self, **data):
+        super().__init__(**data)
+        for agent in self.agents:
+            agent.set_cache_handler(self.cache_handler)
+
     def kickoff(self) -> str:
         """Kickoff the crew to work on its tasks.
 
         Returns:
             Output of the crew for each task.
         """
+        for agent in self.agents:
+            agent.cache_handler = self.cache_handler
+
         if self.process == Process.sequential:
             return self.__sequential_loop()
 

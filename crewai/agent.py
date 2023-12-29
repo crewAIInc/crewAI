@@ -1,14 +1,14 @@
-"""Generic agent."""
 from typing import Any, List, Optional
 
 from langchain.agents import AgentExecutor
 from langchain.agents.format_scratchpad import format_log_to_str
-from langchain.agents.output_parsers import ReActSingleInputOutputParser
 from langchain.chat_models import ChatOpenAI
 from langchain.memory import ConversationSummaryMemory
 from langchain.tools.render import render_text_description
+from langchain_core.runnables.config import RunnableConfig
 from pydantic import BaseModel, Field, InstanceOf, PrivateAttr, model_validator
 
+from .agents import CacheHandler, CrewAgentOutputParser, ToolsHandler
 from .prompts import Prompts
 
 
@@ -29,9 +29,9 @@ class Agent(BaseModel):
             allow_delegation: Whether the agent is allowed to delegate tasks to other agents.
     """
 
-    agent_executor: Optional[InstanceOf[AgentExecutor]] = Field(
-        default=None, description="An instance of the AgentExecutor class."
-    )
+    class Config:
+        arbitrary_types_allowed = True
+
     role: str = Field(description="Role of the agent")
     goal: str = Field(description="Objective of the agent")
     backstory: str = Field(description="Backstory of the agent")
@@ -54,7 +54,15 @@ class Agent(BaseModel):
     tools: List[Any] = Field(
         default_factory=list, description="Tools at agents disposal"
     )
-    _task_calls: List[Any] = PrivateAttr()
+    agent_executor: Optional[InstanceOf[AgentExecutor]] = Field(
+        default=None, description="An instance of the AgentExecutor class."
+    )
+    tools_handler: Optional[InstanceOf[ToolsHandler]] = Field(
+        default=None, description="An instance of the ToolsHandler class."
+    )
+    cache_handler: Optional[InstanceOf[CacheHandler]] = Field(
+        default=None, description="An instance of the CacheHandler class."
+    )
 
     @model_validator(mode="after")
     def check_agent_executor(self) -> "Agent":
@@ -62,7 +70,46 @@ class Agent(BaseModel):
             self.agent_executor = self._create_agent_executor()
         return self
 
-    def _create_agent_executor(self) -> AgentExecutor:
+    def __init__(self, **data):
+        super().__init__(**data)
+        self.set_cache_handler(self.cache_handler)
+
+    def execute_task(
+        self, task: str, context: str = None, tools: List[Any] = None
+    ) -> str:
+        """Execute a task with the agent.
+
+        Args:
+            task: Task to execute.
+            context: Context to execute the task in.
+            tools: Tools to use for the task.
+
+        Returns:
+            Output of the agent
+        """
+        if context:
+            task = "\n".join(
+                [task, "\nThis is the context you are working with:", context]
+            )
+
+        tools = tools or self.tools
+        self.agent_executor.tools = tools
+
+        return self.agent_executor.invoke(
+            {
+                "input": task,
+                "tool_names": self.__tools_names(tools),
+                "tools": render_text_description(tools),
+            },
+            RunnableConfig(callbacks=[self.tools_handler]),
+        )["output"]
+
+    def set_cache_handler(self, _cache_handler) -> None:
+        self.cache_handler = _cache_handler
+        self.tools_handler = ToolsHandler(cache=self.cache_handler)
+        self.__create_agent_executor()
+
+    def __create_agent_executor(self) -> AgentExecutor:
         """Create an agent executor for the agent.
 
         Returns:
@@ -98,38 +145,14 @@ class Agent(BaseModel):
 
         bind = self.llm.bind(stop=["\nObservation"])
         inner_agent = (
-            agent_args | execution_prompt | bind | ReActSingleInputOutputParser()
-        )
-
-        return AgentExecutor(agent=inner_agent, **executor_args)
-
-    def execute_task(
-        self, task: str, context: str = None, tools: List[Any] = None
-    ) -> str:
-        """Execute a task with the agent.
-
-        Args:
-            task: Task to execute.
-            context: Context to execute the task in.
-            tools: Tools to use for the task.
-
-        Returns:
-            Output of the agent
-        """
-        if context:
-            task = "\n".join(
-                [task, "\nThis is the context you are working with:", context]
+            agent_args
+            | execution_prompt
+            | bind
+            | CrewAgentOutputParser(
+                tools_handler=self.tools_handler, cache=self.cache_handler
             )
-
-        tools = tools or self.tools
-        self.agent_executor.tools = tools
-        return self.agent_executor.invoke(
-            {
-                "input": task,
-                "tool_names": self.__tools_names(tools),
-                "tools": render_text_description(tools),
-            }
-        )["output"]
+        )
+        self.agent_executor = AgentExecutor(agent=inner_agent, **executor_args)
 
     @staticmethod
     def __tools_names(tools) -> str:
