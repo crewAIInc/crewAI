@@ -1,0 +1,1 @@
+"[StructuredTool(name='fake_task_tool', description='fake_task_tool() -> None - Fake tool', args_schema=<class 'pydantic.v1.main.fake_task_toolSchemaSchema'>, func=<function test_task_tool_takes_precedence_ove_agent_tools.<locals>.fake_task_tool at 0x169d2bec0>)]"

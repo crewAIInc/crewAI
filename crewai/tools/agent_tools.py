@@ -2,7 +2,7 @@ from textwrap import dedent
 from typing import List
 
 from langchain.tools import Tool
-from pydantic.v1 import BaseModel, Field
+from pydantic import BaseModel, Field
 
 from ..agent import Agent
 

@@ -4,7 +4,7 @@ from textwrap import dedent
 from typing import ClassVar
 
 from langchain.prompts import PromptTemplate
-from pydantic.v1 import BaseModel
+from pydantic import BaseModel
 
 
 class Prompts(BaseModel):
