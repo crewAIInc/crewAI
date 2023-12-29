@@ -1,7 +1,8 @@
 """Test Agent creation and execution basic functionality."""
 
 
-from ..crewai import Agent, Task
+from crewai.agent import Agent
+from crewai.task import Task
 
 
 def test_task_tool_reflect_agent_tools():
