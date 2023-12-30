@@ -5,10 +5,10 @@ import json
 import pytest
 
 from crewai.agent import Agent
+from crewai.agents import CacheHandler
 from crewai.crew import Crew
 from crewai.process import Process
 from crewai.task import Task
-from crewai.agents import CacheHandler
 
 ceo = Agent(
     role="CEO",
@@ -195,6 +195,33 @@ def test_crew_verbose_output(capsys):
     crew.kickoff()
     captured = capsys.readouterr()
     assert captured.out == ""
+
+
+@pytest.mark.vcr(filter_headers=["authorization"])
+def test_crew_verbose_levels_output(capsys):
+    tasks = [Task(description="Write about AI advancements.", agent=researcher)]
+
+    crew = Crew(agents=[researcher], tasks=tasks, process=Process.sequential, verbose=1)
+
+    crew.kickoff()
+    captured = capsys.readouterr()
+    expected_strings = ["Working Agent: Researcher", "Task output:"]
+
+    for expected_string in expected_strings:
+        assert expected_string in captured.out
+
+    # Now test with verbose set to 2
+    crew.verbose = 2
+    crew.kickoff()
+    captured = capsys.readouterr()
+    expected_strings = [
+        "Working Agent: Researcher",
+        "Starting Task: Write about AI advancements. ...",
+        "Task output:",
+    ]
+
+    for expected_string in expected_strings:
+        assert expected_string in captured.out
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
