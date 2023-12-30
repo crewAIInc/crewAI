@@ -2,7 +2,7 @@ import json
 from typing import Any, Dict, List, Optional, Union
 
 from pydantic import (
-    BaseModel,
+    ConfigDict,
     Field,
     InstanceOf,
     Json,
@@ -13,17 +13,16 @@ from pydantic_core import PydanticCustomError
 
 from crewai.agent import Agent
 from crewai.agents import CacheHandler
+from crewai.base.model import CrewAIBaseModel
 from crewai.process import Process
 from crewai.task import Task
 from crewai.tools.agent_tools import AgentTools
 
 
-class Crew(BaseModel):
+class Crew(CrewAIBaseModel):
     """Class that represents a group of agents, how they should work together and their tasks."""
 
-    class Config:
-        arbitrary_types_allowed = True
-
+    model_config = ConfigDict(arbitrary_types_allowed=True)
     tasks: List[Task] = Field(description="List of tasks", default_factory=list)
     agents: List[Agent] = Field(
         description="List of agents in this crew.", default_factory=list
