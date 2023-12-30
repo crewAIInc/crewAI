@@ -3,7 +3,7 @@ version: 2.1
 jobs:
   build-and-test:
     docker:
-      - image: python/3.9.18
+      - image: python:3.9.18
     steps:
       - checkout
       - run:
