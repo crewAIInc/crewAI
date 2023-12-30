@@ -1,5 +1,4 @@
 """Generic agent."""
-
 from typing import Any, List, Optional
 
 from langchain.agents import AgentExecutor
@@ -8,14 +7,13 @@ from langchain.agents.output_parsers import ReActSingleInputOutputParser
 from langchain.chat_models import ChatOpenAI
 from langchain.memory import ConversationSummaryMemory
 from langchain.tools.render import render_text_description
-from pydantic.v1 import BaseModel, Field, PrivateAttr, root_validator
+from pydantic import BaseModel, Field, InstanceOf, PrivateAttr, model_validator
 
 from .prompts import Prompts
 
 
 class Agent(BaseModel):
-    """
-    Represents an agent in a system.
+    """Represents an agent in a system.
 
     Each agent has a role, a goal, a backstory, and an optional language model (llm).
     The agent can also have memory, can operate in verbose mode, and can delegate tasks to other agents.
@@ -31,31 +29,45 @@ class Agent(BaseModel):
             allow_delegation: Whether the agent is allowed to delegate tasks to other agents.
     """
 
-    agent_executor: AgentExecutor = None
+    agent_executor: Optional[InstanceOf[AgentExecutor]] = Field(
+        default=None, description="An instance of the AgentExecutor class."
+    )
     role: str = Field(description="Role of the agent")
     goal: str = Field(description="Objective of the agent")
     backstory: str = Field(description="Backstory of the agent")
-    llm: Optional[Any] = Field(description="LLM that will run the agent")
+    llm: Optional[Any] = Field(
+        default_factory=lambda: ChatOpenAI(
+            temperature=0.7,
+            model_name="gpt-4",
+        ),
+        description="Language model that will run the agent.",
+    )
     memory: bool = Field(
-        description="Whether the agent should have memory or not", default=True
+        default=True, description="Whether the agent should have memory or not"
     )
     verbose: bool = Field(
-        description="Verbose mode for the Agent Execution", default=False
+        default=False, description="Verbose mode for the Agent Execution"
     )
     allow_delegation: bool = Field(
-        description="Allow delegation of tasks to agents", default=True
+        default=True, description="Allow delegation of tasks to agents"
     )
-    tools: List[Any] = Field(description="Tools at agents disposal", default=[])
+    tools: List[Any] = Field(
+        default_factory=list, description="Tools at agents disposal"
+    )
     _task_calls: List[Any] = PrivateAttr()
 
-    @root_validator(pre=True)
-    def check_llm(_cls, values):
-        if not values.get("llm"):
-            values["llm"] = ChatOpenAI(temperature=0.7, model_name="gpt-4")
-        return values
+    @model_validator(mode="after")
+    def check_agent_executor(self) -> "Agent":
+        if not self.agent_executor:
+            self.agent_executor = self._create_agent_executor()
+        return self
 
-    def __init__(self, **data):
-        super().__init__(**data)
+    def _create_agent_executor(self) -> AgentExecutor:
+        """Create an agent executor for the agent.
+
+        Returns:
+            An instance of the AgentExecutor class.
+        """
         agent_args = {
             "input": lambda x: x["input"],
             "tools": lambda x: x["tools"],
@@ -89,17 +101,20 @@ class Agent(BaseModel):
             agent_args | execution_prompt | bind | ReActSingleInputOutputParser()
         )
 
-        self.agent_executor = AgentExecutor(agent=inner_agent, **executor_args)
+        return AgentExecutor(agent=inner_agent, **executor_args)
 
     def execute_task(
         self, task: str, context: str = None, tools: List[Any] = None
     ) -> str:
-        """
-        Execute a task with the agent.
-                Parameters:
-                        task (str): Task to execute
-                Returns:
-                        output (str): Output of the agent
+        """Execute a task with the agent.
+
+        Args:
+            task: Task to execute.
+            context: Context to execute the task in.
+            tools: Tools to use for the task.
+
+        Returns:
+            Output of the agent
         """
         if context:
             task = "\n".join(
@@ -116,5 +131,6 @@ class Agent(BaseModel):
             }
         )["output"]
 
-    def __tools_names(self, tools) -> str:
+    @staticmethod
+    def __tools_names(tools) -> str:
         return ", ".join([t.name for t in tools])

@@ -3,7 +3,7 @@
 import pytest
 from langchain.chat_models import ChatOpenAI as OpenAI
 
-from ..crewai import Agent
+from crewai.agent import Agent
 
 
 def test_agent_creation():
