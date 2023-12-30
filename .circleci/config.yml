@@ -1,24 +1,19 @@
 version: 2.1
-
-orbs:
-  python: circleci/python@2.0.3
+version: 2.1
 
 jobs:
-  build_and_test:
-    executor: python/default
+  build-and-test:
+    docker:
+      - image: python/3.9.18
     steps:
       - checkout
-      - python/install-packages:
-          pkg-manager: pip
+      - install_dependencies:
+          command: poetry install
       - run:
           name: Run tests
-          command: python -m pytest
-      - persist_to_workspace:
-          root: ~/project
-          paths:
-            - .
+          command: poetry run pytest
 
 workflows:
-  build_test_deploy:
+  build-and-test:
     jobs:
-      - build_and_test
+      - build-and-test
