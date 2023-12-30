@@ -7,6 +7,9 @@ jobs:
     steps:
       - checkout
       - run:
+          name: Install poetry
+          command: pipy install poetry
+      - run:
           name: Install dependencies
           command: poetry install
       - run:
