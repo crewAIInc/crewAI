@@ -101,7 +101,6 @@ class Agent(BaseModel):
         )["output"]
 
     def set_cache_handler(self, cache_handler) -> None:
-        print(f"cache_handler: {cache_handler}")
         self.cache_handler = cache_handler
         self.tools_handler = ToolsHandler(cache=self.cache_handler)
         self.__create_agent_executor()
