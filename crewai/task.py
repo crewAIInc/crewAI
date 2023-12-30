@@ -2,7 +2,7 @@ from typing import Any, List, Optional
 
 from pydantic import BaseModel, Field, model_validator
 
-from .agent import Agent
+from crewai.agent import Agent
 
 
 class Task(BaseModel):

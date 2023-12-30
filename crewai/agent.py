@@ -8,8 +8,8 @@ from langchain.tools.render import render_text_description
 from langchain_core.runnables.config import RunnableConfig
 from pydantic import BaseModel, Field, InstanceOf, model_validator
 
-from .agents import CacheHandler, CrewAgentOutputParser, ToolsHandler
-from .prompts import Prompts
+from crewai.agents import CacheHandler, CrewAgentOutputParser, ToolsHandler
+from crewai.prompts import Prompts
 
 
 class Agent(BaseModel):

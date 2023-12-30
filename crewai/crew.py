@@ -11,11 +11,11 @@ from pydantic import (
 )
 from pydantic_core import PydanticCustomError
 
-from .agent import Agent
-from .agents import CacheHandler
-from .process import Process
-from .task import Task
-from .tools.agent_tools import AgentTools
+from crewai.agent import Agent
+from crewai.process import Process
+from crewai.task import Task
+from crewai.tools.agent_tools import AgentTools
+from crewai.agents import CacheHandler
 
 
 class Crew(BaseModel):
