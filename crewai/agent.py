@@ -1,21 +1,19 @@
-"""Generic agent."""
-
 from typing import Any, List, Optional
 
 from langchain.agents import AgentExecutor
 from langchain.agents.format_scratchpad import format_log_to_str
-from langchain.agents.output_parsers import ReActSingleInputOutputParser
 from langchain.chat_models import ChatOpenAI
 from langchain.memory import ConversationSummaryMemory
 from langchain.tools.render import render_text_description
-from pydantic.v1 import BaseModel, Field, PrivateAttr, root_validator
+from langchain_core.runnables.config import RunnableConfig
+from pydantic import BaseModel, Field, InstanceOf, model_validator
 
+from crewai.agents import CacheHandler, CrewAgentOutputParser, ToolsHandler
 from crewai.prompts import Prompts
 
 
 class Agent(BaseModel):
-    """
-    Represents an agent in a system.
+    """Represents an agent in a system.
 
     Each agent has a role, a goal, a backstory, and an optional language model (llm).
     The agent can also have memory, can operate in verbose mode, and can delegate tasks to other agents.
@@ -31,31 +29,89 @@ class Agent(BaseModel):
             allow_delegation: Whether the agent is allowed to delegate tasks to other agents.
     """
 
-    agent_executor: AgentExecutor = None
+    class Config:
+        arbitrary_types_allowed = True
+
     role: str = Field(description="Role of the agent")
     goal: str = Field(description="Objective of the agent")
     backstory: str = Field(description="Backstory of the agent")
-    llm: Optional[Any] = Field(description="LLM that will run the agent")
+    llm: Optional[Any] = Field(
+        default_factory=lambda: ChatOpenAI(
+            temperature=0.7,
+            model_name="gpt-4",
+        ),
+        description="Language model that will run the agent.",
+    )
     memory: bool = Field(
-        description="Whether the agent should have memory or not", default=True
+        default=True, description="Whether the agent should have memory or not"
     )
     verbose: bool = Field(
-        description="Verbose mode for the Agent Execution", default=False
+        default=False, description="Verbose mode for the Agent Execution"
     )
     allow_delegation: bool = Field(
-        description="Allow delegation of tasks to agents", default=True
+        default=True, description="Allow delegation of tasks to agents"
     )
-    tools: List[Any] = Field(description="Tools at agents disposal", default=[])
-    _task_calls: List[Any] = PrivateAttr()
+    tools: List[Any] = Field(
+        default_factory=list, description="Tools at agents disposal"
+    )
+    agent_executor: Optional[InstanceOf[AgentExecutor]] = Field(
+        default=None, description="An instance of the AgentExecutor class."
+    )
+    tools_handler: Optional[InstanceOf[ToolsHandler]] = Field(
+        default=None, description="An instance of the ToolsHandler class."
+    )
+    cache_handler: Optional[InstanceOf[CacheHandler]] = Field(
+        default=CacheHandler(), description="An instance of the CacheHandler class."
+    )
 
-    @root_validator(pre=True)
-    def check_llm(_cls, values):
-        if not values.get("llm"):
-            values["llm"] = ChatOpenAI(temperature=0.7, model_name="gpt-4")
-        return values
+    @model_validator(mode="after")
+    def check_agent_executor(self) -> "Agent":
+        if not self.agent_executor:
+            self.set_cache_handler(self.cache_handler)
+        return self
 
-    def __init__(self, **data):
-        super().__init__(**data)
+    def execute_task(
+        self, task: str, context: str = None, tools: List[Any] = None
+    ) -> str:
+        """Execute a task with the agent.
+
+        Args:
+            task: Task to execute.
+            context: Context to execute the task in.
+            tools: Tools to use for the task.
+
+        Returns:
+            Output of the agent
+        """
+        if context:
+            task = "\n".join(
+                [task, "\nThis is the context you are working with:", context]
+            )
+
+        tools = tools or self.tools
+        self.agent_executor.tools = tools
+
+        return self.agent_executor.invoke(
+            {
+                "input": task,
+                "tool_names": self.__tools_names(tools),
+                "tools": render_text_description(tools),
+            },
+            RunnableConfig(callbacks=[self.tools_handler]),
+        )["output"]
+
+    def set_cache_handler(self, cache_handler) -> None:
+        print(f"cache_handler: {cache_handler}")
+        self.cache_handler = cache_handler
+        self.tools_handler = ToolsHandler(cache=self.cache_handler)
+        self.__create_agent_executor()
+
+    def __create_agent_executor(self) -> AgentExecutor:
+        """Create an agent executor for the agent.
+
+        Returns:
+            An instance of the AgentExecutor class.
+        """
         agent_args = {
             "input": lambda x: x["input"],
             "tools": lambda x: x["tools"],
@@ -86,35 +142,15 @@ class Agent(BaseModel):
 
         bind = self.llm.bind(stop=["\nObservation"])
         inner_agent = (
-            agent_args | execution_prompt | bind | ReActSingleInputOutputParser()
+            agent_args
+            | execution_prompt
+            | bind
+            | CrewAgentOutputParser(
+                tools_handler=self.tools_handler, cache=self.cache_handler
+            )
         )
-
         self.agent_executor = AgentExecutor(agent=inner_agent, **executor_args)
 
-    def execute_task(
-        self, task: str, context: str = None, tools: List[Any] = None
-    ) -> str:
-        """
-        Execute a task with the agent.
-                Parameters:
-                        task (str): Task to execute
-                Returns:
-                        output (str): Output of the agent
-        """
-        if context:
-            task = "\n".join(
-                [task, "\nThis is the context you are working with:", context]
-            )
-
-        tools = tools or self.tools
-        self.agent_executor.tools = tools
-        return self.agent_executor.invoke(
-            {
-                "input": task,
-                "tool_names": self.__tools_names(tools),
-                "tools": render_text_description(tools),
-            }
-        )["output"]
-
-    def __tools_names(self, tools) -> str:
+    @staticmethod
+    def __tools_names(tools) -> str:
         return ", ".join([t.name for t in tools])

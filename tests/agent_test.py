@@ -4,6 +4,7 @@ import pytest
 from langchain.chat_models import ChatOpenAI as OpenAI
 
 from crewai.agent import Agent
+from crewai.agents import CacheHandler
 
 
 def test_agent_creation():
@@ -102,6 +103,77 @@ def test_agent_execution_with_tools():
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
+def test_logging_tool_usage():
+    from langchain.tools import tool
+
+    @tool
+    def multiplier(numbers) -> float:
+        """Useful for when you need to multiply two numbers together.
+        The input to this tool should be a comma separated list of numbers of
+        length two, representing the two numbers you want to multiply together.
+        For example, `1,2` would be the input if you wanted to multiply 1 by 2."""
+        a, b = numbers.split(",")
+        return int(a) * int(b)
+
+    agent = Agent(
+        role="test role",
+        goal="test goal",
+        backstory="test backstory",
+        tools=[multiplier],
+        allow_delegation=False,
+        verbose=True,
+    )
+
+    assert agent.tools_handler.last_used_tool == {}
+    output = agent.execute_task("What is 3 times 5?")
+    tool_usage = {
+        "tool": "multiplier",
+        "input": "3,5",
+    }
+
+    assert output == "3 times 5 is 15."
+    assert agent.tools_handler.last_used_tool == tool_usage
+
+
+@pytest.mark.vcr(filter_headers=["authorization"])
+def test_cache_hitting():
+    from unittest.mock import patch
+
+    from langchain.tools import tool
+
+    @tool
+    def multiplier(numbers) -> float:
+        """Useful for when you need to multiply two numbers together.
+        The input to this tool should be a comma separated list of numbers of
+        length two, representing the two numbers you want to multiply together.
+        For example, `1,2` would be the input if you wanted to multiply 1 by 2."""
+        a, b = numbers.split(",")
+        return int(a) * int(b)
+
+    cache_handler = CacheHandler()
+
+    agent = Agent(
+        role="test role",
+        goal="test goal",
+        backstory="test backstory",
+        tools=[multiplier],
+        allow_delegation=False,
+        cache_handler=cache_handler,
+        verbose=True,
+    )
+
+    output = agent.execute_task("What is 2 times 6?")
+    output = agent.execute_task("What is 3 times 3?")
+    assert cache_handler._cache == {"multiplier-2,6": "12", "multiplier-3,3": "9"}
+
+    with patch.object(CacheHandler, "read") as read:
+        read.return_value = "0"
+        output = agent.execute_task("What is 2 times 6?")
+        assert output == "0"
+        read.assert_called_once_with("multiplier", "2,6")
+
+
+@pytest.mark.vcr(filter_headers=["authorization"])
 def test_agent_execution_with_specific_tools():
     from langchain.tools import tool
 
@@ -122,4 +194,4 @@ def test_agent_execution_with_specific_tools():
     )
 
     output = agent.execute_task(task="What is 3 times 4", tools=[multiplier])
-    assert output == "3 times 4 is 12."
+    assert output == "12"

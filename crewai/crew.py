@@ -1,71 +1,100 @@
 import json
-from typing import List, Optional
+from typing import Any, Dict, List, Optional, Union
 
-from pydantic.v1 import BaseModel, Field, Json, root_validator
+from pydantic import (
+    BaseModel,
+    Field,
+    InstanceOf,
+    Json,
+    field_validator,
+    model_validator,
+)
+from pydantic_core import PydanticCustomError
 
 from crewai.agent import Agent
 from crewai.process import Process
 from crewai.task import Task
 from crewai.tools.agent_tools import AgentTools
+from crewai.agents import CacheHandler
 
 
 class Crew(BaseModel):
-    """
-    Class that represents a group of agents, how they should work together and
-    their tasks.
-    """
+    """Class that represents a group of agents, how they should work together and their tasks."""
 
-    tasks: Optional[List[Task]] = Field(description="List of tasks")
-    agents: Optional[List[Agent]] = Field(description="List of agents in this crew.")
+    class Config:
+        arbitrary_types_allowed = True
+
+    tasks: List[Task] = Field(description="List of tasks", default_factory=list)
+    agents: List[Agent] = Field(
+        description="List of agents in this crew.", default_factory=list
+    )
     process: Process = Field(
         description="Process that the crew will follow.", default=Process.sequential
     )
     verbose: bool = Field(
         description="Verbose mode for the Agent Execution", default=False
     )
-    config: Optional[Json] = Field(
+    config: Optional[Union[Json, Dict[str, Any]]] = Field(
         description="Configuration of the crew.", default=None
     )
+    cache_handler: Optional[InstanceOf[CacheHandler]] = Field(
+        default=CacheHandler(), description="An instance of the CacheHandler class."
+    )
 
-    @root_validator(pre=True)
-    def check_config(_cls, values):
-        if not values.get("config") and (
-            not values.get("agents") and not values.get("tasks")
-        ):
-            raise ValueError("Either agents and task need to be set or config.")
+    @classmethod
+    @field_validator("config", mode="before")
+    def check_config_type(cls, v: Union[Json, Dict[str, Any]]):
+        if isinstance(v, Json):
+            return json.loads(v)
+        return v
 
-        if values.get("config"):
-            config = json.loads(values.get("config"))
-            if not config.get("agents") or not config.get("tasks"):
-                raise ValueError("Config should have agents and tasks.")
+    @model_validator(mode="after")
+    def check_config(self):
+        if not self.config and not self.tasks and not self.agents:
+            raise PydanticCustomError(
+                "missing_keys", "Either agents and task need to be set or config.", {}
+            )
 
-            values["agents"] = [Agent(**agent) for agent in config["agents"]]
+        if self.config:
+            if not self.config.get("agents") or not self.config.get("tasks"):
+                raise PydanticCustomError(
+                    "missing_keys_in_config", "Config should have agents and tasks", {}
+                )
+
+            self.agents = [Agent(**agent) for agent in self.config["agents"]]
 
             tasks = []
-            for task in config["tasks"]:
-                task_agent = [
-                    agt for agt in values["agents"] if agt.role == task["agent"]
-                ][0]
+            for task in self.config["tasks"]:
+                task_agent = [agt for agt in self.agents if agt.role == task["agent"]][
+                    0
+                ]
                 del task["agent"]
                 tasks.append(Task(**task, agent=task_agent))
 
-            values["tasks"] = tasks
-        return values
+            self.tasks = tasks
+
+        if self.agents:
+            for agent in self.agents:
+                agent.set_cache_handler(self.cache_handler)
+        return self
 
     def kickoff(self) -> str:
+        """Kickoff the crew to work on its tasks.
+
+        Returns:
+            Output of the crew for each task.
         """
-        Kickoff the crew to work on it's tasks.
-                Returns:
-                        output (List[str]): Output of the crew for each task.
-        """
+        for agent in self.agents:
+            agent.cache_handler = self.cache_handler
+
         if self.process == Process.sequential:
             return self.__sequential_loop()
 
     def __sequential_loop(self) -> str:
-        """
-        Loop that executes the sequential process.
-                Returns:
-                        output (str): Output of the crew.
+        """Loop that executes the sequential process.
+
+        Returns:
+            Output of the crew.
         """
         task_outcome = None
         for task in self.tasks:

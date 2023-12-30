@@ -4,7 +4,7 @@ from textwrap import dedent
 from typing import ClassVar
 
 from langchain.prompts import PromptTemplate
-from pydantic.v1 import BaseModel
+from pydantic import BaseModel
 
 
 class Prompts(BaseModel):
@@ -48,7 +48,7 @@ class Prompts(BaseModel):
 
 		```
 		Thought: Do I need to use a tool? Yes
-		Action: the action to take, should be one of [{tool_names}]
+		Action: the action to take, should be one of [{tool_names}], just the name.
 		Action Input: the input to the action
 		Observation: the result of the action
 		```
