@@ -1,5 +1,4 @@
 version: 2.1
-version: 2.1
 
 jobs:
   build-and-test:
