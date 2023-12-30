@@ -1,0 +1,1084 @@
+interactions:
+- request:
+    body: '{"messages": [{"role": "user", "content": "You are CEO.\nYou''re an long
+      time CEO of a content creation agency with a Senior Writer on the team. You''re
+      now working on a new project and want to make sure the content produced is amazing.\n\nYour
+      personal goal is: Make sure the writers in your company produce amazing content.\n\nTOOLS:\n------\nYou
+      have access to the following tools:\n\nmultiplier: multiplier(numbers) -> float
+      - Useful for when you need to multiply two numbers together.\n        The input
+      to this tool should be a comma separated list of numbers of\n        length
+      two, representing the two numbers you want to multiply together.\n        For
+      example, `1,2` would be the input if you wanted to multiply 1 by 2.\nDelegate
+      work to co-worker: Useful to delegate a specific task to one of the\n\t\t\t\tfollowing
+      co-workers: [CEO, Researcher].\n\t\t\t\tThe input to this tool should be a pipe
+      (|) separated text of length\n\t\t\t\tthree, representing the role you want
+      to delegate it to, the task and\n\t\t\t\tinformation necessary. For example,
+      `coworker|task|information`.\n\nAsk question to co-worker: Useful to ask a question,
+      opinion or take from on\n\t\t\t\tof the following co-workers: [CEO, Researcher].\n\t\t\t\tThe
+      input to this tool should be a pipe (|) separated text of length\n\t\t\t\tthree,
+      representing the role you want to ask it to, the question and\n\t\t\t\tinformation
+      necessary. For example, `coworker|question|information`.\n\n\nTo use a tool,
+      please use the exact following format:\n\n```\nThought: Do I need to use a tool?
+      Yes\nAction: the action to take, should be one of [multiplier, Delegate work
+      to co-worker, Ask question to co-worker], just the name.\nAction Input: the
+      input to the action\nObservation: the result of the action\n```\n\nWhen you
+      have a response for your task, or if you do not need to use a tool, you MUST
+      use the format:\n\n```\nThought: Do I need to use a tool? No\nFinal Answer:
+      [your response here]\n```\n\t\tThis is the summary of your work so far:\n    \nBegin!
+      This is VERY important to you, your job depends on it!\n\nCurrent Task: What
+      is 2 tims 6?\n\n"}], "model": "gpt-4", "n": 1, "stop": ["\nObservation"], "stream":
+      false, "temperature": 0.7}'
+    headers:
+      accept:
+      - application/json
+      accept-encoding:
+      - gzip, deflate
+      connection:
+      - keep-alive
+      content-length:
+      - '2215'
+      content-type:
+      - application/json
+      cookie:
+      - _cfuvid=ps.JYe.5DT5QaG1hDuUb70tnVJo8IPWJrGrGEO_HUYA-1703099776177-0-604800000
+      host:
+      - api.openai.com
+      user-agent:
+      - OpenAI/Python 1.6.1
+      x-stainless-arch:
+      - arm64
+      x-stainless-async:
+      - 'false'
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - MacOS
+      x-stainless-package-version:
+      - 1.6.1
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.11.7
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    content: "{\n  \"id\": \"chatcmpl-8bFlFR80bKQQzwjFzAICpcBT2G3s0\",\n  \"object\":
+      \"chat.completion\",\n  \"created\": 1703889413,\n  \"model\": \"gpt-4-0613\",\n
+      \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
+      \"assistant\",\n        \"content\": \"Thought: Do I need to use a tool? Yes\\nAction:
+      multiplier\\nAction Input: 2,6\\n\"\n      },\n      \"logprobs\": null,\n      \"finish_reason\":
+      \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 484,\n    \"completion_tokens\":
+      24,\n    \"total_tokens\": 508\n  },\n  \"system_fingerprint\": null\n}\n"
+    headers:
+      CF-Cache-Status:
+      - DYNAMIC
+      CF-RAY:
+      - 83d5863e9a050301-GRU
+      Cache-Control:
+      - no-cache, must-revalidate
+      Connection:
+      - keep-alive
+      Content-Encoding:
+      - gzip
+      Content-Type:
+      - application/json
+      Date:
+      - Fri, 29 Dec 2023 22:36:54 GMT
+      Server:
+      - cloudflare
+      Set-Cookie:
+      - __cf_bm=6RpGZVaY4yiI4M4AoreJuJny2199LZXRkp8DDrcSK5k-1703889414-1-AdxFp5oHDyE1t+/uGSC6LyRh7n4+ats5oznbOnwXmT+G4BkBdSY9kVWLS2RSLndYHxVzz5ksSBcREfL/gr1HAAc=;
+        path=/; expires=Fri, 29-Dec-23 23:06:54 GMT; domain=.api.openai.com; HttpOnly;
+        Secure; SameSite=None
+      - _cfuvid=O8jSUEuY34NDEdF4z_HQGq8w7idZ7PZlcpp1vRj2y5E-1703889414566-0-604800000;
+        path=/; domain=.api.openai.com; HttpOnly; Secure; SameSite=None
+      Transfer-Encoding:
+      - chunked
+      access-control-allow-origin:
+      - '*'
+      alt-svc:
+      - h3=":443"; ma=86400
+      openai-model:
+      - gpt-4-0613
+      openai-organization:
+      - user-z7g4wmlazxqvc5wjyaaaocfz
+      openai-processing-ms:
+      - '1227'
+      openai-version:
+      - '2020-10-01'
+      strict-transport-security:
+      - max-age=15724800; includeSubDomains
+      x-ratelimit-limit-requests:
+      - '10000'
+      x-ratelimit-limit-tokens:
+      - '300000'
+      x-ratelimit-limit-tokens_usage_based:
+      - '300000'
+      x-ratelimit-remaining-requests:
+      - '9999'
+      x-ratelimit-remaining-tokens:
+      - '299483'
+      x-ratelimit-remaining-tokens_usage_based:
+      - '299483'
+      x-ratelimit-reset-requests:
+      - 6ms
+      x-ratelimit-reset-tokens:
+      - 103ms
+      x-ratelimit-reset-tokens_usage_based:
+      - 103ms
+      x-request-id:
+      - 938270aa00d199e6be67525b6e3d6eba
+    http_version: HTTP/1.1
+    status_code: 200
+- request:
+    body: '{"messages": [{"role": "user", "content": "You are CEO.\nYou''re an long
+      time CEO of a content creation agency with a Senior Writer on the team. You''re
+      now working on a new project and want to make sure the content produced is amazing.\n\nYour
+      personal goal is: Make sure the writers in your company produce amazing content.\n\nTOOLS:\n------\nYou
+      have access to the following tools:\n\nmultiplier: multiplier(numbers) -> float
+      - Useful for when you need to multiply two numbers together.\n        The input
+      to this tool should be a comma separated list of numbers of\n        length
+      two, representing the two numbers you want to multiply together.\n        For
+      example, `1,2` would be the input if you wanted to multiply 1 by 2.\nDelegate
+      work to co-worker: Useful to delegate a specific task to one of the\n\t\t\t\tfollowing
+      co-workers: [CEO, Researcher].\n\t\t\t\tThe input to this tool should be a pipe
+      (|) separated text of length\n\t\t\t\tthree, representing the role you want
+      to delegate it to, the task and\n\t\t\t\tinformation necessary. For example,
+      `coworker|task|information`.\n\nAsk question to co-worker: Useful to ask a question,
+      opinion or take from on\n\t\t\t\tof the following co-workers: [CEO, Researcher].\n\t\t\t\tThe
+      input to this tool should be a pipe (|) separated text of length\n\t\t\t\tthree,
+      representing the role you want to ask it to, the question and\n\t\t\t\tinformation
+      necessary. For example, `coworker|question|information`.\n\n\nTo use a tool,
+      please use the exact following format:\n\n```\nThought: Do I need to use a tool?
+      Yes\nAction: the action to take, should be one of [multiplier, Delegate work
+      to co-worker, Ask question to co-worker], just the name.\nAction Input: the
+      input to the action\nObservation: the result of the action\n```\n\nWhen you
+      have a response for your task, or if you do not need to use a tool, you MUST
+      use the format:\n\n```\nThought: Do I need to use a tool? No\nFinal Answer:
+      [your response here]\n```\n\t\tThis is the summary of your work so far:\n    \nBegin!
+      This is VERY important to you, your job depends on it!\n\nCurrent Task: What
+      is 2 tims 6?\nThought: Do I need to use a tool? Yes\nAction: multiplier\nAction
+      Input: 2,6\n\nObservation: 12\nThought: \n"}], "model": "gpt-4", "n": 1, "stop":
+      ["\nObservation"], "stream": false, "temperature": 0.7}'
+    headers:
+      accept:
+      - application/json
+      accept-encoding:
+      - gzip, deflate
+      connection:
+      - keep-alive
+      content-length:
+      - '2321'
+      content-type:
+      - application/json
+      cookie:
+      - _cfuvid=O8jSUEuY34NDEdF4z_HQGq8w7idZ7PZlcpp1vRj2y5E-1703889414566-0-604800000;
+        __cf_bm=6RpGZVaY4yiI4M4AoreJuJny2199LZXRkp8DDrcSK5k-1703889414-1-AdxFp5oHDyE1t+/uGSC6LyRh7n4+ats5oznbOnwXmT+G4BkBdSY9kVWLS2RSLndYHxVzz5ksSBcREfL/gr1HAAc=
+      host:
+      - api.openai.com
+      user-agent:
+      - OpenAI/Python 1.6.1
+      x-stainless-arch:
+      - arm64
+      x-stainless-async:
+      - 'false'
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - MacOS
+      x-stainless-package-version:
+      - 1.6.1
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.11.7
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    content: "{\n  \"id\": \"chatcmpl-8bFlGBZrFqbUBA6wWFIW1k7CrvOMc\",\n  \"object\":
+      \"chat.completion\",\n  \"created\": 1703889414,\n  \"model\": \"gpt-4-0613\",\n
+      \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
+      \"assistant\",\n        \"content\": \"Do I need to use a tool? No\\nFinal Answer:
+      2 times 6 is 12.\"\n      },\n      \"logprobs\": null,\n      \"finish_reason\":
+      \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 517,\n    \"completion_tokens\":
+      22,\n    \"total_tokens\": 539\n  },\n  \"system_fingerprint\": null\n}\n"
+    headers:
+      CF-Cache-Status:
+      - DYNAMIC
+      CF-RAY:
+      - 83d586496c140301-GRU
+      Cache-Control:
+      - no-cache, must-revalidate
+      Connection:
+      - keep-alive
+      Content-Encoding:
+      - gzip
+      Content-Type:
+      - application/json
+      Date:
+      - Fri, 29 Dec 2023 22:36:59 GMT
+      Server:
+      - cloudflare
+      Transfer-Encoding:
+      - chunked
+      access-control-allow-origin:
+      - '*'
+      alt-svc:
+      - h3=":443"; ma=86400
+      openai-model:
+      - gpt-4-0613
+      openai-organization:
+      - user-z7g4wmlazxqvc5wjyaaaocfz
+      openai-processing-ms:
+      - '2377'
+      openai-version:
+      - '2020-10-01'
+      strict-transport-security:
+      - max-age=15724800; includeSubDomains
+      x-ratelimit-limit-requests:
+      - '10000'
+      x-ratelimit-limit-tokens:
+      - '300000'
+      x-ratelimit-limit-tokens_usage_based:
+      - '300000'
+      x-ratelimit-remaining-requests:
+      - '9999'
+      x-ratelimit-remaining-tokens:
+      - '299458'
+      x-ratelimit-remaining-tokens_usage_based:
+      - '299458'
+      x-ratelimit-reset-requests:
+      - 6ms
+      x-ratelimit-reset-tokens:
+      - 108ms
+      x-ratelimit-reset-tokens_usage_based:
+      - 108ms
+      x-request-id:
+      - ab3bab4c142330d66869ccff39de5738
+    http_version: HTTP/1.1
+    status_code: 200
+- request:
+    body: '{"messages": [{"role": "user", "content": "Progressively summarize the
+      lines of conversation provided, adding onto the previous summary returning a
+      new summary.\n\nEXAMPLE\nCurrent summary:\nThe human asks what the AI thinks
+      of artificial intelligence. The AI thinks artificial intelligence is a force
+      for good.\n\nNew lines of conversation:\nHuman: Why do you think artificial
+      intelligence is a force for good?\nAI: Because artificial intelligence will
+      help humans reach their full potential.\n\nNew summary:\nThe human asks what
+      the AI thinks of artificial intelligence. The AI thinks artificial intelligence
+      is a force for good because it will help humans reach their full potential.\nEND
+      OF EXAMPLE\n\nCurrent summary:\n\n\nNew lines of conversation:\nHuman: What
+      is 2 tims 6?\nAI: 2 times 6 is 12.\n\nNew summary:"}], "model": "gpt-4", "n":
+      1, "stream": false, "temperature": 0.7}'
+    headers:
+      accept:
+      - application/json
+      accept-encoding:
+      - gzip, deflate
+      connection:
+      - keep-alive
+      content-length:
+      - '885'
+      content-type:
+      - application/json
+      cookie:
+      - _cfuvid=O8jSUEuY34NDEdF4z_HQGq8w7idZ7PZlcpp1vRj2y5E-1703889414566-0-604800000;
+        __cf_bm=6RpGZVaY4yiI4M4AoreJuJny2199LZXRkp8DDrcSK5k-1703889414-1-AdxFp5oHDyE1t+/uGSC6LyRh7n4+ats5oznbOnwXmT+G4BkBdSY9kVWLS2RSLndYHxVzz5ksSBcREfL/gr1HAAc=
+      host:
+      - api.openai.com
+      user-agent:
+      - OpenAI/Python 1.6.1
+      x-stainless-arch:
+      - arm64
+      x-stainless-async:
+      - 'false'
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - MacOS
+      x-stainless-package-version:
+      - 1.6.1
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.11.7
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    content: "{\n  \"id\": \"chatcmpl-8bFlMHhxpCjHkQymfxQ5D8WBZkclA\",\n  \"object\":
+      \"chat.completion\",\n  \"created\": 1703889420,\n  \"model\": \"gpt-4-0613\",\n
+      \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
+      \"assistant\",\n        \"content\": \"The human asks the AI for the product
+      of 2 times 6, and the AI responds that it is 12.\"\n      },\n      \"logprobs\":
+      null,\n      \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\":
+      156,\n    \"completion_tokens\": 25,\n    \"total_tokens\": 181\n  },\n  \"system_fingerprint\":
+      null\n}\n"
+    headers:
+      CF-Cache-Status:
+      - DYNAMIC
+      CF-RAY:
+      - 83d5866a6c360301-GRU
+      Cache-Control:
+      - no-cache, must-revalidate
+      Connection:
+      - keep-alive
+      Content-Encoding:
+      - gzip
+      Content-Type:
+      - application/json
+      Date:
+      - Fri, 29 Dec 2023 22:37:01 GMT
+      Server:
+      - cloudflare
+      Transfer-Encoding:
+      - chunked
+      access-control-allow-origin:
+      - '*'
+      alt-svc:
+      - h3=":443"; ma=86400
+      openai-model:
+      - gpt-4-0613
+      openai-organization:
+      - user-z7g4wmlazxqvc5wjyaaaocfz
+      openai-processing-ms:
+      - '1468'
+      openai-version:
+      - '2020-10-01'
+      strict-transport-security:
+      - max-age=15724800; includeSubDomains
+      x-ratelimit-limit-requests:
+      - '10000'
+      x-ratelimit-limit-tokens:
+      - '300000'
+      x-ratelimit-limit-tokens_usage_based:
+      - '300000'
+      x-ratelimit-remaining-requests:
+      - '9999'
+      x-ratelimit-remaining-tokens:
+      - '299794'
+      x-ratelimit-remaining-tokens_usage_based:
+      - '299794'
+      x-ratelimit-reset-requests:
+      - 6ms
+      x-ratelimit-reset-tokens:
+      - 41ms
+      x-ratelimit-reset-tokens_usage_based:
+      - 41ms
+      x-request-id:
+      - e6e04fb8a12fc2288d6a3bd0b4480ab0
+    http_version: HTTP/1.1
+    status_code: 200
+- request:
+    body: '{"messages": [{"role": "user", "content": "You are Researcher.\nYou''re
+      an expert researcher, specialized in technology, software engineering, AI and
+      startups. You work as a freelancer and is now working on doing research and
+      analysis for a new customer.\n\nYour personal goal is: Make the best research
+      and analysis on content about AI and AI agents\n\nTOOLS:\n------\nYou have access
+      to the following tools:\n\nmultiplier: multiplier(numbers) -> float - Useful
+      for when you need to multiply two numbers together.\n        The input to this
+      tool should be a comma separated list of numbers of\n        length two, representing
+      the two numbers you want to multiply together.\n        For example, `1,2` would
+      be the input if you wanted to multiply 1 by 2.\n\nTo use a tool, please use
+      the exact following format:\n\n```\nThought: Do I need to use a tool? Yes\nAction:
+      the action to take, should be one of [multiplier], just the name.\nAction Input:
+      the input to the action\nObservation: the result of the action\n```\n\nWhen
+      you have a response for your task, or if you do not need to use a tool, you
+      MUST use the format:\n\n```\nThought: Do I need to use a tool? No\nFinal Answer:
+      [your response here]\n```\n\t\tThis is the summary of your work so far:\n    \nBegin!
+      This is VERY important to you, your job depends on it!\n\nCurrent Task: What
+      is 2 times 6?\n\nThis is the context you are working with:\n2 times 6 is 12.\n\n"}],
+      "model": "gpt-4", "n": 1, "stop": ["\nObservation"], "stream": false, "temperature":
+      0.7}'
+    headers:
+      accept:
+      - application/json
+      accept-encoding:
+      - gzip, deflate
+      connection:
+      - keep-alive
+      content-length:
+      - '1518'
+      content-type:
+      - application/json
+      cookie:
+      - _cfuvid=u_fUK0MqnLcrbhMkg8kKMfrSZpALgzClvD984s71oU8-1703091698056-0-604800000
+      host:
+      - api.openai.com
+      user-agent:
+      - OpenAI/Python 1.6.1
+      x-stainless-arch:
+      - arm64
+      x-stainless-async:
+      - 'false'
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - MacOS
+      x-stainless-package-version:
+      - 1.6.1
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.11.7
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    content: "{\n  \"id\": \"chatcmpl-8bFlOAG2g3FwravPGs5nQmnA8wpf1\",\n  \"object\":
+      \"chat.completion\",\n  \"created\": 1703889422,\n  \"model\": \"gpt-4-0613\",\n
+      \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
+      \"assistant\",\n        \"content\": \"Thought: Do I need to use a tool? Yes\\nAction:
+      multiplier\\nAction Input: 2,6\"\n      },\n      \"logprobs\": null,\n      \"finish_reason\":
+      \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 322,\n    \"completion_tokens\":
+      23,\n    \"total_tokens\": 345\n  },\n  \"system_fingerprint\": null\n}\n"
+    headers:
+      CF-Cache-Status:
+      - DYNAMIC
+      CF-RAY:
+      - 83d586773aea77c0-GRU
+      Cache-Control:
+      - no-cache, must-revalidate
+      Connection:
+      - keep-alive
+      Content-Encoding:
+      - gzip
+      Content-Type:
+      - application/json
+      Date:
+      - Fri, 29 Dec 2023 22:37:04 GMT
+      Server:
+      - cloudflare
+      Set-Cookie:
+      - __cf_bm=NTFlpt52iEoCg0Pkx5.1jxp.b3GIrmzDorPoCjgwA1c-1703889424-1-AcnqI2v1g/4ArTSHF6F4yC9cQd8KWJUiSRlY3mTNPF+6P6fectfBIvD544RQw/zhEY+z/eZ5pw4t/Baew653jtw=;
+        path=/; expires=Fri, 29-Dec-23 23:07:04 GMT; domain=.api.openai.com; HttpOnly;
+        Secure; SameSite=None
+      - _cfuvid=yTJHDMg7VYHMEKTSaPhpQp_5NZ3Xw1rIS8dQw4LmQMk-1703889424692-0-604800000;
+        path=/; domain=.api.openai.com; HttpOnly; Secure; SameSite=None
+      Transfer-Encoding:
+      - chunked
+      access-control-allow-origin:
+      - '*'
+      alt-svc:
+      - h3=":443"; ma=86400
+      openai-model:
+      - gpt-4-0613
+      openai-organization:
+      - user-z7g4wmlazxqvc5wjyaaaocfz
+      openai-processing-ms:
+      - '2511'
+      openai-version:
+      - '2020-10-01'
+      strict-transport-security:
+      - max-age=15724800; includeSubDomains
+      x-ratelimit-limit-requests:
+      - '10000'
+      x-ratelimit-limit-tokens:
+      - '300000'
+      x-ratelimit-limit-tokens_usage_based:
+      - '300000'
+      x-ratelimit-remaining-requests:
+      - '9999'
+      x-ratelimit-remaining-tokens:
+      - '299646'
+      x-ratelimit-remaining-tokens_usage_based:
+      - '299646'
+      x-ratelimit-reset-requests:
+      - 6ms
+      x-ratelimit-reset-tokens:
+      - 70ms
+      x-ratelimit-reset-tokens_usage_based:
+      - 70ms
+      x-request-id:
+      - b86341441fa500dc373240b329cf5446
+    http_version: HTTP/1.1
+    status_code: 200
+- request:
+    body: '{"messages": [{"role": "user", "content": "Progressively summarize the
+      lines of conversation provided, adding onto the previous summary returning a
+      new summary.\n\nEXAMPLE\nCurrent summary:\nThe human asks what the AI thinks
+      of artificial intelligence. The AI thinks artificial intelligence is a force
+      for good.\n\nNew lines of conversation:\nHuman: Why do you think artificial
+      intelligence is a force for good?\nAI: Because artificial intelligence will
+      help humans reach their full potential.\n\nNew summary:\nThe human asks what
+      the AI thinks of artificial intelligence. The AI thinks artificial intelligence
+      is a force for good because it will help humans reach their full potential.\nEND
+      OF EXAMPLE\n\nCurrent summary:\n\n\nNew lines of conversation:\nHuman: What
+      is 2 times 6?\n\nThis is the context you are working with:\n2 times 6 is 12.\nAI:
+      12\n\nNew summary:"}], "model": "gpt-4", "n": 1, "stream": false, "temperature":
+      0.7}'
+    headers:
+      accept:
+      - application/json
+      accept-encoding:
+      - gzip, deflate
+      connection:
+      - keep-alive
+      content-length:
+      - '935'
+      content-type:
+      - application/json
+      cookie:
+      - _cfuvid=yTJHDMg7VYHMEKTSaPhpQp_5NZ3Xw1rIS8dQw4LmQMk-1703889424692-0-604800000;
+        __cf_bm=NTFlpt52iEoCg0Pkx5.1jxp.b3GIrmzDorPoCjgwA1c-1703889424-1-AcnqI2v1g/4ArTSHF6F4yC9cQd8KWJUiSRlY3mTNPF+6P6fectfBIvD544RQw/zhEY+z/eZ5pw4t/Baew653jtw=
+      host:
+      - api.openai.com
+      user-agent:
+      - OpenAI/Python 1.6.1
+      x-stainless-arch:
+      - arm64
+      x-stainless-async:
+      - 'false'
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - MacOS
+      x-stainless-package-version:
+      - 1.6.1
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.11.7
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    content: "{\n  \"id\": \"chatcmpl-8bFlQVqyX43MFLq79thTQ8UaZZ1xD\",\n  \"object\":
+      \"chat.completion\",\n  \"created\": 1703889424,\n  \"model\": \"gpt-4-0613\",\n
+      \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
+      \"assistant\",\n        \"content\": \"The human asks the AI what is 2 times
+      6, and the AI responds with 12.\"\n      },\n      \"logprobs\": null,\n      \"finish_reason\":
+      \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 166,\n    \"completion_tokens\":
+      21,\n    \"total_tokens\": 187\n  },\n  \"system_fingerprint\": null\n}\n"
+    headers:
+      CF-Cache-Status:
+      - DYNAMIC
+      CF-RAY:
+      - 83d58688eda777c0-GRU
+      Cache-Control:
+      - no-cache, must-revalidate
+      Connection:
+      - keep-alive
+      Content-Encoding:
+      - gzip
+      Content-Type:
+      - application/json
+      Date:
+      - Fri, 29 Dec 2023 22:37:06 GMT
+      Server:
+      - cloudflare
+      Transfer-Encoding:
+      - chunked
+      access-control-allow-origin:
+      - '*'
+      alt-svc:
+      - h3=":443"; ma=86400
+      openai-model:
+      - gpt-4-0613
+      openai-organization:
+      - user-z7g4wmlazxqvc5wjyaaaocfz
+      openai-processing-ms:
+      - '1152'
+      openai-version:
+      - '2020-10-01'
+      strict-transport-security:
+      - max-age=15724800; includeSubDomains
+      x-ratelimit-limit-requests:
+      - '10000'
+      x-ratelimit-limit-tokens:
+      - '300000'
+      x-ratelimit-limit-tokens_usage_based:
+      - '300000'
+      x-ratelimit-remaining-requests:
+      - '9999'
+      x-ratelimit-remaining-tokens:
+      - '299782'
+      x-ratelimit-remaining-tokens_usage_based:
+      - '299782'
+      x-ratelimit-reset-requests:
+      - 6ms
+      x-ratelimit-reset-tokens:
+      - 43ms
+      x-ratelimit-reset-tokens_usage_based:
+      - 43ms
+      x-request-id:
+      - d86894b3054720d2053d5bfef884d985
+    http_version: HTTP/1.1
+    status_code: 200
+- request:
+    body: '{"messages": [{"role": "user", "content": "You are CEO.\nYou''re an long
+      time CEO of a content creation agency with a Senior Writer on the team. You''re
+      now working on a new project and want to make sure the content produced is amazing.\n\nYour
+      personal goal is: Make sure the writers in your company produce amazing content.\n\nTOOLS:\n------\nYou
+      have access to the following tools:\n\nmultiplier: multiplier(numbers) -> float
+      - Useful for when you need to multiply two numbers together.\n        The input
+      to this tool should be a comma separated list of numbers of\n        length
+      two, representing the two numbers you want to multiply together.\n        For
+      example, `1,2` would be the input if you wanted to multiply 1 by 2.\nDelegate
+      work to co-worker: Useful to delegate a specific task to one of the\n\t\t\t\tfollowing
+      co-workers: [CEO, Researcher].\n\t\t\t\tThe input to this tool should be a pipe
+      (|) separated text of length\n\t\t\t\tthree, representing the role you want
+      to delegate it to, the task and\n\t\t\t\tinformation necessary. For example,
+      `coworker|task|information`.\n\nAsk question to co-worker: Useful to ask a question,
+      opinion or take from on\n\t\t\t\tof the following co-workers: [CEO, Researcher].\n\t\t\t\tThe
+      input to this tool should be a pipe (|) separated text of length\n\t\t\t\tthree,
+      representing the role you want to ask it to, the question and\n\t\t\t\tinformation
+      necessary. For example, `coworker|question|information`.\n\nDelegate work to
+      co-worker: Useful to delegate a specific task to one of the\n\t\t\t\tfollowing
+      co-workers: [CEO, Researcher].\n\t\t\t\tThe input to this tool should be a pipe
+      (|) separated text of length\n\t\t\t\tthree, representing the role you want
+      to delegate it to, the task and\n\t\t\t\tinformation necessary. For example,
+      `coworker|task|information`.\n\nAsk question to co-worker: Useful to ask a question,
+      opinion or take from on\n\t\t\t\tof the following co-workers: [CEO, Researcher].\n\t\t\t\tThe
+      input to this tool should be a pipe (|) separated text of length\n\t\t\t\tthree,
+      representing the role you want to ask it to, the question and\n\t\t\t\tinformation
+      necessary. For example, `coworker|question|information`.\n\n\nTo use a tool,
+      please use the exact following format:\n\n```\nThought: Do I need to use a tool?
+      Yes\nAction: the action to take, should be one of [multiplier, Delegate work
+      to co-worker, Ask question to co-worker, Delegate work to co-worker, Ask question
+      to co-worker], just the name.\nAction Input: the input to the action\nObservation:
+      the result of the action\n```\n\nWhen you have a response for your task, or
+      if you do not need to use a tool, you MUST use the format:\n\n```\nThought:
+      Do I need to use a tool? No\nFinal Answer: [your response here]\n```\n\t\tThis
+      is the summary of your work so far:\n    The human asks the AI for the product
+      of 2 times 6, and the AI responds that it is 12.\nBegin! This is VERY important
+      to you, your job depends on it!\n\nCurrent Task: What is 2 tims 6?\n\n"}], "model":
+      "gpt-4", "n": 1, "stop": ["\nObservation"], "stream": false, "temperature":
+      0.7}'
+    headers:
+      accept:
+      - application/json
+      accept-encoding:
+      - gzip, deflate
+      connection:
+      - keep-alive
+      content-length:
+      - '3088'
+      content-type:
+      - application/json
+      cookie:
+      - _cfuvid=O8jSUEuY34NDEdF4z_HQGq8w7idZ7PZlcpp1vRj2y5E-1703889414566-0-604800000;
+        __cf_bm=6RpGZVaY4yiI4M4AoreJuJny2199LZXRkp8DDrcSK5k-1703889414-1-AdxFp5oHDyE1t+/uGSC6LyRh7n4+ats5oznbOnwXmT+G4BkBdSY9kVWLS2RSLndYHxVzz5ksSBcREfL/gr1HAAc=
+      host:
+      - api.openai.com
+      user-agent:
+      - OpenAI/Python 1.6.1
+      x-stainless-arch:
+      - arm64
+      x-stainless-async:
+      - 'false'
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - MacOS
+      x-stainless-package-version:
+      - 1.6.1
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.11.7
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    content: "{\n  \"id\": \"chatcmpl-8bFlSjjmk16fcEx4qjS8HvNxbn3ky\",\n  \"object\":
+      \"chat.completion\",\n  \"created\": 1703889426,\n  \"model\": \"gpt-4-0613\",\n
+      \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
+      \"assistant\",\n        \"content\": \"Thought: Do I need to use a tool? Yes\\nAction:
+      multiplier\\nAction Input: 2,6\"\n      },\n      \"logprobs\": null,\n      \"finish_reason\":
+      \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 688,\n    \"completion_tokens\":
+      23,\n    \"total_tokens\": 711\n  },\n  \"system_fingerprint\": null\n}\n"
+    headers:
+      CF-Cache-Status:
+      - DYNAMIC
+      CF-RAY:
+      - 83d58691fc2e0301-GRU
+      Cache-Control:
+      - no-cache, must-revalidate
+      Connection:
+      - keep-alive
+      Content-Encoding:
+      - gzip
+      Content-Type:
+      - application/json
+      Date:
+      - Fri, 29 Dec 2023 22:37:07 GMT
+      Server:
+      - cloudflare
+      Transfer-Encoding:
+      - chunked
+      access-control-allow-origin:
+      - '*'
+      alt-svc:
+      - h3=":443"; ma=86400
+      openai-model:
+      - gpt-4-0613
+      openai-organization:
+      - user-z7g4wmlazxqvc5wjyaaaocfz
+      openai-processing-ms:
+      - '1307'
+      openai-version:
+      - '2020-10-01'
+      strict-transport-security:
+      - max-age=15724800; includeSubDomains
+      x-ratelimit-limit-requests:
+      - '10000'
+      x-ratelimit-limit-tokens:
+      - '300000'
+      x-ratelimit-limit-tokens_usage_based:
+      - '300000'
+      x-ratelimit-remaining-requests:
+      - '9999'
+      x-ratelimit-remaining-tokens:
+      - '299275'
+      x-ratelimit-remaining-tokens_usage_based:
+      - '299275'
+      x-ratelimit-reset-requests:
+      - 6ms
+      x-ratelimit-reset-tokens:
+      - 144ms
+      x-ratelimit-reset-tokens_usage_based:
+      - 144ms
+      x-request-id:
+      - e25c77d8a956e2d403a80795d27446ed
+    http_version: HTTP/1.1
+    status_code: 200
+- request:
+    body: '{"messages": [{"role": "user", "content": "Progressively summarize the
+      lines of conversation provided, adding onto the previous summary returning a
+      new summary.\n\nEXAMPLE\nCurrent summary:\nThe human asks what the AI thinks
+      of artificial intelligence. The AI thinks artificial intelligence is a force
+      for good.\n\nNew lines of conversation:\nHuman: Why do you think artificial
+      intelligence is a force for good?\nAI: Because artificial intelligence will
+      help humans reach their full potential.\n\nNew summary:\nThe human asks what
+      the AI thinks of artificial intelligence. The AI thinks artificial intelligence
+      is a force for good because it will help humans reach their full potential.\nEND
+      OF EXAMPLE\n\nCurrent summary:\nThe human asks the AI for the product of 2 times
+      6, and the AI responds that it is 12.\n\nNew lines of conversation:\nHuman:
+      What is 2 tims 6?\nAI: 12\n\nNew summary:"}], "model": "gpt-4", "n": 1, "stream":
+      false, "temperature": 0.7}'
+    headers:
+      accept:
+      - application/json
+      accept-encoding:
+      - gzip, deflate
+      connection:
+      - keep-alive
+      content-length:
+      - '957'
+      content-type:
+      - application/json
+      cookie:
+      - _cfuvid=O8jSUEuY34NDEdF4z_HQGq8w7idZ7PZlcpp1vRj2y5E-1703889414566-0-604800000;
+        __cf_bm=6RpGZVaY4yiI4M4AoreJuJny2199LZXRkp8DDrcSK5k-1703889414-1-AdxFp5oHDyE1t+/uGSC6LyRh7n4+ats5oznbOnwXmT+G4BkBdSY9kVWLS2RSLndYHxVzz5ksSBcREfL/gr1HAAc=
+      host:
+      - api.openai.com
+      user-agent:
+      - OpenAI/Python 1.6.1
+      x-stainless-arch:
+      - arm64
+      x-stainless-async:
+      - 'false'
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - MacOS
+      x-stainless-package-version:
+      - 1.6.1
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.11.7
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    content: "{\n  \"id\": \"chatcmpl-8bFlTYmUO6Wh3mbgtPshKpQqqDxgd\",\n  \"object\":
+      \"chat.completion\",\n  \"created\": 1703889427,\n  \"model\": \"gpt-4-0613\",\n
+      \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
+      \"assistant\",\n        \"content\": \"The human asks the AI for the product
+      of 2 times 6, and the AI responds that it is 12, confirming this when asked
+      again.\"\n      },\n      \"logprobs\": null,\n      \"finish_reason\": \"stop\"\n
+      \   }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 175,\n    \"completion_tokens\":
+      31,\n    \"total_tokens\": 206\n  },\n  \"system_fingerprint\": null\n}\n"
+    headers:
+      CF-Cache-Status:
+      - DYNAMIC
+      CF-RAY:
+      - 83d5869baf8a0301-GRU
+      Cache-Control:
+      - no-cache, must-revalidate
+      Connection:
+      - keep-alive
+      Content-Encoding:
+      - gzip
+      Content-Type:
+      - application/json
+      Date:
+      - Fri, 29 Dec 2023 22:37:09 GMT
+      Server:
+      - cloudflare
+      Transfer-Encoding:
+      - chunked
+      access-control-allow-origin:
+      - '*'
+      alt-svc:
+      - h3=":443"; ma=86400
+      openai-model:
+      - gpt-4-0613
+      openai-organization:
+      - user-z7g4wmlazxqvc5wjyaaaocfz
+      openai-processing-ms:
+      - '1618'
+      openai-version:
+      - '2020-10-01'
+      strict-transport-security:
+      - max-age=15724800; includeSubDomains
+      x-ratelimit-limit-requests:
+      - '10000'
+      x-ratelimit-limit-tokens:
+      - '300000'
+      x-ratelimit-limit-tokens_usage_based:
+      - '300000'
+      x-ratelimit-remaining-requests:
+      - '9999'
+      x-ratelimit-remaining-tokens:
+      - '299775'
+      x-ratelimit-remaining-tokens_usage_based:
+      - '299775'
+      x-ratelimit-reset-requests:
+      - 6ms
+      x-ratelimit-reset-tokens:
+      - 44ms
+      x-ratelimit-reset-tokens_usage_based:
+      - 44ms
+      x-request-id:
+      - b70f47e489a1fefedc547c87e41f7dae
+    http_version: HTTP/1.1
+    status_code: 200
+- request:
+    body: '{"messages": [{"role": "user", "content": "You are Researcher.\nYou''re
+      an expert researcher, specialized in technology, software engineering, AI and
+      startups. You work as a freelancer and is now working on doing research and
+      analysis for a new customer.\n\nYour personal goal is: Make the best research
+      and analysis on content about AI and AI agents\n\nTOOLS:\n------\nYou have access
+      to the following tools:\n\nmultiplier: multiplier(numbers) -> float - Useful
+      for when you need to multiply two numbers together.\n        The input to this
+      tool should be a comma separated list of numbers of\n        length two, representing
+      the two numbers you want to multiply together.\n        For example, `1,2` would
+      be the input if you wanted to multiply 1 by 2.\n\nTo use a tool, please use
+      the exact following format:\n\n```\nThought: Do I need to use a tool? Yes\nAction:
+      the action to take, should be one of [multiplier], just the name.\nAction Input:
+      the input to the action\nObservation: the result of the action\n```\n\nWhen
+      you have a response for your task, or if you do not need to use a tool, you
+      MUST use the format:\n\n```\nThought: Do I need to use a tool? No\nFinal Answer:
+      [your response here]\n```\n\t\tThis is the summary of your work so far:\n    The
+      human asks the AI what is 2 times 6, and the AI responds with 12.\nBegin! This
+      is VERY important to you, your job depends on it!\n\nCurrent Task: What is 2
+      times 6?\n\nThis is the context you are working with:\n12\n\n"}], "model": "gpt-4",
+      "n": 1, "stop": ["\nObservation"], "stream": false, "temperature": 0.7}'
+    headers:
+      accept:
+      - application/json
+      accept-encoding:
+      - gzip, deflate
+      connection:
+      - keep-alive
+      content-length:
+      - '1573'
+      content-type:
+      - application/json
+      cookie:
+      - _cfuvid=yTJHDMg7VYHMEKTSaPhpQp_5NZ3Xw1rIS8dQw4LmQMk-1703889424692-0-604800000;
+        __cf_bm=NTFlpt52iEoCg0Pkx5.1jxp.b3GIrmzDorPoCjgwA1c-1703889424-1-AcnqI2v1g/4ArTSHF6F4yC9cQd8KWJUiSRlY3mTNPF+6P6fectfBIvD544RQw/zhEY+z/eZ5pw4t/Baew653jtw=
+      host:
+      - api.openai.com
+      user-agent:
+      - OpenAI/Python 1.6.1
+      x-stainless-arch:
+      - arm64
+      x-stainless-async:
+      - 'false'
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - MacOS
+      x-stainless-package-version:
+      - 1.6.1
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.11.7
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    content: "{\n  \"id\": \"chatcmpl-8bFlVgnFkN5XO7X3qLOx96HX1pUjS\",\n  \"object\":
+      \"chat.completion\",\n  \"created\": 1703889429,\n  \"model\": \"gpt-4-0613\",\n
+      \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
+      \"assistant\",\n        \"content\": \"Thought: Do I need to use a tool? Yes\\nAction:
+      multiplier\\nAction Input: 2,6\"\n      },\n      \"logprobs\": null,\n      \"finish_reason\":
+      \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 337,\n    \"completion_tokens\":
+      23,\n    \"total_tokens\": 360\n  },\n  \"system_fingerprint\": null\n}\n"
+    headers:
+      CF-Cache-Status:
+      - DYNAMIC
+      CF-RAY:
+      - 83d586a76ee577c0-GRU
+      Cache-Control:
+      - no-cache, must-revalidate
+      Connection:
+      - keep-alive
+      Content-Encoding:
+      - gzip
+      Content-Type:
+      - application/json
+      Date:
+      - Fri, 29 Dec 2023 22:37:11 GMT
+      Server:
+      - cloudflare
+      Transfer-Encoding:
+      - chunked
+      access-control-allow-origin:
+      - '*'
+      alt-svc:
+      - h3=":443"; ma=86400
+      openai-model:
+      - gpt-4-0613
+      openai-organization:
+      - user-z7g4wmlazxqvc5wjyaaaocfz
+      openai-processing-ms:
+      - '1612'
+      openai-version:
+      - '2020-10-01'
+      strict-transport-security:
+      - max-age=15724800; includeSubDomains
+      x-ratelimit-limit-requests:
+      - '10000'
+      x-ratelimit-limit-tokens:
+      - '300000'
+      x-ratelimit-limit-tokens_usage_based:
+      - '300000'
+      x-ratelimit-remaining-requests:
+      - '9999'
+      x-ratelimit-remaining-tokens:
+      - '299634'
+      x-ratelimit-remaining-tokens_usage_based:
+      - '299634'
+      x-ratelimit-reset-requests:
+      - 6ms
+      x-ratelimit-reset-tokens:
+      - 73ms
+      x-ratelimit-reset-tokens_usage_based:
+      - 73ms
+      x-request-id:
+      - 739f95896087931128c8e260b7d3cf02
+    http_version: HTTP/1.1
+    status_code: 200
+- request:
+    body: '{"messages": [{"role": "user", "content": "Progressively summarize the
+      lines of conversation provided, adding onto the previous summary returning a
+      new summary.\n\nEXAMPLE\nCurrent summary:\nThe human asks what the AI thinks
+      of artificial intelligence. The AI thinks artificial intelligence is a force
+      for good.\n\nNew lines of conversation:\nHuman: Why do you think artificial
+      intelligence is a force for good?\nAI: Because artificial intelligence will
+      help humans reach their full potential.\n\nNew summary:\nThe human asks what
+      the AI thinks of artificial intelligence. The AI thinks artificial intelligence
+      is a force for good because it will help humans reach their full potential.\nEND
+      OF EXAMPLE\n\nCurrent summary:\nThe human asks the AI what is 2 times 6, and
+      the AI responds with 12.\n\nNew lines of conversation:\nHuman: What is 2 times
+      6?\n\nThis is the context you are working with:\n12\nAI: 12\n\nNew summary:"}],
+      "model": "gpt-4", "n": 1, "stream": false, "temperature": 0.7}'
+    headers:
+      accept:
+      - application/json
+      accept-encoding:
+      - gzip, deflate
+      connection:
+      - keep-alive
+      content-length:
+      - '990'
+      content-type:
+      - application/json
+      cookie:
+      - _cfuvid=yTJHDMg7VYHMEKTSaPhpQp_5NZ3Xw1rIS8dQw4LmQMk-1703889424692-0-604800000;
+        __cf_bm=NTFlpt52iEoCg0Pkx5.1jxp.b3GIrmzDorPoCjgwA1c-1703889424-1-AcnqI2v1g/4ArTSHF6F4yC9cQd8KWJUiSRlY3mTNPF+6P6fectfBIvD544RQw/zhEY+z/eZ5pw4t/Baew653jtw=
+      host:
+      - api.openai.com
+      user-agent:
+      - OpenAI/Python 1.6.1
+      x-stainless-arch:
+      - arm64
+      x-stainless-async:
+      - 'false'
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - MacOS
+      x-stainless-package-version:
+      - 1.6.1
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.11.7
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    content: "{\n  \"id\": \"chatcmpl-8bFlXEDmlitriA40K77evvaqJrfZ4\",\n  \"object\":
+      \"chat.completion\",\n  \"created\": 1703889431,\n  \"model\": \"gpt-4-0613\",\n
+      \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
+      \"assistant\",\n        \"content\": \"The human asks the AI what is 2 times
+      6, and the AI consistently responds with 12.\"\n      },\n      \"logprobs\":
+      null,\n      \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\":
+      181,\n    \"completion_tokens\": 22,\n    \"total_tokens\": 203\n  },\n  \"system_fingerprint\":
+      null\n}\n"
+    headers:
+      CF-Cache-Status:
+      - DYNAMIC
+      CF-RAY:
+      - 83d586b2fbd877c0-GRU
+      Cache-Control:
+      - no-cache, must-revalidate
+      Connection:
+      - keep-alive
+      Content-Encoding:
+      - gzip
+      Content-Type:
+      - application/json
+      Date:
+      - Fri, 29 Dec 2023 22:37:13 GMT
+      Server:
+      - cloudflare
+      Transfer-Encoding:
+      - chunked
+      access-control-allow-origin:
+      - '*'
+      alt-svc:
+      - h3=":443"; ma=86400
+      openai-model:
+      - gpt-4-0613
+      openai-organization:
+      - user-z7g4wmlazxqvc5wjyaaaocfz
+      openai-processing-ms:
+      - '1836'
+      openai-version:
+      - '2020-10-01'
+      strict-transport-security:
+      - max-age=15724800; includeSubDomains
+      x-ratelimit-limit-requests:
+      - '10000'
+      x-ratelimit-limit-tokens:
+      - '300000'
+      x-ratelimit-limit-tokens_usage_based:
+      - '300000'
+      x-ratelimit-remaining-requests:
+      - '9999'
+      x-ratelimit-remaining-tokens:
+      - '299769'
+      x-ratelimit-remaining-tokens_usage_based:
+      - '299769'
+      x-ratelimit-reset-requests:
+      - 6ms
+      x-ratelimit-reset-tokens:
+      - 46ms
+      x-ratelimit-reset-tokens_usage_based:
+      - 46ms
+      x-request-id:
+      - 501523f2159a6ae7b2dbb409cf5748a1
+    http_version: HTTP/1.1
+    status_code: 200
+version: 1
