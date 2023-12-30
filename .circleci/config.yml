@@ -6,7 +6,8 @@ jobs:
       - image: python/3.9.18
     steps:
       - checkout
-      - install_dependencies:
+      - run:
+          name: Install dependencies
           command: poetry install
       - run:
           name: Run tests
