@@ -1,7 +1,14 @@
 import json
 from typing import Any, Dict, List, Optional, Union
 
-from pydantic import BaseModel, Field, Json, field_validator, model_validator
+from pydantic import (
+    BaseModel,
+    Field,
+    InstanceOf,
+    Json,
+    field_validator,
+    model_validator,
+)
 from pydantic_core import PydanticCustomError
 
 from .agent import Agent
@@ -31,7 +38,7 @@ class Crew(BaseModel):
         description="Configuration of the crew.", default=None
     )
     cache_handler: Optional[InstanceOf[CacheHandler]] = Field(
-        default=None, description="An instance of the CacheHandler class."
+        default=CacheHandler(), description="An instance of the CacheHandler class."
     )
 
     @classmethod
@@ -65,12 +72,11 @@ class Crew(BaseModel):
                 tasks.append(Task(**task, agent=task_agent))
 
             self.tasks = tasks
-        return self
 
-    def __init__(self, **data):
-        super().__init__(**data)
-        for agent in self.agents:
-            agent.set_cache_handler(self.cache_handler)
+        if self.agents:
+            for agent in self.agents:
+                agent.set_cache_handler(self.cache_handler)
+        return self
 
     def kickoff(self) -> str:
         """Kickoff the crew to work on its tasks.

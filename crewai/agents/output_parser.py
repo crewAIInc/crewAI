@@ -4,7 +4,9 @@ from typing import Union
 from langchain.agents.output_parsers import ReActSingleInputOutputParser
 from langchain_core.agents import AgentAction, AgentFinish
 from langchain_core.exceptions import OutputParserException
-from pydantic.v1 import PrivateAttr
+
+from .cache_handler import CacheHandler
+from .tools_handler import ToolsHandler
 
 FINAL_ANSWER_ACTION = "Final Answer:"
 FINAL_ANSWER_AND_PARSABLE_ACTION_ERROR_MESSAGE = (
@@ -42,14 +44,8 @@ class CrewAgentOutputParser(ReActSingleInputOutputParser):
     class Config:
         arbitrary_types_allowed = True
 
-    _tools_handler = PrivateAttr()
-    _cache = PrivateAttr()
-
-    def __init__(self, *args, cache=None, tools_handler=None, **kwargs):
-        """Initialize the output parser."""
-        self._tools_handler = tools_handler
-        self._cache = cache
-        return super().__init__(*args, **kwargs)
+    tools_handler: ToolsHandler
+    cache: CacheHandler
 
     def parse(self, text: str) -> Union[AgentAction, AgentFinish]:
         includes_answer = FINAL_ANSWER_ACTION in text
@@ -67,7 +63,7 @@ class CrewAgentOutputParser(ReActSingleInputOutputParser):
             tool_input = action_input.strip(" ")
             tool_input = tool_input.strip('"')
 
-            last_tool_usage = self._tools_handler.last_used_tool
+            last_tool_usage = self.tools_handler.last_used_tool
             if last_tool_usage:
                 usage = {
                     "tool": action,
@@ -78,7 +74,7 @@ class CrewAgentOutputParser(ReActSingleInputOutputParser):
                         f"""\nI just used the {action} tool with input {tool_input}. So I already knwo the result of that."""
                     )
 
-            result = self._cache.read(action, tool_input)
+            result = self.cache.read(action, tool_input)
             if result:
                 return AgentFinish({"output": result}, text)
 

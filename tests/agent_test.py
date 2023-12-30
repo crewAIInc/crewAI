@@ -194,4 +194,4 @@ def test_agent_execution_with_specific_tools():
     )
 
     output = agent.execute_task(task="What is 3 times 4", tools=[multiplier])
-    assert output == "3 times 4 is 12."
+    assert output == "12"

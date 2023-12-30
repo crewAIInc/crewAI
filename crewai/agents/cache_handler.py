@@ -1,6 +1,6 @@
 from typing import Optional
 
-from pydantic.v1 import PrivateAttr
+from pydantic import PrivateAttr
 
 
 class CacheHandler:

@@ -6,7 +6,7 @@ from langchain.chat_models import ChatOpenAI
 from langchain.memory import ConversationSummaryMemory
 from langchain.tools.render import render_text_description
 from langchain_core.runnables.config import RunnableConfig
-from pydantic import BaseModel, Field, InstanceOf, PrivateAttr, model_validator
+from pydantic import BaseModel, Field, InstanceOf, model_validator
 
 from .agents import CacheHandler, CrewAgentOutputParser, ToolsHandler
 from .prompts import Prompts
@@ -61,18 +61,14 @@ class Agent(BaseModel):
         default=None, description="An instance of the ToolsHandler class."
     )
     cache_handler: Optional[InstanceOf[CacheHandler]] = Field(
-        default=None, description="An instance of the CacheHandler class."
+        default=CacheHandler(), description="An instance of the CacheHandler class."
     )
 
     @model_validator(mode="after")
     def check_agent_executor(self) -> "Agent":
         if not self.agent_executor:
-            self.agent_executor = self._create_agent_executor()
+            self.set_cache_handler(self.cache_handler)
         return self
-
-    def __init__(self, **data):
-        super().__init__(**data)
-        self.set_cache_handler(self.cache_handler)
 
     def execute_task(
         self, task: str, context: str = None, tools: List[Any] = None
@@ -104,8 +100,9 @@ class Agent(BaseModel):
             RunnableConfig(callbacks=[self.tools_handler]),
         )["output"]
 
-    def set_cache_handler(self, _cache_handler) -> None:
-        self.cache_handler = _cache_handler
+    def set_cache_handler(self, cache_handler) -> None:
+        print(f"cache_handler: {cache_handler}")
+        self.cache_handler = cache_handler
         self.tools_handler = ToolsHandler(cache=self.cache_handler)
         self.__create_agent_executor()
 
