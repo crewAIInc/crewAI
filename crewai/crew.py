@@ -12,10 +12,10 @@ from pydantic import (
 from pydantic_core import PydanticCustomError
 
 from crewai.agent import Agent
+from crewai.agents import CacheHandler
 from crewai.process import Process
 from crewai.task import Task
 from crewai.tools.agent_tools import AgentTools
-from crewai.agents import CacheHandler
 
 
 class Crew(BaseModel):
@@ -31,8 +31,8 @@ class Crew(BaseModel):
     process: Process = Field(
         description="Process that the crew will follow.", default=Process.sequential
     )
-    verbose: bool = Field(
-        description="Verbose mode for the Agent Execution", default=False
+    verbose: Union[int, bool] = Field(
+        description="Verbose mode for the Agent Execution", default=0
     )
     config: Optional[Union[Json, Dict[str, Any]]] = Field(
         description="Configuration of the crew.", default=None
@@ -103,15 +103,20 @@ class Crew(BaseModel):
                 tools = AgentTools(agents=self.agents).tools()
                 task.tools += tools
 
-            self.__log(f"\nWorking Agent: {task.agent.role}")
-            self.__log(f"Starting Task: {task.description} ...")
+            self.__log("debug", f"Working Agent: {task.agent.role}")
+            self.__log("info", f"Starting Task: {task.description} ...")
 
             task_outcome = task.execute(task_outcome)
 
-            self.__log(f"Task output: {task_outcome}")
+            self.__log("debug", f"Task output: {task_outcome}")
 
         return task_outcome
 
-    def __log(self, message):
-        if self.verbose:
+    def __log(self, level, message):
+        """Log a message"""
+        level_map = {"debug": 1, "info": 2}
+        verbose_level = (
+            2 if isinstance(self.verbose, bool) and self.verbose else self.verbose
+        )
+        if verbose_level and level_map[level] <= verbose_level:
             print(message)
