@@ -1,35 +1,33 @@
-from typing import List, Optional
+from typing import Any, List, Optional
 
-from langchain.tools import Tool
-from pydantic.v1 import BaseModel, Field, root_validator
+from pydantic import BaseModel, Field, model_validator
 
 from .agent import Agent
 
 
 class Task(BaseModel):
-    """
-    Class that represent a task to be executed.
-    """
+    """Class that represent a task to be executed."""
 
     description: str = Field(description="Description of the actual task.")
     agent: Optional[Agent] = Field(
         description="Agent responsible for the task.", default=None
     )
-    tools: Optional[List[Tool]] = Field(
-        description="Tools the agent are limited to use for this task.", default=[]
+    tools: List[Any] = Field(
+        default_factory=list,
+        description="Tools the agent are limited to use for this task.",
     )
 
-    @root_validator(pre=False)
-    def _set_tools(_cls, values):
-        if (values.get("agent")) and not (values.get("tools")):
-            values["tools"] = values.get("agent").tools
-        return values
+    @model_validator(mode="after")
+    def check_tools(self):
+        if not self.tools and (self.agent and self.agent.tools):
+            self.tools.extend(self.agent.tools)
+        return self
 
     def execute(self, context: str = None) -> str:
-        """
-        Execute the task.
-                Returns:
-                        output (str): Output of the task.
+        """Execute the task.
+
+        Returns:
+            Output of the task.
         """
         if self.agent:
             return self.agent.execute_task(
