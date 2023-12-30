@@ -4,7 +4,7 @@ from typing import List
 from langchain.tools import Tool
 from pydantic import BaseModel, Field
 
-from ..agent import Agent
+from crewai.agent import Agent
 
 
 class AgentTools(BaseModel):
@@ -16,7 +16,7 @@ class AgentTools(BaseModel):
         return [
             Tool.from_function(
                 func=self.delegate_work,
-                name="Delegate Work to Co-Worker",
+                name="Delegate work to co-worker",
                 description=dedent(
                     f"""Useful to delegate a specific task to one of the
 				following co-workers: [{', '.join([agent.role for agent in self.agents])}].
@@ -28,7 +28,7 @@ class AgentTools(BaseModel):
             ),
             Tool.from_function(
                 func=self.ask_question,
-                name="Ask Question to Co-Worker",
+                name="Ask question to co-worker",
                 description=dedent(
                     f"""Useful to ask a question, opinion or take from on
 				of the following co-workers: [{', '.join([agent.role for agent in self.agents])}].
@@ -53,10 +53,10 @@ class AgentTools(BaseModel):
         try:
             agent, task, information = command.split("|")
         except ValueError:
-            return "Error executing tool. Missing exact 3 pipe (|) separated values. For example, `coworker|task|information`."
+            return "\nError executing tool. Missing exact 3 pipe (|) separated values. For example, `coworker|task|information`."
 
         if not agent or not task or not information:
-            return "Error executing tool. Missing exact 3 pipe (|) separated values. For example, `coworker|question|information`."
+            return "\nError executing tool. Missing exact 3 pipe (|) separated values. For example, `coworker|question|information`."
 
         agent = [
             available_agent
@@ -65,9 +65,7 @@ class AgentTools(BaseModel):
         ]
 
         if len(agent) == 0:
-            return (
-                "Error executing tool. Co-worker not found, double check the co-worker."
-            )
+            return f"\nError executing tool. Co-worker mentioned on the Action Input not found, it must to be one of the following options: {', '.join([agent.role for agent in self.agents])}."
 
         agent = agent[0]
         result = agent.execute_task(task, information)

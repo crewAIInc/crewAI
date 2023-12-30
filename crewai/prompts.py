@@ -12,76 +12,73 @@ class Prompts(BaseModel):
 
     TASK_SLICE: ClassVar[str] = dedent(
         """\
-		Begin! This is VERY important to you, your job depends on it!
+	Begin! This is VERY important to you, your job depends on it!
 
-		Current Task: {input}
-		{agent_scratchpad}
-	"""
+	Current Task: {input}"""
     )
+
+    SCRATCHPAD_SLICE: ClassVar[str] = "\n{agent_scratchpad}"
 
     MEMORY_SLICE: ClassVar[str] = dedent(
         """\
-		This is the summary of your work so far:
-    {chat_history}
-	"""
+	This is the summary of your work so far:
+	{chat_history}"""
     )
 
     ROLE_PLAYING_SLICE: ClassVar[str] = dedent(
         """\
-		You are {role}.
-		{backstory}
+	You are {role}.
+	{backstory}
 
-		Your personal goal is: {goal}
-	"""
+	Your personal goal is: {goal}"""
     )
 
     TOOLS_SLICE: ClassVar[str] = dedent(
         """\
 
-		TOOLS:
-		------
-		You have access to the following tools:
 
-		{tools}
+	TOOLS:
+	------
+	You have access to the following tools:
 
-		To use a tool, please use the exact following format:
+	{tools}
 
-		```
-		Thought: Do I need to use a tool? Yes
-		Action: the action to take, should be one of [{tool_names}]
-		Action Input: the input to the action
-		Observation: the result of the action
-		```
+	To use a tool, please use the exact following format:
 
-		When you have a response for your task, or if you do not need to use a tool, you MUST use the format:
+	```
+	Thought: Do I need to use a tool? Yes
+	Action: the action to take, should be one of [{tool_names}], just the name.
+	Action Input: the input to the action
+	Observation: the result of the action
+	```
 
-		```
-		Thought: Do I need to use a tool? No
-		Final Answer: [your response here]
-		```
-	"""
+	When you have a response for your task, or if you do not need to use a tool, you MUST use the format:
+
+	```
+	Thought: Do I need to use a tool? No
+	Final Answer: [your response here]
+	```"""
     )
 
     VOTING_SLICE: ClassVar[str] = dedent(
         """\
-		You are working on a crew with your co-workers and need to decide who will execute the task.
+	You are working on a crew with your co-workers and need to decide who will execute the task.
 
-		These are your format instructions:
-		{format_instructions}
+	These are your format instructions:
+	{format_instructions}
 
-		These are your co-workers and their roles:
-		{coworkers}
-	"""
+	These are your co-workers and their roles:
+	{coworkers}"""
     )
 
     TASK_EXECUTION_WITH_MEMORY_PROMPT: ClassVar[str] = PromptTemplate.from_template(
-        ROLE_PLAYING_SLICE + TOOLS_SLICE + MEMORY_SLICE + TASK_SLICE
+        ROLE_PLAYING_SLICE + TOOLS_SLICE + MEMORY_SLICE + TASK_SLICE + SCRATCHPAD_SLICE
     )
 
     TASK_EXECUTION_PROMPT: ClassVar[str] = PromptTemplate.from_template(
-        ROLE_PLAYING_SLICE + TOOLS_SLICE + TASK_SLICE
+        ROLE_PLAYING_SLICE + TOOLS_SLICE + TASK_SLICE + SCRATCHPAD_SLICE
     )
 
     CONSENSUNS_VOTING_PROMPT: ClassVar[str] = PromptTemplate.from_template(
-        ROLE_PLAYING_SLICE + VOTING_SLICE + TASK_SLICE
+        ROLE_PLAYING_SLICE + VOTING_SLICE + TASK_SLICE + SCRATCHPAD_SLICE
     )

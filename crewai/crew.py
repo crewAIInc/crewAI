@@ -1,17 +1,28 @@
 import json
 from typing import Any, Dict, List, Optional, Union
 
-from pydantic import BaseModel, Field, Json, field_validator, model_validator
+from pydantic import (
+    BaseModel,
+    Field,
+    InstanceOf,
+    Json,
+    field_validator,
+    model_validator,
+)
 from pydantic_core import PydanticCustomError
 
-from .agent import Agent
-from .process import Process
-from .task import Task
-from .tools.agent_tools import AgentTools
+from crewai.agent import Agent
+from crewai.agents import CacheHandler
+from crewai.process import Process
+from crewai.task import Task
+from crewai.tools.agent_tools import AgentTools
 
 
 class Crew(BaseModel):
     """Class that represents a group of agents, how they should work together and their tasks."""
+
+    class Config:
+        arbitrary_types_allowed = True
 
     tasks: List[Task] = Field(description="List of tasks", default_factory=list)
     agents: List[Agent] = Field(
@@ -20,11 +31,14 @@ class Crew(BaseModel):
     process: Process = Field(
         description="Process that the crew will follow.", default=Process.sequential
     )
-    verbose: bool = Field(
-        description="Verbose mode for the Agent Execution", default=False
+    verbose: Union[int, bool] = Field(
+        description="Verbose mode for the Agent Execution", default=0
     )
     config: Optional[Union[Json, Dict[str, Any]]] = Field(
         description="Configuration of the crew.", default=None
+    )
+    cache_handler: Optional[InstanceOf[CacheHandler]] = Field(
+        default=CacheHandler(), description="An instance of the CacheHandler class."
     )
 
     @classmethod
@@ -58,6 +72,10 @@ class Crew(BaseModel):
                 tasks.append(Task(**task, agent=task_agent))
 
             self.tasks = tasks
+
+        if self.agents:
+            for agent in self.agents:
+                agent.set_cache_handler(self.cache_handler)
         return self
 
     def kickoff(self) -> str:
@@ -66,6 +84,9 @@ class Crew(BaseModel):
         Returns:
             Output of the crew for each task.
         """
+        for agent in self.agents:
+            agent.cache_handler = self.cache_handler
+
         if self.process == Process.sequential:
             return self.__sequential_loop()
 
@@ -82,15 +103,20 @@ class Crew(BaseModel):
                 tools = AgentTools(agents=self.agents).tools()
                 task.tools += tools
 
-            self.__log(f"\nWorking Agent: {task.agent.role}")
-            self.__log(f"Starting Task: {task.description} ...")
+            self.__log("debug", f"Working Agent: {task.agent.role}")
+            self.__log("info", f"Starting Task: {task.description} ...")
 
             task_outcome = task.execute(task_outcome)
 
-            self.__log(f"Task output: {task_outcome}")
+            self.__log("debug", f"Task output: {task_outcome}")
 
         return task_outcome
 
-    def __log(self, message):
-        if self.verbose:
+    def __log(self, level, message):
+        """Log a message"""
+        level_map = {"debug": 1, "info": 2}
+        verbose_level = (
+            2 if isinstance(self.verbose, bool) and self.verbose else self.verbose
+        )
+        if verbose_level and level_map[level] <= verbose_level:
             print(message)

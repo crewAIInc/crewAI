@@ -5,6 +5,7 @@ import json
 import pytest
 
 from crewai.agent import Agent
+from crewai.agents import CacheHandler
 from crewai.crew import Crew
 from crewai.process import Process
 from crewai.task import Task
@@ -157,7 +158,7 @@ def test_crew_with_delegating_agents():
 
     assert (
         crew.kickoff()
-        == "The Senior Writer has created a compelling and engaging 1 paragraph draft about AI agents. The paragraph provides a brief yet comprehensive overview of AI agents, their uses, and implications in the current world. It emphasizes their potential and the role they can play in the future. The tone is informative but captivating, meeting the objectives of the task."
+        == '"AI agents, the digital masterminds at the heart of the 21st-century revolution, are shaping a new era of intelligence and innovation. They are autonomous entities, capable of observing their environment, making decisions, and acting on them, all in pursuit of a specific goal. From streamlining operations in logistics to personalizing customer experiences in retail, AI agents are transforming how businesses operate. But their potential extends far beyond the corporate world. They are the sentinels protecting our digital frontiers, the virtual assistants making our lives easier, and the unseen hands guiding autonomous vehicles. As this technology evolves, AI agents will play an increasingly central role in our world, ushering in an era of unprecedented efficiency, personalization, and productivity. But with great power comes great responsibility, and understanding and harnessing this potential responsibly will be one of our greatest challenges and opportunities in the coming years."'
     )
 
 
@@ -194,3 +195,74 @@ def test_crew_verbose_output(capsys):
     crew.kickoff()
     captured = capsys.readouterr()
     assert captured.out == ""
+
+
+@pytest.mark.vcr(filter_headers=["authorization"])
+def test_crew_verbose_levels_output(capsys):
+    tasks = [Task(description="Write about AI advancements.", agent=researcher)]
+
+    crew = Crew(agents=[researcher], tasks=tasks, process=Process.sequential, verbose=1)
+
+    crew.kickoff()
+    captured = capsys.readouterr()
+    expected_strings = ["Working Agent: Researcher", "Task output:"]
+
+    for expected_string in expected_strings:
+        assert expected_string in captured.out
+
+    # Now test with verbose set to 2
+    crew.verbose = 2
+    crew.kickoff()
+    captured = capsys.readouterr()
+    expected_strings = [
+        "Working Agent: Researcher",
+        "Starting Task: Write about AI advancements. ...",
+        "Task output:",
+    ]
+
+    for expected_string in expected_strings:
+        assert expected_string in captured.out
+
+
+@pytest.mark.vcr(filter_headers=["authorization"])
+def test_cache_hitting_between_agents():
+    from unittest.mock import patch
+
+    from langchain.tools import tool
+
+    @tool
+    def multiplier(numbers) -> float:
+        """Useful for when you need to multiply two numbers together.
+        The input to this tool should be a comma separated list of numbers of
+        length two, representing the two numbers you want to multiply together.
+        For example, `1,2` would be the input if you wanted to multiply 1 by 2."""
+        a, b = numbers.split(",")
+        return int(a) * int(b)
+
+    tasks = [
+        Task(
+            description="What is 2 tims 6?",
+            tools=[multiplier],
+            agent=ceo,
+        ),
+        Task(
+            description="What is 2 times 6?",
+            tools=[multiplier],
+            agent=researcher,
+        ),
+    ]
+
+    crew = Crew(
+        agents=[ceo, researcher],
+        tasks=tasks,
+    )
+
+    assert crew.cache_handler._cache == {}
+    output = crew.kickoff()
+    assert crew.cache_handler._cache == {"multiplier-2,6": "12"}
+    assert output == "12"
+
+    with patch.object(CacheHandler, "read") as read:
+        read.return_value = "12"
+        crew.kickoff()
+        read.assert_called_with("multiplier", "2,6")

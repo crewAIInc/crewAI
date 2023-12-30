@@ -1,0 +1,702 @@
+interactions:
+- request:
+    body: '{"messages": [{"role": "user", "content": "You are Researcher.\nYou''re
+      an expert researcher, specialized in technology, software engineering, AI and
+      startups. You work as a freelancer and is now working on doing research and
+      analysis for a new customer.\n\nYour personal goal is: Make the best research
+      and analysis on content about AI and AI agents\n\nTOOLS:\n------\nYou have access
+      to the following tools:\n\n\n\nTo use a tool, please use the exact following
+      format:\n\n```\nThought: Do I need to use a tool? Yes\nAction: the action to
+      take, should be one of [], just the name.\nAction Input: the input to the action\nObservation:
+      the result of the action\n```\n\nWhen you have a response for your task, or
+      if you do not need to use a tool, you MUST use the format:\n\n```\nThought:
+      Do I need to use a tool? No\nFinal Answer: [your response here]\n```\n\t\tThis
+      is the summary of your work so far:\n    \nBegin! This is VERY important to
+      you, your job depends on it!\n\nCurrent Task: Write about AI advancements.\n\n"}],
+      "model": "gpt-4", "n": 1, "stop": ["\nObservation"], "stream": false, "temperature":
+      0.7}'
+    headers:
+      accept:
+      - application/json
+      accept-encoding:
+      - gzip, deflate
+      connection:
+      - keep-alive
+      content-length:
+      - '1113'
+      content-type:
+      - application/json
+      cookie:
+      - _cfuvid=u_fUK0MqnLcrbhMkg8kKMfrSZpALgzClvD984s71oU8-1703091698056-0-604800000
+      host:
+      - api.openai.com
+      user-agent:
+      - OpenAI/Python 1.6.1
+      x-stainless-arch:
+      - arm64
+      x-stainless-async:
+      - 'false'
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - MacOS
+      x-stainless-package-version:
+      - 1.6.1
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.11.7
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    content: "{\n  \"id\": \"chatcmpl-8bQsRQf90BTHpHqddg5XG2sg4rtmq\",\n  \"object\":
+      \"chat.completion\",\n  \"created\": 1703932143,\n  \"model\": \"gpt-4-0613\",\n
+      \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
+      \"assistant\",\n        \"content\": \"Thought: Do I need to use a tool? Yes\\nAction:
+      Use Google Scholar\\nAction Input: Search for recent research papers on AI advancements\"\n
+      \     },\n      \"logprobs\": null,\n      \"finish_reason\": \"stop\"\n    }\n
+      \ ],\n  \"usage\": {\n    \"prompt_tokens\": 225,\n    \"completion_tokens\":
+      29,\n    \"total_tokens\": 254\n  },\n  \"system_fingerprint\": null\n}\n"
+    headers:
+      CF-Cache-Status:
+      - DYNAMIC
+      CF-RAY:
+      - 83d999768d421d2e-GRU
+      Cache-Control:
+      - no-cache, must-revalidate
+      Connection:
+      - keep-alive
+      Content-Encoding:
+      - gzip
+      Content-Type:
+      - application/json
+      Date:
+      - Sat, 30 Dec 2023 10:29:04 GMT
+      Server:
+      - cloudflare
+      Set-Cookie:
+      - __cf_bm=OlUZJKYA638vLuLRXpnvHsuQGjjNUEUPLyqPk3Xgr7k-1703932144-1-ASbmQtFM69cq3p8WvAULs1c92cQqV4Hj6AQj5D+8d2YbxDrPwADZ4dAPrO1SbsGfaEUgCtY9Hbm1XCp/n7sUEW0=;
+        path=/; expires=Sat, 30-Dec-23 10:59:04 GMT; domain=.api.openai.com; HttpOnly;
+        Secure; SameSite=None
+      - _cfuvid=BMxGwK4wPoN6Cq5150swBY7QbtTvmWU2.p39x.cUidg-1703932144438-0-604800000;
+        path=/; domain=.api.openai.com; HttpOnly; Secure; SameSite=None
+      Transfer-Encoding:
+      - chunked
+      access-control-allow-origin:
+      - '*'
+      alt-svc:
+      - h3=":443"; ma=86400
+      openai-model:
+      - gpt-4-0613
+      openai-organization:
+      - user-z7g4wmlazxqvc5wjyaaaocfz
+      openai-processing-ms:
+      - '1122'
+      openai-version:
+      - '2020-10-01'
+      strict-transport-security:
+      - max-age=15724800; includeSubDomains
+      x-ratelimit-limit-requests:
+      - '10000'
+      x-ratelimit-limit-tokens:
+      - '300000'
+      x-ratelimit-limit-tokens_usage_based:
+      - '300000'
+      x-ratelimit-remaining-requests:
+      - '9999'
+      x-ratelimit-remaining-tokens:
+      - '299747'
+      x-ratelimit-remaining-tokens_usage_based:
+      - '299747'
+      x-ratelimit-reset-requests:
+      - 6ms
+      x-ratelimit-reset-tokens:
+      - 50ms
+      x-ratelimit-reset-tokens_usage_based:
+      - 50ms
+      x-request-id:
+      - de0d60f246779b2ce8deb72a46100999
+    http_version: HTTP/1.1
+    status_code: 200
+- request:
+    body: '{"messages": [{"role": "user", "content": "You are Researcher.\nYou''re
+      an expert researcher, specialized in technology, software engineering, AI and
+      startups. You work as a freelancer and is now working on doing research and
+      analysis for a new customer.\n\nYour personal goal is: Make the best research
+      and analysis on content about AI and AI agents\n\nTOOLS:\n------\nYou have access
+      to the following tools:\n\n\n\nTo use a tool, please use the exact following
+      format:\n\n```\nThought: Do I need to use a tool? Yes\nAction: the action to
+      take, should be one of [], just the name.\nAction Input: the input to the action\nObservation:
+      the result of the action\n```\n\nWhen you have a response for your task, or
+      if you do not need to use a tool, you MUST use the format:\n\n```\nThought:
+      Do I need to use a tool? No\nFinal Answer: [your response here]\n```\n\t\tThis
+      is the summary of your work so far:\n    \nBegin! This is VERY important to
+      you, your job depends on it!\n\nCurrent Task: Write about AI advancements.\nThought:
+      Do I need to use a tool? Yes\nAction: Use Google Scholar\nAction Input: Search
+      for recent research papers on AI advancements\nObservation: Use Google Scholar
+      is not a valid tool, try one of [].\nThought: \n"}], "model": "gpt-4", "n":
+      1, "stop": ["\nObservation"], "stream": false, "temperature": 0.7}'
+    headers:
+      accept:
+      - application/json
+      accept-encoding:
+      - gzip, deflate
+      connection:
+      - keep-alive
+      content-length:
+      - '1326'
+      content-type:
+      - application/json
+      cookie:
+      - _cfuvid=BMxGwK4wPoN6Cq5150swBY7QbtTvmWU2.p39x.cUidg-1703932144438-0-604800000;
+        __cf_bm=OlUZJKYA638vLuLRXpnvHsuQGjjNUEUPLyqPk3Xgr7k-1703932144-1-ASbmQtFM69cq3p8WvAULs1c92cQqV4Hj6AQj5D+8d2YbxDrPwADZ4dAPrO1SbsGfaEUgCtY9Hbm1XCp/n7sUEW0=
+      host:
+      - api.openai.com
+      user-agent:
+      - OpenAI/Python 1.6.1
+      x-stainless-arch:
+      - arm64
+      x-stainless-async:
+      - 'false'
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - MacOS
+      x-stainless-package-version:
+      - 1.6.1
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.11.7
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    content: "{\n  \"id\": \"chatcmpl-8bQsSUIlFRKysiZmNykEJYHaXX2Su\",\n  \"object\":
+      \"chat.completion\",\n  \"created\": 1703932144,\n  \"model\": \"gpt-4-0613\",\n
+      \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
+      \"assistant\",\n        \"content\": \"Do I need to use a tool? No\\nFinal Answer:
+      The field of artificial intelligence (AI) has seen numerous advancements in
+      recent years. The technology has become more sophisticated and capable due to
+      developments in machine learning algorithms and increased computational power.\\n\\nOne
+      significant advancement is in the area of natural language processing (NLP).
+      AI algorithms are now capable of understanding and generating human language
+      more accurately. This has led to the development of more advanced chatbots and
+      virtual assistants that can understand context, sentiment, and even sarcasm.\\n\\nAnother
+      key advancement is in the field of machine learning. Deep learning, a subset
+      of machine learning, has seen tremendous growth. It uses artificial neural networks
+      with various abstraction layers to simulate the human brain, allowing the AI
+      to learn from large amounts of data. This has led to significant improvements
+      in image and speech recognition and has allowed for the development of self-driving
+      cars.\\n\\nAI has also made strides in the field of robotics. Robots are now
+      more autonomous and can learn from their environment, allowing them to adapt
+      to different scenarios. This is particularly useful in industries like manufacturing
+      and logistics.\\n\\nLastly, advancements in AI have also led to the development
+      of more sophisticated predictive models. These are used in a variety of fields,
+      from predicting weather patterns to stock market trends. The ability to accurately
+      predict future events based on historical data is a powerful tool that can have
+      wide-ranging implications. \\n\\nTo conclude, the advancements in AI have opened
+      up numerous possibilities across various sectors. However, these advancements
+      also come with challenges, particularly in the areas of ethics and data privacy.
+      As we continue to push the boundaries of what AI can achieve, it is crucial
+      to address these concerns to ensure that the technology is used responsibly.\"\n
+      \     },\n      \"logprobs\": null,\n      \"finish_reason\": \"stop\"\n    }\n
+      \ ],\n  \"usage\": {\n    \"prompt_tokens\": 275,\n    \"completion_tokens\":
+      341,\n    \"total_tokens\": 616\n  },\n  \"system_fingerprint\": null\n}\n"
+    headers:
+      CF-Cache-Status:
+      - DYNAMIC
+      CF-RAY:
+      - 83d9997f69c91d2e-GRU
+      Cache-Control:
+      - no-cache, must-revalidate
+      Connection:
+      - keep-alive
+      Content-Encoding:
+      - gzip
+      Content-Type:
+      - application/json
+      Date:
+      - Sat, 30 Dec 2023 10:29:21 GMT
+      Server:
+      - cloudflare
+      Transfer-Encoding:
+      - chunked
+      access-control-allow-origin:
+      - '*'
+      alt-svc:
+      - h3=":443"; ma=86400
+      openai-model:
+      - gpt-4-0613
+      openai-organization:
+      - user-z7g4wmlazxqvc5wjyaaaocfz
+      openai-processing-ms:
+      - '17002'
+      openai-version:
+      - '2020-10-01'
+      strict-transport-security:
+      - max-age=15724800; includeSubDomains
+      x-ratelimit-limit-requests:
+      - '10000'
+      x-ratelimit-limit-tokens:
+      - '300000'
+      x-ratelimit-limit-tokens_usage_based:
+      - '300000'
+      x-ratelimit-remaining-requests:
+      - '9999'
+      x-ratelimit-remaining-tokens:
+      - '299695'
+      x-ratelimit-remaining-tokens_usage_based:
+      - '299695'
+      x-ratelimit-reset-requests:
+      - 6ms
+      x-ratelimit-reset-tokens:
+      - 61ms
+      x-ratelimit-reset-tokens_usage_based:
+      - 61ms
+      x-request-id:
+      - c128a7ecfe8990bfc73a1f7ff595a2f6
+    http_version: HTTP/1.1
+    status_code: 200
+- request:
+    body: '{"messages": [{"role": "user", "content": "Progressively summarize the
+      lines of conversation provided, adding onto the previous summary returning a
+      new summary.\n\nEXAMPLE\nCurrent summary:\nThe human asks what the AI thinks
+      of artificial intelligence. The AI thinks artificial intelligence is a force
+      for good.\n\nNew lines of conversation:\nHuman: Why do you think artificial
+      intelligence is a force for good?\nAI: Because artificial intelligence will
+      help humans reach their full potential.\n\nNew summary:\nThe human asks what
+      the AI thinks of artificial intelligence. The AI thinks artificial intelligence
+      is a force for good because it will help humans reach their full potential.\nEND
+      OF EXAMPLE\n\nCurrent summary:\n\n\nNew lines of conversation:\nHuman: Write
+      about AI advancements.\nAI: The field of artificial intelligence (AI) has seen
+      numerous advancements in recent years. The technology has become more sophisticated
+      and capable due to developments in machine learning algorithms and increased
+      computational power.\n\nOne significant advancement is in the area of natural
+      language processing (NLP). AI algorithms are now capable of understanding and
+      generating human language more accurately. This has led to the development of
+      more advanced chatbots and virtual assistants that can understand context, sentiment,
+      and even sarcasm.\n\nAnother key advancement is in the field of machine learning.
+      Deep learning, a subset of machine learning, has seen tremendous growth. It
+      uses artificial neural networks with various abstraction layers to simulate
+      the human brain, allowing the AI to learn from large amounts of data. This has
+      led to significant improvements in image and speech recognition and has allowed
+      for the development of self-driving cars.\n\nAI has also made strides in the
+      field of robotics. Robots are now more autonomous and can learn from their environment,
+      allowing them to adapt to different scenarios. This is particularly useful in
+      industries like manufacturing and logistics.\n\nLastly, advancements in AI have
+      also led to the development of more sophisticated predictive models. These are
+      used in a variety of fields, from predicting weather patterns to stock market
+      trends. The ability to accurately predict future events based on historical
+      data is a powerful tool that can have wide-ranging implications. \n\nTo conclude,
+      the advancements in AI have opened up numerous possibilities across various
+      sectors. However, these advancements also come with challenges, particularly
+      in the areas of ethics and data privacy. As we continue to push the boundaries
+      of what AI can achieve, it is crucial to address these concerns to ensure that
+      the technology is used responsibly.\n\nNew summary:"}], "model": "gpt-4", "n":
+      1, "stream": false, "temperature": 0.7}'
+    headers:
+      accept:
+      - application/json
+      accept-encoding:
+      - gzip, deflate
+      connection:
+      - keep-alive
+      content-length:
+      - '2789'
+      content-type:
+      - application/json
+      cookie:
+      - _cfuvid=BMxGwK4wPoN6Cq5150swBY7QbtTvmWU2.p39x.cUidg-1703932144438-0-604800000;
+        __cf_bm=OlUZJKYA638vLuLRXpnvHsuQGjjNUEUPLyqPk3Xgr7k-1703932144-1-ASbmQtFM69cq3p8WvAULs1c92cQqV4Hj6AQj5D+8d2YbxDrPwADZ4dAPrO1SbsGfaEUgCtY9Hbm1XCp/n7sUEW0=
+      host:
+      - api.openai.com
+      user-agent:
+      - OpenAI/Python 1.6.1
+      x-stainless-arch:
+      - arm64
+      x-stainless-async:
+      - 'false'
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - MacOS
+      x-stainless-package-version:
+      - 1.6.1
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.11.7
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    content: "{\n  \"id\": \"chatcmpl-8bQskWvLAJ1fYi1pr0zhuBF1HO0L2\",\n  \"object\":
+      \"chat.completion\",\n  \"created\": 1703932162,\n  \"model\": \"gpt-4-0613\",\n
+      \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
+      \"assistant\",\n        \"content\": \"The human asks the AI to write about
+      AI advancements. The AI explains that developments in machine learning and increased
+      computational power have led to significant progress in AI technology. Key advancements
+      include improvements in natural language processing, deep learning, robotics,
+      and predictive models. These advancements have led to the creation of more sophisticated
+      chatbots, virtual assistants, image and speech recognition, self-driving cars,
+      and autonomous robots. Despite these advancements, the AI also notes the challenges
+      associated with AI, including ethical and data privacy issues.\"\n      },\n
+      \     \"logprobs\": null,\n      \"finish_reason\": \"stop\"\n    }\n  ],\n
+      \ \"usage\": {\n    \"prompt_tokens\": 471,\n    \"completion_tokens\": 100,\n
+      \   \"total_tokens\": 571\n  },\n  \"system_fingerprint\": null\n}\n"
+    headers:
+      CF-Cache-Status:
+      - DYNAMIC
+      CF-RAY:
+      - 83d999eb1f821d2e-GRU
+      Cache-Control:
+      - no-cache, must-revalidate
+      Connection:
+      - keep-alive
+      Content-Encoding:
+      - gzip
+      Content-Type:
+      - application/json
+      Date:
+      - Sat, 30 Dec 2023 10:29:28 GMT
+      Server:
+      - cloudflare
+      Transfer-Encoding:
+      - chunked
+      access-control-allow-origin:
+      - '*'
+      alt-svc:
+      - h3=":443"; ma=86400
+      openai-model:
+      - gpt-4-0613
+      openai-organization:
+      - user-z7g4wmlazxqvc5wjyaaaocfz
+      openai-processing-ms:
+      - '6188'
+      openai-version:
+      - '2020-10-01'
+      strict-transport-security:
+      - max-age=15724800; includeSubDomains
+      x-ratelimit-limit-requests:
+      - '10000'
+      x-ratelimit-limit-tokens:
+      - '300000'
+      x-ratelimit-limit-tokens_usage_based:
+      - '300000'
+      x-ratelimit-remaining-requests:
+      - '9999'
+      x-ratelimit-remaining-tokens:
+      - '299320'
+      x-ratelimit-remaining-tokens_usage_based:
+      - '299320'
+      x-ratelimit-reset-requests:
+      - 6ms
+      x-ratelimit-reset-tokens:
+      - 135ms
+      x-ratelimit-reset-tokens_usage_based:
+      - 135ms
+      x-request-id:
+      - 4b79a71f1f2a49e466f61343cfa2b543
+    http_version: HTTP/1.1
+    status_code: 200
+- request:
+    body: '{"messages": [{"role": "user", "content": "You are Researcher.\nYou''re
+      an expert researcher, specialized in technology, software engineering, AI and
+      startups. You work as a freelancer and is now working on doing research and
+      analysis for a new customer.\n\nYour personal goal is: Make the best research
+      and analysis on content about AI and AI agents\n\nTOOLS:\n------\nYou have access
+      to the following tools:\n\n\n\nTo use a tool, please use the exact following
+      format:\n\n```\nThought: Do I need to use a tool? Yes\nAction: the action to
+      take, should be one of [], just the name.\nAction Input: the input to the action\nObservation:
+      the result of the action\n```\n\nWhen you have a response for your task, or
+      if you do not need to use a tool, you MUST use the format:\n\n```\nThought:
+      Do I need to use a tool? No\nFinal Answer: [your response here]\n```\n\t\tThis
+      is the summary of your work so far:\n    The human asks the AI to write about
+      AI advancements. The AI explains that developments in machine learning and increased
+      computational power have led to significant progress in AI technology. Key advancements
+      include improvements in natural language processing, deep learning, robotics,
+      and predictive models. These advancements have led to the creation of more sophisticated
+      chatbots, virtual assistants, image and speech recognition, self-driving cars,
+      and autonomous robots. Despite these advancements, the AI also notes the challenges
+      associated with AI, including ethical and data privacy issues.\nBegin! This
+      is VERY important to you, your job depends on it!\n\nCurrent Task: Write about
+      AI advancements.\n\n"}], "model": "gpt-4", "n": 1, "stop": ["\nObservation"],
+      "stream": false, "temperature": 0.7}'
+    headers:
+      accept:
+      - application/json
+      accept-encoding:
+      - gzip, deflate
+      connection:
+      - keep-alive
+      content-length:
+      - '1715'
+      content-type:
+      - application/json
+      cookie:
+      - _cfuvid=BMxGwK4wPoN6Cq5150swBY7QbtTvmWU2.p39x.cUidg-1703932144438-0-604800000;
+        __cf_bm=OlUZJKYA638vLuLRXpnvHsuQGjjNUEUPLyqPk3Xgr7k-1703932144-1-ASbmQtFM69cq3p8WvAULs1c92cQqV4Hj6AQj5D+8d2YbxDrPwADZ4dAPrO1SbsGfaEUgCtY9Hbm1XCp/n7sUEW0=
+      host:
+      - api.openai.com
+      user-agent:
+      - OpenAI/Python 1.6.1
+      x-stainless-arch:
+      - arm64
+      x-stainless-async:
+      - 'false'
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - MacOS
+      x-stainless-package-version:
+      - 1.6.1
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.11.7
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    content: "{\n  \"id\": \"chatcmpl-8bQsq1r7k6279XJwzh3QWNbAxg0Ed\",\n  \"object\":
+      \"chat.completion\",\n  \"created\": 1703932168,\n  \"model\": \"gpt-4-0613\",\n
+      \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
+      \"assistant\",\n        \"content\": \"Thought: Do I need to use a tool? No\\n\\nFinal
+      Answer: Artificial Intelligence (AI) has been making significant advancements
+      in the last decade, revolutionizing various sectors including technology, healthcare,
+      finance, and transportation. One of the key advancements in AI is the development
+      and refinement of machine learning algorithms. Machine learning, a subset of
+      AI, allows computers to learn from data and make predictions or decisions without
+      being explicitly programmed. \\n\\nThe introduction of Deep Learning, a subfield
+      of machine learning, has been a game-changer. It mimics the workings of the
+      human brain in processing data for use in decision making. Deep Learning is
+      primarily responsible for the advancements in tasks that involve image and speech
+      recognition.\\n\\nNatural Language Processing (NLP) has also seen substantial
+      improvements. NLP is a branch of AI that gives machines the ability to read,
+      understand, and derive meaning from human languages. It's the technology used
+      in voice-assistant devices like Amazon's Alexa and Apple's Siri.\\n\\nIn the
+      field of robotics, AI has made it possible to create robots that can understand
+      and respond to their environment. This has led to the creation of autonomous
+      vehicles and drones.\\n\\nPredictive models are another area where AI has made
+      significant strides. These models are used in various fields, from predicting
+      weather patterns to stock market trends and user behavior in technology applications.\\n\\nDespite
+      the significant advancements, AI technology also poses several challenges. The
+      ethical implications of AI are a major concern, particularly in areas like facial
+      recognition and decision-making algorithms. Data privacy is another issue, especially
+      with the increasing use of AI in handling sensitive information.\\n\\nIn conclusion,
+      while AI has seen incredible advancements and has the potential to revolutionize
+      various industries, there are also significant challenges that need to be addressed
+      to ensure its ethical and responsible use.\"\n      },\n      \"logprobs\":
+      null,\n      \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\":
+      325,\n    \"completion_tokens\": 356,\n    \"total_tokens\": 681\n  },\n  \"system_fingerprint\":
+      null\n}\n"
+    headers:
+      CF-Cache-Status:
+      - DYNAMIC
+      CF-RAY:
+      - 83d99a14dcd41d2e-GRU
+      Cache-Control:
+      - no-cache, must-revalidate
+      Connection:
+      - keep-alive
+      Content-Encoding:
+      - gzip
+      Content-Type:
+      - application/json
+      Date:
+      - Sat, 30 Dec 2023 10:29:39 GMT
+      Server:
+      - cloudflare
+      Transfer-Encoding:
+      - chunked
+      access-control-allow-origin:
+      - '*'
+      alt-svc:
+      - h3=":443"; ma=86400
+      openai-model:
+      - gpt-4-0613
+      openai-organization:
+      - user-z7g4wmlazxqvc5wjyaaaocfz
+      openai-processing-ms:
+      - '10741'
+      openai-version:
+      - '2020-10-01'
+      strict-transport-security:
+      - max-age=15724800; includeSubDomains
+      x-ratelimit-limit-requests:
+      - '10000'
+      x-ratelimit-limit-tokens:
+      - '300000'
+      x-ratelimit-limit-tokens_usage_based:
+      - '300000'
+      x-ratelimit-remaining-requests:
+      - '9999'
+      x-ratelimit-remaining-tokens:
+      - '299596'
+      x-ratelimit-remaining-tokens_usage_based:
+      - '299596'
+      x-ratelimit-reset-requests:
+      - 6ms
+      x-ratelimit-reset-tokens:
+      - 80ms
+      x-ratelimit-reset-tokens_usage_based:
+      - 80ms
+      x-request-id:
+      - ad489cb01822a7221278cc4aca438ced
+    http_version: HTTP/1.1
+    status_code: 200
+- request:
+    body: '{"messages": [{"role": "user", "content": "Progressively summarize the
+      lines of conversation provided, adding onto the previous summary returning a
+      new summary.\n\nEXAMPLE\nCurrent summary:\nThe human asks what the AI thinks
+      of artificial intelligence. The AI thinks artificial intelligence is a force
+      for good.\n\nNew lines of conversation:\nHuman: Why do you think artificial
+      intelligence is a force for good?\nAI: Because artificial intelligence will
+      help humans reach their full potential.\n\nNew summary:\nThe human asks what
+      the AI thinks of artificial intelligence. The AI thinks artificial intelligence
+      is a force for good because it will help humans reach their full potential.\nEND
+      OF EXAMPLE\n\nCurrent summary:\nThe human asks the AI to write about AI advancements.
+      The AI explains that developments in machine learning and increased computational
+      power have led to significant progress in AI technology. Key advancements include
+      improvements in natural language processing, deep learning, robotics, and predictive
+      models. These advancements have led to the creation of more sophisticated chatbots,
+      virtual assistants, image and speech recognition, self-driving cars, and autonomous
+      robots. Despite these advancements, the AI also notes the challenges associated
+      with AI, including ethical and data privacy issues.\n\nNew lines of conversation:\nHuman:
+      Write about AI advancements.\nAI: Artificial Intelligence (AI) has been making
+      significant advancements in the last decade, revolutionizing various sectors
+      including technology, healthcare, finance, and transportation. One of the key
+      advancements in AI is the development and refinement of machine learning algorithms.
+      Machine learning, a subset of AI, allows computers to learn from data and make
+      predictions or decisions without being explicitly programmed. \n\nThe introduction
+      of Deep Learning, a subfield of machine learning, has been a game-changer. It
+      mimics the workings of the human brain in processing data for use in decision
+      making. Deep Learning is primarily responsible for the advancements in tasks
+      that involve image and speech recognition.\n\nNatural Language Processing (NLP)
+      has also seen substantial improvements. NLP is a branch of AI that gives machines
+      the ability to read, understand, and derive meaning from human languages. It''s
+      the technology used in voice-assistant devices like Amazon''s Alexa and Apple''s
+      Siri.\n\nIn the field of robotics, AI has made it possible to create robots
+      that can understand and respond to their environment. This has led to the creation
+      of autonomous vehicles and drones.\n\nPredictive models are another area where
+      AI has made significant strides. These models are used in various fields, from
+      predicting weather patterns to stock market trends and user behavior in technology
+      applications.\n\nDespite the significant advancements, AI technology also poses
+      several challenges. The ethical implications of AI are a major concern, particularly
+      in areas like facial recognition and decision-making algorithms. Data privacy
+      is another issue, especially with the increasing use of AI in handling sensitive
+      information.\n\nIn conclusion, while AI has seen incredible advancements and
+      has the potential to revolutionize various industries, there are also significant
+      challenges that need to be addressed to ensure its ethical and responsible use.\n\nNew
+      summary:"}], "model": "gpt-4", "n": 1, "stream": false, "temperature": 0.7}'
+    headers:
+      accept:
+      - application/json
+      accept-encoding:
+      - gzip, deflate
+      connection:
+      - keep-alive
+      content-length:
+      - '3444'
+      content-type:
+      - application/json
+      cookie:
+      - _cfuvid=BMxGwK4wPoN6Cq5150swBY7QbtTvmWU2.p39x.cUidg-1703932144438-0-604800000;
+        __cf_bm=OlUZJKYA638vLuLRXpnvHsuQGjjNUEUPLyqPk3Xgr7k-1703932144-1-ASbmQtFM69cq3p8WvAULs1c92cQqV4Hj6AQj5D+8d2YbxDrPwADZ4dAPrO1SbsGfaEUgCtY9Hbm1XCp/n7sUEW0=
+      host:
+      - api.openai.com
+      user-agent:
+      - OpenAI/Python 1.6.1
+      x-stainless-arch:
+      - arm64
+      x-stainless-async:
+      - 'false'
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - MacOS
+      x-stainless-package-version:
+      - 1.6.1
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.11.7
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    content: "{\n  \"id\": \"chatcmpl-8bQt1FyzTtuAbCMxkMxdzVK1M2QhO\",\n  \"object\":
+      \"chat.completion\",\n  \"created\": 1703932179,\n  \"model\": \"gpt-4-0613\",\n
+      \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
+      \"assistant\",\n        \"content\": \"The human asked the AI to write about
+      AI advancements. The AI highlighted key developments in machine learning and
+      increased computational power that have led to significant progress in AI technology.
+      These advancements include improvements in natural language processing, deep
+      learning, robotics, and predictive models, which have enabled the creation of
+      sophisticated chatbots, virtual assistants, image and speech recognition, self-driving
+      cars, and autonomous robots. The AI further explained that AI has revolutionized
+      various sectors including technology, healthcare, finance, and transportation.
+      Machine learning allows computers to make predictions or decisions based on
+      data, and deep learning mimics human brain processing for decision making. Natural
+      Language Processing allows machines to understand human languages, and AI has
+      enabled the creation of responsive robots and predictive models for various
+      applications. Despite these advancements, the AI also noted the challenges associated
+      with AI, including ethical implications and data privacy issues. In conclusion,
+      while AI has seen incredible advancements, there are significant challenges
+      that need to be addressed to ensure its ethical and responsible use.\"\n      },\n
+      \     \"logprobs\": null,\n      \"finish_reason\": \"stop\"\n    }\n  ],\n
+      \ \"usage\": {\n    \"prompt_tokens\": 584,\n    \"completion_tokens\": 198,\n
+      \   \"total_tokens\": 782\n  },\n  \"system_fingerprint\": null\n}\n"
+    headers:
+      CF-Cache-Status:
+      - DYNAMIC
+      CF-RAY:
+      - 83d99a598ebe1d2e-GRU
+      Cache-Control:
+      - no-cache, must-revalidate
+      Connection:
+      - keep-alive
+      Content-Encoding:
+      - gzip
+      Content-Type:
+      - application/json
+      Date:
+      - Sat, 30 Dec 2023 10:29:51 GMT
+      Server:
+      - cloudflare
+      Transfer-Encoding:
+      - chunked
+      access-control-allow-origin:
+      - '*'
+      alt-svc:
+      - h3=":443"; ma=86400
+      openai-model:
+      - gpt-4-0613
+      openai-organization:
+      - user-z7g4wmlazxqvc5wjyaaaocfz
+      openai-processing-ms:
+      - '11197'
+      openai-version:
+      - '2020-10-01'
+      strict-transport-security:
+      - max-age=15724800; includeSubDomains
+      x-ratelimit-limit-requests:
+      - '10000'
+      x-ratelimit-limit-tokens:
+      - '300000'
+      x-ratelimit-limit-tokens_usage_based:
+      - '300000'
+      x-ratelimit-remaining-requests:
+      - '9999'
+      x-ratelimit-remaining-tokens:
+      - '299156'
+      x-ratelimit-remaining-tokens_usage_based:
+      - '299156'
+      x-ratelimit-reset-requests:
+      - 6ms
+      x-ratelimit-reset-tokens:
+      - 168ms
+      x-ratelimit-reset-tokens_usage_based:
+      - 168ms
+      x-request-id:
+      - 8f64b23c4bfaa33e56e4e5ed52e113c1
+    http_version: HTTP/1.1
+    status_code: 200
+version: 1
