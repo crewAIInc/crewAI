@@ -6,13 +6,14 @@ from langchain.chat_models import ChatOpenAI
 from langchain.memory import ConversationSummaryMemory
 from langchain.tools.render import render_text_description
 from langchain_core.runnables.config import RunnableConfig
-from pydantic import BaseModel, Field, InstanceOf, model_validator
+from pydantic import ConfigDict, Field, InstanceOf, model_validator
 
 from crewai.agents import CacheHandler, CrewAgentOutputParser, ToolsHandler
+from crewai.base.model import CrewAIBaseModel
 from crewai.prompts import Prompts
 
 
-class Agent(BaseModel):
+class Agent(CrewAIBaseModel):
     """Represents an agent in a system.
 
     Each agent has a role, a goal, a backstory, and an optional language model (llm).
@@ -29,9 +30,7 @@ class Agent(BaseModel):
             allow_delegation: Whether the agent is allowed to delegate tasks to other agents.
     """
 
-    class Config:
-        arbitrary_types_allowed = True
-
+    model_config = ConfigDict(arbitrary_types_allowed=True)
     role: str = Field(description="Role of the agent")
     goal: str = Field(description="Objective of the agent")
     backstory: str = Field(description="Backstory of the agent")
