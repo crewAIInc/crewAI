@@ -1,11 +1,12 @@
 from typing import Any, List, Optional
 
-from pydantic import BaseModel, Field, model_validator
+from pydantic import Field, model_validator
 
 from crewai.agent import Agent
+from crewai.base.model import CrewAIBaseModel
 
 
-class Task(BaseModel):
+class Task(CrewAIBaseModel):
     """Class that represent a task to be executed."""
 
     description: str = Field(description="Description of the actual task.")
