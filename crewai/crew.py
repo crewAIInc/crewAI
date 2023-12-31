@@ -1,7 +1,10 @@
 import json
+import uuid
 from typing import Any, Dict, List, Optional, Union
 
 from pydantic import (
+    UUID4,
+    BaseModel,
     ConfigDict,
     Field,
     InstanceOf,
@@ -13,15 +16,15 @@ from pydantic_core import PydanticCustomError
 
 from crewai.agent import Agent
 from crewai.agents import CacheHandler
-from crewai.base.model import CrewAIBaseModel
 from crewai.process import Process
 from crewai.task import Task
 from crewai.tools.agent_tools import AgentTools
 
 
-class Crew(CrewAIBaseModel):
+class Crew(BaseModel):
     """Class that represents a group of agents, how they should work together and their tasks."""
 
+    __hash__ = object.__hash__
     model_config = ConfigDict(arbitrary_types_allowed=True)
     tasks: List[Task] = Field(description="List of tasks", default_factory=list)
     agents: List[Agent] = Field(
@@ -39,6 +42,19 @@ class Crew(CrewAIBaseModel):
     cache_handler: Optional[InstanceOf[CacheHandler]] = Field(
         default=CacheHandler(), description="An instance of the CacheHandler class."
     )
+    id: UUID4 = Field(
+        default_factory=uuid.uuid4,
+        frozen=True,
+        description="Unique identifier for the object, not set by user.",
+    )
+
+    @field_validator("id", mode="before")
+    @classmethod
+    def _deny_user_set_id(cls, v: Optional[UUID4]) -> None:
+        if v:
+            raise PydanticCustomError(
+                "may_not_set_field", "This field is not to be set by the user.", {}
+            )
 
     @classmethod
     @field_validator("config", mode="before")
