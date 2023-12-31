@@ -1,3 +1,4 @@
+import uuid
 from typing import Any, List, Optional
 
 from langchain.agents import AgentExecutor
@@ -6,14 +7,22 @@ from langchain.chat_models import ChatOpenAI
 from langchain.memory import ConversationSummaryMemory
 from langchain.tools.render import render_text_description
 from langchain_core.runnables.config import RunnableConfig
-from pydantic import ConfigDict, Field, InstanceOf, model_validator
+from pydantic import (
+    UUID4,
+    BaseModel,
+    ConfigDict,
+    Field,
+    InstanceOf,
+    field_validator,
+    model_validator,
+)
+from pydantic_core import PydanticCustomError
 
 from crewai.agents import CacheHandler, CrewAgentOutputParser, ToolsHandler
-from crewai.base.model import CrewAIBaseModel
 from crewai.prompts import Prompts
 
 
-class Agent(CrewAIBaseModel):
+class Agent(BaseModel):
     """Represents an agent in a system.
 
     Each agent has a role, a goal, a backstory, and an optional language model (llm).
@@ -30,7 +39,13 @@ class Agent(CrewAIBaseModel):
             allow_delegation: Whether the agent is allowed to delegate tasks to other agents.
     """
 
+    __hash__ = object.__hash__
     model_config = ConfigDict(arbitrary_types_allowed=True)
+    id: UUID4 = Field(
+        default_factory=uuid.uuid4,
+        frozen=True,
+        description="Unique identifier for the object, not set by user.",
+    )
     role: str = Field(description="Role of the agent")
     goal: str = Field(description="Objective of the agent")
     backstory: str = Field(description="Backstory of the agent")
@@ -62,6 +77,14 @@ class Agent(CrewAIBaseModel):
     cache_handler: Optional[InstanceOf[CacheHandler]] = Field(
         default=CacheHandler(), description="An instance of the CacheHandler class."
     )
+
+    @field_validator("id", mode="before")
+    @classmethod
+    def _deny_user_set_id(cls, v: Optional[UUID4]) -> None:
+        if v:
+            raise PydanticCustomError(
+                "may_not_set_field", "This field is not to be set by the user.", {}
+            )
 
     @model_validator(mode="after")
     def check_agent_executor(self) -> "Agent":
