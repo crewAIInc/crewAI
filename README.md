@@ -86,6 +86,10 @@ Currently the only supported process is `Process.sequential`, where one task is 
 ## Examples
 You can test different real life examples of AI crews [in the examples repo](https://github.com/joaomdmoura/crewAI-examples?tab=readme-ov-file)
 
+- [Trip Planner](https://github.com/joaomdmoura/crewAI-examples/tree/main/trip_planner)
+- [Stock Analysis](https://github.com/joaomdmoura/crewAI-examples/tree/main/stock_analysis)
+- [Landing Page Generator](https://github.com/joaomdmoura/crewAI-examples/tree/main/landing_page_generator)
+
 ## Local Open Source Models
 crewAI supports integration with local models, thorugh tools such as [Ollama](https://ollama.ai/), for enhanced flexibility and customization. This allows you to utilize your own models, which can be particularly useful for specialized tasks or data privacy concerns.
 
