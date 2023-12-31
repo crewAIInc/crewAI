@@ -57,7 +57,7 @@ writer = Agent(
 )
 
 # Create tasks for your agents
-task1 = Task(description='Investigate the latest AI trends', agent=researcher)
+task1 = Task(description='Search and investigate the latest AI trends', agent=researcher)
 task2 = Task(description='Write a blog post on AI advancements', agent=writer)
 
 # Instantiate your crew with a sequential process
