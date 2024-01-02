@@ -71,7 +71,7 @@ class CrewAgentOutputParser(ReActSingleInputOutputParser):
                 }
                 if usage == last_tool_usage:
                     raise OutputParserException(
-                        f"""\nI just used the {action} tool with input {tool_input}. So I already knwo the result of that."""
+                        f"""\nI just used the {action} tool with input {tool_input}. So I already know the result of that."""
                     )
 
             result = self.cache.read(action, tool_input)
