@@ -1,7 +1,7 @@
 
 [tool.poetry]
 name = "crewai"
-version = "0.1.14"
+version = "0.1.15"
 description = "Cutting-edge framework for orchestrating role-playing, autonomous AI agents. By fostering collaborative intelligence, CrewAI empowers agents to work together seamlessly, tackling complex tasks."
 authors = ["Joao Moura <joaomdmoura@gmail.com>"]
 readme = "README.md"
@@ -14,7 +14,7 @@ Repository = "https://github.com/joaomdmoura/crewai"
 [tool.poetry.dependencies]
 python = ">=3.9,<4.0"
 pydantic = "^2.4.2"
-langchain = "^0.0.351"
+langchain = "^0.0.354"
 openai = "^1.5.0"
 
 [tool.poetry.group.dev.dependencies]
