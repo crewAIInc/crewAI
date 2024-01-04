@@ -32,6 +32,11 @@ To get started with CrewAI, follow these simple steps:
 pip install crewai
 ```
 
+The example bellow also uses duckduckgo, so also install that
+```shell
+pip install duckduckgo-search
+```
+
 2. **Setting Up Your Crew**:
 
 ```python
