@@ -1,7 +1,6 @@
 import uuid
 from typing import Any, List, Optional
 
-from langchain.agents import AgentExecutor
 from langchain.agents.format_scratchpad import format_log_to_str
 from langchain.chat_models import ChatOpenAI
 from langchain.memory import ConversationSummaryMemory
@@ -18,7 +17,12 @@ from pydantic import (
 )
 from pydantic_core import PydanticCustomError
 
-from crewai.agents import CacheHandler, CrewAgentOutputParser, ToolsHandler
+from crewai.agents import (
+    CacheHandler,
+    CrewAgentExecutor,
+    CrewAgentOutputParser,
+    ToolsHandler,
+)
 from crewai.prompts import Prompts
 
 
@@ -29,7 +33,7 @@ class Agent(BaseModel):
     The agent can also have memory, can operate in verbose mode, and can delegate tasks to other agents.
 
     Attributes:
-            agent_executor: An instance of the AgentExecutor class.
+            agent_executor: An instance of the CrewAgentExecutor class.
             role: The role of the agent.
             goal: The objective of the agent.
             backstory: The backstory of the agent.
@@ -68,8 +72,8 @@ class Agent(BaseModel):
     tools: List[Any] = Field(
         default_factory=list, description="Tools at agents disposal"
     )
-    agent_executor: Optional[InstanceOf[AgentExecutor]] = Field(
-        default=None, description="An instance of the AgentExecutor class."
+    agent_executor: Optional[InstanceOf[CrewAgentExecutor]] = Field(
+        default=None, description="An instance of the CrewAgentExecutor class."
     )
     tools_handler: Optional[InstanceOf[ToolsHandler]] = Field(
         default=None, description="An instance of the ToolsHandler class."
@@ -127,11 +131,11 @@ class Agent(BaseModel):
         self.tools_handler = ToolsHandler(cache=self.cache_handler)
         self.__create_agent_executor()
 
-    def __create_agent_executor(self) -> AgentExecutor:
+    def __create_agent_executor(self) -> CrewAgentExecutor:
         """Create an agent executor for the agent.
 
         Returns:
-            An instance of the AgentExecutor class.
+            An instance of the CrewAgentExecutor class.
         """
         agent_args = {
             "input": lambda x: x["input"],
@@ -170,7 +174,7 @@ class Agent(BaseModel):
                 tools_handler=self.tools_handler, cache=self.cache_handler
             )
         )
-        self.agent_executor = AgentExecutor(agent=inner_agent, **executor_args)
+        self.agent_executor = CrewAgentExecutor(agent=inner_agent, **executor_args)
 
     @staticmethod
     def __tools_names(tools) -> str:

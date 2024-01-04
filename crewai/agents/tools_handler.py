@@ -35,8 +35,9 @@ class ToolsHandler(BaseCallbackHandler):
             and "Invalid or incomplete response" not in output
             and "Invalid Format" not in output
         ):
-            self.cache.add(
-                tool=self.last_used_tool["tool"],
-                input=self.last_used_tool["input"],
-                output=output,
-            )
+            if self.last_used_tool["tool"] != "Hit Cache":
+                self.cache.add(
+                    tool=self.last_used_tool["tool"],
+                    input=self.last_used_tool["input"],
+                    output=output,
+                )
