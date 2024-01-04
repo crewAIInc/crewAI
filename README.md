@@ -35,7 +35,6 @@ pip install crewai
 2. **Setting Up Your Crew**:
 
 ```python
-```python
 import os
 from crewai import Agent, Task, Crew, Process
 
