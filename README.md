@@ -58,7 +58,7 @@ researcher = Agent(
   actionable insights.""",
   verbose=True,
   allow_delegation=False,
-	tools=[search_tool]
+  tools=[search_tool]
   # llm=OpenAI(temperature=0.7, model_name="gpt-4"). It uses langchain.chat_models, default is GPT4
 )
 writer = Agent(
@@ -73,19 +73,19 @@ writer = Agent(
 
 # Create tasks for your agents
 task1 = Task(
-	description="""Conduct a comprehensive analysis of the latest advancements in AI in 2024.
-	Identify key trends, breakthrough technologies, and potential industry impacts.
+  description="""Conduct a comprehensive analysis of the latest advancements in AI in 2024.
+  Identify key trends, breakthrough technologies, and potential industry impacts.
   Compile your findings in a detailed report.""",
-	agent=researcher
+  agent=researcher
 )
 
 task2 = Task(
-	description="""Using the insights from the researcher's report, develop an engaging blog
+  description="""Using the insights from the researcher's report, develop an engaging blog
   post that highlights the most significant AI advancements.
   Your post should be informative yet accessible, catering to a tech-savvy audience.
-	Aim for a narrative that captures the essence of these breakthroughs and their
+  Aim for a narrative that captures the essence of these breakthroughs and their
   implications for the future.""",
-	agent=writer
+  agent=writer
 )
 
 # Instantiate your crew with a sequential process
