@@ -3,7 +3,7 @@ from typing import Any, Dict
 from langchain.callbacks.base import BaseCallbackHandler
 
 from ..tools.cache_tools import CacheTools
-from .cache_handler import CacheHandler
+from .cache.cache_handler import CacheHandler
 
 
 class ToolsHandler(BaseCallbackHandler):

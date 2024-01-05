@@ -1,7 +1,7 @@
 from langchain.tools import Tool
 from pydantic import BaseModel, ConfigDict, Field
 
-from crewai.agents import CacheHandler
+from crewai.agents.cache import CacheHandler
 
 
 class CacheTools(BaseModel):

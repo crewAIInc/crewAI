@@ -4,7 +4,7 @@ import pytest
 from langchain.chat_models import ChatOpenAI as OpenAI
 
 from crewai.agent import Agent
-from crewai.agents import CacheHandler
+from crewai.agents.cache import CacheHandler
 
 
 def test_agent_creation():

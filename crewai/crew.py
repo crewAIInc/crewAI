@@ -15,7 +15,7 @@ from pydantic import (
 from pydantic_core import PydanticCustomError
 
 from crewai.agent import Agent
-from crewai.agents import CacheHandler
+from crewai.agents.cache import CacheHandler
 from crewai.process import Process
 from crewai.task import Task
 from crewai.tools.agent_tools import AgentTools
