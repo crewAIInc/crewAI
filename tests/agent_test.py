@@ -145,7 +145,7 @@ def test_cache_hitting():
     def multiplier(numbers) -> float:
         """Useful for when you need to multiply two numbers together.
         The input to this tool should be a comma separated list of numbers of
-        length two, representing the two numbers you want to multiply together.
+        length two and ONLY TWO, representing the two numbers you want to multiply together.
         For example, `1,2` would be the input if you wanted to multiply 1 by 2."""
         a, b = numbers.split(",")
         return int(a) * int(b)
@@ -162,15 +162,22 @@ def test_cache_hitting():
         verbose=True,
     )
 
-    output = agent.execute_task("What is 2 times 6?")
+    output = agent.execute_task("What is 2 times 6 times 3?")
     output = agent.execute_task("What is 3 times 3?")
-    assert cache_handler._cache == {"multiplier-2,6": "12", "multiplier-3,3": "9"}
+    assert cache_handler._cache == {
+        "multiplier-12,3": "36",
+        "multiplier-2,6": "12",
+        "multiplier-3,3": "9",
+    }
+
+    output = agent.execute_task("What is 2 times 6 times 3? Return only the number")
+    assert output == "36"
 
     with patch.object(CacheHandler, "read") as read:
         read.return_value = "0"
         output = agent.execute_task("What is 2 times 6?")
         assert output == "0"
-        read.assert_called_once_with("multiplier", "2,6")
+        read.assert_called_with("multiplier", "2,6")
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
@@ -194,4 +201,4 @@ def test_agent_execution_with_specific_tools():
     )
 
     output = agent.execute_task(task="What is 3 times 4", tools=[multiplier])
-    assert output == "12"
+    assert output == "3 times 4 is 12."
