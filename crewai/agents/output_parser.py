@@ -6,6 +6,7 @@ from langchain_core.agents import AgentAction, AgentFinish
 from langchain_core.exceptions import OutputParserException
 
 from .cache_handler import CacheHandler
+from .cache_hit import CacheHit
 from .tools_handler import ToolsHandler
 
 FINAL_ANSWER_ACTION = "Final Answer:"
@@ -47,17 +48,13 @@ class CrewAgentOutputParser(ReActSingleInputOutputParser):
     tools_handler: ToolsHandler
     cache: CacheHandler
 
-    def parse(self, text: str) -> Union[AgentAction, AgentFinish]:
-        includes_answer = FINAL_ANSWER_ACTION in text
+    def parse(self, text: str) -> Union[AgentAction, AgentFinish, CacheHit]:
+        FINAL_ANSWER_ACTION in text
         regex = (
             r"Action\s*\d*\s*:[\s]*(.*?)[\s]*Action\s*\d*\s*Input\s*\d*\s*:[\s]*(.*)"
         )
         action_match = re.search(regex, text, re.DOTALL)
         if action_match:
-            if includes_answer:
-                raise OutputParserException(
-                    f"{FINAL_ANSWER_AND_PARSABLE_ACTION_ERROR_MESSAGE}: {text}"
-                )
             action = action_match.group(1).strip()
             action_input = action_match.group(2)
             tool_input = action_input.strip(" ")
@@ -76,6 +73,7 @@ class CrewAgentOutputParser(ReActSingleInputOutputParser):
 
             result = self.cache.read(action, tool_input)
             if result:
-                return AgentFinish({"output": result}, text)
+                action = AgentAction(action, tool_input, text)
+                return CacheHit(action=action, cache=self.cache)
 
         return super().parse(text)

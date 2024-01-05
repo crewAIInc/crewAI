@@ -2,6 +2,7 @@ from typing import Any, Dict
 
 from langchain.callbacks.base import BaseCallbackHandler
 
+from ..tools.cache_tools import CacheTools
 from .cache_handler import CacheHandler
 
 
@@ -35,8 +36,9 @@ class ToolsHandler(BaseCallbackHandler):
             and "Invalid or incomplete response" not in output
             and "Invalid Format" not in output
         ):
-            self.cache.add(
-                tool=self.last_used_tool["tool"],
-                input=self.last_used_tool["input"],
-                output=output,
-            )
+            if self.last_used_tool["tool"] != CacheTools().name:
+                self.cache.add(
+                    tool=self.last_used_tool["tool"],
+                    input=self.last_used_tool["input"],
+                    output=output,
+                )

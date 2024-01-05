@@ -241,12 +241,12 @@ def test_cache_hitting_between_agents():
 
     tasks = [
         Task(
-            description="What is 2 tims 6?",
+            description="What is 2 tims 6? Return only the number.",
             tools=[multiplier],
             agent=ceo,
         ),
         Task(
-            description="What is 2 times 6?",
+            description="What is 2 times 6? Return only the number.",
             tools=[multiplier],
             agent=researcher,
         ),
