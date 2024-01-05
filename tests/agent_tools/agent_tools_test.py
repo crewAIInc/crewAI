@@ -48,7 +48,7 @@ def test_delegate_work_with_wrong_input():
 
     assert (
         result
-        == "\nError executing tool. Missing exact 3 pipe (|) separated values. For example, `coworker|task|information`."
+        == "\nError executing tool. Missing exact 3 pipe (|) separated values. For example, `coworker|task|information`.\n"
     )
 
 
@@ -59,7 +59,7 @@ def test_delegate_work_to_wrong_agent():
 
     assert (
         result
-        == "\nError executing tool. Co-worker mentioned on the Action Input not found, it must to be one of the following options: researcher."
+        == "\nError executing tool. Co-worker mentioned on the Action Input not found, it must to be one of the following options: researcher.\n"
     )
 
 
@@ -70,5 +70,5 @@ def test_ask_question_to_wrong_agent():
 
     assert (
         result
-        == "\nError executing tool. Co-worker mentioned on the Action Input not found, it must to be one of the following options: researcher."
+        == "\nError executing tool. Co-worker mentioned on the Action Input not found, it must to be one of the following options: researcher.\n"
     )

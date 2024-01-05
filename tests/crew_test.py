@@ -5,7 +5,7 @@ import json
 import pytest
 
 from crewai.agent import Agent
-from crewai.agents import CacheHandler
+from crewai.agents.cache import CacheHandler
 from crewai.crew import Crew
 from crewai.process import Process
 from crewai.task import Task
