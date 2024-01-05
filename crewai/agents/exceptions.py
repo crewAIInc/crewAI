@@ -5,7 +5,7 @@ class TaskRepeatedUsageException(OutputParserException):
     """Exception raised when a task is used twice in a roll."""
 
     error: str = "TaskRepeatedUsageException"
-    message: str = "\nI just used the {action} tool with input {tool_input}. So I already know the result of that.\n"
+    message: str = "\nI just used the {tool} tool with input {tool_input}. So I already know the result of that.\n"
 
     def __init__(self, tool: str, tool_input: str):
         self.tool = tool
