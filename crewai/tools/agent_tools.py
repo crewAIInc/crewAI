@@ -53,10 +53,10 @@ class AgentTools(BaseModel):
         try:
             agent, task, information = command.split("|")
         except ValueError:
-            return "\nError executing tool. Missing exact 3 pipe (|) separated values. For example, `coworker|task|information`."
+            return "\nError executing tool. Missing exact 3 pipe (|) separated values. For example, `coworker|task|information`.\n"
 
         if not agent or not task or not information:
-            return "\nError executing tool. Missing exact 3 pipe (|) separated values. For example, `coworker|question|information`."
+            return "\nError executing tool. Missing exact 3 pipe (|) separated values. For example, `coworker|question|information`.\n"
 
         agent = [
             available_agent
@@ -65,7 +65,7 @@ class AgentTools(BaseModel):
         ]
 
         if len(agent) == 0:
-            return f"\nError executing tool. Co-worker mentioned on the Action Input not found, it must to be one of the following options: {', '.join([agent.role for agent in self.agents])}."
+            return f"\nError executing tool. Co-worker mentioned on the Action Input not found, it must to be one of the following options: {', '.join([agent.role for agent in self.agents])}.\n"
 
         agent = agent[0]
         result = agent.execute_task(task, information)
