@@ -82,11 +82,12 @@ class CrewAgentExecutor(AgentExecutor):
         if isinstance(output, CacheHit):
             cache = output.cache
             action = output.action
+            tool = CacheTools(cache_handler=cache).tool()
             output = action.copy()
             output.tool_input = f"tool:{action.tool}|input:{action.tool_input}"
-            output.tool = "Hit Cache"
-            name_to_tool_map["Hit Cache"] = CacheTools(cache_handler=cache).tool()
-            color_mapping["Hit Cache"] = color_mapping[action.tool]
+            output.tool = tool.name
+            name_to_tool_map[tool.name] = tool
+            color_mapping[tool.name] = color_mapping[action.tool]
 
         actions: List[AgentAction]
         if isinstance(output, AgentAction):

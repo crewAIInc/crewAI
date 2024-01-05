@@ -8,12 +8,16 @@ class CacheTools(BaseModel):
     """Default tools to hit the cache."""
 
     model_config = ConfigDict(arbitrary_types_allowed=True)
-    cache_handler: CacheHandler = Field(description="Cache Handler for the crew")
+    name: str = "Hit Cache"
+    cache_handler: CacheHandler = Field(
+        description="Cache Handler for the crew",
+        default=CacheHandler(),
+    )
 
     def tool(self):
         return Tool.from_function(
             func=self.hit_cache,
-            name="Hit Cache",
+            name=self.name,
             description="Reads directly from the cache",
         )
 
