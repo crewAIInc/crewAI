@@ -9,7 +9,7 @@ from langchain_core.exceptions import OutputParserException
 from langchain_core.tools import BaseTool
 
 from ..tools.cache_tools import CacheTools
-from .cache_hit import CacheHit
+from .cache.cache_hit import CacheHit
 
 
 class CrewAgentExecutor(AgentExecutor):

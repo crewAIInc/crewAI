@@ -3,10 +3,9 @@ from typing import Union
 
 from langchain.agents.output_parsers import ReActSingleInputOutputParser
 from langchain_core.agents import AgentAction, AgentFinish
-from langchain_core.exceptions import OutputParserException
 
-from .cache_handler import CacheHandler
-from .cache_hit import CacheHit
+from .cache import CacheHandler, CacheHit
+from .exceptions import TaskRepeatedUsageException
 from .tools_handler import ToolsHandler
 
 FINAL_ANSWER_ACTION = "Final Answer:"
@@ -67,9 +66,7 @@ class CrewAgentOutputParser(ReActSingleInputOutputParser):
                     "input": tool_input,
                 }
                 if usage == last_tool_usage:
-                    raise OutputParserException(
-                        f"""\nI just used the {action} tool with input {tool_input}. So I already know the result of that."""
-                    )
+                    raise TaskRepeatedUsageException(tool=action, tool_input=tool_input)
 
             result = self.cache.read(action, tool_input)
             if result:
