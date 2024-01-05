@@ -42,11 +42,11 @@ pip install duckduckgo-search
 ```python
 import os
 from crewai import Agent, Task, Crew, Process
-# to use local llm
-from langchain.llms import Ollama
-ollama = Ollama(model="mistral")  #let's use the mistral model
+# to use local model
+#from langchain.llms import Ollama
+#ollama = Ollama(model="mistral")  #let's use the mistral model
 # to use openai
-#os.environ["OPENAI_API_KEY"] = "Your Key"
+os.environ["OPENAI_API_KEY"] = "Your Key"
 
 # Define your tools, custom or not.
 # Install duckduckgo-search for this example:
@@ -66,7 +66,8 @@ researcher = Agent(
   verbose=True,
   allow_delegation=False,
   # if using the local model
-  llm = ollama,
+  #llm = ollama,
+  # OpenAI is defaul
   # llm=OpenAI(temperature=0.7, model_name="gpt-4"). It uses langchain.chat_models, default is GPT4
   tools=[search_tool]
 
@@ -79,7 +80,7 @@ writer = Agent(
   the tech industry, you transform complex concepts into compelling narratives.""",
   verbose=True,
   #if using local model
-  llm = ollama,
+  #llm = ollama,
   allow_delegation=True
 )
 
