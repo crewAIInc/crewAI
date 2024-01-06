@@ -20,12 +20,12 @@ class AgentTools(BaseModel):
                 description=dedent(
                     f"""\
                 Useful to delegate a specific task to one of the
-                following co-workers: [{', '.join([agent.role for agent in self.agents])}].
-                The input to this tool should be a pipe (|) separated text of length
-                three, representing the co-worker you want to ask it to (one of the options),
+				following co-workers: [{', '.join([agent.role for agent in self.agents])}].
+				The input to this tool should be a pipe (|) separated text of length
+				three, representing the co-worker you want to ask it to (one of the options),
                 the task and all actual context you have for the task.
                 For example, `coworker|task|context`.
-                """
+				"""
                 ),
             ),
             Tool.from_function(
@@ -34,12 +34,12 @@ class AgentTools(BaseModel):
                 description=dedent(
                     f"""\
                 Useful to ask a question, opinion or take from on
-                of the following co-workers: [{', '.join([agent.role for agent in self.agents])}].
-                The input to this tool should be a pipe (|) separated text of length
-                three, representing the co-worker you want to ask it to (one of the options),
+				of the following co-workers: [{', '.join([agent.role for agent in self.agents])}].
+				The input to this tool should be a pipe (|) separated text of length
+				three, representing the co-worker you want to ask it to (one of the options),
                 the question and all actual context you have for the question.
                 For example, `coworker|question|context`.
-                """
+				"""
                 ),
             ),
         ]
