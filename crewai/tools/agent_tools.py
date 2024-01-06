@@ -18,11 +18,13 @@ class AgentTools(BaseModel):
                 func=self.delegate_work,
                 name="Delegate work to co-worker",
                 description=dedent(
-                    f"""Useful to delegate a specific task to one of the
+                    f"""\
+                Useful to delegate a specific task to one of the
 				following co-workers: [{', '.join([agent.role for agent in self.agents])}].
 				The input to this tool should be a pipe (|) separated text of length
-				three, representing the role you want to delegate it to, the task and
-				information necessary. For example, `coworker|task|information`.
+				three, representing the co-worker you want to ask it to (one of the options),
+                the task and all actual context you have for the task.
+                For example, `coworker|task|context`.
 				"""
                 ),
             ),
@@ -30,11 +32,13 @@ class AgentTools(BaseModel):
                 func=self.ask_question,
                 name="Ask question to co-worker",
                 description=dedent(
-                    f"""Useful to ask a question, opinion or take from on
+                    f"""\
+                Useful to ask a question, opinion or take from on
 				of the following co-workers: [{', '.join([agent.role for agent in self.agents])}].
 				The input to this tool should be a pipe (|) separated text of length
-				three, representing the role you want to ask it to, the question and
-				information necessary. For example, `coworker|question|information`.
+				three, representing the co-worker you want to ask it to (one of the options),
+                the question and all actual context you have for the question.
+                For example, `coworker|question|context`.
 				"""
                 ),
             ),
@@ -51,12 +55,12 @@ class AgentTools(BaseModel):
     def __execute(self, command):
         """Execute the command."""
         try:
-            agent, task, information = command.split("|")
+            agent, task, context = command.split("|")
         except ValueError:
-            return "\nError executing tool. Missing exact 3 pipe (|) separated values. For example, `coworker|task|information`.\n"
+            return "\nError executing tool. Missing exact 3 pipe (|) separated values. For example, `coworker|task|context`. I need to make sure to pass context as context\n"
 
-        if not agent or not task or not information:
-            return "\nError executing tool. Missing exact 3 pipe (|) separated values. For example, `coworker|question|information`.\n"
+        if not agent or not task or not context:
+            return "\nError executing tool. Missing exact 3 pipe (|) separated values. For example, `coworker|task|context`. I need to make sure to pass context as context.\n"
 
         agent = [
             available_agent
@@ -68,5 +72,5 @@ class AgentTools(BaseModel):
             return f"\nError executing tool. Co-worker mentioned on the Action Input not found, it must to be one of the following options: {', '.join([agent.role for agent in self.agents])}.\n"
 
         agent = agent[0]
-        result = agent.execute_task(task, information)
+        result = agent.execute_task(task, context)
         return result
