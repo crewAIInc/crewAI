@@ -12,6 +12,7 @@
 - [Local Open Source Models](#local-open-source-models)
 - [CrewAI x AutoGen x ChatDev](#how-crewai-compares)
 - [Contribution](#contribution)
+- [Hire Consulting](#hire-consulting)
 - [License](#license)
 
 ## Why CrewAI?
@@ -214,6 +215,10 @@ poetry build
 ```bash
 pip install dist/*.tar.gz
 ```
+
+## Hire Consulting
+I, @joaomdmoura (creator or crewAI), offer consulting through my LLC ([AI Nest Labs](https://ainestlabs.com)).
+If you are interested on hiring weekly hours with me on a retainer, feel free to email me at [joao@ainestlabs.com](mailto:joao@ainestlabs.com)
 
 ## License
 CrewAI is released under the MIT License
