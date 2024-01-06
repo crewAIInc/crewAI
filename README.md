@@ -42,16 +42,21 @@ pip install duckduckgo-search
 ```python
 import os
 from crewai import Agent, Task, Crew, Process
-# to use local model
-#from langchain.llms import Ollama
-#ollama = Ollama(model="mistral")  #let's use the mistral model
-# to use openai
+
+# You can choose to use a local model through Ollama for example.
+# In this case we will use OpenHermes 2.5 as an example.
+#
+# from langchain.llms import Ollama
+# ollama_llm = Ollama(model="openhermes")
+
+# If you are using an ollama like above you don't need to set OPENAI_API_KEY.
 os.environ["OPENAI_API_KEY"] = "Your Key"
 
 # Define your tools, custom or not.
 # Install duckduckgo-search for this example:
 #
 # !pip install -U duckduckgo-search
+
 from langchain.tools import DuckDuckGoSearchRun
 search_tool = DuckDuckGoSearchRun()
 
@@ -65,11 +70,8 @@ researcher = Agent(
   actionable insights.""",
   verbose=True,
   allow_delegation=False,
-  # if using the local model
-  #llm = ollama,
-  # OpenAI is defaul
-  # llm=OpenAI(temperature=0.7, model_name="gpt-4"). It uses langchain.chat_models, default is GPT4
   tools=[search_tool]
+  # (optional) llm=ollama_llm, If you wanna use a local modal through Ollama, default is GPT4 with temperature=0.7
 
 )
 writer = Agent(
@@ -79,8 +81,7 @@ writer = Agent(
   and engaging articles on technology and innovation. With a deep understanding of
   the tech industry, you transform complex concepts into compelling narratives.""",
   verbose=True,
-  #if using local model
-  #llm = ollama,
+  # (optional) llm=ollama_llm, If you wanna use a local modal through Ollama, default is GPT4 with temperature=0.7
   allow_delegation=True
 )
 
