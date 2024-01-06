@@ -66,7 +66,9 @@ class CrewAgentOutputParser(ReActSingleInputOutputParser):
                     "input": tool_input,
                 }
                 if usage == last_tool_usage:
-                    raise TaskRepeatedUsageException(tool=action, tool_input=tool_input)
+                    raise TaskRepeatedUsageException(
+                        tool=action, tool_input=tool_input, text=text
+                    )
 
             result = self.cache.read(action, tool_input)
             if result:
