@@ -8,11 +8,11 @@
 - [Getting Started](#getting-started)
 - [Key Features](#key-features)
 - [Examples](#examples)
-- [💬 CrewAI Discord Community](https://discord.gg/4ZqbAStv)
 - [Local Open Source Models](#local-open-source-models)
 - [CrewAI x AutoGen x ChatDev](#how-crewai-compares)
 - [Contribution](#contribution)
 - [Hire Consulting](#hire-consulting)
+- [💬 CrewAI Discord Community](https://discord.gg/4ZqbAStv)
 - [License](#license)
 
 ## Why CrewAI?
