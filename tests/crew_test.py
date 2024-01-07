@@ -180,11 +180,11 @@ def test_crew_verbose_output(capsys):
     captured = capsys.readouterr()
     expected_strings = [
         "Working Agent: Researcher",
-        "Starting Task: Research AI advancements. ...",
-        "Task output:",
+        "Starting Task: Research AI advancements.",
+        "[Researcher] Task output:",
         "Working Agent: Senior Writer",
-        "Starting Task: Write about AI in healthcare. ...",
-        "Task output:",
+        "Starting Task: Write about AI in healthcare.",
+        "[Senior Writer] Task output:",
     ]
 
     for expected_string in expected_strings:
@@ -205,7 +205,7 @@ def test_crew_verbose_levels_output(capsys):
 
     crew.kickoff()
     captured = capsys.readouterr()
-    expected_strings = ["Working Agent: Researcher", "Task output:"]
+    expected_strings = ["Working Agent: Researcher", "[Researcher] Task output:"]
 
     for expected_string in expected_strings:
         assert expected_string in captured.out
@@ -216,8 +216,8 @@ def test_crew_verbose_levels_output(capsys):
     captured = capsys.readouterr()
     expected_strings = [
         "Working Agent: Researcher",
-        "Starting Task: Write about AI advancements. ...",
-        "Task output:",
+        "Starting Task: Write about AI advancements.",
+        "[Researcher] Task output:",
     ]
 
     for expected_string in expected_strings:

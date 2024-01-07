@@ -111,21 +111,21 @@ class Crew(BaseModel):
         Returns:
             Output of the crew.
         """
-        task_outcome = None
+        task_output = None
         for task in self.tasks:
             # Add delegation tools to the task if the agent allows it
             if task.agent.allow_delegation:
-                tools = AgentTools(agents=self.agents).tools()
-                task.tools += tools
+                agent_tools = AgentTools(agents=self.agents).tools()
+                task.tools += agent_tools
 
             self.__log("debug", f"Working Agent: {task.agent.role}")
-            self.__log("info", f"Starting Task: {task.description} ...")
+            self.__log("info", f"Starting Task: {task.description}")
 
-            task_outcome = task.execute(task_outcome)
-
-            self.__log("debug", f"Task output: {task_outcome}")
-
-        return task_outcome
+            task_output = task.execute(task_output)
+            self.__log(
+                "debug", f"\n\n[{task.agent.role}] Task output: {task_output}\n\n"
+            )
+        return task_output
 
     def __log(self, level, message):
         """Log a message"""
