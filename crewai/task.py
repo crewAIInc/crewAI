@@ -5,6 +5,7 @@ from pydantic import UUID4, BaseModel, Field, field_validator, model_validator
 from pydantic_core import PydanticCustomError
 
 from crewai.agent import Agent
+from crewai.tasks.task_output import TaskOutput
 
 
 class Task(BaseModel):
@@ -18,6 +19,9 @@ class Task(BaseModel):
     tools: List[Any] = Field(
         default_factory=list,
         description="Tools the agent are limited to use for this task.",
+    )
+    output: Optional[TaskOutput] = Field(
+        description="Task output, it's final result.", default=None
     )
     id: UUID4 = Field(
         default_factory=uuid.uuid4,
@@ -46,9 +50,12 @@ class Task(BaseModel):
             Output of the task.
         """
         if self.agent:
-            return self.agent.execute_task(
+            result = self.agent.execute_task(
                 task=self.description, context=context, tools=self.tools
             )
+
+            self.output = TaskOutput(description=self.description, result=result)
+            return result
         else:
             raise Exception(
                 f"The task '{self.description}' has no agent assigned, therefore it can't be executed directly and should be executed in a Crew using a specific process that support that, either consensual or hierarchical."
