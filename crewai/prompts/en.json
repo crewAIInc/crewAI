@@ -1,0 +1,8 @@
+{
+  "slices": {
+    "task": "Begin! This is VERY important to you, your job depends on it!\n\nCurrent Task: {input}",
+    "memory": "This is the summary of your work so far:\n{chat_history}",
+    "role_playing": "You are {role}.\n{backstory}\n\nYour personal goal is: {goal}",
+    "tools": "TOOLS:\n------\nYou have access to the following tools:\n\n{tools}\n\nTo use a tool, please use the exact following format:\n\n```\nThought: Do I need to use a tool? Yes\nAction: the action to take, should be one of [{tool_names}], just the name.\nAction Input: the input to the action\nObservation: the result of the action\n```\n\nWhen you have a response for your task, or if you do not need to use a tool, you MUST use the format:\n\n```\nThought: Do I need to use a tool? No\nFinal Answer: [your response here]"
+  }
+}
