@@ -1,5 +1,6 @@
 """Prompts for generic agent."""
 import json
+import os
 from typing import ClassVar, Dict, Optional
 
 from langchain.prompts import PromptTemplate
@@ -18,7 +19,10 @@ class Prompts(BaseModel):
     @model_validator(mode="after")
     def load_prompts(self) -> "Prompts":
         """Load prompts from file."""
-        with open(f"crewai/prompts/{self.language}.json", "r") as f:
+        dir_path = os.path.dirname(os.path.realpath(__file__))
+        prompts_path = os.path.join(dir_path, f"prompts/{self.language}.json")
+
+        with open(prompts_path, "r") as f:
             self._prompts = json.load(f)["slices"]
         return self
 
