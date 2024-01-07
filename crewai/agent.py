@@ -155,9 +155,9 @@ class Agent(BaseModel):
             )
             executor_args["memory"] = summary_memory
             agent_args["chat_history"] = lambda x: x["chat_history"]
-            prompt = Prompts.TASK_EXECUTION_WITH_MEMORY_PROMPT
+            prompt = Prompts().task_execution_with_memory()
         else:
-            prompt = Prompts.TASK_EXECUTION_PROMPT
+            prompt = Prompts().task_execution()
 
         execution_prompt = prompt.partial(
             goal=self.goal,
