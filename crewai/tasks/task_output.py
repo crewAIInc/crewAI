@@ -12,6 +12,6 @@ class TaskOutput(BaseModel):
 
     @model_validator(mode="after")
     def set_summary(self):
-        excerpt = " ".join(self.description.split(" ")[0:10])
+        excerpt = " ".join(self.description.split(" ")[:10])
         self.summary = f"{excerpt}..."
         return self

@@ -68,9 +68,8 @@ class AgentTools(BaseModel):
             if available_agent.role == agent
         ]
 
-        if len(agent) == 0:
+        if not agent:
             return f"\nError executing tool. Co-worker mentioned on the Action Input not found, it must to be one of the following options: {', '.join([agent.role for agent in self.agents])}.\n"
 
         agent = agent[0]
-        result = agent.execute_task(task, context)
-        return result
+        return agent.execute_task(task, context)

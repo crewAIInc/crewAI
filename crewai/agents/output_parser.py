@@ -52,15 +52,13 @@ class CrewAgentOutputParser(ReActSingleInputOutputParser):
         regex = (
             r"Action\s*\d*\s*:[\s]*(.*?)[\s]*Action\s*\d*\s*Input\s*\d*\s*:[\s]*(.*)"
         )
-        action_match = re.search(regex, text, re.DOTALL)
-        if action_match:
+        if action_match := re.search(regex, text, re.DOTALL):
             action = action_match.group(1).strip()
             action_input = action_match.group(2)
             tool_input = action_input.strip(" ")
             tool_input = tool_input.strip('"')
 
-            last_tool_usage = self.tools_handler.last_used_tool
-            if last_tool_usage:
+            if last_tool_usage := self.tools_handler.last_used_tool:
                 usage = {
                     "tool": action,
                     "input": tool_input,
@@ -70,8 +68,7 @@ class CrewAgentOutputParser(ReActSingleInputOutputParser):
                         tool=action, tool_input=tool_input, text=text
                     )
 
-            result = self.cache.read(action, tool_input)
-            if result:
+            if result := self.cache.read(action, tool_input):
                 action = AgentAction(action, tool_input, text)
                 return CacheHit(action=action, cache=self.cache)
 

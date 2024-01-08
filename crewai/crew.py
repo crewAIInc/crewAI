@@ -59,9 +59,7 @@ class Crew(BaseModel):
     @classmethod
     @field_validator("config", mode="before")
     def check_config_type(cls, v: Union[Json, Dict[str, Any]]):
-        if isinstance(v, Json):
-            return json.loads(v)
-        return v
+        return json.loads(v) if isinstance(v, Json) else v
 
     @model_validator(mode="after")
     def check_config(self):
