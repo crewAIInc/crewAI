@@ -5,6 +5,9 @@ on: push
 permissions:
   contents: write
 
+env:
+  OPENAI_API_KEY: fake-api-key
+
 jobs:
   deploy:
     runs-on: ubuntu-latest
@@ -24,11 +27,6 @@ jobs:
           pip install poetry &&
           poetry lock &&
           poetry install
-
-      - name: Set ENV vars
-        run: |
-          echo 'export OPENAI_API_KEY=fake-api-key' >> "$BASH_ENV" &&
-          source "$BASH_ENV"
 
       - name: Run tests
         run: poetry run pytest
