@@ -1,17 +1,8 @@
-# Welcome to MkDocs
+<img src='./crewai_logo.png' width='250'/>
 
-For full documentation visit [mkdocs.org](https://www.mkdocs.org).
+# Welcome to crewAI Documentation
+🤖 Cutting-edge framework for orchestrating role-playing, autonomous AI agents. By fostering collaborative intelligence, CrewAI empowers agents to work together seamlessly, tackling complex tasks.
 
-## Commands
-
-* `mkdocs new [dir-name]` - Create a new project.
-* `mkdocs serve` - Start the live-reloading docs server.
-* `mkdocs build` - Build the documentation site.
-* `mkdocs -h` - Print help message and exit.
-
-## Project layout
-
-    mkdocs.yml    # The configuration file.
-    docs/
-        index.md  # The documentation homepage.
-        ...       # Other markdown pages, images and other files.
+<p align="center">
+    <img src='./crewAI-mindmap.png' />
+</p>

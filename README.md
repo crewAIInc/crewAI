@@ -1,6 +1,6 @@
 # crewAI
 
-![Logo of crewAI, tow people rowing on a boat](./crewai_logo.png)
+![Logo of crewAI, tow people rowing on a boat](./docs/crewai_logo.png)
 
 🤖 Cutting-edge framework for orchestrating role-playing, autonomous AI agents. By fostering collaborative intelligence, CrewAI empowers agents to work together seamlessly, tackling complex tasks.
 
@@ -127,7 +127,7 @@ Currently the only supported process is `Process.sequential`, where one task is 
 - **Flexible Task Management**: Define tasks with customizable tools and assign them to agents dynamically.
 - **Processes Driven**: Currently only supports `sequential` task execution but more complex processes like consensual and hierarchical being worked on.
 
-![CrewAI Mind Map](/crewAI-mindmap.png "CrewAI Mind Map")
+![CrewAI Mind Map](./docs/crewAI-mindmap.png "CrewAI Mind Map")
 
 ## Examples
 You can test different real life examples of AI crews [in the examples repo](https://github.com/joaomdmoura/crewAI-examples?tab=readme-ov-file)
