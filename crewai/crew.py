@@ -3,7 +3,14 @@ import uuid
 from typing import Any, Dict, List, Optional, Union
 
 from pydantic import (
-    BaseModel, ConfigDict, Field, InstanceOf, Json, UUID4
+    UUID4,
+    BaseModel,
+    ConfigDict,
+    Field,
+    InstanceOf,
+    Json,
+    field_validator,
+    model_validator,
 )
 from pydantic_core import PydanticCustomError
 
@@ -12,6 +19,7 @@ from crewai.agents.cache import CacheHandler
 from crewai.process import Process
 from crewai.task import Task
 from crewai.tools.agent_tools import AgentTools
+
 
 class Crew(BaseModel):
     """
@@ -34,12 +42,8 @@ class Crew(BaseModel):
     process: Process = Field(default=Process.sequential)
     verbose: Union[int, bool] = Field(default=0)
     config: Optional[Union[Json, Dict[str, Any]]] = Field(default=None)
-    cache_handler: Optional[InstanceOf[CacheHandler]] = Field(
-        default=CacheHandler()
-    )
-    id: UUID4 = Field(
-        default_factory=uuid.uuid4, frozen=True
-    )
+    cache_handler: Optional[InstanceOf[CacheHandler]] = Field(default=CacheHandler())
+    id: UUID4 = Field(default_factory=uuid.uuid4, frozen=True)
 
     @field_validator("id", mode="before")
     @classmethod
@@ -63,7 +67,9 @@ class Crew(BaseModel):
         """Validates that the crew is properly configured with agents and tasks."""
         if not self.config and not self.tasks and not self.agents:
             raise PydanticCustomError(
-                "missing_keys", "Either 'agents' and 'tasks' need to be set or 'config'.", {}
+                "missing_keys",
+                "Either 'agents' and 'tasks' need to be set or 'config'.",
+                {},
             )
 
         if self.config:
@@ -86,7 +92,9 @@ class Crew(BaseModel):
 
     def _create_task(self, task_config):
         """Creates a task instance from its configuration."""
-        task_agent = next(agt for agt in self.agents if agt.role == task_config["agent"])
+        task_agent = next(
+            agt for agt in self.agents if agt.role == task_config["agent"]
+        )
         del task_config["agent"]
         return Task(**task_config, agent=task_agent)
 
@@ -104,6 +112,9 @@ class Crew(BaseModel):
         for task in self.tasks:
             self._prepare_and_execute_task(task)
             task_output = task.execute(task_output)
+            self._log(
+                "debug", f"\n\n[{task.agent.role}] Task output: {task_output}\n\n"
+            )
         return task_output
 
     def _prepare_and_execute_task(self, task):
@@ -117,6 +128,8 @@ class Crew(BaseModel):
     def _log(self, level, message):
         """Logs a message at the specified verbosity level."""
         level_map = {"debug": 1, "info": 2}
-        verbose_level = 2 if isinstance(self.verbose, bool) and self.verbose else self.verbose
+        verbose_level = (
+            2 if isinstance(self.verbose, bool) and self.verbose else self.verbose
+        )
         if verbose_level and level_map[level] <= verbose_level:
             print(message)
