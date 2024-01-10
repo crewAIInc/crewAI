@@ -5,6 +5,10 @@ version = "0.1.24"
 description = "Cutting-edge framework for orchestrating role-playing, autonomous AI agents. By fostering collaborative intelligence, CrewAI empowers agents to work together seamlessly, tackling complex tasks."
 authors = ["Joao Moura <joaomdmoura@gmail.com>"]
 readme = "README.md"
+packages = [
+    { include = "crewai", from = "src" },
+]
+
 
 [tool.poetry.urls]
 Homepage = "https://github.com/joaomdmoura/crewai"

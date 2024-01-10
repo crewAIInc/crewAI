@@ -3,7 +3,8 @@ import os
 from typing import ClassVar, Dict, Optional
 
 from langchain.prompts import PromptTemplate
-from pydantic import BaseModel, Field, PrivateAttr, model_validator, ValidationError
+from pydantic import BaseModel, Field, PrivateAttr, ValidationError, model_validator
+
 
 class Prompts(BaseModel):
     """Manages and generates prompts for a generic agent with support for different languages."""
@@ -24,7 +25,9 @@ class Prompts(BaseModel):
             with open(prompts_path, "r") as f:
                 self._prompts = json.load(f)["slices"]
         except FileNotFoundError:
-            raise ValidationError(f"Prompt file for language '{self.language}' not found.")
+            raise ValidationError(
+                f"Prompt file for language '{self.language}' not found."
+            )
         except json.JSONDecodeError:
             raise ValidationError(f"Error decoding JSON from the prompts file.")
         return self
@@ -45,6 +48,10 @@ class Prompts(BaseModel):
 
     def _build_prompt(self, components: [str]) -> str:
         """Constructs a prompt string from specified components."""
-        prompt_parts = [self._prompts[component] for component in components if component in self._prompts]
+        prompt_parts = [
+            self._prompts[component]
+            for component in components
+            if component in self._prompts
+        ]
         prompt_parts.append(self.SCRATCHPAD_SLICE)
         return PromptTemplate.from_template("".join(prompt_parts))
