@@ -1,0 +1,34 @@
+name: Run Tests
+
+on: push
+
+permissions:
+  contents: write
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      - name: Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.10'
+
+      - name: Install Requirements
+        run: |
+          sudo apt-get update &&
+          pip install poetry &&
+          poetry lock &&
+          poetry install
+
+      - name: Set ENV vars
+        run: |
+          echo 'export OPENAI_API_KEY=fake-api-key' >> "$BASH_ENV" &&
+          source "$BASH_ENV"
+
+      - name: Run tests
+        run: poetry run pytest
