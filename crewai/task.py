@@ -49,14 +49,13 @@ class Task(BaseModel):
         Returns:
             Output of the task.
         """
-        if self.agent:
-            result = self.agent.execute_task(
-                task=self.description, context=context, tools=self.tools
-            )
-
-            self.output = TaskOutput(description=self.description, result=result)
-            return result
-        else:
+        if not self.agent:
             raise Exception(
                 f"The task '{self.description}' has no agent assigned, therefore it can't be executed directly and should be executed in a Crew using a specific process that support that, either consensual or hierarchical."
             )
+        result = self.agent.execute_task(
+            task=self.description, context=context, tools=self.tools
+        )
+
+        self.output = TaskOutput(description=self.description, result=result)
+        return result
