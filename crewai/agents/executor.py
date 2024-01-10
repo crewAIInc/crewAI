@@ -90,12 +90,8 @@ class CrewAgentExecutor(AgentExecutor):
             color_mapping[tool.name] = color_mapping[action.tool]
 
         actions: List[AgentAction]
-        if isinstance(output, AgentAction):
-            actions = [output]
-        else:
-            actions = output
-        for agent_action in actions:
-            yield agent_action
+        actions = [output] if isinstance(output, AgentAction) else output
+        yield from actions
         for agent_action in actions:
             if run_manager:
                 run_manager.on_agent_action(agent_action, color="green")
