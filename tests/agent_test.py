@@ -1,10 +1,14 @@
 """Test Agent creation and execution basic functionality."""
 
+from unittest.mock import patch
+
 import pytest
+from langchain.tools import tool
 from langchain_openai import ChatOpenAI as OpenAI
 
 from crewai.agent import Agent
 from crewai.agents.cache import CacheHandler
+from crewai.agents.executor import CrewAgentExecutor
 
 
 def test_agent_creation():
@@ -79,8 +83,6 @@ def test_agent_execution():
 
 @pytest.mark.vcr(filter_headers=["authorization"])
 def test_agent_execution_with_tools():
-    from langchain.tools import tool
-
     @tool
     def multiplier(numbers) -> float:
         """Useful for when you need to multiply two numbers together.
@@ -104,8 +106,6 @@ def test_agent_execution_with_tools():
 
 @pytest.mark.vcr(filter_headers=["authorization"])
 def test_logging_tool_usage():
-    from langchain.tools import tool
-
     @tool
     def multiplier(numbers) -> float:
         """Useful for when you need to multiply two numbers together.
@@ -137,10 +137,6 @@ def test_logging_tool_usage():
 
 @pytest.mark.vcr(filter_headers=["authorization"])
 def test_cache_hitting():
-    from unittest.mock import patch
-
-    from langchain.tools import tool
-
     @tool
     def multiplier(numbers) -> float:
         """Useful for when you need to multiply two numbers together.
@@ -182,8 +178,6 @@ def test_cache_hitting():
 
 @pytest.mark.vcr(filter_headers=["authorization"])
 def test_agent_execution_with_specific_tools():
-    from langchain.tools import tool
-
     @tool
     def multiplier(numbers) -> float:
         """Useful for when you need to multiply two numbers together.
@@ -202,3 +196,54 @@ def test_agent_execution_with_specific_tools():
 
     output = agent.execute_task(task="What is 3 times 4", tools=[multiplier])
     assert output == "3 times 4 is 12."
+
+
+@pytest.mark.vcr(filter_headers=["authorization"])
+def test_agent_custom_max_iterations():
+    @tool
+    def get_final_answer(numbers) -> float:
+        """Get the final answer but don't give it yet, just re-use this
+        tool non-stop."""
+        return 42
+
+    agent = Agent(
+        role="test role",
+        goal="test goal",
+        backstory="test backstory",
+        max_iter=1,
+        allow_delegation=False,
+    )
+
+    with patch.object(
+        CrewAgentExecutor, "_iter_next_step", wraps=agent.agent_executor._iter_next_step
+    ) as private_mock:
+        agent.execute_task(
+            task="The final answer is 42. But don't give it yet, instead keep using the `get_final_answer` tool.",
+            tools=[get_final_answer],
+        )
+        private_mock.assert_called_once()
+
+
+@pytest.mark.vcr(filter_headers=["authorization"])
+def test_agent_moved_on_after_max_iterations():
+    @tool
+    def get_final_answer(numbers) -> float:
+        """Get the final answer but don't give it yet, just re-use this
+        tool non-stop."""
+        return 42
+
+    agent = Agent(
+        role="test role",
+        goal="test goal",
+        backstory="test backstory",
+        max_iter=3,
+        allow_delegation=False,
+    )
+
+    output = agent.execute_task(
+        task="The final answer is 42. But don't give it yet, instead keep using the `get_final_answer` tool.",
+        tools=[get_final_answer],
+    )
+    assert (
+        output == "I have used the tool multiple times and the final answer remains 42."
+    )
