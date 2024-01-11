@@ -11,7 +11,7 @@
 - [Local Open Source Models](#local-open-source-models)
 - [CrewAI x AutoGen x ChatDev](#how-crewai-compares)
 - [Contribution](#contribution)
-- [💬 CrewAI Discord Community](https://discord.gg/4ZqbAStv)
+- [💬 CrewAI Discord Community](https://discord.com/invite/X4JWnZnxPb)
 - [Hire Consulting](#hire-consulting)
 - [License](#license)
 
