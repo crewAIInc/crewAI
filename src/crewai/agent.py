@@ -38,6 +38,7 @@ class Agent(BaseModel):
             goal: The objective of the agent.
             backstory: The backstory of the agent.
             llm: The language model that will run the agent.
+            max_iter: Maximum number of iterations for an agent to execute a task.
             memory: Whether the agent should have memory or not.
             verbose: Whether the agent execution should be in verbose mode.
             allow_delegation: Whether the agent is allowed to delegate tasks to other agents.
@@ -71,6 +72,9 @@ class Agent(BaseModel):
     )
     tools: List[Any] = Field(
         default_factory=list, description="Tools at agents disposal"
+    )
+    max_iter: Optional[int] = Field(
+        default=15, description="Maximum iterations for an agent to execute a task"
     )
     agent_executor: Optional[InstanceOf[CrewAgentExecutor]] = Field(
         default=None, description="An instance of the CrewAgentExecutor class."
@@ -147,6 +151,7 @@ class Agent(BaseModel):
             "tools": self.tools,
             "verbose": self.verbose,
             "handle_parsing_errors": True,
+            "max_iterations": self.max_iter,
         }
 
         if self.memory:
