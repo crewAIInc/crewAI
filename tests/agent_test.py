@@ -1,7 +1,7 @@
 """Test Agent creation and execution basic functionality."""
 
 import pytest
-from langchain.chat_models import ChatOpenAI as OpenAI
+from langchain_openai import ChatOpenAI as OpenAI
 
 from crewai.agent import Agent
 from crewai.agents.cache import CacheHandler

@@ -18,8 +18,9 @@ Repository = "https://github.com/joaomdmoura/crewai"
 [tool.poetry.dependencies]
 python = ">=3.9,<4.0"
 pydantic = "^2.4.2"
-langchain = "^0.0.354"
-openai = "^1.5.0"
+langchain = "^0.1.0"
+openai = "^1.7.1"
+langchain-openai = "^0.0.2"
 
 [tool.poetry.group.dev.dependencies]
 isort = "^5.13.2"

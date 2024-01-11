@@ -2,10 +2,10 @@ import uuid
 from typing import Any, List, Optional
 
 from langchain.agents.format_scratchpad import format_log_to_str
-from langchain.chat_models import ChatOpenAI
 from langchain.memory import ConversationSummaryMemory
 from langchain.tools.render import render_text_description
 from langchain_core.runnables.config import RunnableConfig
+from langchain_openai import ChatOpenAI
 from pydantic import (
     UUID4,
     BaseModel,
