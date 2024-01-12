@@ -23,6 +23,7 @@ from crewai.agents import (
     CrewAgentOutputParser,
     ToolsHandler,
 )
+from crewai.i18n import I18N
 from crewai.prompts import Prompts
 
 
@@ -54,13 +55,6 @@ class Agent(BaseModel):
     role: str = Field(description="Role of the agent")
     goal: str = Field(description="Objective of the agent")
     backstory: str = Field(description="Backstory of the agent")
-    llm: Optional[Any] = Field(
-        default_factory=lambda: ChatOpenAI(
-            temperature=0.7,
-            model_name="gpt-4",
-        ),
-        description="Language model that will run the agent.",
-    )
     memory: bool = Field(
         default=True, description="Whether the agent should have memory or not"
     )
@@ -84,6 +78,16 @@ class Agent(BaseModel):
     )
     cache_handler: Optional[InstanceOf[CacheHandler]] = Field(
         default=CacheHandler(), description="An instance of the CacheHandler class."
+    )
+    i18n: Optional[I18N] = Field(
+        default=I18N(), description="Internationalization settings."
+    )
+    llm: Optional[Any] = Field(
+        default_factory=lambda: ChatOpenAI(
+            temperature=0.7,
+            model_name="gpt-4",
+        ),
+        description="Language model that will run the agent.",
     )
 
     @field_validator("id", mode="before")
@@ -114,8 +118,8 @@ class Agent(BaseModel):
             Output of the agent
         """
         if context:
-            task = "\n".join(
-                [task, "\nThis is the context you are working with:", context]
+            task = self.i18n.slices("task_with_context").format(
+                task=task, context=context
             )
 
         tools = tools or self.tools
@@ -148,6 +152,7 @@ class Agent(BaseModel):
             "agent_scratchpad": lambda x: format_log_to_str(x["intermediate_steps"]),
         }
         executor_args = {
+            "i18n": self.i18n,
             "tools": self.tools,
             "verbose": self.verbose,
             "handle_parsing_errors": True,
@@ -160,9 +165,9 @@ class Agent(BaseModel):
             )
             executor_args["memory"] = summary_memory
             agent_args["chat_history"] = lambda x: x["chat_history"]
-            prompt = Prompts().task_execution_with_memory()
+            prompt = Prompts(i18n=self.i18n).task_execution_with_memory()
         else:
-            prompt = Prompts().task_execution()
+            prompt = Prompts(i18n=self.i18n).task_execution()
 
         execution_prompt = prompt.partial(
             goal=self.goal,
@@ -170,13 +175,15 @@ class Agent(BaseModel):
             backstory=self.backstory,
         )
 
-        bind = self.llm.bind(stop=["\nObservation"])
+        bind = self.llm.bind(stop=[self.i18n.slices("observation")])
         inner_agent = (
             agent_args
             | execution_prompt
             | bind
             | CrewAgentOutputParser(
-                tools_handler=self.tools_handler, cache=self.cache_handler
+                tools_handler=self.tools_handler,
+                cache=self.cache_handler,
+                i18n=self.i18n,
             )
         )
         self.agent_executor = CrewAgentExecutor(agent=inner_agent, **executor_args)
