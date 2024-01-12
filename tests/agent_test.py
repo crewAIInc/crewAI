@@ -240,10 +240,15 @@ def test_agent_moved_on_after_max_iterations():
         allow_delegation=False,
     )
 
-    output = agent.execute_task(
-        task="The final answer is 42. But don't give it yet, instead keep using the `get_final_answer` tool.",
-        tools=[get_final_answer],
-    )
-    assert (
-        output == "I have used the tool multiple times and the final answer remains 42."
-    )
+    with patch.object(
+        CrewAgentExecutor, "_force_answer", wraps=agent.agent_executor._force_answer
+    ) as private_mock:
+        output = agent.execute_task(
+            task="The final answer is 42. But don't give it yet, instead keep using the `get_final_answer` tool.",
+            tools=[get_final_answer],
+        )
+        assert (
+            output
+            == "I have used the tool multiple times and the final answer remains 42."
+        )
+        private_mock.assert_called_once()

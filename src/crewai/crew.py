@@ -16,6 +16,7 @@ from pydantic_core import PydanticCustomError
 
 from crewai.agent import Agent
 from crewai.agents.cache import CacheHandler
+from crewai.i18n import I18N
 from crewai.process import Process
 from crewai.task import Task
 from crewai.tools.agent_tools import AgentTools
@@ -44,6 +45,10 @@ class Crew(BaseModel):
     config: Optional[Union[Json, Dict[str, Any]]] = Field(default=None)
     cache_handler: Optional[InstanceOf[CacheHandler]] = Field(default=CacheHandler())
     id: UUID4 = Field(default_factory=uuid.uuid4, frozen=True)
+    language: str = Field(
+        default="en",
+        description="Language used for the crew, defaults to English.",
+    )
 
     @field_validator("id", mode="before")
     @classmethod
@@ -99,6 +104,7 @@ class Crew(BaseModel):
         """Starts the crew to work on its assigned tasks."""
         for agent in self.agents:
             agent.cache_handler = self.cache_handler
+            agent.i18n = I18N(language=self.language)
 
         if self.process == Process.sequential:
             return self._sequential_loop()

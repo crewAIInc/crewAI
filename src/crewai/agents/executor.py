@@ -1,5 +1,4 @@
 import time
-from textwrap import dedent
 from typing import Any, Dict, Iterator, List, Optional, Tuple, Union
 
 from langchain.agents import AgentExecutor
@@ -12,11 +11,13 @@ from langchain_core.pydantic_v1 import root_validator
 from langchain_core.tools import BaseTool
 from langchain_core.utils.input import get_color_mapping
 
-from ..tools.cache_tools import CacheTools
-from .cache.cache_hit import CacheHit
+from crewai.agents.cache.cache_hit import CacheHit
+from crewai.i18n import I18N
+from crewai.tools.cache_tools import CacheTools
 
 
 class CrewAgentExecutor(AgentExecutor):
+    i18n: I18N = I18N()
     iterations: int = 0
     max_iterations: Optional[int] = 15
     force_answer_max_iterations: Optional[int] = None
@@ -31,13 +32,7 @@ class CrewAgentExecutor(AgentExecutor):
 
     def _force_answer(self, output: AgentAction):
         return AgentStep(
-            action=output,
-            observation=dedent(
-                """\
-            I've used too many tools for this task.
-            I'm going to give you my absolute BEST Final answer now and
-            not use any more tools."""
-            ),
+            action=output, observation=self.i18n.errors("used_too_many_tools")
         )
 
     def _call(
