@@ -4,9 +4,10 @@ from typing import Union
 from langchain.agents.output_parsers import ReActSingleInputOutputParser
 from langchain_core.agents import AgentAction, AgentFinish
 
-from .cache import CacheHandler, CacheHit
-from .exceptions import TaskRepeatedUsageException
-from .tools_handler import ToolsHandler
+from crewai.agents.cache import CacheHandler, CacheHit
+from crewai.agents.exceptions import TaskRepeatedUsageException
+from crewai.agents.tools_handler import ToolsHandler
+from crewai.i18n import I18N
 
 FINAL_ANSWER_ACTION = "Final Answer:"
 FINAL_ANSWER_AND_PARSABLE_ACTION_ERROR_MESSAGE = (
@@ -46,6 +47,7 @@ class CrewAgentOutputParser(ReActSingleInputOutputParser):
 
     tools_handler: ToolsHandler
     cache: CacheHandler
+    i18n: I18N
 
     def parse(self, text: str) -> Union[AgentAction, AgentFinish, CacheHit]:
         FINAL_ANSWER_ACTION in text
@@ -65,10 +67,13 @@ class CrewAgentOutputParser(ReActSingleInputOutputParser):
                 }
                 if usage == last_tool_usage:
                     raise TaskRepeatedUsageException(
-                        tool=action, tool_input=tool_input, text=text
+                        text=text,
+                        tool=action,
+                        tool_input=tool_input,
+                        i18n=self.i18n,
                     )
 
-            if result := self.cache.read(action, tool_input):
+            if self.cache.read(action, tool_input):
                 action = AgentAction(action, tool_input, text)
                 return CacheHit(action=action, cache=self.cache)
 

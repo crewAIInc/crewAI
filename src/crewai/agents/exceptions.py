@@ -1,17 +1,23 @@
 from langchain_core.exceptions import OutputParserException
 
+from crewai.i18n import I18N
+
 
 class TaskRepeatedUsageException(OutputParserException):
     """Exception raised when a task is used twice in a roll."""
 
+    i18n: I18N = I18N()
     error: str = "TaskRepeatedUsageException"
-    message: str = "I just used the {tool} tool with input {tool_input}. So I already know the result of that and don't need to use it now.\n"
+    message: str
 
-    def __init__(self, tool: str, tool_input: str, text: str):
+    def __init__(self, i18n: I18N, tool: str, tool_input: str, text: str):
+        self.i18n = i18n
         self.text = text
         self.tool = tool
         self.tool_input = tool_input
-        self.message = self.message.format(tool=tool, tool_input=tool_input)
+        self.message = self.i18n.errors("task_repeated_usage").format(
+            tool=tool, tool_input=tool_input
+        )
 
         super().__init__(
             error=self.error,

@@ -1,45 +1,34 @@
-from textwrap import dedent
-from typing import List
+from typing import List, Optional
 
 from langchain.tools import Tool
 from pydantic import BaseModel, Field
 
 from crewai.agent import Agent
+from crewai.i18n import I18N
 
 
 class AgentTools(BaseModel):
     """Default tools around agent delegation"""
 
     agents: List[Agent] = Field(description="List of agents in this crew.")
+    i18n: Optional[I18N] = Field(
+        default=I18N(), description="Internationalization settings."
+    )
 
     def tools(self):
         return [
             Tool.from_function(
                 func=self.delegate_work,
                 name="Delegate work to co-worker",
-                description=dedent(
-                    f"""\
-                Useful to delegate a specific task to one of the
-				following co-workers: [{', '.join([agent.role for agent in self.agents])}].
-				The input to this tool should be a pipe (|) separated text of length
-				three, representing the co-worker you want to ask it to (one of the options),
-                the task and all actual context you have for the task.
-                For example, `coworker|task|context`.
-				"""
+                description=self.i18n.tools("delegate_work").format(
+                    coworkers=", ".join([agent.role for agent in self.agents])
                 ),
             ),
             Tool.from_function(
                 func=self.ask_question,
                 name="Ask question to co-worker",
-                description=dedent(
-                    f"""\
-                Useful to ask a question, opinion or take from on
-				of the following co-workers: [{', '.join([agent.role for agent in self.agents])}].
-				The input to this tool should be a pipe (|) separated text of length
-				three, representing the co-worker you want to ask it to (one of the options),
-                the question and all actual context you have for the question.
-                For example, `coworker|question|context`.
-				"""
+                description=self.i18n.tools("ask_question").format(
+                    coworkers=", ".join([agent.role for agent in self.agents])
                 ),
             ),
         ]
@@ -57,10 +46,10 @@ class AgentTools(BaseModel):
         try:
             agent, task, context = command.split("|")
         except ValueError:
-            return "\nError executing tool. Missing exact 3 pipe (|) separated values. For example, `coworker|task|context`. I need to make sure to pass context as context\n"
+            return self.i18n.errors("agent_tool_missing_param")
 
         if not agent or not task or not context:
-            return "\nError executing tool. Missing exact 3 pipe (|) separated values. For example, `coworker|task|context`. I need to make sure to pass context as context.\n"
+            return self.i18n.errors("agent_tool_missing_param")
 
         agent = [
             available_agent
@@ -69,7 +58,9 @@ class AgentTools(BaseModel):
         ]
 
         if not agent:
-            return f"\nError executing tool. Co-worker mentioned on the Action Input not found, it must to be one of the following options: {', '.join([agent.role for agent in self.agents])}.\n"
+            return self.i18n.errors("agent_tool_unexsiting_coworker").format(
+                coworkers=", ".join([agent.role for agent in self.agents])
+            )
 
         agent = agent[0]
         return agent.execute_task(task, context)

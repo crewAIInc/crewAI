@@ -48,7 +48,7 @@ def test_delegate_work_with_wrong_input():
 
     assert (
         result
-        == "\nError executing tool. Missing exact 3 pipe (|) separated values. For example, `coworker|task|context`. I need to make sure to pass context as context\n"
+        == "\nError executing tool. Missing exact 3 pipe (|) separated values. For example, `coworker|task|context`. I need to make sure to pass context as context.\n"
     )
 
 
