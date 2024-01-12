@@ -118,7 +118,7 @@ class Agent(BaseModel):
             Output of the agent
         """
         if context:
-            task = self.i18n.slices("task_with_context").format(
+            task = self.i18n.slice("task_with_context").format(
                 task=task, context=context
             )
 
@@ -175,7 +175,7 @@ class Agent(BaseModel):
             backstory=self.backstory,
         )
 
-        bind = self.llm.bind(stop=[self.i18n.slices("observation")])
+        bind = self.llm.bind(stop=[self.i18n.slice("observation")])
         inner_agent = (
             agent_args
             | execution_prompt

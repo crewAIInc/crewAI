@@ -1,7 +1,7 @@
 from typing import ClassVar
 
 from langchain.prompts import PromptTemplate
-from pydantic import BaseModel, PrivateAttr
+from pydantic import BaseModel, Field
 
 from .i18n import I18N
 
@@ -9,7 +9,7 @@ from .i18n import I18N
 class Prompts(BaseModel):
     """Manages and generates prompts for a generic agent with support for different languages."""
 
-    i18n: I18N = PrivateAttr(default=I18N())
+    i18n: I18N = Field(default=I18N())
 
     SCRATCHPAD_SLICE: ClassVar[str] = "\n{agent_scratchpad}"
 

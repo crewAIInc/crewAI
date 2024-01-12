@@ -10,7 +10,8 @@ class TaskRepeatedUsageException(OutputParserException):
     error: str = "TaskRepeatedUsageException"
     message: str
 
-    def __init__(self, tool: str, tool_input: str, text: str):
+    def __init__(self, i18n: I18N, tool: str, tool_input: str, text: str):
+        self.i18n = i18n
         self.text = text
         self.tool = tool
         self.tool_input = tool_input

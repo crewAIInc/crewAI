@@ -46,10 +46,10 @@ class AgentTools(BaseModel):
         try:
             agent, task, context = command.split("|")
         except ValueError:
-            return self.i18n.tools("agent_tool_missing_param")
+            return self.i18n.errors("agent_tool_missing_param")
 
         if not agent or not task or not context:
-            return self.i18n.tools("agent_tool_missing_param")
+            return self.i18n.errors("agent_tool_missing_param")
 
         agent = [
             available_agent
@@ -58,7 +58,9 @@ class AgentTools(BaseModel):
         ]
 
         if not agent:
-            return self.i18n.tools("agent_tool_unexsiting_coworker")
+            return self.i18n.errors("agent_tool_unexsiting_coworker").format(
+                coworkers=", ".join([agent.role for agent in self.agents])
+            )
 
         agent = agent[0]
         return agent.execute_task(task, context)

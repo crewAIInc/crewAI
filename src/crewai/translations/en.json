@@ -10,7 +10,7 @@
   "errors": {
     "used_too_many_tools": "I've used too many tools for this task. I'm going to give you my absolute BEST Final answer now and not use any more tools.",
     "agent_tool_missing_param": "\nError executing tool. Missing exact 3 pipe (|) separated values. For example, `coworker|task|context`. I need to make sure to pass context as context.\n",
-    "agent_tool_unexsiting_coworker": "\nError executing tool. Co-worker mentioned on the Action Input not found, it must to be one of the following options: {', '.join([agent.role for agent in self.agents])}.\n",
+    "agent_tool_unexsiting_coworker": "\nError executing tool. Co-worker mentioned on the Action Input not found, it must to be one of the following options: {coworkers}.\n",
     "task_repeated_usage": "I just used the {tool} tool with input {tool_input}. So I already know the result of that and don't need to use it now.\n"
   },
   "tools": {
