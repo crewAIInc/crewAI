@@ -4,7 +4,7 @@
     "task": "Begin! Dit is ZEER BELANGRIJK voor jou, jouw job hangt er van af!\n\nHuidige Taak: {input}",
     "memory": "Dit is de samenvatting van jouw werk tot nu toe:\n{chat_history}",
     "role_playing": "Jij bent {role}.\n{backstory}\n\nJouw persoonlijk doel is: {goal}",
-    "tools": "HULPMIDDELEN:\n------\nJe hebt toegang tot enkel de volgende hulpmiddelen:\n\n{tools}\n\nOm een hulpmiddel te gebruiken, gebruik precies dit formaat:\n\n```\nGedachte: Moet ik een hulpmiddel gebruiken? Ja\Actie: de actie te nemen, moet er een zijn van [{tool_names}], enkel de naam.\nActie Invoer: de invoer voor de actie\nObservatie: het resultaat van de actie\n```\n\nWanneer je een antwoord hebt voor jouw taak, of als je geen hulpmiddel moet gebruiken, ben je VERPLICHT het volgende formaat te gebruiken:\n\n```\nGedachte: Heb ik een hulpmiddel nodig? Nee\nFinaal Antwoord: [jouw antwoord hier]",
+    "tools": "HULPMIDDELEN:\n------\nJe hebt toegang tot enkel de volgende hulpmiddelen:\n\n{tools}\n\nOm een hulpmiddel te gebruiken, gebruik precies dit formaat:\n\n```\nGedachte: Moet ik een hulpmiddel gebruiken? Ja\nActie: de actie te nemen, moet er een zijn van [{tool_names}], enkel de naam.\nActie Invoer: de invoer voor de actie\nObservatie: het resultaat van de actie\n```\n\nWanneer je een antwoord hebt voor jouw taak, of als je geen hulpmiddel moet gebruiken, ben je VERPLICHT het volgende formaat te gebruiken:\n\n```\nGedachte: Heb ik een hulpmiddel nodig? Nee\nFinaal Antwoord: [jouw antwoord hier]",
     "task_with_context": "{task}\nDit is de context waarmee je werkt:\n{context}"
   },
   "errors": {
@@ -14,7 +14,7 @@
     "task_repeated_usage": "ik gebruikte daarnet het {tool} hulpmiddel met invoer {tool_input}. Ik ken het resultaat daarvan dus al en hoef het nu niet te gebruiken.\n"
   },
   "tools": {
-    "delegate_work": "Nuttig om een ​​specifieke taak te delegeren aan één van de volgende collega’s: {coworkers}.\nDe invoer voor dit hulpmiddel moet een door pipe (|) gescheiden tekst van lengte 3 (drie) zijn, die de collega vertegenwoordigt aan wie je het wilt vragen (een van de opties), de taak en alle feitelijke context die je voor de taak hebt.\nBijvoorbeeld, `collega|taak|context`.",
+    "delegate_work": "Nuttig om een ​​specifieke taak te delegeren aan een van de volgende collega’s: {coworkers}.\nDe invoer voor dit hulpmiddel moet een door pipe (|) gescheiden tekst van lengte 3 (drie) zijn, die de collega vertegenwoordigt aan wie je het wilt vragen (een van de opties), de taak en alle feitelijke context die je voor de taak hebt.\nBijvoorbeeld, `collega|taak|context`.",
     "ask_question": "Nuttig om een ​​vraag, mening of mening te stellen aan een van de volgende collega's: {coworkers}.\nDe invoer voor dit hulpmiddel moet een door pipe (|) gescheiden tekst van lengte 3 (drie) zijn, die de collega vertegenwoordigt aan wie je de vraag wilt stellen (een van de opties), de vraag en alle feitelijke context die je voor de vraag hebt.\nBijvoorbeeld, `collega|vraag|context`."
   }
 }
