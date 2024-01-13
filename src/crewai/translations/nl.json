@@ -1,0 +1,20 @@
+{
+    "slices": {
+      "observation": "\nObservatie",
+      "task": "Start! Dit is HEEL belangrijk voor jou, je baan hangt ervan af!\n\nHuidige Taak: {input}",
+      "memory": "Dit is een samenvatting of je werk tot nu:\n{chat_history}",
+      "role_playing": "Jij bent {role}.\n{backstory}\n\nJe persoonlijke doel is: {goal}",
+      "tools": "hulpmiddelen:\n------\nJe hebt alleen toegang tot de volgende hulpmiddelen:\n\n{tools}\n\nOm een hulpmiddel te gebruiken, gebruik je exact het volgende format:\n\n```\nGedachte: Heb ik een hupmiddel nodig? Ja\nActie: de actie die moet worden ondernomen, moet een van de [{tool_names}] zijn, enkel de naam.\nActie-input: de input voor een actie\n Resultaten: de resultaten van de actie\n```\n\nWanneer je een antwoord hebt op jouw taak, of als je geen hulpmiddel nodig hebt, MOET je dit format gebruiken:\n\n```\nGedachte: Heb ik een huplmiddel nodig? No\nFinal Answer: [jouw antwoord hier]",
+      "task_with_context": "{task}\nDit is de context beschikbaar voor je taak:\n{context}"
+    },
+    "errors": {
+      "used_too_many_tools": "Ik heb te veel hulpmiddelen gebruikt voor deze taak. Ik ga je nu mijn absolute BESTE eindantwoord geven en geen hulpmiddelen meer gebruiken.",
+      "agent_tool_missing_param": "\nFout bij het uitvoeren van hulpmiddel. Er missen exact 3 pipe (|) gescheiden waarden. Bijvoorbeeld, `medewerker|taak|context`. Ik moet ervoor zorgen dat ik context als context doorgeef.\n",
+      "agent_tool_unexsiting_coworker": "\nFout bij het uitvoeren van hulpmiddel. Kan de medewerker vermeld in de Actie-input niet vinden, het moet een van de volgende opties zijn: {coworkers}.\n",
+      "task_repeated_usage": "Ik heb net de {tool} hulpmiddel gebruikt met input {tool_input}. De resultaten hiervan zijn bekend dus ik heb het hulpmiddel nu niet nodig.\n"
+    },
+    "tools": {
+      "delegate_work": "Handig om een ​​specifieke taak te delegeren aan een van de volgende medewerker's: {coworkers}.\nDe input van dit hulpmiddel moet een met een verticaal streepje (|) gescheiden tekst met lengte 3 (drie) zijn, bedoeld voor het vastleggen van de medewerker aan wie je het vraagt (een van de opties), de taak, en alle actuale context beschikbaar voor de taak.\nBijvoorbeeld, `medewerker|taak|context`.",
+      "ask_question": "Handig om een vraag te stellen aan een van de volgende medewerkers: {coworkers}.\nDe input van dit hulpmiddel moet een met een verticaal streepje (|) gescheiden tekst met lengte 3 (drie) zijn, bedoeld voor het vastleggen van de medewerker aan wie je het vraagt (een van de opties), de taak, en alle actuale context beschikbaar voor de taak.\nBijvoorbeeld, `medewerker|taak|context`."
+    }
+  }
