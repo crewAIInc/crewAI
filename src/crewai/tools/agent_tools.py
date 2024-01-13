@@ -51,10 +51,11 @@ class AgentTools(BaseModel):
         if not agent or not task or not context:
             return self.i18n.errors("agent_tool_missing_param")
 
+        agent_name = agent.strip().casefold()
         agent = [
             available_agent
             for available_agent in self.agents
-            if available_agent.role == agent
+            if available_agent.role.casefold() == agent_name
         ]
 
         if not agent:

@@ -43,10 +43,10 @@ class CrewAgentExecutor(AgentExecutor):
     ) -> Dict[str, Any]:
         """Run text through and get agent response."""
         # Construct a mapping of tool name to tool for easy lookup
-        name_to_tool_map = {tool.name: tool for tool in self.tools}
+        name_to_tool_map = {tool.name.casefold(): tool for tool in self.tools}
         # We construct a mapping from each tool to a color, used for logging.
         color_mapping = get_color_mapping(
-            [tool.name for tool in self.tools], excluded_colors=["green", "red"]
+            [name for name in name_to_tool_map.keys()], excluded_colors=["green", "red"]
         )
         intermediate_steps: List[Tuple[AgentAction, str]] = []
         # Let's start tracking the number of iterations and time elapsed
@@ -170,7 +170,7 @@ class CrewAgentExecutor(AgentExecutor):
             output = action.copy()
             output.tool_input = f"tool:{action.tool}|input:{action.tool_input}"
             output.tool = tool.name
-            name_to_tool_map[tool.name] = tool
+            name_to_tool_map[tool.name.casefold()] = tool
             color_mapping[tool.name] = color_mapping[action.tool]
 
         actions: List[AgentAction]
@@ -180,10 +180,11 @@ class CrewAgentExecutor(AgentExecutor):
             if run_manager:
                 run_manager.on_agent_action(agent_action, color="green")
             # Otherwise we lookup the tool
-            if agent_action.tool in name_to_tool_map:
-                tool = name_to_tool_map[agent_action.tool]
+            action_tool_name = agent_action.tool.casefold()
+            if action_tool_name in name_to_tool_map:
+                tool = name_to_tool_map[action_tool_name]
                 return_direct = tool.return_direct
-                color = color_mapping[agent_action.tool]
+                color = color_mapping[action_tool_name]
                 tool_run_kwargs = self.agent.tool_run_logging_kwargs()
                 if return_direct:
                     tool_run_kwargs["llm_prefix"] = ""
@@ -200,7 +201,7 @@ class CrewAgentExecutor(AgentExecutor):
                 observation = InvalidTool().run(
                     {
                         "requested_tool_name": agent_action.tool,
-                        "available_tool_names": list(name_to_tool_map.keys()),
+                        "available_tool_names": [tool.name for tool in name_to_tool_map.values()],
                     },
                     verbose=self.verbose,
                     color=None,
