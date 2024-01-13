@@ -1,0 +1,20 @@
+{
+  "slices": {
+    "observation": "\nBeobachtung",
+    "task": "Los geht's! Das ist SEHR wichtig für dich, dein Job hängt davon ab!\n\nAktuelle Aufgabe: {input}",
+    "memory": "Das ist die Zusammenfassung deiner bisherigen Arbeit:\n{chat_history}",
+    "role_playing": "Du bist {role}.\n{backstory}\n\nDein persönliches Ziel ist: {goal}",
+    "tools": "WERKZEUGE:\n------\nDu hast nur Zugriff auf die folgenden Werkzeuge:\n\n{tools}\n\nUm ein Werkzeug zu verwenden, verwende bitte das genaue folgende Format:\n\n```\nGedanke: Muss ich ein Werkzeug verwenden? Ja\nAktion: die durchzuführende Aktion, sollte eine der [{tool_names}] sein, nur der Name.\nAktionseingabe: die Eingabe für die Aktion\nBeobachtung: das Ergebnis der Aktion\n```\n\nWenn du eine Antwort für deine Aufgabe hast oder wenn du kein Werkzeug verwenden musst, MUSST du das Format verwenden:\n\n```\nGedanke: Muss ich ein Werkzeug verwenden? Nein\nEndgültige Antwort: [deine Antwort hier]",
+    "task_with_context": "{task}\nDas ist der Kontext, mit dem du arbeitest:\n{context}"
+  },
+  "errors": {
+    "used_too_many_tools": "Ich habe zu viele Werkzeuge für diese Aufgabe verwendet. Ich werde dir jetzt meine absolut BESTE endgültige Antwort geben und keine weiteren Werkzeuge verwenden.",
+    "agent_tool_missing_param": "\nFehler bei der Ausführung des Werkzeugs. Es fehlen genaue 3 durch Pipe (|) getrennte Werte. Zum Beispiel `Kollege|Aufgabe|Kontext`. Ich muss sicherstellen, dass der Kontext als Kontext übergeben wird.\n",
+    "agent_tool_unexsiting_coworker": "\nFehler bei der Ausführung des Werkzeugs. Der im Aktionseingabe genannte Kollege existiert nicht, es muss einer der folgenden Optionen sein: {coworkers}.\n",
+    "task_repeated_usage": "Ich habe gerade das {tool} Werkzeug mit der Eingabe {tool_input} verwendet. Daher kenne ich bereits das Ergebnis davon und muss es jetzt nicht erneut verwenden.\n"
+  },
+  "tools": {
+    "delegate_work": "Nützlich, um eine bestimmte Aufgabe an einen der folgenden Kollegen zu delegieren: {coworkers}.\nDie Eingabe für dieses Werkzeug sollte ein durch Pipe (|) getrennter Text mit einer Länge von 3 (drei) sein, der den Kollegen, den du fragen möchtest (eine der Optionen), die Aufgabe und alle tatsächlichen Kontextinformationen für die Aufgabe repräsentiert.\nZum Beispiel: `Kollege|Aufgabe|Kontext`.",
+    "ask_question": "Nützlich, um eine Frage, Meinung oder Einschätzung von einem der folgenden Kollegen zu erfragen: {coworkers}.\nDie Eingabe für dieses Werkzeug sollte ein durch Pipe (|) getrennter Text mit einer Länge von 3 (drei) sein, der den Kollegen, den du fragen möchtest (eine der Optionen), die Frage und alle tatsächlichen Kontextinformationen für die Frage repräsentiert.\n Zum Beispiel: `Kollege|Frage|Kontext`."
+  }
+}
