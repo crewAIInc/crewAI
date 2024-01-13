@@ -266,3 +266,42 @@ def test_cache_hitting_between_agents():
         read.return_value = "12"
         crew.kickoff()
         read.assert_called_with("multiplier", "2,6")
+
+
+@pytest.mark.vcr(filter_headers=["authorization"])
+def test_api_calls_throttling(capsys):
+    from unittest.mock import patch
+
+    from langchain.tools import tool
+
+    @tool
+    def get_final_answer(numbers) -> float:
+        """Get the final answer but don't give it yet, just re-use this
+        tool non-stop."""
+        return 42
+
+    agent = Agent(
+        role="test role",
+        goal="test goal",
+        backstory="test backstory",
+        max_iter=5,
+        allow_delegation=False,
+        verbose=True,
+    )
+
+    task = Task(
+        description="Don't give a Final Answer, instead keep using the `get_final_answer` tool.",
+        tools=[get_final_answer],
+        agent=agent,
+    )
+
+    tasks = task
+
+    crew = Crew(agents=[agent], tasks=[tasks], max_rpm=2, verbose=2)
+
+    with patch.object(Crew, "_wait_for_next_minute") as moveon:
+        moveon.return_value = True
+        crew.kickoff()
+        captured = capsys.readouterr()
+        assert "Max RPM reached, waiting for next minute to start." in captured.out
+        moveon.assert_called()

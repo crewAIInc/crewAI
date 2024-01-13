@@ -12,6 +12,7 @@ from pydantic import (
     ConfigDict,
     Field,
     InstanceOf,
+    PrivateAttr,
     field_validator,
     model_validator,
 )
@@ -46,6 +47,8 @@ class Agent(BaseModel):
     """
 
     __hash__ = object.__hash__
+    _request_within_rpm_limit: Any = PrivateAttr(default=None)
+
     model_config = ConfigDict(arbitrary_types_allowed=True)
     id: UUID4 = Field(
         default_factory=uuid.uuid4,
@@ -139,6 +142,10 @@ class Agent(BaseModel):
         self.tools_handler = ToolsHandler(cache=self.cache_handler)
         self.__create_agent_executor()
 
+    def set_request_within_rpm_limit(self, ensure_function) -> None:
+        self._request_within_rpm_limit = ensure_function
+        self.__create_agent_executor()
+
     def __create_agent_executor(self) -> CrewAgentExecutor:
         """Create an agent executor for the agent.
 
@@ -157,11 +164,12 @@ class Agent(BaseModel):
             "verbose": self.verbose,
             "handle_parsing_errors": True,
             "max_iterations": self.max_iter,
+            "request_within_rpm_limit": self._request_within_rpm_limit,
         }
 
         if self.memory:
             summary_memory = ConversationSummaryMemory(
-                llm=self.llm, memory_key="chat_history", input_key="input"
+                llm=self.llm, input_key="input", memory_key="chat_history"
             )
             executor_args["memory"] = summary_memory
             agent_args["chat_history"] = lambda x: x["chat_history"]

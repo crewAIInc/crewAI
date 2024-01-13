@@ -19,6 +19,7 @@ from crewai.tools.cache_tools import CacheTools
 class CrewAgentExecutor(AgentExecutor):
     i18n: I18N = I18N()
     iterations: int = 0
+    request_within_rpm_limit: Any = None
     max_iterations: Optional[int] = 15
     force_answer_max_iterations: Optional[int] = None
 
@@ -54,29 +55,30 @@ class CrewAgentExecutor(AgentExecutor):
         start_time = time.time()
         # We now enter the agent loop (until it returns something).
         while self._should_continue(self.iterations, time_elapsed):
-            next_step_output = self._take_next_step(
-                name_to_tool_map,
-                color_mapping,
-                inputs,
-                intermediate_steps,
-                run_manager=run_manager,
-            )
-            if isinstance(next_step_output, AgentFinish):
-                return self._return(
-                    next_step_output, intermediate_steps, run_manager=run_manager
+            if not self.request_within_rpm_limit or self.request_within_rpm_limit():
+                next_step_output = self._take_next_step(
+                    name_to_tool_map,
+                    color_mapping,
+                    inputs,
+                    intermediate_steps,
+                    run_manager=run_manager,
                 )
-
-            intermediate_steps.extend(next_step_output)
-            if len(next_step_output) == 1:
-                next_step_action = next_step_output[0]
-                # See if tool should return directly
-                tool_return = self._get_tool_return(next_step_action)
-                if tool_return is not None:
+                if isinstance(next_step_output, AgentFinish):
                     return self._return(
-                        tool_return, intermediate_steps, run_manager=run_manager
+                        next_step_output, intermediate_steps, run_manager=run_manager
                     )
-            self.iterations += 1
-            time_elapsed = time.time() - start_time
+
+                intermediate_steps.extend(next_step_output)
+                if len(next_step_output) == 1:
+                    next_step_action = next_step_output[0]
+                    # See if tool should return directly
+                    tool_return = self._get_tool_return(next_step_action)
+                    if tool_return is not None:
+                        return self._return(
+                            tool_return, intermediate_steps, run_manager=run_manager
+                        )
+                self.iterations += 1
+                time_elapsed = time.time() - start_time
         output = self.agent.return_stopped_response(
             self.early_stopping_method, intermediate_steps, **inputs
         )
