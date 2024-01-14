@@ -8,7 +8,7 @@ class CacheTools(BaseModel):
     """Default tools to hit the cache."""
 
     model_config = ConfigDict(arbitrary_types_allowed=True)
-    name: str = "Hit Cache"
+    name: str = "hit cache"
     cache_handler: CacheHandler = Field(
         description="Cache Handler for the crew",
         default=CacheHandler(),
