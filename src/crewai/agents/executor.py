@@ -201,7 +201,9 @@ class CrewAgentExecutor(AgentExecutor):
                 observation = InvalidTool().run(
                     {
                         "requested_tool_name": agent_action.tool,
-                        "available_tool_names": [tool.name for tool in name_to_tool_map.values()],
+                        "available_tool_names": [
+                            tool.name for tool in name_to_tool_map.values()
+                        ],
                     },
                     verbose=self.verbose,
                     color=None,
