@@ -1,6 +1,6 @@
 from langchain_core.exceptions import OutputParserException
 
-from crewai.i18n import I18N
+from crewai.utilities import I18N
 
 
 class TaskRepeatedUsageException(OutputParserException):

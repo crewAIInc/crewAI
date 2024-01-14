@@ -12,8 +12,8 @@ from langchain_core.tools import BaseTool
 from langchain_core.utils.input import get_color_mapping
 
 from crewai.agents.cache.cache_hit import CacheHit
-from crewai.i18n import I18N
 from crewai.tools.cache_tools import CacheTools
+from crewai.utilities import I18N
 
 
 class CrewAgentExecutor(AgentExecutor):

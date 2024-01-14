@@ -6,9 +6,10 @@ import pytest
 from langchain.tools import tool
 from langchain_openai import ChatOpenAI as OpenAI
 
-from crewai.agent import Agent
+from crewai import Agent, Crew, Task
 from crewai.agents.cache import CacheHandler
 from crewai.agents.executor import CrewAgentExecutor
+from crewai.utilities import RPMController
 
 
 def test_agent_creation():
@@ -252,3 +253,124 @@ def test_agent_moved_on_after_max_iterations():
             == "I have used the tool multiple times and the final answer remains 42."
         )
         private_mock.assert_called_once()
+
+
+@pytest.mark.vcr(filter_headers=["authorization"])
+def test_agent_respect_the_max_rpm_set(capsys):
+    @tool
+    def get_final_answer(numbers) -> float:
+        """Get the final answer but don't give it yet, just re-use this
+        tool non-stop."""
+        return 42
+
+    agent = Agent(
+        role="test role",
+        goal="test goal",
+        backstory="test backstory",
+        max_iter=5,
+        max_rpm=1,
+        verbose=True,
+        allow_delegation=False,
+    )
+
+    with patch.object(RPMController, "_wait_for_next_minute") as moveon:
+        moveon.return_value = True
+        output = agent.execute_task(
+            task="The final answer is 42. But don't give it yet, instead keep using the `get_final_answer` tool.",
+            tools=[get_final_answer],
+        )
+        assert (
+            output
+            == "I've used the `get_final_answer` tool multiple times and it consistently returns the number 42."
+        )
+        captured = capsys.readouterr()
+        assert "Max RPM reached, waiting for next minute to start." in captured.out
+        moveon.assert_called()
+
+
+@pytest.mark.vcr(filter_headers=["authorization"])
+def test_agent_respect_the_max_rpm_set_over_crew_rpm(capsys):
+    from unittest.mock import patch
+
+    from langchain.tools import tool
+
+    @tool
+    def get_final_answer(numbers) -> float:
+        """Get the final answer but don't give it yet, just re-use this
+        tool non-stop."""
+        return 42
+
+    agent = Agent(
+        role="test role",
+        goal="test goal",
+        backstory="test backstory",
+        max_iter=4,
+        max_rpm=10,
+        verbose=True,
+    )
+
+    task = Task(
+        description="Don't give a Final Answer, instead keep using the `get_final_answer` tool.",
+        tools=[get_final_answer],
+        agent=agent,
+    )
+
+    crew = Crew(agents=[agent], tasks=[task], max_rpm=1, verbose=2)
+
+    with patch.object(RPMController, "_wait_for_next_minute") as moveon:
+        moveon.return_value = True
+        crew.kickoff()
+        captured = capsys.readouterr()
+        assert "Max RPM reached, waiting for next minute to start." not in captured.out
+        moveon.assert_not_called()
+
+
+@pytest.mark.vcr(filter_headers=["authorization"])
+def test_agent_without_max_rpm_respet_crew_rpm(capsys):
+    from unittest.mock import patch
+
+    from langchain.tools import tool
+
+    @tool
+    def get_final_answer(numbers) -> float:
+        """Get the final answer but don't give it yet, just re-use this
+        tool non-stop."""
+        return 42
+
+    agent1 = Agent(
+        role="test role",
+        goal="test goal",
+        backstory="test backstory",
+        max_rpm=10,
+        verbose=True,
+    )
+
+    agent2 = Agent(
+        role="test role2",
+        goal="test goal2",
+        backstory="test backstory2",
+        max_iter=2,
+        verbose=True,
+    )
+
+    tasks = [
+        Task(
+            description="Just say hi.",
+            agent=agent1,
+        ),
+        Task(
+            description="Don't give a Final Answer, instead keep using the `get_final_answer` tool.",
+            tools=[get_final_answer],
+            agent=agent2,
+        ),
+    ]
+
+    crew = Crew(agents=[agent1, agent2], tasks=tasks, max_rpm=1, verbose=2)
+
+    with patch.object(RPMController, "_wait_for_next_minute") as moveon:
+        moveon.return_value = True
+        crew.kickoff()
+        captured = capsys.readouterr()
+        assert "Action: get_final_answer" in captured.out
+        assert "Max RPM reached, waiting for next minute to start." in captured.out
+        moveon.assert_called_once()
