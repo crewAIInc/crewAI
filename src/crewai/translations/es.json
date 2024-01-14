@@ -1,0 +1,20 @@
+{
+  "slices": {
+    "observation": "\nObservación",
+    "task": "¡Empieza! Esto es MUY importante para ti, ¡tu trabajo depende de ello!\n\nTarea Actual: {input}",
+    "memory": "Este es el resumen de tu trabajo hasta ahora:\n{chat_history}",
+    "role_playing": "Eres {role}.\n{backstory}\n\nTu objetivo personal es: {goal}",
+    "tools": "HERRAMIENTAS:\n------\nSolo tienes acceso a las siguientes herramientas:\n\n{tools}\n\nPara usar una herramienta, por favor usa el siguiente formato exacto:\n\n```\nPensamiento: ¿Necesito usar una herramienta? Sí\nAcción: la acción a realizar, debe ser una de [{tool_names}], solo el nombre.\nArgumentos de la Acción: los argumentos de entrada para la acción\nObservación: el resultado de la acción\n```\n\nCuando tengas una respuesta para tu tarea, o si no necesitas usar una herramienta, DEBES usar el formato:\n\n```\nPensamiento: ¿Necesito usar una herramienta? No\nRespuesta Final: [tu respuesta aquí]",
+    "task_with_context": "{task}\nEste es el contexto con el que estás trabajando:\n{context}"
+  },
+  "errors": {
+    "used_too_many_tools": "He usado demasiadas herramientas para esta tarea. Voy a darte mi MEJOR respuesta final ahora y no usaré más herramientas.",
+    "agent_tool_missing_param": "\nError al ejecutar la herramienta. Faltan exactamente 3 valores separados por tuberías (|). Por ejemplo, `compañero de trabajo|tarea|contexto`. Necesito asegurarme de pasar el contexto como contexto.\n",
+    "agent_tool_unexsiting_coworker": "\nError al ejecutar la herramienta. El compañero de trabajo mencionado en la Entrada de Acción no se encontró, debe ser una de las siguientes opciones: {coworkers}.\n",
+    "task_repeated_usage": "Acabo de usar la herramienta {tool} con la entrada {tool_input}. Así que ya conozco el resultado de eso y no necesito usarlo ahora.\n"
+  },
+  "tools": {
+    "delegate_work": "Útil para delegar una tarea específica a uno de los siguientes compañeros de trabajo: {coworkers}.\nLa entrada a esta herramienta debe ser un texto separado por tuberías (|) de longitud 3 (tres), representando al compañero de trabajo al que quieres pedírselo (una de las opciones), la tarea y todo el contexto actual que tienes para la tarea.\nPor ejemplo, `compañero de trabajo|tarea|contexto`.",
+    "ask_question": "Útil para hacer una pregunta, opinión o comentario a uno de los siguientes compañeros de trabajo: {coworkers}.\nLa entrada a esta herramienta debe ser un texto separado por tuberías (|) de longitud 3 (tres), representando al compañero de trabajo al que quieres preguntarle (una de las opciones), la pregunta y todo el contexto actual que tienes para la pregunta.\n Por ejemplo, `compañero de trabajo|pregunta|contexto`."
+  }
+}
