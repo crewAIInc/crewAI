@@ -9,6 +9,7 @@ from crewai.agents.cache import CacheHandler
 from crewai.crew import Crew
 from crewai.process import Process
 from crewai.task import Task
+from crewai.utilities import Logger, RPMController
 
 ceo = Agent(
     role="CEO",
@@ -179,19 +180,19 @@ def test_crew_verbose_output(capsys):
     crew.kickoff()
     captured = capsys.readouterr()
     expected_strings = [
-        "Working Agent: Researcher",
-        "Starting Task: Research AI advancements.",
-        "[Researcher] Task output:",
-        "Working Agent: Senior Writer",
-        "Starting Task: Write about AI in healthcare.",
-        "[Senior Writer] Task output:",
+        "[DEBUG]: Working Agent: Researcher",
+        "[INFO]: Starting Task: Research AI advancements.",
+        "[DEBUG]: [Researcher] Task output:",
+        "[DEBUG]: Working Agent: Senior Writer",
+        "[INFO]: Starting Task: Write about AI in healthcare.",
+        "[DEBUG]: [Senior Writer] Task output:",
     ]
 
     for expected_string in expected_strings:
         assert expected_string in captured.out
 
     # Now test with verbose set to False
-    crew.verbose = False
+    crew._logger = Logger(verbose_level=False)
     crew.kickoff()
     captured = capsys.readouterr()
     assert captured.out == ""
@@ -211,7 +212,7 @@ def test_crew_verbose_levels_output(capsys):
         assert expected_string in captured.out
 
     # Now test with verbose set to 2
-    crew.verbose = 2
+    crew._logger = Logger(verbose_level=2)
     crew.kickoff()
     captured = capsys.readouterr()
     expected_strings = [
@@ -257,9 +258,9 @@ def test_cache_hitting_between_agents():
         tasks=tasks,
     )
 
-    assert crew.cache_handler._cache == {}
+    assert crew._cache_handler._cache == {}
     output = crew.kickoff()
-    assert crew.cache_handler._cache == {"multiplier-2,6": "12"}
+    assert crew._cache_handler._cache == {"multiplier-2,6": "12"}
     assert output == "12"
 
     with patch.object(CacheHandler, "read") as read:
@@ -295,11 +296,9 @@ def test_api_calls_throttling(capsys):
         agent=agent,
     )
 
-    tasks = task
+    crew = Crew(agents=[agent], tasks=[task], max_rpm=2, verbose=2)
 
-    crew = Crew(agents=[agent], tasks=[tasks], max_rpm=2, verbose=2)
-
-    with patch.object(Crew, "_wait_for_next_minute") as moveon:
+    with patch.object(RPMController, "_wait_for_next_minute") as moveon:
         moveon.return_value = True
         crew.kickoff()
         captured = capsys.readouterr()

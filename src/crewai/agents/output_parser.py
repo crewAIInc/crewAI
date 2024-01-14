@@ -7,7 +7,7 @@ from langchain_core.agents import AgentAction, AgentFinish
 from crewai.agents.cache import CacheHandler, CacheHit
 from crewai.agents.exceptions import TaskRepeatedUsageException
 from crewai.agents.tools_handler import ToolsHandler
-from crewai.i18n import I18N
+from crewai.utilities import I18N
 
 FINAL_ANSWER_ACTION = "Final Answer:"
 FINAL_ANSWER_AND_PARSABLE_ACTION_ERROR_MESSAGE = (
