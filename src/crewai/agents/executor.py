@@ -170,8 +170,9 @@ class CrewAgentExecutor(AgentExecutor):
             output = action.copy()
             output.tool_input = f"tool:{action.tool}|input:{action.tool_input}"
             output.tool = tool.name
-            name_to_tool_map[tool.name.casefold()] = tool
-            color_mapping[tool.name] = color_mapping[action.tool]
+            tool_name = tool.name.casefold()
+            name_to_tool_map[tool_name] = tool
+            color_mapping[tool_name] = color_mapping[action.tool.casefold()]
 
         actions: List[AgentAction]
         actions = [output] if isinstance(output, AgentAction) else output
