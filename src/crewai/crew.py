@@ -33,7 +33,7 @@ class Crew(BaseModel):
         process: The process flow that the crew will follow (e.g., sequential).
         verbose: Indicates the verbosity level for logging during execution.
         config: Configuration settings for the crew.
-        cache_handler: Handles caching for the crew's operations.
+        _cache_handler: Handles caching for the crew's operations.
         max_rpm: Maximum number of requests per minute for the crew execution to be respected.
         id: A unique identifier for the crew instance.
     """
@@ -71,11 +71,22 @@ class Crew(BaseModel):
 
     @classmethod
     @field_validator("config", mode="before")
-    def check_config_type(cls, v: Union[Json, Dict[str, Any]]):
+    def check_config_type(
+        cls, v: Union[Json, Dict[str, Any]]
+    ) -> Union[Json, Dict[str, Any]]:
+        """Validates that the config is a valid type.
+
+        Args:
+            v: The config to be validated.
+
+        Returns:
+            The config if it is valid.
+        """
         return json.loads(v) if isinstance(v, Json) else v
 
     @model_validator(mode="after")
-    def set_private_attrs(self):
+    def set_private_attrs(self) -> "Crew":
+        """Set private attributes."""
         self._cache_handler = CacheHandler()
         self._logger = Logger(self.verbose)
         self._rpm_controller = RPMController(max_rpm=self.max_rpm, logger=self._logger)
@@ -110,8 +121,15 @@ class Crew(BaseModel):
         self.agents = [Agent(**agent) for agent in self.config["agents"]]
         self.tasks = [self._create_task(task) for task in self.config["tasks"]]
 
-    def _create_task(self, task_config):
-        """Creates a task instance from its configuration."""
+    def _create_task(self, task_config: Dict[str, Any]) -> Task:
+        """Creates a task instance from its configuration.
+
+        Args:
+            task_config: The configuration of the task.
+
+        Returns:
+            A task instance.
+        """
         task_agent = next(
             agt for agt in self.agents if agt.role == task_config["agent"]
         )
@@ -140,8 +158,12 @@ class Crew(BaseModel):
             self._rpm_controller.stop_rpm_counter()
         return task_output
 
-    def _prepare_and_execute_task(self, task):
-        """Prepares and logs information about the task being executed."""
+    def _prepare_and_execute_task(self, task: Task) -> None:
+        """Prepares and logs information about the task being executed.
+
+        Args:
+            task: The task to be executed.
+        """
         if task.agent.allow_delegation:
             task.tools += AgentTools(agents=self.agents).tools()
 
