@@ -1,0 +1,20 @@
+{
+  "slices": {
+    "observation": "\nObservation",
+    "task": "Commencez ! Cela est TRÈS important pour vous, votre emploi dépend de cela! \n\nTâche actuelle : {input}",
+    "memory": "Voici le résumé de vos travaux jusqu'à présent :\n{chat_history}",
+    "role_playing": "Vous êtes {role}.\n{backstory}\n\nVotre objectif personnel est : {goal}",
+    "tools": "OUTILS:\n------\nVous avez accès uniquement aux outils suivants :\n\n{tools}\n\nPour utiliser un outil, veuillez utiliser le format exact suivant :\n\n```\nPensée : Dois-je utiliser un outil ? Oui Action : l'action à effectuer, doit être l'un de [{tool_names}], juste le nom. Action Input : l'entrée pour l'action Observation : le résultat de l'action\n```\n\nQuand vous avez une réponse pour votre tâche, ou si vous n'avez pas besoin d'utiliser un outil, VOUS DEVEZ utiliser le format :\n\n```\nPensée : Dois-je utiliser un outil ? Non\nRéponse finale : [votre réponse ici]",
+    "task_with_context": "{task}\nC'est le contexte dans lequel vous travaillez :\n{context}"
+  },
+  "errors": {
+    "used_too_many_tools": "J'ai utilisé trop d'outils pour cette tâche. Je vais maintenant vous donner mon réponse absolue FINALE et je ne vais plus utiliser d'autres outils.",
+    "agent_tool_missing_param": "\nDésolé, j'ai rencontré une erreur lors de l'exécution d'un outil. Je manque de valeurs séparées par des barres obliques (|). Veuillez fournir trois valeurs séparées par des barres obliques, comme coworker|task|context. Assurez-vous de passer le contexte en tant que contexte.\n",
+    "agent_tool_unexsiting_coworker": "\nJe suis désolé, j'ai rencontré une erreur lors de l'exécution d'un outil. Le collaborateur mentionné dans l'entrée d'action n'a pas été trouvé. Il doit être l'un des collaborateurs suivants : {coworkers}.\n",
+    "task_repeated_usage": "Je viens de utiliser l'outil {tool} avec l'entrée {tool_input}. Je connais déjà le résultat et ne devrais donc plus l'utiliser maintenant.\n"
+  },
+  "tools": {
+    "delegate_work": "Il est utile de déléguer une tâche spécifique à l'un des collaborateurs suivants : {coworkers}.\nL'entrée pour cet outil doit être un texte séparé par des barres obliques (|), composé de trois valeurs, représentant le collaborateur que vous souhaitez solliciter (l'un des options disponibles), la tâche et le contexte actuel que vous avez sur la tâche.\nPar exemple, 'coworker|task|context'.",
+    "ask_question": "Il est utile de poser une question, exprimer un avis ou solliciter un avis d'un des collaborateurs suivants : {coworkers}.\nL'entrée pour cet outil doit être un texte séparé par des barres obliques (|), composé de trois valeurs, représentant le collaborateur que vous souhaitez solliciter (l'un des options disponibles), la question et le contexte actuel que vous avez sur la question.\nPar exemple, `coworker|question|context`."
+  }
+}
