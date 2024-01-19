@@ -13,6 +13,7 @@ class ToolsHandler(BaseCallbackHandler):
     cache: CacheHandler = None
 
     def __init__(self, cache: CacheHandler = None, **kwargs: Any):
+
         """Initialize the callback handler."""
         self.cache = cache
         super().__init__(**kwargs)
@@ -20,6 +21,7 @@ class ToolsHandler(BaseCallbackHandler):
     def on_tool_start(
         self, serialized: Dict[str, Any], input_str: str, **kwargs: Any
     ) -> Any:
+        
         """Run when tool starts running."""
         name = serialized.get("name")
         if name not in ["invalid_tool", "_Exception"]:
@@ -30,6 +32,7 @@ class ToolsHandler(BaseCallbackHandler):
             self.last_used_tool = tools_usage
 
     def on_tool_end(self, output: str, **kwargs: Any) -> Any:
+        
         """Run when tool ends running."""
         if (
             "is not a valid tool" not in output

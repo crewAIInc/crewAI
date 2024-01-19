@@ -32,6 +32,7 @@ class Task(BaseModel):
     @field_validator("id", mode="before")
     @classmethod
     def _deny_user_set_id(cls, v: Optional[UUID4]) -> None:
+        
         if v:
             raise PydanticCustomError(
                 "may_not_set_field", "This field is not to be set by the user.", {}
@@ -39,6 +40,7 @@ class Task(BaseModel):
 
     @model_validator(mode="after")
     def check_tools(self):
+
         if not self.tools and (self.agent and self.agent.tools):
             self.tools.extend(self.agent.tools)
         return self
@@ -49,6 +51,7 @@ class Task(BaseModel):
         Returns:
             Output of the task.
         """
+
         if not self.agent:
             raise Exception(
                 f"The task '{self.description}' has no agent assigned, therefore it can't be executed directly and should be executed in a Crew using a specific process that support that, either consensual or hierarchical."

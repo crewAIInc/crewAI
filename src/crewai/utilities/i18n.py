@@ -15,6 +15,7 @@ class I18N(BaseModel):
     @model_validator(mode="after")
     def load_translation(self) -> "I18N":
         """Load translations from a JSON file based on the specified language."""
+
         try:
             dir_path = os.path.dirname(os.path.realpath(__file__))
             prompts_path = os.path.join(
@@ -32,15 +33,19 @@ class I18N(BaseModel):
         return self
 
     def slice(self, slice: str) -> str:
+
         return self.retrieve("slices", slice)
 
     def errors(self, error: str) -> str:
+
         return self.retrieve("errors", error)
 
     def tools(self, error: str) -> str:
+
         return self.retrieve("tools", error)
 
     def retrieve(self, kind, key):
+        
         try:
             return self._translations[kind].get(key)
         except:

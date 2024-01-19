@@ -102,6 +102,7 @@ class Agent(BaseModel):
     @field_validator("id", mode="before")
     @classmethod
     def _deny_user_set_id(cls, v: Optional[UUID4]) -> None:
+
         if v:
             raise PydanticCustomError(
                 "may_not_set_field", "This field is not to be set by the user.", {}
@@ -109,6 +110,7 @@ class Agent(BaseModel):
 
     @model_validator(mode="after")
     def set_private_attrs(self):
+
         self._logger = Logger(self.verbose)
         if self.max_rpm and not self._rpm_controller:
             self._rpm_controller = RPMController(
@@ -118,6 +120,7 @@ class Agent(BaseModel):
 
     @model_validator(mode="after")
     def check_agent_executor(self) -> "Agent":
+
         if not self.agent_executor:
             self.set_cache_handler(self.cache_handler)
         return self
@@ -135,6 +138,7 @@ class Agent(BaseModel):
         Returns:
             Output of the agent
         """
+
         if context:
             task = self.i18n.slice("task_with_context").format(
                 task=task, context=context
@@ -158,11 +162,13 @@ class Agent(BaseModel):
         return result
 
     def set_cache_handler(self, cache_handler) -> None:
+
         self.cache_handler = cache_handler
         self.tools_handler = ToolsHandler(cache=self.cache_handler)
         self.__create_agent_executor()
 
     def set_rpm_controller(self, rpm_controller) -> None:
+
         if not self._rpm_controller:
             self._rpm_controller = rpm_controller
             self.__create_agent_executor()
@@ -173,6 +179,7 @@ class Agent(BaseModel):
         Returns:
             An instance of the CrewAgentExecutor class.
         """
+
         agent_args = {
             "input": lambda x: x["input"],
             "tools": lambda x: x["tools"],
@@ -223,4 +230,5 @@ class Agent(BaseModel):
 
     @staticmethod
     def __tools_names(tools) -> str:
+        
         return ", ".join([t.name for t in tools])

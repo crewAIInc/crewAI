@@ -15,6 +15,7 @@ class CacheTools(BaseModel):
     )
 
     def tool(self):
+
         return Tool.from_function(
             func=self.hit_cache,
             name=self.name,
@@ -22,6 +23,7 @@ class CacheTools(BaseModel):
         )
 
     def hit_cache(self, key):
+        
         split = key.split("tool:")
         tool = split[1].split("|input:")[0].strip()
         tool_input = split[1].split("|input:")[1].strip()
