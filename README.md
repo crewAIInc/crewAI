@@ -188,9 +188,9 @@ local_expert = Agent(
 
 ## Docker Image
 If you prefer to run your crew in docker, we have an image available that has the framework pre-installed and uses Ollama as a base image. This allows you to run your local LLMs and crew in one container.
-```bash
-See docs/docker-image.md for detailed instructions on running this image.
-```
+
+- See `docs/docker-image.md` for detailed instructions on running this image.
+
 
 ## Contribution
 
