@@ -18,17 +18,20 @@ class I18N(BaseModel):
         try:
             dir_path = os.path.dirname(os.path.realpath(__file__))
             prompts_path = os.path.join(
-                dir_path, f"../translations/{self.language}.json"
+                dir_path, f"../translations/i18n.json"
             )
 
             with open(prompts_path, "r") as f:
-                self._translations = json.load(f)
+                all_translations = json.load(f)
+                self._translations = all_translations.get(self.language)
         except FileNotFoundError:
             raise ValidationError(
-                f"Trasnlation file for language '{self.language}' not found."
+                f"Trasnlation file for language i18n.json not found."
             )
         except json.JSONDecodeError:
             raise ValidationError(f"Error decoding JSON from the prompts file.")
+        except TypeError:
+            raise ValidationError(f"No translations found for language '{self.language}'.")        
         return self
 
     def slice(self, slice: str) -> str:
@@ -37,8 +40,8 @@ class I18N(BaseModel):
     def errors(self, error: str) -> str:
         return self.retrieve("errors", error)
 
-    def tools(self, error: str) -> str:
-        return self.retrieve("tools", error)
+    def tools(self, tool: str) -> str:
+        return self.retrieve("tools", tool)
 
     def retrieve(self, kind, key):
         try:
