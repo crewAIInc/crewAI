@@ -10,6 +10,7 @@
 - [Examples](#examples)
 - [Local Open Source Models](#local-open-source-models)
 - [CrewAI x AutoGen x ChatDev](#how-crewai-compares)
+- [Docker Image](#docker-image)
 - [Contribution](#contribution)
 - [💬 CrewAI Discord Community](https://discord.com/invite/X4JWnZnxPb)
 - [Hire Consulting](#hire-consulting)
@@ -184,6 +185,12 @@ local_expert = Agent(
 - **ChatDev**: ChatDev introduced the idea of processes into the realm of AI agents, but its implementation is quite rigid. Customizations in ChatDev are limited and not geared towards production environments, which can hinder scalability and flexibility in real-world applications.
 
 **CrewAI's Advantage**: CrewAI is built with production in mind. It offers the flexibility of Autogen's conversational agents and the structured process approach of ChatDev, but without the rigidity. CrewAI's processes are designed to be dynamic and adaptable, fitting seamlessly into both development and production workflows.
+
+## Docker Image
+If you prefer to run your crew in docker, we have an image available that has the framework pre-installed and uses Ollama as a base image. This allows you to run your local LLMs and crew in one container.
+```bash
+See docs/docker-image.md for detailed instructions on running this image.
+```
 
 ## Contribution
 
