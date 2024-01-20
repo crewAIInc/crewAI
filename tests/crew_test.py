@@ -9,6 +9,7 @@ from crewai.agents.cache import CacheHandler
 from crewai.crew import Crew
 from crewai.process import Process
 from crewai.task import Task
+from crewai.utilities import Logger, RPMController
 
 ceo = Agent(
     role="CEO",
@@ -179,19 +180,19 @@ def test_crew_verbose_output(capsys):
     crew.kickoff()
     captured = capsys.readouterr()
     expected_strings = [
-        "Working Agent: Researcher",
-        "Starting Task: Research AI advancements.",
-        "[Researcher] Task output:",
-        "Working Agent: Senior Writer",
-        "Starting Task: Write about AI in healthcare.",
-        "[Senior Writer] Task output:",
+        "[DEBUG]: Working Agent: Researcher",
+        "[INFO]: Starting Task: Research AI advancements.",
+        "[DEBUG]: [Researcher] Task output:",
+        "[DEBUG]: Working Agent: Senior Writer",
+        "[INFO]: Starting Task: Write about AI in healthcare.",
+        "[DEBUG]: [Senior Writer] Task output:",
     ]
 
     for expected_string in expected_strings:
         assert expected_string in captured.out
 
     # Now test with verbose set to False
-    crew.verbose = False
+    crew._logger = Logger(verbose_level=False)
     crew.kickoff()
     captured = capsys.readouterr()
     assert captured.out == ""
@@ -211,7 +212,7 @@ def test_crew_verbose_levels_output(capsys):
         assert expected_string in captured.out
 
     # Now test with verbose set to 2
-    crew.verbose = 2
+    crew._logger = Logger(verbose_level=2)
     crew.kickoff()
     captured = capsys.readouterr()
     expected_strings = [
@@ -257,12 +258,49 @@ def test_cache_hitting_between_agents():
         tasks=tasks,
     )
 
-    assert crew.cache_handler._cache == {}
+    assert crew._cache_handler._cache == {}
     output = crew.kickoff()
-    assert crew.cache_handler._cache == {"multiplier-2,6": "12"}
+    assert crew._cache_handler._cache == {"multiplier-2,6": "12"}
     assert output == "12"
 
     with patch.object(CacheHandler, "read") as read:
         read.return_value = "12"
         crew.kickoff()
         read.assert_called_with("multiplier", "2,6")
+
+
+@pytest.mark.vcr(filter_headers=["authorization"])
+def test_api_calls_throttling(capsys):
+    from unittest.mock import patch
+
+    from langchain.tools import tool
+
+    @tool
+    def get_final_answer(numbers) -> float:
+        """Get the final answer but don't give it yet, just re-use this
+        tool non-stop."""
+        return 42
+
+    agent = Agent(
+        role="test role",
+        goal="test goal",
+        backstory="test backstory",
+        max_iter=5,
+        allow_delegation=False,
+        verbose=True,
+    )
+
+    task = Task(
+        description="Don't give a Final Answer, instead keep using the `get_final_answer` tool.",
+        tools=[get_final_answer],
+        agent=agent,
+    )
+
+    crew = Crew(agents=[agent], tasks=[task], max_rpm=2, verbose=2)
+
+    with patch.object(RPMController, "_wait_for_next_minute") as moveon:
+        moveon.return_value = True
+        crew.kickoff()
+        captured = capsys.readouterr()
+        assert "Max RPM reached, waiting for next minute to start." in captured.out
+        moveon.assert_called()

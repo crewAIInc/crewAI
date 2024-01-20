@@ -1,0 +1,663 @@
+interactions:
+- request:
+    body: '{"messages": [{"role": "user", "content": "You are test role.\ntest backstory\n\nYour
+      personal goal is: test goalTOOLS:\n------\nYou have access to only the following
+      tools:\n\nget_final_answer: get_final_answer(numbers) -> float - Get the final
+      answer but don''t give it yet, just re-use this\n        tool non-stop.\n\nTo
+      use a tool, please use the exact following format:\n\n```\nThought: Do I need
+      to use a tool? Yes\nAction: the action to take, should be one of [get_final_answer],
+      just the name.\nAction Input: the input to the action\nObservation: the result
+      of the action\n```\n\nWhen you have a response for your task, or if you do not
+      need to use a tool, you MUST use the format:\n\n```\nThought: Do I need to use
+      a tool? No\nFinal Answer: [your response here]This is the summary of your work
+      so far:\nBegin! This is VERY important to you, your job depends on it!\n\nCurrent
+      Task: The final answer is 42. But don''t give it yet, instead keep using the
+      `get_final_answer` tool.\n"}], "model": "gpt-4", "n": 1, "stop": ["\nObservation"],
+      "stream": false, "temperature": 0.7}'
+    headers:
+      accept:
+      - application/json
+      accept-encoding:
+      - gzip, deflate
+      connection:
+      - keep-alive
+      content-length:
+      - '1080'
+      content-type:
+      - application/json
+      host:
+      - api.openai.com
+      user-agent:
+      - OpenAI/Python 1.7.1
+      x-stainless-arch:
+      - arm64
+      x-stainless-async:
+      - 'false'
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - MacOS
+      x-stainless-package-version:
+      - 1.7.1
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.11.7
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    content: "{\n  \"id\": \"chatcmpl-8ggfw8fvQxNLkF3ttE8Bm7s8rjYFq\",\n  \"object\":
+      \"chat.completion\",\n  \"created\": 1705184512,\n  \"model\": \"gpt-4-0613\",\n
+      \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
+      \"assistant\",\n        \"content\": \"Thought: Do I need to use a tool? Yes\\nAction:
+      get_final_answer\\nAction Input: [42]\"\n      },\n      \"logprobs\": null,\n
+      \     \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\":
+      234,\n    \"completion_tokens\": 24,\n    \"total_tokens\": 258\n  },\n  \"system_fingerprint\":
+      null\n}\n"
+    headers:
+      CF-Cache-Status:
+      - DYNAMIC
+      CF-RAY:
+      - 845108e32c171abd-GRU
+      Cache-Control:
+      - no-cache, must-revalidate
+      Connection:
+      - keep-alive
+      Content-Encoding:
+      - gzip
+      Content-Type:
+      - application/json
+      Date:
+      - Sat, 13 Jan 2024 22:21:54 GMT
+      Server:
+      - cloudflare
+      Set-Cookie:
+      - __cf_bm=N43k0gHErA0PBuIXY9IHQyia.HGfApTZKpYsN4S4E8s-1705184514-1-AQrOw6bC8j+KAeTt3IquXJN8QBK/oqZwqkQ1DG2CFnb3u2VkEs58RczmbK2+3luwjUlNNK5xihxOzOe1hFlIkfc=;
+        path=/; expires=Sat, 13-Jan-24 22:51:54 GMT; domain=.api.openai.com; HttpOnly;
+        Secure; SameSite=None
+      - _cfuvid=tLKPNNCaE7nA1vSgk2uC9AN4gynXRvlaHmfacNL.ncY-1705184514404-0-604800000;
+        path=/; domain=.api.openai.com; HttpOnly; Secure; SameSite=None
+      Transfer-Encoding:
+      - chunked
+      access-control-allow-origin:
+      - '*'
+      alt-svc:
+      - h3=":443"; ma=86400
+      openai-model:
+      - gpt-4-0613
+      openai-organization:
+      - user-z7g4wmlazxqvc5wjyaaaocfz
+      openai-processing-ms:
+      - '1681'
+      openai-version:
+      - '2020-10-01'
+      strict-transport-security:
+      - max-age=15724800; includeSubDomains
+      x-ratelimit-limit-requests:
+      - '10000'
+      x-ratelimit-limit-tokens:
+      - '300000'
+      x-ratelimit-remaining-requests:
+      - '9999'
+      x-ratelimit-remaining-tokens:
+      - '299754'
+      x-ratelimit-reset-requests:
+      - 6ms
+      x-ratelimit-reset-tokens:
+      - 49ms
+      x-request-id:
+      - a25e71b234c622c7dc8010927635a75c
+    http_version: HTTP/1.1
+    status_code: 200
+- request:
+    body: '{"messages": [{"role": "user", "content": "You are test role.\ntest backstory\n\nYour
+      personal goal is: test goalTOOLS:\n------\nYou have access to only the following
+      tools:\n\nget_final_answer: get_final_answer(numbers) -> float - Get the final
+      answer but don''t give it yet, just re-use this\n        tool non-stop.\n\nTo
+      use a tool, please use the exact following format:\n\n```\nThought: Do I need
+      to use a tool? Yes\nAction: the action to take, should be one of [get_final_answer],
+      just the name.\nAction Input: the input to the action\nObservation: the result
+      of the action\n```\n\nWhen you have a response for your task, or if you do not
+      need to use a tool, you MUST use the format:\n\n```\nThought: Do I need to use
+      a tool? No\nFinal Answer: [your response here]This is the summary of your work
+      so far:\nBegin! This is VERY important to you, your job depends on it!\n\nCurrent
+      Task: The final answer is 42. But don''t give it yet, instead keep using the
+      `get_final_answer` tool.\nThought: Do I need to use a tool? Yes\nAction: get_final_answer\nAction
+      Input: [42]\nObservation: 42\nThought: "}], "model": "gpt-4", "n": 1, "stop":
+      ["\nObservation"], "stream": false, "temperature": 0.7}'
+    headers:
+      accept:
+      - application/json
+      accept-encoding:
+      - gzip, deflate
+      connection:
+      - keep-alive
+      content-length:
+      - '1191'
+      content-type:
+      - application/json
+      cookie:
+      - __cf_bm=N43k0gHErA0PBuIXY9IHQyia.HGfApTZKpYsN4S4E8s-1705184514-1-AQrOw6bC8j+KAeTt3IquXJN8QBK/oqZwqkQ1DG2CFnb3u2VkEs58RczmbK2+3luwjUlNNK5xihxOzOe1hFlIkfc=;
+        _cfuvid=tLKPNNCaE7nA1vSgk2uC9AN4gynXRvlaHmfacNL.ncY-1705184514404-0-604800000
+      host:
+      - api.openai.com
+      user-agent:
+      - OpenAI/Python 1.7.1
+      x-stainless-arch:
+      - arm64
+      x-stainless-async:
+      - 'false'
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - MacOS
+      x-stainless-package-version:
+      - 1.7.1
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.11.7
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    content: "{\n  \"id\": \"chatcmpl-8ggfyCtYEPuuA9KzlWJko8Sc4ItXo\",\n  \"object\":
+      \"chat.completion\",\n  \"created\": 1705184514,\n  \"model\": \"gpt-4-0613\",\n
+      \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
+      \"assistant\",\n        \"content\": \"Do I need to use a tool? Yes\\nAction:
+      get_final_answer\\nAction Input: [42]\"\n      },\n      \"logprobs\": null,\n
+      \     \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\":
+      267,\n    \"completion_tokens\": 22,\n    \"total_tokens\": 289\n  },\n  \"system_fingerprint\":
+      null\n}\n"
+    headers:
+      CF-Cache-Status:
+      - DYNAMIC
+      CF-RAY:
+      - 845108ef48b01abd-GRU
+      Cache-Control:
+      - no-cache, must-revalidate
+      Connection:
+      - keep-alive
+      Content-Encoding:
+      - gzip
+      Content-Type:
+      - application/json
+      Date:
+      - Sat, 13 Jan 2024 22:21:55 GMT
+      Server:
+      - cloudflare
+      Transfer-Encoding:
+      - chunked
+      access-control-allow-origin:
+      - '*'
+      alt-svc:
+      - h3=":443"; ma=86400
+      openai-model:
+      - gpt-4-0613
+      openai-organization:
+      - user-z7g4wmlazxqvc5wjyaaaocfz
+      openai-processing-ms:
+      - '1020'
+      openai-version:
+      - '2020-10-01'
+      strict-transport-security:
+      - max-age=15724800; includeSubDomains
+      x-ratelimit-limit-requests:
+      - '10000'
+      x-ratelimit-limit-tokens:
+      - '300000'
+      x-ratelimit-remaining-requests:
+      - '9999'
+      x-ratelimit-remaining-tokens:
+      - '299726'
+      x-ratelimit-reset-requests:
+      - 6ms
+      x-ratelimit-reset-tokens:
+      - 54ms
+      x-request-id:
+      - 2cb025cb28aa59d282888aa8daa8a745
+    http_version: HTTP/1.1
+    status_code: 200
+- request:
+    body: '{"messages": [{"role": "user", "content": "You are test role.\ntest backstory\n\nYour
+      personal goal is: test goalTOOLS:\n------\nYou have access to only the following
+      tools:\n\nget_final_answer: get_final_answer(numbers) -> float - Get the final
+      answer but don''t give it yet, just re-use this\n        tool non-stop.\n\nTo
+      use a tool, please use the exact following format:\n\n```\nThought: Do I need
+      to use a tool? Yes\nAction: the action to take, should be one of [get_final_answer],
+      just the name.\nAction Input: the input to the action\nObservation: the result
+      of the action\n```\n\nWhen you have a response for your task, or if you do not
+      need to use a tool, you MUST use the format:\n\n```\nThought: Do I need to use
+      a tool? No\nFinal Answer: [your response here]This is the summary of your work
+      so far:\nBegin! This is VERY important to you, your job depends on it!\n\nCurrent
+      Task: The final answer is 42. But don''t give it yet, instead keep using the
+      `get_final_answer` tool.\nThought: Do I need to use a tool? Yes\nAction: get_final_answer\nAction
+      Input: [42]\nObservation: 42\nThought: Do I need to use a tool? Yes\nAction:
+      get_final_answer\nAction Input: [42]\nObservation: 42\nThought: "}], "model":
+      "gpt-4", "n": 1, "stop": ["\nObservation"], "stream": false, "temperature":
+      0.7}'
+    headers:
+      accept:
+      - application/json
+      accept-encoding:
+      - gzip, deflate
+      connection:
+      - keep-alive
+      content-length:
+      - '1293'
+      content-type:
+      - application/json
+      cookie:
+      - __cf_bm=N43k0gHErA0PBuIXY9IHQyia.HGfApTZKpYsN4S4E8s-1705184514-1-AQrOw6bC8j+KAeTt3IquXJN8QBK/oqZwqkQ1DG2CFnb3u2VkEs58RczmbK2+3luwjUlNNK5xihxOzOe1hFlIkfc=;
+        _cfuvid=tLKPNNCaE7nA1vSgk2uC9AN4gynXRvlaHmfacNL.ncY-1705184514404-0-604800000
+      host:
+      - api.openai.com
+      user-agent:
+      - OpenAI/Python 1.7.1
+      x-stainless-arch:
+      - arm64
+      x-stainless-async:
+      - 'false'
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - MacOS
+      x-stainless-package-version:
+      - 1.7.1
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.11.7
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    content: "{\n  \"id\": \"chatcmpl-8ggfzAey5AALxtUqKehw6R7nBfyZv\",\n  \"object\":
+      \"chat.completion\",\n  \"created\": 1705184515,\n  \"model\": \"gpt-4-0613\",\n
+      \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
+      \"assistant\",\n        \"content\": \"Do I need to use a tool? Yes\\nAction:
+      get_final_answer\\nAction Input: [42]\"\n      },\n      \"logprobs\": null,\n
+      \     \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\":
+      297,\n    \"completion_tokens\": 22,\n    \"total_tokens\": 319\n  },\n  \"system_fingerprint\":
+      null\n}\n"
+    headers:
+      CF-Cache-Status:
+      - DYNAMIC
+      CF-RAY:
+      - 845108f7794d1abd-GRU
+      Cache-Control:
+      - no-cache, must-revalidate
+      Connection:
+      - keep-alive
+      Content-Encoding:
+      - gzip
+      Content-Type:
+      - application/json
+      Date:
+      - Sat, 13 Jan 2024 22:21:57 GMT
+      Server:
+      - cloudflare
+      Transfer-Encoding:
+      - chunked
+      access-control-allow-origin:
+      - '*'
+      alt-svc:
+      - h3=":443"; ma=86400
+      openai-model:
+      - gpt-4-0613
+      openai-organization:
+      - user-z7g4wmlazxqvc5wjyaaaocfz
+      openai-processing-ms:
+      - '1662'
+      openai-version:
+      - '2020-10-01'
+      strict-transport-security:
+      - max-age=15724800; includeSubDomains
+      x-ratelimit-limit-requests:
+      - '10000'
+      x-ratelimit-limit-tokens:
+      - '300000'
+      x-ratelimit-remaining-requests:
+      - '9999'
+      x-ratelimit-remaining-tokens:
+      - '299702'
+      x-ratelimit-reset-requests:
+      - 6ms
+      x-ratelimit-reset-tokens:
+      - 59ms
+      x-request-id:
+      - 96578e7d658dcea71f927eb3700da70d
+    http_version: HTTP/1.1
+    status_code: 200
+- request:
+    body: '{"messages": [{"role": "user", "content": "You are test role.\ntest backstory\n\nYour
+      personal goal is: test goalTOOLS:\n------\nYou have access to only the following
+      tools:\n\nget_final_answer: get_final_answer(numbers) -> float - Get the final
+      answer but don''t give it yet, just re-use this\n        tool non-stop.\n\nTo
+      use a tool, please use the exact following format:\n\n```\nThought: Do I need
+      to use a tool? Yes\nAction: the action to take, should be one of [get_final_answer],
+      just the name.\nAction Input: the input to the action\nObservation: the result
+      of the action\n```\n\nWhen you have a response for your task, or if you do not
+      need to use a tool, you MUST use the format:\n\n```\nThought: Do I need to use
+      a tool? No\nFinal Answer: [your response here]This is the summary of your work
+      so far:\nBegin! This is VERY important to you, your job depends on it!\n\nCurrent
+      Task: The final answer is 42. But don''t give it yet, instead keep using the
+      `get_final_answer` tool.\nThought: Do I need to use a tool? Yes\nAction: get_final_answer\nAction
+      Input: [42]\nObservation: 42\nThought: Do I need to use a tool? Yes\nAction:
+      get_final_answer\nAction Input: [42]\nObservation: 42\nThought: Do I need to
+      use a tool? Yes\nAction: get_final_answer\nAction Input: [42]\nObservation:
+      42\nThought: "}], "model": "gpt-4", "n": 1, "stop": ["\nObservation"], "stream":
+      false, "temperature": 0.7}'
+    headers:
+      accept:
+      - application/json
+      accept-encoding:
+      - gzip, deflate
+      connection:
+      - keep-alive
+      content-length:
+      - '1395'
+      content-type:
+      - application/json
+      cookie:
+      - __cf_bm=N43k0gHErA0PBuIXY9IHQyia.HGfApTZKpYsN4S4E8s-1705184514-1-AQrOw6bC8j+KAeTt3IquXJN8QBK/oqZwqkQ1DG2CFnb3u2VkEs58RczmbK2+3luwjUlNNK5xihxOzOe1hFlIkfc=;
+        _cfuvid=tLKPNNCaE7nA1vSgk2uC9AN4gynXRvlaHmfacNL.ncY-1705184514404-0-604800000
+      host:
+      - api.openai.com
+      user-agent:
+      - OpenAI/Python 1.7.1
+      x-stainless-arch:
+      - arm64
+      x-stainless-async:
+      - 'false'
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - MacOS
+      x-stainless-package-version:
+      - 1.7.1
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.11.7
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    content: "{\n  \"id\": \"chatcmpl-8ggg2v1bp5IaLU8TDmqcDgXiqXOTd\",\n  \"object\":
+      \"chat.completion\",\n  \"created\": 1705184518,\n  \"model\": \"gpt-4-0613\",\n
+      \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
+      \"assistant\",\n        \"content\": \"Do I need to use a tool? Yes\\nAction:
+      get_final_answer\\nAction Input: [42]\"\n      },\n      \"logprobs\": null,\n
+      \     \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\":
+      327,\n    \"completion_tokens\": 22,\n    \"total_tokens\": 349\n  },\n  \"system_fingerprint\":
+      null\n}\n"
+    headers:
+      CF-Cache-Status:
+      - DYNAMIC
+      CF-RAY:
+      - 845109052e951abd-GRU
+      Cache-Control:
+      - no-cache, must-revalidate
+      Connection:
+      - keep-alive
+      Content-Encoding:
+      - gzip
+      Content-Type:
+      - application/json
+      Date:
+      - Sat, 13 Jan 2024 22:22:00 GMT
+      Server:
+      - cloudflare
+      Transfer-Encoding:
+      - chunked
+      access-control-allow-origin:
+      - '*'
+      alt-svc:
+      - h3=":443"; ma=86400
+      openai-model:
+      - gpt-4-0613
+      openai-organization:
+      - user-z7g4wmlazxqvc5wjyaaaocfz
+      openai-processing-ms:
+      - '1840'
+      openai-version:
+      - '2020-10-01'
+      strict-transport-security:
+      - max-age=15724800; includeSubDomains
+      x-ratelimit-limit-requests:
+      - '10000'
+      x-ratelimit-limit-tokens:
+      - '300000'
+      x-ratelimit-remaining-requests:
+      - '9999'
+      x-ratelimit-remaining-tokens:
+      - '299678'
+      x-ratelimit-reset-requests:
+      - 6ms
+      x-ratelimit-reset-tokens:
+      - 64ms
+      x-request-id:
+      - 24c5fedfa1d1b427cc01a498f46fe60f
+    http_version: HTTP/1.1
+    status_code: 200
+- request:
+    body: '{"messages": [{"role": "user", "content": "You are test role.\ntest backstory\n\nYour
+      personal goal is: test goalTOOLS:\n------\nYou have access to only the following
+      tools:\n\nget_final_answer: get_final_answer(numbers) -> float - Get the final
+      answer but don''t give it yet, just re-use this\n        tool non-stop.\n\nTo
+      use a tool, please use the exact following format:\n\n```\nThought: Do I need
+      to use a tool? Yes\nAction: the action to take, should be one of [get_final_answer],
+      just the name.\nAction Input: the input to the action\nObservation: the result
+      of the action\n```\n\nWhen you have a response for your task, or if you do not
+      need to use a tool, you MUST use the format:\n\n```\nThought: Do I need to use
+      a tool? No\nFinal Answer: [your response here]This is the summary of your work
+      so far:\nBegin! This is VERY important to you, your job depends on it!\n\nCurrent
+      Task: The final answer is 42. But don''t give it yet, instead keep using the
+      `get_final_answer` tool.\nThought: Do I need to use a tool? Yes\nAction: get_final_answer\nAction
+      Input: [42]\nObservation: 42\nThought: Do I need to use a tool? Yes\nAction:
+      get_final_answer\nAction Input: [42]\nObservation: 42\nThought: Do I need to
+      use a tool? Yes\nAction: get_final_answer\nAction Input: [42]\nObservation:
+      42\nThought: Do I need to use a tool? Yes\nAction: get_final_answer\nAction
+      Input: [42]\nObservation: I''ve used too many tools for this task. I''m going
+      to give you my absolute BEST Final answer now and not use any more tools.\nThought:
+      "}], "model": "gpt-4", "n": 1, "stop": ["\nObservation"], "stream": false, "temperature":
+      0.7}'
+    headers:
+      accept:
+      - application/json
+      accept-encoding:
+      - gzip, deflate
+      connection:
+      - keep-alive
+      content-length:
+      - '1618'
+      content-type:
+      - application/json
+      cookie:
+      - __cf_bm=N43k0gHErA0PBuIXY9IHQyia.HGfApTZKpYsN4S4E8s-1705184514-1-AQrOw6bC8j+KAeTt3IquXJN8QBK/oqZwqkQ1DG2CFnb3u2VkEs58RczmbK2+3luwjUlNNK5xihxOzOe1hFlIkfc=;
+        _cfuvid=tLKPNNCaE7nA1vSgk2uC9AN4gynXRvlaHmfacNL.ncY-1705184514404-0-604800000
+      host:
+      - api.openai.com
+      user-agent:
+      - OpenAI/Python 1.7.1
+      x-stainless-arch:
+      - arm64
+      x-stainless-async:
+      - 'false'
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - MacOS
+      x-stainless-package-version:
+      - 1.7.1
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.11.7
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    content: "{\n  \"id\": \"chatcmpl-8ggg4hc3SCoIfjLWgJVTHwj91kcWv\",\n  \"object\":
+      \"chat.completion\",\n  \"created\": 1705184520,\n  \"model\": \"gpt-4-0613\",\n
+      \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
+      \"assistant\",\n        \"content\": \"Do I need to use a tool? No\\nFinal Answer:
+      I've used the `get_final_answer` tool multiple times and it consistently returns
+      the number 42.\"\n      },\n      \"logprobs\": null,\n      \"finish_reason\":
+      \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 383,\n    \"completion_tokens\":
+      34,\n    \"total_tokens\": 417\n  },\n  \"system_fingerprint\": null\n}\n"
+    headers:
+      CF-Cache-Status:
+      - DYNAMIC
+      CF-RAY:
+      - 845109124bdd1abd-GRU
+      Cache-Control:
+      - no-cache, must-revalidate
+      Connection:
+      - keep-alive
+      Content-Encoding:
+      - gzip
+      Content-Type:
+      - application/json
+      Date:
+      - Sat, 13 Jan 2024 22:22:03 GMT
+      Server:
+      - cloudflare
+      Transfer-Encoding:
+      - chunked
+      access-control-allow-origin:
+      - '*'
+      alt-svc:
+      - h3=":443"; ma=86400
+      openai-model:
+      - gpt-4-0613
+      openai-organization:
+      - user-z7g4wmlazxqvc5wjyaaaocfz
+      openai-processing-ms:
+      - '3318'
+      openai-version:
+      - '2020-10-01'
+      strict-transport-security:
+      - max-age=15724800; includeSubDomains
+      x-ratelimit-limit-requests:
+      - '10000'
+      x-ratelimit-limit-tokens:
+      - '300000'
+      x-ratelimit-remaining-requests:
+      - '9999'
+      x-ratelimit-remaining-tokens:
+      - '299623'
+      x-ratelimit-reset-requests:
+      - 6ms
+      x-ratelimit-reset-tokens:
+      - 75ms
+      x-request-id:
+      - c4eb234f14d03df86e41f35ff90b9708
+    http_version: HTTP/1.1
+    status_code: 200
+- request:
+    body: '{"messages": [{"role": "user", "content": "Progressively summarize the
+      lines of conversation provided, adding onto the previous summary returning a
+      new summary.\n\nEXAMPLE\nCurrent summary:\nThe human asks what the AI thinks
+      of artificial intelligence. The AI thinks artificial intelligence is a force
+      for good.\n\nNew lines of conversation:\nHuman: Why do you think artificial
+      intelligence is a force for good?\nAI: Because artificial intelligence will
+      help humans reach their full potential.\n\nNew summary:\nThe human asks what
+      the AI thinks of artificial intelligence. The AI thinks artificial intelligence
+      is a force for good because it will help humans reach their full potential.\nEND
+      OF EXAMPLE\n\nCurrent summary:\n\n\nNew lines of conversation:\nHuman: The final
+      answer is 42. But don''t give it yet, instead keep using the `get_final_answer`
+      tool.\nAI: I''ve used the `get_final_answer` tool multiple times and it consistently
+      returns the number 42.\n\nNew summary:"}], "model": "gpt-4", "n": 1, "stream":
+      false, "temperature": 0.7}'
+    headers:
+      accept:
+      - application/json
+      accept-encoding:
+      - gzip, deflate
+      connection:
+      - keep-alive
+      content-length:
+      - '1041'
+      content-type:
+      - application/json
+      cookie:
+      - __cf_bm=N43k0gHErA0PBuIXY9IHQyia.HGfApTZKpYsN4S4E8s-1705184514-1-AQrOw6bC8j+KAeTt3IquXJN8QBK/oqZwqkQ1DG2CFnb3u2VkEs58RczmbK2+3luwjUlNNK5xihxOzOe1hFlIkfc=;
+        _cfuvid=tLKPNNCaE7nA1vSgk2uC9AN4gynXRvlaHmfacNL.ncY-1705184514404-0-604800000
+      host:
+      - api.openai.com
+      user-agent:
+      - OpenAI/Python 1.7.1
+      x-stainless-arch:
+      - arm64
+      x-stainless-async:
+      - 'false'
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - MacOS
+      x-stainless-package-version:
+      - 1.7.1
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.11.7
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    content: "{\n  \"id\": \"chatcmpl-8ggg8PkiU1uRkwllwEfuGqBztgSqW\",\n  \"object\":
+      \"chat.completion\",\n  \"created\": 1705184524,\n  \"model\": \"gpt-4-0613\",\n
+      \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
+      \"assistant\",\n        \"content\": \"The human instructs the AI to keep using
+      the `get_final_answer` tool, stating that the final answer is 42. The AI confirms
+      that it has used the `get_final_answer` tool multiple times and it consistently
+      returns the number 42.\"\n      },\n      \"logprobs\": null,\n      \"finish_reason\":
+      \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 184,\n    \"completion_tokens\":
+      51,\n    \"total_tokens\": 235\n  },\n  \"system_fingerprint\": null\n}\n"
+    headers:
+      CF-Cache-Status:
+      - DYNAMIC
+      CF-RAY:
+      - 8451092a2daf1abd-GRU
+      Cache-Control:
+      - no-cache, must-revalidate
+      Connection:
+      - keep-alive
+      Content-Encoding:
+      - gzip
+      Content-Type:
+      - application/json
+      Date:
+      - Sat, 13 Jan 2024 22:22:07 GMT
+      Server:
+      - cloudflare
+      Transfer-Encoding:
+      - chunked
+      access-control-allow-origin:
+      - '*'
+      alt-svc:
+      - h3=":443"; ma=86400
+      openai-model:
+      - gpt-4-0613
+      openai-organization:
+      - user-z7g4wmlazxqvc5wjyaaaocfz
+      openai-processing-ms:
+      - '3505'
+      openai-version:
+      - '2020-10-01'
+      strict-transport-security:
+      - max-age=15724800; includeSubDomains
+      x-ratelimit-limit-requests:
+      - '10000'
+      x-ratelimit-limit-tokens:
+      - '300000'
+      x-ratelimit-remaining-requests:
+      - '9999'
+      x-ratelimit-remaining-tokens:
+      - '299755'
+      x-ratelimit-reset-requests:
+      - 6ms
+      x-ratelimit-reset-tokens:
+      - 49ms
+      x-request-id:
+      - 7db26cd36db9105a336c4975a978ad37
+    http_version: HTTP/1.1
+    status_code: 200
+version: 1

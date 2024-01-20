@@ -12,6 +12,7 @@ from pydantic import (
     ConfigDict,
     Field,
     InstanceOf,
+    PrivateAttr,
     field_validator,
     model_validator,
 )
@@ -23,8 +24,7 @@ from crewai.agents import (
     CrewAgentOutputParser,
     ToolsHandler,
 )
-from crewai.i18n import I18N
-from crewai.prompts import Prompts
+from crewai.utilities import I18N, Logger, Prompts, RPMController
 
 
 class Agent(BaseModel):
@@ -41,11 +41,16 @@ class Agent(BaseModel):
             llm: The language model that will run the agent.
             max_iter: Maximum number of iterations for an agent to execute a task.
             memory: Whether the agent should have memory or not.
+            max_rpm: Maximum number of requests per minute for the agent execution to be respected.
             verbose: Whether the agent execution should be in verbose mode.
             allow_delegation: Whether the agent is allowed to delegate tasks to other agents.
     """
 
     __hash__ = object.__hash__
+    _logger: Logger = PrivateAttr()
+    _rpm_controller: RPMController = PrivateAttr(default=None)
+    _request_within_rpm_limit: Any = PrivateAttr(default=None)
+
     model_config = ConfigDict(arbitrary_types_allowed=True)
     id: UUID4 = Field(
         default_factory=uuid.uuid4,
@@ -55,6 +60,10 @@ class Agent(BaseModel):
     role: str = Field(description="Role of the agent")
     goal: str = Field(description="Objective of the agent")
     backstory: str = Field(description="Backstory of the agent")
+    max_rpm: Optional[int] = Field(
+        default=None,
+        description="Maximum number of requests per minute for the agent execution to be respected.",
+    )
     memory: bool = Field(
         default=True, description="Whether the agent should have memory or not"
     )
@@ -99,6 +108,15 @@ class Agent(BaseModel):
             )
 
     @model_validator(mode="after")
+    def set_private_attrs(self):
+        self._logger = Logger(self.verbose)
+        if self.max_rpm and not self._rpm_controller:
+            self._rpm_controller = RPMController(
+                max_rpm=self.max_rpm, logger=self._logger
+            )
+        return self
+
+    @model_validator(mode="after")
     def check_agent_executor(self) -> "Agent":
         if not self.agent_executor:
             self.set_cache_handler(self.cache_handler)
@@ -125,7 +143,7 @@ class Agent(BaseModel):
         tools = tools or self.tools
         self.agent_executor.tools = tools
 
-        return self.agent_executor.invoke(
+        result = self.agent_executor.invoke(
             {
                 "input": task,
                 "tool_names": self.__tools_names(tools),
@@ -134,10 +152,20 @@ class Agent(BaseModel):
             RunnableConfig(callbacks=[self.tools_handler]),
         )["output"]
 
+        if self.max_rpm:
+            self._rpm_controller.stop_rpm_counter()
+
+        return result
+
     def set_cache_handler(self, cache_handler) -> None:
         self.cache_handler = cache_handler
         self.tools_handler = ToolsHandler(cache=self.cache_handler)
         self.__create_agent_executor()
+
+    def set_rpm_controller(self, rpm_controller) -> None:
+        if not self._rpm_controller:
+            self._rpm_controller = rpm_controller
+            self.__create_agent_executor()
 
     def __create_agent_executor(self) -> CrewAgentExecutor:
         """Create an agent executor for the agent.
@@ -159,9 +187,14 @@ class Agent(BaseModel):
             "max_iterations": self.max_iter,
         }
 
+        if self._rpm_controller:
+            executor_args[
+                "request_within_rpm_limit"
+            ] = self._rpm_controller.check_or_wait
+
         if self.memory:
             summary_memory = ConversationSummaryMemory(
-                llm=self.llm, memory_key="chat_history", input_key="input"
+                llm=self.llm, input_key="input", memory_key="chat_history"
             )
             executor_args["memory"] = summary_memory
             agent_args["chat_history"] = lambda x: x["chat_history"]

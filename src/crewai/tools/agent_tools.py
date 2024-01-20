@@ -4,7 +4,7 @@ from langchain.tools import Tool
 from pydantic import BaseModel, Field
 
 from crewai.agent import Agent
-from crewai.i18n import I18N
+from crewai.utilities import I18N
 
 
 class AgentTools(BaseModel):

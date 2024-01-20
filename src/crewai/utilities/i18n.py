@@ -17,7 +17,9 @@ class I18N(BaseModel):
         """Load translations from a JSON file based on the specified language."""
         try:
             dir_path = os.path.dirname(os.path.realpath(__file__))
-            prompts_path = os.path.join(dir_path, f"translations/{self.language}.json")
+            prompts_path = os.path.join(
+                dir_path, f"../translations/{self.language}.json"
+            )
 
             with open(prompts_path, "r") as f:
                 self._translations = json.load(f)
