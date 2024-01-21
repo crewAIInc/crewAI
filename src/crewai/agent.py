@@ -93,7 +93,6 @@ class Agent(BaseModel):
     )
     llm: Optional[Any] = Field(
         default_factory=lambda: ChatOpenAI(
-            temperature=0.7,
             model_name="gpt-4",
         ),
         description="Language model that will run the agent.",
@@ -109,6 +108,7 @@ class Agent(BaseModel):
 
     @model_validator(mode="after")
     def set_private_attrs(self):
+        """Set private attributes."""
         self._logger = Logger(self.verbose)
         if self.max_rpm and not self._rpm_controller:
             self._rpm_controller = RPMController(
@@ -118,12 +118,16 @@ class Agent(BaseModel):
 
     @model_validator(mode="after")
     def check_agent_executor(self) -> "Agent":
+        """Check if the agent executor is set."""
         if not self.agent_executor:
             self.set_cache_handler(self.cache_handler)
         return self
 
     def execute_task(
-        self, task: str, context: str = None, tools: List[Any] = None
+        self,
+        task: str,
+        context: Optional[str] = None,
+        tools: Optional[List[Any]] = None,
     ) -> str:
         """Execute a task with the agent.
 
@@ -157,17 +161,27 @@ class Agent(BaseModel):
 
         return result
 
-    def set_cache_handler(self, cache_handler) -> None:
+    def set_cache_handler(self, cache_handler: CacheHandler) -> None:
+        """Set the cache handler for the agent.
+
+        Args:
+            cache_handler: An instance of the CacheHandler class.
+        """
         self.cache_handler = cache_handler
         self.tools_handler = ToolsHandler(cache=self.cache_handler)
         self.__create_agent_executor()
 
-    def set_rpm_controller(self, rpm_controller) -> None:
+    def set_rpm_controller(self, rpm_controller: RPMController) -> None:
+        """Set the rpm controller for the agent.
+
+        Args:
+            rpm_controller: An instance of the RPMController class.
+        """
         if not self._rpm_controller:
             self._rpm_controller = rpm_controller
             self.__create_agent_executor()
 
-    def __create_agent_executor(self) -> CrewAgentExecutor:
+    def __create_agent_executor(self) -> None:
         """Create an agent executor for the agent.
 
         Returns:
