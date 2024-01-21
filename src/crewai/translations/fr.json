@@ -1,0 +1,21 @@
+{
+    "slices": {
+      "observation": "\nObservation",
+      "task": "Commencez ! C'est TRÈS important pour vous, votre travail en dépend !\n\nTâche actuelle : {input}",
+      "memory": "Voici le résumé de votre travail jusqu'à présent :\n{chat_history}",
+      "role_playing": "Vous êtes {role}.\n{backstory}\n\nVotre objectif personnel est : {goal}",
+      "tools": "OUTILS :\n------\nVous avez accès uniquement aux outils suivants :\n\n{tools}\n\nPour utiliser un outil, veuillez utiliser le format exact suivant :\n\n```\nPensée : Ai-je besoin d'utiliser un outil ? Oui\nAction : l'action à entreprendre, doit être l'une des [{tool_names}], juste le nom.\nEntrée d'action : l'entrée pour l'action\nObservation : le résultat de l'action\n```\n\nLorsque vous avez une réponse pour votre tâche, ou si vous n'avez pas besoin d'utiliser un outil, vous DEVEZ utiliser le format :\n\n```\nPensée : Ai-je besoin d'utiliser un outil ? Non\nRéponse Finale : [votre réponse ici]",
+      "task_with_context": "{task}\nVoici le contexte avec lequel vous travaillez :\n{context}"
+    },
+    "errors": {
+      "used_too_many_tools": "J'ai utilisé trop d'outils pour cette tâche. Je vais vous donner ma meilleure réponse finale maintenant et ne plus utiliser d'autres outils.",
+      "agent_tool_missing_param": "\nErreur d'exécution de l'outil. Il manque exactement 3 valeurs séparées par des pipes (|). Par exemple, `collègue|tâche|contexte`. Je dois m'assurer de passer le contexte en tant que contexte.\n",
+      "agent_tool_unexsiting_coworker": "\nErreur d'exécution de l'outil. Collègue mentionné dans l'Entrée d'Action introuvable, il doit être l'une des options suivantes : {coworkers}.\n",
+      "task_repeated_usage": "Je viens d'utiliser l'outil {tool} avec l'entrée {tool_input}. Donc je connais déjà le résultat de cela et n'ai pas besoin de l'utiliser maintenant.\n"
+    },
+    "tools": {
+      "delegate_work": "Utile pour déléguer une tâche spécifique à l'un des collègues suivants : {coworkers}.\nL'entrée pour cet outil doit être un texte séparé par des pipes (|) de longueur 3 (trois), représentant le collègue à qui vous voulez le demander (l'une des options), la tâche et tout le contexte actuel que vous avez pour la tâche.\nPar exemple, `collègue|tâche|contexte`.",
+      "ask_question": "Utile pour poser une question, une opinion ou un avis à l'un des collègues suivants : {coworkers}.\nL'entrée pour cet outil doit être un texte séparé par des pipes (|) de longueur 3 (trois), représentant le collègue à qui vous voulez le poser (l'une des options), la question et tout le contexte actuel que vous avez pour la question.\nPar exemple, `collègue|question|contexte`."
+    }
+  }
+  
