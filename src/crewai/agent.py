@@ -44,6 +44,7 @@ class Agent(BaseModel):
             max_rpm: Maximum number of requests per minute for the agent execution to be respected.
             verbose: Whether the agent execution should be in verbose mode.
             allow_delegation: Whether the agent is allowed to delegate tasks to other agents.
+            tools: Tools at agents disposal
     """
 
     __hash__ = object.__hash__
