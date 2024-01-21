@@ -21,6 +21,7 @@ from crewai.process import Process
 from crewai.task import Task
 from crewai.tools.agent_tools import AgentTools
 from crewai.utilities import I18N, Logger, RPMController
+from crewai.utilities.agent_selector import AgentSelector
 
 
 class Crew(BaseModel):
@@ -154,7 +155,11 @@ class Crew(BaseModel):
         """Executes tasks sequentially and returns the final output."""
         task_output = ""
         for task in self.tasks:
-            if task.agent is not None and task.agent.allow_delegation:
+            if not task.agent:
+                task.agent = AgentSelector(agents=self.agents).lookup_agent(
+                    task.description
+                )
+            if task.agent.allow_delegation:
                 agents_for_delegation = [
                     agent for agent in self.agents if agent != task.agent
                 ]

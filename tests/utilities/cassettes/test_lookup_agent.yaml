@@ -1,0 +1,240 @@
+interactions:
+- request:
+    body: '{"messages": [{"role": "user", "content": "You are agent_selector.\nI am
+      an agent selector\n\nYour personal goal is: select_agentTOOLS:\n------\nYou
+      have access to only the following tools:\n\n\n\nTo use a tool, please use the
+      exact following format:\n\n```\nThought: Do I need to use a tool? Yes\nAction:
+      the action to take, should be one of [], just the name.\nAction Input: the input
+      to the action\nObservation: the result of the action\n```\n\nWhen you have a
+      response for your task, or if you do not need to use a tool, you MUST use the
+      format:\n\n```\nThought: Do I need to use a tool? No\nFinal Answer: [your response
+      here]This is the summary of your work so far:\nBegin! This is VERY important
+      to you, your job depends on it!\n\nCurrent Task: Given the tasks and the agent
+      profiles, select the best matching agent, do not explain your reasoning,just
+      return the name of the agent\nTask:\nWrite an compelling article about AI agents\n\nAgent
+      name: \"Agent description\"* CEO: \"Make sure the writers in your company produce
+      amazing content., You''re an long time CEO of a content creation agency with
+      a Senior Writer on the team. You''re now working on a new project and want to
+      make sure the content produced is amazing.\"\n* Researcher: \"Make the best
+      research and analysis on content about AI and AI agents, You''re an expert researcher,
+      specialized in technology, software engineering, AI and startups. You work as
+      a freelancer and is now working on doing research and analysis for a new customer.\"\n*
+      Senior Writer: \"Write the best content about AI and AI agents., You''re a senior
+      writer, specialized in technology, software engineering, AI and startups. You
+      work as a freelancer and are now working on writing content for a new customer.\"\n"}],
+      "model": "gpt-4", "n": 1, "stop": ["\nObservation"], "stream": false, "temperature":
+      0.7}'
+    headers:
+      accept:
+      - application/json
+      accept-encoding:
+      - gzip, deflate
+      connection:
+      - keep-alive
+      content-length:
+      - '1847'
+      content-type:
+      - application/json
+      host:
+      - api.openai.com
+      user-agent:
+      - OpenAI/Python 1.7.1
+      x-stainless-arch:
+      - x64
+      x-stainless-async:
+      - 'false'
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - Linux
+      x-stainless-package-version:
+      - 1.7.1
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.11.6
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    content: "{\n  \"id\": \"chatcmpl-8jiWYwfrrj6dqSJf5vMk5SwS9uTsS\",\n  \"object\":
+      \"chat.completion\",\n  \"created\": 1705906602,\n  \"model\": \"gpt-4-0613\",\n
+      \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
+      \"assistant\",\n        \"content\": \"Thought: Do I need to use a tool? No\\nFinal
+      Answer: Senior Writer\"\n      },\n      \"logprobs\": null,\n      \"finish_reason\":
+      \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 376,\n    \"completion_tokens\":
+      17,\n    \"total_tokens\": 393\n  },\n  \"system_fingerprint\": null\n}\n"
+    headers:
+      CF-Cache-Status:
+      - DYNAMIC
+      CF-RAY:
+      - 8495e605abd86a75-TXL
+      Cache-Control:
+      - no-cache, must-revalidate
+      Connection:
+      - keep-alive
+      Content-Encoding:
+      - gzip
+      Content-Type:
+      - application/json
+      Date:
+      - Mon, 22 Jan 2024 06:56:43 GMT
+      Server:
+      - cloudflare
+      Set-Cookie:
+      - __cf_bm=TaegoMkgdXBKRJi4clIuZu.10zX_lD0CSC0gR4qQ.7o-1705906603-1-ARibc2pXphPW6R2FvAaM/K1isXrAAGLuXJn5Aim0bn++BZkDCd6pvG661z4MsL9gxTm+w+D3laqotM7NJq4zLmA=;
+        path=/; expires=Mon, 22-Jan-24 07:26:43 GMT; domain=.api.openai.com; HttpOnly;
+        Secure; SameSite=None
+      - _cfuvid=JNrIVg87xe36CkJvYqdOkhVRKNyNCZ4COKn3Lm5nsLM-1705906603194-0-604800000;
+        path=/; domain=.api.openai.com; HttpOnly; Secure; SameSite=None
+      Transfer-Encoding:
+      - chunked
+      access-control-allow-origin:
+      - '*'
+      alt-svc:
+      - h3=":443"; ma=86400
+      openai-model:
+      - gpt-4-0613
+      openai-organization:
+      - cargobay-ug-haftungsbeschr-nkt
+      openai-processing-ms:
+      - '1126'
+      openai-version:
+      - '2020-10-01'
+      strict-transport-security:
+      - max-age=15724800; includeSubDomains
+      x-ratelimit-limit-requests:
+      - '10000'
+      x-ratelimit-limit-tokens:
+      - '10000'
+      x-ratelimit-remaining-requests:
+      - '9999'
+      x-ratelimit-remaining-tokens:
+      - '9565'
+      x-ratelimit-reset-requests:
+      - 8.64s
+      x-ratelimit-reset-tokens:
+      - 2.61s
+      x-request-id:
+      - 785dff05bf15ecd03e948ea12319a4fa
+    http_version: HTTP/1.1
+    status_code: 200
+- request:
+    body: '{"messages": [{"role": "user", "content": "Progressively summarize the
+      lines of conversation provided, adding onto the previous summary returning a
+      new summary.\n\nEXAMPLE\nCurrent summary:\nThe human asks what the AI thinks
+      of artificial intelligence. The AI thinks artificial intelligence is a force
+      for good.\n\nNew lines of conversation:\nHuman: Why do you think artificial
+      intelligence is a force for good?\nAI: Because artificial intelligence will
+      help humans reach their full potential.\n\nNew summary:\nThe human asks what
+      the AI thinks of artificial intelligence. The AI thinks artificial intelligence
+      is a force for good because it will help humans reach their full potential.\nEND
+      OF EXAMPLE\n\nCurrent summary:\n\n\nNew lines of conversation:\nHuman: Given
+      the tasks and the agent profiles, select the best matching agent, do not explain
+      your reasoning,just return the name of the agent\nTask:\nWrite an compelling
+      article about AI agents\n\nAgent name: \"Agent description\"* CEO: \"Make sure
+      the writers in your company produce amazing content., You''re an long time CEO
+      of a content creation agency with a Senior Writer on the team. You''re now working
+      on a new project and want to make sure the content produced is amazing.\"\n*
+      Researcher: \"Make the best research and analysis on content about AI and AI
+      agents, You''re an expert researcher, specialized in technology, software engineering,
+      AI and startups. You work as a freelancer and is now working on doing research
+      and analysis for a new customer.\"\n* Senior Writer: \"Write the best content
+      about AI and AI agents., You''re a senior writer, specialized in technology,
+      software engineering, AI and startups. You work as a freelancer and are now
+      working on writing content for a new customer.\"\nAI: Senior Writer\n\nNew summary:"}],
+      "model": "gpt-4", "n": 1, "stream": false, "temperature": 0.7}'
+    headers:
+      accept:
+      - application/json
+      accept-encoding:
+      - gzip, deflate
+      connection:
+      - keep-alive
+      content-length:
+      - '1865'
+      content-type:
+      - application/json
+      cookie:
+      - __cf_bm=TaegoMkgdXBKRJi4clIuZu.10zX_lD0CSC0gR4qQ.7o-1705906603-1-ARibc2pXphPW6R2FvAaM/K1isXrAAGLuXJn5Aim0bn++BZkDCd6pvG661z4MsL9gxTm+w+D3laqotM7NJq4zLmA=;
+        _cfuvid=JNrIVg87xe36CkJvYqdOkhVRKNyNCZ4COKn3Lm5nsLM-1705906603194-0-604800000
+      host:
+      - api.openai.com
+      user-agent:
+      - OpenAI/Python 1.7.1
+      x-stainless-arch:
+      - x64
+      x-stainless-async:
+      - 'false'
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - Linux
+      x-stainless-package-version:
+      - 1.7.1
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.11.6
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    content: "{\n  \"id\": \"chatcmpl-8jiWZ5qmj19NZqIEtOVsAIrFEfwaV\",\n  \"object\":
+      \"chat.completion\",\n  \"created\": 1705906603,\n  \"model\": \"gpt-4-0613\",\n
+      \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
+      \"assistant\",\n        \"content\": \"The human asks the AI to select the best
+      agent for a task, which is to write a compelling article about AI agents, without
+      explaining its reasoning. The options are a CEO, a Researcher, and a Senior
+      Writer. The AI selects the Senior Writer.\"\n      },\n      \"logprobs\": null,\n
+      \     \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\":
+      342,\n    \"completion_tokens\": 52,\n    \"total_tokens\": 394\n  },\n  \"system_fingerprint\":
+      null\n}\n"
+    headers:
+      CF-Cache-Status:
+      - DYNAMIC
+      CF-RAY:
+      - 8495e60e9ddb6a75-TXL
+      Cache-Control:
+      - no-cache, must-revalidate
+      Connection:
+      - keep-alive
+      Content-Encoding:
+      - gzip
+      Content-Type:
+      - application/json
+      Date:
+      - Mon, 22 Jan 2024 06:56:47 GMT
+      Server:
+      - cloudflare
+      Transfer-Encoding:
+      - chunked
+      access-control-allow-origin:
+      - '*'
+      alt-svc:
+      - h3=":443"; ma=86400
+      openai-model:
+      - gpt-4-0613
+      openai-organization:
+      - cargobay-ug-haftungsbeschr-nkt
+      openai-processing-ms:
+      - '3622'
+      openai-version:
+      - '2020-10-01'
+      strict-transport-security:
+      - max-age=15724800; includeSubDomains
+      x-ratelimit-limit-requests:
+      - '10000'
+      x-ratelimit-limit-tokens:
+      - '10000'
+      x-ratelimit-remaining-requests:
+      - '9998'
+      x-ratelimit-remaining-tokens:
+      - '9395'
+      x-ratelimit-reset-requests:
+      - 15.867s
+      x-ratelimit-reset-tokens:
+      - 3.627s
+      x-request-id:
+      - 48affa6e9e9c0959633b64dc23edb94d
+    http_version: HTTP/1.1
+    status_code: 200
+version: 1
