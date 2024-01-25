@@ -8,18 +8,18 @@
 </p>
 
 ## Core Concepts
-- [Understanding Agents](Understanding-Agents)
-- [Defining Tasks](Defining-Tasks)
-- [Managing Processes](Managing-Processes)
-- [Collaboration and Delegation](Delegation-and-Collaboration)
-- [Agent Tools](Agent-Tools)
+- [Understanding Agents](Understanding-Agents.md)
+- [Defining Tasks](Defining-Tasks.md)
+- [Managing Processes](Managing-Processes.md)
+- [Collaboration and Delegation](Delegation-and-Collaboration.md)
+- [Agent Tools](Agent-Tools.md)
 
 ## How-To Guides
-- [Connecting to LLMs](LLM-Connections)
-- [Customizing Agents](Customizing-Agents)
-- [Creating Tasks](Creating-Tasks)
-- [Creating a Crew and kick it off](Creating-a-Crew-and-kick-it-off)
-- [Human Input on Execution](Human-Input-on-Execution)
+- [Connecting to LLMs](LLM-Connections.md)
+- [Customizing Agents](Customizing-Agents.md)
+- [Creating Tasks](Creating-Tasks.md)
+- [Creating a Crew and kick it off](Creating-a-Crew-and-kick-it-off.md)
+- [Human Input on Execution](Human-Input-on-Execution.md)
 
 ## Examples and Tutorials
 You can test different real life examples of AI crews [in the examples repo](https://github.com/joaomdmoura/crewAI-examples?tab=readme-ov-file)
