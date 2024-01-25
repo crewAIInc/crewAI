@@ -82,6 +82,8 @@ MODEL_NAME="gpt-3.5-turbo"
 
 ### LM Studio
 
+https://lmstudio.ai/
+
 Configuration settings:
 ```sh
 #REQUIRED
@@ -93,6 +95,8 @@ MODEL_NAME=NA
 
 ### FastChat
 
+https://github.com/lm-sys/FastChat?tab=readme-ov-file#api
+
 Configuration settings:
 ```sh
 OPENAI_API_BASE_URL="http://localhost:8001/v1"
@@ -102,7 +106,11 @@ MODEL_NAME='oh-2.5m7b-q51'
 
 ### text-gen-web-ui
 
+https://github.com/oobabooga/text-generation-webui/wiki/12-%E2%80%90-OpenAI-API
+
+
 Configuration settings:
+
 ```sh
 API_BASE_URL=http://localhost:5000
 OPENAI_API_KEY=NA
@@ -150,10 +158,3 @@ AZURE_OPENAI_DEPLOYMENT=""
 AZURE_OPENAI_ENDPOINT=""
 AZURE_OPENAI_KEY=""
 ```
-
-### Mistral
-
-
-### Hugging Face
-
-
