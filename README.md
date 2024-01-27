@@ -4,16 +4,27 @@
 
 🤖 Cutting-edge framework for orchestrating role-playing, autonomous AI agents. By fostering collaborative intelligence, CrewAI empowers agents to work together seamlessly, tackling complex tasks.
 
-- [Why CrewAI](#why-crewai)
-- [Getting Started](#getting-started)
-- [Key Features](#key-features)
-- [Examples](#examples)
-- [Local Open Source Models](#local-open-source-models)
-- [CrewAI x AutoGen x ChatDev](#how-crewai-compares)
-- [Contribution](#contribution)
-- [💬 CrewAI Discord Community](https://discord.com/invite/X4JWnZnxPb)
-- [Hire CrewAI](#hire-crewai)
-- [License](#license)
+- [crewAI](#crewai)
+  - [Why CrewAI?](#why-crewai)
+  - [Getting Started](#getting-started)
+  - [Key Features](#key-features)
+  - [Examples](#examples)
+    - [Code](#code)
+    - [Video](#video)
+      - [Quick Tutorial](#quick-tutorial)
+      - [Trip Planner](#trip-planner)
+      - [Stock Analysis](#stock-analysis)
+  - [Connecting Your Crew to a Model](#connecting-your-crew-to-a-model)
+  - [How CrewAI Compares](#how-crewai-compares)
+  - [Contribution](#contribution)
+    - [Installing Dependencies](#installing-dependencies)
+    - [Virtual Env](#virtual-env)
+    - [Pre-commit hooks](#pre-commit-hooks)
+    - [Running Tests](#running-tests)
+    - [Packaging](#packaging)
+    - [Installing Locally](#installing-locally)
+  - [Hire CrewAI](#hire-crewai)
+  - [License](#license)
 
 ## Why CrewAI?
 
@@ -21,7 +32,7 @@ The power of AI collaboration has too much to offer.
 CrewAI is designed to enable AI agents to assume roles, share goals, and operate in a cohesive unit - much like a well-oiled crew. Whether you're building a smart assistant platform, an automated customer service ensemble, or a multi-agent research team, CrewAI provides the backbone for sophisticated multi-agent interactions.
 
 - 🤖 [Talk with the Docs](https://chatg.pt/DWjSBZn)
-- 📄 [Documentation Wiki](https://github.com/joaomdmoura/CrewAI/wiki)
+- 📄 [Documentation Wiki](https://joaomdmoura.github.io/crewAI/)
 
 ## Getting Started
 
@@ -137,7 +148,7 @@ You can test different real life examples of AI crews [in the examples repo](htt
 - [Trip Planner](https://github.com/joaomdmoura/crewAI-examples/tree/main/trip_planner)
 - [Stock Analysis](https://github.com/joaomdmoura/crewAI-examples/tree/main/stock_analysis)
 - [Landing Page Generator](https://github.com/joaomdmoura/crewAI-examples/tree/main/landing_page_generator)
-- [Having Human input on the execution](https://github.com/joaomdmoura/crewAI/wiki/Human-Input-on-Execution)
+- [Having Human input on the execution](./docs/how-to/Human-Input-on-Execution.md)
 
 ### Video
 #### Quick Tutorial
@@ -153,7 +164,7 @@ You can test different real life examples of AI crews [in the examples repo](htt
 
 crewAI supports using various LLMs through a variety of connection options. By default your agents will use the OpenAI API when querying the model. However, there are several other ways to allow your agents to connect to models. For example, you can configure your agents to use a local model via the Ollama tool.
 
-Please refer to the [Connect crewAI to LLMs](./docs/llm-connections.md) page for details on configuring you agents' connections to models.
+Please refer to the [Connect crewAI to LLMs](./docs/how-to/llm-connections.md) page for details on configuring you agents' connections to models.
 
 ## How CrewAI Compares
 

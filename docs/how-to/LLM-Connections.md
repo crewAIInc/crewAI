@@ -1,4 +1,4 @@
-# How-To: Connect CrewAI to LLMs
+# Connect CrewAI to LLMs
 
 There are different types of connections.
 Ollama is the recommended way to connect to local LLMs.
