@@ -2,55 +2,127 @@
   "slices": {
     "observation": {
       "el": "\nΠαρατήρηση",
-      "en": "\nObservation"
+      "en": "\nObservation",
+      "cn": "\n观察",
+      "fr": "\nObservation",
+      "jp": "\n観察",
+      "kr": "\n관찰",
+      "ru": "\nнаблюдение",
+      "de": "\nBeobachtung"
     },
     "task": {
       "el": "Αρχή! Αυτό είναι ΠΟΛΥ σημαντικό για εσάς, η δουλειά σας εξαρτάται από αυτό!\n\nΤρέχουσα εργασία: {input}",
-      "en": "Begin! This is VERY important to you, your job depends on it!\n\nCurrent Task: {input}"
+      "en": "Begin! This is VERY important to you, your job depends on it!\n\nCurrent Task: {input}",
+      "cn": "开始！ 这对你来说非常重要，你的工作取决于它！\n\n当前任务：{input}",
+      "fr": "Commencer! C'est TRÈS important pour vous, votre travail en dépend!\n\nTâche actuelle: {input}",
+      "jp": "始める！ これはあなたにとって非常に重要です、あなたの仕事はそれに依存しています！\n\n現在のタスク：{input}",
+      "kr": "시작! 이것은 당신에게 매우 중요합니다. 당신의 일은 그것에 달려 있습니다!\n\n현재 작업 : {input}",
+      "ru": "Начать! Это ОЧЕНЬ важно для вас, ваша работа зависит от этого!\n\nТекущая задача: {input}",
+      "de": "Beginnen! Dies ist SEHR wichtig für Sie, Ihre Arbeit hängt davon ab!\n\nAktuelle Aufgabe: {input}"
     },
     "memory": {
       "el": "Αυτή είναι η περίληψη της μέχρι τώρα δουλειάς σας:\n{chat_history}",
-      "en": "This is the summary of your work so far:\n{chat_history}"
+      "en": "This is the summary of your work so far:\n{chat_history}",
+      "cn": "这是您迄今为止工作的摘要：\n{chat_history}",
+      "fr": "Ceci est le résumé de votre travail jusqu'à présent:\n{chat_history}",
+      "jp": "これまでの作業の要約です：\n{chat_history}",
+      "kr": "지금까지의 작업 요약입니다 :\n{chat_history}",
+      "ru": "Это краткое изложение вашей работы до сих пор:\n{chat_history}",
+      "de": "Dies ist die Zusammenfassung Ihrer bisherigen Arbeit:\n{chat_history}"
     },
     "role_playing": {
       "el": "Είσαι {role}.\n{backstory}\n\nΟ προσωπικός σας στόχος είναι: {goal}",
-      "en": "You are {role}.\n{backstory}\n\nYour personal goal is: {goal}"
+      "en": "You are {role}.\n{backstory}\n\nYour personal goal is: {goal}",
+      "cn": "你是{role}。\n{backstory}\n\n你的个人目标是：{goal}",
+      "fr": "Vous êtes {role}.\n{backstory}\n\nVotre objectif personnel est: {goal}",
+      "jp": "あなたは{role}です。\n{backstory}\n\nあなたの個人的な目標は：{goal}",
+      "kr": "당신은 {role}입니다.\n{backstory}\n\n개인 목표는 다음과 같습니다 : {goal}",
+      "ru": "Вы {role}.\n{backstory}\n\nВаш личный цель: {goal}",
+      "de": "Du bist {role}.\n{backstory}\n\nDein persönliches Ziel ist: {goal}"
     },
     "tools": {
       "el": "ΕΡΓΑΛΕΙΑ:\n------\nΈχετε πρόσβαση μόνο στα ακόλουθα εργαλεία:\n\n{tools}\n\nΓια να χρησιμοποιήσετε ένα εργαλείο, χρησιμοποιήστε την ακόλουθη ακριβώς μορφή:\n\n```\nΣκέψη: Χρειάζεται να χρησιμοποιήσω κάποιο εργαλείο; Ναί\nΔράση: η ενέργεια που πρέπει να γίνει, πρέπει να είναι μία από τις[{tool_names}], μόνο το όνομα.\nΕνέργεια προς εισαγωγή: η είσοδος στη δράση\nΠαρατήρηση: το αποτέλεσμα της δράσης\n```\n\nΌταν έχετε μια απάντηση για την εργασία σας ή εάν δεν χρειάζεται να χρησιμοποιήσετε ένα εργαλείο, ΠΡΕΠΕΙ να χρησιμοποιήσετε τη μορφή:\n\n```\nΣκέψη: Χρειάζεται να χρησιμοποιήσω κάποιο εργαλείο; Οχι\nΤελική απάντηση: [η απάντησή σας εδώ]",
-      "en": "TOOLS:\n------\nYou have access to only the following tools:\n\n{tools}\n\nTo use a tool, please use the exact following format:\n\n```\nThought: Do I need to use a tool? Yes\nAction: the action to take, should be one of [{tool_names}], just the name.\nAction Input: the input to the action\nObservation: the result of the action\n```\n\nWhen you have a response for your task, or if you do not need to use a tool, you MUST use the format:\n\n```\nThought: Do I need to use a tool? No\nFinal Answer: [your response here]"
+      "en": "TOOLS:\n------\nYou have access to only the following tools:\n\n{tools}\n\nTo use a tool, please use the exact following format:\n\n```\nThought: Do I need to use a tool? Yes\nAction: the action to take, should be one of [{tool_names}], just the name.\nAction Input: the input to the action\nObservation: the result of the action\n```\n\nWhen you have a response for your task, or if you do not need to use a tool, you MUST use the format:\n\n```\nThought: Do I need to use a tool? No\nFinal Answer: [your response here]",
+      "cn": "工具：\n------\n您只能访问以下工具：\n\n{tools}\n\n要使用工具，请使用以下确切格式：\n\n```\n想法：我需要使用工具吗？ 是\n行动：要采取的行动，应该是[{tool_names}]之一，只是名称。\n行动输入：输入到动作\n观察：行动的结果\n```\n\n当您对任务有响应时，或者如果您不需要使用工具，则必须使用以下格式：\n\n```\n想法：我需要使用工具吗？ 不\n最终答案：[您的回复在这里]",
+      "fr": "OUTILS:\n------\nVous n'avez accès qu'aux outils suivants:\n\n{tools}\n\nPour utiliser un outil, veuillez utiliser le format exact suivant:\n\n```\nPensée: Ai-je besoin d'utiliser un outil? Oui\nAction: l'action à prendre, doit être l'un des [{tool_names}], juste le nom.\nEntrée d'action: l'entrée à l'action\nObservation: le résultat de l'action\n```\n\nLorsque vous avez une réponse pour votre tâche, ou si vous n'avez pas besoin d'utiliser un outil, vous DEVEZ utiliser le format:\n\n```\nPensée: Ai-je besoin d'utiliser un outil? Non\nRéponse finale: [votre réponse ici]",
+      "jp": "ツール：\n------\n次のツールにのみアクセスできます。\n\n{tools}\n\nツールを使用するには、次の正確な形式を使用してください。\n\n```\n考え：ツールを使用する必要がありますか？ はい\nアクション：実行するアクションは、[{tool_names}]のいずれかである必要があります（名前のみ）。\nアクション入力：アクションへの入力\n観察：アクションの結果\n```\n\nタスクに対する応答がある場合、またはツールを使用する必要がない場合は、次の形式を使用する必要があります。\n\n```\n考え：ツールを使用する必要がありますか？ いいえ\n最終回答：[ここにあなたの回答]",
+      "kr": "도구 :\n------\n다음 도구에만 액세스 할 수 있습니다.\n\n{tools}\n\n도구를 사용하려면 다음 정확한 형식을 사용하십시오.\n\n```\n생각 : 도구를 사용해야합니까? 예\n동작 : 취해야 할 조치는 [{tool_names}] 중 하나 여야합니다 (이름 만).\n동작 입력 : 동작 입력\n관찰 : 작업 결과\n```\n\n작업에 대한 응답이 있거나 도구를 사용할 필요가 없는 경우 다음 형식을 사용해야합니다.\n\n```\n생각 : 도구를 사용해야합니까? 아니\n최종 답변 : [여기에 답변]",
+      "ru": "ИНСТРУМЕНТЫ:\n------\nУ вас есть доступ только к следующим инструментам:\n\n{tools}\n\nЧтобы использовать инструмент, используйте следующий точный формат:\n\n```\nМысль: мне нужно использовать инструмент? Да\nДействие: действие, которое нужно предпринять, должно быть одним из [{tool_names}], только имя.\nВвод действия: ввод в действие\nНаблюдение: результат действия\n```\n\nКогда у вас есть ответ на вашу задачу или если вам не нужно использовать инструмент, ВЫ ДОЛЖНЫ использовать формат:\n\n```\nМысль: мне нужно использовать инструмент? Нет\nОкончательный ответ: [ваш ответ здесь]",
+      "de": "WERKZEUGE:\n------\nSie haben nur Zugriff auf die folgenden Tools:\n\n{tools}\n\nUm ein Tool zu verwenden, verwenden Sie bitte das genaue folgende Format:\n\n```\nGedanke: Muss ich ein Werkzeug verwenden? Ja\nAktion: die zu ergreifende Maßnahme muss eine der folgenden sein [{tool_names}], nur der Name.\nAktionseingabe: die Eingabe zur Aktion\nBeobachtung: das Ergebnis der Aktion\n```\n\nWenn Sie eine Antwort für Ihre Aufgabe haben oder wenn Sie kein Tool verwenden müssen, MÜSSEN Sie das Format verwenden:\n\n```\nGedanke: Muss ich ein Werkzeug verwenden? Nein\nEndgültige Antwort: [Ihre Antwort hier]"
     },
     "task_with_context": {
       "el": "{task}\nΑυτό είναι το πλαίσιο με το οποίο εργάζεστε:\n{context}",
-      "en": "{task}\nThis is the context you're working with:\n{context}"
+      "en": "{task}\nThis is the context you're working with:\n{context}",
+      "cn": "{task}\n这是您正在使用的上下文：\n{context}",
+      "fr": "{task}\nVoici le contexte avec lequel vous travaillez:\n{context}",
+      "jp": "{task}\nこれがあなたが働いているコンテキストです：\n{context}",
+      "kr": "{task}\n이것은 당신이 일하고있는 문맥입니다 :\n{context}",
+      "ru": "{task}\nЭто контекст, с которым вы работаете:\n{context}",
+      "de": "{task}\nDies ist der Kontext, mit dem Sie arbeiten:\n{context}",
     }
   },
   "errors": {
     "used_too_many_tools": {
       "el": "Έχω χρησιμοποιήσει πάρα πολλά εργαλεία για αυτήν την εργασία. Θα σας δώσω την απόλυτη ΚΑΛΥΤΕΡΗ τελική μου απάντηση τώρα και δεν θα χρησιμοποιήσω άλλα εργαλεία.",
-      "en": "I've used too many tools for this task. I'm going to give you my absolute BEST Final answer now and not use any more tools."
+      "en": "I've used too many tools for this task. I'm going to give you my absolute BEST Final answer now and not use any more tools.",
+      "cn": "我为这项任务使用了太多工具。 我现在将给您我绝对最好的最终答案，不再使用任何工具。",
+      "fr": "J'ai utilisé trop d'outils pour cette tâche. Je vais vous donner ma MEILLEURE réponse finale absolue maintenant et ne plus utiliser d'outils.",
+      "jp": "このタスクにはツールが多すぎます。 今、私はあなたに私の絶対的に最高の最終的な答えを与え、もうツールを使わないでください。",
+      "kr": "이 작업에 너무 많은 도구를 사용했습니다. 지금 절대 최고의 최종 답변을 드리겠습니다. 더 이상 도구를 사용하지 않습니다.",
+      "ru": "Я использовал слишком много инструментов для этой задачи. Я сейчас дам вам мой абсолютно ЛУЧШИЙ окончательный ответ и больше не буду использовать никаких инструментов.",
+      "de": "Ich habe zu viele Werkzeuge für diese Aufgabe verwendet. Ich werde Ihnen jetzt meine absolut BESTE endgültige Antwort geben und keine weiteren Werkzeuge verwenden."
     },
     "agent_tool_missing_param": {
       "el": "\nΣφάλμα κατά την εκτέλεση του εργαλείου. Λείπουν ακριβώς 3 διαχωρισμένες τιμές σωλήνων (|). Για παράδειγμα, `coworker|task|context`. Πρέπει να φροντίσω να περάσω το πλαίσιο ως πλαίσιο.\n",
-      "en": "\nError executing tool. Missing exact 3 pipe (|) separated values. For example, `coworker|task|context`. I need to make sure to pass context as context.\n"
+      "en": "\nError executing tool. Missing exact 3 pipe (|) separated values. For example, `coworker|task|context`. I need to make sure to pass context as context.\n",
+      "cn": "\n执行工具时出错。 缺少3个管道（|）分隔的值。 例如，`coworker|task|context`。 我需要确保将上下文作为上下文传递。\n",
+      "fr": "\nErreur lors de l'exécution de l'outil. Valeurs séparées par des tuyaux (|) manquantes exactement 3. Par exemple, `coworker|task|context`. Je dois m'assurer de passer le contexte comme contexte.\n",
+      "jp": "\nツールの実行中にエラーが発生しました。 正確に3つのパイプ（|）で区切られた値がありません。 例えば、 `coworker|task|context`。 私はコンテキストをコンテキストとして渡すことを確認する必要があります。\n",
+      "kr": "\n도구 실행 중 오류가 발생했습니다. 정확히 3 개의 파이프 (|)로 구분 된 값이 없습니다. 예를 들어, `coworker|task|context`. 나는 컨텍스트를 컨텍스트로 전달해야한다는 것을 확실히해야합니다.\n",
+      "ru": "\nОшибка выполнения инструмента. Отсутствуют точно 3 значения, разделенные трубой (|). Например, `coworker|task|context`. Мне нужно убедиться, что передаю контекст как контекст.\n",
+      "de": "\nFehler beim Ausführen des Tools. Fehlende exakte 3 Pipe (|) getrennte Werte. Zum Beispiel `coworker|task|context`. Ich muss sicherstellen, dass ich den Kontext als Kontext weitergebe.\n"
     },
     "agent_tool_unexsiting_coworker": {
       "el": "\nΣφάλμα κατά την εκτέλεση του εργαλείου. Ο συνάδελφος που αναφέρεται στο Ενέργεια προς εισαγωγή δεν βρέθηκε, πρέπει να είναι μία από τις ακόλουθες επιλογές: {coworkers}.\n",
-      "en": "\nError executing tool. Co-worker mentioned on the Action Input not found, it must to be one of the following options: {coworkers}.\n"
+      "en": "\nError executing tool. Co-worker mentioned on the Action Input not found, it must to be one of the following options: {coworkers}.\n",
+      "cn": "\n执行工具时出错。 在操作输入中提到的同事未找到，它必须是以下选项之一：{coworkers}。\n",
+      "fr": "\nErreur lors de l'exécution de l'outil. Le collègue mentionné sur l'entrée d'action n'a pas été trouvé, il doit être l'une des options suivantes: {coworkers}.\n",
+      "jp": "\nツールの実行中にエラーが発生しました。 アクション入力で言及された同僚が見つかりませんでした。次のいずれかである必要があります：{coworkers}。\n",
+      "kr": "\n도구 실행 중 오류가 발생했습니다. 작업 입력에 언급 된 동료를 찾을 수 없습니다. 다음 중 하나 여야합니다 : {coworkers}.\n",
+      "ru": "\nОшибка выполнения инструмента. Сотрудник, упомянутый во входном действии, не найден, он должен быть одним из следующих вариантов: {coworkers}.\n",
+      "de": "\nFehler beim Ausführen des Tools. Der auf der Eingabeaktion erwähnte Mitarbeiter wurde nicht gefunden. Es muss eine der folgenden Optionen sein: {coworkers}.\n"
     },
     "task_repeated_usage": {
       "el": "Μόλις χρησιμοποίησα το {tool} εργαλείο με είσοδο {tool_input}. Άρα ξέρω ήδη το αποτέλεσμα αυτού και δεν χρειάζεται να το χρησιμοποιήσω τώρα.\n",
-      "en": "I just used the {tool} tool with input {tool_input}. So I already know the result of that and don't need to use it now.\n"
+      "en": "I just used the {tool} tool with input {tool_input}. So I already know the result of that and don't need to use it now.\n",
+      "cn": "我刚刚使用了{tool}工具，输入为{tool_input}。 所以我已经知道了这个结果，现在不需要使用它。\n",
+      "fr": "Je viens d'utiliser l'outil {tool} avec l'entrée {tool_input}. Donc je connais déjà le résultat de cela et je n'ai pas besoin de l'utiliser maintenant.\n",
+      "jp": "私はちょうど{tool}ツールを入力{tool_input}で使用しました。 だから私はそれの結果を既に知っていて、今それを使う必要はありません。\n",
+      "kr": "나는 방금 {tool} 도구를 입력 {tool_input}로 사용했습니다. 그래서 나는 이미 그 결과를 알고 있으며 지금은 사용할 필요가 없습니다.\n",
+      "ru": "Я только что использовал инструмент {tool} с входом {tool_input}. Так что я уже знаю результат этого и сейчас не нужно его использовать.\n",
+      "de": "Ich habe gerade das {tool} -Werkzeug mit der Eingabe {tool_input} verwendet. Also kenne ich das Ergebnis bereits und muss es jetzt nicht mehr verwenden.\n"
     }
   },
   "tools": {
     "delegate_work": {
       "el": "Χρήσιμο για την ανάθεση μιας συγκεκριμένης εργασίας σε έναν από τους παρακάτω συναδέλφους: {coworkers}.\nΗ είσοδος σε αυτό το εργαλείο θα πρέπει να είναι ένα κείμενο χωρισμένο σε σωλήνα (|) μήκους 3 (τρία), που αντιπροσωπεύει τον συνάδελφο στον οποίο θέλετε να του ζητήσετε (μία από τις επιλογές), την εργασία και όλο το πραγματικό πλαίσιο που έχετε για την εργασία .\nΓια παράδειγμα, `coworker|task|context`.",
-      "en": "Useful to delegate a specific task to one of the following co-workers: {coworkers}.\nThe input to this tool should be a pipe (|) separated text of length 3 (three), representing the co-worker you want to ask it to (one of the options), the task and all actual context you have for the task.\nFor example, `coworker|task|context`"
+      "en": "Useful to delegate a specific task to one of the following co-workers: {coworkers}.\nThe input to this tool should be a pipe (|) separated text of length 3 (three), representing the co-worker you want to ask it to (one of the options), the task and all actual context you have for the task.\nFor example, `coworker|task|context`",
+      "cn": "有用的是将特定任务委派给以下同事之一：{coworkers}。\n该工具的输入应该是长度为3（三）的管道（|）分隔文本，表示您要询问的同事（其中一个选项），任务和您对任务的所有实际上下文。\n例如，`coworker|task|context`",
+      "fr": "Utile pour déléguer une tâche spécifique à l'un des collègues suivants: {coworkers}.\nL'entrée de cet outil doit être un texte séparé par des tuyaux (|) d'une longueur de 3 (trois), représentant le collègue à qui vous souhaitez le demander (l'une des options), la tâche et tout le contexte réel que vous avez pour la tâche.\nPar exemple, `coworker|task|context`",
+      "jp": "次の同僚の1人に特定のタスクを委任するのに役立ちます：{coworkers}。\nこのツールの入力は、同僚（オプションの1つ）を表す長さ3（3）のパイプ（|）で区切られたテキストである必要があります。タスクとタスクの実際のコンテキスト。\n例：`coworker|task|context`",
+      "kr": "다음 동료 중 한 명에게 특정 작업을 위임하는 데 유용합니다 : {coworkers}.\n이 도구의 입력은 동료 (옵션 중 하나)를 나타내는 길이 3 (세 개)의 파이프 (|)로 구분 된 텍스트 여야합니다. 작업 및 작업에 대한 실제 컨텍스트.\n예 : `coworker|task|context`",
+      "ru": "Полезно делегировать конкретную задачу одному из следующих сотрудников: {coworkers}.\nВход в этот инструмент должен быть текстом, разделенным трубой (|) длиной 3 (три), представляющим сотрудника, которому вы хотите его задать (один из вариантов), задачу и все фактические контексты, которые у вас есть для задачи.\nНапример, `coworker|task|context`",
+      "de": "Nützlich, um eine bestimmte Aufgabe an einen der folgenden Mitarbeiter zu delegieren: {coworkers}.\nDie Eingabe für dieses Tool sollte ein durch Pipe (|) getrennter Text mit einer Länge von 3 (drei) sein, der den Mitarbeiter darstellt, an den Sie ihn richten möchten (eine der Optionen), die Aufgabe und den gesamten tatsächlichen Kontext, den Sie für die Aufgabe haben.\nZum Beispiel `coworker|task|context`"
     },
     "ask_question": {
       "el": "Χρήσιμο για να κάνετε μια ερώτηση, γνώμη ή αποδοχή από τους παρακάτω συναδέλφους: {coworkers}.\nΗ είσοδος σε αυτό το εργαλείο θα πρέπει να είναι ένα κείμενο χωρισμένο σε σωλήνα (|) μήκους 3 (τρία), που αντιπροσωπεύει τον συνάδελφο στον οποίο θέλετε να το ρωτήσετε (μία από τις επιλογές), την ερώτηση και όλο το πραγματικό πλαίσιο που έχετε για την ερώτηση.\nΓια παράδειγμα, `coworker|question|context`.",
-      "en": "Useful to ask a question, opinion or take from on of the following co-workers: {coworkers}.\nThe input to this tool should be a pipe (|) separated text of length 3 (three), representing the co-worker you want to ask it to (one of the options), the question and all actual context you have for the question.\n For example, `coworker|question|context`."
+      "en": "Useful to ask a question, opinion or take from on of the following co-workers: {coworkers}.\nThe input to this tool should be a pipe (|) separated text of length 3 (three), representing the co-worker you want to ask it to (one of the options), the question and all actual context you have for the question.\n For example, `coworker|question|context`.",
+      "cn": "有用的是向以下同事之一提出问题，意见或意见：{coworkers}。\n该工具的输入应该是长度为3（三）的管道（|）分隔文本，表示您要询问的同事（其中一个选项），问题和您对问题的所有实际上下文。\n例如，`coworker|question|context`。",
+      "fr": "Utile pour poser une question, un avis ou prendre l'un des collègues suivants: {coworkers}.\nL'entrée de cet outil doit être un texte séparé par des tuyaux (|) d'une longueur de 3 (trois), représentant le collègue à qui vous souhaitez le demander (l'une des options), la question et tout le contexte réel que vous avez pour la question.\nPar exemple, `coworker|question|context`.",
+      "jp": "次の同僚の1人に質問、意見、または意見を求めるのに役立ちます：{coworkers}。\nこのツールの入力は、同僚（オプションの1つ）を表す長さ3（3）のパイプ（|）で区切られたテキストである必要があります。質問と質問に対する実際のコンテキスト。\n例：`coworker|question|context`。",
+      "kr": "다음 동료 중 한 명에게 질문, 의견 또는 의견을 요청하는 데 유용합니다 : {coworkers}.\n이 도구의 입력은 동료 (옵션 중 하나)를 나타내는 길이 3 (세 개)의 파이프 (|)로 구분 된 텍스트 여야합니다. 질문 및 질문에 대한 실제 컨텍스트.\n예 : `coworker|question|context`.",
+      "ru": "Полезно задать вопрос, мнение или взять у одного из следующих сотрудников: {coworkers}.\nВход в этот инструмент должен быть текстом, разделенным трубой (|) длиной 3 (три), представляющим сотрудника, которому вы хотите его задать (один из вариантов), вопрос и все фактические контексты, которые у вас есть для вопроса.\nНапример, `coworker|question|context`.",
+      "de": "Nützlich, um eine Frage, Meinung oder Meinung von einem der folgenden Mitarbeiter zu erhalten: {coworkers}.\nDie Eingabe für dieses Tool sollte ein durch Pipe (|) getrennter Text mit einer Länge von 3 (drei) sein, der den Mitarbeiter darstellt, an den Sie ihn richten möchten (eine der Optionen), die Frage und den gesamten tatsächlichen Kontext, den Sie für die Frage haben.\nZum Beispiel `coworker|question|context`."
     }
   }
 }
