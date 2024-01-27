@@ -26,5 +26,5 @@ jobs:
           poetry lock &&
           poetry install
 
-      - name: Run tests
+      - name: Run type checks
         run: poetry run pyright
