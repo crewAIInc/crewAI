@@ -1,0 +1,30 @@
+
+name: Run Type Checks
+
+on: [push, pull_request]
+
+permissions:
+  contents: write
+
+jobs:
+  type-checker:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      - name: Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.10'
+
+      - name: Install Requirements
+        run: |
+          sudo apt-get update &&
+          pip install poetry &&
+          poetry lock &&
+          poetry install
+
+      - name: Run tests
+        run: poetry run pyright
