@@ -8,7 +8,7 @@ from pydantic import BaseModel, Field, PrivateAttr, ValidationError, model_valid
 class I18N(BaseModel):
     _translations: Optional[Dict[str, str]] = PrivateAttr()
     language: Optional[str] = Field(
-        default="en",
+        default = os.environ.get("DEFAULT_LANGUAGE", "en"),
         description="Language used to load translations",
     )
 
