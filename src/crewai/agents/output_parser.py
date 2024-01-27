@@ -50,7 +50,6 @@ class CrewAgentOutputParser(ReActSingleInputOutputParser):
     i18n: I18N
 
     def parse(self, text: str) -> Union[AgentAction, AgentFinish, CacheHit]:
-        FINAL_ANSWER_ACTION in text
         regex = (
             r"Action\s*\d*\s*:[\s]*(.*?)[\s]*Action\s*\d*\s*Input\s*\d*\s*:[\s]*(.*)"
         )

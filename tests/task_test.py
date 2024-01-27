@@ -51,7 +51,6 @@ def test_task_tool_takes_precedence_ove_agent_tools():
         description="Give me a list of 5 interesting ideas to explore for na article, what makes them unique and interesting.",
         agent=researcher,
         tools=[fake_task_tool],
-        allow_delegation=False,
     )
 
     assert task.tools == [fake_task_tool]

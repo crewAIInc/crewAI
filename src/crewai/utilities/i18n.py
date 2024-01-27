@@ -6,7 +6,7 @@ from pydantic import BaseModel, Field, PrivateAttr, ValidationError, model_valid
 
 
 class I18N(BaseModel):
-    _translations: Optional[Dict[str, str]] = PrivateAttr()
+    _translations: Dict[str, Dict[str, str]] = PrivateAttr()
     language: Optional[str] = Field(
         default="en",
         description="Language used to load translations",
@@ -25,10 +25,14 @@ class I18N(BaseModel):
                 self._translations = json.load(f)
         except FileNotFoundError:
             raise ValidationError(
-                f"Trasnlation file for language '{self.language}' not found."
+                f"Translation file for language '{self.language}' not found."
             )
         except json.JSONDecodeError:
             raise ValidationError(f"Error decoding JSON from the prompts file.")
+
+        if not self._translations:
+            self._translations = {}
+
         return self
 
     def slice(self, slice: str) -> str:
@@ -40,8 +44,8 @@ class I18N(BaseModel):
     def tools(self, error: str) -> str:
         return self.retrieve("tools", error)
 
-    def retrieve(self, kind, key):
+    def retrieve(self, kind, key) -> str:
         try:
-            return self._translations[kind].get(key)
+            return self._translations[kind][key]
         except:
             raise ValidationError(f"Translation for '{kind}':'{key}'  not found.")

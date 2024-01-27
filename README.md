@@ -208,6 +208,11 @@ pre-commit install
 poetry run pytest
 ```
 
+### Running static type checks
+```bash
+poetry run pyright
+```
+
 ### Packaging
 ```bash
 poetry build
@@ -224,5 +229,3 @@ If you are interested on having access to it and hiring weekly hours with our te
 
 ## License
 CrewAI is released under the MIT License
-
-

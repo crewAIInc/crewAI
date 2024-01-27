@@ -6,7 +6,7 @@ from pydantic import PrivateAttr
 class CacheHandler:
     """Callback handler for tool usage."""
 
-    _cache: PrivateAttr = {}
+    _cache: PrivateAttr = {}  # type: ignore
 
     def __init__(self):
         self._cache = {}

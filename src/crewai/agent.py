@@ -2,10 +2,12 @@ import uuid
 from typing import Any, List, Optional
 
 from langchain.agents.format_scratchpad import format_log_to_str
+from langchain.agents.agent import RunnableAgent
 from langchain.memory import ConversationSummaryMemory
 from langchain.tools.render import render_text_description
 from langchain_core.runnables.config import RunnableConfig
 from langchain_openai import ChatOpenAI
+from langchain_core.language_models import BaseLanguageModel
 from pydantic import (
     UUID4,
     BaseModel,
@@ -47,7 +49,7 @@ class Agent(BaseModel):
             tools: Tools at agents disposal
     """
 
-    __hash__ = object.__hash__
+    __hash__ = object.__hash__  # type: ignore
     _logger: Logger = PrivateAttr()
     _rpm_controller: RPMController = PrivateAttr(default=None)
     _request_within_rpm_limit: Any = PrivateAttr(default=None)
@@ -80,21 +82,19 @@ class Agent(BaseModel):
     max_iter: Optional[int] = Field(
         default=15, description="Maximum iterations for an agent to execute a task"
     )
-    agent_executor: Optional[InstanceOf[CrewAgentExecutor]] = Field(
+    agent_executor: InstanceOf[CrewAgentExecutor] = Field(
         default=None, description="An instance of the CrewAgentExecutor class."
     )
-    tools_handler: Optional[InstanceOf[ToolsHandler]] = Field(
+    tools_handler: InstanceOf[ToolsHandler] = Field(
         default=None, description="An instance of the ToolsHandler class."
     )
-    cache_handler: Optional[InstanceOf[CacheHandler]] = Field(
+    cache_handler: InstanceOf[CacheHandler] = Field(
         default=CacheHandler(), description="An instance of the CacheHandler class."
     )
-    i18n: Optional[I18N] = Field(
-        default=I18N(), description="Internationalization settings."
-    )
-    llm: Optional[Any] = Field(
+    i18n: I18N = Field(default=I18N(), description="Internationalization settings.")
+    llm: Any = Field(
         default_factory=lambda: ChatOpenAI(
-            model_name="gpt-4",
+            model="gpt-4",
         ),
         description="Language model that will run the agent.",
     )
@@ -140,6 +140,7 @@ class Agent(BaseModel):
         Returns:
             Output of the agent
         """
+
         if context:
             task = self.i18n.slice("task_with_context").format(
                 task=task, context=context
@@ -234,7 +235,9 @@ class Agent(BaseModel):
                 i18n=self.i18n,
             )
         )
-        self.agent_executor = CrewAgentExecutor(agent=inner_agent, **executor_args)
+        self.agent_executor = CrewAgentExecutor(
+            agent=RunnableAgent(runnable=inner_agent), **executor_args
+        )
 
     @staticmethod
     def __tools_names(tools) -> str:
