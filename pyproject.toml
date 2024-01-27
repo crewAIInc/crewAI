@@ -35,8 +35,6 @@ mkdocs-material = "^9.5.3"
 profile = "black"
 known_first_party = ["crewai"]
 
-
-
 [tool.poetry.group.test.dependencies]
 pytest = "^7.4"
 pytest-vcr = "^1.0.2"
