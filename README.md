@@ -12,7 +12,7 @@
 - [CrewAI x AutoGen x ChatDev](#how-crewai-compares)
 - [Contribution](#contribution)
 - [💬 CrewAI Discord Community](https://discord.com/invite/X4JWnZnxPb)
-- [Hire Consulting](#hire-consulting)
+- [Hire CrewAI](#hire-crewai)
 - [License](#license)
 
 ## Why CrewAI?
@@ -227,9 +227,9 @@ poetry build
 pip install dist/*.tar.gz
 ```
 
-## Hire Consulting
-I, [@joaomdmoura](https://github.com/joaomdmoura) (creator or crewAI), offer consulting through my LLC ([AI Nest Labs](https://ainestlabs.com)).
-If you are interested on hiring weekly hours with me on a retainer, feel free to email me at [joao@ainestlabs.com](mailto:joao@ainestlabs.com)
+## Hire CrewAI
+We're a company developing crewAI and crewAI Enterprise, we for a limited time are offer consulting with selected customers, to get them early access to our enterprise solution
+If you are interested on having access to it and hiring weekly hours with our team, feel free to email us at [sales@crewai.io](mailto:sales@crewai.io)
 
 ## License
 CrewAI is released under the MIT License

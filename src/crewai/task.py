@@ -39,11 +39,12 @@ class Task(BaseModel):
 
     @model_validator(mode="after")
     def check_tools(self):
+        """Check if the tools are set."""
         if not self.tools and (self.agent and self.agent.tools):
             self.tools.extend(self.agent.tools)
         return self
 
-    def execute(self, context: str = None) -> str:
+    def execute(self, context: Optional[str] = None) -> str:
         """Execute the task.
 
         Returns:
