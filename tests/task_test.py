@@ -1,6 +1,5 @@
 """Test Agent creation and execution basic functionality."""
 
-
 from crewai.agent import Agent
 from crewai.task import Task
 
