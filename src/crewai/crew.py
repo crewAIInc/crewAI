@@ -67,6 +67,21 @@ class Crew(BaseModel):
                 "may_not_set_field", "The 'id' field cannot be set by the user.", {}
             )
 
+    @field_validator("config", mode="before")
+    @classmethod
+    def check_config_type(
+        cls, v: Union[Json, Dict[str, Any]]
+    ) -> Union[Json, Dict[str, Any]]:
+        """Validates that the config is a valid type.
+        Args:
+            v: The config to be validated.
+        Returns:
+            The config if it is valid.
+        """
+
+        # TODO: Improve typing
+        return json.loads(v) if isinstance(v, Json) else v  # type: ignore
+
     @model_validator(mode="after")
     def set_private_attrs(self) -> "Crew":
         """Set private attributes."""
