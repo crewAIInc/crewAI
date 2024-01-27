@@ -66,52 +66,84 @@ example_agent = Agent(
 
 ```
 
+The following sections show examples of the configuration settings for various OpenAI API compatible applications and services. We have included links to relavant documentation for the various application and services. 
+
 
 ### Open AI
 
 OpenAI is the default LLM that will be used if you do not specify a value for the `llm` argument when creating an agent. It will also use default values for the `OPENAI_API_BASE_URL` and `MODEL_NAME`. So the only value you need to set when using the OpenAI endpoint is the API key that from your account.
 
 ```sh
-#REQUIRED
+# Required
 OPENAI_API_KEY="sk-..."
 
-#Optional
+# Optional
 OPENAI_API_BASE_URL=https://api.openai.com/v1
 MODEL_NAME="gpt-3.5-turbo"
 ```
 
-### LM Studio
+### FastChat
 
-https://lmstudio.ai/
+FastChat is an open platform for training, serving, and evaluating large language model based chatbots.
+
+[GitHub](https://github.com/lm-sys/FastChat)
+
+[API Documentation](https://github.com/lm-sys/FastChat?tab=readme-ov-file#api)
 
 Configuration settings:
 ```sh
-#REQUIRED
+# Required
+OPENAI_API_BASE_URL="http://localhost:8001/v1"
+OPENAI_API_KEY=NA
+MODEL_NAME='oh-2.5m7b-q51'
+```
+
+### LM Studio
+
+Discover, download, and run local LLMs
+
+[lmstudio.ai](https://lmstudio.ai/)
+
+
+
+Configuration settings:
+```sh
+# Required
 OPENAI_API_BASE_URL="http://localhost:8000/v1"
 
 OPENAI_API_KEY=NA
 MODEL_NAME=NA
 ```
 
-### FastChat
 
-https://github.com/lm-sys/FastChat?tab=readme-ov-file#api
+### Mistral API
 
-Configuration settings:
+Mistral AI's API endpoints 
+
+[Mistral AI](https://mistral.ai/)
+
+[Documentation](https://docs.mistral.ai/)
+
 ```sh
-OPENAI_API_BASE_URL="http://localhost:8001/v1"
-OPENAI_API_KEY=NA
-MODEL_NAME='oh-2.5m7b-q51'
+OPENAI_API_KEY=your-mistral-api-key
+OPENAI_API_BASE=https://api.mistral.ai/v1
+MODEL_NAME="mistral-small" # Check documentation for available models
 ```
+
+
 
 ### text-gen-web-ui
 
-https://github.com/oobabooga/text-generation-webui/wiki/12-%E2%80%90-OpenAI-API
+A Gradio web UI for Large Language Models.
 
+[GitHub](https://github.com/oobabooga/text-generation-webui)
+
+[API Documentation](https://github.com/oobabooga/text-generation-webui/wiki/12-%E2%80%90-OpenAI-API)
 
 Configuration settings:
 
 ```sh
+# Required
 API_BASE_URL=http://localhost:5000
 OPENAI_API_KEY=NA
 MODEL_NAME=NA
