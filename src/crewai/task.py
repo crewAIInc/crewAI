@@ -6,12 +6,14 @@ from pydantic_core import PydanticCustomError
 
 from crewai.agent import Agent
 from crewai.tasks.task_output import TaskOutput
+from crewai.utilities import I18N
 
 
 class Task(BaseModel):
     """Class that represent a task to be executed."""
 
     __hash__ = object.__hash__
+    i18n: I18N = I18N()
     description: str = Field(description="Description of the actual task.")
     agent: Optional[Agent] = Field(
         description="Agent responsible for the task.", default=None
@@ -19,6 +21,10 @@ class Task(BaseModel):
     tools: List[Any] = Field(
         default_factory=list,
         description="Tools the agent are limited to use for this task.",
+    )
+    expected_output: str = Field(
+        description="Clear definition of expected output for the task.",
+        default=None,
     )
     output: Optional[TaskOutput] = Field(
         description="Task output, it's final result.", default=None
@@ -54,9 +60,25 @@ class Task(BaseModel):
             raise Exception(
                 f"The task '{self.description}' has no agent assigned, therefore it can't be executed directly and should be executed in a Crew using a specific process that support that, either consensual or hierarchical."
             )
+
         result = self.agent.execute_task(
-            task=self.description, context=context, tools=self.tools
+            task=self._prompt(), context=context, tools=self.tools
         )
 
         self.output = TaskOutput(description=self.description, result=result)
         return result
+
+    def _prompt(self) -> str:
+        """Prompt the task.
+
+        Returns:
+            Prompt of the task.
+        """
+        tasks_slices = [self.description]
+
+        if self.expected_output:
+            output = self.i18n.slice("expected_output").format(
+                expected_output=self.expected_output
+            )
+            tasks_slices = [self.description, output]
+        return "\n".join(tasks_slices)
