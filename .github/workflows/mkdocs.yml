@@ -1,6 +1,7 @@
 name: Deploy MkDocs
 
 on:
+  workflow_dispatch:    
   push:
     branches:
       - main
