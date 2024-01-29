@@ -12,7 +12,7 @@ from crewai.utilities import I18N
 class Task(BaseModel):
     """Class that represent a task to be executed."""
 
-    __hash__ = object.__hash__
+    __hash__ = object.__hash__  # type: ignore
     i18n: I18N = I18N()
     description: str = Field(description="Description of the actual task.")
     agent: Optional[Agent] = Field(
@@ -20,7 +20,7 @@ class Task(BaseModel):
     )
     tools: List[Any] = Field(
         default_factory=list,
-        description="Tools the agent are limited to use for this task.",
+        description="Tools the agent is limited to use for this task.",
     )
     expected_output: str = Field(
         description="Clear definition of expected output for the task.",
@@ -46,7 +46,7 @@ class Task(BaseModel):
     @model_validator(mode="after")
     def check_tools(self):
         """Check if the tools are set."""
-        if not self.tools and (self.agent and self.agent.tools):
+        if not self.tools and self.agent and self.agent.tools:
             self.tools.extend(self.agent.tools)
         return self
 

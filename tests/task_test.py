@@ -1,6 +1,5 @@
 """Test Agent creation and execution basic functionality."""
 
-
 from crewai.agent import Agent
 from crewai.task import Task
 
@@ -51,7 +50,6 @@ def test_task_tool_takes_precedence_ove_agent_tools():
         description="Give me a list of 5 interesting ideas to explore for na article, what makes them unique and interesting.",
         agent=researcher,
         tools=[fake_task_tool],
-        allow_delegation=False,
     )
 
     assert task.tools == [fake_task_tool]
@@ -69,7 +67,6 @@ def test_task_prompt_includes_expected_output():
         description="Give me a list of 5 interesting ideas to explore for na article, what makes them unique and interesting.",
         expected_output="Bullet point list of 5 interesting ideas.",
         agent=researcher,
-        allow_delegation=False,
     )
 
     from unittest.mock import patch
