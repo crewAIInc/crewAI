@@ -1,7 +1,5 @@
 from typing import Optional
 
-from pydantic import PrivateAttr
-
 
 class CacheHandler:
     """Callback handler for tool usage."""

@@ -18,7 +18,7 @@ Repository = "https://github.com/joaomdmoura/crewai"
 [tool.poetry.dependencies]
 python = ">=3.9,<4.0"
 pydantic = "^2.4.2"
-langchain = "^0.1.0"
+langchain = "0.1.0"
 openai = "^1.7.1"
 langchain-openai = "^0.0.2"
 pyright = "1.1.333"
@@ -34,6 +34,7 @@ mkdocs-material = "^9.5.3"
 [tool.isort]
 profile = "black"
 known_first_party = ["crewai"]
+
 
 [tool.poetry.group.test.dependencies]
 pytest = "^7.4"

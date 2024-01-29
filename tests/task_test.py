@@ -67,7 +67,6 @@ def test_task_prompt_includes_expected_output():
         description="Give me a list of 5 interesting ideas to explore for na article, what makes them unique and interesting.",
         expected_output="Bullet point list of 5 interesting ideas.",
         agent=researcher,
-        allow_delegation=False,
     )
 
     from unittest.mock import patch
