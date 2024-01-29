@@ -11,7 +11,7 @@ packages = [
 
 
 [tool.poetry.urls]
-Homepage = "https://github.com/joaomdmoura/crewai"
+Homepage = "https://crewai.io"
 Documentation = "https://github.com/joaomdmoura/CrewAI/wiki/Index"
 Repository = "https://github.com/joaomdmoura/crewai"
 
