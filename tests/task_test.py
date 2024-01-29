@@ -55,3 +55,26 @@ def test_task_tool_takes_precedence_ove_agent_tools():
     )
 
     assert task.tools == [fake_task_tool]
+
+
+def test_task_prompt_includes_expected_output():
+    researcher = Agent(
+        role="Researcher",
+        goal="Make the best research and analysis on content about AI and AI agents",
+        backstory="You're an expert researcher, specialized in technology, software engineering, AI and startups. You work as a freelancer and is now working on doing research and analysis for a new customer.",
+        allow_delegation=False,
+    )
+
+    task = Task(
+        description="Give me a list of 5 interesting ideas to explore for na article, what makes them unique and interesting.",
+        expected_output="Bullet point list of 5 interesting ideas.",
+        agent=researcher,
+        allow_delegation=False,
+    )
+
+    from unittest.mock import patch
+
+    with patch.object(Agent, "execute_task") as execute:
+        execute.return_value = "ok"
+        task.execute()
+        execute.assert_called_once_with(task=task._prompt(), context=None, tools=[])
