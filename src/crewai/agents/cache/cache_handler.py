@@ -1,12 +1,10 @@
 from typing import Optional
 
-from pydantic import PrivateAttr
-
 
 class CacheHandler:
     """Callback handler for tool usage."""
 
-    _cache: PrivateAttr = {}
+    _cache: dict = {}
 
     def __init__(self):
         self._cache = {}
