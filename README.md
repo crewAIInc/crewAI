@@ -166,7 +166,7 @@ You can test different real life examples of AI crews [in the examples repo](htt
 
 crewAI supports using various LLMs through a variety of connection options. By default your agents will use the OpenAI API when querying the model. However, there are several other ways to allow your agents to connect to models. For example, you can configure your agents to use a local model via the Ollama tool.
 
-Please refer to the [Connect crewAI to LLMs](./docs/how-to/llm-connections.md) page for details on configuring you agents' connections to models.
+Please refer to the [Connect crewAI to LLMs](https://joaomdmoura.github.io/crewAI/how-to/LLM-Connections/) page for details on configuring you agents' connections to models.
 
 ## How CrewAI Compares
 
