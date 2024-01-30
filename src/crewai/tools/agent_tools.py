@@ -1,4 +1,4 @@
-from typing import List, Optional
+from typing import List
 
 from langchain.tools import Tool
 from pydantic import BaseModel, Field
@@ -11,9 +11,7 @@ class AgentTools(BaseModel):
     """Default tools around agent delegation"""
 
     agents: List[Agent] = Field(description="List of agents in this crew.")
-    i18n: Optional[I18N] = Field(
-        default=I18N(), description="Internationalization settings."
-    )
+    i18n: I18N = Field(default=I18N(), description="Internationalization settings.")
 
     def tools(self):
         return [

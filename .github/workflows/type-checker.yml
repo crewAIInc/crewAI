@@ -1,15 +1,13 @@
-name: Run Tests
+
+name: Run Type Checks
 
 on: [pull_request]
 
 permissions:
   contents: write
 
-env:
-  OPENAI_API_KEY: fake-api-key
-
 jobs:
-  deploy:
+  type-checker:
     runs-on: ubuntu-latest
 
     steps:
@@ -28,5 +26,5 @@ jobs:
           poetry lock &&
           poetry install
 
-      - name: Run tests
-        run: poetry run pytest
+      - name: Run type checks
+        run: poetry run pyright

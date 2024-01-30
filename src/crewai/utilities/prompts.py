@@ -1,6 +1,6 @@
 from typing import ClassVar
 
-from langchain.prompts import PromptTemplate
+from langchain.prompts import PromptTemplate, BasePromptTemplate
 from pydantic import BaseModel, Field
 
 from crewai.utilities import I18N
@@ -13,19 +13,19 @@ class Prompts(BaseModel):
 
     SCRATCHPAD_SLICE: ClassVar[str] = "\n{agent_scratchpad}"
 
-    def task_execution_with_memory(self) -> str:
+    def task_execution_with_memory(self) -> BasePromptTemplate:
         """Generate a prompt for task execution with memory components."""
         return self._build_prompt(["role_playing", "tools", "memory", "task"])
 
-    def task_execution_without_tools(self) -> str:
+    def task_execution_without_tools(self) -> BasePromptTemplate:
         """Generate a prompt for task execution without tools components."""
         return self._build_prompt(["role_playing", "task"])
 
-    def task_execution(self) -> str:
+    def task_execution(self) -> BasePromptTemplate:
         """Generate a standard prompt for task execution."""
         return self._build_prompt(["role_playing", "tools", "task"])
 
-    def _build_prompt(self, components: [str]) -> str:
+    def _build_prompt(self, components: list[str]) -> BasePromptTemplate:
         """Constructs a prompt string from specified components."""
         prompt_parts = [self.i18n.slice(component) for component in components]
         prompt_parts.append(self.SCRATCHPAD_SLICE)

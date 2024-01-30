@@ -10,9 +10,9 @@ class ToolsHandler(BaseCallbackHandler):
     """Callback handler for tool usage."""
 
     last_used_tool: Dict[str, Any] = {}
-    cache: CacheHandler = None
+    cache: CacheHandler
 
-    def __init__(self, cache: CacheHandler = None, **kwargs: Any):
+    def __init__(self, cache: CacheHandler, **kwargs: Any):
         """Initialize the callback handler."""
         self.cache = cache
         super().__init__(**kwargs)
