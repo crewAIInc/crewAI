@@ -143,6 +143,8 @@ class Crew(BaseModel):
 
         if self.process == Process.sequential:
             return self._sequential_loop()
+        elif self.process == Process.sequential_full_output:
+            return self._sequential_loop_full_output()
         else:
             raise NotImplementedError(
                 f"The process '{self.process}' is not implemented yet."
@@ -162,6 +164,23 @@ class Crew(BaseModel):
             self._rpm_controller.stop_rpm_counter()
 
         return task_output
+
+    def _sequential_loop_full_output(self) -> str:
+        """Executes tasks sequentially and returns a list of all task outputs."""
+        task_outputs = []
+        for task in self.tasks:
+            self._prepare_and_execute_task(task)
+            task_output = task.execute(task_output)
+    
+            role = task.agent.role if task.agent is not None else "None"
+            self._logger.log("debug", f"[{role}] Task output: {task_output}\n\n")
+    
+            task_outputs.append(task_output)
+    
+        if self.max_rpm:
+            self._rpm_controller.stop_rpm_counter()
+    
+        return task_outputs
 
     def _prepare_and_execute_task(self, task: Task) -> None:
         """Prepares and logs information about the task being executed.
