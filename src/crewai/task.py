@@ -15,19 +15,22 @@ class Task(BaseModel):
     __hash__ = object.__hash__  # type: ignore
     i18n: I18N = I18N()
     description: str = Field(description="Description of the actual task.")
+    callback: Optional[Any] = Field(
+        description="Callback to be executed after the task is completed.", default=None
+    )
     agent: Optional[Agent] = Field(
-        description="Agent responsible for the task.", default=None
+        description="Agent responsible for executiong the task.", default=None
     )
-    tools: List[Any] = Field(
-        default_factory=list,
-        description="Tools the agent is limited to use for this task.",
-    )
-    expected_output: str = Field(
+    expected_output: Optional[str] = Field(
         description="Clear definition of expected output for the task.",
         default=None,
     )
     output: Optional[TaskOutput] = Field(
-        description="Task output, it's final result.", default=None
+        description="Task output, it's final result after being executed", default=None
+    )
+    tools: List[Any] = Field(
+        default_factory=list,
+        description="Tools the agent is limited to use for this task.",
     )
     id: UUID4 = Field(
         default_factory=uuid.uuid4,
@@ -66,6 +69,7 @@ class Task(BaseModel):
         )
 
         self.output = TaskOutput(description=self.description, result=result)
+        self.callback(self.output) if self.callback else None
         return result
 
     def _prompt(self) -> str:
