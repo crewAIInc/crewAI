@@ -30,6 +30,9 @@ class I18N(BaseModel):
         except json.JSONDecodeError:
             raise ValidationError(f"Error decoding JSON from the prompts file.")
 
+        if not self._translations:
+            self._translations = {}
+
         return self
 
     def slice(self, slice: str) -> str:
