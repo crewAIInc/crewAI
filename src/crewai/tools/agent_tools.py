@@ -33,13 +33,13 @@ class AgentTools(BaseModel):
 
     def delegate_work(self, command):
         """Useful to delegate a specific task to a coworker."""
-        return self.__execute(command)
+        return self._execute(command)
 
     def ask_question(self, command):
         """Useful to ask a question, opinion or take from a coworker."""
-        return self.__execute(command)
+        return self._execute(command)
 
-    def __execute(self, command):
+    def _execute(self, command):
         """Execute the command."""
         try:
             agent, task, context = command.split("|")

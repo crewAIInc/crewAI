@@ -19,7 +19,7 @@ class Task(BaseModel):
         description="Callback to be executed after the task is completed.", default=None
     )
     agent: Optional[Agent] = Field(
-        description="Agent responsible for executiong the task.", default=None
+        description="Agent responsible for execution the task.", default=None
     )
     expected_output: Optional[str] = Field(
         description="Clear definition of expected output for the task.",
@@ -53,18 +53,20 @@ class Task(BaseModel):
             self.tools.extend(self.agent.tools)
         return self
 
-    def execute(self, context: Optional[str] = None) -> str:
+    def execute(self, agent: Agent | None = None, context: Optional[str] = None) -> str:
         """Execute the task.
 
         Returns:
             Output of the task.
         """
-        if not self.agent:
+
+        agent = agent or self.agent
+        if not agent:
             raise Exception(
                 f"The task '{self.description}' has no agent assigned, therefore it can't be executed directly and should be executed in a Crew using a specific process that support that, either consensual or hierarchical."
             )
 
-        result = self.agent.execute_task(
+        result = agent.execute_task(
             task=self._prompt(), context=context, tools=self.tools
         )
 

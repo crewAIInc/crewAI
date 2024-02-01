@@ -142,18 +142,26 @@ class Crew(BaseModel):
             agent.i18n = I18N(language=self.language)
 
         if self.process == Process.sequential:
-            return self._sequential_loop()
-        else:
-            raise NotImplementedError(
-                f"The process '{self.process}' is not implemented yet."
-            )
+            return self._run_sequential_process()
+        if self.process == Process.hierarchical:
+            return self._run_hierarchical_process()
 
-    def _sequential_loop(self) -> str:
+        raise NotImplementedError(
+            f"The process '{self.process}' is not implemented yet."
+        )
+
+    def _run_sequential_process(self) -> str:
         """Executes tasks sequentially and returns the final output."""
         task_output = ""
         for task in self.tasks:
-            self._prepare_and_execute_task(task)
-            task_output = task.execute(task_output)
+            if task.agent is not None and task.agent.allow_delegation:
+                task.tools += AgentTools(agents=self.agents).tools()
+
+            role = task.agent.role if task.agent is not None else "None"
+            self._logger.log("debug", f"Working Agent: {role}")
+            self._logger.log("info", f"Starting Task: {task.description}")
+
+            task_output = task.execute(context=task_output)
 
             role = task.agent.role if task.agent is not None else "None"
             self._logger.log("debug", f"[{role}] Task output: {task_output}\n\n")
@@ -163,15 +171,29 @@ class Crew(BaseModel):
 
         return task_output
 
-    def _prepare_and_execute_task(self, task: Task) -> None:
-        """Prepares and logs information about the task being executed.
+    def _run_hierarchical_process(self) -> str:
+        """Creates and assigns a manager agent to make sure the crew completes the tasks."""
 
-        Args:
-            task: The task to be executed.
-        """
-        if task.agent is not None and task.agent.allow_delegation:
-            task.tools += AgentTools(agents=self.agents).tools()
+        i18n = I18N(language=self.language)
+        manager = Agent(
+            role=i18n.retrieve("hierarchical_manager_agent", "role"),
+            goal=i18n.retrieve("hierarchical_manager_agent", "goal"),
+            backstory=i18n.retrieve("hierarchical_manager_agent", "backstory"),
+            tools=AgentTools(agents=self.agents).tools(),
+            verbose=True,
+        )
 
-        role = task.agent.role if task.agent is not None else "None"
-        self._logger.log("debug", f"Working Agent: {role}")
-        self._logger.log("info", f"Starting Task: {task.description}")
+        task_output = ""
+        for task in self.tasks:
+            self._logger.log("info", f"Starting Task: {task.description}")
+
+            task_output = task.execute(agent=manager, context=task_output)
+
+            self._logger.log(
+                "debug", f"[{manager.role}] Task output: {task_output}\n\n"
+            )
+
+        if self.max_rpm:
+            self._rpm_controller.stop_rpm_counter()
+
+        return task_output
