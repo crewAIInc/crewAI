@@ -18,23 +18,17 @@ class I18N(BaseModel):
         try:
             dir_path = os.path.dirname(os.path.realpath(__file__))
             prompts_path = os.path.join(
-                dir_path, f"../translations/i18n.json"
+                dir_path, f"../translations/{self.language}.json"
             )
 
             with open(prompts_path, "r") as f:
-                all_translations = json.load(f)
-                self._translations = all_translations.get(self.language)
+                self._translations = json.load(f)
         except FileNotFoundError:
             raise ValidationError(
-                f"Trasnlation file for language i18n.json not found."
+                f"Translation file for language '{self.language}' not found."
             )
         except json.JSONDecodeError:
             raise ValidationError(f"Error decoding JSON from the prompts file.")
-        except TypeError:
-            raise ValidationError(f"No translations found for language '{self.language}'.")        
-
-        if not self._translations:
-            self._translations = {}
 
         return self
 

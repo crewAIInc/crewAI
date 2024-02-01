@@ -1,0 +1,21 @@
+{
+  "slices": {
+    "observation": "\nObservation",
+    "task": "Begin! This is VERY important to you, your job depends on it!\n\nCurrent Task: {input}",
+    "memory": "This is the summary of your work so far:\n{chat_history}",
+    "role_playing": "You are {role}.\n{backstory}\n\nYour personal goal is: {goal}",
+    "tools": "TOOLS:\n------\nYou have access to only the following tools:\n\n{tools}\n\nTo use a tool, please use the exact following format:\n\n```\nThought: Do I need to use a tool? Yes\nAction: the action to take, should be one of [{tool_names}], just the name.\nAction Input: the input to the action\nObservation: the result of the action\n```\n\nWhen you have a response for your task, or if you do not need to use a tool, you MUST use the format:\n\n```\nThought: Do I need to use a tool? No\nFinal Answer: [your response here]",
+    "task_with_context": "{task}\nThis is the context you're working with:\n{context}",
+    "expected_output": "Your final answer must be: {expected_output}"
+  },
+  "errors": {
+    "used_too_many_tools": "I've used too many tools for this task. I'm going to give you my absolute BEST Final answer now and not use any more tools.",
+    "agent_tool_missing_param": "\nError executing tool. Missing exact 3 pipe (|) separated values. For example, `coworker|task|context`. I need to make sure to pass context as context.\n",
+    "agent_tool_unexsiting_coworker": "\nError executing tool. Co-worker mentioned on the Action Input not found, it must to be one of the following options: {coworkers}.\n",
+    "task_repeated_usage": "I just used the {tool} tool with input {tool_input}. So I already know the result of that and don't need to use it now.\n"
+  },
+  "tools": {
+    "delegate_work": "Useful to delegate a specific task to one of the following co-workers: {coworkers}.\nThe input to this tool should be a pipe (|) separated text of length 3 (three), representing the co-worker you want to ask it to (one of the options), the task and all actual context you have for the task.\nFor example, `coworker|task|context`.",
+    "ask_question": "Useful to ask a question, opinion or take from on of the following co-workers: {coworkers}.\nThe input to this tool should be a pipe (|) separated text of length 3 (three), representing the co-worker you want to ask it to (one of the options), the question and all actual context you have for the question.\n For example, `coworker|question|context`."
+  }
+}
