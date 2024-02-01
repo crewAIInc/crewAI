@@ -175,7 +175,7 @@ class Crew(BaseModel):
             role = task.agent.role if task.agent is not None else "None"
             self._logger.log("debug", f"[{role}] Task output: {task_output}\n\n")
     
-            task_outputs.append(task_output)
+            task_outputs.append(task.output)
     
         if self.max_rpm:
             self._rpm_controller.stop_rpm_counter()
