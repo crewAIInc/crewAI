@@ -63,7 +63,7 @@ class Task(BaseModel):
         agent = agent or self.agent
         if not agent:
             raise Exception(
-                f"The task '{self.description}' has no agent assigned, therefore it can't be executed directly and should be executed in a Crew using a specific process that support that, either consensual or hierarchical."
+                f"The task '{self.description}' has no agent assigned, therefore it can't be executed directly and should be executed in a Crew using a specific process that support that, like hierarchical."
             )
 
         result = agent.execute_task(
