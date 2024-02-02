@@ -130,10 +130,6 @@ print("######################")
 print(result)
 ```
 
-<!-- Além do process sequencial, você pode usar o process hierárquico, que é um pouco mais complexo, mas que permite que o sistema delegue as tarefas para os agentes e valide os resultados. Veja mais sobre os processos [aqui](./docs/core-concepts/Managing-Processes.md) -->
-
-<!-- TODO english version of above -->
-
 In addition to the sequential process, you can use the hierarchical process, which automatically assigns a manager to the defined crew to properly coordinate the planning and execution of tasks through delegation and validation of results. See more about the processes [here](./docs/core-concepts/Managing-Processes.md)
 
 
