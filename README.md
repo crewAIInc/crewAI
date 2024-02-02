@@ -138,7 +138,7 @@ In addition to the sequential process, you can use the hierarchical process, whi
 - **Role-Based Agent Design**: Customize agents with specific roles, goals, and tools.
 - **Autonomous Inter-Agent Delegation**: Agents can autonomously delegate tasks and inquire amongst themselves, enhancing problem-solving efficiency.
 - **Flexible Task Management**: Define tasks with customizable tools and assign them to agents dynamically.
-- **Processes Driven**: Currently only supports `sequential` task execution and `hierarchical` processes, but more complex processes like consensual are being worked on.
+- **Processes Driven**: Currently only supports `sequential` task execution and `hierarchical` processes, but more complex processes like consensual and autonomous are being worked on.
 - **Works with Open Source Models**: Run your crew using Open AI or open source models refer to the [Connect crewAI to LLMs](./docs/llm-connections.md) page for details on configuring you agents' connections to models, even ones running locally!
 
 ![CrewAI Mind Map](./docs/crewAI-mindmap.png "CrewAI Mind Map")
