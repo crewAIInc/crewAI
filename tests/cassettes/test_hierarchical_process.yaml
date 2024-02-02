@@ -1,0 +1,1210 @@
+interactions:
+- request:
+    body: '{"messages": [{"role": "user", "content": "You are Crew Manager.\nYou are
+      a seasoned manager with a knack for getting the best out of your team.\nYou
+      are also known for your ability to delegate work to the right people, and to
+      ask the right questions to get the best out of your team.\nEven though you don''t
+      perform tasks by yourself, you have a lot of experience in the field, which
+      allows you to properly evaluate the work of your team members.\n\nYour personal
+      goal is: Manage the team to complete the task in the best way possible.TOOLS:\n------\nYou
+      have access to only the following tools:\n\nDelegate work to co-worker: Useful
+      to delegate a specific task to one of the following co-workers: Researcher,
+      Senior Writer.\nThe input to this tool should be a pipe (|) separated text of
+      length 3 (three), representing the co-worker you want to ask it to (one of the
+      options), the task and all actual context you have for the task.\nFor example,
+      `coworker|task|context`.\nAsk question to co-worker: Useful to ask a question,
+      opinion or take from on of the following co-workers: Researcher, Senior Writer.\nThe
+      input to this tool should be a pipe (|) separated text of length 3 (three),
+      representing the co-worker you want to ask it to (one of the options), the question
+      and all actual context you have for the question.\n For example, `coworker|question|context`.\n\nTo
+      use a tool, please use the exact following format:\n\n```\nThought: Do I need
+      to use a tool? Yes\nAction: the action to take, should be one of [Delegate work
+      to co-worker, Ask question to co-worker], just the name.\nAction Input: the
+      input to the action\nObservation: the result of the action\n```\n\nWhen you
+      have a response for your task, or if you do not need to use a tool, you MUST
+      use the format:\n\n```\nThought: Do I need to use a tool? No\nFinal Answer:
+      [your response here]This is the summary of your work so far:\nBegin! This is
+      VERY important to you, your job depends on it!\n\nCurrent Task: Come up with
+      a list of 5 interesting ideas to explore for an article, then write one amazing
+      paragraph highlight for each idea that showcases how good an article about this
+      topic could be. Return the list of ideas with their paragraph and your notes.\n"}],
+      "model": "gpt-4", "n": 1, "stop": ["\nObservation"], "stream": false, "temperature":
+      0.7}'
+    headers:
+      accept:
+      - application/json
+      accept-encoding:
+      - gzip, deflate
+      connection:
+      - keep-alive
+      content-length:
+      - '2320'
+      content-type:
+      - application/json
+      host:
+      - api.openai.com
+      user-agent:
+      - OpenAI/Python 1.7.1
+      x-stainless-arch:
+      - x64
+      x-stainless-async:
+      - 'false'
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - MacOS
+      x-stainless-package-version:
+      - 1.7.1
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.11.5
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    content: "{\n  \"id\": \"chatcmpl-8nWFG8zaNNEPHCHBvEHe8CwOSvaDl\",\n  \"object\":
+      \"chat.completion\",\n  \"created\": 1706812714,\n  \"model\": \"gpt-4-0613\",\n
+      \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
+      \"assistant\",\n        \"content\": \"Thought: Do I need to use a tool? Yes\\nAction:
+      Delegate work to co-worker\\nAction Input: Researcher|Come up with a list of
+      5 interesting ideas to explore for an article.|We need to work on a project
+      where we create a list of 5 interesting ideas for an article. Try to think out
+      of the box and come up with ideas that are unique and engaging. The topics can
+      be from any field like technology, science, lifestyle, culture, or health. The
+      only requirement is that they should be interesting enough to engage a wide
+      range of readers.\"\n      },\n      \"logprobs\": null,\n      \"finish_reason\":
+      \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 498,\n    \"completion_tokens\":
+      118,\n    \"total_tokens\": 616\n  },\n  \"system_fingerprint\": null\n}\n"
+    headers:
+      CF-Cache-Status:
+      - DYNAMIC
+      CF-RAY:
+      - 84ec4fea48914d09-GRU
+      Cache-Control:
+      - no-cache, must-revalidate
+      Connection:
+      - keep-alive
+      Content-Encoding:
+      - gzip
+      Content-Type:
+      - application/json
+      Date:
+      - Thu, 01 Feb 2024 18:38:48 GMT
+      Server:
+      - cloudflare
+      Set-Cookie:
+      - __cf_bm=u.tmEZdLWJJh0JAky720e5vQTXXkbak1vLAbvqJhEiY-1706812728-1-AfwXwbOIbs/ICMGa7ID/ROzghPqSPoWSrFWNGYeQ/pa3JYTifb3+sj5oSXec/ys8Yg0Q3S0fCvt2ZsssnosJDAc=;
+        path=/; expires=Thu, 01-Feb-24 19:08:48 GMT; domain=.api.openai.com; HttpOnly;
+        Secure; SameSite=None
+      - _cfuvid=awym7w2cNrUnczKj2e0M9vtNAb93tU.MTND.tf9GG64-1706812728028-0-604800000;
+        path=/; domain=.api.openai.com; HttpOnly; Secure; SameSite=None
+      Transfer-Encoding:
+      - chunked
+      access-control-allow-origin:
+      - '*'
+      alt-svc:
+      - h3=":443"; ma=86400
+      openai-model:
+      - gpt-4-0613
+      openai-organization:
+      - user-z7g4wmlazxqvc5wjyaaaocfz
+      openai-processing-ms:
+      - '12946'
+      openai-version:
+      - '2020-10-01'
+      strict-transport-security:
+      - max-age=15724800; includeSubDomains
+      x-ratelimit-limit-requests:
+      - '10000'
+      x-ratelimit-limit-tokens:
+      - '300000'
+      x-ratelimit-remaining-requests:
+      - '9999'
+      x-ratelimit-remaining-tokens:
+      - '299445'
+      x-ratelimit-reset-requests:
+      - 6ms
+      x-ratelimit-reset-tokens:
+      - 111ms
+      x-request-id:
+      - bb880b6c0bd2535c462be86719d2a9c9
+    http_version: HTTP/1.1
+    status_code: 200
+- request:
+    body: '{"messages": [{"role": "user", "content": "You are Researcher.\nYou''re
+      an expert researcher, specialized in technology, software engineering, AI and
+      startups. You work as a freelancer and is now working on doing research and
+      analysis for a new customer.\n\nYour personal goal is: Make the best research
+      and analysis on content about AI and AI agentsTOOLS:\n------\nYou have access
+      to only the following tools:\n\n\n\nTo use a tool, please use the exact following
+      format:\n\n```\nThought: Do I need to use a tool? Yes\nAction: the action to
+      take, should be one of [], just the name.\nAction Input: the input to the action\nObservation:
+      the result of the action\n```\n\nWhen you have a response for your task, or
+      if you do not need to use a tool, you MUST use the format:\n\n```\nThought:
+      Do I need to use a tool? No\nFinal Answer: [your response here]This is the summary
+      of your work so far:\nBegin! This is VERY important to you, your job depends
+      on it!\n\nCurrent Task: Come up with a list of 5 interesting ideas to explore
+      for an article.\nThis is the context you''re working with:\nWe need to work
+      on a project where we create a list of 5 interesting ideas for an article. Try
+      to think out of the box and come up with ideas that are unique and engaging.
+      The topics can be from any field like technology, science, lifestyle, culture,
+      or health. The only requirement is that they should be interesting enough to
+      engage a wide range of readers.\n"}], "model": "gpt-4", "n": 1, "stop": ["\nObservation"],
+      "stream": false, "temperature": 0.7}'
+    headers:
+      accept:
+      - application/json
+      accept-encoding:
+      - gzip, deflate
+      connection:
+      - keep-alive
+      content-length:
+      - '1539'
+      content-type:
+      - application/json
+      host:
+      - api.openai.com
+      user-agent:
+      - OpenAI/Python 1.7.1
+      x-stainless-arch:
+      - x64
+      x-stainless-async:
+      - 'false'
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - MacOS
+      x-stainless-package-version:
+      - 1.7.1
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.11.5
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    content: "{\n  \"id\": \"chatcmpl-8nWFUSklEVZdywRpr5O3OcJDVEyB9\",\n  \"object\":
+      \"chat.completion\",\n  \"created\": 1706812728,\n  \"model\": \"gpt-4-0613\",\n
+      \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
+      \"assistant\",\n        \"content\": \"Thought: Do I need to use a tool? No\\n\\nFinal
+      Answer: Here are 5 unique and engaging ideas for an article:\\n\\n1. \\\"The
+      Future of AI in Healthcare: Predicting Diseases Before They Happen\\\" - This
+      article could explore the potential of AI in healthcare, such as its ability
+      to predict diseases based on genetic markers and lifestyle factors.\\n\\n2.
+      \\\"How AI is Changing the Way We Cook: An Insight into Smart Kitchens\\\" -
+      This article could discuss how AI and technology are transforming our kitchens,
+      from smart refrigerators to AI chefs.\\n\\n3. \\\"Redefining Fitness with AI:
+      Personalized Workout Plans and Nutritional Advice\\\" - This article could discuss
+      how AI is being used to create personalized workout plans and provide nutritional
+      advice, making fitness more accessible to everyone.\\n\\n4. \\\"AI and the Art
+      World: How Technology is Shaping Creativity\\\" - This article could explore
+      the intersection of AI and art, including how AI is being used to create unique
+      works of art and its implications for human creativity.\\n\\n5. \\\"AI in Space
+      Exploration: The Next Frontier\\\" - This article could discuss the role of
+      AI in space exploration, from designing spacecrafts to analyzing data from distant
+      planets.\"\n      },\n      \"logprobs\": null,\n      \"finish_reason\": \"stop\"\n
+      \   }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 317,\n    \"completion_tokens\":
+      243,\n    \"total_tokens\": 560\n  },\n  \"system_fingerprint\": null\n}\n"
+    headers:
+      CF-Cache-Status:
+      - DYNAMIC
+      CF-RAY:
+      - 84ec503f9fc8a5d4-GRU
+      Cache-Control:
+      - no-cache, must-revalidate
+      Connection:
+      - keep-alive
+      Content-Encoding:
+      - gzip
+      Content-Type:
+      - application/json
+      Date:
+      - Thu, 01 Feb 2024 18:39:12 GMT
+      Server:
+      - cloudflare
+      Set-Cookie:
+      - __cf_bm=imax5DlfWNvzGRU2Btbl1Bw5sOyUxSB8DTtRAJqUQH4-1706812752-1-AaCZhQsgjz3qKHzpOoQTqEvx92Rf7P3npAeqQj4LJSbxOOzDX6hHa+TXYdLi+AcfxurO6OgrRHMm6345X8IAjBY=;
+        path=/; expires=Thu, 01-Feb-24 19:09:12 GMT; domain=.api.openai.com; HttpOnly;
+        Secure; SameSite=None
+      - _cfuvid=Bk4l0dbVnupi0ZrSYO4nbj7PyfhIwxzhpOPDviuRT9U-1706812752080-0-604800000;
+        path=/; domain=.api.openai.com; HttpOnly; Secure; SameSite=None
+      Transfer-Encoding:
+      - chunked
+      access-control-allow-origin:
+      - '*'
+      alt-svc:
+      - h3=":443"; ma=86400
+      openai-model:
+      - gpt-4-0613
+      openai-organization:
+      - user-z7g4wmlazxqvc5wjyaaaocfz
+      openai-processing-ms:
+      - '23337'
+      openai-version:
+      - '2020-10-01'
+      strict-transport-security:
+      - max-age=15724800; includeSubDomains
+      x-ratelimit-limit-requests:
+      - '10000'
+      x-ratelimit-limit-tokens:
+      - '300000'
+      x-ratelimit-remaining-requests:
+      - '9999'
+      x-ratelimit-remaining-tokens:
+      - '299639'
+      x-ratelimit-reset-requests:
+      - 6ms
+      x-ratelimit-reset-tokens:
+      - 72ms
+      x-request-id:
+      - fcdcc4a39d161234ba5cc19c17bac960
+    http_version: HTTP/1.1
+    status_code: 200
+- request:
+    body: '{"messages": [{"role": "user", "content": "Progressively summarize the
+      lines of conversation provided, adding onto the previous summary returning a
+      new summary.\n\nEXAMPLE\nCurrent summary:\nThe human asks what the AI thinks
+      of artificial intelligence. The AI thinks artificial intelligence is a force
+      for good.\n\nNew lines of conversation:\nHuman: Why do you think artificial
+      intelligence is a force for good?\nAI: Because artificial intelligence will
+      help humans reach their full potential.\n\nNew summary:\nThe human asks what
+      the AI thinks of artificial intelligence. The AI thinks artificial intelligence
+      is a force for good because it will help humans reach their full potential.\nEND
+      OF EXAMPLE\n\nCurrent summary:\n\n\nNew lines of conversation:\nHuman: Come
+      up with a list of 5 interesting ideas to explore for an article.\nThis is the
+      context you''re working with:\nWe need to work on a project where we create
+      a list of 5 interesting ideas for an article. Try to think out of the box and
+      come up with ideas that are unique and engaging. The topics can be from any
+      field like technology, science, lifestyle, culture, or health. The only requirement
+      is that they should be interesting enough to engage a wide range of readers.\nAI:
+      Here are 5 unique and engaging ideas for an article:\n\n1. \"The Future of AI
+      in Healthcare: Predicting Diseases Before They Happen\" - This article could
+      explore the potential of AI in healthcare, such as its ability to predict diseases
+      based on genetic markers and lifestyle factors.\n\n2. \"How AI is Changing the
+      Way We Cook: An Insight into Smart Kitchens\" - This article could discuss how
+      AI and technology are transforming our kitchens, from smart refrigerators to
+      AI chefs.\n\n3. \"Redefining Fitness with AI: Personalized Workout Plans and
+      Nutritional Advice\" - This article could discuss how AI is being used to create
+      personalized workout plans and provide nutritional advice, making fitness more
+      accessible to everyone.\n\n4. \"AI and the Art World: How Technology is Shaping
+      Creativity\" - This article could explore the intersection of AI and art, including
+      how AI is being used to create unique works of art and its implications for
+      human creativity.\n\n5. \"AI in Space Exploration: The Next Frontier\" - This
+      article could discuss the role of AI in space exploration, from designing spacecrafts
+      to analyzing data from distant planets.\n\nNew summary:"}], "model": "gpt-4",
+      "n": 1, "stream": false, "temperature": 0.7}'
+    headers:
+      accept:
+      - application/json
+      accept-encoding:
+      - gzip, deflate
+      connection:
+      - keep-alive
+      content-length:
+      - '2477'
+      content-type:
+      - application/json
+      cookie:
+      - __cf_bm=imax5DlfWNvzGRU2Btbl1Bw5sOyUxSB8DTtRAJqUQH4-1706812752-1-AaCZhQsgjz3qKHzpOoQTqEvx92Rf7P3npAeqQj4LJSbxOOzDX6hHa+TXYdLi+AcfxurO6OgrRHMm6345X8IAjBY=;
+        _cfuvid=Bk4l0dbVnupi0ZrSYO4nbj7PyfhIwxzhpOPDviuRT9U-1706812752080-0-604800000
+      host:
+      - api.openai.com
+      user-agent:
+      - OpenAI/Python 1.7.1
+      x-stainless-arch:
+      - x64
+      x-stainless-async:
+      - 'false'
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - MacOS
+      x-stainless-package-version:
+      - 1.7.1
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.11.5
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    content: "{\n  \"id\": \"chatcmpl-8nWFs5TynmDATlvmbVfsQnbNqPDM0\",\n  \"object\":
+      \"chat.completion\",\n  \"created\": 1706812752,\n  \"model\": \"gpt-4-0613\",\n
+      \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
+      \"assistant\",\n        \"content\": \"The human asks the AI to come up with
+      5 unique and engaging ideas for an article in any field such as technology,
+      science, lifestyle, culture, or health. The AI suggests: 1) The potential of
+      AI in healthcare, specifically in predicting diseases before they happen. 2)
+      The transformation of kitchens through AI and technology, including smart refrigerators
+      and AI chefs. 3) The use of AI in fitness to provide personalized workout plans
+      and nutritional advice. 4) The intersection of AI and art, including how AI
+      creates unique art and its implications for human creativity. 5) The role of
+      AI in space exploration, including designing spacecrafts and analyzing data
+      from distant planets.\"\n      },\n      \"logprobs\": null,\n      \"finish_reason\":
+      \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 467,\n    \"completion_tokens\":
+      139,\n    \"total_tokens\": 606\n  },\n  \"system_fingerprint\": null\n}\n"
+    headers:
+      CF-Cache-Status:
+      - DYNAMIC
+      CF-RAY:
+      - 84ec50d58e52a5d4-GRU
+      Cache-Control:
+      - no-cache, must-revalidate
+      Connection:
+      - keep-alive
+      Content-Encoding:
+      - gzip
+      Content-Type:
+      - application/json
+      Date:
+      - Thu, 01 Feb 2024 18:39:26 GMT
+      Server:
+      - cloudflare
+      Transfer-Encoding:
+      - chunked
+      access-control-allow-origin:
+      - '*'
+      alt-svc:
+      - h3=":443"; ma=86400
+      openai-model:
+      - gpt-4-0613
+      openai-organization:
+      - user-z7g4wmlazxqvc5wjyaaaocfz
+      openai-processing-ms:
+      - '14077'
+      openai-version:
+      - '2020-10-01'
+      strict-transport-security:
+      - max-age=15724800; includeSubDomains
+      x-ratelimit-limit-requests:
+      - '10000'
+      x-ratelimit-limit-tokens:
+      - '300000'
+      x-ratelimit-remaining-requests:
+      - '9999'
+      x-ratelimit-remaining-tokens:
+      - '299402'
+      x-ratelimit-reset-requests:
+      - 6ms
+      x-ratelimit-reset-tokens:
+      - 119ms
+      x-request-id:
+      - 9749fb04bc79acb9867749dfdfbf27ac
+    http_version: HTTP/1.1
+    status_code: 200
+- request:
+    body: '{"messages": [{"role": "user", "content": "You are Crew Manager.\nYou are
+      a seasoned manager with a knack for getting the best out of your team.\nYou
+      are also known for your ability to delegate work to the right people, and to
+      ask the right questions to get the best out of your team.\nEven though you don''t
+      perform tasks by yourself, you have a lot of experience in the field, which
+      allows you to properly evaluate the work of your team members.\n\nYour personal
+      goal is: Manage the team to complete the task in the best way possible.TOOLS:\n------\nYou
+      have access to only the following tools:\n\nDelegate work to co-worker: Useful
+      to delegate a specific task to one of the following co-workers: Researcher,
+      Senior Writer.\nThe input to this tool should be a pipe (|) separated text of
+      length 3 (three), representing the co-worker you want to ask it to (one of the
+      options), the task and all actual context you have for the task.\nFor example,
+      `coworker|task|context`.\nAsk question to co-worker: Useful to ask a question,
+      opinion or take from on of the following co-workers: Researcher, Senior Writer.\nThe
+      input to this tool should be a pipe (|) separated text of length 3 (three),
+      representing the co-worker you want to ask it to (one of the options), the question
+      and all actual context you have for the question.\n For example, `coworker|question|context`.\n\nTo
+      use a tool, please use the exact following format:\n\n```\nThought: Do I need
+      to use a tool? Yes\nAction: the action to take, should be one of [Delegate work
+      to co-worker, Ask question to co-worker], just the name.\nAction Input: the
+      input to the action\nObservation: the result of the action\n```\n\nWhen you
+      have a response for your task, or if you do not need to use a tool, you MUST
+      use the format:\n\n```\nThought: Do I need to use a tool? No\nFinal Answer:
+      [your response here]This is the summary of your work so far:\nBegin! This is
+      VERY important to you, your job depends on it!\n\nCurrent Task: Come up with
+      a list of 5 interesting ideas to explore for an article, then write one amazing
+      paragraph highlight for each idea that showcases how good an article about this
+      topic could be. Return the list of ideas with their paragraph and your notes.\nThought:
+      Do I need to use a tool? Yes\nAction: Delegate work to co-worker\nAction Input:
+      Researcher|Come up with a list of 5 interesting ideas to explore for an article.|We
+      need to work on a project where we create a list of 5 interesting ideas for
+      an article. Try to think out of the box and come up with ideas that are unique
+      and engaging. The topics can be from any field like technology, science, lifestyle,
+      culture, or health. The only requirement is that they should be interesting
+      enough to engage a wide range of readers.\nObservation: Here are 5 unique and
+      engaging ideas for an article:\n\n1. \"The Future of AI in Healthcare: Predicting
+      Diseases Before They Happen\" - This article could explore the potential of
+      AI in healthcare, such as its ability to predict diseases based on genetic markers
+      and lifestyle factors.\n\n2. \"How AI is Changing the Way We Cook: An Insight
+      into Smart Kitchens\" - This article could discuss how AI and technology are
+      transforming our kitchens, from smart refrigerators to AI chefs.\n\n3. \"Redefining
+      Fitness with AI: Personalized Workout Plans and Nutritional Advice\" - This
+      article could discuss how AI is being used to create personalized workout plans
+      and provide nutritional advice, making fitness more accessible to everyone.\n\n4.
+      \"AI and the Art World: How Technology is Shaping Creativity\" - This article
+      could explore the intersection of AI and art, including how AI is being used
+      to create unique works of art and its implications for human creativity.\n\n5.
+      \"AI in Space Exploration: The Next Frontier\" - This article could discuss
+      the role of AI in space exploration, from designing spacecrafts to analyzing
+      data from distant planets.\nThought: "}], "model": "gpt-4", "n": 1, "stop":
+      ["\nObservation"], "stream": false, "temperature": 0.7}'
+    headers:
+      accept:
+      - application/json
+      accept-encoding:
+      - gzip, deflate
+      connection:
+      - keep-alive
+      content-length:
+      - '4028'
+      content-type:
+      - application/json
+      cookie:
+      - __cf_bm=u.tmEZdLWJJh0JAky720e5vQTXXkbak1vLAbvqJhEiY-1706812728-1-AfwXwbOIbs/ICMGa7ID/ROzghPqSPoWSrFWNGYeQ/pa3JYTifb3+sj5oSXec/ys8Yg0Q3S0fCvt2ZsssnosJDAc=;
+        _cfuvid=awym7w2cNrUnczKj2e0M9vtNAb93tU.MTND.tf9GG64-1706812728028-0-604800000
+      host:
+      - api.openai.com
+      user-agent:
+      - OpenAI/Python 1.7.1
+      x-stainless-arch:
+      - x64
+      x-stainless-async:
+      - 'false'
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - MacOS
+      x-stainless-package-version:
+      - 1.7.1
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.11.5
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    content: "{\n  \"id\": \"chatcmpl-8nWG7c3A6XqYBqLoJPpOidhJINoEJ\",\n  \"object\":
+      \"chat.completion\",\n  \"created\": 1706812767,\n  \"model\": \"gpt-4-0613\",\n
+      \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
+      \"assistant\",\n        \"content\": \"Do I need to use a tool? Yes\\nAction:
+      Delegate work to co-worker\\nAction Input: Senior Writer|Write one amazing paragraph
+      highlight for each idea that showcases how good an article about this topic
+      could be.|The researcher has come up with the following topics: \\n1. \\\"The
+      Future of AI in Healthcare: Predicting Diseases Before They Happen\\\"\\n2.
+      \\\"How AI is Changing the Way We Cook: An Insight into Smart Kitchens\\\"\\n3.
+      \\\"Redefining Fitness with AI: Personalized Workout Plans and Nutritional Advice\\\"\\n4.
+      \\\"AI and the Art World: How Technology is Shaping Creativity\\\"\\n5. \\\"AI
+      in Space Exploration: The Next Frontier\\\" \\nPlease write one engaging paragraph
+      for each topic.\"\n      },\n      \"logprobs\": null,\n      \"finish_reason\":
+      \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 850,\n    \"completion_tokens\":
+      150,\n    \"total_tokens\": 1000\n  },\n  \"system_fingerprint\": null\n}\n"
+    headers:
+      CF-Cache-Status:
+      - DYNAMIC
+      CF-RAY:
+      - 84ec513119aa1aa5-GRU
+      Cache-Control:
+      - no-cache, must-revalidate
+      Connection:
+      - keep-alive
+      Content-Encoding:
+      - gzip
+      Content-Type:
+      - application/json
+      Date:
+      - Thu, 01 Feb 2024 18:39:44 GMT
+      Server:
+      - cloudflare
+      Transfer-Encoding:
+      - chunked
+      access-control-allow-origin:
+      - '*'
+      alt-svc:
+      - h3=":443"; ma=86400
+      openai-model:
+      - gpt-4-0613
+      openai-organization:
+      - user-z7g4wmlazxqvc5wjyaaaocfz
+      openai-processing-ms:
+      - '16878'
+      openai-version:
+      - '2020-10-01'
+      strict-transport-security:
+      - max-age=15724800; includeSubDomains
+      x-ratelimit-limit-requests:
+      - '10000'
+      x-ratelimit-limit-tokens:
+      - '300000'
+      x-ratelimit-remaining-requests:
+      - '9999'
+      x-ratelimit-remaining-tokens:
+      - '299024'
+      x-ratelimit-reset-requests:
+      - 6ms
+      x-ratelimit-reset-tokens:
+      - 195ms
+      x-request-id:
+      - 9c0028e09d3e9c061f1490b7313cca84
+    http_version: HTTP/1.1
+    status_code: 200
+- request:
+    body: '{"messages": [{"role": "user", "content": "You are Senior Writer.\nYou''re
+      a senior writer, specialized in technology, software engineering, AI and startups.
+      You work as a freelancer and are now working on writing content for a new customer.\n\nYour
+      personal goal is: Write the best content about AI and AI agents.TOOLS:\n------\nYou
+      have access to only the following tools:\n\n\n\nTo use a tool, please use the
+      exact following format:\n\n```\nThought: Do I need to use a tool? Yes\nAction:
+      the action to take, should be one of [], just the name.\nAction Input: the input
+      to the action\nObservation: the result of the action\n```\n\nWhen you have a
+      response for your task, or if you do not need to use a tool, you MUST use the
+      format:\n\n```\nThought: Do I need to use a tool? No\nFinal Answer: [your response
+      here]This is the summary of your work so far:\nBegin! This is VERY important
+      to you, your job depends on it!\n\nCurrent Task: Write one amazing paragraph
+      highlight for each idea that showcases how good an article about this topic
+      could be.\nThis is the context you''re working with:\nThe researcher has come
+      up with the following topics: \n1. \"The Future of AI in Healthcare: Predicting
+      Diseases Before They Happen\"\n2. \"How AI is Changing the Way We Cook: An Insight
+      into Smart Kitchens\"\n3. \"Redefining Fitness with AI: Personalized Workout
+      Plans and Nutritional Advice\"\n4. \"AI and the Art World: How Technology is
+      Shaping Creativity\"\n5. \"AI in Space Exploration: The Next Frontier\" \nPlease
+      write one engaging paragraph for each topic.\n"}], "model": "gpt-4", "n": 1,
+      "stop": ["\nObservation"], "stream": false, "temperature": 0.7}'
+    headers:
+      accept:
+      - application/json
+      accept-encoding:
+      - gzip, deflate
+      connection:
+      - keep-alive
+      content-length:
+      - '1654'
+      content-type:
+      - application/json
+      host:
+      - api.openai.com
+      user-agent:
+      - OpenAI/Python 1.7.1
+      x-stainless-arch:
+      - x64
+      x-stainless-async:
+      - 'false'
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - MacOS
+      x-stainless-package-version:
+      - 1.7.1
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.11.5
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    content: "{\n  \"id\": \"chatcmpl-8nWGODia4pebOFlrt1WMkOJYtIske\",\n  \"object\":
+      \"chat.completion\",\n  \"created\": 1706812784,\n  \"model\": \"gpt-4-0613\",\n
+      \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
+      \"assistant\",\n        \"content\": \"Thought: Do I need to use a tool? No\\n\\nFinal
+      Answer:\\n\\n1. \\\"Imagine a future where AI empowers us to detect diseases
+      before they arise, transforming healthcare from reactive to proactive. Machine
+      learning algorithms, trained on vast amounts of patient data, could potentially
+      predict heart diseases, strokes, or cancers before they manifest, allowing for
+      early interventions and significantly improving patient outcomes. This article
+      will delve into the rapid advancements in AI within the healthcare sector and
+      how these technologies are ushering us into a new era of predictive medicine.\\\"\\n\\n2.
+      \\\"From the humble home kitchen to grand culinary stages, AI is revolutionizing
+      the way we cook. Smart appliances, equipped with advanced sensors and predictive
+      algorithms, are turning kitchens into creative playgrounds, offering personalized
+      recipes, precise cooking instructions, and even automated meal preparation.
+      This article explores the fascinating intersection of AI and gastronomy, revealing
+      how technology is transforming our culinary experiences.\\\"\\n\\n3. \\\"Fitness
+      reimagined \u2013 that's the promise of AI in the wellness industry. Picture
+      a personal trainer who knows your strengths, weaknesses, and nutritional needs
+      intimately. An AI-powered fitness app can provide this personalized experience,
+      adapting your workout plans and dietary recommendations in real-time based on
+      your progress and feedback. Join us as we unpack how AI is revolutionizing the
+      fitness landscape, offering personalized, data-driven approaches to health and
+      well-being.\\\"\\n\\n4. \\\"Art and AI may seem like unlikely partners, but
+      their synergy is sparking a creative revolution. AI algorithms are now creating
+      mesmerizing artworks, challenging our perceptions of creativity and originality.
+      From AI-assisted painting to generative music composition, this article will
+      take you on a journey through the fascinating world of AI in art, exploring
+      how technology is reshaping the boundaries of human creativity.\\\"\\n\\n5.
+      \\\"The vast expanse of space, once the sole domain of astronauts and rovers,
+      is the next frontier for AI. AI technology is playing an increasingly vital
+      role in space exploration, from predicting space weather to assisting in interstellar
+      navigation. This article will delve into the exciting intersection of AI and
+      space exploration, exploring how these advanced technologies are helping us
+      uncover the mysteries of the cosmos.\\\"\"\n      },\n      \"logprobs\": null,\n
+      \     \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\":
+      346,\n    \"completion_tokens\": 429,\n    \"total_tokens\": 775\n  },\n  \"system_fingerprint\":
+      null\n}\n"
+    headers:
+      CF-Cache-Status:
+      - DYNAMIC
+      CF-RAY:
+      - 84ec519ccebf01b0-GRU
+      Cache-Control:
+      - no-cache, must-revalidate
+      Connection:
+      - keep-alive
+      Content-Encoding:
+      - gzip
+      Content-Type:
+      - application/json
+      Date:
+      - Thu, 01 Feb 2024 18:40:35 GMT
+      Server:
+      - cloudflare
+      Set-Cookie:
+      - __cf_bm=WmFNdtD.V9bIgBQVRqQBv9BhZP0ZofVfpkvpQclwFfM-1706812835-1-AUjyNjOV4GvbD1lpaYZpm1/e7us73aHw2R78TWZyyPTuflg45nO5NKiMPvenhaUMTf4i7YHTjKO4IzcpqQ/bj6w=;
+        path=/; expires=Thu, 01-Feb-24 19:10:35 GMT; domain=.api.openai.com; HttpOnly;
+        Secure; SameSite=None
+      - _cfuvid=oiEdDwsPJinPJAV6H.B7JBTdZ_1mg38yvcDd4zwbdas-1706812835609-0-604800000;
+        path=/; domain=.api.openai.com; HttpOnly; Secure; SameSite=None
+      Transfer-Encoding:
+      - chunked
+      access-control-allow-origin:
+      - '*'
+      alt-svc:
+      - h3=":443"; ma=86400
+      openai-model:
+      - gpt-4-0613
+      openai-organization:
+      - user-z7g4wmlazxqvc5wjyaaaocfz
+      openai-processing-ms:
+      - '51280'
+      openai-version:
+      - '2020-10-01'
+      strict-transport-security:
+      - max-age=15724800; includeSubDomains
+      x-ratelimit-limit-requests:
+      - '10000'
+      x-ratelimit-limit-tokens:
+      - '300000'
+      x-ratelimit-remaining-requests:
+      - '9999'
+      x-ratelimit-remaining-tokens:
+      - '299614'
+      x-ratelimit-reset-requests:
+      - 6ms
+      x-ratelimit-reset-tokens:
+      - 77ms
+      x-request-id:
+      - ffb55bca928f0e1013f6fe066fc19dd7
+    http_version: HTTP/1.1
+    status_code: 200
+- request:
+    body: '{"messages": [{"role": "user", "content": "Progressively summarize the
+      lines of conversation provided, adding onto the previous summary returning a
+      new summary.\n\nEXAMPLE\nCurrent summary:\nThe human asks what the AI thinks
+      of artificial intelligence. The AI thinks artificial intelligence is a force
+      for good.\n\nNew lines of conversation:\nHuman: Why do you think artificial
+      intelligence is a force for good?\nAI: Because artificial intelligence will
+      help humans reach their full potential.\n\nNew summary:\nThe human asks what
+      the AI thinks of artificial intelligence. The AI thinks artificial intelligence
+      is a force for good because it will help humans reach their full potential.\nEND
+      OF EXAMPLE\n\nCurrent summary:\n\n\nNew lines of conversation:\nHuman: Write
+      one amazing paragraph highlight for each idea that showcases how good an article
+      about this topic could be.\nThis is the context you''re working with:\nThe researcher
+      has come up with the following topics: \n1. \"The Future of AI in Healthcare:
+      Predicting Diseases Before They Happen\"\n2. \"How AI is Changing the Way We
+      Cook: An Insight into Smart Kitchens\"\n3. \"Redefining Fitness with AI: Personalized
+      Workout Plans and Nutritional Advice\"\n4. \"AI and the Art World: How Technology
+      is Shaping Creativity\"\n5. \"AI in Space Exploration: The Next Frontier\" \nPlease
+      write one engaging paragraph for each topic.\nAI: 1. \"Imagine a future where
+      AI empowers us to detect diseases before they arise, transforming healthcare
+      from reactive to proactive. Machine learning algorithms, trained on vast amounts
+      of patient data, could potentially predict heart diseases, strokes, or cancers
+      before they manifest, allowing for early interventions and significantly improving
+      patient outcomes. This article will delve into the rapid advancements in AI
+      within the healthcare sector and how these technologies are ushering us into
+      a new era of predictive medicine.\"\n\n2. \"From the humble home kitchen to
+      grand culinary stages, AI is revolutionizing the way we cook. Smart appliances,
+      equipped with advanced sensors and predictive algorithms, are turning kitchens
+      into creative playgrounds, offering personalized recipes, precise cooking instructions,
+      and even automated meal preparation. This article explores the fascinating intersection
+      of AI and gastronomy, revealing how technology is transforming our culinary
+      experiences.\"\n\n3. \"Fitness reimagined \u2013 that''s the promise of AI in
+      the wellness industry. Picture a personal trainer who knows your strengths,
+      weaknesses, and nutritional needs intimately. An AI-powered fitness app can
+      provide this personalized experience, adapting your workout plans and dietary
+      recommendations in real-time based on your progress and feedback. Join us as
+      we unpack how AI is revolutionizing the fitness landscape, offering personalized,
+      data-driven approaches to health and well-being.\"\n\n4. \"Art and AI may seem
+      like unlikely partners, but their synergy is sparking a creative revolution.
+      AI algorithms are now creating mesmerizing artworks, challenging our perceptions
+      of creativity and originality. From AI-assisted painting to generative music
+      composition, this article will take you on a journey through the fascinating
+      world of AI in art, exploring how technology is reshaping the boundaries of
+      human creativity.\"\n\n5. \"The vast expanse of space, once the sole domain
+      of astronauts and rovers, is the next frontier for AI. AI technology is playing
+      an increasingly vital role in space exploration, from predicting space weather
+      to assisting in interstellar navigation. This article will delve into the exciting
+      intersection of AI and space exploration, exploring how these advanced technologies
+      are helping us uncover the mysteries of the cosmos.\"\n\nNew summary:"}], "model":
+      "gpt-4", "n": 1, "stream": false, "temperature": 0.7}'
+    headers:
+      accept:
+      - application/json
+      accept-encoding:
+      - gzip, deflate
+      connection:
+      - keep-alive
+      content-length:
+      - '3851'
+      content-type:
+      - application/json
+      cookie:
+      - __cf_bm=WmFNdtD.V9bIgBQVRqQBv9BhZP0ZofVfpkvpQclwFfM-1706812835-1-AUjyNjOV4GvbD1lpaYZpm1/e7us73aHw2R78TWZyyPTuflg45nO5NKiMPvenhaUMTf4i7YHTjKO4IzcpqQ/bj6w=;
+        _cfuvid=oiEdDwsPJinPJAV6H.B7JBTdZ_1mg38yvcDd4zwbdas-1706812835609-0-604800000
+      host:
+      - api.openai.com
+      user-agent:
+      - OpenAI/Python 1.7.1
+      x-stainless-arch:
+      - x64
+      x-stainless-async:
+      - 'false'
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - MacOS
+      x-stainless-package-version:
+      - 1.7.1
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.11.5
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    content: "{\n  \"id\": \"chatcmpl-8nWHDjDbqEbewjOuX1ybxLqzTwlLn\",\n  \"object\":
+      \"chat.completion\",\n  \"created\": 1706812835,\n  \"model\": \"gpt-4-0613\",\n
+      \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
+      \"assistant\",\n        \"content\": \"The AI has provided engaging highlights
+      for five different topics on the application of artificial intelligence. The
+      first topic discusses how AI in healthcare could predict diseases before they
+      happen, transforming reactive care into proactive care. The second topic explores
+      how AI is changing the culinary world by transforming kitchens with smart appliances
+      and predictive algorithms. The third topic notes how AI is redefining fitness
+      by providing personalized workout plans and nutritional advice. The fourth topic
+      showcases how AI is influencing the art world, challenging perceptions of creativity
+      and originality. The final topic highlights the role of AI in space exploration,
+      assisting in tasks such as predicting space weather and interstellar navigation.\"\n
+      \     },\n      \"logprobs\": null,\n      \"finish_reason\": \"stop\"\n    }\n
+      \ ],\n  \"usage\": {\n    \"prompt_tokens\": 688,\n    \"completion_tokens\":
+      125,\n    \"total_tokens\": 813\n  },\n  \"system_fingerprint\": null\n}\n"
+    headers:
+      CF-Cache-Status:
+      - DYNAMIC
+      CF-RAY:
+      - 84ec52decf2201b0-GRU
+      Cache-Control:
+      - no-cache, must-revalidate
+      Connection:
+      - keep-alive
+      Content-Encoding:
+      - gzip
+      Content-Type:
+      - application/json
+      Date:
+      - Thu, 01 Feb 2024 18:40:53 GMT
+      Server:
+      - cloudflare
+      Transfer-Encoding:
+      - chunked
+      access-control-allow-origin:
+      - '*'
+      alt-svc:
+      - h3=":443"; ma=86400
+      openai-model:
+      - gpt-4-0613
+      openai-organization:
+      - user-z7g4wmlazxqvc5wjyaaaocfz
+      openai-processing-ms:
+      - '17177'
+      openai-version:
+      - '2020-10-01'
+      strict-transport-security:
+      - max-age=15724800; includeSubDomains
+      x-ratelimit-limit-requests:
+      - '10000'
+      x-ratelimit-limit-tokens:
+      - '300000'
+      x-ratelimit-remaining-requests:
+      - '9999'
+      x-ratelimit-remaining-tokens:
+      - '299061'
+      x-ratelimit-reset-requests:
+      - 6ms
+      x-ratelimit-reset-tokens:
+      - 187ms
+      x-request-id:
+      - a3fc0a72bc1ebb52bc318b800b43877c
+    http_version: HTTP/1.1
+    status_code: 200
+- request:
+    body: '{"messages": [{"role": "user", "content": "You are Crew Manager.\nYou are
+      a seasoned manager with a knack for getting the best out of your team.\nYou
+      are also known for your ability to delegate work to the right people, and to
+      ask the right questions to get the best out of your team.\nEven though you don''t
+      perform tasks by yourself, you have a lot of experience in the field, which
+      allows you to properly evaluate the work of your team members.\n\nYour personal
+      goal is: Manage the team to complete the task in the best way possible.TOOLS:\n------\nYou
+      have access to only the following tools:\n\nDelegate work to co-worker: Useful
+      to delegate a specific task to one of the following co-workers: Researcher,
+      Senior Writer.\nThe input to this tool should be a pipe (|) separated text of
+      length 3 (three), representing the co-worker you want to ask it to (one of the
+      options), the task and all actual context you have for the task.\nFor example,
+      `coworker|task|context`.\nAsk question to co-worker: Useful to ask a question,
+      opinion or take from on of the following co-workers: Researcher, Senior Writer.\nThe
+      input to this tool should be a pipe (|) separated text of length 3 (three),
+      representing the co-worker you want to ask it to (one of the options), the question
+      and all actual context you have for the question.\n For example, `coworker|question|context`.\n\nTo
+      use a tool, please use the exact following format:\n\n```\nThought: Do I need
+      to use a tool? Yes\nAction: the action to take, should be one of [Delegate work
+      to co-worker, Ask question to co-worker], just the name.\nAction Input: the
+      input to the action\nObservation: the result of the action\n```\n\nWhen you
+      have a response for your task, or if you do not need to use a tool, you MUST
+      use the format:\n\n```\nThought: Do I need to use a tool? No\nFinal Answer:
+      [your response here]This is the summary of your work so far:\nBegin! This is
+      VERY important to you, your job depends on it!\n\nCurrent Task: Come up with
+      a list of 5 interesting ideas to explore for an article, then write one amazing
+      paragraph highlight for each idea that showcases how good an article about this
+      topic could be. Return the list of ideas with their paragraph and your notes.\nThought:
+      Do I need to use a tool? Yes\nAction: Delegate work to co-worker\nAction Input:
+      Researcher|Come up with a list of 5 interesting ideas to explore for an article.|We
+      need to work on a project where we create a list of 5 interesting ideas for
+      an article. Try to think out of the box and come up with ideas that are unique
+      and engaging. The topics can be from any field like technology, science, lifestyle,
+      culture, or health. The only requirement is that they should be interesting
+      enough to engage a wide range of readers.\nObservation: Here are 5 unique and
+      engaging ideas for an article:\n\n1. \"The Future of AI in Healthcare: Predicting
+      Diseases Before They Happen\" - This article could explore the potential of
+      AI in healthcare, such as its ability to predict diseases based on genetic markers
+      and lifestyle factors.\n\n2. \"How AI is Changing the Way We Cook: An Insight
+      into Smart Kitchens\" - This article could discuss how AI and technology are
+      transforming our kitchens, from smart refrigerators to AI chefs.\n\n3. \"Redefining
+      Fitness with AI: Personalized Workout Plans and Nutritional Advice\" - This
+      article could discuss how AI is being used to create personalized workout plans
+      and provide nutritional advice, making fitness more accessible to everyone.\n\n4.
+      \"AI and the Art World: How Technology is Shaping Creativity\" - This article
+      could explore the intersection of AI and art, including how AI is being used
+      to create unique works of art and its implications for human creativity.\n\n5.
+      \"AI in Space Exploration: The Next Frontier\" - This article could discuss
+      the role of AI in space exploration, from designing spacecrafts to analyzing
+      data from distant planets.\nThought: Do I need to use a tool? Yes\nAction: Delegate
+      work to co-worker\nAction Input: Senior Writer|Write one amazing paragraph highlight
+      for each idea that showcases how good an article about this topic could be.|The
+      researcher has come up with the following topics: \n1. \"The Future of AI in
+      Healthcare: Predicting Diseases Before They Happen\"\n2. \"How AI is Changing
+      the Way We Cook: An Insight into Smart Kitchens\"\n3. \"Redefining Fitness with
+      AI: Personalized Workout Plans and Nutritional Advice\"\n4. \"AI and the Art
+      World: How Technology is Shaping Creativity\"\n5. \"AI in Space Exploration:
+      The Next Frontier\" \nPlease write one engaging paragraph for each topic.\nObservation:
+      1. \"Imagine a future where AI empowers us to detect diseases before they arise,
+      transforming healthcare from reactive to proactive. Machine learning algorithms,
+      trained on vast amounts of patient data, could potentially predict heart diseases,
+      strokes, or cancers before they manifest, allowing for early interventions and
+      significantly improving patient outcomes. This article will delve into the rapid
+      advancements in AI within the healthcare sector and how these technologies are
+      ushering us into a new era of predictive medicine.\"\n\n2. \"From the humble
+      home kitchen to grand culinary stages, AI is revolutionizing the way we cook.
+      Smart appliances, equipped with advanced sensors and predictive algorithms,
+      are turning kitchens into creative playgrounds, offering personalized recipes,
+      precise cooking instructions, and even automated meal preparation. This article
+      explores the fascinating intersection of AI and gastronomy, revealing how technology
+      is transforming our culinary experiences.\"\n\n3. \"Fitness reimagined \u2013
+      that''s the promise of AI in the wellness industry. Picture a personal trainer
+      who knows your strengths, weaknesses, and nutritional needs intimately. An AI-powered
+      fitness app can provide this personalized experience, adapting your workout
+      plans and dietary recommendations in real-time based on your progress and feedback.
+      Join us as we unpack how AI is revolutionizing the fitness landscape, offering
+      personalized, data-driven approaches to health and well-being.\"\n\n4. \"Art
+      and AI may seem like unlikely partners, but their synergy is sparking a creative
+      revolution. AI algorithms are now creating mesmerizing artworks, challenging
+      our perceptions of creativity and originality. From AI-assisted painting to
+      generative music composition, this article will take you on a journey through
+      the fascinating world of AI in art, exploring how technology is reshaping the
+      boundaries of human creativity.\"\n\n5. \"The vast expanse of space, once the
+      sole domain of astronauts and rovers, is the next frontier for AI. AI technology
+      is playing an increasingly vital role in space exploration, from predicting
+      space weather to assisting in interstellar navigation. This article will delve
+      into the exciting intersection of AI and space exploration, exploring how these
+      advanced technologies are helping us uncover the mysteries of the cosmos.\"\nThought:
+      "}], "model": "gpt-4", "n": 1, "stop": ["\nObservation"], "stream": false, "temperature":
+      0.7}'
+    headers:
+      accept:
+      - application/json
+      accept-encoding:
+      - gzip, deflate
+      connection:
+      - keep-alive
+      content-length:
+      - '7104'
+      content-type:
+      - application/json
+      cookie:
+      - __cf_bm=u.tmEZdLWJJh0JAky720e5vQTXXkbak1vLAbvqJhEiY-1706812728-1-AfwXwbOIbs/ICMGa7ID/ROzghPqSPoWSrFWNGYeQ/pa3JYTifb3+sj5oSXec/ys8Yg0Q3S0fCvt2ZsssnosJDAc=;
+        _cfuvid=awym7w2cNrUnczKj2e0M9vtNAb93tU.MTND.tf9GG64-1706812728028-0-604800000
+      host:
+      - api.openai.com
+      user-agent:
+      - OpenAI/Python 1.7.1
+      x-stainless-arch:
+      - x64
+      x-stainless-async:
+      - 'false'
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - MacOS
+      x-stainless-package-version:
+      - 1.7.1
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.11.5
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    content: "{\n  \"id\": \"chatcmpl-8nWHVfigZ90ViYdlhcH7LFow95UFa\",\n  \"object\":
+      \"chat.completion\",\n  \"created\": 1706812853,\n  \"model\": \"gpt-4-0613\",\n
+      \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
+      \"assistant\",\n        \"content\": \"Do I need to use a tool? No\\nFinal Answer:
+      Here are the 5 interesting ideas with a highlight paragraph for each:\\n\\n1.
+      \\\"The Future of AI in Healthcare: Predicting Diseases Before They Happen\\\"\\n
+      \  - \\\"Imagine a future where AI empowers us to detect diseases before they
+      arise, transforming healthcare from reactive to proactive. Machine learning
+      algorithms, trained on vast amounts of patient data, could potentially predict
+      heart diseases, strokes, or cancers before they manifest, allowing for early
+      interventions and significantly improving patient outcomes. This article will
+      delve into the rapid advancements in AI within the healthcare sector and how
+      these technologies are ushering us into a new era of predictive medicine.\\\"\\n\\n2.
+      \\\"How AI is Changing the Way We Cook: An Insight into Smart Kitchens\\\"\\n
+      \  - \\\"From the humble home kitchen to grand culinary stages, AI is revolutionizing
+      the way we cook. Smart appliances, equipped with advanced sensors and predictive
+      algorithms, are turning kitchens into creative playgrounds, offering personalized
+      recipes, precise cooking instructions, and even automated meal preparation.
+      This article explores the fascinating intersection of AI and gastronomy, revealing
+      how technology is transforming our culinary experiences.\\\"\\n\\n3. \\\"Redefining
+      Fitness with AI: Personalized Workout Plans and Nutritional Advice\\\"\\n   -
+      \\\"Fitness reimagined \u2013 that's the promise of AI in the wellness industry.
+      Picture a personal trainer who knows your strengths, weaknesses, and nutritional
+      needs intimately. An AI-powered fitness app can provide this personalized experience,
+      adapting your workout plans and dietary recommendations in real-time based on
+      your progress and feedback. Join us as we unpack how AI is revolutionizing the
+      fitness landscape, offering personalized, data-driven approaches to health and
+      well-being.\\\"\\n\\n4. \\\"AI and the Art World: How Technology is Shaping
+      Creativity\\\"\\n   - \\\"Art and AI may seem like unlikely partners, but their
+      synergy is sparking a creative revolution. AI algorithms are now creating mesmerizing
+      artworks, challenging our perceptions of creativity and originality. From AI-assisted
+      painting to generative music composition, this article will take you on a journey
+      through the fascinating world of AI in art, exploring how technology is reshaping
+      the boundaries of human creativity.\\\"\\n\\n5. \\\"AI in Space Exploration:
+      The Next Frontier\\\"\\n   - \\\"The vast expanse of space, once the sole domain
+      of astronauts and rovers, is the next frontier for AI. AI technology is playing
+      an increasingly vital role in space exploration, from predicting space weather
+      to assisting in interstellar navigation. This article will delve into the exciting
+      intersection of AI and space exploration, exploring how these advanced technologies
+      are helping us uncover the mysteries of the cosmos.\\\"\"\n      },\n      \"logprobs\":
+      null,\n      \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\":
+      1420,\n    \"completion_tokens\": 526,\n    \"total_tokens\": 1946\n  },\n  \"system_fingerprint\":
+      null\n}\n"
+    headers:
+      CF-Cache-Status:
+      - DYNAMIC
+      CF-RAY:
+      - 84ec534c8b3c1ab2-GRU
+      Cache-Control:
+      - no-cache, must-revalidate
+      Connection:
+      - keep-alive
+      Content-Encoding:
+      - gzip
+      Content-Type:
+      - application/json
+      Date:
+      - Thu, 01 Feb 2024 18:41:47 GMT
+      Server:
+      - cloudflare
+      Transfer-Encoding:
+      - chunked
+      access-control-allow-origin:
+      - '*'
+      alt-svc:
+      - h3=":443"; ma=86400
+      openai-model:
+      - gpt-4-0613
+      openai-organization:
+      - user-z7g4wmlazxqvc5wjyaaaocfz
+      openai-processing-ms:
+      - '54417'
+      openai-version:
+      - '2020-10-01'
+      strict-transport-security:
+      - max-age=15724800; includeSubDomains
+      x-ratelimit-limit-requests:
+      - '10000'
+      x-ratelimit-limit-tokens:
+      - '300000'
+      x-ratelimit-remaining-requests:
+      - '9999'
+      x-ratelimit-remaining-tokens:
+      - '298265'
+      x-ratelimit-reset-requests:
+      - 6ms
+      x-ratelimit-reset-tokens:
+      - 347ms
+      x-request-id:
+      - 7bc45da0338f1a84ca0b7f2c3eff5ec2
+    http_version: HTTP/1.1
+    status_code: 200
+- request:
+    body: '{"messages": [{"role": "user", "content": "Progressively summarize the
+      lines of conversation provided, adding onto the previous summary returning a
+      new summary.\n\nEXAMPLE\nCurrent summary:\nThe human asks what the AI thinks
+      of artificial intelligence. The AI thinks artificial intelligence is a force
+      for good.\n\nNew lines of conversation:\nHuman: Why do you think artificial
+      intelligence is a force for good?\nAI: Because artificial intelligence will
+      help humans reach their full potential.\n\nNew summary:\nThe human asks what
+      the AI thinks of artificial intelligence. The AI thinks artificial intelligence
+      is a force for good because it will help humans reach their full potential.\nEND
+      OF EXAMPLE\n\nCurrent summary:\n\n\nNew lines of conversation:\nHuman: Come
+      up with a list of 5 interesting ideas to explore for an article, then write
+      one amazing paragraph highlight for each idea that showcases how good an article
+      about this topic could be. Return the list of ideas with their paragraph and
+      your notes.\nAI: Here are the 5 interesting ideas with a highlight paragraph
+      for each:\n\n1. \"The Future of AI in Healthcare: Predicting Diseases Before
+      They Happen\"\n   - \"Imagine a future where AI empowers us to detect diseases
+      before they arise, transforming healthcare from reactive to proactive. Machine
+      learning algorithms, trained on vast amounts of patient data, could potentially
+      predict heart diseases, strokes, or cancers before they manifest, allowing for
+      early interventions and significantly improving patient outcomes. This article
+      will delve into the rapid advancements in AI within the healthcare sector and
+      how these technologies are ushering us into a new era of predictive medicine.\"\n\n2.
+      \"How AI is Changing the Way We Cook: An Insight into Smart Kitchens\"\n   -
+      \"From the humble home kitchen to grand culinary stages, AI is revolutionizing
+      the way we cook. Smart appliances, equipped with advanced sensors and predictive
+      algorithms, are turning kitchens into creative playgrounds, offering personalized
+      recipes, precise cooking instructions, and even automated meal preparation.
+      This article explores the fascinating intersection of AI and gastronomy, revealing
+      how technology is transforming our culinary experiences.\"\n\n3. \"Redefining
+      Fitness with AI: Personalized Workout Plans and Nutritional Advice\"\n   - \"Fitness
+      reimagined \u2013 that''s the promise of AI in the wellness industry. Picture
+      a personal trainer who knows your strengths, weaknesses, and nutritional needs
+      intimately. An AI-powered fitness app can provide this personalized experience,
+      adapting your workout plans and dietary recommendations in real-time based on
+      your progress and feedback. Join us as we unpack how AI is revolutionizing the
+      fitness landscape, offering personalized, data-driven approaches to health and
+      well-being.\"\n\n4. \"AI and the Art World: How Technology is Shaping Creativity\"\n   -
+      \"Art and AI may seem like unlikely partners, but their synergy is sparking
+      a creative revolution. AI algorithms are now creating mesmerizing artworks,
+      challenging our perceptions of creativity and originality. From AI-assisted
+      painting to generative music composition, this article will take you on a journey
+      through the fascinating world of AI in art, exploring how technology is reshaping
+      the boundaries of human creativity.\"\n\n5. \"AI in Space Exploration: The Next
+      Frontier\"\n   - \"The vast expanse of space, once the sole domain of astronauts
+      and rovers, is the next frontier for AI. AI technology is playing an increasingly
+      vital role in space exploration, from predicting space weather to assisting
+      in interstellar navigation. This article will delve into the exciting intersection
+      of AI and space exploration, exploring how these advanced technologies are helping
+      us uncover the mysteries of the cosmos.\"\n\nNew summary:"}], "model": "gpt-4",
+      "n": 1, "stream": false, "temperature": 0.7}'
+    headers:
+      accept:
+      - application/json
+      accept-encoding:
+      - gzip, deflate
+      connection:
+      - keep-alive
+      content-length:
+      - '3919'
+      content-type:
+      - application/json
+      cookie:
+      - __cf_bm=u.tmEZdLWJJh0JAky720e5vQTXXkbak1vLAbvqJhEiY-1706812728-1-AfwXwbOIbs/ICMGa7ID/ROzghPqSPoWSrFWNGYeQ/pa3JYTifb3+sj5oSXec/ys8Yg0Q3S0fCvt2ZsssnosJDAc=;
+        _cfuvid=awym7w2cNrUnczKj2e0M9vtNAb93tU.MTND.tf9GG64-1706812728028-0-604800000
+      host:
+      - api.openai.com
+      user-agent:
+      - OpenAI/Python 1.7.1
+      x-stainless-arch:
+      - x64
+      x-stainless-async:
+      - 'false'
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - MacOS
+      x-stainless-package-version:
+      - 1.7.1
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.11.5
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    content: "{\n  \"id\": \"chatcmpl-8nWIOgYyxoh7migh87kebeaOUQQM0\",\n  \"object\":
+      \"chat.completion\",\n  \"created\": 1706812908,\n  \"model\": \"gpt-4-0613\",\n
+      \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
+      \"assistant\",\n        \"content\": \"The human asks the AI to generate five
+      topics for articles, each with a highlight paragraph. The AI proposes the following:
+      1) The future role of AI in predicting diseases and transforming healthcare,
+      2) The impact of AI on cooking and the emergence of smart kitchens, 3) The use
+      of AI in personalizing fitness and nutrition plans, 4) The influence of AI on
+      art and creativity, and 5) The application of AI in space exploration. Each
+      topic is accompanied by a paragraph showcasing the potential depth and intrigue
+      of an article on the given subject.\"\n      },\n      \"logprobs\": null,\n
+      \     \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\":
+      700,\n    \"completion_tokens\": 115,\n    \"total_tokens\": 815\n  },\n  \"system_fingerprint\":
+      null\n}\n"
+    headers:
+      CF-Cache-Status:
+      - DYNAMIC
+      CF-RAY:
+      - 84ec54a25b4a1ab2-GRU
+      Cache-Control:
+      - no-cache, must-revalidate
+      Connection:
+      - keep-alive
+      Content-Encoding:
+      - gzip
+      Content-Type:
+      - application/json
+      Date:
+      - Thu, 01 Feb 2024 18:42:01 GMT
+      Server:
+      - cloudflare
+      Transfer-Encoding:
+      - chunked
+      access-control-allow-origin:
+      - '*'
+      alt-svc:
+      - h3=":443"; ma=86400
+      openai-model:
+      - gpt-4-0613
+      openai-organization:
+      - user-z7g4wmlazxqvc5wjyaaaocfz
+      openai-processing-ms:
+      - '13420'
+      openai-version:
+      - '2020-10-01'
+      strict-transport-security:
+      - max-age=15724800; includeSubDomains
+      x-ratelimit-limit-requests:
+      - '10000'
+      x-ratelimit-limit-tokens:
+      - '300000'
+      x-ratelimit-remaining-requests:
+      - '9999'
+      x-ratelimit-remaining-tokens:
+      - '299045'
+      x-ratelimit-reset-requests:
+      - 6ms
+      x-ratelimit-reset-tokens:
+      - 191ms
+      x-request-id:
+      - 7164ea94ba0e8fa5e61b366a6dd69dbc
+    http_version: HTTP/1.1
+    status_code: 200
+version: 1

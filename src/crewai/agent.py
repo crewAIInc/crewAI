@@ -1,13 +1,12 @@
 import uuid
 from typing import Any, List, Optional
 
-from langchain.agents.format_scratchpad import format_log_to_str
 from langchain.agents.agent import RunnableAgent
+from langchain.agents.format_scratchpad import format_log_to_str
 from langchain.memory import ConversationSummaryMemory
 from langchain.tools.render import render_text_description
 from langchain_core.runnables.config import RunnableConfig
 from langchain_openai import ChatOpenAI
-from langchain_core.language_models import BaseLanguageModel
 from pydantic import (
     UUID4,
     BaseModel,
@@ -171,7 +170,7 @@ class Agent(BaseModel):
         """
         self.cache_handler = cache_handler
         self.tools_handler = ToolsHandler(cache=self.cache_handler)
-        self.__create_agent_executor()
+        self._create_agent_executor()
 
     def set_rpm_controller(self, rpm_controller: RPMController) -> None:
         """Set the rpm controller for the agent.
@@ -181,9 +180,9 @@ class Agent(BaseModel):
         """
         if not self._rpm_controller:
             self._rpm_controller = rpm_controller
-            self.__create_agent_executor()
+            self._create_agent_executor()
 
-    def __create_agent_executor(self) -> None:
+    def _create_agent_executor(self) -> None:
         """Create an agent executor for the agent.
 
         Returns:

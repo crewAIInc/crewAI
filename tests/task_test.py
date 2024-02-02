@@ -1,5 +1,7 @@
 """Test Agent creation and execution basic functionality."""
 
+from unittest.mock import MagicMock, patch
+
 from crewai.agent import Agent
 from crewai.task import Task
 
@@ -27,7 +29,7 @@ def test_task_tool_reflect_agent_tools():
     assert task.tools == [fake_tool]
 
 
-def test_task_tool_takes_precedence_ove_agent_tools():
+def test_task_tool_takes_precedence_over_agent_tools():
     from langchain.tools import tool
 
     @tool
@@ -47,7 +49,7 @@ def test_task_tool_takes_precedence_ove_agent_tools():
     )
 
     task = Task(
-        description="Give me a list of 5 interesting ideas to explore for na article, what makes them unique and interesting.",
+        description="Give me a list of 5 interesting ideas to explore for an article, what makes them unique and interesting.",
         agent=researcher,
         tools=[fake_task_tool],
     )
@@ -69,8 +71,6 @@ def test_task_prompt_includes_expected_output():
         agent=researcher,
     )
 
-    from unittest.mock import patch
-
     with patch.object(Agent, "execute_task") as execute:
         execute.return_value = "ok"
         task.execute()
@@ -78,8 +78,6 @@ def test_task_prompt_includes_expected_output():
 
 
 def test_task_callback():
-    from unittest.mock import MagicMock
-
     researcher = Agent(
         role="Researcher",
         goal="Make the best research and analysis on content about AI and AI agents",
@@ -94,12 +92,27 @@ def test_task_callback():
         expected_output="Bullet point list of 5 interesting ideas.",
         agent=researcher,
         callback=task_completed,
-        allow_delegation=False,
     )
-
-    from unittest.mock import patch
 
     with patch.object(Agent, "execute_task") as execute:
         execute.return_value = "ok"
         task.execute()
         task_completed.assert_called_once_with(task.output)
+
+
+def test_execute_with_agent():
+    researcher = Agent(
+        role="Researcher",
+        goal="Make the best research and analysis on content about AI and AI agents",
+        backstory="You're an expert researcher, specialized in technology, software engineering, AI and startups. You work as a freelancer and is now working on doing research and analysis for a new customer.",
+        allow_delegation=False,
+    )
+
+    task = Task(
+        description="Give me a list of 5 interesting ideas to explore for na article, what makes them unique and interesting.",
+        expected_output="Bullet point list of 5 interesting ideas.",
+    )
+
+    with patch.object(Agent, "execute_task", return_value="ok") as execute:
+        task.execute(agent=researcher)
+        execute.assert_called_once_with(task=task._prompt(), context=None, tools=[])
