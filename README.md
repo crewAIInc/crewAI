@@ -130,7 +130,11 @@ print("######################")
 print(result)
 ```
 
-Currently the only supported process is `Process.sequential`, where one task is executed after the other and the outcome of one is passed as extra content into this next.
+<!-- Além do process sequencial, você pode usar o process hierárquico, que é um pouco mais complexo, mas que permite que o sistema delegue as tarefas para os agentes e valide os resultados. Veja mais sobre os processos [aqui](./docs/core-concepts/Managing-Processes.md) -->
+
+<!-- TODO english version of above -->
+
+In addition to the sequential process, you can use the hierarchical process, which automatically assigns a manager to the defined crew to properly coordinate the planning and execution of tasks through delegation and validation of results. See more about the processes [here](./docs/core-concepts/Managing-Processes.md)
 
 
 ## Key Features
@@ -138,7 +142,7 @@ Currently the only supported process is `Process.sequential`, where one task is 
 - **Role-Based Agent Design**: Customize agents with specific roles, goals, and tools.
 - **Autonomous Inter-Agent Delegation**: Agents can autonomously delegate tasks and inquire amongst themselves, enhancing problem-solving efficiency.
 - **Flexible Task Management**: Define tasks with customizable tools and assign them to agents dynamically.
-- **Processes Driven**: Currently only supports `sequential` task execution but more complex processes like consensual and hierarchical being worked on.
+- **Processes Driven**: Currently only supports `sequential` task execution and `hierarchical` processes, but more complex processes like consensual are being worked on.
 - **Works with Open Source Models**: Run your crew using Open AI or open source models refer to the [Connect crewAI to LLMs](./docs/llm-connections.md) page for details on configuring you agents' connections to models, even ones running locally!
 
 ![CrewAI Mind Map](./docs/crewAI-mindmap.png "CrewAI Mind Map")

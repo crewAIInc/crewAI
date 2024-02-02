@@ -8,22 +8,14 @@ A process in CrewAI can be thought of as the game plan for how your AI agents wi
 
 ## Process Implementations
 
-- **Sequential (Supported)**: This is the only process currently implemented in CrewAI. It ensures tasks are handled one at a time, in a given order, much like a relay race where one runner passes the baton to the next.
+- **Sequential (Supported)**: This process ensures tasks are handled one at a time, in a given order, much like a relay race where one runner passes the baton to the next.
+- **Hierarchical**: This process introduces a chain of command to task execution. You define the crew and the system assigns a manager to properly coordinate the planning and execution of tasks through delegation and validation of results, akin to a traditional corporate hierarchy.
 - **Consensual (WIP)**: Envisioned for a future update, the consensual process will enable agents to make joint decisions on task execution, similar to a team consensus in a meeting before proceeding.
-- **Hierarchical (WIP)**: Also in the pipeline, this process will introduce a chain of command to task execution, where some agents may have the authority to prioritize tasks or delegate them, akin to a traditional corporate hierarchy.
 These additional processes, once implemented, will offer more nuanced and sophisticated ways for agents to interact and complete tasks, much like teams in complex organizational structures.
 
+## The Role of Processes in Teamwork
 
-## Defining a Sequential Process
-
-Creating a sequential process in CrewAI is straightforward and reflects the simplicity of coordinating a team's efforts step by step. In this process the outcome of the previous task is sent into the next one as context that I should use to accomplish it's task
-
-```python
-from crewai import Process
-
-# Define a sequential process
-sequential_process = Process.sequential
-```
+The process you choose for your crew is critical. It's what transforms a group of individual agents into a cohesive unit that can tackle complex projects with the precision and harmony you'd find in a team of skilled humans.
 
 # The Magic of Sequential Processes
 
@@ -35,15 +27,28 @@ To assign a process to a crew, simply set it during the crew's creation. The pro
 
 ```python
 from crewai import Crew
+from crewai.process import Process
 
 # Create a crew with a sequential process
-crew = Crew(agents=my_agents, tasks=my_tasks, process=sequential_process)
+crew = Crew(agents=my_agents, tasks=my_tasks, process=Process.sequential)
 ```
 
-## The Role of Processes in Teamwork
+# The Magic of Hierarchical Processes
 
-The process you choose for your crew is critical. It's what transforms a group of individual agents into a cohesive unit that can tackle complex projects with the precision and harmony you'd find in a team of skilled humans.
+The hierarchical process is tiny bit more magic, as the chain of command and task assignment is hidden from the user. The system will automatically assign a manager the execute the tasks, but the agent will never execute the job by itself. Instead, the manager will plan the steps to execute the task and delegate the work to the agents. The agents will then execute the task and report back to the manager, who will validate the results and pass the task outcome to the next task.
 
-## Conclusion
+## Assigning Processes to a Crew
+
+To assign a process to a crew, simply set it during the crew's creation. The process will dictate the crew's approach to task execution. Different from the sequential process, you don't need to assign an agent to a task.
+
+```python
+from crewai import Crew
+from crewai.process import Process
+
+# Create a crew with a sequential process
+crew = Crew(agents=my_agents, tasks=my_tasks, process=Process.hierarchical)
+```
+
+# Conclusion
 
 Processes bring structure and order to the CrewAI ecosystem, allowing agents to collaborate effectively and accomplish goals systematically. As CrewAI evolves, additional process types will be introduced to enhance the framework's versatility, much like a team that grows and adapts over time.
