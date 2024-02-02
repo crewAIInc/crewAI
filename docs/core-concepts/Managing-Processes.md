@@ -17,26 +17,6 @@ These additional processes, once implemented, will offer more nuanced and sophis
 
 The process you choose for your crew is critical. It's what transforms a group of individual agents into a cohesive unit that can tackle complex projects with the precision and harmony you'd find in a team of skilled humans.
 
-# The Magic of Sequential Processes
-
-The sequential process is where much of CrewAI's magic happens. It ensures that tasks are approached with the same thoughtful progression that a human team would use, fostering a natural and logical flow of work while passing on task outcome into the next.
-
-## Assigning Processes to a Crew
-
-To assign a process to a crew, simply set it during the crew's creation. The process will dictate the crew's approach to task execution.
-
-```python
-from crewai import Crew
-from crewai.process import Process
-
-# Create a crew with a sequential process
-crew = Crew(agents=my_agents, tasks=my_tasks, process=Process.sequential)
-```
-
-# The Magic of Hierarchical Processes
-
-The hierarchical process is tiny bit more magic, as the chain of command and task assignment is hidden from the user. The system will automatically assign a manager the execute the tasks, but the agent will never execute the job by itself. Instead, the manager will plan the steps to execute the task and delegate the work to the agents. The agents will then execute the task and report back to the manager, who will validate the results and pass the task outcome to the next task.
-
 ## Assigning Processes to a Crew
 
 To assign a process to a crew, simply set it during the crew's creation. The process will dictate the crew's approach to task execution. Different from the sequential process, you don't need to assign an agent to a task.
@@ -46,8 +26,18 @@ from crewai import Crew
 from crewai.process import Process
 
 # Create a crew with a sequential process
+crew = Crew(agents=my_agents, tasks=my_tasks, process=Process.sequential)
+# OR create a crew with a hierarchical process
 crew = Crew(agents=my_agents, tasks=my_tasks, process=Process.hierarchical)
 ```
+
+## Sequential Process
+
+The sequential process is where much of CrewAI's magic happens. It ensures that tasks are approached with the same thoughtful progression that a human team would use, fostering a natural and logical flow of work while passing on task outcome into the next.
+
+## Hierarchical Process
+
+The hierarchical process is tiny bit more magic, as the chain of command and task assignment is hidden from the user. The system will automatically assign a manager the execute the tasks, but the agent will never execute the job by itself. Instead, the manager will plan the steps to execute the task and delegate the work to the agents. The agents will then execute the task and report back to the manager, who will validate the results and pass the task outcome to the next task.
 
 # Conclusion
 
