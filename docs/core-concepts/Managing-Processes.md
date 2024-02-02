@@ -39,6 +39,6 @@ The sequential process is where much of CrewAI's magic happens. It ensures that 
 
 The hierarchical process is tiny bit more magic, as the chain of command and task assignment is hidden from the user. The system will automatically assign a manager the execute the tasks, but the agent will never execute the job by itself. Instead, the manager will plan the steps to execute the task and delegate the work to the agents. The agents will then execute the task and report back to the manager, who will validate the results and pass the task outcome to the next task.
 
-# Conclusion
+## Conclusion
 
 Processes bring structure and order to the CrewAI ecosystem, allowing agents to collaborate effectively and accomplish goals systematically. As CrewAI evolves, additional process types will be introduced to enhance the framework's versatility, much like a team that grows and adapts over time.
