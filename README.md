@@ -241,7 +241,7 @@ pip install dist/*.tar.gz
 ## Hire CrewAI
 
 We're a company developing crewAI and crewAI Enterprise, we for a limited time are offer consulting with selected customers, to get them early access to our enterprise solution
-If you are interested on having access to it and hiring weekly hours with our team, feel free to email us at [sales@crewai.io](mailto:joao@crewai.io).
+If you are interested on having access to it and hiring weekly hours with our team, feel free to email us at [sales@crewai.io](mailto:joao@crewai.com).
 
 ## License
 
