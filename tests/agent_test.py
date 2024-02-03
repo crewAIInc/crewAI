@@ -374,3 +374,27 @@ def test_agent_without_max_rpm_respet_crew_rpm(capsys):
         assert "Action: get_final_answer" in captured.out
         assert "Max RPM reached, waiting for next minute to start." in captured.out
         moveon.assert_called_once()
+
+
+@pytest.mark.vcr(filter_headers=["authorization"])
+def test_agent_use_specific_tasks_output_as_context(capsys):
+    pass
+
+    agent1 = Agent(role="test role", goal="test goal", backstory="test backstory")
+
+    agent2 = Agent(role="test role2", goal="test goal2", backstory="test backstory2")
+
+    say_hi_task = Task(description="Just say hi.", agent=agent1)
+    say_bye_task = Task(description="Just say bye.", agent=agent1)
+    answer_task = Task(
+        description="Answer accordingly to the context you got.",
+        context=[say_hi_task],
+        agent=agent2,
+    )
+
+    tasks = [say_hi_task, say_bye_task, answer_task]
+
+    crew = Crew(agents=[agent1, agent2], tasks=tasks)
+    result = crew.kickoff()
+    assert "bye" not in result.lower()
+    assert "hi" in result.lower() or "hello" in result.lower()
