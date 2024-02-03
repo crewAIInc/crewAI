@@ -39,9 +39,6 @@
 The power of AI collaboration has too much to offer.
 CrewAI is designed to enable AI agents to assume roles, share goals, and operate in a cohesive unit - much like a well-oiled crew. Whether you're building a smart assistant platform, an automated customer service ensemble, or a multi-agent research team, CrewAI provides the backbone for sophisticated multi-agent interactions.
 
-- 🤖 [Talk with the Docs](https://chatg.pt/DWjSBZn)
-- 📄 [Documentation](https://joaomdmoura.github.io/crewAI/)
-
 ## Getting Started
 
 To get started with CrewAI, follow these simple steps:
@@ -52,7 +49,7 @@ To get started with CrewAI, follow these simple steps:
 pip install crewai
 ```
 
-The example below also uses DuckDuckGo's Search. Install it too:
+The example below also uses DuckDuckGo's Search. You can install it with `pip` too:
 
 ```shell
 pip install duckduckgo-search
@@ -64,7 +61,7 @@ pip install duckduckgo-search
 import os
 from crewai import Agent, Task, Crew, Process
 
-os.environ["OPENAI_API_KEY"] = "YOUR KEY"
+os.environ["OPENAI_API_KEY"] = "YOUR_API_KEY"
 
 # You can choose to use a local model through Ollama for example. See ./docs/how-to/llm-connections.md for more information.
 # from langchain.llms import Ollama
@@ -151,26 +148,26 @@ In addition to the sequential process, you can use the hierarchical process, whi
 
 ## Examples
 
-You can test different real life examples of AI crews [in the examples repo](https://github.com/joaomdmoura/crewAI-examples?tab=readme-ov-file)
+You can test different real life examples of AI crews in the [ `crewAI-examples`](https://github.com/joaomdmoura/crewAI-examples?tab=readme-ov-file) repo:
 
-### Code
-
-- [Trip Planner](https://github.com/joaomdmoura/crewAI-examples/tree/main/trip_planner)
-- [Stock Analysis](https://github.com/joaomdmoura/crewAI-examples/tree/main/stock_analysis)
 - [Landing Page Generator](https://github.com/joaomdmoura/crewAI-examples/tree/main/landing_page_generator)
 - [Having Human input on the execution](./docs/how-to/Human-Input-on-Execution.md)
+- [Trip Planner](https://github.com/joaomdmoura/crewAI-examples/tree/main/trip_planner)
+- [Stock Analysis](https://github.com/joaomdmoura/crewAI-examples/tree/main/stock_analysis)
 
-### Video
-
-#### Quick Tutorial
+### Quick Tutorial
 
 [![CrewAI Tutorial](https://img.youtube.com/vi/tnejrr-0a94/maxresdefault.jpg)](https://www.youtube.com/watch?v=tnejrr-0a94 "CrewAI Tutorial")
 
-#### Trip Planner
+### Trip Planner
+
+[Check out code for this example](https://github.com/joaomdmoura/crewAI-examples/tree/main/trip_planner) or watch a video below:
 
 [![Trip Planner](https://img.youtube.com/vi/xis7rWp-hjs/maxresdefault.jpg)](https://www.youtube.com/watch?v=xis7rWp-hjs "Trip Planner")
 
-#### Stock Analysis
+### Stock Analysis
+
+[Check out code for this example](https://github.com/joaomdmoura/crewAI-examples/tree/main/stock_analysis) or watch a video below:
 
 [![Stock Analysis](https://img.youtube.com/vi/e0Uj4yWdaAg/maxresdefault.jpg)](https://www.youtube.com/watch?v=e0Uj4yWdaAg "Stock Analysis")
 
@@ -244,8 +241,8 @@ pip install dist/*.tar.gz
 ## Hire CrewAI
 
 We're a company developing crewAI and crewAI Enterprise, we for a limited time are offer consulting with selected customers, to get them early access to our enterprise solution
-If you are interested on having access to it and hiring weekly hours with our team, feel free to email us at [sales@crewai.io](mailto:sales@crewai.io)
+If you are interested on having access to it and hiring weekly hours with our team, feel free to email us at [sales@crewai.io](mailto:sales@crewai.io).
 
 ## License
 
-CrewAI is released under the MIT License
+CrewAI is released under the MIT License.
