@@ -25,6 +25,10 @@ class Task(BaseModel):
         description="Clear definition of expected output for the task.",
         default=None,
     )
+    context: Optional[List["Task"]] = Field(
+        description="Other tasks that will have their output used as context for this task.",
+        default=None,
+    )
     output: Optional[TaskOutput] = Field(
         description="Task output, it's final result after being executed", default=None
     )
@@ -66,7 +70,10 @@ class Task(BaseModel):
                 f"The task '{self.description}' has no agent assigned, therefore it can't be executed directly and should be executed in a Crew using a specific process that support that, like hierarchical."
             )
 
-        result = agent.execute_task(
+        if self.context:
+            context = "\n".join([task.output.result for task in self.context])
+
+        result = self.agent.execute_task(
             task=self._prompt(), context=context, tools=self.tools
         )
 
