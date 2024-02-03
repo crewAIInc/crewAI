@@ -4,7 +4,7 @@
 
 # **crewAI**
 
-Cutting-edge framework for orchestrating role-playing, autonomous AI agents. By fostering collaborative intelligence, CrewAI empowers agents to work together seamlessly, tackling complex tasks.
+🤖 **crewAI**: Cutting-edge framework for orchestrating role-playing, autonomous AI agents. By fostering collaborative intelligence, CrewAI empowers agents to work together seamlessly, tackling complex tasks.
 
 <h3>
 
@@ -28,16 +28,16 @@ Cutting-edge framework for orchestrating role-playing, autonomous AI agents. By 
   - [Quick Tutorial](#quick-tutorial)
   - [Trip Planner](#trip-planner)
   - [Stock Analysis](#stock-analysis)
-- [Connecting Your Crew to any Model](#connecting-your-crew-to-a-model)
+- [Connecting Your Crew to a Model](#connecting-your-crew-to-a-model)
 - [How CrewAI Compares](#how-crewai-compares)
 - [Contribution](#contribution)
-- [crewAI Enterprise](#crewai-enterprise)
+- [Hire CrewAI](#hire-crewai)
 - [License](#license)
 
-## Why crewAI?
+## Why CrewAI?
 
-crewAI is designed to enable AI agentsoperate in a cohesive unit, by assuming roles, and sharing goals.
-Whether you're building a smart assistant platform, an automated customer service ensemble, or a multi-agent research team, crewAI provides the backbone for sophisticated multi-agent interactions that can be integrate into products and automations.
+The power of AI collaboration has too much to offer.
+CrewAI is designed to enable AI agents to assume roles, share goals, and operate in a cohesive unit - much like a well-oiled crew. Whether you're building a smart assistant platform, an automated customer service ensemble, or a multi-agent research team, CrewAI provides the backbone for sophisticated multi-agent interactions.
 
 ## Getting Started
 
@@ -57,43 +57,57 @@ pip install duckduckgo-search
 
 ### 2. Setting Up Your Crew
 
-Example for crew using the `sequential` process:
 ```python
 import os
 from crewai import Agent, Task, Crew, Process
 
 os.environ["OPENAI_API_KEY"] = "YOUR_API_KEY"
 
-# You can choose to use any major provider and local models as well, check the docs: https://docs.crewai.com/how-to/LLM-Connections/
+# You can choose to use a local model through Ollama for example. See ./docs/how-to/llm-connections.md for more information.
+# from langchain.llms import Ollama
+# ollama_llm = Ollama(model="openhermes")
 
-from langchain_community.tools import DuckDuckGoSearchRun
+# Install duckduckgo-search for this example:
+# !pip install -U duckduckgo-search
+
+from langchain.tools import DuckDuckGoSearchRun
 search_tool = DuckDuckGoSearchRun()
 
 # Define your agents with roles and goals
 researcher = Agent(
   role='Senior Research Analyst',
-  goal='Uncover cutting-edge developments in AI ',
+  goal='Uncover cutting-edge developments in AI and data science',
   backstory="""You work at a leading tech think tank.
   Your expertise lies in identifying emerging trends.
   You have a knack for dissecting complex data and presenting actionable insights.""",
   verbose=True,
   allow_delegation=False,
   tools=[search_tool]
+  # You can pass an optional llm attribute specifying what mode you wanna use.
+  # It can be a local model through Ollama / LM Studio or a remote
+  # model like OpenAI, Mistral, Antrophic or others (https://python.langchain.com/docs/integrations/llms/)
+  #
+  # Examples:
+  # llm=ollama_llm # was defined above in the file
+  # llm=OpenAI(model_name="gpt-3.5", temperature=0.7)
+  # For the OpenAI model you would need to import
+  # from langchain_openai import OpenAI
 )
-
 writer = Agent(
   role='Tech Content Strategist',
-  goal='Craft compelling content about tech',
-  backstory="""You are a renowned Content Strategist, known for transforming complex concepts into compelling narratives.""",
+  goal='Craft compelling content on tech advancements',
+  backstory="""You are a renowned Content Strategist, known for your insightful and engaging articles.
+  You transform complex concepts into compelling narratives.""",
   verbose=True,
-  allow_delegation=True
+  allow_delegation=True,
+  # (optional) llm=ollama_llm
 )
 
 # Create tasks for your agents
 task1 = Task(
   description="""Conduct a comprehensive analysis of the latest advancements in AI in 2024.
-  Identify key trends, breakthrough technologies, and potential industry impacts.""",
-  expected_output="A comprehensive full analysis report.",
+  Identify key trends, breakthrough technologies, and potential industry impacts.
+  Your final answer MUST be a full analysis report""",
   agent=researcher
 )
 
@@ -101,8 +115,8 @@ task2 = Task(
   description="""Using the insights provided, develop an engaging blog
   post that highlights the most significant AI advancements.
   Your post should be informative yet accessible, catering to a tech-savvy audience.
-  Make it sound cool, avoid complex words so it doesn't sound like AI.""",
-  expected_output="A complete 4 paragraph long blog post that is engaging and informative.",
+  Make it sound cool, avoid complex words so it doesn't sound like AI.
+  Your final answer MUST be the full blog post of at least 4 paragraphs.""",
   agent=writer
 )
 
@@ -110,7 +124,6 @@ task2 = Task(
 crew = Crew(
   agents=[researcher, writer],
   tasks=[task1, task2],
-  Process=Process.sequential, # You can use different processes: https://docs.crewai.com/core-concepts/Managing-Processes/
   verbose=2, # You can set it to 1 or 2 to different logging levels
 )
 
@@ -121,21 +134,26 @@ print("######################")
 print(result)
 ```
 
-In addition to the sequential process, you can use the hierarchical process, which automatically assigns a manager to the defined crew to properly coordinate the planning and execution of tasks through delegation and validation of results. See more about the processes [here](https://docs.crewai.com/core-concepts/Managing-Processes/).
+In addition to the sequential process, you can use the hierarchical process, which automatically assigns a manager to the defined crew to properly coordinate the planning and execution of tasks through delegation and validation of results. See more about the processes [here](./docs/core-concepts/Managing-Processes.md).
 
 ## Key Features
 
 - **Role-Based Agent Design**: Customize agents with specific roles, goals, and tools.
 - **Autonomous Inter-Agent Delegation**: Agents can autonomously delegate tasks and inquire amongst themselves, enhancing problem-solving efficiency.
 - **Flexible Task Management**: Define tasks with customizable tools and assign them to agents dynamically.
-- **Processes Driven**: Currently supports `sequential` and `hierarchical` task execution, but more complex processes like consensual and autonomous are being worked on.
-- **Works with Open Source Models**: Run your crew using Open AI or open source models refer to the [Connect crewAI to LLMs](https://docs.crewai.com/how-to/LLM-Connections/) page for details on configuring you agents' connections to models, even ones running locally!
+- **Processes Driven**: Currently only supports `sequential` task execution and `hierarchical` processes, but more complex processes like consensual and autonomous are being worked on.
+- **Works with Open Source Models**: Run your crew using Open AI or open source models refer to the [Connect crewAI to LLMs](https://joaomdmoura.github.io/crewAI/how-to/LLM-Connections/) page for details on configuring you agents' connections to models, even ones running locally!
 
 ![CrewAI Mind Map](./docs/crewAI-mindmap.png "CrewAI Mind Map")
 
 ## Examples
 
-You can test different real life examples of AI crews in the [ `Examples repository`](https://github.com/joaomdmoura/crewAI-examples?tab=readme-ov-file).
+You can test different real life examples of AI crews in the [ `crewAI-examples`](https://github.com/joaomdmoura/crewAI-examples?tab=readme-ov-file) repo:
+
+- [Landing Page Generator](https://github.com/joaomdmoura/crewAI-examples/tree/main/landing_page_generator)
+- [Having Human input on the execution](./docs/how-to/Human-Input-on-Execution.md)
+- [Trip Planner](https://github.com/joaomdmoura/crewAI-examples/tree/main/trip_planner)
+- [Stock Analysis](https://github.com/joaomdmoura/crewAI-examples/tree/main/stock_analysis)
 
 ### Quick Tutorial
 
@@ -161,13 +179,21 @@ Please refer to the [Connect crewAI to LLMs](https://joaomdmoura.github.io/crewA
 
 ## How CrewAI Compares
 
-- **Autogen**: While Autogen excels in creating conversational agents capable of working together, it lacks an inherent concept of process, that ability to assign specific tasks to agents and a lot of the safeguards that created more reliable outcome in crewAI. In Autogen, orchestrating agents' interactions requires additional programming, which can become complex and cumbersome as the scale of tasks grows.
+- **Autogen**: While Autogen excels in creating conversational agents capable of working together, it lacks an inherent concept of process. In Autogen, orchestrating agents' interactions requires additional programming, which can become complex and cumbersome as the scale of tasks grows.
 
 - **ChatDev**: ChatDev introduced the idea of processes into the realm of AI agents, but its implementation is quite rigid. Customizations in ChatDev are limited and not geared towards production environments, which can hinder scalability and flexibility in real-world applications.
 
 **CrewAI's Advantage**: CrewAI is built with production in mind. It offers the flexibility of Autogen's conversational agents and the structured process approach of ChatDev, but without the rigidity. CrewAI's processes are designed to be dynamic and adaptable, fitting seamlessly into both development and production workflows.
 
 ## Contribution
+
+CrewAI is open-source and we welcome contributions. If you're looking to contribute, please:
+
+- Fork the repository.
+- Create a new branch for your feature.
+- Add your feature or improvement.
+- Send a pull request.
+- We appreciate your input!
 
 ### Installing Dependencies
 
@@ -212,10 +238,10 @@ poetry build
 pip install dist/*.tar.gz
 ```
 
-## crewAI Enterprise
+## Hire CrewAI
 
-crewAI Inc, is a company developing crewAI and crewAI Enterprise, we for a limited time are offer consulting with selected customers, to get them early access to our enterprise solution.
-If you are interested on having access to it and hiring weekly hours with our team, feel free to email us at [joao@crewai.io](mailto:joao@crewai.com).
+We're a company developing crewAI and crewAI Enterprise, we for a limited time are offer consulting with selected customers, to get them early access to our enterprise solution
+If you are interested on having access to it and hiring weekly hours with our team, feel free to email us at [sales@crewai.io](mailto:sales@crewai.io).
 
 ## License
 
