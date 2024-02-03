@@ -73,7 +73,7 @@ class Task(BaseModel):
         if self.context:
             context = "\n".join([task.output.result for task in self.context])
 
-        result = self.agent.execute_task(
+        result = agent.execute_task(
             task=self._prompt(), context=context, tools=self.tools
         )
 
