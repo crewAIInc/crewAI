@@ -21,8 +21,11 @@ description: What are crewAI Agents and how to use them.
 | **Goal**       | The individual objective that the agent aims to achieve. It guides the agent's decision-making process. |
 | **Backstory**    | Provides context to the agent's role and goal, enriching the interaction and collaboration dynamics. |
 | **Tools**    | Set of capabilities or functions that the agent can use to perform tasks. Tools can be shared or exclusive to specific agents. |
+| **Max Iter**    | The maximum number of iterations the agent can perform before forced to give its best answer |
+| **Max RPM**    | The maximum number of requests per minute the agent can perform to avoid rate limits |
 | **Verbose**    | This allow you to actually see what is going on during the Crew execution. |
 | **Allow Delegation**    | Agents can delegate tasks or questions to one another, ensuring that each task is handled by the most suitable agent. |
+
 
 ## Creating an Agent
 
@@ -32,18 +35,22 @@ description: What are crewAI Agents and how to use them.
 To create an agent, you would typically initialize an instance of the `Agent` class with the desired properties. Here's a conceptual example:
 
 ```python
+# Example: Creating an agent with all attributes
 from crewai import Agent
 
-# Create an agent with a role and a goal
 agent = Agent(
   role='Data Analyst',
   goal='Extract actionable insights',
-  verbose=True,
   backstory="""You're a data analyst at a large company.
   You're responsible for analyzing data and providing insights
   to the business.
   You're currently working on a project to analyze the
-  performance of our marketing campaigns."""
+  performance of our marketing campaigns.""",
+  tools=[my_tool1, my_tool2],
+  max_iter=10,
+  max_rpm=10,
+  verbose=True,
+  allow_delegation=True
 )
 ```
 

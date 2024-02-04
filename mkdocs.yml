@@ -126,16 +126,19 @@ nav:
     - Processes: 'core-concepts/Processes.md'
     - Collaboration: 'core-concepts/Collaboration.md'
   - How to Guides:
+    - Creating a Crew Automation: 'how-to/Creating-a-Crew-and-kick-it-off.md'
     - Using Sequential Process: 'how-to/Sequential.md'
     - Using Hierarchical Process: 'how-to/Hierarchical.md'
     - Connecting to any LLM: 'how-to/LLM-Connections.md'
     - Customizing Agents: 'how-to/Customizing-Agents.md'
     - Human Input on Execution: 'how-to/Human-Input-on-Execution.md'
   - Examples:
-    - Example 1: 'examples/Example-1.md'
-    - Example 2: 'examples/Example-2.md'
-    - Example 3: 'examples/Example-3.md'
-
+    - Trip Planner Crew: https://github.com/joaomdmoura/crewAI-examples/tree/main/trip_planner"
+    - Create Instagram Post: https://github.com/joaomdmoura/crewAI-examples/tree/main/instagram_post"
+    - Stock Analysis: https://github.com/joaomdmoura/crewAI-examples/tree/main/stock_analysis"
+    - Game Generator: https://github.com/joaomdmoura/crewAI-examples/tree/main/game-builder-crew"
+    - Drafting emails with LangGraph: https://github.com/joaomdmoura/crewAI-examples/tree/main/CrewAI-LangGraph"
+    - Landing Page Generator: https://github.com/joaomdmoura/crewAI-examples/tree/main/landing_page_generator"
 extra_css:
   - stylesheets/output.css
   - stylesheets/extra.css

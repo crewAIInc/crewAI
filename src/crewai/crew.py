@@ -155,7 +155,10 @@ class Crew(BaseModel):
         task_output = ""
         for task in self.tasks:
             if task.agent is not None and task.agent.allow_delegation:
-                task.tools += AgentTools(agents=self.agents).tools()
+                agents_for_delegation = [
+                    agent for agent in self.agents if agent != task.agent
+                ]
+                task.tools += AgentTools(agents=agents_for_delegation).tools()
 
             role = task.agent.role if task.agent is not None else "None"
             self._logger.log("debug", f"Working Agent: {role}")
@@ -187,9 +190,12 @@ class Crew(BaseModel):
 
         task_output = ""
         for task in self.tasks:
+            self._logger.log("debug", f"Working Agent: {manager.role}")
             self._logger.log("info", f"Starting Task: {task.description}")
 
-            task_output = task.execute(agent=manager, context=task_output)
+            task_output = task.execute(
+                agent=manager, context=task_output, tools=manager.tools
+            )
 
             self._logger.log(
                 "debug", f"[{manager.role}] Task output: {task_output}\n\n"

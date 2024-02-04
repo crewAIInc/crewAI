@@ -66,7 +66,12 @@ class Task(BaseModel):
             self.tools.extend(self.agent.tools)
         return self
 
-    def execute(self, agent: Agent | None = None, context: Optional[str] = None) -> str:
+    def execute(
+        self,
+        agent: Agent | None = None,
+        context: Optional[str] = None,
+        tools: Optional[List[Any]] = None,
+    ) -> str:
         """Execute the task.
 
         Returns:
@@ -87,9 +92,11 @@ class Task(BaseModel):
                 context.append(task.output.result)
             context = "\n".join(context)
 
+        tools = tools or self.tools
+
         if self.async_execution:
             self.thread = threading.Thread(
-                target=self._execute, args=(agent, self._prompt(), context, self.tools)
+                target=self._execute, args=(agent, self._prompt(), context, tools)
             )
             self.thread.start()
         else:
@@ -97,7 +104,7 @@ class Task(BaseModel):
                 agent=agent,
                 task_prompt=self._prompt(),
                 context=context,
-                tools=self.tools,
+                tools=tools,
             )
             return result
 
