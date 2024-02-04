@@ -1,9 +1,9 @@
 
 [tool.poetry]
 name = "crewai"
-version = "0.1.32"
+version = "0.5.0"
 description = "Cutting-edge framework for orchestrating role-playing, autonomous AI agents. By fostering collaborative intelligence, CrewAI empowers agents to work together seamlessly, tackling complex tasks."
-authors = ["Joao Moura <joaomdmoura@gmail.com>"]
+authors = ["Joao Moura <joao@crewai.com>"]
 readme = "README.md"
 packages = [
     { include = "crewai", from = "src" },
