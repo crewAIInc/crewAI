@@ -4,7 +4,7 @@ from unittest.mock import patch
 
 import pytest
 from langchain.tools import tool
-from langchain_openai import ChatOpenAI as OpenAI
+from langchain_openai import ChatOpenAI
 
 from crewai import Agent, Crew, Task
 from crewai.agents.cache import CacheHandler
@@ -24,7 +24,7 @@ def test_agent_creation():
 def test_agent_default_values():
     agent = Agent(role="test role", goal="test goal", backstory="test backstory")
 
-    assert isinstance(agent.llm, OpenAI)
+    assert isinstance(agent.llm, ChatOpenAI)
     assert agent.llm.model_name == "gpt-4"
     assert agent.llm.temperature == 0.7
     assert agent.llm.verbose == False
@@ -36,10 +36,10 @@ def test_custom_llm():
         role="test role",
         goal="test goal",
         backstory="test backstory",
-        llm=OpenAI(temperature=0, model="gpt-4"),
+        llm=ChatOpenAI(temperature=0, model="gpt-4"),
     )
 
-    assert isinstance(agent.llm, OpenAI)
+    assert isinstance(agent.llm, ChatOpenAI)
     assert agent.llm.model_name == "gpt-4"
     assert agent.llm.temperature == 0
 
@@ -51,7 +51,7 @@ def test_agent_without_memory():
         goal="test goal",
         backstory="test backstory",
         memory=False,
-        llm=OpenAI(temperature=0, model="gpt-4"),
+        llm=ChatOpenAI(temperature=0, model="gpt-4"),
     )
 
     memory_agent = Agent(
@@ -59,7 +59,7 @@ def test_agent_without_memory():
         goal="test goal",
         backstory="test backstory",
         memory=True,
-        llm=OpenAI(temperature=0, model="gpt-4"),
+        llm=ChatOpenAI(temperature=0, model="gpt-4"),
     )
 
     result = no_memory_agent.execute_task("How much is 1 + 1?")

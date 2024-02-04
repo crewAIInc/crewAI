@@ -86,10 +86,12 @@ researcher = Agent(
   # model like OpenAI, Mistral, Antrophic or others (https://python.langchain.com/docs/integrations/llms/)
   #
   # Examples:
+  #
+  # from langchain.llms import Ollama
   # llm=ollama_llm # was defined above in the file
-  # llm=OpenAI(model_name="gpt-3.5", temperature=0.7)
-  # For the OpenAI model you would need to import
-  # from langchain_openai import OpenAI
+  #
+  # from langchain_openai import ChatOpenAI
+  # llm=ChatOpenAI(model_name="gpt-3.5", temperature=0.7)
 )
 writer = Agent(
   role='Tech Content Strategist',
