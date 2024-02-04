@@ -23,17 +23,22 @@ openai = "^1.7.1"
 langchain-openai = "^0.0.2"
 pyright = "1.1.333"
 black = {git = "https://github.com/psf/black.git", rev = "stable"}
+mkdocs-material = {extras = ["imaging"], version = "^9.5.7"}
 
 [tool.poetry.group.dev.dependencies]
 isort = "^5.13.2"
 black = "^24.1"
 autoflake = "^2.2.1"
 pre-commit = "^3.6.0"
+mkdocs = "^1.4.3"
 mkdocs-material = "^9.5.3"
+mkdocstrings = "^0.22.0"
+mkdocstrings-python = "^1.1.2"
 
 [tool.isort]
 profile = "black"
 known_first_party = ["crewai"]
+
 
 
 [tool.poetry.group.test.dependencies]

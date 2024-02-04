@@ -39,9 +39,9 @@ local_expert = Agent(
 
 ## Open AI Compatible API Endpoints
 
-In the context of integrating various language models with CrewAI, the flexibility to switch between different API endpoints is a crucial feature. By utilizing environment variables for configuration details such as `OPENAI_API_BASE_URL`, `OPENAI_API_KEY`, and `MODEL_NAME`, you can easily transition between different APIs or models. For instance, if you want to switch from using the standard OpenAI GPT model to a custom or alternative version, simply update the values of these environment variables. 
+In the context of integrating various language models with CrewAI, the flexibility to switch between different API endpoints is a crucial feature. By utilizing environment variables for configuration details such as `OPENAI_API_BASE`, `OPENAI_API_KEY`, and `MODEL_NAME`, you can easily transition between different APIs or models. For instance, if you want to switch from using the standard OpenAI GPT model to a custom or alternative version, simply update the values of these environment variables.
 
-The `OPENAI_API_BASE_URL` variable allows you to define the base URL of the API to connect to, while `OPENAI_API_KEY` is used for authentication purposes. Lastly, the `MODEL_NAME` variable specifies the particular language model to be used, such as "gpt-3.5-turbo" or any other available model. 
+The `OPENAI_API_BASE` variable allows you to define the base URL of the API to connect to, while `OPENAI_API_KEY` is used for authentication purposes. Lastly, the `MODEL_NAME` variable specifies the particular language model to be used, such as "gpt-3.5-turbo" or any other available model.
 
 This method offers an easy way to adapt the system to different models or plataforms, be it for testing, scaling, or accessing different features available on various platforms. By centralizing the configuration in environment variables, the process becomes streamlined, reducing the need for extensive code modifications when switching between APIs or models.
 
@@ -52,7 +52,7 @@ from langchain.chat_models.openai import ChatOpenAI
 
 load_dotenv()
 
-defalut_llm = ChatOpenAI(openai_api_base=os.environ.get("OPENAI_API_BASE_URL", "https://api.openai.com/v1"),
+defalut_llm = ChatOpenAI(openai_api_base=os.environ.get("OPENAI_API_BASE", "https://api.openai.com/v1"),
                         openai_api_key=os.environ.get("OPENAI_API_KEY", "NA"),
                         model_name=os.environ.get("MODEL_NAME", "gpt-3.5-turbo"))
 
@@ -66,19 +66,19 @@ example_agent = Agent(
 
 ```
 
-The following sections show examples of the configuration settings for various OpenAI API compatible applications and services. We have included links to relavant documentation for the various application and services. 
+The following sections show examples of the configuration settings for various OpenAI API compatible applications and services. We have included links to relavant documentation for the various application and services.
 
 
 ### Open AI
 
-OpenAI is the default LLM that will be used if you do not specify a value for the `llm` argument when creating an agent. It will also use default values for the `OPENAI_API_BASE_URL` and `MODEL_NAME`. So the only value you need to set when using the OpenAI endpoint is the API key that from your account.
+OpenAI is the default LLM that will be used if you do not specify a value for the `llm` argument when creating an agent. It will also use default values for the `OPENAI_API_BASE` and `MODEL_NAME`. So the only value you need to set when using the OpenAI endpoint is the API key that from your account.
 
 ```sh
 # Required
 OPENAI_API_KEY="sk-..."
 
 # Optional
-OPENAI_API_BASE_URL=https://api.openai.com/v1
+OPENAI_API_BASE=https://api.openai.com/v1
 MODEL_NAME="gpt-3.5-turbo"
 ```
 
@@ -93,7 +93,7 @@ FastChat is an open platform for training, serving, and evaluating large languag
 Configuration settings:
 ```sh
 # Required
-OPENAI_API_BASE_URL="http://localhost:8001/v1"
+OPENAI_API_BASE="http://localhost:8001/v1"
 OPENAI_API_KEY=NA
 MODEL_NAME='oh-2.5m7b-q51'
 ```
@@ -109,7 +109,7 @@ Discover, download, and run local LLMs
 Configuration settings:
 ```sh
 # Required
-OPENAI_API_BASE_URL="http://localhost:8000/v1"
+OPENAI_API_BASE="http://localhost:8000/v1"
 
 OPENAI_API_KEY=NA
 MODEL_NAME=NA
@@ -118,7 +118,7 @@ MODEL_NAME=NA
 
 ### Mistral API
 
-Mistral AI's API endpoints 
+Mistral AI's API endpoints
 
 [Mistral AI](https://mistral.ai/)
 
