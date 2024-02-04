@@ -8,7 +8,7 @@
 
 <h3>
 
-[Homepage](https://www.crewai.io/) | [Documentation](https://joaomdmoura.github.io/crewAI/) | [Chat with Docs](https://chatg.pt/DWjSBZn) | [Examples](https://joaomdmoura.github.io/crewAI/#examples-and-tutorials) | [Discord](https://discord.com/invite/X4JWnZnxPb)
+[Homepage](https://www.crewai.io/) | [Documentation](https://docs.crewai.com/) | [Chat with Docs](https://chatg.pt/DWjSBZn) | [Examples](https://github.com/joaomdmoura/crewai-examples) | [Discord](https://discord.com/invite/X4JWnZnxPb)
 
 </h3>
 
@@ -132,7 +132,7 @@ print("######################")
 print(result)
 ```
 
-In addition to the sequential process, you can use the hierarchical process, which automatically assigns a manager to the defined crew to properly coordinate the planning and execution of tasks through delegation and validation of results. [See more about the processes here](https://docs.crewai.com/core-concepts/Managing-Processes/).
+In addition to the sequential process, you can use the hierarchical process, which automatically assigns a manager to the defined crew to properly coordinate the planning and execution of tasks through delegation and validation of results. [See more about the processes here](https://docs.crewai.com/core-concepts/Processes/).
 
 ## Key Features
 
@@ -140,16 +140,16 @@ In addition to the sequential process, you can use the hierarchical process, whi
 - **Autonomous Inter-Agent Delegation**: Agents can autonomously delegate tasks and inquire amongst themselves, enhancing problem-solving efficiency.
 - **Flexible Task Management**: Define tasks with customizable tools and assign them to agents dynamically.
 - **Processes Driven**: Currently only supports `sequential` task execution and `hierarchical` processes, but more complex processes like consensual and autonomous are being worked on.
-- **Works with Open Source Models**: Run your crew using Open AI or open source models refer to the [Connect crewAI to LLMs](https://joaomdmoura.github.io/crewAI/how-to/LLM-Connections/) page for details on configuring you agents' connections to models, even ones running locally!
+- **Works with Open Source Models**: Run your crew using Open AI or open source models refer to the [Connect crewAI to LLMs](https://docs.crewai.com/how-to/LLM-Connections/) page for details on configuring you agents' connections to models, even ones running locally!
 
 ![CrewAI Mind Map](./docs/crewAI-mindmap.png "CrewAI Mind Map")
 
 ## Examples
 
-You can test different real life examples of AI crews in the [ `crewAI-examples`](https://github.com/joaomdmoura/crewAI-examples?tab=readme-ov-file) repo:
+You can test different real life examples of AI crews in the [crewAI-examples repo](https://github.com/joaomdmoura/crewAI-examples?tab=readme-ov-file):
 
 - [Landing Page Generator](https://github.com/joaomdmoura/crewAI-examples/tree/main/landing_page_generator)
-- [Having Human input on the execution](./docs/how-to/Human-Input-on-Execution.md)
+- [Having Human input on the execution](https://docs.crewai.com/how-to/Human-Input-on-Execution)
 - [Trip Planner](https://github.com/joaomdmoura/crewAI-examples/tree/main/trip_planner)
 - [Stock Analysis](https://github.com/joaomdmoura/crewAI-examples/tree/main/stock_analysis)
 
@@ -173,7 +173,7 @@ You can test different real life examples of AI crews in the [ `crewAI-examples`
 
 crewAI supports using various LLMs through a variety of connection options. By default your agents will use the OpenAI API when querying the model. However, there are several other ways to allow your agents to connect to models. For example, you can configure your agents to use a local model via the Ollama tool.
 
-Please refer to the [Connect crewAI to LLMs](https://joaomdmoura.github.io/crewAI/how-to/LLM-Connections/) page for details on configuring you agents' connections to models.
+Please refer to the [Connect crewAI to LLMs](https://docs.crewai.com/how-to/LLM-Connections/) page for details on configuring you agents' connections to models.
 
 ## How CrewAI Compares
 
@@ -239,7 +239,7 @@ pip install dist/*.tar.gz
 ## Hire CrewAI
 
 We're a company developing crewAI and crewAI Enterprise, we for a limited time are offer consulting with selected customers, to get them early access to our enterprise solution
-If you are interested on having access to it and hiring weekly hours with our team, feel free to email us at [sales@crewai.io](mailto:sales@crewai.io).
+If you are interested on having access to it and hiring weekly hours with our team, feel free to email us at [joao@crewai.com](mailto:joao@crewai.com).
 
 ## License
 
