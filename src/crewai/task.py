@@ -1,3 +1,4 @@
+import threading
 import uuid
 from typing import Any, List, Optional
 
@@ -12,8 +13,12 @@ from crewai.utilities import I18N
 class Task(BaseModel):
     """Class that represent a task to be executed."""
 
+    class Config:
+        arbitrary_types_allowed = True
+
     __hash__ = object.__hash__  # type: ignore
     i18n: I18N = I18N()
+    thread: threading.Thread = None
     description: str = Field(description="Description of the actual task.")
     callback: Optional[Any] = Field(
         description="Callback to be executed after the task is completed.", default=None
@@ -28,6 +33,10 @@ class Task(BaseModel):
     context: Optional[List["Task"]] = Field(
         description="Other tasks that will have their output used as context for this task.",
         default=None,
+    )
+    async_execution: Optional[bool] = Field(
+        description="Whether the task should be executed asynchronously or not.",
+        default=False,
     )
     output: Optional[TaskOutput] = Field(
         description="Task output, it's final result after being executed", default=None
@@ -71,12 +80,29 @@ class Task(BaseModel):
             )
 
         if self.context:
-            context = "\n".join([task.output.result for task in self.context])
+            context = []
+            for task in self.context:
+                if task.async_execution:
+                    task.thread.join()
+                context.append(task.output.result)
+            context = "\n".join(context)
 
-        result = self.agent.execute_task(
-            task=self._prompt(), context=context, tools=self.tools
-        )
+        if self.async_execution:
+            self.thread = threading.Thread(
+                target=self._execute, args=(agent, self._prompt(), context, self.tools)
+            )
+            self.thread.start()
+        else:
+            result = self._execute(
+                agent=agent,
+                task_prompt=self._prompt(),
+                context=context,
+                tools=self.tools,
+            )
+            return result
 
+    def _execute(self, agent, task_prompt, context, tools):
+        result = agent.execute_task(task=task_prompt, context=context, tools=tools)
         self.output = TaskOutput(description=self.description, result=result)
         self.callback(self.output) if self.callback else None
         return result
