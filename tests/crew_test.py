@@ -337,3 +337,51 @@ def test_api_calls_throttling(capsys):
         captured = capsys.readouterr()
         assert "Max RPM reached, waiting for next minute to start." in captured.out
         moveon.assert_called()
+
+
+def test_async_task_execution():
+    import threading
+    from unittest.mock import patch
+
+    from crewai.tasks.task_output import TaskOutput
+
+    list_ideas = Task(
+        description="Give me a list of 5 interesting ideas to explore for na article, what makes them unique and interesting.",
+        expected_output="Bullet point list of 5 important events.",
+        agent=researcher,
+        async_execution=True,
+    )
+    list_important_history = Task(
+        description="Research the history of AI and give me the 5 most important events that shaped the technology.",
+        expected_output="Bullet point list of 5 important events.",
+        agent=researcher,
+        async_execution=True,
+    )
+    write_article = Task(
+        description="Write an article about the history of AI and its most important events.",
+        expected_output="A 4 paragraph article about AI.",
+        agent=writer,
+        context=[list_ideas, list_important_history],
+    )
+
+    crew = Crew(
+        agents=[researcher, writer],
+        process=Process.sequential,
+        tasks=[list_ideas, list_important_history, write_article],
+    )
+
+    with patch.object(Agent, "execute_task") as execute:
+        execute.return_value = "ok"
+        with patch.object(threading.Thread, "start") as start:
+            thread = threading.Thread(target=lambda: None, args=()).start()
+            start.return_value = thread
+            with patch.object(threading.Thread, "join", wraps=thread.join()) as join:
+                list_ideas.output = TaskOutput(
+                    description="A 4 paragraph article about AI.", result="ok"
+                )
+                list_important_history.output = TaskOutput(
+                    description="A 4 paragraph article about AI.", result="ok"
+                )
+                crew.kickoff()
+                start.assert_called()
+                join.assert_called()

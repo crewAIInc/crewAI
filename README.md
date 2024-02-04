@@ -15,8 +15,6 @@
 [![GitHub Repo stars](https://img.shields.io/github/stars/joaomdmoura/crewAI)](https://github.com/joaomdmoura/crewAI)
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](https://opensource.org/licenses/MIT)
 
-<!-- [![Discord](https://img.shields.io/discord/1192246288507474000)](https://discord.com/invite/X4JWnZnxPb) -->
-
 </div>
 
 ## Table of contents
@@ -134,7 +132,7 @@ print("######################")
 print(result)
 ```
 
-In addition to the sequential process, you can use the hierarchical process, which automatically assigns a manager to the defined crew to properly coordinate the planning and execution of tasks through delegation and validation of results. See more about the processes [here](./docs/core-concepts/Managing-Processes.md).
+In addition to the sequential process, you can use the hierarchical process, which automatically assigns a manager to the defined crew to properly coordinate the planning and execution of tasks through delegation and validation of results. [See more about the processes here](https://docs.crewai.com/core-concepts/Managing-Processes/).
 
 ## Key Features
 

@@ -161,7 +161,9 @@ class Crew(BaseModel):
             self._logger.log("debug", f"Working Agent: {role}")
             self._logger.log("info", f"Starting Task: {task.description}")
 
-            task_output = task.execute(context=task_output)
+            output = task.execute(context=task_output)
+            if not task.async_execution:
+                task_output = output
 
             role = task.agent.role if task.agent is not None else "None"
             self._logger.log("debug", f"[{role}] Task output: {task_output}\n\n")
