@@ -68,7 +68,7 @@ os.environ["OPENAI_API_KEY"] = "YOUR_API_KEY"
 # Install duckduckgo-search for this example:
 # !pip install -U duckduckgo-search
 
-from langchain.tools import DuckDuckGoSearchRun
+from langchain_community.tools import DuckDuckGoSearchRun
 search_tool = DuckDuckGoSearchRun()
 
 # Define your agents with roles and goals

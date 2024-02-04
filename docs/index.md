@@ -28,21 +28,6 @@ Cutting-edge framework for orchestrating role-playing, autonomous AI agents. By 
                     Processes
                 </a>
             </li>
-            <!-- <li>
-                <a href="./core-concepts/Managing-Processes">
-                    Managing Processes
-                </a>
-            </li>
-            <li>
-                <a href="./core-concepts/Delegation-and-Collaboration">
-                    Collaboration and Delegation
-                </a>
-            </li>
-            <li>
-                <a href="./core-concepts/Agent-Tools">
-                    Agent Tools
-                </a>
-            </li> -->
         </ul>
     </div>
     <div style="width:30%">
@@ -74,17 +59,32 @@ Cutting-edge framework for orchestrating role-playing, autonomous AI agents. By 
         <h2>Examples</h2>
         <ul>
             <li>
-                <a href="https://github.com/joaomdmoura/crewAI-examples/tree/main/trip_planner">
+                <a target='_blank' href="https://github.com/joaomdmoura/crewAI-examples/tree/main/trip_planner">
                     Trip Planner Crew
                 </a>
             </li>
             <li>
-                <a href="https://github.com/joaomdmoura/crewAI-examples/tree/main/stock_analysis">
+                <a target='_blank' href="https://github.com/joaomdmoura/crewAI-examples/tree/main/instagram_post">
+                    Create Instagram Post
+                </a>
+            </li>
+            <li>
+                <a target='_blank' href="https://github.com/joaomdmoura/crewAI-examples/tree/main/stock_analysis">
                     Stock Analysis
                 </a>
             </li>
             <li>
-                <a href="https://github.com/joaomdmoura/crewAI-examples/tree/main/landing_page_generator">
+                <a target='_blank' href="https://github.com/joaomdmoura/crewAI-examples/tree/main/game-builder-crew">
+                    Game Generator
+                </a>
+            </li>
+            <li>
+                <a target='_blank' href="https://github.com/joaomdmoura/crewAI-examples/tree/main/CrewAI-LangGraph">
+                    Drafting emails with LangGraph
+                </a>
+            </li>
+            <li>
+                <a target='_blank' href="https://github.com/joaomdmoura/crewAI-examples/tree/main/landing_page_generator">
                     Landing Page Generator
                 </a>
             </li>
