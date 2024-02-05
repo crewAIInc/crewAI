@@ -72,6 +72,6 @@ class AgentSelector(BaseModel):
         found_agent = [agent for agent in self.agents if agent.role == llm_response]
         if not found_agent:
             raise Exception(
-                f"No agent was provided for the task {task}, and no agent was found suitable for the task, review task "
-                f"or switch Crew using a specific process that support that, like hierarchical. ")
+                f"No agent was provided for the task {task}, and no agent was found suitable for the task, review task or switch Crew using a specific process that support that, like hierarchical. "
+            )
         return found_agent[0]
