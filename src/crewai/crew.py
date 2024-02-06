@@ -30,6 +30,7 @@ class Crew(BaseModel):
     Attributes:
         tasks: List of tasks assigned to the crew.
         agents: List of agents part of this crew.
+        manager_llm: The language model that will run manager agent.
         process: The process flow that the crew will follow (e.g., sequential).
         verbose: Indicates the verbosity level for logging during execution.
         config: Configuration settings for the crew.
@@ -47,6 +48,9 @@ class Crew(BaseModel):
     agents: List[Agent] = Field(default_factory=list)
     process: Process = Field(default=Process.sequential)
     verbose: Union[int, bool] = Field(default=0)
+    manager_llm: Optional[Any] = Field(
+        description="Language model that will run the agent.", default=None
+    )
     config: Optional[Union[Json, Dict[str, Any]]] = Field(default=None)
     id: UUID4 = Field(default_factory=uuid.uuid4, frozen=True)
     max_rpm: Optional[int] = Field(
@@ -88,6 +92,17 @@ class Crew(BaseModel):
         self._cache_handler = CacheHandler()
         self._logger = Logger(self.verbose)
         self._rpm_controller = RPMController(max_rpm=self.max_rpm, logger=self._logger)
+        return self
+
+    @model_validator(mode="after")
+    def check_manager_llm(self):
+        """Validates that the language model is set when using hierarchical process."""
+        if self.process == Process.hierarchical and not self.manager_llm:
+            raise PydanticCustomError(
+                "missing_manager_llm",
+                "Attribute `manager_llm` is required when using hierarchical process.",
+                {},
+            )
         return self
 
     @model_validator(mode="after")
