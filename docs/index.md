@@ -34,6 +34,21 @@ Cutting-edge framework for orchestrating role-playing, autonomous AI agents. By 
         <h2>How-To Guides</h2>
         <ul>
             <li>
+                <a href="./how-to/Creating-a-Crew-and-kick-it-off">
+                    Getting Started
+                </a>
+            </li>
+            <li>
+                <a href="./how-to/how-to/Sequential">
+                    Using Sequential Process
+                </a>
+            </li>
+            <li>
+                <a href="./how-to/Hierarchical">
+                    Using Hierarchical Process
+                </a>
+            </li>
+            <li>
                 <a href="./how-to/LLM-Connections">
                     Connecting to LLMs
                 </a>
@@ -41,11 +56,6 @@ Cutting-edge framework for orchestrating role-playing, autonomous AI agents. By 
             <li>
                 <a href="./how-to/Customizing-Agents">
                     Customizing Agents
-                </a>
-            </li>
-            <li>
-                <a href="./how-to/Creating-a-Crew-and-kick-it-off">
-                    Creating a Crew and kick it off
                 </a>
             </li>
             <li>
@@ -58,6 +68,11 @@ Cutting-edge framework for orchestrating role-playing, autonomous AI agents. By 
     <div style="width:30%">
         <h2>Examples</h2>
         <ul>
+            <li>
+                <a target='_blank' href="https://github.com/joaomdmoura/crewAI-examples/tree/main/prep-for-a-meeting">
+                    Prepare for meetings
+                </a>
+            </li>
             <li>
                 <a target='_blank' href="https://github.com/joaomdmoura/crewAI-examples/tree/main/trip_planner">
                     Trip Planner Crew

@@ -126,7 +126,7 @@ nav:
     - Processes: 'core-concepts/Processes.md'
     - Collaboration: 'core-concepts/Collaboration.md'
   - How to Guides:
-    - Creating a Crew Automation: 'how-to/Creating-a-Crew-and-kick-it-off.md'
+    - Getting Started: 'how-to/Creating-a-Crew-and-kick-it-off.md'
     - Using Sequential Process: 'how-to/Sequential.md'
     - Using Hierarchical Process: 'how-to/Hierarchical.md'
     - Connecting to any LLM: 'how-to/LLM-Connections.md'
@@ -139,6 +139,7 @@ nav:
     - Game Generator: https://github.com/joaomdmoura/crewAI-examples/tree/main/game-builder-crew"
     - Drafting emails with LangGraph: https://github.com/joaomdmoura/crewAI-examples/tree/main/CrewAI-LangGraph"
     - Landing Page Generator: https://github.com/joaomdmoura/crewAI-examples/tree/main/landing_page_generator"
+    - Prepare for meetings: https://github.com/joaomdmoura/crewAI-examples/tree/main/prep-for-a-meeting"
 extra_css:
   - stylesheets/output.css
   - stylesheets/extra.css
