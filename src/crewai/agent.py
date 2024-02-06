@@ -24,6 +24,8 @@ from crewai.agents import (
     CrewAgentExecutor,
     CrewAgentOutputParser,
     ToolsHandler,
+    FileHandler,
+    RAGModelHandler,
 )
 from crewai.utilities import I18N, Logger, Prompts, RPMController
 
@@ -97,6 +99,14 @@ class Agent(BaseModel):
         ),
         description="Language model that will run the agent.",
     )
+
+    file_handler: FileHandler = Field(default_factory=FileHandler, description="File handler for the agent.")
+    rag_model_handler: RAGModelHandler = Field(default_factory=RAGModelHandler, description="RAG model handler for the agent.")
+
+    def query_rag_model(self, query: str) -> str:
+        """Query the RAG model."""
+        file_contents = self.file_handler.load_file_content()
+        return self.rag_model_handler.query_rag_model(query, file_contents)
 
     @field_validator("id", mode="before")
     @classmethod
