@@ -62,7 +62,7 @@ from crewai import Agent, Task, Crew, Process
 os.environ["OPENAI_API_KEY"] = "YOUR_API_KEY"
 
 # You can choose to use a local model through Ollama for example. See ./docs/how-to/llm-connections.md for more information.
-# from langchain.llms import Ollama
+# from langchain_community.llms import Ollama
 # ollama_llm = Ollama(model="openhermes")
 
 # Install duckduckgo-search for this example:
@@ -87,7 +87,7 @@ researcher = Agent(
   #
   # Examples:
   #
-  # from langchain.llms import Ollama
+  # from langchain_community.llms import Ollama
   # llm=ollama_llm # was defined above in the file
   #
   # from langchain_openai import ChatOpenAI
