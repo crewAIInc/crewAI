@@ -2,6 +2,7 @@
 
 import json
 
+import pydantic_core
 import pytest
 
 from crewai.agent import Agent
@@ -144,6 +145,8 @@ def test_crew_creation():
 
 @pytest.mark.vcr(filter_headers=["authorization"])
 def test_hierarchical_process():
+    from langchain_openai import ChatOpenAI
+
     task = Task(
         description="Come up with a list of 5 interesting ideas to explore for an article, then write one amazing paragraph highlight for each idea that showcases how good an article about this topic could be. Return the list of ideas with their paragraph and your notes.",
     )
@@ -151,6 +154,7 @@ def test_hierarchical_process():
     crew = Crew(
         agents=[researcher, writer],
         process=Process.hierarchical,
+        manager_llm=ChatOpenAI(temperature=0, model="gpt-4"),
         tasks=[task],
     )
 
@@ -173,6 +177,19 @@ def test_hierarchical_process():
 5. "AI in Space Exploration: The Next Frontier"
    - "The vast expanse of space, once the sole domain of astronauts and rovers, is the next frontier for AI. AI technology is playing an increasingly vital role in space exploration, from predicting space weather to assisting in interstellar navigation. This article will delve into the exciting intersection of AI and space exploration, exploring how these advanced technologies are helping us uncover the mysteries of the cosmos.\""""
     )
+
+
+def test_manager_llm_requirement_for_hierarchical_process():
+    task = Task(
+        description="Come up with a list of 5 interesting ideas to explore for an article, then write one amazing paragraph highlight for each idea that showcases how good an article about this topic could be. Return the list of ideas with their paragraph and your notes.",
+    )
+
+    with pytest.raises(pydantic_core._pydantic_core.ValidationError):
+        Crew(
+            agents=[researcher, writer],
+            process=Process.hierarchical,
+            tasks=[task],
+        )
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])

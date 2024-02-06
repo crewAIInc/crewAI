@@ -23,7 +23,11 @@ To utilize the hierarchical process, you must define a crew with a designated ma
 !!! note "Tools on the hierarchical process"
 	For tools when using the hierarchical process, you want to make sure to assign them to the agents instead of the tasks, as the manager will be the one delegating the tasks and the agents will be the ones executing them.
 
+!!! note "Manager LLM"
+	A manager will be automatically set for the crew, you don't need to define it. You do need to set the `manager_llm` parameter in the crew though.
+
 ```python
+from langchain_openai import ChatOpenAI
 from crewai import Crew, Process, Agent
 
 # Define your agents, no need to define a manager
@@ -42,6 +46,7 @@ writer = Agent(
 project_crew = Crew(
 	tasks=[...], # Tasks that that manager will figure out how to complete
 	agents=[researcher, writer],
+	manager_llm=ChatOpenAI(temperature=0, model="gpt-4"), # The manager's LLM that will be used internally
 	process=Process.hierarchical  # Designating the hierarchical approach
 )
 ```

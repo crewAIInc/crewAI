@@ -33,7 +33,7 @@ class CrewAgentExecutor(AgentExecutor):
 
     def _force_answer(self, output: AgentAction):
         return AgentStep(
-            action=output, observation=self.i18n.errors("used_too_many_tools")
+            action=output, observation=self.i18n.errors("force_final_answer")
         )
 
     def _call(
@@ -106,7 +106,7 @@ class CrewAgentExecutor(AgentExecutor):
                 **inputs,
             )
             if self._should_force_answer():
-                if isinstance(output, AgentAction):
+                if isinstance(output, AgentAction) or isinstance(output, AgentFinish):
                     output = output
                 elif isinstance(output, CacheHit):
                     output = output.action

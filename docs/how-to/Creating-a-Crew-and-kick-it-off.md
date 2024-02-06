@@ -4,7 +4,15 @@ description: A step-by-step guide to creating a cohesive CrewAI team for your pr
 ---
 
 ## Introduction
-Assembling a crew in CrewAI is akin to casting for a play, where each agent plays a unique role. This guide walks you through creating a crew, assigning roles and tasks, and activating them to work in harmony.
+Embarking on your CrewAI journey involves a few straightforward steps to set up your environment and initiate your AI crew. This guide ensures a seamless start.
+
+## Step 0: Installation
+Begin by installing CrewAI and any additional packages required for your project. For instance, the `duckduckgo-search` package is used in this example for enhanced search capabilities.
+
+```shell
+pip install crewai
+pip install duckduckgo-search
+```
 
 ## Step 1: Assemble Your Agents
 Begin by defining your agents with distinct roles and backstories. These elements not only add depth but also guide their task execution and interaction within the crew.

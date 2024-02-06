@@ -20,7 +20,7 @@ Ollama is preferred for local LLM integration, offering customization and privac
 Instantiate Ollama and pass it to your agents within CrewAI, enhancing them with the local model's capabilities.
 
 ```python
-from langchain.llms import Ollama
+from langchain_community.llms import Ollama
 
 # Assuming you have Ollama installed and downloaded the openhermes model
 ollama_openhermes = Ollama(model="openhermes")
