@@ -101,6 +101,20 @@ class Agent(BaseModel):
     @field_validator("id", mode="before")
     @classmethod
     def _deny_user_set_id(cls, v: Optional[UUID4]) -> None:
+        """        Deny the user from setting the ID.
+
+        Args:
+            cls: The class instance.
+            v: The value to be checked.
+
+        Returns:
+            None
+
+        Raises:
+            PydanticCustomError: If the user tries to set the ID, a PydanticCustomError is raised with the message
+                "may_not_set_field" and details "{}".
+        """
+
         if v:
             raise PydanticCustomError(
                 "may_not_set_field", "This field is not to be set by the user.", {}
@@ -108,7 +122,14 @@ class Agent(BaseModel):
 
     @model_validator(mode="after")
     def set_private_attrs(self):
-        """Set private attributes."""
+        """        Set private attributes.
+
+        Returns:
+            None
+
+        Raises:
+            SomeException: An explanation of when this exception is raised.
+        """
         self._logger = Logger(self.verbose)
         if self.max_rpm and not self._rpm_controller:
             self._rpm_controller = RPMController(
@@ -118,7 +139,14 @@ class Agent(BaseModel):
 
     @model_validator(mode="after")
     def check_agent_executor(self) -> "Agent":
-        """Check if the agent executor is set."""
+        """        Check if the agent executor is set.
+
+        Returns:
+            The current instance of the class.
+
+        Raises:
+             None
+        """
         if not self.agent_executor:
             self.set_cache_handler(self.cache_handler)
         return self
@@ -129,15 +157,15 @@ class Agent(BaseModel):
         context: Optional[str] = None,
         tools: Optional[List[Any]] = None,
     ) -> str:
-        """Execute a task with the agent.
+        """        Execute a task with the agent.
 
         Args:
-            task: Task to execute.
-            context: Context to execute the task in.
-            tools: Tools to use for the task.
+            task (str): Task to execute.
+            context (Optional[str]?): Context to execute the task in. Defaults to None.
+            tools (Optional[List[Any]]?): Tools to use for the task. Defaults to None.
 
         Returns:
-            Output of the agent
+            str: Output of the agent
         """
 
         if context:
@@ -163,7 +191,7 @@ class Agent(BaseModel):
         return result
 
     def set_cache_handler(self, cache_handler: CacheHandler) -> None:
-        """Set the cache handler for the agent.
+        """        Set the cache handler for the agent.
 
         Args:
             cache_handler: An instance of the CacheHandler class.
@@ -173,17 +201,20 @@ class Agent(BaseModel):
         self._create_agent_executor()
 
     def set_rpm_controller(self, rpm_controller: RPMController) -> None:
-        """Set the rpm controller for the agent.
+        """        Set the RPM controller for the agent.
 
         Args:
-            rpm_controller: An instance of the RPMController class.
+            rpm_controller (RPMController): An instance of the RPMController class.
+
+        Returns:
+            None
         """
         if not self._rpm_controller:
             self._rpm_controller = rpm_controller
             self._create_agent_executor()
 
     def _create_agent_executor(self) -> None:
-        """Create an agent executor for the agent.
+        """        Create an agent executor for the agent.
 
         Returns:
             An instance of the CrewAgentExecutor class.
@@ -240,4 +271,13 @@ class Agent(BaseModel):
 
     @staticmethod
     def __tools_names(tools) -> str:
+        """        Return a comma-separated string of tool names.
+
+        Args:
+            tools (list): A list of tool objects.
+
+        Returns:
+            str: A comma-separated string of tool names.
+        """
+
         return ", ".join([t.name for t in tools])

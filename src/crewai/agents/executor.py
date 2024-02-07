@@ -25,13 +25,42 @@ class CrewAgentExecutor(AgentExecutor):
 
     @root_validator()
     def set_force_answer_max_iterations(cls, values: Dict) -> Dict:
+        """        Set the 'force_answer_max_iterations' value in the input dictionary.
+
+        Args:
+            cls: The class instance (not used in the function)
+            values: A dictionary containing the input values with the key 'max_iterations'
+
+        Returns:
+            A dictionary with the updated 'force_answer_max_iterations' value
+
+        Raises:
+            KeyError: If 'max_iterations' key is not present in the input dictionary
+            TypeError: If the input 'values' is not a dictionary
+        """
+
         values["force_answer_max_iterations"] = values["max_iterations"] - 2
         return values
 
     def _should_force_answer(self) -> bool:
+        """        Check if the answer should be forced based on the number of iterations.
+
+        Returns:
+            bool: True if the number of iterations is equal to force_answer_max_iterations, False otherwise.
+        """
+
         return True if self.iterations == self.force_answer_max_iterations else False
 
     def _force_answer(self, output: AgentAction):
+        """        Force an answer with the given output.
+
+        Args:
+            output (AgentAction): The action to be forced as the answer.
+
+        Returns:
+            AgentStep: An AgentStep object with the forced action and an observation message.
+        """
+
         return AgentStep(
             action=output, observation=self.i18n.errors("force_final_answer")
         )
@@ -41,7 +70,15 @@ class CrewAgentExecutor(AgentExecutor):
         inputs: Dict[str, str],
         run_manager: Optional[CallbackManagerForChainRun] = None,
     ) -> Dict[str, Any]:
-        """Run text through and get agent response."""
+        """        Run text through and get agent response.
+
+        Args:
+            inputs (Dict[str, str]): The input data for the agent.
+            run_manager (Optional[CallbackManagerForChainRun]?): The callback manager for chain run. Defaults to None.
+
+        Returns:
+            Dict[str, Any]: The agent response.
+        """
         # Construct a mapping of tool name to tool for easy lookup
         name_to_tool_map = {tool.name: tool for tool in self.tools}
         # We construct a mapping from each tool to a color, used for logging.
@@ -92,9 +129,27 @@ class CrewAgentExecutor(AgentExecutor):
         intermediate_steps: List[Tuple[AgentAction, str]],
         run_manager: Optional[CallbackManagerForChainRun] = None,
     ) -> Iterator[Union[AgentFinish, AgentAction, AgentStep]]:
-        """Take a single step in the thought-action-observation loop.
+        """        Take a single step in the thought-action-observation loop.
 
         Override this to take control of how the agent makes and acts on choices.
+
+        Args:
+            name_to_tool_map (Dict[str, BaseTool]): Mapping of tool names to BaseTool instances.
+            color_mapping (Dict[str, str]): Mapping of tool names to color codes.
+            inputs (Dict[str, str]): Input data for the agent.
+            intermediate_steps (List[Tuple[AgentAction, str]]): List of intermediate steps.
+            run_manager (Optional[CallbackManagerForChainRun]?): Callback manager for chain run. Defaults to None.
+
+        Returns:
+            Iterator[Union[AgentFinish, AgentAction, AgentStep]]: Yields the next step in the agent's action loop.
+
+        Yields:
+            Iterator[Union[AgentFinish, AgentAction, AgentStep]]: Yields the next step in the agent's action loop.
+
+        Raises:
+            ValueError: If an unexpected output type is received from the agent.
+            ValueError: If an output parsing error occurs and `handle_parsing_errors` is not set to True.
+            ValueError: If an unexpected type of `handle_parsing_errors` is encountered.
         """
         try:
             intermediate_steps = self._prepare_intermediate_steps(intermediate_steps)
