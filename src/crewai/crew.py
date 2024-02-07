@@ -200,6 +200,7 @@ class Crew(BaseModel):
             goal=i18n.retrieve("hierarchical_manager_agent", "goal"),
             backstory=i18n.retrieve("hierarchical_manager_agent", "backstory"),
             tools=AgentTools(agents=self.agents).tools(),
+            llm=self.manager_llm,
             verbose=True,
         )
 
