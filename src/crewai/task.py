@@ -54,6 +54,19 @@ class Task(BaseModel):
     @field_validator("id", mode="before")
     @classmethod
     def _deny_user_set_id(cls, v: Optional[UUID4]) -> None:
+        """        Deny user to set the ID.
+
+        Args:
+            cls: The class instance.
+            v: The value to be checked.
+
+        Returns:
+            None
+
+        Raises:
+            PydanticCustomError: If the value is not None, indicating that the field should not be set by the user.
+        """
+
         if v:
             raise PydanticCustomError(
                 "may_not_set_field", "This field is not to be set by the user.", {}
@@ -61,7 +74,14 @@ class Task(BaseModel):
 
     @model_validator(mode="after")
     def check_tools(self):
-        """Check if the tools are set."""
+        """        Check if the tools are set.
+
+        Returns:
+            self
+
+        Raises:
+             None
+        """
         if not self.tools and self.agent and self.agent.tools:
             self.tools.extend(self.agent.tools)
         return self
@@ -72,10 +92,18 @@ class Task(BaseModel):
         context: Optional[str] = None,
         tools: Optional[List[Any]] = None,
     ) -> str:
-        """Execute the task.
+        """        Execute the task.
+
+        Args:
+            agent (Agent?): The agent to be used for execution. Defaults to None.
+            context (str?): The context for the task. Defaults to None.
+            tools (List[Any]?): The list of tools to be used. Defaults to None.
 
         Returns:
-            Output of the task.
+            str: Output of the task.
+
+        Raises:
+            Exception: If the task has no agent assigned and cannot be executed directly.
         """
 
         agent = agent or self.agent
@@ -109,16 +137,28 @@ class Task(BaseModel):
             return result
 
     def _execute(self, agent, task_prompt, context, tools):
+        """        Execute a task using the provided agent and input parameters.
+
+        Args:
+            agent (Agent): The agent to be used for executing the task.
+            task_prompt (str): The prompt for the task to be executed.
+            context (dict): The context for the task execution.
+            tools (list): The list of tools to be used for the task execution.
+
+        Returns:
+            Any: The result of the task execution.
+        """
+
         result = agent.execute_task(task=task_prompt, context=context, tools=tools)
         self.output = TaskOutput(description=self.description, result=result)
         self.callback(self.output) if self.callback else None
         return result
 
     def _prompt(self) -> str:
-        """Prompt the task.
+        """        Prompt the task.
 
         Returns:
-            Prompt of the task.
+            str: Prompt of the task.
         """
         tasks_slices = [self.description]
 

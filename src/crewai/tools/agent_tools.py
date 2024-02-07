@@ -14,6 +14,17 @@ class AgentTools(BaseModel):
     i18n: I18N = Field(default=I18N(), description="Internationalization settings.")
 
     def tools(self):
+        """        Return a list of tools available for the user.
+
+        This method returns a list of Tool objects, each representing a specific tool available for the user to utilize.
+
+        Returns:
+            list: A list of Tool objects.
+
+        Raises:
+             None
+        """
+
         return [
             Tool.from_function(
                 func=self.delegate_work,
@@ -32,15 +43,42 @@ class AgentTools(BaseModel):
         ]
 
     def delegate_work(self, command):
-        """Useful to delegate a specific task to a coworker."""
+        """        Useful to delegate a specific task to a coworker.
+
+        Args:
+            self: The object instance
+            command: The specific task to be delegated
+
+        Returns:
+            The result of executing the command
+        """
         return self._execute(command)
 
     def ask_question(self, command):
-        """Useful to ask a question, opinion or take from a coworker."""
+        """        Useful to ask a question, opinion or take from a coworker.
+
+        Args:
+            command (str): The command to be executed.
+
+        Returns:
+            The result of executing the command.
+        """
         return self._execute(command)
 
     def _execute(self, command):
-        """Execute the command."""
+        """        Execute the command.
+
+        Args:
+            command (str): The command to be executed in the format "agent|task|context".
+
+        Returns:
+            str: The result of executing the command.
+
+        Raises:
+            ValueError: If the command does not contain all three parts separated by "|".
+            ValueError: If any of the parts (agent, task, context) is missing in the command.
+            ValueError: If the specified agent does not exist in the list of available agents.
+        """
         try:
             agent, task, context = command.split("|")
         except ValueError:
