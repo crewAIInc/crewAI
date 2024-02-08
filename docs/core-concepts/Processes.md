@@ -27,7 +27,12 @@ from crewai.process import Process
 crew = Crew(agents=my_agents, tasks=my_tasks, process=Process.sequential)
 
 # Example: Creating a crew with a hierarchical process
-crew = Crew(agents=my_agents, tasks=my_tasks, process=Process.hierarchical)
+crew = Crew(
+  agents=my_agents,
+  manager_llm = llm, #this creates a manager agent inside the crew which assigns the tasks to agents
+  tasks=my_tasks,
+  process=Process.hierarchical
+)
 ```
 
 ## Sequential Process
