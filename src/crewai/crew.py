@@ -124,7 +124,8 @@ class Crew(BaseModel):
         if self.agents:
             for agent in self.agents:
                 agent.set_cache_handler(self._cache_handler)
-                agent.set_rpm_controller(self._rpm_controller)
+                if self.max_rpm:
+                    agent.set_rpm_controller(self._rpm_controller)
         return self
 
     def _setup_from_config(self):
