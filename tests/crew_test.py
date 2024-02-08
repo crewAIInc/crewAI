@@ -356,6 +356,25 @@ def test_api_calls_throttling(capsys):
         moveon.assert_called()
 
 
+def test_agents_rpm_is_never_set_if_crew_max_RPM_is_not_set():
+    agent = Agent(
+        role="test role",
+        goal="test goal",
+        backstory="test backstory",
+        allow_delegation=False,
+        verbose=True,
+    )
+
+    task = Task(
+        description="just say hi!",
+        agent=agent,
+    )
+
+    Crew(agents=[agent], tasks=[task], verbose=2)
+
+    assert agent._rpm_controller is None
+
+
 def test_async_task_execution():
     import threading
     from unittest.mock import patch
