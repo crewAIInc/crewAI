@@ -21,6 +21,9 @@ pydantic = "^2.4.2"
 langchain = "0.1.0"
 openai = "^1.7.1"
 langchain-openai = "^0.0.2"
+opentelemetry-api = "^1.22.0"
+opentelemetry-sdk = "^1.22.0"
+opentelemetry-exporter-otlp-proto-http = "^1.22.0"
 
 [tool.poetry.group.dev.dependencies]
 isort = "^5.13.2"
@@ -39,7 +42,6 @@ cairosvg = "^2.7.1"
 [tool.isort]
 profile = "black"
 known_first_party = ["crewai"]
-
 
 [tool.poetry.group.test.dependencies]
 pytest = "^7.4"

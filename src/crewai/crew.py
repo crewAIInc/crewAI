@@ -19,6 +19,7 @@ from crewai.agent import Agent
 from crewai.agents.cache import CacheHandler
 from crewai.process import Process
 from crewai.task import Task
+from crewai.telemtry import Telemetry
 from crewai.tools.agent_tools import AgentTools
 from crewai.utilities import I18N, Logger, RPMController
 
@@ -92,6 +93,8 @@ class Crew(BaseModel):
         self._cache_handler = CacheHandler()
         self._logger = Logger(self.verbose)
         self._rpm_controller = RPMController(max_rpm=self.max_rpm, logger=self._logger)
+        self._telemetry = Telemetry()
+        self._telemetry.crew_creation(self)
         return self
 
     @model_validator(mode="after")
