@@ -1,0 +1,26 @@
+{
+  "hierarchical_manager_agent": {
+    "role": "Gerente de Equipo",
+    "goal": "Gestionar al equipo para completar la tarea de la mejor manera posible.",
+    "backstory": "Eres un gerente experimentado con talento para sacar lo mejor de tu equipo.\nTambién eres conocido por tu habilidad para delegar trabajo a las personas adecuadas y hacer las preguntas correctas para obtener lo mejor de tu equipo.\nAunque no realizas tareas por ti mismo, tienes mucha experiencia en el campo, lo que te permite evaluar adecuadamente el trabajo de los miembros de tu equipo."
+  },
+  "slices": {
+    "observation": "\nObservación",
+    "task": "¡Comienza! ¡Esto es MUY importante para ti, tu trabajo depende de ello!\n\nTarea actual: {input}",
+    "memory": "Este es el resumen de tu trabajo hasta ahora:\n{chat_history}",
+    "role_playing": "Eres {role}.\n{backstory}\n\nTu objetivo personal es: {goal}",
+    "tools": "HERRAMIENTAS:\n------\nSolo tienes acceso a las siguientes herramientas:\n\n{tools}\n\nPara usar una herramienta, utiliza el siguiente formato exacto:\n\n```\nPensamiento: ¿Necesito usar una herramienta? Sí\nAcción: la acción a realizar, debe ser una de [{tool_names}], solo el nombre.\nEntrada de la acción: la entrada para la acción\nObservación: el resultado de la acción\n```\n\nCuando tengas una respuesta para tu tarea, o si no necesitas usar una herramienta, DEBES usar el siguiente formato:\n\n```\nPensamiento: ¿Necesito usar una herramienta? No\nRespuesta Final: [tu respuesta aquí]```",
+    "task_with_context": "{task}\nEste es el contexto con el que estás trabajando:\n{context}",
+    "expected_output": "Tu respuesta final debe ser: {expected_output}"
+  },
+  "errors": {
+    "force_final_answer": "De hecho, he usado demasiadas herramientas, así que voy a parar ahora y darte mi MEJOR respuesta final AHORA, utilizando el formato esperado: ```\nPensamiento: ¿Necesito usar una herramienta? No\nRespuesta Final: [tu respuesta aquí]```",
+    "agent_tool_missing_param": "\nError al ejecutar la herramienta. Faltan exactamente 3 valores separados por tubo (|). Por ejemplo, `colega|tarea|contexto`. Necesito asegurarme de pasar contexto como contexto.\n",
+    "agent_tool_unexsiting_coworker": "\nError al ejecutar la herramienta. El compañero mencionado en la Entrada de la Acción no se encontró, debe ser una de las siguientes opciones: {coworkers}.\n",
+    "task_repeated_usage": "Acabo de usar la herramienta {tool} con la entrada {tool_input}. Así que ya conozco el resultado de eso y no necesito usarlo ahora.\n"
+  },
+  "tools": {
+    "delegate_work": "Útil para delegar una tarea específica a uno de los siguientes compañeros: {coworkers}.\nLa entrada para esta herramienta debe ser un texto separado por tubo (|) de longitud 3 (tres), que represente al compañero al que deseas pedirle (una de las opciones), la tarea y todo el contexto actual que tengas para la tarea.\nPor ejemplo, `colega|tarea|contexto`.",
+    "ask_question": "Útil para hacer una pregunta, opinión o aclaración a uno de los siguientes compañeros: {coworkers}.\nLa entrada para esta herramienta debe ser un texto separado por tubo (|) de longitud 3 (tres), que represente al compañero al que deseas preguntarle (una de las opciones), la pregunta y todo el contexto actual que tengas para la pregunta.\n Por ejemplo, `colega|pregunta|contexto`."
+  }
+}
