@@ -106,15 +106,16 @@ class CrewAgentExecutor(AgentExecutor):
                 **inputs,
             )
             if self._should_force_answer():
-                if isinstance(output, AgentAction) or isinstance(output, AgentFinish):
-                    output = output
-                elif isinstance(output, CacheHit):
+                if isinstance(output, CacheHit):
                     output = output.action
-                else:
-                    raise ValueError(
-                        f"Unexpected output type from agent: {type(output)}"
-                    )
-                yield self._force_answer(output)
+                if isinstance(output, AgentAction):
+                    yield self._force_answer(output)
+                    return
+                if isinstance(output, list):
+                    yield from [self._force_answer(action) for action in output]
+                    return
+
+                yield output
                 return
 
         except OutputParserException as e:

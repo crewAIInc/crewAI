@@ -18,7 +18,7 @@ class Task(BaseModel):
 
     __hash__ = object.__hash__  # type: ignore
     i18n: I18N = I18N()
-    thread: threading.Thread = None
+    thread: threading.Thread | None = None
     description: str = Field(description="Description of the actual task.")
     callback: Optional[Any] = Field(
         description="Callback to be executed after the task is completed.", default=None
@@ -71,7 +71,7 @@ class Task(BaseModel):
         agent: Agent | None = None,
         context: Optional[str] = None,
         tools: Optional[List[Any]] = None,
-    ) -> str:
+    ) -> str | None:
         """Execute the task.
 
         Returns:
@@ -85,12 +85,14 @@ class Task(BaseModel):
             )
 
         if self.context:
-            context = []
+            results = []
             for task in self.context:
                 if task.async_execution:
+                    assert task.thread is not None
                     task.thread.join()
-                context.append(task.output.result)
-            context = "\n".join(context)
+                if task.output is not None:
+                    results.append(task.output.result)
+            context = "\n".join(results)
 
         tools = tools or self.tools
 

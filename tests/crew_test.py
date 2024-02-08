@@ -411,7 +411,7 @@ def test_async_task_execution():
         with patch.object(threading.Thread, "start") as start:
             thread = threading.Thread(target=lambda: None, args=()).start()
             start.return_value = thread
-            with patch.object(threading.Thread, "join", wraps=thread.join()) as join:
+            with patch.object(threading.Thread, "join", wraps=thread.join()) as join:  # type: ignore
                 list_ideas.output = TaskOutput(
                     description="A 4 paragraph article about AI.", result="ok"
                 )

@@ -171,7 +171,7 @@ class Crew(BaseModel):
 
     def _run_sequential_process(self) -> str:
         """Executes tasks sequentially and returns the final output."""
-        task_output = ""
+        task_output: str = ""
         for task in self.tasks:
             if task.agent is not None and task.agent.allow_delegation:
                 agents_for_delegation = [
@@ -185,6 +185,7 @@ class Crew(BaseModel):
 
             output = task.execute(context=task_output)
             if not task.async_execution:
+                assert output is not None
                 task_output = output
 
             role = task.agent.role if task.agent is not None else "None"
@@ -208,14 +209,17 @@ class Crew(BaseModel):
             verbose=True,
         )
 
-        task_output = ""
+        task_output: str = ""
         for task in self.tasks:
             self._logger.log("debug", f"Working Agent: {manager.role}")
             self._logger.log("info", f"Starting Task: {task.description}")
 
-            task_output = task.execute(
+            output = task.execute(
                 agent=manager, context=task_output, tools=manager.tools
             )
+            if not task.async_execution:
+                assert output is not None
+                task_output = output
 
             self._logger.log(
                 "debug", f"[{manager.role}] Task output: {task_output}\n\n"

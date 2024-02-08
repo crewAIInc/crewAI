@@ -73,7 +73,7 @@ class CrewAgentOutputParser(ReActSingleInputOutputParser):
                     )
 
             if self.cache.read(action, tool_input):
-                action = AgentAction(action, tool_input, text)
-                return CacheHit(action=action, cache=self.cache)
+                agent_action = AgentAction(action, tool_input, text)
+                return CacheHit(action=agent_action, cache=self.cache)
 
         return super().parse(text)
