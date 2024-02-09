@@ -177,6 +177,7 @@ class Crew(BaseModel):
             agent.i18n = I18N(language=self.language)
             if (self.step_callback) and (not agent.step_callback):
                 agent.step_callback = self.step_callback
+                agent.create_agent_executor()
 
         if self.process == Process.sequential:
             return self._run_sequential_process()
