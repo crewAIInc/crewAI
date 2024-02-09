@@ -25,7 +25,7 @@ description: What are crewAI Agents and how to use them.
 | **Max RPM**    | The maximum number of requests per minute the agent can perform to avoid rate limits |
 | **Verbose**    | This allow you to actually see what is going on during the Crew execution. |
 | **Allow Delegation**    | Agents can delegate tasks or questions to one another, ensuring that each task is handled by the most suitable agent. |
-
+| **Step Callback**    | A function that is called after each step of the agent. This can be used to log the agent's actions or to perform other operations. |
 
 ## Creating an Agent
 
@@ -51,6 +51,7 @@ agent = Agent(
   max_rpm=10,
   verbose=True,
   allow_delegation=True
+  step_callback=my_intermediate_step_callback
 )
 ```
 

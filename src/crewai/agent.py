@@ -46,6 +46,7 @@ class Agent(BaseModel):
             verbose: Whether the agent execution should be in verbose mode.
             allow_delegation: Whether the agent is allowed to delegate tasks to other agents.
             tools: Tools at agents disposal
+            step_callback: Callback to be executed after each step of the agent execution.
     """
 
     __hash__ = object.__hash__  # type: ignore
@@ -89,6 +90,10 @@ class Agent(BaseModel):
     )
     cache_handler: InstanceOf[CacheHandler] = Field(
         default=CacheHandler(), description="An instance of the CacheHandler class."
+    )
+    step_callback: Optional[Any] = Field(
+        default=None,
+        description="Callback to be executed after each step of the agent execution.",
     )
     i18n: I18N = Field(default=I18N(), description="Internationalization settings.")
     llm: Any = Field(
@@ -200,12 +205,13 @@ class Agent(BaseModel):
             "verbose": self.verbose,
             "handle_parsing_errors": True,
             "max_iterations": self.max_iter,
+            "step_callback": self.step_callback,
         }
 
         if self._rpm_controller:
-            executor_args["request_within_rpm_limit"] = (
-                self._rpm_controller.check_or_wait
-            )
+            executor_args[
+                "request_within_rpm_limit"
+            ] = self._rpm_controller.check_or_wait
 
         if self.memory:
             summary_memory = ConversationSummaryMemory(
