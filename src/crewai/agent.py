@@ -175,7 +175,7 @@ class Agent(BaseModel):
         """
         self.cache_handler = cache_handler
         self.tools_handler = ToolsHandler(cache=self.cache_handler)
-        self._create_agent_executor()
+        self.create_agent_executor()
 
     def set_rpm_controller(self, rpm_controller: RPMController) -> None:
         """Set the rpm controller for the agent.
@@ -185,9 +185,9 @@ class Agent(BaseModel):
         """
         if not self._rpm_controller:
             self._rpm_controller = rpm_controller
-            self._create_agent_executor()
+            self.create_agent_executor()
 
-    def _create_agent_executor(self) -> None:
+    def create_agent_executor(self) -> None:
         """Create an agent executor for the agent.
 
         Returns:
