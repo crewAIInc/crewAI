@@ -37,6 +37,7 @@ class Crew(BaseModel):
         config: Configuration settings for the crew.
         max_rpm: Maximum number of requests per minute for the crew execution to be respected.
         id: A unique identifier for the crew instance.
+        full_output: Whether the crew should return the full output with all tasks outputs or just the final output.
         share_crew: Whether you want to share the complete crew infromation and execution with crewAI to make the library better, and allow us to train models.
         _cache_handler: Handles caching for the crew's operations.
     """
@@ -51,6 +52,10 @@ class Crew(BaseModel):
     agents: List[Agent] = Field(default_factory=list)
     process: Process = Field(default=Process.sequential)
     verbose: Union[int, bool] = Field(default=0)
+    full_output: Optional[bool] = Field(
+        default=False,
+        description="Whether the crew should return the full output with all tasks outputs or just the final output.",
+    )
     manager_llm: Optional[Any] = Field(
         description="Language model that will run the agent.", default=None
     )
@@ -196,7 +201,7 @@ class Crew(BaseModel):
             self._logger.log("debug", f"[{role}] Task output: {task_output}\n\n")
 
         self._finish_execution(task_output)
-        return task_output
+        return self._format_output(task_output)
 
     def _run_hierarchical_process(self) -> str:
         """Creates and assigns a manager agent to make sure the crew completes the tasks."""
@@ -225,7 +230,17 @@ class Crew(BaseModel):
             )
 
         self._finish_execution(task_output)
-        return task_output
+        return self._format_output(task_output)
+
+    def _format_output(self, output: str) -> str:
+        """Formats the output of the crew execution."""
+        if self.full_output:
+            return {
+                "final_output": output,
+                "tasks_outputs": [task.output for task in self.tasks],
+            }
+        else:
+            return output
 
     def _finish_execution(self, output) -> None:
         if self.max_rpm:

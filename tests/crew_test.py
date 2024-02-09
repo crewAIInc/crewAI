@@ -356,6 +356,34 @@ def test_api_calls_throttling(capsys):
         moveon.assert_called()
 
 
+@pytest.mark.vcr(filter_headers=["authorization"])
+def test_crew_full_ouput():
+    agent = Agent(
+        role="test role",
+        goal="test goal",
+        backstory="test backstory",
+        allow_delegation=False,
+        verbose=True,
+    )
+
+    task1 = Task(
+        description="just say hi!",
+        agent=agent,
+    )
+    task2 = Task(
+        description="just say hello!",
+        agent=agent,
+    )
+
+    crew = Crew(agents=[agent], tasks=[task1, task2], full_output=True)
+
+    result = crew.kickoff()
+    assert result == {
+        "final_output": "Hello!",
+        "tasks_outputs": [task1.output, task2.output],
+    }
+
+
 def test_agents_rpm_is_never_set_if_crew_max_RPM_is_not_set():
     agent = Agent(
         role="test role",

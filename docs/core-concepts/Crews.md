@@ -19,6 +19,7 @@ description: Understanding and utilizing crews in the crewAI framework.
 | **Config**           | Configuration settings for the crew.                         |
 | **Max RPM**          | Maximum requests per minute the crew adheres to during execution. |
 | **Language**         | Language setting for the crew's operation.                   |
+| **Full Output**    | Whether the crew should return the full output with all tasks outputs or just the final output. |
 | **Share Crew**       | Whether you want to share the complete crew infromation and execution with the crewAI team to make the library better, and allow us to train models. |
 
 
@@ -57,6 +58,7 @@ my_crew = Crew(
     agents=[researcher, writer],
     tasks=[research_task, write_article_task],
     process=Process.sequential,
+    full_output=True,
     verbose=True
 )
 ```
