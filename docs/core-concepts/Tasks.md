@@ -55,7 +55,7 @@ research_agent = Agent(
 	goal='Find and summarize the latest AI news',
 	backstory="""You're a researcher at a large company.
 	You're responsible for analyzing data and providing insights
-	to the business."""
+	to the business.""",
 	verbose=True
 )
 
