@@ -15,3 +15,5 @@ Data collected includes:
 - Language model being used
 - Roles of agents in a crew
 - Tools names available
+
+Users can opt-in sharing the complete telemetry data by setting the `share_crew` attribute to `True` on their Crews.

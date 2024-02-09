@@ -35,12 +35,14 @@ class Crew(BaseModel):
         process: The process flow that the crew will follow (e.g., sequential).
         verbose: Indicates the verbosity level for logging during execution.
         config: Configuration settings for the crew.
-        _cache_handler: Handles caching for the crew's operations.
         max_rpm: Maximum number of requests per minute for the crew execution to be respected.
         id: A unique identifier for the crew instance.
+        share_crew: Whether you want to share the complete crew infromation and execution with crewAI to make the library better, and allow us to train models.
+        _cache_handler: Handles caching for the crew's operations.
     """
 
     __hash__ = object.__hash__  # type: ignore
+    _execution_span: Any = PrivateAttr()
     _rpm_controller: RPMController = PrivateAttr()
     _logger: Logger = PrivateAttr()
     _cache_handler: InstanceOf[CacheHandler] = PrivateAttr(default=CacheHandler())
@@ -54,6 +56,7 @@ class Crew(BaseModel):
     )
     config: Optional[Union[Json, Dict[str, Any]]] = Field(default=None)
     id: UUID4 = Field(default_factory=uuid.uuid4, frozen=True)
+    share_crew: bool = Field(default=False)
     max_rpm: Optional[int] = Field(
         default=None,
         description="Maximum number of requests per minute for the crew execution to be respected.",
@@ -157,6 +160,8 @@ class Crew(BaseModel):
 
     def kickoff(self) -> str:
         """Starts the crew to work on its assigned tasks."""
+        self._execution_span = self._telemetry.crew_execution_span(self)
+
         for agent in self.agents:
             agent.i18n = I18N(language=self.language)
 
@@ -190,9 +195,7 @@ class Crew(BaseModel):
             role = task.agent.role if task.agent is not None else "None"
             self._logger.log("debug", f"[{role}] Task output: {task_output}\n\n")
 
-        if self.max_rpm:
-            self._rpm_controller.stop_rpm_counter()
-
+        self._finish_execution(task_output)
         return task_output
 
     def _run_hierarchical_process(self) -> str:
@@ -221,7 +224,10 @@ class Crew(BaseModel):
                 "debug", f"[{manager.role}] Task output: {task_output}\n\n"
             )
 
+        self._finish_execution(task_output)
+        return task_output
+
+    def _finish_execution(self, output) -> None:
         if self.max_rpm:
             self._rpm_controller.stop_rpm_counter()
-
-        return task_output
+        self._telemetry.end_crew(self, output)
