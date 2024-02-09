@@ -64,13 +64,14 @@ class CrewAgentExecutor(AgentExecutor):
                     intermediate_steps,
                     run_manager=run_manager,
                 )
+
+                if self.step_callback:
+                    self.step_callback(next_step_output)
+
                 if isinstance(next_step_output, AgentFinish):
                     return self._return(
                         next_step_output, intermediate_steps, run_manager=run_manager
                     )
-
-                if self.step_callback:
-                    self.step_callback(next_step_output)
 
                 intermediate_steps.extend(next_step_output)
                 if len(next_step_output) == 1:
