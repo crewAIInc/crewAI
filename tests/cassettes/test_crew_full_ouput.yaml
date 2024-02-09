@@ -1,0 +1,431 @@
+interactions:
+- request:
+    body: '{"messages": [{"role": "user", "content": "You are test role.\ntest backstory\n\nYour
+      personal goal is: test goalTOOLS:\n------\nYou have access to only the following
+      tools:\n\n\n\nTo use a tool, please use the exact following format:\n\n```\nThought:
+      Do I need to use a tool? Yes\nAction: the action to take, should be one of [],
+      just the name.\nAction Input: the input to the action\nObservation: the result
+      of the action\n```\n\nWhen you have a response for your task, or if you do not
+      need to use a tool, you MUST use the format:\n\n```\nThought: Do I need to use
+      a tool? No\nFinal Answer: [your response here]```This is the summary of your
+      work so far:\nBegin! This is VERY important to you, your job depends on it!\n\nCurrent
+      Task: just say hi!\n"}], "model": "gpt-4", "n": 1, "stop": ["\nObservation"],
+      "stream": false, "temperature": 0.7}'
+    headers:
+      accept:
+      - application/json
+      accept-encoding:
+      - gzip, deflate
+      connection:
+      - keep-alive
+      content-length:
+      - '846'
+      content-type:
+      - application/json
+      host:
+      - api.openai.com
+      user-agent:
+      - OpenAI/Python 1.11.1
+      x-stainless-arch:
+      - arm64
+      x-stainless-async:
+      - 'false'
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - MacOS
+      x-stainless-package-version:
+      - 1.11.1
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.11.7
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    body:
+      string: !!binary |
+        H4sIAAAAAAAAA1SQS0/DMBCE7/kVi88tSiDqIxdUCSrgAKpAQghQ5TqbxMXxGnsjQFX/O0qaPrj4
+        MLOz/mY3EYDQuchAqEqyqp0ZTr7mj2kS+0IvXmor5dPrfVIvblTh4/VMDNoErdaoeJ86V1Q7g6zJ
+        7mzlUTK2W5NxPE5HF5PpqDNqytG0sdLxMB3Go+SyT1SkFQaRwVsEALDp3pbN5vgjMogHe6XGEGSJ
+        IjsMAQhPplWEDEEHlpbF4Ggqsoy2w32uqCkrzuCa4A4sYg5M0AQECUxkruCB3u1cW2lgZsM3+gxu
+        9Znol20PFIZK52nVEtvGmINeaKtDtfQoA9n2x8DkdvFtBPDRtW3+FRDOU+14yfSJNnRHG+/2ieNh
+        T93eZGJpTvRpGvWEIvwGxnpZaFuid1535VvOaBv9AQAA//8DAB3dd33zAQAA
+    headers:
+      CF-Cache-Status:
+      - DYNAMIC
+      CF-RAY:
+      - 852a51805aad67eb-SJC
+      Cache-Control:
+      - no-cache, must-revalidate
+      Connection:
+      - keep-alive
+      Content-Encoding:
+      - gzip
+      Content-Type:
+      - application/json
+      Date:
+      - Fri, 09 Feb 2024 07:14:58 GMT
+      Server:
+      - cloudflare
+      Set-Cookie:
+      - __cf_bm=9ly7231xuotblGKWs6jbqP1UIOLx4Z4fGC_GzaLrjf0-1707462898-1-ARsy16USRPFgm9nFkRCgyVEJ0bZHxoljRrPhQDJWOAGApKCPHnJUOUKp5ZIYM+Cye1FsXshcWJ4eSs/1aHvjl74=;
+        path=/; expires=Fri, 09-Feb-24 07:44:58 GMT; domain=.api.openai.com; HttpOnly;
+        Secure; SameSite=None
+      - _cfuvid=Myd_SP.rh1qGv3eu8_4uoiAw_XxGG6sO.jpzVZqLJGc-1707462898242-0-604800000;
+        path=/; domain=.api.openai.com; HttpOnly; Secure; SameSite=None
+      Transfer-Encoding:
+      - chunked
+      access-control-allow-origin:
+      - '*'
+      alt-svc:
+      - h3=":443"; ma=86400
+      openai-model:
+      - gpt-4-0613
+      openai-organization:
+      - user-z7g4wmlazxqvc5wjyaaaocfz
+      openai-processing-ms:
+      - '1227'
+      openai-version:
+      - '2020-10-01'
+      strict-transport-security:
+      - max-age=15724800; includeSubDomains
+      x-ratelimit-limit-requests:
+      - '10000'
+      x-ratelimit-limit-tokens:
+      - '300000'
+      x-ratelimit-remaining-requests:
+      - '9999'
+      x-ratelimit-remaining-tokens:
+      - '299811'
+      x-ratelimit-reset-requests:
+      - 6ms
+      x-ratelimit-reset-tokens:
+      - 37ms
+      x-request-id:
+      - req_8e9048cd17dae372866713b1f204fc99
+    status:
+      code: 200
+      message: OK
+- request:
+    body: '{"messages": [{"role": "user", "content": "Progressively summarize the
+      lines of conversation provided, adding onto the previous summary returning a
+      new summary.\n\nEXAMPLE\nCurrent summary:\nThe human asks what the AI thinks
+      of artificial intelligence. The AI thinks artificial intelligence is a force
+      for good.\n\nNew lines of conversation:\nHuman: Why do you think artificial
+      intelligence is a force for good?\nAI: Because artificial intelligence will
+      help humans reach their full potential.\n\nNew summary:\nThe human asks what
+      the AI thinks of artificial intelligence. The AI thinks artificial intelligence
+      is a force for good because it will help humans reach their full potential.\nEND
+      OF EXAMPLE\n\nCurrent summary:\n\n\nNew lines of conversation:\nHuman: just
+      say hi!\nAI: Hi!\n\nNew summary:"}], "model": "gpt-4", "n": 1, "stream": false,
+      "temperature": 0.7}'
+    headers:
+      accept:
+      - application/json
+      accept-encoding:
+      - gzip, deflate
+      connection:
+      - keep-alive
+      content-length:
+      - '867'
+      content-type:
+      - application/json
+      cookie:
+      - __cf_bm=9ly7231xuotblGKWs6jbqP1UIOLx4Z4fGC_GzaLrjf0-1707462898-1-ARsy16USRPFgm9nFkRCgyVEJ0bZHxoljRrPhQDJWOAGApKCPHnJUOUKp5ZIYM+Cye1FsXshcWJ4eSs/1aHvjl74=;
+        _cfuvid=Myd_SP.rh1qGv3eu8_4uoiAw_XxGG6sO.jpzVZqLJGc-1707462898242-0-604800000
+      host:
+      - api.openai.com
+      user-agent:
+      - OpenAI/Python 1.11.1
+      x-stainless-arch:
+      - arm64
+      x-stainless-async:
+      - 'false'
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - MacOS
+      x-stainless-package-version:
+      - 1.11.1
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.11.7
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    body:
+      string: !!binary |
+        H4sIAAAAAAAAA1SQS0/DMBCE7/kVK5/bqi1R+rhxAKlFqBw4gVDlOpvY4Niud1OoUP87cvrkYlkz
+        nvW385sBCFOKOQilJasm2P50+7gqXp6ed25FbzM92y4Xq4nmAstl/SB6KeE3n6j4nBoo3wSLbLw7
+        2iqiZExTR5PhJC/G09m0Mxpfok2xOnA/7w+L0d0pob1RSGIO7xkAwG93JjZX4o+Yw7B3VhokkjWK
+        +eURgIjeJkVIIkMsHYve1VTeMboO91Uj6LaRDowjjq1iAtYI9wtgDyT3oE0vXb+1UfpsRaTgXUkg
+        q8rERrLZod0PxOmLw4XN+jpEv0l7uNbai14ZZ0ivI0ryLnEQ+3CMHzKAj66D9t9aIkTfBF6z/0KX
+        Bo7y/DhPXOu+cacnkz1Le6MX4+xEKGhPjM26Mq7GGKLpKkmc2SH7AwAA//8DAHvVVasJAgAA
+    headers:
+      CF-Cache-Status:
+      - DYNAMIC
+      CF-RAY:
+      - 852a518a581d67eb-SJC
+      Cache-Control:
+      - no-cache, must-revalidate
+      Connection:
+      - keep-alive
+      Content-Encoding:
+      - gzip
+      Content-Type:
+      - application/json
+      Date:
+      - Fri, 09 Feb 2024 07:14:59 GMT
+      Server:
+      - cloudflare
+      Transfer-Encoding:
+      - chunked
+      access-control-allow-origin:
+      - '*'
+      alt-svc:
+      - h3=":443"; ma=86400
+      openai-model:
+      - gpt-4-0613
+      openai-organization:
+      - user-z7g4wmlazxqvc5wjyaaaocfz
+      openai-processing-ms:
+      - '1261'
+      openai-version:
+      - '2020-10-01'
+      strict-transport-security:
+      - max-age=15724800; includeSubDomains
+      x-ratelimit-limit-requests:
+      - '10000'
+      x-ratelimit-limit-tokens:
+      - '300000'
+      x-ratelimit-remaining-requests:
+      - '9999'
+      x-ratelimit-remaining-tokens:
+      - '299799'
+      x-ratelimit-reset-requests:
+      - 6ms
+      x-ratelimit-reset-tokens:
+      - 40ms
+      x-request-id:
+      - req_c169edc1f697d9f897dd46b3fe23da76
+    status:
+      code: 200
+      message: OK
+- request:
+    body: '{"messages": [{"role": "user", "content": "You are test role.\ntest backstory\n\nYour
+      personal goal is: test goalTOOLS:\n------\nYou have access to only the following
+      tools:\n\n\n\nTo use a tool, please use the exact following format:\n\n```\nThought:
+      Do I need to use a tool? Yes\nAction: the action to take, should be one of [],
+      just the name.\nAction Input: the input to the action\nObservation: the result
+      of the action\n```\n\nWhen you have a response for your task, or if you do not
+      need to use a tool, you MUST use the format:\n\n```\nThought: Do I need to use
+      a tool? No\nFinal Answer: [your response here]```This is the summary of your
+      work so far:\nThe human instructs the AI to say hi, to which the AI responds
+      affirmatively.Begin! This is VERY important to you, your job depends on it!\n\nCurrent
+      Task: just say hello!\nThis is the context you''re working with:\nHi!\n"}],
+      "model": "gpt-4", "n": 1, "stop": ["\nObservation"], "stream": false, "temperature":
+      0.7}'
+    headers:
+      accept:
+      - application/json
+      accept-encoding:
+      - gzip, deflate
+      connection:
+      - keep-alive
+      content-length:
+      - '973'
+      content-type:
+      - application/json
+      cookie:
+      - __cf_bm=9ly7231xuotblGKWs6jbqP1UIOLx4Z4fGC_GzaLrjf0-1707462898-1-ARsy16USRPFgm9nFkRCgyVEJ0bZHxoljRrPhQDJWOAGApKCPHnJUOUKp5ZIYM+Cye1FsXshcWJ4eSs/1aHvjl74=;
+        _cfuvid=Myd_SP.rh1qGv3eu8_4uoiAw_XxGG6sO.jpzVZqLJGc-1707462898242-0-604800000
+      host:
+      - api.openai.com
+      user-agent:
+      - OpenAI/Python 1.11.1
+      x-stainless-arch:
+      - arm64
+      x-stainless-async:
+      - 'false'
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - MacOS
+      x-stainless-package-version:
+      - 1.11.1
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.11.7
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    body:
+      string: !!binary |
+        H4sIAAAAAAAAA1SQX0/CMBTF3/cprn0GMyYC7sUYDVHxT4z6YNSQ0l22Ytc72ruoEL676ZigL304
+        p7/Tc7qOAITORApCFZJVWZnuaDm+Hz08r9RiNdHLx4InN6pY3Onr89vsRXQCQbMFKv6lDhWVlUHW
+        ZLe2cigZQ2pvGA/7g+QkjhujpAxNwPKKu/1uPOgdtURBWqEXKbxGAADr5gzdbIZfIoWGb5QSvZc5
+        inR3CUA4MkER0nvtWVoWnb2pyDLapu5TQXVecAoXBFdgETNggtojSGAicwp39GbH2koDZ9Z/okvh
+        Eo2hA9HmbXZFDOWVo1kobWtjdvpcW+2LqUPpyYZHPVO1xTcRwHszuP63QVSOyoqnTB9oQ2ASH2/z
+        xP5v925v2JpMLM0fKkmitqHw356xnM61zdFVTjf7Q89oE/0AAAD//wMAxl1LJ/YBAAA=
+    headers:
+      CF-Cache-Status:
+      - DYNAMIC
+      CF-RAY:
+      - 852a5196983067eb-SJC
+      Cache-Control:
+      - no-cache, must-revalidate
+      Connection:
+      - keep-alive
+      Content-Encoding:
+      - gzip
+      Content-Type:
+      - application/json
+      Date:
+      - Fri, 09 Feb 2024 07:15:01 GMT
+      Server:
+      - cloudflare
+      Transfer-Encoding:
+      - chunked
+      access-control-allow-origin:
+      - '*'
+      alt-svc:
+      - h3=":443"; ma=86400
+      openai-model:
+      - gpt-4-0613
+      openai-organization:
+      - user-z7g4wmlazxqvc5wjyaaaocfz
+      openai-processing-ms:
+      - '1093'
+      openai-version:
+      - '2020-10-01'
+      strict-transport-security:
+      - max-age=15724800; includeSubDomains
+      x-ratelimit-limit-requests:
+      - '10000'
+      x-ratelimit-limit-tokens:
+      - '300000'
+      x-ratelimit-remaining-requests:
+      - '9999'
+      x-ratelimit-remaining-tokens:
+      - '299780'
+      x-ratelimit-reset-requests:
+      - 6ms
+      x-ratelimit-reset-tokens:
+      - 43ms
+      x-request-id:
+      - req_908d51731310c13867cd2dd7d565348b
+    status:
+      code: 200
+      message: OK
+- request:
+    body: '{"messages": [{"role": "user", "content": "Progressively summarize the
+      lines of conversation provided, adding onto the previous summary returning a
+      new summary.\n\nEXAMPLE\nCurrent summary:\nThe human asks what the AI thinks
+      of artificial intelligence. The AI thinks artificial intelligence is a force
+      for good.\n\nNew lines of conversation:\nHuman: Why do you think artificial
+      intelligence is a force for good?\nAI: Because artificial intelligence will
+      help humans reach their full potential.\n\nNew summary:\nThe human asks what
+      the AI thinks of artificial intelligence. The AI thinks artificial intelligence
+      is a force for good because it will help humans reach their full potential.\nEND
+      OF EXAMPLE\n\nCurrent summary:\nThe human instructs the AI to say hi, to which
+      the AI responds affirmatively.\n\nNew lines of conversation:\nHuman: just say
+      hello!\nThis is the context you''re working with:\nHi!\nAI: Hello!\n\nNew summary:"}],
+      "model": "gpt-4", "n": 1, "stream": false, "temperature": 0.7}'
+    headers:
+      accept:
+      - application/json
+      accept-encoding:
+      - gzip, deflate
+      connection:
+      - keep-alive
+      content-length:
+      - '997'
+      content-type:
+      - application/json
+      cookie:
+      - __cf_bm=9ly7231xuotblGKWs6jbqP1UIOLx4Z4fGC_GzaLrjf0-1707462898-1-ARsy16USRPFgm9nFkRCgyVEJ0bZHxoljRrPhQDJWOAGApKCPHnJUOUKp5ZIYM+Cye1FsXshcWJ4eSs/1aHvjl74=;
+        _cfuvid=Myd_SP.rh1qGv3eu8_4uoiAw_XxGG6sO.jpzVZqLJGc-1707462898242-0-604800000
+      host:
+      - api.openai.com
+      user-agent:
+      - OpenAI/Python 1.11.1
+      x-stainless-arch:
+      - arm64
+      x-stainless-async:
+      - 'false'
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - MacOS
+      x-stainless-package-version:
+      - 1.11.1
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.11.7
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    body:
+      string: !!binary |
+        H4sIAAAAAAAAA1SRS2sjMRCE7/MrGp3tYMdZO/bNEJaEXQgse8iDYGRNz0iOpFbUPZuY4P8eNH5l
+        LzpU9ddUtT4rAOVqtQBlrBYTkh9ev/28n//4jY+/uLkd0+My0Hr28HR3037c/FGDQtB6g0aO1IWh
+        kDyKo7i3TUYtWLaOZ6PZ1fRyPhr3RqAafcHaJMOr4Wg6nhwIS84gqwU8VwAAn/1bssUaP9QCRoOj
+        EpBZt6gWpyEAlckXRWlmx6KjqMHZNBQFYx/3r0WwXdARXGTJnREGsQjLOxAC1luwDnSsixiLtOlY
+        9jp6T4MivVtn7JHKyIlizaCbxuWgxf1DvwXUZcQFvFCHHLtTAU9tyrQuZWPn/UlvXHRsVxk1Uyxh
+        WSjt8V0F8NIfqvuvu0qZQpKV0CtG7u892e9T5z85u5fTgykk2n+j5vPqkFDxlgXDqnGxxZyy6+9W
+        cla76gsAAP//AwDz/udFLgIAAA==
+    headers:
+      CF-Cache-Status:
+      - DYNAMIC
+      CF-RAY:
+      - 852a519e29bb67eb-SJC
+      Cache-Control:
+      - no-cache, must-revalidate
+      Connection:
+      - keep-alive
+      Content-Encoding:
+      - gzip
+      Content-Type:
+      - application/json
+      Date:
+      - Fri, 09 Feb 2024 07:15:03 GMT
+      Server:
+      - cloudflare
+      Transfer-Encoding:
+      - chunked
+      access-control-allow-origin:
+      - '*'
+      alt-svc:
+      - h3=":443"; ma=86400
+      openai-model:
+      - gpt-4-0613
+      openai-organization:
+      - user-z7g4wmlazxqvc5wjyaaaocfz
+      openai-processing-ms:
+      - '1955'
+      openai-version:
+      - '2020-10-01'
+      strict-transport-security:
+      - max-age=15724800; includeSubDomains
+      x-ratelimit-limit-requests:
+      - '10000'
+      x-ratelimit-limit-tokens:
+      - '300000'
+      x-ratelimit-remaining-requests:
+      - '9999'
+      x-ratelimit-remaining-tokens:
+      - '299767'
+      x-ratelimit-reset-requests:
+      - 6ms
+      x-ratelimit-reset-tokens:
+      - 46ms
+      x-request-id:
+      - req_24c78e42a235c08ae9c6f1b5dbff3c6f
+    status:
+      code: 200
+      message: OK
+version: 1

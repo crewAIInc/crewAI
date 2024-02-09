@@ -50,7 +50,7 @@ agent = Agent(
   max_iter=10,
   max_rpm=10,
   verbose=True,
-  allow_delegation=True
+  allow_delegation=True,
   step_callback=my_intermediate_step_callback
 )
 ```
