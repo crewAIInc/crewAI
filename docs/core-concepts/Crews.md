@@ -19,6 +19,8 @@ description: Understanding and utilizing crews in the crewAI framework.
 | **Config**           | Configuration settings for the crew.                         |
 | **Max RPM**          | Maximum requests per minute the crew adheres to during execution. |
 | **Language**         | Language setting for the crew's operation.                   |
+| **Share Crew**       | Whether you want to share the complete crew infromation and execution with the crewAI team to make the library better, and allow us to train models. |
+
 
 !!! note "Crew Max RPM"
 		The `max_rpm` attribute sets the maximum number of requests per minute the crew can perform to avoid rate limits and will override individual agents `max_rpm` settings if you set it.

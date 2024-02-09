@@ -262,6 +262,8 @@ Data collected includes:
 - Roles of agents in a crew
 - Tools names available
 
+Users can opt-in sharing the complete telemetry data by setting the `share_crew` attribute to `True` on their Crews.
+
 ## License
 
 CrewAI is released under the MIT License.

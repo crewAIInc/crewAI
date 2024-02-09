@@ -32,6 +32,9 @@ class Telemetry:
     - Language model being used
     - Roles of agents in a crew
     - Tools names available
+
+    Users can opt-in to sharing more complete data suing the `share_crew`
+    attribute in the Crew class.
     """
 
     def __init__(self):
@@ -49,17 +52,17 @@ class Telemetry:
         try:
             tracer = trace.get_tracer("crewai.telemetry")
             span = tracer.start_span("Crew Created")
-            self.add_attribute(
+            self._add_attribute(
                 span, "crewai_version", pkg_resources.get_distribution("crewai").version
             )
-            self.add_attribute(span, "python_version", platform.python_version())
-            self.add_attribute(span, "hostname", socket.gethostname())
-            self.add_attribute(span, "crewid", str(crew.id))
-            self.add_attribute(span, "crew_process", crew.process)
-            self.add_attribute(span, "crew_language", crew.language)
-            self.add_attribute(span, "crew_number_of_tasks", len(crew.tasks))
-            self.add_attribute(span, "crew_number_of_agents", len(crew.agents))
-            self.add_attribute(
+            self._add_attribute(span, "python_version", platform.python_version())
+            self._add_attribute(span, "hostname", socket.gethostname())
+            self._add_attribute(span, "crew_id", str(crew.id))
+            self._add_attribute(span, "crew_process", crew.process)
+            self._add_attribute(span, "crew_language", crew.language)
+            self._add_attribute(span, "crew_number_of_tasks", len(crew.tasks))
+            self._add_attribute(span, "crew_number_of_agents", len(crew.agents))
+            self._add_attribute(
                 span,
                 "crew_agents",
                 json.dumps(
@@ -68,6 +71,10 @@ class Telemetry:
                             "id": str(agent.id),
                             "role": agent.role,
                             "memory_enabled?": agent.memory,
+                            "verbose?": agent.verbose,
+                            "max_iter": agent.max_iter,
+                            "max_rpm": agent.max_rpm,
+                            "i18n": agent.i18n.language,
                             "llm": json.dumps(self._safe_llm_attributes(agent.llm)),
                             "delegation_enabled?": agent.allow_delegation,
                             "tools_names": [tool.name for tool in agent.tools],
@@ -76,7 +83,7 @@ class Telemetry:
                     ]
                 ),
             )
-            self.add_attribute(
+            self._add_attribute(
                 span,
                 "crew_tasks",
                 json.dumps(
@@ -84,23 +91,159 @@ class Telemetry:
                         {
                             "id": str(task.id),
                             "async_execution?": task.async_execution,
+                            "agent_role": task.agent.role if task.agent else "None",
                             "tools_names": [tool.name for tool in task.tools],
                         }
                         for task in crew.tasks
                     ]
                 ),
             )
-            self.add_attribute(span, "platform", platform.platform())
-            self.add_attribute(span, "platform_release", platform.release())
-            self.add_attribute(span, "platform_system", platform.system())
-            self.add_attribute(span, "platform_version", platform.version())
-            self.add_attribute(span, "cpus", os.cpu_count())
+            self._add_attribute(span, "platform", platform.platform())
+            self._add_attribute(span, "platform_release", platform.release())
+            self._add_attribute(span, "platform_system", platform.system())
+            self._add_attribute(span, "platform_version", platform.version())
+            self._add_attribute(span, "cpus", os.cpu_count())
             span.set_status(Status(StatusCode.OK))
             span.end()
         except Exception:
             pass
 
-    def add_attribute(self, span, key, value):
+    def crew_execution_span(self, crew):
+        """Records the complete execution of a crew.
+        This is only collected if the user has opted-in to share the crew.
+        """
+        try:
+            tracer = trace.get_tracer("crewai.telemetry")
+            span = tracer.start_span("Crew Execution")
+            self._add_attribute(span, "crew_id", str(crew.id))
+            self._add_attribute(
+                span,
+                "crew_agents",
+                json.dumps(
+                    [
+                        {
+                            "id": str(agent.id),
+                            "role": agent.role,
+                            "goal": agent.goal,
+                            "backstory": agent.backstory,
+                            "memory_enabled?": agent.memory,
+                            "verbose?": agent.verbose,
+                            "max_iter": agent.max_iter,
+                            "max_rpm": agent.max_rpm,
+                            "i18n": agent.i18n.language,
+                            "llm": json.dumps(self._safe_llm_attributes(agent.llm)),
+                            "delegation_enabled?": agent.allow_delegation,
+                            "tools_names": [tool.name for tool in agent.tools],
+                        }
+                        for agent in crew.agents
+                    ]
+                ),
+            )
+            self._add_attribute(
+                span,
+                "crew_tasks",
+                json.dumps(
+                    [
+                        {
+                            "id": str(task.id),
+                            "description": task.description,
+                            "async_execution?": task.async_execution,
+                            "output": task.expected_output,
+                            "agent_role": task.agent.role if task.agent else "None",
+                            "context": [task.description for task in task.context]
+                            if task.context
+                            else "None",
+                            "tools_names": [tool.name for tool in task.tools],
+                        }
+                        for task in crew.tasks
+                    ]
+                ),
+            )
+            span.set_status(Status(StatusCode.OK))
+            span.end()
+        except Exception:
+            pass
+
+    def crew_execution_span(self, crew):
+        """Records the complete execution of a crew.
+        This is only collected if the user has opted-in to share the crew.
+        """
+        if crew.share_crew:
+            try:
+                tracer = trace.get_tracer("crewai.telemetry")
+                span = tracer.start_span("Crew Execution")
+                self._add_attribute(span, "crew_id", str(crew.id))
+                self._add_attribute(
+                    span,
+                    "crew_agents",
+                    json.dumps(
+                        [
+                            {
+                                "id": str(agent.id),
+                                "role": agent.role,
+                                "goal": agent.goal,
+                                "backstory": agent.backstory,
+                                "memory_enabled?": agent.memory,
+                                "verbose?": agent.verbose,
+                                "max_iter": agent.max_iter,
+                                "max_rpm": agent.max_rpm,
+                                "i18n": agent.i18n.language,
+                                "llm": json.dumps(self._safe_llm_attributes(agent.llm)),
+                                "delegation_enabled?": agent.allow_delegation,
+                                "tools_names": [tool.name for tool in agent.tools],
+                            }
+                            for agent in crew.agents
+                        ]
+                    ),
+                )
+                self._add_attribute(
+                    span,
+                    "crew_tasks",
+                    json.dumps(
+                        [
+                            {
+                                "id": str(task.id),
+                                "description": task.description,
+                                "async_execution?": task.async_execution,
+                                "output": task.expected_output,
+                                "agent_role": task.agent.role if task.agent else "None",
+                                "context": [task.description for task in task.context]
+                                if task.context
+                                else "None",
+                                "tools_names": [tool.name for tool in task.tools],
+                            }
+                            for task in crew.tasks
+                        ]
+                    ),
+                )
+                return span
+            except Exception:
+                pass
+
+    def end_crew(self, crew, output):
+        if crew.share_crew:
+            try:
+                self._add_attribute(crew._execution_span, "crew_output", output)
+                self._add_attribute(
+                    crew._execution_span,
+                    "crew_tasks_output",
+                    json.dumps(
+                        [
+                            {
+                                "id": str(task.id),
+                                "description": task.description,
+                                "output": task.output.result,
+                            }
+                            for task in crew.tasks
+                        ]
+                    ),
+                )
+                crew._execution_span.set_status(Status(StatusCode.OK))
+                crew._execution_span.end()
+            except Exception:
+                pass
+
+    def _add_attribute(self, span, key, value):
         """Add an attribute to a span."""
         try:
             return span.set_attribute(key, value)
