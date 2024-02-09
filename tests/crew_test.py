@@ -449,3 +449,71 @@ def test_async_task_execution():
                 crew.kickoff()
                 start.assert_called()
                 join.assert_called()
+
+
+def test_set_agents_step_callback():
+    from unittest.mock import patch
+
+    researcher_agent = Agent(
+        role="Researcher",
+        goal="Make the best research and analysis on content about AI and AI agents",
+        backstory="You're an expert researcher, specialized in technology, software engineering, AI and startups. You work as a freelancer and is now working on doing research and analysis for a new customer.",
+        allow_delegation=False,
+    )
+
+    list_ideas = Task(
+        description="Give me a list of 5 interesting ideas to explore for na article, what makes them unique and interesting.",
+        expected_output="Bullet point list of 5 important events.",
+        agent=researcher_agent,
+        async_execution=True,
+    )
+
+    crew = Crew(
+        agents=[researcher_agent],
+        process=Process.sequential,
+        tasks=[list_ideas],
+        step_callback=lambda: None,
+    )
+
+    with patch.object(Agent, "execute_task") as execute:
+        execute.return_value = "ok"
+        crew.kickoff()
+        assert researcher_agent.step_callback is not None
+
+
+def test_dont_set_agents_step_callback_if_already_set():
+    from unittest.mock import patch
+
+    def agent_callback(_):
+        pass
+
+    def crew_callback(_):
+        pass
+
+    researcher_agent = Agent(
+        role="Researcher",
+        goal="Make the best research and analysis on content about AI and AI agents",
+        backstory="You're an expert researcher, specialized in technology, software engineering, AI and startups. You work as a freelancer and is now working on doing research and analysis for a new customer.",
+        allow_delegation=False,
+        step_callback=agent_callback,
+    )
+
+    list_ideas = Task(
+        description="Give me a list of 5 interesting ideas to explore for na article, what makes them unique and interesting.",
+        expected_output="Bullet point list of 5 important events.",
+        agent=researcher_agent,
+        async_execution=True,
+    )
+
+    crew = Crew(
+        agents=[researcher_agent],
+        process=Process.sequential,
+        tasks=[list_ideas],
+        step_callback=crew_callback,
+    )
+
+    with patch.object(Agent, "execute_task") as execute:
+        execute.return_value = "ok"
+        crew.kickoff()
+        assert researcher_agent.step_callback is not crew_callback
+        assert researcher_agent.step_callback is agent_callback

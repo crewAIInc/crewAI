@@ -38,6 +38,7 @@ class Crew(BaseModel):
         max_rpm: Maximum number of requests per minute for the crew execution to be respected.
         id: A unique identifier for the crew instance.
         full_output: Whether the crew should return the full output with all tasks outputs or just the final output.
+        step_callback: Callback to be executed after each step for every agents execution.
         share_crew: Whether you want to share the complete crew infromation and execution with crewAI to make the library better, and allow us to train models.
         _cache_handler: Handles caching for the crew's operations.
     """
@@ -61,7 +62,11 @@ class Crew(BaseModel):
     )
     config: Optional[Union[Json, Dict[str, Any]]] = Field(default=None)
     id: UUID4 = Field(default_factory=uuid.uuid4, frozen=True)
-    share_crew: bool = Field(default=False)
+    share_crew: Optional[bool] = Field(default=False)
+    step_callback: Optional[Any] = Field(
+        default=None,
+        description="Callback to be executed after each step for all agents execution.",
+    )
     max_rpm: Optional[int] = Field(
         default=None,
         description="Maximum number of requests per minute for the crew execution to be respected.",
@@ -145,6 +150,7 @@ class Crew(BaseModel):
                 "missing_keys_in_config", "Config should have 'agents' and 'tasks'.", {}
             )
 
+        self.process = self.config.get("process", self.process)
         self.agents = [Agent(**agent) for agent in self.config["agents"]]
         self.tasks = [self._create_task(task) for task in self.config["tasks"]]
 
@@ -169,6 +175,8 @@ class Crew(BaseModel):
 
         for agent in self.agents:
             agent.i18n = I18N(language=self.language)
+            if (self.step_callback) and (not agent.step_callback):
+                agent.step_callback = self.step_callback
 
         if self.process == Process.sequential:
             return self._run_sequential_process()

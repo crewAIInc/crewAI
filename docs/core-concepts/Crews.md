@@ -20,6 +20,7 @@ description: Understanding and utilizing crews in the crewAI framework.
 | **Max RPM**          | Maximum requests per minute the crew adheres to during execution. |
 | **Language**         | Language setting for the crew's operation.                   |
 | **Full Output**    | Whether the crew should return the full output with all tasks outputs or just the final output. |
+| **Step Callback**    | A function that is called after each step of every agent. This can be used to log the agent's actions or to perform other operations, it won't override the agent specific `step_callback` |
 | **Share Crew**       | Whether you want to share the complete crew infromation and execution with the crewAI team to make the library better, and allow us to train models. |
 
 
