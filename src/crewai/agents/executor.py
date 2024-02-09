@@ -68,7 +68,10 @@ class CrewAgentExecutor(AgentExecutor):
                     return self._return(
                         next_step_output, intermediate_steps, run_manager=run_manager
                     )
-                self.step_callback(next_step_output)
+
+                if self.step_callback:
+                    self.step_callback(next_step_output)
+
                 intermediate_steps.extend(next_step_output)
                 if len(next_step_output) == 1:
                     next_step_action = next_step_output[0]

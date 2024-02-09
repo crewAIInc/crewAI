@@ -378,8 +378,6 @@ def test_agent_without_max_rpm_respet_crew_rpm(capsys):
 
 @pytest.mark.vcr(filter_headers=["authorization"])
 def test_agent_use_specific_tasks_output_as_context(capsys):
-    pass
-
     agent1 = Agent(role="test role", goal="test goal", backstory="test backstory")
 
     agent2 = Agent(role="test role2", goal="test goal2", backstory="test backstory2")
@@ -398,3 +396,36 @@ def test_agent_use_specific_tasks_output_as_context(capsys):
     result = crew.kickoff()
     assert "bye" not in result.lower()
     assert "hi" in result.lower() or "hello" in result.lower()
+
+
+@pytest.mark.vcr(filter_headers=["authorization"])
+def test_agent_step_callback():
+    class StepCallback:
+        def callback(self, step):
+            print(step)
+
+    with patch.object(StepCallback, "callback") as callback:
+
+        @tool
+        def learn_about_AI(topic) -> float:
+            """Useful for when you need to learn about AI to write an paragraph about it."""
+            return "AI is a very broad field."
+
+        agent1 = Agent(
+            role="test role",
+            goal="test goal",
+            backstory="test backstory",
+            tools=[learn_about_AI],
+            step_callback=StepCallback().callback,
+        )
+
+        essay = Task(
+            description="Write and then review an small paragraph on AI until it's AMAZING",
+            agent=agent1,
+        )
+        tasks = [essay]
+        crew = Crew(agents=[agent1], tasks=tasks)
+
+        callback.return_value = "ok"
+        crew.kickoff()
+        callback.assert_called_once()
