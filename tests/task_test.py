@@ -74,7 +74,7 @@ def test_task_prompt_includes_expected_output():
     with patch.object(Agent, "execute_task") as execute:
         execute.return_value = "ok"
         task.execute()
-        execute.assert_called_once_with(task=task._prompt(), context=None, tools=[])
+        execute.assert_called_once_with(task=task, context=None, tools=[])
 
 
 def test_task_callback():
@@ -115,7 +115,7 @@ def test_execute_with_agent():
 
     with patch.object(Agent, "execute_task", return_value="ok") as execute:
         task.execute(agent=researcher)
-        execute.assert_called_once_with(task=task._prompt(), context=None, tools=[])
+        execute.assert_called_once_with(task=task, context=None, tools=[])
 
 
 def test_async_execution():
@@ -135,4 +135,4 @@ def test_async_execution():
 
     with patch.object(Agent, "execute_task", return_value="ok") as execute:
         task.execute(agent=researcher)
-        execute.assert_called_once_with(task=task._prompt(), context=None, tools=[])
+        execute.assert_called_once_with(task=task, context=None, tools=[])
