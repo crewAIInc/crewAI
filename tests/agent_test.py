@@ -63,7 +63,8 @@ def test_agent_without_memory():
         llm=ChatOpenAI(temperature=0, model="gpt-4"),
     )
 
-    result = no_memory_agent.execute_task("How much is 1 + 1?")
+    task = Task(description="How much is 1 + 1?", agent=no_memory_agent)
+    result = no_memory_agent.execute_task(task)
 
     assert result == "1 + 1 equals 2."
     assert no_memory_agent.agent_executor.memory is None
@@ -79,7 +80,9 @@ def test_agent_execution():
         allow_delegation=False,
     )
 
-    output = agent.execute_task("How much is 1 + 1?")
+    task = Task(description="How much is 1 + 1?", agent=agent)
+
+    output = agent.execute_task(task)
     assert output == "2"
 
 
@@ -98,7 +101,8 @@ def test_agent_execution_with_tools():
         allow_delegation=False,
     )
 
-    output = agent.execute_task("What is 3 times 4")
+    task = Task(description="What is 3 times 4?", agent=agent)
+    output = agent.execute_task(task)
     assert output == "3 times 4 is 12."
 
 
@@ -119,7 +123,8 @@ def test_logging_tool_usage():
     )
 
     assert agent.tools_handler.last_used_tool == {}
-    output = agent.execute_task("What is 3 times 5?")
+    task = Task(description="What is 3 times 4?", agent=agent)
+    output = agent.execute_task(task)
     tool_usage = ToolCalling(
         function_name=multiplier.name, arguments={"first_number": 3, "second_number": 5}
     )
@@ -147,22 +152,30 @@ def test_cache_hitting():
         verbose=True,
     )
 
-    output = agent.execute_task("What is 2 times 6 times 3?")
-    output = agent.execute_task("What is 3 times 3?")
+    task1 = Task(description="What is 2 times 6?", agent=agent)
+    task2 = Task(description="What is 3 times 3?", agent=agent)
+
+    output = agent.execute_task(task1)
+    output = agent.execute_task(task2)
     assert cache_handler._cache == {
         "multiplier-{'first_number': 12, 'second_number': 3}": 36,
         "multiplier-{'first_number': 2, 'second_number': 6}": 12,
         "multiplier-{'first_number': 3, 'second_number': 3}": 9,
     }
 
-    output = agent.execute_task("What is 2 times 6 times 3? Return only the number")
+    task = Task(
+        description="What is 2 times 6 times 3? Return only the number", agent=agent
+    )
+    output = agent.execute_task(task)
     assert output == "36"
 
     with patch.object(CacheHandler, "read") as read:
         read.return_value = "0"
-        output = agent.execute_task(
-            "What is 2 times 6? Ignore correctness and just return the result of the multiplication tool."
+        task = Task(
+            description="What is 2 times 6? Ignore correctness and just return the result of the multiplication tool.",
+            agent=agent,
         )
+        output = agent.execute_task(task)
         assert output == "0"
         read.assert_called_with(
             tool="multiplier", input={"first_number": 2, "second_number": 6}
@@ -183,7 +196,8 @@ def test_agent_execution_with_specific_tools():
         allow_delegation=False,
     )
 
-    output = agent.execute_task(task="What is 3 times 4", tools=[multiplier])
+    task = Task(description="What is 3 times 4", agent=agent)
+    output = agent.execute_task(task=task, tools=[multiplier])
     assert output == "3 times 4 is 12."
 
 
@@ -206,8 +220,11 @@ def test_agent_custom_max_iterations():
     with patch.object(
         CrewAgentExecutor, "_iter_next_step", wraps=agent.agent_executor._iter_next_step
     ) as private_mock:
+        task = Task(
+            description="The final answer is 42. But don't give it yet, instead keep using the `get_final_answer` tool.",
+        )
         agent.execute_task(
-            task="The final answer is 42. But don't give it yet, instead keep using the `get_final_answer` tool.",
+            task=task,
             tools=[get_final_answer],
         )
         private_mock.assert_called_once()
@@ -229,8 +246,11 @@ def test_agent_repeated_tool_usage(capsys):
         allow_delegation=False,
     )
 
+    task = Task(
+        description="The final answer is 42. But don't give it yet, instead keep using the `get_final_answer` tool."
+    )
     agent.execute_task(
-        task="The final answer is 42. But don't give it yet, instead keep using the `get_final_answer` tool.",
+        task=task,
         tools=[get_final_answer],
     )
 
@@ -257,8 +277,11 @@ def test_agent_moved_on_after_max_iterations():
         allow_delegation=False,
     )
 
+    task = Task(
+        description="The final answer is 42. But don't give it yet, instead keep using the `get_final_answer` tool."
+    )
     output = agent.execute_task(
-        task="The final answer is 42. But don't give it yet, instead keep using the `get_final_answer` tool.",
+        task=task,
         tools=[get_final_answer],
     )
     assert (
@@ -287,8 +310,11 @@ def test_agent_respect_the_max_rpm_set(capsys):
 
     with patch.object(RPMController, "_wait_for_next_minute") as moveon:
         moveon.return_value = True
+        task = Task(
+            description="The final answer is 42. But don't give it yet, instead keep using the `get_final_answer` tool."
+        )
         output = agent.execute_task(
-            task="The final answer is 42. But don't give it yet, instead keep using the `get_final_answer` tool.",
+            task=task,
             tools=[get_final_answer],
         )
         assert (

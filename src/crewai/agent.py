@@ -125,7 +125,7 @@ class Agent(BaseModel):
 
     def execute_task(
         self,
-        task: str,
+        task: Any,
         context: Optional[str] = None,
         tools: Optional[List[Any]] = None,
     ) -> str:
@@ -140,17 +140,20 @@ class Agent(BaseModel):
             Output of the agent
         """
 
+        task_prompt = task.prompt()
+
         if context:
-            task = self.i18n.slice("task_with_context").format(
-                task=task, context=context
+            task_prompt = self.i18n.slice("task_with_context").format(
+                task=task_prompt, context=context
             )
 
         tools = tools or self.tools
         self.agent_executor.tools = tools
+        self.agent_executor.task = task
 
         result = self.agent_executor.invoke(
             {
-                "input": task,
+                "input": task_prompt,
                 "tool_names": self.__tools_names(tools),
                 "tools": render_text_description(tools),
             }

@@ -4,6 +4,7 @@ from langchain.tools import StructuredTool
 from pydantic import BaseModel, Field
 
 from crewai.agent import Agent
+from crewai.task import Task
 from crewai.utilities import I18N
 
 
@@ -53,4 +54,5 @@ class AgentTools(BaseModel):
             )
 
         agent = agent[0]
+        task = Task(description=task, agent=agent)
         return agent.execute_task(task, context)
