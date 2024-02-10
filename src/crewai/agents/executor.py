@@ -21,6 +21,9 @@ class CrewAgentExecutor(AgentExecutor):
     i18n: I18N = I18N()
     llm: Any = None
     iterations: int = 0
+    task: Any = None
+    tools_description: str = ""
+    tools_names: str = ""
     request_within_rpm_limit: Any = None
     tools_handler: InstanceOf[ToolsHandler] = None
     max_iterations: Optional[int] = 15
@@ -187,7 +190,12 @@ class CrewAgentExecutor(AgentExecutor):
                 if return_direct:
                     tool_run_kwargs["llm_prefix"] = ""
                 observation = ToolUsage(
-                    tools_handler=self.tools_handler, tools=self.tools, llm=self.llm
+                    tools_handler=self.tools_handler,
+                    tools=self.tools,
+                    tools_description=self.tools_description,
+                    tools_names=self.tools_names,
+                    llm=self.llm,
+                    task=self.task,
                 ).use(agent_action.log)
             else:
                 tool_run_kwargs = self.agent.tool_run_logging_kwargs()

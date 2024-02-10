@@ -10,6 +10,7 @@ from crewai import Agent, Crew, Task
 from crewai.agents.cache import CacheHandler
 from crewai.agents.executor import CrewAgentExecutor
 from crewai.tools.tool_calling import ToolCalling
+from crewai.tools.tool_usage import ToolUsage
 from crewai.utilities import RPMController
 
 
@@ -256,7 +257,7 @@ def test_agent_repeated_tool_usage(capsys):
 
     captured = capsys.readouterr()
     assert (
-        "I just used the get_final_answer tool with input {'numbers': 42}. So I already know the result of that and don't need to use it again now."
+        "I just used the get_final_answer tool with input {'numbers': 42}. So I already know the result of that and don't need to use it again now. \nI could give my final answer if I'm ready, using exaclty the expected format bellow: \n```\nThought: Do I need to use a tool? No\nFinal Answer: [your response here]```\n"
         in captured.out
     )
 
@@ -412,6 +413,78 @@ def test_agent_without_max_rpm_respet_crew_rpm(capsys):
         assert "Action: get_final_answer" in captured.out
         assert "Max RPM reached, waiting for next minute to start." in captured.out
         moveon.assert_called_once()
+
+
+@pytest.mark.vcr(filter_headers=["authorization"])
+def test_agent_error_on_parsing_tool(capsys):
+    from unittest.mock import patch
+
+    from langchain.tools import tool
+
+    @tool
+    def get_final_answer(numbers) -> float:
+        """Get the final answer but don't give it yet, just re-use this
+        tool non-stop."""
+        return 42
+
+    agent1 = Agent(
+        role="test role",
+        goal="test goal",
+        backstory="test backstory",
+        verbose=True,
+    )
+    tasks = [
+        Task(
+            description="Use the get_final_answer tool.",
+            agent=agent1,
+            tools=[get_final_answer],
+        )
+    ]
+
+    crew = Crew(agents=[agent1], tasks=tasks, verbose=2)
+
+    with patch.object(ToolUsage, "_render") as force_exception:
+        force_exception.side_effect = Exception("Error on parsing tool.")
+        crew.kickoff()
+        captured = capsys.readouterr()
+        assert (
+            "It seems we encountered an unexpected error while trying to use the tool"
+            in captured.out
+        )
+
+
+@pytest.mark.vcr(filter_headers=["authorization"])
+def test_agent_remembers_output_format_after_using_tools_too_many_times():
+    from unittest.mock import patch
+
+    from langchain.tools import tool
+
+    @tool
+    def get_final_answer(numbers) -> float:
+        """Get the final answer but don't give it yet, just re-use this
+        tool non-stop."""
+        return 42
+
+    agent1 = Agent(
+        role="test role",
+        goal="test goal",
+        backstory="test backstory",
+        max_iter=4,
+        verbose=True,
+    )
+    tasks = [
+        Task(
+            description="Never give the final answer. Use the get_final_answer tool in a loop.",
+            agent=agent1,
+            tools=[get_final_answer],
+        )
+    ]
+
+    crew = Crew(agents=[agent1], tasks=tasks, verbose=2)
+
+    with patch.object(ToolUsage, "_remember_format") as remember_format:
+        crew.kickoff()
+        remember_format.assert_called()
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
