@@ -60,31 +60,40 @@ class ToolUsage:
             self._printer.print(content=f"\n\n{error}\n", color="yellow")
             return error
         tool = self._select_tool(calling.function_name)
-        return self._use(tool=tool, calling=calling)
+        return self._use(tool_string=tool_string, tool=tool, calling=calling)
 
-    def _use(self, tool: BaseTool, calling: ToolCalling) -> None:
-        if self._check_tool_repeated_usage(calling=calling):
-            result = self._i18n.errors("task_repeated_usage").format(
-                tool=calling.function_name, tool_input=calling.arguments
+    def _use(self, tool_string: str, tool: BaseTool, calling: ToolCalling) -> None:
+        try:
+            if self._check_tool_repeated_usage(calling=calling):
+                result = self._i18n.errors("task_repeated_usage").format(
+                    tool=calling.function_name, tool_input=calling.arguments
+                )
+            else:
+                self.tools_handler.on_tool_start(calling=calling)
+
+                result = self.tools_handler.cache.read(
+                    tool=calling.function_name, input=calling.arguments
+                )
+
+                if not result:
+                    result = tool._run(**calling.arguments)
+                    self.tools_handler.on_tool_end(calling=calling, output=result)
+
+            self._printer.print(content=f"\n\n{result}\n", color="yellow")
+            self._telemetry.tool_usage(
+                llm=self.llm, tool_name=tool.name, attempts=self._run_attempts
             )
-        else:
-            self.tools_handler.on_tool_start(calling=calling)
 
-            result = self.tools_handler.cache.read(
-                tool=calling.function_name, input=calling.arguments
-            )
-
-            if not result:
-                result = tool._run(**calling.arguments)
-                self.tools_handler.on_tool_end(calling=calling, output=result)
-
-        self._printer.print(content=f"\n\n{result}\n", color="yellow")
-        self._telemetry.tool_usage(
-            llm=self.llm, tool_name=tool.name, attempts=self._run_attempts
-        )
-
-        result = self._format_result(result=result)
-        return result
+            result = self._format_result(result=result)
+            return result
+        except Exception:
+            self._run_attempts += 1
+            if self._run_attempts > self._max_parsing_attempts:
+                self._telemetry.tool_usage_error(llm=self.llm)
+                return ToolUsageErrorException(
+                    self._i18n.errors("tool_usage_error")
+                ).message
+            return self.use(tool_string=tool_string)
 
     def _format_result(self, result: Any) -> None:
         self.task.used_tools += 1
