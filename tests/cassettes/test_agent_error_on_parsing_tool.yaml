@@ -1,0 +1,772 @@
+interactions:
+- request:
+    body: '{"messages": [{"role": "user", "content": "You are test role.\ntest backstory\n\nYour
+      personal goal is: test goalTOOLS:\n------\nYou have access to only the following
+      tools:\n\n(\"get_final_answer: get_final_answer(numbers) -> float - Get the
+      final answer but don''t give it yet, just re-use this\\n        tool non-stop.\\nDelegate
+      work to co-worker: Delegate work to co-worker(coworker: str, task: str, context:
+      str) - Delegate a specific task to one of the following co-workers: . The input
+      to this tool should be the role of the coworker, the task you want them to do,
+      and ALL necessary context to exectue the task, they know nothing about the task,
+      so share absolute everything you know, don''t reference things but instead explain
+      them.\\nAsk question to co-worker: Ask question to co-worker(coworker: str,
+      question: str, context: str) - Ask a specific question to one of the following
+      co-workers: . The input to this tool should be the role of the coworker, the
+      question you have for them, and ALL necessary context to ask the question properly,
+      they know nothing about the question, so share absolute everything you know,
+      don''t reference things but instead explain them.\",)\n\nTo use a tool, please
+      use the exact following format:\n\n```\nThought: Do I need to use a tool? Yes\nAction:
+      the tool you wanna use, should be one of [get_final_answer, Delegate work to
+      co-worker, Ask question to co-worker], just the name.\nAction Input: Any and
+      all relevant information input and context for using the tool\nObservation:
+      the result of using the tool\n```\n\nWhen you have a response for your task,
+      or if you do not need to use a tool, you MUST use the format:\n\n```\nThought:
+      Do I need to use a tool? No\nFinal Answer: [your response here]```This is the
+      summary of your work so far:\nBegin! This is VERY important to you, your job
+      depends on it!\n\nCurrent Task: Use the get_final_answer tool.\n"}], "model":
+      "gpt-4", "n": 1, "stop": ["\nObservation"], "stream": false, "temperature":
+      0.7}'
+    headers:
+      accept:
+      - application/json
+      accept-encoding:
+      - gzip, deflate
+      connection:
+      - keep-alive
+      content-length:
+      - '1992'
+      content-type:
+      - application/json
+      host:
+      - api.openai.com
+      user-agent:
+      - OpenAI/Python 1.12.0
+      x-stainless-arch:
+      - arm64
+      x-stainless-async:
+      - 'false'
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - MacOS
+      x-stainless-package-version:
+      - 1.12.0
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.11.7
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    body:
+      string: !!binary |
+        H4sIAAAAAAAAA1SRT0vDQBDF7/kUw55TaZPU2FxEKIJ4EEHwX0vZbqZJ6mZn3Z2gUvrdZdO01cse
+        3ps3/N7sLgIQTSkKEKqWrFqrR1ef9HCfWHtfdo/+Td2+PM8fkizffuC3uRRxSNB6i4qPqQtFrdXI
+        DZmDrRxKxrB1ko/z6SzPpklvtFSiDrHK8igbjS8n6ZCoqVHoRQHvEQDArn8DmynxWxQwjo9Ki97L
+        CkVxGgIQjnRQhPS+8SwNi/hsKjKMpsd9qqmrai5gTnAHBrEEJug8ggQm0tfwin5hblQoU0CFvNo0
+        RuqVNP4L3dGBO2M7LmC3EKZr1+j8IqBPYkhiSGPIYpgu92JA2J/YNVXW0Tr0NJ3WJ33TmMbXK4fS
+        kwmcnske4vsIYNnfqPtXW1hHreUV0weasDBLk8M+cf6Os5vOBpOJpf6TyifRQCj8j2dsQ+EKnXVN
+        f7LAGe2jXwAAAP//AwAmhGp+KQIAAA==
+    headers:
+      CF-Cache-Status:
+      - DYNAMIC
+      CF-RAY:
+      - 8537268cf851f9cc-SJC
+      Cache-Control:
+      - no-cache, must-revalidate
+      Connection:
+      - keep-alive
+      Content-Encoding:
+      - gzip
+      Content-Type:
+      - application/json
+      Date:
+      - Sat, 10 Feb 2024 20:37:34 GMT
+      Server:
+      - cloudflare
+      Set-Cookie:
+      - __cf_bm=yNACzxKDqhoX850JGrUxpi3HcHQSibzwLRgORMLsdCU-1707597454-1-ASwdC6d9DT1NZzOpdsfleqICKRa6ToebCTL08incS+pzyfl/JRGh5JvDcsERTfvsy8jmMaUN+wpnUS8AV7sTgaM=;
+        path=/; expires=Sat, 10-Feb-24 21:07:34 GMT; domain=.api.openai.com; HttpOnly;
+        Secure; SameSite=None
+      - _cfuvid=JDKIcW8t2HvQ7UF8CVrbSSKjjxQ.xFhOFrnF63Dz.94-1707597454672-0-604800000;
+        path=/; domain=.api.openai.com; HttpOnly; Secure; SameSite=None
+      Transfer-Encoding:
+      - chunked
+      access-control-allow-origin:
+      - '*'
+      alt-svc:
+      - h3=":443"; ma=86400
+      openai-model:
+      - gpt-4-0613
+      openai-organization:
+      - user-z7g4wmlazxqvc5wjyaaaocfz
+      openai-processing-ms:
+      - '2033'
+      openai-version:
+      - '2020-10-01'
+      strict-transport-security:
+      - max-age=15724800; includeSubDomains
+      x-ratelimit-limit-requests:
+      - '10000'
+      x-ratelimit-limit-tokens:
+      - '300000'
+      x-ratelimit-remaining-requests:
+      - '9999'
+      x-ratelimit-remaining-tokens:
+      - '299527'
+      x-ratelimit-reset-requests:
+      - 6ms
+      x-ratelimit-reset-tokens:
+      - 94ms
+      x-request-id:
+      - req_e5a50fb40b6fe941bbcb75db85aa1e14
+    status:
+      code: 200
+      message: OK
+- request:
+    body: '{"messages": [{"role": "user", "content": "You are test role.\ntest backstory\n\nYour
+      personal goal is: test goalTOOLS:\n------\nYou have access to only the following
+      tools:\n\n(\"get_final_answer: get_final_answer(numbers) -> float - Get the
+      final answer but don''t give it yet, just re-use this\\n        tool non-stop.\\nDelegate
+      work to co-worker: Delegate work to co-worker(coworker: str, task: str, context:
+      str) - Delegate a specific task to one of the following co-workers: . The input
+      to this tool should be the role of the coworker, the task you want them to do,
+      and ALL necessary context to exectue the task, they know nothing about the task,
+      so share absolute everything you know, don''t reference things but instead explain
+      them.\\nAsk question to co-worker: Ask question to co-worker(coworker: str,
+      question: str, context: str) - Ask a specific question to one of the following
+      co-workers: . The input to this tool should be the role of the coworker, the
+      question you have for them, and ALL necessary context to ask the question properly,
+      they know nothing about the question, so share absolute everything you know,
+      don''t reference things but instead explain them.\",)\n\nTo use a tool, please
+      use the exact following format:\n\n```\nThought: Do I need to use a tool? Yes\nAction:
+      the tool you wanna use, should be one of [get_final_answer, Delegate work to
+      co-worker, Ask question to co-worker], just the name.\nAction Input: Any and
+      all relevant information input and context for using the tool\nObservation:
+      the result of using the tool\n```\n\nWhen you have a response for your task,
+      or if you do not need to use a tool, you MUST use the format:\n\n```\nThought:
+      Do I need to use a tool? No\nFinal Answer: [your response here]```This is the
+      summary of your work so far:\nBegin! This is VERY important to you, your job
+      depends on it!\n\nCurrent Task: Use the get_final_answer tool.\nThought: Do
+      I need to use a tool? Yes\nAction: get_final_answer\nAction Input: {\"numbers\":
+      [1, 2, 3, 4, 5]}\nObservation: It seems we encountered an unexpected error while
+      trying to use the tool.\nThought: "}], "model": "gpt-4", "n": 1, "stop": ["\nObservation"],
+      "stream": false, "temperature": 0.7}'
+    headers:
+      accept:
+      - application/json
+      accept-encoding:
+      - gzip, deflate
+      connection:
+      - keep-alive
+      content-length:
+      - '2200'
+      content-type:
+      - application/json
+      cookie:
+      - __cf_bm=yNACzxKDqhoX850JGrUxpi3HcHQSibzwLRgORMLsdCU-1707597454-1-ASwdC6d9DT1NZzOpdsfleqICKRa6ToebCTL08incS+pzyfl/JRGh5JvDcsERTfvsy8jmMaUN+wpnUS8AV7sTgaM=;
+        _cfuvid=JDKIcW8t2HvQ7UF8CVrbSSKjjxQ.xFhOFrnF63Dz.94-1707597454672-0-604800000
+      host:
+      - api.openai.com
+      user-agent:
+      - OpenAI/Python 1.12.0
+      x-stainless-arch:
+      - arm64
+      x-stainless-async:
+      - 'false'
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - MacOS
+      x-stainless-package-version:
+      - 1.12.0
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.11.7
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    body:
+      string: !!binary |
+        H4sIAAAAAAAAA1RRy27bMBC86ysWPMuGH3Kd6JYiF6MtmkPQSxwYNLWWmFBcmrtCYhv+94DyK73w
+        MMMZzgwPGYCylSpBmUaLaYMb3G3p75/dfh+b6b+fDzTZmvi0Dbz/tX1sf6s8KWj9hkYuqqGhNjgU
+        S/5Em4haMLmO56P57H5ezIqeaKlCl2R1kEExGP0YT8+KhqxBViW8ZAAAh/5M2XyFn6qEUX5BWmTW
+        NaryeglARXIJUZrZsmgvKr+Rhryg7+M+NwhC5KCyFXgS+KD4DpoBPwMawWoIC+CGOleBxB3oWlsP
+        QsCIYDcgDYJl7hACxvQUD2HpH0zqXkKNstpYr91Ke/7AeGFg4UMnJRyWynftGiMvU9NxDpMcpjkU
+        Ocxej+qc+Hit6qgOkdZpFt85d8U31ltuVhE1k0+1WCic5McM4LWftPtvJRUitUFWQu/ok2FxPz75
+        qdvvfWPnZ1JItLvhs+lddk6oeMeCbSpcYwzR9gunnNkx+wIAAP//AwB4mJ1FWAIAAA==
+    headers:
+      CF-Cache-Status:
+      - DYNAMIC
+      CF-RAY:
+      - 8537269beca0f9cc-SJC
+      Cache-Control:
+      - no-cache, must-revalidate
+      Connection:
+      - keep-alive
+      Content-Encoding:
+      - gzip
+      Content-Type:
+      - application/json
+      Date:
+      - Sat, 10 Feb 2024 20:37:37 GMT
+      Server:
+      - cloudflare
+      Transfer-Encoding:
+      - chunked
+      access-control-allow-origin:
+      - '*'
+      alt-svc:
+      - h3=":443"; ma=86400
+      openai-model:
+      - gpt-4-0613
+      openai-organization:
+      - user-z7g4wmlazxqvc5wjyaaaocfz
+      openai-processing-ms:
+      - '2386'
+      openai-version:
+      - '2020-10-01'
+      strict-transport-security:
+      - max-age=15724800; includeSubDomains
+      x-ratelimit-limit-requests:
+      - '10000'
+      x-ratelimit-limit-tokens:
+      - '300000'
+      x-ratelimit-remaining-requests:
+      - '9999'
+      x-ratelimit-remaining-tokens:
+      - '299475'
+      x-ratelimit-reset-requests:
+      - 6ms
+      x-ratelimit-reset-tokens:
+      - 104ms
+      x-request-id:
+      - req_682e1eb6a163744320749bff358928ce
+    status:
+      code: 200
+      message: OK
+- request:
+    body: '{"messages": [{"role": "user", "content": "You are test role.\ntest backstory\n\nYour
+      personal goal is: test goalTOOLS:\n------\nYou have access to only the following
+      tools:\n\n(\"get_final_answer: get_final_answer(numbers) -> float - Get the
+      final answer but don''t give it yet, just re-use this\\n        tool non-stop.\\nDelegate
+      work to co-worker: Delegate work to co-worker(coworker: str, task: str, context:
+      str) - Delegate a specific task to one of the following co-workers: . The input
+      to this tool should be the role of the coworker, the task you want them to do,
+      and ALL necessary context to exectue the task, they know nothing about the task,
+      so share absolute everything you know, don''t reference things but instead explain
+      them.\\nAsk question to co-worker: Ask question to co-worker(coworker: str,
+      question: str, context: str) - Ask a specific question to one of the following
+      co-workers: . The input to this tool should be the role of the coworker, the
+      question you have for them, and ALL necessary context to ask the question properly,
+      they know nothing about the question, so share absolute everything you know,
+      don''t reference things but instead explain them.\",)\n\nTo use a tool, please
+      use the exact following format:\n\n```\nThought: Do I need to use a tool? Yes\nAction:
+      the tool you wanna use, should be one of [get_final_answer, Delegate work to
+      co-worker, Ask question to co-worker], just the name.\nAction Input: Any and
+      all relevant information input and context for using the tool\nObservation:
+      the result of using the tool\n```\n\nWhen you have a response for your task,
+      or if you do not need to use a tool, you MUST use the format:\n\n```\nThought:
+      Do I need to use a tool? No\nFinal Answer: [your response here]```This is the
+      summary of your work so far:\nBegin! This is VERY important to you, your job
+      depends on it!\n\nCurrent Task: Use the get_final_answer tool.\nThought: Do
+      I need to use a tool? Yes\nAction: get_final_answer\nAction Input: {\"numbers\":
+      [1, 2, 3, 4, 5]}\nObservation: It seems we encountered an unexpected error while
+      trying to use the tool.\nThought: The tool did not work as expected. I should
+      try again to see if the issue persists. \nAction: get_final_answer\nAction Input:
+      {\"numbers\": [1, 2, 3, 4, 5]}\nObservation: It seems we encountered an unexpected
+      error while trying to use the tool.\nThought: "}], "model": "gpt-4", "n": 1,
+      "stop": ["\nObservation"], "stream": false, "temperature": 0.7}'
+    headers:
+      accept:
+      - application/json
+      accept-encoding:
+      - gzip, deflate
+      connection:
+      - keep-alive
+      content-length:
+      - '2455'
+      content-type:
+      - application/json
+      cookie:
+      - __cf_bm=yNACzxKDqhoX850JGrUxpi3HcHQSibzwLRgORMLsdCU-1707597454-1-ASwdC6d9DT1NZzOpdsfleqICKRa6ToebCTL08incS+pzyfl/JRGh5JvDcsERTfvsy8jmMaUN+wpnUS8AV7sTgaM=;
+        _cfuvid=JDKIcW8t2HvQ7UF8CVrbSSKjjxQ.xFhOFrnF63Dz.94-1707597454672-0-604800000
+      host:
+      - api.openai.com
+      user-agent:
+      - OpenAI/Python 1.12.0
+      x-stainless-arch:
+      - arm64
+      x-stainless-async:
+      - 'false'
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - MacOS
+      x-stainless-package-version:
+      - 1.12.0
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.11.7
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    body:
+      string: !!binary |
+        H4sIAAAAAAAAA1RT0W4aMRB85ytGfj4QFAgNL1XVqmrSRGnVVqkaImTuljsHn/dq7wUQ4t8rGy5p
+        X07yzs54dj136AHKFGoOlVda8rqx/bd/+O7rl+m37ze35e/qbnLzvP91+1RffLq/r69VFhm8eqJc
+        OtYg57qxJIbdCc49aaGoOpoNZ9PL2WQ6S0DNBdlIKxvpT/rDi9H4zKjY5BTUHA89ADikb/TmCtqp
+        OYZZV6kpBF2Smr80AcqzjRWlQzBBtBOVvYI5OyGX7P6oCMJsEWvGtRQgjFrbdevyOMAAV6hNWQkc
+        URHBgiyVWghSmQDRYROrGjlv2W/Igz1SsaIa63gonk1OYIdtpSVJMBztZLBw79Mlc3zsRKNGbMm5
+        f5LrenDlmlbmOCxUd9NCzbFQ11y5hcqwUNHLqfYzRHuEkmS5Nk7bpXZhSz7NempOS9jJqf+eoD1B
+        /N64Ml5fkiSBRMaZ3IaIagTyhgJ4DdfWK/IBD6MMbzKMM0wyTB+hA0y0O8Bn3tIz+SyppU1XOmBF
+        5P7dctJ1BRpPgeJDxCNaR7uGcqEC5D37AT5ohz23aCzpkPxGs+152iTPqcODXJEkLQlqwsbxFmad
+        2HFUvbLUDWrSo8SdvluoozoH5fiSMMtl43kV0+haa1/qa+NMqJaedGAX0xSEmxP92AMeU5Lb/8Kp
+        Gs91I0vhDbkoOD39CSmV3U/zio7G4zMqLNq+AheXw97Zogr7IFTHdy7JN96kZEejvWPvLwAAAP//
+        AwBWiKdQ0AMAAA==
+    headers:
+      CF-Cache-Status:
+      - DYNAMIC
+      CF-RAY:
+      - 853726ab8ad0f9cc-SJC
+      Cache-Control:
+      - no-cache, must-revalidate
+      Connection:
+      - keep-alive
+      Content-Encoding:
+      - gzip
+      Content-Type:
+      - application/json
+      Date:
+      - Sat, 10 Feb 2024 20:37:44 GMT
+      Server:
+      - cloudflare
+      Transfer-Encoding:
+      - chunked
+      access-control-allow-origin:
+      - '*'
+      alt-svc:
+      - h3=":443"; ma=86400
+      openai-model:
+      - gpt-4-0613
+      openai-organization:
+      - user-z7g4wmlazxqvc5wjyaaaocfz
+      openai-processing-ms:
+      - '7250'
+      openai-version:
+      - '2020-10-01'
+      strict-transport-security:
+      - max-age=15724800; includeSubDomains
+      x-ratelimit-limit-requests:
+      - '10000'
+      x-ratelimit-limit-tokens:
+      - '300000'
+      x-ratelimit-remaining-requests:
+      - '9999'
+      x-ratelimit-remaining-tokens:
+      - '299414'
+      x-ratelimit-reset-requests:
+      - 6ms
+      x-ratelimit-reset-tokens:
+      - 117ms
+      x-request-id:
+      - req_999c12bd72c5eab61ca77b38e1e394d2
+    status:
+      code: 200
+      message: OK
+- request:
+    body: '{"messages": [{"role": "user", "content": "You are test role.\ntest backstory\n\nYour
+      personal goal is: test goalTOOLS:\n------\nYou have access to only the following
+      tools:\n\n(\"get_final_answer: get_final_answer(numbers) -> float - Get the
+      final answer but don''t give it yet, just re-use this\\n        tool non-stop.\\nDelegate
+      work to co-worker: Delegate work to co-worker(coworker: str, task: str, context:
+      str) - Delegate a specific task to one of the following co-workers: . The input
+      to this tool should be the role of the coworker, the task you want them to do,
+      and ALL necessary context to exectue the task, they know nothing about the task,
+      so share absolute everything you know, don''t reference things but instead explain
+      them.\\nAsk question to co-worker: Ask question to co-worker(coworker: str,
+      question: str, context: str) - Ask a specific question to one of the following
+      co-workers: . The input to this tool should be the role of the coworker, the
+      question you have for them, and ALL necessary context to ask the question properly,
+      they know nothing about the question, so share absolute everything you know,
+      don''t reference things but instead explain them.\",)\n\nTo use a tool, please
+      use the exact following format:\n\n```\nThought: Do I need to use a tool? Yes\nAction:
+      the tool you wanna use, should be one of [get_final_answer, Delegate work to
+      co-worker, Ask question to co-worker], just the name.\nAction Input: Any and
+      all relevant information input and context for using the tool\nObservation:
+      the result of using the tool\n```\n\nWhen you have a response for your task,
+      or if you do not need to use a tool, you MUST use the format:\n\n```\nThought:
+      Do I need to use a tool? No\nFinal Answer: [your response here]```This is the
+      summary of your work so far:\nBegin! This is VERY important to you, your job
+      depends on it!\n\nCurrent Task: Use the get_final_answer tool.\nThought: Do
+      I need to use a tool? Yes\nAction: get_final_answer\nAction Input: {\"numbers\":
+      [1, 2, 3, 4, 5]}\nObservation: It seems we encountered an unexpected error while
+      trying to use the tool.\nThought: The tool did not work as expected. I should
+      try again to see if the issue persists. \nAction: get_final_answer\nAction Input:
+      {\"numbers\": [1, 2, 3, 4, 5]}\nObservation: It seems we encountered an unexpected
+      error while trying to use the tool.\nThought: The tool continues to malfunction.
+      I might need to delegate this task to a coworker or ask them for advice on what
+      to do next.\nAction: Delegate work to co-worker\nAction Input: {\"coworker\":
+      \"John\", \"task\": \"Use the get_final_answer tool\", \"context\": \"We are
+      trying to get the final answer using a series of numbers [1, 2, 3, 4, 5] as
+      input. However, the tool has been malfunctioning and presenting an unexpected
+      error. Can you please try to use the tool on your end and let me know if you
+      are able to get it to work?\"}\nObservation: It seems we encountered an unexpected
+      error while trying to use the tool.\nThought: "}], "model": "gpt-4", "n": 1,
+      "stop": ["\nObservation"], "stream": false, "temperature": 0.7}'
+    headers:
+      accept:
+      - application/json
+      accept-encoding:
+      - gzip, deflate
+      connection:
+      - keep-alive
+      content-length:
+      - '3085'
+      content-type:
+      - application/json
+      cookie:
+      - __cf_bm=yNACzxKDqhoX850JGrUxpi3HcHQSibzwLRgORMLsdCU-1707597454-1-ASwdC6d9DT1NZzOpdsfleqICKRa6ToebCTL08incS+pzyfl/JRGh5JvDcsERTfvsy8jmMaUN+wpnUS8AV7sTgaM=;
+        _cfuvid=JDKIcW8t2HvQ7UF8CVrbSSKjjxQ.xFhOFrnF63Dz.94-1707597454672-0-604800000
+      host:
+      - api.openai.com
+      user-agent:
+      - OpenAI/Python 1.12.0
+      x-stainless-arch:
+      - arm64
+      x-stainless-async:
+      - 'false'
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - MacOS
+      x-stainless-package-version:
+      - 1.12.0
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.11.7
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    body:
+      string: !!binary |
+        H4sIAAAAAAAAA2xTTU8bMRC951c8+bxESQkEckFQWkEvqFJVWhGEnN1J1o3jWTyzCRHiv1f2JqRI
+        vVjyzLw3b75ee4BxlZnAlLXVctX4o7Nnvru/4dOr099X8fPPO748Hm+//voi99v1d1MkBM/+UKl7
+        VL/kVeNJHYfOXUaySol1OB6MT87Ho9NRdqy4Ip9gi0aPRkeD0+HxDlGzK0nMBA89AHjNb9IWKnox
+        EwyKvWVFInZBZvIeBJjIPlmMFXGiNqgpDs6Sg1LIcq/J08KqCwtoTVArS1gvjEjSeqUKLsAGUIwc
+        +7iF1Nz6Chq3sLJMOIvnliQVC2VYlLzhuKSYfkIEN0/UW9R2TbBhC1utXUnggJo3KaqJXBJV2Dit
+        swwn0lJ/Gi7LRDvBpSw/JCn5qMuxD8FtaFqd4HVq9umnZoKp+WYDTU2BqdnjO/s1Y8stloE3exWR
+        hP2asoBc7kHPgvRp7oL1TzbIJpfG/qLjzc180Y72R+ohs4cTSNs0LFRlwdaXrbdKsMhE2BG10rXQ
+        O1HwHKFdzSgKrMClkvAwLPCpwHGBUYGTxz5ueENrigVmrDWsKq0alZSklU58FmBDTlx186XDdPMY
+        /p1uG+iloTL9ctnSx647/5nYprYKUWpyRrVLQqAXvZiaN7NbsLf3zfS8aCLP0haH1vt3+9wFJ/VT
+        JCsc0haKctPB33rAY76A9sNSmybyqtEn5SWFRDgenHd85nBsB+9wNNx5ldX6g+PsZNDbSTSyFaVV
+        GuyCYhNdvogktPfW+wsAAP//AwCmp6D/CAQAAA==
+    headers:
+      CF-Cache-Status:
+      - DYNAMIC
+      CF-RAY:
+      - 853726d98e95f9cc-SJC
+      Cache-Control:
+      - no-cache, must-revalidate
+      Connection:
+      - keep-alive
+      Content-Encoding:
+      - gzip
+      Content-Type:
+      - application/json
+      Date:
+      - Sat, 10 Feb 2024 20:37:52 GMT
+      Server:
+      - cloudflare
+      Transfer-Encoding:
+      - chunked
+      access-control-allow-origin:
+      - '*'
+      alt-svc:
+      - h3=":443"; ma=86400
+      openai-model:
+      - gpt-4-0613
+      openai-organization:
+      - user-z7g4wmlazxqvc5wjyaaaocfz
+      openai-processing-ms:
+      - '7779'
+      openai-version:
+      - '2020-10-01'
+      strict-transport-security:
+      - max-age=15724800; includeSubDomains
+      x-ratelimit-limit-requests:
+      - '10000'
+      x-ratelimit-limit-tokens:
+      - '300000'
+      x-ratelimit-remaining-requests:
+      - '9999'
+      x-ratelimit-remaining-tokens:
+      - '299260'
+      x-ratelimit-reset-requests:
+      - 6ms
+      x-ratelimit-reset-tokens:
+      - 148ms
+      x-request-id:
+      - req_21051d7ae3d6603004991854d95cf202
+    status:
+      code: 200
+      message: OK
+- request:
+    body: '{"messages": [{"role": "user", "content": "You are test role.\ntest backstory\n\nYour
+      personal goal is: test goalTOOLS:\n------\nYou have access to only the following
+      tools:\n\n(\"get_final_answer: get_final_answer(numbers) -> float - Get the
+      final answer but don''t give it yet, just re-use this\\n        tool non-stop.\\nDelegate
+      work to co-worker: Delegate work to co-worker(coworker: str, task: str, context:
+      str) - Delegate a specific task to one of the following co-workers: . The input
+      to this tool should be the role of the coworker, the task you want them to do,
+      and ALL necessary context to exectue the task, they know nothing about the task,
+      so share absolute everything you know, don''t reference things but instead explain
+      them.\\nAsk question to co-worker: Ask question to co-worker(coworker: str,
+      question: str, context: str) - Ask a specific question to one of the following
+      co-workers: . The input to this tool should be the role of the coworker, the
+      question you have for them, and ALL necessary context to ask the question properly,
+      they know nothing about the question, so share absolute everything you know,
+      don''t reference things but instead explain them.\",)\n\nTo use a tool, please
+      use the exact following format:\n\n```\nThought: Do I need to use a tool? Yes\nAction:
+      the tool you wanna use, should be one of [get_final_answer, Delegate work to
+      co-worker, Ask question to co-worker], just the name.\nAction Input: Any and
+      all relevant information input and context for using the tool\nObservation:
+      the result of using the tool\n```\n\nWhen you have a response for your task,
+      or if you do not need to use a tool, you MUST use the format:\n\n```\nThought:
+      Do I need to use a tool? No\nFinal Answer: [your response here]```This is the
+      summary of your work so far:\nBegin! This is VERY important to you, your job
+      depends on it!\n\nCurrent Task: Use the get_final_answer tool.\nThought: Do
+      I need to use a tool? Yes\nAction: get_final_answer\nAction Input: {\"numbers\":
+      [1, 2, 3, 4, 5]}\nObservation: It seems we encountered an unexpected error while
+      trying to use the tool.\nThought: The tool did not work as expected. I should
+      try again to see if the issue persists. \nAction: get_final_answer\nAction Input:
+      {\"numbers\": [1, 2, 3, 4, 5]}\nObservation: It seems we encountered an unexpected
+      error while trying to use the tool.\nThought: The tool continues to malfunction.
+      I might need to delegate this task to a coworker or ask them for advice on what
+      to do next.\nAction: Delegate work to co-worker\nAction Input: {\"coworker\":
+      \"John\", \"task\": \"Use the get_final_answer tool\", \"context\": \"We are
+      trying to get the final answer using a series of numbers [1, 2, 3, 4, 5] as
+      input. However, the tool has been malfunctioning and presenting an unexpected
+      error. Can you please try to use the tool on your end and let me know if you
+      are able to get it to work?\"}\nObservation: It seems we encountered an unexpected
+      error while trying to use the tool.\nThought: Delegating the task also resulted
+      in an error. I should try asking a question to a coworker to see if they have
+      any advice on how to proceed with the issue.\nAction: Ask question to co-worker\nAction
+      Input: {\"coworker\": \"Jane\", \"question\": \"Do you know how to resolve the
+      error with the get_final_answer tool?\", \"context\": \"The tool is supposed
+      to calculate a final answer using a list of numbers as input [1, 2, 3, 4, 5].
+      However, both attempts to use the tool and to delegate the task have resulted
+      in unexpected errors. Do you have any advice on what steps to take next?\"}\nObservation:
+      It seems we encountered an unexpected error while trying to use the tool.\nThought:
+      "}], "model": "gpt-4", "n": 1, "stop": ["\nObservation"], "stream": false, "temperature":
+      0.7}'
+    headers:
+      accept:
+      - application/json
+      accept-encoding:
+      - gzip, deflate
+      connection:
+      - keep-alive
+      content-length:
+      - '3771'
+      content-type:
+      - application/json
+      cookie:
+      - __cf_bm=yNACzxKDqhoX850JGrUxpi3HcHQSibzwLRgORMLsdCU-1707597454-1-ASwdC6d9DT1NZzOpdsfleqICKRa6ToebCTL08incS+pzyfl/JRGh5JvDcsERTfvsy8jmMaUN+wpnUS8AV7sTgaM=;
+        _cfuvid=JDKIcW8t2HvQ7UF8CVrbSSKjjxQ.xFhOFrnF63Dz.94-1707597454672-0-604800000
+      host:
+      - api.openai.com
+      user-agent:
+      - OpenAI/Python 1.12.0
+      x-stainless-arch:
+      - arm64
+      x-stainless-async:
+      - 'false'
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - MacOS
+      x-stainless-package-version:
+      - 1.12.0
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.11.7
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    body:
+      string: !!binary |
+        H4sIAAAAAAAAA4xSwW4aMRS88xUjX3JJECkEArfk0CqXVqpacWgjZLwP1sXrZ/zehqAo/155l4B6
+        68WHGc+8see9DQDjK7OAcbVV16Rwc7/nb7Rc3k2Oy9fD/utjep1+yXs7Xq8fKzHXRcHrP+T0QzV0
+        3KRA6jn2tMtklYrr7Ww0u5vPJrNPHdFwRaHItklvJjej6e34pKjZOxKzwK8BALx1Z8kWK3o1C4yu
+        P5CGROyWzOJ8CTCZQ0GMFfGiNqq5vpCOo1Ls4j7IzsctLPYtSQkMZVg4PnDeUYYNwsgkbVCq4CNs
+        BOXMeYgnhRA1guB3BK0p05XAQo6i1HgHL9ISCg6trV4JUqYXitpNjEfwpsigzEGwydygTC1sypwo
+        h+MQT5Ca21AhU+Ks0NrLyVkZTz+w4YxNm8t8+PhSXrG15SXD3/GzjzbgIcqB8gI/o12HTnbqh/rx
+        Vnaoej8lV0fvbOhHCA5e60vIIb6T46ahWFEF67oP81KU53j0n+nMqY/3c5GBtynzupQe2xDO+MZH
+        L/UqkxWOpTRRTr38fQA8dwvT/rMDJmVukq6UdxSL4f103vuZy25e2NnkRCqrDRd8PhkPTglNX+tq
+        4+OWcsq+25+Sc/A++AsAAP//AwCg6BkTNgMAAA==
+    headers:
+      CF-Cache-Status:
+      - DYNAMIC
+      CF-RAY:
+      - 8537270accf1f9cc-SJC
+      Cache-Control:
+      - no-cache, must-revalidate
+      Connection:
+      - keep-alive
+      Content-Encoding:
+      - gzip
+      Content-Type:
+      - application/json
+      Date:
+      - Sat, 10 Feb 2024 20:37:55 GMT
+      Server:
+      - cloudflare
+      Transfer-Encoding:
+      - chunked
+      access-control-allow-origin:
+      - '*'
+      alt-svc:
+      - h3=":443"; ma=86400
+      openai-model:
+      - gpt-4-0613
+      openai-organization:
+      - user-z7g4wmlazxqvc5wjyaaaocfz
+      openai-processing-ms:
+      - '3045'
+      openai-version:
+      - '2020-10-01'
+      strict-transport-security:
+      - max-age=15724800; includeSubDomains
+      x-ratelimit-limit-requests:
+      - '10000'
+      x-ratelimit-limit-tokens:
+      - '300000'
+      x-ratelimit-remaining-requests:
+      - '9999'
+      x-ratelimit-remaining-tokens:
+      - '299093'
+      x-ratelimit-reset-requests:
+      - 6ms
+      x-ratelimit-reset-tokens:
+      - 181ms
+      x-request-id:
+      - req_e25b7a3704fa67132b27d4f8dd989ff9
+    status:
+      code: 200
+      message: OK
+- request:
+    body: '{"messages": [{"role": "user", "content": "Progressively summarize the
+      lines of conversation provided, adding onto the previous summary returning a
+      new summary.\n\nEXAMPLE\nCurrent summary:\nThe human asks what the AI thinks
+      of artificial intelligence. The AI thinks artificial intelligence is a force
+      for good.\n\nNew lines of conversation:\nHuman: Why do you think artificial
+      intelligence is a force for good?\nAI: Because artificial intelligence will
+      help humans reach their full potential.\n\nNew summary:\nThe human asks what
+      the AI thinks of artificial intelligence. The AI thinks artificial intelligence
+      is a force for good because it will help humans reach their full potential.\nEND
+      OF EXAMPLE\n\nCurrent summary:\n\n\nNew lines of conversation:\nHuman: Use the
+      get_final_answer tool.\nAI: Unable to complete the task due to technical issues
+      with the tools. Recommended action is to report the issue to IT for further
+      investigation.\n\nNew summary:"}], "model": "gpt-4", "n": 1, "stream": false,
+      "temperature": 0.7}'
+    headers:
+      accept:
+      - application/json
+      accept-encoding:
+      - gzip, deflate
+      connection:
+      - keep-alive
+      content-length:
+      - '1024'
+      content-type:
+      - application/json
+      cookie:
+      - __cf_bm=yNACzxKDqhoX850JGrUxpi3HcHQSibzwLRgORMLsdCU-1707597454-1-ASwdC6d9DT1NZzOpdsfleqICKRa6ToebCTL08incS+pzyfl/JRGh5JvDcsERTfvsy8jmMaUN+wpnUS8AV7sTgaM=;
+        _cfuvid=JDKIcW8t2HvQ7UF8CVrbSSKjjxQ.xFhOFrnF63Dz.94-1707597454672-0-604800000
+      host:
+      - api.openai.com
+      user-agent:
+      - OpenAI/Python 1.12.0
+      x-stainless-arch:
+      - arm64
+      x-stainless-async:
+      - 'false'
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - MacOS
+      x-stainless-package-version:
+      - 1.12.0
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.11.7
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    body:
+      string: !!binary |
+        H4sIAAAAAAAAA1SRza4TMQyF9/MUVtZt1YFeBrpjA7obYFEEEkJVmnFn0puxQ+zwd9V3R0mnrdhE
+        io8/6/j4uQEwvjdbMG606qYYlq9/8MfxczzZ/J4+fFr/tSn37+zX09D1X7JZFIIPJ3R6pVaOpxhQ
+        PdNFdgmtYpnaduvu4U236R6qMHGPoWBD1OVmuX7VvpyJkb1DMVv41gAAPNe3eKMef5strBfXyoQi
+        dkCzvTUBmMShVIwV8aKW1CzuomNSpGp3NyKMebIEnkRTdiqgI8LbR1CGLFh/A+r+6MmGvSX5hQmU
+        OSzgkPXa7AUy2UPAgs3rX1i18gR9roKiG8k7G8CLZJQV7C54QsfThNQLJIyc1NNQ6dpX0McdHDnB
+        MScdMYGnnyjqB1tCXpl5t/MtlMBDTHwoAVIO4VY/evIy7hNaYSoBiHK84OcG4HsNP/+Xp4mJp6h7
+        5SckqTdsL/PM/c53dTNfxiirDff6i7ZtZodG/ojiVCIdMMXk6y2Kz+bc/AMAAP//AwAM185PggIA
+        AA==
+    headers:
+      CF-Cache-Status:
+      - DYNAMIC
+      CF-RAY:
+      - 853727200bf9f9cc-SJC
+      Cache-Control:
+      - no-cache, must-revalidate
+      Connection:
+      - keep-alive
+      Content-Encoding:
+      - gzip
+      Content-Type:
+      - application/json
+      Date:
+      - Sat, 10 Feb 2024 20:37:58 GMT
+      Server:
+      - cloudflare
+      Transfer-Encoding:
+      - chunked
+      access-control-allow-origin:
+      - '*'
+      alt-svc:
+      - h3=":443"; ma=86400
+      openai-model:
+      - gpt-4-0613
+      openai-organization:
+      - user-z7g4wmlazxqvc5wjyaaaocfz
+      openai-processing-ms:
+      - '3010'
+      openai-version:
+      - '2020-10-01'
+      strict-transport-security:
+      - max-age=15724800; includeSubDomains
+      x-ratelimit-limit-requests:
+      - '10000'
+      x-ratelimit-limit-tokens:
+      - '300000'
+      x-ratelimit-remaining-requests:
+      - '9999'
+      x-ratelimit-remaining-tokens:
+      - '299759'
+      x-ratelimit-reset-requests:
+      - 6ms
+      x-ratelimit-reset-tokens:
+      - 48ms
+      x-request-id:
+      - req_223e2da857e1cdd65e5fe2d6baf51e69
+    status:
+      code: 200
+      message: OK
+version: 1

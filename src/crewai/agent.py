@@ -150,12 +150,14 @@ class Agent(BaseModel):
         tools = tools or self.tools
         self.agent_executor.tools = tools
         self.agent_executor.task = task
+        self.agent_executor.tools_description = (render_text_description(tools),)
+        self.agent_executor.tools_names = self.__tools_names(tools)
 
         result = self.agent_executor.invoke(
             {
                 "input": task_prompt,
-                "tool_names": self.__tools_names(tools),
-                "tools": render_text_description(tools),
+                "tool_names": self.agent_executor.tools_names,
+                "tools": self.agent_executor.tools_description,
             }
         )["output"]
 

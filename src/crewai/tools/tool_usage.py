@@ -10,30 +10,55 @@ from crewai.tools.tool_calling import ToolCalling
 from crewai.utilities import I18N, Printer
 
 
+class ToolUsageErrorException(Exception):
+    """Exception raised for errors in the tool usage."""
+
+    def __init__(self, message: str) -> None:
+        self.message = message
+        super().__init__(self.message)
+
+
 class ToolUsage:
     """
     Class that represents the usage of a tool by an agent.
 
     Attributes:
+        task: Task being executed.
         tools_handler: Tools handler that will manage the tool usage.
         tools: List of tools available for the agent.
+        tools_description: Description of the tools available for the agent.
+        tools_names: Names of the tools available for the agent.
         llm: Language model to be used for the tool usage.
     """
 
     def __init__(
-        self, tools_handler: ToolsHandler, tools: List[BaseTool], llm: Any
+        self,
+        tools_handler: ToolsHandler,
+        tools: List[BaseTool],
+        tools_description: str,
+        tools_names: str,
+        task: Any,
+        llm: Any,
     ) -> None:
         self._i18n: I18N = I18N()
         self._printer: Printer = Printer()
         self._telemetry: Telemetry = Telemetry()
         self._run_attempts: int = 1
         self._max_parsing_attempts: int = 3
+        self._remeber_format_after_usages: int = 3
+        self.tools_description = tools_description
+        self.tools_names = tools_names
         self.tools_handler = tools_handler
         self.tools = tools
+        self.task = task
         self.llm = llm
 
     def use(self, tool_string: str):
         calling = self._tool_calling(tool_string)
+        if isinstance(calling, ToolUsageErrorException):
+            error = calling.message
+            self._printer.print(content=f"\n\n{error}\n", color="yellow")
+            return error
         tool = self._select_tool(calling.function_name)
         return self._use(tool=tool, calling=calling)
 
@@ -56,6 +81,24 @@ class ToolUsage:
         self._printer.print(content=f"\n\n{result}\n", color="yellow")
         self._telemetry.tool_usage(
             llm=self.llm, tool_name=tool.name, attempts=self._run_attempts
+        )
+
+        result = self._format_result(result=result)
+        return result
+
+    def _format_result(self, result: Any) -> None:
+        self.task.used_tools += 1
+        if self._should_remember_format():
+            result = self._remember_format(result=result)
+        return result
+
+    def _should_remember_format(self) -> None:
+        return self.task.used_tools % self._remeber_format_after_usages == 0
+
+    def _remember_format(self, result: str) -> None:
+        result = str(result)
+        result += "\n\n" + self._i18n.slice("tools").format(
+            tools=self.tools_description, tool_names=self.tools_names
         )
         return result
 
@@ -102,11 +145,11 @@ class ToolUsage:
             chain = prompt | self.llm | parser
             calling = chain.invoke({"tool_string": tool_string})
 
-        except Exception as e:
+        except Exception:
             self._run_attempts += 1
             if self._run_attempts > self._max_parsing_attempts:
                 self._telemetry.tool_usage_error(llm=self.llm)
-                raise e
+                return ToolUsageErrorException(self._i18n.errors("tool_usage_error"))
             return self._tool_calling(tool_string)
 
         return calling
