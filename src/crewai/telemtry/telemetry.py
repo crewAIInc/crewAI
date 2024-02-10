@@ -2,6 +2,7 @@ import json
 import os
 import platform
 import socket
+from typing import Any
 
 import pkg_resources
 from opentelemetry import trace
@@ -42,15 +43,17 @@ class Telemetry:
         try:
             telemetry_endpoint = "http://telemetry.crewai.com:4318"
             self.resource = Resource(attributes={SERVICE_NAME: "crewAI-telemetry"})
-            provider = TracerProvider(resource=self.resource)
+            self.provider = TracerProvider(resource=self.resource)
             processor = BatchSpanProcessor(
                 OTLPSpanExporter(endpoint=f"{telemetry_endpoint}/v1/traces")
             )
-            provider.add_span_processor(processor)
-            trace.set_tracer_provider(provider)
+            self.provider.add_span_processor(processor)
             self.ready = True
         except Exception:
             pass
+
+    def set_tracer(self):
+        trace.set_tracer_provider(self.provider)
 
     def crew_creation(self, crew):
         """Records the creation of a crew."""
@@ -111,6 +114,36 @@ class Telemetry:
                 self._add_attribute(span, "platform_system", platform.system())
                 self._add_attribute(span, "platform_version", platform.version())
                 self._add_attribute(span, "cpus", os.cpu_count())
+                span.set_status(Status(StatusCode.OK))
+                span.end()
+            except Exception:
+                pass
+
+    def tool_usage(self, llm: Any, tool_name: str, attempts: int):
+        """Records the usage of a tool by an agent."""
+        if self.ready:
+            try:
+                tracer = trace.get_tracer("crewai.telemetry")
+                span = tracer.start_span("Tool Usage")
+                self._add_attribute(span, "tool_name", tool_name)
+                self._add_attribute(span, "attempts", attempts)
+                self._add_attribute(
+                    span, "llm", json.dumps(self._safe_llm_attributes(llm))
+                )
+                span.set_status(Status(StatusCode.OK))
+                span.end()
+            except Exception:
+                pass
+
+    def tool_usage_error(self, llm: Any):
+        """Records the usage of a tool by an agent."""
+        if self.ready:
+            try:
+                tracer = trace.get_tracer("crewai.telemetry")
+                span = tracer.start_span("Tool Usage Error")
+                self._add_attribute(
+                    span, "llm", json.dumps(self._safe_llm_attributes(llm))
+                )
                 span.set_status(Status(StatusCode.OK))
                 span.end()
             except Exception:
