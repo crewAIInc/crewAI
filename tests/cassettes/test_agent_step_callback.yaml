@@ -4,25 +4,28 @@ interactions:
       personal goal is: test goalTOOLS:\n------\nYou have access to only the following
       tools:\n\nlearn_about_AI: learn_about_AI(topic) -> float - Useful for when you
       need to learn about AI to write an paragraph about it.\nDelegate work to co-worker:
-      Useful to delegate a specific task to one of the following co-workers: .\nThe
-      input to this tool should be a pipe (|) separated text of length 3 (three),
-      representing the co-worker you want to ask it to (one of the options), the task
-      and all actual context you have for the task.\nFor example, `coworker|task|context`.\nAsk
-      question to co-worker: Useful to ask a question, opinion or take from on of
-      the following co-workers: .\nThe input to this tool should be a pipe (|) separated
-      text of length 3 (three), representing the co-worker you want to ask it to (one
-      of the options), the question and all actual context you have for the question.\n
-      For example, `coworker|question|context`.\n\nTo use a tool, please use the exact
-      following format:\n\n```\nThought: Do I need to use a tool? Yes\nAction: the
-      action to take, should be one of [learn_about_AI, Delegate work to co-worker,
-      Ask question to co-worker], just the name.\nAction Input: the input to the action\nObservation:
-      the result of the action\n```\n\nWhen you have a response for your task, or
-      if you do not need to use a tool, you MUST use the format:\n\n```\nThought:
-      Do I need to use a tool? No\nFinal Answer: [your response here]```This is the
-      summary of your work so far:\nBegin! This is VERY important to you, your job
-      depends on it!\n\nCurrent Task: Write and then review an small paragraph on
-      AI until it''s AMAZING\n"}], "model": "gpt-4", "n": 1, "stop": ["\nObservation"],
-      "stream": false, "temperature": 0.7}'
+      Delegate work to co-worker(coworker: str, task: str, context: str) - Delegate
+      a specific task to one of the following co-workers: . The input to this tool
+      should be the role of the coworker, the task you want them to do, and ALL necessary
+      context to exectue the task, they know nothing about the task, so share absolute
+      everything you know, don''t reference things but instead explain them.\nAsk
+      question to co-worker: Ask question to co-worker(coworker: str, question: str,
+      context: str) - Ask a specific question to one of the following co-workers:
+      . The input to this tool should be the role of the coworker, the question you
+      have for them, and ALL necessary context to ask the question properly, they
+      know nothing about the question, so share absolute everything you know, don''t
+      reference things but instead explain them.\n\nTo use a tool, please use the
+      exact following format:\n\n```\nThought: Do I need to use a tool? Yes\nAction:
+      the tool you wanna use, should be one of [learn_about_AI, Delegate work to co-worker,
+      Ask question to co-worker], just the name.\nAction Input: Any and all relevant
+      information input and context for using the tool\nObservation: the result of
+      using the tool\n```\n\nWhen you have a response for your task, or if you do
+      not need to use a tool, you MUST use the format:\n\n```\nThought: Do I need
+      to use a tool? No\nFinal Answer: [your response here]```This is the summary
+      of your work so far:\nBegin! This is VERY important to you, your job depends
+      on it!\n\nCurrent Task: Write and then review an small paragraph on AI until
+      it''s AMAZING\n"}], "model": "gpt-4", "n": 1, "stop": ["\nObservation"], "stream":
+      false, "temperature": 0.7}'
     headers:
       accept:
       - application/json
@@ -31,13 +34,13 @@ interactions:
       connection:
       - keep-alive
       content-length:
-      - '1807'
+      - '1999'
       content-type:
       - application/json
       host:
       - api.openai.com
       user-agent:
-      - OpenAI/Python 1.11.1
+      - OpenAI/Python 1.12.0
       x-stainless-arch:
       - arm64
       x-stainless-async:
@@ -47,7 +50,7 @@ interactions:
       x-stainless-os:
       - MacOS
       x-stainless-package-version:
-      - 1.11.1
+      - 1.12.0
       x-stainless-runtime:
       - CPython
       x-stainless-runtime-version:
@@ -57,18 +60,18 @@ interactions:
   response:
     body:
       string: !!binary |
-        H4sIAAAAAAAAA1SRzU7DMBCE73mKlc8t6k9oaS6oEkKKBIIDQiBAketsk1DHa+xNW1r13ZHTtBUX
-        H2Y862/W+whAVLlIQKhSsqqt7t/83K8f1tPdrl7aV7VZr/FtOtg8PW6fyzmJXkjQ4hsVn1JXimqr
-        kSsyR1s5lIxh6nA6mMaTeHY9a42actQhVljux/3BZDjuEiVVCr1I4CMCANi3Z2AzOW5FAoPeSanR
-        e1mgSM6XAIQjHRQhva88S8OidzEVGUbT4r6U1BQlJ3BHkIJBzIEJGo8ggYn0Lbyj/zRzFcokoFE6
-        k8kFNZzN05MOqbENJ1CgQSc1zFNYGdpozAsU3bOHM6+mwjpahG6m0fqsLytT+TJzKD2ZwOaZ7DF+
-        iAC+2r00/6oK66i2nDGt0ISB49nsOE9cvuDijuLOZGKpL3o8GkcdofC/nrHOlpUp0FlXtWsKnNEh
-        +gMAAP//AwBENAoEHQIAAA==
+        H4sIAAAAAAAAA1SRS0/DMBCE7/kVK59blNKnckEVINEDggNCAooix9kmpo7X2BvRqup/R05fcPFh
+        xrP+Zr1LAIQuRQZC1ZJV40x/9l3et+93mx8jC1rdpo+btEi3/vX54el2LXoxQcUXKj6lrhQ1ziBr
+        sgdbeZSMcepgmk7H49F4NuqMhko0MVY57o/66WQwPCZq0gqDyOAjAQDYdWdksyVuRAZp76Q0GIKs
+        UGTnSwDCk4mKkCHowNKy6F1MRZbRdrgvNbVVzRncESzAIpbABG1AkMBE5gbeMCztXMUyGRiU3uay
+        oJbz+eKkw8K6ljNYirlnvdJKSwMLy2iMrtAqXApxfH1/xjZUOU9FrGhbY876Slsd6tyjDGQjYmBy
+        h/g+Afjs1tP+ayycp8ZxzrRGGweOhoPDPHH5iYt7PTmaTCzNn9R4mhwJRdgGxiZfaVuhd15324qc
+        yT75BQAA//8DAG14RFskAgAA
     headers:
       CF-Cache-Status:
       - DYNAMIC
       CF-RAY:
-      - 852a83de5fb2fabe-SJC
+      - 85330ff5ff101637-SJC
       Cache-Control:
       - no-cache, must-revalidate
       Connection:
@@ -78,14 +81,14 @@ interactions:
       Content-Type:
       - application/json
       Date:
-      - Fri, 09 Feb 2024 07:49:21 GMT
+      - Sat, 10 Feb 2024 08:43:05 GMT
       Server:
       - cloudflare
       Set-Cookie:
-      - __cf_bm=wNpUyP3WikFZ5owMt5Wt4RvvxL5RRbV5Lm6N3cYt0cQ-1707464961-1-AaRJSNtZhC0qEyOOtzVqZyGINmDySgK+NZEmXyReWDjlSfP0cTj8tUtP+DYB/ttT11hGeDfZUyYzGIz1jsRPjN4=;
-        path=/; expires=Fri, 09-Feb-24 08:19:21 GMT; domain=.api.openai.com; HttpOnly;
+      - __cf_bm=FHcpgH1eZBeZ3Rbcza28Oc6NWTXs_wBg2dFweW8n7iE-1707554585-1-AeO0TVKmSDiPyhIhqVNGXLU1AqKVAJroEV7Mq1JaqrBTJlB6hP4FrF9q/F66TJ4PAMcnMJ6YKH9wW4gQAx2jhis=;
+        path=/; expires=Sat, 10-Feb-24 09:13:05 GMT; domain=.api.openai.com; HttpOnly;
         Secure; SameSite=None
-      - _cfuvid=Ii_GgXvfh_uOU6kzTG.hYatLhnP.5qhsMn05KgacgMc-1707464961455-0-604800000;
+      - _cfuvid=CyquHMSR3lyGv7DVvBmUUvZ_N5p0T0sRkvGYdcRgwUo-1707554585722-0-604800000;
         path=/; domain=.api.openai.com; HttpOnly; Secure; SameSite=None
       Transfer-Encoding:
       - chunked
@@ -98,7 +101,7 @@ interactions:
       openai-organization:
       - user-z7g4wmlazxqvc5wjyaaaocfz
       openai-processing-ms:
-      - '1637'
+      - '1403'
       openai-version:
       - '2020-10-01'
       strict-transport-security:
@@ -110,165 +113,50 @@ interactions:
       x-ratelimit-remaining-requests:
       - '9999'
       x-ratelimit-remaining-tokens:
-      - '299573'
+      - '299524'
       x-ratelimit-reset-requests:
       - 6ms
       x-ratelimit-reset-tokens:
-      - 85ms
+      - 95ms
       x-request-id:
-      - req_363f8fd0e98a3c0e807830d844480ad1
+      - req_c3e3d009fb1789af53949c6665e20c2d
     status:
       code: 200
       message: OK
 - request:
-    body: !!binary |
-      CokpCiQKIgoMc2VydmljZS5uYW1lEhIKEGNyZXdBSS10ZWxlbWV0cnkS4CgKEgoQY3Jld2FpLnRl
-      bGVtZXRyeRKYCAoQRMg95BA38/OSZo0f5R6QaBIIKgZb+0wGi88qDENyZXcgQ3JlYXRlZDABOaDm
-      x41VIrIXQfjXzo1VIrIXShkKDmNyZXdhaV92ZXJzaW9uEgcKBTAuNS4yShoKDnB5dGhvbl92ZXJz
-      aW9uEggKBjMuMTEuN0olCghob3N0bmFtZRIZChdKb2Fvcy1NYWNCb29rLVByby5sb2NhbEoxCgdj
-      cmV3X2lkEiYKJDUyZDc0NDVjLWE5Y2UtNGU2Yi05NjI2LWRhZGU5OWQ2YThmNkocCgxjcmV3X3By
-      b2Nlc3MSDAoKc2VxdWVudGlhbEoVCg1jcmV3X2xhbmd1YWdlEgQKAmVuShoKFGNyZXdfbnVtYmVy
-      X29mX3Rhc2tzEgIYAUobChVjcmV3X251bWJlcl9vZl9hZ2VudHMSAhgBSsYCCgtjcmV3X2FnZW50
-      cxK2AgqzAlt7ImlkIjogImEwMGUwM2Y0LTgwYTEtNDQ1Ni05NzRiLWFiYjQ2YmVmM2NmYyIsICJy
-      b2xlIjogInRlc3Qgcm9sZSIsICJtZW1vcnlfZW5hYmxlZD8iOiB0cnVlLCAidmVyYm9zZT8iOiB0
-      cnVlLCAibWF4X2l0ZXIiOiA0LCAibWF4X3JwbSI6IDEwLCAiaTE4biI6ICJlbiIsICJsbG0iOiAi
-      e1wibmFtZVwiOiBudWxsLCBcIm1vZGVsX25hbWVcIjogXCJncHQtNFwiLCBcInRlbXBlcmF0dXJl
-      XCI6IDAuNywgXCJjbGFzc1wiOiBcIkNoYXRPcGVuQUlcIn0iLCAiZGVsZWdhdGlvbl9lbmFibGVk
-      PyI6IHRydWUsICJ0b29sc19uYW1lcyI6IFtdfV1KnQEKCmNyZXdfdGFza3MSjgEKiwFbeyJpZCI6
-      ICIwM2E4MDg0ZS04NjQ1LTRiMTQtYWE4My05YjE0YTFjYzViNWIiLCAiYXN5bmNfZXhlY3V0aW9u
-      PyI6IGZhbHNlLCAiYWdlbnRfcm9sZSI6ICJ0ZXN0IHJvbGUiLCAidG9vbHNfbmFtZXMiOiBbImdl
-      dF9maW5hbF9hbnN3ZXIiXX1dSigKCHBsYXRmb3JtEhwKGm1hY09TLTE0LjMtYXJtNjQtYXJtLTY0
-      Yml0ShwKEHBsYXRmb3JtX3JlbGVhc2USCAoGMjMuMy4wShsKD3BsYXRmb3JtX3N5c3RlbRIICgZE
-      YXJ3aW5KewoQcGxhdGZvcm1fdmVyc2lvbhJnCmVEYXJ3aW4gS2VybmVsIFZlcnNpb24gMjMuMy4w
-      OiBXZWQgRGVjIDIwIDIxOjMwOjU5IFBTVCAyMDIzOyByb290OnhudS0xMDAwMi44MS41fjcvUkVM
-      RUFTRV9BUk02NF9UNjAzMEoKCgRjcHVzEgIYDHoCGAESyQsKEIAiEIJi8FZ1hiGlogKFFscSCCvs
-      2YTYXYKeKgxDcmV3IENyZWF0ZWQwATkwbAqQVSKyF0EAaAyQVSKyF0oZCg5jcmV3YWlfdmVyc2lv
-      bhIHCgUwLjUuMkoaCg5weXRob25fdmVyc2lvbhIICgYzLjExLjdKJQoIaG9zdG5hbWUSGQoXSm9h
-      b3MtTWFjQm9vay1Qcm8ubG9jYWxKMQoHY3Jld19pZBImCiQzNTAzM2YwMC1kYzhiLTRjN2YtOWVk
-      MC02MDBlMDJjNmUxMjdKHAoMY3Jld19wcm9jZXNzEgwKCnNlcXVlbnRpYWxKFQoNY3Jld19sYW5n
-      dWFnZRIECgJlbkoaChRjcmV3X251bWJlcl9vZl90YXNrcxICGAJKGwoVY3Jld19udW1iZXJfb2Zf
-      YWdlbnRzEgIYAkr9BAoLY3Jld19hZ2VudHMS7QQK6gRbeyJpZCI6ICIzNWZhODdkMi02M2YzLTRh
-      YmYtYmJkOC04ZWRlNDMxMWUwYWMiLCAicm9sZSI6ICJ0ZXN0IHJvbGUiLCAibWVtb3J5X2VuYWJs
-      ZWQ/IjogdHJ1ZSwgInZlcmJvc2U/IjogdHJ1ZSwgIm1heF9pdGVyIjogMTUsICJtYXhfcnBtIjog
-      MTAsICJpMThuIjogImVuIiwgImxsbSI6ICJ7XCJuYW1lXCI6IG51bGwsIFwibW9kZWxfbmFtZVwi
-      OiBcImdwdC00XCIsIFwidGVtcGVyYXR1cmVcIjogMC43LCBcImNsYXNzXCI6IFwiQ2hhdE9wZW5B
-      SVwifSIsICJkZWxlZ2F0aW9uX2VuYWJsZWQ/IjogdHJ1ZSwgInRvb2xzX25hbWVzIjogW119LCB7
-      ImlkIjogIjAzZGNhNGMwLWRhMDEtNDg0YS1iNmQ1LTAwMjI3NWUzMWM5OSIsICJyb2xlIjogInRl
-      c3Qgcm9sZTIiLCAibWVtb3J5X2VuYWJsZWQ/IjogdHJ1ZSwgInZlcmJvc2U/IjogdHJ1ZSwgIm1h
-      eF9pdGVyIjogMiwgIm1heF9ycG0iOiBudWxsLCAiaTE4biI6ICJlbiIsICJsbG0iOiAie1wibmFt
-      ZVwiOiBudWxsLCBcIm1vZGVsX25hbWVcIjogXCJncHQtNFwiLCBcInRlbXBlcmF0dXJlXCI6IDAu
-      NywgXCJjbGFzc1wiOiBcIkNoYXRPcGVuQUlcIn0iLCAiZGVsZWdhdGlvbl9lbmFibGVkPyI6IHRy
-      dWUsICJ0b29sc19uYW1lcyI6IFtdfV1KlwIKCmNyZXdfdGFza3MSiAIKhQJbeyJpZCI6ICJjY2Ey
-      ZmZiMy1jOGI1LTQwZDctYmU0OC03MTg3ZTUwODgwOWYiLCAiYXN5bmNfZXhlY3V0aW9uPyI6IGZh
-      bHNlLCAiYWdlbnRfcm9sZSI6ICJ0ZXN0IHJvbGUiLCAidG9vbHNfbmFtZXMiOiBbXX0sIHsiaWQi
-      OiAiMDEyMWFlNWQtN2FjMC00NGQ0LTg3MzItOWViZDZkM2E3NzcwIiwgImFzeW5jX2V4ZWN1dGlv
-      bj8iOiBmYWxzZSwgImFnZW50X3JvbGUiOiAidGVzdCByb2xlMiIsICJ0b29sc19uYW1lcyI6IFsi
-      Z2V0X2ZpbmFsX2Fuc3dlciJdfV1KKAoIcGxhdGZvcm0SHAoabWFjT1MtMTQuMy1hcm02NC1hcm0t
-      NjRiaXRKHAoQcGxhdGZvcm1fcmVsZWFzZRIICgYyMy4zLjBKGwoPcGxhdGZvcm1fc3lzdGVtEggK
-      BkRhcndpbkp7ChBwbGF0Zm9ybV92ZXJzaW9uEmcKZURhcndpbiBLZXJuZWwgVmVyc2lvbiAyMy4z
-      LjA6IFdlZCBEZWMgMjAgMjE6MzA6NTkgUFNUIDIwMjM7IHJvb3Q6eG51LTEwMDAyLjgxLjV+Ny9S
-      RUxFQVNFX0FSTTY0X1Q2MDMwSgoKBGNwdXMSAhgMegIYARK1DAoQzeoTQK6TritBeDtREUudsxII
-      v/Sdpx2P668qDENyZXcgQ3JlYXRlZDABOajEaZJVIrIXQWiZa5JVIrIXShkKDmNyZXdhaV92ZXJz
-      aW9uEgcKBTAuNS4yShoKDnB5dGhvbl92ZXJzaW9uEggKBjMuMTEuN0olCghob3N0bmFtZRIZChdK
-      b2Fvcy1NYWNCb29rLVByby5sb2NhbEoxCgdjcmV3X2lkEiYKJDFmNjNlM2MxLTJiMzMtNDMzYi05
-      ZWNhLTRlZjdlNWIzOGMzNEocCgxjcmV3X3Byb2Nlc3MSDAoKc2VxdWVudGlhbEoVCg1jcmV3X2xh
-      bmd1YWdlEgQKAmVuShoKFGNyZXdfbnVtYmVyX29mX3Rhc2tzEgIYA0obChVjcmV3X251bWJlcl9v
-      Zl9hZ2VudHMSAhgCSoIFCgtjcmV3X2FnZW50cxLyBArvBFt7ImlkIjogImU3YjllZTg0LTBjMDQt
-      NGNjZC04MjViLTBlNDE1NzlmYWIxOCIsICJyb2xlIjogInRlc3Qgcm9sZSIsICJtZW1vcnlfZW5h
-      YmxlZD8iOiB0cnVlLCAidmVyYm9zZT8iOiBmYWxzZSwgIm1heF9pdGVyIjogMTUsICJtYXhfcnBt
-      IjogbnVsbCwgImkxOG4iOiAiZW4iLCAibGxtIjogIntcIm5hbWVcIjogbnVsbCwgXCJtb2RlbF9u
-      YW1lXCI6IFwiZ3B0LTRcIiwgXCJ0ZW1wZXJhdHVyZVwiOiAwLjcsIFwiY2xhc3NcIjogXCJDaGF0
-      T3BlbkFJXCJ9IiwgImRlbGVnYXRpb25fZW5hYmxlZD8iOiB0cnVlLCAidG9vbHNfbmFtZXMiOiBb
-      XX0sIHsiaWQiOiAiYzYwYjYzN2MtYmY5OC00ZWJkLTkwZWItMzUwNzkwNTRkMjdhIiwgInJvbGUi
-      OiAidGVzdCByb2xlMiIsICJtZW1vcnlfZW5hYmxlZD8iOiB0cnVlLCAidmVyYm9zZT8iOiBmYWxz
-      ZSwgIm1heF9pdGVyIjogMTUsICJtYXhfcnBtIjogbnVsbCwgImkxOG4iOiAiZW4iLCAibGxtIjog
-      IntcIm5hbWVcIjogbnVsbCwgXCJtb2RlbF9uYW1lXCI6IFwiZ3B0LTRcIiwgXCJ0ZW1wZXJhdHVy
-      ZVwiOiAwLjcsIFwiY2xhc3NcIjogXCJDaGF0T3BlbkFJXCJ9IiwgImRlbGVnYXRpb25fZW5hYmxl
-      ZD8iOiB0cnVlLCAidG9vbHNfbmFtZXMiOiBbXX1dSv4CCgpjcmV3X3Rhc2tzEu8CCuwCW3siaWQi
-      OiAiZWIyOTgxNjUtODg1My00Mjg4LWI3M2YtOWQ4NmQ0YjIxMzFiIiwgImFzeW5jX2V4ZWN1dGlv
-      bj8iOiBmYWxzZSwgImFnZW50X3JvbGUiOiAidGVzdCByb2xlIiwgInRvb2xzX25hbWVzIjogW119
-      LCB7ImlkIjogIjFkYjdjMjUzLTFlMDEtNDJlYi1iODY4LTU2NjlhMDc2ZTA5MiIsICJhc3luY19l
-      eGVjdXRpb24/IjogZmFsc2UsICJhZ2VudF9yb2xlIjogInRlc3Qgcm9sZSIsICJ0b29sc19uYW1l
-      cyI6IFtdfSwgeyJpZCI6ICI3MjI2ODAwOS1mOGFhLTQ0M2EtYTIwZS1lOWVmYTBiZDhlN2UiLCAi
-      YXN5bmNfZXhlY3V0aW9uPyI6IGZhbHNlLCAiYWdlbnRfcm9sZSI6ICJ0ZXN0IHJvbGUyIiwgInRv
-      b2xzX25hbWVzIjogW119XUooCghwbGF0Zm9ybRIcChptYWNPUy0xNC4zLWFybTY0LWFybS02NGJp
-      dEocChBwbGF0Zm9ybV9yZWxlYXNlEggKBjIzLjMuMEobCg9wbGF0Zm9ybV9zeXN0ZW0SCAoGRGFy
-      d2luSnsKEHBsYXRmb3JtX3ZlcnNpb24SZwplRGFyd2luIEtlcm5lbCBWZXJzaW9uIDIzLjMuMDog
-      V2VkIERlYyAyMCAyMTozMDo1OSBQU1QgMjAyMzsgcm9vdDp4bnUtMTAwMDIuODEuNX43L1JFTEVB
-      U0VfQVJNNjRfVDYwMzBKCgoEY3B1cxICGAx6AhgBEqoIChAfSWWtcWdxaoyWECh3vhkCEgiTLpDL
-      PjEHmioMQ3JldyBDcmVhdGVkMAE5gO5llFUishdBGKBnlFUishdKGQoOY3Jld2FpX3ZlcnNpb24S
-      BwoFMC41LjJKGgoOcHl0aG9uX3ZlcnNpb24SCAoGMy4xMS43SiUKCGhvc3RuYW1lEhkKF0pvYW9z
-      LU1hY0Jvb2stUHJvLmxvY2FsSjEKB2NyZXdfaWQSJgokZjg1ZDQ3MTEtYzMwNC00NDMyLTk1N2Yt
-      MzE4NDUzNWFkOWJmShwKDGNyZXdfcHJvY2VzcxIMCgpzZXF1ZW50aWFsShUKDWNyZXdfbGFuZ3Vh
-      Z2USBAoCZW5KGgoUY3Jld19udW1iZXJfb2ZfdGFza3MSAhgBShsKFWNyZXdfbnVtYmVyX29mX2Fn
-      ZW50cxICGAFK2gIKC2NyZXdfYWdlbnRzEsoCCscCW3siaWQiOiAiNWJkOWYxODEtM2Y0ZC00MTk0
-      LThlOWEtODM1NDdhNTM1YjY4IiwgInJvbGUiOiAidGVzdCByb2xlIiwgIm1lbW9yeV9lbmFibGVk
-      PyI6IHRydWUsICJ2ZXJib3NlPyI6IGZhbHNlLCAibWF4X2l0ZXIiOiAxNSwgIm1heF9ycG0iOiBu
-      dWxsLCAiaTE4biI6ICJlbiIsICJsbG0iOiAie1wibmFtZVwiOiBudWxsLCBcIm1vZGVsX25hbWVc
-      IjogXCJncHQtNFwiLCBcInRlbXBlcmF0dXJlXCI6IDAuNywgXCJjbGFzc1wiOiBcIkNoYXRPcGVu
-      QUlcIn0iLCAiZGVsZWdhdGlvbl9lbmFibGVkPyI6IHRydWUsICJ0b29sc19uYW1lcyI6IFsibGVh
-      cm5fYWJvdXRfQUkiXX1dSpsBCgpjcmV3X3Rhc2tzEowBCokBW3siaWQiOiAiMzQ1ZGY0ZGItNGE2
-      ZC00ZGU4LWE3N2UtOTFiYTMwYzExZWVhIiwgImFzeW5jX2V4ZWN1dGlvbj8iOiBmYWxzZSwgImFn
-      ZW50X3JvbGUiOiAidGVzdCByb2xlIiwgInRvb2xzX25hbWVzIjogWyJsZWFybl9hYm91dF9BSSJd
-      fV1KKAoIcGxhdGZvcm0SHAoabWFjT1MtMTQuMy1hcm02NC1hcm0tNjRiaXRKHAoQcGxhdGZvcm1f
-      cmVsZWFzZRIICgYyMy4zLjBKGwoPcGxhdGZvcm1fc3lzdGVtEggKBkRhcndpbkp7ChBwbGF0Zm9y
-      bV92ZXJzaW9uEmcKZURhcndpbiBLZXJuZWwgVmVyc2lvbiAyMy4zLjA6IFdlZCBEZWMgMjAgMjE6
-      MzA6NTkgUFNUIDIwMjM7IHJvb3Q6eG51LTEwMDAyLjgxLjV+Ny9SRUxFQVNFX0FSTTY0X1Q2MDMw
-      SgoKBGNwdXMSAhgMegIYAQ==
-    headers:
-      Accept:
-      - '*/*'
-      Accept-Encoding:
-      - gzip, deflate
-      Connection:
-      - keep-alive
-      Content-Length:
-      - '5260'
-      Content-Type:
-      - application/x-protobuf
-      User-Agent:
-      - OTel-OTLP-Exporter-Python/1.22.0
-    method: POST
-    uri: http://telemetry.crewai.com:4318/v1/traces
-  response:
-    body:
-      string: "\n\0"
-    headers:
-      Content-Length:
-      - '2'
-      Content-Type:
-      - application/x-protobuf
-      Date:
-      - Fri, 09 Feb 2024 07:49:24 GMT
-    status:
-      code: 200
-      message: OK
-- request:
-    body: '{"messages": [{"role": "user", "content": "You are test role.\ntest backstory\n\nYour
-      personal goal is: test goalTOOLS:\n------\nYou have access to only the following
-      tools:\n\nlearn_about_AI: learn_about_AI(topic) -> float - Useful for when you
-      need to learn about AI to write an paragraph about it.\nDelegate work to co-worker:
-      Useful to delegate a specific task to one of the following co-workers: .\nThe
-      input to this tool should be a pipe (|) separated text of length 3 (three),
-      representing the co-worker you want to ask it to (one of the options), the task
-      and all actual context you have for the task.\nFor example, `coworker|task|context`.\nAsk
-      question to co-worker: Useful to ask a question, opinion or take from on of
-      the following co-workers: .\nThe input to this tool should be a pipe (|) separated
-      text of length 3 (three), representing the co-worker you want to ask it to (one
-      of the options), the question and all actual context you have for the question.\n
-      For example, `coworker|question|context`.\n\nTo use a tool, please use the exact
-      following format:\n\n```\nThought: Do I need to use a tool? Yes\nAction: the
-      action to take, should be one of [learn_about_AI, Delegate work to co-worker,
-      Ask question to co-worker], just the name.\nAction Input: the input to the action\nObservation:
-      the result of the action\n```\n\nWhen you have a response for your task, or
-      if you do not need to use a tool, you MUST use the format:\n\n```\nThought:
-      Do I need to use a tool? No\nFinal Answer: [your response here]```This is the
-      summary of your work so far:\nBegin! This is VERY important to you, your job
-      depends on it!\n\nCurrent Task: Write and then review an small paragraph on
-      AI until it''s AMAZING\nThought: Do I need to use a tool? Yes\nAction: learn_about_AI\nAction
-      Input: general AI knowledge\nObservation: AI is a very broad field.\nThought:
-      "}], "model": "gpt-4", "n": 1, "stop": ["\nObservation"], "stream": false, "temperature":
-      0.7}'
+    body: '{"messages": [{"role": "user", "content": "Return a valid schema for the
+      one tool you must use with its arguments and values.\n\nTools available:\n\nFuntion
+      Name: learn_about_AI\nFuntion attributes: {''topic'': {}}\nDescription: learn_about_AI(topic)
+      -> float - Useful for when you need to learn about AI to write an paragraph
+      about it.\n--\nFuntion Name: Delegate work to co-worker\nFuntion attributes:
+      {''coworker'': {''type'': ''string''}, ''task'': {''type'': ''string''}, ''context'':
+      {''type'': ''string''}}\nDescription: Delegate work to co-worker(coworker: str,
+      task: str, context: str) - Delegate a specific task to one of the following
+      co-workers: . The input to this tool should be the role of the coworker, the
+      task you want them to do, and ALL necessary context to exectue the task, they
+      know nothing about the task, so share absolute everything you know, don''t reference
+      things but instead explain them.\n--\nFuntion Name: Ask question to co-worker\nFuntion
+      attributes: {''coworker'': {''type'': ''string''}, ''question'': {''type'':
+      ''string''}, ''context'': {''type'': ''string''}}\nDescription: Ask question
+      to co-worker(coworker: str, question: str, context: str) - Ask a specific question
+      to one of the following co-workers: . The input to this tool should be the role
+      of the coworker, the question you have for them, and ALL necessary context to
+      ask the question properly, they know nothing about the question, so share absolute
+      everything you know, don''t reference things but instead explain them.\n\nUse
+      this text to inform a valid ouput schema:\nThought: Do I need to use a tool?
+      Yes\nAction: learn_about_AI\nAction Input: \"Artificial Intelligence\"\n\nThe
+      output should be formatted as a JSON instance that conforms to the JSON schema
+      below.\n\nAs an example, for the schema {\"properties\": {\"foo\": {\"title\":
+      \"Foo\", \"description\": \"a list of strings\", \"type\": \"array\", \"items\":
+      {\"type\": \"string\"}}}, \"required\": [\"foo\"]}\nthe object {\"foo\": [\"bar\",
+      \"baz\"]} is a well-formatted instance of the schema. The object {\"properties\":
+      {\"foo\": [\"bar\", \"baz\"]}} is not well-formatted.\n\nHere is the output
+      schema:\n```\n{\"properties\": {\"function_name\": {\"title\": \"Function Name\",
+      \"description\": \"The name of the function to be called.\", \"type\": \"string\"},
+      \"arguments\": {\"title\": \"Arguments\", \"description\": \"A dictinary of
+      arguments to be passed to the function.\", \"type\": \"object\"}}, \"required\":
+      [\"function_name\", \"arguments\"]}\n```\n```"}], "model": "gpt-4", "n": 1,
+      "stream": false, "temperature": 0.7}'
     headers:
       accept:
       - application/json
@@ -277,16 +165,16 @@ interactions:
       connection:
       - keep-alive
       content-length:
-      - '1955'
+      - '2558'
       content-type:
       - application/json
       cookie:
-      - __cf_bm=wNpUyP3WikFZ5owMt5Wt4RvvxL5RRbV5Lm6N3cYt0cQ-1707464961-1-AaRJSNtZhC0qEyOOtzVqZyGINmDySgK+NZEmXyReWDjlSfP0cTj8tUtP+DYB/ttT11hGeDfZUyYzGIz1jsRPjN4=;
-        _cfuvid=Ii_GgXvfh_uOU6kzTG.hYatLhnP.5qhsMn05KgacgMc-1707464961455-0-604800000
+      - __cf_bm=FHcpgH1eZBeZ3Rbcza28Oc6NWTXs_wBg2dFweW8n7iE-1707554585-1-AeO0TVKmSDiPyhIhqVNGXLU1AqKVAJroEV7Mq1JaqrBTJlB6hP4FrF9q/F66TJ4PAMcnMJ6YKH9wW4gQAx2jhis=;
+        _cfuvid=CyquHMSR3lyGv7DVvBmUUvZ_N5p0T0sRkvGYdcRgwUo-1707554585722-0-604800000
       host:
       - api.openai.com
       user-agent:
-      - OpenAI/Python 1.11.1
+      - OpenAI/Python 1.12.0
       x-stainless-arch:
       - arm64
       x-stainless-async:
@@ -296,7 +184,7 @@ interactions:
       x-stainless-os:
       - MacOS
       x-stainless-package-version:
-      - 1.11.1
+      - 1.12.0
       x-stainless-runtime:
       - CPython
       x-stainless-runtime-version:
@@ -306,23 +194,19 @@ interactions:
   response:
     body:
       string: !!binary |
-        H4sIAAAAAAAAA1RTwW4bRwy96yse9rwSrEaxU10KA0EAXVIXCBAgbWFQs9xdVjPD7ZArRQj878HI
-        so1c5sDH9/jIIX8sgEa6ZosmjOQhTXH54f9Px8/v+UTyMD+Y/vUw+cPX+O3mePjzw6FpK0P3/3Hw
-        F9YqaJoiu2h+hkNhcq6q67ubu83t5vfb9QVI2nGstGHy5WZ5c7t+d2WMKoGt2eLvBQD8uLzVW+74
-        e7PFTfsSSWxGAzfb1ySgKRprpCEzMafsTfsGBs3O+WL3o2KHzNzBFbMxCK4a/8Bn/Sd/kkwR99lO
-        XLa4Ly69BKGIXXaOUQbOgVto75xB+33ho9Q+QYb7XQsxEI5kDsod0hxdegpcM3rh2K2wc3Cu0yIz
-        rtmF8sDQHjbvl51YkClKrlBVYB+106iDsLVgCiNIUi3ouMxY8oBEYbxQtMC09xMVxkl8BCFwcZKM
-        yEeOtQzNrlnTuUXHQUw0LxMdqkygifYSxc9tLd5C8is9kFUDQbMF0dkym63wZWRjFKaYDDZRRl80
-        vfhBZCq5Krui6F5dgrXI5HOhiEh5mGlgTEUDm10Tgw5ZXI6MOqW5NnixA1OkOYxIWniFj2yTOMNH
-        RidHLiZ+rv2JG2iaogSq62htHVUNBi3c4n4H8yJHtlrMJM2RnOvk+HuoWzHOiTLkl//u59xR4uwU
-        4xkUnUt1O+oJJ0aUI7c4aTk8G524BK4NVG8nLbEDFZ1zh9lWzXUpn163OeowFd3Xzc9zjK/xXrLY
-        +FiYTHPdXHOdnulPC+Dfy9XMvxxCMxVNkz+6HjhXwc27u2e95u1A39D1b5sr6uoU34D3t+vF1WJj
-        Z3NOj73kgctU5HJF1ejiafETAAD//wMAKXcLNTwEAAA=
+        H4sIAAAAAAAAA1SRwW7bMBBE7/qKBc92YTeWbehmIC4a9JJrURYyTa0kJuSSIVdtWkP/XlBybPSi
+        w8y+1ezwUgAI04gKhO4Vaxfscv/WHH/x8fl7n/rHxy+H4zf8u7HP7/i23SexyIQ/v6DmD+qT9i5Y
+        ZONptnVExZi3rnerXVluyn05Gc43aDPWBV5ulqvt+uFK9N5oTKKCHwUAwGX65mzU4LuoYLX4UBym
+        pDoU1W0IQERvsyJUSiaxIhaLu6k9MdIU9ytGBJNAwW+0dtn66BQzNmAoYxrBt8A9gh84DAxJ9+hU
+        JUnS6XSSdJEEIEU7kM7n1qQcSlGBFBZVpFqd/cD14UmKxTypYjc4JE55aqKzyj4YPXOHyKY12igL
+        T8RoremQNEqRZ0dJ4/Rncb1mvNVgfReiP+fKaLD2preGTOrriCp5yicn9mHGxwLg51T38F+DIkTv
+        AtfsX5HywnK3n/eJ+8ve3c3D1WTPyt717ed1cU0o0p/E6OrWUIcxRDO1n3MWY/EPAAD//wMA8S8H
+        Q3QCAAA=
     headers:
       CF-Cache-Status:
       - DYNAMIC
       CF-RAY:
-      - 852a83e94821fabe-SJC
+      - 853310010fcd1637-SJC
       Cache-Control:
       - no-cache, must-revalidate
       Connection:
@@ -332,7 +216,7 @@ interactions:
       Content-Type:
       - application/json
       Date:
-      - Fri, 09 Feb 2024 07:49:32 GMT
+      - Sat, 10 Feb 2024 08:43:08 GMT
       Server:
       - cloudflare
       Transfer-Encoding:
@@ -346,7 +230,7 @@ interactions:
       openai-organization:
       - user-z7g4wmlazxqvc5wjyaaaocfz
       openai-processing-ms:
-      - '11068'
+      - '2273'
       openai-version:
       - '2020-10-01'
       strict-transport-security:
@@ -358,13 +242,141 @@ interactions:
       x-ratelimit-remaining-requests:
       - '9999'
       x-ratelimit-remaining-tokens:
-      - '299537'
+      - '299398'
       x-ratelimit-reset-requests:
       - 6ms
       x-ratelimit-reset-tokens:
-      - 92ms
+      - 120ms
       x-request-id:
-      - req_b10e3d7ad93697db2a1d46243d59a41c
+      - req_9af33ac92b825be43da4372550c8c502
+    status:
+      code: 200
+      message: OK
+- request:
+    body: '{"messages": [{"role": "user", "content": "You are test role.\ntest backstory\n\nYour
+      personal goal is: test goalTOOLS:\n------\nYou have access to only the following
+      tools:\n\nlearn_about_AI: learn_about_AI(topic) -> float - Useful for when you
+      need to learn about AI to write an paragraph about it.\nDelegate work to co-worker:
+      Delegate work to co-worker(coworker: str, task: str, context: str) - Delegate
+      a specific task to one of the following co-workers: . The input to this tool
+      should be the role of the coworker, the task you want them to do, and ALL necessary
+      context to exectue the task, they know nothing about the task, so share absolute
+      everything you know, don''t reference things but instead explain them.\nAsk
+      question to co-worker: Ask question to co-worker(coworker: str, question: str,
+      context: str) - Ask a specific question to one of the following co-workers:
+      . The input to this tool should be the role of the coworker, the question you
+      have for them, and ALL necessary context to ask the question properly, they
+      know nothing about the question, so share absolute everything you know, don''t
+      reference things but instead explain them.\n\nTo use a tool, please use the
+      exact following format:\n\n```\nThought: Do I need to use a tool? Yes\nAction:
+      the tool you wanna use, should be one of [learn_about_AI, Delegate work to co-worker,
+      Ask question to co-worker], just the name.\nAction Input: Any and all relevant
+      information input and context for using the tool\nObservation: the result of
+      using the tool\n```\n\nWhen you have a response for your task, or if you do
+      not need to use a tool, you MUST use the format:\n\n```\nThought: Do I need
+      to use a tool? No\nFinal Answer: [your response here]```This is the summary
+      of your work so far:\nBegin! This is VERY important to you, your job depends
+      on it!\n\nCurrent Task: Write and then review an small paragraph on AI until
+      it''s AMAZING\nThought: Do I need to use a tool? Yes\nAction: learn_about_AI\nAction
+      Input: \"Artificial Intelligence\"\nObservation: AI is a very broad field.\nThought:
+      "}], "model": "gpt-4", "n": 1, "stop": ["\nObservation"], "stream": false, "temperature":
+      0.7}'
+    headers:
+      accept:
+      - application/json
+      accept-encoding:
+      - gzip, deflate
+      connection:
+      - keep-alive
+      content-length:
+      - '2154'
+      content-type:
+      - application/json
+      cookie:
+      - __cf_bm=FHcpgH1eZBeZ3Rbcza28Oc6NWTXs_wBg2dFweW8n7iE-1707554585-1-AeO0TVKmSDiPyhIhqVNGXLU1AqKVAJroEV7Mq1JaqrBTJlB6hP4FrF9q/F66TJ4PAMcnMJ6YKH9wW4gQAx2jhis=;
+        _cfuvid=CyquHMSR3lyGv7DVvBmUUvZ_N5p0T0sRkvGYdcRgwUo-1707554585722-0-604800000
+      host:
+      - api.openai.com
+      user-agent:
+      - OpenAI/Python 1.12.0
+      x-stainless-arch:
+      - arm64
+      x-stainless-async:
+      - 'false'
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - MacOS
+      x-stainless-package-version:
+      - 1.12.0
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.11.7
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    body:
+      string: !!binary |
+        H4sIAAAAAAAAA2RTwWobSxC86yuaPa+ERazY1iUYXh4IHoGEBAJJMK3Z3t22Z7s30z1ylOB/D7Na
+        WwnvMoepqaaqpvrXAqDiptpCFXr0MIxxef29eXu8eRzS/dX43+fmU2P69lV4v+4+HHhT1YWh+3sK
+        /sxaBR3GSM4qJzgkQqcydX11cbXZXG6urydg0IZioXWjLy+XF6/Xr2ZGrxzIqi18WQAA/JrOok0a
+        +lFt4aJ+vhnIDDuqti+PAKqksdxUaMbmKF7VZzCoOMkk9x+FHQhRA66QjQDBVeMbeKdf5V8WjHAr
+        9khpC7fJueXAGGEnTjFyRxKoBm2dBHC/T3Tg4hPQ4HZXAxsgHNAcWqbYrGDnQFLCQTMyOGBizQaW
+        98uGLfAYWcgApQGn0ItG7ZgMvEcH5KGIPGUJA4b+5bEdzWkwCDjiPhJoCyOlVtPA0oGjPcwzHjXH
+        BrJljPEIib5nTgR9HlCA/zC1go89Gc1UlhBzQxAJk5SJbdIB6MdIictrqyFLQ6kE3RRc0HPCCBGl
+        y9hRDYmCdsI/CzqiOyWxGsak+0jD0jQeWLp6MtNQYGMVGPCBpZukQKcYi63bXUlV1OE+m5c8Eo2R
+        Q4nk/zZgnx0wmv4R3HNWUx4B5Tmp2eugiYDa8tEkHo+TJAwhJ3SKx1VR0GOhE4xaalQKMek4aMyl
+        8/yTzl9LwTVZPWdY7PeE0fuAiWpoWXDqkCcUGzU5lgmnIIqUVTXX9uml71G7klvZDckxvty3LGz9
+        XSI0ldJtcx1P9KcFwLdpr/Jfq1KNSYfR71wfSMrAy6t5r6rzCp/R9fpmRl0d4xnYXN8sZonVKd+7
+        lqWjNCae9qwIXTwtfgMAAP//AwDp3F89XgQAAA==
+    headers:
+      CF-Cache-Status:
+      - DYNAMIC
+      CF-RAY:
+      - 853310125de31637-SJC
+      Cache-Control:
+      - no-cache, must-revalidate
+      Connection:
+      - keep-alive
+      Content-Encoding:
+      - gzip
+      Content-Type:
+      - application/json
+      Date:
+      - Sat, 10 Feb 2024 08:43:14 GMT
+      Server:
+      - cloudflare
+      Transfer-Encoding:
+      - chunked
+      access-control-allow-origin:
+      - '*'
+      alt-svc:
+      - h3=":443"; ma=86400
+      openai-model:
+      - gpt-4-0613
+      openai-organization:
+      - user-z7g4wmlazxqvc5wjyaaaocfz
+      openai-processing-ms:
+      - '6017'
+      openai-version:
+      - '2020-10-01'
+      strict-transport-security:
+      - max-age=15724800; includeSubDomains
+      x-ratelimit-limit-requests:
+      - '10000'
+      x-ratelimit-limit-tokens:
+      - '300000'
+      x-ratelimit-remaining-requests:
+      - '9999'
+      x-ratelimit-remaining-tokens:
+      - '299486'
+      x-ratelimit-reset-requests:
+      - 6ms
+      x-ratelimit-reset-tokens:
+      - 102ms
+      x-request-id:
+      - req_c153504e2e53f18e15a640221b664aba
     status:
       code: 200
       message: OK
@@ -380,15 +392,15 @@ interactions:
       is a force for good because it will help humans reach their full potential.\nEND
       OF EXAMPLE\n\nCurrent summary:\n\n\nNew lines of conversation:\nHuman: Write
       and then review an small paragraph on AI until it''s AMAZING\nAI: Artificial
-      Intelligence, often abbreviated as AI, is a vast and multifaceted field. It
-      encompasses a range of sub-disciplines and methodologies, each aimed at creating
-      machines or software with a certain level of autonomy, decision-making capability,
-      and, in certain cases, consciousness. These realms span from machine learning
-      to robotics, natural language processing to cognitive computing, and so much
-      more. Despite the diversity of its applications, at its core, AI strives to
-      simulate or exceed human intelligence, fundamentally altering how we live, work,
-      and perceive the world around us.\n\nNew summary:"}], "model": "gpt-4", "n":
-      1, "stream": false, "temperature": 0.7}'
+      Intelligence, often abbreviated as AI, is a vast field. It encompasses various
+      sub-disciplines and technologies that aim to create machines and systems capable
+      of performing tasks that would usually require human intelligence. These tasks
+      include learning from experiences, understanding natural language, recognizing
+      patterns, problem-solving, and decision making. The goal of AI is not just to
+      replicate human intelligence but also to create systems that can perform tasks
+      more efficiently and accurately. AI has the potential to revolutionize various
+      sectors, including healthcare, finance, transportation, and more.\n\nNew summary:"}],
+      "model": "gpt-4", "n": 1, "stream": false, "temperature": 0.7}'
     headers:
       accept:
       - application/json
@@ -397,16 +409,16 @@ interactions:
       connection:
       - keep-alive
       content-length:
-      - '1513'
+      - '1547'
       content-type:
       - application/json
       cookie:
-      - __cf_bm=wNpUyP3WikFZ5owMt5Wt4RvvxL5RRbV5Lm6N3cYt0cQ-1707464961-1-AaRJSNtZhC0qEyOOtzVqZyGINmDySgK+NZEmXyReWDjlSfP0cTj8tUtP+DYB/ttT11hGeDfZUyYzGIz1jsRPjN4=;
-        _cfuvid=Ii_GgXvfh_uOU6kzTG.hYatLhnP.5qhsMn05KgacgMc-1707464961455-0-604800000
+      - __cf_bm=FHcpgH1eZBeZ3Rbcza28Oc6NWTXs_wBg2dFweW8n7iE-1707554585-1-AeO0TVKmSDiPyhIhqVNGXLU1AqKVAJroEV7Mq1JaqrBTJlB6hP4FrF9q/F66TJ4PAMcnMJ6YKH9wW4gQAx2jhis=;
+        _cfuvid=CyquHMSR3lyGv7DVvBmUUvZ_N5p0T0sRkvGYdcRgwUo-1707554585722-0-604800000
       host:
       - api.openai.com
       user-agent:
-      - OpenAI/Python 1.11.1
+      - OpenAI/Python 1.12.0
       x-stainless-arch:
       - arm64
       x-stainless-async:
@@ -416,7 +428,7 @@ interactions:
       x-stainless-os:
       - MacOS
       x-stainless-package-version:
-      - 1.11.1
+      - 1.12.0
       x-stainless-runtime:
       - CPython
       x-stainless-runtime-version:
@@ -426,22 +438,21 @@ interactions:
   response:
     body:
       string: !!binary |
-        H4sIAAAAAAAAA1STQW/bMAyF7/kVhC+7OEHTBk2XW3YYFmyHAeuGFcNQMDJjs5FFTaTtZkX/+yAn
-        bdaLD6Te0yfy+WkCUHBVrKBwDZpro5/e/PnY3314+Hbz+fv+i3XzcLjqftzpp59f46YryqyQ7QM5
-        e1HNnLTRk7GEY9slQqPsOl9eLBfXi/fLy7HRSkU+y+po08X04np+dVI0wo60WMGvCQDA0/jNbKGi
-        x2IFF+VLpSVVrKlYvR4CKJL4XClQldUwWFGem06CURhxbxuCpmsxAOpewRqC9QZMYEhsBBgqSNQz
-        DYCgLXoPERPWCWMDEvLZLhh7YHungC3+5VDP4PZoM3ooIOR5JGooKPf0nwM9Ro8cONRgDRqsNyVI
-        gnUy3rFj9LAJRt5zTcFRCZzNelQbwdrOG+/QkVEFOyZfzWBjwMH5riKFHhNLp6DddlqxOo6eQ+bJ
-        WrJGKvFSM2kJ+WHILVWABuO2MlOLrhkVkkBlZwMmgoGtyU+iZMgBPPXkQXaAnUmQ9lBCRY6VJUxb
-        3GcbhxG37NkO5Xh3lDx9Ru8PJTgJ6jJmINUZrDd5jjF6dpjzo5DvrLinpFTCtrNMyKbgJOWJWObW
-        vDHltvNolGnp0RFVp83ymxmiN0oZq5EBBgLPPZUwSNqf6Cg5ymvKWRgk+WpWnKLz/Jo5L3VMss35
-        DJ33r/UdB9bmPhGqhJwvNYlH+fME4PeY7e5NXIuYpI12b7KnkA0vrxdHv+L8G52784vlqWti6M+N
-        q+V8ckIs9KBG7f2OQ00pJh6znkEnz5N/AAAA//8DAG6VJ3HiAwAA
+        H4sIAAAAAAAAA1RSTW/bMAy951cQuuySBM0aL21uxYBhxW5FdhqGgpFpm60sqiKd9AP974PstMEu
+        OpB6j4+P720G4Lh2W3C+Q/N9Courp/pH9TPZ8+53vNu8rL5Xq4fjjW52d9/CLzcvCNk/kLcP1NJL
+        nwIZS5zaPhMaFdbV5mJTVevquhobvdQUCqxNtlgvLr6tLk+ITtiTui38mQEAvI1v0RZrenZbuJh/
+        VHpSxZbc9vMTgMsSSsWhKqthNDc/N71EozjK3XUE3dBjBNRHBesIbm7BBI6ZjQBjXWoRMh2YjoCg
+        PYYACTO2GVMHEgtgiMYB2L4oYI+vHNsl7CauTJok1gpHtg4Q9pmpATlQHhmlgZvbOdSkPvOeYwts
+        gAoIB1SDhinUE/SAmWVQ0GG/qFk9p8CRdNJIvosSpGXSJdwa9BSL/WUjtHGtVjBM04C1bDgdBfRF
+        jXoFjwn3gcqXRLmR3BcxdrIFDQYdMIQXyPQ0cP6wjaNRCNxS9DQ/+YVWpnQ4+ZmkmM0YytBMBwlD
+        kcavdF6JvElW4OjDUJe5HWGwzmOmOTQc8cyeMWqSbFhIlu501ffPOARpU5Z9iU4cQvisNxxZu/tM
+        qBLL6dUkTfD3GcDfMXbDf0lyKUuf7N7kkWIh/FpdT3zunPBz96o6NU0Mw7l+uV7PTgrd5PZ9w7Gl
+        nDKPKSw6Z++zfwAAAP//AwBANdK6fAMAAA==
     headers:
       CF-Cache-Status:
       - DYNAMIC
       CF-RAY:
-      - 852a842f29cffabe-SJC
+      - 8533103aae201637-SJC
       Cache-Control:
       - no-cache, must-revalidate
       Connection:
@@ -451,7 +462,7 @@ interactions:
       Content-Type:
       - application/json
       Date:
-      - Fri, 09 Feb 2024 07:49:38 GMT
+      - Sat, 10 Feb 2024 08:43:18 GMT
       Server:
       - cloudflare
       Transfer-Encoding:
@@ -465,7 +476,7 @@ interactions:
       openai-organization:
       - user-z7g4wmlazxqvc5wjyaaaocfz
       openai-processing-ms:
-      - '6156'
+      - '2948'
       openai-version:
       - '2020-10-01'
       strict-transport-security:
@@ -477,13 +488,13 @@ interactions:
       x-ratelimit-remaining-requests:
       - '9999'
       x-ratelimit-remaining-tokens:
-      - '299636'
+      - '299629'
       x-ratelimit-reset-requests:
       - 6ms
       x-ratelimit-reset-tokens:
-      - 72ms
+      - 74ms
       x-request-id:
-      - req_c4d71f28b3724c8591d7a1c79a9773a8
+      - req_bf6f7315d0ac178598b80627d7b1af72
     status:
       code: 200
       message: OK

@@ -1,21 +1,19 @@
 interactions:
 - request:
-    body: '{"messages": [{"role": "user", "content": "You are new test role.\nnew
-      test backstory\n\nYour personal goal is: new test goal\n\nTOOLS:\n------\nYou
-      have access to the following tools:\n\nmultiplier: multiplier(numbers) -> float
-      - Useful for when you need to multiply two numbers together.\n        The input
-      to this tool should be a comma separated list of numbers of\n        length
-      two, representing the two numbers you want to multiply together.\n        For
-      example, `1,2` would be the input if you wanted to multiply 1 by 2.\n\nTo use
-      a tool, please use the exact following format:\n\n```\nThought: Do I need to
-      use a tool? Yes\nAction: the action to take, should be one of [multiplier],
-      just the name.\nAction Input: the input to the action\nObservation: the result
-      of the action\n```\n\nWhen you have a response for your task, or if you do not
-      need to use a tool, you MUST use the format:\n\n```\nThought: Do I need to use
-      a tool? No\nFinal Answer: [your response here]\n```\n\t\tThis is the summary
-      of your work so far:\n    \nBegin! This is VERY important to you, your job depends
-      on it!\n\nCurrent Task: What is 3 times 5?\n\n"}], "model": "gpt-4", "n": 1,
-      "stop": ["\nObservation"], "stream": false, "temperature": 0.7}'
+    body: '{"messages": [{"role": "user", "content": "You are test role.\ntest backstory\n\nYour
+      personal goal is: test goalTOOLS:\n------\nYou have access to only the following
+      tools:\n\nmultiplier: multiplier(first_number: int, second_number: int) -> float
+      - Useful for when you need to multiply two numbers together.\n\nTo use a tool,
+      please use the exact following format:\n\n```\nThought: Do I need to use a tool?
+      Yes\nAction: the tool you wanna use, should be one of [multiplier], just the
+      name.\nAction Input: Any and all relevant information input and context for
+      using the tool\nObservation: the result of using the tool\n```\n\nWhen you have
+      a response for your task, or if you do not need to use a tool, you MUST use
+      the format:\n\n```\nThought: Do I need to use a tool? No\nFinal Answer: [your
+      response here]```This is the summary of your work so far:\nBegin! This is VERY
+      important to you, your job depends on it!\n\nCurrent Task: What is 3 times 5?\n"}],
+      "model": "gpt-4", "n": 1, "stop": ["\nObservation"], "stream": false, "temperature":
+      0.7}'
     headers:
       accept:
       - application/json
@@ -24,13 +22,13 @@ interactions:
       connection:
       - keep-alive
       content-length:
-      - '1231'
+      - '1047'
       content-type:
       - application/json
       host:
       - api.openai.com
       user-agent:
-      - OpenAI/Python 1.6.1
+      - OpenAI/Python 1.12.0
       x-stainless-arch:
       - arm64
       x-stainless-async:
@@ -40,7 +38,7 @@ interactions:
       x-stainless-os:
       - MacOS
       x-stainless-package-version:
-      - 1.6.1
+      - 1.12.0
       x-stainless-runtime:
       - CPython
       x-stainless-runtime-version:
@@ -48,18 +46,20 @@ interactions:
     method: POST
     uri: https://api.openai.com/v1/chat/completions
   response:
-    content: "{\n  \"id\": \"chatcmpl-8b7eDhOwdMJw0817wIqiD9MoXVRU8\",\n  \"object\":
-      \"chat.completion\",\n  \"created\": 1703858225,\n  \"model\": \"gpt-4-0613\",\n
-      \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
-      \"assistant\",\n        \"content\": \"Thought: Do I need to use a tool? Yes\\nAction:
-      multiplier\\nAction Input: 3,5\"\n      },\n      \"logprobs\": null,\n      \"finish_reason\":
-      \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 264,\n    \"completion_tokens\":
-      23,\n    \"total_tokens\": 287\n  },\n  \"system_fingerprint\": null\n}\n"
+    body:
+      string: !!binary |
+        H4sIAAAAAAAAA1SRS0/DMBCE7/kVqz2nqK8AzQUhEIIbIDggiqrU2SQujtfYGwmo+t+R0ycXH2Z2
+        Vt+s1wkA6hJzQNUUolpnBpdfarby1ROZ2fju9fGesko/X36W05vfc41pTPByRUr2qTPFrTMkmu3W
+        Vp4Kobh1dDG8yLLhdDTrjZZLMjFWOxlMB8Pz0WSXaFgrCpjDewIAsO7fyGZL+sYchuleaSmEoibM
+        D0MA6NlEBYsQdJDCCqZHU7EVsj3uS8Nd3UgOtwwPYIlKEIYuEBQgzOYK3ijM7bWKZXJoOyPaGU1+
+        r8GDdZ3ksJ5jpX2Qhe3aJfk55jBJYY6BFNvyRM02uCPZHCoYrp3nZaxrO2MOeqWtDs3CUxHYRtwg
+        7LbxTQLw0Z+q+9cenefWyUL4k2xcOB6Ptvvw+CtHdzLZmcJSmJNUNk12hBh+glC7qLStyTuv+8tF
+        zmST/AEAAP//AwCr+Q67MAIAAA==
     headers:
       CF-Cache-Status:
       - DYNAMIC
       CF-RAY:
-      - 83d28cd70f9f1cd9-GRU
+      - 8532aa4bca4e679a-SJC
       Cache-Control:
       - no-cache, must-revalidate
       Connection:
@@ -69,14 +69,14 @@ interactions:
       Content-Type:
       - application/json
       Date:
-      - Fri, 29 Dec 2023 13:57:07 GMT
+      - Sat, 10 Feb 2024 07:33:41 GMT
       Server:
       - cloudflare
       Set-Cookie:
-      - __cf_bm=iNTKkM.TU1FqaOYqOtdlGljM5kh2eYMOQyBBsDxjV7o-1703858227-1-AUtPBBabQY5DO7jJdGlU5rhZeJigXNSYGJkA8uYAsRU5NSaEt+YcHCLzXRQWpzm+lHKeh5JKd9iq/sLM5ylFvc8=;
-        path=/; expires=Fri, 29-Dec-23 14:27:07 GMT; domain=.api.openai.com; HttpOnly;
+      - __cf_bm=iA8sDHDKVnfosmI8wG_ElV9lor.u9ivoU2KD_Uw2Ck0-1707550421-1-AakLurCxUahX1wP/EqH55USvoahi23iv5/ZX2jxvr6ltSDBhzk8J0ipuSFcgyazwnWfYsqu0n467tSBqzuyTan0=;
+        path=/; expires=Sat, 10-Feb-24 08:03:41 GMT; domain=.api.openai.com; HttpOnly;
         Secure; SameSite=None
-      - _cfuvid=FKpE5gHVpQFRYsdYjjLPKhDX2CeCXpdvvJ8tjGmsYrM-1703858227679-0-604800000;
+      - _cfuvid=CpE5jxQFzpK609ZrTNgy1kxDFHYN2x4AY1XCThUEeQk-1707550421579-0-604800000;
         path=/; domain=.api.openai.com; HttpOnly; Secure; SameSite=None
       Transfer-Encoding:
       - chunked
@@ -89,7 +89,7 @@ interactions:
       openai-organization:
       - user-z7g4wmlazxqvc5wjyaaaocfz
       openai-processing-ms:
-      - '1725'
+      - '1673'
       openai-version:
       - '2020-10-01'
       strict-transport-security:
@@ -98,43 +98,39 @@ interactions:
       - '10000'
       x-ratelimit-limit-tokens:
       - '300000'
-      x-ratelimit-limit-tokens_usage_based:
-      - '300000'
       x-ratelimit-remaining-requests:
       - '9999'
       x-ratelimit-remaining-tokens:
-      - '299717'
-      x-ratelimit-remaining-tokens_usage_based:
-      - '299717'
+      - '299762'
       x-ratelimit-reset-requests:
       - 6ms
       x-ratelimit-reset-tokens:
-      - 56ms
-      x-ratelimit-reset-tokens_usage_based:
-      - 56ms
+      - 47ms
       x-request-id:
-      - 689757a1e38baf0844ec69f20525c5d7
-    http_version: HTTP/1.1
-    status_code: 200
+      - req_e5461f12abf90cd87cea37b9c47989e0
+    status:
+      code: 200
+      message: OK
 - request:
-    body: '{"messages": [{"role": "user", "content": "You are new test role.\nnew
-      test backstory\n\nYour personal goal is: new test goal\n\nTOOLS:\n------\nYou
-      have access to the following tools:\n\nmultiplier: multiplier(numbers) -> float
-      - Useful for when you need to multiply two numbers together.\n        The input
-      to this tool should be a comma separated list of numbers of\n        length
-      two, representing the two numbers you want to multiply together.\n        For
-      example, `1,2` would be the input if you wanted to multiply 1 by 2.\n\nTo use
-      a tool, please use the exact following format:\n\n```\nThought: Do I need to
-      use a tool? Yes\nAction: the action to take, should be one of [multiplier],
-      just the name.\nAction Input: the input to the action\nObservation: the result
-      of the action\n```\n\nWhen you have a response for your task, or if you do not
-      need to use a tool, you MUST use the format:\n\n```\nThought: Do I need to use
-      a tool? No\nFinal Answer: [your response here]\n```\n\t\tThis is the summary
-      of your work so far:\n    \nBegin! This is VERY important to you, your job depends
-      on it!\n\nCurrent Task: What is 3 times 5?\nThought: Do I need to use a tool?
-      Yes\nAction: multiplier\nAction Input: 3,5\nObservation: 15\nThought: \n"}],
-      "model": "gpt-4", "n": 1, "stop": ["\nObservation"], "stream": false, "temperature":
-      0.7}'
+    body: '{"messages": [{"role": "user", "content": "Return a valid schema for the
+      one tool you must use with its arguments and values.\n\nTools available:\n\nFuntion
+      Name: multiplier\nFuntion attributes: {''first_number'': {''type'': ''integer''},
+      ''second_number'': {''type'': ''integer''}}\nDescription: multiplier(first_number:
+      int, second_number: int) -> float - Useful for when you need to multiply two
+      numbers together.\n\nUse this text to inform a valid ouput schema:\nThought:
+      Do I need to use a tool? Yes\nAction: multiplier\nAction Input: {\"first_number\":
+      3, \"second_number\": 5}\n\nThe output should be formatted as a JSON instance
+      that conforms to the JSON schema below.\n\nAs an example, for the schema {\"properties\":
+      {\"foo\": {\"title\": \"Foo\", \"description\": \"a list of strings\", \"type\":
+      \"array\", \"items\": {\"type\": \"string\"}}}, \"required\": [\"foo\"]}\nthe
+      object {\"foo\": [\"bar\", \"baz\"]} is a well-formatted instance of the schema.
+      The object {\"properties\": {\"foo\": [\"bar\", \"baz\"]}} is not well-formatted.\n\nHere
+      is the output schema:\n```\n{\"properties\": {\"function_name\": {\"title\":
+      \"Function Name\", \"description\": \"The name of the function to be called.\",
+      \"type\": \"string\"}, \"arguments\": {\"title\": \"Arguments\", \"description\":
+      \"A dictinary of arguments to be passed to the function.\", \"type\": \"object\"}},
+      \"required\": [\"function_name\", \"arguments\"]}\n```\n```"}], "model": "gpt-4",
+      "n": 1, "stream": false, "temperature": 0.7}'
     headers:
       accept:
       - application/json
@@ -143,16 +139,16 @@ interactions:
       connection:
       - keep-alive
       content-length:
-      - '1335'
+      - '1494'
       content-type:
       - application/json
       cookie:
-      - __cf_bm=iNTKkM.TU1FqaOYqOtdlGljM5kh2eYMOQyBBsDxjV7o-1703858227-1-AUtPBBabQY5DO7jJdGlU5rhZeJigXNSYGJkA8uYAsRU5NSaEt+YcHCLzXRQWpzm+lHKeh5JKd9iq/sLM5ylFvc8=;
-        _cfuvid=FKpE5gHVpQFRYsdYjjLPKhDX2CeCXpdvvJ8tjGmsYrM-1703858227679-0-604800000
+      - __cf_bm=iA8sDHDKVnfosmI8wG_ElV9lor.u9ivoU2KD_Uw2Ck0-1707550421-1-AakLurCxUahX1wP/EqH55USvoahi23iv5/ZX2jxvr6ltSDBhzk8J0ipuSFcgyazwnWfYsqu0n467tSBqzuyTan0=;
+        _cfuvid=CpE5jxQFzpK609ZrTNgy1kxDFHYN2x4AY1XCThUEeQk-1707550421579-0-604800000
       host:
       - api.openai.com
       user-agent:
-      - OpenAI/Python 1.6.1
+      - OpenAI/Python 1.12.0
       x-stainless-arch:
       - arm64
       x-stainless-async:
@@ -162,7 +158,7 @@ interactions:
       x-stainless-os:
       - MacOS
       x-stainless-package-version:
-      - 1.6.1
+      - 1.12.0
       x-stainless-runtime:
       - CPython
       x-stainless-runtime-version:
@@ -170,18 +166,20 @@ interactions:
     method: POST
     uri: https://api.openai.com/v1/chat/completions
   response:
-    content: "{\n  \"id\": \"chatcmpl-8b7eG2qnUr6SZcankL5AqkwIJvYFc\",\n  \"object\":
-      \"chat.completion\",\n  \"created\": 1703858228,\n  \"model\": \"gpt-4-0613\",\n
-      \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
-      \"assistant\",\n        \"content\": \"Do I need to use a tool? No\\nFinal Answer:
-      3 times 5 is 15.\"\n      },\n      \"logprobs\": null,\n      \"finish_reason\":
-      \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 297,\n    \"completion_tokens\":
-      22,\n    \"total_tokens\": 319\n  },\n  \"system_fingerprint\": null\n}\n"
+    body:
+      string: !!binary |
+        H4sIAAAAAAAAA1SRO2/cMBCEe/2KBWtdIN0jF6t1kRQG7MApDISBjketJNrkUiFX8AUH/feAupfd
+        sNiZbzE7PGYAwjSiAqF7xdoNdvHtr76zT+XDy+HXz/v3t2e6f/xelHx4ennmpcgT4fevqPlCfdHe
+        DRbZeDrJOqBiTFvLbbHdbIr1spwF5xu0CesGXqwXxddydSZ6bzRGUcHvDADgOL8pGzV4EBUU+WXi
+        MEbVoaiuJgARvE0ToWI0kRWxyG+i9sRIc9wfGBBMBAXvaO2i9cEpZmzAUMI0gm+Be4Soe3SqkiRp
+        t9u9Rk+SjpIApGhH0unWmpRDKSqQwo2WzWANBinyk0uFbnRIHJNjJmfWhMg1jW6frBWs8osSUXtq
+        PkibpEySpjmBOJ8zXXuwvhuC36fOaLT2Om8NmdjXAVX0lG6O7IcTPmUAf+a+x08ViiF4N3DN/g0p
+        LVwtN6d94va1N3V9dxbZs7IfqO06OycU8V9kdHVrqMMwBDPXn3JmU/YfAAD//wMAtRBeM3UCAAA=
     headers:
       CF-Cache-Status:
       - DYNAMIC
       CF-RAY:
-      - 83d28ce3ab3b1cd9-GRU
+      - 8532aa5709e5679a-SJC
       Cache-Control:
       - no-cache, must-revalidate
       Connection:
@@ -191,7 +189,7 @@ interactions:
       Content-Type:
       - application/json
       Date:
-      - Fri, 29 Dec 2023 13:57:09 GMT
+      - Sat, 10 Feb 2024 07:33:44 GMT
       Server:
       - cloudflare
       Transfer-Encoding:
@@ -205,7 +203,7 @@ interactions:
       openai-organization:
       - user-z7g4wmlazxqvc5wjyaaaocfz
       openai-processing-ms:
-      - '1568'
+      - '2203'
       openai-version:
       - '2020-10-01'
       strict-transport-security:
@@ -214,24 +212,128 @@ interactions:
       - '10000'
       x-ratelimit-limit-tokens:
       - '300000'
-      x-ratelimit-limit-tokens_usage_based:
+      x-ratelimit-remaining-requests:
+      - '9999'
+      x-ratelimit-remaining-tokens:
+      - '299661'
+      x-ratelimit-reset-requests:
+      - 6ms
+      x-ratelimit-reset-tokens:
+      - 67ms
+      x-request-id:
+      - req_a428e78fc8e9d475e463316f65950fa9
+    status:
+      code: 200
+      message: OK
+- request:
+    body: '{"messages": [{"role": "user", "content": "You are test role.\ntest backstory\n\nYour
+      personal goal is: test goalTOOLS:\n------\nYou have access to only the following
+      tools:\n\nmultiplier: multiplier(first_number: int, second_number: int) -> float
+      - Useful for when you need to multiply two numbers together.\n\nTo use a tool,
+      please use the exact following format:\n\n```\nThought: Do I need to use a tool?
+      Yes\nAction: the tool you wanna use, should be one of [multiplier], just the
+      name.\nAction Input: Any and all relevant information input and context for
+      using the tool\nObservation: the result of using the tool\n```\n\nWhen you have
+      a response for your task, or if you do not need to use a tool, you MUST use
+      the format:\n\n```\nThought: Do I need to use a tool? No\nFinal Answer: [your
+      response here]```This is the summary of your work so far:\nBegin! This is VERY
+      important to you, your job depends on it!\n\nCurrent Task: What is 3 times 5?\nThought:
+      Do I need to use a tool? Yes\nAction: multiplier\nAction Input: {\"first_number\":
+      3, \"second_number\": 5}\nObservation: 15\nThought: "}], "model": "gpt-4", "n":
+      1, "stop": ["\nObservation"], "stream": false, "temperature": 0.7}'
+    headers:
+      accept:
+      - application/json
+      accept-encoding:
+      - gzip, deflate
+      connection:
+      - keep-alive
+      content-length:
+      - '1191'
+      content-type:
+      - application/json
+      cookie:
+      - __cf_bm=iA8sDHDKVnfosmI8wG_ElV9lor.u9ivoU2KD_Uw2Ck0-1707550421-1-AakLurCxUahX1wP/EqH55USvoahi23iv5/ZX2jxvr6ltSDBhzk8J0ipuSFcgyazwnWfYsqu0n467tSBqzuyTan0=;
+        _cfuvid=CpE5jxQFzpK609ZrTNgy1kxDFHYN2x4AY1XCThUEeQk-1707550421579-0-604800000
+      host:
+      - api.openai.com
+      user-agent:
+      - OpenAI/Python 1.12.0
+      x-stainless-arch:
+      - arm64
+      x-stainless-async:
+      - 'false'
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - MacOS
+      x-stainless-package-version:
+      - 1.12.0
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.11.7
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    body:
+      string: !!binary |
+        H4sIAAAAAAAAA1SQW0sDMRCF3/dXDHluy/aybd0XEYqiiKAiFFRKmp1uY7OZmMyipfS/S7bbiy95
+        OGfOyTezSwCELkQOQq0lq8qZ7vRbXRGrVz2fPPKd3z7MeSPty2r29uy06MQELb9Q8THVU1Q5g6zJ
+        HmzlUTLG1v4knWRZOhqMGqOiAk2MlY67o2467g/bxJq0wiByeE8AAHbNG9lsgb8ih7RzVCoMQZYo
+        8tMQgPBkoiJkCDqwtCw6Z1ORZbQN7ozgHixiAUxQBwQJTGSu4Yk+7K220sCNDT/ocxgC6woDZKAD
+        9LOeaAv3JxJDpfO0jNS2Nuakr7TVYb3wKAPZ+Gtgcof4PgH4bDau/y0hnKfK8YJpgzYWDsbDQ584
+        H/fCHbQmE0tzoU+zpCUUYRsYq8VK2xK987o5QORM9skfAAAA//8DACAb4vP3AQAA
+    headers:
+      CF-Cache-Status:
+      - DYNAMIC
+      CF-RAY:
+      - 8532aa66fd5c679a-SJC
+      Cache-Control:
+      - no-cache, must-revalidate
+      Connection:
+      - keep-alive
+      Content-Encoding:
+      - gzip
+      Content-Type:
+      - application/json
+      Date:
+      - Sat, 10 Feb 2024 07:33:45 GMT
+      Server:
+      - cloudflare
+      Transfer-Encoding:
+      - chunked
+      access-control-allow-origin:
+      - '*'
+      alt-svc:
+      - h3=":443"; ma=86400
+      openai-model:
+      - gpt-4-0613
+      openai-organization:
+      - user-z7g4wmlazxqvc5wjyaaaocfz
+      openai-processing-ms:
+      - '1275'
+      openai-version:
+      - '2020-10-01'
+      strict-transport-security:
+      - max-age=15724800; includeSubDomains
+      x-ratelimit-limit-requests:
+      - '10000'
+      x-ratelimit-limit-tokens:
       - '300000'
       x-ratelimit-remaining-requests:
       - '9999'
       x-ratelimit-remaining-tokens:
-      - '299693'
-      x-ratelimit-remaining-tokens_usage_based:
-      - '299693'
+      - '299728'
       x-ratelimit-reset-requests:
       - 6ms
       x-ratelimit-reset-tokens:
-      - 61ms
-      x-ratelimit-reset-tokens_usage_based:
-      - 61ms
+      - 54ms
       x-request-id:
-      - 66a02e3e08e3f6b5b29fb04cd19f50a0
-    http_version: HTTP/1.1
-    status_code: 200
+      - req_dd069a32b6514615a79356287e845a29
+    status:
+      code: 200
+      message: OK
 - request:
     body: '{"messages": [{"role": "user", "content": "Progressively summarize the
       lines of conversation provided, adding onto the previous summary returning a
@@ -257,12 +359,12 @@ interactions:
       content-type:
       - application/json
       cookie:
-      - __cf_bm=iNTKkM.TU1FqaOYqOtdlGljM5kh2eYMOQyBBsDxjV7o-1703858227-1-AUtPBBabQY5DO7jJdGlU5rhZeJigXNSYGJkA8uYAsRU5NSaEt+YcHCLzXRQWpzm+lHKeh5JKd9iq/sLM5ylFvc8=;
-        _cfuvid=FKpE5gHVpQFRYsdYjjLPKhDX2CeCXpdvvJ8tjGmsYrM-1703858227679-0-604800000
+      - __cf_bm=iA8sDHDKVnfosmI8wG_ElV9lor.u9ivoU2KD_Uw2Ck0-1707550421-1-AakLurCxUahX1wP/EqH55USvoahi23iv5/ZX2jxvr6ltSDBhzk8J0ipuSFcgyazwnWfYsqu0n467tSBqzuyTan0=;
+        _cfuvid=CpE5jxQFzpK609ZrTNgy1kxDFHYN2x4AY1XCThUEeQk-1707550421579-0-604800000
       host:
       - api.openai.com
       user-agent:
-      - OpenAI/Python 1.6.1
+      - OpenAI/Python 1.12.0
       x-stainless-arch:
       - arm64
       x-stainless-async:
@@ -272,7 +374,7 @@ interactions:
       x-stainless-os:
       - MacOS
       x-stainless-package-version:
-      - 1.6.1
+      - 1.12.0
       x-stainless-runtime:
       - CPython
       x-stainless-runtime-version:
@@ -280,19 +382,19 @@ interactions:
     method: POST
     uri: https://api.openai.com/v1/chat/completions
   response:
-    content: "{\n  \"id\": \"chatcmpl-8b7eIfmBgQoWGLW4jiQZTu3qzEBBL\",\n  \"object\":
-      \"chat.completion\",\n  \"created\": 1703858230,\n  \"model\": \"gpt-4-0613\",\n
-      \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
-      \"assistant\",\n        \"content\": \"The human asks the AI to calculate 3
-      times 5 and the AI responds that 3 times 5 is 15.\"\n      },\n      \"logprobs\":
-      null,\n      \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\":
-      155,\n    \"completion_tokens\": 26,\n    \"total_tokens\": 181\n  },\n  \"system_fingerprint\":
-      null\n}\n"
+    body:
+      string: !!binary |
+        H4sIAAAAAAAAA1SQT0/CQBDF7/0Ukz0XQgsV6E0TD2qiHtSYGEOW7dCu7D92p4lC+O5mS6F62cO8
+        93v7Zg4JAJMVK4GJhpPQTo0WO7F0ezl7549q+bx/eMp3t+v8Zlrdv27eWBoJu/5CQWdqLKx2Ckla
+        c5KFR04YU7P5ZF4Uk1ledIK2FaqI1Y5Gs9HkKpv2RGOlwMBK+EgAAA7dG7uZCr9ZCZP0PNEYAq+R
+        lRcTAPNWxQnjIchA3BBLB1FYQ2i6ui8NQtNqboCHbQBqEK7vgCwIrkSrOCFMgaTGAEUK3FRni8fg
+        rKkiwmnwgAyQFWPWf3a8tFS2dt6u40amVeoy30gjQ7PyyIM1sVEg6074MQH47K7R/luQOW+1oxXZ
+        LZoYmBXFKY8Nhx/UfN6LZImrP9QiT/qGLPwEQr3aSFOjd152x4k9k2PyCwAA//8DAHepd0ITAgAA
     headers:
       CF-Cache-Status:
       - DYNAMIC
       CF-RAY:
-      - 83d28cf118221cd9-GRU
+      - 8532aa703b92679a-SJC
       Cache-Control:
       - no-cache, must-revalidate
       Connection:
@@ -302,7 +404,7 @@ interactions:
       Content-Type:
       - application/json
       Date:
-      - Fri, 29 Dec 2023 13:57:12 GMT
+      - Sat, 10 Feb 2024 07:33:47 GMT
       Server:
       - cloudflare
       Transfer-Encoding:
@@ -316,7 +418,7 @@ interactions:
       openai-organization:
       - user-z7g4wmlazxqvc5wjyaaaocfz
       openai-processing-ms:
-      - '2188'
+      - '1667'
       openai-version:
       - '2020-10-01'
       strict-transport-security:
@@ -324,367 +426,18 @@ interactions:
       x-ratelimit-limit-requests:
       - '10000'
       x-ratelimit-limit-tokens:
-      - '300000'
-      x-ratelimit-limit-tokens_usage_based:
       - '300000'
       x-ratelimit-remaining-requests:
       - '9999'
       x-ratelimit-remaining-tokens:
       - '299794'
-      x-ratelimit-remaining-tokens_usage_based:
-      - '299794'
       x-ratelimit-reset-requests:
       - 6ms
       x-ratelimit-reset-tokens:
       - 41ms
-      x-ratelimit-reset-tokens_usage_based:
-      - 41ms
       x-request-id:
-      - a644c703d416b1e4b06586e96e6d7297
-    http_version: HTTP/1.1
-    status_code: 200
-- request:
-    body: '{"messages": [{"role": "user", "content": "You are new test role.\nnew
-      test backstory\n\nYour personal goal is: new test goal\n\nTOOLS:\n------\nYou
-      have access to the following tools:\n\nmultiplier: multiplier(numbers) -> float
-      - Useful for when you need to multiply two numbers together.\n        The input
-      to this tool should be a comma separated list of numbers of\n        length
-      two, representing the two numbers you want to multiply together.\n        For
-      example, `1,2` would be the input if you wanted to multiply 1 by 2.\n\nTo use
-      a tool, please use the exact following format:\n\n```\nThought: Do I need to
-      use a tool? Yes\nAction: the action to take, should be one of [multiplier],
-      just the name.\nAction Input: the input to the action\nObservation: the result
-      of the action\n```\n\nWhen you have a response for your task, or if you do not
-      need to use a tool, you MUST use the format:\n\n```\nThought: Do I need to use
-      a tool? No\nFinal Answer: [your response here]\n```\n\t\tThis is the summary
-      of your work so far:\n    The human asks the AI to calculate 3 times 5 and the
-      AI responds that 3 times 5 is 15.\nBegin! This is VERY important to you, your
-      job depends on it!\n\nCurrent Task: What is 3 times 5?\n\n"}], "model": "gpt-4",
-      "n": 1, "stop": ["\nObservation"], "stream": false, "temperature": 0.7}'
-    headers:
-      accept:
-      - application/json
-      accept-encoding:
-      - gzip, deflate
-      connection:
-      - keep-alive
-      content-length:
-      - '1317'
-      content-type:
-      - application/json
-      cookie:
-      - __cf_bm=iNTKkM.TU1FqaOYqOtdlGljM5kh2eYMOQyBBsDxjV7o-1703858227-1-AUtPBBabQY5DO7jJdGlU5rhZeJigXNSYGJkA8uYAsRU5NSaEt+YcHCLzXRQWpzm+lHKeh5JKd9iq/sLM5ylFvc8=;
-        _cfuvid=FKpE5gHVpQFRYsdYjjLPKhDX2CeCXpdvvJ8tjGmsYrM-1703858227679-0-604800000
-      host:
-      - api.openai.com
-      user-agent:
-      - OpenAI/Python 1.6.1
-      x-stainless-arch:
-      - arm64
-      x-stainless-async:
-      - 'false'
-      x-stainless-lang:
-      - python
-      x-stainless-os:
-      - MacOS
-      x-stainless-package-version:
-      - 1.6.1
-      x-stainless-runtime:
-      - CPython
-      x-stainless-runtime-version:
-      - 3.11.7
-    method: POST
-    uri: https://api.openai.com/v1/chat/completions
-  response:
-    content: "{\n  \"id\": \"chatcmpl-8b7eKehkNtTjrXJD0aFjiVUeXU7te\",\n  \"object\":
-      \"chat.completion\",\n  \"created\": 1703858232,\n  \"model\": \"gpt-4-0613\",\n
-      \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
-      \"assistant\",\n        \"content\": \"Thought: Do I need to use a tool? Yes\\nAction:
-      multiplier\\nAction Input: 3,5\"\n      },\n      \"logprobs\": null,\n      \"finish_reason\":
-      \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 290,\n    \"completion_tokens\":
-      23,\n    \"total_tokens\": 313\n  },\n  \"system_fingerprint\": null\n}\n"
-    headers:
-      CF-Cache-Status:
-      - DYNAMIC
-      CF-RAY:
-      - 83d28d007f461cd9-GRU
-      Cache-Control:
-      - no-cache, must-revalidate
-      Connection:
-      - keep-alive
-      Content-Encoding:
-      - gzip
-      Content-Type:
-      - application/json
-      Date:
-      - Fri, 29 Dec 2023 13:57:14 GMT
-      Server:
-      - cloudflare
-      Transfer-Encoding:
-      - chunked
-      access-control-allow-origin:
-      - '*'
-      alt-svc:
-      - h3=":443"; ma=86400
-      openai-model:
-      - gpt-4-0613
-      openai-organization:
-      - user-z7g4wmlazxqvc5wjyaaaocfz
-      openai-processing-ms:
-      - '1885'
-      openai-version:
-      - '2020-10-01'
-      strict-transport-security:
-      - max-age=15724800; includeSubDomains
-      x-ratelimit-limit-requests:
-      - '10000'
-      x-ratelimit-limit-tokens:
-      - '300000'
-      x-ratelimit-limit-tokens_usage_based:
-      - '300000'
-      x-ratelimit-remaining-requests:
-      - '9999'
-      x-ratelimit-remaining-tokens:
-      - '299697'
-      x-ratelimit-remaining-tokens_usage_based:
-      - '299697'
-      x-ratelimit-reset-requests:
-      - 6ms
-      x-ratelimit-reset-tokens:
-      - 60ms
-      x-ratelimit-reset-tokens_usage_based:
-      - 60ms
-      x-request-id:
-      - 87959bfa6a029f7bcafb5095e66d4964
-    http_version: HTTP/1.1
-    status_code: 200
-- request:
-    body: '{"messages": [{"role": "user", "content": "You are new test role.\nnew
-      test backstory\n\nYour personal goal is: new test goal\n\nTOOLS:\n------\nYou
-      have access to the following tools:\n\nmultiplier: multiplier(numbers) -> float
-      - Useful for when you need to multiply two numbers together.\n        The input
-      to this tool should be a comma separated list of numbers of\n        length
-      two, representing the two numbers you want to multiply together.\n        For
-      example, `1,2` would be the input if you wanted to multiply 1 by 2.\n\nTo use
-      a tool, please use the exact following format:\n\n```\nThought: Do I need to
-      use a tool? Yes\nAction: the action to take, should be one of [multiplier],
-      just the name.\nAction Input: the input to the action\nObservation: the result
-      of the action\n```\n\nWhen you have a response for your task, or if you do not
-      need to use a tool, you MUST use the format:\n\n```\nThought: Do I need to use
-      a tool? No\nFinal Answer: [your response here]\n```\n\t\tThis is the summary
-      of your work so far:\n    The human asks the AI to calculate 3 times 5 and the
-      AI responds that 3 times 5 is 15.\nBegin! This is VERY important to you, your
-      job depends on it!\n\nCurrent Task: What is 3 times 5?\n\nI just used the multiplier
-      tool with input 3,5. So I already knwo the result of that.\nObservation: Invalid
-      or incomplete response\nThought: \n"}], "model": "gpt-4", "n": 1, "stop": ["\nObservation"],
-      "stream": false, "temperature": 0.7}'
-    headers:
-      accept:
-      - application/json
-      accept-encoding:
-      - gzip, deflate
-      connection:
-      - keep-alive
-      content-length:
-      - '1460'
-      content-type:
-      - application/json
-      cookie:
-      - __cf_bm=iNTKkM.TU1FqaOYqOtdlGljM5kh2eYMOQyBBsDxjV7o-1703858227-1-AUtPBBabQY5DO7jJdGlU5rhZeJigXNSYGJkA8uYAsRU5NSaEt+YcHCLzXRQWpzm+lHKeh5JKd9iq/sLM5ylFvc8=;
-        _cfuvid=FKpE5gHVpQFRYsdYjjLPKhDX2CeCXpdvvJ8tjGmsYrM-1703858227679-0-604800000
-      host:
-      - api.openai.com
-      user-agent:
-      - OpenAI/Python 1.6.1
-      x-stainless-arch:
-      - arm64
-      x-stainless-async:
-      - 'false'
-      x-stainless-lang:
-      - python
-      x-stainless-os:
-      - MacOS
-      x-stainless-package-version:
-      - 1.6.1
-      x-stainless-runtime:
-      - CPython
-      x-stainless-runtime-version:
-      - 3.11.7
-    method: POST
-    uri: https://api.openai.com/v1/chat/completions
-  response:
-    content: "{\n  \"id\": \"chatcmpl-8b7eME5fg1w8QcXUnl0FBcqxJWy7u\",\n  \"object\":
-      \"chat.completion\",\n  \"created\": 1703858234,\n  \"model\": \"gpt-4-0613\",\n
-      \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
-      \"assistant\",\n        \"content\": \"Do I need to use a tool? No\\nFinal Answer:
-      3 times 5 is 15.\"\n      },\n      \"logprobs\": null,\n      \"finish_reason\":
-      \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 324,\n    \"completion_tokens\":
-      22,\n    \"total_tokens\": 346\n  },\n  \"system_fingerprint\": null\n}\n"
-    headers:
-      CF-Cache-Status:
-      - DYNAMIC
-      CF-RAY:
-      - 83d28d0fcfaf1cd9-GRU
-      Cache-Control:
-      - no-cache, must-revalidate
-      Connection:
-      - keep-alive
-      Content-Encoding:
-      - gzip
-      Content-Type:
-      - application/json
-      Date:
-      - Fri, 29 Dec 2023 13:57:17 GMT
-      Server:
-      - cloudflare
-      Transfer-Encoding:
-      - chunked
-      access-control-allow-origin:
-      - '*'
-      alt-svc:
-      - h3=":443"; ma=86400
-      openai-model:
-      - gpt-4-0613
-      openai-organization:
-      - user-z7g4wmlazxqvc5wjyaaaocfz
-      openai-processing-ms:
-      - '2494'
-      openai-version:
-      - '2020-10-01'
-      strict-transport-security:
-      - max-age=15724800; includeSubDomains
-      x-ratelimit-limit-requests:
-      - '10000'
-      x-ratelimit-limit-tokens:
-      - '300000'
-      x-ratelimit-limit-tokens_usage_based:
-      - '300000'
-      x-ratelimit-remaining-requests:
-      - '9999'
-      x-ratelimit-remaining-tokens:
-      - '299661'
-      x-ratelimit-remaining-tokens_usage_based:
-      - '299661'
-      x-ratelimit-reset-requests:
-      - 6ms
-      x-ratelimit-reset-tokens:
-      - 67ms
-      x-ratelimit-reset-tokens_usage_based:
-      - 67ms
-      x-request-id:
-      - eb9704531634d4cd3c6652dff09914bc
-    http_version: HTTP/1.1
-    status_code: 200
-- request:
-    body: '{"messages": [{"role": "user", "content": "Progressively summarize the
-      lines of conversation provided, adding onto the previous summary returning a
-      new summary.\n\nEXAMPLE\nCurrent summary:\nThe human asks what the AI thinks
-      of artificial intelligence. The AI thinks artificial intelligence is a force
-      for good.\n\nNew lines of conversation:\nHuman: Why do you think artificial
-      intelligence is a force for good?\nAI: Because artificial intelligence will
-      help humans reach their full potential.\n\nNew summary:\nThe human asks what
-      the AI thinks of artificial intelligence. The AI thinks artificial intelligence
-      is a force for good because it will help humans reach their full potential.\nEND
-      OF EXAMPLE\n\nCurrent summary:\nThe human asks the AI to calculate 3 times 5
-      and the AI responds that 3 times 5 is 15.\n\nNew lines of conversation:\nHuman:
-      What is 3 times 5?\nAI: 3 times 5 is 15.\n\nNew summary:"}], "model": "gpt-4",
-      "n": 1, "stream": false, "temperature": 0.7}'
-    headers:
-      accept:
-      - application/json
-      accept-encoding:
-      - gzip, deflate
-      connection:
-      - keep-alive
-      content-length:
-      - '972'
-      content-type:
-      - application/json
-      cookie:
-      - __cf_bm=iNTKkM.TU1FqaOYqOtdlGljM5kh2eYMOQyBBsDxjV7o-1703858227-1-AUtPBBabQY5DO7jJdGlU5rhZeJigXNSYGJkA8uYAsRU5NSaEt+YcHCLzXRQWpzm+lHKeh5JKd9iq/sLM5ylFvc8=;
-        _cfuvid=FKpE5gHVpQFRYsdYjjLPKhDX2CeCXpdvvJ8tjGmsYrM-1703858227679-0-604800000
-      host:
-      - api.openai.com
-      user-agent:
-      - OpenAI/Python 1.6.1
-      x-stainless-arch:
-      - arm64
-      x-stainless-async:
-      - 'false'
-      x-stainless-lang:
-      - python
-      x-stainless-os:
-      - MacOS
-      x-stainless-package-version:
-      - 1.6.1
-      x-stainless-runtime:
-      - CPython
-      x-stainless-runtime-version:
-      - 3.11.7
-    method: POST
-    uri: https://api.openai.com/v1/chat/completions
-  response:
-    content: "{\n  \"id\": \"chatcmpl-8b7eP77MzprkbgjaMbeaEob0aDx39\",\n  \"object\":
-      \"chat.completion\",\n  \"created\": 1703858237,\n  \"model\": \"gpt-4-0613\",\n
-      \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
-      \"assistant\",\n        \"content\": \"The human asks the AI to calculate 3
-      times 5 twice, and both times the AI responds that 3 times 5 is 15.\"\n      },\n
-      \     \"logprobs\": null,\n      \"finish_reason\": \"stop\"\n    }\n  ],\n
-      \ \"usage\": {\n    \"prompt_tokens\": 181,\n    \"completion_tokens\": 30,\n
-      \   \"total_tokens\": 211\n  },\n  \"system_fingerprint\": null\n}\n"
-    headers:
-      CF-Cache-Status:
-      - DYNAMIC
-      CF-RAY:
-      - 83d28d211f591cd9-GRU
-      Cache-Control:
-      - no-cache, must-revalidate
-      Connection:
-      - keep-alive
-      Content-Encoding:
-      - gzip
-      Content-Type:
-      - application/json
-      Date:
-      - Fri, 29 Dec 2023 13:57:20 GMT
-      Server:
-      - cloudflare
-      Transfer-Encoding:
-      - chunked
-      access-control-allow-origin:
-      - '*'
-      alt-svc:
-      - h3=":443"; ma=86400
-      openai-model:
-      - gpt-4-0613
-      openai-organization:
-      - user-z7g4wmlazxqvc5wjyaaaocfz
-      openai-processing-ms:
-      - '2967'
-      openai-version:
-      - '2020-10-01'
-      strict-transport-security:
-      - max-age=15724800; includeSubDomains
-      x-ratelimit-limit-requests:
-      - '10000'
-      x-ratelimit-limit-tokens:
-      - '300000'
-      x-ratelimit-limit-tokens_usage_based:
-      - '300000'
-      x-ratelimit-remaining-requests:
-      - '9999'
-      x-ratelimit-remaining-tokens:
-      - '299771'
-      x-ratelimit-remaining-tokens_usage_based:
-      - '299771'
-      x-ratelimit-reset-requests:
-      - 6ms
-      x-ratelimit-reset-tokens:
-      - 45ms
-      x-ratelimit-reset-tokens_usage_based:
-      - 45ms
-      x-request-id:
-      - e3bbd11b2e9b28f76f8b43dc7a4d2b6d
-    http_version: HTTP/1.1
-    status_code: 200
+      - req_14ec03ab8500562c8eaac94fe2cec349
+    status:
+      code: 200
+      message: OK
 version: 1

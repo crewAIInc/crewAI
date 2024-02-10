@@ -2,23 +2,24 @@ interactions:
 - request:
     body: '{"messages": [{"role": "user", "content": "You are researcher.\nYou''re
       an expert researcher, specialized in technology\n\nYour personal goal is: make
-      the best research and analysis on content about AI and AI agents\n\nTOOLS:\n------\nYou
-      have access to the following tools:\n\n\n\nTo use a tool, please use the exact
-      following format:\n\n```\nThought: Do I need to use a tool? Yes\nAction: the
-      action to take, should be one of []\nAction Input: the input to the action\nObservation:
-      the result of the action\n```\n\nWhen you have a response for your task, or
-      if you do not need to use a tool, you MUST use the format:\n\n```\nThought:
-      Do I need to use a tool? No\nFinal Answer: [your response here]\n```\n\t\tThis
-      is the summary of your work so far:\n    The human asks the AI for its opinion
-      on AI agents, based on the impression that the AI dislikes them. The AI clarifies
-      that it doesn''t hold personal sentiments towards AI or any technology, but
-      instead analyzes them objectively. The AI finds AI agents a fascinating domain
-      of research with great potential for task automation and optimization across
-      industries, but acknowledges they present challenges such as ethical considerations
-      around privacy and decision-making.\nBegin! This is VERY important to you, your
-      job depends on it!\n\nCurrent Task: do you hate AI Agents?\n\nThis is the context
-      you are working with:\nI heard you LOVE them\n\n"}], "model": "gpt-4", "n":
-      1, "stop": ["\nObservation"], "stream": false, "temperature": 0.7}'
+      the best research and analysis on content about AI and AI agentsTOOLS:\n------\nYou
+      have access to only the following tools:\n\n\n\nTo use a tool, please use the
+      exact following format:\n\n```\nThought: Do I need to use a tool? Yes\nAction:
+      the tool you wanna use, should be one of [], just the name.\nAction Input: Any
+      and all relevant information input and context for using the tool\nObservation:
+      the result of using the tool\n```\n\nWhen you have a response for your task,
+      or if you do not need to use a tool, you MUST use the format:\n\n```\nThought:
+      Do I need to use a tool? No\nFinal Answer: [your response here]```This is the
+      summary of your work so far:\nThe human asks the AI for its opinion on AI Agents,
+      assuming it dislikes them. The AI, as a researcher, maintains a neutral perspective
+      on all subjects, including AI agents. It recognizes their potential to revolutionize
+      sectors like healthcare, education, and finance, and acknowledges their capability
+      to perform tasks requiring human intelligence. However, it also notes that these
+      tools can be used for both beneficial and harmful purposes, emphasizing the
+      importance of ethical guidelines and regulations.Begin! This is VERY important
+      to you, your job depends on it!\n\nCurrent Task: do you hate AI Agents?\nThis
+      is the context you''re working with:\nI heard you LOVE them\n"}], "model": "gpt-4",
+      "n": 1, "stop": ["\nObservation"], "stream": false, "temperature": 0.7}'
     headers:
       accept:
       - application/json
@@ -27,16 +28,16 @@ interactions:
       connection:
       - keep-alive
       content-length:
-      - '1494'
+      - '1586'
       content-type:
       - application/json
       cookie:
-      - __cf_bm=k2HUdEp80irAkv.3wl0c6unbzRUujrE1TnJeObxyuHw-1703102483-1-AZe8OKi9NWunQ9x4f3lkdOpb/hJIp/3oyXUqPhkcmcEHXvFTkMcv77NSclcoz9DjRhwC62ZvANkWImyVRM4seH4=;
-        _cfuvid=8qN4npFFWXAqn.wugd0jrQ36YkreDcTGH14We.FcBjg-1703102483136-0-604800000
+      - __cf_bm=pAjnXPCKLP174gonPz8UGOZQoqFHUiNUU1v.InXD9Cc-1707550293-1-AR6tvKypbDhglRorLyQ7tcDW2e2sIe2xhcStICqoI+acaWE0jn7KVUv77LWqGCWnFpmTGO7MhKPDfWYrMV/sLzw=;
+        _cfuvid=UE60YgzaF5dZyQJY5bLlOgAnsQXnIWgI6RW4LyZAQsQ-1707550293924-0-604800000
       host:
       - api.openai.com
       user-agent:
-      - OpenAI/Python 1.6.0
+      - OpenAI/Python 1.12.0
       x-stainless-arch:
       - arm64
       x-stainless-async:
@@ -46,7 +47,7 @@ interactions:
       x-stainless-os:
       - MacOS
       x-stainless-package-version:
-      - 1.6.0
+      - 1.12.0
       x-stainless-runtime:
       - CPython
       x-stainless-runtime-version:
@@ -54,22 +55,25 @@ interactions:
     method: POST
     uri: https://api.openai.com/v1/chat/completions
   response:
-    content: "{\n  \"id\": \"chatcmpl-8Xx2vMXN4WCrWeeO4DOAowhb3oeDJ\",\n  \"object\":
-      \"chat.completion\",\n  \"created\": 1703102489,\n  \"model\": \"gpt-4-0613\",\n
-      \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
-      \"assistant\",\n        \"content\": \"Thought: Do I need to use a tool? No\\nFinal
-      Answer: As an AI, I don't possess feelings or emotions, so I don't love or hate
-      anything. However, I can provide detailed analysis and research on AI agents.
-      They are a fascinating field of study with the potential to revolutionize many
-      industries, although they also present certain challenges and ethical considerations.\"\n
-      \     },\n      \"logprobs\": null,\n      \"finish_reason\": \"stop\"\n    }\n
-      \ ],\n  \"usage\": {\n    \"prompt_tokens\": 291,\n    \"completion_tokens\":
-      75,\n    \"total_tokens\": 366\n  },\n  \"system_fingerprint\": null\n}\n"
+    body:
+      string: !!binary |
+        H4sIAAAAAAAAA1RTXW/bOBB8968Y6KUviuH0K61fDi76ZRS9A4K2KHpXBGtqJbKhuAp36ZyvyH8v
+        KKcx7kUgdjizM6vlzwXQhK5Zo3GezI1TPHtx4y7Gzx9TevdtH/76QOXV+y/fbvzl5W739U3TVobs
+        frCz36ylk3GKbEHSEXaZybiqnl+sLp49Wz1++WIGRuk4Vtow2dnTs9Xz8yf3DC/BsTZr/L0AgJ/z
+        t3pLHf/brLFqf1dGVqWBm/XDJaDJEmulIdWgRsma9gQ6ScZptvvJSxm8rfFasEVi7mCCogyCicQ/
+        8Kf8k96GRBGbpLec19goKGGzbbFFJ0himESVVcGj1NTawnNyjC0cpXohyp4hGZ6MQelgPqRhifdy
+        y3vOLUhByKxM2flamJmYsuxDxzhIwW0wXxsfZx32VYfiQYNCemy22AycTJenIyjznELRsYYhHdNN
+        nHvJI4z0WmGeDLdSYgc7TMFRjAdkvikhM3wZKSEk4xjDUCMt8cnzAZ72jEnqGAPFqpp5L7HU9OE/
+        xp5ykKJQdiZZEZKLpQtpgGeK5h1lbsFdcVQpLSh16EOiucXDWGK4nscFMc95ztLCqoE6nR3XP9Wh
+        l4ydmMeOE/fBVUdVz1Me+xIxlTyJss7eM/dSewd7pGDVU4I5E5uvM8BQQscxJNZZKvNQ4my1ZsEU
+        yfHc1zyHjFI3cNncr9jdw25GGaYsu7rHqcT4UO9DCuqvMpNKqnuoJtORfrcAvs9voPxvrZspyzjZ
+        lck1pyr4ZPXyqNecntsJPT+/uEdNjOIJePr4+eLeYqMHNR6v+pAGzlMO85uoRhd3i18AAAD//wMA
+        m/i2NQoEAAA=
     headers:
       CF-Cache-Status:
       - DYNAMIC
       CF-RAY:
-      - 838a7a3efab6a4b0-GRU
+      - 8532a7561c9a5c1d-SJC
       Cache-Control:
       - no-cache, must-revalidate
       Connection:
@@ -79,7 +83,7 @@ interactions:
       Content-Type:
       - application/json
       Date:
-      - Wed, 20 Dec 2023 20:01:35 GMT
+      - Sat, 10 Feb 2024 07:31:44 GMT
       Server:
       - cloudflare
       Transfer-Encoding:
@@ -93,7 +97,7 @@ interactions:
       openai-organization:
       - user-z7g4wmlazxqvc5wjyaaaocfz
       openai-processing-ms:
-      - '6060'
+      - '6268'
       openai-version:
       - '2020-10-01'
       strict-transport-security:
@@ -102,24 +106,19 @@ interactions:
       - '10000'
       x-ratelimit-limit-tokens:
       - '300000'
-      x-ratelimit-limit-tokens_usage_based:
-      - '300000'
       x-ratelimit-remaining-requests:
       - '9999'
       x-ratelimit-remaining-tokens:
-      - '299652'
-      x-ratelimit-remaining-tokens_usage_based:
-      - '299652'
+      - '299626'
       x-ratelimit-reset-requests:
       - 6ms
       x-ratelimit-reset-tokens:
-      - 69ms
-      x-ratelimit-reset-tokens_usage_based:
-      - 69ms
+      - 74ms
       x-request-id:
-      - 3ad0d047d5260434816f61ec105bdbb8
-    http_version: HTTP/1.1
-    status_code: 200
+      - req_4be2c88644d6a769dcf030a33e294850
+    status:
+      code: 200
+      message: OK
 - request:
     body: '{"messages": [{"role": "user", "content": "Progressively summarize the
       lines of conversation provided, adding onto the previous summary returning a
@@ -131,18 +130,22 @@ interactions:
       the AI thinks of artificial intelligence. The AI thinks artificial intelligence
       is a force for good because it will help humans reach their full potential.\nEND
       OF EXAMPLE\n\nCurrent summary:\nThe human asks the AI for its opinion on AI
-      agents, based on the impression that the AI dislikes them. The AI clarifies
-      that it doesn''t hold personal sentiments towards AI or any technology, but
-      instead analyzes them objectively. The AI finds AI agents a fascinating domain
-      of research with great potential for task automation and optimization across
-      industries, but acknowledges they present challenges such as ethical considerations
-      around privacy and decision-making.\n\nNew lines of conversation:\nHuman: do
-      you hate AI Agents?\n\nThis is the context you are working with:\nI heard you
-      LOVE them\nAI: As an AI, I don''t possess feelings or emotions, so I don''t
-      love or hate anything. However, I can provide detailed analysis and research
-      on AI agents. They are a fascinating field of study with the potential to revolutionize
-      many industries, although they also present certain challenges and ethical considerations.\n\nNew
-      summary:"}], "model": "gpt-4", "n": 1, "stream": false, "temperature": 0.7}'
+      Agents, assuming it dislikes them. The AI, as a researcher, maintains a neutral
+      perspective on all subjects, including AI agents. It recognizes their potential
+      to revolutionize sectors like healthcare, education, and finance, and acknowledges
+      their capability to perform tasks requiring human intelligence. However, it
+      also notes that these tools can be used for both beneficial and harmful purposes,
+      emphasizing the importance of ethical guidelines and regulations.\n\nNew lines
+      of conversation:\nHuman: do you hate AI Agents?\nThis is the context you''re
+      working with:\nI heard you LOVE them\nAI: As an AI, I do not possess emotions,
+      hence I cannot love or hate anything. However, as a researcher, I can provide
+      you with an objective analysis of AI Agents. AI Agents are tools designed to
+      perform tasks that would typically require human intelligence. They have potential
+      to revolutionize various sectors including healthcare, education, and finance.
+      However, like any other tool, they can be used for both beneficial and harmful
+      purposes. Therefore, it''s essential to have ethical guidelines and regulations
+      in place for their usage.\n\nNew summary:"}], "model": "gpt-4", "n": 1, "stream":
+      false, "temperature": 0.7}'
     headers:
       accept:
       - application/json
@@ -151,16 +154,16 @@ interactions:
       connection:
       - keep-alive
       content-length:
-      - '1726'
+      - '1986'
       content-type:
       - application/json
       cookie:
-      - __cf_bm=k2HUdEp80irAkv.3wl0c6unbzRUujrE1TnJeObxyuHw-1703102483-1-AZe8OKi9NWunQ9x4f3lkdOpb/hJIp/3oyXUqPhkcmcEHXvFTkMcv77NSclcoz9DjRhwC62ZvANkWImyVRM4seH4=;
-        _cfuvid=8qN4npFFWXAqn.wugd0jrQ36YkreDcTGH14We.FcBjg-1703102483136-0-604800000
+      - __cf_bm=pAjnXPCKLP174gonPz8UGOZQoqFHUiNUU1v.InXD9Cc-1707550293-1-AR6tvKypbDhglRorLyQ7tcDW2e2sIe2xhcStICqoI+acaWE0jn7KVUv77LWqGCWnFpmTGO7MhKPDfWYrMV/sLzw=;
+        _cfuvid=UE60YgzaF5dZyQJY5bLlOgAnsQXnIWgI6RW4LyZAQsQ-1707550293924-0-604800000
       host:
       - api.openai.com
       user-agent:
-      - OpenAI/Python 1.6.0
+      - OpenAI/Python 1.12.0
       x-stainless-arch:
       - arm64
       x-stainless-async:
@@ -170,7 +173,7 @@ interactions:
       x-stainless-os:
       - MacOS
       x-stainless-package-version:
-      - 1.6.0
+      - 1.12.0
       x-stainless-runtime:
       - CPython
       x-stainless-runtime-version:
@@ -178,26 +181,26 @@ interactions:
     method: POST
     uri: https://api.openai.com/v1/chat/completions
   response:
-    content: "{\n  \"id\": \"chatcmpl-8Xx32X5innWZd8vEETP1jZMLH3b1O\",\n  \"object\":
-      \"chat.completion\",\n  \"created\": 1703102496,\n  \"model\": \"gpt-4-0613\",\n
-      \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
-      \"assistant\",\n        \"content\": \"The human asks the AI for its opinion
-      on AI agents, based on the impression that the AI dislikes them. The AI clarifies
-      that it doesn't hold personal sentiments towards AI or any technology, but instead
-      analyzes them objectively. The AI finds AI agents a fascinating domain of research
-      with great potential for task automation and optimization across industries,
-      but acknowledges they present challenges such as ethical considerations around
-      privacy and decision-making. When asked again if it hates or loves AI agents,
-      the AI reiterates that it doesn't possess feelings or emotions, but can provide
-      detailed analysis and research on AI agents.\"\n      },\n      \"logprobs\":
-      null,\n      \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\":
-      300,\n    \"completion_tokens\": 117,\n    \"total_tokens\": 417\n  },\n  \"system_fingerprint\":
-      null\n}\n"
+    body:
+      string: !!binary |
+        H4sIAAAAAAAAA4RUwW4bRwy96yuIPa8FqY7qxjcDBRoX6MVIEBRFYVCz3F1Gs+R4yLFrB/73Ykay
+        3F7aiwCRfHx8b8n5vgLoeOiuoQszelhSvPjpIVz5px9+HX/5/e7bx7svdx8Oz5L1y8+/6ddd11eE
+        7r9R8DfUOuiSIjmrHNMhEzrVrturzdVut7nc7Fpi0YFihU3JLz5cbH7cXp4Qs3Ig667hjxUAwPf2
+        W2eTgf7qrmHTv0UWMsOJuutzEUCXNdZIh2ZsjuJd/54MKk7Sxv08E8xlQQG0g4HPBDe3MGoGdgNN
+        LKwCKjV6M5G49YBmZWGZgB0GtsgHashlDZ8bvpYAQiYjzGGm3MOCLI4sNS5UPGOERNkSBedHqgwY
+        I1hpRloPLCGWobLc3AI25jXcOmQKOgm/HCk5Q9KqhTGCK2R61Fiq8fxCYBRcs0GdEGbC6HPATD3Q
+        UALWqh5QBhhZUAId/2A4iD5FGqYzRcCEe47sz5UjUR41L+DNsUwPhXOd82gji1OMPJEEWsMnfaLH
+        qp8dMJqCqLe26LW3EbhqNAgosCcoRkMzf68+w56ERg5VWh1sxryMJUIqOamR9UBLmtH4pbLXL8dL
+        0uxVCugI5DMHjDAVHiiykLU2maYSm3hbw9eZBMaSfaYMD4WsxmkA3GvxtgIjVexk4PqEebB/LsJp
+        W0LEzCO/6apboWRVKiQ1IzOgRRvjUUj1BoS4sUZ9bMUZZvQ247PPLNPpa7NTxrNnZ3LATJD0iXK1
+        5Ghiqzg5+R8G9lBkoGxB85txQiff/98zYDltRalXt+5OZ/V6vseoU8q6r7crJcZzfGRhm+8zoanU
+        2zPXdIS/rgD+bHdf/nXKXcq6JL93PZDUhpe77bFf9/7EvGe3u9Or0Lk6xvfEbrNdnUbs7NmclvuR
+        ZaKcMrd3oA66el39DQAA//8DACyZIo/+BAAA
     headers:
       CF-Cache-Status:
       - DYNAMIC
       CF-RAY:
-      - 838a7a67ecaca4b0-GRU
+      - 8532a77e4cb85c1d-SJC
       Cache-Control:
       - no-cache, must-revalidate
       Connection:
@@ -207,7 +210,7 @@ interactions:
       Content-Type:
       - application/json
       Date:
-      - Wed, 20 Dec 2023 20:01:41 GMT
+      - Sat, 10 Feb 2024 07:31:51 GMT
       Server:
       - cloudflare
       Transfer-Encoding:
@@ -221,7 +224,7 @@ interactions:
       openai-organization:
       - user-z7g4wmlazxqvc5wjyaaaocfz
       openai-processing-ms:
-      - '5610'
+      - '6001'
       openai-version:
       - '2020-10-01'
       strict-transport-security:
@@ -230,22 +233,17 @@ interactions:
       - '10000'
       x-ratelimit-limit-tokens:
       - '300000'
-      x-ratelimit-limit-tokens_usage_based:
-      - '300000'
       x-ratelimit-remaining-requests:
       - '9999'
       x-ratelimit-remaining-tokens:
-      - '299585'
-      x-ratelimit-remaining-tokens_usage_based:
-      - '299585'
+      - '299519'
       x-ratelimit-reset-requests:
       - 6ms
       x-ratelimit-reset-tokens:
-      - 83ms
-      x-ratelimit-reset-tokens_usage_based:
-      - 83ms
+      - 96ms
       x-request-id:
-      - 5b0b96506faa544c5d35b52286a3389c
-    http_version: HTTP/1.1
-    status_code: 200
+      - req_4571b50d6566e754edbc36a10d8fa7c5
+    status:
+      code: 200
+      message: OK
 version: 1
