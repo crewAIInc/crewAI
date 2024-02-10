@@ -10,16 +10,19 @@ from langchain_core.exceptions import OutputParserException
 from langchain_core.pydantic_v1 import root_validator
 from langchain_core.tools import BaseTool
 from langchain_core.utils.input import get_color_mapping
+from pydantic import InstanceOf
 
-from crewai.agents.cache.cache_hit import CacheHit
-from crewai.tools.cache_tools import CacheTools
+from crewai.agents.tools_handler import ToolsHandler
+from crewai.tools.tool_usage import ToolUsage
 from crewai.utilities import I18N
 
 
 class CrewAgentExecutor(AgentExecutor):
     i18n: I18N = I18N()
+    llm: Any = None
     iterations: int = 0
     request_within_rpm_limit: Any = None
+    tools_handler: InstanceOf[ToolsHandler] = None
     max_iterations: Optional[int] = 15
     force_answer_max_iterations: Optional[int] = None
     step_callback: Optional[Any] = None
@@ -31,11 +34,6 @@ class CrewAgentExecutor(AgentExecutor):
 
     def _should_force_answer(self) -> bool:
         return True if self.iterations == self.force_answer_max_iterations else False
-
-    def _force_answer(self, output: AgentAction):
-        return AgentStep(
-            action=output, observation=self.i18n.errors("force_final_answer")
-        )
 
     def _call(
         self,
@@ -110,16 +108,17 @@ class CrewAgentExecutor(AgentExecutor):
                 callbacks=run_manager.get_child() if run_manager else None,
                 **inputs,
             )
+
             if self._should_force_answer():
                 if isinstance(output, AgentAction) or isinstance(output, AgentFinish):
                     output = output
-                elif isinstance(output, CacheHit):
-                    output = output.action
                 else:
                     raise ValueError(
                         f"Unexpected output type from agent: {type(output)}"
                     )
-                yield self._force_answer(output)
+                yield AgentStep(
+                    action=output, observation=self.i18n.errors("force_final_answer")
+                )
                 return
 
         except OutputParserException as e:
@@ -160,7 +159,9 @@ class CrewAgentExecutor(AgentExecutor):
             )
 
             if self._should_force_answer():
-                yield self._force_answer(output)
+                yield AgentStep(
+                    action=output, observation=self.i18n.errors("force_final_answer")
+                )
                 return
 
             yield AgentStep(action=output, observation=observation)
@@ -170,17 +171,6 @@ class CrewAgentExecutor(AgentExecutor):
         if isinstance(output, AgentFinish):
             yield output
             return
-
-        # Override tool usage to use CacheTools
-        if isinstance(output, CacheHit):
-            cache = output.cache
-            action = output.action
-            tool = CacheTools(cache_handler=cache).tool()
-            output = action.copy()
-            output.tool_input = f"tool:{action.tool}|input:{action.tool_input}"
-            output.tool = tool.name
-            name_to_tool_map[tool.name] = tool
-            color_mapping[tool.name] = color_mapping[action.tool]
 
         actions: List[AgentAction]
         actions = [output] if isinstance(output, AgentAction) else output
@@ -192,18 +182,13 @@ class CrewAgentExecutor(AgentExecutor):
             if agent_action.tool in name_to_tool_map:
                 tool = name_to_tool_map[agent_action.tool]
                 return_direct = tool.return_direct
-                color = color_mapping[agent_action.tool]
+                color_mapping[agent_action.tool]
                 tool_run_kwargs = self.agent.tool_run_logging_kwargs()
                 if return_direct:
                     tool_run_kwargs["llm_prefix"] = ""
-                # We then call the tool on the tool input to get an observation
-                observation = tool.run(
-                    agent_action.tool_input,
-                    verbose=self.verbose,
-                    color=color,
-                    callbacks=run_manager.get_child() if run_manager else None,
-                    **tool_run_kwargs,
-                )
+                observation = ToolUsage(
+                    tools_handler=self.tools_handler, tools=self.tools, llm=self.llm
+                ).use(agent_action.log)
             else:
                 tool_run_kwargs = self.agent.tool_run_logging_kwargs()
                 observation = InvalidTool().run(
