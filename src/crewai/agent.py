@@ -143,7 +143,8 @@ class Agent(BaseModel):
         task_prompt = task.prompt()
 
         if context:
-            task = self.i18n.slice("task_with_context").format(
+            context = "\n".join(context)
+            task_prompt = self.i18n.slice("task_with_context").format(
                 task=task_prompt, context=context
             )
 
@@ -210,9 +211,9 @@ class Agent(BaseModel):
         }
 
         if self._rpm_controller:
-            executor_args[
-                "request_within_rpm_limit"
-            ] = self._rpm_controller.check_or_wait
+            executor_args["request_within_rpm_limit"] = (
+                self._rpm_controller.check_or_wait
+            )
 
         if self.memory:
             summary_memory = ConversationSummaryMemory(
