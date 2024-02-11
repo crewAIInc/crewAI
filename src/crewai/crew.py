@@ -15,6 +15,8 @@ from pydantic import (
 )
 from pydantic_core import PydanticCustomError
 
+from agent_interface import AgentWrapperParent
+
 from crewai.agent import Agent
 from crewai.agents.cache import CacheHandler
 from crewai.process import Process
@@ -45,7 +47,7 @@ class Crew(BaseModel):
     _cache_handler: InstanceOf[CacheHandler] = PrivateAttr(default=CacheHandler())
     model_config = ConfigDict(arbitrary_types_allowed=True)
     tasks: List[Task] = Field(default_factory=list)
-    agents: List[Agent] = Field(default_factory=list)
+    agents: List[Agent | AgentWrapperParent] = Field(default_factory=list)
     process: Process = Field(default=Process.sequential)
     verbose: Union[int, bool] = Field(default=0)
     manager_llm: Optional[Any] = Field(

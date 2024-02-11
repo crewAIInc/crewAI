@@ -8,6 +8,7 @@ from pydantic_core import PydanticCustomError
 from crewai.agent import Agent
 from crewai.tasks.task_output import TaskOutput
 from crewai.utilities import I18N
+from agent_interface import AgentWrapperParent
 
 
 class Task(BaseModel):
@@ -23,7 +24,7 @@ class Task(BaseModel):
     callback: Optional[Any] = Field(
         description="Callback to be executed after the task is completed.", default=None
     )
-    agent: Optional[Agent] = Field(
+    agent: Optional[Agent | AgentWrapperParent] = Field(
         description="Agent responsible for execution the task.", default=None
     )
     expected_output: Optional[str] = Field(

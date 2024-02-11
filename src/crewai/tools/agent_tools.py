@@ -6,11 +6,15 @@ from pydantic import BaseModel, Field
 from crewai.agent import Agent
 from crewai.utilities import I18N
 
+from agent_interface import AgentWrapperParent
+
 
 class AgentTools(BaseModel):
     """Default tools around agent delegation"""
 
-    agents: List[Agent] = Field(description="List of agents in this crew.")
+    agents: List[Agent | AgentWrapperParent] = Field(
+        description="List of agents in this crew."
+    )
     i18n: I18N = Field(default=I18N(), description="Internationalization settings.")
 
     def tools(self):
