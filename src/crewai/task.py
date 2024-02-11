@@ -91,7 +91,6 @@ class Task(BaseModel):
                 if task.async_execution:
                     task.thread.join()
                 context.append(task.output.result)
-            context = "\n".join(context)
 
         tools = tools or self.tools
 

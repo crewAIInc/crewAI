@@ -126,7 +126,7 @@ class Agent(BaseModel):
     def execute_task(
         self,
         task: str,
-        context: Optional[str] = None,
+        context: Optional[List[str]] = None,
         tools: Optional[List[Any]] = None,
     ) -> str:
         """Execute a task with the agent.
@@ -141,6 +141,7 @@ class Agent(BaseModel):
         """
 
         if context:
+            context = "\n".join(context)
             task = self.i18n.slice("task_with_context").format(
                 task=task, context=context
             )
