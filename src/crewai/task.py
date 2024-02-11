@@ -8,7 +8,7 @@ from pydantic_core import PydanticCustomError
 from crewai.agent import Agent
 from crewai.tasks.task_output import TaskOutput
 from crewai.utilities import I18N
-from agent_interface import AgentWrapperParent
+from crewai.agents.agent_interface import AgentWrapperParent
 
 
 class Task(BaseModel):

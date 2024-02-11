@@ -15,7 +15,7 @@ from pydantic import (
 )
 from pydantic_core import PydanticCustomError
 
-from agent_interface import AgentWrapperParent
+from crewai.agents.agent_interface import AgentWrapperParent
 
 from crewai.agent import Agent
 from crewai.agents.cache import CacheHandler

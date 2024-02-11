@@ -6,7 +6,7 @@ from pydantic import BaseModel, Field
 from crewai.agent import Agent
 from crewai.utilities import I18N
 
-from agent_interface import AgentWrapperParent
+from crewai.agents.agent_interface import AgentWrapperParent
 
 
 class AgentTools(BaseModel):
