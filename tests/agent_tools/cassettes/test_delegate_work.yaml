@@ -2,18 +2,18 @@ interactions:
 - request:
     body: '{"messages": [{"role": "user", "content": "You are researcher.\nYou''re
       an expert researcher, specialized in technology\n\nYour personal goal is: make
-      the best research and analysis on content about AI and AI agents\n\nTOOLS:\n------\nYou
-      have access to the following tools:\n\n\n\nTo use a tool, please use the exact
-      following format:\n\n```\nThought: Do I need to use a tool? Yes\nAction: the
-      action to take, should be one of []\nAction Input: the input to the action\nObservation:
-      the result of the action\n```\n\nWhen you have a response for your task, or
-      if you do not need to use a tool, you MUST use the format:\n\n```\nThought:
-      Do I need to use a tool? No\nFinal Answer: [your response here]\n```\n\t\tThis
-      is the summary of your work so far:\n    \nBegin! This is VERY important to
-      you, your job depends on it!\n\nCurrent Task: share your take on AI Agents\n\nThis
-      is the context you are working with:\nI heard you hate them\n\n"}], "model":
-      "gpt-4", "n": 1, "stop": ["\nObservation"], "stream": false, "temperature":
-      0.7}'
+      the best research and analysis on content about AI and AI agentsTOOLS:\n------\nYou
+      have access to only the following tools:\n\n\n\nTo use a tool, please use the
+      exact following format:\n\n```\nThought: Do I need to use a tool? Yes\nAction:
+      the tool you wanna use, should be one of [], just the name.\nAction Input: Any
+      and all relevant information input and context for using the tool\nObservation:
+      the result of using the tool\n```\n\nWhen you have a response for your task,
+      or if you do not need to use a tool, you MUST use the format:\n\n```\nThought:
+      Do I need to use a tool? No\nFinal Answer: [your response here]```This is the
+      summary of your work so far:\nBegin! This is VERY important to you, your job
+      depends on it!\n\nCurrent Task: share your take on AI Agents\nThis is the context
+      you''re working with:\nI heard you hate them\n"}], "model": "gpt-4", "n": 1,
+      "stop": ["\nObservation"], "stream": false, "temperature": 0.7}'
     headers:
       accept:
       - application/json
@@ -22,13 +22,13 @@ interactions:
       connection:
       - keep-alive
       content-length:
-      - '1030'
+      - '1082'
       content-type:
       - application/json
       host:
       - api.openai.com
       user-agent:
-      - OpenAI/Python 1.6.0
+      - OpenAI/Python 1.12.0
       x-stainless-arch:
       - arm64
       x-stainless-async:
@@ -38,7 +38,7 @@ interactions:
       x-stainless-os:
       - MacOS
       x-stainless-package-version:
-      - 1.6.0
+      - 1.12.0
       x-stainless-runtime:
       - CPython
       x-stainless-runtime-version:
@@ -46,27 +46,26 @@ interactions:
     method: POST
     uri: https://api.openai.com/v1/chat/completions
   response:
-    content: "{\n  \"id\": \"chatcmpl-8Xx2cQWLZ8Nd34HGmbQluyZWlD58b\",\n  \"object\":
-      \"chat.completion\",\n  \"created\": 1703102470,\n  \"model\": \"gpt-4-0613\",\n
-      \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
-      \"assistant\",\n        \"content\": \"Thought: Do I need to use a tool? No\\nFinal
-      Answer: I apologize if my previous statements have given you the impression
-      that I hate AI agents. As a technology researcher, I don't hold personal sentiments
-      towards AI or any other technology. Rather, I analyze them objectively based
-      on their capabilities, applications, and implications. AI agents, in particular,
-      are a fascinating domain of research. They hold tremendous potential in automating
-      and optimizing various tasks across industries. However, like any other technology,
-      they come with their own set of challenges, such as ethical considerations around
-      privacy and decision-making. My objective is to understand these technologies
-      in depth and provide a balanced view.\"\n      },\n      \"logprobs\": null,\n
-      \     \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\":
-      211,\n    \"completion_tokens\": 134,\n    \"total_tokens\": 345\n  },\n  \"system_fingerprint\":
-      null\n}\n"
+    body:
+      string: !!binary |
+        H4sIAAAAAAAAA1SUQW/cRgyF7/srCF1ykRe7jmMneykMJG0XaIIeAvTQFgY1ojS0R6Qy5Ky7Cfzf
+        i9Gu7faiw1B8/PQ4Tz9WAA33zQ6aENHDNKeL99/CDV59mMf9L39M++0mjP39pvv44dNv+fdj09YO
+        7e4p+HPXOug0J3JWOZVDJnSqqtubzc27d5vL99dLYdKeUm0bZ7+4uthcb9+eO6JyIGt28OcKAODH
+        8qxs0tM/zQ427fPJRGY4UrN7eQmgyZrqSYNmbI7iTftaDCpOsuB+jVrG6Dv4qLAHIerBFYoRILhq
+        +gm+6F/yMwsmuBV7pLyDWwOETEaYQ6Tcwh4mZHFkAQSh4hkTzJRtpuB8IFABTAmsLDYZ6PDSDywh
+        lZ5lhNs94EjitobPR7jXDtgqzZz1wD0BCpx8rpIomI7GBh0a9XXCgMGtBVFfZmtFHogSy2jrKn67
+        iAPm+nHGo/DAAcXBdeYALOCRYGBKfSV0ClE06XiER/YIs1bTGFNlynTQVOqG+TvBATNrMTAKrtnA
+        SoiABpEweQyYqQXqS8Da0MLAghLqN/QwaaY1fI10XMAy2axi3CWCQTM42oOBR3TI9K1wJohlQgEW
+        p5R4pCr0PK9IT7mue/FT0EvdREIZC47UQqago/D3Wp3RnbJYu2DMWbtEE5imA8u4hl/1kQ51uYkf
+        KunxP3601agTb70jZ76AAh3Vu9Mv6J16hI6EBg7VtTomYp6GkmAueVYjg55mOtHqyX5erubif1zE
+        8uJOpkGri+xvDEIu4bwHMscusUUgjxwwwVi4r0snWyZmGktafLeToZE4V911cw7E00uSko7Vh5o6
+        KSm9nA8sbPEuE5pKTY25zqf2pxXA30tiy/9C2MxZp9nvXB9IquDl5fak17z+HF6r26vnqqtjei28
+        vb5cnREbO5rTdDewjJTnzEuCK+jqafUvAAAA//8DAKstuxS4BAAA
     headers:
       CF-Cache-Status:
       - DYNAMIC
       CF-RAY:
-      - 838a79c59ea7a4b0-GRU
+      - 8532a7084d385c1d-SJC
       Cache-Control:
       - no-cache, must-revalidate
       Connection:
@@ -76,14 +75,14 @@ interactions:
       Content-Type:
       - application/json
       Date:
-      - Wed, 20 Dec 2023 20:01:23 GMT
+      - Sat, 10 Feb 2024 07:31:33 GMT
       Server:
       - cloudflare
       Set-Cookie:
-      - __cf_bm=k2HUdEp80irAkv.3wl0c6unbzRUujrE1TnJeObxyuHw-1703102483-1-AZe8OKi9NWunQ9x4f3lkdOpb/hJIp/3oyXUqPhkcmcEHXvFTkMcv77NSclcoz9DjRhwC62ZvANkWImyVRM4seH4=;
-        path=/; expires=Wed, 20-Dec-23 20:31:23 GMT; domain=.api.openai.com; HttpOnly;
+      - __cf_bm=pAjnXPCKLP174gonPz8UGOZQoqFHUiNUU1v.InXD9Cc-1707550293-1-AR6tvKypbDhglRorLyQ7tcDW2e2sIe2xhcStICqoI+acaWE0jn7KVUv77LWqGCWnFpmTGO7MhKPDfWYrMV/sLzw=;
+        path=/; expires=Sat, 10-Feb-24 08:01:33 GMT; domain=.api.openai.com; HttpOnly;
         Secure; SameSite=None
-      - _cfuvid=8qN4npFFWXAqn.wugd0jrQ36YkreDcTGH14We.FcBjg-1703102483136-0-604800000;
+      - _cfuvid=UE60YgzaF5dZyQJY5bLlOgAnsQXnIWgI6RW4LyZAQsQ-1707550293924-0-604800000;
         path=/; domain=.api.openai.com; HttpOnly; Secure; SameSite=None
       Transfer-Encoding:
       - chunked
@@ -96,7 +95,7 @@ interactions:
       openai-organization:
       - user-z7g4wmlazxqvc5wjyaaaocfz
       openai-processing-ms:
-      - '12923'
+      - '7710'
       openai-version:
       - '2020-10-01'
       strict-transport-security:
@@ -105,24 +104,19 @@ interactions:
       - '10000'
       x-ratelimit-limit-tokens:
       - '300000'
-      x-ratelimit-limit-tokens_usage_based:
-      - '300000'
       x-ratelimit-remaining-requests:
       - '9999'
       x-ratelimit-remaining-tokens:
-      - '299769'
-      x-ratelimit-remaining-tokens_usage_based:
-      - '299769'
+      - '299753'
       x-ratelimit-reset-requests:
       - 6ms
       x-ratelimit-reset-tokens:
-      - 46ms
-      x-ratelimit-reset-tokens_usage_based:
-      - 46ms
+      - 49ms
       x-request-id:
-      - 6468cdd7ae76aea910c72a503a58b8da
-    http_version: HTTP/1.1
-    status_code: 200
+      - req_1b998b57f55feb2ec76eee43f16e520e
+    status:
+      code: 200
+      message: OK
 - request:
     body: '{"messages": [{"role": "user", "content": "Progressively summarize the
       lines of conversation provided, adding onto the previous summary returning a
@@ -134,17 +128,18 @@ interactions:
       the AI thinks of artificial intelligence. The AI thinks artificial intelligence
       is a force for good because it will help humans reach their full potential.\nEND
       OF EXAMPLE\n\nCurrent summary:\n\n\nNew lines of conversation:\nHuman: share
-      your take on AI Agents\n\nThis is the context you are working with:\nI heard
-      you hate them\nAI: I apologize if my previous statements have given you the
-      impression that I hate AI agents. As a technology researcher, I don''t hold
-      personal sentiments towards AI or any other technology. Rather, I analyze them
-      objectively based on their capabilities, applications, and implications. AI
-      agents, in particular, are a fascinating domain of research. They hold tremendous
-      potential in automating and optimizing various tasks across industries. However,
-      like any other technology, they come with their own set of challenges, such
-      as ethical considerations around privacy and decision-making. My objective is
-      to understand these technologies in depth and provide a balanced view.\n\nNew
-      summary:"}], "model": "gpt-4", "n": 1, "stream": false, "temperature": 0.7}'
+      your take on AI Agents\nThis is the context you''re working with:\nI heard you
+      hate them\nAI: As a researcher, I maintain a neutral perspective on all subjects
+      of research including AI agents. My job is to provide an objective analysis
+      based on facts, not personal feelings. AI Agents are a significant topic in
+      the field of technology with potential to revolutionize various sectors such
+      as healthcare, education, finance and more. They are responsible for tasks that
+      require human intelligence such as understanding natural language, recognizing
+      patterns, and problem solving. However, like any technology, they are tools
+      that can be used for both beneficial and harmful purposes depending on the intent
+      of the user. Therefore, it''s crucial to establish ethical guidelines and regulations
+      for their use.\n\nNew summary:"}], "model": "gpt-4", "n": 1, "stream": false,
+      "temperature": 0.7}'
     headers:
       accept:
       - application/json
@@ -153,16 +148,16 @@ interactions:
       connection:
       - keep-alive
       content-length:
-      - '1622'
+      - '1656'
       content-type:
       - application/json
       cookie:
-      - __cf_bm=k2HUdEp80irAkv.3wl0c6unbzRUujrE1TnJeObxyuHw-1703102483-1-AZe8OKi9NWunQ9x4f3lkdOpb/hJIp/3oyXUqPhkcmcEHXvFTkMcv77NSclcoz9DjRhwC62ZvANkWImyVRM4seH4=;
-        _cfuvid=8qN4npFFWXAqn.wugd0jrQ36YkreDcTGH14We.FcBjg-1703102483136-0-604800000
+      - __cf_bm=pAjnXPCKLP174gonPz8UGOZQoqFHUiNUU1v.InXD9Cc-1707550293-1-AR6tvKypbDhglRorLyQ7tcDW2e2sIe2xhcStICqoI+acaWE0jn7KVUv77LWqGCWnFpmTGO7MhKPDfWYrMV/sLzw=;
+        _cfuvid=UE60YgzaF5dZyQJY5bLlOgAnsQXnIWgI6RW4LyZAQsQ-1707550293924-0-604800000
       host:
       - api.openai.com
       user-agent:
-      - OpenAI/Python 1.6.0
+      - OpenAI/Python 1.12.0
       x-stainless-arch:
       - arm64
       x-stainless-async:
@@ -172,7 +167,7 @@ interactions:
       x-stainless-os:
       - MacOS
       x-stainless-package-version:
-      - 1.6.0
+      - 1.12.0
       x-stainless-runtime:
       - CPython
       x-stainless-runtime-version:
@@ -180,23 +175,24 @@ interactions:
     method: POST
     uri: https://api.openai.com/v1/chat/completions
   response:
-    content: "{\n  \"id\": \"chatcmpl-8Xx2pqWD01uG0roGJ4daSfvaXLchg\",\n  \"object\":
-      \"chat.completion\",\n  \"created\": 1703102483,\n  \"model\": \"gpt-4-0613\",\n
-      \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
-      \"assistant\",\n        \"content\": \"The human asks the AI for its opinion
-      on AI agents, based on the impression that the AI dislikes them. The AI clarifies
-      that it doesn't hold personal sentiments towards AI or any technology, but instead
-      analyzes them objectively. The AI finds AI agents a fascinating domain of research
-      with great potential for task automation and optimization across industries,
-      but acknowledges they present challenges such as ethical considerations around
-      privacy and decision-making.\"\n      },\n      \"logprobs\": null,\n      \"finish_reason\":
-      \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 279,\n    \"completion_tokens\":
-      81,\n    \"total_tokens\": 360\n  },\n  \"system_fingerprint\": null\n}\n"
+    body:
+      string: !!binary |
+        H4sIAAAAAAAAA1RTyW7bQAy9+ysInRXDzmLHvqWXJgV6C9AWRRHQI0piPSInQyor8u/FyImDXgSI
+        5FtIPb3OACpuqi1UoUcPQ4onl/dhzV83dn69/B5+0C79XH7brC8fv7S/Vk9VXRC6+0vBP1DzoEOK
+        5KxyaIdM6FRYl+vF+uJicbo5nxqDNhQLrEt+cn6yWC3P3hG9ciCrtvB7BgDwOj2LN2noqdrCov6o
+        DGSGHVXb4xBAlTWWSoVmbI7iVf3ZDCpOMtm97Qn6cUABtL2B9wRXN9BqBnYDTSysAiqletWRuNWA
+        ZuPA0gE7NGyR9zQhhzncTvgyAgiZjDCHnnINA7I4spS60OgZIyTKlig4P1BRwBjBxumQVgNLiGNT
+        VK5uACflOdw4ZAraCb8cJDlD0rILYwRXyPSgcSyH5xcCo+CaDYpD6Amj9wEz1UDNGLBM1YDSQMuC
+        EujwgmEv+hip6Y4SARPuOLI/F41EudU8gE8Xy3Q/ci4+D2dkcYqRO5JAc7jWR3oo+7MDRlMQ9YkW
+        vXAbgatGg4ACO4LRqJmOv1PvYUdCLYeyWjHWYx7aMUIac1Ijq4GG1KPxS1EvX46HpNnLKqAtkPcc
+        MEI3ckORhWyiydSNcVre5tV7Jt6OYYrapay7EjwZYzzWWxa2/i4TmkoJjrmmA/xtBvBnCu34Xw6r
+        lHVIfue6JymEp5erA1/1+X98djfvia5cHeNn/Wy9mr07rOzZnIa7lqWjnDJPGS4+Z2+zfwAAAP//
+        AwAwOZyrugMAAA==
     headers:
       CF-Cache-Status:
       - DYNAMIC
       CF-RAY:
-      - 838a7a17fbb9a4b0-GRU
+      - 8532a7393ffa5c1d-SJC
       Cache-Control:
       - no-cache, must-revalidate
       Connection:
@@ -206,7 +202,7 @@ interactions:
       Content-Type:
       - application/json
       Date:
-      - Wed, 20 Dec 2023 20:01:29 GMT
+      - Sat, 10 Feb 2024 07:31:38 GMT
       Server:
       - cloudflare
       Transfer-Encoding:
@@ -220,7 +216,7 @@ interactions:
       openai-organization:
       - user-z7g4wmlazxqvc5wjyaaaocfz
       openai-processing-ms:
-      - '5872'
+      - '4240'
       openai-version:
       - '2020-10-01'
       strict-transport-security:
@@ -229,22 +225,17 @@ interactions:
       - '10000'
       x-ratelimit-limit-tokens:
       - '300000'
-      x-ratelimit-limit-tokens_usage_based:
-      - '300000'
       x-ratelimit-remaining-requests:
       - '9999'
       x-ratelimit-remaining-tokens:
-      - '299610'
-      x-ratelimit-remaining-tokens_usage_based:
-      - '299610'
+      - '299601'
       x-ratelimit-reset-requests:
       - 6ms
       x-ratelimit-reset-tokens:
-      - 77ms
-      x-ratelimit-reset-tokens_usage_based:
-      - 77ms
+      - 79ms
       x-request-id:
-      - bff02b569530c001aa9a2adba9adbeb9
-    http_version: HTTP/1.1
-    status_code: 200
+      - req_502a082c0bdbfecdda4ba28f5a2fa01a
+    status:
+      code: 200
+      message: OK
 version: 1

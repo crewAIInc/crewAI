@@ -18,6 +18,7 @@ class Task(BaseModel):
         arbitrary_types_allowed = True
 
     __hash__ = object.__hash__  # type: ignore
+    used_tools: int = 0
     i18n: I18N = I18N()
     thread: threading.Thread = None
     description: str = Field(description="Description of the actual task.")
@@ -96,25 +97,29 @@ class Task(BaseModel):
 
         if self.async_execution:
             self.thread = threading.Thread(
-                target=self._execute, args=(agent, self._prompt(), context, tools)
+                target=self._execute, args=(agent, self, context, tools)
             )
             self.thread.start()
         else:
             result = self._execute(
+                task=self,
                 agent=agent,
-                task_prompt=self._prompt(),
                 context=context,
                 tools=tools,
             )
             return result
 
-    def _execute(self, agent, task_prompt, context, tools):
-        result = agent.execute_task(task=task_prompt, context=context, tools=tools)
+    def _execute(self, agent, task, context, tools):
+        result = agent.execute_task(
+            task=task,
+            context=context,
+            tools=tools,
+        )
         self.output = TaskOutput(description=self.description, result=result)
         self.callback(self.output) if self.callback else None
         return result
 
-    def _prompt(self) -> str:
+    def prompt(self) -> str:
         """Prompt the task.
 
         Returns:

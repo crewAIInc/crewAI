@@ -160,22 +160,7 @@ def test_hierarchical_process():
 
     assert (
         crew.kickoff()
-        == """Here are the 5 interesting ideas with a highlight paragraph for each:
-
-1. "The Future of AI in Healthcare: Predicting Diseases Before They Happen"
-   - "Imagine a future where AI empowers us to detect diseases before they arise, transforming healthcare from reactive to proactive. Machine learning algorithms, trained on vast amounts of patient data, could potentially predict heart diseases, strokes, or cancers before they manifest, allowing for early interventions and significantly improving patient outcomes. This article will delve into the rapid advancements in AI within the healthcare sector and how these technologies are ushering us into a new era of predictive medicine."
-
-2. "How AI is Changing the Way We Cook: An Insight into Smart Kitchens"
-   - "From the humble home kitchen to grand culinary stages, AI is revolutionizing the way we cook. Smart appliances, equipped with advanced sensors and predictive algorithms, are turning kitchens into creative playgrounds, offering personalized recipes, precise cooking instructions, and even automated meal preparation. This article explores the fascinating intersection of AI and gastronomy, revealing how technology is transforming our culinary experiences."
-
-3. "Redefining Fitness with AI: Personalized Workout Plans and Nutritional Advice"
-   - "Fitness reimagined – that's the promise of AI in the wellness industry. Picture a personal trainer who knows your strengths, weaknesses, and nutritional needs intimately. An AI-powered fitness app can provide this personalized experience, adapting your workout plans and dietary recommendations in real-time based on your progress and feedback. Join us as we unpack how AI is revolutionizing the fitness landscape, offering personalized, data-driven approaches to health and well-being."
-
-4. "AI and the Art World: How Technology is Shaping Creativity"
-   - "Art and AI may seem like unlikely partners, but their synergy is sparking a creative revolution. AI algorithms are now creating mesmerizing artworks, challenging our perceptions of creativity and originality. From AI-assisted painting to generative music composition, this article will take you on a journey through the fascinating world of AI in art, exploring how technology is reshaping the boundaries of human creativity."
-
-5. "AI in Space Exploration: The Next Frontier"
-   - "The vast expanse of space, once the sole domain of astronauts and rovers, is the next frontier for AI. AI technology is playing an increasingly vital role in space exploration, from predicting space weather to assisting in interstellar navigation. This article will delve into the exciting intersection of AI and space exploration, exploring how these advanced technologies are helping us uncover the mysteries of the cosmos.\""""
+        == """Here are the five interesting ideas for an article with a highlight paragraph for each:\n\n1. The Evolution of Artificial Intelligence:\nDive deep into the fascinating journey of artificial intelligence, from its humble beginnings as a concept in science fiction to an integral part of our daily lives and a catalyst of modern innovations. Explore how AI has evolved over the years, the key milestones that have shaped its growth, and the visionary minds behind these advancements. Uncover the remarkable transformation of AI and its astounding potential for the future.\n\n2. AI in Everyday Life:\nUncover the unseen impact of AI in our every day lives, from our smartphones and home appliances to social media and healthcare. Learn about the subtle yet profound ways AI has become a silent partner in your daily routine, enhancing convenience, productivity, and decision-making. Explore the numerous applications of AI right at your fingertips and how it shapes our interactions with technology and the world around us.\n\n3. Ethical Implications of AI:\nVenture into the ethical labyrinth of artificial intelligence, where innovation meets responsibility. Explore the implications of AI on privacy, job security, and societal norms, and the moral obligations we have towards its development and use. Delve into the thought-provoking debates about AI ethics and the measures being taken to ensure its responsible and equitable use.\n\n4. The Rise of AI Startups:\nWitness the rise of AI startups, the new champions of innovation, driving the technology revolution. Discover how these trailblazing companies are harnessing the power of AI to solve complex problems, create new markets, and revolutionize industries. Learn about their unique challenges, their groundbreaking solutions, and the potential they hold for reshaping the future of technology and business.\n\n5. AI and the Environment:\nExplore the intersection of AI and the environment, where technology meets sustainability. Uncover how AI is being used to combat climate change, conserve biodiversity, and optimize resource utilization. Learn about the innovative ways AI is being used to create a sustainable future and the challenges and opportunities it presents."""
     )
 
 
@@ -277,18 +262,14 @@ def test_crew_verbose_levels_output(capsys):
 
 @pytest.mark.vcr(filter_headers=["authorization"])
 def test_cache_hitting_between_agents():
-    from unittest.mock import patch
+    from unittest.mock import call, patch
 
     from langchain.tools import tool
 
     @tool
-    def multiplier(numbers) -> float:
-        """Useful for when you need to multiply two numbers together.
-        The input to this tool should be a comma separated list of numbers of
-        length two, representing the two numbers you want to multiply together.
-        For example, `1,2` would be the input if you wanted to multiply 1 by 2."""
-        a, b = numbers.split(",")
-        return int(a) * int(b)
+    def multiplier(first_number: int, second_number: int) -> float:
+        """Useful for when you need to multiply two numbers together."""
+        return first_number * second_number
 
     tasks = [
         Task(
@@ -308,15 +289,16 @@ def test_cache_hitting_between_agents():
         tasks=tasks,
     )
 
-    assert crew._cache_handler._cache == {}
-    output = crew.kickoff()
-    assert crew._cache_handler._cache == {"multiplier-2,6": "12"}
-    assert output == "12"
-
     with patch.object(CacheHandler, "read") as read:
         read.return_value = "12"
         crew.kickoff()
-        read.assert_called_with("multiplier", "2,6")
+        assert read.call_count == 2, "read was not called exactly twice"
+        # Check if read was called with the expected arguments
+        expected_calls = [
+            call(tool="multiplier", input={"first_number": 2, "second_number": 6}),
+            call(tool="multiplier", input={"first_number": 2, "second_number": 6}),
+        ]
+        read.assert_has_calls(expected_calls, any_order=False)
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
@@ -354,6 +336,53 @@ def test_api_calls_throttling(capsys):
         captured = capsys.readouterr()
         assert "Max RPM reached, waiting for next minute to start." in captured.out
         moveon.assert_called()
+
+
+@pytest.mark.vcr(filter_headers=["authorization"])
+def test_crew_full_ouput():
+    agent = Agent(
+        role="test role",
+        goal="test goal",
+        backstory="test backstory",
+        allow_delegation=False,
+        verbose=True,
+    )
+
+    task1 = Task(
+        description="just say hi!",
+        agent=agent,
+    )
+    task2 = Task(
+        description="just say hello!",
+        agent=agent,
+    )
+
+    crew = Crew(agents=[agent], tasks=[task1, task2], full_output=True)
+
+    result = crew.kickoff()
+    assert result == {
+        "final_output": "Hello!",
+        "tasks_outputs": [task1.output, task2.output],
+    }
+
+
+def test_agents_rpm_is_never_set_if_crew_max_RPM_is_not_set():
+    agent = Agent(
+        role="test role",
+        goal="test goal",
+        backstory="test backstory",
+        allow_delegation=False,
+        verbose=True,
+    )
+
+    task = Task(
+        description="just say hi!",
+        agent=agent,
+    )
+
+    Crew(agents=[agent], tasks=[task], verbose=2)
+
+    assert agent._rpm_controller is None
 
 
 def test_async_task_execution():
@@ -402,3 +431,71 @@ def test_async_task_execution():
                 crew.kickoff()
                 start.assert_called()
                 join.assert_called()
+
+
+def test_set_agents_step_callback():
+    from unittest.mock import patch
+
+    researcher_agent = Agent(
+        role="Researcher",
+        goal="Make the best research and analysis on content about AI and AI agents",
+        backstory="You're an expert researcher, specialized in technology, software engineering, AI and startups. You work as a freelancer and is now working on doing research and analysis for a new customer.",
+        allow_delegation=False,
+    )
+
+    list_ideas = Task(
+        description="Give me a list of 5 interesting ideas to explore for na article, what makes them unique and interesting.",
+        expected_output="Bullet point list of 5 important events.",
+        agent=researcher_agent,
+        async_execution=True,
+    )
+
+    crew = Crew(
+        agents=[researcher_agent],
+        process=Process.sequential,
+        tasks=[list_ideas],
+        step_callback=lambda: None,
+    )
+
+    with patch.object(Agent, "execute_task") as execute:
+        execute.return_value = "ok"
+        crew.kickoff()
+        assert researcher_agent.step_callback is not None
+
+
+def test_dont_set_agents_step_callback_if_already_set():
+    from unittest.mock import patch
+
+    def agent_callback(_):
+        pass
+
+    def crew_callback(_):
+        pass
+
+    researcher_agent = Agent(
+        role="Researcher",
+        goal="Make the best research and analysis on content about AI and AI agents",
+        backstory="You're an expert researcher, specialized in technology, software engineering, AI and startups. You work as a freelancer and is now working on doing research and analysis for a new customer.",
+        allow_delegation=False,
+        step_callback=agent_callback,
+    )
+
+    list_ideas = Task(
+        description="Give me a list of 5 interesting ideas to explore for na article, what makes them unique and interesting.",
+        expected_output="Bullet point list of 5 important events.",
+        agent=researcher_agent,
+        async_execution=True,
+    )
+
+    crew = Crew(
+        agents=[researcher_agent],
+        process=Process.sequential,
+        tasks=[list_ideas],
+        step_callback=crew_callback,
+    )
+
+    with patch.object(Agent, "execute_task") as execute:
+        execute.return_value = "ok"
+        crew.kickoff()
+        assert researcher_agent.step_callback is not crew_callback
+        assert researcher_agent.step_callback is agent_callback

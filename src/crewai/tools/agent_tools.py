@@ -1,9 +1,10 @@
 from typing import List
 
-from langchain.tools import Tool
+from langchain.tools import StructuredTool
 from pydantic import BaseModel, Field
 
 from crewai.agent import Agent
+from crewai.task import Task
 from crewai.utilities import I18N
 
 from crewai.agents.agent_interface import AgentWrapperParent
@@ -19,14 +20,14 @@ class AgentTools(BaseModel):
 
     def tools(self):
         return [
-            Tool.from_function(
+            StructuredTool.from_function(
                 func=self.delegate_work,
                 name="Delegate work to co-worker",
                 description=self.i18n.tools("delegate_work").format(
                     coworkers=", ".join([agent.role for agent in self.agents])
                 ),
             ),
-            Tool.from_function(
+            StructuredTool.from_function(
                 func=self.ask_question,
                 name="Ask question to co-worker",
                 description=self.i18n.tools("ask_question").format(
@@ -35,24 +36,16 @@ class AgentTools(BaseModel):
             ),
         ]
 
-    def delegate_work(self, command):
+    def delegate_work(self, coworker: str, task: str, context: str):
         """Useful to delegate a specific task to a coworker."""
-        return self._execute(command)
+        return self._execute(coworker, task, context)
 
-    def ask_question(self, command):
+    def ask_question(self, coworker: str, question: str, context: str):
         """Useful to ask a question, opinion or take from a coworker."""
-        return self._execute(command)
+        return self._execute(coworker, question, context)
 
-    def _execute(self, command):
+    def _execute(self, agent, task, context):
         """Execute the command."""
-        try:
-            agent, task, context = command.split("|")
-        except ValueError:
-            return self.i18n.errors("agent_tool_missing_param")
-
-        if not agent or not task or not context:
-            return self.i18n.errors("agent_tool_missing_param")
-
         agent = [
             available_agent
             for available_agent in self.agents
@@ -65,4 +58,5 @@ class AgentTools(BaseModel):
             )
 
         agent = agent[0]
+        task = Task(description=task, agent=agent)
         return agent.execute_task(task, context)

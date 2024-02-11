@@ -1,0 +1,501 @@
+interactions:
+- request:
+    body: '{"messages": [{"role": "user", "content": "You are test role.\ntest backstory\n\nYour
+      personal goal is: test goalTOOLS:\n------\nYou have access to only the following
+      tools:\n\nlearn_about_AI: learn_about_AI(topic) -> float - Useful for when you
+      need to learn about AI to write an paragraph about it.\nDelegate work to co-worker:
+      Delegate work to co-worker(coworker: str, task: str, context: str) - Delegate
+      a specific task to one of the following co-workers: . The input to this tool
+      should be the role of the coworker, the task you want them to do, and ALL necessary
+      context to exectue the task, they know nothing about the task, so share absolute
+      everything you know, don''t reference things but instead explain them.\nAsk
+      question to co-worker: Ask question to co-worker(coworker: str, question: str,
+      context: str) - Ask a specific question to one of the following co-workers:
+      . The input to this tool should be the role of the coworker, the question you
+      have for them, and ALL necessary context to ask the question properly, they
+      know nothing about the question, so share absolute everything you know, don''t
+      reference things but instead explain them.\n\nTo use a tool, please use the
+      exact following format:\n\n```\nThought: Do I need to use a tool? Yes\nAction:
+      the tool you wanna use, should be one of [learn_about_AI, Delegate work to co-worker,
+      Ask question to co-worker], just the name.\nAction Input: Any and all relevant
+      information input and context for using the tool\nObservation: the result of
+      using the tool\n```\n\nWhen you have a response for your task, or if you do
+      not need to use a tool, you MUST use the format:\n\n```\nThought: Do I need
+      to use a tool? No\nFinal Answer: [your response here]```This is the summary
+      of your work so far:\nBegin! This is VERY important to you, your job depends
+      on it!\n\nCurrent Task: Write and then review an small paragraph on AI until
+      it''s AMAZING\n"}], "model": "gpt-4", "n": 1, "stop": ["\nObservation"], "stream":
+      false, "temperature": 0.7}'
+    headers:
+      accept:
+      - application/json
+      accept-encoding:
+      - gzip, deflate
+      connection:
+      - keep-alive
+      content-length:
+      - '1999'
+      content-type:
+      - application/json
+      host:
+      - api.openai.com
+      user-agent:
+      - OpenAI/Python 1.12.0
+      x-stainless-arch:
+      - arm64
+      x-stainless-async:
+      - 'false'
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - MacOS
+      x-stainless-package-version:
+      - 1.12.0
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.11.7
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    body:
+      string: !!binary |
+        H4sIAAAAAAAAA1SRS0/DMBCE7/kVK59blNKnckEVINEDggNCAooix9kmpo7X2BvRqup/R05fcPFh
+        xrP+Zr1LAIQuRQZC1ZJV40x/9l3et+93mx8jC1rdpo+btEi3/vX54el2LXoxQcUXKj6lrhQ1ziBr
+        sgdbeZSMcepgmk7H49F4NuqMhko0MVY57o/66WQwPCZq0gqDyOAjAQDYdWdksyVuRAZp76Q0GIKs
+        UGTnSwDCk4mKkCHowNKy6F1MRZbRdrgvNbVVzRncESzAIpbABG1AkMBE5gbeMCztXMUyGRiU3uay
+        oJbz+eKkw8K6ljNYirlnvdJKSwMLy2iMrtAqXApxfH1/xjZUOU9FrGhbY876Slsd6tyjDGQjYmBy
+        h/g+Afjs1tP+ayycp8ZxzrRGGweOhoPDPHH5iYt7PTmaTCzNn9R4mhwJRdgGxiZfaVuhd15324qc
+        yT75BQAA//8DAG14RFskAgAA
+    headers:
+      CF-Cache-Status:
+      - DYNAMIC
+      CF-RAY:
+      - 85330ff5ff101637-SJC
+      Cache-Control:
+      - no-cache, must-revalidate
+      Connection:
+      - keep-alive
+      Content-Encoding:
+      - gzip
+      Content-Type:
+      - application/json
+      Date:
+      - Sat, 10 Feb 2024 08:43:05 GMT
+      Server:
+      - cloudflare
+      Set-Cookie:
+      - __cf_bm=FHcpgH1eZBeZ3Rbcza28Oc6NWTXs_wBg2dFweW8n7iE-1707554585-1-AeO0TVKmSDiPyhIhqVNGXLU1AqKVAJroEV7Mq1JaqrBTJlB6hP4FrF9q/F66TJ4PAMcnMJ6YKH9wW4gQAx2jhis=;
+        path=/; expires=Sat, 10-Feb-24 09:13:05 GMT; domain=.api.openai.com; HttpOnly;
+        Secure; SameSite=None
+      - _cfuvid=CyquHMSR3lyGv7DVvBmUUvZ_N5p0T0sRkvGYdcRgwUo-1707554585722-0-604800000;
+        path=/; domain=.api.openai.com; HttpOnly; Secure; SameSite=None
+      Transfer-Encoding:
+      - chunked
+      access-control-allow-origin:
+      - '*'
+      alt-svc:
+      - h3=":443"; ma=86400
+      openai-model:
+      - gpt-4-0613
+      openai-organization:
+      - user-z7g4wmlazxqvc5wjyaaaocfz
+      openai-processing-ms:
+      - '1403'
+      openai-version:
+      - '2020-10-01'
+      strict-transport-security:
+      - max-age=15724800; includeSubDomains
+      x-ratelimit-limit-requests:
+      - '10000'
+      x-ratelimit-limit-tokens:
+      - '300000'
+      x-ratelimit-remaining-requests:
+      - '9999'
+      x-ratelimit-remaining-tokens:
+      - '299524'
+      x-ratelimit-reset-requests:
+      - 6ms
+      x-ratelimit-reset-tokens:
+      - 95ms
+      x-request-id:
+      - req_c3e3d009fb1789af53949c6665e20c2d
+    status:
+      code: 200
+      message: OK
+- request:
+    body: '{"messages": [{"role": "user", "content": "Return a valid schema for the
+      one tool you must use with its arguments and values.\n\nTools available:\n\nFuntion
+      Name: learn_about_AI\nFuntion attributes: {''topic'': {}}\nDescription: learn_about_AI(topic)
+      -> float - Useful for when you need to learn about AI to write an paragraph
+      about it.\n--\nFuntion Name: Delegate work to co-worker\nFuntion attributes:
+      {''coworker'': {''type'': ''string''}, ''task'': {''type'': ''string''}, ''context'':
+      {''type'': ''string''}}\nDescription: Delegate work to co-worker(coworker: str,
+      task: str, context: str) - Delegate a specific task to one of the following
+      co-workers: . The input to this tool should be the role of the coworker, the
+      task you want them to do, and ALL necessary context to exectue the task, they
+      know nothing about the task, so share absolute everything you know, don''t reference
+      things but instead explain them.\n--\nFuntion Name: Ask question to co-worker\nFuntion
+      attributes: {''coworker'': {''type'': ''string''}, ''question'': {''type'':
+      ''string''}, ''context'': {''type'': ''string''}}\nDescription: Ask question
+      to co-worker(coworker: str, question: str, context: str) - Ask a specific question
+      to one of the following co-workers: . The input to this tool should be the role
+      of the coworker, the question you have for them, and ALL necessary context to
+      ask the question properly, they know nothing about the question, so share absolute
+      everything you know, don''t reference things but instead explain them.\n\nUse
+      this text to inform a valid ouput schema:\nThought: Do I need to use a tool?
+      Yes\nAction: learn_about_AI\nAction Input: \"Artificial Intelligence\"\n\nThe
+      output should be formatted as a JSON instance that conforms to the JSON schema
+      below.\n\nAs an example, for the schema {\"properties\": {\"foo\": {\"title\":
+      \"Foo\", \"description\": \"a list of strings\", \"type\": \"array\", \"items\":
+      {\"type\": \"string\"}}}, \"required\": [\"foo\"]}\nthe object {\"foo\": [\"bar\",
+      \"baz\"]} is a well-formatted instance of the schema. The object {\"properties\":
+      {\"foo\": [\"bar\", \"baz\"]}} is not well-formatted.\n\nHere is the output
+      schema:\n```\n{\"properties\": {\"function_name\": {\"title\": \"Function Name\",
+      \"description\": \"The name of the function to be called.\", \"type\": \"string\"},
+      \"arguments\": {\"title\": \"Arguments\", \"description\": \"A dictinary of
+      arguments to be passed to the function.\", \"type\": \"object\"}}, \"required\":
+      [\"function_name\", \"arguments\"]}\n```\n```"}], "model": "gpt-4", "n": 1,
+      "stream": false, "temperature": 0.7}'
+    headers:
+      accept:
+      - application/json
+      accept-encoding:
+      - gzip, deflate
+      connection:
+      - keep-alive
+      content-length:
+      - '2558'
+      content-type:
+      - application/json
+      cookie:
+      - __cf_bm=FHcpgH1eZBeZ3Rbcza28Oc6NWTXs_wBg2dFweW8n7iE-1707554585-1-AeO0TVKmSDiPyhIhqVNGXLU1AqKVAJroEV7Mq1JaqrBTJlB6hP4FrF9q/F66TJ4PAMcnMJ6YKH9wW4gQAx2jhis=;
+        _cfuvid=CyquHMSR3lyGv7DVvBmUUvZ_N5p0T0sRkvGYdcRgwUo-1707554585722-0-604800000
+      host:
+      - api.openai.com
+      user-agent:
+      - OpenAI/Python 1.12.0
+      x-stainless-arch:
+      - arm64
+      x-stainless-async:
+      - 'false'
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - MacOS
+      x-stainless-package-version:
+      - 1.12.0
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.11.7
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    body:
+      string: !!binary |
+        H4sIAAAAAAAAA1SRwW7bMBBE7/qKBc92YTeWbehmIC4a9JJrURYyTa0kJuSSIVdtWkP/XlBybPSi
+        w8y+1ezwUgAI04gKhO4Vaxfscv/WHH/x8fl7n/rHxy+H4zf8u7HP7/i23SexyIQ/v6DmD+qT9i5Y
+        ZONptnVExZi3rnerXVluyn05Gc43aDPWBV5ulqvt+uFK9N5oTKKCHwUAwGX65mzU4LuoYLX4UBym
+        pDoU1W0IQERvsyJUSiaxIhaLu6k9MdIU9ytGBJNAwW+0dtn66BQzNmAoYxrBt8A9gh84DAxJ9+hU
+        JUnS6XSSdJEEIEU7kM7n1qQcSlGBFBZVpFqd/cD14UmKxTypYjc4JE55aqKzyj4YPXOHyKY12igL
+        T8RoremQNEqRZ0dJ4/Rncb1mvNVgfReiP+fKaLD2preGTOrriCp5yicn9mHGxwLg51T38F+DIkTv
+        AtfsX5HywnK3n/eJ+8ve3c3D1WTPyt717ed1cU0o0p/E6OrWUIcxRDO1n3MWY/EPAAD//wMA8S8H
+        Q3QCAAA=
+    headers:
+      CF-Cache-Status:
+      - DYNAMIC
+      CF-RAY:
+      - 853310010fcd1637-SJC
+      Cache-Control:
+      - no-cache, must-revalidate
+      Connection:
+      - keep-alive
+      Content-Encoding:
+      - gzip
+      Content-Type:
+      - application/json
+      Date:
+      - Sat, 10 Feb 2024 08:43:08 GMT
+      Server:
+      - cloudflare
+      Transfer-Encoding:
+      - chunked
+      access-control-allow-origin:
+      - '*'
+      alt-svc:
+      - h3=":443"; ma=86400
+      openai-model:
+      - gpt-4-0613
+      openai-organization:
+      - user-z7g4wmlazxqvc5wjyaaaocfz
+      openai-processing-ms:
+      - '2273'
+      openai-version:
+      - '2020-10-01'
+      strict-transport-security:
+      - max-age=15724800; includeSubDomains
+      x-ratelimit-limit-requests:
+      - '10000'
+      x-ratelimit-limit-tokens:
+      - '300000'
+      x-ratelimit-remaining-requests:
+      - '9999'
+      x-ratelimit-remaining-tokens:
+      - '299398'
+      x-ratelimit-reset-requests:
+      - 6ms
+      x-ratelimit-reset-tokens:
+      - 120ms
+      x-request-id:
+      - req_9af33ac92b825be43da4372550c8c502
+    status:
+      code: 200
+      message: OK
+- request:
+    body: '{"messages": [{"role": "user", "content": "You are test role.\ntest backstory\n\nYour
+      personal goal is: test goalTOOLS:\n------\nYou have access to only the following
+      tools:\n\nlearn_about_AI: learn_about_AI(topic) -> float - Useful for when you
+      need to learn about AI to write an paragraph about it.\nDelegate work to co-worker:
+      Delegate work to co-worker(coworker: str, task: str, context: str) - Delegate
+      a specific task to one of the following co-workers: . The input to this tool
+      should be the role of the coworker, the task you want them to do, and ALL necessary
+      context to exectue the task, they know nothing about the task, so share absolute
+      everything you know, don''t reference things but instead explain them.\nAsk
+      question to co-worker: Ask question to co-worker(coworker: str, question: str,
+      context: str) - Ask a specific question to one of the following co-workers:
+      . The input to this tool should be the role of the coworker, the question you
+      have for them, and ALL necessary context to ask the question properly, they
+      know nothing about the question, so share absolute everything you know, don''t
+      reference things but instead explain them.\n\nTo use a tool, please use the
+      exact following format:\n\n```\nThought: Do I need to use a tool? Yes\nAction:
+      the tool you wanna use, should be one of [learn_about_AI, Delegate work to co-worker,
+      Ask question to co-worker], just the name.\nAction Input: Any and all relevant
+      information input and context for using the tool\nObservation: the result of
+      using the tool\n```\n\nWhen you have a response for your task, or if you do
+      not need to use a tool, you MUST use the format:\n\n```\nThought: Do I need
+      to use a tool? No\nFinal Answer: [your response here]```This is the summary
+      of your work so far:\nBegin! This is VERY important to you, your job depends
+      on it!\n\nCurrent Task: Write and then review an small paragraph on AI until
+      it''s AMAZING\nThought: Do I need to use a tool? Yes\nAction: learn_about_AI\nAction
+      Input: \"Artificial Intelligence\"\nObservation: AI is a very broad field.\nThought:
+      "}], "model": "gpt-4", "n": 1, "stop": ["\nObservation"], "stream": false, "temperature":
+      0.7}'
+    headers:
+      accept:
+      - application/json
+      accept-encoding:
+      - gzip, deflate
+      connection:
+      - keep-alive
+      content-length:
+      - '2154'
+      content-type:
+      - application/json
+      cookie:
+      - __cf_bm=FHcpgH1eZBeZ3Rbcza28Oc6NWTXs_wBg2dFweW8n7iE-1707554585-1-AeO0TVKmSDiPyhIhqVNGXLU1AqKVAJroEV7Mq1JaqrBTJlB6hP4FrF9q/F66TJ4PAMcnMJ6YKH9wW4gQAx2jhis=;
+        _cfuvid=CyquHMSR3lyGv7DVvBmUUvZ_N5p0T0sRkvGYdcRgwUo-1707554585722-0-604800000
+      host:
+      - api.openai.com
+      user-agent:
+      - OpenAI/Python 1.12.0
+      x-stainless-arch:
+      - arm64
+      x-stainless-async:
+      - 'false'
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - MacOS
+      x-stainless-package-version:
+      - 1.12.0
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.11.7
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    body:
+      string: !!binary |
+        H4sIAAAAAAAAA2RTwWobSxC86yuaPa+ERazY1iUYXh4IHoGEBAJJMK3Z3t22Z7s30z1ylOB/D7Na
+        WwnvMoepqaaqpvrXAqDiptpCFXr0MIxxef29eXu8eRzS/dX43+fmU2P69lV4v+4+HHhT1YWh+3sK
+        /sxaBR3GSM4qJzgkQqcydX11cbXZXG6urydg0IZioXWjLy+XF6/Xr2ZGrxzIqi18WQAA/JrOok0a
+        +lFt4aJ+vhnIDDuqti+PAKqksdxUaMbmKF7VZzCoOMkk9x+FHQhRA66QjQDBVeMbeKdf5V8WjHAr
+        9khpC7fJueXAGGEnTjFyRxKoBm2dBHC/T3Tg4hPQ4HZXAxsgHNAcWqbYrGDnQFLCQTMyOGBizQaW
+        98uGLfAYWcgApQGn0ItG7ZgMvEcH5KGIPGUJA4b+5bEdzWkwCDjiPhJoCyOlVtPA0oGjPcwzHjXH
+        BrJljPEIib5nTgR9HlCA/zC1go89Gc1UlhBzQxAJk5SJbdIB6MdIictrqyFLQ6kE3RRc0HPCCBGl
+        y9hRDYmCdsI/CzqiOyWxGsak+0jD0jQeWLp6MtNQYGMVGPCBpZukQKcYi63bXUlV1OE+m5c8Eo2R
+        Q4nk/zZgnx0wmv4R3HNWUx4B5Tmp2eugiYDa8tEkHo+TJAwhJ3SKx1VR0GOhE4xaalQKMek4aMyl
+        8/yTzl9LwTVZPWdY7PeE0fuAiWpoWXDqkCcUGzU5lgmnIIqUVTXX9uml71G7klvZDckxvty3LGz9
+        XSI0ldJtcx1P9KcFwLdpr/Jfq1KNSYfR71wfSMrAy6t5r6rzCp/R9fpmRl0d4xnYXN8sZonVKd+7
+        lqWjNCae9qwIXTwtfgMAAP//AwDp3F89XgQAAA==
+    headers:
+      CF-Cache-Status:
+      - DYNAMIC
+      CF-RAY:
+      - 853310125de31637-SJC
+      Cache-Control:
+      - no-cache, must-revalidate
+      Connection:
+      - keep-alive
+      Content-Encoding:
+      - gzip
+      Content-Type:
+      - application/json
+      Date:
+      - Sat, 10 Feb 2024 08:43:14 GMT
+      Server:
+      - cloudflare
+      Transfer-Encoding:
+      - chunked
+      access-control-allow-origin:
+      - '*'
+      alt-svc:
+      - h3=":443"; ma=86400
+      openai-model:
+      - gpt-4-0613
+      openai-organization:
+      - user-z7g4wmlazxqvc5wjyaaaocfz
+      openai-processing-ms:
+      - '6017'
+      openai-version:
+      - '2020-10-01'
+      strict-transport-security:
+      - max-age=15724800; includeSubDomains
+      x-ratelimit-limit-requests:
+      - '10000'
+      x-ratelimit-limit-tokens:
+      - '300000'
+      x-ratelimit-remaining-requests:
+      - '9999'
+      x-ratelimit-remaining-tokens:
+      - '299486'
+      x-ratelimit-reset-requests:
+      - 6ms
+      x-ratelimit-reset-tokens:
+      - 102ms
+      x-request-id:
+      - req_c153504e2e53f18e15a640221b664aba
+    status:
+      code: 200
+      message: OK
+- request:
+    body: '{"messages": [{"role": "user", "content": "Progressively summarize the
+      lines of conversation provided, adding onto the previous summary returning a
+      new summary.\n\nEXAMPLE\nCurrent summary:\nThe human asks what the AI thinks
+      of artificial intelligence. The AI thinks artificial intelligence is a force
+      for good.\n\nNew lines of conversation:\nHuman: Why do you think artificial
+      intelligence is a force for good?\nAI: Because artificial intelligence will
+      help humans reach their full potential.\n\nNew summary:\nThe human asks what
+      the AI thinks of artificial intelligence. The AI thinks artificial intelligence
+      is a force for good because it will help humans reach their full potential.\nEND
+      OF EXAMPLE\n\nCurrent summary:\n\n\nNew lines of conversation:\nHuman: Write
+      and then review an small paragraph on AI until it''s AMAZING\nAI: Artificial
+      Intelligence, often abbreviated as AI, is a vast field. It encompasses various
+      sub-disciplines and technologies that aim to create machines and systems capable
+      of performing tasks that would usually require human intelligence. These tasks
+      include learning from experiences, understanding natural language, recognizing
+      patterns, problem-solving, and decision making. The goal of AI is not just to
+      replicate human intelligence but also to create systems that can perform tasks
+      more efficiently and accurately. AI has the potential to revolutionize various
+      sectors, including healthcare, finance, transportation, and more.\n\nNew summary:"}],
+      "model": "gpt-4", "n": 1, "stream": false, "temperature": 0.7}'
+    headers:
+      accept:
+      - application/json
+      accept-encoding:
+      - gzip, deflate
+      connection:
+      - keep-alive
+      content-length:
+      - '1547'
+      content-type:
+      - application/json
+      cookie:
+      - __cf_bm=FHcpgH1eZBeZ3Rbcza28Oc6NWTXs_wBg2dFweW8n7iE-1707554585-1-AeO0TVKmSDiPyhIhqVNGXLU1AqKVAJroEV7Mq1JaqrBTJlB6hP4FrF9q/F66TJ4PAMcnMJ6YKH9wW4gQAx2jhis=;
+        _cfuvid=CyquHMSR3lyGv7DVvBmUUvZ_N5p0T0sRkvGYdcRgwUo-1707554585722-0-604800000
+      host:
+      - api.openai.com
+      user-agent:
+      - OpenAI/Python 1.12.0
+      x-stainless-arch:
+      - arm64
+      x-stainless-async:
+      - 'false'
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - MacOS
+      x-stainless-package-version:
+      - 1.12.0
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.11.7
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    body:
+      string: !!binary |
+        H4sIAAAAAAAAA1RSTW/bMAy951cQuuySBM0aL21uxYBhxW5FdhqGgpFpm60sqiKd9AP974PstMEu
+        OpB6j4+P720G4Lh2W3C+Q/N9Courp/pH9TPZ8+53vNu8rL5Xq4fjjW52d9/CLzcvCNk/kLcP1NJL
+        nwIZS5zaPhMaFdbV5mJTVevquhobvdQUCqxNtlgvLr6tLk+ITtiTui38mQEAvI1v0RZrenZbuJh/
+        VHpSxZbc9vMTgMsSSsWhKqthNDc/N71EozjK3XUE3dBjBNRHBesIbm7BBI6ZjQBjXWoRMh2YjoCg
+        PYYACTO2GVMHEgtgiMYB2L4oYI+vHNsl7CauTJok1gpHtg4Q9pmpATlQHhmlgZvbOdSkPvOeYwts
+        gAoIB1SDhinUE/SAmWVQ0GG/qFk9p8CRdNJIvosSpGXSJdwa9BSL/WUjtHGtVjBM04C1bDgdBfRF
+        jXoFjwn3gcqXRLmR3BcxdrIFDQYdMIQXyPQ0cP6wjaNRCNxS9DQ/+YVWpnQ4+ZmkmM0YytBMBwlD
+        kcavdF6JvElW4OjDUJe5HWGwzmOmOTQc8cyeMWqSbFhIlu501ffPOARpU5Z9iU4cQvisNxxZu/tM
+        qBLL6dUkTfD3GcDfMXbDf0lyKUuf7N7kkWIh/FpdT3zunPBz96o6NU0Mw7l+uV7PTgrd5PZ9w7Gl
+        nDKPKSw6Z++zfwAAAP//AwBANdK6fAMAAA==
+    headers:
+      CF-Cache-Status:
+      - DYNAMIC
+      CF-RAY:
+      - 8533103aae201637-SJC
+      Cache-Control:
+      - no-cache, must-revalidate
+      Connection:
+      - keep-alive
+      Content-Encoding:
+      - gzip
+      Content-Type:
+      - application/json
+      Date:
+      - Sat, 10 Feb 2024 08:43:18 GMT
+      Server:
+      - cloudflare
+      Transfer-Encoding:
+      - chunked
+      access-control-allow-origin:
+      - '*'
+      alt-svc:
+      - h3=":443"; ma=86400
+      openai-model:
+      - gpt-4-0613
+      openai-organization:
+      - user-z7g4wmlazxqvc5wjyaaaocfz
+      openai-processing-ms:
+      - '2948'
+      openai-version:
+      - '2020-10-01'
+      strict-transport-security:
+      - max-age=15724800; includeSubDomains
+      x-ratelimit-limit-requests:
+      - '10000'
+      x-ratelimit-limit-tokens:
+      - '300000'
+      x-ratelimit-remaining-requests:
+      - '9999'
+      x-ratelimit-remaining-tokens:
+      - '299629'
+      x-ratelimit-reset-requests:
+      - 6ms
+      x-ratelimit-reset-tokens:
+      - 74ms
+      x-request-id:
+      - req_bf6f7315d0ac178598b80627d7b1af72
+    status:
+      code: 200
+      message: OK
+version: 1

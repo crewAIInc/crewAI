@@ -3,9 +3,9 @@ from typing import Any, List, Optional
 
 from langchain.agents.agent import RunnableAgent
 from langchain.agents.format_scratchpad import format_log_to_str
+from langchain.agents.output_parsers import ReActSingleInputOutputParser
 from langchain.memory import ConversationSummaryMemory
 from langchain.tools.render import render_text_description
-from langchain_core.runnables.config import RunnableConfig
 from langchain_openai import ChatOpenAI
 from pydantic import (
     UUID4,
@@ -19,12 +19,7 @@ from pydantic import (
 )
 from pydantic_core import PydanticCustomError
 
-from crewai.agents import (
-    CacheHandler,
-    CrewAgentExecutor,
-    CrewAgentOutputParser,
-    ToolsHandler,
-)
+from crewai.agents import CacheHandler, CrewAgentExecutor, ToolsHandler
 from crewai.utilities import I18N, Logger, Prompts, RPMController
 
 
@@ -46,6 +41,7 @@ class Agent(BaseModel):
             verbose: Whether the agent execution should be in verbose mode.
             allow_delegation: Whether the agent is allowed to delegate tasks to other agents.
             tools: Tools at agents disposal
+            step_callback: Callback to be executed after each step of the agent execution.
     """
 
     __hash__ = object.__hash__  # type: ignore
@@ -90,6 +86,10 @@ class Agent(BaseModel):
     cache_handler: InstanceOf[CacheHandler] = Field(
         default=CacheHandler(), description="An instance of the CacheHandler class."
     )
+    step_callback: Optional[Any] = Field(
+        default=None,
+        description="Callback to be executed after each step of the agent execution.",
+    )
     i18n: I18N = Field(default=I18N(), description="Internationalization settings.")
     llm: Any = Field(
         default_factory=lambda: ChatOpenAI(
@@ -125,7 +125,7 @@ class Agent(BaseModel):
 
     def execute_task(
         self,
-        task: str,
+        task: Any,
         context: Optional[List[str]] = None,
         tools: Optional[List[Any]] = None,
     ) -> str:
@@ -140,22 +140,25 @@ class Agent(BaseModel):
             Output of the agent
         """
 
+        task_prompt = task.prompt()
+
         if context:
-            context = "\n".join(context)
             task = self.i18n.slice("task_with_context").format(
-                task=task, context=context
+                task=task_prompt, context=context
             )
 
         tools = tools or self.tools
         self.agent_executor.tools = tools
+        self.agent_executor.task = task
+        self.agent_executor.tools_description = (render_text_description(tools),)
+        self.agent_executor.tools_names = self.__tools_names(tools)
 
         result = self.agent_executor.invoke(
             {
-                "input": task,
-                "tool_names": self.__tools_names(tools),
-                "tools": render_text_description(tools),
-            },
-            RunnableConfig(callbacks=[self.tools_handler]),
+                "input": task_prompt,
+                "tool_names": self.agent_executor.tools_names,
+                "tools": self.agent_executor.tools_description,
+            }
         )["output"]
 
         if self.max_rpm:
@@ -171,7 +174,7 @@ class Agent(BaseModel):
         """
         self.cache_handler = cache_handler
         self.tools_handler = ToolsHandler(cache=self.cache_handler)
-        self._create_agent_executor()
+        self.create_agent_executor()
 
     def set_rpm_controller(self, rpm_controller: RPMController) -> None:
         """Set the rpm controller for the agent.
@@ -181,9 +184,9 @@ class Agent(BaseModel):
         """
         if not self._rpm_controller:
             self._rpm_controller = rpm_controller
-            self._create_agent_executor()
+            self.create_agent_executor()
 
-    def _create_agent_executor(self) -> None:
+    def create_agent_executor(self) -> None:
         """Create an agent executor for the agent.
 
         Returns:
@@ -196,17 +199,20 @@ class Agent(BaseModel):
             "agent_scratchpad": lambda x: format_log_to_str(x["intermediate_steps"]),
         }
         executor_args = {
+            "llm": self.llm,
             "i18n": self.i18n,
             "tools": self.tools,
             "verbose": self.verbose,
             "handle_parsing_errors": True,
             "max_iterations": self.max_iter,
+            "step_callback": self.step_callback,
+            "tools_handler": self.tools_handler,
         }
 
         if self._rpm_controller:
-            executor_args["request_within_rpm_limit"] = (
-                self._rpm_controller.check_or_wait
-            )
+            executor_args[
+                "request_within_rpm_limit"
+            ] = self._rpm_controller.check_or_wait
 
         if self.memory:
             summary_memory = ConversationSummaryMemory(
@@ -226,14 +232,7 @@ class Agent(BaseModel):
 
         bind = self.llm.bind(stop=[self.i18n.slice("observation")])
         inner_agent = (
-            agent_args
-            | execution_prompt
-            | bind
-            | CrewAgentOutputParser(
-                tools_handler=self.tools_handler,
-                cache=self.cache_handler,
-                i18n=self.i18n,
-            )
+            agent_args | execution_prompt | bind | ReActSingleInputOutputParser()
         )
         self.agent_executor = CrewAgentExecutor(
             agent=RunnableAgent(runnable=inner_agent), **executor_args
