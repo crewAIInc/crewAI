@@ -5,7 +5,7 @@ from langchain_core.messages import AIMessage
 from crewai.agents.agent_interface import AgentWrapperParent
 
 
-class LangchainAgent(AgentWrapperParent):
+class LangchainCrewAgent(AgentWrapperParent):
 
     def __init__(
         self,
