@@ -215,7 +215,7 @@ files = [
 
 [[package]]
 name = "black"
-version = "24.1.1"
+version = "24.2.0"
 description = "The uncompromising code formatter."
 optional = false
 python-versions = ">=3.8"
@@ -241,7 +241,7 @@ uvloop = ["uvloop (>=0.15.2)"]
 type = "git"
 url = "https://github.com/psf/black.git"
 reference = "stable"
-resolved_reference = "e026c93888f91a47a9c9f4e029f3eb07d96375e6"
+resolved_reference = "6fdf8a4af28071ed1d079c01122b34c5d587207a"
 
 [[package]]
 name = "cairocffi"
@@ -2937,4 +2937,4 @@ testing = ["big-O", "jaraco.functools", "jaraco.itertools", "more-itertools", "p
 [metadata]
 lock-version = "2.0"
 python-versions = ">=3.10,<4.0"
-content-hash = "3897236a0daf72e147039af0d76f62c37b75ae12d751ea98217b19ba37459ad8"
+content-hash = "0fffdfc697477db9ef90ddda74809a47144d64d7e7e972962333e28ab9829225"
