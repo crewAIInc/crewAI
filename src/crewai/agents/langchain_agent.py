@@ -1,4 +1,5 @@
 from typing import Any, Optional, List, Callable
+import warnings
 
 from langchain_core.messages import AIMessage
 from crewai.agents.agent_interface import AgentWrapperParent
@@ -8,20 +9,18 @@ class LangchainAgent(AgentWrapperParent):
 
     def __init__(
         self,
-        agent_from_tools: Callable[[Any], Any],
-        tools: List[Any],
+        agent: Any,
         role: str,
         allow_delegation: bool = False,
-        **data: Any
+        tools: List[Any] | None = None,
+        **data: Any,
     ):
         super().__init__(role=role, allow_delegation=allow_delegation, **data)
         self.data.update(data)
-
-        self.data["agent_from_tools"] = agent_from_tools
+        self.data["agent"] = agent
         # store tools by name to eliminate duplicates
         self.data["tools"] = {}
-        self.add_tools(tools)
-        self.create_agent_executor()
+        self.tools = tools or []
 
     def execute_task(
         self,
@@ -35,9 +34,9 @@ class LangchainAgent(AgentWrapperParent):
             context = [AIMessage(content=ctx) for ctx in context]
         else:
             context = []
-
-        return self.data["agent_executor"].invoke(
-            {"input": task, "chat_history": context}
+        # https://github.com/langchain-ai/langchain/discussions/17403
+        return self.data["agent"].invoke(
+            {"input": task, "chat_history": context, "tools": self.tools}
         )["output"]
 
     @property
@@ -46,20 +45,8 @@ class LangchainAgent(AgentWrapperParent):
 
     @tools.setter
     def tools(self, tools: List[Any]) -> None:
-        added = self.add_tools(tools)
-        if added:
-            # Is there a way to add tools without re-creating the agent?
-            self.create_agent_executor()
-
-    def add_tools(self, tools: List[Any] | None) -> int:
-        if tools is None:
-            return 0
-        added = 0
         for tool in tools:
             if tool.name not in self.data["tools"]:
                 self.data["tools"][tool.name] = tool
-                added += 1
-        return added
-
-    def create_agent_executor(self) -> None:
-        self.data["agent_executor"] = self.data["agent_from_tools"](self.tools)
+            else:
+                warnings.warn(f"Tool {tool.name} already exists in the agent.")
