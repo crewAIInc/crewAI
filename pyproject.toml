@@ -25,6 +25,7 @@ opentelemetry-api = "^1.22.0"
 opentelemetry-sdk = "^1.22.0"
 opentelemetry-exporter-otlp-proto-http = "^1.22.0"
 instructor = "^0.5.2"
+regex = "^2023.12.25"
 
 [tool.poetry.group.dev.dependencies]
 isort = "^5.13.2"
@@ -43,6 +44,7 @@ cairosvg = "^2.7.1"
 [tool.isort]
 profile = "black"
 known_first_party = ["crewai"]
+
 
 
 [tool.poetry.group.test.dependencies]
