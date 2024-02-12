@@ -20,17 +20,16 @@ Ollama is preferred for local LLM integration, offering customization and privac
 Instantiate Ollama and pass it to your agents within CrewAI, enhancing them with the local model's capabilities.
 
 ```python
-from langchain_community.llms import Ollama
-
-# Assuming you have Ollama installed and downloaded the openhermes model
-ollama_openhermes = Ollama(model="openhermes")
+# Required
+os.environ["OPENAI_API_BASE"]='http://localhost:11434/v1'
+os.environ["OPENAI_MODEL_NAME"]='openhermes'
+os.environ["OPENAI_API_KEY"]=''
 
 local_expert = Agent(
   role='Local Expert',
   goal='Provide insights about the city',
   backstory="A knowledgeable local guide.",
   tools=[SearchTools.search_internet, BrowserTools.scrape_and_summarize_website],
-  llm=ollama_openhermes,
   verbose=True
 )
 ```
@@ -40,35 +39,40 @@ You can use environment variables for easy switch between APIs and models, suppo
 
 ### Configuration Examples
 
+### Ollama
+```sh
+OPENAI_API_BASE='http://localhost:11434/v1'
+OPENAI_MODEL_NAME='openhermes'  # Depending on the model you have available
+OPENAI_API_KEY=NA
+```
+
 ### FastChat
 ```sh
-# Required
+
 OPENAI_API_BASE="http://localhost:8001/v1"
+OPENAI_MODEL_NAME='oh-2.5m7b-q51' # Depending on the model you have available
 OPENAI_API_KEY=NA
-MODEL_NAME='oh-2.5m7b-q51' # Depending on the model you have available
 ```
 
 ### LM Studio
 ```sh
-# Required
 OPENAI_API_BASE="http://localhost:8000/v1"
+OPENAI_MODEL_NAME=NA
 OPENAI_API_KEY=NA
-MODEL_NAME=NA
 ```
 
 ### Mistral API
 ```sh
 OPENAI_API_KEY=your-mistral-api-key
 OPENAI_API_BASE=https://api.mistral.ai/v1
-MODEL_NAME="mistral-small" # Check documentation for available models
+OPENAI_MODEL_NAME="mistral-small" # Check documentation for available models
 ```
 
 ### text-gen-web-ui
 ```sh
-# Required
-API_BASE_URL=http://localhost:5000
+OPENAI_API_BASE=http://localhost:5000/v1
+OPENAI_MODEL_NAME=NA
 OPENAI_API_KEY=NA
-MODEL_NAME=NA
 ```
 
 ### Azure Open AI
