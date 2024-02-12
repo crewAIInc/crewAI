@@ -5,4 +5,4 @@ dist/
 .env
 assets/*
 .idea
-test.py
+test/
