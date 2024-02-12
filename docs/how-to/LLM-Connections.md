@@ -5,9 +5,10 @@ description: Guide on integrating CrewAI with various Large Language Models (LLM
 
 ## Connect CrewAI to LLMs
 !!! note "Default LLM"
-    By default, crewAI uses OpenAI's GPT-4 model for language processing. However, you can configure your agents to use a different model or API. This guide will show you how to connect your agents to different LLMs.
+    By default, crewAI uses OpenAI's GPT-4 model for language processing. However, you can configure your agents to use a different model or API. This guide will show you how to connect your agents to different LLMs. You can change the specific gpt model by setting the `OPENAI_MODEL_NAME` environment variable.
 
 CrewAI offers flexibility in connecting to various LLMs, including local models via [Ollama](https://ollama.ai) and different APIs like Azure. It's compatible with all [LangChain LLM](https://python.langchain.com/docs/integrations/llms/) components, enabling diverse integrations for tailored AI solutions.
+
 
 ## Ollama Integration
 Ollama is preferred for local LLM integration, offering customization and privacy benefits. It requires installation and configuration, including model adjustments via a Modelfile to optimize performance.

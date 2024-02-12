@@ -120,6 +120,22 @@ class Telemetry:
             except Exception:
                 pass
 
+    def tool_repeated_usage(self, llm: Any, tool_name: str, attempts: int):
+        """Records the repeated usage 'error' of a tool by an agent."""
+        if self.ready:
+            try:
+                tracer = trace.get_tracer("crewai.telemetry")
+                span = tracer.start_span("Tool Repeated Usage")
+                self._add_attribute(span, "tool_name", tool_name)
+                self._add_attribute(span, "attempts", attempts)
+                self._add_attribute(
+                    span, "llm", json.dumps(self._safe_llm_attributes(llm))
+                )
+                span.set_status(Status(StatusCode.OK))
+                span.end()
+            except Exception:
+                pass
+
     def tool_usage(self, llm: Any, tool_name: str, attempts: int):
         """Records the usage of a tool by an agent."""
         if self.ready:
