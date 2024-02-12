@@ -12,6 +12,10 @@ class AgentWrapperParent(ABC, BaseModel):
         default_factory=dict,
         description="Data storage for children, as pydantic doesn't play well with inheritance.",
     )
+    role: str = Field(description="Role of the agent", default="")
+    allow_delegation: bool = Field(
+        description="Allow delegation of tasks to other agents?", default=False
+    )
 
     @property
     def i18n(self) -> I18N:
@@ -34,16 +38,6 @@ class AgentWrapperParent(ABC, BaseModel):
         context: Optional[str] = None,
         tools: Optional[List[Any]] = None,
     ) -> str:
-        pass
-
-    @property
-    @abstractmethod
-    def allow_delegation(self) -> bool:
-        pass
-
-    @property
-    @abstractmethod
-    def role(self) -> str:
         pass
 
     @property
