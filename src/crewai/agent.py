@@ -1,3 +1,4 @@
+import os
 import uuid
 from typing import Any, List, Optional
 
@@ -93,7 +94,7 @@ class Agent(BaseModel):
     i18n: I18N = Field(default=I18N(), description="Internationalization settings.")
     llm: Any = Field(
         default_factory=lambda: ChatOpenAI(
-            model="gpt-4",
+            model=os.environ.get("OPENAI_MODEL_NAME", "gpt-4")
         ),
         description="Language model that will run the agent.",
     )
