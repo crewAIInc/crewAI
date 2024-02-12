@@ -53,7 +53,8 @@ class Telemetry:
             pass
 
     def set_tracer(self):
-        trace.set_tracer_provider(self.provider)
+        if self.ready:
+            trace.set_tracer_provider(self.provider)
 
     def crew_creation(self, crew):
         """Records the creation of a crew."""
