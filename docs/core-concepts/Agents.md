@@ -20,7 +20,9 @@ description: What are crewAI Agents and how to use them.
 | **Role**       | Defines the agent's function within the crew. It determines the kind of tasks the agent is best suited for.  |
 | **Goal**       | The individual objective that the agent aims to achieve. It guides the agent's decision-making process. |
 | **Backstory**    | Provides context to the agent's role and goal, enriching the interaction and collaboration dynamics. |
+| **LLM**       | The language model used by the agent to process and generate text. |
 | **Tools**    | Set of capabilities or functions that the agent can use to perform tasks. Tools can be shared or exclusive to specific agents. |
+| **Function Calling LLM** | The language model used by this agent to call functions, if none is passed the same main llm for each agent will be used.      |
 | **Max Iter**    | The maximum number of iterations the agent can perform before forced to give its best answer |
 | **Max RPM**    | The maximum number of requests per minute the agent can perform to avoid rate limits |
 | **Verbose**    | This allow you to actually see what is going on during the Crew execution. |
@@ -47,6 +49,8 @@ agent = Agent(
   You're currently working on a project to analyze the
   performance of our marketing campaigns.""",
   tools=[my_tool1, my_tool2],
+  llm=my_llm,
+  function_calling_llm=my_llm,
   max_iter=10,
   max_rpm=10,
   verbose=True,
