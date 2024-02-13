@@ -41,6 +41,7 @@ class ToolUsage:
         tools_names: str,
         task: Any,
         llm: Any,
+        function_calling_llm: Any,
     ) -> None:
         self._i18n: I18N = I18N()
         self._printer: Printer = Printer()
@@ -54,6 +55,7 @@ class ToolUsage:
         self.tools = tools
         self.task = task
         self.llm = llm
+        self.function_calling_llm = function_calling_llm
 
     def use(self, tool_string: str):
         calling = self._tool_calling(tool_string)
@@ -79,7 +81,9 @@ class ToolUsage:
             try:
                 result = self._i18n.errors("task_repeated_usage").format(
                     tool=calling.tool_name,
-                    tool_input=", ".join(calling.arguments.values()),
+                    tool_input=", ".join(
+                        [str(arg) for arg in calling.arguments.values()]
+                    ),
                 )
                 self._printer.print(content=f"\n\n{result}\n", color="yellow")
                 self._telemetry.tool_repeated_usage(
@@ -138,7 +142,9 @@ class ToolUsage:
         self, calling: Union[ToolCalling, InstructorToolCalling]
     ) -> None:
         if last_tool_usage := self.tools_handler.last_used_tool:
-            return calling == last_tool_usage
+            return (calling.tool_name == last_tool_usage.tool_name) and (
+                calling.arguments == last_tool_usage.arguments
+            )
 
     def _select_tool(self, tool_name: str) -> BaseTool:
         for tool in self.tools:
@@ -175,15 +181,18 @@ class ToolUsage:
             tool_string = tool_string.replace("Action:", "Tool Name:")
             tool_string = tool_string.replace("Action Input:", "Tool Arguments:")
 
-            if (isinstance(self.llm, ChatOpenAI)) and (
-                self.llm.openai_api_base == None
-            ):
+            llm = self.function_calling_llm or self.llm
+
+            if (isinstance(llm, ChatOpenAI)) and (llm.openai_api_base == None):
+                print("CARALHOooooooooooo")
+                print(llm)
+                print("CARALHOooooooooooo")
                 client = instructor.patch(
-                    self.llm.client._client,
+                    llm.client._client,
                     mode=instructor.Mode.FUNCTIONS,
                 )
                 calling = client.chat.completions.create(
-                    model=self.llm.model_name,
+                    model=llm.model_name,
                     messages=[
                         {
                             "role": "system",
@@ -220,13 +229,13 @@ class ToolUsage:
                         """,
                     },
                 )
-                chain = prompt | self.llm | parser
+                chain = prompt | llm | parser
                 calling = chain.invoke({"tool_string": tool_string})
 
         except Exception:
             self._run_attempts += 1
             if self._run_attempts > self._max_parsing_attempts:
-                self._telemetry.tool_usage_error(llm=self.llm)
+                self._telemetry.tool_usage_error(llm=llm)
                 return ToolUsageErrorException(self._i18n.errors("tool_usage_error"))
             return self._tool_calling(tool_string)
 

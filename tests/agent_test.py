@@ -543,3 +543,35 @@ def test_agent_step_callback():
         callback.return_value = "ok"
         crew.kickoff()
         callback.assert_called()
+
+
+@pytest.mark.vcr(filter_headers=["authorization"])
+def test_agent_function_calling_llm():
+    from langchain_openai import ChatOpenAI
+
+    llm = ChatOpenAI(model="gpt-3.5")
+
+    with patch.object(llm.client, "create", wraps=llm.client.create) as private_mock:
+
+        @tool
+        def learn_about_AI(topic) -> float:
+            """Useful for when you need to learn about AI to write an paragraph about it."""
+            return "AI is a very broad field."
+
+        agent1 = Agent(
+            role="test role",
+            goal="test goal",
+            backstory="test backstory",
+            tools=[learn_about_AI],
+            function_calling_llm=llm,
+        )
+
+        essay = Task(
+            description="Write and then review an small paragraph on AI until it's AMAZING",
+            agent=agent1,
+        )
+        tasks = [essay]
+        crew = Crew(agents=[agent1], tasks=tasks)
+
+        crew.kickoff()
+        private_mock.assert_called()

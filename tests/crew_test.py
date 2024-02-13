@@ -492,3 +492,38 @@ def test_dont_set_agents_step_callback_if_already_set():
         crew.kickoff()
         assert researcher_agent.step_callback is not crew_callback
         assert researcher_agent.step_callback is agent_callback
+
+
+@pytest.mark.vcr(filter_headers=["authorization"])
+def test_crew_function_calling_llm():
+    from unittest.mock import patch
+
+    from langchain.tools import tool
+    from langchain_openai import ChatOpenAI
+
+    llm = ChatOpenAI(model="gpt-3.5")
+
+    with patch.object(llm.client, "create", wraps=llm.client.create) as private_mock:
+
+        @tool
+        def learn_about_AI(topic) -> float:
+            """Useful for when you need to learn about AI to write an paragraph about it."""
+            return "AI is a very broad field."
+
+        agent1 = Agent(
+            role="test role",
+            goal="test goal",
+            backstory="test backstory",
+            tools=[learn_about_AI],
+        )
+
+        essay = Task(
+            description="Write and then review an small paragraph on AI until it's AMAZING",
+            agent=agent1,
+        )
+        tasks = [essay]
+        print(agent1.function_calling_llm)
+        crew = Crew(agents=[agent1], tasks=tasks, function_calling_llm=llm)
+        print(agent1.function_calling_llm)
+        crew.kickoff()
+        private_mock.assert_called()

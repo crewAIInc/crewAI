@@ -24,6 +24,7 @@ class CrewAgentExecutor(AgentExecutor):
     task: Any = None
     tools_description: str = ""
     tools_names: str = ""
+    function_calling_llm: Any = None
     request_within_rpm_limit: Any = None
     tools_handler: InstanceOf[ToolsHandler] = None
     max_iterations: Optional[int] = 15
@@ -194,6 +195,7 @@ class CrewAgentExecutor(AgentExecutor):
                     tools=self.tools,
                     tools_description=self.tools_description,
                     tools_names=self.tools_names,
+                    function_calling_llm=self.function_calling_llm,
                     llm=self.llm,
                     task=self.task,
                 ).use(agent_action.log)

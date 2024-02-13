@@ -22,9 +22,9 @@ class ToolsHandler:
 
     def on_tool_end(self, calling: ToolCalling, output: str) -> Any:
         """Run when tool ends running."""
-        if self.last_used_tool.function_name != CacheTools().name:
+        if self.last_used_tool.tool_name != CacheTools().name:
             self.cache.add(
-                tool=calling.function_name,
+                tool=calling.tool_name,
                 input=calling.arguments,
                 output=output,
             )

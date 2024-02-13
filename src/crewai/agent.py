@@ -36,6 +36,7 @@ class Agent(BaseModel):
             goal: The objective of the agent.
             backstory: The backstory of the agent.
             llm: The language model that will run the agent.
+            function_calling_llm: The language model that will the tool calling for this agent, it overrides the crew function_calling_llm.
             max_iter: Maximum number of iterations for an agent to execute a task.
             memory: Whether the agent should have memory or not.
             max_rpm: Maximum number of requests per minute for the agent execution to be respected.
@@ -98,6 +99,9 @@ class Agent(BaseModel):
         ),
         description="Language model that will run the agent.",
     )
+    function_calling_llm: Optional[Any] = Field(
+        description="Language model that will run the agent.", default=None
+    )
 
     @field_validator("id", mode="before")
     @classmethod
@@ -140,7 +144,6 @@ class Agent(BaseModel):
         Returns:
             Output of the agent
         """
-
         task_prompt = task.prompt()
 
         if context:
@@ -151,7 +154,7 @@ class Agent(BaseModel):
         tools = tools or self.tools
         self.agent_executor.tools = tools
         self.agent_executor.task = task
-        self.agent_executor.tools_description = (render_text_description(tools),)
+        self.agent_executor.tools_description = render_text_description(tools)
         self.agent_executor.tools_names = self.__tools_names(tools)
 
         result = self.agent_executor.invoke(
@@ -208,6 +211,7 @@ class Agent(BaseModel):
             "max_iterations": self.max_iter,
             "step_callback": self.step_callback,
             "tools_handler": self.tools_handler,
+            "function_calling_llm": self.function_calling_llm,
         }
 
         if self._rpm_controller:
