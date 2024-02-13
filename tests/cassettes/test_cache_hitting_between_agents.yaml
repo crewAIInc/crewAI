@@ -1,33 +1,90 @@
 interactions:
 - request:
+    body: !!binary |
+      CuMLCiQKIgoMc2VydmljZS5uYW1lEhIKEGNyZXdBSS10ZWxlbWV0cnkSugsKEgoQY3Jld2FpLnRl
+      bGVtZXRyeRKjCwoQEFjRIG2GoZQnrnnNcRe+MRIIGTM6Xe5biPAqDENyZXcgQ3JlYXRlZDABOUCG
+      ovJ7XbMXQXg7pvJ7XbMXShoKDmNyZXdhaV92ZXJzaW9uEggKBjAuMTAuMkoaCg5weXRob25fdmVy
+      c2lvbhIICgYzLjExLjdKMQoHY3Jld19pZBImCiQ5MmY3YTI0Zi03ZmE2LTQxNzgtYmIxYS02NDdm
+      NTRjNzNkMDRKHAoMY3Jld19wcm9jZXNzEgwKCnNlcXVlbnRpYWxKFQoNY3Jld19sYW5ndWFnZRIE
+      CgJlbkoaChRjcmV3X251bWJlcl9vZl90YXNrcxICGAJKGwoVY3Jld19udW1iZXJfb2ZfYWdlbnRz
+      EgIYAkr9BAoLY3Jld19hZ2VudHMS7QQK6gRbeyJpZCI6ICIzOTFmYTliYy01ZTlmLTRiNDctYmIy
+      Yy0xZjEwNjIxYWJkYjkiLCAicm9sZSI6ICJDRU8iLCAibWVtb3J5X2VuYWJsZWQ/IjogdHJ1ZSwg
+      InZlcmJvc2U/IjogZmFsc2UsICJtYXhfaXRlciI6IDE1LCAibWF4X3JwbSI6IG51bGwsICJpMThu
+      IjogImVuIiwgImxsbSI6ICJ7XCJuYW1lXCI6IG51bGwsIFwibW9kZWxfbmFtZVwiOiBcImdwdC00
+      XCIsIFwidGVtcGVyYXR1cmVcIjogMC43LCBcImNsYXNzXCI6IFwiQ2hhdE9wZW5BSVwifSIsICJk
+      ZWxlZ2F0aW9uX2VuYWJsZWQ/IjogdHJ1ZSwgInRvb2xzX25hbWVzIjogW119LCB7ImlkIjogImVm
+      ODllOTZkLTkzMTUtNGRkOS1hYjhlLWZhZWI3ZTI0MDBhNCIsICJyb2xlIjogIlJlc2VhcmNoZXIi
+      LCAibWVtb3J5X2VuYWJsZWQ/IjogdHJ1ZSwgInZlcmJvc2U/IjogZmFsc2UsICJtYXhfaXRlciI6
+      IDE1LCAibWF4X3JwbSI6IG51bGwsICJpMThuIjogImVuIiwgImxsbSI6ICJ7XCJuYW1lXCI6IG51
+      bGwsIFwibW9kZWxfbmFtZVwiOiBcImdwdC00XCIsIFwidGVtcGVyYXR1cmVcIjogMC43LCBcImNs
+      YXNzXCI6IFwiQ2hhdE9wZW5BSVwifSIsICJkZWxlZ2F0aW9uX2VuYWJsZWQ/IjogZmFsc2UsICJ0
+      b29sc19uYW1lcyI6IFtdfV1KlwIKCmNyZXdfdGFza3MSiAIKhQJbeyJpZCI6ICI0Y2NmOWVkYS02
+      OWEyLTQ5NmItOTI5Zi0yMTQ4NDBkMDdhYjQiLCAiYXN5bmNfZXhlY3V0aW9uPyI6IGZhbHNlLCAi
+      YWdlbnRfcm9sZSI6ICJDRU8iLCAidG9vbHNfbmFtZXMiOiBbIm11bHRpcGxpZXIiXX0sIHsiaWQi
+      OiAiZDU5Nzg0MmItYzE4Mi00YTY2LTgwYjItNzdlYzM4MjRhOTYxIiwgImFzeW5jX2V4ZWN1dGlv
+      bj8iOiBmYWxzZSwgImFnZW50X3JvbGUiOiAiUmVzZWFyY2hlciIsICJ0b29sc19uYW1lcyI6IFsi
+      bXVsdGlwbGllciJdfV1KKAoIcGxhdGZvcm0SHAoabWFjT1MtMTQuMy1hcm02NC1hcm0tNjRiaXRK
+      HAoQcGxhdGZvcm1fcmVsZWFzZRIICgYyMy4zLjBKGwoPcGxhdGZvcm1fc3lzdGVtEggKBkRhcndp
+      bkp7ChBwbGF0Zm9ybV92ZXJzaW9uEmcKZURhcndpbiBLZXJuZWwgVmVyc2lvbiAyMy4zLjA6IFdl
+      ZCBEZWMgMjAgMjE6MzA6NTkgUFNUIDIwMjM7IHJvb3Q6eG51LTEwMDAyLjgxLjV+Ny9SRUxFQVNF
+      X0FSTTY0X1Q2MDMwSgoKBGNwdXMSAhgMegIYAQ==
+    headers:
+      Accept:
+      - '*/*'
+      Accept-Encoding:
+      - gzip, deflate
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '1510'
+      Content-Type:
+      - application/x-protobuf
+      User-Agent:
+      - OTel-OTLP-Exporter-Python/1.22.0
+    method: POST
+    uri: http://telemetry.crewai.com:4318/v1/traces
+  response:
+    body:
+      string: "\n\0"
+    headers:
+      Content-Length:
+      - '2'
+      Content-Type:
+      - application/x-protobuf
+      Date:
+      - Tue, 13 Feb 2024 08:04:31 GMT
+    status:
+      code: 200
+      message: OK
+- request:
     body: '{"messages": [{"role": "user", "content": "You are CEO.\nYou''re an long
       time CEO of a content creation agency with a Senior Writer on the team. You''re
       now working on a new project and want to make sure the content produced is amazing.\n\nYour
       personal goal is: Make sure the writers in your company produce amazing content.TOOLS:\n------\nYou
-      have access to only the following tools:\n\nmultiplier: multiplier(first_number:
+      have access to only the following tools:\n\n(\"multiplier: multiplier(first_number:
       int, second_number: int) -> float - Useful for when you need to multiply two
-      numbers together.\nDelegate work to co-worker: Delegate work to co-worker(coworker:
+      numbers together.\\nDelegate work to co-worker: Delegate work to co-worker(coworker:
       str, task: str, context: str) - Delegate a specific task to one of the following
-      co-workers: Researcher. The input to this tool should be the role of the coworker,
-      the task you want them to do, and ALL necessary context to exectue the task,
-      they know nothing about the task, so share absolute everything you know, don''t
-      reference things but instead explain them.\nAsk question to co-worker: Ask question
-      to co-worker(coworker: str, question: str, context: str) - Ask a specific question
-      to one of the following co-workers: Researcher. The input to this tool should
-      be the role of the coworker, the question you have for them, and ALL necessary
-      context to ask the question properly, they know nothing about the question,
-      so share absolute everything you know, don''t reference things but instead explain
-      them.\n\nTo use a tool, please use the exact following format:\n\n```\nThought:
-      Do I need to use a tool? Yes\nAction: the tool you wanna use, should be one
-      of [multiplier, Delegate work to co-worker, Ask question to co-worker], just
-      the name.\nAction Input: Any and all relevant information input and context
-      for using the tool\nObservation: the result of using the tool\n```\n\nWhen you
-      have a response for your task, or if you do not need to use a tool, you MUST
-      use the format:\n\n```\nThought: Do I need to use a tool? No\nFinal Answer:
-      [your response here]```This is the summary of your work so far:\nBegin! This
-      is VERY important to you, your job depends on it!\n\nCurrent Task: What is 2
-      tims 6? Return only the number.\n"}], "model": "gpt-4", "n": 1, "stop": ["\nObservation"],
-      "stream": false, "temperature": 0.7}'
+      co-workers:\\n- Researcher.\\nThe input to this tool should be the role of the
+      coworker, the task you want them to do, and ALL necessary context to exectue
+      the task, they know nothing about the task, so share absolute everything you
+      know, don''t reference things but instead explain them.\\nAsk question to co-worker:
+      Ask question to co-worker(coworker: str, question: str, context: str) - Ask
+      a specific question to one of the following co-workers:\\n- Researcher.\\nThe
+      input to this tool should be the role of the coworker, the question you have
+      for them, and ALL necessary context to ask the question properly, they know
+      nothing about the question, so share absolute everything you know, don''t reference
+      things but instead explain them.\",)\n\nTo use a tool, please use the exact
+      following format:\n\n```\nThought: Do I need to use a tool? Yes\nAction: the
+      tool you wanna use, should be one of [multiplier, Delegate work to co-worker,
+      Ask question to co-worker], just the name.\nAction Input: Any and all relevant
+      information input and context for using the tool\nObservation: the result of
+      using the tool\n```\n\nWhen you have a response for your task, or if you do
+      not need to use a tool, you MUST use the format:\n\n```\nThought: Do I need
+      to use a tool? No\nFinal Answer: [your response here]```This is the summary
+      of your work so far:\nBegin! This is VERY important to you, your job depends
+      on it!\n\nCurrent Task: What is 2 tims 6? Return only the number.\n"}], "model":
+      "gpt-4", "n": 1, "stop": ["\nObservation"], "stream": true, "temperature": 0.7}'
     headers:
       accept:
       - application/json
@@ -36,11 +93,12 @@ interactions:
       connection:
       - keep-alive
       content-length:
-      - '2209'
+      - '2229'
       content-type:
       - application/json
       cookie:
-      - _cfuvid=ps.JYe.5DT5QaG1hDuUb70tnVJo8IPWJrGrGEO_HUYA-1703099776177-0-604800000
+      - __cf_bm=l8PgzrDOifuVgV8jOi6oNnLSKwzNw5zlnYEI_Qslu_o-1707811118-1-ARSm0+dQEO1vsfbM09g4mKX7cyvA/8odsM47nu2fWyCii5R/qlesVg08eZDiacndSQlL+nEfI/ne5RvoyPTGkgg=;
+        _cfuvid=zFH17OERRVf.0CqqO0vUy7WbuquH88772m3kfb_dIbs-1707811118866-0-604800000
       host:
       - api.openai.com
       user-agent:
@@ -63,37 +121,144 @@ interactions:
     uri: https://api.openai.com/v1/chat/completions
   response:
     body:
-      string: !!binary |
-        H4sIAAAAAAAAA1SRT0/jMBDF7/kUozm3qN02Lc0FoYVDVyvgwIGWrqrUmSTedTzGniBQle+OnP5j
-        Lz68N2/0e+N9AoC6wAxQ1bmoxpnh9Vu5fljTapeuf3P4+evxfZk+vSzuqZwuHA5ignd/SckpdaW4
-        cYZEsz3YylMuFLeO56N5Opuk03FvNFyQibHKyXA6HM3Gk2OiZq0oYAavCQDAvn8jmy3oAzMYDU5K
-        QyHkFWF2HgJAzyYqmIegg+RWcHAxFVsh2+M+19xWtWRwx7AES1SAMLSBIAdhNjeworCxtyqWyaBp
-        jWhnNPmTBkvrWslgv8FS+yBb2zY78hvM4McANhhIsS2+qbMOjyTduYLhynnexbq2Neasl9rqUG89
-        5YFtxA3C7hDvEoA//ana/9qj89w42Qr/IxsXTuezwz68/MrFnUyOprDk5qKno0VyJMTwGYSabalt
-        Rd553V8uciZd8gUAAP//AwBVoBVzMAIAAA==
+      string: 'data: {"id":"chatcmpl-8ri4Ewek9ChNFjqPnJ9Q9SH7cC4eJ","object":"chat.completion.chunk","created":1707811470,"model":"gpt-4-0613","system_fingerprint":null,"choices":[{"index":0,"delta":{"role":"assistant","content":""},"logprobs":null,"finish_reason":null}]}
+
+
+        data: {"id":"chatcmpl-8ri4Ewek9ChNFjqPnJ9Q9SH7cC4eJ","object":"chat.completion.chunk","created":1707811470,"model":"gpt-4-0613","system_fingerprint":null,"choices":[{"index":0,"delta":{"content":"Thought"},"logprobs":null,"finish_reason":null}]}
+
+
+        data: {"id":"chatcmpl-8ri4Ewek9ChNFjqPnJ9Q9SH7cC4eJ","object":"chat.completion.chunk","created":1707811470,"model":"gpt-4-0613","system_fingerprint":null,"choices":[{"index":0,"delta":{"content":":"},"logprobs":null,"finish_reason":null}]}
+
+
+        data: {"id":"chatcmpl-8ri4Ewek9ChNFjqPnJ9Q9SH7cC4eJ","object":"chat.completion.chunk","created":1707811470,"model":"gpt-4-0613","system_fingerprint":null,"choices":[{"index":0,"delta":{"content":"
+        Do"},"logprobs":null,"finish_reason":null}]}
+
+
+        data: {"id":"chatcmpl-8ri4Ewek9ChNFjqPnJ9Q9SH7cC4eJ","object":"chat.completion.chunk","created":1707811470,"model":"gpt-4-0613","system_fingerprint":null,"choices":[{"index":0,"delta":{"content":"
+        I"},"logprobs":null,"finish_reason":null}]}
+
+
+        data: {"id":"chatcmpl-8ri4Ewek9ChNFjqPnJ9Q9SH7cC4eJ","object":"chat.completion.chunk","created":1707811470,"model":"gpt-4-0613","system_fingerprint":null,"choices":[{"index":0,"delta":{"content":"
+        need"},"logprobs":null,"finish_reason":null}]}
+
+
+        data: {"id":"chatcmpl-8ri4Ewek9ChNFjqPnJ9Q9SH7cC4eJ","object":"chat.completion.chunk","created":1707811470,"model":"gpt-4-0613","system_fingerprint":null,"choices":[{"index":0,"delta":{"content":"
+        to"},"logprobs":null,"finish_reason":null}]}
+
+
+        data: {"id":"chatcmpl-8ri4Ewek9ChNFjqPnJ9Q9SH7cC4eJ","object":"chat.completion.chunk","created":1707811470,"model":"gpt-4-0613","system_fingerprint":null,"choices":[{"index":0,"delta":{"content":"
+        use"},"logprobs":null,"finish_reason":null}]}
+
+
+        data: {"id":"chatcmpl-8ri4Ewek9ChNFjqPnJ9Q9SH7cC4eJ","object":"chat.completion.chunk","created":1707811470,"model":"gpt-4-0613","system_fingerprint":null,"choices":[{"index":0,"delta":{"content":"
+        a"},"logprobs":null,"finish_reason":null}]}
+
+
+        data: {"id":"chatcmpl-8ri4Ewek9ChNFjqPnJ9Q9SH7cC4eJ","object":"chat.completion.chunk","created":1707811470,"model":"gpt-4-0613","system_fingerprint":null,"choices":[{"index":0,"delta":{"content":"
+        tool"},"logprobs":null,"finish_reason":null}]}
+
+
+        data: {"id":"chatcmpl-8ri4Ewek9ChNFjqPnJ9Q9SH7cC4eJ","object":"chat.completion.chunk","created":1707811470,"model":"gpt-4-0613","system_fingerprint":null,"choices":[{"index":0,"delta":{"content":"?"},"logprobs":null,"finish_reason":null}]}
+
+
+        data: {"id":"chatcmpl-8ri4Ewek9ChNFjqPnJ9Q9SH7cC4eJ","object":"chat.completion.chunk","created":1707811470,"model":"gpt-4-0613","system_fingerprint":null,"choices":[{"index":0,"delta":{"content":"
+        Yes"},"logprobs":null,"finish_reason":null}]}
+
+
+        data: {"id":"chatcmpl-8ri4Ewek9ChNFjqPnJ9Q9SH7cC4eJ","object":"chat.completion.chunk","created":1707811470,"model":"gpt-4-0613","system_fingerprint":null,"choices":[{"index":0,"delta":{"content":"\n"},"logprobs":null,"finish_reason":null}]}
+
+
+        data: {"id":"chatcmpl-8ri4Ewek9ChNFjqPnJ9Q9SH7cC4eJ","object":"chat.completion.chunk","created":1707811470,"model":"gpt-4-0613","system_fingerprint":null,"choices":[{"index":0,"delta":{"content":"Action"},"logprobs":null,"finish_reason":null}]}
+
+
+        data: {"id":"chatcmpl-8ri4Ewek9ChNFjqPnJ9Q9SH7cC4eJ","object":"chat.completion.chunk","created":1707811470,"model":"gpt-4-0613","system_fingerprint":null,"choices":[{"index":0,"delta":{"content":":"},"logprobs":null,"finish_reason":null}]}
+
+
+        data: {"id":"chatcmpl-8ri4Ewek9ChNFjqPnJ9Q9SH7cC4eJ","object":"chat.completion.chunk","created":1707811470,"model":"gpt-4-0613","system_fingerprint":null,"choices":[{"index":0,"delta":{"content":"
+        multiplier"},"logprobs":null,"finish_reason":null}]}
+
+
+        data: {"id":"chatcmpl-8ri4Ewek9ChNFjqPnJ9Q9SH7cC4eJ","object":"chat.completion.chunk","created":1707811470,"model":"gpt-4-0613","system_fingerprint":null,"choices":[{"index":0,"delta":{"content":"\n"},"logprobs":null,"finish_reason":null}]}
+
+
+        data: {"id":"chatcmpl-8ri4Ewek9ChNFjqPnJ9Q9SH7cC4eJ","object":"chat.completion.chunk","created":1707811470,"model":"gpt-4-0613","system_fingerprint":null,"choices":[{"index":0,"delta":{"content":"Action"},"logprobs":null,"finish_reason":null}]}
+
+
+        data: {"id":"chatcmpl-8ri4Ewek9ChNFjqPnJ9Q9SH7cC4eJ","object":"chat.completion.chunk","created":1707811470,"model":"gpt-4-0613","system_fingerprint":null,"choices":[{"index":0,"delta":{"content":"
+        Input"},"logprobs":null,"finish_reason":null}]}
+
+
+        data: {"id":"chatcmpl-8ri4Ewek9ChNFjqPnJ9Q9SH7cC4eJ","object":"chat.completion.chunk","created":1707811470,"model":"gpt-4-0613","system_fingerprint":null,"choices":[{"index":0,"delta":{"content":":"},"logprobs":null,"finish_reason":null}]}
+
+
+        data: {"id":"chatcmpl-8ri4Ewek9ChNFjqPnJ9Q9SH7cC4eJ","object":"chat.completion.chunk","created":1707811470,"model":"gpt-4-0613","system_fingerprint":null,"choices":[{"index":0,"delta":{"content":"
+        {\""},"logprobs":null,"finish_reason":null}]}
+
+
+        data: {"id":"chatcmpl-8ri4Ewek9ChNFjqPnJ9Q9SH7cC4eJ","object":"chat.completion.chunk","created":1707811470,"model":"gpt-4-0613","system_fingerprint":null,"choices":[{"index":0,"delta":{"content":"first"},"logprobs":null,"finish_reason":null}]}
+
+
+        data: {"id":"chatcmpl-8ri4Ewek9ChNFjqPnJ9Q9SH7cC4eJ","object":"chat.completion.chunk","created":1707811470,"model":"gpt-4-0613","system_fingerprint":null,"choices":[{"index":0,"delta":{"content":"_number"},"logprobs":null,"finish_reason":null}]}
+
+
+        data: {"id":"chatcmpl-8ri4Ewek9ChNFjqPnJ9Q9SH7cC4eJ","object":"chat.completion.chunk","created":1707811470,"model":"gpt-4-0613","system_fingerprint":null,"choices":[{"index":0,"delta":{"content":"\":"},"logprobs":null,"finish_reason":null}]}
+
+
+        data: {"id":"chatcmpl-8ri4Ewek9ChNFjqPnJ9Q9SH7cC4eJ","object":"chat.completion.chunk","created":1707811470,"model":"gpt-4-0613","system_fingerprint":null,"choices":[{"index":0,"delta":{"content":"
+        "},"logprobs":null,"finish_reason":null}]}
+
+
+        data: {"id":"chatcmpl-8ri4Ewek9ChNFjqPnJ9Q9SH7cC4eJ","object":"chat.completion.chunk","created":1707811470,"model":"gpt-4-0613","system_fingerprint":null,"choices":[{"index":0,"delta":{"content":"2"},"logprobs":null,"finish_reason":null}]}
+
+
+        data: {"id":"chatcmpl-8ri4Ewek9ChNFjqPnJ9Q9SH7cC4eJ","object":"chat.completion.chunk","created":1707811470,"model":"gpt-4-0613","system_fingerprint":null,"choices":[{"index":0,"delta":{"content":","},"logprobs":null,"finish_reason":null}]}
+
+
+        data: {"id":"chatcmpl-8ri4Ewek9ChNFjqPnJ9Q9SH7cC4eJ","object":"chat.completion.chunk","created":1707811470,"model":"gpt-4-0613","system_fingerprint":null,"choices":[{"index":0,"delta":{"content":"
+        \""},"logprobs":null,"finish_reason":null}]}
+
+
+        data: {"id":"chatcmpl-8ri4Ewek9ChNFjqPnJ9Q9SH7cC4eJ","object":"chat.completion.chunk","created":1707811470,"model":"gpt-4-0613","system_fingerprint":null,"choices":[{"index":0,"delta":{"content":"second"},"logprobs":null,"finish_reason":null}]}
+
+
+        data: {"id":"chatcmpl-8ri4Ewek9ChNFjqPnJ9Q9SH7cC4eJ","object":"chat.completion.chunk","created":1707811470,"model":"gpt-4-0613","system_fingerprint":null,"choices":[{"index":0,"delta":{"content":"_number"},"logprobs":null,"finish_reason":null}]}
+
+
+        data: {"id":"chatcmpl-8ri4Ewek9ChNFjqPnJ9Q9SH7cC4eJ","object":"chat.completion.chunk","created":1707811470,"model":"gpt-4-0613","system_fingerprint":null,"choices":[{"index":0,"delta":{"content":"\":"},"logprobs":null,"finish_reason":null}]}
+
+
+        data: {"id":"chatcmpl-8ri4Ewek9ChNFjqPnJ9Q9SH7cC4eJ","object":"chat.completion.chunk","created":1707811470,"model":"gpt-4-0613","system_fingerprint":null,"choices":[{"index":0,"delta":{"content":"
+        "},"logprobs":null,"finish_reason":null}]}
+
+
+        data: {"id":"chatcmpl-8ri4Ewek9ChNFjqPnJ9Q9SH7cC4eJ","object":"chat.completion.chunk","created":1707811470,"model":"gpt-4-0613","system_fingerprint":null,"choices":[{"index":0,"delta":{"content":"6"},"logprobs":null,"finish_reason":null}]}
+
+
+        data: {"id":"chatcmpl-8ri4Ewek9ChNFjqPnJ9Q9SH7cC4eJ","object":"chat.completion.chunk","created":1707811470,"model":"gpt-4-0613","system_fingerprint":null,"choices":[{"index":0,"delta":{"content":"}"},"logprobs":null,"finish_reason":null}]}
+
+
+        data: {"id":"chatcmpl-8ri4Ewek9ChNFjqPnJ9Q9SH7cC4eJ","object":"chat.completion.chunk","created":1707811470,"model":"gpt-4-0613","system_fingerprint":null,"choices":[{"index":0,"delta":{},"logprobs":null,"finish_reason":"stop"}]}
+
+
+        data: [DONE]
+
+
+        '
     headers:
       CF-Cache-Status:
       - DYNAMIC
       CF-RAY:
-      - 8533eaa65ee36893-SJC
+      - 854b8f9ce8c567df-SJC
       Cache-Control:
       - no-cache, must-revalidate
       Connection:
       - keep-alive
-      Content-Encoding:
-      - gzip
       Content-Type:
-      - application/json
+      - text/event-stream
       Date:
-      - Sat, 10 Feb 2024 11:12:23 GMT
+      - Tue, 13 Feb 2024 08:04:31 GMT
       Server:
       - cloudflare
-      Set-Cookie:
-      - __cf_bm=VUM_AzyPmw54UKYCZhrJdPu8KbJzn3N7bJOp_y.9Kyc-1707563543-1-AZT0SxUJP3NDQsM27IVGaO9UGlGGGZ1b3awpQUl9p3hTgm4X7fW6Gm29TusixoSADT4s/T+MAAy6Phf92Q+xsaw=;
-        path=/; expires=Sat, 10-Feb-24 11:42:23 GMT; domain=.api.openai.com; HttpOnly;
-        Secure; SameSite=None
-      - _cfuvid=ylta_5IzewtBbeSYSU3qahLvf8rnmBo7j6w87zjpbtc-1707563543431-0-604800000;
-        path=/; domain=.api.openai.com; HttpOnly; Secure; SameSite=None
       Transfer-Encoding:
       - chunked
       access-control-allow-origin:
@@ -105,7 +270,7 @@ interactions:
       openai-organization:
       - user-z7g4wmlazxqvc5wjyaaaocfz
       openai-processing-ms:
-      - '1803'
+      - '721'
       openai-version:
       - '2020-10-01'
       strict-transport-security:
@@ -117,51 +282,50 @@ interactions:
       x-ratelimit-remaining-requests:
       - '9999'
       x-ratelimit-remaining-tokens:
-      - '299471'
+      - '299468'
       x-ratelimit-reset-requests:
       - 6ms
       x-ratelimit-reset-tokens:
-      - 105ms
+      - 106ms
       x-request-id:
-      - req_c65d30cd6df3fbd0de8688f78e4a3aeb
+      - req_1ced6142eab0985809db866365f81b5e
     status:
       code: 200
       message: OK
 - request:
-    body: '{"messages": [{"role": "user", "content": "Return a valid schema for the
-      one tool you must use with its arguments and values.\n\nTools available:\n\nFuntion
-      Name: multiplier\nFuntion attributes: {''first_number'': {''type'': ''integer''},
-      ''second_number'': {''type'': ''integer''}}\nDescription: multiplier(first_number:
-      int, second_number: int) -> float - Useful for when you need to multiply two
-      numbers together.\n--\nFuntion Name: Delegate work to co-worker\nFuntion attributes:
-      {''coworker'': {''type'': ''string''}, ''task'': {''type'': ''string''}, ''context'':
-      {''type'': ''string''}}\nDescription: Delegate work to co-worker(coworker: str,
-      task: str, context: str) - Delegate a specific task to one of the following
-      co-workers: Researcher. The input to this tool should be the role of the coworker,
-      the task you want them to do, and ALL necessary context to exectue the task,
-      they know nothing about the task, so share absolute everything you know, don''t
-      reference things but instead explain them.\n--\nFuntion Name: Ask question to
-      co-worker\nFuntion attributes: {''coworker'': {''type'': ''string''}, ''question'':
-      {''type'': ''string''}, ''context'': {''type'': ''string''}}\nDescription: Ask
+    body: '{"messages": [{"role": "system", "content": "\n                                The
+      schema should have the following structure, only two key:\n                                -
+      tool_name: str\n                                - arguments: dict (with all
+      arguments being passed)\n\n                                Example:\n                                {\"tool_name\":
+      \"tool_name\", \"arguments\": {\"arg_name1\": \"value\", \"arg_name2\": 2}}\n                            "},
+      {"role": "user", "content": "Tools available:\n\nTool Name: multiplier\nTool
+      Description: multiplier(first_number: int, second_number: int) -> float - Useful
+      for when you need to multiply two numbers together.\nTool Arguments: {''first_number'':
+      {''type'': ''integer''}, ''second_number'': {''type'': ''integer''}}\n--\nTool
+      Name: delegate work to co-worker\nTool Description: Delegate work to co-worker(coworker:
+      str, task: str, context: str) - Delegate a specific task to one of the following
+      co-workers:\n- Researcher.\nThe input to this tool should be the role of the
+      coworker, the task you want them to do, and ALL necessary context to exectue
+      the task, they know nothing about the task, so share absolute everything you
+      know, don''t reference things but instead explain them.\nTool Arguments: {''coworker'':
+      {''type'': ''string''}, ''task'': {''type'': ''string''}, ''context'': {''type'':
+      ''string''}}\n--\nTool Name: ask question to co-worker\nTool Description: Ask
       question to co-worker(coworker: str, question: str, context: str) - Ask a specific
-      question to one of the following co-workers: Researcher. The input to this tool
-      should be the role of the coworker, the question you have for them, and ALL
-      necessary context to ask the question properly, they know nothing about the
-      question, so share absolute everything you know, don''t reference things but
-      instead explain them.\n\nUse this text to inform a valid ouput schema:\nThought:
-      Do I need to use a tool? Yes\nAction: multiplier\nAction Input: {\"first_number\":
-      2, \"second_number\": 6}\n\nThe output should be formatted as a JSON instance
-      that conforms to the JSON schema below.\n\nAs an example, for the schema {\"properties\":
-      {\"foo\": {\"title\": \"Foo\", \"description\": \"a list of strings\", \"type\":
-      \"array\", \"items\": {\"type\": \"string\"}}}, \"required\": [\"foo\"]}\nthe
-      object {\"foo\": [\"bar\", \"baz\"]} is a well-formatted instance of the schema.
-      The object {\"properties\": {\"foo\": [\"bar\", \"baz\"]}} is not well-formatted.\n\nHere
-      is the output schema:\n```\n{\"properties\": {\"function_name\": {\"title\":
-      \"Function Name\", \"description\": \"The name of the function to be called.\",
-      \"type\": \"string\"}, \"arguments\": {\"title\": \"Arguments\", \"description\":
-      \"A dictinary of arguments to be passed to the function.\", \"type\": \"object\"}},
-      \"required\": [\"function_name\", \"arguments\"]}\n```\n```"}], "model": "gpt-4",
-      "n": 1, "stream": false, "temperature": 0.7}'
+      question to one of the following co-workers:\n- Researcher.\nThe input to this
+      tool should be the role of the coworker, the question you have for them, and
+      ALL necessary context to ask the question properly, they know nothing about
+      the question, so share absolute everything you know, don''t reference things
+      but instead explain them.\nTool Arguments: {''coworker'': {''type'': ''string''},
+      ''question'': {''type'': ''string''}, ''context'': {''type'': ''string''}}\n\nReturn
+      a valid schema for the tool, use this text to inform a valid ouput schema:\n\nTool
+      Name: multiplier\nTool Arguments: {\"first_number\": 2, \"second_number\": 6}```"}],
+      "model": "gpt-4", "function_call": {"name": "InstructorToolCalling"}, "functions":
+      [{"name": "InstructorToolCalling", "description": "Correctly extracted `InstructorToolCalling`
+      with all the required parameters with correct types", "parameters": {"properties":
+      {"tool_name": {"description": "The name of the tool to be called.", "title":
+      "Tool Name", "type": "string"}, "arguments": {"description": "A dictinary of
+      arguments to be passed to the tool.", "title": "Arguments", "type": "object"}},
+      "required": ["arguments", "tool_name"], "type": "object"}}]}'
     headers:
       accept:
       - application/json
@@ -170,12 +334,12 @@ interactions:
       connection:
       - keep-alive
       content-length:
-      - '2660'
+      - '2684'
       content-type:
       - application/json
       cookie:
-      - _cfuvid=ylta_5IzewtBbeSYSU3qahLvf8rnmBo7j6w87zjpbtc-1707563543431-0-604800000;
-        __cf_bm=VUM_AzyPmw54UKYCZhrJdPu8KbJzn3N7bJOp_y.9Kyc-1707563543-1-AZT0SxUJP3NDQsM27IVGaO9UGlGGGZ1b3awpQUl9p3hTgm4X7fW6Gm29TusixoSADT4s/T+MAAy6Phf92Q+xsaw=
+      - __cf_bm=l8PgzrDOifuVgV8jOi6oNnLSKwzNw5zlnYEI_Qslu_o-1707811118-1-ARSm0+dQEO1vsfbM09g4mKX7cyvA/8odsM47nu2fWyCii5R/qlesVg08eZDiacndSQlL+nEfI/ne5RvoyPTGkgg=;
+        _cfuvid=zFH17OERRVf.0CqqO0vUy7WbuquH88772m3kfb_dIbs-1707811118866-0-604800000
       host:
       - api.openai.com
       user-agent:
@@ -199,18 +363,18 @@ interactions:
   response:
     body:
       string: !!binary |
-        H4sIAAAAAAAAA1SRTU/kMAyG7/0Vkc+dVaEzHdTjLhIXFiHEXqCoTTOeTtjECYkrsRr1v6/S+YJL
-        Dn78WK+dfSYE6A3UAtROsrLeLG4+ti+Pv/QT3r3cL/uHP/3Nz4/1c3WrVr/vPiFPhuvfUfHJ+qGc
-        9QZZOzpgFVAypqlX62K9qsrVspyBdRs0SRs8L5aLoroqj8bOaYURavGaCSHEfn5TNtrgJ9SiyE8V
-        izHKAaE+NwkBwZlUARmjjiyJIb9A5YiR5rhd1zW0b0iIBrYjqZS5JWmxgVo0YEfD2huNoYH80CXD
-        MFokjqljNmdXh8gtjbZPrbW4zk8konK0+YKqRKaGpoa6roNjrOm8j3GDD65Pu9NozLm+1aTjrg0o
-        o6OUPbLzB33KhHib7zZ+OwX44Kznlt1fpDSwKsrDPLh80YWW6yNkx9J8sZZFdkwI8V9ktO1W04DB
-        Bz2fMeXMpuw/AAAA//8DAG2PnFw9AgAA
+        H4sIAAAAAAAAA1yRQW/bMAyF7/4VAs/OEHdu0vraXXodil3mwZAVxtFGkZ5EoysC//dBSeqkvQgC
+        H9+nJ/JYGAN+B40Bd7Dqwkirh+jr56d7eq2p+vHt73fs9W16PLz0r+teoMwO6X+j03fXFydhJFQv
+        fJZdRKuYqdV2vX2oqnpbn4QgO6RsG0Zd1av1pvp6cRzEO0zQmJ+FMcYcT2fOxjv8B41Zl++VgCnZ
+        AaFZmoyBKJQrYFPySS0rlFfRCStyjssT0Y2wn9jl1J2zRB+AxgDbcEI+c9I4OZX4IkJPlsjzcIM3
+        BmwcpoCsOT8cW25BRajLhBYa00KYSP1IHmMLZdYXR9aPLex9TNrxFPrc0pi70rSQ0AnvbqqbueUZ
+        lpfny21eZkMyjFH69OmrsPfs06GLaJNwDplUxjMoQ36ddjB9GCuMUcKoncof5Ay8rx7PPLiu+6re
+        bS+iilq6cdWb4pIQ0ltSDN3e84BxjH5ZSTEX/wEAAP//AwDUPpRQiQIAAA==
     headers:
       CF-Cache-Status:
       - DYNAMIC
       CF-RAY:
-      - 8533eab518596893-SJC
+      - 854b8fb10ca067df-SJC
       Cache-Control:
       - no-cache, must-revalidate
       Connection:
@@ -220,7 +384,7 @@ interactions:
       Content-Type:
       - application/json
       Date:
-      - Sat, 10 Feb 2024 11:12:26 GMT
+      - Tue, 13 Feb 2024 08:04:36 GMT
       Server:
       - cloudflare
       Transfer-Encoding:
@@ -234,7 +398,7 @@ interactions:
       openai-organization:
       - user-z7g4wmlazxqvc5wjyaaaocfz
       openai-processing-ms:
-      - '2207'
+      - '2043'
       openai-version:
       - '2020-10-01'
       strict-transport-security:
@@ -246,13 +410,48 @@ interactions:
       x-ratelimit-remaining-requests:
       - '9999'
       x-ratelimit-remaining-tokens:
-      - '299373'
+      - '299480'
       x-ratelimit-reset-requests:
       - 6ms
       x-ratelimit-reset-tokens:
-      - 125ms
+      - 103ms
       x-request-id:
-      - req_9a01ee74af99a1aedd8d368735f333f1
+      - req_bca5e146f656c30dcb843a85773b3f27
+    status:
+      code: 200
+      message: OK
+- request:
+    body: !!binary |
+      CoYCCiQKIgoMc2VydmljZS5uYW1lEhIKEGNyZXdBSS10ZWxlbWV0cnkS3QEKEgoQY3Jld2FpLnRl
+      bGVtZXRyeRLGAQoQqmwdnIY5wuObfEdb+dRqvxIIeMSfUAOIjG4qClRvb2wgVXNhZ2UwATkQ/rVA
+      fV2zF0GIYbdAfV2zF0oZCgl0b29sX25hbWUSDAoKbXVsdGlwbGllckoOCghhdHRlbXB0cxICGAFK
+      WQoDbGxtElIKUHsibmFtZSI6IG51bGwsICJtb2RlbF9uYW1lIjogImdwdC00IiwgInRlbXBlcmF0
+      dXJlIjogMC43LCAiY2xhc3MiOiAiQ2hhdE9wZW5BSSJ9egIYAQ==
+    headers:
+      Accept:
+      - '*/*'
+      Accept-Encoding:
+      - gzip, deflate
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '265'
+      Content-Type:
+      - application/x-protobuf
+      User-Agent:
+      - OTel-OTLP-Exporter-Python/1.22.0
+    method: POST
+    uri: http://telemetry.crewai.com:4318/v1/traces
+  response:
+    body:
+      string: "\n\0"
+    headers:
+      Content-Length:
+      - '2'
+      Content-Type:
+      - application/x-protobuf
+      Date:
+      - Tue, 13 Feb 2024 08:04:36 GMT
     status:
       code: 200
       message: OK
@@ -261,32 +460,32 @@ interactions:
       time CEO of a content creation agency with a Senior Writer on the team. You''re
       now working on a new project and want to make sure the content produced is amazing.\n\nYour
       personal goal is: Make sure the writers in your company produce amazing content.TOOLS:\n------\nYou
-      have access to only the following tools:\n\nmultiplier: multiplier(first_number:
+      have access to only the following tools:\n\n(\"multiplier: multiplier(first_number:
       int, second_number: int) -> float - Useful for when you need to multiply two
-      numbers together.\nDelegate work to co-worker: Delegate work to co-worker(coworker:
+      numbers together.\\nDelegate work to co-worker: Delegate work to co-worker(coworker:
       str, task: str, context: str) - Delegate a specific task to one of the following
-      co-workers: Researcher. The input to this tool should be the role of the coworker,
-      the task you want them to do, and ALL necessary context to exectue the task,
-      they know nothing about the task, so share absolute everything you know, don''t
-      reference things but instead explain them.\nAsk question to co-worker: Ask question
-      to co-worker(coworker: str, question: str, context: str) - Ask a specific question
-      to one of the following co-workers: Researcher. The input to this tool should
-      be the role of the coworker, the question you have for them, and ALL necessary
-      context to ask the question properly, they know nothing about the question,
-      so share absolute everything you know, don''t reference things but instead explain
-      them.\n\nTo use a tool, please use the exact following format:\n\n```\nThought:
-      Do I need to use a tool? Yes\nAction: the tool you wanna use, should be one
-      of [multiplier, Delegate work to co-worker, Ask question to co-worker], just
-      the name.\nAction Input: Any and all relevant information input and context
-      for using the tool\nObservation: the result of using the tool\n```\n\nWhen you
-      have a response for your task, or if you do not need to use a tool, you MUST
-      use the format:\n\n```\nThought: Do I need to use a tool? No\nFinal Answer:
-      [your response here]```This is the summary of your work so far:\nBegin! This
-      is VERY important to you, your job depends on it!\n\nCurrent Task: What is 2
-      tims 6? Return only the number.\nThought: Do I need to use a tool? Yes\nAction:
-      multiplier\nAction Input: {\"first_number\": 2, \"second_number\": 6}\nObservation:
-      12\nThought: "}], "model": "gpt-4", "n": 1, "stop": ["\nObservation"], "stream":
-      false, "temperature": 0.7}'
+      co-workers:\\n- Researcher.\\nThe input to this tool should be the role of the
+      coworker, the task you want them to do, and ALL necessary context to exectue
+      the task, they know nothing about the task, so share absolute everything you
+      know, don''t reference things but instead explain them.\\nAsk question to co-worker:
+      Ask question to co-worker(coworker: str, question: str, context: str) - Ask
+      a specific question to one of the following co-workers:\\n- Researcher.\\nThe
+      input to this tool should be the role of the coworker, the question you have
+      for them, and ALL necessary context to ask the question properly, they know
+      nothing about the question, so share absolute everything you know, don''t reference
+      things but instead explain them.\",)\n\nTo use a tool, please use the exact
+      following format:\n\n```\nThought: Do I need to use a tool? Yes\nAction: the
+      tool you wanna use, should be one of [multiplier, Delegate work to co-worker,
+      Ask question to co-worker], just the name.\nAction Input: Any and all relevant
+      information input and context for using the tool\nObservation: the result of
+      using the tool\n```\n\nWhen you have a response for your task, or if you do
+      not need to use a tool, you MUST use the format:\n\n```\nThought: Do I need
+      to use a tool? No\nFinal Answer: [your response here]```This is the summary
+      of your work so far:\nBegin! This is VERY important to you, your job depends
+      on it!\n\nCurrent Task: What is 2 tims 6? Return only the number.\nThought:
+      Do I need to use a tool? Yes\nAction: multiplier\nAction Input: {\"first_number\":
+      2, \"second_number\": 6}\nObservation: 12\nThought: "}], "model": "gpt-4", "n":
+      1, "stop": ["\nObservation"], "stream": true, "temperature": 0.7}'
     headers:
       accept:
       - application/json
@@ -295,12 +494,12 @@ interactions:
       connection:
       - keep-alive
       content-length:
-      - '2353'
+      - '2373'
       content-type:
       - application/json
       cookie:
-      - _cfuvid=ylta_5IzewtBbeSYSU3qahLvf8rnmBo7j6w87zjpbtc-1707563543431-0-604800000;
-        __cf_bm=VUM_AzyPmw54UKYCZhrJdPu8KbJzn3N7bJOp_y.9Kyc-1707563543-1-AZT0SxUJP3NDQsM27IVGaO9UGlGGGZ1b3awpQUl9p3hTgm4X7fW6Gm29TusixoSADT4s/T+MAAy6Phf92Q+xsaw=
+      - __cf_bm=l8PgzrDOifuVgV8jOi6oNnLSKwzNw5zlnYEI_Qslu_o-1707811118-1-ARSm0+dQEO1vsfbM09g4mKX7cyvA/8odsM47nu2fWyCii5R/qlesVg08eZDiacndSQlL+nEfI/ne5RvoyPTGkgg=;
+        _cfuvid=zFH17OERRVf.0CqqO0vUy7WbuquH88772m3kfb_dIbs-1707811118866-0-604800000
       host:
       - api.openai.com
       user-agent:
@@ -323,28 +522,83 @@ interactions:
     uri: https://api.openai.com/v1/chat/completions
   response:
     body:
-      string: !!binary |
-        H4sIAAAAAAAAA1SQT2vCQBDF7/kUw561GGNiyKUUiuChQhtaSv8gazIm22524u6IFvG7l41R28se
-        3pv35jd7CACEKkUGoqglF02rh+lm/ZZvktljups/vYzTxfOm5vxhFu7z/FUMfIJWX1jwOXVTUNNq
-        ZEXmZBcWJaNvDaejaZxE8STpjIZK1D5WtTycDEdJGPWJmlSBTmTwHgAAHLrXs5kS9yKD0eCsNOic
-        rFBklyEAYUl7RUjnlGNpWAyuZkGG0XS49wRzMIglMMHWIUhgIn0LC/owM2WkhjvjdmgzCMeirzhe
-        dmuqWksrz2m2Wl/0tTLK1UuL0pHxexxTe4ofA4DP7sbtP2zRWmpaXjJ9o/GFcZie+sT1O69uGPcm
-        E0v9JxVFQU8o3I9jbJZrZSq0rVXdyZ4zOAa/AAAA//8DAHwOc//pAQAA
+      string: 'data: {"id":"chatcmpl-8ri4KWNfT7nXicmycukCk1Z0tfFz0","object":"chat.completion.chunk","created":1707811476,"model":"gpt-4-0613","system_fingerprint":null,"choices":[{"index":0,"delta":{"role":"assistant","content":""},"logprobs":null,"finish_reason":null}]}
+
+
+        data: {"id":"chatcmpl-8ri4KWNfT7nXicmycukCk1Z0tfFz0","object":"chat.completion.chunk","created":1707811476,"model":"gpt-4-0613","system_fingerprint":null,"choices":[{"index":0,"delta":{"content":"Do"},"logprobs":null,"finish_reason":null}]}
+
+
+        data: {"id":"chatcmpl-8ri4KWNfT7nXicmycukCk1Z0tfFz0","object":"chat.completion.chunk","created":1707811476,"model":"gpt-4-0613","system_fingerprint":null,"choices":[{"index":0,"delta":{"content":"
+        I"},"logprobs":null,"finish_reason":null}]}
+
+
+        data: {"id":"chatcmpl-8ri4KWNfT7nXicmycukCk1Z0tfFz0","object":"chat.completion.chunk","created":1707811476,"model":"gpt-4-0613","system_fingerprint":null,"choices":[{"index":0,"delta":{"content":"
+        need"},"logprobs":null,"finish_reason":null}]}
+
+
+        data: {"id":"chatcmpl-8ri4KWNfT7nXicmycukCk1Z0tfFz0","object":"chat.completion.chunk","created":1707811476,"model":"gpt-4-0613","system_fingerprint":null,"choices":[{"index":0,"delta":{"content":"
+        to"},"logprobs":null,"finish_reason":null}]}
+
+
+        data: {"id":"chatcmpl-8ri4KWNfT7nXicmycukCk1Z0tfFz0","object":"chat.completion.chunk","created":1707811476,"model":"gpt-4-0613","system_fingerprint":null,"choices":[{"index":0,"delta":{"content":"
+        use"},"logprobs":null,"finish_reason":null}]}
+
+
+        data: {"id":"chatcmpl-8ri4KWNfT7nXicmycukCk1Z0tfFz0","object":"chat.completion.chunk","created":1707811476,"model":"gpt-4-0613","system_fingerprint":null,"choices":[{"index":0,"delta":{"content":"
+        a"},"logprobs":null,"finish_reason":null}]}
+
+
+        data: {"id":"chatcmpl-8ri4KWNfT7nXicmycukCk1Z0tfFz0","object":"chat.completion.chunk","created":1707811476,"model":"gpt-4-0613","system_fingerprint":null,"choices":[{"index":0,"delta":{"content":"
+        tool"},"logprobs":null,"finish_reason":null}]}
+
+
+        data: {"id":"chatcmpl-8ri4KWNfT7nXicmycukCk1Z0tfFz0","object":"chat.completion.chunk","created":1707811476,"model":"gpt-4-0613","system_fingerprint":null,"choices":[{"index":0,"delta":{"content":"?"},"logprobs":null,"finish_reason":null}]}
+
+
+        data: {"id":"chatcmpl-8ri4KWNfT7nXicmycukCk1Z0tfFz0","object":"chat.completion.chunk","created":1707811476,"model":"gpt-4-0613","system_fingerprint":null,"choices":[{"index":0,"delta":{"content":"
+        No"},"logprobs":null,"finish_reason":null}]}
+
+
+        data: {"id":"chatcmpl-8ri4KWNfT7nXicmycukCk1Z0tfFz0","object":"chat.completion.chunk","created":1707811476,"model":"gpt-4-0613","system_fingerprint":null,"choices":[{"index":0,"delta":{"content":"\n"},"logprobs":null,"finish_reason":null}]}
+
+
+        data: {"id":"chatcmpl-8ri4KWNfT7nXicmycukCk1Z0tfFz0","object":"chat.completion.chunk","created":1707811476,"model":"gpt-4-0613","system_fingerprint":null,"choices":[{"index":0,"delta":{"content":"Final"},"logprobs":null,"finish_reason":null}]}
+
+
+        data: {"id":"chatcmpl-8ri4KWNfT7nXicmycukCk1Z0tfFz0","object":"chat.completion.chunk","created":1707811476,"model":"gpt-4-0613","system_fingerprint":null,"choices":[{"index":0,"delta":{"content":"
+        Answer"},"logprobs":null,"finish_reason":null}]}
+
+
+        data: {"id":"chatcmpl-8ri4KWNfT7nXicmycukCk1Z0tfFz0","object":"chat.completion.chunk","created":1707811476,"model":"gpt-4-0613","system_fingerprint":null,"choices":[{"index":0,"delta":{"content":":"},"logprobs":null,"finish_reason":null}]}
+
+
+        data: {"id":"chatcmpl-8ri4KWNfT7nXicmycukCk1Z0tfFz0","object":"chat.completion.chunk","created":1707811476,"model":"gpt-4-0613","system_fingerprint":null,"choices":[{"index":0,"delta":{"content":"
+        "},"logprobs":null,"finish_reason":null}]}
+
+
+        data: {"id":"chatcmpl-8ri4KWNfT7nXicmycukCk1Z0tfFz0","object":"chat.completion.chunk","created":1707811476,"model":"gpt-4-0613","system_fingerprint":null,"choices":[{"index":0,"delta":{"content":"12"},"logprobs":null,"finish_reason":null}]}
+
+
+        data: {"id":"chatcmpl-8ri4KWNfT7nXicmycukCk1Z0tfFz0","object":"chat.completion.chunk","created":1707811476,"model":"gpt-4-0613","system_fingerprint":null,"choices":[{"index":0,"delta":{},"logprobs":null,"finish_reason":"stop"}]}
+
+
+        data: [DONE]
+
+
+        '
     headers:
       CF-Cache-Status:
       - DYNAMIC
       CF-RAY:
-      - 8533eac3cc576893-SJC
+      - 854b8fbed8b167df-SJC
       Cache-Control:
       - no-cache, must-revalidate
       Connection:
       - keep-alive
-      Content-Encoding:
-      - gzip
       Content-Type:
-      - application/json
+      - text/event-stream
       Date:
-      - Sat, 10 Feb 2024 11:12:27 GMT
+      - Tue, 13 Feb 2024 08:04:41 GMT
       Server:
       - cloudflare
       Transfer-Encoding:
@@ -358,7 +612,7 @@ interactions:
       openai-organization:
       - user-z7g4wmlazxqvc5wjyaaaocfz
       openai-processing-ms:
-      - '1440'
+      - '4552'
       openai-version:
       - '2020-10-01'
       strict-transport-security:
@@ -370,13 +624,13 @@ interactions:
       x-ratelimit-remaining-requests:
       - '9999'
       x-ratelimit-remaining-tokens:
-      - '299437'
+      - '299434'
       x-ratelimit-reset-requests:
       - 6ms
       x-ratelimit-reset-tokens:
-      - 112ms
+      - 113ms
       x-request-id:
-      - req_cbbe9abcc5b53c3c7928a5d15e08268d
+      - req_664919380e69086067c3ddcd59030830
     status:
       code: 200
       message: OK
@@ -405,8 +659,8 @@ interactions:
       content-type:
       - application/json
       cookie:
-      - _cfuvid=ylta_5IzewtBbeSYSU3qahLvf8rnmBo7j6w87zjpbtc-1707563543431-0-604800000;
-        __cf_bm=VUM_AzyPmw54UKYCZhrJdPu8KbJzn3N7bJOp_y.9Kyc-1707563543-1-AZT0SxUJP3NDQsM27IVGaO9UGlGGGZ1b3awpQUl9p3hTgm4X7fW6Gm29TusixoSADT4s/T+MAAy6Phf92Q+xsaw=
+      - __cf_bm=l8PgzrDOifuVgV8jOi6oNnLSKwzNw5zlnYEI_Qslu_o-1707811118-1-ARSm0+dQEO1vsfbM09g4mKX7cyvA/8odsM47nu2fWyCii5R/qlesVg08eZDiacndSQlL+nEfI/ne5RvoyPTGkgg=;
+        _cfuvid=zFH17OERRVf.0CqqO0vUy7WbuquH88772m3kfb_dIbs-1707811118866-0-604800000
       host:
       - api.openai.com
       user-agent:
@@ -430,18 +684,18 @@ interactions:
   response:
     body:
       string: !!binary |
-        H4sIAAAAAAAAA1SRy04DMQxF9/MVVtZT1JZOp3THohJIIBY8hIpQlWbcTmgSh8Qj+lD/HWX6gk0W
-        9/g61/YuAxC6EmMQqpasrDed0fdi+rJyT4/r1+Jt8s4P27Kc3I22X7J+noo8OWj+hYpPritF1htk
-        Te6AVUDJmLr2ym5ZDK+LQdkCSxWaZFt67gw63WHv+uioSSuMYgwfGQDArn1TNlfhWoyhm58UizHK
-        JYrxuQhABDJJETJGHVk6FvkFKnKMro37UiPUjZUOZFxF4Brh9h6YQEmjGiMZoQ+sLUYY5iBddSpR
-        FAIqNhsIGD25KsKP5rrFrrFzDNDrX4njp/tzWkNLH2ieJnONMWd9oZ2O9SygjORSssjkD/Z9BvDZ
-        bqX5N6jwgaznGdMKXWrYK4pDP3E5wIX2B0fIxNL8cZU32TGhiJvIaGcL7ZYYfNDtklLObJ/9AgAA
-        //8DAAExLRobAgAA
+        H4sIAAAAAAAAA1SQS09CMRCF9/dXTLoGwkVessOdiYlEjRiNIaV35FbaTtMZREP476aXl266OGfO
+        9JuzKwCUrdQElKm1GB9de5xs/6H7OuPx7Q0P5/PH6afc3331/Oxl8KxaOUHLTzRySnUM+ehQLIWD
+        bRJqwby1HHVH47Lsj68aw1OFLsdWUdr9dndYXh0TNVmDrCbwVgAA7Jo3s4UKv9UEuq2T4pFZr1BN
+        zkMAKpHLitLMlkUHUa2LaSgIhgb3qUaoN14H0LxmkBphegtCYLQzG6cFoQdiPTIMQYfqNJGQI4WK
+        YWulbkRDKaER0IG3mFpQ9jrq+OX+zOpoFRMt811h49xZ/7DBcr1IqJlC5mKheIjvC4D3ppPNvzNV
+        TOSjLITWGPLCcjA47FOX+i9ur380hUS7P6nRdXEkVPzDgn7xYcMKU0y2qShzFvviFwAA//8DAKzL
+        eCUZAgAA
     headers:
       CF-Cache-Status:
       - DYNAMIC
       CF-RAY:
-      - 8533eacd9ca26893-SJC
+      - 854b8feb99cf67df-SJC
       Cache-Control:
       - no-cache, must-revalidate
       Connection:
@@ -451,7 +705,7 @@ interactions:
       Content-Type:
       - application/json
       Date:
-      - Sat, 10 Feb 2024 11:12:29 GMT
+      - Tue, 13 Feb 2024 08:04:45 GMT
       Server:
       - cloudflare
       Transfer-Encoding:
@@ -465,7 +719,7 @@ interactions:
       openai-organization:
       - user-z7g4wmlazxqvc5wjyaaaocfz
       openai-processing-ms:
-      - '1475'
+      - '1585'
       openai-version:
       - '2020-10-01'
       strict-transport-security:
@@ -477,13 +731,13 @@ interactions:
       x-ratelimit-remaining-requests:
       - '9999'
       x-ratelimit-remaining-tokens:
-      - '299791'
+      - '299792'
       x-ratelimit-reset-requests:
       - 6ms
       x-ratelimit-reset-tokens:
       - 41ms
       x-request-id:
-      - req_d6b99d01f7fe1335ba2110b5bacf608a
+      - req_cf6bd3745d661d1a06f8e77ba41a6e3c
     status:
       code: 200
       message: OK
@@ -493,18 +747,18 @@ interactions:
       startups. You work as a freelancer and is now working on doing research and
       analysis for a new customer.\n\nYour personal goal is: Make the best research
       and analysis on content about AI and AI agentsTOOLS:\n------\nYou have access
-      to only the following tools:\n\nmultiplier: multiplier(first_number: int, second_number:
-      int) -> float - Useful for when you need to multiply two numbers together.\n\nTo
-      use a tool, please use the exact following format:\n\n```\nThought: Do I need
-      to use a tool? Yes\nAction: the tool you wanna use, should be one of [multiplier],
-      just the name.\nAction Input: Any and all relevant information input and context
-      for using the tool\nObservation: the result of using the tool\n```\n\nWhen you
-      have a response for your task, or if you do not need to use a tool, you MUST
-      use the format:\n\n```\nThought: Do I need to use a tool? No\nFinal Answer:
+      to only the following tools:\n\n(''multiplier: multiplier(first_number: int,
+      second_number: int) -> float - Useful for when you need to multiply two numbers
+      together.'',)\n\nTo use a tool, please use the exact following format:\n\n```\nThought:
+      Do I need to use a tool? Yes\nAction: the tool you wanna use, should be one
+      of [multiplier], just the name.\nAction Input: Any and all relevant information
+      input and context for using the tool\nObservation: the result of using the tool\n```\n\nWhen
+      you have a response for your task, or if you do not need to use a tool, you
+      MUST use the format:\n\n```\nThought: Do I need to use a tool? No\nFinal Answer:
       [your response here]```This is the summary of your work so far:\nBegin! This
       is VERY important to you, your job depends on it!\n\nCurrent Task: What is 2
       times 6? Return only the number.\nThis is the context you''re working with:\n12\n"}],
-      "model": "gpt-4", "n": 1, "stop": ["\nObservation"], "stream": false, "temperature":
+      "model": "gpt-4", "n": 1, "stop": ["\nObservation"], "stream": true, "temperature":
       0.7}'
     headers:
       accept:
@@ -514,11 +768,12 @@ interactions:
       connection:
       - keep-alive
       content-length:
-      - '1353'
+      - '1357'
       content-type:
       - application/json
       cookie:
-      - _cfuvid=BMxGwK4wPoN6Cq5150swBY7QbtTvmWU2.p39x.cUidg-1703932144438-0-604800000
+      - __cf_bm=2Sq6QZC8ubo0uaJ_oGz9MIc.QFOOBbArVVZ1hfDyGmY-1707810872-1-AY/zSUU/W0R+ddbwbB8c9lfjiRTZgncqZIx1TKFkrJ39ZvX/bciOo1iWiRtqop2nD6+FnZ84Mc82Pq09fbaL5k4=;
+        _cfuvid=KRcEIDH8_CjxRUfnBClhnKowC8izvirPV4maDe0gpuk-1707810872815-0-604800000
       host:
       - api.openai.com
       user-agent:
@@ -541,37 +796,144 @@ interactions:
     uri: https://api.openai.com/v1/chat/completions
   response:
     body:
-      string: !!binary |
-        H4sIAAAAAAAAA1SRS0/DMBCE7/kVqz23qG9KLqi8pN5AQkiUoip1tolbx2vsjQRU/e/I6ZOLDzM7
-        q2/W2wQAdY4poCozUZUz7fHXavb2cm+++WvmJnfFEz27zubxd7a244CtmODlmpQcU1eKK2dINNu9
-        rTxlQnFr97pzPRz1h4Obxqg4JxNjhZP2oN0ZdfuHRMlaUcAUPhIAgG3zRjab0zem0GkdlYpCyArC
-        9DQEgJ5NVDALQQfJrGDrbCq2QrbBfS25LkpJ4YFhCpYoB2GoA0EGwmxu4Z3C3E5ULJNCVRvRzmjy
-        Rw2m1tWSwnaOK+2DLGxdLcnPMYVeC+YYSLHNL9TRDg8ku1MFw4XzvIx1bW3MSV9pq0O58JQFthE3
-        CLt9fJcAfDanqv+1R+e5crIQ3pCNC3vj7n4fnn/l7Pb7B1NYMnOhdwfJgRDDTxCqFittC/LO6+Zy
-        kTPZJX8AAAD//wMAjGKIWjACAAA=
+      string: 'data: {"id":"chatcmpl-8ri4TnQAwS2Mkvt0VJmbBQ5cOfOm8","object":"chat.completion.chunk","created":1707811485,"model":"gpt-4-0613","system_fingerprint":null,"choices":[{"index":0,"delta":{"role":"assistant","content":""},"logprobs":null,"finish_reason":null}]}
+
+
+        data: {"id":"chatcmpl-8ri4TnQAwS2Mkvt0VJmbBQ5cOfOm8","object":"chat.completion.chunk","created":1707811485,"model":"gpt-4-0613","system_fingerprint":null,"choices":[{"index":0,"delta":{"content":"Thought"},"logprobs":null,"finish_reason":null}]}
+
+
+        data: {"id":"chatcmpl-8ri4TnQAwS2Mkvt0VJmbBQ5cOfOm8","object":"chat.completion.chunk","created":1707811485,"model":"gpt-4-0613","system_fingerprint":null,"choices":[{"index":0,"delta":{"content":":"},"logprobs":null,"finish_reason":null}]}
+
+
+        data: {"id":"chatcmpl-8ri4TnQAwS2Mkvt0VJmbBQ5cOfOm8","object":"chat.completion.chunk","created":1707811485,"model":"gpt-4-0613","system_fingerprint":null,"choices":[{"index":0,"delta":{"content":"
+        Do"},"logprobs":null,"finish_reason":null}]}
+
+
+        data: {"id":"chatcmpl-8ri4TnQAwS2Mkvt0VJmbBQ5cOfOm8","object":"chat.completion.chunk","created":1707811485,"model":"gpt-4-0613","system_fingerprint":null,"choices":[{"index":0,"delta":{"content":"
+        I"},"logprobs":null,"finish_reason":null}]}
+
+
+        data: {"id":"chatcmpl-8ri4TnQAwS2Mkvt0VJmbBQ5cOfOm8","object":"chat.completion.chunk","created":1707811485,"model":"gpt-4-0613","system_fingerprint":null,"choices":[{"index":0,"delta":{"content":"
+        need"},"logprobs":null,"finish_reason":null}]}
+
+
+        data: {"id":"chatcmpl-8ri4TnQAwS2Mkvt0VJmbBQ5cOfOm8","object":"chat.completion.chunk","created":1707811485,"model":"gpt-4-0613","system_fingerprint":null,"choices":[{"index":0,"delta":{"content":"
+        to"},"logprobs":null,"finish_reason":null}]}
+
+
+        data: {"id":"chatcmpl-8ri4TnQAwS2Mkvt0VJmbBQ5cOfOm8","object":"chat.completion.chunk","created":1707811485,"model":"gpt-4-0613","system_fingerprint":null,"choices":[{"index":0,"delta":{"content":"
+        use"},"logprobs":null,"finish_reason":null}]}
+
+
+        data: {"id":"chatcmpl-8ri4TnQAwS2Mkvt0VJmbBQ5cOfOm8","object":"chat.completion.chunk","created":1707811485,"model":"gpt-4-0613","system_fingerprint":null,"choices":[{"index":0,"delta":{"content":"
+        a"},"logprobs":null,"finish_reason":null}]}
+
+
+        data: {"id":"chatcmpl-8ri4TnQAwS2Mkvt0VJmbBQ5cOfOm8","object":"chat.completion.chunk","created":1707811485,"model":"gpt-4-0613","system_fingerprint":null,"choices":[{"index":0,"delta":{"content":"
+        tool"},"logprobs":null,"finish_reason":null}]}
+
+
+        data: {"id":"chatcmpl-8ri4TnQAwS2Mkvt0VJmbBQ5cOfOm8","object":"chat.completion.chunk","created":1707811485,"model":"gpt-4-0613","system_fingerprint":null,"choices":[{"index":0,"delta":{"content":"?"},"logprobs":null,"finish_reason":null}]}
+
+
+        data: {"id":"chatcmpl-8ri4TnQAwS2Mkvt0VJmbBQ5cOfOm8","object":"chat.completion.chunk","created":1707811485,"model":"gpt-4-0613","system_fingerprint":null,"choices":[{"index":0,"delta":{"content":"
+        Yes"},"logprobs":null,"finish_reason":null}]}
+
+
+        data: {"id":"chatcmpl-8ri4TnQAwS2Mkvt0VJmbBQ5cOfOm8","object":"chat.completion.chunk","created":1707811485,"model":"gpt-4-0613","system_fingerprint":null,"choices":[{"index":0,"delta":{"content":"\n"},"logprobs":null,"finish_reason":null}]}
+
+
+        data: {"id":"chatcmpl-8ri4TnQAwS2Mkvt0VJmbBQ5cOfOm8","object":"chat.completion.chunk","created":1707811485,"model":"gpt-4-0613","system_fingerprint":null,"choices":[{"index":0,"delta":{"content":"Action"},"logprobs":null,"finish_reason":null}]}
+
+
+        data: {"id":"chatcmpl-8ri4TnQAwS2Mkvt0VJmbBQ5cOfOm8","object":"chat.completion.chunk","created":1707811485,"model":"gpt-4-0613","system_fingerprint":null,"choices":[{"index":0,"delta":{"content":":"},"logprobs":null,"finish_reason":null}]}
+
+
+        data: {"id":"chatcmpl-8ri4TnQAwS2Mkvt0VJmbBQ5cOfOm8","object":"chat.completion.chunk","created":1707811485,"model":"gpt-4-0613","system_fingerprint":null,"choices":[{"index":0,"delta":{"content":"
+        multiplier"},"logprobs":null,"finish_reason":null}]}
+
+
+        data: {"id":"chatcmpl-8ri4TnQAwS2Mkvt0VJmbBQ5cOfOm8","object":"chat.completion.chunk","created":1707811485,"model":"gpt-4-0613","system_fingerprint":null,"choices":[{"index":0,"delta":{"content":"\n"},"logprobs":null,"finish_reason":null}]}
+
+
+        data: {"id":"chatcmpl-8ri4TnQAwS2Mkvt0VJmbBQ5cOfOm8","object":"chat.completion.chunk","created":1707811485,"model":"gpt-4-0613","system_fingerprint":null,"choices":[{"index":0,"delta":{"content":"Action"},"logprobs":null,"finish_reason":null}]}
+
+
+        data: {"id":"chatcmpl-8ri4TnQAwS2Mkvt0VJmbBQ5cOfOm8","object":"chat.completion.chunk","created":1707811485,"model":"gpt-4-0613","system_fingerprint":null,"choices":[{"index":0,"delta":{"content":"
+        Input"},"logprobs":null,"finish_reason":null}]}
+
+
+        data: {"id":"chatcmpl-8ri4TnQAwS2Mkvt0VJmbBQ5cOfOm8","object":"chat.completion.chunk","created":1707811485,"model":"gpt-4-0613","system_fingerprint":null,"choices":[{"index":0,"delta":{"content":":"},"logprobs":null,"finish_reason":null}]}
+
+
+        data: {"id":"chatcmpl-8ri4TnQAwS2Mkvt0VJmbBQ5cOfOm8","object":"chat.completion.chunk","created":1707811485,"model":"gpt-4-0613","system_fingerprint":null,"choices":[{"index":0,"delta":{"content":"
+        {''"},"logprobs":null,"finish_reason":null}]}
+
+
+        data: {"id":"chatcmpl-8ri4TnQAwS2Mkvt0VJmbBQ5cOfOm8","object":"chat.completion.chunk","created":1707811485,"model":"gpt-4-0613","system_fingerprint":null,"choices":[{"index":0,"delta":{"content":"first"},"logprobs":null,"finish_reason":null}]}
+
+
+        data: {"id":"chatcmpl-8ri4TnQAwS2Mkvt0VJmbBQ5cOfOm8","object":"chat.completion.chunk","created":1707811485,"model":"gpt-4-0613","system_fingerprint":null,"choices":[{"index":0,"delta":{"content":"_number"},"logprobs":null,"finish_reason":null}]}
+
+
+        data: {"id":"chatcmpl-8ri4TnQAwS2Mkvt0VJmbBQ5cOfOm8","object":"chat.completion.chunk","created":1707811485,"model":"gpt-4-0613","system_fingerprint":null,"choices":[{"index":0,"delta":{"content":"'':"},"logprobs":null,"finish_reason":null}]}
+
+
+        data: {"id":"chatcmpl-8ri4TnQAwS2Mkvt0VJmbBQ5cOfOm8","object":"chat.completion.chunk","created":1707811485,"model":"gpt-4-0613","system_fingerprint":null,"choices":[{"index":0,"delta":{"content":"
+        "},"logprobs":null,"finish_reason":null}]}
+
+
+        data: {"id":"chatcmpl-8ri4TnQAwS2Mkvt0VJmbBQ5cOfOm8","object":"chat.completion.chunk","created":1707811485,"model":"gpt-4-0613","system_fingerprint":null,"choices":[{"index":0,"delta":{"content":"2"},"logprobs":null,"finish_reason":null}]}
+
+
+        data: {"id":"chatcmpl-8ri4TnQAwS2Mkvt0VJmbBQ5cOfOm8","object":"chat.completion.chunk","created":1707811485,"model":"gpt-4-0613","system_fingerprint":null,"choices":[{"index":0,"delta":{"content":","},"logprobs":null,"finish_reason":null}]}
+
+
+        data: {"id":"chatcmpl-8ri4TnQAwS2Mkvt0VJmbBQ5cOfOm8","object":"chat.completion.chunk","created":1707811485,"model":"gpt-4-0613","system_fingerprint":null,"choices":[{"index":0,"delta":{"content":"
+        ''"},"logprobs":null,"finish_reason":null}]}
+
+
+        data: {"id":"chatcmpl-8ri4TnQAwS2Mkvt0VJmbBQ5cOfOm8","object":"chat.completion.chunk","created":1707811485,"model":"gpt-4-0613","system_fingerprint":null,"choices":[{"index":0,"delta":{"content":"second"},"logprobs":null,"finish_reason":null}]}
+
+
+        data: {"id":"chatcmpl-8ri4TnQAwS2Mkvt0VJmbBQ5cOfOm8","object":"chat.completion.chunk","created":1707811485,"model":"gpt-4-0613","system_fingerprint":null,"choices":[{"index":0,"delta":{"content":"_number"},"logprobs":null,"finish_reason":null}]}
+
+
+        data: {"id":"chatcmpl-8ri4TnQAwS2Mkvt0VJmbBQ5cOfOm8","object":"chat.completion.chunk","created":1707811485,"model":"gpt-4-0613","system_fingerprint":null,"choices":[{"index":0,"delta":{"content":"'':"},"logprobs":null,"finish_reason":null}]}
+
+
+        data: {"id":"chatcmpl-8ri4TnQAwS2Mkvt0VJmbBQ5cOfOm8","object":"chat.completion.chunk","created":1707811485,"model":"gpt-4-0613","system_fingerprint":null,"choices":[{"index":0,"delta":{"content":"
+        "},"logprobs":null,"finish_reason":null}]}
+
+
+        data: {"id":"chatcmpl-8ri4TnQAwS2Mkvt0VJmbBQ5cOfOm8","object":"chat.completion.chunk","created":1707811485,"model":"gpt-4-0613","system_fingerprint":null,"choices":[{"index":0,"delta":{"content":"6"},"logprobs":null,"finish_reason":null}]}
+
+
+        data: {"id":"chatcmpl-8ri4TnQAwS2Mkvt0VJmbBQ5cOfOm8","object":"chat.completion.chunk","created":1707811485,"model":"gpt-4-0613","system_fingerprint":null,"choices":[{"index":0,"delta":{"content":"}"},"logprobs":null,"finish_reason":null}]}
+
+
+        data: {"id":"chatcmpl-8ri4TnQAwS2Mkvt0VJmbBQ5cOfOm8","object":"chat.completion.chunk","created":1707811485,"model":"gpt-4-0613","system_fingerprint":null,"choices":[{"index":0,"delta":{},"logprobs":null,"finish_reason":"stop"}]}
+
+
+        data: [DONE]
+
+
+        '
     headers:
       CF-Cache-Status:
       - DYNAMIC
       CF-RAY:
-      - 8533ead98e9c6444-SJC
+      - 854b8ff6efe096cc-SJC
       Cache-Control:
       - no-cache, must-revalidate
       Connection:
       - keep-alive
-      Content-Encoding:
-      - gzip
       Content-Type:
-      - application/json
+      - text/event-stream
       Date:
-      - Sat, 10 Feb 2024 11:12:31 GMT
+      - Tue, 13 Feb 2024 08:04:45 GMT
       Server:
       - cloudflare
-      Set-Cookie:
-      - __cf_bm=QNy.wYY1_9KHI8_RIeUZP.ali92DnVLjsO0oTX1XUfM-1707563551-1-AcwgNxZQVQEIE7HGXGP/Y7xskgkg3Jbu3L557XdSbkGcTUp12spKbI8e6GCb7fgn3Q+Zwuj+jMcX8oUH3M4djac=;
-        path=/; expires=Sat, 10-Feb-24 11:42:31 GMT; domain=.api.openai.com; HttpOnly;
-        Secure; SameSite=None
-      - _cfuvid=4YKuN.HwkkNnLgJwQBDQitCw85.UDIPaqBKt4otOGco-1707563551419-0-604800000;
-        path=/; domain=.api.openai.com; HttpOnly; Secure; SameSite=None
       Transfer-Encoding:
       - chunked
       access-control-allow-origin:
@@ -583,7 +945,7 @@ interactions:
       openai-organization:
       - user-z7g4wmlazxqvc5wjyaaaocfz
       openai-processing-ms:
-      - '1658'
+      - '379'
       openai-version:
       - '2020-10-01'
       strict-transport-security:
@@ -595,36 +957,35 @@ interactions:
       x-ratelimit-remaining-requests:
       - '9999'
       x-ratelimit-remaining-tokens:
-      - '299685'
+      - '299684'
       x-ratelimit-reset-requests:
       - 6ms
       x-ratelimit-reset-tokens:
-      - 62ms
+      - 63ms
       x-request-id:
-      - req_b2a5aa12c053cd45a20cd56c916a978f
+      - req_f95479368c97322e2ddfd0fe147b41b1
     status:
       code: 200
       message: OK
 - request:
-    body: '{"messages": [{"role": "user", "content": "Return a valid schema for the
-      one tool you must use with its arguments and values.\n\nTools available:\n\nFuntion
-      Name: multiplier\nFuntion attributes: {''first_number'': {''type'': ''integer''},
-      ''second_number'': {''type'': ''integer''}}\nDescription: multiplier(first_number:
-      int, second_number: int) -> float - Useful for when you need to multiply two
-      numbers together.\n\nUse this text to inform a valid ouput schema:\nThought:
-      Do I need to use a tool? Yes\nAction: multiplier\nAction Input: {\"first_number\":
-      2, \"second_number\": 6}\n\nThe output should be formatted as a JSON instance
-      that conforms to the JSON schema below.\n\nAs an example, for the schema {\"properties\":
-      {\"foo\": {\"title\": \"Foo\", \"description\": \"a list of strings\", \"type\":
-      \"array\", \"items\": {\"type\": \"string\"}}}, \"required\": [\"foo\"]}\nthe
-      object {\"foo\": [\"bar\", \"baz\"]} is a well-formatted instance of the schema.
-      The object {\"properties\": {\"foo\": [\"bar\", \"baz\"]}} is not well-formatted.\n\nHere
-      is the output schema:\n```\n{\"properties\": {\"function_name\": {\"title\":
-      \"Function Name\", \"description\": \"The name of the function to be called.\",
-      \"type\": \"string\"}, \"arguments\": {\"title\": \"Arguments\", \"description\":
-      \"A dictinary of arguments to be passed to the function.\", \"type\": \"object\"}},
-      \"required\": [\"function_name\", \"arguments\"]}\n```\n```"}], "model": "gpt-4",
-      "n": 1, "stream": false, "temperature": 0.7}'
+    body: '{"messages": [{"role": "system", "content": "\n                                The
+      schema should have the following structure, only two key:\n                                -
+      tool_name: str\n                                - arguments: dict (with all
+      arguments being passed)\n\n                                Example:\n                                {\"tool_name\":
+      \"tool_name\", \"arguments\": {\"arg_name1\": \"value\", \"arg_name2\": 2}}\n                            "},
+      {"role": "user", "content": "Tools available:\n\nTool Name: multiplier\nTool
+      Description: multiplier(first_number: int, second_number: int) -> float - Useful
+      for when you need to multiply two numbers together.\nTool Arguments: {''first_number'':
+      {''type'': ''integer''}, ''second_number'': {''type'': ''integer''}}\n\nReturn
+      a valid schema for the tool, use this text to inform a valid ouput schema:\n\nTool
+      Name: multiplier\nTool Arguments: {''first_number'': 2, ''second_number'': 6}```"}],
+      "model": "gpt-4", "function_call": {"name": "InstructorToolCalling"}, "functions":
+      [{"name": "InstructorToolCalling", "description": "Correctly extracted `InstructorToolCalling`
+      with all the required parameters with correct types", "parameters": {"properties":
+      {"tool_name": {"description": "The name of the tool to be called.", "title":
+      "Tool Name", "type": "string"}, "arguments": {"description": "A dictinary of
+      arguments to be passed to the tool.", "title": "Arguments", "type": "object"}},
+      "required": ["arguments", "tool_name"], "type": "object"}}]}'
     headers:
       accept:
       - application/json
@@ -633,12 +994,12 @@ interactions:
       connection:
       - keep-alive
       content-length:
-      - '1494'
+      - '1510'
       content-type:
       - application/json
       cookie:
-      - _cfuvid=4YKuN.HwkkNnLgJwQBDQitCw85.UDIPaqBKt4otOGco-1707563551419-0-604800000;
-        __cf_bm=QNy.wYY1_9KHI8_RIeUZP.ali92DnVLjsO0oTX1XUfM-1707563551-1-AcwgNxZQVQEIE7HGXGP/Y7xskgkg3Jbu3L557XdSbkGcTUp12spKbI8e6GCb7fgn3Q+Zwuj+jMcX8oUH3M4djac=
+      - __cf_bm=2Sq6QZC8ubo0uaJ_oGz9MIc.QFOOBbArVVZ1hfDyGmY-1707810872-1-AY/zSUU/W0R+ddbwbB8c9lfjiRTZgncqZIx1TKFkrJ39ZvX/bciOo1iWiRtqop2nD6+FnZ84Mc82Pq09fbaL5k4=;
+        _cfuvid=KRcEIDH8_CjxRUfnBClhnKowC8izvirPV4maDe0gpuk-1707810872815-0-604800000
       host:
       - api.openai.com
       user-agent:
@@ -662,18 +1023,18 @@ interactions:
   response:
     body:
       string: !!binary |
-        H4sIAAAAAAAAA1SRTW/bMAyG7/4VhM7OEDd1svnYy4oehh0GbOg8OIpM2+okSpPooUXg/z5I+eou
-        PvB5H5qkjgWA0L1oQKhJsrLerD7+GZ5/PD+F+vH1S5Dx7fO3vw/OvHytPj19fxBlMtzhBRVfrA/K
-        WW+QtaMTVgElY+pa7da7erup6yoD63o0SRs9r+5X6221ORuT0wqjaOBnAQBwzN80G/X4KhpYl5eK
-        xRjliKK5hgBEcCZVhIxRR5bEorxB5YiR8riPGBB0BJ4QBhesZMYeNCVHIbghk6gmtLJpab/ft3Rs
-        CaAVw0wqrdiRtNiKBlphZ8PaG42hFeUpJcM4WySOKZHN7OoQuaPZHlK0gbvyQiIqR/07tE1kaWnJ
-        fxfnLZbr+saNPrhDOhXNxlzrgyYdpy6gjI7SqpGdP+lLAfArn3n+73LCB2c9d+x+I6WGm7v61E/c
-        XvRG77dnyI6leWftquI8oYhvkdF2g6YRgw86Xz3NWSzFPwAAAP//AwBr2VHebAIAAA==
+        H4sIAAAAAAAAA1ySTYvbMBCG7/4Vw5ydkuy6SdbH7aFsYSmUQgt1MYqiOOpKM6o03g+C/3uRkzjZ
+        XoyZZ96H15IPBQDaLdaAeq9E++Bm62irn/fLN702j+71y/2zV982L+6x+vz3x1csc4I3f4yWc+qD
+        Zh+cEct0xDoaJSZbF6v5ar1YVOu7EXjeGpdjXZBZNZsvF7enxJ6tNglr+FUAABzGZ+5GW/OKNczL
+        88SblFRnsJ6WADCyyxNUKdkkigTLC9RMYijXpd65K7DrSefWrVbOvRMCICk/Kh8oSey1cPzO7D4p
+        5yx1V3oAVLHrvSHJ/fHQEECDwuza7GiwhgZ978QGZ01ssDxuTKm8MabydGdjkpZ6v8mrNdyUZ5KM
+        ZtpeoWUmQ0MDTmWG09swHZfjLkTepP++HneWbNq30ajElHsn4XAUZcnv8Vr6dyeNIbIP0go/GcrC
+        m+rj0YeXP+BCb6sTFBblrlKru+LUENNbEuPbnaXOxBDtdEvFUPwDAAD//wMAUqXvrJwCAAA=
     headers:
       CF-Cache-Status:
       - DYNAMIC
       CF-RAY:
-      - 8533eae4884a6444-SJC
+      - 854b900e4c8496cc-SJC
       Cache-Control:
       - no-cache, must-revalidate
       Connection:
@@ -683,7 +1044,7 @@ interactions:
       Content-Type:
       - application/json
       Date:
-      - Sat, 10 Feb 2024 11:12:34 GMT
+      - Tue, 13 Feb 2024 08:04:51 GMT
       Server:
       - cloudflare
       Transfer-Encoding:
@@ -697,7 +1058,7 @@ interactions:
       openai-organization:
       - user-z7g4wmlazxqvc5wjyaaaocfz
       openai-processing-ms:
-      - '3367'
+      - '2787'
       openai-version:
       - '2020-10-01'
       strict-transport-security:
@@ -709,13 +1070,48 @@ interactions:
       x-ratelimit-remaining-requests:
       - '9999'
       x-ratelimit-remaining-tokens:
-      - '299661'
+      - '299770'
       x-ratelimit-reset-requests:
       - 6ms
       x-ratelimit-reset-tokens:
-      - 67ms
+      - 45ms
       x-request-id:
-      - req_b56e83164780843a8b796fa55b469b1e
+      - req_7b9e983ec622f4bd47c4bce3724a4bc4
+    status:
+      code: 200
+      message: OK
+- request:
+    body: !!binary |
+      CoYCCiQKIgoMc2VydmljZS5uYW1lEhIKEGNyZXdBSS10ZWxlbWV0cnkS3QEKEgoQY3Jld2FpLnRl
+      bGVtZXRyeRLGAQoQojieAZxEKElkA5qp0J4DzxII7FelX11TOuMqClRvb2wgVXNhZ2UwATkoy1Lj
+      gF2zF0EQRlTjgF2zF0oZCgl0b29sX25hbWUSDAoKbXVsdGlwbGllckoOCghhdHRlbXB0cxICGAFK
+      WQoDbGxtElIKUHsibmFtZSI6IG51bGwsICJtb2RlbF9uYW1lIjogImdwdC00IiwgInRlbXBlcmF0
+      dXJlIjogMC43LCAiY2xhc3MiOiAiQ2hhdE9wZW5BSSJ9egIYAQ==
+    headers:
+      Accept:
+      - '*/*'
+      Accept-Encoding:
+      - gzip, deflate
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '265'
+      Content-Type:
+      - application/x-protobuf
+      User-Agent:
+      - OTel-OTLP-Exporter-Python/1.22.0
+    method: POST
+    uri: http://telemetry.crewai.com:4318/v1/traces
+  response:
+    body:
+      string: "\n\0"
+    headers:
+      Content-Length:
+      - '2'
+      Content-Type:
+      - application/x-protobuf
+      Date:
+      - Tue, 13 Feb 2024 08:04:51 GMT
     status:
       code: 200
       message: OK
@@ -725,20 +1121,20 @@ interactions:
       startups. You work as a freelancer and is now working on doing research and
       analysis for a new customer.\n\nYour personal goal is: Make the best research
       and analysis on content about AI and AI agentsTOOLS:\n------\nYou have access
-      to only the following tools:\n\nmultiplier: multiplier(first_number: int, second_number:
-      int) -> float - Useful for when you need to multiply two numbers together.\n\nTo
-      use a tool, please use the exact following format:\n\n```\nThought: Do I need
-      to use a tool? Yes\nAction: the tool you wanna use, should be one of [multiplier],
-      just the name.\nAction Input: Any and all relevant information input and context
-      for using the tool\nObservation: the result of using the tool\n```\n\nWhen you
-      have a response for your task, or if you do not need to use a tool, you MUST
-      use the format:\n\n```\nThought: Do I need to use a tool? No\nFinal Answer:
+      to only the following tools:\n\n(''multiplier: multiplier(first_number: int,
+      second_number: int) -> float - Useful for when you need to multiply two numbers
+      together.'',)\n\nTo use a tool, please use the exact following format:\n\n```\nThought:
+      Do I need to use a tool? Yes\nAction: the tool you wanna use, should be one
+      of [multiplier], just the name.\nAction Input: Any and all relevant information
+      input and context for using the tool\nObservation: the result of using the tool\n```\n\nWhen
+      you have a response for your task, or if you do not need to use a tool, you
+      MUST use the format:\n\n```\nThought: Do I need to use a tool? No\nFinal Answer:
       [your response here]```This is the summary of your work so far:\nBegin! This
       is VERY important to you, your job depends on it!\n\nCurrent Task: What is 2
       times 6? Return only the number.\nThis is the context you''re working with:\n12\nThought:
-      Do I need to use a tool? Yes\nAction: multiplier\nAction Input: {\"first_number\":
-      2, \"second_number\": 6}\nObservation: 12\nThought: "}], "model": "gpt-4", "n":
-      1, "stop": ["\nObservation"], "stream": false, "temperature": 0.7}'
+      Do I need to use a tool? Yes\nAction: multiplier\nAction Input: {''first_number'':
+      2, ''second_number'': 6}\nObservation: 12\nThought: "}], "model": "gpt-4", "n":
+      1, "stop": ["\nObservation"], "stream": true, "temperature": 0.7}'
     headers:
       accept:
       - application/json
@@ -751,8 +1147,8 @@ interactions:
       content-type:
       - application/json
       cookie:
-      - _cfuvid=4YKuN.HwkkNnLgJwQBDQitCw85.UDIPaqBKt4otOGco-1707563551419-0-604800000;
-        __cf_bm=QNy.wYY1_9KHI8_RIeUZP.ali92DnVLjsO0oTX1XUfM-1707563551-1-AcwgNxZQVQEIE7HGXGP/Y7xskgkg3Jbu3L557XdSbkGcTUp12spKbI8e6GCb7fgn3Q+Zwuj+jMcX8oUH3M4djac=
+      - __cf_bm=2Sq6QZC8ubo0uaJ_oGz9MIc.QFOOBbArVVZ1hfDyGmY-1707810872-1-AY/zSUU/W0R+ddbwbB8c9lfjiRTZgncqZIx1TKFkrJ39ZvX/bciOo1iWiRtqop2nD6+FnZ84Mc82Pq09fbaL5k4=;
+        _cfuvid=KRcEIDH8_CjxRUfnBClhnKowC8izvirPV4maDe0gpuk-1707810872815-0-604800000
       host:
       - api.openai.com
       user-agent:
@@ -775,28 +1171,83 @@ interactions:
     uri: https://api.openai.com/v1/chat/completions
   response:
     body:
-      string: !!binary |
-        H4sIAAAAAAAAA1SQQU8CMRCF7/srJj2DYVkWyF6MBjRoogeNJqghZXdYKt1ObYegEv476bKAXnp4
-        b96bb7qNAIQqRAYiX0rOK6vbw6/FdL7ajOOX60d9dzt+GpW/r9P753QibU+0QoLmn5jzMXWRU2U1
-        siJzsHOHkjG0xoPOIO0naZrWRkUF6hArLbd77U4/TprEklSOXmTwFgEAbOs3sJkCv0UGndZRqdB7
-        WaLITkMAwpEOipDeK8/SsGidzZwMo6lxRwQTMIgFMMHaI0hgIn0JD/RubpSRGq6M36DLIO6KpmJ3
-        2q2ptI7mgdOstT7pC2WUX84cSk8m7PFM9hDfRQAf9Y3rf9jCOqosz5hWaEJh0k0OfeL8nWc3ThuT
-        iaX+k0qGUUMo/I9nrGYLZUp01qn65MAZ7aI9AAAA//8DAEHO4tPpAQAA
+      string: 'data: {"id":"chatcmpl-8ri4ZZBMrxW6UHWAorsLYoPmAhygi","object":"chat.completion.chunk","created":1707811491,"model":"gpt-4-0613","system_fingerprint":null,"choices":[{"index":0,"delta":{"role":"assistant","content":""},"logprobs":null,"finish_reason":null}]}
+
+
+        data: {"id":"chatcmpl-8ri4ZZBMrxW6UHWAorsLYoPmAhygi","object":"chat.completion.chunk","created":1707811491,"model":"gpt-4-0613","system_fingerprint":null,"choices":[{"index":0,"delta":{"content":"Do"},"logprobs":null,"finish_reason":null}]}
+
+
+        data: {"id":"chatcmpl-8ri4ZZBMrxW6UHWAorsLYoPmAhygi","object":"chat.completion.chunk","created":1707811491,"model":"gpt-4-0613","system_fingerprint":null,"choices":[{"index":0,"delta":{"content":"
+        I"},"logprobs":null,"finish_reason":null}]}
+
+
+        data: {"id":"chatcmpl-8ri4ZZBMrxW6UHWAorsLYoPmAhygi","object":"chat.completion.chunk","created":1707811491,"model":"gpt-4-0613","system_fingerprint":null,"choices":[{"index":0,"delta":{"content":"
+        need"},"logprobs":null,"finish_reason":null}]}
+
+
+        data: {"id":"chatcmpl-8ri4ZZBMrxW6UHWAorsLYoPmAhygi","object":"chat.completion.chunk","created":1707811491,"model":"gpt-4-0613","system_fingerprint":null,"choices":[{"index":0,"delta":{"content":"
+        to"},"logprobs":null,"finish_reason":null}]}
+
+
+        data: {"id":"chatcmpl-8ri4ZZBMrxW6UHWAorsLYoPmAhygi","object":"chat.completion.chunk","created":1707811491,"model":"gpt-4-0613","system_fingerprint":null,"choices":[{"index":0,"delta":{"content":"
+        use"},"logprobs":null,"finish_reason":null}]}
+
+
+        data: {"id":"chatcmpl-8ri4ZZBMrxW6UHWAorsLYoPmAhygi","object":"chat.completion.chunk","created":1707811491,"model":"gpt-4-0613","system_fingerprint":null,"choices":[{"index":0,"delta":{"content":"
+        a"},"logprobs":null,"finish_reason":null}]}
+
+
+        data: {"id":"chatcmpl-8ri4ZZBMrxW6UHWAorsLYoPmAhygi","object":"chat.completion.chunk","created":1707811491,"model":"gpt-4-0613","system_fingerprint":null,"choices":[{"index":0,"delta":{"content":"
+        tool"},"logprobs":null,"finish_reason":null}]}
+
+
+        data: {"id":"chatcmpl-8ri4ZZBMrxW6UHWAorsLYoPmAhygi","object":"chat.completion.chunk","created":1707811491,"model":"gpt-4-0613","system_fingerprint":null,"choices":[{"index":0,"delta":{"content":"?"},"logprobs":null,"finish_reason":null}]}
+
+
+        data: {"id":"chatcmpl-8ri4ZZBMrxW6UHWAorsLYoPmAhygi","object":"chat.completion.chunk","created":1707811491,"model":"gpt-4-0613","system_fingerprint":null,"choices":[{"index":0,"delta":{"content":"
+        No"},"logprobs":null,"finish_reason":null}]}
+
+
+        data: {"id":"chatcmpl-8ri4ZZBMrxW6UHWAorsLYoPmAhygi","object":"chat.completion.chunk","created":1707811491,"model":"gpt-4-0613","system_fingerprint":null,"choices":[{"index":0,"delta":{"content":"\n"},"logprobs":null,"finish_reason":null}]}
+
+
+        data: {"id":"chatcmpl-8ri4ZZBMrxW6UHWAorsLYoPmAhygi","object":"chat.completion.chunk","created":1707811491,"model":"gpt-4-0613","system_fingerprint":null,"choices":[{"index":0,"delta":{"content":"Final"},"logprobs":null,"finish_reason":null}]}
+
+
+        data: {"id":"chatcmpl-8ri4ZZBMrxW6UHWAorsLYoPmAhygi","object":"chat.completion.chunk","created":1707811491,"model":"gpt-4-0613","system_fingerprint":null,"choices":[{"index":0,"delta":{"content":"
+        Answer"},"logprobs":null,"finish_reason":null}]}
+
+
+        data: {"id":"chatcmpl-8ri4ZZBMrxW6UHWAorsLYoPmAhygi","object":"chat.completion.chunk","created":1707811491,"model":"gpt-4-0613","system_fingerprint":null,"choices":[{"index":0,"delta":{"content":":"},"logprobs":null,"finish_reason":null}]}
+
+
+        data: {"id":"chatcmpl-8ri4ZZBMrxW6UHWAorsLYoPmAhygi","object":"chat.completion.chunk","created":1707811491,"model":"gpt-4-0613","system_fingerprint":null,"choices":[{"index":0,"delta":{"content":"
+        "},"logprobs":null,"finish_reason":null}]}
+
+
+        data: {"id":"chatcmpl-8ri4ZZBMrxW6UHWAorsLYoPmAhygi","object":"chat.completion.chunk","created":1707811491,"model":"gpt-4-0613","system_fingerprint":null,"choices":[{"index":0,"delta":{"content":"12"},"logprobs":null,"finish_reason":null}]}
+
+
+        data: {"id":"chatcmpl-8ri4ZZBMrxW6UHWAorsLYoPmAhygi","object":"chat.completion.chunk","created":1707811491,"model":"gpt-4-0613","system_fingerprint":null,"choices":[{"index":0,"delta":{},"logprobs":null,"finish_reason":"stop"}]}
+
+
+        data: [DONE]
+
+
+        '
     headers:
       CF-Cache-Status:
       - DYNAMIC
       CF-RAY:
-      - 8533eafae9606444-SJC
+      - 854b90206dc796cc-SJC
       Cache-Control:
       - no-cache, must-revalidate
       Connection:
       - keep-alive
-      Content-Encoding:
-      - gzip
       Content-Type:
-      - application/json
+      - text/event-stream
       Date:
-      - Sat, 10 Feb 2024 11:12:36 GMT
+      - Tue, 13 Feb 2024 08:04:52 GMT
       Server:
       - cloudflare
       Transfer-Encoding:
@@ -810,7 +1261,7 @@ interactions:
       openai-organization:
       - user-z7g4wmlazxqvc5wjyaaaocfz
       openai-processing-ms:
-      - '1087'
+      - '386'
       openai-version:
       - '2020-10-01'
       strict-transport-security:
@@ -822,13 +1273,13 @@ interactions:
       x-ratelimit-remaining-requests:
       - '9999'
       x-ratelimit-remaining-tokens:
-      - '299651'
+      - '299650'
       x-ratelimit-reset-requests:
       - 6ms
       x-ratelimit-reset-tokens:
-      - 69ms
+      - 70ms
       x-request-id:
-      - req_b09dc263c60d9ee4de53594d57b2b29e
+      - req_0946b5813aa5a9b4d743bc1c4c67b705
     status:
       code: 200
       message: OK
@@ -858,8 +1309,8 @@ interactions:
       content-type:
       - application/json
       cookie:
-      - _cfuvid=4YKuN.HwkkNnLgJwQBDQitCw85.UDIPaqBKt4otOGco-1707563551419-0-604800000;
-        __cf_bm=QNy.wYY1_9KHI8_RIeUZP.ali92DnVLjsO0oTX1XUfM-1707563551-1-AcwgNxZQVQEIE7HGXGP/Y7xskgkg3Jbu3L557XdSbkGcTUp12spKbI8e6GCb7fgn3Q+Zwuj+jMcX8oUH3M4djac=
+      - __cf_bm=2Sq6QZC8ubo0uaJ_oGz9MIc.QFOOBbArVVZ1hfDyGmY-1707810872-1-AY/zSUU/W0R+ddbwbB8c9lfjiRTZgncqZIx1TKFkrJ39ZvX/bciOo1iWiRtqop2nD6+FnZ84Mc82Pq09fbaL5k4=;
+        _cfuvid=KRcEIDH8_CjxRUfnBClhnKowC8izvirPV4maDe0gpuk-1707810872815-0-604800000
       host:
       - api.openai.com
       user-agent:
@@ -883,18 +1334,18 @@ interactions:
   response:
     body:
       string: !!binary |
-        H4sIAAAAAAAAA1SQS0/DMBCE7/kVK59T1LQkQG8VXEBISMCpCFWus00Mjtd4NzxU9b8jpy+4+DCz
-        s/52NhmAsrWagTKtFtMFN7r8WC/MU3M5Kf28uF6Ee/m8Kh755q6fP1QqTwlavaGRQ+rMUBcciiW/
-        s01ELZi2Fhfji7KalmU1GB3V6FKsCTI6H42rYrpPtGQNsprBSwYAsBnexOZr/FYzGOcHpUNm3aCa
-        HYcAVCSXFKWZLYv2ovKTacgL+gH3uUVo+0570PzOIC3C/BaEwGhneqcFYQJiO2SoctC+PoxE5EC+
-        Zviy0g6ioRjRCGjPXxhzKCZnav/n9gjrqAmRVukw3zt31NfWW26XETWTT2AsFHbxbQbwOpTS/7tT
-        hUhdkKXQO/q0sKjK3T516v/kTg6mkGj3J3U1zvaEin9YsFuurW8whmiHjhJnts1+AQAA//8DAPLW
-        W1YaAgAA
+        H4sIAAAAAAAAA1SQT08CMRDF7/spJj0vhAUE2ZsHNSQe1BgvxpDSHXYr3U7TGQRD+O6myz+99PDe
+        vNffzD4DULZSJSjTaDFtcL3baMdL45euGNUvuwk/PM3v33eP38XzazNSeUrQ8guNnFN9Q21wKJb8
+        0TYRtWBqLaaD6W1RjGejzmipQpdidZDeuDeYFKdC05A1yKqEjwwAYN+9ic1XuFMlDPKz0iKzrlGV
+        lyEAFcklRWlmy6K9qPxqGvKCvsN9axCaTas9aF4zSINwNwchMNqZjdOCMASxLTJMctC+Oo9E5EC+
+        YthaaTrRUIxoBLTnLcYcimFfnf48XGAd1SHSMi3mN85d9JX1lptFRM3kExgLhWP8kAF8dkfZ/NtT
+        hUhtkIXQGn0qLCY3xz51vf/VHZ5NIdHuT2o2yE6Ein9YsF2srK8xhmi7GyXO7JD9AgAA//8DAL4I
+        yp4aAgAA
     headers:
       CF-Cache-Status:
       - DYNAMIC
       CF-RAY:
-      - 8533eb02782f6444-SJC
+      - 854b902afb4a96cc-SJC
       Cache-Control:
       - no-cache, must-revalidate
       Connection:
@@ -904,7 +1355,7 @@ interactions:
       Content-Type:
       - application/json
       Date:
-      - Sat, 10 Feb 2024 11:12:37 GMT
+      - Tue, 13 Feb 2024 08:04:55 GMT
       Server:
       - cloudflare
       Transfer-Encoding:
@@ -918,7 +1369,7 @@ interactions:
       openai-organization:
       - user-z7g4wmlazxqvc5wjyaaaocfz
       openai-processing-ms:
-      - '1132'
+      - '1725'
       openai-version:
       - '2020-10-01'
       strict-transport-security:
@@ -936,988 +1387,7 @@ interactions:
       x-ratelimit-reset-tokens:
       - 44ms
       x-request-id:
-      - req_61d34283c3b6d77c7ad9924085ad9e1d
-    status:
-      code: 200
-      message: OK
-- request:
-    body: '{"messages": [{"role": "user", "content": "You are CEO.\nYou''re an long
-      time CEO of a content creation agency with a Senior Writer on the team. You''re
-      now working on a new project and want to make sure the content produced is amazing.\n\nYour
-      personal goal is: Make sure the writers in your company produce amazing content.TOOLS:\n------\nYou
-      have access to only the following tools:\n\nmultiplier: multiplier(first_number:
-      int, second_number: int) -> float - Useful for when you need to multiply two
-      numbers together.\nDelegate work to co-worker: Delegate work to co-worker(coworker:
-      str, task: str, context: str) - Delegate a specific task to one of the following
-      co-workers: Researcher. The input to this tool should be the role of the coworker,
-      the task you want them to do, and ALL necessary context to exectue the task,
-      they know nothing about the task, so share absolute everything you know, don''t
-      reference things but instead explain them.\nAsk question to co-worker: Ask question
-      to co-worker(coworker: str, question: str, context: str) - Ask a specific question
-      to one of the following co-workers: Researcher. The input to this tool should
-      be the role of the coworker, the question you have for them, and ALL necessary
-      context to ask the question properly, they know nothing about the question,
-      so share absolute everything you know, don''t reference things but instead explain
-      them.\nDelegate work to co-worker: Delegate work to co-worker(coworker: str,
-      task: str, context: str) - Delegate a specific task to one of the following
-      co-workers: Researcher. The input to this tool should be the role of the coworker,
-      the task you want them to do, and ALL necessary context to exectue the task,
-      they know nothing about the task, so share absolute everything you know, don''t
-      reference things but instead explain them.\nAsk question to co-worker: Ask question
-      to co-worker(coworker: str, question: str, context: str) - Ask a specific question
-      to one of the following co-workers: Researcher. The input to this tool should
-      be the role of the coworker, the question you have for them, and ALL necessary
-      context to ask the question properly, they know nothing about the question,
-      so share absolute everything you know, don''t reference things but instead explain
-      them.\n\nTo use a tool, please use the exact following format:\n\n```\nThought:
-      Do I need to use a tool? Yes\nAction: the tool you wanna use, should be one
-      of [multiplier, Delegate work to co-worker, Ask question to co-worker, Delegate
-      work to co-worker, Ask question to co-worker], just the name.\nAction Input:
-      Any and all relevant information input and context for using the tool\nObservation:
-      the result of using the tool\n```\n\nWhen you have a response for your task,
-      or if you do not need to use a tool, you MUST use the format:\n\n```\nThought:
-      Do I need to use a tool? No\nFinal Answer: [your response here]```This is the
-      summary of your work so far:\nThe human asks the AI to calculate 2 times 6,
-      and the AI correctly responds with the number 12.Begin! This is VERY important
-      to you, your job depends on it!\n\nCurrent Task: What is 2 tims 6? Return only
-      the number.\n"}], "model": "gpt-4", "n": 1, "stop": ["\nObservation"], "stream":
-      false, "temperature": 0.7}'
-    headers:
-      accept:
-      - application/json
-      accept-encoding:
-      - gzip, deflate
-      connection:
-      - keep-alive
-      content-length:
-      - '3233'
-      content-type:
-      - application/json
-      cookie:
-      - _cfuvid=ylta_5IzewtBbeSYSU3qahLvf8rnmBo7j6w87zjpbtc-1707563543431-0-604800000;
-        __cf_bm=VUM_AzyPmw54UKYCZhrJdPu8KbJzn3N7bJOp_y.9Kyc-1707563543-1-AZT0SxUJP3NDQsM27IVGaO9UGlGGGZ1b3awpQUl9p3hTgm4X7fW6Gm29TusixoSADT4s/T+MAAy6Phf92Q+xsaw=
-      host:
-      - api.openai.com
-      user-agent:
-      - OpenAI/Python 1.12.0
-      x-stainless-arch:
-      - arm64
-      x-stainless-async:
-      - 'false'
-      x-stainless-lang:
-      - python
-      x-stainless-os:
-      - MacOS
-      x-stainless-package-version:
-      - 1.12.0
-      x-stainless-runtime:
-      - CPython
-      x-stainless-runtime-version:
-      - 3.11.7
-    method: POST
-    uri: https://api.openai.com/v1/chat/completions
-  response:
-    body:
-      string: !!binary |
-        H4sIAAAAAAAAA1SRzU7DMBCE73mK1Z5b1BLSVrkgJEDiwqlCAooq19kmBsdr7A0Cqr47cvrLxYcZ
-        z+gbe5MBoKmwBNSNEt16O5x9rl+q3/nX9/2suDPjx3c1/726eyLz1NgcBynBq3fSckhdaG69JTHs
-        drYOpIRS63g6mhaTvCimvdFyRTbFai/Dq+FoMt4X6oaNpoglvGYAAJv+TGyuom8sYTQ4KC3FqGrC
-        8ngJAAPbpKCK0URRTnBwMjU7Idfjzhvu6kZKuGV4AEdUgTB0kUCBMNtreKa4cDc6jSmh7awYbw2F
-        gwYPzndSwmaBaxOiLF3XrigssITLASwwkmZXnamTLe5JtscJlmsfeJXmus7ao742zsRmGUhFdgk3
-        CvtdfJsBvPVP1f1bjz5w62Up/EEuFU5Hxa4PT79ycvN8bwqLsmepfJbtCTH+RKF2uTaupuCD6V8u
-        cWbb7A8AAP//AwBUqF5vMAIAAA==
-    headers:
-      CF-Cache-Status:
-      - DYNAMIC
-      CF-RAY:
-      - 8533eb0bcc2acfc4-SJC
-      Cache-Control:
-      - no-cache, must-revalidate
-      Connection:
-      - keep-alive
-      Content-Encoding:
-      - gzip
-      Content-Type:
-      - application/json
-      Date:
-      - Sat, 10 Feb 2024 11:12:39 GMT
-      Server:
-      - cloudflare
-      Transfer-Encoding:
-      - chunked
-      access-control-allow-origin:
-      - '*'
-      alt-svc:
-      - h3=":443"; ma=86400
-      openai-model:
-      - gpt-4-0613
-      openai-organization:
-      - user-z7g4wmlazxqvc5wjyaaaocfz
-      openai-processing-ms:
-      - '1402'
-      openai-version:
-      - '2020-10-01'
-      strict-transport-security:
-      - max-age=15724800; includeSubDomains
-      x-ratelimit-limit-requests:
-      - '10000'
-      x-ratelimit-limit-tokens:
-      - '300000'
-      x-ratelimit-remaining-requests:
-      - '9999'
-      x-ratelimit-remaining-tokens:
-      - '299215'
-      x-ratelimit-reset-requests:
-      - 6ms
-      x-ratelimit-reset-tokens:
-      - 156ms
-      x-request-id:
-      - req_b2aded41145719a69d978de2b4845b64
-    status:
-      code: 200
-      message: OK
-- request:
-    body: '{"messages": [{"role": "user", "content": "Return a valid schema for the
-      one tool you must use with its arguments and values.\n\nTools available:\n\nFuntion
-      Name: multiplier\nFuntion attributes: {''first_number'': {''type'': ''integer''},
-      ''second_number'': {''type'': ''integer''}}\nDescription: multiplier(first_number:
-      int, second_number: int) -> float - Useful for when you need to multiply two
-      numbers together.\n--\nFuntion Name: Delegate work to co-worker\nFuntion attributes:
-      {''coworker'': {''type'': ''string''}, ''task'': {''type'': ''string''}, ''context'':
-      {''type'': ''string''}}\nDescription: Delegate work to co-worker(coworker: str,
-      task: str, context: str) - Delegate a specific task to one of the following
-      co-workers: Researcher. The input to this tool should be the role of the coworker,
-      the task you want them to do, and ALL necessary context to exectue the task,
-      they know nothing about the task, so share absolute everything you know, don''t
-      reference things but instead explain them.\n--\nFuntion Name: Ask question to
-      co-worker\nFuntion attributes: {''coworker'': {''type'': ''string''}, ''question'':
-      {''type'': ''string''}, ''context'': {''type'': ''string''}}\nDescription: Ask
-      question to co-worker(coworker: str, question: str, context: str) - Ask a specific
-      question to one of the following co-workers: Researcher. The input to this tool
-      should be the role of the coworker, the question you have for them, and ALL
-      necessary context to ask the question properly, they know nothing about the
-      question, so share absolute everything you know, don''t reference things but
-      instead explain them.\n--\nFuntion Name: Delegate work to co-worker\nFuntion
-      attributes: {''coworker'': {''type'': ''string''}, ''task'': {''type'': ''string''},
-      ''context'': {''type'': ''string''}}\nDescription: Delegate work to co-worker(coworker:
-      str, task: str, context: str) - Delegate a specific task to one of the following
-      co-workers: Researcher. The input to this tool should be the role of the coworker,
-      the task you want them to do, and ALL necessary context to exectue the task,
-      they know nothing about the task, so share absolute everything you know, don''t
-      reference things but instead explain them.\n--\nFuntion Name: Ask question to
-      co-worker\nFuntion attributes: {''coworker'': {''type'': ''string''}, ''question'':
-      {''type'': ''string''}, ''context'': {''type'': ''string''}}\nDescription: Ask
-      question to co-worker(coworker: str, question: str, context: str) - Ask a specific
-      question to one of the following co-workers: Researcher. The input to this tool
-      should be the role of the coworker, the question you have for them, and ALL
-      necessary context to ask the question properly, they know nothing about the
-      question, so share absolute everything you know, don''t reference things but
-      instead explain them.\n\nUse this text to inform a valid ouput schema:\nThought:
-      Do I need to use a tool? Yes\nAction: multiplier\nAction Input: {\"first_number\":
-      2, \"second_number\": 6}\n\nThe output should be formatted as a JSON instance
-      that conforms to the JSON schema below.\n\nAs an example, for the schema {\"properties\":
-      {\"foo\": {\"title\": \"Foo\", \"description\": \"a list of strings\", \"type\":
-      \"array\", \"items\": {\"type\": \"string\"}}}, \"required\": [\"foo\"]}\nthe
-      object {\"foo\": [\"bar\", \"baz\"]} is a well-formatted instance of the schema.
-      The object {\"properties\": {\"foo\": [\"bar\", \"baz\"]}} is not well-formatted.\n\nHere
-      is the output schema:\n```\n{\"properties\": {\"function_name\": {\"title\":
-      \"Function Name\", \"description\": \"The name of the function to be called.\",
-      \"type\": \"string\"}, \"arguments\": {\"title\": \"Arguments\", \"description\":
-      \"A dictinary of arguments to be passed to the function.\", \"type\": \"object\"}},
-      \"required\": [\"function_name\", \"arguments\"]}\n```\n```"}], "model": "gpt-4",
-      "n": 1, "stream": false, "temperature": 0.7}'
-    headers:
-      accept:
-      - application/json
-      accept-encoding:
-      - gzip, deflate
-      connection:
-      - keep-alive
-      content-length:
-      - '3826'
-      content-type:
-      - application/json
-      cookie:
-      - _cfuvid=ylta_5IzewtBbeSYSU3qahLvf8rnmBo7j6w87zjpbtc-1707563543431-0-604800000;
-        __cf_bm=VUM_AzyPmw54UKYCZhrJdPu8KbJzn3N7bJOp_y.9Kyc-1707563543-1-AZT0SxUJP3NDQsM27IVGaO9UGlGGGZ1b3awpQUl9p3hTgm4X7fW6Gm29TusixoSADT4s/T+MAAy6Phf92Q+xsaw=
-      host:
-      - api.openai.com
-      user-agent:
-      - OpenAI/Python 1.12.0
-      x-stainless-arch:
-      - arm64
-      x-stainless-async:
-      - 'false'
-      x-stainless-lang:
-      - python
-      x-stainless-os:
-      - MacOS
-      x-stainless-package-version:
-      - 1.12.0
-      x-stainless-runtime:
-      - CPython
-      x-stainless-runtime-version:
-      - 3.11.7
-    method: POST
-    uri: https://api.openai.com/v1/chat/completions
-  response:
-    body:
-      string: !!binary |
-        H4sIAAAAAAAAA1SRzW7bMBCE73qKxZ7lwo5jx9Y9QIP23iJRIFDUSmZDLhlyBSQw9O4F5b/kwsN8
-        M4vZ5bEAQNNhBagPSrQLdrF775/7X3f977/248/2qV2+t4+uP/BPeR47LHPCt/9IyyX1Q3sXLInx
-        fMI6khLKU1cPy4fNdr3Z7GfgfEc2x4Ygi/vFcrtanxMHbzQlrOClAAA4zm/uxh19YAXL8qI4SkkN
-        hNXVBIDR26ygSskkUSxY3qD2LMRz3WPNADX2I+tct2HlqMYKanSjFROsoVhjeXKpOIyOWFJ2zMk5
-        a2KShkfXZmsFd+WFJNKeuy9om8lU84TnMtN1C+uHEH2bN+bR2qveGzbp0ERSyXNunMSHU3wqAF7n
-        a43fDoAhehekEf9GnAfudqvTPLx9zI2u789QvCh70/erTXFuiOkzCbmmNzxQDNHMx8s9i6n4DwAA
-        //8DADc96EEzAgAA
-    headers:
-      CF-Cache-Status:
-      - DYNAMIC
-      CF-RAY:
-      - 8533eb15bb9fcfc4-SJC
-      Cache-Control:
-      - no-cache, must-revalidate
-      Connection:
-      - keep-alive
-      Content-Encoding:
-      - gzip
-      Content-Type:
-      - application/json
-      Date:
-      - Sat, 10 Feb 2024 11:12:42 GMT
-      Server:
-      - cloudflare
-      Transfer-Encoding:
-      - chunked
-      access-control-allow-origin:
-      - '*'
-      alt-svc:
-      - h3=":443"; ma=86400
-      openai-model:
-      - gpt-4-0613
-      openai-organization:
-      - user-z7g4wmlazxqvc5wjyaaaocfz
-      openai-processing-ms:
-      - '2698'
-      openai-version:
-      - '2020-10-01'
-      strict-transport-security:
-      - max-age=15724800; includeSubDomains
-      x-ratelimit-limit-requests:
-      - '10000'
-      x-ratelimit-limit-tokens:
-      - '300000'
-      x-ratelimit-remaining-requests:
-      - '9999'
-      x-ratelimit-remaining-tokens:
-      - '299083'
-      x-ratelimit-reset-requests:
-      - 6ms
-      x-ratelimit-reset-tokens:
-      - 183ms
-      x-request-id:
-      - req_3083e7cc58f3bb3f7339a29d75e52a0c
-    status:
-      code: 200
-      message: OK
-- request:
-    body: '{"messages": [{"role": "user", "content": "You are CEO.\nYou''re an long
-      time CEO of a content creation agency with a Senior Writer on the team. You''re
-      now working on a new project and want to make sure the content produced is amazing.\n\nYour
-      personal goal is: Make sure the writers in your company produce amazing content.TOOLS:\n------\nYou
-      have access to only the following tools:\n\nmultiplier: multiplier(first_number:
-      int, second_number: int) -> float - Useful for when you need to multiply two
-      numbers together.\nDelegate work to co-worker: Delegate work to co-worker(coworker:
-      str, task: str, context: str) - Delegate a specific task to one of the following
-      co-workers: Researcher. The input to this tool should be the role of the coworker,
-      the task you want them to do, and ALL necessary context to exectue the task,
-      they know nothing about the task, so share absolute everything you know, don''t
-      reference things but instead explain them.\nAsk question to co-worker: Ask question
-      to co-worker(coworker: str, question: str, context: str) - Ask a specific question
-      to one of the following co-workers: Researcher. The input to this tool should
-      be the role of the coworker, the question you have for them, and ALL necessary
-      context to ask the question properly, they know nothing about the question,
-      so share absolute everything you know, don''t reference things but instead explain
-      them.\nDelegate work to co-worker: Delegate work to co-worker(coworker: str,
-      task: str, context: str) - Delegate a specific task to one of the following
-      co-workers: Researcher. The input to this tool should be the role of the coworker,
-      the task you want them to do, and ALL necessary context to exectue the task,
-      they know nothing about the task, so share absolute everything you know, don''t
-      reference things but instead explain them.\nAsk question to co-worker: Ask question
-      to co-worker(coworker: str, question: str, context: str) - Ask a specific question
-      to one of the following co-workers: Researcher. The input to this tool should
-      be the role of the coworker, the question you have for them, and ALL necessary
-      context to ask the question properly, they know nothing about the question,
-      so share absolute everything you know, don''t reference things but instead explain
-      them.\n\nTo use a tool, please use the exact following format:\n\n```\nThought:
-      Do I need to use a tool? Yes\nAction: the tool you wanna use, should be one
-      of [multiplier, Delegate work to co-worker, Ask question to co-worker, Delegate
-      work to co-worker, Ask question to co-worker], just the name.\nAction Input:
-      Any and all relevant information input and context for using the tool\nObservation:
-      the result of using the tool\n```\n\nWhen you have a response for your task,
-      or if you do not need to use a tool, you MUST use the format:\n\n```\nThought:
-      Do I need to use a tool? No\nFinal Answer: [your response here]```This is the
-      summary of your work so far:\nThe human asks the AI to calculate 2 times 6,
-      and the AI correctly responds with the number 12.Begin! This is VERY important
-      to you, your job depends on it!\n\nCurrent Task: What is 2 tims 6? Return only
-      the number.\nThought: Do I need to use a tool? Yes\nAction: multiplier\nAction
-      Input: {\"first_number\": 2, \"second_number\": 6}\nObservation: I just used
-      the multiplier tool with input {''first_number'': 2, ''second_number'': 6}.
-      So I already know the result of that and don''t need to use it again now.\n\nThought:
-      "}], "model": "gpt-4", "n": 1, "stop": ["\nObservation"], "stream": false, "temperature":
-      0.7}'
-    headers:
-      accept:
-      - application/json
-      accept-encoding:
-      - gzip, deflate
-      connection:
-      - keep-alive
-      content-length:
-      - '3533'
-      content-type:
-      - application/json
-      cookie:
-      - _cfuvid=ylta_5IzewtBbeSYSU3qahLvf8rnmBo7j6w87zjpbtc-1707563543431-0-604800000;
-        __cf_bm=VUM_AzyPmw54UKYCZhrJdPu8KbJzn3N7bJOp_y.9Kyc-1707563543-1-AZT0SxUJP3NDQsM27IVGaO9UGlGGGZ1b3awpQUl9p3hTgm4X7fW6Gm29TusixoSADT4s/T+MAAy6Phf92Q+xsaw=
-      host:
-      - api.openai.com
-      user-agent:
-      - OpenAI/Python 1.12.0
-      x-stainless-arch:
-      - arm64
-      x-stainless-async:
-      - 'false'
-      x-stainless-lang:
-      - python
-      x-stainless-os:
-      - MacOS
-      x-stainless-package-version:
-      - 1.12.0
-      x-stainless-runtime:
-      - CPython
-      x-stainless-runtime-version:
-      - 3.11.7
-    method: POST
-    uri: https://api.openai.com/v1/chat/completions
-  response:
-    body:
-      string: !!binary |
-        H4sIAAAAAAAAA1SQW0sDMRCF3/dXDHlupdt790UqWhGxIChSL5Q0O91NzWZiMsVL6X+XbG/6kodz
-        5pz5JpsEQOhcZCBUKVlVzjSHH8tn/Xg1ubson+4ffla3Tl1PZ92Zn/nxo2jEBC1WqPiQOlNUOYOs
-        ye5s5VEyxtZ00Br0+p1ev10bFeVoYqxw3Ow2W/20s0+UpBUGkcFLAgCwqd/IZnP8Ehm0GgelwhBk
-        gSI7DgEITyYqQoagA0vLonEyFVlGW+NeEtyARcyBCdYBQQITmXOY0qudaCsNjG34RJ9B2hb7iu1x
-        t6HCeVpETrs25qgvtdWhnHuUgWzcE5jcLr5NAN7qG9f/sIXzVDmeM72jjYWDYXfXJ07feXLT3t5k
-        Ymn+pEajZE8owndgrOZLbQv0zuv65MiZbJNfAAAA//8DAAKnQ8fpAQAA
-    headers:
-      CF-Cache-Status:
-      - DYNAMIC
-      CF-RAY:
-      - 8533eb28c823cfc4-SJC
-      Cache-Control:
-      - no-cache, must-revalidate
-      Connection:
-      - keep-alive
-      Content-Encoding:
-      - gzip
-      Content-Type:
-      - application/json
-      Date:
-      - Sat, 10 Feb 2024 11:12:43 GMT
-      Server:
-      - cloudflare
-      Transfer-Encoding:
-      - chunked
-      access-control-allow-origin:
-      - '*'
-      alt-svc:
-      - h3=":443"; ma=86400
-      openai-model:
-      - gpt-4-0613
-      openai-organization:
-      - user-z7g4wmlazxqvc5wjyaaaocfz
-      openai-processing-ms:
-      - '1067'
-      openai-version:
-      - '2020-10-01'
-      strict-transport-security:
-      - max-age=15724800; includeSubDomains
-      x-ratelimit-limit-requests:
-      - '10000'
-      x-ratelimit-limit-tokens:
-      - '300000'
-      x-ratelimit-remaining-requests:
-      - '9999'
-      x-ratelimit-remaining-tokens:
-      - '299143'
-      x-ratelimit-reset-requests:
-      - 6ms
-      x-ratelimit-reset-tokens:
-      - 171ms
-      x-request-id:
-      - req_ffb89b01f12636dbcb093c3d8ddadbbf
-    status:
-      code: 200
-      message: OK
-- request:
-    body: '{"messages": [{"role": "user", "content": "Progressively summarize the
-      lines of conversation provided, adding onto the previous summary returning a
-      new summary.\n\nEXAMPLE\nCurrent summary:\nThe human asks what the AI thinks
-      of artificial intelligence. The AI thinks artificial intelligence is a force
-      for good.\n\nNew lines of conversation:\nHuman: Why do you think artificial
-      intelligence is a force for good?\nAI: Because artificial intelligence will
-      help humans reach their full potential.\n\nNew summary:\nThe human asks what
-      the AI thinks of artificial intelligence. The AI thinks artificial intelligence
-      is a force for good because it will help humans reach their full potential.\nEND
-      OF EXAMPLE\n\nCurrent summary:\nThe human asks the AI to calculate 2 times 6,
-      and the AI correctly responds with the number 12.\n\nNew lines of conversation:\nHuman:
-      What is 2 tims 6? Return only the number.\nAI: 12\n\nNew summary:"}], "model":
-      "gpt-4", "n": 1, "stream": false, "temperature": 0.7}'
-    headers:
-      accept:
-      - application/json
-      accept-encoding:
-      - gzip, deflate
-      connection:
-      - keep-alive
-      content-length:
-      - '990'
-      content-type:
-      - application/json
-      cookie:
-      - _cfuvid=ylta_5IzewtBbeSYSU3qahLvf8rnmBo7j6w87zjpbtc-1707563543431-0-604800000;
-        __cf_bm=VUM_AzyPmw54UKYCZhrJdPu8KbJzn3N7bJOp_y.9Kyc-1707563543-1-AZT0SxUJP3NDQsM27IVGaO9UGlGGGZ1b3awpQUl9p3hTgm4X7fW6Gm29TusixoSADT4s/T+MAAy6Phf92Q+xsaw=
-      host:
-      - api.openai.com
-      user-agent:
-      - OpenAI/Python 1.12.0
-      x-stainless-arch:
-      - arm64
-      x-stainless-async:
-      - 'false'
-      x-stainless-lang:
-      - python
-      x-stainless-os:
-      - MacOS
-      x-stainless-package-version:
-      - 1.12.0
-      x-stainless-runtime:
-      - CPython
-      x-stainless-runtime-version:
-      - 3.11.7
-    method: POST
-    uri: https://api.openai.com/v1/chat/completions
-  response:
-    body:
-      string: !!binary |
-        H4sIAAAAAAAAA1SRT08CMRDF7/spJj0D4Y8uyk0TY0g8GS9qDCndgS20ndqZjQLhu5suK+ilh/fm
-        TX7zeigAlK3UDJSptRgfXf/mc/W2uXo2Zv+yeZq/PjxPt5vt/T7Nm8enUvVygpYbNPKbGhjy0aFY
-        CifbJNSCeetoOpxel5PrctIanip0ObaO0r/qD8vRpEvUZA2ymsF7AQBwaN/MFir8VjMY9n4Vj8x6
-        jWp2HgJQiVxWlGa2LDqI6l1MQ0EwtLgvNULdeB1A85ZBaoS7OQiB0c40TgvCGMR6ZChBvqzBHuhQ
-        wZKk7vQuYyglNOJ2kJAjhYrhy+ahGiE0fokJRuOB6iiOZ3xH65homU8NjXNnfWWD5XqRUDOFjMpC
-        8RQ/FgAfbU3Nv8tVTOSjLIS2GLht+/a0T11+5OKOp50pJNr90Ydl0REq3rGgX6xsWGOKybatZc7i
-        WPwAAAD//wMAsxMr8CwCAAA=
-    headers:
-      CF-Cache-Status:
-      - DYNAMIC
-      CF-RAY:
-      - 8533eb309c84cfc4-SJC
-      Cache-Control:
-      - no-cache, must-revalidate
-      Connection:
-      - keep-alive
-      Content-Encoding:
-      - gzip
-      Content-Type:
-      - application/json
-      Date:
-      - Sat, 10 Feb 2024 11:12:45 GMT
-      Server:
-      - cloudflare
-      Transfer-Encoding:
-      - chunked
-      access-control-allow-origin:
-      - '*'
-      alt-svc:
-      - h3=":443"; ma=86400
-      openai-model:
-      - gpt-4-0613
-      openai-organization:
-      - user-z7g4wmlazxqvc5wjyaaaocfz
-      openai-processing-ms:
-      - '1864'
-      openai-version:
-      - '2020-10-01'
-      strict-transport-security:
-      - max-age=15724800; includeSubDomains
-      x-ratelimit-limit-requests:
-      - '10000'
-      x-ratelimit-limit-tokens:
-      - '300000'
-      x-ratelimit-remaining-requests:
-      - '9999'
-      x-ratelimit-remaining-tokens:
-      - '299767'
-      x-ratelimit-reset-requests:
-      - 6ms
-      x-ratelimit-reset-tokens:
-      - 46ms
-      x-request-id:
-      - req_ae872b8ad337e15d936b8bbb07e65510
-    status:
-      code: 200
-      message: OK
-- request:
-    body: '{"messages": [{"role": "user", "content": "You are Researcher.\nYou''re
-      an expert researcher, specialized in technology, software engineering, AI and
-      startups. You work as a freelancer and is now working on doing research and
-      analysis for a new customer.\n\nYour personal goal is: Make the best research
-      and analysis on content about AI and AI agentsTOOLS:\n------\nYou have access
-      to only the following tools:\n\nmultiplier: multiplier(first_number: int, second_number:
-      int) -> float - Useful for when you need to multiply two numbers together.\n\nTo
-      use a tool, please use the exact following format:\n\n```\nThought: Do I need
-      to use a tool? Yes\nAction: the tool you wanna use, should be one of [multiplier],
-      just the name.\nAction Input: Any and all relevant information input and context
-      for using the tool\nObservation: the result of using the tool\n```\n\nWhen you
-      have a response for your task, or if you do not need to use a tool, you MUST
-      use the format:\n\n```\nThought: Do I need to use a tool? No\nFinal Answer:
-      [your response here]```This is the summary of your work so far:\nThe human asks
-      the AI to calculate 2 times 6, and the AI responds with the correct answer,
-      12.Begin! This is VERY important to you, your job depends on it!\n\nCurrent
-      Task: What is 2 times 6? Return only the number.\nThis is the context you''re
-      working with:\n12\n"}], "model": "gpt-4", "n": 1, "stop": ["\nObservation"],
-      "stream": false, "temperature": 0.7}'
-    headers:
-      accept:
-      - application/json
-      accept-encoding:
-      - gzip, deflate
-      connection:
-      - keep-alive
-      content-length:
-      - '1447'
-      content-type:
-      - application/json
-      cookie:
-      - _cfuvid=4YKuN.HwkkNnLgJwQBDQitCw85.UDIPaqBKt4otOGco-1707563551419-0-604800000;
-        __cf_bm=QNy.wYY1_9KHI8_RIeUZP.ali92DnVLjsO0oTX1XUfM-1707563551-1-AcwgNxZQVQEIE7HGXGP/Y7xskgkg3Jbu3L557XdSbkGcTUp12spKbI8e6GCb7fgn3Q+Zwuj+jMcX8oUH3M4djac=
-      host:
-      - api.openai.com
-      user-agent:
-      - OpenAI/Python 1.12.0
-      x-stainless-arch:
-      - arm64
-      x-stainless-async:
-      - 'false'
-      x-stainless-lang:
-      - python
-      x-stainless-os:
-      - MacOS
-      x-stainless-package-version:
-      - 1.12.0
-      x-stainless-runtime:
-      - CPython
-      x-stainless-runtime-version:
-      - 3.11.7
-    method: POST
-    uri: https://api.openai.com/v1/chat/completions
-  response:
-    body:
-      string: !!binary |
-        H4sIAAAAAAAAA1SRT2vjMBDF7/4Uw5yTktbrNPhSCmWXsnsIpdAmzRIceWxrI2lUaQwtId+9yPnT
-        7EWH9+YNvzfaZQCoaywBVVeJst6MZ+/N0iy65uX33H78+lPMlvOfr4t8u2zIPuEoJXjzj5ScUleK
-        rTckmt3BVoEqobT1+nZyW0zzYloMhuWaTIq1XsY/xpPpdX5MdKwVRSzhLQMA2A1vYnM1fWAJk9FJ
-        sRRj1RKW5yEADGySglWMOkrlBEffpmIn5Abc5477tpMSHhgewRHVIAx9JKhAmM0dLCiu3L1KZUqw
-        vRHtjaZw0uDR+V5K2K2w0SHK2vV2Q2GFJdyMYIWRFLv6Qp3u8UiyP1cw3PrAm1TX9cac9UY7Hbt1
-        oCqyS7hR2B/i+wzg73Cq/r/26ANbL2vhLbm0MJ8Uh334/SsXbn40haUyl/osOxJi/IxCdt1o11Lw
-        QQ+XS5zZPvsCAAD//wMA/eb9lDACAAA=
-    headers:
-      CF-Cache-Status:
-      - DYNAMIC
-      CF-RAY:
-      - 8533eb3d0a5ecfcc-SJC
-      Cache-Control:
-      - no-cache, must-revalidate
-      Connection:
-      - keep-alive
-      Content-Encoding:
-      - gzip
-      Content-Type:
-      - application/json
-      Date:
-      - Sat, 10 Feb 2024 11:12:47 GMT
-      Server:
-      - cloudflare
-      Transfer-Encoding:
-      - chunked
-      access-control-allow-origin:
-      - '*'
-      alt-svc:
-      - h3=":443"; ma=86400
-      openai-model:
-      - gpt-4-0613
-      openai-organization:
-      - user-z7g4wmlazxqvc5wjyaaaocfz
-      openai-processing-ms:
-      - '1516'
-      openai-version:
-      - '2020-10-01'
-      strict-transport-security:
-      - max-age=15724800; includeSubDomains
-      x-ratelimit-limit-requests:
-      - '10000'
-      x-ratelimit-limit-tokens:
-      - '300000'
-      x-ratelimit-remaining-requests:
-      - '9999'
-      x-ratelimit-remaining-tokens:
-      - '299661'
-      x-ratelimit-reset-requests:
-      - 6ms
-      x-ratelimit-reset-tokens:
-      - 67ms
-      x-request-id:
-      - req_33c7525db9f28e60ae6827cc83f25cbe
-    status:
-      code: 200
-      message: OK
-- request:
-    body: '{"messages": [{"role": "user", "content": "Return a valid schema for the
-      one tool you must use with its arguments and values.\n\nTools available:\n\nFuntion
-      Name: multiplier\nFuntion attributes: {''first_number'': {''type'': ''integer''},
-      ''second_number'': {''type'': ''integer''}}\nDescription: multiplier(first_number:
-      int, second_number: int) -> float - Useful for when you need to multiply two
-      numbers together.\n\nUse this text to inform a valid ouput schema:\nThought:
-      Do I need to use a tool? Yes\nAction: multiplier\nAction Input: {\"first_number\":
-      2, \"second_number\": 6}\n\nThe output should be formatted as a JSON instance
-      that conforms to the JSON schema below.\n\nAs an example, for the schema {\"properties\":
-      {\"foo\": {\"title\": \"Foo\", \"description\": \"a list of strings\", \"type\":
-      \"array\", \"items\": {\"type\": \"string\"}}}, \"required\": [\"foo\"]}\nthe
-      object {\"foo\": [\"bar\", \"baz\"]} is a well-formatted instance of the schema.
-      The object {\"properties\": {\"foo\": [\"bar\", \"baz\"]}} is not well-formatted.\n\nHere
-      is the output schema:\n```\n{\"properties\": {\"function_name\": {\"title\":
-      \"Function Name\", \"description\": \"The name of the function to be called.\",
-      \"type\": \"string\"}, \"arguments\": {\"title\": \"Arguments\", \"description\":
-      \"A dictinary of arguments to be passed to the function.\", \"type\": \"object\"}},
-      \"required\": [\"function_name\", \"arguments\"]}\n```\n```"}], "model": "gpt-4",
-      "n": 1, "stream": false, "temperature": 0.7}'
-    headers:
-      accept:
-      - application/json
-      accept-encoding:
-      - gzip, deflate
-      connection:
-      - keep-alive
-      content-length:
-      - '1494'
-      content-type:
-      - application/json
-      cookie:
-      - _cfuvid=4YKuN.HwkkNnLgJwQBDQitCw85.UDIPaqBKt4otOGco-1707563551419-0-604800000;
-        __cf_bm=QNy.wYY1_9KHI8_RIeUZP.ali92DnVLjsO0oTX1XUfM-1707563551-1-AcwgNxZQVQEIE7HGXGP/Y7xskgkg3Jbu3L557XdSbkGcTUp12spKbI8e6GCb7fgn3Q+Zwuj+jMcX8oUH3M4djac=
-      host:
-      - api.openai.com
-      user-agent:
-      - OpenAI/Python 1.12.0
-      x-stainless-arch:
-      - arm64
-      x-stainless-async:
-      - 'false'
-      x-stainless-lang:
-      - python
-      x-stainless-os:
-      - MacOS
-      x-stainless-package-version:
-      - 1.12.0
-      x-stainless-runtime:
-      - CPython
-      x-stainless-runtime-version:
-      - 3.11.7
-    method: POST
-    uri: https://api.openai.com/v1/chat/completions
-  response:
-    body:
-      string: !!binary |
-        H4sIAAAAAAAAA1SRzW/UMBDF7/krRj5n0bb7RXOrAKlVxQkkJEiV9TqTxMWeCfYEWFb535GzX+3F
-        h3nvN3rzfMgAlK1VAcp0Wozv3ez9r+Y77R8/Pay4/oD+y+f7O/z47anb//s9/6ryRPDuBY2cqXeG
-        fe9QLNNRNgG1YNp6s5lvVuvFar2ZBM81uoS1vcyWs/n6ZnEiOrYGoyrgRwYAcJjelI1q/KsKmOfn
-        iccYdYuquJgAVGCXJkrHaKNoEpVfRcMkSFPcBwwINoKGP+jcrOHgtQjWYClhBoEbkA4hmg69Lkoq
-        abvdvkSmkg4lAZSqGcikWyvSHktVQKn84MT2zmIoVX506dAOHklickzkxNoQpaLB75K1gNv8rEQ0
-        TPUraZ2UsaRxSqBO54yXHhy3feBd6owG5y7zxpKNXRVQR6Z0cxTuj/iYATxPfQ9vKlR9YN9LJfwT
-        KS1c3K6O+9T1a6/q8u4kCot2r6jNMjslVHEfBX3VWGox9MFO9aec2Zj9BwAA//8DAFroJbR1AgAA
-    headers:
-      CF-Cache-Status:
-      - DYNAMIC
-      CF-RAY:
-      - 8533eb47a9a2cfcc-SJC
-      Cache-Control:
-      - no-cache, must-revalidate
-      Connection:
-      - keep-alive
-      Content-Encoding:
-      - gzip
-      Content-Type:
-      - application/json
-      Date:
-      - Sat, 10 Feb 2024 11:12:49 GMT
-      Server:
-      - cloudflare
-      Transfer-Encoding:
-      - chunked
-      access-control-allow-origin:
-      - '*'
-      alt-svc:
-      - h3=":443"; ma=86400
-      openai-model:
-      - gpt-4-0613
-      openai-organization:
-      - user-z7g4wmlazxqvc5wjyaaaocfz
-      openai-processing-ms:
-      - '2133'
-      openai-version:
-      - '2020-10-01'
-      strict-transport-security:
-      - max-age=15724800; includeSubDomains
-      x-ratelimit-limit-requests:
-      - '10000'
-      x-ratelimit-limit-tokens:
-      - '300000'
-      x-ratelimit-remaining-requests:
-      - '9999'
-      x-ratelimit-remaining-tokens:
-      - '299662'
-      x-ratelimit-reset-requests:
-      - 6ms
-      x-ratelimit-reset-tokens:
-      - 67ms
-      x-request-id:
-      - req_7c8fef4357ccf35a4bdd74ae47ee0b5e
-    status:
-      code: 200
-      message: OK
-- request:
-    body: '{"messages": [{"role": "user", "content": "You are Researcher.\nYou''re
-      an expert researcher, specialized in technology, software engineering, AI and
-      startups. You work as a freelancer and is now working on doing research and
-      analysis for a new customer.\n\nYour personal goal is: Make the best research
-      and analysis on content about AI and AI agentsTOOLS:\n------\nYou have access
-      to only the following tools:\n\nmultiplier: multiplier(first_number: int, second_number:
-      int) -> float - Useful for when you need to multiply two numbers together.\n\nTo
-      use a tool, please use the exact following format:\n\n```\nThought: Do I need
-      to use a tool? Yes\nAction: the tool you wanna use, should be one of [multiplier],
-      just the name.\nAction Input: Any and all relevant information input and context
-      for using the tool\nObservation: the result of using the tool\n```\n\nWhen you
-      have a response for your task, or if you do not need to use a tool, you MUST
-      use the format:\n\n```\nThought: Do I need to use a tool? No\nFinal Answer:
-      [your response here]```This is the summary of your work so far:\nThe human asks
-      the AI to calculate 2 times 6, and the AI responds with the correct answer,
-      12.Begin! This is VERY important to you, your job depends on it!\n\nCurrent
-      Task: What is 2 times 6? Return only the number.\nThis is the context you''re
-      working with:\n12\nThought: Do I need to use a tool? Yes\nAction: multiplier\nAction
-      Input: {\"first_number\": 2, \"second_number\": 6}\nObservation: I just used
-      the multiplier tool with input {''first_number'': 2, ''second_number'': 6}.
-      So I already know the result of that and don''t need to use it again now.\n\nThought:
-      "}], "model": "gpt-4", "n": 1, "stop": ["\nObservation"], "stream": false, "temperature":
-      0.7}'
-    headers:
-      accept:
-      - application/json
-      accept-encoding:
-      - gzip, deflate
-      connection:
-      - keep-alive
-      content-length:
-      - '1747'
-      content-type:
-      - application/json
-      cookie:
-      - _cfuvid=4YKuN.HwkkNnLgJwQBDQitCw85.UDIPaqBKt4otOGco-1707563551419-0-604800000;
-        __cf_bm=QNy.wYY1_9KHI8_RIeUZP.ali92DnVLjsO0oTX1XUfM-1707563551-1-AcwgNxZQVQEIE7HGXGP/Y7xskgkg3Jbu3L557XdSbkGcTUp12spKbI8e6GCb7fgn3Q+Zwuj+jMcX8oUH3M4djac=
-      host:
-      - api.openai.com
-      user-agent:
-      - OpenAI/Python 1.12.0
-      x-stainless-arch:
-      - arm64
-      x-stainless-async:
-      - 'false'
-      x-stainless-lang:
-      - python
-      x-stainless-os:
-      - MacOS
-      x-stainless-package-version:
-      - 1.12.0
-      x-stainless-runtime:
-      - CPython
-      x-stainless-runtime-version:
-      - 3.11.7
-    method: POST
-    uri: https://api.openai.com/v1/chat/completions
-  response:
-    body:
-      string: !!binary |
-        H4sIAAAAAAAAA1SQS2/CMBCE7/kVK5+hIg3PXKpWfUpVD6iX0lbIJEticLyuvRQo4r9XDgHaiw8z
-        O7PfehcBCJWLFERWSs4qq9vDr/nELjbdZPn28L12P2O6Gb+Oy+J5e7d8FK2QoNkCMz6mLjKqrEZW
-        ZA525lAyhtZ40Bn0+kmvP6qNinLUIVZYbnfbnX6cNImSVIZepPAeAQDs6jewmRw3IoVO66hU6L0s
-        UKSnIQDhSAdFSO+VZ2lYtM5mRobR1Li3BE9gEHNggpVHkMBE+gpe6MPcKyM1XBu/RpdCfCmaiv1p
-        t6bCOpoFTrPS+qTPlVG+nDqUnkzY45nsIb6PAD7rG1f/sIV1VFmeMi3RhMJk2D30ifN3nt2415hM
-        LPWf1GgUNYTCbz1jNZ0rU6CzTtUnB85oH/0CAAD//wMAfeDhj+kBAAA=
-    headers:
-      CF-Cache-Status:
-      - DYNAMIC
-      CF-RAY:
-      - 8533eb55aaaccfcc-SJC
-      Cache-Control:
-      - no-cache, must-revalidate
-      Connection:
-      - keep-alive
-      Content-Encoding:
-      - gzip
-      Content-Type:
-      - application/json
-      Date:
-      - Sat, 10 Feb 2024 11:12:50 GMT
-      Server:
-      - cloudflare
-      Transfer-Encoding:
-      - chunked
-      access-control-allow-origin:
-      - '*'
-      alt-svc:
-      - h3=":443"; ma=86400
-      openai-model:
-      - gpt-4-0613
-      openai-organization:
-      - user-z7g4wmlazxqvc5wjyaaaocfz
-      openai-processing-ms:
-      - '896'
-      openai-version:
-      - '2020-10-01'
-      strict-transport-security:
-      - max-age=15724800; includeSubDomains
-      x-ratelimit-limit-requests:
-      - '10000'
-      x-ratelimit-limit-tokens:
-      - '300000'
-      x-ratelimit-remaining-requests:
-      - '9999'
-      x-ratelimit-remaining-tokens:
-      - '299589'
-      x-ratelimit-reset-requests:
-      - 6ms
-      x-ratelimit-reset-tokens:
-      - 82ms
-      x-request-id:
-      - req_93d60fb3dc024e83dd1e316e838d5670
-    status:
-      code: 200
-      message: OK
-- request:
-    body: '{"messages": [{"role": "user", "content": "Progressively summarize the
-      lines of conversation provided, adding onto the previous summary returning a
-      new summary.\n\nEXAMPLE\nCurrent summary:\nThe human asks what the AI thinks
-      of artificial intelligence. The AI thinks artificial intelligence is a force
-      for good.\n\nNew lines of conversation:\nHuman: Why do you think artificial
-      intelligence is a force for good?\nAI: Because artificial intelligence will
-      help humans reach their full potential.\n\nNew summary:\nThe human asks what
-      the AI thinks of artificial intelligence. The AI thinks artificial intelligence
-      is a force for good because it will help humans reach their full potential.\nEND
-      OF EXAMPLE\n\nCurrent summary:\nThe human asks the AI to calculate 2 times 6,
-      and the AI responds with the correct answer, 12.\n\nNew lines of conversation:\nHuman:
-      What is 2 times 6? Return only the number.\nThis is the context you''re working
-      with:\n12\nAI: 12\n\nNew summary:"}], "model": "gpt-4", "n": 1, "stream": false,
-      "temperature": 0.7}'
-    headers:
-      accept:
-      - application/json
-      accept-encoding:
-      - gzip, deflate
-      connection:
-      - keep-alive
-      content-length:
-      - '1036'
-      content-type:
-      - application/json
-      cookie:
-      - _cfuvid=4YKuN.HwkkNnLgJwQBDQitCw85.UDIPaqBKt4otOGco-1707563551419-0-604800000;
-        __cf_bm=QNy.wYY1_9KHI8_RIeUZP.ali92DnVLjsO0oTX1XUfM-1707563551-1-AcwgNxZQVQEIE7HGXGP/Y7xskgkg3Jbu3L557XdSbkGcTUp12spKbI8e6GCb7fgn3Q+Zwuj+jMcX8oUH3M4djac=
-      host:
-      - api.openai.com
-      user-agent:
-      - OpenAI/Python 1.12.0
-      x-stainless-arch:
-      - arm64
-      x-stainless-async:
-      - 'false'
-      x-stainless-lang:
-      - python
-      x-stainless-os:
-      - MacOS
-      x-stainless-package-version:
-      - 1.12.0
-      x-stainless-runtime:
-      - CPython
-      x-stainless-runtime-version:
-      - 3.11.7
-    method: POST
-    uri: https://api.openai.com/v1/chat/completions
-  response:
-    body:
-      string: !!binary |
-        H4sIAAAAAAAAA1SRQU/jMBCF7/kVI59b1LS02fYGQkLArrggpF2EKteZNgbb43gmKgj1v68cQgsX
-        H96bb/Tm+aMAULZWK1Cm0WJ8dONf7fZfe3N7/9b+vm6vqysKd5d/q8d5dzlr/6hRJmjzgka+qDND
-        PjoUS+HTNgm1YN5aVpNqvpjNq0lveKrRZWwXZXw+nizK2UA0ZA2yWsFTAQDw0b85W6jxTa2g53vF
-        I7PeoVodhwBUIpcVpZktiw6iRifTUBAMfdyHBqHpvA6g+ZVBGoSLGxACo53pnBaEKYj1yLAA2VuD
-        I9Chhg1JM+gDk5AjhZphb7PVIBhKCY1A6Dwma7QDHXiPaQTl9EwNcQ7HOxztYqJNvjl0zh31rQ2W
-        m3VCzRRyZhaKn/ihAHju++p+VKBiIh9lLfSKIS8sl0Nf6vQ1J3e6HEwh0e6bXi6LIaHidxb0660N
-        O0wx2b6+nLM4FP8BAAD//wMAlUo2rDUCAAA=
-    headers:
-      CF-Cache-Status:
-      - DYNAMIC
-      CF-RAY:
-      - 8533eb5c1eeecfcc-SJC
-      Cache-Control:
-      - no-cache, must-revalidate
-      Connection:
-      - keep-alive
-      Content-Encoding:
-      - gzip
-      Content-Type:
-      - application/json
-      Date:
-      - Sat, 10 Feb 2024 11:12:52 GMT
-      Server:
-      - cloudflare
-      Transfer-Encoding:
-      - chunked
-      access-control-allow-origin:
-      - '*'
-      alt-svc:
-      - h3=":443"; ma=86400
-      openai-model:
-      - gpt-4-0613
-      openai-organization:
-      - user-z7g4wmlazxqvc5wjyaaaocfz
-      openai-processing-ms:
-      - '1693'
-      openai-version:
-      - '2020-10-01'
-      strict-transport-security:
-      - max-age=15724800; includeSubDomains
-      x-ratelimit-limit-requests:
-      - '10000'
-      x-ratelimit-limit-tokens:
-      - '300000'
-      x-ratelimit-remaining-requests:
-      - '9999'
-      x-ratelimit-remaining-tokens:
-      - '299757'
-      x-ratelimit-reset-requests:
-      - 6ms
-      x-ratelimit-reset-tokens:
-      - 48ms
-      x-request-id:
-      - req_d1b20b6e01313a133c96666f353043c8
+      - req_e3e38104372c86a5698a119edda5c9be
     status:
       code: 200
       message: OK
