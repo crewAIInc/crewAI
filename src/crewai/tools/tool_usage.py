@@ -184,9 +184,6 @@ class ToolUsage:
             llm = self.function_calling_llm or self.llm
 
             if (isinstance(llm, ChatOpenAI)) and (llm.openai_api_base == None):
-                print("CARALHOooooooooooo")
-                print(llm)
-                print("CARALHOooooooooooo")
                 client = instructor.patch(
                     llm.client._client,
                     mode=instructor.Mode.FUNCTIONS,
