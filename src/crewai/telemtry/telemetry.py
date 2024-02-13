@@ -1,7 +1,6 @@
 import json
 import os
 import platform
-import socket
 from typing import Any
 
 import pkg_resources
@@ -68,7 +67,6 @@ class Telemetry:
                     pkg_resources.get_distribution("crewai").version,
                 )
                 self._add_attribute(span, "python_version", platform.python_version())
-                self._add_attribute(span, "hostname", socket.gethostname())
                 self._add_attribute(span, "crew_id", str(crew.id))
                 self._add_attribute(span, "crew_process", crew.process)
                 self._add_attribute(span, "crew_language", crew.language)
