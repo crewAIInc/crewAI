@@ -9,7 +9,7 @@ from langchain_openai import ChatOpenAI
 from crewai import Agent, Crew, Task
 from crewai.agents.cache import CacheHandler
 from crewai.agents.executor import CrewAgentExecutor
-from crewai.tools.tool_calling import ToolCalling
+from crewai.tools.tool_calling import InstructorToolCalling
 from crewai.tools.tool_usage import ToolUsage
 from crewai.utilities import RPMController
 
@@ -84,7 +84,7 @@ def test_agent_execution():
     task = Task(description="How much is 1 + 1?", agent=agent)
 
     output = agent.execute_task(task)
-    assert output == "2"
+    assert output == "1 + 1 equals 2."
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
@@ -104,7 +104,7 @@ def test_agent_execution_with_tools():
 
     task = Task(description="What is 3 times 4?", agent=agent)
     output = agent.execute_task(task)
-    assert output == "3 times 4 is 12."
+    assert output == "3 times 4 equals 12."
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
@@ -126,12 +126,12 @@ def test_logging_tool_usage():
     assert agent.tools_handler.last_used_tool == {}
     task = Task(description="What is 3 times 4?", agent=agent)
     output = agent.execute_task(task)
-    tool_usage = ToolCalling(
-        function_name=multiplier.name, arguments={"first_number": 3, "second_number": 5}
+    tool_usage = InstructorToolCalling(
+        tool_name=multiplier.name, arguments={"first_number": 3, "second_number": 4}
     )
-
-    assert output == "3 times 5 is 15."
-    assert agent.tools_handler.last_used_tool == tool_usage
+    assert output == "3 times 4 equals 12."
+    assert agent.tools_handler.last_used_tool.tool_name == tool_usage.tool_name
+    assert agent.tools_handler.last_used_tool.arguments == tool_usage.arguments
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
@@ -159,7 +159,6 @@ def test_cache_hitting():
     output = agent.execute_task(task1)
     output = agent.execute_task(task2)
     assert cache_handler._cache == {
-        "multiplier-{'first_number': 12, 'second_number': 3}": 36,
         "multiplier-{'first_number': 2, 'second_number': 6}": 12,
         "multiplier-{'first_number': 3, 'second_number': 3}": 9,
     }
@@ -169,6 +168,12 @@ def test_cache_hitting():
     )
     output = agent.execute_task(task)
     assert output == "36"
+
+    assert cache_handler._cache == {
+        "multiplier-{'first_number': 2, 'second_number': 6}": 12,
+        "multiplier-{'first_number': 3, 'second_number': 3}": 9,
+        "multiplier-{'first_number': 12, 'second_number': 3}": 36,
+    }
 
     with patch.object(CacheHandler, "read") as read:
         read.return_value = "0"
@@ -243,7 +248,7 @@ def test_agent_repeated_tool_usage(capsys):
         role="test role",
         goal="test goal",
         backstory="test backstory",
-        max_iter=3,
+        max_iter=4,
         allow_delegation=False,
     )
 
@@ -256,8 +261,9 @@ def test_agent_repeated_tool_usage(capsys):
     )
 
     captured = capsys.readouterr()
+
     assert (
-        "I just used the get_final_answer tool with input {'numbers': 42}. So I already know the result of that and don't need to use it again now. \nI could give my final answer if I'm ready, using exaclty the expected format bellow: \n```\nThought: Do I need to use a tool? No\nFinal Answer: [your response here]```\n"
+        "I just used the get_final_answer tool with input 42. So I already know that and must stop using it in a row with the same input. \nI could give my final answer if I'm ready, using exaclty the expected format bellow: \n\nThought: Do I need to use a tool? No\nFinal Answer: [your response here]\n"
         in captured.out
     )
 
@@ -279,16 +285,13 @@ def test_agent_moved_on_after_max_iterations():
     )
 
     task = Task(
-        description="The final answer is 42. But don't give it yet, instead keep using the `get_final_answer` tool."
+        description="The final answer is 42. But don't give it yet, instead keep using the `get_final_answer` tool. Until you're told you could give my final answer if I'm ready."
     )
     output = agent.execute_task(
         task=task,
         tools=[get_final_answer],
     )
-    assert (
-        output
-        == "I have used the tool 'get_final_answer' twice and confirmed that the answer is indeed 42."
-    )
+    assert output == "42"
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
@@ -312,7 +315,7 @@ def test_agent_respect_the_max_rpm_set(capsys):
     with patch.object(RPMController, "_wait_for_next_minute") as moveon:
         moveon.return_value = True
         task = Task(
-            description="The final answer is 42. But don't give it yet, instead keep using the `get_final_answer` tool."
+            description="The final answer is 42. But don't give it yet, instead keep using the `get_final_answer` tool, unless you're told otherwise"
         )
         output = agent.execute_task(
             task=task,
@@ -320,7 +323,7 @@ def test_agent_respect_the_max_rpm_set(capsys):
         )
         assert (
             output
-            == "I have used the tool as instructed and I am now ready to give the final answer. However, as per the instructions, I am not supposed to give it yet."
+            == "I have used the tool 'get_final_answer' with the input '42' multiple times and have observed the same result. Therefore, I am confident to conclude that the final answer is '42'."
         )
         captured = capsys.readouterr()
         assert "Max RPM reached, waiting for next minute to start." in captured.out

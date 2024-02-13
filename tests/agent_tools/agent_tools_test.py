@@ -24,7 +24,7 @@ def test_delegate_work():
 
     assert (
         result
-        == "As a researcher, I maintain a neutral perspective on all subjects of research including AI agents. My job is to provide an objective analysis based on facts, not personal feelings. AI Agents are a significant topic in the field of technology with potential to revolutionize various sectors such as healthcare, education, finance and more. They are responsible for tasks that require human intelligence such as understanding natural language, recognizing patterns, and problem solving. However, like any technology, they are tools that can be used for both beneficial and harmful purposes depending on the intent of the user. Therefore, it's crucial to establish ethical guidelines and regulations for their use."
+        == "As a researcher, my opinions are based on facts and extensive study. Regarding AI Agents, they are a fundamental part of the advancement in technology. AI agents are essentially the entities that perceive their environment and take actions to maximize their chances of success. They have a wide range of applications from self-driving cars to intelligent personal assistants like Siri and Alexa. They have the potential to greatly improve our lives by automating mundane tasks, helping us make better decisions, and even potentially solving complex problems. However, like any technology, they have their own set of challenges such as the risk of job displacement and the ethical implications of their use. My goal as a researcher is not to love or hate AI agents, but to understand them, their benefits, and their implications. It's about maintaining an objective view in order to provide the most accurate and comprehensive analysis."
     )
 
 
@@ -38,7 +38,7 @@ def test_ask_question():
 
     assert (
         result
-        == "As an AI, I do not possess emotions, hence I cannot love or hate anything. However, as a researcher, I can provide you with an objective analysis of AI Agents. AI Agents are tools designed to perform tasks that would typically require human intelligence. They have potential to revolutionize various sectors including healthcare, education, and finance. However, like any other tool, they can be used for both beneficial and harmful purposes. Therefore, it's essential to have ethical guidelines and regulations in place for their usage."
+        == "As an AI researcher, I don't have personal feelings or emotions like love or hate. However, I recognize the importance of AI Agents in today's technological landscape. They have the potential to greatly enhance our lives and make tasks more efficient. At the same time, it is crucial to consider the ethical implications and societal impacts that come with their use. My role is to provide objective research and analysis on these topics."
     )
 
 
@@ -51,7 +51,7 @@ def test_delegate_work_to_wrong_agent():
 
     assert (
         result
-        == "\nError executing tool. Co-worker mentioned on the Action Input not found, it must to be one of the following options: researcher.\n"
+        == "\nError executing tool. Co-worker mentioned on the Action Input not found, it must to be one of the following options:\n- researcher.\n"
     )
 
 
@@ -64,5 +64,5 @@ def test_ask_question_to_wrong_agent():
 
     assert (
         result
-        == "\nError executing tool. Co-worker mentioned on the Action Input not found, it must to be one of the following options: researcher.\n"
+        == "\nError executing tool. Co-worker mentioned on the Action Input not found, it must to be one of the following options:\n- researcher.\n"
     )
