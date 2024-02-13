@@ -4,7 +4,6 @@ import instructor
 from langchain.prompts import PromptTemplate
 from langchain_core.tools import BaseTool
 from langchain_openai import ChatOpenAI
-from openai import OpenAI
 
 from crewai.agents.tools_handler import ToolsHandler
 from crewai.telemtry import Telemetry
@@ -62,7 +61,12 @@ class ToolUsage:
             error = calling.message
             self._printer.print(content=f"\n\n{error}\n", color="yellow")
             return error
-        tool = self._select_tool(calling.function_name)
+        try:
+            tool = self._select_tool(calling.tool_name)
+        except Exception as e:
+            error = getattr(e, "message", str(e))
+            self._printer.print(content=f"\n\n{error}\n", color="yellow")
+            return error
         return self._use(tool_string=tool_string, tool=tool, calling=calling)
 
     def _use(
@@ -74,7 +78,7 @@ class ToolUsage:
         if self._check_tool_repeated_usage(calling=calling):
             try:
                 result = self._i18n.errors("task_repeated_usage").format(
-                    tool=calling.function_name,
+                    tool=calling.tool_name,
                     tool_input=", ".join(calling.arguments.values()),
                 )
                 self._printer.print(content=f"\n\n{result}\n", color="yellow")
@@ -89,7 +93,7 @@ class ToolUsage:
         self.tools_handler.on_tool_start(calling=calling)
 
         result = self.tools_handler.cache.read(
-            tool=calling.function_name, input=calling.arguments
+            tool=calling.tool_name, input=calling.arguments
         )
 
         if not result:
@@ -138,7 +142,7 @@ class ToolUsage:
 
     def _select_tool(self, tool_name: str) -> BaseTool:
         for tool in self.tools:
-            if tool.name.lower() == tool_name.lower():
+            if tool.name.lower().strip() == tool_name.lower().strip():
                 return tool
         raise Exception(f"Tool '{tool_name}' not found.")
 
@@ -154,7 +158,7 @@ class ToolUsage:
                 "\n".join(
                     [
                         f"Tool Name: {tool.name.lower()}",
-                        f"Description: {tool.description}",
+                        f"Tool Description: {tool.description}",
                         f"Tool Arguments: {args}",
                     ]
                 )
@@ -175,19 +179,27 @@ class ToolUsage:
                 self.llm.openai_api_base == None
             ):
                 client = instructor.patch(
-                    OpenAI(
-                        base_url=self.llm.openai_api_base,
-                        api_key=self.llm.openai_api_key,
-                    ),
-                    mode=instructor.Mode.JSON,
+                    self.llm.client._client,
+                    mode=instructor.Mode.FUNCTIONS,
                 )
                 calling = client.chat.completions.create(
                     model=self.llm.model_name,
                     messages=[
                         {
+                            "role": "system",
+                            "content": """
+                                The schema should have the following structure, only two key:
+                                - tool_name: str
+                                - arguments: dict (with all arguments being passed)
+
+                                Example:
+                                {"tool_name": "tool_name", "arguments": {"arg_name1": "value", "arg_name2": 2}}
+                            """,
+                        },
+                        {
                             "role": "user",
                             "content": f"Tools available:\n\n{self._render()}\n\nReturn a valid schema for the tool, use this text to inform a valid ouput schema:\n{tool_string}```",
-                        }
+                        },
                     ],
                     response_model=InstructorToolCalling,
                 )
@@ -200,11 +212,11 @@ class ToolUsage:
                         "available_tools": self._render(),
                         "format_instructions": """
                         The schema should have the following structure, only two key:
-                        - function_name: str
+                        - tool_name: str
                         - arguments: dict (with all arguments being passed)
 
                         Example:
-                        {"function_name": "function_name", "arguments": {"arg_name1": "value", "arg_name2": 2}}
+                        {"tool_name": "tool_name", "arguments": {"arg_name1": "value", "arg_name2": 2}}
                         """,
                     },
                 )

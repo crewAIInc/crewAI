@@ -45,7 +45,7 @@ class AgentTools(BaseModel):
         agent = [
             available_agent
             for available_agent in self.agents
-            if available_agent.role == agent
+            if available_agent.role.lower() == agent.lower()
         ]
 
         if not agent:
