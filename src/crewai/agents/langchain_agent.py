@@ -28,7 +28,7 @@ class LangchainCrewAgent(AgentWrapperParent):
         context: Optional[List[str]] = None,
         tools: Optional[List[Any]] = None,
     ) -> str:
-        self.tools += tools or []
+        used_tools = self.tools + (tools or [])
 
         if context:
             context = [AIMessage(content=ctx) for ctx in context]
@@ -36,7 +36,7 @@ class LangchainCrewAgent(AgentWrapperParent):
             context = []
         # https://github.com/langchain-ai/langchain/discussions/17403
         return self.data["agent"].invoke(
-            {"input": task, "chat_history": context, "tools": self.tools}
+            {"input": task, "chat_history": context, "tools": used_tools}
         )["output"]
 
     @property
