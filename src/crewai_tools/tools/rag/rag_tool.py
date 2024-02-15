@@ -140,7 +140,7 @@ class RagTool(BaseTool):
 
         app = App.from_config(config_path=config_path)
         adapter = EmbedchainAdapter(embedchain_app=app)
-        return RagTool(adapter=adapter)
+        return RagTool(name=self.name, description=self.description, adapter=adapter)
 
     def _from_generic(self, source: str, type: str):
         from embedchain import App
@@ -148,4 +148,4 @@ class RagTool(BaseTool):
         app = App()
         app.add(source, data_type=type)
         adapter = EmbedchainAdapter(embedchain_app=app)
-        return RagTool(adapter=adapter)
+        return RagTool(name=self.name, description=self.description, adapter=adapter)
