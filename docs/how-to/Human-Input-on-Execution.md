@@ -1,7 +1,7 @@
 # Human Input on Execution
 
 Human inputs is important in many agent execution use cases, humans are AGI so they can can be prompted to step in and provide extra details ins necessary.
-Using it with crewAI is pretty straightforward and you can do it through a LangChain Tool. 
+Using it with crewAI is pretty straightforward and you can do it through a LangChain Tool.
 Check [LangChain Integration](https://python.langchain.com/docs/integrations/tools/human_tools) for more details:
 
 Example:
@@ -9,7 +9,7 @@ Example:
 ```python
 import os
 from crewai import Agent, Task, Crew, Process
-from langchain.tools import DuckDuckGoSearchRun
+from langchain_community.tools import DuckDuckGoSearchRun
 from langchain.agents import load_tools
 
 search_tool = DuckDuckGoSearchRun()
@@ -45,7 +45,7 @@ writer = Agent(
 task1 = Task(
   description="""Conduct a comprehensive analysis of the latest advancements in AI in 2024.
   Identify key trends, breakthrough technologies, and potential industry impacts.
-  Compile your findings in a detailed report. 
+  Compile your findings in a detailed report.
   Make sure to check with the human if the draft is good before returning your Final Answer.
   Your final answer MUST be a full analysis report""",
   agent=researcher
@@ -56,7 +56,7 @@ task2 = Task(
   post that highlights the most significant AI advancements.
   Your post should be informative yet accessible, catering to a tech-savvy audience.
   Aim for a narrative that captures the essence of these breakthroughs and their
-  implications for the future. 
+  implications for the future.
   Your final answer MUST be the full blog post of at least 3 paragraphs.""",
   agent=writer
 )

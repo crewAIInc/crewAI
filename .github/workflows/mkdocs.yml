@@ -1,7 +1,7 @@
 name: Deploy MkDocs
 
 on:
-  workflow_dispatch:    
+  workflow_dispatch:
   push:
     branches:
       - main
@@ -22,11 +22,23 @@ jobs:
         with:
           python-version: '3.10'
 
+      - name: Calculate requirements hash
+        id: req-hash
+        run: echo "::set-output name=hash::$(sha256sum requirements-doc.txt | awk '{print $1}')"
+
+      - name: Setup cache
+        uses: actions/cache@v3
+        with:
+          key: mkdocs-material-${{ steps.req-hash.outputs.hash }}
+          path: .cache
+          restore-keys: |
+            mkdocs-material-
+
       - name: Install Requirements
         run: |
           sudo apt-get update &&
           sudo apt-get install pngquant &&
-          pip install mkdocs-material
+          pip install mkdocs-material mkdocs-material-extensions pillow cairosvg
 
         env:
           GH_TOKEN: ${{ secrets.GH_TOKEN }}

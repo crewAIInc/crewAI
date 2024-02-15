@@ -1,75 +1,112 @@
-# Get a crew working
+---
+title: Assembling and Activating Your CrewAI Team
+description: A step-by-step guide to creating a cohesive CrewAI team for your projects.
+---
 
-Assembling a Crew in CrewAI is like casting characters for a play. Each agent you create is a cast member with a unique part to play. When your crew is assembled, you'll give the signal, and they'll spring into action, each performing their role in the grand scheme of your project.
+## Introduction
+Embarking on your CrewAI journey involves a few straightforward steps to set up your environment and initiate your AI crew. This guide ensures a seamless start.
 
-# Step 1: Assemble Your Agents
+## Step 0: Installation
+Begin by installing CrewAI and any additional packages required for your project. For instance, the `duckduckgo-search` package is used in this example for enhanced search capabilities.
 
-Start by creating your agents, each with its own role and backstory. These backstories add depth to the agents, influencing how they approach their tasks and interact with one another.
+```shell
+pip install crewai
+pip install duckduckgo-search
+```
+
+## Step 1: Assemble Your Agents
+Begin by defining your agents with distinct roles and backstories. These elements not only add depth but also guide their task execution and interaction within the crew.
 
 ```python
+import os
+os.environ["OPENAI_API_KEY"] = "Your Key"
+
 from crewai import Agent
 
-# Create a researcher agent
+# Topic that will be used in the crew run
+topic = 'AI in healthcare'
+
+# Creating a senior researcher agent
 researcher = Agent(
   role='Senior Researcher',
-  goal='Discover groundbreaking technologies',
+  goal=f'Uncover groundbreaking technologies around {topic}',
   verbose=True,
-  backstory='A curious mind fascinated by cutting-edge innovation and the potential to change the world, you know everything about tech.'
+  backstory="""Driven by curiosity, you're at the forefront of
+  innovation, eager to explore and share knowledge that could change
+  the world."""
 )
 
-# Create a writer agent
+# Creating a writer agent
 writer = Agent(
   role='Writer',
-  goal='Craft compelling stories about tech discoveries',
+  goal=f'Narrate compelling tech stories around {topic}',
   verbose=True,
-  backstory='A creative soul who translates complex tech jargon into engaging narratives for the masses, you write using simple words in a friendly and inviting tone that does not sounds like AI.'
+  backstory="""With a flair for simplifying complex topics, you craft
+  engaging narratives that captivate and educate, bringing new
+  discoveries to light in an accessible manner."""
 )
 ```
 
-# Step 2: Define the Tasks
-
-Outline the tasks that your agents need to tackle. These tasks are their missions, the specific objectives they need to achieve.
+## Step 2: Define the Tasks
+Detail the specific objectives for your agents. These tasks guide their focus and ensure a targeted approach to their roles.
 
 ```python
 from crewai import Task
 
-# Task for the researcher
+# Install duckduckgo-search for this example:
+# !pip install -U duckduckgo-search
+
+from langchain_community.tools import DuckDuckGoSearchRun
+search_tool = DuckDuckGoSearchRun()
+
+# Research task for identifying AI trends
 research_task = Task(
-  description='Identify the next big trend in AI',
-  agent=researcher  # Assigning the task to the researcher
+  description=f"""Identify the next big trend in {topic}.
+  Focus on identifying pros and cons and the overall narrative.
+
+  Your final report should clearly articulate the key points,
+  its market opportunities, and potential risks.
+  """,
+  expected_output='A comprehensive 3 paragraphs long report on the latest AI trends.',
+  max_inter=3,
+  tools=[search_tool],
+  agent=researcher
 )
 
-# Task for the writer
+# Writing task based on research findings
 write_task = Task(
-  description='Write an article on AI advancements leveraging the research made.',
-  agent=writer  # Assigning the task to the writer
+  description=f"""Compose an insightful article on {topic}.
+  Focus on the latest trends and how it's impacting the industry.
+  This article should be easy to understand, engaging and positive.
+  """,
+  expected_output=f'A 4 paragraph article on {topic} advancements.',
+  tools=[search_tool],
+  agent=writer
 )
 ```
 
-# Step 3: Form the Crew
-
-Bring your agents together into a crew. This is where you define the process they'll follow to complete their tasks.
+## Step 3: Form the Crew
+Combine your agents into a crew, setting the workflow process they'll follow to accomplish the tasks.
 
 ```python
 from crewai import Crew, Process
 
-# Instantiate your crew
-tech_crew = Crew(
+# Forming the tech-focused crew
+crew = Crew(
   agents=[researcher, writer],
   tasks=[research_task, write_task],
-  process=Process.sequential  # Tasks will be executed one after the other
+  process=Process.sequential  # Sequential task execution
 )
 ```
 
-# Step 4: Kick It Off
-
-With the crew formed and the stage set, it's time to start the show. Kick off the process and watch as your agents collaborate to achieve their goals.
+## Step 4: Kick It Off
+With your crew ready and the stage set, initiate the process. Watch as your agents collaborate, each contributing their expertise to achieve the collective goal.
 
 ```python
-# Begin the task execution
-tech_crew.kickoff()
+# Starting the task execution process
+result = crew.kickoff()
+print(result)
 ```
 
-# Conclusion
-
-Creating a crew and setting it into motion is a straightforward process in CrewAI. With each agent playing their part and a clear set of tasks, your AI ensemble is ready to take on any challenge. Remember, the richness of their backstories and the clarity of their goals will greatly enhance their performance and the outcomes of their collaboration.
+## Conclusion
+Building and activating a crew in CrewAI is a seamless process. By carefully assigning roles, tasks, and a clear process, your AI team is equipped to tackle challenges efficiently. The depth of agent backstories and the precision of their objectives enrich the collaboration, leading to successful project outcomes.

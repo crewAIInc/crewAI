@@ -1,9 +1,9 @@
 
 [tool.poetry]
 name = "crewai"
-version = "0.1.32"
+version = "0.11.0"
 description = "Cutting-edge framework for orchestrating role-playing, autonomous AI agents. By fostering collaborative intelligence, CrewAI empowers agents to work together seamlessly, tackling complex tasks."
-authors = ["Joao Moura <joaomdmoura@gmail.com>"]
+authors = ["Joao Moura <joao@crewai.com>"]
 readme = "README.md"
 packages = [
     { include = "crewai", from = "src" },
@@ -16,24 +16,35 @@ Documentation = "https://github.com/joaomdmoura/CrewAI/wiki/Index"
 Repository = "https://github.com/joaomdmoura/crewai"
 
 [tool.poetry.dependencies]
-python = ">=3.9,<4.0"
+python = ">=3.10,<4.0"
 pydantic = "^2.4.2"
-langchain = "0.1.0"
+langchain = "^0.1.0"
 openai = "^1.7.1"
 langchain-openai = "^0.0.2"
-pyright = "1.1.333"
-black = {git = "https://github.com/psf/black.git", rev = "stable"}
+opentelemetry-api = "^1.22.0"
+opentelemetry-sdk = "^1.22.0"
+opentelemetry-exporter-otlp-proto-http = "^1.22.0"
+instructor = "^0.5.2"
+regex = "^2023.12.25"
 
 [tool.poetry.group.dev.dependencies]
 isort = "^5.13.2"
-black = "^24.1"
+pyright = "1.1.333"
+black = {git = "https://github.com/psf/black.git", rev = "stable"}
 autoflake = "^2.2.1"
 pre-commit = "^3.6.0"
-mkdocs-material = "^9.5.3"
+mkdocs = "^1.4.3"
+mkdocstrings = "^0.22.0"
+mkdocstrings-python = "^1.1.2"
+mkdocs-material = {extras = ["imaging"], version = "^9.5.7"}
+mkdocs-material-extensions = "^1.3.1"
+pillow = "^10.2.0"
+cairosvg = "^2.7.1"
 
 [tool.isort]
 profile = "black"
 known_first_party = ["crewai"]
+
 
 
 [tool.poetry.group.test.dependencies]

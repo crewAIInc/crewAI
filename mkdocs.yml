@@ -1,9 +1,161 @@
-site_name: crewAI Documentation
+site_name: crewAI
+site_author: crewAI, Inc
+site_description: Cutting-edge framework for orchestrating role-playing, autonomous AI agents. By fostering collaborative intelligence, CrewAI empowers agents to work together seamlessly, tackling complex tasks.
+repo_name: crewAI
+repo_url: https://github.com/joaomdmoura/crewai/
+site_url: https://crewai.com
+edit_uri: edit/main/docs/
+copyright: Copyright &copy; 2024 crewAI, Inc
+
+markdown_extensions:
+  - abbr
+  - admonition
+  - pymdownx.details
+  - attr_list
+  - def_list
+  - footnotes
+  - md_in_html
+  - toc:
+      permalink: true
+  - pymdownx.arithmatex:
+      generic: true
+  - pymdownx.betterem:
+      smart_enable: all
+  - pymdownx.caret
+  - pymdownx.emoji:
+      emoji_generator: !!python/name:material.extensions.emoji.to_svg
+      emoji_index: !!python/name:material.extensions.emoji.twemoji
+  - pymdownx.highlight:
+      anchor_linenums: true
+      line_spans: __span
+      pygments_lang_class: true
+  - pymdownx.inlinehilite
+  - pymdownx.keys
+  - pymdownx.magiclink:
+      normalize_issue_symbols: true
+      repo_url_shorthand: true
+      user: joaomdmoura
+      repo: crewAI
+  - pymdownx.mark
+  - pymdownx.smartsymbols
+  - pymdownx.snippets:
+      auto_append:
+        - includes/mkdocs.md
+  - pymdownx.superfences:
+      custom_fences:
+        - name: mermaid
+          class: mermaid
+          format: !!python/name:pymdownx.superfences.fence_code_format
+  - pymdownx.tabbed:
+      alternate_style: true
+      combine_header_slug: true
+      slugify: !!python/object/apply:pymdownx.slugs.slugify
+        kwds:
+          case: lower
+  - pymdownx.tasklist:
+      custom_checkbox: true
+  - pymdownx.tilde
 theme:
   name: material
+  language: en
+  icon:
+    repo: fontawesome/brands/github
+    edit: material/pencil
+    view: material/eye
+    admonition:
+      note: octicons/light-bulb-16
+      abstract: octicons/checklist-16
+      info: octicons/info-16
+      tip: octicons/squirrel-16
+      success: octicons/check-16
+      question: octicons/question-16
+      warning: octicons/alert-16
+      failure: octicons/x-circle-16
+      danger: octicons/zap-16
+      bug: octicons/bug-16
+      example: octicons/beaker-16
+      quote: octicons/quote-16
+
   palette:
-    scheme: default
-    primary: red
-    accent: red
+    - scheme: default
+      primary: red
+      accent: red
+      toggle:
+        icon: material/brightness-7
+        name: Switch to dark mode
+    - scheme: slate
+      primary: red
+      accent: red
+      toggle:
+        icon: material/brightness-4
+        name: Switch to light mode
   features:
-    - navigation.tabs
+    - announce.dismiss
+    - content.action.edit
+    - content.action.view
+    - content.code.annotate
+    - content.code.copy
+    - content.code.select
+    - content.tabs.link
+    - content.tooltips
+    - header.autohide
+    - navigation.footer
+    - navigation.indexes
+    # - navigation.prune
+    # - navigation.sections
+    # - navigation.tabs
+    - search.suggest
+    - navigation.instant
+    - navigation.instant.progress
+    - navigation.instant.prefetch
+    - navigation.tracking
+    # - navigation.expand
+    - navigation.path
+    - navigation.top
+    - toc.follow
+    - toc.integrate
+    - search.highlight
+    - search.share
+
+nav:
+  - Home: '/'
+  - Core Concepts:
+    - Agents: 'core-concepts/Agents.md'
+    - Tasks: 'core-concepts/Tasks.md'
+    - Tools: 'core-concepts/Tools.md'
+    - Processes: 'core-concepts/Processes.md'
+    - Crews: 'core-concepts/Crews.md'
+    - Collaboration: 'core-concepts/Collaboration.md'
+  - How to Guides:
+    - Getting Started: 'how-to/Creating-a-Crew-and-kick-it-off.md'
+    - Using Sequential Process: 'how-to/Sequential.md'
+    - Using Hierarchical Process: 'how-to/Hierarchical.md'
+    - Connecting to any LLM: 'how-to/LLM-Connections.md'
+    - Customizing Agents: 'how-to/Customizing-Agents.md'
+    - Human Input on Execution: 'how-to/Human-Input-on-Execution.md'
+  - Examples:
+    - Trip Planner Crew: https://github.com/joaomdmoura/crewAI-examples/tree/main/trip_planner"
+    - Create Instagram Post: https://github.com/joaomdmoura/crewAI-examples/tree/main/instagram_post"
+    - Stock Analysis: https://github.com/joaomdmoura/crewAI-examples/tree/main/stock_analysis"
+    - Game Generator: https://github.com/joaomdmoura/crewAI-examples/tree/main/game-builder-crew"
+    - Drafting emails with LangGraph: https://github.com/joaomdmoura/crewAI-examples/tree/main/CrewAI-LangGraph"
+    - Landing Page Generator: https://github.com/joaomdmoura/crewAI-examples/tree/main/landing_page_generator"
+    - Prepare for meetings: https://github.com/joaomdmoura/crewAI-examples/tree/main/prep-for-a-meeting"
+  - Telemetry: 'telemetry/Telemetry.md'
+
+extra_css:
+  - stylesheets/output.css
+  - stylesheets/extra.css
+
+plugins:
+  - social
+
+extra:
+  analytics:
+    provider: google
+    property: G-N3Q505TMQ6
+  social:
+    - icon: fontawesome/brands/twitter
+      link: https://twitter.com/joaomdmoura
+    - icon: fontawesome/brands/github
+      link: https://github.com/joaomdmoura/crewAI
