@@ -1,1 +1,1 @@
-from rag.rag_tool import RagTool
+from .rag.rag_tool import RagTool
