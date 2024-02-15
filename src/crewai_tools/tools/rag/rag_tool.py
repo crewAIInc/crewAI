@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from typing import Any, List
+from typing import Any, List, Optional
 
 from pydantic import BaseModel, ConfigDict
 
@@ -16,7 +16,7 @@ class Adapter(BaseModel, ABC):
 class RagTool(BaseTool):
     name: str = "Knowledge base"
     description: str = "A knowledge base that can be used to answer questions."
-    adapter: Adapter
+    adapter: Optional[Adapter] = None
 
     def _run(
         self,
@@ -53,6 +53,7 @@ class RagTool(BaseTool):
 
     def from_pg_db(self, db_uri: str, table_name: str):
         from embedchain import App
+        from embedchain.models.data_type import DataType
         from embedchain.loaders.postgres import PostgresLoader
         from crewai_tools.adapters.embedchain_adapter import EmbedchainAdapter
 
@@ -79,7 +80,7 @@ class RagTool(BaseTool):
                 }
             )
         app = App()
-        app.add(f"repo:{gh_repo} type:{",".joing(type)}", data_type="github", loader=loader)
+        app.add(f"repo:{gh_repo} type:{','.join(type)}", data_type="github", loader=loader)
         adapter = EmbedchainAdapter(embedchain_app=app)
         return RagTool(adapter=adapter)
 
