@@ -1,6 +1,6 @@
 from embedchain import App
 
-from crewai_tools.rag_tool import Adapter
+from crewai_tools.tools.rag.rag_tool import Adapter
 
 
 class EmbedchainAdapter(Adapter):

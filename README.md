@@ -1,101 +1,132 @@
-## Getting started
+<div align="center">
 
-When setting up agents you can provide tools for them to use. Here you will find ready-to-use tools as well as simple helpers for you to create your own tools.
+![Logo of crewAI, two people rowing on a boat](./assets/crewai_logo.png)
 
-In order to create a new tool, you have to pick one of the available strategies.
+<div align="left">
+
+# **crewAI Tools**
+This document provides a comprehensive guide for setting up sophisticated tools for [crewAI](https://github.com/joaomdmoura/crewai) agents, facilitating the creation of bespoke tooling to empower your AI solutions.
+
+In the realm of CrewAI agents, tools are pivotal for enhancing functionality. This guide outlines the steps to equip your agents with an arsenal of ready-to-use tools and the methodology to craft your own.
+
+</div>
+
+<h3>
+
+[Homepage](https://www.crewai.io/) | [Documentation](https://docs.crewai.com/) | [Chat with Docs](https://chatg.pt/DWjSBZn) | [Examples](https://github.com/joaomdmoura/crewai-examples) | [Discord](https://discord.com/invite/X4JWnZnxPb)
+
+</h3>
+
+</div>
+
+## Table of contents
+
+- [Creating Your Tools](#creating-your-tools)
+	- [Subclassing `BaseTool`](#subclassing-basetool)
+	- [Functional Tool Creation](#functional-tool-creation)
+	- [Utilizing the `tool` Decorator](#utilizing-the-tool-decorator)
+- [Contribution Guidelines](#contribution-guidelines)
+- [Development Setup](#development-setup)
+
+## Creating Your Tools
+
+Tools are always expect to return strings, as they are meant to be used by the agents to generate responses.
+
+There are three ways to create tools for crewAI agents:
+- [Subclassing `BaseTool`](#subclassing-basetool)
+- [Creating a tool from a function or lambda](#functional-tool-creation)
+- [Using the `tool` decorator](#utilizing-the-tool-decorator)
 
 ### Subclassing `BaseTool`
 
 ```python
-class MyTool(BaseTool):
-    name: str = "Knowledge base"
-    description: str = "A knowledge base with all the requirements for the project."
+class MyCustomTool(BaseTool):
+    name: str = "Name of my tool"
+    description: str = "Clear description for what this tool is useful for, you agent will need this information to use it."
 
-    def _run(self, question) -> str:
-        return (
-            tbl.search(embed_func([question])[0]).limit(3).to_pandas()["text"].tolist()
-        )
+    def _run(self, argument) -> str:
+        # Implementation goes here
+        pass
 ```
 
-As you can see, all you need to do is to create a new class that inherits from `BaseTool`, define `name` and `description` fields, as well as implement the `_run` method.
+Define a new class inheriting from `BaseTool`, specifying `name`, `description`, and the `_run` method for operational logic.
 
-### Create tool from a function or lambda
+### Functional Tool Creation
 
 ```python
 my_tool = Tool(
-    name="Knowledge base",
-    description="A knowledge base with all the requirements for the project.",
-    func=lambda question: tbl.search(embed_func([question])[0])
-    .limit(3)
-    .to_pandas()["text"]
-    .tolist(),
+    name="Name of my tool"
+    description="Clear description for what this tool is useful for, you agent will need this information to use it.",
+    func=lambda argument: # Your function logic here
 )
 ```
 
-Here's it's a bit simpler, as you don't have to subclass. Simply create a `Tool` object with the three required fields and you are good to go.
+For a simpler approach, create a `Tool` object directly with the required attributes and a functional logic.
 
-### Use the `tool` decorator.
+### Utilizing the `tool` Decorator
 
 ```python
-@tool("Knowledge base")
+@tool("Name of my tool")
 def my_tool(question: str) -> str:
-    """A knowledge base with all the requirements for the project."""
-    return tbl.search(embed_func([question])[0]).limit(3).to_pandas()["text"].tolist()
+    """Clear description for what this tool is useful for, you agent will need this information to use it."""
+    # Function logic here
 ```
 
-By using the decorator you can easily wrap simple functions as tools. If you don't provide a name, the function name is going to be used. However, the docstring is required.
+The `tool` decorator simplifies the process, transforming functions into tools with minimal overhead.
 
-If you are using a linter you may see issues when passing your decorated tool in `tools` parameters that expect a list of `BaseTool`. If that's the case, you can use the `as_tool` helper.
+## Contribution Guidelines
 
+We eagerly welcome contributions to enrich this toolset. To contribute:
 
-## Contribution
+1. **Fork the Repository:** Begin with forking the repository to your GitHub account.
+2. **Feature Branch:** Create a new branch in your fork for the feature or improvement.
+3. **Implement Your Feature:** Add your contribution to the new branch.
+4. **Pull Request:** Submit a pull request from your feature branch to the main repository.
 
-This repo is open-source and we welcome contributions. If you're looking to contribute, please:
+Your contributions are greatly appreciated and will help enhance this project.
 
-- Fork the repository.
-- Create a new branch for your feature.
-- Add your feature or improvement.
-- Send a pull request.
-- We appreciate your input!
+## **Development Setup**
 
-### Installing Dependencies
+**Installing Dependencies:**
 
 ```bash
 poetry install
 ```
 
-### Virtual Env
+**Activating Virtual Environment:**
 
 ```bash
 poetry shell
 ```
 
-### Pre-commit hooks
+**Setting Up Pre-commit Hooks:**
 
 ```bash
 pre-commit install
 ```
 
-### Running Tests
+**Running Tests:**
 
 ```bash
 poetry run pytest
 ```
 
-### Running static type checks
+**Static Type Checking:**
 
 ```bash
 poetry run pyright
 ```
 
-### Packaging
+**Packaging:**
 
 ```bash
 poetry build
 ```
 
-### Installing Locally
+**Local Installation:**
 
 ```bash
 pip install dist/*.tar.gz
 ```
+
+Thank you for your interest in enhancing the capabilities of AI agents through advanced tooling. Your contributions make a significant impact.

@@ -3,7 +3,7 @@ from typing import Any
 
 from pydantic import BaseModel, ConfigDict
 
-from crewai_tools.base_tool import BaseTool
+from crewai_tools.tools.base_tool import BaseTool
 
 
 class Adapter(BaseModel, ABC):

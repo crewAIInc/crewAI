@@ -1,4 +1,4 @@
-from crewai_tools.rag_tool import Adapter, RagTool
+from crewai_tools.tools.rag.rag_tool import Adapter, RagTool
 
 
 class MockAdapter(Adapter):
