@@ -61,13 +61,13 @@ class ToolUsage:
         calling = self._tool_calling(tool_string)
         if isinstance(calling, ToolUsageErrorException):
             error = calling.message
-            self._printer.print(content=f"\n\n{error}\n", color="yellow")
+            self._printer.print(content=f"\n\n{error}\n", color="red")
             return error
         try:
             tool = self._select_tool(calling.tool_name)
         except Exception as e:
             error = getattr(e, "message", str(e))
-            self._printer.print(content=f"\n\n{error}\n", color="yellow")
+            self._printer.print(content=f"\n\n{error}\n", color="red")
             return error
         return self._use(tool_string=tool_string, tool=tool, calling=calling)
 
@@ -94,8 +94,6 @@ class ToolUsage:
             except Exception:
                 pass
 
-        self.tools_handler.on_tool_start(calling=calling)
-
         result = self.tools_handler.cache.read(
             tool=calling.tool_name, input=calling.arguments
         )
@@ -107,18 +105,19 @@ class ToolUsage:
                 self._run_attempts += 1
                 if self._run_attempts > self._max_parsing_attempts:
                     self._telemetry.tool_usage_error(llm=self.llm)
-                    return ToolUsageErrorException(
+                    error = ToolUsageErrorException(
                         self._i18n.errors("tool_usage_exception").format(error=e)
                     ).message
+                    self._printer.print(content=f"\n\n{error}\n", color="red")
+                    return error
                 return self.use(tool_string=tool_string)
 
-            self.tools_handler.on_tool_end(calling=calling, output=result)
+            self.tools_handler.on_tool_use(calling=calling, output=result)
 
         self._printer.print(content=f"\n\n{result}\n", color="yellow")
         self._telemetry.tool_usage(
             llm=self.llm, tool_name=tool.name, attempts=self._run_attempts
         )
-
         result = self._format_result(result=result)
         return result
 

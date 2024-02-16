@@ -1,7 +1,7 @@
 
 [tool.poetry]
 name = "crewai"
-version = "0.11.0"
+version = "0.11.1"
 description = "Cutting-edge framework for orchestrating role-playing, autonomous AI agents. By fostering collaborative intelligence, CrewAI empowers agents to work together seamlessly, tackling complex tasks."
 authors = ["Joao Moura <joao@crewai.com>"]
 readme = "README.md"
@@ -20,7 +20,7 @@ python = ">=3.10,<4.0"
 pydantic = "^2.4.2"
 langchain = "^0.1.0"
 openai = "^1.7.1"
-langchain-openai = "^0.0.2"
+langchain-openai = "^0.0.5"
 opentelemetry-api = "^1.22.0"
 opentelemetry-sdk = "^1.22.0"
 opentelemetry-exporter-otlp-proto-http = "^1.22.0"
