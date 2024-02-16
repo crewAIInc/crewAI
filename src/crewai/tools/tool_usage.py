@@ -228,11 +228,15 @@ class ToolUsage:
                 chain = prompt | llm | parser
                 calling = chain.invoke({"tool_string": tool_string})
 
-        except Exception:
+        except Exception as e:
             self._run_attempts += 1
             if self._run_attempts > self._max_parsing_attempts:
                 self._telemetry.tool_usage_error(llm=llm)
-                return ToolUsageErrorException(self._i18n.errors("tool_usage_error"))
+                error = ToolUsageErrorException(
+                    self._i18n.errors("tool_usage_exception").format(error=e)
+                ).message
+                self._printer.print(content=f"\n\n{error}\n", color="red")
+                return error
             return self._tool_calling(tool_string)
 
         return calling
