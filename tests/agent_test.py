@@ -125,6 +125,8 @@ def test_logging_tool_usage():
 
     assert agent.tools_handler.last_used_tool == {}
     task = Task(description="What is 3 times 4?", agent=agent)
+    # force cleaning cache
+    agent.tools_handler.cache = CacheHandler()
     output = agent.execute_task(task)
     tool_usage = InstructorToolCalling(
         tool_name=multiplier.name, arguments={"first_number": 3, "second_number": 4}
@@ -255,6 +257,8 @@ def test_agent_repeated_tool_usage(capsys):
     task = Task(
         description="The final answer is 42. But don't give it yet, instead keep using the `get_final_answer` tool."
     )
+    # force cleaning cache
+    agent.tools_handler.cache = CacheHandler()
     agent.execute_task(
         task=task,
         tools=[get_final_answer],
