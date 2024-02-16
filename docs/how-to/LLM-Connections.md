@@ -76,6 +76,17 @@ OPENAI_MODEL_NAME=NA
 OPENAI_API_KEY=NA
 ```
 
+### Cohere
+```sh
+from langchain_community.chat_models import ChatCohere
+# Initialize language model
+os.environ["COHERE_API_KEY"] = "your-cohere-api-key"
+llm = ChatCohere()
+
+Free developer API key available here: https://cohere.com/
+Langchain Documentation: https://python.langchain.com/docs/integrations/chat/cohere
+```
+
 ### Azure Open AI
 Azure's OpenAI API needs a distinct setup, utilizing the `langchain_openai` component for Azure-specific configurations.
 
