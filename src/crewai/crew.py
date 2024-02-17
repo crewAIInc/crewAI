@@ -34,6 +34,7 @@ class Crew(BaseModel):
         tasks: List of tasks assigned to the crew.
         agents: List of agents part of this crew.
         manager_llm: The language model that will run manager agent.
+        function_calling_llm: The language model that will run the tool calling for all the agents.
         process: The process flow that the crew will follow (e.g., sequential).
         verbose: Indicates the verbosity level for logging during execution.
         config: Configuration settings for the crew.
@@ -60,6 +61,9 @@ class Crew(BaseModel):
         description="Whether the crew should return the full output with all tasks outputs or just the final output.",
     )
     manager_llm: Optional[Any] = Field(
+        description="Language model that will run the agent.", default=None
+    )
+    function_calling_llm: Optional[Any] = Field(
         description="Language model that will run the agent.", default=None
     )
     config: Optional[Union[Json, Dict[str, Any]]] = Field(default=None)
@@ -178,7 +182,11 @@ class Crew(BaseModel):
 
         for agent in self.agents:
             agent.i18n = I18N(language=self.language)
-            if (self.step_callback) and (not agent.step_callback):
+
+            if not agent.function_calling_llm:
+                agent.function_calling_llm = self.function_calling_llm
+                agent.create_agent_executor()
+            if not agent.step_callback:
                 agent.step_callback = self.step_callback
                 agent.create_agent_executor()
 

@@ -2,18 +2,18 @@ interactions:
 - request:
     body: '{"messages": [{"role": "user", "content": "You are test role.\ntest backstory\n\nYour
       personal goal is: test goalTOOLS:\n------\nYou have access to only the following
-      tools:\n\nmultiplier: multiplier(first_number: int, second_number: int) -> float
-      - Useful for when you need to multiply two numbers together.\n\nTo use a tool,
-      please use the exact following format:\n\n```\nThought: Do I need to use a tool?
-      Yes\nAction: the tool you wanna use, should be one of [multiplier], just the
-      name.\nAction Input: Any and all relevant information input and context for
-      using the tool\nObservation: the result of using the tool\n```\n\nWhen you have
-      a response for your task, or if you do not need to use a tool, you MUST use
-      the format:\n\n```\nThought: Do I need to use a tool? No\nFinal Answer: [your
-      response here]```This is the summary of your work so far:\nBegin! This is VERY
-      important to you, your job depends on it!\n\nCurrent Task: What is 3 times 5?\n"}],
-      "model": "gpt-4", "n": 1, "stop": ["\nObservation"], "stream": false, "temperature":
-      0.7}'
+      tools:\n\n(''multiplier: multiplier(first_number: int, second_number: int) ->
+      float - Useful for when you need to multiply two numbers together.'',)\n\nTo
+      use a tool, please use the exact following format:\n\n```\nThought: Do I need
+      to use a tool? Yes\nAction: the tool you wanna use, should be one of [multiplier],
+      just the name.\nAction Input: Any and all relevant information input and context
+      for using the tool\nObservation: the result of using the tool\n```\n\nWhen you
+      have a response for your task, or if you do not need to use a tool, you MUST
+      use the format:\n\n```\nThought: Do I need to use a tool? No\nFinal Answer:
+      [your response here]```This is the summary of your work so far:\nBegin! This
+      is VERY important to you, your job depends on it!\n\nCurrent Task: What is 3
+      times 4?\n"}], "model": "gpt-4", "n": 1, "stop": ["\nObservation"], "stream":
+      true, "temperature": 0.7}'
     headers:
       accept:
       - application/json
@@ -22,7 +22,7 @@ interactions:
       connection:
       - keep-alive
       content-length:
-      - '1047'
+      - '1051'
       content-type:
       - application/json
       host:
@@ -47,36 +47,149 @@ interactions:
     uri: https://api.openai.com/v1/chat/completions
   response:
     body:
-      string: !!binary |
-        H4sIAAAAAAAAA1SRS0/DMBCE7/kVqz2nqK8AzQUhEIIbIDggiqrU2SQujtfYGwmo+t+R0ycXH2Z2
-        Vt+s1wkA6hJzQNUUolpnBpdfarby1ROZ2fju9fGesko/X36W05vfc41pTPByRUr2qTPFrTMkmu3W
-        Vp4Kobh1dDG8yLLhdDTrjZZLMjFWOxlMB8Pz0WSXaFgrCpjDewIAsO7fyGZL+sYchuleaSmEoibM
-        D0MA6NlEBYsQdJDCCqZHU7EVsj3uS8Nd3UgOtwwPYIlKEIYuEBQgzOYK3ijM7bWKZXJoOyPaGU1+
-        r8GDdZ3ksJ5jpX2Qhe3aJfk55jBJYY6BFNvyRM02uCPZHCoYrp3nZaxrO2MOeqWtDs3CUxHYRtwg
-        7LbxTQLw0Z+q+9cenefWyUL4k2xcOB6Ptvvw+CtHdzLZmcJSmJNUNk12hBh+glC7qLStyTuv+8tF
-        zmST/AEAAP//AwCr+Q67MAIAAA==
+      string: 'data: {"id":"chatcmpl-8rhqlgY5EyKnQhtTdxk43p6T5CgNN","object":"chat.completion.chunk","created":1707810635,"model":"gpt-4-0613","system_fingerprint":null,"choices":[{"index":0,"delta":{"role":"assistant","content":""},"logprobs":null,"finish_reason":null}]}
+
+
+        data: {"id":"chatcmpl-8rhqlgY5EyKnQhtTdxk43p6T5CgNN","object":"chat.completion.chunk","created":1707810635,"model":"gpt-4-0613","system_fingerprint":null,"choices":[{"index":0,"delta":{"content":"Thought"},"logprobs":null,"finish_reason":null}]}
+
+
+        data: {"id":"chatcmpl-8rhqlgY5EyKnQhtTdxk43p6T5CgNN","object":"chat.completion.chunk","created":1707810635,"model":"gpt-4-0613","system_fingerprint":null,"choices":[{"index":0,"delta":{"content":":"},"logprobs":null,"finish_reason":null}]}
+
+
+        data: {"id":"chatcmpl-8rhqlgY5EyKnQhtTdxk43p6T5CgNN","object":"chat.completion.chunk","created":1707810635,"model":"gpt-4-0613","system_fingerprint":null,"choices":[{"index":0,"delta":{"content":"
+        Do"},"logprobs":null,"finish_reason":null}]}
+
+
+        data: {"id":"chatcmpl-8rhqlgY5EyKnQhtTdxk43p6T5CgNN","object":"chat.completion.chunk","created":1707810635,"model":"gpt-4-0613","system_fingerprint":null,"choices":[{"index":0,"delta":{"content":"
+        I"},"logprobs":null,"finish_reason":null}]}
+
+
+        data: {"id":"chatcmpl-8rhqlgY5EyKnQhtTdxk43p6T5CgNN","object":"chat.completion.chunk","created":1707810635,"model":"gpt-4-0613","system_fingerprint":null,"choices":[{"index":0,"delta":{"content":"
+        need"},"logprobs":null,"finish_reason":null}]}
+
+
+        data: {"id":"chatcmpl-8rhqlgY5EyKnQhtTdxk43p6T5CgNN","object":"chat.completion.chunk","created":1707810635,"model":"gpt-4-0613","system_fingerprint":null,"choices":[{"index":0,"delta":{"content":"
+        to"},"logprobs":null,"finish_reason":null}]}
+
+
+        data: {"id":"chatcmpl-8rhqlgY5EyKnQhtTdxk43p6T5CgNN","object":"chat.completion.chunk","created":1707810635,"model":"gpt-4-0613","system_fingerprint":null,"choices":[{"index":0,"delta":{"content":"
+        use"},"logprobs":null,"finish_reason":null}]}
+
+
+        data: {"id":"chatcmpl-8rhqlgY5EyKnQhtTdxk43p6T5CgNN","object":"chat.completion.chunk","created":1707810635,"model":"gpt-4-0613","system_fingerprint":null,"choices":[{"index":0,"delta":{"content":"
+        a"},"logprobs":null,"finish_reason":null}]}
+
+
+        data: {"id":"chatcmpl-8rhqlgY5EyKnQhtTdxk43p6T5CgNN","object":"chat.completion.chunk","created":1707810635,"model":"gpt-4-0613","system_fingerprint":null,"choices":[{"index":0,"delta":{"content":"
+        tool"},"logprobs":null,"finish_reason":null}]}
+
+
+        data: {"id":"chatcmpl-8rhqlgY5EyKnQhtTdxk43p6T5CgNN","object":"chat.completion.chunk","created":1707810635,"model":"gpt-4-0613","system_fingerprint":null,"choices":[{"index":0,"delta":{"content":"?"},"logprobs":null,"finish_reason":null}]}
+
+
+        data: {"id":"chatcmpl-8rhqlgY5EyKnQhtTdxk43p6T5CgNN","object":"chat.completion.chunk","created":1707810635,"model":"gpt-4-0613","system_fingerprint":null,"choices":[{"index":0,"delta":{"content":"
+        Yes"},"logprobs":null,"finish_reason":null}]}
+
+
+        data: {"id":"chatcmpl-8rhqlgY5EyKnQhtTdxk43p6T5CgNN","object":"chat.completion.chunk","created":1707810635,"model":"gpt-4-0613","system_fingerprint":null,"choices":[{"index":0,"delta":{"content":"\n"},"logprobs":null,"finish_reason":null}]}
+
+
+        data: {"id":"chatcmpl-8rhqlgY5EyKnQhtTdxk43p6T5CgNN","object":"chat.completion.chunk","created":1707810635,"model":"gpt-4-0613","system_fingerprint":null,"choices":[{"index":0,"delta":{"content":"Action"},"logprobs":null,"finish_reason":null}]}
+
+
+        data: {"id":"chatcmpl-8rhqlgY5EyKnQhtTdxk43p6T5CgNN","object":"chat.completion.chunk","created":1707810635,"model":"gpt-4-0613","system_fingerprint":null,"choices":[{"index":0,"delta":{"content":":"},"logprobs":null,"finish_reason":null}]}
+
+
+        data: {"id":"chatcmpl-8rhqlgY5EyKnQhtTdxk43p6T5CgNN","object":"chat.completion.chunk","created":1707810635,"model":"gpt-4-0613","system_fingerprint":null,"choices":[{"index":0,"delta":{"content":"
+        multiplier"},"logprobs":null,"finish_reason":null}]}
+
+
+        data: {"id":"chatcmpl-8rhqlgY5EyKnQhtTdxk43p6T5CgNN","object":"chat.completion.chunk","created":1707810635,"model":"gpt-4-0613","system_fingerprint":null,"choices":[{"index":0,"delta":{"content":"\n"},"logprobs":null,"finish_reason":null}]}
+
+
+        data: {"id":"chatcmpl-8rhqlgY5EyKnQhtTdxk43p6T5CgNN","object":"chat.completion.chunk","created":1707810635,"model":"gpt-4-0613","system_fingerprint":null,"choices":[{"index":0,"delta":{"content":"Action"},"logprobs":null,"finish_reason":null}]}
+
+
+        data: {"id":"chatcmpl-8rhqlgY5EyKnQhtTdxk43p6T5CgNN","object":"chat.completion.chunk","created":1707810635,"model":"gpt-4-0613","system_fingerprint":null,"choices":[{"index":0,"delta":{"content":"
+        Input"},"logprobs":null,"finish_reason":null}]}
+
+
+        data: {"id":"chatcmpl-8rhqlgY5EyKnQhtTdxk43p6T5CgNN","object":"chat.completion.chunk","created":1707810635,"model":"gpt-4-0613","system_fingerprint":null,"choices":[{"index":0,"delta":{"content":":"},"logprobs":null,"finish_reason":null}]}
+
+
+        data: {"id":"chatcmpl-8rhqlgY5EyKnQhtTdxk43p6T5CgNN","object":"chat.completion.chunk","created":1707810635,"model":"gpt-4-0613","system_fingerprint":null,"choices":[{"index":0,"delta":{"content":"
+        {''"},"logprobs":null,"finish_reason":null}]}
+
+
+        data: {"id":"chatcmpl-8rhqlgY5EyKnQhtTdxk43p6T5CgNN","object":"chat.completion.chunk","created":1707810635,"model":"gpt-4-0613","system_fingerprint":null,"choices":[{"index":0,"delta":{"content":"first"},"logprobs":null,"finish_reason":null}]}
+
+
+        data: {"id":"chatcmpl-8rhqlgY5EyKnQhtTdxk43p6T5CgNN","object":"chat.completion.chunk","created":1707810635,"model":"gpt-4-0613","system_fingerprint":null,"choices":[{"index":0,"delta":{"content":"_number"},"logprobs":null,"finish_reason":null}]}
+
+
+        data: {"id":"chatcmpl-8rhqlgY5EyKnQhtTdxk43p6T5CgNN","object":"chat.completion.chunk","created":1707810635,"model":"gpt-4-0613","system_fingerprint":null,"choices":[{"index":0,"delta":{"content":"'':"},"logprobs":null,"finish_reason":null}]}
+
+
+        data: {"id":"chatcmpl-8rhqlgY5EyKnQhtTdxk43p6T5CgNN","object":"chat.completion.chunk","created":1707810635,"model":"gpt-4-0613","system_fingerprint":null,"choices":[{"index":0,"delta":{"content":"
+        "},"logprobs":null,"finish_reason":null}]}
+
+
+        data: {"id":"chatcmpl-8rhqlgY5EyKnQhtTdxk43p6T5CgNN","object":"chat.completion.chunk","created":1707810635,"model":"gpt-4-0613","system_fingerprint":null,"choices":[{"index":0,"delta":{"content":"3"},"logprobs":null,"finish_reason":null}]}
+
+
+        data: {"id":"chatcmpl-8rhqlgY5EyKnQhtTdxk43p6T5CgNN","object":"chat.completion.chunk","created":1707810635,"model":"gpt-4-0613","system_fingerprint":null,"choices":[{"index":0,"delta":{"content":","},"logprobs":null,"finish_reason":null}]}
+
+
+        data: {"id":"chatcmpl-8rhqlgY5EyKnQhtTdxk43p6T5CgNN","object":"chat.completion.chunk","created":1707810635,"model":"gpt-4-0613","system_fingerprint":null,"choices":[{"index":0,"delta":{"content":"
+        ''"},"logprobs":null,"finish_reason":null}]}
+
+
+        data: {"id":"chatcmpl-8rhqlgY5EyKnQhtTdxk43p6T5CgNN","object":"chat.completion.chunk","created":1707810635,"model":"gpt-4-0613","system_fingerprint":null,"choices":[{"index":0,"delta":{"content":"second"},"logprobs":null,"finish_reason":null}]}
+
+
+        data: {"id":"chatcmpl-8rhqlgY5EyKnQhtTdxk43p6T5CgNN","object":"chat.completion.chunk","created":1707810635,"model":"gpt-4-0613","system_fingerprint":null,"choices":[{"index":0,"delta":{"content":"_number"},"logprobs":null,"finish_reason":null}]}
+
+
+        data: {"id":"chatcmpl-8rhqlgY5EyKnQhtTdxk43p6T5CgNN","object":"chat.completion.chunk","created":1707810635,"model":"gpt-4-0613","system_fingerprint":null,"choices":[{"index":0,"delta":{"content":"'':"},"logprobs":null,"finish_reason":null}]}
+
+
+        data: {"id":"chatcmpl-8rhqlgY5EyKnQhtTdxk43p6T5CgNN","object":"chat.completion.chunk","created":1707810635,"model":"gpt-4-0613","system_fingerprint":null,"choices":[{"index":0,"delta":{"content":"
+        "},"logprobs":null,"finish_reason":null}]}
+
+
+        data: {"id":"chatcmpl-8rhqlgY5EyKnQhtTdxk43p6T5CgNN","object":"chat.completion.chunk","created":1707810635,"model":"gpt-4-0613","system_fingerprint":null,"choices":[{"index":0,"delta":{"content":"4"},"logprobs":null,"finish_reason":null}]}
+
+
+        data: {"id":"chatcmpl-8rhqlgY5EyKnQhtTdxk43p6T5CgNN","object":"chat.completion.chunk","created":1707810635,"model":"gpt-4-0613","system_fingerprint":null,"choices":[{"index":0,"delta":{"content":"}"},"logprobs":null,"finish_reason":null}]}
+
+
+        data: {"id":"chatcmpl-8rhqlgY5EyKnQhtTdxk43p6T5CgNN","object":"chat.completion.chunk","created":1707810635,"model":"gpt-4-0613","system_fingerprint":null,"choices":[{"index":0,"delta":{},"logprobs":null,"finish_reason":"stop"}]}
+
+
+        data: [DONE]
+
+
+        '
     headers:
       CF-Cache-Status:
       - DYNAMIC
       CF-RAY:
-      - 8532aa4bca4e679a-SJC
+      - 854b7b380f95fb50-SJC
       Cache-Control:
       - no-cache, must-revalidate
       Connection:
       - keep-alive
-      Content-Encoding:
-      - gzip
       Content-Type:
-      - application/json
+      - text/event-stream
       Date:
-      - Sat, 10 Feb 2024 07:33:41 GMT
+      - Tue, 13 Feb 2024 07:50:36 GMT
       Server:
       - cloudflare
       Set-Cookie:
-      - __cf_bm=iA8sDHDKVnfosmI8wG_ElV9lor.u9ivoU2KD_Uw2Ck0-1707550421-1-AakLurCxUahX1wP/EqH55USvoahi23iv5/ZX2jxvr6ltSDBhzk8J0ipuSFcgyazwnWfYsqu0n467tSBqzuyTan0=;
-        path=/; expires=Sat, 10-Feb-24 08:03:41 GMT; domain=.api.openai.com; HttpOnly;
+      - __cf_bm=WtYsZIolwSGU.Cw4hxGTqIv0MRGYu4Anw8lzJON1fgk-1707810636-1-Adr1AXb4JT1VMT15njZVe64VjGKYws2k3wQOAEcin03j8Lk4b6WDtV0AG8+mydIMxiPJ++Wwk5ZpUN+jjSGK1Pg=;
+        path=/; expires=Tue, 13-Feb-24 08:20:36 GMT; domain=.api.openai.com; HttpOnly;
         Secure; SameSite=None
-      - _cfuvid=CpE5jxQFzpK609ZrTNgy1kxDFHYN2x4AY1XCThUEeQk-1707550421579-0-604800000;
+      - _cfuvid=kNhuSk4gM0Tj8M010_XI7rHzNLZx1vXRlB.DYvetRy8-1707810636228-0-604800000;
         path=/; domain=.api.openai.com; HttpOnly; Secure; SameSite=None
       Transfer-Encoding:
       - chunked
@@ -89,7 +202,7 @@ interactions:
       openai-organization:
       - user-z7g4wmlazxqvc5wjyaaaocfz
       openai-processing-ms:
-      - '1673'
+      - '460'
       openai-version:
       - '2020-10-01'
       strict-transport-security:
@@ -101,36 +214,35 @@ interactions:
       x-ratelimit-remaining-requests:
       - '9999'
       x-ratelimit-remaining-tokens:
-      - '299762'
+      - '299760'
       x-ratelimit-reset-requests:
       - 6ms
       x-ratelimit-reset-tokens:
-      - 47ms
+      - 48ms
       x-request-id:
-      - req_e5461f12abf90cd87cea37b9c47989e0
+      - req_9f3693cba92d7c2c99f8c49878a51c17
     status:
       code: 200
       message: OK
 - request:
-    body: '{"messages": [{"role": "user", "content": "Return a valid schema for the
-      one tool you must use with its arguments and values.\n\nTools available:\n\nFuntion
-      Name: multiplier\nFuntion attributes: {''first_number'': {''type'': ''integer''},
-      ''second_number'': {''type'': ''integer''}}\nDescription: multiplier(first_number:
-      int, second_number: int) -> float - Useful for when you need to multiply two
-      numbers together.\n\nUse this text to inform a valid ouput schema:\nThought:
-      Do I need to use a tool? Yes\nAction: multiplier\nAction Input: {\"first_number\":
-      3, \"second_number\": 5}\n\nThe output should be formatted as a JSON instance
-      that conforms to the JSON schema below.\n\nAs an example, for the schema {\"properties\":
-      {\"foo\": {\"title\": \"Foo\", \"description\": \"a list of strings\", \"type\":
-      \"array\", \"items\": {\"type\": \"string\"}}}, \"required\": [\"foo\"]}\nthe
-      object {\"foo\": [\"bar\", \"baz\"]} is a well-formatted instance of the schema.
-      The object {\"properties\": {\"foo\": [\"bar\", \"baz\"]}} is not well-formatted.\n\nHere
-      is the output schema:\n```\n{\"properties\": {\"function_name\": {\"title\":
-      \"Function Name\", \"description\": \"The name of the function to be called.\",
-      \"type\": \"string\"}, \"arguments\": {\"title\": \"Arguments\", \"description\":
-      \"A dictinary of arguments to be passed to the function.\", \"type\": \"object\"}},
-      \"required\": [\"function_name\", \"arguments\"]}\n```\n```"}], "model": "gpt-4",
-      "n": 1, "stream": false, "temperature": 0.7}'
+    body: '{"messages": [{"role": "system", "content": "\n                                The
+      schema should have the following structure, only two key:\n                                -
+      tool_name: str\n                                - arguments: dict (with all
+      arguments being passed)\n\n                                Example:\n                                {\"tool_name\":
+      \"tool_name\", \"arguments\": {\"arg_name1\": \"value\", \"arg_name2\": 2}}\n                            "},
+      {"role": "user", "content": "Tools available:\n\nTool Name: multiplier\nTool
+      Description: multiplier(first_number: int, second_number: int) -> float - Useful
+      for when you need to multiply two numbers together.\nTool Arguments: {''first_number'':
+      {''type'': ''integer''}, ''second_number'': {''type'': ''integer''}}\n\nReturn
+      a valid schema for the tool, use this text to inform a valid ouput schema:\n\nTool
+      Name: multiplier\nTool Arguments: {''first_number'': 3, ''second_number'': 4}```"}],
+      "model": "gpt-4", "function_call": {"name": "InstructorToolCalling"}, "functions":
+      [{"name": "InstructorToolCalling", "description": "Correctly extracted `InstructorToolCalling`
+      with all the required parameters with correct types", "parameters": {"properties":
+      {"tool_name": {"description": "The name of the tool to be called.", "title":
+      "Tool Name", "type": "string"}, "arguments": {"description": "A dictinary of
+      arguments to be passed to the tool.", "title": "Arguments", "type": "object"}},
+      "required": ["arguments", "tool_name"], "type": "object"}}]}'
     headers:
       accept:
       - application/json
@@ -139,12 +251,12 @@ interactions:
       connection:
       - keep-alive
       content-length:
-      - '1494'
+      - '1510'
       content-type:
       - application/json
       cookie:
-      - __cf_bm=iA8sDHDKVnfosmI8wG_ElV9lor.u9ivoU2KD_Uw2Ck0-1707550421-1-AakLurCxUahX1wP/EqH55USvoahi23iv5/ZX2jxvr6ltSDBhzk8J0ipuSFcgyazwnWfYsqu0n467tSBqzuyTan0=;
-        _cfuvid=CpE5jxQFzpK609ZrTNgy1kxDFHYN2x4AY1XCThUEeQk-1707550421579-0-604800000
+      - __cf_bm=WtYsZIolwSGU.Cw4hxGTqIv0MRGYu4Anw8lzJON1fgk-1707810636-1-Adr1AXb4JT1VMT15njZVe64VjGKYws2k3wQOAEcin03j8Lk4b6WDtV0AG8+mydIMxiPJ++Wwk5ZpUN+jjSGK1Pg=;
+        _cfuvid=kNhuSk4gM0Tj8M010_XI7rHzNLZx1vXRlB.DYvetRy8-1707810636228-0-604800000
       host:
       - api.openai.com
       user-agent:
@@ -168,18 +280,18 @@ interactions:
   response:
     body:
       string: !!binary |
-        H4sIAAAAAAAAA1SRO2/cMBCEe/2KBWtdIN0jF6t1kRQG7MApDISBjketJNrkUiFX8AUH/feAupfd
-        sNiZbzE7PGYAwjSiAqF7xdoNdvHtr76zT+XDy+HXz/v3t2e6f/xelHx4ennmpcgT4fevqPlCfdHe
-        DRbZeDrJOqBiTFvLbbHdbIr1spwF5xu0CesGXqwXxddydSZ6bzRGUcHvDADgOL8pGzV4EBUU+WXi
-        MEbVoaiuJgARvE0ToWI0kRWxyG+i9sRIc9wfGBBMBAXvaO2i9cEpZmzAUMI0gm+Be4Soe3SqkiRp
-        t9u9Rk+SjpIApGhH0unWmpRDKSqQwo2WzWANBinyk0uFbnRIHJNjJmfWhMg1jW6frBWs8osSUXtq
-        PkibpEySpjmBOJ8zXXuwvhuC36fOaLT2Om8NmdjXAVX0lG6O7IcTPmUAf+a+x08ViiF4N3DN/g0p
-        LVwtN6d94va1N3V9dxbZs7IfqO06OycU8V9kdHVrqMMwBDPXn3JmU/YfAAD//wMAtRBeM3UCAAA=
+        H4sIAAAAAAAAA1yRQW/bMAyF7/4VBM/OEDdZEvg2bMXWyzAUO2yYC0ORFUedRCoSDWwI/N8HJanr
+        7iIIfHyfnshzAYC2wxpQH5VoH9xiF48njl+l0v7nl8fq84/7hxN9Oj1+23QfGMvs4P2z0fLieqfZ
+        B2fEMl1lHY0Sk6nVdrndVcvNancRPHfGZVsfZLFeLDfV6uY4stUmYQ2/CgCA8+XM2agzf7CGZflS
+        8SYl1RuspyYAjOxyBVVKNokiwfJV1ExiKMelwbmZcBhI59StVs69AQIgKX9BPlCSOGjh+J3ZfVTO
+        WepneABUsR+8Icn58dxQg8Ls2kxosIYG/eDEBmdNbLDM+uTI+rnBg41JWhr8PrfUsCqhwWQ0Uzer
+        rseGRpxeHm+3cZqN4z5E3qf/vooHSzYd22hUYsohk3C4gjLk6bKD4c1YMUT2QVrh34Yy8G79/srD
+        13XP1O1NFBbl5vW74pYQ098kxrcHS72JIdppJcVY/AMAAP//AwBvuYvviQIAAA==
     headers:
       CF-Cache-Status:
       - DYNAMIC
       CF-RAY:
-      - 8532aa5709e5679a-SJC
+      - 854b7b4c8925fb50-SJC
       Cache-Control:
       - no-cache, must-revalidate
       Connection:
@@ -189,7 +301,7 @@ interactions:
       Content-Type:
       - application/json
       Date:
-      - Sat, 10 Feb 2024 07:33:44 GMT
+      - Tue, 13 Feb 2024 07:50:40 GMT
       Server:
       - cloudflare
       Transfer-Encoding:
@@ -203,7 +315,7 @@ interactions:
       openai-organization:
       - user-z7g4wmlazxqvc5wjyaaaocfz
       openai-processing-ms:
-      - '2203'
+      - '1333'
       openai-version:
       - '2020-10-01'
       strict-transport-security:
@@ -215,32 +327,33 @@ interactions:
       x-ratelimit-remaining-requests:
       - '9999'
       x-ratelimit-remaining-tokens:
-      - '299661'
+      - '299770'
       x-ratelimit-reset-requests:
       - 6ms
       x-ratelimit-reset-tokens:
-      - 67ms
+      - 45ms
       x-request-id:
-      - req_a428e78fc8e9d475e463316f65950fa9
+      - req_d9bce0afd53265ec62076e265f8be7ce
     status:
       code: 200
       message: OK
 - request:
     body: '{"messages": [{"role": "user", "content": "You are test role.\ntest backstory\n\nYour
       personal goal is: test goalTOOLS:\n------\nYou have access to only the following
-      tools:\n\nmultiplier: multiplier(first_number: int, second_number: int) -> float
-      - Useful for when you need to multiply two numbers together.\n\nTo use a tool,
-      please use the exact following format:\n\n```\nThought: Do I need to use a tool?
-      Yes\nAction: the tool you wanna use, should be one of [multiplier], just the
-      name.\nAction Input: Any and all relevant information input and context for
-      using the tool\nObservation: the result of using the tool\n```\n\nWhen you have
-      a response for your task, or if you do not need to use a tool, you MUST use
-      the format:\n\n```\nThought: Do I need to use a tool? No\nFinal Answer: [your
-      response here]```This is the summary of your work so far:\nBegin! This is VERY
-      important to you, your job depends on it!\n\nCurrent Task: What is 3 times 5?\nThought:
-      Do I need to use a tool? Yes\nAction: multiplier\nAction Input: {\"first_number\":
-      3, \"second_number\": 5}\nObservation: 15\nThought: "}], "model": "gpt-4", "n":
-      1, "stop": ["\nObservation"], "stream": false, "temperature": 0.7}'
+      tools:\n\n(''multiplier: multiplier(first_number: int, second_number: int) ->
+      float - Useful for when you need to multiply two numbers together.'',)\n\nTo
+      use a tool, please use the exact following format:\n\n```\nThought: Do I need
+      to use a tool? Yes\nAction: the tool you wanna use, should be one of [multiplier],
+      just the name.\nAction Input: Any and all relevant information input and context
+      for using the tool\nObservation: the result of using the tool\n```\n\nWhen you
+      have a response for your task, or if you do not need to use a tool, you MUST
+      use the format:\n\n```\nThought: Do I need to use a tool? No\nFinal Answer:
+      [your response here]```This is the summary of your work so far:\nBegin! This
+      is VERY important to you, your job depends on it!\n\nCurrent Task: What is 3
+      times 4?\nThought: Do I need to use a tool? Yes\nAction: multiplier\nAction
+      Input: {''first_number'': 3, ''second_number'': 4}\nObservation: 12\nThought:
+      "}], "model": "gpt-4", "n": 1, "stop": ["\nObservation"], "stream": true, "temperature":
+      0.7}'
     headers:
       accept:
       - application/json
@@ -253,8 +366,8 @@ interactions:
       content-type:
       - application/json
       cookie:
-      - __cf_bm=iA8sDHDKVnfosmI8wG_ElV9lor.u9ivoU2KD_Uw2Ck0-1707550421-1-AakLurCxUahX1wP/EqH55USvoahi23iv5/ZX2jxvr6ltSDBhzk8J0ipuSFcgyazwnWfYsqu0n467tSBqzuyTan0=;
-        _cfuvid=CpE5jxQFzpK609ZrTNgy1kxDFHYN2x4AY1XCThUEeQk-1707550421579-0-604800000
+      - __cf_bm=WtYsZIolwSGU.Cw4hxGTqIv0MRGYu4Anw8lzJON1fgk-1707810636-1-Adr1AXb4JT1VMT15njZVe64VjGKYws2k3wQOAEcin03j8Lk4b6WDtV0AG8+mydIMxiPJ++Wwk5ZpUN+jjSGK1Pg=;
+        _cfuvid=kNhuSk4gM0Tj8M010_XI7rHzNLZx1vXRlB.DYvetRy8-1707810636228-0-604800000
       host:
       - api.openai.com
       user-agent:
@@ -277,28 +390,108 @@ interactions:
     uri: https://api.openai.com/v1/chat/completions
   response:
     body:
-      string: !!binary |
-        H4sIAAAAAAAAA1SQW0sDMRCF3/dXDHluy/aybd0XEYqiiKAiFFRKmp1uY7OZmMyipfS/S7bbiy95
-        OGfOyTezSwCELkQOQq0lq8qZ7vRbXRGrVz2fPPKd3z7MeSPty2r29uy06MQELb9Q8THVU1Q5g6zJ
-        HmzlUTLG1v4knWRZOhqMGqOiAk2MlY67o2467g/bxJq0wiByeE8AAHbNG9lsgb8ih7RzVCoMQZYo
-        8tMQgPBkoiJkCDqwtCw6Z1ORZbQN7ozgHixiAUxQBwQJTGSu4Yk+7K220sCNDT/ocxgC6woDZKAD
-        9LOeaAv3JxJDpfO0jNS2Nuakr7TVYb3wKAPZ+Gtgcof4PgH4bDau/y0hnKfK8YJpgzYWDsbDQ584
-        H/fCHbQmE0tzoU+zpCUUYRsYq8VK2xK987o5QORM9skfAAAA//8DACAb4vP3AQAA
+      string: 'data: {"id":"chatcmpl-8rhqqdEmcBPxCmMRLTZFyzdYtelgh","object":"chat.completion.chunk","created":1707810640,"model":"gpt-4-0613","system_fingerprint":null,"choices":[{"index":0,"delta":{"role":"assistant","content":""},"logprobs":null,"finish_reason":null}]}
+
+
+        data: {"id":"chatcmpl-8rhqqdEmcBPxCmMRLTZFyzdYtelgh","object":"chat.completion.chunk","created":1707810640,"model":"gpt-4-0613","system_fingerprint":null,"choices":[{"index":0,"delta":{"content":"Do"},"logprobs":null,"finish_reason":null}]}
+
+
+        data: {"id":"chatcmpl-8rhqqdEmcBPxCmMRLTZFyzdYtelgh","object":"chat.completion.chunk","created":1707810640,"model":"gpt-4-0613","system_fingerprint":null,"choices":[{"index":0,"delta":{"content":"
+        I"},"logprobs":null,"finish_reason":null}]}
+
+
+        data: {"id":"chatcmpl-8rhqqdEmcBPxCmMRLTZFyzdYtelgh","object":"chat.completion.chunk","created":1707810640,"model":"gpt-4-0613","system_fingerprint":null,"choices":[{"index":0,"delta":{"content":"
+        need"},"logprobs":null,"finish_reason":null}]}
+
+
+        data: {"id":"chatcmpl-8rhqqdEmcBPxCmMRLTZFyzdYtelgh","object":"chat.completion.chunk","created":1707810640,"model":"gpt-4-0613","system_fingerprint":null,"choices":[{"index":0,"delta":{"content":"
+        to"},"logprobs":null,"finish_reason":null}]}
+
+
+        data: {"id":"chatcmpl-8rhqqdEmcBPxCmMRLTZFyzdYtelgh","object":"chat.completion.chunk","created":1707810640,"model":"gpt-4-0613","system_fingerprint":null,"choices":[{"index":0,"delta":{"content":"
+        use"},"logprobs":null,"finish_reason":null}]}
+
+
+        data: {"id":"chatcmpl-8rhqqdEmcBPxCmMRLTZFyzdYtelgh","object":"chat.completion.chunk","created":1707810640,"model":"gpt-4-0613","system_fingerprint":null,"choices":[{"index":0,"delta":{"content":"
+        a"},"logprobs":null,"finish_reason":null}]}
+
+
+        data: {"id":"chatcmpl-8rhqqdEmcBPxCmMRLTZFyzdYtelgh","object":"chat.completion.chunk","created":1707810640,"model":"gpt-4-0613","system_fingerprint":null,"choices":[{"index":0,"delta":{"content":"
+        tool"},"logprobs":null,"finish_reason":null}]}
+
+
+        data: {"id":"chatcmpl-8rhqqdEmcBPxCmMRLTZFyzdYtelgh","object":"chat.completion.chunk","created":1707810640,"model":"gpt-4-0613","system_fingerprint":null,"choices":[{"index":0,"delta":{"content":"?"},"logprobs":null,"finish_reason":null}]}
+
+
+        data: {"id":"chatcmpl-8rhqqdEmcBPxCmMRLTZFyzdYtelgh","object":"chat.completion.chunk","created":1707810640,"model":"gpt-4-0613","system_fingerprint":null,"choices":[{"index":0,"delta":{"content":"
+        No"},"logprobs":null,"finish_reason":null}]}
+
+
+        data: {"id":"chatcmpl-8rhqqdEmcBPxCmMRLTZFyzdYtelgh","object":"chat.completion.chunk","created":1707810640,"model":"gpt-4-0613","system_fingerprint":null,"choices":[{"index":0,"delta":{"content":"\n"},"logprobs":null,"finish_reason":null}]}
+
+
+        data: {"id":"chatcmpl-8rhqqdEmcBPxCmMRLTZFyzdYtelgh","object":"chat.completion.chunk","created":1707810640,"model":"gpt-4-0613","system_fingerprint":null,"choices":[{"index":0,"delta":{"content":"Final"},"logprobs":null,"finish_reason":null}]}
+
+
+        data: {"id":"chatcmpl-8rhqqdEmcBPxCmMRLTZFyzdYtelgh","object":"chat.completion.chunk","created":1707810640,"model":"gpt-4-0613","system_fingerprint":null,"choices":[{"index":0,"delta":{"content":"
+        Answer"},"logprobs":null,"finish_reason":null}]}
+
+
+        data: {"id":"chatcmpl-8rhqqdEmcBPxCmMRLTZFyzdYtelgh","object":"chat.completion.chunk","created":1707810640,"model":"gpt-4-0613","system_fingerprint":null,"choices":[{"index":0,"delta":{"content":":"},"logprobs":null,"finish_reason":null}]}
+
+
+        data: {"id":"chatcmpl-8rhqqdEmcBPxCmMRLTZFyzdYtelgh","object":"chat.completion.chunk","created":1707810640,"model":"gpt-4-0613","system_fingerprint":null,"choices":[{"index":0,"delta":{"content":"
+        "},"logprobs":null,"finish_reason":null}]}
+
+
+        data: {"id":"chatcmpl-8rhqqdEmcBPxCmMRLTZFyzdYtelgh","object":"chat.completion.chunk","created":1707810640,"model":"gpt-4-0613","system_fingerprint":null,"choices":[{"index":0,"delta":{"content":"3"},"logprobs":null,"finish_reason":null}]}
+
+
+        data: {"id":"chatcmpl-8rhqqdEmcBPxCmMRLTZFyzdYtelgh","object":"chat.completion.chunk","created":1707810640,"model":"gpt-4-0613","system_fingerprint":null,"choices":[{"index":0,"delta":{"content":"
+        times"},"logprobs":null,"finish_reason":null}]}
+
+
+        data: {"id":"chatcmpl-8rhqqdEmcBPxCmMRLTZFyzdYtelgh","object":"chat.completion.chunk","created":1707810640,"model":"gpt-4-0613","system_fingerprint":null,"choices":[{"index":0,"delta":{"content":"
+        "},"logprobs":null,"finish_reason":null}]}
+
+
+        data: {"id":"chatcmpl-8rhqqdEmcBPxCmMRLTZFyzdYtelgh","object":"chat.completion.chunk","created":1707810640,"model":"gpt-4-0613","system_fingerprint":null,"choices":[{"index":0,"delta":{"content":"4"},"logprobs":null,"finish_reason":null}]}
+
+
+        data: {"id":"chatcmpl-8rhqqdEmcBPxCmMRLTZFyzdYtelgh","object":"chat.completion.chunk","created":1707810640,"model":"gpt-4-0613","system_fingerprint":null,"choices":[{"index":0,"delta":{"content":"
+        equals"},"logprobs":null,"finish_reason":null}]}
+
+
+        data: {"id":"chatcmpl-8rhqqdEmcBPxCmMRLTZFyzdYtelgh","object":"chat.completion.chunk","created":1707810640,"model":"gpt-4-0613","system_fingerprint":null,"choices":[{"index":0,"delta":{"content":"
+        "},"logprobs":null,"finish_reason":null}]}
+
+
+        data: {"id":"chatcmpl-8rhqqdEmcBPxCmMRLTZFyzdYtelgh","object":"chat.completion.chunk","created":1707810640,"model":"gpt-4-0613","system_fingerprint":null,"choices":[{"index":0,"delta":{"content":"12"},"logprobs":null,"finish_reason":null}]}
+
+
+        data: {"id":"chatcmpl-8rhqqdEmcBPxCmMRLTZFyzdYtelgh","object":"chat.completion.chunk","created":1707810640,"model":"gpt-4-0613","system_fingerprint":null,"choices":[{"index":0,"delta":{"content":"."},"logprobs":null,"finish_reason":null}]}
+
+
+        data: {"id":"chatcmpl-8rhqqdEmcBPxCmMRLTZFyzdYtelgh","object":"chat.completion.chunk","created":1707810640,"model":"gpt-4-0613","system_fingerprint":null,"choices":[{"index":0,"delta":{},"logprobs":null,"finish_reason":"stop"}]}
+
+
+        data: [DONE]
+
+
+        '
     headers:
       CF-Cache-Status:
       - DYNAMIC
       CF-RAY:
-      - 8532aa66fd5c679a-SJC
+      - 854b7b5718b2fb50-SJC
       Cache-Control:
       - no-cache, must-revalidate
       Connection:
       - keep-alive
-      Content-Encoding:
-      - gzip
       Content-Type:
-      - application/json
+      - text/event-stream
       Date:
-      - Sat, 10 Feb 2024 07:33:45 GMT
+      - Tue, 13 Feb 2024 07:50:41 GMT
       Server:
       - cloudflare
       Transfer-Encoding:
@@ -312,7 +505,7 @@ interactions:
       openai-organization:
       - user-z7g4wmlazxqvc5wjyaaaocfz
       openai-processing-ms:
-      - '1275'
+      - '452'
       openai-version:
       - '2020-10-01'
       strict-transport-security:
@@ -324,13 +517,13 @@ interactions:
       x-ratelimit-remaining-requests:
       - '9999'
       x-ratelimit-remaining-tokens:
-      - '299728'
+      - '299725'
       x-ratelimit-reset-requests:
       - 6ms
       x-ratelimit-reset-tokens:
       - 54ms
       x-request-id:
-      - req_dd069a32b6514615a79356287e845a29
+      - req_54f5eae0b42e9964627e87c7f23ccb83
     status:
       code: 200
       message: OK
@@ -345,8 +538,8 @@ interactions:
       the AI thinks of artificial intelligence. The AI thinks artificial intelligence
       is a force for good because it will help humans reach their full potential.\nEND
       OF EXAMPLE\n\nCurrent summary:\n\n\nNew lines of conversation:\nHuman: What
-      is 3 times 5?\nAI: 3 times 5 is 15.\n\nNew summary:"}], "model": "gpt-4", "n":
-      1, "stream": false, "temperature": 0.7}'
+      is 3 times 4?\nAI: 3 times 4 equals 12.\n\nNew summary:"}], "model": "gpt-4",
+      "n": 1, "stream": false, "temperature": 0.7}'
     headers:
       accept:
       - application/json
@@ -355,12 +548,12 @@ interactions:
       connection:
       - keep-alive
       content-length:
-      - '886'
+      - '890'
       content-type:
       - application/json
       cookie:
-      - __cf_bm=iA8sDHDKVnfosmI8wG_ElV9lor.u9ivoU2KD_Uw2Ck0-1707550421-1-AakLurCxUahX1wP/EqH55USvoahi23iv5/ZX2jxvr6ltSDBhzk8J0ipuSFcgyazwnWfYsqu0n467tSBqzuyTan0=;
-        _cfuvid=CpE5jxQFzpK609ZrTNgy1kxDFHYN2x4AY1XCThUEeQk-1707550421579-0-604800000
+      - __cf_bm=WtYsZIolwSGU.Cw4hxGTqIv0MRGYu4Anw8lzJON1fgk-1707810636-1-Adr1AXb4JT1VMT15njZVe64VjGKYws2k3wQOAEcin03j8Lk4b6WDtV0AG8+mydIMxiPJ++Wwk5ZpUN+jjSGK1Pg=;
+        _cfuvid=kNhuSk4gM0Tj8M010_XI7rHzNLZx1vXRlB.DYvetRy8-1707810636228-0-604800000
       host:
       - api.openai.com
       user-agent:
@@ -384,17 +577,18 @@ interactions:
   response:
     body:
       string: !!binary |
-        H4sIAAAAAAAAA1SQT0/CQBDF7/0Ukz0XQgsV6E0TD2qiHtSYGEOW7dCu7D92p4lC+O5mS6F62cO8
-        93v7Zg4JAJMVK4GJhpPQTo0WO7F0ezl7549q+bx/eMp3t+v8Zlrdv27eWBoJu/5CQWdqLKx2Ckla
-        c5KFR04YU7P5ZF4Uk1ledIK2FaqI1Y5Gs9HkKpv2RGOlwMBK+EgAAA7dG7uZCr9ZCZP0PNEYAq+R
-        lRcTAPNWxQnjIchA3BBLB1FYQ2i6ui8NQtNqboCHbQBqEK7vgCwIrkSrOCFMgaTGAEUK3FRni8fg
-        rKkiwmnwgAyQFWPWf3a8tFS2dt6u40amVeoy30gjQ7PyyIM1sVEg6074MQH47K7R/luQOW+1oxXZ
-        LZoYmBXFKY8Nhx/UfN6LZImrP9QiT/qGLPwEQr3aSFOjd152x4k9k2PyCwAA//8DAHepd0ITAgAA
+        H4sIAAAAAAAAA1SQzWrDMBCE736KRWcn2PnHt+TSFgqloS2FUoIib2w1sqRo19AS8u5FjpO0Fx12
+        5hvN7jEBELoUBQhVS1aNN4NFqA/hdf22ft4+3rXZ/e59/rRaL1f63R9IpJFw2y9UfKGGyjXeIGtn
+        z7IKKBljaj7P5os8m03yTmhciSZilefBZJDN8nFP1E4rJFHARwIAcOze2M2W+C0KyNLLpEEiWaEo
+        riYAEZyJEyGJNLG0LNKbqJxltF3dlxqhbhtpQdKegGuE5QOwAyWNao1khDGwbpBgkoK05cUSkLyz
+        ZUQk3zyAh1Yagnw0FP2Hp2tT4yof3DZuZVtjrvOdtprqTUBJzsZWxM6f8VMC8NldpP23pPDBNZ43
+        7PZoY2A+nZ7zxO34N3U070V2LM0fajFK+oaCfoix2ey0rTD4oLsDxZ7JKfkFAAD//wMA43iM4hcC
+        AAA=
     headers:
       CF-Cache-Status:
       - DYNAMIC
       CF-RAY:
-      - 8532aa703b92679a-SJC
+      - 854b7b602f72fb50-SJC
       Cache-Control:
       - no-cache, must-revalidate
       Connection:
@@ -404,7 +598,7 @@ interactions:
       Content-Type:
       - application/json
       Date:
-      - Sat, 10 Feb 2024 07:33:47 GMT
+      - Tue, 13 Feb 2024 07:50:43 GMT
       Server:
       - cloudflare
       Transfer-Encoding:
@@ -418,7 +612,7 @@ interactions:
       openai-organization:
       - user-z7g4wmlazxqvc5wjyaaaocfz
       openai-processing-ms:
-      - '1667'
+      - '1563'
       openai-version:
       - '2020-10-01'
       strict-transport-security:
@@ -430,13 +624,13 @@ interactions:
       x-ratelimit-remaining-requests:
       - '9999'
       x-ratelimit-remaining-tokens:
-      - '299794'
+      - '299793'
       x-ratelimit-reset-requests:
       - 6ms
       x-ratelimit-reset-tokens:
       - 41ms
       x-request-id:
-      - req_14ec03ab8500562c8eaac94fe2cec349
+      - req_9b32c164d87a9cdf3f87162980820d52
     status:
       code: 200
       message: OK

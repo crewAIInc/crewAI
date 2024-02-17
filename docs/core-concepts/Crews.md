@@ -16,6 +16,7 @@ description: Understanding and utilizing crews in the crewAI framework.
 | **Process**          | The process flow (e.g., sequential, hierarchical) the crew follows. |
 | **Verbose**          | The verbosity level for logging during execution.            |
 | **Manager LLM**      | The language model used by the manager agent in a hierarchical process. |
+| **Function Calling LLM** | The language model used by all agensts in the crew to call functions, if none is passed the same main llm for each agent will be used.      |
 | **Config**           | Configuration settings for the crew.                         |
 | **Max RPM**          | Maximum requests per minute the crew adheres to during execution. |
 | **Language**         | Language setting for the crew's operation.                   |

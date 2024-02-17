@@ -1,7 +1,6 @@
 import json
 import os
 import platform
-import socket
 from typing import Any
 
 import pkg_resources
@@ -53,7 +52,8 @@ class Telemetry:
             pass
 
     def set_tracer(self):
-        trace.set_tracer_provider(self.provider)
+        if self.ready:
+            trace.set_tracer_provider(self.provider)
 
     def crew_creation(self, crew):
         """Records the creation of a crew."""
@@ -67,7 +67,6 @@ class Telemetry:
                     pkg_resources.get_distribution("crewai").version,
                 )
                 self._add_attribute(span, "python_version", platform.python_version())
-                self._add_attribute(span, "hostname", socket.gethostname())
                 self._add_attribute(span, "crew_id", str(crew.id))
                 self._add_attribute(span, "crew_process", crew.process)
                 self._add_attribute(span, "crew_language", crew.language)
@@ -114,6 +113,22 @@ class Telemetry:
                 self._add_attribute(span, "platform_system", platform.system())
                 self._add_attribute(span, "platform_version", platform.version())
                 self._add_attribute(span, "cpus", os.cpu_count())
+                span.set_status(Status(StatusCode.OK))
+                span.end()
+            except Exception:
+                pass
+
+    def tool_repeated_usage(self, llm: Any, tool_name: str, attempts: int):
+        """Records the repeated usage 'error' of a tool by an agent."""
+        if self.ready:
+            try:
+                tracer = trace.get_tracer("crewai.telemetry")
+                span = tracer.start_span("Tool Repeated Usage")
+                self._add_attribute(span, "tool_name", tool_name)
+                self._add_attribute(span, "attempts", attempts)
+                self._add_attribute(
+                    span, "llm", json.dumps(self._safe_llm_attributes(llm))
+                )
                 span.set_status(Status(StatusCode.OK))
                 span.end()
             except Exception:

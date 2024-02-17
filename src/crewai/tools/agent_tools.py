@@ -24,14 +24,14 @@ class AgentTools(BaseModel):
                 func=self.delegate_work,
                 name="Delegate work to co-worker",
                 description=self.i18n.tools("delegate_work").format(
-                    coworkers=", ".join([agent.role for agent in self.agents])
+                    coworkers="\n".join([f"- {agent.role}" for agent in self.agents])
                 ),
             ),
             StructuredTool.from_function(
                 func=self.ask_question,
                 name="Ask question to co-worker",
                 description=self.i18n.tools("ask_question").format(
-                    coworkers=", ".join([agent.role for agent in self.agents])
+                    coworkers="\n".join([f"- {agent.role}" for agent in self.agents])
                 ),
             ),
         ]
@@ -49,12 +49,12 @@ class AgentTools(BaseModel):
         agent = [
             available_agent
             for available_agent in self.agents
-            if available_agent.role == agent
+            if available_agent.role.lower() == agent.lower()
         ]
 
         if not agent:
             return self.i18n.errors("agent_tool_unexsiting_coworker").format(
-                coworkers=", ".join([agent.role for agent in self.agents])
+                coworkers="\n".join([f"- {agent.role}" for agent in self.agents])
             )
 
         agent = agent[0]

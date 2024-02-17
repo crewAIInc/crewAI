@@ -5,9 +5,10 @@ description: Guide on integrating CrewAI with various Large Language Models (LLM
 
 ## Connect CrewAI to LLMs
 !!! note "Default LLM"
-    By default, crewAI uses OpenAI's GPT-4 model for language processing. However, you can configure your agents to use a different model or API. This guide will show you how to connect your agents to different LLMs.
+    By default, crewAI uses OpenAI's GPT-4 model for language processing. However, you can configure your agents to use a different model or API. This guide will show you how to connect your agents to different LLMs. You can change the specific gpt model by setting the `OPENAI_MODEL_NAME` environment variable.
 
 CrewAI offers flexibility in connecting to various LLMs, including local models via [Ollama](https://ollama.ai) and different APIs like Azure. It's compatible with all [LangChain LLM](https://python.langchain.com/docs/integrations/llms/) components, enabling diverse integrations for tailored AI solutions.
+
 
 ## Ollama Integration
 Ollama is preferred for local LLM integration, offering customization and privacy benefits. It requires installation and configuration, including model adjustments via a Modelfile to optimize performance.
@@ -20,17 +21,16 @@ Ollama is preferred for local LLM integration, offering customization and privac
 Instantiate Ollama and pass it to your agents within CrewAI, enhancing them with the local model's capabilities.
 
 ```python
-from langchain_community.llms import Ollama
-
-# Assuming you have Ollama installed and downloaded the openhermes model
-ollama_openhermes = Ollama(model="openhermes")
+# Required
+os.environ["OPENAI_API_BASE"]='http://localhost:11434/v1'
+os.environ["OPENAI_MODEL_NAME"]='openhermes'
+os.environ["OPENAI_API_KEY"]=''
 
 local_expert = Agent(
   role='Local Expert',
   goal='Provide insights about the city',
   backstory="A knowledgeable local guide.",
   tools=[SearchTools.search_internet, BrowserTools.scrape_and_summarize_website],
-  llm=ollama_openhermes,
   verbose=True
 )
 ```
@@ -40,35 +40,40 @@ You can use environment variables for easy switch between APIs and models, suppo
 
 ### Configuration Examples
 
+### Ollama
+```sh
+OPENAI_API_BASE='http://localhost:11434/v1'
+OPENAI_MODEL_NAME='openhermes'  # Depending on the model you have available
+OPENAI_API_KEY=NA
+```
+
 ### FastChat
 ```sh
-# Required
+
 OPENAI_API_BASE="http://localhost:8001/v1"
+OPENAI_MODEL_NAME='oh-2.5m7b-q51' # Depending on the model you have available
 OPENAI_API_KEY=NA
-MODEL_NAME='oh-2.5m7b-q51' # Depending on the model you have available
 ```
 
 ### LM Studio
 ```sh
-# Required
 OPENAI_API_BASE="http://localhost:8000/v1"
+OPENAI_MODEL_NAME=NA
 OPENAI_API_KEY=NA
-MODEL_NAME=NA
 ```
 
 ### Mistral API
 ```sh
 OPENAI_API_KEY=your-mistral-api-key
 OPENAI_API_BASE=https://api.mistral.ai/v1
-MODEL_NAME="mistral-small" # Check documentation for available models
+OPENAI_MODEL_NAME="mistral-small" # Check documentation for available models
 ```
 
 ### text-gen-web-ui
 ```sh
-# Required
-API_BASE_URL=http://localhost:5000
+OPENAI_API_BASE=http://localhost:5000/v1
+OPENAI_MODEL_NAME=NA
 OPENAI_API_KEY=NA
-MODEL_NAME=NA
 ```
 
 ### Azure Open AI

@@ -131,15 +131,7 @@ def test_crew_creation():
 
     assert (
         crew.kickoff()
-        == """1. **The Evolution of AI: From Old Concepts to New Frontiers** - Journey with us as we traverse the fascinating timeline of artificial intelligence - from its philosophical and mathematical infancy to the sophisticated, problem-solving tool it has become today. This riveting account will not only educate but also inspire, as we delve deep into the milestones that brought us here and shine a beacon on the potential that lies ahead.
-
-2. **AI Agents in Healthcare: The Future of Medicine** - Imagine a world where illnesses are diagnosed before symptoms appear, where patient outcomes are not mere guesses but accurate predictions. This is the world AI is crafting in healthcare - a revolution that's saving lives and changing the face of medicine as we know it. This article will spotlight this transformative journey, underlining the profound impact AI is having on our health and well-being.
-
-3. **AI and Ethics: Navigating the Moral Landscape of Artificial Intelligence** - As AI becomes an integral part of our lives, it brings along a plethora of ethical dilemmas. This thought-provoking piece will navigate the complex moral landscape of AI, addressing critical concerns like privacy, job displacement, and decision-making biases. It serves as a much-needed discussion platform for the societal implications of AI, urging us to look beyond the technology and into the mirror.
-
-4. **Demystifying AI Algorithms: A Deep Dive into Machine Learning** - Ever wondered what goes on behind the scenes of AI? This enlightening article will break down the complex world of machine learning algorithms into digestible insights, unraveling the mystery of AI's 'black box'. It's a rare opportunity for the non-technical audience to appreciate the inner workings of AI, fostering a deeper understanding of this revolutionary technology.
-
-5. **AI Startups: The Game Changers of the Tech Industry** - In the world of tech, AI startups are the bold pioneers charting new territories. This article will spotlight these game changers, showcasing how their innovative products and services are driving the AI revolution. It's a unique opportunity to catch a glimpse of the entrepreneurial side of AI, offering inspiration for the tech enthusiasts and dreamers alike."""
+        == '1. "The Role of AI in Predicting and Managing Pandemics"\nHighlight: \nIn an era where global health crises can emerge from any corner of the world, the role of AI in predicting and managing pandemics has never been more critical. Through intelligent data gathering and predictive analytics, AI can potentially identify the onset of pandemics before they reach critical mass, offering a proactive solution to a reactive problem. This article explores the intersection of AI and epidemiology, delving into how this cutting-edge technology is revolutionizing our approach to global health crises.\n\n2. "AI and the Future of Work: Will Robots Take Our Jobs?"\nHighlight: \nThe rise of AI has sparked both excitement and apprehension about the future of work. Will robots replace us, or will they augment our capabilities? This article delves into the heart of this controversial issue, examining the potential of AI to disrupt job markets, transform industries, and redefine the concept of work. It\'s not just a question of job security—it\'s a discussion about the kind of world we want to live in.\n\n3. "AI in Art and Creativity: A New Frontier in Innovation"\nHighlight: \nArt and creativity, once seen as the exclusive domain of human expression, are being redefined by the advent of AI. From algorithmic compositions to AI-assisted design, this article explores the burgeoning field of AI in art and creativity. It\'s a journey into a new frontier of innovation, one where the lines between human creativity and artificial intelligence blur into an exciting, uncharted territory.\n\n4. "Ethics in AI: Balancing Innovation with Responsibility"\nHighlight: \nAs AI continues to permeate every facet of our lives, questions about its ethical implications grow louder. This article invites readers into a thoughtful exploration of the moral landscape of AI. It challenges us to balance the relentless pursuit of innovation with the weighty responsibilities that come with it, asking: How can we harness the power of AI without losing sight of our human values?\n\n5. "AI in Education: Personalizing Learning for the Next Generation"\nHighlight: \nEducation is poised for a transformation as AI enters the classroom, promising a future where learning is personalized, not generalized. This article delves into how AI can tailor educational experiences to individual learning styles, making education more effective and accessible. It\'s a glimpse into a future where AI is not just a tool for learning, but an active participant in shaping the educational journey of the next generation.'
     )
 
 
@@ -160,7 +152,7 @@ def test_hierarchical_process():
 
     assert (
         crew.kickoff()
-        == """Here are the five interesting ideas for an article with a highlight paragraph for each:\n\n1. The Evolution of Artificial Intelligence:\nDive deep into the fascinating journey of artificial intelligence, from its humble beginnings as a concept in science fiction to an integral part of our daily lives and a catalyst of modern innovations. Explore how AI has evolved over the years, the key milestones that have shaped its growth, and the visionary minds behind these advancements. Uncover the remarkable transformation of AI and its astounding potential for the future.\n\n2. AI in Everyday Life:\nUncover the unseen impact of AI in our every day lives, from our smartphones and home appliances to social media and healthcare. Learn about the subtle yet profound ways AI has become a silent partner in your daily routine, enhancing convenience, productivity, and decision-making. Explore the numerous applications of AI right at your fingertips and how it shapes our interactions with technology and the world around us.\n\n3. Ethical Implications of AI:\nVenture into the ethical labyrinth of artificial intelligence, where innovation meets responsibility. Explore the implications of AI on privacy, job security, and societal norms, and the moral obligations we have towards its development and use. Delve into the thought-provoking debates about AI ethics and the measures being taken to ensure its responsible and equitable use.\n\n4. The Rise of AI Startups:\nWitness the rise of AI startups, the new champions of innovation, driving the technology revolution. Discover how these trailblazing companies are harnessing the power of AI to solve complex problems, create new markets, and revolutionize industries. Learn about their unique challenges, their groundbreaking solutions, and the potential they hold for reshaping the future of technology and business.\n\n5. AI and the Environment:\nExplore the intersection of AI and the environment, where technology meets sustainability. Uncover how AI is being used to combat climate change, conserve biodiversity, and optimize resource utilization. Learn about the innovative ways AI is being used to create a sustainable future and the challenges and opportunities it presents."""
+        == """Here are the five interesting ideas for articles with their respective highlights:\n\n1. The Role of AI in Climate Change: As the world grapples with the existential threat of climate change, artificial intelligence (AI) has emerged as a powerful ally in our battle against it. The article will explore how AI is being used to predict weather patterns, optimize renewable energy sources, and even capture and reduce greenhouse emissions. This novel intersection of technology and environment could hold the key to a sustainable future, making this a must-read for anyone interested in the potential of AI to transform our world.\n\n2. AI and Mental Health: With the increasing prevalence of mental health issues worldwide, innovative solutions are needed more than ever. This article will delve into the cutting-edge domain of AI and mental health, exploring how machine learning algorithms are helping to diagnose conditions, personalize treatments, and even predict the onset of mental disorders. This exploration of AI's potential in mental health not only sheds light on the future of healthcare but also opens a dialogue on the ethical considerations involved.\n\n3. The Ethical Implications of AI: As AI continues to permeate our lives, it brings with it a host of ethical considerations. This article will unravel the complex ethical terrain of AI, from issues of privacy and consent to its potential for bias and discrimination. By diving into the philosophical underpinnings of AI and its societal implications, this article will provoke thought and stimulate discussion on how we can ensure a fair and equitable AI-enabled future.\n\n4. How AI is Revolutionizing E-commerce: In the fiercely competitive world of e-commerce, AI is proving to be a game-changer. This article will take you on a journey through the world of AI-enhanced e-commerce, showcasing how machine learning algorithms are optimizing logistics, personalizing shopping experiences, and even predicting consumer behavior. This deep dive into AI's transformative impact on e-commerce is a must-read for anyone interested in the future of business and technology.\n\n5. AI in Space Exploration: The final frontier of space exploration is being redefined by the advent of AI. This article will take you on an interstellar journey through the role of AI in space exploration, from autonomous spacecraft navigation to the search for extraterrestrial life. By peering into the cosmos through the lens of AI, this article offers a glimpse into the future of space exploration and the infinite possibilities that AI holds."""
     )
 
 
@@ -182,6 +174,7 @@ def test_crew_with_delegating_agents():
     tasks = [
         Task(
             description="Produce and amazing 1 paragraph draft of an article about AI Agents.",
+            expected_output="A 4 paragraph article about AI.",
             agent=ceo,
         )
     ]
@@ -194,7 +187,7 @@ def test_crew_with_delegating_agents():
 
     assert (
         crew.kickoff()
-        == '"AI agents, the digital masterminds at the heart of the 21st-century revolution, are shaping a new era of intelligence and innovation. They are autonomous entities, capable of observing their environment, making decisions, and acting on them, all in pursuit of a specific goal. From streamlining operations in logistics to personalizing customer experiences in retail, AI agents are transforming how businesses operate. But their potential extends far beyond the corporate world. They are the sentinels protecting our digital frontiers, the virtual assistants making our lives easier, and the unseen hands guiding autonomous vehicles. As this technology evolves, AI agents will play an increasingly central role in our world, ushering in an era of unprecedented efficiency, personalization, and productivity. But with great power comes great responsibility, and understanding and harnessing this potential responsibly will be one of our greatest challenges and opportunities in the coming years."'
+        == "The Senior Writer has produced a fantastic 4 paragraph article on AI:\n\n\"Artificial Intelligence, or AI, is often considered the stuff of science fiction, but it is very much a reality in today's world. In simplest terms, AI is a branch of computer science that aims to create machines that mimic human intelligence - think self-driving cars, voice assistants like Siri or Alexa, even your Netflix recommendations. These are all examples of AI in action, silently making our lives easier and more efficient.\n\nThe applications of AI are as vast as our imagination. In healthcare, AI is used to predict diseases and personalize patient care. In finance, algorithms can analyze market trends and make investment decisions. The education sector uses AI to customize learning and identify areas where students need help. Even in creative fields like music and art, AI is making its mark by creating new pieces that are hard to distinguish from those made by humans.\n\nAI's potential for the future is staggering. As technology advances, so too does the complexity and capabilities of AI. It's predicted that AI will play a significant role in tackling some of humanity's biggest challenges, such as climate change and global health crises. Imagine AI systems predicting natural disasters with enough time for us to take preventative measures, or developing new, effective treatments for diseases through data analysis.\n\nHowever, this brave new world does not come without its challenges. Ethical issues are at the forefront, with concerns over privacy and the potential misuse of AI. There's also the question of job displacement due to automation, and the need for laws and regulations to keep pace with this rapidly advancing technology. Despite these hurdles, the promise of AI and its ability to transform our world is an exciting prospect, one that we are only just beginning to explore.\""
     )
 
 
@@ -499,3 +492,38 @@ def test_dont_set_agents_step_callback_if_already_set():
         crew.kickoff()
         assert researcher_agent.step_callback is not crew_callback
         assert researcher_agent.step_callback is agent_callback
+
+
+@pytest.mark.vcr(filter_headers=["authorization"])
+def test_crew_function_calling_llm():
+    from unittest.mock import patch
+
+    from langchain.tools import tool
+    from langchain_openai import ChatOpenAI
+
+    llm = ChatOpenAI(model="gpt-3.5")
+
+    with patch.object(llm.client, "create", wraps=llm.client.create) as private_mock:
+
+        @tool
+        def learn_about_AI(topic) -> float:
+            """Useful for when you need to learn about AI to write an paragraph about it."""
+            return "AI is a very broad field."
+
+        agent1 = Agent(
+            role="test role",
+            goal="test goal",
+            backstory="test backstory",
+            tools=[learn_about_AI],
+        )
+
+        essay = Task(
+            description="Write and then review an small paragraph on AI until it's AMAZING",
+            agent=agent1,
+        )
+        tasks = [essay]
+        print(agent1.function_calling_llm)
+        crew = Crew(agents=[agent1], tasks=tasks, function_calling_llm=llm)
+        print(agent1.function_calling_llm)
+        crew.kickoff()
+        private_mock.assert_called()
