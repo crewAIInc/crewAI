@@ -41,6 +41,7 @@ CrewAI is designed to enable AI agents to assume roles, share goals, and operate
 ## Getting Started
 
 Please note, CrewAI is recommended to be used with Python 3.10 for optimal and compatibility.
+
 To get started with CrewAI, follow these simple steps. 
 
 ### 1. Installation
