@@ -42,7 +42,7 @@ CrewAI is designed to enable AI agents to assume roles, share goals, and operate
 
 To get started with CrewAI, follow these simple steps:
 
-### 1. Installation
+### 1. Installation 
 
 ```shell
 pip install crewai
@@ -56,77 +56,7 @@ pip install duckduckgo-search
 
 ### 2. Setting Up Your Crew
 
-```python
-import os
-from crewai import Agent, Task, Crew, Process
-
-os.environ["OPENAI_API_KEY"] = "YOUR_API_KEY"
-
-# You can choose to use a local model through Ollama for example. See ./docs/how-to/llm-connections.md for more information.
-# from langchain_community.llms import Ollama
-# ollama_llm = Ollama(model="openhermes")
-
-# Install duckduckgo-search for this example:
-# !pip install -U duckduckgo-search
-
-from langchain_community.tools import DuckDuckGoSearchRun
-search_tool = DuckDuckGoSearchRun()
-
-# Define your agents with roles and goals
-researcher = Agent(
-  role='Senior Research Analyst',
-  goal='Uncover cutting-edge developments in AI and data science',
-  backstory="""You work at a leading tech think tank.
-  Your expertise lies in identifying emerging trends.
-  You have a knack for dissecting complex data and presenting actionable insights.""",
-  verbose=True,
-  allow_delegation=False,
-  tools=[search_tool]
-  # You can pass an optional llm attribute specifying what mode you wanna use.
-  # It can be a local model through Ollama / LM Studio or a remote
-  # model like OpenAI, Mistral, Antrophic or others (https://python.langchain.com/docs/integrations/llms/)
-  #
-  # Examples:
-  #
-  # from langchain_community.llms import Ollama
-  # llm=ollama_llm # was defined above in the file
-  #
-  # from langchain_openai import ChatOpenAI
-  # llm=ChatOpenAI(model_name="gpt-3.5", temperature=0.7)
-)
-writer = Agent(
-  role='Tech Content Strategist',
-  goal='Craft compelling content on tech advancements',
-  backstory="""You are a renowned Content Strategist, known for your insightful and engaging articles.
-  You transform complex concepts into compelling narratives.""",
-  verbose=True,
-  allow_delegation=True,
-  # (optional) llm=ollama_llm
-)
-
-# Create tasks for your agents
-task1 = Task(
-  description="""Conduct a comprehensive analysis of the latest advancements in AI in 2024.
-  Identify key trends, breakthrough technologies, and potential industry impacts.
-  Your final answer MUST be a full analysis report""",
-  agent=researcher
-)
-
-task2 = Task(
-  description="""Using the insights provided, develop an engaging blog
-  post that highlights the most significant AI advancements.
-  Your post should be informative yet accessible, catering to a tech-savvy audience.
-  Make it sound cool, avoid complex words so it doesn't sound like AI.
-  Your final answer MUST be the full blog post of at least 4 paragraphs.""",
-  agent=writer
-)
-
-# Instantiate your crew with a sequential process
-crew = Crew(
-  agents=[researcher, writer],
-  tasks=[task1, task2],
-  verbose=2, # You can set it to 1 or 2 to different logging levels
-)
+```
 
 # Get your crew to work!
 result = crew.kickoff()
@@ -172,9 +102,7 @@ You can test different real life examples of AI crews in the [crewAI-examples re
 
 [![Stock Analysis](https://img.youtube.com/vi/e0Uj4yWdaAg/maxresdefault.jpg)](https://www.youtube.com/watch?v=e0Uj4yWdaAg "Stock Analysis")
 
-## Connecting Your Crew to a Model
-
-crewAI supports using various LLMs through a variety of connection options. By default your agents will use the OpenAI API when querying the model. However, there are several other ways to allow your agents to connect to models. For example, you can configure your agents to use a local model via the Ollama tool.
+## Connecto use a local model via the Ollama tool.
 
 Please refer to the [Connect crewAI to LLMs](https://docs.crewai.com/how-to/LLM-Connections/) page for details on configuring you agents' connections to models.
 
@@ -197,7 +125,51 @@ CrewAI is open-source and we welcome contributions. If you're looking to contrib
 - We appreciate your input!
 
 ### Installing Dependencies
+from crewai import Agent
 
+# Define the role and goal of the first agent
+agent_first = Agent(
+    role='First Agent',
+    goal='Provide assistance with NHL-related inquiries',
+    backstory="""You're the first agent in the crewAI team, specializing in handling NHL-related inquiries. Your goal is to assist users with questions about NHL matchups, schedules, statistics, and other related topics. You're equipped with comprehensive knowledge about the NHL and are ready to provide accurate and helpful responses.""",
+    llm=my_llm,  # Assuming my_llm is the language model for processing NHL-related inquiries
+    tools=[nhl_tool1, nhl_tool2],  # Assuming nhl_tool1 and nhl_tool2 are tools/resources for assisting with NHL inquiries
+    function_calling_llm=my_llm,  # Assuming my_llm is the language model for processing NHL-related inquiries
+    max_iter=10,  # Maximum number of iterations
+    max_rpm=10,  # Maximum requests per minute
+    verbose=True,  # Verbose logging enabled
+    allow_delegation=True,  # Allowing delegation of tasks to other agents
+    step_callback=my_intermediate_step_callback  # Callback function after each step
+)
+
+# Define the role and characteristics of the second agent
+agent_second = Agent(
+    role='Tech Content Strategist',
+    goal='Craft compelling content on tech advancements',
+    backstory="""You are a renowned Content Strategist, known for your insightful and engaging articles. You transform complex concepts into compelling narratives.""",
+    llm=my_llm,  # Assuming my_llm is the language model for processing content strategy inquiries
+    tools=[tool1, tool2],  # Assuming tool1 and tool2 are tools/resources for content strategy
+    function_calling_llm=my_llm,  # Assuming my_llm is the language model for processing content strategy inquiries
+    max_iter=10,  # Maximum number of iterations
+    max_rpm=10,  # Maximum requests per minute
+    verbose=True,  # Verbose logging enabled
+    allow_delegation=True,  # Allowing delegation of tasks to other agents
+    step_callback=my_intermediate_step_callback  # Callback function after each step
+)
+
+# Define the role and characteristics of the third agent
+agent_third = Agent(
+    role='Senior Research Analyst',
+    goal='Uncover cutting-edge developments in AI and data science',
+    backstory="""You work at a leading tech think tank. Your expertise lies in identifying emerging trends. You have a knack for dissecting complex data and presenting actionable insights.""",
+    llm=my_llm,  # Assuming my_llm is the language model for processing research inquiries
+    tools=[tool1, tool2],  # Assuming tool1 and tool2 are tools/resources for research analysis
+    function_calling_llm=my_llm,  # Assuming my_llm is the language model for processing research inquiries
+    max_iter=10,  # Maximum number of iterations
+    max_rpm=10,  # Maximum requests per minute
+    verbose=True,  # Verbose logging enabled
+    allow_delegation=True,  # Allowing delegation of tasks to other agents
+    step_callback=my_intermediate_step_callback  # Callback function after each step
 ```bash
 poetry lock
 poetry install
@@ -274,6 +246,8 @@ Data collected includes:
 
 Users can opt-in sharing the complete telemetry data by setting the `share_crew` attribute to `True` on their Crews.
 
-## License
+## Licenseing Your Crew to a Model
+
+crewAI supports using various LLMs through a variety of connection options. By default your agents will use the OpenAI API when querying the model. However, there are several other ways to allow your agents to connect to models. For example, you can configure your agents t
 
 CrewAI is released under the MIT License.
