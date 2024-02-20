@@ -13,7 +13,7 @@ from langchain_core.utils.input import get_color_mapping
 from pydantic import InstanceOf
 
 from crewai.agents.tools_handler import ToolsHandler
-from crewai.tools.tool_usage import ToolUsage
+from crewai.tools.tool_usage import ToolUsage, ToolUsageErrorException
 from crewai.utilities import I18N
 
 
@@ -111,13 +111,19 @@ class CrewAgentExecutor(AgentExecutor):
                 callbacks=run_manager.get_child() if run_manager else None,
                 **inputs,
             )
+
             if self._should_force_answer():
-                if isinstance(output, AgentAction) or isinstance(output, AgentFinish):
+                if isinstance(output, AgentFinish):
+                    yield output
+                    return
+
+                if isinstance(output, AgentAction):
                     output = output
                 else:
                     raise ValueError(
                         f"Unexpected output type from agent: {type(output)}"
                     )
+
                 yield AgentStep(
                     action=output, observation=self._i18n.errors("force_final_answer")
                 )
@@ -192,20 +198,23 @@ class CrewAgentExecutor(AgentExecutor):
             )
             tool_calling = tool_usage.parse(agent_action.log)
 
-            if tool_calling.tool_name.lower().strip() in [
-                name.lower().strip() for name in name_to_tool_map
-            ]:
-                observation = tool_usage.use(tool_calling, agent_action.log)
+            if isinstance(tool_calling, ToolUsageErrorException):
+                observation = tool_calling.message
             else:
-                tool_run_kwargs = self.agent.tool_run_logging_kwargs()
-                observation = InvalidTool().run(
-                    {
-                        "requested_tool_name": tool_calling.tool_name,
-                        "available_tool_names": list(name_to_tool_map.keys()),
-                    },
-                    verbose=self.verbose,
-                    color=None,
-                    callbacks=run_manager.get_child() if run_manager else None,
-                    **tool_run_kwargs,
-                )
+                if tool_calling.tool_name.lower().strip() in [
+                    name.lower().strip() for name in name_to_tool_map
+                ]:
+                    observation = tool_usage.use(tool_calling, agent_action.log)
+                else:
+                    tool_run_kwargs = self.agent.tool_run_logging_kwargs()
+                    observation = InvalidTool().run(
+                        {
+                            "requested_tool_name": tool_calling.tool_name,
+                            "available_tool_names": list(name_to_tool_map.keys()),
+                        },
+                        verbose=self.verbose,
+                        color=None,
+                        callbacks=run_manager.get_child() if run_manager else None,
+                        **tool_run_kwargs,
+                    )
             yield AgentStep(action=agent_action, observation=observation)

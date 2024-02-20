@@ -113,7 +113,10 @@ class ToolUsage:
 
         if not result:
             try:
-                result = tool._run(**calling.arguments)
+                if calling.arguments:
+                    result = tool._run(**calling.arguments)
+                else:
+                    result = tool._run()
             except Exception as e:
                 self._run_attempts += 1
                 if self._run_attempts > self._max_parsing_attempts:
@@ -206,6 +209,7 @@ class ToolUsage:
                     ),
                 )
                 calling = instructor.to_pydantic()
+
             else:
                 parser = ToolOutputParser(pydantic_object=ToolCalling)
                 prompt = PromptTemplate(
@@ -234,7 +238,7 @@ class ToolUsage:
                 self._telemetry.tool_usage_error(llm=self.llm)
                 self._printer.print(content=f"\n\n{e}\n", color="red")
                 return ToolUsageErrorException(
-                    f'{self._i18n.errors("tool_usage_error")}.\n{self._i18n.slice("format").format(tool_names=self.tools_names)}'
+                    f'{self._i18n.errors("tool_usage_error")}\n{self._i18n.slice("format").format(tool_names=self.tools_names)}'
                 )
             return self._tool_calling(tool_string)
 
