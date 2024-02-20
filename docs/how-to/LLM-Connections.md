@@ -15,7 +15,7 @@ Ollama is preferred for local LLM integration, offering customization and privac
 
 ### Setting Up Ollama
 - **Installation**: Follow Ollama's guide for setup.
-- **Configuration**: [Adjust your local model with a Modelfile](https://github.com/jmorganca/ollama/blob/main/docs/modelfile.md), considering adding `Observation` as a stop word and playing with parameters like `top_p` and `temperature`.
+- **Configuration**: [Adjust your local model with a Modelfile](https://github.com/jmorganca/ollama/blob/main/docs/modelfile.md), considering adding `Result` as a stop word and playing with parameters like `top_p` and `temperature`.
 
 ### Integrating Ollama with CrewAI
 Instantiate Ollama and pass it to your agents within CrewAI, enhancing them with the local model's capabilities.

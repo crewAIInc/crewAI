@@ -19,6 +19,9 @@ Tasks in CrewAI can be designed to require collaboration between agents. For exa
 | **Tools** *(optional)*   | These are the functions or capabilities the agent can utilize to perform the task. They can be anything from simple actions like 'search' to more complex interactions with other agents or APIs. |
 | **Async Execution** *(optional)*      | If the task should be executed asynchronously.  |
 | **Context**  *(optional)*     | Other tasks that will have their output used as context for this task, if one is an asynchronous task it will wait for that to finish |
+| **Output JSON**  *(optional)*     | Takes a pydantic model and returns the output as a JSON object. **Agent LLM needs to be using OpenAI client, could be Ollama for example but using the OpenAI wrapper** |
+| **Output Pydantic**  *(optional)*     | Takes a pydantic model and returns the output as a pydantic object. **Agent LLM needs to be using OpenAI client, could be Ollama for example but using the OpenAI wrapper** |
+| **Output File**  *(optional)*     | Takes a file path and saves the output of the task on it. |
 | **Callback**  *(optional)*  | A function to be executed after the task is completed. |
 
 ## Creating a Task
