@@ -16,7 +16,7 @@ Documentation = "https://github.com/joaomdmoura/CrewAI/wiki/Index"
 Repository = "https://github.com/joaomdmoura/crewai"
 
 [tool.poetry.dependencies]
-python = ">=3.10,<4.0"
+python = ">=3.10,<3.12"
 pydantic = "^2.4.2"
 langchain = "^0.1.0"
 openai = "^1.7.1"
@@ -26,11 +26,11 @@ opentelemetry-sdk = "^1.22.0"
 opentelemetry-exporter-otlp-proto-http = "^1.22.0"
 instructor = "^0.5.2"
 regex = "^2023.12.25"
-crewai-tools = "^0.0.2"
+crewai-tools = "^0.0.3"
 
 [tool.poetry.group.dev.dependencies]
 isort = "^5.13.2"
-pyright = "1.1.333"
+pyright = ">=1.1.350,<2.0.0"
 black = {git = "https://github.com/psf/black.git", rev = "stable"}
 autoflake = "^2.2.1"
 pre-commit = "^3.6.0"
@@ -49,7 +49,7 @@ known_first_party = ["crewai"]
 
 
 [tool.poetry.group.test.dependencies]
-pytest = "^7.4"
+pytest = "^8.0.0"
 pytest-vcr = "^1.0.2"
 python-dotenv = "1.0.0"
 
