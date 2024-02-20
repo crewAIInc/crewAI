@@ -82,7 +82,7 @@ class ToolUsage:
             error = getattr(e, "message", str(e))
             self._printer.print(content=f"\n\n{error}\n", color="red")
             return error
-        return f"{self._use(tool_string=tool_string, tool=tool, calling=calling)}\n{self._i18n.slice('final_answer_format')}"
+        return f"{self._use(tool_string=tool_string, tool=tool, calling=calling)}\n\n{self._i18n.slice('final_answer_format')}"
 
     def _use(
         self,
@@ -121,10 +121,13 @@ class ToolUsage:
                 self._run_attempts += 1
                 if self._run_attempts > self._max_parsing_attempts:
                     self._telemetry.tool_usage_error(llm=self.llm)
+                    error_message = self._i18n.errors("tool_usage_exception").format(
+                        error=e
+                    )
                     error = ToolUsageErrorException(
-                        f'{self._i18n.errors("tool_usage_exception").format(error=e)}.\n{self._i18n.slice("format").format(tool_names=self.tools_names)}'
+                        f'\n{error_message}.\nMoving one then. {self._i18n.slice("format").format(tool_names=self.tools_names)}'
                     ).message
-                    self._printer.print(content=f"\n\n{error}\n", color="red")
+                    self._printer.print(content=f"\n\n{error_message}\n", color="red")
                     return error
                 return self.use(calling=calling, tool_string=tool_string)
 
@@ -196,7 +199,7 @@ class ToolUsage:
                 instructor = Instructor(
                     llm=self.llm,
                     model=InstructorToolCalling,
-                    content=f"Tools available:\n\n{self._render()}\n\nReturn a valid schema for the tool, the tool name must be equal one of the options, use this text to inform a valid ouput schema:\n{tool_string}```",
+                    content=f"Tools available:\n###\n{self._render()}\n\nReturn a valid schema for the tool, the tool name must be equal one of the options, use this text to inform a valid ouput schema:\n{tool_string}```",
                     instructions=dedent(
                         """\
                                     The schema should have the following structure, only two keys:
@@ -204,7 +207,7 @@ class ToolUsage:
                                     - arguments: dict (with all arguments being passed)
 
                                     Example:
-                                    {"tool_name": "tool_name", "arguments": {"arg_name1": "value", "arg_name2": 2}}
+                                    {"tool_name": "tool name", "arguments": {"arg_name1": "value", "arg_name2": 2}}
                                 """
                     ),
                 )

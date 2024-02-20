@@ -3,7 +3,6 @@ from typing import Any, Dict, Iterator, List, Optional, Tuple, Union
 
 from langchain.agents import AgentExecutor
 from langchain.agents.agent import ExceptionTool
-from langchain.agents.tools import InvalidTool
 from langchain.callbacks.manager import CallbackManagerForChainRun
 from langchain_core.agents import AgentAction, AgentFinish, AgentStep
 from langchain_core.exceptions import OutputParserException
@@ -147,7 +146,7 @@ class CrewAgentExecutor(AgentExecutor):
                     observation = f"\n{str(e.observation)}"
                     text = str(e.llm_output)
                 else:
-                    observation = "Invalid or incomplete response"
+                    observation = ""
             elif isinstance(self.handle_parsing_errors, str):
                 observation = f"\n{self.handle_parsing_errors}"
             elif callable(self.handle_parsing_errors):
@@ -206,15 +205,8 @@ class CrewAgentExecutor(AgentExecutor):
                 ]:
                     observation = tool_usage.use(tool_calling, agent_action.log)
                 else:
-                    tool_run_kwargs = self.agent.tool_run_logging_kwargs()
-                    observation = InvalidTool().run(
-                        {
-                            "requested_tool_name": tool_calling.tool_name,
-                            "available_tool_names": list(name_to_tool_map.keys()),
-                        },
-                        verbose=self.verbose,
-                        color=None,
-                        callbacks=run_manager.get_child() if run_manager else None,
-                        **tool_run_kwargs,
+                    observation = self._i18n.errors("wrong_tool_name").format(
+                        tool=tool_calling.tool_name,
+                        tools=", ".join([tool.name for tool in self.tools]),
                     )
             yield AgentStep(action=agent_action, observation=observation)
