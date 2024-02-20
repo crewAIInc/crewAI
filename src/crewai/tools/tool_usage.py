@@ -1,6 +1,6 @@
+from textwrap import dedent
 from typing import Any, List, Union
 
-import instructor
 from langchain.prompts import PromptTemplate
 from langchain_core.tools import BaseTool
 from langchain_openai import ChatOpenAI
@@ -9,7 +9,9 @@ from crewai.agents.tools_handler import ToolsHandler
 from crewai.telemtry import Telemetry
 from crewai.tools.tool_calling import InstructorToolCalling, ToolCalling
 from crewai.tools.tool_output_parser import ToolOutputParser
-from crewai.utilities import I18N, Printer
+from crewai.utilities import I18N, Instructor, Printer
+
+OPENAI_BIGGER_MODELS = ["gpt-4"]
 
 
 class ToolUsageErrorException(Exception):
@@ -31,6 +33,7 @@ class ToolUsage:
         tools_description: Description of the tools available for the agent.
         tools_names: Names of the tools available for the agent.
         llm: Language model to be used for the tool usage.
+        function_calling_llm: Language model to be used for the tool usage.
     """
 
     def __init__(
@@ -47,18 +50,28 @@ class ToolUsage:
         self._printer: Printer = Printer()
         self._telemetry: Telemetry = Telemetry()
         self._run_attempts: int = 1
-        self._max_parsing_attempts: int = 2
+        self._max_parsing_attempts: int = 3
         self._remeber_format_after_usages: int = 3
         self.tools_description = tools_description
         self.tools_names = tools_names
         self.tools_handler = tools_handler
         self.tools = tools
         self.task = task
-        self.llm = llm
-        self.function_calling_llm = function_calling_llm
+        self.llm = function_calling_llm or llm
 
-    def use(self, tool_string: str):
-        calling = self._tool_calling(tool_string)
+        # Set the maximum parsing attempts for bigger models
+        if (isinstance(self.llm, ChatOpenAI)) and (self.llm.openai_api_base == None):
+            if self.llm.model_name in OPENAI_BIGGER_MODELS:
+                self._max_parsing_attempts = 2
+                self._remeber_format_after_usages = 4
+
+    def parse(self, tool_string: str):
+        """Parse the tool string and return the tool calling."""
+        return self._tool_calling(tool_string)
+
+    def use(
+        self, calling: Union[ToolCalling, InstructorToolCalling], tool_string: str
+    ) -> str:
         if isinstance(calling, ToolUsageErrorException):
             error = calling.message
             self._printer.print(content=f"\n\n{error}\n", color="red")
@@ -69,7 +82,7 @@ class ToolUsage:
             error = getattr(e, "message", str(e))
             self._printer.print(content=f"\n\n{error}\n", color="red")
             return error
-        return self._use(tool_string=tool_string, tool=tool, calling=calling)
+        return f"{self._use(tool_string=tool_string, tool=tool, calling=calling)}\n{self._i18n.slice('final_answer_format')}"
 
     def _use(
         self,
@@ -106,11 +119,11 @@ class ToolUsage:
                 if self._run_attempts > self._max_parsing_attempts:
                     self._telemetry.tool_usage_error(llm=self.llm)
                     error = ToolUsageErrorException(
-                        self._i18n.errors("tool_usage_exception").format(error=e)
+                        f'{self._i18n.errors("tool_usage_exception").format(error=e)}.\n{self._i18n.slice("format").format(tool_names=self.tools_names)}'
                     ).message
                     self._printer.print(content=f"\n\n{error}\n", color="red")
                     return error
-                return self.use(tool_string=tool_string)
+                return self.use(calling=calling, tool_string=tool_string)
 
             self.tools_handler.on_tool_use(calling=calling, output=result)
 
@@ -174,69 +187,55 @@ class ToolUsage:
         self, tool_string: str
     ) -> Union[ToolCalling, InstructorToolCalling]:
         try:
-            tool_string = tool_string.replace(
-                "Thought: Do I need to use a tool? Yes", ""
-            )
-            tool_string = tool_string.replace("Action:", "Tool Name:")
-            tool_string = tool_string.replace("Action Input:", "Tool Arguments:")
+            if (isinstance(self.llm, ChatOpenAI)) and (
+                self.llm.openai_api_base == None
+            ):
+                instructor = Instructor(
+                    llm=self.llm,
+                    model=InstructorToolCalling,
+                    content=f"Tools available:\n\n{self._render()}\n\nReturn a valid schema for the tool, the tool name must be equal one of the options, use this text to inform a valid ouput schema:\n{tool_string}```",
+                    instructions=dedent(
+                        """\
+                                    The schema should have the following structure, only two keys:
+                                    - tool_name: str
+                                    - arguments: dict (with all arguments being passed)
 
-            llm = self.function_calling_llm or self.llm
-
-            if (isinstance(llm, ChatOpenAI)) and (llm.openai_api_base == None):
-                client = instructor.patch(
-                    llm.client._client,
-                    mode=instructor.Mode.FUNCTIONS,
+                                    Example:
+                                    {"tool_name": "tool_name", "arguments": {"arg_name1": "value", "arg_name2": 2}}
+                                """
+                    ),
                 )
-                calling = client.chat.completions.create(
-                    model=llm.model_name,
-                    messages=[
-                        {
-                            "role": "system",
-                            "content": """
-                                The schema should have the following structure, only two key:
-                                - tool_name: str
-                                - arguments: dict (with all arguments being passed)
-
-                                Example:
-                                {"tool_name": "tool_name", "arguments": {"arg_name1": "value", "arg_name2": 2}}
-                            """,
-                        },
-                        {
-                            "role": "user",
-                            "content": f"Tools available:\n\n{self._render()}\n\nReturn a valid schema for the tool, use this text to inform a valid ouput schema:\n{tool_string}```",
-                        },
-                    ],
-                    response_model=InstructorToolCalling,
-                )
+                calling = instructor.to_pydantic()
             else:
                 parser = ToolOutputParser(pydantic_object=ToolCalling)
                 prompt = PromptTemplate(
-                    template="Tools available:\n\n{available_tools}\n\nReturn a valid schema for the tool, use this text to inform a valid ouput schema:\n{tool_string}\n\n{format_instructions}\n```",
+                    template="Tools available:\n\n{available_tools}\n\nReturn a valid schema for the tool, the tool name must be equal one of the options, use this text to inform a valid ouput schema:\n{tool_string}\n\n{format_instructions}\n```",
                     input_variables=["tool_string"],
                     partial_variables={
                         "available_tools": self._render(),
-                        "format_instructions": """
-                        The schema should have the following structure, only two key:
+                        "format_instructions": dedent(
+                            """\
+                        The schema should have the following structure, only two keys:
                         - tool_name: str
                         - arguments: dict (with all arguments being passed)
 
                         Example:
                         {"tool_name": "tool_name", "arguments": {"arg_name1": "value", "arg_name2": 2}}
-                        """,
+                        """
+                        ),
                     },
                 )
-                chain = prompt | llm | parser
+                chain = prompt | self.llm | parser
                 calling = chain.invoke({"tool_string": tool_string})
 
         except Exception as e:
             self._run_attempts += 1
             if self._run_attempts > self._max_parsing_attempts:
-                self._telemetry.tool_usage_error(llm=llm)
-                error = ToolUsageErrorException(
-                    self._i18n.errors("tool_usage_exception").format(error=e)
-                ).message
-                self._printer.print(content=f"\n\n{error}\n", color="red")
-                return error
+                self._telemetry.tool_usage_error(llm=self.llm)
+                self._printer.print(content=f"\n\n{e}\n", color="red")
+                return ToolUsageErrorException(
+                    f'{self._i18n.errors("tool_usage_error")}.\n{self._i18n.slice("format").format(tool_names=self.tools_names)}'
+                )
             return self._tool_calling(tool_string)
 
         return calling

@@ -18,7 +18,7 @@ from crewai.utilities import I18N
 
 
 class CrewAgentExecutor(AgentExecutor):
-    i18n: I18N = I18N()
+    _i18n: I18N = I18N()
     llm: Any = None
     iterations: int = 0
     task: Any = None
@@ -105,14 +105,12 @@ class CrewAgentExecutor(AgentExecutor):
         """
         try:
             intermediate_steps = self._prepare_intermediate_steps(intermediate_steps)
-
             # Call the LLM to see what to do.
             output = self.agent.plan(
                 intermediate_steps,
                 callbacks=run_manager.get_child() if run_manager else None,
                 **inputs,
             )
-
             if self._should_force_answer():
                 if isinstance(output, AgentAction) or isinstance(output, AgentFinish):
                     output = output
@@ -121,7 +119,7 @@ class CrewAgentExecutor(AgentExecutor):
                         f"Unexpected output type from agent: {type(output)}"
                     )
                 yield AgentStep(
-                    action=output, observation=self.i18n.errors("force_final_answer")
+                    action=output, observation=self._i18n.errors("force_final_answer")
                 )
                 return
 
@@ -140,14 +138,14 @@ class CrewAgentExecutor(AgentExecutor):
             text = str(e)
             if isinstance(self.handle_parsing_errors, bool):
                 if e.send_to_llm:
-                    observation = str(e.observation)
+                    observation = f"\n{str(e.observation)}"
                     text = str(e.llm_output)
                 else:
                     observation = "Invalid or incomplete response"
             elif isinstance(self.handle_parsing_errors, str):
-                observation = self.handle_parsing_errors
+                observation = f"\n{self.handle_parsing_errors}"
             elif callable(self.handle_parsing_errors):
-                observation = self.handle_parsing_errors(e)
+                observation = f"\n{self.handle_parsing_errors(e)}"
             else:
                 raise ValueError("Got unexpected type of `handle_parsing_errors`")
             output = AgentAction("_Exception", observation, text)
@@ -164,7 +162,7 @@ class CrewAgentExecutor(AgentExecutor):
 
             if self._should_force_answer():
                 yield AgentStep(
-                    action=output, observation=self.i18n.errors("force_final_answer")
+                    action=output, observation=self._i18n.errors("force_final_answer")
                 )
                 return
 
@@ -183,27 +181,26 @@ class CrewAgentExecutor(AgentExecutor):
             if run_manager:
                 run_manager.on_agent_action(agent_action, color="green")
             # Otherwise we lookup the tool
-            if agent_action.tool in name_to_tool_map:
-                tool = name_to_tool_map[agent_action.tool]
-                return_direct = tool.return_direct
-                color_mapping[agent_action.tool]
-                tool_run_kwargs = self.agent.tool_run_logging_kwargs()
-                if return_direct:
-                    tool_run_kwargs["llm_prefix"] = ""
-                observation = ToolUsage(
-                    tools_handler=self.tools_handler,
-                    tools=self.tools,
-                    tools_description=self.tools_description,
-                    tools_names=self.tools_names,
-                    function_calling_llm=self.function_calling_llm,
-                    llm=self.llm,
-                    task=self.task,
-                ).use(agent_action.log)
+            tool_usage = ToolUsage(
+                tools_handler=self.tools_handler,
+                tools=self.tools,
+                tools_description=self.tools_description,
+                tools_names=self.tools_names,
+                function_calling_llm=self.function_calling_llm,
+                llm=self.llm,
+                task=self.task,
+            )
+            tool_calling = tool_usage.parse(agent_action.log)
+
+            if tool_calling.tool_name.lower().strip() in [
+                name.lower().strip() for name in name_to_tool_map
+            ]:
+                observation = tool_usage.use(tool_calling, agent_action.log)
             else:
                 tool_run_kwargs = self.agent.tool_run_logging_kwargs()
                 observation = InvalidTool().run(
                     {
-                        "requested_tool_name": agent_action.tool,
+                        "requested_tool_name": tool_calling.tool_name,
                         "available_tool_names": list(name_to_tool_map.keys()),
                     },
                     verbose=self.verbose,

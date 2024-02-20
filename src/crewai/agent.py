@@ -1,12 +1,13 @@
 import os
 import uuid
-from typing import Any, List, Optional
+from typing import Any, List, Optional, Tuple
 
+from crewai_tools import BaseTool as CrewAITool
 from langchain.agents.agent import RunnableAgent
-from langchain.agents.format_scratchpad import format_log_to_str
-from langchain.agents.output_parsers import ReActSingleInputOutputParser
+from langchain.agents.tools import tool as LangChainTool
 from langchain.memory import ConversationSummaryMemory
 from langchain.tools.render import render_text_description
+from langchain_core.agents import AgentAction
 from langchain_openai import ChatOpenAI
 from pydantic import (
     UUID4,
@@ -20,7 +21,7 @@ from pydantic import (
 )
 from pydantic_core import PydanticCustomError
 
-from crewai.agents import CacheHandler, CrewAgentExecutor, ToolsHandler
+from crewai.agents import CacheHandler, CrewAgentExecutor, CrewAgentParser, ToolsHandler
 from crewai.utilities import I18N, Logger, Prompts, RPMController
 
 
@@ -73,7 +74,7 @@ class Agent(BaseModel):
     allow_delegation: bool = Field(
         default=True, description="Allow delegation of tasks to agents"
     )
-    tools: List[Any] = Field(
+    tools: Optional[List[Any]] = Field(
         default_factory=list, description="Tools at agents disposal"
     )
     max_iter: Optional[int] = Field(
@@ -151,7 +152,7 @@ class Agent(BaseModel):
                 task=task_prompt, context=context
             )
 
-        tools = tools or self.tools
+        tools = self._parse_tools(tools or self.tools)
         self.agent_executor.tools = tools
         self.agent_executor.task = task
         self.agent_executor.tools_description = render_text_description(tools)
@@ -200,12 +201,15 @@ class Agent(BaseModel):
             "input": lambda x: x["input"],
             "tools": lambda x: x["tools"],
             "tool_names": lambda x: x["tool_names"],
-            "agent_scratchpad": lambda x: format_log_to_str(x["intermediate_steps"]),
+            "agent_scratchpad": lambda x: self.format_log_to_str(
+                x["intermediate_steps"]
+            ),
         }
+
         executor_args = {
             "llm": self.llm,
             "i18n": self.i18n,
-            "tools": self.tools,
+            "tools": self._parse_tools(self.tools),
             "verbose": self.verbose,
             "handle_parsing_errors": True,
             "max_iterations": self.max_iter,
@@ -225,9 +229,11 @@ class Agent(BaseModel):
             )
             executor_args["memory"] = summary_memory
             agent_args["chat_history"] = lambda x: x["chat_history"]
-            prompt = Prompts(i18n=self.i18n).task_execution_with_memory()
+            prompt = Prompts(
+                i18n=self.i18n, tools=self.tools
+            ).task_execution_with_memory()
         else:
-            prompt = Prompts(i18n=self.i18n).task_execution()
+            prompt = Prompts(i18n=self.i18n, tools=self.tools).task_execution()
 
         execution_prompt = prompt.partial(
             goal=self.goal,
@@ -236,12 +242,33 @@ class Agent(BaseModel):
         )
 
         bind = self.llm.bind(stop=[self.i18n.slice("observation")])
-        inner_agent = (
-            agent_args | execution_prompt | bind | ReActSingleInputOutputParser()
-        )
+        inner_agent = agent_args | execution_prompt | bind | CrewAgentParser()
         self.agent_executor = CrewAgentExecutor(
             agent=RunnableAgent(runnable=inner_agent), **executor_args
         )
+
+    def _parse_tools(self, tools: List[Any]) -> List[LangChainTool]:
+        """Parse tools to be used for the task."""
+        tools_list = []
+        for tool in tools:
+            if isinstance(tool, CrewAITool):
+                tools_list.append(tool.to_langchain())
+            else:
+                tools_list.append(tool)
+        return tools_list
+
+    def format_log_to_str(
+        self,
+        intermediate_steps: List[Tuple[AgentAction, str]],
+        observation_prefix: str = "Result: ",
+        llm_prefix: str = "Thought: ",
+    ) -> str:
+        """Construct the scratchpad that lets the agent continue its thought process."""
+        thoughts = ""
+        for action, observation in intermediate_steps:
+            thoughts += action.log
+            thoughts += f"\n{observation_prefix}{observation}\n{llm_prefix}"
+        return thoughts
 
     @staticmethod
     def __tools_names(tools) -> str:
