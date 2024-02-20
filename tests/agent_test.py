@@ -267,7 +267,7 @@ def test_agent_repeated_tool_usage(capsys):
     captured = capsys.readouterr()
 
     assert (
-        "I just used the get_final_answer tool with input 42. So I already know that and must stop using it in a row with the same input. \nI could give my final answer if I'm ready, using exaclty the expected format bellow: \n\nThought: Do I need to use a tool? No\nFinal Answer: [your response here]\n"
+        "I have already used the get_final_answer tool with input 42. So I already know that and must stop using it in a row with the same input. \nI could give my final answer if I'm ready, using exaclty the expected format bellow: \n\nThought: Do I need to use a tool? No\nFinal Answer: [your response here]\n"
         in captured.out
     )
 

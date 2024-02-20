@@ -923,7 +923,7 @@ interactions:
       I''m ready, using exaclty the expected format bellow: \n\nThought: Do I need
       to use a tool? No\nFinal Answer: [your response here]\n\nThought: Do I need
       to use a tool? Yes\nAction: get_final_answer\nAction Input: 42\nObservation:
-      I just used the get_final_answer tool with input 42. So I already know that
+      I have already used the get_final_answer tool with input 42. So I already know that
       and must stop using it in a row with the same input. \nI could give my final
       answer if I''m ready, using exaclty the expected format bellow: \n\nThought:
       Do I need to use a tool? No\nFinal Answer: [your response here]\n\n\nTOOLS:\n------\nYou
@@ -1126,7 +1126,7 @@ interactions:
       I''m ready, using exaclty the expected format bellow: \n\nThought: Do I need
       to use a tool? No\nFinal Answer: [your response here]\n\nThought: Do I need
       to use a tool? Yes\nAction: get_final_answer\nAction Input: 42\nObservation:
-      I just used the get_final_answer tool with input 42. So I already know that
+      I have already used the get_final_answer tool with input 42. So I already know that
       and must stop using it in a row with the same input. \nI could give my final
       answer if I''m ready, using exaclty the expected format bellow: \n\nThought:
       Do I need to use a tool? No\nFinal Answer: [your response here]\n\n\nTOOLS:\n------\nYou
