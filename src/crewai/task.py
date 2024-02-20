@@ -1,13 +1,13 @@
 import threading
 import uuid
-from typing import Any, List, Optional
+from typing import Any, List, Optional, Type
 
 from pydantic import UUID4, BaseModel, Field, field_validator, model_validator
 from pydantic_core import PydanticCustomError
 
 from crewai.agent import Agent
 from crewai.tasks.task_output import TaskOutput
-from crewai.utilities import I18N
+from crewai.utilities import I18N, Instructor
 
 
 class Task(BaseModel):
@@ -39,10 +39,22 @@ class Task(BaseModel):
         description="Whether the task should be executed asynchronously or not.",
         default=False,
     )
+    output_json: Optional[Type[BaseModel]] = Field(
+        description="A Pydantic model to be used to create a JSON output.",
+        default=None,
+    )
+    output_pydantic: Optional[Type[BaseModel]] = Field(
+        description="A Pydantic model to be used to create a Pydantic output.",
+        default=None,
+    )
+    output_file: Optional[str] = Field(
+        description="A file path to be used to create a file output.",
+        default=None,
+    )
     output: Optional[TaskOutput] = Field(
         description="Task output, it's final result after being executed", default=None
     )
-    tools: List[Any] = Field(
+    tools: Optional[List[Any]] = Field(
         default_factory=list,
         description="Tools the agent is limited to use for this task.",
     )
@@ -65,6 +77,18 @@ class Task(BaseModel):
         """Check if the tools are set."""
         if not self.tools and self.agent and self.agent.tools:
             self.tools.extend(self.agent.tools)
+        return self
+
+    @model_validator(mode="after")
+    def check_output(self):
+        """Check if an output type is set."""
+        output_types = [self.output_json, self.output_pydantic]
+        if len([type for type in output_types if type]) > 1:
+            raise PydanticCustomError(
+                "output_type",
+                "Only one output type can be set, either output_pydantic or output_json.",
+                {},
+            )
         return self
 
     def execute(
@@ -115,9 +139,19 @@ class Task(BaseModel):
             context=context,
             tools=tools,
         )
-        self.output = TaskOutput(description=self.description, result=result)
-        self.callback(self.output) if self.callback else None
-        return result
+
+        exported_output = self._export_output(result)
+
+        self.output = TaskOutput(
+            description=self.description,
+            exported_output=exported_output,
+            raw_output=result,
+        )
+
+        if self.callback:
+            self.callback(self.output)
+
+        return exported_output
 
     def prompt(self) -> str:
         """Prompt the task.
@@ -133,3 +167,28 @@ class Task(BaseModel):
             )
             tasks_slices = [self.description, output]
         return "\n".join(tasks_slices)
+
+    def _export_output(self, result: str) -> Any:
+        if self.output_pydantic or self.output_json:
+            model = self.output_pydantic or self.output_json
+            instructor = Instructor(
+                agent=self.agent,
+                content=result,
+                model=model,
+            )
+
+            if self.output_pydantic:
+                result = instructor.to_pydantic()
+            elif self.output_json:
+                result = instructor.to_json()
+
+        if self.output_file:
+            content = result if not self.output_pydantic else result.json()
+            self._save_file(content)
+
+        return result
+
+    def _save_file(self, result: Any) -> None:
+        with open(self.output_file, "w") as file:
+            file.write(result)
+        return None
