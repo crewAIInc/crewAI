@@ -8,7 +8,7 @@ from crewai.utilities import I18N
 
 TOOL_USAGE_SECTION = "Use Tool:"
 FINAL_ANSWER_ACTION = "Final Answer:"
-FINAL_ANSWER_AND_TOOL_ERROR_MESSAGE = "You are trying to use a tool and give a final answer at the same time, choose only one."
+FINAL_ANSWER_AND_TOOL_ERROR_MESSAGE = "I tried to use a tool and give a final answer at the same time, I must choose only one."
 
 
 class CrewAgentParser(ReActSingleInputOutputParser):
@@ -50,9 +50,8 @@ class CrewAgentParser(ReActSingleInputOutputParser):
                 {"output": text.split(FINAL_ANSWER_ACTION)[-1].strip()}, text
             )
 
-        error = self._i18n.errors("unexpected_format")
         format = self._i18n.slice("format_without_tools")
-        error = f"{error}\n{format}"
+        error = f"{format}"
         raise OutputParserException(
             error,
             observation=error,

@@ -42,11 +42,16 @@ class AgentTools(BaseModel):
 
     def _execute(self, agent, task, context):
         """Execute the command."""
-        agent = [
-            available_agent
-            for available_agent in self.agents
-            if available_agent.role.strip().lower() == agent.strip().lower()
-        ]
+        try:
+            agent = [
+                available_agent
+                for available_agent in self.agents
+                if available_agent.role.strip().lower() == agent.strip().lower()
+            ]
+        except:
+            return self.i18n.errors("agent_tool_unexsiting_coworker").format(
+                coworkers="\n".join([f"- {agent.role}" for agent in self.agents])
+            )
 
         if not agent:
             return self.i18n.errors("agent_tool_unexsiting_coworker").format(

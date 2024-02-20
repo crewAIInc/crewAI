@@ -261,7 +261,7 @@ class Agent(BaseModel):
         self,
         intermediate_steps: List[Tuple[AgentAction, str]],
         observation_prefix: str = "Result: ",
-        llm_prefix: str = "Thought: ",
+        llm_prefix: str = "",
     ) -> str:
         """Construct the scratchpad that lets the agent continue its thought process."""
         thoughts = ""
