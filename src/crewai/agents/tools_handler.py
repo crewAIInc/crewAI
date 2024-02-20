@@ -18,7 +18,6 @@ class ToolsHandler:
 
     def on_tool_use(self, calling: ToolCalling, output: str) -> Any:
         """Run when tool ends running."""
-        print(f"Tool {calling.tool_name} has been used.")
         self.last_used_tool = calling
         if calling.tool_name != CacheTools().name:
             self.cache.add(
