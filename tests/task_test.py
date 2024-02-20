@@ -341,4 +341,4 @@ def test_save_task_pydantic_output():
     with patch.object(Task, "_save_file") as save_file:
         save_file.return_value = None
         crew.kickoff()
-        save_file.assert_called_once_with('{\n  "score": 4\n}')
+        save_file.assert_called_once_with('{"score":4}')

@@ -152,7 +152,7 @@ def test_hierarchical_process():
 
     assert (
         crew.kickoff()
-        == """Here are the five interesting ideas for articles with their respective highlights:\n\n1. The Role of AI in Climate Change: As the world grapples with the existential threat of climate change, artificial intelligence (AI) has emerged as a powerful ally in our battle against it. The article will explore how AI is being used to predict weather patterns, optimize renewable energy sources, and even capture and reduce greenhouse emissions. This novel intersection of technology and environment could hold the key to a sustainable future, making this a must-read for anyone interested in the potential of AI to transform our world.\n\n2. AI and Mental Health: With the increasing prevalence of mental health issues worldwide, innovative solutions are needed more than ever. This article will delve into the cutting-edge domain of AI and mental health, exploring how machine learning algorithms are helping to diagnose conditions, personalize treatments, and even predict the onset of mental disorders. This exploration of AI's potential in mental health not only sheds light on the future of healthcare but also opens a dialogue on the ethical considerations involved.\n\n3. The Ethical Implications of AI: As AI continues to permeate our lives, it brings with it a host of ethical considerations. This article will unravel the complex ethical terrain of AI, from issues of privacy and consent to its potential for bias and discrimination. By diving into the philosophical underpinnings of AI and its societal implications, this article will provoke thought and stimulate discussion on how we can ensure a fair and equitable AI-enabled future.\n\n4. How AI is Revolutionizing E-commerce: In the fiercely competitive world of e-commerce, AI is proving to be a game-changer. This article will take you on a journey through the world of AI-enhanced e-commerce, showcasing how machine learning algorithms are optimizing logistics, personalizing shopping experiences, and even predicting consumer behavior. This deep dive into AI's transformative impact on e-commerce is a must-read for anyone interested in the future of business and technology.\n\n5. AI in Space Exploration: The final frontier of space exploration is being redefined by the advent of AI. This article will take you on an interstellar journey through the role of AI in space exploration, from autonomous spacecraft navigation to the search for extraterrestrial life. By peering into the cosmos through the lens of AI, this article offers a glimpse into the future of space exploration and the infinite possibilities that AI holds."""
+        == """Here are the 5 unique and interesting ideas for articles along with a highlight paragraph for each:\n\n1) The Future of AI and Machine Learning: A deeper look into the future of AI and machine learning, revealing the potential of both and their implications on society. The article will provide an informed vision of the future, addressing the possibilities that AI and machine learning could bring to our daily lives, from healthcare to education, and the challenges we might face.\n\n2) Startups Revolutionizing Traditional Industries with Tech: This article will narrate the journey of game-changing startups that are transforming traditional industries with innovative technology. It will delve into their stories, exploring how they leverage technology to disrupt the status quo, the hurdles they've overcome, and the impact they're making.\n\n3) Personal Development in the Age of Technology: In this article, we will explore how technology has changed the landscape of personal development. We will cover how digital tools and platforms are empowering individuals to learn, grow, and achieve their goals faster than ever before.\n\n4) Ethical Issues in Software Engineering: This article will investigate the ethical dilemmas that are arising in the realm of software engineering. It will discuss the moral implications of new technologies, the responsibilities of software engineers, and the need for a robust code of ethics in this rapidly evolving field.\n\n5) Entrepreneurship in the Digital Era: In this piece, we will delve into the role of digital technology in shaping the entrepreneurial landscape. We will discuss how the digital era has given rise to new entrepreneurial opportunities, the challenges that come with it, and the skills required to thrive in this new era."""
     )
 
 
@@ -187,7 +187,7 @@ def test_crew_with_delegating_agents():
 
     assert (
         crew.kickoff()
-        == "The Senior Writer has produced a fantastic 4 paragraph article on AI:\n\n\"Artificial Intelligence, or AI, is often considered the stuff of science fiction, but it is very much a reality in today's world. In simplest terms, AI is a branch of computer science that aims to create machines that mimic human intelligence - think self-driving cars, voice assistants like Siri or Alexa, even your Netflix recommendations. These are all examples of AI in action, silently making our lives easier and more efficient.\n\nThe applications of AI are as vast as our imagination. In healthcare, AI is used to predict diseases and personalize patient care. In finance, algorithms can analyze market trends and make investment decisions. The education sector uses AI to customize learning and identify areas where students need help. Even in creative fields like music and art, AI is making its mark by creating new pieces that are hard to distinguish from those made by humans.\n\nAI's potential for the future is staggering. As technology advances, so too does the complexity and capabilities of AI. It's predicted that AI will play a significant role in tackling some of humanity's biggest challenges, such as climate change and global health crises. Imagine AI systems predicting natural disasters with enough time for us to take preventative measures, or developing new, effective treatments for diseases through data analysis.\n\nHowever, this brave new world does not come without its challenges. Ethical issues are at the forefront, with concerns over privacy and the potential misuse of AI. There's also the question of job displacement due to automation, and the need for laws and regulations to keep pace with this rapidly advancing technology. Despite these hurdles, the promise of AI and its ability to transform our world is an exciting prospect, one that we are only just beginning to explore.\""
+        == "In today's technological landscape, Artificial Intelligence (AI) agents have emerged as key players in shaping the future of various industries. These agents, which are essentially computer programs that can learn, adapt, and operate autonomously, are a testament to the rapidly evolving capabilities of AI. They are the harbingers of a new era, where machines can mimic human intelligence, and in some cases, even surpass it.\n\nAI agents are transforming the way we engage with technology, enabling a more personalized and efficient user experience. They are extensively used in areas like customer service, where chatbots can handle customer inquiries without human intervention. They have revolutionized sectors like healthcare, where AI agents can analyze patient data to predict health trends and provide personalized treatment recommendations. \n\nHowever, as AI agents continue to evolve, they also pose significant ethical and regulatory challenges. There are concerns about privacy, bias, and the potential misuse of these technologies. As a society, it's crucial to establish norms and regulations that ensure the responsible use of AI agents, balancing their benefits with potential risks.\n\nIn conclusion, AI agents are a transformative technology that is reshaping our world. The challenges they present are complex, but the opportunities they offer are immense. As we continue to explore and understand this technology, we can harness its potential to create a more efficient, personalized, and intelligent future."
     )
 
 
@@ -416,10 +416,10 @@ def test_async_task_execution():
             start.return_value = thread
             with patch.object(threading.Thread, "join", wraps=thread.join()) as join:
                 list_ideas.output = TaskOutput(
-                    description="A 4 paragraph article about AI.", result="ok"
+                    description="A 4 paragraph article about AI.", raw_output="ok"
                 )
                 list_important_history.output = TaskOutput(
-                    description="A 4 paragraph article about AI.", result="ok"
+                    description="A 4 paragraph article about AI.", raw_output="ok"
                 )
                 crew.kickoff()
                 start.assert_called()
@@ -522,8 +522,34 @@ def test_crew_function_calling_llm():
             agent=agent1,
         )
         tasks = [essay]
-        print(agent1.function_calling_llm)
         crew = Crew(agents=[agent1], tasks=tasks, function_calling_llm=llm)
-        print(agent1.function_calling_llm)
         crew.kickoff()
         private_mock.assert_called()
+
+
+@pytest.mark.vcr(filter_headers=["authorization"])
+def test_task_with_no_arguments():
+    from langchain.tools import tool
+
+    @tool
+    def return_data() -> str:
+        "Useful to get the sales related data"
+        return "January: 5, February: 10, March: 15, April: 20, May: 25"
+
+    researcher = Agent(
+        role="Researcher",
+        goal="Make the best research and analysis on content about AI and AI agents",
+        backstory="You're an expert researcher, specialized in technology, software engineering, AI and startups. You work as a freelancer and is now working on doing research and analysis for a new customer.",
+        tools=[return_data],
+        allow_delegation=False,
+    )
+
+    task = Task(
+        description="Look at the available data nd give me a sense on the total number of sales.",
+        agent=researcher,
+    )
+
+    crew = Crew(agents=[researcher], tasks=[task])
+
+    result = crew.kickoff()
+    assert result == "The total number of sales from January to May is 75."

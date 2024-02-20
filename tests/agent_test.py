@@ -104,7 +104,7 @@ def test_agent_execution_with_tools():
 
     task = Task(description="What is 3 times 4?", agent=agent)
     output = agent.execute_task(task)
-    assert output == "3 times 4 equals 12."
+    assert output == "The result of 3 times 4 is 12."
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
@@ -131,7 +131,7 @@ def test_logging_tool_usage():
     tool_usage = InstructorToolCalling(
         tool_name=multiplier.name, arguments={"first_number": 3, "second_number": 4}
     )
-    assert output == "3 times 4 equals 12."
+    assert output == "The result of multiplying 3 by 4 is 12."
     assert agent.tools_handler.last_used_tool.tool_name == tool_usage.tool_name
     assert agent.tools_handler.last_used_tool.arguments == tool_usage.arguments
 
@@ -184,7 +184,7 @@ def test_cache_hitting():
             agent=agent,
         )
         output = agent.execute_task(task)
-        assert output == "0"
+        assert output == "The result of the multiplication of 2 and 6 is 0."
         read.assert_called_with(
             tool="multiplier", input={"first_number": 2, "second_number": 6}
         )
@@ -206,7 +206,7 @@ def test_agent_execution_with_specific_tools():
 
     task = Task(description="What is 3 times 4", agent=agent)
     output = agent.execute_task(task=task, tools=[multiplier])
-    assert output == "3 times 4 is 12."
+    assert output == "12"
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
@@ -252,10 +252,11 @@ def test_agent_repeated_tool_usage(capsys):
         backstory="test backstory",
         max_iter=4,
         allow_delegation=False,
+        verbose=True,
     )
 
     task = Task(
-        description="The final answer is 42. But don't give it yet, instead keep using the `get_final_answer` tool."
+        description="The final answer is 42. But don't give it until I tell you so, instead keep using the `get_final_answer` tool."
     )
     # force cleaning cache
     agent.tools_handler.cache = CacheHandler()
@@ -267,7 +268,7 @@ def test_agent_repeated_tool_usage(capsys):
     captured = capsys.readouterr()
 
     assert (
-        "I have already used the get_final_answer tool with input 42. So I already know that and must stop using it in a row with the same input. \nI could give my final answer if I'm ready, using exaclty the expected format bellow: \n\nThought: Do I need to use a tool? No\nFinal Answer: [your response here]\n"
+        "I have been instructed to give the final answer now, so I will proceed to do so using the exact expected format."
         in captured.out
     )
 
@@ -301,7 +302,7 @@ def test_agent_moved_on_after_max_iterations():
 @pytest.mark.vcr(filter_headers=["authorization"])
 def test_agent_respect_the_max_rpm_set(capsys):
     @tool
-    def get_final_answer(numbers) -> float:
+    def get_final_answer(anything: str) -> float:
         """Get the final answer but don't give it yet, just re-use this
         tool non-stop."""
         return 42
@@ -319,7 +320,7 @@ def test_agent_respect_the_max_rpm_set(capsys):
     with patch.object(RPMController, "_wait_for_next_minute") as moveon:
         moveon.return_value = True
         task = Task(
-            description="The final answer is 42. But don't give it yet, instead keep using the `get_final_answer` tool, unless you're told otherwise"
+            description="Use tool logic for `get_final_answer` but fon't give you final answer yet, instead keep using it unless you're told to give your final answer"
         )
         output = agent.execute_task(
             task=task,
@@ -327,7 +328,7 @@ def test_agent_respect_the_max_rpm_set(capsys):
         )
         assert (
             output
-            == "I have used the tool 'get_final_answer' with the input '42' multiple times and have observed the same result. Therefore, I am confident to conclude that the final answer is '42'."
+            == 'The result of using the `get_final_answer` tool with the input "test input" is 42.'
         )
         captured = capsys.readouterr()
         assert "Max RPM reached, waiting for next minute to start." in captured.out
@@ -429,7 +430,7 @@ def test_agent_error_on_parsing_tool(capsys):
     from langchain.tools import tool
 
     @tool
-    def get_final_answer(numbers) -> float:
+    def get_final_answer(anything: str) -> float:
         """Get the final answer but don't give it yet, just re-use this
         tool non-stop."""
         return 42
@@ -454,10 +455,7 @@ def test_agent_error_on_parsing_tool(capsys):
         force_exception.side_effect = Exception("Error on parsing tool.")
         crew.kickoff()
         captured = capsys.readouterr()
-        assert (
-            "It seems we encountered an unexpected error while trying to use the tool"
-            in captured.out
-        )
+        assert "Error on parsing tool." in captured.out
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
@@ -467,7 +465,7 @@ def test_agent_remembers_output_format_after_using_tools_too_many_times():
     from langchain.tools import tool
 
     @tool
-    def get_final_answer(numbers) -> float:
+    def get_final_answer(anything: str) -> float:
         """Get the final answer but don't give it yet, just re-use this
         tool non-stop."""
         return 42
@@ -476,12 +474,12 @@ def test_agent_remembers_output_format_after_using_tools_too_many_times():
         role="test role",
         goal="test goal",
         backstory="test backstory",
-        max_iter=4,
+        max_iter=6,
         verbose=True,
     )
     tasks = [
         Task(
-            description="Never give the final answer. Use the get_final_answer tool in a loop.",
+            description="Use tool logic for `get_final_answer` but fon't give you final answer yet, instead keep using it unless you're told to give your final answer",
             agent=agent1,
             tools=[get_final_answer],
         )
