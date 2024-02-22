@@ -299,9 +299,10 @@ def test_api_calls_throttling(capsys):
     from unittest.mock import patch
 
     from langchain.tools import tool
+    from langchain_openai import ChatOpenAI
 
     @tool
-    def get_final_answer(numbers) -> float:
+    def get_final_answer(anything) -> float:
         """Get the final answer but don't give it yet, just re-use this
         tool non-stop."""
         return 42
@@ -313,6 +314,7 @@ def test_api_calls_throttling(capsys):
         max_iter=5,
         allow_delegation=False,
         verbose=True,
+        llm=ChatOpenAI(model="gpt-4-0125-preview"),
     )
 
     task = Task(
@@ -501,7 +503,7 @@ def test_crew_function_calling_llm():
     from langchain.tools import tool
     from langchain_openai import ChatOpenAI
 
-    llm = ChatOpenAI(model="gpt-3.5")
+    llm = ChatOpenAI(model="gpt-3.5-turbo-0125")
 
     with patch.object(llm.client, "create", wraps=llm.client.create) as private_mock:
 
@@ -514,6 +516,7 @@ def test_crew_function_calling_llm():
             role="test role",
             goal="test goal",
             backstory="test backstory",
+            llm=ChatOpenAI(model="gpt-4-0125-preview"),
             tools=[learn_about_AI],
         )
 

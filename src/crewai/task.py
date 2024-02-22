@@ -2,12 +2,14 @@ import threading
 import uuid
 from typing import Any, List, Optional, Type
 
+from langchain_openai import ChatOpenAI
 from pydantic import UUID4, BaseModel, Field, field_validator, model_validator
 from pydantic_core import PydanticCustomError
 
 from crewai.agent import Agent
 from crewai.tasks.task_output import TaskOutput
-from crewai.utilities import I18N, Instructor
+from crewai.utilities import I18N, Converter, ConverterError, Printer
+from crewai.utilities.pydantic_schema_parser import PydanticSchemaParser
 
 
 class Task(BaseModel):
@@ -169,24 +171,43 @@ class Task(BaseModel):
         return "\n".join(tasks_slices)
 
     def _export_output(self, result: str) -> Any:
+        exported_result = result
+        instructions = "I'm gonna convert this raw text into valid JSON."
+
         if self.output_pydantic or self.output_json:
             model = self.output_pydantic or self.output_json
-            instructor = Instructor(
-                agent=self.agent,
-                content=result,
-                model=model,
+            llm = self.agent.function_calling_llm or self.agent.llm
+
+            if not self._is_gpt(llm):
+                model_schema = PydanticSchemaParser(model=model).get_schema()
+                instructions = f"{instructions}\n\nThe json should have the following structure, with the following keys:\n{model_schema}"
+
+            converter = Converter(
+                llm=llm, text=result, model=model, instructions=instructions
             )
 
             if self.output_pydantic:
-                result = instructor.to_pydantic()
+                exported_result = converter.to_pydantic()
             elif self.output_json:
-                result = instructor.to_json()
+                exported_result = converter.to_json()
+
+            if isinstance(exported_result, ConverterError):
+                Printer().print(
+                    content=f"{exported_result.message} Using raw output instead.",
+                    color="red",
+                )
+                exported_result = result
 
         if self.output_file:
-            content = result if not self.output_pydantic else result.json()
+            content = (
+                exported_result if not self.output_pydantic else exported_result.json()
+            )
             self._save_file(content)
 
-        return result
+        return exported_result
+
+    def _is_gpt(self, llm) -> bool:
+        return isinstance(llm, ChatOpenAI) and llm.openai_api_base == None
 
     def _save_file(self, result: Any) -> None:
         with open(self.output_file, "w") as file:
