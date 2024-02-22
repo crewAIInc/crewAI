@@ -5,9 +5,6 @@ from langchain.schema import HumanMessage, SystemMessage
 from langchain_openai import ChatOpenAI
 from pydantic import BaseModel, Field, PrivateAttr, model_validator
 
-from crewai.utilities import Instructor
-from crewai.utilities.crew_pydantic_output_parser import CrewPydanticOutputParser
-
 
 class ConverterError(Exception):
     """Error raised when Converter fails to parse the input."""
@@ -63,6 +60,8 @@ class Converter(BaseModel):
 
     def _create_instructor(self):
         """Create an instructor."""
+        from crewai.utilities import Instructor
+
         inst = Instructor(
             llm=self.llm,
             max_attemps=self.max_attemps,
@@ -74,6 +73,10 @@ class Converter(BaseModel):
 
     def _create_chain(self):
         """Create a chain."""
+        from crewai.utilities.crew_pydantic_output_parser import (
+            CrewPydanticOutputParser,
+        )
+
         parser = CrewPydanticOutputParser(pydantic_object=self.model)
         new_prompt = HumanMessage(content=self.text) + SystemMessage(
             content=self.instructions
