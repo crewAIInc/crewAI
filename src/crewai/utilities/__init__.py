@@ -1,3 +1,4 @@
+from .converter import Converter, ConverterError
 from .i18n import I18N
 from .instructor import Instructor
 from .logger import Logger

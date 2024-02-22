@@ -1,15 +1,13 @@
 from textwrap import dedent
 from typing import Any, List, Union
 
-from langchain.prompts import PromptTemplate
 from langchain_core.tools import BaseTool
 from langchain_openai import ChatOpenAI
 
 from crewai.agents.tools_handler import ToolsHandler
 from crewai.telemtry import Telemetry
 from crewai.tools.tool_calling import InstructorToolCalling, ToolCalling
-from crewai.tools.tool_output_parser import ToolOutputParser
-from crewai.utilities import I18N, Instructor, Printer
+from crewai.utilities import I18N, Converter, ConverterError, Printer
 
 OPENAI_BIGGER_MODELS = ["gpt-4"]
 
@@ -189,52 +187,33 @@ class ToolUsage:
             )
         return "\n--\n".join(descriptions)
 
+    def _is_gpt(self, llm) -> bool:
+        return isinstance(llm, ChatOpenAI) and llm.openai_api_base == None
+
     def _tool_calling(
         self, tool_string: str
     ) -> Union[ToolCalling, InstructorToolCalling]:
         try:
-            if (isinstance(self.llm, ChatOpenAI)) and (
-                self.llm.openai_api_base == None
-            ):
-                instructor = Instructor(
-                    llm=self.llm,
-                    model=InstructorToolCalling,
-                    content=f"Tools available:\n###\n{self._render()}\n\nReturn a valid schema for the tool, the tool name must be equal one of the options, use this text to inform a valid ouput schema:\n{tool_string}```",
-                    instructions=dedent(
-                        """\
+            model = InstructorToolCalling if self._is_gpt(self.llm) else ToolCalling
+            converter = Converter(
+                text=f"Only tools available:\n###\n{self._render()}\n\nReturn a valid schema for the tool, the tool name must be exactly equal one of the options, use this text to inform the valid ouput schema:\n\n{tool_string}```",
+                llm=self.llm,
+                model=model,
+                instructions=dedent(
+                    """\
                                     The schema should have the following structure, only two keys:
                                     - tool_name: str
                                     - arguments: dict (with all arguments being passed)
 
                                     Example:
-                                    {"tool_name": "tool name", "arguments": {"arg_name1": "value", "arg_name2": 2}}
-                                """
-                    ),
-                )
-                calling = instructor.to_pydantic()
+                                    {"tool_name": "tool name", "arguments": {"arg_name1": "value", "arg_name2": 2}}""",
+                ),
+                max_attemps=1,
+            )
+            calling = converter.to_pydantic()
 
-            else:
-                parser = ToolOutputParser(pydantic_object=ToolCalling)
-                prompt = PromptTemplate(
-                    template="Tools available:\n\n{available_tools}\n\nReturn a valid schema for the tool, the tool name must be equal one of the options, use this text to inform a valid ouput schema:\n{tool_string}\n\n{format_instructions}\n```",
-                    input_variables=["tool_string"],
-                    partial_variables={
-                        "available_tools": self._render(),
-                        "format_instructions": dedent(
-                            """\
-                        The schema should have the following structure, only two keys:
-                        - tool_name: str
-                        - arguments: dict (with all arguments being passed)
-
-                        Example:
-                        {"tool_name": "tool_name", "arguments": {"arg_name1": "value", "arg_name2": 2}}
-                        """
-                        ),
-                    },
-                )
-                chain = prompt | self.llm | parser
-                calling = chain.invoke({"tool_string": tool_string})
-
+            if isinstance(calling, ConverterError):
+                raise calling
         except Exception as e:
             self._run_attempts += 1
             if self._run_attempts > self._max_parsing_attempts:

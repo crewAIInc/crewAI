@@ -204,6 +204,8 @@ def test_output_json():
 
 @pytest.mark.vcr(filter_headers=["authorization"])
 def test_output_pydantic_to_another_task():
+    from langchain_openai import ChatOpenAI
+
     class ScoreOutput(BaseModel):
         score: int
 
@@ -212,6 +214,9 @@ def test_output_pydantic_to_another_task():
         goal="Score the title",
         backstory="You're an expert scorer, specialized in scoring titles.",
         allow_delegation=False,
+        llm=ChatOpenAI(model="gpt-4-0125-preview"),
+        function_calling_llm=ChatOpenAI(model="gpt-3.5-turbo-0125"),
+        verbose=True,
     )
 
     task1 = Task(
@@ -222,15 +227,15 @@ def test_output_pydantic_to_another_task():
     )
 
     task2 = Task(
-        description="Given the score the title 'The impact of AI in the future of work' got, give me an integer score between 1-5 for the following title: 'Return of the Jedi'",
+        description="Given the score the title 'The impact of AI in the future of work' got, give me an integer score between 1-5 for the following title: 'Return of the Jedi', you MUST give it a score, use your best judgment",
         expected_output="The score of the title.",
         output_pydantic=ScoreOutput,
         agent=scorer,
     )
 
-    crew = Crew(agents=[scorer], tasks=[task1, task2])
+    crew = Crew(agents=[scorer], tasks=[task1, task2], verbose=2)
     result = crew.kickoff()
-    assert 4 == result.score
+    assert 5 == result.score
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])

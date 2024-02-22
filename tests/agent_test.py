@@ -241,7 +241,7 @@ def test_agent_custom_max_iterations():
 @pytest.mark.vcr(filter_headers=["authorization"])
 def test_agent_repeated_tool_usage(capsys):
     @tool
-    def get_final_answer(numbers) -> float:
+    def get_final_answer(anything: str) -> float:
         """Get the final answer but don't give it yet, just re-use this
         tool non-stop."""
         return 42
@@ -251,6 +251,7 @@ def test_agent_repeated_tool_usage(capsys):
         goal="test goal",
         backstory="test backstory",
         max_iter=4,
+        llm=ChatOpenAI(model="gpt-4-0125-preview"),
         allow_delegation=False,
         verbose=True,
     )
@@ -267,10 +268,7 @@ def test_agent_repeated_tool_usage(capsys):
 
     captured = capsys.readouterr()
 
-    assert (
-        "I have been instructed to give the final answer now, so I will proceed to do so using the exact expected format."
-        in captured.out
-    )
+    assert "Final Answer: 42" in captured.out
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
@@ -551,7 +549,7 @@ def test_agent_step_callback():
 def test_agent_function_calling_llm():
     from langchain_openai import ChatOpenAI
 
-    llm = ChatOpenAI(model="gpt-3.5")
+    llm = ChatOpenAI(model="gpt-3.5-turbo-0125")
 
     with patch.object(llm.client, "create", wraps=llm.client.create) as private_mock:
 
@@ -565,6 +563,7 @@ def test_agent_function_calling_llm():
             goal="test goal",
             backstory="test backstory",
             tools=[learn_about_AI],
+            llm=ChatOpenAI(model="gpt-4-0125-preview"),
             function_calling_llm=llm,
         )
 

@@ -47,5 +47,4 @@ class Instructor(BaseModel):
         model = self._client.chat.completions.create(
             model=self.llm.model_name, response_model=self.model, messages=messages
         )
-
         return model
