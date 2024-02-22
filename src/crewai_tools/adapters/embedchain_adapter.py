@@ -1,14 +1,12 @@
-from embedchain import App
-
+from typing import Any
 from crewai_tools.tools.rag.rag_tool import Adapter
 
-
 class EmbedchainAdapter(Adapter):
-    embedchain_app: App
-    dry_run: bool = False
+    embedchain_app: Any
+    summarize: bool = False
 
     def query(self, question: str) -> str:
-        result = self.embedchain_app.query(question, dry_run=self.dry_run)
-        if result is list:
-            return "\n".join(result)
-        return str(result)
+        result, sources = self.embedchain_app.query(question, citations=True, dry_run=(not self.summarize))
+        if self.summarize:
+            return result
+        return "\n\n".join([source[0] for source in sources])

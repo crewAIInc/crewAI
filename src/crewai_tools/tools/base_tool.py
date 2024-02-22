@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from typing import Any, Callable, cast
+from typing import Any, Callable, cast, Optional, Type
 
 from langchain.agents import tools as langchain_tools
 from pydantic import BaseModel
@@ -10,12 +10,15 @@ class BaseTool(BaseModel, ABC):
     """The unique name of the tool that clearly communicates its purpose."""
     description: str
     """Used to tell the model how/when/why to use the tool."""
+    args_schema: Optional[Type[BaseModel]] = None
+    """The schema for the arguments that the tool accepts."""
 
     def run(
         self,
         *args: Any,
         **kwargs: Any,
     ) -> Any:
+        print(f"Using Tool: {self.name}")
         return self._run(*args, **kwargs)
 
     @abstractmethod
@@ -30,6 +33,7 @@ class BaseTool(BaseModel, ABC):
         return langchain_tools.Tool(
             name=self.name,
             description=self.description,
+            args_schema=self.args_schema,
             func=self._run,
         )
 
