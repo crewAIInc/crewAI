@@ -46,7 +46,7 @@ class Telemetry:
             )
             self.provider = TracerProvider(resource=self.resource)
             processor = BatchSpanProcessor(
-                OTLPSpanExporter(endpoint=f"{telemetry_endpoint}/v1/traces", timeout=60)
+                OTLPSpanExporter(endpoint=f"{telemetry_endpoint}/v1/traces", timeout=30)
             )
             self.provider.add_span_processor(processor)
             self.ready = True
