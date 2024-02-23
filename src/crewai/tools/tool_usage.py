@@ -5,7 +5,6 @@ from langchain_core.tools import BaseTool
 from langchain_openai import ChatOpenAI
 
 from crewai.agents.tools_handler import ToolsHandler
-from crewai.telemtry import Telemetry
 from crewai.tools.tool_calling import InstructorToolCalling, ToolCalling
 from crewai.utilities import I18N, Converter, ConverterError, Printer
 
@@ -46,7 +45,6 @@ class ToolUsage:
     ) -> None:
         self._i18n: I18N = I18N()
         self._printer: Printer = Printer()
-        self._telemetry: Telemetry = Telemetry()
         self._run_attempts: int = 1
         self._max_parsing_attempts: int = 3
         self._remeber_format_after_usages: int = 3
@@ -97,9 +95,6 @@ class ToolUsage:
                     ),
                 )
                 self._printer.print(content=f"\n\n{result}\n", color="yellow")
-                self._telemetry.tool_repeated_usage(
-                    llm=self.llm, tool_name=tool.name, attempts=self._run_attempts
-                )
                 result = self._format_result(result=result)
                 return result
             except Exception:
@@ -118,7 +113,6 @@ class ToolUsage:
             except Exception as e:
                 self._run_attempts += 1
                 if self._run_attempts > self._max_parsing_attempts:
-                    self._telemetry.tool_usage_error(llm=self.llm)
                     error_message = self._i18n.errors("tool_usage_exception").format(
                         error=e
                     )
@@ -132,9 +126,6 @@ class ToolUsage:
             self.tools_handler.on_tool_use(calling=calling, output=result)
 
         self._printer.print(content=f"\n\n{result}\n", color="yellow")
-        self._telemetry.tool_usage(
-            llm=self.llm, tool_name=tool.name, attempts=self._run_attempts
-        )
         result = self._format_result(result=result)
         return result
 
@@ -217,7 +208,6 @@ class ToolUsage:
         except Exception as e:
             self._run_attempts += 1
             if self._run_attempts > self._max_parsing_attempts:
-                self._telemetry.tool_usage_error(llm=self.llm)
                 self._printer.print(content=f"\n\n{e}\n", color="red")
                 return ToolUsageErrorException(
                     f'{self._i18n.errors("tool_usage_error")}\n{self._i18n.slice("format").format(tool_names=self.tools_names)}'
