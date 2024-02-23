@@ -157,7 +157,7 @@ def callback_function(output: TaskOutput):
 	print(f"""
 		Task completed!
 		Task: {output.description}
-		Output: {output.result}
+		Output: {output.raw_ouput}
 	""")
 
 research_task = Task(
@@ -198,7 +198,7 @@ result = crew.kickoff()
 print(f"""
 	Task completed!
 	Task: {task1.output.description}
-	Output: {task1.output.result}
+	Output: {task1.output.raw_ouput}
 """)
 ```
 

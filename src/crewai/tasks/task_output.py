@@ -18,3 +18,6 @@ class TaskOutput(BaseModel):
         excerpt = " ".join(self.description.split(" ")[:10])
         self.summary = f"{excerpt}..."
         return self
+
+    def result(self):
+        return self.exported_output
