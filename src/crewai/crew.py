@@ -254,7 +254,7 @@ class Crew(BaseModel):
         if self.full_output:
             return {
                 "final_output": output,
-                "tasks_outputs": [task.output for task in self.tasks],
+                "tasks_outputs": [task.output for task in self.tasks if task],
             }
         else:
             return output
