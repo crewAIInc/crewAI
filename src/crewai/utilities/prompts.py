@@ -15,7 +15,12 @@ class Prompts(BaseModel):
 
     def task_execution_with_memory(self) -> BasePromptTemplate:
         """Generate a prompt for task execution with memory components."""
-        slices = ["role_playing", "tools", "memory", "task"]
+        slices = ["role_playing"]
+        if len(self.tools) > 0:
+            slices.append("tools")
+        else:
+            slices.append("no_tools")
+        slices.extend(["memory", "task"])
         return self._build_prompt(slices)
 
     def task_execution_without_tools(self) -> BasePromptTemplate:
@@ -24,7 +29,12 @@ class Prompts(BaseModel):
 
     def task_execution(self) -> BasePromptTemplate:
         """Generate a standard prompt for task execution."""
-        slices = ["role_playing", "tools", "task"]
+        slices = ["role_playing"]
+        if len(self.tools) > 0:
+            slices.append("tools")
+        else:
+            slices.append("no_tools")
+        slices.append("task")
         return self._build_prompt(slices)
 
     def _build_prompt(self, components: list[str]) -> BasePromptTemplate:

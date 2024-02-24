@@ -153,6 +153,7 @@ class Agent(BaseModel):
             )
 
         tools = self._parse_tools(tools or self.tools)
+        self.create_agent_executor(tools=tools)
         self.agent_executor.tools = tools
         self.agent_executor.task = task
         self.agent_executor.tools_description = render_text_description(tools)
@@ -191,12 +192,14 @@ class Agent(BaseModel):
             self._rpm_controller = rpm_controller
             self.create_agent_executor()
 
-    def create_agent_executor(self) -> None:
+    def create_agent_executor(self, tools=None) -> None:
         """Create an agent executor for the agent.
 
         Returns:
             An instance of the CrewAgentExecutor class.
         """
+        tools = tools or self.tools
+
         agent_args = {
             "input": lambda x: x["input"],
             "tools": lambda x: x["tools"],
@@ -209,7 +212,7 @@ class Agent(BaseModel):
         executor_args = {
             "llm": self.llm,
             "i18n": self.i18n,
-            "tools": self._parse_tools(self.tools),
+            "tools": self._parse_tools(tools),
             "verbose": self.verbose,
             "handle_parsing_errors": True,
             "max_iterations": self.max_iter,
@@ -229,11 +232,9 @@ class Agent(BaseModel):
             )
             executor_args["memory"] = summary_memory
             agent_args["chat_history"] = lambda x: x["chat_history"]
-            prompt = Prompts(
-                i18n=self.i18n, tools=self.tools
-            ).task_execution_with_memory()
+            prompt = Prompts(i18n=self.i18n, tools=tools).task_execution_with_memory()
         else:
-            prompt = Prompts(i18n=self.i18n, tools=self.tools).task_execution()
+            prompt = Prompts(i18n=self.i18n, tools=tools).task_execution()
 
         execution_prompt = prompt.partial(
             goal=self.goal,
