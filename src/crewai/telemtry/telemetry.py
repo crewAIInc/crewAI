@@ -58,7 +58,7 @@ class Telemetry:
             try:
                 trace.set_tracer_provider(self.provider)
             except Exception:
-                self.ready = False
+                pass
 
     def crew_creation(self, crew):
         """Records the creation of a crew."""

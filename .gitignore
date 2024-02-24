@@ -7,3 +7,4 @@ assets/*
 .idea
 test/
 docs_crew/
+chroma.sqlite3
