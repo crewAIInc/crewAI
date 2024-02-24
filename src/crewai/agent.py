@@ -66,7 +66,7 @@ class Agent(BaseModel):
         description="Maximum number of requests per minute for the agent execution to be respected.",
     )
     memory: bool = Field(
-        default=True, description="Whether the agent should have memory or not"
+        default=False, description="Whether the agent should have memory or not"
     )
     verbose: bool = Field(
         default=False, description="Verbose mode for the Agent Execution"
