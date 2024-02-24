@@ -4,6 +4,7 @@ from .tools import (
 	CSVSearchTool,
 	DirectorySearchTool,
 	DOCXSearchTool,
+	DirectoryReadTool,
 	FileReadTool,
 	GithubSearchTool,
 	TXTSearchTool,

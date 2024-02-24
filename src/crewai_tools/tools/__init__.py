@@ -1,6 +1,7 @@
 from .code_docs_search_tool.code_docs_search_tool import CodeDocsSearchTool
 from .csv_search_tool.csv_search_tool import CSVSearchTool
 from .directory_search_tool.directory_search_tool import DirectorySearchTool
+from .directory_read_tool.directory_read_tool import DirectoryReadTool
 from .docx_search_tool.docx_search_tool import DOCXSearchTool
 from .file_read_tool.file_read_tool import FileReadTool
 from .github_search_tool.github_search_tool import GithubSearchTool

@@ -8,7 +8,7 @@ class FixedFileReadToolSchema(BaseModel):
 
 class FileReadToolSchema(FixedFileReadToolSchema):
 	"""Input for FileReadTool."""
-	file_path: str = Field(..., description="Mandatory file path to read the file")
+	file_path: str = Field(..., description="Mandatory file full path to read the file")
 
 class FileReadTool(BaseTool):
 	name: str = "Read a file's content"
