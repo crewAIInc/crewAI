@@ -1,4 +1,4 @@
-from typing import Union
+from typing import Union, Any
 
 from langchain.agents.output_parsers import ReActSingleInputOutputParser
 from langchain_core.agents import AgentAction, AgentFinish
@@ -32,8 +32,9 @@ class CrewAgentParser(ReActSingleInputOutputParser):
     Final Answer: The temperature is 100 degrees
     ```
     """
-
-    _i18n: I18N = I18N()
+    def __init__(self, i18n=None, **kwargs: Any):
+        super().__init__(**kwargs)
+        _i18n: I18N = i18n if i18n else I18N()
 
     def parse(self, text: str) -> Union[AgentAction, AgentFinish]:
         includes_answer = FINAL_ANSWER_ACTION in text
