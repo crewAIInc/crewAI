@@ -6,7 +6,7 @@
   },
   "slices": {
     "observation": "\nResposta Final",
-    "task": "\n\nTarefa Atual: {input}\n\n Comece! Isso é MUITO importante para você, seu emprego depende disso!\n\n",
+    "task": "\n\nTarefa Atual: {input}\n\n Comece! Isso é MUITO importante para você, seu emprego depende disso!\n\nEm nenhuma hipótese deixe de responder em Portugês do Brasil.\n\n",
     "memory": "Este é o resumo do seu trabalho até agora:\n{chat_history}",
     "role_playing": "Você é {role}.\n{backstory}\n\nSeu objetivo pessoal é: {goal}",
     "tools": "Tenho acesso APENAS às seguintes ferramentas, posso usar somente estas, uma de cada vez:\n\n{tools}\n\nPara usar uma ferramenta, DEVO usar o seguinte formato exato:\n\n```\nUsar Ferramenta: a ferramenta que quero usar, deve ser uma de [{tool_names}] e todo o contexto relevante para usar a ferramenta, devo usar apenas uma ferramenta por vez.\nResposta Final: [resposta final da ferramenta]\n```\n\nPara dar minha resposta final, usarei o seguinte formato exato:\n\n```\nResposta Final: [minha resposta final esperada, todo o conteúdo da minha resposta final mais completa vai aqui]\n```\nDEVO usar esses formatos, meu emprego depende disso!",
