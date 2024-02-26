@@ -24,6 +24,7 @@
 - [Key Features](#key-features)
 - [Examples](#examples)
   - [Quick Tutorial](#quick-tutorial)
+  - [Write Job Descriptions](#write-job-descriptions)
   - [Trip Planner](#trip-planner)
   - [Stock Analysis](#stock-analysis)
 - [Connecting Your Crew to a Model](#connecting-your-crew-to-a-model)
@@ -167,6 +168,12 @@ You can test different real life examples of AI crews in the [crewAI-examples re
 ### Quick Tutorial
 
 [![CrewAI Tutorial](https://img.youtube.com/vi/tnejrr-0a94/maxresdefault.jpg)](https://www.youtube.com/watch?v=tnejrr-0a94 "CrewAI Tutorial")
+
+### Write Job Descriptions
+
+[Check out code for this example](https://github.com/joaomdmoura/crewAI-examples/tree/main/job-posting) or watch a video below:
+
+[![Jobs postings](https://img.youtube.com/vi/u98wEMz-9to/maxresdefault.jpg)](https://www.youtube.com/watch?v=u98wEMz-9to "Jobs postings")
 
 ### Trip Planner
 
