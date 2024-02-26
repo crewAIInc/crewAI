@@ -21,7 +21,7 @@ CrewAI tools empower agents with capabilities ranging from web searching and dat
 crewAI comes with a series to built-in tools that can be used to extend the capabilities of your agents. Start by installing our extra tools package:
 
 ```bash
-pip install crewai[tools]
+pip install 'crewai[tools]'
 ```
 
 Here is an example on how to use them:
@@ -140,7 +140,7 @@ Here is a list of the available tools and their descriptions:
 To create your own crewAI tools you will need to install our extra tools package:
 
 ```bash
-pip install crewai[tools]
+pip install 'crewai[tools]'
 ```
 
 Once you do that there are two main ways for one to create a crewAI tool:

@@ -51,7 +51,7 @@ pip install crewai
 If you want to also install crewai-tools, which is a package with tools that can be used by the agents, but more dependencies, you can install it with:
 
 ```shell
-pip install crewai[tools]
+pip install 'crewai[tools]'
 ```
 
 The example below also uses DuckDuckGo's Search. You can install it with `pip` too:
