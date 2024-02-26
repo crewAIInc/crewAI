@@ -35,7 +35,7 @@ The `max_iter` attribute allows users to define the maximum number of iterations
 Agents are customized by defining their attributes and tools during initialization. Tools are critical for an agent's functionality, enabling them to perform specialized tasks. In this example we will use the crewAI tools package to create a tool for a research analyst agent.
 
 ```shell
-pip install crewai[tools]
+pip install 'crewai[tools]'
 ```
 
 ### Example: Assigning Tools to an Agent
