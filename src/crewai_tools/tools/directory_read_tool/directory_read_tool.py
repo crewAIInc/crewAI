@@ -29,5 +29,9 @@ class DirectoryReadTool(BaseTool):
 		**kwargs: Any,
 	) -> Any:
 		directory = kwargs.get('directory', self.directory)
-		return [(os.path.join(root, file).replace(directory, "").lstrip(os.path.sep)) for root, dirs, files in os.walk(directory) for file in files]
+		if directory[-1] == "/":
+			directory = directory[:-1]
+		files_list = [f"{directory}/{(os.path.join(root, filename).replace(directory, '').lstrip(os.path.sep))}" for root, dirs, files in os.walk(directory) for filename in files]
+		files = "\n- ".join(files_list)
+		return f"File paths: \n-{files}"
 

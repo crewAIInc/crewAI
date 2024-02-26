@@ -1,4 +1,4 @@
-from .tools.base_tool import BaseTool, Tool, as_tool, tool
+from .tools.base_tool import BaseTool, Tool, tool
 from .tools import (
 	CodeDocsSearchTool,
 	CSVSearchTool,

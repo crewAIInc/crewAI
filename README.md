@@ -23,7 +23,6 @@ In the realm of CrewAI agents, tools are pivotal for enhancing functionality. Th
 
 - [Creating Your Tools](#creating-your-tools)
 	- [Subclassing `BaseTool`](#subclassing-basetool)
-	- [Functional Tool Creation](#functional-tool-creation)
 	- [Utilizing the `tool` Decorator](#utilizing-the-tool-decorator)
 - [Contribution Guidelines](#contribution-guidelines)
 - [Development Setup](#development-setup)
@@ -40,32 +39,26 @@ There are three ways to create tools for crewAI agents:
 ### Subclassing `BaseTool`
 
 ```python
+from crewai_tools import BaseTool
+
 class MyCustomTool(BaseTool):
     name: str = "Name of my tool"
     description: str = "Clear description for what this tool is useful for, you agent will need this information to use it."
 
-    def _run(self, argument) -> str:
+    def _run(self, argument: str) -> str:
         # Implementation goes here
         pass
 ```
 
 Define a new class inheriting from `BaseTool`, specifying `name`, `description`, and the `_run` method for operational logic.
 
-### Functional Tool Creation
-
-```python
-my_tool = Tool(
-    name="Name of my tool"
-    description="Clear description for what this tool is useful for, you agent will need this information to use it.",
-    func=lambda argument: # Your function logic here
-)
-```
-
-For a simpler approach, create a `Tool` object directly with the required attributes and a functional logic.
 
 ### Utilizing the `tool` Decorator
 
+For a simpler approach, create a `Tool` object directly with the required attributes and a functional logic.
+
 ```python
+from crewai_tools import tool
 @tool("Name of my tool")
 def my_tool(question: str) -> str:
     """Clear description for what this tool is useful for, you agent will need this information to use it."""
