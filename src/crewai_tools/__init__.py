@@ -14,6 +14,8 @@ from .tools import (
 	PDFSearchTool,
 	PGSearchTool,
 	RagTool,
+	ScrapeElementFromWebsiteTool,
+	ScrapeWebsiteTool,
 	WebsiteSearchTool,
 	XMLSearchTool,
 	YoutubeChannelSearchTool,
