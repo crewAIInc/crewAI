@@ -48,6 +48,12 @@ To get started with CrewAI, follow these simple steps:
 pip install crewai
 ```
 
+If you want to also install crewai-tools, which is a package with tools that can be used by the agents, but more dependencies, you can install it with:
+
+```shell
+pip install crewai[tools]
+```
+
 The example below also uses DuckDuckGo's Search. You can install it with `pip` too:
 
 ```shell
@@ -62,9 +68,10 @@ from crewai import Agent, Task, Crew, Process
 
 os.environ["OPENAI_API_KEY"] = "YOUR_API_KEY"
 
-# You can choose to use a local model through Ollama for example. See ./docs/how-to/llm-connections.md for more information.
-# from langchain_community.llms import Ollama
-# ollama_llm = Ollama(model="openhermes")
+# You can choose to use a local model through Ollama for example. See https://docs.crewai.com/how-to/LLM-Connections/ for more information.
+# osOPENAI_API_BASE='http://localhost:11434/v1'
+# OPENAI_MODEL_NAME='openhermes'  # Adjust based on available model
+# OPENAI_API_KEY=''
 
 # Install duckduckgo-search for this example:
 # !pip install -U duckduckgo-search
@@ -84,12 +91,12 @@ researcher = Agent(
   tools=[search_tool]
   # You can pass an optional llm attribute specifying what mode you wanna use.
   # It can be a local model through Ollama / LM Studio or a remote
-  # model like OpenAI, Mistral, Antrophic or others (https://python.langchain.com/docs/integrations/llms/)
+  # model like OpenAI, Mistral, Antrophic or others (https://docs.crewai.com/how-to/LLM-Connections/)
   #
-  # Examples:
+  # import os
+  # os.environ['OPENAI_MODEL_NAME'] = 'gpt-3.5-turbo'
   #
-  # from langchain_community.llms import Ollama
-  # llm=ollama_llm # was defined above in the file
+  # OR
   #
   # from langchain_openai import ChatOpenAI
   # llm=ChatOpenAI(model_name="gpt-3.5", temperature=0.7)
@@ -100,8 +107,7 @@ writer = Agent(
   backstory="""You are a renowned Content Strategist, known for your insightful and engaging articles.
   You transform complex concepts into compelling narratives.""",
   verbose=True,
-  allow_delegation=True,
-  # (optional) llm=ollama_llm
+  allow_delegation=True
 )
 
 # Create tasks for your agents
@@ -143,6 +149,8 @@ In addition to the sequential process, you can use the hierarchical process, whi
 - **Autonomous Inter-Agent Delegation**: Agents can autonomously delegate tasks and inquire amongst themselves, enhancing problem-solving efficiency.
 - **Flexible Task Management**: Define tasks with customizable tools and assign them to agents dynamically.
 - **Processes Driven**: Currently only supports `sequential` task execution and `hierarchical` processes, but more complex processes like consensual and autonomous are being worked on.
+- **Save output as file**: Save the output of individual tasks as a file, so you can use it later.
+- **Parse output as Pydantic or Json**: Parse the output of individual tasks as a Pydantic model or as a Json if you want to.
 - **Works with Open Source Models**: Run your crew using Open AI or open source models refer to the [Connect crewAI to LLMs](https://docs.crewai.com/how-to/LLM-Connections/) page for details on configuring you agents' connections to models, even ones running locally!
 
 ![CrewAI Mind Map](./docs/crewAI-mindmap.png "CrewAI Mind Map")
@@ -180,7 +188,7 @@ Please refer to the [Connect crewAI to LLMs](https://docs.crewai.com/how-to/LLM-
 
 ## How CrewAI Compares
 
-- **Autogen**: While Autogen excels in creating conversational agents capable of working together, it lacks an inherent concept of process. In Autogen, orchestrating agents' interactions requires additional programming, which can become complex and cumbersome as the scale of tasks grows.
+- **Autogen**: While Autogen does good in creating conversational agents capable of working together, it lacks an inherent concept of process. In Autogen, orchestrating agents' interactions requires additional programming, which can become complex and cumbersome as the scale of tasks grows.
 
 - **ChatDev**: ChatDev introduced the idea of processes into the realm of AI agents, but its implementation is quite rigid. Customizations in ChatDev are limited and not geared towards production environments, which can hinder scalability and flexibility in real-world applications.
 

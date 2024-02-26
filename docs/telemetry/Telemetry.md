@@ -1,29 +1,23 @@
 ## Telemetry
 
-CrewAI uses anonymous telemetry to collect usage data with the main purpose of helping us improve the library by focusing our efforts on the most used features, integrations and tools.
+CrewAI utilizes anonymous telemetry to gather usage statistics with the primary goal of enhancing the library. Our focus is on improving and developing the features, integrations, and tools most utilized by our users.
 
-There is NO data being collected on the prompts, tasks descriptions agents backstories or goals nor tools usage, no API calls, nor responses nor any data that is being processed by the agents, nor any secrets and env vars.
+It's pivotal to understand that **NO data is collected** concerning prompts, task descriptions, agents' backstories or goals, usage of tools, API calls, responses, any data processed by the agents, or secrets and environment variables.
 
-Data collected includes:
-- Version of crewAI
-  - So we can understand how many users are using the latest version
-- Version of Python
-  - So we can decide on what versions to better support
-- General OS (e.g. number of CPUs, macOS/Windows/Linux)
-  - So we know what OS we should focus on and if we could build specific OS related features
-- Number of agents and tasks in a crew
-  - So we make sure we are testing internally with similar use cases and educate people on the best practices
-- Crew Process being used
-  - Understand where we should focus our efforts
-- If Agents are using memory or allowing delegation
-  - Understand if we improved the features or maybe even drop them
-- If Tasks are being executed in parallel or sequentially
-  - Understand if we should focus more on parallel execution
-- Language model being used
-  - Improved support on most used languages
-- Roles of agents in a crew
-  - Understand high level use cases so we can build better tools, integrations and examples about it
-- Tools names available
-  - Understand out of the publically available tools, which ones are being used the most so we can improve them
+### Data Collected Includes:
+- **Version of CrewAI**: Assessing the adoption rate of our latest version helps us understand user needs and guide our updates.
+- **Python Version**: Identifying the Python versions our users operate with assists in prioritizing our support efforts for these versions.
+- **General OS Information**: Details like the number of CPUs and the operating system type (macOS, Windows, Linux) enable us to focus our development on the most used operating systems and explore the potential for OS-specific features.
+- **Number of Agents and Tasks in a Crew**: Ensures our internal testing mirrors real-world scenarios, helping us guide users towards best practices.
+- **Crew Process Utilization**: Understanding how crews are utilized aids in directing our development focus.
+- **Memory and Delegation Use by Agents**: Insights into how these features are used help evaluate their effectiveness and future.
+- **Task Execution Mode**: Knowing whether tasks are executed in parallel or sequentially influences our emphasis on enhancing parallel execution capabilities.
+- **Language Model Utilization**: Supports our goal to improve support for the most popular languages among our users.
+- **Roles of Agents within a Crew**: Understanding the various roles agents play aids in crafting better tools, integrations, and examples.
+- **Tool Usage**: Identifying which tools are most frequently used allows us to prioritize improvements in those areas.
 
-Users can opt-in sharing the complete telemetry data by setting the `share_crew` attribute to `True` on their Crews.
+### Opt-In Futher Telemetry Sharing
+Users can choose to share their complete telemetry data by enabling the `share_crew` attribute to `True` in their crew configurations. This opt-in approach respects user privacy and aligns with data protection standards by ensuring users have control over their data sharing preferences.
+
+### Updates and Revisions
+We are committed to maintaining the accuracy and transparency of our documentation. Regular reviews and updates are performed to ensure our documentation accurately reflects the latest developments of our codebase and telemetry practices. Users are encouraged to review this section for the most current information on our data collection practices and how they contribute to the improvement of CrewAI.

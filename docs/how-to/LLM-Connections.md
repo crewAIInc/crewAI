@@ -5,81 +5,71 @@ description: Guide on integrating CrewAI with various Large Language Models (LLM
 
 ## Connect CrewAI to LLMs
 !!! note "Default LLM"
-    By default, crewAI uses OpenAI's GPT-4 model for language processing. However, you can configure your agents to use a different model or API. This guide will show you how to connect your agents to different LLMs. You can change the specific gpt model by setting the `OPENAI_MODEL_NAME` environment variable.
+    By default, CrewAI uses OpenAI's GPT-4 model for language processing. However, you can configure your agents to use a different model or API. This guide will show you how to connect your agents to different LLMs through environment variables and direct instantiation.
 
 CrewAI offers flexibility in connecting to various LLMs, including local models via [Ollama](https://ollama.ai) and different APIs like Azure. It's compatible with all [LangChain LLM](https://python.langchain.com/docs/integrations/llms/) components, enabling diverse integrations for tailored AI solutions.
 
+## CrewAI Agent Overview
+The `Agent` class in CrewAI is central to implementing AI solutions. Here's a brief overview:
 
-## Ollama Integration
-Ollama is preferred for local LLM integration, offering customization and privacy benefits. It requires installation and configuration, including model adjustments via a Modelfile to optimize performance.
+- **Attributes**:
+    - `role`: Defines the agent's role within the solution.
+    - `goal`: Specifies the agent's objective.
+    - `backstory`: Provides a background story to the agent.
+    - `llm`: Indicates the Large Language Model the agent uses.
 
-### Setting Up Ollama
-- **Installation**: Follow Ollama's guide for setup.
-- **Configuration**: [Adjust your local model with a Modelfile](https://github.com/jmorganca/ollama/blob/main/docs/modelfile.md), considering adding `Result` as a stop word and playing with parameters like `top_p` and `temperature`.
-
-### Integrating Ollama with CrewAI
-Instantiate Ollama and pass it to your agents within CrewAI, enhancing them with the local model's capabilities.
-
+### Example Changing OpenAI's GPT model
 ```python
 # Required
-os.environ["OPENAI_API_BASE"]='http://localhost:11434/v1'
-os.environ["OPENAI_MODEL_NAME"]='openhermes'
-os.environ["OPENAI_API_KEY"]=''
+os.environ["OPENAI_MODEL_NAME"]="gpt-4-0125-preview"
 
-local_expert = Agent(
+# Agent will automatically use the model defined in the environment variable
+example_agent = Agent(
   role='Local Expert',
   goal='Provide insights about the city',
   backstory="A knowledgeable local guide.",
-  tools=[SearchTools.search_internet, BrowserTools.scrape_and_summarize_website],
   verbose=True
 )
 ```
 
-## OpenAI Compatible API Endpoints
-You can use environment variables for easy switch between APIs and models, supporting diverse platforms like FastChat, LM Studio, and Mistral AI.
+## Ollama Integration
+Ollama is preferred for local LLM integration, offering customization and privacy benefits. To integrate Ollama with CrewAI, set the appropriate environment variables as shown below. Note: Detailed Ollama setup is beyond this document's scope, but general guidance is provided.
 
-### Configuration Examples
-
-### Ollama
+### Setting Up Ollama
+- **Environment Variables Configuration**: To integrate Ollama, set the following environment variables:
 ```sh
 OPENAI_API_BASE='http://localhost:11434/v1'
-OPENAI_MODEL_NAME='openhermes'  # Depending on the model you have available
-OPENAI_API_KEY=NA
+OPENAI_MODEL_NAME='openhermes'  # Adjust based on available model
+OPENAI_API_KEY=''
 ```
 
-### FastChat
+## OpenAI Compatible API Endpoints
+Switch between APIs and models seamlessly using environment variables, supporting platforms like FastChat, LM Studio, and Mistral AI.
+
+### Configuration Examples
+#### FastChat
 ```sh
-
 OPENAI_API_BASE="http://localhost:8001/v1"
-OPENAI_MODEL_NAME='oh-2.5m7b-q51' # Depending on the model you have available
+OPENAI_MODEL_NAME='oh-2.5m7b-q51'
 OPENAI_API_KEY=NA
 ```
 
-### LM Studio
+#### LM Studio
 ```sh
 OPENAI_API_BASE="http://localhost:8000/v1"
 OPENAI_MODEL_NAME=NA
 OPENAI_API_KEY=NA
 ```
 
-### Mistral API
+#### Mistral API
 ```sh
 OPENAI_API_KEY=your-mistral-api-key
 OPENAI_API_BASE=https://api.mistral.ai/v1
-OPENAI_MODEL_NAME="mistral-small" # Check documentation for available models
+OPENAI_MODEL_NAME="mistral-small"
 ```
 
-### text-gen-web-ui
-```sh
-OPENAI_API_BASE=http://localhost:5000/v1
-OPENAI_MODEL_NAME=NA
-OPENAI_API_KEY=NA
-```
-
-### Azure Open AI
-Azure's OpenAI API needs a distinct setup, utilizing the `langchain_openai` component for Azure-specific configurations.
-
-Configuration settings:
+### Azure Open AI Configuration
+For Azure OpenAI API integration, set the following environment variables:
 ```sh
 AZURE_OPENAI_VERSION="2022-12-01"
 AZURE_OPENAI_DEPLOYMENT=""
@@ -87,22 +77,24 @@ AZURE_OPENAI_ENDPOINT=""
 AZURE_OPENAI_KEY=""
 ```
 
+### Example Agent with Azure LLM
 ```python
 from dotenv import load_dotenv
+from crewai import Agent
 from langchain_openai import AzureChatOpenAI
 
 load_dotenv()
 
-default_llm = AzureChatOpenAI(
+azure_llm = AzureChatOpenAI(
     azure_endpoint=os.environ.get("AZURE_OPENAI_ENDPOINT"),
     api_key=os.environ.get("AZURE_OPENAI_KEY")
 )
 
-example_agent = Agent(
+azure_agent = Agent(
   role='Example Agent',
   goal='Demonstrate custom LLM configuration',
   backstory='A diligent explorer of GitHub docs.',
-  llm=default_llm
+  llm=azure_llm
 )
 ```
 

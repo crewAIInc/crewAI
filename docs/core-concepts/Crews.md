@@ -15,18 +15,17 @@ description: Understanding and utilizing crews in the crewAI framework.
 | **Agents**           | A list of agents that are part of the crew.                  |
 | **Process**          | The process flow (e.g., sequential, hierarchical) the crew follows. |
 | **Verbose**          | The verbosity level for logging during execution.            |
-| **Manager LLM**      | The language model used by the manager agent in a hierarchical process. |
-| **Function Calling LLM** | The language model used by all agensts in the crew to call functions, if none is passed the same main llm for each agent will be used.      |
-| **Config**           | Configuration settings for the crew.                         |
+| **Manager LLM**      | The language model used by the manager agent in a hierarchical process. **Required when using a hierarchical process.** |
+| **Function Calling LLM** | The language model used by all agents in the crew for calling functions. If none is passed, the main LLM for each agent will be used. |
+| **Config**           | Optional configuration settings for the crew, in `Json` or `Dict[str, Any]` format. |
 | **Max RPM**          | Maximum requests per minute the crew adheres to during execution. |
-| **Language**         | Language setting for the crew's operation.                   |
-| **Full Output**    | Whether the crew should return the full output with all tasks outputs or just the final output. |
-| **Step Callback**    | A function that is called after each step of every agent. This can be used to log the agent's actions or to perform other operations, it won't override the agent specific `step_callback` |
-| **Share Crew**       | Whether you want to share the complete crew infromation and execution with the crewAI team to make the library better, and allow us to train models. |
-
+| **Language**         | Language used for the crew, defaults to English.             |
+| **Full Output**      | Whether the crew should return the full output with all tasks outputs or just the final output. |
+| **Step Callback**    | A function that is called after each step of every agent. This can be used to log the agent's actions or to perform other operations; it won't override the agent-specific `step_callback`. |
+| **Share Crew**       | Whether you want to share the complete crew information and execution with the crewAI team to make the library better, and allow us to train models. |
 
 !!! note "Crew Max RPM"
-		The `max_rpm` attribute sets the maximum number of requests per minute the crew can perform to avoid rate limits and will override individual agents `max_rpm` settings if you set it.
+		The `max_rpm` attribute sets the maximum number of requests per minute the crew can perform to avoid rate limits and will override individual agents' `max_rpm` settings if you set it.
 
 ## Creating a Crew
 
@@ -68,7 +67,7 @@ my_crew = Crew(
 ## Crew Execution Process
 
 - **Sequential Process**: Tasks are executed one after another, allowing for a linear flow of work.
-- **Hierarchical Process**: A manager agent coordinates the crew, delegating tasks and validating outcomes before proceeding.
+- **Hierarchical Process**: A manager agent coordinates the crew, delegating tasks and validating outcomes before proceeding. **Note**: A `manager_llm` is required for this process.
 
 ### Kicking Off a Crew
 

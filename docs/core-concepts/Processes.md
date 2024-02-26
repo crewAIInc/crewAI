@@ -1,23 +1,23 @@
 ---
 title: Managing Processes in CrewAI
-description: An overview of workflow management through processes in CrewAI.
+description: Detailed guide on workflow management through processes in CrewAI, with updated implementation details.
 ---
 
 ## Understanding Processes
 !!! note "Core Concept"
-    Processes in CrewAI orchestrate how tasks are executed by agents, akin to project management in human teams. They ensure tasks are distributed and completed efficiently, according to a predefined game plan.
+    In CrewAI, processes orchestrate the execution of tasks by agents, akin to project management in human teams. These processes ensure tasks are distributed and executed efficiently, in alignment with a predefined strategy.
 
 ## Process Implementations
 
-- **Sequential**: Executes tasks one after another, ensuring a linear and orderly progression.
-- **Hierarchical**: Implements a chain of command, where tasks are delegated and executed based on a managerial structure.
-- **Consensual (WIP)**: Future process type aiming for collaborative decision-making among agents on task execution.
+- **Sequential**: Executes tasks sequentially, ensuring tasks are completed in an orderly progression.
+- **Hierarchical**: Organizes tasks in a managerial hierarchy, where tasks are delegated and executed based on a structured chain of command, the manager for delegation is automatically created by crewAI.
+- **Consensual (Planned)**: A future process type aiming for collaborative decision-making among agents on task execution, introducing a more democratic approach to task management within CrewAI.
 
 ## The Role of Processes in Teamwork
-Processes transform individual agents into a unified team, coordinating their efforts to achieve common goals with efficiency and harmony.
+Processes enable individual agents to operate as a cohesive unit, streamlining their efforts to achieve common objectives with efficiency and coherence.
 
 ## Assigning Processes to a Crew
-Specify the process during crew creation to determine the execution strategy:
+Specify the process type upon crew creation to set the execution strategy:
 
 ```python
 from crewai import Crew
@@ -29,20 +29,21 @@ crew = Crew(agents=my_agents, tasks=my_tasks, process=Process.sequential)
 # Example: Creating a crew with a hierarchical process
 crew = Crew(agents=my_agents, tasks=my_tasks, process=Process.hierarchical)
 ```
+**Note:** Ensure `my_agents` and `my_tasks` are defined prior to creating a `Crew` object.
 
 ## Sequential Process
-Ensures a natural flow of work, mirroring human team dynamics by progressing through tasks thoughtfully and systematically.
+This method mirrors dynamic team workflows, progressing through tasks in a thoughtful and systematic manner. Task execution follows the predefined order in the task list, with the output of one task serving as context for the next.
 
-Tasks need to be pre-assigned to agents, and the order of execution is determined by the order of the tasks in the list.
-
-Tasks are executed one after another, ensuring a linear and orderly progression and the output of one task is automatically used as context into the next task.
-
-You can also define specific task's outputs that should be used as context for another task by using the `context` parameter in the `Task` class.
+To customize task context, utilize the `context` parameter in the `Task` class to specify outputs that should be used as context for subsequent tasks.
 
 ## Hierarchical Process
-Mimics a corporate hierarchy, where a manager oversees task execution, planning, delegation, and validation, enhancing task coordination.
+Emulates a corporate hierarchy. A "manager" agent is automatically created so it oversees task execution, including planning, delegation, and validation. Tasks are not pre-assigned; the manager allocates tasks to agents, reviews outputs, and assesses task completion.
 
-In this process tasks don't need to be pre-assigned to agents, the manager will decide which agent will perform each task, review the output and decide if the task is completed or not.
+## Process Class: Detailed Overview
+The `Process` class is implemented as an enumeration (`Enum`), ensuring type safety and restricting process values to the defined types (`sequential` and `hierarchical`). This design choice guarantees that only valid processes are utilized within the CrewAI framework.
+
+## Planned Future Processes
+- **Consensual Process**: A collaborative decision-making process among agents on task execution is planned but not currently implemented. This future enhancement will introduce a more democratic approach to task management within CrewAI.
 
 ## Conclusion
-Processes are vital for structured collaboration within CrewAI, enabling agents to work together systematically. Future updates will introduce new processes, further mimicking the adaptability and complexity of human teamwork.
+The structured collaboration facilitated by processes within CrewAI is crucial for enabling systematic teamwork among agents. Documentation will be updated to reflect new processes and enhancements, ensuring users have access to the most current and comprehensive information.
