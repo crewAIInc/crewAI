@@ -19,7 +19,11 @@ class ScrapeElementFromWebsiteTool(BaseTool):
 	args_schema: Type[BaseModel] = ScrapeElementFromWebsiteToolSchema
 	website_url: Optional[str] = None
 	css_element: Optional[str] = None
-	headers: Optional[dict] = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/58.0.3029.110 Safari/537.3'}
+	headers: Optional[dict] = {
+		'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/58.0.3029.110 Safari/537.3',
+		'Accept-Language': 'en-US,en;q=0.5',
+		'Referer': 'https://www.google.com/'
+	}
 
 	def __init__(self, website_url: Optional[str] = None, css_element: Optional[str] = None, **kwargs):
 		super().__init__(**kwargs)
