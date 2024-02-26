@@ -19,6 +19,7 @@ class ScrapeElementFromWebsiteTool(BaseTool):
 	args_schema: Type[BaseModel] = ScrapeElementFromWebsiteToolSchema
 	website_url: Optional[str] = None
 	css_element: Optional[str] = None
+	headers: Optional[dict] = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/58.0.3029.110 Safari/537.3'}
 
 	def __init__(self, website_url: Optional[str] = None, css_element: Optional[str] = None, **kwargs):
 		super().__init__(**kwargs)
@@ -34,7 +35,7 @@ class ScrapeElementFromWebsiteTool(BaseTool):
 	) -> Any:
 		website_url = kwargs.get('website_url', self.website_url)
 		css_element = kwargs.get('css_element', self.css_element)
-		page = requests.get(website_url)
+		page = requests.get(website_url, headers=self.headers)
 		parsed = BeautifulSoup(page.content, "html.parser")
 		elements = parsed.select(css_element)
 		return "\n".join([element.get_text() for element in elements])

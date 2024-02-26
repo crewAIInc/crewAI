@@ -17,6 +17,7 @@ class ScrapeWebsiteTool(BaseTool):
 	description: str = "A tool that can be used to read a website content."
 	args_schema: Type[BaseModel] = ScrapeWebsiteToolSchema
 	website_url: Optional[str] = None
+	headers: Optional[dict] = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/58.0.3029.110 Safari/537.3'}
 
 	def __init__(self, website_url: Optional[str] = None, **kwargs):
 		super().__init__(**kwargs)
@@ -30,7 +31,7 @@ class ScrapeWebsiteTool(BaseTool):
 		**kwargs: Any,
 	) -> Any:
 		website_url = kwargs.get('website_url', self.website_url)
-		page = requests.get(website_url)
+		page = requests.get(website_url, headers=self.headers)
 		parsed = BeautifulSoup(page.content, "html.parser")
 		return parsed.get_text()
 
