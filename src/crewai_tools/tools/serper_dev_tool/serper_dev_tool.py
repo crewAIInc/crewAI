@@ -31,8 +31,6 @@ class SeperDevTool(BaseTool):
 		results = response.json()['organic']
 		stirng = []
 		for result in results:
-			print(result)
-			print('--------------')
 			try:
 				stirng.append('\n'.join([
 						f"Title: {result['title']}",

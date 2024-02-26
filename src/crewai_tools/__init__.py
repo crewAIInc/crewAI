@@ -7,6 +7,7 @@ from .tools import (
 	DirectoryReadTool,
 	FileReadTool,
 	GithubSearchTool,
+	SeperDevTool,
 	TXTSearchTool,
 	JSONSearchTool,
 	MDXSearchTool,
