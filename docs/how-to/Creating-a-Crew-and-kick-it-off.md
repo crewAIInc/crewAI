@@ -10,7 +10,7 @@ Embark on your CrewAI journey by setting up your environment and initiating your
 Install CrewAI and any necessary packages for your project. The `duckduckgo-search` package is highlighted here for enhanced search capabilities.
 
 ```shell
-pip install crewai
+pip install crewai[tools]
 pip install duckduckgo-search
 ```
 
@@ -68,7 +68,6 @@ research_task = Task(
   Your final report should clearly articulate the key points,
   its market opportunities, and potential risks.""",
   expected_output='A comprehensive 3 paragraphs long report on the latest AI trends.',
-  max_inter=3,
   tools=[search_tool],
   agent=researcher,
 )
