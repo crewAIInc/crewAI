@@ -11,6 +11,7 @@ Install CrewAI and any necessary packages for your project. The `duckduckgo-sear
 
 ```shell
 pip install crewai
+pip install crewai-tools
 pip install duckduckgo-search
 ```
 
