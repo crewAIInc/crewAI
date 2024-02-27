@@ -10,7 +10,6 @@ Embark on your CrewAI journey by setting up your environment and initiating your
 Install CrewAI and any necessary packages for your project. The `duckduckgo-search` package is highlighted here for enhanced search capabilities.
 
 ```shell
-pip install crewai
 pip install crewai[tools]
 pip install duckduckgo-search
 ```
