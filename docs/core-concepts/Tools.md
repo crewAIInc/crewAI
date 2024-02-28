@@ -199,7 +199,8 @@ agent = Agent(
 
 ## Using LangChain Tools
 !!! info "LangChain Integration"
-    CrewAI seamlessly integrates with LangChain’s comprehensive toolkit for search-based queries and more:
+    CrewAI seamlessly integrates with LangChain’s comprehensive toolkit for search-based queries and more, here are the available built-in tools that are offered by Langchain [LangChain Toolkit](https://python.langchain.com/docs/integrations/tools/)
+ :
 
 ```python
 from crewai import Agent
