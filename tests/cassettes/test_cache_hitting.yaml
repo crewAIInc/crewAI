@@ -170,7 +170,7 @@ interactions:
       int) -> float - Useful for when you need to multiply two numbers together.\nTool
       Arguments: {''first_number'': {''type'': ''integer''}, ''second_number'': {''type'':
       ''integer''}}\n\nReturn a valid schema for the tool, the tool name must be exactly
-      equal one of the options, use this text to inform the valid ouput schema:\n\nUse
+      equal one of the options, use this text to inform the valid output schema:\n\nUse
       Tool: multiplier, first_number: 2, second_number: 6```"}, {"role": "system",
       "content": "The schema should have the following structure, only two keys:\n-
       tool_name: str\n- arguments: dict (with all arguments being passed)\n\nExample:\n{\"tool_name\":
@@ -610,7 +610,7 @@ interactions:
       int) -> float - Useful for when you need to multiply two numbers together.\nTool
       Arguments: {''first_number'': {''type'': ''integer''}, ''second_number'': {''type'':
       ''integer''}}\n\nReturn a valid schema for the tool, the tool name must be exactly
-      equal one of the options, use this text to inform the valid ouput schema:\n\nUse
+      equal one of the options, use this text to inform the valid output schema:\n\nUse
       Tool: multiplier, with first_number as 3 and second_number as 3.```"}, {"role":
       "system", "content": "The schema should have the following structure, only two
       keys:\n- tool_name: str\n- arguments: dict (with all arguments being passed)\n\nExample:\n{\"tool_name\":
@@ -1053,7 +1053,7 @@ interactions:
       int) -> float - Useful for when you need to multiply two numbers together.\nTool
       Arguments: {''first_number'': {''type'': ''integer''}, ''second_number'': {''type'':
       ''integer''}}\n\nReturn a valid schema for the tool, the tool name must be exactly
-      equal one of the options, use this text to inform the valid ouput schema:\n\nUse
+      equal one of the options, use this text to inform the valid output schema:\n\nUse
       Tool: multiplier, first_number: 2, second_number: 6```"}, {"role": "system",
       "content": "The schema should have the following structure, only two keys:\n-
       tool_name: str\n- arguments: dict (with all arguments being passed)\n\nExample:\n{\"tool_name\":
@@ -1334,7 +1334,7 @@ interactions:
       int) -> float - Useful for when you need to multiply two numbers together.\nTool
       Arguments: {''first_number'': {''type'': ''integer''}, ''second_number'': {''type'':
       ''integer''}}\n\nReturn a valid schema for the tool, the tool name must be exactly
-      equal one of the options, use this text to inform the valid ouput schema:\n\nUse
+      equal one of the options, use this text to inform the valid output schema:\n\nUse
       Tool: multiplier, first_number: 12, second_number: 3```"}, {"role": "system",
       "content": "The schema should have the following structure, only two keys:\n-
       tool_name: str\n- arguments: dict (with all arguments being passed)\n\nExample:\n{\"tool_name\":
@@ -1755,7 +1755,7 @@ interactions:
       int) -> float - Useful for when you need to multiply two numbers together.\nTool
       Arguments: {''first_number'': {''type'': ''integer''}, ''second_number'': {''type'':
       ''integer''}}\n\nReturn a valid schema for the tool, the tool name must be exactly
-      equal one of the options, use this text to inform the valid ouput schema:\n\nUse
+      equal one of the options, use this text to inform the valid output schema:\n\nUse
       Tool: multiplier, with first_number as 2 and second_number as 6.```"}, {"role":
       "system", "content": "The schema should have the following structure, only two
       keys:\n- tool_name: str\n- arguments: dict (with all arguments being passed)\n\nExample:\n{\"tool_name\":
