@@ -1,6 +1,6 @@
 import threading
 import uuid
-from typing import Any, List, Optional, Type
+from typing import Any, Dict, List, Optional, Type
 
 from langchain_openai import ChatOpenAI
 from pydantic import UUID4, BaseModel, Field, field_validator, model_validator
@@ -172,6 +172,12 @@ class Task(BaseModel):
             )
             tasks_slices = [self.description, output]
         return "\n".join(tasks_slices)
+
+    def interpolate_inputs(self, inputs: Dict[str, Any]) -> None:
+        """Interpolate inputs into the task description and expected output."""
+        self.description = self.description.format(**inputs)
+        if self.expected_output:
+            self.expected_output = self.expected_output.format(**inputs)
 
     def increment_tools_errors(self) -> None:
         """Increment the tools errors counter."""
