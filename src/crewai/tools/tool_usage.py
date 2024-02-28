@@ -49,7 +49,7 @@ class ToolUsage:
         self._telemetry: Telemetry = Telemetry()
         self._run_attempts: int = 1
         self._max_parsing_attempts: int = 3
-        self._remeber_format_after_usages: int = 3
+        self._remember_format_after_usages: int = 3
         self.tools_description = tools_description
         self.tools_names = tools_names
         self.tools_handler = tools_handler
@@ -61,7 +61,7 @@ class ToolUsage:
         if (isinstance(self.llm, ChatOpenAI)) and (self.llm.openai_api_base == None):
             if self.llm.model_name in OPENAI_BIGGER_MODELS:
                 self._max_parsing_attempts = 2
-                self._remeber_format_after_usages = 4
+                self._remember_format_after_usages = 4
 
     def parse(self, tool_string: str):
         """Parse the tool string and return the tool calling."""
@@ -155,7 +155,7 @@ class ToolUsage:
         return result
 
     def _should_remember_format(self) -> None:
-        return self.task.used_tools % self._remeber_format_after_usages == 0
+        return self.task.used_tools % self._remember_format_after_usages == 0
 
     def _remember_format(self, result: str) -> None:
         result = str(result)
