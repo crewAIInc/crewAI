@@ -221,7 +221,7 @@ class Crew(BaseModel):
                 agents_for_delegation = [
                     agent for agent in self.agents if agent != task.agent
                 ]
-                if len(agents_for_delegation) > 0:
+                if len(self.agents) > 1 and len(agents_for_delegation) > 0:
                     task.tools += AgentTools(agents=agents_for_delegation).tools()
 
             role = task.agent.role if task.agent is not None else "None"
