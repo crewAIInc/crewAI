@@ -1,4 +1,4 @@
-from typing import Union
+from typing import Any, Union
 
 from langchain.agents.output_parsers import ReActSingleInputOutputParser
 from langchain_core.agents import AgentAction, AgentFinish
@@ -34,6 +34,7 @@ class CrewAgentParser(ReActSingleInputOutputParser):
     """
 
     _i18n: I18N = I18N()
+    agent: Any = None
 
     def parse(self, text: str) -> Union[AgentAction, AgentFinish]:
         includes_answer = FINAL_ANSWER_ACTION in text
@@ -41,6 +42,7 @@ class CrewAgentParser(ReActSingleInputOutputParser):
 
         if includes_tool:
             if includes_answer:
+                self.agent.count_formatting_errors()
                 raise OutputParserException(f"{FINAL_ANSWER_AND_TOOL_ERROR_MESSAGE}")
 
             return AgentAction("", "", text)
@@ -52,6 +54,7 @@ class CrewAgentParser(ReActSingleInputOutputParser):
 
         format = self._i18n.slice("format_without_tools")
         error = f"{format}"
+        self.agent.count_formatting_errors()
         raise OutputParserException(
             error,
             observation=error,
