@@ -2,7 +2,6 @@ import os
 import uuid
 from typing import Any, Dict, List, Optional, Tuple
 
-from crewai_tools import BaseTool as CrewAITool
 from langchain.agents.agent import RunnableAgent
 from langchain.agents.tools import tool as LangChainTool
 from langchain.memory import ConversationSummaryMemory
@@ -280,12 +279,18 @@ class Agent(BaseModel):
 
     def _parse_tools(self, tools: List[Any]) -> List[LangChainTool]:
         """Parse tools to be used for the task."""
+        # tentatively try to import from crewai_tools import BaseTool as CrewAITool
         tools_list = []
-        for tool in tools:
-            if isinstance(tool, CrewAITool):
-                tools_list.append(tool.to_langchain())
-            else:
-                tools_list.append(tool)
+        try:
+            from crewai_tools import BaseTool as CrewAITool
+
+            for tool in tools:
+                if isinstance(tool, CrewAITool):
+                    tools_list.append(tool.to_langchain())
+                else:
+                    tools_list.append(tool)
+        except ModuleNotFoundError:
+            tools_list.append(tool)
         return tools_list
 
     @staticmethod
