@@ -556,3 +556,97 @@ def test_task_with_no_arguments():
 
     result = crew.kickoff()
     assert result == "The total number of sales from January to May is 75."
+
+
+def test_delegation_is_not_enabled_if_there_are_only_one_agent():
+    from unittest.mock import patch
+
+    researcher = Agent(
+        role="Researcher",
+        goal="Make the best research and analysis on content about AI and AI agents",
+        backstory="You're an expert researcher, specialized in technology, software engineering, AI and startups. You work as a freelancer and is now working on doing research and analysis for a new customer.",
+        allow_delegation=True,
+    )
+
+    task = Task(
+        description="Look at the available data nd give me a sense on the total number of sales.",
+        agent=researcher,
+    )
+
+    crew = Crew(agents=[researcher], tasks=[task])
+
+    with patch.object(Task, "execute") as execute:
+        execute.return_value = "ok"
+        crew.kickoff()
+        assert task.tools == []
+
+
+@pytest.mark.vcr(filter_headers=["authorization"])
+def test_agents_do_not_get_delegation_tools_with_there_is_only_one_agent():
+    agent = Agent(
+        role="Researcher",
+        goal="Be super empathetic.",
+        backstory="You're love to sey howdy.",
+        allow_delegation=False,
+    )
+
+    task = Task(description="say howdy", expected_output="Howdy!", agent=agent)
+
+    crew = Crew(agents=[agent], tasks=[task])
+
+    result = crew.kickoff()
+    assert result == "Howdy!"
+    assert len(agent.tools) == 0
+
+
+@pytest.mark.vcr(filter_headers=["authorization"])
+def test_agent_usage_metrics_are_captured_for_sequential_process():
+    agent = Agent(
+        role="Researcher",
+        goal="Be super empathetic.",
+        backstory="You're love to sey howdy.",
+        allow_delegation=False,
+    )
+
+    task = Task(description="say howdy", expected_output="Howdy!", agent=agent)
+
+    crew = Crew(agents=[agent], tasks=[task])
+
+    result = crew.kickoff()
+    assert result == "Howdy!"
+    assert crew.usage_metrics == {
+        "completion_tokens": 8,
+        "prompt_tokens": 103,
+        "successful_requests": 1,
+        "total_tokens": 111,
+    }
+
+
+@pytest.mark.vcr(filter_headers=["authorization"])
+def test_agent_usage_metrics_are_captured_for_hierarchical_process():
+    from langchain_openai import ChatOpenAI
+
+    agent = Agent(
+        role="Researcher",
+        goal="Be super empathetic.",
+        backstory="You're love to sey howdy.",
+        allow_delegation=False,
+    )
+
+    task = Task(description="say howdy", expected_output="Howdy!")
+
+    crew = Crew(
+        agents=[agent],
+        tasks=[task],
+        process=Process.hierarchical,
+        manager_llm=ChatOpenAI(temperature=0, model="gpt-4"),
+    )
+
+    result = crew.kickoff()
+    assert result == "Howdy!"
+    assert crew.usage_metrics == {
+        "total_tokens": 1365,
+        "prompt_tokens": 1256,
+        "completion_tokens": 109,
+        "successful_requests": 3,
+    }

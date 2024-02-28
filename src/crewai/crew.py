@@ -53,6 +53,10 @@ class Crew(BaseModel):
     agents: List[Agent] = Field(default_factory=list)
     process: Process = Field(default=Process.sequential)
     verbose: Union[int, bool] = Field(default=0)
+    usage_metrics: Optional[dict] = Field(
+        default=None,
+        description="Metrics for the LLM usage during all tasks execution.",
+    )
     full_output: Optional[bool] = Field(
         default=False,
         description="Whether the crew should return the full output with all tasks outputs or just the final output.",
@@ -187,14 +191,27 @@ class Crew(BaseModel):
                 agent.step_callback = self.step_callback
                 agent.create_agent_executor()
 
-        if self.process == Process.sequential:
-            return self._run_sequential_process()
-        if self.process == Process.hierarchical:
-            return self._run_hierarchical_process()
+        metrics = []
 
-        raise NotImplementedError(
-            f"The process '{self.process}' is not implemented yet."
-        )
+        if self.process == Process.sequential:
+            result = self._run_sequential_process()
+        elif self.process == Process.hierarchical:
+            result, manager_metrics = self._run_hierarchical_process()
+            metrics.append(manager_metrics)
+
+        else:
+            raise NotImplementedError(
+                f"The process '{self.process}' is not implemented yet."
+            )
+
+        metrics = metrics + [
+            agent._token_process.get_summary() for agent in self.agents
+        ]
+        self.usage_metrics = {
+            key: sum([m[key] for m in metrics if m is not None]) for key in metrics[0]
+        }
+
+        return result
 
     def _run_sequential_process(self) -> str:
         """Executes tasks sequentially and returns the final output."""
@@ -204,7 +221,8 @@ class Crew(BaseModel):
                 agents_for_delegation = [
                     agent for agent in self.agents if agent != task.agent
                 ]
-                task.tools += AgentTools(agents=agents_for_delegation).tools()
+                if len(agents_for_delegation) > 0:
+                    task.tools += AgentTools(agents=agents_for_delegation).tools()
 
             role = task.agent.role if task.agent is not None else "None"
             self._logger.log("debug", f"Working Agent: {role}")
@@ -247,7 +265,7 @@ class Crew(BaseModel):
             )
 
         self._finish_execution(task_output)
-        return self._format_output(task_output)
+        return self._format_output(task_output), manager._token_process.get_summary()
 
     def _format_output(self, output: str) -> str:
         """Formats the output of the crew execution."""
