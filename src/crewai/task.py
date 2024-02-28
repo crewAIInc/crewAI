@@ -175,9 +175,10 @@ class Task(BaseModel):
 
     def interpolate_inputs(self, inputs: Dict[str, Any]) -> None:
         """Interpolate inputs into the task description and expected output."""
-        self.description = self.description.format(**inputs)
-        if self.expected_output:
-            self.expected_output = self.expected_output.format(**inputs)
+        if inputs:
+            self.description = self.description.format(**inputs)
+            if self.expected_output:
+                self.expected_output = self.expected_output.format(**inputs)
 
     def increment_tools_errors(self) -> None:
         """Increment the tools errors counter."""

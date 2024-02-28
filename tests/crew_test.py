@@ -671,3 +671,26 @@ def test_crew_inputs_interpolate_both_agents_and_tasks():
     assert crew.agents[0].role == "AI Researcher"
     assert crew.agents[0].goal == "Express hot takes on AI."
     assert crew.agents[0].backstory == "You have a lot of experience with AI."
+
+
+def test_crew_inputs_interpolate_both_agents_and_tasks():
+    from unittest.mock import patch
+
+    agent = Agent(
+        role="{topic} Researcher",
+        goal="Express hot takes on {topic}.",
+        backstory="You have a lot of experience with {topic}.",
+    )
+
+    task = Task(
+        description="Give me an analysis around {topic}.",
+        expected_output="{points} bullet points about {topic}.",
+    )
+
+    with patch.object(Agent, "interpolate_inputs") as interpolate_agent_inputs:
+        with patch.object(Task, "interpolate_inputs") as interpolate_task_inputs:
+            interpolate_agent_inputs.return_value = None
+            interpolate_task_inputs.return_value = None
+            Crew(agents=[agent], tasks=[task], inputs={"topic": "AI", "points": 5})
+            interpolate_agent_inputs.assert_called()
+            interpolate_task_inputs.assert_called()

@@ -256,9 +256,10 @@ class Agent(BaseModel):
 
     def interpolate_inputs(self, inputs: Dict[str, Any]) -> None:
         """Interpolate inputs into the agent description and backstory."""
-        self.role = self.role.format(**inputs)
-        self.goal = self.goal.format(**inputs)
-        self.backstory = self.backstory.format(**inputs)
+        if inputs:
+            self.role = self.role.format(**inputs)
+            self.goal = self.goal.format(**inputs)
+            self.backstory = self.backstory.format(**inputs)
 
     def increment_formatting_errors(self) -> None:
         """Count the formatting errors of the agent."""
