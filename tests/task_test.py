@@ -235,7 +235,7 @@ def test_output_pydantic_to_another_task():
 
     crew = Crew(agents=[scorer], tasks=[task1, task2], verbose=2)
     result = crew.kickoff()
-    assert 5 == result.score
+    assert 4 == result.score
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
