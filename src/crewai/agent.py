@@ -255,7 +255,7 @@ class Agent(BaseModel):
             agent=RunnableAgent(runnable=inner_agent), **executor_args
         )
 
-    def count_formatting_errors(self) -> None:
+    def increment_formatting_errors(self) -> None:
         """Count the formatting errors of the agent."""
         self.formatting_errors += 1
 

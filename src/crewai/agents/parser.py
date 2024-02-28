@@ -42,7 +42,7 @@ class CrewAgentParser(ReActSingleInputOutputParser):
 
         if includes_tool:
             if includes_answer:
-                self.agent.count_formatting_errors()
+                self.agent.increment_formatting_errors()
                 raise OutputParserException(f"{FINAL_ANSWER_AND_TOOL_ERROR_MESSAGE}")
 
             return AgentAction("", "", text)
@@ -54,7 +54,7 @@ class CrewAgentParser(ReActSingleInputOutputParser):
 
         format = self._i18n.slice("format_without_tools")
         error = f"{format}"
-        self.agent.count_formatting_errors()
+        self.agent.increment_formatting_errors()
         raise OutputParserException(
             error,
             observation=error,
