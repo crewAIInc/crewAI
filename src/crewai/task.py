@@ -20,6 +20,8 @@ class Task(BaseModel):
 
     __hash__ = object.__hash__  # type: ignore
     used_tools: int = 0
+    tools_errors: int = 0
+    delegations: int = 0
     i18n: I18N = I18N()
     thread: threading.Thread = None
     description: str = Field(description="Description of the actual task.")
@@ -170,6 +172,14 @@ class Task(BaseModel):
             )
             tasks_slices = [self.description, output]
         return "\n".join(tasks_slices)
+
+    def increment_tools_errors(self) -> None:
+        """Increment the tools errors counter."""
+        self.tools_errors += 1
+
+    def increment_delegations(self) -> None:
+        """Increment the delegations counter."""
+        self.delegations += 1
 
     def _export_output(self, result: str) -> Any:
         exported_result = result

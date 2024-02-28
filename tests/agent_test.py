@@ -593,7 +593,7 @@ def test_agent_count_formatting_error():
     parser = CrewAgentParser()
     parser.agent = agent1
 
-    with patch.object(Agent, "count_formatting_errors") as mock_count_errors:
+    with patch.object(Agent, "increment_formatting_errors") as mock_count_errors:
         test_text = "This text does not match expected formats."
         with pytest.raises(OutputParserException):
             parser.parse(test_text)

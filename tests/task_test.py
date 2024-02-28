@@ -6,7 +6,7 @@ import pytest
 from pydantic import BaseModel
 from pydantic_core import ValidationError
 
-from crewai import Agent, Crew, Task
+from crewai import Agent, Crew, Process, Task
 
 
 def test_task_tool_reflect_agent_tools():
@@ -347,3 +347,103 @@ def test_save_task_pydantic_output():
         save_file.return_value = None
         crew.kickoff()
         save_file.assert_called_once_with('{"score":4}')
+
+
+@pytest.mark.vcr(filter_headers=["authorization"])
+def test_increment_delegations_for_hierarchical_process():
+    from langchain_openai import ChatOpenAI
+
+    scorer = Agent(
+        role="Scorer",
+        goal="Score the title",
+        backstory="You're an expert scorer, specialized in scoring titles.",
+        allow_delegation=False,
+    )
+
+    task = Task(
+        description="Give me an integer score between 1-5 for the following title: 'The impact of AI in the future of work'",
+        expected_output="The score of the title.",
+    )
+
+    crew = Crew(
+        agents=[scorer],
+        tasks=[task],
+        process=Process.hierarchical,
+        manager_llm=ChatOpenAI(model="gpt-4-0125-preview"),
+    )
+
+    with patch.object(Task, "increment_delegations") as increment_delegations:
+        increment_delegations.return_value = None
+        crew.kickoff()
+        increment_delegations.assert_called_once
+
+
+@pytest.mark.vcr(filter_headers=["authorization"])
+def test_increment_delegations_for_sequential_process():
+    pass
+
+    manager = Agent(
+        role="Manager",
+        goal="Coordinate scoring processes",
+        backstory="You're great at delegating work about scoring.",
+        allow_delegation=False,
+    )
+
+    scorer = Agent(
+        role="Scorer",
+        goal="Score the title",
+        backstory="You're an expert scorer, specialized in scoring titles.",
+        allow_delegation=False,
+    )
+
+    task = Task(
+        description="Give me an integer score between 1-5 for the following title: 'The impact of AI in the future of work'",
+        expected_output="The score of the title.",
+        agent=manager,
+    )
+
+    crew = Crew(
+        agents=[manager, scorer],
+        tasks=[task],
+        process=Process.sequential,
+    )
+
+    with patch.object(Task, "increment_delegations") as increment_delegations:
+        increment_delegations.return_value = None
+        crew.kickoff()
+        increment_delegations.assert_called_once
+
+
+@pytest.mark.vcr(filter_headers=["authorization"])
+def test_increment_tool_errors():
+    from crewai_tools import tool
+    from langchain_openai import ChatOpenAI
+
+    @tool
+    def scoring_examples() -> None:
+        "Useful examples for scoring titles."
+        raise Exception("Error")
+
+    scorer = Agent(
+        role="Scorer",
+        goal="Score the title",
+        backstory="You're an expert scorer, specialized in scoring titles.",
+        tools=[scoring_examples],
+    )
+
+    task = Task(
+        description="Give me an integer score between 1-5 for the following title: 'The impact of AI in the future of work', check examples to based your evaluation.",
+        expected_output="The score of the title.",
+    )
+
+    crew = Crew(
+        agents=[scorer],
+        tasks=[task],
+        process=Process.hierarchical,
+        manager_llm=ChatOpenAI(model="gpt-4-0125-preview"),
+    )
+
+    with patch.object(Task, "increment_tools_errors") as increment_tools_errors:
+        increment_tools_errors.return_value = None
+        crew.kickoff()
+        increment_tools_errors.assert_called_once

@@ -73,11 +73,13 @@ class ToolUsage:
         if isinstance(calling, ToolUsageErrorException):
             error = calling.message
             self._printer.print(content=f"\n\n{error}\n", color="red")
+            self.task.increment_tools_errors()
             return error
         try:
             tool = self._select_tool(calling.tool_name)
         except Exception as e:
             error = getattr(e, "message", str(e))
+            self.task.increment_tools_errors()
             self._printer.print(content=f"\n\n{error}\n", color="red")
             return error
         return f"{self._use(tool_string=tool_string, tool=tool, calling=calling)}\n\n{self._i18n.slice('final_answer_format')}"
@@ -103,7 +105,7 @@ class ToolUsage:
                 result = self._format_result(result=result)
                 return result
             except Exception:
-                pass
+                self.task.increment_tools_errors()
 
         result = self.tools_handler.cache.read(
             tool=calling.tool_name, input=calling.arguments
@@ -111,8 +113,17 @@ class ToolUsage:
 
         if not result:
             try:
+                print(f"Calling tool: {calling.tool_name}")
+                if calling.tool_name in [
+                    "Delegate work to co-worker",
+                    "Ask question to co-worker",
+                ]:
+                    self.task.increment_delegations()
+
                 if calling.arguments:
+                    print(f"Calling tool NOW: {calling.tool_name}")
                     result = tool._run(**calling.arguments)
+                    print("Got result back from tool")
                 else:
                     result = tool._run()
             except Exception as e:
@@ -125,8 +136,10 @@ class ToolUsage:
                     error = ToolUsageErrorException(
                         f'\n{error_message}.\nMoving one then. {self._i18n.slice("format").format(tool_names=self.tools_names)}'
                     ).message
+                    self.task.increment_tools_errors()
                     self._printer.print(content=f"\n\n{error_message}\n", color="red")
                     return error
+                self.task.increment_tools_errors()
                 return self.use(calling=calling, tool_string=tool_string)
 
             self.tools_handler.on_tool_use(calling=calling, output=result)
@@ -166,6 +179,7 @@ class ToolUsage:
         for tool in self.tools:
             if tool.name.lower().strip() == tool_name.lower().strip():
                 return tool
+        self.task.increment_tools_errors()
         raise Exception(f"Tool '{tool_name}' not found.")
 
     def _render(self) -> str:
@@ -210,7 +224,9 @@ class ToolUsage:
                 ),
                 max_attemps=1,
             )
+            print(f"Converter: {converter}")
             calling = converter.to_pydantic()
+            print(f"Calling: {calling}")
 
             if isinstance(calling, ConverterError):
                 raise calling
@@ -218,6 +234,7 @@ class ToolUsage:
             self._run_attempts += 1
             if self._run_attempts > self._max_parsing_attempts:
                 self._telemetry.tool_usage_error(llm=self.llm)
+                self.task.increment_tools_errors()
                 self._printer.print(content=f"\n\n{e}\n", color="red")
                 return ToolUsageErrorException(
                     f'{self._i18n.errors("tool_usage_error")}\n{self._i18n.slice("format").format(tool_names=self.tools_names)}'

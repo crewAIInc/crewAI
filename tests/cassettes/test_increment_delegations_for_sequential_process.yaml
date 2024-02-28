@@ -1,0 +1,153 @@
+interactions:
+- request:
+    body: '{"messages": [{"role": "user", "content": "You are Manager.\nYou''re great
+      at delegating work about scoring.\n\nYour personal goal is: Coordinate scoring
+      processesTo give my final answer use the exact following format:\n\n```\nFinal
+      Answer: [my expected final answer, entire content of my most complete final
+      answer goes here]\n```\nI MUST use these formats, my jobs depends on it!\n\nCurrent
+      Task: Give me an integer score between 1-5 for the following title: ''The impact
+      of AI in the future of work''\nYour final answer must be: The score of the title.\n\n
+      Begin! This is VERY important to you, your job depends on it!\n\n\n"}], "model":
+      "gpt-4", "n": 1, "stop": ["\nResult"], "stream": true, "temperature": 0.7}'
+    headers:
+      accept:
+      - application/json
+      accept-encoding:
+      - gzip, deflate, br
+      connection:
+      - keep-alive
+      content-length:
+      - '712'
+      content-type:
+      - application/json
+      host:
+      - api.openai.com
+      user-agent:
+      - OpenAI/Python 1.12.0
+      x-stainless-arch:
+      - arm64
+      x-stainless-async:
+      - 'false'
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - MacOS
+      x-stainless-package-version:
+      - 1.12.0
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.11.7
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    body:
+      string: 'data: {"id":"chatcmpl-8x6hAnJdNQ95CMhSACL5TNL0lG6Ws","object":"chat.completion.chunk","created":1709097780,"model":"gpt-4-0613","system_fingerprint":null,"choices":[{"index":0,"delta":{"role":"assistant","content":""},"logprobs":null,"finish_reason":null}]}
+
+
+        data: {"id":"chatcmpl-8x6hAnJdNQ95CMhSACL5TNL0lG6Ws","object":"chat.completion.chunk","created":1709097780,"model":"gpt-4-0613","system_fingerprint":null,"choices":[{"index":0,"delta":{"content":"Final"},"logprobs":null,"finish_reason":null}]}
+
+
+        data: {"id":"chatcmpl-8x6hAnJdNQ95CMhSACL5TNL0lG6Ws","object":"chat.completion.chunk","created":1709097780,"model":"gpt-4-0613","system_fingerprint":null,"choices":[{"index":0,"delta":{"content":"
+        Answer"},"logprobs":null,"finish_reason":null}]}
+
+
+        data: {"id":"chatcmpl-8x6hAnJdNQ95CMhSACL5TNL0lG6Ws","object":"chat.completion.chunk","created":1709097780,"model":"gpt-4-0613","system_fingerprint":null,"choices":[{"index":0,"delta":{"content":":"},"logprobs":null,"finish_reason":null}]}
+
+
+        data: {"id":"chatcmpl-8x6hAnJdNQ95CMhSACL5TNL0lG6Ws","object":"chat.completion.chunk","created":1709097780,"model":"gpt-4-0613","system_fingerprint":null,"choices":[{"index":0,"delta":{"content":"
+        The"},"logprobs":null,"finish_reason":null}]}
+
+
+        data: {"id":"chatcmpl-8x6hAnJdNQ95CMhSACL5TNL0lG6Ws","object":"chat.completion.chunk","created":1709097780,"model":"gpt-4-0613","system_fingerprint":null,"choices":[{"index":0,"delta":{"content":"
+        score"},"logprobs":null,"finish_reason":null}]}
+
+
+        data: {"id":"chatcmpl-8x6hAnJdNQ95CMhSACL5TNL0lG6Ws","object":"chat.completion.chunk","created":1709097780,"model":"gpt-4-0613","system_fingerprint":null,"choices":[{"index":0,"delta":{"content":"
+        of"},"logprobs":null,"finish_reason":null}]}
+
+
+        data: {"id":"chatcmpl-8x6hAnJdNQ95CMhSACL5TNL0lG6Ws","object":"chat.completion.chunk","created":1709097780,"model":"gpt-4-0613","system_fingerprint":null,"choices":[{"index":0,"delta":{"content":"
+        the"},"logprobs":null,"finish_reason":null}]}
+
+
+        data: {"id":"chatcmpl-8x6hAnJdNQ95CMhSACL5TNL0lG6Ws","object":"chat.completion.chunk","created":1709097780,"model":"gpt-4-0613","system_fingerprint":null,"choices":[{"index":0,"delta":{"content":"
+        title"},"logprobs":null,"finish_reason":null}]}
+
+
+        data: {"id":"chatcmpl-8x6hAnJdNQ95CMhSACL5TNL0lG6Ws","object":"chat.completion.chunk","created":1709097780,"model":"gpt-4-0613","system_fingerprint":null,"choices":[{"index":0,"delta":{"content":"
+        is"},"logprobs":null,"finish_reason":null}]}
+
+
+        data: {"id":"chatcmpl-8x6hAnJdNQ95CMhSACL5TNL0lG6Ws","object":"chat.completion.chunk","created":1709097780,"model":"gpt-4-0613","system_fingerprint":null,"choices":[{"index":0,"delta":{"content":"
+        "},"logprobs":null,"finish_reason":null}]}
+
+
+        data: {"id":"chatcmpl-8x6hAnJdNQ95CMhSACL5TNL0lG6Ws","object":"chat.completion.chunk","created":1709097780,"model":"gpt-4-0613","system_fingerprint":null,"choices":[{"index":0,"delta":{"content":"4"},"logprobs":null,"finish_reason":null}]}
+
+
+        data: {"id":"chatcmpl-8x6hAnJdNQ95CMhSACL5TNL0lG6Ws","object":"chat.completion.chunk","created":1709097780,"model":"gpt-4-0613","system_fingerprint":null,"choices":[{"index":0,"delta":{"content":"."},"logprobs":null,"finish_reason":null}]}
+
+
+        data: {"id":"chatcmpl-8x6hAnJdNQ95CMhSACL5TNL0lG6Ws","object":"chat.completion.chunk","created":1709097780,"model":"gpt-4-0613","system_fingerprint":null,"choices":[{"index":0,"delta":{},"logprobs":null,"finish_reason":"stop"}]}
+
+
+        data: [DONE]
+
+
+        '
+    headers:
+      CF-Cache-Status:
+      - DYNAMIC
+      CF-RAY:
+      - 85c63ba94ea60110-GRU
+      Cache-Control:
+      - no-cache, must-revalidate
+      Connection:
+      - keep-alive
+      Content-Type:
+      - text/event-stream
+      Date:
+      - Wed, 28 Feb 2024 05:23:01 GMT
+      Server:
+      - cloudflare
+      Set-Cookie:
+      - __cf_bm=AaCQFIZM8yehA4h1745UTRRtL0FczZJtdLfNQ6_8NzA-1709097781-1.0-AUIh6/dxRTiveEa2WnhkSYSTau7hn7cRLNnlSfeiJp2fgTieIadq3fkeBHjqHSnQ7k/pE4WZgIZ9SAAmacifrgc=;
+        path=/; expires=Wed, 28-Feb-24 05:53:01 GMT; domain=.api.openai.com; HttpOnly;
+        Secure; SameSite=None
+      - _cfuvid=o.lLAcb8kPLRizp5FDtYBR4rjdIgMyVXhQ_NLWlcuj8-1709097781239-0.0-604800000;
+        path=/; domain=.api.openai.com; HttpOnly; Secure; SameSite=None
+      Transfer-Encoding:
+      - chunked
+      access-control-allow-origin:
+      - '*'
+      alt-svc:
+      - h3=":443"; ma=86400
+      openai-model:
+      - gpt-4-0613
+      openai-organization:
+      - crewai-iuxna1
+      openai-processing-ms:
+      - '224'
+      openai-version:
+      - '2020-10-01'
+      strict-transport-security:
+      - max-age=15724800; includeSubDomains
+      x-ratelimit-limit-requests:
+      - '10000'
+      x-ratelimit-limit-tokens:
+      - '300000'
+      x-ratelimit-remaining-requests:
+      - '9999'
+      x-ratelimit-remaining-tokens:
+      - '299840'
+      x-ratelimit-reset-requests:
+      - 6ms
+      x-ratelimit-reset-tokens:
+      - 31ms
+      x-request-id:
+      - req_3129f92f1bc422dba1aa396cc072a30e
+    status:
+      code: 200
+      message: OK
+version: 1
