@@ -27,7 +27,9 @@ class PydanticSchemaParser(BaseModel):
         field_type = field.annotation
         if get_origin(field_type) is list:
             list_item_type = get_args(field_type)[0]
-            if issubclass(list_item_type, BaseModel):
+            if isinstance(list_item_type, type) and issubclass(
+                list_item_type, BaseModel
+            ):
                 nested_schema = self._get_model_schema(list_item_type, depth + 1)
                 return f"List[\n{nested_schema}\n{' ' * 4 * depth}]"
             else:
