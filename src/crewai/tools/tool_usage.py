@@ -113,7 +113,6 @@ class ToolUsage:
 
         if not result:
             try:
-                print(f"Calling tool: {calling.tool_name}")
                 if calling.tool_name in [
                     "Delegate work to co-worker",
                     "Ask question to co-worker",
@@ -121,9 +120,7 @@ class ToolUsage:
                     self.task.increment_delegations()
 
                 if calling.arguments:
-                    print(f"Calling tool NOW: {calling.tool_name}")
                     result = tool._run(**calling.arguments)
-                    print("Got result back from tool")
                 else:
                     result = tool._run()
             except Exception as e:
@@ -224,9 +221,7 @@ class ToolUsage:
                 ),
                 max_attemps=1,
             )
-            print(f"Converter: {converter}")
             calling = converter.to_pydantic()
-            print(f"Calling: {calling}")
 
             if isinstance(calling, ConverterError):
                 raise calling
