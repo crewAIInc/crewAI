@@ -41,6 +41,7 @@ class Crew(BaseModel):
         full_output: Whether the crew should return the full output with all tasks outputs or just the final output.
         step_callback: Callback to be executed after each step for every agents execution.
         share_crew: Whether you want to share the complete crew infromation and execution with crewAI to make the library better, and allow us to train models.
+        inputs: Any inputs that the crew will use in tasks or agents, it will be interpolated in promtps.
     """
 
     __hash__ = object.__hash__  # type: ignore
@@ -66,6 +67,10 @@ class Crew(BaseModel):
     )
     function_calling_llm: Optional[Any] = Field(
         description="Language model that will run the agent.", default=None
+    )
+    inputs: Optional[Dict[str, Any]] = Field(
+        description="Any inputs that the crew will use in tasks or agents, it will be interpolated in promtps.",
+        default={},
     )
     config: Optional[Union[Json, Dict[str, Any]]] = Field(default=None)
     id: UUID4 = Field(default_factory=uuid.uuid4, frozen=True)
@@ -127,6 +132,15 @@ class Crew(BaseModel):
                 "Attribute `manager_llm` is required when using hierarchical process.",
                 {},
             )
+        return self
+
+    @model_validator(mode="after")
+    def interpolate_inputs(self):
+        """Interpolates the inputs in the tasks and agents."""
+        for task in self.tasks:
+            task.interpolate_inputs(self.inputs)
+        for agent in self.agents:
+            agent.interpolate_inputs(self.inputs)
         return self
 
     @model_validator(mode="after")

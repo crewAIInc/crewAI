@@ -650,3 +650,24 @@ def test_agent_usage_metrics_are_captured_for_hierarchical_process():
         "completion_tokens": 109,
         "successful_requests": 3,
     }
+
+
+def test_crew_inputs_interpolate_both_agents_and_tasks():
+    agent = Agent(
+        role="{topic} Researcher",
+        goal="Express hot takes on {topic}.",
+        backstory="You have a lot of experience with {topic}.",
+    )
+
+    task = Task(
+        description="Give me an analysis around {topic}.",
+        expected_output="{points} bullet points about {topic}.",
+    )
+
+    crew = Crew(agents=[agent], tasks=[task], inputs={"topic": "AI", "points": 5})
+
+    assert crew.tasks[0].description == "Give me an analysis around AI."
+    assert crew.tasks[0].expected_output == "5 bullet points about AI."
+    assert crew.agents[0].role == "AI Researcher"
+    assert crew.agents[0].goal == "Express hot takes on AI."
+    assert crew.agents[0].backstory == "You have a lot of experience with AI."

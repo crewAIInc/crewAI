@@ -1,6 +1,6 @@
 import os
 import uuid
-from typing import Any, List, Optional, Tuple
+from typing import Any, Dict, List, Optional, Tuple
 
 from crewai_tools import BaseTool as CrewAITool
 from langchain.agents.agent import RunnableAgent
@@ -254,6 +254,12 @@ class Agent(BaseModel):
         self.agent_executor = CrewAgentExecutor(
             agent=RunnableAgent(runnable=inner_agent), **executor_args
         )
+
+    def interpolate_inputs(self, inputs: Dict[str, Any]) -> None:
+        """Interpolate inputs into the agent description and backstory."""
+        self.role = self.role.format(**inputs)
+        self.goal = self.goal.format(**inputs)
+        self.backstory = self.backstory.format(**inputs)
 
     def increment_formatting_errors(self) -> None:
         """Count the formatting errors of the agent."""
