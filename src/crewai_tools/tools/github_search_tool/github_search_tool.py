@@ -41,4 +41,5 @@ class GithubSearchTool(RagTool):
 		loader = GithubLoader(config={"token": self.gh_token})
 		app = App()
 		app.add(f"repo:{github_repo} type:{','.join(self.content_types)}", data_type="github", loader=loader)
+		self.app = app
 		return super()._run(query=search_query)
