@@ -114,8 +114,8 @@ writer = Agent(
 # Create tasks for your agents
 task1 = Task(
   description="""Conduct a comprehensive analysis of the latest advancements in AI in 2024.
-  Identify key trends, breakthrough technologies, and potential industry impacts.
-  Your final answer MUST be a full analysis report""",
+  Identify key trends, breakthrough technologies, and potential industry impacts.""",
+  expected_output="Full analysis report in bullet points",
   agent=researcher
 )
 
@@ -123,8 +123,8 @@ task2 = Task(
   description="""Using the insights provided, develop an engaging blog
   post that highlights the most significant AI advancements.
   Your post should be informative yet accessible, catering to a tech-savvy audience.
-  Make it sound cool, avoid complex words so it doesn't sound like AI.
-  Your final answer MUST be the full blog post of at least 4 paragraphs.""",
+  Make it sound cool, avoid complex words so it doesn't sound like AI.""",
+  expected_output="Full blog post of at least 4 paragraphs",
   agent=writer
 )
 
