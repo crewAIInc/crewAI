@@ -186,7 +186,7 @@ def test_cache_hitting():
             agent=agent,
         )
         output = agent.execute_task(task)
-        assert output == "The result of the multiplication of 2 and 6 is 0."
+        assert output == "0"
         read.assert_called_with(
             tool="multiplier", input={"first_number": 2, "second_number": 6}
         )
@@ -418,7 +418,7 @@ def test_agent_without_max_rpm_respet_crew_rpm(capsys):
         moveon.return_value = True
         crew.kickoff()
         captured = capsys.readouterr()
-        assert "Action: get_final_answer" in captured.out
+        assert "get_final_answer" in captured.out
         assert "Max RPM reached, waiting for next minute to start." in captured.out
         moveon.assert_called_once()
 
