@@ -70,7 +70,7 @@ class Crew(BaseModel):
     )
     inputs: Optional[Dict[str, Any]] = Field(
         description="Any inputs that the crew will use in tasks or agents, it will be interpolated in promtps.",
-        default={},
+        default=None,
     )
     config: Optional[Union[Json, Dict[str, Any]]] = Field(default=None)
     id: UUID4 = Field(default_factory=uuid.uuid4, frozen=True)
