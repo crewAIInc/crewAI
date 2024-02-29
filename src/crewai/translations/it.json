@@ -1,0 +1,34 @@
+{
+    "hierarchical_manager_agent": {
+        "role": "Responsabile del team",
+        "goal": "Gestire il team per completare il compito nel miglior modo possibile.",
+        "backstory": "Sei un manager esperto con un talento per ottenere il meglio dal tuo team.\nSei anche noto per la tua capacità di delegare il lavoro alle persone giuste e di fare le domande giuste per ottenere il meglio dal tuo team.\nAnche se non esegui compiti da solo, hai molta esperienza sul campo, che ti permette di valutare adeguatamente il lavoro dei membri del tuo team."
+    },
+    "slices": {
+        "observation": "\nRisultato",
+        "task": "\n\nCompito corrente: {input}\n\n Inizia! Questo è MOLTO importante per te, il tuo lavoro dipende da esso!\n\n",
+        "memory": "Questo è il riassunto del tuo lavoro finora:\n{chat_history}",
+        "role_playing": "Sei {role}.\n{backstory}\n\nIl tuo obiettivo personale è: {goal}",
+        "tools": "Ho accesso SOLO ai seguenti strumenti, posso usarne solo questi, uno alla volta:\n\n{tools}\n\nPer usare uno strumento DEVO usare esattamente il seguente formato:\n\n```\nUsa Strumento: lo strumento che voglio usare, dovrebbe essere uno di [{tool_names}] e tutto il contesto rilevante per l'uso dello strumento, devo usare solo uno strumento alla volta.\nRisultato: [risultato dello strumento]\n```\n\nPer dare la mia risposta finale userò esattamente il seguente formato:\n\n```\nRisposta Finale: [la mia risposta finale prevista, tutto il contenuto della mia risposta finale più completa va qui]\n```\nDEVO usare questi formati, il mio lavoro dipende da esso!",
+        "no_tools": "Per dare la mia risposta finale usa esattamente il seguente formato:\n\n```\nRisposta Finale: [la mia risposta finale prevista, tutto il contenuto della mia risposta finale più completa va qui]\n```\nDEVO usare questi formati, il mio lavoro dipende da esso!",
+        "format": "DEVO o usare uno strumento (uno alla volta) O dare la mia migliore risposta finale. Per usare un singolo strumento DEVO usare esattamente il seguente formato:\n\n```\nUsa Strumento: lo strumento che voglio usare, dovrebbe essere uno di [{tool_names}] e tutto il contesto rilevante per l'uso dello strumento, devo usare solo uno strumento alla volta.\nRisultato: [risultato dello strumento]\n```\n\nPer dare la mia risposta finale usa esattamente il seguente formato:\n\n```\nRisposta Finale: [la mia risposta finale prevista, tutto il contenuto della mia risposta finale più completa va qui]\n```\nDEVO usare questi formati, il mio lavoro dipende da esso!",
+        "final_answer_format": "Se non ho bisogno di usare altri strumenti, devo assicurarmi di usare il formato corretto per dare la mia risposta finale:\n\n```Risposta Finale: [la mia risposta finale prevista, tutto il contenuto della mia risposta finale più completa va qui]```\n DEVO usare questi formati, il mio lavoro dipende da esso!",
+        "format_without_tools": "\nScusa, non ho usato il formato giusto. DEVO o usare uno strumento (tra quelli disponibili), O dare la mia migliore risposta finale.\nMi sono appena ricordato i formati previsti che devo seguire:\n\n```\nUsa Strumento: lo strumento che voglio usare, e tutto il contesto rilevante per l'uso dello strumento, devo usare solo uno strumento alla volta.\nRisultato: [risultato dello strumento]\n```\nO\n```\nRisposta Finale: [la mia risposta finale prevista, tutto il contenuto della mia risposta finale più completa va qui]\n```\n",
+        "task_with_context": "{task}\nQuesto è il contesto con cui stai lavorando:\n{context}",
+        "expected_output": "La tua risposta finale deve essere: {expected_output}"
+    },
+    "errors": {
+        "unexpected_format": "\nScusa, non ho usato il formato previsto, DEVO o usare uno strumento (uno alla volta) O dare la mia migliore risposta finale.\n",
+        "force_final_answer": "In realtà, ho usato troppi strumenti, quindi mi fermerò ora e ti darò la mia MIGLIORE risposta finale ORA, usando esattamente il formato previsto di seguito:\n\n```\nRisposta Finale: [la mia risposta finale prevista, tutto il contenuto della mia risposta finale più completa va qui]\n```\nDEVO usare questi formati, il mio lavoro dipende da esso!",
+        "agent_tool_unexsiting_coworker": "\nErrore nell'esecuzione dello strumento. Il collaboratore menzionato non è stato trovato, deve essere una delle seguenti opzioni:\n{collaboratori}\n",
+        "task_repeated_usage": "Ho già usato lo strumento {strumento} con input {input_strumento}. Quindi lo so già e devo smettere di usarlo con lo stesso input. \nPotrei dare la mia migliore risposta finale completa se sono pronto, usando esattamente il formato previsto di seguito:\n\n```\nRisposta Finale: [la mia risposta finale prevista, tutto il contenuto della mia risposta finale più completa va qui]\n```\nDEVO usare questi formati, il mio lavoro dipende da esso!",
+        "tool_usage_error": "Sembra che abbiamo riscontrato un errore imprevisto durante l'uso dello strumento.",
+        "wrong_tool_name": "Hai provato a usare lo strumento {strumento}, ma non esiste. Devi usare uno dei seguenti strumenti, uno alla volta: {strumenti}.",
+        "tool_usage_exception": "Sembra che abbiamo riscontrato un errore imprevisto durante l'uso dello strumento. Questo era l'errore: {errore}"
+    },
+    "tools": {
+        "delegate_work": "Delega un compito specifico a uno dei seguenti collaboratori: {coworkers}\nL'input per questo strumento dovrebbe essere il collaboratore, il compito che vuoi che svolgano, e TUTTO il contesto necessario per eseguire il compito, non sanno nulla del compito, quindi condividi assolutamente tutto quello che sai, non fare riferimento a cose ma invece spiegale.",
+        "ask_question": "Fai una domanda specifica a uno dei seguenti collaboratori: {coworkers}\nL'input per questo strumento dovrebbe essere il collaboratore, la domanda che hai per loro, e TUTTO il contesto necessario per fare la domanda correttamente, non sanno nulla della domanda, quindi condividi assolutamente tutto quello che sai, non fare riferimento a cose ma invece spiegale."
+    }
+  }
+  
