@@ -9,9 +9,17 @@ from langchain_core.pydantic_v1 import ValidationError
 
 
 class ToolOutputParser(PydanticOutputParser):
-    """Parses the function calling of a tool usage and it's arguments."""
+    """
+    This class extends the PydanticOutputParser and is used to parse the output of a tool usage.
+    It provides methods to parse the result and transform the output into valid JSON.
+    """
 
     def parse_result(self, result: List[Generation], *, partial: bool = False) -> Any:
+        """
+        This method is used to parse the result of a tool usage. It first transforms the result into valid JSON.
+        It then calls the parse_result method of the superclass to parse the JSON object.
+        If parsing fails, it raises an OutputParserException.
+        """
         result[0].text = self._transform_in_valid_json(result[0].text)
         json_object = super().parse_result(result)
         try:
@@ -22,6 +30,13 @@ class ToolOutputParser(PydanticOutputParser):
             raise OutputParserException(msg, llm_output=json_object)
 
     def _transform_in_valid_json(self, text) -> str:
+        """
+        This method is used to transform the output of a tool usage into valid JSON.
+        It first removes any backticks and the word 'json' from the text.
+        It then uses a regular expression to find all JSON objects in the text.
+        It attempts to parse each match as JSON and returns the first successfully parsed JSON object.
+        If no match can be parsed as JSON, it returns the original text.
+        """
         text = text.replace("```", "").replace("json", "")
         json_pattern = r"\{(?:[^{}]|(?R))*\}"
         matches = regex.finditer(json_pattern, text)
