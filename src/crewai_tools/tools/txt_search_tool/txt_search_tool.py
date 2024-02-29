@@ -27,6 +27,7 @@ class TXTSearchTool(RagTool):
 			self.txt = txt
 			self.description = f"A tool that can be used to semantic search a query the {txt} txt's content."
 			self.args_schema = FixedTXTSearchToolSchema
+			self._generate_description()
 
 	def _run(
 		self,

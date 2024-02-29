@@ -28,6 +28,7 @@ class CSVSearchTool(RagTool):
 			self.csv = csv
 			self.description = f"A tool that can be used to semantic search a query the {csv} CSV's content."
 			self.args_schema = FixedCSVSearchToolSchema
+			self._generate_description()
 
 	def _run(
 		self,

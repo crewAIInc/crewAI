@@ -31,6 +31,7 @@ class GithubSearchTool(RagTool):
 			self.github_repo = github_repo
 			self.description = f"A tool that can be used to semantic search a query the {github_repo} github repo's content."
 			self.args_schema = FixedGithubSearchToolSchema
+			self._generate_description()
 
 	def _run(
 		self,

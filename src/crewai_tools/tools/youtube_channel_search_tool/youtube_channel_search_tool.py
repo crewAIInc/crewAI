@@ -28,6 +28,7 @@ class YoutubeChannelSearchTool(RagTool):
 			self.youtube_channel_handle = youtube_channel_handle
 			self.description = f"A tool that can be used to semantic search a query the {youtube_channel_handle} Youtube Channels content."
 			self.args_schema = FixedYoutubeChannelSearchToolSchema
+			self._generate_description()
 
 	def _run(
 		self,

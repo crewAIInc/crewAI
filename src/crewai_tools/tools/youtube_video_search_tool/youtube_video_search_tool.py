@@ -28,6 +28,7 @@ class YoutubeVideoSearchTool(RagTool):
 			self.youtube_video_url = youtube_video_url
 			self.description = f"A tool that can be used to semantic search a query the {youtube_video_url} Youtube Video content."
 			self.args_schema = FixedYoutubeVideoSearchToolSchema
+			self._generate_description()
 
 	def _run(
 		self,

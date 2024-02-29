@@ -13,10 +13,12 @@ class BaseTool(BaseModel, ABC):
     """Used to tell the model how/when/why to use the tool."""
     args_schema: Optional[Type[V1BaseModel]] = None
     """The schema for the arguments that the tool accepts."""
+    description_updated: bool = False
 
     @model_validator(mode="after")
     def _check_args_schema(self):
         self._set_args_schema()
+        self._generate_description()
         return self
 
     def run(
@@ -56,6 +58,13 @@ class BaseTool(BaseModel, ABC):
                     },
                 },
             )
+    def _generate_description(self):
+        args = []
+        for arg, attribute in self.args_schema.schema()['properties'].items():
+            args.append(f"{arg}: '{attribute['type']}'")
+
+        description = self.description.replace('\n', ' ')
+        self.description = f"{self.name}({', '.join(args)}) - {description}"
 
 
 class Tool(BaseTool):

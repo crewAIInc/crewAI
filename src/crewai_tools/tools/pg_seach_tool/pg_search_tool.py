@@ -24,6 +24,7 @@ class PGSearchTool(RagTool):
 		if table_name is not None:
 			self.table_name = table_name
 			self.description = f"A tool that can be used to semantic search a query the {table_name} database table's content."
+			self._generate_description()
 		else:
 			raise('To use PGSearchTool, you must provide a `table_name` argument')
 

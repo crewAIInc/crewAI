@@ -23,6 +23,7 @@ class DirectoryReadTool(BaseTool):
 			self.directory = directory
 			self.description = f"A tool that can be used to list {directory}'s content."
 			self.args_schema = FixedDirectoryReadToolSchema
+			self._generate_description()
 
 	def _run(
 		self,

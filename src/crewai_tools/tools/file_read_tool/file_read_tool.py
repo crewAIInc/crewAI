@@ -22,6 +22,7 @@ class FileReadTool(BaseTool):
 			self.file_path = file_path
 			self.description = f"A tool that can be used to read {file_path}'s content."
 			self.args_schema = FixedFileReadToolSchema
+			self._generate_description()
 
 	def _run(
 		self,
