@@ -16,6 +16,7 @@ from .tools import (
 	RagTool,
 	ScrapeElementFromWebsiteTool,
 	ScrapeWebsiteTool,
+	SeleniumScrapingTool,
 	WebsiteSearchTool,
 	XMLSearchTool,
 	YoutubeChannelSearchTool,
