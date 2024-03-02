@@ -1,3 +1,4 @@
+import ast
 from textwrap import dedent
 from typing import Any, List, Union
 
@@ -30,7 +31,6 @@ class ToolUsage:
         tools: List of tools available for the agent.
         tools_description: Description of the tools available for the agent.
         tools_names: Names of the tools available for the agent.
-        llm: Language model to be used for the tool usage.
         function_calling_llm: Language model to be used for the tool usage.
     """
 
@@ -41,8 +41,8 @@ class ToolUsage:
         tools_description: str,
         tools_names: str,
         task: Any,
-        llm: Any,
         function_calling_llm: Any,
+        action: Any,
     ) -> None:
         self._i18n: I18N = I18N()
         self._printer: Printer = Printer()
@@ -55,11 +55,14 @@ class ToolUsage:
         self.tools_handler = tools_handler
         self.tools = tools
         self.task = task
-        self.llm = function_calling_llm or llm
+        self.action = action
+        self.function_calling_llm = function_calling_llm
 
         # Set the maximum parsing attempts for bigger models
-        if (isinstance(self.llm, ChatOpenAI)) and (self.llm.openai_api_base == None):
-            if self.llm.model_name in OPENAI_BIGGER_MODELS:
+        if (isinstance(self.function_calling_llm, ChatOpenAI)) and (
+            self.function_calling_llm.openai_api_base == None
+        ):
+            if self.function_calling_llm.model_name in OPENAI_BIGGER_MODELS:
                 self._max_parsing_attempts = 2
                 self._remember_format_after_usages = 4
 
@@ -82,7 +85,7 @@ class ToolUsage:
             self.task.increment_tools_errors()
             self._printer.print(content=f"\n\n{error}\n", color="red")
             return error
-        return f"{self._use(tool_string=tool_string, tool=tool, calling=calling)}\n\n{self._i18n.slice('final_answer_format')}"
+        return f"{self._use(tool_string=tool_string, tool=tool, calling=calling)}"
 
     def _use(
         self,
@@ -93,14 +96,13 @@ class ToolUsage:
         if self._check_tool_repeated_usage(calling=calling):
             try:
                 result = self._i18n.errors("task_repeated_usage").format(
-                    tool=calling.tool_name,
-                    tool_input=", ".join(
-                        [str(arg) for arg in calling.arguments.values()]
-                    ),
+                    tool_names=self.tools_names
                 )
                 self._printer.print(content=f"\n\n{result}\n", color="yellow")
                 self._telemetry.tool_repeated_usage(
-                    llm=self.llm, tool_name=tool.name, attempts=self._run_attempts
+                    llm=self.function_calling_llm,
+                    tool_name=tool.name,
+                    attempts=self._run_attempts,
                 )
                 result = self._format_result(result=result)
                 return result
@@ -120,18 +122,32 @@ class ToolUsage:
                     self.task.increment_delegations()
 
                 if calling.arguments:
-                    result = tool._run(**calling.arguments)
+                    try:
+                        acceptable_args = tool.args_schema.schema()["properties"].keys()
+                        arguments = {
+                            k: v
+                            for k, v in calling.arguments.items()
+                            if k in acceptable_args
+                        }
+                        result = tool._run(**arguments)
+                    except Exception:
+                        if tool.args_schema:
+                            arguments = calling.arguments
+                            result = tool._run(**arguments)
+                        else:
+                            arguments = calling.arguments.values()
+                            result = tool._run(*arguments)
                 else:
                     result = tool._run()
             except Exception as e:
                 self._run_attempts += 1
                 if self._run_attempts > self._max_parsing_attempts:
-                    self._telemetry.tool_usage_error(llm=self.llm)
+                    self._telemetry.tool_usage_error(llm=self.function_calling_llm)
                     error_message = self._i18n.errors("tool_usage_exception").format(
-                        error=e
+                        error=e, tool=tool.name, tool_inputs=tool.description
                     )
                     error = ToolUsageErrorException(
-                        f'\n{error_message}.\nMoving one then. {self._i18n.slice("format").format(tool_names=self.tools_names)}'
+                        f'\n{error_message}.\nMoving on then. {self._i18n.slice("format").format(tool_names=self.tools_names)}'
                     ).message
                     self.task.increment_tools_errors()
                     self._printer.print(content=f"\n\n{error_message}\n", color="red")
@@ -139,11 +155,14 @@ class ToolUsage:
                 self.task.increment_tools_errors()
                 return self.use(calling=calling, tool_string=tool_string)
 
+            print('LET"S GOOOOOOOO')
             self.tools_handler.on_tool_use(calling=calling, output=result)
 
         self._printer.print(content=f"\n\n{result}\n", color="yellow")
         self._telemetry.tool_usage(
-            llm=self.llm, tool_name=tool.name, attempts=self._run_attempts
+            llm=self.function_calling_llm,
+            tool_name=tool.name,
+            attempts=self._run_attempts,
         )
         result = self._format_result(result=result)
         return result
@@ -177,7 +196,14 @@ class ToolUsage:
             if tool.name.lower().strip() == tool_name.lower().strip():
                 return tool
         self.task.increment_tools_errors()
-        raise Exception(f"Tool '{tool_name}' not found.")
+        if tool_name and tool_name != "":
+            raise Exception(
+                f"Action '{tool_name}' don't exist, these are the only available Actions: {self.tools_description}"
+            )
+        else:
+            raise Exception(
+                f"I forgot the Action name, these are the only available Actions: {self.tools_description}"
+            )
 
     def _render(self) -> str:
         """Render the tool name and description in plain text."""
@@ -205,34 +231,57 @@ class ToolUsage:
         self, tool_string: str
     ) -> Union[ToolCalling, InstructorToolCalling]:
         try:
-            model = InstructorToolCalling if self._is_gpt(self.llm) else ToolCalling
-            converter = Converter(
-                text=f"Only tools available:\n###\n{self._render()}\n\nReturn a valid schema for the tool, the tool name must be exactly equal one of the options, use this text to inform the valid ouput schema:\n\n{tool_string}```",
-                llm=self.llm,
-                model=model,
-                instructions=dedent(
-                    """\
-                                    The schema should have the following structure, only two keys:
-                                    - tool_name: str
-                                    - arguments: dict (with all arguments being passed)
+            if self.function_calling_llm:
+                model = (
+                    InstructorToolCalling
+                    if self._is_gpt(self.function_calling_llm)
+                    else ToolCalling
+                )
+                converter = Converter(
+                    text=f"Only tools available:\n###\n{self._render()}\n\nReturn a valid schema for the tool, the tool name must be exactly equal one of the options, use this text to inform the valid ouput schema:\n\n{tool_string}```",
+                    llm=self.function_calling_llm,
+                    model=model,
+                    instructions=dedent(
+                        """\
+                                            The schema should have the following structure, only two keys:
+                                            - tool_name: str
+                                            - arguments: dict (with all arguments being passed)
 
-                                    Example:
-                                    {"tool_name": "tool name", "arguments": {"arg_name1": "value", "arg_name2": 2}}""",
-                ),
-                max_attemps=1,
-            )
-            calling = converter.to_pydantic()
+                                            Example:
+                                            {"tool_name": "tool name", "arguments": {"arg_name1": "value", "arg_name2": 2}}""",
+                    ),
+                    max_attemps=1,
+                )
+                calling = converter.to_pydantic()
 
-            if isinstance(calling, ConverterError):
-                raise calling
+                if isinstance(calling, ConverterError):
+                    raise calling
+            else:
+                tool_name = self.action.tool
+                tool = self._select_tool(tool_name)
+                try:
+                    arguments = ast.literal_eval(self.action.tool_input)
+                except Exception:
+                    return ToolUsageErrorException(
+                        f'{self._i18n.errors("tool_arguments_error")}'
+                    )
+                if not isinstance(arguments, dict):
+                    return ToolUsageErrorException(
+                        f'{self._i18n.errors("tool_arguments_error")}'
+                    )
+                calling = ToolCalling(
+                    tool_name=tool.name,
+                    arguments=arguments,
+                    log=tool_string,
+                )
         except Exception as e:
             self._run_attempts += 1
             if self._run_attempts > self._max_parsing_attempts:
-                self._telemetry.tool_usage_error(llm=self.llm)
+                self._telemetry.tool_usage_error(llm=self.function_calling_llm)
                 self.task.increment_tools_errors()
                 self._printer.print(content=f"\n\n{e}\n", color="red")
                 return ToolUsageErrorException(
-                    f'{self._i18n.errors("tool_usage_error")}\n{self._i18n.slice("format").format(tool_names=self.tools_names)}'
+                    f'{self._i18n.errors("tool_usage_error").format(error=e)}\nMoving on then. {self._i18n.slice("format").format(tool_names=self.tools_names)}'
                 )
             return self._tool_calling(tool_string)
 

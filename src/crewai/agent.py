@@ -151,6 +151,8 @@ class Agent(BaseModel):
         Returns:
             Output of the agent
         """
+        self.tools_handler.last_used_tool = {}
+
         task_prompt = task.prompt()
 
         if context:
@@ -162,6 +164,7 @@ class Agent(BaseModel):
         self.create_agent_executor(tools=tools)
         self.agent_executor.tools = tools
         self.agent_executor.task = task
+
         self.agent_executor.tools_description = render_text_description(tools)
         self.agent_executor.tools_names = self.__tools_names(tools)
 
@@ -268,7 +271,7 @@ class Agent(BaseModel):
     def format_log_to_str(
         self,
         intermediate_steps: List[Tuple[AgentAction, str]],
-        observation_prefix: str = "Result: ",
+        observation_prefix: str = "Observation: ",
         llm_prefix: str = "",
     ) -> str:
         """Construct the scratchpad that lets the agent continue its thought process."""
