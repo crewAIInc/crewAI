@@ -41,7 +41,6 @@ class Crew(BaseModel):
         full_output: Whether the crew should return the full output with all tasks outputs or just the final output.
         step_callback: Callback to be executed after each step for every agents execution.
         share_crew: Whether you want to share the complete crew infromation and execution with crewAI to make the library better, and allow us to train models.
-        inputs: Any inputs that the crew will use in tasks or agents, it will be interpolated in promtps.
     """
 
     __hash__ = object.__hash__  # type: ignore
@@ -67,10 +66,6 @@ class Crew(BaseModel):
     )
     function_calling_llm: Optional[Any] = Field(
         description="Language model that will run the agent.", default=None
-    )
-    inputs: Optional[Dict[str, Any]] = Field(
-        description="Any inputs that the crew will use in tasks or agents, it will be interpolated in promtps.",
-        default=None,
     )
     config: Optional[Union[Json, Dict[str, Any]]] = Field(default=None)
     id: UUID4 = Field(default_factory=uuid.uuid4, frozen=True)
@@ -135,15 +130,6 @@ class Crew(BaseModel):
         return self
 
     @model_validator(mode="after")
-    def interpolate_inputs(self):
-        """Interpolates the inputs in the tasks and agents."""
-        for task in self.tasks:
-            task.interpolate_inputs(self.inputs)
-        for agent in self.agents:
-            agent.interpolate_inputs(self.inputs)
-        return self
-
-    @model_validator(mode="after")
     def check_config(self):
         """Validates that the crew is properly configured with agents and tasks."""
         if not self.config and not self.tasks and not self.agents:
@@ -191,9 +177,10 @@ class Crew(BaseModel):
         del task_config["agent"]
         return Task(**task_config, agent=task_agent)
 
-    def kickoff(self) -> str:
+    def kickoff(self, inputs: Optional[Dict[str, Any]] = {}) -> str:
         """Starts the crew to work on its assigned tasks."""
         self._execution_span = self._telemetry.crew_execution_span(self)
+        self._interpolate_inputs(inputs)
 
         for agent in self.agents:
             agent.i18n = I18N(language=self.language)
@@ -231,7 +218,7 @@ class Crew(BaseModel):
         """Executes tasks sequentially and returns the final output."""
         task_output = ""
         for task in self.tasks:
-            if task.agent is not None and task.agent.allow_delegation:
+            if task.agent.allow_delegation:
                 agents_for_delegation = [
                     agent for agent in self.agents if agent != task.agent
                 ]
@@ -280,6 +267,11 @@ class Crew(BaseModel):
 
         self._finish_execution(task_output)
         return self._format_output(task_output), manager._token_process.get_summary()
+
+    def _interpolate_inputs(self, inputs: Dict[str, Any]) -> str:
+        """Interpolates the inputs in the tasks and agents."""
+        [task.interpolate_inputs(inputs) for task in self.tasks]
+        [agent.interpolate_inputs(inputs) for agent in self.agents]
 
     def _format_output(self, output: str) -> str:
         """Formats the output of the crew execution."""
