@@ -15,7 +15,7 @@ Tasks in CrewAI can be designed to require collaboration between agents. For exa
 | :------------- | :----------------------------------- |
 | **Description**       | A clear, concise statement of what the task entails.  |
 | **Agent**    | Optionally, you can specify which agent is responsible for the task. If not, the crew's process will determine who takes it on. |
-| **Expected Output** *(optional)*      | Clear and detailed definition of expected output for the task.  |
+| **Expected Output**      | Clear and detailed definition of expected output for the task.  |
 | **Tools** *(optional)*   | These are the functions or capabilities the agent can utilize to perform the task. They can be anything from simple actions like 'search' to more complex interactions with other agents or APIs. |
 | **Async Execution** *(optional)*      | If the task should be executed asynchronously. This indicates that the crew will not wait for the task to be completed to continue with the next task. |
 | **Context**  *(optional)*     | Other tasks that will have their output used as context for this task. If a task is asynchronous, the system will wait for that to finish before using its output as context. |

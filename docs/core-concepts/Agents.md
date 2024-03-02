@@ -22,7 +22,7 @@ description: What are crewAI Agents and how to use them.
 | **Backstory**       | Provides context to the agent's role and goal, enriching the interaction and collaboration dynamics. |
 | **LLM**             | The language model used by the agent to process and generate text. Defaults to using OpenAI's GPT-4 (`ChatOpenAI`), unless another model is specified through the environment variable "OPENAI_MODEL_NAME". |
 | **Tools**           | Set of capabilities or functions that the agent can use to perform tasks. Tools can be shared or exclusive to specific agents. It's an attribute that can be set during the initialization of an agent. |
-| **Function Calling LLM** | The language model used by this agent to call functions. It is an optional field and, if not provided, the behavior of defaulting to the main `llm` is implicit. |
+| **Function Calling LLM** | If passed this agent will use this LLM to do function calling for tools instead of relying on the main llm output |
 | **Max Iter**        | The maximum number of iterations the agent can perform before being forced to give its best answer. Default is `15`. |
 | **Max RPM**         | The maximum number of requests per minute the agent can perform to avoid rate limits. It's optional and can be left unspecified. |
 | **Verbose**         | Enables detailed logging of the agent's execution for debugging or monitoring purposes when set to True. Default is `False` |
