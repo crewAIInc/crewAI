@@ -14,7 +14,7 @@ class ScrapeWebsiteToolSchema(FixedScrapeWebsiteToolSchema):
 	website_url: str = Field(..., description="Mandatory website url to read the file")
 
 class ScrapeWebsiteTool(BaseTool):
-	name: str = "Read a website content"
+	name: str = "Read website content"
 	description: str = "A tool that can be used to read a website content."
 	args_schema: Type[BaseModel] = ScrapeWebsiteToolSchema
 	website_url: Optional[str] = None
@@ -46,5 +46,8 @@ class ScrapeWebsiteTool(BaseTool):
 		website_url = kwargs.get('website_url', self.website_url)
 		page = requests.get(website_url, headers=self.headers, cookies=self.cookies if self.cookies else {})
 		parsed = BeautifulSoup(page.content, "html.parser")
-		return parsed.get_text()
+		text = parsed.get_text()
+		text = '\n'.join([i for i in text.split('\n') if i.strip() != ''])
+		text = ' '.join([i for i in text.split(' ') if i.strip() != ''])
+		return text
 
