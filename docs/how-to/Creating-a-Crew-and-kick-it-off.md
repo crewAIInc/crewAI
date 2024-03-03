@@ -7,12 +7,11 @@ description: A comprehensive guide to creating a dynamic CrewAI team for your pr
 Embark on your CrewAI journey by setting up your environment and initiating your AI crew with enhanced features. This guide ensures a seamless start, incorporating the latest updates.
 
 ## Step 0: Installation
-Install CrewAI and any necessary packages for your project. The `duckduckgo-search` package is highlighted here for enhanced search capabilities.
+Install CrewAI and any necessary packages for your project.
 
 ```shell
 pip install crewai
-pip install crewai[tools]
-pip install duckduckgo-search
+pip install 'crewai[tools]'
 ```
 
 ## Step 1: Assemble Your Agents
@@ -20,24 +19,24 @@ Define your agents with distinct roles, backstories, and now, enhanced capabilit
 
 ```python
 import os
+os.environ["SERPER_API_KEY"] = "Your Key" # serper.dev API key
 os.environ["OPENAI_API_KEY"] = "Your Key"
 
 from crewai import Agent
-from langchain_community.tools import DuckDuckGoSearchRun
-search_tool = DuckDuckGoSearchRun()
-
-# Topic for the crew run
-topic = 'AI in healthcare'
+from crewai_tools import SerperDevTool
+search_tool = SerperDevTool()
 
 # Creating a senior researcher agent with memory and verbose mode
 researcher = Agent(
   role='Senior Researcher',
-  goal=f'Uncover groundbreaking technologies in {topic}',
+  goal='Uncover groundbreaking technologies in {topic}',
   verbose=True,
   memory=True,
-  backstory="""Driven by curiosity, you're at the forefront of
-  innovation, eager to explore and share knowledge that could change
-  the world.""",
+  backstory=(
+    "Driven by curiosity, you're at the forefront of"
+    "innovation, eager to explore and share knowledge that could change"
+    "the world."
+  ),
   tools=[search_tool],
   allow_delegation=True
 )
@@ -45,12 +44,14 @@ researcher = Agent(
 # Creating a writer agent with custom tools and delegation capability
 writer = Agent(
   role='Writer',
-  goal=f'Narrate compelling tech stories about {topic}',
+  goal='Narrate compelling tech stories about {topic}',
   verbose=True,
   memory=True,
-  backstory="""With a flair for simplifying complex topics, you craft
-  engaging narratives that captivate and educate, bringing new
-  discoveries to light in an accessible manner.""",
+  backstory=(
+    "With a flair for simplifying complex topics, you craft"
+    "engaging narratives that captivate and educate, bringing new"
+    "discoveries to light in an accessible manner."
+  ),
   tools=[search_tool],
   allow_delegation=False
 )
@@ -64,10 +65,12 @@ from crewai import Task
 
 # Research task
 research_task = Task(
-  description=f"""Identify the next big trend in {topic}.
-  Focus on identifying pros and cons and the overall narrative.
-  Your final report should clearly articulate the key points,
-  its market opportunities, and potential risks.""",
+  description=(
+    "Identify the next big trend in {topic}."
+    "Focus on identifying pros and cons and the overall narrative."
+    "Your final report should clearly articulate the key points"
+    "its market opportunities, and potential risks."
+  ),
   expected_output='A comprehensive 3 paragraphs long report on the latest AI trends.',
   tools=[search_tool],
   agent=researcher,
@@ -75,10 +78,12 @@ research_task = Task(
 
 # Writing task with language model configuration
 write_task = Task(
-  description=f"""Compose an insightful article on {topic}.
-  Focus on the latest trends and how it's impacting the industry.
-  This article should be easy to understand, engaging, and positive.""",
-  expected_output=f'A 4 paragraph article on {topic} advancements fromated as markdown.',
+  description=(
+    "Compose an insightful article on {topic}."
+    "Focus on the latest trends and how it's impacting the industry."
+    "This article should be easy to understand, engaging, and positive."
+  ),
+  expected_output='A 4 paragraph article on {topic} advancements formatted as markdown.',
   tools=[search_tool],
   agent=writer,
   async_execution=False,
@@ -101,11 +106,11 @@ crew = Crew(
 ```
 
 ## Step 4: Kick It Off
-Initiate the process with your enhanced crew ready. Observe as your agents collaborate, leveraging their new capabilities for a successful project outcome.
+Initiate the process with your enhanced crew ready. Observe as your agents collaborate, leveraging their new capabilities for a successful project outcome. You can also pass the inputs that will be interpolated into the agents and tasks.
 
 ```python
 # Starting the task execution process with enhanced feedback
-result = crew.kickoff()
+result = crew.kickoff(inputs={'topic': 'AI in healthcare'})
 print(result)
 ```
 

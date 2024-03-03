@@ -155,7 +155,6 @@ class ToolUsage:
                 self.task.increment_tools_errors()
                 return self.use(calling=calling, tool_string=tool_string)
 
-            print('LET"S GOOOOOOOO')
             self.tools_handler.on_tool_use(calling=calling, output=result)
 
         self._printer.print(content=f"\n\n{result}\n", color="yellow")
