@@ -152,7 +152,7 @@ In addition to the sequential process, you can use the hierarchical process, whi
 - **Processes Driven**: Currently only supports `sequential` task execution and `hierarchical` processes, but more complex processes like consensual and autonomous are being worked on.
 - **Save output as file**: Save the output of individual tasks as a file, so you can use it later.
 - **Parse output as Pydantic or Json**: Parse the output of individual tasks as a Pydantic model or as a Json if you want to.
-- **Works with Open Source Models**: Run your crew using Open AI or open source models refer to the [Connect crewAI to LLMs](https://docs.crewai.com/how-to/LLM-Connections/) page for details on configuring you agents' connections to models, even ones running locally!
+- **Works with Open Source Models**: Run your crew using Open AI or open source models refer to the [Connect crewAI to LLMs](https://docs.crewai.com/how-to/LLM-Connections/) page for details on configuring your agents' connections to models, even ones running locally!
 
 ![CrewAI Mind Map](./docs/crewAI-mindmap.png "CrewAI Mind Map")
 
