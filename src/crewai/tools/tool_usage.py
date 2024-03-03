@@ -5,7 +5,7 @@ from langchain_core.tools import BaseTool
 from langchain_openai import ChatOpenAI
 
 from crewai.agents.tools_handler import ToolsHandler
-from crewai.telemtry import Telemetry
+from crewai.telemetry import Telemetry
 from crewai.tools.tool_calling import InstructorToolCalling, ToolCalling
 from crewai.utilities import I18N, Converter, ConverterError, Printer
 

@@ -19,7 +19,7 @@ from crewai.agent import Agent
 from crewai.agents.cache import CacheHandler
 from crewai.process import Process
 from crewai.task import Task
-from crewai.telemtry import Telemetry
+from crewai.telemetry import Telemetry
 from crewai.tools.agent_tools import AgentTools
 from crewai.utilities import I18N, Logger, RPMController
 
