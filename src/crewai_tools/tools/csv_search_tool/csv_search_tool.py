@@ -13,7 +13,7 @@ class FixedCSVSearchToolSchema(BaseModel):
 
 class CSVSearchToolSchema(FixedCSVSearchToolSchema):
 	"""Input for CSVSearchTool."""
-	pdf: str = Field(..., description="Mandatory csv path you want to search")
+	csv: str = Field(..., description="Mandatory csv path you want to search")
 
 class CSVSearchTool(RagTool):
 	name: str = "Search a CSV's content"
