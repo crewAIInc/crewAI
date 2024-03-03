@@ -72,7 +72,7 @@ os.environ["OPENAI_API_KEY"] = "YOUR_API_KEY"
 # You can choose to use a local model through Ollama for example. See https://docs.crewai.com/how-to/LLM-Connections/ for more information.
 # osOPENAI_API_BASE='http://localhost:11434/v1'
 # OPENAI_MODEL_NAME='openhermes'  # Adjust based on available model
-# OPENAI_API_KEY=''
+# OPENAI_API_KEY='sk-111111111111111111111111111111111111111111111111'
 
 # Install duckduckgo-search for this example:
 # !pip install -U duckduckgo-search
