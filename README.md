@@ -19,20 +19,31 @@
 
 ## Table of contents
 
-- [Why CrewAI?](#why-crewai)
-- [Getting Started](#getting-started)
-- [Key Features](#key-features)
-- [Examples](#examples)
-  - [Quick Tutorial](#quick-tutorial)
-  - [Write Job Descriptions](#write-job-descriptions)
-  - [Trip Planner](#trip-planner)
-  - [Stock Analysis](#stock-analysis)
-- [Connecting Your Crew to a Model](#connecting-your-crew-to-a-model)
-- [How CrewAI Compares](#how-crewai-compares)
-- [Contribution](#contribution)
-- [Hire CrewAI](#hire-crewai)
-- [Telemetry](#telemetry)
-- [License](#license)
+- [**crewAI**](#crewai)
+  - [Table of contents](#table-of-contents)
+  - [Why CrewAI?](#why-crewai)
+  - [Getting Started](#getting-started)
+    - [1. Installation](#1-installation)
+    - [2. Setting Up Your Crew](#2-setting-up-your-crew)
+  - [Key Features](#key-features)
+  - [Examples](#examples)
+    - [Quick Tutorial](#quick-tutorial)
+    - [Write Job Descriptions](#write-job-descriptions)
+    - [Trip Planner](#trip-planner)
+    - [Stock Analysis](#stock-analysis)
+  - [Connecting Your Crew to a Model](#connecting-your-crew-to-a-model)
+  - [How CrewAI Compares](#how-crewai-compares)
+  - [Contribution](#contribution)
+    - [Installing Dependencies](#installing-dependencies)
+    - [Virtual Env](#virtual-env)
+    - [Pre-commit hooks](#pre-commit-hooks)
+    - [Running Tests](#running-tests)
+    - [Running static type checks](#running-static-type-checks)
+    - [Packaging](#packaging)
+    - [Installing Locally](#installing-locally)
+  - [Hire CrewAI](#hire-crewai)
+  - [Telemetry](#telemetry)
+  - [License](#license)
 
 ## Why CrewAI?
 
@@ -90,9 +101,9 @@ researcher = Agent(
   verbose=True,
   allow_delegation=False,
   tools=[search_tool]
-  # You can pass an optional llm attribute specifying what mode you wanna use.
+  # You can pass an optional llm attribute specifying which model you want to use.
   # It can be a local model through Ollama / LM Studio or a remote
-  # model like OpenAI, Mistral, Antrophic or others (https://docs.crewai.com/how-to/LLM-Connections/)
+  # models like OpenAI, Mistral, Antrophic or others (https://docs.crewai.com/how-to/LLM-Connections/)
   #
   # import os
   # os.environ['OPENAI_MODEL_NAME'] = 'gpt-3.5-turbo'
