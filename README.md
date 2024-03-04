@@ -24,6 +24,7 @@
 - [Key Features](#key-features)
 - [Examples](#examples)
   - [Quick Tutorial](#quick-tutorial)
+  - [Write Job Descriptions](#write-job-descriptions)
   - [Trip Planner](#trip-planner)
   - [Stock Analysis](#stock-analysis)
 - [Connecting Your Crew to a Model](#connecting-your-crew-to-a-model)
@@ -71,7 +72,7 @@ os.environ["OPENAI_API_KEY"] = "YOUR_API_KEY"
 # You can choose to use a local model through Ollama for example. See https://docs.crewai.com/how-to/LLM-Connections/ for more information.
 # osOPENAI_API_BASE='http://localhost:11434/v1'
 # OPENAI_MODEL_NAME='openhermes'  # Adjust based on available model
-# OPENAI_API_KEY=''
+# OPENAI_API_KEY='sk-111111111111111111111111111111111111111111111111'
 
 # Install duckduckgo-search for this example:
 # !pip install -U duckduckgo-search
@@ -113,8 +114,8 @@ writer = Agent(
 # Create tasks for your agents
 task1 = Task(
   description="""Conduct a comprehensive analysis of the latest advancements in AI in 2024.
-  Identify key trends, breakthrough technologies, and potential industry impacts.
-  Your final answer MUST be a full analysis report""",
+  Identify key trends, breakthrough technologies, and potential industry impacts.""",
+  expected_output="Full analysis report in bullet points",
   agent=researcher
 )
 
@@ -122,8 +123,8 @@ task2 = Task(
   description="""Using the insights provided, develop an engaging blog
   post that highlights the most significant AI advancements.
   Your post should be informative yet accessible, catering to a tech-savvy audience.
-  Make it sound cool, avoid complex words so it doesn't sound like AI.
-  Your final answer MUST be the full blog post of at least 4 paragraphs.""",
+  Make it sound cool, avoid complex words so it doesn't sound like AI.""",
+  expected_output="Full blog post of at least 4 paragraphs",
   agent=writer
 )
 
@@ -151,7 +152,7 @@ In addition to the sequential process, you can use the hierarchical process, whi
 - **Processes Driven**: Currently only supports `sequential` task execution and `hierarchical` processes, but more complex processes like consensual and autonomous are being worked on.
 - **Save output as file**: Save the output of individual tasks as a file, so you can use it later.
 - **Parse output as Pydantic or Json**: Parse the output of individual tasks as a Pydantic model or as a Json if you want to.
-- **Works with Open Source Models**: Run your crew using Open AI or open source models refer to the [Connect crewAI to LLMs](https://docs.crewai.com/how-to/LLM-Connections/) page for details on configuring you agents' connections to models, even ones running locally!
+- **Works with Open Source Models**: Run your crew using Open AI or open source models refer to the [Connect crewAI to LLMs](https://docs.crewai.com/how-to/LLM-Connections/) page for details on configuring your agents' connections to models, even ones running locally!
 
 ![CrewAI Mind Map](./docs/crewAI-mindmap.png "CrewAI Mind Map")
 
@@ -167,6 +168,12 @@ You can test different real life examples of AI crews in the [crewAI-examples re
 ### Quick Tutorial
 
 [![CrewAI Tutorial](https://img.youtube.com/vi/tnejrr-0a94/maxresdefault.jpg)](https://www.youtube.com/watch?v=tnejrr-0a94 "CrewAI Tutorial")
+
+### Write Job Descriptions
+
+[Check out code for this example](https://github.com/joaomdmoura/crewAI-examples/tree/main/job-posting) or watch a video below:
+
+[![Jobs postings](https://img.youtube.com/vi/u98wEMz-9to/maxresdefault.jpg)](https://www.youtube.com/watch?v=u98wEMz-9to "Jobs postings")
 
 ### Trip Planner
 

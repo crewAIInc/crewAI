@@ -14,15 +14,16 @@ description: Exploring the dynamics of agent collaboration within the CrewAI fra
 ## Enhanced Attributes for Improved Collaboration
 The `Crew` class has been enriched with several attributes to support advanced functionalities:
 
-- **Language Model Management (`manager_llm`, `function_calling_llm`)**: Manages language models for executing tasks and tools, facilitating sophisticated agent-tool interactions.
+- **Language Model Management (`manager_llm`, `function_calling_llm`)**: Manages language models for executing tasks and tools, facilitating sophisticated agent-tool interactions. It's important to note that `manager_llm` is mandatory when using a hierarchical process for ensuring proper execution flow.
 - **Process Flow (`process`)**: Defines the execution logic (e.g., sequential, hierarchical) to streamline task distribution and execution.
-- **Verbose Logging (`verbose`)**: Offers detailed logging capabilities for monitoring and debugging purposes.
+- **Verbose Logging (`verbose`)**: Offers detailed logging capabilities for monitoring and debugging purposes. It supports both integer and boolean types to indicate the verbosity level.
 - **Configuration (`config`)**: Allows extensive customization to tailor the crew's behavior according to specific requirements.
 - **Rate Limiting (`max_rpm`)**: Ensures efficient utilization of resources by limiting requests per minute.
 - **Internationalization Support (`language`)**: Facilitates operation in multiple languages, enhancing global usability.
 - **Execution and Output Handling (`full_output`)**: Distinguishes between full and final outputs for nuanced control over task results.
 - **Callback and Telemetry (`step_callback`)**: Integrates callbacks for step-wise execution monitoring and telemetry for performance analytics.
-- **Crew Sharing (`share_crew`)**: Enables sharing of crew information with CrewAI for continuous improvement.
+- **Crew Sharing (`share_crew`)**: Enables sharing of crew information with CrewAI for continuous improvement and training models.
+- **Usage Metrics (`usage_metrics`)**: Store all metrics for the language model (LLM) usage during all tasks' execution, providing insights into operational efficiency and areas for improvement, you can check it after the crew execution.
 
 ## Delegation: Dividing to Conquer
 Delegation enhances functionality by allowing agents to intelligently assign tasks or seek help, thereby amplifying the crew's overall capability.

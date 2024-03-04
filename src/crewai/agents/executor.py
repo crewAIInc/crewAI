@@ -27,6 +27,7 @@ class CrewAgentExecutor(AgentExecutor):
     request_within_rpm_limit: Any = None
     tools_handler: InstanceOf[ToolsHandler] = None
     max_iterations: Optional[int] = 15
+    have_forced_answer: bool = False
     force_answer_max_iterations: Optional[int] = None
     step_callback: Optional[Any] = None
 
@@ -36,7 +37,9 @@ class CrewAgentExecutor(AgentExecutor):
         return values
 
     def _should_force_answer(self) -> bool:
-        return True if self.iterations == self.force_answer_max_iterations else False
+        return (
+            self.iterations == self.force_answer_max_iterations
+        ) and not self.have_forced_answer
 
     def _call(
         self,
@@ -103,6 +106,13 @@ class CrewAgentExecutor(AgentExecutor):
         Override this to take control of how the agent makes and acts on choices.
         """
         try:
+            if self._should_force_answer():
+                error = self._i18n.errors("force_final_answer")
+                output = AgentAction("_Exception", error, error)
+                self.have_forced_answer = True
+                yield AgentStep(action=output, observation=error)
+                return
+
             intermediate_steps = self._prepare_intermediate_steps(intermediate_steps)
             # Call the LLM to see what to do.
             output = self.agent.plan(
@@ -110,23 +120,6 @@ class CrewAgentExecutor(AgentExecutor):
                 callbacks=run_manager.get_child() if run_manager else None,
                 **inputs,
             )
-
-            if self._should_force_answer():
-                if isinstance(output, AgentFinish):
-                    yield output
-                    return
-
-                if isinstance(output, AgentAction):
-                    output = output
-                else:
-                    raise ValueError(
-                        f"Unexpected output type from agent: {type(output)}"
-                    )
-
-                yield AgentStep(
-                    action=output, observation=self._i18n.errors("force_final_answer")
-                )
-                return
 
         except OutputParserException as e:
             if isinstance(self.handle_parsing_errors, bool):
@@ -140,11 +133,11 @@ class CrewAgentExecutor(AgentExecutor):
                     "again, pass `handle_parsing_errors=True` to the AgentExecutor. "
                     f"This is the error: {str(e)}"
                 )
-            text = str(e)
+            str(e)
             if isinstance(self.handle_parsing_errors, bool):
                 if e.send_to_llm:
                     observation = f"\n{str(e.observation)}"
-                    text = str(e.llm_output)
+                    str(e.llm_output)
                 else:
                     observation = ""
             elif isinstance(self.handle_parsing_errors, str):
@@ -153,22 +146,22 @@ class CrewAgentExecutor(AgentExecutor):
                 observation = f"\n{self.handle_parsing_errors(e)}"
             else:
                 raise ValueError("Got unexpected type of `handle_parsing_errors`")
-            output = AgentAction("_Exception", observation, text)
+            output = AgentAction("_Exception", observation, "")
             if run_manager:
                 run_manager.on_agent_action(output, color="green")
             tool_run_kwargs = self.agent.tool_run_logging_kwargs()
             observation = ExceptionTool().run(
                 output.tool_input,
-                verbose=self.verbose,
+                verbose=False,
                 color=None,
                 callbacks=run_manager.get_child() if run_manager else None,
                 **tool_run_kwargs,
             )
 
             if self._should_force_answer():
-                yield AgentStep(
-                    action=output, observation=self._i18n.errors("force_final_answer")
-                )
+                error = self._i18n.errors("force_final_answer")
+                output = AgentAction("_Exception", error, error)
+                yield AgentStep(action=output, observation=error)
                 return
 
             yield AgentStep(action=output, observation=observation)
@@ -192,8 +185,8 @@ class CrewAgentExecutor(AgentExecutor):
                 tools_description=self.tools_description,
                 tools_names=self.tools_names,
                 function_calling_llm=self.function_calling_llm,
-                llm=self.llm,
                 task=self.task,
+                action=agent_action,
             )
             tool_calling = tool_usage.parse(agent_action.log)
 

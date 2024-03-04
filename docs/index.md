@@ -44,6 +44,11 @@ Cutting-edge framework for orchestrating role-playing, autonomous AI agents. By 
                 </a>
             </li>
             <li>
+                <a href="./how-to/Create-Custom-Tools">
+                    Create Custom Tools
+                </a>
+            </li>
+            <li>
                 <a href="./how-to/Sequential">
                     Using Sequential Process
                 </a>

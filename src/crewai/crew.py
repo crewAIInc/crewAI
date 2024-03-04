@@ -19,7 +19,7 @@ from crewai.agent import Agent
 from crewai.agents.cache import CacheHandler
 from crewai.process import Process
 from crewai.task import Task
-from crewai.telemtry import Telemetry
+from crewai.telemetry import Telemetry
 from crewai.tools.agent_tools import AgentTools
 from crewai.utilities import I18N, Logger, RPMController
 
@@ -53,6 +53,10 @@ class Crew(BaseModel):
     agents: List[Agent] = Field(default_factory=list)
     process: Process = Field(default=Process.sequential)
     verbose: Union[int, bool] = Field(default=0)
+    usage_metrics: Optional[dict] = Field(
+        default=None,
+        description="Metrics for the LLM usage during all tasks execution.",
+    )
     full_output: Optional[bool] = Field(
         default=False,
         description="Whether the crew should return the full output with all tasks outputs or just the final output.",
@@ -173,9 +177,10 @@ class Crew(BaseModel):
         del task_config["agent"]
         return Task(**task_config, agent=task_agent)
 
-    def kickoff(self) -> str:
+    def kickoff(self, inputs: Optional[Dict[str, Any]] = {}) -> str:
         """Starts the crew to work on its assigned tasks."""
         self._execution_span = self._telemetry.crew_execution_span(self)
+        self._interpolate_inputs(inputs)
 
         for agent in self.agents:
             agent.i18n = I18N(language=self.language)
@@ -187,24 +192,38 @@ class Crew(BaseModel):
                 agent.step_callback = self.step_callback
                 agent.create_agent_executor()
 
-        if self.process == Process.sequential:
-            return self._run_sequential_process()
-        if self.process == Process.hierarchical:
-            return self._run_hierarchical_process()
+        metrics = []
 
-        raise NotImplementedError(
-            f"The process '{self.process}' is not implemented yet."
-        )
+        if self.process == Process.sequential:
+            result = self._run_sequential_process()
+        elif self.process == Process.hierarchical:
+            result, manager_metrics = self._run_hierarchical_process()
+            metrics.append(manager_metrics)
+
+        else:
+            raise NotImplementedError(
+                f"The process '{self.process}' is not implemented yet."
+            )
+
+        metrics = metrics + [
+            agent._token_process.get_summary() for agent in self.agents
+        ]
+        self.usage_metrics = {
+            key: sum([m[key] for m in metrics if m is not None]) for key in metrics[0]
+        }
+
+        return result
 
     def _run_sequential_process(self) -> str:
         """Executes tasks sequentially and returns the final output."""
         task_output = ""
         for task in self.tasks:
-            if task.agent is not None and task.agent.allow_delegation:
+            if task.agent.allow_delegation:
                 agents_for_delegation = [
                     agent for agent in self.agents if agent != task.agent
                 ]
-                task.tools += AgentTools(agents=agents_for_delegation).tools()
+                if len(self.agents) > 1 and len(agents_for_delegation) > 0:
+                    task.tools += AgentTools(agents=agents_for_delegation).tools()
 
             role = task.agent.role if task.agent is not None else "None"
             self._logger.log("debug", f"Working Agent: {role}")
@@ -247,7 +266,12 @@ class Crew(BaseModel):
             )
 
         self._finish_execution(task_output)
-        return self._format_output(task_output)
+        return self._format_output(task_output), manager._token_process.get_summary()
+
+    def _interpolate_inputs(self, inputs: Dict[str, Any]) -> str:
+        """Interpolates the inputs in the tasks and agents."""
+        [task.interpolate_inputs(inputs) for task in self.tasks]
+        [agent.interpolate_inputs(inputs) for agent in self.agents]
 
     def _format_output(self, output: str) -> str:
         """Formats the output of the crew execution."""

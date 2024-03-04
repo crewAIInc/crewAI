@@ -1,6 +1,6 @@
 ---
 title: Connect CrewAI to LLMs
-description: Guide on integrating CrewAI with various Large Language Models (LLMs).
+description: Comprehensive guide on integrating CrewAI with various Large Language Models (LLMs), including detailed class attributes and methods.
 ---
 
 ## Connect CrewAI to LLMs
@@ -10,15 +10,22 @@ description: Guide on integrating CrewAI with various Large Language Models (LLM
 CrewAI offers flexibility in connecting to various LLMs, including local models via [Ollama](https://ollama.ai) and different APIs like Azure. It's compatible with all [LangChain LLM](https://python.langchain.com/docs/integrations/llms/) components, enabling diverse integrations for tailored AI solutions.
 
 ## CrewAI Agent Overview
-The `Agent` class in CrewAI is central to implementing AI solutions. Here's a brief overview:
+The `Agent` class is the cornerstone for implementing AI solutions in CrewAI. Here's an updated overview reflecting the latest codebase changes:
 
 - **Attributes**:
     - `role`: Defines the agent's role within the solution.
     - `goal`: Specifies the agent's objective.
     - `backstory`: Provides a background story to the agent.
     - `llm`: Indicates the Large Language Model the agent uses.
+    - `function_calling_llm` *Optinal*: Will turn the ReAct crewAI agent into a function calling agent.
+    - `max_iter`: Maximum number of iterations for an agent to execute a task, default is 15.
+    - `memory`: Enables the agent to retain information during the execution.
+    - `max_rpm`: Sets the maximum number of requests per minute.
+    - `verbose`: Enables detailed logging of the agent's execution.
+    - `allow_delegation`: Allows the agent to delegate tasks to other agents, default is `True`.
+    - `tools`: Specifies the tools available to the agent for task execution.
+    - `step_callback`: Provides a callback function to be executed after each step.
 
-### Example Changing OpenAI's GPT model
 ```python
 # Required
 os.environ["OPENAI_MODEL_NAME"]="gpt-4-0125-preview"

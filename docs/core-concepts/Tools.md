@@ -12,41 +12,40 @@ CrewAI tools empower agents with capabilities ranging from web searching and dat
 
 ## Key Characteristics of Tools
 
-- **Utility**: Designed for various tasks such as web searching, data analysis, content generation, and agent collaboration.
-- **Integration**: Enhances agent capabilities by integrating tools directly into their workflow.
-- **Customizability**: Offers flexibility to develop custom tools or use existing ones, catering to specific agent needs.
+- **Utility**: Crafted for tasks such as web searching, data analysis, content generation, and agent collaboration.
+- **Integration**: Boosts agent capabilities by seamlessly integrating tools into their workflow.
+- **Customizability**: Provides the flexibility to develop custom tools or utilize existing ones, catering to the specific needs of agents.
 
 ## Using crewAI Tools
 
-crewAI comes with a series to built-in tools that can be used to extend the capabilities of your agents. Start by installing our extra tools package:
+To enhance your agents' capabilities with crewAI tools, begin by installing our extra tools package:
 
 ```bash
 pip install 'crewai[tools]'
 ```
 
-Here is an example on how to use them:
+Here's an example demonstrating their use:
 
 ```python
 import os
 from crewai import Agent, Task, Crew
-# Importing some of the crewAI tools
+# Importing crewAI tools
 from crewai_tools import (
     DirectoryReadTool,
     FileReadTool,
-    SeperDevTool,
+    SerperDevTool,
     WebsiteSearchTool
 )
 
-# get a free account in serper.dev
-os.environ["SERPER_API_KEY"] = "Your Key"
+# Set up API keys
+os.environ["SERPER_API_KEY"] = "Your Key" # serper.dev API key
 os.environ["OPENAI_API_KEY"] = "Your Key"
 
 # Instantiate tools
-# Assumes this ./blog-posts exists with existing blog posts on it
-docs_tools = DirectoryReadTool(directory='./blog-posts')
-file_read_tool = FileReadTool()
+docs_tool = DirectoryReadTool(directory='./blog-posts')
+file_tool = FileReadTool()
 search_tool = SeperDevTool()
-website_rag = WebsiteSearchTool()
+web_rag_tool = WebsiteSearchTool()
 
 # Create agents
 researcher = Agent(
@@ -59,35 +58,34 @@ researcher = Agent(
 
 writer = Agent(
     role='Content Writer',
-    goal='Write amazing, super engaging blog post about the AI industry',
+    goal='Craft engaging blog posts about the AI industry',
     backstory='A skilled writer with a passion for technology.',
-    tools=[docs_tools, file_read_tool],
+    tools=[docs_tool, file_tool],
     verbose=True
 )
 
-# Create  tasks
+# Define tasks
 research = Task(
-    description='Research the AI industry and provide a summary of the latest most trending matters and developments.',
-    expected_output='A summary of the top 3 latest most trending matters and developments in the AI industry with you unique take on why they matter.',
+    description='Research the latest trends in the AI industry and provide a summary.',
+    expected_output='A summary of the top 3 trending developments in the AI industry with a unique perspective on their significance.',
     agent=researcher
 )
 
 write = Task(
-    description='Write an engaging blog post about the AI industry, using the summary provided by the research analyst. Read the latest blog posts in the directory to get inspiration.',
-    expected_output='A 4 paragraph blog post formatted as markdown with proper subtitles about the latest trends that is engaging and informative and funny, avoid complex words and make it easy to read.',
+    description='Write an engaging blog post about the AI industry, based on the research analyst’s summary. Draw inspiration from the latest blog posts in the directory.',
+    expected_output='A 4-paragraph blog post formatted in markdown with engaging, informative, and accessible content, avoiding complex jargon.',
     agent=writer,
-    output_file='blog-posts/new_post.md' # The final blog post will be written here
+    output_file='blog-posts/new_post.md'  # The final blog post will be saved here
 )
 
-
-# Create a crew
+# Assemble a crew
 crew = Crew(
     agents=[researcher, writer],
     tasks=[research, write],
     verbose=2
 )
 
-# Execute the tasks
+# Execute tasks
 crew.kickoff()
 ```
 
@@ -156,7 +154,7 @@ class MyCustomTool(BaseTool):
 
     def _run(self, argument: str) -> str:
         # Implementation goes here
-        pass
+        return "Result from custom tool"
 ```
 
 Define a new class inheriting from `BaseTool`, specifying `name`, `description`, and the `_run` method for operational logic.
@@ -230,4 +228,4 @@ agent = Agent(
 ```
 
 ## Conclusion
-Tools are crucial for extending the capabilities of CrewAI agents, allowing them to undertake a diverse array of tasks and collaborate efficiently. When building your AI solutions with CrewAI, consider both custom and existing tools to empower your agents and foster a dynamic AI ecosystem.
+Tools are pivotal in extending the capabilities of CrewAI agents, enabling them to undertake a broad spectrum of tasks and collaborate effectively. When building solutions with CrewAI, leverage both custom and existing tools to empower your agents and enhance the AI ecosystem.

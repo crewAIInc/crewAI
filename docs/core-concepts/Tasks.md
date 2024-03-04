@@ -15,12 +15,12 @@ Tasks in CrewAI can be designed to require collaboration between agents. For exa
 | :------------- | :----------------------------------- |
 | **Description**       | A clear, concise statement of what the task entails.  |
 | **Agent**    | Optionally, you can specify which agent is responsible for the task. If not, the crew's process will determine who takes it on. |
-| **Expected Output** *(optional)*      | Clear and detailed definition of expected output for the task.  |
+| **Expected Output**      | Clear and detailed definition of expected output for the task.  |
 | **Tools** *(optional)*   | These are the functions or capabilities the agent can utilize to perform the task. They can be anything from simple actions like 'search' to more complex interactions with other agents or APIs. |
-| **Async Execution** *(optional)*      | If the task should be executed asynchronously. This indicates that the crew will not wait for the task to be completed to continue with the next task. |
+| **Async Execution** *(optional)*      | Indicates whether the task should be executed asynchronously, allowing the crew to continue with the next task without waiting for completion. |
 | **Context**  *(optional)*     | Other tasks that will have their output used as context for this task. If a task is asynchronous, the system will wait for that to finish before using its output as context. |
-| **Output JSON**  *(optional)*     | Takes a pydantic model and returns the output as a JSON object. **Agent LLM needs to be using OpenAI client, could be Ollama for example but using the OpenAI wrapper** |
-| **Output Pydantic**  *(optional)*     | Takes a pydantic model and returns the output as a pydantic object. **Agent LLM needs to be using OpenAI client, could be Ollama for example but using the OpenAI wrapper** |
+| **Output JSON**  *(optional)*     | Takes a pydantic model and returns the output as a JSON object. **Agent LLM needs to be using an OpenAI client, could be Ollama for example but using the OpenAI wrapper** |
+| **Output Pydantic**  *(optional)*     | Takes a pydantic model and returns the output as a pydantic object. **Agent LLM needs to be using an OpenAI client, could be Ollama for example but using the OpenAI wrapper** |
 | **Output File**  *(optional)*     | Takes a file path and saves the output of the task on it. |
 | **Callback**  *(optional)*  | A function to be executed after the task is completed. |
 
@@ -48,10 +48,10 @@ Tools from the [crewAI Toolkit](https://github.com/joaomdmoura/crewai-tools) and
 ```python
 import os
 os.environ["OPENAI_API_KEY"] = "Your Key"
+os.environ["SERPER_API_KEY"] = "Your Key" # serper.dev API key
 
 from crewai import Agent, Task, Crew
-from langchain.agents import Tool
-from langchain_community.tools import DuckDuckGoSearchRun
+from crewai_tools import SerperDevTool
 
 research_agent = Agent(
     role='Researcher',
@@ -62,9 +62,7 @@ research_agent = Agent(
     verbose=True
 )
 
-# Install duckduckgo-search for this example:
-# !pip install -U duckduckgo-search
-search_tool = DuckDuckGoSearchRun()
+search_tool = SerperDevTool()
 
 task = Task(
   description='Find and summarize the latest AI news',
@@ -87,16 +85,25 @@ This demonstrates how tasks with specific tools can override an agent's default 
 
 ## Referring to Other Tasks
 
-In crewAI, the output of one task is automatically relayed into the next one, but you can specifically define what tasks' output should be used as context for another task.
+In crewAI, the output of one task is automatically relayed into the next one, but you can specifically define what tasks' output, including multiple should be used as context for another task.
 
 This is useful when you have a task that depends on the output of another task that is not performed immediately after it. This is done through the `context` attribute of the task:
 
 ```python
 # ...
 
-research_task = Task(
+research_ai_task = Task(
   description='Find and summarize the latest AI news',
   expected_output='A bullet list summary of the top 5 most important AI news',
+  async_execution=True,
+  agent=research_agent,
+  tools=[search_tool]
+)
+
+research_ops_task = Task(
+  description='Find and summarize the latest AI Ops news',
+  expected_output='A bullet list summary of the top 5 most important AI Ops news',
+  async_execution=True,
   agent=research_agent,
   tools=[search_tool]
 )
@@ -105,7 +112,7 @@ write_blog_task = Task(
   description="Write a full blog post about the importance of AI and its latest news",
   expected_output='Full blog post that is 4 paragraphs long',
   agent=writer_agent,
-  context=[research_task]
+  context=[research_ai_task, research_ops_task]
 )
 
 #...
@@ -146,7 +153,7 @@ write_article = Task(
 
 ## Callback Mechanism
 
-You can define a callback function that will be executed after the task is completed. This is useful for tasks that need to trigger some side effect after they are completed, while the crew is still running.
+The callback function is executed after the task is completed, allowing for actions or notifications to be triggered based on the task's outcome.
 
 ```python
 # ...
@@ -217,5 +224,4 @@ These validations help in maintaining the consistency and reliability of task ex
 
 ## Conclusion
 
-Tasks are the driving force behind the actions of agents in crewAI. By properly defining tasks and their outcomes, you set the stage for your AI agents to work effectively, either independently or as a collaborative unit.
-Equipping tasks with appropriate tools and following robust validation practices is crucial for maximizing CrewAI's potential, ensuring agents are effectively prepared for their assignments and that tasks are executed as intended.
+Tasks are the driving force behind the actions of agents in crewAI. By properly defining tasks and their outcomes, you set the stage for your AI agents to work effectively, either independently or as a collaborative unit. Equipping tasks with appropriate tools, understanding the execution process, and following robust validation practices are crucial for maximizing CrewAI's potential, ensuring agents are effectively prepared for their assignments and that tasks are executed as intended.

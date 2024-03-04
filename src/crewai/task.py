@@ -1,6 +1,6 @@
 import threading
 import uuid
-from typing import Any, List, Optional, Type
+from typing import Any, Dict, List, Optional, Type
 
 from langchain_openai import ChatOpenAI
 from pydantic import UUID4, BaseModel, Field, field_validator, model_validator
@@ -20,18 +20,19 @@ class Task(BaseModel):
 
     __hash__ = object.__hash__  # type: ignore
     used_tools: int = 0
+    tools_errors: int = 0
+    delegations: int = 0
     i18n: I18N = I18N()
     thread: threading.Thread = None
     description: str = Field(description="Description of the actual task.")
+    expected_output: str = Field(
+        description="Clear definition of expected output for the task."
+    )
     callback: Optional[Any] = Field(
         description="Callback to be executed after the task is completed.", default=None
     )
     agent: Optional[Agent] = Field(
         description="Agent responsible for execution the task.", default=None
-    )
-    expected_output: Optional[str] = Field(
-        description="Clear definition of expected output for the task.",
-        default=None,
     )
     context: Optional[List["Task"]] = Field(
         description="Other tasks that will have their output used as context for this task.",
@@ -164,12 +165,25 @@ class Task(BaseModel):
         """
         tasks_slices = [self.description]
 
-        if self.expected_output:
-            output = self.i18n.slice("expected_output").format(
-                expected_output=self.expected_output
-            )
-            tasks_slices = [self.description, output]
+        output = self.i18n.slice("expected_output").format(
+            expected_output=self.expected_output
+        )
+        tasks_slices = [self.description, output]
         return "\n".join(tasks_slices)
+
+    def interpolate_inputs(self, inputs: Dict[str, Any]) -> None:
+        """Interpolate inputs into the task description and expected output."""
+        if inputs:
+            self.description = self.description.format(**inputs)
+            self.expected_output = self.expected_output.format(**inputs)
+
+    def increment_tools_errors(self) -> None:
+        """Increment the tools errors counter."""
+        self.tools_errors += 1
+
+    def increment_delegations(self) -> None:
+        """Increment the delegations counter."""
+        self.delegations += 1
 
     def _export_output(self, result: str) -> Any:
         exported_result = result
