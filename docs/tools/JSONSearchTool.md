@@ -1,5 +1,11 @@
 # JSONSearchTool
 
+!!! note "Depend on OpenAI"
+    All RAG tools at the moment can only use openAI to generate embeddings, we are working on adding support for other providers.
+
+!!! note "Experimental"
+    We are still working on improving tools, so there might be unexpected behavior or changes in the future.
+
 ## Description
 This tool is used to perform a RAG search within a JSON file's content. It allows users to initiate a search with a specific JSON path, focusing the search operation within that particular JSON file. If the path is provided at initialization, the tool restricts its search scope to the specified JSON file, thereby enhancing the precision of search results.
 

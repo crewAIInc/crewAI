@@ -1,5 +1,11 @@
 # GitHubSearchTool
 
+!!! note "Depend on OpenAI"
+    All RAG tools at the moment can only use openAI to generate embeddings, we are working on adding support for other providers.
+
+!!! note "Experimental"
+    We are still working on improving tools, so there might be unexpected behavior or changes in the future.
+
 ## Description
 The GitHubSearchTool is a Read, Append, and Generate (RAG) tool specifically designed for conducting semantic searches within GitHub repositories. Utilizing advanced semantic search capabilities, it sifts through code, pull requests, issues, and repositories, making it an essential tool for developers, researchers, or anyone in need of precise information from GitHub.
 

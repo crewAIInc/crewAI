@@ -1,5 +1,11 @@
 # DOCXSearchTool
 
+!!! note "Depend on OpenAI"
+    All RAG tools at the moment can only use openAI to generate embeddings, we are working on adding support for other providers.
+
+!!! note "Experimental"
+    We are still working on improving tools, so there might be unexpected behavior or changes in the future.
+
 ## Description
 The DOCXSearchTool is a RAG tool designed for semantic searching within DOCX documents. It enables users to effectively search and extract relevant information from DOCX files using query-based searches. This tool is invaluable for data analysis, information management, and research tasks, streamlining the process of finding specific information within large document collections.
 

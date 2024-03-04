@@ -1,5 +1,11 @@
 # PGSearchTool
 
+!!! note "Depend on OpenAI"
+    All RAG tools at the moment can only use openAI to generate embeddings, we are working on adding support for other providers.
+
+!!! note "Experimental"
+    We are still working on improving tools, so there might be unexpected behavior or changes in the future.
+
 ## Description
 This tool is designed to facilitate semantic searches within PostgreSQL database tables. Leveraging the RAG (Retrieve and Generate) technology, the PGSearchTool provides users with an efficient means of querying database table content, specifically tailored for PostgreSQL databases. It simplifies the process of finding relevant data through semantic search queries, making it an invaluable resource for users needing to perform advanced queries on extensive datasets within a PostgreSQL database.
 

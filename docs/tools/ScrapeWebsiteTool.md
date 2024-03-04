@@ -1,5 +1,11 @@
 # ScrapeWebsiteTool
 
+!!! note "Depend on OpenAI"
+    All RAG tools at the moment can only use openAI to generate embeddings, we are working on adding support for other providers.
+
+!!! note "Experimental"
+    We are still working on improving tools, so there might be unexpected behavior or changes in the future.
+
 ## Description
 A tool designed to extract and read the content of a specified website. It is capable of handling various types of web pages by making HTTP requests and parsing the received HTML content. This tool can be particularly useful for web scraping tasks, data collection, or extracting specific information from websites.
 
