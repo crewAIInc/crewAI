@@ -44,7 +44,7 @@ Cutting-edge framework for orchestrating role-playing, autonomous AI agents. By 
                 </a>
             </li>
             <li>
-                <a href="./how-to/Create Custom Tools">
+                <a href="./how-to/Create-Custom-Tools">
                     Create Custom Tools
                 </a>
             </li>
