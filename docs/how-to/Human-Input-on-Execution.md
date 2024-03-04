@@ -1,4 +1,3 @@
-```markdown
 # Human Input in Agent Execution
 
 Human input plays a pivotal role in several agent execution scenarios, enabling agents to seek additional information or clarification when necessary. This capability is invaluable in complex decision-making processes or when agents need more details to complete a task effectively.
