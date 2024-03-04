@@ -1,4 +1,3 @@
-```
 ---
 title: crewAI Tools
 description: Understanding and leveraging tools within the crewAI framework for agent collaboration and task execution.
@@ -39,7 +38,7 @@ from crewai_tools import (
 )
 
 # Set up API keys
-os.environ["SERPER_API_KEY"] = "Your Key"
+os.environ["SERPER_API_KEY"] = "Your Key" # serper.dev API key
 os.environ["OPENAI_API_KEY"] = "Your Key"
 
 # Instantiate tools
