@@ -128,6 +128,7 @@ nav:
     - Collaboration: 'core-concepts/Collaboration.md'
   - How to Guides:
     - Getting Started: 'how-to/Creating-a-Crew-and-kick-it-off.md'
+    - Create Custom Tools: 'how-to/Create-Custom-Tools.md'
     - Using Sequential Process: 'how-to/Sequential.md'
     - Using Hierarchical Process: 'how-to/Hierarchical.md'
     - Connecting to any LLM: 'how-to/LLM-Connections.md'
@@ -153,7 +154,6 @@ nav:
     - Code Docs RAG Search: 'tools/CodeDocsSearchTool.md'
     - Youtube Video RAG Search: 'tools/YoutubeVideoSearchTool.md'
     - Youtube Chanel RAG Search: 'tools/YoutubeChannelSearchTool.md'
-
   - Examples:
     - Trip Planner Crew: https://github.com/joaomdmoura/crewAI-examples/tree/main/trip_planner"
     - Create Instagram Post: https://github.com/joaomdmoura/crewAI-examples/tree/main/instagram_post"
