@@ -133,6 +133,27 @@ nav:
     - Connecting to any LLM: 'how-to/LLM-Connections.md'
     - Customizing Agents: 'how-to/Customizing-Agents.md'
     - Human Input on Execution: 'how-to/Human-Input-on-Execution.md'
+  - Tools Docs:
+    - Google Serper Search: 'tools-docs/SerperDevTool.md'
+    - Scrape Website: 'tools-docs/ScrapeWebsiteTool.md'
+    - Directory Read: 'tools-docs/DirectoryReadTool.md'
+    - File Read: 'tools-docs/FileReadTool.md'
+    - Selenium Scraper: 'tools-docs/SeleniumScrapingTool.md'
+    - Directory RAG Search: 'tools-docs/DirectorySearchTool.md'
+    - PDF RAG Search: 'tools-docs/PDFSearchTool.md'
+    - TXT RAG Search: 'tools-docs/TXTSearchTool.md'
+    - CSV RAG Search: 'tools-docs/CSVSearchTool.md'
+    - XML RAG Search: 'tools-docs/XMLSearchTool.md'
+    - JSON RAG Search: 'tools-docs/JSONSearchTool.md'
+    - Docx Rag Search: 'tools-docs/DOCXSearchTool.md'
+    - MDX RAG Search: 'tools-docs/MDXSearchTool.md'
+    - PG RAG Search: 'tools-docs/PGSearchTool.md'
+    - Website RAG Search: 'tools-docs/WebsiteSearchTool.md'
+    - Github RAG Search: 'tools-docs/GitHubSearchTool.md'
+    - Code Docs RAG Search: 'tools-docs/CodeDocsSearchTool.md'
+    - Youtube Video RAG Search: 'tools-docs/YoutubeVideoSearchTool.md'
+    - Youtube Chanel RAG Search: 'tools-docs/YoutubeChannelSearchTool.md'
+
   - Examples:
     - Trip Planner Crew: https://github.com/joaomdmoura/crewAI-examples/tree/main/trip_planner"
     - Create Instagram Post: https://github.com/joaomdmoura/crewAI-examples/tree/main/instagram_post"
