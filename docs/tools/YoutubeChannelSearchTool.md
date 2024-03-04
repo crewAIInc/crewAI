@@ -1,5 +1,11 @@
 # YoutubeChannelSearchTool
 
+!!! note "Depend on OpenAI"
+    All RAG tools at the moment can only use openAI to generate embeddings, we are working on adding support for other providers.
+
+!!! note "Experimental"
+    We are still working on improving tools, so there might be unexpected behavior or changes in the future.
+
 ## Description
 This tool is designed to perform semantic searches within a specific Youtube channel's content. Leveraging the RAG (Retrieval-Augmented Generation) methodology, it provides relevant search results, making it invaluable for extracting information or finding specific content without the need to manually sift through videos. It streamlines the search process within Youtube channels, catering to researchers, content creators, and viewers seeking specific information or topics.
 

@@ -1,5 +1,8 @@
 # SeleniumScrapingTool
 
+!!! note "Experimental"
+    We are still working on improving tools, so there might be unexpected behavior or changes in the future.
+
 ## Description
 This tool is designed for efficient web scraping, enabling users to extract content from web pages. It supports targeted scraping by allowing the specification of a CSS selector for desired elements. The flexibility of the tool enables it to be used on any website URL provided by the user, making it a versatile tool for various web scraping needs.
 
