@@ -66,3 +66,24 @@ agent = Agent(
     tools=[integtation_tool]
 )
 ```
+
+### Using the 'Tool' function from langchain
+
+For another simple approach, create a function in python directly with the required attributes and a functional logic.
+
+```python
+def combine(a, b):
+    return a + b
+```
+
+Then you can add that function into the your tool by using 'func' variable in the Tool function.
+
+```python
+from langchain.agents import Tool
+
+math_tool = Tool(
+            name="Math tool",
+            func=math_tool,
+            description="Useful for adding two numbers together, in other words combining them."
+        )
+```
