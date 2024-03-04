@@ -1,4 +1,3 @@
-```markdown
 ---
 title: How Agents Collaborate in CrewAI
 description: Exploring the dynamics of agent collaboration within the CrewAI framework, focusing on the newly integrated features for enhanced functionality.
