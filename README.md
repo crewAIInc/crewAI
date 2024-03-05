@@ -66,19 +66,18 @@ pip install duckduckgo-search
 ```python
 import os
 from crewai import Agent, Task, Crew, Process
+from crewai_tools import SerperDevTool
 
 os.environ["OPENAI_API_KEY"] = "YOUR_API_KEY"
+os.environ["SERPER_API_KEY"] = "Your Key" # serper.dev API key
 
 # You can choose to use a local model through Ollama for example. See https://docs.crewai.com/how-to/LLM-Connections/ for more information.
-# osOPENAI_API_BASE='http://localhost:11434/v1'
-# OPENAI_MODEL_NAME='openhermes'  # Adjust based on available model
-# OPENAI_API_KEY='sk-111111111111111111111111111111111111111111111111'
 
-# Install duckduckgo-search for this example:
-# !pip install -U duckduckgo-search
+# os.environ["OPENAI_API_BASE"] = 'http://localhost:11434/v1'
+# os.environ["OPENAI_MODEL_NAME"] ='openhermes'  # Adjust based on available model
+# os.environ["OPENAI_API_KEY"] ='sk-111111111111111111111111111111111111111111111111'
 
-from langchain_community.tools import DuckDuckGoSearchRun
-search_tool = DuckDuckGoSearchRun()
+search_tool = SerperDevTool()
 
 # Define your agents with roles and goals
 researcher = Agent(
