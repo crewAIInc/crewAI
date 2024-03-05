@@ -28,6 +28,10 @@ class Task(BaseModel):
     expected_output: str = Field(
         description="Clear definition of expected output for the task."
     )
+    config: Optional[Dict[str, Any]] = Field(
+        description="Configuration for the agent",
+        default=None,
+    )
     callback: Optional[Any] = Field(
         description="Callback to be executed after the task is completed.", default=None
     )
@@ -67,6 +71,10 @@ class Task(BaseModel):
         description="Unique identifier for the object, not set by user.",
     )
 
+    def __init__(__pydantic_self__, **data):
+        config = data.pop("config", {})
+        super().__init__(**config, **data)
+
     @field_validator("id", mode="before")
     @classmethod
     def _deny_user_set_id(cls, v: Optional[UUID4]) -> None:
@@ -74,6 +82,14 @@ class Task(BaseModel):
             raise PydanticCustomError(
                 "may_not_set_field", "This field is not to be set by the user.", {}
             )
+
+    @model_validator(mode="after")
+    def set_attributes_based_on_config(self) -> "Task":
+        """Set attributes based on the agent configuration."""
+        if self.config:
+            for key, value in self.config.items():
+                setattr(self, key, value)
+        return self
 
     @model_validator(mode="after")
     def check_tools(self):
