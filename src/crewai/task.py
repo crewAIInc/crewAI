@@ -244,3 +244,6 @@ class Task(BaseModel):
         with open(self.output_file, "w") as file:
             file.write(result)
         return None
+
+    def __repr__(self):
+        return f"Task(description={self.description}, expected_output={self.expected_output})"

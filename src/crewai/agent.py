@@ -318,3 +318,6 @@ class Agent(BaseModel):
     @staticmethod
     def __tools_names(tools) -> str:
         return ", ".join([t.name for t in tools])
+
+    def __repr__(self):
+        return f"Agent(role={self.role}, goal={self.goal}, backstory={self.backstory})"
