@@ -44,7 +44,7 @@ os.environ["OPENAI_API_KEY"] = "Your Key"
 # Instantiate tools
 docs_tool = DirectoryReadTool(directory='./blog-posts')
 file_tool = FileReadTool()
-search_tool = SeperDevTool()
+search_tool = SerperDevTool()
 web_rag_tool = WebsiteSearchTool()
 
 # Create agents
