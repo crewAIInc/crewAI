@@ -52,7 +52,7 @@ researcher = Agent(
     role='Market Research Analyst',
     goal='Provide up-to-date market analysis of the AI industry',
     backstory='An expert analyst with a keen eye for market trends.',
-    tools=[search_tool, website_rag],
+    tools=[search_tool, web_rag_tool],
     verbose=True
 )
 
