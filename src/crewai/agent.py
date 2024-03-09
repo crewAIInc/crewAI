@@ -8,6 +8,8 @@ from langchain.memory import ConversationSummaryMemory
 from langchain.tools.render import render_text_description
 from langchain_core.agents import AgentAction
 from langchain_openai import ChatOpenAI
+from langchain_core.callbacks import BaseCallbackHandler
+
 from pydantic import (
     UUID4,
     BaseModel,
@@ -45,6 +47,7 @@ class Agent(BaseModel):
             allow_delegation: Whether the agent is allowed to delegate tasks to other agents.
             tools: Tools at agents disposal
             step_callback: Callback to be executed after each step of the agent execution.
+            callbacks: A list of callback functions from the langchain library that are triggered during the agent's execution process
     """
 
     __hash__ = object.__hash__  # type: ignore
@@ -104,6 +107,9 @@ class Agent(BaseModel):
     )
     function_calling_llm: Optional[Any] = Field(
         description="Language model that will run the agent.", default=None
+    )
+    callbacks: Optional[List[InstanceOf[BaseCallbackHandler]]] = Field(
+        default=None, description="Callback to be executed"
     )
 
     @field_validator("id", mode="before")
@@ -228,6 +234,7 @@ class Agent(BaseModel):
             "step_callback": self.step_callback,
             "tools_handler": self.tools_handler,
             "function_calling_llm": self.function_calling_llm,
+            "callbacks": self.callbacks
         }
 
         if self._rpm_controller:
