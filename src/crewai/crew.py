@@ -261,9 +261,7 @@ class Crew(BaseModel):
                 agent=manager, context=task_output, tools=manager.tools
             )
 
-            self._logger.log(
-                "debug", f"[{manager.role}] Task output: {task_output}\n\n"
-            )
+            self._logger.log("debug", f"[{manager.role}] Task output: {task_output}")
 
         self._finish_execution(task_output)
         return self._format_output(task_output), manager._token_process.get_summary()
