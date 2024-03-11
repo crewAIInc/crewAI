@@ -181,7 +181,7 @@ from unstructured.partition.html import partition_html
 
     # Annotate the function with the tool decorator from crewAI
 @tool("Integration with a given API")
-def integtation_tool(argument: str) -> str:
+def integration_tool(argument: str) -> str:
     """Integration with a given API"""
     # Code here
     return resutls # string to be sent back to the agent
@@ -191,7 +191,7 @@ agent = Agent(
     role='Research Analyst',
     goal='Provide up-to-date market analysis',
     backstory='An expert analyst with a keen eye for market trends.',
-    tools=[integtation_tool]
+    tools=[integration_tool]
 )
 ```
 
