@@ -7,9 +7,8 @@ from langchain.agents.tools import tool as LangChainTool
 from langchain.memory import ConversationSummaryMemory
 from langchain.tools.render import render_text_description
 from langchain_core.agents import AgentAction
-from langchain_openai import ChatOpenAI
 from langchain_core.callbacks import BaseCallbackHandler
-
+from langchain_openai import ChatOpenAI
 from pydantic import (
     UUID4,
     BaseModel,
@@ -251,7 +250,7 @@ class Agent(BaseModel):
             "step_callback": self.step_callback,
             "tools_handler": self.tools_handler,
             "function_calling_llm": self.function_calling_llm,
-            "callbacks": self.callbacks
+            "callbacks": self.callbacks,
         }
 
         if self._rpm_controller:
