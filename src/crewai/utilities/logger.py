@@ -10,7 +10,7 @@ class Logger:
         )
         self.verbose_level = verbose_level
 
-    def log(self, level, message):
+    def log(self, level, message, color="bold_green"):
         level_map = {"debug": 1, "info": 2}
         if self.verbose_level and level_map.get(level, 0) <= self.verbose_level:
-            self._printer.print(f"[{level.upper()}]: {message}", color="bold_green")
+            self._printer.print(f"[{level.upper()}]: {message}", color=color)
