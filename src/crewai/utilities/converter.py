@@ -78,8 +78,8 @@ class Converter(BaseModel):
         )
 
         parser = CrewPydanticOutputParser(pydantic_object=self.model)
-        new_prompt = HumanMessage(content=self.text) + SystemMessage(
-            content=self.instructions
+        new_prompt = SystemMessage(content=self.instructions) + HumanMessage(
+            content=self.text
         )
         return new_prompt | self.llm | parser
 

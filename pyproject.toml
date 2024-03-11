@@ -1,7 +1,6 @@
-
 [tool.poetry]
 name = "crewai"
-version = "0.19.0"
+version = "0.20.0"
 description = "Cutting-edge framework for orchestrating role-playing, autonomous AI agents. By fostering collaborative intelligence, CrewAI empowers agents to work together seamlessly, tackling complex tasks."
 authors = ["Joao Moura <joao@crewai.com>"]
 readme = "README.md"
@@ -55,6 +54,9 @@ known_first_party = ["crewai"]
 pytest = "^8.0.0"
 pytest-vcr = "^1.0.2"
 python-dotenv = "1.0.0"
+
+[tool.poetry.scripts]
+crewai = "crewai.cli.cli:crewai"
 
 [build-system]
 requires = ["poetry-core"]

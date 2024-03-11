@@ -449,3 +449,16 @@ def test_increment_tool_errors():
         increment_tools_errors.return_value = None
         crew.kickoff()
         increment_tools_errors.assert_called_once
+
+
+def test_task_definition_based_on_dict():
+    config = {
+        "description": "Give me an integer score between 1-5 for the following title: 'The impact of AI in the future of work', check examples to based your evaluation.",
+        "expected_output": "The score of the title.",
+    }
+
+    task = Task(config=config)
+
+    assert task.description == config["description"]
+    assert task.expected_output == config["expected_output"]
+    assert task.agent is None

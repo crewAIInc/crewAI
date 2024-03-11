@@ -663,3 +663,20 @@ def test_agent_llm_uses_token_calc_handler_with_llm_has_model_name():
     assert (
         agent1.llm.callbacks[0].token_cost_process.__class__.__name__ == "TokenProcess"
     )
+
+
+def test_agent_definition_based_on_dict():
+    config = {
+        "role": "test role",
+        "goal": "test goal",
+        "backstory": "test backstory",
+        "verbose": True,
+    }
+
+    agent = Agent(config=config)
+
+    assert agent.role == "test role"
+    assert agent.goal == "test goal"
+    assert agent.backstory == "test backstory"
+    assert agent.verbose == True
+    assert agent.tools == []
