@@ -21,8 +21,9 @@ poetry lock
 ```bash
 poetry install
 ```
-
 ### Customizing
+
+**Add you `OPENAI_API_KEY` on the `.env` file**
 
 - Modify `src/{{folder_name}}/config/agents.yaml` to define your agents
 - Modify `src/{{folder_name}}/config/tasks.yaml` to define your tasks
@@ -38,6 +39,8 @@ poetry run {{folder_name}}
 ```
 
 This command initializes the {{name}} Crew, assembling the agents and assigning them tasks as defined in your configuration.
+
+This example, unmodified, will run the create a `report.md` file with the output of a research on LLMs in the root folser
 
 ## Understanding Your Crew
 
