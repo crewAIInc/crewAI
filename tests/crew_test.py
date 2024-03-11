@@ -222,12 +222,12 @@ def test_crew_verbose_output(capsys):
     crew.kickoff()
     captured = capsys.readouterr()
     expected_strings = [
-        "[DEBUG]: Working Agent: Researcher",
-        "[INFO]: Starting Task: Research AI advancements.",
-        "[DEBUG]: [Researcher] Task output:",
-        "[DEBUG]: Working Agent: Senior Writer",
-        "[INFO]: Starting Task: Write about AI in healthcare.",
-        "[DEBUG]: [Senior Writer] Task output:",
+        "[DEBUG]: == Working Agent: Researcher",
+        "[INFO]: == Starting Task: Research AI advancements.",
+        "[DEBUG]: == [Researcher] Task output:",
+        "[DEBUG]: == Working Agent: Senior Writer",
+        "[INFO]: == Starting Task: Write about AI in healthcare.",
+        "[DEBUG]: == [Senior Writer] Task output:",
     ]
 
     for expected_string in expected_strings:

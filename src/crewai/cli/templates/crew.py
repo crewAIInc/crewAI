@@ -35,7 +35,7 @@ class {{crew_name}}Crew():
 		)
 
 	@task
-	def research_task(self) -> Task:
+	def reporting_task(self) -> Task:
 		return Task(
 			config=self.tasks_config['reporting_task'],
 			agent=self.reporting_analyst(),

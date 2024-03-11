@@ -232,9 +232,9 @@ class Crew(BaseModel):
                     task.tools += AgentTools(agents=agents_for_delegation).tools()
 
             role = task.agent.role if task.agent is not None else "None"
-            self._logger.log("debug", f" == Working Agent: {role}", color="bold_yellow")
+            self._logger.log("debug", f"== Working Agent: {role}", color="bold_yellow")
             self._logger.log(
-                "info", f" == Starting Task: {task.description}", color="bold_yellow"
+                "info", f"== Starting Task: {task.description}", color="bold_yellow"
             )
 
             output = task.execute(context=task_output)
@@ -242,7 +242,7 @@ class Crew(BaseModel):
                 task_output = output
 
             role = task.agent.role if task.agent is not None else "None"
-            self._logger.log("debug", f"[{role}] Task output: {task_output}\n\n")
+            self._logger.log("debug", f"== [{role}] Task output: {task_output}\n\n")
 
         self._finish_execution(task_output)
         return self._format_output(task_output)
