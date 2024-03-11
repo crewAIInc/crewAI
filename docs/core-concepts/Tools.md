@@ -44,7 +44,7 @@ os.environ["OPENAI_API_KEY"] = "Your Key"
 # Instantiate tools
 docs_tool = DirectoryReadTool(directory='./blog-posts')
 file_tool = FileReadTool()
-search_tool = SeperDevTool()
+search_tool = SerperDevTool()
 web_rag_tool = WebsiteSearchTool()
 
 # Create agents
@@ -52,7 +52,7 @@ researcher = Agent(
     role='Market Research Analyst',
     goal='Provide up-to-date market analysis of the AI industry',
     backstory='An expert analyst with a keen eye for market trends.',
-    tools=[search_tool, website_rag],
+    tools=[search_tool, web_rag_tool],
     verbose=True
 )
 
