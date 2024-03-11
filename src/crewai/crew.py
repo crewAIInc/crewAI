@@ -2,6 +2,8 @@ import json
 import uuid
 from typing import Any, Dict, List, Optional, Union
 
+from langchain_core.callbacks import BaseCallbackHandler
+
 from pydantic import (
     UUID4,
     BaseModel,
@@ -32,6 +34,7 @@ class Crew(BaseModel):
         tasks: List of tasks assigned to the crew.
         agents: List of agents part of this crew.
         manager_llm: The language model that will run manager agent.
+        manager_callbacks: The callback handlers to be executed by the manager agent when hierarchical process is used
         function_calling_llm: The language model that will run the tool calling for all the agents.
         process: The process flow that the crew will follow (e.g., sequential).
         verbose: Indicates the verbosity level for logging during execution.
@@ -63,6 +66,9 @@ class Crew(BaseModel):
     )
     manager_llm: Optional[Any] = Field(
         description="Language model that will run the agent.", default=None
+    )
+    manager_callbacks: Optional[List[InstanceOf[BaseCallbackHandler]]] = Field(
+        default=None, description="A list of callback handlers to be executed by the manager agent when hierarchical process is used"
     )
     function_calling_llm: Optional[Any] = Field(
         description="Language model that will run the agent.", default=None
