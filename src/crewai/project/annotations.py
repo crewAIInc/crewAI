@@ -1,5 +1,9 @@
+tasks_order = []
+
+
 def task(func):
     func.is_task = True
+    tasks_order.append(func.__name__)
     return func
 
 
@@ -13,11 +17,11 @@ def crew(func):
         instantiated_tasks = []
         instantiated_agents = []
 
-        # Instantiate tasks and collect their associated agents
         agent_roles = set()
-        for attr_name in dir(self):
-            possible_task = getattr(self, attr_name)
-            if callable(possible_task) and hasattr(possible_task, "is_task"):
+        # Iterate over tasks_order to maintain the defined order
+        for task_name in tasks_order:
+            possible_task = getattr(self, task_name)
+            if callable(possible_task):
                 task_instance = possible_task()
                 instantiated_tasks.append(task_instance)
                 if hasattr(task_instance, "agent"):
@@ -38,7 +42,6 @@ def crew(func):
         self.agents = instantiated_agents
         self.tasks = instantiated_tasks
 
-        # Now call the original crew method
         return func(self, *args, **kwargs)
 
     return wrapper

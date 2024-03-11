@@ -1,7 +1,8 @@
 from crewai import Agent, Crew, Process, Task
 from crewai.project import CrewBase, agent, crew, task
 
-from .tools.custom_tool import MyCustomTool
+# Uncomment the following line to use an example of a custom tool
+# from .tools.custom_tool import MyCustomTool
 
 # Check our tools documentations for more information on how to use them
 # from crewai_tools import SerperDevTool
@@ -16,7 +17,7 @@ class {{crew_name}}Crew():
 	def researcher(self) -> Agent:
 		return Agent(
 			config=self.agents_config['researcher'],
-			# tools=[MyCustomTool()], # Example of custom tool
+			# tools=[MyCustomTool()], # Example of custom tool, loaded on the beginning of file
 			verbose=True
 		)
 

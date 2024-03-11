@@ -1,6 +1,3 @@
-# For this make sure to install the tools package
-# pip install 'crewai[tools]'
-
 from crewai_tools import BaseTool
 
 
