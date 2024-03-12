@@ -3,6 +3,9 @@ import os
 from pathlib import Path
 
 import yaml
+from dotenv import load_dotenv
+
+load_dotenv()
 
 
 def CrewBase(cls):
