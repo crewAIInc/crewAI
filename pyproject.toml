@@ -26,7 +26,7 @@ instructor = "^0.5.2"
 regex = "^2023.12.25"
 crewai-tools = { version = "^0.0.15", optional = true }
 click = "^8.1.7"
-python-dotenv = "1.0.0"
+python-dotenv = "^1.0.0"
 
 [tool.poetry.extras]
 tools = ["crewai-tools"]
