@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-from .crew import {{crew_name}}Crew
+from {{folder_name}}.crew import {{crew_name}}Crew
 
 
 def run():
