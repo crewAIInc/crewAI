@@ -48,7 +48,7 @@ def my_tool(question: str) -> str:
 import json
 import requests
 from crewai import Agent
-from crewai.tools import tool
+from crewai_tools import tool
 from unstructured.partition.html import partition_html
 
     # Annotate the function with the tool decorator from crewAI
