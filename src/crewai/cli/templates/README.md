@@ -40,7 +40,7 @@ poetry run {{folder_name}}
 
 This command initializes the {{name}} Crew, assembling the agents and assigning them tasks as defined in your configuration.
 
-This example, unmodified, will run the create a `report.md` file with the output of a research on LLMs in the root folser
+This example, unmodified, will run the create a `report.md` file with the output of a research on LLMs in the root folder.
 
 ## Understanding Your Crew
 
@@ -51,7 +51,7 @@ The {{name}} Crew is composed of multiple AI agents, each with unique roles, goa
 For support, questions, or feedback regarding the {{crew_name}} Crew or crewAI.
 - Visit our [documentation](https://docs.crewai.com)
 - Reach out to us through our [GitHub repository](https://github.com/joaomdmoura/crewai)
-- [Joing our Discord](https://discord.com/invite/X4JWnZnxPb)
-- [Chat wtih our docs](https://chatg.pt/DWjSBZn)
+- [Join our Discord](https://discord.com/invite/X4JWnZnxPb)
+- [Chat with our docs](https://chatg.pt/DWjSBZn)
 
 Let's create wonders together with the power and simplicity of crewAI.
