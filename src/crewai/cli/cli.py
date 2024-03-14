@@ -21,6 +21,7 @@ def create(project_name):
     "--tools", is_flag=True, help="Show the installed version of crewai tools"
 )
 def version(tools):
+    """Show the installed version of crewai."""
     crewai_version = pkg_resources.get_distribution("crewai").version
     click.echo(f"crewai version: {crewai_version}")
 
