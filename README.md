@@ -57,6 +57,8 @@ pip install 'crewai[tools]'
 
 ### 2. Setting Up Your Crew
 
+In order to run the following example you need to have installed the `crewai-tools` package.
+
 ```python
 import os
 from crewai import Agent, Task, Crew, Process
