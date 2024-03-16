@@ -17,7 +17,7 @@ The `Agent` class is the cornerstone for implementing AI solutions in CrewAI. He
     - `goal`: Specifies the agent's objective.
     - `backstory`: Provides a background story to the agent.
     - `llm`: Indicates the Large Language Model the agent uses.
-    - `function_calling_llm` *Optinal*: Will turn the ReAct crewAI agent into a function calling agent.
+    - `function_calling_llm` *Optional*: Will turn the ReAct crewAI agent into a function calling agent.
     - `max_iter`: Maximum number of iterations for an agent to execute a task, default is 15.
     - `memory`: Enables the agent to retain information during the execution.
     - `max_rpm`: Sets the maximum number of requests per minute.
