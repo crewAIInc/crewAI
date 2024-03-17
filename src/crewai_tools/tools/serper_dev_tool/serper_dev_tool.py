@@ -31,10 +31,10 @@ class SerperDevTool(BaseTool):
 		results = response.json()
 		if 'organic' in results:
 			results = results['organic']
-			stirng = []
+			string = []
 			for result in results:
 				try:
-					stirng.append('\n'.join([
+					string.append('\n'.join([
 							f"Title: {result['title']}",
 							f"Link: {result['link']}",
 							f"Snippet: {result['snippet']}",
@@ -43,7 +43,7 @@ class SerperDevTool(BaseTool):
 				except KeyError:
 					next
 
-			content = '\n'.join(stirng)
+			content = '\n'.join(string)
 			return f"\nSearch results: {content}\n"
 		else:
 			return results
