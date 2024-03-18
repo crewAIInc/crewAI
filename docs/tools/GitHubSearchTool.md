@@ -21,10 +21,10 @@ This command installs the necessary package to run the GitHubSearchTool along wi
 ## Example
 Here’s how you can use the GitHubSearchTool to perform semantic searches within a GitHub repository:
 ```python
-from crewai_tools import GitHubSearchTool
+from crewai_tools import GithubSearchTool
 
 # Initialize the tool for semantic searches within a specific GitHub repository
-tool = GitHubSearchTool(
+tool = GithubSearchTool(
 	github_repo='https://github.com/example/repo',
 	content_types=['code', 'issue'] # Options: code, repo, pr, issue
 )
@@ -32,7 +32,7 @@ tool = GitHubSearchTool(
 # OR
 
 # Initialize the tool for semantic searches within a specific GitHub repository, so the agent can search any repository if it learns about during its execution
-tool = GitHubSearchTool(
+tool = GithubSearchTool(
 	content_types=['code', 'issue'] # Options: code, repo, pr, issue
 )
 ```
