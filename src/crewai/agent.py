@@ -66,6 +66,10 @@ class Agent(BaseModel):
     role: str = Field(description="Role of the agent")
     goal: str = Field(description="Objective of the agent")
     backstory: str = Field(description="Backstory of the agent")
+    cache: bool = Field(
+        default=True,
+        description="Whether the agent should use a cache for tool usage.",
+    )
     config: Optional[Dict[str, Any]] = Field(
         description="Configuration for the agent",
         default=None,
@@ -96,7 +100,7 @@ class Agent(BaseModel):
         default=None, description="An instance of the ToolsHandler class."
     )
     cache_handler: InstanceOf[CacheHandler] = Field(
-        default=CacheHandler(), description="An instance of the CacheHandler class."
+        default=None, description="An instance of the CacheHandler class."
     )
     step_callback: Optional[Any] = Field(
         default=None,
@@ -158,6 +162,8 @@ class Agent(BaseModel):
                 TokenCalcHandler(self.llm.model_name, self._token_process)
             ]
         if not self.agent_executor:
+            if not self.cache_handler:
+                self.cache_handler = CacheHandler()
             self.set_cache_handler(self.cache_handler)
         return self
 
@@ -177,7 +183,8 @@ class Agent(BaseModel):
         Returns:
             Output of the agent
         """
-        self.tools_handler.last_used_tool = {}
+        if self.tools_handler:
+            self.tools_handler.last_used_tool = {}
 
         task_prompt = task.prompt()
 
@@ -213,9 +220,10 @@ class Agent(BaseModel):
         Args:
             cache_handler: An instance of the CacheHandler class.
         """
-        self.cache_handler = cache_handler
-        self.tools_handler = ToolsHandler(cache=self.cache_handler)
-        self.create_agent_executor()
+        if self.cache:
+            self.cache_handler = cache_handler
+            self.tools_handler = ToolsHandler(cache=self.cache_handler)
+            self.create_agent_executor()
 
     def set_rpm_controller(self, rpm_controller: RPMController) -> None:
         """Set the rpm controller for the agent.

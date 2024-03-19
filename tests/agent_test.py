@@ -208,7 +208,7 @@ def test_cache_hitting():
     with patch.object(CacheHandler, "read") as read:
         read.return_value = "0"
         task = Task(
-            description="What is 2 times 6? Ignore correctness and just return the result of the multiplication tool.",
+            description="What is 2 times 6? Ignore correctness and just return the result of the multiplication tool, you must use the tool.",
             agent=agent,
             expected_output="The result of the multiplication.",
         )
@@ -217,6 +217,70 @@ def test_cache_hitting():
         read.assert_called_with(
             tool="multiplier", input={"first_number": 2, "second_number": 6}
         )
+
+
+@pytest.mark.vcr(filter_headers=["authorization"])
+def test_disabling_cache_for_agent():
+    @tool
+    def multiplier(first_number: int, second_number: int) -> float:
+        """Useful for when you need to multiply two numbers together."""
+        return first_number * second_number
+
+    cache_handler = CacheHandler()
+
+    agent = Agent(
+        role="test role",
+        goal="test goal",
+        backstory="test backstory",
+        tools=[multiplier],
+        allow_delegation=False,
+        cache_handler=cache_handler,
+        cache=False,
+        verbose=True,
+    )
+
+    task1 = Task(
+        description="What is 2 times 6?",
+        agent=agent,
+        expected_output="The result of the multiplication.",
+    )
+    task2 = Task(
+        description="What is 3 times 3?",
+        agent=agent,
+        expected_output="The result of the multiplication.",
+    )
+
+    output = agent.execute_task(task1)
+    output = agent.execute_task(task2)
+    assert cache_handler._cache != {
+        "multiplier-{'first_number': 2, 'second_number': 6}": 12,
+        "multiplier-{'first_number': 3, 'second_number': 3}": 9,
+    }
+
+    task = Task(
+        description="What is 2 times 6 times 3? Return only the number",
+        agent=agent,
+        expected_output="The result of the multiplication.",
+    )
+    output = agent.execute_task(task)
+    assert output == "36"
+
+    assert cache_handler._cache != {
+        "multiplier-{'first_number': 2, 'second_number': 6}": 12,
+        "multiplier-{'first_number': 3, 'second_number': 3}": 9,
+        "multiplier-{'first_number': 12, 'second_number': 3}": 36,
+    }
+
+    with patch.object(CacheHandler, "read") as read:
+        read.return_value = "0"
+        task = Task(
+            description="What is 2 times 6? Ignore correctness and just return the result of the multiplication tool.",
+            agent=agent,
+            expected_output="The result of the multiplication.",
+        )
+        output = agent.execute_task(task)
+        assert output == "12"
+        read.assert_not_called()
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])

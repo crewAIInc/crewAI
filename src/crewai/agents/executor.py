@@ -198,7 +198,7 @@ class CrewAgentExecutor(AgentExecutor):
         for agent_action in actions:
             if run_manager:
                 run_manager.on_agent_action(agent_action, color="green")
-            # Otherwise we lookup the tool
+
             tool_usage = ToolUsage(
                 tools_handler=self.tools_handler,
                 tools=self.tools,
