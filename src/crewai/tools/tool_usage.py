@@ -109,9 +109,12 @@ class ToolUsage:
             except Exception:
                 self.task.increment_tools_errors()
 
-        result = self.tools_handler.cache.read(
-            tool=calling.tool_name, input=calling.arguments
-        )
+        result = None
+
+        if self.tools_handler:
+            result = self.tools_handler.cache.read(
+                tool=calling.tool_name, input=calling.arguments
+            )
 
         if not result:
             try:
@@ -155,7 +158,8 @@ class ToolUsage:
                 self.task.increment_tools_errors()
                 return self.use(calling=calling, tool_string=tool_string)
 
-            self.tools_handler.on_tool_use(calling=calling, output=result)
+            if self.tools_handler:
+                self.tools_handler.on_tool_use(calling=calling, output=result)
 
         self._printer.print(content=f"\n\n{result}\n", color="yellow")
         self._telemetry.tool_usage(
@@ -185,6 +189,8 @@ class ToolUsage:
     def _check_tool_repeated_usage(
         self, calling: Union[ToolCalling, InstructorToolCalling]
     ) -> None:
+        if not self.tools_handler:
+            return False
         if last_tool_usage := self.tools_handler.last_used_tool:
             return (calling.tool_name == last_tool_usage.tool_name) and (
                 calling.arguments == last_tool_usage.arguments

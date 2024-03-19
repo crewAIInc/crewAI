@@ -34,8 +34,9 @@ class Crew(BaseModel):
         agents: List of agents part of this crew.
         manager_llm: The language model that will run manager agent.
         manager_callbacks: The callback handlers to be executed by the manager agent when hierarchical process is used
+        cache: Whether the crew should use a cache to store the results of the tools execution.
         function_calling_llm: The language model that will run the tool calling for all the agents.
-        process: The process flow that the crew will follow (e.g., sequential).
+        process: The process flow that the crew will follow (e.g., sequential, hierarchical).
         verbose: Indicates the verbosity level for logging during execution.
         config: Configuration settings for the crew.
         max_rpm: Maximum number of requests per minute for the crew execution to be respected.
@@ -50,6 +51,7 @@ class Crew(BaseModel):
     _rpm_controller: RPMController = PrivateAttr()
     _logger: Logger = PrivateAttr()
     _cache_handler: InstanceOf[CacheHandler] = PrivateAttr(default=CacheHandler())
+    cache: bool = Field(default=True)
     model_config = ConfigDict(arbitrary_types_allowed=True)
     tasks: List[Task] = Field(default_factory=list)
     agents: List[Agent] = Field(default_factory=list)
@@ -150,7 +152,8 @@ class Crew(BaseModel):
 
         if self.agents:
             for agent in self.agents:
-                agent.set_cache_handler(self._cache_handler)
+                if self.cache:
+                    agent.set_cache_handler(self._cache_handler)
                 if self.max_rpm:
                     agent.set_rpm_controller(self._rpm_controller)
         return self
