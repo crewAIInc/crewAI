@@ -50,6 +50,39 @@ OPENAI_MODEL_NAME='openhermes'  # Adjust based on available model
 OPENAI_API_KEY=''
 ```
 
+## HuggingFace Integration
+There are a couple different ways you can use HuggingFace to host your LLM.
+
+### Your own HuggingFace endpoint
+```python
+from langchain_community.llms import HuggingFaceEndpoint
+
+llm = HuggingFaceEndpoint(
+    endpoint_url="<YOUR_ENDPOINT_URL_HERE>",
+    huggingfacehub_api_token="<HF_TOKEN_HERE>",
+    task="text-generation",
+    max_new_tokens=512
+)
+
+agent = Agent(
+    role="HuggingFace Agent",
+    goal="Generate text using HuggingFace",
+    backstory="A diligent explorer of GitHub docs.",
+    llm=llm
+)
+```
+
+### From HuggingFaceHub endpoint
+```python
+from langchain_community.llms import HuggingFaceHub
+
+llm = HuggingFaceHub(
+    repo_id="HuggingFaceH4/zephyr-7b-beta",
+    huggingfacehub_api_token="<HF_TOKEN_HERE>",
+    task="text-generation",
+)
+```
+
 ## OpenAI Compatible API Endpoints
 Switch between APIs and models seamlessly using environment variables, supporting platforms like FastChat, LM Studio, and Mistral AI.
 
