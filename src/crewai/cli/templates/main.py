@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-from {{folder_name}}.crew import {{crew_name}}Crew
+from crew import {{crew_name}}Crew
 
 
 def run():
@@ -8,3 +8,6 @@ def run():
         'topic': 'AI LLMs'
     }
     {{crew_name}}Crew().crew().kickoff(inputs=inputs)
+
+if __name__ == "__main__":
+    run()
