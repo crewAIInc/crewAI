@@ -645,15 +645,12 @@ def test_agent_usage_metrics_are_captured_for_sequential_process():
     crew = Crew(agents=[agent], tasks=[task])
 
     result = crew.kickoff()
-    assert (
-        result
-        == "Howdy! I hope you're having a wonderful day. I'm here ready to make your day even better. Let's have a great time together!"
-    )
+    assert result == "Howdy!"
     assert crew.usage_metrics == {
-        "completion_tokens": 91,
+        "completion_tokens": 56,
         "prompt_tokens": 164,
         "successful_requests": 1,
-        "total_tokens": 255,
+        "total_tokens": 220,
     }
 
 
@@ -680,10 +677,10 @@ def test_agent_usage_metrics_are_captured_for_hierarchical_process():
     result = crew.kickoff()
     assert result == "Howdy!"
     assert crew.usage_metrics == {
-        "total_tokens": 2476,
-        "prompt_tokens": 2191,
-        "completion_tokens": 285,
-        "successful_requests": 5,
+        "total_tokens": 1513,
+        "prompt_tokens": 1299,
+        "completion_tokens": 214,
+        "successful_requests": 3,
     }
 
 

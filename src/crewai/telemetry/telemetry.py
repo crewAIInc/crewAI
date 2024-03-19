@@ -1,3 +1,5 @@
+import asyncio
+import importlib.resources
 import json
 import os
 import platform
@@ -47,12 +49,12 @@ class Telemetry:
             )
             self.provider = TracerProvider(resource=self.resource)
 
-            ssl_context = ssl.create_default_context()
-            ssl_context.load_verify_locations(
-                pkg_resources.resource_filename(
-                    "crewai.telemetry", "STAR_crewai_com_bundle.pem"
-                )
+            cert_file = importlib.resources.files("crewai.telemetry").joinpath(
+                "STAR_crewai_com_bundle.pem"
             )
+            ssl_context = ssl.create_default_context()
+            with cert_file.open("rb") as cert:
+                ssl_context.load_verify_locations(cadata=cert.read())
 
             processor = BatchSpanProcessor(
                 OTLPSpanExporter(
@@ -63,15 +65,22 @@ class Telemetry:
             )
             self.provider.add_span_processor(processor)
             self.ready = True
-        except Exception:
-            pass
+        except BaseException as e:
+            if isinstance(
+                e,
+                (SystemExit, KeyboardInterrupt, GeneratorExit, asyncio.CancelledError),
+            ):
+                raise  # Re-raise the exception to not interfere with system signals
+            self.ready = False
 
     def set_tracer(self):
         if self.ready:
-            try:
-                trace.set_tracer_provider(self.provider)
-            except Exception:
-                pass
+            provider = trace.get_tracer_provider()
+            if provider is None:
+                try:
+                    trace.set_tracer_provider(self.provider)
+                except Exception:
+                    self.ready = False
 
     def crew_creation(self, crew):
         """Records the creation of a crew."""
