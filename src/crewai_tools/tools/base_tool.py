@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from typing import Any, Callable, cast, Optional, Type
+from typing import Any, Callable, Optional, Type
 
 from pydantic import BaseModel, model_validator
 from pydantic.v1 import BaseModel as V1BaseModel
@@ -14,6 +14,9 @@ class BaseTool(BaseModel, ABC):
     args_schema: Optional[Type[V1BaseModel]] = None
     """The schema for the arguments that the tool accepts."""
     description_updated: bool = False
+    """Flag to check if the description has been updated."""
+    cache_function: Optional[Callable] = lambda: True
+    """Function that will be used to determine if the tool should be cached, should return a boolean. If None, the tool will be cached."""
 
     @model_validator(mode="after")
     def _check_args_schema(self):
