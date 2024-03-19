@@ -1,6 +1,7 @@
 import json
 import os
 import platform
+import ssl
 from typing import Any
 
 import pkg_resources
@@ -40,13 +41,25 @@ class Telemetry:
     def __init__(self):
         self.ready = False
         try:
-            telemetry_endpoint = "http://telemetry.crewai.com:4318"
+            telemetry_endpoint = "https://telemetry.crewai.com:4319"
             self.resource = Resource(
                 attributes={SERVICE_NAME: "crewAI-telemetry"},
             )
             self.provider = TracerProvider(resource=self.resource)
+
+            ssl_context = ssl.create_default_context()
+            ssl_context.load_verify_locations(
+                pkg_resources.resource_filename(
+                    "crewai.telemetry", "STAR_crewai_com_bundle.pem"
+                )
+            )
+
             processor = BatchSpanProcessor(
-                OTLPSpanExporter(endpoint=f"{telemetry_endpoint}/v1/traces", timeout=15)
+                OTLPSpanExporter(
+                    endpoint=f"{telemetry_endpoint}/v1/traces",
+                    ssl_context=ssl_context,
+                    timeout=30,
+                )
             )
             self.provider.add_span_processor(processor)
             self.ready = True
