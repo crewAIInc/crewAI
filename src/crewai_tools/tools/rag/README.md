@@ -48,9 +48,6 @@ rag_tool = RagTool().from_directory('path/to/your/directory')
 
 # Example: Loading from a web page
 rag_tool = RagTool().from_web_page('https://example.com')
-
-# Example: Loading from an Embedchain configuration
-rag_tool = RagTool().from_embedchain('path/to/your/config.json')
 ```
 
 ## **Contribution**

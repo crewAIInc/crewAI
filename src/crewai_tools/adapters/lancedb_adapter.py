@@ -35,7 +35,7 @@ class LanceDBAdapter(Adapter):
         self._db = lancedb_connect(self.uri)
         self._table = self._db.open_table(self.table_name)
 
-        return super().model_post_init(__context)
+        super().model_post_init(__context)
 
     def query(self, question: str) -> str:
         query = self.embedding_function([question])[0]
@@ -47,3 +47,10 @@ class LanceDBAdapter(Adapter):
         )
         values = [result[self.text_column_name] for result in results]
         return "\n".join(values)
+
+    def add(
+        self,
+        *args: Any,
+        **kwargs: Any,
+    ) -> None:
+        self._table.add(*args, **kwargs)
