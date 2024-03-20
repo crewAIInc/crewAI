@@ -27,6 +27,7 @@ regex = "^2023.12.25"
 crewai-tools = { version = "^0.0.15", optional = true }
 click = "^8.1.7"
 python-dotenv = "1.0.0"
+agentops = "0.1.0b1"
 
 [tool.poetry.extras]
 tools = ["crewai-tools"]
@@ -49,6 +50,7 @@ crewai_tools = "^0.0.15"
 [tool.isort]
 profile = "black"
 known_first_party = ["crewai"]
+
 
 [tool.poetry.group.test.dependencies]
 pytest = "^8.0.0"

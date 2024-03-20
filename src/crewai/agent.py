@@ -24,8 +24,11 @@ from pydantic_core import PydanticCustomError
 from crewai.agents import CacheHandler, CrewAgentExecutor, CrewAgentParser, ToolsHandler
 from crewai.utilities import I18N, Logger, Prompts, RPMController
 from crewai.utilities.token_counter_callback import TokenCalcHandler, TokenProcess
+from agentops.agent import track_agent
+from agentops import LangchainCallbackHandler
 
 
+@track_agent(name=None)
 class Agent(BaseModel):
     """Represents an agent in a system.
 
@@ -55,6 +58,8 @@ class Agent(BaseModel):
     _rpm_controller: RPMController = PrivateAttr(default=None)
     _request_within_rpm_limit: Any = PrivateAttr(default=None)
     _token_process: TokenProcess = TokenProcess()
+    agent_ops_agent_name: str = None
+    agent_ops_agent_id: str = None
 
     formatting_errors: int = 0
     model_config = ConfigDict(arbitrary_types_allowed=True)
@@ -119,6 +124,7 @@ class Agent(BaseModel):
     def __init__(__pydantic_self__, **data):
         config = data.pop("config", {})
         super().__init__(**config, **data)
+        __pydantic_self__._agent_ops_agent_name = __pydantic_self__.role
 
     @field_validator("id", mode="before")
     @classmethod
@@ -151,7 +157,8 @@ class Agent(BaseModel):
         """set agent executor is set."""
         if hasattr(self.llm, "model_name"):
             self.llm.callbacks = [
-                TokenCalcHandler(self.llm.model_name, self._token_process)
+                TokenCalcHandler(self.llm.model_name, self._token_process),
+                LangchainCallbackHandler()
             ]
         if not self.agent_executor:
             self.set_cache_handler(self.cache_handler)
