@@ -13,7 +13,23 @@ from crewai.utilities.pydantic_schema_parser import PydanticSchemaParser
 
 
 class Task(BaseModel):
-    """Class that represent a task to be executed."""
+    """Class that represents a task to be executed.
+
+    Each task must have a description, an expected output and an agent responsible for execution.
+
+    Attributes:
+        agent: Agent responsible for task execution. Represents entity performing task.
+        async_execution: Boolean flag indicating asynchronous task execution.
+        callback: Function/object executed post task completion for additional actions.
+        config: Dictionary containing task-specific configuration parameters.
+        context: List of Task instances providing task context or input data.
+        description: Descriptive text detailing task's purpose and execution.
+        expected_output: Clear definition of expected task outcome.
+        output_file: File path for storing task output.
+        output_json: Pydantic model for structuring JSON output.
+        output_pydantic: Pydantic model for task output.
+        tools: List of tools/resources limited for task execution.
+    """
 
     class Config:
         arbitrary_types_allowed = True
