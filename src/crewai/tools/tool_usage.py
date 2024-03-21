@@ -9,7 +9,7 @@ from crewai.agents.tools_handler import ToolsHandler
 from crewai.telemetry import Telemetry
 from crewai.tools.tool_calling import InstructorToolCalling, ToolCalling
 from crewai.utilities import I18N, Converter, ConverterError, Printer
-from agentops import record, ToolEvent
+from agentops import ToolEvent, ErrorEvent, record
 
 OPENAI_BIGGER_MODELS = ["gpt-4"]
 
@@ -79,13 +79,16 @@ class ToolUsage:
             self._printer.print(content=f"\n\n{error}\n", color="red")
             self.task.increment_tools_errors()
             return error
+
+        event = ToolEvent(name=calling.tool_name)
+        record(event)
         try:
             tool = self._select_tool(calling.tool_name)
-            record(ToolEvent(name=calling.tool_name))
         except Exception as e:
             error = getattr(e, "message", str(e))
             self.task.increment_tools_errors()
             self._printer.print(content=f"\n\n{error}\n", color="red")
+            record(ErrorEvent(details=error, trigger_event=event))
             return error
         return f"{self._use(tool_string=tool_string, tool=tool, calling=calling)}"
 

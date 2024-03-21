@@ -25,10 +25,10 @@ from crewai.agents import CacheHandler, CrewAgentExecutor, CrewAgentParser, Tool
 from crewai.utilities import I18N, Logger, Prompts, RPMController
 from crewai.utilities.token_counter_callback import TokenCalcHandler, TokenProcess
 from agentops.agent import track_agent
-from agentops import LangchainCallbackHandler
+from agentops.langchain_callback_handler import LangchainCallbackHandler
 
 
-@track_agent(name=None)
+@track_agent()
 class Agent(BaseModel):
     """Represents an agent in a system.
 
@@ -124,7 +124,7 @@ class Agent(BaseModel):
     def __init__(__pydantic_self__, **data):
         config = data.pop("config", {})
         super().__init__(**config, **data)
-        __pydantic_self__._agent_ops_agent_name = __pydantic_self__.role
+        __pydantic_self__.agent_ops_agent_name = __pydantic_self__.role
 
     @field_validator("id", mode="before")
     @classmethod
