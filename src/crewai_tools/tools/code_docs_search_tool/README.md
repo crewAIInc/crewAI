@@ -26,3 +26,31 @@ Note: Substitute 'https://docs.example.com/reference' with your target documenta
 
 ## Arguments
 - `docs_url`: Optional. Specifies the URL of the code documentation to be searched. Providing this during the tool's initialization focuses the search on the specified documentation content.
+
+## Custom model and embeddings
+
+By default, the tool uses OpenAI for both embeddings and summarization. To customize the model, you can use a config dictionary as follows:
+
+```python
+tool = YoutubeVideoSearchTool(
+    config=dict(
+        llm=dict(
+            provider="ollama", # or google, openai, anthropic, llama2, ...
+            config=dict(
+                model="llama2",
+                # temperature=0.5,
+                # top_p=1,
+                # stream=true,
+            ),
+        ),
+        embedder=dict(
+            provider="google",
+            config=dict(
+                model="models/embedding-001",
+                task_type="retrieval_document",
+                # title="Embeddings",
+            ),
+        ),
+    )
+)
+```

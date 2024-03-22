@@ -26,3 +26,31 @@ The PGSearchTool requires the following arguments for its operation:
 
 - `db_uri`: A string representing the URI of the PostgreSQL database to be queried. This argument is mandatory and must include the necessary authentication details and the location of the database.
 - `table_name`: A string specifying the name of the table within the database on which the semantic search will be performed. This argument is mandatory.
+
+## Custom model and embeddings
+
+By default, the tool uses OpenAI for both embeddings and summarization. To customize the model, you can use a config dictionary as follows:
+
+```python
+tool = PGSearchTool(
+    config=dict(
+        llm=dict(
+            provider="ollama", # or google, openai, anthropic, llama2, ...
+            config=dict(
+                model="llama2",
+                # temperature=0.5,
+                # top_p=1,
+                # stream=true,
+            ),
+        ),
+        embedder=dict(
+            provider="google",
+            config=dict(
+                model="models/embedding-001",
+                task_type="retrieval_document",
+                # title="Embeddings",
+            ),
+        ),
+    )
+)
+```

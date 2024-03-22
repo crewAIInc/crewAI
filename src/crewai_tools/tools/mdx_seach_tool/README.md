@@ -27,3 +27,31 @@ tool = MDXSearchTool(mdx='path/to/your/document.mdx')
 
 ## Arguments
 - mdx: **Optional** The MDX path for the search. Can be provided at initialization
+
+## Custom model and embeddings
+
+By default, the tool uses OpenAI for both embeddings and summarization. To customize the model, you can use a config dictionary as follows:
+
+```python
+tool = MDXSearchTool(
+    config=dict(
+        llm=dict(
+            provider="ollama", # or google, openai, anthropic, llama2, ...
+            config=dict(
+                model="llama2",
+                # temperature=0.5,
+                # top_p=1,
+                # stream=true,
+            ),
+        ),
+        embedder=dict(
+            provider="google",
+            config=dict(
+                model="models/embedding-001",
+                task_type="retrieval_document",
+                # title="Embeddings",
+            ),
+        ),
+    )
+)
+```
