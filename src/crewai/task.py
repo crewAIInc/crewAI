@@ -71,6 +71,9 @@ class Task(BaseModel):
         description="Unique identifier for the object, not set by user.",
     )
 
+    _original_description: str | None = None
+    _original_expected_output: str | None = None
+
     def __init__(__pydantic_self__, **data):
         config = data.pop("config", {})
         super().__init__(**config, **data)
@@ -189,9 +192,14 @@ class Task(BaseModel):
 
     def interpolate_inputs(self, inputs: Dict[str, Any]) -> None:
         """Interpolate inputs into the task description and expected output."""
+        if self._original_description is None:
+            self._original_description = self.description
+        if self._original_expected_output is None:
+            self._original_expected_output = self.expected_output
+
         if inputs:
-            self.description = self.description.format(**inputs)
-            self.expected_output = self.expected_output.format(**inputs)
+            self.description = self._original_description.format(**inputs)
+            self.expected_output = self._original_expected_output.format(**inputs)
 
     def increment_tools_errors(self) -> None:
         """Increment the tools errors counter."""

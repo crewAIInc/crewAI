@@ -462,3 +462,24 @@ def test_task_definition_based_on_dict():
     assert task.description == config["description"]
     assert task.expected_output == config["expected_output"]
     assert task.agent is None
+
+
+def test_interpolate_inputs():
+    task = Task(
+        description="Give me a list of 5 interesting ideas about {topic} to explore for an article, what makes them unique and interesting.",
+        expected_output="Bullet point list of 5 interesting ideas about {topic}.",
+    )
+
+    task.interpolate_inputs(inputs={"topic": "AI"})
+    assert (
+        task.description
+        == "Give me a list of 5 interesting ideas about AI to explore for an article, what makes them unique and interesting."
+    )
+    assert task.expected_output == "Bullet point list of 5 interesting ideas about AI."
+
+    task.interpolate_inputs(inputs={"topic": "ML"})
+    assert (
+        task.description
+        == "Give me a list of 5 interesting ideas about ML to explore for an article, what makes them unique and interesting."
+    )
+    assert task.expected_output == "Bullet point list of 5 interesting ideas about ML."

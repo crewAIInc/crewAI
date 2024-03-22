@@ -680,3 +680,21 @@ def test_agent_definition_based_on_dict():
     assert agent.backstory == "test backstory"
     assert agent.verbose == True
     assert agent.tools == []
+
+
+def test_interpolate_inputs():
+    agent = Agent(
+        role="{topic} specialist",
+        goal="Figure {goal} out",
+        backstory="I am the master of {role}",
+    )
+
+    agent.interpolate_inputs({"topic": "AI", "goal": "life", "role": "all things"})
+    assert agent.role == "AI specialist"
+    assert agent.goal == "Figure life out"
+    assert agent.backstory == "I am the master of all things"
+
+    agent.interpolate_inputs({"topic": "Sales", "goal": "stuff", "role": "nothing"})
+    assert agent.role == "Sales specialist"
+    assert agent.goal == "Figure stuff out"
+    assert agent.backstory == "I am the master of nothing"
