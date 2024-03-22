@@ -15,9 +15,8 @@ def create_crew(name):
         os.mkdir(folder_name)
         os.mkdir(folder_name + "/tests")
         os.mkdir(folder_name + "/src")
-        os.mkdir(folder_name + f"/src/{folder_name}")
-        os.mkdir(folder_name + f"/src/{folder_name}/tools")
-        os.mkdir(folder_name + f"/src/{folder_name}/config")
+        os.mkdir(folder_name + "/src/tools")
+        os.mkdir(folder_name + "/src/config")
         with open(folder_name + "/.env", "w") as file:
             file.write("OPENAI_API_KEY=YOUR_API_KEY")
     else:
@@ -47,17 +46,17 @@ def create_crew(name):
 
     for file_name in src_template_files:
         src_file = templates_dir / file_name
-        dst_file = Path(folder_name) / "src" / folder_name / file_name
+        dst_file = Path(folder_name) / "src" / file_name
         copy_template(src_file, dst_file, name, class_name, folder_name)
 
     for file_name in tools_template_files:
         src_file = templates_dir / file_name
-        dst_file = Path(folder_name) / "src" / folder_name / file_name
+        dst_file = Path(folder_name) / "src" / file_name
         copy_template(src_file, dst_file, name, class_name, folder_name)
 
     for file_name in config_template_files:
         src_file = templates_dir / file_name
-        dst_file = Path(folder_name) / "src" / folder_name / file_name
+        dst_file = Path(folder_name) / "src" / file_name
         copy_template(src_file, dst_file, name, class_name, folder_name)
 
     click.secho(f"Crew {name} created successfully!", fg="green", bold=True)
