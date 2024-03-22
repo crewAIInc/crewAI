@@ -33,6 +33,8 @@
 - [Hire CrewAI](#hire-crewai)
 - [Telemetry](#telemetry)
 - [License](#license)
+- [Crewai create Command](#Crewai-create-Command)
+
 
 ## Why CrewAI?
 
@@ -285,3 +287,41 @@ Users can opt-in sharing the complete telemetry data by setting the `share_crew`
 ## License
 
 CrewAI is released under the MIT License.
+
+## Crewai-create-Command
+The crewai create command is used to create various resources in crewAI, such as projects, datasets, and models. It allows users to easily create and manage their AI projects.
+
+crewai create [OPTIONS] NAME 
+
+- Description:
+The crewai create command is used to create various resources in crewAI, such as projects, datasets, and models.
+
+- Options:
+  	-d, --description TEXT: Specify a description for the resource.
+  	-t, --type TEXT: Specify the type of resource to create (e.g., project, dataset).
+  	-f, --file PATH: Specify a file containing configuration settings for the resource.
+
+- Usage Examples:
+  •	Creating a Project:
+    crewai create project my_project
+    
+
+  •	Creating a Dataset:
+    crewai create dataset my_dataset 
+
+  •	Creating a Project with Description:
+    crewai create project my_project -d "My project description" 
+
+  •	Creating a Dataset with Type:
+    crewai create dataset my_dataset -t image_classification 
+
+  •	Creating a Model with Configuration File:
+    crewai create model my_model -f model_config.json 
+
+- Usage Scenarios:
+  •	Scenario 1 - Project Creation:
+  •	Description: Create a new project named my_project with a description.
+  •	Command: crewai create project my_project -d "My project description"
+  •	Scenario 2 - Dataset Creation:
+  •	Description: Create a new dataset named my_dataset.
+  •	Command: crewai create dataset my_dataset
