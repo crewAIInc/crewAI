@@ -1,8 +1,5 @@
 # ScrapeWebsiteTool
 
-!!! note "Depend on OpenAI"
-    All RAG tools at the moment can only use openAI to generate embeddings, we are working on adding support for other providers.
-
 !!! note "Experimental"
     We are still working on improving tools, so there might be unexpected behavior or changes in the future.
 
