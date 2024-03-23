@@ -193,13 +193,15 @@ class Agent(BaseModel):
                 task=task_prompt, context=context
             )
 
-        tools = self._parse_tools(tools or self.tools)
+        tools = tools or self.tools
+        parsed_tools = self._parse_tools(tools)
+
         self.create_agent_executor(tools=tools)
-        self.agent_executor.tools = tools
+        self.agent_executor.tools = parsed_tools
         self.agent_executor.task = task
 
-        self.agent_executor.tools_description = render_text_description(tools)
-        self.agent_executor.tools_names = self.__tools_names(tools)
+        self.agent_executor.tools_description = render_text_description(parsed_tools)
+        self.agent_executor.tools_names = self.__tools_names(parsed_tools)
 
         result = self.agent_executor.invoke(
             {
@@ -220,10 +222,11 @@ class Agent(BaseModel):
         Args:
             cache_handler: An instance of the CacheHandler class.
         """
+        self.tools_handler = ToolsHandler()
         if self.cache:
             self.cache_handler = cache_handler
-            self.tools_handler = ToolsHandler(cache=self.cache_handler)
-            self.create_agent_executor()
+            self.tools_handler.cache = cache_handler
+        self.create_agent_executor()
 
     def set_rpm_controller(self, rpm_controller: RPMController) -> None:
         """Set the rpm controller for the agent.
@@ -257,6 +260,7 @@ class Agent(BaseModel):
             "i18n": self.i18n,
             "tools": self._parse_tools(tools),
             "verbose": self.verbose,
+            "original_tools": tools,
             "handle_parsing_errors": True,
             "max_iterations": self.max_iter,
             "step_callback": self.step_callback,

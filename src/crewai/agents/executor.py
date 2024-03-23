@@ -24,6 +24,7 @@ class CrewAgentExecutor(AgentExecutor):
     task: Any = None
     tools_description: str = ""
     tools_names: str = ""
+    original_tools: List[Any] = []
     function_calling_llm: Any = None
     request_within_rpm_limit: Any = None
     tools_handler: InstanceOf[ToolsHandler] = None
@@ -202,6 +203,7 @@ class CrewAgentExecutor(AgentExecutor):
             tool_usage = ToolUsage(
                 tools_handler=self.tools_handler,
                 tools=self.tools,
+                original_tools=self.original_tools,
                 tools_description=self.tools_description,
                 tools_names=self.tools_names,
                 function_calling_llm=self.function_calling_llm,

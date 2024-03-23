@@ -29,6 +29,7 @@ class ToolUsage:
         task: Task being executed.
         tools_handler: Tools handler that will manage the tool usage.
         tools: List of tools available for the agent.
+        original_tools: Original tools available for the agent before being converted to BaseTool.
         tools_description: Description of the tools available for the agent.
         tools_names: Names of the tools available for the agent.
         function_calling_llm: Language model to be used for the tool usage.
@@ -38,6 +39,7 @@ class ToolUsage:
         self,
         tools_handler: ToolsHandler,
         tools: List[BaseTool],
+        original_tools: List[Any],
         tools_description: str,
         tools_names: str,
         task: Any,
@@ -53,6 +55,7 @@ class ToolUsage:
         self.tools_description = tools_description
         self.tools_names = tools_names
         self.tools_handler = tools_handler
+        self.original_tools = original_tools
         self.tools = tools
         self.task = task
         self.action = action
@@ -111,7 +114,7 @@ class ToolUsage:
 
         result = None
 
-        if self.tools_handler:
+        if self.tools_handler.cache:
             result = self.tools_handler.cache.read(
                 tool=calling.tool_name, input=calling.arguments
             )
@@ -159,7 +162,25 @@ class ToolUsage:
                 return self.use(calling=calling, tool_string=tool_string)
 
             if self.tools_handler:
-                self.tools_handler.on_tool_use(calling=calling, output=result)
+                should_cache = True
+                print("FORA")
+                print(tool)
+                original_tool = next(
+                    (ot for ot in self.original_tools if ot.name == tool.name), None
+                )
+                if (
+                    hasattr(original_tool, "cache_function")
+                    and original_tool.cache_function
+                ):
+                    print("CARALHOOOO")
+                    print(original_tool.cache_function)
+                    should_cache = original_tool.cache_function(
+                        calling.arguments, result
+                    )
+
+                self.tools_handler.on_tool_use(
+                    calling=calling, output=result, should_cache=should_cache
+                )
 
         self._printer.print(content=f"\n\n{result}\n", color="yellow")
         self._telemetry.tool_usage(
@@ -248,12 +269,12 @@ class ToolUsage:
                     model=model,
                     instructions=dedent(
                         """\
-                                            The schema should have the following structure, only two keys:
-                                            - tool_name: str
-                                            - arguments: dict (with all arguments being passed)
+                            The schema should have the following structure, only two keys:
+                            - tool_name: str
+                            - arguments: dict (with all arguments being passed)
 
-                                            Example:
-                                            {"tool_name": "tool name", "arguments": {"arg_name1": "value", "arg_name2": 2}}""",
+                            Example:
+                            {"tool_name": "tool name", "arguments": {"arg_name1": "value", "arg_name2": 2}}""",
                     ),
                     max_attemps=1,
                 )

@@ -5,43 +5,43 @@ description: Guide on how to create and use custom tools within the crewAI frame
 
 ## Creating your own Tools
 !!! example "Custom Tool Creation"
-    Developers can craft custom tools tailored for their agent’s needs or utilize pre-built options:
+    Developers can craft custom tools tailored to their agent’s needs or utilize pre-built options.
 
-To create your own crewAI tools you will need to install our extra tools package:
+To create your own crewAI tools, you will need to install our extra tools package:
 
 ```bash
 pip install 'crewai[tools]'
 ```
 
-Once you do that there are two main ways for one to create a crewAI tool:
+Once installed, there are two primary methods for creating a crewAI tool:
 
 ### Subclassing `BaseTool`
+
+To define a custom tool, create a new class that inherits from `BaseTool`. Specify the `name`, `description`, and implement the `_run` method to outline its operational logic.
 
 ```python
 from crewai_tools import BaseTool
 
 class MyCustomTool(BaseTool):
     name: str = "Name of my tool"
-    description: str = "Clear description for what this tool is useful for, you agent will need this information to use it."
+    description: str = "Clear description for what this tool is useful for. Your agent will need this information to utilize it effectively."
 
     def _run(self, argument: str) -> str:
-        # Implementation goes here
+        # Implementation details go here
         return "Result from custom tool"
 ```
 
-Define a new class inheriting from `BaseTool`, specifying `name`, `description`, and the `_run` method for operational logic.
-
-
 ### Utilizing the `tool` Decorator
 
-For a simpler approach, create a `Tool` object directly with the required attributes and a functional logic.
+For a more straightforward approach, employ the `tool` decorator to create a `Tool` object directly. This method requires specifying the required attributes and functional logic within a decorated function.
 
 ```python
 from crewai_tools import tool
+
 @tool("Name of my tool")
 def my_tool(question: str) -> str:
-    """Clear description for what this tool is useful for, you agent will need this information to use it."""
-    # Function logic here
+    """Provide a clear description of what this tool is useful for. Your agent will need this information to use it."""
+    # Implement function logic here
 ```
 
 ```python
@@ -49,43 +49,30 @@ import json
 import requests
 from crewai import Agent
 from crewai.tools import tool
-from unstructured.partition.html import partition_html
 
-    # Annotate the function with the tool decorator from crewAI
-@tool("Integration with a given API")
-def integtation_tool(argument: str) -> str:
-    """Integration with a given API"""
-    # Code here
-    return resutls # string to be sent back to the agent
-
-# Assign the scraping tool to an agent
-agent = Agent(
-    role='Research Analyst',
-    goal='Provide up-to-date market analysis',
-    backstory='An expert analyst with a keen eye for market trends.',
-    tools=[integtation_tool]
-)
+# Decorate the function with the tool decorator from crewAI
+@tool("Integration with a Given API")
+def integration_tool(argument: str) -> str:
+    """Details the integration process with a given API."""
+    # Implementation details
+    return "Results to be sent back to the agent"
 ```
 
+### Defining a Cache Function for the Tool
 
-
-### Using the `Tool` function from langchain
-
-For another simple approach, create a function in python directly with the required attributes and a functional logic.
+By default, all tools have caching enabled, meaning that if a tool is called with the same arguments by any agent in the crew, it will return the same result. However, specific scenarios may require more tailored caching strategies. For these cases, use the `cache_function` attribute to assign a function that determines whether the result should be cached.
 
 ```python
-def combine(a, b):
-    return a + b
-```
+@tool("Integration with a Given API")
+def integration_tool(argument: str) -> str:
+    """Integration with a given API."""
+    # Implementation details
+    return "Results to be sent back to the agent"
 
-Then you can add that function into the your tool by using 'func' variable in the Tool function.
+def cache_strategy(arguments: dict, result: str) -> bool:
+    if result == "some_value":
+        return True
+    return False
 
-```python
-from langchain.agents import Tool
-
-math_tool = Tool(
-            name="Math tool",
-            func=math_tool,
-            description="Useful for adding two numbers together, in other words combining them."
-        )
+integration_tool.cache_function = cache_strategy
 ```
