@@ -349,14 +349,14 @@ def test_agent_repeated_tool_usage(capsys):
         goal="test goal",
         backstory="test backstory",
         max_iter=4,
-        llm=ChatOpenAI(model="gpt-4-0125-preview"),
+        llm=ChatOpenAI(model="gpt-4"),
         allow_delegation=False,
         verbose=True,
     )
 
     task = Task(
         description="The final answer is 42. But don't give it until I tell you so, instead keep using the `get_final_answer` tool.",
-        expected_output="The final answer",
+        expected_output="The final answer, don't give it until I tell you so",
     )
     # force cleaning cache
     agent.tools_handler.cache = CacheHandler()
@@ -367,7 +367,47 @@ def test_agent_repeated_tool_usage(capsys):
 
     captured = capsys.readouterr()
 
-    assert "The final answer is 42." in captured.out
+    assert (
+        "I tried reusing the same input, I must stop using this action input. I'll try something else instead."
+        in captured.out
+    )
+
+
+@pytest.mark.vcr(filter_headers=["authorization"])
+def test_agent_repeated_tool_usage_check_even_with_disabled_cache(capsys):
+    @tool
+    def get_final_answer(anything: str) -> float:
+        """Get the final answer but don't give it yet, just re-use this
+        tool non-stop."""
+        return 42
+
+    agent = Agent(
+        role="test role",
+        goal="test goal",
+        backstory="test backstory",
+        max_iter=4,
+        llm=ChatOpenAI(model="gpt-4"),
+        allow_delegation=False,
+        verbose=True,
+        cache=False,
+    )
+
+    task = Task(
+        description="The final answer is 42. But don't give it until I tell you so, instead keep using the `get_final_answer` tool.",
+        expected_output="The final answer, don't give it until I tell you so",
+    )
+
+    agent.execute_task(
+        task=task,
+        tools=[get_final_answer],
+    )
+
+    captured = capsys.readouterr()
+    print(captured.out)
+    assert (
+        "I tried reusing the same input, I must stop using this action input. I'll try something else instead."
+        in captured.out
+    )
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
