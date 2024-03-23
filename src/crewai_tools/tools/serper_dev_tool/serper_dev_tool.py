@@ -15,14 +15,14 @@ class SerperDevTool(BaseTool):
 	description: str = "A tool that can be used to semantic search a query from a txt's content."
 	args_schema: Type[BaseModel] = SerperDevToolSchema
 	search_url: str = "https://google.serper.dev/search"
-	n_results: int = None
+	n_results: int = 10
 
 	def _run(
 		self,
 		search_query: str,
 		**kwargs: Any,
 	) -> Any:
-		payload = json.dumps({"q": search_query})
+		payload = json.dumps({"q": search_query, "num": self.n_results})
 		headers = {
 				'X-API-KEY': os.environ['SERPER_API_KEY'],
 				'content-type': 'application/json'
