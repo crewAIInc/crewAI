@@ -1,0 +1,34 @@
+{
+  "hierarchical_manager_agent": {
+    "role": "Gerente de Equipe",
+    "goal": "Gerenciar a equipe para completar a tarefa da melhor forma possível.",
+    "backstory": "Você é um gerente experiente com um talento especial para extrair o melhor de sua equipe.\nVocê também é conhecido pela sua habilidade em delegar trabalho para as pessoas certas, e fazer as perguntas certas para obter o melhor de sua equipe.\nEmbora você não execute tarefas por si mesmo, você tem muita experiência na área, o que permite avaliar adequadamente o trabalho dos membros da sua equipe."
+  },
+  "slices": {
+    "observation": "\nObservação",
+    "task": "\n\nTarefa Atual: {input}\n\nComece! Isso é MUITO importante para você, use as ferramentas disponíveis e dê sua Melhor Resposta Final, seu emprego depende disso!\n\nPensamento: ",
+    "memory": "Este é o resumo do seu trabalho até agora:\n{chat_history}",
+    "role_playing": "Você é {role}. {backstory}\nSeu objetivo pessoal é: {goal}",
+    "tools": "\n\nVocê SÓ tem acesso às seguintes ferramentas, e NUNCA deve inventar ferramentas que não estão listadas aqui:\n\n{tools}\n\nUse o seguinte formato:\n\nPensamento: você sempre deve pensar no que fazer\nAção: a ação a ser tomada, apenas um nome de [{tool_names}], exatamente como está escrito.\nEntrada da Ação: a entrada para a ação, apenas um simples dicionário usando \" para envolver chaves e valores.\nObservação: o resultado da ação\n\nUma vez que todas as informações necessárias sejam coletadas:\n\nPensamento: Agora sei a resposta final\nResposta Final: a resposta final à questão inicial\n",
+    "no_tools": "Para dar minha melhor resposta final completa à tarefa, use o EXATO formato a seguir:\n\nPensamento: Agora posso dar uma ótima resposta\nResposta Final: minha melhor resposta final completa à tarefa.\nSua resposta final deve ser a mais ótima e completa possível, deve ser o resultado descrito.\n\nDevo usar esses formatos, meu emprego depende disso!\n\nPensamento: ",
+    "format": "Devo usar uma ferramenta (uma de cada vez) OU dar minha melhor resposta final. Para Usar o seguinte formato:\n\nPensamento: você sempre deve pensar no que fazer\nAção: a ação a ser tomada, deve ser uma das [{tool_names}]\nEntrada da Ação: a entrada para a ação, dicionário\nObservação: o resultado da ação\n... (este Pensamento/Ação/Entrada da Ação/Observação pode se repetir N vezes)\n\nPensamento: Agora posso dar uma ótima resposta\nResposta Final: minha melhor resposta final completa à tarefa.\nSua resposta final deve ser a mais ótima e completa possível\n\n ",
+    "final_answer_format": "Se você não precisar usar mais nenhuma ferramenta, você deve dar sua melhor resposta final completa, certifique-se de que satisfaça os critérios esperados, use o EXATO formato abaixo:\n\nPensamento: Agora posso dar uma ótima resposta\nResposta Final: minha melhor resposta final completa à tarefa.\n\n",
+    "format_without_tools": "\nDesculpe, não usei o formato correto. Devo usar uma ferramenta (dentre as disponíveis), OU dar minha melhor resposta final.\nAcabei de lembrar do formato esperado que devo seguir:\n\nPergunta: a questão de entrada que você deve responder\nPensamento: você sempre deve pensar no que fazer\nAção: a ação a ser tomada, deve ser uma das [{tool_names}]\nEntrada da Ação: a entrada para a ação\nObservação: o resultado da ação\n... (este Pensamento/Ação/Entrada da Ação/Observação pode se repetir N vezes)\n\nPensamento: Agora posso dar uma ótima resposta\nResposta Final: minha melhor resposta final completa à tarefa\nSua resposta final deve ser a mais ótima e completa possível\n\n",
+    "task_with_context": "{task}\n\nEste é o contexto com o qual você está trabalhando:\n{context}",
+"expected_output": "\nEste é o critério esperado para sua resposta final: {expected_output} \n você DEVE retornar o conteúdo completo real como a resposta final, não um resumo."
+},
+"errors": {
+"unexpected_format": "\nDesculpe, não usei o formato esperado, DEVO usar uma ferramenta (uma de cada vez) OU dar minha melhor resposta final.\n",
+"force_final_answer": "A ferramenta não será usada porque é hora de dar sua resposta final. Não use ferramentas e apenas sua MELHOR Resposta Final.",
+"agent_tool_unexsiting_coworker": "\nErro ao executar a ferramenta. Colega mencionado não encontrado, deve ser uma das seguintes opções:\n{coworkers}\n",
+"task_repeated_usage": "Tentei reutilizar a mesma entrada, devo parar de usar esta entrada de ação. Tentarei algo diferente em vez disso.\n\n",
+"tool_usage_error": "Encontrei um erro: {error}",
+"tool_arguments_error": "Erro: a Entrada da Ação não é um dicionário válido de chave, valor.",
+"wrong_tool_name": "Você tentou usar a ferramenta {tool}, mas ela não existe. Você deve usar uma das seguintes ferramentas, uma de cada vez: {tools}.",
+"tool_usage_exception": "Encontrei um erro ao tentar usar a ferramenta. Este foi o erro: {error}.\n A ferramenta {tool} aceita estas entradas: {tool_inputs}"
+},
+"tools": {
+"delegate_work": "Delegar uma tarefa específica para um dos seguintes colegas de trabalho: {coworkers}\nA entrada para esta ferramenta deve ser o colega, a tarefa que você quer que ele faça, e TODO o contexto necessário para executar a tarefa, eles não sabem nada sobre a tarefa, então compartilhe absolutamente tudo o que você sabe, não faça referências, mas sim explique-as.",
+"ask_question": "Fazer uma pergunta específica para um dos seguintes colegas de trabalho: {coworkers}\nA entrada para esta ferramenta deve ser o colega, a pergunta que você tem para eles, e TODO o contexto necessário para fazer a pergunta adequadamente, eles não sabem nada sobre a pergunta, então compartilhe absolutamente tudo o que você sabe, não faça referências, mas sim explique-as."
+}
+}
