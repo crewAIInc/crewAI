@@ -23,6 +23,7 @@ from crewai.task import Task
 from crewai.telemetry import Telemetry
 from crewai.tools.agent_tools import AgentTools
 from crewai.utilities import I18N, Logger, RPMController
+import agentops
 
 
 class Crew(BaseModel):
@@ -293,6 +294,7 @@ class Crew(BaseModel):
         if self.max_rpm:
             self._rpm_controller.stop_rpm_counter()
         self._telemetry.end_crew(self, output)
+        agentops.end_session(end_state="Success", end_state_reason="Finished Execution")
 
     def __repr__(self):
         return f"Crew(id={self.id}, process={self.process}, number_of_agents={len(self.agents)}, number_of_tasks={len(self.tasks)})"
