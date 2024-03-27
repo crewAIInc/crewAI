@@ -20,7 +20,7 @@ class BaseTool(BaseModel, ABC):
     """The schema for the arguments that the tool accepts."""
     description_updated: bool = False
     """Flag to check if the description has been updated."""
-    cache_function: Optional[Callable] = lambda: True
+    cache_function: Optional[Callable] = lambda _args, _result: True
     """Function that will be used to determine if the tool should be cached, should return a boolean. If None, the tool will be cached."""
 
     @validator("args_schema", always=True, pre=True)
