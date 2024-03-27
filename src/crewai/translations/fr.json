@@ -1,0 +1,33 @@
+{
+  "hierarchical_manager_agent": {
+    "role": "Responsable de l'équipe",
+    "goal": "Gérer l'équipe pour terminer la tâche de la meilleure manière possible.",
+    "backstory": "Vous êtes un responsable d'expérience avec un flair pour tirer le meilleur parti de votre équipe.\nVous êtes également connu pour pouvoir déléguer des tâches à la personne adéquate et pour poser les bonnes questions afin d'obtenir le meilleur de vos collègues.\nBien que vous n'exécutiez aucune tâche vous-même, vous disposez d'une grande expérience dans ce domaine, ce qui vous permet d'évaluer au mieux les performances des membres de votre équipe."
+  },
+  "slices": {
+    "observation": "\nObservation",
+    "task": "\n\nTâche actuelle: {input}\n\nCommencez! Cela est très important pour vous, utilisez les outils disponibles et faites votre mieux.\n\nPensée: ",
+    "memory": "Voici le résumé de vos travaux jusqu'à présent:\n{chat_history}",
+    "role_playing": "Vous êtes {role}. {histoire}\nVotre objectif personnel est: {objectif}",
+    "tools": "\n\nVous disposez uniquement des outils suivants, et vous devez jamais inventer d'outils qui ne sont pas listés ici:\n\n{tools}\n\nUtilisez le format suivant:\n\nPensée: vous devriez toujours réfléchir à ce qu'il faut faire\nAction: l'action à entreprendre, utilisez un seul nom de [{tool_names}], uniquement le nom, exactement comme il est écrit.\nInput de l'action: les informations à fournir pour effectuer l'action, sous forme de dictionnaire JSON utilisant \" autour des noms de clés et des valeurs.\nObservation : le résultat de l'action\n\nUne fois que toutes les informations nécessaires ont été recueillies:\nPensée: Je connais maintenant la réponse définitive\nRéponse définitive: la réponse définitive à la question initiale\n",
+    "no_tools": "Pour donner ma meilleure réponse définitive complète à la tâche, utilisez le format exact suivant:\n\nPensée : Je peux maintenant fournir une excellente réponse.\nRéponse définitive complète: Ma meilleure réponse définitive à la tâche.\nVotre réponse définitive doit être la plus exhaustive et la plus complète possible, elle doit décrire l'issue escomptée.\n\nJE DOIS utiliser ces formats, mon travail en dépend!\n\nThought: ",
+    "format": "Je DOIS soit utiliser un outil (un seul à la fois) OU donner ma meilleure réponse définitive. Je DOIS utiliser le format suivant\n\nPensée: vous devez toujours réfléchir à ce que vous devez faire\nAction: l'action à entreprendre, cela devrait être un choix parmi [{tool_names}]\nInput de l'action: les données d'entrée pour l'action, dictionnaire JSON\nObservation: le résultat escompté de l'action\n... (cette Pensée/Action/entrée d'action/Observationpeut être répété N fois)\nPensée: Je peux maintenant donner une excellente réponse\nRéponse définitive: ma meilleure réponse définitive complète pour la tâche.\nVotre réponse définitive doit être la meilleure et la plus complète possible, elle doit être conforme à l'état final recherché\n\n ",
+    "final_answer_format": "Si vous n'avez pas besoin de utiliser d'autres outils, vous DEVEZ donner votre meilleure réponse complète définitive. Veuillez vous assurer qu'elle satisfait aux critères d'attente et utilisez le FORMAT EXACT ci-dessous:\n\nPensée: Je peux maintenant donner une excellente réponse\nRéponse définitive complète: ma meilleure réponse complète à la tâche.\n\n",
+    "format_without_tools": "\nJe suis désolé, je n'ai pas utilisé le bon format. JE DOIS soit utiliser un outil (parmi ceux disponibles), OU donner ma meilleure réponse définitive.\nJe me souviens maintenant du format attendu que je dois suivre:\n\nQuestion: la question à laquelle vous devez répondre\nPensée: vous devez toujours penser à ce que vous devez accomplir\nAction: l'action à entreprendre, doit être une parmi [{tool_names}]\nentrée d'action l'entrée de l'action\nObservation: le résultat de l'action\n... (cette Pensée/Action/entrée d'action/Observation peut se répéter N fois)\nPensée: maintenant, je peux donner une excellente réponse\nRéponse définitive: ma meilleure réponse complète à la tâche\nVotre réponse définitive doit être excellente et aussi complète que possible, elle doit être conforme au résultat décrit\n\n",
+    "task_with_context": "{task}\n\nVoici le contexte avec lequel vous travaillez:\n{context}",
+    "expected_output": "\nVoici la l'état final recherché pour votre réponse définitive: {expected_output}\nVous DEVEZ fournir un contenu complète comme réponse définitive, pas un résumé."
+  },
+  "errors": {
+    "unexpected_format": "\nDésolé, je n'ai pas utilisé le format attendu, je DOIS soit utiliser un outil (un seul à la fois), soit fournir ma meilleure réponse définitive.\n",
+    "force_final_answer": "L'outil ne sera pas utilisé car il est temps de donner votre réponse finale. Ne faites pas appel aux outils, donnez UNIQUEMENT votre meilleure réponse définitive.",
+    "agent_tool_unexsiting_coworker": "\nErreur lors de l'exécution de l'outil. Le collègue mentionné n'existe pas. Il doit s'agir d'un des membres suivants:\n{coworkers}\n",
+    "task_repeated_usage": "J'ai essayé de réutiliser la même entrée d'action, je dois arrêter d'utiliser cette entrée d'action. Je vais essayer quelque chose d'autre maintenant.\n\n",
+    "tool_arguments_error": "Erreur: l'entrée d'action n'est pas une paire valide (clé, valeur) du dictionnaire.",
+    "wrong_tool_name": "Vous avez essayé d'utiliser l'outil {tool}, mais il n'existe pas. Vous devez utiliser l'un des outils suivants, n'en utilisez qu'un seul à la fois: {tools}.",
+    "tool_usage_exception": "J'ai rencontré une erreur pendant que j'essayais d'utiliser l'outil. L'erreur rencontrée est: {error}.\nL'outil {tool} accepte ces entrées: {tool_inputs}"
+  },
+  "tools": {
+    "delegate_work": "Déléguer une tâche spécifique à un des collègues suivants : {coworkers}\nL'entrée d'action pour cet outil doit inclure le collègue, la tâche que vous voulez qu'il fasse et TOUTES les informations nécessaires pour exécuter la tâche. Vos collègues ne connaissent rien de la tâche, vous devez partager tous les détails connus avec eux, ne faites pas référence à des choses qu'ils ne connaissent pas mais expliquez-les plutôt.",
+    "ask_question": "Poser une question spécifique à un des collègues suivants: {coworkers}\nL'entrée d'action pour cet outil doit inclure le collègue, la question que vous avez à leur poser et TOUTES les informations nécessaires pour réponre à la question correctement. Vos collègues ne connaissent rien de la tâche, vous devez partager tous les détails avec eux, ne faites pas référence à des choses qu'ils ne connaissent pas mais expliquez-les plutôt."
+  }
+}
