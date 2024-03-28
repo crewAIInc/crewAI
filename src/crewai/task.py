@@ -70,6 +70,10 @@ class Task(BaseModel):
         frozen=True,
         description="Unique identifier for the object, not set by user.",
     )
+    human_input: Optional[bool] = Field(
+        description="Whether the task should have a human review the final answer of the agent",
+        default=False,
+    )
 
     def __init__(__pydantic_self__, **data):
         config = data.pop("config", {})

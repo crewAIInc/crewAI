@@ -18,6 +18,7 @@ from crewai.utilities import I18N
 
 class CrewAgentExecutor(AgentExecutor):
     _i18n: I18N = I18N()
+    human_input: bool = False
     llm: Any = None
     iterations: int = 0
     task: Any = None
@@ -54,6 +55,8 @@ class CrewAgentExecutor(AgentExecutor):
             [tool.name for tool in self.tools], excluded_colors=["green", "red"]
         )
         intermediate_steps: List[Tuple[AgentAction, str]] = []
+        # Get info about human input from Task
+        self.human_input = self.task.human_input
         # Let's start tracking the number of iterations and time elapsed
         self.iterations = 0
         time_elapsed = 0.0
@@ -169,8 +172,23 @@ class CrewAgentExecutor(AgentExecutor):
 
         # If the tool chosen is the finishing tool, then we end and return.
         if isinstance(output, AgentFinish):
-            yield output
-            return
+            if self.human_input:
+                self.human_input = False
+                human_feedback = self._human_input(output.return_values["output"])
+                action = AgentAction(
+                    tool="Human Input", tool_input=human_feedback, log=output.log
+                )
+                yield AgentStep(
+                    action=action,
+                    observation=self._i18n.slice("human_feedback").format(
+                        human_feedback=human_feedback
+                    ),
+                )
+                return
+
+            else:
+                yield output
+                return
 
         actions: List[AgentAction]
         actions = [output] if isinstance(output, AgentAction) else output
@@ -203,3 +221,9 @@ class CrewAgentExecutor(AgentExecutor):
                         tools=", ".join([tool.name for tool in self.tools]),
                     )
             yield AgentStep(action=agent_action, observation=observation)
+
+    def _human_input(self, final_answer: dict) -> str:
+        """Get human input."""
+        return input(
+            self._i18n.slice("getting_input").format(final_answer=final_answer)
+        )
