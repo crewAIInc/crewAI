@@ -40,6 +40,8 @@ class Telemetry:
     def __init__(self):
         self.ready = False
         try:
+            if os.environ.get("CREWAI_TELEMETRY_OPT_OUT", False):
+                return
             telemetry_endpoint = "http://telemetry.crewai.com:4318"
             self.resource = Resource(
                 attributes={SERVICE_NAME: "crewAI-telemetry"},
