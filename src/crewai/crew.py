@@ -293,8 +293,10 @@ class Crew(BaseModel):
     def _finish_execution(self, output) -> None:
         if self.max_rpm:
             self._rpm_controller.stop_rpm_counter()
-        self._telemetry.end_crew(self, output)
+
+        print('ending')
         agentops.end_session(end_state="Success", end_state_reason="Finished Execution")
+        self._telemetry.end_crew(self, output)
 
     def __repr__(self):
         return f"Crew(id={self.id}, process={self.process}, number_of_agents={len(self.agents)}, number_of_tasks={len(self.tasks)})"

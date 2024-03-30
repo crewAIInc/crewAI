@@ -156,7 +156,7 @@ class ToolUsage:
                     self._printer.print(content=f"\n\n{error_message}\n", color="red")
                     return error
                 self.task.increment_tools_errors()
-                agentops.record(agentops.ErrorEvent(details=error, trigger_event=tool_event))
+                agentops.record(agentops.ErrorEvent(details=e, trigger_event=tool_event))
                 return self.use(calling=calling, tool_string=tool_string)
 
             self.tools_handler.on_tool_use(calling=calling, output=result)

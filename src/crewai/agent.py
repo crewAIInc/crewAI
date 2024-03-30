@@ -25,7 +25,6 @@ from crewai.agents import CacheHandler, CrewAgentExecutor, CrewAgentParser, Tool
 from crewai.utilities import I18N, Logger, Prompts, RPMController
 from crewai.utilities.token_counter_callback import TokenCalcHandler, TokenProcess
 from agentops.agent import track_agent
-from agentops.langchain_callback_handler import LangchainCallbackHandler
 
 
 @track_agent()
@@ -157,8 +156,7 @@ class Agent(BaseModel):
         """set agent executor is set."""
         if hasattr(self.llm, "model_name"):
             self.llm.callbacks = [
-                TokenCalcHandler(self.llm.model_name, self._token_process),
-                LangchainCallbackHandler()
+                TokenCalcHandler(self.llm.model_name, self._token_process)
             ]
         if not self.agent_executor:
             self.set_cache_handler(self.cache_handler)
