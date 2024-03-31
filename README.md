@@ -24,6 +24,7 @@
 - [Key Features](#key-features)
 - [Examples](#examples)
   - [Quick Tutorial](#quick-tutorial)
+  - [Write Job Descriptions](#write-job-descriptions)
   - [Trip Planner](#trip-planner)
   - [Stock Analysis](#stock-analysis)
 - [Connecting Your Crew to a Model](#connecting-your-crew-to-a-model)
@@ -48,10 +49,10 @@ To get started with CrewAI, follow these simple steps:
 pip install crewai
 ```
 
-The example below also uses DuckDuckGo's Search. You can install it with `pip` too:
+If you want to also install crewai-tools, which is a package with tools that can be used by the agents, but more dependencies, you can install it with, example below uses it:
 
 ```shell
-pip install duckduckgo-search
+pip install 'crewai[tools]'
 ```
 
 ### 2. Setting Up Your Crew
@@ -59,18 +60,18 @@ pip install duckduckgo-search
 ```python
 import os
 from crewai import Agent, Task, Crew, Process
+from crewai_tools import SerperDevTool
 
 os.environ["OPENAI_API_KEY"] = "YOUR_API_KEY"
+os.environ["SERPER_API_KEY"] = "Your Key" # serper.dev API key
 
-# You can choose to use a local model through Ollama for example. See ./docs/how-to/llm-connections.md for more information.
-# from langchain_community.llms import Ollama
-# ollama_llm = Ollama(model="openhermes")
+# You can choose to use a local model through Ollama for example. See https://docs.crewai.com/how-to/LLM-Connections/ for more information.
 
-# Install duckduckgo-search for this example:
-# !pip install -U duckduckgo-search
+# os.environ["OPENAI_API_BASE"] = 'http://localhost:11434/v1'
+# os.environ["OPENAI_MODEL_NAME"] ='openhermes'  # Adjust based on available model
+# os.environ["OPENAI_API_KEY"] ='sk-111111111111111111111111111111111111111111111111'
 
-from langchain_community.tools import DuckDuckGoSearchRun
-search_tool = DuckDuckGoSearchRun()
+search_tool = SerperDevTool()
 
 # Define your agents with roles and goals
 researcher = Agent(
@@ -84,12 +85,12 @@ researcher = Agent(
   tools=[search_tool]
   # You can pass an optional llm attribute specifying what mode you wanna use.
   # It can be a local model through Ollama / LM Studio or a remote
-  # model like OpenAI, Mistral, Antrophic or others (https://python.langchain.com/docs/integrations/llms/)
+  # model like OpenAI, Mistral, Antrophic or others (https://docs.crewai.com/how-to/LLM-Connections/)
   #
-  # Examples:
+  # import os
+  # os.environ['OPENAI_MODEL_NAME'] = 'gpt-3.5-turbo'
   #
-  # from langchain_community.llms import Ollama
-  # llm=ollama_llm # was defined above in the file
+  # OR
   #
   # from langchain_openai import ChatOpenAI
   # llm=ChatOpenAI(model_name="gpt-3.5", temperature=0.7)
@@ -100,15 +101,14 @@ writer = Agent(
   backstory="""You are a renowned Content Strategist, known for your insightful and engaging articles.
   You transform complex concepts into compelling narratives.""",
   verbose=True,
-  allow_delegation=True,
-  # (optional) llm=ollama_llm
+  allow_delegation=True
 )
 
 # Create tasks for your agents
 task1 = Task(
   description="""Conduct a comprehensive analysis of the latest advancements in AI in 2024.
-  Identify key trends, breakthrough technologies, and potential industry impacts.
-  Your final answer MUST be a full analysis report""",
+  Identify key trends, breakthrough technologies, and potential industry impacts.""",
+  expected_output="Full analysis report in bullet points",
   agent=researcher
 )
 
@@ -116,8 +116,8 @@ task2 = Task(
   description="""Using the insights provided, develop an engaging blog
   post that highlights the most significant AI advancements.
   Your post should be informative yet accessible, catering to a tech-savvy audience.
-  Make it sound cool, avoid complex words so it doesn't sound like AI.
-  Your final answer MUST be the full blog post of at least 4 paragraphs.""",
+  Make it sound cool, avoid complex words so it doesn't sound like AI.""",
+  expected_output="Full blog post of at least 4 paragraphs",
   agent=writer
 )
 
@@ -143,7 +143,9 @@ In addition to the sequential process, you can use the hierarchical process, whi
 - **Autonomous Inter-Agent Delegation**: Agents can autonomously delegate tasks and inquire amongst themselves, enhancing problem-solving efficiency.
 - **Flexible Task Management**: Define tasks with customizable tools and assign them to agents dynamically.
 - **Processes Driven**: Currently only supports `sequential` task execution and `hierarchical` processes, but more complex processes like consensual and autonomous are being worked on.
-- **Works with Open Source Models**: Run your crew using Open AI or open source models refer to the [Connect crewAI to LLMs](https://docs.crewai.com/how-to/LLM-Connections/) page for details on configuring you agents' connections to models, even ones running locally!
+- **Save output as file**: Save the output of individual tasks as a file, so you can use it later.
+- **Parse output as Pydantic or Json**: Parse the output of individual tasks as a Pydantic model or as a Json if you want to.
+- **Works with Open Source Models**: Run your crew using Open AI or open source models refer to the [Connect crewAI to LLMs](https://docs.crewai.com/how-to/LLM-Connections/) page for details on configuring your agents' connections to models, even ones running locally!
 
 ![CrewAI Mind Map](./docs/crewAI-mindmap.png "CrewAI Mind Map")
 
@@ -159,6 +161,12 @@ You can test different real life examples of AI crews in the [crewAI-examples re
 ### Quick Tutorial
 
 [![CrewAI Tutorial](https://img.youtube.com/vi/tnejrr-0a94/maxresdefault.jpg)](https://www.youtube.com/watch?v=tnejrr-0a94 "CrewAI Tutorial")
+
+### Write Job Descriptions
+
+[Check out code for this example](https://github.com/joaomdmoura/crewAI-examples/tree/main/job-posting) or watch a video below:
+
+[![Jobs postings](https://img.youtube.com/vi/u98wEMz-9to/maxresdefault.jpg)](https://www.youtube.com/watch?v=u98wEMz-9to "Jobs postings")
 
 ### Trip Planner
 
@@ -180,7 +188,7 @@ Please refer to the [Connect crewAI to LLMs](https://docs.crewai.com/how-to/LLM-
 
 ## How CrewAI Compares
 
-- **Autogen**: While Autogen excels in creating conversational agents capable of working together, it lacks an inherent concept of process. In Autogen, orchestrating agents' interactions requires additional programming, which can become complex and cumbersome as the scale of tasks grows.
+- **Autogen**: While Autogen does good in creating conversational agents capable of working together, it lacks an inherent concept of process. In Autogen, orchestrating agents' interactions requires additional programming, which can become complex and cumbersome as the scale of tasks grows.
 
 - **ChatDev**: ChatDev introduced the idea of processes into the realm of AI agents, but its implementation is quite rigid. Customizations in ChatDev are limited and not geared towards production environments, which can hinder scalability and flexibility in real-world applications.
 
@@ -252,15 +260,27 @@ There is NO data being collected on the prompts, tasks descriptions agents backs
 
 Data collected includes:
 - Version of crewAI
+  - So we can understand how many users are using the latest version
 - Version of Python
+  - So we can decide on what versions to better support
 - General OS (e.g. number of CPUs, macOS/Windows/Linux)
+  - So we know what OS we should focus on and if we could build specific OS related features
 - Number of agents and tasks in a crew
+  - So we make sure we are testing internally with similar use cases and educate people on the best practices
 - Crew Process being used
+  - Understand where we should focus our efforts
 - If Agents are using memory or allowing delegation
+  - Understand if we improved the features or maybe even drop them
 - If Tasks are being executed in parallel or sequentially
+  - Understand if we should focus more on parallel execution
 - Language model being used
+  - Improved support on most used languages
 - Roles of agents in a crew
+  - Understand high level use cases so we can build better tools, integrations and examples about it
 - Tools names available
+  - Understand out of the publically available tools, which ones are being used the most so we can improve them
+
+Users can opt-in sharing the complete telemetry data by setting the `share_crew` attribute to `True` on their Crews.
 
 ## License
 

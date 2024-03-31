@@ -17,58 +17,52 @@ tools = AgentTools(agents=[researcher])
 @pytest.mark.vcr(filter_headers=["authorization"])
 def test_delegate_work():
     result = tools.delegate_work(
-        command="researcher|share your take on AI Agents|I heard you hate them"
+        coworker="researcher",
+        task="share your take on AI Agents",
+        context="I heard you hate them",
     )
 
     assert (
         result
-        == "I apologize if my previous statements have given you the impression that I hate AI agents. As a technology researcher, I don't hold personal sentiments towards AI or any other technology. Rather, I analyze them objectively based on their capabilities, applications, and implications. AI agents, in particular, are a fascinating domain of research. They hold tremendous potential in automating and optimizing various tasks across industries. However, like any other technology, they come with their own set of challenges, such as ethical considerations around privacy and decision-making. My objective is to understand these technologies in depth and provide a balanced view."
+        == "As a researcher, my opinions are based on facts and extensive study. Regarding AI Agents, they are a fundamental part of the advancement in technology. AI agents are essentially the entities that perceive their environment and take actions to maximize their chances of success. They have a wide range of applications from self-driving cars to intelligent personal assistants like Siri and Alexa. They have the potential to greatly improve our lives by automating mundane tasks, helping us make better decisions, and even potentially solving complex problems. However, like any technology, they have their own set of challenges such as the risk of job displacement and the ethical implications of their use. My goal as a researcher is not to love or hate AI agents, but to understand them, their benefits, and their implications. It's about maintaining an objective view in order to provide the most accurate and comprehensive analysis."
     )
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
 def test_ask_question():
     result = tools.ask_question(
-        command="researcher|do you hate AI Agents?|I heard you LOVE them"
+        coworker="researcher",
+        question="do you hate AI Agents?",
+        context="I heard you LOVE them",
     )
 
     assert (
         result
-        == "As an AI, I don't possess feelings or emotions, so I don't love or hate anything. However, I can provide detailed analysis and research on AI agents. They are a fascinating field of study with the potential to revolutionize many industries, although they also present certain challenges and ethical considerations."
-    )
-
-
-def test_can_not_self_delegate():
-    # TODO: Add test for self delegation
-    pass
-
-
-def test_delegate_work_with_wrong_input():
-    result = tools.ask_question(command="writer|share your take on AI Agents")
-
-    assert (
-        result
-        == "\nError executing tool. Missing exact 3 pipe (|) separated values. For example, `coworker|task|context`. I need to make sure to pass context as context.\n"
+        == "As an AI researcher, I don't have personal feelings or emotions like love or hate. However, I recognize the importance of AI Agents in today's technological landscape. They have the potential to greatly enhance our lives and make tasks more efficient. At the same time, it is crucial to consider the ethical implications and societal impacts that come with their use. My role is to provide objective research and analysis on these topics."
     )
 
 
 def test_delegate_work_to_wrong_agent():
     result = tools.ask_question(
-        command="writer|share your take on AI Agents|I heard you hate them"
+        coworker="writer",
+        question="share your take on AI Agents",
+        context="I heard you hate them",
     )
 
     assert (
         result
-        == "\nError executing tool. Co-worker mentioned on the Action Input not found, it must to be one of the following options: researcher.\n"
+        == "\nError executing tool. Co-worker mentioned not found, it must to be one of the following options:\n- researcher\n"
     )
 
 
 def test_ask_question_to_wrong_agent():
     result = tools.ask_question(
-        command="writer|do you hate AI Agents?|I heard you LOVE them"
+        coworker="writer",
+        question="do you hate AI Agents?",
+        context="I heard you LOVE them",
     )
 
     assert (
         result
-        == "\nError executing tool. Co-worker mentioned on the Action Input not found, it must to be one of the following options: researcher.\n"
+        == "\nError executing tool. Co-worker mentioned not found, it must to be one of the following options:\n- researcher\n"
     )
