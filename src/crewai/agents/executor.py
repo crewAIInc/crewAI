@@ -18,7 +18,7 @@ from crewai.utilities import I18N
 
 class CrewAgentExecutor(AgentExecutor):
     _i18n: I18N = I18N()
-    _human_input: bool = False
+    _should_ask_for_human_input: bool = False
     llm: Any = None
     iterations: int = 0
     task: Any = None
@@ -57,7 +57,7 @@ class CrewAgentExecutor(AgentExecutor):
         intermediate_steps: List[Tuple[AgentAction, str]] = []
         # Allowing human input given task setting
         if self.task.human_input:
-            self._human_input = True
+            self._should_ask_for_human_input = True
         # Let's start tracking the number of iterations and time elapsed
         self.iterations = 0
         time_elapsed = 0.0
@@ -173,9 +173,9 @@ class CrewAgentExecutor(AgentExecutor):
 
         # If the tool chosen is the finishing tool, then we end and return.
         if isinstance(output, AgentFinish):
-            if self._human_input:
-                self._human_input = False
-                human_feedback = self._human_input(output.return_values["output"])
+            if self._should_ask_for_human_input:
+                self._should_ask_for_human_input = False
+                human_feedback = self._should_ask_for_human_input(output.return_values["output"])
                 action = AgentAction(
                     tool="Human Input", tool_input=human_feedback, log=output.log
                 )
@@ -223,7 +223,7 @@ class CrewAgentExecutor(AgentExecutor):
                     )
             yield AgentStep(action=agent_action, observation=observation)
 
-    def _human_input(self, final_answer: dict) -> str:
+    def _should_ask_for_human_input(self, final_answer: dict) -> str:
         """Get human input."""
         return input(
             self._i18n.slice("getting_input").format(final_answer=final_answer)
