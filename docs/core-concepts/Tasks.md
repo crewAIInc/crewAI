@@ -23,6 +23,7 @@ Tasks in CrewAI can be designed to require collaboration between agents. For exa
 | **Output Pydantic**  *(optional)*     | Takes a pydantic model and returns the output as a pydantic object. **Agent LLM needs to be using an OpenAI client, could be Ollama for example but using the OpenAI wrapper** |
 | **Output File**  *(optional)*     | Takes a file path and saves the output of the task on it. |
 | **Callback**  *(optional)*  | A function to be executed after the task is completed. |
+| **Human Input** *(optional)*   |   Indicates whether the agent should ask for feedback at the end of the task |
 
 ## Creating a Task
 
