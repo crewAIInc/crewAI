@@ -1,5 +1,5 @@
 ---
-title: Human Input on Execution
+title: Human Input on Execution [Release Candidate]
 description: Comprehensive guide on integrating CrewAI with human input during execution in complex decision-making processes or when needed help during complex tasks.
 ---
 
@@ -9,7 +9,7 @@ Human input plays a pivotal role in several agent execution scenarios, enabling 
 
 ## Using Human Input with CrewAI
 
-Incorporating human input with CrewAI is straightforward, enhancing the agent's ability to make informed decisions. While the documentation previously mentioned using a "LangChain Tool" and a specific "DuckDuckGoSearchRun" tool from `langchain_community.tools`, it's important to clarify that the integration of such tools should align with the actual capabilities and configurations defined within your `Agent` class setup. Now it is a simple flag in the task itself that needs to be turned on.
+The easiest way to integrate human input into agent execution is by setting the `human_input` flag in the task definition. When this flag is enabled, the agent will prompt the user for input before giving it's final answer. This input can be used to provide additional context, clarify ambiguities, or validate the agent's output.
 
 ### Example:
 
