@@ -7,7 +7,7 @@ from pydantic import BaseModel, Field, PrivateAttr, ValidationError, model_valid
 
 class I18N(BaseModel):
     _translations: Dict[str, Dict[str, str]] = PrivateAttr()
-    language_file: str = Field(
+    language_file: Optional[str] = Field(
         default=None,
         description="Path to the translation file to load",
     )
