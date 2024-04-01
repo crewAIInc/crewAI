@@ -75,8 +75,27 @@ OPENAI_API_BASE=https://api.mistral.ai/v1
 OPENAI_MODEL_NAME="mistral-small"
 ```
 
-### Azure Open AI Configuration
-For Azure OpenAI API integration, set the following environment variables:
+### text-gen-web-ui
+```sh
+OPENAI_API_BASE=http://localhost:5000/v1
+OPENAI_MODEL_NAME=NA
+OPENAI_API_KEY=NA
+```
+
+### Cohere
+```sh
+from langchain_community.chat_models import ChatCohere
+# Initialize language model
+os.environ["COHERE_API_KEY"] = "your-cohere-api-key"
+llm = ChatCohere()
+
+Free developer API key available here: https://cohere.com/
+Langchain Documentation: https://python.langchain.com/docs/integrations/chat/cohere
+```
+
+### Azure Open AI
+Azure's OpenAI API needs a distinct setup, utilizing the `langchain_openai` component for Azure-specific configurations.
+
 ```sh
 AZURE_OPENAI_VERSION="2022-12-01"
 AZURE_OPENAI_DEPLOYMENT=""
