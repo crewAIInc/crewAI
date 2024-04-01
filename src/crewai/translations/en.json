@@ -6,22 +6,29 @@
   },
   "slices": {
     "observation": "\nObservation",
-    "task": "Begin! This is VERY important to you, your job depends on it!\n\nCurrent Task: {input}",
+    "task": "\n\nCurrent Task: {input}\n\nBegin! This is VERY important to you, use the tools available and give your best Final Answer, your job depends on it!\n\nThought: ",
     "memory": "This is the summary of your work so far:\n{chat_history}",
-    "role_playing": "You are {role}.\n{backstory}\n\nYour personal goal is: {goal}",
-    "tools": "TOOLS:\n------\nYou have access to only the following tools:\n\n{tools}\n\nTo use a tool, please use the exact following format:\n\n```\nThought: Do I need to use a tool? Yes\nAction: the tool you wanna use, should be one of [{tool_names}], just the name.\nAction Input: Any and all relevant information input and context for using the tool\nObservation: the result of using the tool\n```\n\nWhen you have a response for your task, or if you do not need to use a tool, you MUST use the format:\n\n```\nThought: Do I need to use a tool? No\nFinal Answer: [your response here]```",
-    "task_with_context": "{task}\nThis is the context you're working with:\n{context}",
-    "expected_output": "Your final answer must be: {expected_output}"
+    "role_playing": "You are {role}. {backstory}\nYour personal goal is: {goal}",
+    "tools": "\n\nYou ONLY have access to the following tools, and should NEVER make up tools that are not listed here:\n\n{tools}\n\nUse the following format:\n\nThought: you should always think about what to do\nAction: the action to take, only one name of [{tool_names}], just the name, exactly as it's written.\nAction Input: the input to the action, just a simple a python dictionary using \" to wrap keys and values.\nObservation: the result of the action\n\nOnce all necessary information is gathered:\n\nThought: I now know the final answer\nFinal Answer: the final answer to the original input question\n",
+    "no_tools": "To give my best complete final answer to the task use the exact following format:\n\nThought: I now can give a great answer\nFinal Answer: my best complete final answer to the task.\nYour final answer must be the great and the most complete as possible, it must be outcome described.\n\nI MUST use these formats, my job depends on it!\n\nThought: ",
+    "format": "I MUST either use a tool (use one at time) OR give my best final answer. To Use the following format:\n\nThought: you should always think about what to do\nAction: the action to take, should be one of [{tool_names}]\nAction Input: the input to the action, dictionary\nObservation: the result of the action\n... (this Thought/Action/Action Input/Observation can repeat N times)\nThought: I now can give a great answer\nFinal Answer: my best complete final answer to the task.\nYour final answer must be the great and the most complete as possible, it must be outcome described\n\n ",
+    "final_answer_format": "If you don't need to use any more tools, you must give your best complete final answer, make sure it satisfy the expect criteria, use the EXACT format below:\n\nThought: I now can give a great answer\nFinal Answer: my best complete final answer to the task.\n\n",
+    "format_without_tools": "\nSorry, I didn't use the right format. I MUST either use a tool (among the available ones), OR give my best final answer.\nI just remembered the expected format I must follow:\n\nQuestion: the input question you must answer\nThought: you should always think about what to do\nAction: the action to take, should be one of [{tool_names}]\nAction Input: the input to the action\nObservation: the result of the action\n... (this Thought/Action/Action Input/Observation can repeat N times)\nThought: I now can give a great answer\nFinal Answer: my best complete final answer to the task\nYour final answer must be the great and the most complete as possible, it must be outcome described\n\n",
+    "task_with_context": "{task}\n\nThis is the context you're working with:\n{context}",
+    "expected_output": "\nThis is the expect criteria for your final answer: {expected_output} \n you MUST return the actual complete content as the final answer, not a summary."
   },
   "errors": {
-    "force_final_answer": "Actually, I used too many tools, so I'll stop now and give you my absolute BEST Final answer NOW, using exaclty the expected format bellow: \n```\nThought: Do I need to use a tool? No\nFinal Answer: [your response here]```",
-    "agent_tool_unexsiting_coworker": "\nError executing tool. Co-worker mentioned on the Action Input not found, it must to be one of the following options:\n{coworkers}.\n",
-    "task_repeated_usage": "I just used the {tool} tool with input {tool_input}. So I already know that and must stop using it in a row with the same input. \nI could give my final answer if I'm ready, using exaclty the expected format bellow: \n\nThought: Do I need to use a tool? No\nFinal Answer: [your response here]\n",
-    "tool_usage_error": "It seems we encountered an unexpected error while trying to use the tool.",
-    "tool_usage_exception": "It seems we encountered an unexpected error while trying to use the tool. This was the error: {error}"
+    "unexpected_format": "\nSorry, I didn't use the expected format, I MUST either use a tool (use one at time) OR give my best final answer.\n",
+    "force_final_answer": "Tool won't be use because it's time to give your final answer. Don't use tools and just your absolute BEST Final answer.",
+    "agent_tool_unexsiting_coworker": "\nError executing tool. Co-worker mentioned not found, it must to be one of the following options:\n{coworkers}\n",
+    "task_repeated_usage": "I tried reusing the same input, I must stop using this action input. I'll try something else instead.\n\n",
+    "tool_usage_error": "I encountered an error: {error}",
+    "tool_arguments_error": "Error: the Action Input is not a valid key, value dictionary.",
+    "wrong_tool_name": "You tried to use the tool {tool}, but it doesn't exist. You must use one of the following tools, use one at time: {tools}.",
+    "tool_usage_exception": "I encountered an error while trying to use the tool. This was the error: {error}.\n Tool {tool} accepts these inputs: {tool_inputs}"
   },
   "tools": {
-    "delegate_work": "Delegate a specific task to one of the following co-workers:\n{coworkers}.\nThe input to this tool should be the role of the coworker, the task you want them to do, and ALL necessary context to exectue the task, they know nothing about the task, so share absolute everything you know, don't reference things but instead explain them.",
-    "ask_question": "Ask a specific question to one of the following co-workers:\n{coworkers}.\nThe input to this tool should be the role of the coworker, the question you have for them, and ALL necessary context to ask the question properly, they know nothing about the question, so share absolute everything you know, don't reference things but instead explain them."
+    "delegate_work": "Delegate a specific task to one of the following co-workers: {coworkers}\nThe input to this tool should be the coworker, the task you want them to do, and ALL necessary context to exectue the task, they know nothing about the task, so share absolute everything you know, don't reference things but instead explain them.",
+    "ask_question": "Ask a specific question to one of the following co-workers: {coworkers}\nThe input to this tool should be the coworker, the question you have for them, and ALL necessary context to ask the question properly, they know nothing about the question, so share absolute everything you know, don't reference things but instead explain them."
   }
 }

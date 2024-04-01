@@ -3,7 +3,6 @@ from typing import Any, Dict, Iterator, List, Optional, Tuple, Union
 
 from langchain.agents import AgentExecutor
 from langchain.agents.agent import ExceptionTool
-from langchain.agents.tools import InvalidTool
 from langchain.callbacks.manager import CallbackManagerForChainRun
 from langchain_core.agents import AgentAction, AgentFinish, AgentStep
 from langchain_core.exceptions import OutputParserException
@@ -13,12 +12,12 @@ from langchain_core.utils.input import get_color_mapping
 from pydantic import InstanceOf
 
 from crewai.agents.tools_handler import ToolsHandler
-from crewai.tools.tool_usage import ToolUsage
+from crewai.tools.tool_usage import ToolUsage, ToolUsageErrorException
 from crewai.utilities import I18N
 
 
 class CrewAgentExecutor(AgentExecutor):
-    i18n: I18N = I18N()
+    _i18n: I18N = I18N()
     llm: Any = None
     iterations: int = 0
     task: Any = None
@@ -28,6 +27,7 @@ class CrewAgentExecutor(AgentExecutor):
     request_within_rpm_limit: Any = None
     tools_handler: InstanceOf[ToolsHandler] = None
     max_iterations: Optional[int] = 15
+    have_forced_answer: bool = False
     force_answer_max_iterations: Optional[int] = None
     step_callback: Optional[Any] = None
 
@@ -37,7 +37,9 @@ class CrewAgentExecutor(AgentExecutor):
         return values
 
     def _should_force_answer(self) -> bool:
-        return True if self.iterations == self.force_answer_max_iterations else False
+        return (
+            self.iterations == self.force_answer_max_iterations
+        ) and not self.have_forced_answer
 
     def _call(
         self,
@@ -104,26 +106,20 @@ class CrewAgentExecutor(AgentExecutor):
         Override this to take control of how the agent makes and acts on choices.
         """
         try:
-            intermediate_steps = self._prepare_intermediate_steps(intermediate_steps)
+            if self._should_force_answer():
+                error = self._i18n.errors("force_final_answer")
+                output = AgentAction("_Exception", error, error)
+                self.have_forced_answer = True
+                yield AgentStep(action=output, observation=error)
+                return
 
+            intermediate_steps = self._prepare_intermediate_steps(intermediate_steps)
             # Call the LLM to see what to do.
             output = self.agent.plan(
                 intermediate_steps,
                 callbacks=run_manager.get_child() if run_manager else None,
                 **inputs,
             )
-
-            if self._should_force_answer():
-                if isinstance(output, AgentAction) or isinstance(output, AgentFinish):
-                    output = output
-                else:
-                    raise ValueError(
-                        f"Unexpected output type from agent: {type(output)}"
-                    )
-                yield AgentStep(
-                    action=output, observation=self.i18n.errors("force_final_answer")
-                )
-                return
 
         except OutputParserException as e:
             if isinstance(self.handle_parsing_errors, bool):
@@ -137,35 +133,35 @@ class CrewAgentExecutor(AgentExecutor):
                     "again, pass `handle_parsing_errors=True` to the AgentExecutor. "
                     f"This is the error: {str(e)}"
                 )
-            text = str(e)
+            str(e)
             if isinstance(self.handle_parsing_errors, bool):
                 if e.send_to_llm:
-                    observation = str(e.observation)
-                    text = str(e.llm_output)
+                    observation = f"\n{str(e.observation)}"
+                    str(e.llm_output)
                 else:
-                    observation = "Invalid or incomplete response"
+                    observation = ""
             elif isinstance(self.handle_parsing_errors, str):
-                observation = self.handle_parsing_errors
+                observation = f"\n{self.handle_parsing_errors}"
             elif callable(self.handle_parsing_errors):
-                observation = self.handle_parsing_errors(e)
+                observation = f"\n{self.handle_parsing_errors(e)}"
             else:
                 raise ValueError("Got unexpected type of `handle_parsing_errors`")
-            output = AgentAction("_Exception", observation, text)
+            output = AgentAction("_Exception", observation, "")
             if run_manager:
                 run_manager.on_agent_action(output, color="green")
             tool_run_kwargs = self.agent.tool_run_logging_kwargs()
             observation = ExceptionTool().run(
                 output.tool_input,
-                verbose=self.verbose,
+                verbose=False,
                 color=None,
                 callbacks=run_manager.get_child() if run_manager else None,
                 **tool_run_kwargs,
             )
 
             if self._should_force_answer():
-                yield AgentStep(
-                    action=output, observation=self.i18n.errors("force_final_answer")
-                )
+                error = self._i18n.errors("force_final_answer")
+                output = AgentAction("_Exception", error, error)
+                yield AgentStep(action=output, observation=error)
                 return
 
             yield AgentStep(action=output, observation=observation)
@@ -183,32 +179,27 @@ class CrewAgentExecutor(AgentExecutor):
             if run_manager:
                 run_manager.on_agent_action(agent_action, color="green")
             # Otherwise we lookup the tool
-            if agent_action.tool in name_to_tool_map:
-                tool = name_to_tool_map[agent_action.tool]
-                return_direct = tool.return_direct
-                color_mapping[agent_action.tool]
-                tool_run_kwargs = self.agent.tool_run_logging_kwargs()
-                if return_direct:
-                    tool_run_kwargs["llm_prefix"] = ""
-                observation = ToolUsage(
-                    tools_handler=self.tools_handler,
-                    tools=self.tools,
-                    tools_description=self.tools_description,
-                    tools_names=self.tools_names,
-                    function_calling_llm=self.function_calling_llm,
-                    llm=self.llm,
-                    task=self.task,
-                ).use(agent_action.log)
+            tool_usage = ToolUsage(
+                tools_handler=self.tools_handler,
+                tools=self.tools,
+                tools_description=self.tools_description,
+                tools_names=self.tools_names,
+                function_calling_llm=self.function_calling_llm,
+                task=self.task,
+                action=agent_action,
+            )
+            tool_calling = tool_usage.parse(agent_action.log)
+
+            if isinstance(tool_calling, ToolUsageErrorException):
+                observation = tool_calling.message
             else:
-                tool_run_kwargs = self.agent.tool_run_logging_kwargs()
-                observation = InvalidTool().run(
-                    {
-                        "requested_tool_name": agent_action.tool,
-                        "available_tool_names": list(name_to_tool_map.keys()),
-                    },
-                    verbose=self.verbose,
-                    color=None,
-                    callbacks=run_manager.get_child() if run_manager else None,
-                    **tool_run_kwargs,
-                )
+                if tool_calling.tool_name.lower().strip() in [
+                    name.lower().strip() for name in name_to_tool_map
+                ]:
+                    observation = tool_usage.use(tool_calling, agent_action.log)
+                else:
+                    observation = self._i18n.errors("wrong_tool_name").format(
+                        tool=tool_calling.tool_name,
+                        tools=", ".join([tool.name for tool in self.tools]),
+                    )
             yield AgentStep(action=agent_action, observation=observation)

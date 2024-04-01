@@ -1,60 +1,61 @@
 ---
 title: Implementing the Hierarchical Process in CrewAI
-description: Understanding and applying the hierarchical process within your CrewAI projects.
+description: A comprehensive guide to understanding and applying the hierarchical process within your CrewAI projects, updated to reflect the latest coding practices and functionalities.
 ---
 
 ## Introduction
-The hierarchical process in CrewAI introduces a structured approach to task management, mimicking traditional organizational hierarchies for efficient task delegation and execution.
+The hierarchical process in CrewAI introduces a structured approach to task management, simulating traditional organizational hierarchies for efficient task delegation and execution. This systematic workflow enhances project outcomes by ensuring tasks are handled with optimal efficiency and accuracy.
 
-!!! note "Complexity"
-	The current implementation of the hierarchical process relies on tools usage that usually require more complex models like GPT-4 and usually imply of a higher token usage.
+!!! note "Complexity and Efficiency"
+    The hierarchical process is designed to leverage advanced models like GPT-4, optimizing token usage while handling complex tasks with greater efficiency.
 
 ## Hierarchical Process Overview
-In this process, tasks are assigned and executed based on a defined hierarchy, where a 'manager' agent coordinates the workflow, delegating tasks to other agents and validating their outcomes before proceeding.
+By default, tasks in CrewAI are managed through a sequential process. However, adopting a hierarchical approach allows for a clear hierarchy in task management, where a 'manager' agent coordinates the workflow, delegates tasks, and validates outcomes for streamlined and effective execution. This manager agent is automatically created by crewAI so you don't need to worry about it.
 
 ### Key Features
-- **Task Delegation**: A manager agent oversees task distribution among crew members.
-- **Result Validation**: The manager reviews outcomes before passing tasks along, ensuring quality and relevance.
-- **Efficient Workflow**: Mimics corporate structures for a familiar and organized task management approach.
+- **Task Delegation**: A manager agent allocates tasks among crew members based on their roles and capabilities.
+- **Result Validation**: The manager evaluates outcomes to ensure they meet the required standards.
+- **Efficient Workflow**: Emulates corporate structures, providing an organized approach to task management.
 
 ## Implementing the Hierarchical Process
-To utilize the hierarchical process, you must define a crew with a designated manager and a clear chain of command for task execution.
+To utilize the hierarchical process, it's essential to explicitly set the process attribute to `Process.hierarchical`, as the default behavior is `Process.sequential`. Define a crew with a designated manager and establish a clear chain of command.
 
-!!! note "Tools on the hierarchical process"
-	For tools when using the hierarchical process, you want to make sure to assign them to the agents instead of the tasks, as the manager will be the one delegating the tasks and the agents will be the ones executing them.
+!!! note "Tools and Agent Assignment"
+    Assign tools at the agent level to facilitate task delegation and execution by the designated agents under the manager's guidance.
 
-!!! note "Manager LLM"
-	A manager will be automatically set for the crew, you don't need to define it. You do need to set the `manager_llm` parameter in the crew though.
+!!! note "Manager LLM Requirement"
+    Configuring the `manager_llm` parameter is crucial for the hierarchical process. The system requires a manager LLM to be set up for proper function, ensuring tailored decision-making.
 
 ```python
 from langchain_openai import ChatOpenAI
 from crewai import Crew, Process, Agent
 
-# Define your agents, no need to define a manager
+# Agents are defined with an optional tools parameter
 researcher = Agent(
-	role='Researcher',
-	goal='Conduct in-depth analysis',
-	# tools = [...]
+    role='Researcher',
+    goal='Conduct in-depth analysis',
+    # tools=[]  # This can be optionally specified; defaults to an empty list
 )
 writer = Agent(
-	role='Writer',
-	goal='Create engaging content',
-	# tools = [...]
+    role='Writer',
+    goal='Create engaging content',
+    # tools=[]  # Optionally specify tools; defaults to an empty list
 )
 
-# Form the crew with a hierarchical process
+# Establishing the crew with a hierarchical process
 project_crew = Crew(
-	tasks=[...], # Tasks that that manager will figure out how to complete
-	agents=[researcher, writer],
-	manager_llm=ChatOpenAI(temperature=0, model="gpt-4"), # The manager's LLM that will be used internally
-	process=Process.hierarchical  # Designating the hierarchical approach
+    tasks=[...],  # Tasks to be delegated and executed under the manager's supervision
+    agents=[researcher, writer],
+    manager_llm=ChatOpenAI(temperature=0, model="gpt-4"),  # Mandatory for hierarchical process
+    process=Process.hierarchical  # Specifies the hierarchical management approach
 )
 ```
 
 ### Workflow in Action
-1. **Task Assignment**: The manager assigns tasks based on agent roles and capabilities.
-2. **Execution and Review**: Agents perform their tasks, with the manager reviewing outcomes for approval.
-3. **Sequential Task Progression**: Tasks are completed in a sequence dictated by the manager, ensuring orderly progression.
+1. **Task Assignment**: The manager assigns tasks strategically, considering each agent's capabilities.
+2. **Execution and Review**: Agents complete their tasks, with the manager ensuring quality standards.
+3. **Sequential Task Progression**: Despite being a hierarchical process, tasks follow a logical order for smooth progression, facilitated by the manager's oversight.
+
 
 ## Conclusion
-The hierarchical process in CrewAI offers a familiar, structured way to manage tasks within a project. By leveraging a chain of command, it enhances efficiency and quality control, making it ideal for complex projects requiring meticulous oversight.
+Adopting the hierarchical process in crewAI, with the correct configurations and understanding of the system's capabilities, facilitates an organized and efficient approach to project management.

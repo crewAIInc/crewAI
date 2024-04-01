@@ -41,10 +41,12 @@ class Telemetry:
         self.ready = False
         try:
             telemetry_endpoint = "http://telemetry.crewai.com:4318"
-            self.resource = Resource(attributes={SERVICE_NAME: "crewAI-telemetry"})
+            self.resource = Resource(
+                attributes={SERVICE_NAME: "crewAI-telemetry"},
+            )
             self.provider = TracerProvider(resource=self.resource)
             processor = BatchSpanProcessor(
-                OTLPSpanExporter(endpoint=f"{telemetry_endpoint}/v1/traces")
+                OTLPSpanExporter(endpoint=f"{telemetry_endpoint}/v1/traces", timeout=15)
             )
             self.provider.add_span_processor(processor)
             self.ready = True
@@ -53,7 +55,10 @@ class Telemetry:
 
     def set_tracer(self):
         if self.ready:
-            trace.set_tracer_provider(self.provider)
+            try:
+                trace.set_tracer_provider(self.provider)
+            except Exception:
+                pass
 
     def crew_creation(self, crew):
         """Records the creation of a crew."""
@@ -232,7 +237,7 @@ class Telemetry:
                             {
                                 "id": str(task.id),
                                 "description": task.description,
-                                "output": task.output.result,
+                                "output": task.output.raw_output,
                             }
                             for task in crew.tasks
                         ]

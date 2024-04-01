@@ -55,10 +55,12 @@ def test_crew_config_conditional_requirement():
             "tasks": [
                 {
                     "description": "Give me a list of 5 interesting ideas to explore for na article, what makes them unique and interesting.",
+                    "expected_output": "Bullet point list of 5 important events.",
                     "agent": "Senior Researcher",
                 },
                 {
                     "description": "Write a 1 amazing paragraph highlight for each idead that showcases how good an article about this topic could be, check references if necessary or search for more content but make sure it's unique, interesting and well written. Return the list of ideas with their paragraph and your notes.",
+                    "expected_output": "A 4 paragraph article about AI.",
                     "agent": "Senior Writer",
                 },
             ],
@@ -115,10 +117,12 @@ def test_crew_creation():
     tasks = [
         Task(
             description="Give me a list of 5 interesting ideas to explore for na article, what makes them unique and interesting.",
+            expected_output="Bullet point list of 5 important events.",
             agent=researcher,
         ),
         Task(
             description="Write a 1 amazing paragraph highlight for each idea that showcases how good an article about this topic could be. Return the list of ideas with their paragraph and your notes.",
+            expected_output="A 4 paragraph article about AI.",
             agent=writer,
         ),
     ]
@@ -131,7 +135,7 @@ def test_crew_creation():
 
     assert (
         crew.kickoff()
-        == '1. "The Role of AI in Predicting and Managing Pandemics"\nHighlight: \nIn an era where global health crises can emerge from any corner of the world, the role of AI in predicting and managing pandemics has never been more critical. Through intelligent data gathering and predictive analytics, AI can potentially identify the onset of pandemics before they reach critical mass, offering a proactive solution to a reactive problem. This article explores the intersection of AI and epidemiology, delving into how this cutting-edge technology is revolutionizing our approach to global health crises.\n\n2. "AI and the Future of Work: Will Robots Take Our Jobs?"\nHighlight: \nThe rise of AI has sparked both excitement and apprehension about the future of work. Will robots replace us, or will they augment our capabilities? This article delves into the heart of this controversial issue, examining the potential of AI to disrupt job markets, transform industries, and redefine the concept of work. It\'s not just a question of job security—it\'s a discussion about the kind of world we want to live in.\n\n3. "AI in Art and Creativity: A New Frontier in Innovation"\nHighlight: \nArt and creativity, once seen as the exclusive domain of human expression, are being redefined by the advent of AI. From algorithmic compositions to AI-assisted design, this article explores the burgeoning field of AI in art and creativity. It\'s a journey into a new frontier of innovation, one where the lines between human creativity and artificial intelligence blur into an exciting, uncharted territory.\n\n4. "Ethics in AI: Balancing Innovation with Responsibility"\nHighlight: \nAs AI continues to permeate every facet of our lives, questions about its ethical implications grow louder. This article invites readers into a thoughtful exploration of the moral landscape of AI. It challenges us to balance the relentless pursuit of innovation with the weighty responsibilities that come with it, asking: How can we harness the power of AI without losing sight of our human values?\n\n5. "AI in Education: Personalizing Learning for the Next Generation"\nHighlight: \nEducation is poised for a transformation as AI enters the classroom, promising a future where learning is personalized, not generalized. This article delves into how AI can tailor educational experiences to individual learning styles, making education more effective and accessible. It\'s a glimpse into a future where AI is not just a tool for learning, but an active participant in shaping the educational journey of the next generation.'
+        == "1. **The Rise of AI in Healthcare**: The convergence of AI and healthcare is a promising frontier, offering unprecedented opportunities for disease diagnosis and patient outcome prediction. AI's potential to revolutionize healthcare lies in its capacity to synthesize vast amounts of data, generating precise and efficient results. This technological breakthrough, however, is not just about improving accuracy and efficiency; it's about saving lives. As we stand on the precipice of this transformative era, we must prepare for the complex challenges and ethical questions it poses, while embracing its ability to reshape healthcare as we know it.\n\n2. **Ethical Implications of AI**: As AI intertwines with our daily lives, it presents a complex web of ethical dilemmas. This fusion of technology, philosophy, and ethics is not merely academically intriguing but profoundly impacts the fabric of our society. The questions raised range from decision-making transparency to accountability, and from privacy to potential biases. As we navigate this ethical labyrinth, it is crucial to establish robust frameworks and regulations to ensure that AI serves humanity, and not the other way around.\n\n3. **AI and Data Privacy**: The rise of AI brings with it an insatiable appetite for data, spawning new debates around privacy rights. Balancing the potential benefits of AI with the right to privacy is a unique challenge that intersects technology, law, and human rights. In an increasingly digital world, where personal information forms the backbone of many services, we must grapple with these issues. It's time to redefine the concept of privacy and devise innovative solutions that ensure our digital footprints are not abused.\n\n4. **AI in Job Market**: The discourse around AI's impact on employment is a narrative of contrast, a tale of displacement and creation. On one hand, AI threatens to automate a multitude of jobs, on the other, it promises to create new roles that we cannot yet imagine. This intersection of technology, economics, and labor rights is a critical dialogue that will shape our future. As we stand at this crossroads, we must not only brace ourselves for the changes but also seize the opportunities that this technological wave brings.\n\n5. **Future of AI Agents**: The evolution of AI agents signifies a leap towards a future where AI is not just a tool, but a partner. These sophisticated AI agents, employed in customer service to personal assistants, are redefining our interactions with technology. As we gaze into the future of AI agents, we see a landscape of possibilities and challenges. This journey will be about harnessing the potential of AI agents while navigating the issues of trust, dependence, and ethical use."
     )
 
 
@@ -141,6 +145,7 @@ def test_hierarchical_process():
 
     task = Task(
         description="Come up with a list of 5 interesting ideas to explore for an article, then write one amazing paragraph highlight for each idea that showcases how good an article about this topic could be. Return the list of ideas with their paragraph and your notes.",
+        expected_output="5 bullet points with a paragraph for each idea.",
     )
 
     crew = Crew(
@@ -152,13 +157,14 @@ def test_hierarchical_process():
 
     assert (
         crew.kickoff()
-        == """Here are the five interesting ideas for articles with their respective highlights:\n\n1. The Role of AI in Climate Change: As the world grapples with the existential threat of climate change, artificial intelligence (AI) has emerged as a powerful ally in our battle against it. The article will explore how AI is being used to predict weather patterns, optimize renewable energy sources, and even capture and reduce greenhouse emissions. This novel intersection of technology and environment could hold the key to a sustainable future, making this a must-read for anyone interested in the potential of AI to transform our world.\n\n2. AI and Mental Health: With the increasing prevalence of mental health issues worldwide, innovative solutions are needed more than ever. This article will delve into the cutting-edge domain of AI and mental health, exploring how machine learning algorithms are helping to diagnose conditions, personalize treatments, and even predict the onset of mental disorders. This exploration of AI's potential in mental health not only sheds light on the future of healthcare but also opens a dialogue on the ethical considerations involved.\n\n3. The Ethical Implications of AI: As AI continues to permeate our lives, it brings with it a host of ethical considerations. This article will unravel the complex ethical terrain of AI, from issues of privacy and consent to its potential for bias and discrimination. By diving into the philosophical underpinnings of AI and its societal implications, this article will provoke thought and stimulate discussion on how we can ensure a fair and equitable AI-enabled future.\n\n4. How AI is Revolutionizing E-commerce: In the fiercely competitive world of e-commerce, AI is proving to be a game-changer. This article will take you on a journey through the world of AI-enhanced e-commerce, showcasing how machine learning algorithms are optimizing logistics, personalizing shopping experiences, and even predicting consumer behavior. This deep dive into AI's transformative impact on e-commerce is a must-read for anyone interested in the future of business and technology.\n\n5. AI in Space Exploration: The final frontier of space exploration is being redefined by the advent of AI. This article will take you on an interstellar journey through the role of AI in space exploration, from autonomous spacecraft navigation to the search for extraterrestrial life. By peering into the cosmos through the lens of AI, this article offers a glimpse into the future of space exploration and the infinite possibilities that AI holds."""
+        == "1. 'Demystifying AI: An in-depth exploration of Artificial Intelligence for the layperson' - In this piece, we will unravel the enigma of AI, simplifying its complexities into digestible information for the everyday individual. By using relatable examples and analogies, we will journey through the neural networks and machine learning algorithms that define AI, without the jargon and convoluted explanations that often accompany such topics.\n\n2. 'The Role of AI in Startups: A Game Changer?' - Startups today are harnessing the power of AI to revolutionize their businesses. This article will delve into how AI, as an innovative force, is shaping the startup ecosystem, transforming everything from customer service to product development. We'll explore real-life case studies of startups that have leveraged AI to accelerate their growth and disrupt their respective industries.\n\n3. 'AI and Ethics: Navigating the Complex Landscape' - AI brings with it not just technological advancements, but ethical dilemmas as well. This article will engage readers in a thought-provoking discussion on the ethical implications of AI, exploring issues like bias in algorithms, privacy concerns, job displacement, and the moral responsibility of AI developers. We will also discuss potential solutions and frameworks to address these challenges.\n\n4. 'Unveiling the AI Agents: The Future of Customer Service' - AI agents are poised to reshape the customer service landscape, offering businesses the ability to provide round-the-clock support and personalized experiences. In this article, we'll dive deep into the world of AI agents, examining how they work, their benefits and limitations, and how they're set to redefine customer interactions in the digital age.\n\n5. 'From Science Fiction to Reality: AI in Everyday Life' - AI, once a concept limited to the realm of sci-fi, has now permeated our daily lives. This article will highlight the ubiquitous presence of AI, from voice assistants and recommendation algorithms, to autonomous vehicles and smart homes. We'll explore how AI, in its various forms, is transforming our everyday experiences, making the future seem a lot closer than we imagined."
     )
 
 
 def test_manager_llm_requirement_for_hierarchical_process():
     task = Task(
         description="Come up with a list of 5 interesting ideas to explore for an article, then write one amazing paragraph highlight for each idea that showcases how good an article about this topic could be. Return the list of ideas with their paragraph and your notes.",
+        expected_output="5 bullet points with a paragraph for each idea.",
     )
 
     with pytest.raises(pydantic_core._pydantic_core.ValidationError):
@@ -187,15 +193,23 @@ def test_crew_with_delegating_agents():
 
     assert (
         crew.kickoff()
-        == "The Senior Writer has produced a fantastic 4 paragraph article on AI:\n\n\"Artificial Intelligence, or AI, is often considered the stuff of science fiction, but it is very much a reality in today's world. In simplest terms, AI is a branch of computer science that aims to create machines that mimic human intelligence - think self-driving cars, voice assistants like Siri or Alexa, even your Netflix recommendations. These are all examples of AI in action, silently making our lives easier and more efficient.\n\nThe applications of AI are as vast as our imagination. In healthcare, AI is used to predict diseases and personalize patient care. In finance, algorithms can analyze market trends and make investment decisions. The education sector uses AI to customize learning and identify areas where students need help. Even in creative fields like music and art, AI is making its mark by creating new pieces that are hard to distinguish from those made by humans.\n\nAI's potential for the future is staggering. As technology advances, so too does the complexity and capabilities of AI. It's predicted that AI will play a significant role in tackling some of humanity's biggest challenges, such as climate change and global health crises. Imagine AI systems predicting natural disasters with enough time for us to take preventative measures, or developing new, effective treatments for diseases through data analysis.\n\nHowever, this brave new world does not come without its challenges. Ethical issues are at the forefront, with concerns over privacy and the potential misuse of AI. There's also the question of job displacement due to automation, and the need for laws and regulations to keep pace with this rapidly advancing technology. Despite these hurdles, the promise of AI and its ability to transform our world is an exciting prospect, one that we are only just beginning to explore.\""
+        == "AI Agents, simply put, are intelligent systems that can perceive their environment and take actions to reach specific goals. Imagine them as digital assistants that can learn, adapt and make decisions. They operate in the realms of software or hardware, like a chatbot on a website or a self-driving car. The key to their intelligence is their ability to learn from their experiences, making them better at their tasks over time. In today's interconnected world, AI agents are transforming our lives. They enhance customer service experiences, streamline business processes, and even predict trends in data. Vehicles equipped with AI agents are making transportation safer. In healthcare, AI agents are helping to diagnose diseases, personalizing treatment plans, and monitoring patient health. As we embrace the digital era, these AI agents are not just important, they're becoming indispensable, shaping a future where technology works intuitively and intelligently to meet our needs."
     )
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
 def test_crew_verbose_output(capsys):
     tasks = [
-        Task(description="Research AI advancements.", agent=researcher),
-        Task(description="Write about AI in healthcare.", agent=writer),
+        Task(
+            description="Research AI advancements.",
+            expected_output="A full report on AI advancements.",
+            agent=researcher,
+        ),
+        Task(
+            description="Write about AI in healthcare.",
+            expected_output="A 4 paragraph article about AI.",
+            agent=writer,
+        ),
     ]
 
     crew = Crew(
@@ -208,12 +222,12 @@ def test_crew_verbose_output(capsys):
     crew.kickoff()
     captured = capsys.readouterr()
     expected_strings = [
-        "[DEBUG]: Working Agent: Researcher",
-        "[INFO]: Starting Task: Research AI advancements.",
-        "[DEBUG]: [Researcher] Task output:",
-        "[DEBUG]: Working Agent: Senior Writer",
-        "[INFO]: Starting Task: Write about AI in healthcare.",
-        "[DEBUG]: [Senior Writer] Task output:",
+        "[DEBUG]: == Working Agent: Researcher",
+        "[INFO]: == Starting Task: Research AI advancements.",
+        "[DEBUG]: == [Researcher] Task output:",
+        "[DEBUG]: == Working Agent: Senior Writer",
+        "[INFO]: == Starting Task: Write about AI in healthcare.",
+        "[DEBUG]: == [Senior Writer] Task output:",
     ]
 
     for expected_string in expected_strings:
@@ -228,7 +242,13 @@ def test_crew_verbose_output(capsys):
 
 @pytest.mark.vcr(filter_headers=["authorization"])
 def test_crew_verbose_levels_output(capsys):
-    tasks = [Task(description="Write about AI advancements.", agent=researcher)]
+    tasks = [
+        Task(
+            description="Write about AI advancements.",
+            expected_output="A 4 paragraph article about AI.",
+            agent=researcher,
+        )
+    ]
 
     crew = Crew(agents=[researcher], tasks=tasks, process=Process.sequential, verbose=1)
 
@@ -267,11 +287,13 @@ def test_cache_hitting_between_agents():
     tasks = [
         Task(
             description="What is 2 tims 6? Return only the number.",
+            expected_output="the result of multiplication",
             tools=[multiplier],
             agent=ceo,
         ),
         Task(
             description="What is 2 times 6? Return only the number.",
+            expected_output="the result of multiplication",
             tools=[multiplier],
             agent=researcher,
         ),
@@ -299,9 +321,10 @@ def test_api_calls_throttling(capsys):
     from unittest.mock import patch
 
     from langchain.tools import tool
+    from langchain_openai import ChatOpenAI
 
     @tool
-    def get_final_answer(numbers) -> float:
+    def get_final_answer(anything) -> float:
         """Get the final answer but don't give it yet, just re-use this
         tool non-stop."""
         return 42
@@ -313,10 +336,12 @@ def test_api_calls_throttling(capsys):
         max_iter=5,
         allow_delegation=False,
         verbose=True,
+        llm=ChatOpenAI(model="gpt-4-0125-preview"),
     )
 
     task = Task(
         description="Don't give a Final Answer, instead keep using the `get_final_answer` tool.",
+        expected_output="The final answer.",
         tools=[get_final_answer],
         agent=agent,
     )
@@ -343,10 +368,12 @@ def test_crew_full_ouput():
 
     task1 = Task(
         description="just say hi!",
+        expected_output="your greeting",
         agent=agent,
     )
     task2 = Task(
         description="just say hello!",
+        expected_output="your greeting",
         agent=agent,
     )
 
@@ -354,7 +381,7 @@ def test_crew_full_ouput():
 
     result = crew.kickoff()
     assert result == {
-        "final_output": "Hello!",
+        "final_output": "Hello! It is a delight to receive your message. I trust this response finds you in good spirits. It's indeed a pleasure to connect with you too.",
         "tasks_outputs": [task1.output, task2.output],
     }
 
@@ -370,6 +397,7 @@ def test_agents_rpm_is_never_set_if_crew_max_RPM_is_not_set():
 
     task = Task(
         description="just say hi!",
+        expected_output="your greeting",
         agent=agent,
     )
 
@@ -416,10 +444,10 @@ def test_async_task_execution():
             start.return_value = thread
             with patch.object(threading.Thread, "join", wraps=thread.join()) as join:
                 list_ideas.output = TaskOutput(
-                    description="A 4 paragraph article about AI.", result="ok"
+                    description="A 4 paragraph article about AI.", raw_output="ok"
                 )
                 list_important_history.output = TaskOutput(
-                    description="A 4 paragraph article about AI.", result="ok"
+                    description="A 4 paragraph article about AI.", raw_output="ok"
                 )
                 crew.kickoff()
                 start.assert_called()
@@ -501,7 +529,7 @@ def test_crew_function_calling_llm():
     from langchain.tools import tool
     from langchain_openai import ChatOpenAI
 
-    llm = ChatOpenAI(model="gpt-3.5")
+    llm = ChatOpenAI(model="gpt-3.5-turbo-0125")
 
     with patch.object(llm.client, "create", wraps=llm.client.create) as private_mock:
 
@@ -514,16 +542,197 @@ def test_crew_function_calling_llm():
             role="test role",
             goal="test goal",
             backstory="test backstory",
+            llm=ChatOpenAI(model="gpt-4-0125-preview"),
             tools=[learn_about_AI],
         )
 
         essay = Task(
             description="Write and then review an small paragraph on AI until it's AMAZING",
+            expected_output="A 4 paragraph article about AI.",
             agent=agent1,
         )
         tasks = [essay]
-        print(agent1.function_calling_llm)
         crew = Crew(agents=[agent1], tasks=tasks, function_calling_llm=llm)
-        print(agent1.function_calling_llm)
         crew.kickoff()
         private_mock.assert_called()
+
+
+@pytest.mark.vcr(filter_headers=["authorization"])
+def test_task_with_no_arguments():
+    from langchain.tools import tool
+
+    @tool
+    def return_data() -> str:
+        "Useful to get the sales related data"
+        return "January: 5, February: 10, March: 15, April: 20, May: 25"
+
+    researcher = Agent(
+        role="Researcher",
+        goal="Make the best research and analysis on content about AI and AI agents",
+        backstory="You're an expert researcher, specialized in technology, software engineering, AI and startups. You work as a freelancer and is now working on doing research and analysis for a new customer.",
+        tools=[return_data],
+        allow_delegation=False,
+    )
+
+    task = Task(
+        description="Look at the available data nd give me a sense on the total number of sales.",
+        expected_output="The total number of sales as an integer",
+        agent=researcher,
+    )
+
+    crew = Crew(agents=[researcher], tasks=[task])
+
+    result = crew.kickoff()
+    assert result == "75"
+
+
+def test_delegation_is_not_enabled_if_there_are_only_one_agent():
+    from unittest.mock import patch
+
+    researcher = Agent(
+        role="Researcher",
+        goal="Make the best research and analysis on content about AI and AI agents",
+        backstory="You're an expert researcher, specialized in technology, software engineering, AI and startups. You work as a freelancer and is now working on doing research and analysis for a new customer.",
+        allow_delegation=True,
+    )
+
+    task = Task(
+        description="Look at the available data nd give me a sense on the total number of sales.",
+        expected_output="The total number of sales as an integer",
+        agent=researcher,
+    )
+
+    crew = Crew(agents=[researcher], tasks=[task])
+
+    with patch.object(Task, "execute") as execute:
+        execute.return_value = "ok"
+        crew.kickoff()
+        assert task.tools == []
+
+
+@pytest.mark.vcr(filter_headers=["authorization"])
+def test_agents_do_not_get_delegation_tools_with_there_is_only_one_agent():
+    agent = Agent(
+        role="Researcher",
+        goal="Be super empathetic.",
+        backstory="You're love to sey howdy.",
+        allow_delegation=False,
+    )
+
+    task = Task(description="say howdy", expected_output="Howdy!", agent=agent)
+
+    crew = Crew(agents=[agent], tasks=[task])
+
+    result = crew.kickoff()
+    assert (
+        result
+        == "Howdy! I hope this message finds you well and brings a smile to your face. Have a fantastic day!"
+    )
+    assert len(agent.tools) == 0
+
+
+@pytest.mark.vcr(filter_headers=["authorization"])
+def test_agent_usage_metrics_are_captured_for_sequential_process():
+    agent = Agent(
+        role="Researcher",
+        goal="Be super empathetic.",
+        backstory="You're love to sey howdy.",
+        allow_delegation=False,
+    )
+
+    task = Task(description="say howdy", expected_output="Howdy!", agent=agent)
+
+    crew = Crew(agents=[agent], tasks=[task])
+
+    result = crew.kickoff()
+    assert (
+        result
+        == "Howdy! I hope you're having a wonderful day. I'm here ready to make your day even better. Let's have a great time together!"
+    )
+    assert crew.usage_metrics == {
+        "completion_tokens": 91,
+        "prompt_tokens": 164,
+        "successful_requests": 1,
+        "total_tokens": 255,
+    }
+
+
+@pytest.mark.vcr(filter_headers=["authorization"])
+def test_agent_usage_metrics_are_captured_for_hierarchical_process():
+    from langchain_openai import ChatOpenAI
+
+    agent = Agent(
+        role="Researcher",
+        goal="Be super empathetic.",
+        backstory="You're love to sey howdy.",
+        allow_delegation=False,
+    )
+
+    task = Task(description="Ask the researched to say hi!", expected_output="Howdy!")
+
+    crew = Crew(
+        agents=[agent],
+        tasks=[task],
+        process=Process.hierarchical,
+        manager_llm=ChatOpenAI(temperature=0, model="gpt-4"),
+    )
+
+    result = crew.kickoff()
+    assert result == "Howdy!"
+    assert crew.usage_metrics == {
+        "total_tokens": 2476,
+        "prompt_tokens": 2191,
+        "completion_tokens": 285,
+        "successful_requests": 5,
+    }
+
+
+def test_crew_inputs_interpolate_both_agents_and_tasks():
+    agent = Agent(
+        role="{topic} Researcher",
+        goal="Express hot takes on {topic}.",
+        backstory="You have a lot of experience with {topic}.",
+    )
+
+    task = Task(
+        description="Give me an analysis around {topic}.",
+        expected_output="{points} bullet points about {topic}.",
+    )
+
+    crew = Crew(agents=[agent], tasks=[task], inputs={"topic": "AI", "points": 5})
+
+    assert crew.tasks[0].description == "Give me an analysis around AI."
+    assert crew.tasks[0].expected_output == "5 bullet points about AI."
+    assert crew.agents[0].role == "AI Researcher"
+    assert crew.agents[0].goal == "Express hot takes on AI."
+    assert crew.agents[0].backstory == "You have a lot of experience with AI."
+
+
+def test_crew_inputs_interpolate_both_agents_and_tasks():
+    from unittest.mock import patch
+
+    agent = Agent(
+        role="{topic} Researcher",
+        goal="Express hot takes on {topic}.",
+        backstory="You have a lot of experience with {topic}.",
+    )
+
+    task = Task(
+        description="Give me an analysis around {topic}.",
+        expected_output="{points} bullet points about {topic}.",
+        agent=agent,
+    )
+
+    crew = Crew(agents=[agent], tasks=[task])
+
+    with patch.object(Agent, "execute_task") as execute:
+        with patch.object(
+            Agent, "interpolate_inputs", wraps=agent.interpolate_inputs
+        ) as interpolate_agent_inputs:
+            with patch.object(
+                Task, "interpolate_inputs", wraps=task.interpolate_inputs
+            ) as interpolate_task_inputs:
+                execute.return_value = "ok"
+                crew.kickoff(inputs={"topic": "AI", "points": 5})
+                interpolate_agent_inputs.assert_called()
+                interpolate_task_inputs.assert_called()

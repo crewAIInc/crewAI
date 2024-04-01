@@ -4,11 +4,13 @@ from unittest.mock import patch
 
 import pytest
 from langchain.tools import tool
+from langchain_core.exceptions import OutputParserException
 from langchain_openai import ChatOpenAI
 
 from crewai import Agent, Crew, Task
 from crewai.agents.cache import CacheHandler
 from crewai.agents.executor import CrewAgentExecutor
+from crewai.agents.parser import CrewAgentParser
 from crewai.tools.tool_calling import InstructorToolCalling
 from crewai.tools.tool_usage import ToolUsage
 from crewai.utilities import RPMController
@@ -64,10 +66,14 @@ def test_agent_without_memory():
         llm=ChatOpenAI(temperature=0, model="gpt-4"),
     )
 
-    task = Task(description="How much is 1 + 1?", agent=no_memory_agent)
+    task = Task(
+        description="How much is 1 + 1?",
+        agent=no_memory_agent,
+        expected_output="the result of the math operation.",
+    )
     result = no_memory_agent.execute_task(task)
 
-    assert result == "1 + 1 equals 2."
+    assert result == "The result of the math operation 1 + 1 is 2."
     assert no_memory_agent.agent_executor.memory is None
     assert memory_agent.agent_executor.memory is not None
 
@@ -81,10 +87,14 @@ def test_agent_execution():
         allow_delegation=False,
     )
 
-    task = Task(description="How much is 1 + 1?", agent=agent)
+    task = Task(
+        description="How much is 1 + 1?",
+        agent=agent,
+        expected_output="the result of the math operation.",
+    )
 
     output = agent.execute_task(task)
-    assert output == "1 + 1 equals 2."
+    assert output == "The result of the math operation 1 + 1 is 2."
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
@@ -102,9 +112,13 @@ def test_agent_execution_with_tools():
         allow_delegation=False,
     )
 
-    task = Task(description="What is 3 times 4?", agent=agent)
+    task = Task(
+        description="What is 3 times 4?",
+        agent=agent,
+        expected_output="The result of the multiplication.",
+    )
     output = agent.execute_task(task)
-    assert output == "3 times 4 equals 12."
+    assert output == "The result of 3 times 4 is 12."
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
@@ -124,14 +138,18 @@ def test_logging_tool_usage():
     )
 
     assert agent.tools_handler.last_used_tool == {}
-    task = Task(description="What is 3 times 4?", agent=agent)
+    task = Task(
+        description="What is 3 times 4?",
+        agent=agent,
+        expected_output="The result of the multiplication.",
+    )
     # force cleaning cache
     agent.tools_handler.cache = CacheHandler()
     output = agent.execute_task(task)
     tool_usage = InstructorToolCalling(
         tool_name=multiplier.name, arguments={"first_number": 3, "second_number": 4}
     )
-    assert output == "3 times 4 equals 12."
+    assert output == "12"
     assert agent.tools_handler.last_used_tool.tool_name == tool_usage.tool_name
     assert agent.tools_handler.last_used_tool.arguments == tool_usage.arguments
 
@@ -155,8 +173,16 @@ def test_cache_hitting():
         verbose=True,
     )
 
-    task1 = Task(description="What is 2 times 6?", agent=agent)
-    task2 = Task(description="What is 3 times 3?", agent=agent)
+    task1 = Task(
+        description="What is 2 times 6?",
+        agent=agent,
+        expected_output="The result of the multiplication.",
+    )
+    task2 = Task(
+        description="What is 3 times 3?",
+        agent=agent,
+        expected_output="The result of the multiplication.",
+    )
 
     output = agent.execute_task(task1)
     output = agent.execute_task(task2)
@@ -166,7 +192,9 @@ def test_cache_hitting():
     }
 
     task = Task(
-        description="What is 2 times 6 times 3? Return only the number", agent=agent
+        description="What is 2 times 6 times 3? Return only the number",
+        agent=agent,
+        expected_output="The result of the multiplication.",
     )
     output = agent.execute_task(task)
     assert output == "36"
@@ -182,6 +210,7 @@ def test_cache_hitting():
         task = Task(
             description="What is 2 times 6? Ignore correctness and just return the result of the multiplication tool.",
             agent=agent,
+            expected_output="The result of the multiplication.",
         )
         output = agent.execute_task(task)
         assert output == "0"
@@ -204,9 +233,13 @@ def test_agent_execution_with_specific_tools():
         allow_delegation=False,
     )
 
-    task = Task(description="What is 3 times 4", agent=agent)
+    task = Task(
+        description="What is 3 times 4",
+        agent=agent,
+        expected_output="The result of the multiplication.",
+    )
     output = agent.execute_task(task=task, tools=[multiplier])
-    assert output == "3 times 4 is 12."
+    assert output == "The result of the multiplication is 12."
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
@@ -230,6 +263,7 @@ def test_agent_custom_max_iterations():
     ) as private_mock:
         task = Task(
             description="The final answer is 42. But don't give it yet, instead keep using the `get_final_answer` tool.",
+            expected_output="The final answer",
         )
         agent.execute_task(
             task=task,
@@ -241,7 +275,7 @@ def test_agent_custom_max_iterations():
 @pytest.mark.vcr(filter_headers=["authorization"])
 def test_agent_repeated_tool_usage(capsys):
     @tool
-    def get_final_answer(numbers) -> float:
+    def get_final_answer(anything: str) -> float:
         """Get the final answer but don't give it yet, just re-use this
         tool non-stop."""
         return 42
@@ -251,11 +285,14 @@ def test_agent_repeated_tool_usage(capsys):
         goal="test goal",
         backstory="test backstory",
         max_iter=4,
+        llm=ChatOpenAI(model="gpt-4-0125-preview"),
         allow_delegation=False,
+        verbose=True,
     )
 
     task = Task(
-        description="The final answer is 42. But don't give it yet, instead keep using the `get_final_answer` tool."
+        description="The final answer is 42. But don't give it until I tell you so, instead keep using the `get_final_answer` tool.",
+        expected_output="The final answer",
     )
     # force cleaning cache
     agent.tools_handler.cache = CacheHandler()
@@ -266,10 +303,7 @@ def test_agent_repeated_tool_usage(capsys):
 
     captured = capsys.readouterr()
 
-    assert (
-        "I just used the get_final_answer tool with input 42. So I already know that and must stop using it in a row with the same input. \nI could give my final answer if I'm ready, using exaclty the expected format bellow: \n\nThought: Do I need to use a tool? No\nFinal Answer: [your response here]\n"
-        in captured.out
-    )
+    assert "The final answer is 42." in captured.out
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
@@ -289,7 +323,8 @@ def test_agent_moved_on_after_max_iterations():
     )
 
     task = Task(
-        description="The final answer is 42. But don't give it yet, instead keep using the `get_final_answer` tool. Until you're told you could give my final answer if I'm ready."
+        description="The final answer is 42. But don't give it yet, instead keep using the `get_final_answer` tool over and over until you're told you can give yout final answer.",
+        expected_output="The final answer",
     )
     output = agent.execute_task(
         task=task,
@@ -301,7 +336,7 @@ def test_agent_moved_on_after_max_iterations():
 @pytest.mark.vcr(filter_headers=["authorization"])
 def test_agent_respect_the_max_rpm_set(capsys):
     @tool
-    def get_final_answer(numbers) -> float:
+    def get_final_answer(anything: str) -> float:
         """Get the final answer but don't give it yet, just re-use this
         tool non-stop."""
         return 42
@@ -319,16 +354,14 @@ def test_agent_respect_the_max_rpm_set(capsys):
     with patch.object(RPMController, "_wait_for_next_minute") as moveon:
         moveon.return_value = True
         task = Task(
-            description="The final answer is 42. But don't give it yet, instead keep using the `get_final_answer` tool, unless you're told otherwise"
+            description="Use tool logic for `get_final_answer` but fon't give you final answer yet, instead keep using it unless you're told to give your final answer",
+            expected_output="The final answer",
         )
         output = agent.execute_task(
             task=task,
             tools=[get_final_answer],
         )
-        assert (
-            output
-            == "I have used the tool 'get_final_answer' with the input '42' multiple times and have observed the same result. Therefore, I am confident to conclude that the final answer is '42'."
-        )
+        assert output == "42"
         captured = capsys.readouterr()
         assert "Max RPM reached, waiting for next minute to start." in captured.out
         moveon.assert_called()
@@ -356,7 +389,8 @@ def test_agent_respect_the_max_rpm_set_over_crew_rpm(capsys):
     )
 
     task = Task(
-        description="Don't give a Final Answer, instead keep using the `get_final_answer` tool.",
+        description="Use tool logic for `get_final_answer` but fon't give you final answer yet, instead keep using it unless you're told to give your final answer",
+        expected_output="The final answer",
         tools=[get_final_answer],
         agent=agent,
     )
@@ -389,6 +423,7 @@ def test_agent_without_max_rpm_respet_crew_rpm(capsys):
         backstory="test backstory",
         max_rpm=10,
         verbose=True,
+        allow_delegation=False,
     )
 
     agent2 = Agent(
@@ -397,15 +432,16 @@ def test_agent_without_max_rpm_respet_crew_rpm(capsys):
         backstory="test backstory2",
         max_iter=2,
         verbose=True,
+        allow_delegation=False,
     )
 
     tasks = [
         Task(
-            description="Just say hi.",
-            agent=agent1,
+            description="Just say hi.", agent=agent1, expected_output="Your greeting."
         ),
         Task(
-            description="Don't give a Final Answer, instead keep using the `get_final_answer` tool non-stop",
+            description="NEVER give a Final Answer, instead keep using the `get_final_answer` tool non-stop",
+            expected_output="The final answer",
             tools=[get_final_answer],
             agent=agent2,
         ),
@@ -417,7 +453,7 @@ def test_agent_without_max_rpm_respet_crew_rpm(capsys):
         moveon.return_value = True
         crew.kickoff()
         captured = capsys.readouterr()
-        assert "Action: get_final_answer" in captured.out
+        assert "get_final_answer" in captured.out
         assert "Max RPM reached, waiting for next minute to start." in captured.out
         moveon.assert_called_once()
 
@@ -429,7 +465,7 @@ def test_agent_error_on_parsing_tool(capsys):
     from langchain.tools import tool
 
     @tool
-    def get_final_answer(numbers) -> float:
+    def get_final_answer() -> float:
         """Get the final answer but don't give it yet, just re-use this
         tool non-stop."""
         return 42
@@ -443,21 +479,24 @@ def test_agent_error_on_parsing_tool(capsys):
     tasks = [
         Task(
             description="Use the get_final_answer tool.",
+            expected_output="The final answer",
             agent=agent1,
             tools=[get_final_answer],
         )
     ]
 
-    crew = Crew(agents=[agent1], tasks=tasks, verbose=2)
+    crew = Crew(
+        agents=[agent1],
+        tasks=tasks,
+        verbose=2,
+        function_calling_llm=ChatOpenAI(model="gpt-4-0125-preview"),
+    )
 
     with patch.object(ToolUsage, "_render") as force_exception:
         force_exception.side_effect = Exception("Error on parsing tool.")
         crew.kickoff()
         captured = capsys.readouterr()
-        assert (
-            "It seems we encountered an unexpected error while trying to use the tool"
-            in captured.out
-        )
+        assert "Error on parsing tool." in captured.out
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
@@ -467,7 +506,7 @@ def test_agent_remembers_output_format_after_using_tools_too_many_times():
     from langchain.tools import tool
 
     @tool
-    def get_final_answer(numbers) -> float:
+    def get_final_answer(anything: str) -> float:
         """Get the final answer but don't give it yet, just re-use this
         tool non-stop."""
         return 42
@@ -476,12 +515,13 @@ def test_agent_remembers_output_format_after_using_tools_too_many_times():
         role="test role",
         goal="test goal",
         backstory="test backstory",
-        max_iter=4,
+        max_iter=6,
         verbose=True,
     )
     tasks = [
         Task(
-            description="Never give the final answer. Use the get_final_answer tool in a loop.",
+            description="Use tool logic for `get_final_answer` but fon't give you final answer yet, instead keep using it unless you're told to give your final answer",
+            expected_output="The final answer",
             agent=agent1,
             tools=[get_final_answer],
         )
@@ -500,10 +540,15 @@ def test_agent_use_specific_tasks_output_as_context(capsys):
 
     agent2 = Agent(role="test role2", goal="test goal2", backstory="test backstory2")
 
-    say_hi_task = Task(description="Just say hi.", agent=agent1)
-    say_bye_task = Task(description="Just say bye.", agent=agent1)
+    say_hi_task = Task(
+        description="Just say hi.", agent=agent1, expected_output="Your greeting."
+    )
+    say_bye_task = Task(
+        description="Just say bye.", agent=agent1, expected_output="Your farewell."
+    )
     answer_task = Task(
         description="Answer accordingly to the context you got.",
+        expected_output="Your answer.",
         context=[say_hi_task],
         agent=agent2,
     )
@@ -539,6 +584,7 @@ def test_agent_step_callback():
 
         essay = Task(
             description="Write and then review an small paragraph on AI until it's AMAZING",
+            expected_output="The final paragraph.",
             agent=agent1,
         )
         tasks = [essay]
@@ -553,7 +599,7 @@ def test_agent_step_callback():
 def test_agent_function_calling_llm():
     from langchain_openai import ChatOpenAI
 
-    llm = ChatOpenAI(model="gpt-3.5")
+    llm = ChatOpenAI(model="gpt-3.5-turbo-0125")
 
     with patch.object(llm.client, "create", wraps=llm.client.create) as private_mock:
 
@@ -567,11 +613,13 @@ def test_agent_function_calling_llm():
             goal="test goal",
             backstory="test backstory",
             tools=[learn_about_AI],
+            llm=ChatOpenAI(model="gpt-4-0125-preview"),
             function_calling_llm=llm,
         )
 
         essay = Task(
             description="Write and then review an small paragraph on AI until it's AMAZING",
+            expected_output="The final paragraph.",
             agent=agent1,
         )
         tasks = [essay]
@@ -579,3 +627,74 @@ def test_agent_function_calling_llm():
 
         crew.kickoff()
         private_mock.assert_called()
+
+
+def test_agent_count_formatting_error():
+    from unittest.mock import patch
+
+    agent1 = Agent(
+        role="test role",
+        goal="test goal",
+        backstory="test backstory",
+        verbose=True,
+    )
+
+    parser = CrewAgentParser()
+    parser.agent = agent1
+
+    with patch.object(Agent, "increment_formatting_errors") as mock_count_errors:
+        test_text = "This text does not match expected formats."
+        with pytest.raises(OutputParserException):
+            parser.parse(test_text)
+        mock_count_errors.assert_called_once()
+
+
+def test_agent_llm_uses_token_calc_handler_with_llm_has_model_name():
+    agent1 = Agent(
+        role="test role",
+        goal="test goal",
+        backstory="test backstory",
+        verbose=True,
+    )
+
+    assert len(agent1.llm.callbacks) == 1
+    assert agent1.llm.callbacks[0].__class__.__name__ == "TokenCalcHandler"
+    assert agent1.llm.callbacks[0].model == "gpt-4"
+    assert (
+        agent1.llm.callbacks[0].token_cost_process.__class__.__name__ == "TokenProcess"
+    )
+
+
+def test_agent_definition_based_on_dict():
+    config = {
+        "role": "test role",
+        "goal": "test goal",
+        "backstory": "test backstory",
+        "verbose": True,
+    }
+
+    agent = Agent(config=config)
+
+    assert agent.role == "test role"
+    assert agent.goal == "test goal"
+    assert agent.backstory == "test backstory"
+    assert agent.verbose == True
+    assert agent.tools == []
+
+
+def test_interpolate_inputs():
+    agent = Agent(
+        role="{topic} specialist",
+        goal="Figure {goal} out",
+        backstory="I am the master of {role}",
+    )
+
+    agent.interpolate_inputs({"topic": "AI", "goal": "life", "role": "all things"})
+    assert agent.role == "AI specialist"
+    assert agent.goal == "Figure life out"
+    assert agent.backstory == "I am the master of all things"
+
+    agent.interpolate_inputs({"topic": "Sales", "goal": "stuff", "role": "nothing"})
+    assert agent.role == "Sales specialist"
+    assert agent.goal == "Figure stuff out"
+    assert agent.backstory == "I am the master of nothing"
