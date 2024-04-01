@@ -174,6 +174,7 @@ class CrewAgentExecutor(AgentExecutor):
         # If the tool chosen is the finishing tool, then we end and return.
         if isinstance(output, AgentFinish):
             if self._should_ask_for_human_input:
+                # Making sure we only ask for it once, so disabling for the next thought loop
                 self._should_ask_for_human_input = False
                 human_feedback = self._should_ask_for_human_input(output.return_values["output"])
                 action = AgentAction(
