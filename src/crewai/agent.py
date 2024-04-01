@@ -116,6 +116,10 @@ class Agent(BaseModel):
         default=None, description="Callback to be executed"
     )
 
+    _original_role: str | None = None
+    _original_goal: str | None = None
+    _original_backstory: str | None = None
+
     def __init__(__pydantic_self__, **data):
         config = data.pop("config", {})
         super().__init__(**config, **data)
@@ -282,10 +286,17 @@ class Agent(BaseModel):
 
     def interpolate_inputs(self, inputs: Dict[str, Any]) -> None:
         """Interpolate inputs into the agent description and backstory."""
+        if self._original_role is None:
+            self._original_role = self.role
+        if self._original_goal is None:
+            self._original_goal = self.goal
+        if self._original_backstory is None:
+            self._original_backstory = self.backstory
+
         if inputs:
-            self.role = self.role.format(**inputs)
-            self.goal = self.goal.format(**inputs)
-            self.backstory = self.backstory.format(**inputs)
+            self.role = self._original_role.format(**inputs)
+            self.goal = self._original_goal.format(**inputs)
+            self.backstory = self._original_backstory.format(**inputs)
 
     def increment_formatting_errors(self) -> None:
         """Count the formatting errors of the agent."""

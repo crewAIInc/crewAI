@@ -49,7 +49,7 @@ To get started with CrewAI, follow these simple steps:
 pip install crewai
 ```
 
-If you want to also install crewai-tools, which is a package with tools that can be used by the agents, but more dependencies, you can install it with, example bellow uses it:
+If you want to also install crewai-tools, which is a package with tools that can be used by the agents, but more dependencies, you can install it with, example below uses it:
 
 ```shell
 pip install 'crewai[tools]'

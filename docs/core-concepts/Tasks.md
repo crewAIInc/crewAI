@@ -55,12 +55,12 @@ from crewai import Agent, Task, Crew
 from crewai_tools import SerperDevTool
 
 research_agent = Agent(
-    role='Researcher',
-    goal='Find and summarize the latest AI news',
-    backstory="""You're a researcher at a large company.
-    You're responsible for analyzing data and providing insights
-    to the business."""
-    verbose=True
+  role='Researcher',
+  goal='Find and summarize the latest AI news',
+  backstory="""You're a researcher at a large company.
+  You're responsible for analyzing data and providing insights
+  to the business.""",
+  verbose=True
 )
 
 search_tool = SerperDevTool()
