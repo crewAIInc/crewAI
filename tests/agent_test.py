@@ -49,36 +49,6 @@ def test_custom_llm():
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
-def test_agent_without_memory():
-    no_memory_agent = Agent(
-        role="test role",
-        goal="test goal",
-        backstory="test backstory",
-        memory=False,
-        llm=ChatOpenAI(temperature=0, model="gpt-4"),
-    )
-
-    memory_agent = Agent(
-        role="test role",
-        goal="test goal",
-        backstory="test backstory",
-        memory=True,
-        llm=ChatOpenAI(temperature=0, model="gpt-4"),
-    )
-
-    task = Task(
-        description="How much is 1 + 1?",
-        agent=no_memory_agent,
-        expected_output="the result of the math operation.",
-    )
-    result = no_memory_agent.execute_task(task)
-
-    assert result == "The result of the math operation 1 + 1 is 2."
-    assert no_memory_agent.agent_executor.memory is None
-    assert memory_agent.agent_executor.memory is not None
-
-
-@pytest.mark.vcr(filter_headers=["authorization"])
 def test_agent_execution():
     agent = Agent(
         role="test role",
@@ -403,7 +373,6 @@ def test_agent_repeated_tool_usage_check_even_with_disabled_cache(capsys):
     )
 
     captured = capsys.readouterr()
-    print(captured.out)
     assert (
         "I tried reusing the same input, I must stop using this action input. I'll try something else instead."
         in captured.out

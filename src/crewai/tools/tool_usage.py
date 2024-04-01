@@ -163,8 +163,6 @@ class ToolUsage:
 
             if self.tools_handler:
                 should_cache = True
-                print("FORA")
-                print(tool)
                 original_tool = next(
                     (ot for ot in self.original_tools if ot.name == tool.name), None
                 )
@@ -172,8 +170,6 @@ class ToolUsage:
                     hasattr(original_tool, "cache_function")
                     and original_tool.cache_function
                 ):
-                    print("CARALHOOOO")
-                    print(original_tool.cache_function)
                     should_cache = original_tool.cache_function(
                         calling.arguments, result
                     )

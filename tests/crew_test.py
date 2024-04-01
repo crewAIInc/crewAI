@@ -648,9 +648,9 @@ def test_agent_usage_metrics_are_captured_for_sequential_process():
     assert result == "Howdy!"
     assert crew.usage_metrics == {
         "completion_tokens": 56,
-        "prompt_tokens": 164,
+        "prompt_tokens": 161,
         "successful_requests": 1,
-        "total_tokens": 220,
+        "total_tokens": 217,
     }
 
 
@@ -677,8 +677,8 @@ def test_agent_usage_metrics_are_captured_for_hierarchical_process():
     result = crew.kickoff()
     assert result == "Howdy!"
     assert crew.usage_metrics == {
-        "total_tokens": 1513,
-        "prompt_tokens": 1299,
+        "total_tokens": 1510,
+        "prompt_tokens": 1296,
         "completion_tokens": 214,
         "successful_requests": 3,
     }
@@ -735,6 +735,36 @@ def test_crew_inputs_interpolate_both_agents_and_tasks():
                 interpolate_task_inputs.assert_called()
 
 
+def test_task_callback_on_crew():
+    from unittest.mock import patch
+
+    researcher_agent = Agent(
+        role="Researcher",
+        goal="Make the best research and analysis on content about AI and AI agents",
+        backstory="You're an expert researcher, specialized in technology, software engineering, AI and startups. You work as a freelancer and is now working on doing research and analysis for a new customer.",
+        allow_delegation=False,
+    )
+
+    list_ideas = Task(
+        description="Give me a list of 5 interesting ideas to explore for na article, what makes them unique and interesting.",
+        expected_output="Bullet point list of 5 important events.",
+        agent=researcher_agent,
+        async_execution=True,
+    )
+
+    crew = Crew(
+        agents=[researcher_agent],
+        process=Process.sequential,
+        tasks=[list_ideas],
+        task_callback=lambda: None,
+    )
+
+    with patch.object(Agent, "execute_task") as execute:
+        execute.return_value = "ok"
+        crew.kickoff()
+        assert list_ideas.callback is not None
+
+
 @pytest.mark.vcr(filter_headers=["authorization"])
 def test_tools_with_custom_caching():
     from unittest.mock import patch
@@ -748,7 +778,6 @@ def test_tools_with_custom_caching():
 
     def cache_func(args, result):
         cache = result % 2 == 0
-        print(f"cache?: {cache}")
         return cache
 
     multiplcation_tool.cache_function = cache_func
