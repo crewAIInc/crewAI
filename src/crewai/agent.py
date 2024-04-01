@@ -4,7 +4,6 @@ from typing import Any, Dict, List, Optional, Tuple
 
 from langchain.agents.agent import RunnableAgent
 from langchain.agents.tools import tool as LangChainTool
-from langchain.memory import ConversationSummaryMemory
 from langchain.tools.render import render_text_description
 from langchain_core.agents import AgentAction
 from langchain_core.callbacks import BaseCallbackHandler
@@ -22,6 +21,7 @@ from pydantic import (
 from pydantic_core import PydanticCustomError
 
 from crewai.agents import CacheHandler, CrewAgentExecutor, CrewAgentParser, ToolsHandler
+from crewai.memory.contextual.contextual_memory import ContextualMemory
 from crewai.utilities import I18N, Logger, Prompts, RPMController
 from crewai.utilities.token_counter_callback import TokenCalcHandler, TokenProcess
 
@@ -96,6 +96,7 @@ class Agent(BaseModel):
     agent_executor: InstanceOf[CrewAgentExecutor] = Field(
         default=None, description="An instance of the CrewAgentExecutor class."
     )
+    crew: Any = Field(default=None, description="Crew to which the agent belongs.")
     tools_handler: InstanceOf[ToolsHandler] = Field(
         default=None, description="An instance of the ToolsHandler class."
     )
@@ -193,6 +194,15 @@ class Agent(BaseModel):
                 task=task_prompt, context=context
             )
 
+        if self.crew and self.memory:
+            contextual_memory = ContextualMemory(
+                self.crew._short_term_memory,
+                self.crew._long_term_memory,
+                self.crew._entity_memory,
+            )
+            memory = contextual_memory.build_context_for_task(task, context)
+            task_prompt += self.i18n.slice("memory").format(memory=memory)
+
         tools = tools or self.tools
         parsed_tools = self._parse_tools(tools)
 
@@ -258,6 +268,8 @@ class Agent(BaseModel):
         executor_args = {
             "llm": self.llm,
             "i18n": self.i18n,
+            "crew": self.crew,
+            "crew_agent": self,
             "tools": self._parse_tools(tools),
             "verbose": self.verbose,
             "original_tools": tools,
@@ -274,15 +286,7 @@ class Agent(BaseModel):
                 "request_within_rpm_limit"
             ] = self._rpm_controller.check_or_wait
 
-        if self.memory:
-            summary_memory = ConversationSummaryMemory(
-                llm=self.llm, input_key="input", memory_key="chat_history"
-            )
-            executor_args["memory"] = summary_memory
-            agent_args["chat_history"] = lambda x: x["chat_history"]
-            prompt = Prompts(i18n=self.i18n, tools=tools).task_execution_with_memory()
-        else:
-            prompt = Prompts(i18n=self.i18n, tools=tools).task_execution()
+        prompt = Prompts(i18n=self.i18n, tools=tools).task_execution()
 
         execution_prompt = prompt.partial(
             goal=self.goal,

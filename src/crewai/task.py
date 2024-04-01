@@ -24,6 +24,7 @@ class Task(BaseModel):
     delegations: int = 0
     i18n: I18N = I18N()
     thread: threading.Thread = None
+    prompt_context: Optional[str] = None
     description: str = Field(description="Description of the actual task.")
     expected_output: str = Field(
         description="Clear definition of expected output for the task."
@@ -144,6 +145,7 @@ class Task(BaseModel):
                     context.append(task.output.raw_output)
             context = "\n".join(context)
 
+        self.prompt_context = context
         tools = tools or self.tools
 
         if self.async_execution:

@@ -1,5 +1,8 @@
 import json
+import subprocess
+import sys
 import uuid
+from pathlib import Path
 from typing import Any, Dict, List, Optional, Union
 
 from langchain_core.callbacks import BaseCallbackHandler
@@ -18,6 +21,9 @@ from pydantic_core import PydanticCustomError
 
 from crewai.agent import Agent
 from crewai.agents.cache import CacheHandler
+from crewai.memory.entity.entity_memory import EntityMemory
+from crewai.memory.long_term.long_term_memory import LongTermMemory
+from crewai.memory.short_term.short_term_memory import ShortTermMemory
 from crewai.process import Process
 from crewai.task import Task
 from crewai.telemetry import Telemetry
@@ -33,6 +39,7 @@ class Crew(BaseModel):
         tasks: List of tasks assigned to the crew.
         agents: List of agents part of this crew.
         manager_llm: The language model that will run manager agent.
+        memory: Whether the crew should use memory to store memories of it's execution.
         manager_callbacks: The callback handlers to be executed by the manager agent when hierarchical process is used
         cache: Whether the crew should use a cache to store the results of the tools execution.
         function_calling_llm: The language model that will run the tool calling for all the agents.
@@ -42,6 +49,7 @@ class Crew(BaseModel):
         max_rpm: Maximum number of requests per minute for the crew execution to be respected.
         id: A unique identifier for the crew instance.
         full_output: Whether the crew should return the full output with all tasks outputs or just the final output.
+        task_callback: Callback to be executed after each task for every agents execution.
         step_callback: Callback to be executed after each step for every agents execution.
         share_crew: Whether you want to share the complete crew infromation and execution with crewAI to make the library better, and allow us to train models.
     """
@@ -51,12 +59,24 @@ class Crew(BaseModel):
     _rpm_controller: RPMController = PrivateAttr()
     _logger: Logger = PrivateAttr()
     _cache_handler: InstanceOf[CacheHandler] = PrivateAttr(default=CacheHandler())
+    _short_term_memory: Optional[InstanceOf[ShortTermMemory]] = PrivateAttr()
+    _long_term_memory: Optional[InstanceOf[LongTermMemory]] = PrivateAttr()
+    _entity_memory: Optional[InstanceOf[EntityMemory]] = PrivateAttr()
+
     cache: bool = Field(default=True)
     model_config = ConfigDict(arbitrary_types_allowed=True)
     tasks: List[Task] = Field(default_factory=list)
     agents: List[Agent] = Field(default_factory=list)
     process: Process = Field(default=Process.sequential)
     verbose: Union[int, bool] = Field(default=0)
+    memory: bool = Field(
+        default=True,
+        description="Whether the crew should use memory to store memories of it's execution",
+    )
+    embedder: Optional[dict] = Field(
+        default={"provider": "openai"},
+        description="Configuration for the embedder to be used for the crew.",
+    )
     usage_metrics: Optional[dict] = Field(
         default=None,
         description="Metrics for the LLM usage during all tasks execution.",
@@ -82,6 +102,10 @@ class Crew(BaseModel):
         default=None,
         description="Callback to be executed after each step for all agents execution.",
     )
+    task_callback: Optional[Any] = Field(
+        default=None,
+        description="Callback to be executed after each task for all agents execution.",
+    )
     max_rpm: Optional[int] = Field(
         default=None,
         description="Maximum number of requests per minute for the crew execution to be respected.",
@@ -89,6 +113,10 @@ class Crew(BaseModel):
     language: str = Field(
         default="en",
         description="Language used for the crew, defaults to English.",
+    )
+    language_file: str = Field(
+        default=None,
+        description="Path to the language file to be used for the crew.",
     )
 
     @field_validator("id", mode="before")
@@ -124,6 +152,19 @@ class Crew(BaseModel):
         self._telemetry = Telemetry()
         self._telemetry.set_tracer()
         self._telemetry.crew_creation(self)
+        return self
+
+    @model_validator(mode="after")
+    def create_crew_memory(self) -> "Crew":
+        """Set private attributes."""
+        if self.memory:
+            storage_dir = Path(".db")
+            storage_dir.mkdir(exist_ok=True)
+            if sys.platform.startswith("win"):
+                subprocess.call(["attrib", "+H", str(storage_dir)])
+            self._long_term_memory = LongTermMemory()
+            self._short_term_memory = ShortTermMemory(embedder_config=self.embedder)
+            self._entity_memory = EntityMemory(embedder_config=self.embedder)
         return self
 
     @model_validator(mode="after")
@@ -190,16 +231,20 @@ class Crew(BaseModel):
         """Starts the crew to work on its assigned tasks."""
         self._execution_span = self._telemetry.crew_execution_span(self)
         self._interpolate_inputs(inputs)
+        self._set_tasks_callbacks()
+
+        i18n = I18N(language=self.language, language_file=self.language_file)
 
         for agent in self.agents:
-            agent.i18n = I18N(language=self.language)
+            agent.i18n = i18n
+            agent.crew = self
 
             if not agent.function_calling_llm:
                 agent.function_calling_llm = self.function_calling_llm
-                agent.create_agent_executor()
             if not agent.step_callback:
                 agent.step_callback = self.step_callback
-                agent.create_agent_executor()
+
+            agent.create_agent_executor()
 
         metrics = []
 
@@ -253,7 +298,7 @@ class Crew(BaseModel):
     def _run_hierarchical_process(self) -> str:
         """Creates and assigns a manager agent to make sure the crew completes the tasks."""
 
-        i18n = I18N(language=self.language)
+        i18n = I18N(language=self.language, language_file=self.language_file)
         manager = Agent(
             role=i18n.retrieve("hierarchical_manager_agent", "role"),
             goal=i18n.retrieve("hierarchical_manager_agent", "goal"),
@@ -276,6 +321,11 @@ class Crew(BaseModel):
 
         self._finish_execution(task_output)
         return self._format_output(task_output), manager._token_process.get_summary()
+
+    def _set_tasks_callbacks(self) -> str:
+        """Sets callback for every task suing task_callback"""
+        for task in self.tasks:
+            task.callback = self.task_callback
 
     def _interpolate_inputs(self, inputs: Dict[str, Any]) -> str:
         """Interpolates the inputs in the tasks and agents."""
