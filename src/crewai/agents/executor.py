@@ -55,8 +55,9 @@ class CrewAgentExecutor(AgentExecutor):
             [tool.name for tool in self.tools], excluded_colors=["green", "red"]
         )
         intermediate_steps: List[Tuple[AgentAction, str]] = []
-        # Get info about human input from Task
-        self._human_input = self.task.human_input
+        # Allowing human input given task setting
+        if self.task.human_input:
+            self._human_input = True
         # Let's start tracking the number of iterations and time elapsed
         self.iterations = 0
         time_elapsed = 0.0
