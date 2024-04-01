@@ -176,7 +176,7 @@ class CrewAgentExecutor(AgentExecutor):
             if self._should_ask_for_human_input:
                 # Making sure we only ask for it once, so disabling for the next thought loop
                 self._should_ask_for_human_input = False
-                human_feedback = self._should_ask_for_human_input(output.return_values["output"])
+                human_feedback = self._ask_human_input(output.return_values["output"])
                 action = AgentAction(
                     tool="Human Input", tool_input=human_feedback, log=output.log
                 )
@@ -224,7 +224,7 @@ class CrewAgentExecutor(AgentExecutor):
                     )
             yield AgentStep(action=agent_action, observation=observation)
 
-    def _should_ask_for_human_input(self, final_answer: dict) -> str:
+    def _ask_human_input(self, final_answer: dict) -> str:
         """Get human input."""
         return input(
             self._i18n.slice("getting_input").format(final_answer=final_answer)
