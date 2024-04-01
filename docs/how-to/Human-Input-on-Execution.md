@@ -1,6 +1,6 @@
 ---
 title: Human Input on Execution
-description: Comprehensive guide on integrating CrewAI with human input during execution in complex decision-making processes or when needed help during complex tasks. 
+description: Comprehensive guide on integrating CrewAI with human input during execution in complex decision-making processes or when needed help during complex tasks.
 ---
 
 # Human Input in Agent Execution
@@ -9,7 +9,7 @@ Human input plays a pivotal role in several agent execution scenarios, enabling 
 
 ## Using Human Input with CrewAI
 
-Incorporating human input with CrewAI is straightforward, enhancing the agent's ability to make informed decisions. While the documentation previously mentioned using a "LangChain Tool" and a specific "DuckDuckGoSearchRun" tool from `langchain_community.tools`, it's important to clarify that the integration of such tools should align with the actual capabilities and configurations defined within your `Agent` class setup.
+Incorporating human input with CrewAI is straightforward, enhancing the agent's ability to make informed decisions. While the documentation previously mentioned using a "LangChain Tool" and a specific "DuckDuckGoSearchRun" tool from `langchain_community.tools`, it's important to clarify that the integration of such tools should align with the actual capabilities and configurations defined within your `Agent` class setup. Now it is a simple flag in the task itself that needs to be turned on.
 
 ### Example:
 
@@ -23,14 +23,10 @@ import os
 from crewai import Agent, Task, Crew
 from crewai_tools import SerperDevTool
 
-from langchain.agents import load_tools
-
 os.environ["SERPER_API_KEY"] = "Your Key" # serper.dev API key
 os.environ["OPENAI_API_KEY"] = "Your Key"
 
-
-# Loading Human Tools
-human_tools = load_tools(["human"])
+# Loading Tools
 search_tool = SerperDevTool()
 
 # Define your agents with roles, goals, and tools
@@ -44,7 +40,7 @@ researcher = Agent(
   ),
   verbose=True,
   allow_delegation=False,
-  tools=[search_tool]+human_tools # Passing human tools to the agent
+  tools=[search_tool]
 )
 writer = Agent(
   role='Tech Content Strategist',
@@ -67,6 +63,7 @@ task1 = Task(
   ),
   expected_output='A comprehensive full report on the latest AI advancements in 2024, leave nothing out',
   agent=researcher,
+  human_input=True, # setting the flag on for human input in this task
 )
 
 task2 = Task(

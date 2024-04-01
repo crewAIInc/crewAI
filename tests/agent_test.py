@@ -681,6 +681,31 @@ def test_agent_definition_based_on_dict():
     assert agent.verbose == True
     assert agent.tools == []
 
+# test for human input
+@pytest.mark.vcr(filter_headers=["authorization"])
+def test_agent_human_input():
+    from unittest.mock import patch
+
+    config = {
+        "role": "test role",
+        "goal": "test goal",
+        "backstory": "test backstory",
+    }
+
+    agent = Agent(config=config)
+
+    task = Task(
+        agent=agent,
+        description="Say the word: Hi",
+        expected_output="The word: Hi",
+        human_input=True,
+    )
+
+    with patch.object(CrewAgentExecutor, "_ask_human_input") as mock_human_input:
+        mock_human_input.return_value = "Hello"
+        output = agent.execute_task(task)
+        mock_human_input.assert_called_once()
+        assert output == "Hello"
 
 def test_interpolate_inputs():
     agent = Agent(
@@ -698,3 +723,4 @@ def test_interpolate_inputs():
     assert agent.role == "Sales specialist"
     assert agent.goal == "Figure stuff out"
     assert agent.backstory == "I am the master of nothing"
+
