@@ -18,7 +18,7 @@ from crewai.utilities import I18N
 
 class CrewAgentExecutor(AgentExecutor):
     _i18n: I18N = I18N()
-    human_input: bool = False
+    _human_input: bool = False
     llm: Any = None
     iterations: int = 0
     task: Any = None
@@ -56,7 +56,7 @@ class CrewAgentExecutor(AgentExecutor):
         )
         intermediate_steps: List[Tuple[AgentAction, str]] = []
         # Get info about human input from Task
-        self.human_input = self.task.human_input
+        self._human_input = self.task.human_input
         # Let's start tracking the number of iterations and time elapsed
         self.iterations = 0
         time_elapsed = 0.0
@@ -172,8 +172,8 @@ class CrewAgentExecutor(AgentExecutor):
 
         # If the tool chosen is the finishing tool, then we end and return.
         if isinstance(output, AgentFinish):
-            if self.human_input:
-                self.human_input = False
+            if self._human_input:
+                self._human_input = False
                 human_feedback = self._human_input(output.return_values["output"])
                 action = AgentAction(
                     tool="Human Input", tool_input=human_feedback, log=output.log
