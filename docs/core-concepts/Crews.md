@@ -25,7 +25,7 @@ description: Understanding and utilizing crews in the crewAI framework.
 | **Share Crew** *(optional)*           | Whether you want to share the complete crew information and execution with the crewAI team to make the library better, and allow us to train models. |
 
 !!! note "Crew Max RPM"
-		The `max_rpm` attribute sets the maximum number of requests per minute the crew can perform to avoid rate limits and will override individual agents' `max_rpm` settings if you set it.
+        The `max_rpm` attribute sets the maximum number of requests per minute the crew can perform to avoid rate limits and will override individual agents' `max_rpm` settings if you set it.
 
 ## Creating a Crew
 
