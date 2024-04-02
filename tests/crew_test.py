@@ -645,15 +645,12 @@ def test_agent_usage_metrics_are_captured_for_sequential_process():
     crew = Crew(agents=[agent], tasks=[task])
 
     result = crew.kickoff()
-    assert (
-        result
-        == "Howdy! I hope you're having a wonderful day. I'm here ready to make your day even better. Let's have a great time together!"
-    )
+    assert result == "Howdy!"
     assert crew.usage_metrics == {
-        "completion_tokens": 91,
-        "prompt_tokens": 164,
+        "completion_tokens": 17,
+        "prompt_tokens": 161,
         "successful_requests": 1,
-        "total_tokens": 255,
+        "total_tokens": 178,
     }
 
 
@@ -678,12 +675,12 @@ def test_agent_usage_metrics_are_captured_for_hierarchical_process():
     )
 
     result = crew.kickoff()
-    assert result == "Howdy!"
+    assert result == '"Howdy!"'
     assert crew.usage_metrics == {
-        "total_tokens": 2476,
-        "prompt_tokens": 2191,
-        "completion_tokens": 285,
-        "successful_requests": 5,
+        "total_tokens": 1641,
+        "prompt_tokens": 1358,
+        "completion_tokens": 283,
+        "successful_requests": 3,
     }
 
 
@@ -736,3 +733,107 @@ def test_crew_inputs_interpolate_both_agents_and_tasks():
                 crew.kickoff(inputs={"topic": "AI", "points": 5})
                 interpolate_agent_inputs.assert_called()
                 interpolate_task_inputs.assert_called()
+
+
+def test_task_callback_on_crew():
+    from unittest.mock import patch
+
+    researcher_agent = Agent(
+        role="Researcher",
+        goal="Make the best research and analysis on content about AI and AI agents",
+        backstory="You're an expert researcher, specialized in technology, software engineering, AI and startups. You work as a freelancer and is now working on doing research and analysis for a new customer.",
+        allow_delegation=False,
+    )
+
+    list_ideas = Task(
+        description="Give me a list of 5 interesting ideas to explore for na article, what makes them unique and interesting.",
+        expected_output="Bullet point list of 5 important events.",
+        agent=researcher_agent,
+        async_execution=True,
+    )
+
+    crew = Crew(
+        agents=[researcher_agent],
+        process=Process.sequential,
+        tasks=[list_ideas],
+        task_callback=lambda: None,
+    )
+
+    with patch.object(Agent, "execute_task") as execute:
+        execute.return_value = "ok"
+        crew.kickoff()
+        assert list_ideas.callback is not None
+
+
+@pytest.mark.vcr(filter_headers=["authorization"])
+def test_tools_with_custom_caching():
+    from unittest.mock import patch
+
+    from crewai_tools import tool
+
+    @tool
+    def multiplcation_tool(first_number: int, second_number: int) -> str:
+        """Useful for when you need to multiply two numbers together."""
+        return first_number * second_number
+
+    def cache_func(args, result):
+        cache = result % 2 == 0
+        return cache
+
+    multiplcation_tool.cache_function = cache_func
+
+    writer1 = Agent(
+        role="Writer",
+        goal="You write lesssons of math for kids.",
+        backstory="You're an expert in writting and you love to teach kids but you know nothing of math.",
+        tools=[multiplcation_tool],
+        allow_delegation=False,
+    )
+
+    writer2 = Agent(
+        role="Writer",
+        goal="You write lesssons of math for kids.",
+        backstory="You're an expert in writting and you love to teach kids but you know nothing of math.",
+        tools=[multiplcation_tool],
+        allow_delegation=False,
+    )
+
+    task1 = Task(
+        description="What is 2 times 6? Return only the number after using the multiplication tool.",
+        expected_output="the result of multiplication",
+        agent=writer1,
+    )
+
+    task2 = Task(
+        description="What is 3 times 1? Return only the number after using the multiplication tool.",
+        expected_output="the result of multiplication",
+        agent=writer1,
+    )
+
+    task3 = Task(
+        description="What is 2 times 6? Return only the number after using the multiplication tool.",
+        expected_output="the result of multiplication",
+        agent=writer2,
+    )
+
+    task4 = Task(
+        description="What is 3 times 1? Return only the number after using the multiplication tool.",
+        expected_output="the result of multiplication",
+        agent=writer2,
+    )
+
+    crew = Crew(agents=[writer1, writer2], tasks=[task1, task2, task3, task4])
+
+    with patch.object(
+        CacheHandler, "add", wraps=crew._cache_handler.add
+    ) as add_to_cache:
+        with patch.object(
+            CacheHandler, "read", wraps=crew._cache_handler.read
+        ) as read_from_cache:
+            result = crew.kickoff()
+            add_to_cache.assert_called_once_with(
+                tool="multiplcation_tool",
+                input={"first_number": 2, "second_number": 6},
+                output=12,
+            )
+            assert result == "3"

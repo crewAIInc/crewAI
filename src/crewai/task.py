@@ -24,6 +24,7 @@ class Task(BaseModel):
     delegations: int = 0
     i18n: I18N = I18N()
     thread: threading.Thread = None
+    prompt_context: Optional[str] = None
     description: str = Field(description="Description of the actual task.")
     expected_output: str = Field(
         description="Clear definition of expected output for the task."
@@ -70,6 +71,13 @@ class Task(BaseModel):
         frozen=True,
         description="Unique identifier for the object, not set by user.",
     )
+    human_input: Optional[bool] = Field(
+        description="Whether the task should have a human review the final answer of the agent",
+        default=False,
+    )
+
+    _original_description: str | None = None
+    _original_expected_output: str | None = None
 
     def __init__(__pydantic_self__, **data):
         config = data.pop("config", {})
@@ -137,6 +145,7 @@ class Task(BaseModel):
                     context.append(task.output.raw_output)
             context = "\n".join(context)
 
+        self.prompt_context = context
         tools = tools or self.tools
 
         if self.async_execution:
@@ -189,9 +198,14 @@ class Task(BaseModel):
 
     def interpolate_inputs(self, inputs: Dict[str, Any]) -> None:
         """Interpolate inputs into the task description and expected output."""
+        if self._original_description is None:
+            self._original_description = self.description
+        if self._original_expected_output is None:
+            self._original_expected_output = self.expected_output
+
         if inputs:
-            self.description = self.description.format(**inputs)
-            self.expected_output = self.expected_output.format(**inputs)
+            self.description = self._original_description.format(**inputs)
+            self.expected_output = self._original_expected_output.format(**inputs)
 
     def increment_tools_errors(self) -> None:
         """Increment the tools errors counter."""

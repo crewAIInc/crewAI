@@ -50,6 +50,39 @@ OPENAI_MODEL_NAME='openhermes'  # Adjust based on available model
 OPENAI_API_KEY=''
 ```
 
+## HuggingFace Integration
+There are a couple different ways you can use HuggingFace to host your LLM.
+
+### Your own HuggingFace endpoint
+```python
+from langchain_community.llms import HuggingFaceEndpoint
+
+llm = HuggingFaceEndpoint(
+    endpoint_url="<YOUR_ENDPOINT_URL_HERE>",
+    huggingfacehub_api_token="<HF_TOKEN_HERE>",
+    task="text-generation",
+    max_new_tokens=512
+)
+
+agent = Agent(
+    role="HuggingFace Agent",
+    goal="Generate text using HuggingFace",
+    backstory="A diligent explorer of GitHub docs.",
+    llm=llm
+)
+```
+
+### From HuggingFaceHub endpoint
+```python
+from langchain_community.llms import HuggingFaceHub
+
+llm = HuggingFaceHub(
+    repo_id="HuggingFaceH4/zephyr-7b-beta",
+    huggingfacehub_api_token="<HF_TOKEN_HERE>",
+    task="text-generation",
+)
+```
+
 ## OpenAI Compatible API Endpoints
 Switch between APIs and models seamlessly using environment variables, supporting platforms like FastChat, LM Studio, and Mistral AI.
 
@@ -75,8 +108,27 @@ OPENAI_API_BASE=https://api.mistral.ai/v1
 OPENAI_MODEL_NAME="mistral-small"
 ```
 
-### Azure Open AI Configuration
-For Azure OpenAI API integration, set the following environment variables:
+### text-gen-web-ui
+```sh
+OPENAI_API_BASE=http://localhost:5000/v1
+OPENAI_MODEL_NAME=NA
+OPENAI_API_KEY=NA
+```
+
+### Cohere
+```sh
+from langchain_community.chat_models import ChatCohere
+# Initialize language model
+os.environ["COHERE_API_KEY"] = "your-cohere-api-key"
+llm = ChatCohere()
+
+Free developer API key available here: https://cohere.com/
+Langchain Documentation: https://python.langchain.com/docs/integrations/chat/cohere
+```
+
+### Azure Open AI
+Azure's OpenAI API needs a distinct setup, utilizing the `langchain_openai` component for Azure-specific configurations.
+
 ```sh
 AZURE_OPENAI_VERSION="2022-12-01"
 AZURE_OPENAI_DEPLOYMENT=""
