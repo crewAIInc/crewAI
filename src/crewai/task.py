@@ -215,6 +215,14 @@ class Task(BaseModel):
 
         if self.output_pydantic or self.output_json:
             model = self.output_pydantic or self.output_json
+
+            if self.output_pydantic:
+                try:
+                    exported_result = model.model_validate_json(result)
+                    return exported_result
+                except Exception:
+                    pass
+
             llm = self.agent.function_calling_llm or self.agent.llm
 
             if not self._is_gpt(llm):
