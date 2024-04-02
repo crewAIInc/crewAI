@@ -73,6 +73,11 @@ Cutting-edge framework for orchestrating role-playing, autonomous AI agents. By 
                     Human Input on Execution
                 </a>
             </li>
+            <li>
+                <a href="./how-to/Agent-Observability">
+                    Agent Observability
+                </a>
+            </li>
         </ul>
     </div>
     <div style="width:30%">
