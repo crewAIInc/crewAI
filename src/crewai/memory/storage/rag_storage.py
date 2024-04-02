@@ -7,6 +7,7 @@ from embedchain import App
 from embedchain.llm.base import BaseLlm
 
 from crewai.memory.storage.interface import Storage
+from crewai.utilities.paths import db_storage_path
 
 
 @contextlib.contextmanager
@@ -50,7 +51,7 @@ class RAGStorage(Storage):
                 "provider": "chroma",
                 "config": {
                     "collection_name": type,
-                    "dir": f".db/{type}",
+                    "dir": f"{db_storage_path()}/{type}",
                     "allow_reset": allow_reset,
                 },
             },

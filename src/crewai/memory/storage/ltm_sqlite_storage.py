@@ -3,6 +3,7 @@ import sqlite3
 from typing import Any, Dict, Union
 
 from crewai.utilities import Printer
+from crewai.utilities.paths import db_storage_path
 
 
 class LTMSQLiteStorage:
@@ -10,7 +11,7 @@ class LTMSQLiteStorage:
     An updated SQLite storage class for LTM data storage.
     """
 
-    def __init__(self, db_path=".db/long_term_memory_storage.db"):
+    def __init__(self, db_path=f"{db_storage_path()}/long_term_memory_storage.db"):
         self.db_path = db_path
         self._printer: Printer = Printer()
         self._initialize_db()
