@@ -195,6 +195,42 @@ agent = Agent(
 )
 ```
 
+### Custom Caching Mechanism
+Tools now can have an optinal attribute called `cache_function`, this cache function
+can be use to fine control when to cache and when not to cache a tool retuls.
+Good example my be a tool responsible for getting values from securities where
+you are okay to cache treasury value but not stock values.
+
+```python
+from crewai_tools import tool
+
+    @tool
+    def multiplcation_tool(first_number: int, second_number: int) -> str:
+        """Useful for when you need to multiply two numbers together."""
+        return first_number * second_number
+
+    def cache_func(args, result):
+        # The cache function will receive:
+        # - arguments passed to the tool
+        # - the result of the tool
+        #
+        # In this case we only cache the resutl if it's multiple of 2
+        cache = result % 2 == 0
+        return cache
+
+    multiplcation_tool.cache_function = cache_func
+
+
+    writer1 = Agent(
+        role="Writer",
+        goal="You write lesssons of math for kids.",
+        backstory="You're an expert in writting and you love to teach kids but you know nothing of math.",
+        tools=[multiplcation_tool],
+        allow_delegation=False,
+    )
+    #...
+```
+
 ## Using LangChain Tools
 !!! info "LangChain Integration"
     CrewAI seamlessly integrates with LangChain’s comprehensive toolkit for search-based queries and more, here are the available built-in tools that are offered by Langchain [LangChain Toolkit](https://python.langchain.com/docs/integrations/tools/)
