@@ -347,7 +347,6 @@ class Crew(BaseModel):
         if self.max_rpm:
             self._rpm_controller.stop_rpm_counter()
 
-        print('ending')
         agentops.end_session(end_state="Success", end_state_reason="Finished Execution")
         self._telemetry.end_crew(self, output)
 

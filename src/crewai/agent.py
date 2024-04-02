@@ -58,7 +58,6 @@ class Agent(BaseModel):
     _request_within_rpm_limit: Any = PrivateAttr(default=None)
     _token_process: TokenProcess = TokenProcess()
     agent_ops_agent_name: str = None
-    agent_ops_agent_id: str = None
 
     formatting_errors: int = 0
     model_config = ConfigDict(arbitrary_types_allowed=True)
