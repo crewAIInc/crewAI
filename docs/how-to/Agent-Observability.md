@@ -39,6 +39,15 @@ Add your API key to your environment variables
 AGENTOPS_API_KEY=<YOUR_AGENTOPS_API_KEY>
 ```
 
+Install AgentOps with:
+```
+pip install crewai[agentops]
+```
+or
+```
+pip install agentops
+```
+
 Before using `Crew` in your script, include these lines:
 
 ```python
