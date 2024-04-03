@@ -1,6 +1,7 @@
 import contextlib
 import io
 import logging
+import os
 from typing import Any, Dict
 
 from embedchain import App
@@ -38,6 +39,11 @@ class RAGStorage(Storage):
 
     def __init__(self, type, allow_reset=True, embedder_config=None):
         super().__init__()
+        if (
+            not os.getenv("OPENAI_API_KEY")
+            and not os.getenv("OPENAI_BASE_URLl") == "https://api.openai.com/v1"
+        ):
+            os.environ["OPENAI_API_KEY"] = "fake"
         config = {
             "app": {
                 "config": {"name": type, "collect_metrics": False, "log_level": "ERROR"}
