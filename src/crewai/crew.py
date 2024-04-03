@@ -1,8 +1,5 @@
 import json
-import subprocess
-import sys
 import uuid
-from pathlib import Path
 from typing import Any, Dict, List, Optional, Union
 
 from langchain_core.callbacks import BaseCallbackHandler
@@ -158,10 +155,6 @@ class Crew(BaseModel):
     def create_crew_memory(self) -> "Crew":
         """Set private attributes."""
         if self.memory:
-            storage_dir = Path(".db")
-            storage_dir.mkdir(exist_ok=True)
-            if sys.platform.startswith("win"):
-                subprocess.call(["attrib", "+H", str(storage_dir)])
             self._long_term_memory = LongTermMemory()
             self._short_term_memory = ShortTermMemory(embedder_config=self.embedder)
             self._entity_memory = EntityMemory(embedder_config=self.embedder)

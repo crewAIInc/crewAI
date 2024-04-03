@@ -53,7 +53,8 @@ class CrewAgentExecutor(AgentExecutor):
 
     def _create_short_term_memory(self, output) -> None:
         if (
-            self.crew_agent.memory
+            self.crew
+            and self.crew_agent.memory
             and "Action: Delegate work to co-worker" not in output.log
         ):
             memory = ShortTermMemoryItem(
@@ -66,7 +67,7 @@ class CrewAgentExecutor(AgentExecutor):
             self.crew._short_term_memory.save(memory)
 
     def _create_long_term_memory(self, output) -> None:
-        if self.crew_agent.memory:
+        if self.crew and self.crew_agent.memory:
             ltm_agent = TaskEvaluator(self.crew_agent)
             evaluation = ltm_agent.evaluate(self.task, output.log)
 
