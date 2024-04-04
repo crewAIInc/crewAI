@@ -1,4 +1,3 @@
-```markdown
 ---
 title: crewAI Agents
 description: What are crewAI Agents and how to use them.
@@ -65,4 +64,3 @@ agent = Agent(
 
 ## Conclusion
 Agents are the building blocks of the CrewAI framework. By understanding how to define and interact with agents, you can create sophisticated AI systems that leverage the power of collaborative intelligence.
-```
