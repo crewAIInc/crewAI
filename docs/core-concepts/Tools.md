@@ -15,6 +15,8 @@ CrewAI tools empower agents with capabilities ranging from web searching and dat
 - **Utility**: Crafted for tasks such as web searching, data analysis, content generation, and agent collaboration.
 - **Integration**: Boosts agent capabilities by seamlessly integrating tools into their workflow.
 - **Customizability**: Provides the flexibility to develop custom tools or utilize existing ones, catering to the specific needs of agents.
+- **Error Handling**: Incorporates robust error handling mechanisms to ensure smooth operation.
+- **Caching Mechanism**: Features intelligent caching to optimize performance and reduce redundant operations.
 
 ## Using crewAI Tools
 
@@ -91,34 +93,22 @@ crew.kickoff()
 
 ## Available crewAI Tools
 
-Most of the tools in the crewAI toolkit offer the ability to set specific arguments or let them to be more wide open, this is the case for most of the tools, for example:
+- **Error Handling**: All tools are built with error handling capabilities, allowing agents to gracefully manage exceptions and continue their tasks.
+- **Caching Mechanism**: All tools support caching, enabling agents to efficiently reuse previously obtained results, reducing the load on external resources and speeding up the execution time, you can also define finner control over the caching mechanism, using `cache_function` attribute on the tool.
 
-```python
-from crewai_tools import DirectoryReadTool
-
-# This will allow the agent with this tool to read any directory it wants during it's execution
-tool = DirectoryReadTool()
-
-# OR
-
-# This will allow the agent with this tool to read only the directory specified during it's execution
-toos = DirectoryReadTool(directory='./directory')
-```
-
-Specific per tool docs are coming soon.
 Here is a list of the available tools and their descriptions:
 
 | Tool                        | Description                                                                                   |
 | :-------------------------- | :-------------------------------------------------------------------------------------------- |
-| **CodeDocsSearchTool**      | A RAG tool optimized for searching through code documentation and related technical documents.|
+| **CodeDocsSearchTool**      | A RAG tool optimized for searching through code documentation and related technical documents. |
 | **CSVSearchTool**           | A RAG tool designed for searching within CSV files, tailored to handle structured data.       |
 | **DirectorySearchTool**     | A RAG tool for searching within directories, useful for navigating through file systems.      |
-| **DOCXSearchTool**          | A RAG tool aimed at searching within DOCX documents, ideal for processing Word files.          |
+| **DOCXSearchTool**          | A RAG tool aimed at searching within DOCX documents, ideal for processing Word files.         |
 | **DirectoryReadTool**       | Facilitates reading and processing of directory structures and their contents.                |
 | **FileReadTool**            | Enables reading and extracting data from files, supporting various file formats.              |
 | **GithubSearchTool**        | A RAG tool for searching within GitHub repositories, useful for code and documentation search.|
 | **SeperDevTool**            | A specialized tool for development purposes, with specific functionalities under development. |
-| **TXTSearchTool**           | A RAG tool focused on searching within text (.txt) files, suitable for unstructured data.      |
+| **TXTSearchTool**           | A RAG tool focused on searching within text (.txt) files, suitable for unstructured data.     |
 | **JSONSearchTool**          | A RAG tool designed for searching within JSON files, catering to structured data handling.     |
 | **MDXSearchTool**           | A RAG tool tailored for searching within Markdown (MDX) files, useful for documentation.      |
 | **PDFSearchTool**           | A RAG tool aimed at searching within PDF documents, ideal for processing scanned documents.    |
@@ -132,8 +122,10 @@ Here is a list of the available tools and their descriptions:
 | **YoutubeVideoSearchTool**  | A RAG tool aimed at searching within YouTube videos, ideal for video data extraction.          |
 
 ## Creating your own Tools
+
 !!! example "Custom Tool Creation"
     Developers can craft custom tools tailored for their agent’s needs or utilize pre-built options:
+
 
 To create your own crewAI tools you will need to install our extra tools package:
 
@@ -142,7 +134,6 @@ pip install 'crewai[tools]'
 ```
 
 Once you do that there are two main ways for one to create a crewAI tool:
-
 ### Subclassing `BaseTool`
 
 ```python
@@ -157,12 +148,7 @@ class MyCustomTool(BaseTool):
         return "Result from custom tool"
 ```
 
-Define a new class inheriting from `BaseTool`, specifying `name`, `description`, and the `_run` method for operational logic.
-
-
 ### Utilizing the `tool` Decorator
-
-For a simpler approach, create a `Tool` object directly with the required attributes and a functional logic.
 
 ```python
 from crewai_tools import tool
@@ -170,58 +156,29 @@ from crewai_tools import tool
 def my_tool(question: str) -> str:
     """Clear description for what this tool is useful for, you agent will need this information to use it."""
     # Function logic here
-```
-
-```python
-import json
-import requests
-from crewai import Agent
-from crewai.tools import tool
-from unstructured.partition.html import partition_html
-
-    # Annotate the function with the tool decorator from crewAI
-@tool("Integration with a given API")
-def integration_tool(argument: str) -> str:
-    """Integration with a given API"""
-    # Code here
-    return resutls # string to be sent back to the agent
-
-# Assign the scraping tool to an agent
-agent = Agent(
-    role='Research Analyst',
-    goal='Provide up-to-date market analysis',
-    backstory='An expert analyst with a keen eye for market trends.',
-    tools=[integration_tool]
-)
+    return "Result from your custom tool"
 ```
 
 ### Custom Caching Mechanism
-Tools now can have an optinal attribute called `cache_function`, this cache function
-can be use to fine control when to cache and when not to cache a tool retuls.
-Good example my be a tool responsible for getting values from securities where
-you are okay to cache treasury value but not stock values.
+!!! note "Caching"
+    Tools can optionally implement a `cache_function` to fine-tune caching behavior. This function determines when to cache results based on specific conditions, offering granular control over caching logic.
 
 ```python
 from crewai_tools import tool
 
-    @tool
-    def multiplcation_tool(first_number: int, second_number: int) -> str:
-        """Useful for when you need to multiply two numbers together."""
-        return first_number * second_number
+@tool
+def multiplication_tool(first_number: int, second_number: int) -> str:
+    """Useful for when you need to multiply two numbers together."""
+    return first_number * second_number
 
-    def cache_func(args, result):
-        # The cache function will receive:
-        # - arguments passed to the tool
-        # - the result of the tool
-        #
-        # In this case we only cache the resutl if it's multiple of 2
-        cache = result % 2 == 0
-        return cache
+def cache_func(args, result):
+    # In this case, we only cache the result if it's a multiple of 2
+    cache = result % 2 == 0
+    return cache
 
-    multiplcation_tool.cache_function = cache_func
+multiplication_tool.cache_function = cache_func
 
-
-    writer1 = Agent(
+writer1 = Agent(
         role="Writer",
         goal="You write lesssons of math for kids.",
         backstory="You're an expert in writting and you love to teach kids but you know nothing of math.",
@@ -264,4 +221,4 @@ agent = Agent(
 ```
 
 ## Conclusion
-Tools are pivotal in extending the capabilities of CrewAI agents, enabling them to undertake a broad spectrum of tasks and collaborate effectively. When building solutions with CrewAI, leverage both custom and existing tools to empower your agents and enhance the AI ecosystem.
+Tools are pivotal in extending the capabilities of CrewAI agents, enabling them to undertake a broad spectrum of tasks and collaborate effectively. When building solutions with CrewAI, leverage both custom and existing tools to empower your agents and enhance the AI ecosystem. Consider utilizing error handling, caching mechanisms, and the flexibility of tool arguments to optimize your agents' performance and capabilities.

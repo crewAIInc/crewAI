@@ -1,39 +1,39 @@
 # WebsiteSearchTool
 
-!!! note "Experimental"
-    We are still working on improving tools, so there might be unexpected behavior or changes in the future.
+!!! note "Experimental Status"
+    The WebsiteSearchTool is currently in an experimental phase. We are actively working on incorporating this tool into our suite of offerings and will update the documentation accordingly.
 
 ## Description
-This tool is specifically crafted for conducting semantic searches within the content of a particular website. Leveraging a Retrieval-Augmented Generation (RAG) model, it navigates through the information provided on a given URL. Users have the flexibility to either initiate a search across any website known or discovered during its usage or to concentrate the search on a predefined, specific website.
+The WebsiteSearchTool is designed as a concept for conducting semantic searches within the content of websites. It aims to leverage advanced machine learning models like Retrieval-Augmented Generation (RAG) to navigate and extract information from specified URLs efficiently. This tool intends to offer flexibility, allowing users to perform searches across any website or focus on specific websites of interest. Please note, the current implementation details of the WebsiteSearchTool are under development, and its functionalities as described may not yet be accessible.
 
 ## Installation
-Install the crewai_tools package by executing the following command in your terminal:
+To prepare your environment for when the WebsiteSearchTool becomes available, you can install the foundational package with:
 
 ```shell
 pip install 'crewai[tools]'
 ```
 
-## Example
-To utilize the WebsiteSearchTool for different use cases, follow these examples:
+This command installs the necessary dependencies to ensure that once the tool is fully integrated, users can start using it immediately.
+
+## Example Usage
+Below are examples of how the WebsiteSearchTool could be utilized in different scenarios. Please note, these examples are illustrative and represent planned functionality:
 
 ```python
 from crewai_tools import WebsiteSearchTool
 
-# To enable the tool to search any website the agent comes across or learns about during its operation
+# Example of initiating tool that agents can use to search across any discovered websites
 tool = WebsiteSearchTool()
 
-# OR
-
-# To restrict the tool to only search within the content of a specific website.
+# Example of limiting the search to the content of a specific website, so now agents can only search within that website
 tool = WebsiteSearchTool(website='https://example.com')
 ```
 
 ## Arguments
-- `website` : An optional argument that specifies the valid website URL to perform the search on. This becomes necessary if the tool is initialized without a specific website. In the `WebsiteSearchToolSchema`, this argument is mandatory. However, in the `FixedWebsiteSearchToolSchema`, it becomes optional if a website is provided during the tool's initialization, as it will then only search within the predefined website's content.
+- `website`: An optional argument intended to specify the website URL for focused searches. This argument is designed to enhance the tool's flexibility by allowing targeted searches when necessary.
 
-## Custom model and embeddings
-
+## Customization Options
 By default, the tool uses OpenAI for both embeddings and summarization. To customize the model, you can use a config dictionary as follows:
+
 
 ```python
 tool = WebsiteSearchTool(
