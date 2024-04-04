@@ -53,3 +53,10 @@ class YoutubeChannelSearchTool(RagTool):
     ) -> Any:
         if "youtube_channel_handle" in kwargs:
             self.add(kwargs["youtube_channel_handle"])
+
+    def _run(
+        self,
+        search_query: str,
+        **kwargs: Any,
+    ) -> Any:
+        return super()._run(query=search_query)

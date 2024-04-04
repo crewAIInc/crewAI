@@ -50,3 +50,10 @@ class MDXSearchTool(RagTool):
     ) -> Any:
         if "mdx" in kwargs:
             self.add(kwargs["mdx"])
+
+    def _run(
+        self,
+        search_query: str,
+        **kwargs: Any,
+    ) -> Any:
+        return super()._run(query=search_query)

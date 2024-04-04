@@ -35,3 +35,10 @@ class PGSearchTool(RagTool):
         kwargs["data_type"] = "postgres"
         kwargs["loader"] = PostgresLoader(config=dict(url=self.db_uri))
         super().add(f"SELECT * FROM {table_name};", **kwargs)
+
+    def _run(
+        self,
+        search_query: str,
+        **kwargs: Any,
+    ) -> Any:
+        return super()._run(query=search_query)
