@@ -24,7 +24,13 @@ from crewai.agents import CacheHandler, CrewAgentExecutor, CrewAgentParser, Tool
 from crewai.memory.contextual.contextual_memory import ContextualMemory
 from crewai.utilities import I18N, Logger, Prompts, RPMController
 from crewai.utilities.token_counter_callback import TokenCalcHandler, TokenProcess
-from agentops.agent import track_agent
+try:
+    from agentops.agent import track_agent
+except ImportError:
+    def track_agent():
+        def do_nothing_decorator(f):
+            return f
+        return do_nothing_decorator
 
 
 @track_agent()
@@ -58,6 +64,7 @@ class Agent(BaseModel):
     _request_within_rpm_limit: Any = PrivateAttr(default=None)
     _token_process: TokenProcess = TokenProcess()
     agent_ops_agent_name: str = None
+    agent_ops_agent_id: str = None
 
     formatting_errors: int = 0
     model_config = ConfigDict(arbitrary_types_allowed=True)
