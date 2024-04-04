@@ -198,7 +198,8 @@ class Agent(BaseModel):
                 self.crew._entity_memory,
             )
             memory = contextual_memory.build_context_for_task(task, context)
-            task_prompt += self.i18n.slice("memory").format(memory=memory)
+            if memory.strip() != "":
+                task_prompt += self.i18n.slice("memory").format(memory=memory)
 
         tools = tools or self.tools
         parsed_tools = self._parse_tools(tools)

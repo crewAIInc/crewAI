@@ -8,6 +8,7 @@ import pytest
 from crewai.agent import Agent
 from crewai.agents.cache import CacheHandler
 from crewai.crew import Crew
+from crewai.memory.contextual.contextual_memory import ContextualMemory
 from crewai.process import Process
 from crewai.task import Task
 from crewai.utilities import Logger, RPMController
@@ -837,3 +838,59 @@ def test_tools_with_custom_caching():
                 output=12,
             )
             assert result == "3"
+
+
+@pytest.mark.vcr(filter_headers=["authorization"])
+def test_using_contextual_memory():
+    from unittest.mock import patch
+
+    math_researcher = Agent(
+        role="Researcher",
+        goal="You research about math.",
+        backstory="You're an expert in research and you love to learn new things.",
+        allow_delegation=False,
+    )
+
+    task1 = Task(
+        description="Research a topic to teach a kid aged 6 about math.",
+        expected_output="A topic, explanation, angle, and examples.",
+        agent=math_researcher,
+    )
+
+    crew = Crew(
+        agents=[math_researcher],
+        tasks=[task1],
+        memory=True,
+    )
+
+    with patch.object(ContextualMemory, "build_context_for_task") as contextual_mem:
+        crew.kickoff()
+        contextual_mem.assert_called_once()
+
+
+@pytest.mark.vcr(filter_headers=["authorization"])
+def test_disabled_memory_using_contextual_memory():
+    from unittest.mock import patch
+
+    math_researcher = Agent(
+        role="Researcher",
+        goal="You research about math.",
+        backstory="You're an expert in research and you love to learn new things.",
+        allow_delegation=False,
+    )
+
+    task1 = Task(
+        description="Research a topic to teach a kid aged 6 about math.",
+        expected_output="A topic, explanation, angle, and examples.",
+        agent=math_researcher,
+    )
+
+    crew = Crew(
+        agents=[math_researcher],
+        tasks=[task1],
+        memory=False,
+    )
+
+    with patch.object(ContextualMemory, "build_context_for_task") as contextual_mem:
+        crew.kickoff()
+        contextual_mem.assert_not_called()
