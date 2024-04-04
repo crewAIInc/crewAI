@@ -1,14 +1,21 @@
 ---
-title: Agent Observability
+title: (AgentOps) Observability using AgentOps
 description: Understanding and logging your agent performance with AgentOps.
 ---
 
-# AgentOps
+# Intro
+Observability is a key aspect of developing and deploying conversational AI agents. It allows developers to understand how the agent is performing, how users are interacting with the agent, and how the agent is responding to user inputs. 
 
-[AgentOps](https://agentops.ai) provides session replays, metrics, and monitoring for agents built with Superagent.
+AgentOps is a product, idependent of crewAI that provides a comprehensive observability solution for agents. 
+
+This notebook will provide an overview of AgentOps and how to use it with crewAI.
+
+## AgentOps
+
+[AgentOps](https://agentops.ai) provides session replays, metrics, and monitoring for agents.
 [AgentOps Repo](https://github.com/AgentOps-AI/agentops)
 
-## Overview
+### Overview
 AgentOps provides monotoring for agents in development and production. It provides a dashboard for monitoring agent performance, session replays, and custom reporting.
 
 ![agentops-overview.png](..%2Fassets%2Fagentops-overview.png)
@@ -18,7 +25,7 @@ Additionally, AgentOps provides session drilldowns that allows users to view the
 ![agentops-session.png](..%2Fassets%2Fagentops-session.png)
 ![agentops-replay.png](..%2Fassets%2Fagentops-replay.png)
 
-## Features
+### Features
 - LLM Cost management and tracking
 - Replay Analytics
 - Recursive thought detection
@@ -29,7 +36,7 @@ Additionally, AgentOps provides session drilldowns that allows users to view the
 - Time Travel Debugging
 - Compliance and Security
 
-## Using AgentOps
+### Using AgentOps
 
 Create a user API key here: app.agentops.ai/account
 
