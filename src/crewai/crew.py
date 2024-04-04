@@ -67,7 +67,7 @@ class Crew(BaseModel):
     process: Process = Field(default=Process.sequential)
     verbose: Union[int, bool] = Field(default=0)
     memory: bool = Field(
-        default=True,
+        default=False,
         description="Whether the crew should use memory to store memories of it's execution",
     )
     embedder: Optional[dict] = Field(
