@@ -78,9 +78,6 @@ class Agent(BaseModel):
         default=None,
         description="Maximum number of requests per minute for the agent execution to be respected.",
     )
-    memory: bool = Field(
-        default=False, description="Whether the agent should have memory or not"
-    )
     verbose: bool = Field(
         default=False, description="Verbose mode for the Agent Execution"
     )
@@ -194,7 +191,7 @@ class Agent(BaseModel):
                 task=task_prompt, context=context
             )
 
-        if self.crew and self.memory:
+        if self.crew and self.crew.memory:
             contextual_memory = ContextualMemory(
                 self.crew._short_term_memory,
                 self.crew._long_term_memory,
