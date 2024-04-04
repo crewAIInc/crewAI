@@ -7,7 +7,7 @@ description: A comprehensive guide to creating a dynamic CrewAI team for your pr
 Embark on your CrewAI journey by setting up your environment and initiating your AI crew with enhanced features. This guide ensures a seamless start, incorporating the latest updates.
 
 ## Step 0: Installation
-Install CrewAI and any necessary packages for your project.
+Install CrewAI and any necessary packages for your project. CrewAI is compatible with Python >=3.10,<=3.13.
 
 ```shell
 pip install crewai

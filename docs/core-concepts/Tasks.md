@@ -23,6 +23,7 @@ Tasks in CrewAI can be designed to require collaboration between agents. For exa
 | **Output Pydantic**  *(optional)*     | Takes a pydantic model and returns the output as a pydantic object. **Agent LLM needs to be using an OpenAI client, could be Ollama for example but using the OpenAI wrapper** |
 | **Output File**  *(optional)*     | Takes a file path and saves the output of the task on it. |
 | **Callback**  *(optional)*  | A function to be executed after the task is completed. |
+| **Human Input** *(optional) - Release Candidate*    |   Indicates whether the agent should ask for feedback at the end of the task |
 
 ## Creating a Task
 
@@ -54,12 +55,12 @@ from crewai import Agent, Task, Crew
 from crewai_tools import SerperDevTool
 
 research_agent = Agent(
-    role='Researcher',
-    goal='Find and summarize the latest AI news',
-    backstory="""You're a researcher at a large company.
-    You're responsible for analyzing data and providing insights
-    to the business."""
-    verbose=True
+  role='Researcher',
+  goal='Find and summarize the latest AI news',
+  backstory="""You're a researcher at a large company.
+  You're responsible for analyzing data and providing insights
+  to the business.""",
+  verbose=True
 )
 
 search_tool = SerperDevTool()

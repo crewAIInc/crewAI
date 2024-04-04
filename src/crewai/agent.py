@@ -4,7 +4,6 @@ from typing import Any, Dict, List, Optional, Tuple
 
 from langchain.agents.agent import RunnableAgent
 from langchain.agents.tools import tool as LangChainTool
-from langchain.memory import ConversationSummaryMemory
 from langchain.tools.render import render_text_description
 from langchain_core.agents import AgentAction
 from langchain_core.callbacks import BaseCallbackHandler
@@ -22,6 +21,7 @@ from pydantic import (
 from pydantic_core import PydanticCustomError
 
 from crewai.agents import CacheHandler, CrewAgentExecutor, CrewAgentParser, ToolsHandler
+from crewai.memory.contextual.contextual_memory import ContextualMemory
 from crewai.utilities import I18N, Logger, Prompts, RPMController
 from crewai.utilities.token_counter_callback import TokenCalcHandler, TokenProcess
 
@@ -66,6 +66,10 @@ class Agent(BaseModel):
     role: str = Field(description="Role of the agent")
     goal: str = Field(description="Objective of the agent")
     backstory: str = Field(description="Backstory of the agent")
+    cache: bool = Field(
+        default=True,
+        description="Whether the agent should use a cache for tool usage.",
+    )
     config: Optional[Dict[str, Any]] = Field(
         description="Configuration for the agent",
         default=None,
@@ -92,11 +96,12 @@ class Agent(BaseModel):
     agent_executor: InstanceOf[CrewAgentExecutor] = Field(
         default=None, description="An instance of the CrewAgentExecutor class."
     )
+    crew: Any = Field(default=None, description="Crew to which the agent belongs.")
     tools_handler: InstanceOf[ToolsHandler] = Field(
         default=None, description="An instance of the ToolsHandler class."
     )
     cache_handler: InstanceOf[CacheHandler] = Field(
-        default=CacheHandler(), description="An instance of the CacheHandler class."
+        default=None, description="An instance of the CacheHandler class."
     )
     step_callback: Optional[Any] = Field(
         default=None,
@@ -158,6 +163,8 @@ class Agent(BaseModel):
                 TokenCalcHandler(self.llm.model_name, self._token_process)
             ]
         if not self.agent_executor:
+            if not self.cache_handler:
+                self.cache_handler = CacheHandler()
             self.set_cache_handler(self.cache_handler)
         return self
 
@@ -177,7 +184,8 @@ class Agent(BaseModel):
         Returns:
             Output of the agent
         """
-        self.tools_handler.last_used_tool = {}
+        if self.tools_handler:
+            self.tools_handler.last_used_tool = {}
 
         task_prompt = task.prompt()
 
@@ -186,13 +194,24 @@ class Agent(BaseModel):
                 task=task_prompt, context=context
             )
 
-        tools = self._parse_tools(tools or self.tools)
+        if self.crew and self.memory:
+            contextual_memory = ContextualMemory(
+                self.crew._short_term_memory,
+                self.crew._long_term_memory,
+                self.crew._entity_memory,
+            )
+            memory = contextual_memory.build_context_for_task(task, context)
+            task_prompt += self.i18n.slice("memory").format(memory=memory)
+
+        tools = tools or self.tools
+        parsed_tools = self._parse_tools(tools)
+
         self.create_agent_executor(tools=tools)
-        self.agent_executor.tools = tools
+        self.agent_executor.tools = parsed_tools
         self.agent_executor.task = task
 
-        self.agent_executor.tools_description = render_text_description(tools)
-        self.agent_executor.tools_names = self.__tools_names(tools)
+        self.agent_executor.tools_description = render_text_description(parsed_tools)
+        self.agent_executor.tools_names = self.__tools_names(parsed_tools)
 
         result = self.agent_executor.invoke(
             {
@@ -213,8 +232,10 @@ class Agent(BaseModel):
         Args:
             cache_handler: An instance of the CacheHandler class.
         """
-        self.cache_handler = cache_handler
-        self.tools_handler = ToolsHandler(cache=self.cache_handler)
+        self.tools_handler = ToolsHandler()
+        if self.cache:
+            self.cache_handler = cache_handler
+            self.tools_handler.cache = cache_handler
         self.create_agent_executor()
 
     def set_rpm_controller(self, rpm_controller: RPMController) -> None:
@@ -247,8 +268,11 @@ class Agent(BaseModel):
         executor_args = {
             "llm": self.llm,
             "i18n": self.i18n,
+            "crew": self.crew,
+            "crew_agent": self,
             "tools": self._parse_tools(tools),
             "verbose": self.verbose,
+            "original_tools": tools,
             "handle_parsing_errors": True,
             "max_iterations": self.max_iter,
             "step_callback": self.step_callback,
@@ -262,15 +286,7 @@ class Agent(BaseModel):
                 "request_within_rpm_limit"
             ] = self._rpm_controller.check_or_wait
 
-        if self.memory:
-            summary_memory = ConversationSummaryMemory(
-                llm=self.llm, input_key="input", memory_key="chat_history"
-            )
-            executor_args["memory"] = summary_memory
-            agent_args["chat_history"] = lambda x: x["chat_history"]
-            prompt = Prompts(i18n=self.i18n, tools=tools).task_execution_with_memory()
-        else:
-            prompt = Prompts(i18n=self.i18n, tools=tools).task_execution()
+        prompt = Prompts(i18n=self.i18n, tools=tools).task_execution()
 
         execution_prompt = prompt.partial(
             goal=self.goal,
