@@ -41,7 +41,7 @@ class RAGStorage(Storage):
         super().__init__()
         if (
             not os.getenv("OPENAI_API_KEY")
-            and not os.getenv("OPENAI_BASE_URLl") == "https://api.openai.com/v1"
+            and not os.getenv("OPENAI_BASE_URL") == "https://api.openai.com/v1"
         ):
             os.environ["OPENAI_API_KEY"] = "fake"
         config = {
