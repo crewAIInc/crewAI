@@ -4,10 +4,6 @@ import json
 import os
 import platform
 from typing import Any
-try:
-    import agentops
-except ImportError:
-    agentops = None
 
 import pkg_resources
 from opentelemetry import trace
@@ -200,21 +196,6 @@ class Telemetry:
         """
         if (self.ready) and (crew.share_crew):
             try:
-                if not agentops:
-                    print("To enable full telemetry, install agentops: pip install agentops")
-                else:
-                    print("")
-                    if not agentops.get_api_key():
-                        # not using agentops
-                        agentops.start_session(
-                          tags=['anonymous_telemetry'],
-                          config=agentops.Config(
-                            api_key="daebe730-f54d-4af5-98df-e6946fb76d13",
-                          )
-                        )
-                    else:
-                        # using agent ops, add parent key
-                        agentops.set_parent_key("daebe730-f54d-4af5-98df-e6946fb76d13")
                 tracer = trace.get_tracer("crewai.telemetry")
                 span = tracer.start_span("Crew Execution")
                 self._add_attribute(span, "crew_id", str(crew.id))
