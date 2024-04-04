@@ -28,9 +28,9 @@ try:
     from agentops.agent import track_agent
 except ImportError:
     def track_agent():
-        def do_nothing_decorator(f):
+        def noop(f):
             return f
-        return do_nothing_decorator
+        return noop
 
 
 @track_agent()
