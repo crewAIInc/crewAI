@@ -847,13 +847,13 @@ files = [
 
 [[package]]
 name = "crewai-tools"
-version = "0.1.1"
+version = "0.1.4"
 description = "Set of tools for the crewAI framework"
 optional = false
 python-versions = "<=3.13,>=3.10"
 files = [
-    {file = "crewai_tools-0.1.1-py3-none-any.whl", hash = "sha256:89b3a658006175e62885d5ac5de7905ccec50ea84d5c215acc0946317cbdc851"},
-    {file = "crewai_tools-0.1.1.tar.gz", hash = "sha256:1cffcba00f76949af9941299a2985775fe1930417ca6fdcc52c0fc4cc5eabad7"},
+    {file = "crewai_tools-0.1.4-py3-none-any.whl", hash = "sha256:f68fc4464ef40c70a53275dadbc7d43b6095662c685fa18392bd762490d9ab0c"},
+    {file = "crewai_tools-0.1.4.tar.gz", hash = "sha256:c02223f83a525e28a0a0b44abea67c414e5f12dcf7d86b9f1e496e857fc6132b"},
 ]
 
 [package.dependencies]
@@ -2264,13 +2264,13 @@ extended-testing = ["aiosqlite (>=0.19.0,<0.20.0)", "aleph-alpha-client (>=2.15.
 
 [[package]]
 name = "langchain-core"
-version = "0.1.39"
+version = "0.1.40"
 description = "Building applications with LLMs through composability"
 optional = false
 python-versions = "<4.0,>=3.8.1"
 files = [
-    {file = "langchain_core-0.1.39-py3-none-any.whl", hash = "sha256:26b024ef49c5a712611941651bff66fb9a2fd7bc82bd815934c94f0ecf9b6f03"},
-    {file = "langchain_core-0.1.39.tar.gz", hash = "sha256:a34bd517dcd9b7e80adf131ee47554736f9532e1bba17593cd0a316a38ec2caf"},
+    {file = "langchain_core-0.1.40-py3-none-any.whl", hash = "sha256:618dbb7ab44d8b263b91e384db1ff07d0db256ae5bdafa0123a115b6a75a13f1"},
+    {file = "langchain_core-0.1.40.tar.gz", hash = "sha256:34c06fc0e6d3534b738c63f85403446b4be71161665b7e091f9bb19c914ec100"},
 ]
 
 [package.dependencies]
@@ -2320,13 +2320,13 @@ extended-testing = ["lxml (>=5.1.0,<6.0.0)"]
 
 [[package]]
 name = "langsmith"
-version = "0.1.39"
+version = "0.1.40"
 description = "Client library to connect to the LangSmith LLM Tracing and Evaluation Platform."
 optional = false
 python-versions = "<4.0,>=3.8.1"
 files = [
-    {file = "langsmith-0.1.39-py3-none-any.whl", hash = "sha256:85c19177162585728001cb7ae91ab48ca4abe39b7bc1ff783212ac426ded222b"},
-    {file = "langsmith-0.1.39.tar.gz", hash = "sha256:2aec9d2f9cc664042d2121b13da569b0902aff842c86b17b440245d57da84ec5"},
+    {file = "langsmith-0.1.40-py3-none-any.whl", hash = "sha256:aa47d0f5a1eabd5c05ac6ce2cd3e28ccfc554d366e856a27b7c3c17c443881cb"},
+    {file = "langsmith-0.1.40.tar.gz", hash = "sha256:50fdf313741cf94e978de06025fd180b56acf1d1a4549b0fd5453ef23d5461ef"},
 ]
 
 [package.dependencies]
@@ -2990,13 +2990,13 @@ sympy = "*"
 
 [[package]]
 name = "openai"
-version = "1.16.1"
+version = "1.16.2"
 description = "The official Python library for the openai API"
 optional = false
 python-versions = ">=3.7.1"
 files = [
-    {file = "openai-1.16.1-py3-none-any.whl", hash = "sha256:77ef3db6110071f7154859e234250fb945a36554207a30a4491092eadb73fcb5"},
-    {file = "openai-1.16.1.tar.gz", hash = "sha256:58922c785d167458b46e3c76e7b1bc2306f313ee9b71791e84cbf590abe160f2"},
+    {file = "openai-1.16.2-py3-none-any.whl", hash = "sha256:46a435380921e42dae218d04d6dd0e89a30d7f3b9d8a778d5887f78003cf9354"},
+    {file = "openai-1.16.2.tar.gz", hash = "sha256:c93d5efe5b73b6cb72c4cd31823852d2e7c84a138c0af3cbe4a8eb32b1164ab2"},
 ]
 
 [package.dependencies]
@@ -3983,13 +3983,13 @@ files = [
 
 [[package]]
 name = "pyright"
-version = "1.1.356"
+version = "1.1.357"
 description = "Command line wrapper for pyright"
 optional = false
 python-versions = ">=3.7"
 files = [
-    {file = "pyright-1.1.356-py3-none-any.whl", hash = "sha256:a101b0f375f93d7082f9046cfaa7ba15b7cf8e1939ace45e984c351f6e8feb99"},
-    {file = "pyright-1.1.356.tar.gz", hash = "sha256:f05b8b29d06b96ed4a0885dad5a31d9dff691ca12b2f658249f583d5f2754021"},
+    {file = "pyright-1.1.357-py3-none-any.whl", hash = "sha256:1cf29ee38e4928131895cd8e90eef37b5b77e2ed72a14e6e8e2405266f5f0aca"},
+    {file = "pyright-1.1.357.tar.gz", hash = "sha256:7c66261116c78c5fa9629134fe85c54cc5302ab73e376be4b0a99d89c80a9403"},
 ]
 
 [package.dependencies]
@@ -5602,4 +5602,4 @@ tools = ["crewai-tools"]
 [metadata]
 lock-version = "2.0"
 python-versions = ">=3.10,<=3.13"
-content-hash = "d3a90e83d39b9b2b48a9abf28caeebb11c9bcb0561dcb3d29c86d8632881af81"
+content-hash = "d5b6804b19966ca6af7785a1f22d61a6c14c406e5196463a9e5f9415bf1e1aef"
