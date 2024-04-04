@@ -50,3 +50,10 @@ class JSONSearchTool(RagTool):
     ) -> Any:
         if "json_path" in kwargs:
             self.add(kwargs["json_path"])
+
+    def _run(
+        self,
+        search_query: str,
+        **kwargs: Any,
+    ) -> Any:
+        return super()._run(query=search_query)

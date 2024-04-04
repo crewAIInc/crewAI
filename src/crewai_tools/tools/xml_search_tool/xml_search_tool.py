@@ -50,3 +50,10 @@ class XMLSearchTool(RagTool):
     ) -> Any:
         if "xml" in kwargs:
             self.add(kwargs["xml"])
+
+    def _run(
+        self,
+        search_query: str,
+        **kwargs: Any,
+    ) -> Any:
+        return super()._run(query=search_query)

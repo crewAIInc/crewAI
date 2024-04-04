@@ -50,3 +50,10 @@ class DOCXSearchTool(RagTool):
     ) -> Any:
         if "docx" in kwargs:
             self.add(kwargs["docx"])
+
+    def _run(
+        self,
+        search_query: str,
+        **kwargs: Any,
+    ) -> Any:
+        return super()._run(query=search_query)

@@ -50,3 +50,10 @@ class DirectorySearchTool(RagTool):
     ) -> Any:
         if "directory" in kwargs:
             self.add(kwargs["directory"])
+
+    def _run(
+        self,
+        search_query: str,
+        **kwargs: Any,
+    ) -> Any:
+        return super()._run(query=search_query)

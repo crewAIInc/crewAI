@@ -50,3 +50,10 @@ class YoutubeVideoSearchTool(RagTool):
     ) -> Any:
         if "youtube_video_url" in kwargs:
             self.add(kwargs["youtube_video_url"])
+
+    def _run(
+        self,
+        search_query: str,
+        **kwargs: Any,
+    ) -> Any:
+        return super()._run(query=search_query)

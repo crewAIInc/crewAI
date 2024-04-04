@@ -21,7 +21,7 @@ class GithubSearchToolSchema(FixedGithubSearchToolSchema):
     github_repo: str = Field(..., description="Mandatory github you want to search")
     content_types: List[str] = Field(
         ...,
-        description="Mandatory content types you want to be inlcuded search, options: [code, repo, pr, issue]",
+        description="Mandatory content types you want to be included search, options: [code, repo, pr, issue]",
     )
 
 
@@ -56,3 +56,10 @@ class GithubSearchTool(RagTool):
     ) -> Any:
         if "github_repo" in kwargs:
             self.add(kwargs["github_repo"])
+
+    def _run(
+        self,
+        search_query: str,
+        **kwargs: Any,
+    ) -> Any:
+        return super()._run(query=search_query)

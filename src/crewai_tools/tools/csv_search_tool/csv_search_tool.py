@@ -50,3 +50,10 @@ class CSVSearchTool(RagTool):
     ) -> Any:
         if "csv" in kwargs:
             self.add(kwargs["csv"])
+
+    def _run(
+        self,
+        search_query: str,
+        **kwargs: Any,
+    ) -> Any:
+        return super()._run(query=search_query)
