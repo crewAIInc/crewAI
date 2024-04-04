@@ -1,10 +1,11 @@
 ---
 title: Assembling and Activating Your CrewAI Team
-description: A comprehensive guide to creating a dynamic CrewAI team for your projects, with updated functionalities including verbose mode, memory capabilities, and more.
+description: A comprehensive guide to creating a dynamic CrewAI team for your projects, with updated functionalities including verbose mode, memory capabilities, asynchronous execution, output customization, language model configuration, and more.
+
 ---
 
 ## Introduction
-Embark on your CrewAI journey by setting up your environment and initiating your AI crew with enhanced features. This guide ensures a seamless start, incorporating the latest updates.
+Embark on your CrewAI journey by setting up your environment and initiating your AI crew with the latest features. This guide ensures a smooth start, incorporating all recent updates for an enhanced experience.
 
 ## Step 0: Installation
 Install CrewAI and any necessary packages for your project. CrewAI is compatible with Python >=3.10,<=3.13.
@@ -15,11 +16,11 @@ pip install 'crewai[tools]'
 ```
 
 ## Step 1: Assemble Your Agents
-Define your agents with distinct roles, backstories, and now, enhanced capabilities such as verbose mode and memory usage. These elements add depth and guide their task execution and interaction within the crew.
+Define your agents with distinct roles, backstories, and enhanced capabilities like verbose mode and memory usage. These elements add depth and guide their task execution and interaction within the crew.
 
 ```python
 import os
-os.environ["SERPER_API_KEY"] = "Your Key" # serper.dev API key
+os.environ["SERPER_API_KEY"] = "Your Key"  # serper.dev API key
 os.environ["OPENAI_API_KEY"] = "Your Key"
 
 from crewai import Agent
@@ -68,7 +69,7 @@ research_task = Task(
   description=(
     "Identify the next big trend in {topic}."
     "Focus on identifying pros and cons and the overall narrative."
-    "Your final report should clearly articulate the key points"
+    "Your final report should clearly articulate the key points,"
     "its market opportunities, and potential risks."
   ),
   expected_output='A comprehensive 3 paragraphs long report on the latest AI trends.',
@@ -92,21 +93,25 @@ write_task = Task(
 ```
 
 ## Step 3: Form the Crew
-Combine your agents into a crew, setting the workflow process they'll follow to accomplish the tasks, now with the option to configure language models for enhanced interaction.
+Combine your agents into a crew, setting the workflow process they'll follow to accomplish the tasks. Now with options to configure language models for enhanced interaction and additional configurations for optimizing performance.
 
 ```python
 from crewai import Crew, Process
 
-# Forming the tech-focused crew with enhanced configurations
+# Forming the tech-focused crew with some enhanced configurations
 crew = Crew(
   agents=[researcher, writer],
   tasks=[research_task, write_task],
-  process=Process.sequential  # Optional: Sequential task execution is default
+  process=Process.sequential,  # Optional: Sequential task execution is default
+  memory=True,
+  cache=True,
+  max_rpm=100,
+  share_crew=True
 )
 ```
 
 ## Step 4: Kick It Off
-Initiate the process with your enhanced crew ready. Observe as your agents collaborate, leveraging their new capabilities for a successful project outcome. You can also pass the inputs that will be interpolated into the agents and tasks.
+Initiate the process with your enhanced crew ready. Observe as your agents collaborate, leveraging their new capabilities for a successful project outcome. Input variables will be interpolated into the agents and tasks for a personalized approach.
 
 ```python
 # Starting the task execution process with enhanced feedback
@@ -115,4 +120,4 @@ print(result)
 ```
 
 ## Conclusion
-Building and activating a crew in CrewAI has evolved with new functionalities. By incorporating verbose mode, memory capabilities, asynchronous task execution, output customization, and language model configuration, your AI team is more equipped than ever to tackle challenges efficiently. The depth of agent backstories and the precision of their objectives enrich collaboration, leading to successful project outcomes.
+Building and activating a crew in CrewAI has evolved with new functionalities. By incorporating verbose mode, memory capabilities, asynchronous task execution, output customization, language model configuration, and enhanced crew configurations, your AI team is more equipped than ever to tackle challenges efficiently. The depth of agent backstories and the precision of their objectives enrich collaboration, leading to successful project outcomes. This guide aims to provide you with a clear and detailed understanding of setting up and utilizing the CrewAI framework to its full potential.

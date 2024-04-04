@@ -1,3 +1,4 @@
+```markdown
 ---
 title: crewAI Memory Systems
 description: Leveraging memory systems in the crewAI framework to enhance agent capabilities.
@@ -5,7 +6,7 @@ description: Leveraging memory systems in the crewAI framework to enhance agent 
 
 ## Introduction to Memory Systems in crewAI
 !!! note "Enhancing Agent Intelligence"
-    The crewAI framework introduces a sophisticated memory system designed to significantly enhance the capabilities of AI agents. This system comprises short-term memory, long-term memory, and entity memory, each serving a unique purpose in aiding agents to remember, reason, and learn from past interactions.
+    The crewAI framework introduces a sophisticated memory system designed to significantly enhance the capabilities of AI agents. This system comprises short-term memory, long-term memory, entity memory, and newly identified contextual memory, each serving a unique purpose in aiding agents to remember, reason, and learn from past interactions.
 
 ## Memory System Components
 
@@ -14,10 +15,11 @@ description: Leveraging memory systems in the crewAI framework to enhance agent 
 | **Short-Term Memory**| Temporarily stores recent interactions and outcomes, enabling agents to recall and utilize information relevant to their current context. |
 | **Long-Term Memory** | Preserves valuable insights and learnings from past executions, allowing agents to build and refine their knowledge over time. |
 | **Entity Memory**    | Captures and organizes information about entities (people, places, concepts) encountered during tasks, facilitating deeper understanding and relationship mapping. |
+| **Contextual Memory**| Maintains the context of interactions, aiding in the coherence and relevance of agent responses over a sequence of tasks or a conversation. |
 
 ## How Memory Systems Empower Agents
 
-1. **Contextual Awareness**: With short-term memory, agents gain the ability to maintain context over a conversation or task sequence, leading to more coherent and relevant responses.
+1. **Contextual Awareness**: With short-term and contextual memory, agents gain the ability to maintain context over a conversation or task sequence, leading to more coherent and relevant responses.
 
 2. **Experience Accumulation**: Long-term memory allows agents to accumulate experiences, learning from past actions to improve future decision-making and problem-solving.
 
@@ -26,7 +28,7 @@ description: Leveraging memory systems in the crewAI framework to enhance agent 
 ## Implementing Memory in Your Crew
 
 When configuring a crew, you can enable and customize each memory component to suit the crew's objectives and the nature of tasks it will perform.
-By default the memory system is disabled, but you can enable it by setting `memory=True` in the crew configuration.
+By default, the memory system is disabled, and you can ensure it is active by setting `memory=True` in the crew configuration.
 The memory will use OpenAI Embeddings by default, but you can change it by setting `embedder` to a different model.
 
 ### Example: Configuring Memory for a Crew
@@ -40,16 +42,11 @@ my_crew = Crew(
     tasks=[...],
     process=Process.sequential,
     memory=True,
-    verbose=True,
-		#  Optional: Customize the memory embedding model
-		# embedder={
-		# 		"provider": "huggingface",
-		# 		"config":{
-		# 			"model": 'sentence-transformers/all-mpnet-base-v2'
-		# 		}
-		# 	}
+    verbose=True
 )
 ```
+
+## Additional Embedding Providers
 
 ### Using OpenAI embeddings (already default)
 ```python

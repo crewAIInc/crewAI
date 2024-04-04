@@ -1,22 +1,23 @@
+```markdown
 # DirectoryReadTool
 
 !!! note "Experimental"
     We are still working on improving tools, so there might be unexpected behavior or changes in the future.
 
 ## Description
-The DirectoryReadTool is a highly efficient utility designed for the comprehensive listing of directory contents. It recursively navigates through the specified directory, providing users with a detailed enumeration of all files, including those nested within subdirectories. This tool is indispensable for tasks requiring a thorough inventory of directory structures or for validating the organization of files within directories.
+The DirectoryReadTool is a powerful utility designed to provide a comprehensive listing of directory contents. It can recursively navigate through the specified directory, offering users a detailed enumeration of all files, including those within subdirectories. This tool is crucial for tasks that require a thorough inventory of directory structures or for validating the organization of files within directories.
 
 ## Installation
-Install the `crewai_tools` package to use the DirectoryReadTool in your project. If you haven't added this package to your environment, you can easily install it with pip using the following command:
+To utilize the DirectoryReadTool in your project, install the `crewai_tools` package. If this package is not yet part of your environment, you can install it using pip with the command below:
 
 ```shell
 pip install 'crewai[tools]'
 ```
 
-This installs the latest version of the `crewai_tools` package, allowing access to the DirectoryReadTool and other utilities.
+This command installs the latest version of the `crewai_tools` package, granting access to the DirectoryReadTool among other utilities.
 
 ## Example
-The DirectoryReadTool is simple to use. The code snippet below shows how to set up and use the tool to list the contents of a specified directory:
+Employing the DirectoryReadTool is straightforward. The following code snippet demonstrates how to set it up and use the tool to list the contents of a specified directory:
 
 ```python
 from crewai_tools import DirectoryReadTool
@@ -33,4 +34,4 @@ tool = DirectoryReadTool(directory='/path/to/your/directory')
 ## Arguments
 The DirectoryReadTool requires minimal configuration for use. The essential argument for this tool is as follows:
 
-- `directory`: **Optional** A argument that specifies the path to the directory whose contents you wish to list. It accepts both absolute and relative paths, guiding the tool to the desired directory for content listing.
+- `directory`: **Optional**. An argument that specifies the path to the directory whose contents you wish to list. It accepts both absolute and relative paths, guiding the tool to the desired directory for content listing.
