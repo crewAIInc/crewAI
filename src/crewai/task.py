@@ -216,12 +216,14 @@ class Task(BaseModel):
         if self.output_pydantic or self.output_json:
             model = self.output_pydantic or self.output_json
 
-            if self.output_pydantic:
-                try:
-                    exported_result = model.model_validate_json(result)
-                    return exported_result
-                except Exception:
-                    pass
+            # try to convert task_output directly to pydantic/json
+            try:
+                exported_result = model.model_validate_json(result)
+                if self.output_json:
+                    return exported_result.model_dump()
+                return exported_result
+            except Exception:
+                pass
 
             llm = self.agent.function_calling_llm or self.agent.llm
 
