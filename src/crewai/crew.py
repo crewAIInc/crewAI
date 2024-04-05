@@ -1,8 +1,5 @@
 import json
-import subprocess
-import sys
 import uuid
-from pathlib import Path
 from typing import Any, Dict, List, Optional, Union
 
 from langchain_core.callbacks import BaseCallbackHandler
@@ -73,7 +70,7 @@ class Crew(BaseModel):
     process: Process = Field(default=Process.sequential)
     verbose: Union[int, bool] = Field(default=0)
     memory: bool = Field(
-        default=True,
+        default=False,
         description="Whether the crew should use memory to store memories of it's execution",
     )
     embedder: Optional[dict] = Field(
@@ -161,10 +158,6 @@ class Crew(BaseModel):
     def create_crew_memory(self) -> "Crew":
         """Set private attributes."""
         if self.memory:
-            storage_dir = Path(".db")
-            storage_dir.mkdir(exist_ok=True)
-            if sys.platform.startswith("win"):
-                subprocess.call(["attrib", "+H", str(storage_dir)])
             self._long_term_memory = LongTermMemory()
             self._short_term_memory = ShortTermMemory(embedder_config=self.embedder)
             self._entity_memory = EntityMemory(embedder_config=self.embedder)
@@ -286,9 +279,9 @@ class Crew(BaseModel):
                     task.tools += AgentTools(agents=agents_for_delegation).tools()
 
             role = task.agent.role if task.agent is not None else "None"
-            self._logger.log("debug", f"== Working Agent: {role}", color="bold_yellow")
+            self._logger.log("debug", f"== Working Agent: {role}", color="bold_purple")
             self._logger.log(
-                "info", f"== Starting Task: {task.description}", color="bold_yellow"
+                "info", f"== Starting Task: {task.description}", color="bold_purple"
             )
 
             output = task.execute(context=task_output)

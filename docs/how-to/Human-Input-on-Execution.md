@@ -1,21 +1,20 @@
 ---
-title: Human Input on Execution [Release Candidate]
-description: Comprehensive guide on integrating CrewAI with human input during execution in complex decision-making processes or when needed help during complex tasks.
+title: Human Input on Execution
+description: Integrating CrewAI with human input during execution in complex decision-making processes and leveraging the full capabilities of the agent's attributes and tools.
 ---
 
 # Human Input in Agent Execution
 
-Human input plays a pivotal role in several agent execution scenarios, enabling agents to seek additional information or clarification when necessary. This capability is invaluable in complex decision-making processes or when agents need more details to complete a task effectively.
+Human input is critical in several agent execution scenarios, allowing agents to request additional information or clarification when necessary. This feature is especially useful in complex decision-making processes or when agents require more details to complete a task effectively.
 
 ## Using Human Input with CrewAI
 
-The easiest way to integrate human input into agent execution is by setting the `human_input` flag in the task definition. When this flag is enabled, the agent will prompt the user for input before giving it's final answer. This input can be used to provide additional context, clarify ambiguities, or validate the agent's output.
+To integrate human input into agent execution, set the `human_input` flag in the task definition. When enabled, the agent prompts the user for input before delivering its final answer. This input can provide extra context, clarify ambiguities, or validate the agent's output.
 
 ### Example:
 
 ```shell
 pip install crewai
-pip install 'crewai[tools]'
 ```
 
 ```python
@@ -29,7 +28,7 @@ os.environ["OPENAI_API_KEY"] = "Your Key"
 # Loading Tools
 search_tool = SerperDevTool()
 
-# Define your agents with roles, goals, and tools
+# Define your agents with roles, goals, tools, and additional attributes
 researcher = Agent(
   role='Senior Research Analyst',
   goal='Uncover cutting-edge developments in AI and data science',
@@ -40,7 +39,8 @@ researcher = Agent(
   ),
   verbose=True,
   allow_delegation=False,
-  tools=[search_tool]
+  tools=[search_tool],
+  max_rpm=100
 )
 writer = Agent(
   role='Tech Content Strategist',
@@ -50,7 +50,9 @@ writer = Agent(
     "With a deep understanding of the tech industry, you transform complex concepts into compelling narratives."
   ),
   verbose=True,
-  allow_delegation=True
+  allow_delegation=True,
+  tools=[search_tool],
+  cache=False, # Disable cache for this agent
 )
 
 # Create tasks for your agents
@@ -63,7 +65,7 @@ task1 = Task(
   ),
   expected_output='A comprehensive full report on the latest AI advancements in 2024, leave nothing out',
   agent=researcher,
-  human_input=True, # setting the flag on for human input in this task
+  human_input=True,
 )
 
 task2 = Task(

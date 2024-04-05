@@ -1,48 +1,45 @@
 # DirectorySearchTool
 
 !!! note "Experimental"
-    We are still working on improving tools, so there might be unexpected behavior or changes in the future.
+    The DirectorySearchTool is under continuous development. Features and functionalities might evolve, and unexpected behavior may occur as we refine the tool.
 
 ## Description
-This tool is designed to perform a semantic search for queries within the content of a specified directory. Utilizing the RAG (Retrieval-Augmented Generation) methodology, it offers a powerful means to semantically navigate through the files of a given directory. The tool can be dynamically set to search any directory specified at runtime or can be pre-configured to search within a specific directory upon initialization.
+The DirectorySearchTool enables semantic search within the content of specified directories, leveraging the Retrieval-Augmented Generation (RAG) methodology for efficient navigation through files. Designed for flexibility, it allows users to dynamically specify search directories at runtime or set a fixed directory during initial setup.
 
 ## Installation
-To start using the DirectorySearchTool, you need to install the crewai_tools package. Execute the following command in your terminal:
+To use the DirectorySearchTool, begin by installing the crewai_tools package. Execute the following command in your terminal:
 
 ```shell
 pip install 'crewai[tools]'
 ```
 
-## Example
-The following examples demonstrate how to initialize the DirectorySearchTool for different use cases and how to perform a search:
+## Initialization and Usage
+Import the DirectorySearchTool from the `crewai_tools` package to start. You can initialize the tool without specifying a directory, enabling the setting of the search directory at runtime. Alternatively, the tool can be initialized with a predefined directory.
 
 ```python
 from crewai_tools import DirectorySearchTool
 
-# To enable searching within any specified directory at runtime
+# For dynamic directory specification at runtime
 tool = DirectorySearchTool()
 
-# Alternatively, to restrict searches to a specific directory
+# For fixed directory searches
 tool = DirectorySearchTool(directory='/path/to/directory')
 ```
 
 ## Arguments
-- `directory` : This string argument specifies the directory within which to search. It is mandatory if the tool has not been initialized with a directory; otherwise, the tool will only search within the initialized directory.
+- `directory`: A string argument that specifies the search directory. This is optional during initialization but required for searches if not set initially.
 
-## Custom model and embeddings
-
-By default, the tool uses OpenAI for both embeddings and summarization. To customize the model, you can use a config dictionary as follows:
+## Custom Model and Embeddings
+The DirectorySearchTool uses OpenAI for embeddings and summarization by default. Customization options for these settings include changing the model provider and configuration, enhancing flexibility for advanced users.
 
 ```python
 tool = DirectorySearchTool(
     config=dict(
         llm=dict(
-            provider="ollama", # or google, openai, anthropic, llama2, ...
+            provider="ollama", # Options include ollama, google, anthropic, llama2, and more
             config=dict(
                 model="llama2",
-                # temperature=0.5,
-                # top_p=1,
-                # stream=true,
+                # Additional configurations here
             ),
         ),
         embedder=dict(

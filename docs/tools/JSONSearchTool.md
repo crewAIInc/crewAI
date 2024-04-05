@@ -1,58 +1,60 @@
 # JSONSearchTool
 
-!!! note "Experimental"
-    We are still working on improving tools, so there might be unexpected behavior or changes in the future.
+!!! note "Experimental Status"
+    The JSONSearchTool is currently in an experimental phase. This means the tool is under active development, and users might encounter unexpected behavior or changes. We highly encourage feedback on any issues or suggestions for improvements.
 
 ## Description
-This tool is used to perform a RAG search within a JSON file's content. It allows users to initiate a search with a specific JSON path, focusing the search operation within that particular JSON file. If the path is provided at initialization, the tool restricts its search scope to the specified JSON file, thereby enhancing the precision of search results.
+The JSONSearchTool is designed to facilitate efficient and precise searches within JSON file contents. It utilizes a RAG (Retrieve and Generate) search mechanism, allowing users to specify a JSON path for targeted searches within a particular JSON file. This capability significantly improves the accuracy and relevance of search results.
 
 ## Installation
-Install the crewai_tools package by executing the following command in your terminal:
+To install the JSONSearchTool, use the following pip command:
 
 ```shell
 pip install 'crewai[tools]'
 ```
 
-## Example
-Below are examples demonstrating how to use the JSONSearchTool for searching within JSON files. You can either search any JSON content or restrict the search to a specific JSON file.
+## Usage Examples
+Here are updated examples on how to utilize the JSONSearchTool effectively for searching within JSON files. These examples take into account the current implementation and usage patterns identified in the codebase.
 
 ```python
-from crewai_tools import JSONSearchTool
+from crewai.json_tools import JSONSearchTool  # Updated import path
 
-# Example 1: Initialize the tool for a general search across any JSON content. This is useful when the path is known or can be discovered during execution.
+# General JSON content search
+# This approach is suitable when the JSON path is either known beforehand or can be dynamically identified.
 tool = JSONSearchTool()
 
-# Example 2: Initialize the tool with a specific JSON path, limiting the search to a particular JSON file.
+# Restricting search to a specific JSON file
+# Use this initialization method when you want to limit the search scope to a specific JSON file.
 tool = JSONSearchTool(json_path='./path/to/your/file.json')
 ```
 
 ## Arguments
-- `json_path` (str): An optional argument that defines the path to the JSON file to be searched. This parameter is only necessary if the tool is initialized without a specific JSON path. Providing this argument restricts the search to the specified JSON file.
+- `json_path` (str, optional): Specifies the path to the JSON file to be searched. This argument is not required if the tool is initialized for a general search. When provided, it confines the search to the specified JSON file.
 
-## Custom model and embeddings
-
-By default, the tool uses OpenAI for both embeddings and summarization. To customize the model, you can use a config dictionary as follows:
+## Configuration Options
+The JSONSearchTool supports extensive customization through a configuration dictionary. This allows users to select different models for embeddings and summarization based on their requirements.
 
 ```python
 tool = JSONSearchTool(
-    config=dict(
-        llm=dict(
-            provider="ollama", # or google, openai, anthropic, llama2, ...
-            config=dict(
-                model="llama2",
+    config={
+        "llm": {
+            "provider": "ollama",  # Other options include google, openai, anthropic, llama2, etc.
+            "config": {
+                "model": "llama2",
+                # Additional optional configurations can be specified here.
                 # temperature=0.5,
                 # top_p=1,
                 # stream=true,
-            ),
-        ),
-        embedder=dict(
-            provider="google",
-            config=dict(
-                model="models/embedding-001",
-                task_type="retrieval_document",
-                # title="Embeddings",
-            ),
-        ),
-    )
+            },
+        },
+        "embedder": {
+            "provider": "google",
+            "config": {
+                "model": "models/embedding-001",
+                "task_type": "retrieval_document",
+                # Further customization options can be added here.
+            },
+        },
+    }
 )
 ```

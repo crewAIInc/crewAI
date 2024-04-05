@@ -85,7 +85,6 @@ class ToolUsage:
             self._printer.print(content=f"\n\n{error}\n", color="red")
             self.task.increment_tools_errors()
             return error
-
         try:
             tool = self._select_tool(calling.tool_name)
         except Exception as e:
@@ -107,7 +106,7 @@ class ToolUsage:
                 result = self._i18n.errors("task_repeated_usage").format(
                     tool_names=self.tools_names
                 )
-                self._printer.print(content=f"\n\n{result}\n", color="yellow")
+                self._printer.print(content=f"\n\n{result}\n", color="purple")
                 self._telemetry.tool_repeated_usage(
                     llm=self.function_calling_llm,
                     tool_name=tool.name,
@@ -186,7 +185,7 @@ class ToolUsage:
                     calling=calling, output=result, should_cache=should_cache
                 )
 
-        self._printer.print(content=f"\n\n{result}\n", color="yellow")
+        self._printer.print(content=f"\n\n{result}\n", color="purple")
         if agentops:
           agentops.record(tool_event)
         self._telemetry.tool_usage(
