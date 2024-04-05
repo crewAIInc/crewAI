@@ -110,6 +110,16 @@ OPENAI_API_BASE=https://api.mistral.ai/v1
 OPENAI_MODEL_NAME="mistral-small"
 ```
 
+### Solar
+```sh
+from langchain_community.chat_models.solar import SolarChat
+# Initialize language model
+os.environ["SOLAR_API_KEY"] = "your-solar-api-key"
+llm = SolarChat(max_tokens=1024)
+
+Free developer API key available here: https://console.upstage.ai/services/solar
+Langchain Example: https://github.com/langchain-ai/langchain/pull/18556
+```
 ### text-gen-web-ui
 ```sh
 OPENAI_API_BASE=http://localhost:5000/v1
@@ -128,9 +138,9 @@ Free developer API key available here: https://cohere.com/
 Langchain Documentation: https://python.langchain.com/docs/integrations/chat/cohere
 ```
 
-### Azure Open AI
-Azure's OpenAI API needs a distinct setup, utilizing the `langchain_openai` component for Azure-specific configurations.
 
+### Azure Open AI Configuration
+For Azure OpenAI API integration, set the following environment variables:
 ```sh
 AZURE_OPENAI_VERSION="2022-12-01"
 AZURE_OPENAI_DEPLOYMENT=""
