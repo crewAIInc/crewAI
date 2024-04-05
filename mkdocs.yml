@@ -126,6 +126,7 @@ nav:
     - Processes: 'core-concepts/Processes.md'
     - Crews: 'core-concepts/Crews.md'
     - Collaboration: 'core-concepts/Collaboration.md'
+    - Memory: 'core-concepts/Memory.md'
   - How to Guides:
     - Getting Started: 'how-to/Creating-a-Crew-and-kick-it-off.md'
     - Create Custom Tools: 'how-to/Create-Custom-Tools.md'
