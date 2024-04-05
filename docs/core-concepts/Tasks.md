@@ -96,26 +96,26 @@ This is useful when you have a task that depends on the output of another task t
 # ...
 
 research_ai_task = Task(
-  description='Find and summarize the latest AI news',
-  expected_output='A bullet list summary of the top 5 most important AI news',
-  async_execution=True,
-  agent=research_agent,
-  tools=[search_tool]
+    description='Find and summarize the latest AI news',
+    expected_output='A bullet list summary of the top 5 most important AI news',
+    async_execution=True,
+    agent=research_agent,
+    tools=[search_tool]
 )
 
 research_ops_task = Task(
-  description='Find and summarize the latest AI Ops news',
-  expected_output='A bullet list summary of the top 5 most important AI Ops news',
-  async_execution=True,
-  agent=research_agent,
-  tools=[search_tool]
+    description='Find and summarize the latest AI Ops news',
+    expected_output='A bullet list summary of the top 5 most important AI Ops news',
+    async_execution=True,
+    agent=research_agent,
+    tools=[search_tool]
 )
 
 write_blog_task = Task(
-  description="Write a full blog post about the importance of AI and its latest news",
-  expected_output='Full blog post that is 4 paragraphs long',
-  agent=writer_agent,
-  context=[research_ai_task, research_ops_task]
+    description="Write a full blog post about the importance of AI and its latest news",
+    expected_output='Full blog post that is 4 paragraphs long',
+    agent=writer_agent,
+    context=[research_ai_task, research_ops_task]
 )
 
 #...
@@ -131,24 +131,24 @@ You can then use the `context` attribute to define in a future task that it shou
 #...
 
 list_ideas = Task(
-	description="List of 5 interesting ideas to explore for an article about AI.",
-	expected_output="Bullet point list of 5 ideas for an article.",
-	agent=researcher,
-	async_execution=True # Will be executed asynchronously
+    description="List of 5 interesting ideas to explore for an article about AI.",
+    expected_output="Bullet point list of 5 ideas for an article.",
+    agent=researcher,
+    async_execution=True # Will be executed asynchronously
 )
 
 list_important_history = Task(
-	description="Research the history of AI and give me the 5 most important events.",
-	expected_output="Bullet point list of 5 important events.",
-	agent=researcher,
-	async_execution=True # Will be executed asynchronously
+    description="Research the history of AI and give me the 5 most important events.",
+    expected_output="Bullet point list of 5 important events.",
+    agent=researcher,
+    async_execution=True # Will be executed asynchronously
 )
 
 write_article = Task(
-	description="Write an article about AI, its history, and interesting ideas.",
-	expected_output="A 4 paragraph article about AI.",
-	agent=writer,
-	context=[list_ideas, list_important_history] # Will wait for the output of the two tasks to be completed
+    description="Write an article about AI, its history, and interesting ideas.",
+    expected_output="A 4 paragraph article about AI.",
+    agent=writer,
+    context=[list_ideas, list_important_history] # Will wait for the output of the two tasks to be completed
 )
 
 #...
@@ -162,20 +162,20 @@ The callback function is executed after the task is completed, allowing for acti
 # ...
 
 def callback_function(output: TaskOutput):
-	# Do something after the task is completed
-	# Example: Send an email to the manager
-	print(f"""
-		Task completed!
-		Task: {output.description}
-		Output: {output.raw_output}
-	""")
+    # Do something after the task is completed
+    # Example: Send an email to the manager
+    print(f"""
+        Task completed!
+        Task: {output.description}
+        Output: {output.raw_output}
+    """)
 
 research_task = Task(
-  description='Find and summarize the latest AI news',
-	expected_output='A bullet list summary of the top 5 most important AI news',
-	agent=research_agent,
-  tools=[search_tool],
-	callback=callback_function
+    description='Find and summarize the latest AI news',
+    expected_output='A bullet list summary of the top 5 most important AI news',
+    agent=research_agent,
+    tools=[search_tool],
+    callback=callback_function
 )
 
 #...
@@ -188,27 +188,27 @@ Once a crew finishes running, you can access the output of a specific task by us
 ```python
 # ...
 task1 = Task(
-	description='Find and summarize the latest AI news',
-	expected_output='A bullet list summary of the top 5 most important AI news',
-	agent=research_agent,
-	tools=[search_tool]
+    description='Find and summarize the latest AI news',
+    expected_output='A bullet list summary of the top 5 most important AI news',
+    agent=research_agent,
+    tools=[search_tool]
 )
 
 #...
 
 crew = Crew(
-	agents=[research_agent],
-	tasks=[task1, task2, task3],
-	verbose=2
+    agents=[research_agent],
+    tasks=[task1, task2, task3],
+    verbose=2
 )
 
 result = crew.kickoff()
 
 # Returns a TaskOutput object with the description and results of the task
 print(f"""
-	Task completed!
-	Task: {task1.output.description}
-	Output: {task1.output.raw_output}
+    Task completed!
+    Task: {task1.output.description}
+    Output: {task1.output.raw_output}
 """)
 ```
 
