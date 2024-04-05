@@ -78,9 +78,6 @@ class Agent(BaseModel):
         default=None,
         description="Maximum number of requests per minute for the agent execution to be respected.",
     )
-    memory: bool = Field(
-        default=False, description="Whether the agent should have memory or not"
-    )
     verbose: bool = Field(
         default=False, description="Verbose mode for the Agent Execution"
     )
@@ -91,7 +88,11 @@ class Agent(BaseModel):
         default_factory=list, description="Tools at agents disposal"
     )
     max_iter: Optional[int] = Field(
-        default=15, description="Maximum iterations for an agent to execute a task"
+        default=25, description="Maximum iterations for an agent to execute a task"
+    )
+    max_execution_time: Optional[int] = Field(
+        default=None,
+        description="Maximum execution time for an agent to execute a task",
     )
     agent_executor: InstanceOf[CrewAgentExecutor] = Field(
         default=None, description="An instance of the CrewAgentExecutor class."
@@ -159,9 +160,12 @@ class Agent(BaseModel):
     def set_agent_executor(self) -> "Agent":
         """set agent executor is set."""
         if hasattr(self.llm, "model_name"):
-            self.llm.callbacks = [
-                TokenCalcHandler(self.llm.model_name, self._token_process)
-            ]
+            token_handler = TokenCalcHandler(self.llm.model_name, self._token_process)
+            if isinstance(self.llm.callbacks, list):
+                self.llm.callbacks.append(token_handler)
+            else:
+                self.llm.callbacks = [token_handler]
+
         if not self.agent_executor:
             if not self.cache_handler:
                 self.cache_handler = CacheHandler()
@@ -194,14 +198,15 @@ class Agent(BaseModel):
                 task=task_prompt, context=context
             )
 
-        if self.crew and self.memory:
+        if self.crew and self.crew.memory:
             contextual_memory = ContextualMemory(
                 self.crew._short_term_memory,
                 self.crew._long_term_memory,
                 self.crew._entity_memory,
             )
             memory = contextual_memory.build_context_for_task(task, context)
-            task_prompt += self.i18n.slice("memory").format(memory=memory)
+            if memory.strip() != "":
+                task_prompt += self.i18n.slice("memory").format(memory=memory)
 
         tools = tools or self.tools
         parsed_tools = self._parse_tools(tools)
@@ -275,6 +280,7 @@ class Agent(BaseModel):
             "original_tools": tools,
             "handle_parsing_errors": True,
             "max_iterations": self.max_iter,
+            "max_execution_time": self.max_execution_time,
             "step_callback": self.step_callback,
             "tools_handler": self.tools_handler,
             "function_calling_llm": self.function_calling_llm,

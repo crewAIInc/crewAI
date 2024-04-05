@@ -21,7 +21,7 @@ It's pivotal to understand that **NO data is collected** concerning prompts, tas
 - **Tool Usage**: Identifying which tools are most frequently used allows us to prioritize improvements in those areas.
 
 ### Opt-In Further Telemetry Sharing
-Users can choose to share their complete telemetry data by enabling the `share_crew` attribute to `True` in their crew configurations. This opt-in approach respects user privacy and aligns with data protection standards by ensuring users have control over their data sharing preferences. Enabling `share_crew` results in the collection of detailed `crew` and `task` execution data, including `goal`, `backstory`, `context`, and `output` of tasks. This enables a deeper insight into usage patterns while respecting the user's choice to share.
+Users can choose to share their complete telemetry data by enabling the `share_crew` attribute to `True` in their crew configurations. This opt-in approach respects user privacy and aligns with data protection standards by ensuring users have control over their data sharing preferences. Enabling `share_crew` results in the collection of detailed crew and task execution data, including `goal`, `backstory`, `context`, and `output` of tasks. This enables a deeper insight into usage patterns while respecting the user's choice to share.
 
 ### Updates and Revisions
 We are committed to maintaining the accuracy and transparency of our documentation. Regular reviews and updates are performed to ensure our documentation accurately reflects the latest developments of our codebase and telemetry practices. Users are encouraged to review this section for the most current information on our data collection practices and how they contribute to the improvement of CrewAI.

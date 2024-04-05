@@ -23,7 +23,7 @@ poetry install
 ```
 ### Customizing
 
-**Add you `OPENAI_API_KEY` on the `.env` file**
+**Add your `OPENAI_API_KEY` into the `.env` file**
 
 - Modify `src/{{folder_name}}/config/agents.yaml` to define your agents
 - Modify `src/{{folder_name}}/config/tasks.yaml` to define your tasks

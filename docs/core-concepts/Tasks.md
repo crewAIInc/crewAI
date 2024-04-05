@@ -1,33 +1,34 @@
 ---
 title: crewAI Tasks
-description: Overview and management of tasks within the crewAI framework.
+description: Detailed guide on managing and creating tasks within the crewAI framework, reflecting the latest codebase updates.
 ---
 
 ## Overview of a Task
 !!! note "What is a Task?"
-    In the CrewAI framework, tasks are individual assignments that agents complete. They encapsulate necessary information for execution, including a description, assigned agent, required tools, offering flexibility for various action complexities.
+    In the crewAI framework, tasks are specific assignments completed by agents. They provide all necessary details for execution, such as a description, the agent responsible, required tools, and more, facilitating a wide range of action complexities.
 
-Tasks in CrewAI can be designed to require collaboration between agents. For example, one agent might gather data while another analyzes it. This collaborative approach can be defined within the task properties and managed by the Crew's process.
+Tasks within crewAI can be collaborative, requiring multiple agents to work together. This is managed through the task properties and orchestrated by the Crew's process, enhancing teamwork and efficiency.
 
 ## Task Attributes
 
-| Attribute      | Description                          |
-| :------------- | :----------------------------------- |
-| **Description**       | A clear, concise statement of what the task entails.  |
-| **Agent**    | Optionally, you can specify which agent is responsible for the task. If not, the crew's process will determine who takes it on. |
-| **Expected Output**      | Clear and detailed definition of expected output for the task.  |
-| **Tools** *(optional)*   | These are the functions or capabilities the agent can utilize to perform the task. They can be anything from simple actions like 'search' to more complex interactions with other agents or APIs. |
-| **Async Execution** *(optional)*      | Indicates whether the task should be executed asynchronously, allowing the crew to continue with the next task without waiting for completion. |
-| **Context**  *(optional)*     | Other tasks that will have their output used as context for this task. If a task is asynchronous, the system will wait for that to finish before using its output as context. |
-| **Output JSON**  *(optional)*     | Takes a pydantic model and returns the output as a JSON object. **Agent LLM needs to be using an OpenAI client, could be Ollama for example but using the OpenAI wrapper** |
-| **Output Pydantic**  *(optional)*     | Takes a pydantic model and returns the output as a pydantic object. **Agent LLM needs to be using an OpenAI client, could be Ollama for example but using the OpenAI wrapper** |
-| **Output File**  *(optional)*     | Takes a file path and saves the output of the task on it. |
-| **Callback**  *(optional)*  | A function to be executed after the task is completed. |
-| **Human Input** *(optional) - Release Candidate*    |   Indicates whether the agent should ask for feedback at the end of the task |
+| Attribute              | Description                                                                                   |
+| :----------------------| :-------------------------------------------------------------------------------------------- |
+| **Description**        | A clear, concise statement of what the task entails.                                          |
+| **Agent**              | The agent responsible for the task, assigned either directly or by the crew's process.        |
+| **Expected Output**    | A detailed description of what the task's completion looks like.                              |
+| **Tools** *(optional)* | The functions or capabilities the agent can utilize to perform the task.                      |
+| **Async Execution** *(optional)* | If set, the task executes asynchronously, allowing progression without waiting for completion.|
+| **Context**  *(optional)* | Specifies tasks whose outputs are used as context for this task.                              |
+| **Config** *(optional)* | Additional configuration details for the agent executing the task, allowing further customization. |
+| **Output JSON**  *(optional)* | Outputs a JSON object, requiring an OpenAI client. Only one output format can be set.         |
+| **Output Pydantic**  *(optional)* | Outputs a Pydantic model object, requiring an OpenAI client. Only one output format can be set. |
+| **Output File**  *(optional)* | Saves the task output to a file. If used with `Output JSON` or `Output Pydantic`, specifies how the output is saved. |
+| **Callback**  *(optional)* | A Python callable that is executed with the task's output upon completion.                    |
+| **Human Input** *(optional)* | Indicates if the task requires human feedback at the end, useful for tasks needing human oversight. |
 
 ## Creating a Task
 
-This is the simplest example for creating a task, it involves defining its scope and agent, but there are optional attributes that can provide a lot of flexibility:
+Creating a task involves defining its scope, responsible agent, and any additional attributes for flexibility:
 
 ```python
 from crewai import Task
@@ -37,12 +38,13 @@ task = Task(
     agent=sales_agent
 )
 ```
+
 !!! note "Task Assignment"
-    Tasks can be assigned directly by specifying an `agent` to them, or they can be assigned in run time if you are using the `hierarchical` through CrewAI's process, considering roles, availability, or other criteria.
+    Directly specify an `agent` for assignment or let the `hierarchical` CrewAI's process decide based on roles, availability, etc.
 
 ## Integrating Tools with Tasks
 
-Tools from the [crewAI Toolkit](https://github.com/joaomdmoura/crewai-tools) and [LangChain Tools](https://python.langchain.com/docs/integrations/tools) enhance task performance, allowing agents to interact more effectively with their environment. Assigning specific tools to tasks can tailor agent capabilities to particular needs.
+Leverage tools from the [crewAI Toolkit](https://github.com/joaomdmoura/crewai-tools) and [LangChain Tools](https://python.langchain.com/docs/integrations/tools) for enhanced task performance and agent interaction.
 
 ## Creating a Task with Tools
 

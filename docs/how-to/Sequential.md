@@ -1,6 +1,6 @@
 ---
 title: Using the Sequential Processes in crewAI
-description: A comprehensive guide to utilizing the sequential processe for task execution in crewAI projects.
+description: A comprehensive guide to utilizing the sequential processes for task execution in crewAI projects.
 ---
 
 ## Introduction
@@ -13,8 +13,6 @@ The sequential process ensures tasks are executed one after the other, following
 - **Linear Task Flow**: Ensures orderly progression by handling tasks in a predetermined sequence.
 - **Simplicity**: Best suited for projects with clear, step-by-step tasks.
 - **Easy Monitoring**: Facilitates easy tracking of task completion and project progress.
-
-
 ## Implementing the Sequential Process
 Assemble your crew and define tasks in the order they need to be executed.
 
@@ -57,4 +55,4 @@ report_crew = Crew(
 3. **Completion**: The process concludes once the final task is executed, leading to project completion.
 
 ## Conclusion
-The sequential process in CrewAI provides a clear, straightforward path for task execution. It's particularly suited for projects requiring a logical progression of tasks, ensuring each step is completed before the next begins, thereby facilitating a cohesive final product.
+The sequential and hierarchical processes in CrewAI offer clear, adaptable paths for task execution. They are well-suited for projects requiring logical progression and dynamic decision-making, ensuring each step is completed effectively, thereby facilitating a cohesive final product.
