@@ -1,4 +1,3 @@
-```markdown
 ---
 title: crewAI Memory Systems
 description: Leveraging memory systems in the crewAI framework to enhance agent capabilities.
