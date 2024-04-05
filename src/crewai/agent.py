@@ -88,7 +88,7 @@ class Agent(BaseModel):
         default_factory=list, description="Tools at agents disposal"
     )
     max_iter: Optional[int] = Field(
-        default=15, description="Maximum iterations for an agent to execute a task"
+        default=25, description="Maximum iterations for an agent to execute a task"
     )
     max_execution_time: Optional[int] = Field(
         default=None,
