@@ -90,6 +90,10 @@ class Agent(BaseModel):
     max_iter: Optional[int] = Field(
         default=15, description="Maximum iterations for an agent to execute a task"
     )
+    max_execution_time: Optional[int] = Field(
+        default=None,
+        description="Maximum execution time for an agent to execute a task",
+    )
     agent_executor: InstanceOf[CrewAgentExecutor] = Field(
         default=None, description="An instance of the CrewAgentExecutor class."
     )
@@ -276,6 +280,7 @@ class Agent(BaseModel):
             "original_tools": tools,
             "handle_parsing_errors": True,
             "max_iterations": self.max_iter,
+            "max_execution_time": self.max_execution_time,
             "step_callback": self.step_callback,
             "tools_handler": self.tools_handler,
             "function_calling_llm": self.function_calling_llm,
