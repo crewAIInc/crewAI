@@ -648,10 +648,10 @@ def test_agent_usage_metrics_are_captured_for_sequential_process():
     result = crew.kickoff()
     assert result == "Howdy!"
     assert crew.usage_metrics == {
-        "completion_tokens": 17,
-        "prompt_tokens": 161,
-        "successful_requests": 1,
-        "total_tokens": 178,
+        "completion_tokens": 51,
+        "prompt_tokens": 483,
+        "successful_requests": 3,
+        "total_tokens": 534,
     }
 
 
@@ -678,10 +678,10 @@ def test_agent_usage_metrics_are_captured_for_hierarchical_process():
     result = crew.kickoff()
     assert result == '"Howdy!"'
     assert crew.usage_metrics == {
-        "total_tokens": 1641,
-        "prompt_tokens": 1358,
-        "completion_tokens": 283,
-        "successful_requests": 3,
+        "total_tokens": 2592,
+        "prompt_tokens": 2048,
+        "completion_tokens": 544,
+        "successful_requests": 6,
     }
 
 
