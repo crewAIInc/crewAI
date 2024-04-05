@@ -35,7 +35,7 @@ Cutting-edge framework for orchestrating role-playing, autonomous AI agents. By 
             </li>
             <li>
                 <a href="./core-concepts/Memory">
-                    Crews
+                    Memory
                 </a>
             </li>
         </ul>
