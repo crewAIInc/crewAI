@@ -1,3 +1,5 @@
+import asyncio
+import importlib.resources
 import json
 import os
 import platform
@@ -40,25 +42,40 @@ class Telemetry:
     def __init__(self):
         self.ready = False
         try:
-            telemetry_endpoint = "http://telemetry.crewai.com:4318"
+            telemetry_endpoint = "https://telemetry.crewai.com:4319"
             self.resource = Resource(
                 attributes={SERVICE_NAME: "crewAI-telemetry"},
             )
             self.provider = TracerProvider(resource=self.resource)
-            processor = BatchSpanProcessor(
-                OTLPSpanExporter(endpoint=f"{telemetry_endpoint}/v1/traces", timeout=15)
+            cert_file = importlib.resources.files("crewai.telemetry").joinpath(
+                "STAR_crewai_com_bundle.pem"
             )
+            processor = BatchSpanProcessor(
+                OTLPSpanExporter(
+                    endpoint=f"{telemetry_endpoint}/v1/traces",
+                    certificate_file=cert_file,
+                    timeout=30,
+                )
+            )
+
             self.provider.add_span_processor(processor)
             self.ready = True
-        except Exception:
-            pass
+        except BaseException as e:
+            if isinstance(
+                e,
+                (SystemExit, KeyboardInterrupt, GeneratorExit, asyncio.CancelledError),
+            ):
+                raise  # Re-raise the exception to not interfere with system signals
+            self.ready = False
 
     def set_tracer(self):
         if self.ready:
-            try:
-                trace.set_tracer_provider(self.provider)
-            except Exception:
-                pass
+            provider = trace.get_tracer_provider()
+            if provider is None:
+                try:
+                    trace.set_tracer_provider(self.provider)
+                except Exception:
+                    self.ready = False
 
     def crew_creation(self, crew):
         """Records the creation of a crew."""
@@ -92,7 +109,9 @@ class Telemetry:
                                 "i18n": agent.i18n.language,
                                 "llm": json.dumps(self._safe_llm_attributes(agent.llm)),
                                 "delegation_enabled?": agent.allow_delegation,
-                                "tools_names": [tool.name for tool in agent.tools],
+                                "tools_names": [
+                                    tool.name.casefold() for tool in agent.tools
+                                ],
                             }
                             for agent in crew.agents
                         ]
@@ -107,7 +126,9 @@ class Telemetry:
                                 "id": str(task.id),
                                 "async_execution?": task.async_execution,
                                 "agent_role": task.agent.role if task.agent else "None",
-                                "tools_names": [tool.name for tool in task.tools],
+                                "tools_names": [
+                                    tool.name.casefold() for tool in task.tools
+                                ],
                             }
                             for task in crew.tasks
                         ]
@@ -195,7 +216,9 @@ class Telemetry:
                                 "i18n": agent.i18n.language,
                                 "llm": json.dumps(self._safe_llm_attributes(agent.llm)),
                                 "delegation_enabled?": agent.allow_delegation,
-                                "tools_names": [tool.name for tool in agent.tools],
+                                "tools_names": [
+                                    tool.name.casefold() for tool in agent.tools
+                                ],
                             }
                             for agent in crew.agents
                         ]
@@ -215,7 +238,9 @@ class Telemetry:
                                 "context": [task.description for task in task.context]
                                 if task.context
                                 else "None",
-                                "tools_names": [tool.name for tool in task.tools],
+                                "tools_names": [
+                                    tool.name.casefold() for tool in task.tools
+                                ],
                             }
                             for task in crew.tasks
                         ]
