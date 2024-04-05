@@ -894,3 +894,21 @@ def test_disabled_memory_using_contextual_memory():
     with patch.object(ContextualMemory, "build_context_for_task") as contextual_mem:
         crew.kickoff()
         contextual_mem.assert_not_called()
+
+
+@pytest.mark.vcr(filter_headers=["authorization"])
+def test_crew_log_file_output(tmp_path):
+    test_file = tmp_path / "logs.txt"
+    tasks = [
+        Task(
+            description="Say Hi",
+            expected_output="The word: Hi",
+            agent=researcher,
+        )
+    ]
+
+    test_message = {"agent": "Researcher", "task": "Say Hi"}
+
+    crew = Crew(agents=[researcher], tasks=tasks, output_log_file=str(test_file))
+    crew.kickoff()
+    assert test_file.exists()

@@ -25,7 +25,7 @@ from crewai.process import Process
 from crewai.task import Task
 from crewai.telemetry import Telemetry
 from crewai.tools.agent_tools import AgentTools
-from crewai.utilities import I18N, Logger, RPMController
+from crewai.utilities import I18N, Logger, RPMController, FileHandler
 
 
 class Crew(BaseModel):
@@ -55,6 +55,7 @@ class Crew(BaseModel):
     _execution_span: Any = PrivateAttr()
     _rpm_controller: RPMController = PrivateAttr()
     _logger: Logger = PrivateAttr()
+    _file_handler: FileHandler = PrivateAttr()
     _cache_handler: InstanceOf[CacheHandler] = PrivateAttr(default=CacheHandler())
     _short_term_memory: Optional[InstanceOf[ShortTermMemory]] = PrivateAttr()
     _long_term_memory: Optional[InstanceOf[LongTermMemory]] = PrivateAttr()
@@ -115,6 +116,10 @@ class Crew(BaseModel):
         default=None,
         description="Path to the language file to be used for the crew.",
     )
+    output_log_file: Optional[Union[bool, str]] = Field(
+        default=False,
+        description="output_log_file",
+    )
 
     @field_validator("id", mode="before")
     @classmethod
@@ -145,6 +150,8 @@ class Crew(BaseModel):
         """Set private attributes."""
         self._cache_handler = CacheHandler()
         self._logger = Logger(self.verbose)
+        if self.output_log_file:
+            self._file_handler = FileHandler(self.output_log_file)
         self._rpm_controller = RPMController(max_rpm=self.max_rpm, logger=self._logger)
         self._telemetry = Telemetry()
         self._telemetry.set_tracer()
@@ -278,12 +285,20 @@ class Crew(BaseModel):
                 "info", f"== Starting Task: {task.description}", color="bold_purple"
             )
 
+            if self.output_log_file:
+                self._file_handler.log(
+                    agent=role, task=task.description, status="started"
+                )
+
             output = task.execute(context=task_output)
             if not task.async_execution:
                 task_output = output
 
             role = task.agent.role if task.agent is not None else "None"
             self._logger.log("debug", f"== [{role}] Task output: {task_output}\n\n")
+
+            if self.output_log_file:
+                self._file_handler.log(agent=role, task=task_output, status="completed")
 
         self._finish_execution(task_output)
         return self._format_output(task_output)
@@ -306,11 +321,21 @@ class Crew(BaseModel):
             self._logger.log("debug", f"Working Agent: {manager.role}")
             self._logger.log("info", f"Starting Task: {task.description}")
 
+            if self.output_log_file:
+                self._file_handler.log(
+                    agent=manager.role, task=task.description, status="started"
+                )
+
             task_output = task.execute(
                 agent=manager, context=task_output, tools=manager.tools
             )
 
             self._logger.log("debug", f"[{manager.role}] Task output: {task_output}")
+
+            if self.output_log_file:
+                self._file_handler.log(
+                    agent=manager.role, task=task_output, status="completed"
+                )
 
         self._finish_execution(task_output)
         return self._format_output(task_output), manager._token_process.get_summary()
