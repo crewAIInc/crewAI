@@ -5,3 +5,4 @@ from .logger import Logger
 from .printer import Printer
 from .prompts import Prompts
 from .rpm_controller import RPMController
+from .fileHandler import FileHandler

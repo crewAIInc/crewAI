@@ -27,6 +27,8 @@ A crew in crewAI represents a collaborative group of agents working together to 
 | **Step Callback** *(optional)* | A function that is called after each step of every agent. This can be used to log the agent's actions or to perform other operations; it won't override the agent-specific `step_callback`. |
 | **Task Callback** *(optional)* | A function that is called after the completion of each task. Useful for monitoring or additional operations post-task execution. |
 | **Share Crew** *(optional)* | Whether you want to share the complete crew information and execution with the crewAI team to make the library better, and allow us to train models. |
+| **Output Log File** *(optional)* | Whether you want to have a file with the complete crew output and execution. You can set it using True and it will default to the folder you are currently and it will be called logs.txt or passing a string with the full path and name of the file. |
+
 
 !!! note "Crew Max RPM"
     The `max_rpm` attribute sets the maximum number of requests per minute the crew can perform to avoid rate limits and will override individual agents' `max_rpm` settings if you set it.
