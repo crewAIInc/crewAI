@@ -43,7 +43,10 @@ class ContextualMemory:
         formatted_results = "\n".join(
             [f"{result['metadata']['suggestions']}" for result in ltm_results]
         )
-        formatted_results = list(set(formatted_results))
+        # formatted_results = list(set(formatted_results))
+        # This fix is required to get the unique insights. Without this
+        # it is splitting at char level
+        formatted_results = list(set(formatted_results.split('\n')))
         return f"Historical Data:\n{formatted_results}" if ltm_results else ""
 
     def _fetch_entity_context(self, query) -> str:
