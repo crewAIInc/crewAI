@@ -67,19 +67,19 @@ class LTMSQLiteStorage:
                 color="red",
             )
 
-    def load(self, task_description: str) -> Dict[str, Any]:
+    def load(self, task_description: str, latest_n: int) -> Dict[str, Any]:
         """Queries the LTM table by task description with error handling."""
         try:
             with sqlite3.connect(self.db_path) as conn:
                 cursor = conn.cursor()
                 cursor.execute(
-                    """
-                SELECT metadata, datetime, score
-                FROM long_term_memories
-                WHERE task_description = ?
-                ORDER BY datetime DESC, score ASC
-                LIMIT 2
-              """,
+                    f"""
+                    SELECT metadata, datetime, score
+                    FROM long_term_memories
+                    WHERE task_description = ?
+                    ORDER BY datetime DESC, score ASC
+                    LIMIT {latest_n}
+                """,
                     (task_description,),
                 )
                 rows = cursor.fetchall()
