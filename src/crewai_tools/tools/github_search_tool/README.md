@@ -40,7 +40,7 @@ tool = GithubSearchTool(
 By default, the tool uses OpenAI for both embeddings and summarization. To customize the model, you can use a config dictionary as follows:
 
 ```python
-tool = GitHubSearchTool(
+tool = GithubSearchTool(
     config=dict(
         llm=dict(
             provider="ollama", # or google, openai, anthropic, llama2, ...
