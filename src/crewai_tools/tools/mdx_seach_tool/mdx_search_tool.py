@@ -34,6 +34,7 @@ class MDXSearchTool(RagTool):
             self.add(mdx)
             self.description = f"A tool that can be used to semantic search a query the {mdx} MDX's content."
             self.args_schema = FixedMDXSearchToolSchema
+            self._generate_description()
 
     def add(
         self,

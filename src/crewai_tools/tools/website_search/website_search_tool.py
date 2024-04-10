@@ -34,6 +34,7 @@ class WebsiteSearchTool(RagTool):
             self.add(website)
             self.description = f"A tool that can be used to semantic search a query from {website} website content."
             self.args_schema = FixedWebsiteSearchToolSchema
+            self._generate_description()
 
     def add(
         self,
