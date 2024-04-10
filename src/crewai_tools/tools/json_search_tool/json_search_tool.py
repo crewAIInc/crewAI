@@ -34,6 +34,7 @@ class JSONSearchTool(RagTool):
             self.add(json_path)
             self.description = f"A tool that can be used to semantic search a query the {json_path} JSON's content."
             self.args_schema = FixedJSONSearchToolSchema
+            self._generate_description()
 
     def add(
         self,

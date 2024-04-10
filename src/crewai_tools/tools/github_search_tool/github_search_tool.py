@@ -27,7 +27,7 @@ class GithubSearchToolSchema(FixedGithubSearchToolSchema):
 
 class GithubSearchTool(RagTool):
     name: str = "Search a github repo's content"
-    description: str = "A tool that can be used to semantic search a query from a github repo's content."
+    description: str = "A tool that can be used to semantic search a query from a github repo's content. This is not the GitHub API, but instead a tool that can provide semantic search capabilities."
     summarize: bool = False
     gh_token: str
     args_schema: Type[BaseModel] = GithubSearchToolSchema
@@ -37,8 +37,9 @@ class GithubSearchTool(RagTool):
         super().__init__(**kwargs)
         if github_repo is not None:
             self.add(repo=github_repo)
-            self.description = f"A tool that can be used to semantic search a query the {github_repo} github repo's content."
+            self.description = f"A tool that can be used to semantic search a query the {github_repo} github repo's content. This is not the GitHub API, but instead a tool that can provide semantic search capabilities."
             self.args_schema = FixedGithubSearchToolSchema
+            self._generate_description()
 
     def add(
         self,
