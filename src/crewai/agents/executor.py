@@ -81,9 +81,7 @@ class CrewAgentExecutor(AgentExecutor):
                 datetime=str(time.time()),
                 expected_output=self.task.expected_output,
                 metadata={
-                    "suggestions": "\n".join(
-                        [f"- {s}" for s in evaluation.suggestions]
-                    ),
+                    "suggestions": evaluation.suggestions,
                     "quality": evaluation.quality,
                 },
             )

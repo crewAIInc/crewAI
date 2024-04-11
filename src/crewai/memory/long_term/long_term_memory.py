@@ -28,5 +28,5 @@ class LongTermMemory(Memory):
             datetime=item.datetime,
         )
 
-    def search(self, task: str) -> Dict[str, Any]:
-        return self.storage.load(task)
+    def search(self, task: str, latest_n: int) -> Dict[str, Any]:
+        return self.storage.load(task, latest_n)

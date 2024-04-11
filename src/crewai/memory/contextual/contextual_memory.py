@@ -37,13 +37,18 @@ class ContextualMemory:
         Fetches historical data or insights from LTM that are relevant to the task's description and expected_output,
         formatted as bullet points.
         """
-        ltm_results = self.ltm.search(task)
+        ltm_results = self.ltm.search(task, latest_n=2)
         if not ltm_results:
             return None
-        formatted_results = "\n".join(
-            [f"{result['metadata']['suggestions']}" for result in ltm_results]
-        )
-        formatted_results = list(set(formatted_results))
+
+        formatted_results = [
+            suggestion
+            for result in ltm_results
+            for suggestion in result["metadata"]["suggestions"]
+        ]
+        formatted_results = list(dict.fromkeys(formatted_results))
+        formatted_results = "\n".join([f"- {result}" for result in formatted_results])
+
         return f"Historical Data:\n{formatted_results}" if ltm_results else ""
 
     def _fetch_entity_context(self, query) -> str:
