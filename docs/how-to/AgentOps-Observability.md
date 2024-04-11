@@ -14,9 +14,9 @@ Observability is a key aspect of developing and deploying conversational AI agen
 At a high level, AgentOps gives you the ability to monitor cost, token usage, latency, agent failures, session-wide statistics, and more. For more info, check out the [AgentOps Repo](https://github.com/AgentOps-AI/agentops).
 
 ### Overview
-AgentOps provides monitoring for agents in development and production. It provides a dashboard for monitoring agent performance, session replays, and custom reporting.
+AgentOps provides monitoring for agents in development and production. It provides a dashboard for tracking agent performance, session replays, and custom reporting.
 
-Additionally, AgentOps provides session drilldowns that allows users to view Crew agent interactions, LLM calls, and tool usage in real-time. This feature is useful for debugging and understanding how agents interact with users as well as other agents.
+Additionally, AgentOps provides session drilldowns for viewing Crew agent interactions, LLM calls, and tool usage in real-time. This feature is useful for debugging and understanding how agents interact with users as well as other agents.
 
 ![Agent Sessions Overview](..%2Fassets%2Fagentops-overview.png)
 ![Session Drilldowns](..%2Fassets%2Fagentops-session.png)
