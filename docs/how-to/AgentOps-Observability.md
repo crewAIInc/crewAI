@@ -4,7 +4,7 @@ description: Understanding and logging your agent performance with AgentOps.
 ---
 
 # Intro
-Observability is a key aspect of developing and deploying conversational AI agents. It allows developers to understand how their agents are performing, how users are interacting with their agents, and how their agents are responding to user inputs. AgentOps is a product independent of CrewAI that provides a comprehensive observability solution for agents. 
+Observability is a key aspect of developing and deploying conversational AI agents. It allows developers to understand how their agents are performing, how their agents are interacting with users, and how their agents use external tools and APIs. AgentOps is a product independent of CrewAI that provides a comprehensive observability solution for agents. 
 
 
 ## AgentOps
