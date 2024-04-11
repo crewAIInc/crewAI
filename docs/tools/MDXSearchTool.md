@@ -1,47 +1,48 @@
 # MDXSearchTool
 
 !!! note "Experimental"
-    We are still working on improving tools, so there might be unexpected behavior or changes in the future.
+    The MDXSearchTool is in continuous development. Features may be added or removed, and functionality could change unpredictably as we refine the tool.
 
 ## Description
-The MDX Search Tool, a key component of the `crewai_tools` package, is designed for advanced market data extraction, offering invaluable support to researchers and analysts requiring immediate market insights in the AI sector. With its ability to interface with various data sources and tools, it streamlines the process of acquiring, reading, and organizing market data efficiently.
+The MDX Search Tool is a component of the `crewai_tools` package aimed at facilitating advanced market data extraction. This tool is invaluable for researchers and analysts seeking quick access to market insights, especially within the AI sector. It simplifies the task of acquiring, interpreting, and organizing market data by interfacing with various data sources.
 
 ## Installation
-To utilize the MDX Search Tool, ensure the `crewai_tools` package is installed. If not already present, install it using the following command:
+Before using the MDX Search Tool, ensure the `crewai_tools` package is installed. If it is not, you can install it with the following command:
 
 ```shell
 pip install 'crewai[tools]'
 ```
 
-## Example
-Configuring and using the MDX Search Tool involves setting up environment variables and utilizing the tool within a crewAI project for market research. Here's a simple example:
+## Usage Example
+To use the MDX Search Tool, you must first set up the necessary environment variables. Then, integrate the tool into your crewAI project to begin your market research. Below is a basic example of how to do this:
 
 ```python
 from crewai_tools import MDXSearchTool
 
-# Initialize the tool so the agent can search any MDX content if it learns about during its execution
+# Initialize the tool to search any MDX content it learns about during execution
 tool = MDXSearchTool()
 
 # OR
 
-# Initialize the tool with a specific MDX file path for exclusive search within that document
+# Initialize the tool with a specific MDX file path for an exclusive search within that document
 tool = MDXSearchTool(mdx='path/to/your/document.mdx')
 ```
 
-## Arguments
-- mdx: **Optional** The MDX path for the search. Can be provided at initialization
+## Parameters
+- mdx: **Optional**. Specifies the MDX file path for the search. It can be provided during initialization.
 
-## Custom model and embeddings
+## Customization of Model and Embeddings
 
-By default, the tool uses OpenAI for both embeddings and summarization. To customize the model, you can use a config dictionary as follows:
+The tool defaults to using OpenAI for embeddings and summarization. For customization, utilize a configuration dictionary as shown below:
 
 ```python
 tool = MDXSearchTool(
     config=dict(
         llm=dict(
-            provider="ollama", # or google, openai, anthropic, llama2, ...
+            provider="ollama", # Options include google, openai, anthropic, llama2, etc.
             config=dict(
                 model="llama2",
+                # Optional parameters can be included here.
                 # temperature=0.5,
                 # top_p=1,
                 # stream=true,
@@ -52,6 +53,7 @@ tool = MDXSearchTool(
             config=dict(
                 model="models/embedding-001",
                 task_type="retrieval_document",
+                # Optional title for the embeddings can be added here.
                 # title="Embeddings",
             ),
         ),

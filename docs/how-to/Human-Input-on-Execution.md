@@ -1,21 +1,20 @@
 ---
 title: Human Input on Execution
-description: Comprehensive guide on integrating CrewAI with human input during execution in complex decision-making processes or when needed help during complex tasks. 
+description: Integrating CrewAI with human input during execution in complex decision-making processes and leveraging the full capabilities of the agent's attributes and tools.
 ---
 
 # Human Input in Agent Execution
 
-Human input plays a pivotal role in several agent execution scenarios, enabling agents to seek additional information or clarification when necessary. This capability is invaluable in complex decision-making processes or when agents need more details to complete a task effectively.
+Human input is critical in several agent execution scenarios, allowing agents to request additional information or clarification when necessary. This feature is especially useful in complex decision-making processes or when agents require more details to complete a task effectively.
 
 ## Using Human Input with CrewAI
 
-Incorporating human input with CrewAI is straightforward, enhancing the agent's ability to make informed decisions. While the documentation previously mentioned using a "LangChain Tool" and a specific "DuckDuckGoSearchRun" tool from `langchain_community.tools`, it's important to clarify that the integration of such tools should align with the actual capabilities and configurations defined within your `Agent` class setup.
+To integrate human input into agent execution, set the `human_input` flag in the task definition. When enabled, the agent prompts the user for input before delivering its final answer. This input can provide extra context, clarify ambiguities, or validate the agent's output.
 
 ### Example:
 
 ```shell
 pip install crewai
-pip install 'crewai[tools]'
 ```
 
 ```python
@@ -23,17 +22,13 @@ import os
 from crewai import Agent, Task, Crew
 from crewai_tools import SerperDevTool
 
-from langchain.agents import load_tools
-
 os.environ["SERPER_API_KEY"] = "Your Key" # serper.dev API key
 os.environ["OPENAI_API_KEY"] = "Your Key"
 
-
-# Loading Human Tools
-human_tools = load_tools(["human"])
+# Loading Tools
 search_tool = SerperDevTool()
 
-# Define your agents with roles, goals, and tools
+# Define your agents with roles, goals, tools, and additional attributes
 researcher = Agent(
   role='Senior Research Analyst',
   goal='Uncover cutting-edge developments in AI and data science',
@@ -44,7 +39,8 @@ researcher = Agent(
   ),
   verbose=True,
   allow_delegation=False,
-  tools=[search_tool]+human_tools # Passing human tools to the agent
+  tools=[search_tool],
+  max_rpm=100
 )
 writer = Agent(
   role='Tech Content Strategist',
@@ -54,7 +50,9 @@ writer = Agent(
     "With a deep understanding of the tech industry, you transform complex concepts into compelling narratives."
   ),
   verbose=True,
-  allow_delegation=True
+  allow_delegation=True,
+  tools=[search_tool],
+  cache=False, # Disable cache for this agent
 )
 
 # Create tasks for your agents
@@ -67,6 +65,7 @@ task1 = Task(
   ),
   expected_output='A comprehensive full report on the latest AI advancements in 2024, leave nothing out',
   agent=researcher,
+  human_input=True,
 )
 
 task2 = Task(

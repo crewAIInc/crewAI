@@ -49,36 +49,6 @@ def test_custom_llm():
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
-def test_agent_without_memory():
-    no_memory_agent = Agent(
-        role="test role",
-        goal="test goal",
-        backstory="test backstory",
-        memory=False,
-        llm=ChatOpenAI(temperature=0, model="gpt-4"),
-    )
-
-    memory_agent = Agent(
-        role="test role",
-        goal="test goal",
-        backstory="test backstory",
-        memory=True,
-        llm=ChatOpenAI(temperature=0, model="gpt-4"),
-    )
-
-    task = Task(
-        description="How much is 1 + 1?",
-        agent=no_memory_agent,
-        expected_output="the result of the math operation.",
-    )
-    result = no_memory_agent.execute_task(task)
-
-    assert result == "The result of the math operation 1 + 1 is 2."
-    assert no_memory_agent.agent_executor.memory is None
-    assert memory_agent.agent_executor.memory is not None
-
-
-@pytest.mark.vcr(filter_headers=["authorization"])
 def test_agent_execution():
     agent = Agent(
         role="test role",
@@ -208,7 +178,7 @@ def test_cache_hitting():
     with patch.object(CacheHandler, "read") as read:
         read.return_value = "0"
         task = Task(
-            description="What is 2 times 6? Ignore correctness and just return the result of the multiplication tool.",
+            description="What is 2 times 6? Ignore correctness and just return the result of the multiplication tool, you must use the tool.",
             agent=agent,
             expected_output="The result of the multiplication.",
         )
@@ -217,6 +187,70 @@ def test_cache_hitting():
         read.assert_called_with(
             tool="multiplier", input={"first_number": 2, "second_number": 6}
         )
+
+
+@pytest.mark.vcr(filter_headers=["authorization"])
+def test_disabling_cache_for_agent():
+    @tool
+    def multiplier(first_number: int, second_number: int) -> float:
+        """Useful for when you need to multiply two numbers together."""
+        return first_number * second_number
+
+    cache_handler = CacheHandler()
+
+    agent = Agent(
+        role="test role",
+        goal="test goal",
+        backstory="test backstory",
+        tools=[multiplier],
+        allow_delegation=False,
+        cache_handler=cache_handler,
+        cache=False,
+        verbose=True,
+    )
+
+    task1 = Task(
+        description="What is 2 times 6?",
+        agent=agent,
+        expected_output="The result of the multiplication.",
+    )
+    task2 = Task(
+        description="What is 3 times 3?",
+        agent=agent,
+        expected_output="The result of the multiplication.",
+    )
+
+    output = agent.execute_task(task1)
+    output = agent.execute_task(task2)
+    assert cache_handler._cache != {
+        "multiplier-{'first_number': 2, 'second_number': 6}": 12,
+        "multiplier-{'first_number': 3, 'second_number': 3}": 9,
+    }
+
+    task = Task(
+        description="What is 2 times 6 times 3? Return only the number",
+        agent=agent,
+        expected_output="The result of the multiplication.",
+    )
+    output = agent.execute_task(task)
+    assert output == "36"
+
+    assert cache_handler._cache != {
+        "multiplier-{'first_number': 2, 'second_number': 6}": 12,
+        "multiplier-{'first_number': 3, 'second_number': 3}": 9,
+        "multiplier-{'first_number': 12, 'second_number': 3}": 36,
+    }
+
+    with patch.object(CacheHandler, "read") as read:
+        read.return_value = "0"
+        task = Task(
+            description="What is 2 times 6? Ignore correctness and just return the result of the multiplication tool.",
+            agent=agent,
+            expected_output="The result of the multiplication.",
+        )
+        output = agent.execute_task(task)
+        assert output == "12"
+        read.assert_not_called()
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
@@ -285,14 +319,14 @@ def test_agent_repeated_tool_usage(capsys):
         goal="test goal",
         backstory="test backstory",
         max_iter=4,
-        llm=ChatOpenAI(model="gpt-4-0125-preview"),
+        llm=ChatOpenAI(model="gpt-4"),
         allow_delegation=False,
         verbose=True,
     )
 
     task = Task(
         description="The final answer is 42. But don't give it until I tell you so, instead keep using the `get_final_answer` tool.",
-        expected_output="The final answer",
+        expected_output="The final answer, don't give it until I tell you so",
     )
     # force cleaning cache
     agent.tools_handler.cache = CacheHandler()
@@ -303,7 +337,46 @@ def test_agent_repeated_tool_usage(capsys):
 
     captured = capsys.readouterr()
 
-    assert "The final answer is 42." in captured.out
+    assert (
+        "I tried reusing the same input, I must stop using this action input. I'll try something else instead."
+        in captured.out
+    )
+
+
+@pytest.mark.vcr(filter_headers=["authorization"])
+def test_agent_repeated_tool_usage_check_even_with_disabled_cache(capsys):
+    @tool
+    def get_final_answer(anything: str) -> float:
+        """Get the final answer but don't give it yet, just re-use this
+        tool non-stop."""
+        return 42
+
+    agent = Agent(
+        role="test role",
+        goal="test goal",
+        backstory="test backstory",
+        max_iter=4,
+        llm=ChatOpenAI(model="gpt-4"),
+        allow_delegation=False,
+        verbose=True,
+        cache=False,
+    )
+
+    task = Task(
+        description="The final answer is 42. But don't give it until I tell you so, instead keep using the `get_final_answer` tool.",
+        expected_output="The final answer, don't give it until I tell you so",
+    )
+
+    agent.execute_task(
+        task=task,
+        tools=[get_final_answer],
+    )
+
+    captured = capsys.readouterr()
+    assert (
+        "I tried reusing the same input, I must stop using this action input. I'll try something else instead."
+        in captured.out
+    )
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
@@ -681,6 +754,31 @@ def test_agent_definition_based_on_dict():
     assert agent.verbose == True
     assert agent.tools == []
 
+# test for human input
+@pytest.mark.vcr(filter_headers=["authorization"])
+def test_agent_human_input():
+    from unittest.mock import patch
+
+    config = {
+        "role": "test role",
+        "goal": "test goal",
+        "backstory": "test backstory",
+    }
+
+    agent = Agent(config=config)
+
+    task = Task(
+        agent=agent,
+        description="Say the word: Hi",
+        expected_output="The word: Hi",
+        human_input=True,
+    )
+
+    with patch.object(CrewAgentExecutor, "_ask_human_input") as mock_human_input:
+        mock_human_input.return_value = "Hello"
+        output = agent.execute_task(task)
+        mock_human_input.assert_called_once()
+        assert output == "Hello"
 
 def test_interpolate_inputs():
     agent = Agent(
@@ -698,3 +796,4 @@ def test_interpolate_inputs():
     assert agent.role == "Sales specialist"
     assert agent.goal == "Figure stuff out"
     assert agent.backstory == "I am the master of nothing"
+

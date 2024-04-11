@@ -13,7 +13,23 @@ from crewai.utilities.pydantic_schema_parser import PydanticSchemaParser
 
 
 class Task(BaseModel):
-    """Class that represent a task to be executed."""
+    """Class that represents a task to be executed.
+
+    Each task must have a description, an expected output and an agent responsible for execution.
+
+    Attributes:
+        agent: Agent responsible for task execution. Represents entity performing task.
+        async_execution: Boolean flag indicating asynchronous task execution.
+        callback: Function/object executed post task completion for additional actions.
+        config: Dictionary containing task-specific configuration parameters.
+        context: List of Task instances providing task context or input data.
+        description: Descriptive text detailing task's purpose and execution.
+        expected_output: Clear definition of expected task outcome.
+        output_file: File path for storing task output.
+        output_json: Pydantic model for structuring JSON output.
+        output_pydantic: Pydantic model for task output.
+        tools: List of tools/resources limited for task execution.
+    """
 
     class Config:
         arbitrary_types_allowed = True
@@ -24,6 +40,7 @@ class Task(BaseModel):
     delegations: int = 0
     i18n: I18N = I18N()
     thread: threading.Thread = None
+    prompt_context: Optional[str] = None
     description: str = Field(description="Description of the actual task.")
     expected_output: str = Field(
         description="Clear definition of expected output for the task."
@@ -69,6 +86,10 @@ class Task(BaseModel):
         default_factory=uuid.uuid4,
         frozen=True,
         description="Unique identifier for the object, not set by user.",
+    )
+    human_input: Optional[bool] = Field(
+        description="Whether the task should have a human review the final answer of the agent",
+        default=False,
     )
 
     _original_description: str | None = None
@@ -140,6 +161,7 @@ class Task(BaseModel):
                     context.append(task.output.raw_output)
             context = "\n".join(context)
 
+        self.prompt_context = context
         tools = tools or self.tools
 
         if self.async_execution:
@@ -215,6 +237,16 @@ class Task(BaseModel):
 
         if self.output_pydantic or self.output_json:
             model = self.output_pydantic or self.output_json
+
+            # try to convert task_output directly to pydantic/json
+            try:
+                exported_result = model.model_validate_json(result)
+                if self.output_json:
+                    return exported_result.model_dump()
+                return exported_result
+            except Exception:
+                pass
+
             llm = self.agent.function_calling_llm or self.agent.llm
 
             if not self._is_gpt(llm):
