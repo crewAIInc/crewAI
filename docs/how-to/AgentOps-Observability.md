@@ -16,7 +16,7 @@ At a high level, AgentOps gives you the ability to monitor cost, token usage, la
 ### Overview
 AgentOps provides monitoring for agents in development and production. It provides a dashboard for monitoring agent performance, session replays, and custom reporting.
 
-Additionally, AgentOps provides session drilldowns that allows users to view the agent's interactions with users in real-time. This feature is useful for debugging and understanding how the agent interacts with users.
+Additionally, AgentOps provides session drilldowns that allows users to view Crew agent interactions, LLM calls, and tool usage in real-time. This feature is useful for debugging and understanding how agents interact with users as well as other agents.
 
 ![Agent Sessions Overview](..%2Fassets%2Fagentops-overview.png)
 ![Session Drilldowns](..%2Fassets%2Fagentops-session.png)
