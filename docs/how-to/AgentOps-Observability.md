@@ -18,21 +18,21 @@ AgentOps provides monitoring for agents in development and production. It provid
 
 Additionally, AgentOps provides session drilldowns for viewing Crew agent interactions, LLM calls, and tool usage in real-time. This feature is useful for debugging and understanding how agents interact with users as well as other agents.
 
-![Agent Sessions Overview](..%2Fassets%2Fagentops-overview.png)
-![Session Drilldowns](..%2Fassets%2Fagentops-session.png)
-![Agent Replays](..%2Fassets%2Fagentops-replay.png)
+![Overview of a select series of agent session runs](..%2Fassets%2Fagentops-overview.png)
+![Overview of session drilldowns for examining agent runs](..%2Fassets%2Fagentops-session.png)
+![Viewing a step-by-step agent replay execution graph](..%2Fassets%2Fagentops-replay.png)
 
 ### Features
-- LLM Cost Management and Tracking
-- Replay Analytics
-- Recursive Thought Detection
-- Custom Reporting
-- Analytics Dashboard
-- Public Model Testing
-- Custom Tests
-- Time Travel Debugging
-- Compliance and Security
-- Prompt Injection Detection
+- **LLM Cost Management and Tracking**: Track spend with foundation model providers
+- **Replay Analytics**: Watch step-by-step agent execution graphs
+- **Recursive Thought Detection**: Identify when agents fall into infinite loops
+- **Custom Reporting**: Create custom analytics on agent performance
+- **Analytics Dashboard**: Monitor high level statistics about agents in development and production
+- **Public Model Testing**: Test your agents against benchmarks and leaderboards
+- **Custom Tests**: Run your agents against domain specific tests
+- **Time Travel Debugging**: Restart your sessions from checkpoints
+- **Compliance and Security**: Create audit logs and detect potential threats such as profanity and PII leaks
+- **Prompt Injection Detection**: Identify potential code injection and secret leaks
 
 ### Using AgentOps
 
@@ -72,7 +72,10 @@ This will initiate an AgentOps session as well as automatically track Crew agent
 
 
 ### Further Information
-To implement more features and better observability, please see the [AgentOps Repo](https://github.com/AgentOps-AI/agentops).
+
+To get started, create an [AgentOps account](https://agentops.ai/?=crew).
+
+For feature requests or bug reports, please reach out to the AgentOps team on the [AgentOps Repo](https://github.com/AgentOps-AI/agentops).
 
 #### Extra links
 
