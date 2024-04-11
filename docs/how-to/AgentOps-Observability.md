@@ -4,12 +4,12 @@ description: Understanding and logging your agent performance with AgentOps.
 ---
 
 # Intro
-Observability is a key aspect of developing and deploying conversational AI agents. It allows developers to understand how the agent is performing, how users are interacting with the agent, and how the agent is responding to user inputs. AgentOps is a product independent of CrewAI that provides a comprehensive observability solution for agents. 
+Observability is a key aspect of developing and deploying conversational AI agents. It allows developers to understand how their agents are performing, how users are interacting with their agents, and how their agents are responding to user inputs. AgentOps is a product independent of CrewAI that provides a comprehensive observability solution for agents. 
 
 
 ## AgentOps
 
-[AgentOps](https://agentops.ai) provides session replays, metrics, and monitoring for agents.
+[AgentOps](https://agentops.ai/?=crew) provides session replays, metrics, and monitoring for agents.
 [AgentOps Repo](https://github.com/AgentOps-AI/agentops)
 
 At a high level, AgentOps gives you the ability to monitor cost, token usage, latency, agent failures, session-wide statistics, and more.
@@ -64,7 +64,7 @@ import agentops
 agentops.init()
 ```
 
-This will initiate an AgentOps session as well as automatically track Crew agents. For futher info on how to outfit more complex agentic systems, check out the [AgentOps documentation](https://docs.agentops.ai) or join the [Discord](https://discord.gg/j4f3KbeH).
+This will initiate an AgentOps session as well as automatically track Crew agents. For further info on how to outfit more complex agentic systems, check out the [AgentOps documentation](https://docs.agentops.ai) or join the [Discord](https://discord.gg/j4f3KbeH).
 
 ### Crew + AgentOps Examples
 - [Job Posting](https://github.com/joaomdmoura/crewAI-examples/tree/main/job-posting)
@@ -74,3 +74,13 @@ This will initiate an AgentOps session as well as automatically track Crew agent
 
 ### Further Information
 To implement more features and better observability, please see the [AgentOps Repo](https://github.com/AgentOps-AI/agentops).
+
+#### Extra links
+
+<a href="https://twitter.com/agentopsai/">🐦 Twitter</a>
+<span>&nbsp;&nbsp;•&nbsp;&nbsp;</span>
+<a href="https://discord.gg/JHPt4C7r">📢 Discord</a>
+<span>&nbsp;&nbsp;•&nbsp;&nbsp;</span>
+<a href="https://app.agentops.ai/?=crew">🖇️ AgentOps Dashboard</a>
+<span>&nbsp;&nbsp;•&nbsp;&nbsp;</span>
+<a href="https://docs.agentops.ai/introduction">📙 Documentation</a>
