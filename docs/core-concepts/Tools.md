@@ -107,7 +107,7 @@ Here is a list of the available tools and their descriptions:
 | **DirectoryReadTool**       | Facilitates reading and processing of directory structures and their contents.                |
 | **FileReadTool**            | Enables reading and extracting data from files, supporting various file formats.              |
 | **GithubSearchTool**        | A RAG tool for searching within GitHub repositories, useful for code and documentation search.|
-| **SeperDevTool**            | A specialized tool for development purposes, with specific functionalities under development. |
+| **SerperDevTool**            | A specialized tool for development purposes, with specific functionalities under development. |
 | **TXTSearchTool**           | A RAG tool focused on searching within text (.txt) files, suitable for unstructured data.     |
 | **JSONSearchTool**          | A RAG tool designed for searching within JSON files, catering to structured data handling.     |
 | **MDXSearchTool**           | A RAG tool tailored for searching within Markdown (MDX) files, useful for documentation.      |
