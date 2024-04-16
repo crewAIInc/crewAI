@@ -97,10 +97,10 @@ OPENAI_API_KEY=NA
 ```
 
 #### LM Studio
+Launch [LM Studio](https://lmstudio.ai) and go to the Server tab. Then select a model from the dropdown menu then wait for it to load. Once it's loaded, click the green Start Server button and use the URL, port, and API key that's shown (you can modify them). Below is an example of the default settings as of LM Studio 0.2.19:
 ```sh
-OPENAI_API_BASE="http://localhost:8000/v1"
-OPENAI_MODEL_NAME=NA
-OPENAI_API_KEY=NA
+OPENAI_API_BASE="http://localhost:1234/v1"
+OPENAI_API_KEY="lm-studio"
 ```
 
 #### Mistral API
