@@ -312,6 +312,7 @@ class Crew(BaseModel):
         i18n = I18N(language=self.language, language_file=self.language_file)
         try:
             manager = self.manager_agent
+            manager.allow_delegation = True # Forcing Allow delegation to the manager
         except: 
             manager = Agent(
                 role=i18n.retrieve("hierarchical_manager_agent", "role"),
