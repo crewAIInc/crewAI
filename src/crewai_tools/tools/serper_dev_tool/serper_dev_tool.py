@@ -7,12 +7,12 @@ from pydantic.v1 import BaseModel, Field
 from crewai_tools.tools.base_tool import BaseTool
 
 class SerperDevToolSchema(BaseModel):
-	"""Input for TXTSearchTool."""
+	"""Input for SerperDevTool."""
 	search_query: str = Field(..., description="Mandatory search query you want to use to search the internet")
 
 class SerperDevTool(BaseTool):
 	name: str = "Search the internet"
-	description: str = "A tool that can be used to semantic search a query from a txt's content."
+	description: str = "A tool that can be used to search the internet."
 	args_schema: Type[BaseModel] = SerperDevToolSchema
 	search_url: str = "https://google.serper.dev/search"
 	n_results: int = None
