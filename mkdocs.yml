@@ -135,7 +135,7 @@ nav:
     - Connecting to any LLM: 'how-to/LLM-Connections.md'
     - Customizing Agents: 'how-to/Customizing-Agents.md'
     - Human Input on Execution: 'how-to/Human-Input-on-Execution.md'
-    - Agent Observability using AgentOps: 'how-to/AgentOps-Observability.md'
+    - Agent Monitoring with AgentOps: 'how-to/AgentOps-Observability.md'
   - Tools Docs:
     - Google Serper Search: 'tools/SerperDevTool.md'
     - Scrape Website: 'tools/ScrapeWebsiteTool.md'
