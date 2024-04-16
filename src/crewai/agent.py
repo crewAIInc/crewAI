@@ -161,10 +161,14 @@ class Agent(BaseModel):
         """set agent executor is set."""
         if hasattr(self.llm, "model_name"):
             token_handler = TokenCalcHandler(self.llm.model_name, self._token_process)
-            if isinstance(self.llm.callbacks, list):
+
+            # Ensure self.llm.callbacks is a list
+            if not isinstance(self.llm.callbacks, list):
+                self.llm.callbacks = []
+
+            # Check if an instance of TokenCalcHandler already exists in the list
+            if not any(isinstance(handler, TokenCalcHandler) for handler in self.llm.callbacks):
                 self.llm.callbacks.append(token_handler)
-            else:
-                self.llm.callbacks = [token_handler]
 
         if not self.agent_executor:
             if not self.cache_handler:
