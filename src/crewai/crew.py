@@ -86,6 +86,9 @@ class Crew(BaseModel):
     manager_llm: Optional[Any] = Field(
         description="Language model that will run the agent.", default=None
     )
+    manager_agent: Optional[Any] = Field(
+        description="Custom agent that will be used as manager.", default=None
+    )
     manager_callbacks: Optional[List[InstanceOf[BaseCallbackHandler]]] = Field(
         default=None,
         description="A list of callback handlers to be executed by the manager agent when hierarchical process is used",
@@ -307,14 +310,18 @@ class Crew(BaseModel):
         """Creates and assigns a manager agent to make sure the crew completes the tasks."""
 
         i18n = I18N(language=self.language, language_file=self.language_file)
-        manager = Agent(
-            role=i18n.retrieve("hierarchical_manager_agent", "role"),
-            goal=i18n.retrieve("hierarchical_manager_agent", "goal"),
-            backstory=i18n.retrieve("hierarchical_manager_agent", "backstory"),
-            tools=AgentTools(agents=self.agents).tools(),
-            llm=self.manager_llm,
-            verbose=True,
-        )
+        try:
+            manager = self.manager_agent
+            manager.allow_delegation = True # Forcing Allow delegation to the manager
+        except: 
+            manager = Agent(
+                role=i18n.retrieve("hierarchical_manager_agent", "role"),
+                goal=i18n.retrieve("hierarchical_manager_agent", "goal"),
+                backstory=i18n.retrieve("hierarchical_manager_agent", "backstory"),
+                tools=AgentTools(agents=self.agents).tools(),
+                llm=self.manager_llm,
+                verbose=True,
+            ) 
 
         task_output = ""
         for task in self.tasks:
