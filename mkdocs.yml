@@ -128,6 +128,7 @@ nav:
     - Collaboration: 'core-concepts/Collaboration.md'
     - Memory: 'core-concepts/Memory.md'
   - How to Guides:
+    - Installing CrewAI: 'how-to/Installing-CrewAI.md'
     - Getting Started: 'how-to/Creating-a-Crew-and-kick-it-off.md'
     - Create Custom Tools: 'how-to/Create-Custom-Tools.md'
     - Using Sequential Process: 'how-to/Sequential.md'
@@ -135,7 +136,7 @@ nav:
     - Connecting to any LLM: 'how-to/LLM-Connections.md'
     - Customizing Agents: 'how-to/Customizing-Agents.md'
     - Human Input on Execution: 'how-to/Human-Input-on-Execution.md'
-    - Agent Observability using AgentOps: 'how-to/AgentOps-Observability.md'
+    - Agent Monitoring with AgentOps: 'how-to/AgentOps-Observability.md'
   - Tools Docs:
     - Google Serper Search: 'tools/SerperDevTool.md'
     - Scrape Website: 'tools/ScrapeWebsiteTool.md'

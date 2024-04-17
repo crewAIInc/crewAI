@@ -44,6 +44,11 @@ Cutting-edge framework for orchestrating role-playing, autonomous AI agents. By 
         <h2>How-To Guides</h2>
         <ul>
             <li>
+                <a href="./how-to/Installing-CrewAI">
+                    Installing crewAI
+                </a>
+            </li>
+            <li>
                 <a href="./how-to/Creating-a-Crew-and-kick-it-off">
                     Getting Started
                 </a>
@@ -79,8 +84,8 @@ Cutting-edge framework for orchestrating role-playing, autonomous AI agents. By 
                 </a>
             </li>
             <li>
-                <a href="./how-to/AgentOps-Observability.md">
-                    Agent Observability using AgentOps
+                <a href="./how-to/AgentOps-Observability">
+                    Agent Monitoring with AgentOps
                 </a>
             </li>
         </ul>

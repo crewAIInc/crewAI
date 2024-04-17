@@ -25,7 +25,7 @@ from crewai.process import Process
 from crewai.task import Task
 from crewai.telemetry import Telemetry
 from crewai.tools.agent_tools import AgentTools
-from crewai.utilities import I18N, Logger, RPMController, FileHandler
+from crewai.utilities import I18N, FileHandler, Logger, RPMController
 try:
   import agentops
 except ImportError:
@@ -89,6 +89,9 @@ class Crew(BaseModel):
     )
     manager_llm: Optional[Any] = Field(
         description="Language model that will run the agent.", default=None
+    )
+    manager_agent: Optional[Any] = Field(
+        description="Custom agent that will be used as manager.", default=None
     )
     manager_callbacks: Optional[List[InstanceOf[BaseCallbackHandler]]] = Field(
         default=None,
@@ -174,7 +177,9 @@ class Crew(BaseModel):
     @model_validator(mode="after")
     def check_manager_llm(self):
         """Validates that the language model is set when using hierarchical process."""
-        if self.process == Process.hierarchical and not self.manager_llm:
+        if self.process == Process.hierarchical and (
+            not self.manager_llm and not self.manager_agent
+        ):
             raise PydanticCustomError(
                 "missing_manager_llm",
                 "Attribute `manager_llm` is required when using hierarchical process.",
@@ -311,14 +316,20 @@ class Crew(BaseModel):
         """Creates and assigns a manager agent to make sure the crew completes the tasks."""
 
         i18n = I18N(language=self.language, language_file=self.language_file)
-        manager = Agent(
-            role=i18n.retrieve("hierarchical_manager_agent", "role"),
-            goal=i18n.retrieve("hierarchical_manager_agent", "goal"),
-            backstory=i18n.retrieve("hierarchical_manager_agent", "backstory"),
-            tools=AgentTools(agents=self.agents).tools(),
-            llm=self.manager_llm,
-            verbose=True,
-        )
+        try:
+            self.manager_agent.allow_delegation = (
+                True  # Forcing Allow delegation to the manager
+            )
+            manager = self.manager_agent
+        except:
+            manager = Agent(
+                role=i18n.retrieve("hierarchical_manager_agent", "role"),
+                goal=i18n.retrieve("hierarchical_manager_agent", "goal"),
+                backstory=i18n.retrieve("hierarchical_manager_agent", "backstory"),
+                tools=AgentTools(agents=self.agents).tools(),
+                llm=self.manager_llm,
+                verbose=True,
+            )
 
         task_output = ""
         for task in self.tasks:
@@ -347,7 +358,7 @@ class Crew(BaseModel):
     def _set_tasks_callbacks(self) -> str:
         """Sets callback for every task suing task_callback"""
         for task in self.tasks:
-            task.callback = self.task_callback
+            self.task_callback = task.callback
 
     def _interpolate_inputs(self, inputs: Dict[str, Any]) -> str:
         """Interpolates the inputs in the tasks and agents."""
