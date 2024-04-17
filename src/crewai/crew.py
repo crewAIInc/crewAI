@@ -26,10 +26,7 @@ from crewai.task import Task
 from crewai.telemetry import Telemetry
 from crewai.tools.agent_tools import AgentTools
 from crewai.utilities import I18N, FileHandler, Logger, RPMController
-try:
-  import agentops
-except ImportError:
-  agentops = None
+import agentops
 
 
 class Crew(BaseModel):
@@ -378,8 +375,7 @@ class Crew(BaseModel):
     def _finish_execution(self, output) -> None:
         if self.max_rpm:
             self._rpm_controller.stop_rpm_counter()
-        if agentops:
-            agentops.end_session(end_state="Success", end_state_reason="Finished Execution")
+        agentops.end_session(end_state="Success", end_state_reason="Finished Execution")
         self._telemetry.end_crew(self, output)
 
     def __repr__(self):

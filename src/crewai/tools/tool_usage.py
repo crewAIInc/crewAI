@@ -100,7 +100,7 @@ class ToolUsage:
         tool: BaseTool,
         calling: Union[ToolCalling, InstructorToolCalling],
     ) -> None:
-        tool_event = agentops.ToolEvent(name=calling.tool_name) if agentops else None
+        tool_event = agentops.ToolEvent(name=calling.tool_name)
         if self._check_tool_repeated_usage(calling=calling):
             try:
                 result = self._i18n.errors("task_repeated_usage").format(
@@ -164,8 +164,7 @@ class ToolUsage:
                     self._printer.print(content=f"\n\n{error_message}\n", color="red")
                     return error
                 self.task.increment_tools_errors()
-                if agentops:
-                  agentops.record(agentops.ErrorEvent(details=e, trigger_event=tool_event))
+                agentops.record(agentops.ErrorEvent(details=e, trigger_event=tool_event))
                 return self.use(calling=calling, tool_string=tool_string)
 
             if self.tools_handler:
@@ -186,8 +185,7 @@ class ToolUsage:
                 )
 
         self._printer.print(content=f"\n\n{result}\n", color="purple")
-        if agentops:
-          agentops.record(tool_event)
+        agentops.record(tool_event)
         self._telemetry.tool_usage(
             llm=self.function_calling_llm,
             tool_name=tool.name,
