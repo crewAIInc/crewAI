@@ -24,13 +24,7 @@ from crewai.agents import CacheHandler, CrewAgentExecutor, CrewAgentParser, Tool
 from crewai.memory.contextual.contextual_memory import ContextualMemory
 from crewai.utilities import I18N, Logger, Prompts, RPMController
 from crewai.utilities.token_counter_callback import TokenCalcHandler, TokenProcess
-try:
-    from agentops.agent import track_agent
-except ImportError:
-    def track_agent():
-        def noop(f):
-            return f
-        return noop
+from agentops.agent import track_agent
 
 
 @track_agent()

@@ -9,10 +9,7 @@ from crewai.agents.tools_handler import ToolsHandler
 from crewai.telemetry import Telemetry
 from crewai.tools.tool_calling import InstructorToolCalling, ToolCalling
 from crewai.utilities import I18N, Converter, ConverterError, Printer
-try:
-  import agentops
-except ImportError:
-  agentops = None
+import agentops
 
 OPENAI_BIGGER_MODELS = ["gpt-4"]
 
