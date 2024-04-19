@@ -1,8 +1,5 @@
 # PDFSearchTool
 
-!!! note "Depend on OpenAI"
-    All RAG tools at the moment can only use openAI to generate embeddings, we are working on adding support for other providers.
-
 !!! note "Experimental"
     We are still working on improving tools, so there might be unexpected behavior or changes in the future.
 
@@ -33,3 +30,31 @@ tool = PDFSearchTool(pdf='path/to/your/document.pdf')
 
 ## Arguments
 - `pdf`: **Optinal** The PDF path for the search. Can be provided at initialization or within the `run` method's arguments. If provided at initialization, the tool confines its search to the specified document.
+
+## Custom model and embeddings
+
+By default, the tool uses OpenAI for both embeddings and summarization. To customize the model, you can use a config dictionary as follows:
+
+```python
+tool = PDFSearchTool(
+    config=dict(
+        llm=dict(
+            provider="ollama", # or google, openai, anthropic, llama2, ...
+            config=dict(
+                model="llama2",
+                # temperature=0.5,
+                # top_p=1,
+                # stream=true,
+            ),
+        ),
+        embedder=dict(
+            provider="google",
+            config=dict(
+                model="models/embedding-001",
+                task_type="retrieval_document",
+                # title="Embeddings",
+            ),
+        ),
+    )
+)
+```

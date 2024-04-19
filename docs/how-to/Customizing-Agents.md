@@ -4,7 +4,7 @@ description: A comprehensive guide to tailoring agents for specific roles, tasks
 ---
 
 ## Customizable Attributes
-Crafting an efficient CrewAI team hinges on the ability to tailor your AI agents dynamically to meet the unique requirements of any project. This section covers the foundational attributes you can customize.
+Crafting an efficient CrewAI team hinges on the ability to dynamically tailor your AI agents to meet the unique requirements of any project. This section covers the foundational attributes you can customize.
 
 ### Key Attributes for Customization
 - **Role**: Specifies the agent's job within the crew, such as 'Analyst' or 'Customer Service Rep'.
@@ -16,24 +16,20 @@ Crafting an efficient CrewAI team hinges on the ability to tailor your AI agents
 Beyond the basic attributes, CrewAI allows for deeper customization to enhance an agent's behavior and capabilities significantly.
 
 ### Language Model Customization
-Agents can be customized with specific language models (`llm`) and function-calling language models (`function_calling_llm`), offering advanced control over their processing and decision-making abilities.
-By default crewAI agents are ReAct agents, but by setting the `function_calling_llm` you can turn them into a function calling agents.
-
-### Enabling Memory for Agents
-CrewAI supports memory for agents, enabling them to remember past interactions. This feature is critical for tasks requiring awareness of previous contexts or decisions.
+Agents can be customized with specific language models (`llm`) and function-calling language models (`function_calling_llm`), offering advanced control over their processing and decision-making abilities. It's important to note that setting the `function_calling_llm` allows for overriding the default crew function-calling language model, providing a greater degree of customization.
 
 ## Performance and Debugging Settings
 Adjusting an agent's performance and monitoring its operations are crucial for efficient task execution.
 
 ### Verbose Mode and RPM Limit
 - **Verbose Mode**: Enables detailed logging of an agent's actions, useful for debugging and optimization. Specifically, it provides insights into agent execution processes, aiding in the optimization of performance.
-- **RPM Limit**: Sets the maximum number of requests per minute (`max_rpm`), controlling the agent's query frequency to external services.
+- **RPM Limit**: Sets the maximum number of requests per minute (`max_rpm`). This attribute is optional and can be set to `None` for no limit, allowing for unlimited queries to external services if needed.
 
 ### Maximum Iterations for Task Execution
-The `max_iter` attribute allows users to define the maximum number of iterations an agent can perform for a single task, preventing infinite loops or excessively long executions. The default value is set to 15, providing a balance between thoroughness and efficiency. Once the agent approaches this number it will try it's best to give a good answer.
+The `max_iter` attribute allows users to define the maximum number of iterations an agent can perform for a single task, preventing infinite loops or excessively long executions. The default value is set to 15, providing a balance between thoroughness and efficiency. Once the agent approaches this number, it will try its best to give a good answer.
 
 ## Customizing Agents and Tools
-Agents are customized by defining their attributes and tools during initialization. Tools are critical for an agent's functionality, enabling them to perform specialized tasks. In this example we will use the crewAI tools package to create a tool for a research analyst agent.
+Agents are customized by defining their attributes and tools during initialization. Tools are critical for an agent's functionality, enabling them to perform specialized tasks. The `tools` attribute should be an array of tools the agent can utilize, and it's initialized as an empty list by default. Tools can be added or modified post-agent initialization to adapt to new requirements.
 
 ```shell
 pip install 'crewai[tools]'
@@ -58,16 +54,16 @@ agent = Agent(
   goal='Provide up-to-date market analysis',
   backstory='An expert analyst with a keen eye for market trends.',
   tools=[search_tool],
-  memory=True,
+  memory=True, # Enable memory
   verbose=True,
-  max_rpm=10, # Optional: Limit requests to 10 per minute, preventing API abuse
-  max_iter=5, # Optional: Limit task iterations to 5 before the agent tries to give its best answer
+  max_rpm=None, # No limit on requests per minute
+  max_iter=15, # Default value for maximum iterations
   allow_delegation=False
 )
 ```
 
 ## Delegation and Autonomy
-Controlling an agent's ability to delegate tasks or ask questions is vital for tailoring its autonomy and collaborative dynamics within the crewAI framework. By default, the `allow_delegation` attribute is set to `True`, enabling agents to seek assistance or delegate tasks as needed. This default behavior promotes collaborative problem-solving and efficiency within the crewAI ecosystem.
+Controlling an agent's ability to delegate tasks or ask questions is vital for tailoring its autonomy and collaborative dynamics within the CrewAI framework. By default, the `allow_delegation` attribute is set to `True`, enabling agents to seek assistance or delegate tasks as needed. This default behavior promotes collaborative problem-solving and efficiency within the CrewAI ecosystem. If needed, delegation can be disabled to suit specific operational requirements.
 
 ### Example: Disabling Delegation for an Agent
 ```python
@@ -75,7 +71,7 @@ agent = Agent(
   role='Content Writer',
   goal='Write engaging content on market trends',
   backstory='A seasoned writer with expertise in market analysis.',
-  allow_delegation=False
+  allow_delegation=False # Disabling delegation
 )
 ```
 
