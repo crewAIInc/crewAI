@@ -82,7 +82,7 @@ researcher = Agent(
   verbose=True,
   allow_delegation=False,
   tools=[search_tool]
-  # You can pass an optional llm attribute specifying what mode you wanna use.
+  # You can pass an optional llm attribute specifying what model you wanna use.
   # It can be a local model through Ollama / LM Studio or a remote
   # model like OpenAI, Mistral, Antrophic or others (https://docs.crewai.com/how-to/LLM-Connections/)
   #
@@ -253,6 +253,7 @@ CrewAI uses anonymous telemetry to collect usage data with the main purpose of h
 There is NO data being collected on the prompts, tasks descriptions agents backstories or goals nor tools usage, no API calls, nor responses nor any data that is being processed by the agents, nor any secrets and env vars.
 
 Data collected includes:
+
 - Version of crewAI
   - So we can understand how many users are using the latest version
 - Version of Python
