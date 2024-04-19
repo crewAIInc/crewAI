@@ -1,12 +1,12 @@
 import os
 from crewai_tools import BaseTool
-from typing import Union
+from typing import Union, Optional
 
 class BrowserbaseLoadTool(BaseTool):
     name: str = "Browserbase web load tool"
     description: str = "Load webpages in a headless browser using Browserbase and return the contents"
 
-    def __init__(self, api_key: str = os.environ["BROWSERBASE_KEY"], text_content: bool = False):
+    def __init__(self, api_key: Optional[str] = None, text_content: bool = False):
         try:
             from browserbase import Browserbase
         except ImportError:

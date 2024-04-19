@@ -6,7 +6,7 @@
 
 ## Installation
 
-- Get an API key from [browserbase.com](https://browserbase.com) and set it in environment variables (`BROWSERBASE_KEY`).
+- Get an API key from [browserbase.com](https://browserbase.com) and set it in environment variables (`BROWSERBASE_API_KEY`).
 - Install the [Browserbase SDK](http://github.com/browserbase/python-sdk) along with `crewai[tools]` package:
 
 ```
@@ -25,5 +25,5 @@ tool = BrowserbaseLoadTool()
 
 ## Arguments
 
-- `api_key`: Optional. Specifies Browserbase API key. Defaults is the `BROWSERBASE_KEY` environment variable.
+- `api_key`: Optional. Specifies Browserbase API key. Defaults is the `BROWSERBASE_API_KEY` environment variable.
 - `text_content`: Optional. Load pages as readable text. Default is `False`.
