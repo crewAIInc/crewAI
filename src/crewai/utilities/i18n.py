@@ -7,6 +7,10 @@ from pydantic import BaseModel, Field, PrivateAttr, ValidationError, model_valid
 
 class I18N(BaseModel):
     _translations: Dict[str, Dict[str, str]] = PrivateAttr()
+    language_file: Optional[str] = Field(
+        default=None,
+        description="Path to the translation file to load",
+    )
     language: Optional[str] = Field(
         default="en",
         description="Language used to load translations",
@@ -16,13 +20,17 @@ class I18N(BaseModel):
     def load_translation(self) -> "I18N":
         """Load translations from a JSON file based on the specified language."""
         try:
-            dir_path = os.path.dirname(os.path.realpath(__file__))
-            prompts_path = os.path.join(
-                dir_path, f"../translations/{self.language}.json"
-            )
+            if self.language_file:
+                with open(self.language_file, "r") as f:
+                    self._translations = json.load(f)
+            else:
+                dir_path = os.path.dirname(os.path.realpath(__file__))
+                prompts_path = os.path.join(
+                    dir_path, f"../translations/{self.language}.json"
+                )
 
-            with open(prompts_path, "r") as f:
-                self._translations = json.load(f)
+                with open(prompts_path, "r") as f:
+                    self._translations = json.load(f)
         except FileNotFoundError:
             raise ValidationError(
                 f"Translation file for language '{self.language}' not found."
