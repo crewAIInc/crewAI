@@ -33,11 +33,21 @@ Cutting-edge framework for orchestrating role-playing, autonomous AI agents. By 
                     Crews
                 </a>
             </li>
+            <li>
+                <a href="./core-concepts/Memory">
+                    Memory
+                </a>
+            </li>
         </ul>
     </div>
     <div style="width:30%">
         <h2>How-To Guides</h2>
         <ul>
+            <li>
+                <a href="./how-to/Installing-CrewAI">
+                    Installing crewAI
+                </a>
+            </li>
             <li>
                 <a href="./how-to/Creating-a-Crew-and-kick-it-off">
                     Getting Started
@@ -71,6 +81,11 @@ Cutting-edge framework for orchestrating role-playing, autonomous AI agents. By 
             <li>
                 <a href="./how-to/Human-Input-on-Execution">
                     Human Input on Execution
+                </a>
+            </li>
+            <li>
+                <a href="./how-to/AgentOps-Observability">
+                    Agent Monitoring with AgentOps
                 </a>
             </li>
         </ul>

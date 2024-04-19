@@ -1,8 +1,5 @@
 # YoutubeChannelSearchTool
 
-!!! note "Depend on OpenAI"
-    All RAG tools at the moment can only use openAI to generate embeddings, we are working on adding support for other providers.
-
 !!! note "Experimental"
     We are still working on improving tools, so there might be unexpected behavior or changes in the future.
 
@@ -33,3 +30,31 @@ tool = YoutubeChannelSearchTool(youtube_channel_handle='@exampleChannel')
 
 ## Arguments
 - `youtube_channel_handle` : A mandatory string representing the Youtube channel handle. This parameter is crucial for initializing the tool to specify the channel you want to search within. The tool is designed to only search within the content of the provided channel handle.
+
+## Custom model and embeddings
+
+By default, the tool uses OpenAI for both embeddings and summarization. To customize the model, you can use a config dictionary as follows:
+
+```python
+tool = YoutubeChannelSearchTool(
+    config=dict(
+        llm=dict(
+            provider="ollama", # or google, openai, anthropic, llama2, ...
+            config=dict(
+                model="llama2",
+                # temperature=0.5,
+                # top_p=1,
+                # stream=true,
+            ),
+        ),
+        embedder=dict(
+            provider="google",
+            config=dict(
+                model="models/embedding-001",
+                task_type="retrieval_document",
+                # title="Embeddings",
+            ),
+        ),
+    )
+)
+```
