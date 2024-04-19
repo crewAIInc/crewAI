@@ -16,8 +16,8 @@ The `Agent` class is the cornerstone for implementing AI solutions in CrewAI. He
     - `role`: Defines the agent's role within the solution.
     - `goal`: Specifies the agent's objective.
     - `backstory`: Provides a background story to the agent.
-    - `llm`: The language model that will run the agent. By default, it uses the GPT-4 model defined in the environment variable "OPENAI_MODEL_NAME".
-    - `function_calling_llm`: The language model that will handle the tool calling for this agent, overriding the crew function_calling_llm. Optional.
+    - `llm`: Indicates the Large Language Model the agent uses. By default, it uses the GPT-4 model defined in the environment variable "OPENAI_MODEL_NAME".
+    - `function_calling_llm` *Optional*: Will turn the ReAct crewAI agent into a function calling agent.
     - `max_iter`: Maximum number of iterations for an agent to execute a task, default is 15.
     - `memory`: Enables the agent to retain information during and a across executions. Default is `False`.
     - `max_rpm`: Maximum number of requests per minute the agent's execution should respect. Optional.
