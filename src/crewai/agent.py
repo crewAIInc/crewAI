@@ -7,6 +7,7 @@ from langchain.agents.tools import tool as LangChainTool
 from langchain.tools.render import render_text_description
 from langchain_core.agents import AgentAction
 from langchain_core.callbacks import BaseCallbackHandler
+from langchain_core.runnables import RunnableConfig
 from langchain_openai import ChatOpenAI
 from pydantic import (
     UUID4,
@@ -181,6 +182,7 @@ class Agent(BaseModel):
         task: Any,
         context: Optional[str] = None,
         tools: Optional[List[Any]] = None,
+        config: Optional[RunnableConfig] = None,
     ) -> str:
         """Execute a task with the agent.
 
@@ -227,7 +229,8 @@ class Agent(BaseModel):
                 "input": task_prompt,
                 "tool_names": self.agent_executor.tools_names,
                 "tools": self.agent_executor.tools_description,
-            }
+            },
+            config=config
         )["output"]
 
         if self.max_rpm:
