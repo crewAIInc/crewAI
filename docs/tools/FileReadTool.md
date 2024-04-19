@@ -4,16 +4,16 @@
     We are still working on improving tools, so there might be unexpected behavior or changes in the future.
 
 ## Description
-The FileReadTool is a versatile component of the crewai_tools package, designed to streamline the process of reading and retrieving content from files. It is particularly useful in scenarios such as batch text file processing, runtime configuration file reading, and data importation for analytics. This tool supports various text-based file formats including `.txt`, `.csv`, `.json` and more, and adapts its functionality based on the file type, for instance, converting JSON content into a Python dictionary for easy use.
+The FileReadTool conceptually represents a suite of functionalities within the crewai_tools package aimed at facilitating file reading and content retrieval. This suite includes tools for processing batch text files, reading runtime configuration files, and importing data for analytics. It supports a variety of text-based file formats such as `.txt`, `.csv`, `.json`, and more. Depending on the file type, the suite offers specialized functionality, such as converting JSON content into a Python dictionary for ease of use.
 
 ## Installation
-Install the crewai_tools package to use the FileReadTool in your projects:
+To utilize the functionalities previously attributed to the FileReadTool, install the crewai_tools package:
 
 ```shell
 pip install 'crewai[tools]'
 ```
 
-## Example
+## Usage Example
 To get started with the FileReadTool:
 
 ```python

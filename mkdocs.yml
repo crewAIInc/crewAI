@@ -126,7 +126,9 @@ nav:
     - Processes: 'core-concepts/Processes.md'
     - Crews: 'core-concepts/Crews.md'
     - Collaboration: 'core-concepts/Collaboration.md'
+    - Memory: 'core-concepts/Memory.md'
   - How to Guides:
+    - Installing CrewAI: 'how-to/Installing-CrewAI.md'
     - Getting Started: 'how-to/Creating-a-Crew-and-kick-it-off.md'
     - Create Custom Tools: 'how-to/Create-Custom-Tools.md'
     - Using Sequential Process: 'how-to/Sequential.md'
@@ -134,6 +136,7 @@ nav:
     - Connecting to any LLM: 'how-to/LLM-Connections.md'
     - Customizing Agents: 'how-to/Customizing-Agents.md'
     - Human Input on Execution: 'how-to/Human-Input-on-Execution.md'
+    - Agent Monitoring with AgentOps: 'how-to/AgentOps-Observability.md'
   - Tools Docs:
     - Google Serper Search: 'tools/SerperDevTool.md'
     - Scrape Website: 'tools/ScrapeWebsiteTool.md'
@@ -153,7 +156,7 @@ nav:
     - Github RAG Search: 'tools/GitHubSearchTool.md'
     - Code Docs RAG Search: 'tools/CodeDocsSearchTool.md'
     - Youtube Video RAG Search: 'tools/YoutubeVideoSearchTool.md'
-    - Youtube Chanel RAG Search: 'tools/YoutubeChannelSearchTool.md'
+    - Youtube Channel RAG Search: 'tools/YoutubeChannelSearchTool.md'
   - Examples:
     - Trip Planner Crew: https://github.com/joaomdmoura/crewAI-examples/tree/main/trip_planner"
     - Create Instagram Post: https://github.com/joaomdmoura/crewAI-examples/tree/main/instagram_post"

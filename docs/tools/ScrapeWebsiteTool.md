@@ -1,8 +1,5 @@
 # ScrapeWebsiteTool
 
-!!! note "Depend on OpenAI"
-    All RAG tools at the moment can only use openAI to generate embeddings, we are working on adding support for other providers.
-
 !!! note "Experimental"
     We are still working on improving tools, so there might be unexpected behavior or changes in the future.
 
@@ -24,6 +21,10 @@ tool = ScrapeWebsiteTool()
 
 # Initialize the tool with the website URL, so the agent can only scrap the content of the specified website
 tool = ScrapeWebsiteTool(website_url='https://www.example.com')
+
+# Extract the text from the site
+text = tool.run()
+print(text)
 ```
 
 ## Arguments

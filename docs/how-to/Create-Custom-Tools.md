@@ -1,91 +1,62 @@
 ---
-title: Creating your own Tools
-description: Guide on how to create and use custom tools within the crewAI framework.
+title: Creating and Utilizing Tools in crewAI
+description: Comprehensive guide on crafting, using, and managing custom tools within the crewAI framework, including new functionalities and error handling.
 ---
 
-## Creating your own Tools
-!!! example "Custom Tool Creation"
-    Developers can craft custom tools tailored for their agent’s needs or utilize pre-built options:
+## Creating and Utilizing Tools in crewAI
+This guide provides detailed instructions on creating custom tools for the crewAI framework and how to efficiently manage and utilize these tools, incorporating the latest functionalities such as tool delegation, error handling, and dynamic tool calling. It also highlights the importance of collaboration tools, enabling agents to perform a wide range of actions.
 
-To create your own crewAI tools you will need to install our extra tools package:
+### Prerequisites
+Before creating your own tools, ensure you have the crewAI extra tools package installed:
 
 ```bash
 pip install 'crewai[tools]'
 ```
 
-Once you do that there are two main ways for one to create a crewAI tool:
-
 ### Subclassing `BaseTool`
+
+To create a personalized tool, inherit from `BaseTool` and define the necessary attributes and the `_run` method.
 
 ```python
 from crewai_tools import BaseTool
 
 class MyCustomTool(BaseTool):
     name: str = "Name of my tool"
-    description: str = "Clear description for what this tool is useful for, you agent will need this information to use it."
+    description: str = "What this tool does. It's vital for effective utilization."
 
     def _run(self, argument: str) -> str:
-        # Implementation goes here
-        return "Result from custom tool"
+        # Your tool's logic here
+        return "Tool's result"
 ```
 
-Define a new class inheriting from `BaseTool`, specifying `name`, `description`, and the `_run` method for operational logic.
+### Using the `tool` Decorator
 
-
-### Utilizing the `tool` Decorator
-
-For a simpler approach, create a `Tool` object directly with the required attributes and a functional logic.
+Alternatively, use the `tool` decorator for a direct approach to create tools. This requires specifying attributes and the tool's logic within a function.
 
 ```python
 from crewai_tools import tool
-@tool("Name of my tool")
-def my_tool(question: str) -> str:
-    """Clear description for what this tool is useful for, you agent will need this information to use it."""
-    # Function logic here
+
+@tool("Tool Name")
+def my_simple_tool(question: str) -> str:
+    """Tool description for clarity."""
+    # Tool logic here
+    return "Tool output"
 ```
+### Defining a Cache Function for the Tool
+
+To optimize tool performance with caching, define custom caching strategies using the `cache_function` attribute.
 
 ```python
-import json
-import requests
-from crewai import Agent
-from crewai.tools import tool
-from unstructured.partition.html import partition_html
+@tool("Tool with Caching")
+def cached_tool(argument: str) -> str:
+    """Tool functionality description."""
+    return "Cachable result"
 
-    # Annotate the function with the tool decorator from crewAI
-@tool("Integration with a given API")
-def integtation_tool(argument: str) -> str:
-    """Integration with a given API"""
-    # Code here
-    return resutls # string to be sent back to the agent
+def my_cache_strategy(arguments: dict, result: str) -> bool:
+    # Define custom caching logic
+    return True if some_condition else False
 
-# Assign the scraping tool to an agent
-agent = Agent(
-    role='Research Analyst',
-    goal='Provide up-to-date market analysis',
-    backstory='An expert analyst with a keen eye for market trends.',
-    tools=[integtation_tool]
-)
+cached_tool.cache_function = my_cache_strategy
 ```
 
-
-
-### Using the `Tool` function from langchain
-
-For another simple approach, create a function in python directly with the required attributes and a functional logic.
-
-```python
-def combine(a, b):
-    return a + b
-```
-
-Then you can add that function into the your tool by using 'func' variable in the Tool function.
-
-```python
-from langchain.agents import Tool
-
-math_tool = Tool(
-            name="Math tool",
-            func=math_tool,
-            description="Useful for adding two numbers together, in other words combining them."
-        )
-```
+By adhering to these guidelines and incorporating new functionalities and collaboration tools into your tool creation and management processes, you can leverage the full capabilities of the crewAI framework, enhancing both the development experience and the efficiency of your AI agents.

@@ -30,7 +30,6 @@
 - [Connecting Your Crew to a Model](#connecting-your-crew-to-a-model)
 - [How CrewAI Compares](#how-crewai-compares)
 - [Contribution](#contribution)
-- [Hire CrewAI](#hire-crewai)
 - [Telemetry](#telemetry)
 - [License](#license)
 
@@ -49,7 +48,7 @@ To get started with CrewAI, follow these simple steps:
 pip install crewai
 ```
 
-If you want to also install crewai-tools, which is a package with tools that can be used by the agents, but more dependencies, you can install it with, example bellow uses it:
+If you want to also install crewai-tools, which is a package with tools that can be used by the agents, but more dependencies, you can install it with, example below uses it:
 
 ```shell
 pip install 'crewai[tools]'
@@ -246,11 +245,6 @@ poetry build
 ```bash
 pip install dist/*.tar.gz
 ```
-
-## Hire CrewAI
-
-We're a company developing crewAI and crewAI Enterprise, we for a limited time are offer consulting with selected customers, to get them early access to our enterprise solution
-If you are interested on having access to it and hiring weekly hours with our team, feel free to email us at [joao@crewai.com](mailto:joao@crewai.com).
 
 ## Telemetry
 

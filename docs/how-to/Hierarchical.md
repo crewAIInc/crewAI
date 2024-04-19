@@ -21,7 +21,7 @@ By default, tasks in CrewAI are managed through a sequential process. However, a
 To utilize the hierarchical process, it's essential to explicitly set the process attribute to `Process.hierarchical`, as the default behavior is `Process.sequential`. Define a crew with a designated manager and establish a clear chain of command.
 
 !!! note "Tools and Agent Assignment"
-    Assign tools at the agent level to facilitate task delegation and execution by the designated agents under the manager's guidance.
+    Assign tools at the agent level to facilitate task delegation and execution by the designated agents under the manager's guidance. Tools can also be specified at the task level for precise control over tool availability during task execution.
 
 !!! note "Manager LLM Requirement"
     Configuring the `manager_llm` parameter is crucial for the hierarchical process. The system requires a manager LLM to be set up for proper function, ensuring tailored decision-making.
@@ -30,32 +30,38 @@ To utilize the hierarchical process, it's essential to explicitly set the proces
 from langchain_openai import ChatOpenAI
 from crewai import Crew, Process, Agent
 
-# Agents are defined with an optional tools parameter
+# Agents are defined with attributes for backstory, cache, and verbose mode
 researcher = Agent(
     role='Researcher',
     goal='Conduct in-depth analysis',
+    backstory='Experienced data analyst with a knack for uncovering hidden trends.',
+    cache=True,
+    verbose=False,
     # tools=[]  # This can be optionally specified; defaults to an empty list
 )
 writer = Agent(
     role='Writer',
     goal='Create engaging content',
+    backstory='Creative writer passionate about storytelling in technical domains.',
+    cache=True,
+    verbose=False,
     # tools=[]  # Optionally specify tools; defaults to an empty list
 )
 
-# Establishing the crew with a hierarchical process
+# Establishing the crew with a hierarchical process and additional configurations
 project_crew = Crew(
     tasks=[...],  # Tasks to be delegated and executed under the manager's supervision
     agents=[researcher, writer],
     manager_llm=ChatOpenAI(temperature=0, model="gpt-4"),  # Mandatory for hierarchical process
-    process=Process.hierarchical  # Specifies the hierarchical management approach
+    process=Process.hierarchical,  # Specifies the hierarchical management approach
+    memory=True,  # Enable memory usage for enhanced task execution
 )
 ```
 
 ### Workflow in Action
-1. **Task Assignment**: The manager assigns tasks strategically, considering each agent's capabilities.
-2. **Execution and Review**: Agents complete their tasks, with the manager ensuring quality standards.
+1. **Task Assignment**: The manager assigns tasks strategically, considering each agent's capabilities and available tools.
+2. **Execution and Review**: Agents complete their tasks with the option for asynchronous execution and callback functions for streamlined workflows.
 3. **Sequential Task Progression**: Despite being a hierarchical process, tasks follow a logical order for smooth progression, facilitated by the manager's oversight.
-
 
 ## Conclusion
 Adopting the hierarchical process in crewAI, with the correct configurations and understanding of the system's capabilities, facilitates an organized and efficient approach to project management.
