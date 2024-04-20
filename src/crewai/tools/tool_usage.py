@@ -165,7 +165,7 @@ class ToolUsage:
                     return error
                 self.task.increment_tools_errors()
                 if agentops:
-                  agentops.record(agentops.ErrorEvent(details=e, trigger_event=tool_event))
+                  agentops.record(agentops.ErrorEvent(exception=e, trigger_event=tool_event))
                 return self.use(calling=calling, tool_string=tool_string)
 
             if self.tools_handler:
