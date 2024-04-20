@@ -9,6 +9,7 @@ from crewai.agents.tools_handler import ToolsHandler
 from crewai.telemetry import Telemetry
 from crewai.tools.tool_calling import InstructorToolCalling, ToolCalling
 from crewai.utilities import I18N, Converter, ConverterError, Printer
+import agentops
 
 OPENAI_BIGGER_MODELS = ["gpt-4"]
 
@@ -96,6 +97,7 @@ class ToolUsage:
         tool: BaseTool,
         calling: Union[ToolCalling, InstructorToolCalling],
     ) -> None:
+        tool_event = agentops.ToolEvent(name=calling.tool_name)
         if self._check_tool_repeated_usage(calling=calling):
             try:
                 result = self._i18n.errors("task_repeated_usage").format(
@@ -159,6 +161,7 @@ class ToolUsage:
                     self._printer.print(content=f"\n\n{error_message}\n", color="red")
                     return error
                 self.task.increment_tools_errors()
+                agentops.record(agentops.ErrorEvent(details=e, trigger_event=tool_event))
                 return self.use(calling=calling, tool_string=tool_string)
 
             if self.tools_handler:
@@ -179,6 +182,7 @@ class ToolUsage:
                 )
 
         self._printer.print(content=f"\n\n{result}\n", color="purple")
+        agentops.record(tool_event)
         self._telemetry.tool_usage(
             llm=self.function_calling_llm,
             tool_name=tool.name,
