@@ -1,3 +1,4 @@
+import re
 import threading
 import uuid
 from typing import Any, Dict, List, Optional, Type
@@ -246,6 +247,17 @@ class Task(BaseModel):
                 return exported_result
             except Exception:
                 pass
+
+            # sometimes the response contains valid JSON in the middle of text
+            match = re.search(r"({.*})", result, re.DOTALL)
+            if match:
+                try:
+                    exported_result = model.model_validate_json(match.group(0))
+                    if self.output_json:
+                        return exported_result.model_dump()
+                    return exported_result
+                except Exception:
+                    pass
 
             llm = self.agent.function_calling_llm or self.agent.llm
 
