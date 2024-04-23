@@ -50,6 +50,7 @@ class Agent(BaseModel):
             tools: Tools at agents disposal
             step_callback: Callback to be executed after each step of the agent execution.
             callbacks: A list of callback functions from the langchain library that are triggered during the agent's execution process
+            agent_name: The Name of the agent
     """
 
     __hash__ = object.__hash__  # type: ignore
@@ -124,6 +125,9 @@ class Agent(BaseModel):
     )
     callbacks: Optional[List[InstanceOf[BaseCallbackHandler]]] = Field(
         default=None, description="Callback to be executed"
+    )
+    agent_name: Optional[str] = Field(
+        default=None, description="The Name of the Agent"
     )
 
     _original_role: str | None = None
@@ -232,7 +236,7 @@ class Agent(BaseModel):
                 "input": task_prompt,
                 "tool_names": self.agent_executor.tools_names,
                 "tools": self.agent_executor.tools_description,
-            }
+            },{"run_name":self.agent_name}
         )["output"]
 
         if self.max_rpm:
