@@ -1,3 +1,4 @@
+from .browserbase_load_tool.browserbase_load_tool import BrowserbaseLoadTool
 from .code_docs_search_tool.code_docs_search_tool import CodeDocsSearchTool
 from .csv_search_tool.csv_search_tool import CSVSearchTool
 from .directory_search_tool.directory_search_tool import DirectorySearchTool
