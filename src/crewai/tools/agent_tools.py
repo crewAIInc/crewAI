@@ -30,20 +30,6 @@ class AgentTools(BaseModel):
                     coworkers=f"[{', '.join([f'{agent.role}' for agent in self.agents])}]"
                 ),
             ),
-            StructuredTool.from_function(
-              func=self.delegate_work,
-              name="Delegate Work to Coworker",
-              description=self.i18n.tools("delegate_work").format(
-                coworkers=f"[{', '.join([f'{agent.role}' for agent in self.agents])}]"
-              ),
-            ),
-            StructuredTool.from_function(
-              func=self.ask_question,
-              name="Ask Question to Coworker",
-              description=self.i18n.tools("ask_question").format(
-                coworkers=f"[{', '.join([f'{agent.role}' for agent in self.agents])}]"
-              ),
-            ),
         ]
         return tools
 
