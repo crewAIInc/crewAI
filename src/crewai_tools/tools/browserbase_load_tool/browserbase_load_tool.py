@@ -1,9 +1,14 @@
 from crewai_tools import BaseTool
 from typing import Optional, Any
+from pydantic.v1 import BaseModel, Field
+
+class BrowserbaseLoadToolSchema(BaseModel):
+    url: str = Field(description="Website URL")
 
 class BrowserbaseLoadTool(BaseTool):
     name: str = "Browserbase web load tool"
     description: str = "Load webpages in a headless browser using Browserbase and return the contents"
+    args_schema: Type[BaseModel] = BrowserbaseLoadToolSchema
     api_key: Optional[str] = None
     text_content: Optional[bool] = False
     browserbase: Optional[Any] = None
