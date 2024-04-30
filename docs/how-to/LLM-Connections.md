@@ -16,8 +16,8 @@ The `Agent` class is the cornerstone for implementing AI solutions in CrewAI. He
     - `role`: Defines the agent's role within the solution.
     - `goal`: Specifies the agent's objective.
     - `backstory`: Provides a background story to the agent.
-    - `llm`: The language model that will run the agent. By default, it uses the GPT-4 model defined in the environment variable "OPENAI_MODEL_NAME".
-    - `function_calling_llm`: The language model that will handle the tool calling for this agent, overriding the crew function_calling_llm. Optional.
+    - `llm`: Indicates the Large Language Model the agent uses. By default, it uses the GPT-4 model defined in the environment variable "OPENAI_MODEL_NAME".
+    - `function_calling_llm` *Optional*: Will turn the ReAct crewAI agent into a function calling agent.
     - `max_iter`: Maximum number of iterations for an agent to execute a task, default is 15.
     - `memory`: Enables the agent to retain information during and a across executions. Default is `False`.
     - `max_rpm`: Maximum number of requests per minute the agent's execution should respect. Optional.
@@ -42,7 +42,7 @@ example_agent = Agent(
 ```
 
 ## Ollama Integration
-Ollama is preferred for local LLM integration, offering customization and privacy benefits. To integrate Ollama with CrewAI, set the appropriate environment variables as shown below. Note: Detailed Ollama setup is beyond this document's scope, but general guidance is provided.
+Ollama is preferred for local LLM integration, offering customization and privacy benefits. To integrate Ollama with CrewAI, set the appropriate environment variables as shown below. 
 
 ### Setting Up Ollama
 - **Environment Variables Configuration**: To integrate Ollama, set the following environment variables:
@@ -50,6 +50,70 @@ Ollama is preferred for local LLM integration, offering customization and privac
 OPENAI_API_BASE='http://localhost:11434/v1'
 OPENAI_MODEL_NAME='openhermes'  # Adjust based on available model
 OPENAI_API_KEY=''
+```
+
+## Ollama Integration (ex. for using Llama 2 locally)
+1. [Download Ollama](https://ollama.com/download).   
+2. After setting up the Ollama, Pull the Llama2 by typing following lines into the terminal ```ollama pull Llama2```.   
+3. Create a ModelFile similar the one below in your project directory.
+```
+FROM llama2
+
+# Set parameters
+
+PARAMETER temperature 0.8
+PARAMETER stop Result
+
+# Sets a custom system message to specify the behavior of the chat assistant
+
+# Leaving it blank for now.
+
+SYSTEM """"""
+```
+4. Create a script to get the base model, which in our case is llama2, and create a model on top of that with ModelFile above. PS: this will be ".sh" file.     
+```
+#!/bin/zsh
+
+# variables
+model_name="llama2"
+custom_model_name="crewai-llama2"
+
+#get the base model
+ollama pull $model_name
+
+#create the model file
+ollama create $custom_model_name -f ./Llama2ModelFile
+```
+5. Go into the directory where the script file and ModelFile is located and run the script.   
+6. Enjoy your free Llama2 model that powered up by excellent agents from crewai.   
+```
+from crewai import Agent, Task, Crew
+from langchain_openai import ChatOpenAI
+import os
+os.environ["OPENAI_API_KEY"] = "NA"
+
+llm = ChatOpenAI(
+    model = "crewai-llama2",
+    base_url = "http://localhost:11434/v1")
+
+general_agent = Agent(role = "Math Professor",
+                      goal = """Provide the solution to the students that are asking mathematical questions and give them the answer.""",
+                      backstory = """You are an excellent math professor that likes to solve math questions in a way that everyone can understand your solution""",
+                      allow_delegation = False,
+                      verbose = True,
+                      llm = llm)
+task = Task (description="""what is 3 + 5""",
+             agent = general_agent)
+
+crew = Crew(
+            agents=[general_agent],
+            tasks=[task],
+            verbose=2
+        )
+
+result = crew.kickoff()
+
+print(result)
 ```
 
 ## HuggingFace Integration
