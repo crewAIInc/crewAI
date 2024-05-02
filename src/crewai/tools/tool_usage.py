@@ -1,4 +1,6 @@
 import ast
+import asyncio
+import inspect
 from textwrap import dedent
 from typing import Any, List, Union
 
@@ -233,11 +235,13 @@ class ToolUsage:
             tool=calling.tool_name, input=calling.arguments
         )
 
-        print(f"Using Tool: {tool}")
         tool_instance = tool.func.__self__
-        # Access the async_execution attribute of the instance
-        async_tool = tool_instance.async_execution
-        print(f"async_tool: {async_tool}")
+        tool_method = tool.func
+        is_async_tool = (
+            getattr(tool_instance, "async_execution", False)
+            or asyncio.iscoroutinefunction(tool_method)
+            or inspect.iscoroutinefunction(tool_method)
+        )
         if not result:
             try:
                 if calling.tool_name in [
@@ -254,7 +258,7 @@ class ToolUsage:
                             for k, v in calling.arguments.items()
                             if k in acceptable_args
                         }
-                        if async_tool:
+                        if is_async_tool:
                             result = await tool._run(**arguments)
                         else:
                             result = tool._run(**arguments)
@@ -262,18 +266,18 @@ class ToolUsage:
                     except Exception:
                         if tool.args_schema:
                             arguments = calling.arguments
-                            if async_tool:
+                            if is_async_tool:
                                 result = await tool._run(**arguments)
                             else:
                                 result = tool._run(**arguments)
                         else:
                             arguments = calling.arguments.values()
-                            if async_tool:
+                            if is_async_tool:
                                 result = await tool._run(*arguments)
                             else:
                                 result = tool._run(*arguments)
                 else:
-                    if async_tool:
+                    if is_async_tool:
                         result = await tool._run()
                     else:
                         result = tool._run()

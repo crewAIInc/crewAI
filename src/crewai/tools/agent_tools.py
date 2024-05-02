@@ -71,4 +71,4 @@ class AgentTools(BaseModel):
             agent=agent,
             expected_output="Your best answer to your co-worker asking you this, accounting for the context shared.",
         )
-        return await agent.execute_task(task, context)
+        return await agent.aexecute_task(task, context)

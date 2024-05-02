@@ -451,6 +451,7 @@ class CrewAgentExecutor(AgentExecutor):
             tool_usage = ToolUsage(
                 tools_handler=self.tools_handler,
                 tools=self.tools,
+                original_tools=self.original_tools,
                 tools_description=self.tools_description,
                 tools_names=self.tools_names,
                 function_calling_llm=self.function_calling_llm,
@@ -466,7 +467,7 @@ class CrewAgentExecutor(AgentExecutor):
                 if tool_calling.tool_name.lower().strip() in [
                     name.lower().strip() for name in name_to_tool_map
                 ]:
-                    observation = await tool_usage.use(tool_calling, agent_action.log)
+                    observation = await tool_usage.ause(tool_calling, agent_action.log)
                 else:
                     observation = self._i18n.errors("wrong_tool_name").format(
                         tool=tool_calling.tool_name,
