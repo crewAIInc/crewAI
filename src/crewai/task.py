@@ -1,6 +1,7 @@
 import threading
 import uuid
 from typing import Any, Dict, List, Optional, Type
+import os
 
 from langchain_openai import ChatOpenAI
 from pydantic import UUID4, BaseModel, Field, field_validator, model_validator
@@ -281,6 +282,11 @@ class Task(BaseModel):
         return isinstance(llm, ChatOpenAI) and llm.openai_api_base == None
 
     def _save_file(self, result: Any) -> None:
+        directory = os.path.dirname(self.output_file)
+
+        if not os.path.exists(directory):
+            os.makedirs(directory)
+
         with open(self.output_file, "w") as file:
             file.write(result)
         return None
