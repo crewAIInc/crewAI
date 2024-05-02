@@ -754,6 +754,7 @@ def test_agent_definition_based_on_dict():
     assert agent.verbose == True
     assert agent.tools == []
 
+
 # test for human input
 @pytest.mark.vcr(filter_headers=["authorization"])
 def test_agent_human_input():
@@ -780,6 +781,7 @@ def test_agent_human_input():
         mock_human_input.assert_called_once()
         assert output == "Hello"
 
+
 def test_interpolate_inputs():
     agent = Agent(
         role="{topic} specialist",
@@ -797,3 +799,46 @@ def test_interpolate_inputs():
     assert agent.goal == "Figure stuff out"
     assert agent.backstory == "I am the master of nothing"
 
+
+def test_system_and_prompt_template():
+    agent = Agent(
+        role="{topic} specialist",
+        goal="Figure {goal} out",
+        backstory="I am the master of {role}",
+        system_template="""<|start_header_id|>system<|end_header_id|>
+
+{{ .System }}<|eot_id|>""",
+        prompt_template="""<|start_header_id|>user<|end_header_id|>
+
+{{ .Prompt }}<|eot_id|>""",
+        response_template="""<|start_header_id|>assistant<|end_header_id|>
+
+{{ .Response }}<|eot_id|>""",
+    )
+
+    template = agent.agent_executor.agent.dict()["runnable"]["middle"][0]["template"]
+    assert (
+        template
+        == """<|start_header_id|>system<|end_header_id|>
+
+You are {role}. {backstory}
+Your personal goal is: {goal}To give my best complete final answer to the task use the exact following format:
+
+Thought: I now can give a great answer
+Final Answer: my best complete final answer to the task.
+Your final answer must be the great and the most complete as possible, it must be outcome described.
+
+I MUST use these formats, my job depends on it!<|eot_id|>
+<|start_header_id|>user<|end_header_id|>
+
+
+Current Task: {input}
+
+Begin! This is VERY important to you, use the tools available and give your best Final Answer, your job depends on it!
+
+Thought:
+{agent_scratchpad}<|eot_id|>
+<|start_header_id|>assistant<|end_header_id|>
+
+"""
+    )

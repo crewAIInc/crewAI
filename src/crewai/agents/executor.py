@@ -40,6 +40,9 @@ class CrewAgentExecutor(AgentExecutor):
     have_forced_answer: bool = False
     force_answer_max_iterations: Optional[int] = None
     step_callback: Optional[Any] = None
+    system_template: Optional[str] = None
+    prompt_template: Optional[str] = None
+    response_template: Optional[str] = None
 
     @root_validator()
     def set_force_answer_max_iterations(cls, values: Dict) -> Dict:
@@ -113,6 +116,7 @@ class CrewAgentExecutor(AgentExecutor):
         # Allowing human input given task setting
         if self.task.human_input:
             self.should_ask_for_human_input = True
+
         # Let's start tracking the number of iterations and time elapsed
         self.iterations = 0
         time_elapsed = 0.0
@@ -128,8 +132,10 @@ class CrewAgentExecutor(AgentExecutor):
                     intermediate_steps,
                     run_manager=run_manager,
                 )
+
                 if self.step_callback:
                     self.step_callback(next_step_output)
+
                 if isinstance(next_step_output, AgentFinish):
                     # Creating long term memory
                     create_long_term_memory = threading.Thread(
@@ -292,7 +298,6 @@ class CrewAgentExecutor(AgentExecutor):
                         tool=tool_calling.tool_name,
                         tools=", ".join([tool.name.casefold() for tool in self.tools]),
                     )
-
             yield AgentStep(action=agent_action, observation=observation)
 
     def _ask_human_input(self, final_answer: dict) -> str:
