@@ -34,6 +34,7 @@ class DOCXSearchTool(RagTool):
             self.add(docx)
             self.description = f"A tool that can be used to semantic search a query the {docx} DOCX's content."
             self.args_schema = FixedDOCXSearchToolSchema
+            self._generate_description()
 
     def add(
         self,
@@ -50,3 +51,10 @@ class DOCXSearchTool(RagTool):
     ) -> Any:
         if "docx" in kwargs:
             self.add(kwargs["docx"])
+
+    def _run(
+        self,
+        search_query: str,
+        **kwargs: Any,
+    ) -> Any:
+        return super()._run(query=search_query)

@@ -33,6 +33,7 @@ class PDFSearchTool(RagTool):
             self.add(pdf)
             self.description = f"A tool that can be used to semantic search a query the {pdf} PDF's content."
             self.args_schema = FixedPDFSearchToolSchema
+            self._generate_description()
 
     def add(
         self,

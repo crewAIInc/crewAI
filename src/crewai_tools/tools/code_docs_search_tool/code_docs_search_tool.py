@@ -34,6 +34,7 @@ class CodeDocsSearchTool(RagTool):
             self.add(docs_url)
             self.description = f"A tool that can be used to semantic search a query the {docs_url} Code Docs content."
             self.args_schema = FixedCodeDocsSearchToolSchema
+            self._generate_description()
 
     def add(
         self,
@@ -50,3 +51,10 @@ class CodeDocsSearchTool(RagTool):
     ) -> Any:
         if "docs_url" in kwargs:
             self.add(kwargs["docs_url"])
+
+    def _run(
+        self,
+        search_query: str,
+        **kwargs: Any,
+    ) -> Any:
+        return super()._run(query=search_query)

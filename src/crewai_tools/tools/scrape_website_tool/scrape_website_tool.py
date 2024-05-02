@@ -44,7 +44,12 @@ class ScrapeWebsiteTool(BaseTool):
 		**kwargs: Any,
 	) -> Any:
 		website_url = kwargs.get('website_url', self.website_url)
-		page = requests.get(website_url, headers=self.headers, cookies=self.cookies if self.cookies else {})
+		page = requests.get(
+			website_url,
+			timeout=15,
+			headers=self.headers,
+			cookies=self.cookies if self.cookies else {}
+		)
 		parsed = BeautifulSoup(page.content, "html.parser")
 		text = parsed.get_text()
 		text = '\n'.join([i for i in text.split('\n') if i.strip() != ''])

@@ -34,6 +34,7 @@ class TXTSearchTool(RagTool):
             self.add(txt)
             self.description = f"A tool that can be used to semantic search a query the {txt} txt's content."
             self.args_schema = FixedTXTSearchToolSchema
+            self._generate_description()
 
     def add(
         self,
@@ -50,3 +51,10 @@ class TXTSearchTool(RagTool):
     ) -> Any:
         if "txt" in kwargs:
             self.add(kwargs["txt"])
+
+    def _run(
+        self,
+        search_query: str,
+        **kwargs: Any,
+    ) -> Any:
+        return super()._run(query=search_query)

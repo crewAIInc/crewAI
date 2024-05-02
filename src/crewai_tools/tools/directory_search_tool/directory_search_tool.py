@@ -34,6 +34,7 @@ class DirectorySearchTool(RagTool):
             self.add(directory)
             self.description = f"A tool that can be used to semantic search a query the {directory} directory's content."
             self.args_schema = FixedDirectorySearchToolSchema
+            self._generate_description()
 
     def add(
         self,
@@ -50,3 +51,10 @@ class DirectorySearchTool(RagTool):
     ) -> Any:
         if "directory" in kwargs:
             self.add(kwargs["directory"])
+
+    def _run(
+        self,
+        search_query: str,
+        **kwargs: Any,
+    ) -> Any:
+        return super()._run(query=search_query)

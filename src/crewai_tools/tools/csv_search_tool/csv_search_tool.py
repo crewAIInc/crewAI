@@ -34,6 +34,7 @@ class CSVSearchTool(RagTool):
             self.add(csv)
             self.description = f"A tool that can be used to semantic search a query the {csv} CSV's content."
             self.args_schema = FixedCSVSearchToolSchema
+            self._generate_description()
 
     def add(
         self,
@@ -50,3 +51,10 @@ class CSVSearchTool(RagTool):
     ) -> Any:
         if "csv" in kwargs:
             self.add(kwargs["csv"])
+
+    def _run(
+        self,
+        search_query: str,
+        **kwargs: Any,
+    ) -> Any:
+        return super()._run(query=search_query)

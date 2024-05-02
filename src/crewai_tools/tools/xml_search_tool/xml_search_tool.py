@@ -34,6 +34,7 @@ class XMLSearchTool(RagTool):
             self.add(xml)
             self.description = f"A tool that can be used to semantic search a query the {xml} XML's content."
             self.args_schema = FixedXMLSearchToolSchema
+            self._generate_description()
 
     def add(
         self,
@@ -50,3 +51,10 @@ class XMLSearchTool(RagTool):
     ) -> Any:
         if "xml" in kwargs:
             self.add(kwargs["xml"])
+
+    def _run(
+        self,
+        search_query: str,
+        **kwargs: Any,
+    ) -> Any:
+        return super()._run(query=search_query)

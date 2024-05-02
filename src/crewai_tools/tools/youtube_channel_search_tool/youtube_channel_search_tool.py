@@ -34,6 +34,7 @@ class YoutubeChannelSearchTool(RagTool):
             self.add(youtube_channel_handle)
             self.description = f"A tool that can be used to semantic search a query the {youtube_channel_handle} Youtube Channels content."
             self.args_schema = FixedYoutubeChannelSearchToolSchema
+            self._generate_description()
 
     def add(
         self,
@@ -53,3 +54,10 @@ class YoutubeChannelSearchTool(RagTool):
     ) -> Any:
         if "youtube_channel_handle" in kwargs:
             self.add(kwargs["youtube_channel_handle"])
+
+    def _run(
+        self,
+        search_query: str,
+        **kwargs: Any,
+    ) -> Any:
+        return super()._run(query=search_query)
