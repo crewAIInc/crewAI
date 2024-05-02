@@ -12,7 +12,7 @@ class SerperDevToolSchema(BaseModel):
 
 class SerperDevTool(BaseTool):
 	name: str = "Search the internet"
-	description: str = "A tool that can be used to semantic search a query from a txt's content."
+	description: str = "A tool that can be used to search the internet with a search_query."
 	args_schema: Type[BaseModel] = SerperDevToolSchema
 	search_url: str = "https://google.serper.dev/search"
 	n_results: int = 10
