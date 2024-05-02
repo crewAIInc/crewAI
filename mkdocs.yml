@@ -139,6 +139,7 @@ nav:
     - Agent Monitoring with AgentOps: 'how-to/AgentOps-Observability.md'
   - Tools Docs:
     - Google Serper Search: 'tools/SerperDevTool.md'
+    - Browserbase Web Loader: 'tools/BrowserbaseLoadTool.md'
     - Scrape Website: 'tools/ScrapeWebsiteTool.md'
     - Directory Read: 'tools/DirectoryReadTool.md'
     - File Read: 'tools/FileReadTool.md'

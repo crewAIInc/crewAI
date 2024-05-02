@@ -88,7 +88,9 @@ class Telemetry:
                 self._add_attribute(span, "python_version", platform.python_version())
                 self._add_attribute(span, "crew_id", str(crew.id))
                 self._add_attribute(span, "crew_process", crew.process)
-                self._add_attribute(span, "crew_language", crew.language)
+                self._add_attribute(
+                    span, "crew_language", crew.prompt_file if crew.i18n else "None"
+                )
                 self._add_attribute(span, "crew_memory", crew.memory)
                 self._add_attribute(span, "crew_number_of_tasks", len(crew.tasks))
                 self._add_attribute(span, "crew_number_of_agents", len(crew.agents))
@@ -103,7 +105,7 @@ class Telemetry:
                                 "verbose?": agent.verbose,
                                 "max_iter": agent.max_iter,
                                 "max_rpm": agent.max_rpm,
-                                "i18n": agent.i18n.language,
+                                "i18n": agent.i18n.prompt_file,
                                 "llm": json.dumps(self._safe_llm_attributes(agent.llm)),
                                 "delegation_enabled?": agent.allow_delegation,
                                 "tools_names": [
@@ -232,7 +234,7 @@ class Telemetry:
                                 "verbose?": agent.verbose,
                                 "max_iter": agent.max_iter,
                                 "max_rpm": agent.max_rpm,
-                                "i18n": agent.i18n.language,
+                                "i18n": agent.i18n.prompt_file,
                                 "llm": json.dumps(self._safe_llm_attributes(agent.llm)),
                                 "delegation_enabled?": agent.allow_delegation,
                                 "tools_names": [

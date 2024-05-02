@@ -48,6 +48,7 @@ class Crew(BaseModel):
         verbose: Indicates the verbosity level for logging during execution.
         config: Configuration settings for the crew.
         max_rpm: Maximum number of requests per minute for the crew execution to be respected.
+        prompt_file: Path to the prompt json file to be used for the crew.
         id: A unique identifier for the crew instance.
         full_output: Whether the crew should return the full output with all tasks outputs or just the final output.
         task_callback: Callback to be executed after each task for every agents execution.
@@ -115,13 +116,9 @@ class Crew(BaseModel):
         default=None,
         description="Maximum number of requests per minute for the crew execution to be respected.",
     )
-    language: str = Field(
-        default="en",
-        description="Language used for the crew, defaults to English.",
-    )
-    language_file: str = Field(
+    prompt_file: str = Field(
         default=None,
-        description="Path to the language file to be used for the crew.",
+        description="Path to the prompt json file to be used for the crew.",
     )
     output_log_file: Optional[Union[bool, str]] = Field(
         default=False,
@@ -242,7 +239,7 @@ class Crew(BaseModel):
         self._interpolate_inputs(inputs)
         self._set_tasks_callbacks()
 
-        i18n = I18N(language=self.language, language_file=self.language_file)
+        i18n = I18N(prompt_file=self.prompt_file)
         agentops.set_parent_key("daebe730-f54d-4af5-98df-e6946fb76d13")
         agentops.add_tags(['crewai'])
 
@@ -317,7 +314,7 @@ class Crew(BaseModel):
     def _run_hierarchical_process(self) -> str:
         """Creates and assigns a manager agent to make sure the crew completes the tasks."""
 
-        i18n = I18N(language=self.language, language_file=self.language_file)
+        i18n = I18N(prompt_file=self.prompt_file)
         try:
             self.manager_agent.allow_delegation = (
                 True  # Forcing Allow delegation to the manager
@@ -360,7 +357,8 @@ class Crew(BaseModel):
     def _set_tasks_callbacks(self) -> str:
         """Sets callback for every task suing task_callback"""
         for task in self.tasks:
-            self.task_callback = task.callback
+            if not task.callback:
+                task.callback = self.task_callback
 
     def _interpolate_inputs(self, inputs: Dict[str, Any]) -> str:
         """Interpolates the inputs in the tasks and agents."""

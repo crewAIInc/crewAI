@@ -1463,11 +1463,11 @@
       "locked": false,
       "fontSize": 20,
       "fontFamily": 3,
-      "text": "Agents have the inert ability of\nreach out to another to delegate\nwork or ask questions.",
+      "text": "Agents have the innate ability of\nreach out to another to delegate\nwork or ask questions.",
       "textAlign": "right",
       "verticalAlign": "top",
       "containerId": null,
-      "originalText": "Agents have the inert ability of\nreach out to another to delegate\nwork or ask questions.",
+      "originalText": "Agents have the innate ability of\nreach out to another to delegate\nwork or ask questions.",
       "lineHeight": 1.2,
       "baseline": 68
     },
