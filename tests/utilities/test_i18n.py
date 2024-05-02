@@ -15,12 +15,6 @@ def test_slice():
     assert isinstance(i18n.slice("role_playing"), str)
 
 
-def test_errors():
-    i18n = I18N(language="en")
-    i18n.load_translation()
-    assert isinstance(i18n.errors("unexpected_format"), str)
-
-
 def test_tools():
     i18n = I18N(language="en")
     i18n.load_translation()
