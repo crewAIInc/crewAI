@@ -1,6 +1,7 @@
 import ast
 from textwrap import dedent
 from typing import Any, List, Union
+from difflib import SequenceMatcher
 
 from langchain_core.tools import BaseTool
 from langchain_openai import ChatOpenAI
@@ -215,12 +216,15 @@ class ToolUsage:
 
     def _select_tool(self, tool_name: str) -> BaseTool:
         for tool in self.tools:
-            if tool.name.lower().strip() == tool_name.lower().strip():
+            if (
+                tool.name.lower().strip() == tool_name.lower().strip()
+                or SequenceMatcher(None, tool.name.lower().strip(), tool_name.lower().strip()).ratio() > 0.9
+            ):
                 return tool
         self.task.increment_tools_errors()
         if tool_name and tool_name != "":
             raise Exception(
-                f"Action '{tool_name}' don't exist, these are the only available Actions: {self.tools_description}"
+                f"Action '{tool_name}' don't exist, these are the only available Actions:\n {self.tools_description}"
             )
         else:
             raise Exception(
