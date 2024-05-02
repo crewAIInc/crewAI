@@ -2,7 +2,7 @@ import json
 import os
 from typing import Dict, Optional
 
-from pydantic import BaseModel, Field, PrivateAttr, ValidationError, model_validator
+from pydantic import BaseModel, Field, PrivateAttr, model_validator
 
 
 class I18N(BaseModel):
@@ -26,9 +26,9 @@ class I18N(BaseModel):
                 with open(prompts_path, "r") as f:
                     self._prompts = json.load(f)
         except FileNotFoundError:
-            raise ValidationError(f"Prompt file '{self.prompt_file}' not found.")
+            raise Exception(f"Prompt file '{self.prompt_file}' not found.")
         except json.JSONDecodeError:
-            raise ValidationError(f"Error decoding JSON from the prompts file.")
+            raise Exception(f"Error decoding JSON from the prompts file.")
 
         if not self._prompts:
             self._prompts = {}
@@ -48,4 +48,4 @@ class I18N(BaseModel):
         try:
             return self._prompts[kind][key]
         except:
-            raise ValidationError(f"Prompt for '{kind}':'{key}'  not found.")
+            raise Exception(f"Prompt for '{kind}':'{key}'  not found.")
