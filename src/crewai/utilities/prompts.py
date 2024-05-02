@@ -7,7 +7,7 @@ from crewai.utilities import I18N
 
 
 class Prompts(BaseModel):
-    """Manages and generates prompts for a generic agent with support for different languages."""
+    """Manages and generates prompts for a generic agent."""
 
     i18n: I18N = Field(default=I18N())
     tools: list[Any] = Field(default=[])
