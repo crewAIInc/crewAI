@@ -16,7 +16,6 @@ class EXABaseTool(BaseTool):
 	headers: dict = {
 			"accept": "application/json",
 			"content-type": "application/json",
-			"x-api-key": os.environ['EXA_API_KEY'],
 		}
 
 	def _parse_results(self, results):
