@@ -357,6 +357,97 @@ class Crew(BaseModel):
             if not task.callback:
                 task.callback = self.task_callback
 
+    async def akickoff(self, inputs: Optional[Dict[str, Any]] = {}) -> str:
+        """Starts the crew to work on its assigned tasks."""
+        self._execution_span = self._telemetry.crew_execution_span(self)
+        self._interpolate_inputs(inputs)
+
+        for agent in self.agents:
+            agent.i18n = I18N(language=self.language)
+
+            if not agent.function_calling_llm:
+                agent.function_calling_llm = self.function_calling_llm
+                agent.create_agent_executor()
+            if not agent.step_callback:
+                agent.step_callback = self.step_callback
+                agent.create_agent_executor()
+
+        metrics = []
+
+        if self.process == Process.sequential:
+            result = await self._arun_sequential_process()
+        elif self.process == Process.hierarchical:
+            result, manager_metrics = await self._arun_hierarchical_process()
+            metrics.append(manager_metrics)
+
+        else:
+            raise NotImplementedError(
+                f"The process '{self.process}' is not implemented yet."
+            )
+
+        metrics = metrics + [
+            agent._token_process.get_summary() for agent in self.agents
+        ]
+        self.usage_metrics = {
+            key: sum([m[key] for m in metrics if m is not None]) for key in metrics[0]
+        }
+
+        return result
+
+    async def _arun_sequential_process(self) -> str:
+        """Executes tasks sequentially and returns the final output."""
+        task_output = ""
+        for task in self.tasks:
+            if task.agent.allow_delegation:
+                agents_for_delegation = [
+                    agent for agent in self.agents if agent != task.agent
+                ]
+                if len(self.agents) > 1 and len(agents_for_delegation) > 0:
+                    task.tools += AgentTools(agents=agents_for_delegation).tools()
+
+            role = task.agent.role if task.agent is not None else "None"
+            self._logger.log("debug", f"== Working Agent: {role}", color="bold_yellow")
+            self._logger.log(
+                "info", f"== Starting Task: {task.description}", color="bold_yellow"
+            )
+
+            output = await task.aexecute(context=task_output)
+            if not task.async_execution:
+                task_output = output
+
+            role = task.agent.role if task.agent is not None else "None"
+            self._logger.log("debug", f"== [{role}] Task output: {task_output}\n\n")
+
+        self._finish_execution(task_output)
+        return self._format_output(task_output)
+
+    async def _arun_hierarchical_process(self) -> str:
+        """Creates and assigns a manager agent to make sure the crew completes the tasks."""
+
+        i18n = I18N(language=self.language)
+        manager = Agent(
+            role=i18n.retrieve("hierarchical_manager_agent", "role"),
+            goal=i18n.retrieve("hierarchical_manager_agent", "goal"),
+            backstory=i18n.retrieve("hierarchical_manager_agent", "backstory"),
+            tools=AgentTools(agents=self.agents).tools(),
+            llm=self.manager_llm,
+            verbose=True,
+        )
+
+        task_output = ""
+        for task in self.tasks:
+            self._logger.log("debug", f"Working Agent: {manager.role}")
+            self._logger.log("info", f"Starting Task: {task.description}")
+
+            task_output = await task.aexecute(
+                agent=manager, context=task_output, tools=manager.tools
+            )
+
+            self._logger.log("debug", f"[{manager.role}] Task output: {task_output}")
+
+        self._finish_execution(task_output)
+        return self._format_output(task_output), manager._token_process.get_summary()
+
     def _interpolate_inputs(self, inputs: Dict[str, Any]) -> str:
         """Interpolates the inputs in the tasks and agents."""
         [task.interpolate_inputs(inputs) for task in self.tasks]

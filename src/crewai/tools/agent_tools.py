@@ -22,6 +22,7 @@ class AgentTools(BaseModel):
                 description=self.i18n.tools("delegate_work").format(
                     coworkers=f"[{', '.join([f'{agent.role}' for agent in self.agents])}]"
                 ),
+                async_execution=True,
             ),
             StructuredTool.from_function(
                 func=self.ask_question,
@@ -29,19 +30,20 @@ class AgentTools(BaseModel):
                 description=self.i18n.tools("ask_question").format(
                     coworkers=f"[{', '.join([f'{agent.role}' for agent in self.agents])}]"
                 ),
+                async_execution=True,
             ),
         ]
         return tools
 
-    def delegate_work(self, coworker: str, task: str, context: str):
+    async def delegate_work(self, coworker: str, task: str, context: str):
         """Useful to delegate a specific task to a co-worker passing all necessary context and names."""
-        return self._execute(coworker, task, context)
+        return await self._execute(coworker, task, context)
 
-    def ask_question(self, coworker: str, question: str, context: str):
+    async def ask_question(self, coworker: str, question: str, context: str):
         """Useful to ask a question, opinion or take from a co-worker passing all necessary context and names."""
-        return self._execute(coworker, question, context)
+        return await self._execute(coworker, question, context)
 
-    def _execute(self, agent, task, context):
+    async def _execute(self, agent, task, context):
         """Execute the command."""
         try:
             agent = [
@@ -69,4 +71,4 @@ class AgentTools(BaseModel):
             agent=agent,
             expected_output="Your best answer to your co-worker asking you this, accounting for the context shared.",
         )
-        return agent.execute_task(task, context)
+        return await agent.execute_task(task, context)

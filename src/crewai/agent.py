@@ -246,6 +246,53 @@ class Agent(BaseModel):
 
         return result
 
+    async def aexecute_task(
+        self,
+        task: Any,
+        context: Optional[str] = None,
+        tools: Optional[List[Any]] = None,
+    ) -> str:
+        """Execute a task with the agent.
+
+        Args:
+            task: Task to execute.
+            context: Context to execute the task in.
+            tools: Tools to use for the task.
+
+        Returns:
+            Output of the agent
+        """
+        self.tools_handler.last_used_tool = {}
+
+        task_prompt = task.prompt()
+
+        if context:
+            task_prompt = self.i18n.slice("task_with_context").format(
+                task=task_prompt, context=context
+            )
+
+        tools = self._parse_tools(tools or self.tools)
+        self.create_agent_executor(tools=tools)
+        self.agent_executor.tools = tools
+        self.agent_executor.task = task
+
+        self.agent_executor.tools_description = render_text_description(tools)
+        self.agent_executor.tools_names = self.__tools_names(tools)
+
+        invocation_result = await self.agent_executor.ainvoke(
+            {
+                "input": task_prompt,
+                "tool_names": self.agent_executor.tools_names,
+                "tools": self.agent_executor.tools_description,
+            }
+        )
+        result = invocation_result["output"]
+
+        if self.max_rpm:
+            self._rpm_controller.stop_rpm_counter()
+
+        return result
+
     def set_cache_handler(self, cache_handler: CacheHandler) -> None:
         """Set the cache handler for the agent.
 
@@ -303,9 +350,9 @@ class Agent(BaseModel):
         }
 
         if self._rpm_controller:
-            executor_args[
-                "request_within_rpm_limit"
-            ] = self._rpm_controller.check_or_wait
+            executor_args["request_within_rpm_limit"] = (
+                self._rpm_controller.check_or_wait
+            )
 
         prompt = Prompts(
             i18n=self.i18n,

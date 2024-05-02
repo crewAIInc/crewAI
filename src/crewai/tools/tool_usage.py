@@ -90,6 +90,26 @@ class ToolUsage:
             return error
         return f"{self._use(tool_string=tool_string, tool=tool, calling=calling)}"
 
+    async def ause(
+        self, calling: Union[ToolCalling, InstructorToolCalling], tool_string: str
+    ) -> str:
+        if isinstance(calling, ToolUsageErrorException):
+            error = calling.message
+            self._printer.print(content=f"\n\n{error}\n", color="red")
+            self.task.increment_tools_errors()
+            return error
+        try:
+            tool = self._select_tool(calling.tool_name)
+        except Exception as e:
+            error = getattr(e, "message", str(e))
+            self.task.increment_tools_errors()
+            self._printer.print(content=f"\n\n{error}\n", color="red")
+            return error
+        tool_result = await self._ause(
+            tool_string=tool_string, tool=tool, calling=calling
+        )
+        return f"{tool_result}"
+
     def _use(
         self,
         tool_string: str,
@@ -179,6 +199,104 @@ class ToolUsage:
                 )
 
         self._printer.print(content=f"\n\n{result}\n", color="purple")
+        self._telemetry.tool_usage(
+            llm=self.function_calling_llm,
+            tool_name=tool.name,
+            attempts=self._run_attempts,
+        )
+        result = self._format_result(result=result)
+        return result
+
+    async def _ause(
+        self,
+        tool_string: str,
+        tool: BaseTool,
+        calling: Union[ToolCalling, InstructorToolCalling],
+    ) -> None:
+        if self._check_tool_repeated_usage(calling=calling):
+            try:
+                result = self._i18n.errors("task_repeated_usage").format(
+                    tool_names=self.tools_names
+                )
+                self._printer.print(content=f"\n\n{result}\n", color="yellow")
+                self._telemetry.tool_repeated_usage(
+                    llm=self.function_calling_llm,
+                    tool_name=tool.name,
+                    attempts=self._run_attempts,
+                )
+                result = self._format_result(result=result)
+                return result
+            except Exception:
+                self.task.increment_tools_errors()
+
+        result = self.tools_handler.cache.read(
+            tool=calling.tool_name, input=calling.arguments
+        )
+
+        print(f"Using Tool: {tool}")
+        tool_instance = tool.func.__self__
+        # Access the async_execution attribute of the instance
+        async_tool = tool_instance.async_execution
+        print(f"async_tool: {async_tool}")
+        if not result:
+            try:
+                if calling.tool_name in [
+                    "Delegate work to co-worker",
+                    "Ask question to co-worker",
+                ]:
+                    self.task.increment_delegations()
+
+                if calling.arguments:
+                    try:
+                        acceptable_args = tool.args_schema.schema()["properties"].keys()
+                        arguments = {
+                            k: v
+                            for k, v in calling.arguments.items()
+                            if k in acceptable_args
+                        }
+                        if async_tool:
+                            result = await tool._run(**arguments)
+                        else:
+                            result = tool._run(**arguments)
+
+                    except Exception:
+                        if tool.args_schema:
+                            arguments = calling.arguments
+                            if async_tool:
+                                result = await tool._run(**arguments)
+                            else:
+                                result = tool._run(**arguments)
+                        else:
+                            arguments = calling.arguments.values()
+                            if async_tool:
+                                result = await tool._run(*arguments)
+                            else:
+                                result = tool._run(*arguments)
+                else:
+                    if async_tool:
+                        result = await tool._run()
+                    else:
+                        result = tool._run()
+            except Exception as e:
+                self._run_attempts += 1
+                if self._run_attempts > self._max_parsing_attempts:
+                    self._telemetry.tool_usage_error(llm=self.function_calling_llm)
+                    error_message = self._i18n.errors("tool_usage_exception").format(
+                        error=e, tool=tool.name, tool_inputs=tool.description
+                    )
+                    error = ToolUsageErrorException(
+                        f'\n{error_message}.\nMoving on then. {self._i18n.slice("format").format(tool_names=self.tools_names)}'
+                    ).message
+                    self.task.increment_tools_errors()
+                    self._printer.print(content=f"\n\n{error_message}\n", color="red")
+                    return error
+                self.task.increment_tools_errors()
+
+                return await self.use(calling=calling, tool_string=tool_string)
+
+            self.tools_handler.on_tool_use(calling=calling, output=result)
+
+        self._printer.print(content=f"\n\n{result}\n", color="yellow")
         self._telemetry.tool_usage(
             llm=self.function_calling_llm,
             tool_name=tool.name,

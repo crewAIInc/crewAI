@@ -178,8 +178,71 @@ class Task(BaseModel):
             )
             return result
 
+    async def aexecute(
+        self,
+        agent: Agent | None = None,
+        context: Optional[str] = None,
+        tools: Optional[List[Any]] = None,
+    ) -> str:
+        """Execute the task.
+
+        Returns:
+            Output of the task.
+        """
+
+        agent = agent or self.agent
+        if not agent:
+            raise Exception(
+                f"The task '{self.description}' has no agent assigned, therefore it can't be executed directly and should be executed in a Crew using a specific process that support that, like hierarchical."
+            )
+
+        if self.context:
+            context = []
+            for task in self.context:
+                if task.async_execution:
+                    task.thread.join()
+                if task and task.output:
+                    context.append(task.output.raw_output)
+            context = "\n".join(context)
+
+        tools = tools or self.tools
+
+        if self.async_execution:
+            self.thread = threading.Thread(
+                target=self._aexecute, args=(agent, self, context, tools)
+            )
+            self.thread.start()
+        else:
+            result = await self._aexecute(
+                task=self,
+                agent=agent,
+                context=context,
+                tools=tools,
+            )
+            return result
+
     def _execute(self, agent, task, context, tools):
         result = agent.execute_task(
+            task=task,
+            context=context,
+            tools=tools,
+        )
+
+        exported_output = self._export_output(result)
+
+        self.output = TaskOutput(
+            description=self.description,
+            exported_output=exported_output,
+            raw_output=result,
+        )
+
+        if self.callback:
+            self.callback(self.output)
+
+        return exported_output
+
+    async def _aexecute(self, agent, task, context, tools):
+        result = await agent.aexecute_task(
             task=task,
             context=context,
             tools=tools,
