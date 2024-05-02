@@ -33,7 +33,6 @@ Tools are always expect to return strings, as they are meant to be used by the a
 
 There are three ways to create tools for crewAI agents:
 - [Subclassing `BaseTool`](#subclassing-basetool)
-- [Creating a tool from a function or lambda](#functional-tool-creation)
 - [Using the `tool` decorator](#utilizing-the-tool-decorator)
 
 ### Subclassing `BaseTool`
