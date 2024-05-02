@@ -10,11 +10,12 @@ from crewai.agents.tools_handler import ToolsHandler
 from crewai.telemetry import Telemetry
 from crewai.tools.tool_calling import InstructorToolCalling, ToolCalling
 from crewai.utilities import I18N, Converter, ConverterError, Printer
+
 agentops = None
 try:
-  import agentops
+    import agentops
 except ImportError:
-  pass
+    pass
 
 OPENAI_BIGGER_MODELS = ["gpt-4"]
 
@@ -167,7 +168,9 @@ class ToolUsage:
                     return error
                 self.task.increment_tools_errors()
                 if agentops:
-                  agentops.record(agentops.ErrorEvent(exception=e, trigger_event=tool_event))
+                    agentops.record(
+                        agentops.ErrorEvent(exception=e, trigger_event=tool_event)
+                    )
                 return self.use(calling=calling, tool_string=tool_string)
 
             if self.tools_handler:
@@ -189,7 +192,7 @@ class ToolUsage:
 
         self._printer.print(content=f"\n\n{result}\n", color="purple")
         if agentops:
-          agentops.record(tool_event)
+            agentops.record(tool_event)
         self._telemetry.tool_usage(
             llm=self.function_calling_llm,
             tool_name=tool.name,
@@ -228,7 +231,10 @@ class ToolUsage:
         for tool in self.tools:
             if (
                 tool.name.lower().strip() == tool_name.lower().strip()
-                or SequenceMatcher(None, tool.name.lower().strip(), tool_name.lower().strip()).ratio() > 0.9
+                or SequenceMatcher(
+                    None, tool.name.lower().strip(), tool_name.lower().strip()
+                ).ratio()
+                > 0.9
             ):
                 return tool
         self.task.increment_tools_errors()
