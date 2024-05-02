@@ -244,6 +244,7 @@ class Crew(BaseModel):
 
         i18n = I18N(language=self.language, language_file=self.language_file)
         agentops.set_parent_key("daebe730-f54d-4af5-98df-e6946fb76d13")
+        agentops.add_tags(['crewai'])
 
         for agent in self.agents:
             agent.i18n = i18n
