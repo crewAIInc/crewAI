@@ -6,7 +6,7 @@ from crewai.utilities.i18n import I18N
 def test_load_prompts():
     i18n = I18N()
     i18n.load_prompts()
-    assert i18n._translations is not None
+    assert i18n._prompts is not None
 
 
 def test_slice():
@@ -35,7 +35,10 @@ def test_retrieve_not_found():
 
 
 def test_prompt_file():
-    i18n = I18N(prompt_file="tests/utilities/en.json")
+    import os
+
+    path = os.path.join(os.path.dirname(__file__), "prompts.json")
+    i18n = I18N(prompt_file=path)
     i18n.load_prompts()
     assert isinstance(i18n.retrieve("slices", "role_playing"), str)
     assert i18n.retrieve("slices", "role_playing") == "Lorem ipsum dolor sit amet"

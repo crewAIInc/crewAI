@@ -308,7 +308,7 @@ class Crew(BaseModel):
     def _run_hierarchical_process(self) -> str:
         """Creates and assigns a manager agent to make sure the crew completes the tasks."""
 
-        i18n = I18N(language=self.language, language_file=self.language_file)
+        i18n = I18N(prompt_file=self.prompt_file)
         try:
             self.manager_agent.allow_delegation = (
                 True  # Forcing Allow delegation to the manager
