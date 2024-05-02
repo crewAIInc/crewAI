@@ -6,6 +6,7 @@ from .tools import (
 	DirectorySearchTool,
 	DOCXSearchTool,
 	DirectoryReadTool,
+ 	EXASearchTool,
 	FileReadTool,
 	GithubSearchTool,
 	SerperDevTool,

@@ -3,7 +3,7 @@ from typing import Any
 
 from .exa_base_tool import EXABaseTool
 
-class EXAURLTool(EXABaseTool):
+class EXASearchTool(EXABaseTool):
 	def _run(
 		self,
 		**kwargs: Any,
