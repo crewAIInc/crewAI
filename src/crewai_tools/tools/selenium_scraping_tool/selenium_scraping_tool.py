@@ -55,7 +55,6 @@ class SeleniumScrapingTool(BaseTool):
 			body_text = driver.find_element(By.TAG_NAME, "body").text
 			content.append(body_text)
 		else:
-			driver.find_elements(By.CSS_SELECTOR, css_element)
 			for element in driver.find_elements(By.CSS_SELECTOR, css_element):
 				content.append(element.text)
 		driver.close()
