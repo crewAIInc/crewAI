@@ -19,10 +19,13 @@ class SerperDevTool(BaseTool):
 
 	def _run(
 		self,
-		search_query: str,
 		**kwargs: Any,
 	) -> Any:
-		payload = json.dumps({"q": search_query, "num": self.n_results})
+		search_query = kwargs.get('search_query')
+		if search_query is None:
+			search_query = kwargs.get('query')
+
+		payload = json.dumps({"q": search_query})
 		headers = {
 				'X-API-KEY': os.environ['SERPER_API_KEY'],
 				'content-type': 'application/json'
