@@ -34,11 +34,11 @@ class AgentTools(BaseModel):
         return tools
 
     def delegate_work(self, coworker: str, task: str, context: str):
-        """Useful to delegate a specific task to a coworker passing all necessary context and names."""
+        """Useful to delegate a specific task to a co-worker passing all necessary context and names."""
         return self._execute(coworker, task, context)
 
     def ask_question(self, coworker: str, question: str, context: str):
-        """Useful to ask a question, opinion or take from a coworker passing all necessary context and names."""
+        """Useful to ask a question, opinion or take from a co-worker passing all necessary context and names."""
         return self._execute(coworker, question, context)
 
     def _execute(self, agent, task, context):
@@ -67,6 +67,6 @@ class AgentTools(BaseModel):
         task = Task(
             description=task,
             agent=agent,
-            expected_output="Your best answer to your coworker asking you this, accounting for the context shared.",
+            expected_output="Your best answer to your co-worker asking you this, accounting for the context shared.",
         )
         return agent.execute_task(task, context)
