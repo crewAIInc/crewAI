@@ -41,7 +41,7 @@ Note: Substitute 'https://docs.example.com/reference' with your target documenta
 By default, the tool uses OpenAI for both embeddings and summarization. To customize the model, you can use a config dictionary as follows:
 
 ```python
-tool = YoutubeVideoSearchTool(
+tool = CodeDocsSearchTool(
     config=dict(
         llm=dict(
             provider="ollama", # or google, openai, anthropic, llama2, ...
