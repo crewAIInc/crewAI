@@ -54,7 +54,7 @@ OPENAI_API_KEY=''
 
 ## Ollama Integration (ex. for using Llama 2 locally)
 1. [Download Ollama](https://ollama.com/download).   
-2. After setting up the Ollama, Pull the Llama2 by typing following lines into the terminal ```ollama pull Llama2```.   
+2. After setting up the Ollama, Pull the Llama2 by typing following lines into the terminal ```ollama pull llama2```.   
 3. Create a ModelFile similar the one below in your project directory.
 ```
 FROM llama2
