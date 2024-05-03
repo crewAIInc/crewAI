@@ -175,8 +175,8 @@ class Crew(BaseModel):
             not self.manager_llm and not self.manager_agent
         ):
             raise PydanticCustomError(
-                "missing_manager_llm",
-                "Attribute `manager_llm` is required when using hierarchical process.",
+                "missing_manager_llm_or_manager_agent",
+                "Attribute `manager_llm` or `manager_agent` is required when using hierarchical process.",
                 {},
             )
         return self
