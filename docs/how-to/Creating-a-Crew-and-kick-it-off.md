@@ -72,7 +72,7 @@ research_task = Task(
     "Your final report should clearly articulate the key points,"
     "its market opportunities, and potential risks."
   ),
-  expected_output='A comprehensive 3 paragraphs long report on the latest AI trends.',
+  expected_output='A comprehensive 3 paragraphs long report on the latest {topic} trends.',
   tools=[search_tool],
   agent=researcher,
 )
