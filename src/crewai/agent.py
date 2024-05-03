@@ -25,7 +25,9 @@ from crewai.memory.contextual.contextual_memory import ContextualMemory
 from crewai.utilities import I18N, Logger, Prompts, RPMController
 from crewai.utilities.token_counter_callback import TokenCalcHandler, TokenProcess
 
+agentops = None
 try:
+    import agentops
     from agentops import track_agent
 except ImportError:
 
@@ -194,6 +196,12 @@ class Agent(BaseModel):
                 isinstance(handler, TokenCalcHandler) for handler in self.llm.callbacks
             ):
                 self.llm.callbacks.append(token_handler)
+
+            if agentops and not any(
+                isinstance(handler, agentops.LangchainCallbackHandler) for handler in self.llm.callbacks
+            ):
+                agentops.stop_instrumenting()
+                self.llm.callbacks.append(agentops.LangchainCallbackHandler())
 
         if not self.agent_executor:
             if not self.cache_handler:
