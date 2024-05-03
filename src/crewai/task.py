@@ -1,6 +1,8 @@
+import re
 import threading
 import uuid
 from typing import Any, Dict, List, Optional, Type
+import os
 
 from langchain_openai import ChatOpenAI
 from pydantic import UUID4, BaseModel, Field, field_validator, model_validator
@@ -245,7 +247,16 @@ class Task(BaseModel):
                     return exported_result.model_dump()
                 return exported_result
             except Exception:
-                pass
+              # sometimes the response contains valid JSON in the middle of text
+              match = re.search(r"({.*})", result, re.DOTALL)
+              if match:
+                  try:
+                      exported_result = model.model_validate_json(match.group(0))
+                      if self.output_json:
+                          return exported_result.model_dump()
+                      return exported_result
+                  except Exception:
+                      pass
 
             llm = self.agent.function_calling_llm or self.agent.llm
 
@@ -281,6 +292,11 @@ class Task(BaseModel):
         return isinstance(llm, ChatOpenAI) and llm.openai_api_base == None
 
     def _save_file(self, result: Any) -> None:
+        directory = os.path.dirname(self.output_file)
+
+        if not os.path.exists(directory):
+            os.makedirs(directory)
+
         with open(self.output_file, "w") as file:
             file.write(result)
         return None

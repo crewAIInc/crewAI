@@ -648,10 +648,10 @@ def test_agent_usage_metrics_are_captured_for_sequential_process():
     result = crew.kickoff()
     assert result == "Howdy!"
     assert crew.usage_metrics == {
-        "completion_tokens": 51,
-        "prompt_tokens": 483,
-        "successful_requests": 3,
-        "total_tokens": 534,
+        "completion_tokens": 17,
+        "prompt_tokens": 160,
+        "successful_requests": 1,
+        "total_tokens": 177,
     }
 
 
@@ -678,10 +678,10 @@ def test_agent_usage_metrics_are_captured_for_hierarchical_process():
     result = crew.kickoff()
     assert result == '"Howdy!"'
     assert crew.usage_metrics == {
-        "total_tokens": 2592,
-        "prompt_tokens": 2048,
-        "completion_tokens": 544,
-        "successful_requests": 6,
+        "total_tokens": 1650,
+        "prompt_tokens": 1367,
+        "completion_tokens": 283,
+        "successful_requests": 3,
     }
 
 
@@ -912,3 +912,32 @@ def test_crew_log_file_output(tmp_path):
     crew = Crew(agents=[researcher], tasks=tasks, output_log_file=str(test_file))
     crew.kickoff()
     assert test_file.exists()
+
+
+@pytest.mark.vcr(filter_headers=["authorization"])
+def test_manager_agent():
+    from unittest.mock import patch
+
+    task = Task(
+        description="Come up with a list of 5 interesting ideas to explore for an article, then write one amazing paragraph highlight for each idea that showcases how good an article about this topic could be. Return the list of ideas with their paragraph and your notes.",
+        expected_output="5 bullet points with a paragraph for each idea.",
+    )
+
+    manager = Agent(
+        role="Manager",
+        goal="Manage the crew and ensure the tasks are completed efficiently.",
+        backstory="You're an experienced manager, skilled in overseeing complex projects and guiding teams to success. Your role is to coordinate the efforts of the crew members, ensuring that each task is completed on time and to the highest standard.",
+        allow_delegation=False,
+    )
+
+    crew = Crew(
+        agents=[researcher, writer],
+        process=Process.hierarchical,
+        manager_agent=manager,
+        tasks=[task],
+    )
+
+    with patch.object(Task, "execute") as execute:
+        crew.kickoff()
+        assert manager.allow_delegation == True
+        execute.assert_called()

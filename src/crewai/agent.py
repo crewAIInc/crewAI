@@ -121,6 +121,15 @@ class Agent(BaseModel):
     callbacks: Optional[List[InstanceOf[BaseCallbackHandler]]] = Field(
         default=None, description="Callback to be executed"
     )
+    system_template: Optional[str] = Field(
+        default=None, description="System format for the agent."
+    )
+    prompt_template: Optional[str] = Field(
+        default=None, description="Prompt format for the agent."
+    )
+    response_template: Optional[str] = Field(
+        default=None, description="Response format for the agent."
+    )
 
     _original_role: str | None = None
     _original_goal: str | None = None
@@ -161,10 +170,16 @@ class Agent(BaseModel):
         """set agent executor is set."""
         if hasattr(self.llm, "model_name"):
             token_handler = TokenCalcHandler(self.llm.model_name, self._token_process)
-            if isinstance(self.llm.callbacks, list):
+
+            # Ensure self.llm.callbacks is a list
+            if not isinstance(self.llm.callbacks, list):
+                self.llm.callbacks = []
+
+            # Check if an instance of TokenCalcHandler already exists in the list
+            if not any(
+                isinstance(handler, TokenCalcHandler) for handler in self.llm.callbacks
+            ):
                 self.llm.callbacks.append(token_handler)
-            else:
-                self.llm.callbacks = [token_handler]
 
         if not self.agent_executor:
             if not self.cache_handler:
@@ -292,7 +307,13 @@ class Agent(BaseModel):
                 "request_within_rpm_limit"
             ] = self._rpm_controller.check_or_wait
 
-        prompt = Prompts(i18n=self.i18n, tools=tools).task_execution()
+        prompt = Prompts(
+            i18n=self.i18n,
+            tools=tools,
+            system_template=self.system_template,
+            prompt_template=self.prompt_template,
+            response_template=self.response_template,
+        ).task_execution()
 
         execution_prompt = prompt.partial(
             goal=self.goal,
@@ -300,7 +321,13 @@ class Agent(BaseModel):
             backstory=self.backstory,
         )
 
-        bind = self.llm.bind(stop=[self.i18n.slice("observation")])
+        stop_words = [self.i18n.slice("observation")]
+        if self.response_template:
+            stop_words.append(
+                self.response_template.split("{{ .Response }}")[1].strip()
+            )
+
+        bind = self.llm.bind(stop=stop_words)
         inner_agent = agent_args | execution_prompt | bind | CrewAgentParser(agent=self)
         self.agent_executor = CrewAgentExecutor(
             agent=RunnableAgent(runnable=inner_agent), **executor_args

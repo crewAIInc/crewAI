@@ -30,7 +30,6 @@
 - [Connecting Your Crew to a Model](#connecting-your-crew-to-a-model)
 - [How CrewAI Compares](#how-crewai-compares)
 - [Contribution](#contribution)
-- [Hire CrewAI](#hire-crewai)
 - [Telemetry](#telemetry)
 - [License](#license)
 
@@ -49,7 +48,7 @@ To get started with CrewAI, follow these simple steps:
 pip install crewai
 ```
 
-If you want to also install crewai-tools, which is a package with tools that can be used by the agents, but more dependencies, you can install it with, example below uses it:
+If you want to install the 'crewai' package along with its optional features that include additional tools for agents, you can do so by using the following command: pip install 'crewai[tools]'. This command installs the basic package and also adds extra components which require more dependencies to function."
 
 ```shell
 pip install 'crewai[tools]'
@@ -83,7 +82,7 @@ researcher = Agent(
   verbose=True,
   allow_delegation=False,
   tools=[search_tool]
-  # You can pass an optional llm attribute specifying what mode you wanna use.
+  # You can pass an optional llm attribute specifying what model you wanna use.
   # It can be a local model through Ollama / LM Studio or a remote
   # model like OpenAI, Mistral, Antrophic or others (https://docs.crewai.com/how-to/LLM-Connections/)
   #
@@ -247,11 +246,6 @@ poetry build
 pip install dist/*.tar.gz
 ```
 
-## Hire CrewAI
-
-We're a company developing crewAI and crewAI Enterprise. We, for a limited time, are offering consulting with selected customers; to get them early access to our enterprise solution.
-If you are interested in having access to it, and hiring weekly hours with our team, feel free to email us at [joao@crewai.com](mailto:joao@crewai.com).
-
 ## Telemetry
 
 CrewAI uses anonymous telemetry to collect usage data with the main purpose of helping us improve the library by focusing our efforts on the most used features, integrations and tools.
@@ -259,6 +253,7 @@ CrewAI uses anonymous telemetry to collect usage data with the main purpose of h
 There is NO data being collected on the prompts, tasks descriptions agents backstories or goals nor tools usage, no API calls, nor responses nor any data that is being processed by the agents, nor any secrets and env vars.
 
 Data collected includes:
+
 - Version of crewAI
   - So we can understand how many users are using the latest version
 - Version of Python

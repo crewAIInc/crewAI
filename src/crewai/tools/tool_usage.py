@@ -1,4 +1,5 @@
 import ast
+from difflib import SequenceMatcher
 from textwrap import dedent
 from typing import Any, List, Union
 
@@ -26,13 +27,13 @@ class ToolUsage:
     Class that represents the usage of a tool by an agent.
 
     Attributes:
-        task: Task being executed.
-        tools_handler: Tools handler that will manage the tool usage.
-        tools: List of tools available for the agent.
-        original_tools: Original tools available for the agent before being converted to BaseTool.
-        tools_description: Description of the tools available for the agent.
-        tools_names: Names of the tools available for the agent.
-        function_calling_llm: Language model to be used for the tool usage.
+      task: Task being executed.
+      tools_handler: Tools handler that will manage the tool usage.
+      tools: List of tools available for the agent.
+      original_tools: Original tools available for the agent before being converted to BaseTool.
+      tools_description: Description of the tools available for the agent.
+      tools_names: Names of the tools available for the agent.
+      function_calling_llm: Language model to be used for the tool usage.
     """
 
     def __init__(
@@ -215,12 +216,18 @@ class ToolUsage:
 
     def _select_tool(self, tool_name: str) -> BaseTool:
         for tool in self.tools:
-            if tool.name.lower().strip() == tool_name.lower().strip():
+            if (
+                tool.name.lower().strip() == tool_name.lower().strip()
+                or SequenceMatcher(
+                    None, tool.name.lower().strip(), tool_name.lower().strip()
+                ).ratio()
+                > 0.9
+            ):
                 return tool
         self.task.increment_tools_errors()
         if tool_name and tool_name != "":
             raise Exception(
-                f"Action '{tool_name}' don't exist, these are the only available Actions: {self.tools_description}"
+                f"Action '{tool_name}' don't exist, these are the only available Actions:\n {self.tools_description}"
             )
         else:
             raise Exception(
@@ -260,17 +267,17 @@ class ToolUsage:
                     else ToolCalling
                 )
                 converter = Converter(
-                    text=f"Only tools available:\n###\n{self._render()}\n\nReturn a valid schema for the tool, the tool name must be exactly equal one of the options, use this text to inform the valid ouput schema:\n\n{tool_string}```",
+                    text=f"Only tools available:\n###\n{self._render()}\n\nReturn a valid schema for the tool, the tool name must be exactly equal one of the options, use this text to inform the valid output schema:\n\n{tool_string}```",
                     llm=self.function_calling_llm,
                     model=model,
                     instructions=dedent(
                         """\
-                            The schema should have the following structure, only two keys:
-                            - tool_name: str
-                            - arguments: dict (with all arguments being passed)
+              The schema should have the following structure, only two keys:
+              - tool_name: str
+              - arguments: dict (with all arguments being passed)
 
-                            Example:
-                            {"tool_name": "tool name", "arguments": {"arg_name1": "value", "arg_name2": 2}}""",
+              Example:
+              {"tool_name": "tool name", "arguments": {"arg_name1": "value", "arg_name2": 2}}""",
                     ),
                     max_attemps=1,
                 )
@@ -282,7 +289,8 @@ class ToolUsage:
                 tool_name = self.action.tool
                 tool = self._select_tool(tool_name)
                 try:
-                    arguments = ast.literal_eval(self.action.tool_input)
+                    tool_input = self._validate_tool_input(self.action.tool_input)
+                    arguments = ast.literal_eval(tool_input)
                 except Exception:
                     return ToolUsageErrorException(
                         f'{self._i18n.errors("tool_arguments_error")}'
@@ -308,3 +316,54 @@ class ToolUsage:
             return self._tool_calling(tool_string)
 
         return calling
+
+    def _validate_tool_input(self, tool_input: str) -> str:
+        try:
+            ast.literal_eval(tool_input)
+            return tool_input
+        except Exception:
+            # Clean and ensure the string is properly enclosed in braces
+            tool_input = tool_input.strip()
+            if not tool_input.startswith("{"):
+                tool_input = "{" + tool_input
+            if not tool_input.endswith("}"):
+                tool_input += "}"
+
+            # Manually split the input into key-value pairs
+            entries = tool_input.strip("{} ").split(",")
+            formatted_entries = []
+
+            for entry in entries:
+                if ":" not in entry:
+                    continue  # Skip malformed entries
+                key, value = entry.split(":", 1)
+
+                # Remove extraneous white spaces and quotes, replace single quotes
+                key = key.strip().strip('"').replace("'", '"')
+                value = value.strip()
+
+                # Handle replacement of single quotes at the start and end of the value string
+                if value.startswith("'") and value.endswith("'"):
+                    value = value[1:-1]  # Remove single quotes
+                    value = (
+                        '"' + value.replace('"', '\\"') + '"'
+                    )  # Re-encapsulate with double quotes
+                elif value.isdigit():  # Check if value is a digit, hence integer
+                    formatted_value = value
+                elif value.lower() in [
+                    "true",
+                    "false",
+                    "null",
+                ]:  # Check for boolean and null values
+                    formatted_value = value.lower()
+                else:
+                    # Assume the value is a string and needs quotes
+                    formatted_value = '"' + value.replace('"', '\\"') + '"'
+
+                # Rebuild the entry with proper quoting
+                formatted_entry = f'"{key}": {formatted_value}'
+                formatted_entries.append(formatted_entry)
+
+            # Reconstruct the JSON string
+            new_json_string = "{" + ", ".join(formatted_entries) + "}"
+            return new_json_string
