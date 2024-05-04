@@ -25,7 +25,7 @@
     "task_repeated_usage": "I tried reusing the same input, I must stop using this action input. I'll try something else instead.\n\n",
     "tool_usage_error": "I encountered an error: {error}",
     "tool_arguments_error": "Error: the Action Input is not a valid key, value dictionary.",
-    "wrong_tool_name": "You tried to use the tool {tool}, but it doesn't exist. You must use one of the following tools, use one at time: {tools}.",
+    "wrong_tool_name": "You tried to use the tool {tool}, but it doesn't exist. You must use one of the following tools, use one tool in: {tools}.",
     "tool_usage_exception": "I encountered an error while trying to use the tool. This was the error: {error}.\n Tool {tool} accepts these inputs: {tool_inputs}"
   },
   "tools": {
