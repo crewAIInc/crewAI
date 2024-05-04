@@ -44,7 +44,7 @@ Cutting-edge framework for orchestrating role-playing, autonomous AI agents. By 
         <h2>How-To Guides</h2>
         <ul>
             <li>
-                <a href="./how-to/Installing-CrewAI">
+                <a href="./how-to/Installing-CrewAI.md">
                     Installing crewAI
                 </a>
             </li>
