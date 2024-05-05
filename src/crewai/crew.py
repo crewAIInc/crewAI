@@ -324,7 +324,7 @@ class Crew(BaseModel):
             manager = self.manager_agent
             if len(manager.tools) > 0:
                 raise Exception("Manager agent should not have tools")
-            manager.tools = (AgentTools(agents=self.agents).tools(),)
+            manager.tools = AgentTools(agents=self.agents).tools()
         else:
             manager = Agent(
                 role=i18n.retrieve("hierarchical_manager_agent", "role"),
