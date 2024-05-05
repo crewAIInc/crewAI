@@ -9,32 +9,32 @@ Cutting-edge framework for orchestrating role-playing, autonomous AI agents. By 
         <h2>Core Concepts</h2>
         <ul>
             <li>
-                <a href="./core-concepts/Agents.md">
+                <a href="./core-concepts/Agents">
                     Agents
                 </a>
             </li>
             <li>
-                <a href="./core-concepts/Tasks.md">
+                <a href="./core-concepts/Tasks">
                     Tasks
                 </a>
             </li>
             <li>
-                <a href="./core-concepts/Tools.md">
+                <a href="./core-concepts/Tools">
                     Tools
                 </a>
             </li>
             <li>
-                <a href="./core-concepts/Processes.md">
+                <a href="./core-concepts/Processes">
                     Processes
                 </a>
             </li>
             <li>
-                <a href="./core-concepts/Crews.md">
+                <a href="./core-concepts/Crews">
                     Crews
                 </a>
             </li>
             <li>
-                <a href="./core-concepts/Memory.md">
+                <a href="./core-concepts/Memory">
                     Memory
                 </a>
             </li>
@@ -44,47 +44,47 @@ Cutting-edge framework for orchestrating role-playing, autonomous AI agents. By 
         <h2>How-To Guides</h2>
         <ul>
             <li>
-                <a href="./how-to/Installing-CrewAI.md">
+                <a href="./how-to/Installing-CrewAI">
                     Installing crewAI
                 </a>
             </li>
             <li>
-                <a href="./how-to/Creating-a-Crew-and-kick-it-off.md">
+                <a href="./how-to/Creating-a-Crew-and-kick-it-off">
                     Getting Started
                 </a>
             </li>
             <li>
-                <a href="./how-to/Create-Custom-Tools.md">
+                <a href="./how-to/Create-Custom-Tools">
                     Create Custom Tools
                 </a>
             </li>
             <li>
-                <a href="./how-to/Sequential.md">
+                <a href="./how-to/Sequential">
                     Using Sequential Process
                 </a>
             </li>
             <li>
-                <a href="./how-to/Hierarchical.md">
+                <a href="./how-to/Hierarchical">
                     Using Hierarchical Process
                 </a>
             </li>
             <li>
-                <a href="./how-to/LLM-Connections.md">
+                <a href="./how-to/LLM-Connections">
                     Connecting to LLMs
                 </a>
             </li>
             <li>
-                <a href="./how-to/Customizing-Agents.md">
+                <a href="./how-to/Customizing-Agents">
                     Customizing Agents
                 </a>
             </li>
             <li>
-                <a href="./how-to/Human-Input-on-Execution.md">
+                <a href="./how-to/Human-Input-on-Execution">
                     Human Input on Execution
                 </a>
             </li>
             <li>
-                <a href="./how-to/AgentOps-Observability.md">
+                <a href="./how-to/AgentOps-Observability">
                     Agent Monitoring with AgentOps
                 </a>
             </li>
