@@ -171,14 +171,23 @@ class Crew(BaseModel):
     @model_validator(mode="after")
     def check_manager_llm(self):
         """Validates that the language model is set when using hierarchical process."""
-        if self.process == Process.hierarchical and (
-            not self.manager_llm and not self.manager_agent
-        ):
-            raise PydanticCustomError(
-                "missing_manager_llm_or_manager_agent",
-                "Attribute `manager_llm` or `manager_agent` is required when using hierarchical process.",
-                {},
-            )
+        if self.process == Process.hierarchical:
+            if not self.manager_llm and not self.manager_agent:
+                raise PydanticCustomError(
+                    "missing_manager_llm_or_manager_agent",
+                    "Attribute `manager_llm` or `manager_agent` is required when using hierarchical process.",
+                    {},
+                )
+
+            if (self.manager_agent is not None) and (
+                self.agents.count(self.manager_agent) > 0
+            ):
+                raise PydanticCustomError(
+                    "manager_agent_in_agents",
+                    "Manager agent should not be included in agents list.",
+                    {},
+                )
+
         return self
 
     @model_validator(mode="after")
@@ -310,12 +319,13 @@ class Crew(BaseModel):
         """Creates and assigns a manager agent to make sure the crew completes the tasks."""
 
         i18n = I18N(prompt_file=self.prompt_file)
-        try:
-            self.manager_agent.allow_delegation = (
-                True  # Forcing Allow delegation to the manager
-            )
+        if self.manager_agent is not None:
+            self.manager_agent.allow_delegation = True
             manager = self.manager_agent
-        except:
+            if len(manager.tools) > 0:
+                raise Exception("Manager agent should not have tools")
+            manager.tools = (AgentTools(agents=self.agents).tools(),)
+        else:
             manager = Agent(
                 role=i18n.retrieve("hierarchical_manager_agent", "role"),
                 goal=i18n.retrieve("hierarchical_manager_agent", "goal"),
