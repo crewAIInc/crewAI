@@ -8,7 +8,7 @@ from ..rag.rag_tool import RagTool
 
 class FixedDOCXSearchToolSchema(BaseModel):
     """Input for DOCXSearchTool."""
-    docx: Optional[str] = Field(..., description="Mandatory docx path you want to search")
+    docx: str = Optional[Field](..., description="Mandatory docx path you want to search")
     search_query: str = Field(
         ...,
         description="Mandatory search query you want to use to search the DOCX's content",
