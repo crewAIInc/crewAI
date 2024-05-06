@@ -8,18 +8,18 @@ from ..rag.rag_tool import RagTool
 
 class FixedDOCXSearchToolSchema(BaseModel):
     """Input for DOCXSearchTool."""
-
+    docx: str = Optional[Field](..., description="Mandatory docx path you want to search")
     search_query: str = Field(
         ...,
         description="Mandatory search query you want to use to search the DOCX's content",
     )
 
-
 class DOCXSearchToolSchema(FixedDOCXSearchToolSchema):
     """Input for DOCXSearchTool."""
-
-    docx: str = Field(..., description="Mandatory docx path you want to search")
-
+    search_query: str = Field(
+        ...,
+        description="Mandatory search query you want to use to search the DOCX's content",
+    )
 
 class DOCXSearchTool(RagTool):
     name: str = "Search a DOCX's content"
@@ -54,7 +54,13 @@ class DOCXSearchTool(RagTool):
 
     def _run(
         self,
-        search_query: str,
         **kwargs: Any,
     ) -> Any:
+        search_query = kwargs.get('search_query')
+        if search_query is None:
+            search_query = kwargs.get('query')
+
+        docx = kwargs.get("docx")
+        if docx is not None:
+            self.add(docx)
         return super()._run(query=search_query)
