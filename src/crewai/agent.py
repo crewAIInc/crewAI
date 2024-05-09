@@ -303,9 +303,9 @@ class Agent(BaseModel):
         }
 
         if self._rpm_controller:
-            executor_args[
-                "request_within_rpm_limit"
-            ] = self._rpm_controller.check_or_wait
+            executor_args["request_within_rpm_limit"] = (
+                self._rpm_controller.check_or_wait
+            )
 
         prompt = Prompts(
             i18n=self.i18n,
