@@ -1,8 +1,8 @@
+import os
 import re
 import threading
 import uuid
 from typing import Any, Dict, List, Optional, Type
-import os
 
 from langchain_openai import ChatOpenAI
 from pydantic import UUID4, BaseModel, Field, field_validator, model_validator
@@ -108,6 +108,14 @@ class Task(BaseModel):
             raise PydanticCustomError(
                 "may_not_set_field", "This field is not to be set by the user.", {}
             )
+
+    @field_validator("output_file")
+    @classmethod
+    def output_file_validattion(cls, value: str) -> str:
+        """Validate the output file path by removing the / from the beginning of the path."""
+        if value.startswith("/"):
+            return value[1:]
+        return value
 
     @model_validator(mode="after")
     def set_attributes_based_on_config(self) -> "Task":
@@ -247,16 +255,16 @@ class Task(BaseModel):
                     return exported_result.model_dump()
                 return exported_result
             except Exception:
-              # sometimes the response contains valid JSON in the middle of text
-              match = re.search(r"({.*})", result, re.DOTALL)
-              if match:
-                  try:
-                      exported_result = model.model_validate_json(match.group(0))
-                      if self.output_json:
-                          return exported_result.model_dump()
-                      return exported_result
-                  except Exception:
-                      pass
+                # sometimes the response contains valid JSON in the middle of text
+                match = re.search(r"({.*})", result, re.DOTALL)
+                if match:
+                    try:
+                        exported_result = model.model_validate_json(match.group(0))
+                        if self.output_json:
+                            return exported_result.model_dump()
+                        return exported_result
+                    except Exception:
+                        pass
 
             llm = self.agent.function_calling_llm or self.agent.llm
 
@@ -294,7 +302,7 @@ class Task(BaseModel):
     def _save_file(self, result: Any) -> None:
         directory = os.path.dirname(self.output_file)
 
-        if not os.path.exists(directory):
+        if directory and not os.path.exists(directory):
             os.makedirs(directory)
 
         with open(self.output_file, "w") as file:
