@@ -10,7 +10,7 @@ jobs:
 
       - name: Install Requirements
         run: |
-          pip install black
+          pip install ruff
 
       - name: Run Black
-        run: black . --exclude "cli/templates/crew.py" --extend-exclude "cli/templates/main.py"
+        run: ruff check --exclude "templates","__init__.py"

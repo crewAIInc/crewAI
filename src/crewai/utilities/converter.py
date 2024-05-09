@@ -84,4 +84,4 @@ class Converter(BaseModel):
         return new_prompt | self.llm | parser
 
     def _is_gpt(self, llm) -> bool:
-        return isinstance(llm, ChatOpenAI) and llm.openai_api_base == None
+        return isinstance(llm, ChatOpenAI) and llm.openai_api_base is None
