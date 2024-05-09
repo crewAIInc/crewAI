@@ -944,8 +944,6 @@ def test_manager_agent():
 
 
 def test_manager_agent_in_agents_raises_exception():
-    pass
-
     task = Task(
         description="Come up with a list of 5 interesting ideas to explore for an article, then write one amazing paragraph highlight for each idea that showcases how good an article about this topic could be. Return the list of ideas with their paragraph and your notes.",
         expected_output="5 bullet points with a paragraph for each idea.",
@@ -959,7 +957,7 @@ def test_manager_agent_in_agents_raises_exception():
     )
 
     with pytest.raises(pydantic_core._pydantic_core.ValidationError):
-        crew = Crew(
+        Crew(
             agents=[researcher, writer, manager],
             process=Process.hierarchical,
             manager_agent=manager,
@@ -968,7 +966,12 @@ def test_manager_agent_in_agents_raises_exception():
 
 
 def test_manager_agent_with_tools_raises_exception():
-    pass
+    from crewai_tools import tool
+
+    @tool
+    def testing_tool(first_number: int, second_number: int) -> int:
+        """Useful for when you need to multiply two numbers together."""
+        return first_number * second_number
 
     task = Task(
         description="Come up with a list of 5 interesting ideas to explore for an article, then write one amazing paragraph highlight for each idea that showcases how good an article about this topic could be. Return the list of ideas with their paragraph and your notes.",
@@ -980,6 +983,7 @@ def test_manager_agent_with_tools_raises_exception():
         goal="Manage the crew and ensure the tasks are completed efficiently.",
         backstory="You're an experienced manager, skilled in overseeing complex projects and guiding teams to success. Your role is to coordinate the efforts of the crew members, ensuring that each task is completed on time and to the highest standard.",
         allow_delegation=False,
+        tools=[testing_tool],
     )
 
     crew = Crew(
