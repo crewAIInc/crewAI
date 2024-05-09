@@ -256,9 +256,11 @@ class Telemetry:
                                 "async_execution?": task.async_execution,
                                 "output": task.expected_output,
                                 "agent_role": task.agent.role if task.agent else "None",
-                                "context": [task.description for task in task.context]
-                                if task.context
-                                else "None",
+                                "context": (
+                                    [task.description for task in task.context]
+                                    if task.context
+                                    else "None"
+                                ),
                                 "tools_names": [
                                     tool.name.casefold() for tool in task.tools
                                 ],
