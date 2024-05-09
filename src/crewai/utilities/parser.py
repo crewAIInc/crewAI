@@ -9,4 +9,9 @@ class YamlParser:
         modified_content = re.sub(
             r"(?<!\})(?<!\%)(?<!\#)\}(?!})", "}}", modified_content
         )
+        # Check for 'context:' not followed by '[' and raise an error
+        if re.search(r"context:(?!\s*\[)", modified_content):
+            raise ValueError(
+                "Context is currently only supported in code when creating a task. Please use the 'context' key in the task configuration."
+            )
         return modified_content
