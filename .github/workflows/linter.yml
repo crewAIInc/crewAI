@@ -12,5 +12,5 @@ jobs:
         run: |
           pip install ruff
 
-      - name: Run Black
+      - name: Run Ruff Linter
         run: ruff check --exclude "templates","__init__.py"
