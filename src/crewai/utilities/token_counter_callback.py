@@ -42,9 +42,9 @@ class TokenCalcHandler(BaseCallbackHandler):
     def on_llm_start(
         self, serialized: Dict[str, Any], prompts: List[str], **kwargs: Any
     ) -> None:
-        if "gpt" in self.model:
-            encoding = tiktoken.encoding_for_model(self.model)
-        else:
+        try:
+            encoding = tiktoken.get_encoding(self.model)
+        except KeyError:
             encoding = tiktoken.get_encoding("cl100k_base")
 
         if self.token_cost_process == None:
