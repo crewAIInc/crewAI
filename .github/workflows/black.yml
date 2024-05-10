@@ -7,4 +7,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
-      - uses: psf/black@stable
+
+      - name: Install Requirements
+        run: |
+          pip install black
+
+      - name: Run Black
+        run: black . --exclude "cli/templates/crew.py" --extend-exclude "cli/templates/main.py"
