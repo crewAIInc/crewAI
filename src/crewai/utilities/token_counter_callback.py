@@ -22,7 +22,7 @@ class TokenProcess:
     def sum_successful_requests(self, requests: int):
         self.successful_requests = self.successful_requests + requests
 
-    def get_summary(self) -> str:
+    def get_summary(self) -> Dict[str, Any]:
         return {
             "total_tokens": self.total_tokens,
             "prompt_tokens": self.prompt_tokens,

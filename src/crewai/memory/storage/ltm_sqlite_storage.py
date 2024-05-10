@@ -1,6 +1,6 @@
 import json
 import sqlite3
-from typing import Any, Dict, Union
+from typing import Any, Dict, List, Optional, Union
 
 from crewai.utilities import Printer
 from crewai.utilities.paths import db_storage_path
@@ -11,7 +11,9 @@ class LTMSQLiteStorage:
     An updated SQLite storage class for LTM data storage.
     """
 
-    def __init__(self, db_path=f"{db_storage_path()}/long_term_memory_storage.db"):
+    def __init__(
+        self, db_path: str = f"{db_storage_path()}/long_term_memory_storage.db"
+    ) -> None:
         self.db_path = db_path
         self._printer: Printer = Printer()
         self._initialize_db()
@@ -67,7 +69,9 @@ class LTMSQLiteStorage:
                 color="red",
             )
 
-    def load(self, task_description: str, latest_n: int) -> Dict[str, Any]:
+    def load(
+        self, task_description: str, latest_n: int
+    ) -> Optional[List[Dict[str, Any]]]:
         """Queries the LTM table by task description with error handling."""
         try:
             with sqlite3.connect(self.db_path) as conn:

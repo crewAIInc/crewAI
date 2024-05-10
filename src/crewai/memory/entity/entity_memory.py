@@ -16,7 +16,7 @@ class EntityMemory(Memory):
         )
         super().__init__(storage)
 
-    def save(self, item: EntityMemoryItem) -> None:
+    def save(self, item: EntityMemoryItem) -> None:  # type: ignore # BUG?: Signature of "save" incompatible with supertype "Memory"
         """Saves an entity item into the SQLite storage."""
         data = f"{item.name}({item.type}): {item.description}"
         super().save(data, item.metadata)

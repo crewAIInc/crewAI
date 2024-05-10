@@ -82,6 +82,8 @@ class ToolUsage:
             self._printer.print(content=f"\n\n{error}\n", color="red")
             self.task.increment_tools_errors()
             return error
+
+        # BUG? The code below seems to be unreachable
         try:
             tool = self._select_tool(calling.tool_name)
         except Exception as e:
@@ -89,15 +91,15 @@ class ToolUsage:
             self.task.increment_tools_errors()
             self._printer.print(content=f"\n\n{error}\n", color="red")
             return error
-        return f"{self._use(tool_string=tool_string, tool=tool, calling=calling)}"
+        return f"{self._use(tool_string=tool_string, tool=tool, calling=calling)}"  # type: ignore # BUG?: "_use" of "ToolUsage" does not return a value (it only ever returns None)
 
     def _use(
         self,
         tool_string: str,
         tool: BaseTool,
         calling: Union[ToolCalling, InstructorToolCalling],
-    ) -> None:
-        if self._check_tool_repeated_usage(calling=calling):
+    ) -> None:  # TODO: Fix this return type
+        if self._check_tool_repeated_usage(calling=calling):  # type: ignore # _check_tool_repeated_usage of "ToolUsage" does not return a value (it only ever returns None)
             try:
                 result = self._i18n.errors("task_repeated_usage").format(
                     tool_names=self.tools_names
@@ -108,15 +110,16 @@ class ToolUsage:
                     tool_name=tool.name,
                     attempts=self._run_attempts,
                 )
-                result = self._format_result(result=result)
-                return result
+                result = self._format_result(result=result)  # type: ignore #  "_format_result" of "ToolUsage" does not return a value (it only ever returns None)
+                return result  # type: ignore # Fix the reutrn type of this function
+
             except Exception:
                 self.task.increment_tools_errors()
 
-        result = None
+        result = None  # type: ignore # Incompatible types in assignment (expression has type "None", variable has type "str")
 
         if self.tools_handler.cache:
-            result = self.tools_handler.cache.read(
+            result = self.tools_handler.cache.read(  # type: ignore # Incompatible types in assignment (expression has type "str | None", variable has type "str")
                 tool=calling.tool_name, input=calling.arguments
             )
 
@@ -130,7 +133,7 @@ class ToolUsage:
 
                 if calling.arguments:
                     try:
-                        acceptable_args = tool.args_schema.schema()["properties"].keys()
+                        acceptable_args = tool.args_schema.schema()["properties"].keys()  # type: ignore # Item "None" of "type[BaseModel] | None" has no attribute "schema"
                         arguments = {
                             k: v
                             for k, v in calling.arguments.items()
@@ -142,7 +145,7 @@ class ToolUsage:
                             arguments = calling.arguments
                             result = tool._run(**arguments)
                         else:
-                            arguments = calling.arguments.values()
+                            arguments = calling.arguments.values()  # type: ignore # Incompatible types in assignment (expression has type "dict_values[str, Any]", variable has type "dict[str, Any]")
                             result = tool._run(*arguments)
                 else:
                     result = tool._run()
@@ -158,9 +161,10 @@ class ToolUsage:
                     ).message
                     self.task.increment_tools_errors()
                     self._printer.print(content=f"\n\n{error_message}\n", color="red")
-                    return error
+                    return error  # type: ignore # No return value expected
+
                 self.task.increment_tools_errors()
-                return self.use(calling=calling, tool_string=tool_string)
+                return self.use(calling=calling, tool_string=tool_string)  # type: ignore # No return value expected
 
             if self.tools_handler:
                 should_cache = True
@@ -169,9 +173,9 @@ class ToolUsage:
                 )
                 if (
                     hasattr(original_tool, "cache_function")
-                    and original_tool.cache_function
+                    and original_tool.cache_function  # type: ignore # Item "None" of "Any | None" has no attribute "cache_function"
                 ):
-                    should_cache = original_tool.cache_function(
+                    should_cache = original_tool.cache_function(  # type: ignore # Item "None" of "Any | None" has no attribute "cache_function"
                         calling.arguments, result
                     )
 
@@ -185,13 +189,13 @@ class ToolUsage:
             tool_name=tool.name,
             attempts=self._run_attempts,
         )
-        result = self._format_result(result=result)
-        return result
+        result = self._format_result(result=result)  # type: ignore # "_format_result" of "ToolUsage" does not return a value (it only ever returns None)
+        return result  # type: ignore # No return value expected
 
     def _format_result(self, result: Any) -> None:
         self.task.used_tools += 1
-        if self._should_remember_format():
-            result = self._remember_format(result=result)
+        if self._should_remember_format():  # type: ignore # "_should_remember_format" of "ToolUsage" does not return a value (it only ever returns None)
+            result = self._remember_format(result=result)  # type: ignore # "_remember_format" of "ToolUsage" does not return a value (it only ever returns None)
         return result
 
     def _should_remember_format(self) -> None:
@@ -202,15 +206,15 @@ class ToolUsage:
         result += "\n\n" + self._i18n.slice("tools").format(
             tools=self.tools_description, tool_names=self.tools_names
         )
-        return result
+        return result  # type: ignore # No return value expected
 
     def _check_tool_repeated_usage(
         self, calling: Union[ToolCalling, InstructorToolCalling]
     ) -> None:
         if not self.tools_handler:
-            return False
+            return False  # type: ignore # No return value expected
         if last_tool_usage := self.tools_handler.last_used_tool:
-            return (calling.tool_name == last_tool_usage.tool_name) and (
+            return (calling.tool_name == last_tool_usage.tool_name) and (  # type: ignore # No return value expected
                 calling.arguments == last_tool_usage.arguments
             )
 
@@ -292,14 +296,14 @@ class ToolUsage:
                     tool_input = self._validate_tool_input(self.action.tool_input)
                     arguments = ast.literal_eval(tool_input)
                 except Exception:
-                    return ToolUsageErrorException(
+                    return ToolUsageErrorException(  # type: ignore # Incompatible return value type (got "ToolUsageErrorException", expected "ToolCalling | InstructorToolCalling")
                         f'{self._i18n.errors("tool_arguments_error")}'
                     )
                 if not isinstance(arguments, dict):
-                    return ToolUsageErrorException(
+                    return ToolUsageErrorException(  # type: ignore # Incompatible return value type (got "ToolUsageErrorException", expected "ToolCalling | InstructorToolCalling")
                         f'{self._i18n.errors("tool_arguments_error")}'
                     )
-                calling = ToolCalling(
+                calling = ToolCalling(  # type: ignore # Unexpected keyword argument "log" for "ToolCalling"
                     tool_name=tool.name,
                     arguments=arguments,
                     log=tool_string,
@@ -310,7 +314,7 @@ class ToolUsage:
                 self._telemetry.tool_usage_error(llm=self.function_calling_llm)
                 self.task.increment_tools_errors()
                 self._printer.print(content=f"\n\n{e}\n", color="red")
-                return ToolUsageErrorException(
+                return ToolUsageErrorException(  # type: ignore # Incompatible return value type (got "ToolUsageErrorException", expected "ToolCalling | InstructorToolCalling")
                     f'{self._i18n.errors("tool_usage_error").format(error=e)}\nMoving on then. {self._i18n.slice("format").format(tool_names=self.tools_names)}'
                 )
             return self._tool_calling(tool_string)

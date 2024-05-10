@@ -2,7 +2,7 @@ import contextlib
 import io
 import logging
 import os
-from typing import Any, Dict
+from typing import Any, Dict, List, Optional
 
 from embedchain import App
 from embedchain.llm.base import BaseLlm
@@ -72,16 +72,16 @@ class RAGStorage(Storage):
         if allow_reset:
             self.app.reset()
 
-    def save(self, value: Any, metadata: Dict[str, Any]) -> None:
+    def save(self, value: Any, metadata: Dict[str, Any]) -> None:  # type: ignore # BUG?: Should be save(key, value, metadata)  Signature of "save" incompatible with supertype "Storage"
         self._generate_embedding(value, metadata)
 
-    def search(
+    def search(  # type: ignore # BUG?: Signature of "search" incompatible with supertype "Storage"
         self,
         query: str,
         limit: int = 3,
-        filter: dict = None,
+        filter: Optional[dict] = None,
         score_threshold: float = 0.35,
-    ) -> Dict[str, Any]:
+    ) -> List[Any]:
         with suppress_logging():
             try:
                 results = (
