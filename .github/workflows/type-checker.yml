@@ -20,7 +20,11 @@ jobs:
 
       - name: Install Requirements
         run: |
-          pip install mypy
+          sudo apt-get update &&
+          pip install poetry &&
+          poetry add mypy
+          poetry lock &&
+          poetry install &&
 
       - name: Run type checks
-        run: mypy src --install-types --non-interactive --ignore-missing-imports --exclude "cli/templates"
+        run: poetry run mypy src --install-types --non-interactive --ignore-missing-imports --exclude "cli/templates"
