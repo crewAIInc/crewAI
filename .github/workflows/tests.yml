@@ -23,10 +23,7 @@ jobs:
 
       - name: Install Requirements
         run: |
-          sudo apt-get update &&
-          pip install poetry &&
-          poetry lock &&
-          poetry install
+          pip install pytest
 
       - name: Run tests
-        run: poetry run pytest
+        run: pytest tests
