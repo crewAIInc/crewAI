@@ -1,10 +1,11 @@
 import inspect
 import os
 from pathlib import Path
-from crewai.utilities.parser import YamlParser
 
 import yaml
 from dotenv import load_dotenv
+
+from crewai.utilities.parser import YamlParser
 
 load_dotenv()
 
@@ -41,7 +42,7 @@ def CrewBase(cls):
         @staticmethod
         def load_yaml(config_path: str):
             with open(config_path, "r") as file:
-                parsedContent = YamlParser.parse(file)
+                parsedContent = YamlParser.parse(file)  # type: ignore # Argument 1 to "parse" has incompatible type "TextIOWrapper"; expected "YamlParser"
                 return yaml.safe_load(parsedContent)
 
     return WrappedClass

@@ -1,4 +1,3 @@
-
 name: Run Type Checks
 
 on: [pull_request]
@@ -12,19 +11,16 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v2
+        uses: actions/checkout@v4
 
       - name: Setup Python
         uses: actions/setup-python@v4
         with:
-          python-version: '3.10'
+          python-version: "3.10"
 
       - name: Install Requirements
         run: |
-          sudo apt-get update &&
-          pip install poetry &&
-          poetry lock &&
-          poetry install
+          pip install mypy
 
       - name: Run type checks
-        run: poetry run pyright
+        run: mypy src

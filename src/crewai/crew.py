@@ -242,7 +242,7 @@ class Crew(BaseModel):
     def kickoff(self, inputs: Optional[Dict[str, Any]] = {}) -> str:
         """Starts the crew to work on its assigned tasks."""
         self._execution_span = self._telemetry.crew_execution_span(self)
-        self._interpolate_inputs(inputs)
+        self._interpolate_inputs(inputs)  # type: ignore # Argument 1 to "_interpolate_inputs" of "Crew" has incompatible type "dict[str, Any] | None"; expected "dict[str, Any]"
         self._set_tasks_callbacks()
 
         i18n = I18N(prompt_file=self.prompt_file)
@@ -263,8 +263,8 @@ class Crew(BaseModel):
         if self.process == Process.sequential:
             result = self._run_sequential_process()
         elif self.process == Process.hierarchical:
-            result, manager_metrics = self._run_hierarchical_process()
-            metrics.append(manager_metrics)
+            result, manager_metrics = self._run_hierarchical_process()  # type: ignore # Unpacking a string is disallowed
+            metrics.append(manager_metrics)  # type: ignore # Cannot determine type of "manager_metrics"
 
         else:
             raise NotImplementedError(
@@ -284,7 +284,7 @@ class Crew(BaseModel):
         """Executes tasks sequentially and returns the final output."""
         task_output = ""
         for task in self.tasks:
-            if task.agent.allow_delegation:
+            if task.agent.allow_delegation:  # type: ignore #  Item "None" of "Agent | None" has no attribute "allow_delegation"
                 agents_for_delegation = [
                     agent for agent in self.agents if agent != task.agent
                 ]
@@ -357,23 +357,23 @@ class Crew(BaseModel):
                 )
 
         self._finish_execution(task_output)
-        return self._format_output(task_output), manager._token_process.get_summary()
+        return self._format_output(task_output), manager._token_process.get_summary()  # type: ignore # Incompatible return value type (got "tuple[str, Any]", expected "str")
 
-    def _set_tasks_callbacks(self) -> str:
+    def _set_tasks_callbacks(self) -> None:
         """Sets callback for every task suing task_callback"""
         for task in self.tasks:
             if not task.callback:
                 task.callback = self.task_callback
 
-    def _interpolate_inputs(self, inputs: Dict[str, Any]) -> str:
+    def _interpolate_inputs(self, inputs: Dict[str, Any]) -> None:
         """Interpolates the inputs in the tasks and agents."""
-        [task.interpolate_inputs(inputs) for task in self.tasks]
-        [agent.interpolate_inputs(inputs) for agent in self.agents]
+        [task.interpolate_inputs(inputs) for task in self.tasks]  # type: ignore # "interpolate_inputs" of "Task" does not return a value (it only ever returns None)
+        [agent.interpolate_inputs(inputs) for agent in self.agents]  # type: ignore # "interpolate_inputs" of "Agent" does not return a value (it only ever returns None)
 
     def _format_output(self, output: str) -> str:
         """Formats the output of the crew execution."""
         if self.full_output:
-            return {
+            return {  # type: ignore # Incompatible return value type (got "dict[str, Sequence[str | TaskOutput | None]]", expected "str")
                 "final_output": output,
                 "tasks_outputs": [task.output for task in self.tasks if task],
             }

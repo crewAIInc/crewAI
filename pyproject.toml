@@ -32,7 +32,7 @@ tools = ["crewai-tools"]
 
 [tool.poetry.group.dev.dependencies]
 isort = "^5.13.2"
-pyright = ">=1.1.350,<2.0.0"
+mypy = "1.10.0"
 autoflake = "^2.2.1"
 pre-commit = "^3.6.0"
 mkdocs = "^1.4.3"
@@ -51,6 +51,11 @@ python-dotenv = "1.0.0"
 
 [tool.poetry.scripts]
 crewai = "crewai.cli.cli:crewai"
+
+[tool.mypy]
+ignore_missing_imports = true
+disable_error_code = 'import-untyped'
+exclude = ["cli/templates/main.py", "cli/templates/crew.py"]
 
 [build-system]
 requires = ["poetry-core"]
