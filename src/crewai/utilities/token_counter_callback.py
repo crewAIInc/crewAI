@@ -43,7 +43,7 @@ class TokenCalcHandler(BaseCallbackHandler):
         self, serialized: Dict[str, Any], prompts: List[str], **kwargs: Any
     ) -> None:
         try:
-            encoding = tiktoken.get_encoding(self.model)
+            encoding = tiktoken.encoding_for_model(self.model)
         except KeyError:
             encoding = tiktoken.get_encoding("cl100k_base")
 
