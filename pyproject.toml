@@ -54,6 +54,7 @@ crewai = "crewai.cli.cli:crewai"
 
 [tool.mypy]
 ignore_missing_imports = true
+disable_error_code = 'import-untyped'
 exclude = ["cli/templates/main.py", "cli/templates/crew.py"]
 
 [build-system]
