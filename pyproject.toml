@@ -52,6 +52,10 @@ python-dotenv = "1.0.0"
 [tool.poetry.scripts]
 crewai = "crewai.cli.cli:crewai"
 
+[tool.mypy]
+ignore_missing_imports = true
+exclude = ["cli/templates/main.py", "cli/templates/crew.py"]
+
 [build-system]
 requires = ["poetry-core"]
 build-backend = "poetry.core.masonry.api"
