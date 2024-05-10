@@ -32,7 +32,7 @@ tools = ["crewai-tools"]
 
 [tool.poetry.group.dev.dependencies]
 isort = "^5.13.2"
-pyright = ">=1.1.350,<2.0.0"
+mypy = "1.10.0"
 autoflake = "^2.2.1"
 pre-commit = "^3.6.0"
 mkdocs = "^1.4.3"

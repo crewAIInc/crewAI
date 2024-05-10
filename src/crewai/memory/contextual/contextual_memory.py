@@ -1,3 +1,5 @@
+from typing import Optional
+
 from crewai.memory import EntityMemory, LongTermMemory, ShortTermMemory
 
 
@@ -32,7 +34,7 @@ class ContextualMemory:
         formatted_results = "\n".join([f"- {result}" for result in stm_results])
         return f"Recent Insights:\n{formatted_results}" if stm_results else ""
 
-    def _fetch_ltm_context(self, task) -> str:
+    def _fetch_ltm_context(self, task) -> Optional[str]:
         """
         Fetches historical data or insights from LTM that are relevant to the task's description and expected_output,
         formatted as bullet points.
@@ -44,10 +46,10 @@ class ContextualMemory:
         formatted_results = [
             suggestion
             for result in ltm_results
-            for suggestion in result["metadata"]["suggestions"]
+            for suggestion in result["metadata"]["suggestions"]  # type: ignore # Invalid index type "str" for "str"; expected type "SupportsIndex | slice"
         ]
         formatted_results = list(dict.fromkeys(formatted_results))
-        formatted_results = "\n".join([f"- {result}" for result in formatted_results])
+        formatted_results = "\n".join([f"- {result}" for result in formatted_results])  # type: ignore # Incompatible types in assignment (expression has type "str", variable has type "list[str]")
 
         return f"Historical Data:\n{formatted_results}" if ltm_results else ""
 
@@ -58,6 +60,6 @@ class ContextualMemory:
         """
         em_results = self.em.search(query)
         formatted_results = "\n".join(
-            [f"- {result['context']}" for result in em_results]
+            [f"- {result['context']}" for result in em_results]  # type: ignore #  Invalid index type "str" for "str"; expected type "SupportsIndex | slice"
         )
         return f"Entities:\n{formatted_results}" if em_results else ""
