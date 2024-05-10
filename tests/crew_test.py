@@ -698,6 +698,8 @@ def test_crew_inputs_interpolate_both_agents_and_tasks():
     )
 
     crew = Crew(agents=[agent], tasks=[task], inputs={"topic": "AI", "points": 5})
+    inputs = {"topic": "AI", "points": 5}
+    crew._interpolate_inputs(inputs=inputs)  # Manual call for now
 
     assert crew.tasks[0].description == "Give me an analysis around AI."
     assert crew.tasks[0].expected_output == "5 bullet points about AI."
@@ -706,7 +708,7 @@ def test_crew_inputs_interpolate_both_agents_and_tasks():
     assert crew.agents[0].backstory == "You have a lot of experience with AI."
 
 
-def test_crew_inputs_interpolate_both_agents_and_tasks():
+def test_crew_inputs_interpolate_both_agents_and_tasks_diff():
     from unittest.mock import patch
 
     agent = Agent(
@@ -828,9 +830,7 @@ def test_tools_with_custom_caching():
     with patch.object(
         CacheHandler, "add", wraps=crew._cache_handler.add
     ) as add_to_cache:
-        with patch.object(
-            CacheHandler, "read", wraps=crew._cache_handler.read
-        ) as read_from_cache:
+        with patch.object(CacheHandler, "read", wraps=crew._cache_handler.read) as _:
             result = crew.kickoff()
             add_to_cache.assert_called_once_with(
                 tool="multiplcation_tool",
@@ -907,8 +907,6 @@ def test_crew_log_file_output(tmp_path):
         )
     ]
 
-    test_message = {"agent": "Researcher", "task": "Say Hi"}
-
     crew = Crew(agents=[researcher], tasks=tasks, output_log_file=str(test_file))
     crew.kickoff()
     assert test_file.exists()
@@ -939,7 +937,7 @@ def test_manager_agent():
 
     with patch.object(Task, "execute") as execute:
         crew.kickoff()
-        assert manager.allow_delegation == True
+        assert manager.allow_delegation is True
         execute.assert_called()
 
 

@@ -47,7 +47,7 @@ class TokenCalcHandler(BaseCallbackHandler):
         else:
             encoding = tiktoken.get_encoding("cl100k_base")
 
-        if self.token_cost_process == None:
+        if self.token_cost_process is None:
             return
 
         for prompt in prompts:
