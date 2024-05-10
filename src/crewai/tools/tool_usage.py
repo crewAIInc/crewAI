@@ -64,7 +64,7 @@ class ToolUsage:
 
         # Set the maximum parsing attempts for bigger models
         if (isinstance(self.function_calling_llm, ChatOpenAI)) and (
-            self.function_calling_llm.openai_api_base == None
+            self.function_calling_llm.openai_api_base is None
         ):
             if self.function_calling_llm.model_name in OPENAI_BIGGER_MODELS:
                 self._max_parsing_attempts = 2
@@ -254,7 +254,7 @@ class ToolUsage:
         return "\n--\n".join(descriptions)
 
     def _is_gpt(self, llm) -> bool:
-        return isinstance(llm, ChatOpenAI) and llm.openai_api_base == None
+        return isinstance(llm, ChatOpenAI) and llm.openai_api_base is None
 
     def _tool_calling(
         self, tool_string: str

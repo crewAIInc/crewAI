@@ -21,14 +21,14 @@ class I18N(BaseModel):
                     self._prompts = json.load(f)
             else:
                 dir_path = os.path.dirname(os.path.realpath(__file__))
-                prompts_path = os.path.join(dir_path, f"../translations/en.json")
+                prompts_path = os.path.join(dir_path, "../translations/en.json")
 
                 with open(prompts_path, "r") as f:
                     self._prompts = json.load(f)
         except FileNotFoundError:
             raise Exception(f"Prompt file '{self.prompt_file}' not found.")
         except json.JSONDecodeError:
-            raise Exception(f"Error decoding JSON from the prompts file.")
+            raise Exception("Error decoding JSON from the prompts file.")
 
         if not self._prompts:
             self._prompts = {}
@@ -47,5 +47,5 @@ class I18N(BaseModel):
     def retrieve(self, kind, key) -> str:
         try:
             return self._prompts[kind][key]
-        except:
+        except Exception as _:
             raise Exception(f"Prompt for '{kind}':'{key}'  not found.")

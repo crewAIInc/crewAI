@@ -31,8 +31,8 @@ def test_agent_default_values():
     assert isinstance(agent.llm, ChatOpenAI)
     assert agent.llm.model_name == "gpt-4"
     assert agent.llm.temperature == 0.7
-    assert agent.llm.verbose == False
-    assert agent.allow_delegation == True
+    assert agent.llm.verbose is False
+    assert agent.allow_delegation is True
 
 
 def test_custom_llm():
@@ -751,7 +751,7 @@ def test_agent_definition_based_on_dict():
     assert agent.role == "test role"
     assert agent.goal == "test goal"
     assert agent.backstory == "test backstory"
-    assert agent.verbose == True
+    assert agent.verbose is True
     assert agent.tools == []
 
 
