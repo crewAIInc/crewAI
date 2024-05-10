@@ -1,6 +1,7 @@
 import inspect
 import os
 from pathlib import Path
+from crewai.utilities.parser import YamlParser
 
 import yaml
 from dotenv import load_dotenv
@@ -40,6 +41,7 @@ def CrewBase(cls):
         @staticmethod
         def load_yaml(config_path: str):
             with open(config_path, "r") as file:
-                return yaml.safe_load(file)
+                parsedContent = YamlParser.parse(file)
+                return yaml.safe_load(parsedContent)
 
     return WrappedClass
