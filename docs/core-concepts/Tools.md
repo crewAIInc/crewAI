@@ -100,26 +100,26 @@ Here is a list of the available tools and their descriptions:
 
 | Tool                        | Description                                                                                   |
 | :-------------------------- | :-------------------------------------------------------------------------------------------- |
-| **CodeDocsSearchTool**      | A RAG tool optimized for searching through code documentation and related technical documents. |
-| **CSVSearchTool**           | A RAG tool designed for searching within CSV files, tailored to handle structured data.       |
-| **DirectorySearchTool**     | A RAG tool for searching within directories, useful for navigating through file systems.      |
-| **DOCXSearchTool**          | A RAG tool aimed at searching within DOCX documents, ideal for processing Word files.         |
-| **DirectoryReadTool**       | Facilitates reading and processing of directory structures and their contents.                |
-| **FileReadTool**            | Enables reading and extracting data from files, supporting various file formats.              |
-| **GithubSearchTool**        | A RAG tool for searching within GitHub repositories, useful for code and documentation search.|
-| **SerperDevTool**            | A specialized tool for development purposes, with specific functionalities under development. |
-| **TXTSearchTool**           | A RAG tool focused on searching within text (.txt) files, suitable for unstructured data.     |
-| **JSONSearchTool**          | A RAG tool designed for searching within JSON files, catering to structured data handling.     |
-| **MDXSearchTool**           | A RAG tool tailored for searching within Markdown (MDX) files, useful for documentation.      |
-| **PDFSearchTool**           | A RAG tool aimed at searching within PDF documents, ideal for processing scanned documents.    |
-| **PGSearchTool**            | A RAG tool optimized for searching within PostgreSQL databases, suitable for database queries. |
+| [**CodeDocsSearchTool**](https://docs.crewai.com/tools/CodeDocsSearchTool/)     | A RAG tool optimized for searching through code documentation and related technical documents. |
+| [**CSV Search Tool**](https://docs.crewai.com/tools/CSVSearchTool/)         | A RAG tool designed for searching within CSV files, tailored to handle structured data.       |
+| [**Directory Search Tool**](https://docs.crewai.com/tools/DirectorySearchTool/)     | A RAG tool for searching within directories, useful for navigating through file systems.      |
+| [**DOCX Search Tool**](https://docs.crewai.com/tools/DOCXSearchTool/)         | A RAG tool aimed at searching within DOCX documents, ideal for processing Word files.         |
+| [**Directory Read Tool**](https://docs.crewai.com/tools/DirectoryReadTool/)       | Facilitates reading and processing of directory structures and their contents.                |
+| [**File Read Tool**](https://docs.crewai.com/tools/FileReadTool/)            | Enables reading and extracting data from files, supporting various file formats.              |
+| [**GitHub Search Tool**](https://docs.crewai.com/tools/GitHubSearchTool/)        | A RAG tool for searching within GitHub repositories, useful for code and documentation search.|
+| [**Serper Dev Tool**](https://docs.crewai.com/tools/SerperDevTool/)            | A specialized tool for development purposes, with specific functionalities under development. |
+| [**TXT Search Tool**](https://docs.crewai.com/tools/TXTSearchTool/)           | A RAG tool focused on searching within text (.txt) files, suitable for unstructured data.     |
+| [**JSON Search Tool**](https://docs.crewai.com/tools/JSONSearchTool/)          | A RAG tool designed for searching within JSON files, catering to structured data handling.     |
+| [**MDX Search Tool**](https://docs.crewai.com/tools/MDXSearchTool/)           | A RAG tool tailored for searching within Markdown (MDX) files, useful for documentation.      |
+| [**PDF Search Tool**](https://docs.crewai.com/tools/PDFSearchTool/)           | A RAG tool aimed at searching within PDF documents, ideal for processing scanned documents.    |
+| [**PG Search Tool**](https://docs.crewai.com/tools/PGSearchTool/)            | A RAG tool optimized for searching within PostgreSQL databases, suitable for database queries. |
 | **RagTool**                 | A general-purpose RAG tool capable of handling various data sources and types.                 |
 | **ScrapeElementFromWebsiteTool** | Enables scraping specific elements from websites, useful for targeted data extraction.     |
-| **ScrapeWebsiteTool**       | Facilitates scraping entire websites, ideal for comprehensive data collection.                 |
-| **WebsiteSearchTool**       | A RAG tool for searching website content, optimized for web data extraction.                   |
-| **XMLSearchTool**           | A RAG tool designed for searching within XML files, suitable for structured data formats.      |
-| **YoutubeChannelSearchTool**| A RAG tool for searching within YouTube channels, useful for video content analysis.           |
-| **YoutubeVideoSearchTool**  | A RAG tool aimed at searching within YouTube videos, ideal for video data extraction.          |
+| [**Scrape Website Tool**](https://docs.crewai.com/tools/ScrapeWebsiteTool/)       | Facilitates scraping entire websites, ideal for comprehensive data collection.                 |
+| [**Website Search Tool**](https://docs.crewai.com/tools/WebsiteSearchTool/)      | A RAG tool for searching website content, optimized for web data extraction.                   |
+| [**XML Search Tool**](https://docs.crewai.com/tools/XMLSearchTool/)          | A RAG tool designed for searching within XML files, suitable for structured data formats.      |
+| [**YouTube Channel Search Tool**](https://docs.crewai.com/tools/YoutubeChannelSearchTool/)| A RAG tool for searching within YouTube channels, useful for video content analysis.           |
+| [**YouTube Video Search Tool**](https://docs.crewai.com/tools/YoutubeVideoSearchTool/)  | A RAG tool aimed at searching within YouTube videos, ideal for video data extraction.          |
 
 ## Creating your own Tools
 
