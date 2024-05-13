@@ -35,12 +35,18 @@ class AgentTools(BaseModel):
 
     def delegate_work(self, task: str, context: str, coworker: Union[str, None] = None, **kwargs):
         """Useful to delegate a specific task to a co-worker passing all necessary context and names."""
-        coworker = coworker or kwargs.get("co_worker")
+        coworker = coworker or kwargs.get("co_worker") or kwargs.get("co-worker")
+        is_list = coworker.startswith("[") and coworker.endswith("]")
+        if is_list:
+            coworker = coworker[1:-1].split(",")[0]
         return self._execute(coworker, task, context)
 
     def ask_question(self, question: str, context: str, coworker: Union[str, None] = None, **kwargs):
         """Useful to ask a question, opinion or take from a co-worker passing all necessary context and names."""
-        coworker = coworker or kwargs.get("co_worker")
+        coworker = coworker or kwargs.get("co_worker") or kwargs.get("co-worker")
+        is_list = coworker.startswith("[") and coworker.endswith("]")
+        if is_list:
+            coworker = coworker[1:-1].split(",")[0]
         return self._execute(coworker, question, context)
 
     def _execute(self, agent, task, context):

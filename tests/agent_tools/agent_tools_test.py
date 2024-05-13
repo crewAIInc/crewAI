@@ -68,6 +68,33 @@ def test_ask_question_with_wrong_co_worker_variable():
         == "No, I don't hate AI agents. In fact, I find them quite fascinating. They are powerful tools that can greatly assist in various tasks, including my research. As a technology researcher, AI and AI agents are subjects of interest to me due to their potential in advancing our understanding and capabilities in various fields. My supposed love for them stems from this professional interest and the potential they hold."
     )
 
+@pytest.mark.vcr(filter_headers=["authorization"])
+def test_delegate_work_withwith_coworker_as_array():
+    result = tools.delegate_work(
+        co_worker="[researcher]",
+        task="share your take on AI Agents",
+        context="I heard you hate them",
+    )
+
+    assert (
+        result
+        == "AI Agents are software entities which operate in an environment to achieve a particular goal. They can perceive their environment, reason about it, and take actions to fulfill their objectives. This includes everything from chatbots to self-driving cars. They are designed to act autonomously to a certain extent and are capable of learning from their experiences to improve their performance over time.\n\nDespite some people's fears or dislikes, AI Agents are not inherently good or bad. They are tools, and like any tool, their value depends on how they are used. For instance, AI Agents can be used to automate repetitive tasks, provide customer support, or analyze vast amounts of data far more quickly and accurately than a human could. They can also be used in ways that invade privacy or replace jobs, which is often where the apprehension comes from.\n\nThe key is to create regulations and ethical guidelines for the use of AI Agents, and to continue researching and developing them in a way that maximizes their benefits and minimizes their potential harm. From a research perspective, there's a lot of potential in AI Agents, and it's a fascinating field to be a part of."
+    )
+
+
+@pytest.mark.vcr(filter_headers=["authorization"])
+def test_ask_question_with_coworker_as_array():
+    result = tools.ask_question(
+        co_worker="[researcher]",
+        question="do you hate AI Agents?",
+        context="I heard you LOVE them",
+    )
+
+    assert (
+        result
+        == "I don't hate or love AI agents. My passion lies in understanding them, researching about their capabilities, implications, and potential for development. As a researcher, my feelings toward AI are more of fascination and interest rather than personal love or hate."
+    )
+
 
 def test_delegate_work_to_wrong_agent():
     result = tools.ask_question(
