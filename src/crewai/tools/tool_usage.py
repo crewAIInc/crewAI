@@ -219,13 +219,20 @@ class ToolUsage:
             )
 
     def _select_tool(self, tool_name: str) -> BaseTool:
-        for tool in self.tools:
+        order_tools = sorted(
+            self.tools,
+            key=lambda tool: SequenceMatcher(
+                None, tool.name.lower().strip(), tool_name.lower().strip()
+            ).ratio(),
+            reverse=True,
+        )
+        for tool in order_tools:
             if (
                 tool.name.lower().strip() == tool_name.lower().strip()
                 or SequenceMatcher(
                     None, tool.name.lower().strip(), tool_name.lower().strip()
                 ).ratio()
-                > 0.9
+                > 0.85
             ):
                 return tool
         self.task.increment_tools_errors()
