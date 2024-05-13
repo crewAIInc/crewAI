@@ -29,7 +29,7 @@
     "tool_usage_exception": "I encountered an error while trying to use the tool. This was the error: {error}.\n Tool {tool} accepts these inputs: {tool_inputs}"
   },
   "tools": {
-    "delegate_work": "Delegate a specific task to one of the following co-workers: {coworkers}\nThe input to this tool should be the co-worker, the task you want them to do, and ALL necessary context to exectue the task, they know nothing about the task, so share absolute everything you know, don't reference things but instead explain them.",
+    "delegate_work": "Delegate a specific task to one of the following co-workers: {coworkers}\nThe input to this tool should be the co-worker, the task you want them to do, and ALL necessary context to execute the task, they know nothing about the task, so share absolute everything you know, don't reference things but instead explain them.",
     "ask_question": "Ask a specific question to one of the following co-workers: {coworkers}\nThe input to this tool should be the co-worker, the question you have for them, and ALL necessary context to ask the question properly, they know nothing about the question, so share absolute everything you know, don't reference things but instead explain them."
   }
 }
