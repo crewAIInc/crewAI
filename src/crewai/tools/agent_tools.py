@@ -1,4 +1,4 @@
-from typing import List
+from typing import List, Union
 
 from langchain.tools import StructuredTool
 from pydantic import BaseModel, Field
@@ -33,12 +33,12 @@ class AgentTools(BaseModel):
         ]
         return tools
 
-    def delegate_work(self, task: str, context: str, coworker: str = None, **kwargs):
+    def delegate_work(self, task: str, context: str, coworker: Union[str, None] = None, **kwargs):
         """Useful to delegate a specific task to a co-worker passing all necessary context and names."""
         coworker = coworker or kwargs.get("co_worker")
         return self._execute(coworker, task, context)
 
-    def ask_question(self, question: str, context: str, coworker: str = None, **kwargs):
+    def ask_question(self, question: str, context: str, coworker: Union[str, None] = None, **kwargs):
         """Useful to ask a question, opinion or take from a co-worker passing all necessary context and names."""
         coworker = coworker or kwargs.get("co_worker")
         return self._execute(coworker, question, context)
