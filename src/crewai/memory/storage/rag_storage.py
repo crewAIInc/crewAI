@@ -37,13 +37,18 @@ class RAGStorage(Storage):
     search efficiency.
     """
 
-    def __init__(self, type, allow_reset=True, embedder_config=None):
+    def __init__(self, type, allow_reset=True, embedder_config=None, crew=None):
         super().__init__()
         if (
             not os.getenv("OPENAI_API_KEY")
             and not os.getenv("OPENAI_BASE_URL") == "https://api.openai.com/v1"
         ):
             os.environ["OPENAI_API_KEY"] = "fake"
+
+        agents = crew.agents if crew else []
+        agents = [agent.role for agent in agents]
+        agents = "_".join(agents)
+
         config = {
             "app": {
                 "config": {"name": type, "collect_metrics": False, "log_level": "ERROR"}
@@ -58,7 +63,7 @@ class RAGStorage(Storage):
                 "provider": "chroma",
                 "config": {
                     "collection_name": type,
-                    "dir": f"{db_storage_path()}/{type}",
+                    "dir": f"{db_storage_path()}/{type}/{agents}",
                     "allow_reset": allow_reset,
                 },
             },
