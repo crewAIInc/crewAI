@@ -12,7 +12,11 @@ load_dotenv()
 
 def CrewBase(cls):
     class WrappedClass(cls):
-        is_crew_class = True
+        is_crew_class: bool = True
+
+        class Config:
+            arbitrary_types_allowed = True
+            ignored_types = [bool]
 
         base_directory = None
         for frame_info in inspect.stack():
