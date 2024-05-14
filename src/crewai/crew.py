@@ -164,8 +164,8 @@ class Crew(BaseModel):
         """Set private attributes."""
         if self.memory:
             self._long_term_memory = LongTermMemory()
-            self._short_term_memory = ShortTermMemory(embedder_config=self.embedder)
-            self._entity_memory = EntityMemory(embedder_config=self.embedder)
+            self._short_term_memory = ShortTermMemory(crew=self, embedder_config=self.embedder)
+            self._entity_memory = EntityMemory(crew=self, embedder_config=self.embedder)
         return self
 
     @model_validator(mode="after")
