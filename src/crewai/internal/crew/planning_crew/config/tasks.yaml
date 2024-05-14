@@ -1,0 +1,36 @@
+task_decomposition:
+  description: >
+    Analyze the high-level task, "{task}", provided and break it down into
+    distinct, manageable subtasks that are specific and actionable.
+    Consider all aspects of the task and ensure that each subtask is
+    aligned with the final goal. Additionally, outline the roles, goals,
+    and backstories for the agents you plan to recruit for performing
+    each subtask. Make sure to clearly define their responsibilities in
+    the context of this project.
+  expected_output: >
+    A detailed list of subtasks, each with defined objectives and
+    scopes, ensuring they collectively address all components of the
+    original task, "{task}". Each subtask should be assigned to a
+    specific agent you will recruit, complete with their role, goal, and
+    backstory. The main goal is to ensure systematic progression and
+    effective task management.
+
+resource_allocation:
+  description: >
+    Evaluate the list of subtasks generated from the high-level task
+    "{task}" and determine the most appropriate agents and tools needed
+    for each. Assign resources based on the complexity, required skills,
+    and the tools needed to effectively complete each subtask. This
+    evaluation should consider the unique requirements of each subtask
+    and align resources to optimize task completion. Available tools to
+    choose from include:
+    {tools_list}.
+  expected_output: >
+    An allocation plan that lists each subtask along with the assigned
+    agent and the tools they will use, explaining the rationale for each
+    resource assignment to ensure transparency and optimal task
+    alignment. The expected outcome is to have a fully resourced plan
+    that facilitates efficient task execution and achievement of the
+    main goal: "{goal}".
+    Ensure each tool selected is from the provided list of available tools:
+    {tools_list}.
