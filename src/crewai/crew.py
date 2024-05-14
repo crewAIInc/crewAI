@@ -1,7 +1,9 @@
+import os
 import json
 import uuid
 from typing import Any, Dict, List, Optional, Union
 
+from langchain_openai import ChatOpenAI
 from langchain_core.callbacks import BaseCallbackHandler
 from pydantic import (
     UUID4,
@@ -26,7 +28,6 @@ from crewai.task import Task
 from crewai.telemetry import Telemetry
 from crewai.tools.agent_tools import AgentTools
 from crewai.utilities import I18N, FileHandler, Logger, RPMController
-
 
 class Crew(BaseModel):
     """
@@ -101,6 +102,15 @@ class Crew(BaseModel):
     config: Optional[Union[Json, Dict[str, Any]]] = Field(default=None)
     id: UUID4 = Field(default_factory=uuid.uuid4, frozen=True)
     share_crew: Optional[bool] = Field(default=False)
+    autonomous_llm: Optional[Any] = Field(
+        default_factory=lambda: ChatOpenAI(
+            model=os.environ.get("OPENAI_MODEL_NAME", "gpt-4")
+        ),
+        description="Language model that will used for agents dinamycally created.",
+    )
+    autonomous_tools: Optional[List[Any]] = Field(
+        default_factory=list, description="Tools at agents disposal when dinamically generated."
+    )
     step_callback: Optional[Any] = Field(
         default=None,
         description="Callback to be executed after each step for all agents execution.",
@@ -266,6 +276,10 @@ class Crew(BaseModel):
             result, manager_metrics = self._run_hierarchical_process()  # type: ignore # Unpacking a string is disallowed
             metrics.append(manager_metrics)  # type: ignore # Cannot determine type of "manager_metrics"
 
+            result, manager_metrics = self._run_hierarchical_process()
+            metrics.append(manager_metrics)
+        elif self.process == Process.autonomous:
+            result = self._run_autonomous_process()
         else:
             raise NotImplementedError(
                 f"The process '{self.process}' is not implemented yet."
@@ -314,6 +328,61 @@ class Crew(BaseModel):
 
         self._finish_execution(task_output)
         return self._format_output(task_output)
+
+    def _run_autonomous_process(self) -> str:
+        """Executes high level tasks by automatically creating agents and tasks for achieving an initial task"""
+        from crewai.internal.crew.planning_crew.crew import PlanningCrewCrew
+        #task_output = ""
+        # Need to decide how to break the initial task into smaller tasks
+        # Need to decide on what agents to create to fullfill the tasks
+        # Need to decide what process to use, whether sequential or hierarchical
+        # Need to decide on what tools to use for the agents
+
+        import pkgutil
+        import inspect
+        import crewai_tools
+
+        def list_crewai_tools():
+            tool_list = []
+            for importer, modname, ispkg in pkgutil.iter_modules(crewai_tools.__path__):
+                module = importer.find_module(modname).load_module(modname)
+                for name, obj in inspect.getmembers(module, inspect.isclass):
+                    if obj.__module__ == module.__name__:
+                        tool_list.append(name)
+            return tool_list
+
+        # Get the list of tools
+        tools = list_crewai_tools()
+
+        descriptions = []
+        for tool in tools:
+            args = {
+                k: {k2: v2 for k2, v2 in v.items() if k2 in ["description", "type"]}
+                for k, v in tool.args.items()
+            }
+            descriptions.append(
+                "\n".join(
+                    [
+                        f"Tool Name: {tool.name.lower()}",
+                        f"Tool Description: {tool.description}",
+                        f"Tool Arguments: {args}",
+                    ]
+                )
+            )
+        descriptions =  "\n--\n".join(descriptions)
+        print(descriptions)
+
+        crew = PlanningCrewCrew().crew()
+
+        for task in self.tasks:
+            crew.kickoff({
+                "task": task.description,
+                "goal": task.expected_output,
+                "tools_list": descriptions
+            })
+
+
+
 
     def _run_hierarchical_process(self) -> str:
         """Creates and assigns a manager agent to make sure the crew completes the tasks."""
@@ -364,6 +433,7 @@ class Crew(BaseModel):
         for task in self.tasks:
             if not task.callback:
                 task.callback = self.task_callback
+            task.callback = self.task_callback
 
     def _interpolate_inputs(self, inputs: Dict[str, Any]) -> None:
         """Interpolates the inputs in the tasks and agents."""

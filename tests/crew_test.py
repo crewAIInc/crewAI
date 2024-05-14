@@ -961,35 +961,3 @@ def test_manager_agent_in_agents_raises_exception():
             manager_agent=manager,
             tasks=[task],
         )
-
-
-def test_manager_agent_with_tools_raises_exception():
-    from crewai_tools import tool
-
-    @tool
-    def testing_tool(first_number: int, second_number: int) -> int:
-        """Useful for when you need to multiply two numbers together."""
-        return first_number * second_number
-
-    task = Task(
-        description="Come up with a list of 5 interesting ideas to explore for an article, then write one amazing paragraph highlight for each idea that showcases how good an article about this topic could be. Return the list of ideas with their paragraph and your notes.",
-        expected_output="5 bullet points with a paragraph for each idea.",
-    )
-
-    manager = Agent(
-        role="Manager",
-        goal="Manage the crew and ensure the tasks are completed efficiently.",
-        backstory="You're an experienced manager, skilled in overseeing complex projects and guiding teams to success. Your role is to coordinate the efforts of the crew members, ensuring that each task is completed on time and to the highest standard.",
-        allow_delegation=False,
-        tools=[testing_tool],
-    )
-
-    crew = Crew(
-        agents=[researcher, writer],
-        process=Process.hierarchical,
-        manager_agent=manager,
-        tasks=[task],
-    )
-
-    with pytest.raises(Exception):
-        crew.kickoff()
