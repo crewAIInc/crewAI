@@ -15,6 +15,7 @@ class EXASearchTool(EXABaseTool):
 
     payload = {
         "query": search_query,
+        "type": "magic",
     }
 
     headers = self.headers.copy()
