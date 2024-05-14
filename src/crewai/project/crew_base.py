@@ -14,9 +14,6 @@ def CrewBase(cls):
         model_config = ConfigDict(arbitrary_types_allowed=True)
         is_crew_class: bool = True
 
-        class Config:
-            arbitrary_types_allowed = True
-
         base_directory = None
         for frame_info in inspect.stack():
             if "site-packages" not in frame_info.filename:
