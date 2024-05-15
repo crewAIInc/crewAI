@@ -27,7 +27,7 @@ def version(tools):
 
     if tools:
         try:
-            tools_version = pkg_resources.get_distribution("crewai[tools]").version
+            tools_version = pkg_resources.get_distribution("crewai-tools").version
             click.echo(f"crewai tools version: {tools_version}")
         except pkg_resources.DistributionNotFound:
             click.echo("crewai tools not installed")
