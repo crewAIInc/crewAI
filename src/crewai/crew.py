@@ -58,7 +58,8 @@ class Crew(BaseModel):
     _rpm_controller: RPMController = PrivateAttr()
     _logger: Logger = PrivateAttr()
     _file_handler: FileHandler = PrivateAttr()
-    _cache_handler: InstanceOf[CacheHandler] = PrivateAttr(default=CacheHandler())
+    _cache_handler: InstanceOf[CacheHandler] = PrivateAttr(
+        default=CacheHandler())
     _short_term_memory: Optional[InstanceOf[ShortTermMemory]] = PrivateAttr()
     _long_term_memory: Optional[InstanceOf[LongTermMemory]] = PrivateAttr()
     _entity_memory: Optional[InstanceOf[EntityMemory]] = PrivateAttr()
@@ -153,7 +154,8 @@ class Crew(BaseModel):
         self._logger = Logger(self.verbose)
         if self.output_log_file:
             self._file_handler = FileHandler(self.output_log_file)
-        self._rpm_controller = RPMController(max_rpm=self.max_rpm, logger=self._logger)
+        self._rpm_controller = RPMController(
+            max_rpm=self.max_rpm, logger=self._logger)
         self._telemetry = Telemetry()
         self._telemetry.set_tracer()
         self._telemetry.crew_creation(self)
@@ -164,7 +166,8 @@ class Crew(BaseModel):
         """Set private attributes."""
         if self.memory:
             self._long_term_memory = LongTermMemory()
-            self._short_term_memory = ShortTermMemory(embedder_config=self.embedder)
+            self._short_term_memory = ShortTermMemory(
+                embedder_config=self.embedder)
             self._entity_memory = EntityMemory(embedder_config=self.embedder)
         return self
 
@@ -242,7 +245,8 @@ class Crew(BaseModel):
     def kickoff(self, inputs: Optional[Dict[str, Any]] = {}) -> str:
         """Starts the crew to work on its assigned tasks."""
         self._execution_span = self._telemetry.crew_execution_span(self)
-        self._interpolate_inputs(inputs)  # type: ignore # Argument 1 to "_interpolate_inputs" of "Crew" has incompatible type "dict[str, Any] | None"; expected "dict[str, Any]"
+        # type: ignore # Argument 1 to "_interpolate_inputs" of "Crew" has incompatible type "dict[str, Any] | None"; expected "dict[str, Any]"
+        self._interpolate_inputs(inputs)
         self._set_tasks_callbacks()
 
         i18n = I18N(prompt_file=self.prompt_file)
@@ -263,8 +267,10 @@ class Crew(BaseModel):
         if self.process == Process.sequential:
             result = self._run_sequential_process()
         elif self.process == Process.hierarchical:
-            result, manager_metrics = self._run_hierarchical_process()  # type: ignore # Unpacking a string is disallowed
-            metrics.append(manager_metrics)  # type: ignore # Cannot determine type of "manager_metrics"
+            # type: ignore # Unpacking a string is disallowed
+            result, manager_metrics = self._run_hierarchical_process()
+            # type: ignore # Cannot determine type of "manager_metrics"
+            metrics.append(manager_metrics)
 
         else:
             raise NotImplementedError(
@@ -292,7 +298,8 @@ class Crew(BaseModel):
                     task.tools += AgentTools(agents=agents_for_delegation).tools()
 
             role = task.agent.role if task.agent is not None else "None"
-            self._logger.log("debug", f"== Working Agent: {role}", color="bold_purple")
+            self._logger.log("debug", f"== Working Agent: {
+                             role}", color="bold_purple")
             self._logger.log(
                 "info", f"== Starting Task: {task.description}", color="bold_purple"
             )
@@ -307,10 +314,12 @@ class Crew(BaseModel):
                 task_output = output
 
             role = task.agent.role if task.agent is not None else "None"
-            self._logger.log("debug", f"== [{role}] Task output: {task_output}\n\n")
+            self._logger.log("debug", f"== [{role}] Task output: {
+                             task_output}\n\n")
 
             if self.output_log_file:
-                self._file_handler.log(agent=role, task=task_output, status="completed")
+                self._file_handler.log(
+                    agent=role, task=task_output, status="completed")
 
         self._finish_execution(task_output)
         return self._format_output(task_output)
@@ -329,7 +338,8 @@ class Crew(BaseModel):
             manager = Agent(
                 role=i18n.retrieve("hierarchical_manager_agent", "role"),
                 goal=i18n.retrieve("hierarchical_manager_agent", "goal"),
-                backstory=i18n.retrieve("hierarchical_manager_agent", "backstory"),
+                backstory=i18n.retrieve(
+                    "hierarchical_manager_agent", "backstory"),
                 tools=AgentTools(agents=self.agents).tools(),
                 llm=self.manager_llm,
                 verbose=True,
@@ -349,7 +359,8 @@ class Crew(BaseModel):
                 agent=manager, context=task_output, tools=manager.tools
             )
 
-            self._logger.log("debug", f"[{manager.role}] Task output: {task_output}")
+            self._logger.log(
+                "debug", f"[{manager.role}] Task output: {task_output}")
 
             if self.output_log_file:
                 self._file_handler.log(
@@ -357,7 +368,8 @@ class Crew(BaseModel):
                 )
 
         self._finish_execution(task_output)
-        return self._format_output(task_output), manager._token_process.get_summary()  # type: ignore # Incompatible return value type (got "tuple[str, Any]", expected "str")
+        # type: ignore # Incompatible return value type (got "tuple[str, Any]", expected "str")
+        return self._format_output(task_output), manager._token_process.get_summary()
 
     def _set_tasks_callbacks(self) -> None:
         """Sets callback for every task suing task_callback"""
@@ -367,8 +379,11 @@ class Crew(BaseModel):
 
     def _interpolate_inputs(self, inputs: Dict[str, Any]) -> None:
         """Interpolates the inputs in the tasks and agents."""
-        [task.interpolate_inputs(inputs) for task in self.tasks]  # type: ignore # "interpolate_inputs" of "Task" does not return a value (it only ever returns None)
-        [agent.interpolate_inputs(inputs) for agent in self.agents]  # type: ignore # "interpolate_inputs" of "Agent" does not return a value (it only ever returns None)
+        [task.interpolate_inputs(
+            # type: ignore # "interpolate_inputs" of "Task" does not return a value (it only ever returns None)
+            inputs) for task in self.tasks]
+        # type: ignore # "interpolate_inputs" of "Agent" does not return a value (it only ever returns None)
+        [agent.interpolate_inputs(inputs) for agent in self.agents]
 
     def _format_output(self, output: str) -> str:
         """Formats the output of the crew execution."""
