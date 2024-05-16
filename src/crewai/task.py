@@ -201,6 +201,7 @@ class Task(BaseModel):
             description=self.description,
             exported_output=exported_output,
             raw_output=result,
+            agent=agent.role,
         )
 
         if self.callback:

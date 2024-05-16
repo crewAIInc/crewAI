@@ -11,6 +11,7 @@ class TaskOutput(BaseModel):
     exported_output: Union[str, BaseModel] = Field(
         description="Output of the task", default=None
     )
+    agent: str = Field(description="Agent that executed the task")
     raw_output: str = Field(description="Result of the task")
 
     @model_validator(mode="after")
