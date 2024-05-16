@@ -2,6 +2,7 @@ import click
 import pkg_resources
 
 from .create_crew import create_crew
+from .train_crew import train_crew
 
 
 @click.group()
@@ -31,6 +32,20 @@ def version(tools):
             click.echo(f"crewai tools version: {tools_version}")
         except pkg_resources.DistributionNotFound:
             click.echo("crewai tools not installed")
+
+
+@crewai.command()
+@click.option(
+    "-n",
+    "--n_iterations",
+    type=int,
+    default=5,
+    help="Number of iterations to train the crew",
+)
+def train(n_iterations: int):
+    """Train the crew."""
+    click.echo(f"Training the crew for {n_iterations} iterations")
+    train_crew(n_iterations)
 
 
 if __name__ == "__main__":

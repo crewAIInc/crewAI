@@ -6,6 +6,7 @@ from pathlib import Path
 from pydantic import ConfigDict
 
 from dotenv import load_dotenv
+
 load_dotenv()
 
 
