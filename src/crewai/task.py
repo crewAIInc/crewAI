@@ -330,7 +330,7 @@ class Task(BaseModel):
             os.makedirs(directory)
 
         # type: ignore # Argument 1 to "open" has incompatible type "str | None"; expected "int | str | bytes | PathLike[str] | PathLike[bytes]"
-        with open(self.output_file, "w") as file:
+        with open(self.output_file, "w", encoding='utf-8') as file:
             file.write(result)
         return None
 
