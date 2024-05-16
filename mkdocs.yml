@@ -138,6 +138,9 @@ nav:
     - Human Input on Execution: 'how-to/Human-Input-on-Execution.md'
     - Agent Monitoring with AgentOps: 'how-to/AgentOps-Observability.md'
   - Tools Docs:
+    - Firecrawl Scrape Website Tool: 'tools/FirecrawlScrapeWebsiteTool.md'
+    - Firecrawl Crawl Website Tool: 'tools/FirecrawlCrawlWebsiteTool.md'
+    - Firecrawl Search Tool: 'tools/FirecrawlSearchTool.md'
     - Google Serper Search: 'tools/SerperDevTool.md'
     - Browserbase Web Loader: 'tools/BrowserbaseLoadTool.md'
     - Scrape Website: 'tools/ScrapeWebsiteTool.md'
