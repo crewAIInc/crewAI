@@ -66,7 +66,7 @@ class Crew(BaseModel):
     _short_term_memory: Optional[InstanceOf[ShortTermMemory]] = PrivateAttr()
     _long_term_memory: Optional[InstanceOf[LongTermMemory]] = PrivateAttr()
     _entity_memory: Optional[InstanceOf[EntityMemory]] = PrivateAttr()
-    _thread_local = threading.local = PrivateAttr(
+    _thread_local: threading.local = PrivateAttr(
         default_factory=threading.local)
 
     cache: bool = Field(default=True)
@@ -221,6 +221,7 @@ class Crew(BaseModel):
                     agent.set_cache_handler(self._cache_handler)
                 if self.max_rpm:
                     agent.set_rpm_controller(self._rpm_controller)
+
         return self
 
     def _setup_from_config(self):
@@ -253,32 +254,14 @@ class Crew(BaseModel):
 
     def kickoff(self, inputs: Optional[Dict[str, Any]] = {}) -> str:
         """Starts the crew to work on its assigned tasks."""
+        # Initialize thread-local agents and tasks
+        if not hasattr(self._thread_local, 'initialized'):
+            self._initialize_thread_specific_components()
+            self._thread_local.initialized = True
+
         # type: ignore # Argument 1 to "_interpolate_inputs" of "Crew" has incompatible type "dict[str, Any] | None"; expected "dict[str, Any]"
         self._interpolate_inputs(inputs)
         self._set_tasks_callbacks()
-
-        # Use thread-local storage for thread-specific data
-        if not hasattr(self._thread_local, 'initialized'):
-            self._thread_local.rpm_controller = copy.deepcopy(
-                self._rpm_controller)
-            self._thread_local.logger = copy.deepcopy(
-                self._logger)
-            self._thread_local.file_handler = copy.deepcopy(
-                self._file_handler)
-            self._thread_local.cache_handler = copy.deepcopy(
-                self._cache_handler)
-            self._thread_local.short_term_memory = copy.deepcopy(
-                self._short_term_memory)
-            self._thread_local.long_term_memory = copy.deepcopy(
-                self._long_term_memory)
-            self._thread_local.entity_memory = copy.deepcopy(
-                self._entity_memory)
-            self._thread_local.initialized = True
-
-            # TODO: Overriding of current TracerProvider is not allowed
-            # Reinitialize telemetry instead of deep copying
-            # self._thread_local.telemetry = Telemetry()
-            # self._thread_local.telemetry.set_tracer()
 
         self._thread_local.execution_span = self._telemetry.crew_execution_span(
             self)
@@ -310,12 +293,10 @@ class Crew(BaseModel):
                 metrics.append(manager_metrics)
             else:
                 raise NotImplementedError(
-                    f"The process '{self.process}' is not implemented yet."
-                )
+                    f"The process '{self.process}' is not implemented yet.")
 
-            metrics = metrics + [
-                agent._token_process.get_summary() for agent in self.agents
-            ]
+            metrics = metrics + [agent._token_process.get_summary()
+                                 for agent in self._thread_local.agents]
             self.usage_metrics = {
                 key: sum([m[key] for m in metrics if m is not None]) for key in metrics[0]
             }
@@ -323,6 +304,27 @@ class Crew(BaseModel):
             self._reset_thread_local()
 
         return result
+
+    def _initialize_thread_specific_components(self):
+        """Initialize thread-specific properties, agents, and tasks."""
+        self._thread_local.rpm_controller = copy.deepcopy(
+            self._rpm_controller)
+        self._thread_local.logger = copy.deepcopy(
+            self._logger)
+        self._thread_local.file_handler = copy.deepcopy(
+            self._file_handler)
+        self._thread_local.cache_handler = copy.deepcopy(
+            self._cache_handler)
+        self._thread_local.short_term_memory = copy.deepcopy(
+            self._short_term_memory)
+        self._thread_local.long_term_memory = copy.deepcopy(
+            self._long_term_memory)
+        self._thread_local.entity_memory = copy.deepcopy(
+            self._entity_memory)
+        self._thread_local.agents = [copy.deepcopy(
+            agent) for agent in self._shared_agents]
+        self._thread_local.tasks = [copy.deepcopy(
+            task) for task in self._shared_tasks]
 
     def kickoff_for_each(self, inputs_list: List[Dict[str, Any]], use_threading: bool = True, max_threads: int = 10) -> List[str]:
         """Start multiple instances of crew to work on its assigned tasks for each input in a new thread if threading is enabled."""
@@ -367,11 +369,11 @@ class Crew(BaseModel):
     def _run_sequential_process(self, thread_local=None) -> str:
         """Executes tasks sequentially and returns the final output."""
         task_output = ""
-        for task in self.tasks:
+        for task in self._thread_local.tasks:
             if task.agent.allow_delegation:  # type: ignore #  Item "None" of "Agent | None" has no attribute "allow_delegation"
                 agents_for_delegation = [
-                    agent for agent in self.agents if agent != task.agent]
-                if len(self.agents) > 1 and len(agents_for_delegation) > 0:
+                    agent for agent in self._thread_local.agents if agent != task.agent]
+                if len(self._thread_local.agents) > 1 and len(agents_for_delegation) > 0:
                     task.tools += AgentTools(agents=agents_for_delegation).tools()
 
             role = task.agent.role if task.agent is not None else "None"
@@ -401,27 +403,27 @@ class Crew(BaseModel):
 
     def _run_hierarchical_process(self, thread_local=None) -> str:
         """Creates and assigns a manager agent to make sure the crew completes the tasks."""
-
-        i18n = I18N.prompt_file(self.prompt_file)
+        i18n = I18N(prompt_file=self.prompt_file)
         if self.manager_agent is not None:
             self.manager_agent.allow_delegation = True
             manager = self.manager_agent
             if len(manager.tools) > 0:
                 raise Exception("Manager agent should not have tools")
-            manager.tools = AgentTools(agents=self.agents).tools()
+            manager.tools = AgentTools(
+                agents=self._thread_local.agents).tools()
         else:
             manager = Agent(
                 role=i18n.retrieve("hierarchical_manager_agent", "role"),
                 goal=i18n.retrieve("hierarchical_manager_agent", "goal"),
                 backstory=i18n.retrieve(
                     "hierarchical_manager_agent", "backstory"),
-                tools=AgentTools(agents=self.agents).tools(),
+                tools=AgentTools(agents=self._thread_local.agents).tools(),
                 llm=self.manager_llm,
                 verbose=True,
             )
 
         task_output = ""
-        for task in self.tasks:
+        for task in self._thread_local.tasks:
             thread_local.logger.log("debug", f"Working Agent: {manager.role}")
             thread_local.logger.log(
                 "info", f"Starting Task: {task.description}")
@@ -445,8 +447,8 @@ class Crew(BaseModel):
         return self._format_output(task_output), manager._token_process.get_summary()
 
     def _set_tasks_callbacks(self) -> None:
-        """Sets callback for every task suing task_callback"""
-        for task in self.tasks:
+        """Sets callback for every task using task_callback."""
+        for task in self._thread_local.tasks:
             if not task.callback:
                 task.callback = self.task_callback
 
@@ -455,16 +457,18 @@ class Crew(BaseModel):
         print("Interpolating inputs")
         print(inputs)
         # type: ignore # "interpolate_inputs" of "Task" does not return a value (it only ever returns None)
-        [task.interpolate_inputs(inputs) for task in self.tasks]
+        for task in self._thread_local.tasks:
+            task.interpolate_inputs(inputs)
         # type: ignore # "interpolate_inputs" of "Agent" does not return a value (it only ever returns None)
-        [agent.interpolate_inputs(inputs) for agent in self.agents]
+        for agent in self._thread_local.agents:
+            agent.interpolate_inputs(inputs)
 
     def _format_output(self, output: str) -> str:
         """Formats the output of the crew execution."""
         if self.full_output:
             return {  # type: ignore # Incompatible return value type (got "dict[str, Sequence[str | TaskOutput | None]]", expected "str")
                 "final_output": output,
-                "tasks_outputs": [task.output for task in self.tasks if task],
+                "tasks_outputs": [task.output for task in self._thread_local.tasks if task],
             }
         else:
             return output
@@ -472,7 +476,7 @@ class Crew(BaseModel):
     def _finish_execution(self, output, thread_local=None) -> None:
         if self.max_rpm:
             thread_local.rpm_controller.stop_rpm_counter()
-        thread_local.telemetry.end_crew(self, output)
+        self._telemetry.end_crew(self, output)
 
     def _reset_thread_local(self):
         """Resets the thread-local storage."""
