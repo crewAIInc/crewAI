@@ -1,4 +1,7 @@
+import copy
 import json
+from queue import Queue
+import threading
 import uuid
 from typing import Any, Dict, List, Optional, Union
 
@@ -63,6 +66,7 @@ class Crew(BaseModel):
     _short_term_memory: Optional[InstanceOf[ShortTermMemory]] = PrivateAttr()
     _long_term_memory: Optional[InstanceOf[LongTermMemory]] = PrivateAttr()
     _entity_memory: Optional[InstanceOf[EntityMemory]] = PrivateAttr()
+    _thread_local = threading.local()
 
     cache: bool = Field(default=True)
     model_config = ConfigDict(arbitrary_types_allowed=True)
@@ -244,7 +248,26 @@ class Crew(BaseModel):
 
     def kickoff(self, inputs: Optional[Dict[str, Any]] = {}) -> str:
         """Starts the crew to work on its assigned tasks."""
-        self._execution_span = self._telemetry.crew_execution_span(self)
+        # Use thread-local storage for thread-specific data
+        if not hasattr(self._thread_local, 'initialized'):
+            self._thread_local.rpm_controller = copy.deepcopy(
+                self._rpm_controller)
+            self._thread_local.logger = copy.deepcopy(self._logger)
+            self._thread_local.file_handler = copy.deepcopy(self._file_handler)
+            self._thread_local.cache_handler = copy.deepcopy(
+                self._cache_handler)
+            self._thread_local.short_term_memory = copy.deepcopy(
+                self._short_term_memory)
+            self._thread_local.long_term_memory = copy.deepcopy(
+                self._long_term_memory)
+            self._thread_local.entity_memory = copy.deepcopy(
+                self._entity_memory)
+            self._thread_local.telemetry = copy.deepcopy(self._telemetry)
+            self._thread_local.telemetry.set_tracer()
+            self._thread_local.initialized = True
+
+        self._thread_local.execution_span = self._thread_local.telemetry.crew_execution_span(
+            self)
         # type: ignore # Argument 1 to "_interpolate_inputs" of "Crew" has incompatible type "dict[str, Any] | None"; expected "dict[str, Any]"
         self._interpolate_inputs(inputs)
         self._set_tasks_callbacks()
@@ -265,13 +288,14 @@ class Crew(BaseModel):
         metrics = []
 
         if self.process == Process.sequential:
-            result = self._run_sequential_process()
+            result = self._run_sequential_process(
+                thread_local=self._thread_local)
         elif self.process == Process.hierarchical:
             # type: ignore # Unpacking a string is disallowed
-            result, manager_metrics = self._run_hierarchical_process()
+            result, manager_metrics = self._run_hierarchical_process(
+                thread_local=self._thread_local)
             # type: ignore # Cannot determine type of "manager_metrics"
             metrics.append(manager_metrics)
-
         else:
             raise NotImplementedError(
                 f"The process '{self.process}' is not implemented yet."
@@ -286,48 +310,85 @@ class Crew(BaseModel):
 
         return result
 
-    def _run_sequential_process(self) -> str:
+    def kickoff_for_each(self, inputs_list: List[Dict[str, Any]], use_threading: bool = True, max_threads: int = 10) -> List[str]:
+        """Start multiple instances of crew to work on its assigned tasks for each input in a new thread if threading is enabled."""
+        if not use_threading:
+            return [self.kickoff(inputs) for inputs in inputs_list]
+
+        def worker():
+            while True:
+                inputs = q.get()
+                if inputs is None:
+                    break
+                try:
+                    result = self.kickoff(inputs)
+                    results.append(result)
+                except Exception as e:
+                    self._logger.log('error', f"Error processing inputs {
+                                     inputs}: {str(e)}")
+                finally:
+                    q.task_done()
+
+        q = Queue()
+        results = []
+        threads = []
+
+        for _ in range(min(max_threads, len(inputs_list))):
+            thread = threading.Thread(target=worker)
+            thread.start()
+            threads.append(thread)
+
+        for inputs in inputs_list:
+            q.put(inputs)
+
+        q.join()
+
+        for _ in range(len(threads)):
+            q.put(None)
+        for thread in threads:
+            thread.join()
+
+        return results
+
+    def _run_sequential_process(self, thread_local=None) -> str:
         """Executes tasks sequentially and returns the final output."""
         task_output = ""
         for task in self.tasks:
             if task.agent.allow_delegation:  # type: ignore #  Item "None" of "Agent | None" has no attribute "allow_delegation"
                 agents_for_delegation = [
-                    agent for agent in self.agents if agent != task.agent
-                ]
+                    agent for agent in self.agents if agent != task.agent]
                 if len(self.agents) > 1 and len(agents_for_delegation) > 0:
                     task.tools += AgentTools(agents=agents_for_delegation).tools()
 
             role = task.agent.role if task.agent is not None else "None"
-            self._logger.log("debug", f"== Working Agent: {
-                             role}", color="bold_purple")
-            self._logger.log(
-                "info", f"== Starting Task: {task.description}", color="bold_purple"
-            )
+            thread_local.logger.log("debug", f"== Working Agent: {
+                                    role}", color="bold_purple")
+            thread_local.logger.log("info", f"== Starting Task: {
+                                    task.description}", color="bold_purple")
 
             if self.output_log_file:
-                self._file_handler.log(
-                    agent=role, task=task.description, status="started"
-                )
+                thread_local.file_handler.log(
+                    agent=role, task=task.description, status="started")
 
             output = task.execute(context=task_output)
             if not task.async_execution:
                 task_output = output
 
             role = task.agent.role if task.agent is not None else "None"
-            self._logger.log("debug", f"== [{role}] Task output: {
-                             task_output}\n\n")
+            thread_local.logger.log(
+                "debug", f"== [{role}] Task output: {task_output}\n\n")
 
             if self.output_log_file:
-                self._file_handler.log(
+                thread_local.file_handler.log(
                     agent=role, task=task_output, status="completed")
 
-        self._finish_execution(task_output)
+        self._finish_execution(task_output, thread_local=thread_local)
         return self._format_output(task_output)
 
-    def _run_hierarchical_process(self) -> str:
+    def _run_hierarchical_process(self, thread_local=None) -> str:
         """Creates and assigns a manager agent to make sure the crew completes the tasks."""
 
-        i18n = I18N(prompt_file=self.prompt_file)
+        i18n = I18N.prompt_file(self.prompt_file)
         if self.manager_agent is not None:
             self.manager_agent.allow_delegation = True
             manager = self.manager_agent
@@ -347,27 +408,25 @@ class Crew(BaseModel):
 
         task_output = ""
         for task in self.tasks:
-            self._logger.log("debug", f"Working Agent: {manager.role}")
-            self._logger.log("info", f"Starting Task: {task.description}")
+            thread_local.logger.log("debug", f"Working Agent: {manager.role}")
+            thread_local.logger.log(
+                "info", f"Starting Task: {task.description}")
 
             if self.output_log_file:
-                self._file_handler.log(
-                    agent=manager.role, task=task.description, status="started"
-                )
+                thread_local.file_handler.log(
+                    agent=manager.role, task=task.description, status="started")
 
             task_output = task.execute(
-                agent=manager, context=task_output, tools=manager.tools
-            )
+                agent=manager, context=task_output, tools=manager.tools)
 
-            self._logger.log(
+            thread_local.logger.log(
                 "debug", f"[{manager.role}] Task output: {task_output}")
 
             if self.output_log_file:
-                self._file_handler.log(
-                    agent=manager.role, task=task_output, status="completed"
-                )
+                thread_local.file_handler.log(
+                    agent=manager.role, task=task_output, status="completed")
 
-        self._finish_execution(task_output)
+        self._finish_execution(task_output, thread_local=thread_local)
         # type: ignore # Incompatible return value type (got "tuple[str, Any]", expected "str")
         return self._format_output(task_output), manager._token_process.get_summary()
 
@@ -395,10 +454,10 @@ class Crew(BaseModel):
         else:
             return output
 
-    def _finish_execution(self, output) -> None:
+    def _finish_execution(self, output, thread_local=None) -> None:
         if self.max_rpm:
-            self._rpm_controller.stop_rpm_counter()
-        self._telemetry.end_crew(self, output)
+            thread_local.rpm_controller.stop_rpm_counter()
+        thread_local.telemetry.end_crew(self, output)
 
     def __repr__(self):
         return f"Crew(id={self.id}, process={self.process}, number_of_agents={len(self.agents)}, number_of_tasks={len(self.tasks)})"
