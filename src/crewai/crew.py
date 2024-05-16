@@ -58,15 +58,16 @@ class Crew(BaseModel):
 
     __hash__ = object.__hash__  # type: ignore
     _execution_span: Any = PrivateAttr()
-    _rpm_controller: RPMController = PrivateAttr()
-    _logger: Logger = PrivateAttr()
-    _file_handler: FileHandler = PrivateAttr()
+    _rpm_controller = PrivateAttr(default=None)
+    _logger = PrivateAttr(default=None)
+    _file_handler = PrivateAttr(default=None)
     _cache_handler: InstanceOf[CacheHandler] = PrivateAttr(
         default=CacheHandler())
     _short_term_memory: Optional[InstanceOf[ShortTermMemory]] = PrivateAttr()
     _long_term_memory: Optional[InstanceOf[LongTermMemory]] = PrivateAttr()
     _entity_memory: Optional[InstanceOf[EntityMemory]] = PrivateAttr()
-    _thread_local = threading.local()
+    _thread_local = threading.local = PrivateAttr(
+        default_factory=threading.local)
 
     cache: bool = Field(default=True)
     model_config = ConfigDict(arbitrary_types_allowed=True)
@@ -156,6 +157,7 @@ class Crew(BaseModel):
         """Set private attributes."""
         self._cache_handler = CacheHandler()
         self._logger = Logger(self.verbose)
+        self._file_handler = None
         if self.output_log_file:
             self._file_handler = FileHandler(self.output_log_file)
         self._rpm_controller = RPMController(
@@ -168,6 +170,9 @@ class Crew(BaseModel):
     @model_validator(mode="after")
     def create_crew_memory(self) -> "Crew":
         """Set private attributes."""
+        self._short_term_memory = None
+        self._long_term_memory = None
+        self._entity_memory = None
         if self.memory:
             self._long_term_memory = LongTermMemory()
             self._short_term_memory = ShortTermMemory(
@@ -248,12 +253,18 @@ class Crew(BaseModel):
 
     def kickoff(self, inputs: Optional[Dict[str, Any]] = {}) -> str:
         """Starts the crew to work on its assigned tasks."""
+        # type: ignore # Argument 1 to "_interpolate_inputs" of "Crew" has incompatible type "dict[str, Any] | None"; expected "dict[str, Any]"
+        self._interpolate_inputs(inputs)
+        self._set_tasks_callbacks()
+
         # Use thread-local storage for thread-specific data
         if not hasattr(self._thread_local, 'initialized'):
             self._thread_local.rpm_controller = copy.deepcopy(
                 self._rpm_controller)
-            self._thread_local.logger = copy.deepcopy(self._logger)
-            self._thread_local.file_handler = copy.deepcopy(self._file_handler)
+            self._thread_local.logger = copy.deepcopy(
+                self._logger)
+            self._thread_local.file_handler = copy.deepcopy(
+                self._file_handler)
             self._thread_local.cache_handler = copy.deepcopy(
                 self._cache_handler)
             self._thread_local.short_term_memory = copy.deepcopy(
@@ -262,15 +273,15 @@ class Crew(BaseModel):
                 self._long_term_memory)
             self._thread_local.entity_memory = copy.deepcopy(
                 self._entity_memory)
-            self._thread_local.telemetry = copy.deepcopy(self._telemetry)
-            self._thread_local.telemetry.set_tracer()
             self._thread_local.initialized = True
 
-        self._thread_local.execution_span = self._thread_local.telemetry.crew_execution_span(
+            # TODO: Overriding of current TracerProvider is not allowed
+            # Reinitialize telemetry instead of deep copying
+            # self._thread_local.telemetry = Telemetry()
+            # self._thread_local.telemetry.set_tracer()
+
+        self._thread_local.execution_span = self._telemetry.crew_execution_span(
             self)
-        # type: ignore # Argument 1 to "_interpolate_inputs" of "Crew" has incompatible type "dict[str, Any] | None"; expected "dict[str, Any]"
-        self._interpolate_inputs(inputs)
-        self._set_tasks_callbacks()
 
         i18n = I18N(prompt_file=self.prompt_file)
 
@@ -287,26 +298,29 @@ class Crew(BaseModel):
 
         metrics = []
 
-        if self.process == Process.sequential:
-            result = self._run_sequential_process(
-                thread_local=self._thread_local)
-        elif self.process == Process.hierarchical:
-            # type: ignore # Unpacking a string is disallowed
-            result, manager_metrics = self._run_hierarchical_process(
-                thread_local=self._thread_local)
-            # type: ignore # Cannot determine type of "manager_metrics"
-            metrics.append(manager_metrics)
-        else:
-            raise NotImplementedError(
-                f"The process '{self.process}' is not implemented yet."
-            )
+        try:
+            if self.process == Process.sequential:
+                result = self._run_sequential_process(
+                    thread_local=self._thread_local)
+            elif self.process == Process.hierarchical:
+                # type: ignore # Unpacking a string is disallowed
+                result, manager_metrics = self._run_hierarchical_process(
+                    thread_local=self._thread_local)
+                # type: ignore # Cannot determine type of "manager_metrics"
+                metrics.append(manager_metrics)
+            else:
+                raise NotImplementedError(
+                    f"The process '{self.process}' is not implemented yet."
+                )
 
-        metrics = metrics + [
-            agent._token_process.get_summary() for agent in self.agents
-        ]
-        self.usage_metrics = {
-            key: sum([m[key] for m in metrics if m is not None]) for key in metrics[0]
-        }
+            metrics = metrics + [
+                agent._token_process.get_summary() for agent in self.agents
+            ]
+            self.usage_metrics = {
+                key: sum([m[key] for m in metrics if m is not None]) for key in metrics[0]
+            }
+        finally:
+            self._reset_thread_local()
 
         return result
 
@@ -438,9 +452,10 @@ class Crew(BaseModel):
 
     def _interpolate_inputs(self, inputs: Dict[str, Any]) -> None:
         """Interpolates the inputs in the tasks and agents."""
-        [task.interpolate_inputs(
-            # type: ignore # "interpolate_inputs" of "Task" does not return a value (it only ever returns None)
-            inputs) for task in self.tasks]
+        print("Interpolating inputs")
+        print(inputs)
+        # type: ignore # "interpolate_inputs" of "Task" does not return a value (it only ever returns None)
+        [task.interpolate_inputs(inputs) for task in self.tasks]
         # type: ignore # "interpolate_inputs" of "Agent" does not return a value (it only ever returns None)
         [agent.interpolate_inputs(inputs) for agent in self.agents]
 
@@ -458,6 +473,10 @@ class Crew(BaseModel):
         if self.max_rpm:
             thread_local.rpm_controller.stop_rpm_counter()
         thread_local.telemetry.end_crew(self, output)
+
+    def _reset_thread_local(self):
+        """Resets the thread-local storage."""
+        self._thread_local.initialized = False
 
     def __repr__(self):
         return f"Crew(id={self.id}, process={self.process}, number_of_agents={len(self.agents)}, number_of_tasks={len(self.tasks)})"
