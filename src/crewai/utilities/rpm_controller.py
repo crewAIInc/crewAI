@@ -13,14 +13,13 @@ class RPMController(BaseModel):
     logger: Logger = Field(default=None)
     _current_rpm: int = PrivateAttr(default=0)
     _timer: threading.Timer | None = PrivateAttr(default=None)
-    _lock: threading.Lock = PrivateAttr(default=None)
+    _lock: threading.Lock = PrivateAttr(default_factory=threading.Lock)
     _shutdown_flag = False
 
     @model_validator(mode="after")
     def reset_counter(self):
         if self.max_rpm:
             if not self._shutdown_flag:
-                self._lock = threading.Lock()
                 self._reset_request_count()
         return self
 

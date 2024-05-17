@@ -373,7 +373,38 @@ class Agent(BaseModel):
             thoughts += f"\n{observation_prefix}{observation}\n{llm_prefix}"
         return thoughts
 
-    # type: ignore # Function "langchain_core.tools.tool" is not valid as a type
+    def clone(self) -> "Agent":
+        """Creates a new instance of Agent with the same data."""
+        def filter_none(d):
+            if isinstance(d, dict):
+                return {k: filter_none(v) for k, v in d.items() if v is not None}
+            elif isinstance(d, list):
+                return [filter_none(v) for v in d if v is not None]
+            else:
+                return d
+
+        data = self.model_dump()
+        print("Original Data:", data)  # Debug print
+        filtered_data = filter_none(data)
+        # Ensure the 'id' field is not set, so a new id is generated
+        filtered_data.pop("id", None)
+
+        if 'tools' in filtered_data:
+            print("Tools Before Cloning:",
+                  filtered_data['tools'])  # Debug print
+            filtered_data['tools'] = [
+                tool.clone() if hasattr(tool, 'clone') else tool for tool in filtered_data['tools']
+            ]
+            print("Tools After Cloning:",
+                  filtered_data['tools'])  # Debug print
+
+        # Remove attributes that should not be copied directly
+        for attr in ['agent_executor', 'tools_handler', 'cache_handler', '_rpm_controller']:
+            filtered_data.pop(attr, None)
+
+        print("Filtered Data:", filtered_data)  # Debug print
+        return Agent(**filtered_data)
+
     def _parse_tools(self, tools: List[Any]) -> List[LangChainTool]:
         """Parse tools to be used for the task."""
         # tentatively try to import from crewai_tools import BaseTool as CrewAITool

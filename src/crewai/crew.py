@@ -18,6 +18,7 @@ from pydantic import (
     model_validator,
 )
 from pydantic_core import PydanticCustomError
+from pydantic.json import pydantic_encoder
 
 from crewai.agent import Agent
 from crewai.agents.cache import CacheHandler
@@ -71,9 +72,9 @@ class Crew(BaseModel):
 
     cache: bool = Field(default=True)
     model_config = ConfigDict(arbitrary_types_allowed=True)
-    _tasks: List[Task] = PrivateAttr(default_factory=list)
-    _agents: List[Agent] = PrivateAttr(default_factory=list)
-    _process: Process = PrivateAttr(default=Process.sequential)
+    tasks: List[Task] = Field(default_factory=list)
+    agents: List[Agent] = Field(default_factory=list)
+    process: Process = Field(default=Process.sequential)
     verbose: Union[int, bool] = Field(default=0)
     memory: bool = Field(
         default=False,
@@ -128,12 +129,6 @@ class Crew(BaseModel):
         description="output_log_file",
     )
 
-    def __init__(self, **data: Any):
-        super().__init__(**data)
-        self._agents = data.get('agents', [])
-        self._tasks = data.get('tasks', [])
-        self._process = data.get('process', Process.sequential)
-
     @field_validator("id", mode="before")
     @classmethod
     def _deny_user_set_id(cls, v: Optional[UUID4]) -> None:
@@ -166,11 +161,6 @@ class Crew(BaseModel):
         self._file_handler = None
         if self.output_log_file:
             self._file_handler = FileHandler(self.output_log_file)
-        self._rpm_controller = RPMController(
-            max_rpm=self.max_rpm, logger=self._logger)
-        self._telemetry = Telemetry()
-        self._telemetry.set_tracer()
-        self._telemetry.crew_creation(self)
         return self
 
     @model_validator(mode="after")
@@ -189,7 +179,7 @@ class Crew(BaseModel):
     @model_validator(mode="after")
     def check_manager_llm(self):
         """Validates that the language model is set when using hierarchical process."""
-        if self._process == Process.hierarchical:
+        if self.process == Process.hierarchical:
             if not self.manager_llm and not self.manager_agent:
                 raise PydanticCustomError(
                     "missing_manager_llm_or_manager_agent",
@@ -211,11 +201,8 @@ class Crew(BaseModel):
     @model_validator(mode="after")
     def check_config(self):
         """Validates that the crew is properly configured with agents and tasks."""
-        print("Checking config", self.config)
-        print("tasks", self._tasks)
-        print("agents", self._agents)
         # TODO: See if we can drop not self.tasks and not self.agents since moving to thread safe
-        if not self.config and not self._tasks and not self._agents:
+        if not self.config and not self.tasks and not self.agents:
             raise PydanticCustomError(
                 "missing_keys",
                 "Either 'agents' and 'tasks' need to be set or 'config'.",
@@ -226,9 +213,8 @@ class Crew(BaseModel):
             self._setup_from_config()
 
         # TODO: See if we can drop cache check since moving to thread safe
-        # TODO: See if we should pass thread_local to agents or self....
-        if self._agents:
-            for agent in self._agents:
+        if self.agents:
+            for agent in self.agents:
                 if self.cache:
                     agent.set_cache_handler(self._cache_handler)
                 if self.max_rpm:
@@ -245,10 +231,10 @@ class Crew(BaseModel):
                 "missing_keys_in_config", "Config should have 'agents' and 'tasks'.", {}
             )
 
-        self._process = self.config.get("process", self._process)
-        self._agents = [Agent(**agent) for agent in self.config["agents"]]
-        self._tasks = [self._create_task(task)
-                       for task in self.config["tasks"]]
+        self.process = self.config.get("process", self.process)
+        self.agents = [Agent(**agent) for agent in self.config["agents"]]
+        self.tasks = [self._create_task(task)
+                      for task in self.config["tasks"]]
 
     def _create_task(self, task_config: Dict[str, Any]) -> Task:
         """Creates a task instance from its configuration.
@@ -260,24 +246,24 @@ class Crew(BaseModel):
             A task instance.
         """
         task_agent = next(
-            agt for agt in self._agents if agt.role == task_config["agent"]
+            agt for agt in self.agents if agt.role == task_config["agent"]
         )
         del task_config["agent"]
         return Task(**task_config, agent=task_agent)
 
     def kickoff(self, inputs: Optional[Dict[str, Any]] = {}) -> str:
         """Starts the crew to work on its assigned tasks."""
-        self._thread_local.agents = copy.deepcopy(self._agents)
-        self._thread_local.tasks = copy.deepcopy(self._tasks)
+        if not hasattr(self._thread_local, 'initialized'):
+            self._initialize_thread_specific_components()
+            self._thread_local.initialized = True
+
+         # Clone tasks for thread-local storage
+        self._thread_local.tasks = [task.clone() for task in self.tasks]
+        self._thread_local.agents = [agent.clone() for agent in self.agents]
 
         # type: ignore # Argument 1 to "_interpolate_inputs" of "Crew" has incompatible type "dict[str, Any] | None"; expected "dict[str, Any]"
         self._interpolate_inputs(inputs)
         self._set_tasks_callbacks
-
-        # Initialize thread-local agents and tasks
-        if not hasattr(self._thread_local, 'initialized'):
-            self._initialize_thread_specific_components()
-            self._thread_local.initialized = True
 
         self._thread_local.execution_span = self._telemetry.crew_execution_span(
             self)
@@ -298,10 +284,10 @@ class Crew(BaseModel):
         metrics = []
 
         try:
-            if self._process == Process.sequential:
+            if self.process == Process.sequential:
                 result = self._run_sequential_process(
                     thread_local=self._thread_local)
-            elif self._process == Process.hierarchical:
+            elif self.process == Process.hierarchical:
                 # type: ignore # Unpacking a string is disallowed
                 result, manager_metrics = self._run_hierarchical_process(
                     thread_local=self._thread_local)
@@ -309,7 +295,7 @@ class Crew(BaseModel):
                 metrics.append(manager_metrics)
             else:
                 raise NotImplementedError(
-                    f"The process '{self._process}' is not implemented yet.")
+                    f"The process '{self.process}' is not implemented yet.")
 
             metrics = metrics + [agent._token_process.get_summary()
                                  for agent in self._thread_local.agents]
@@ -323,10 +309,13 @@ class Crew(BaseModel):
 
     def _initialize_thread_specific_components(self):
         """Initialize thread-specific properties, agents, and tasks."""
-        self._thread_local.rpm_controller = copy.deepcopy(
-            self._rpm_controller)
+        self._thread_local._telemetry = Telemetry()
+        self._thread_local._telemetry.set_tracer()
+        self._thread_local._telemetry.crew_creation(self)
         self._thread_local.logger = copy.deepcopy(
             self._logger)
+        self._thread_local.rpm_controller = RPMController(
+            max_rpm=self.max_rpm, logger=self._thread_local.logger)
         self._thread_local.file_handler = copy.deepcopy(
             self._file_handler)
         self._thread_local.cache_handler = copy.deepcopy(
@@ -496,5 +485,30 @@ class Crew(BaseModel):
         """Resets the thread-local storage."""
         self._thread_local.initialized = False
 
+    def _deep_copy_without_threading(self, obj: Any) -> Any:
+        if isinstance(obj, list):
+            return [self._deep_copy_without_threading(item) for item in obj]
+        elif isinstance(obj, dict):
+            return {key: self._deep_copy_without_threading(value) for key, value in obj.items()}
+        elif isinstance(obj, BaseModel):
+            new_obj = obj.__class__.__new__(obj.__class__)
+            for key, value in obj.__dict__.items():
+                if key not in ['_thread_local', '_lock', '_timer']:
+                    setattr(new_obj, key, self._deep_copy_without_threading(value))
+            # Copy internal Pydantic attributes
+            if hasattr(obj, '__pydantic_validator__'):
+                new_obj.__pydantic_validator__ = obj.__pydantic_validator__
+            if hasattr(obj, '__pydantic_fields_set__'):
+                new_obj.__pydantic_fields_set__ = obj.__pydantic_fields_set__
+            return new_obj
+        elif hasattr(obj, '__dict__'):
+            new_obj = obj.__class__.__new__(obj.__class__)
+            for key, value in obj.__dict__.items():
+                if key not in ['_thread_local', '_lock', '_timer']:
+                    setattr(new_obj, key, self._deep_copy_without_threading(value))
+            return new_obj
+        else:
+            return copy.deepcopy(obj)
+
     def __repr__(self):
-        return f"Crew(id={self.id}, process={self._process}, number_of_agents={len(self._agents)}, number_of_tasks={len(self._tasks)})"
+        return f"Crew(id={self.id}, process={self.process}, number_of_agents={len(self.agents)}, number_of_tasks={len(self.tasks)})"

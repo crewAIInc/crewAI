@@ -254,6 +254,32 @@ class Task(BaseModel):
         """Increment the delegations counter."""
         self.delegations += 1
 
+    def clone(self) -> "Task":
+        def filter_none(d):
+            if isinstance(d, dict):
+                return {k: filter_none(v) for k, v in d.items() if v is not None}
+            elif isinstance(d, list):
+                return [filter_none(v) for v in d if v is not None]
+            else:
+                return d
+
+        data = self.model_dump()
+        filtered_data = filter_none(data)
+        # Ensure the 'id' field is not set, so a new id is generated
+        filtered_data.pop("id", None)
+
+        if 'agent' in filtered_data and isinstance(filtered_data['agent'], dict):
+            agent_data = filtered_data['agent']
+            # Ensure the 'id' field is not set, so a new id is generated
+            agent_data.pop("id", None)
+            filtered_data['agent'] = Agent(**agent_data)
+
+        if 'context' in filtered_data and isinstance(filtered_data['context'], list):
+            filtered_data['context'] = [
+                Task(**context_task) for context_task in filtered_data['context']]
+
+        return Task(**filtered_data)
+
     def _export_output(self, result: str) -> Any:
         exported_result = result
         instructions = "I'm gonna convert this raw text into valid JSON."
