@@ -60,7 +60,8 @@ class Telemetry:
         except BaseException as e:
             if isinstance(
                 e,
-                (SystemExit, KeyboardInterrupt, GeneratorExit, asyncio.CancelledError),
+                (SystemExit, KeyboardInterrupt,
+                 GeneratorExit, asyncio.CancelledError),
             ):
                 raise  # Re-raise the exception to not interfere with system signals
             self.ready = False
@@ -85,58 +86,68 @@ class Telemetry:
                     "crewai_version",
                     pkg_resources.get_distribution("crewai").version,
                 )
-                self._add_attribute(span, "python_version", platform.python_version())
+                self._add_attribute(span, "python_version",
+                                    platform.python_version())
                 self._add_attribute(span, "crew_id", str(crew.id))
-                self._add_attribute(span, "crew_process", crew.process)
+                # TODO: add back in
+                # self._add_attribute(span, "crew_process", crew.process)
                 self._add_attribute(
                     span, "crew_language", crew.prompt_file if crew.i18n else "None"
                 )
                 self._add_attribute(span, "crew_memory", crew.memory)
-                self._add_attribute(span, "crew_number_of_tasks", len(crew.tasks))
-                self._add_attribute(span, "crew_number_of_agents", len(crew.agents))
-                self._add_attribute(
-                    span,
-                    "crew_agents",
-                    json.dumps(
-                        [
-                            {
-                                "id": str(agent.id),
-                                "role": agent.role,
-                                "verbose?": agent.verbose,
-                                "max_iter": agent.max_iter,
-                                "max_rpm": agent.max_rpm,
-                                "i18n": agent.i18n.prompt_file,
-                                "llm": json.dumps(self._safe_llm_attributes(agent.llm)),
-                                "delegation_enabled?": agent.allow_delegation,
-                                "tools_names": [
-                                    tool.name.casefold() for tool in agent.tools
-                                ],
-                            }
-                            for agent in crew.agents
-                        ]
-                    ),
-                )
-                self._add_attribute(
-                    span,
-                    "crew_tasks",
-                    json.dumps(
-                        [
-                            {
-                                "id": str(task.id),
-                                "async_execution?": task.async_execution,
-                                "agent_role": task.agent.role if task.agent else "None",
-                                "tools_names": [
-                                    tool.name.casefold() for tool in task.tools
-                                ],
-                            }
-                            for task in crew.tasks
-                        ]
-                    ),
-                )
+                # TODO: add back in
+                # self._add_attribute(
+                #     span, "crew_number_of_tasks", len(crew.tasks))
+                # TODO: add back in
+                # self._add_attribute(
+                #     span, "crew_number_of_agents", len(crew.agents))
+                # TODO: add back in
+                # self._add_attribute(
+                #     span,
+                #     "crew_agents",
+                #     json.dumps(
+                #         [
+                #             {
+                #                 "id": str(agent.id),
+                #                 "role": agent.role,
+                #                 "verbose?": agent.verbose,
+                #                 "max_iter": agent.max_iter,
+                #                 "max_rpm": agent.max_rpm,
+                #                 "i18n": agent.i18n.prompt_file,
+                #                 "llm": json.dumps(self._safe_llm_attributes(agent.llm)),
+                #                 "delegation_enabled?": agent.allow_delegation,
+                #                 "tools_names": [
+                #                     tool.name.casefold() for tool in agent.tools
+                #                 ],
+                #             }
+                #             for agent in crew.agents
+                #         ]
+                #     ),
+                # )
+                # TODO: add back in
+                # self._add_attribute(
+                #     span,
+                #     "crew_tasks",
+                #     json.dumps(
+                #         [
+                #             {
+                #                 "id": str(task.id),
+                #                 "async_execution?": task.async_execution,
+                #                 "agent_role": task.agent.role if task.agent else "None",
+                #                 "tools_names": [
+                #                     tool.name.casefold() for tool in task.tools
+                #                 ],
+                #             }
+                #             for task in crew.tasks
+                #         ]
+                #     ),
+                # )
                 self._add_attribute(span, "platform", platform.platform())
-                self._add_attribute(span, "platform_release", platform.release())
+                self._add_attribute(
+                    span, "platform_release", platform.release())
                 self._add_attribute(span, "platform_system", platform.system())
-                self._add_attribute(span, "platform_version", platform.version())
+                self._add_attribute(
+                    span, "platform_version", platform.version())
                 self._add_attribute(span, "cpus", os.cpu_count())
                 span.set_status(Status(StatusCode.OK))
                 span.end()
@@ -221,54 +232,56 @@ class Telemetry:
                     pkg_resources.get_distribution("crewai").version,
                 )
                 self._add_attribute(span, "crew_id", str(crew.id))
-                self._add_attribute(
-                    span,
-                    "crew_agents",
-                    json.dumps(
-                        [
-                            {
-                                "id": str(agent.id),
-                                "role": agent.role,
-                                "goal": agent.goal,
-                                "backstory": agent.backstory,
-                                "verbose?": agent.verbose,
-                                "max_iter": agent.max_iter,
-                                "max_rpm": agent.max_rpm,
-                                "i18n": agent.i18n.prompt_file,
-                                "llm": json.dumps(self._safe_llm_attributes(agent.llm)),
-                                "delegation_enabled?": agent.allow_delegation,
-                                "tools_names": [
-                                    tool.name.casefold() for tool in agent.tools
-                                ],
-                            }
-                            for agent in crew.agents
-                        ]
-                    ),
-                )
-                self._add_attribute(
-                    span,
-                    "crew_tasks",
-                    json.dumps(
-                        [
-                            {
-                                "id": str(task.id),
-                                "description": task.description,
-                                "async_execution?": task.async_execution,
-                                "output": task.expected_output,
-                                "agent_role": task.agent.role if task.agent else "None",
-                                "context": (
-                                    [task.description for task in task.context]
-                                    if task.context
-                                    else "None"
-                                ),
-                                "tools_names": [
-                                    tool.name.casefold() for tool in task.tools
-                                ],
-                            }
-                            for task in crew.tasks
-                        ]
-                    ),
-                )
+                # TODO: add back in
+                # self._add_attribute(
+                #     span,
+                #     "crew_agents",
+                #     json.dumps(
+                #         [
+                #             {
+                #                 "id": str(agent.id),
+                #                 "role": agent.role,
+                #                 "goal": agent.goal,
+                #                 "backstory": agent.backstory,
+                #                 "verbose?": agent.verbose,
+                #                 "max_iter": agent.max_iter,
+                #                 "max_rpm": agent.max_rpm,
+                #                 "i18n": agent.i18n.prompt_file,
+                #                 "llm": json.dumps(self._safe_llm_attributes(agent.llm)),
+                #                 "delegation_enabled?": agent.allow_delegation,
+                #                 "tools_names": [
+                #                     tool.name.casefold() for tool in agent.tools
+                #                 ],
+                #             }
+                #             for agent in crew.agents
+                #         ]
+                #     ),
+                # )
+                # TODO: add back in
+                # self._add_attribute(
+                #     span,
+                #     "crew_tasks",
+                #     json.dumps(
+                #         [
+                #             {
+                #                 "id": str(task.id),
+                #                 "description": task.description,
+                #                 "async_execution?": task.async_execution,
+                #                 "output": task.expected_output,
+                #                 "agent_role": task.agent.role if task.agent else "None",
+                #                 "context": (
+                #                     [task.description for task in task.context]
+                #                     if task.context
+                #                     else "None"
+                #                 ),
+                #                 "tools_names": [
+                #                     tool.name.casefold() for tool in task.tools
+                #                 ],
+                #             }
+                #             for task in crew.tasks
+                #         ]
+                #     ),
+                # )
                 return span
             except Exception:
                 pass
@@ -281,21 +294,23 @@ class Telemetry:
                     "crewai_version",
                     pkg_resources.get_distribution("crewai").version,
                 )
-                self._add_attribute(crew._execution_span, "crew_output", output)
-                self._add_attribute(
-                    crew._execution_span,
-                    "crew_tasks_output",
-                    json.dumps(
-                        [
-                            {
-                                "id": str(task.id),
-                                "description": task.description,
-                                "output": task.output.raw_output,
-                            }
-                            for task in crew.tasks
-                        ]
-                    ),
-                )
+                self._add_attribute(crew._execution_span,
+                                    "crew_output", output)
+                # TODO: add back in
+                # self._add_attribute(
+                #     crew._execution_span,
+                #     "crew_tasks_output",
+                #     json.dumps(
+                #         [
+                #             {
+                #                 "id": str(task.id),
+                #                 "description": task.description,
+                #                 "output": task.output.raw_output,
+                #             }
+                #             for task in crew.tasks
+                #         ]
+                #     ),
+                # )
                 crew._execution_span.set_status(Status(StatusCode.OK))
                 crew._execution_span.end()
             except Exception:
@@ -309,9 +324,11 @@ class Telemetry:
             pass
 
     def _safe_llm_attributes(self, llm):
-        attributes = ["name", "model_name", "base_url", "model", "top_k", "temperature"]
+        attributes = ["name", "model_name", "base_url",
+                      "model", "top_k", "temperature"]
         if llm:
-            safe_attributes = {k: v for k, v in vars(llm).items() if k in attributes}
+            safe_attributes = {k: v for k, v in vars(
+                llm).items() if k in attributes}
             safe_attributes["class"] = llm.__class__.__name__
             return safe_attributes
         return {}
