@@ -2,6 +2,7 @@ import os
 import uuid
 from typing import Any, Dict, List, Optional, Tuple
 
+from langchain_core.runnables import RunnableConfig
 from langchain.agents.agent import RunnableAgent
 from langchain.agents.tools import tool as LangChainTool
 from langchain.tools.render import render_text_description
@@ -48,6 +49,7 @@ class Agent(BaseModel):
             tools: Tools at agents disposal
             step_callback: Callback to be executed after each step of the agent execution.
             callbacks: A list of callback functions from the langchain library that are triggered during the agent's execution process
+            runnable_config: A runnable configuration to be used by the AgentExecutor
     """
 
     __hash__ = object.__hash__  # type: ignore
@@ -129,6 +131,9 @@ class Agent(BaseModel):
     )
     response_template: Optional[str] = Field(
         default=None, description="Response format for the agent."
+    )
+    runnable_config: Optional[RunnableConfig] = Field(
+        default=None, description="A runnable configuration to be used by the AgentExecutor"
     )
 
     _original_role: str | None = None
@@ -238,7 +243,8 @@ class Agent(BaseModel):
                 "input": task_prompt,
                 "tool_names": self.agent_executor.tools_names,
                 "tools": self.agent_executor.tools_description,
-            }
+            },
+            config=self.runnable_config
         )["output"]
 
         if self.max_rpm:
