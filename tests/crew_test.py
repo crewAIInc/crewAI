@@ -413,6 +413,13 @@ def test_async_task_execution():
 
     from crewai.tasks.task_output import TaskOutput
 
+    researcher = Agent(
+        role="Researcher",
+        goal="Make the best research and analysis on content about AI and AI agents",
+        backstory="You're an expert researcher, specialized in technology, software engineering, AI and startups. You work as a freelancer and is now working on doing research and analysis for a new customer.",
+        allow_delegation=False,
+    )
+
     list_ideas = Task(
         description="Give me a list of 5 interesting ideas to explore for na article, what makes them unique and interesting.",
         expected_output="Bullet point list of 5 important events.",
