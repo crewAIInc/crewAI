@@ -437,6 +437,7 @@ def test_async_task_execution():
         process=Process.sequential,
         tasks=[list_ideas, list_important_history, write_article],
     )
+    output = TaskOutput(description="A 4 paragraph article about AI.", raw_output="ok")
 
     with patch.object(Agent, "execute_task") as execute:
         execute.return_value = "ok"
@@ -444,13 +445,11 @@ def test_async_task_execution():
             thread = threading.Thread(target=lambda: None, args=()).start()
             start.return_value = thread
             with patch.object(threading.Thread, "join", wraps=thread.join()) as join:
-                list_ideas.output = TaskOutput(
-                    description="A 4 paragraph article about AI.", raw_output="ok"
-                )
-                list_important_history.output = TaskOutput(
-                    description="A 4 paragraph article about AI.", raw_output="ok"
-                )
+                list_ideas.output = output
+                list_important_history.output = output
+
                 crew.kickoff()
+
                 start.assert_called()
                 join.assert_called()
 
