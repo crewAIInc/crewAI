@@ -39,6 +39,4 @@ class SpiderTool(BaseTool):
         )
         spider_docs = action(url=url, params=params)
 
-
-        print(spider_docs)
         return spider_docs
