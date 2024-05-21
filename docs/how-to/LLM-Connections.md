@@ -103,7 +103,8 @@ general_agent = Agent(role = "Math Professor",
                       verbose = True,
                       llm = llm)
 task = Task (description="""what is 3 + 5""",
-             agent = general_agent)
+             agent = general_agent,
+             expected_output="A numerical answer.")
 
 crew = Crew(
             agents=[general_agent],

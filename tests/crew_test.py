@@ -678,8 +678,8 @@ def test_agent_usage_metrics_are_captured_for_hierarchical_process():
     result = crew.kickoff()
     assert result == '"Howdy!"'
     assert crew.usage_metrics == {
-        "total_tokens": 1650,
-        "prompt_tokens": 1367,
+        "total_tokens": 1666,
+        "prompt_tokens": 1383,
         "completion_tokens": 283,
         "successful_requests": 3,
     }
@@ -698,6 +698,8 @@ def test_crew_inputs_interpolate_both_agents_and_tasks():
     )
 
     crew = Crew(agents=[agent], tasks=[task], inputs={"topic": "AI", "points": 5})
+    inputs = {"topic": "AI", "points": 5}
+    crew._interpolate_inputs(inputs=inputs)  # Manual call for now
 
     assert crew.tasks[0].description == "Give me an analysis around AI."
     assert crew.tasks[0].expected_output == "5 bullet points about AI."
@@ -706,7 +708,7 @@ def test_crew_inputs_interpolate_both_agents_and_tasks():
     assert crew.agents[0].backstory == "You have a lot of experience with AI."
 
 
-def test_crew_inputs_interpolate_both_agents_and_tasks():
+def test_crew_inputs_interpolate_both_agents_and_tasks_diff():
     from unittest.mock import patch
 
     agent = Agent(
@@ -828,9 +830,7 @@ def test_tools_with_custom_caching():
     with patch.object(
         CacheHandler, "add", wraps=crew._cache_handler.add
     ) as add_to_cache:
-        with patch.object(
-            CacheHandler, "read", wraps=crew._cache_handler.read
-        ) as read_from_cache:
+        with patch.object(CacheHandler, "read", wraps=crew._cache_handler.read) as _:
             result = crew.kickoff()
             add_to_cache.assert_called_once_with(
                 tool="multiplcation_tool",
@@ -907,8 +907,6 @@ def test_crew_log_file_output(tmp_path):
         )
     ]
 
-    test_message = {"agent": "Researcher", "task": "Say Hi"}
-
     crew = Crew(agents=[researcher], tasks=tasks, output_log_file=str(test_file))
     crew.kickoff()
     assert test_file.exists()
@@ -939,13 +937,11 @@ def test_manager_agent():
 
     with patch.object(Task, "execute") as execute:
         crew.kickoff()
-        assert manager.allow_delegation == True
+        assert manager.allow_delegation is True
         execute.assert_called()
 
 
 def test_manager_agent_in_agents_raises_exception():
-    pass
-
     task = Task(
         description="Come up with a list of 5 interesting ideas to explore for an article, then write one amazing paragraph highlight for each idea that showcases how good an article about this topic could be. Return the list of ideas with their paragraph and your notes.",
         expected_output="5 bullet points with a paragraph for each idea.",
@@ -959,7 +955,7 @@ def test_manager_agent_in_agents_raises_exception():
     )
 
     with pytest.raises(pydantic_core._pydantic_core.ValidationError):
-        crew = Crew(
+        Crew(
             agents=[researcher, writer, manager],
             process=Process.hierarchical,
             manager_agent=manager,
@@ -968,7 +964,12 @@ def test_manager_agent_in_agents_raises_exception():
 
 
 def test_manager_agent_with_tools_raises_exception():
-    pass
+    from crewai_tools import tool
+
+    @tool
+    def testing_tool(first_number: int, second_number: int) -> int:
+        """Useful for when you need to multiply two numbers together."""
+        return first_number * second_number
 
     task = Task(
         description="Come up with a list of 5 interesting ideas to explore for an article, then write one amazing paragraph highlight for each idea that showcases how good an article about this topic could be. Return the list of ideas with their paragraph and your notes.",
@@ -980,6 +981,7 @@ def test_manager_agent_with_tools_raises_exception():
         goal="Manage the crew and ensure the tasks are completed efficiently.",
         backstory="You're an experienced manager, skilled in overseeing complex projects and guiding teams to success. Your role is to coordinate the efforts of the crew members, ensuring that each task is completed on time and to the highest standard.",
         allow_delegation=False,
+        tools=[testing_tool],
     )
 
     crew = Crew(

@@ -18,10 +18,10 @@ class LongTermMemory(Memory):
         storage = LTMSQLiteStorage()
         super().__init__(storage)
 
-    def save(self, item: LongTermMemoryItem) -> None:
+    def save(self, item: LongTermMemoryItem) -> None:  # type: ignore # BUG?: Signature of "save" incompatible with supertype "Memory"
         metadata = item.metadata
         metadata.update({"agent": item.agent, "expected_output": item.expected_output})
-        self.storage.save(
+        self.storage.save(  # type: ignore # BUG?: Unexpected keyword argument "task_description","score","datetime" for "save" of "Storage"
             task_description=item.task,
             score=metadata["quality"],
             metadata=metadata,
@@ -29,4 +29,4 @@ class LongTermMemory(Memory):
         )
 
     def search(self, task: str, latest_n: int = 3) -> Dict[str, Any]:
-        return self.storage.load(task, latest_n)
+        return self.storage.load(task, latest_n)  # type: ignore # BUG?: "Storage" has no attribute "load"

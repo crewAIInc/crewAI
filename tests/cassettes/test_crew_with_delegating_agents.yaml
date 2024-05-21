@@ -86,7 +86,7 @@ interactions:
       are not listed here:\n\nDelegate work to co-worker: Delegate work to co-worker(coworker:
       str, task: str, context: str) - Delegate a specific task to one of the following
       co-workers: [''Senior Writer'']\nThe input to this tool should be the coworker,
-      the task you want them to do, and ALL necessary context to exectue the task,
+      the task you want them to do, and ALL necessary context to execute the task,
       they know nothing about the task, so share absolute everything you know, don''t
       reference things but instead explain them.\nAsk question to co-worker: Ask question
       to co-worker(coworker: str, question: str, context: str) - Ask a specific question
@@ -1716,7 +1716,7 @@ interactions:
       are not listed here:\n\nDelegate work to co-worker: Delegate work to co-worker(coworker:
       str, task: str, context: str) - Delegate a specific task to one of the following
       co-workers: [''Senior Writer'']\nThe input to this tool should be the coworker,
-      the task you want them to do, and ALL necessary context to exectue the task,
+      the task you want them to do, and ALL necessary context to execute the task,
       they know nothing about the task, so share absolute everything you know, don''t
       reference things but instead explain them.\nAsk question to co-worker: Ask question
       to co-worker(coworker: str, question: str, context: str) - Ask a specific question

@@ -22,7 +22,7 @@ class TokenProcess:
     def sum_successful_requests(self, requests: int):
         self.successful_requests = self.successful_requests + requests
 
-    def get_summary(self) -> str:
+    def get_summary(self) -> Dict[str, Any]:
         return {
             "total_tokens": self.total_tokens,
             "prompt_tokens": self.prompt_tokens,
@@ -42,12 +42,12 @@ class TokenCalcHandler(BaseCallbackHandler):
     def on_llm_start(
         self, serialized: Dict[str, Any], prompts: List[str], **kwargs: Any
     ) -> None:
-        if "gpt" in self.model:
+        try:
             encoding = tiktoken.encoding_for_model(self.model)
-        else:
+        except KeyError:
             encoding = tiktoken.get_encoding("cl100k_base")
 
-        if self.token_cost_process == None:
+        if self.token_cost_process is None:
             return
 
         for prompt in prompts:

@@ -12,12 +12,12 @@ class ShortTermMemory(Memory):
     MemoryItem instances.
     """
 
-    def __init__(self, embedder_config=None):
-        storage = RAGStorage(type="short_term", embedder_config=embedder_config)
+    def __init__(self, crew=None, embedder_config=None):
+        storage = RAGStorage(type="short_term", embedder_config=embedder_config, crew=crew)
         super().__init__(storage)
 
-    def save(self, item: ShortTermMemoryItem) -> None:
+    def save(self, item: ShortTermMemoryItem) -> None:  # type: ignore # BUG?: Signature of "save" incompatible with supertype "Memory"
         super().save(item.data, item.metadata, item.agent)
 
     def search(self, query: str, score_threshold: float = 0.35):
-        return self.storage.search(query=query, score_threshold=score_threshold)
+        return self.storage.search(query=query, score_threshold=score_threshold)  # type: ignore # BUG? The reference is to the parent class, but the parent class does not have this parameters

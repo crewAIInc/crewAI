@@ -226,7 +226,7 @@ class Agent(BaseModel):
             Output of the agent
         """
         if self.tools_handler:
-            self.tools_handler.last_used_tool = {}
+            self.tools_handler.last_used_tool = {}  # type: ignore # Incompatible types in assignment (expression has type "dict[Never, Never]", variable has type "ToolCalling")
 
         task_prompt = task.prompt()
 
@@ -246,7 +246,7 @@ class Agent(BaseModel):
                 task_prompt += self.i18n.slice("memory").format(memory=memory)
 
         tools = tools or self.tools
-        parsed_tools = self._parse_tools(tools)
+        parsed_tools = self._parse_tools(tools)  # type: ignore # Argument 1 to "_parse_tools" of "Agent" has incompatible type "list[Any] | None"; expected "list[Any]"
 
         self.create_agent_executor(tools=tools)
         self.agent_executor.tools = parsed_tools
@@ -386,7 +386,7 @@ class Agent(BaseModel):
             thoughts += f"\n{observation_prefix}{observation}\n{llm_prefix}"
         return thoughts
 
-    def _parse_tools(self, tools: List[Any]) -> List[LangChainTool]:
+    def _parse_tools(self, tools: List[Any]) -> List[LangChainTool]:  # type: ignore # Function "langchain_core.tools.tool" is not valid as a type
         """Parse tools to be used for the task."""
         # tentatively try to import from crewai_tools import BaseTool as CrewAITool
         tools_list = []

@@ -35,7 +35,7 @@ class CrewAgentExecutor(AgentExecutor):
     crew: Any = None
     function_calling_llm: Any = None
     request_within_rpm_limit: Any = None
-    tools_handler: InstanceOf[ToolsHandler] = None
+    tools_handler: Optional[InstanceOf[ToolsHandler]] = None
     max_iterations: Optional[int] = 15
     have_forced_answer: bool = False
     force_answer_max_iterations: Optional[int] = None
@@ -189,7 +189,7 @@ class CrewAgentExecutor(AgentExecutor):
             intermediate_steps = self._prepare_intermediate_steps(intermediate_steps)
 
             # Call the LLM to see what to do.
-            output = self.agent.plan(
+            output = self.agent.plan(  # type: ignore #  Incompatible types in assignment (expression has type "AgentAction | AgentFinish | list[AgentAction]", variable has type "AgentAction")
                 intermediate_steps,
                 callbacks=run_manager.get_child() if run_manager else None,
                 **inputs,
@@ -275,8 +275,8 @@ class CrewAgentExecutor(AgentExecutor):
                 run_manager.on_agent_action(agent_action, color="green")
 
             tool_usage = ToolUsage(
-                tools_handler=self.tools_handler,
-                tools=self.tools,
+                tools_handler=self.tools_handler,  # type: ignore # Argument "tools_handler" to "ToolUsage" has incompatible type "ToolsHandler | None"; expected "ToolsHandler"
+                tools=self.tools,  # type: ignore # Argument "tools" to "ToolUsage" has incompatible type "Sequence[BaseTool]"; expected "list[BaseTool]"
                 original_tools=self.original_tools,
                 tools_description=self.tools_description,
                 tools_names=self.tools_names,

@@ -1,8 +1,8 @@
+import os
 import re
 import threading
 import uuid
 from typing import Any, Dict, List, Optional, Type
-import os
 
 from langchain_openai import ChatOpenAI
 from pydantic import UUID4, BaseModel, Field, field_validator, model_validator
@@ -41,7 +41,7 @@ class Task(BaseModel):
     tools_errors: int = 0
     delegations: int = 0
     i18n: I18N = I18N()
-    thread: threading.Thread = None
+    thread: Optional[threading.Thread] = None
     prompt_context: Optional[str] = None
     description: str = Field(description="Description of the actual task.")
     expected_output: str = Field(
@@ -109,6 +109,14 @@ class Task(BaseModel):
                 "may_not_set_field", "This field is not to be set by the user.", {}
             )
 
+    @field_validator("output_file")
+    @classmethod
+    def output_file_validattion(cls, value: str) -> str:
+        """Validate the output file path by removing the / from the beginning of the path."""
+        if value.startswith("/"):
+            return value[1:]
+        return value
+
     @model_validator(mode="after")
     def set_attributes_based_on_config(self) -> "Task":
         """Set attributes based on the agent configuration."""
@@ -136,7 +144,7 @@ class Task(BaseModel):
             )
         return self
 
-    def execute(
+    def execute(  # type: ignore # Missing return statement
         self,
         agent: Agent | None = None,
         context: Optional[str] = None,
@@ -155,12 +163,15 @@ class Task(BaseModel):
             )
 
         if self.context:
+            # type: ignore # Incompatible types in assignment (expression has type "list[Never]", variable has type "str | None")
             context = []
             for task in self.context:
                 if task.async_execution:
-                    task.thread.join()
+                    task.thread.join()  # type: ignore # Item "None" of "Thread | None" has no attribute "join"
                 if task and task.output:
+                    # type: ignore # Item "str" of "str | None" has no attribute "append"
                     context.append(task.output.raw_output)
+            # type: ignore # Argument 1 to "join" of "str" has incompatible type "str | None"; expected "Iterable[str]"
             context = "\n".join(context)
 
         self.prompt_context = context
@@ -193,6 +204,7 @@ class Task(BaseModel):
             description=self.description,
             exported_output=exported_output,
             raw_output=result,
+            agent=agent.role,
         )
 
         if self.callback:
@@ -242,25 +254,29 @@ class Task(BaseModel):
 
             # try to convert task_output directly to pydantic/json
             try:
+                # type: ignore # Item "None" of "type[BaseModel] | None" has no attribute "model_validate_json"
                 exported_result = model.model_validate_json(result)
                 if self.output_json:
-                    return exported_result.model_dump()
+                    return exported_result.model_dump()  # type: ignore # "str" has no attribute "model_dump"
                 return exported_result
             except Exception:
                 # sometimes the response contains valid JSON in the middle of text
                 match = re.search(r"({.*})", result, re.DOTALL)
                 if match:
                     try:
+                        # type: ignore # Item "None" of "type[BaseModel] | None" has no attribute "model_validate_json"
                         exported_result = model.model_validate_json(match.group(0))
                         if self.output_json:
-                            return exported_result.model_dump()
+                            return exported_result.model_dump()  # type: ignore # "str" has no attribute "model_dump"
                         return exported_result
                     except Exception:
                         pass
 
+            # type: ignore # Item "None" of "Agent | None" has no attribute "function_calling_llm"
             llm = self.agent.function_calling_llm or self.agent.llm
 
             if not self._is_gpt(llm):
+                # type: ignore # Argument "model" to "PydanticSchemaParser" has incompatible type "type[BaseModel] | None"; expected "type[BaseModel]"
                 model_schema = PydanticSchemaParser(model=model).get_schema()
                 instructions = f"{instructions}\n\nThe json should have the following structure, with the following keys:\n{model_schema}"
 
@@ -282,22 +298,24 @@ class Task(BaseModel):
 
         if self.output_file:
             content = (
-                exported_result if not self.output_pydantic else exported_result.json()
+                exported_result if not self.output_pydantic else exported_result.json()  # type: ignore # "str" has no attribute "json"
             )
             self._save_file(content)
 
         return exported_result
 
     def _is_gpt(self, llm) -> bool:
-        return isinstance(llm, ChatOpenAI) and llm.openai_api_base == None
+        return isinstance(llm, ChatOpenAI) and llm.openai_api_base is None
 
     def _save_file(self, result: Any) -> None:
+        # type: ignore # Value of type variable "AnyOrLiteralStr" of "dirname" cannot be "str | None"
         directory = os.path.dirname(self.output_file)
 
-        if not os.path.exists(directory):
+        if directory and not os.path.exists(directory):
             os.makedirs(directory)
 
-        with open(self.output_file, "w") as file:
+        # type: ignore # Argument 1 to "open" has incompatible type "str | None"; expected "int | str | bytes | PathLike[str] | PathLike[bytes]"
+        with open(self.output_file, "w", encoding='utf-8') as file:
             file.write(result)
         return None
 

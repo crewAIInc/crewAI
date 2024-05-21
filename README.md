@@ -231,7 +231,7 @@ poetry run pytest
 ### Running static type checks
 
 ```bash
-poetry run pyright
+poetry run mypy
 ```
 
 ### Packaging
