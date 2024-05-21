@@ -4,8 +4,8 @@ from crewai_tools.tools.base_tool import BaseTool
 
 class SpiderToolSchema(BaseModel):
     url: str = Field(description="Website URL")
-    params: Optional[Dict[str, Any]] = Field(default={"return_format": "markdown"}, description="Specified Params, see https://spider.cloud/docs/api for all availabe params")
-    mode: Optional[Literal["scrape", "crawl"]] = Field(defualt="scrape", description="Mode, either `scrape` or `crawl` the url")
+    params: Optional[Dict[str, Any]] = Field(default={"return_format": "markdown"}, description="Set additional params. Leave empty for this to return LLM-ready data")
+    mode: Optional[Literal["scrape", "crawl"]] = Field(defualt="scrape", description="Mode, the only two allowed modes are `scrape` or `crawl` the url")
 
 class SpiderTool(BaseTool):
     name: str = "Spider scrape & crawl tool"
@@ -31,7 +31,7 @@ class SpiderTool(BaseTool):
                 "Unknown mode in `mode` parameter, `scrape` or `crawl` is the allowed modes"
             )
 
-        if params is None:
+        if params is None or params == {}:
             params = {"return_format": "markdown"}
         
         action = (
