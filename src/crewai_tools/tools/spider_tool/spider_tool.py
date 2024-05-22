@@ -33,7 +33,7 @@ class SpiderTool(BaseTool):
 
         if params is None or params == {}:
             params = {"return_format": "markdown"}
-        
+
         action = (
             self.spider.scrape_url if mode == "scrape" else self.spider.crawl_url
         )
