@@ -355,10 +355,6 @@ class Agent(BaseModel):
             self.goal = self._original_goal.format(**inputs)
             self.backstory = self._original_backstory.format(**inputs)
 
-    def update_inputs(self, inputs: Dict[str, Any]) -> None:
-        """Update the agent inputs."""
-        self.interpolate_inputs(inputs)
-
     def increment_formatting_errors(self) -> None:
         """Count the formatting errors of the agent."""
         self.formatting_errors += 1
@@ -394,7 +390,6 @@ class Agent(BaseModel):
         copied_data = {k: v for k, v in copied_data.items() if v is not None}
 
         copied_agent = Agent(**copied_data)
-
         copied_agent.tools = deepcopy(self.tools)
 
         return copied_agent

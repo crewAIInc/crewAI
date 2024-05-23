@@ -238,10 +238,6 @@ class Task(BaseModel):
             self.expected_output = self._original_expected_output.format(
                 **inputs)
 
-    def update_inputs(self, new_inputs: Dict[str, Any]):
-        """Update the task inputs."""
-        self.interpolate_inputs(new_inputs)
-
     def increment_tools_errors(self) -> None:
         """Increment the tools errors counter."""
         self.tools_errors += 1
