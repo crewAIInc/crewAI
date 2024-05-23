@@ -306,7 +306,7 @@ class Task(BaseModel):
         if directory and not os.path.exists(directory):
             os.makedirs(directory)
 
-        with open(self.output_file, "w", encoding='utf-8') as file:  # type: ignore # Argument 1 to "open" has incompatible type "str | None"; expected "int | str | bytes | PathLike[str] | PathLike[bytes]"
+        with open(self.output_file, "w", encoding="utf-8") as file:  # type: ignore # Argument 1 to "open" has incompatible type "str | None"; expected "int | str | bytes | PathLike[str] | PathLike[bytes]"
             file.write(result)
         return None
 
