@@ -1,5 +1,4 @@
 import asyncio
-from copy import deepcopy
 import json
 import uuid
 from typing import Any, Dict, List, Optional, Union
@@ -301,7 +300,6 @@ class Crew(BaseModel):
 
             for task in crew.tasks:
                 task.update_inputs(input_data)
-
             for agent in crew.agents:
                 agent.update_inputs(input_data)
 
@@ -311,71 +309,26 @@ class Crew(BaseModel):
         return results
 
     async def akickoff(self, inputs: Optional[Dict[str, Any]] = {}) -> Union[str, Dict]:
-        self._execution_span = self._telemetry.crew_execution_span(self)
-        self._interpolate_inputs(inputs)
-        self._set_tasks_callbacks()
-
-        i18n = I18N(prompt_file=self.prompt_file)
-        for agent in self.agents:
-            agent.i18n = i18n
-            agent.crew = self
-
-            if not agent.function_calling_llm:
-                agent.function_calling_llm = self.function_calling_llm
-            if not agent.step_callback:
-                agent.step_callback = self.step_callback
-
-            agent.create_agent_executor()
-
-        metrics = []
-
-        if self.process == Process.sequential:
-            result = await self._arun_sequential_process()
-        elif self.process == Process.hierarchical:
-            result, manager_metrics = await self._arun_hierarchical_process()
-            metrics.append(manager_metrics)
-        else:
-            raise NotImplementedError(
-                f"The process '{self.process}' is not implemented yet."
-            )
-
-        metrics = metrics + [
-            agent._token_process.get_summary() for agent in self.agents
-        ]
-        self.usage_metrics = {
-            key: sum([m[key] for m in metrics if m is not None]) for key in metrics[0]
-        }
-
-        return result
-
+        """Asynchronous kickoff method to start the crew execution."""
+        return await asyncio.to_thread(self.kickoff, inputs)
+    
     async def akickoff_for_each(self, inputs: List[Dict]) -> List[Any]:
         async def run_crew(input_data):
-            crew = Crew(
-                agents=self.agents.copy(),
-                tasks=self.tasks.copy(),
-                process=self.process,
-                manager_llm=self.manager_llm,
-                manager_agent=self.manager_agent,
-                manager_callbacks=self.manager_callbacks,
-                function_calling_llm=self.function_calling_llm,
-                memory=self.memory,
-                embedder=self.embedder,
-                verbose=self.verbose,
-                prompt_file=self.prompt_file,
-                output_log_file=self.output_log_file,
-                max_rpm=self.max_rpm,
-                share_crew=self.share_crew,
-                step_callback=self.step_callback,
-                task_callback=self.task_callback,
-                full_output=self.full_output,
-            )
+            crew = self.copy()
+
             for task in crew.tasks:
-                task.update_input(input_data)
+                task.update_inputs(input_data)
+
+            for agent in crew.agents:
+                agent.update_inputs(input_data)
+
             return await crew.akickoff()
 
         tasks = [asyncio.create_task(run_crew(input_data))
                  for input_data in inputs]
+        
         results = await asyncio.gather(*tasks)
+
         return results
 
     def _run_sequential_process(self) -> str:
@@ -415,6 +368,40 @@ class Crew(BaseModel):
 
         self._finish_execution(task_output)
         return self._format_output(task_output)
+    
+    # async def _arun_sequential_process(self) -> Union[str, Dict]:
+    #     """Executes tasks sequentially in an asynchronous manner."""
+    #     task_output = ""
+    #     for task in self.tasks:
+    #         if task.agent.allow_delegation:  # type: ignore
+    #             agents_for_delegation = [
+    #                 agent for agent in self.agents if agent != task.agent
+    #             ]
+    #             if len(self.agents) > 1 and len(agents_for_delegation) > 0:
+    #                 task.tools += AgentTools(agents=agents_for_delegation).tools()
+
+    #         role = task.agent.role if task.agent is not None else "None"
+    #         self._logger.log("debug", f"== Working Agent: {role}", color="bold_purple")
+    #         self._logger.log(
+    #             "info", f"== Starting Task: {task.description}", color="bold_purple"
+    #         )
+
+    #         if self.output_log_file:
+    #             self._file_handler.log(agent=role, task=task.description, status="started")
+
+    #         output = await task.execute(context=task_output)
+    #         if not task.async_execution:
+    #             task_output = output
+
+    #         role = task.agent.role if task.agent is not None else "None"
+    #         self._logger.log("debug", f"== [{role}] Task output: {task_output}\n\n")
+
+    #         if self.output_log_file:
+    #             self._file_handler.log(agent=role, task=task_output, status="completed")
+
+    #     self._finish_execution(task_output)
+    #     return self._format_output(task_output)
+
 
     def _run_hierarchical_process(self) -> str:
         """Creates and assigns a manager agent to make sure the crew completes the tasks."""
@@ -463,6 +450,51 @@ class Crew(BaseModel):
         # type: ignore # Incompatible return value type (got "tuple[str, Any]", expected "str")
         return self._format_output(task_output), manager._token_process.get_summary()
     
+    # async def _arun_hierarchical_process(self) -> str:
+    #     """Creates and assigns a manager agent to make sure the crew completes the tasks asynchronously."""
+    #     i18n = I18N(prompt_file=self.prompt_file)
+    #     if self.manager_agent is not None:
+    #         self.manager_agent.allow_delegation = True
+    #         manager = self.manager_agent
+    #         if len(manager.tools) > 0:
+    #             raise Exception("Manager agent should not have tools")
+    #         manager.tools = AgentTools(agents=self.agents).tools()
+    #     else:
+    #         manager = Agent(
+    #             role=i18n.retrieve("hierarchical_manager_agent", "role"),
+    #             goal=i18n.retrieve("hierarchical_manager_agent", "goal"),
+    #             backstory=i18n.retrieve("hierarchical_manager_agent", "backstory"),
+    #             tools=AgentTools(agents=self.agents).tools(),
+    #             llm=self.manager_llm,
+    #             verbose=True,
+    #         )
+
+    #     task_output = ""
+    #     for task in self.tasks:
+    #         self._logger.log("debug", f"Working Agent: {manager.role}")
+    #         self._logger.log("info", f"Starting Task: {task.description}")
+
+    #         if self.output_log_file:
+    #             self._file_handler.log(
+    #                 agent=manager.role, task=task.description, status="started"
+    #             )
+
+    #         task_output = await task.execute(
+    #             agent=manager, context=task_output, tools=manager.tools
+    #         )
+
+    #         self._logger.log(
+    #             "debug", f"[{manager.role}] Task output: {task_output}"
+    #         )
+
+    #         if self.output_log_file:
+    #             self._file_handler.log(
+    #                 agent=manager.role, task=task_output, status="completed"
+    #             )
+
+    #     self._finish_execution(task_output)
+    #     return self._format_output(task_output), manager._token_process.get_summary()
+
     def copy(self):
         """Create a deep copy of the Crew."""
         
