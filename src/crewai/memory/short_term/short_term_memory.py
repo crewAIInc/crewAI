@@ -13,7 +13,9 @@ class ShortTermMemory(Memory):
     """
 
     def __init__(self, crew=None, embedder_config=None):
-        storage = RAGStorage(type="short_term", embedder_config=embedder_config, crew=crew)
+        storage = RAGStorage(
+            type="short_term", embedder_config=embedder_config, crew=crew
+        )
         super().__init__(storage)
 
     def save(self, item: ShortTermMemoryItem) -> None:  # type: ignore # BUG?: Signature of "save" incompatible with supertype "Memory"

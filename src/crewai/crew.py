@@ -164,7 +164,9 @@ class Crew(BaseModel):
         """Set private attributes."""
         if self.memory:
             self._long_term_memory = LongTermMemory()
-            self._short_term_memory = ShortTermMemory(crew=self, embedder_config=self.embedder)
+            self._short_term_memory = ShortTermMemory(
+                crew=self, embedder_config=self.embedder
+            )
             self._entity_memory = EntityMemory(crew=self, embedder_config=self.embedder)
         return self
 
@@ -279,6 +281,10 @@ class Crew(BaseModel):
         }
 
         return result
+
+    def train(self, n_iterations: int) -> None:
+        # TODO: Implement training
+        pass
 
     def _run_sequential_process(self) -> str:
         """Executes tasks sequentially and returns the final output."""

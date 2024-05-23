@@ -993,3 +993,35 @@ def test_manager_agent_with_tools_raises_exception():
 
     with pytest.raises(Exception):
         crew.kickoff()
+
+
+def test_crew_train_success():
+    task = Task(
+        description="Come up with a list of 5 interesting ideas to explore for an article, then write one amazing paragraph highlight for each idea that showcases how good an article about this topic could be. Return the list of ideas with their paragraph and your notes.",
+        expected_output="5 bullet points with a paragraph for each idea.",
+    )
+
+    crew = Crew(
+        agents=[researcher, writer],
+        tasks=[task],
+    )
+
+    crew.train(n_iterations=2)
+
+
+def test_crew_train_error():
+    task = Task(
+        description="Come up with a list of 5 interesting ideas to explore for an article",
+        expected_output="5 bullet points with a paragraph for each idea.",
+    )
+
+    crew = Crew(
+        agents=[researcher, writer],
+        tasks=[task],
+    )
+
+    with pytest.raises(TypeError) as e:
+        crew.train()
+        assert "train() missing 1 required positional argument: 'n_iterations'" in str(
+            e
+        )
