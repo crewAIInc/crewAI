@@ -305,11 +305,11 @@ class Crew(BaseModel):
 
         return results
 
-    async def akickoff(self, inputs: Optional[Dict[str, Any]] = {}) -> Union[str, Dict]:
+    async def kickoff_async(self, inputs: Optional[Dict[str, Any]] = {}) -> Union[str, Dict]:
         """Asynchronous kickoff method to start the crew execution."""
         return await asyncio.to_thread(self.kickoff, inputs)
     
-    async def akickoff_for_each(self, inputs: List[Dict]) -> List[Any]:
+    async def kickoff_for_each_async(self, inputs: List[Dict]) -> List[Any]:
         async def run_crew(input_data):
             crew = self.copy()
 
@@ -318,7 +318,7 @@ class Crew(BaseModel):
             for agent in crew.agents:
                 agent.interpolate_inputs(input_data)
 
-            return await crew.akickoff()
+            return await crew.kickoff_async()
 
         tasks = [asyncio.create_task(run_crew(input_data))
                  for input_data in inputs]
