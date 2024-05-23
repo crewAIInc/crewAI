@@ -1,3 +1,5 @@
+import asyncio
+from copy import deepcopy
 import json
 import uuid
 from typing import Any, Dict, List, Optional, Union
@@ -58,7 +60,8 @@ class Crew(BaseModel):
     _rpm_controller: RPMController = PrivateAttr()
     _logger: Logger = PrivateAttr()
     _file_handler: FileHandler = PrivateAttr()
-    _cache_handler: InstanceOf[CacheHandler] = PrivateAttr(default=CacheHandler())
+    _cache_handler: InstanceOf[CacheHandler] = PrivateAttr(
+        default=CacheHandler())
     _short_term_memory: Optional[InstanceOf[ShortTermMemory]] = PrivateAttr()
     _long_term_memory: Optional[InstanceOf[LongTermMemory]] = PrivateAttr()
     _entity_memory: Optional[InstanceOf[EntityMemory]] = PrivateAttr()
@@ -153,7 +156,8 @@ class Crew(BaseModel):
         self._logger = Logger(self.verbose)
         if self.output_log_file:
             self._file_handler = FileHandler(self.output_log_file)
-        self._rpm_controller = RPMController(max_rpm=self.max_rpm, logger=self._logger)
+        self._rpm_controller = RPMController(
+            max_rpm=self.max_rpm, logger=self._logger)
         self._telemetry = Telemetry()
         self._telemetry.set_tracer()
         self._telemetry.crew_creation(self)
@@ -164,8 +168,10 @@ class Crew(BaseModel):
         """Set private attributes."""
         if self.memory:
             self._long_term_memory = LongTermMemory()
-            self._short_term_memory = ShortTermMemory(crew=self, embedder_config=self.embedder)
-            self._entity_memory = EntityMemory(crew=self, embedder_config=self.embedder)
+            self._short_term_memory = ShortTermMemory(
+                crew=self, embedder_config=self.embedder)
+            self._entity_memory = EntityMemory(
+                crew=self, embedder_config=self.embedder)
         return self
 
     @model_validator(mode="after")
@@ -242,7 +248,8 @@ class Crew(BaseModel):
     def kickoff(self, inputs: Optional[Dict[str, Any]] = {}) -> str:
         """Starts the crew to work on its assigned tasks."""
         self._execution_span = self._telemetry.crew_execution_span(self)
-        self._interpolate_inputs(inputs)  # type: ignore # Argument 1 to "_interpolate_inputs" of "Crew" has incompatible type "dict[str, Any] | None"; expected "dict[str, Any]"
+        # type: ignore # Argument 1 to "_interpolate_inputs" of "Crew" has incompatible type "dict[str, Any] | None"; expected "dict[str, Any]"
+        self._interpolate_inputs(inputs)
         self._set_tasks_callbacks()
 
         i18n = I18N(prompt_file=self.prompt_file)
@@ -263,8 +270,10 @@ class Crew(BaseModel):
         if self.process == Process.sequential:
             result = self._run_sequential_process()
         elif self.process == Process.hierarchical:
-            result, manager_metrics = self._run_hierarchical_process()  # type: ignore # Unpacking a string is disallowed
-            metrics.append(manager_metrics)  # type: ignore # Cannot determine type of "manager_metrics"
+            # type: ignore # Unpacking a string is disallowed
+            result, manager_metrics = self._run_hierarchical_process()
+            # type: ignore # Cannot determine type of "manager_metrics"
+            metrics.append(manager_metrics)
 
         else:
             raise NotImplementedError(
@@ -280,6 +289,95 @@ class Crew(BaseModel):
 
         return result
 
+    def kickoff_for_each(self, inputs: List[Dict[str, Any]]) -> List:
+        """
+        Executes the Crew's workflow for each input in the list and aggregates results.
+        """
+
+        results = []
+
+        for input_data in inputs:
+            crew = self.copy()
+
+            for task in crew.tasks:
+                task.update_inputs(input_data)
+
+            for agent in crew.agents:
+                agent.update_inputs(input_data)
+
+            output = crew.kickoff()
+            results.append(output)
+
+        return results
+
+    async def akickoff(self, inputs: Optional[Dict[str, Any]] = {}) -> Union[str, Dict]:
+        self._execution_span = self._telemetry.crew_execution_span(self)
+        self._interpolate_inputs(inputs)
+        self._set_tasks_callbacks()
+
+        i18n = I18N(prompt_file=self.prompt_file)
+        for agent in self.agents:
+            agent.i18n = i18n
+            agent.crew = self
+
+            if not agent.function_calling_llm:
+                agent.function_calling_llm = self.function_calling_llm
+            if not agent.step_callback:
+                agent.step_callback = self.step_callback
+
+            agent.create_agent_executor()
+
+        metrics = []
+
+        if self.process == Process.sequential:
+            result = await self._arun_sequential_process()
+        elif self.process == Process.hierarchical:
+            result, manager_metrics = await self._arun_hierarchical_process()
+            metrics.append(manager_metrics)
+        else:
+            raise NotImplementedError(
+                f"The process '{self.process}' is not implemented yet."
+            )
+
+        metrics = metrics + [
+            agent._token_process.get_summary() for agent in self.agents
+        ]
+        self.usage_metrics = {
+            key: sum([m[key] for m in metrics if m is not None]) for key in metrics[0]
+        }
+
+        return result
+
+    async def akickoff_for_each(self, inputs: List[Dict]) -> List[Any]:
+        async def run_crew(input_data):
+            crew = Crew(
+                agents=self.agents.copy(),
+                tasks=self.tasks.copy(),
+                process=self.process,
+                manager_llm=self.manager_llm,
+                manager_agent=self.manager_agent,
+                manager_callbacks=self.manager_callbacks,
+                function_calling_llm=self.function_calling_llm,
+                memory=self.memory,
+                embedder=self.embedder,
+                verbose=self.verbose,
+                prompt_file=self.prompt_file,
+                output_log_file=self.output_log_file,
+                max_rpm=self.max_rpm,
+                share_crew=self.share_crew,
+                step_callback=self.step_callback,
+                task_callback=self.task_callback,
+                full_output=self.full_output,
+            )
+            for task in crew.tasks:
+                task.update_input(input_data)
+            return await crew.akickoff()
+
+        tasks = [asyncio.create_task(run_crew(input_data))
+                 for input_data in inputs]
+        results = await asyncio.gather(*tasks)
+        return results
+
     def _run_sequential_process(self) -> str:
         """Executes tasks sequentially and returns the final output."""
         task_output = ""
@@ -292,7 +390,8 @@ class Crew(BaseModel):
                     task.tools += AgentTools(agents=agents_for_delegation).tools()
 
             role = task.agent.role if task.agent is not None else "None"
-            self._logger.log("debug", f"== Working Agent: {role}", color="bold_purple")
+            self._logger.log("debug", f"== Working Agent: {
+                             role}", color="bold_purple")
             self._logger.log(
                 "info", f"== Starting Task: {task.description}", color="bold_purple"
             )
@@ -307,10 +406,12 @@ class Crew(BaseModel):
                 task_output = output
 
             role = task.agent.role if task.agent is not None else "None"
-            self._logger.log("debug", f"== [{role}] Task output: {task_output}\n\n")
+            self._logger.log("debug", f"== [{role}] Task output: {
+                             task_output}\n\n")
 
             if self.output_log_file:
-                self._file_handler.log(agent=role, task=task_output, status="completed")
+                self._file_handler.log(
+                    agent=role, task=task_output, status="completed")
 
         self._finish_execution(task_output)
         return self._format_output(task_output)
@@ -329,7 +430,8 @@ class Crew(BaseModel):
             manager = Agent(
                 role=i18n.retrieve("hierarchical_manager_agent", "role"),
                 goal=i18n.retrieve("hierarchical_manager_agent", "goal"),
-                backstory=i18n.retrieve("hierarchical_manager_agent", "backstory"),
+                backstory=i18n.retrieve(
+                    "hierarchical_manager_agent", "backstory"),
                 tools=AgentTools(agents=self.agents).tools(),
                 llm=self.manager_llm,
                 verbose=True,
@@ -349,7 +451,8 @@ class Crew(BaseModel):
                 agent=manager, context=task_output, tools=manager.tools
             )
 
-            self._logger.log("debug", f"[{manager.role}] Task output: {task_output}")
+            self._logger.log(
+                "debug", f"[{manager.role}] Task output: {task_output}")
 
             if self.output_log_file:
                 self._file_handler.log(
@@ -357,7 +460,40 @@ class Crew(BaseModel):
                 )
 
         self._finish_execution(task_output)
-        return self._format_output(task_output), manager._token_process.get_summary()  # type: ignore # Incompatible return value type (got "tuple[str, Any]", expected "str")
+        # type: ignore # Incompatible return value type (got "tuple[str, Any]", expected "str")
+        return self._format_output(task_output), manager._token_process.get_summary()
+    
+    def copy(self):
+        """Create a deep copy of the Crew."""
+        
+        exclude = {
+            "id",
+            "_rpm_controller",
+            "_logger",
+            "_execution_span",
+            "_file_handler",
+            "_cache_handler",
+            "_short_term_memory",
+            "_long_term_memory",
+            "_entity_memory"
+            "agents",
+            "tasks",
+        }
+
+        cloned_agents = [agent.copy() for agent in self.agents]
+        cloned_tasks = [task.copy() for task in self.tasks]
+
+        copied_data = self.model_dump(exclude=exclude)
+        copied_data = {k: v for k, v in copied_data.items() if v is not None}
+
+        # Remove data from copied crew
+        copied_data.pop("agents", None)
+        copied_data.pop("tasks", None)
+
+        copied_crew = Crew(**copied_data, agents=cloned_agents, tasks=cloned_tasks)
+
+        return copied_crew
+
 
     def _set_tasks_callbacks(self) -> None:
         """Sets callback for every task suing task_callback"""
@@ -367,8 +503,11 @@ class Crew(BaseModel):
 
     def _interpolate_inputs(self, inputs: Dict[str, Any]) -> None:
         """Interpolates the inputs in the tasks and agents."""
-        [task.interpolate_inputs(inputs) for task in self.tasks]  # type: ignore # "interpolate_inputs" of "Task" does not return a value (it only ever returns None)
-        [agent.interpolate_inputs(inputs) for agent in self.agents]  # type: ignore # "interpolate_inputs" of "Agent" does not return a value (it only ever returns None)
+        [task.interpolate_inputs(
+            # type: ignore # "interpolate_inputs" of "Task" does not return a value (it only ever returns None)
+            inputs) for task in self.tasks]
+        # type: ignore # "interpolate_inputs" of "Agent" does not return a value (it only ever returns None)
+        [agent.interpolate_inputs(inputs) for agent in self.agents]
 
     def _format_output(self, output: str) -> str:
         """Formats the output of the crew execution."""
