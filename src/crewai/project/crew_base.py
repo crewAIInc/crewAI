@@ -1,21 +1,18 @@
 import inspect
-import os
-from pathlib import Path
-
 import yaml
+import os
+
+from pathlib import Path
+from pydantic import ConfigDict
+
 from dotenv import load_dotenv
-
-
 load_dotenv()
 
 
 def CrewBase(cls):
     class WrappedClass(cls):
+        model_config = ConfigDict(arbitrary_types_allowed=True)
         is_crew_class: bool = True
-
-        class Config:
-            arbitrary_types_allowed = True
-            ignored_types = [bool]
 
         base_directory = None
         for frame_info in inspect.stack():
