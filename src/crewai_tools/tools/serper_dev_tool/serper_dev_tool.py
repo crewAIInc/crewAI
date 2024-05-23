@@ -2,7 +2,7 @@ import os
 import json
 import requests
 
-from typing import Type, Any
+from typing import Optional, Type, Any
 from pydantic.v1 import BaseModel, Field
 from crewai_tools.tools.base_tool import BaseTool
 
@@ -16,18 +16,27 @@ class SerperDevTool(BaseTool):
 	args_schema: Type[BaseModel] = SerperDevToolSchema
 	search_url: str = "https://google.serper.dev/search"
 	n_results: int = 10
+	country: Optional[str] = None
+	location: Optional[str] = None
+	locale: Optional[str] = None
 
 	def _run(
 		self,
 		**kwargs: Any,
 	) -> Any:
-		search_query = kwargs.get('search_query')
-		if search_query is None:
-			search_query = kwargs.get('query')
+		search_query = kwargs.get('search_query') or kwargs.get('query')
 
-		payload = json.dumps({"q": search_query})
+		payload = json.dumps(
+			{
+				"q": search_query,
+				"num": self.n_results,
+				"gl": self.country,
+				"location": self.location,
+				"hl": self.locale,
+			}
+		)
 		headers = {
-				'X-API-KEY': os.environ['SERPER_API_KEY'],
+			'X-API-KEY': os.environ['SERPER_API_KEY'],
 				'content-type': 'application/json'
 		}
 		response = requests.request("POST", self.search_url, headers=headers, data=payload)
