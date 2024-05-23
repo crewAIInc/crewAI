@@ -1,6 +1,7 @@
 from typing import Optional, Any, Type, Dict, Literal
 from pydantic.v1 import BaseModel, Field
 from crewai_tools.tools.base_tool import BaseTool
+import requests
 
 class SpiderFullParams(BaseModel):
     request: Optional[str] = Field(description="The request type to perform. Possible values are `http`, `chrome`, and `smart`.")
@@ -64,12 +65,21 @@ class SpiderFullTool(BaseTool):
             )
 
         if params is None:
+            print("PARAMS IT NONE")
             params = SpiderFullParams()
+            print(params)
 
         action = self.spider.scrape_url if mode == "scrape" else self.spider.crawl_url
-        spider_docs = action(url=url, params=params.dict())
+        response = action(url=url, params=params.dict())
+
+        # Debugging: Print the response content
+        print(f"Response status code: {response.status_code}")
+        print(f"Response content: {response.text}")
+
+        try:
+            spider_docs = response.json()
+        except requests.exceptions.JSONDecodeError as e:
+            print(f"JSONDecodeError: {e}")
+            spider_docs = {"error": "Failed to decode JSON response"}
 
         return spider_docs
-
-tool = SpiderFullTool()
-tool._run(url="https://spider.cloud")

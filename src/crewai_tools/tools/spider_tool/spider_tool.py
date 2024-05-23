@@ -25,10 +25,15 @@ class SpiderTool(BaseTool):
 
         self.spider = Spider(api_key=api_key)
 
-    def _run(self, url: str, params: Optional[Dict[str, Any]] = None, mode: Optional[Literal["scrape", "crawl"]] = "scrape"):
-        if mode != "scrape" and mode != "crawl":
+    def _run(
+        self,
+        url: str,
+        params: Optional[Dict[str, any]] = None,
+        mode: Optional[Literal["scrape", "crawl"]] = "scrape"
+    ):
+        if mode not in ["scrape", "crawl"]:
             raise ValueError(
-                "Unknown mode in `mode` parameter, `scrape` or `crawl` is the allowed modes"
+                "Unknown mode in `mode` parameter, `scrape` or `crawl` are the allowed modes"
             )
 
         if params is None or params == {}:
