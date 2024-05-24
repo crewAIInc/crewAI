@@ -1,4 +1,5 @@
 import os
+import pickle
 from datetime import datetime
 
 
@@ -18,3 +19,76 @@ class FileHandler:
         message = f"{now}: ".join([f"{key}={value}" for key, value in kwargs.items()])
         with open(self._path, "a") as file:
             file.write(message + "\n")
+
+
+class PickleHandler:
+    def __init__(self, file_name: str):
+        """
+        Initialize the PickleHandler with the name of the file where data will be stored.
+        The file will be saved in the current directory.
+
+        Parameters:
+        - file_name (str): The name of the file for saving and loading data.
+        """
+        self.file_path = os.path.join(os.getcwd(), file_name)
+        self._initialize_file()
+
+    def _initialize_file(self):
+        """
+        Initialize the file with an empty dictionary if it does not exist or is empty.
+        """
+        if not os.path.exists(self.file_path) or os.path.getsize(self.file_path) == 0:
+            self.save({})  # Save an empty dictionary to initialize the file
+
+    def save(self, data):
+        """
+        Save the data to the specified file using pickle.
+
+        Parameters:
+        - data (object): The data to be saved.
+        """
+        with open(self.file_path, "wb") as file:
+            pickle.dump(data, file)
+
+    def load(self) -> dict:
+        """
+        Load the data from the specified file using pickle.
+
+        Returns:
+        - dict: The data loaded from the file.
+        """
+        if not os.path.exists(self.file_path) or os.path.getsize(self.file_path) == 0:
+            return {}  # Return an empty dictionary if the file does not exist or is empty
+
+        with open(self.file_path, "rb") as file:
+            try:
+                return pickle.load(file)
+            except EOFError:
+                return {}  # Return an empty dictionary if the file is empty or corrupted
+
+    def save_trained_data(self, agent_id, trained_data):
+        """
+        Save the trained data for a specific agent.
+
+        Parameters:
+        - agent_id (str): The ID of the agent.
+        - trained_data (dict): The trained data to be saved.
+        """
+        data = self.load()
+        data[agent_id] = trained_data
+        self.save(data)
+
+    def append(self, train_iteration, agent_id, new_data):
+        """
+        Append new data to the existing pickle file.
+
+        Parameters:
+        - new_data (object): The new data to be appended.
+        """
+        data = self.load()
+
+        if agent_id in data:
+            data[agent_id][train_iteration] = new_data
+        else:
+            data[agent_id] = {train_iteration: new_data}
+        self.save(data)
