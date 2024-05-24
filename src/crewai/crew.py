@@ -64,6 +64,8 @@ class Crew(BaseModel):
     _short_term_memory: Optional[InstanceOf[ShortTermMemory]] = PrivateAttr()
     _long_term_memory: Optional[InstanceOf[LongTermMemory]] = PrivateAttr()
     _entity_memory: Optional[InstanceOf[EntityMemory]] = PrivateAttr()
+    _train: Optional[bool] = PrivateAttr(default=False)
+    _train_iteration: Optional[int] = PrivateAttr()
 
     cache: bool = Field(default=True)
     model_config = ConfigDict(arbitrary_types_allowed=True)
@@ -243,8 +245,10 @@ class Crew(BaseModel):
         del task_config["agent"]
         return Task(**task_config, agent=task_agent)
 
-    def _setup_for_training(self):
+    def _setup_for_training(self) -> None:
+        """Sets up the crew for training."""
         self._train = True
+
         for task in self.tasks:
             task.human_input = True
 

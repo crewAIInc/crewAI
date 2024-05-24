@@ -22,7 +22,7 @@ class FileHandler:
 
 
 class PickleHandler:
-    def __init__(self, file_name: str):
+    def __init__(self, file_name: str) -> None:
         """
         Initialize the PickleHandler with the name of the file where data will be stored.
         The file will be saved in the current directory.
@@ -33,14 +33,14 @@ class PickleHandler:
         self.file_path = os.path.join(os.getcwd(), file_name)
         self._initialize_file()
 
-    def _initialize_file(self):
+    def _initialize_file(self) -> None:
         """
         Initialize the file with an empty dictionary if it does not exist or is empty.
         """
         if not os.path.exists(self.file_path) or os.path.getsize(self.file_path) == 0:
             self.save({})  # Save an empty dictionary to initialize the file
 
-    def save(self, data):
+    def save(self, data) -> None:
         """
         Save the data to the specified file using pickle.
 
@@ -66,7 +66,7 @@ class PickleHandler:
             except EOFError:
                 return {}  # Return an empty dictionary if the file is empty or corrupted
 
-    def save_trained_data(self, agent_id, trained_data):
+    def save_trained_data(self, agent_id: str, trained_data: dict) -> None:
         """
         Save the trained data for a specific agent.
 
@@ -78,7 +78,7 @@ class PickleHandler:
         data[agent_id] = trained_data
         self.save(data)
 
-    def append(self, train_iteration, agent_id, new_data):
+    def append(self, train_iteration: int, agent_id: str, new_data) -> None:
         """
         Append new data to the existing pickle file.
 

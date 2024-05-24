@@ -72,7 +72,17 @@ class TaskEvaluator:
     def _is_gpt(self, llm) -> bool:
         return isinstance(llm, ChatOpenAI) and llm.openai_api_base is None
 
-    def evaluate_training_data(self, training_data, agent_id) -> TrainingTaskEvaluation:
+    def evaluate_training_data(
+        self, training_data: dict, agent_id: str
+    ) -> TrainingTaskEvaluation:
+        """
+        Evaluate the training data based on the llm output, human feedback, and improved output.
+
+        Parameters:
+            - training_data (dict): The training data to be evaluated.
+            - agent_id (str): The ID of the agent.
+        """
+
         output_training_data = training_data[agent_id]
 
         final_aggregated_data = ""

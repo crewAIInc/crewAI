@@ -388,11 +388,13 @@ class Agent(BaseModel):
         return tools_list
 
     def _training_handler(self, task_prompt: str) -> str:
-        if PickleHandler("training_data.pkl").load():
-            data = PickleHandler("training_data.pkl").load()
-            if data.get(str(self.id)):
+        """Handle training data for the agent task prompt to improve output on Training."""
+        if data := PickleHandler("training_data.pkl").load():
+            agent_id = str(self.id)
+
+            if data.get(agent_id):
                 human_feedbacks = [
-                    i["human_feedback"] for i in data.get(str(self.id), {}).values()
+                    i["human_feedback"] for i in data.get(agent_id, {}).values()
                 ]
                 task_prompt += "You MUST follow these feedbacks: \n " + "\n - ".join(
                     human_feedbacks
@@ -401,9 +403,9 @@ class Agent(BaseModel):
         return task_prompt
 
     def _use_trained_data(self, task_prompt: str) -> str:
-        if PickleHandler("trained_agents_data.pkl").load():
-            data = PickleHandler("trained_agents_data.pkl").load()
-            if trained_data_output := data.get(str(self.role)):
+        """Use trained data for the agent task prompt to improve output."""
+        if data := PickleHandler("trained_agents_data.pkl").load():
+            if trained_data_output := data.get(self.role):
                 task_prompt += "You MUST follow these feedbacks: \n " + "\n - ".join(
                     trained_data_output["suggestions"]
                 )
