@@ -23,6 +23,7 @@ from pydantic_core import PydanticCustomError
 from crewai.agents import CacheHandler, CrewAgentExecutor, CrewAgentParser, ToolsHandler
 from crewai.memory.contextual.contextual_memory import ContextualMemory
 from crewai.utilities import I18N, Logger, Prompts, RPMController
+from crewai.utilities.fileHandler import PickleHandler
 from crewai.utilities.token_counter_callback import TokenCalcHandler, TokenProcess
 
 
@@ -233,6 +234,11 @@ class Agent(BaseModel):
         self.agent_executor.tools_description = render_text_description(parsed_tools)
         self.agent_executor.tools_names = self.__tools_names(parsed_tools)
 
+        if self.crew._train:
+            task_prompt = self._training_handler(task_prompt=task_prompt)
+        else:
+            task_prompt = self._use_trained_data(task_prompt=task_prompt)
+
         result = self.agent_executor.invoke(
             {
                 "input": task_prompt,
@@ -380,6 +386,28 @@ class Agent(BaseModel):
             for tool in tools:
                 tools_list.append(tool)
         return tools_list
+
+    def _training_handler(self, task_prompt: str) -> str:
+        if PickleHandler("training_data.pkl").load():
+            data = PickleHandler("training_data.pkl").load()
+            if data.get(str(self.id)):
+                human_feedbacks = [
+                    i["human_feedback"] for i in data.get(str(self.id), {}).values()
+                ]
+                task_prompt += "You MUST follow these feedbacks: \n " + "\n - ".join(
+                    human_feedbacks
+                )
+
+        return task_prompt
+
+    def _use_trained_data(self, task_prompt: str) -> str:
+        if PickleHandler("trained_agents_data.pkl").load():
+            data = PickleHandler("trained_agents_data.pkl").load()
+            if trained_data_output := data.get(str(self.role)):
+                task_prompt += "You MUST follow these feedbacks: \n " + "\n - ".join(
+                    trained_data_output["suggestions"]
+                )
+        return task_prompt
 
     @staticmethod
     def __tools_names(tools) -> str:

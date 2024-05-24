@@ -26,6 +26,8 @@ from crewai.task import Task
 from crewai.telemetry import Telemetry
 from crewai.tools.agent_tools import AgentTools
 from crewai.utilities import I18N, FileHandler, Logger, RPMController
+from crewai.utilities.evaluators.task_evaluator import TaskEvaluator
+from crewai.utilities.fileHandler import PickleHandler
 
 
 class Crew(BaseModel):
@@ -241,6 +243,33 @@ class Crew(BaseModel):
         del task_config["agent"]
         return Task(**task_config, agent=task_agent)
 
+    def _setup_for_training(self):
+        self._train = True
+        for task in self.tasks:
+            task.human_input = True
+
+        for agent in self.agents:
+            agent.allow_delegation = False
+
+    def train(self, n_iterations: int, inputs: Optional[Dict[str, Any]] = {}) -> None:
+        """Trains the crew for a given number of iterations."""
+        self._setup_for_training()
+
+        for n_iteration in range(n_iterations):
+            self._train_iteration = n_iteration
+            self.kickoff(inputs=inputs)
+
+        training_data = PickleHandler("training_data.pkl").load()
+
+        for agent in self.agents:
+            result = TaskEvaluator(agent).evaluate_training_data(
+                training_data=training_data, agent_id=str(agent.id)
+            )
+
+            PickleHandler("trained_agents_data.pkl").save_trained_data(
+                agent_id=str(agent.role), trained_data=result.model_dump()
+            )
+
     def kickoff(self, inputs: Optional[Dict[str, Any]] = {}) -> str:
         """Starts the crew to work on its assigned tasks."""
         self._execution_span = self._telemetry.crew_execution_span(self)
@@ -281,10 +310,6 @@ class Crew(BaseModel):
         }
 
         return result
-
-    def train(self, n_iterations: int) -> None:
-        # TODO: Implement training
-        pass
 
     def _run_sequential_process(self) -> str:
         """Executes tasks sequentially and returns the final output."""
