@@ -315,7 +315,10 @@ class CrewAgentExecutor(AgentExecutor):
             self._i18n.slice("getting_input").format(final_answer=final_answer)
         )
 
-    def _training_handler(self, output, human_feedback=None):
+    def _training_handler(
+        self, output: AgentFinish, human_feedback: str | None = None
+    ) -> None:
+        """Function to handle the process of the training data."""
         training_data_filename = "training_data.pkl"
         agent_id = str(self.crew_agent.id)
 
