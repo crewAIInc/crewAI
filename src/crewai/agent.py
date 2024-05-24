@@ -111,7 +111,7 @@ class Agent(BaseModel):
     i18n: I18N = Field(default=I18N(), description="Internationalization settings.")
     llm: Any = Field(
         default_factory=lambda: ChatOpenAI(
-            model=os.environ.get("OPENAI_MODEL_NAME", "gpt-4")
+            model=os.environ.get("OPENAI_MODEL_NAME", "gpt-4o")
         ),
         description="Language model that will run the agent.",
     )
