@@ -4,8 +4,17 @@ from crewai_tools.tools.base_tool import BaseTool
 
 class SpiderToolSchema(BaseModel):
     url: str = Field(description="Website URL")
-    params: Optional[Dict[str, Any]] = Field(default={"return_format": "markdown"}, description="Set additional params. Leave empty for this to return LLM-ready data")
-    mode: Optional[Literal["scrape", "crawl"]] = Field(defualt="scrape", description="Mode, the only two allowed modes are `scrape` or `crawl` the url")
+    params: Optional[Dict[str, Any]] = Field(
+        description="Set additional params. Options include:\n"
+                    "- `limit`: Optional[int] - The maximum number of pages allowed to crawl per website. Remove the value or set it to `0` to crawl all pages.\n"
+                    "- `depth`: Optional[int] - The crawl limit for maximum depth. If `0`, no limit will be applied.\n"
+                    "- `metadata`: Optional[bool] - Boolean to include metadata or not. Defaults to `False` unless set to `True`. If the user wants metadata, include params.metadata = True.\n"
+                    "- `query_selector`: Optional[str] - The CSS query selector to use when extracting content from the markup.\n"
+    )
+    mode: Literal["scrape", "crawl"] = Field(
+        default="scrape",
+        description="Mode, the only two allowed modes are `scrape` or `crawl`. `scrape` will only scrape the one page of the url provided, while `crawl` will crawl the website following all the subpages found."
+    )
 
 class SpiderTool(BaseTool):
     name: str = "Spider scrape & crawl tool"
@@ -28,7 +37,7 @@ class SpiderTool(BaseTool):
     def _run(
         self,
         url: str,
-        params: Optional[Dict[str, any]] = None,
+        params: Optional[Dict[str, Any]] = None,
         mode: Optional[Literal["scrape", "crawl"]] = "scrape"
     ):
         if mode not in ["scrape", "crawl"]:
@@ -36,7 +45,10 @@ class SpiderTool(BaseTool):
                 "Unknown mode in `mode` parameter, `scrape` or `crawl` are the allowed modes"
             )
 
-        if params is None or params == {}:
+        # Ensure 'return_format': 'markdown' is always included
+        if params:
+            params["return_format"] = "markdown"
+        else:
             params = {"return_format": "markdown"}
 
         action = (
