@@ -1,4 +1,3 @@
-import os
 from crewai_tools.tools.spider_tool.spider_tool import SpiderTool
 from crewai import Agent, Task, Crew
 
