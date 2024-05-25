@@ -13,7 +13,7 @@ class SpiderToolSchema(BaseModel):
     )
     mode: Literal["scrape", "crawl"] = Field(
         default="scrape",
-        description="Mode, the only two allowed modes are `scrape` or `crawl`. `scrape` will only scrape the one page of the url provided, while `crawl` will crawl the website following all the subpages found."
+        description="Mode, the only two allowed modes are `scrape` or `crawl`. Use `scrape` to scrape a single page and `crawl` to crawl the entire website following subpages. These modes are the only allowed values even when ANY params is set."
     )
 
 class SpiderTool(BaseTool):

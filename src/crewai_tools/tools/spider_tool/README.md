@@ -19,7 +19,35 @@ This example shows you how you can use the Spider tool to enable your agent to s
 ```python
 from crewai_tools import SpiderTool
 
-tool = SpiderTool()
+def main():
+    spider_tool = SpiderTool()
+    
+    searcher = Agent(
+        role="Web Research Expert",
+        goal="Find related information from specific URL's",
+        backstory="An expert web researcher that uses the web extremely well",
+        tools=[spider_tool],
+        verbose=True,
+    )
+
+    return_metadata = Task(
+        description="Scrape https://spider.cloud with a limit of 1 and enable metadata",
+        expected_output="Metadata and 10 word summary of spider.cloud",
+        agent=searcher
+    )
+
+    crew = Crew(
+        agents=[searcher],
+        tasks=[
+            return_metadata, 
+        ],
+        verbose=2
+    )
+    
+    crew.kickoff()
+
+if __name__ == "__main__":
+    main()
 ```
 
 ## Arguments
