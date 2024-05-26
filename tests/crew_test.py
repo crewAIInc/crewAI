@@ -1021,13 +1021,48 @@ def test_manager_agent_with_tools_raises_exception():
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
-def test_kickoff_for_each_basic():
-    from unittest.mock import call, patch
+def test_kickoff_for_each_single_input():
+    """Tests if kickoff_for_each works with a single input."""
+    from unittest.mock import patch
+
+    inputs = [{"topic": "dog"}]
+    expected_outputs = ["Dogs are loyal companions and popular pets."]
+
+    agent = Agent(
+        role="{topic} Researcher",
+        goal="Express hot takes on {topic}.",
+        backstory="You have a lot of experience with {topic}.",
+    )
+
+    task = Task(
+        description="Give me an analysis around {topic}.",
+        expected_output="1 bullet point about {topic} that's under 15 words.",
+        agent=agent,
+    )
+
+    with patch.object(Agent, "execute_task") as mock_execute_task:
+        mock_execute_task.side_effect = expected_outputs
+        crew = Crew(agents=[agent], tasks=[task])
+        results = crew.kickoff_for_each(inputs=inputs)
+
+    assert len(results) == 1
+    assert results == expected_outputs
+
+
+@pytest.mark.vcr(filter_headers=["authorization"])
+def test_kickoff_for_each_multiple_inputs():
+    """Tests if kickoff_for_each works with multiple inputs."""
+    from unittest.mock import patch
 
     inputs = [
         {"topic": "dog"},
         {"topic": "cat"},
         {"topic": "apple"},
+    ]
+    expected_outputs = [
+        "Dogs are loyal companions and popular pets.",
+        "Cats are independent and low-maintenance pets.",
+        "Apples are a rich source of dietary fiber and vitamin C.",
     ]
 
     agent = Agent(
@@ -1042,22 +1077,93 @@ def test_kickoff_for_each_basic():
         agent=agent,
     )
 
-    crew = Crew(agents=[agent], tasks=[task])
-
-    expected_outputs = [
-        "Dogs, known for their loyalty, play significant roles in emotional support and companionship.",
-        "Cats are independent creatures known for their agility and hunting prowess.",
-        "Apples are a rich source of dietary fiber and vitamin C.",
-    ]
-
-    with patch.object(Crew, "kickoff") as mock_kickoff:
-        mock_kickoff.side_effect = expected_outputs
-
+    with patch.object(Agent, "execute_task") as mock_execute_task:
+        mock_execute_task.side_effect = expected_outputs
+        crew = Crew(agents=[agent], tasks=[task])
         results = crew.kickoff_for_each(inputs=inputs)
 
-    for res in result:
-        print("kickoff_for_each result", res)
-    assert len(result) == len(inputs)
+    assert len(results) == len(inputs)
+    for i, res in enumerate(results):
+        assert res == expected_outputs[i]
+
+
+@pytest.mark.vcr(filter_headers=["authorization"])
+def test_kickoff_for_each_empty_input():
+    """Tests if kickoff_for_each handles an empty input list."""
+    agent = Agent(
+        role="{topic} Researcher",
+        goal="Express hot takes on {topic}.",
+        backstory="You have a lot of experience with {topic}.",
+    )
+
+    task = Task(
+        description="Give me an analysis around {topic}.",
+        expected_output="1 bullet point about {topic} that's under 15 words.",
+        agent=agent,
+    )
+
+    crew = Crew(agents=[agent], tasks=[task])
+    results = crew.kickoff_for_each(inputs=[])
+    assert results == []
+
+
+@pytest.mark.vcr(filter_headers=["authorization"])
+def test_kickoff_for_each_invalid_input():
+    """Tests if kickoff_for_each raises TypeError for invalid input types."""
+
+    agent = Agent(
+        role="{topic} Researcher",
+        goal="Express hot takes on {topic}.",
+        backstory="You have a lot of experience with {topic}.",
+    )
+
+    task = Task(
+        description="Give me an analysis around {topic}.",
+        expected_output="1 bullet point about {topic} that's under 15 words.",
+        agent=agent,
+    )
+    crew = Crew(agents=[agent], tasks=[task])
+
+    with pytest.raises(TypeError):
+        crew.kickoff_for_each("invalid input")  # Pass a string instead of a list
+
+
+@pytest.mark.vcr(filter_headers=["authorization"])
+def test_kickoff_for_each_error_handling():
+    """Tests error handling in kickoff_for_each when kickoff raises an error."""
+    from unittest.mock import patch
+
+    inputs = [
+        {"topic": "dog"},
+        {"topic": "cat"},
+        {"topic": "apple"},
+    ]
+    expected_outputs = [
+        "Dogs are loyal companions and popular pets.",
+        "Cats are independent and low-maintenance pets.",
+        "Apples are a rich source of dietary fiber and vitamin C.",
+    ]
+    agent = Agent(
+        role="{topic} Researcher",
+        goal="Express hot takes on {topic}.",
+        backstory="You have a lot of experience with {topic}.",
+    )
+
+    task = Task(
+        description="Give me an analysis around {topic}.",
+        expected_output="1 bullet point about {topic} that's under 15 words.",
+        agent=agent,
+    )
+
+    crew = Crew(agents=[agent], tasks=[task])
+
+    # Mock the kickoff method to raise an exception for one input
+    with patch.object(Crew, "kickoff") as mock_kickoff:
+        mock_kickoff.side_effect = expected_outputs[:2] + [
+            Exception("Simulated kickoff error")
+        ]
+        with pytest.raises(Exception, match="Simulated kickoff error"):
+            crew.kickoff_for_each(inputs=inputs)
 
 
 def test_crew_train_success():
