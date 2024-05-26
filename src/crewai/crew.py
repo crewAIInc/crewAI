@@ -301,12 +301,7 @@ class Crew(BaseModel):
         for input_data in inputs:
             crew = self.copy()
 
-            for task in crew.tasks:
-                task.interpolate_inputs(input_data)
-            for agent in crew.agents:
-                agent.interpolate_inputs(input_data)
-
-            output = crew.kickoff()
+            output = crew.kickoff(inputs=input_data)
             results.append(output)
 
         return results
@@ -337,7 +332,6 @@ class Crew(BaseModel):
         """Executes tasks sequentially and returns the final output."""
         task_output = ""
         for task in self.tasks:
-            print("task agents", task.agent)
             if task.agent.allow_delegation:  # type: ignore #  Item "None" of "Agent | None" has no attribute "allow_delegation"
                 agents_for_delegation = [
                     agent for agent in self.agents if agent != task.agent
