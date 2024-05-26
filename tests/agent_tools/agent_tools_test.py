@@ -105,7 +105,7 @@ def test_delegate_work_to_wrong_agent():
 
     assert (
         result
-        == "\nError executing tool. Co-worker mentioned not found, it must to be one of the following options:\n- researcher\n"
+        == "\nError executing tool. coworker mentioned not found, it must to be one of the following options:\n- researcher\n"
     )
 
 
@@ -118,5 +118,5 @@ def test_ask_question_to_wrong_agent():
 
     assert (
         result
-        == "\nError executing tool. Co-worker mentioned not found, it must to be one of the following options:\n- researcher\n"
+        == "\nError executing tool. coworker mentioned not found, it must to be one of the following options:\n- researcher\n"
     )
