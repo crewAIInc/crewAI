@@ -993,3 +993,30 @@ def test_manager_agent_with_tools_raises_exception():
 
     with pytest.raises(Exception):
         crew.kickoff()
+
+
+@pytest.mark.vcr(filter_headers=["authorization"])
+def test_kickoff_for_each_basic():
+    inputs = [
+        {"topic": "dog"},
+        {"topic": "cat"},
+        {"topic": "apple"},
+    ]
+
+    agent = Agent(
+        role="{topic} Researcher",
+        goal="Express hot takes on {topic}.",
+        backstory="You have a lot of experience with {topic}.",
+    )
+
+    task = Task(
+        description="Give me an analysis around {topic}.",
+        expected_output="5 bullet points about {topic}.",
+    )
+
+    crew = Crew(agents=[agent], tasks=[task])
+    result = crew.kickoff_for_each(inputs=inputs)
+
+    for res in result:
+        print("kickoff_for_each result", res)
+    assert len(result) == len(inputs)

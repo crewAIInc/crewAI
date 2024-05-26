@@ -5,15 +5,15 @@ from typing import Any, Dict, List, Optional, Union
 
 from langchain_core.callbacks import BaseCallbackHandler
 from pydantic import (
-    UUID4,
-    BaseModel,
-    ConfigDict,
-    Field,
-    InstanceOf,
-    Json,
-    PrivateAttr,
-    field_validator,
-    model_validator,
+  UUID4,
+  BaseModel,
+  ConfigDict,
+  Field,
+  InstanceOf,
+  Json,
+  PrivateAttr,
+  field_validator,
+  model_validator,
 )
 from pydantic_core import PydanticCustomError
 
@@ -308,7 +308,7 @@ class Crew(BaseModel):
     async def kickoff_async(self, inputs: Optional[Dict[str, Any]] = {}) -> Union[str, Dict]:
         """Asynchronous kickoff method to start the crew execution."""
         return await asyncio.to_thread(self.kickoff, inputs)
-    
+
     async def kickoff_for_each_async(self, inputs: List[Dict]) -> List[Any]:
         async def run_crew(input_data):
             crew = self.copy()
@@ -322,7 +322,7 @@ class Crew(BaseModel):
 
         tasks = [asyncio.create_task(run_crew(input_data))
                  for input_data in inputs]
-        
+
         results = await asyncio.gather(*tasks)
 
         return results
@@ -331,6 +331,7 @@ class Crew(BaseModel):
         """Executes tasks sequentially and returns the final output."""
         task_output = ""
         for task in self.tasks:
+            print("task agents", task.agent)
             if task.agent.allow_delegation:  # type: ignore #  Item "None" of "Agent | None" has no attribute "allow_delegation"
                 agents_for_delegation = [
                     agent for agent in self.agents if agent != task.agent
@@ -364,7 +365,6 @@ class Crew(BaseModel):
 
         self._finish_execution(task_output)
         return self._format_output(task_output)
-
 
     def _run_hierarchical_process(self) -> str:
         """Creates and assigns a manager agent to make sure the crew completes the tasks."""
@@ -415,7 +415,7 @@ class Crew(BaseModel):
 
     def copy(self):
         """Create a deep copy of the Crew."""
-        
+
         exclude = {
             "id",
             "_rpm_controller",
@@ -439,10 +439,10 @@ class Crew(BaseModel):
         copied_data.pop("agents", None)
         copied_data.pop("tasks", None)
 
-        copied_crew = Crew(**copied_data, agents=cloned_agents, tasks=cloned_tasks)
+        copied_crew = Crew(
+            **copied_data, agents=cloned_agents, tasks=cloned_tasks)
 
         return copied_crew
-
 
     def _set_tasks_callbacks(self) -> None:
         """Sets callback for every task suing task_callback"""
