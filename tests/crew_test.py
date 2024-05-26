@@ -141,6 +141,31 @@ def test_crew_creation():
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
+def test_crew_creation_tasks_without_agents():
+    tasks = [
+        Task(
+            description="Give me a list of 5 interesting ideas to explore for na article, what makes them unique and interesting.",
+            expected_output="Bullet point list of 5 important events.",
+        ),
+        Task(
+            description="Write a 1 amazing paragraph highlight for each idea that showcases how good an article about this topic could be. Return the list of ideas with their paragraph and your notes.",
+            expected_output="A 4 paragraph article about AI.",
+        ),
+    ]
+
+    crew = Crew(
+        agents=[researcher, writer],
+        process=Process.sequential,
+        tasks=tasks,
+    )
+
+    assert (
+        crew.kickoff()
+        == "1. **The Rise of AI in Healthcare**: The convergence of AI and healthcare is a promising frontier, offering unprecedented opportunities for disease diagnosis and patient outcome prediction. AI's potential to revolutionize healthcare lies in its capacity to synthesize vast amounts of data, generating precise and efficient results. This technological breakthrough, however, is not just about improving accuracy and efficiency; it's about saving lives. As we stand on the precipice of this transformative era, we must prepare for the complex challenges and ethical questions it poses, while embracing its ability to reshape healthcare as we know it.\n\n2. **Ethical Implications of AI**: As AI intertwines with our daily lives, it presents a complex web of ethical dilemmas. This fusion of technology, philosophy, and ethics is not merely academically intriguing but profoundly impacts the fabric of our society. The questions raised range from decision-making transparency to accountability, and from privacy to potential biases. As we navigate this ethical labyrinth, it is crucial to establish robust frameworks and regulations to ensure that AI serves humanity, and not the other way around.\n\n3. **AI and Data Privacy**: The rise of AI brings with it an insatiable appetite for data, spawning new debates around privacy rights. Balancing the potential benefits of AI with the right to privacy is a unique challenge that intersects technology, law, and human rights. In an increasingly digital world, where personal information forms the backbone of many services, we must grapple with these issues. It's time to redefine the concept of privacy and devise innovative solutions that ensure our digital footprints are not abused.\n\n4. **AI in Job Market**: The discourse around AI's impact on employment is a narrative of contrast, a tale of displacement and creation. On one hand, AI threatens to automate a multitude of jobs, on the other, it promises to create new roles that we cannot yet imagine. This intersection of technology, economics, and labor rights is a critical dialogue that will shape our future. As we stand at this crossroads, we must not only brace ourselves for the changes but also seize the opportunities that this technological wave brings.\n\n5. **Future of AI Agents**: The evolution of AI agents signifies a leap towards a future where AI is not just a tool, but a partner. These sophisticated AI agents, employed in customer service to personal assistants, are redefining our interactions with technology. As we gaze into the future of AI agents, we see a landscape of possibilities and challenges. This journey will be about harnessing the potential of AI agents while navigating the issues of trust, dependence, and ethical use."
+    )
+
+
+@pytest.mark.vcr(filter_headers=["authorization"])
 def test_hierarchical_process():
     from langchain_openai import ChatOpenAI
 
@@ -997,6 +1022,8 @@ def test_manager_agent_with_tools_raises_exception():
 
 @pytest.mark.vcr(filter_headers=["authorization"])
 def test_kickoff_for_each_basic():
+    from unittest.mock import call, patch
+
     inputs = [
         {"topic": "dog"},
         {"topic": "cat"},
@@ -1011,12 +1038,28 @@ def test_kickoff_for_each_basic():
 
     task = Task(
         description="Give me an analysis around {topic}.",
-        expected_output="5 bullet points about {topic}.",
+        expected_output="1 bullet point about {topic} that's under 15 words.",
+        agent=agent,
     )
 
     crew = Crew(agents=[agent], tasks=[task])
-    result = crew.kickoff_for_each(inputs=inputs)
 
-    for res in result:
-        print("kickoff_for_each result", res)
-    assert len(result) == len(inputs)
+    expected_outputs = [
+        "Dogs, known for their loyalty, play significant roles in emotional support and companionship.",
+        "Cats are independent creatures known for their agility and hunting prowess.",
+        "Apples are a rich source of dietary fiber and vitamin C.",
+    ]
+
+    with patch.object(Crew, "kickoff") as mock_kickoff:
+        mock_kickoff.side_effect = expected_outputs
+
+        results = crew.kickoff_for_each(inputs=inputs)
+
+    # Assertions
+    assert len(results) == len(inputs)
+    for i, res in enumerate(results):
+        assert res == expected_outputs[i]
+
+    # Verify kickoff was called the correct number of times
+    assert mock_kickoff.call_count == len(inputs)
+    mock_kickoff.assert_has_calls([call(inputs=input_data) for input_data in inputs])
