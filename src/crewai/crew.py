@@ -294,7 +294,7 @@ class Crew(BaseModel):
         # TODO: Implement training
         pass
 
-    def kickoff_for_each(self, inputs: List[Dict[str, Any]]) -> List:
+    def kickoff_for_each(self, inputs: List[Dict[str, Any]]) -> List[str]:
         """Executes the Crew's workflow for each input in the list and aggregates results."""
         results = []
 
@@ -310,16 +310,11 @@ class Crew(BaseModel):
         """Asynchronous kickoff method to start the crew execution."""
         return await asyncio.to_thread(self.kickoff, inputs)
 
-    async def kickoff_for_each_async(self, inputs: List[Dict]) -> List[Any]:
+    async def kickoff_for_each_async(self, inputs: List[Dict]) -> List[str]:
         async def run_crew(input_data):
             crew = self.copy()
 
-            for task in crew.tasks:
-                task.interpolate_inputs(input_data)
-            for agent in crew.agents:
-                agent.interpolate_inputs(input_data)
-
-            return await crew.kickoff_async()
+            return await crew.kickoff_async(inputs=input_data)
 
         tasks = [asyncio.create_task(run_crew(input_data))
                  for input_data in inputs]

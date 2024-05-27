@@ -48,6 +48,7 @@ crewai-tools = "^0.2.6"
 pytest = "^8.0.0"
 pytest-vcr = "^1.0.2"
 python-dotenv = "1.0.0"
+pytest-asyncio = "^0.23.0"
 
 [tool.poetry.scripts]
 crewai = "crewai.cli.cli:crewai"

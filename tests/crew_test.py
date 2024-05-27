@@ -1122,6 +1122,7 @@ def test_kickoff_for_each_invalid_input():
         expected_output="1 bullet point about {topic} that's under 15 words.",
         agent=agent,
     )
+
     crew = Crew(agents=[agent], tasks=[task])
 
     with pytest.raises(TypeError):
@@ -1157,13 +1158,121 @@ def test_kickoff_for_each_error_handling():
 
     crew = Crew(agents=[agent], tasks=[task])
 
-    # Mock the kickoff method to raise an exception for one input
     with patch.object(Crew, "kickoff") as mock_kickoff:
         mock_kickoff.side_effect = expected_outputs[:2] + [
             Exception("Simulated kickoff error")
         ]
         with pytest.raises(Exception, match="Simulated kickoff error"):
             crew.kickoff_for_each(inputs=inputs)
+
+
+@pytest.mark.vcr(filter_headers=["authorization"])
+@pytest.mark.asyncio
+async def test_kickoff_async_basic_functionality_and_output():
+    """Tests the basic functionality and output of kickoff_async."""
+    from unittest.mock import patch
+
+    inputs = {"topic": "dog"}
+
+    agent = Agent(
+        role="{topic} Researcher",
+        goal="Express hot takes on {topic}.",
+        backstory="You have a lot of experience with {topic}.",
+    )
+
+    task = Task(
+        description="Give me an analysis around {topic}.",
+        expected_output="1 bullet point about {topic} that's under 15 words.",
+        agent=agent,
+    )
+
+    # Create the crew
+    crew = Crew(
+        agents=[agent],
+        tasks=[task],
+    )
+
+    expected_output = "This is a sample output from kickoff."
+    with patch.object(Crew, "kickoff", return_value=expected_output) as mock_kickoff:
+        result = await crew.kickoff_async(inputs)
+
+        assert isinstance(result, str), "Result should be a string"
+        assert result == expected_output, "Result should match expected output"
+        mock_kickoff.assert_called_once_with(inputs)
+
+
+@pytest.mark.vcr(filter_headers=["authorization"])
+@pytest.mark.asyncio  # Use pytest-asyncio for async tests
+async def test_akickoff_for_each_async_basic_functionality_and_output():
+    """Tests the basic functionality and output of akickoff_for_each_async."""
+    from unittest.mock import patch
+
+    inputs = [
+        {"topic": "dog"},
+        {"topic": "cat"},
+        {"topic": "apple"},
+    ]
+
+    # Define expected outputs for each input
+    expected_outputs = [
+        "Dogs are loyal companions and popular pets.",
+        "Cats are independent and low-maintenance pets.",
+        "Apples are a rich source of dietary fiber and vitamin C.",
+    ]
+
+    agent = Agent(
+        role="{topic} Researcher",
+        goal="Express hot takes on {topic}.",
+        backstory="You have a lot of experience with {topic}.",
+    )
+
+    task = Task(
+        description="Give me an analysis around {topic}.",
+        expected_output="1 bullet point about {topic} that's under 15 words.",
+        agent=agent,
+    )
+
+    with patch.object(
+        Crew, "kickoff_async", side_effect=expected_outputs
+    ) as mock_kickoff_async:
+        crew = Crew(agents=[agent], tasks=[task])
+
+        results = await crew.kickoff_for_each_async(inputs)
+
+        assert len(results) == len(inputs)
+        assert results == expected_outputs
+        for input_data in inputs:
+            mock_kickoff_async.assert_any_call(inputs=input_data)
+
+
+@pytest.mark.vcr(filter_headers=["authorization"])
+@pytest.mark.asyncio
+async def test_akickoff_for_each_async_empty_input():
+    """Tests if akickoff_for_each_async handles an empty input list."""
+
+    agent = Agent(
+        role="{topic} Researcher",
+        goal="Express hot takes on {topic}.",
+        backstory="You have a lot of experience with {topic}.",
+    )
+
+    task = Task(
+        description="Give me an analysis around {topic}.",
+        expected_output="1 bullet point about {topic} that's under 15 words.",
+        agent=agent,
+    )
+
+    # Create the crew
+    crew = Crew(
+        agents=[agent],
+        tasks=[task],
+    )
+
+    # Call the function we are testing
+    results = await crew.kickoff_for_each_async([])
+
+    # Assertion
+    assert results == [], "Result should be an empty list when input is empty"
 
 
 def test_crew_train_success():
