@@ -18,6 +18,7 @@ from .tools import (
 	RagTool,
 	ScrapeElementFromWebsiteTool,
 	ScrapeWebsiteTool,
+    ScrapflyScrapeWebsiteTool,
 	SeleniumScrapingTool,
 	WebsiteSearchTool,
 	XMLSearchTool,
