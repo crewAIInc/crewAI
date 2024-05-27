@@ -12,7 +12,7 @@ class RPMController(BaseModel):
     max_rpm: Union[int, None] = Field(default=None)
     logger: Logger = Field(default=None)
     _current_rpm: int = PrivateAttr(default=0)
-    _timer: threading.Timer | None = PrivateAttr(default=None)
+    _timer: Union[threading.Timer, None] = PrivateAttr(default=None)
     _lock: threading.Lock = PrivateAttr(default=None)
     _shutdown_flag = False
 

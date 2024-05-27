@@ -2,7 +2,7 @@ import os
 import re
 import threading
 import uuid
-from typing import Any, Dict, List, Optional, Type
+from typing import Any, Dict, List, Optional, Type, Union
 
 from langchain_openai import ChatOpenAI
 from pydantic import UUID4, BaseModel, Field, field_validator, model_validator
@@ -146,7 +146,7 @@ class Task(BaseModel):
 
     def execute(  # type: ignore # Missing return statement
         self,
-        agent: Agent | None = None,
+        agent: Union[Agent, None] = None,
         context: Optional[str] = None,
         tools: Optional[List[Any]] = None,
     ) -> str:
