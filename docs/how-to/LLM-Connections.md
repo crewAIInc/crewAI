@@ -88,13 +88,12 @@ ollama create $custom_model_name -f ./Llama2ModelFile
 6. Enjoy your free Llama2 model that powered up by excellent agents from crewai.   
 ```
 from crewai import Agent, Task, Crew
-from langchain_openai import ChatOpenAI
+from langchain_community.chat_models import ChatOllama
 import os
 os.environ["OPENAI_API_KEY"] = "NA"
 
-llm = ChatOpenAI(
-    model = "crewai-llama2",
-    base_url = "http://localhost:11434/v1")
+llm = ChatOllama(
+    model = "crewai-llama2")
 
 general_agent = Agent(role = "Math Professor",
                       goal = """Provide the solution to the students that are asking mathematical questions and give them the answer.""",
