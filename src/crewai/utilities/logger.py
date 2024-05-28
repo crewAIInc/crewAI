@@ -1,4 +1,5 @@
 from crewai.utilities.printer import Printer
+from datetime import datetime
 
 
 class Logger:
