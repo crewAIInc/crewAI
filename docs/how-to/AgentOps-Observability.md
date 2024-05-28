@@ -49,7 +49,7 @@ AGENTOPS_API_KEY=<YOUR_AGENTOPS_API_KEY>
 3. **Install AgentOps:**
 Install AgentOps with:
 ```
-pip install crewai[agentops]
+pip install 'crewai[agentops]'
 ```
 or
 ```
