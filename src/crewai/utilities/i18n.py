@@ -11,6 +11,19 @@ class I18N(BaseModel):
         default=None,
         description="Path to the prompt_file file to load",
     )
+    prompt_overrides: Optional[dict] = Field(
+        default=None,
+        description="dict with overrides to the prompts loaded from the prompt_file file",
+    )
+    
+    @classmethod
+    def merge_dicts(cls, d1, d2):
+        for key, value in d2.items():
+            if isinstance(value, dict) and key in d1 and isinstance(d1[key], dict):
+                cls.merge_dicts(d1[key], value)
+            else:
+                d1[key] = value
+        return d1
 
     @model_validator(mode="after")
     def load_prompts(self) -> "I18N":
@@ -32,7 +45,10 @@ class I18N(BaseModel):
 
         if not self._prompts:
             self._prompts = {}
-
+        
+        if self.prompt_overrides:
+            self.merge_dicts(self._prompts, self.prompt_overrides)
+            
         return self
 
     def slice(self, slice: str) -> str:

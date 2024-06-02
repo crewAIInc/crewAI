@@ -46,6 +46,7 @@ class Crew(BaseModel):
         config: Configuration settings for the crew.
         max_rpm: Maximum number of requests per minute for the crew execution to be respected.
         prompt_file: Path to the prompt json file to be used for the crew.
+        prompt_overrides: dict with overrides to prompt_file or default prompts.
         id: A unique identifier for the crew instance.
         full_output: Whether the crew should return the full output with all tasks outputs or just the final output.
         task_callback: Callback to be executed after each task for every agents execution.
@@ -116,6 +117,10 @@ class Crew(BaseModel):
     prompt_file: str = Field(
         default=None,
         description="Path to the prompt json file to be used for the crew.",
+    )
+    prompt_overrides: Optional[dict] = Field(
+        default=None,
+        description="overrides to prompt_file or default prompts.",
     )
     output_log_file: Optional[Union[bool, str]] = Field(
         default=False,
@@ -247,7 +252,7 @@ class Crew(BaseModel):
         self._interpolate_inputs(inputs)  # type: ignore # Argument 1 to "_interpolate_inputs" of "Crew" has incompatible type "dict[str, Any] | None"; expected "dict[str, Any]"
         self._set_tasks_callbacks()
 
-        i18n = I18N(prompt_file=self.prompt_file)
+        i18n = I18N(prompt_file=self.prompt_file, prompt_overrides=self.prompt_overrides)
 
         for agent in self.agents:
             agent.i18n = i18n
@@ -324,7 +329,7 @@ class Crew(BaseModel):
     def _run_hierarchical_process(self) -> str:
         """Creates and assigns a manager agent to make sure the crew completes the tasks."""
 
-        i18n = I18N(prompt_file=self.prompt_file)
+        i18n = I18N(prompt_file=self.prompt_file, prompt_overrides=self.prompt_overrides)
         if self.manager_agent is not None:
             self.manager_agent.allow_delegation = True
             manager = self.manager_agent

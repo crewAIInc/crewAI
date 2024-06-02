@@ -42,3 +42,18 @@ def test_prompt_file():
     i18n.load_prompts()
     assert isinstance(i18n.retrieve("slices", "role_playing"), str)
     assert i18n.retrieve("slices", "role_playing") == "Lorem ipsum dolor sit amet"
+
+def test_prompt_overrides():
+    import os
+
+    path = os.path.join(os.path.dirname(__file__), "prompts.json")
+    prompt_overrides = {
+        "slices": {
+            "role_playing": "More Lorem ipsum dolor sit amet"
+        }
+    }
+    i18n = I18N(prompt_file=path, prompt_overrides=prompt_overrides)
+    i18n.load_prompts()
+    
+    assert isinstance(i18n.retrieve("slices", "role_playing"), str)
+    assert i18n.retrieve("slices", "role_playing") == "More Lorem ipsum dolor sit amet"
