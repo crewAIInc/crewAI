@@ -2,6 +2,8 @@ import ast
 from difflib import SequenceMatcher
 from textwrap import dedent
 from typing import Any, List, Union
+import asyncio
+import inspect
 
 from langchain_core.tools import BaseTool
 from langchain_openai import ChatOpenAI
@@ -123,6 +125,11 @@ class ToolUsage:
                 tool=calling.tool_name, input=calling.arguments
             )
 
+        tool_method = tool.func
+        is_async_tool = asyncio.iscoroutinefunction(
+            tool_method
+        ) or inspect.iscoroutinefunction(tool_method)
+
         if not result:
             try:
                 if calling.tool_name in [
@@ -139,16 +146,28 @@ class ToolUsage:
                             for k, v in calling.arguments.items()
                             if k in acceptable_args
                         }
-                        result = tool._run(**arguments)
+                        if is_async_tool:
+                            result = asyncio.run(tool._run(**arguments))
+                        else:
+                            result = tool._run(**arguments)
                     except Exception:
                         if tool.args_schema:
                             arguments = calling.arguments
-                            result = tool._run(**arguments)
+                            if is_async_tool:
+                                result = asyncio.run(tool._run(**arguments))
+                            else:
+                                result = tool._run(**arguments)
                         else:
                             arguments = calling.arguments.values()  # type: ignore # Incompatible types in assignment (expression has type "dict_values[str, Any]", variable has type "dict[str, Any]")
-                            result = tool._run(*arguments)
+                            if is_async_tool:
+                                result = asyncio.run(tool._run(*arguments))
+                            else:
+                                result = tool._run(*arguments)
                 else:
-                    result = tool._run()
+                    if is_async_tool:
+                        result = asyncio.run(tool._run())
+                    else:
+                        result = tool._run()
             except Exception as e:
                 self._run_attempts += 1
                 if self._run_attempts > self._max_parsing_attempts:
