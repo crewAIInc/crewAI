@@ -3,7 +3,6 @@ from difflib import SequenceMatcher
 from textwrap import dedent
 from typing import Any, List, Union
 import asyncio
-import inspect
 
 from langchain_core.tools import BaseTool
 from langchain_openai import ChatOpenAI
@@ -125,10 +124,16 @@ class ToolUsage:
                 tool=calling.tool_name, input=calling.arguments
             )
 
-        tool_method = tool.func
-        is_async_tool = asyncio.iscoroutinefunction(
-            tool_method
-        ) or inspect.iscoroutinefunction(tool_method)
+        tool_method = tool.func or tool.coroutine
+        is_async_tool = asyncio.iscoroutinefunction(tool_method)
+
+        if is_async_tool:
+            if tool.func:
+                # async tool defined using BaseTool class from crewai_tools
+                async_tool_run = tool._run
+            elif tool.coroutine:
+                # async tool defined using @tool decorator from langchain
+                async_tool_run = tool._arun
 
         if not result:
             try:
@@ -147,25 +152,25 @@ class ToolUsage:
                             if k in acceptable_args
                         }
                         if is_async_tool:
-                            result = asyncio.run(tool._run(**arguments))
+                            result = asyncio.run(async_tool_run(**arguments))
                         else:
                             result = tool._run(**arguments)
                     except Exception:
                         if tool.args_schema:
                             arguments = calling.arguments
                             if is_async_tool:
-                                result = asyncio.run(tool._run(**arguments))
+                                result = asyncio.run(async_tool_run(**arguments))
                             else:
                                 result = tool._run(**arguments)
                         else:
                             arguments = calling.arguments.values()  # type: ignore # Incompatible types in assignment (expression has type "dict_values[str, Any]", variable has type "dict[str, Any]")
                             if is_async_tool:
-                                result = asyncio.run(tool._run(*arguments))
+                                result = asyncio.run(async_tool_run(*arguments))
                             else:
                                 result = tool._run(*arguments)
                 else:
                     if is_async_tool:
-                        result = asyncio.run(tool._run())
+                        result = asyncio.run(async_tool_run())
                     else:
                         result = tool._run()
             except Exception as e:

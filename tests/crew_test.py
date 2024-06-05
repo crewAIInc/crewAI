@@ -941,15 +941,14 @@ def test_manager_agent():
         execute.assert_called()
 
 
-@pytest.mark.vcr(filter_headers=["authorization"])
-def test_crew_async_tool_execution():
+def test_crew_async_tool_execution_langchain():
     from langchain.tools import tool
     from langchain_openai import ChatOpenAI
     import asyncio
 
     @tool
-    async def async_answer() -> str:
-        """Useful for when you need to multiply two numbers together."""
+    async def async_search(query: str) -> str:
+        """Useful to get the answer to a user query."""
         await asyncio.sleep(1)
         return "The capital of France is Paris."
 
@@ -959,7 +958,49 @@ def test_crew_async_tool_execution():
         backstory=(
             "You are a virtual concierge specialized in research. Respond to our first-class users with the latest information."
         ),
-        tools=[async_answer],
+        tools=[async_search],
+        llm=ChatOpenAI(temperature=0, model="gpt-4"),
+    )
+    task_description = "Find the capital of France"
+    expected_output = "A response to the user query."
+
+    async_task = Task(
+        description=task_description, expected_output=expected_output, agent=agent
+    )
+
+    crew = Crew(agents=[agent], tasks=[async_task])
+
+    result = crew.kickoff()
+    assert result == "The capital of France is Paris."
+
+
+def test_crew_async_tool_execution():
+    from langchain.tools import tool
+    from langchain_openai import ChatOpenAI
+    import asyncio
+    import time
+    from crewai_tools import BaseTool
+
+    class AsyncSearch(BaseTool):
+        def __init__(self):
+            super().__init__(
+                name="AsyncSearch",
+                description="Performs searches based on query",
+            )
+
+        async def _run(self, query: str):
+            await asyncio.sleep(1)
+            return "The capital of France is Paris."
+
+    async_search = AsyncSearch()
+
+    agent = Agent(
+        role="Research",
+        goal="Research the user query and provide a brief and concise response. If you need more information, ask the user for it.",
+        backstory=(
+            "You are a virtual concierge specialized in research. Respond to our first-class users with the latest information."
+        ),
+        tools=[async_search],
         llm=ChatOpenAI(temperature=0, model="gpt-4"),
     )
     task_description = "Find the capital of France"
