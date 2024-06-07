@@ -253,8 +253,9 @@ class Crew(BaseModel):
         self._set_tasks_callbacks()
 
         i18n = I18N(prompt_file=self.prompt_file)
-        agentops.set_parent_key("daebe730-f54d-4af5-98df-e6946fb76d13")
-        agentops.add_tags(["crewai"])
+        if agentops:
+            agentops.set_parent_key("daebe730-f54d-4af5-98df-e6946fb76d13")
+            agentops.add_tags(["crewai"])
 
         for agent in self.agents:
             agent.i18n = i18n
