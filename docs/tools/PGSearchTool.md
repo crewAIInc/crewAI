@@ -19,7 +19,7 @@ pip install 'crewai[tools]'
 Below is a proposed example showcasing how to use the PGSearchTool for conducting a semantic search on a table within a PostgreSQL database:
 
 ```python
-rom crewai_tools import PGSearchTool
+from crewai_tools import PGSearchTool
 
 # Initialize the tool with the database URI and the target table name
 tool = PGSearchTool(db_uri='postgresql://user:password@localhost:5432/mydatabase', table_name='employees')
@@ -48,7 +48,7 @@ tool = PGSearchTool(
             ),
         ),
         embedder=dict(
-            provider="google",
+            provider="google", # or openai, ollama, ...
             config=dict(
                 model="models/embedding-001",
                 task_type="retrieval_document",

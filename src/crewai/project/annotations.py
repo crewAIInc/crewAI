@@ -1,14 +1,28 @@
 tasks_order = []
 
 
+def memoize(func):
+    cache = {}
+
+    def memoized_func(*args, **kwargs):
+        key = (args, tuple(kwargs.items()))
+        if key not in cache:
+            cache[key] = func(*args, **kwargs)
+        return cache[key]
+
+    return memoized_func
+
+
 def task(func):
     func.is_task = True
     tasks_order.append(func.__name__)
+    func = memoize(func)
     return func
 
 
 def agent(func):
     func.is_agent = True
+    func = memoize(func)
     return func
 
 

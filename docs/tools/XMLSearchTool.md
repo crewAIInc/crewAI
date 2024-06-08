@@ -17,7 +17,7 @@ pip install 'crewai[tools]'
 Here are two examples demonstrating how to use the XMLSearchTool. The first example shows searching within a specific XML file, while the second example illustrates initiating a search without predefining an XML path, providing flexibility in search scope.
 
 ```python
-from crewai_tools.tools.xml_search_tool import XMLSearchTool
+from crewai_tools import XMLSearchTool
 
 # Allow agents to search within any XML file's content as it learns about their paths during execution
 tool = XMLSearchTool()
@@ -48,7 +48,7 @@ tool = XMLSearchTool(
             ),
         ),
         embedder=dict(
-            provider="google",
+            provider="google", # or openai, ollama, ...
             config=dict(
                 model="models/embedding-001",
                 task_type="retrieval_document",

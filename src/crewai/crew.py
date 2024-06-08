@@ -36,6 +36,7 @@ class Crew(BaseModel):
         tasks: List of tasks assigned to the crew.
         agents: List of agents part of this crew.
         manager_llm: The language model that will run manager agent.
+        manager_agent: Custom agent that will be used as manager.
         memory: Whether the crew should use memory to store memories of it's execution.
         manager_callbacks: The callback handlers to be executed by the manager agent when hierarchical process is used
         cache: Whether the crew should use a cache to store the results of the tools execution.
@@ -44,11 +45,12 @@ class Crew(BaseModel):
         verbose: Indicates the verbosity level for logging during execution.
         config: Configuration settings for the crew.
         max_rpm: Maximum number of requests per minute for the crew execution to be respected.
+        prompt_file: Path to the prompt json file to be used for the crew.
         id: A unique identifier for the crew instance.
         full_output: Whether the crew should return the full output with all tasks outputs or just the final output.
         task_callback: Callback to be executed after each task for every agents execution.
         step_callback: Callback to be executed after each step for every agents execution.
-        share_crew: Whether you want to share the complete crew infromation and execution with crewAI to make the library better, and allow us to train models.
+        share_crew: Whether you want to share the complete crew information and execution with crewAI to make the library better, and allow us to train models.
     """
 
     __hash__ = object.__hash__  # type: ignore
@@ -111,13 +113,9 @@ class Crew(BaseModel):
         default=None,
         description="Maximum number of requests per minute for the crew execution to be respected.",
     )
-    language: str = Field(
-        default="en",
-        description="Language used for the crew, defaults to English.",
-    )
-    language_file: str = Field(
+    prompt_file: str = Field(
         default=None,
-        description="Path to the language file to be used for the crew.",
+        description="Path to the prompt json file to be used for the crew.",
     )
     output_log_file: Optional[Union[bool, str]] = Field(
         default=False,
@@ -166,21 +164,32 @@ class Crew(BaseModel):
         """Set private attributes."""
         if self.memory:
             self._long_term_memory = LongTermMemory()
-            self._short_term_memory = ShortTermMemory(embedder_config=self.embedder)
-            self._entity_memory = EntityMemory(embedder_config=self.embedder)
+            self._short_term_memory = ShortTermMemory(
+                crew=self, embedder_config=self.embedder
+            )
+            self._entity_memory = EntityMemory(crew=self, embedder_config=self.embedder)
         return self
 
     @model_validator(mode="after")
     def check_manager_llm(self):
         """Validates that the language model is set when using hierarchical process."""
-        if self.process == Process.hierarchical and (
-            not self.manager_llm and not self.manager_agent
-        ):
-            raise PydanticCustomError(
-                "missing_manager_llm",
-                "Attribute `manager_llm` is required when using hierarchical process.",
-                {},
-            )
+        if self.process == Process.hierarchical:
+            if not self.manager_llm and not self.manager_agent:
+                raise PydanticCustomError(
+                    "missing_manager_llm_or_manager_agent",
+                    "Attribute `manager_llm` or `manager_agent` is required when using hierarchical process.",
+                    {},
+                )
+
+            if (self.manager_agent is not None) and (
+                self.agents.count(self.manager_agent) > 0
+            ):
+                raise PydanticCustomError(
+                    "manager_agent_in_agents",
+                    "Manager agent should not be included in agents list.",
+                    {},
+                )
+
         return self
 
     @model_validator(mode="after")
@@ -235,10 +244,10 @@ class Crew(BaseModel):
     def kickoff(self, inputs: Optional[Dict[str, Any]] = {}) -> str:
         """Starts the crew to work on its assigned tasks."""
         self._execution_span = self._telemetry.crew_execution_span(self)
-        self._interpolate_inputs(inputs)
+        self._interpolate_inputs(inputs)  # type: ignore # Argument 1 to "_interpolate_inputs" of "Crew" has incompatible type "dict[str, Any] | None"; expected "dict[str, Any]"
         self._set_tasks_callbacks()
 
-        i18n = I18N(language=self.language, language_file=self.language_file)
+        i18n = I18N(prompt_file=self.prompt_file)
 
         for agent in self.agents:
             agent.i18n = i18n
@@ -256,8 +265,8 @@ class Crew(BaseModel):
         if self.process == Process.sequential:
             result = self._run_sequential_process()
         elif self.process == Process.hierarchical:
-            result, manager_metrics = self._run_hierarchical_process()
-            metrics.append(manager_metrics)
+            result, manager_metrics = self._run_hierarchical_process()  # type: ignore # Unpacking a string is disallowed
+            metrics.append(manager_metrics)  # type: ignore # Cannot determine type of "manager_metrics"
 
         else:
             raise NotImplementedError(
@@ -273,11 +282,15 @@ class Crew(BaseModel):
 
         return result
 
+    def train(self, n_iterations: int) -> None:
+        # TODO: Implement training
+        pass
+
     def _run_sequential_process(self) -> str:
         """Executes tasks sequentially and returns the final output."""
         task_output = ""
         for task in self.tasks:
-            if task.agent.allow_delegation:
+            if task.agent.allow_delegation:  # type: ignore #  Item "None" of "Agent | None" has no attribute "allow_delegation"
                 agents_for_delegation = [
                     agent for agent in self.agents if agent != task.agent
                 ]
@@ -311,13 +324,14 @@ class Crew(BaseModel):
     def _run_hierarchical_process(self) -> str:
         """Creates and assigns a manager agent to make sure the crew completes the tasks."""
 
-        i18n = I18N(language=self.language, language_file=self.language_file)
-        try:
-            self.manager_agent.allow_delegation = (
-                True  # Forcing Allow delegation to the manager
-            )
+        i18n = I18N(prompt_file=self.prompt_file)
+        if self.manager_agent is not None:
+            self.manager_agent.allow_delegation = True
             manager = self.manager_agent
-        except:
+            if len(manager.tools) > 0:
+                raise Exception("Manager agent should not have tools")
+            manager.tools = AgentTools(agents=self.agents).tools()
+        else:
             manager = Agent(
                 role=i18n.retrieve("hierarchical_manager_agent", "role"),
                 goal=i18n.retrieve("hierarchical_manager_agent", "goal"),
@@ -349,22 +363,23 @@ class Crew(BaseModel):
                 )
 
         self._finish_execution(task_output)
-        return self._format_output(task_output), manager._token_process.get_summary()
+        return self._format_output(task_output), manager._token_process.get_summary()  # type: ignore # Incompatible return value type (got "tuple[str, Any]", expected "str")
 
-    def _set_tasks_callbacks(self) -> str:
+    def _set_tasks_callbacks(self) -> None:
         """Sets callback for every task suing task_callback"""
         for task in self.tasks:
-            self.task_callback = task.callback
+            if not task.callback:
+                task.callback = self.task_callback
 
-    def _interpolate_inputs(self, inputs: Dict[str, Any]) -> str:
+    def _interpolate_inputs(self, inputs: Dict[str, Any]) -> None:
         """Interpolates the inputs in the tasks and agents."""
-        [task.interpolate_inputs(inputs) for task in self.tasks]
-        [agent.interpolate_inputs(inputs) for agent in self.agents]
+        [task.interpolate_inputs(inputs) for task in self.tasks]  # type: ignore # "interpolate_inputs" of "Task" does not return a value (it only ever returns None)
+        [agent.interpolate_inputs(inputs) for agent in self.agents]  # type: ignore # "interpolate_inputs" of "Agent" does not return a value (it only ever returns None)
 
     def _format_output(self, output: str) -> str:
         """Formats the output of the crew execution."""
         if self.full_output:
-            return {
+            return {  # type: ignore # Incompatible return value type (got "dict[str, Sequence[str | TaskOutput | None]]", expected "str")
                 "final_output": output,
                 "tasks_outputs": [task.output for task in self.tasks if task],
             }

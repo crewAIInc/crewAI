@@ -1,3 +1,4 @@
+import os
 from pathlib import Path
 
 import appdirs
@@ -13,6 +14,11 @@ def db_storage_path():
 
 
 def get_project_directory_name():
-    cwd = Path.cwd()
-    project_directory_name = cwd.name
-    return project_directory_name
+    project_directory_name = os.environ.get("CREWAI_STORAGE_DIR")
+
+    if project_directory_name:
+        return project_directory_name
+    else:
+        cwd = Path.cwd()
+        project_directory_name = cwd.name
+        return project_directory_name

@@ -1,0 +1,40 @@
+{
+  "hierarchical_manager_agent": {
+    "role": "Lorem ipsum dolor sit amet",
+    "goal": "Lorem ipsum dolor sit amet",
+    "backstory": "Lorem ipsum dolor sit amet."
+  },
+  "planning_manager_agent": {
+    "role": "Lorem ipsum dolor sit amet",
+    "goal": "Lorem ipsum dolor sit amet",
+    "backstory": "Lorem ipsum dolor sit amet."
+  },
+  "slices": {
+    "observation": "Lorem ipsum dolor sit amet",
+    "task": "Lorem ipsum dolor sit amet",
+    "memory": "Lorem ipsum dolor sit amet",
+    "role_playing": "Lorem ipsum dolor sit amet",
+    "tools": "Lorem ipsum dolor sit amet",
+    "no_tools": "Lorem ipsum dolor sit amet",
+    "format": "Lorem ipsum dolor sit amet",
+    "final_answer_format": "Lorem ipsum dolor sit amet",
+    "format_without_tools": "Lorem ipsum dolor sit amet",
+    "task_with_context": "Lorem ipsum dolor sit amet",
+    "expected_output": "Lorem ipsum dolor sit amet",
+    "human_feedback": "Lorem ipsum dolor sit amet",
+    "getting_input": "Lorem ipsum dolor sit amet "
+  },
+  "errors": {
+    "force_final_answer": "Lorem ipsum dolor sit amet",
+    "agent_tool_unexsiting_coworker": "Lorem ipsum dolor sit amet",
+    "task_repeated_usage": "Lorem ipsum dolor sit amet",
+    "tool_usage_error": "Lorem ipsum dolor sit amet",
+    "tool_arguments_error": "Lorem ipsum dolor sit amet",
+    "wrong_tool_name": "Lorem ipsum dolor sit amet",
+    "tool_usage_exception": "Lorem ipsum dolor sit amet"
+  },
+  "tools": {
+    "delegate_work": "Lorem ipsum dolor sit amet",
+    "ask_question": "Lorem ipsum dolor sit amet"
+  }
+}

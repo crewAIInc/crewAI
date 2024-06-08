@@ -1,4 +1,5 @@
 import ast
+from difflib import SequenceMatcher
 from textwrap import dedent
 from typing import Any, List, Union
 
@@ -26,13 +27,13 @@ class ToolUsage:
     Class that represents the usage of a tool by an agent.
 
     Attributes:
-        task: Task being executed.
-        tools_handler: Tools handler that will manage the tool usage.
-        tools: List of tools available for the agent.
-        original_tools: Original tools available for the agent before being converted to BaseTool.
-        tools_description: Description of the tools available for the agent.
-        tools_names: Names of the tools available for the agent.
-        function_calling_llm: Language model to be used for the tool usage.
+      task: Task being executed.
+      tools_handler: Tools handler that will manage the tool usage.
+      tools: List of tools available for the agent.
+      original_tools: Original tools available for the agent before being converted to BaseTool.
+      tools_description: Description of the tools available for the agent.
+      tools_names: Names of the tools available for the agent.
+      function_calling_llm: Language model to be used for the tool usage.
     """
 
     def __init__(
@@ -63,7 +64,7 @@ class ToolUsage:
 
         # Set the maximum parsing attempts for bigger models
         if (isinstance(self.function_calling_llm, ChatOpenAI)) and (
-            self.function_calling_llm.openai_api_base == None
+            self.function_calling_llm.openai_api_base is None
         ):
             if self.function_calling_llm.model_name in OPENAI_BIGGER_MODELS:
                 self._max_parsing_attempts = 2
@@ -81,6 +82,8 @@ class ToolUsage:
             self._printer.print(content=f"\n\n{error}\n", color="red")
             self.task.increment_tools_errors()
             return error
+
+        # BUG? The code below seems to be unreachable
         try:
             tool = self._select_tool(calling.tool_name)
         except Exception as e:
@@ -88,15 +91,15 @@ class ToolUsage:
             self.task.increment_tools_errors()
             self._printer.print(content=f"\n\n{error}\n", color="red")
             return error
-        return f"{self._use(tool_string=tool_string, tool=tool, calling=calling)}"
+        return f"{self._use(tool_string=tool_string, tool=tool, calling=calling)}"  # type: ignore # BUG?: "_use" of "ToolUsage" does not return a value (it only ever returns None)
 
     def _use(
         self,
         tool_string: str,
         tool: BaseTool,
         calling: Union[ToolCalling, InstructorToolCalling],
-    ) -> None:
-        if self._check_tool_repeated_usage(calling=calling):
+    ) -> None:  # TODO: Fix this return type
+        if self._check_tool_repeated_usage(calling=calling):  # type: ignore # _check_tool_repeated_usage of "ToolUsage" does not return a value (it only ever returns None)
             try:
                 result = self._i18n.errors("task_repeated_usage").format(
                     tool_names=self.tools_names
@@ -107,15 +110,16 @@ class ToolUsage:
                     tool_name=tool.name,
                     attempts=self._run_attempts,
                 )
-                result = self._format_result(result=result)
-                return result
+                result = self._format_result(result=result)  # type: ignore #  "_format_result" of "ToolUsage" does not return a value (it only ever returns None)
+                return result  # type: ignore # Fix the reutrn type of this function
+
             except Exception:
                 self.task.increment_tools_errors()
 
-        result = None
+        result = None  # type: ignore # Incompatible types in assignment (expression has type "None", variable has type "str")
 
         if self.tools_handler.cache:
-            result = self.tools_handler.cache.read(
+            result = self.tools_handler.cache.read(  # type: ignore # Incompatible types in assignment (expression has type "str | None", variable has type "str")
                 tool=calling.tool_name, input=calling.arguments
             )
 
@@ -129,7 +133,7 @@ class ToolUsage:
 
                 if calling.arguments:
                     try:
-                        acceptable_args = tool.args_schema.schema()["properties"].keys()
+                        acceptable_args = tool.args_schema.schema()["properties"].keys()  # type: ignore # Item "None" of "type[BaseModel] | None" has no attribute "schema"
                         arguments = {
                             k: v
                             for k, v in calling.arguments.items()
@@ -141,7 +145,7 @@ class ToolUsage:
                             arguments = calling.arguments
                             result = tool._run(**arguments)
                         else:
-                            arguments = calling.arguments.values()
+                            arguments = calling.arguments.values()  # type: ignore # Incompatible types in assignment (expression has type "dict_values[str, Any]", variable has type "dict[str, Any]")
                             result = tool._run(*arguments)
                 else:
                     result = tool._run()
@@ -157,9 +161,10 @@ class ToolUsage:
                     ).message
                     self.task.increment_tools_errors()
                     self._printer.print(content=f"\n\n{error_message}\n", color="red")
-                    return error
+                    return error  # type: ignore # No return value expected
+
                 self.task.increment_tools_errors()
-                return self.use(calling=calling, tool_string=tool_string)
+                return self.use(calling=calling, tool_string=tool_string)  # type: ignore # No return value expected
 
             if self.tools_handler:
                 should_cache = True
@@ -168,9 +173,9 @@ class ToolUsage:
                 )
                 if (
                     hasattr(original_tool, "cache_function")
-                    and original_tool.cache_function
+                    and original_tool.cache_function  # type: ignore # Item "None" of "Any | None" has no attribute "cache_function"
                 ):
-                    should_cache = original_tool.cache_function(
+                    should_cache = original_tool.cache_function(  # type: ignore # Item "None" of "Any | None" has no attribute "cache_function"
                         calling.arguments, result
                     )
 
@@ -184,13 +189,13 @@ class ToolUsage:
             tool_name=tool.name,
             attempts=self._run_attempts,
         )
-        result = self._format_result(result=result)
-        return result
+        result = self._format_result(result=result)  # type: ignore # "_format_result" of "ToolUsage" does not return a value (it only ever returns None)
+        return result  # type: ignore # No return value expected
 
     def _format_result(self, result: Any) -> None:
         self.task.used_tools += 1
-        if self._should_remember_format():
-            result = self._remember_format(result=result)
+        if self._should_remember_format():  # type: ignore # "_should_remember_format" of "ToolUsage" does not return a value (it only ever returns None)
+            result = self._remember_format(result=result)  # type: ignore # "_remember_format" of "ToolUsage" does not return a value (it only ever returns None)
         return result
 
     def _should_remember_format(self) -> None:
@@ -201,26 +206,39 @@ class ToolUsage:
         result += "\n\n" + self._i18n.slice("tools").format(
             tools=self.tools_description, tool_names=self.tools_names
         )
-        return result
+        return result  # type: ignore # No return value expected
 
     def _check_tool_repeated_usage(
         self, calling: Union[ToolCalling, InstructorToolCalling]
     ) -> None:
         if not self.tools_handler:
-            return False
+            return False  # type: ignore # No return value expected
         if last_tool_usage := self.tools_handler.last_used_tool:
-            return (calling.tool_name == last_tool_usage.tool_name) and (
+            return (calling.tool_name == last_tool_usage.tool_name) and (  # type: ignore # No return value expected
                 calling.arguments == last_tool_usage.arguments
             )
 
     def _select_tool(self, tool_name: str) -> BaseTool:
-        for tool in self.tools:
-            if tool.name.lower().strip() == tool_name.lower().strip():
+        order_tools = sorted(
+            self.tools,
+            key=lambda tool: SequenceMatcher(
+                None, tool.name.lower().strip(), tool_name.lower().strip()
+            ).ratio(),
+            reverse=True,
+        )
+        for tool in order_tools:
+            if (
+                tool.name.lower().strip() == tool_name.lower().strip()
+                or SequenceMatcher(
+                    None, tool.name.lower().strip(), tool_name.lower().strip()
+                ).ratio()
+                > 0.85
+            ):
                 return tool
         self.task.increment_tools_errors()
         if tool_name and tool_name != "":
             raise Exception(
-                f"Action '{tool_name}' don't exist, these are the only available Actions: {self.tools_description}"
+                f"Action '{tool_name}' don't exist, these are the only available Actions:\n {self.tools_description}"
             )
         else:
             raise Exception(
@@ -247,7 +265,7 @@ class ToolUsage:
         return "\n--\n".join(descriptions)
 
     def _is_gpt(self, llm) -> bool:
-        return isinstance(llm, ChatOpenAI) and llm.openai_api_base == None
+        return isinstance(llm, ChatOpenAI) and llm.openai_api_base is None
 
     def _tool_calling(
         self, tool_string: str
@@ -260,17 +278,17 @@ class ToolUsage:
                     else ToolCalling
                 )
                 converter = Converter(
-                    text=f"Only tools available:\n###\n{self._render()}\n\nReturn a valid schema for the tool, the tool name must be exactly equal one of the options, use this text to inform the valid ouput schema:\n\n{tool_string}```",
+                    text=f"Only tools available:\n###\n{self._render()}\n\nReturn a valid schema for the tool, the tool name must be exactly equal one of the options, use this text to inform the valid output schema:\n\n{tool_string}```",
                     llm=self.function_calling_llm,
                     model=model,
                     instructions=dedent(
                         """\
-                            The schema should have the following structure, only two keys:
-                            - tool_name: str
-                            - arguments: dict (with all arguments being passed)
+              The schema should have the following structure, only two keys:
+              - tool_name: str
+              - arguments: dict (with all arguments being passed)
 
-                            Example:
-                            {"tool_name": "tool name", "arguments": {"arg_name1": "value", "arg_name2": 2}}""",
+              Example:
+              {"tool_name": "tool name", "arguments": {"arg_name1": "value", "arg_name2": 2}}""",
                     ),
                     max_attemps=1,
                 )
@@ -282,16 +300,17 @@ class ToolUsage:
                 tool_name = self.action.tool
                 tool = self._select_tool(tool_name)
                 try:
-                    arguments = ast.literal_eval(self.action.tool_input)
+                    tool_input = self._validate_tool_input(self.action.tool_input)
+                    arguments = ast.literal_eval(tool_input)
                 except Exception:
-                    return ToolUsageErrorException(
+                    return ToolUsageErrorException(  # type: ignore # Incompatible return value type (got "ToolUsageErrorException", expected "ToolCalling | InstructorToolCalling")
                         f'{self._i18n.errors("tool_arguments_error")}'
                     )
                 if not isinstance(arguments, dict):
-                    return ToolUsageErrorException(
+                    return ToolUsageErrorException(  # type: ignore # Incompatible return value type (got "ToolUsageErrorException", expected "ToolCalling | InstructorToolCalling")
                         f'{self._i18n.errors("tool_arguments_error")}'
                     )
-                calling = ToolCalling(
+                calling = ToolCalling(  # type: ignore # Unexpected keyword argument "log" for "ToolCalling"
                     tool_name=tool.name,
                     arguments=arguments,
                     log=tool_string,
@@ -302,9 +321,60 @@ class ToolUsage:
                 self._telemetry.tool_usage_error(llm=self.function_calling_llm)
                 self.task.increment_tools_errors()
                 self._printer.print(content=f"\n\n{e}\n", color="red")
-                return ToolUsageErrorException(
+                return ToolUsageErrorException(  # type: ignore # Incompatible return value type (got "ToolUsageErrorException", expected "ToolCalling | InstructorToolCalling")
                     f'{self._i18n.errors("tool_usage_error").format(error=e)}\nMoving on then. {self._i18n.slice("format").format(tool_names=self.tools_names)}'
                 )
             return self._tool_calling(tool_string)
 
         return calling
+
+    def _validate_tool_input(self, tool_input: str) -> str:
+        try:
+            ast.literal_eval(tool_input)
+            return tool_input
+        except Exception:
+            # Clean and ensure the string is properly enclosed in braces
+            tool_input = tool_input.strip()
+            if not tool_input.startswith("{"):
+                tool_input = "{" + tool_input
+            if not tool_input.endswith("}"):
+                tool_input += "}"
+
+            # Manually split the input into key-value pairs
+            entries = tool_input.strip("{} ").split(",")
+            formatted_entries = []
+
+            for entry in entries:
+                if ":" not in entry:
+                    continue  # Skip malformed entries
+                key, value = entry.split(":", 1)
+
+                # Remove extraneous white spaces and quotes, replace single quotes
+                key = key.strip().strip('"').replace("'", '"')
+                value = value.strip()
+
+                # Handle replacement of single quotes at the start and end of the value string
+                if value.startswith("'") and value.endswith("'"):
+                    value = value[1:-1]  # Remove single quotes
+                    value = (
+                        '"' + value.replace('"', '\\"') + '"'
+                    )  # Re-encapsulate with double quotes
+                elif value.isdigit():  # Check if value is a digit, hence integer
+                    formatted_value = value
+                elif value.lower() in [
+                    "true",
+                    "false",
+                    "null",
+                ]:  # Check for boolean and null values
+                    formatted_value = value.lower()
+                else:
+                    # Assume the value is a string and needs quotes
+                    formatted_value = '"' + value.replace('"', '\\"') + '"'
+
+                # Rebuild the entry with proper quoting
+                formatted_entry = f'"{key}": {formatted_value}'
+                formatted_entries.append(formatted_entry)
+
+            # Reconstruct the JSON string
+            new_json_string = "{" + ", ".join(formatted_entries) + "}"
+            return new_json_string

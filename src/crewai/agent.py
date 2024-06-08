@@ -40,7 +40,7 @@ class Agent(BaseModel):
             backstory: The backstory of the agent.
             config: Dict representation of agent configuration.
             llm: The language model that will run the agent.
-            function_calling_llm: The language model that will the tool calling for this agent, it overrides the crew function_calling_llm.
+            function_calling_llm: The language model that will handle the tool calling for this agent, it overrides the crew function_calling_llm.
             max_iter: Maximum number of iterations for an agent to execute a task.
             memory: Whether the agent should have memory or not.
             max_rpm: Maximum number of requests per minute for the agent execution to be respected.
@@ -112,7 +112,7 @@ class Agent(BaseModel):
     i18n: I18N = Field(default=I18N(), description="Internationalization settings.")
     llm: Any = Field(
         default_factory=lambda: ChatOpenAI(
-            model=os.environ.get("OPENAI_MODEL_NAME", "gpt-4")
+            model=os.environ.get("OPENAI_MODEL_NAME", "gpt-4o")
         ),
         description="Language model that will run the agent.",
     )
@@ -121,6 +121,15 @@ class Agent(BaseModel):
     )
     callbacks: Optional[List[InstanceOf[BaseCallbackHandler]]] = Field(
         default=None, description="Callback to be executed"
+    )
+    system_template: Optional[str] = Field(
+        default=None, description="System format for the agent."
+    )
+    prompt_template: Optional[str] = Field(
+        default=None, description="Prompt format for the agent."
+    )
+    response_template: Optional[str] = Field(
+        default=None, description="Response format for the agent."
     )
 
     _original_role: str | None = None
@@ -168,7 +177,9 @@ class Agent(BaseModel):
                 self.llm.callbacks = []
 
             # Check if an instance of TokenCalcHandler already exists in the list
-            if not any(isinstance(handler, TokenCalcHandler) for handler in self.llm.callbacks):
+            if not any(
+                isinstance(handler, TokenCalcHandler) for handler in self.llm.callbacks
+            ):
                 self.llm.callbacks.append(token_handler)
 
         if not self.agent_executor:
@@ -195,7 +206,7 @@ class Agent(BaseModel):
             Output of the agent
         """
         if self.tools_handler:
-            self.tools_handler.last_used_tool = {}
+            self.tools_handler.last_used_tool = {}  # type: ignore # Incompatible types in assignment (expression has type "dict[Never, Never]", variable has type "ToolCalling")
 
         task_prompt = task.prompt()
 
@@ -215,7 +226,7 @@ class Agent(BaseModel):
                 task_prompt += self.i18n.slice("memory").format(memory=memory)
 
         tools = tools or self.tools
-        parsed_tools = self._parse_tools(tools)
+        parsed_tools = self._parse_tools(tools)  # type: ignore # Argument 1 to "_parse_tools" of "Agent" has incompatible type "list[Any] | None"; expected "list[Any]"
 
         self.create_agent_executor(tools=tools)
         self.agent_executor.tools = parsed_tools
@@ -295,11 +306,17 @@ class Agent(BaseModel):
         }
 
         if self._rpm_controller:
-            executor_args[
-                "request_within_rpm_limit"
-            ] = self._rpm_controller.check_or_wait
+            executor_args["request_within_rpm_limit"] = (
+                self._rpm_controller.check_or_wait
+            )
 
-        prompt = Prompts(i18n=self.i18n, tools=tools).task_execution()
+        prompt = Prompts(
+            i18n=self.i18n,
+            tools=tools,
+            system_template=self.system_template,
+            prompt_template=self.prompt_template,
+            response_template=self.response_template,
+        ).task_execution()
 
         execution_prompt = prompt.partial(
             goal=self.goal,
@@ -307,7 +324,13 @@ class Agent(BaseModel):
             backstory=self.backstory,
         )
 
-        bind = self.llm.bind(stop=[self.i18n.slice("observation")])
+        stop_words = [self.i18n.slice("observation")]
+        if self.response_template:
+            stop_words.append(
+                self.response_template.split("{{ .Response }}")[1].strip()
+            )
+
+        bind = self.llm.bind(stop=stop_words)
         inner_agent = agent_args | execution_prompt | bind | CrewAgentParser(agent=self)
         self.agent_executor = CrewAgentExecutor(
             agent=RunnableAgent(runnable=inner_agent), **executor_args
@@ -344,7 +367,7 @@ class Agent(BaseModel):
             thoughts += f"\n{observation_prefix}{observation}\n{llm_prefix}"
         return thoughts
 
-    def _parse_tools(self, tools: List[Any]) -> List[LangChainTool]:
+    def _parse_tools(self, tools: List[Any]) -> List[LangChainTool]:  # type: ignore # Function "langchain_core.tools.tool" is not valid as a type
         """Parse tools to be used for the task."""
         # tentatively try to import from crewai_tools import BaseTool as CrewAITool
         tools_list = []

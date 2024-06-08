@@ -2,7 +2,7 @@ import contextlib
 import io
 import logging
 import os
-from typing import Any, Dict
+from typing import Any, Dict, List, Optional
 
 from embedchain import App
 from embedchain.llm.base import BaseLlm
@@ -37,13 +37,18 @@ class RAGStorage(Storage):
     search efficiency.
     """
 
-    def __init__(self, type, allow_reset=True, embedder_config=None):
+    def __init__(self, type, allow_reset=True, embedder_config=None, crew=None):
         super().__init__()
         if (
             not os.getenv("OPENAI_API_KEY")
             and not os.getenv("OPENAI_BASE_URL") == "https://api.openai.com/v1"
         ):
             os.environ["OPENAI_API_KEY"] = "fake"
+
+        agents = crew.agents if crew else []
+        agents = [agent.role for agent in agents]
+        agents = "_".join(agents)
+
         config = {
             "app": {
                 "config": {"name": type, "collect_metrics": False, "log_level": "ERROR"}
@@ -58,7 +63,7 @@ class RAGStorage(Storage):
                 "provider": "chroma",
                 "config": {
                     "collection_name": type,
-                    "dir": f"{db_storage_path()}/{type}",
+                    "dir": f"{db_storage_path()}/{type}/{agents}",
                     "allow_reset": allow_reset,
                 },
             },
@@ -72,16 +77,16 @@ class RAGStorage(Storage):
         if allow_reset:
             self.app.reset()
 
-    def save(self, value: Any, metadata: Dict[str, Any]) -> None:
+    def save(self, value: Any, metadata: Dict[str, Any]) -> None:  # type: ignore # BUG?: Should be save(key, value, metadata)  Signature of "save" incompatible with supertype "Storage"
         self._generate_embedding(value, metadata)
 
-    def search(
+    def search(  # type: ignore # BUG?: Signature of "search" incompatible with supertype "Storage"
         self,
         query: str,
         limit: int = 3,
-        filter: dict = None,
+        filter: Optional[dict] = None,
         score_threshold: float = 0.35,
-    ) -> Dict[str, Any]:
+    ) -> List[Any]:
         with suppress_logging():
             try:
                 results = (

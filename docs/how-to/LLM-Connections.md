@@ -54,7 +54,7 @@ OPENAI_API_KEY=''
 
 ## Ollama Integration (ex. for using Llama 2 locally)
 1. [Download Ollama](https://ollama.com/download).   
-2. After setting up the Ollama, Pull the Llama2 by typing following lines into the terminal ```ollama pull Llama2```.   
+2. After setting up the Ollama, Pull the Llama2 by typing following lines into the terminal ```ollama pull llama2```.   
 3. Create a ModelFile similar the one below in your project directory.
 ```
 FROM llama2
@@ -103,7 +103,8 @@ general_agent = Agent(role = "Math Professor",
                       verbose = True,
                       llm = llm)
 task = Task (description="""what is 3 + 5""",
-             agent = general_agent)
+             agent = general_agent,
+             expected_output="A numerical answer.")
 
 crew = Crew(
             agents=[general_agent],
@@ -193,7 +194,7 @@ OPENAI_API_KEY=NA
 
 ### Cohere
 ```sh
-from langchain_community.chat_models import ChatCohere
+from langchain_cohere import ChatCohere
 # Initialize language model
 os.environ["COHERE_API_KEY"] = "your-cohere-api-key"
 llm = ChatCohere()

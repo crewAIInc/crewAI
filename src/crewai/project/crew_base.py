@@ -4,13 +4,15 @@ from pathlib import Path
 
 import yaml
 from dotenv import load_dotenv
+from pydantic import ConfigDict
 
 load_dotenv()
 
 
 def CrewBase(cls):
     class WrappedClass(cls):
-        is_crew_class = True
+        model_config = ConfigDict(arbitrary_types_allowed=True)
+        is_crew_class: bool = True  # type: ignore
 
         base_directory = None
         for frame_info in inspect.stack():
@@ -40,6 +42,7 @@ def CrewBase(cls):
         @staticmethod
         def load_yaml(config_path: str):
             with open(config_path, "r") as file:
+                # parsedContent = YamlParser.parse(file)  # type: ignore # Argument 1 to "parse" has incompatible type "TextIOWrapper"; expected "YamlParser"
                 return yaml.safe_load(file)
 
     return WrappedClass
