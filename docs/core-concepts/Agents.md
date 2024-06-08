@@ -31,6 +31,7 @@ description: What are crewAI Agents and how to use them.
 | **Allow Delegation** *(optional)* | Agents can delegate tasks or questions to one another, ensuring that each task is handled by the most suitable agent. Default is `True`.                                                                                                       |
 | **Step Callback** *(optional)* | A function that is called after each step of the agent. This can be used to log the agent's actions or to perform other operations. It will overwrite the crew `step_callback`.                                                               |
 | **Cache** *(optional)*     | Indicates if the agent should use a cache for tool usage. Default is `True`.                                                                                                                                                                  |
+| **runnable_config** *(optional)*      | A Langchain supported RunnableConfig to be used by the AgentExecutor. Default is `None`.    |
 
 ## Creating an Agent
 
