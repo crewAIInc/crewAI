@@ -55,6 +55,7 @@ def test_ask_question():
         == "As an AI researcher, I don't have personal feelings or emotions like love or hate. However, I recognize the importance of AI Agents in today's technological landscape. They have the potential to greatly enhance our lives and make tasks more efficient. At the same time, it is crucial to consider the ethical implications and societal impacts that come with their use. My role is to provide objective research and analysis on these topics."
     )
 
+
 @pytest.mark.vcr(filter_headers=["authorization"])
 def test_ask_question_with_wrong_co_worker_variable():
     result = tools.ask_question(
@@ -67,6 +68,7 @@ def test_ask_question_with_wrong_co_worker_variable():
         result
         == "No, I don't hate AI agents. In fact, I find them quite fascinating. They are powerful tools that can greatly assist in various tasks, including my research. As a technology researcher, AI and AI agents are subjects of interest to me due to their potential in advancing our understanding and capabilities in various fields. My supposed love for them stems from this professional interest and the potential they hold."
     )
+
 
 @pytest.mark.vcr(filter_headers=["authorization"])
 def test_delegate_work_withwith_coworker_as_array():

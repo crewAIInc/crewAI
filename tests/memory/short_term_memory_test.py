@@ -23,10 +23,7 @@ def short_term_memory():
         expected_output="A list of relevant URLs based on the search query.",
         agent=agent,
     )
-    return ShortTermMemory(crew=Crew(
-        agents=[agent],
-        tasks=[task]
-    ))
+    return ShortTermMemory(crew=Crew(agents=[agent], tasks=[task]))
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
