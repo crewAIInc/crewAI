@@ -276,9 +276,14 @@ class Crew(BaseModel):
         metrics = metrics + [
             agent._token_process.get_summary() for agent in self.agents
         ]
-        self.usage_metrics = {
-            key: sum([m[key] for m in metrics if m is not None]) for key in metrics[0]
-        }
+
+        if metrics:
+            self.usage_metrics = {
+                key: sum([m[key] for m in metrics if m is not None])
+                for key in metrics[0]
+            }
+        else:
+            self.usage_metrics = {}
 
         return result
 
