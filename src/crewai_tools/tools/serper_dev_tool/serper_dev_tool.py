@@ -33,7 +33,7 @@ class SerperDevTool(BaseTool):
 		response = requests.request("POST", self.search_url, headers=headers, data=payload)
 		results = response.json()
 		if 'organic' in results:
-			results = results['organic']
+			results = results['organic'][:self.n_results]
 			string = []
 			for result in results:
 				try:
@@ -44,7 +44,7 @@ class SerperDevTool(BaseTool):
 							"---"
 					]))
 				except KeyError:
-					next
+					continue
 
 			content = '\n'.join(string)
 			return f"\nSearch results: {content}\n"
