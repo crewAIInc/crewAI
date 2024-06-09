@@ -212,6 +212,61 @@ print(f"""
 """)
 ```
 
+## Using Output JSON in Tasks
+
+In the crewAI framework, you can specify that the output of a task should be in JSON format by using the `output_json` parameter. This requires an OpenAI client and ensures that only one output format is set per task. Below is an example demonstrating how to use this feature.
+
+### Example: Defining a Task with JSON Output
+
+Here we define a task that searches for local companies and outputs the results in a JSON format according to a predefined schema using Pydantic models.
+
+```python
+from pydantic import BaseModel
+from typing import List
+
+# Pydantic model definitions
+class CompanyData(BaseModel):
+    Name: str
+    Address: str
+    Phone: str
+    Website: str
+    Email: str
+
+class CompanyList(BaseModel):
+    companies: List[CompanyData] = []
+
+# Task definition using output_json
+task_search_companies = Task(
+    description='Search for local companies using Google Maps. '
+                'The search parameter is "{query}". '
+                'For each company, find the phone number and website. '
+                'Return a JSON list with the details found.',
+    expected_output='List of companies with name, address, phone, website and e-mail in JSON format without additional comments or character escape formatting.',
+    agent=search_agent,
+    tools=[search_tool],
+    async_execution=False,
+    output_json=CompanyList,
+    output_file='companies.json'
+)
+
+# Creating a crew to execute the task
+crew = Crew(
+    agents=[search_agent],
+    tasks=[task_search_companies],
+    verbose=2
+)
+
+# Execute the task
+result = crew.kickoff()
+
+# Accessing the task output
+print(f"""
+    Task completed!
+    Task: {task_search_companies.output.description}
+    Output: {task_search_companies.output.raw_output}
+""")
+```
+
 ## Tool Override Mechanism
 
 Specifying tools in a task allows for dynamic adaptation of agent capabilities, emphasizing CrewAI's flexibility.
