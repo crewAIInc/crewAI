@@ -267,6 +267,31 @@ print(f"""
 """)
 ```
 
+### Example Output
+
+The output of the task, when accessed, would be a JSON structured as follows:
+
+```json
+{
+    "companies": [
+        {
+            "Name": "Tech Innovators Inc.",
+            "Address": "123 Silicon Valley, CA",
+            "Phone": "+1-800-555-1234",
+            "Website": "https://techinnovators.com",
+            "Email": "info@techinnovators.com"
+        },
+        {
+            "Name": "Green Solutions LLC",
+            "Address": "456 Green Street, NY",
+            "Phone": "+1-800-555-5678",
+            "Website": "https://greensolutions.com",
+            "Email": "contact@greensolutions.com"
+        }
+    ]
+}
+```
+
 ## Tool Override Mechanism
 
 Specifying tools in a task allows for dynamic adaptation of agent capabilities, emphasizing CrewAI's flexibility.
