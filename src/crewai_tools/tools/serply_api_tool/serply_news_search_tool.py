@@ -5,6 +5,7 @@ from typing import Type, Any, Optional
 from pydantic.v1 import BaseModel, Field
 from crewai_tools.tools.base_tool import BaseTool
 
+
 class SerplyNewsSearchToolSchema(BaseModel):
     """Input for Serply News Search."""
     search_query: str = Field(..., description="Mandatory search query you want to use to fetch news articles")

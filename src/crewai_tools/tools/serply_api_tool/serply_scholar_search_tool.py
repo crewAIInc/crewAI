@@ -5,6 +5,7 @@ from typing import Type, Any, Optional
 from pydantic.v1 import BaseModel, Field
 from crewai_tools.tools.base_tool import BaseTool
 
+
 class SerplyScholarSearchToolSchema(BaseModel):
     """Input for Serply Scholar Search."""
     search_query: str = Field(..., description="Mandatory search query you want to use to fetch scholarly literature")
@@ -41,8 +42,8 @@ class SerplyScholarSearchTool(BaseTool):
         }
 
     def _run(
-        self,
-        **kwargs: Any,
+            self,
+            **kwargs: Any,
     ) -> Any:
         query_payload = {
             "hl": self.hl

@@ -55,6 +55,45 @@ tool = SerplyScholarSearchTool()
 tool = SerplyScholarSearchTool(proxy_location="GB")
 ```
 
+## Web Page To Markdown
+The following example demonstrates how to initialize the tool and fetch a web page and convert it to markdown:
+
+```python
+from crewai_tools import SerplyWebpageToMarkdownTool
+
+# Initialize the tool for internet searching capabilities
+tool = SerplyWebpageToMarkdownTool()
+
+# change country news (DE - Germany)
+tool = SerplyWebpageToMarkdownTool(proxy_location="DE")
+```
+
+## Combining Multiple Tools
+
+The following example demonstrates performing a Google search to find relevant articles. Then, convert those articles to markdown format for easier extraction of key points.
+
+```python
+from crewai import Agent
+from crewai_tools import SerplyWebSearchTool, SerplyWebpageToMarkdownTool
+
+search_tool = SerplyWebSearchTool()
+convert_to_markdown = SerplyWebpageToMarkdownTool()
+
+# Creating a senior researcher agent with memory and verbose mode
+researcher = Agent(
+  role='Senior Researcher',
+  goal='Uncover groundbreaking technologies in {topic}',
+  verbose=True,
+  memory=True,
+  backstory=(
+    "Driven by curiosity, you're at the forefront of"
+    "innovation, eager to explore and share knowledge that could change"
+    "the world."
+  ),
+  tools=[search_tool, convert_to_markdown],
+  allow_delegation=True
+)
+```
 
 ## Steps to Get Started
 To effectively use the `SerplyApiTool`, follow these steps:
