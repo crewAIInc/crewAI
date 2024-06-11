@@ -341,8 +341,7 @@ class Crew(BaseModel):
                     task.tools += AgentTools(agents=agents_for_delegation).tools()
 
             role = task.agent.role if task.agent is not None else "None"
-            self._logger.log("debug", f"== Working Agent: {
-                             role}", color="bold_purple")
+            self._logger.log("debug", f"== Working Agent: {role}", color="bold_purple")
             self._logger.log(
                 "info", f"== Starting Task: {task.description}", color="bold_purple"
             )
@@ -357,8 +356,7 @@ class Crew(BaseModel):
                 task_output = output
 
             role = task.agent.role if task.agent is not None else "None"
-            self._logger.log("debug", f"== [{role}] Task output: {
-                             task_output}\n\n")
+            self._logger.log("debug", f"== [{role}] Task output: {task_output}\n\n")
 
             if self.output_log_file:
                 self._file_handler.log(

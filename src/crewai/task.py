@@ -302,8 +302,7 @@ class Task(BaseModel):
             if not self._is_gpt(llm):
                 # type: ignore # Argument "model" to "PydanticSchemaParser" has incompatible type "type[BaseModel] | None"; expected "type[BaseModel]"
                 model_schema = PydanticSchemaParser(model=model).get_schema()
-                instructions = f"{
-                    instructions}\n\nThe json should have the following structure, with the following keys:\n{model_schema}"
+                instructions = f"{instructions}\n\nThe json should have the following structure, with the following keys:\n{model_schema}"
 
             converter = Converter(
                 llm=llm, text=result, model=model, instructions=instructions
