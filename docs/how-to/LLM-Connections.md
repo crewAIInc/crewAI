@@ -194,7 +194,7 @@ OPENAI_API_KEY=NA
 
 ### Cohere
 ```sh
-from langchain_community.chat_models import ChatCohere
+from langchain_cohere import ChatCohere
 # Initialize language model
 os.environ["COHERE_API_KEY"] = "your-cohere-api-key"
 llm = ChatCohere()

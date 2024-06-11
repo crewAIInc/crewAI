@@ -16,5 +16,5 @@ class FileHandler:
     def log(self, **kwargs):
         now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         message = f"{now}: ".join([f"{key}={value}" for key, value in kwargs.items()])
-        with open(self._path, "a") as file:
+        with open(self._path, "a", encoding = 'utf-8') as file:
             file.write(message + "\n")

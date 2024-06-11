@@ -40,7 +40,7 @@ class Agent(BaseModel):
             backstory: The backstory of the agent.
             config: Dict representation of agent configuration.
             llm: The language model that will run the agent.
-            function_calling_llm: The language model that will the tool calling for this agent, it overrides the crew function_calling_llm.
+            function_calling_llm: The language model that will handle the tool calling for this agent, it overrides the crew function_calling_llm.
             max_iter: Maximum number of iterations for an agent to execute a task.
             memory: Whether the agent should have memory or not.
             max_rpm: Maximum number of requests per minute for the agent execution to be respected.
@@ -114,7 +114,7 @@ class Agent(BaseModel):
         default=I18N(), description="Internationalization settings.")
     llm: Any = Field(
         default_factory=lambda: ChatOpenAI(
-            model=os.environ.get("OPENAI_MODEL_NAME", "gpt-4")
+            model=os.environ.get("OPENAI_MODEL_NAME", "gpt-4o")
         ),
         description="Language model that will run the agent.",
     )
