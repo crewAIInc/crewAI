@@ -26,5 +26,6 @@ from .tools import (
 	SerplyWebSearchTool,
 	SerplyNewsSearchTool,
 	SerplyScholarSearchTool,
-	SerplyWebpageToMarkdownTool
+	SerplyWebpageToMarkdownTool,
+	SerplyJobSearchTool
 )

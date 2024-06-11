@@ -1,6 +1,5 @@
 import os
 import requests
-from urllib.parse import urlencode
 from typing import Type, Any, Optional
 from pydantic.v1 import BaseModel, Field
 from crewai_tools.tools.rag.rag_tool import RagTool

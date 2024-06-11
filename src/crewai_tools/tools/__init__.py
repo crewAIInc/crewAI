@@ -24,4 +24,5 @@ from .youtube_video_search_tool.youtube_video_search_tool import YoutubeVideoSea
 from .serply_api_tool.serply_web_search_tool import SerplyWebSearchTool
 from .serply_api_tool.serply_news_search_tool import SerplyNewsSearchTool
 from .serply_api_tool.serply_scholar_search_tool import SerplyScholarSearchTool
-from .serply_api_tool.serply_web_to_markdown_tool import SerplyWebpageToMarkdownTool
+from .serply_api_tool.serply_webpage_to_markdown_tool import SerplyWebpageToMarkdownTool
+from .serply_api_tool.serply_job_search_tool import SerplyJobSearchTool

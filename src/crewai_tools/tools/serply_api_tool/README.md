@@ -55,6 +55,17 @@ tool = SerplyScholarSearchTool()
 tool = SerplyScholarSearchTool(proxy_location="GB")
 ```
 
+## Job Search
+The following example demonstrates how to initialize the tool and searching for jobs in the USA:
+
+```python
+from crewai_tools import SerplyJobSearchTool
+
+# Initialize the tool for internet searching capabilities
+tool = SerplyJobSearchTool()
+```
+
+
 ## Web Page To Markdown
 The following example demonstrates how to initialize the tool and fetch a web page and convert it to markdown:
 
@@ -64,7 +75,7 @@ from crewai_tools import SerplyWebpageToMarkdownTool
 # Initialize the tool for internet searching capabilities
 tool = SerplyWebpageToMarkdownTool()
 
-# change country news (DE - Germany)
+# change country make request from (DE - Germany)
 tool = SerplyWebpageToMarkdownTool(proxy_location="DE")
 ```
 
