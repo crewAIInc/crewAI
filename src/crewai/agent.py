@@ -1,3 +1,4 @@
+from copy import deepcopy
 import os
 import uuid
 from typing import Any, Dict, List, Optional, Tuple
@@ -97,7 +98,8 @@ class Agent(BaseModel):
     agent_executor: InstanceOf[CrewAgentExecutor] = Field(
         default=None, description="An instance of the CrewAgentExecutor class."
     )
-    crew: Any = Field(default=None, description="Crew to which the agent belongs.")
+    crew: Any = Field(
+        default=None, description="Crew to which the agent belongs.")
     tools_handler: InstanceOf[ToolsHandler] = Field(
         default=None, description="An instance of the ToolsHandler class."
     )
@@ -108,7 +110,8 @@ class Agent(BaseModel):
         default=None,
         description="Callback to be executed after each step of the agent execution.",
     )
-    i18n: I18N = Field(default=I18N(), description="Internationalization settings.")
+    i18n: I18N = Field(
+        default=I18N(), description="Internationalization settings.")
     llm: Any = Field(
         default_factory=lambda: ChatOpenAI(
             model=os.environ.get("OPENAI_MODEL_NAME", "gpt-4o")
@@ -169,7 +172,8 @@ class Agent(BaseModel):
     def set_agent_executor(self) -> "Agent":
         """set agent executor is set."""
         if hasattr(self.llm, "model_name"):
-            token_handler = TokenCalcHandler(self.llm.model_name, self._token_process)
+            token_handler = TokenCalcHandler(
+                self.llm.model_name, self._token_process)
 
             # Ensure self.llm.callbacks is a list
             if not isinstance(self.llm.callbacks, list):
@@ -204,7 +208,8 @@ class Agent(BaseModel):
             Output of the agent
         """
         if self.tools_handler:
-            self.tools_handler.last_used_tool = {}  # type: ignore # Incompatible types in assignment (expression has type "dict[Never, Never]", variable has type "ToolCalling")
+            # type: ignore # Incompatible types in assignment (expression has type "dict[Never, Never]", variable has type "ToolCalling")
+            self.tools_handler.last_used_tool = {}
 
         task_prompt = task.prompt()
 
@@ -224,13 +229,15 @@ class Agent(BaseModel):
                 task_prompt += self.i18n.slice("memory").format(memory=memory)
 
         tools = tools or self.tools
-        parsed_tools = self._parse_tools(tools)  # type: ignore # Argument 1 to "_parse_tools" of "Agent" has incompatible type "list[Any] | None"; expected "list[Any]"
+        # type: ignore # Argument 1 to "_parse_tools" of "Agent" has incompatible type "list[Any] | None"; expected "list[Any]"
+        parsed_tools = self._parse_tools(tools)
 
         self.create_agent_executor(tools=tools)
         self.agent_executor.tools = parsed_tools
         self.agent_executor.task = task
 
-        self.agent_executor.tools_description = render_text_description(parsed_tools)
+        self.agent_executor.tools_description = render_text_description(
+            parsed_tools)
         self.agent_executor.tools_names = self.__tools_names(parsed_tools)
 
         result = self.agent_executor.invoke(
@@ -328,7 +335,8 @@ class Agent(BaseModel):
             )
 
         bind = self.llm.bind(stop=stop_words)
-        inner_agent = agent_args | execution_prompt | bind | CrewAgentParser(agent=self)
+        inner_agent = agent_args | execution_prompt | bind | CrewAgentParser(
+            agent=self)
         self.agent_executor = CrewAgentExecutor(
             agent=RunnableAgent(runnable=inner_agent), **executor_args
         )
@@ -363,8 +371,31 @@ class Agent(BaseModel):
             thoughts += action.log
             thoughts += f"\n{observation_prefix}{observation}\n{llm_prefix}"
         return thoughts
+    
+    def copy(self):
+        """Create a deep copy of the Agent."""
+        exclude = {
+            "id",
+            "_logger",
+            "_rpm_controller",
+            "_request_within_rpm_limit",
+            "_token_process",      
+            "agent_executor",  
+            "tools",
+            "tools_handler",
+            "cache_handler",
+        }
 
-    def _parse_tools(self, tools: List[Any]) -> List[LangChainTool]:  # type: ignore # Function "langchain_core.tools.tool" is not valid as a type
+        copied_data = self.model_dump(exclude=exclude)
+        copied_data = {k: v for k, v in copied_data.items() if v is not None}
+
+        copied_agent = Agent(**copied_data)
+        copied_agent.tools = deepcopy(self.tools)
+
+        return copied_agent
+
+    # type: ignore # Function "langchain_core.tools.tool" is not valid as a type
+    def _parse_tools(self, tools: List[Any]) -> List[LangChainTool]:
         """Parse tools to be used for the task."""
         # tentatively try to import from crewai_tools import BaseTool as CrewAITool
         tools_list = []
