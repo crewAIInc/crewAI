@@ -52,6 +52,7 @@ class Crew(BaseModel):
         task_callback: Callback to be executed after each task for every agents execution.
         step_callback: Callback to be executed after each step for every agents execution.
         share_crew: Whether you want to share the complete crew information and execution with crewAI to make the library better, and allow us to train models.
+        output_token_usage: Whether the crew should return the amount of tokens used for the entire exectution.
     """
 
     __hash__ = object.__hash__  # type: ignore
@@ -121,6 +122,10 @@ class Crew(BaseModel):
     output_log_file: Optional[Union[bool, str]] = Field(
         default=False,
         description="output_log_file",
+    )
+    output_token_usage: Optional[bool] = Field(
+        default=False,
+        description="Whether the crew should return the amount of tokens used for the entire exectution.",
     )
 
     @field_validator("id", mode="before")
@@ -245,7 +250,6 @@ class Crew(BaseModel):
     def kickoff(
         self,
         inputs: Optional[Dict[str, Any]] = {},
-        output_token_usage: Optional[bool] = False,
     ) -> str:
         """Starts the crew to work on its assigned tasks."""
         self._execution_span = self._telemetry.crew_execution_span(self)
@@ -275,7 +279,6 @@ class Crew(BaseModel):
             result, manager_metrics = self._run_hierarchical_process()
             # type: ignore # Cannot determine type of "manager_metrics"
             metrics.append(manager_metrics)
-
         else:
             raise NotImplementedError(
                 f"The process '{self.process}' is not implemented yet."
@@ -287,11 +290,13 @@ class Crew(BaseModel):
         self.usage_metrics = {
             key: sum([m[key] for m in metrics if m is not None]) for key in metrics[0]
         }
-        token_usage_log = "\n".join(
-            [f"{key}={value}" for key, value in self.usage_metrics.items()]
-        )
-        if output_token_usage:
-            result += f"\n--------\nTOKEN USAGE:\n{token_usage_log}"
+        if self.output_token_usage and not self.full_output:
+            token_usage_log = "\n".join(
+                [f"{key}={value}" for key, value in self.usage_metrics.items()]
+            )
+            token_usage_info = f"\n--------\nTOKEN USAGE:\n{token_usage_log}"
+            result += token_usage_info
+
         return result
 
     def kickoff_for_each(self, inputs: List[Dict[str, Any]]) -> List:
@@ -361,6 +366,7 @@ class Crew(BaseModel):
                 )
 
             output = task.execute(context=task_output)
+
             if not task.async_execution:
                 task_output = output
 
@@ -371,7 +377,9 @@ class Crew(BaseModel):
                 self._file_handler.log(agent=role, task=task_output, status="completed")
 
         self._finish_execution(task_output)
-        return self._format_output(task_output)
+        # type: ignore # Incompatible return value type (got "tuple[str, Any]", expected "str")
+        token_usage = task.agent._token_process.get_summary()
+        return self._format_output(task_output, token_usage)
 
     def _run_hierarchical_process(self) -> str:
         """Creates and assigns a manager agent to make sure the crew completes the tasks."""
@@ -416,7 +424,10 @@ class Crew(BaseModel):
 
         self._finish_execution(task_output)
         # type: ignore # Incompatible return value type (got "tuple[str, Any]", expected "str")
-        return self._format_output(task_output), manager._token_process.get_summary()
+        manager_token_usage = manager._token_process.get_summary()
+        return self._format_output(
+            task_output, manager_token_usage
+        ), manager_token_usage
 
     def copy(self):
         """Create a deep copy of the Crew."""
@@ -465,13 +476,16 @@ class Crew(BaseModel):
         # type: ignore # "interpolate_inputs" of "Agent" does not return a value (it only ever returns None)
         [agent.interpolate_inputs(inputs) for agent in self.agents]
 
-    def _format_output(self, output: str) -> str:
+    def _format_output(self, output: str, token_usage: Optional[Dict[str, Any]]) -> str:
         """Formats the output of the crew execution."""
         if self.full_output:
-            return {  # type: ignore # Incompatible return value type (got "dict[str, Sequence[str | TaskOutput | None]]", expected "str")
+            formatted_output = {
                 "final_output": output,
                 "tasks_outputs": [task.output for task in self.tasks if task],
             }
+            if self.output_token_usage and token_usage:
+                formatted_output["token_usage"] = token_usage
+            return formatted_output
         else:
             return output
 

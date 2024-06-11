@@ -699,8 +699,8 @@ def test_crew_outputs_token_usage_flag():
     )
     task = Task(description="Say howdy", expected_output="Howdy!", agent=agent)
 
-    crew = Crew(agents=[agent], tasks=[task])
-    result = crew.kickoff(output_token_usage=True)
+    crew = Crew(agents=[agent], tasks=[task], output_token_usage=True)
+    result = crew.kickoff()
     assert (
         result
         == "Howdy!\n--------\nTOKEN USAGE:\ntotal_tokens=176\nprompt_tokens=158\ncompletion_tokens=18\nsuccessful_requests=1"
