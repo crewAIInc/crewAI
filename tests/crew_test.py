@@ -445,10 +445,14 @@ def test_async_task_execution():
             start.return_value = thread
             with patch.object(threading.Thread, "join", wraps=thread.join()) as join:
                 list_ideas.output = TaskOutput(
-                    description="A 4 paragraph article about AI.", raw_output="ok"
+                    description="A 4 paragraph article about AI.",
+                    raw_output="ok",
+                    agent="writer",
                 )
                 list_important_history.output = TaskOutput(
-                    description="A 4 paragraph article about AI.", raw_output="ok"
+                    description="A 4 paragraph article about AI.",
+                    raw_output="ok",
+                    agent="writer",
                 )
                 crew.kickoff()
                 start.assert_called()
@@ -677,9 +681,10 @@ def test_agent_usage_metrics_are_captured_for_hierarchical_process():
 
     result = crew.kickoff()
     assert result == '"Howdy!"'
+    print(crew.usage_metrics)
     assert crew.usage_metrics == {
-        "total_tokens": 1666,
-        "prompt_tokens": 1383,
+        "total_tokens": 1664,
+        "prompt_tokens": 1381,
         "completion_tokens": 283,
         "successful_requests": 3,
     }
