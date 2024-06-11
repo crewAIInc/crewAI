@@ -377,8 +377,9 @@ class Crew(BaseModel):
                 self._file_handler.log(agent=role, task=task_output, status="completed")
 
         self._finish_execution(task_output)
-        # type: ignore # Incompatible return value type (got "tuple[str, Any]", expected "str")
+        # type: ignore # Item "None" of "Agent | None" has no attribute "_token_process"
         token_usage = task.agent._token_process.get_summary()
+        # type: ignore # Incompatible return value type (got "tuple[str, Any]", expected "str")
         return self._format_output(task_output, token_usage)
 
     def _run_hierarchical_process(self) -> str:
@@ -485,6 +486,7 @@ class Crew(BaseModel):
             }
             if self.output_token_usage and token_usage:
                 formatted_output["token_usage"] = token_usage
+            # type: ignore # Incompatible return value type (got " dict[str, Any]", expected "str")
             return formatted_output
         else:
             return output
