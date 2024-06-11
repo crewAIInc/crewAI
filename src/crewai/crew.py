@@ -59,8 +59,7 @@ class Crew(BaseModel):
     _rpm_controller: RPMController = PrivateAttr()
     _logger: Logger = PrivateAttr()
     _file_handler: FileHandler = PrivateAttr()
-    _cache_handler: InstanceOf[CacheHandler] = PrivateAttr(
-        default=CacheHandler())
+    _cache_handler: InstanceOf[CacheHandler] = PrivateAttr(default=CacheHandler())
     _short_term_memory: Optional[InstanceOf[ShortTermMemory]] = PrivateAttr()
     _long_term_memory: Optional[InstanceOf[LongTermMemory]] = PrivateAttr()
     _entity_memory: Optional[InstanceOf[EntityMemory]] = PrivateAttr()
@@ -155,8 +154,7 @@ class Crew(BaseModel):
         self._logger = Logger(self.verbose)
         if self.output_log_file:
             self._file_handler = FileHandler(self.output_log_file)
-        self._rpm_controller = RPMController(
-            max_rpm=self.max_rpm, logger=self._logger)
+        self._rpm_controller = RPMController(max_rpm=self.max_rpm, logger=self._logger)
         self._telemetry = Telemetry()
         self._telemetry.set_tracer()
         self._telemetry.crew_creation(self)
@@ -167,7 +165,9 @@ class Crew(BaseModel):
         """Set private attributes."""
         if self.memory:
             self._long_term_memory = LongTermMemory()
-            self._short_term_memory = ShortTermMemory(crew=self, embedder_config=self.embedder)
+            self._short_term_memory = ShortTermMemory(
+                crew=self, embedder_config=self.embedder
+            )
             self._entity_memory = EntityMemory(crew=self, embedder_config=self.embedder)
         return self
 
@@ -242,7 +242,11 @@ class Crew(BaseModel):
         del task_config["agent"]
         return Task(**task_config, agent=task_agent)
 
-    def kickoff(self, inputs: Optional[Dict[str, Any]] = {}) -> str:
+    def kickoff(
+        self,
+        inputs: Optional[Dict[str, Any]] = {},
+        output_token_usage: Optional[bool] = False,
+    ) -> str:
         """Starts the crew to work on its assigned tasks."""
         self._execution_span = self._telemetry.crew_execution_span(self)
         # type: ignore # Argument 1 to "_interpolate_inputs" of "Crew" has incompatible type "dict[str, Any] | None"; expected "dict[str, Any]"
@@ -283,7 +287,11 @@ class Crew(BaseModel):
         self.usage_metrics = {
             key: sum([m[key] for m in metrics if m is not None]) for key in metrics[0]
         }
-
+        token_usage_log = "\n".join(
+            [f"{key}={value}" for key, value in self.usage_metrics.items()]
+        )
+        if output_token_usage:
+            result += f"\n--------\nTOKEN USAGE:\n{token_usage_log}"
         return result
 
     def kickoff_for_each(self, inputs: List[Dict[str, Any]]) -> List:
@@ -303,10 +311,12 @@ class Crew(BaseModel):
 
         return results
 
-    async def kickoff_async(self, inputs: Optional[Dict[str, Any]] = {}) -> Union[str, Dict]:
+    async def kickoff_async(
+        self, inputs: Optional[Dict[str, Any]] = {}
+    ) -> Union[str, Dict]:
         """Asynchronous kickoff method to start the crew execution."""
         return await asyncio.to_thread(self.kickoff, inputs)
-    
+
     async def kickoff_for_each_async(self, inputs: List[Dict]) -> List[Any]:
         async def run_crew(input_data):
             crew = self.copy()
@@ -318,9 +328,8 @@ class Crew(BaseModel):
 
             return await crew.kickoff_async()
 
-        tasks = [asyncio.create_task(run_crew(input_data))
-                 for input_data in inputs]
-        
+        tasks = [asyncio.create_task(run_crew(input_data)) for input_data in inputs]
+
         results = await asyncio.gather(*tasks)
 
         return results
@@ -341,8 +350,7 @@ class Crew(BaseModel):
                     task.tools += AgentTools(agents=agents_for_delegation).tools()
 
             role = task.agent.role if task.agent is not None else "None"
-            self._logger.log("debug", f"== Working Agent: {
-                             role}", color="bold_purple")
+            self._logger.log("debug", f"== Working Agent: {role}", color="bold_purple")
             self._logger.log(
                 "info", f"== Starting Task: {task.description}", color="bold_purple"
             )
@@ -357,16 +365,13 @@ class Crew(BaseModel):
                 task_output = output
 
             role = task.agent.role if task.agent is not None else "None"
-            self._logger.log("debug", f"== [{role}] Task output: {
-                             task_output}\n\n")
+            self._logger.log("debug", f"== [{role}] Task output: {task_output}\n\n")
 
             if self.output_log_file:
-                self._file_handler.log(
-                    agent=role, task=task_output, status="completed")
+                self._file_handler.log(agent=role, task=task_output, status="completed")
 
         self._finish_execution(task_output)
         return self._format_output(task_output)
-
 
     def _run_hierarchical_process(self) -> str:
         """Creates and assigns a manager agent to make sure the crew completes the tasks."""
@@ -382,8 +387,7 @@ class Crew(BaseModel):
             manager = Agent(
                 role=i18n.retrieve("hierarchical_manager_agent", "role"),
                 goal=i18n.retrieve("hierarchical_manager_agent", "goal"),
-                backstory=i18n.retrieve(
-                    "hierarchical_manager_agent", "backstory"),
+                backstory=i18n.retrieve("hierarchical_manager_agent", "backstory"),
                 tools=AgentTools(agents=self.agents).tools(),
                 llm=self.manager_llm,
                 verbose=True,
@@ -403,8 +407,7 @@ class Crew(BaseModel):
                 agent=manager, context=task_output, tools=manager.tools
             )
 
-            self._logger.log(
-                "debug", f"[{manager.role}] Task output: {task_output}")
+            self._logger.log("debug", f"[{manager.role}] Task output: {task_output}")
 
             if self.output_log_file:
                 self._file_handler.log(
@@ -417,7 +420,7 @@ class Crew(BaseModel):
 
     def copy(self):
         """Create a deep copy of the Crew."""
-        
+
         exclude = {
             "id",
             "_rpm_controller",
@@ -427,8 +430,7 @@ class Crew(BaseModel):
             "_cache_handler",
             "_short_term_memory",
             "_long_term_memory",
-            "_entity_memory"
-            "agents",
+            "_entity_memory" "agents",
             "tasks",
         }
 
@@ -445,7 +447,6 @@ class Crew(BaseModel):
 
         return copied_crew
 
-
     def _set_tasks_callbacks(self) -> None:
         """Sets callback for every task suing task_callback"""
         for task in self.tasks:
@@ -454,9 +455,13 @@ class Crew(BaseModel):
 
     def _interpolate_inputs(self, inputs: Dict[str, Any]) -> None:
         """Interpolates the inputs in the tasks and agents."""
-        [task.interpolate_inputs(
-            # type: ignore # "interpolate_inputs" of "Task" does not return a value (it only ever returns None)
-            inputs) for task in self.tasks]
+        [
+            task.interpolate_inputs(
+                # type: ignore # "interpolate_inputs" of "Task" does not return a value (it only ever returns None)
+                inputs
+            )
+            for task in self.tasks
+        ]
         # type: ignore # "interpolate_inputs" of "Agent" does not return a value (it only ever returns None)
         [agent.interpolate_inputs(inputs) for agent in self.agents]
 

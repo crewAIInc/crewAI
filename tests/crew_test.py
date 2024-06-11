@@ -690,6 +690,23 @@ def test_agent_usage_metrics_are_captured_for_hierarchical_process():
     }
 
 
+def test_crew_outputs_token_usage_flag():
+    agent = Agent(
+        role="Researcher",
+        goal="Be super empathetic.",
+        backstory="You love to say howdy.",
+        allow_delegation=False,
+    )
+    task = Task(description="Say howdy", expected_output="Howdy!", agent=agent)
+
+    crew = Crew(agents=[agent], tasks=[task])
+    result = crew.kickoff(output_token_usage=True)
+    assert (
+        result
+        == "Howdy!\n--------\nTOKEN USAGE:\ntotal_tokens=176\nprompt_tokens=158\ncompletion_tokens=18\nsuccessful_requests=1"
+    )
+
+
 def test_crew_inputs_interpolate_both_agents_and_tasks():
     agent = Agent(
         role="{topic} Researcher",
