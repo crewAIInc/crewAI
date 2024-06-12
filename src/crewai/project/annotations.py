@@ -34,15 +34,16 @@ def crew(func):
         agent_roles = set()
         # Iterate over tasks_order to maintain the defined order
         for task_name in tasks_order:
-            possible_task = getattr(self, task_name)
-            if callable(possible_task):
-                task_instance = possible_task()
-                instantiated_tasks.append(task_instance)
-                if hasattr(task_instance, "agent"):
-                    agent_instance = task_instance.agent
-                    if agent_instance.role not in agent_roles:
-                        instantiated_agents.append(agent_instance)
-                        agent_roles.add(agent_instance.role)
+            if hasattr(self, task_name):
+                possible_task = getattr(self, task_name)
+                if callable(possible_task):
+                    task_instance = possible_task()
+                    instantiated_tasks.append(task_instance)
+                    if hasattr(task_instance, "agent"):
+                        agent_instance = task_instance.agent
+                        if agent_instance.role not in agent_roles:
+                            instantiated_agents.append(agent_instance)
+                            agent_roles.add(agent_instance.role)
 
         # Instantiate any additional agents not already included by tasks
         for attr_name in dir(self):
