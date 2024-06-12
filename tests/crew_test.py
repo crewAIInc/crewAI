@@ -384,6 +384,12 @@ def test_crew_full_ouput():
     assert result == {
         "final_output": "Hello! It is a delight to receive your message. I trust this response finds you in good spirits. It's indeed a pleasure to connect with you too.",
         "tasks_outputs": [task1.output, task2.output],
+        "usage_metrics": {
+            "completion_tokens": 109,
+            "prompt_tokens": 330,
+            "successful_requests": 2,
+            "total_tokens": 439,
+        },
     }
 
 
@@ -688,23 +694,6 @@ def test_agent_usage_metrics_are_captured_for_hierarchical_process():
         "completion_tokens": 283,
         "successful_requests": 3,
     }
-
-
-def test_crew_outputs_token_usage_flag():
-    agent = Agent(
-        role="Researcher",
-        goal="Be super empathetic.",
-        backstory="You love to say howdy.",
-        allow_delegation=False,
-    )
-    task = Task(description="Say howdy", expected_output="Howdy!", agent=agent)
-
-    crew = Crew(agents=[agent], tasks=[task], output_token_usage=True)
-    result = crew.kickoff()
-    assert (
-        result
-        == "Howdy!\n--------\nTOKEN USAGE:\ntotal_tokens=176\nprompt_tokens=158\ncompletion_tokens=18\nsuccessful_requests=1"
-    )
 
 
 def test_crew_inputs_interpolate_both_agents_and_tasks():

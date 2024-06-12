@@ -52,7 +52,6 @@ class Crew(BaseModel):
         task_callback: Callback to be executed after each task for every agents execution.
         step_callback: Callback to be executed after each step for every agents execution.
         share_crew: Whether you want to share the complete crew information and execution with crewAI to make the library better, and allow us to train models.
-        output_token_usage: Whether the crew should return the amount of tokens used for the entire exectution.
     """
 
     __hash__ = object.__hash__  # type: ignore
@@ -122,10 +121,6 @@ class Crew(BaseModel):
     output_log_file: Optional[Union[bool, str]] = Field(
         default=False,
         description="output_log_file",
-    )
-    output_token_usage: Optional[bool] = Field(
-        default=False,
-        description="Whether the crew should return the amount of tokens used for the entire exectution.",
     )
 
     @field_validator("id", mode="before")
@@ -290,12 +285,6 @@ class Crew(BaseModel):
         self.usage_metrics = {
             key: sum([m[key] for m in metrics if m is not None]) for key in metrics[0]
         }
-        if self.output_token_usage and not self.full_output:
-            token_usage_log = "\n".join(
-                [f"{key}={value}" for key, value in self.usage_metrics.items()]
-            )
-            token_usage_info = f"\n--------\nTOKEN USAGE:\n{token_usage_log}"
-            result += token_usage_info
 
         return result
 
@@ -480,14 +469,11 @@ class Crew(BaseModel):
     def _format_output(self, output: str, token_usage: Optional[Dict[str, Any]]) -> str:
         """Formats the output of the crew execution."""
         if self.full_output:
-            formatted_output = {
+            return {  # type: ignore # Incompatible return value type (got "dict[str, Sequence[str | TaskOutput | None]]", expected "str")
                 "final_output": output,
                 "tasks_outputs": [task.output for task in self.tasks if task],
+                "usage_metrics": token_usage,
             }
-            if self.output_token_usage and token_usage:
-                formatted_output["token_usage"] = token_usage
-            # type: ignore # Incompatible return value type (got " dict[str, Any]", expected "str")
-            return formatted_output
         else:
             return output
 
