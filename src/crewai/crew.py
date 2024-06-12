@@ -48,7 +48,7 @@ class Crew(BaseModel):
         max_rpm: Maximum number of requests per minute for the crew execution to be respected.
         prompt_file: Path to the prompt json file to be used for the crew.
         id: A unique identifier for the crew instance.
-        full_output: Whether the crew should return the full output with all tasks outputs or just the final output.
+        full_output: Whether the crew should return the full output with all tasks outputs and token usage metrics or just the final output.
         task_callback: Callback to be executed after each task for every agents execution.
         step_callback: Callback to be executed after each step for every agents execution.
         share_crew: Whether you want to share the complete crew information and execution with crewAI to make the library better, and allow us to train models.
@@ -84,7 +84,7 @@ class Crew(BaseModel):
     )
     full_output: Optional[bool] = Field(
         default=False,
-        description="Whether the crew should return the full output with all tasks outputs or just the final output.",
+        description="Whether the crew should return the full output with all tasks outputs and token usage metrics or just the final output.",
     )
     manager_llm: Optional[Any] = Field(
         description="Language model that will run the agent.", default=None
