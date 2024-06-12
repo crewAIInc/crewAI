@@ -315,8 +315,7 @@ class Task(BaseModel):
 
             if isinstance(exported_result, ConverterError):
                 Printer().print(
-                    content=f"{
-                        exported_result.message} Using raw output instead.",
+                    content=f"{exported_result.message} Using raw output instead.",
                     color="red",
                 )
                 exported_result = result
