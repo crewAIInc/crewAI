@@ -431,7 +431,8 @@ class Crew(BaseModel):
             "_cache_handler",
             "_short_term_memory",
             "_long_term_memory",
-            "_entity_memory" "agents",
+            "_entity_memory",
+            "agents",
             "tasks",
         }
 
