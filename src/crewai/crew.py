@@ -49,6 +49,7 @@ class Crew(BaseModel):
         prompt_file: Path to the prompt json file to be used for the crew.
         id: A unique identifier for the crew instance.
         full_output: Whether the crew should return the full output with all tasks outputs and token usage metrics or just the final output.
+        full_output: Whether the crew should return the full output with all tasks outputs and token usage metrics or just the final output.
         task_callback: Callback to be executed after each task for every agents execution.
         step_callback: Callback to be executed after each step for every agents execution.
         share_crew: Whether you want to share the complete crew information and execution with crewAI to make the library better, and allow us to train models.
@@ -59,6 +60,7 @@ class Crew(BaseModel):
     _rpm_controller: RPMController = PrivateAttr()
     _logger: Logger = PrivateAttr()
     _file_handler: FileHandler = PrivateAttr()
+    _cache_handler: InstanceOf[CacheHandler] = PrivateAttr(default=CacheHandler())
     _cache_handler: InstanceOf[CacheHandler] = PrivateAttr(default=CacheHandler())
     _short_term_memory: Optional[InstanceOf[ShortTermMemory]] = PrivateAttr()
     _long_term_memory: Optional[InstanceOf[LongTermMemory]] = PrivateAttr()
