@@ -18,6 +18,7 @@ from crewai.memory.long_term.long_term_memory_item import LongTermMemoryItem
 from crewai.memory.short_term.short_term_memory_item import ShortTermMemoryItem
 from crewai.tools.tool_usage import ToolUsage, ToolUsageErrorException
 from crewai.utilities import I18N
+from crewai.utilities.constants import TRAINING_DATA_FILE
 from crewai.utilities.converter import ConverterError
 from crewai.utilities.evaluators.task_evaluator import TaskEvaluator
 from crewai.utilities.fileHandler import PickleHandler
@@ -319,19 +320,18 @@ class CrewAgentExecutor(AgentExecutor):
         self, output: AgentFinish, human_feedback: str | None = None
     ) -> None:
         """Function to handle the process of the training data."""
-        training_data_filename = "training_data.pkl"
         agent_id = str(self.crew_agent.id)
 
         if (
-            not self.should_ask_for_human_input
-            and PickleHandler(training_data_filename).load()
+            training_data := PickleHandler(TRAINING_DATA_FILE).load()
+            and not self.should_ask_for_human_input
         ):
-            training_data = PickleHandler(training_data_filename).load()
+            training_data = PickleHandler(TRAINING_DATA_FILE).load()
             if training_data.get(agent_id):
                 training_data[agent_id][self.crew._train_iteration][
                     "improved_output"
                 ] = output.return_values["output"]
-                PickleHandler(training_data_filename).save(training_data)
+                PickleHandler(TRAINING_DATA_FILE).save(training_data)
 
         if self.should_ask_for_human_input and human_feedback is not None:
             training_data = {
@@ -340,6 +340,6 @@ class CrewAgentExecutor(AgentExecutor):
                 "agent": agent_id,
                 "agent_role": self.crew_agent.role,
             }
-            PickleHandler(training_data_filename).append(
+            PickleHandler(TRAINING_DATA_FILE).append(
                 self.crew._train_iteration, agent_id, training_data
             )

@@ -23,6 +23,7 @@ from pydantic_core import PydanticCustomError
 from crewai.agents import CacheHandler, CrewAgentExecutor, CrewAgentParser, ToolsHandler
 from crewai.memory.contextual.contextual_memory import ContextualMemory
 from crewai.utilities import I18N, Logger, Prompts, RPMController
+from crewai.utilities.constants import TRAINED_AGENTS_DATA_FILE, TRAINING_DATA_FILE
 from crewai.utilities.fileHandler import PickleHandler
 from crewai.utilities.token_counter_callback import TokenCalcHandler, TokenProcess
 
@@ -389,7 +390,7 @@ class Agent(BaseModel):
 
     def _training_handler(self, task_prompt: str) -> str:
         """Handle training data for the agent task prompt to improve output on Training."""
-        if data := PickleHandler("training_data.pkl").load():
+        if data := PickleHandler(TRAINING_DATA_FILE).load():
             agent_id = str(self.id)
 
             if data.get(agent_id):
@@ -404,7 +405,7 @@ class Agent(BaseModel):
 
     def _use_trained_data(self, task_prompt: str) -> str:
         """Use trained data for the agent task prompt to improve output."""
-        if data := PickleHandler("trained_agents_data.pkl").load():
+        if data := PickleHandler(TRAINED_AGENTS_DATA_FILE).load():
             if trained_data_output := data.get(self.role):
                 task_prompt += "You MUST follow these feedbacks: \n " + "\n - ".join(
                     trained_data_output["suggestions"]
