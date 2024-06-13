@@ -67,7 +67,7 @@ class Crew(BaseModel):
     cache: bool = Field(default=True)
     model_config = ConfigDict(arbitrary_types_allowed=True)
     tasks: List[Task] = Field(default_factory=list)
-    agents: List[Agent] = Field(default_factory=list)
+    agents: List[Agent | Any] = Field(default_factory=list)
     process: Process = Field(default=Process.sequential)
     verbose: Union[int, bool] = Field(default=0)
     memory: bool = Field(
@@ -255,8 +255,10 @@ class Crew(BaseModel):
         i18n = I18N(prompt_file=self.prompt_file)
 
         for agent in self.agents:
+            # type: ignore # Argument 1 to "_interpolate_inputs" of "Crew" has incompatible type "dict[str, Any] | None"; expected "dict[str, Any]"
             agent.i18n = i18n
-            agent.crew = self
+            # type: ignore[attr-defined] # Argument 1 to "_interpolate_inputs" of "Crew" has incompatible type "dict[str, Any] | None"; expected "dict[str, Any]"
+            agent.crew = self  # type: ignore[attr-defined]
 
             if not agent.function_calling_llm:
                 agent.function_calling_llm = self.function_calling_llm
@@ -465,7 +467,9 @@ class Crew(BaseModel):
             for task in self.tasks
         ]
         # type: ignore # "interpolate_inputs" of "Agent" does not return a value (it only ever returns None)
-        [agent.interpolate_inputs(inputs) for agent in self.agents]
+        for agent in self.agents:
+            agent.interpolate_inputs(inputs)
+        # [agent.interpolate_inputs(inputs) for agent in self.agents]
 
     def _format_output(self, output: str, token_usage: Optional[Dict[str, Any]]) -> str:
         """Formats the output of the crew execution."""

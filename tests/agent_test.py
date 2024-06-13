@@ -11,6 +11,8 @@ from crewai import Agent, Crew, Task
 from crewai.agents.cache import CacheHandler
 from crewai.agents.executor import CrewAgentExecutor
 from crewai.agents.parser import CrewAgentParser
+
+# from crewai.agents.third_party import ThirdPartyAgent
 from crewai.tools.tool_calling import InstructorToolCalling
 from crewai.tools.tool_usage import ToolUsage
 from crewai.utilities import RPMController
@@ -23,6 +25,15 @@ def test_agent_creation():
     assert agent.goal == "test goal"
     assert agent.backstory == "test backstory"
     assert agent.tools == []
+
+
+# def test_third_party_agent():
+#     agent = ThirdPartyAgent(role="third-party-agent", goal="test goal", backstory="test backstory")
+#     print('THIRD PARTY AGENT', agent.role)
+#     # assert agent.role == "third-party-agent"
+#     # assert agent.goal == "test goal"
+#     # assert agent.backstory == "test backstory"
+#     # assert agent.tools == []
 
 
 def test_agent_default_values():

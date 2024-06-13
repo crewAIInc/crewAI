@@ -98,8 +98,7 @@ class Agent(BaseModel):
     agent_executor: InstanceOf[CrewAgentExecutor] = Field(
         default=None, description="An instance of the CrewAgentExecutor class."
     )
-    crew: Any = Field(
-        default=None, description="Crew to which the agent belongs.")
+    crew: Any = Field(default=None, description="Crew to which the agent belongs.")
     tools_handler: InstanceOf[ToolsHandler] = Field(
         default=None, description="An instance of the ToolsHandler class."
     )
@@ -110,8 +109,7 @@ class Agent(BaseModel):
         default=None,
         description="Callback to be executed after each step of the agent execution.",
     )
-    i18n: I18N = Field(
-        default=I18N(), description="Internationalization settings.")
+    i18n: I18N = Field(default=I18N(), description="Internationalization settings.")
     llm: Any = Field(
         default_factory=lambda: ChatOpenAI(
             model=os.environ.get("OPENAI_MODEL_NAME", "gpt-4o")
@@ -172,8 +170,7 @@ class Agent(BaseModel):
     def set_agent_executor(self) -> "Agent":
         """set agent executor is set."""
         if hasattr(self.llm, "model_name"):
-            token_handler = TokenCalcHandler(
-                self.llm.model_name, self._token_process)
+            token_handler = TokenCalcHandler(self.llm.model_name, self._token_process)
 
             # Ensure self.llm.callbacks is a list
             if not isinstance(self.llm.callbacks, list):
@@ -236,8 +233,7 @@ class Agent(BaseModel):
         self.agent_executor.tools = parsed_tools
         self.agent_executor.task = task
 
-        self.agent_executor.tools_description = render_text_description(
-            parsed_tools)
+        self.agent_executor.tools_description = render_text_description(parsed_tools)
         self.agent_executor.tools_names = self.__tools_names(parsed_tools)
 
         result = self.agent_executor.invoke(
@@ -250,7 +246,7 @@ class Agent(BaseModel):
 
         if self.max_rpm:
             self._rpm_controller.stop_rpm_counter()
-
+        pass
         return result
 
     def set_cache_handler(self, cache_handler: CacheHandler) -> None:
@@ -264,6 +260,7 @@ class Agent(BaseModel):
             self.cache_handler = cache_handler
             self.tools_handler.cache = cache_handler
         self.create_agent_executor()
+        pass
 
     def set_rpm_controller(self, rpm_controller: RPMController) -> None:
         """Set the rpm controller for the agent.
@@ -335,8 +332,7 @@ class Agent(BaseModel):
             )
 
         bind = self.llm.bind(stop=stop_words)
-        inner_agent = agent_args | execution_prompt | bind | CrewAgentParser(
-            agent=self)
+        inner_agent = agent_args | execution_prompt | bind | CrewAgentParser(agent=self)
         self.agent_executor = CrewAgentExecutor(
             agent=RunnableAgent(runnable=inner_agent), **executor_args
         )
@@ -371,7 +367,7 @@ class Agent(BaseModel):
             thoughts += action.log
             thoughts += f"\n{observation_prefix}{observation}\n{llm_prefix}"
         return thoughts
-    
+
     def copy(self):
         """Create a deep copy of the Agent."""
         exclude = {
@@ -379,8 +375,8 @@ class Agent(BaseModel):
             "_logger",
             "_rpm_controller",
             "_request_within_rpm_limit",
-            "_token_process",      
-            "agent_executor",  
+            "_token_process",
+            "agent_executor",
             "tools",
             "tools_handler",
             "cache_handler",
