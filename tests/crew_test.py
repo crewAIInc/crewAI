@@ -384,6 +384,12 @@ def test_crew_full_ouput():
     assert result == {
         "final_output": "Hello! It is a delight to receive your message. I trust this response finds you in good spirits. It's indeed a pleasure to connect with you too.",
         "tasks_outputs": [task1.output, task2.output],
+        "usage_metrics": {
+            "completion_tokens": 109,
+            "prompt_tokens": 330,
+            "successful_requests": 2,
+            "total_tokens": 439,
+        },
     }
 
 

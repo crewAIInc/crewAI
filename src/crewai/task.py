@@ -236,8 +236,7 @@ class Task(BaseModel):
 
         if inputs:
             self.description = self._original_description.format(**inputs)
-            self.expected_output = self._original_expected_output.format(
-                **inputs)
+            self.expected_output = self._original_expected_output.format(**inputs)
 
     def increment_tools_errors(self) -> None:
         """Increment the tools errors counter."""
@@ -259,11 +258,18 @@ class Task(BaseModel):
         copied_data = self.model_dump(exclude=exclude)
         copied_data = {k: v for k, v in copied_data.items() if v is not None}
 
-        cloned_context = [task.copy() for task in self.context] if self.context else None
+        cloned_context = (
+            [task.copy() for task in self.context] if self.context else None
+        )
         cloned_agent = self.agent.copy() if self.agent else None
         cloned_tools = deepcopy(self.tools) if self.tools else None
 
-        copied_task = Task(**copied_data, context=cloned_context, agent=cloned_agent, tools=cloned_tools)
+        copied_task = Task(
+            **copied_data,
+            context=cloned_context,
+            agent=cloned_agent,
+            tools=cloned_tools,
+        )
         return copied_task
 
     def _export_output(self, result: str) -> Any:
@@ -287,8 +293,7 @@ class Task(BaseModel):
                 if match:
                     try:
                         # type: ignore # Item "None" of "type[BaseModel] | None" has no attribute "model_validate_json"
-                        exported_result = model.model_validate_json(
-                            match.group(0))
+                        exported_result = model.model_validate_json(match.group(0))
                         if self.output_json:
                             # type: ignore # "str" has no attribute "model_dump"
                             return exported_result.model_dump()
@@ -302,8 +307,7 @@ class Task(BaseModel):
             if not self._is_gpt(llm):
                 # type: ignore # Argument "model" to "PydanticSchemaParser" has incompatible type "type[BaseModel] | None"; expected "type[BaseModel]"
                 model_schema = PydanticSchemaParser(model=model).get_schema()
-                instructions = f"{
-                    instructions}\n\nThe json should have the following structure, with the following keys:\n{model_schema}"
+                instructions = f"{instructions}\n\nThe json should have the following structure, with the following keys:\n{model_schema}"
 
             converter = Converter(
                 llm=llm, text=result, model=model, instructions=instructions
@@ -316,8 +320,7 @@ class Task(BaseModel):
 
             if isinstance(exported_result, ConverterError):
                 Printer().print(
-                    content=f"{
-                        exported_result.message} Using raw output instead.",
+                    content=f"{exported_result.message} Using raw output instead.",
                     color="red",
                 )
                 exported_result = result
@@ -342,7 +345,7 @@ class Task(BaseModel):
             os.makedirs(directory)
 
         # type: ignore # Argument 1 to "open" has incompatible type "str | None"; expected "int | str | bytes | PathLike[str] | PathLike[bytes]"
-        with open(self.output_file, "w", encoding='utf-8') as file:
+        with open(self.output_file, "w", encoding="utf-8") as file:
             file.write(result)
         return None
 
