@@ -251,7 +251,7 @@ class CrewAgentExecutor(AgentExecutor):
                 human_feedback = self._ask_human_input(output.return_values["output"])
 
                 if self.crew._train:
-                    self._training_handler(output, human_feedback)
+                    self._handle_crew_training_output(output, human_feedback)
 
                 # Making sure we only ask for it once, so disabling for the next thought loop
                 self.should_ask_for_human_input = False
@@ -269,7 +269,7 @@ class CrewAgentExecutor(AgentExecutor):
 
             else:
                 if self.crew._train:
-                    self._training_handler(output)
+                    self._handle_crew_training_output(output)
 
                 yield output
                 return
@@ -316,7 +316,7 @@ class CrewAgentExecutor(AgentExecutor):
             self._i18n.slice("getting_input").format(final_answer=final_answer)
         )
 
-    def _training_handler(
+    def _handle_crew_training_output(
         self, output: AgentFinish, human_feedback: str | None = None
     ) -> None:
         """Function to handle the process of the training data."""
