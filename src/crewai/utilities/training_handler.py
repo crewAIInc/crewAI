@@ -1,4 +1,4 @@
-from file_handler import PickleHandler
+from crewai.utilities.file_handler import PickleHandler
 
 
 class CrewTrainingHandler(PickleHandler):
