@@ -24,7 +24,7 @@ regex = "^2023.12.25"
 crewai-tools = { version = "^0.2.6", optional = true }
 click = "^8.1.7"
 python-dotenv = "^1.0.0"
-embedchain = "^0.1.98"
+embedchain = "0.1.109"
 appdirs = "^1.4.4"
 jsonref = "^1.1.0"
 
