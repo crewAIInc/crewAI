@@ -245,7 +245,7 @@ class Crew(BaseModel):
     def kickoff(
         self,
         inputs: Optional[Dict[str, Any]] = {},
-    ) -> str:
+    ) -> Union[str, Dict[str, Any]]:
         """Starts the crew to work on its assigned tasks."""
         self._execution_span = self._telemetry.crew_execution_span(self)
         # type: ignore # Argument 1 to "_interpolate_inputs" of "Crew" has incompatible type "dict[str, Any] | None"; expected "dict[str, Any]"
@@ -332,7 +332,7 @@ class Crew(BaseModel):
         # TODO: Implement training
         pass
 
-    def _run_sequential_process(self) -> str:
+    def _run_sequential_process(self) -> Union[str, Dict[str, Any]]:
         """Executes tasks sequentially and returns the final output."""
         task_output = ""
         for task in self.tasks:
@@ -371,7 +371,7 @@ class Crew(BaseModel):
         # type: ignore # Incompatible return value type (got "tuple[str, Any]", expected "str")
         return self._format_output(task_output, token_usage)
 
-    def _run_hierarchical_process(self) -> str:
+    def _run_hierarchical_process(self) -> Union[str, Dict[str, Any]]:
         """Creates and assigns a manager agent to make sure the crew completes the tasks."""
 
         i18n = I18N(prompt_file=self.prompt_file)
@@ -467,8 +467,13 @@ class Crew(BaseModel):
         # type: ignore # "interpolate_inputs" of "Agent" does not return a value (it only ever returns None)
         [agent.interpolate_inputs(inputs) for agent in self.agents]
 
-    def _format_output(self, output: str, token_usage: Optional[Dict[str, Any]]) -> str:
-        """Formats the output of the crew execution."""
+    def _format_output(
+        self, output: str, token_usage: Optional[Dict[str, Any]]
+    ) -> Union[str, Dict[str, Any]]:
+        """
+        Formats the output of the crew execution.
+        If full_output is True, then returned data type will be a dictionary else returned outputs are string
+        """
         if self.full_output:
             return {  # type: ignore # Incompatible return value type (got "dict[str, Sequence[str | TaskOutput | None]]", expected "str")
                 "final_output": output,
