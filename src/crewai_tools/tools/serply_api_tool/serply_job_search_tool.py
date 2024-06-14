@@ -18,7 +18,7 @@ class SerplyJobSearchTool(RagTool):
     request_url: str = "https://api.serply.io/v1/job/search/"
     proxy_location: Optional[str] = "US"
     """
-        proxy_location: (str): Where to get news, specifically for a specific country results.
+        proxy_location: (str): Where to get jobs, specifically for a specific country results.
             - Currently only supports US
     """
     headers: Optional[dict] = {}
@@ -69,7 +69,7 @@ class SerplyJobSearchTool(RagTool):
                     "---"
                 ]))
             except KeyError:
-                next
+                continue
 
         content = '\n'.join(string)
         return f"\nSearch results: {content}\n"

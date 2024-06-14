@@ -85,7 +85,7 @@ class SerplyWebSearchTool(BaseTool):
                         "---"
                     ]))
                 except KeyError:
-                    next
+                    continue
 
             content = '\n'.join(string)
             return f"\nSearch results: {content}\n"

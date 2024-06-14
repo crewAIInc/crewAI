@@ -41,7 +41,7 @@ class SerplyWebpageToMarkdownTool(RagTool):
     ) -> Any:
         data = {
             "url": kwargs["url"],
-            "method": "get",
+            "method": "GET",
             "response_type": "markdown"
         }
         response = requests.request("POST", self.request_url, headers=self.headers, json=data)
