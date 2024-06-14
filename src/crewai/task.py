@@ -94,6 +94,10 @@ class Task(BaseModel):
         description="Whether the task should have a human review the final answer of the agent",
         default=False,
     )
+    rci: Optional[bool] = Field(
+        default=True,
+        description="Implements Recursive Criticism and Iteration to verify output",
+    )
 
     _original_description: str | None = None
     _original_expected_output: str | None = None
@@ -192,7 +196,37 @@ class Task(BaseModel):
             )
             return result
 
-    def _execute(self, agent, task, context, tools):
+    # Create new methods that will verify the output of the agent using RCI - Recursive Criticism and Iteration
+    def critique(self, agent, task, context, tools):
+        critic_agent = Agent(
+            role=agent.role,
+            goal="""A task is assigned to a LLM model which provided an output based on the task description. Identify
+                       errors in the output provided by the model. """,
+            backstory=agent.backstory
+            + "and you are a great critic who has keen eyes for errors.",
+            allow_delegation=False,
+            verbose=True,
+            llm=self.agent.function_calling_llm or self.agent.llm,
+            rci=False,
+        )
+
+        new_task = task
+        new_task.description = (
+            f"""Provided Task: {task.description}\n Output: {self.output}"""
+        )
+        new_task.expected_output = "A short paragraph"
+        new_task.agent = critic_agent
+
+        critic_response = self._execute(
+            agent=critic_agent, task=task, context=context, tools=tools, rci=False
+        )
+
+        print(critic_response)
+
+    def improve(self):
+        pass
+
+    def _execute(self, agent, task, context, tools, rci=True):
         result = agent.execute_task(
             task=task,
             context=context,
@@ -207,6 +241,9 @@ class Task(BaseModel):
             raw_output=result,
             agent=agent.role,
         )
+
+        # if rci:
+        #     self.critique(agent=agent, task=task, tools=tools, context=context)
 
         if self.callback:
             self.callback(self.output)
