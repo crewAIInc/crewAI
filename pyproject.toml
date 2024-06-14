@@ -19,13 +19,14 @@ openai = "^1.13.3"
 opentelemetry-api = "^1.22.0"
 opentelemetry-sdk = "^1.22.0"
 opentelemetry-exporter-otlp-proto-http = "^1.22.0"
-instructor = "^0.5.2"
+instructor = "1.3.3"
 regex = "^2023.12.25"
 crewai-tools = { version = "^0.2.6", optional = true }
 click = "^8.1.7"
 python-dotenv = "^1.0.0"
-embedchain = "^0.1.98"
+embedchain = "0.1.109"
 appdirs = "^1.4.4"
+jsonref = "^1.1.0"
 
 [tool.poetry.extras]
 tools = ["crewai-tools"]
