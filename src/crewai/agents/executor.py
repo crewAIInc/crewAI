@@ -21,7 +21,7 @@ from crewai.utilities import I18N
 from crewai.utilities.constants import TRAINING_DATA_FILE
 from crewai.utilities.converter import ConverterError
 from crewai.utilities.evaluators.task_evaluator import TaskEvaluator
-from crewai.utilities.fileHandler import PickleHandler
+from crewai.utilities.training_handler import CrewTrainingHandler
 
 
 class CrewAgentExecutor(AgentExecutor):
@@ -323,14 +323,14 @@ class CrewAgentExecutor(AgentExecutor):
         agent_id = str(self.crew_agent.id)
 
         if (
-            training_data := PickleHandler(TRAINING_DATA_FILE).load()
+            training_data := CrewTrainingHandler(TRAINING_DATA_FILE).load()
             and not self.should_ask_for_human_input
         ):
             if training_data.get(agent_id):
                 training_data[agent_id][self.crew._train_iteration][
                     "improved_output"
                 ] = output.return_values["output"]
-                PickleHandler(TRAINING_DATA_FILE).save(training_data)
+                CrewTrainingHandler(TRAINING_DATA_FILE).save(training_data)
 
         if self.should_ask_for_human_input and human_feedback is not None:
             training_data = {
@@ -339,6 +339,6 @@ class CrewAgentExecutor(AgentExecutor):
                 "agent": agent_id,
                 "agent_role": self.crew_agent.role,
             }
-            PickleHandler(TRAINING_DATA_FILE).append(
+            CrewTrainingHandler(TRAINING_DATA_FILE).append(
                 self.crew._train_iteration, agent_id, training_data
             )

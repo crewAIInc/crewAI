@@ -28,7 +28,7 @@ from crewai.telemetry import Telemetry
 from crewai.tools.agent_tools import AgentTools
 from crewai.utilities import I18N, FileHandler, Logger, RPMController
 from crewai.utilities.evaluators.task_evaluator import TaskEvaluator
-from crewai.utilities.fileHandler import PickleHandler
+from crewai.utilities.training_handler import CrewTrainingHandler
 
 
 class Crew(BaseModel):
@@ -264,14 +264,14 @@ class Crew(BaseModel):
             self._train_iteration = n_iteration
             self.kickoff(inputs=inputs)
 
-        training_data = PickleHandler("training_data.pkl").load()
+        training_data = CrewTrainingHandler("training_data.pkl").load()
 
         for agent in self.agents:
             result = TaskEvaluator(agent).evaluate_training_data(
                 training_data=training_data, agent_id=str(agent.id)
             )
 
-            PickleHandler("trained_agents_data.pkl").save_trained_data(
+            CrewTrainingHandler("trained_agents_data.pkl").save_trained_data(
                 agent_id=str(agent.role), trained_data=result.model_dump()
             )
 
