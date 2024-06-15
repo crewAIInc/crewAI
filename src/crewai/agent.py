@@ -228,7 +228,6 @@ class Agent(BaseModel):
         tools = tools or self.tools
         # type: ignore # Argument 1 to "_parse_tools" of "Agent" has incompatible type "list[Any] | None"; expected "list[Any]"
         parsed_tools = self._parse_tools(tools)
-        print("parsed_tools", parsed_tools)
         self.create_agent_executor(tools=tools)
         self.agent_executor.tools = parsed_tools
         self.agent_executor.task = task
@@ -243,7 +242,6 @@ class Agent(BaseModel):
                 "tools": self.agent_executor.tools_description,
             }
         )["output"]
-        print("REGULAR AGENT", result)
         if self.max_rpm:
             self._rpm_controller.stop_rpm_counter()
         return result
@@ -318,13 +316,11 @@ class Agent(BaseModel):
             response_template=self.response_template,
         ).task_execution()
 
-        print("PROMPT TASK EXECUTION", f"\n {prompt}\n END")
         execution_prompt = prompt.partial(
             goal=self.goal,
             role=self.role,
             backstory=self.backstory,
         )
-        print("execution_prompt", f"\n {execution_prompt}\n END")
 
         stop_words = [self.i18n.slice("observation")]
         if self.response_template:
@@ -340,7 +336,6 @@ class Agent(BaseModel):
 
     def interpolate_inputs(self, inputs: Dict[str, Any]) -> None:
         """Interpolate inputs into the agent description and backstory."""
-        print("inputs passed ", inputs)
         if self._original_role is None:
             self._original_role = self.role
         if self._original_goal is None:

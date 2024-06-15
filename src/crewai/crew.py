@@ -360,7 +360,6 @@ class Crew(BaseModel):
                     agent=role, task=task.description, status="started"
                 )
             output = task.execute(context=task_output)
-            print("---task_output", output)
 
             if not task.async_execution:
                 task_output = output

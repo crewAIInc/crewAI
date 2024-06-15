@@ -20,9 +20,6 @@ def get_word_length(word: str) -> int:
     return len(word)
 
 
-get_word_length.invoke("abc")
-
-
 prompt = ChatPromptTemplate.from_messages(
     [
         (
@@ -47,21 +44,22 @@ custom_langchain_agent = (
     | llm_with_tools
     | OpenAIToolsAgentOutputParser()
 )
-# print("custom_langchain_agent", custom_langchain_agent)
+
 
 agent1: Agent = CustomAgentWrapper(
     custom_agent=custom_langchain_agent,
     agent_executor=AgentExecutor(agent=custom_langchain_agent, tools=tools).invoke,
-    role="Word smith",
+    role="word_smith",
     goal="You are very powerful assistant, you take a word: {input} and return a fun fact based off its letter count",
     backstory="word smith since the you arrived",
     verbose=True,
+    tools=[tools],
 )
 
 agent2 = Agent(
     role="fun fact teller",
     goal="you create a story based of the word: {input}",
-    backstory="you are a wiz at telling fun facts based of the word and the number of letter is has.",
+    backstory="you are a wiz at telling fun facts based of the word.",
     verbose=True,
 )
 printer = Printer()
@@ -101,11 +99,12 @@ my_crew = Crew(
     agents=[agent1, agent2],
     tasks=[task1, task2],
     process=Process.sequential,
-    cache=True,
+    full_output=False,
+    # cache=True,
 )
 
 crew = my_crew.kickoff(inputs={"input": "grapes"})
-# print("RESULT:", crew)
+print("RESULT:", crew)
 
 
 # agent_executor = AgentExecutor(agent=agent, tools=tools, verbose=True)
