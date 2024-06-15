@@ -1,8 +1,4 @@
-from crewai import Task, Crew, Process, Agent
-# from crewai.agents import CustomAgentWrapper
-
-# from crewai.agent import Agent
-
+from crewai import Agent, Process, Task, Crew, CustomAgentWrapper
 from langchain.agents import tool
 from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
 from langchain.agents.format_scratchpad.openai_tools import (
@@ -11,13 +7,10 @@ from langchain.agents.format_scratchpad.openai_tools import (
 from langchain.agents.output_parsers.openai_tools import OpenAIToolsAgentOutputParser
 from langchain_openai import ChatOpenAI
 from langchain.agents import AgentExecutor
-from pydantic import Field
-from typing import Any
-from pprint import pprint
-from crewai.utilities import I18N
+from crewai.utilities.printer import Printer
 
 
-# MOCKING A CUSTOM AGENT
+# # MOCKING A CUSTOM AGENT
 llm = ChatOpenAI(model="gpt-4o", temperature=0)
 
 
@@ -43,27 +36,6 @@ prompt = ChatPromptTemplate.from_messages(
 tools = [get_word_length]
 llm_with_tools = llm.bind_tools(tools)
 
-
-class CustomAgentWrapper(Agent):
-    custom_agent: Any = Field(default=None)
-    agent_executor: Any = Field(default=None)
-    i18n: I18N = Field(default=I18N())
-
-    def __init__(self, custom_agent, agent_executor, **data):
-        super().__init__(**data)
-        self.custom_agent = custom_agent
-        self.agent_executor = agent_executor
-
-    def execute_task(self, task, context=None, tools=None):
-        return super().execute_task(task, context, tools)
-
-    # def i18n(self, value: I18N) -> None:
-    #     if hasattr(self, "_agent") and hasattr(self._agent, "i18n"):
-    #         self._agent.i18n = value
-    #     else:
-    #         self._i18n = value
-
-
 custom_langchain_agent = (
     {
         "input": lambda x: x["input"],
@@ -75,43 +47,55 @@ custom_langchain_agent = (
     | llm_with_tools
     | OpenAIToolsAgentOutputParser()
 )
-print("custom_langchain_agent", custom_langchain_agent)
+# print("custom_langchain_agent", custom_langchain_agent)
 
 agent1: Agent = CustomAgentWrapper(
     custom_agent=custom_langchain_agent,
-    agent_executor=AgentExecutor(agent=custom_langchain_agent, tools=tools),
+    agent_executor=AgentExecutor(agent=custom_langchain_agent, tools=tools).invoke,
     role="Word smith",
-    goal="You are very powerful assistant",
+    goal="You are very powerful assistant, you take a word: {input} and return a fun fact based off its letter count",
     backstory="word smith since the you arrived",
     verbose=True,
 )
 
 agent2 = Agent(
     role="fun fact teller",
-    goal="you create a story based of the word given",
+    goal="you create a story based of the word: {input}",
     backstory="you are a wiz at telling fun facts based of the word and the number of letter is has.",
     verbose=True,
 )
-print("AGENT 1")
-pprint(vars(agent1))
-pprint(vars(agent1))
-print(
-    "\n AGENT 2",
-)
-pprint(vars(agent2))
-
+printer = Printer()
+# print("AGENT 1")
+# printer.print(vars(agent1), color='bold_green')
+# pprint(vars(agent1))
+# print(
+#     "\n AGENT 2",
+# )
+# pprint(vars(agent2))
+# printer.print(vars(agent2), color='bold_purple')
 
 task1 = Task(
     agent=agent1,
-    description="how many letters in {input}",
+    description="return a fun fact about {input}",
     expected_output="give me the word and the number of letter of words.",
 )
 
+# print(
+#     "\n task 1",
+# )
+
+# pprint(vars(agent2))
+# printer.print(vars(task1), color='bold_green')
 task2 = Task(
     agent=agent2,
-    description="create a paragraph about a fun fact for the {input} and the significance of the number of letter of words.",
+    description="create a paragraph about a fun fact for the given word and the significance of the number of letter of words.",
     expected_output="paragraph about a fun fact for the given word and the significance of the number of letter of words.",
+    context=[task1],
 )
+# print(
+#     "\n task 2",
+# )
+# printer.print(vars(task2), color='bold_green')
 
 my_crew = Crew(
     agents=[agent1, agent2],
@@ -121,7 +105,7 @@ my_crew = Crew(
 )
 
 crew = my_crew.kickoff(inputs={"input": "grapes"})
-print("RESULT:", crew)
+# print("RESULT:", crew)
 
 
 # agent_executor = AgentExecutor(agent=agent, tools=tools, verbose=True)

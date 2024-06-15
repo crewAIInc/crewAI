@@ -18,6 +18,7 @@ from pydantic import (
 from pydantic_core import PydanticCustomError
 
 from crewai.agent import Agent
+from crewai.custom_agent import CustomAgentWrapper
 from crewai.agents.cache import CacheHandler
 from crewai.memory.entity.entity_memory import EntityMemory
 from crewai.memory.long_term.long_term_memory import LongTermMemory
@@ -67,7 +68,7 @@ class Crew(BaseModel):
     cache: bool = Field(default=True)
     model_config = ConfigDict(arbitrary_types_allowed=True)
     tasks: List[Task] = Field(default_factory=list)
-    agents: List[Agent | Any] = Field(default_factory=list)
+    agents: List[Agent | CustomAgentWrapper] = Field(default_factory=list)
     process: Process = Field(default=Process.sequential)
     verbose: Union[int, bool] = Field(default=0)
     memory: bool = Field(
@@ -264,8 +265,11 @@ class Crew(BaseModel):
                 agent.function_calling_llm = self.function_calling_llm
             if not agent.step_callback:
                 agent.step_callback = self.step_callback
-
-            agent.create_agent_executor()
+            # if using default crewai agent then run this
+            if isinstance(agent, Agent):
+                agent.create_agent_executor()
+            # else:
+            #     agent.create_agent_executor()
 
         metrics = []
 
@@ -355,8 +359,8 @@ class Crew(BaseModel):
                 self._file_handler.log(
                     agent=role, task=task.description, status="started"
                 )
-
             output = task.execute(context=task_output)
+            print("---task_output", output)
 
             if not task.async_execution:
                 task_output = output
