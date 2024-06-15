@@ -4,15 +4,13 @@ import unittest
 from crewai.utilities.training_handler import CrewTrainingHandler
 
 
-class MyTestCase(unittest.TestCase):
+class TestCrewTrainingHandler(unittest.TestCase):
     def setUp(self):
         self.handler = CrewTrainingHandler("trained_data.pkl")
-        print("Setting up...")
 
     def tearDown(self):
         os.remove("trained_data.pkl")
         del self.handler
-        print("Tearing down...")
 
     def test_save_trained_data(self):
         agent_id = "agent1"

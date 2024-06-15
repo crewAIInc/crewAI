@@ -65,3 +65,5 @@ class PickleHandler:
                 return pickle.load(file)
             except EOFError:
                 return {}  # Return an empty dictionary if the file is empty or corrupted
+            except Exception:
+                raise  # Raise any other exceptions that occur during loading
