@@ -27,10 +27,14 @@ def test_evaluate_training_data(converter_mock):
     original_agent = MagicMock()
     function_return_value = TrainingTaskEvaluation(
         suggestions=[
-            "The initial output was already good, having a detailed explanation. However, the improved output gave similar information but in a more professional manner using better vocabulary. For future tasks, try to implement more elaborate language and precise terminology from the beginning."
+            "The initial output was already good, having a detailed explanation. However, the improved output "
+            "gave similar information but in a more professional manner using better vocabulary. For future tasks, "
+            "try to implement more elaborate language and precise terminology from the beginning."
         ],
         quality=8.0,
-        final_summary="The agent responded well initially. However, the improved output showed that there is room for enhancement in terms of language usage, precision, and professionalism. For future tasks, the agent should focus more on these points from the start to increase performance.",
+        final_summary="The agent responded well initially. However, the improved output showed that there is room "
+        "for enhancement in terms of language usage, precision, and professionalism. For future tasks, the agent "
+        "should focus more on these points from the start to increase performance.",
     )
     converter_mock.return_value.to_pydantic.return_value = function_return_value
     result = TaskEvaluator(original_agent=original_agent).evaluate_training_data(
@@ -42,9 +46,18 @@ def test_evaluate_training_data(converter_mock):
         [
             mock.call(
                 llm=original_agent.llm,
-                text="Assess the quality of the training data based on the llm output, human feedback , and llm output improved result.\n\nInitial Output:\nInitial output 1\n\nHuman Feedback:\nHuman feedback 1\n\nImproved Output:\nImproved output 1\n\nInitial Output:\nInitial output 2\n\nHuman Feedback:\nHuman feedback 2\n\nImproved Output:\nImproved output 2\n\nPlease provide:\n- Based on the Human Feedbacks and the comparison between Initial Outputs and Improved outputs provide action items based on human_feedback for future tasks\n- A score from 0 to 10 evaluating on completion, quality, and overall performance from the improved output to the initial output based on the human feedback\n",
+                text="Assess the quality of the training data based on the llm output, human feedback , and llm "
+                "output improved result.\n\nInitial Output:\nInitial output 1\n\nHuman Feedback:\nHuman feedback "
+                "1\n\nImproved Output:\nImproved output 1\n\nInitial Output:\nInitial output 2\n\nHuman "
+                "Feedback:\nHuman feedback 2\n\nImproved Output:\nImproved output 2\n\nPlease provide:\n- "
+                "Based on the Human Feedbacks and the comparison between Initial Outputs and Improved outputs "
+                "provide action items based on human_feedback for future tasks\n- A score from 0 to 10 evaluating "
+                "on completion, quality, and overall performance from the improved output to the initial output "
+                "based on the human feedback\n",
                 model=TrainingTaskEvaluation,
-                instructions="I'm gonna convert this raw text into valid JSON.\n\nThe json should have the following structure, with the following keys:\n- suggestions: List[str]\n- quality: float\n- final_summary: str",
+                instructions="I'm gonna convert this raw text into valid JSON.\n\nThe json should have the "
+                "following structure, with the following keys:\n- suggestions: List[str]\n- "
+                "quality: float\n- final_summary: str",
             ),
             mock.call().to_pydantic(),
         ]
