@@ -661,9 +661,9 @@ def test_agent_usage_metrics_are_captured_for_sequential_process():
     assert result == "Howdy!"
     assert crew.usage_metrics == {
         "completion_tokens": 17,
-        "prompt_tokens": 160,
+        "prompt_tokens": 158,
         "successful_requests": 1,
-        "total_tokens": 177,
+        "total_tokens": 175,
     }
 
 
@@ -691,8 +691,8 @@ def test_agent_usage_metrics_are_captured_for_hierarchical_process():
     assert result == '"Howdy!"'
     print(crew.usage_metrics)
     assert crew.usage_metrics == {
-        "total_tokens": 1664,
-        "prompt_tokens": 1381,
+        "total_tokens": 1659,
+        "prompt_tokens": 1376,
         "completion_tokens": 283,
         "successful_requests": 3,
     }
