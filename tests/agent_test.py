@@ -865,3 +865,32 @@ def test_agent_training_handler(crew_training_handler):
     crew_training_handler.assert_has_calls(
         [mock.call(), mock.call("training_data.pkl"), mock.call().load()]
     )
+
+
+@patch("crewai.agent.CrewTrainingHandler")
+def test_agent_use_trained_data(crew_training_handler):
+    task_prompt = "What is 1 + 1?"
+    agent = Agent(
+        role="researcher",
+        goal="test goal",
+        backstory="test backstory",
+        verbose=True,
+    )
+    crew_training_handler().load.return_value = {
+        agent.role: {
+            "suggestions": [
+                "The result of the math operatio must be right.",
+                "Result must be better than 1.",
+            ]
+        }
+    }
+
+    result = agent._use_trained_data(task_prompt=task_prompt)
+
+    assert (
+        result == "What is 1 + 1?You MUST follow these feedbacks: \n "
+        "The result of the math operatio must be right.\n - Result must be better than 1."
+    )
+    crew_training_handler.assert_has_calls(
+        [mock.call(), mock.call("trained_agents_data.pkl"), mock.call().load()]
+    )
