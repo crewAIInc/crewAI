@@ -1,5 +1,6 @@
 """Test Agent creation and execution basic functionality."""
 
+from unittest import mock
 from unittest.mock import patch
 
 import pytest
@@ -841,4 +842,26 @@ Thought:
 <|start_header_id|>assistant<|end_header_id|>
 
 """
+    )
+
+
+@patch("crewai.agent.CrewTrainingHandler")
+def test_agent_training_handler(crew_training_handler):
+    task_prompt = "What is 1 + 1?"
+    agent = Agent(
+        role="test role",
+        goal="test goal",
+        backstory="test backstory",
+        verbose=True,
+    )
+    crew_training_handler().load.return_value = {
+        f"{str(agent.id)}": {"0": {"human_feedback": "good"}}
+    }
+
+    result = agent._training_handler(task_prompt=task_prompt)
+
+    assert result == "What is 1 + 1?You MUST follow these feedbacks: \n good"
+
+    crew_training_handler.assert_has_calls(
+        [mock.call(), mock.call("training_data.pkl"), mock.call().load()]
     )
