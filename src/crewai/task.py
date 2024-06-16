@@ -13,7 +13,7 @@ from crewai.agent import Agent
 from crewai.tasks.task_output import TaskOutput
 from crewai.utilities import I18N, Converter, ConverterError, Printer
 from crewai.utilities.pydantic_schema_parser import PydanticSchemaParser
-from crewai.custom_agent import CustomAgentWrapper
+from crewai.custom_agent import CustomAgent
 
 
 class Task(BaseModel):
@@ -56,7 +56,7 @@ class Task(BaseModel):
     callback: Optional[Any] = Field(
         description="Callback to be executed after the task is completed.", default=None
     )
-    agent: Optional[Agent | CustomAgentWrapper] = Field(
+    agent: Optional[Agent | CustomAgent] = Field(
         description="Agent responsible for execution the task.", default=None
     )
     context: Optional[List["Task"]] = Field(
@@ -201,10 +201,6 @@ class Task(BaseModel):
         )
 
         exported_output = self._export_output(result)
-        # print('---TASKS EXECUTING exported_output---', exported_output)
-        # print('---TASKS EXECUTING self.description---', self.description)
-        # print('---TASKS EXECUTING result---', result)
-        # print('---TASKS EXECUTING agent.role---', agent.role)
 
         # type: the responses are usually str but need to figuire out a more elegant solution here
         self.output = TaskOutput(

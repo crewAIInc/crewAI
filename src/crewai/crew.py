@@ -18,7 +18,7 @@ from pydantic import (
 from pydantic_core import PydanticCustomError
 
 from crewai.agent import Agent
-from crewai.custom_agent import CustomAgentWrapper
+from crewai.custom_agent import CustomAgent
 from crewai.agents.cache import CacheHandler
 from crewai.memory.entity.entity_memory import EntityMemory
 from crewai.memory.long_term.long_term_memory import LongTermMemory
@@ -68,7 +68,7 @@ class Crew(BaseModel):
     cache: bool = Field(default=True)
     model_config = ConfigDict(arbitrary_types_allowed=True)
     tasks: List[Task] = Field(default_factory=list)
-    agents: List[Agent | CustomAgentWrapper] = Field(default_factory=list)
+    agents: List[Agent | CustomAgent] = Field(default_factory=list)
     process: Process = Field(default=Process.sequential)
     verbose: Union[int, bool] = Field(default=0)
     memory: bool = Field(
@@ -286,8 +286,13 @@ class Crew(BaseModel):
             )
 
         metrics = metrics + [
-            agent._token_process.get_summary() for agent in self.agents
+            agent._token_process.get_summary()
+            for agent in self.agents
+            if type(agent) == Agent
         ]
+        for agent in self.agents:
+            if type(agent) == Agent:
+                metrics.append(agent._token_process.get_summary())
         self.usage_metrics = {
             key: sum([m[key] for m in metrics if m is not None]) for key in metrics[0]
         }
@@ -371,8 +376,10 @@ class Crew(BaseModel):
                 self._file_handler.log(agent=role, task=task_output, status="completed")
 
         self._finish_execution(task_output)
-        # type: ignore # Item "None" of "Agent | None" has no attribute "_token_process"
-        token_usage = task.agent._token_process.get_summary()
+        if (
+            type(task.agent) == Agent
+        ):  # ignores if using a custom agent since there is too many ways of structuring this output - but maybe crewai becomes the standard
+            token_usage = task.agent._token_process.get_summary()
         # type: ignore # Incompatible return value type (got "tuple[str, Any]", expected "str")
         return self._format_output(task_output, token_usage)
 

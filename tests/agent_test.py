@@ -7,7 +7,7 @@ from langchain.tools import tool
 from langchain_core.exceptions import OutputParserException
 from langchain_openai import ChatOpenAI
 
-from crewai import Agent, Crew, Task, CustomAgentWrapper
+from crewai import Agent, Crew, Task, CustomAgent
 from crewai.agents.cache import CacheHandler
 from crewai.agents.executor import CrewAgentExecutor
 from crewai.agents.parser import CrewAgentParser
@@ -27,7 +27,9 @@ def test_agent_creation():
 
 
 def test_third_party_agent():
-    agent = CustomAgentWrapper(
+    # mocki
+    # llm = ChatOpenAI(model="gpt-3.5-turbo-0125", temperature=0)
+    agent = CustomAgent(
         role="third-party-agent", goal="test goal", backstory="test backstory"
     )
     print("THIRD PARTY AGENT", agent.role)

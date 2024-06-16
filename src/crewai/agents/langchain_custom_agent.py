@@ -1,4 +1,4 @@
-from crewai import Agent, Process, Task, Crew, CustomAgentWrapper
+from crewai import Agent, Process, Task, Crew, CustomAgent
 from langchain.agents import tool
 from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
 from langchain.agents.format_scratchpad.openai_tools import (
@@ -7,7 +7,7 @@ from langchain.agents.format_scratchpad.openai_tools import (
 from langchain.agents.output_parsers.openai_tools import OpenAIToolsAgentOutputParser
 from langchain_openai import ChatOpenAI
 from langchain.agents import AgentExecutor
-from crewai.utilities.printer import Printer
+from langchain_community.tools import DuckDuckGoSearchRun
 
 
 # # MOCKING A CUSTOM AGENT
@@ -30,7 +30,8 @@ prompt = ChatPromptTemplate.from_messages(
         MessagesPlaceholder(variable_name="agent_scratchpad"),
     ]
 )
-tools = [get_word_length]
+search = DuckDuckGoSearchRun()
+tools = [search]
 llm_with_tools = llm.bind_tools(tools)
 
 custom_langchain_agent = (
@@ -46,14 +47,19 @@ custom_langchain_agent = (
 )
 
 
-agent1: Agent = CustomAgentWrapper(
+agent1: Agent = CustomAgent(
     custom_agent=custom_langchain_agent,
-    agent_executor=AgentExecutor(agent=custom_langchain_agent, tools=tools).invoke,
-    role="word_smith",
-    goal="You are very powerful assistant, you take a word: {input} and return a fun fact based off its letter count",
-    backstory="word smith since the you arrived",
-    verbose=True,
-    tools=[tools],
+    agent_executor=AgentExecutor(
+        agent=custom_langchain_agent, tools=tools, verbose=True
+    ).invoke,
+    role="Senior Research Analyst",
+    goal="Discover innovative AI technologies",
+    backstory="""You're a senior research analyst at a large company.
+        You're responsible for analyzing data and providing insights
+        to the business.
+        You're currently working on a project to analyze the
+        trends and innovations in the space of artificial intelligence.""",
+    tools=[DuckDuckGoSearchRun()],
 )
 
 agent2 = Agent(
@@ -62,59 +68,22 @@ agent2 = Agent(
     backstory="you are a wiz at telling fun facts based of the word.",
     verbose=True,
 )
-printer = Printer()
-# print("AGENT 1")
-# printer.print(vars(agent1), color='bold_green')
-# pprint(vars(agent1))
-# print(
-#     "\n AGENT 2",
-# )
-# pprint(vars(agent2))
-# printer.print(vars(agent2), color='bold_purple')
 
-task1 = Task(
+research_task = Task(
+    description="Identify breakthrough AI technologies",
     agent=agent1,
-    description="return a fun fact about {input}",
-    expected_output="give me the word and the number of letter of words.",
+    expected_output="A bullet list summary of the top 5 most important AI news",
 )
-
-# print(
-#     "\n task 1",
-# )
-
-# pprint(vars(agent2))
-# printer.print(vars(task1), color='bold_green')
-task2 = Task(
+write_article_task = Task(
+    description="Draft an article on the latest AI technologies",
     agent=agent2,
-    description="create a paragraph about a fun fact for the given word and the significance of the number of letter of words.",
-    expected_output="paragraph about a fun fact for the given word and the significance of the number of letter of words.",
-    context=[task1],
+    expected_output="3 paragraph blog post on the latest AI technologies",
 )
-# print(
-#     "\n task 2",
-# )
-# printer.print(vars(task2), color='bold_green')
 
 my_crew = Crew(
     agents=[agent1, agent2],
-    tasks=[task1, task2],
+    tasks=[research_task, write_article_task],
     process=Process.sequential,
     full_output=False,
-    # cache=True,
 )
-
-crew = my_crew.kickoff(inputs={"input": "grapes"})
-print("RESULT:", crew)
-
-
-# agent_executor = AgentExecutor(agent=agent, tools=tools, verbose=True)
-# list(agent_executor.stream({"input": "How many letters in the word eudca"}))
-
-
-# should convert to for crewai
-
-# '''
-# ThirdPartyAgent(
-
-# )
-# '''
+# crew = my_crew.kickoff()
