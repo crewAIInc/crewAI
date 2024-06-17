@@ -16,6 +16,13 @@ from crewai.tools.tool_calling import InstructorToolCalling
 from crewai.tools.tool_usage import ToolUsage
 from crewai.utilities import RPMController
 
+from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
+from langchain.agents import AgentExecutor
+from langchain.agents.output_parsers.openai_tools import OpenAIToolsAgentOutputParser
+from langchain.agents.format_scratchpad.openai_tools import (
+    format_to_openai_tool_messages,
+)
+
 
 def test_agent_creation():
     agent = Agent(role="test role", goal="test goal", backstory="test backstory")
@@ -26,17 +33,53 @@ def test_agent_creation():
     assert agent.tools == []
 
 
-def test_third_party_agent():
-    # mocki
-    # llm = ChatOpenAI(model="gpt-3.5-turbo-0125", temperature=0)
-    agent = CustomAgent(
-        role="third-party-agent", goal="test goal", backstory="test backstory"
+def test_custom_agent_creation():
+    llm = ChatOpenAI(model="gpt-4o", temperature=0)
+
+    @tool
+    def get_word_length(word: str) -> int:
+        """Returns the length of a word."""
+        return len(word)
+
+    prompt = ChatPromptTemplate.from_messages(
+        [
+            (
+                "system",
+                "You are very powerful assistant, but don't know current events",
+            ),
+            ("user", "{input}"),
+            MessagesPlaceholder(variable_name="agent_scratchpad"),
+        ]
     )
-    print("THIRD PARTY AGENT", agent.role)
-    # assert agent.role == "third-party-agent"
-    # assert agent.goal == "test goal"
-    # assert agent.backstory == "test backstory"
-    # assert agent.tools == []
+    tools = [get_word_length]
+    llm_with_tools = llm.bind_tools(tools)
+    custom_langchain_agent = (
+        {
+            "input": lambda x: x["input"],
+            "agent_scratchpad": lambda x: format_to_openai_tool_messages(
+                x["intermediate_steps"]
+            ),
+        }
+        | prompt
+        | llm_with_tools
+        | OpenAIToolsAgentOutputParser()
+    )
+    agent_executor = AgentExecutor(
+        agent=custom_langchain_agent, tools=tools, verbose=True
+    ).invoke
+    agent = CustomAgent(
+        agent_executor=agent_executor,
+        role="test role",
+        goal="test goal",
+        backstory="test backstory",
+        tools=[tools],
+    )
+    print("AGENT EXEC", agent.agent_executor)
+    assert agent.role == "test role"
+    assert agent.goal == "test goal"
+    assert agent.backstory == "test backstory"
+    assert agent.tools == [tools]
+    assert agent.agent_executor == agent_executor
 
 
 def test_agent_default_values():

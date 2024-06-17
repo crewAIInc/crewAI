@@ -48,7 +48,6 @@ custom_langchain_agent = (
 
 
 agent1: Agent = CustomAgent(
-    custom_agent=custom_langchain_agent,
     agent_executor=AgentExecutor(
         agent=custom_langchain_agent, tools=tools, verbose=True
     ).invoke,
@@ -86,4 +85,5 @@ my_crew = Crew(
     process=Process.sequential,
     full_output=False,
 )
-# crew = my_crew.kickoff()
+crew = my_crew.kickoff()
+print(crew)

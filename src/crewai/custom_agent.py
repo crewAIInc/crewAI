@@ -1,6 +1,6 @@
 import inspect
 from pydantic import Field
-from typing import Any
+from typing import Any, List, Optional, Dict
 
 from crewai.agent import Agent
 
@@ -35,7 +35,20 @@ class CustomAgent(Agent):
         params = sig.parameters
 
         # for custom langchain agents and then other third party agents
-        if "input" in params:
-            return self.agent_executor({"input": task_prompt})
+        for param in params.values():
+            print("PARAM", param.annotation)
+            if param.annotation == Dict[str, Any]:
+                return self.agent_executor({"input": task_prompt})
+            elif (
+                param.annotation == list
+                or param.annotation == Optional[List[Dict[str, Any]]]
+            ):
+                return self.agent_executor(
+                    messages=[{"content": task_prompt, "role": "user"}]
+                )
+            elif param.annotation == str:
+                return self.agent_executor(task_prompt)
+            else:
+                raise TypeError(f"Unsupported parameter type: {param.annotation}")
         # works with llama index
         return self.agent_executor(task_prompt)

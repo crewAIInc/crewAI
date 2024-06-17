@@ -293,9 +293,10 @@ class Crew(BaseModel):
         for agent in self.agents:
             if type(agent) == Agent:
                 metrics.append(agent._token_process.get_summary())
-        self.usage_metrics = {
-            key: sum([m[key] for m in metrics if m is not None]) for key in metrics[0]
-        }
+                self.usage_metrics = {
+                    key: sum([m[key] for m in metrics if m is not None])
+                    for key in metrics[0]
+                }
 
         return result
 
@@ -376,12 +377,12 @@ class Crew(BaseModel):
                 self._file_handler.log(agent=role, task=task_output, status="completed")
 
         self._finish_execution(task_output)
-        if (
-            type(task.agent) == Agent
-        ):  # ignores if using a custom agent since there is too many ways of structuring this output - but maybe crewai becomes the standard
+        if type(task.agent) == Agent:
+            # ignores if using a custom agent since there is too many ways of structuring this output - but maybe crewai becomes the standard
             token_usage = task.agent._token_process.get_summary()
+            return self._format_output(task_output, token_usage)
         # type: ignore # Incompatible return value type (got "tuple[str, Any]", expected "str")
-        return self._format_output(task_output, token_usage)
+        return self._format_output(task_output)
 
     def _run_hierarchical_process(self) -> Union[str, Dict[str, Any]]:
         """Creates and assigns a manager agent to make sure the crew completes the tasks."""
@@ -482,7 +483,7 @@ class Crew(BaseModel):
         # [agent.interpolate_inputs(inputs) for agent in self.agents]
 
     def _format_output(
-        self, output: str, token_usage: Optional[Dict[str, Any]]
+        self, output: str, token_usage: Optional[Dict[str, Any]] = None
     ) -> Union[str, Dict[str, Any]]:
         """
         Formats the output of the crew execution.
