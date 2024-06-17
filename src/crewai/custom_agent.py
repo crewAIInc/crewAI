@@ -6,7 +6,17 @@ from crewai.agent import Agent
 
 
 class CustomAgent(Agent):
-    """Extends the Agent class to create a custom agent (llamaindex, langchain custom agents, etc)"""
+    """Extends the Agent class to create a custom agent (llamaindex, langchain custom agents, etc)
+
+    Each agent has a role, a goal, a backstory, agent_executor and an optional output_key if method to execute agent returns a dict instead of a string.
+
+    Attributes:
+    agent_executor: The chat/execute/generate_reply method of the of the agent you bring in.
+    output_key: The key of the output to return if the agent_executor() returns a Dict instead of a string.
+    role: The role of the agent.
+    goal: The objective of the agent.
+    backstory: The backstory of the agent.
+    """
 
     agent_executor: Any = Field(
         default=None,
