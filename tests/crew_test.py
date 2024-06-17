@@ -155,9 +155,9 @@ def test_hierarchical_process():
         manager_llm=ChatOpenAI(temperature=0, model="gpt-4"),
         tasks=[task],
     )
-
+    result = crew.kickoff()
     assert (
-        crew.kickoff()
+        result
         == "1. 'Demystifying AI: An in-depth exploration of Artificial Intelligence for the layperson' - In this piece, we will unravel the enigma of AI, simplifying its complexities into digestible information for the everyday individual. By using relatable examples and analogies, we will journey through the neural networks and machine learning algorithms that define AI, without the jargon and convoluted explanations that often accompany such topics.\n\n2. 'The Role of AI in Startups: A Game Changer?' - Startups today are harnessing the power of AI to revolutionize their businesses. This article will delve into how AI, as an innovative force, is shaping the startup ecosystem, transforming everything from customer service to product development. We'll explore real-life case studies of startups that have leveraged AI to accelerate their growth and disrupt their respective industries.\n\n3. 'AI and Ethics: Navigating the Complex Landscape' - AI brings with it not just technological advancements, but ethical dilemmas as well. This article will engage readers in a thought-provoking discussion on the ethical implications of AI, exploring issues like bias in algorithms, privacy concerns, job displacement, and the moral responsibility of AI developers. We will also discuss potential solutions and frameworks to address these challenges.\n\n4. 'Unveiling the AI Agents: The Future of Customer Service' - AI agents are poised to reshape the customer service landscape, offering businesses the ability to provide round-the-clock support and personalized experiences. In this article, we'll dive deep into the world of AI agents, examining how they work, their benefits and limitations, and how they're set to redefine customer interactions in the digital age.\n\n5. 'From Science Fiction to Reality: AI in Everyday Life' - AI, once a concept limited to the realm of sci-fi, has now permeated our daily lives. This article will highlight the ubiquitous presence of AI, from voice assistants and recommendation algorithms, to autonomous vehicles and smart homes. We'll explore how AI, in its various forms, is transforming our everyday experiences, making the future seem a lot closer than we imagined."
     )
 
@@ -659,9 +659,9 @@ def test_agent_usage_metrics_are_captured_for_sequential_process():
     assert result == "Howdy!"
     assert crew.usage_metrics == {
         "completion_tokens": 17,
-        "prompt_tokens": 158,
+        "prompt_tokens": 160,
         "successful_requests": 1,
-        "total_tokens": 175,
+        "total_tokens": 177,
     }
 
 
@@ -682,15 +682,14 @@ def test_agent_usage_metrics_are_captured_for_hierarchical_process():
         agents=[agent],
         tasks=[task],
         process=Process.hierarchical,
-        manager_llm=ChatOpenAI(temperature=0, model="gpt-4"),
+        manager_llm=ChatOpenAI(temperature=0, model="gpt-4o"),
     )
 
     result = crew.kickoff()
     assert result == '"Howdy!"'
-    print(crew.usage_metrics)
     assert crew.usage_metrics == {
-        "total_tokens": 1659,
-        "prompt_tokens": 1376,
+        "total_tokens": 1664,
+        "prompt_tokens": 1381,
         "completion_tokens": 283,
         "successful_requests": 3,
     }

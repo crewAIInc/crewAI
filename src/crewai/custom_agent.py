@@ -12,16 +12,21 @@ class CustomAgent(Agent):
         default=None,
         description="Bring the agent executor method of a custom agent to execute/run the agent.",
     )
+    output_key: Optional[str] = Field(
+        default=None,
+        description="The key of the output to return if the agent_executor() returns a Dict instead of a string",
+    )
 
-    def __init__(self, agent_executor, **data):
+    def __init__(self, agent_executor, output_key=None, **data):
         super().__init__(**data)
         self.agent_executor = agent_executor
+        self.output_key = output_key
 
     def create_agent_executor(self, tools=None) -> None:
         # overriding the create_agent_executor since custom agents utilize their own
         pass
 
-    def execute_task(self, task, context=None, tools=None, *args, **kwargs):
+    def execute_task(self, task, context=None, tools=None) -> str:
         if self.tools_handler:
             # type: ignore # Incompatible types in assignment (expression has type "dict[Never, Never]", variable has type "ToolCalling")
             self.tools_handler.last_used_tool = {}
@@ -43,23 +48,33 @@ class CustomAgent(Agent):
                     else {}
                 )
                 if isinstance(default_value, dict) and default_value:
-                    key = next(iter(default_value.keys()))
-                    return self.agent_executor({key: task_prompt})
+                    # Find the key that has a default value of type string
+                    for key, value in default_value.items():
+                        if isinstance(value, str):
+                            result = self.agent_executor({key: task_prompt})
+                            break
+                    else:
+                        result = self.agent_executor({"input": task_prompt})
                 else:
-                    # some take inputs like langchain
-                    return self.agent_executor({"input": task_prompt})
+                    result = self.agent_executor({"input": task_prompt})
             elif (
                 param.annotation == list
                 or param.annotation == Optional[List[Dict[str, Any]]]
             ):  # some agents take a list of messages like autogen
-                return self.agent_executor(
+                result = self.agent_executor(
                     messages=[{"content": task_prompt, "role": "user"}]
                 )
             elif (
                 param.annotation == str
             ):  # some agent runners only take a string like llamaindex
-                return self.agent_executor(task_prompt)
+                result = self.agent_executor(task_prompt)
             else:
                 raise TypeError(f"Unsupported parameter type: {param.annotation}")
-        # works with llama index
-        return self.agent_executor(task_prompt)
+            break
+        else:
+            result = self.agent_executor(task_prompt)
+
+        if self.output_key and isinstance(result, dict):
+            return result.get(self.output_key, "")
+
+        return result

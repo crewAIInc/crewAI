@@ -288,11 +288,10 @@ class Crew(BaseModel):
         metrics = metrics + [
             agent._token_process.get_summary()
             for agent in self.agents
-            if type(agent) == Agent
+            if not isinstance(agent, CustomAgent)
         ]
         for agent in self.agents:
-            if type(agent) == Agent:
-                metrics.append(agent._token_process.get_summary())
+            if not isinstance(agent, CustomAgent):
                 self.usage_metrics = {
                     key: sum([m[key] for m in metrics if m is not None])
                     for key in metrics[0]
@@ -377,12 +376,13 @@ class Crew(BaseModel):
                 self._file_handler.log(agent=role, task=task_output, status="completed")
 
         self._finish_execution(task_output)
-        if type(task.agent) == Agent:
+        if type(task.agent) == CustomAgent:
             # ignores if using a custom agent since there is too many ways of structuring this output - but maybe crewai becomes the standard
+            return self._format_output(task_output)
+        else:
+            # type: ignore # Incompatible return value type (got "tuple[str, Any]", expected "str")
             token_usage = task.agent._token_process.get_summary()
             return self._format_output(task_output, token_usage)
-        # type: ignore # Incompatible return value type (got "tuple[str, Any]", expected "str")
-        return self._format_output(task_output)
 
     def _run_hierarchical_process(self) -> Union[str, Dict[str, Any]]:
         """Creates and assigns a manager agent to make sure the crew completes the tasks."""
@@ -427,13 +427,13 @@ class Crew(BaseModel):
 
         self._finish_execution(task_output)
         # type: ignore # Incompatible return value type (got "tuple[str, Any]", expected "str")
+        manager_token_usage = manager._token_process.get_summary()
         if type(task.agent) == Agent:
-            manager_token_usage = manager._token_process.get_summary()
             return self._format_output(
                 task_output, manager_token_usage
             ), manager_token_usage
         else:
-            return self._format_output(task_output)
+            return self._format_output(task_output), manager_token_usage
 
     def copy(self):
         """Create a deep copy of the Crew."""
