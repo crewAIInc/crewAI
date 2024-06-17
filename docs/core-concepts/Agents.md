@@ -63,5 +63,44 @@ agent = Agent(
 )
 ```
 
+## Using a Custom Agent
+!!! note "Custom Agent Usage"
+    Bring your own agents like autogen, llamaindex, langchain custom agents and more. Each agent has their own agent_executor. All you have to do is attach the agent executor in and the goal + task gets added to the prompt. 
+
+```py
+from crewai import CustomAgent, Agent, Task, Crew, Process
+
+from llama_index.core.tools import FunctionTool
+from llama_index.llms.openai import OpenAI
+from llama_index.core.agent import ReActAgent
+
+
+# define sample Tool
+def multiply(a: int, b: int) -> int:
+    """Multiple two integers and returns the result integer"""
+    return a * b
+
+multiply_tool = FunctionTool.from_defaults(fn=multiply)
+llm = OpenAI(model="gpt-4o")
+
+llama_agent = ReActAgent.from_tools(
+    [multiply_tool],
+    llm=llm,
+    verbose=True,
+)
+
+# adding llama_agent to our custom agent
+agent = CustomAgent(
+    agent_executor=llama_agent.chat, # the .chat is llamaindex agent_executor. If you are using others just find their methods
+    role="math_solver",
+    goal="solve the question",
+    backstory="you are a mathmatician",
+    verbose=True,
+    memory=True,
+    tools=[multiply_tool],
+)
+```
+
+
 ## Conclusion
 Agents are the building blocks of the CrewAI framework. By understanding how to define and interact with agents, you can create sophisticated AI systems that leverage the power of collaborative intelligence.

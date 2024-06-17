@@ -427,10 +427,13 @@ class Crew(BaseModel):
 
         self._finish_execution(task_output)
         # type: ignore # Incompatible return value type (got "tuple[str, Any]", expected "str")
-        manager_token_usage = manager._token_process.get_summary()
-        return self._format_output(
-            task_output, manager_token_usage
-        ), manager_token_usage
+        if type(task.agent) == Agent:
+            manager_token_usage = manager._token_process.get_summary()
+            return self._format_output(
+                task_output, manager_token_usage
+            ), manager_token_usage
+        else:
+            return self._format_output(task_output)
 
     def copy(self):
         """Create a deep copy of the Crew."""

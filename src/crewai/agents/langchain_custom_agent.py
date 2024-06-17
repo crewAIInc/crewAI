@@ -78,11 +78,18 @@ write_article_task = Task(
     agent=agent2,
     expected_output="3 paragraph blog post on the latest AI technologies",
 )
-
+# sequential
+# my_crew = Crew(
+#     agents=[agent1, agent2],
+#     tasks=[research_task, write_article_task],
+#     process=Process.sequential,
+#     full_output=False,
+# )
 my_crew = Crew(
     agents=[agent1, agent2],
     tasks=[research_task, write_article_task],
-    process=Process.sequential,
+    process=Process.hierarchical,
+    manager_llm=ChatOpenAI(temperature=0, model="gpt-4o"),
     full_output=False,
 )
 crew = my_crew.kickoff()

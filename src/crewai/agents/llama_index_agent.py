@@ -1,4 +1,4 @@
-from crewai import CustomAgent, Agent, Task, Crew
+from crewai import CustomAgent, Agent, Task, Crew, Process
 
 import tiktoken
 from llama_index.core.callbacks import CallbackManager, TokenCountingHandler
@@ -6,6 +6,7 @@ from llama_index.core.tools import FunctionTool
 from llama_index.llms.openai import OpenAI
 from llama_index.core.agent import ReActAgent
 from langchain_community.tools import DuckDuckGoSearchRun
+from langchain_openai import ChatOpenAI
 
 
 # define sample Tool
@@ -45,7 +46,7 @@ llama_agent_2 = ReActAgent.from_tools([multiply_tool], llm=llm, verbose=True)
 agent1 = CustomAgent(
     agent_executor=llama_agent.chat,
     token_counter=token_counter.completion_llm_token_count,
-    role="math solver",
+    role="math_solver",
     goal="solve the question",
     backstory="you are a mathmatician",
     verbose=True,
@@ -54,7 +55,7 @@ agent1 = CustomAgent(
 )
 
 agent2 = Agent(
-    role="funny story",
+    role="funny_story",
     goal="create a funny story based on answer given",
     backstory="mathmatician turned commedian",
     verbose=True,
@@ -84,5 +85,13 @@ task2 = Task(
     context=[task1],
 )
 
-my_crew = Crew(agents=[agent1, agent2], tasks=[task1, task2], full_output=True)
+# my_crew = Crew(agents=[agent1, agent2], tasks=[task1, task2], full_output=True)
+my_crew = Crew(
+    agents=[agent1, agent2],
+    tasks=[task1, task2],
+    full_output=True,
+    process=Process.hierarchical,
+    manager_llm=ChatOpenAI(temperature=0, model="gpt-4o"),
+)
+crew = my_crew.kickoff(inputs={"a": "32", "b": "25"})
 crew = my_crew.kickoff(inputs={"a": "32", "b": "25"})
