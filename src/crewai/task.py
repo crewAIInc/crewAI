@@ -5,6 +5,10 @@ import threading
 import uuid
 from typing import Any, Dict, List, Optional, Type
 
+from langchain_community.chat_models import ChatOllama
+from langchain_core.output_parsers import StrOutputParser
+from langchain_core.prompts import PromptTemplate
+
 from langchain_openai import ChatOpenAI
 from pydantic import UUID4, BaseModel, Field, field_validator, model_validator
 from pydantic_core import PydanticCustomError
@@ -96,7 +100,11 @@ class Task(BaseModel):
     )
     rci: Optional[bool] = Field(
         default=True,
-        description="Implements Recursive Criticism and Iteration to verify output",
+        description="Whether the agent should use Recursive Criticism and Iteration(RCI) to verify output or not",
+    )
+    rci_depth: Optional[int] = Field(
+        default=1,
+        description="If the agent uses RCI, how many iterations it can maximum re-iterate.",
     )
 
     _original_description: str | None = None
@@ -182,6 +190,10 @@ class Task(BaseModel):
         self.prompt_context = context
         tools = tools or self.tools
 
+        # To check if the rci_depth is 0 and rci is set True, if True then set rci_depth as 1
+        if self.rci and self.rci_depth == 0:
+            self.rci_depth = 1
+
         if self.async_execution:
             self.thread = threading.Thread(
                 target=self._execute, args=(agent, self, context, tools)
@@ -193,45 +205,120 @@ class Task(BaseModel):
                 agent=agent,
                 context=context,
                 tools=tools,
+                rci = self.rci, # adding rci in function call
+                rci_depth=self.rci_depth
             )
             return result
 
     # Create new methods that will verify the output of the agent using RCI - Recursive Criticism and Iteration
-    def critique(self, agent, task, context, tools):
-        critic_agent = Agent(
-            role=agent.role,
-            goal="""A task is assigned to a LLM model which provided an output based on the task description. Identify
-                       errors in the output provided by the model. """,
-            backstory=agent.backstory
-            + "and you are a great critic who has keen eyes for errors.",
-            allow_delegation=False,
-            verbose=True,
-            llm=self.agent.function_calling_llm or self.agent.llm,
-            rci=False,
+    def critique(self, agent, task, output, llm):
+
+        critic_prompt_template = """
+        {agent_backstory}. + You are a great critic who has keen eyes for errors. 
+        A task is assigned to a LLM model which provides an output based on the task description. 
+        Identify errors in the output provided by the model, if any. 
+        Strictly avoid grammatical rephrasing or paraphrasing, point out only the logical or factual inaccuracies. 
+        Do not reproduce your own version of the output, just provide only the critique.
+        I repeat do not give your own rewritten version of the output. Only point out the errors.
+
+        Provided Task: {task_description}
+        Output: {output}
+        """
+
+        critic_prompt = PromptTemplate(
+            input_variables=["task_description", "result"],
+            template=critic_prompt_template
         )
 
-        new_task = task
-        new_task.description = (
-            f"""Provided Task: {task.description}\n Output: {self.output}"""
+        critic_chain = critic_prompt | llm | StrOutputParser()
+        
+        critic_response = critic_chain.invoke({
+            "agent_backstory": agent.backstory,
+            "task_description": task.description,
+            "output": output
+        })
+
+        return critic_response
+
+    
+    def validate(self, task, critique, output, llm):
+
+        validate_prompt_template = """
+        You are a context analyzer and your job is to identify if the critique to a task provided and its corresponding output, states "significant changes are required in the output" or synonymous phrases of that significance order.
+        If there are significant changes stated in the critique, without any preamble or additional explanation, just print "True" else just print "False". 
+        Avoid minor inaccuracies or minor adjustments. 
+        If the critique says the overall output matches the task description with minor changes required, print 'False'.
+        Unless and until the output change provided by the critique is tangential, print 'False', if it is tagential print 'True'. 
+        Make sure the output provided by you should be only one word that is either 'True' or 'False'.
+
+        Provided Task: {task_description}
+        Output: {output}
+        Critique: {critique}
+        """
+
+        validate_prompt = PromptTemplate(
+            input_variables=["task_description", "output", "critique"],
+            template=validate_prompt_template
         )
-        new_task.expected_output = "A short paragraph"
-        new_task.agent = critic_agent
 
-        critic_response = self._execute(
-            agent=critic_agent, task=task, context=context, tools=tools, rci=False
+        validate_chain = validate_prompt | llm | StrOutputParser()
+
+        validate_response = validate_chain.invoke({
+            "task_description": task.description,
+            "output": output,
+            "critique": critique
+        })
+
+        return validate_response
+    
+    def improve(self, task, output, critique, llm):
+    
+        improve_prompt_template = """
+        You are a helpful assistant who can skillfully analyze the critique provided to a task based on its output. 
+        Your job is completely understand the task, its corresponding output and the critique provided and rewrite the output based on the critique. 
+        Avoid writing "Here is my modificication" or any synoymous phrases at the start or at the end.
+        No need for premable or explanations from your side, just rewrite the output based on the critique. 
+        Make sure you maintain the format if mentioned in the task description.
+
+        Provided Task: {task_description}
+        Output: {output}
+        Critique: {critique}
+        """
+
+        improve_prompt = PromptTemplate(
+            input_variables=["task_description", "output", "critique"],
+            template=improve_prompt_template
         )
 
-        print(critic_response)
+        improve_chain = improve_prompt | llm | StrOutputParser()
+        
+        improve_response = improve_chain.invoke({
+            "task_description": task.description,
+            "output": output,
+            "critique": critique
+        })
 
-    def improve(self):
-        pass
+        return improve_response
 
-    def _execute(self, agent, task, context, tools, rci=True):
+    def _execute(self, agent, task, context, tools, rci, rci_depth):
         result = agent.execute_task(
             task=task,
             context=context,
             tools=tools,
         )
+
+        # To perform RCI if rci is set to True
+        llm = ChatOllama(model="llama3")
+        depth = 0
+        while rci and (depth < rci_depth):
+            critic_response = self.critique(llm = llm, agent=agent, task=task, output=result)
+            validate_response = self.validate(llm=llm, task=task, output=result, critique=critic_response)
+            if validate_response == "True": 
+                result = self.improve(llm=llm, task=task, output=result,critique=critic_response)
+            else:
+                rci = False
+            
+            depth += 1
 
         exported_output = self._export_output(result)
 
@@ -241,9 +328,6 @@ class Task(BaseModel):
             raw_output=result,
             agent=agent.role,
         )
-
-        # if rci:
-        #     self.critique(agent=agent, task=task, tools=tools, context=context)
 
         if self.callback:
             self.callback(self.output)
