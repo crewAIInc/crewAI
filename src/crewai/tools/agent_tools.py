@@ -70,7 +70,12 @@ class AgentTools(BaseModel):
                 agent = ""
 
             # It is important to remove the quotes from the agent name.
-            # This is because the LLM might have added quotes to the agent name.
+            # The reason we have to do this is because less-powerful LLM's
+            # have difficulty producing valid JSON.
+            # As a result, we end up with invalid JSON that is truncated like this:
+            # {"task": "....", "coworker": "....
+            # when it should look like this:
+            # {"task": "....", "coworker": "...."}
             agent_name = agent.casefold().replace('"', "")
 
             agent = [
