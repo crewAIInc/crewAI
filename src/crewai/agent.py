@@ -257,7 +257,6 @@ class Agent(BaseModel):
             self.cache_handler = cache_handler
             self.tools_handler.cache = cache_handler
         self.create_agent_executor()
-        pass
 
     def set_rpm_controller(self, rpm_controller: RPMController) -> None:
         """Set the rpm controller for the agent.
