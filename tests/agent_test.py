@@ -29,7 +29,7 @@ def test_agent_default_values():
     agent = Agent(role="test role", goal="test goal", backstory="test backstory")
 
     assert isinstance(agent.llm, ChatOpenAI)
-    assert agent.llm.model_name == "gpt-4"
+    assert agent.llm.model_name == "gpt-4o"
     assert agent.llm.temperature == 0.7
     assert agent.llm.verbose is False
     assert agent.allow_delegation is True
@@ -732,7 +732,7 @@ def test_agent_llm_uses_token_calc_handler_with_llm_has_model_name():
 
     assert len(agent1.llm.callbacks) == 1
     assert agent1.llm.callbacks[0].__class__.__name__ == "TokenCalcHandler"
-    assert agent1.llm.callbacks[0].model == "gpt-4"
+    assert agent1.llm.callbacks[0].model == "gpt-4o"
     assert (
         agent1.llm.callbacks[0].token_cost_process.__class__.__name__ == "TokenProcess"
     )

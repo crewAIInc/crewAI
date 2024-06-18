@@ -1,5 +1,7 @@
 """Test Agent creation and execution basic functionality."""
 
+import json
+
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -7,6 +9,7 @@ from pydantic import BaseModel
 from pydantic_core import ValidationError
 
 from crewai import Agent, Crew, Process, Task
+from crewai.tasks.task_output import TaskOutput
 
 
 def test_task_tool_reflect_agent_tools():
@@ -103,6 +106,46 @@ def test_task_callback():
         execute.return_value = "ok"
         task.execute()
         task_completed.assert_called_once_with(task.output)
+
+
+def test_task_callback_returns_task_ouput():
+    researcher = Agent(
+        role="Researcher",
+        goal="Make the best research and analysis on content about AI and AI agents",
+        backstory="You're an expert researcher, specialized in technology, software engineering, AI and startups. You work as a freelancer and is now working on doing research and analysis for a new customer.",
+        allow_delegation=False,
+    )
+
+    task_completed = MagicMock(return_value="done")
+
+    task = Task(
+        description="Give me a list of 5 interesting ideas to explore for an article, what makes them unique and interesting.",
+        expected_output="Bullet point list of 5 interesting ideas.",
+        agent=researcher,
+        callback=task_completed,
+    )
+
+    with patch.object(Agent, "execute_task") as execute:
+        execute.return_value = "exported_ok"
+        task.execute()
+        # Ensure the callback is called with a TaskOutput object serialized to JSON
+        task_completed.assert_called_once()
+        callback_data = task_completed.call_args[0][0]
+
+        # Check if callback_data is TaskOutput object or JSON string
+        if isinstance(callback_data, TaskOutput):
+            callback_data = json.dumps(callback_data.model_dump())
+
+        assert isinstance(callback_data, str)
+        output_dict = json.loads(callback_data)
+        expected_output = {
+            "description": task.description,
+            "exported_output": "exported_ok",
+            "raw_output": "exported_ok",
+            "agent": researcher.role,
+            "summary": "Give me a list of 5 interesting ideas to explore...",
+        }
+        assert output_dict == expected_output
 
 
 def test_execute_with_agent():
