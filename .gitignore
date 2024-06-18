@@ -12,3 +12,4 @@ old_en.json
 db/
 test.py
 rc-tests/*
+.env.local

@@ -238,6 +238,8 @@ class Task(BaseModel):
             "output": output
         })
 
+        print("Critic Response:\n", critic_response)
+
         return critic_response
 
     
@@ -269,6 +271,7 @@ class Task(BaseModel):
             "critique": critique
         })
 
+        print("Validate Response:\n", validate_response)
         return validate_response
     
     def improve(self, task, output, critique, llm):
@@ -298,9 +301,11 @@ class Task(BaseModel):
             "critique": critique
         })
 
+        print("Improvised Response:\n", improve_response)
+
         return improve_response
 
-    def _execute(self, agent, task, context, tools, rci, rci_depth):
+    def _execute(self, agent, task, context, tools, rci=True, rci_depth=1):
         result = agent.execute_task(
             task=task,
             context=context,

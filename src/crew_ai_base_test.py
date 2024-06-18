@@ -7,8 +7,6 @@ os.environ["OPENAI_API_KEY"] = "NA"
 
 llm = ChatOpenAI(model="llama3", base_url="http://localhost:11434/v1")
 
-# Task 1
-
 general_agent = Agent(
     role="Machine Learning Expert",
     goal="""Provide clear explanations to the questions asked in a very simple language covering even the complex concepts""",
@@ -22,7 +20,7 @@ task = Task(
     description="""what is K-Means Clustering""",
     agent=general_agent,
     expected_output="A short to meduim sized paragraph",
-    rci_depth=2
+    rci_depth=1
 )
 
 crew = Crew(agents=[general_agent], tasks=[task], verbose=2)
