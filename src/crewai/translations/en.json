@@ -21,7 +21,7 @@
   },
   "errors": {
     "force_final_answer": "Tool won't be use because it's time to give your final answer. Don't use tools and just your absolute BEST Final answer.",
-    "agent_tool_unexsiting_coworker": "\nError executing tool. coworker mentioned not found, it must to be one of the following options:\n{coworkers}\n",
+    "agent_tool_unexsiting_coworker": "\nError executing tool. coworker mentioned not found, it must be one of the following options:\n{coworkers}\n",
     "task_repeated_usage": "I tried reusing the same input, I must stop using this action input. I'll try something else instead.\n\n",
     "tool_usage_error": "I encountered an error: {error}",
     "tool_arguments_error": "Error: the Action Input is not a valid key, value dictionary.",

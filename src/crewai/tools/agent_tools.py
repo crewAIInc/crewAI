@@ -34,7 +34,11 @@ class AgentTools(BaseModel):
         return tools
 
     def delegate_work(
-        self, task: str, context: Union[str, None] = None, coworker: Union[str, None] = None, **kwargs
+        self,
+        task: str,
+        context: Union[str, None] = None,
+        coworker: Union[str, None] = None,
+        **kwargs,
     ):
         """Useful to delegate a specific task to a coworker passing all necessary context and names."""
         coworker = coworker or kwargs.get("co_worker") or kwargs.get("coworker")
@@ -45,7 +49,11 @@ class AgentTools(BaseModel):
         return self._execute(coworker, task, context)
 
     def ask_question(
-        self, question: str, context: Union[str, None] = None, coworker: Union[str, None] = None, **kwargs
+        self,
+        question: str,
+        context: Union[str, None] = None,
+        coworker: Union[str, None] = None,
+        **kwargs,
     ):
         """Useful to ask a question, opinion or take from a coworker passing all necessary context and names."""
         coworker = coworker or kwargs.get("co_worker") or kwargs.get("coworker")
@@ -55,13 +63,20 @@ class AgentTools(BaseModel):
                 coworker = coworker[1:-1].split(",")[0]
         return self._execute(coworker, question, context)
 
-    def _execute(self, agent, task, context):
+    def _execute(self, agent: Union[str, None], task: str, context: Union[str, None]):
         """Execute the command."""
         try:
+            if agent is None:
+                agent = ""
+
+            # It is important to remove the quotes from the agent name.
+            # This is because the LLM might have added quotes to the agent name.
+            agent_name = agent.casefold().replace('"', "")
+
             agent = [
                 available_agent
                 for available_agent in self.agents
-                if available_agent.role.casefold().strip() == agent.casefold().strip()
+                if available_agent.role.casefold() == agent_name
             ]
         except Exception as _:
             return self.i18n.errors("agent_tool_unexsiting_coworker").format(
