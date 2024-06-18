@@ -42,7 +42,7 @@ class AgentTools(BaseModel):
     ):
         """Useful to delegate a specific task to a coworker passing all necessary context and names."""
         coworker = coworker or kwargs.get("co_worker") or kwargs.get("coworker")
-        if coworker is not None:
+        if coworker:
             is_list = coworker.startswith("[") and coworker.endswith("]")
             if is_list:
                 coworker = coworker[1:-1].split(",")[0]
@@ -57,7 +57,7 @@ class AgentTools(BaseModel):
     ):
         """Useful to ask a question, opinion or take from a coworker passing all necessary context and names."""
         coworker = coworker or kwargs.get("co_worker") or kwargs.get("coworker")
-        if coworker is not None:
+        if coworker:
             is_list = coworker.startswith("[") and coworker.endswith("]")
             if is_list:
                 coworker = coworker[1:-1].split(",")[0]
