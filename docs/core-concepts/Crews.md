@@ -47,23 +47,34 @@ from langchain_community.tools import DuckDuckGoSearchRun
 researcher = Agent(
     role='Senior Research Analyst',
     goal='Discover innovative AI technologies',
+    backstory="""You're a senior research analyst at a large company.
+        You're responsible for analyzing data and providing insights
+        to the business.
+        You're currently working on a project to analyze the
+        trends and innovations in the space of artificial intelligence.""",
     tools=[DuckDuckGoSearchRun()]
 )
 
 writer = Agent(
     role='Content Writer',
     goal='Write engaging articles on AI discoveries',
+    backstory="""You're a senior writer at a large company.
+        You're responsible for creating content to the business.
+        You're currently working on a project to write about trends 
+        and innovations in the space of AI for your next meeting.""",
     verbose=True
 )
 
 # Create tasks for the agents
 research_task = Task(
     description='Identify breakthrough AI technologies',
-    agent=researcher
+    agent=researcher,
+    expected_output='A bullet list summary of the top 5 most important AI news'
 )
 write_article_task = Task(
     description='Draft an article on the latest AI technologies',
-    agent=writer
+    agent=writer,
+    expected_output='3 paragraph blog post on the latest AI technologies'
 )
 
 # Assemble the crew with a sequential process
