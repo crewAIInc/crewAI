@@ -57,20 +57,20 @@ interactions:
       allows you to properly evaluate the work of your team members.\nYour personal
       goal is: Manage the team to complete the task in the best way possible.\n\nYou
       ONLY have access to the following tools, and should NEVER make up tools that
-      are not listed here:\n\nDelegate work to co-worker: Delegate work to co-worker(coworker:
+      are not listed here:\n\nDelegate work to coworker: Delegate work to coworker(coworker:
       str, task: str, context: str) - Delegate a specific task to one of the following
-      co-workers: [''Scorer'']\nThe input to this tool should be the coworker, the
+      coworkers: [''Scorer'']\nThe input to this tool should be the coworker, the
       task you want them to do, and ALL necessary context to execute the task, they
       know nothing about the task, so share absolute everything you know, don''t reference
-      things but instead explain them.\nAsk question to co-worker: Ask question to
-      co-worker(coworker: str, question: str, context: str) - Ask a specific question
-      to one of the following co-workers: [''Scorer'']\nThe input to this tool should
+      things but instead explain them.\nAsk question to coworker: Ask question to
+      coworker(coworker: str, question: str, context: str) - Ask a specific question
+      to one of the following coworkers: [''Scorer'']\nThe input to this tool should
       be the coworker, the question you have for them, and ALL necessary context to
       ask the question properly, they know nothing about the question, so share absolute
       everything you know, don''t reference things but instead explain them.\n\nUse
       the following format:\n\nThought: you should always think about what to do\nAction:
-      the action to take, only one name of [Delegate work to co-worker, Ask question
-      to co-worker], just the name, exactly as it''s written.\nAction Input: the input
+      the action to take, only one name of [Delegate work to coworker, Ask question
+      to coworker], just the name, exactly as it''s written.\nAction Input: the input
       to the action, just a simple a python dictionary using \" to wrap keys and values.\nObservation:
       the result of the action\n\nOnce all necessary information is gathered:\n\nThought:
       I now know the final answer\nFinal Answer: the final answer to the original
@@ -3197,20 +3197,20 @@ interactions:
       allows you to properly evaluate the work of your team members.\nYour personal
       goal is: Manage the team to complete the task in the best way possible.\n\nYou
       ONLY have access to the following tools, and should NEVER make up tools that
-      are not listed here:\n\nDelegate work to co-worker: Delegate work to co-worker(coworker:
+      are not listed here:\n\nDelegate work to coworker: Delegate work to coworker(coworker:
       str, task: str, context: str) - Delegate a specific task to one of the following
-      co-workers: [''Scorer'']\nThe input to this tool should be the coworker, the
+      coworkers: [''Scorer'']\nThe input to this tool should be the coworker, the
       task you want them to do, and ALL necessary context to execute the task, they
       know nothing about the task, so share absolute everything you know, don''t reference
-      things but instead explain them.\nAsk question to co-worker: Ask question to
-      co-worker(coworker: str, question: str, context: str) - Ask a specific question
-      to one of the following co-workers: [''Scorer'']\nThe input to this tool should
+      things but instead explain them.\nAsk question to coworker: Ask question to
+      coworker(coworker: str, question: str, context: str) - Ask a specific question
+      to one of the following coworkers: [''Scorer'']\nThe input to this tool should
       be the coworker, the question you have for them, and ALL necessary context to
       ask the question properly, they know nothing about the question, so share absolute
       everything you know, don''t reference things but instead explain them.\n\nUse
       the following format:\n\nThought: you should always think about what to do\nAction:
-      the action to take, only one name of [Delegate work to co-worker, Ask question
-      to co-worker], just the name, exactly as it''s written.\nAction Input: the input
+      the action to take, only one name of [Delegate work to coworker, Ask question
+      to coworker], just the name, exactly as it''s written.\nAction Input: the input
       to the action, just a simple a python dictionary using \" to wrap keys and values.\nObservation:
       the result of the action\n\nOnce all necessary information is gathered:\n\nThought:
       I now know the final answer\nFinal Answer: the final answer to the original
@@ -3225,8 +3225,8 @@ interactions:
       it. Since scoring can be subjective, it''s essential to establish clear criteria
       based on relevance, insightfulness, current interest in the topic, and perhaps
       its specificity or ability to provoke thought. As I don''t have direct guidelines,
-      I will need to consult with my co-worker, Scorer, who might have a set of criteria
-      or insights on how to approach this task.\n\nAction: Ask question to co-worker\nAction
+      I will need to consult with my coworker, Scorer, who might have a set of criteria
+      or insights on how to approach this task.\n\nAction: Ask question to coworker\nAction
       Input: {\"coworker\": \"Scorer\", \"question\": \"What criteria should we use
       to evaluate and score the title ''The impact of AI in the future of work''?\",
       \"context\": \"We need to assign a score between 1-5 for the title ''The impact

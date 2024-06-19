@@ -58,7 +58,7 @@ class CrewAgentExecutor(AgentExecutor):
         if (
             self.crew
             and self.crew.memory
-            and "Action: Delegate work to co-worker" not in output.log
+            and "Action: Delegate work to coworker" not in output.log
         ):
             memory = ShortTermMemoryItem(
                 data=output.log,

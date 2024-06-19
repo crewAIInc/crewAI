@@ -144,20 +144,20 @@ interactions:
       allows you to properly evaluate the work of your team members.\nYour personal
       goal is: Manage the team to complete the task in the best way possible.\nYou
       ONLY have access to the following tools, and should NEVER make up tools that
-      are not listed here:\n\nDelegate work to co-worker: Delegate work to co-worker(task:
+      are not listed here:\n\nDelegate work to coworker: Delegate work to coworker(task:
       str, context: str, coworker: Optional[str] = None, **kwargs) - Delegate a specific
-      task to one of the following co-workers: [Scorer]\nThe input to this tool should
-      be the co-worker, the task you want them to do, and ALL necessary context to
+      task to one of the following coworkers: [Scorer]\nThe input to this tool should
+      be the coworker, the task you want them to do, and ALL necessary context to
       execute the task, they know nothing about the task, so share absolute everything
       you know, don''t reference things but instead explain them.\nAsk question to
-      co-worker: Ask question to co-worker(question: str, context: str, coworker:
+      coworker: Ask question to coworker(question: str, context: str, coworker:
       Optional[str] = None, **kwargs) - Ask a specific question to one of the following
-      co-workers: [Scorer]\nThe input to this tool should be the co-worker, the question
+      coworkers: [Scorer]\nThe input to this tool should be the coworker, the question
       you have for them, and ALL necessary context to ask the question properly, they
       know nothing about the question, so share absolute everything you know, don''t
       reference things but instead explain them.\n\nUse the following format:\n\nThought:
       you should always think about what to do\nAction: the action to take, only one
-      name of [Delegate work to co-worker, Ask question to co-worker], just the name,
+      name of [Delegate work to coworker, Ask question to coworker], just the name,
       exactly as it''s written.\nAction Input: the input to the action, just a simple
       a python dictionary, enclosed in curly braces, using \" to wrap keys and values.\nObservation:
       the result of the action\n\nOnce all necessary information is gathered:\n\nThought:
@@ -1391,7 +1391,7 @@ interactions:
       it must be outcome described.\n\nI MUST use these formats, my job depends on
       it!\nCurrent Task: What criteria do you use to score a title and how are these
       criteria weighted?\n\nThis is the expect criteria for your final answer: Your
-      best answer to your co-worker asking you this, accounting for the context shared.
+      best answer to your coworker asking you this, accounting for the context shared.
       \n you MUST return the actual complete content as the final answer, not a summary.\n\nThis
       is the context you''re working with:\nI need to assign a score between 1-5 to
       the title ''The impact of AI in the future of work.'' To ensure I understand
@@ -3120,20 +3120,20 @@ interactions:
       allows you to properly evaluate the work of your team members.\nYour personal
       goal is: Manage the team to complete the task in the best way possible.\nYou
       ONLY have access to the following tools, and should NEVER make up tools that
-      are not listed here:\n\nDelegate work to co-worker: Delegate work to co-worker(task:
+      are not listed here:\n\nDelegate work to coworker: Delegate work to coworker(task:
       str, context: str, coworker: Optional[str] = None, **kwargs) - Delegate a specific
-      task to one of the following co-workers: [Scorer]\nThe input to this tool should
-      be the co-worker, the task you want them to do, and ALL necessary context to
+      task to one of the following coworkers: [Scorer]\nThe input to this tool should
+      be the coworker, the task you want them to do, and ALL necessary context to
       execute the task, they know nothing about the task, so share absolute everything
       you know, don''t reference things but instead explain them.\nAsk question to
-      co-worker: Ask question to co-worker(question: str, context: str, coworker:
+      coworker: Ask question to coworker(question: str, context: str, coworker:
       Optional[str] = None, **kwargs) - Ask a specific question to one of the following
-      co-workers: [Scorer]\nThe input to this tool should be the co-worker, the question
+      coworkers: [Scorer]\nThe input to this tool should be the coworker, the question
       you have for them, and ALL necessary context to ask the question properly, they
       know nothing about the question, so share absolute everything you know, don''t
       reference things but instead explain them.\n\nUse the following format:\n\nThought:
       you should always think about what to do\nAction: the action to take, only one
-      name of [Delegate work to co-worker, Ask question to co-worker], just the name,
+      name of [Delegate work to coworker, Ask question to coworker], just the name,
       exactly as it''s written.\nAction Input: the input to the action, just a simple
       a python dictionary, enclosed in curly braces, using \" to wrap keys and values.\nObservation:
       the result of the action\n\nOnce all necessary information is gathered:\n\nThought:
@@ -3149,7 +3149,7 @@ interactions:
       contribute to a title''s score and how these factors are weighted. Given I can''t
       make assumptions and have to provide all necessary context, I need to first
       gather this information to ensure the task is completed accurately.\n\nAction:
-      Ask question to co-worker\n\nAction Input: {\"question\": \"What criteria do
+      Ask question to coworker\n\nAction Input: {\"question\": \"What criteria do
       you use to score a title and how are these criteria weighted?\", \"context\":
       \"I need to assign a score between 1-5 to the title ''The impact of AI in the
       future of work.'' To ensure I understand how to evaluate this title accurately,
@@ -4438,7 +4438,7 @@ interactions:
       the task.\nYour final answer must be the great and the most complete as possible,
       it must be outcome described.\n\nI MUST use these formats, my job depends on
       it!\nCurrent Task: Score the title using the provided criteria\n\nThis is the
-      expect criteria for your final answer: Your best answer to your co-worker asking
+      expect criteria for your final answer: Your best answer to your coworker asking
       you this, accounting for the context shared. \n you MUST return the actual complete
       content as the final answer, not a summary.\n\nThis is the context you''re working
       with:\nThe title to be scored is ''The impact of AI in the future of work.''
@@ -4936,20 +4936,20 @@ interactions:
       allows you to properly evaluate the work of your team members.\nYour personal
       goal is: Manage the team to complete the task in the best way possible.\nYou
       ONLY have access to the following tools, and should NEVER make up tools that
-      are not listed here:\n\nDelegate work to co-worker: Delegate work to co-worker(task:
+      are not listed here:\n\nDelegate work to coworker: Delegate work to coworker(task:
       str, context: str, coworker: Optional[str] = None, **kwargs) - Delegate a specific
-      task to one of the following co-workers: [Scorer]\nThe input to this tool should
-      be the co-worker, the task you want them to do, and ALL necessary context to
+      task to one of the following coworkers: [Scorer]\nThe input to this tool should
+      be the coworker, the task you want them to do, and ALL necessary context to
       execute the task, they know nothing about the task, so share absolute everything
       you know, don''t reference things but instead explain them.\nAsk question to
-      co-worker: Ask question to co-worker(question: str, context: str, coworker:
+      coworker: Ask question to coworker(question: str, context: str, coworker:
       Optional[str] = None, **kwargs) - Ask a specific question to one of the following
-      co-workers: [Scorer]\nThe input to this tool should be the co-worker, the question
+      coworkers: [Scorer]\nThe input to this tool should be the coworker, the question
       you have for them, and ALL necessary context to ask the question properly, they
       know nothing about the question, so share absolute everything you know, don''t
       reference things but instead explain them.\n\nUse the following format:\n\nThought:
       you should always think about what to do\nAction: the action to take, only one
-      name of [Delegate work to co-worker, Ask question to co-worker], just the name,
+      name of [Delegate work to coworker, Ask question to coworker], just the name,
       exactly as it''s written.\nAction Input: the input to the action, just a simple
       a python dictionary, enclosed in curly braces, using \" to wrap keys and values.\nObservation:
       the result of the action\n\nOnce all necessary information is gathered:\n\nThought:
@@ -4965,7 +4965,7 @@ interactions:
       contribute to a title''s score and how these factors are weighted. Given I can''t
       make assumptions and have to provide all necessary context, I need to first
       gather this information to ensure the task is completed accurately.\n\nAction:
-      Ask question to co-worker\n\nAction Input: {\"question\": \"What criteria do
+      Ask question to coworker\n\nAction Input: {\"question\": \"What criteria do
       you use to score a title and how are these criteria weighted?\", \"context\":
       \"I need to assign a score between 1-5 to the title ''The impact of AI in the
       future of work.'' To ensure I understand how to evaluate this title accurately,
@@ -4997,7 +4997,7 @@ interactions:
       impact of AI in the future of work\" based on Relevance, Clarity, Originality,
       Engagement, and Length. Given my understanding of the title''s subject and the
       criteria provided, I can now delegate the task of scoring the title using these
-      specific guidelines.\n\nAction: Delegate work to co-worker\n\nAction Input:
+      specific guidelines.\n\nAction: Delegate work to coworker\n\nAction Input:
       {\"task\": \"Score the title using the provided criteria\", \"context\": \"The
       title to be scored is ''The impact of AI in the future of work.'' Based on our
       scoring system, please evaluate the title against the following five criteria,
