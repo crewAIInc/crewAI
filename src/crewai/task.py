@@ -13,7 +13,7 @@ from crewai.agent import Agent
 from crewai.tasks.task_output import TaskOutput
 from crewai.utilities import I18N, Converter, ConverterError, Printer
 from crewai.utilities.pydantic_schema_parser import PydanticSchemaParser
-from crewai.agents.BaseAgent import BaseAgent
+from crewai.agents.third_party_agents.base_agent import BaseAgent
 
 
 class Task(BaseModel):
@@ -185,18 +185,15 @@ class Task(BaseModel):
             )
             self.thread.start()
         else:
-            print("RUNNING TASK EXECUTOR -- ", agent.role)
             result = self._execute(
                 task=self,
                 agent=agent,
                 context=context,
                 tools=tools,
             )
-            print("result", result)
             return result
 
     def _execute(self, agent, task, context, tools):
-        print("execute task with tools", tools)
         result = agent.execute_task(
             task=task,
             context=context,

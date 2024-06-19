@@ -1,66 +1,20 @@
-import uuid
-from typing import Any, Dict, List, Optional, Protocol
-from pydantic import UUID4, BaseModel, Field
 from copy import deepcopy
+import uuid
+from typing import Any, Dict, List, Optional, Union
+from abc import ABC, abstractmethod
+from pydantic import UUID4, BaseModel, Field, InstanceOf, model_validator
+
+from crewai.utilities import I18N, RPMController, Logger
+from crewai.agents import CacheHandler, ToolsHandler
+from crewai.agents.third_party_agents.utilities.agent_tools import (
+    execute,
+    delegate_work,
+    ask_question,
+)
 
 
-class BaseAgentProtocol(Protocol):
-    id: UUID4
-    role: str
-    goal: str
-    backstory: str
-    cache: bool
-    config: Optional[Dict[str, Any]]
-    max_rpm: Optional[int]
-    verbose: bool
-    allow_delegation: bool
-    tools: Optional[List[Any]]
-    max_iter: Optional[int]
-    max_execution_time: Optional[int]
-    agent_executor: Any
-    step_callback: Optional[Any]
-    llm: Any
-    function_calling_llm: Optional[Any]
-    callbacks: Optional[List[Any]]
-    system_template: Optional[str]
-    prompt_template: Optional[str]
-    response_template: Optional[str]
-    crew: Any
-    i18n: Any
-    tools_handler: Any
-    cache_handler: Any
-
-    def execute_task(
-        self,
-        task: Any,
-        context: Optional[str] = None,
-        tools: Optional[List[Any]] = None,
-    ) -> str: ...
-
-    def set_cache_handler(self, cache_handler: Any) -> None: ...
-
-    def set_rpm_controller(self, rpm_controller: Any) -> None: ...
-
-    def create_agent_executor(self, tools=None) -> None: ...
-
-    def interpolate_inputs(self, inputs: Dict[str, Any]) -> None: ...
-
-    def increment_formatting_errors(self) -> None: ...
-
-    def format_log_to_str(
-        self,
-        intermediate_steps: List[Any],
-        observation_prefix: str = "Observation: ",
-        llm_prefix: str = "",
-    ) -> str: ...
-
-    def copy(self) -> "BaseAgentProtocol": ...
-
-    def _parse_tools(self, tools: List[Any]) -> List[Any]: ...
-
-
-class BaseAgent(BaseModel):
-    """Concrete implementation of the BaseAgentProtocol."""
+class BaseAgent(ABC, BaseModel):
+    """Abstract Base Class for for all third party agents."""
 
     id: UUID4 = Field(default_factory=uuid.uuid4, frozen=True)
     role: str = Field(description="Role of the agent")
@@ -92,7 +46,7 @@ class BaseAgent(BaseModel):
         default=None,
         description="Maximum execution time for an agent to execute a task",
     )
-    agent_executor: Any = Field(
+    agent_executor: InstanceOf = Field(
         default=None, description="An instance of the CrewAgentExecutor class."
     )
     step_callback: Optional[Any] = Field(
@@ -119,36 +73,58 @@ class BaseAgent(BaseModel):
         default=None, description="Response format for the agent."
     )
     crew: Any = Field(default=None, description="Crew to which the agent belongs.")
-    i18n: Any = Field(default=None, description="Internationalization settings.")
-    tools_handler: Any = Field(
+    i18n: I18N = Field(default=I18N(), description="Internationalization settings.")
+    tools_handler: InstanceOf[ToolsHandler] = Field(
         default=None, description="An instance of the ToolsHandler class."
     )
-    cache_handler: Any = Field(
+    cache_handler: InstanceOf[CacheHandler] = Field(
         default=None, description="An instance of the CacheHandler class."
     )
 
-    _original_role: Optional[str] = None
-    _original_goal: Optional[str] = None
-    _original_backstory: Optional[str] = None
+    _original_role: str | None = None
+    _original_goal: str | None = None
+    _original_backstory: str | None = None
 
+    @abstractmethod
     def execute_task(
         self,
         task: Any,
         context: Optional[str] = None,
         tools: Optional[List[Any]] = None,
     ) -> str:
-        raise NotImplementedError
+        pass
 
-    def set_cache_handler(self, cache_handler: Any) -> None:
-        raise NotImplementedError
-
-    def set_rpm_controller(self, rpm_controller: Any) -> None:
-        raise NotImplementedError
-
+    @abstractmethod
     def create_agent_executor(self, tools=None) -> None:
-        raise NotImplementedError
+        pass
+
+    @abstractmethod
+    def _parse_tools(self, tools: List[Any]) -> List[Any]:
+        pass
+
+    @abstractmethod
+    def create_delegate_work_tool(self, agents):
+        """Extend this method to create a delegate work tool for the agent."""
+        pass
+
+    @abstractmethod
+    def create_ask_question_tool(self, agents):
+        """Extend this method to create an ask question tool for the agent."""
+        pass
+
+    @abstractmethod
+    def set_agent_tools(self, agents: List["BaseAgent"]):
+        """Set the agent tools that init BaseAgenTools class."""
+        pass
+
+    def create_task_tools(self, agents) -> List[Any]:
+        return [
+            self.create_delegate_work_tool(agents),
+            self.create_ask_question_tool(agents),
+        ]
 
     def interpolate_inputs(self, inputs: Dict[str, Any]) -> None:
+        """Interpolate inputs into the agent description and backstory."""
         if self._original_role is None:
             self._original_role = self.role
         if self._original_goal is None:
@@ -161,6 +137,18 @@ class BaseAgent(BaseModel):
             self.goal = self._original_goal.format(**inputs)
             self.backstory = self._original_backstory.format(**inputs)
 
+    def set_cache_handler(self, cache_handler: CacheHandler) -> None:
+        """Set the cache handler for the agent.
+
+        Args:
+            cache_handler: An instance of the CacheHandler class.
+        """
+        self.tools_handler = ToolsHandler()
+        if self.cache:
+            self.cache_handler = cache_handler
+            self.tools_handler.cache = cache_handler
+        self.create_agent_executor()
+
     def increment_formatting_errors(self) -> None:
         print("Formatting errors incremented")
 
@@ -172,7 +160,7 @@ class BaseAgent(BaseModel):
     ) -> str:
         return "Formatted log"
 
-    def copy(self) -> "BaseAgent":
+    def copy(self):
         exclude = {
             "id",
             "_logger",
@@ -188,10 +176,54 @@ class BaseAgent(BaseModel):
         copied_data = self.model_dump(exclude=exclude)
         copied_data = {k: v for k, v in copied_data.items() if v is not None}
 
-        copied_agent = self.__class__(**copied_data)
+        copied_agent = self(**copied_data)
         copied_agent.tools = deepcopy(self.tools)
 
         return copied_agent
 
-    def _parse_tools(self, tools: List[Any]) -> List[Any]:
-        raise NotImplementedError
+    def delegate_work(
+        self,
+        task: str,
+        context: str,
+        coworker: Union[str, None] = None,
+        agents_for_delegation: List[Any] = None,
+        **kwargs,
+    ):
+        return delegate_work(
+            self, task, context, coworker, agents_for_delegation, **kwargs
+        )
+
+    def ask_question(
+        self,
+        question: str,
+        context: str,
+        coworker: Union[str, None] = None,
+        agents_for_delegation: List[Any] = None,
+        **kwargs,
+    ):
+        return ask_question(
+            self, question, context, coworker, agents_for_delegation, **kwargs
+        )
+
+    def _execute(self, agent, task, context):
+        return execute(self, agent, task, context)
+
+    def set_rpm_controller(self, rpm_controller: RPMController) -> None:
+        """Set the rpm controller for the agent.
+
+        Args:
+            rpm_controller: An instance of the RPMController class.
+        """
+        if not self._rpm_controller:
+            self._rpm_controller = rpm_controller
+            self.create_agent_executor()
+
+    @model_validator(mode="after")
+    def set_private_attrs(self):
+        """Set private attributes."""
+        self._logger = Logger(self.verbose)
+        if self.max_rpm and not self._rpm_controller:
+            self._rpm_controller = RPMController(
+                max_rpm=self.max_rpm, logger=self._logger
+            )
+        return self

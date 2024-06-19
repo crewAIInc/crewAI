@@ -19,7 +19,7 @@ from pydantic_core import PydanticCustomError
 
 from crewai.agent import Agent
 from crewai.custom_agent import CustomAgent
-from crewai.agents.BaseAgent import BaseAgent
+from crewai.agents.third_party_agents.base_agent import BaseAgent
 from crewai.agents.cache import CacheHandler
 from crewai.memory.entity.entity_memory import EntityMemory
 from crewai.memory.long_term.long_term_memory import LongTermMemory
@@ -268,8 +268,6 @@ class Crew(BaseModel):
                 agent.step_callback = self.step_callback
             """ --- BEST WAY TO HANDLE THIS ?---"""
             agent.create_agent_executor()
-            # else:
-            #     agent.create_agent_executor()
 
         metrics = []
 
@@ -347,13 +345,14 @@ class Crew(BaseModel):
         task_output = ""
         for task in self.tasks:
             if task.agent.allow_delegation:  # type: ignore #  Item "None" of "Agent | None" has no attribute "allow_delegation"
-                print("need to delegate task", task.tools)
                 agents_for_delegation = [
                     agent for agent in self.agents if agent != task.agent
                 ]
-                if len(self.agents) > 1 and len(agents_for_delegation) > 0:
-                    if not isinstance(task.agent, BaseAgent):
-                        task.tools += AgentTools(agents=agents_for_delegation).tools()
+                if not isinstance(task.agent, Agent):
+                    if len(self.agents) > 1 and len(agents_for_delegation) > 0:
+                        task.tools += task.agent.set_agent_tools(agents_for_delegation)
+                else:
+                    task.tools += AgentTools(agents=agents_for_delegation).tools()
 
             role = task.agent.role if task.agent is not None else "None"
             self._logger.log("debug", f"== Working Agent: {role}", color="bold_purple")
@@ -377,7 +376,7 @@ class Crew(BaseModel):
                 self._file_handler.log(agent=role, task=task_output, status="completed")
 
         self._finish_execution(task_output)
-        if type(task.agent) == BaseAgent:
+        if isinstance(task.agent, BaseAgent):
             # ignores if using a custom agent since there is too many ways of structuring this output - but maybe crewai becomes the standard
             return self._format_output(task_output)
         else:

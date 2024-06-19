@@ -1,10 +1,19 @@
-from crewai import LangchainAgent, Task, Crew
+from crewai import Task, Crew
+from crewai.agents.third_party_agents.langchain_custom.agent import LangchainAgent
+
+from langchain.agents import load_tools
+from langchain_openai import OpenAI
+
+llm = OpenAI(temperature=0)
+langchain_tools = load_tools(["google-serper"], llm=llm)
+
 
 agent1 = LangchainAgent(
     role="backstory agent",
     goal="who is {input}?",
     backstory="agent backstory",
     verbose=True,
+    tools=langchain_tools,
 )
 
 task1 = Task(
@@ -15,7 +24,7 @@ task1 = Task(
 
 agent2 = LangchainAgent(
     role="bio agent",
-    goal="summarize the short bio for {input}",
+    goal="summarize the short bio for {input} and if needed do more research",
     backstory="agent backstory",
     verbose=True,
 )
@@ -26,12 +35,6 @@ task2 = Task(
     agent=agent2,
     context=[task1],
 )
-
-# taskcomp1 = agent1.execute_task(task1)
-# taskcomp2 = agent2.execute_task(task2)
-# print('taskcomp1',taskcomp1)
-# print('taskcomp2',taskcomp2)
-
 
 my_crew = Crew(agents=[agent1, agent2], tasks=[task1, task2])
 crew = my_crew.kickoff(inputs={"input": "andrew ng"})

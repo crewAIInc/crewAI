@@ -1,9 +1,9 @@
 import os
 from pydantic import PrivateAttr
-from crewai.agents.BaseAgent import BaseAgent
+from crewai.agents.third_party_agents.base_agent import BaseAgent
 from typing import Any, List, Optional, Tuple
 
-
+from langchain.tools import StructuredTool
 from langchain.agents.agent import RunnableAgent
 from langchain.agents.tools import tool as LangChainTool
 from langchain.tools.render import render_text_description
@@ -19,9 +19,11 @@ from pydantic_core import PydanticCustomError
 
 from crewai.agents import CacheHandler, CrewAgentExecutor, CrewAgentParser, ToolsHandler
 from crewai.memory.contextual.contextual_memory import ContextualMemory
-from crewai.utilities import Logger, Prompts, RPMController
+from crewai.utilities import Prompts
 from crewai.utilities.token_counter_callback import TokenProcess
-from crewai.utilities.token_counter_callback import TokenCalcHandler
+from crewai.agents.third_party_agents.langchain_custom.tools.task_tools import (
+    LangchainCustomTools,
+)
 
 
 class LangchainAgent(BaseAgent):
@@ -58,38 +60,6 @@ class LangchainAgent(BaseAgent):
         if self.config:
             for key, value in self.config.items():
                 setattr(self, key, value)
-        return self
-
-    @model_validator(mode="after")
-    def set_private_attrs(self):
-        """Set private attributes."""
-        self._logger = Logger(self.verbose)
-        if self.max_rpm and not self._rpm_controller:
-            self._rpm_controller = RPMController(
-                max_rpm=self.max_rpm, logger=self._logger
-            )
-        return self
-
-    @model_validator(mode="after")
-    def set_agent_executor(self) -> "LangchainAgent":
-        """set agent executor is set."""
-        if hasattr(self.llm, "model_name"):
-            token_handler = TokenCalcHandler(self.llm.model_name, self._token_process)
-
-            # Ensure self.llm.callbacks is a list
-            if not isinstance(self.llm.callbacks, list):
-                self.llm.callbacks = []
-
-            # Check if an instance of TokenCalcHandler already exists in the list
-            if not any(
-                isinstance(handler, TokenCalcHandler) for handler in self.llm.callbacks
-            ):
-                self.llm.callbacks.append(token_handler)
-
-        if not self.agent_executor:
-            if not self.cache_handler:
-                self.cache_handler = CacheHandler()
-            self.set_cache_handler(self.cache_handler)
         return self
 
     def execute_task(
@@ -161,15 +131,21 @@ class LangchainAgent(BaseAgent):
             self.tools_handler.cache = cache_handler
         self.create_agent_executor()
 
-    def set_rpm_controller(self, rpm_controller: RPMController) -> None:
-        """Set the rpm controller for the agent.
+    def create_delegate_work_tool(self, agents):
+        coworkers = f"[{', '.join([f'{agent.role}' for agent in agents])}]"
+        return StructuredTool.from_function(
+            func=self.delegate_work,
+            name="Delegate-work-to-coworker",
+            description=self.i18n.tools("delegate_work").format(coworkers=coworkers),
+        )
 
-        Args:
-            rpm_controller: An instance of the RPMController class.
-        """
-        if not self._rpm_controller:
-            self._rpm_controller = rpm_controller
-            self.create_agent_executor()
+    def create_ask_question_tool(self, agents):
+        coworkers = f"[{', '.join([f'{agent.role}' for agent in agents])}]"
+        return StructuredTool.from_function(
+            func=self.ask_question,
+            name="Ask-question-to-coworker",
+            description=self.i18n.tools("ask_question").format(coworkers=coworkers),
+        )
 
     def format_log_to_str(
         self,
@@ -250,6 +226,12 @@ class LangchainAgent(BaseAgent):
         self.agent_executor = CrewAgentExecutor(
             agent=RunnableAgent(runnable=inner_agent), **executor_args
         )
+
+    def set_agent_tools(self, agents: List[BaseAgent]):
+        """Set the agent tools and update tools."""
+        agent_tools = LangchainCustomTools(agents=agents)
+        tools = agent_tools.tools()
+        return tools
 
     def _parse_tools(self, tools: List[Any]) -> List[LangChainTool]:
         """Parse tools to be used for the task."""

@@ -4,7 +4,6 @@ from langchain.tools import StructuredTool
 from pydantic import BaseModel, Field
 
 from crewai.agent import Agent
-from crewai.agents.BaseAgent import BaseAgent
 from crewai.task import Task
 from crewai.utilities import I18N
 
@@ -12,7 +11,7 @@ from crewai.utilities import I18N
 class AgentTools(BaseModel):
     """Default tools around agent delegation"""
 
-    agents: List[Agent | BaseAgent] = Field(description="List of agents in this crew.")
+    agents: List[Agent] = Field(description="List of agents in this crew.")
     i18n: I18N = Field(default=I18N(), description="Internationalization settings.")
 
     def tools(self):
