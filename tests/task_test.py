@@ -398,6 +398,9 @@ def test_custom_converter_cls():
     class ScoreOutput(BaseModel):
         score: int
 
+    class ScoreConverter(Converter):
+        pass
+
     scorer = Agent(
         role="Scorer",
         goal="Score the title",
