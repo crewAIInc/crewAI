@@ -4,6 +4,7 @@ from langchain.tools import StructuredTool
 from pydantic import BaseModel, Field
 
 from crewai.agent import Agent
+from crewai.agents.BaseAgent import BaseAgent
 from crewai.task import Task
 from crewai.utilities import I18N
 
@@ -11,24 +12,23 @@ from crewai.utilities import I18N
 class AgentTools(BaseModel):
     """Default tools around agent delegation"""
 
-    agents: List[Agent] = Field(description="List of agents in this crew.")
+    agents: List[Agent | BaseAgent] = Field(description="List of agents in this crew.")
     i18n: I18N = Field(default=I18N(), description="Internationalization settings.")
 
     def tools(self):
+        coworkers = f"[{', '.join([f'{agent.role}' for agent in self.agents])}]"
         tools = [
             StructuredTool.from_function(
                 func=self.delegate_work,
-                name="Delegate work to co-worker",
+                name="Delegate work to coworker",
                 description=self.i18n.tools("delegate_work").format(
-                    coworkers=f"[{', '.join([f'{agent.role}' for agent in self.agents])}]"
+                    coworkers=coworkers
                 ),
             ),
             StructuredTool.from_function(
                 func=self.ask_question,
-                name="Ask question to co-worker",
-                description=self.i18n.tools("ask_question").format(
-                    coworkers=f"[{', '.join([f'{agent.role}' for agent in self.agents])}]"
-                ),
+                name="Ask question to coworker",
+                description=self.i18n.tools("ask_question").format(coworkers=coworkers),
             ),
         ]
         return tools
@@ -37,7 +37,13 @@ class AgentTools(BaseModel):
         self, task: str, context: str, coworker: Union[str, None] = None, **kwargs
     ):
         """Useful to delegate a specific task to a co-worker passing all necessary context and names."""
-        coworker = coworker or kwargs.get("co_worker") or kwargs.get("co-worker")
+        coworker = (
+            coworker
+            or kwargs.get("co_worker")
+            or kwargs.get("co-worker")
+            or kwargs.get("coworker")
+        )
+        print("coworker", coworker)
         if coworker is not None:
             is_list = coworker.startswith("[") and coworker.endswith("]")
             if is_list:

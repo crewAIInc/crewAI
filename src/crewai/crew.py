@@ -19,6 +19,7 @@ from pydantic_core import PydanticCustomError
 
 from crewai.agent import Agent
 from crewai.custom_agent import CustomAgent
+from crewai.agents.BaseAgent import BaseAgent
 from crewai.agents.cache import CacheHandler
 from crewai.memory.entity.entity_memory import EntityMemory
 from crewai.memory.long_term.long_term_memory import LongTermMemory
@@ -68,7 +69,7 @@ class Crew(BaseModel):
     cache: bool = Field(default=True)
     model_config = ConfigDict(arbitrary_types_allowed=True)
     tasks: List[Task] = Field(default_factory=list)
-    agents: List[Agent | CustomAgent] = Field(default_factory=list)
+    agents: List[Agent | CustomAgent | BaseAgent] = Field(default_factory=list)
     process: Process = Field(default=Process.sequential)
     verbose: Union[int, bool] = Field(default=0)
     memory: bool = Field(
@@ -265,9 +266,8 @@ class Crew(BaseModel):
                 agent.function_calling_llm = self.function_calling_llm
             if not agent.step_callback:
                 agent.step_callback = self.step_callback
-            # if using default crewai agent then run this
-            if isinstance(agent, Agent):
-                agent.create_agent_executor()
+            """ --- BEST WAY TO HANDLE THIS ?---"""
+            agent.create_agent_executor()
             # else:
             #     agent.create_agent_executor()
 
@@ -284,18 +284,17 @@ class Crew(BaseModel):
             raise NotImplementedError(
                 f"The process '{self.process}' is not implemented yet."
             )
-
-        metrics = metrics + [
-            agent._token_process.get_summary()
-            for agent in self.agents
-            if not isinstance(agent, CustomAgent)
-        ]
-        for agent in self.agents:
-            if not isinstance(agent, CustomAgent):
-                self.usage_metrics = {
-                    key: sum([m[key] for m in metrics if m is not None])
-                    for key in metrics[0]
-                }
+        # metrics = metrics + [
+        #     agent._token_process.get_summary()
+        #     for agent in self.agents
+        #     if not isinstance(agent, CustomAgent)
+        # ]
+        # for agent in self.agents:
+        #     if not isinstance(agent, CustomAgent):
+        #         self.usage_metrics = {
+        #             key: sum([m[key] for m in metrics if m is not None])
+        #             for key in metrics[0]
+        #         }
 
         return result
 
@@ -348,11 +347,13 @@ class Crew(BaseModel):
         task_output = ""
         for task in self.tasks:
             if task.agent.allow_delegation:  # type: ignore #  Item "None" of "Agent | None" has no attribute "allow_delegation"
+                print("need to delegate task", task.tools)
                 agents_for_delegation = [
                     agent for agent in self.agents if agent != task.agent
                 ]
                 if len(self.agents) > 1 and len(agents_for_delegation) > 0:
-                    task.tools += AgentTools(agents=agents_for_delegation).tools()
+                    if not isinstance(task.agent, BaseAgent):
+                        task.tools += AgentTools(agents=agents_for_delegation).tools()
 
             role = task.agent.role if task.agent is not None else "None"
             self._logger.log("debug", f"== Working Agent: {role}", color="bold_purple")
@@ -376,7 +377,7 @@ class Crew(BaseModel):
                 self._file_handler.log(agent=role, task=task_output, status="completed")
 
         self._finish_execution(task_output)
-        if type(task.agent) == CustomAgent:
+        if type(task.agent) == BaseAgent:
             # ignores if using a custom agent since there is too many ways of structuring this output - but maybe crewai becomes the standard
             return self._format_output(task_output)
         else:

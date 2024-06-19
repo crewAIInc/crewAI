@@ -3,5 +3,6 @@ from crewai.crew import Crew
 from crewai.process import Process
 from crewai.task import Task
 from crewai.custom_agent import CustomAgent
+from crewai.langchain_agent_custom import LangchainAgent
 
-__all__ = ["Agent", "Crew", "Process", "Task", "CustomAgent"]
+__all__ = ["Agent", "Crew", "Process", "Task", "CustomAgent", "LangchainAgent"]
