@@ -394,6 +394,32 @@ def test_save_task_pydantic_output():
         save_file.assert_called_once_with('{"score":4}')
 
 
+def test_custom_converter_cls():
+    class ScoreOutput(BaseModel):
+        score: int
+
+    scorer = Agent(
+        role="Scorer",
+        goal="Score the title",
+        backstory="You're an expert scorer, specialized in scoring titles.",
+        allow_delegation=False,
+    )
+
+    task = Task(
+        description="Give me an integer score between 1-5 for the following title: 'The impact of AI in the future of work'",
+        expected_output="The score of the title.",
+        output_file="score.json",
+        output_pydantic=ScoreOutput,
+        converter_cls=ScoreConverter,
+        agent=scorer,
+    )
+
+    with patch.object(ScoreConverter, "__new__", ScoreConverter.__new__) as converter_constructor:
+        crew.kickoff()
+        converter_constructor.assert_called_once
+
+
+
 @pytest.mark.vcr(filter_headers=["authorization"])
 def test_increment_delegations_for_hierarchical_process():
     from langchain_openai import ChatOpenAI

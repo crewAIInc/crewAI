@@ -94,6 +94,10 @@ class Task(BaseModel):
         description="Whether the task should have a human review the final answer of the agent",
         default=False,
     )
+    converter_cls: Optional[Type[Converter]] = Field(
+        description="A converter class used to export structured output",
+        default=None,
+    )
 
     _original_description: str | None = None
     _original_expected_output: str | None = None
@@ -272,6 +276,11 @@ class Task(BaseModel):
         )
         return copied_task
 
+    def _create_converter(*args, **kwargs) -> Converter:
+        converter_cls = self.converter_cls or Converter
+        return converter_cls(*args, **kwargs)
+
+
     def _export_output(self, result: str) -> Any:
         exported_result = result
         instructions = "I'm gonna convert this raw text into valid JSON."
@@ -309,7 +318,7 @@ class Task(BaseModel):
                 model_schema = PydanticSchemaParser(model=model).get_schema()
                 instructions = f"{instructions}\n\nThe json should have the following structure, with the following keys:\n{model_schema}"
 
-            converter = Converter(
+            converter = self._create_converter(
                 llm=llm, text=result, model=model, instructions=instructions
             )
 
