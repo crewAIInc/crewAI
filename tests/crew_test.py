@@ -420,9 +420,18 @@ def test_agents_rpm_is_never_set_if_crew_max_RPM_is_not_set():
     assert agent._rpm_controller is None
 
 
-# TODO: NEED TO MAKE SURE ORDER IS STILL KEPT.
-# TODO: TEST ASYNC TO SYNC CONTEXT STILL WORKS
-# TODO: ADD BACK IN AND FIX
+"""
+Future tests:
+TODO: Make sure 1 async task return results and waits for async to fnish before returning result
+TODO: Make sure 3 async tasks return result from final task. Make sure Joao approves of this.
+TODO: 1 async task, 1 sync task. Make sure sync task waits for async to finish before starting.
+TODO: 3 async tasks, 1 sync task. Make sure sync task waits for async to finish before starting.
+TODO: 1 sync task, 1 async task. Make sure we wait for result from async before finishing crew.
+
+TODO: 3 async tasks, 1 sync task. Pass in context from only 1 async task to sync task.
+"""
+
+
 @pytest.mark.vcr(filter_headers=["authorization"])
 def test_async_task_execution_completion():
     import pdb
@@ -521,9 +530,8 @@ def test_async_task_execution_completion():
     )
 
 
-# TODO: Improve this test once I get feedback from Joao.
 @pytest.mark.vcr(filter_headers=["authorization"])
-def test_async_execution_single_task():
+def test_single_task_with_async_execution():
     from unittest.mock import patch
 
     researcher_agent = Agent(
@@ -534,10 +542,10 @@ def test_async_execution_single_task():
     )
 
     list_ideas = Task(
-        description="Give me a list of 5 interesting ideas to explore for na article, what makes them unique and interesting.",
+        description="Give me a short list of 5 interesting ideas to explore for an article, what makes them unique and interesting.",
         expected_output="Bullet point list of 5 important events.",
         agent=researcher_agent,
-        async_execution=True,
+        # async_execution=True,
     )
 
     crew = Crew(

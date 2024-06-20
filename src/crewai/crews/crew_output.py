@@ -7,7 +7,9 @@ from crewai.tasks.task_output import TaskOutput
 
 # TODO: Potentially add in JSON_OUTPUT, PYDANTIC_OUTPUT, etc.
 class CrewOutput(BaseModel):
-    final_output: str = Field(description="Final output of the crew")
+    final_output: Union[str, Dict, BaseModel] = Field(
+        description="Final output of the crew"
+    )
     tasks_output: list[TaskOutput] = Field(
         description="Output of each task", default=[]
     )

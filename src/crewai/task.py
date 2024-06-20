@@ -4,7 +4,7 @@ import threading
 import uuid
 from concurrent.futures import Future
 from copy import deepcopy
-from typing import Any, Dict, List, Optional, Type
+from typing import Any, Dict, List, Optional, Type, Union
 
 from langchain_openai import ChatOpenAI
 from pydantic import UUID4, BaseModel, Field, field_validator, model_validator
@@ -292,7 +292,7 @@ class Task(BaseModel):
         )
         return copied_task
 
-    def _export_output(self, result: str) -> Any:
+    def _export_output(self, result: str) -> Union[str, dict, BaseModel]:
         exported_result = result
         instructions = "I'm gonna convert this raw text into valid JSON."
 
