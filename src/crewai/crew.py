@@ -6,15 +6,15 @@ from typing import Any, Dict, List, Optional, Tuple, Union
 
 from langchain_core.callbacks import BaseCallbackHandler
 from pydantic import (
-    UUID4,
-    BaseModel,
-    ConfigDict,
-    Field,
-    InstanceOf,
-    Json,
-    PrivateAttr,
-    field_validator,
-    model_validator,
+  UUID4,
+  BaseModel,
+  ConfigDict,
+  Field,
+  InstanceOf,
+  Json,
+  PrivateAttr,
+  field_validator,
+  model_validator,
 )
 from pydantic_core import PydanticCustomError
 
@@ -338,8 +338,7 @@ class Crew(BaseModel):
         """Executes tasks sequentially and returns the final output."""
         # TODO: Check to see if we need to be clearing task output after each task
         task_output = ""
-        futures: List[Tuple[int, Task, Future]] = []
-        task_results = {}
+        futures: List[Tuple[Task, Future]] = []
 
         def _process_task_result(task, output):
             role = task.agent.role if task.agent is not None else "None"
@@ -347,7 +346,7 @@ class Crew(BaseModel):
             if self.output_log_file:
                 self._file_handler.log(agent=role, task=output, status="completed")
 
-        for index, task in enumerate(self.tasks):
+        for task in self.tasks:
             if task.agent.allow_delegation:  # type: ignore #  Item "None" of "Agent | None" has no attribute "allow_delegation"
                 agents_for_delegation = [
                     agent for agent in self.agents if agent != task.agent
@@ -370,13 +369,14 @@ class Crew(BaseModel):
                 future = task.execute_async(
                     agent=task.agent, context=task_output, tools=task.tools
                 )
-                futures.append((index, task, future))
+                futures.append(( task, future))
             else:
                 # Before executing a synchronous task, wait for all async tasks to complete
                 if futures:
-                    for future_index, future_task, future in futures:
+                    task_output = ""
+                    for future_task, future in futures:
                         output = future.result()
-                        task_results[future_index] = output
+                        task_output += output + "\n\n\n"
                         _process_task_result(future_task, output)
 
                     # Clear the futures list after processing all async results
@@ -385,16 +385,18 @@ class Crew(BaseModel):
                 output = task.execute_sync(
                     agent=task.agent, context=task_output, tools=task.tools
                 )
-                task_results[index] = output
                 task_output = output
                 _process_task_result(task, output)
 
         # TODO: Check with Joao to see if we want to add or ignore outputs from async tasks
         # Process any remaining async results
-        for future_index, future_task, future in futures:
-            output = future.result()
-            task_results[future_index] = output
-            _process_task_result(future_task, output)
+
+        if futures:
+            task_output = ""
+            for future_task, future in futures:
+                output = future.result()
+                task_output += output + "\n\n\n"
+                _process_task_result(future_task, output)
 
         self._finish_execution(task_output)
         # type: ignore # Item "None" of "Agent | None" has no attribute "_token_process"
@@ -423,10 +425,15 @@ class Crew(BaseModel):
             )
 
         task_output = ""
-        futures: List[Tuple[int, Task, Future]] = []
-        task_results = {}
+        futures: List[Tuple[Task, Future]] = []
 
-        for index, task in enumerate(self.tasks):
+        def _process_task_result(task, output):
+            role = task.agent.role if task.agent is not None else "None"
+            self._logger.log("debug", f"== [{role}] Task output: {output}\n\n")
+            if self.output_log_file:
+                self._file_handler.log(agent=role, task=output, status="completed")
+
+        for task in self.tasks:
             self._logger.log("debug", f"Working Agent: {manager.role}")
             self._logger.log("info", f"Starting Task: {task.description}")
 
@@ -439,38 +446,34 @@ class Crew(BaseModel):
                 future = task.execute_async(
                     agent=manager, context=task_output, tools=manager.tools
                 )
-                futures.append((index, task, future))
+                futures.append((task, future))
             else:
+                # Before executing a synchronous task, wait for all async tasks to complete
+                if futures:
+                    task_output = ""  # Clear task_output before processing async tasks
+                    for future_task, future in futures:
+                        output = future.result()
+                        task_output += output + "\n\n\n"
+                        _process_task_result(future_task, output)
+
+                    # Clear the futures list after processing all async results
+                    futures.clear()
+
                 output = task.execute_sync(
                     agent=manager, context=task_output, tools=manager.tools
                 )
-                task_results[index] = output
+                task_output = output  # Set task_output to the new result for sync tasks
+                _process_task_result(task, output)
 
-                self._logger.log("debug", f"[{manager.role}] Task output: {output}")
-
-                if self.output_log_file:
-                    self._file_handler.log(
-                        agent=manager.role, task=output, status="completed"
-                    )
-
-        # Process async results in order
-        for index, task, future in sorted(futures):
-            output = future.result()
-            task_results[index] = output
-
-            role = manager.role
-            self._logger.log("debug", f"== [{role}] Task output: {output}\n\n")
-
-            if self.output_log_file:
-                self._file_handler.log(agent=role, task=output, status="completed")
-
-        # Get the final task_output from the last task result
-        final_index = len(self.tasks) - 1
-        if final_index in task_results:
-            task_output = task_results[final_index]
+        # Process any remaining async results
+        if futures:
+            task_output = ""  # Clear task_output before processing async tasks
+            for future_task, future in futures:
+                output = future.result()
+                task_output += output + "\n\n\n"
+                _process_task_result(future_task, output)
 
         self._finish_execution(task_output)
-
         manager_token_usage = manager._token_process.get_summary()
         return (
             self._format_output(task_output, manager_token_usage),

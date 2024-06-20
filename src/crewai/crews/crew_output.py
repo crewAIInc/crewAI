@@ -5,6 +5,7 @@ from pydantic import BaseModel, Field
 from crewai.tasks.task_output import TaskOutput
 
 
+# TODO: Potentially add in JSON_OUTPUT, PYDANTIC_OUTPUT, etc.
 class CrewOutput(BaseModel):
     final_output: str = Field(description="Final output of the crew")
     tasks_output: list[TaskOutput] = Field(

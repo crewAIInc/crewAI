@@ -521,6 +521,36 @@ def test_async_task_execution_completion():
     )
 
 
+# TODO: Improve this test once I get feedback from Joao.
+@pytest.mark.vcr(filter_headers=["authorization"])
+def test_async_execution_single_task():
+    from unittest.mock import patch
+
+    researcher_agent = Agent(
+        role="Researcher",
+        goal="Make the best research and analysis on content about AI and AI agents",
+        backstory="You're an expert researcher, specialized in technology, software engineering, AI and startups. You work as a freelancer and is now working on doing research and analysis for a new customer.",
+        allow_delegation=False,
+    )
+
+    list_ideas = Task(
+        description="Give me a list of 5 interesting ideas to explore for na article, what makes them unique and interesting.",
+        expected_output="Bullet point list of 5 important events.",
+        agent=researcher_agent,
+        async_execution=True,
+    )
+
+    crew = Crew(
+        agents=[researcher_agent],
+        process=Process.sequential,
+        tasks=[list_ideas],
+    )
+
+    result = crew.kickoff()
+    print(result)
+    assert result.final_output == ""
+
+
 # TODO: Make sure sync and async task execution keeps right order of expected outputs
 
 
