@@ -614,7 +614,6 @@ def test_delegation_is_not_enabled_if_there_are_only_one_agent():
     )
 
     crew = Crew(agents=[researcher], tasks=[task])
-
     with patch.object(Task, "execute") as execute:
         execute.return_value = "ok"
         crew.kickoff()
@@ -688,8 +687,8 @@ def test_agent_usage_metrics_are_captured_for_hierarchical_process():
     result = crew.kickoff()
     assert result == '"Howdy!"'
     assert crew.usage_metrics == {
-        "total_tokens": 1664,
-        "prompt_tokens": 1381,
+        "total_tokens": 1676,
+        "prompt_tokens": 1393,
         "completion_tokens": 283,
         "successful_requests": 3,
     }

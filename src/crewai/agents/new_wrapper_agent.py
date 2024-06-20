@@ -1,6 +1,7 @@
-from crewai import Task, Crew
+from crewai import Task, Crew, Process
 from crewai.agents.third_party_agents.langchain_custom.agent import LangchainAgent
 from crewai.agents.third_party_agents.llama_index.agent import LlamaIndexAgent
+from langchain_openai import ChatOpenAI
 
 from langchain.agents import load_tools
 from langchain_openai import OpenAI
@@ -27,6 +28,7 @@ agent2 = LangchainAgent(
     goal="summarize the short bio for {input} and if needed do more research",
     backstory="agent backstory",
     verbose=True,
+    tools=langchain_tools,
 )
 
 task2 = Task(
@@ -36,7 +38,12 @@ task2 = Task(
     context=[task1],
 )
 
-my_crew = Crew(agents=[agent1, agent2], tasks=[task1, task2])
+my_crew = Crew(
+    agents=[agent1, agent2],
+    tasks=[task1, task2],
+    process=Process.sequential,
+    manager_llm=ChatOpenAI(temperature=0, model="gpt-4"),
+)
 crew = my_crew.kickoff(inputs={"input": "andrew ng"})
 print("crew", crew)
 summary = agent1.get_token_summary()

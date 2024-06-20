@@ -44,7 +44,10 @@ class LlamaIndexAgent(BaseAgent):
         parsed_tools = self._parse_tools(tools)
         self.create_agent_executor(tools=tools)
         self.agent_executor.tools = parsed_tools
-        return self.agent_executor.chat(task_prompt)
+        result = self.agent_executor.chat(task_prompt)
+        if self.max_rpm:
+            self._rpm_controller.stop_rpm_counter()
+        return result
 
     def get_token_summary(self) -> Dict:
         print("token_counter", self.token_counter.completion_llm_token_count)
@@ -74,25 +77,8 @@ class LlamaIndexAgent(BaseAgent):
             max_iterations=self.max_iter,
         )
 
-    def create_delegate_work_tool(self, agents):
-        coworkers = f"[{', '.join([f'{agent.role}' for agent in agents])}]"
-        return FunctionTool.from_defaults(
-            fn=self.delegate_work,
-            name="Delegate-work-to-coworker",
-            description=self.i18n.tools("delegate_work").format(coworkers=coworkers),
-        )
-
-    def create_ask_question_tool(self, agents):
-        coworkers = f"[{', '.join([f'{agent.role}' for agent in agents])}]"
-        return FunctionTool.from_defaults(
-            fn=self.ask_question,
-            name="Ask-question-to-coworker",
-            description=self.i18n.tools("ask_question").format(coworkers=coworkers),
-        )
-
     def set_agent_tools(self, agents: List[BaseAgent]):
         """Set the agent tools and update tools."""
-
         agent_tools = LlamaAgentTools(agents=agents)
         tools = agent_tools.tools()
         return tools

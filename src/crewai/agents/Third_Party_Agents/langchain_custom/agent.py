@@ -3,7 +3,6 @@ from pydantic import PrivateAttr
 from crewai.agents.third_party_agents.base_agent import BaseAgent
 from typing import Any, List, Optional, Tuple
 
-from langchain.tools import StructuredTool
 from langchain.agents.agent import RunnableAgent
 from langchain.agents.tools import tool as LangChainTool
 from langchain.tools.render import render_text_description
@@ -17,7 +16,7 @@ from pydantic import (
 )
 from pydantic_core import PydanticCustomError
 
-from crewai.agents import CacheHandler, CrewAgentExecutor, CrewAgentParser, ToolsHandler
+from crewai.agents import CrewAgentExecutor, CrewAgentParser
 from crewai.memory.contextual.contextual_memory import ContextualMemory
 from crewai.utilities import Prompts
 from crewai.utilities.token_counter_callback import TokenProcess
@@ -40,6 +39,30 @@ class LangchainAgent(BaseAgent):
             model=os.environ.get("OPENAI_MODEL_NAME", "gpt-4o")
         ),
         description="Language model that will run the agent.",
+    )
+    max_execution_time: Optional[int] = Field(
+        default=None,
+        description="Maximum execution time for an agent to execute a task",
+    )
+    step_callback: Optional[Any] = Field(
+        default=None,
+        description="Callback to be executed after each step of the agent execution.",
+    )
+    function_calling_llm: Optional[Any] = Field(
+        description="Language model that will handle tool calling for this agent.",
+        default=None,
+    )
+    callbacks: Optional[List[Any]] = Field(
+        default=None, description="Callback to be executed"
+    )
+    system_template: Optional[str] = Field(
+        default=None, description="System format for the agent."
+    )
+    prompt_template: Optional[str] = Field(
+        default=None, description="Prompt format for the agent."
+    )
+    response_template: Optional[str] = Field(
+        default=None, description="Response format for the agent."
     )
 
     def __init__(__pydantic_self__, **data):
@@ -118,34 +141,6 @@ class LangchainAgent(BaseAgent):
         if self.max_rpm:
             self._rpm_controller.stop_rpm_counter()
         return result
-
-    def set_cache_handler(self, cache_handler: CacheHandler) -> None:
-        """Set the cache handler for the agent.
-
-        Args:
-            cache_handler: An instance of the CacheHandler class.
-        """
-        self.tools_handler = ToolsHandler()
-        if self.cache:
-            self.cache_handler = cache_handler
-            self.tools_handler.cache = cache_handler
-        self.create_agent_executor()
-
-    def create_delegate_work_tool(self, agents):
-        coworkers = f"[{', '.join([f'{agent.role}' for agent in agents])}]"
-        return StructuredTool.from_function(
-            func=self.delegate_work,
-            name="Delegate-work-to-coworker",
-            description=self.i18n.tools("delegate_work").format(coworkers=coworkers),
-        )
-
-    def create_ask_question_tool(self, agents):
-        coworkers = f"[{', '.join([f'{agent.role}' for agent in agents])}]"
-        return StructuredTool.from_function(
-            func=self.ask_question,
-            name="Ask-question-to-coworker",
-            description=self.i18n.tools("ask_question").format(coworkers=coworkers),
-        )
 
     def format_log_to_str(
         self,

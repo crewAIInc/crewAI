@@ -9,7 +9,50 @@ from crewai.agents import CacheHandler, ToolsHandler
 
 
 class BaseAgent(ABC, BaseModel):
-    """Abstract Base Class for for all third party agents."""
+    """Abstract Base Class for all third party agents compatible with CrewAI.
+
+    Attributes:
+        id (UUID4): Unique identifier for the agent.
+        role (str): Role of the agent.
+        goal (str): Objective of the agent.
+        backstory (str): Backstory of the agent.
+        cache (bool): Whether the agent should use a cache for tool usage.
+        config (Optional[Dict[str, Any]]): Configuration for the agent.
+        verbose (bool): Verbose mode for the Agent Execution.
+        max_rpm (Optional[int]): Maximum number of requests per minute for the agent execution.
+        allow_delegation (bool): Allow delegation of tasks to agents.
+        tools (Optional[List[Any]]): Tools at the agent's disposal.
+        max_iter (Optional[int]): Maximum iterations for an agent to execute a task.
+        agent_executor (InstanceOf): An instance of the CrewAgentExecutor class.
+        llm (Any): Language model that will run the agent.
+        crew (Any): Crew to which the agent belongs.
+        i18n (I18N): Internationalization settings.
+        cache_handler (InstanceOf[CacheHandler]): An instance of the CacheHandler class.
+        tools_handler (InstanceOf[ToolsHandler]): An instance of the ToolsHandler class.
+
+
+    Methods:
+        execute_task(task: Any, context: Optional[str] = None, tools: Optional[List[Any]] = None) -> str:
+            Abstract method to execute a task.
+        create_agent_executor(tools=None) -> None:
+            Abstract method to create an agent executor.
+        _parse_tools(tools: List[Any]) -> List[Any]:
+            Abstract method to parse tools.
+        set_agent_tools(agents: List["BaseAgent"]):
+            Abstract method to set the agent tools.
+        interpolate_inputs(inputs: Dict[str, Any]) -> None:
+            Interpolate inputs into the agent description and backstory.
+        set_cache_handler(cache_handler: CacheHandler) -> None:
+            Set the cache handler for the agent.
+        increment_formatting_errors() -> None:
+            Increment formatting errors.
+        copy() -> "BaseAgent":
+            Create a copy of the agent.
+        set_rpm_controller(rpm_controller: RPMController) -> None:
+            Set the rpm controller for the agent.
+        set_private_attrs() -> "BaseAgent":
+            Set private attributes.
+    """
 
     id: UUID4 = Field(default_factory=uuid.uuid4, frozen=True)
     role: str = Field(description="Role of the agent")
@@ -21,12 +64,12 @@ class BaseAgent(ABC, BaseModel):
     config: Optional[Dict[str, Any]] = Field(
         description="Configuration for the agent", default=None
     )
+    verbose: bool = Field(
+        default=False, description="Verbose mode for the Agent Execution"
+    )
     max_rpm: Optional[int] = Field(
         default=None,
         description="Maximum number of requests per minute for the agent execution to be respected.",
-    )
-    verbose: bool = Field(
-        default=False, description="Verbose mode for the Agent Execution"
     )
     allow_delegation: bool = Field(
         default=True, description="Allow delegation of tasks to agents"
@@ -37,43 +80,19 @@ class BaseAgent(ABC, BaseModel):
     max_iter: Optional[int] = Field(
         default=25, description="Maximum iterations for an agent to execute a task"
     )
-    max_execution_time: Optional[int] = Field(
-        default=None,
-        description="Maximum execution time for an agent to execute a task",
-    )
     agent_executor: InstanceOf = Field(
         default=None, description="An instance of the CrewAgentExecutor class."
-    )
-    step_callback: Optional[Any] = Field(
-        default=None,
-        description="Callback to be executed after each step of the agent execution.",
     )
     llm: Any = Field(
         default=None, description="Language model that will run the agent."
     )
-    function_calling_llm: Optional[Any] = Field(
-        description="Language model that will handle tool calling for this agent.",
-        default=None,
-    )
-    callbacks: Optional[List[Any]] = Field(
-        default=None, description="Callback to be executed"
-    )
-    system_template: Optional[str] = Field(
-        default=None, description="System format for the agent."
-    )
-    prompt_template: Optional[str] = Field(
-        default=None, description="Prompt format for the agent."
-    )
-    response_template: Optional[str] = Field(
-        default=None, description="Response format for the agent."
-    )
     crew: Any = Field(default=None, description="Crew to which the agent belongs.")
     i18n: I18N = Field(default=I18N(), description="Internationalization settings.")
-    tools_handler: InstanceOf[ToolsHandler] = Field(
-        default=None, description="An instance of the ToolsHandler class."
-    )
     cache_handler: InstanceOf[CacheHandler] = Field(
         default=None, description="An instance of the CacheHandler class."
+    )
+    tools_handler: InstanceOf[ToolsHandler] = Field(
+        default=None, description="An instance of the ToolsHandler class."
     )
 
     _original_role: str | None = None
@@ -95,16 +114,6 @@ class BaseAgent(ABC, BaseModel):
 
     @abstractmethod
     def _parse_tools(self, tools: List[Any]) -> List[Any]:
-        pass
-
-    @abstractmethod
-    def create_delegate_work_tool(self, agents):
-        """Extend this method to create a delegate work tool for the agent."""
-        pass
-
-    @abstractmethod
-    def create_ask_question_tool(self, agents):
-        """Extend this method to create an ask question tool for the agent."""
         pass
 
     @abstractmethod
@@ -140,14 +149,6 @@ class BaseAgent(ABC, BaseModel):
 
     def increment_formatting_errors(self) -> None:
         print("Formatting errors incremented")
-
-    def format_log_to_str(
-        self,
-        intermediate_steps: List[Any],
-        observation_prefix: str = "Observation: ",
-        llm_prefix: str = "",
-    ) -> str:
-        return "Formatted log"
 
     def copy(self):
         exclude = {

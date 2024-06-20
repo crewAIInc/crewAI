@@ -262,10 +262,11 @@ class Crew(BaseModel):
             # type: ignore[attr-defined] # Argument 1 to "_interpolate_inputs" of "Crew" has incompatible type "dict[str, Any] | None"; expected "dict[str, Any]"
             agent.crew = self  # type: ignore[attr-defined]
 
-            if not agent.function_calling_llm:
-                agent.function_calling_llm = self.function_calling_llm
-            if not agent.step_callback:
-                agent.step_callback = self.step_callback
+            if isinstance(agent, Agent):
+                if not agent.function_calling_llm:
+                    agent.function_calling_llm = self.function_calling_llm
+                if not agent.step_callback:
+                    agent.step_callback = self.step_callback
             """ --- BEST WAY TO HANDLE THIS ?---"""
             agent.create_agent_executor()
 
@@ -282,17 +283,17 @@ class Crew(BaseModel):
             raise NotImplementedError(
                 f"The process '{self.process}' is not implemented yet."
             )
-        # metrics = metrics + [
-        #     agent._token_process.get_summary()
-        #     for agent in self.agents
-        #     if not isinstance(agent, CustomAgent)
-        # ]
-        # for agent in self.agents:
-        #     if not isinstance(agent, CustomAgent):
-        #         self.usage_metrics = {
-        #             key: sum([m[key] for m in metrics if m is not None])
-        #             for key in metrics[0]
-        #         }
+        metrics = metrics + [
+            agent._token_process.get_summary()
+            for agent in self.agents
+            if isinstance(agent, Agent)
+        ]
+        for agent in self.agents:
+            if isinstance(agent, Agent):
+                self.usage_metrics = {
+                    key: sum([m[key] for m in metrics if m is not None])
+                    for key in metrics[0]
+                }
 
         return result
 
@@ -348,11 +349,11 @@ class Crew(BaseModel):
                 agents_for_delegation = [
                     agent for agent in self.agents if agent != task.agent
                 ]
-                if not isinstance(task.agent, Agent):
-                    if len(self.agents) > 1 and len(agents_for_delegation) > 0:
+                if len(self.agents) > 1 and len(agents_for_delegation) > 0:
+                    if not isinstance(task.agent, Agent):
                         task.tools += task.agent.set_agent_tools(agents_for_delegation)
-                else:
-                    task.tools += AgentTools(agents=agents_for_delegation).tools()
+                    else:
+                        task.tools += AgentTools(agents=agents_for_delegation).tools()
 
             role = task.agent.role if task.agent is not None else "None"
             self._logger.log("debug", f"== Working Agent: {role}", color="bold_purple")
@@ -426,9 +427,10 @@ class Crew(BaseModel):
                 )
 
         self._finish_execution(task_output)
+
         # type: ignore # Incompatible return value type (got "tuple[str, Any]", expected "str")
         manager_token_usage = manager._token_process.get_summary()
-        if type(task.agent) == Agent:
+        if isinstance(task.agent, Agent):
             return self._format_output(
                 task_output, manager_token_usage
             ), manager_token_usage
