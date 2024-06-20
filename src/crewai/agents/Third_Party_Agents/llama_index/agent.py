@@ -1,35 +1,29 @@
-from typing import List, Any
+import tiktoken
+from typing import ClassVar, List, Any, Dict
 from pydantic import Field
-
-from llama_index.core.tools import FunctionTool
-from llama_index.agent.openai import OpenAIAgent
-from llama_index.llms.openai import OpenAI
 
 from crewai.agents.third_party_agents.base_agent import BaseAgent
 from crewai.memory.contextual.contextual_memory import ContextualMemory
 from crewai.agents.third_party_agents.llama_index.tools.task_tools import (
     LlamaAgentTools,
 )
+from llama_index.core.tools import FunctionTool
+from llama_index.core.agent import ReActAgent
+from llama_index.llms.openai import OpenAI
+from llama_index.core.callbacks import CallbackManager, TokenCountingHandler
 
 
 class LlamaIndexAgent(BaseAgent):
     llm: OpenAI = Field(
-        default_factory=lambda: OpenAI(model="gpt-3.5-turbo-0613"),
+        default_factory=lambda: OpenAI(model="gpt-4o"),
         description="Language model that will run the agent.",
     )
-
-    def __init__(
-        self,
-        tools: List[FunctionTool] = [],
-        llm: OpenAI = OpenAI(temperature=0, model="gpt-4o"),
-        *args,
-        **kwargs,
-    ):
-        super().__init__(*args, **kwargs)
-        self.tools = tools
-        self.llm = llm
+    token_counter: ClassVar[TokenCountingHandler] = TokenCountingHandler(
+        tokenizer=tiktoken.encoding_for_model("gpt-3.5-turbo").encode
+    )
 
     def execute_task(self, task, context=None, tools=None) -> str:
+        self.token_counter.reset_counts()  # reset the count before running otherwise it saves it
         task_prompt = task.prompt()
         if context:
             task_prompt = self.i18n.slice("task_with_context").format(
@@ -52,6 +46,9 @@ class LlamaIndexAgent(BaseAgent):
         self.agent_executor.tools = parsed_tools
         return self.agent_executor.chat(task_prompt)
 
+    def get_token_summary(self) -> Dict:
+        print("token_counter", self.token_counter.completion_llm_token_count)
+
     def _parse_tools(self, tools: List[Any]) -> List[FunctionTool]:
         """Ensures tools being passed are correct for llama index"""
         tools_list = []
@@ -69,14 +66,15 @@ class LlamaIndexAgent(BaseAgent):
         return tools_list
 
     def create_agent_executor(self, tools=None):
-        self.agent_executor = OpenAIAgent.from_tools(
+        self.agent_executor = ReActAgent.from_llm(
             tools=tools,
             llm=self.llm,
             verbose=self.verbose,
+            callback_manager=CallbackManager([self.token_counter]),
+            max_iterations=self.max_iter,
         )
 
     def create_delegate_work_tool(self, agents):
-        print("agents to call from delegation", agents)
         coworkers = f"[{', '.join([f'{agent.role}' for agent in agents])}]"
         return FunctionTool.from_defaults(
             fn=self.delegate_work,

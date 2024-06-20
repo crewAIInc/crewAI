@@ -1,16 +1,11 @@
 from copy import deepcopy
 import uuid
-from typing import Any, Dict, List, Optional, Union
+from typing import Any, Dict, List, Optional
 from abc import ABC, abstractmethod
 from pydantic import UUID4, BaseModel, Field, InstanceOf, model_validator
 
 from crewai.utilities import I18N, RPMController, Logger
 from crewai.agents import CacheHandler, ToolsHandler
-from crewai.agents.third_party_agents.utilities.agent_tools import (
-    execute,
-    delegate_work,
-    ask_question,
-)
 
 
 class BaseAgent(ABC, BaseModel):
@@ -117,12 +112,6 @@ class BaseAgent(ABC, BaseModel):
         """Set the agent tools that init BaseAgenTools class."""
         pass
 
-    def create_task_tools(self, agents) -> List[Any]:
-        return [
-            self.create_delegate_work_tool(agents),
-            self.create_ask_question_tool(agents),
-        ]
-
     def interpolate_inputs(self, inputs: Dict[str, Any]) -> None:
         """Interpolate inputs into the agent description and backstory."""
         if self._original_role is None:
@@ -180,33 +169,6 @@ class BaseAgent(ABC, BaseModel):
         copied_agent.tools = deepcopy(self.tools)
 
         return copied_agent
-
-    def delegate_work(
-        self,
-        task: str,
-        context: str,
-        coworker: Union[str, None] = None,
-        agents_for_delegation: List[Any] = None,
-        **kwargs,
-    ):
-        return delegate_work(
-            self, task, context, coworker, agents_for_delegation, **kwargs
-        )
-
-    def ask_question(
-        self,
-        question: str,
-        context: str,
-        coworker: Union[str, None] = None,
-        agents_for_delegation: List[Any] = None,
-        **kwargs,
-    ):
-        return ask_question(
-            self, question, context, coworker, agents_for_delegation, **kwargs
-        )
-
-    def _execute(self, agent, task, context):
-        return execute(self, agent, task, context)
 
     def set_rpm_controller(self, rpm_controller: RPMController) -> None:
         """Set the rpm controller for the agent.

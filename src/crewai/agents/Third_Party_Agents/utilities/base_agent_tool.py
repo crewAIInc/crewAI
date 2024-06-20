@@ -38,7 +38,6 @@ class BaseAgentTools(BaseModel, ABC):
 
     def _execute(self, agent_role: Optional[str], task: str, context: str):
         """Execute the command."""
-        print("all agents for delegation stuff self.agents", self.agents)
         if agent_role:
             agent = next(
                 (

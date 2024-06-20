@@ -64,41 +64,56 @@ agent = Agent(
 ```
 
 ## Using a Custom Agent
-!!! note "Custom Agent Usage"
-    Bring your own agents like autogen, llamaindex, langchain custom agents and more. Each agent has their own agent_executor. All you have to do is attach the agent executor in and the goal + task gets added to the prompt. 
+!!! note "Custom Agent Usage with BaseAgent"
+    Use other agents like llamaIndex. We created a BaseAgent, which is a wrapper around the core Agent class to run tasks, delegate tasks and ask questions to other agents in your crew and still fully customizable to fit all your needs.
+
+    We currently have llamaIndex, and langchain custom agents implemented using the BaseAgent class with the minumum requirements for compatiblity with CrewAI. They can be orchestrated with each other using agents that suit specific tasks - like RAG tasks with llamaIndex and easily adding search tools with langchain custom agents.
+
+    Overall, we aim to leverage the ecosystem of existing and custom AI agents to be able to effectively orchestrate tasks and agents for every crew.
+
 
 ```py
-from crewai import CustomAgent, Agent, Task, Crew, Process
+from crewai import Task, Crew
+from crewai.agents.third_party_agents.langchain_custom.agent import LangchainAgent
+from crewai.agents.third_party_agents.llama_index.agent import LlamaIndexAgent
 
-from llama_index.core.tools import FunctionTool
-from llama_index.llms.openai import OpenAI
-from llama_index.core.agent import ReActAgent
+from langchain.agents import load_tools
+from langchain_openai import OpenAI
 
+llm = OpenAI(temperature=0)
+langchain_tools = load_tools(["google-serper"], llm=llm)
 
-# define sample Tool
-def multiply(a: int, b: int) -> int:
-    """Multiple two integers and returns the result integer"""
-    return a * b
-
-multiply_tool = FunctionTool.from_defaults(fn=multiply)
-llm = OpenAI(model="gpt-4o")
-
-llama_agent = ReActAgent.from_tools(
-    [multiply_tool],
-    llm=llm,
+# llamaIndexAgent with its own tool
+agent1 = LlamaIndexAgent(
+    role="backstory agent",
+    goal="who is {input}?",
+    backstory="agent backstory",
     verbose=True,
 )
 
-# adding llama_agent to our custom agent
-agent = CustomAgent(
-    agent_executor=llama_agent.chat, # the .chat is llamaindex agent_executor. If you are using others just find their methods
-    role="math_solver",
-    goal="solve the question",
-    backstory="you are a mathmatician",
-    verbose=True,
-    memory=True,
-    tools=[multiply_tool],
+task1 = Task(
+    expected_output="a short biography of {input}",
+    description="a short biography of {input}",
+    agent=agent1,
 )
+
+agent2 = LangchainAgent(
+    role="bio agent",
+    goal="summarize the short bio for {input} and if needed do more research",
+    backstory="agent backstory",
+    verbose=True,
+)
+
+task2 = Task(
+    description="a tldr summary of the short biography",
+    expected_output="5 bullet point summary of the biography",
+    agent=agent2,
+    context=[task1],
+)
+
+my_crew = Crew(agents=[agent1, agent2], tasks=[task1, task2])
+crew = my_crew.kickoff(inputs={"input": "andrew ng"})
+print("crew", crew)
 ```
 
 
