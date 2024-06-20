@@ -13,6 +13,7 @@ The sequential process ensures tasks are executed one after the other, following
 - **Linear Task Flow**: Ensures orderly progression by handling tasks in a predetermined sequence.
 - **Simplicity**: Best suited for projects with clear, step-by-step tasks.
 - **Easy Monitoring**: Facilitates easy tracking of task completion and project progress.
+
 ## Implementing the Sequential Process
 Assemble your crew and define tasks in the order they need to be executed.
 

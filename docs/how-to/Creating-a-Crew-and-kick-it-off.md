@@ -16,7 +16,7 @@ pip install 'crewai[tools]'
 ```
 
 ## Step 1: Assemble Your Agents
-Define your agents with distinct roles, backstories, and enhanced capabilities like verbose mode and memory usage. These elements add depth and guide their task execution and interaction within the crew.
+Define your agents with distinct roles, backstories, and enhanced capabilities like verbose mode, memory usage, and the ability to set specific agents as managers. These elements add depth and guide their task execution and interaction within the crew.
 
 ```python
 import os
@@ -24,8 +24,10 @@ os.environ["SERPER_API_KEY"] = "Your Key"  # serper.dev API key
 os.environ["OPENAI_API_KEY"] = "Your Key"
 
 from crewai import Agent
-from crewai_tools import SerperDevTool
+from crewai_tools import SerperDevTool, BrowserbaseTool, ExaSearchTool
 search_tool = SerperDevTool()
+browser_tool = BrowserbaseTool()
+exa_search_tool = ExaSearchTool()
 
 # Creating a senior researcher agent with memory and verbose mode
 researcher = Agent(
@@ -38,8 +40,7 @@ researcher = Agent(
     "innovation, eager to explore and share knowledge that could change"
     "the world."
   ),
-  tools=[search_tool],
-  allow_delegation=True
+  tools=[search_tool, browser_tool],
 )
 
 # Creating a writer agent with custom tools and delegation capability
@@ -53,8 +54,19 @@ writer = Agent(
     "engaging narratives that captivate and educate, bringing new"
     "discoveries to light in an accessible manner."
   ),
-  tools=[search_tool],
+  tools=[exa_search_tool],
   allow_delegation=False
+)
+
+# Setting a specific manager agent
+manager = Agent(
+  role='Manager',
+  goal='Ensure the smooth operation and coordination of the team',
+  verbose=True,
+  backstory=(
+    "As a seasoned project manager, you excel in organizing"
+    "tasks, managing timelines, and ensuring the team stays on track."
+  )
 )
 ```
 
@@ -75,6 +87,8 @@ research_task = Task(
   expected_output='A comprehensive 3 paragraphs long report on the latest AI trends.',
   tools=[search_tool],
   agent=researcher,
+  callback="research_callback",  # Example of task callback
+  human_input=True
 )
 
 # Writing task with language model configuration
@@ -85,15 +99,14 @@ write_task = Task(
     "This article should be easy to understand, engaging, and positive."
   ),
   expected_output='A 4 paragraph article on {topic} advancements formatted as markdown.',
-  tools=[search_tool],
+  tools=[exa_search_tool],
   agent=writer,
-  async_execution=False,
-  output_file='new-blog-post.md'  # Example of output customization
+  output_file='new-blog-post.md',  # Example of output customization
 )
 ```
 
 ## Step 3: Form the Crew
-Combine your agents into a crew, setting the workflow process they'll follow to accomplish the tasks. Now with options to configure language models for enhanced interaction and additional configurations for optimizing performance.
+Combine your agents into a crew, setting the workflow process they'll follow to accomplish the tasks. Now with options to configure language models for enhanced interaction and additional configurations for optimizing performance, such as creating directories when saving files.
 
 ```python
 from crewai import Crew, Process
@@ -106,7 +119,7 @@ crew = Crew(
   memory=True,
   cache=True,
   max_rpm=100,
-  share_crew=True
+  manager_agent=manager
 )
 ```
 
