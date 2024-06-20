@@ -21,6 +21,7 @@ from .website_search.website_search_tool import WebsiteSearchTool
 from .xml_search_tool.xml_search_tool import XMLSearchTool
 from .youtube_channel_search_tool.youtube_channel_search_tool import YoutubeChannelSearchTool
 from .youtube_video_search_tool.youtube_video_search_tool import YoutubeVideoSearchTool
+from .llamaindex_tool.llamaindex_tool import LlamaIndexTool
 from .serply_api_tool.serply_web_search_tool import SerplyWebSearchTool
 from .serply_api_tool.serply_news_search_tool import SerplyNewsSearchTool
 from .serply_api_tool.serply_scholar_search_tool import SerplyScholarSearchTool

@@ -23,6 +23,7 @@ from .tools import (
 	XMLSearchTool,
 	YoutubeChannelSearchTool,
 	YoutubeVideoSearchTool,
+	LlamaIndexTool
 	SerplyWebSearchTool,
 	SerplyNewsSearchTool,
 	SerplyScholarSearchTool,
