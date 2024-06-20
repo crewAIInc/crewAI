@@ -199,7 +199,6 @@ class Task(BaseModel):
             context=context,
             tools=tools,
         )
-
         exported_output = self._export_output(result)
 
         # type: the responses are usually str but need to figuire out a more elegant solution here

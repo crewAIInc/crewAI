@@ -1,12 +1,18 @@
 import tiktoken
-from typing import ClassVar, List, Any, Dict
-from pydantic import Field
+from typing import List, Any
+from pydantic import Field, model_validator
 
 from crewai.agents.third_party_agents.base_agent import BaseAgent
+from crewai.agents.third_party_agents.llama_index.utilities.token_handler import (
+    ExtendedTokenCountingHandler,
+    TokenProcess,
+)
 from crewai.memory.contextual.contextual_memory import ContextualMemory
+from crewai.agents import CacheHandler
 from crewai.agents.third_party_agents.llama_index.tools.task_tools import (
     LlamaAgentTools,
 )
+
 from llama_index.core.tools import FunctionTool
 from llama_index.core.agent import ReActAgent
 from llama_index.llms.openai import OpenAI
@@ -15,19 +21,33 @@ from llama_index.core.callbacks import CallbackManager, TokenCountingHandler
 
 class LlamaIndexAgent(BaseAgent):
     llm: OpenAI = Field(
-        default_factory=lambda: OpenAI(model="gpt-4o"),
+        default_factory=lambda: OpenAI(model="gpt-3.5-turbo"),
         description="Language model that will run the agent.",
     )
-    token_counter: ClassVar[TokenCountingHandler] = TokenCountingHandler(
-        tokenizer=tiktoken.encoding_for_model("gpt-3.5-turbo").encode
-    )
+
+    _token_process: TokenProcess = TokenProcess()
+    token_counter: TokenCountingHandler = Field(default_factory=TokenCountingHandler)
 
     def __init__(__pydantic_self__, **data):
         config = data.pop("config", {})
         super().__init__(**config, **data)
 
+    @model_validator(mode="after")
+    def set_agent_executor(self) -> "LlamaIndexAgent":
+        """set agent executor is set."""
+        if hasattr(self.llm, "model"):
+            self.token_counter = ExtendedTokenCountingHandler(
+                tokenizer=tiktoken.encoding_for_model(self.llm.model).encode,
+                token_process=self._token_process,
+            )
+
+        if not self.agent_executor:
+            if not self.cache_handler:
+                self.cache_handler = CacheHandler()
+            self.set_cache_handler(self.cache_handler)
+        return self
+
     def execute_task(self, task, context=None, tools=None) -> str:
-        self.token_counter.reset_counts()  # reset the count before running otherwise it saves it
         task_prompt = task.prompt()
         if context:
             task_prompt = self.i18n.slice("task_with_context").format(
@@ -51,10 +71,8 @@ class LlamaIndexAgent(BaseAgent):
         result = self.agent_executor.chat(task_prompt)
         if self.max_rpm:
             self._rpm_controller.stop_rpm_counter()
-        return result
 
-    def get_token_summary(self) -> Dict:
-        print("token_counter", self.token_counter.completion_llm_token_count)
+        return result
 
     def _parse_tools(self, tools: List[Any]) -> List[FunctionTool]:
         """Ensures tools being passed are correct for llama index"""
