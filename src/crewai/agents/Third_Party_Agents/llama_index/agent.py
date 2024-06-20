@@ -22,6 +22,10 @@ class LlamaIndexAgent(BaseAgent):
         tokenizer=tiktoken.encoding_for_model("gpt-3.5-turbo").encode
     )
 
+    def __init__(__pydantic_self__, **data):
+        config = data.pop("config", {})
+        super().__init__(**config, **data)
+
     def execute_task(self, task, context=None, tools=None) -> str:
         self.token_counter.reset_counts()  # reset the count before running otherwise it saves it
         task_prompt = task.prompt()

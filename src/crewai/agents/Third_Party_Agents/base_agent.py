@@ -2,7 +2,17 @@ from copy import deepcopy
 import uuid
 from typing import Any, Dict, List, Optional
 from abc import ABC, abstractmethod
-from pydantic import UUID4, BaseModel, Field, InstanceOf, model_validator
+from pydantic import (
+    UUID4,
+    BaseModel,
+    Field,
+    InstanceOf,
+    field_validator,
+    model_validator,
+    ConfigDict,
+    PrivateAttr,
+)
+from pydantic_core import PydanticCustomError
 
 from crewai.utilities import I18N, RPMController, Logger
 from crewai.agents import CacheHandler, ToolsHandler
@@ -54,6 +64,12 @@ class BaseAgent(ABC, BaseModel):
             Set private attributes.
     """
 
+    __hash__ = object.__hash__  # type: ignore
+    _logger: Logger = PrivateAttr()
+    _rpm_controller: RPMController = PrivateAttr(default=None)
+    _request_within_rpm_limit: Any = PrivateAttr(default=None)
+    formatting_errors: int = 0
+    model_config = ConfigDict(arbitrary_types_allowed=True)
     id: UUID4 = Field(default_factory=uuid.uuid4, frozen=True)
     role: str = Field(description="Role of the agent")
     goal: str = Field(description="Objective of the agent")
@@ -101,7 +117,34 @@ class BaseAgent(ABC, BaseModel):
 
     def __init__(__pydantic_self__, **data):
         config = data.pop("config", {})
+        print("base agent config", config)
         super().__init__(**config, **data)
+
+    @field_validator("id", mode="before")
+    @classmethod
+    def _deny_user_set_id(cls, v: Optional[UUID4]) -> None:
+        if v:
+            raise PydanticCustomError(
+                "may_not_set_field", "This field is not to be set by the user.", {}
+            )
+
+    @model_validator(mode="after")
+    def set_attributes_based_on_config(self) -> "BaseAgent":
+        """Set attributes based on the agent configuration."""
+        if self.config:
+            for key, value in self.config.items():
+                setattr(self, key, value)
+        return self
+
+    @model_validator(mode="after")
+    def set_private_attrs(self):
+        """Set private attributes."""
+        self._logger = Logger(self.verbose)
+        if self.max_rpm and not self._rpm_controller:
+            self._rpm_controller = RPMController(
+                max_rpm=self.max_rpm, logger=self._logger
+            )
+        return self
 
     @abstractmethod
     def execute_task(
@@ -169,8 +212,7 @@ class BaseAgent(ABC, BaseModel):
 
         copied_data = self.model_dump(exclude=exclude)
         copied_data = {k: v for k, v in copied_data.items() if v is not None}
-
-        copied_agent = self(**copied_data)
+        copied_agent = self.__class__(**copied_data)
         copied_agent.tools = deepcopy(self.tools)
 
         return copied_agent
@@ -184,13 +226,3 @@ class BaseAgent(ABC, BaseModel):
         if not self._rpm_controller:
             self._rpm_controller = rpm_controller
             self.create_agent_executor()
-
-    @model_validator(mode="after")
-    def set_private_attrs(self):
-        """Set private attributes."""
-        self._logger = Logger(self.verbose)
-        if self.max_rpm and not self._rpm_controller:
-            self._rpm_controller = RPMController(
-                max_rpm=self.max_rpm, logger=self._logger
-            )
-        return self

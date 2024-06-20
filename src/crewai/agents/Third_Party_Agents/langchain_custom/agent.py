@@ -1,25 +1,20 @@
 import os
-from pydantic import PrivateAttr
-from crewai.agents.third_party_agents.base_agent import BaseAgent
 from typing import Any, List, Optional, Tuple
 
 from langchain.agents.agent import RunnableAgent
 from langchain.agents.tools import tool as LangChainTool
 from langchain.tools.render import render_text_description
 from langchain_core.agents import AgentAction
+from langchain_core.callbacks import BaseCallbackHandler
 from langchain_openai import ChatOpenAI
-from pydantic import (
-    UUID4,
-    Field,
-    field_validator,
-    model_validator,
-)
-from pydantic_core import PydanticCustomError
 
-from crewai.agents import CrewAgentExecutor, CrewAgentParser
+from pydantic import Field, InstanceOf, model_validator
+
+from crewai.agents import CacheHandler, CrewAgentExecutor, CrewAgentParser
 from crewai.memory.contextual.contextual_memory import ContextualMemory
 from crewai.utilities import Prompts
-from crewai.utilities.token_counter_callback import TokenProcess
+from crewai.utilities.token_counter_callback import TokenCalcHandler, TokenProcess
+from crewai.agents.third_party_agents.base_agent import BaseAgent
 from crewai.agents.third_party_agents.langchain_custom.tools.task_tools import (
     LangchainCustomTools,
 )
@@ -28,31 +23,29 @@ from crewai.agents.third_party_agents.langchain_custom.tools.task_tools import (
 class LangchainAgent(BaseAgent):
     """Represents an langchain based agent in a system."""
 
-    __hash__ = object.__hash__  # type: ignore
-    _logger: Any = PrivateAttr()
-    _rpm_controller: Any = PrivateAttr(default=None)
-    _request_within_rpm_limit: Any = PrivateAttr(default=None)
-    _token_process: Any = TokenProcess()
+    _token_process: TokenProcess = TokenProcess()
 
+    max_execution_time: Optional[int] = Field(
+        default=None,
+        description="Maximum execution time for an agent to execute a task",
+    )
+    cache_handler: InstanceOf[CacheHandler] = Field(
+        default=None, description="An instance of the CacheHandler class."
+    )
+    step_callback: Optional[Any] = Field(
+        default=None,
+        description="Callback to be executed after each step of the agent execution.",
+    )
     llm: Any = Field(
         default_factory=lambda: ChatOpenAI(
             model=os.environ.get("OPENAI_MODEL_NAME", "gpt-4o")
         ),
         description="Language model that will run the agent.",
     )
-    max_execution_time: Optional[int] = Field(
-        default=None,
-        description="Maximum execution time for an agent to execute a task",
-    )
-    step_callback: Optional[Any] = Field(
-        default=None,
-        description="Callback to be executed after each step of the agent execution.",
-    )
     function_calling_llm: Optional[Any] = Field(
-        description="Language model that will handle tool calling for this agent.",
-        default=None,
+        description="Language model that will run the agent.", default=None
     )
-    callbacks: Optional[List[Any]] = Field(
+    callbacks: Optional[List[InstanceOf[BaseCallbackHandler]]] = Field(
         default=None, description="Callback to be executed"
     )
     system_template: Optional[str] = Field(
@@ -69,20 +62,26 @@ class LangchainAgent(BaseAgent):
         config = data.pop("config", {})
         super().__init__(**config, **data)
 
-    @field_validator("id", mode="before")
-    @classmethod
-    def _deny_user_set_id(cls, v: Optional[UUID4]) -> None:
-        if v:
-            raise PydanticCustomError(
-                "may_not_set_field", "This field is not to be set by the user.", {}
-            )
-
     @model_validator(mode="after")
-    def set_attributes_based_on_config(self) -> "LangchainAgent":
-        """Set attributes based on the agent configuration."""
-        if self.config:
-            for key, value in self.config.items():
-                setattr(self, key, value)
+    def set_agent_executor(self) -> "LangchainAgent":
+        """set agent executor is set."""
+        if hasattr(self.llm, "model_name"):
+            token_handler = TokenCalcHandler(self.llm.model_name, self._token_process)
+
+            # Ensure self.llm.callbacks is a list
+            if not isinstance(self.llm.callbacks, list):
+                self.llm.callbacks = []
+
+            # Check if an instance of TokenCalcHandler already exists in the list
+            if not any(
+                isinstance(handler, TokenCalcHandler) for handler in self.llm.callbacks
+            ):
+                self.llm.callbacks.append(token_handler)
+
+        if not self.agent_executor:
+            if not self.cache_handler:
+                self.cache_handler = CacheHandler()
+            self.set_cache_handler(self.cache_handler)
         return self
 
     def execute_task(
@@ -125,12 +124,13 @@ class LangchainAgent(BaseAgent):
         tools = tools or self.tools
         # type: ignore # Argument 1 to "_parse_tools" of "Agent" has incompatible type "list[Any] | None"; expected "list[Any]"
         parsed_tools = self._parse_tools(tools)
-
         self.create_agent_executor(tools=tools)
         self.agent_executor.tools = parsed_tools
         self.agent_executor.task = task
+
         self.agent_executor.tools_description = render_text_description(parsed_tools)
         self.agent_executor.tools_names = self.__tools_names(parsed_tools)
+
         result = self.agent_executor.invoke(
             {
                 "input": task_prompt,
