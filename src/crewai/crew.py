@@ -1,7 +1,8 @@
 import asyncio
 import json
 import uuid
-from typing import Any, Dict, List, Optional, Union
+from concurrent.futures import Future
+from typing import Any, Dict, List, Optional, Tuple, Union
 
 from langchain_core.callbacks import BaseCallbackHandler
 from pydantic import (
@@ -19,6 +20,7 @@ from pydantic_core import PydanticCustomError
 
 from crewai.agent import Agent
 from crewai.agents.cache import CacheHandler
+from crewai.crews.crew_output import CrewOutput
 from crewai.memory.entity.entity_memory import EntityMemory
 from crewai.memory.long_term.long_term_memory import LongTermMemory
 from crewai.memory.short_term.short_term_memory import ShortTermMemory
@@ -245,7 +247,7 @@ class Crew(BaseModel):
     def kickoff(
         self,
         inputs: Optional[Dict[str, Any]] = {},
-    ) -> Union[str, Dict[str, Any]]:
+    ) -> CrewOutput:
         """Starts the crew to work on its assigned tasks."""
         self._execution_span = self._telemetry.crew_execution_span(self)
         # type: ignore # Argument 1 to "_interpolate_inputs" of "Crew" has incompatible type "dict[str, Any] | None"; expected "dict[str, Any]"
@@ -288,9 +290,9 @@ class Crew(BaseModel):
 
         return result
 
-    def kickoff_for_each(self, inputs: List[Dict[str, Any]]) -> List:
+    def kickoff_for_each(self, inputs: List[Dict[str, Any]]) -> List[CrewOutput]:
         """Executes the Crew's workflow for each input in the list and aggregates results."""
-        results = []
+        results: List[CrewOutput] = []
 
         for input_data in inputs:
             crew = self.copy()
@@ -306,12 +308,12 @@ class Crew(BaseModel):
         return results
 
     async def kickoff_async(
-        self, inputs: Optional[Dict[str, Any]] = {}
+        self, inputs: Optional[CrewOutput] = {}
     ) -> Union[str, Dict]:
         """Asynchronous kickoff method to start the crew execution."""
         return await asyncio.to_thread(self.kickoff, inputs)
 
-    async def kickoff_for_each_async(self, inputs: List[Dict]) -> List[Any]:
+    async def kickoff_for_each_async(self, inputs: List[Dict]) -> List[CrewOutput]:
         async def run_crew(input_data):
             crew = self.copy()
 
@@ -332,10 +334,20 @@ class Crew(BaseModel):
         # TODO: Implement training
         pass
 
-    def _run_sequential_process(self) -> Union[str, Dict[str, Any]]:
+    def _run_sequential_process(self) -> CrewOutput:
         """Executes tasks sequentially and returns the final output."""
+        # TODO: Check to see if we need to be clearing task output after each task
         task_output = ""
-        for task in self.tasks:
+        futures: List[Tuple[int, Task, Future]] = []
+        task_results = {}
+
+        def _process_task_result(task, output):
+            role = task.agent.role if task.agent is not None else "None"
+            self._logger.log("debug", f"== [{role}] Task output: {output}\n\n")
+            if self.output_log_file:
+                self._file_handler.log(agent=role, task=output, status="completed")
+
+        for index, task in enumerate(self.tasks):
             if task.agent.allow_delegation:  # type: ignore #  Item "None" of "Agent | None" has no attribute "allow_delegation"
                 agents_for_delegation = [
                     agent for agent in self.agents if agent != task.agent
@@ -354,24 +366,43 @@ class Crew(BaseModel):
                     agent=role, task=task.description, status="started"
                 )
 
-            output = task.execute(context=task_output)
+            if task.async_execution:
+                future = task.execute_async(
+                    agent=task.agent, context=task_output, tools=task.tools
+                )
+                futures.append((index, task, future))
+            else:
+                # Before executing a synchronous task, wait for all async tasks to complete
+                if futures:
+                    for future_index, future_task, future in futures:
+                        output = future.result()
+                        task_results[future_index] = output
+                        _process_task_result(future_task, output)
 
-            if not task.async_execution:
+                    # Clear the futures list after processing all async results
+                    futures.clear()
+
+                output = task.execute_sync(
+                    agent=task.agent, context=task_output, tools=task.tools
+                )
+                task_results[index] = output
                 task_output = output
+                _process_task_result(task, output)
 
-            role = task.agent.role if task.agent is not None else "None"
-            self._logger.log("debug", f"== [{role}] Task output: {task_output}\n\n")
-
-            if self.output_log_file:
-                self._file_handler.log(agent=role, task=task_output, status="completed")
+        # TODO: Check with Joao to see if we want to add or ignore outputs from async tasks
+        # Process any remaining async results
+        for future_index, future_task, future in futures:
+            output = future.result()
+            task_results[future_index] = output
+            _process_task_result(future_task, output)
 
         self._finish_execution(task_output)
         # type: ignore # Item "None" of "Agent | None" has no attribute "_token_process"
         token_usage = task.agent._token_process.get_summary()
-        # type: ignore # Incompatible return value type (got "tuple[str, Any]", expected "str")
         return self._format_output(task_output, token_usage)
 
-    def _run_hierarchical_process(self) -> Union[str, Dict[str, Any]]:
+    # TODO: Updates this to mimic the async and sync exeuction of tasks in sequential process
+    def _run_hierarchical_process(self) -> Tuple[CrewOutput, Dict[str, Any]]:
         """Creates and assigns a manager agent to make sure the crew completes the tasks."""
 
         i18n = I18N(prompt_file=self.prompt_file)
@@ -392,7 +423,10 @@ class Crew(BaseModel):
             )
 
         task_output = ""
-        for task in self.tasks:
+        futures: List[Tuple[int, Task, Future]] = []
+        task_results = {}
+
+        for index, task in enumerate(self.tasks):
             self._logger.log("debug", f"Working Agent: {manager.role}")
             self._logger.log("info", f"Starting Task: {task.description}")
 
@@ -401,23 +435,47 @@ class Crew(BaseModel):
                     agent=manager.role, task=task.description, status="started"
                 )
 
-            task_output = task.execute(
-                agent=manager, context=task_output, tools=manager.tools
-            )
+            if task.async_execution:
+                future = task.execute_async(
+                    agent=manager, context=task_output, tools=manager.tools
+                )
+                futures.append((index, task, future))
+            else:
+                output = task.execute_sync(
+                    agent=manager, context=task_output, tools=manager.tools
+                )
+                task_results[index] = output
 
-            self._logger.log("debug", f"[{manager.role}] Task output: {task_output}")
+                self._logger.log("debug", f"[{manager.role}] Task output: {output}")
+
+                if self.output_log_file:
+                    self._file_handler.log(
+                        agent=manager.role, task=output, status="completed"
+                    )
+
+        # Process async results in order
+        for index, task, future in sorted(futures):
+            output = future.result()
+            task_results[index] = output
+
+            role = manager.role
+            self._logger.log("debug", f"== [{role}] Task output: {output}\n\n")
 
             if self.output_log_file:
-                self._file_handler.log(
-                    agent=manager.role, task=task_output, status="completed"
-                )
+                self._file_handler.log(agent=role, task=output, status="completed")
+
+        # Get the final task_output from the last task result
+        final_index = len(self.tasks) - 1
+        if final_index in task_results:
+            task_output = task_results[final_index]
 
         self._finish_execution(task_output)
-        # type: ignore # Incompatible return value type (got "tuple[str, Any]", expected "str")
+
         manager_token_usage = manager._token_process.get_summary()
-        return self._format_output(
-            task_output, manager_token_usage
-        ), manager_token_usage
+        return (
+            self._format_output(task_output, manager_token_usage),
+            manager_token_usage,
+        )
 
     def copy(self):
         """Create a deep copy of the Crew."""
@@ -469,21 +527,21 @@ class Crew(BaseModel):
 
     def _format_output(
         self, output: str, token_usage: Optional[Dict[str, Any]]
-    ) -> Union[str, Dict[str, Any]]:
+    ) -> CrewOutput:
         """
         Formats the output of the crew execution.
-        If full_output is True, then returned data type will be a dictionary else returned outputs are string
         """
-        if self.full_output:
-            return {  # type: ignore # Incompatible return value type (got "dict[str, Sequence[str | TaskOutput | None]]", expected "str")
-                "final_output": output,
-                "tasks_outputs": [task.output for task in self.tasks if task],
-                "usage_metrics": token_usage,
-            }
-        else:
-            return output
+        print("Crew Output: ", output)
+        print("Crew output type: ", type(output))
+        print("SELF TASKS: ", self.tasks)
+        print("Tasks Output: ", [task.output for task in self.tasks if task])
+        return CrewOutput(
+            final_output=output,
+            tasks_output=[task.output for task in self.tasks if task],
+            token_output=token_usage,
+        )
 
-    def _finish_execution(self, output) -> None:
+    def _finish_execution(self, output: str) -> None:
         if self.max_rpm:
             self._rpm_controller.stop_rpm_counter()
         self._telemetry.end_crew(self, output)

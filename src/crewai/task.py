@@ -1,8 +1,9 @@
-from copy import deepcopy
 import os
 import re
 import threading
 import uuid
+from concurrent.futures import Future
+from copy import deepcopy
 from typing import Any, Dict, List, Optional, Type
 
 from langchain_openai import ChatOpenAI
@@ -145,18 +146,55 @@ class Task(BaseModel):
             )
         return self
 
-    def execute(  # type: ignore # Missing return statement
+    def execute_sync(
         self,
-        agent: Agent | None = None,
+        agent: Optional[Agent] = None,
         context: Optional[str] = None,
         tools: Optional[List[Any]] = None,
     ) -> str:
-        """Execute the task.
+        """Execute the task synchronously."""
+        return self._execute_task_sync(agent, context, tools)
 
-        Returns:
-            Output of the task.
-        """
+    def execute_async(
+        self,
+        agent: Optional[Agent] = None,
+        context: Optional[str] = None,
+        tools: Optional[List[Any]] = None,
+    ) -> Future:
+        """Execute the task asynchronously."""
+        future = Future()
+        threading.Thread(
+            target=self._execute_task_async, args=(agent, context, tools, future)
+        ).start()
+        return future
 
+    def _execute_task_sync(
+        self,
+        agent: Optional[Agent],
+        context: Optional[str],
+        tools: Optional[List[Any]],
+    ) -> str:
+        """Execute the task synchronously with context handling."""
+        return self._execute_core(agent, context, tools)
+
+    def _execute_task_async(
+        self,
+        agent: Optional[Agent],
+        context: Optional[str],
+        tools: Optional[List[Any]],
+        future: Future,
+    ) -> None:
+        """Execute the task asynchronously with context handling."""
+        result = self._execute_core(agent, context, tools)
+        future.set_result(result)
+
+    def _execute_core(
+        self,
+        agent: Optional[Agent],
+        context: Optional[str],
+        tools: Optional[List[Any]],
+    ) -> str:
+        """Run the core execution logic of the task."""
         agent = agent or self.agent
         if not agent:
             raise Exception(
@@ -164,37 +202,19 @@ class Task(BaseModel):
             )
 
         if self.context:
-            # type: ignore # Incompatible types in assignment (expression has type "list[Never]", variable has type "str | None")
-            context = []
+            context_list = []
             for task in self.context:
-                if task.async_execution:
-                    task.thread.join()  # type: ignore # Item "None" of "Thread | None" has no attribute "join"
+                if task.async_execution and task.thread:
+                    task.thread.join()
                 if task and task.output:
-                    # type: ignore # Item "str" of "str | None" has no attribute "append"
-                    context.append(task.output.raw_output)
-            # type: ignore # Argument 1 to "join" of "str" has incompatible type "str | None"; expected "Iterable[str]"
-            context = "\n".join(context)
+                    context_list.append(task.output.raw_output)
+            context = "\n".join(context_list)
 
         self.prompt_context = context
         tools = tools or self.tools
 
-        if self.async_execution:
-            self.thread = threading.Thread(
-                target=self._execute, args=(agent, self, context, tools)
-            )
-            self.thread.start()
-        else:
-            result = self._execute(
-                task=self,
-                agent=agent,
-                context=context,
-                tools=tools,
-            )
-            return result
-
-    def _execute(self, agent, task, context, tools):
         result = agent.execute_task(
-            task=task,
+            task=self,
             context=context,
             tools=tools,
         )
@@ -328,7 +348,9 @@ class Task(BaseModel):
         if self.output_file:
             content = (
                 # type: ignore # "str" has no attribute "json"
-                exported_result if not self.output_pydantic else exported_result.json()
+                exported_result
+                if not self.output_pydantic
+                else exported_result.json()
             )
             self._save_file(content)
 
