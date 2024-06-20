@@ -24,14 +24,16 @@ description: What are crewAI Agents and how to use them.
 | **LLM** *(optional)*       | Represents the language model that will run the agent. It dynamically fetches the model name from the `OPENAI_MODEL_NAME` environment variable, defaulting to "gpt-4" if not specified.                                                         |
 | **Tools** *(optional)*     | Set of capabilities or functions that the agent can use to perform tasks. Expected to be instances of custom classes compatible with the agent's execution environment. Tools are initialized with a default value of an empty list.             |
 | **Function Calling LLM** *(optional)* | Specifies the language model that will handle the tool calling for this agent, overriding the crew function calling LLM if passed. Default is `None`.                                                                                          |
-| **Max Iter** *(optional)*  | The maximum number of iterations the agent can perform before being forced to give its best answer. Default is `25`.                                                                                                                           |
-| **Max RPM** *(optional)*   | The maximum number of requests per minute the agent can perform to avoid rate limits. It's optional and can be left unspecified, with a default value of `None`.                                                                               |
-| **max_execution_time** *(optional)*   | Maximum execution time for an agent to execute a task It's optional and can be left unspecified, with a default value of `None`, menaning no max execution time                                                                     |
+| **Max Iter** *(optional)*  | `max_iter` is the maximum number of iterations the agent can perform before being forced to give its best answer. Default is `25`.                                                                                                                           |
+| **Max RPM** *(optional)*   | `max_rpm` is Tte maximum number of requests per minute the agent can perform to avoid rate limits. It's optional and can be left unspecified, with a default value of `None`.                                                                               |
+| **Max Execution Time** *(optional)*   | `max_execution_time` is the Maximum execution time for an agent to execute a task. It's optional and can be left unspecified, with a default value of `None`, meaning no max execution time.                                                                     |
 | **Verbose** *(optional)*   | Setting this to `True` configures the internal logger to provide detailed execution logs, aiding in debugging and monitoring. Default is `False`.                                                                                              |
 | **Allow Delegation** *(optional)* | Agents can delegate tasks or questions to one another, ensuring that each task is handled by the most suitable agent. Default is `True`.                                                                                                       |
 | **Step Callback** *(optional)* | A function that is called after each step of the agent. This can be used to log the agent's actions or to perform other operations. It will overwrite the crew `step_callback`.                                                               |
 | **Cache** *(optional)*     | Indicates if the agent should use a cache for tool usage. Default is `True`.                                                                                                                                                                  |
-
+| **System Template** *(optional)*     | Specifies the system format for the agent. Default is `None`.                                                                                                                                                                  |
+| **Prompt Template** *(optional)*     | Specifies the prompt format for the agent. Default is `None`.                                                                                                                                                                  |
+| **Response Template** *(optional)*     | Specifies the response format for the agent. Default is `None`.                                                                                                                                                                  |
 ## Creating an Agent
 
 !!! note "Agent Interaction"
@@ -56,11 +58,42 @@ agent = Agent(
   function_calling_llm=my_llm,  # Optional
   max_iter=15,  # Optional
   max_rpm=None, # Optional
+  max_execution_time=None, # Optional
   verbose=True,  # Optional
   allow_delegation=True,  # Optional
   step_callback=my_intermediate_step_callback,  # Optional
-  cache=True  # Optional
+  cache=True,  # Optional
+  system_template=my_system_template,  # Optional
+  prompt_template=my_prompt_template,  # Optional
+  response_template=my_response_template,  # Optional
+  config=my_config,  # Optional
+  crew=my_crew,  # Optional
+  tools_handler=my_tools_handler,  # Optional
+  cache_handler=my_cache_handler,  # Optional
+  callbacks=[callback1, callback2],  # Optional
+  agent_executor=my_agent_executor  # Optional
 )
+```
+
+## Setting prompt templates
+
+Prompt templates are used to format the prompt for the agent. You can use to update the system, regular and response templates for the agent. Here's an example of how to set prompt templates:
+
+```python
+agent = Agent(
+        role="{topic} specialist",
+        goal="Figure {goal} out",
+        backstory="I am the master of {role}",
+        system_template="""<|start_header_id|>system<|end_header_id|>
+
+{{ .System }}<|eot_id|>""",
+        prompt_template="""<|start_header_id|>user<|end_header_id|>
+
+{{ .Prompt }}<|eot_id|>""",
+        response_template="""<|start_header_id|>assistant<|end_header_id|>
+
+{{ .Response }}<|eot_id|>""",
+    )
 ```
 
 ## Using a Custom Agent
@@ -112,8 +145,8 @@ task2 = Task(
 )
 
 my_crew = Crew(agents=[agent1, agent2], tasks=[task1, task2])
-crew = my_crew.kickoff(inputs={"input": "andrew ng"})
-print("crew", crew)
+crew = my_crew.kickoff(inputs={"input": "Mark Twain"})
+print("result:", crew)
 ```
 
 

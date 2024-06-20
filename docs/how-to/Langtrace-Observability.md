@@ -1,15 +1,15 @@
 ---
 title: CrewAI Agent Monitoring with Langtrace
-description: How to monitor cost, latency and performance of CrewAI Agents using Langtrace.
+description: How to monitor cost, latency, and performance of CrewAI Agents using Langtrace.
 ---
 
 # Langtrace Overview
-Langtrace is an open-source tool that helps you set up observability and evaluations for LLMs, LLM frameworks and VectorDB. With Langtrace, you can get deep visibility into the cost, latency and performance of your CrewAI Agents. Additionally, you can log the hyperparameters and monitor for any performance regressions and set up a process to continuously improve your Agents. 
+Langtrace is an open-source tool that helps you set up observability and evaluations for LLMs, LLM frameworks, and VectorDB. With Langtrace, you can get deep visibility into the cost, latency, and performance of your CrewAI Agents. Additionally, you can log the hyperparameters and monitor for any performance regressions and set up a process to continuously improve your Agents.
 
 ## Setup Instructions
 
-1. Sign up for [Langtrace](https://langtrace.ai/) by going to [https://langtrace.ai/signup](https://langtrace.ai/signup). 
-2. Create a project and generate an API key. 
+1. Sign up for [Langtrace](https://langtrace.ai/) by going to [https://langtrace.ai/signup](https://langtrace.ai/signup).
+2. Create a project and generate an API key.
 3. Install Langtrace in your code using the following commands.
 **Note**: For detailed instructions on integrating Langtrace, you can check out the official docs from [here](https://docs.langtrace.ai/supported-integrations/llm-frameworks/crewai).
 
