@@ -38,8 +38,8 @@ class BaseAgent(ABC, BaseModel):
             Abstract method to create an agent executor.
         _parse_tools(tools: List[Any]) -> List[Any]:
             Abstract method to parse tools.
-        set_agent_tools(agents: List["BaseAgent"]):
-            Abstract method to set the agent tools.
+        get_delegation_tools(agents: List["BaseAgent"]):
+            Abstract method to set the agents task tools for handling delegation and question asking to other agents in crew.
         interpolate_inputs(inputs: Dict[str, Any]) -> None:
             Interpolate inputs into the agent description and backstory.
         set_cache_handler(cache_handler: CacheHandler) -> None:
@@ -99,6 +99,10 @@ class BaseAgent(ABC, BaseModel):
     _original_goal: str | None = None
     _original_backstory: str | None = None
 
+    def __init__(__pydantic_self__, **data):
+        config = data.pop("config", {})
+        super().__init__(**config, **data)
+
     @abstractmethod
     def execute_task(
         self,
@@ -117,8 +121,8 @@ class BaseAgent(ABC, BaseModel):
         pass
 
     @abstractmethod
-    def set_agent_tools(self, agents: List["BaseAgent"]):
-        """Set the agent tools that init BaseAgenTools class."""
+    def get_delegation_tools(self, agents: List["BaseAgent"]):
+        """Set the task tools that init BaseAgenTools class."""
         pass
 
     def interpolate_inputs(self, inputs: Dict[str, Any]) -> None:

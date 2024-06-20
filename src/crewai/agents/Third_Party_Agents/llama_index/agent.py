@@ -77,8 +77,7 @@ class LlamaIndexAgent(BaseAgent):
             max_iterations=self.max_iter,
         )
 
-    def set_agent_tools(self, agents: List[BaseAgent]):
-        """Set the agent tools and update tools."""
+    def get_delegation_tools(self, agents: List[BaseAgent]):
         agent_tools = LlamaAgentTools(agents=agents)
         tools = agent_tools.tools()
         return tools

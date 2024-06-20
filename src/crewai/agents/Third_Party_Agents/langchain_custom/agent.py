@@ -222,17 +222,16 @@ class LangchainAgent(BaseAgent):
             agent=RunnableAgent(runnable=inner_agent), **executor_args
         )
 
-    def set_agent_tools(self, agents: List[BaseAgent]):
-        """Set the agent tools and update tools."""
+    def get_delegation_tools(self, agents: List[BaseAgent]):
         agent_tools = LangchainCustomTools(agents=agents)
         tools = agent_tools.tools()
         return tools
 
     def _parse_tools(self, tools: List[Any]) -> List[LangChainTool]:
         """Parse tools to be used for the task."""
-        # tentatively try to import from crewai_tools import BaseTool as CrewAITool
         tools_list = []
         try:
+            # tentatively try to import from crewai_tools import BaseTool as CrewAITool
             from crewai_tools import BaseTool as CrewAITool
 
             for tool in tools:

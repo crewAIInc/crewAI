@@ -11,7 +11,6 @@ from langchain_core.callbacks import BaseCallbackHandler
 from langchain_openai import ChatOpenAI
 from pydantic import (
     UUID4,
-    BaseModel,
     ConfigDict,
     Field,
     InstanceOf,
@@ -25,9 +24,10 @@ from crewai.agents import CacheHandler, CrewAgentExecutor, CrewAgentParser, Tool
 from crewai.memory.contextual.contextual_memory import ContextualMemory
 from crewai.utilities import I18N, Logger, Prompts, RPMController
 from crewai.utilities.token_counter_callback import TokenCalcHandler, TokenProcess
+from crewai.agents.third_party_agents.langchain_custom.agent import LangchainAgent
 
 
-class Agent(BaseModel):
+class Agent(LangchainAgent):
     """Represents an agent in a system.
 
     Each agent has a role, a goal, a backstory, and an optional language model (llm).

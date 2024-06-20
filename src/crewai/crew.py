@@ -18,7 +18,6 @@ from pydantic import (
 from pydantic_core import PydanticCustomError
 
 from crewai.agent import Agent
-from crewai.custom_agent import CustomAgent
 from crewai.agents.third_party_agents.base_agent import BaseAgent
 from crewai.agents.cache import CacheHandler
 from crewai.memory.entity.entity_memory import EntityMemory
@@ -69,7 +68,7 @@ class Crew(BaseModel):
     cache: bool = Field(default=True)
     model_config = ConfigDict(arbitrary_types_allowed=True)
     tasks: List[Task] = Field(default_factory=list)
-    agents: List[Agent | CustomAgent | BaseAgent] = Field(default_factory=list)
+    agents: List[BaseAgent] = Field(default_factory=list)
     process: Process = Field(default=Process.sequential)
     verbose: Union[int, bool] = Field(default=0)
     memory: bool = Field(
@@ -261,13 +260,14 @@ class Crew(BaseModel):
             agent.i18n = i18n
             # type: ignore[attr-defined] # Argument 1 to "_interpolate_inputs" of "Crew" has incompatible type "dict[str, Any] | None"; expected "dict[str, Any]"
             agent.crew = self  # type: ignore[attr-defined]
+            if (
+                hasattr(agent, "function_calling_llm")
+                and not agent.function_calling_llm
+            ):
+                agent.function_calling_llm = self.function_calling_llm
+            if hasattr(agent, "step_callback") and not agent.step_callback:
+                agent.step_callback = self.step_callback
 
-            if isinstance(agent, Agent):
-                if not agent.function_calling_llm:
-                    agent.function_calling_llm = self.function_calling_llm
-                if not agent.step_callback:
-                    agent.step_callback = self.step_callback
-            """ --- BEST WAY TO HANDLE THIS ?---"""
             agent.create_agent_executor()
 
         metrics = []
@@ -283,18 +283,17 @@ class Crew(BaseModel):
             raise NotImplementedError(
                 f"The process '{self.process}' is not implemented yet."
             )
+
         metrics = metrics + [
             agent._token_process.get_summary()
             for agent in self.agents
-            if isinstance(agent, Agent)
+            if hasattr(agent, "_token_process")
         ]
         for agent in self.agents:
-            if isinstance(agent, Agent):
-                self.usage_metrics = {
-                    key: sum([m[key] for m in metrics if m is not None])
-                    for key in metrics[0]
-                }
-
+            self.usage_metrics = {
+                key: sum([m[key] for m in metrics if m is not None])
+                for key in metrics[0]
+            }
         return result
 
     def kickoff_for_each(self, inputs: List[Dict[str, Any]]) -> List:
@@ -350,10 +349,7 @@ class Crew(BaseModel):
                     agent for agent in self.agents if agent != task.agent
                 ]
                 if len(self.agents) > 1 and len(agents_for_delegation) > 0:
-                    if not isinstance(task.agent, Agent):
-                        task.tools += task.agent.set_agent_tools(agents_for_delegation)
-                    else:
-                        task.tools += AgentTools(agents=agents_for_delegation).tools()
+                    task.tools += task.agent.get_delegation_tools(agents_for_delegation)
 
             role = task.agent.role if task.agent is not None else "None"
             self._logger.log("debug", f"== Working Agent: {role}", color="bold_purple")
@@ -377,13 +373,12 @@ class Crew(BaseModel):
                 self._file_handler.log(agent=role, task=task_output, status="completed")
 
         self._finish_execution(task_output)
-        if isinstance(task.agent, BaseAgent):
-            # ignores if using a custom agent since there is too many ways of structuring this output - but maybe crewai becomes the standard
-            return self._format_output(task_output)
-        else:
-            # type: ignore # Incompatible return value type (got "tuple[str, Any]", expected "str")
+
+        if hasattr(task.agent, "_token_process"):
             token_usage = task.agent._token_process.get_summary()
             return self._format_output(task_output, token_usage)
+        # type: ignore # Incompatible return value type (got "tuple[str, Any]", expected "str")
+        return self._format_output(task_output)
 
     def _run_hierarchical_process(self) -> Union[str, Dict[str, Any]]:
         """Creates and assigns a manager agent to make sure the crew completes the tasks."""
@@ -430,7 +425,7 @@ class Crew(BaseModel):
 
         # type: ignore # Incompatible return value type (got "tuple[str, Any]", expected "str")
         manager_token_usage = manager._token_process.get_summary()
-        if isinstance(task.agent, Agent):
+        if hasattr(manager, "_token_process"):
             return self._format_output(
                 task_output, manager_token_usage
             ), manager_token_usage

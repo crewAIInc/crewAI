@@ -9,7 +9,7 @@ from langchain_openai import ChatOpenAI
 from pydantic import UUID4, BaseModel, Field, field_validator, model_validator
 from pydantic_core import PydanticCustomError
 
-from crewai.agent import Agent
+# from crewai.agent import Agent
 from crewai.tasks.task_output import TaskOutput
 from crewai.utilities import I18N, Converter, ConverterError, Printer
 from crewai.utilities.pydantic_schema_parser import PydanticSchemaParser
@@ -56,7 +56,7 @@ class Task(BaseModel):
     callback: Optional[Any] = Field(
         description="Callback to be executed after the task is completed.", default=None
     )
-    agent: Optional[Agent | BaseAgent] = Field(
+    agent: Optional[BaseAgent] = Field(
         description="Agent responsible for execution the task.", default=None
     )
     context: Optional[List["Task"]] = Field(
@@ -148,7 +148,7 @@ class Task(BaseModel):
 
     def execute(  # type: ignore # Missing return statement
         self,
-        agent: Agent | None = None,
+        agent: BaseAgent | None = None,
         context: Optional[str] = None,
         tools: Optional[List[Any]] = None,
     ) -> str:
