@@ -108,7 +108,7 @@ agent = Agent(
 ```py
 from crewai import Task, Crew
 from crewai.agents.third_party_agents.langchain_custom.agent import LangchainAgent
-from crewai.agents.third_party_agents.llama_index.agent import LlamaIndexAgent
+from crewai.agents.third_party_agents.llama_index.agent import LlamaIndexReActAgent
 
 from langchain.agents import load_tools
 from langchain_openai import OpenAI
@@ -116,8 +116,8 @@ from langchain_openai import OpenAI
 llm = OpenAI(temperature=0)
 langchain_tools = load_tools(["google-serper"], llm=llm)
 
-# llamaIndexAgent with its own tool
-agent1 = LlamaIndexAgent(
+# LlamaIndexReActAgent with its own tool
+agent1 = LlamaIndexReActAgent(
     role="backstory agent",
     goal="who is {input}?",
     backstory="agent backstory",

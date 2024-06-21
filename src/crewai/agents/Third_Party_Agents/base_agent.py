@@ -117,7 +117,6 @@ class BaseAgent(ABC, BaseModel):
 
     def __init__(__pydantic_self__, **data):
         config = data.pop("config", {})
-        print("base agent config", config)
         super().__init__(**config, **data)
 
     @field_validator("id", mode="before")

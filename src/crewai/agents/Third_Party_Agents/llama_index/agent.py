@@ -19,7 +19,7 @@ from llama_index.llms.openai import OpenAI
 from llama_index.core.callbacks import CallbackManager, TokenCountingHandler
 
 
-class LlamaIndexAgent(BaseAgent):
+class LlamaIndexReActAgent(BaseAgent):
     llm: OpenAI = Field(
         default_factory=lambda: OpenAI(model="gpt-3.5-turbo"),
         description="Language model that will run the agent.",
@@ -33,7 +33,7 @@ class LlamaIndexAgent(BaseAgent):
         super().__init__(**config, **data)
 
     @model_validator(mode="after")
-    def set_agent_executor(self) -> "LlamaIndexAgent":
+    def set_agent_executor(self) -> "LlamaIndexReActAgent":
         """set agent executor is set."""
         if hasattr(self.llm, "model"):
             self.token_counter = ExtendedTokenCountingHandler(
