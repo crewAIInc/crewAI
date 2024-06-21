@@ -284,9 +284,9 @@ class Crew(BaseModel):
                 f"The process '{self.process}' is not implemented yet."
             )
         metrics = metrics + [
-            agent._token_process.get_summary()
+            agent.token_process.get_summary()
             for agent in self.agents
-            if hasattr(agent, "_token_process")
+            if hasattr(agent, "token_process")
         ]
         for agent in self.agents:
             self.usage_metrics = {
@@ -373,8 +373,8 @@ class Crew(BaseModel):
 
         self._finish_execution(task_output)
 
-        if hasattr(task.agent, "_token_process"):
-            token_usage = task.agent._token_process.get_summary()
+        if hasattr(task.agent, "token_process"):
+            token_usage = task.agent.token_process.get_summary()
             return self._format_output(task_output, token_usage)
         # type: ignore # Incompatible return value type (got "tuple[str, Any]", expected "str")
         return self._format_output(task_output)
@@ -423,8 +423,8 @@ class Crew(BaseModel):
         self._finish_execution(task_output)
 
         # type: ignore # Incompatible return value type (got "tuple[str, Any]", expected "str")
-        manager_token_usage = manager._token_process.get_summary()
-        if hasattr(manager, "_token_process"):
+        manager_token_usage = manager.token_process.get_summary()
+        if hasattr(manager, "token_process"):
             return self._format_output(
                 task_output, manager_token_usage
             ), manager_token_usage

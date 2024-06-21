@@ -16,6 +16,7 @@ from pydantic_core import PydanticCustomError
 
 from crewai.utilities import I18N, RPMController, Logger
 from crewai.agents import CacheHandler, ToolsHandler
+from crewai.utilities.token_counter_callback import TokenProcess
 
 
 class BaseAgent(ABC, BaseModel):
@@ -110,6 +111,9 @@ class BaseAgent(ABC, BaseModel):
     tools_handler: InstanceOf[ToolsHandler] = Field(
         default=None, description="An instance of the ToolsHandler class."
     )
+    token_process: TokenProcess = Field(
+        ..., description="Token process handler for the agent."
+    )
 
     _original_role: str | None = None
     _original_goal: str | None = None
@@ -202,7 +206,7 @@ class BaseAgent(ABC, BaseModel):
             "_logger",
             "_rpm_controller",
             "_request_within_rpm_limit",
-            "_token_process",
+            "token_process",
             "agent_executor",
             "tools",
             "tools_handler",

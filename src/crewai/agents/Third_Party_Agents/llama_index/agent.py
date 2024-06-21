@@ -16,7 +16,7 @@ from crewai.agents.third_party_agents.llama_index.tools.task_tools import (
 from llama_index.core.tools import FunctionTool
 from llama_index.core.agent import ReActAgent
 from llama_index.llms.openai import OpenAI
-from llama_index.core.callbacks import CallbackManager, TokenCountingHandler
+from llama_index.core.callbacks import CallbackManager
 
 
 class LlamaIndexReActAgent(BaseAgent):
@@ -25,8 +25,9 @@ class LlamaIndexReActAgent(BaseAgent):
         description="Language model that will run the agent.",
     )
 
-    _token_process: TokenProcess = TokenProcess()
-    token_counter: TokenCountingHandler = Field(default_factory=TokenCountingHandler)
+    token_process: TokenProcess = TokenProcess()
+
+    _token_counter: ExtendedTokenCountingHandler
 
     def __init__(__pydantic_self__, **data):
         config = data.pop("config", {})
@@ -36,9 +37,9 @@ class LlamaIndexReActAgent(BaseAgent):
     def set_agent_executor(self) -> "LlamaIndexReActAgent":
         """set agent executor is set."""
         if hasattr(self.llm, "model"):
-            self.token_counter = ExtendedTokenCountingHandler(
+            self._token_counter = ExtendedTokenCountingHandler(
                 tokenizer=tiktoken.encoding_for_model(self.llm.model).encode,
-                token_process=self._token_process,
+                token_process=self.token_process,
             )
 
         if not self.agent_executor:
@@ -95,7 +96,7 @@ class LlamaIndexReActAgent(BaseAgent):
             tools=tools,
             llm=self.llm,
             verbose=self.verbose,
-            callback_manager=CallbackManager([self.token_counter]),
+            callback_manager=CallbackManager([self._token_counter]),
             max_iterations=self.max_iter,
         )
 

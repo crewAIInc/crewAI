@@ -23,7 +23,7 @@ from crewai.agents.third_party_agents.langchain_custom.tools.task_tools import (
 class LangchainAgent(BaseAgent):
     """Represents an langchain based agent in a system."""
 
-    _token_process: TokenProcess = TokenProcess()
+    token_process: TokenProcess = TokenProcess()
 
     max_execution_time: Optional[int] = Field(
         default=None,
@@ -66,7 +66,7 @@ class LangchainAgent(BaseAgent):
     def set_agent_executor(self) -> "LangchainAgent":
         """set agent executor is set."""
         if hasattr(self.llm, "model_name"):
-            token_handler = TokenCalcHandler(self.llm.model_name, self._token_process)
+            token_handler = TokenCalcHandler(self.llm.model_name, self.token_process)
 
             # Ensure self.llm.callbacks is a list
             if not isinstance(self.llm.callbacks, list):
