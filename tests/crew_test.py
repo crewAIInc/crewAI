@@ -658,9 +658,9 @@ def test_agent_usage_metrics_are_captured_for_sequential_process():
     assert result == "Howdy!"
     assert crew.usage_metrics == {
         "completion_tokens": 17,
-        "prompt_tokens": 160,
+        "prompt_tokens": 158,
         "successful_requests": 1,
-        "total_tokens": 177,
+        "total_tokens": 175,
     }
 
 

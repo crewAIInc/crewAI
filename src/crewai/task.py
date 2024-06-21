@@ -9,7 +9,6 @@ from langchain_openai import ChatOpenAI
 from pydantic import UUID4, BaseModel, Field, field_validator, model_validator
 from pydantic_core import PydanticCustomError
 
-# from crewai.agent import Agent
 from crewai.tasks.task_output import TaskOutput
 from crewai.utilities import I18N, Converter, ConverterError, Printer
 from crewai.utilities.pydantic_schema_parser import PydanticSchemaParser

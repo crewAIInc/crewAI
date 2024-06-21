@@ -20,13 +20,15 @@ from pydantic_core import PydanticCustomError
 from crewai.agent import Agent
 from crewai.agents.third_party_agents.base_agent import BaseAgent
 from crewai.agents.cache import CacheHandler
+from crewai.agents.third_party_agents.langchain_custom.tools.task_tools import (
+    LangchainCustomTools,
+)
 from crewai.memory.entity.entity_memory import EntityMemory
 from crewai.memory.long_term.long_term_memory import LongTermMemory
 from crewai.memory.short_term.short_term_memory import ShortTermMemory
 from crewai.process import Process
 from crewai.task import Task
 from crewai.telemetry import Telemetry
-from crewai.tools.agent_tools import AgentTools
 from crewai.utilities import I18N, FileHandler, Logger, RPMController
 
 
@@ -90,7 +92,7 @@ class Crew(BaseModel):
     manager_llm: Optional[Any] = Field(
         description="Language model that will run the agent.", default=None
     )
-    manager_agent: Optional[Any] = Field(
+    manager_agent: Optional[BaseAgent] = Field(
         description="Custom agent that will be used as manager.", default=None
     )
     manager_callbacks: Optional[List[InstanceOf[BaseCallbackHandler]]] = Field(
@@ -260,11 +262,13 @@ class Crew(BaseModel):
             agent.i18n = i18n
             # type: ignore[attr-defined] # Argument 1 to "_interpolate_inputs" of "Crew" has incompatible type "dict[str, Any] | None"; expected "dict[str, Any]"
             agent.crew = self  # type: ignore[attr-defined]
+            # TODO: Create an AgentFunctionCalling protocol for future refactoring
             if (
                 hasattr(agent, "function_calling_llm")
                 and not agent.function_calling_llm
             ):
                 agent.function_calling_llm = self.function_calling_llm
+            # TODO: Create an AgentWithCallbacks protocol for future refactoring
             if hasattr(agent, "step_callback") and not agent.step_callback:
                 agent.step_callback = self.step_callback
 
@@ -283,16 +287,14 @@ class Crew(BaseModel):
             raise NotImplementedError(
                 f"The process '{self.process}' is not implemented yet."
             )
-        metrics = metrics + [
-            agent.token_process.get_summary()
-            for agent in self.agents
-            if hasattr(agent, "token_process")
-        ]
+
+        metrics = metrics + [agent.token_process.get_summary() for agent in self.agents]
         for agent in self.agents:
             self.usage_metrics = {
                 key: sum([m[key] for m in metrics if m is not None])
                 for key in metrics[0]
             }
+
         return result
 
     def kickoff_for_each(self, inputs: List[Dict[str, Any]]) -> List:
@@ -373,11 +375,9 @@ class Crew(BaseModel):
 
         self._finish_execution(task_output)
 
-        if hasattr(task.agent, "token_process"):
-            token_usage = task.agent.token_process.get_summary()
-            return self._format_output(task_output, token_usage)
+        token_usage = task.agent.token_process.get_summary()
         # type: ignore # Incompatible return value type (got "tuple[str, Any]", expected "str")
-        return self._format_output(task_output)
+        return self._format_output(task_output, token_usage)
 
     def _run_hierarchical_process(self) -> Union[str, Dict[str, Any]]:
         """Creates and assigns a manager agent to make sure the crew completes the tasks."""
@@ -388,13 +388,13 @@ class Crew(BaseModel):
             manager = self.manager_agent
             if len(manager.tools) > 0:
                 raise Exception("Manager agent should not have tools")
-            manager.tools = AgentTools(agents=self.agents).tools()
+            manager.tools = self.manager_agent.get_delegation_tools(self.agents)
         else:
             manager = Agent(
                 role=i18n.retrieve("hierarchical_manager_agent", "role"),
                 goal=i18n.retrieve("hierarchical_manager_agent", "goal"),
                 backstory=i18n.retrieve("hierarchical_manager_agent", "backstory"),
-                tools=AgentTools(agents=self.agents).tools(),
+                tools=LangchainCustomTools(agents=self.agents).tools(),
                 llm=self.manager_llm,
                 verbose=True,
             )
@@ -424,12 +424,10 @@ class Crew(BaseModel):
 
         # type: ignore # Incompatible return value type (got "tuple[str, Any]", expected "str")
         manager_token_usage = manager.token_process.get_summary()
-        if hasattr(manager, "token_process"):
-            return self._format_output(
-                task_output, manager_token_usage
-            ), manager_token_usage
-        else:
-            return self._format_output(task_output), manager_token_usage
+
+        return self._format_output(
+            task_output, manager_token_usage
+        ), manager_token_usage
 
     def copy(self):
         """Create a deep copy of the Crew."""
