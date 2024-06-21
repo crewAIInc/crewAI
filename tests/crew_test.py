@@ -431,7 +431,7 @@ def test_agents_rpm_is_never_set_if_crew_max_RPM_is_not_set():
 
 """
 Future tests:
-TODO: 1 async task, 1 sync task. Make sure sync task waits for async to finish before starting.
+TODO: 1 async task, 1 sync task. Make sure sync task waits for async to finish before starting.[]
 TODO: 3 async tasks, 1 sync task. Make sure sync task waits for async to finish before starting.
 TODO: 1 sync task, 1 async task. Make sure we wait for result from async before finishing crew.
 
@@ -619,10 +619,6 @@ def test_wait_for_async_execution_before_sync_execution():
         tasks=[bullet_list, article_writer],
     )
 
-    # Expected output is that the sync task will wait for the async task to finish before starting.
-    # TODO: Mock the output of the async task
-    # TODO: Mocke the `execute_sync` Task to check that it was passed the context from the async task
-
 
 @pytest.mark.vcr(filter_headers=["authorization"])
 def test_async_task_execution_call_count():
@@ -678,77 +674,73 @@ def test_async_task_execution_call_count():
         assert mock_execute_sync.call_count == 1
 
 
-# ---- TEST FOR HIERARCHICAL --- #
+def test_set_agents_step_callback():
+    from unittest.mock import patch
+
+    researcher_agent = Agent(
+        role="Researcher",
+        goal="Make the best research and analysis on content about AI and AI agents",
+        backstory="You're an expert researcher, specialized in technology, software engineering, AI and startups. You work as a freelancer and is now working on doing research and analysis for a new customer.",
+        allow_delegation=False,
+    )
+
+    list_ideas = Task(
+        description="Give me a list of 5 interesting ideas to explore for na article, what makes them unique and interesting.",
+        expected_output="Bullet point list of 5 important events.",
+        agent=researcher_agent,
+        async_execution=True,
+    )
+
+    crew = Crew(
+        agents=[researcher_agent],
+        process=Process.sequential,
+        tasks=[list_ideas],
+        step_callback=lambda: None,
+    )
+
+    with patch.object(Agent, "execute_task") as execute:
+        execute.return_value = "ok"
+        crew.kickoff()
+        assert researcher_agent.step_callback is not None
+        assert False
 
 
-# TODO: Add back in
-# def test_set_agents_step_callback():
-#     from unittest.mock import patch
+def test_dont_set_agents_step_callback_if_already_set():
+    from unittest.mock import patch
 
-#     researcher_agent = Agent(
-#         role="Researcher",
-#         goal="Make the best research and analysis on content about AI and AI agents",
-#         backstory="You're an expert researcher, specialized in technology, software engineering, AI and startups. You work as a freelancer and is now working on doing research and analysis for a new customer.",
-#         allow_delegation=False,
-#     )
+    def agent_callback(_):
+        pass
 
-#     list_ideas = Task(
-#         description="Give me a list of 5 interesting ideas to explore for na article, what makes them unique and interesting.",
-#         expected_output="Bullet point list of 5 important events.",
-#         agent=researcher_agent,
-#         async_execution=True,
-#     )
+    def crew_callback(_):
+        pass
 
-#     crew = Crew(
-#         agents=[researcher_agent],
-#         process=Process.sequential,
-#         tasks=[list_ideas],
-#         step_callback=lambda: None,
-#     )
+    researcher_agent = Agent(
+        role="Researcher",
+        goal="Make the best research and analysis on content about AI and AI agents",
+        backstory="You're an expert researcher, specialized in technology, software engineering, AI and startups. You work as a freelancer and is now working on doing research and analysis for a new customer.",
+        allow_delegation=False,
+        step_callback=agent_callback,
+    )
 
-#     with patch.object(Agent, "execute_task") as execute:
-#         execute.return_value = "ok"
-#         crew.kickoff()
-#         assert researcher_agent.step_callback is not None
+    list_ideas = Task(
+        description="Give me a list of 5 interesting ideas to explore for na article, what makes them unique and interesting.",
+        expected_output="Bullet point list of 5 important events.",
+        agent=researcher_agent,
+        async_execution=True,
+    )
 
+    crew = Crew(
+        agents=[researcher_agent],
+        process=Process.sequential,
+        tasks=[list_ideas],
+        step_callback=crew_callback,
+    )
 
-# TODO: Add back in
-# def test_dont_set_agents_step_callback_if_already_set():
-#     from unittest.mock import patch
-
-#     def agent_callback(_):
-#         pass
-
-#     def crew_callback(_):
-#         pass
-
-#     researcher_agent = Agent(
-#         role="Researcher",
-#         goal="Make the best research and analysis on content about AI and AI agents",
-#         backstory="You're an expert researcher, specialized in technology, software engineering, AI and startups. You work as a freelancer and is now working on doing research and analysis for a new customer.",
-#         allow_delegation=False,
-#         step_callback=agent_callback,
-#     )
-
-#     list_ideas = Task(
-#         description="Give me a list of 5 interesting ideas to explore for na article, what makes them unique and interesting.",
-#         expected_output="Bullet point list of 5 important events.",
-#         agent=researcher_agent,
-#         async_execution=True,
-#     )
-
-#     crew = Crew(
-#         agents=[researcher_agent],
-#         process=Process.sequential,
-#         tasks=[list_ideas],
-#         step_callback=crew_callback,
-#     )
-
-#     with patch.object(Agent, "execute_task") as execute:
-#         execute.return_value = "ok"
-#         crew.kickoff()
-#         assert researcher_agent.step_callback is not crew_callback
-#         assert researcher_agent.step_callback is agent_callback
+    with patch.object(Agent, "execute_task") as execute:
+        execute.return_value = "ok"
+        crew.kickoff()
+        assert researcher_agent.step_callback is not crew_callback
+        assert researcher_agent.step_callback is agent_callback
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
@@ -1044,35 +1036,34 @@ def test_crew_does_not_interpolate_without_inputs():
 #     assert crew.agents[0].backstory == "You have a lot of experience with {topic}."
 
 
-# TODO: Add back in
-# def test_task_callback_on_crew():
-#     from unittest.mock import patch
+def test_task_callback_on_crew():
+    from unittest.mock import patch
 
-#     researcher_agent = Agent(
-#         role="Researcher",
-#         goal="Make the best research and analysis on content about AI and AI agents",
-#         backstory="You're an expert researcher, specialized in technology, software engineering, AI and startups. You work as a freelancer and is now working on doing research and analysis for a new customer.",
-#         allow_delegation=False,
-#     )
+    researcher_agent = Agent(
+        role="Researcher",
+        goal="Make the best research and analysis on content about AI and AI agents",
+        backstory="You're an expert researcher, specialized in technology, software engineering, AI and startups. You work as a freelancer and is now working on doing research and analysis for a new customer.",
+        allow_delegation=False,
+    )
 
-#     list_ideas = Task(
-#         description="Give me a list of 5 interesting ideas to explore for na article, what makes them unique and interesting.",
-#         expected_output="Bullet point list of 5 important events.",
-#         agent=researcher_agent,
-#         async_execution=True,
-#     )
+    list_ideas = Task(
+        description="Give me a list of 5 interesting ideas to explore for na article, what makes them unique and interesting.",
+        expected_output="Bullet point list of 5 important events.",
+        agent=researcher_agent,
+        async_execution=True,
+    )
 
-#     crew = Crew(
-#         agents=[researcher_agent],
-#         process=Process.sequential,
-#         tasks=[list_ideas],
-#         task_callback=lambda: None,
-#     )
+    crew = Crew(
+        agents=[researcher_agent],
+        process=Process.sequential,
+        tasks=[list_ideas],
+        task_callback=lambda: None,
+    )
 
-#     with patch.object(Agent, "execute_task") as execute:
-#         execute.return_value = "ok"
-#         crew.kickoff()
-#         assert list_ideas.callback is not None
+    with patch.object(Agent, "execute_task") as execute:
+        execute.return_value = "ok"
+        crew.kickoff()
+        assert list_ideas.callback is not None
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
