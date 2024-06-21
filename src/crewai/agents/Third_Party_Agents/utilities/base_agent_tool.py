@@ -57,9 +57,9 @@ class BaseAgentTools(BaseModel, ABC):
                 )
             )
 
-        task = Task(
+        task_obj = Task(
             description=task,
             agent=agent,
             expected_output="Your best answer to your coworker asking you this, accounting for the context shared.",
         )
-        return agent.execute_task(task, context)
+        return agent.execute_task(task_obj, context)

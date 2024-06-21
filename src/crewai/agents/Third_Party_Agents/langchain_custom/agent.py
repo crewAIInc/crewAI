@@ -2,7 +2,7 @@ import os
 from typing import Any, List, Optional, Tuple
 
 from langchain.agents.agent import RunnableAgent
-from langchain.agents.tools import tool as LangChainTool
+from langchain.tools import BaseTool
 from langchain.tools.render import render_text_description
 from langchain_core.agents import AgentAction
 from langchain_core.callbacks import BaseCallbackHandler
@@ -123,7 +123,7 @@ class LangchainAgent(BaseAgent):
 
         tools = tools or self.tools
         # type: ignore # Argument 1 to "_parse_tools" of "Agent" has incompatible type "list[Any] | None"; expected "list[Any]"
-        parsed_tools = self._parse_tools(tools)
+        parsed_tools = self._parse_tools(tools or [])
         self.create_agent_executor(tools=tools)
         self.agent_executor.tools = parsed_tools
         self.agent_executor.task = task
@@ -227,7 +227,7 @@ class LangchainAgent(BaseAgent):
         tools = agent_tools.tools()
         return tools
 
-    def _parse_tools(self, tools: List[Any]) -> List[LangChainTool]:
+    def _parse_tools(self, tools: List[Any]) -> List[BaseTool]:
         """Parse tools to be used for the task."""
         tools_list = []
         try:
