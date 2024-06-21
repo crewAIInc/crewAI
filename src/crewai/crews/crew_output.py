@@ -1,15 +1,13 @@
-from typing import Any, Dict, Union
+from typing import Any, Dict, List, Optional, Union
 
 from pydantic import BaseModel, Field
 
 from crewai.tasks.task_output import TaskOutput
+from crewai.utilities.formatter import aggregate_raw_outputs_from_task_outputs
 
 
-# TODO: Potentially add in JSON_OUTPUT, PYDANTIC_OUTPUT, etc.
 class CrewOutput(BaseModel):
-    final_output: Union[str, Dict, BaseModel] = Field(
-        description="Final output of the crew"
-    )
+    output: List[TaskOutput] = Field(description="Result of the final task")
     tasks_output: list[TaskOutput] = Field(
         description="Output of each task", default=[]
     )
@@ -17,5 +15,19 @@ class CrewOutput(BaseModel):
         description="Processed token summary", default={}
     )
 
+    def result(self) -> Union[str, BaseModel, Dict[str, Any]]:
+        """Return the result of the task based on the available output."""
+        return self.output.result()
+
+    def raw_output(self) -> str:
+        """Return the raw output of the task."""
+        return aggregate_raw_outputs_from_task_outputs(self.output)
+
+    def to_output_dict(self) -> Dict[str, Any]:
+        self.output.to_output_dict()
+
+    def __getitem__(self, key: str) -> Any:
+        self.output[key]
+
     def __str__(self):
-        return self.final_output
+        return str(self.raw_output())

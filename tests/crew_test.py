@@ -139,12 +139,12 @@ def test_crew_creation():
 
     result = crew.kickoff()
 
-    assert (
-        result.final_output
-        == "1. **The Rise of AI in Healthcare**: The convergence of AI and healthcare is a promising frontier, offering unprecedented opportunities for disease diagnosis and patient outcome prediction. AI's potential to revolutionize healthcare lies in its capacity to synthesize vast amounts of data, generating precise and efficient results. This technological breakthrough, however, is not just about improving accuracy and efficiency; it's about saving lives. As we stand on the precipice of this transformative era, we must prepare for the complex challenges and ethical questions it poses, while embracing its ability to reshape healthcare as we know it.\n\n2. **Ethical Implications of AI**: As AI intertwines with our daily lives, it presents a complex web of ethical dilemmas. This fusion of technology, philosophy, and ethics is not merely academically intriguing but profoundly impacts the fabric of our society. The questions raised range from decision-making transparency to accountability, and from privacy to potential biases. As we navigate this ethical labyrinth, it is crucial to establish robust frameworks and regulations to ensure that AI serves humanity, and not the other way around.\n\n3. **AI and Data Privacy**: The rise of AI brings with it an insatiable appetite for data, spawning new debates around privacy rights. Balancing the potential benefits of AI with the right to privacy is a unique challenge that intersects technology, law, and human rights. In an increasingly digital world, where personal information forms the backbone of many services, we must grapple with these issues. It's time to redefine the concept of privacy and devise innovative solutions that ensure our digital footprints are not abused.\n\n4. **AI in Job Market**: The discourse around AI's impact on employment is a narrative of contrast, a tale of displacement and creation. On one hand, AI threatens to automate a multitude of jobs, on the other, it promises to create new roles that we cannot yet imagine. This intersection of technology, economics, and labor rights is a critical dialogue that will shape our future. As we stand at this crossroads, we must not only brace ourselves for the changes but also seize the opportunities that this technological wave brings.\n\n5. **Future of AI Agents**: The evolution of AI agents signifies a leap towards a future where AI is not just a tool, but a partner. These sophisticated AI agents, employed in customer service to personal assistants, are redefining our interactions with technology. As we gaze into the future of AI agents, we see a landscape of possibilities and challenges. This journey will be about harnessing the potential of AI agents while navigating the issues of trust, dependence, and ethical use."
-    )
+    expected_string_output = "1. **The Rise of AI in Healthcare**: The convergence of AI and healthcare is a promising frontier, offering unprecedented opportunities for disease diagnosis and patient outcome prediction. AI's potential to revolutionize healthcare lies in its capacity to synthesize vast amounts of data, generating precise and efficient results. This technological breakthrough, however, is not just about improving accuracy and efficiency; it's about saving lives. As we stand on the precipice of this transformative era, we must prepare for the complex challenges and ethical questions it poses, while embracing its ability to reshape healthcare as we know it.\n\n2. **Ethical Implications of AI**: As AI intertwines with our daily lives, it presents a complex web of ethical dilemmas. This fusion of technology, philosophy, and ethics is not merely academically intriguing but profoundly impacts the fabric of our society. The questions raised range from decision-making transparency to accountability, and from privacy to potential biases. As we navigate this ethical labyrinth, it is crucial to establish robust frameworks and regulations to ensure that AI serves humanity, and not the other way around.\n\n3. **AI and Data Privacy**: The rise of AI brings with it an insatiable appetite for data, spawning new debates around privacy rights. Balancing the potential benefits of AI with the right to privacy is a unique challenge that intersects technology, law, and human rights. In an increasingly digital world, where personal information forms the backbone of many services, we must grapple with these issues. It's time to redefine the concept of privacy and devise innovative solutions that ensure our digital footprints are not abused.\n\n4. **AI in Job Market**: The discourse around AI's impact on employment is a narrative of contrast, a tale of displacement and creation. On one hand, AI threatens to automate a multitude of jobs, on the other, it promises to create new roles that we cannot yet imagine. This intersection of technology, economics, and labor rights is a critical dialogue that will shape our future. As we stand at this crossroads, we must not only brace ourselves for the changes but also seize the opportunities that this technological wave brings.\n\n5. **Future of AI Agents**: The evolution of AI agents signifies a leap towards a future where AI is not just a tool, but a partner. These sophisticated AI agents, employed in customer service to personal assistants, are redefining our interactions with technology. As we gaze into the future of AI agents, we see a landscape of possibilities and challenges. This journey will be about harnessing the potential of AI agents while navigating the issues of trust, dependence, and ethical use."
 
+    assert str(result) == expected_string_output
+    assert result.raw_output() == expected_string_output
     assert isinstance(result, CrewOutput)
+    assert len(result.tasks_output) == len(tasks)
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
@@ -170,8 +170,17 @@ def test_sync_task_execution():
         tasks=tasks,
     )
 
+    mock_task_output = TaskOutput(
+        description="Mock description", raw_output="mocked output", agent="mocked agent"
+    )
+
+    # Because we are mocking execute_sync, we never hit the underlying _execute_core
+    # which sets the output attribute of the task
+    for task in tasks:
+        task.output = mock_task_output
+
     with patch.object(
-        Task, "execute_sync", return_value="mocked output"
+        Task, "execute_sync", return_value=mock_task_output
     ) as mock_execute_sync:
         crew.kickoff()
 
@@ -198,7 +207,7 @@ def test_hierarchical_process():
     result = crew.kickoff()
 
     assert (
-        result.final_output
+        result.raw_output()
         == "1. 'Demystifying AI: An in-depth exploration of Artificial Intelligence for the layperson' - In this piece, we will unravel the enigma of AI, simplifying its complexities into digestible information for the everyday individual. By using relatable examples and analogies, we will journey through the neural networks and machine learning algorithms that define AI, without the jargon and convoluted explanations that often accompany such topics.\n\n2. 'The Role of AI in Startups: A Game Changer?' - Startups today are harnessing the power of AI to revolutionize their businesses. This article will delve into how AI, as an innovative force, is shaping the startup ecosystem, transforming everything from customer service to product development. We'll explore real-life case studies of startups that have leveraged AI to accelerate their growth and disrupt their respective industries.\n\n3. 'AI and Ethics: Navigating the Complex Landscape' - AI brings with it not just technological advancements, but ethical dilemmas as well. This article will engage readers in a thought-provoking discussion on the ethical implications of AI, exploring issues like bias in algorithms, privacy concerns, job displacement, and the moral responsibility of AI developers. We will also discuss potential solutions and frameworks to address these challenges.\n\n4. 'Unveiling the AI Agents: The Future of Customer Service' - AI agents are poised to reshape the customer service landscape, offering businesses the ability to provide round-the-clock support and personalized experiences. In this article, we'll dive deep into the world of AI agents, examining how they work, their benefits and limitations, and how they're set to redefine customer interactions in the digital age.\n\n5. 'From Science Fiction to Reality: AI in Everyday Life' - AI, once a concept limited to the realm of sci-fi, has now permeated our daily lives. This article will highlight the ubiquitous presence of AI, from voice assistants and recommendation algorithms, to autonomous vehicles and smart homes. We'll explore how AI, in its various forms, is transforming our everyday experiences, making the future seem a lot closer than we imagined."
     )
 
@@ -236,7 +245,7 @@ def test_crew_with_delegating_agents():
     result = crew.kickoff()
 
     assert (
-        result.final_output
+        result.raw_output()
         == "AI Agents, simply put, are intelligent systems that can perceive their environment and take actions to reach specific goals. Imagine them as digital assistants that can learn, adapt and make decisions. They operate in the realms of software or hardware, like a chatbot on a website or a self-driving car. The key to their intelligence is their ability to learn from their experiences, making them better at their tasks over time. In today's interconnected world, AI agents are transforming our lives. They enhance customer service experiences, streamline business processes, and even predict trends in data. Vehicles equipped with AI agents are making transportation safer. In healthcare, AI agents are helping to diagnose diseases, personalizing treatment plans, and monitoring patient health. As we embrace the digital era, these AI agents are not just important, they're becoming indispensable, shaping a future where technology works intuitively and intelligently to meet our needs."
     )
 
@@ -422,24 +431,22 @@ def test_agents_rpm_is_never_set_if_crew_max_RPM_is_not_set():
 
 """
 Future tests:
-TODO: Make sure 1 async task return results and waits for async to fnish before returning result
-TODO: Make sure 3 async tasks return result from final task. Make sure Joao approves of this.
 TODO: 1 async task, 1 sync task. Make sure sync task waits for async to finish before starting.
 TODO: 3 async tasks, 1 sync task. Make sure sync task waits for async to finish before starting.
 TODO: 1 sync task, 1 async task. Make sure we wait for result from async before finishing crew.
 
+TODO: 3 async tasks, 1 sync task. Make sure context from all 3 async tasks is passed to sync task.
 TODO: 3 async tasks, 1 sync task. Pass in context from only 1 async task to sync task.
+
+TODO: Test pydantic output of CrewOutput and test type in CrewOutput result
+TODO: Test json output of CrewOutput and test type in CrewOutput result
+
+TODO: TEST THE SAME THING BUT WITH HIERARCHICAL PROCESS
 """
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
-def test_async_task_execution_completion():
-    import pdb
-    import threading
-    from unittest.mock import patch
-
-    from crewai.tasks.task_output import TaskOutput
-
+def test_sequential_async_task_execution_completion():
     list_ideas = Task(
         description="Give me a list of 5 interesting ideas to explore for na article, what makes them unique and interesting.",
         expected_output="Bullet point list of 5 important events.",
@@ -459,45 +466,21 @@ def test_async_task_execution_completion():
         context=[list_ideas, list_important_history],
     )
 
-    crew = Crew(
+    sequential_crew = Crew(
         agents=[researcher, writer],
         process=Process.sequential,
         tasks=[list_ideas, list_important_history, write_article],
     )
 
-    result = crew.kickoff()
-    assert result.final_output.startswith(
-        "Artificial Intelligence (AI) has a rich and storied history, marked by significant milestones that have shaped its development and societal impact."
+    sequential_result = sequential_crew.kickoff()
+    assert sequential_result.raw_output().startswith(
+        "**The Evolution of Artificial Intelligence: A Journey Through Milestones**"
     )
-
-    # with patch.object(Agent, "execute_task") as execute:
-    #     execute.return_value = "ok"
-    #     with patch.object(threading.Thread, "start") as start:
-    #         thread = threading.Thread(target=lambda: None, args=()).start()
-    #         start.return_value = thread
-    #         with patch.object(threading.Thread, "join", wraps=thread.join()) as join:
-    #             list_ideas.output = TaskOutput(
-    #                 description="A 4 paragraph article about AI.",
-    #                 raw_output="ok",
-    #                 agent="writer",
-    #             )
-    #             list_important_history.output = TaskOutput(
-    #                 description="A 4 paragraph article about AI.",
-    #                 raw_output="ok",
-    #                 agent="writer",
-    #             )
-    #             crew.kickoff()
-    #             start.assert_called()
-    #             join.assert_called()
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
-def test_async_task_execution_completion():
-    import pdb
-    import threading
-    from unittest.mock import patch
-
-    from crewai.tasks.task_output import TaskOutput
+def test_hierarchical_async_task_execution_completion():
+    from langchain_openai import ChatOpenAI
 
     list_ideas = Task(
         description="Give me a list of 5 interesting ideas to explore for na article, what makes them unique and interesting.",
@@ -518,21 +501,21 @@ def test_async_task_execution_completion():
         context=[list_ideas, list_important_history],
     )
 
-    crew = Crew(
+    hierarchical_crew = Crew(
         agents=[researcher, writer],
-        process=Process.sequential,
+        process=Process.hierarchical,
         tasks=[list_ideas, list_important_history, write_article],
+        manager_llm=ChatOpenAI(temperature=0, model="gpt-4"),
     )
 
-    result = crew.kickoff()
-    assert result.final_output.startswith(
-        "Artificial Intelligence (AI) has a rich and storied history, marked by significant milestones that have shaped its development and societal impact."
+    hierarchical_result = hierarchical_crew.kickoff()
+    assert hierarchical_result.raw_output().startswith(
+        "The history of Artificial Intelligence (AI) is a fascinating journey that charts the evolution of human ingenuity and technological advancement."
     )
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
 def test_single_task_with_async_execution():
-    from unittest.mock import patch
 
     researcher_agent = Agent(
         role="Researcher",
@@ -542,10 +525,10 @@ def test_single_task_with_async_execution():
     )
 
     list_ideas = Task(
-        description="Give me a short list of 5 interesting ideas to explore for an article, what makes them unique and interesting.",
-        expected_output="Bullet point list of 5 important events.",
+        description="Generate a list of 5 interesting ideas to explore for an article, where each bulletpoint is under 15 words.",
+        expected_output="Bullet point list of 5 important events. No additional commentary.",
         agent=researcher_agent,
-        # async_execution=True,
+        async_execution=True,
     )
 
     crew = Crew(
@@ -555,11 +538,90 @@ def test_single_task_with_async_execution():
     )
 
     result = crew.kickoff()
-    print(result)
-    assert result.final_output == ""
+    print(result.raw_output())
+    assert result.raw_output().startswith(
+        "- The impact of AI agents on remote work productivity."
+    )
 
 
-# TODO: Make sure sync and async task execution keeps right order of expected outputs
+@pytest.mark.vcr(filter_headers=["authorization"])
+def test_three_task_with_async_execution():
+    researcher_agent = Agent(
+        role="Researcher",
+        goal="Make the best research and analysis on content about AI and AI agents",
+        backstory="You're an expert researcher, specialized in technology, software engineering, AI and startups. You work as a freelancer and is now working on doing research and analysis for a new customer.",
+        allow_delegation=False,
+    )
+
+    bullet_list = Task(
+        description="Generate a list of 5 interesting ideas to explore for an article, where each bulletpoint is under 15 words.",
+        expected_output="Bullet point list of 5 important events. No additional commentary.",
+        agent=researcher_agent,
+        async_execution=True,
+    )
+    numbered_list = Task(
+        description="Generate a list of 5 interesting ideas to explore for an article, where each bulletpoint is under 15 words.",
+        expected_output="Numbered list of 5 important events. No additional commentary.",
+        agent=researcher_agent,
+        async_execution=True,
+    )
+    letter_list = Task(
+        description="Generate a list of 5 interesting ideas to explore for an article, where each bulletpoint is under 15 words.",
+        expected_output="Numbered list using [A), B), C)] list of 5 important events. No additional commentary.",
+        agent=researcher_agent,
+        async_execution=True,
+    )
+
+    crew = Crew(
+        agents=[researcher_agent],
+        process=Process.sequential,
+        tasks=[bullet_list, numbered_list, letter_list],
+    )
+
+    # Expected result is that we are going to concatenate the output from each async task.
+    # Because we add a buffer between each task, we should see a "----------" string
+    # after the first and second task in the final output.
+    result = crew.kickoff()
+    assert result.raw_output().count("\n\n----------\n\n") == 2
+
+
+def test_wait_for_async_execution_before_sync_execution():
+    researcher_agent = Agent(
+        role="Researcher",
+        goal="Make the best research and analysis on content about AI and AI agents",
+        backstory="You're an expert researcher, specialized in technology, software engineering, AI and startups. You work as a freelancer and is now working on doing research and analysis for a new customer.",
+        allow_delegation=False,
+    )
+
+    writer_agent = Agent(
+        role="Writer",
+        goal="Write the best content about AI and AI agents.",
+        backstory="You're a writer, specialized in technology, software engineering, AI and startups. You work as a freelancer and are now working on writing content for a new customer.",
+        allow_delegation=False,
+    )
+
+    bullet_list = Task(
+        description="Generate a list of 5 interesting ideas to explore for an article, where each bulletpoint is under 15 words.",
+        expected_output="Bullet point list of 5 important events. No additional commentary.",
+        agent=researcher_agent,
+        async_execution=True,
+    )
+    article_writer = Task(
+        description="Convert a bulleted list into a 1 paragraph article.",
+        expected_output="A paragraph article with 5 sentences.",
+        agent=writer_agent,
+        async_execution=False,
+    )
+
+    crew = Crew(
+        agents=[researcher_agent, writer_agent],
+        process=Process.sequential,
+        tasks=[bullet_list, article_writer],
+    )
+
+    # Expected output is that the sync task will wait for the async task to finish before starting.
+    # TODO: Mock the output of the async task
+    # TODO: Mocke the `execute_sync` Task to check that it was passed the context from the async task
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
@@ -590,17 +652,14 @@ def test_async_task_execution_call_count():
         tasks=[list_ideas, list_important_history, write_article],
     )
 
-    # Create a MagicMock Future instance
-    mock_future = MagicMock(spec=Future)
-    mock_future.result.return_value = "ok"
-
     # Create a valid TaskOutput instance to mock the return value
     mock_task_output = TaskOutput(
-        description="Mocked Task Output",
-        exported_output="mocked output",
-        raw_output="mocked raw output",
-        agent="mocked agent",
+        description="Mock description", raw_output="mocked output", agent="mocked agent"
     )
+
+    # Create a MagicMock Future instance
+    mock_future = MagicMock(spec=Future)
+    mock_future.result.return_value = mock_task_output
 
     # Directly set the output attribute for each task
     list_ideas.output = mock_task_output
@@ -608,7 +667,7 @@ def test_async_task_execution_call_count():
     write_article.output = mock_task_output
 
     with patch.object(
-        Task, "execute_sync", return_value="ok"
+        Task, "execute_sync", return_value=mock_task_output
     ) as mock_execute_sync, patch.object(
         Task, "execute_async", return_value=mock_future
     ) as mock_execute_async:
@@ -617,6 +676,9 @@ def test_async_task_execution_call_count():
 
         assert mock_execute_async.call_count == 2
         assert mock_execute_sync.call_count == 1
+
+
+# ---- TEST FOR HIERARCHICAL --- #
 
 
 # TODO: Add back in
@@ -750,7 +812,7 @@ def test_task_with_no_arguments():
     crew = Crew(agents=[researcher], tasks=[task])
 
     result = crew.kickoff()
-    assert result.final_output == "75"
+    assert result.raw_output() == "75"
 
 
 def test_delegation_is_not_enabled_if_there_are_only_one_agent():
@@ -790,7 +852,7 @@ def test_agents_do_not_get_delegation_tools_with_there_is_only_one_agent():
 
     result = crew.kickoff()
     assert (
-        result.final_output
+        result.raw_output()
         == "Howdy! I hope this message finds you well and brings a smile to your face. Have a fantastic day!"
     )
     assert len(agent.tools) == 0
@@ -810,7 +872,7 @@ def test_agent_usage_metrics_are_captured_for_sequential_process():
     crew = Crew(agents=[agent], tasks=[task])
 
     result = crew.kickoff()
-    assert result.final_output == "Howdy!"
+    assert result.raw_output() == "Howdy!"
 
     required_keys = [
         "total_tokens",
@@ -844,7 +906,7 @@ def test_agent_usage_metrics_are_captured_for_hierarchical_process():
     )
 
     result = crew.kickoff()
-    assert result.final_output == '"Howdy!"'
+    assert result.raw_output() == '"Howdy!"'
 
     required_keys = [
         "total_tokens",
@@ -908,6 +970,78 @@ def test_crew_inputs_interpolate_both_agents_and_tasks_diff():
                 crew.kickoff(inputs={"topic": "AI", "points": 5})
                 interpolate_agent_inputs.assert_called()
                 interpolate_task_inputs.assert_called()
+
+
+def test_crew_does_not_interpolate_without_inputs():
+    from unittest.mock import patch
+
+    agent = Agent(
+        role="{topic} Researcher",
+        goal="Express hot takes on {topic}.",
+        backstory="You have a lot of experience with {topic}.",
+    )
+
+    task = Task(
+        description="Give me an analysis around {topic}.",
+        expected_output="{points} bullet points about {topic}.",
+        agent=agent,
+    )
+
+    crew = Crew(agents=[agent], tasks=[task])
+
+    with patch.object(Agent, "interpolate_inputs") as interpolate_agent_inputs:
+        with patch.object(Task, "interpolate_inputs") as interpolate_task_inputs:
+            crew.kickoff()
+            interpolate_agent_inputs.assert_not_called()
+            interpolate_task_inputs.assert_not_called()
+
+
+# TODO: Ask @joao if we want to start throwing errors if inputs are not provided
+# def test_crew_partial_inputs():
+#     agent = Agent(
+#         role="{topic} Researcher",
+#         goal="Express hot takes on {topic}.",
+#         backstory="You have a lot of experience with {topic}.",
+#     )
+
+#     task = Task(
+#         description="Give me an analysis around {topic}.",
+#         expected_output="{points} bullet points about {topic}.",
+#     )
+
+#     crew = Crew(agents=[agent], tasks=[task], inputs={"topic": "AI"})
+#     inputs = {"topic": "AI"}
+#     crew._interpolate_inputs(inputs=inputs)  # Manual call for now
+
+#     assert crew.tasks[0].description == "Give me an analysis around AI."
+#     assert crew.tasks[0].expected_output == "{points} bullet points about AI."
+#     assert crew.agents[0].role == "AI Researcher"
+#     assert crew.agents[0].goal == "Express hot takes on AI."
+#     assert crew.agents[0].backstory == "You have a lot of experience with AI."
+
+
+# TODO: If we do want ot throw errors if we are missing inputs. Add in this test.
+# def test_crew_invalid_inputs():
+#     agent = Agent(
+#         role="{topic} Researcher",
+#         goal="Express hot takes on {topic}.",
+#         backstory="You have a lot of experience with {topic}.",
+#     )
+
+#     task = Task(
+#         description="Give me an analysis around {topic}.",
+#         expected_output="{points} bullet points about {topic}.",
+#     )
+
+#     crew = Crew(agents=[agent], tasks=[task], inputs={"subject": "AI"})
+#     inputs = {"subject": "AI"}
+#     crew._interpolate_inputs(inputs=inputs)  # Manual call for now
+
+#     assert crew.tasks[0].description == "Give me an analysis around {topic}."
+#     assert crew.tasks[0].expected_output == "{points} bullet points about {topic}."
+#     assert crew.agents[0].role == "{topic} Researcher"
+#     assert crew.agents[0].goal == "Express hot takes on {topic}."
+#     assert crew.agents[0].backstory == "You have a lot of experience with {topic}."
 
 
 # TODO: Add back in
@@ -1010,7 +1144,7 @@ def test_tools_with_custom_caching():
                 input={"first_number": 2, "second_number": 6},
                 output=12,
             )
-            assert result.final_output == "3"
+            assert result.raw_output() == "3"
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
@@ -1087,7 +1221,7 @@ def test_crew_log_file_output(tmp_path):
 
 @pytest.mark.vcr(filter_headers=["authorization"])
 def test_manager_agent():
-    from unittest.mock import MagicMock, patch
+    from unittest.mock import patch
 
     task = Task(
         description="Come up with a list of 5 interesting ideas to explore for an article, then write one amazing paragraph highlight for each idea that showcases how good an article about this topic could be. Return the list of ideas with their paragraph and your notes.",
@@ -1108,8 +1242,16 @@ def test_manager_agent():
         tasks=[task],
     )
 
+    mock_task_output = TaskOutput(
+        description="Mock description", raw_output="mocked output", agent="mocked agent"
+    )
+
+    # Because we are mocking execute_sync, we never hit the underlying _execute_core
+    # which sets the output attribute of the task
+    task.output = mock_task_output
+
     with patch.object(
-        Task, "execute_sync", return_value="Example output for a task."
+        Task, "execute_sync", return_value=mock_task_output
     ) as mock_execute_sync:
         crew.kickoff()
         assert manager.allow_delegation is True

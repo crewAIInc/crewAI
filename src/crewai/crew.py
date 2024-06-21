@@ -6,15 +6,15 @@ from typing import Any, Dict, List, Optional, Tuple, Union
 
 from langchain_core.callbacks import BaseCallbackHandler
 from pydantic import (
-  UUID4,
-  BaseModel,
-  ConfigDict,
-  Field,
-  InstanceOf,
-  Json,
-  PrivateAttr,
-  field_validator,
-  model_validator,
+    UUID4,
+    BaseModel,
+    ConfigDict,
+    Field,
+    InstanceOf,
+    Json,
+    PrivateAttr,
+    field_validator,
+    model_validator,
 )
 from pydantic_core import PydanticCustomError
 
@@ -26,9 +26,11 @@ from crewai.memory.long_term.long_term_memory import LongTermMemory
 from crewai.memory.short_term.short_term_memory import ShortTermMemory
 from crewai.process import Process
 from crewai.task import Task
+from crewai.tasks.task_output import TaskOutput
 from crewai.telemetry import Telemetry
 from crewai.tools.agent_tools import AgentTools
 from crewai.utilities import I18N, FileHandler, Logger, RPMController
+from crewai.utilities.formatter import aggregate_raw_outputs_from_task_outputs
 
 
 class Crew(BaseModel):
@@ -246,12 +248,12 @@ class Crew(BaseModel):
 
     def kickoff(
         self,
-        inputs: Optional[Dict[str, Any]] = {},
+        inputs: Optional[Dict[str, Any]] = None,
     ) -> CrewOutput:
         """Starts the crew to work on its assigned tasks."""
         self._execution_span = self._telemetry.crew_execution_span(self)
-        # type: ignore # Argument 1 to "_interpolate_inputs" of "Crew" has incompatible type "dict[str, Any] | None"; expected "dict[str, Any]"
-        self._interpolate_inputs(inputs)
+        if inputs is not None:
+            self._interpolate_inputs(inputs)
         self._set_tasks_callbacks()
 
         i18n = I18N(prompt_file=self.prompt_file)
@@ -297,12 +299,7 @@ class Crew(BaseModel):
         for input_data in inputs:
             crew = self.copy()
 
-            for task in crew.tasks:
-                task.interpolate_inputs(input_data)
-            for agent in crew.agents:
-                agent.interpolate_inputs(input_data)
-
-            output = crew.kickoff()
+            output = crew.kickoff(inputs=input_data)
             results.append(output)
 
         return results
@@ -317,12 +314,7 @@ class Crew(BaseModel):
         async def run_crew(input_data):
             crew = self.copy()
 
-            for task in crew.tasks:
-                task.interpolate_inputs(input_data)
-            for agent in crew.agents:
-                agent.interpolate_inputs(input_data)
-
-            return await crew.kickoff_async()
+            return await crew.kickoff_async(inputs=input_data)
 
         tasks = [asyncio.create_task(run_crew(input_data)) for input_data in inputs]
 
@@ -336,15 +328,8 @@ class Crew(BaseModel):
 
     def _run_sequential_process(self) -> CrewOutput:
         """Executes tasks sequentially and returns the final output."""
-        # TODO: Check to see if we need to be clearing task output after each task
-        task_output = ""
-        futures: List[Tuple[Task, Future]] = []
-
-        def _process_task_result(task, output):
-            role = task.agent.role if task.agent is not None else "None"
-            self._logger.log("debug", f"== [{role}] Task output: {output}\n\n")
-            if self.output_log_file:
-                self._file_handler.log(agent=role, task=output, status="completed")
+        task_outputs: List[TaskOutput] = []
+        futures: List[Tuple[Task, Future[TaskOutput]]] = []
 
         for task in self.tasks:
             if task.agent.allow_delegation:  # type: ignore #  Item "None" of "Agent | None" has no attribute "allow_delegation"
@@ -366,47 +351,55 @@ class Crew(BaseModel):
                 )
 
             if task.async_execution:
+                context = aggregate_raw_outputs_from_task_outputs(task_outputs)
                 future = task.execute_async(
-                    agent=task.agent, context=task_output, tools=task.tools
+                    agent=task.agent, context=context, tools=task.tools
                 )
-                futures.append(( task, future))
+                futures.append((task, future))
             else:
                 # Before executing a synchronous task, wait for all async tasks to complete
                 if futures:
-                    task_output = ""
+                    # Clear task_outputs before processing async tasks
+                    task_outputs = []
                     for future_task, future in futures:
-                        output = future.result()
-                        task_output += output + "\n\n\n"
-                        _process_task_result(future_task, output)
+                        task_output = future.result()
+                        task_outputs.append(task_output)
+                        self._process_task_result(future_task, task_output)
 
                     # Clear the futures list after processing all async results
                     futures.clear()
 
-                output = task.execute_sync(
-                    agent=task.agent, context=task_output, tools=task.tools
+                context = aggregate_raw_outputs_from_task_outputs(task_outputs)
+                task_output = task.execute_sync(
+                    agent=task.agent, context=context, tools=task.tools
                 )
-                task_output = output
-                _process_task_result(task, output)
-
-        # TODO: Check with Joao to see if we want to add or ignore outputs from async tasks
-        # Process any remaining async results
+                task_outputs = [task_output]
+                self._process_task_result(task, task_output)
 
         if futures:
-            task_output = ""
+            # Clear task_outputs before processing async tasks
+            task_outputs = []
             for future_task, future in futures:
-                output = future.result()
-                task_output += output + "\n\n\n"
-                _process_task_result(future_task, output)
+                task_output = future.result()
+                task_outputs.append(task_output)
+                self._process_task_result(future_task, task_output)
 
-        self._finish_execution(task_output)
+        final_string_output = aggregate_raw_outputs_from_task_outputs(task_outputs)
+        self._finish_execution(final_string_output)
         # type: ignore # Item "None" of "Agent | None" has no attribute "_token_process"
         token_usage = task.agent._token_process.get_summary()
-        return self._format_output(task_output, token_usage)
+        return self._format_output(task_outputs, token_usage)
 
-    # TODO: Updates this to mimic the async and sync exeuction of tasks in sequential process
+    def _process_task_result(self, task: Task, output: TaskOutput) -> None:
+        role = task.agent.role if task.agent is not None else "None"
+        self._logger.log("debug", f"== [{role}] Task output: {output}\n\n")
+        if self.output_log_file:
+            self._file_handler.log(agent=role, task=output, status="completed")
+
+    # TODO: Ask Joao if agent conntected to task can delegate to other agents like we
+    # can in sequential process. Or, can only the manager delegate to other agents in hierarchical process.
     def _run_hierarchical_process(self) -> Tuple[CrewOutput, Dict[str, Any]]:
         """Creates and assigns a manager agent to make sure the crew completes the tasks."""
-
         i18n = I18N(prompt_file=self.prompt_file)
         if self.manager_agent is not None:
             self.manager_agent.allow_delegation = True
@@ -424,16 +417,12 @@ class Crew(BaseModel):
                 verbose=True,
             )
 
-        task_output = ""
-        futures: List[Tuple[Task, Future]] = []
-
-        def _process_task_result(task, output):
-            role = task.agent.role if task.agent is not None else "None"
-            self._logger.log("debug", f"== [{role}] Task output: {output}\n\n")
-            if self.output_log_file:
-                self._file_handler.log(agent=role, task=output, status="completed")
+        task_outputs: List[TaskOutput] = []
+        futures: List[Tuple[Task, Future[TaskOutput]]] = []
 
         for task in self.tasks:
+            # TODO: In sequential, we allow delegation but we ignore it here. Confirm with Joao.
+
             self._logger.log("debug", f"Working Agent: {manager.role}")
             self._logger.log("info", f"Starting Task: {task.description}")
 
@@ -443,40 +432,45 @@ class Crew(BaseModel):
                 )
 
             if task.async_execution:
+                context = aggregate_raw_outputs_from_task_outputs(task_outputs)
                 future = task.execute_async(
-                    agent=manager, context=task_output, tools=manager.tools
+                    agent=manager, context=context, tools=manager.tools
                 )
                 futures.append((task, future))
             else:
                 # Before executing a synchronous task, wait for all async tasks to complete
                 if futures:
-                    task_output = ""  # Clear task_output before processing async tasks
+                    # Clear task_outputs before processing async tasks
+                    task_outputs = []
                     for future_task, future in futures:
-                        output = future.result()
-                        task_output += output + "\n\n\n"
-                        _process_task_result(future_task, output)
+                        task_output = future.result()
+                        task_outputs.append(task_output)
+                        self._process_task_result(future_task, task_output)
 
                     # Clear the futures list after processing all async results
                     futures.clear()
 
-                output = task.execute_sync(
-                    agent=manager, context=task_output, tools=manager.tools
+                context = aggregate_raw_outputs_from_task_outputs(task_outputs)
+                task_output = task.execute_sync(
+                    agent=manager, context=context, tools=manager.tools
                 )
-                task_output = output  # Set task_output to the new result for sync tasks
-                _process_task_result(task, output)
+                task_outputs = [task_output]
+                self._process_task_result(task, task_output)
 
         # Process any remaining async results
         if futures:
-            task_output = ""  # Clear task_output before processing async tasks
+            # Clear task_outputs before processing async tasks
+            task_outputs = []
             for future_task, future in futures:
-                output = future.result()
-                task_output += output + "\n\n\n"
-                _process_task_result(future_task, output)
+                task_output = future.result()
+                task_outputs.append(task_output)
+                self._process_task_result(future_task, task_output)
 
-        self._finish_execution(task_output)
+        final_string_output = aggregate_raw_outputs_from_task_outputs(task_outputs)
+        self._finish_execution(final_string_output)
         manager_token_usage = manager._token_process.get_summary()
         return (
-            self._format_output(task_output, manager_token_usage),
+            self._format_output(task_outputs, manager_token_usage),
             manager_token_usage,
         )
 
@@ -529,25 +523,22 @@ class Crew(BaseModel):
         [agent.interpolate_inputs(inputs) for agent in self.agents]
 
     def _format_output(
-        self, output: str, token_usage: Optional[Dict[str, Any]]
+        self, output: List[TaskOutput], token_usage: Optional[Dict[str, Any]]
     ) -> CrewOutput:
         """
         Formats the output of the crew execution.
         """
-        print("Crew Output: ", output)
-        print("Crew output type: ", type(output))
-        print("SELF TASKS: ", self.tasks)
-        print("Tasks Output: ", [task.output for task in self.tasks if task])
         return CrewOutput(
-            final_output=output,
+            output=output,
             tasks_output=[task.output for task in self.tasks if task],
             token_output=token_usage,
         )
 
-    def _finish_execution(self, output: str) -> None:
+    def _finish_execution(self, final_string_output: str) -> None:
         if self.max_rpm:
             self._rpm_controller.stop_rpm_counter()
-        self._telemetry.end_crew(self, output)
+
+        self._telemetry.end_crew(self, final_string_output)
 
     def __repr__(self):
         return f"Crew(id={self.id}, process={self.process}, number_of_agents={len(self.agents)}, number_of_tasks={len(self.tasks)})"

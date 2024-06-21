@@ -273,7 +273,7 @@ class Telemetry:
             except Exception:
                 pass
 
-    def end_crew(self, crew, output):
+    def end_crew(self, crew, final_string_output):
         if (self.ready) and (crew.share_crew):
             try:
                 self._add_attribute(
@@ -281,7 +281,9 @@ class Telemetry:
                     "crewai_version",
                     pkg_resources.get_distribution("crewai").version,
                 )
-                self._add_attribute(crew._execution_span, "crew_output", output)
+                self._add_attribute(
+                    crew._execution_span, "crew_output", final_string_output
+                )
                 self._add_attribute(
                     crew._execution_span,
                     "crew_tasks_output",
