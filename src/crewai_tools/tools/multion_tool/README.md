@@ -20,7 +20,7 @@ multion_tool = MultiOnTool(api_key= "YOUR_MULTION_API_KEY", local=False)
 ## Arguments
 
 - `api_key`: Specifies Browserbase API key. Defaults is the `BROWSERBASE_API_KEY` environment variable.
-- `local`: Optional. Use the local flag to run the agent locally on your browser. 
+- `local`: Optional. Use the local flag set as "true" to run the agent locally on your browser. Make sure the multion browser extension is installed and API Enabled is checked.
 
 ## Steps to Get Started
 To effectively use the `MultiOnTool`, follow these steps:
