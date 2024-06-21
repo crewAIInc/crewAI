@@ -1,3 +1,4 @@
+import os
 from typing import Optional, Type
 
 import docker
@@ -30,9 +31,27 @@ class CodeInterpreterTool(BaseTool):
     args_schema: Type[BaseModel] = CodeInterpreterSchema
     code: Optional[str] = None
 
+    def _verify_docker_image(self) -> None:
+        """
+        Verify if the Docker image is available
+        """
+        image_tag = "code-interpreter:latest"
+
+        client = docker.from_env()
+        images = client.images.list()
+        all_tags = [tag for image in images for tag in image.tags]
+
+        if image_tag not in all_tags:
+            client.images.build(
+                path=os.path.dirname(os.path.abspath(__file__)),
+                tag=image_tag,
+                rm=True,
+            )
+
     def __init__(self, code: Optional[str] = None, **kwargs) -> None:
         super().__init__(**kwargs)
         if code is not None:
+            self._verify_docker_image()
             self.code = code
             self.description = "Interprets Python code in a Docker container. ALWAYS PRINT the final result and the output of the code"
             self.args_schema = FixedCodeInterpreterSchemaSchema
@@ -67,7 +86,8 @@ class CodeInterpreterTool(BaseTool):
         cmd_to_run = f'python3 -c "{code}"'
         exec_result = container.exec_run(cmd_to_run)
 
-        container.stop().remove()
+        container.stop()
+        container.remove()
 
         if exec_result.exit_code != 0:
             return f"Something went wrong while running the code: \n{exec_result.output.decode('utf-8')}"
