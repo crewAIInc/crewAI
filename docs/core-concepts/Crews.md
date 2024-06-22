@@ -138,16 +138,19 @@ result = my_crew.kickoff()
 print(result)
 
 # Example of using kickoff_for_each
-results = my_crew.kickoff_for_each()
+inputs_array = [{'topic': 'AI in healthcare'}, {'topic': 'AI in finance'}]
+results = my_crew.kickoff_for_each(inputs=inputs_array)
 for result in results:
     print(result)
 
 # Example of using kickoff_async
-async_result = my_crew.kickoff_async()
+inputs = {'topic': 'AI in healthcare'}
+async_result = my_crew.kickoff_async(inputs=inputs)
 print(async_result)
 
 # Example of using kickoff_for_each_async
-async_results = my_crew.kickoff_for_each_async()
+inputs_array = [{'topic': 'AI in healthcare'}, {'topic': 'AI in finance'}]
+async_results = my_crew.kickoff_for_each_async(inputs=inputs_array)
 for async_result in async_results:
     print(async_result)
 ```
