@@ -141,7 +141,6 @@ class BaseAgent(ABC, BaseModel):
     @model_validator(mode="after")
     def set_attributes_based_on_config(self) -> "BaseAgent":
         """Set attributes based on the agent configuration."""
-        print("config", self.config)
         if self.config:
             for key, value in self.config.items():
                 setattr(self, key, value)
