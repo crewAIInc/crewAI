@@ -123,6 +123,13 @@ class BaseAgent(ABC, BaseModel):
         config = data.pop("config", {})
         super().__init__(**config, **data)
 
+    @model_validator(mode="after")
+    def set_config_attributes(self):
+        if self.config:
+            for key, value in self.config.items():
+                setattr(self, key, value)
+        return self
+
     @field_validator("id", mode="before")
     @classmethod
     def _deny_user_set_id(cls, v: Optional[UUID4]) -> None:
@@ -134,6 +141,7 @@ class BaseAgent(ABC, BaseModel):
     @model_validator(mode="after")
     def set_attributes_based_on_config(self) -> "BaseAgent":
         """Set attributes based on the agent configuration."""
+        print("config", self.config)
         if self.config:
             for key, value in self.config.items():
                 setattr(self, key, value)
@@ -211,12 +219,21 @@ class BaseAgent(ABC, BaseModel):
             "tools",
             "tools_handler",
             "cache_handler",
+            "crew",
+            "llm",
         }
 
-        copied_data = self.model_dump(exclude=exclude)
-        copied_data = {k: v for k, v in copied_data.items() if v is not None}
+        copied_data = self.model_dump(exclude=exclude, exclude_unset=True)
         copied_agent = self.__class__(**copied_data)
+
+        # Copy mutable attributes separately
         copied_agent.tools = deepcopy(self.tools)
+        copied_agent.config = deepcopy(self.config)
+
+        # Preserve original values for interpolation
+        copied_agent._original_role = self._original_role
+        copied_agent._original_goal = self._original_goal
+        copied_agent._original_backstory = self._original_backstory
 
         return copied_agent
 
