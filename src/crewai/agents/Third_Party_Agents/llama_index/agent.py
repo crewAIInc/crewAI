@@ -71,6 +71,7 @@ class LlamaIndexReActAgent(BaseAgent):
         parsed_tools = self._parse_tools(tools)
         self.create_agent_executor(tools=tools)
         self.agent_executor.tools = parsed_tools
+        self.agent_executor.task = task
         result = self.agent_executor.chat(task_prompt)
         if self.max_rpm:
             self._rpm_controller.stop_rpm_counter()

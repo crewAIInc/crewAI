@@ -66,6 +66,8 @@ class CrewLlamaReActAgentExecutor(ReActAgent):
         chat_history: Optional[List[ChatMessage]] = None,
         tool_choice: Optional[Union[str, dict]] = None,
     ) -> AgentChatResponse:
+        if self.task.human_input:
+            self.should_ask_for_human_input = True
         # override tool choice is provided as input.
         if tool_choice is None:
             tool_choice = self.default_tool_choice
@@ -81,10 +83,19 @@ class CrewLlamaReActAgentExecutor(ReActAgent):
             )
             assert isinstance(chat_response, AgentChatResponse)
             e.on_end(payload={EventPayload.RESPONSE: chat_response})
-            # TODO: Add logic for handling human input when e.finished
             if e._event_type == CBEventType.AGENT_STEP:
                 self.iterations += 1
-            if e.finished:
-                self._create_short_term_memory(chat_response)
-
+                if e.finished:
+                    self._create_short_term_memory(chat_response)
+                    if self.should_ask_for_human_input:
+                        self.should_ask_for_human_input = False
+                        human_feedback = self._ask_human_input(chat_response)
+                        action = self.create_task(human_feedback)
+                        self.run_step(action.task_id)
         return chat_response
+
+    def _ask_human_input(self, final_answer: dict) -> str:
+        """Get human input."""
+        return input(
+            self._i18n.slice("getting_input").format(final_answer=final_answer)
+        )
