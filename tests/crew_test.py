@@ -702,7 +702,6 @@ def test_set_agents_step_callback():
         execute.return_value = "ok"
         crew.kickoff()
         assert researcher_agent.step_callback is not None
-        assert False
 
 
 def test_dont_set_agents_step_callback_if_already_set():
@@ -1037,7 +1036,7 @@ def test_crew_does_not_interpolate_without_inputs():
 
 
 def test_task_callback_on_crew():
-    from unittest.mock import patch
+    from unittest.mock import MagicMock, patch
 
     researcher_agent = Agent(
         role="Researcher",
@@ -1053,17 +1052,23 @@ def test_task_callback_on_crew():
         async_execution=True,
     )
 
+    mock_callback = MagicMock()
+
     crew = Crew(
         agents=[researcher_agent],
         process=Process.sequential,
         tasks=[list_ideas],
-        task_callback=lambda: None,
+        task_callback=mock_callback,
     )
 
     with patch.object(Agent, "execute_task") as execute:
         execute.return_value = "ok"
         crew.kickoff()
+
         assert list_ideas.callback is not None
+        mock_callback.assert_called_once()
+        args, _ = mock_callback.call_args
+        assert isinstance(args[0], TaskOutput)
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
@@ -1333,3 +1338,6 @@ def test_crew_train_error():
         assert "train() missing 1 required positional argument: 'n_iterations'" in str(
             e
         )
+
+
+# TODO: Test delegation in heirarchical process
