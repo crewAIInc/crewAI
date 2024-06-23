@@ -302,8 +302,7 @@ class Task(BaseModel):
                         pass
 
             # type: ignore # Item "None" of "Agent | None" has no attribute "function_calling_llm"
-            llm = self.agent.function_calling_llm or self.agent.llm
-
+            llm = getattr(self.agent, "function_calling_llm", None) or self.agent.llm
             if not self._is_gpt(llm):
                 # type: ignore # Argument "model" to "PydanticSchemaParser" has incompatible type "type[BaseModel] | None"; expected "type[BaseModel]"
                 model_schema = PydanticSchemaParser(model=model).get_schema()

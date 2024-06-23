@@ -31,14 +31,14 @@ class LlamaAgentTools(BaseAgentTools, BaseModel):
         tools = [
             FunctionTool.from_defaults(
                 fn=self.delegate_work,
-                name="delegate-work-to-coworker",
+                name="delegate",
                 description=self.i18n.tools("delegate_work").format(
                     coworkers=coworkers
                 ),
             ),
             FunctionTool.from_defaults(
                 fn=self.ask_question,
-                name="ask-question-to-coworker",
+                name="question",
                 description=self.i18n.tools("ask_question").format(coworkers=coworkers),
             ),
         ]

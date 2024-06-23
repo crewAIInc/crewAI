@@ -1,5 +1,5 @@
 import tiktoken
-from typing import List
+from typing import List, Any
 from pydantic import Field, model_validator
 
 from crewai.agents.third_party_agents.base_agent import BaseAgent
@@ -17,7 +17,6 @@ from crewai.agents.third_party_agents.llama_index.tools.task_tools import (
 )
 
 from llama_index.core.tools import FunctionTool
-from llama_index.core.agent import ReActAgent
 from llama_index.llms.openai import OpenAI
 from llama_index.core.callbacks import CallbackManager
 
@@ -30,6 +29,7 @@ class LlamaIndexReActAgent(BaseAgent):
     token_process: TokenProcess = TokenProcess()
 
     _token_counter: ExtendedTokenCountingHandler
+    current_task: Any = None
 
     def __init__(__pydantic_self__, **data):
         config = data.pop("config", {})
@@ -69,14 +69,16 @@ class LlamaIndexReActAgent(BaseAgent):
 
         tools = tools or self.tools
         parsed_tools = self._parse_tools(tools)
-        self.create_agent_executor(tools=tools)
-        self.agent_executor.tools = parsed_tools
+        self.current_task = task
+        self.create_agent_executor(tools=parsed_tools)
         self.agent_executor.task = task
+        self.agent_executor.tools = parsed_tools
         result = self.agent_executor.chat(task_prompt)
+
         if self.max_rpm:
             self._rpm_controller.stop_rpm_counter()
 
-        return result
+        return result.response
 
     def _parse_tools(self, tools: List[FunctionTool]) -> List[FunctionTool]:
         """Ensures tools being passed are correct for llama index"""
@@ -101,19 +103,17 @@ class LlamaIndexReActAgent(BaseAgent):
             An instance of the CrewLlamaReActAgentExecutor class.
         """
 
-        llama_agent = ReActAgent
         executor_args = {
             "llm": self.llm,
-            "_i18n": self.i18n,
-            "crew": self.crew,
-            "crew_agent": self,
-            "tools": self._parse_tools(tools),
+            "tools": tools,
             "verbose": self.verbose,
-            "original_tools": tools,
             "callback_manager": CallbackManager([self._token_counter]),
+            "max_iterations": self.max_iter,
+            "memory": None,
         }
+
         self.agent_executor = CrewLlamaReActAgentExecutor(
-            agent_worker=llama_agent, **executor_args
+            **executor_args,
         )
 
     def get_delegation_tools(self, agents: List[BaseAgent]):
