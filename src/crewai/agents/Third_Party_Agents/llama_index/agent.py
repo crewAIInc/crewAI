@@ -53,7 +53,7 @@ class LlamaIndexReActAgent(BaseAgent):
             self.set_cache_handler(self.cache_handler)
         return self
 
-    def execute_task(self, task, context=None, tools=None) -> str:
+    def execute_task(self, task, context=None, tools: List[FunctionTool] = []) -> str:
         task_prompt = task.prompt()
         if context:
             task_prompt = self.i18n.slice("task_with_context").format(
@@ -99,7 +99,7 @@ class LlamaIndexReActAgent(BaseAgent):
                 tools_list.append(tool)
         return tools_list
 
-    def create_agent_executor(self, tools=[]) -> None:
+    def create_agent_executor(self, tools: List[FunctionTool] = []) -> None:
         """Create an agent executor for the agent.
 
         Returns:
