@@ -78,12 +78,12 @@ class AgentTools(BaseModel):
             # {"task": "....", "coworker": "....
             # when it should look like this:
             # {"task": "....", "coworker": "...."}
-            agent_name = agent.casefold().replace('"', "")
+            agent_name = agent.casefold().replace('"', "").replace("\n", "")
 
             agent = [
                 available_agent
                 for available_agent in self.agents
-                if available_agent.role.casefold() == agent_name
+                if available_agent.role.casefold().replace("\n", "") == agent_name
             ]
         except Exception as _:
             return self.i18n.errors("agent_tool_unexsiting_coworker").format(
