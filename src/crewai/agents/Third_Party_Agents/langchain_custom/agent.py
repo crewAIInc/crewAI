@@ -13,7 +13,7 @@ from pydantic import Field, InstanceOf, model_validator
 from crewai.agents import CacheHandler, CrewAgentExecutor, CrewAgentParser
 from crewai.memory.contextual.contextual_memory import ContextualMemory
 from crewai.utilities import Prompts, Converter
-from crewai.utilities.token_counter_callback import TokenCalcHandler, TokenProcess
+from crewai.utilities.token_counter_callback import TokenCalcHandler
 from crewai.agents.third_party_agents.base_agent import BaseAgent
 from crewai.agents.third_party_agents.langchain_custom.tools.task_tools import (
     LangchainCustomTools,
@@ -22,8 +22,6 @@ from crewai.agents.third_party_agents.langchain_custom.tools.task_tools import (
 
 class LangchainAgent(BaseAgent):
     """Represents an langchain based agent in a system."""
-
-    token_process: TokenProcess = TokenProcess()
 
     max_execution_time: Optional[int] = Field(
         default=None,

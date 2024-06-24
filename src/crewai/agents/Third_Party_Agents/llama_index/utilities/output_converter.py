@@ -2,7 +2,7 @@ import json
 
 from pydantic import model_validator
 
-from crewai.agents.third_party_agents.utilities.converter_base import AbstractConverter
+from crewai.agents.third_party_agents.utilities.converter_base import OutputConverter
 from llama_index.core.program import LLMTextCompletionProgram
 from llama_index.llms.openai import OpenAI
 
@@ -15,7 +15,7 @@ class ConverterError(Exception):
         self.message = message
 
 
-class LLamaOutputConverter(AbstractConverter):
+class LLamaOutputConverter(OutputConverter):
     """Class that converts text into either pydantic or json."""
 
     @model_validator(mode="after")
@@ -26,10 +26,7 @@ class LLamaOutputConverter(AbstractConverter):
     def to_pydantic(self, current_attempt=1):
         """Convert text to pydantic."""
         try:
-            if self._is_gpt:
-                return self._get_llm_response()
-            else:
-                return self._create_runnable_step().chat()
+            return self._create_runnable_step()
         except Exception as e:
             if current_attempt < self.max_attemps:
                 return self.to_pydantic(current_attempt + 1)
@@ -42,7 +39,6 @@ class LLamaOutputConverter(AbstractConverter):
         try:
             if self._is_gpt:
                 return self._get_llm_response()
-
             else:
                 return json.dumps(self._create_runnable_step().model_dump())
 
@@ -52,25 +48,13 @@ class LLamaOutputConverter(AbstractConverter):
                 return self.to_json(current_attempt + 1)
             return ConverterError("Failed to convert text into JSON.")
 
-    def _create_instructor(self):
-        """Create an instructor."""
-        from crewai.utilities import Instructor
-
-        inst = Instructor(
-            llm=self.llm,
-            max_attemps=self.max_attemps,
-            model=self.model,
-            content=self.text,
-            instructions=self.instructions,
-        )
-        return inst
-
     def _create_runnable_step(self):
         """Given an LLM as well as an output Pydantic class, generate a structured Pydantic object."""
         program = LLMTextCompletionProgram.from_defaults(
             output_cls=self.model,
             prompt_template_str=self.text,
             verbose=True,
+            llm=self.llm,
         )
         return program(raw_text=self.text)
 

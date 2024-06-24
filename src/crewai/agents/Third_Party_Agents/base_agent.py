@@ -113,8 +113,8 @@ class BaseAgent(ABC, BaseModel):
     tools_handler: InstanceOf[ToolsHandler] = Field(
         default=None, description="An instance of the ToolsHandler class."
     )
-    token_process: TokenProcess = Field(
-        ..., description="Token process handler for the agent."
+    token_process: InstanceOf[TokenProcess] = Field(
+        default=TokenProcess(), description="Token process handler for the agent."
     )
 
     _original_role: str | None = None

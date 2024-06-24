@@ -94,7 +94,6 @@ class CrewLlamaReActAgentExecutor(ReActAgent, CrewAgentExecutorMixin):
     ) -> TaskStepOutput:
         """Execute step."""
         if self._should_force_answer():
-            print("force final answer")
             error = self._i18n.errors("force_final_answer")
             self.have_forced_answer = True
             force_final_answer_task = self.create_task(error)

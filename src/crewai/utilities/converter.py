@@ -3,7 +3,7 @@ import json
 from langchain.schema import HumanMessage, SystemMessage
 from langchain_openai import ChatOpenAI
 from pydantic import model_validator
-from crewai.agents.third_party_agents.utilities.converter_base import AbstractConverter
+from crewai.agents.third_party_agents.utilities.converter_base import OutputConverter
 
 
 class ConverterError(Exception):
@@ -14,7 +14,7 @@ class ConverterError(Exception):
         self.message = message
 
 
-class Converter(AbstractConverter):
+class Converter(OutputConverter):
     """Class that converts text into either pydantic or json."""
 
     @model_validator(mode="after")
