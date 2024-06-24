@@ -6,6 +6,9 @@ from crewai.agents.third_party_agents.base_agent import BaseAgent
 from crewai.agents.third_party_agents.llama_index.executor import (
     CrewLlamaReActAgentExecutor,
 )
+from crewai.agents.third_party_agents.llama_index.utilities.output_converter import (
+    LLamaOutputConverter,
+)
 from crewai.agents.third_party_agents.llama_index.utilities.token_handler import (
     ExtendedTokenCountingHandler,
     TokenProcess,
@@ -120,3 +123,8 @@ class LlamaIndexReActAgent(BaseAgent):
         agent_tools = LlamaAgentTools(agents=agents)
         tools = agent_tools.tools()
         return tools
+
+    def get_output_converter(self, llm, text, model, instructions):
+        return LLamaOutputConverter(
+            llm=llm, text=text, model=model, instructions=instructions
+        )

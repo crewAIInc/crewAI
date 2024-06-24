@@ -12,7 +12,7 @@ from pydantic import Field, InstanceOf, model_validator
 
 from crewai.agents import CacheHandler, CrewAgentExecutor, CrewAgentParser
 from crewai.memory.contextual.contextual_memory import ContextualMemory
-from crewai.utilities import Prompts
+from crewai.utilities import Prompts, Converter
 from crewai.utilities.token_counter_callback import TokenCalcHandler, TokenProcess
 from crewai.agents.third_party_agents.base_agent import BaseAgent
 from crewai.agents.third_party_agents.langchain_custom.tools.task_tools import (
@@ -226,6 +226,9 @@ class LangchainAgent(BaseAgent):
         agent_tools = LangchainCustomTools(agents=agents)
         tools = agent_tools.tools()
         return tools
+
+    def get_output_converter(self, llm, text, model, instructions):
+        return Converter(llm=llm, text=text, model=model, instructions=instructions)
 
     def _parse_tools(self, tools: List[Any]) -> List[BaseTool]:
         """Parse tools to be used for the task."""

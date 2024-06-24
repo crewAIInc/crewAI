@@ -10,7 +10,7 @@ from pydantic import UUID4, BaseModel, Field, field_validator, model_validator
 from pydantic_core import PydanticCustomError
 
 from crewai.tasks.task_output import TaskOutput
-from crewai.utilities import I18N, Converter, ConverterError, Printer
+from crewai.utilities import I18N, ConverterError, Printer
 from crewai.utilities.pydantic_schema_parser import PydanticSchemaParser
 from crewai.agents.third_party_agents.base_agent import BaseAgent
 
@@ -308,7 +308,7 @@ class Task(BaseModel):
                 model_schema = PydanticSchemaParser(model=model).get_schema()
                 instructions = f"{instructions}\n\nThe json should have the following structure, with the following keys:\n{model_schema}"
 
-            converter = Converter(
+            converter = self.agent.get_output_converter(
                 llm=llm, text=result, model=model, instructions=instructions
             )
 

@@ -51,6 +51,8 @@ class BaseAgent(ABC, BaseModel):
             Abstract method to parse tools.
         get_delegation_tools(agents: List["BaseAgent"]):
             Abstract method to set the agents task tools for handling delegation and question asking to other agents in crew.
+        get_output_converter(llm, model, instructions):
+            Abstract method to get the converter class for the agent to create json/pydantic outputs.
         interpolate_inputs(inputs: Dict[str, Any]) -> None:
             Interpolate inputs into the agent description and backstory.
         set_cache_handler(cache_handler: CacheHandler) -> None:
@@ -176,6 +178,12 @@ class BaseAgent(ABC, BaseModel):
     @abstractmethod
     def get_delegation_tools(self, agents: List["BaseAgent"]):
         """Set the task tools that init BaseAgenTools class."""
+        pass
+
+    def get_output_converter(
+        self, llm: Any, text: str, model: type[BaseModel] | None, instructions: str
+    ):
+        """Get the converter class for the agent to create json/pydantic outputs."""
         pass
 
     def interpolate_inputs(self, inputs: Dict[str, Any]) -> None:
