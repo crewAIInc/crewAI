@@ -30,6 +30,7 @@ from crewai.process import Process
 from crewai.task import Task
 from crewai.telemetry import Telemetry
 from crewai.utilities import I18N, FileHandler, Logger, RPMController
+from collections import Counter
 
 
 class Crew(BaseModel):
@@ -289,11 +290,7 @@ class Crew(BaseModel):
             )
 
         metrics = metrics + [agent.token_process.get_summary() for agent in self.agents]
-        for agent in self.agents:
-            self.usage_metrics = {
-                key: sum([m[key] for m in metrics if m is not None])
-                for key in metrics[0]
-            }
+        self.usage_metrics = self.aggregate_token_usage(metrics)
 
         return result
 
@@ -344,6 +341,7 @@ class Crew(BaseModel):
     def _run_sequential_process(self) -> Union[str, Dict[str, Any]]:
         """Executes tasks sequentially and returns the final output."""
         task_output = ""
+        token_usage = []
         for task in self.tasks:
             if task.agent.allow_delegation:  # type: ignore #  Item "None" of "Agent | None" has no attribute "allow_delegation"
                 agents_for_delegation = [
@@ -369,15 +367,17 @@ class Crew(BaseModel):
 
             role = task.agent.role if task.agent is not None else "None"
             self._logger.log("debug", f"== [{role}] Task output: {task_output}\n\n")
+            token_usage.append(task.agent.token_process.get_summary())
 
             if self.output_log_file:
                 self._file_handler.log(agent=role, task=task_output, status="completed")
 
         self._finish_execution(task_output)
 
-        token_usage = task.agent.token_process.get_summary()
+        token_usage_formatted = self.aggregate_token_usage(token_usage)
+
         # type: ignore # Incompatible return value type (got "tuple[str, Any]", expected "str")
-        return self._format_output(task_output, token_usage)
+        return self._format_output(task_output, token_usage_formatted)
 
     def _run_hierarchical_process(self) -> Union[str, Dict[str, Any]]:
         """Creates and assigns a manager agent to make sure the crew completes the tasks."""
@@ -400,6 +400,7 @@ class Crew(BaseModel):
             )
 
         task_output = ""
+        token_usage = []
         for task in self.tasks:
             self._logger.log("debug", f"Working Agent: {manager.role}")
             self._logger.log("info", f"Starting Task: {task.description}")
@@ -414,7 +415,7 @@ class Crew(BaseModel):
             )
 
             self._logger.log("debug", f"[{manager.role}] Task output: {task_output}")
-
+            token_usage.append(task.agent.token_process.get_summary())
             if self.output_log_file:
                 self._file_handler.log(
                     agent=manager.role, task=task_output, status="completed"
@@ -424,9 +425,11 @@ class Crew(BaseModel):
 
         # type: ignore # Incompatible return value type (got "tuple[str, Any]", expected "str")
         manager_token_usage = manager.token_process.get_summary()
+        token_usage.append(manager_token_usage)
+        token_usage_formatted = self.aggregate_token_usage(token_usage)
 
         return self._format_output(
-            task_output, manager_token_usage
+            task_output, token_usage_formatted
         ), manager_token_usage
 
     def copy(self):
@@ -502,3 +505,10 @@ class Crew(BaseModel):
 
     def __repr__(self):
         return f"Crew(id={self.id}, process={self.process}, number_of_agents={len(self.agents)}, number_of_tasks={len(self.tasks)})"
+
+    def aggregate_token_usage(self, token_usage_list: List[Dict[str, Any]]):
+        token_usage_counter = Counter()
+        for usage in token_usage_list:
+            if usage is not None:
+                token_usage_counter.update(usage)
+        return dict(token_usage_counter)

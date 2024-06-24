@@ -11,6 +11,7 @@ from crewai.agents.third_party_agents.llama_index.utilities.output_converter imp
 )
 from crewai.agents.third_party_agents.llama_index.utilities.token_handler import (
     ExtendedTokenCountingHandler,
+    TokenProcess,
 )
 from crewai.memory.contextual.contextual_memory import ContextualMemory
 from crewai.agents import CacheHandler
@@ -28,6 +29,7 @@ class LlamaIndexReActAgent(BaseAgent):
         default_factory=lambda: OpenAI(model="gpt-3.5-turbo"),
         description="Language model that will run the agent.",
     )
+    token_process: TokenProcess = TokenProcess()
 
     _token_counter: ExtendedTokenCountingHandler
     current_task: Any = None
