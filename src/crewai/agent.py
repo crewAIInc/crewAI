@@ -131,7 +131,7 @@ class Agent(BaseModel):
     response_template: Optional[str] = Field(
         default=None, description="Response format for the agent."
     )
-    enable_code_execution: Optional[bool] = Field(
+    allow_code_execution: Optional[bool] = Field(
         default=False, description="Enable code execution for the agent."
     )
 
@@ -406,7 +406,7 @@ class Agent(BaseModel):
                 else:
                     tools_list.append(tool)
 
-            if self.enable_code_execution:
+            if self.allow_code_execution:
                 from crewai_tools.code_interpreter_tool import CodeInterpreterTool
 
                 tools_list.append(CodeInterpreterTool)
