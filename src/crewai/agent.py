@@ -171,7 +171,6 @@ class Agent(BaseModel):
         """set agent executor is set."""
         if hasattr(self.llm, "model_name"):
             token_handler = TokenCalcHandler(self.llm.model_name, self._token_process)
-            print("TOKENHANDLER UUID", token_handler.id)
 
             # Ensure self.llm.callbacks is a list
             if not isinstance(self.llm.callbacks, list):
@@ -181,10 +180,6 @@ class Agent(BaseModel):
             if not any(
                 isinstance(handler, TokenCalcHandler) for handler in self.llm.callbacks
             ):
-                print(
-                    "IMPORTANT: TokenCalcHandler not found in callbacks. Adding",
-                    token_handler.id,
-                )
                 self.llm.callbacks.append(token_handler)
 
         if not self.agent_executor:
@@ -384,12 +379,15 @@ class Agent(BaseModel):
             "tools",
             "tools_handler",
             "cache_handler",
+            "llm",  # TODO: THIS GET'S THINGS WORKING AGAIN.``
         }
 
+        print("LLM IN COPY", self.llm.model_name)
         copied_data = self.model_dump(exclude=exclude)
         copied_data = {k: v for k, v in copied_data.items() if v is not None}
 
         copied_agent = Agent(**copied_data)
+        print("COPIED AGENT LLM", copied_agent.llm.model_name)
         copied_agent.tools = deepcopy(self.tools)
 
         return copied_agent

@@ -279,19 +279,10 @@ class Crew(BaseModel):
                 f"The process '{self.process}' is not implemented yet."
             )
 
-        print("FINISHED EXECUTION OF CREW", self.id)
-        print("GOING TO INVESTIGATE TOKEN USAGE")
-        for agent in self.agents:
-            print("ANALYZING AGENT", agent.id)
-            print("AGENT _token_process id: ", agent._token_process.id)
-
-            print("AGENT USAGE METRICS", agent._token_process.get_summary())
-
         # TODO: THIS IS A BUG. ONLY THE LAST AGENT'S TOKEN USAGE IS BEING RETURNED
         metrics = metrics + [
             agent._token_process.get_summary() for agent in self.agents
         ]
-        print()
         self.usage_metrics = {
             key: sum([m[key] for m in metrics if m is not None]) for key in metrics[0]
         }
@@ -311,6 +302,16 @@ class Crew(BaseModel):
             # TODO: FIGURE OUT HOW TO MERGE THE USAGE METRICS
             # TODO: I would expect we would want to merge the usage metrics from each crew execution
             results.append(output)
+
+        print("CREW USAGE METRICS:", crew.usage_metrics)
+        print(
+            "ORIGINAL AGENT USAGE METRICS",
+            [agent._token_process.get_summary() for agent in self.agents],
+        )
+        print(
+            "COPIED AGENT USAGE METRICS",
+            [agent._token_process.get_summary() for agent in crew.agents],
+        )
 
         return results
 
@@ -332,7 +333,6 @@ class Crew(BaseModel):
 
         # TODO: FIGURE OUT HOW TO MERGE THE USAGE METRICS
         # TODO: I would expect we would want to merge the usage metrics from each crew execution
-
         return results
 
     def train(self, n_iterations: int) -> None:
@@ -383,8 +383,6 @@ class Crew(BaseModel):
             current_token_usage = task.agent._token_process.get_summary()
             for key in total_token_usage:
                 total_token_usage[key] += current_token_usage.get(key, 0)
-
-            print("Updated total_token_usage:", total_token_usage)
 
         self._finish_execution(task_output)
         # type: ignore # Item "None" of "Agent | None" has no attribute "_token_process")
@@ -461,11 +459,6 @@ class Crew(BaseModel):
             "tasks",
         }
 
-        print("CREW ID", self.id)
-        print("CURRENT IDS FOR AGENTS", [agent.id for agent in self.agents])
-        print("CURRENT IDS FOR TASKS", [task.id for task in self.tasks])
-
-        # TODO: I think there is a disconnect. We need to pass new agents and tasks to the new crew
         cloned_agents = [agent.copy() for agent in self.agents]
         cloned_tasks = [task.copy(cloned_agents) for task in self.tasks]
 
@@ -476,12 +469,6 @@ class Crew(BaseModel):
         copied_data.pop("tasks", None)
 
         copied_crew = Crew(**copied_data, agents=cloned_agents, tasks=cloned_tasks)
-
-        print("COPIED CREW ID", copied_crew.id)
-        print("NEW IDS FOR AGENTS", [agent.id for agent in copied_crew.agents])
-        print("NEW IDS FOR TASKS", [task.id for task in copied_crew.tasks])
-
-        # TODO: EXPERIMENT, PRINT ID'S AND MAKE SURE I'M CALLING THE RIGHT AGENTS AND TASKS
 
         return copied_crew
 
@@ -511,7 +498,6 @@ class Crew(BaseModel):
         If full_output is True, then returned data type will be a dictionary else returned outputs are string
         """
         if self.full_output:
-            print("SPITTING OUT FULL OUTPUT FOR CREW", self.id)
             return {  # type: ignore # Incompatible return value type (got "dict[str, Sequence[str | TaskOutput | None]]", expected "str")
                 "final_output": output,
                 "tasks_outputs": [task.output for task in self.tasks if task],

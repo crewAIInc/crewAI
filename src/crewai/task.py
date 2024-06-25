@@ -199,12 +199,6 @@ class Task(BaseModel):
             tools=tools,
         )
 
-        print("CALLING EXECUTE ON TASK WITH ID", task.id)
-        print("THIS TASK IS CALLING AGENT", agent.id)
-        print(
-            "CALLING TOKEN PROCESS in task on AGENT", agent._token_process.get_summary()
-        )
-
         exported_output = self._export_output(result)
 
         self.output = TaskOutput(
@@ -260,7 +254,6 @@ class Task(BaseModel):
             "context",
             "tools",
         }
-        print("ORIGINAL TOOLS:", self.tools)
 
         copied_data = self.model_dump(exclude=exclude)
         copied_data = {k: v for k, v in copied_data.items() if v is not None}
@@ -277,8 +270,6 @@ class Task(BaseModel):
         # cloned_agent = self.agent.copy() if self.agent else None
         cloned_tools = deepcopy(self.tools) if self.tools else []
 
-        print("CLONED_TOOLS", cloned_tools)
-
         copied_task = Task(
             **copied_data,
             context=cloned_context,
@@ -286,7 +277,6 @@ class Task(BaseModel):
             tools=cloned_tools,
         )
 
-        print("TASK TOOLS:", copied_task.tools)
         return copied_task
 
     def _export_output(self, result: str) -> Any:
