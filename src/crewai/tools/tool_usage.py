@@ -290,7 +290,7 @@ class ToolUsage:
               Example:
               {"tool_name": "tool name", "arguments": {"arg_name1": "value", "arg_name2": 2}}""",
                     ),
-                    max_attemps=1,
+                    max_attempts=1,
                 )
                 calling = converter.to_pydantic()
 
