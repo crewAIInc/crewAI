@@ -22,8 +22,8 @@ class Converter(BaseModel):
     llm: Any = Field(description="The language model to be used to convert the text.")
     model: Any = Field(description="The model to be used to convert the text.")
     instructions: str = Field(description="Conversion instructions to the LLM.")
-    max_attemps: Optional[int] = Field(
-        description="Max number of attemps to try to get the output formated.",
+    max_attempts: Optional[int] = Field(
+        description="Max number of attempts to try to get the output formated.",
         default=3,
     )
 
@@ -40,7 +40,7 @@ class Converter(BaseModel):
             else:
                 return self._create_chain().invoke({})
         except Exception as e:
-            if current_attempt < self.max_attemps:
+            if current_attempt < self.max_attempts:
                 return self.to_pydantic(current_attempt + 1)
             return ConverterError(
                 f"Failed to convert text into a pydantic model due to the following error: {e}"
@@ -54,7 +54,7 @@ class Converter(BaseModel):
             else:
                 return json.dumps(self._create_chain().invoke({}).model_dump())
         except Exception:
-            if current_attempt < self.max_attemps:
+            if current_attempt < self.max_attempts:
                 return self.to_json(current_attempt + 1)
             return ConverterError("Failed to convert text into JSON.")
 
@@ -64,7 +64,7 @@ class Converter(BaseModel):
 
         inst = Instructor(
             llm=self.llm,
-            max_attemps=self.max_attemps,
+            max_attempts=self.max_attempts,
             model=self.model,
             content=self.text,
             instructions=self.instructions,
