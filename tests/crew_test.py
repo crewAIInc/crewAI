@@ -391,6 +391,83 @@ def test_crew_full_ouput():
             "total_tokens": 439,
         },
     }
+    assert False
+
+
+"""
+Issues:
+- Each output is not tracking usage metrics
+"""
+
+
+# @pytest.mark.vcr(filter_headers=["authorization"])
+def test_crew_kickoff_for_each_full_ouput():
+    # TODO: Add docstrings to all tests
+    from unittest.mock import patch
+
+    inputs = [
+        {"topic": "dog"},
+        # {"topic": "cat"},
+        # {"topic": "apple"},
+    ]
+
+    expected_outputs = [
+        "Dogs are loyal companions and popular pets.",
+        "Cats are independent and low-maintenance pets.",
+        "Apples are a rich source of dietary fiber and vitamin C.",
+    ]
+
+    agent = Agent(
+        role="{topic} Researcher",
+        goal="Express hot takes on {topic}.",
+        backstory="You have a lot of experience with {topic}.",
+    )
+
+    task = Task(
+        description="Give me an analysis around {topic}.",
+        expected_output="1 bullet point about {topic} that's under 15 words.",
+        agent=agent,
+    )
+
+    crew = Crew(agents=[agent], tasks=[task], full_output=True)
+    results = crew.kickoff_for_each(inputs=inputs)
+    # with patch.object(Agent, "execute_task") as mock_execute_task:
+    #     mock_execute_task.side_effect = expected_outputs
+
+    assert len(results) == len(inputs)
+    print("RESULTS:", results)
+
+    assert False
+
+
+@pytest.mark.vcr(filter_headers=["authorization"])
+def test_crew_async_kickoff_for_each_full_ouput():
+    inputs = [
+        {"topic": "dog"},
+        {"topic": "cat"},
+        {"topic": "apple"},
+    ]
+
+    expected_outputs = [
+        "Dogs are loyal companions and popular pets.",
+        "Cats are independent and low-maintenance pets.",
+        "Apples are a rich source of dietary fiber and vitamin C.",
+    ]
+
+    agent = Agent(
+        role="{topic} Researcher",
+        goal="Express hot takes on {topic}.",
+        backstory="You have a lot of experience with {topic}.",
+    )
+
+    task = Task(
+        description="Give me an analysis around {topic}.",
+        expected_output="1 bullet point about {topic} that's under 15 words.",
+        agent=agent,
+    )
+
+    crew = Crew(agents=[agent], tasks=[task1, task2], full_output=True)
+    assert False
 
 
 def test_agents_rpm_is_never_set_if_crew_max_RPM_is_not_set():
@@ -463,6 +540,266 @@ def test_async_task_execution():
                 crew.kickoff()
                 start.assert_called()
                 join.assert_called()
+
+
+@pytest.mark.vcr(filter_headers=["authorization"])
+def test_kickoff_for_each_single_input():
+    """Tests if kickoff_for_each works with a single input."""
+    from unittest.mock import patch
+
+    inputs = [{"topic": "dog"}]
+    expected_outputs = ["Dogs are loyal companions and popular pets."]
+
+    agent = Agent(
+        role="{topic} Researcher",
+        goal="Express hot takes on {topic}.",
+        backstory="You have a lot of experience with {topic}.",
+    )
+
+    task = Task(
+        description="Give me an analysis around {topic}.",
+        expected_output="1 bullet point about {topic} that's under 15 words.",
+        agent=agent,
+    )
+
+    with patch.object(Agent, "execute_task") as mock_execute_task:
+        mock_execute_task.side_effect = expected_outputs
+        crew = Crew(agents=[agent], tasks=[task])
+        results = crew.kickoff_for_each(inputs=inputs)
+
+    assert len(results) == 1
+    assert results == expected_outputs
+
+
+@pytest.mark.vcr(filter_headers=["authorization"])
+def test_kickoff_for_each_multiple_inputs():
+    """Tests if kickoff_for_each works with multiple inputs."""
+    from unittest.mock import patch
+
+    inputs = [
+        {"topic": "dog"},
+        {"topic": "cat"},
+        {"topic": "apple"},
+    ]
+    expected_outputs = [
+        "Dogs are loyal companions and popular pets.",
+        "Cats are independent and low-maintenance pets.",
+        "Apples are a rich source of dietary fiber and vitamin C.",
+    ]
+
+    agent = Agent(
+        role="{topic} Researcher",
+        goal="Express hot takes on {topic}.",
+        backstory="You have a lot of experience with {topic}.",
+    )
+
+    task = Task(
+        description="Give me an analysis around {topic}.",
+        expected_output="1 bullet point about {topic} that's under 15 words.",
+        agent=agent,
+    )
+
+    with patch.object(Agent, "execute_task") as mock_execute_task:
+        mock_execute_task.side_effect = expected_outputs
+        crew = Crew(agents=[agent], tasks=[task])
+        results = crew.kickoff_for_each(inputs=inputs)
+
+    assert len(results) == len(inputs)
+    for i, res in enumerate(results):
+        assert res == expected_outputs[i]
+
+
+@pytest.mark.vcr(filter_headers=["authorization"])
+def test_kickoff_for_each_empty_input():
+    """Tests if kickoff_for_each handles an empty input list."""
+    agent = Agent(
+        role="{topic} Researcher",
+        goal="Express hot takes on {topic}.",
+        backstory="You have a lot of experience with {topic}.",
+    )
+
+    task = Task(
+        description="Give me an analysis around {topic}.",
+        expected_output="1 bullet point about {topic} that's under 15 words.",
+        agent=agent,
+    )
+
+    crew = Crew(agents=[agent], tasks=[task])
+    results = crew.kickoff_for_each(inputs=[])
+    assert results == []
+
+
+@pytest.mark.vcr(filter_headers=["authorization"])
+def test_kickoff_for_each_invalid_input():
+    """Tests if kickoff_for_each raises TypeError for invalid input types."""
+
+    agent = Agent(
+        role="{topic} Researcher",
+        goal="Express hot takes on {topic}.",
+        backstory="You have a lot of experience with {topic}.",
+    )
+
+    task = Task(
+        description="Give me an analysis around {topic}.",
+        expected_output="1 bullet point about {topic} that's under 15 words.",
+        agent=agent,
+    )
+
+    crew = Crew(agents=[agent], tasks=[task])
+
+    with pytest.raises(TypeError):
+        # Pass a string instead of a list
+        crew.kickoff_for_each("invalid input")
+
+
+@pytest.mark.vcr(filter_headers=["authorization"])
+def test_kickoff_for_each_error_handling():
+    """Tests error handling in kickoff_for_each when kickoff raises an error."""
+    from unittest.mock import patch
+
+    inputs = [
+        {"topic": "dog"},
+        {"topic": "cat"},
+        {"topic": "apple"},
+    ]
+    expected_outputs = [
+        "Dogs are loyal companions and popular pets.",
+        "Cats are independent and low-maintenance pets.",
+        "Apples are a rich source of dietary fiber and vitamin C.",
+    ]
+    agent = Agent(
+        role="{topic} Researcher",
+        goal="Express hot takes on {topic}.",
+        backstory="You have a lot of experience with {topic}.",
+    )
+
+    task = Task(
+        description="Give me an analysis around {topic}.",
+        expected_output="1 bullet point about {topic} that's under 15 words.",
+        agent=agent,
+    )
+
+    crew = Crew(agents=[agent], tasks=[task])
+
+    with patch.object(Crew, "kickoff") as mock_kickoff:
+        mock_kickoff.side_effect = expected_outputs[:2] + [
+            Exception("Simulated kickoff error")
+        ]
+        with pytest.raises(Exception, match="Simulated kickoff error"):
+            crew.kickoff_for_each(inputs=inputs)
+
+
+@pytest.mark.vcr(filter_headers=["authorization"])
+@pytest.mark.asyncio
+async def test_kickoff_async_basic_functionality_and_output():
+    """Tests the basic functionality and output of kickoff_async."""
+    from unittest.mock import patch
+
+    inputs = {"topic": "dog"}
+
+    agent = Agent(
+        role="{topic} Researcher",
+        goal="Express hot takes on {topic}.",
+        backstory="You have a lot of experience with {topic}.",
+    )
+
+    task = Task(
+        description="Give me an analysis around {topic}.",
+        expected_output="1 bullet point about {topic} that's under 15 words.",
+        agent=agent,
+    )
+
+    # Create the crew
+    crew = Crew(
+        agents=[agent],
+        tasks=[task],
+    )
+
+    expected_output = "This is a sample output from kickoff."
+    with patch.object(Crew, "kickoff", return_value=expected_output) as mock_kickoff:
+        result = await crew.kickoff_async(inputs)
+
+        assert isinstance(result, str), "Result should be a string"
+        assert result == expected_output, "Result should match expected output"
+        mock_kickoff.assert_called_once_with(inputs)
+
+
+@pytest.mark.vcr(filter_headers=["authorization"])
+@pytest.mark.asyncio  # Use pytest-asyncio for async tests
+async def test_async_kickoff_for_each_async_basic_functionality_and_output():
+    """Tests the basic functionality and output of akickoff_for_each_async."""
+    from unittest.mock import patch
+
+    inputs = [
+        {"topic": "dog"},
+        {"topic": "cat"},
+        {"topic": "apple"},
+    ]
+
+    # Define expected outputs for each input
+    expected_outputs = [
+        "Dogs are loyal companions and popular pets.",
+        "Cats are independent and low-maintenance pets.",
+        "Apples are a rich source of dietary fiber and vitamin C.",
+    ]
+
+    agent = Agent(
+        role="{topic} Researcher",
+        goal="Express hot takes on {topic}.",
+        backstory="You have a lot of experience with {topic}.",
+    )
+
+    task = Task(
+        description="Give me an analysis around {topic}.",
+        expected_output="1 bullet point about {topic} that's under 15 words.",
+        agent=agent,
+    )
+
+    with patch.object(
+        Crew, "kickoff_async", side_effect=expected_outputs
+    ) as mock_kickoff_async:
+        crew = Crew(agents=[agent], tasks=[task])
+
+        results = await crew.kickoff_for_each_async(inputs)
+
+        assert len(results) == len(inputs)
+        assert results == expected_outputs
+        for input_data in inputs:
+            mock_kickoff_async.assert_any_call(inputs=input_data)
+
+
+@pytest.mark.vcr(filter_headers=["authorization"])
+@pytest.mark.asyncio
+async def test_async_kickoff_for_each_async_empty_input():
+    """Tests if akickoff_for_each_async handles an empty input list."""
+
+    agent = Agent(
+        role="{topic} Researcher",
+        goal="Express hot takes on {topic}.",
+        backstory="You have a lot of experience with {topic}.",
+    )
+
+    task = Task(
+        description="Give me an analysis around {topic}.",
+        expected_output="1 bullet point about {topic} that's under 15 words.",
+        agent=agent,
+    )
+
+    # Create the crew
+    crew = Crew(
+        agents=[agent],
+        tasks=[task],
+    )
+
+    # Call the function we are testing
+    results = await crew.kickoff_for_each_async([])
+
+    # Assertion
+    assert results == [], "Result should be an empty list when input is empty"
+
+
+# TODO: TEST KICKOFF FOR EACH WITH USAGE METRICS
+# TODO: TEST ASYNC KICKOFF FOR EACH WITH USAGE METRICS
 
 
 def test_set_agents_step_callback():

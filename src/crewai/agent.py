@@ -1,6 +1,6 @@
-from copy import deepcopy
 import os
 import uuid
+from copy import deepcopy
 from typing import Any, Dict, List, Optional, Tuple
 
 from langchain.agents.agent import RunnableAgent
@@ -55,7 +55,7 @@ class Agent(BaseModel):
     _logger: Logger = PrivateAttr()
     _rpm_controller: RPMController = PrivateAttr(default=None)
     _request_within_rpm_limit: Any = PrivateAttr(default=None)
-    _token_process: TokenProcess = TokenProcess()
+    _token_process: TokenProcess = PrivateAttr(default=TokenProcess())
 
     formatting_errors: int = 0
     model_config = ConfigDict(arbitrary_types_allowed=True)
@@ -98,8 +98,7 @@ class Agent(BaseModel):
     agent_executor: InstanceOf[CrewAgentExecutor] = Field(
         default=None, description="An instance of the CrewAgentExecutor class."
     )
-    crew: Any = Field(
-        default=None, description="Crew to which the agent belongs.")
+    crew: Any = Field(default=None, description="Crew to which the agent belongs.")
     tools_handler: InstanceOf[ToolsHandler] = Field(
         default=None, description="An instance of the ToolsHandler class."
     )
@@ -110,8 +109,7 @@ class Agent(BaseModel):
         default=None,
         description="Callback to be executed after each step of the agent execution.",
     )
-    i18n: I18N = Field(
-        default=I18N(), description="Internationalization settings.")
+    i18n: I18N = Field(default=I18N(), description="Internationalization settings.")
     llm: Any = Field(
         default_factory=lambda: ChatOpenAI(
             model=os.environ.get("OPENAI_MODEL_NAME", "gpt-4o")
@@ -172,8 +170,8 @@ class Agent(BaseModel):
     def set_agent_executor(self) -> "Agent":
         """set agent executor is set."""
         if hasattr(self.llm, "model_name"):
-            token_handler = TokenCalcHandler(
-                self.llm.model_name, self._token_process)
+            token_handler = TokenCalcHandler(self.llm.model_name, self._token_process)
+            print("TOKENHANDLER UUID", token_handler.id)
 
             # Ensure self.llm.callbacks is a list
             if not isinstance(self.llm.callbacks, list):
@@ -183,6 +181,10 @@ class Agent(BaseModel):
             if not any(
                 isinstance(handler, TokenCalcHandler) for handler in self.llm.callbacks
             ):
+                print(
+                    "IMPORTANT: TokenCalcHandler not found in callbacks. Adding",
+                    token_handler.id,
+                )
                 self.llm.callbacks.append(token_handler)
 
         if not self.agent_executor:
@@ -236,8 +238,7 @@ class Agent(BaseModel):
         self.agent_executor.tools = parsed_tools
         self.agent_executor.task = task
 
-        self.agent_executor.tools_description = render_text_description(
-            parsed_tools)
+        self.agent_executor.tools_description = render_text_description(parsed_tools)
         self.agent_executor.tools_names = self.__tools_names(parsed_tools)
 
         result = self.agent_executor.invoke(
@@ -335,8 +336,7 @@ class Agent(BaseModel):
             )
 
         bind = self.llm.bind(stop=stop_words)
-        inner_agent = agent_args | execution_prompt | bind | CrewAgentParser(
-            agent=self)
+        inner_agent = agent_args | execution_prompt | bind | CrewAgentParser(agent=self)
         self.agent_executor = CrewAgentExecutor(
             agent=RunnableAgent(runnable=inner_agent), **executor_args
         )
@@ -371,7 +371,7 @@ class Agent(BaseModel):
             thoughts += action.log
             thoughts += f"\n{observation_prefix}{observation}\n{llm_prefix}"
         return thoughts
-    
+
     def copy(self):
         """Create a deep copy of the Agent."""
         exclude = {
@@ -379,8 +379,8 @@ class Agent(BaseModel):
             "_logger",
             "_rpm_controller",
             "_request_within_rpm_limit",
-            "_token_process",      
-            "agent_executor",  
+            "_token_process",
+            "agent_executor",
             "tools",
             "tools_handler",
             "cache_handler",

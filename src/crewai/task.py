@@ -1,8 +1,8 @@
-from copy import deepcopy
 import os
 import re
 import threading
 import uuid
+from copy import deepcopy
 from typing import Any, Dict, List, Optional, Type
 
 from langchain_openai import ChatOpenAI
@@ -192,11 +192,17 @@ class Task(BaseModel):
             )
             return result
 
-    def _execute(self, agent, task, context, tools):
+    def _execute(self, agent: Agent, task, context, tools):
         result = agent.execute_task(
             task=task,
             context=context,
             tools=tools,
+        )
+
+        print("CALLING EXECUTE ON TASK WITH ID", task.id)
+        print("THIS TASK IS CALLING AGENT", agent.id)
+        print(
+            "CALLING TOKEN PROCESS in task on AGENT", agent._token_process.get_summary()
         )
 
         exported_output = self._export_output(result)
@@ -246,7 +252,7 @@ class Task(BaseModel):
         """Increment the delegations counter."""
         self.delegations += 1
 
-    def copy(self):
+    def copy(self, agents: Optional[List[Agent]] = None) -> "Task":
         """Create a deep copy of the Task."""
         exclude = {
             "id",
@@ -254,6 +260,7 @@ class Task(BaseModel):
             "context",
             "tools",
         }
+        print("ORIGINAL TOOLS:", self.tools)
 
         copied_data = self.model_dump(exclude=exclude)
         copied_data = {k: v for k, v in copied_data.items() if v is not None}
@@ -261,8 +268,16 @@ class Task(BaseModel):
         cloned_context = (
             [task.copy() for task in self.context] if self.context else None
         )
-        cloned_agent = self.agent.copy() if self.agent else None
-        cloned_tools = deepcopy(self.tools) if self.tools else None
+
+        # TODO: Make sure this clone approach is correct.
+        def get_agent_by_role(role: str) -> Agent | None:
+            return next((agent for agent in agents if agent.role == role), None)
+
+        cloned_agent = get_agent_by_role(self.agent.role) if self.agent else None
+        # cloned_agent = self.agent.copy() if self.agent else None
+        cloned_tools = deepcopy(self.tools) if self.tools else []
+
+        print("CLONED_TOOLS", cloned_tools)
 
         copied_task = Task(
             **copied_data,
@@ -270,6 +285,8 @@ class Task(BaseModel):
             agent=cloned_agent,
             tools=cloned_tools,
         )
+
+        print("TASK TOOLS:", copied_task.tools)
         return copied_task
 
     def _export_output(self, result: str) -> Any:
@@ -328,7 +345,9 @@ class Task(BaseModel):
         if self.output_file:
             content = (
                 # type: ignore # "str" has no attribute "json"
-                exported_result if not self.output_pydantic else exported_result.json()
+                exported_result
+                if not self.output_pydantic
+                else exported_result.model_dump_json()
             )
             self._save_file(content)
 

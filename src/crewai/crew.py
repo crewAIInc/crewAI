@@ -279,28 +279,37 @@ class Crew(BaseModel):
                 f"The process '{self.process}' is not implemented yet."
             )
 
+        print("FINISHED EXECUTION OF CREW", self.id)
+        print("GOING TO INVESTIGATE TOKEN USAGE")
+        for agent in self.agents:
+            print("ANALYZING AGENT", agent.id)
+            print("AGENT _token_process id: ", agent._token_process.id)
+
+            print("AGENT USAGE METRICS", agent._token_process.get_summary())
+
+        # TODO: THIS IS A BUG. ONLY THE LAST AGENT'S TOKEN USAGE IS BEING RETURNED
         metrics = metrics + [
             agent._token_process.get_summary() for agent in self.agents
         ]
+        print()
         self.usage_metrics = {
             key: sum([m[key] for m in metrics if m is not None]) for key in metrics[0]
         }
 
         return result
 
-    def kickoff_for_each(self, inputs: List[Dict[str, Any]]) -> List:
+    def kickoff_for_each(
+        self, inputs: List[Dict[str, Any]]
+    ) -> List[Union[str, Dict[str, Any]]]:
         """Executes the Crew's workflow for each input in the list and aggregates results."""
         results = []
 
         for input_data in inputs:
             crew = self.copy()
 
-            for task in crew.tasks:
-                task.interpolate_inputs(input_data)
-            for agent in crew.agents:
-                agent.interpolate_inputs(input_data)
-
-            output = crew.kickoff()
+            output = crew.kickoff(inputs=input_data)
+            # TODO: FIGURE OUT HOW TO MERGE THE USAGE METRICS
+            # TODO: I would expect we would want to merge the usage metrics from each crew execution
             results.append(output)
 
         return results
@@ -315,16 +324,14 @@ class Crew(BaseModel):
         async def run_crew(input_data):
             crew = self.copy()
 
-            for task in crew.tasks:
-                task.interpolate_inputs(input_data)
-            for agent in crew.agents:
-                agent.interpolate_inputs(input_data)
-
-            return await crew.kickoff_async()
+            return await crew.kickoff_async(inputs=input_data)
 
         tasks = [asyncio.create_task(run_crew(input_data)) for input_data in inputs]
 
         results = await asyncio.gather(*tasks)
+
+        # TODO: FIGURE OUT HOW TO MERGE THE USAGE METRICS
+        # TODO: I would expect we would want to merge the usage metrics from each crew execution
 
         return results
 
@@ -335,6 +342,13 @@ class Crew(BaseModel):
     def _run_sequential_process(self) -> Union[str, Dict[str, Any]]:
         """Executes tasks sequentially and returns the final output."""
         task_output = ""
+        total_token_usage = {
+            "total_tokens": 0,
+            "prompt_tokens": 0,
+            "completion_tokens": 0,
+            "successful_requests": 0,
+        }
+
         for task in self.tasks:
             if task.agent.allow_delegation:  # type: ignore #  Item "None" of "Agent | None" has no attribute "allow_delegation"
                 agents_for_delegation = [
@@ -365,11 +379,19 @@ class Crew(BaseModel):
             if self.output_log_file:
                 self._file_handler.log(agent=role, task=task_output, status="completed")
 
+            # Update token usage for the current task
+            current_token_usage = task.agent._token_process.get_summary()
+            for key in total_token_usage:
+                total_token_usage[key] += current_token_usage.get(key, 0)
+
+            print("Updated total_token_usage:", total_token_usage)
+
         self._finish_execution(task_output)
-        # type: ignore # Item "None" of "Agent | None" has no attribute "_token_process"
-        token_usage = task.agent._token_process.get_summary()
+        # type: ignore # Item "None" of "Agent | None" has no attribute "_token_process")
+
         # type: ignore # Incompatible return value type (got "tuple[str, Any]", expected "str")
-        return self._format_output(task_output, token_usage)
+        # TODO: TEST AND FIX
+        return self._format_output(task_output, total_token_usage)
 
     def _run_hierarchical_process(self) -> Union[str, Dict[str, Any]]:
         """Creates and assigns a manager agent to make sure the crew completes the tasks."""
@@ -415,9 +437,11 @@ class Crew(BaseModel):
         self._finish_execution(task_output)
         # type: ignore # Incompatible return value type (got "tuple[str, Any]", expected "str")
         manager_token_usage = manager._token_process.get_summary()
-        return self._format_output(
-            task_output, manager_token_usage
-        ), manager_token_usage
+        # TODO: TEST AND FIX
+        return (
+            self._format_output(task_output, manager_token_usage),
+            manager_token_usage,
+        )
 
     def copy(self):
         """Create a deep copy of the Crew."""
@@ -432,12 +456,18 @@ class Crew(BaseModel):
             "_short_term_memory",
             "_long_term_memory",
             "_entity_memory",
+            "_telemetry",
             "agents",
             "tasks",
         }
 
+        print("CREW ID", self.id)
+        print("CURRENT IDS FOR AGENTS", [agent.id for agent in self.agents])
+        print("CURRENT IDS FOR TASKS", [task.id for task in self.tasks])
+
+        # TODO: I think there is a disconnect. We need to pass new agents and tasks to the new crew
         cloned_agents = [agent.copy() for agent in self.agents]
-        cloned_tasks = [task.copy() for task in self.tasks]
+        cloned_tasks = [task.copy(cloned_agents) for task in self.tasks]
 
         copied_data = self.model_dump(exclude=exclude)
         copied_data = {k: v for k, v in copied_data.items() if v is not None}
@@ -446,6 +476,12 @@ class Crew(BaseModel):
         copied_data.pop("tasks", None)
 
         copied_crew = Crew(**copied_data, agents=cloned_agents, tasks=cloned_tasks)
+
+        print("COPIED CREW ID", copied_crew.id)
+        print("NEW IDS FOR AGENTS", [agent.id for agent in copied_crew.agents])
+        print("NEW IDS FOR TASKS", [task.id for task in copied_crew.tasks])
+
+        # TODO: EXPERIMENT, PRINT ID'S AND MAKE SURE I'M CALLING THE RIGHT AGENTS AND TASKS
 
         return copied_crew
 
@@ -475,6 +511,7 @@ class Crew(BaseModel):
         If full_output is True, then returned data type will be a dictionary else returned outputs are string
         """
         if self.full_output:
+            print("SPITTING OUT FULL OUTPUT FOR CREW", self.id)
             return {  # type: ignore # Incompatible return value type (got "dict[str, Sequence[str | TaskOutput | None]]", expected "str")
                 "final_output": output,
                 "tasks_outputs": [task.output for task in self.tasks if task],

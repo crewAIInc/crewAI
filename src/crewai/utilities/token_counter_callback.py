@@ -1,3 +1,4 @@
+import uuid
 from typing import Any, Dict, List
 
 import tiktoken
@@ -6,6 +7,7 @@ from langchain.schema import LLMResult
 
 
 class TokenProcess:
+    id = uuid.uuid4()  # TODO: REMOVE THIS
     total_tokens: int = 0
     prompt_tokens: int = 0
     completion_tokens: int = 0
@@ -32,6 +34,7 @@ class TokenProcess:
 
 
 class TokenCalcHandler(BaseCallbackHandler):
+    id = uuid.uuid4()  # TODO: REMOVE THIS
     model: str = ""
     token_cost_process: TokenProcess
 
