@@ -12,7 +12,7 @@ from pydantic_core import PydanticCustomError
 from crewai.tasks.task_output import TaskOutput
 from crewai.utilities import I18N, ConverterError, Printer
 from crewai.utilities.pydantic_schema_parser import PydanticSchemaParser
-from crewai.agents.third_party_agents.base_agent import BaseAgent
+from crewai.agents.agent_builder.base_agent import BaseAgent
 
 
 class Task(BaseModel):

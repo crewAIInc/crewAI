@@ -4,7 +4,7 @@ import tiktoken
 from langchain.callbacks.base import BaseCallbackHandler
 from langchain.schema import LLMResult
 
-from crewai.agents.third_party_agents.utilities.token_process import TokenProcess
+from crewai.agents.agent_builder.utilities.base_token_process import TokenProcess
 
 
 class TokenCalcHandler(BaseCallbackHandler):

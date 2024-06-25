@@ -18,17 +18,15 @@ from pydantic import (
 from pydantic_core import PydanticCustomError
 
 from crewai.agent import Agent
-from crewai.agents.third_party_agents.base_agent import BaseAgent
+from crewai.agents.agent_builder.base_agent import BaseAgent
 from crewai.agents.cache import CacheHandler
-from crewai.agents.third_party_agents.langchain_custom.tools.task_tools import (
-    LangchainCustomTools,
-)
 from crewai.memory.entity.entity_memory import EntityMemory
 from crewai.memory.long_term.long_term_memory import LongTermMemory
 from crewai.memory.short_term.short_term_memory import ShortTermMemory
 from crewai.process import Process
 from crewai.task import Task
 from crewai.telemetry import Telemetry
+from crewai.tools.agent_tools import AgentTools
 from crewai.utilities import I18N, FileHandler, Logger, RPMController
 
 
@@ -396,7 +394,7 @@ class Crew(BaseModel):
                 role=i18n.retrieve("hierarchical_manager_agent", "role"),
                 goal=i18n.retrieve("hierarchical_manager_agent", "goal"),
                 backstory=i18n.retrieve("hierarchical_manager_agent", "backstory"),
-                tools=LangchainCustomTools(agents=self.agents).tools(),
+                tools=AgentTools(agents=self.agents).tools(),
                 llm=self.manager_llm,
                 verbose=True,
             )

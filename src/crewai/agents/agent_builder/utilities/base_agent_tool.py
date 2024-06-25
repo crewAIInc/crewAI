@@ -1,7 +1,7 @@
 from abc import ABC, abstractmethod
 from typing import List, Optional
 from pydantic import BaseModel, Field
-from crewai.agents.third_party_agents.base_agent import BaseAgent
+from crewai.agents.agent_builder.base_agent import BaseAgent
 from crewai.task import Task
 from crewai.utilities import I18N
 
