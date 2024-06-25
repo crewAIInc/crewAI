@@ -96,27 +96,24 @@ agent = Agent(
     )
 ```
 
-## Using a Custom Agent
+## Bring your own agent
 !!! note "Custom Agent Usage with BaseAgent"
     Use other agents like llamaIndex. We created a BaseAgent, which is a wrapper around the core Agent class to run tasks, delegate tasks and ask questions to other agents in your crew and still fully customizable to fit all your needs.
 
-    We currently have llamaIndex, and langchain custom agents implemented using the BaseAgent class with the minumum requirements for compatiblity with CrewAI. They can be orchestrated with each other using agents that suit specific tasks - like RAG tasks with llamaIndex and easily adding search tools with langchain custom agents.
+    BaseAgent has the base requirements for compatiblity with CrewAI. Integrations with custo agents can be orchestrated with each other using agents that suit specific tasks with tooling.
 
-    Overall, we aim to leverage the ecosystem of existing and custom AI agents to be able to effectively orchestrate tasks and agents for every crew.
+    Overall, we aim to give flexibility for exsiting and custom agents to be used within our crewai agent ecosystem.
 
 
 ```py
-from crewai import Task, Crew
-from crewai.agents.third_party_agents.langchain_custom.agent import LangchainAgent
-from crewai.agents.third_party_agents.llama_index.agent import LlamaIndexReActAgent
+from crewai import Agent, Task, Crew
+from my_llama_agent import LlamaIndexReActAgent
 
 from langchain.agents import load_tools
-from langchain_openai import OpenAI
 
-llm = OpenAI(temperature=0)
 langchain_tools = load_tools(["google-serper"], llm=llm)
 
-# LlamaIndexReActAgent with its own tool
+# You need to extend your LlamaIndex ReAct Agent
 agent1 = LlamaIndexReActAgent(
     role="backstory agent",
     goal="who is {input}?",
@@ -146,7 +143,6 @@ task2 = Task(
 
 my_crew = Crew(agents=[agent1, agent2], tasks=[task1, task2])
 crew = my_crew.kickoff(inputs={"input": "Mark Twain"})
-print("result:", crew)
 ```
 
 
