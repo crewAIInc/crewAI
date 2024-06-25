@@ -23,8 +23,6 @@ from crewai.agents.third_party_agents.langchain_custom.tools.task_tools import (
 class LangchainAgent(BaseAgent):
     """Represents an langchain based agent in a system."""
 
-    token_process: TokenProcess = TokenProcess()
-
     max_execution_time: Optional[int] = Field(
         default=None,
         description="Maximum execution time for an agent to execute a task",
@@ -57,6 +55,7 @@ class LangchainAgent(BaseAgent):
     response_template: Optional[str] = Field(
         default=None, description="Response format for the agent."
     )
+    token_process: TokenProcess = TokenProcess()
 
     def __init__(__pydantic_self__, **data):
         config = data.pop("config", {})

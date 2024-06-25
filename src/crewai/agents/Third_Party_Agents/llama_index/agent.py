@@ -1,5 +1,5 @@
 import tiktoken
-from typing import List, Any
+from typing import List
 from pydantic import Field, model_validator
 
 from crewai.agents.third_party_agents.base_agent import BaseAgent
@@ -11,7 +11,6 @@ from crewai.agents.third_party_agents.llama_index.utilities.output_converter imp
 )
 from crewai.agents.third_party_agents.llama_index.utilities.token_handler import (
     ExtendedTokenCountingHandler,
-    TokenProcess,
 )
 from crewai.memory.contextual.contextual_memory import ContextualMemory
 from crewai.agents import CacheHandler
@@ -29,10 +28,7 @@ class LlamaIndexReActAgent(BaseAgent):
         default_factory=lambda: OpenAI(model="gpt-3.5-turbo"),
         description="Language model that will run the agent.",
     )
-    token_process: TokenProcess = TokenProcess()
-
     _token_counter: ExtendedTokenCountingHandler
-    current_task: Any = None
 
     def __init__(__pydantic_self__, **data):
         config = data.pop("config", {})
@@ -72,7 +68,6 @@ class LlamaIndexReActAgent(BaseAgent):
 
         tools = tools or self.tools
         parsed_tools = self._parse_tools(tools)
-        self.current_task = task
         self.create_agent_executor(tools=parsed_tools)
         self.agent_executor.task = task
         self.agent_executor.tools = parsed_tools

@@ -30,7 +30,6 @@ from crewai.process import Process
 from crewai.task import Task
 from crewai.telemetry import Telemetry
 from crewai.utilities import I18N, FileHandler, Logger, RPMController
-from collections import Counter
 
 
 class Crew(BaseModel):
@@ -288,9 +287,11 @@ class Crew(BaseModel):
             raise NotImplementedError(
                 f"The process '{self.process}' is not implemented yet."
             )
-
         metrics = metrics + [agent.token_process.get_summary() for agent in self.agents]
-        self.usage_metrics = self.aggregate_token_usage(metrics)
+
+        self.usage_metrics = {
+            key: sum([m[key] for m in metrics if m is not None]) for key in metrics[0]
+        }
 
         return result
 
@@ -367,14 +368,15 @@ class Crew(BaseModel):
 
             role = task.agent.role if task.agent is not None else "None"
             self._logger.log("debug", f"== [{role}] Task output: {task_output}\n\n")
-            token_usage.append(task.agent.token_process.get_summary())
+            token_summ = task.agent.token_process.get_summary()
+
+            token_usage.append(token_summ)
 
             if self.output_log_file:
                 self._file_handler.log(agent=role, task=task_output, status="completed")
 
-        self._finish_execution(task_output)
-
         token_usage_formatted = self.aggregate_token_usage(token_usage)
+        self._finish_execution(task_output)
 
         # type: ignore # Incompatible return value type (got "tuple[str, Any]", expected "str")
         return self._format_output(task_output, token_usage_formatted)
@@ -507,8 +509,7 @@ class Crew(BaseModel):
         return f"Crew(id={self.id}, process={self.process}, number_of_agents={len(self.agents)}, number_of_tasks={len(self.tasks)})"
 
     def aggregate_token_usage(self, token_usage_list: List[Dict[str, Any]]):
-        token_usage_counter = Counter()
-        for usage in token_usage_list:
-            if usage is not None:
-                token_usage_counter.update(usage)
-        return dict(token_usage_counter)
+        return {
+            key: sum([m[key] for m in token_usage_list if m is not None])
+            for key in token_usage_list[0]
+        }
