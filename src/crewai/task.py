@@ -1,18 +1,20 @@
-from copy import deepcopy
 import os
 import re
 import threading
 import uuid
+from copy import deepcopy
 from typing import Any, Dict, List, Optional, Type
 
 from langchain_openai import ChatOpenAI
+from opentelemetry.trace import Span
 from pydantic import UUID4, BaseModel, Field, field_validator, model_validator
 from pydantic_core import PydanticCustomError
 
+from crewai.agents.agent_builder.base_agent import BaseAgent
 from crewai.tasks.task_output import TaskOutput
+from crewai.telemetry.telemetry import Telemetry
 from crewai.utilities import I18N, ConverterError, Printer
 from crewai.utilities.pydantic_schema_parser import PydanticSchemaParser
-from crewai.agents.agent_builder.base_agent import BaseAgent
 
 
 class Task(BaseModel):
@@ -42,7 +44,6 @@ class Task(BaseModel):
     tools_errors: int = 0
     delegations: int = 0
     i18n: I18N = I18N()
-    thread: Optional[threading.Thread] = None
     prompt_context: Optional[str] = None
     description: str = Field(description="Description of the actual task.")
     expected_output: str = Field(
@@ -95,8 +96,11 @@ class Task(BaseModel):
         default=False,
     )
 
+    _telemetry: Telemetry
+    _execution_span: Span | None = None
     _original_description: str | None = None
     _original_expected_output: str | None = None
+    _thread: threading.Thread | None = None
 
     def __init__(__pydantic_self__, **data):
         config = data.pop("config", {})
@@ -117,6 +121,13 @@ class Task(BaseModel):
         if value.startswith("/"):
             return value[1:]
         return value
+
+    @model_validator(mode="after")
+    def set_private_attrs(self) -> "Task":
+        """Set private attributes."""
+        self._telemetry = Telemetry()
+        self._telemetry.set_tracer()
+        return self
 
     @model_validator(mode="after")
     def set_attributes_based_on_config(self) -> "Task":
@@ -145,6 +156,18 @@ class Task(BaseModel):
             )
         return self
 
+    def wait_for_completion(self) -> str | BaseModel:
+        """Wait for asynchronous task completion and return the output."""
+        assert self.async_execution, "Task is not set to be executed asynchronously."
+
+        if self._thread:
+            self._thread.join()
+            self._thread = None
+
+        assert self.output, "Task output is not set."
+
+        return self.output.exported_output
+
     def execute(  # type: ignore # Missing return statement
         self,
         agent: BaseAgent | None = None,
@@ -157,6 +180,8 @@ class Task(BaseModel):
             Output of the task.
         """
 
+        self._execution_span = self._telemetry.task_started(self)
+
         agent = agent or self.agent
         if not agent:
             raise Exception(
@@ -168,8 +193,8 @@ class Task(BaseModel):
             context = []
             for task in self.context:
                 if task.async_execution:
-                    task.thread.join()  # type: ignore # Item "None" of "Thread | None" has no attribute "join"
-                if task and task.output:
+                    task.wait_for_completion()
+                if task.output:
                     # type: ignore # Item "str" of "str | None" has no attribute "append"
                     context.append(task.output.raw_output)
             # type: ignore # Argument 1 to "join" of "str" has incompatible type "str | None"; expected "Iterable[str]"
@@ -179,10 +204,10 @@ class Task(BaseModel):
         tools = tools or self.tools
 
         if self.async_execution:
-            self.thread = threading.Thread(
+            self._thread = threading.Thread(
                 target=self._execute, args=(agent, self, context, tools)
             )
-            self.thread.start()
+            self._thread.start()
         else:
             result = self._execute(
                 task=self,
@@ -210,6 +235,10 @@ class Task(BaseModel):
 
         if self.callback:
             self.callback(self.output)
+
+        if self._execution_span:
+            self._telemetry.task_ended(self._execution_span, self)
+            self._execution_span = None
 
         return exported_output
 
@@ -327,7 +356,9 @@ class Task(BaseModel):
         if self.output_file:
             content = (
                 # type: ignore # "str" has no attribute "json"
-                exported_result if not self.output_pydantic else exported_result.json()
+                exported_result
+                if not self.output_pydantic
+                else exported_result.json()
             )
             self._save_file(content)
 
