@@ -154,7 +154,7 @@ class Agent(BaseAgent):
         self.agent_executor.tools_description = render_text_description(parsed_tools)
         self.agent_executor.tools_names = self.__tools_names(parsed_tools)
 
-        if self.crew._train:
+        if self.crew and self.crew._train:
             task_prompt = self._training_handler(task_prompt=task_prompt)
         else:
             task_prompt = self._use_trained_data(task_prompt=task_prompt)

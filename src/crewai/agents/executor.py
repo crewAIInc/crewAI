@@ -191,7 +191,7 @@ class CrewAgentExecutor(AgentExecutor, CrewAgentExecutorMixin):
             if self.should_ask_for_human_input:
                 human_feedback = self._ask_human_input(output.return_values["output"])
 
-                if self.crew._train:
+                if self.crew and self.crew._train:
                     self._handle_crew_training_output(output, human_feedback)
 
                 # Making sure we only ask for it once, so disabling for the next thought loop
@@ -209,7 +209,7 @@ class CrewAgentExecutor(AgentExecutor, CrewAgentExecutorMixin):
                 return
 
             else:
-                if self.crew._train:
+                if self.crew and self.crew._train:
                     self._handle_crew_training_output(output)
 
                 yield output
@@ -258,9 +258,10 @@ class CrewAgentExecutor(AgentExecutor, CrewAgentExecutorMixin):
         agent_id = str(self.crew_agent.id)
 
         if (
-            training_data := CrewTrainingHandler(TRAINING_DATA_FILE).load()
+            CrewTrainingHandler(TRAINING_DATA_FILE).load()
             and not self.should_ask_for_human_input
         ):
+            training_data = CrewTrainingHandler(TRAINING_DATA_FILE).load()
             if training_data.get(agent_id):
                 training_data[agent_id][self.crew._train_iteration][
                     "improved_output"
