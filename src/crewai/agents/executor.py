@@ -18,8 +18,10 @@ from crewai.memory.long_term.long_term_memory_item import LongTermMemoryItem
 from crewai.memory.short_term.short_term_memory_item import ShortTermMemoryItem
 from crewai.tools.tool_usage import ToolUsage, ToolUsageErrorException
 from crewai.utilities import I18N
+from crewai.utilities.constants import TRAINING_DATA_FILE
 from crewai.utilities.converter import ConverterError
 from crewai.utilities.evaluators.task_evaluator import TaskEvaluator
+from crewai.utilities.training_handler import CrewTrainingHandler
 
 
 class CrewAgentExecutor(AgentExecutor):
@@ -246,12 +248,17 @@ class CrewAgentExecutor(AgentExecutor):
         # If the tool chosen is the finishing tool, then we end and return.
         if isinstance(output, AgentFinish):
             if self.should_ask_for_human_input:
+                human_feedback = self._ask_human_input(output.return_values["output"])
+
+                if self.crew._train:
+                    self._handle_crew_training_output(output, human_feedback)
+
                 # Making sure we only ask for it once, so disabling for the next thought loop
                 self.should_ask_for_human_input = False
-                human_feedback = self._ask_human_input(output.return_values["output"])
                 action = AgentAction(
                     tool="Human Input", tool_input=human_feedback, log=output.log
                 )
+
                 yield AgentStep(
                     action=action,
                     observation=self._i18n.slice("human_feedback").format(
@@ -261,6 +268,9 @@ class CrewAgentExecutor(AgentExecutor):
                 return
 
             else:
+                if self.crew._train:
+                    self._handle_crew_training_output(output)
+
                 yield output
                 return
 
@@ -305,3 +315,30 @@ class CrewAgentExecutor(AgentExecutor):
         return input(
             self._i18n.slice("getting_input").format(final_answer=final_answer)
         )
+
+    def _handle_crew_training_output(
+        self, output: AgentFinish, human_feedback: str | None = None
+    ) -> None:
+        """Function to handle the process of the training data."""
+        agent_id = str(self.crew_agent.id)
+
+        if (
+            training_data := CrewTrainingHandler(TRAINING_DATA_FILE).load()
+            and not self.should_ask_for_human_input
+        ):
+            if training_data.get(agent_id):
+                training_data[agent_id][self.crew._train_iteration][
+                    "improved_output"
+                ] = output.return_values["output"]
+                CrewTrainingHandler(TRAINING_DATA_FILE).save(training_data)
+
+        if self.should_ask_for_human_input and human_feedback is not None:
+            training_data = {
+                "initial_output": output.return_values["output"],
+                "human_feedback": human_feedback,
+                "agent": agent_id,
+                "agent_role": self.crew_agent.role,
+            }
+            CrewTrainingHandler(TRAINING_DATA_FILE).append(
+                self.crew._train_iteration, agent_id, training_data
+            )
