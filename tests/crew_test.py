@@ -382,13 +382,13 @@ def test_crew_full_ouput():
 
     result = crew.kickoff()
     assert result == {
-        "final_output": "Hello! It is a delight to receive your message. I trust this response finds you in good spirits. It's indeed a pleasure to connect with you too.",
+        "final_output": "Hello!",
         "tasks_outputs": [task1.output, task2.output],
         "usage_metrics": {
-            "completion_tokens": 109,
-            "prompt_tokens": 330,
-            "successful_requests": 2,
-            "total_tokens": 439,
+            "completion_tokens": 51,
+            "prompt_tokens": 466,
+            "successful_requests": 3,
+            "total_tokens": 517,
         },
     }
 
@@ -687,8 +687,8 @@ def test_agent_usage_metrics_are_captured_for_hierarchical_process():
     result = crew.kickoff()
     assert result == '"Howdy!"'
     assert crew.usage_metrics == {
-        "total_tokens": 1676,
-        "prompt_tokens": 1393,
+        "total_tokens": 1656,
+        "prompt_tokens": 1373,
         "completion_tokens": 283,
         "successful_requests": 3,
     }

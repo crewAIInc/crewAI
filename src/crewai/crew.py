@@ -417,7 +417,9 @@ class Crew(BaseModel):
             )
 
             self._logger.log("debug", f"[{manager.role}] Task output: {task_output}")
-            token_usage.append(task._token_process.get_summary())
+            if hasattr(task.agent, "_token_process"):
+                token_summ = task.agent._token_process.get_summary()
+                token_usage.append(token_summ)
             if self.output_log_file:
                 self._file_handler.log(
                     agent=manager.role, task=task_output, status="completed"
