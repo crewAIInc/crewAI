@@ -1,6 +1,8 @@
 """Test Agent creation and execution basic functionality."""
 
 import json
+from unittest import mock
+from unittest.mock import patch
 
 import pydantic_core
 import pytest
@@ -1004,7 +1006,10 @@ def test_manager_agent_with_tools_raises_exception():
         crew.kickoff()
 
 
-def test_crew_train_success():
+@patch("crewai.crew.Crew.kickoff")
+@patch("crewai.crew.CrewTrainingHandler")
+@patch("crewai.crew.TaskEvaluator")
+def test_crew_train_success(task_evaluator, crew_training_handler, kickoff):
     task = Task(
         description="Come up with a list of 5 interesting ideas to explore for an article, then write one amazing paragraph highlight for each idea that showcases how good an article about this topic could be. Return the list of ideas with their paragraph and your notes.",
         expected_output="5 bullet points with a paragraph for each idea.",
@@ -1014,8 +1019,48 @@ def test_crew_train_success():
         agents=[researcher, writer],
         tasks=[task],
     )
+    crew.train(n_iterations=2, inputs={"topic": "AI"})
+    task_evaluator.assert_has_calls(
+        [
+            mock.call(researcher),
+            mock.call().evaluate_training_data(
+                training_data=crew_training_handler().load(),
+                agent_id=str(researcher.id),
+            ),
+            mock.call().evaluate_training_data().model_dump(),
+            mock.call(writer),
+            mock.call().evaluate_training_data(
+                training_data=crew_training_handler().load(),
+                agent_id=str(writer.id),
+            ),
+            mock.call().evaluate_training_data().model_dump(),
+        ]
+    )
 
-    crew.train(n_iterations=2)
+    crew_training_handler.assert_has_calls(
+        [
+            mock.call("training_data.pkl"),
+            mock.call().load(),
+            mock.call("trained_agents_data.pkl"),
+            mock.call().save_trained_data(
+                agent_id="Researcher",
+                trained_data=task_evaluator().evaluate_training_data().model_dump(),
+            ),
+            mock.call("trained_agents_data.pkl"),
+            mock.call().save_trained_data(
+                agent_id="Senior Writer",
+                trained_data=task_evaluator().evaluate_training_data().model_dump(),
+            ),
+            mock.call(),
+            mock.call().load(),
+            mock.call(),
+            mock.call().load(),
+        ]
+    )
+
+    kickoff.assert_has_calls(
+        [mock.call(inputs={"topic": "AI"}), mock.call(inputs={"topic": "AI"})]
+    )
 
 
 def test_crew_train_error():
@@ -1034,3 +1079,32 @@ def test_crew_train_error():
         assert "train() missing 1 required positional argument: 'n_iterations'" in str(
             e
         )
+
+
+def test__setup_for_training():
+    researcher.allow_delegation = True
+    writer.allow_delegation = True
+    agents = [researcher, writer]
+    task = Task(
+        description="Come up with a list of 5 interesting ideas to explore for an article",
+        expected_output="5 bullet points with a paragraph for each idea.",
+    )
+
+    crew = Crew(
+        agents=agents,
+        tasks=[task],
+    )
+
+    assert crew._train is False
+    assert task.human_input is False
+
+    for agent in agents:
+        assert agent.allow_delegation is True
+
+    crew._setup_for_training()
+
+    assert crew._train is True
+    assert task.human_input is True
+
+    for agent in agents:
+        assert agent.allow_delegation is False

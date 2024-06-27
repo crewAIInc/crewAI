@@ -14,8 +14,10 @@ from crewai.agents import CacheHandler, CrewAgentExecutor, CrewAgentParser
 from crewai.memory.contextual.contextual_memory import ContextualMemory
 from crewai.tools.agent_tools import AgentTools
 from crewai.utilities import Prompts, Converter
+from crewai.utilities.constants import TRAINED_AGENTS_DATA_FILE, TRAINING_DATA_FILE
 from crewai.utilities.token_counter_callback import TokenCalcHandler
 from crewai.agents.agent_builder.base_agent import BaseAgent
+from crewai.utilities.training_handler import CrewTrainingHandler
 
 
 class Agent(BaseAgent):
@@ -73,6 +75,10 @@ class Agent(BaseAgent):
     )
     response_template: Optional[str] = Field(
         default=None, description="Response format for the agent."
+    )
+
+    allow_code_execution: Optional[bool] = Field(
+        default=False, description="Enable code execution for the agent."
     )
 
     def __init__(__pydantic_self__, **data):
@@ -147,6 +153,11 @@ class Agent(BaseAgent):
 
         self.agent_executor.tools_description = render_text_description(parsed_tools)
         self.agent_executor.tools_names = self.__tools_names(parsed_tools)
+
+        if self.crew._train:
+            task_prompt = self._training_handler(task_prompt=task_prompt)
+        else:
+            task_prompt = self._use_trained_data(task_prompt=task_prompt)
 
         result = self.agent_executor.invoke(
             {
@@ -259,10 +270,40 @@ class Agent(BaseAgent):
                     tools_list.append(tool.to_langchain())
                 else:
                     tools_list.append(tool)
+
+            if self.allow_code_execution:
+                from crewai_tools.code_interpreter_tool import CodeInterpreterTool
+
+                tools_list.append(CodeInterpreterTool)
+
         except ModuleNotFoundError:
             for tool in tools:
                 tools_list.append(tool)
         return tools_list
+
+    def _training_handler(self, task_prompt: str) -> str:
+        """Handle training data for the agent task prompt to improve output on Training."""
+        if data := CrewTrainingHandler(TRAINING_DATA_FILE).load():
+            agent_id = str(self.id)
+
+            if data.get(agent_id):
+                human_feedbacks = [
+                    i["human_feedback"] for i in data.get(agent_id, {}).values()
+                ]
+                task_prompt += "You MUST follow these feedbacks: \n " + "\n - ".join(
+                    human_feedbacks
+                )
+
+        return task_prompt
+
+    def _use_trained_data(self, task_prompt: str) -> str:
+        """Use trained data for the agent task prompt to improve output."""
+        if data := CrewTrainingHandler(TRAINED_AGENTS_DATA_FILE).load():
+            if trained_data_output := data.get(self.role):
+                task_prompt += "You MUST follow these feedbacks: \n " + "\n - ".join(
+                    trained_data_output["suggestions"]
+                )
+        return task_prompt
 
     @staticmethod
     def __tools_names(tools) -> str:
