@@ -323,9 +323,10 @@ class CrewAgentExecutor(AgentExecutor):
         agent_id = str(self.crew_agent.id)
 
         if (
-            training_data := CrewTrainingHandler(TRAINING_DATA_FILE).load()
+            CrewTrainingHandler(TRAINING_DATA_FILE).load()
             and not self.should_ask_for_human_input
         ):
+            training_data = CrewTrainingHandler(TRAINING_DATA_FILE).load()
             if training_data.get(agent_id):
                 training_data[agent_id][self.crew._train_iteration][
                     "improved_output"
