@@ -1,6 +1,6 @@
 import os
 import uuid
-from copy import deepcopy
+from copy import copy, deepcopy
 from typing import Any, Dict, List, Optional, Tuple
 
 from langchain.agents.agent import RunnableAgent
@@ -10,14 +10,14 @@ from langchain_core.agents import AgentAction
 from langchain_core.callbacks import BaseCallbackHandler
 from langchain_openai import ChatOpenAI
 from pydantic import (
-    UUID4,
-    BaseModel,
-    ConfigDict,
-    Field,
-    InstanceOf,
-    PrivateAttr,
-    field_validator,
-    model_validator,
+  UUID4,
+  BaseModel,
+  ConfigDict,
+  Field,
+  InstanceOf,
+  PrivateAttr,
+  field_validator,
+  model_validator,
 )
 from pydantic_core import PydanticCustomError
 
@@ -379,16 +379,17 @@ class Agent(BaseModel):
             "tools",
             "tools_handler",
             "cache_handler",
-            "llm",  # TODO: THIS GET'S THINGS WORKING AGAIN.``
+            "llm",
         }
 
-        print("LLM IN COPY", self.llm.model_name)
+        existing_llm = copy(self.llm)
+        # TODO: EXPAND ON WHY THIS IS NEEDED
+        # RESET LLM CALLBACKS
+        existing_llm.callbacks = []  
         copied_data = self.model_dump(exclude=exclude)
         copied_data = {k: v for k, v in copied_data.items() if v is not None}
 
-        copied_agent = Agent(**copied_data)
-        print("COPIED AGENT LLM", copied_agent.llm.model_name)
-        copied_agent.tools = deepcopy(self.tools)
+        copied_agent = Agent(**copied_data, llm=existing_llm, tools=self.tools)
 
         return copied_agent
 
