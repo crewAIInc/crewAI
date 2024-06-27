@@ -18,6 +18,26 @@ class ComposioTool(BaseTool):
         """Run the composio action with given arguments."""
         return self.composio_action(*args, **kwargs)
 
+    @staticmethod
+    def _check_connected_account(tool: t.Any, toolset: t.Any) -> None:
+        """Check if connected account is required and if required it exists or not."""
+        from composio import Action
+        from composio.client.collections import ConnectedAccountModel
+
+        tool = t.cast(Action, tool)
+        if tool.no_auth:
+            return
+
+        connections = t.cast(
+            t.List[ConnectedAccountModel],
+            toolset.client.connected_accounts.get(),
+        )
+        if tool.app not in [connection.appUniqueId for connection in connections]:
+            raise RuntimeError(
+                f"No connected account found for app `{tool.app}`; "
+                f"Run `composio add {tool.app}` to fix this"
+            )
+
     @classmethod
     def from_tool(
         cls,
@@ -35,6 +55,11 @@ class ComposioTool(BaseTool):
             tool = Action(tool)
 
         tool = t.cast(Action, tool)
+        cls._check_connected_account(
+            tool=tool,
+            toolset=toolset,
+        )
+
         (action,) = toolset.get_action_schemas(actions=[tool])
         schema = action.model_dump(exclude_none=True)
         entity_id = kwargs.pop("entity_id", DEFAULT_ENTITY_ID)
