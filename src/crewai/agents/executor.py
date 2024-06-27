@@ -250,7 +250,7 @@ class CrewAgentExecutor(AgentExecutor):
             if self.should_ask_for_human_input:
                 human_feedback = self._ask_human_input(output.return_values["output"])
 
-                if self.crew._train:
+                if self.crew and self.crew._train:
                     self._handle_crew_training_output(output, human_feedback)
 
                 # Making sure we only ask for it once, so disabling for the next thought loop
@@ -268,7 +268,7 @@ class CrewAgentExecutor(AgentExecutor):
                 return
 
             else:
-                if self.crew._train:
+                if self.crew and self.crew._train:
                     self._handle_crew_training_output(output)
 
                 yield output
