@@ -39,9 +39,9 @@ class ComposioTool(BaseTool):
             )
 
     @classmethod
-    def from_tool(
+    def from_action(
         cls,
-        tool: t.Any,
+        action: t.Any,
         **kwargs: t.Any,
     ) -> te.Self:
         """Wrap a composio tool as crewAI tool."""
@@ -51,17 +51,17 @@ class ComposioTool(BaseTool):
         from composio.utils.shared import json_schema_to_model
 
         toolset = ComposioToolSet()
-        if not isinstance(tool, Action):
-            tool = Action(tool)
+        if not isinstance(action, Action):
+            action = Action(action)
 
-        tool = t.cast(Action, tool)
+        action = t.cast(Action, action)
         cls._check_connected_account(
-            tool=tool,
+            tool=action,
             toolset=toolset,
         )
 
-        (action,) = toolset.get_action_schemas(actions=[tool])
-        schema = action.model_dump(exclude_none=True)
+        (action_schema,) = toolset.get_action_schemas(actions=[action])
+        schema = action_schema.model_dump(exclude_none=True)
         entity_id = kwargs.pop("entity_id", DEFAULT_ENTITY_ID)
 
         def function(**kwargs: t.Any) -> t.Dict:
@@ -79,7 +79,7 @@ class ComposioTool(BaseTool):
             name=schema["name"],
             description=schema["description"],
             args_schema=json_schema_to_model(
-                action.parameters.model_dump(
+                action_schema.parameters.model_dump(
                     exclude_none=True,
                 )
             ),
@@ -90,36 +90,33 @@ class ComposioTool(BaseTool):
     @classmethod
     def from_app(
         cls,
-        app: t.Any,
-        tags: t.Optional[t.List[str]] = None,
-        **kwargs: t.Any,
-    ) -> t.List[te.Self]:
-        """Create toolset from an app."""
-        from composio import App
-
-        if not isinstance(app, App):
-            app = App(app)
-
-        return [
-            cls.from_tool(tool=action, **kwargs)
-            for action in app.get_actions(tags=tags)
-        ]
-
-    @classmethod
-    def from_use_case(
-        cls,
         *apps: t.Any,
-        use_case: str,
+        tags: t.Optional[t.List[str]] = None,
+        use_case: t.Optional[str] = None,
         **kwargs: t.Any,
     ) -> t.List[te.Self]:
         """Create toolset from an app."""
         if len(apps) == 0:
+            raise ValueError("You need to provide at least one app name")
+
+        if use_case is None and tags is None:
+            raise ValueError("Both `use_case` and `tags` cannot be `None`")
+
+        if use_case is not None and tags is not None:
             raise ValueError(
-                "You need to provide at least one app name to search by use case"
+                "Cannot use both `use_case` and `tags` to filter the actions"
             )
 
         from composio import ComposioToolSet
 
         toolset = ComposioToolSet()
-        actions = toolset.find_actions_by_use_case(*apps, use_case=use_case)
-        return [cls.from_tool(tool=action, **kwargs) for action in actions]
+        if use_case is not None:
+            return [
+                cls.from_action(action=action, **kwargs)
+                for action in toolset.find_actions_by_use_case(*apps, use_case=use_case)
+            ]
+
+        return [
+            cls.from_action(action=action, **kwargs)
+            for action in toolset.find_actions_by_tags(*apps, tags=tags)
+        ]

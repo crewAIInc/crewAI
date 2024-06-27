@@ -27,19 +27,19 @@ from crewai_tools import ComposioTool
 from crewai import Agent, Task
 
 
-tools = [ComposioTool.from_tool(tool=Action.GITHUB_ACTIVITY_STAR_REPO_FOR_AUTHENTICATED_USER)]
+tools = [ComposioTool.from_action(action=Action.GITHUB_ACTIVITY_STAR_REPO_FOR_AUTHENTICATED_USER)]
 ```
 
 If you don't know what action you want to use, use `from_app` and `tags` filter to get relevant actions
 
 ```python
-tools = ComposioTool.from_app(app=App.GITHUB, tags=["important"])
+tools = ComposioTool.from_app(App.GITHUB, tags=["important"])
 ```
 
-or use `from_use_case` to search relevant actions
+or use `use_case` to search relevant actions
 
 ```python
-tools = ComposioTool.from_use_case(App.GITHUB, use_case="Star a github repository")
+tools = ComposioTool.from_app(App.GITHUB, use_case="Star a github repository")
 ```
 
 2. Define agent
