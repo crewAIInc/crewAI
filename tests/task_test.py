@@ -367,6 +367,8 @@ def test_save_task_json_output():
 
 @pytest.mark.vcr(filter_headers=["authorization"])
 def test_save_task_pydantic_output():
+    from langchain_openai import ChatOpenAI
+
     class ScoreOutput(BaseModel):
         score: int
 
@@ -375,6 +377,7 @@ def test_save_task_pydantic_output():
         goal="Score the title",
         backstory="You're an expert scorer, specialized in scoring titles.",
         allow_delegation=False,
+        llm=ChatOpenAI(model="gpt-4o"),
     )
 
     task = Task(
