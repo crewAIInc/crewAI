@@ -34,6 +34,7 @@ description: What are crewAI Agents and how to use them.
 | **System Template** *(optional)*     | Specifies the system format for the agent. Default is `None`.                                                                                                                                                                  |
 | **Prompt Template** *(optional)*     | Specifies the prompt format for the agent. Default is `None`.                                                                                                                                                                  |
 | **Response Template** *(optional)*     | Specifies the response format for the agent. Default is `None`.                                                                                                                                                                  |
+
 ## Creating an Agent
 
 !!! note "Agent Interaction"
