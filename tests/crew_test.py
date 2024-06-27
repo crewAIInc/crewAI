@@ -691,9 +691,9 @@ def test_agent_usage_metrics_are_captured_for_hierarchical_process():
     assert result == "Howdy!"
 
     assert crew.usage_metrics == {
-        "total_tokens": 1476,
-        "prompt_tokens": 1322,
-        "completion_tokens": 154,
+        "total_tokens": 1383,
+        "prompt_tokens": 1278,
+        "completion_tokens": 105,
         "successful_requests": 3,
     }
 
