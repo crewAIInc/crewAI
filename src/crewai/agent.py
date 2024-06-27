@@ -133,6 +133,9 @@ class Agent(BaseModel):
     response_template: Optional[str] = Field(
         default=None, description="Response format for the agent."
     )
+    allow_code_execution: Optional[bool] = Field(
+        default=False, description="Enable code execution for the agent."
+    )
 
     _original_role: str | None = None
     _original_goal: str | None = None
@@ -409,6 +412,12 @@ class Agent(BaseModel):
                     tools_list.append(tool.to_langchain())
                 else:
                     tools_list.append(tool)
+
+            if self.allow_code_execution:
+                from crewai_tools.code_interpreter_tool import CodeInterpreterTool
+
+                tools_list.append(CodeInterpreterTool)
+
         except ModuleNotFoundError:
             for tool in tools:
                 tools_list.append(tool)
