@@ -1,7 +1,6 @@
 """Test Agent creation and execution basic functionality."""
 
 import json
-
 from unittest.mock import MagicMock, patch
 
 import pytest
