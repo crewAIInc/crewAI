@@ -388,10 +388,10 @@ def test_crew_full_ouput():
         "final_output": "Hello!",
         "tasks_outputs": [task1.output, task2.output],
         "usage_metrics": {
-            "total_tokens": 348,
-            "prompt_tokens": 314,
-            "completion_tokens": 34,
-            "successful_requests": 2,
+            "total_tokens": 517,
+            "prompt_tokens": 466,
+            "completion_tokens": 51,
+            "successful_requests": 3,
         },
     }
 
@@ -691,8 +691,8 @@ def test_agent_usage_metrics_are_captured_for_hierarchical_process():
     assert result == '"Howdy!"'
 
     assert crew.usage_metrics == {
-        "total_tokens": 507,
-        "prompt_tokens": 224,
+        "total_tokens": 1640,
+        "prompt_tokens": 1357,
         "completion_tokens": 283,
         "successful_requests": 3,
     }

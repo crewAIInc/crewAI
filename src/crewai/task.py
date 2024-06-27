@@ -262,7 +262,7 @@ class Task(BaseModel):
             [task.copy() for task in self.context] if self.context else None
         )
         cloned_agent = self.agent.copy() if self.agent else None
-        cloned_tools = deepcopy(self.tools) if self.tools else None
+        cloned_tools = deepcopy(self.tools) if self.tools else []
 
         copied_task = Task(
             **copied_data,
