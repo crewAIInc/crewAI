@@ -313,7 +313,7 @@ class Task(BaseModel):
         )
 
         # To perform RCI if rci is set to True
-        llm = ChatOllama(model="llama3")
+        llm = self.agent.function_calling_llm or self.agent.llm
         depth = 0
         while rci and (depth < rci_depth):
             critic_response = self.critique(llm = llm, agent=agent, task=task, output=result)
