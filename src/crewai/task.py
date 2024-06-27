@@ -9,10 +9,10 @@ from langchain_openai import ChatOpenAI
 from pydantic import UUID4, BaseModel, Field, field_validator, model_validator
 from pydantic_core import PydanticCustomError
 
-from crewai.agent import Agent
 from crewai.tasks.task_output import TaskOutput
-from crewai.utilities import I18N, Converter, ConverterError, Printer
+from crewai.utilities import I18N, ConverterError, Printer
 from crewai.utilities.pydantic_schema_parser import PydanticSchemaParser
+from crewai.agents.agent_builder.base_agent import BaseAgent
 
 
 class Task(BaseModel):
@@ -55,7 +55,7 @@ class Task(BaseModel):
     callback: Optional[Any] = Field(
         description="Callback to be executed after the task is completed.", default=None
     )
-    agent: Optional[Agent] = Field(
+    agent: Optional[BaseAgent] = Field(
         description="Agent responsible for execution the task.", default=None
     )
     context: Optional[List["Task"]] = Field(
@@ -147,7 +147,7 @@ class Task(BaseModel):
 
     def execute(  # type: ignore # Missing return statement
         self,
-        agent: Agent | None = None,
+        agent: BaseAgent | None = None,
         context: Optional[str] = None,
         tools: Optional[List[Any]] = None,
     ) -> str:
@@ -198,9 +198,9 @@ class Task(BaseModel):
             context=context,
             tools=tools,
         )
-
         exported_output = self._export_output(result)
 
+        # type: the responses are usually str but need to figuire out a more elegant solution here
         self.output = TaskOutput(
             description=self.description,
             exported_output=exported_output,
@@ -262,7 +262,7 @@ class Task(BaseModel):
             [task.copy() for task in self.context] if self.context else None
         )
         cloned_agent = self.agent.copy() if self.agent else None
-        cloned_tools = deepcopy(self.tools) if self.tools else None
+        cloned_tools = deepcopy(self.tools) if self.tools else []
 
         copied_task = Task(
             **copied_data,
@@ -302,14 +302,13 @@ class Task(BaseModel):
                         pass
 
             # type: ignore # Item "None" of "Agent | None" has no attribute "function_calling_llm"
-            llm = self.agent.function_calling_llm or self.agent.llm
-
+            llm = getattr(self.agent, "function_calling_llm", None) or self.agent.llm
             if not self._is_gpt(llm):
                 # type: ignore # Argument "model" to "PydanticSchemaParser" has incompatible type "type[BaseModel] | None"; expected "type[BaseModel]"
                 model_schema = PydanticSchemaParser(model=model).get_schema()
                 instructions = f"{instructions}\n\nThe json should have the following structure, with the following keys:\n{model_schema}"
 
-            converter = Converter(
+            converter = self.agent.get_output_converter(
                 llm=llm, text=result, model=model, instructions=instructions
             )
 
