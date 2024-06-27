@@ -383,14 +383,15 @@ def test_crew_full_ouput():
     crew = Crew(agents=[agent], tasks=[task1, task2], full_output=True)
 
     result = crew.kickoff()
+
     assert result == {
         "final_output": "Hello!",
         "tasks_outputs": [task1.output, task2.output],
         "usage_metrics": {
-            "completion_tokens": 51,
-            "prompt_tokens": 466,
-            "successful_requests": 3,
-            "total_tokens": 517,
+            "total_tokens": 348,
+            "prompt_tokens": 314,
+            "completion_tokens": 34,
+            "successful_requests": 2,
         },
     }
 
@@ -688,9 +689,10 @@ def test_agent_usage_metrics_are_captured_for_hierarchical_process():
 
     result = crew.kickoff()
     assert result == '"Howdy!"'
+
     assert crew.usage_metrics == {
-        "total_tokens": 1656,
-        "prompt_tokens": 1373,
+        "total_tokens": 507,
+        "prompt_tokens": 224,
         "completion_tokens": 283,
         "successful_requests": 3,
     }

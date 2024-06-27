@@ -1,6 +1,6 @@
 from copy import deepcopy
 import uuid
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Tuple
 from abc import ABC, abstractmethod
 from pydantic import (
     UUID4,
@@ -180,6 +180,16 @@ class BaseAgent(ABC, BaseModel):
         """Set the task tools that init BaseAgenTools class."""
         pass
 
+    @abstractmethod
+    def format_log_to_str(
+        self,
+        intermediate_steps: List[Tuple[Any, str]],
+        observation_prefix: str = "Observation: ",
+        llm_prefix: str = "",
+    ) -> str:
+        pass
+
+    @abstractmethod
     def get_output_converter(
         self, llm: Any, text: str, model: type[BaseModel] | None, instructions: str
     ):

@@ -2,7 +2,7 @@ import os
 from typing import Any, List, Optional, Tuple
 
 from langchain.agents.agent import RunnableAgent
-from langchain.tools import BaseTool
+from langchain.agents.tools import tool as LangChainTool
 from langchain.tools.render import render_text_description
 from langchain_core.agents import AgentAction
 from langchain_core.callbacks import BaseCallbackHandler
@@ -258,7 +258,7 @@ class Agent(BaseAgent):
     def get_output_converter(self, llm, text, model, instructions):
         return Converter(llm=llm, text=text, model=model, instructions=instructions)
 
-    def _parse_tools(self, tools: List[Any]) -> List[BaseTool]:
+    def _parse_tools(self, tools: List[Any]) -> List[LangChainTool]:
         """Parse tools to be used for the task."""
         tools_list = []
         try:
