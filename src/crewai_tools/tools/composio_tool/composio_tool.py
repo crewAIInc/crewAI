@@ -19,7 +19,11 @@ class ComposioTool(BaseTool):
         return self.composio_action(*args, **kwargs)
 
     @classmethod
-    def from_tool(cls, tool: t.Any, **kwargs: t.Any) -> te.Self:
+    def from_tool(
+        cls,
+        tool: t.Any,
+        **kwargs: t.Any,
+    ) -> te.Self:
         """Wrap a composio tool as crewAI tool."""
 
         from composio import Action, ComposioToolSet
@@ -28,7 +32,7 @@ class ComposioTool(BaseTool):
 
         toolset = ComposioToolSet()
         if not isinstance(tool, Action):
-            tool = Action.from_action(name=tool)
+            tool = Action(tool)
 
         tool = t.cast(Action, tool)
         (action,) = toolset.get_action_schemas(actions=[tool])
@@ -38,10 +42,7 @@ class ComposioTool(BaseTool):
         def function(**kwargs: t.Any) -> t.Dict:
             """Wrapper function for composio action."""
             return toolset.execute_action(
-                action=Action.from_app_and_action(
-                    app=schema["appName"],
-                    name=schema["name"],
-                ),
+                action=Action(schema["name"]),
                 params=kwargs,
                 entity_id=entity_id,
             )
@@ -58,5 +59,42 @@ class ComposioTool(BaseTool):
                 )
             ),
             composio_action=function,
-            **kwargs
+            **kwargs,
         )
+
+    @classmethod
+    def from_app(
+        cls,
+        app: t.Any,
+        tags: t.Optional[t.List[str]] = None,
+        **kwargs: t.Any,
+    ) -> t.List[te.Self]:
+        """Create toolset from an app."""
+        from composio import App
+
+        if not isinstance(app, App):
+            app = App(app)
+
+        return [
+            cls.from_tool(tool=action, **kwargs)
+            for action in app.get_actions(tags=tags)
+        ]
+
+    @classmethod
+    def from_use_case(
+        cls,
+        *apps: t.Any,
+        use_case: str,
+        **kwargs: t.Any,
+    ) -> t.List[te.Self]:
+        """Create toolset from an app."""
+        if len(apps) == 0:
+            raise ValueError(
+                "You need to provide at least one app name to search by use case"
+            )
+
+        from composio import ComposioToolSet
+
+        toolset = ComposioToolSet()
+        actions = toolset.find_actions_by_use_case(*apps, use_case=use_case)
+        return [cls.from_tool(tool=action, **kwargs) for action in actions]
