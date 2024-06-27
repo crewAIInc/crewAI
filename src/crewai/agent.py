@@ -74,7 +74,6 @@ class Agent(BaseAgent):
     response_template: Optional[str] = Field(
         default=None, description="Response format for the agent."
     )
-    # token_process: TokenProcess = TokenProcess()
 
     def __init__(__pydantic_self__, **data):
         config = data.pop("config", {})

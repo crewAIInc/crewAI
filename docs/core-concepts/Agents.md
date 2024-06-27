@@ -96,18 +96,17 @@ agent = Agent(
     )
 ```
 
-## Bring an external agent
-!!! note "Bring your own custom agent using the BaseAgent class"
-    Bring your own agent extending the BaseAgent class. BaseAgent is a wrapper around the core Agent class to run tasks, delegate tasks and ask questions to other agents within your own crew and still fully customizable to fit all your needs.
+## Bring your Third Party Agents
+!!! note "Extend your Third Party Agents like LlamaIndex, Langchain, Autogen or fully custom agents using the the crewai's BaseAgent class."
 
-    The BaseAgent class has the requirements for working within CrewAI. Integrations with custom agents can be orchestrated with each other using agents that suit specific tasks with their specific tooling.
+    BaseAgent includes attributes and methods required to integrate with your crews to run and delegate tasks to other agents within your own crew.
 
-    Overall, we aim to give flexibility for exsiting and custom agents to be used within the current orchestration of agents.
+    CrewAI is a universal multi agent framework that allows for all agents to work together to automate tasks and solve problems.
 
 
 ```py
 from crewai import Agent, Task, Crew
-from custom_agent import CustomAgent #You need to build and extend your own agent logic then import it here.
+from custom_agent import CustomAgent # You need to build and extend your own agent logic with the CrewAI BaseAgent class then import it here.
 
 from langchain.agents import load_tools
 
