@@ -22,13 +22,15 @@ A crew in crewAI represents a collaborative group of agents working together to 
 | **Language File** *(optional)* | Path to the language file to be used for the crew.          |
 | **Memory** *(optional)*     | Utilized for storing execution memories (short-term, long-term, entity memory). |
 | **Cache** *(optional)*      | Specifies whether to use a cache for storing the results of tools' execution. |
-| **Embedder** *(optional)*   | Configuration for the embedder to be used by the crew. mostly used by memory for now       |
+| **Embedder** *(optional)*   | Configuration for the embedder to be used by the crew. Mostly used by memory for now.       |
 | **Full Output** *(optional)*| Whether the crew should return the full output with all tasks outputs or just the final output. |
 | **Step Callback** *(optional)* | A function that is called after each step of every agent. This can be used to log the agent's actions or to perform other operations; it won't override the agent-specific `step_callback`. |
 | **Task Callback** *(optional)* | A function that is called after the completion of each task. Useful for monitoring or additional operations post-task execution. |
 | **Share Crew** *(optional)* | Whether you want to share the complete crew information and execution with the crewAI team to make the library better, and allow us to train models. |
-| **Output Log File** *(optional)* | Whether you want to have a file with the complete crew output and execution. You can set it using True and it will default to the folder you are currently and it will be called logs.txt or passing a string with the full path and name of the file. |
-
+| **Output Log File** *(optional)* | Whether you want to have a file with the complete crew output and execution. You can set it using True and it will default to the folder you are currently in and it will be called logs.txt or passing a string with the full path and name of the file. |
+| **Manager Agent** *(optional)* | `manager` sets a ustom agent that will be used as a manager. |
+| **Manager Callbacks** *(optional)* | `manager_callbacks` takes a list of callback handlers to be executed by the manager agent when a hierarchical process is used. |
+| **Prompt File** *(optional)* | Path to the prompt JSON file to be used for the crew. |
 
 !!! note "Crew Max RPM"
     The `max_rpm` attribute sets the maximum number of requests per minute the crew can perform to avoid rate limits and will override individual agents' `max_rpm` settings if you set it.
@@ -60,7 +62,7 @@ writer = Agent(
     goal='Write engaging articles on AI discoveries',
     backstory="""You're a senior writer at a large company.
         You're responsible for creating content to the business.
-        You're currently working on a project to write about trends 
+        You're currently working on a project to write about trends
         and innovations in the space of AI for your next meeting.""",
     verbose=True
 )
@@ -109,7 +111,7 @@ print(crew.usage_metrics)
 ## Crew Execution Process
 
 - **Sequential Process**: Tasks are executed one after another, allowing for a linear flow of work.
-- **Hierarchical Process**: A manager agent coordinates the crew, delegating tasks and validating outcomes before proceeding. **Note**: A `manager_llm` is required for this process and it's essential for validating the process flow.
+- **Hierarchical Process**: A manager agent coordinates the crew, delegating tasks and validating outcomes before proceeding. **Note**: A `manager_llm` or `manager_agent` is required for this process and it's essential for validating the process flow.
 
 ### Kicking Off a Crew
 
@@ -120,3 +122,37 @@ Once your crew is assembled, initiate the workflow with the `kickoff()` method. 
 result = my_crew.kickoff()
 print(result)
 ```
+
+### Kicking Off a Crew
+
+Once your crew is assembled, initiate the workflow with the appropriate kickoff method. CrewAI provides several methods for better control over the kickoff process: `kickoff()`, `kickoff_for_each()`, `kickoff_async()`, and `kickoff_for_each_async()`.
+
+`kickoff()`: Starts the execution process according to the defined process flow.
+`kickoff_for_each()`: Executes tasks for each agent individually.
+`kickoff_async()`: Initiates the workflow asynchronously.
+`kickoff_for_each_async()`: Executes tasks for each agent individually in an asynchronous manner.
+
+```python
+# Start the crew's task execution
+result = my_crew.kickoff()
+print(result)
+
+# Example of using kickoff_for_each
+inputs_array = [{'topic': 'AI in healthcare'}, {'topic': 'AI in finance'}]
+results = my_crew.kickoff_for_each(inputs=inputs_array)
+for result in results:
+    print(result)
+
+# Example of using kickoff_async
+inputs = {'topic': 'AI in healthcare'}
+async_result = my_crew.kickoff_async(inputs=inputs)
+print(async_result)
+
+# Example of using kickoff_for_each_async
+inputs_array = [{'topic': 'AI in healthcare'}, {'topic': 'AI in finance'}]
+async_results = my_crew.kickoff_for_each_async(inputs=inputs_array)
+for async_result in async_results:
+    print(async_result)
+```
+
+These methods provide flexibility in how you manage and execute tasks within your crew, allowing for both synchronous and asynchronous workflows tailored to your needs

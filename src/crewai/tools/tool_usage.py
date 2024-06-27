@@ -126,8 +126,8 @@ class ToolUsage:
         if not result:
             try:
                 if calling.tool_name in [
-                    "Delegate work to co-worker",
-                    "Ask question to co-worker",
+                    "Delegate work to coworker",
+                    "Ask question to coworker",
                 ]:
                     self.task.increment_delegations()
 

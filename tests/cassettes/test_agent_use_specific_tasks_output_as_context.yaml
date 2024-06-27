@@ -3,19 +3,19 @@ interactions:
     body: '{"messages": [{"role": "user", "content": "You are test role. test backstory\nYour
       personal goal is: test goal\n\nYou ONLY have access to the following tools,
       and should NEVER make up tools that are not listed here:\n\nDelegate work to
-      co-worker: Delegate work to co-worker(coworker: str, task: str, context: str)
-      - Delegate a specific task to one of the following co-workers: [''test role2'']\nThe
+      coworker: Delegate work to coworker(coworker: str, task: str, context: str)
+      - Delegate a specific task to one of the following coworkers: [''test role2'']\nThe
       input to this tool should be the coworker, the task you want them to do, and
       ALL necessary context to execute the task, they know nothing about the task,
       so share absolute everything you know, don''t reference things but instead explain
-      them.\nAsk question to co-worker: Ask question to co-worker(coworker: str, question:
-      str, context: str) - Ask a specific question to one of the following co-workers:
+      them.\nAsk question to coworker: Ask question to coworker(coworker: str, question:
+      str, context: str) - Ask a specific question to one of the following coworkers:
       [''test role2'']\nThe input to this tool should be the coworker, the question
       you have for them, and ALL necessary context to ask the question properly, they
       know nothing about the question, so share absolute everything you know, don''t
       reference things but instead explain them.\n\nUse the following format:\n\nThought:
       you should always think about what to do\nAction: the action to take, only one
-      name of [Delegate work to co-worker, Ask question to co-worker], just the name,
+      name of [Delegate work to coworker, Ask question to coworker], just the name,
       exactly as it''s written.\nAction Input: the input to the action, just a simple
       a python dictionary using \" to wrap keys and values.\nObservation: the result
       of the action\n\nOnce all necessary information is gathered:\n\nThought: I now
@@ -323,19 +323,19 @@ interactions:
     body: '{"messages": [{"role": "user", "content": "You are test role. test backstory\nYour
       personal goal is: test goal\n\nYou ONLY have access to the following tools,
       and should NEVER make up tools that are not listed here:\n\nDelegate work to
-      co-worker: Delegate work to co-worker(coworker: str, task: str, context: str)
-      - Delegate a specific task to one of the following co-workers: [''test role2'']\nThe
+      coworker: Delegate work to coworker(coworker: str, task: str, context: str)
+      - Delegate a specific task to one of the following coworkers: [''test role2'']\nThe
       input to this tool should be the coworker, the task you want them to do, and
       ALL necessary context to execute the task, they know nothing about the task,
       so share absolute everything you know, don''t reference things but instead explain
-      them.\nAsk question to co-worker: Ask question to co-worker(coworker: str, question:
-      str, context: str) - Ask a specific question to one of the following co-workers:
+      them.\nAsk question to coworker: Ask question to coworker(coworker: str, question:
+      str, context: str) - Ask a specific question to one of the following coworkers:
       [''test role2'']\nThe input to this tool should be the coworker, the question
       you have for them, and ALL necessary context to ask the question properly, they
       know nothing about the question, so share absolute everything you know, don''t
       reference things but instead explain them.\n\nUse the following format:\n\nThought:
       you should always think about what to do\nAction: the action to take, only one
-      name of [Delegate work to co-worker, Ask question to co-worker], just the name,
+      name of [Delegate work to coworker, Ask question to coworker], just the name,
       exactly as it''s written.\nAction Input: the input to the action, just a simple
       a python dictionary using \" to wrap keys and values.\nObservation: the result
       of the action\n\nOnce all necessary information is gathered:\n\nThought: I now
@@ -345,23 +345,23 @@ interactions:
       as the final answer, not a summary.\n\nBegin! This is VERY important to you,
       use the tools available and give your best Final Answer, your job depends on
       it!\n\nThought: \nAs this task is very straightforward and doesn''t require
-      any input or help from my co-worker, I should go ahead and complete it myself.\n\nAction:
+      any input or help from my coworker, I should go ahead and complete it myself.\n\nAction:
       None\n\nAction Input: None\n\nObservation: I encountered an error: Action ''None''
-      don''t exist, these are the only available Actions: Delegate work to co-worker:
-      Delegate work to co-worker(coworker: str, task: str, context: str) - Delegate
-      a specific task to one of the following co-workers: [''test role2'']\nThe input
+      don''t exist, these are the only available Actions: Delegate work to coworker:
+      Delegate work to coworker(coworker: str, task: str, context: str) - Delegate
+      a specific task to one of the following coworkers: [''test role2'']\nThe input
       to this tool should be the coworker, the task you want them to do, and ALL necessary
       context to execute the task, they know nothing about the task, so share absolute
       everything you know, don''t reference things but instead explain them.\nAsk
-      question to co-worker: Ask question to co-worker(coworker: str, question: str,
-      context: str) - Ask a specific question to one of the following co-workers:
+      question to coworker: Ask question to coworker(coworker: str, question: str,
+      context: str) - Ask a specific question to one of the following coworkers:
       [''test role2'']\nThe input to this tool should be the coworker, the question
       you have for them, and ALL necessary context to ask the question properly, they
       know nothing about the question, so share absolute everything you know, don''t
       reference things but instead explain them.\nMoving on then. I MUST either use
       a tool (use one at time) OR give my best final answer. To Use the following
       format:\n\nThought: you should always think about what to do\nAction: the action
-      to take, should be one of [Delegate work to co-worker, Ask question to co-worker]\nAction
+      to take, should be one of [Delegate work to coworker, Ask question to coworker]\nAction
       Input: the input to the action, dictionary\nObservation: the result of the action\n...
       (this Thought/Action/Action Input/Observation can repeat N times)\nThought:
       I now can give a great answer\nFinal Answer: my best complete final answer to
@@ -1024,19 +1024,19 @@ interactions:
     body: '{"messages": [{"role": "user", "content": "You are test role. test backstory\nYour
       personal goal is: test goal\n\nYou ONLY have access to the following tools,
       and should NEVER make up tools that are not listed here:\n\nDelegate work to
-      co-worker: Delegate work to co-worker(coworker: str, task: str, context: str)
-      - Delegate a specific task to one of the following co-workers: [''test role2'']\nThe
+      coworker: Delegate work to coworker(coworker: str, task: str, context: str)
+      - Delegate a specific task to one of the following coworkers: [''test role2'']\nThe
       input to this tool should be the coworker, the task you want them to do, and
       ALL necessary context to execute the task, they know nothing about the task,
       so share absolute everything you know, don''t reference things but instead explain
-      them.\nAsk question to co-worker: Ask question to co-worker(coworker: str, question:
-      str, context: str) - Ask a specific question to one of the following co-workers:
+      them.\nAsk question to coworker: Ask question to coworker(coworker: str, question:
+      str, context: str) - Ask a specific question to one of the following coworkers:
       [''test role2'']\nThe input to this tool should be the coworker, the question
       you have for them, and ALL necessary context to ask the question properly, they
       know nothing about the question, so share absolute everything you know, don''t
       reference things but instead explain them.\n\nUse the following format:\n\nThought:
       you should always think about what to do\nAction: the action to take, only one
-      name of [Delegate work to co-worker, Ask question to co-worker], just the name,
+      name of [Delegate work to coworker, Ask question to coworker], just the name,
       exactly as it''s written.\nAction Input: the input to the action, just a simple
       a python dictionary using \" to wrap keys and values.\nObservation: the result
       of the action\n\nOnce all necessary information is gathered:\n\nThought: I now
@@ -1046,31 +1046,31 @@ interactions:
       as the final answer, not a summary.\n\nBegin! This is VERY important to you,
       use the tools available and give your best Final Answer, your job depends on
       it!\n\nThought: \nAs this task is very straightforward and doesn''t require
-      any input or help from my co-worker, I should go ahead and complete it myself.\n\nAction:
+      any input or help from my coworker, I should go ahead and complete it myself.\n\nAction:
       None\n\nAction Input: None\n\nObservation: I encountered an error: Action ''None''
-      don''t exist, these are the only available Actions: Delegate work to co-worker:
-      Delegate work to co-worker(coworker: str, task: str, context: str) - Delegate
-      a specific task to one of the following co-workers: [''test role2'']\nThe input
+      don''t exist, these are the only available Actions: Delegate work to coworker:
+      Delegate work to coworker(coworker: str, task: str, context: str) - Delegate
+      a specific task to one of the following coworkers: [''test role2'']\nThe input
       to this tool should be the coworker, the task you want them to do, and ALL necessary
       context to execute the task, they know nothing about the task, so share absolute
       everything you know, don''t reference things but instead explain them.\nAsk
-      question to co-worker: Ask question to co-worker(coworker: str, question: str,
-      context: str) - Ask a specific question to one of the following co-workers:
+      question to coworker: Ask question to coworker(coworker: str, question: str,
+      context: str) - Ask a specific question to one of the following coworkers:
       [''test role2'']\nThe input to this tool should be the coworker, the question
       you have for them, and ALL necessary context to ask the question properly, they
       know nothing about the question, so share absolute everything you know, don''t
       reference things but instead explain them.\nMoving on then. I MUST either use
       a tool (use one at time) OR give my best final answer. To Use the following
       format:\n\nThought: you should always think about what to do\nAction: the action
-      to take, should be one of [Delegate work to co-worker, Ask question to co-worker]\nAction
+      to take, should be one of [Delegate work to coworker, Ask question to coworker]\nAction
       Input: the input to the action, dictionary\nObservation: the result of the action\n...
       (this Thought/Action/Action Input/Observation can repeat N times)\nThought:
       I now can give a great answer\nFinal Answer: my best complete final answer to
       the task.\nYour final answer must be the great and the most complete as possible,
       it must be outcome described\n\n \nThought: \nAlthough I initially thought that
       I could just say hi myself, this system seems to require me to use one of the
-      tools available. Therefore, I''ll delegate this task to my co-worker.\n\nAction:
-      Delegate work to co-worker\n\nAction Input: {\"coworker\": \"test role2\", \"task\":
+      tools available. Therefore, I''ll delegate this task to my coworker.\n\nAction:
+      Delegate work to coworker\n\nAction Input: {\"coworker\": \"test role2\", \"task\":
       \"Just say hi\", \"context\": \"We need to greet someone. Just say ''hi'' to
       them.\"}\n\nObservation: Hi there!\n"}], "model": "gpt-4", "n": 1, "stop": ["\nObservation"],
       "stream": true, "temperature": 0.7}'
@@ -1233,19 +1233,19 @@ interactions:
     body: '{"messages": [{"role": "user", "content": "You are test role. test backstory\nYour
       personal goal is: test goal\n\nYou ONLY have access to the following tools,
       and should NEVER make up tools that are not listed here:\n\nDelegate work to
-      co-worker: Delegate work to co-worker(coworker: str, task: str, context: str)
-      - Delegate a specific task to one of the following co-workers: [''test role2'']\nThe
+      coworker: Delegate work to coworker(coworker: str, task: str, context: str)
+      - Delegate a specific task to one of the following coworkers: [''test role2'']\nThe
       input to this tool should be the coworker, the task you want them to do, and
       ALL necessary context to execute the task, they know nothing about the task,
       so share absolute everything you know, don''t reference things but instead explain
-      them.\nAsk question to co-worker: Ask question to co-worker(coworker: str, question:
-      str, context: str) - Ask a specific question to one of the following co-workers:
+      them.\nAsk question to coworker: Ask question to coworker(coworker: str, question:
+      str, context: str) - Ask a specific question to one of the following coworkers:
       [''test role2'']\nThe input to this tool should be the coworker, the question
       you have for them, and ALL necessary context to ask the question properly, they
       know nothing about the question, so share absolute everything you know, don''t
       reference things but instead explain them.\n\nUse the following format:\n\nThought:
       you should always think about what to do\nAction: the action to take, only one
-      name of [Delegate work to co-worker, Ask question to co-worker], just the name,
+      name of [Delegate work to coworker, Ask question to coworker], just the name,
       exactly as it''s written.\nAction Input: the input to the action, just a simple
       a python dictionary using \" to wrap keys and values.\nObservation: the result
       of the action\n\nOnce all necessary information is gathered:\n\nThought: I now
@@ -1482,19 +1482,19 @@ interactions:
     body: '{"messages": [{"role": "user", "content": "You are test role2. test backstory2\nYour
       personal goal is: test goal2\n\nYou ONLY have access to the following tools,
       and should NEVER make up tools that are not listed here:\n\nDelegate work to
-      co-worker: Delegate work to co-worker(coworker: str, task: str, context: str)
-      - Delegate a specific task to one of the following co-workers: [''test role'']\nThe
+      coworker: Delegate work to coworker(coworker: str, task: str, context: str)
+      - Delegate a specific task to one of the following coworkers: [''test role'']\nThe
       input to this tool should be the coworker, the task you want them to do, and
       ALL necessary context to execute the task, they know nothing about the task,
       so share absolute everything you know, don''t reference things but instead explain
-      them.\nAsk question to co-worker: Ask question to co-worker(coworker: str, question:
-      str, context: str) - Ask a specific question to one of the following co-workers:
+      them.\nAsk question to coworker: Ask question to coworker(coworker: str, question:
+      str, context: str) - Ask a specific question to one of the following coworkers:
       [''test role'']\nThe input to this tool should be the coworker, the question
       you have for them, and ALL necessary context to ask the question properly, they
       know nothing about the question, so share absolute everything you know, don''t
       reference things but instead explain them.\n\nUse the following format:\n\nThought:
       you should always think about what to do\nAction: the action to take, only one
-      name of [Delegate work to co-worker, Ask question to co-worker], just the name,
+      name of [Delegate work to coworker, Ask question to coworker], just the name,
       exactly as it''s written.\nAction Input: the input to the action, just a simple
       a python dictionary using \" to wrap keys and values.\nObservation: the result
       of the action\n\nOnce all necessary information is gathered:\n\nThought: I now
@@ -2487,19 +2487,19 @@ interactions:
     body: '{"messages": [{"role": "user", "content": "You are test role2. test backstory2\nYour
       personal goal is: test goal2\n\nYou ONLY have access to the following tools,
       and should NEVER make up tools that are not listed here:\n\nDelegate work to
-      co-worker: Delegate work to co-worker(coworker: str, task: str, context: str)
-      - Delegate a specific task to one of the following co-workers: [''test role'']\nThe
+      coworker: Delegate work to coworker(coworker: str, task: str, context: str)
+      - Delegate a specific task to one of the following coworkers: [''test role'']\nThe
       input to this tool should be the coworker, the task you want them to do, and
       ALL necessary context to execute the task, they know nothing about the task,
       so share absolute everything you know, don''t reference things but instead explain
-      them.\nAsk question to co-worker: Ask question to co-worker(coworker: str, question:
-      str, context: str) - Ask a specific question to one of the following co-workers:
+      them.\nAsk question to coworker: Ask question to coworker(coworker: str, question:
+      str, context: str) - Ask a specific question to one of the following coworkers:
       [''test role'']\nThe input to this tool should be the coworker, the question
       you have for them, and ALL necessary context to ask the question properly, they
       know nothing about the question, so share absolute everything you know, don''t
       reference things but instead explain them.\n\nUse the following format:\n\nThought:
       you should always think about what to do\nAction: the action to take, only one
-      name of [Delegate work to co-worker, Ask question to co-worker], just the name,
+      name of [Delegate work to coworker, Ask question to coworker], just the name,
       exactly as it''s written.\nAction Input: the input to the action, just a simple
       a python dictionary using \" to wrap keys and values.\nObservation: the result
       of the action\n\nOnce all necessary information is gathered:\n\nThought: I now
@@ -2511,8 +2511,8 @@ interactions:
       you, use the tools available and give your best Final Answer, your job depends
       on it!\n\nThought: \nI need to understand the context better before I can provide
       a final answer. It seems I''m missing crucial information to proceed. I will
-      ask a question to my co-worker, ''test role'', to gather more details about
-      the situation.\n\nAction: \nAsk question to co-worker\n\nAction Input: \n{\"coworker\":
+      ask a question to my coworker, ''test role'', to gather more details about
+      the situation.\n\nAction: \nAsk question to coworker\n\nAction Input: \n{\"coworker\":
       \"test role\", \"question\": \"Could you please provide more details about the
       situation?\", \"context\": \"Hi there!\"}\n\nObservation: Could you please provide
       more details about the situation?\n"}], "model": "gpt-4", "n": 1, "stop": ["\nObservation"],
