@@ -170,20 +170,6 @@ class Agent(BaseAgent):
             self._rpm_controller.stop_rpm_counter()
         return result
 
-<<<<<<< HEAD
-    def format_log_to_str(
-        self,
-        intermediate_steps: List[Tuple[AgentAction, str]],
-        observation_prefix: str = "Observation: ",
-        llm_prefix: str = "",
-    ) -> str:
-        """Construct the scratchpad that lets the agent continue its thought process."""
-        thoughts = ""
-        for action, observation in intermediate_steps:
-            thoughts += action.log
-            thoughts += f"\n{observation_prefix}{observation}\n{llm_prefix}"
-        return thoughts
-=======
     def set_cache_handler(self, cache_handler: CacheHandler) -> None:
         """Set the cache handler for the agent.
         Args:
@@ -206,7 +192,6 @@ class Agent(BaseAgent):
         if not self._rpm_controller:
             self._rpm_controller = rpm_controller
             self.create_agent_executor()
->>>>>>> 0baf1a0 (adding a check for the tools_handler before setting the cache handler)
 
     def create_agent_executor(self, tools=None) -> None:
         """Create an agent executor for the agent.
