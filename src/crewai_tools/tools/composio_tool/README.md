@@ -15,16 +15,55 @@ pip install 'crewai[tools]'
 
 ## Example
 
-The following example demonstrates how to initialize the tool and execute a mathematical operation:
+The following example demonstrates how to initialize the tool and execute a github action:
+
+1. Initialize toolset
 
 ```python
+from composio import App
+from crewai_tools import ComposioTool
+from crewai import Agent, Task
 
-from composio import Action
 
-from crewai_tools.tools.composio_tool.composio_tool import ComposioTool
+tools = [ComposioTool.from_tool(tool=Action.GITHUB_ACTIVITY_STAR_REPO_FOR_AUTHENTICATED_USER)]
+```
 
-tool = ComposioTool.from_tool(
-    tool=Action.MATHEMATICAL_CALCULATOR,
+If you don't know what action you want to use, use `from_app` and `tags` filter to get relevant actions
+
+```python
+tools = ComposioTool.from_app(app=App.GITHUB, tags=["important"])
+```
+
+or use `from_use_case` to search relevant actions
+
+```python
+tools = ComposioTool.from_use_case(App.GITHUB, use_case="Star a github repository")
+```
+
+2. Define agent
+
+```python
+crewai_agent = Agent(
+    role="Github Agent",
+    goal="""You take action on Github using Github APIs""",
+    backstory=(
+        "You are AI agent that is responsible for taking actions on Github "
+        "on users behalf. You need to take action on Github using Github APIs"
+    ),
+    verbose=True,
+    tools=tools,
 )
+```
+
+3. Execute task
+
+```python
+task = Task(
+    description="Star a repo ComposioHQ/composio on GitHub",
+    agent=crewai_agent,
+    expected_output="if the star happened",
+)
+
+task.execute()
 ```
 
