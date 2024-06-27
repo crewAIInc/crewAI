@@ -299,7 +299,6 @@ class Crew(BaseModel):
                 and not agent.function_calling_llm
             ):
                 agent.function_calling_llm = self.function_calling_llm
-            # TODO: Create an AgentWithCallbacks protocol for future refactoring
             if hasattr(agent, "step_callback") and not agent.step_callback:
                 agent.step_callback = self.step_callback
 
@@ -446,7 +445,7 @@ class Crew(BaseModel):
             )
 
             self._logger.log("debug", f"[{manager.role}] Task output: {task_output}")
-            if hasattr(task.agent, "_token_process"):
+            if hasattr(task, "agent._token_process"):
                 token_summ = task.agent._token_process.get_summary()
                 token_usage.append(token_summ)
             if self.output_log_file:
@@ -513,7 +512,6 @@ class Crew(BaseModel):
         # type: ignore # "interpolate_inputs" of "Agent" does not return a value (it only ever returns None)
         for agent in self.agents:
             agent.interpolate_inputs(inputs)
-        # [agent.interpolate_inputs(inputs) for agent in self.agents]
 
     def _format_output(
         self, output: str, token_usage: Optional[Dict[str, Any]] = None

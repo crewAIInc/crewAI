@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from typing import List, Optional
+from typing import List, Optional, Union
 from pydantic import BaseModel, Field
 from crewai.agents.agent_builder.base_agent import BaseAgent
 from crewai.task import Task
@@ -18,8 +18,10 @@ class BaseAgentTools(BaseModel, ABC):
 
     def _get_coworker(self, coworker: Optional[str], **kwargs) -> Optional[str]:
         coworker = coworker or kwargs.get("co_worker") or kwargs.get("coworker")
-        if coworker and coworker.startswith("[") and coworker.endswith("]"):
-            coworker = coworker[1:-1].split(",")[0]
+        if coworker:
+            is_list = coworker.startswith("[") and coworker.endswith("]")
+            if is_list:
+                coworker = coworker[1:-1].split(",")[0]
         return coworker
 
     def delegate_work(
@@ -36,19 +38,32 @@ class BaseAgentTools(BaseModel, ABC):
         coworker = self._get_coworker(coworker, **kwargs)
         return self._execute(coworker, question, context)
 
-    def _execute(self, agent_role: Optional[str], task: str, context: str):
+    def _execute(self, agent: Union[str, None], task: str, context: Union[str, None]):
         """Execute the command."""
-        if agent_role:
-            agent = next(
-                (
-                    agent
-                    for agent in self.agents
-                    if agent.role.casefold().strip() == agent_role.casefold().strip()
-                ),
-                None,
+        try:
+            if agent is None:
+                agent = ""
+
+            # It is important to remove the quotes from the agent name.
+            # The reason we have to do this is because less-powerful LLM's
+            # have difficulty producing valid JSON.
+            # As a result, we end up with invalid JSON that is truncated like this:
+            # {"task": "....", "coworker": "....
+            # when it should look like this:
+            # {"task": "....", "coworker": "...."}
+            agent_name = agent.casefold().replace('"', "").replace("\n", "")
+
+            agent = [
+                available_agent
+                for available_agent in self.agents
+                if available_agent.role.casefold().replace("\n", "") == agent_name
+            ]
+        except Exception as _:
+            return self.i18n.errors("agent_tool_unexsiting_coworker").format(
+                coworkers="\n".join(
+                    [f"- {agent.role.casefold()}" for agent in self.agents]
+                )
             )
-        else:
-            agent = None
 
         if not agent:
             return self.i18n.errors("agent_tool_unexsiting_coworker").format(
@@ -57,9 +72,10 @@ class BaseAgentTools(BaseModel, ABC):
                 )
             )
 
-        task_obj = Task(
+        agent = agent[0]
+        task = Task(
             description=task,
             agent=agent,
             expected_output="Your best answer to your coworker asking you this, accounting for the context shared.",
         )
-        return agent.execute_task(task_obj, context)
+        return agent.execute_task(task, context)

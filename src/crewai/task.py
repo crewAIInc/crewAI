@@ -203,8 +203,8 @@ class Task(BaseModel):
         # type: the responses are usually str but need to figuire out a more elegant solution here
         self.output = TaskOutput(
             description=self.description,
-            exported_output=str(exported_output),
-            raw_output=str(result),
+            exported_output=exported_output,
+            raw_output=result,
             agent=agent.role,
         )
 
