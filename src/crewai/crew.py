@@ -282,8 +282,8 @@ class Crew(BaseModel):
     ) -> Union[str, Dict[str, Any]]:
         """Starts the crew to work on its assigned tasks."""
         self._execution_span = self._telemetry.crew_execution_span(self)
-        # type: ignore # Argument 1 to "_interpolate_inputs" of "Crew" has incompatible type "dict[str, Any] | None"; expected "dict[str, Any]"
-        self._interpolate_inputs(inputs)
+
+        self._interpolate_inputs(inputs)  # type: ignore # Argument 1 to "_interpolate_inputs" of "Crew" has incompatible type "dict[str, Any] | None"; expected "dict[str, Any]"
         self._set_tasks_callbacks()
 
         i18n = I18N(prompt_file=self.prompt_file)
@@ -309,10 +309,8 @@ class Crew(BaseModel):
         if self.process == Process.sequential:
             result = self._run_sequential_process()
         elif self.process == Process.hierarchical:
-            # type: ignore # Unpacking a string is disallowed
-            result, manager_metrics = self._run_hierarchical_process()
-            # type: ignore # Cannot determine type of "manager_metrics"
-            metrics.append(manager_metrics)
+            result, manager_metrics = self._run_hierarchical_process()  # type: ignore # Unpacking a string is disallowed
+            metrics.append(manager_metrics)  # type: ignore # Cannot determine type of "manager_metrics"
         else:
             raise NotImplementedError(
                 f"The process '{self.process}' is not implemented yet."
@@ -322,7 +320,8 @@ class Crew(BaseModel):
         ]
 
         self.usage_metrics = {
-            key: sum([m[key] for m in metrics if m is not None]) for key in metrics[0]
+            key: sum([m[key] for m in metrics if m is not None])  # type: ignore # List comprehension has incompatible type List[Any | str]; expected List[bool]
+            for key in metrics[0]
         }
 
         return result
@@ -406,8 +405,9 @@ class Crew(BaseModel):
         token_usage_formatted = self.aggregate_token_usage(token_usage)
         self._finish_execution(task_output)
 
-        # type: ignore # Incompatible return value type (got "tuple[str, Any]", expected "str")
-        return self._format_output(task_output, token_usage_formatted)
+        token_usage = task.agent._token_process.get_summary()  # type: ignore # Item "None" of "Agent | None" has no attribute "_token_process"
+
+        return self._format_output(task_output, token_usage)  # type: ignore # Incompatible return value type (got "tuple[str, Any]", expected "str")
 
     def _run_hierarchical_process(self) -> Union[str, Dict[str, Any]]:
         """Creates and assigns a manager agent to make sure the crew completes the tasks."""
@@ -444,10 +444,8 @@ class Crew(BaseModel):
                 agent=manager, context=task_output, tools=manager.tools
             )
 
-            self._logger.log("debug", f"[{manager.role}] Task output: {task_output}")
-            if hasattr(task, "agent._token_process"):
-                token_summ = task.agent._token_process.get_summary()
-                token_usage.append(token_summ)
+            self._logger.log("debug", f"[{manager.role}] Task ouptput: {task_output}")
+
             if self.output_log_file:
                 self._file_handler.log(
                     agent=manager.role, task=task_output, status="completed"
@@ -455,13 +453,9 @@ class Crew(BaseModel):
 
         self._finish_execution(task_output)
 
-        # type: ignore # Incompatible return value type (got "tuple[str, Any]", expected "str")
         manager_token_usage = manager._token_process.get_summary()
-        token_usage.append(manager_token_usage)
-        token_usage_formatted = self.aggregate_token_usage(token_usage)
-
-        return self._format_output(
-            task_output, token_usage_formatted
+        return self._format_output(  # type: ignore # Incompatible return value type (got "tuple[str, Any]", expected "str")
+            task_output, manager_token_usage
         ), manager_token_usage
 
     def copy(self):
@@ -509,9 +503,8 @@ class Crew(BaseModel):
             )
             for task in self.tasks
         ]
-        # type: ignore # "interpolate_inputs" of "Agent" does not return a value (it only ever returns None)
-        for agent in self.agents:
-            agent.interpolate_inputs(inputs)
+
+        [agent.interpolate_inputs(inputs) for agent in self.agents]  # type: ignore # "interpolate_inputs" of "Agent" does not return a value (it only ever returns None)
 
     def _format_output(
         self, output: str, token_usage: Optional[Dict[str, Any]] = None

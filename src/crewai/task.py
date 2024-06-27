@@ -1,8 +1,8 @@
-from copy import deepcopy
 import os
 import re
 import threading
 import uuid
+from copy import deepcopy
 from typing import Any, Dict, List, Optional, Type
 
 from langchain_openai import ChatOpenAI
@@ -164,16 +164,13 @@ class Task(BaseModel):
             )
 
         if self.context:
-            # type: ignore # Incompatible types in assignment (expression has type "list[Never]", variable has type "str | None")
-            context = []
+            context = []  # type: ignore # Incompatible types in assignment (expression has type "list[Never]", variable has type "str | None")
             for task in self.context:
                 if task.async_execution:
                     task.thread.join()  # type: ignore # Item "None" of "Thread | None" has no attribute "join"
                 if task and task.output:
-                    # type: ignore # Item "str" of "str | None" has no attribute "append"
-                    context.append(task.output.raw_output)
-            # type: ignore # Argument 1 to "join" of "str" has incompatible type "str | None"; expected "Iterable[str]"
-            context = "\n".join(context)
+                    context.append(task.output.raw_output)  # type: ignore # Item "str" of "str | None" has no attribute "append"
+            context = "\n".join(context)  # type: ignore # Argument 1 to "join" of "str" has incompatible type "str | None"; expected "Iterable[str]"
 
         self.prompt_context = context
         tools = tools or self.tools
@@ -281,31 +278,26 @@ class Task(BaseModel):
 
             # try to convert task_output directly to pydantic/json
             try:
-                # type: ignore # Item "None" of "type[BaseModel] | None" has no attribute "model_validate_json"
-                exported_result = model.model_validate_json(result)
+                exported_result = model.model_validate_json(result)  # type: ignore # Item "None" of "type[BaseModel] | None" has no attribute "model_validate_json"
                 if self.output_json:
-                    # type: ignore # "str" has no attribute "model_dump"
-                    return exported_result.model_dump()
+                    return exported_result.model_dump()  # type: ignore # "str" has no attribute "model_dump"
                 return exported_result
             except Exception:
                 # sometimes the response contains valid JSON in the middle of text
                 match = re.search(r"({.*})", result, re.DOTALL)
                 if match:
                     try:
-                        # type: ignore # Item "None" of "type[BaseModel] | None" has no attribute "model_validate_json"
-                        exported_result = model.model_validate_json(match.group(0))
+                        exported_result = model.model_validate_json(match.group(0))  # type: ignore # Item "None" of "type[BaseModel] | None" has no attribute "model_validate_json"
                         if self.output_json:
-                            # type: ignore # "str" has no attribute "model_dump"
-                            return exported_result.model_dump()
+                            return exported_result.model_dump()  # type: ignore # "str" has no attribute "model_dump"
                         return exported_result
                     except Exception:
                         pass
 
-            # type: ignore # Item "None" of "Agent | None" has no attribute "function_calling_llm"
-            llm = getattr(self.agent, "function_calling_llm", None) or self.agent.llm
+            llm = self.agent.function_calling_llm or self.agent.llm  # type: ignore # Item "None" of "Agent | None" has no attribute "function_calling_llm"
+
             if not self._is_gpt(llm):
-                # type: ignore # Argument "model" to "PydanticSchemaParser" has incompatible type "type[BaseModel] | None"; expected "type[BaseModel]"
-                model_schema = PydanticSchemaParser(model=model).get_schema()
+                model_schema = PydanticSchemaParser(model=model).get_schema()  # type: ignore # Argument "model" to "PydanticSchemaParser" has incompatible type "type[BaseModel] | None"; expected "type[BaseModel]"
                 instructions = f"{instructions}\n\nThe json should have the following structure, with the following keys:\n{model_schema}"
 
             converter = self.agent.get_output_converter(
@@ -326,8 +318,7 @@ class Task(BaseModel):
 
         if self.output_file:
             content = (
-                # type: ignore # "str" has no attribute "json"
-                exported_result if not self.output_pydantic else exported_result.json()
+                exported_result if not self.output_pydantic else exported_result.json()  # type: ignore # "str" has no attribute "json"
             )
             self._save_file(content)
 
@@ -337,14 +328,12 @@ class Task(BaseModel):
         return isinstance(llm, ChatOpenAI) and llm.openai_api_base is None
 
     def _save_file(self, result: Any) -> None:
-        # type: ignore # Value of type variable "AnyOrLiteralStr" of "dirname" cannot be "str | None"
-        directory = os.path.dirname(self.output_file)
+        directory = os.path.dirname(self.output_file)  # type: ignore # Value of type variable "AnyOrLiteralStr" of "dirname" cannot be "str | None"
 
         if directory and not os.path.exists(directory):
             os.makedirs(directory)
 
-        # type: ignore # Argument 1 to "open" has incompatible type "str | None"; expected "int | str | bytes | PathLike[str] | PathLike[bytes]"
-        with open(self.output_file, "w", encoding="utf-8") as file:
+        with open(self.output_file, "w", encoding="utf-8") as file:  # type: ignore # Argument 1 to "open" has incompatible type "str | None"; expected "int | str | bytes | PathLike[str] | PathLike[bytes]"
             file.write(result)
         return None
 

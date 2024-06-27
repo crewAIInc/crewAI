@@ -124,8 +124,7 @@ class Agent(BaseAgent):
             Output of the agent
         """
         if self.tools_handler:
-            # type: ignore # Incompatible types in assignment (expression has type "dict[Never, Never]", variable has type "ToolCalling")
-            self.tools_handler.last_used_tool = {}
+            self.tools_handler.last_used_tool = {}  # type: ignore # Incompatible types in assignment (expression has type "dict[Never, Never]", variable has type "ToolCalling")
 
         task_prompt = task.prompt()
 
@@ -145,8 +144,9 @@ class Agent(BaseAgent):
                 task_prompt += self.i18n.slice("memory").format(memory=memory)
 
         tools = tools or self.tools
-        # type: ignore # Argument 1 to "_parse_tools" of "Agent" has incompatible type "list[Any] | None"; expected "list[Any]"
-        parsed_tools = self._parse_tools(tools or [])
+
+        parsed_tools = self._parse_tools(tools)  # type: ignore # Argument 1 to "_parse_tools" of "Agent" has incompatible type "list[Any] | None"; expected "list[Any]"
+
         self.create_agent_executor(tools=tools)
         self.agent_executor.tools = parsed_tools
         self.agent_executor.task = task
@@ -268,7 +268,46 @@ class Agent(BaseAgent):
     def get_output_converter(self, llm, text, model, instructions):
         return Converter(llm=llm, text=text, model=model, instructions=instructions)
 
-    def _parse_tools(self, tools: List[Any]) -> List[LangChainTool]:
+    def increment_formatting_errors(self) -> None:
+        """Count the formatting errors of the agent."""
+        self.formatting_errors += 1
+
+    def format_log_to_str(
+        self,
+        intermediate_steps: List[Tuple[AgentAction, str]],
+        observation_prefix: str = "Observation: ",
+        llm_prefix: str = "",
+    ) -> str:
+        """Construct the scratchpad that lets the agent continue its thought process."""
+        thoughts = ""
+        for action, observation in intermediate_steps:
+            thoughts += action.log
+            thoughts += f"\n{observation_prefix}{observation}\n{llm_prefix}"
+        return thoughts
+
+    def copy(self):
+        """Create a deep copy of the Agent."""
+        exclude = {
+            "id",
+            "_logger",
+            "_rpm_controller",
+            "_request_within_rpm_limit",
+            "_token_process",
+            "agent_executor",
+            "tools",
+            "tools_handler",
+            "cache_handler",
+        }
+
+        copied_data = self.model_dump(exclude=exclude)
+        copied_data = {k: v for k, v in copied_data.items() if v is not None}
+
+        copied_agent = Agent(**copied_data)
+        copied_agent.tools = deepcopy(self.tools)
+
+        return copied_agent
+
+    def _parse_tools(self, tools: List[Any]) -> List[LangChainTool]:  # type: ignore # Function "langchain_core.tools.tool" is not valid as a type
         """Parse tools to be used for the task."""
         tools_list = []
         try:
