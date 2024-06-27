@@ -5,7 +5,6 @@ import threading
 import uuid
 from typing import Any, Dict, List, Optional, Type
 
-from langchain_community.chat_models import ChatOllama
 from langchain_core.output_parsers import StrOutputParser
 from langchain_core.prompts import PromptTemplate
 
@@ -205,14 +204,13 @@ class Task(BaseModel):
                 agent=agent,
                 context=context,
                 tools=tools,
-                rci = self.rci, # adding rci in function call
-                rci_depth=self.rci_depth
+                rci=self.rci,  # adding rci in function call
+                rci_depth=self.rci_depth,
             )
             return result
 
     # Create new methods that will verify the output of the agent using RCI - Recursive Criticism and Iteration
     def critique(self, agent, task, output, llm):
-
         critic_prompt_template = """
         {agent_backstory}. + You are a great critic who has keen eyes for errors. 
         A task is assigned to a LLM model which provides an output based on the task description. 
@@ -227,24 +225,24 @@ class Task(BaseModel):
 
         critic_prompt = PromptTemplate(
             input_variables=["task_description", "result"],
-            template=critic_prompt_template
+            template=critic_prompt_template,
         )
 
         critic_chain = critic_prompt | llm | StrOutputParser()
-        
-        critic_response = critic_chain.invoke({
-            "agent_backstory": agent.backstory,
-            "task_description": task.description,
-            "output": output
-        })
+
+        critic_response = critic_chain.invoke(
+            {
+                "agent_backstory": agent.backstory,
+                "task_description": task.description,
+                "output": output,
+            }
+        )
 
         print("Critic Response:\n", critic_response)
 
         return critic_response
 
-    
     def validate(self, task, critique, output, llm):
-
         validate_prompt_template = """
         You are a context analyzer and your job is to identify if the critique to a task provided and its corresponding output, states "significant changes are required in the output" or synonymous phrases of that significance order.
         If there are significant changes stated in the critique, without any preamble or additional explanation, just print "True" else just print "False". 
@@ -260,22 +258,23 @@ class Task(BaseModel):
 
         validate_prompt = PromptTemplate(
             input_variables=["task_description", "output", "critique"],
-            template=validate_prompt_template
+            template=validate_prompt_template,
         )
 
         validate_chain = validate_prompt | llm | StrOutputParser()
 
-        validate_response = validate_chain.invoke({
-            "task_description": task.description,
-            "output": output,
-            "critique": critique
-        })
+        validate_response = validate_chain.invoke(
+            {
+                "task_description": task.description,
+                "output": output,
+                "critique": critique,
+            }
+        )
 
         print("Validate Response:\n", validate_response)
         return validate_response
-    
+
     def improve(self, task, output, critique, llm):
-    
         improve_prompt_template = """
         You are a helpful assistant who can skillfully analyze the critique provided to a task based on its output. 
         Your job is completely understand the task, its corresponding output and the critique provided and rewrite the output based on the critique. 
@@ -290,16 +289,18 @@ class Task(BaseModel):
 
         improve_prompt = PromptTemplate(
             input_variables=["task_description", "output", "critique"],
-            template=improve_prompt_template
+            template=improve_prompt_template,
         )
 
         improve_chain = improve_prompt | llm | StrOutputParser()
-        
-        improve_response = improve_chain.invoke({
-            "task_description": task.description,
-            "output": output,
-            "critique": critique
-        })
+
+        improve_response = improve_chain.invoke(
+            {
+                "task_description": task.description,
+                "output": output,
+                "critique": critique,
+            }
+        )
 
         print("Improvised Response:\n", improve_response)
 
@@ -316,13 +317,19 @@ class Task(BaseModel):
         llm = self.agent.function_calling_llm or self.agent.llm
         depth = 0
         while rci and (depth < rci_depth):
-            critic_response = self.critique(llm = llm, agent=agent, task=task, output=result)
-            validate_response = self.validate(llm=llm, task=task, output=result, critique=critic_response)
-            if validate_response == "True": 
-                result = self.improve(llm=llm, task=task, output=result,critique=critic_response)
+            critic_response = self.critique(
+                llm=llm, agent=agent, task=task, output=result
+            )
+            validate_response = self.validate(
+                llm=llm, task=task, output=result, critique=critic_response
+            )
+            if validate_response == "True":
+                result = self.improve(
+                    llm=llm, task=task, output=result, critique=critic_response
+                )
             else:
                 rci = False
-            
+
             depth += 1
 
         exported_output = self._export_output(result)
