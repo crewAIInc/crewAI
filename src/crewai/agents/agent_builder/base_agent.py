@@ -113,13 +113,11 @@ class BaseAgent(ABC, BaseModel):
     tools_handler: InstanceOf[ToolsHandler] = Field(
         default=None, description="An instance of the ToolsHandler class."
     )
-    token_process: InstanceOf[TokenProcess] = Field(
-        default=TokenProcess(), description="Token process handler for the agent."
-    )
 
     _original_role: str | None = None
     _original_goal: str | None = None
     _original_backstory: str | None = None
+    _token_process: TokenProcess = TokenProcess()
 
     def __init__(__pydantic_self__, **data):
         config = data.pop("config", {})
@@ -156,6 +154,8 @@ class BaseAgent(ABC, BaseModel):
             self._rpm_controller = RPMController(
                 max_rpm=self.max_rpm, logger=self._logger
             )
+        if not self._token_process:
+            self._token_process = TokenProcess()
         return self
 
     @abstractmethod

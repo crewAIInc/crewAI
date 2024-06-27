@@ -96,25 +96,24 @@ agent = Agent(
     )
 ```
 
-## Bring your own agent
-!!! note "Custom Agent Usage with BaseAgent"
-    Use other agents like llamaIndex. We created a BaseAgent, which is a wrapper around the core Agent class to run tasks, delegate tasks and ask questions to other agents in your crew and still fully customizable to fit all your needs.
+## Bring an external agent
+!!! note "Bring your own custom agent using the BaseAgent class"
+    Bring your own agent extending the BaseAgent class. BaseAgent is a wrapper around the core Agent class to run tasks, delegate tasks and ask questions to other agents within your own crew and still fully customizable to fit all your needs.
 
-    BaseAgent has the base requirements for compatiblity with CrewAI. Integrations with custo agents can be orchestrated with each other using agents that suit specific tasks with tooling.
+    The BaseAgent class has the requirements for working within CrewAI. Integrations with custom agents can be orchestrated with each other using agents that suit specific tasks with their specific tooling.
 
-    Overall, we aim to give flexibility for exsiting and custom agents to be used within our crewai agent ecosystem.
+    Overall, we aim to give flexibility for exsiting and custom agents to be used within the current orchestration of agents.
 
 
 ```py
 from crewai import Agent, Task, Crew
-from my_llama_agent import LlamaIndexReActAgent
+from custom_agent import CustomAgent #You need to build and extend your own agent logic then import it here.
 
 from langchain.agents import load_tools
 
 langchain_tools = load_tools(["google-serper"], llm=llm)
 
-# You need to extend your LlamaIndex ReAct Agent
-agent1 = LlamaIndexReActAgent(
+agent1 = CustomAgent(
     role="backstory agent",
     goal="who is {input}?",
     backstory="agent backstory",
@@ -127,7 +126,7 @@ task1 = Task(
     agent=agent1,
 )
 
-agent2 = LangchainAgent(
+agent2 = Agent(
     role="bio agent",
     goal="summarize the short bio for {input} and if needed do more research",
     backstory="agent backstory",

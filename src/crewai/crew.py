@@ -285,7 +285,9 @@ class Crew(BaseModel):
             raise NotImplementedError(
                 f"The process '{self.process}' is not implemented yet."
             )
-        metrics = metrics + [agent.token_process.get_summary() for agent in self.agents]
+        metrics = metrics + [
+            agent._token_process.get_summary() for agent in self.agents
+        ]
 
         self.usage_metrics = {
             key: sum([m[key] for m in metrics if m is not None]) for key in metrics[0]
@@ -366,7 +368,7 @@ class Crew(BaseModel):
 
             role = task.agent.role if task.agent is not None else "None"
             self._logger.log("debug", f"== [{role}] Task output: {task_output}\n\n")
-            token_summ = task.agent.token_process.get_summary()
+            token_summ = task.agent._token_process.get_summary()
 
             token_usage.append(token_summ)
 
@@ -415,7 +417,7 @@ class Crew(BaseModel):
             )
 
             self._logger.log("debug", f"[{manager.role}] Task output: {task_output}")
-            token_usage.append(task.agent.token_process.get_summary())
+            token_usage.append(task._token_process.get_summary())
             if self.output_log_file:
                 self._file_handler.log(
                     agent=manager.role, task=task_output, status="completed"
@@ -424,7 +426,7 @@ class Crew(BaseModel):
         self._finish_execution(task_output)
 
         # type: ignore # Incompatible return value type (got "tuple[str, Any]", expected "str")
-        manager_token_usage = manager.token_process.get_summary()
+        manager_token_usage = manager._token_process.get_summary()
         token_usage.append(manager_token_usage)
         token_usage_formatted = self.aggregate_token_usage(token_usage)
 

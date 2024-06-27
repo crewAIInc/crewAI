@@ -11,7 +11,6 @@ from langchain_openai import ChatOpenAI
 from pydantic import Field, InstanceOf, model_validator
 
 from crewai.agents import CacheHandler, CrewAgentExecutor, CrewAgentParser
-from crewai.agents.agent_builder.utilities.base_token_process import TokenProcess
 from crewai.memory.contextual.contextual_memory import ContextualMemory
 from crewai.tools.agent_tools import AgentTools
 from crewai.utilities import Prompts, Converter
@@ -75,7 +74,7 @@ class Agent(BaseAgent):
     response_template: Optional[str] = Field(
         default=None, description="Response format for the agent."
     )
-    token_process: TokenProcess = TokenProcess()
+    # token_process: TokenProcess = TokenProcess()
 
     def __init__(__pydantic_self__, **data):
         config = data.pop("config", {})
@@ -83,9 +82,9 @@ class Agent(BaseAgent):
 
     @model_validator(mode="after")
     def set_agent_executor(self) -> "Agent":
-        """set agent executor is set."""
+        """Ensure agent executor and token process is set."""
         if hasattr(self.llm, "model_name"):
-            token_handler = TokenCalcHandler(self.llm.model_name, self.token_process)
+            token_handler = TokenCalcHandler(self.llm.model_name, self._token_process)
 
             # Ensure self.llm.callbacks is a list
             if not isinstance(self.llm.callbacks, list):
