@@ -13,6 +13,8 @@ pip install composio-core
 pip install 'crewai[tools]'
 ```
 
+after the installation is complete, either run `composio login` or export your composio API key as `COMPOSIO_API_KEY`.
+
 ## Example
 
 The following example demonstrates how to initialize the tool and execute a github action:
@@ -45,7 +47,7 @@ tools = ComposioTool.from_use_case(App.GITHUB, use_case="Star a github repositor
 ```python
 crewai_agent = Agent(
     role="Github Agent",
-    goal="""You take action on Github using Github APIs""",
+    goal="You take action on Github using Github APIs",
     backstory=(
         "You are AI agent that is responsible for taking actions on Github "
         "on users behalf. You need to take action on Github using Github APIs"
@@ -67,3 +69,4 @@ task = Task(
 task.execute()
 ```
 
+* More detailed list of tools can be found [here](https://app.composio.dev)
