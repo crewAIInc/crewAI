@@ -413,7 +413,7 @@ def test_increment_delegations_for_hierarchical_process():
         agents=[scorer],
         tasks=[task],
         process=Process.hierarchical,
-        manager_llm=ChatOpenAI(model="gpt-4-0125-preview"),
+        manager_llm=ChatOpenAI(model="gpt-4o"),
     )
 
     with patch.object(Task, "increment_delegations") as increment_delegations:
