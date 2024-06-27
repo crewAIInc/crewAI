@@ -1,8 +1,10 @@
+from __future__ import annotations
+
 import asyncio
 import json
 import os
 import platform
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 import pkg_resources
 from opentelemetry import trace
@@ -12,8 +14,9 @@ from opentelemetry.sdk.trace import TracerProvider
 from opentelemetry.sdk.trace.export import BatchSpanProcessor
 from opentelemetry.trace import Span, Status, StatusCode
 
-from crewai.crew import Crew
-from crewai.task import Task
+if TYPE_CHECKING:
+    from crewai.crew import Crew
+    from crewai.task import Task
 
 
 class Telemetry:
@@ -91,9 +94,6 @@ class Telemetry:
                 self._add_attribute(span, "python_version", platform.python_version())
                 self._add_attribute(span, "crew_id", str(crew.id))
                 self._add_attribute(span, "crew_process", crew.process)
-                self._add_attribute(
-                    span, "crew_language", crew.prompt_file if crew.i18n else "None"
-                )
                 self._add_attribute(span, "crew_memory", crew.memory)
                 self._add_attribute(span, "crew_number_of_tasks", len(crew.tasks))
                 self._add_attribute(span, "crew_number_of_agents", len(crew.agents))

@@ -126,7 +126,6 @@ class Task(BaseModel):
     def set_private_attrs(self) -> "Task":
         """Set private attributes."""
         self._telemetry = Telemetry()
-        self._telemetry.set_tracer()
         return self
 
     @model_validator(mode="after")
