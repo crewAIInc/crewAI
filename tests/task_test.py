@@ -419,7 +419,7 @@ def test_increment_delegations_for_hierarchical_process():
     with patch.object(Task, "increment_delegations") as increment_delegations:
         increment_delegations.return_value = None
         crew.kickoff()
-        increment_delegations.assert_called_once
+        increment_delegations.assert_called_once()
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
