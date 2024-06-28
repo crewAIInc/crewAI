@@ -223,8 +223,7 @@ class Task(BaseModel):
             tools=tools,
         )
         exported_output = self._export_output(result)
-
-        # type: the responses are usually str but need to figuire out a more elegant solution here
+        # type: the responses are usually str but need to figure out a more elegant solution here
         self.output = TaskOutput(
             description=self.description,
             exported_output=exported_output,
@@ -355,9 +354,7 @@ class Task(BaseModel):
         if self.output_file:
             content = (
                 # type: ignore # "str" has no attribute "json"
-                exported_result
-                if not self.output_pydantic
-                else exported_result.json()
+                exported_result if not self.output_pydantic else exported_result.json()
             )
             self._save_file(content)
 
