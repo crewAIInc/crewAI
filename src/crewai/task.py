@@ -223,7 +223,8 @@ class Task(BaseModel):
             tools=tools,
         )
         exported_output = self._export_output(result)
-        # type: the responses are usually str but need to figure out a more elegant solution here
+
+        # type: ignore # the responses are usually str but need to figure out a more elegant solution here
         self.output = TaskOutput(
             description=self.description,
             exported_output=exported_output,
