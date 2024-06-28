@@ -207,7 +207,8 @@ class BaseAgent(ABC, BaseModel):
         Args:
             cache_handler: An instance of the CacheHandler class.
         """
-        self.tools_handler = ToolsHandler()
+        if not self.tools_handler:
+            self.tools_handler = ToolsHandler()
         if self.cache:
             self.cache_handler = cache_handler
             self.tools_handler.cache = cache_handler
