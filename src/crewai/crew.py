@@ -315,6 +315,10 @@ class Crew(BaseModel):
                 and not agent.function_calling_llm
             ):
                 agent.function_calling_llm = self.function_calling_llm
+
+            if hasattr(agent, "allow_code_execution") and agent.allow_code_execution:
+                agent.tools += agent.get_code_execution_tools()
+
             if hasattr(agent, "step_callback") and not agent.step_callback:
                 agent.step_callback = self.step_callback
 
@@ -442,7 +446,7 @@ class Crew(BaseModel):
                 backstory=i18n.retrieve("hierarchical_manager_agent", "backstory"),
                 tools=AgentTools(agents=self.agents).tools(),
                 llm=self.manager_llm,
-                verbose=True,
+                verbose=self.verbose,
             )
             self.manager_agent = manager
         task_output = ""

@@ -255,6 +255,16 @@ class Agent(BaseAgent):
         tools = agent_tools.tools()
         return tools
 
+    def get_code_execution_tools(self):
+        try:
+            from crewai_tools import CodeInterpreterTool
+
+            return [CodeInterpreterTool()]
+        except ModuleNotFoundError:
+            self._logger.log(
+                "info", "Coding tools not available. Install crewai_tools. "
+            )
+
     def get_output_converter(self, llm, text, model, instructions):
         return Converter(llm=llm, text=text, model=model, instructions=instructions)
 
@@ -270,13 +280,8 @@ class Agent(BaseAgent):
                     tools_list.append(tool.to_langchain())
                 else:
                     tools_list.append(tool)
-
-            if self.allow_code_execution:
-                from crewai_tools.code_interpreter_tool import CodeInterpreterTool
-
-                tools_list.append(CodeInterpreterTool)
-
         except ModuleNotFoundError:
+            tools_list = []
             for tool in tools:
                 tools_list.append(tool)
         return tools_list

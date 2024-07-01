@@ -600,6 +600,30 @@ def test_task_with_no_arguments():
     assert result == "75"
 
 
+def test_code_execution_flag_adds_code_tool_upon_kickoff():
+    from crewai_tools import CodeInterpreterTool
+
+    programmer = Agent(
+        role="Programmer",
+        goal="Write code to solve problems.",
+        backstory="You're a programmer who loves to solve problems with code.",
+        allow_delegation=False,
+        allow_code_execution=True,
+    )
+
+    task = Task(
+        description="How much is 2 + 2?",
+        expected_output="The result of the sum as an integer.",
+        agent=programmer,
+    )
+
+    crew = Crew(agents=[programmer], tasks=[task])
+    crew.kickoff()
+    assert len(programmer.tools) == 1
+    assert programmer.tools[0].__class__ == CodeInterpreterTool
+
+
+@pytest.mark.vcr(filter_headers=["authorization"])
 def test_delegation_is_not_enabled_if_there_are_only_one_agent():
     from unittest.mock import patch
 
@@ -714,8 +738,8 @@ def test_agent_usage_metrics_are_captured_for_hierarchical_process():
     assert result == '"Howdy!"'
 
     assert crew.usage_metrics == {
-        "total_tokens": 1640,
-        "prompt_tokens": 1357,
+        "total_tokens": 1616,
+        "prompt_tokens": 1333,
         "completion_tokens": 283,
         "successful_requests": 3,
     }
