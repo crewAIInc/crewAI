@@ -668,6 +668,29 @@ def test_agent_usage_metrics_are_captured_for_sequential_process():
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
+def test_sequential_crew_creation_tasks_without_agents():
+    task = Task(
+        description="Come up with a list of 5 interesting ideas to explore for an article, then write one amazing paragraph highlight for each idea that showcases how good an article about this topic could be. Return the list of ideas with their paragraph and your notes.",
+        expected_output="5 bullet points with a paragraph for each idea.",
+        # agent=researcher, #this should throw an error
+    )
+
+    # Expected Output: The sequential crew should fail to create because the task is missing an agent
+    with pytest.raises(pydantic_core._pydantic_core.ValidationError) as exec_info:
+        Crew(
+            tasks=[task],
+            agents=[researcher],
+            process=Process.sequential,
+        )
+
+    assert exec_info.value.errors()[0]["type"] == "missing_agent_in_task"
+    assert (
+        "Agent is missing in the task with the following description"
+        in exec_info.value.errors()[0]["msg"]
+    )
+
+
+@pytest.mark.vcr(filter_headers=["authorization"])
 def test_agent_usage_metrics_are_captured_for_hierarchical_process():
     from langchain_openai import ChatOpenAI
 
@@ -698,6 +721,38 @@ def test_agent_usage_metrics_are_captured_for_hierarchical_process():
     }
 
 
+@pytest.mark.vcr(filter_headers=["authorization"])
+def test_hierarchical_crew_creation_tasks_with_agents():
+    """
+    Agents are not required for tasks in a hierarchical process but sometimes they are still added
+    This test makes sure that the manager still delegates the task to the agent even if the agent is passed in the task
+    """
+    from langchain_openai import ChatOpenAI
+
+    task = Task(
+        description="Write one amazing paragraph about AI.",
+        expected_output="A single paragraph with 4 sentences.",
+        agent=writer,
+    )
+
+    crew = Crew(
+        tasks=[task],
+        agents=[writer],
+        process=Process.hierarchical,
+        manager_llm=ChatOpenAI(model="gpt-4o"),
+    )
+
+    assert crew.process == Process.hierarchical
+    assert crew.manager_llm is not None
+    assert crew.tasks[0].agent == writer
+    result = crew.kickoff()
+
+    assert (
+        result
+        == "Artificial Intelligence (AI) is revolutionizing the way we live and work, driving advancements across numerous industries from healthcare to finance and beyond. By harnessing the power of complex algorithms and vast datasets, AI systems can perform tasks with unprecedented speed, accuracy, and efficiency, often surpassing human capabilities. From predictive analytics and personalized recommendations to autonomous vehicles and intelligent virtual assistants, AI's applications are both diverse and transformative. As we continue to innovate and integrate AI into our daily lives, its potential to shape a smarter, more efficient, and interconnected future is boundless."
+    )
+
+
 def test_crew_inputs_interpolate_both_agents_and_tasks():
     agent = Agent(
         role="{topic} Researcher",
@@ -708,9 +763,10 @@ def test_crew_inputs_interpolate_both_agents_and_tasks():
     task = Task(
         description="Give me an analysis around {topic}.",
         expected_output="{points} bullet points about {topic}.",
+        agent=agent,
     )
 
-    crew = Crew(agents=[agent], tasks=[task], inputs={"topic": "AI", "points": 5})
+    crew = Crew(agents=[agent], tasks=[task])
     inputs = {"topic": "AI", "points": 5}
     crew._interpolate_inputs(inputs=inputs)  # Manual call for now
 
