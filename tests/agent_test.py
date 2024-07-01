@@ -1,5 +1,6 @@
 """Test Agent creation and execution basic functionality."""
 
+from unittest import mock
 from unittest.mock import patch
 
 import pytest
@@ -732,7 +733,7 @@ def test_agent_llm_uses_token_calc_handler_with_llm_has_model_name():
 
     assert len(agent1.llm.callbacks) == 1
     assert agent1.llm.callbacks[0].__class__.__name__ == "TokenCalcHandler"
-    assert agent1.llm.callbacks[0].model == "gpt-4o"
+    assert agent1.llm.callbacks[0].model_name == "gpt-4o"
     assert (
         agent1.llm.callbacks[0].token_cost_process.__class__.__name__ == "TokenProcess"
     )
@@ -841,4 +842,55 @@ Thought:
 <|start_header_id|>assistant<|end_header_id|>
 
 """
+    )
+
+
+@patch("crewai.agent.CrewTrainingHandler")
+def test_agent_training_handler(crew_training_handler):
+    task_prompt = "What is 1 + 1?"
+    agent = Agent(
+        role="test role",
+        goal="test goal",
+        backstory="test backstory",
+        verbose=True,
+    )
+    crew_training_handler().load.return_value = {
+        f"{str(agent.id)}": {"0": {"human_feedback": "good"}}
+    }
+
+    result = agent._training_handler(task_prompt=task_prompt)
+
+    assert result == "What is 1 + 1?You MUST follow these feedbacks: \n good"
+
+    crew_training_handler.assert_has_calls(
+        [mock.call(), mock.call("training_data.pkl"), mock.call().load()]
+    )
+
+
+@patch("crewai.agent.CrewTrainingHandler")
+def test_agent_use_trained_data(crew_training_handler):
+    task_prompt = "What is 1 + 1?"
+    agent = Agent(
+        role="researcher",
+        goal="test goal",
+        backstory="test backstory",
+        verbose=True,
+    )
+    crew_training_handler().load.return_value = {
+        agent.role: {
+            "suggestions": [
+                "The result of the math operatio must be right.",
+                "Result must be better than 1.",
+            ]
+        }
+    }
+
+    result = agent._use_trained_data(task_prompt=task_prompt)
+
+    assert (
+        result == "What is 1 + 1?You MUST follow these feedbacks: \n "
+        "The result of the math operatio must be right.\n - Result must be better than 1."
+    )
+    crew_training_handler.assert_has_calls(
+        [mock.call(), mock.call("trained_agents_data.pkl"), mock.call().load()]
     )

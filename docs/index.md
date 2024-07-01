@@ -34,6 +34,11 @@ Cutting-edge framework for orchestrating role-playing, autonomous AI agents. By 
                 </a>
             </li>
             <li>
+                <a href="./core-concepts/Training-Crew">
+                    Training
+                </a>
+            </li>
+            <li>
                 <a href="./core-concepts/Memory">
                     Memory
                 </a>
@@ -79,13 +84,33 @@ Cutting-edge framework for orchestrating role-playing, autonomous AI agents. By 
                 </a>
             </li>
             <li>
+                <a href="./how-to/Coding-Agents">
+                    Coding Agents
+                </a>
+            </li>
+            <li>
                 <a href="./how-to/Human-Input-on-Execution">
                     Human Input on Execution
                 </a>
             </li>
             <li>
+                <a href="./how-to/Kickoff-async">
+                    Kickoff a Crew Asynchronously
+                </a>
+            </li>
+            <li>
+                <a href="./how-to/Kickoff-for-each">
+                    Kickoff a Crew for a List
+                </a>
+            </li>
+            <li>
                 <a href="./how-to/AgentOps-Observability">
                     Agent Monitoring with AgentOps
+                </a>
+            </li>
+            <li>
+                <a href="./how-to/Langtrace-Observability">
+                    Agent Monitoring with LangTrace
                 </a>
             </li>
         </ul>

@@ -126,6 +126,7 @@ nav:
     - Processes: 'core-concepts/Processes.md'
     - Crews: 'core-concepts/Crews.md'
     - Collaboration: 'core-concepts/Collaboration.md'
+    - Training: 'core-concepts/Training-Crew.md'
     - Memory: 'core-concepts/Memory.md'
     - Using LangChain Tools: 'core-concepts/Using-LangChain-Tools.md'
     - Using LlamaIndex Tools: 'core-concepts/Using-LlamaIndex-Tools.md'
@@ -138,7 +139,10 @@ nav:
     - Create your own Manager Agent: 'how-to/Your-Own-Manager-Agent.md'
     - Connecting to any LLM: 'how-to/LLM-Connections.md'
     - Customizing Agents: 'how-to/Customizing-Agents.md'
+    - Coding Agents: 'how-to/Coding-Agents.md'
     - Human Input on Execution: 'how-to/Human-Input-on-Execution.md'
+    - Kickoff a Crew Asynchronously: 'how-to/Kickoff-async.md'
+    - Kickoff a Crew for a List: 'how-to/Kickoff-for-each.md'
     - Agent Monitoring with AgentOps: 'how-to/AgentOps-Observability.md'
     - Agent Monitoring with LangTrace: 'how-to/Langtrace-Observability.md'
   - Tools Docs:

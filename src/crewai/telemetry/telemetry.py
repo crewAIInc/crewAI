@@ -1,8 +1,10 @@
+from __future__ import annotations
+
 import asyncio
 import json
 import os
 import platform
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 import pkg_resources
 from opentelemetry import trace
@@ -10,7 +12,11 @@ from opentelemetry.exporter.otlp.proto.http.trace_exporter import OTLPSpanExport
 from opentelemetry.sdk.resources import SERVICE_NAME, Resource
 from opentelemetry.sdk.trace import TracerProvider
 from opentelemetry.sdk.trace.export import BatchSpanProcessor
-from opentelemetry.trace import Status, StatusCode
+from opentelemetry.trace import Span, Status, StatusCode
+
+if TYPE_CHECKING:
+    from crewai.crew import Crew
+    from crewai.task import Task
 
 
 class Telemetry:
@@ -88,9 +94,6 @@ class Telemetry:
                 self._add_attribute(span, "python_version", platform.python_version())
                 self._add_attribute(span, "crew_id", str(crew.id))
                 self._add_attribute(span, "crew_process", crew.process)
-                self._add_attribute(
-                    span, "crew_language", crew.prompt_file if crew.i18n else "None"
-                )
                 self._add_attribute(span, "crew_memory", crew.memory)
                 self._add_attribute(span, "crew_number_of_tasks", len(crew.tasks))
                 self._add_attribute(span, "crew_number_of_agents", len(crew.agents))
@@ -102,6 +105,8 @@ class Telemetry:
                             {
                                 "id": str(agent.id),
                                 "role": agent.role,
+                                "goal": agent.goal,
+                                "backstory": agent.backstory,
                                 "verbose?": agent.verbose,
                                 "max_iter": agent.max_iter,
                                 "max_rpm": agent.max_rpm,
@@ -123,8 +128,16 @@ class Telemetry:
                         [
                             {
                                 "id": str(task.id),
+                                "description": task.description,
+                                "expected_output": task.expected_output,
                                 "async_execution?": task.async_execution,
+                                "human_input?": task.human_input,
                                 "agent_role": task.agent.role if task.agent else "None",
+                                "context": (
+                                    [task.description for task in task.context]
+                                    if task.context
+                                    else None
+                                ),
                                 "tools_names": [
                                     tool.name.casefold() for tool in task.tools
                                 ],
@@ -138,6 +151,38 @@ class Telemetry:
                 self._add_attribute(span, "platform_system", platform.system())
                 self._add_attribute(span, "platform_version", platform.version())
                 self._add_attribute(span, "cpus", os.cpu_count())
+                span.set_status(Status(StatusCode.OK))
+                span.end()
+            except Exception:
+                pass
+
+    def task_started(self, task: Task) -> Span | None:
+        """Records task started in a crew."""
+        if self.ready:
+            try:
+                tracer = trace.get_tracer("crewai.telemetry")
+                span = tracer.start_span("Task Execution")
+
+                self._add_attribute(span, "task_id", str(task.id))
+                self._add_attribute(span, "formatted_description", task.description)
+                self._add_attribute(
+                    span, "formatted_expected_output", task.expected_output
+                )
+
+                return span
+            except Exception:
+                pass
+
+        return None
+
+    def task_ended(self, span: Span, task: Task):
+        """Records task execution in a crew."""
+        if self.ready:
+            try:
+                self._add_attribute(
+                    span, "output", task.output.raw_output if task.output else ""
+                )
+
                 span.set_status(Status(StatusCode.OK))
                 span.end()
             except Exception:
@@ -207,7 +252,7 @@ class Telemetry:
             except Exception:
                 pass
 
-    def crew_execution_span(self, crew):
+    def crew_execution_span(self, crew: Crew, inputs: dict[str, Any] | None):
         """Records the complete execution of a crew.
         This is only collected if the user has opted-in to share the crew.
         """
@@ -221,6 +266,7 @@ class Telemetry:
                     pkg_resources.get_distribution("crewai").version,
                 )
                 self._add_attribute(span, "crew_id", str(crew.id))
+                self._add_attribute(span, "inputs", json.dumps(inputs))
                 self._add_attribute(
                     span,
                     "crew_agents",
@@ -238,7 +284,7 @@ class Telemetry:
                                 "llm": json.dumps(self._safe_llm_attributes(agent.llm)),
                                 "delegation_enabled?": agent.allow_delegation,
                                 "tools_names": [
-                                    tool.name.casefold() for tool in agent.tools
+                                    tool.name.casefold() for tool in agent.tools or []
                                 ],
                             }
                             for agent in crew.agents
@@ -253,16 +299,17 @@ class Telemetry:
                             {
                                 "id": str(task.id),
                                 "description": task.description,
+                                "expected_output": task.expected_output,
                                 "async_execution?": task.async_execution,
-                                "output": task.expected_output,
+                                "human_input?": task.human_input,
                                 "agent_role": task.agent.role if task.agent else "None",
                                 "context": (
                                     [task.description for task in task.context]
                                     if task.context
-                                    else "None"
+                                    else None
                                 ),
                                 "tools_names": [
-                                    tool.name.casefold() for tool in task.tools
+                                    tool.name.casefold() for tool in task.tools or []
                                 ],
                             }
                             for task in crew.tasks

@@ -28,7 +28,7 @@ A crew in crewAI represents a collaborative group of agents working together to 
 | **Task Callback** *(optional)* | A function that is called after the completion of each task. Useful for monitoring or additional operations post-task execution. |
 | **Share Crew** *(optional)* | Whether you want to share the complete crew information and execution with the crewAI team to make the library better, and allow us to train models. |
 | **Output Log File** *(optional)* | Whether you want to have a file with the complete crew output and execution. You can set it using True and it will default to the folder you are currently in and it will be called logs.txt or passing a string with the full path and name of the file. |
-| **Manager Agent** *(optional)* | `manager` sets a ustom agent that will be used as a manager. |
+| **Manager Agent** *(optional)* | `manager` sets a custom agent that will be used as a manager. |
 | **Manager Callbacks** *(optional)* | `manager_callbacks` takes a list of callback handlers to be executed by the manager agent when a hierarchical process is used. |
 | **Prompt File** *(optional)* | Path to the prompt JSON file to be used for the crew. |
 
@@ -123,7 +123,7 @@ result = my_crew.kickoff()
 print(result)
 ```
 
-### Kicking Off a Crew
+### Different wayt to Kicking Off a Crew
 
 Once your crew is assembled, initiate the workflow with the appropriate kickoff method. CrewAI provides several methods for better control over the kickoff process: `kickoff()`, `kickoff_for_each()`, `kickoff_async()`, and `kickoff_for_each_async()`.
 
@@ -138,16 +138,19 @@ result = my_crew.kickoff()
 print(result)
 
 # Example of using kickoff_for_each
-results = my_crew.kickoff_for_each()
+inputs_array = [{'topic': 'AI in healthcare'}, {'topic': 'AI in finance'}]
+results = my_crew.kickoff_for_each(inputs=inputs_array)
 for result in results:
     print(result)
 
 # Example of using kickoff_async
-async_result = my_crew.kickoff_async()
+inputs = {'topic': 'AI in healthcare'}
+async_result = my_crew.kickoff_async(inputs=inputs)
 print(async_result)
 
 # Example of using kickoff_for_each_async
-async_results = my_crew.kickoff_for_each_async()
+inputs_array = [{'topic': 'AI in healthcare'}, {'topic': 'AI in finance'}]
+async_results = my_crew.kickoff_for_each_async(inputs=inputs_array)
 for async_result in async_results:
     print(async_result)
 ```

@@ -1,44 +1,89 @@
 ---
 title: CrewAI Agent Monitoring with Langtrace
-description: How to monitor cost, latency, and performance of CrewAI Agents using Langtrace.
+description: How to monitor cost, latency, and performance of CrewAI Agents using Langtrace, an external observability tool.
 ---
 
 # Langtrace Overview
-Langtrace is an open-source tool that helps you set up observability and evaluations for LLMs, LLM frameworks, and VectorDB. With Langtrace, you can get deep visibility into the cost, latency, and performance of your CrewAI Agents. Additionally, you can log the hyperparameters and monitor for any performance regressions and set up a process to continuously improve your Agents.
+
+Langtrace is an open-source, external tool that helps you set up observability and evaluations for Large Language Models (LLMs), LLM frameworks, and Vector Databases. While not built directly into CrewAI, Langtrace can be used alongside CrewAI to gain deep visibility into the cost, latency, and performance of your CrewAI Agents. This integration allows you to log hyperparameters, monitor performance regressions, and establish a process for continuous improvement of your Agents.
 
 ## Setup Instructions
 
-1. Sign up for [Langtrace](https://langtrace.ai/) by going to [https://langtrace.ai/signup](https://langtrace.ai/signup).
+1. Sign up for [Langtrace](https://langtrace.ai/) by visiting [https://langtrace.ai/signup](https://langtrace.ai/signup).
 2. Create a project and generate an API key.
-3. Install Langtrace in your code using the following commands.
-**Note**: For detailed instructions on integrating Langtrace, you can check out the official docs from [here](https://docs.langtrace.ai/supported-integrations/llm-frameworks/crewai).
+3. Install Langtrace in your CrewAI project using the following commands:
 
-```
+```bash
 # Install the SDK
 pip install langtrace-python-sdk
-
-# Import it into your project
-from langtrace_python_sdk import langtrace # Must precede any llm module imports
-langtrace.init(api_key = '<LANGTRACE_API_KEY>')
 ```
 
-### Features
-- **LLM Token and Cost tracking**
-- **Trace graph showing detailed execution steps with latency and logs**
-- **Dataset curation using manual annotation**
-- **Prompt versioning and management**
-- **Prompt Playground with comparison views between models**
-- **Testing and Evaluations**
+## Using Langtrace with CrewAI
 
-![Langtrace Cost and Usage Tracking](..%2Fassets%2Fcrewai-langtrace-stats.png)
-![Langtrace Span Graph and Logs Dashboard](..%2Fassets%2Fcrewai-langtrace-spans.png)
+To integrate Langtrace with your CrewAI project, follow these steps:
 
-#### Extra links
+1. Import and initialize Langtrace at the beginning of your script, before any CrewAI imports:
 
-<a href="https://x.com/langtrace_ai">🐦 Twitter</a>
-<span>&nbsp;&nbsp;•&nbsp;&nbsp;</span>
-<a href="https://discord.com/invite/EaSATwtr4t">📢 Discord</a>
-<span>&nbsp;&nbsp;•&nbsp;&nbsp;</span>
-<a href="https://langtrace.ai/">🖇 Website</a>
-<span>&nbsp;&nbsp;•&nbsp;&nbsp;</span>
-<a href="https://docs.langtrace.ai/introduction">📙 Documentation</a>
+```python
+from langtrace_python_sdk import langtrace
+langtrace.init(api_key='<LANGTRACE_API_KEY>')
+
+# Now import CrewAI modules
+from crewai import Agent, Task, Crew
+```
+
+2. Create your CrewAI agents and tasks as usual.
+
+3. Use Langtrace's tracking functions to monitor your CrewAI operations. For example:
+
+```python
+with langtrace.trace("CrewAI Task Execution"):
+    result = crew.kickoff()
+```
+
+### Features and Their Application to CrewAI
+
+1. **LLM Token and Cost Tracking**
+   - Monitor the token usage and associated costs for each CrewAI agent interaction.
+   - Example:
+     ```python
+     with langtrace.trace("Agent Interaction"):
+         agent_response = agent.execute(task)
+     ```
+
+2. **Trace Graph for Execution Steps**
+   - Visualize the execution flow of your CrewAI tasks, including latency and logs.
+   - Useful for identifying bottlenecks in your agent workflows.
+
+3. **Dataset Curation with Manual Annotation**
+   - Create datasets from your CrewAI task outputs for future training or evaluation.
+   - Example:
+     ```python
+     langtrace.log_dataset_item(task_input, agent_output, {"task_type": "research"})
+     ```
+
+4. **Prompt Versioning and Management**
+   - Keep track of different versions of prompts used in your CrewAI agents.
+   - Useful for A/B testing and optimizing agent performance.
+
+5. **Prompt Playground with Model Comparisons**
+   - Test and compare different prompts and models for your CrewAI agents before deployment.
+
+6. **Testing and Evaluations**
+   - Set up automated tests for your CrewAI agents and tasks.
+   - Example:
+     ```python
+     langtrace.evaluate(agent_output, expected_output, "accuracy")
+     ```
+
+## Monitoring New CrewAI Features
+
+CrewAI has introduced several new features that can be monitored using Langtrace:
+
+1. **Code Execution**: Monitor the performance and output of code executed by agents.
+   ```python
+   with langtrace.trace("Agent Code Execution"):
+       code_output = agent.execute_code(code_snippet)
+   ```
+
+2. **Third-party Agent Integration**: Track interactions with LlamaIndex, LangChain, and Autogen agents.
