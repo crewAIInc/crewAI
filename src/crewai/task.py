@@ -3,7 +3,7 @@ import re
 import threading
 import uuid
 from copy import copy
-from typing import TYPE_CHECKING, Any, Dict, List, Optional, Type, Union
+from typing import Any, Dict, List, Optional, Type, Union
 
 from langchain_openai import ChatOpenAI
 from opentelemetry.trace import Span
@@ -17,9 +17,6 @@ from crewai.utilities.converter import ConverterError
 from crewai.utilities.i18n import I18N
 from crewai.utilities.printer import Printer
 from crewai.utilities.pydantic_schema_parser import PydanticSchemaParser
-
-if TYPE_CHECKING:
-    from crewai.agents import Agent
 
 
 class Task(BaseModel):
@@ -221,7 +218,7 @@ class Task(BaseModel):
             )
             return result
 
-    def _execute(self, agent: "Agent", task, context, tools):
+    def _execute(self, agent: "BaseAgent", task, context, tools):
         result = agent.execute_task(
             task=task,
             context=context,
@@ -279,7 +276,7 @@ class Task(BaseModel):
         """Increment the delegations counter."""
         self.delegations += 1
 
-    def copy(self, agents: Optional[List["Agent"]] = None) -> "Task":
+    def copy(self, agents: Optional[List["BaseAgent"]] = None) -> "Task":
         """Create a deep copy of the Task."""
         exclude = {
             "id",
@@ -295,7 +292,7 @@ class Task(BaseModel):
             [task.copy() for task in self.context] if self.context else None
         )
 
-        def get_agent_by_role(role: str) -> Union["Agent", None]:
+        def get_agent_by_role(role: str) -> Union["BaseAgent", None]:
             return next((agent for agent in agents if agent.role == role), None)
 
         cloned_agent = get_agent_by_role(self.agent.role) if self.agent else None
@@ -339,7 +336,7 @@ class Task(BaseModel):
                     except Exception:
                         pass
 
-            # type: ignore # Item "None" of "Agent | None" has no attribute "function_calling_llm"
+            # type: ignore # Item "None" of "BaseAgent | None" has no attribute "function_calling_llm"
             llm = getattr(self.agent, "function_calling_llm", None) or self.agent.llm
             if not self._is_gpt(llm):
                 # type: ignore # Argument "model" to "PydanticSchemaParser" has incompatible type "type[BaseModel] | None"; expected "type[BaseModel]"
