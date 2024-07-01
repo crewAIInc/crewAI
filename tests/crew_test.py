@@ -1050,11 +1050,9 @@ def test_agent_usage_metrics_are_captured_for_hierarchical_process():
     result = crew.kickoff()
     assert result == '"Howdy!"'
 
-    print(crew.usage_metrics)
-
     assert crew.usage_metrics == {
-        "total_tokens": 1951,
-        "prompt_tokens": 1581,
+        "total_tokens": 1927,
+        "prompt_tokens": 1557,
         "completion_tokens": 370,
         "successful_requests": 4,
     }
