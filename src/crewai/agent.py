@@ -80,6 +80,9 @@ class Agent(BaseAgent):
     allow_code_execution: Optional[bool] = Field(
         default=False, description="Enable code execution for the agent."
     )
+    allow_code_execution: Optional[bool] = Field(
+        default=False, description="Enable code execution for the agent."
+    )
 
     def __init__(__pydantic_self__, **data):
         config = data.pop("config", {})

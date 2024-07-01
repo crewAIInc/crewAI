@@ -5,15 +5,15 @@ from typing import Any, Dict, List, Optional, Union
 
 from langchain_core.callbacks import BaseCallbackHandler
 from pydantic import (
-    UUID4,
-    BaseModel,
-    ConfigDict,
-    Field,
-    InstanceOf,
-    Json,
-    PrivateAttr,
-    field_validator,
-    model_validator,
+  UUID4,
+  BaseModel,
+  ConfigDict,
+  Field,
+  InstanceOf,
+  Json,
+  PrivateAttr,
+  field_validator,
+  model_validator,
 )
 from pydantic_core import PydanticCustomError
 
@@ -404,6 +404,7 @@ class Crew(BaseModel):
                 ]
                 if len(self.agents) > 1 and len(agents_for_delegation) > 0:
                     task.tools += task.agent.get_delegation_tools(agents_for_delegation)
+                    task.tools += task.agent.get_delegation_tools(agents_for_delegation)
 
             role = task.agent.role if task.agent is not None else "None"
             self._logger.log("debug", f"== Working Agent: {role}", color="bold_purple")
@@ -586,9 +587,3 @@ class Crew(BaseModel):
 
     def __repr__(self):
         return f"Crew(id={self.id}, process={self.process}, number_of_agents={len(self.agents)}, number_of_tasks={len(self.tasks)})"
-
-    def aggregate_token_usage(self, token_usage_list: List[Dict[str, Any]]):
-        return {
-            key: sum([m[key] for m in token_usage_list if m is not None])
-            for key in token_usage_list[0]
-        }

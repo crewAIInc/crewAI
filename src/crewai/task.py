@@ -13,7 +13,9 @@ from pydantic_core import PydanticCustomError
 from crewai.agents.agent_builder.base_agent import BaseAgent
 from crewai.tasks.task_output import TaskOutput
 from crewai.telemetry.telemetry import Telemetry
-from crewai.utilities import I18N, ConverterError, Printer
+from crewai.utilities.converter import ConverterError
+from crewai.utilities.i18n import I18N
+from crewai.utilities.printer import Printer
 from crewai.utilities.pydantic_schema_parser import PydanticSchemaParser
 
 if TYPE_CHECKING:
