@@ -50,54 +50,24 @@ Ollama is preferred for local LLM integration, offering customization and privac
 ### Setting Up Ollama
 - **Environment Variables Configuration**: To integrate Ollama, set the following environment variables:
 ```sh
-OPENAI_API_BASE='http://localhost:11434/v1'
-OPENAI_MODEL_NAME='openhermes'  # Adjust based on available model
+OPENAI_API_BASE='http://localhost:11434'
+OPENAI_MODEL_NAME='llama2'  # Adjust based on available model
 OPENAI_API_KEY=''
 ```
 
 ## Ollama Integration (ex. for using Llama 2 locally)
-1. [Download Ollama](https://ollama.com/download).
-2. After setting up the Ollama, Pull the Llama2 by typing following lines into the terminal ```ollama pull llama2```.
-3. Create a ModelFile similar the one below in your project directory.
+1. [Download Ollama](https://ollama.com/download).   
+2. After setting up the Ollama, Pull the Llama2 by typing following lines into the terminal ```ollama pull llama2```.   
+3. Enjoy your free Llama2 model that powered up by excellent agents from crewai.   
 ```
-FROM llama2
-
-# Set parameters
-
-PARAMETER temperature 0.8
-PARAMETER stop Result
-
-# Sets a custom system message to specify the behavior of the chat assistant
-
-# Leaving it blank for now.
-
-SYSTEM """"""
-```
-4. Create a script to get the base model, which in our case is llama2, and create a model on top of that with ModelFile above. PS: this will be ".sh" file.
-```
-#!/bin/zsh
-
-# variables
-model_name="llama2"
-custom_model_name="crewai-llama2"
-
-#get the base model
-ollama pull $model_name
-
-#create the model file
-ollama create $custom_model_name -f ./Llama2ModelFile
-```
-5. Go into the directory where the script file and ModelFile is located and run the script.
-6. Enjoy your free Llama2 model that is powered up by excellent agents from CrewAI.
-```python
 from crewai import Agent, Task, Crew
-from langchain_openai import ChatOpenAI
+from langchain.llms import Ollama
 import os
 os.environ["OPENAI_API_KEY"] = "NA"
 
-llm = ChatOpenAI(
-    model = "crewai-llama2",
-    base_url = "http://localhost:11434/v1")
+llm = Ollama(
+    model = "llama2",
+    base_url = "http://localhost:11434")
 
 general_agent = Agent(role = "Math Professor",
                       goal = """Provide the solution to the students that are asking mathematical questions and give them the answer.""",
