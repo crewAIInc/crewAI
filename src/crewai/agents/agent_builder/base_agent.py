@@ -214,7 +214,7 @@ class BaseAgent(ABC, BaseModel):
         self.create_agent_executor()
 
     def increment_formatting_errors(self) -> None:
-        print("Formatting errors incremented")
+        self.formatting_errors += 1
 
     def copy(self):
         exclude = {
