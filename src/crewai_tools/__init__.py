@@ -2,6 +2,7 @@ from .tools.base_tool import BaseTool, Tool, tool
 from .tools import (
 	BrowserbaseLoadTool,
 	CodeDocsSearchTool,
+	CodeInterpreterTool,
 	CSVSearchTool,
 	DirectorySearchTool,
 	DOCXSearchTool,
