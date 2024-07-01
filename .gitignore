@@ -13,3 +13,4 @@ db/
 test.py
 rc-tests/*
 *.pkl
+temp/*
