@@ -299,8 +299,10 @@ class Crew(BaseModel):
                 and not agent.function_calling_llm
             ):
                 agent.function_calling_llm = self.function_calling_llm
+
             if hasattr(agent, "allow_code_execution") and agent.allow_code_execution:
                 agent.tools += agent.get_code_execution_tools()
+
             if hasattr(agent, "step_callback") and not agent.step_callback:
                 agent.step_callback = self.step_callback
 
