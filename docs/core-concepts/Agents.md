@@ -34,6 +34,7 @@ description: What are crewAI Agents and how to use them.
 | **System Template** *(optional)*     | Specifies the system format for the agent. Default is `None`.                                                                                                                                                                  |
 | **Prompt Template** *(optional)*     | Specifies the prompt format for the agent. Default is `None`.                                                                                                                                                                  |
 | **Response Template** *(optional)*     | Specifies the response format for the agent. Default is `None`.                                                                                                                                                                  |
+
 ## Creating an Agent
 
 !!! note "Agent Interaction"
@@ -95,6 +96,54 @@ agent = Agent(
 {{ .Response }}<|eot_id|>""",
     )
 ```
+
+## Bring your Third Party Agents
+!!! note "Extend your Third Party Agents like LlamaIndex, Langchain, Autogen or fully custom agents using the the crewai's BaseAgent class."
+
+    BaseAgent includes attributes and methods required to integrate with your crews to run and delegate tasks to other agents within your own crew.
+
+    CrewAI is a universal multi agent framework that allows for all agents to work together to automate tasks and solve problems.
+
+
+```py
+from crewai import Agent, Task, Crew
+from custom_agent import CustomAgent # You need to build and extend your own agent logic with the CrewAI BaseAgent class then import it here.
+
+from langchain.agents import load_tools
+
+langchain_tools = load_tools(["google-serper"], llm=llm)
+
+agent1 = CustomAgent(
+    role="backstory agent",
+    goal="who is {input}?",
+    backstory="agent backstory",
+    verbose=True,
+)
+
+task1 = Task(
+    expected_output="a short biography of {input}",
+    description="a short biography of {input}",
+    agent=agent1,
+)
+
+agent2 = Agent(
+    role="bio agent",
+    goal="summarize the short bio for {input} and if needed do more research",
+    backstory="agent backstory",
+    verbose=True,
+)
+
+task2 = Task(
+    description="a tldr summary of the short biography",
+    expected_output="5 bullet point summary of the biography",
+    agent=agent2,
+    context=[task1],
+)
+
+my_crew = Crew(agents=[agent1, agent2], tasks=[task1, task2])
+crew = my_crew.kickoff(inputs={"input": "Mark Twain"})
+```
+
 
 ## Conclusion
 Agents are the building blocks of the CrewAI framework. By understanding how to define and interact with agents, you can create sophisticated AI systems that leverage the power of collaborative intelligence.
