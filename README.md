@@ -127,6 +127,7 @@ crew = Crew(
   agents=[researcher, writer],
   tasks=[task1, task2],
   verbose=2, # You can set it to 1 or 2 to different logging levels
+  process = Process.sequential
 )
 
 # Get your crew to work!
