@@ -1,12 +1,12 @@
 ---
-title: Ability to Set a Specific Agent as Manager in CrewAI
-description: Introducing the ability to set a specific agent as a manager instead of having CrewAI create one automatically.
+title: Setting a Specific Agent as Manager in CrewAI
+description: Learn how to set a custom agent as the manager in CrewAI, providing more control over task management and coordination.
 
 ---
 
-# Ability to Set a Specific Agent as Manager in CrewAI
+# Setting a Specific Agent as Manager in CrewAI
 
-CrewAI now allows users to set a specific agent as the manager of the crew, providing more control over the management and coordination of tasks. This feature enables the customization of the managerial role to better fit the project's requirements.
+CrewAI allows users to set a specific agent as the manager of the crew, providing more control over the management and coordination of tasks. This feature enables the customization of the managerial role to better fit your project's requirements.
 
 ## Using the `manager_agent` Attribute
 
@@ -23,46 +23,65 @@ from crewai import Agent, Task, Crew, Process
 # Define your agents
 researcher = Agent(
     role="Researcher",
-    goal="Make the best research and analysis on content about AI and AI agents",
-    backstory="You're an expert researcher, specialized in technology, software engineering, AI and startups. You work as a freelancer and is now working on doing research and analysis for a new customer.",
+    goal="Conduct thorough research and analysis on AI and AI agents",
+    backstory="You're an expert researcher, specialized in technology, software engineering, AI, and startups. You work as a freelancer and are currently researching for a new client.",
     allow_delegation=False,
 )
 
 writer = Agent(
     role="Senior Writer",
-    goal="Write the best content about AI and AI agents.",
-    backstory="You're a senior writer, specialized in technology, software engineering, AI and startups. You work as a freelancer and are now working on writing content for a new customer.",
+    goal="Create compelling content about AI and AI agents",
+    backstory="You're a senior writer, specialized in technology, software engineering, AI, and startups. You work as a freelancer and are currently writing content for a new client.",
     allow_delegation=False,
 )
 
 # Define your task
 task = Task(
-    description="Come up with a list of 5 interesting ideas to explore for an article, then write one amazing paragraph highlight for each idea that showcases how good an article about this topic could be. Return the list of ideas with their paragraph and your notes.",
-    expected_output="5 bullet points with a paragraph for each idea.",
+    description="Generate a list of 5 interesting ideas for an article, then write one captivating paragraph for each idea that showcases the potential of a full article on this topic. Return the list of ideas with their paragraphs and your notes.",
+    expected_output="5 bullet points, each with a paragraph and accompanying notes.",
 )
 
 # Define the manager agent
 manager = Agent(
-    role="Manager",
-    goal="Manage the crew and ensure the tasks are completed efficiently.",
-    backstory="You're an experienced manager, skilled in overseeing complex projects and guiding teams to success. Your role is to coordinate the efforts of the crew members, ensuring that each task is completed on time and to the highest standard.",
-    allow_delegation=False,
+    role="Project Manager",
+    goal="Efficiently manage the crew and ensure high-quality task completion",
+    backstory="You're an experienced project manager, skilled in overseeing complex projects and guiding teams to success. Your role is to coordinate the efforts of the crew members, ensuring that each task is completed on time and to the highest standard.",
+    allow_delegation=True,
 )
 
 # Instantiate your crew with a custom manager
 crew = Crew(
     agents=[researcher, writer],
-    process=Process.hierarchical,
-    manager_agent=manager,
     tasks=[task],
+    manager_agent=manager,
+    process=Process.hierarchical,
 )
 
-# Get your crew to work!
-crew.kickoff()
+# Start the crew's work
+result = crew.kickoff()
 ```
 
 ## Benefits of a Custom Manager Agent
 
-- **Enhanced Control**: Allows for a more tailored management approach, fitting the specific needs of the project.
-- **Improved Coordination**: Ensures that the tasks are efficiently coordinated and managed by an experienced agent.
-- **Customizable Management**: Provides the flexibility to define managerial roles and responsibilities that align with the project's goals.
+- **Enhanced Control**: Tailor the management approach to fit the specific needs of your project.
+- **Improved Coordination**: Ensure efficient task coordination and management by an experienced agent.
+- **Customizable Management**: Define managerial roles and responsibilities that align with your project's goals.
+
+## Setting a Manager LLM
+
+If you're using the hierarchical process and don't want to set a custom manager agent, you can specify the language model for the manager:
+
+```python
+from langchain_openai import ChatOpenAI
+
+manager_llm = ChatOpenAI(model_name="gpt-4")
+
+crew = Crew(
+    agents=[researcher, writer],
+    tasks=[task],
+    process=Process.hierarchical,
+    manager_llm=manager_llm
+)
+```
+
+Note: Either `manager_agent` or `manager_llm` must be set when using the hierarchical process.
