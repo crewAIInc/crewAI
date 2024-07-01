@@ -20,18 +20,9 @@ crewai train -n <n_iterations>
 
 Replace `<n_iterations>` with the desired number of training iterations. This determines how many times the agents will go through the training process.
 
-Remember to also replace the placeholder inputs with the actual values you want to use on the main.py file in the `train` function.
-
-```python
-def train():
-    """
-    Train the crew for a given number of iterations.
-    """
-    inputs = {"topic": "AI LLMs"}
-    try:
-        ProjectCreationCrew().crew().train(n_iterations=int(sys.argv[1]), inputs=inputs)
-    ...
-```
+### Key Points to Note:
+- **Positive Integer Requirement:** Ensure that the number of iterations (`n_iterations`) is a positive integer. The code will raise a `ValueError` if this condition is not met.
+- **Error Handling:** The code handles subprocess errors and unexpected exceptions, providing error messages to the user.
 
 It is important to note that the training process may take some time, depending on the complexity of your agents and will also require your feedback on each iteration.
 
