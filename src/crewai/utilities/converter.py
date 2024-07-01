@@ -1,9 +1,11 @@
 import json
-from typing import Any, Optional
 
 from langchain.schema import HumanMessage, SystemMessage
 from langchain_openai import ChatOpenAI
-from pydantic import BaseModel, Field, PrivateAttr, model_validator
+from pydantic import model_validator
+from crewai.agents.agent_builder.utilities.base_output_converter_base import (
+    OutputConverter,
+)
 
 
 class ConverterError(Exception):
@@ -14,18 +16,8 @@ class ConverterError(Exception):
         self.message = message
 
 
-class Converter(BaseModel):
+class Converter(OutputConverter):
     """Class that converts text into either pydantic or json."""
-
-    _is_gpt: bool = PrivateAttr(default=True)
-    text: str = Field(description="Text to be converted.")
-    llm: Any = Field(description="The language model to be used to convert the text.")
-    model: Any = Field(description="The model to be used to convert the text.")
-    instructions: str = Field(description="Conversion instructions to the LLM.")
-    max_attemps: Optional[int] = Field(
-        description="Max number of attemps to try to get the output formated.",
-        default=3,
-    )
 
     @model_validator(mode="after")
     def check_llm_provider(self):

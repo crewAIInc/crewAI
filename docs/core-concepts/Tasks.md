@@ -88,7 +88,7 @@ This demonstrates how tasks with specific tools can override an agent's default 
 
 ## Referring to Other Tasks
 
-In crewAI, the output of one task is automatically relayed into the next one, but you can specifically define what tasks' output, including multiple should be used as context for another task.
+In crewAI, the output of one task is automatically relayed into the next one, but you can specifically define what tasks' output, including multiple, should be used as context for another task.
 
 This is useful when you have a task that depends on the output of another task that is not performed immediately after it. This is done through the `context` attribute of the task:
 
@@ -224,6 +224,25 @@ While creating and executing tasks, certain validation mechanisms are in place t
 - Preventing the manual assignment of the `id` attribute to uphold the integrity of the unique identifier system.
 
 These validations help in maintaining the consistency and reliability of task executions within the crewAI framework.
+
+## Creating Directories when Saving Files
+
+You can now specify if a task should create directories when saving its output to a file. This is particularly useful for organizing outputs and ensuring that file paths are correctly structured.
+
+```python
+# ...
+
+save_output_task = Task(
+    description='Save the summarized AI news to a file',
+    expected_output='File saved successfully',
+    agent=research_agent,
+    tools=[file_save_tool],
+    output_file='outputs/ai_news_summary.txt',
+    create_directory=True
+)
+
+#...
+```
 
 ## Conclusion
 
