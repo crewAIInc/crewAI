@@ -423,7 +423,7 @@ class Crew(BaseModel):
 
         self._finish_execution(task_output)
 
-        token_usage = self._calculate_usage_metrics()
+        token_usage = self.calculate_usage_metrics()
 
         # type: ignore # Incompatible return value type (got "tuple[str, Any]", expected "str")
         return self._format_output(task_output, token_usage)

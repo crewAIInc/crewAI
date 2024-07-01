@@ -187,7 +187,6 @@ class BaseAgent(ABC, BaseModel):
         """Get the converter class for the agent to create json/pydantic outputs."""
         pass
 
-    # TODO: HAVE LORENZE REVIEW THIS WITH OTHER AGENTS
     @abstractmethod
     def copy(self):
         """Create a copy of the agent."""
