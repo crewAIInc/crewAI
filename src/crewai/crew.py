@@ -64,7 +64,7 @@ class Crew(BaseModel):
     _long_term_memory: Optional[InstanceOf[LongTermMemory]] = PrivateAttr()
     _entity_memory: Optional[InstanceOf[EntityMemory]] = PrivateAttr()
 
-    cache: bool = Field(default=True)
+    cache: bool = Field(default=False)
     model_config = ConfigDict(arbitrary_types_allowed=True)
     tasks: List[Task] = Field(default_factory=list)
     agents: List[Agent] = Field(default_factory=list)
@@ -247,6 +247,11 @@ class Crew(BaseModel):
         inputs: Optional[Dict[str, Any]] = {},
     ) -> Union[str, Dict[str, Any]]:
         """Starts the crew to work on its assigned tasks."""
+        print(f"CREW ID {self.id} - KICKING OFF CREW")
+        print(
+            f"CREW ID {self.id} - callbacks",
+            [agent.llm.callbacks for agent in self.agents],
+        )
         self._execution_span = self._telemetry.crew_execution_span(self)
         # type: ignore # Argument 1 to "_interpolate_inputs" of "Crew" has incompatible type "dict[str, Any] | None"; expected "dict[str, Any]"
         self._interpolate_inputs(inputs)
@@ -315,6 +320,10 @@ class Crew(BaseModel):
     async def kickoff_for_each_async(self, inputs: List[Dict]) -> List[Any]:
         crew_copies = [self.copy() for _ in inputs]
 
+        for crew in crew_copies:
+            for task in crew.tasks:
+                print("TASK DESCRIPTION", task.description)
+
         async def run_crew(crew, input_data):
             return await crew.kickoff_async(inputs=input_data)
 
@@ -344,6 +353,7 @@ class Crew(BaseModel):
         }
 
         for task in self.tasks:
+            print("TASK DESCRIPTION", task.description)
             if task.agent.allow_delegation:  # type: ignore #  Item "None" of "Agent | None" has no attribute "allow_delegation"
                 agents_for_delegation = [
                     agent for agent in self.agents if agent != task.agent
@@ -374,7 +384,9 @@ class Crew(BaseModel):
                 self._file_handler.log(agent=role, task=task_output, status="completed")
 
         for agent in self.agents:
+            print("INSPECTING AGENT", agent.role)
             agent_token_usage = agent._token_process.get_summary()
+            print("AGENT TOKEN USAGE", agent_token_usage)
             for key in total_token_usage:
                 total_token_usage[key] += agent_token_usage.get(key, 0)
 

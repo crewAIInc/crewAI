@@ -2,7 +2,7 @@ import os
 import re
 import threading
 import uuid
-from copy import deepcopy
+from copy import copy
 from typing import Any, Dict, List, Optional, Type
 
 from langchain_openai import ChatOpenAI
@@ -268,7 +268,9 @@ class Task(BaseModel):
 
         cloned_agent = get_agent_by_role(self.agent.role) if self.agent else None
         # cloned_agent = self.agent.copy() if self.agent else None
-        cloned_tools = deepcopy(self.tools) if self.tools else []
+        print("TOOLS BEFORE COPY", self.tools)
+        cloned_tools = copy(self.tools) if self.tools else []
+        print("TOOLS AFTER COPY", cloned_tools)
 
         copied_task = Task(
             **copied_data,

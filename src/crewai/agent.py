@@ -10,14 +10,14 @@ from langchain_core.agents import AgentAction
 from langchain_core.callbacks import BaseCallbackHandler
 from langchain_openai import ChatOpenAI
 from pydantic import (
-  UUID4,
-  BaseModel,
-  ConfigDict,
-  Field,
-  InstanceOf,
-  PrivateAttr,
-  field_validator,
-  model_validator,
+    UUID4,
+    BaseModel,
+    ConfigDict,
+    Field,
+    InstanceOf,
+    PrivateAttr,
+    field_validator,
+    model_validator,
 )
 from pydantic_core import PydanticCustomError
 
@@ -169,6 +169,9 @@ class Agent(BaseModel):
     @model_validator(mode="after")
     def set_agent_executor(self) -> "Agent":
         """set agent executor is set."""
+        print(
+            f"CREW ID: {self.id} - SET AGENT EXECUTOR model name", self.llm.model_name
+        )
         if hasattr(self.llm, "model_name"):
             token_handler = TokenCalcHandler(self.llm.model_name, self._token_process)
 
@@ -177,6 +180,7 @@ class Agent(BaseModel):
                 self.llm.callbacks = []
 
             # Check if an instance of TokenCalcHandler already exists in the list
+            print(f"CREW ID : {self.id} - self.llm.callbacks", self.llm.callbacks)
             if not any(
                 isinstance(handler, TokenCalcHandler) for handler in self.llm.callbacks
             ):
@@ -382,11 +386,15 @@ class Agent(BaseModel):
             "llm",
         }
 
+        print("EXISTING LLM", self.llm)
         existing_llm = copy(self.llm)
+        print("COPIED LLM", existing_llm)
         # TODO: EXPAND ON WHY THIS IS NEEDED
         # RESET LLM CALLBACKS
-        existing_llm.callbacks = []  
+        existing_llm.callbacks = []
+        print("RESET LLM CALLBACKS", existing_llm)
         copied_data = self.model_dump(exclude=exclude)
+        print("COPIED DATA FOR AGENT", copied_data)
         copied_data = {k: v for k, v in copied_data.items() if v is not None}
 
         copied_agent = Agent(**copied_data, llm=existing_llm, tools=self.tools)
