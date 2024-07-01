@@ -24,7 +24,7 @@ regex = "^2023.12.25"
 crewai-tools = { version = "^0.4.1", optional = true }
 click = "^8.1.7"
 python-dotenv = "^1.0.0"
-embedchain = { git = "https://github.com/joaomdmoura/embedchain.git", branch = "main" }
+embedchain = {extras = ["github", "youtube"], git = "https://github.com/joaomdmoura/embedchain.git", rev = "v0.1.34" }
 appdirs = "^1.4.4"
 jsonref = "^1.1.0"
 
