@@ -1,5 +1,4 @@
 import os
-from copy import copy as shallow_copy
 from typing import Any, List, Optional, Tuple
 
 from langchain.agents.agent import RunnableAgent
