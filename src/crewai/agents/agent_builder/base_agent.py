@@ -1,6 +1,7 @@
 import uuid
 from abc import ABC, abstractmethod
-from typing import Any, Dict, List, Optional
+from copy import copy as shallow_copy
+from typing import Any, Dict, List, Optional, TypeVar
 
 from pydantic import (
     UUID4,
@@ -17,6 +18,8 @@ from pydantic_core import PydanticCustomError
 from crewai.agents import CacheHandler, ToolsHandler
 from crewai.agents.agent_builder.utilities.base_token_process import TokenProcess
 from crewai.utilities import I18N, Logger, RPMController
+
+T = TypeVar("T", bound="BaseAgent")
 
 
 class BaseAgent(ABC, BaseModel):
@@ -187,10 +190,30 @@ class BaseAgent(ABC, BaseModel):
         """Get the converter class for the agent to create json/pydantic outputs."""
         pass
 
-    @abstractmethod
-    def copy(self):
-        """Create a copy of the agent."""
-        pass
+    def copy(self: T) -> T:
+        """Create a deep copy of the Agent."""
+        exclude = {
+            "id",
+            "_logger",
+            "_rpm_controller",
+            "_request_within_rpm_limit",
+            "_token_process",
+            "agent_executor",
+            "tools",
+            "tools_handler",
+            "cache_handler",
+            "llm",
+        }
+
+        # Copy llm and clear callbacks
+        existing_llm = shallow_copy(self.llm)
+        existing_llm.callbacks = []
+        copied_data = self.model_dump(exclude=exclude)
+        copied_data = {k: v for k, v in copied_data.items() if v is not None}
+
+        copied_agent = type(self)(**copied_data, llm=existing_llm, tools=self.tools)
+
+        return copied_agent
 
     def interpolate_inputs(self, inputs: Dict[str, Any]) -> None:
         """Interpolate inputs into the agent description and backstory."""

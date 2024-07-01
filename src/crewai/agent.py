@@ -267,31 +267,6 @@ class Agent(BaseAgent):
     def get_output_converter(self, llm, text, model, instructions):
         return Converter(llm=llm, text=text, model=model, instructions=instructions)
 
-    def copy(self):
-        """Create a deep copy of the Agent."""
-        exclude = {
-            "id",
-            "_logger",
-            "_rpm_controller",
-            "_request_within_rpm_limit",
-            "_token_process",
-            "agent_executor",
-            "tools",
-            "tools_handler",
-            "cache_handler",
-            "llm",
-        }
-
-        # Copy llm and clear callbacks
-        existing_llm = shallow_copy(self.llm)
-        existing_llm.callbacks = []
-        copied_data = self.model_dump(exclude=exclude)
-        copied_data = {k: v for k, v in copied_data.items() if v is not None}
-
-        copied_agent = Agent(**copied_data, llm=existing_llm, tools=self.tools)
-
-        return copied_agent
-
     def _parse_tools(self, tools: List[Any]) -> List[LangChainTool]:
         """Parse tools to be used for the task."""
         tools_list = []
