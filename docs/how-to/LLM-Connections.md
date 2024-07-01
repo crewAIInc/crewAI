@@ -1,16 +1,18 @@
 ---
 title: Connect CrewAI to LLMs
-description: Comprehensive guide on integrating CrewAI with various Large Language Models (LLMs), including detailed class attributes and methods.
+description: Comprehensive guide on integrating CrewAI with various Large Language Models (LLMs), including detailed class attributes, methods, and configuration options.
 ---
 
 ## Connect CrewAI to LLMs
+
 !!! note "Default LLM"
-    By default, CrewAI uses OpenAI's GPT-4 model for language processing. You can configure your agents to use a different model or API. This guide shows how to connect your agents to various LLMs through environment variables and direct instantiation.
+    By default, CrewAI uses OpenAI's GPT-4 model (specifically, the model specified by the OPENAI_MODEL_NAME environment variable, defaulting to "gpt-4o") for language processing. You can configure your agents to use a different model or API as described in this guide.
 
 CrewAI offers flexibility in connecting to various LLMs, including local models via [Ollama](https://ollama.ai) and different APIs like Azure. It's compatible with all [LangChain LLM](https://python.langchain.com/docs/integrations/llms/) components, enabling diverse integrations for tailored AI solutions.
 
 ## CrewAI Agent Overview
-The `Agent` class is the cornerstone for implementing AI solutions in CrewAI. Here's an updated overview reflecting the latest codebase changes:
+
+The `Agent` class is the cornerstone for implementing AI solutions in CrewAI. Here's a comprehensive overview of the Agent class attributes and methods:
 
 - **Attributes**:
     - `role`: Defines the agent's role within the solution.
