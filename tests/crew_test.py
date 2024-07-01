@@ -1,6 +1,8 @@
 """Test Agent creation and execution basic functionality."""
 
 import json
+from unittest import mock
+from unittest.mock import patch
 
 import pydantic_core
 import pytest
@@ -155,9 +157,9 @@ def test_hierarchical_process():
         manager_llm=ChatOpenAI(temperature=0, model="gpt-4"),
         tasks=[task],
     )
-
+    result = crew.kickoff()
     assert (
-        crew.kickoff()
+        result
         == "1. 'Demystifying AI: An in-depth exploration of Artificial Intelligence for the layperson' - In this piece, we will unravel the enigma of AI, simplifying its complexities into digestible information for the everyday individual. By using relatable examples and analogies, we will journey through the neural networks and machine learning algorithms that define AI, without the jargon and convoluted explanations that often accompany such topics.\n\n2. 'The Role of AI in Startups: A Game Changer?' - Startups today are harnessing the power of AI to revolutionize their businesses. This article will delve into how AI, as an innovative force, is shaping the startup ecosystem, transforming everything from customer service to product development. We'll explore real-life case studies of startups that have leveraged AI to accelerate their growth and disrupt their respective industries.\n\n3. 'AI and Ethics: Navigating the Complex Landscape' - AI brings with it not just technological advancements, but ethical dilemmas as well. This article will engage readers in a thought-provoking discussion on the ethical implications of AI, exploring issues like bias in algorithms, privacy concerns, job displacement, and the moral responsibility of AI developers. We will also discuss potential solutions and frameworks to address these challenges.\n\n4. 'Unveiling the AI Agents: The Future of Customer Service' - AI agents are poised to reshape the customer service landscape, offering businesses the ability to provide round-the-clock support and personalized experiences. In this article, we'll dive deep into the world of AI agents, examining how they work, their benefits and limitations, and how they're set to redefine customer interactions in the digital age.\n\n5. 'From Science Fiction to Reality: AI in Everyday Life' - AI, once a concept limited to the realm of sci-fi, has now permeated our daily lives. This article will highlight the ubiquitous presence of AI, from voice assistants and recommendation algorithms, to autonomous vehicles and smart homes. We'll explore how AI, in its various forms, is transforming our everyday experiences, making the future seem a lot closer than we imagined."
     )
 
@@ -381,9 +383,16 @@ def test_crew_full_ouput():
     crew = Crew(agents=[agent], tasks=[task1, task2], full_output=True)
 
     result = crew.kickoff()
+
     assert result == {
-        "final_output": "Hello! It is a delight to receive your message. I trust this response finds you in good spirits. It's indeed a pleasure to connect with you too.",
+        "final_output": "Hello!",
         "tasks_outputs": [task1.output, task2.output],
+        "usage_metrics": {
+            "total_tokens": 517,
+            "prompt_tokens": 466,
+            "completion_tokens": 51,
+            "successful_requests": 3,
+        },
     }
 
 
@@ -445,10 +454,14 @@ def test_async_task_execution():
             start.return_value = thread
             with patch.object(threading.Thread, "join", wraps=thread.join()) as join:
                 list_ideas.output = TaskOutput(
-                    description="A 4 paragraph article about AI.", raw_output="ok"
+                    description="A 4 paragraph article about AI.",
+                    raw_output="ok",
+                    agent="writer",
                 )
                 list_important_history.output = TaskOutput(
-                    description="A 4 paragraph article about AI.", raw_output="ok"
+                    description="A 4 paragraph article about AI.",
+                    raw_output="ok",
+                    agent="writer",
                 )
                 crew.kickoff()
                 start.assert_called()
@@ -587,6 +600,30 @@ def test_task_with_no_arguments():
     assert result == "75"
 
 
+def test_code_execution_flag_adds_code_tool_upon_kickoff():
+    from crewai_tools import CodeInterpreterTool
+
+    programmer = Agent(
+        role="Programmer",
+        goal="Write code to solve problems.",
+        backstory="You're a programmer who loves to solve problems with code.",
+        allow_delegation=False,
+        allow_code_execution=True,
+    )
+
+    task = Task(
+        description="How much is 2 + 2?",
+        expected_output="The result of the sum as an integer.",
+        agent=programmer,
+    )
+
+    crew = Crew(agents=[programmer], tasks=[task])
+    crew.kickoff()
+    assert len(programmer.tools) == 1
+    assert programmer.tools[0].__class__ == CodeInterpreterTool
+
+
+@pytest.mark.vcr(filter_headers=["authorization"])
 def test_delegation_is_not_enabled_if_there_are_only_one_agent():
     from unittest.mock import patch
 
@@ -604,7 +641,6 @@ def test_delegation_is_not_enabled_if_there_are_only_one_agent():
     )
 
     crew = Crew(agents=[researcher], tasks=[task])
-
     with patch.object(Task, "execute") as execute:
         execute.return_value = "ok"
         crew.kickoff()
@@ -649,9 +685,9 @@ def test_agent_usage_metrics_are_captured_for_sequential_process():
     assert result == "Howdy!"
     assert crew.usage_metrics == {
         "completion_tokens": 17,
-        "prompt_tokens": 160,
+        "prompt_tokens": 158,
         "successful_requests": 1,
-        "total_tokens": 177,
+        "total_tokens": 175,
     }
 
 
@@ -672,14 +708,15 @@ def test_agent_usage_metrics_are_captured_for_hierarchical_process():
         agents=[agent],
         tasks=[task],
         process=Process.hierarchical,
-        manager_llm=ChatOpenAI(temperature=0, model="gpt-4"),
+        manager_llm=ChatOpenAI(temperature=0, model="gpt-4o"),
     )
 
     result = crew.kickoff()
     assert result == '"Howdy!"'
+
     assert crew.usage_metrics == {
-        "total_tokens": 1666,
-        "prompt_tokens": 1383,
+        "total_tokens": 1616,
+        "prompt_tokens": 1333,
         "completion_tokens": 283,
         "successful_requests": 3,
     }
@@ -995,7 +1032,10 @@ def test_manager_agent_with_tools_raises_exception():
         crew.kickoff()
 
 
-def test_crew_train_success():
+@patch("crewai.crew.Crew.kickoff")
+@patch("crewai.crew.CrewTrainingHandler")
+@patch("crewai.crew.TaskEvaluator")
+def test_crew_train_success(task_evaluator, crew_training_handler, kickoff):
     task = Task(
         description="Come up with a list of 5 interesting ideas to explore for an article, then write one amazing paragraph highlight for each idea that showcases how good an article about this topic could be. Return the list of ideas with their paragraph and your notes.",
         expected_output="5 bullet points with a paragraph for each idea.",
@@ -1005,8 +1045,48 @@ def test_crew_train_success():
         agents=[researcher, writer],
         tasks=[task],
     )
+    crew.train(n_iterations=2, inputs={"topic": "AI"})
+    task_evaluator.assert_has_calls(
+        [
+            mock.call(researcher),
+            mock.call().evaluate_training_data(
+                training_data=crew_training_handler().load(),
+                agent_id=str(researcher.id),
+            ),
+            mock.call().evaluate_training_data().model_dump(),
+            mock.call(writer),
+            mock.call().evaluate_training_data(
+                training_data=crew_training_handler().load(),
+                agent_id=str(writer.id),
+            ),
+            mock.call().evaluate_training_data().model_dump(),
+        ]
+    )
 
-    crew.train(n_iterations=2)
+    crew_training_handler.assert_has_calls(
+        [
+            mock.call("training_data.pkl"),
+            mock.call().load(),
+            mock.call("trained_agents_data.pkl"),
+            mock.call().save_trained_data(
+                agent_id="Researcher",
+                trained_data=task_evaluator().evaluate_training_data().model_dump(),
+            ),
+            mock.call("trained_agents_data.pkl"),
+            mock.call().save_trained_data(
+                agent_id="Senior Writer",
+                trained_data=task_evaluator().evaluate_training_data().model_dump(),
+            ),
+            mock.call(),
+            mock.call().load(),
+            mock.call(),
+            mock.call().load(),
+        ]
+    )
+
+    kickoff.assert_has_calls(
+        [mock.call(inputs={"topic": "AI"}), mock.call(inputs={"topic": "AI"})]
+    )
 
 
 def test_crew_train_error():
@@ -1025,3 +1105,32 @@ def test_crew_train_error():
         assert "train() missing 1 required positional argument: 'n_iterations'" in str(
             e
         )
+
+
+def test__setup_for_training():
+    researcher.allow_delegation = True
+    writer.allow_delegation = True
+    agents = [researcher, writer]
+    task = Task(
+        description="Come up with a list of 5 interesting ideas to explore for an article",
+        expected_output="5 bullet points with a paragraph for each idea.",
+    )
+
+    crew = Crew(
+        agents=agents,
+        tasks=[task],
+    )
+
+    assert crew._train is False
+    assert task.human_input is False
+
+    for agent in agents:
+        assert agent.allow_delegation is True
+
+    crew._setup_for_training()
+
+    assert crew._train is True
+    assert task.human_input is True
+
+    for agent in agents:
+        assert agent.allow_delegation is False

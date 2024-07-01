@@ -12,3 +12,5 @@ old_en.json
 db/
 test.py
 rc-tests/*
+*.pkl
+temp/*

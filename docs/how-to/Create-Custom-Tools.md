@@ -42,6 +42,7 @@ def my_simple_tool(question: str) -> str:
     # Tool logic here
     return "Tool output"
 ```
+
 ### Defining a Cache Function for the Tool
 
 To optimize tool performance with caching, define custom caching strategies using the `cache_function` attribute.
