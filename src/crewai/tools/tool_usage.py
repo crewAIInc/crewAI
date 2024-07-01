@@ -98,7 +98,7 @@ class ToolUsage:
         tool_string: str,
         tool: BaseTool,
         calling: Union[ToolCalling, InstructorToolCalling],
-    ) -> None:  # TODO: Fix this return type
+    ) -> str:  # TODO: Fix this return type --> finecwg : I updated return type to str
         if self._check_tool_repeated_usage(calling=calling):  # type: ignore # _check_tool_repeated_usage of "ToolUsage" does not return a value (it only ever returns None)
             try:
                 result = self._i18n.errors("task_repeated_usage").format(
@@ -123,7 +123,7 @@ class ToolUsage:
                 tool=calling.tool_name, input=calling.arguments
             )
 
-        if not result:
+        if result is None: #! finecwg: if not result --> if result is None
             try:
                 if calling.tool_name in [
                     "Delegate work to coworker",
