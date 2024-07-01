@@ -1,69 +1,62 @@
 import os
-from typing import Optional, Type
+import importlib.util
+import textwrap
+from typing import List, Optional, Type
 
 import docker
 from crewai_tools.tools.base_tool import BaseTool
 from pydantic.v1 import BaseModel, Field
 
 
-class FixedCodeInterpreterSchemaSchema(BaseModel):
+class CodeInterpreterSchema(BaseModel):
     """Input for CodeInterpreterTool."""
-
-    pass
-
-
-class CodeInterpreterSchema(FixedCodeInterpreterSchemaSchema):
-    """Input for CodeInterpreterTool."""
-
     code: str = Field(
         ...,
-        description="Python3 code used to be interpreted in the Docker container. ALWAYS PRINT the final result and the output of the code",
+        description="Mandatory string of python3 code used to be interpreted with a final print statement.",
     )
-    libraries_used: Optional[str] = Field(
-        None,
-        description="List of libraries used in the code with proper installing names separated by commas. Example: numpy,pandas,beautifulsoup4",
+    dependencies_used_in_code: List[str] = Field(
+        ...,
+        description="Mandatory list of libraries used in the code with proper installing names.",
     )
-
 
 class CodeInterpreterTool(BaseTool):
     name: str = "Code Interpreter"
-    description: str = "Interprets Python code in a Docker container. ALWAYS PRINT the final result and the output of the code"
+    description: str = "Interprets Python3 code strings with a final print statement."
     args_schema: Type[BaseModel] = CodeInterpreterSchema
     code: Optional[str] = None
+
+    @staticmethod
+    def _get_installed_package_path():
+        spec = importlib.util.find_spec('crewai_tools')
+        return os.path.dirname(spec.origin)
 
     def _verify_docker_image(self) -> None:
         """
         Verify if the Docker image is available
         """
         image_tag = "code-interpreter:latest"
-
         client = docker.from_env()
-        images = client.images.list()
-        all_tags = [tag for image in images for tag in image.tags]
+        try:
+            client.images.get(image_tag)
+        except:
+            package_path = self._get_installed_package_path()
+            dockerfile_path = os.path.join(package_path, 'tools/code_interpreter_tool')
+            if not os.path.exists(dockerfile_path):
+                raise FileNotFoundError(f"Dockerfile not found in {dockerfile_path}")
 
-        if image_tag not in all_tags:
             client.images.build(
-                path=os.path.dirname(os.path.abspath(__file__)),
+                path=dockerfile_path,
                 tag=image_tag,
                 rm=True,
             )
 
-    def __init__(self, code: Optional[str] = None, **kwargs) -> None:
-        super().__init__(**kwargs)
-        if code is not None:
-            self._verify_docker_image()
-            self.code = code
-            self.description = "Interprets Python code in a Docker container. ALWAYS PRINT the final result and the output of the code"
-            self.args_schema = FixedCodeInterpreterSchemaSchema
-            self._generate_description()
-
     def _run(self, **kwargs) -> str:
         code = kwargs.get("code", self.code)
-        libraries_used = kwargs.get("libraries_used", None)
+        libraries_used = kwargs.get("dependencies_used_in_code", [])
         return self.run_code_in_docker(code, libraries_used)
 
     def _install_libraries(
-        self, container: docker.models.containers.Container, libraries: list[str]
+        self, container: docker.models.containers.Container, libraries: List[str]
     ) -> None:
         """
         Install missing libraries in the Docker container
@@ -78,10 +71,9 @@ class CodeInterpreterTool(BaseTool):
         )
 
     def run_code_in_docker(self, code: str, libraries_used: str) -> str:
+        self._verify_docker_image()
         container = self._init_docker_container()
-
-        if libraries_used:
-            self._install_libraries(container, libraries_used.split(","))
+        self._install_libraries(container, libraries_used)
 
         cmd_to_run = f'python3 -c "{code}"'
         exec_result = container.exec_run(cmd_to_run)
