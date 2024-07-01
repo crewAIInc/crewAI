@@ -1,5 +1,5 @@
 import os
-from copy import copy
+from copy import copy as shallow_copy
 from typing import Any, List, Optional, Tuple
 
 from langchain.agents.agent import RunnableAgent
@@ -75,10 +75,6 @@ class Agent(BaseAgent):
     )
     response_template: Optional[str] = Field(
         default=None, description="Response format for the agent."
-    )
-
-    allow_code_execution: Optional[bool] = Field(
-        default=False, description="Enable code execution for the agent."
     )
     allow_code_execution: Optional[bool] = Field(
         default=False, description="Enable code execution for the agent."
@@ -286,8 +282,8 @@ class Agent(BaseAgent):
             "llm",
         }
 
-        # TODO: TEST REMOVING THIS AND SEE IF ANYTHING CHANGES
-        existing_llm = copy(self.llm)
+        # Copy llm and clear callbacks
+        existing_llm = shallow_copy(self.llm)
         existing_llm.callbacks = []
         copied_data = self.model_dump(exclude=exclude)
         copied_data = {k: v for k, v in copied_data.items() if v is not None}
