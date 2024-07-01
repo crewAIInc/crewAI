@@ -28,7 +28,7 @@ A crew in crewAI represents a collaborative group of agents working together to 
 | **Task Callback** *(optional)* | A function that is called after the completion of each task. Useful for monitoring or additional operations post-task execution. |
 | **Share Crew** *(optional)* | Whether you want to share the complete crew information and execution with the crewAI team to make the library better, and allow us to train models. |
 | **Output Log File** *(optional)* | Whether you want to have a file with the complete crew output and execution. You can set it using True and it will default to the folder you are currently in and it will be called logs.txt or passing a string with the full path and name of the file. |
-| **Manager Agent** *(optional)* | `manager` sets a ustom agent that will be used as a manager. |
+| **Manager Agent** *(optional)* | `manager` sets a custom agent that will be used as a manager. |
 | **Manager Callbacks** *(optional)* | `manager_callbacks` takes a list of callback handlers to be executed by the manager agent when a hierarchical process is used. |
 | **Prompt File** *(optional)* | Path to the prompt JSON file to be used for the crew. |
 
