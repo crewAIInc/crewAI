@@ -1,11 +1,10 @@
 ---
 title: Assembling and Activating Your CrewAI Team
-description: A comprehensive guide to creating a dynamic CrewAI team for your projects, with updated functionalities including verbose mode, memory capabilities, asynchronous execution, output customization, language model configuration, and more.
-
+description: A comprehensive guide to creating a dynamic CrewAI team for your projects, with updated functionalities including verbose mode, memory capabilities, asynchronous execution, output customization, language model configuration, code execution, and integration with third-party agents.
 ---
 
 ## Introduction
-Embark on your CrewAI journey by setting up your environment and initiating your AI crew with the latest features. This guide ensures a smooth start, incorporating all recent updates for an enhanced experience.
+Embark on your CrewAI journey by setting up your environment and initiating your AI crew with the latest features. This guide ensures a smooth start, incorporating all recent updates for an enhanced experience, including code execution capabilities and integration with third-party agents.
 
 ## Step 0: Installation
 Install CrewAI and any necessary packages for your project. CrewAI is compatible with Python >=3.10,<=3.13.
@@ -16,46 +15,43 @@ pip install 'crewai[tools]'
 ```
 
 ## Step 1: Assemble Your Agents
-Define your agents with distinct roles, backstories, and enhanced capabilities like verbose mode, memory usage, and the ability to set specific agents as managers. These elements add depth and guide their task execution and interaction within the crew.
+Define your agents with distinct roles, backstories, and enhanced capabilities. The Agent class now supports a wide range of attributes for fine-tuned control over agent behavior and interactions, including code execution and integration with third-party agents.
 
 ```python
 import os
-os.environ["SERPER_API_KEY"] = "Your Key"  # serper.dev API key
-os.environ["OPENAI_API_KEY"] = "Your Key"
-
+from langchain.llms import OpenAI
 from crewai import Agent
 from crewai_tools import SerperDevTool, BrowserbaseTool, ExaSearchTool
+
+os.environ["OPENAI_API_KEY"] = "Your OpenAI Key"
+os.environ["SERPER_API_KEY"] = "Your Serper Key"
+
 search_tool = SerperDevTool()
 browser_tool = BrowserbaseTool()
 exa_search_tool = ExaSearchTool()
 
-# Creating a senior researcher agent with memory and verbose mode
+# Creating a senior researcher agent with advanced configurations
 researcher = Agent(
-  role='Senior Researcher',
-  goal='Uncover groundbreaking technologies in {topic}',
-  verbose=True,
-  memory=True,
-  backstory=(
-    "Driven by curiosity, you're at the forefront of"
-    "innovation, eager to explore and share knowledge that could change"
-    "the world."
-  ),
-  tools=[search_tool, browser_tool],
+    role='Senior Researcher',
+    goal='Uncover groundbreaking technologies in {topic}',
+    backstory=("Driven by curiosity, you're at the forefront of innovation, "
+               "eager to explore and share knowledge that could change the world."),
+    memory=True,
+    verbose=True,
+    allow_delegation=False,
+    tools=[search_tool, browser_tool]
 )
 
-# Creating a writer agent with custom tools and delegation capability
+# Creating a writer agent with custom tools and specific configurations
 writer = Agent(
-  role='Writer',
-  goal='Narrate compelling tech stories about {topic}',
-  verbose=True,
-  memory=True,
-  backstory=(
-    "With a flair for simplifying complex topics, you craft"
-    "engaging narratives that captivate and educate, bringing new"
-    "discoveries to light in an accessible manner."
-  ),
-  tools=[exa_search_tool],
-  allow_delegation=False
+    role='Writer',
+    goal='Narrate compelling tech stories about {topic}',
+    backstory=("With a flair for simplifying complex topics, you craft engaging "
+               "narratives that captivate and educate, bringing new discoveries to light."),
+    verbose=True,
+    allow_delegation=False,
+    memory=True,
+    tools=[exa_search_tool],
 )
 
 # Setting a specific manager agent
