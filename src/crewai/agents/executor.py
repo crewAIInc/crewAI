@@ -1,6 +1,14 @@
 import threading
 import time
-from typing import Any, Dict, Iterator, List, Optional, Tuple, Union
+from typing import (
+    Any,
+    Dict,
+    Iterator,
+    List,
+    Optional,
+    Tuple,
+    Union,
+)
 
 from langchain.agents import AgentExecutor
 from langchain.agents.agent import ExceptionTool
@@ -11,31 +19,34 @@ from langchain_core.exceptions import OutputParserException
 from langchain_core.tools import BaseTool
 from langchain_core.utils.input import get_color_mapping
 from pydantic import InstanceOf
-from crewai.agents.agent_builder.base_agent_executor_mixin import CrewAgentExecutorMixin
+from crewai.agents.agent_builder.base_agent_executor_mixin import (
+    CrewAgentExecutorMixin,
+)
 
 from crewai.agents.tools_handler import ToolsHandler
 from crewai.tools.tool_usage import ToolUsage, ToolUsageErrorException
 from crewai.utilities.constants import TRAINING_DATA_FILE
 from crewai.utilities.training_handler import CrewTrainingHandler
+from crewai.utilities import I18N
 
 
 class CrewAgentExecutor(AgentExecutor, CrewAgentExecutorMixin):
-    # _i18n: I18N = I18N()
+    _i18n: I18N = I18N()
     should_ask_for_human_input: bool = False
     llm: Any = None
-    # iterations: int = 0
-    # task: Any = None
+    iterations: int = 0
+    task: Any = None
     tools_description: str = ""
     tools_names: str = ""
     original_tools: List[Any] = []
-    # crew_agent: Any = None
-    # crew: Any = None
+    crew_agent: Any = None
+    crew: Any = None
     function_calling_llm: Any = None
     request_within_rpm_limit: Any = None
     tools_handler: Optional[InstanceOf[ToolsHandler]] = None
     max_iterations: Optional[int] = 15
-    # have_forced_answer: bool = False
-    # force_answer_max_iterations: Optional[int] = None
+    have_forced_answer: bool = False
+    force_answer_max_iterations: Optional[int] = None
     step_callback: Optional[Any] = None
     system_template: Optional[str] = None
     prompt_template: Optional[str] = None
