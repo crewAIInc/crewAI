@@ -761,19 +761,15 @@ def test_hierarchical_crew_creation_tasks_with_agents():
 
     crew = Crew(
         tasks=[task],
-        agents=[writer],
+        agents=[writer, researcher],
         process=Process.hierarchical,
         manager_llm=ChatOpenAI(model="gpt-4o"),
     )
-
-    assert crew.process == Process.hierarchical
-    assert crew.manager_llm is not None
-    assert crew.tasks[0].agent == writer
-    result = crew.kickoff()
-
-    assert (
-        result
-        == "Artificial Intelligence (AI) is revolutionizing the way we live and work, driving advancements across numerous industries from healthcare to finance and beyond. By harnessing the power of complex algorithms and vast datasets, AI systems can perform tasks with unprecedented speed, accuracy, and efficiency, often surpassing human capabilities. From predictive analytics and personalized recommendations to autonomous vehicles and intelligent virtual assistants, AI's applications are both diverse and transformative. As we continue to innovate and integrate AI into our daily lives, its potential to shape a smarter, more efficient, and interconnected future is boundless."
+    crew.kickoff()
+    assert crew.manager_agent is not None
+    assert crew.manager_agent.tools is not None
+    assert crew.manager_agent.tools[0].description.startswith(
+        "Delegate a specific task to one of the following coworkers: [Senior Writer]"
     )
 
 
