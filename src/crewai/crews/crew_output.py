@@ -11,13 +11,15 @@ class CrewOutput(BaseModel):
     tasks_output: list[TaskOutput] = Field(
         description="Output of each task", default=[]
     )
-    token_output: Dict[str, Any] = Field(
+    token_usage: Dict[str, Any] = Field(
         description="Processed token summary", default={}
     )
 
+    # TODO: Ask @joao what is the desired behavior here
     def result(self) -> Union[str, BaseModel, Dict[str, Any]]:
         """Return the result of the task based on the available output."""
-        return self.output.result()
+        results = [output.result() for output in self.output]
+        return results if len(results) > 1 else results[0]
 
     def raw_output(self) -> str:
         """Return the raw output of the task."""
@@ -29,5 +31,6 @@ class CrewOutput(BaseModel):
     def __getitem__(self, key: str) -> Any:
         self.output[key]
 
+    # TODO: Confirm with Joao that we want to print the raw output and not the object
     def __str__(self):
         return str(self.raw_output())

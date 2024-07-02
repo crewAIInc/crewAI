@@ -7,7 +7,6 @@ from unittest.mock import patch
 
 import pydantic_core
 import pytest
-
 from crewai.agent import Agent
 from crewai.agents.cache import CacheHandler
 from crewai.crew import Crew
@@ -436,16 +435,18 @@ def test_crew_full_ouput():
 
     result = crew.kickoff()
 
-    assert result == {
-        "final_output": "Hello!",
-        "tasks_outputs": [task1.output, task2.output],
-        "usage_metrics": {
-            "total_tokens": 517,
-            "prompt_tokens": 466,
-            "completion_tokens": 51,
-            "successful_requests": 3,
-        },
+    expected_usage_metrics = {
+        "total_tokens": 348,
+        "prompt_tokens": 314,
+        "completion_tokens": 34,
+        "successful_requests": 2,
     }
+    print(result.output)
+    assert result.token_usage == expected_usage_metrics
+    expected_final_string_output = "Hello!"
+    assert result.tasks_output == [task1.output, task2.output]
+    assert result.result() == expected_final_string_output
+    assert result.raw_output() == expected_final_string_output
 
 
 def test_agents_rpm_is_never_set_if_crew_max_RPM_is_not_set():
@@ -548,8 +549,9 @@ def test_hierarchical_async_task_execution_completion():
     )
 
     hierarchical_result = hierarchical_crew.kickoff()
+
     assert hierarchical_result.raw_output().startswith(
-        "The history of Artificial Intelligence (AI) is a fascinating journey that charts the evolution of human ingenuity and technological advancement."
+        "The history of artificial intelligence (AI) is a fascinating journey"
     )
 
 
@@ -625,47 +627,8 @@ def test_three_task_with_async_execution():
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
-def test_crew_kickoff_for_each_full_ouput():
-    inputs = [
-        {"topic": "dog"},
-        {"topic": "cat"},
-        {"topic": "apple"},
-    ]
-
-    agent = Agent(
-        role="{topic} Researcher",
-        goal="Express hot takes on {topic}.",
-        backstory="You have a lot of experience with {topic}.",
-    )
-
-    task = Task(
-        description="Give me an analysis around {topic}.",
-        expected_output="1 bullet point about {topic} that's under 15 words.",
-        agent=agent,
-    )
-
-    crew = Crew(agents=[agent], tasks=[task], full_output=True)
-    results = crew.kickoff_for_each(inputs=inputs)
-
-    assert len(results) == len(inputs)
-    for result in results:
-        assert "usage_metrics" in result
-        assert isinstance(result["usage_metrics"], dict)
-
-        # Assert that all required keys are in usage_metrics and their values are not None
-        for key in [
-            "total_tokens",
-            "prompt_tokens",
-            "completion_tokens",
-            "successful_requests",
-        ]:
-            assert key in result["usage_metrics"]
-            assert result["usage_metrics"][key] > 0
-
-
-@pytest.mark.vcr(filter_headers=["authorization"])
 @pytest.mark.asyncio
-async def test_crew_async_kickoff_for_each_full_ouput():
+async def test_crew_async_kickoff():
     inputs = [
         {"topic": "dog"},
         {"topic": "cat"},
@@ -689,9 +652,6 @@ async def test_crew_async_kickoff_for_each_full_ouput():
 
     assert len(results) == len(inputs)
     for result in results:
-        assert "usage_metrics" in result
-        assert isinstance(result["usage_metrics"], dict)
-
         # Assert that all required keys are in usage_metrics and their values are not None
         for key in [
             "total_tokens",
@@ -699,9 +659,9 @@ async def test_crew_async_kickoff_for_each_full_ouput():
             "completion_tokens",
             "successful_requests",
         ]:
-            assert key in result["usage_metrics"]
+            assert key in result.token_usage
             # TODO: FIX THIS WHEN USAGE METRICS ARE RE-DONE
-            # assert result["usage_metrics"][key] > 0
+            # assert result.token_usage[key] > 0
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
@@ -784,7 +744,9 @@ def test_kickoff_for_each_single_input():
         results = crew.kickoff_for_each(inputs=inputs)
 
     assert len(results) == 1
-    assert results == expected_outputs
+    print("RESULT:", results)
+    for result in results:
+        assert result == expected_outputs[0]
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])

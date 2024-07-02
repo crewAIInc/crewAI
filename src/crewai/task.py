@@ -3,7 +3,7 @@ import re
 import threading
 import uuid
 from concurrent.futures import Future
-from copy import copy, deepcopy
+from copy import copy
 from typing import Any, Dict, List, Optional, Type, Union
 
 from langchain_openai import ChatOpenAI
@@ -209,8 +209,8 @@ class Task(BaseModel):
         if self.context:
             context_list = []
             for task in self.context:
-                if task.async_execution and task.thread:
-                    task.thread.join()
+                if task.async_execution and task._thread:
+                    task._thread.join()
                 if task and task.output:
                     context_list.append(task.output.raw_output)
             context = "\n".join(context_list)
