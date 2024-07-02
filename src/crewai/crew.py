@@ -21,6 +21,7 @@ from pydantic_core import PydanticCustomError
 from crewai.agent import Agent
 from crewai.agents.agent_builder.base_agent import BaseAgent
 from crewai.agents.cache import CacheHandler
+from crewai.conditional_task import ConditionalTask
 from crewai.crews.crew_output import CrewOutput
 from crewai.memory.entity.entity_memory import EntityMemory
 from crewai.memory.long_term.long_term_memory import LongTermMemory
@@ -396,7 +397,19 @@ class Crew(BaseModel):
         task_outputs: List[TaskOutput] = []
         futures: List[Tuple[Task, Future[TaskOutput]]] = []
 
-        for task in self.tasks:
+        for i, task in enumerate(self.tasks):
+            if isinstance(task, ConditionalTask):
+                # print("task_outputs", task_outputs)
+                previous_output = task_outputs[-1] if task_outputs else None
+                # print("previous_output type", type(previous_output))
+                if previous_output is not None:
+                    if not task.should_execute(previous_output):
+                        self._logger.log(
+                            "info",
+                            f"Skipping conditional task: {task.description}",
+                            color="yellow",
+                        )
+                    continue
             if task.agent.allow_delegation:  # type: ignore #  Item "None" of "Agent | None" has no attribute "allow_delegation"
                 agents_for_delegation = [
                     agent for agent in self.agents if agent != task.agent
@@ -438,9 +451,9 @@ class Crew(BaseModel):
                 task_output = task.execute_sync(
                     agent=task.agent, context=context, tools=task.tools
                 )
-                task_outputs = [task_output]
+                print("task executed res:", task_output)
+                task_outputs.append(task_output)
                 self._process_task_result(task, task_output)
-
         if futures:
             # Clear task_outputs before processing async tasks
             task_outputs = []
@@ -451,8 +464,14 @@ class Crew(BaseModel):
 
         final_string_output = aggregate_raw_outputs_from_task_outputs(task_outputs)
         self._finish_execution(final_string_output)
-
-        token_usage = self.calculate_usage_metrics()
+        # TODO: need to revert
+        # token_usage = self.calculate_usage_metrics()
+        token_usage = {
+            "total_tokens": 0,
+            "prompt_tokens": 0,
+            "completion_tokens": 0,
+            "successful_requests": 0,
+        }
 
         return self._format_output(task_outputs, token_usage)
 
