@@ -1,6 +1,7 @@
 from .tools import (
     BrowserbaseLoadTool,
     CodeDocsSearchTool,
+    CodeInterpreterTool,
     ComposioTool,
     CSVSearchTool,
     DirectoryReadTool,
