@@ -820,31 +820,30 @@ files = [
 
 [[package]]
 name = "crewai-tools"
-version = "0.4.3"
+version = "0.4.5"
 description = "Set of tools for the crewAI framework"
 optional = false
-python-versions = ">=3.10,<=3.13"
-files = []
-develop = false
+python-versions = "<=3.13,>=3.10"
+files = [
+    {file = "crewai_tools-0.4.5-py3-none-any.whl", hash = "sha256:d970a152a69d039eb23150755d4dc9e7c6ef9176b19a80348142619518e39b17"},
+    {file = "crewai_tools-0.4.5.tar.gz", hash = "sha256:1d7763f20afd95c6be70d31f9f0e9334cb42be127c17feddce368907077a6543"},
+]
 
 [package.dependencies]
-beautifulsoup4 = "^4.12.3"
-chromadb = "^0.4.22"
-docker = "^7.1.0"
-docx2txt = "^0.8"
-lancedb = "^0.5.4"
+beautifulsoup4 = ">=4.12.3,<5.0.0"
+chromadb = ">=0.4.22,<0.5.0"
+docker = ">=7.1.0,<8.0.0"
+docx2txt = ">=0.8,<0.9"
+embedchain = ">=0.1.113,<0.2.0"
+lancedb = ">=0.5.4,<0.6.0"
 langchain = ">=0.1.4,<0.2.0"
-openai = "^1.12.0"
-pydantic = "^2.6.1"
-pyright = "^1.1.350"
-pytest = "^8.0.0"
-pytube = "^15.0.0"
-requests = "^2.31.0"
-selenium = "^4.18.1"
-
-[package.source]
-type = "directory"
-url = "../crewai-tools"
+openai = ">=1.12.0,<2.0.0"
+pydantic = ">=2.6.1,<3.0.0"
+pyright = ">=1.1.350,<2.0.0"
+pytest = ">=8.0.0,<9.0.0"
+pytube = ">=15.0.0,<16.0.0"
+requests = ">=2.31.0,<3.0.0"
+selenium = ">=4.18.1,<5.0.0"
 
 [[package]]
 name = "cssselect2"
@@ -2506,8 +2505,8 @@ files = [
 [package.dependencies]
 orjson = ">=3.9.14,<4.0.0"
 pydantic = [
-    {version = ">=2.7.4,<3.0.0", markers = "python_full_version >= \"3.12.4\""},
     {version = ">=1,<3", markers = "python_full_version < \"3.12.4\""},
+    {version = ">=2.7.4,<3.0.0", markers = "python_full_version >= \"3.12.4\""},
 ]
 requests = ">=2,<3"
 
@@ -3935,8 +3934,8 @@ files = [
 annotated-types = ">=0.4.0"
 pydantic-core = "2.20.0"
 typing-extensions = [
-    {version = ">=4.12.2", markers = "python_version >= \"3.13\""},
     {version = ">=4.6.1", markers = "python_version < \"3.13\""},
+    {version = ">=4.12.2", markers = "python_version >= \"3.13\""},
 ]
 
 [package.extras]
@@ -6034,4 +6033,4 @@ tools = ["crewai-tools"]
 [metadata]
 lock-version = "2.0"
 python-versions = ">=3.10,<=3.13"
-content-hash = "4fcffef0372bbf95065b56b63db8f1c2fa83999329bf67d370c9b736382f02f4"
+content-hash = "d4ea0d71723ecc2bad629c387dd786b6a96c553b1e3e298516fdfcd2059d1019"
