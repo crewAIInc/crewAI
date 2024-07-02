@@ -1,5 +1,5 @@
 import time
-from typing import Optional, Any
+from typing import Any
 
 from crewai.memory.entity.entity_memory_item import EntityMemoryItem
 from crewai.memory.long_term.long_term_memory_item import LongTermMemoryItem
@@ -8,11 +8,16 @@ from crewai.utilities.converter import ConverterError
 from crewai.utilities.evaluators.task_evaluator import TaskEvaluator
 from crewai.utilities import I18N
 
+# if TYPE_CHECKING:
+#     from crewai.crew import Crew
+#     from crewai.task import Task
+#     from crewai.agents.agent_builder.base_agent import BaseAgent
+
 
 class CrewAgentExecutorMixin:
-    crew: Optional[Any]
-    crew_agent: Optional[Any]
-    task: Optional[Any]
+    crew: Any = None
+    crew_agent: Any = None
+    task: Any = None
     iterations: int
     force_answer_max_iterations: int
     have_forced_answer: bool
@@ -28,35 +33,39 @@ class CrewAgentExecutorMixin:
         """Create and save a short-term memory item if conditions are met."""
         if (
             self.crew
-            and self.crew.memory
+            and self.crew_agent
+            and self.task
+            and self.crew._short_term_memory
             and "Action: Delegate work to coworker" not in output.log
         ):
             try:
-                if (
-                    self.crew_agent
-                    and self.crew_agent.role
-                    and self.task
-                    and self.task.description
-                ):
-                    memory = ShortTermMemoryItem(
-                        data=output.log,
-                        agent=self.crew_agent.role,
-                        metadata={
-                            "observation": self.task.description,
-                        },
-                    )
-                    self.crew._short_term_memory.save(memory)
-            except AttributeError as e:
-                print(f"Missing attributes for short term memory: {e}")
-                pass
+                print("self.crew_agent", self.crew_agent.__dict__)
+                memory = ShortTermMemoryItem(
+                    data=output.log,
+                    agent=self.crew_agent.role,
+                    metadata={
+                        "observation": self.task.description,
+                    },
+                )
+                self.crew._short_term_memory.save(memory)
             except Exception as e:
                 print(f"Failed to add to short term memory: {e}")
                 pass
 
     def _create_long_term_memory(self, output) -> None:
         """Create and save long-term and entity memory items based on evaluation."""
-        if self.crew and self.crew.memory and self.task and self.crew_agent:
+        if (
+            self.crew
+            and self.crew.memory
+            and self.crew._long_term_memory
+            and self.crew._entity_memory
+            and self.task
+            and self.crew_agent
+        ):
             try:
+                print("self.crew", self.crew.__dict__)
+                print("self.crew_agent", self.crew_agent.__dict__)
+
                 ltm_agent = TaskEvaluator(self.crew_agent)
                 evaluation = ltm_agent.evaluate(self.task, output.log)
 

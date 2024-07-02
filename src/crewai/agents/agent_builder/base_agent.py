@@ -15,7 +15,8 @@ from pydantic import (
 from pydantic_core import PydanticCustomError
 
 from crewai.utilities import I18N, RPMController, Logger
-from crewai.agents import CacheHandler, ToolsHandler
+from crewai.agents.cache.cache_handler import CacheHandler
+from crewai.agents.tools_handler import ToolsHandler
 from crewai.utilities.token_counter_callback import TokenProcess
 
 
