@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "crewai"
-version = "0.30.11"
+version = "0.35.8"
 description = "Cutting-edge framework for orchestrating role-playing, autonomous AI agents. By fostering collaborative intelligence, CrewAI empowers agents to work together seamlessly, tackling complex tasks."
 authors = ["Joao Moura <joao@crewai.com>"]
 readme = "README.md"
@@ -14,21 +14,24 @@ Repository = "https://github.com/joaomdmoura/crewai"
 [tool.poetry.dependencies]
 python = ">=3.10,<=3.13"
 pydantic = "^2.4.2"
-langchain = "^0.1.10"
+langchain = ">=0.1.4,<0.2.0"
 openai = "^1.13.3"
 opentelemetry-api = "^1.22.0"
 opentelemetry-sdk = "^1.22.0"
 opentelemetry-exporter-otlp-proto-http = "^1.22.0"
-instructor = "^0.5.2"
+instructor = "1.3.3"
 regex = "^2023.12.25"
-crewai-tools = { version = "^0.2.6", optional = true }
+crewai-tools = { version = "^0.4.6", optional = true }
 click = "^8.1.7"
 python-dotenv = "^1.0.0"
-embedchain = "^0.1.98"
 appdirs = "^1.4.4"
+jsonref = "^1.1.0"
+agentops = { version = "^0.1.9", optional = true }
+embedchain = "^0.1.113"
 
 [tool.poetry.extras]
 tools = ["crewai-tools"]
+agentops = ["agentops"]
 
 [tool.poetry.group.dev.dependencies]
 isort = "^5.13.2"
@@ -42,7 +45,7 @@ mkdocs-material = { extras = ["imaging"], version = "^9.5.7" }
 mkdocs-material-extensions = "^1.3.1"
 pillow = "^10.2.0"
 cairosvg = "^2.7.1"
-crewai-tools = "^0.2.6"
+crewai-tools = "^0.4.6"
 
 [tool.poetry.group.test.dependencies]
 pytest = "^8.0.0"

@@ -63,20 +63,20 @@ interactions:
       allows you to properly evaluate the work of your team members.\nYour personal
       goal is: Manage the team to complete the task in the best way possible.\n\nYou
       ONLY have access to the following tools, and should NEVER make up tools that
-      are not listed here:\n\nDelegate work to co-worker: Delegate work to co-worker(coworker:
+      are not listed here:\n\nDelegate work to coworker: Delegate work to coworker(coworker:
       str, task: str, context: str) - Delegate a specific task to one of the following
-      co-workers: [''Researcher'', ''Senior Writer'']\nThe input to this tool should
+      coworkers: [''Researcher'', ''Senior Writer'']\nThe input to this tool should
       be the coworker, the task you want them to do, and ALL necessary context to
       execute the task, they know nothing about the task, so share absolute everything
       you know, don''t reference things but instead explain them.\nAsk question to
-      co-worker: Ask question to co-worker(coworker: str, question: str, context:
-      str) - Ask a specific question to one of the following co-workers: [''Researcher'',
+      coworker: Ask question to coworker(coworker: str, question: str, context:
+      str) - Ask a specific question to one of the following coworkers: [''Researcher'',
       ''Senior Writer'']\nThe input to this tool should be the coworker, the question
       you have for them, and ALL necessary context to ask the question properly, they
       know nothing about the question, so share absolute everything you know, don''t
       reference things but instead explain them.\n\nUse the following format:\n\nThought:
       you should always think about what to do\nAction: the action to take, only one
-      name of [Delegate work to co-worker, Ask question to co-worker], just the name,
+      name of [Delegate work to coworker, Ask question to coworker], just the name,
       exactly as it''s written.\nAction Input: the input to the action, just a simple
       a python dictionary using \" to wrap keys and values.\nObservation: the result
       of the action\n\nOnce all necessary information is gathered:\n\nThought: I now
@@ -2444,20 +2444,20 @@ interactions:
       allows you to properly evaluate the work of your team members.\nYour personal
       goal is: Manage the team to complete the task in the best way possible.\n\nYou
       ONLY have access to the following tools, and should NEVER make up tools that
-      are not listed here:\n\nDelegate work to co-worker: Delegate work to co-worker(coworker:
+      are not listed here:\n\nDelegate work to coworker: Delegate work to coworker(coworker:
       str, task: str, context: str) - Delegate a specific task to one of the following
-      co-workers: [''Researcher'', ''Senior Writer'']\nThe input to this tool should
+      coworkers: [''Researcher'', ''Senior Writer'']\nThe input to this tool should
       be the coworker, the task you want them to do, and ALL necessary context to
       execute the task, they know nothing about the task, so share absolute everything
       you know, don''t reference things but instead explain them.\nAsk question to
-      co-worker: Ask question to co-worker(coworker: str, question: str, context:
-      str) - Ask a specific question to one of the following co-workers: [''Researcher'',
+      coworker: Ask question to coworker(coworker: str, question: str, context:
+      str) - Ask a specific question to one of the following coworkers: [''Researcher'',
       ''Senior Writer'']\nThe input to this tool should be the coworker, the question
       you have for them, and ALL necessary context to ask the question properly, they
       know nothing about the question, so share absolute everything you know, don''t
       reference things but instead explain them.\n\nUse the following format:\n\nThought:
       you should always think about what to do\nAction: the action to take, only one
-      name of [Delegate work to co-worker, Ask question to co-worker], just the name,
+      name of [Delegate work to coworker, Ask question to coworker], just the name,
       exactly as it''s written.\nAction Input: the input to the action, just a simple
       a python dictionary using \" to wrap keys and values.\nObservation: the result
       of the action\n\nOnce all necessary information is gathered:\n\nThought: I now
@@ -2474,7 +2474,7 @@ interactions:
       a paragraph for each idea that showcases how good an article about this topic
       could be. I will delegate the task of coming up with the ideas to the Researcher
       and the task of writing the paragraphs to the Senior Writer.\n\nAction: \nDelegate
-      work to co-worker\n\nAction Input: \n{\n  \"coworker\": \"Researcher\",\n  \"task\":
+      work to coworker\n\nAction Input: \n{\n  \"coworker\": \"Researcher\",\n  \"task\":
       \"Come up with 5 interesting ideas for an article\",\n  \"context\": \"We need
       to create a list of 5 interesting ideas for an article. These ideas should be
       unique, engaging, and have the potential to be developed into a full-length
@@ -5363,20 +5363,20 @@ interactions:
       allows you to properly evaluate the work of your team members.\nYour personal
       goal is: Manage the team to complete the task in the best way possible.\n\nYou
       ONLY have access to the following tools, and should NEVER make up tools that
-      are not listed here:\n\nDelegate work to co-worker: Delegate work to co-worker(coworker:
+      are not listed here:\n\nDelegate work to coworker: Delegate work to coworker(coworker:
       str, task: str, context: str) - Delegate a specific task to one of the following
-      co-workers: [''Researcher'', ''Senior Writer'']\nThe input to this tool should
+      coworkers: [''Researcher'', ''Senior Writer'']\nThe input to this tool should
       be the coworker, the task you want them to do, and ALL necessary context to
       execute the task, they know nothing about the task, so share absolute everything
       you know, don''t reference things but instead explain them.\nAsk question to
-      co-worker: Ask question to co-worker(coworker: str, question: str, context:
-      str) - Ask a specific question to one of the following co-workers: [''Researcher'',
+      coworker: Ask question to coworker(coworker: str, question: str, context:
+      str) - Ask a specific question to one of the following coworkers: [''Researcher'',
       ''Senior Writer'']\nThe input to this tool should be the coworker, the question
       you have for them, and ALL necessary context to ask the question properly, they
       know nothing about the question, so share absolute everything you know, don''t
       reference things but instead explain them.\n\nUse the following format:\n\nThought:
       you should always think about what to do\nAction: the action to take, only one
-      name of [Delegate work to co-worker, Ask question to co-worker], just the name,
+      name of [Delegate work to coworker, Ask question to coworker], just the name,
       exactly as it''s written.\nAction Input: the input to the action, just a simple
       a python dictionary using \" to wrap keys and values.\nObservation: the result
       of the action\n\nOnce all necessary information is gathered:\n\nThought: I now
@@ -5393,7 +5393,7 @@ interactions:
       a paragraph for each idea that showcases how good an article about this topic
       could be. I will delegate the task of coming up with the ideas to the Researcher
       and the task of writing the paragraphs to the Senior Writer.\n\nAction: \nDelegate
-      work to co-worker\n\nAction Input: \n{\n  \"coworker\": \"Researcher\",\n  \"task\":
+      work to coworker\n\nAction Input: \n{\n  \"coworker\": \"Researcher\",\n  \"task\":
       \"Come up with 5 interesting ideas for an article\",\n  \"context\": \"We need
       to create a list of 5 interesting ideas for an article. These ideas should be
       unique, engaging, and have the potential to be developed into a full-length
@@ -5406,7 +5406,7 @@ interactions:
       for the article. Now, I need to delegate the task of writing a paragraph for
       each idea to the Senior Writer. I will provide the Senior Writer with the ideas
       and ask them to write a paragraph that showcases how good an article about each
-      topic could be.\n\nAction: \nDelegate work to co-worker\n\nAction Input: \n{\n  \"coworker\":
+      topic could be.\n\nAction: \nDelegate work to coworker\n\nAction Input: \n{\n  \"coworker\":
       \"Senior Writer\",\n  \"task\": \"Write one amazing paragraph highlight for
       each idea\",\n  \"context\": \"We have 5 interesting ideas for an article. They
       are: 1. ''Demystifying AI: An in-depth exploration of Artificial Intelligence

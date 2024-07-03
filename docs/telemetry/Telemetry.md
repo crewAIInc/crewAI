@@ -2,6 +2,7 @@
 title: Telemetry
 description: Understanding the telemetry data collected by CrewAI and how it contributes to the enhancement of the library.
 ---
+
 ## Telemetry
 
 CrewAI utilizes anonymous telemetry to gather usage statistics with the primary goal of enhancing the library. Our focus is on improving and developing the features, integrations, and tools most utilized by our users.

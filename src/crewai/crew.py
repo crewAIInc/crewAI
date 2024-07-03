@@ -1,3 +1,4 @@
+import asyncio
 import json
 import uuid
 from typing import Any, Dict, List, Optional, Union
@@ -17,6 +18,7 @@ from pydantic import (
 from pydantic_core import PydanticCustomError
 
 from crewai.agent import Agent
+from crewai.agents.agent_builder.base_agent import BaseAgent
 from crewai.agents.cache import CacheHandler
 from crewai.memory.entity.entity_memory import EntityMemory
 from crewai.memory.long_term.long_term_memory import LongTermMemory
@@ -26,6 +28,13 @@ from crewai.task import Task
 from crewai.telemetry import Telemetry
 from crewai.tools.agent_tools import AgentTools
 from crewai.utilities import I18N, FileHandler, Logger, RPMController
+from crewai.utilities.evaluators.task_evaluator import TaskEvaluator
+from crewai.utilities.training_handler import CrewTrainingHandler
+
+try:
+    import agentops
+except ImportError:
+    agentops = None
 
 
 class Crew(BaseModel):
@@ -47,7 +56,7 @@ class Crew(BaseModel):
         max_rpm: Maximum number of requests per minute for the crew execution to be respected.
         prompt_file: Path to the prompt json file to be used for the crew.
         id: A unique identifier for the crew instance.
-        full_output: Whether the crew should return the full output with all tasks outputs or just the final output.
+        full_output: Whether the crew should return the full output with all tasks outputs and token usage metrics or just the final output.
         task_callback: Callback to be executed after each task for every agents execution.
         step_callback: Callback to be executed after each step for every agents execution.
         share_crew: Whether you want to share the complete crew information and execution with crewAI to make the library better, and allow us to train models.
@@ -62,11 +71,13 @@ class Crew(BaseModel):
     _short_term_memory: Optional[InstanceOf[ShortTermMemory]] = PrivateAttr()
     _long_term_memory: Optional[InstanceOf[LongTermMemory]] = PrivateAttr()
     _entity_memory: Optional[InstanceOf[EntityMemory]] = PrivateAttr()
+    _train: Optional[bool] = PrivateAttr(default=False)
+    _train_iteration: Optional[int] = PrivateAttr()
 
     cache: bool = Field(default=True)
     model_config = ConfigDict(arbitrary_types_allowed=True)
     tasks: List[Task] = Field(default_factory=list)
-    agents: List[Agent] = Field(default_factory=list)
+    agents: List[BaseAgent] = Field(default_factory=list)
     process: Process = Field(default=Process.sequential)
     verbose: Union[int, bool] = Field(default=0)
     memory: bool = Field(
@@ -83,12 +94,12 @@ class Crew(BaseModel):
     )
     full_output: Optional[bool] = Field(
         default=False,
-        description="Whether the crew should return the full output with all tasks outputs or just the final output.",
+        description="Whether the crew should return the full output with all tasks outputs and token usage metrics or just the final output.",
     )
     manager_llm: Optional[Any] = Field(
         description="Language model that will run the agent.", default=None
     )
-    manager_agent: Optional[Any] = Field(
+    manager_agent: Optional[BaseAgent] = Field(
         description="Custom agent that will be used as manager.", default=None
     )
     manager_callbacks: Optional[List[InstanceOf[BaseCallbackHandler]]] = Field(
@@ -241,21 +252,63 @@ class Crew(BaseModel):
         del task_config["agent"]
         return Task(**task_config, agent=task_agent)
 
-    def kickoff(self, inputs: Optional[Dict[str, Any]] = {}) -> str:
+    def _setup_for_training(self) -> None:
+        """Sets up the crew for training."""
+        self._train = True
+
+        for task in self.tasks:
+            task.human_input = True
+
+        for agent in self.agents:
+            agent.allow_delegation = False
+
+    def train(self, n_iterations: int, inputs: Optional[Dict[str, Any]] = {}) -> None:
+        """Trains the crew for a given number of iterations."""
+        self._setup_for_training()
+
+        for n_iteration in range(n_iterations):
+            self._train_iteration = n_iteration
+            self.kickoff(inputs=inputs)
+
+        training_data = CrewTrainingHandler("training_data.pkl").load()
+
+        for agent in self.agents:
+            result = TaskEvaluator(agent).evaluate_training_data(
+                training_data=training_data, agent_id=str(agent.id)
+            )
+
+            CrewTrainingHandler("trained_agents_data.pkl").save_trained_data(
+                agent_id=str(agent.role), trained_data=result.model_dump()
+            )
+
+    def kickoff(
+        self,
+        inputs: Optional[Dict[str, Any]] = {},
+    ) -> Union[str, Dict[str, Any]]:
         """Starts the crew to work on its assigned tasks."""
-        self._execution_span = self._telemetry.crew_execution_span(self)
-        self._interpolate_inputs(inputs)  # type: ignore # Argument 1 to "_interpolate_inputs" of "Crew" has incompatible type "dict[str, Any] | None"; expected "dict[str, Any]"
+        self._execution_span = self._telemetry.crew_execution_span(self, inputs)
+        # type: ignore # Argument 1 to "_interpolate_inputs" of "Crew" has incompatible type "dict[str, Any] | None"; expected "dict[str, Any]"
+        self._interpolate_inputs(inputs)
         self._set_tasks_callbacks()
 
         i18n = I18N(prompt_file=self.prompt_file)
 
         for agent in self.agents:
+            # type: ignore # Argument 1 to "_interpolate_inputs" of "Crew" has incompatible type "dict[str, Any] | None"; expected "dict[str, Any]"
             agent.i18n = i18n
-            agent.crew = self
-
-            if not agent.function_calling_llm:
+            # type: ignore[attr-defined] # Argument 1 to "_interpolate_inputs" of "Crew" has incompatible type "dict[str, Any] | None"; expected "dict[str, Any]"
+            agent.crew = self  # type: ignore[attr-defined]
+            # TODO: Create an AgentFunctionCalling protocol for future refactoring
+            if (
+                hasattr(agent, "function_calling_llm")
+                and not agent.function_calling_llm
+            ):
                 agent.function_calling_llm = self.function_calling_llm
-            if not agent.step_callback:
+
+            if hasattr(agent, "allow_code_execution") and agent.allow_code_execution:
+                agent.tools += agent.get_code_execution_tools()
+
+            if hasattr(agent, "step_callback") and not agent.step_callback:
                 agent.step_callback = self.step_callback
 
             agent.create_agent_executor()
@@ -265,37 +318,75 @@ class Crew(BaseModel):
         if self.process == Process.sequential:
             result = self._run_sequential_process()
         elif self.process == Process.hierarchical:
-            result, manager_metrics = self._run_hierarchical_process()  # type: ignore # Unpacking a string is disallowed
-            metrics.append(manager_metrics)  # type: ignore # Cannot determine type of "manager_metrics"
-
+            # type: ignore # Unpacking a string is disallowed
+            result, manager_metrics = self._run_hierarchical_process()
+            # type: ignore # Cannot determine type of "manager_metrics"
+            metrics.append(manager_metrics)
         else:
             raise NotImplementedError(
                 f"The process '{self.process}' is not implemented yet."
             )
-
         metrics = metrics + [
             agent._token_process.get_summary() for agent in self.agents
         ]
+
         self.usage_metrics = {
             key: sum([m[key] for m in metrics if m is not None]) for key in metrics[0]
         }
 
         return result
 
-    def train(self, n_iterations: int) -> None:
-        # TODO: Implement training
-        pass
+    def kickoff_for_each(self, inputs: List[Dict[str, Any]]) -> List:
+        """Executes the Crew's workflow for each input in the list and aggregates results."""
+        results = []
+
+        for input_data in inputs:
+            crew = self.copy()
+
+            for task in crew.tasks:
+                task.interpolate_inputs(input_data)
+            for agent in crew.agents:
+                agent.interpolate_inputs(input_data)
+
+            output = crew.kickoff()
+            results.append(output)
+
+        return results
+
+    async def kickoff_async(
+        self, inputs: Optional[Dict[str, Any]] = {}
+    ) -> Union[str, Dict]:
+        """Asynchronous kickoff method to start the crew execution."""
+        return await asyncio.to_thread(self.kickoff, inputs)
+
+    async def kickoff_for_each_async(self, inputs: List[Dict]) -> List[Any]:
+        async def run_crew(input_data):
+            crew = self.copy()
+
+            for task in crew.tasks:
+                task.interpolate_inputs(input_data)
+            for agent in crew.agents:
+                agent.interpolate_inputs(input_data)
+
+            return await crew.kickoff_async()
+
+        tasks = [asyncio.create_task(run_crew(input_data)) for input_data in inputs]
+
+        results = await asyncio.gather(*tasks)
+
+        return results
 
     def _run_sequential_process(self) -> str:
         """Executes tasks sequentially and returns the final output."""
         task_output = ""
+        token_usage = []
         for task in self.tasks:
             if task.agent.allow_delegation:  # type: ignore #  Item "None" of "Agent | None" has no attribute "allow_delegation"
                 agents_for_delegation = [
                     agent for agent in self.agents if agent != task.agent
                 ]
                 if len(self.agents) > 1 and len(agents_for_delegation) > 0:
-                    task.tools += AgentTools(agents=agents_for_delegation).tools()
+                    task.tools += task.agent.get_delegation_tools(agents_for_delegation)
 
             role = task.agent.role if task.agent is not None else "None"
             self._logger.log("debug", f"== Working Agent: {role}", color="bold_purple")
@@ -307,21 +398,27 @@ class Crew(BaseModel):
                 self._file_handler.log(
                     agent=role, task=task.description, status="started"
                 )
-
             output = task.execute(context=task_output)
+
             if not task.async_execution:
                 task_output = output
 
             role = task.agent.role if task.agent is not None else "None"
             self._logger.log("debug", f"== [{role}] Task output: {task_output}\n\n")
+            token_summ = task.agent._token_process.get_summary()
+
+            token_usage.append(token_summ)
 
             if self.output_log_file:
                 self._file_handler.log(agent=role, task=task_output, status="completed")
 
+        token_usage_formatted = self.aggregate_token_usage(token_usage)
         self._finish_execution(task_output)
-        return self._format_output(task_output)
 
-    def _run_hierarchical_process(self) -> str:
+        # type: ignore # Incompatible return value type (got "tuple[str, Any]", expected "str")
+        return self._format_output(task_output, token_usage_formatted)
+
+    def _run_hierarchical_process(self) -> Union[str, Dict[str, Any]]:
         """Creates and assigns a manager agent to make sure the crew completes the tasks."""
 
         i18n = I18N(prompt_file=self.prompt_file)
@@ -330,7 +427,7 @@ class Crew(BaseModel):
             manager = self.manager_agent
             if len(manager.tools) > 0:
                 raise Exception("Manager agent should not have tools")
-            manager.tools = AgentTools(agents=self.agents).tools()
+            manager.tools = self.manager_agent.get_delegation_tools(self.agents)
         else:
             manager = Agent(
                 role=i18n.retrieve("hierarchical_manager_agent", "role"),
@@ -338,10 +435,11 @@ class Crew(BaseModel):
                 backstory=i18n.retrieve("hierarchical_manager_agent", "backstory"),
                 tools=AgentTools(agents=self.agents).tools(),
                 llm=self.manager_llm,
-                verbose=True,
+                verbose=self.verbose,
             )
 
         task_output = ""
+        token_usage = []
         for task in self.tasks:
             self._logger.log("debug", f"Working Agent: {manager.role}")
             self._logger.log("info", f"Starting Task: {task.description}")
@@ -356,14 +454,54 @@ class Crew(BaseModel):
             )
 
             self._logger.log("debug", f"[{manager.role}] Task output: {task_output}")
-
+            if hasattr(task, "agent._token_process"):
+                token_summ = task.agent._token_process.get_summary()
+                token_usage.append(token_summ)
             if self.output_log_file:
                 self._file_handler.log(
                     agent=manager.role, task=task_output, status="completed"
                 )
 
         self._finish_execution(task_output)
-        return self._format_output(task_output), manager._token_process.get_summary()  # type: ignore # Incompatible return value type (got "tuple[str, Any]", expected "str")
+
+        # type: ignore # Incompatible return value type (got "tuple[str, Any]", expected "str")
+        manager_token_usage = manager._token_process.get_summary()
+        token_usage.append(manager_token_usage)
+        token_usage_formatted = self.aggregate_token_usage(token_usage)
+
+        return self._format_output(
+            task_output, token_usage_formatted
+        ), manager_token_usage
+
+    def copy(self):
+        """Create a deep copy of the Crew."""
+
+        exclude = {
+            "id",
+            "_rpm_controller",
+            "_logger",
+            "_execution_span",
+            "_file_handler",
+            "_cache_handler",
+            "_short_term_memory",
+            "_long_term_memory",
+            "_entity_memory",
+            "agents",
+            "tasks",
+        }
+
+        cloned_agents = [agent.copy() for agent in self.agents]
+        cloned_tasks = [task.copy() for task in self.tasks]
+
+        copied_data = self.model_dump(exclude=exclude)
+        copied_data = {k: v for k, v in copied_data.items() if v is not None}
+
+        copied_data.pop("agents", None)
+        copied_data.pop("tasks", None)
+
+        copied_crew = Crew(**copied_data, agents=cloned_agents, tasks=cloned_tasks)
+
+        return copied_crew
 
     def _set_tasks_callbacks(self) -> None:
         """Sets callback for every task suing task_callback"""
@@ -373,15 +511,29 @@ class Crew(BaseModel):
 
     def _interpolate_inputs(self, inputs: Dict[str, Any]) -> None:
         """Interpolates the inputs in the tasks and agents."""
-        [task.interpolate_inputs(inputs) for task in self.tasks]  # type: ignore # "interpolate_inputs" of "Task" does not return a value (it only ever returns None)
-        [agent.interpolate_inputs(inputs) for agent in self.agents]  # type: ignore # "interpolate_inputs" of "Agent" does not return a value (it only ever returns None)
+        [
+            task.interpolate_inputs(
+                # type: ignore # "interpolate_inputs" of "Task" does not return a value (it only ever returns None)
+                inputs
+            )
+            for task in self.tasks
+        ]
+        # type: ignore # "interpolate_inputs" of "Agent" does not return a value (it only ever returns None)
+        for agent in self.agents:
+            agent.interpolate_inputs(inputs)
 
-    def _format_output(self, output: str) -> str:
-        """Formats the output of the crew execution."""
+    def _format_output(
+        self, output: str, token_usage: Optional[Dict[str, Any]] = None
+    ) -> Union[str, Dict[str, Any]]:
+        """
+        Formats the output of the crew execution.
+        If full_output is True, then returned data type will be a dictionary else returned outputs are string
+        """
         if self.full_output:
             return {  # type: ignore # Incompatible return value type (got "dict[str, Sequence[str | TaskOutput | None]]", expected "str")
                 "final_output": output,
                 "tasks_outputs": [task.output for task in self.tasks if task],
+                "usage_metrics": token_usage,
             }
         else:
             return output
@@ -389,7 +541,17 @@ class Crew(BaseModel):
     def _finish_execution(self, output) -> None:
         if self.max_rpm:
             self._rpm_controller.stop_rpm_counter()
+        if agentops:
+            agentops.end_session(
+                end_state="Success", end_state_reason="Finished Execution", is_auto_end=True
+            )
         self._telemetry.end_crew(self, output)
 
     def __repr__(self):
         return f"Crew(id={self.id}, process={self.process}, number_of_agents={len(self.agents)}, number_of_tasks={len(self.tasks)})"
+
+    def aggregate_token_usage(self, token_usage_list: List[Dict[str, Any]]):
+        return {
+            key: sum([m[key] for m in token_usage_list if m is not None])
+            for key in token_usage_list[0]
+        }
