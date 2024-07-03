@@ -12,7 +12,6 @@ from crewai import Agent, Crew, Task
 from crewai.agents.cache import CacheHandler
 from crewai.agents.executor import CrewAgentExecutor
 from crewai.agents.parser import CrewAgentParser
-
 from crewai.tools.tool_calling import InstructorToolCalling
 from crewai.tools.tool_usage import ToolUsage
 from crewai.utilities import RPMController
@@ -734,7 +733,7 @@ def test_agent_llm_uses_token_calc_handler_with_llm_has_model_name():
 
     assert len(agent1.llm.callbacks) == 1
     assert agent1.llm.callbacks[0].__class__.__name__ == "TokenCalcHandler"
-    assert agent1.llm.callbacks[0].model == "gpt-4o"
+    assert agent1.llm.callbacks[0].model_name == "gpt-4o"
     assert (
         agent1.llm.callbacks[0].token_cost_process.__class__.__name__ == "TokenProcess"
     )
