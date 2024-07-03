@@ -26,10 +26,12 @@ click = "^8.1.7"
 python-dotenv = "^1.0.0"
 appdirs = "^1.4.4"
 jsonref = "^1.1.0"
+agentops = { version = "^0.1.9", optional = true }
 embedchain = "^0.1.113"
 
 [tool.poetry.extras]
 tools = ["crewai-tools"]
+agentops = ["agentops"]
 
 [tool.poetry.group.dev.dependencies]
 isort = "^5.13.2"
