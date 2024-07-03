@@ -5,6 +5,17 @@ from pydantic import BaseModel, Field
 
 from crewai.utilities import Converter
 from crewai.utilities.pydantic_schema_parser import PydanticSchemaParser
+agentops = None
+try:
+    import agentops
+    from agentops import track_agent
+except ImportError:
+
+    def track_agent(name):
+        def noop(f):
+            return f
+
+        return noop
 
 
 class Entity(BaseModel):
@@ -38,6 +49,7 @@ class TrainingTaskEvaluation(BaseModel):
     )
 
 
+@track_agent(name="Task Evaluator")
 class TaskEvaluator:
     def __init__(self, original_agent):
         self.llm = original_agent.llm
