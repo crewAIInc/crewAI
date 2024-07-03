@@ -19,7 +19,20 @@ from crewai.utilities.token_counter_callback import TokenCalcHandler
 from crewai.agents.agent_builder.base_agent import BaseAgent
 from crewai.utilities.training_handler import CrewTrainingHandler
 
+agentops = None
+try:
+    import agentops
+    from agentops import track_agent
+except ImportError:
 
+    def track_agent():
+        def noop(f):
+            return f
+
+        return noop
+
+
+@track_agent()
 class Agent(BaseAgent):
     """Represents an agent in a system.
 
@@ -48,6 +61,8 @@ class Agent(BaseAgent):
         default=None,
         description="Maximum execution time for an agent to execute a task",
     )
+    agent_ops_agent_name: str = None
+    agent_ops_agent_id: str = None
     cache_handler: InstanceOf[CacheHandler] = Field(
         default=None, description="An instance of the CacheHandler class."
     )
@@ -84,6 +99,7 @@ class Agent(BaseAgent):
     def __init__(__pydantic_self__, **data):
         config = data.pop("config", {})
         super().__init__(**config, **data)
+        __pydantic_self__.agent_ops_agent_name = __pydantic_self__.role
 
     @model_validator(mode="after")
     def set_agent_executor(self) -> "Agent":
@@ -100,6 +116,12 @@ class Agent(BaseAgent):
                 isinstance(handler, TokenCalcHandler) for handler in self.llm.callbacks
             ):
                 self.llm.callbacks.append(token_handler)
+
+            if agentops and not any(
+                isinstance(handler, agentops.LangchainCallbackHandler) for handler in self.llm.callbacks
+            ):
+                agentops.stop_instrumenting()
+                self.llm.callbacks.append(agentops.LangchainCallbackHandler())
 
         if not self.agent_executor:
             if not self.cache_handler:
