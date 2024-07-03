@@ -234,7 +234,7 @@ class Crew(BaseModel):
                 if task.agent is None:
                     raise PydanticCustomError(
                         "missing_agent_in_task",
-                        "Sequential process error: Agent is missing in the task with the following description: {task.description}",
+                        f"Sequential process error: Agent is missing in the task with the following description: {task.description}",  # type: ignore Argument of type "str" cannot be assigned to parameter "message_template" of type "LiteralString"
                         {},
                     )
 
@@ -464,7 +464,7 @@ class Crew(BaseModel):
                 self._file_handler.log(
                     agent=manager.role, task=task.description, status="started"
                 )
-            # THIS MIGHT BREAK DURING ASYNC TASK RUN
+
             if task.agent:
                 manager.tools = task.agent.get_delegation_tools([task.agent])
             else:

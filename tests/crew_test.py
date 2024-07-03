@@ -696,7 +696,7 @@ def test_sequential_crew_creation_tasks_without_agents():
     task = Task(
         description="Come up with a list of 5 interesting ideas to explore for an article, then write one amazing paragraph highlight for each idea that showcases how good an article about this topic could be. Return the list of ideas with their paragraph and your notes.",
         expected_output="5 bullet points with a paragraph for each idea.",
-        # agent=researcher, #this should throw an error
+        # agent=researcher, # not having an agent on the task should throw an error
     )
 
     # Expected Output: The sequential crew should fail to create because the task is missing an agent
@@ -1091,6 +1091,7 @@ def test_crew_train_success(task_evaluator, crew_training_handler, kickoff):
     task = Task(
         description="Come up with a list of 5 interesting ideas to explore for an article, then write one amazing paragraph highlight for each idea that showcases how good an article about this topic could be. Return the list of ideas with their paragraph and your notes.",
         expected_output="5 bullet points with a paragraph for each idea.",
+        agent=researcher,
     )
 
     crew = Crew(
@@ -1145,6 +1146,7 @@ def test_crew_train_error():
     task = Task(
         description="Come up with a list of 5 interesting ideas to explore for an article",
         expected_output="5 bullet points with a paragraph for each idea.",
+        agent=researcher,
     )
 
     crew = Crew(
@@ -1166,6 +1168,7 @@ def test__setup_for_training():
     task = Task(
         description="Come up with a list of 5 interesting ideas to explore for an article",
         expected_output="5 bullet points with a paragraph for each idea.",
+        agent=researcher,
     )
 
     crew = Crew(
