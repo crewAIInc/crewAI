@@ -1109,6 +1109,33 @@ def test_hierarchical_crew_creation_tasks_with_agents():
     )
 
 
+@pytest.mark.vcr(filter_headers=["authorization"])
+def test_hierarchical_crew_creation_tasks_without_async_execution():
+    from langchain_openai import ChatOpenAI
+
+    task = Task(
+        description="Come up with a list of 5 interesting ideas to explore for an article, then write one amazing paragraph highlight for each idea that showcases how good an article about this topic could be. Return the list of ideas with their paragraph and your notes.",
+        expected_output="5 bullet points with a paragraph for each idea.",
+        async_execution=True,  # should throw an error
+    )
+
+    with pytest.raises(pydantic_core._pydantic_core.ValidationError) as exec_info:
+        Crew(
+            tasks=[task],
+            agents=[researcher],
+            process=Process.hierarchical,
+            manager_llm=ChatOpenAI(model="gpt-4o"),
+        )
+
+    assert (
+        exec_info.value.errors()[0]["type"] == "async_execution_in_hierarchical_process"
+    )
+    assert (
+        "Hierarchical process error: Tasks cannot be flagged with async_execution."
+        in exec_info.value.errors()[0]["msg"]
+    )
+
+
 def test_crew_inputs_interpolate_both_agents_and_tasks():
     agent = Agent(
         role="{topic} Researcher",

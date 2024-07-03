@@ -226,15 +226,26 @@ class Crew(BaseModel):
 
     @model_validator(mode="after")
     def validate_tasks(self):
-        process = self.process
-        tasks = self.tasks
-
-        if process == Process.sequential:
-            for task in tasks:
+        if self.process == Process.sequential:
+            for task in self.tasks:
                 if task.agent is None:
                     raise PydanticCustomError(
                         "missing_agent_in_task",
                         f"Sequential process error: Agent is missing in the task with the following description: {task.description}",  # type: ignore Argument of type "str" cannot be assigned to parameter "message_template" of type "LiteralString"
+                        {},
+                    )
+
+        return self
+
+    @model_validator(mode="after")
+    def check_tasks_in_hierarchical_process_not_async(self):
+        """Validates that the tasks in hierarchical process are not flagged with async_execution."""
+        if self.process == Process.hierarchical:
+            for task in self.tasks:
+                if task.async_execution:
+                    raise PydanticCustomError(
+                        "async_execution_in_hierarchical_process",
+                        "Hierarchical process error: Tasks cannot be flagged with async_execution.",
                         {},
                     )
 
