@@ -148,6 +148,8 @@ nav:
   - Tools Docs:
     - Google Serper Search: 'tools/SerperDevTool.md'
     - Browserbase Web Loader: 'tools/BrowserbaseLoadTool.md'
+    - Composio Tools: 'tools/ComposioTool.md'
+    - Code Interpreter: 'tools/CodeInterpreterTool.md'
     - Scrape Website: 'tools/ScrapeWebsiteTool.md'
     - Directory Read: 'tools/DirectoryReadTool.md'
     - Exa Serch Web Loader: 'tools/EXASearchTool.md'
