@@ -1,23 +1,26 @@
-from copy import deepcopy
 import uuid
-from typing import Any, Dict, List, Optional
 from abc import ABC, abstractmethod
+from copy import copy as shallow_copy
+from typing import Any, Dict, List, Optional, TypeVar
+
 from pydantic import (
     UUID4,
     BaseModel,
+    ConfigDict,
     Field,
     InstanceOf,
+    PrivateAttr,
     field_validator,
     model_validator,
-    ConfigDict,
-    PrivateAttr,
 )
 from pydantic_core import PydanticCustomError
 
-from crewai.utilities import I18N, RPMController, Logger
+from crewai.agents.agent_builder.utilities.base_token_process import TokenProcess
 from crewai.agents.cache.cache_handler import CacheHandler
 from crewai.agents.tools_handler import ToolsHandler
-from crewai.utilities.token_counter_callback import TokenProcess
+from crewai.utilities import I18N, Logger, RPMController
+
+T = TypeVar("T", bound="BaseAgent")
 
 
 class BaseAgent(ABC, BaseModel):
@@ -188,6 +191,31 @@ class BaseAgent(ABC, BaseModel):
         """Get the converter class for the agent to create json/pydantic outputs."""
         pass
 
+    def copy(self: T) -> T:
+        """Create a deep copy of the Agent."""
+        exclude = {
+            "id",
+            "_logger",
+            "_rpm_controller",
+            "_request_within_rpm_limit",
+            "_token_process",
+            "agent_executor",
+            "tools",
+            "tools_handler",
+            "cache_handler",
+            "llm",
+        }
+
+        # Copy llm and clear callbacks
+        existing_llm = shallow_copy(self.llm)
+        existing_llm.callbacks = []
+        copied_data = self.model_dump(exclude=exclude)
+        copied_data = {k: v for k, v in copied_data.items() if v is not None}
+
+        copied_agent = type(self)(**copied_data, llm=existing_llm, tools=self.tools)
+
+        return copied_agent
+
     def interpolate_inputs(self, inputs: Dict[str, Any]) -> None:
         """Interpolate inputs into the agent description and backstory."""
         if self._original_role is None:
@@ -216,35 +244,6 @@ class BaseAgent(ABC, BaseModel):
 
     def increment_formatting_errors(self) -> None:
         self.formatting_errors += 1
-
-    def copy(self):
-        exclude = {
-            "id",
-            "_logger",
-            "_rpm_controller",
-            "_request_within_rpm_limit",
-            "token_process",
-            "agent_executor",
-            "tools",
-            "tools_handler",
-            "cache_handler",
-            "crew",
-            "llm",
-        }
-
-        copied_data = self.model_dump(exclude=exclude, exclude_unset=True)
-        copied_agent = self.__class__(**copied_data)
-
-        # Copy mutable attributes separately
-        copied_agent.tools = deepcopy(self.tools)
-        copied_agent.config = deepcopy(self.config)
-
-        # Preserve original values for interpolation
-        copied_agent._original_role = self._original_role
-        copied_agent._original_goal = self._original_goal
-        copied_agent._original_backstory = self._original_backstory
-
-        return copied_agent
 
     def set_rpm_controller(self, rpm_controller: RPMController) -> None:
         """Set the rpm controller for the agent.
