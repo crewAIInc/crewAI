@@ -7,16 +7,15 @@ from langchain.tools.render import render_text_description
 from langchain_core.agents import AgentAction
 from langchain_core.callbacks import BaseCallbackHandler
 from langchain_openai import ChatOpenAI
-
 from pydantic import Field, InstanceOf, model_validator
 
 from crewai.agents import CacheHandler, CrewAgentExecutor, CrewAgentParser
+from crewai.agents.agent_builder.base_agent import BaseAgent
 from crewai.memory.contextual.contextual_memory import ContextualMemory
 from crewai.tools.agent_tools import AgentTools
-from crewai.utilities import Prompts, Converter
+from crewai.utilities import Converter, Prompts
 from crewai.utilities.constants import TRAINED_AGENTS_DATA_FILE, TRAINING_DATA_FILE
 from crewai.utilities.token_counter_callback import TokenCalcHandler
-from crewai.agents.agent_builder.base_agent import BaseAgent
 from crewai.utilities.training_handler import CrewTrainingHandler
 
 agentops = None
@@ -91,7 +90,6 @@ class Agent(BaseAgent):
     response_template: Optional[str] = Field(
         default=None, description="Response format for the agent."
     )
-
     allow_code_execution: Optional[bool] = Field(
         default=False, description="Enable code execution for the agent."
     )
@@ -103,7 +101,7 @@ class Agent(BaseAgent):
 
     @model_validator(mode="after")
     def set_agent_executor(self) -> "Agent":
-        """Ensure agent executor and token process is set."""
+        """Ensure agent executor and token process are set."""
         if hasattr(self.llm, "model_name"):
             token_handler = TokenCalcHandler(self.llm.model_name, self._token_process)
 

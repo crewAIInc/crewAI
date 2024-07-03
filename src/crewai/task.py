@@ -2,8 +2,8 @@ import os
 import re
 import threading
 import uuid
-from copy import deepcopy
-from typing import Any, Dict, List, Optional, Type
+from copy import copy
+from typing import Any, Dict, List, Optional, Type, Union
 
 from langchain_openai import ChatOpenAI
 from opentelemetry.trace import Span
@@ -13,7 +13,9 @@ from pydantic_core import PydanticCustomError
 from crewai.agents.agent_builder.base_agent import BaseAgent
 from crewai.tasks.task_output import TaskOutput
 from crewai.telemetry.telemetry import Telemetry
-from crewai.utilities import I18N, ConverterError, Printer
+from crewai.utilities.converter import ConverterError
+from crewai.utilities.i18n import I18N
+from crewai.utilities.printer import Printer
 from crewai.utilities.pydantic_schema_parser import PydanticSchemaParser
 
 
@@ -216,7 +218,7 @@ class Task(BaseModel):
             )
             return result
 
-    def _execute(self, agent, task, context, tools):
+    def _execute(self, agent: "BaseAgent", task, context, tools):
         result = agent.execute_task(
             task=task,
             context=context,
@@ -274,7 +276,7 @@ class Task(BaseModel):
         """Increment the delegations counter."""
         self.delegations += 1
 
-    def copy(self):
+    def copy(self, agents: Optional[List["BaseAgent"]] = None) -> "Task":
         """Create a deep copy of the Task."""
         exclude = {
             "id",
@@ -289,8 +291,12 @@ class Task(BaseModel):
         cloned_context = (
             [task.copy() for task in self.context] if self.context else None
         )
-        cloned_agent = self.agent.copy() if self.agent else None
-        cloned_tools = deepcopy(self.tools) if self.tools else []
+
+        def get_agent_by_role(role: str) -> Union["BaseAgent", None]:
+            return next((agent for agent in agents if agent.role == role), None)
+
+        cloned_agent = get_agent_by_role(self.agent.role) if self.agent else None
+        cloned_tools = copy(self.tools) if self.tools else []
 
         copied_task = Task(
             **copied_data,
@@ -298,6 +304,7 @@ class Task(BaseModel):
             agent=cloned_agent,
             tools=cloned_tools,
         )
+
         return copied_task
 
     def _export_output(self, result: str) -> Any:
@@ -329,7 +336,7 @@ class Task(BaseModel):
                     except Exception:
                         pass
 
-            # type: ignore # Item "None" of "Agent | None" has no attribute "function_calling_llm"
+            # type: ignore # Item "None" of "BaseAgent | None" has no attribute "function_calling_llm"
             llm = getattr(self.agent, "function_calling_llm", None) or self.agent.llm
             if not self._is_gpt(llm):
                 # type: ignore # Argument "model" to "PydanticSchemaParser" has incompatible type "type[BaseModel] | None"; expected "type[BaseModel]"
@@ -355,7 +362,9 @@ class Task(BaseModel):
         if self.output_file:
             content = (
                 # type: ignore # "str" has no attribute "json"
-                exported_result if not self.output_pydantic else exported_result.json()
+                exported_result
+                if not self.output_pydantic
+                else exported_result.model_dump_json()
             )
             self._save_file(content)
 
