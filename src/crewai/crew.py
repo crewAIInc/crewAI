@@ -586,8 +586,7 @@ class Crew(BaseModel):
         if agentops:
             agentops.end_session(
                 end_state="Success",
-                end_state_reason="Finished Execution",
-                is_auto_end=True,
+                end_state_reason="Finished Execution"
             )
         self._telemetry.end_crew(self, output)
 
