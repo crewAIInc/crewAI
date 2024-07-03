@@ -15,8 +15,9 @@ from pydantic import (
 )
 from pydantic_core import PydanticCustomError
 
-from crewai.agents import CacheHandler, ToolsHandler
 from crewai.agents.agent_builder.utilities.base_token_process import TokenProcess
+from crewai.agents.cache.cache_handler import CacheHandler
+from crewai.agents.tools_handler import ToolsHandler
 from crewai.utilities import I18N, Logger, RPMController
 
 T = TypeVar("T", bound="BaseAgent")

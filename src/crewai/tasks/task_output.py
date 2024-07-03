@@ -52,7 +52,7 @@ class TaskOutput(BaseModel):
         if self.json_output:
             output_dict.update(self.json_output)
         if self.pydantic_output:
-            output_dict.update(self.pydantic_output.dict())
+            output_dict.update(self.pydantic_output.model_dump())
         return output_dict
 
     def __str__(self) -> str:

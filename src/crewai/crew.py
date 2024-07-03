@@ -36,6 +36,11 @@ from crewai.utilities.evaluators.task_evaluator import TaskEvaluator
 from crewai.utilities.formatter import aggregate_raw_outputs_from_task_outputs
 from crewai.utilities.training_handler import CrewTrainingHandler
 
+try:
+    import agentops
+except ImportError:
+    agentops = None
+
 
 class Crew(BaseModel):
     """
@@ -56,7 +61,6 @@ class Crew(BaseModel):
         max_rpm: Maximum number of requests per minute for the crew execution to be respected.
         prompt_file: Path to the prompt json file to be used for the crew.
         id: A unique identifier for the crew instance.
-        full_output: Whether the crew should return the full output with all tasks outputs and token usage metrics or just the final output.
         task_callback: Callback to be executed after each task for every agents execution.
         step_callback: Callback to be executed after each step for every agents execution.
         share_crew: Whether you want to share the complete crew information and execution with crewAI to make the library better, and allow us to train models.
@@ -91,10 +95,6 @@ class Crew(BaseModel):
     usage_metrics: Optional[dict] = Field(
         default=None,
         description="Metrics for the LLM usage during all tasks execution.",
-    )
-    full_output: Optional[bool] = Field(
-        default=False,
-        description="Whether the crew should return the full output with all tasks outputs and token usage metrics or just the final output.",
     )
     manager_llm: Optional[Any] = Field(
         description="Language model that will run the agent.", default=None
@@ -627,13 +627,41 @@ class Crew(BaseModel):
         return CrewOutput(
             output=output,
             tasks_output=[task.output for task in self.tasks if task],
-            token_output=token_usage,
+            token_usage=token_usage,
         )
 
     def _finish_execution(self, final_string_output: str) -> None:
         if self.max_rpm:
             self._rpm_controller.stop_rpm_counter()
+        if agentops:
+            agentops.end_session(
+                end_state="Success",
+                end_state_reason="Finished Execution",
+                is_auto_end=True,
+            )
         self._telemetry.end_crew(self, final_string_output)
+
+    def calculate_usage_metrics(self) -> Dict[str, int]:
+        """Calculates and returns the usage metrics."""
+        total_usage_metrics = {
+            "total_tokens": 0,
+            "prompt_tokens": 0,
+            "completion_tokens": 0,
+            "successful_requests": 0,
+        }
+
+        for agent in self.agents:
+            if hasattr(agent, "_token_process"):
+                token_sum = agent._token_process.get_summary()
+                for key in total_usage_metrics:
+                    total_usage_metrics[key] += token_sum.get(key, 0)
+
+        if self.manager_agent and hasattr(self.manager_agent, "_token_process"):
+            token_sum = self.manager_agent._token_process.get_summary()
+            for key in total_usage_metrics:
+                total_usage_metrics[key] += token_sum.get(key, 0)
+
+        return total_usage_metrics
 
     def __repr__(self):
         return f"Crew(id={self.id}, process={self.process}, number_of_agents={len(self.agents)}, number_of_tasks={len(self.tasks)})"

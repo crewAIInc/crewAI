@@ -37,10 +37,9 @@ writer = Agent(
   backstory='A skilled writer with a talent for crafting compelling narratives'
 )
 
-# Define the tasks in sequence
-research_task = Task(description='Gather relevant data...', agent=researcher)
-analysis_task = Task(description='Analyze the data...', agent=analyst)
-writing_task = Task(description='Compose the report...', agent=writer)
+research_task = Task(description='Gather relevant data...', agent=researcher, expected_output='Raw Data')
+analysis_task = Task(description='Analyze the data...', agent=analyst, expected_output='Data Insights')
+writing_task = Task(description='Compose the report...', agent=writer, expected_output='Final Report')
 
 # Form the crew with a sequential process
 report_crew = Crew(
