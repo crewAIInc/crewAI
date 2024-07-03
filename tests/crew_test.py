@@ -7,6 +7,7 @@ from unittest.mock import patch
 
 import pydantic_core
 import pytest
+
 from crewai.agent import Agent
 from crewai.agents.cache import CacheHandler
 from crewai.crew import Crew
@@ -146,6 +147,7 @@ def test_crew_creation():
     assert result.raw_output() == expected_string_output
     assert isinstance(result, CrewOutput)
     assert len(result.tasks_output) == len(tasks)
+    assert result.result() == [expected_string_output]
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
@@ -1736,3 +1738,8 @@ def test__setup_for_training():
 
     for agent in agents:
         assert agent.allow_delegation is False
+
+
+# TODO: TEST EXPORT OUTPUT TASK WITH PYDANTIC
+# TODO: TEST EXPORT OUTPUT TASK WITH JSON
+# TODO: TEST EXPORT OUTPUT TASK CALLBACK
