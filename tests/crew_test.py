@@ -1028,6 +1028,29 @@ def test_agent_usage_metrics_are_captured_for_sequential_process():
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
+def test_sequential_crew_creation_tasks_without_agents():
+    task = Task(
+        description="Come up with a list of 5 interesting ideas to explore for an article, then write one amazing paragraph highlight for each idea that showcases how good an article about this topic could be. Return the list of ideas with their paragraph and your notes.",
+        expected_output="5 bullet points with a paragraph for each idea.",
+        # agent=researcher, # not having an agent on the task should throw an error
+    )
+
+    # Expected Output: The sequential crew should fail to create because the task is missing an agent
+    with pytest.raises(pydantic_core._pydantic_core.ValidationError) as exec_info:
+        Crew(
+            tasks=[task],
+            agents=[researcher],
+            process=Process.sequential,
+        )
+
+    assert exec_info.value.errors()[0]["type"] == "missing_agent_in_task"
+    assert (
+        "Agent is missing in the task with the following description"
+        in exec_info.value.errors()[0]["msg"]
+    )
+
+
+@pytest.mark.vcr(filter_headers=["authorization"])
 def test_agent_usage_metrics_are_captured_for_hierarchical_process():
     from langchain_openai import ChatOpenAI
 
@@ -1058,6 +1081,61 @@ def test_agent_usage_metrics_are_captured_for_hierarchical_process():
     }
 
 
+@pytest.mark.vcr(filter_headers=["authorization"])
+def test_hierarchical_crew_creation_tasks_with_agents():
+    """
+    Agents are not required for tasks in a hierarchical process but sometimes they are still added
+    This test makes sure that the manager still delegates the task to the agent even if the agent is passed in the task
+    """
+    from langchain_openai import ChatOpenAI
+
+    task = Task(
+        description="Write one amazing paragraph about AI.",
+        expected_output="A single paragraph with 4 sentences.",
+        agent=writer,
+    )
+
+    crew = Crew(
+        tasks=[task],
+        agents=[writer, researcher],
+        process=Process.hierarchical,
+        manager_llm=ChatOpenAI(model="gpt-4o"),
+    )
+    crew.kickoff()
+    assert crew.manager_agent is not None
+    assert crew.manager_agent.tools is not None
+    assert crew.manager_agent.tools[0].description.startswith(
+        "Delegate a specific task to one of the following coworkers: [Senior Writer]"
+    )
+
+
+@pytest.mark.vcr(filter_headers=["authorization"])
+def test_hierarchical_crew_creation_tasks_without_async_execution():
+    from langchain_openai import ChatOpenAI
+
+    task = Task(
+        description="Come up with a list of 5 interesting ideas to explore for an article, then write one amazing paragraph highlight for each idea that showcases how good an article about this topic could be. Return the list of ideas with their paragraph and your notes.",
+        expected_output="5 bullet points with a paragraph for each idea.",
+        async_execution=True,  # should throw an error
+    )
+
+    with pytest.raises(pydantic_core._pydantic_core.ValidationError) as exec_info:
+        Crew(
+            tasks=[task],
+            agents=[researcher],
+            process=Process.hierarchical,
+            manager_llm=ChatOpenAI(model="gpt-4o"),
+        )
+
+    assert (
+        exec_info.value.errors()[0]["type"] == "async_execution_in_hierarchical_process"
+    )
+    assert (
+        "Hierarchical process error: Tasks cannot be flagged with async_execution."
+        in exec_info.value.errors()[0]["msg"]
+    )
+
+
 def test_crew_inputs_interpolate_both_agents_and_tasks():
     agent = Agent(
         role="{topic} Researcher",
@@ -1068,9 +1146,10 @@ def test_crew_inputs_interpolate_both_agents_and_tasks():
     task = Task(
         description="Give me an analysis around {topic}.",
         expected_output="{points} bullet points about {topic}.",
+        agent=agent,
     )
 
-    crew = Crew(agents=[agent], tasks=[task], inputs={"topic": "AI", "points": 5})
+    crew = Crew(agents=[agent], tasks=[task])
     inputs = {"topic": "AI", "points": 5}
     crew._interpolate_inputs(inputs=inputs)  # Manual call for now
 
@@ -1375,6 +1454,7 @@ def test_crew_train_success(task_evaluator, crew_training_handler, kickoff):
     task = Task(
         description="Come up with a list of 5 interesting ideas to explore for an article, then write one amazing paragraph highlight for each idea that showcases how good an article about this topic could be. Return the list of ideas with their paragraph and your notes.",
         expected_output="5 bullet points with a paragraph for each idea.",
+        agent=researcher,
     )
 
     crew = Crew(
@@ -1429,6 +1509,7 @@ def test_crew_train_error():
     task = Task(
         description="Come up with a list of 5 interesting ideas to explore for an article",
         expected_output="5 bullet points with a paragraph for each idea.",
+        agent=researcher,
     )
 
     crew = Crew(
@@ -1450,6 +1531,7 @@ def test__setup_for_training():
     task = Task(
         description="Come up with a list of 5 interesting ideas to explore for an article",
         expected_output="5 bullet points with a paragraph for each idea.",
+        agent=researcher,
     )
 
     crew = Crew(
