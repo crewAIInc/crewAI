@@ -1,6 +1,8 @@
 from abc import ABC, abstractmethod
 from typing import List, Optional, Union
+
 from pydantic import BaseModel, Field
+
 from crewai.agents.agent_builder.base_agent import BaseAgent
 from crewai.task import Task
 from crewai.utilities import I18N
@@ -17,11 +19,14 @@ class BaseAgentTools(BaseModel, ABC):
         pass
 
     def _get_coworker(self, coworker: Optional[str], **kwargs) -> Optional[str]:
+        print("RUNNING _get_coworker", coworker)
         coworker = coworker or kwargs.get("co_worker") or kwargs.get("coworker")
+        print("FORMATTED COWORKER:", coworker)
         if coworker:
             is_list = coworker.startswith("[") and coworker.endswith("]")
             if is_list:
                 coworker = coworker[1:-1].split(",")[0]
+
         return coworker
 
     def delegate_work(
@@ -38,11 +43,18 @@ class BaseAgentTools(BaseModel, ABC):
         coworker = self._get_coworker(coworker, **kwargs)
         return self._execute(coworker, question, context)
 
-    def _execute(self, agent: Union[str, None], task: str, context: Union[str, None]):
+    def _execute(
+        self, agent_name: Union[str, None], task: str, context: Union[str, None]
+    ):
         """Execute the command."""
         try:
-            if agent is None:
-                agent = ""
+            print("RUNNING _execute")
+            print("_execute AGENT:", agent_name)
+            print("_execte task:", task)
+            print("_execute context:", context)
+            print("_execute self.agents:", self.agents)
+            if agent_name is None:
+                agent_name = ""
 
             # It is important to remove the quotes from the agent name.
             # The reason we have to do this is because less-powerful LLM's
@@ -51,7 +63,8 @@ class BaseAgentTools(BaseModel, ABC):
             # {"task": "....", "coworker": "....
             # when it should look like this:
             # {"task": "....", "coworker": "...."}
-            agent_name = agent.casefold().replace('"', "").replace("\n", "")
+            agent_name = agent_name.casefold().replace('"', "").replace("\n", "")
+            print("AGENT NAME:", agent_name)
 
             agent = [
                 available_agent
@@ -73,9 +86,9 @@ class BaseAgentTools(BaseModel, ABC):
             )
 
         agent = agent[0]
-        task = Task(
+        task_with_assigned_agent = Task(
             description=task,
             agent=agent,
             expected_output="Your best answer to your coworker asking you this, accounting for the context shared.",
         )
-        return agent.execute_task(task, context)
+        return agent.execute_task(task_with_assigned_agent, context)
