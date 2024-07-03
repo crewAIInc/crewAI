@@ -35,6 +35,11 @@ from crewai.utilities.evaluators.task_evaluator import TaskEvaluator
 from crewai.utilities.formatter import aggregate_raw_outputs_from_task_outputs
 from crewai.utilities.training_handler import CrewTrainingHandler
 
+try:
+    import agentops
+except ImportError:
+    agentops = None
+
 
 class Crew(BaseModel):
     """
@@ -599,6 +604,12 @@ class Crew(BaseModel):
     def _finish_execution(self, final_string_output: str) -> None:
         if self.max_rpm:
             self._rpm_controller.stop_rpm_counter()
+        if agentops:
+            agentops.end_session(
+                end_state="Success",
+                end_state_reason="Finished Execution",
+                is_auto_end=True,
+            )
         self._telemetry.end_crew(self, final_string_output)
 
     def calculate_usage_metrics(self) -> Dict[str, int]:

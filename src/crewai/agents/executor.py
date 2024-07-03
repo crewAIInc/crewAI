@@ -1,6 +1,14 @@
 import threading
 import time
-from typing import Any, Dict, Iterator, List, Optional, Tuple, Union
+from typing import (
+    Any,
+    Dict,
+    Iterator,
+    List,
+    Optional,
+    Tuple,
+    Union,
+)
 
 from langchain.agents import AgentExecutor
 from langchain.agents.agent import ExceptionTool
@@ -11,13 +19,15 @@ from langchain_core.exceptions import OutputParserException
 from langchain_core.tools import BaseTool
 from langchain_core.utils.input import get_color_mapping
 from pydantic import InstanceOf
-from crewai.agents.agent_builder.base_agent_executor_mixin import CrewAgentExecutorMixin
+from crewai.agents.agent_builder.base_agent_executor_mixin import (
+    CrewAgentExecutorMixin,
+)
 
 from crewai.agents.tools_handler import ToolsHandler
 from crewai.tools.tool_usage import ToolUsage, ToolUsageErrorException
-from crewai.utilities import I18N
 from crewai.utilities.constants import TRAINING_DATA_FILE
 from crewai.utilities.training_handler import CrewTrainingHandler
+from crewai.utilities import I18N
 
 
 class CrewAgentExecutor(AgentExecutor, CrewAgentExecutorMixin):
