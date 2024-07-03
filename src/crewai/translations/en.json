@@ -17,7 +17,7 @@
     "task_with_context": "{task}\n\nThis is the context you're working with:\n{context}",
     "expected_output": "\nThis is the expect criteria for your final answer: {expected_output} \n you MUST return the actual complete content as the final answer, not a summary.",
     "human_feedback": "You got human feedback on your work, re-avaluate it and give a new Final Answer when ready.\n {human_feedback}",
-    "getting_input": "This is the agent final answer: {final_answer}\nPlease provide a feedback: "
+    "getting_input": "This is the agent final answer: {final_answer}\nPlease provide feedback: "
   },
   "errors": {
     "force_final_answer": "Tool won't be use because it's time to give your final answer. Don't use tools and just your absolute BEST Final answer.",
