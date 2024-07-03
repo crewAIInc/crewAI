@@ -1,4 +1,4 @@
-from typing import Callable, Optional
+from typing import Callable, Optional, Any
 
 from pydantic import BaseModel
 
@@ -18,7 +18,7 @@ class ConditionalTask(Task):
         super().__init__(*args, **kwargs)
         self.condition = condition
 
-    def should_execute(self, context: TaskOutput) -> bool:
+    def should_execute(self, context: Any) -> bool:
         print("TaskOutput", TaskOutput)
         if self.condition:
             return self.condition(context)

@@ -224,6 +224,17 @@ class Crew(BaseModel):
                     agent.set_rpm_controller(self._rpm_controller)
         return self
 
+    @model_validator(mode="after")
+    def validate_first_task(self) -> "Crew":
+        """Ensure the first task is not a ConditionalTask."""
+        if self.tasks and isinstance(self.tasks[0], ConditionalTask):
+            raise PydanticCustomError(
+                "invalid_first_task",
+                "The first task cannot be a ConditionalTask.",
+                {},
+            )
+        return self
+
     def _setup_from_config(self):
         assert self.config is not None, "Config should not be None."
 
@@ -400,7 +411,7 @@ class Crew(BaseModel):
         for i, task in enumerate(self.tasks):
             if isinstance(task, ConditionalTask):
                 # print("task_outputs", task_outputs)
-                previous_output = task_outputs[-1] if task_outputs else None
+                previous_output = task_outputs[-1].result() if task_outputs else None
                 # print("previous_output type", type(previous_output))
                 if previous_output is not None:
                     if not task.should_execute(previous_output):
@@ -451,7 +462,6 @@ class Crew(BaseModel):
                 task_output = task.execute_sync(
                     agent=task.agent, context=context, tools=task.tools
                 )
-                print("task executed res:", task_output)
                 task_outputs.append(task_output)
                 self._process_task_result(task, task_output)
         if futures:
