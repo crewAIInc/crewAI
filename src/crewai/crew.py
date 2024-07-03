@@ -409,18 +409,19 @@ class Crew(BaseModel):
         futures: List[Tuple[Task, Future[TaskOutput]]] = []
 
         for i, task in enumerate(self.tasks):
-            if isinstance(task, ConditionalTask):
-                # print("task_outputs", task_outputs)
-                previous_output = task_outputs[-1].result() if task_outputs else None
-                # print("previous_output type", type(previous_output))
-                if previous_output is not None:
-                    if not task.should_execute(previous_output):
-                        self._logger.log(
-                            "info",
-                            f"Skipping conditional task: {task.description}",
-                            color="yellow",
-                        )
-                    continue
+            # if isinstance(task, ConditionalTask):
+            #     # print("task_outputs", task_outputs)
+            #     previous_output = task_outputs[-1] if task_outputs else None
+            #     print("previous_output", previous_output)
+            #     # print("previous_output type", type(previous_output))
+            #     if previous_output is not None:
+            #         if not task.should_execute(previous_output):
+            #             self._logger.log(
+            #                 "info",
+            #                 f"Skipping conditional task: {task.description}",
+            #                 color="yellow",
+            #             )
+            #         continue
             if task.agent.allow_delegation:  # type: ignore #  Item "None" of "Agent | None" has no attribute "allow_delegation"
                 agents_for_delegation = [
                     agent for agent in self.agents if agent != task.agent

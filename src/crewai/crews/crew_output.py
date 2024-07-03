@@ -1,4 +1,4 @@
-from typing import Any, Dict, List, Union
+from typing import Any, Dict, List
 
 from pydantic import BaseModel, Field
 
@@ -18,7 +18,7 @@ class CrewOutput(BaseModel):
     # TODO: Ask @joao what is the desired behavior here
     def result(
         self,
-    ) -> List[str | BaseModel | Dict[str, Any]]]:
+    ) -> List[str | BaseModel | Dict[str, Any]]:
         """Return the result of the task based on the available output."""
         results = [output.result() for output in self.output]
         return results

@@ -224,7 +224,6 @@ class Task(BaseModel):
             tools=tools,
         )
         exported_output = self._export_output(result)
-        print("exported_output", exported_output["pydantic"])
 
         task_output = TaskOutput(
             description=self.description,
@@ -233,7 +232,6 @@ class Task(BaseModel):
             json_output=exported_output["json"],
             agent=agent.role,
         )
-        print("task_output", task_output)
         self.output = task_output
 
         if self.callback:
@@ -313,8 +311,8 @@ class Task(BaseModel):
         self, result: str
     ) -> Dict[str, Union[BaseModel, Dict[str, Any]]]:
         output = {
-            "pydantic": self.output_pydantic() if self.output_pydantic else None,
-            "json": {},
+            "pydantic": None,
+            "json": None,
         }
 
         if self.output_pydantic or self.output_json:
