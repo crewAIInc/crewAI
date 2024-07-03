@@ -5,9 +5,9 @@ from pydantic import BaseModel, Field
 
 from crewai.utilities import Converter
 from crewai.utilities.pydantic_schema_parser import PydanticSchemaParser
+
 agentops = None
 try:
-    import agentops
     from agentops import track_agent
 except ImportError:
 

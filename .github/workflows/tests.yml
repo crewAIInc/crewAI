@@ -23,8 +23,8 @@ jobs:
 
       - name: Install Requirements
         run: |
+          set -e
           pip install poetry
-          poetry lock &&
           poetry install
 
       - name: Run tests
