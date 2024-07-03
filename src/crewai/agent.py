@@ -7,16 +7,15 @@ from langchain.tools.render import render_text_description
 from langchain_core.agents import AgentAction
 from langchain_core.callbacks import BaseCallbackHandler
 from langchain_openai import ChatOpenAI
-
 from pydantic import Field, InstanceOf, model_validator
 
 from crewai.agents import CacheHandler, CrewAgentExecutor, CrewAgentParser
+from crewai.agents.agent_builder.base_agent import BaseAgent
 from crewai.memory.contextual.contextual_memory import ContextualMemory
 from crewai.tools.agent_tools import AgentTools
-from crewai.utilities import Prompts, Converter
+from crewai.utilities import Converter, Prompts
 from crewai.utilities.constants import TRAINED_AGENTS_DATA_FILE, TRAINING_DATA_FILE
 from crewai.utilities.token_counter_callback import TokenCalcHandler
-from crewai.agents.agent_builder.base_agent import BaseAgent
 from crewai.utilities.training_handler import CrewTrainingHandler
 
 agentops = None
@@ -118,7 +117,8 @@ class Agent(BaseAgent):
                 self.llm.callbacks.append(token_handler)
 
             if agentops and not any(
-                isinstance(handler, agentops.LangchainCallbackHandler) for handler in self.llm.callbacks
+                isinstance(handler, agentops.LangchainCallbackHandler)
+                for handler in self.llm.callbacks
             ):
                 agentops.stop_instrumenting()
                 self.llm.callbacks.append(agentops.LangchainCallbackHandler())
@@ -188,6 +188,8 @@ class Agent(BaseAgent):
                 "tools": self.agent_executor.tools_description,
             }
         )["output"]
+        print("RESULT FROM agent_executor:", result)
+
         if self.max_rpm:
             self._rpm_controller.stop_rpm_counter()
         return result

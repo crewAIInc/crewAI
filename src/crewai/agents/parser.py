@@ -1,6 +1,7 @@
 import re
 from typing import Any, Union
 
+from json_repair import repair_json
 from langchain.agents.output_parsers import ReActSingleInputOutputParser
 from langchain_core.agents import AgentAction, AgentFinish
 from langchain_core.exceptions import OutputParserException
@@ -38,28 +39,39 @@ class CrewAgentParser(ReActSingleInputOutputParser):
     agent: Any = None
 
     def parse(self, text: str) -> Union[AgentAction, AgentFinish]:
+        print("TEXT TO PARSE IN CREWAGENTPARSER:", text)
         includes_answer = FINAL_ANSWER_ACTION in text
         regex = (
             r"Action\s*\d*\s*:[\s]*(.*?)[\s]*Action\s*\d*\s*Input\s*\d*\s*:[\s]*(.*)"
         )
         action_match = re.search(regex, text, re.DOTALL)
         if action_match:
+            print("ACTION MATCH:", action_match.group(1).strip())
             if includes_answer:
                 raise OutputParserException(
                     f"{FINAL_ANSWER_AND_PARSABLE_ACTION_ERROR_MESSAGE}: {text}"
                 )
             action = action_match.group(1).strip()
             action_input = action_match.group(2)
+            print("action_input before formatting:", action)
             tool_input = action_input.strip(" ")
             tool_input = tool_input.strip('"')
+            # TODO: CREATE A REPAIR OR FALLBACK FOR REPAIR_JSON
+            # Attempt to format the tool input as a JSON object
+            repaired_tool_input = repair_json(tool_input)
+
+            print("TOOL INPUT AFTER FORMATTING:", tool_input)
+            print("REPAIRED TOOL INPUT:", repaired_tool_input)
             return AgentAction(action, tool_input, text)
 
         elif includes_answer:
+            print("INCLUDED ANSWER:", text.split(FINAL_ANSWER_ACTION)[-1].strip())
             return AgentFinish(
                 {"output": text.split(FINAL_ANSWER_ACTION)[-1].strip()}, text
             )
 
         if not re.search(r"Action\s*\d*\s*:[\s]*(.*?)", text, re.DOTALL):
+            print("MISSING ACTION AFTER THOUGHT", text)
             self.agent.increment_formatting_errors()
             raise OutputParserException(
                 f"Could not parse LLM output: `{text}`",
@@ -70,6 +82,7 @@ class CrewAgentParser(ReActSingleInputOutputParser):
         elif not re.search(
             r"[\s]*Action\s*\d*\s*Input\s*\d*\s*:[\s]*(.*)", text, re.DOTALL
         ):
+            print("MISSING ACTION INPUT AFTER ACTION", text)
             self.agent.increment_formatting_errors()
             raise OutputParserException(
                 f"Could not parse LLM output: `{text}`",
@@ -78,6 +91,7 @@ class CrewAgentParser(ReActSingleInputOutputParser):
                 send_to_llm=True,
             )
         else:
+            print("FORMAT ERROR", text)
             format = self._i18n.slice("format_without_tools")
             error = f"{format}"
             self.agent.increment_formatting_errors()
@@ -87,3 +101,9 @@ class CrewAgentParser(ReActSingleInputOutputParser):
                 llm_output=text,
                 send_to_llm=True,
             )
+
+    def _safe_repair_json(self, tool_input: str) -> str:
+        try:
+            return repair_json(tool_input)
+        except Exception as e:
+            return tool_input
