@@ -27,5 +27,23 @@ jobs:
           pip install poetry
           poetry lock && poetry install
 
+      - name: Print Environment Information
+        run: |
+          python --version
+          pip list
+          env
+
+      - name: Clear Caches
+        run: |
+          sudo rm -rf ~/.cache/pypoetry
+          sudo rm -rf ~/.cache/pip
+
       - name: Run tests
-        run: poetry run pytest tests
+        run: poetry run pytest tests --capture=tee-sys --junitxml=test-results.xml
+
+      - name: Upload Test Results
+        if: always()
+        uses: actions/upload-artifact@v3
+        with:
+          name: test-results
+          path: test-results.xml
