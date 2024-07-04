@@ -90,6 +90,9 @@ class Agent(BaseAgent):
     response_template: Optional[str] = Field(
         default=None, description="Response format for the agent."
     )
+    tools_results: Optional[List[Any]] = Field(
+        default=[], description="Results of the tools used by the agent."
+    )
     allow_code_execution: Optional[bool] = Field(
         default=False, description="Enable code execution for the agent."
     )
@@ -116,7 +119,8 @@ class Agent(BaseAgent):
                 self.llm.callbacks.append(token_handler)
 
             if agentops and not any(
-                isinstance(handler, agentops.LangchainCallbackHandler) for handler in self.llm.callbacks
+                isinstance(handler, agentops.LangchainCallbackHandler)
+                for handler in self.llm.callbacks
             ):
                 agentops.stop_instrumenting()
                 self.llm.callbacks.append(agentops.LangchainCallbackHandler())
@@ -188,6 +192,14 @@ class Agent(BaseAgent):
         )["output"]
         if self.max_rpm:
             self._rpm_controller.stop_rpm_counter()
+
+        # If there was any tool in self.tools_results that had result_as_answer
+        # set to True, return the restuls of the last tool that had
+        # result_as_answer set to True
+        for tool_result in self.tools_results:
+            if tool_result.get("result_as_answer", False):
+                result = tool_result["result"]
+
         return result
 
     def format_log_to_str(

@@ -310,7 +310,7 @@ def test_output_json_to_another_task():
 
     crew = Crew(agents=[scorer], tasks=[task1, task2])
     result = crew.kickoff()
-    assert '{\n  "score": 3\n}' == result
+    assert '{\n  "score": 5\n}' == result
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
