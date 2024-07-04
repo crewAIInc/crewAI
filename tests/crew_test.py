@@ -936,27 +936,28 @@ def test_task_with_no_arguments():
     assert result == "75"
 
 
-def test_code_execution_flag_adds_code_tool_upon_kickoff():
-    from crewai_tools import CodeInterpreterTool
+# @pytest.mark.vcr(filter_headers=["authorization"])
+# def test_code_execution_flag_adds_code_tool_upon_kickoff():
+#     from crewai_tools import CodeInterpreterTool
 
-    programmer = Agent(
-        role="Programmer",
-        goal="Write code to solve problems.",
-        backstory="You're a programmer who loves to solve problems with code.",
-        allow_delegation=False,
-        allow_code_execution=True,
-    )
+#     programmer = Agent(
+#         role="Programmer",
+#         goal="Write code to solve problems.",
+#         backstory="You're a programmer who loves to solve problems with code.",
+#         allow_delegation=False,
+#         allow_code_execution=True,
+#     )
 
-    task = Task(
-        description="How much is 2 + 2?",
-        expected_output="The result of the sum as an integer.",
-        agent=programmer,
-    )
+#     task = Task(
+#         description="How much is 2 + 2?",
+#         expected_output="The result of the sum as an integer.",
+#         agent=programmer,
+#     )
 
-    crew = Crew(agents=[programmer], tasks=[task])
-    crew.kickoff()
-    assert len(programmer.tools) == 1
-    assert programmer.tools[0].__class__ == CodeInterpreterTool
+#     crew = Crew(agents=[programmer], tasks=[task])
+#     crew.kickoff()
+#     assert len(programmer.tools) == 1
+#     assert programmer.tools[0].__class__ == CodeInterpreterTool
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])

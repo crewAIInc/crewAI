@@ -756,6 +756,7 @@ def test_tool_result_as_answer_is_the_final_answer_for_the_agent():
 pytest.mark.vcr(filter_headers=["authorization"])
 
 
+@pytest.mark.vcr(filter_headers=["authorization"])
 def test_tool_usage_information_is_appended_to_agent():
     from crewai_tools import BaseTool
 
@@ -782,11 +783,12 @@ def test_tool_usage_information_is_appended_to_agent():
     crew = Crew(agents=[agent1], tasks=tasks)
 
     crew.kickoff()
+
     assert agent1.tools_results == [
         {
             "result": "Howdy!",
             "tool_name": "Decide Greetings",
-            "tool_args": {},
+            "tool_args": {"context": "to make everyone feel welcome"},
             "result_as_answer": True,
         }
     ]
