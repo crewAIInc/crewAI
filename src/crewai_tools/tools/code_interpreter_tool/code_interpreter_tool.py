@@ -1,6 +1,5 @@
-import os
 import importlib.util
-import textwrap
+import os
 from typing import List, Optional, Type
 
 import docker
@@ -10,14 +9,17 @@ from pydantic.v1 import BaseModel, Field
 
 class CodeInterpreterSchema(BaseModel):
     """Input for CodeInterpreterTool."""
+
     code: str = Field(
         ...,
-        description="Mandatory string of python3 code used to be interpreted with a final print statement.",
+        description="Python3 code used to be interpreted in the Docker container. ALWAYS PRINT the final result and the output of the code",
     )
-    dependencies_used_in_code: List[str] = Field(
+
+    libraries_used: List[str] = Field(
         ...,
-        description="Mandatory list of libraries used in the code with proper installing names.",
+        description="List of libraries used in the code with proper installing names separated by commas. Example: numpy,pandas,beautifulsoup4",
     )
+
 
 class CodeInterpreterTool(BaseTool):
     name: str = "Code Interpreter"
@@ -27,7 +29,7 @@ class CodeInterpreterTool(BaseTool):
 
     @staticmethod
     def _get_installed_package_path():
-        spec = importlib.util.find_spec('crewai_tools')
+        spec = importlib.util.find_spec("crewai_tools")
         return os.path.dirname(spec.origin)
 
     def _verify_docker_image(self) -> None:
@@ -36,11 +38,13 @@ class CodeInterpreterTool(BaseTool):
         """
         image_tag = "code-interpreter:latest"
         client = docker.from_env()
+
         try:
             client.images.get(image_tag)
-        except:
+
+        except docker.errors.ImageNotFound:
             package_path = self._get_installed_package_path()
-            dockerfile_path = os.path.join(package_path, 'tools/code_interpreter_tool')
+            dockerfile_path = os.path.join(package_path, "tools/code_interpreter_tool")
             if not os.path.exists(dockerfile_path):
                 raise FileNotFoundError(f"Dockerfile not found in {dockerfile_path}")
 
@@ -52,7 +56,7 @@ class CodeInterpreterTool(BaseTool):
 
     def _run(self, **kwargs) -> str:
         code = kwargs.get("code", self.code)
-        libraries_used = kwargs.get("dependencies_used_in_code", [])
+        libraries_used = kwargs.get("libraries_used", [])
         return self.run_code_in_docker(code, libraries_used)
 
     def _install_libraries(
@@ -67,10 +71,14 @@ class CodeInterpreterTool(BaseTool):
     def _init_docker_container(self) -> docker.models.containers.Container:
         client = docker.from_env()
         return client.containers.run(
-            "code-interpreter", detach=True, tty=True, working_dir="/workspace"
+            "code-interpreter",
+            detach=True,
+            tty=True,
+            working_dir="/workspace",
+            name="code-interpreter",
         )
 
-    def run_code_in_docker(self, code: str, libraries_used: str) -> str:
+    def run_code_in_docker(self, code: str, libraries_used: List[str]) -> str:
         self._verify_docker_image()
         container = self._init_docker_container()
         self._install_libraries(container, libraries_used)
