@@ -194,7 +194,7 @@ class Agent(BaseAgent):
             self._rpm_controller.stop_rpm_counter()
 
         # If there was any tool in self.tools_results that had result_as_answer
-        # set to True, return the restuls of the last tool that had
+        # set to True, return the results of the last tool that had
         # result_as_answer set to True
         for tool_result in self.tools_results:
             if tool_result.get("result_as_answer", False):
