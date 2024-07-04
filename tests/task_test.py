@@ -424,20 +424,18 @@ def test_increment_delegations_for_hierarchical_process():
 
 @pytest.mark.vcr(filter_headers=["authorization"])
 def test_increment_delegations_for_sequential_process():
-    pass
-
     manager = Agent(
         role="Manager",
         goal="Coordinate scoring processes",
         backstory="You're great at delegating work about scoring.",
-        allow_delegation=False,
+        allow_delegation=True,
     )
 
     scorer = Agent(
         role="Scorer",
         goal="Score the title",
         backstory="You're an expert scorer, specialized in scoring titles.",
-        allow_delegation=False,
+        allow_delegation=True,
     )
 
     task = Task(
