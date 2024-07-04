@@ -490,7 +490,7 @@ def test_increment_tool_errors():
     with patch.object(Task, "increment_tools_errors") as increment_tools_errors:
         increment_tools_errors.return_value = None
         crew.kickoff()
-        increment_tools_errors.assert_called_once()
+        assert len(increment_tools_errors.mock_calls) == 3
 
 
 def test_task_definition_based_on_dict():
