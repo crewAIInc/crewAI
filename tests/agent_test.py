@@ -723,6 +723,75 @@ def test_agent_count_formatting_error():
         mock_count_errors.assert_called_once()
 
 
+@pytest.mark.vcr(filter_headers=["authorization"])
+def test_tool_result_as_answer_is_the_final_answer_for_the_agent():
+    from crewai_tools import BaseTool
+
+    class MyCustomTool(BaseTool):
+        name: str = "Get Greetings"
+        description: str = "Get a random greeting back"
+
+        def _run(self) -> str:
+            return "Howdy!"
+
+    agent1 = Agent(
+        role="Data Scientist",
+        goal="Product amazing resports on AI",
+        backstory="You work with data and AI",
+        tools=[MyCustomTool(result_as_answer=True)],
+    )
+
+    essay = Task(
+        description="Write and then review an small paragraph on AI until it's AMAZING. But first use the `Get Greetings` tool to get a greeting.",
+        expected_output="The final paragraph with the full review on AI and no greeting.",
+        agent=agent1,
+    )
+    tasks = [essay]
+    crew = Crew(agents=[agent1], tasks=tasks)
+
+    result = crew.kickoff()
+    assert result == "Howdy!"
+
+
+pytest.mark.vcr(filter_headers=["authorization"])
+
+
+def test_tool_usage_information_is_appended_to_agent():
+    from crewai_tools import BaseTool
+
+    class MyCustomTool(BaseTool):
+        name: str = "Decide Greetings"
+        description: str = "Decide what is the appropriate greeting to use"
+
+        def _run(self) -> str:
+            return "Howdy!"
+
+    agent1 = Agent(
+        role="Friendly Neighbor",
+        goal="Make everyone feel welcome",
+        backstory="You are the friendly neighbor",
+        tools=[MyCustomTool(result_as_answer=True)],
+    )
+
+    greeting = Task(
+        description="Say an appropriate greeting.",
+        expected_output="The greeting.",
+        agent=agent1,
+    )
+    tasks = [greeting]
+    crew = Crew(agents=[agent1], tasks=tasks)
+
+    crew.kickoff()
+    assert agent1.tools_results == [
+        {
+            "result": "Howdy!",
+            "tool_name": "Decide Greetings",
+            "tool_args": {},
+            "result_as_answer": True,
+        }
+    ]
+
+
 def test_agent_llm_uses_token_calc_handler_with_llm_has_model_name():
     agent1 = Agent(
         role="test role",

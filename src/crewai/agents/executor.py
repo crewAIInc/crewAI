@@ -243,6 +243,7 @@ class CrewAgentExecutor(AgentExecutor, CrewAgentExecutorMixin):
                 tools_names=self.tools_names,
                 function_calling_llm=self.function_calling_llm,
                 task=self.task,
+                agent=self.crew_agent,
                 action=agent_action,
             )
             tool_calling = tool_usage.parse(agent_action.log)

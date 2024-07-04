@@ -51,6 +51,7 @@ class ToolUsage:
         tools_names: str,
         task: Any,
         function_calling_llm: Any,
+        agent: Any,
         action: Any,
     ) -> None:
         self._i18n: I18N = I18N()
@@ -59,6 +60,7 @@ class ToolUsage:
         self._run_attempts: int = 1
         self._max_parsing_attempts: int = 3
         self._remember_format_after_usages: int = 3
+        self.agent = agent
         self.tools_description = tools_description
         self.tools_names = tools_names
         self.tools_handler = tools_handler
@@ -130,6 +132,10 @@ class ToolUsage:
                 tool=calling.tool_name, input=calling.arguments
             )
 
+        original_tool = next(
+            (ot for ot in self.original_tools if ot.name == tool.name), None
+        )
+
         if result is None:  #! finecwg: if not result --> if result is None
             try:
                 if calling.tool_name in [
@@ -179,9 +185,6 @@ class ToolUsage:
 
             if self.tools_handler:
                 should_cache = True
-                original_tool = next(
-                    (ot for ot in self.original_tools if ot.name == tool.name), None
-                )
                 if (
                     hasattr(original_tool, "cache_function")
                     and original_tool.cache_function  # type: ignore # Item "None" of "Any | None" has no attribute "cache_function"
@@ -203,6 +206,21 @@ class ToolUsage:
             attempts=self._run_attempts,
         )
         result = self._format_result(result=result)  # type: ignore # "_format_result" of "ToolUsage" does not return a value (it only ever returns None)
+        data = {
+            "result": result,
+            "tool_name": tool.name,
+            "tool_args": calling.arguments,
+        }
+
+        if (
+            hasattr(original_tool, "result_as_answer")
+            and original_tool.result_as_answer  # type: ignore # Item "None" of "Any | None" has no attribute "cache_function"
+        ):
+            result_as_answer = original_tool.result_as_answer
+            data["result_as_answer"] = result_as_answer
+
+        self.agent.tools_results.append(data)
+
         return result  # type: ignore # No return value expected
 
     def _format_result(self, result: Any) -> None:
