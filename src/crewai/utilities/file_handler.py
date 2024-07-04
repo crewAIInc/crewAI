@@ -31,9 +31,8 @@ class PickleHandler:
         - file_name (str): The name of the file for saving and loading data.
         """
         self.file_path = os.path.join(os.getcwd(), file_name)
-        self._initialize_file()
 
-    def _initialize_file(self) -> None:
+    def initialize_file(self) -> None:
         """
         Initialize the file with an empty dictionary if it does not exist or is empty.
         """
