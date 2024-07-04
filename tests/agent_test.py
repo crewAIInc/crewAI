@@ -743,7 +743,7 @@ def test_tool_result_as_answer_is_the_final_answer_for_the_agent():
 
     essay = Task(
         description="Write and then review an small paragraph on AI until it's AMAZING. But first use the `Get Greetings` tool to get a greeting.",
-        expected_output="The final paragraph withthe full review on AI and no greeting.",
+        expected_output="The final paragraph with the full review on AI and no greeting.",
         agent=agent1,
     )
     tasks = [essay]
