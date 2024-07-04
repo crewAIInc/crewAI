@@ -413,19 +413,17 @@ def test_increment_delegations_for_hierarchical_process():
         agents=[scorer],
         tasks=[task],
         process=Process.hierarchical,
-        manager_llm=ChatOpenAI(model="gpt-4-0125-preview"),
+        manager_llm=ChatOpenAI(model="gpt-4o"),
     )
 
     with patch.object(Task, "increment_delegations") as increment_delegations:
         increment_delegations.return_value = None
         crew.kickoff()
-        increment_delegations.assert_called_once
+        increment_delegations.assert_called_once()
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
 def test_increment_delegations_for_sequential_process():
-    pass
-
     manager = Agent(
         role="Manager",
         goal="Coordinate scoring processes",
@@ -455,7 +453,7 @@ def test_increment_delegations_for_sequential_process():
     with patch.object(Task, "increment_delegations") as increment_delegations:
         increment_delegations.return_value = None
         crew.kickoff()
-        increment_delegations.assert_called_once
+        increment_delegations.assert_called_once()
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
@@ -484,13 +482,13 @@ def test_increment_tool_errors():
         agents=[scorer],
         tasks=[task],
         process=Process.hierarchical,
-        manager_llm=ChatOpenAI(model="gpt-4-0125-preview"),
+        manager_llm=ChatOpenAI(model="gpt-4o"),
     )
 
     with patch.object(Task, "increment_tools_errors") as increment_tools_errors:
         increment_tools_errors.return_value = None
         crew.kickoff()
-        increment_tools_errors.assert_called_once
+        increment_tools_errors.assert_called_once()
 
 
 def test_task_definition_based_on_dict():
