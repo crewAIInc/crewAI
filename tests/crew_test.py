@@ -386,11 +386,14 @@ def test_crew_full_output():
 
     assert result == {
         "final_output": "Hello!",
-        "tasks_outputs": [task1.output, task2.output],
+        "tasks_outputs": [
+            task1.output,
+            task2.output,
+        ],
         "usage_metrics": {
-            "total_tokens": 348,
+            "total_tokens": 346,
             "prompt_tokens": 314,
-            "completion_tokens": 34,
+            "completion_tokens": 32,
             "successful_requests": 2,
         },
     }
