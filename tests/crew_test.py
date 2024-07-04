@@ -936,6 +936,7 @@ def test_task_with_no_arguments():
     assert result == "75"
 
 
+@pytest.mark.vcr(filter_headers=["authorization"])
 def test_code_execution_flag_adds_code_tool_upon_kickoff():
     from crewai_tools import CodeInterpreterTool
 
@@ -954,9 +955,12 @@ def test_code_execution_flag_adds_code_tool_upon_kickoff():
     )
 
     crew = Crew(agents=[programmer], tasks=[task])
-    crew.kickoff()
-    assert len(programmer.tools) == 1
-    assert programmer.tools[0].__class__ == CodeInterpreterTool
+
+    with patch.object(Agent, "execute_task") as executor:
+        executor.return_value = "ok"
+        crew.kickoff()
+        assert len(programmer.tools) == 1
+        assert programmer.tools[0].__class__ == CodeInterpreterTool
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
