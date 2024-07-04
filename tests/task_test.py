@@ -200,6 +200,8 @@ def test_multiple_output_type_error():
 
 @pytest.mark.vcr(filter_headers=["authorization"])
 def test_output_pydantic():
+    from langchain_openai import ChatOpenAI
+
     class ScoreOutput(BaseModel):
         score: int
 
@@ -215,6 +217,7 @@ def test_output_pydantic():
         expected_output="The score of the title.",
         output_pydantic=ScoreOutput,
         agent=scorer,
+        llm=ChatOpenAI(model="gpt-4o"),
     )
 
     crew = Crew(agents=[scorer], tasks=[task])
