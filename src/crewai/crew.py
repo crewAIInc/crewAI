@@ -1,7 +1,7 @@
 import asyncio
 import json
 import uuid
-from typing import Any, Dict, List, Optional, Union, Tuple
+from typing import Any, Dict, List, Optional, Tuple, Union
 
 from langchain_core.callbacks import BaseCallbackHandler
 from pydantic import (
@@ -28,6 +28,7 @@ from crewai.task import Task
 from crewai.telemetry import Telemetry
 from crewai.tools.agent_tools import AgentTools
 from crewai.utilities import I18N, FileHandler, Logger, RPMController
+from crewai.utilities.constants import TRAINED_AGENTS_DATA_FILE, TRAINING_DATA_FILE
 from crewai.utilities.evaluators.task_evaluator import TaskEvaluator
 from crewai.utilities.training_handler import CrewTrainingHandler
 
@@ -289,6 +290,9 @@ class Crew(BaseModel):
         for agent in self.agents:
             agent.allow_delegation = False
 
+        CrewTrainingHandler(TRAINING_DATA_FILE).initialize_file()
+        CrewTrainingHandler(TRAINED_AGENTS_DATA_FILE).initialize_file()
+
     def train(self, n_iterations: int, inputs: Optional[Dict[str, Any]] = {}) -> None:
         """Trains the crew for a given number of iterations."""
         self._setup_for_training()
@@ -297,14 +301,14 @@ class Crew(BaseModel):
             self._train_iteration = n_iteration
             self.kickoff(inputs=inputs)
 
-        training_data = CrewTrainingHandler("training_data.pkl").load()
+        training_data = CrewTrainingHandler(TRAINING_DATA_FILE).load()
 
         for agent in self.agents:
             result = TaskEvaluator(agent).evaluate_training_data(
                 training_data=training_data, agent_id=str(agent.id)
             )
 
-            CrewTrainingHandler("trained_agents_data.pkl").save_trained_data(
+            CrewTrainingHandler(TRAINED_AGENTS_DATA_FILE).save_trained_data(
                 agent_id=str(agent.role), trained_data=result.model_dump()
             )
 
@@ -585,8 +589,7 @@ class Crew(BaseModel):
             self._rpm_controller.stop_rpm_counter()
         if agentops:
             agentops.end_session(
-                end_state="Success",
-                end_state_reason="Finished Execution"
+                end_state="Success", end_state_reason="Finished Execution"
             )
         self._telemetry.end_crew(self, output)
 
