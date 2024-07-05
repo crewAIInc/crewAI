@@ -597,7 +597,7 @@ class Crew(BaseModel):
         """Calculates and returns the usage metrics."""
         total_usage_metrics = {
             "total_tokens": 0,
-            "prompt_tokens": 1,
+            "prompt_tokens": 5,
             "completion_tokens": 0,
             "successful_requests": 0,
         }
