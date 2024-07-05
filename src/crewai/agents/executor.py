@@ -15,19 +15,18 @@ from langchain.agents.agent import ExceptionTool
 from langchain.callbacks.manager import CallbackManagerForChainRun
 from langchain_core.agents import AgentAction, AgentFinish, AgentStep
 from langchain_core.exceptions import OutputParserException
-
 from langchain_core.tools import BaseTool
 from langchain_core.utils.input import get_color_mapping
 from pydantic import InstanceOf
+
 from crewai.agents.agent_builder.base_agent_executor_mixin import (
     CrewAgentExecutorMixin,
 )
-
 from crewai.agents.tools_handler import ToolsHandler
 from crewai.tools.tool_usage import ToolUsage, ToolUsageErrorException
+from crewai.utilities import I18N
 from crewai.utilities.constants import TRAINING_DATA_FILE
 from crewai.utilities.training_handler import CrewTrainingHandler
-from crewai.utilities import I18N
 
 
 class CrewAgentExecutor(AgentExecutor, CrewAgentExecutorMixin):
@@ -46,7 +45,7 @@ class CrewAgentExecutor(AgentExecutor, CrewAgentExecutorMixin):
     tools_handler: Optional[InstanceOf[ToolsHandler]] = None
     max_iterations: Optional[int] = 15
     have_forced_answer: bool = False
-    force_answer_max_iterations: Optional[int] = None
+    force_answer_max_iterations: Optional[int] = None  # type: ignore # Incompatible types in assignment (expression has type "int | None", base class "CrewAgentExecutorMixin" defined the type as "int")
     step_callback: Optional[Any] = None
     system_template: Optional[str] = None
     prompt_template: Optional[str] = None
