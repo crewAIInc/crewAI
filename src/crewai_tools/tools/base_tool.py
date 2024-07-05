@@ -86,16 +86,16 @@ class BaseTool(BaseModel, ABC):
             )
 
     def _generate_description(self):
-            args = []
-            args_description = []
-            for arg, attribute in self.args_schema.schema()["properties"].items():
-                if "type" in attribute:
-                    args.append(f"{arg}: '{attribute['type']}'")
-                if "description" in attribute:
-                    args_description.append(f"{arg}: '{attribute['description']}'")
+        args = []
+        args_description = []
+        for arg, attribute in self.args_schema.schema()["properties"].items():
+            if "type" in attribute:
+                args.append(f"{arg}: '{attribute['type']}'")
+            if "description" in attribute:
+                args_description.append(f"{arg}: '{attribute['description']}'")
 
-            description = self.description.replace("\n", " ")
-            self.description = f"{self.name}({', '.join(args)}) - {description} {', '.join(args_description)}"
+        description = self.description.replace("\n", " ")
+        self.description = f"{self.name}({', '.join(args)}) - {description} {', '.join(args_description)}"
 
 
 class Tool(BaseTool):
