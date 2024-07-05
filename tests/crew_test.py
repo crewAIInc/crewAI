@@ -359,41 +359,41 @@ def test_api_calls_throttling(capsys):
         moveon.assert_called()
 
 
-# @pytest.mark.vcr(filter_headers=["authorization"])
-# def test_crew_full_output():
-#     agent = Agent(
-#         role="test role",
-#         goal="test goal",
-#         backstory="test backstory",
-#         allow_delegation=False,
-#         verbose=True,
-#     )
+@pytest.mark.vcr(filter_headers=["authorization"])
+def test_crew_full_output():
+    agent = Agent(
+        role="test role",
+        goal="test goal",
+        backstory="test backstory",
+        allow_delegation=False,
+        verbose=True,
+    )
 
-#     task1 = Task(
-#         description="just say hi!",
-#         expected_output="your greeting",
-#         agent=agent,
-#     )
-#     task2 = Task(
-#         description="just say hello!",
-#         expected_output="your greeting",
-#         agent=agent,
-#     )
+    task1 = Task(
+        description="just say hi!",
+        expected_output="your greeting",
+        agent=agent,
+    )
+    task2 = Task(
+        description="just say hello!",
+        expected_output="your greeting",
+        agent=agent,
+    )
 
-#     crew = Crew(agents=[agent], tasks=[task1, task2], full_output=True)
+    crew = Crew(agents=[agent], tasks=[task1, task2], full_output=True)
 
-#     result = crew.kickoff()
+    result = crew.kickoff()
 
-#     assert result == {
-#         "final_output": "Hello!",
-#         "tasks_outputs": [task1.output, task2.output],
-#         "usage_metrics": {
-#             "total_tokens": 348,
-#             "prompt_tokens": 314,
-#             "completion_tokens": 34,
-#             "successful_requests": 2,
-#         },
-#     }
+    assert result == {
+        "final_output": "Hello!",
+        "tasks_outputs": [task1.output, task2.output],
+        "usage_metrics": {
+            "total_tokens": 348,
+            "prompt_tokens": 314,
+            "completion_tokens": 34,
+            "successful_requests": 2,
+        },
+    }
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
