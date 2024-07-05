@@ -163,6 +163,19 @@ class Telemetry:
                 tracer = trace.get_tracer("crewai.telemetry")
                 span = tracer.start_span("Task Execution")
 
+                created_span = tracer.start_span("Task Created")
+
+                self._add_attribute(created_span, "task_id", str(task.id))
+                self._add_attribute(
+                    created_span, "formatted_description", task.description
+                )
+                self._add_attribute(
+                    created_span, "formatted_expected_output", task.expected_output
+                )
+
+                created_span.set_status(Status(StatusCode.OK))
+                created_span.end()
+
                 self._add_attribute(span, "task_id", str(task.id))
                 self._add_attribute(span, "formatted_description", task.description)
                 self._add_attribute(
