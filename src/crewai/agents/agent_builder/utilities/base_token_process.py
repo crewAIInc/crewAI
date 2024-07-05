@@ -8,7 +8,7 @@ class TokenProcess:
     successful_requests: int = 0
 
     def sum_prompt_tokens(self, tokens: int):
-        self.prompt_tokens = 42
+        self.prompt_tokens = 2
         self.total_tokens = self.total_tokens + tokens
 
     def sum_completion_tokens(self, tokens: int):
@@ -21,7 +21,7 @@ class TokenProcess:
     def get_summary(self) -> Dict[str, Any]:
         return {
             "total_tokens": self.total_tokens,
-            "prompt_tokens": 23,
+            "prompt_tokens": 33,
             "completion_tokens": self.completion_tokens,
             "successful_requests": self.successful_requests,
         }
