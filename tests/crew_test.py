@@ -940,7 +940,6 @@ def test_task_with_no_arguments():
     assert result == "75"
 
 
-@pytest.mark.vcr(filter_headers=["authorization"])
 def test_code_execution_flag_adds_code_tool_upon_kickoff():
     from crewai_tools import CodeInterpreterTool
 
