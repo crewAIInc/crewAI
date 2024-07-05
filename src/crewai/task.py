@@ -169,12 +169,12 @@ class Task(BaseModel):
 
         return self.output.exported_output
 
-    def execute(  # type: ignore # Missing return statement
+    def execute(
         self,
         agent: BaseAgent | None = None,
         context: Optional[str] = None,
         tools: Optional[List[Any]] = None,
-    ) -> str:
+    ) -> str | None:
         """Execute the task.
 
         Returns:
@@ -186,17 +186,18 @@ class Task(BaseModel):
         agent = agent or self.agent
         if not agent:
             raise Exception(
-                f"The task '{self.description}' has no agent assigned, therefore it can't be executed directly and should be executed in a Crew using a specific process that support that, like hierarchical."
+                f"The task '{self.description}' has no agent assigned, therefore it can't be executed directly "
+                "and should be executed in a Crew using a specific process that support that, like hierarchical."
             )
 
         if self.context:
-            context = []  # type: ignore # Incompatible types in assignment (expression has type "list[Never]", variable has type "str | None")
+            internal_context = []
             for task in self.context:
                 if task.async_execution:
                     task.wait_for_completion()
                 if task.output:
-                    context.append(task.output.raw_output)  # type: ignore # Item "str" of "str | None" has no attribute "append"
-            context = "\n".join(context)  # type: ignore # Argument 1 to "join" of "str" has incompatible type "str | None"; expected "Iterable[str]"
+                    internal_context.append(task.output.raw_output)
+            context = "\n".join(internal_context)
 
         self.prompt_context = context
         tools = tools or self.tools
@@ -206,6 +207,7 @@ class Task(BaseModel):
                 self._future = executor.submit(
                     self._execute, agent, self, context, tools
                 )
+            return None
         else:
             result = self._execute(
                 task=self,
@@ -215,7 +217,7 @@ class Task(BaseModel):
             )
             return result
 
-    def _execute(self, agent: "BaseAgent", task, context, tools):
+    def _execute(self, agent: "BaseAgent", task, context, tools) -> str | None:
         result = agent.execute_task(
             task=task,
             context=context,
@@ -223,7 +225,7 @@ class Task(BaseModel):
         )
         exported_output = self._export_output(result)
 
-        self.output = TaskOutput(  # type: ignore # the responses are usually str but need to figure out a more elegant solution here
+        self.output = TaskOutput(
             description=self.description,
             exported_output=exported_output,
             raw_output=result,
