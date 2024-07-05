@@ -17,6 +17,10 @@ class TestPickleHandler(unittest.TestCase):
             os.remove(self.file_path)
 
     def test_initialize_file(self):
+        assert os.path.exists(self.file_path) is False
+
+        self.handler.initialize_file()
+
         assert os.path.exists(self.file_path) is True
         assert os.path.getsize(self.file_path) >= 0
 
