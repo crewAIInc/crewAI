@@ -2,8 +2,8 @@ import os
 from typing import Any, List, Optional, Tuple
 
 from langchain.agents.agent import RunnableAgent
+from langchain.agents.tools import BaseTool
 from langchain.agents.tools import tool as LangChainTool
-from langchain.tools.render import render_text_description
 from langchain_core.agents import AgentAction
 from langchain_core.callbacks import BaseCallbackHandler
 from langchain_openai import ChatOpenAI
@@ -174,7 +174,9 @@ class Agent(BaseAgent):
         self.agent_executor.tools = parsed_tools
         self.agent_executor.task = task
 
-        self.agent_executor.tools_description = render_text_description(parsed_tools)
+        self.agent_executor.tools_description = self._render_text_description(
+            parsed_tools
+        )
         self.agent_executor.tools_names = self.__tools_names(parsed_tools)
 
         print("AGENT AGENT EXECUTOR TOOLS:", self.agent_executor.tools)
@@ -344,6 +346,25 @@ class Agent(BaseAgent):
                     trained_data_output["suggestions"]
                 )
         return task_prompt
+
+    def _render_text_description(self, tools: List[BaseTool]) -> str:
+        """Render the tool name and description in plain text.
+
+        Output will be in the format of:
+
+        .. code-block:: markdown
+
+            search: This tool is used for search
+            calculator: This tool is used for math
+        """
+        description = "\n".join(
+            [
+                f"Tool name: {tool.name}\nTool description:\n{tool.description}"
+                for tool in tools
+            ]
+        )
+        print("render_text_description result", description)
+        return description
 
     @staticmethod
     def __tools_names(tools) -> str:
