@@ -1,33 +1,22 @@
 import threading
 import time
-from typing import (
-    Any,
-    Dict,
-    Iterator,
-    List,
-    Optional,
-    Tuple,
-    Union,
-)
+from typing import Any, Dict, Iterator, List, Optional, Tuple, Union
 
 from langchain.agents import AgentExecutor
 from langchain.agents.agent import ExceptionTool
 from langchain.callbacks.manager import CallbackManagerForChainRun
 from langchain_core.agents import AgentAction, AgentFinish, AgentStep
 from langchain_core.exceptions import OutputParserException
-
 from langchain_core.tools import BaseTool
 from langchain_core.utils.input import get_color_mapping
 from pydantic import InstanceOf
-from crewai.agents.agent_builder.base_agent_executor_mixin import (
-    CrewAgentExecutorMixin,
-)
 
+from crewai.agents.agent_builder.base_agent_executor_mixin import CrewAgentExecutorMixin
 from crewai.agents.tools_handler import ToolsHandler
 from crewai.tools.tool_usage import ToolUsage, ToolUsageErrorException
+from crewai.utilities import I18N
 from crewai.utilities.constants import TRAINING_DATA_FILE
 from crewai.utilities.training_handler import CrewTrainingHandler
-from crewai.utilities import I18N
 
 
 class CrewAgentExecutor(AgentExecutor, CrewAgentExecutorMixin):
@@ -131,6 +120,9 @@ class CrewAgentExecutor(AgentExecutor, CrewAgentExecutorMixin):
 
         Override this to take control of how the agent makes and acts on choices.
         """
+        print("TOOLS DESCRIPTION IN CREWAGENTEXECUTOR: ", self.tools_description)
+        print("TOOLS NAMES IN CREWAGENTEXECUTOR: ", self.tools_names)
+
         try:
             if self._should_force_answer():
                 error = self._i18n.errors("force_final_answer")
@@ -245,6 +237,16 @@ class CrewAgentExecutor(AgentExecutor, CrewAgentExecutorMixin):
                 task=self.task,
                 action=agent_action,
             )
+            # print("TOOL USAGE CALLED IN CREWAGENTEXECUTOR: ", tool_usage)
+            # print(
+            #     "TOOL USAGE CALLED IN CREWAGENTEXECUTOR tool descriptions: ",
+            #     tool_usage.tools_description,
+            # )
+            # print(
+            #     "TOOL USAGE CALLED IN CREWAGENTEXECUTOR tool names: ",
+            #     tool_usage.tools_names,
+            # )
+            # print("TOOL USAGE PARSEL CALLED: ", agent_action.log)
             tool_calling = tool_usage.parse(agent_action.log)
 
             if isinstance(tool_calling, ToolUsageErrorException):

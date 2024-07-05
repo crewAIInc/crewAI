@@ -1,8 +1,7 @@
 import pytest
+from crewai.agents.parser import CrewAgentParser
 from langchain_core.agents import AgentAction, AgentFinish
 from langchain_core.exceptions import OutputParserException
-
-from crewai.agents.parser import CrewAgentParser
 
 
 @pytest.fixture
@@ -18,6 +17,19 @@ def test_valid_action_parsing_special_characters(parser):
     assert isinstance(result, AgentAction)
     assert result.tool == "search"
     assert result.tool_input == "what's the temperature in SF?"
+
+
+def test_valid_action_parsing_with_json_tool_input(parser):
+    text = """
+    Thought: Let's find the information
+    Action: query
+    Action Input: ** {"task": "What are some common challenges or barriers that you have observed or experienced when implementing AI-powered solutions in healthcare settings?", "context": "As we've discussed recent advancements in AI applications in healthcare, it's crucial to acknowledge the potential hurdles. Some possible obstacles include...", "coworker": "Senior Researcher"}
+    """
+    result = parser.parse(text)
+    assert isinstance(result, AgentAction)
+    expected_tool_input = '{"task": "What are some common challenges or barriers that you have observed or experienced when implementing AI-powered solutions in healthcare settings?", "context": "As we\'ve discussed recent advancements in AI applications in healthcare, it\'s crucial to acknowledge the potential hurdles. Some possible obstacles include...", "coworker": "Senior Researcher"}'
+    assert result.tool == "query"
+    assert result.tool_input == expected_tool_input
 
 
 def test_valid_action_parsing_with_quotes(parser):

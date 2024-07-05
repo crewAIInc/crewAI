@@ -4,15 +4,15 @@ from unittest import mock
 from unittest.mock import patch
 
 import pytest
-from langchain.tools import tool
+from langchain.tools import StructuredTool, tool
 from langchain_core.exceptions import OutputParserException
 from langchain_openai import ChatOpenAI
+from pydantic import BaseModel
 
 from crewai import Agent, Crew, Task
 from crewai.agents.cache import CacheHandler
 from crewai.agents.executor import CrewAgentExecutor
 from crewai.agents.parser import CrewAgentParser
-
 from crewai.tools.tool_calling import InstructorToolCalling
 from crewai.tools.tool_usage import ToolUsage
 from crewai.utilities import RPMController
@@ -645,7 +645,7 @@ def test_agent_step_callback():
     with patch.object(StepCallback, "callback") as callback:
 
         @tool
-        def learn_about_AI(topic) -> float:
+        def learn_about_AI(topic) -> str:
             """Useful for when you need to learn about AI to write an paragraph about it."""
             return "AI is a very broad field."
 
@@ -679,7 +679,7 @@ def test_agent_function_calling_llm():
     with patch.object(llm.client, "create", wraps=llm.client.create) as private_mock:
 
         @tool
-        def learn_about_AI(topic) -> float:
+        def learn_about_AI(topic) -> str:
             """Useful for when you need to learn about AI to write an paragraph about it."""
             return "AI is a very broad field."
 
@@ -895,3 +895,104 @@ def test_agent_use_trained_data(crew_training_handler):
     crew_training_handler.assert_has_calls(
         [mock.call(), mock.call("trained_agents_data.pkl"), mock.call().load()]
     )
+
+
+# Mock class to simulate CrewAITool
+class MockCrewAITool:
+    def to_langchain(self):
+        return StructuredTool(name="mock_tool", func=lambda x: x)
+
+
+# Mock class to simulate non-tool objects
+class NonTool:
+    pass
+
+
+def test_parse_tools_with_crewai_tool():
+    agent = Agent(role="test role", goal="test goal", backstory="test backstory")
+
+    tools = [MockCrewAITool()]
+    parsed_tools = agent._parse_tools(tools)
+
+    assert len(parsed_tools) == 1
+    assert isinstance(parsed_tools[0], StructuredTool)
+    assert parsed_tools[0].name == "mock_tool"
+
+
+# def test_parse_tools_with_regular_tool():
+#     # Using an existing StructuredTool from langchain.tools
+#     def mock_tool_function(x):
+#         return x
+
+#     mock_tool = StructuredTool(
+#         name="mock_tool", func=mock_tool_function, args_schema=None
+#     )
+
+#     agent = Agent(role="test role", goal="test goal", backstory="test backstory")
+
+#     tools = [mock_tool]
+#     parsed_tools = agent._parse_tools(tools)
+
+#     assert len(parsed_tools) == 1
+#     assert parsed_tools[0] == mock_tool
+
+
+# def test_parse_tools_with_mixed_tools():
+#     # Using an existing StructuredTool from langchain.tools
+#     def mock_tool_function(x):
+#         return x
+
+#     mock_tool = StructuredTool(name="regular_tool", func=mock_tool_function)
+
+#     agent = Agent(role="test role", goal="test goal", backstory="test backstory")
+
+#     tools = [MockCrewAITool(), mock_tool]
+#     parsed_tools = agent._parse_tools(tools)
+
+#     assert len(parsed_tools) == 2
+#     assert isinstance(parsed_tools[0], StructuredTool)
+#     assert parsed_tools[0].name == "mock_tool"
+#     assert parsed_tools[1] == mock_tool
+
+
+# def test_parse_tools_with_no_tools():
+#     agent = Agent(role="test role", goal="test goal", backstory="test backstory")
+
+#     tools = []
+#     parsed_tools = agent._parse_tools(tools)
+
+#     assert len(parsed_tools) == 0
+
+
+# def test_parse_tools_with_non_tool_objects():
+#     agent = Agent(role="test role", goal="test goal", backstory="test backstory")
+
+#     tools = [NonTool()]
+#     parsed_tools = agent._parse_tools(tools)
+
+#     assert len(parsed_tools) == 1
+#     assert isinstance(parsed_tools[0], NonTool)
+
+
+# @pytest.mark.parametrize(
+#     "tool_class_name, expected_instance",
+#     [("MockCrewAITool", StructuredTool), ("NonTool", NonTool)],
+# )
+# def test_parse_tools_dynamic_import(tool_class_name, expected_instance):
+#     agent = Agent(role="test role", goal="test goal", backstory="test backstory")
+
+#     # Dynamically create tool class
+#     ToolClass = type(
+#         tool_class_name,
+#         (),
+#         {
+#             "to_langchain": lambda self: StructuredTool(
+#                 name="dynamic_tool", func=lambda x: x
+#             )
+#         },
+#     )
+#     tools = [ToolClass()]
+#     parsed_tools = agent._parse_tools(tools)
+
+#     assert len(parsed_tools) == 1
+#     assert isinstance(parsed_tools[0], expected_instance)
