@@ -51,16 +51,17 @@ class CrewAgentParser(ReActSingleInputOutputParser):
                 raise OutputParserException(
                     f"{FINAL_ANSWER_AND_PARSABLE_ACTION_ERROR_MESSAGE}: {text}"
                 )
-            action = action_match.group(1).strip()
-            print("ACTION:", action)
-            action_input = action_match.group(2)
-            print("action_input before formatting:", action)
+            action = action_match.group(1)
+            clean_action = self._clean_action(action)
+            print("CLEAN ACTION:", clean_action)
+            action_input = action_match.group(2).strip()
+            # TODO: TEST CLEAN MARKDOWN
             tool_input = action_input.strip(" ").strip('"')
             safe_tool_input = self._safe_repair_json(tool_input)
 
             print("TOOL INPUT AFTER FORMATTING:", tool_input)
             print("REPAIRED TOOL INPUT:", safe_tool_input)
-            return AgentAction(action, safe_tool_input, text)
+            return AgentAction(clean_action, safe_tool_input, text)
 
         elif includes_answer:
             print("INCLUDED ANSWER:", text.split(FINAL_ANSWER_ACTION)[-1].strip())
@@ -99,6 +100,10 @@ class CrewAgentParser(ReActSingleInputOutputParser):
                 llm_output=text,
                 send_to_llm=True,
             )
+
+    def _clean_action(self, text: str) -> str:
+        """Clean action string by removing non-essential formatting characters."""
+        return re.sub(r"^\s*\*+\s*|\s*\*+\s*$", "", text).strip()
 
     def _safe_repair_json(self, tool_input: str) -> str:
         UNABLE_TO_REPAIR_JSON_RESULTS = ['""', "{}"]

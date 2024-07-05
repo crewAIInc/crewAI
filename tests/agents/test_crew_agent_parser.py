@@ -1,7 +1,8 @@
 import pytest
-from crewai.agents.parser import CrewAgentParser
 from langchain_core.agents import AgentAction, AgentFinish
 from langchain_core.exceptions import OutputParserException
+
+from crewai.agents.parser import CrewAgentParser
 
 
 @pytest.fixture
@@ -129,6 +130,62 @@ def test_valid_action_parsing_with_unbalanced_quotes(parser):
     assert isinstance(result, AgentAction)
     assert result.tool == "search"
     assert result.tool_input == "what is the temperature in SF?"
+
+
+def test_clean_action_no_formatting(parser):
+    action = "Ask question to senior researcher"
+    cleaned_action = parser._clean_action(action)
+    assert cleaned_action == "Ask question to senior researcher"
+
+
+def test_clean_action_with_leading_asterisks(parser):
+    action = "** Ask question to senior researcher"
+    cleaned_action = parser._clean_action(action)
+    assert cleaned_action == "Ask question to senior researcher"
+
+
+def test_clean_action_with_trailing_asterisks(parser):
+    action = "Ask question to senior researcher **"
+    cleaned_action = parser._clean_action(action)
+    assert cleaned_action == "Ask question to senior researcher"
+
+
+def test_clean_action_with_leading_and_trailing_asterisks(parser):
+    action = "** Ask question to senior researcher **"
+    cleaned_action = parser._clean_action(action)
+    assert cleaned_action == "Ask question to senior researcher"
+
+
+def test_clean_action_with_multiple_leading_asterisks(parser):
+    action = "**** Ask question to senior researcher"
+    cleaned_action = parser._clean_action(action)
+    assert cleaned_action == "Ask question to senior researcher"
+
+
+def test_clean_action_with_multiple_trailing_asterisks(parser):
+    action = "Ask question to senior researcher ****"
+    cleaned_action = parser._clean_action(action)
+    assert cleaned_action == "Ask question to senior researcher"
+
+
+def test_clean_action_with_spaces_and_asterisks(parser):
+    action = "  **  Ask question to senior researcher  **  "
+    cleaned_action = parser._clean_action(action)
+    print(f"Original action: '{action}'")
+    print(f"Cleaned action: '{cleaned_action}'")
+    assert cleaned_action == "Ask question to senior researcher"
+
+
+def test_clean_action_with_only_asterisks(parser):
+    action = "****"
+    cleaned_action = parser._clean_action(action)
+    assert cleaned_action == ""
+
+
+def test_clean_action_with_empty_string(parser):
+    action = ""
+    cleaned_action = parser._clean_action(action)
+    assert cleaned_action == ""
 
 
 def test_valid_final_answer_parsing(parser):
@@ -304,3 +361,6 @@ def test_integration_valid_and_invalid(parser):
 class MockAgent:
     def increment_formatting_errors(self):
         pass
+
+
+# TODO: ADD TEST TO MAKE SURE ** REMOVAL DOESN'T MESS UP ANYTHING

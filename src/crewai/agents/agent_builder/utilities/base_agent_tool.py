@@ -21,12 +21,12 @@ class BaseAgentTools(BaseModel, ABC):
     def _get_coworker(self, coworker: Optional[str], **kwargs) -> Optional[str]:
         print("RUNNING _get_coworker", coworker)
         coworker = coworker or kwargs.get("co_worker") or kwargs.get("coworker")
-        print("FORMATTED COWORKER:", coworker)
         if coworker:
             is_list = coworker.startswith("[") and coworker.endswith("]")
             if is_list:
                 coworker = coworker[1:-1].split(",")[0]
 
+        print("FORMATTED COWORKER:", coworker)
         return coworker
 
     def delegate_work(
