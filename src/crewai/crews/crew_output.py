@@ -1,4 +1,4 @@
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Union
 
 from pydantic import BaseModel, Field
 
@@ -8,7 +8,11 @@ from crewai.utilities.formatter import aggregate_raw_outputs_from_task_outputs
 
 class CrewOutput(BaseModel):
     output: List[TaskOutput] = Field(description="Result of the final task")
-    tasks_output: list[TaskOutput] = Field(
+    # NOTE HERE
+    # tasks_output: list[TaskOutput] = Field(
+    #     description="Output of each task", default=[]
+    # )
+    tasks_output: list[Union[str, BaseModel, Dict[str, Any]]] = Field(
         description="Output of each task", default=[]
     )
     token_usage: Dict[str, Any] = Field(

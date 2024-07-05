@@ -29,13 +29,10 @@ class TaskOutput(BaseModel):
     def result(self) -> Union[str, BaseModel, Dict[str, Any]]:
         """Return the result of the task based on the available output."""
         if self.pydantic_output:
-            print("returns pydantic_output", self.pydantic_output)
             return self.pydantic_output
         elif self.json_output:
-            print("returns json_output", self.json_output)
             return self.json_output
         else:
-            print("return string out")
             return self.raw_output
 
     def __getitem__(self, key: str) -> Any:

@@ -3,13 +3,14 @@
 import json
 from concurrent.futures import Future
 from unittest import mock
-from unittest.mock import patch
+from unittest.mock import patch, MagicMock
 
 import pydantic_core
 import pytest
 
 from crewai.agent import Agent
 from crewai.agents.cache import CacheHandler
+from crewai.conditional_task import ConditionalTask
 from crewai.crew import Crew
 from crewai.crews.crew_output import CrewOutput
 from crewai.memory.contextual.contextual_memory import ContextualMemory
@@ -559,7 +560,6 @@ def test_hierarchical_async_task_execution_completion():
 
 @pytest.mark.vcr(filter_headers=["authorization"])
 def test_single_task_with_async_execution():
-
     researcher_agent = Agent(
         role="Researcher",
         goal="Make the best research and analysis on content about AI and AI agents",
@@ -713,7 +713,6 @@ def test_async_task_execution_call_count():
     ) as mock_execute_sync, patch.object(
         Task, "execute_async", return_value=mock_future
     ) as mock_execute_async:
-
         crew.kickoff()
 
         assert mock_execute_async.call_count == 2
@@ -1135,8 +1134,6 @@ def test_code_execution_flag_adds_code_tool_upon_kickoff():
 
 @pytest.mark.vcr(filter_headers=["authorization"])
 def test_delegation_is_not_enabled_if_there_are_only_one_agent():
-    from unittest.mock import patch
-
     researcher = Agent(
         role="Researcher",
         goal="Make the best research and analysis on content about AI and AI agents",
@@ -1202,6 +1199,82 @@ def test_agent_usage_metrics_are_captured_for_sequential_process():
     for key in required_keys:
         assert key in crew.usage_metrics, f"Key '{key}' not found in usage_metrics"
         assert crew.usage_metrics[key] > 0, f"Value for key '{key}' is zero"
+
+
+def test_conditional_task_requirement_breaks_when_singular_conditional_task():
+    task = ConditionalTask(
+        description="Come up with a list of 5 interesting ideas to explore for an article, then write one amazing paragraph highlight for each idea that showcases how good an article about this topic could be. Return the list of ideas with their paragraph and your notes.",
+        expected_output="5 bullet points with a paragraph for each idea.",
+    )
+
+    with pytest.raises(pydantic_core._pydantic_core.ValidationError):
+        Crew(
+            agents=[researcher, writer],
+            tasks=[task],
+        )
+
+
+@pytest.mark.vcr(filter_headers=["authorization"])
+def test_conditional_should_not_execute():
+    task1 = Task(description="Return hello", expected_output="say hi", agent=researcher)
+
+    condition_mock = MagicMock(return_value=False)
+    task2 = ConditionalTask(
+        description="Come up with a list of 5 interesting ideas to explore for an article, then write one amazing paragraph highlight for each idea that showcases how good an article about this topic could be. Return the list of ideas with their paragraph and your notes.",
+        expected_output="5 bullet points with a paragraph for each idea.",
+        condition=condition_mock,
+        agent=writer,
+    )
+    crew_met = Crew(
+        agents=[researcher, writer],
+        tasks=[task1, task2],
+    )
+    with patch.object(Task, "execute_sync") as mock_execute_sync:
+        mock_execute_sync.return_value = TaskOutput(
+            description="Task 1 description",
+            raw_output="Task 1 output",
+            agent="Researcher",
+        )
+
+        result = crew_met.kickoff()
+        assert mock_execute_sync.call_count == 1
+
+        assert condition_mock.call_count == 1
+        assert condition_mock() is False
+
+        assert task2.output is None
+        assert result.raw_output().startswith("Task 1 output")
+
+
+@pytest.mark.vcr(filter_headers=["authorization"])
+def test_conditional_should_execute():
+    task1 = Task(description="Return hello", expected_output="say hi", agent=researcher)
+
+    condition_mock = MagicMock(
+        return_value=True
+    )  # should execute this conditional task
+    task2 = ConditionalTask(
+        description="Come up with a list of 5 interesting ideas to explore for an article, then write one amazing paragraph highlight for each idea that showcases how good an article about this topic could be. Return the list of ideas with their paragraph and your notes.",
+        expected_output="5 bullet points with a paragraph for each idea.",
+        condition=condition_mock,
+        agent=writer,
+    )
+    crew_met = Crew(
+        agents=[researcher, writer],
+        tasks=[task1, task2],
+    )
+    with patch.object(Task, "execute_sync") as mock_execute_sync:
+        mock_execute_sync.return_value = TaskOutput(
+            description="Task 1 description",
+            raw_output="Task 1 output",
+            agent="Researcher",
+        )
+
+        crew_met.kickoff()
+
+        assert condition_mock.call_count == 1
+        assert condition_mock() is True
+        assert mock_execute_sync.call_count == 2
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
