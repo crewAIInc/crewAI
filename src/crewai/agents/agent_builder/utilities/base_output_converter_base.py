@@ -1,7 +1,6 @@
 from abc import ABC, abstractmethod
 from typing import Any, Optional
 
-
 from pydantic import BaseModel, Field, PrivateAttr
 
 
@@ -42,7 +41,7 @@ class OutputConverter(BaseModel, ABC):
         """Convert text to json."""
         pass
 
-    @abstractmethod
-    def _is_gpt(self, llm):
+    @abstractmethod  # type: ignore #  Name "_is_gpt" already defined on line 25
+    def _is_gpt(self, llm):  # type: ignore #  Name "_is_gpt" already defined on line 25
         """Return if llm provided is of gpt from openai."""
         pass

@@ -11,11 +11,10 @@ from crewai.telemetry import Telemetry
 from crewai.tools.tool_calling import InstructorToolCalling, ToolCalling
 from crewai.utilities import I18N, Converter, ConverterError, Printer
 
-agentops = None
 try:
     import agentops
 except ImportError:
-    pass
+    agentops = None
 
 OPENAI_BIGGER_MODELS = ["gpt-4"]
 
@@ -216,7 +215,7 @@ class ToolUsage:
             hasattr(original_tool, "result_as_answer")
             and original_tool.result_as_answer  # type: ignore # Item "None" of "Any | None" has no attribute "cache_function"
         ):
-            result_as_answer = original_tool.result_as_answer
+            result_as_answer = original_tool.result_as_answer  # type: ignore # Item "None" of "Any | None" has no attribute "result_as_answer"
             data["result_as_answer"] = result_as_answer
 
         self.agent.tools_results.append(data)
