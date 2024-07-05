@@ -52,17 +52,15 @@ class CrewAgentParser(ReActSingleInputOutputParser):
                     f"{FINAL_ANSWER_AND_PARSABLE_ACTION_ERROR_MESSAGE}: {text}"
                 )
             action = action_match.group(1).strip()
+            print("ACTION:", action)
             action_input = action_match.group(2)
             print("action_input before formatting:", action)
-            tool_input = action_input.strip(" ")
-            tool_input = tool_input.strip('"')
-            # TODO: CREATE A REPAIR OR FALLBACK FOR REPAIR_JSON
-            # Attempt to format the tool input as a JSON object
-            repaired_tool_input = repair_json(tool_input)
+            tool_input = action_input.strip(" ").strip('"')
+            safe_tool_input = self._safe_repair_json(tool_input)
 
             print("TOOL INPUT AFTER FORMATTING:", tool_input)
-            print("REPAIRED TOOL INPUT:", repaired_tool_input)
-            return AgentAction(action, tool_input, text)
+            print("REPAIRED TOOL INPUT:", safe_tool_input)
+            return AgentAction(action, safe_tool_input, text)
 
         elif includes_answer:
             print("INCLUDED ANSWER:", text.split(FINAL_ANSWER_ACTION)[-1].strip())
@@ -103,7 +101,24 @@ class CrewAgentParser(ReActSingleInputOutputParser):
             )
 
     def _safe_repair_json(self, tool_input: str) -> str:
-        try:
-            return repair_json(tool_input)
-        except Exception as e:
+        UNABLE_TO_REPAIR_JSON_RESULTS = ['""', "{}"]
+
+        # Skip repair if the input starts and ends with square brackets
+        # Explanation: The JSON parser has issues handling inputs that are enclosed in square brackets ('[]').
+        # These are typically valid JSON arrays or strings that do not require repair. Attempting to repair such inputs
+        # might lead to unintended alterations, such as wrapping the entire input in additional layers or modifying
+        # the structure in a way that changes its meaning. By skipping the repair for inputs that start and end with
+        # square brackets, we preserve the integrity of these valid JSON structures and avoid unnecessary modifications.
+        if tool_input.startswith("[") and tool_input.endswith("]"):
             return tool_input
+
+        # Before repair, handle common LLM issues:
+        # 1. Replace """ with " to avoid JSON parser errors
+
+        tool_input = tool_input.replace('"""', '"')
+
+        result = repair_json(tool_input)
+        if result in UNABLE_TO_REPAIR_JSON_RESULTS:
+            return tool_input
+
+        return str(result)
