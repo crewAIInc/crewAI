@@ -359,7 +359,6 @@ def test_api_calls_throttling(capsys):
         moveon.assert_called()
 
 
-@pytest.mark.vcr(filter_headers=["authorization"])
 def test_crew_full_output():
     agent = Agent(
         role="test role",
