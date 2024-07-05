@@ -133,15 +133,6 @@ class Crew(BaseModel):
         default=False,
         description="output_log_file",
     )
-    total_usage_metrics: dict = Field(
-        description="Total usage metrics for the crew.",
-        default={
-            "total_tokens": 0,
-            "prompt_tokens": 0,
-            "completion_tokens": 0,
-            "successful_requests": 0,
-        },
-    )
 
     @field_validator("id", mode="before")
     @classmethod
@@ -604,18 +595,25 @@ class Crew(BaseModel):
 
     def calculate_usage_metrics(self) -> Dict[str, int]:
         """Calculates and returns the usage metrics."""
+        total_usage_metrics = {
+            "total_tokens": 0,
+            "prompt_tokens": 0,
+            "completion_tokens": 0,
+            "successful_requests": 0,
+        }
+
         for agent in self.agents:
             if hasattr(agent, "_token_process"):
                 token_sum = agent._token_process.get_summary()
-                for key in self.total_usage_metrics:
-                    self.total_usage_metrics[key] += token_sum.get(key, 0)
+                for key in total_usage_metrics:
+                    total_usage_metrics[key] += token_sum.get(key, 0)
 
         if self.manager_agent and hasattr(self.manager_agent, "_token_process"):
             token_sum = self.manager_agent._token_process.get_summary()
-            for key in self.total_usage_metrics:
-                self.total_usage_metrics[key] += token_sum.get(key, 0)
+            for key in total_usage_metrics:
+                total_usage_metrics[key] += token_sum.get(key, 0)
 
-        return self.total_usage_metrics
+        return total_usage_metrics
 
     def __repr__(self):
         return f"Crew(id={self.id}, process={self.process}, number_of_agents={len(self.agents)}, number_of_tasks={len(self.tasks)})"
