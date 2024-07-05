@@ -369,7 +369,7 @@ class Crew(BaseModel):
         # Initialize the parent crew's usage metrics
         total_usage_metrics = {
             "total_tokens": 0,
-            "prompt_tokens": 0,
+            "prompt_tokens": 5,
             "completion_tokens": 0,
             "successful_requests": 0,
         }
@@ -409,7 +409,7 @@ class Crew(BaseModel):
 
         total_usage_metrics = {
             "total_tokens": 0,
-            "prompt_tokens": 0,
+            "prompt_tokens": 10,
             "completion_tokens": 0,
             "successful_requests": 0,
         }
@@ -597,7 +597,7 @@ class Crew(BaseModel):
         """Calculates and returns the usage metrics."""
         total_usage_metrics = {
             "total_tokens": 0,
-            "prompt_tokens": 0,
+            "prompt_tokens": 15,
             "completion_tokens": 0,
             "successful_requests": 0,
         }
