@@ -1,7 +1,7 @@
 import os
 import re
-import threading
 import uuid
+from concurrent.futures import Future, ThreadPoolExecutor
 from copy import copy
 from typing import Any, Dict, List, Optional, Type, Union
 
@@ -102,7 +102,7 @@ class Task(BaseModel):
     _execution_span: Span | None = None
     _original_description: str | None = None
     _original_expected_output: str | None = None
-    _thread: threading.Thread | None = None
+    _future: Future | None = None
 
     def __init__(__pydantic_self__, **data):
         config = data.pop("config", {})
@@ -161,9 +161,9 @@ class Task(BaseModel):
         """Wait for asynchronous task completion and return the output."""
         assert self.async_execution, "Task is not set to be executed asynchronously."
 
-        if self._thread:
-            self._thread.join()
-            self._thread = None
+        if self._future:
+            self._future.result()  # Wait for the future to complete
+            self._future = None
 
         assert self.output, "Task output is not set."
 
@@ -202,10 +202,10 @@ class Task(BaseModel):
         tools = tools or self.tools
 
         if self.async_execution:
-            self._thread = threading.Thread(
-                target=self._execute, args=(agent, self, context, tools)
-            )
-            self._thread.start()
+            with ThreadPoolExecutor() as executor:
+                self._future = executor.submit(
+                    self._execute, agent, self, context, tools
+                )
         else:
             result = self._execute(
                 task=self,
