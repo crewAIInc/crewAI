@@ -14,6 +14,7 @@ from crewai.agents.agent_builder.base_agent import BaseAgent
 from crewai.tasks.task_output import TaskOutput
 from crewai.telemetry.telemetry import Telemetry
 from crewai.utilities.converter import ConverterError
+from crewai.utilities.converter import Converter
 from crewai.utilities.i18n import I18N
 from crewai.utilities.printer import Printer
 from crewai.utilities.pydantic_schema_parser import PydanticSchemaParser
@@ -96,6 +97,10 @@ class Task(BaseModel):
     human_input: Optional[bool] = Field(
         description="Whether the task should have a human review the final answer of the agent",
         default=False,
+    )
+    converter_cls: Optional[Type[Converter]] = Field(
+        description="A converter class used to export structured output",
+        default=None,
     )
 
     _telemetry: Telemetry
@@ -305,6 +310,16 @@ class Task(BaseModel):
 
         return copied_task
 
+    def _create_converter(self, *args, **kwargs) -> Converter: # type: ignore
+      converter = self.agent.get_output_converter(  # type: ignore # Item "None" of "BaseAgent | None" has no attribute "get_output_converter"
+        *args, **kwargs
+      )
+      if self.converter_cls:
+        converter = self.converter_cls(  # type: ignore # Item "None" of "BaseAgent | None" has no attribute "get_output_converter"
+          *args, **kwargs
+        )          
+      return converter
+
     def _export_output(self, result: str) -> Any:
         exported_result = result
         instructions = "I'm gonna convert this raw text into valid JSON."
@@ -335,7 +350,7 @@ class Task(BaseModel):
                 model_schema = PydanticSchemaParser(model=model).get_schema()  # type: ignore # Argument "model" to "PydanticSchemaParser" has incompatible type "type[BaseModel] | None"; expected "type[BaseModel]"
                 instructions = f"{instructions}\n\nThe json should have the following structure, with the following keys:\n{model_schema}"
 
-            converter = self.agent.get_output_converter(  # type: ignore # Item "None" of "BaseAgent | None" has no attribute "get_output_converter"
+            converter = self._create_converter( # type: ignore # Item "None" of "BaseAgent | None" has no attribute "get_output_converter"
                 llm=llm, text=result, model=model, instructions=instructions
             )
 
