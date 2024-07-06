@@ -9,6 +9,7 @@ from pydantic_core import ValidationError
 
 from crewai import Agent, Crew, Process, Task
 from crewai.tasks.task_output import TaskOutput
+from crewai.utilities.converter import Converter
 
 
 def test_task_tool_reflect_agent_tools():
@@ -415,6 +416,8 @@ def test_custom_converter_cls():
         converter_cls=ScoreConverter,
         agent=scorer,
     )
+
+    crew = Crew(agents=[scorer], tasks=[task])
 
     with patch.object(ScoreConverter, "__new__", ScoreConverter.__new__) as converter_constructor:
         crew.kickoff()
