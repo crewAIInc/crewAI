@@ -9,6 +9,7 @@ from pydantic_core import ValidationError
 
 from crewai import Agent, Crew, Process, Task
 from crewai.tasks.task_output import TaskOutput
+from crewai.utilities.converter import Converter
 
 
 def test_task_tool_reflect_agent_tools():
@@ -391,6 +392,37 @@ def test_save_task_pydantic_output():
         save_file.return_value = None
         crew.kickoff()
         save_file.assert_called_once_with('{"score":4}')
+
+
+def test_custom_converter_cls():
+    class ScoreOutput(BaseModel):
+        score: int
+
+    class ScoreConverter(Converter):
+        pass
+
+    scorer = Agent(
+        role="Scorer",
+        goal="Score the title",
+        backstory="You're an expert scorer, specialized in scoring titles.",
+        allow_delegation=False,
+    )
+
+    task = Task(
+        description="Give me an integer score between 1-5 for the following title: 'The impact of AI in the future of work'",
+        expected_output="The score of the title.",
+        output_file="score.json",
+        output_pydantic=ScoreOutput,
+        converter_cls=ScoreConverter,
+        agent=scorer,
+    )
+
+    crew = Crew(agents=[scorer], tasks=[task])
+
+    with patch.object(ScoreConverter, "__new__", ScoreConverter.__new__) as converter_constructor:
+        crew.kickoff()
+        converter_constructor.assert_called_once
+
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
