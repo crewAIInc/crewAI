@@ -289,6 +289,7 @@ class Agent(BaseAgent):
     def get_delegation_tools(self, agents: List[BaseAgent]):
         agent_tools = AgentTools(agents=agents)
         tools = agent_tools.tools()
+        print("FOUND TOOLS IN AGENT TOOLS:", tools)
         return tools
 
     def get_code_execution_tools(self):

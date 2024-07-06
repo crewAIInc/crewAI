@@ -386,8 +386,28 @@ class Crew(BaseModel):
                     agent for agent in self.agents if agent != task.agent
                 ]
                 if len(self.agents) > 1 and len(agents_for_delegation) > 0:
-                    task.tools += task.agent.get_delegation_tools(agents_for_delegation)
+                    print(
+                        "AGENTS FOR DELEGATION",
+                        [agt.role for agt in agents_for_delegation],
+                    )
+                    print(
+                        "ADDING DELEGATION TOOLS",
+                        task.agent.get_delegation_tools(agents_for_delegation),
+                    )
+                    print("TASK TOOLS BEFORE", task.tools)
+                    delegation_tools = task.agent.get_delegation_tools(
+                        agents_for_delegation
+                    )
+                    print("ADDING DELEGATION TOOLS", delegation_tools)
+                    print("TASK TOOLS BEFORE", task.tools)
 
+                    # Add tools if they are not already in task.tools
+                    for tool in delegation_tools:
+                        if tool not in task.tools:
+                            task.tools.append(tool)
+                    print("TASK TOOLS AFTER", task.tools)
+
+            print("TASK TOOLS", task.tools)
             role = task.agent.role if task.agent is not None else "None"
             self._logger.log("debug", f"== Working Agent: {role}", color="bold_purple")
             self._logger.log(
@@ -469,9 +489,10 @@ class Crew(BaseModel):
         token_usage.append(manager_token_usage)
         token_usage_formatted = self.aggregate_token_usage(token_usage)
 
-        return self._format_output(
-            task_output, token_usage_formatted
-        ), manager_token_usage
+        return (
+            self._format_output(task_output, token_usage_formatted),
+            manager_token_usage,
+        )
 
     def copy(self):
         """Create a deep copy of the Crew."""
@@ -543,7 +564,9 @@ class Crew(BaseModel):
             self._rpm_controller.stop_rpm_counter()
         if agentops:
             agentops.end_session(
-                end_state="Success", end_state_reason="Finished Execution", is_auto_end=True
+                end_state="Success",
+                end_state_reason="Finished Execution",
+                is_auto_end=True,
             )
         self._telemetry.end_crew(self, output)
 
