@@ -421,17 +421,17 @@ class Crew(BaseModel):
 
         return results
 
-    def _run_sequential_process(self) -> str:
+    def _run_sequential_process(self) -> Union[str, Dict[str, Any]]:
         """Executes tasks sequentially and returns the final output."""
-        task_output = ""
+        task_output = None
 
         for task in self.tasks:
-            if task.agent.allow_delegation:  # type: ignore #  Item "None" of "Agent | None" has no attribute "allow_delegation"
+            if task.agent and task.agent.allow_delegation:
                 agents_for_delegation = [
                     agent for agent in self.agents if agent != task.agent
                 ]
                 if len(self.agents) > 1 and len(agents_for_delegation) > 0:
-                    task.tools += task.agent.get_delegation_tools(agents_for_delegation)  # type: ignore # Item "None" of "BaseAgent | None" has no attribute "get_delegation_tools"
+                    task.tools += task.agent.get_delegation_tools(agents_for_delegation)
 
             role = task.agent.role if task.agent is not None else "None"
             self._logger.log("debug", f"== Working Agent: {role}", color="bold_purple")
@@ -458,7 +458,7 @@ class Crew(BaseModel):
 
         token_usage = self.calculate_usage_metrics()
 
-        return self._format_output(task_output, token_usage)  # type: ignore # Incompatible return value type (got "tuple[str, Any]", expected "str")
+        return self._format_output(task_output if task_output else "", token_usage)
 
     def _run_hierarchical_process(
         self,
@@ -483,7 +483,7 @@ class Crew(BaseModel):
             )
             self.manager_agent = manager
 
-        task_output = ""
+        task_output = None
 
         for task in self.tasks:
             self._logger.log("debug", f"Working Agent: {manager.role}")
@@ -510,10 +510,11 @@ class Crew(BaseModel):
 
         self._finish_execution(task_output)
 
-        # type: ignore # Incompatible return value type (got "tuple[str, Any]", expected "str")
         token_usage = self.calculate_usage_metrics()
 
-        return self._format_output(task_output, token_usage), token_usage
+        return self._format_output(
+            task_output if task_output else "", token_usage
+        ), token_usage
 
     def copy(self):
         """Create a deep copy of the Crew."""
@@ -574,7 +575,7 @@ class Crew(BaseModel):
         """
 
         if self.full_output:
-            return {  # type: ignore # Incompatible return value type (got "dict[str, Sequence[str | TaskOutput | None]]", expected "str")
+            return {
                 "final_output": output,
                 "tasks_outputs": [task.output for task in self.tasks if task],
                 "usage_metrics": token_usage,
