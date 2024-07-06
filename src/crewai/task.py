@@ -312,7 +312,9 @@ class Task(BaseModel):
 
     def _create_converter(self, *args, **kwargs) -> type[Converter]:
         if self.converter_cls:
-          return self.converter_cls          
+          return self.converter_cls(  # type: ignore # Item "None" of "BaseAgent | None" has no attribute "get_output_converter"
+            *args, **kwargs
+          )          
         else:
           return self.agent.get_output_converter(  # type: ignore # Item "None" of "BaseAgent | None" has no attribute "get_output_converter"
             *args, **kwargs
