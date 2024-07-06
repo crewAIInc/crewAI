@@ -343,17 +343,17 @@ lxml = ["lxml"]
 
 [[package]]
 name = "boto3"
-version = "1.34.139"
+version = "1.34.140"
 description = "The AWS SDK for Python"
 optional = false
 python-versions = ">=3.8"
 files = [
-    {file = "boto3-1.34.139-py3-none-any.whl", hash = "sha256:98b2a12bcb30e679fa9f60fc74145a39db5ec2ca7b7c763f42896e3bd9b3a38d"},
-    {file = "boto3-1.34.139.tar.gz", hash = "sha256:32b99f0d76ec81fdca287ace2c9744a2eb8b92cb62bf4d26d52a4f516b63a6bf"},
+    {file = "boto3-1.34.140-py3-none-any.whl", hash = "sha256:23ca8d8f7a30c3bbd989808056b5fc5d68ff5121c02c722c6167b6b1bb7f8726"},
+    {file = "boto3-1.34.140.tar.gz", hash = "sha256:578bbd5e356005719b6b610d03edff7ea1b0824d078afe62d3fb8bea72f83a87"},
 ]
 
 [package.dependencies]
-botocore = ">=1.34.139,<1.35.0"
+botocore = ">=1.34.140,<1.35.0"
 jmespath = ">=0.7.1,<2.0.0"
 s3transfer = ">=0.10.0,<0.11.0"
 
@@ -362,13 +362,13 @@ crt = ["botocore[crt] (>=1.21.0,<2.0a0)"]
 
 [[package]]
 name = "botocore"
-version = "1.34.139"
+version = "1.34.140"
 description = "Low-level, data-driven core of boto 3."
 optional = false
 python-versions = ">=3.8"
 files = [
-    {file = "botocore-1.34.139-py3-none-any.whl", hash = "sha256:dd1e085d4caa2a4c1b7d83e3bc51416111c8238a35d498e9d3b04f3b63b086ba"},
-    {file = "botocore-1.34.139.tar.gz", hash = "sha256:df023d8cf8999d574214dad4645cb90f9d2ccd1494f6ee2b57b1ab7522f6be77"},
+    {file = "botocore-1.34.140-py3-none-any.whl", hash = "sha256:43940d3a67d946ba3301631ba4078476a75f1015d4fb0fb0272d0b754b2cf9de"},
+    {file = "botocore-1.34.140.tar.gz", hash = "sha256:86302b2226c743b9eec7915a4c6cfaffd338ae03989cd9ee181078ef39d1ab39"},
 ]
 
 [package.dependencies]
@@ -747,13 +747,13 @@ all = ["pycocotools (==2.0.6)"]
 
 [[package]]
 name = "clarifai-grpc"
-version = "10.5.4"
+version = "10.6.1"
 description = "Clarifai gRPC API Client"
 optional = false
 python-versions = ">=3.8"
 files = [
-    {file = "clarifai_grpc-10.5.4-py3-none-any.whl", hash = "sha256:ae4c4d8985fdd2bf326cec27ee834571e44d0e989fb12686dd681f9b553ae218"},
-    {file = "clarifai_grpc-10.5.4.tar.gz", hash = "sha256:c67ce0dde186e8bab0d42a9923d28ddb4a05017b826c8e52ac7a86ec6df5f12a"},
+    {file = "clarifai_grpc-10.6.1-py3-none-any.whl", hash = "sha256:7f07c262f46042995b11af10cdd552718c4487e955db1b3f1253fcb0c2ab1ce1"},
+    {file = "clarifai_grpc-10.6.1.tar.gz", hash = "sha256:f692e3d6a051a1228ca371c3a9dc705cc9a61334eecc454d056f7af0b6f4dbad"},
 ]
 
 [package.dependencies]
@@ -883,6 +883,21 @@ webencodings = "*"
 [package.extras]
 doc = ["sphinx", "sphinx_rtd_theme"]
 test = ["flake8", "isort", "pytest"]
+
+[[package]]
+name = "dataclasses-json"
+version = "0.6.7"
+description = "Easily serialize dataclasses to and from JSON."
+optional = false
+python-versions = "<4.0,>=3.7"
+files = [
+    {file = "dataclasses_json-0.6.7-py3-none-any.whl", hash = "sha256:0dbf33f26c8d5305befd61b39d2b3414e8a407bedc2834dea9b8d642666fb40a"},
+    {file = "dataclasses_json-0.6.7.tar.gz", hash = "sha256:b6b3e528266ea45b9535223bc53ca645f5208833c29229e847b3f26a1cc55fc0"},
+]
+
+[package.dependencies]
+marshmallow = ">=3.18.0,<4.0.0"
+typing-inspect = ">=0.4.0,<1"
 
 [[package]]
 name = "decorator"
@@ -1039,13 +1054,13 @@ idna = ">=2.0.0"
 
 [[package]]
 name = "embedchain"
-version = "0.1.114"
+version = "0.1.115"
 description = "Simplest open source retrieval (RAG) framework"
 optional = false
 python-versions = "<=3.13,>=3.9"
 files = [
-    {file = "embedchain-0.1.114-py3-none-any.whl", hash = "sha256:ce1b16196bcf53c679cacead0551a5466c33a9080a82be63f973e4437b0823ca"},
-    {file = "embedchain-0.1.114.tar.gz", hash = "sha256:fa5c4a29dd3c6b1137c772e1bc3e2d7ca489c58f46f4c7f7de133b3b9fc56e72"},
+    {file = "embedchain-0.1.115-py3-none-any.whl", hash = "sha256:6f1842edea7780e6b1d21d073b72b2c916f440411c32e758165c88141b2ac1ec"},
+    {file = "embedchain-0.1.115.tar.gz", hash = "sha256:8b259a3307e022924c99cf82b17789f141d157f11e53beb3bc82bf49efa2e31e"},
 ]
 
 [package.dependencies]
@@ -1053,10 +1068,12 @@ alembic = ">=1.13.1,<2.0.0"
 beautifulsoup4 = ">=4.12.2,<5.0.0"
 chromadb = ">=0.4.24,<0.5.0"
 clarifai = ">=10.0.1,<11.0.0"
+cohere = ">=5.3,<6.0"
 google-cloud-aiplatform = ">=1.26.1,<2.0.0"
 gptcache = ">=0.1.43,<0.2.0"
 langchain = ">0.2,<=0.3"
 langchain-cohere = ">=0.1.4,<0.2.0"
+langchain-community = ">=0.2.6,<0.3.0"
 langchain-openai = ">=0.1.7,<0.2.0"
 openai = ">=1.1.1"
 posthog = ">=3.0.2,<4.0.0"
@@ -1070,7 +1087,6 @@ tiktoken = ">=0.7.0,<0.8.0"
 
 [package.extras]
 aws-bedrock = ["boto3 (>=1.34.20,<2.0.0)"]
-cohere = ["cohere (>=5.3,<6.0)"]
 dataloaders = ["docx2txt (>=0.8,<0.9)", "duckduckgo-search (>=6.1.5,<7.0.0)", "pytube (>=15.0.0,<16.0.0)", "sentence-transformers (>=2.2.2,<3.0.0)", "youtube-transcript-api (>=0.6.1,<0.7.0)"]
 discord = ["discord (>=2.3.2,<3.0.0)"]
 dropbox = ["dropbox (>=11.36.2,<12.0.0)"]
@@ -2403,6 +2419,32 @@ cohere = ">=5.5.6,<6.0"
 langchain-core = ">=0.2.0,<0.3"
 
 [[package]]
+name = "langchain-community"
+version = "0.2.6"
+description = "Community contributed LangChain integrations."
+optional = false
+python-versions = "<4.0,>=3.8.1"
+files = [
+    {file = "langchain_community-0.2.6-py3-none-any.whl", hash = "sha256:758cc800acfe5dd396bf8ba1b57c4792639ead0eab48ed0367f0732ec6ee1f68"},
+    {file = "langchain_community-0.2.6.tar.gz", hash = "sha256:40ce09a50ed798aa651ddb34c8978200fa8589b9813c7a28ce8af027bbf249f0"},
+]
+
+[package.dependencies]
+aiohttp = ">=3.8.3,<4.0.0"
+dataclasses-json = ">=0.5.7,<0.7"
+langchain = ">=0.2.6,<0.3.0"
+langchain-core = ">=0.2.10,<0.3.0"
+langsmith = ">=0.1.0,<0.2.0"
+numpy = [
+    {version = ">=1.26.0,<2.0.0", markers = "python_version >= \"3.12\""},
+    {version = ">=1,<2", markers = "python_version < \"3.12\""},
+]
+PyYAML = ">=5.3"
+requests = ">=2,<3"
+SQLAlchemy = ">=1.4,<3"
+tenacity = ">=8.1.0,<8.4.0 || >8.4.0,<9.0.0"
+
+[[package]]
 name = "langchain-core"
 version = "0.2.11"
 description = "Building applications with LLMs through composability"
@@ -2599,6 +2641,25 @@ files = [
     {file = "MarkupSafe-2.1.5-cp39-cp39-win_amd64.whl", hash = "sha256:fa173ec60341d6bb97a89f5ea19c85c5643c1e7dedebc22f5181eb73573142c5"},
     {file = "MarkupSafe-2.1.5.tar.gz", hash = "sha256:d283d37a890ba4c1ae73ffadf8046435c76e7bc2247bbb63c00bd1a709c6544b"},
 ]
+
+[[package]]
+name = "marshmallow"
+version = "3.21.3"
+description = "A lightweight library for converting complex datatypes to and from native Python datatypes."
+optional = false
+python-versions = ">=3.8"
+files = [
+    {file = "marshmallow-3.21.3-py3-none-any.whl", hash = "sha256:86ce7fb914aa865001a4b2092c4c2872d13bc347f3d42673272cabfdbad386f1"},
+    {file = "marshmallow-3.21.3.tar.gz", hash = "sha256:4f57c5e050a54d66361e826f94fba213eb10b67b2fdb02c3e0343ce207ba1662"},
+]
+
+[package.dependencies]
+packaging = ">=17.0"
+
+[package.extras]
+dev = ["marshmallow[tests]", "pre-commit (>=3.5,<4.0)", "tox"]
+docs = ["alabaster (==0.7.16)", "autodocsumm (==0.2.12)", "sphinx (==7.3.7)", "sphinx-issues (==4.1.0)", "sphinx-version-warning (==1.1.2)"]
+tests = ["pytest", "pytz", "simplejson"]
 
 [[package]]
 name = "mdurl"
@@ -4972,13 +5033,13 @@ widechars = ["wcwidth"]
 
 [[package]]
 name = "tenacity"
-version = "8.4.2"
+version = "8.5.0"
 description = "Retry code until it succeeds"
 optional = false
 python-versions = ">=3.8"
 files = [
-    {file = "tenacity-8.4.2-py3-none-any.whl", hash = "sha256:9e6f7cf7da729125c7437222f8a522279751cdfbe6b67bfe64f75d3a348661b2"},
-    {file = "tenacity-8.4.2.tar.gz", hash = "sha256:cd80a53a79336edba8489e767f729e4f391c896956b57140b5d7511a64bbd3ef"},
+    {file = "tenacity-8.5.0-py3-none-any.whl", hash = "sha256:b594c2a5945830c267ce6b79a166228323ed52718f30302c1359836112346687"},
+    {file = "tenacity-8.5.0.tar.gz", hash = "sha256:8bc6c0c8a09b31e6cad13c47afbed1a567518250a9a171418582ed8d9c20ca78"},
 ]
 
 [package.extras]
@@ -5205,13 +5266,13 @@ telegram = ["requests"]
 
 [[package]]
 name = "trio"
-version = "0.25.1"
+version = "0.26.0"
 description = "A friendly Python library for async concurrency and I/O"
 optional = false
 python-versions = ">=3.8"
 files = [
-    {file = "trio-0.25.1-py3-none-any.whl", hash = "sha256:e42617ba091e7b2e50c899052e83a3c403101841de925187f61e7b7eaebdf3fb"},
-    {file = "trio-0.25.1.tar.gz", hash = "sha256:9f5314f014ea3af489e77b001861c535005c3858d38ec46b6b071ebfa339d7fb"},
+    {file = "trio-0.26.0-py3-none-any.whl", hash = "sha256:bb9c1b259591af941fccfbabbdc65bc7ed764bd2db76428454c894cd5e3d2032"},
+    {file = "trio-0.26.0.tar.gz", hash = "sha256:67c5ec3265dd4abc7b1d1ab9ca4fe4c25b896f9c93dac73713778adab487f9c4"},
 ]
 
 [package.dependencies]
@@ -5313,6 +5374,21 @@ files = [
     {file = "typing_extensions-4.12.2-py3-none-any.whl", hash = "sha256:04e5ca0351e0f3f85c6853954072df659d0d13fac324d0072316b67d7794700d"},
     {file = "typing_extensions-4.12.2.tar.gz", hash = "sha256:1a7ead55c7e559dd4dee8856e3a88b41225abfe1ce8df57b7c13915fe121ffb8"},
 ]
+
+[[package]]
+name = "typing-inspect"
+version = "0.9.0"
+description = "Runtime inspection utilities for typing module."
+optional = false
+python-versions = "*"
+files = [
+    {file = "typing_inspect-0.9.0-py3-none-any.whl", hash = "sha256:9ee6fc59062311ef8547596ab6b955e1b8aa46242d854bfc78f4f6b0eff35f9f"},
+    {file = "typing_inspect-0.9.0.tar.gz", hash = "sha256:b23fc42ff6f6ef6954e4852c1fb512cdd18dbea03134f91f856a95ccc9461f78"},
+]
+
+[package.dependencies]
+mypy-extensions = ">=0.3.0"
+typing-extensions = ">=3.7.4"
 
 [[package]]
 name = "ujson"

@@ -394,6 +394,7 @@ def test_save_task_pydantic_output():
         save_file.assert_called_once_with('{"score":4}')
 
 
+@pytest.mark.vcr(filter_headers=["authorization"])
 def test_custom_converter_cls():
     class ScoreOutput(BaseModel):
         score: int
@@ -411,7 +412,6 @@ def test_custom_converter_cls():
     task = Task(
         description="Give me an integer score between 1-5 for the following title: 'The impact of AI in the future of work'",
         expected_output="The score of the title.",
-        output_file="score.json",
         output_pydantic=ScoreOutput,
         converter_cls=ScoreConverter,
         agent=scorer,
@@ -419,10 +419,11 @@ def test_custom_converter_cls():
 
     crew = Crew(agents=[scorer], tasks=[task])
 
-    with patch.object(ScoreConverter, "__new__", ScoreConverter.__new__) as converter_constructor:
+    with patch.object(
+        ScoreConverter, "to_pydantic", return_value=ScoreOutput(score=5)
+    ) as mock_to_pydantic:
         crew.kickoff()
-        converter_constructor.assert_called_once
-
+        mock_to_pydantic.assert_called_once()
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
