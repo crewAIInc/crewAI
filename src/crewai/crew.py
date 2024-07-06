@@ -232,7 +232,7 @@ class Crew(BaseModel):
                 if task.agent is None:
                     raise PydanticCustomError(
                         "missing_agent_in_task",
-                        f"Sequential process error: Agent is missing in the task with the following description: {task.description}",  # type: ignore Argument of type "str" cannot be assigned to parameter "message_template" of type "LiteralString"
+                        f"Sequential process error: Agent is missing in the task with the following description: {task.description}",  # type: ignore # Argument of type "str" cannot be assigned to parameter "message_template" of type "LiteralString"
                         {},
                     )
 
@@ -318,26 +318,25 @@ class Crew(BaseModel):
     ) -> Union[str, Dict[str, Any]]:
         """Starts the crew to work on its assigned tasks."""
         self._execution_span = self._telemetry.crew_execution_span(self, inputs)
-        # type: ignore # Argument 1 to "_interpolate_inputs" of "Crew" has incompatible type "dict[str, Any] | None"; expected "dict[str, Any]"
-        self._interpolate_inputs(inputs)
+
+        self._interpolate_inputs(inputs)  # type: ignore # Argument 1 to "_interpolate_inputs" of "Crew" has incompatible type "dict[str, Any] | None"; expected "dict[str, Any]"
         self._set_tasks_callbacks()
 
         i18n = I18N(prompt_file=self.prompt_file)
 
         for agent in self.agents:
-            # type: ignore # Argument 1 to "_interpolate_inputs" of "Crew" has incompatible type "dict[str, Any] | None"; expected "dict[str, Any]"
             agent.i18n = i18n
             # type: ignore[attr-defined] # Argument 1 to "_interpolate_inputs" of "Crew" has incompatible type "dict[str, Any] | None"; expected "dict[str, Any]"
             agent.crew = self  # type: ignore[attr-defined]
             # TODO: Create an AgentFunctionCalling protocol for future refactoring
-            if not agent.function_calling_llm:
-                agent.function_calling_llm = self.function_calling_llm
+            if not agent.function_calling_llm:  # type: ignore # "BaseAgent" has no attribute "function_calling_llm"
+                agent.function_calling_llm = self.function_calling_llm  # type: ignore # "BaseAgent" has no attribute "function_calling_llm"
 
-            if agent.allow_code_execution:
-                agent.tools += agent.get_code_execution_tools()
+            if agent.allow_code_execution:  # type: ignore # BaseAgent" has no attribute "allow_code_execution"
+                agent.tools += agent.get_code_execution_tools()  # type: ignore # "BaseAgent" has no attribute "get_code_execution_tools"; maybe "get_delegation_tools"?
 
-            if not agent.step_callback:
-                agent.step_callback = self.step_callback
+            if not agent.step_callback:  # type: ignore # "BaseAgent" has no attribute "step_callback"
+                agent.step_callback = self.step_callback  # type: ignore # "BaseAgent" has no attribute "step_callback"
 
             agent.create_agent_executor()
 
@@ -346,7 +345,7 @@ class Crew(BaseModel):
         if self.process == Process.sequential:
             result = self._run_sequential_process()
         elif self.process == Process.hierarchical:
-            result, manager_metrics = self._run_hierarchical_process()
+            result, manager_metrics = self._run_hierarchical_process()  # type: ignore # Incompatible types in assignment (expression has type "str | dict[str, Any]", variable has type "str")
             metrics.append(manager_metrics)
         else:
             raise NotImplementedError(
@@ -422,12 +421,12 @@ class Crew(BaseModel):
 
         return results
 
-    def _run_sequential_process(self) -> str:
+    def _run_sequential_process(self) -> Union[str, Dict[str, Any]]:
         """Executes tasks sequentially and returns the final output."""
-        task_output = ""
+        task_output = None
 
         for task in self.tasks:
-            if task.agent.allow_delegation:  # type: ignore #  Item "None" of "Agent | None" has no attribute "allow_delegation"
+            if task.agent and task.agent.allow_delegation:
                 agents_for_delegation = [
                     agent for agent in self.agents if agent != task.agent
                 ]
@@ -459,8 +458,7 @@ class Crew(BaseModel):
 
         token_usage = self.calculate_usage_metrics()
 
-        # type: ignore # Incompatible return value type (got "tuple[str, Any]", expected "str")
-        return self._format_output(task_output, token_usage)
+        return self._format_output(task_output if task_output else "", token_usage)
 
     def _run_hierarchical_process(
         self,
@@ -485,7 +483,7 @@ class Crew(BaseModel):
             )
             self.manager_agent = manager
 
-        task_output = ""
+        task_output = None
 
         for task in self.tasks:
             self._logger.log("debug", f"Working Agent: {manager.role}")
@@ -512,10 +510,11 @@ class Crew(BaseModel):
 
         self._finish_execution(task_output)
 
-        # type: ignore # Incompatible return value type (got "tuple[str, Any]", expected "str")
         token_usage = self.calculate_usage_metrics()
 
-        return self._format_output(task_output, token_usage), token_usage
+        return self._format_output(
+            task_output if task_output else "", token_usage
+        ), token_usage
 
     def copy(self):
         """Create a deep copy of the Crew."""
@@ -576,7 +575,7 @@ class Crew(BaseModel):
         """
 
         if self.full_output:
-            return {  # type: ignore # Incompatible return value type (got "dict[str, Sequence[str | TaskOutput | None]]", expected "str")
+            return {
                 "final_output": output,
                 "tasks_outputs": [task.output for task in self.tasks if task],
                 "usage_metrics": token_usage,

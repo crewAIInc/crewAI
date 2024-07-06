@@ -1,7 +1,7 @@
 import os
 import re
-import threading
 import uuid
+from concurrent.futures import Future, ThreadPoolExecutor
 from copy import copy
 from typing import Any, Dict, List, Optional, Type, Union
 
@@ -14,6 +14,7 @@ from crewai.agents.agent_builder.base_agent import BaseAgent
 from crewai.tasks.task_output import TaskOutput
 from crewai.telemetry.telemetry import Telemetry
 from crewai.utilities.converter import ConverterError
+from crewai.utilities.converter import Converter
 from crewai.utilities.i18n import I18N
 from crewai.utilities.printer import Printer
 from crewai.utilities.pydantic_schema_parser import PydanticSchemaParser
@@ -97,12 +98,16 @@ class Task(BaseModel):
         description="Whether the task should have a human review the final answer of the agent",
         default=False,
     )
+    converter_cls: Optional[Type[Converter]] = Field(
+        description="A converter class used to export structured output",
+        default=None,
+    )
 
     _telemetry: Telemetry
     _execution_span: Span | None = None
     _original_description: str | None = None
     _original_expected_output: str | None = None
-    _thread: threading.Thread | None = None
+    _future: Future | None = None
 
     def __init__(__pydantic_self__, **data):
         config = data.pop("config", {})
@@ -161,20 +166,20 @@ class Task(BaseModel):
         """Wait for asynchronous task completion and return the output."""
         assert self.async_execution, "Task is not set to be executed asynchronously."
 
-        if self._thread:
-            self._thread.join()
-            self._thread = None
+        if self._future:
+            self._future.result()  # Wait for the future to complete
+            self._future = None
 
         assert self.output, "Task output is not set."
 
         return self.output.exported_output
 
-    def execute(  # type: ignore # Missing return statement
+    def execute(
         self,
         agent: BaseAgent | None = None,
         context: Optional[str] = None,
         tools: Optional[List[Any]] = None,
-    ) -> str:
+    ) -> str | None:
         """Execute the task.
 
         Returns:
@@ -186,29 +191,28 @@ class Task(BaseModel):
         agent = agent or self.agent
         if not agent:
             raise Exception(
-                f"The task '{self.description}' has no agent assigned, therefore it can't be executed directly and should be executed in a Crew using a specific process that support that, like hierarchical."
+                f"The task '{self.description}' has no agent assigned, therefore it can't be executed directly "
+                "and should be executed in a Crew using a specific process that support that, like hierarchical."
             )
 
         if self.context:
-            # type: ignore # Incompatible types in assignment (expression has type "list[Never]", variable has type "str | None")
-            context = []
+            internal_context = []
             for task in self.context:
                 if task.async_execution:
                     task.wait_for_completion()
                 if task.output:
-                    # type: ignore # Item "str" of "str | None" has no attribute "append"
-                    context.append(task.output.raw_output)
-            # type: ignore # Argument 1 to "join" of "str" has incompatible type "str | None"; expected "Iterable[str]"
-            context = "\n".join(context)
+                    internal_context.append(task.output.raw_output)
+            context = "\n".join(internal_context)
 
         self.prompt_context = context
         tools = tools or self.tools
 
         if self.async_execution:
-            self._thread = threading.Thread(
-                target=self._execute, args=(agent, self, context, tools)
-            )
-            self._thread.start()
+            with ThreadPoolExecutor() as executor:
+                self._future = executor.submit(
+                    self._execute, agent, self, context, tools
+                )
+            return None
         else:
             result = self._execute(
                 task=self,
@@ -218,7 +222,7 @@ class Task(BaseModel):
             )
             return result
 
-    def _execute(self, agent: "BaseAgent", task, context, tools):
+    def _execute(self, agent: "BaseAgent", task, context, tools) -> str | None:
         result = agent.execute_task(
             task=task,
             context=context,
@@ -226,7 +230,6 @@ class Task(BaseModel):
         )
         exported_output = self._export_output(result)
 
-        # type: ignore # the responses are usually str but need to figure out a more elegant solution here
         self.output = TaskOutput(
             description=self.description,
             exported_output=exported_output,
@@ -276,7 +279,7 @@ class Task(BaseModel):
         """Increment the delegations counter."""
         self.delegations += 1
 
-    def copy(self, agents: Optional[List["BaseAgent"]] = None) -> "Task":
+    def copy(self, agents: Optional[List["BaseAgent"]] = None) -> "Task":  # type: ignore # Signature of "copy" incompatible with supertype "BaseModel"
         """Create a deep copy of the Task."""
         exclude = {
             "id",
@@ -293,7 +296,7 @@ class Task(BaseModel):
         )
 
         def get_agent_by_role(role: str) -> Union["BaseAgent", None]:
-            return next((agent for agent in agents if agent.role == role), None)
+            return next((agent for agent in agents if agent.role == role), None)  # type: ignore # Item "None" of "list[BaseAgent] | None" has no attribute "__iter__" (not iterable)
 
         cloned_agent = get_agent_by_role(self.agent.role) if self.agent else None
         cloned_tools = copy(self.tools) if self.tools else []
@@ -307,6 +310,16 @@ class Task(BaseModel):
 
         return copied_task
 
+    def _create_converter(self, *args, **kwargs) -> Converter: # type: ignore
+      converter = self.agent.get_output_converter(  # type: ignore # Item "None" of "BaseAgent | None" has no attribute "get_output_converter"
+        *args, **kwargs
+      )
+      if self.converter_cls:
+        converter = self.converter_cls(  # type: ignore # Item "None" of "BaseAgent | None" has no attribute "get_output_converter"
+          *args, **kwargs
+        )          
+      return converter
+
     def _export_output(self, result: str) -> Any:
         exported_result = result
         instructions = "I'm gonna convert this raw text into valid JSON."
@@ -316,34 +329,28 @@ class Task(BaseModel):
 
             # try to convert task_output directly to pydantic/json
             try:
-                # type: ignore # Item "None" of "type[BaseModel] | None" has no attribute "model_validate_json"
-                exported_result = model.model_validate_json(result)
+                exported_result = model.model_validate_json(result)  # type: ignore # Item "None" of "type[BaseModel] | None" has no attribute "model_validate_json"
                 if self.output_json:
-                    # type: ignore # "str" has no attribute "model_dump"
-                    return exported_result.model_dump()
+                    return exported_result.model_dump()  # type: ignore # "str" has no attribute "model_dump"
                 return exported_result
             except Exception:
                 # sometimes the response contains valid JSON in the middle of text
                 match = re.search(r"({.*})", result, re.DOTALL)
                 if match:
                     try:
-                        # type: ignore # Item "None" of "type[BaseModel] | None" has no attribute "model_validate_json"
-                        exported_result = model.model_validate_json(match.group(0))
+                        exported_result = model.model_validate_json(match.group(0))  # type: ignore # Item "None" of "type[BaseModel] | None" has no attribute "model_validate_json"
                         if self.output_json:
-                            # type: ignore # "str" has no attribute "model_dump"
-                            return exported_result.model_dump()
+                            return exported_result.model_dump()  # type: ignore # "str" has no attribute "model_dump"
                         return exported_result
                     except Exception:
                         pass
 
-            # type: ignore # Item "None" of "BaseAgent | None" has no attribute "function_calling_llm"
-            llm = getattr(self.agent, "function_calling_llm", None) or self.agent.llm
+            llm = getattr(self.agent, "function_calling_llm", None) or self.agent.llm  # type: ignore # Item "None" of "BaseAgent | None" has no attribute "function_calling_llm"
             if not self._is_gpt(llm):
-                # type: ignore # Argument "model" to "PydanticSchemaParser" has incompatible type "type[BaseModel] | None"; expected "type[BaseModel]"
-                model_schema = PydanticSchemaParser(model=model).get_schema()
+                model_schema = PydanticSchemaParser(model=model).get_schema()  # type: ignore # Argument "model" to "PydanticSchemaParser" has incompatible type "type[BaseModel] | None"; expected "type[BaseModel]"
                 instructions = f"{instructions}\n\nThe json should have the following structure, with the following keys:\n{model_schema}"
 
-            converter = self.agent.get_output_converter(
+            converter = self._create_converter( # type: ignore # Item "None" of "BaseAgent | None" has no attribute "get_output_converter"
                 llm=llm, text=result, model=model, instructions=instructions
             )
 
@@ -361,10 +368,9 @@ class Task(BaseModel):
 
         if self.output_file:
             content = (
-                # type: ignore # "str" has no attribute "json"
                 exported_result
                 if not self.output_pydantic
-                else exported_result.model_dump_json()
+                else exported_result.model_dump_json()  # type: ignore # "str" has no attribute "json"
             )
             self._save_file(content)
 
@@ -374,14 +380,12 @@ class Task(BaseModel):
         return isinstance(llm, ChatOpenAI) and llm.openai_api_base is None
 
     def _save_file(self, result: Any) -> None:
-        # type: ignore # Value of type variable "AnyOrLiteralStr" of "dirname" cannot be "str | None"
-        directory = os.path.dirname(self.output_file)
+        directory = os.path.dirname(self.output_file)  # type: ignore # Value of type variable "AnyOrLiteralStr" of "dirname" cannot be "str | None"
 
         if directory and not os.path.exists(directory):
             os.makedirs(directory)
 
-        # type: ignore # Argument 1 to "open" has incompatible type "str | None"; expected "int | str | bytes | PathLike[str] | PathLike[bytes]"
-        with open(self.output_file, "w", encoding="utf-8") as file:
+        with open(self.output_file, "w", encoding="utf-8") as file:  # type: ignore # Argument 1 to "open" has incompatible type "str | None"; expected "int | str | bytes | PathLike[str] | PathLike[bytes]"
             file.write(result)
         return None
 

@@ -1,6 +1,8 @@
 from abc import ABC, abstractmethod
 from typing import List, Optional, Union
+
 from pydantic import BaseModel, Field
+
 from crewai.agents.agent_builder.base_agent import BaseAgent
 from crewai.task import Task
 from crewai.utilities import I18N
@@ -53,7 +55,7 @@ class BaseAgentTools(BaseModel, ABC):
             # {"task": "....", "coworker": "...."}
             agent_name = agent.casefold().replace('"', "").replace("\n", "")
 
-            agent = [
+            agent = [  # type: ignore # Incompatible types in assignment (expression has type "list[BaseAgent]", variable has type "str | None")
                 available_agent
                 for available_agent in self.agents
                 if available_agent.role.casefold().replace("\n", "") == agent_name
@@ -73,9 +75,9 @@ class BaseAgentTools(BaseModel, ABC):
             )
 
         agent = agent[0]
-        task = Task(
+        task = Task(  # type: ignore # Incompatible types in assignment (expression has type "Task", variable has type "str")
             description=task,
             agent=agent,
             expected_output="Your best answer to your coworker asking you this, accounting for the context shared.",
         )
-        return agent.execute_task(task, context)
+        return agent.execute_task(task, context)  # type: ignore # "str" has no attribute "execute_task"
