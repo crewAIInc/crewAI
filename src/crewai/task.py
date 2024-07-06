@@ -310,7 +310,7 @@ class Task(BaseModel):
 
         return copied_task
 
-    def _create_converter(self, *args, **kwargs) -> Converter:
+    def _create_converter(self, *args, **kwargs) -> type[Converter]:
         if self.converter_cls:
           return self.converter_cls          
         else:
