@@ -80,4 +80,3 @@ manager = Agent(
 1. `allow_code_execution`: Enable or disable code execution capabilities for the agent (default is False).
 2. `max_execution_time`: Set a maximum execution time (in seconds) for the agent to complete a task.
 3. `function_calling_llm`: Specify a separate language model for function calling.
-4
