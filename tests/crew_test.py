@@ -501,13 +501,13 @@ def test_agents_rpm_is_never_set_if_crew_max_RPM_is_not_set():
 
 
 def test_async_task_execution():
-    import threading
-    from unittest.mock import patch
+    from concurrent.futures import ThreadPoolExecutor
+    from unittest.mock import MagicMock, patch
 
     from crewai.tasks.task_output import TaskOutput
 
     list_ideas = Task(
-        description="Give me a list of 5 interesting ideas to explore for na article, what makes them unique and interesting.",
+        description="Give me a list of 5 interesting ideas to explore for an article, what makes them unique and interesting.",
         expected_output="Bullet point list of 5 important events.",
         agent=researcher,
         async_execution=True,
@@ -533,23 +533,24 @@ def test_async_task_execution():
 
     with patch.object(Agent, "execute_task") as execute:
         execute.return_value = "ok"
-        with patch.object(threading.Thread, "start") as start:
-            thread = threading.Thread(target=lambda: None, args=()).start()
-            start.return_value = thread
-            with patch.object(threading.Thread, "join", wraps=thread.join()) as join:
-                list_ideas.output = TaskOutput(
-                    description="A 4 paragraph article about AI.",
-                    raw_output="ok",
-                    agent="writer",
-                )
-                list_important_history.output = TaskOutput(
-                    description="A 4 paragraph article about AI.",
-                    raw_output="ok",
-                    agent="writer",
-                )
-                crew.kickoff()
-                start.assert_called()
-                join.assert_called()
+        with patch.object(ThreadPoolExecutor, "submit") as submit:
+            future = MagicMock()
+            future.result.return_value = "ok"
+            submit.return_value = future
+
+            list_ideas.output = TaskOutput(
+                description="A 4 paragraph article about AI.",
+                raw_output="ok",
+                agent="writer",
+            )
+            list_important_history.output = TaskOutput(
+                description="A 4 paragraph article about AI.",
+                raw_output="ok",
+                agent="writer",
+            )
+            crew.kickoff()
+            submit.assert_called()
+            future.result.assert_called()
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
