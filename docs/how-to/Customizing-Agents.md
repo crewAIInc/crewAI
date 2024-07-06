@@ -10,7 +10,16 @@ Crafting an efficient CrewAI team hinges on the ability to dynamically tailor yo
 - **Role**: Specifies the agent's job within the crew, such as 'Analyst' or 'Customer Service Rep'.
 - **Goal**: Defines what the agent aims to achieve, in alignment with its role and the overarching objectives of the crew.
 - **Backstory**: Provides depth to the agent's persona, enriching its motivations and engagements within the crew.
-- **Tools**: Represents the capabilities or methods the agent uses to perform tasks, from simple functions to intricate integrations.
+- **Tools** *(Optional)*: Represents the capabilities or methods the agent uses to perform tasks, from simple functions to intricate integrations.
+- **Cache** *(Optional)*: Determines whether the agent should use a cache for tool usage.
+- **Max RPM**: Sets the maximum number of requests per minute (`max_rpm`). This attribute is optional and can be set to `None` for no limit, allowing for unlimited queries to external services if needed.
+- **Verbose** *(Optional)*: Enables detailed logging of an agent's actions, useful for debugging and optimization. Specifically, it provides insights into agent execution processes, aiding in the optimization of performance.
+- **Allow Delegation** *(Optional)*: `allow_delegation` controls whether the agent is allowed to delegate tasks to other agents.
+- **Max Iter** *(Optional)*: The `max_iter` attribute allows users to define the maximum number of iterations an agent can perform for a single task, preventing infinite loops or excessively long executions. The default value is set to 25, providing a balance between thoroughness and efficiency. Once the agent approaches this number, it will try its best to give a good answer.
+- **Max Execution Time** *(Optional)*: `max_execution_time` Sets the maximum execution time for an agent to complete a task.
+- **System Template** *(Optional)*: `system_template` defines the system format for the agent.
+- **Prompt Template** *(Optional)*: `prompt_template` defines the prompt format for the agent.
+- **Response Template** *(Optional)*: `response_template` defines the response format for the agent.
 
 ## Advanced Customization Options
 Beyond the basic attributes, CrewAI allows for deeper customization to enhance an agent's behavior and capabilities significantly.
@@ -26,7 +35,7 @@ Adjusting an agent's performance and monitoring its operations are crucial for e
 - **RPM Limit**: Sets the maximum number of requests per minute (`max_rpm`). This attribute is optional and can be set to `None` for no limit, allowing for unlimited queries to external services if needed.
 
 ### Maximum Iterations for Task Execution
-The `max_iter` attribute allows users to define the maximum number of iterations an agent can perform for a single task, preventing infinite loops or excessively long executions. The default value is set to 15, providing a balance between thoroughness and efficiency. Once the agent approaches this number, it will try its best to give a good answer.
+The `max_iter` attribute allows users to define the maximum number of iterations an agent can perform for a single task, preventing infinite loops or excessively long executions. The default value is set to 25, providing a balance between thoroughness and efficiency. Once the agent approaches this number, it will try its best to give a good answer.
 
 ## Customizing Agents and Tools
 Agents are customized by defining their attributes and tools during initialization. Tools are critical for an agent's functionality, enabling them to perform specialized tasks. The `tools` attribute should be an array of tools the agent can utilize, and it's initialized as an empty list by default. Tools can be added or modified post-agent initialization to adapt to new requirements.
@@ -57,7 +66,7 @@ agent = Agent(
   memory=True, # Enable memory
   verbose=True,
   max_rpm=None, # No limit on requests per minute
-  max_iter=15, # Default value for maximum iterations
+  max_iter=25, # Default value for maximum iterations
   allow_delegation=False
 )
 ```

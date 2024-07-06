@@ -1,28 +1,35 @@
 import threading
 import time
-from typing import Any, Dict, Iterator, List, Optional, Tuple, Union
+from typing import (
+    Any,
+    Dict,
+    Iterator,
+    List,
+    Optional,
+    Tuple,
+    Union,
+)
 
 from langchain.agents import AgentExecutor
 from langchain.agents.agent import ExceptionTool
 from langchain.callbacks.manager import CallbackManagerForChainRun
 from langchain_core.agents import AgentAction, AgentFinish, AgentStep
 from langchain_core.exceptions import OutputParserException
-from langchain_core.pydantic_v1 import root_validator
 from langchain_core.tools import BaseTool
 from langchain_core.utils.input import get_color_mapping
 from pydantic import InstanceOf
 
+from crewai.agents.agent_builder.base_agent_executor_mixin import (
+    CrewAgentExecutorMixin,
+)
 from crewai.agents.tools_handler import ToolsHandler
-from crewai.memory.entity.entity_memory_item import EntityMemoryItem
-from crewai.memory.long_term.long_term_memory_item import LongTermMemoryItem
-from crewai.memory.short_term.short_term_memory_item import ShortTermMemoryItem
 from crewai.tools.tool_usage import ToolUsage, ToolUsageErrorException
 from crewai.utilities import I18N
-from crewai.utilities.converter import ConverterError
-from crewai.utilities.evaluators.task_evaluator import TaskEvaluator
+from crewai.utilities.constants import TRAINING_DATA_FILE
+from crewai.utilities.training_handler import CrewTrainingHandler
 
 
-class CrewAgentExecutor(AgentExecutor):
+class CrewAgentExecutor(AgentExecutor, CrewAgentExecutorMixin):
     _i18n: I18N = I18N()
     should_ask_for_human_input: bool = False
     llm: Any = None
@@ -38,66 +45,11 @@ class CrewAgentExecutor(AgentExecutor):
     tools_handler: Optional[InstanceOf[ToolsHandler]] = None
     max_iterations: Optional[int] = 15
     have_forced_answer: bool = False
-    force_answer_max_iterations: Optional[int] = None
+    force_answer_max_iterations: Optional[int] = None  # type: ignore # Incompatible types in assignment (expression has type "int | None", base class "CrewAgentExecutorMixin" defined the type as "int")
     step_callback: Optional[Any] = None
     system_template: Optional[str] = None
     prompt_template: Optional[str] = None
     response_template: Optional[str] = None
-
-    @root_validator()
-    def set_force_answer_max_iterations(cls, values: Dict) -> Dict:
-        values["force_answer_max_iterations"] = values["max_iterations"] - 2
-        return values
-
-    def _should_force_answer(self) -> bool:
-        return (
-            self.iterations == self.force_answer_max_iterations
-        ) and not self.have_forced_answer
-
-    def _create_short_term_memory(self, output) -> None:
-        if (
-            self.crew
-            and self.crew.memory
-            and "Action: Delegate work to co-worker" not in output.log
-        ):
-            memory = ShortTermMemoryItem(
-                data=output.log,
-                agent=self.crew_agent.role,
-                metadata={
-                    "observation": self.task.description,
-                },
-            )
-            self.crew._short_term_memory.save(memory)
-
-    def _create_long_term_memory(self, output) -> None:
-        if self.crew and self.crew.memory:
-            ltm_agent = TaskEvaluator(self.crew_agent)
-            evaluation = ltm_agent.evaluate(self.task, output.log)
-
-            if isinstance(evaluation, ConverterError):
-                return
-
-            long_term_memory = LongTermMemoryItem(
-                task=self.task.description,
-                agent=self.crew_agent.role,
-                quality=evaluation.quality,
-                datetime=str(time.time()),
-                expected_output=self.task.expected_output,
-                metadata={
-                    "suggestions": evaluation.suggestions,
-                    "quality": evaluation.quality,
-                },
-            )
-            self.crew._long_term_memory.save(long_term_memory)
-
-            for entity in evaluation.entities:
-                entity_memory = EntityMemoryItem(
-                    name=entity.name,
-                    type=entity.type,
-                    description=entity.description,
-                    relationships="\n".join([f"- {r}" for r in entity.relationships]),
-                )
-                self.crew._entity_memory.save(entity_memory)
 
     def _call(
         self,
@@ -246,12 +198,17 @@ class CrewAgentExecutor(AgentExecutor):
         # If the tool chosen is the finishing tool, then we end and return.
         if isinstance(output, AgentFinish):
             if self.should_ask_for_human_input:
+                human_feedback = self._ask_human_input(output.return_values["output"])
+
+                if self.crew and self.crew._train:
+                    self._handle_crew_training_output(output, human_feedback)
+
                 # Making sure we only ask for it once, so disabling for the next thought loop
                 self.should_ask_for_human_input = False
-                human_feedback = self._ask_human_input(output.return_values["output"])
                 action = AgentAction(
                     tool="Human Input", tool_input=human_feedback, log=output.log
                 )
+
                 yield AgentStep(
                     action=action,
                     observation=self._i18n.slice("human_feedback").format(
@@ -261,6 +218,9 @@ class CrewAgentExecutor(AgentExecutor):
                 return
 
             else:
+                if self.crew and self.crew._train:
+                    self._handle_crew_training_output(output)
+
                 yield output
                 return
 
@@ -282,6 +242,7 @@ class CrewAgentExecutor(AgentExecutor):
                 tools_names=self.tools_names,
                 function_calling_llm=self.function_calling_llm,
                 task=self.task,
+                agent=self.crew_agent,
                 action=agent_action,
             )
             tool_calling = tool_usage.parse(agent_action.log)
@@ -300,8 +261,30 @@ class CrewAgentExecutor(AgentExecutor):
                     )
             yield AgentStep(action=agent_action, observation=observation)
 
-    def _ask_human_input(self, final_answer: dict) -> str:
-        """Get human input."""
-        return input(
-            self._i18n.slice("getting_input").format(final_answer=final_answer)
-        )
+    def _handle_crew_training_output(
+        self, output: AgentFinish, human_feedback: str | None = None
+    ) -> None:
+        """Function to handle the process of the training data."""
+        agent_id = str(self.crew_agent.id)
+
+        if (
+            CrewTrainingHandler(TRAINING_DATA_FILE).load()
+            and not self.should_ask_for_human_input
+        ):
+            training_data = CrewTrainingHandler(TRAINING_DATA_FILE).load()
+            if training_data.get(agent_id):
+                training_data[agent_id][self.crew._train_iteration][
+                    "improved_output"
+                ] = output.return_values["output"]
+                CrewTrainingHandler(TRAINING_DATA_FILE).save(training_data)
+
+        if self.should_ask_for_human_input and human_feedback is not None:
+            training_data = {
+                "initial_output": output.return_values["output"],
+                "human_feedback": human_feedback,
+                "agent": agent_id,
+                "agent_role": self.crew_agent.role,
+            }
+            CrewTrainingHandler(TRAINING_DATA_FILE).append(
+                self.crew._train_iteration, agent_id, training_data
+            )

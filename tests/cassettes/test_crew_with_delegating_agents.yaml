@@ -83,20 +83,20 @@ interactions:
       now working on a new project and want to make sure the content produced is amazing.\nYour
       personal goal is: Make sure the writers in your company produce amazing content.\n\nYou
       ONLY have access to the following tools, and should NEVER make up tools that
-      are not listed here:\n\nDelegate work to co-worker: Delegate work to co-worker(coworker:
+      are not listed here:\n\nDelegate work to coworker: Delegate work to coworker(coworker:
       str, task: str, context: str) - Delegate a specific task to one of the following
-      co-workers: [''Senior Writer'']\nThe input to this tool should be the coworker,
+      coworkers: [''Senior Writer'']\nThe input to this tool should be the coworker,
       the task you want them to do, and ALL necessary context to execute the task,
       they know nothing about the task, so share absolute everything you know, don''t
-      reference things but instead explain them.\nAsk question to co-worker: Ask question
-      to co-worker(coworker: str, question: str, context: str) - Ask a specific question
-      to one of the following co-workers: [''Senior Writer'']\nThe input to this tool
+      reference things but instead explain them.\nAsk question to coworker: Ask question
+      to coworker(coworker: str, question: str, context: str) - Ask a specific question
+      to one of the following coworkers: [''Senior Writer'']\nThe input to this tool
       should be the coworker, the question you have for them, and ALL necessary context
       to ask the question properly, they know nothing about the question, so share
       absolute everything you know, don''t reference things but instead explain them.\n\nUse
       the following format:\n\nThought: you should always think about what to do\nAction:
-      the action to take, only one name of [Delegate work to co-worker, Ask question
-      to co-worker], just the name, exactly as it''s written.\nAction Input: the input
+      the action to take, only one name of [Delegate work to coworker, Ask question
+      to coworker], just the name, exactly as it''s written.\nAction Input: the input
       to the action, just a simple a python dictionary using \" to wrap keys and values.\nObservation:
       the result of the action\n\nOnce all necessary information is gathered:\n\nThought:
       I now know the final answer\nFinal Answer: the final answer to the original
@@ -1713,20 +1713,20 @@ interactions:
       now working on a new project and want to make sure the content produced is amazing.\nYour
       personal goal is: Make sure the writers in your company produce amazing content.\n\nYou
       ONLY have access to the following tools, and should NEVER make up tools that
-      are not listed here:\n\nDelegate work to co-worker: Delegate work to co-worker(coworker:
+      are not listed here:\n\nDelegate work to coworker: Delegate work to coworker(coworker:
       str, task: str, context: str) - Delegate a specific task to one of the following
-      co-workers: [''Senior Writer'']\nThe input to this tool should be the coworker,
+      coworkers: [''Senior Writer'']\nThe input to this tool should be the coworker,
       the task you want them to do, and ALL necessary context to execute the task,
       they know nothing about the task, so share absolute everything you know, don''t
-      reference things but instead explain them.\nAsk question to co-worker: Ask question
-      to co-worker(coworker: str, question: str, context: str) - Ask a specific question
-      to one of the following co-workers: [''Senior Writer'']\nThe input to this tool
+      reference things but instead explain them.\nAsk question to coworker: Ask question
+      to coworker(coworker: str, question: str, context: str) - Ask a specific question
+      to one of the following coworkers: [''Senior Writer'']\nThe input to this tool
       should be the coworker, the question you have for them, and ALL necessary context
       to ask the question properly, they know nothing about the question, so share
       absolute everything you know, don''t reference things but instead explain them.\n\nUse
       the following format:\n\nThought: you should always think about what to do\nAction:
-      the action to take, only one name of [Delegate work to co-worker, Ask question
-      to co-worker], just the name, exactly as it''s written.\nAction Input: the input
+      the action to take, only one name of [Delegate work to coworker, Ask question
+      to coworker], just the name, exactly as it''s written.\nAction Input: the input
       to the action, just a simple a python dictionary using \" to wrap keys and values.\nObservation:
       the result of the action\n\nOnce all necessary information is gathered:\n\nThought:
       I now know the final answer\nFinal Answer: the final answer to the original
@@ -1738,7 +1738,7 @@ interactions:
       it!\n\nThought: \nI want to ensure that the Senior Writer understands the topic
       and the standard of quality that we aim to achieve. I''ll provide them with
       all the information they need to produce an amazing 1 paragraph draft about
-      AI Agents. \n\nAction: Delegate work to co-worker\nAction Input: {\"coworker\":
+      AI Agents. \n\nAction: Delegate work to coworker\nAction Input: {\"coworker\":
       \"Senior Writer\", \"task\": \"Produce a 1 paragraph draft of an article about
       AI Agents.\", \"context\": \"We are working on a new project that requires high-quality
       content about AI Agents. We want to make sure that the content is engaging,

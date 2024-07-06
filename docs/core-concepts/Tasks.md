@@ -11,20 +11,20 @@ Tasks within crewAI can be collaborative, requiring multiple agents to work toge
 
 ## Task Attributes
 
-| Attribute              | Description                                                                                   |
-| :----------------------| :-------------------------------------------------------------------------------------------- |
-| **Description**        | A clear, concise statement of what the task entails.                                          |
-| **Agent**              | The agent responsible for the task, assigned either directly or by the crew's process.        |
-| **Expected Output**    | A detailed description of what the task's completion looks like.                              |
-| **Tools** *(optional)* | The functions or capabilities the agent can utilize to perform the task.                      |
-| **Async Execution** *(optional)* | If set, the task executes asynchronously, allowing progression without waiting for completion.|
-| **Context**  *(optional)* | Specifies tasks whose outputs are used as context for this task.                              |
-| **Config** *(optional)* | Additional configuration details for the agent executing the task, allowing further customization. |
-| **Output JSON**  *(optional)* | Outputs a JSON object, requiring an OpenAI client. Only one output format can be set.         |
-| **Output Pydantic**  *(optional)* | Outputs a Pydantic model object, requiring an OpenAI client. Only one output format can be set. |
-| **Output File**  *(optional)* | Saves the task output to a file. If used with `Output JSON` or `Output Pydantic`, specifies how the output is saved. |
-| **Callback**  *(optional)* | A Python callable that is executed with the task's output upon completion.                    |
-| **Human Input** *(optional)* | Indicates if the task requires human feedback at the end, useful for tasks needing human oversight. |
+| Attribute              | Parameters           | Description                                                                                   |
+| :----------------------| :------------------- | :-------------------------------------------------------------------------------------------- |
+| **Description**        | `description`          | A clear, concise statement of what the task entails.                                          |
+| **Agent**              | `agent`                | The agent responsible for the task, assigned either directly or by the crew's process.        |
+| **Expected Output**    | `expected_output`      | A detailed description of what the task's completion looks like.                              |
+| **Tools** *(optional)* | `tools`                | The functions or capabilities the agent can utilize to perform the task.                      |
+| **Async Execution** *(optional)* | `async_execution`      | If set, the task executes asynchronously, allowing progression without waiting for completion.|
+| **Context**  *(optional)* | `context`              | Specifies tasks whose outputs are used as context for this task.                              |
+| **Config** *(optional)* | `config`               | Additional configuration details for the agent executing the task, allowing further customization. |
+| **Output JSON**  *(optional)* | `output_json`          | Outputs a JSON object, requiring an OpenAI client. Only one output format can be set.         |
+| **Output Pydantic**  *(optional)* | `output_pydantic`      | Outputs a Pydantic model object, requiring an OpenAI client. Only one output format can be set. |
+| **Output File**  *(optional)* | `output_file`          | Saves the task output to a file. If used with `Output JSON` or `Output Pydantic`, specifies how the output is saved. |
+| **Callback**  *(optional)* | `callback`             | A Python callable that is executed with the task's output upon completion.                    |
+| **Human Input** *(optional)* | `human_input`         | Indicates if the task requires human feedback at the end, useful for tasks needing human oversight. |
 
 ## Creating a Task
 
@@ -88,7 +88,7 @@ This demonstrates how tasks with specific tools can override an agent's default 
 
 ## Referring to Other Tasks
 
-In crewAI, the output of one task is automatically relayed into the next one, but you can specifically define what tasks' output, including multiple should be used as context for another task.
+In crewAI, the output of one task is automatically relayed into the next one, but you can specifically define what tasks' output, including multiple, should be used as context for another task.
 
 This is useful when you have a task that depends on the output of another task that is not performed immediately after it. This is done through the `context` attribute of the task:
 
@@ -224,6 +224,25 @@ While creating and executing tasks, certain validation mechanisms are in place t
 - Preventing the manual assignment of the `id` attribute to uphold the integrity of the unique identifier system.
 
 These validations help in maintaining the consistency and reliability of task executions within the crewAI framework.
+
+## Creating Directories when Saving Files
+
+You can now specify if a task should create directories when saving its output to a file. This is particularly useful for organizing outputs and ensuring that file paths are correctly structured.
+
+```python
+# ...
+
+save_output_task = Task(
+    description='Save the summarized AI news to a file',
+    expected_output='File saved successfully',
+    agent=research_agent,
+    tools=[file_save_tool],
+    output_file='outputs/ai_news_summary.txt',
+    create_directory=True
+)
+
+#...
+```
 
 ## Conclusion
 

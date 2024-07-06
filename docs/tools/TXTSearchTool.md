@@ -31,7 +31,7 @@ tool = TXTSearchTool(txt='path/to/text/file.txt')
 ```
 
 ## Arguments
-- `txt` (str): **Optinal**. The path to the text file you want to search. This argument is only required if the tool was not initialized with a specific text file; otherwise, the search will be conducted within the initially provided text file.
+- `txt` (str): **Optional**. The path to the text file you want to search. This argument is only required if the tool was not initialized with a specific text file; otherwise, the search will be conducted within the initially provided text file.
 
 ## Custom model and embeddings
 

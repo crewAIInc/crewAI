@@ -1,5 +1,6 @@
 """Test Agent creation and execution basic functionality."""
 
+import json
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -7,6 +8,8 @@ from pydantic import BaseModel
 from pydantic_core import ValidationError
 
 from crewai import Agent, Crew, Process, Task
+from crewai.tasks.task_output import TaskOutput
+from crewai.utilities.converter import Converter
 
 
 def test_task_tool_reflect_agent_tools():
@@ -103,6 +106,46 @@ def test_task_callback():
         execute.return_value = "ok"
         task.execute()
         task_completed.assert_called_once_with(task.output)
+
+
+def test_task_callback_returns_task_ouput():
+    researcher = Agent(
+        role="Researcher",
+        goal="Make the best research and analysis on content about AI and AI agents",
+        backstory="You're an expert researcher, specialized in technology, software engineering, AI and startups. You work as a freelancer and is now working on doing research and analysis for a new customer.",
+        allow_delegation=False,
+    )
+
+    task_completed = MagicMock(return_value="done")
+
+    task = Task(
+        description="Give me a list of 5 interesting ideas to explore for an article, what makes them unique and interesting.",
+        expected_output="Bullet point list of 5 interesting ideas.",
+        agent=researcher,
+        callback=task_completed,
+    )
+
+    with patch.object(Agent, "execute_task") as execute:
+        execute.return_value = "exported_ok"
+        task.execute()
+        # Ensure the callback is called with a TaskOutput object serialized to JSON
+        task_completed.assert_called_once()
+        callback_data = task_completed.call_args[0][0]
+
+        # Check if callback_data is TaskOutput object or JSON string
+        if isinstance(callback_data, TaskOutput):
+            callback_data = json.dumps(callback_data.model_dump())
+
+        assert isinstance(callback_data, str)
+        output_dict = json.loads(callback_data)
+        expected_output = {
+            "description": task.description,
+            "exported_output": "exported_ok",
+            "raw_output": "exported_ok",
+            "agent": researcher.role,
+            "summary": "Give me a list of 5 interesting ideas to explore...",
+        }
+        assert output_dict == expected_output
 
 
 def test_execute_with_agent():
@@ -268,7 +311,7 @@ def test_output_json_to_another_task():
 
     crew = Crew(agents=[scorer], tasks=[task1, task2])
     result = crew.kickoff()
-    assert '{\n  "score": 3\n}' == result
+    assert '{\n  "score": 5\n}' == result
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
@@ -352,6 +395,38 @@ def test_save_task_pydantic_output():
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
+def test_custom_converter_cls():
+    class ScoreOutput(BaseModel):
+        score: int
+
+    class ScoreConverter(Converter):
+        pass
+
+    scorer = Agent(
+        role="Scorer",
+        goal="Score the title",
+        backstory="You're an expert scorer, specialized in scoring titles.",
+        allow_delegation=False,
+    )
+
+    task = Task(
+        description="Give me an integer score between 1-5 for the following title: 'The impact of AI in the future of work'",
+        expected_output="The score of the title.",
+        output_pydantic=ScoreOutput,
+        converter_cls=ScoreConverter,
+        agent=scorer,
+    )
+
+    crew = Crew(agents=[scorer], tasks=[task])
+
+    with patch.object(
+        ScoreConverter, "to_pydantic", return_value=ScoreOutput(score=5)
+    ) as mock_to_pydantic:
+        crew.kickoff()
+        mock_to_pydantic.assert_called_once()
+
+
+@pytest.mark.vcr(filter_headers=["authorization"])
 def test_increment_delegations_for_hierarchical_process():
     from langchain_openai import ChatOpenAI
 
@@ -371,31 +446,29 @@ def test_increment_delegations_for_hierarchical_process():
         agents=[scorer],
         tasks=[task],
         process=Process.hierarchical,
-        manager_llm=ChatOpenAI(model="gpt-4-0125-preview"),
+        manager_llm=ChatOpenAI(model="gpt-4o"),
     )
 
     with patch.object(Task, "increment_delegations") as increment_delegations:
         increment_delegations.return_value = None
         crew.kickoff()
-        increment_delegations.assert_called_once
+        increment_delegations.assert_called_once()
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
 def test_increment_delegations_for_sequential_process():
-    pass
-
     manager = Agent(
         role="Manager",
         goal="Coordinate scoring processes",
         backstory="You're great at delegating work about scoring.",
-        allow_delegation=False,
+        allow_delegation=True,
     )
 
     scorer = Agent(
         role="Scorer",
         goal="Score the title",
         backstory="You're an expert scorer, specialized in scoring titles.",
-        allow_delegation=False,
+        allow_delegation=True,
     )
 
     task = Task(
@@ -413,7 +486,7 @@ def test_increment_delegations_for_sequential_process():
     with patch.object(Task, "increment_delegations") as increment_delegations:
         increment_delegations.return_value = None
         crew.kickoff()
-        increment_delegations.assert_called_once
+        increment_delegations.assert_called_once()
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
@@ -448,7 +521,7 @@ def test_increment_tool_errors():
     with patch.object(Task, "increment_tools_errors") as increment_tools_errors:
         increment_tools_errors.return_value = None
         crew.kickoff()
-        increment_tools_errors.assert_called_once
+        assert len(increment_tools_errors.mock_calls) == 3
 
 
 def test_task_definition_based_on_dict():

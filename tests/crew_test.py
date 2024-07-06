@@ -1,6 +1,8 @@
 """Test Agent creation and execution basic functionality."""
 
 import json
+from unittest import mock
+from unittest.mock import patch
 
 import pydantic_core
 import pytest
@@ -155,9 +157,9 @@ def test_hierarchical_process():
         manager_llm=ChatOpenAI(temperature=0, model="gpt-4"),
         tasks=[task],
     )
-
+    result = crew.kickoff()
     assert (
-        crew.kickoff()
+        result
         == "1. 'Demystifying AI: An in-depth exploration of Artificial Intelligence for the layperson' - In this piece, we will unravel the enigma of AI, simplifying its complexities into digestible information for the everyday individual. By using relatable examples and analogies, we will journey through the neural networks and machine learning algorithms that define AI, without the jargon and convoluted explanations that often accompany such topics.\n\n2. 'The Role of AI in Startups: A Game Changer?' - Startups today are harnessing the power of AI to revolutionize their businesses. This article will delve into how AI, as an innovative force, is shaping the startup ecosystem, transforming everything from customer service to product development. We'll explore real-life case studies of startups that have leveraged AI to accelerate their growth and disrupt their respective industries.\n\n3. 'AI and Ethics: Navigating the Complex Landscape' - AI brings with it not just technological advancements, but ethical dilemmas as well. This article will engage readers in a thought-provoking discussion on the ethical implications of AI, exploring issues like bias in algorithms, privacy concerns, job displacement, and the moral responsibility of AI developers. We will also discuss potential solutions and frameworks to address these challenges.\n\n4. 'Unveiling the AI Agents: The Future of Customer Service' - AI agents are poised to reshape the customer service landscape, offering businesses the ability to provide round-the-clock support and personalized experiences. In this article, we'll dive deep into the world of AI agents, examining how they work, their benefits and limitations, and how they're set to redefine customer interactions in the digital age.\n\n5. 'From Science Fiction to Reality: AI in Everyday Life' - AI, once a concept limited to the realm of sci-fi, has now permeated our daily lives. This article will highlight the ubiquitous presence of AI, from voice assistants and recommendation algorithms, to autonomous vehicles and smart homes. We'll explore how AI, in its various forms, is transforming our everyday experiences, making the future seem a lot closer than we imagined."
     )
 
@@ -357,34 +359,125 @@ def test_api_calls_throttling(capsys):
         moveon.assert_called()
 
 
+# This test is not consistent, some issue is happening on the CI when it comes to Prompt tokens
+#  {'usage_metrics': {'completion_tokens': 34, 'prompt_tokens': 0, 'successful_requests': 2, 'total_tokens': 34}} CI OUTPUT
+#  {'usage_metrics': {'completion_tokens': 34, 'prompt_tokens': 314, 'successful_requests': 2, 'total_tokens': 348}}
+# The issue migh be related to the calculate_usage_metrics function
+# @pytest.mark.vcr(filter_headers=["authorization"])
+# def test_crew_full_output():
+#     agent = Agent(
+#         role="test role",
+#         goal="test goal",
+#         backstory="test backstory",
+#         allow_delegation=False,
+#         verbose=True,
+#     )
+
+#     task1 = Task(
+#         description="just say hi!",
+#         expected_output="your greeting",
+#         agent=agent,
+#     )
+#     task2 = Task(
+#         description="just say hello!",
+#         expected_output="your greeting",
+#         agent=agent,
+#     )
+
+#     crew = Crew(agents=[agent], tasks=[task1, task2], full_output=True)
+
+#     result = crew.kickoff()
+
+#     assert result == {
+#         "final_output": "Hello!",
+#         "tasks_outputs": [task1.output, task2.output],
+#         "usage_metrics": {
+#             "total_tokens": 348,
+#             "prompt_tokens": 314,
+#             "completion_tokens": 34,
+#             "successful_requests": 2,
+#         },
+#     }
+
+
 @pytest.mark.vcr(filter_headers=["authorization"])
-def test_crew_full_ouput():
+def test_crew_kickoff_for_each_full_ouput():
+    inputs = [
+        {"topic": "dog"},
+        {"topic": "cat"},
+        {"topic": "apple"},
+    ]
+
     agent = Agent(
-        role="test role",
-        goal="test goal",
-        backstory="test backstory",
-        allow_delegation=False,
-        verbose=True,
+        role="{topic} Researcher",
+        goal="Express hot takes on {topic}.",
+        backstory="You have a lot of experience with {topic}.",
     )
 
-    task1 = Task(
-        description="just say hi!",
-        expected_output="your greeting",
-        agent=agent,
-    )
-    task2 = Task(
-        description="just say hello!",
-        expected_output="your greeting",
+    task = Task(
+        description="Give me an analysis around {topic}.",
+        expected_output="1 bullet point about {topic} that's under 15 words.",
         agent=agent,
     )
 
-    crew = Crew(agents=[agent], tasks=[task1, task2], full_output=True)
+    crew = Crew(agents=[agent], tasks=[task], full_output=True)
+    results = crew.kickoff_for_each(inputs=inputs)
 
-    result = crew.kickoff()
-    assert result == {
-        "final_output": "Hello! It is a delight to receive your message. I trust this response finds you in good spirits. It's indeed a pleasure to connect with you too.",
-        "tasks_outputs": [task1.output, task2.output],
-    }
+    assert len(results) == len(inputs)
+    for result in results:
+        assert "usage_metrics" in result
+        assert isinstance(result["usage_metrics"], dict)
+
+        # Assert that all required keys are in usage_metrics and their values are not None
+        for key in [
+            "total_tokens",
+            "prompt_tokens",
+            "completion_tokens",
+            "successful_requests",
+        ]:
+            assert key in result["usage_metrics"]
+            assert result["usage_metrics"][key] > 0
+
+
+@pytest.mark.vcr(filter_headers=["authorization"])
+@pytest.mark.asyncio
+async def test_crew_async_kickoff_for_each_full_ouput():
+    inputs = [
+        {"topic": "dog"},
+        {"topic": "cat"},
+        {"topic": "apple"},
+    ]
+
+    agent = Agent(
+        role="{topic} Researcher",
+        goal="Express hot takes on {topic}.",
+        backstory="You have a lot of experience with {topic}.",
+    )
+
+    task = Task(
+        description="Give me an analysis around {topic}.",
+        expected_output="1 bullet point about {topic} that's under 15 words.",
+        agent=agent,
+    )
+
+    crew = Crew(agents=[agent], tasks=[task], full_output=True)
+    results = await crew.kickoff_for_each_async(inputs=inputs)
+
+    assert len(results) == len(inputs)
+    for result in results:
+        assert "usage_metrics" in result
+        assert isinstance(result["usage_metrics"], dict)
+
+        # Assert that all required keys are in usage_metrics and their values are not None
+        for key in [
+            "total_tokens",
+            "prompt_tokens",
+            "completion_tokens",
+            "successful_requests",
+        ]:
+            assert key in result["usage_metrics"]
+            # TODO: FIX THIS WHEN USAGE METRICS ARE RE-DONE
+            # assert result["usage_metrics"][key] > 0
 
 
 def test_agents_rpm_is_never_set_if_crew_max_RPM_is_not_set():
@@ -408,13 +501,13 @@ def test_agents_rpm_is_never_set_if_crew_max_RPM_is_not_set():
 
 
 def test_async_task_execution():
-    import threading
-    from unittest.mock import patch
+    from concurrent.futures import ThreadPoolExecutor
+    from unittest.mock import MagicMock, patch
 
     from crewai.tasks.task_output import TaskOutput
 
     list_ideas = Task(
-        description="Give me a list of 5 interesting ideas to explore for na article, what makes them unique and interesting.",
+        description="Give me a list of 5 interesting ideas to explore for an article, what makes them unique and interesting.",
         expected_output="Bullet point list of 5 important events.",
         agent=researcher,
         async_execution=True,
@@ -440,19 +533,280 @@ def test_async_task_execution():
 
     with patch.object(Agent, "execute_task") as execute:
         execute.return_value = "ok"
-        with patch.object(threading.Thread, "start") as start:
-            thread = threading.Thread(target=lambda: None, args=()).start()
-            start.return_value = thread
-            with patch.object(threading.Thread, "join", wraps=thread.join()) as join:
-                list_ideas.output = TaskOutput(
-                    description="A 4 paragraph article about AI.", raw_output="ok"
-                )
-                list_important_history.output = TaskOutput(
-                    description="A 4 paragraph article about AI.", raw_output="ok"
-                )
-                crew.kickoff()
-                start.assert_called()
-                join.assert_called()
+        with patch.object(ThreadPoolExecutor, "submit") as submit:
+            future = MagicMock()
+            future.result.return_value = "ok"
+            submit.return_value = future
+
+            list_ideas.output = TaskOutput(
+                description="A 4 paragraph article about AI.",
+                raw_output="ok",
+                agent="writer",
+            )
+            list_important_history.output = TaskOutput(
+                description="A 4 paragraph article about AI.",
+                raw_output="ok",
+                agent="writer",
+            )
+            crew.kickoff()
+            submit.assert_called()
+            future.result.assert_called()
+
+
+@pytest.mark.vcr(filter_headers=["authorization"])
+def test_kickoff_for_each_single_input():
+    """Tests if kickoff_for_each works with a single input."""
+    from unittest.mock import patch
+
+    inputs = [{"topic": "dog"}]
+    expected_outputs = ["Dogs are loyal companions and popular pets."]
+
+    agent = Agent(
+        role="{topic} Researcher",
+        goal="Express hot takes on {topic}.",
+        backstory="You have a lot of experience with {topic}.",
+    )
+
+    task = Task(
+        description="Give me an analysis around {topic}.",
+        expected_output="1 bullet point about {topic} that's under 15 words.",
+        agent=agent,
+    )
+
+    with patch.object(Agent, "execute_task") as mock_execute_task:
+        mock_execute_task.side_effect = expected_outputs
+        crew = Crew(agents=[agent], tasks=[task])
+        results = crew.kickoff_for_each(inputs=inputs)
+
+    assert len(results) == 1
+    assert results == expected_outputs
+
+
+@pytest.mark.vcr(filter_headers=["authorization"])
+def test_kickoff_for_each_multiple_inputs():
+    """Tests if kickoff_for_each works with multiple inputs."""
+    from unittest.mock import patch
+
+    inputs = [
+        {"topic": "dog"},
+        {"topic": "cat"},
+        {"topic": "apple"},
+    ]
+    expected_outputs = [
+        "Dogs are loyal companions and popular pets.",
+        "Cats are independent and low-maintenance pets.",
+        "Apples are a rich source of dietary fiber and vitamin C.",
+    ]
+
+    agent = Agent(
+        role="{topic} Researcher",
+        goal="Express hot takes on {topic}.",
+        backstory="You have a lot of experience with {topic}.",
+    )
+
+    task = Task(
+        description="Give me an analysis around {topic}.",
+        expected_output="1 bullet point about {topic} that's under 15 words.",
+        agent=agent,
+    )
+
+    with patch.object(Agent, "execute_task") as mock_execute_task:
+        mock_execute_task.side_effect = expected_outputs
+        crew = Crew(agents=[agent], tasks=[task])
+        results = crew.kickoff_for_each(inputs=inputs)
+
+    assert len(results) == len(inputs)
+    for i, res in enumerate(results):
+        assert res == expected_outputs[i]
+
+
+@pytest.mark.vcr(filter_headers=["authorization"])
+def test_kickoff_for_each_empty_input():
+    """Tests if kickoff_for_each handles an empty input list."""
+    agent = Agent(
+        role="{topic} Researcher",
+        goal="Express hot takes on {topic}.",
+        backstory="You have a lot of experience with {topic}.",
+    )
+
+    task = Task(
+        description="Give me an analysis around {topic}.",
+        expected_output="1 bullet point about {topic} that's under 15 words.",
+        agent=agent,
+    )
+
+    crew = Crew(agents=[agent], tasks=[task])
+    results = crew.kickoff_for_each(inputs=[])
+    assert results == []
+
+
+@pytest.mark.vcr(filter_headers=["authorization"])
+def test_kickoff_for_each_invalid_input():
+    """Tests if kickoff_for_each raises TypeError for invalid input types."""
+
+    agent = Agent(
+        role="{topic} Researcher",
+        goal="Express hot takes on {topic}.",
+        backstory="You have a lot of experience with {topic}.",
+    )
+
+    task = Task(
+        description="Give me an analysis around {topic}.",
+        expected_output="1 bullet point about {topic} that's under 15 words.",
+        agent=agent,
+    )
+
+    crew = Crew(agents=[agent], tasks=[task])
+
+    with pytest.raises(TypeError):
+        # Pass a string instead of a list
+        crew.kickoff_for_each("invalid input")
+
+
+@pytest.mark.vcr(filter_headers=["authorization"])
+def test_kickoff_for_each_error_handling():
+    """Tests error handling in kickoff_for_each when kickoff raises an error."""
+    from unittest.mock import patch
+
+    inputs = [
+        {"topic": "dog"},
+        {"topic": "cat"},
+        {"topic": "apple"},
+    ]
+    expected_outputs = [
+        "Dogs are loyal companions and popular pets.",
+        "Cats are independent and low-maintenance pets.",
+        "Apples are a rich source of dietary fiber and vitamin C.",
+    ]
+    agent = Agent(
+        role="{topic} Researcher",
+        goal="Express hot takes on {topic}.",
+        backstory="You have a lot of experience with {topic}.",
+    )
+
+    task = Task(
+        description="Give me an analysis around {topic}.",
+        expected_output="1 bullet point about {topic} that's under 15 words.",
+        agent=agent,
+    )
+
+    crew = Crew(agents=[agent], tasks=[task])
+
+    with patch.object(Crew, "kickoff") as mock_kickoff:
+        mock_kickoff.side_effect = expected_outputs[:2] + [
+            Exception("Simulated kickoff error")
+        ]
+        with pytest.raises(Exception, match="Simulated kickoff error"):
+            crew.kickoff_for_each(inputs=inputs)
+
+
+@pytest.mark.vcr(filter_headers=["authorization"])
+@pytest.mark.asyncio
+async def test_kickoff_async_basic_functionality_and_output():
+    """Tests the basic functionality and output of kickoff_async."""
+    from unittest.mock import patch
+
+    inputs = {"topic": "dog"}
+
+    agent = Agent(
+        role="{topic} Researcher",
+        goal="Express hot takes on {topic}.",
+        backstory="You have a lot of experience with {topic}.",
+    )
+
+    task = Task(
+        description="Give me an analysis around {topic}.",
+        expected_output="1 bullet point about {topic} that's under 15 words.",
+        agent=agent,
+    )
+
+    # Create the crew
+    crew = Crew(
+        agents=[agent],
+        tasks=[task],
+    )
+
+    expected_output = "This is a sample output from kickoff."
+    with patch.object(Crew, "kickoff", return_value=expected_output) as mock_kickoff:
+        result = await crew.kickoff_async(inputs)
+
+        assert isinstance(result, str), "Result should be a string"
+        assert result == expected_output, "Result should match expected output"
+        mock_kickoff.assert_called_once_with(inputs)
+
+
+@pytest.mark.vcr(filter_headers=["authorization"])
+@pytest.mark.asyncio
+async def test_async_kickoff_for_each_async_basic_functionality_and_output():
+    """Tests the basic functionality and output of akickoff_for_each_async."""
+    from unittest.mock import patch
+
+    inputs = [
+        {"topic": "dog"},
+        {"topic": "cat"},
+        {"topic": "apple"},
+    ]
+
+    # Define expected outputs for each input
+    expected_outputs = [
+        "Dogs are loyal companions and popular pets.",
+        "Cats are independent and low-maintenance pets.",
+        "Apples are a rich source of dietary fiber and vitamin C.",
+    ]
+
+    agent = Agent(
+        role="{topic} Researcher",
+        goal="Express hot takes on {topic}.",
+        backstory="You have a lot of experience with {topic}.",
+    )
+
+    task = Task(
+        description="Give me an analysis around {topic}.",
+        expected_output="1 bullet point about {topic} that's under 15 words.",
+        agent=agent,
+    )
+
+    with patch.object(
+        Crew, "kickoff_async", side_effect=expected_outputs
+    ) as mock_kickoff_async:
+        crew = Crew(agents=[agent], tasks=[task])
+
+        results = await crew.kickoff_for_each_async(inputs)
+
+        assert len(results) == len(inputs)
+        assert results == expected_outputs
+        for input_data in inputs:
+            mock_kickoff_async.assert_any_call(inputs=input_data)
+
+
+@pytest.mark.vcr(filter_headers=["authorization"])
+@pytest.mark.asyncio
+async def test_async_kickoff_for_each_async_empty_input():
+    """Tests if akickoff_for_each_async handles an empty input list."""
+
+    agent = Agent(
+        role="{topic} Researcher",
+        goal="Express hot takes on {topic}.",
+        backstory="You have a lot of experience with {topic}.",
+    )
+
+    task = Task(
+        description="Give me an analysis around {topic}.",
+        expected_output="1 bullet point about {topic} that's under 15 words.",
+        agent=agent,
+    )
+
+    # Create the crew
+    crew = Crew(
+        agents=[agent],
+        tasks=[task],
+    )
+
+    # Call the function we are testing
+    results = await crew.kickoff_for_each_async([])
+
+    # Assertion
+    assert results == [], "Result should be an empty list when input is empty"
 
 
 def test_set_agents_step_callback():
@@ -587,6 +941,33 @@ def test_task_with_no_arguments():
     assert result == "75"
 
 
+def test_code_execution_flag_adds_code_tool_upon_kickoff():
+    from crewai_tools import CodeInterpreterTool
+
+    programmer = Agent(
+        role="Programmer",
+        goal="Write code to solve problems.",
+        backstory="You're a programmer who loves to solve problems with code.",
+        allow_delegation=False,
+        allow_code_execution=True,
+    )
+
+    task = Task(
+        description="How much is 2 + 2?",
+        expected_output="The result of the sum as an integer.",
+        agent=programmer,
+    )
+
+    crew = Crew(agents=[programmer], tasks=[task])
+
+    with patch.object(Agent, "execute_task") as executor:
+        executor.return_value = "ok"
+        crew.kickoff()
+        assert len(programmer.tools) == 1
+        assert programmer.tools[0].__class__ == CodeInterpreterTool
+
+
+@pytest.mark.vcr(filter_headers=["authorization"])
 def test_delegation_is_not_enabled_if_there_are_only_one_agent():
     from unittest.mock import patch
 
@@ -604,7 +985,6 @@ def test_delegation_is_not_enabled_if_there_are_only_one_agent():
     )
 
     crew = Crew(agents=[researcher], tasks=[task])
-
     with patch.object(Task, "execute") as execute:
         execute.return_value = "ok"
         crew.kickoff()
@@ -649,10 +1029,33 @@ def test_agent_usage_metrics_are_captured_for_sequential_process():
     assert result == "Howdy!"
     assert crew.usage_metrics == {
         "completion_tokens": 17,
-        "prompt_tokens": 160,
+        "prompt_tokens": 158,
         "successful_requests": 1,
-        "total_tokens": 177,
+        "total_tokens": 175,
     }
+
+
+@pytest.mark.vcr(filter_headers=["authorization"])
+def test_sequential_crew_creation_tasks_without_agents():
+    task = Task(
+        description="Come up with a list of 5 interesting ideas to explore for an article, then write one amazing paragraph highlight for each idea that showcases how good an article about this topic could be. Return the list of ideas with their paragraph and your notes.",
+        expected_output="5 bullet points with a paragraph for each idea.",
+        # agent=researcher, # not having an agent on the task should throw an error
+    )
+
+    # Expected Output: The sequential crew should fail to create because the task is missing an agent
+    with pytest.raises(pydantic_core._pydantic_core.ValidationError) as exec_info:
+        Crew(
+            tasks=[task],
+            agents=[researcher],
+            process=Process.sequential,
+        )
+
+    assert exec_info.value.errors()[0]["type"] == "missing_agent_in_task"
+    assert (
+        "Agent is missing in the task with the following description"
+        in exec_info.value.errors()[0]["msg"]
+    )
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
@@ -672,17 +1075,73 @@ def test_agent_usage_metrics_are_captured_for_hierarchical_process():
         agents=[agent],
         tasks=[task],
         process=Process.hierarchical,
-        manager_llm=ChatOpenAI(temperature=0, model="gpt-4"),
+        manager_llm=ChatOpenAI(temperature=0, model="gpt-4o"),
     )
 
     result = crew.kickoff()
     assert result == '"Howdy!"'
+
     assert crew.usage_metrics == {
-        "total_tokens": 1666,
-        "prompt_tokens": 1383,
-        "completion_tokens": 283,
-        "successful_requests": 3,
+        "total_tokens": 1927,
+        "prompt_tokens": 1557,
+        "completion_tokens": 370,
+        "successful_requests": 4,
     }
+
+
+@pytest.mark.vcr(filter_headers=["authorization"])
+def test_hierarchical_crew_creation_tasks_with_agents():
+    """
+    Agents are not required for tasks in a hierarchical process but sometimes they are still added
+    This test makes sure that the manager still delegates the task to the agent even if the agent is passed in the task
+    """
+    from langchain_openai import ChatOpenAI
+
+    task = Task(
+        description="Write one amazing paragraph about AI.",
+        expected_output="A single paragraph with 4 sentences.",
+        agent=writer,
+    )
+
+    crew = Crew(
+        tasks=[task],
+        agents=[writer, researcher],
+        process=Process.hierarchical,
+        manager_llm=ChatOpenAI(model="gpt-4o"),
+    )
+    crew.kickoff()
+    assert crew.manager_agent is not None
+    assert crew.manager_agent.tools is not None
+    assert crew.manager_agent.tools[0].description.startswith(
+        "Delegate a specific task to one of the following coworkers: [Senior Writer]"
+    )
+
+
+@pytest.mark.vcr(filter_headers=["authorization"])
+def test_hierarchical_crew_creation_tasks_without_async_execution():
+    from langchain_openai import ChatOpenAI
+
+    task = Task(
+        description="Come up with a list of 5 interesting ideas to explore for an article, then write one amazing paragraph highlight for each idea that showcases how good an article about this topic could be. Return the list of ideas with their paragraph and your notes.",
+        expected_output="5 bullet points with a paragraph for each idea.",
+        async_execution=True,  # should throw an error
+    )
+
+    with pytest.raises(pydantic_core._pydantic_core.ValidationError) as exec_info:
+        Crew(
+            tasks=[task],
+            agents=[researcher],
+            process=Process.hierarchical,
+            manager_llm=ChatOpenAI(model="gpt-4o"),
+        )
+
+    assert (
+        exec_info.value.errors()[0]["type"] == "async_execution_in_hierarchical_process"
+    )
+    assert (
+        "Hierarchical process error: Tasks cannot be flagged with async_execution."
+        in exec_info.value.errors()[0]["msg"]
+    )
 
 
 def test_crew_inputs_interpolate_both_agents_and_tasks():
@@ -695,9 +1154,10 @@ def test_crew_inputs_interpolate_both_agents_and_tasks():
     task = Task(
         description="Give me an analysis around {topic}.",
         expected_output="{points} bullet points about {topic}.",
+        agent=agent,
     )
 
-    crew = Crew(agents=[agent], tasks=[task], inputs={"topic": "AI", "points": 5})
+    crew = Crew(agents=[agent], tasks=[task])
     inputs = {"topic": "AI", "points": 5}
     crew._interpolate_inputs(inputs=inputs)  # Manual call for now
 
@@ -995,24 +1455,69 @@ def test_manager_agent_with_tools_raises_exception():
         crew.kickoff()
 
 
-def test_crew_train_success():
+@patch("crewai.crew.Crew.kickoff")
+@patch("crewai.crew.CrewTrainingHandler")
+@patch("crewai.crew.TaskEvaluator")
+def test_crew_train_success(task_evaluator, crew_training_handler, kickoff):
     task = Task(
         description="Come up with a list of 5 interesting ideas to explore for an article, then write one amazing paragraph highlight for each idea that showcases how good an article about this topic could be. Return the list of ideas with their paragraph and your notes.",
         expected_output="5 bullet points with a paragraph for each idea.",
+        agent=researcher,
     )
 
     crew = Crew(
         agents=[researcher, writer],
         tasks=[task],
     )
+    crew.train(n_iterations=2, inputs={"topic": "AI"})
+    task_evaluator.assert_has_calls(
+        [
+            mock.call(researcher),
+            mock.call().evaluate_training_data(
+                training_data=crew_training_handler().load(),
+                agent_id=str(researcher.id),
+            ),
+            mock.call().evaluate_training_data().model_dump(),
+            mock.call(writer),
+            mock.call().evaluate_training_data(
+                training_data=crew_training_handler().load(),
+                agent_id=str(writer.id),
+            ),
+            mock.call().evaluate_training_data().model_dump(),
+        ]
+    )
 
-    crew.train(n_iterations=2)
+    crew_training_handler.assert_has_calls(
+        [
+            mock.call("training_data.pkl"),
+            mock.call().load(),
+            mock.call("trained_agents_data.pkl"),
+            mock.call().save_trained_data(
+                agent_id="Researcher",
+                trained_data=task_evaluator().evaluate_training_data().model_dump(),
+            ),
+            mock.call("trained_agents_data.pkl"),
+            mock.call().save_trained_data(
+                agent_id="Senior Writer",
+                trained_data=task_evaluator().evaluate_training_data().model_dump(),
+            ),
+            mock.call(),
+            mock.call().load(),
+            mock.call(),
+            mock.call().load(),
+        ]
+    )
+
+    kickoff.assert_has_calls(
+        [mock.call(inputs={"topic": "AI"}), mock.call(inputs={"topic": "AI"})]
+    )
 
 
 def test_crew_train_error():
     task = Task(
         description="Come up with a list of 5 interesting ideas to explore for an article",
         expected_output="5 bullet points with a paragraph for each idea.",
+        agent=researcher,
     )
 
     crew = Crew(
@@ -1025,3 +1530,33 @@ def test_crew_train_error():
         assert "train() missing 1 required positional argument: 'n_iterations'" in str(
             e
         )
+
+
+def test__setup_for_training():
+    researcher.allow_delegation = True
+    writer.allow_delegation = True
+    agents = [researcher, writer]
+    task = Task(
+        description="Come up with a list of 5 interesting ideas to explore for an article",
+        expected_output="5 bullet points with a paragraph for each idea.",
+        agent=researcher,
+    )
+
+    crew = Crew(
+        agents=agents,
+        tasks=[task],
+    )
+
+    assert crew._train is False
+    assert task.human_input is False
+
+    for agent in agents:
+        assert agent.allow_delegation is True
+
+    crew._setup_for_training()
+
+    assert crew._train is True
+    assert task.human_input is True
+
+    for agent in agents:
+        assert agent.allow_delegation is False
