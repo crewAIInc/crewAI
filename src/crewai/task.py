@@ -311,14 +311,14 @@ class Task(BaseModel):
         return copied_task
 
     def _create_converter(self, *args, **kwargs) -> type[Converter]:
-        if self.converter_cls:
-          return self.converter_cls(  # type: ignore # Item "None" of "BaseAgent | None" has no attribute "get_output_converter"
-            *args, **kwargs
-          )          
-        else:
-          return self.agent.get_output_converter(  # type: ignore # Item "None" of "BaseAgent | None" has no attribute "get_output_converter"
-            *args, **kwargs
-          )
+      converter = self.agent.get_output_converter(  # type: ignore # Item "None" of "BaseAgent | None" has no attribute "get_output_converter"
+        *args, **kwargs
+      )
+      if self.converter_cls:
+        converter = self.converter_cls(  # type: ignore # Item "None" of "BaseAgent | None" has no attribute "get_output_converter"
+          *args, **kwargs
+        )          
+      return converter
 
     def _export_output(self, result: str) -> Any:
         exported_result = result
