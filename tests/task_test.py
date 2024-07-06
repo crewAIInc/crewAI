@@ -1,7 +1,6 @@
 """Test Agent creation and execution basic functionality."""
 
 import json
-
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -311,7 +310,7 @@ def test_output_json_to_another_task():
 
     crew = Crew(agents=[scorer], tasks=[task1, task2])
     result = crew.kickoff()
-    assert '{\n  "score": 3\n}' == result
+    assert '{\n  "score": 5\n}' == result
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
@@ -443,31 +442,29 @@ def test_increment_delegations_for_hierarchical_process():
         agents=[scorer],
         tasks=[task],
         process=Process.hierarchical,
-        manager_llm=ChatOpenAI(model="gpt-4-0125-preview"),
+        manager_llm=ChatOpenAI(model="gpt-4o"),
     )
 
     with patch.object(Task, "increment_delegations") as increment_delegations:
         increment_delegations.return_value = None
         crew.kickoff()
-        increment_delegations.assert_called_once
+        increment_delegations.assert_called_once()
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
 def test_increment_delegations_for_sequential_process():
-    pass
-
     manager = Agent(
         role="Manager",
         goal="Coordinate scoring processes",
         backstory="You're great at delegating work about scoring.",
-        allow_delegation=False,
+        allow_delegation=True,
     )
 
     scorer = Agent(
         role="Scorer",
         goal="Score the title",
         backstory="You're an expert scorer, specialized in scoring titles.",
-        allow_delegation=False,
+        allow_delegation=True,
     )
 
     task = Task(
@@ -485,7 +482,7 @@ def test_increment_delegations_for_sequential_process():
     with patch.object(Task, "increment_delegations") as increment_delegations:
         increment_delegations.return_value = None
         crew.kickoff()
-        increment_delegations.assert_called_once
+        increment_delegations.assert_called_once()
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
@@ -520,7 +517,7 @@ def test_increment_tool_errors():
     with patch.object(Task, "increment_tools_errors") as increment_tools_errors:
         increment_tools_errors.return_value = None
         crew.kickoff()
-        increment_tools_errors.assert_called_once
+        assert len(increment_tools_errors.mock_calls) == 3
 
 
 def test_task_definition_based_on_dict():

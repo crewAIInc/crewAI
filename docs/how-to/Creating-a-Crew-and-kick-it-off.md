@@ -1,11 +1,10 @@
 ---
 title: Assembling and Activating Your CrewAI Team
-description: A comprehensive guide to creating a dynamic CrewAI team for your projects, with updated functionalities including verbose mode, memory capabilities, asynchronous execution, output customization, language model configuration, and more.
-
+description: A comprehensive guide to creating a dynamic CrewAI team for your projects, with updated functionalities including verbose mode, memory capabilities, asynchronous execution, output customization, language model configuration, code execution, integration with third-party agents, and improved task management.
 ---
 
 ## Introduction
-Embark on your CrewAI journey by setting up your environment and initiating your AI crew with the latest features. This guide ensures a smooth start, incorporating all recent updates for an enhanced experience.
+Embark on your CrewAI journey by setting up your environment and initiating your AI crew with the latest features. This guide ensures a smooth start, incorporating all recent updates for an enhanced experience, including code execution capabilities, integration with third-party agents, and advanced task management.
 
 ## Step 0: Installation
 Install CrewAI and any necessary packages for your project. CrewAI is compatible with Python >=3.10,<=3.13.
@@ -16,108 +15,68 @@ pip install 'crewai[tools]'
 ```
 
 ## Step 1: Assemble Your Agents
-Define your agents with distinct roles, backstories, and enhanced capabilities like verbose mode and memory usage. These elements add depth and guide their task execution and interaction within the crew.
+Define your agents with distinct roles, backstories, and enhanced capabilities. The Agent class now supports a wide range of attributes for fine-tuned control over agent behavior and interactions, including code execution and integration with third-party agents.
 
 ```python
 import os
-os.environ["SERPER_API_KEY"] = "Your Key"  # serper.dev API key
-os.environ["OPENAI_API_KEY"] = "Your Key"
-
+from langchain.llms import OpenAI
 from crewai import Agent
-from crewai_tools import SerperDevTool
+from crewai_tools import SerperDevTool, BrowserbaseTool, ExaSearchTool
+
+os.environ["OPENAI_API_KEY"] = "Your OpenAI Key"
+os.environ["SERPER_API_KEY"] = "Your Serper Key"
+
 search_tool = SerperDevTool()
+browser_tool = BrowserbaseTool()
+exa_search_tool = ExaSearchTool()
 
-# Creating a senior researcher agent with memory and verbose mode
+# Creating a senior researcher agent with advanced configurations
 researcher = Agent(
-  role='Senior Researcher',
-  goal='Uncover groundbreaking technologies in {topic}',
-  verbose=True,
-  memory=True,
-  backstory=(
-    "Driven by curiosity, you're at the forefront of"
-    "innovation, eager to explore and share knowledge that could change"
-    "the world."
-  ),
-  tools=[search_tool],
-  allow_delegation=True
+    role='Senior Researcher',
+    goal='Uncover groundbreaking technologies in {topic}',
+    backstory=("Driven by curiosity, you're at the forefront of innovation, "
+               "eager to explore and share knowledge that could change the world."),
+    memory=True,
+    verbose=True,
+    allow_delegation=False,
+    tools=[search_tool, browser_tool],
+    allow_code_execution=False,  # New attribute for enabling code execution
+    max_iter=15,  # Maximum number of iterations for task execution
+    max_rpm=100,  # Maximum requests per minute
+    max_execution_time=3600,  # Maximum execution time in seconds
+    system_template="Your custom system template here",  # Custom system template
+    prompt_template="Your custom prompt template here",  # Custom prompt template
+    response_template="Your custom response template here",  # Custom response template
 )
 
-# Creating a writer agent with custom tools and delegation capability
+# Creating a writer agent with custom tools and specific configurations
 writer = Agent(
-  role='Writer',
-  goal='Narrate compelling tech stories about {topic}',
+    role='Writer',
+    goal='Narrate compelling tech stories about {topic}',
+    backstory=("With a flair for simplifying complex topics, you craft engaging "
+               "narratives that captivate and educate, bringing new discoveries to light."),
+    verbose=True,
+    allow_delegation=False,
+    memory=True,
+    tools=[exa_search_tool],
+    function_calling_llm=OpenAI(model_name="gpt-3.5-turbo"),  # Separate LLM for function calling
+)
+
+# Setting a specific manager agent
+manager = Agent(
+  role='Manager',
+  goal='Ensure the smooth operation and coordination of the team',
   verbose=True,
-  memory=True,
   backstory=(
-    "With a flair for simplifying complex topics, you craft"
-    "engaging narratives that captivate and educate, bringing new"
-    "discoveries to light in an accessible manner."
+    "As a seasoned project manager, you excel in organizing "
+    "tasks, managing timelines, and ensuring the team stays on track."
   ),
-  tools=[search_tool],
-  allow_delegation=False
+  allow_code_execution=True,  # Enable code execution for the manager
 )
 ```
 
-## Step 2: Define the Tasks
-Detail the specific objectives for your agents, including new features for asynchronous execution and output customization. These tasks ensure a targeted approach to their roles.
+### New Agent Attributes and Features
 
-```python
-from crewai import Task
-
-# Research task
-research_task = Task(
-  description=(
-    "Identify the next big trend in {topic}."
-    "Focus on identifying pros and cons and the overall narrative."
-    "Your final report should clearly articulate the key points,"
-    "its market opportunities, and potential risks."
-  ),
-  expected_output='A comprehensive 3 paragraphs long report on the latest AI trends.',
-  tools=[search_tool],
-  agent=researcher,
-)
-
-# Writing task with language model configuration
-write_task = Task(
-  description=(
-    "Compose an insightful article on {topic}."
-    "Focus on the latest trends and how it's impacting the industry."
-    "This article should be easy to understand, engaging, and positive."
-  ),
-  expected_output='A 4 paragraph article on {topic} advancements formatted as markdown.',
-  tools=[search_tool],
-  agent=writer,
-  async_execution=False,
-  output_file='new-blog-post.md'  # Example of output customization
-)
-```
-
-## Step 3: Form the Crew
-Combine your agents into a crew, setting the workflow process they'll follow to accomplish the tasks. Now with options to configure language models for enhanced interaction and additional configurations for optimizing performance.
-
-```python
-from crewai import Crew, Process
-
-# Forming the tech-focused crew with some enhanced configurations
-crew = Crew(
-  agents=[researcher, writer],
-  tasks=[research_task, write_task],
-  process=Process.sequential,  # Optional: Sequential task execution is default
-  memory=True,
-  cache=True,
-  max_rpm=100,
-  share_crew=True
-)
-```
-
-## Step 4: Kick It Off
-Initiate the process with your enhanced crew ready. Observe as your agents collaborate, leveraging their new capabilities for a successful project outcome. Input variables will be interpolated into the agents and tasks for a personalized approach.
-
-```python
-# Starting the task execution process with enhanced feedback
-result = crew.kickoff(inputs={'topic': 'AI in healthcare'})
-print(result)
-```
-
-## Conclusion
-Building and activating a crew in CrewAI has evolved with new functionalities. By incorporating verbose mode, memory capabilities, asynchronous task execution, output customization, language model configuration, and enhanced crew configurations, your AI team is more equipped than ever to tackle challenges efficiently. The depth of agent backstories and the precision of their objectives enrich collaboration, leading to successful project outcomes. This guide aims to provide you with a clear and detailed understanding of setting up and utilizing the CrewAI framework to its full potential.
+1. `allow_code_execution`: Enable or disable code execution capabilities for the agent (default is False).
+2. `max_execution_time`: Set a maximum execution time (in seconds) for the agent to complete a task.
+3. `function_calling_llm`: Specify a separate language model for function calling.
