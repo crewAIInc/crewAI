@@ -119,7 +119,7 @@ class ToolUsage:
                     attempts=self._run_attempts,
                 )
                 result = self._format_result(result=result)  # type: ignore #  "_format_result" of "ToolUsage" does not return a value (it only ever returns None)
-                return result  # type: ignore # Fix the reutrn type of this function
+                return result  # type: ignore # Fix the return type of this function
 
             except Exception:
                 self.task.increment_tools_errors()
