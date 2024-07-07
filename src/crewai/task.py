@@ -291,7 +291,7 @@ class Task(BaseModel):
         copied_data = {k: v for k, v in copied_data.items() if v is not None}
 
         cloned_context = (
-            [task.copy() for task in self.context] if self.context else None
+            [task.copy(agents) for task in self.context] if self.context else None
         )
 
         def get_agent_by_role(role: str) -> Union["BaseAgent", None]:
