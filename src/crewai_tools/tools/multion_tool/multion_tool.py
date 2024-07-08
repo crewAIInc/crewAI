@@ -15,8 +15,15 @@ class MultiOnTool(BaseTool):
     multion: Optional[Any] = None
     session_id: Optional[str] = None
     local: bool = False
+    max_steps: int = 3
 
-    def __init__(self, api_key: Optional[str] = None, local: bool = False, **kwargs):
+    def __init__(
+        self,
+        api_key: Optional[str] = None,
+        local: bool = False,
+        max_steps: int = 3,
+        **kwargs,
+    ):
         super().__init__(**kwargs)
         try:
             from multion.client import MultiOn  # type: ignore
@@ -27,6 +34,7 @@ class MultiOnTool(BaseTool):
         self.session_id = None
         self.local = local
         self.multion = MultiOn(api_key=api_key)
+        self.max_steps = max_steps
 
     def _run(
         self,
@@ -48,6 +56,7 @@ class MultiOnTool(BaseTool):
             cmd=cmd,
             session_id=self.session_id,
             local=self.local,
+            max_steps=self.max_steps,
             *args,
             **kwargs,
         )
