@@ -94,6 +94,11 @@ Cutting-edge framework for orchestrating role-playing, autonomous AI agents. By 
                 </a>
             </li>
             <li>
+                <a href="./how-to/Force-Tool-Ouput-as-Result">
+                    Forcing Tool Output as Result
+                </a>
+            </li>
+            <li>
                 <a href="./how-to/Human-Input-on-Execution">
                     Human Input on Execution
                 </a>
