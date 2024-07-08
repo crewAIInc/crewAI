@@ -8,6 +8,9 @@ from .directory_search_tool.directory_search_tool import DirectorySearchTool
 from .docx_search_tool.docx_search_tool import DOCXSearchTool
 from .exa_tools.exa_search_tool import EXASearchTool
 from .file_read_tool.file_read_tool import FileReadTool
+from .firecrawl_crawl_website_tool.firecrawl_crawl_website_tool import FirecrawlCrawlWebsiteTool
+from .firecrawl_scrape_website_tool.firecrawl_scrape_website_tool import FirecrawlScrapeWebsiteTool
+from .firecrawl_search_tool.firecrawl_search_tool import FirecrawlSearchTool
 from .github_search_tool.github_search_tool import GithubSearchTool
 from .json_search_tool.json_search_tool import JSONSearchTool
 from .llamaindex_tool.llamaindex_tool import LlamaIndexTool
