@@ -1,6 +1,6 @@
 ---
-title: crewAI Agents
-description: What are crewAI Agents and how to use them.
+title: CrewAI Agents
+description: What are CrewAI Agents and how to use them.
 ---
 
 ## What is an Agent?
@@ -38,7 +38,7 @@ description: What are crewAI Agents and how to use them.
 ## Creating an Agent
 
 !!! note "Agent Interaction"
-    Agents can interact with each other using crewAI's built-in delegation and communication mechanisms. This allows for dynamic task management and problem-solving within the crew.
+    Agents can interact with each other using CrewAI's built-in delegation and communication mechanisms. This allows for dynamic task management and problem-solving within the crew.
 
 To create an agent, you would typically initialize an instance of the `Agent` class with the desired properties. Here's a conceptual example including all attributes:
 

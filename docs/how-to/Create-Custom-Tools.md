@@ -1,13 +1,13 @@
 ---
-title: Creating and Utilizing Tools in crewAI
-description: Comprehensive guide on crafting, using, and managing custom tools within the crewAI framework, including new functionalities and error handling.
+title: Creating and Utilizing Tools in CrewAI
+description: Comprehensive guide on crafting, using, and managing custom tools within the CrewAI framework, including new functionalities and error handling.
 ---
 
-## Creating and Utilizing Tools in crewAI
-This guide provides detailed instructions on creating custom tools for the crewAI framework and how to efficiently manage and utilize these tools, incorporating the latest functionalities such as tool delegation, error handling, and dynamic tool calling. It also highlights the importance of collaboration tools, enabling agents to perform a wide range of actions.
+## Creating and Utilizing Tools in CrewAI
+This guide provides detailed instructions on creating custom tools for the CrewAI framework and how to efficiently manage and utilize these tools, incorporating the latest functionalities such as tool delegation, error handling, and dynamic tool calling. It also highlights the importance of collaboration tools, enabling agents to perform a wide range of actions.
 
 ### Prerequisites
-Before creating your own tools, ensure you have the crewAI extra tools package installed:
+Before creating your own tools, ensure you have the CrewAI extra tools package installed:
 
 ```bash
 pip install 'crewai[tools]'
@@ -60,4 +60,4 @@ def my_cache_strategy(arguments: dict, result: str) -> bool:
 cached_tool.cache_function = my_cache_strategy
 ```
 
-By adhering to these guidelines and incorporating new functionalities and collaboration tools into your tool creation and management processes, you can leverage the full capabilities of the crewAI framework, enhancing both the development experience and the efficiency of your AI agents.
+By adhering to these guidelines and incorporating new functionalities and collaboration tools into your tool creation and management processes, you can leverage the full capabilities of the CrewAI framework, enhancing both the development experience and the efficiency of your AI agents.

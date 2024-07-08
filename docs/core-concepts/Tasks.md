@@ -1,13 +1,13 @@
 ---
-title: crewAI Tasks
-description: Detailed guide on managing and creating tasks within the crewAI framework, reflecting the latest codebase updates.
+title: CrewAI Tasks
+description: Detailed guide on managing and creating tasks within the CrewAI framework, reflecting the latest codebase updates.
 ---
 
 ## Overview of a Task
 !!! note "What is a Task?"
-    In the crewAI framework, tasks are specific assignments completed by agents. They provide all necessary details for execution, such as a description, the agent responsible, required tools, and more, facilitating a wide range of action complexities.
+    In the CrewAI framework, tasks are specific assignments completed by agents. They provide all necessary details for execution, such as a description, the agent responsible, required tools, and more, facilitating a wide range of action complexities.
 
-Tasks within crewAI can be collaborative, requiring multiple agents to work together. This is managed through the task properties and orchestrated by the Crew's process, enhancing teamwork and efficiency.
+Tasks within CrewAI can be collaborative, requiring multiple agents to work together. This is managed through the task properties and orchestrated by the Crew's process, enhancing teamwork and efficiency.
 
 ## Task Attributes
 
@@ -44,7 +44,7 @@ task = Task(
 
 ## Integrating Tools with Tasks
 
-Leverage tools from the [crewAI Toolkit](https://github.com/joaomdmoura/crewai-tools) and [LangChain Tools](https://python.langchain.com/docs/integrations/tools) for enhanced task performance and agent interaction.
+Leverage tools from the [CrewAI Toolkit](https://github.com/joaomdmoura/crewai-tools) and [LangChain Tools](https://python.langchain.com/docs/integrations/tools) for enhanced task performance and agent interaction.
 
 ## Creating a Task with Tools
 
@@ -88,7 +88,7 @@ This demonstrates how tasks with specific tools can override an agent's default 
 
 ## Referring to Other Tasks
 
-In crewAI, the output of one task is automatically relayed into the next one, but you can specifically define what tasks' output, including multiple, should be used as context for another task.
+In CrewAI, the output of one task is automatically relayed into the next one, but you can specifically define what tasks' output, including multiple, should be used as context for another task.
 
 This is useful when you have a task that depends on the output of another task that is not performed immediately after it. This is done through the `context` attribute of the task:
 
@@ -223,7 +223,7 @@ While creating and executing tasks, certain validation mechanisms are in place t
 - Ensuring only one output type is set per task to maintain clear output expectations.
 - Preventing the manual assignment of the `id` attribute to uphold the integrity of the unique identifier system.
 
-These validations help in maintaining the consistency and reliability of task executions within the crewAI framework.
+These validations help in maintaining the consistency and reliability of task executions within the CrewAI framework.
 
 ## Creating Directories when Saving Files
 
@@ -246,4 +246,4 @@ save_output_task = Task(
 
 ## Conclusion
 
-Tasks are the driving force behind the actions of agents in crewAI. By properly defining tasks and their outcomes, you set the stage for your AI agents to work effectively, either independently or as a collaborative unit. Equipping tasks with appropriate tools, understanding the execution process, and following robust validation practices are crucial for maximizing CrewAI's potential, ensuring agents are effectively prepared for their assignments and that tasks are executed as intended.
+Tasks are the driving force behind the actions of agents in CrewAI. By properly defining tasks and their outcomes, you set the stage for your AI agents to work effectively, either independently or as a collaborative unit. Equipping tasks with appropriate tools, understanding the execution process, and following robust validation practices are crucial for maximizing CrewAI's potential, ensuring agents are effectively prepared for their assignments and that tasks are executed as intended.

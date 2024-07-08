@@ -1,10 +1,10 @@
 ---
-title: crewAI Crews
-description: Understanding and utilizing crews in the crewAI framework with comprehensive attributes and functionalities.
+title: CrewAI Crews
+description: Understanding and utilizing crews in the CrewAI framework with comprehensive attributes and functionalities.
 ---
 
 ## What is a Crew?
-A crew in crewAI represents a collaborative group of agents working together to achieve a set of tasks. Each crew defines the strategy for task execution, agent collaboration, and the overall workflow.
+A crew in CrewAI represents a collaborative group of agents working together to achieve a set of tasks. Each crew defines the strategy for task execution, agent collaboration, and the overall workflow.
 
 ## Crew Attributes
 
@@ -26,7 +26,7 @@ A crew in crewAI represents a collaborative group of agents working together to 
 | **Full Output** *(optional)*| `full_output`         | Whether the crew should return the full output with all tasks outputs or just the final output.           |
 | **Step Callback** *(optional)* | `step_callback`       | A function that is called after each step of every agent. This can be used to log the agent's actions or to perform other operations; it won't override the agent-specific `step_callback`. |
 | **Task Callback** *(optional)* | `task_callback`       | A function that is called after the completion of each task. Useful for monitoring or additional operations post-task execution. |
-| **Share Crew** *(optional)* | `share_crew`          | Whether you want to share the complete crew information and execution with the crewAI team to make the library better, and allow us to train models. |
+| **Share Crew** *(optional)* | `share_crew`          | Whether you want to share the complete crew information and execution with the CrewAI team to make the library better, and allow us to train models. |
 | **Output Log File** *(optional)* | `output_log_file`    | Whether you want to have a file with the complete crew output and execution. You can set it using True and it will default to the folder you are currently in and it will be called logs.txt or passing a string with the full path and name of the file. |
 | **Manager Agent** *(optional)* | `manager_agent`      | `manager` sets a custom agent that will be used as a manager.                                             |
 | **Manager Callbacks** *(optional)* | `manager_callbacks` | `manager_callbacks` takes a list of callback handlers to be executed by the manager agent when a hierarchical process is used. |

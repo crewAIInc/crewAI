@@ -1,6 +1,6 @@
 ---
 title: Forcing Tool Output as Result
-description: Learn how to force tool output as the result in of an Agent's task in crewAI.
+description: Learn how to force tool output as the result in of an Agent's task in CrewAI.
 ---
 
 ## Introduction

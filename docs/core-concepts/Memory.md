@@ -1,11 +1,11 @@
 ---
-title: crewAI Memory Systems
-description: Leveraging memory systems in the crewAI framework to enhance agent capabilities.
+title: CrewAI Memory Systems
+description: Leveraging memory systems in the CrewAI framework to enhance agent capabilities.
 ---
 
-## Introduction to Memory Systems in crewAI
+## Introduction to Memory Systems in CrewAI
 !!! note "Enhancing Agent Intelligence"
-    The crewAI framework introduces a sophisticated memory system designed to significantly enhance the capabilities of AI agents. This system comprises short-term memory, long-term memory, entity memory, and contextual memory, each serving a unique purpose in aiding agents to remember, reason, and learn from past interactions.
+    The CrewAI framework introduces a sophisticated memory system designed to significantly enhance the capabilities of AI agents. This system comprises short-term memory, long-term memory, entity memory, and contextual memory, each serving a unique purpose in aiding agents to remember, reason, and learn from past interactions.
 
 ## Memory System Components
 
@@ -161,10 +161,10 @@ my_crew = Crew(
 )
 ```
 
-## Benefits of Using crewAI's Memory System
+## Benefits of Using CrewAI's Memory System
 - **Adaptive Learning:** Crews become more efficient over time, adapting to new information and refining their approach to tasks.
 - **Enhanced Personalization:** Memory enables agents to remember user preferences and historical interactions, leading to personalized experiences.
 - **Improved Problem Solving:** Access to a rich memory store aids agents in making more informed decisions, drawing on past learnings and contextual insights.
 
 ## Getting Started
-Integrating crewAI's memory system into your projects is straightforward. By leveraging the provided memory components and configurations, you can quickly empower your agents with the ability to remember, reason, and learn from their interactions, unlocking new levels of intelligence and capability.
+Integrating CrewAI's memory system into your projects is straightforward. By leveraging the provided memory components and configurations, you can quickly empower your agents with the ability to remember, reason, and learn from their interactions, unlocking new levels of intelligence and capability.

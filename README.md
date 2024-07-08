@@ -1,14 +1,14 @@
 <div align="center">
 
-![Logo of crewAI, two people rowing on a boat](./docs/crewai_logo.png)
+![Logo of CrewAI, two people rowing on a boat](./docs/crewai_logo.png)
 
-# **crewAI**
+# **CrewAI**
 
-🤖 **crewAI**: Cutting-edge framework for orchestrating role-playing, autonomous AI agents. By fostering collaborative intelligence, CrewAI empowers agents to work together seamlessly, tackling complex tasks.
+🤖 **CrewAI**: Cutting-edge framework for orchestrating role-playing and autonomous AI agents. By fostering collaborative intelligence, CrewAI empowers agents to work together seamlessly, tackling complex tasks.
 
 <h3>
 
-[Homepage](https://www.crewai.io/) | [Documentation](https://docs.crewai.com/) | [Chat with Docs](https://chatg.pt/DWjSBZn) | [Examples](https://github.com/joaomdmoura/crewai-examples) | [Discord](https://discord.com/invite/X4JWnZnxPb)
+[Homepage](https://www.crewai.io/) | [Documentation](https://docs.crewai.com/) | [Chat with the Docs](https://chatg.pt/DWjSBZn) | [Examples](https://github.com/joaomdmoura/crewai-examples) | [Discord](https://discord.com/invite/X4JWnZnxPb)
 
 </h3>
 
@@ -72,7 +72,7 @@ os.environ["SERPER_API_KEY"] = "Your Key" # serper.dev API key
 
 # You can pass an optional llm attribute specifying what model you wanna use.
 # It can be a local model through Ollama / LM Studio or a remote
-# model like OpenAI, Mistral, Antrophic or others (https://docs.crewai.com/how-to/LLM-Connections/)
+# model like OpenAI, Mistral, Anthropic or others (https://docs.crewai.com/how-to/LLM-Connections/)
 #
 # import os
 # os.environ['OPENAI_MODEL_NAME'] = 'gpt-3.5-turbo'
@@ -137,17 +137,17 @@ print("######################")
 print(result)
 ```
 
-In addition to the sequential process, you can use the hierarchical process, which automatically assigns a manager to the defined crew to properly coordinate the planning and execution of tasks through delegation and validation of results. [See more about the processes here](https://docs.crewai.com/core-concepts/Processes/).
+In addition to the sequential process, you can use the hierarchical process to automatically assign a manager agent to a crew. The manager's responsibility is to properly coordinate the planning and execution of tasks through delegation and validation of results. [See more about the processes here](https://docs.crewai.com/core-concepts/Processes/).
 
 ## Key Features
 
 - **Role-Based Agent Design**: Customize agents with specific roles, goals, and tools.
-- **Autonomous Inter-Agent Delegation**: Agents can autonomously delegate tasks and inquire amongst themselves, enhancing problem-solving efficiency.
+- **Autonomous Inter-Agent Delegation**: Agents can be configured to autonomously delegate tasks and inquire amongst themselves, enhancing problem-solving efficiency.
 - **Flexible Task Management**: Define tasks with customizable tools and assign them to agents dynamically.
-- **Processes Driven**: Currently only supports `sequential` task execution and `hierarchical` processes, but more complex processes like consensual and autonomous are being worked on.
+- **Processes Driven**: Currently supports `sequential` task execution and `hierarchical` processes. More complex processes like consensual and autonomous are being worked on.
 - **Save output as file**: Save the output of individual tasks as a file, so you can use it later.
-- **Parse output as Pydantic or Json**: Parse the output of individual tasks as a Pydantic model or as a Json if you want to.
-- **Works with Open Source Models**: Run your crew using Open AI or open source models refer to the [Connect crewAI to LLMs](https://docs.crewai.com/how-to/LLM-Connections/) page for details on configuring your agents' connections to models, even ones running locally!
+- **Parse output as Pydantic or JSON**: Parse the output of individual tasks as a Pydantic model or as JSON if you want to.
+- **Works with Open Source Models**: Run your crew using OpenAI or open source models. Refer to the [Connect crewAI to LLMs](https://docs.crewai.com/how-to/LLM-Connections/) page for details on configuring your agents' connections to models - even locally running models!
 
 ![CrewAI Mind Map](./docs/crewAI-mindmap.png "CrewAI Mind Map")
 
@@ -156,7 +156,7 @@ In addition to the sequential process, you can use the hierarchical process, whi
 You can test different real life examples of AI crews in the [crewAI-examples repo](https://github.com/joaomdmoura/crewAI-examples?tab=readme-ov-file):
 
 - [Landing Page Generator](https://github.com/joaomdmoura/crewAI-examples/tree/main/landing_page_generator)
-- [Having Human input on the execution](https://docs.crewai.com/how-to/Human-Input-on-Execution)
+- [Having Human Input on the execution](https://docs.crewai.com/how-to/Human-Input-on-Execution)
 - [Trip Planner](https://github.com/joaomdmoura/crewAI-examples/tree/main/trip_planner)
 - [Stock Analysis](https://github.com/joaomdmoura/crewAI-examples/tree/main/stock_analysis)
 
@@ -168,7 +168,7 @@ You can test different real life examples of AI crews in the [crewAI-examples re
 
 [Check out code for this example](https://github.com/joaomdmoura/crewAI-examples/tree/main/job-posting) or watch a video below:
 
-[![Jobs postings](https://img.youtube.com/vi/u98wEMz-9to/maxresdefault.jpg)](https://www.youtube.com/watch?v=u98wEMz-9to "Jobs postings")
+[![Job postings](https://img.youtube.com/vi/u98wEMz-9to/maxresdefault.jpg)](https://www.youtube.com/watch?v=u98wEMz-9to "Job postings")
 
 ### Trip Planner
 
@@ -184,9 +184,9 @@ You can test different real life examples of AI crews in the [crewAI-examples re
 
 ## Connecting Your Crew to a Model
 
-crewAI supports using various LLMs through a variety of connection options. By default your agents will use the OpenAI API when querying the model. However, there are several other ways to allow your agents to connect to models. For example, you can configure your agents to use a local model via the Ollama tool.
+CrewAI supports using various LLMs through a variety of connection options. By default your agents will use the OpenAI API when querying the model. However, there are several other ways to allow your agents to connect to models. For example, you can configure your agents to use a local model via the Ollama tool.
 
-Please refer to the [Connect crewAI to LLMs](https://docs.crewai.com/how-to/LLM-Connections/) page for details on configuring you agents' connections to models.
+Please refer to the [Connect CrewAI to LLMs](https://docs.crewai.com/how-to/LLM-Connections/) page for details on configuring you agents' connections to models.
 
 ## How CrewAI Compares
 
@@ -196,16 +196,16 @@ Please refer to the [Connect crewAI to LLMs](https://docs.crewai.com/how-to/LLM-
 
 **CrewAI's Advantage**: CrewAI is built with production in mind. It offers the flexibility of Autogen's conversational agents and the structured process approach of ChatDev, but without the rigidity. CrewAI's processes are designed to be dynamic and adaptable, fitting seamlessly into both development and production workflows.
 
-
 ## Contribution
 
-CrewAI is open-source and we welcome contributions. If you're looking to contribute, please:
+CrewAI is open-source and we encourage contributions. If you're interested in contributing, here's how you can do it:
 
-- Fork the repository.
-- Create a new branch for your feature.
-- Add your feature or improvement.
-- Send a pull request.
-- We appreciate your input!
+1. Fork the repository.
+2. Create a new branch for your feature or improvement.
+3. Implement your changes.
+4. Submit a pull request.
+
+We value your input.
 
 ### Installing Dependencies
 
@@ -252,34 +252,24 @@ pip install dist/*.tar.gz
 
 ## Telemetry
 
-CrewAI uses anonymous telemetry to collect usage data with the main purpose of helping us improve the library by focusing our efforts on the most used features, integrations and tools.
+CrewAI collects anonymized usage data to aid in improving the library by prioritizing features, integrations, and tools that are most commonly used.
 
-There is NO data being collected on the prompts, tasks descriptions agents backstories or goals nor tools usage, no API calls, nor responses nor any data that is being processed by the agents, nor any secrets and env vars.
+We do not collect data on the prompts, task descriptions, agent backstories, goals, tool usage, API calls, or responses. Additionally, we do not collect any data that is being processed by the agents, such as secrets or environment variables.
 
 Data collected includes:
 
-- Version of crewAI
-  - So we can understand how many users are using the latest version
-- Version of Python
-  - So we can decide on what versions to better support
-- General OS (e.g. number of CPUs, macOS/Windows/Linux)
-  - So we know what OS we should focus on and if we could build specific OS related features
-- Number of agents and tasks in a crew
-  - So we make sure we are testing internally with similar use cases and educate people on the best practices
-- Crew Process being used
-  - Understand where we should focus our efforts
-- If Agents are using memory or allowing delegation
-  - Understand if we improved the features or maybe even drop them
-- If Tasks are being executed in parallel or sequentially
-  - Understand if we should focus more on parallel execution
-- Language model being used
-  - Improved support on most used languages
-- Roles of agents in a crew
-  - Understand high level use cases so we can build better tools, integrations and examples about it
-- Tools names available
-  - Understand out of the publically available tools, which ones are being used the most so we can improve them
+- The version of CrewAI being used
+- The version of Python being used
+- General operating system details (e.g. number of CPUs, macOS/Windows/Linux)
+- The number of agents and tasks in a crew
+- The process being used (sequential or hierarchical)
+- The language model being used
+- The roles of agents in a crew
+- The names of available tools
 
-Users can opt-in sharing the complete telemetry data by setting the `share_crew` attribute to `True` on their Crews.
+This information helps us understand how users are utilizing CrewAI, which allows us to focus on the most common use cases, improve support for popular integrations, and develop tools and features that meet the needs of our users.
+
+Users can opt to share the complete telemetry data by setting the `share_crew` attribute to `True` on their Crews.
 
 ## License
 

@@ -1,6 +1,6 @@
 ---
-title: crewAI Tools
-description: Understanding and leveraging tools within the crewAI framework for agent collaboration and task execution.
+title: CrewAI Tools
+description: Understanding and leveraging tools within the CrewAI framework for agent collaboration and task execution.
 ---
 
 ## Introduction
@@ -8,7 +8,7 @@ CrewAI tools empower agents with capabilities ranging from web searching and dat
 
 ## What is a Tool?
 !!! note "Definition"
-    A tool in CrewAI is a skill or function that agents can utilize to perform various actions. This includes tools from the [crewAI Toolkit](https://github.com/joaomdmoura/crewai-tools) and [LangChain Tools](https://python.langchain.com/docs/integrations/tools), enabling everything from simple searches to complex interactions and effective teamwork among agents.
+    A tool in CrewAI is a skill or function that agents can utilize to perform various actions. This includes tools from the [CrewAI Toolkit](https://github.com/joaomdmoura/crewai-tools) and [LangChain Tools](https://python.langchain.com/docs/integrations/tools), enabling everything from simple searches to complex interactions and effective teamwork among agents.
 
 ## Key Characteristics of Tools
 
@@ -18,9 +18,9 @@ CrewAI tools empower agents with capabilities ranging from web searching and dat
 - **Error Handling**: Incorporates robust error handling mechanisms to ensure smooth operation.
 - **Caching Mechanism**: Features intelligent caching to optimize performance and reduce redundant operations.
 
-## Using crewAI Tools
+## Using CrewAI Tools
 
-To enhance your agents' capabilities with crewAI tools, begin by installing our extra tools package:
+To enhance your agents' capabilities with CrewAI tools, begin by installing our extra tools package:
 
 ```bash
 pip install 'crewai[tools]'
@@ -31,7 +31,7 @@ Here's an example demonstrating their use:
 ```python
 import os
 from crewai import Agent, Task, Crew
-# Importing crewAI tools
+# Importing CrewAI tools
 from crewai_tools import (
     DirectoryReadTool,
     FileReadTool,
@@ -91,7 +91,7 @@ crew = Crew(
 crew.kickoff()
 ```
 
-## Available crewAI Tools
+## Available CrewAI Tools
 
 - **Error Handling**: All tools are built with error handling capabilities, allowing agents to gracefully manage exceptions and continue their tasks.
 - **Caching Mechanism**: All tools support caching, enabling agents to efficiently reuse previously obtained results, reducing the load on external resources and speeding up the execution time. You can also define finer control over the caching mechanism using the `cache_function` attribute on the tool.
@@ -128,13 +128,13 @@ Here is a list of the available tools and their descriptions:
 !!! example "Custom Tool Creation"
     Developers can craft custom tools tailored for their agent’s needs or utilize pre-built options:
 
-To create your own crewAI tools you will need to install our extra tools package:
+To create your own CrewAI tools you will need to install our extra tools package:
 
 ```bash
 pip install 'crewai[tools]'
 ```
 
-Once you do that there are two main ways for one to create a crewAI tool:
+Once you do that there are two main ways for one to create a CrewAI tool:
 ### Subclassing `BaseTool`
 
 ```python

@@ -1,11 +1,11 @@
 ---
 title: Coding Agents
-description: Learn how to enable your crewAI Agents to write and execute code, and explore advanced features for enhanced functionality.
+description: Learn how to enable your CrewAI Agents to write and execute code, and explore advanced features for enhanced functionality.
 ---
 
 ## Introduction
 
-crewAI Agents now have the powerful ability to write and execute code, significantly enhancing their problem-solving capabilities. This feature is particularly useful for tasks that require computational or programmatic solutions.
+CrewAI Agents now have the powerful ability to write and execute code, significantly enhancing their problem-solving capabilities. This feature is particularly useful for tasks that require computational or programmatic solutions.
 
 ## Enabling Code Execution
 

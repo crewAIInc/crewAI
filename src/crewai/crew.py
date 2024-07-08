@@ -60,7 +60,7 @@ class Crew(BaseModel):
         full_output: Whether the crew should return the full output with all tasks outputs and token usage metrics or just the final output.
         task_callback: Callback to be executed after each task for every agents execution.
         step_callback: Callback to be executed after each step for every agents execution.
-        share_crew: Whether you want to share the complete crew information and execution with crewAI to make the library better, and allow us to train models.
+        share_crew: Whether you want to share the complete crew information and execution with CrewAI to make the library better, and allow us to train models.
     """
 
     __hash__ = object.__hash__  # type: ignore

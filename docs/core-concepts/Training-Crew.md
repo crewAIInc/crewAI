@@ -1,6 +1,6 @@
 ---
-title: crewAI Train
-description: Learn how to train your crewAI agents by giving them feedback early on and get consistent results.
+title: CrewAI Train
+description: Learn how to train your CrewAI agents by giving them feedback early on and get consistent results.
 ---
 
 ## Introduction

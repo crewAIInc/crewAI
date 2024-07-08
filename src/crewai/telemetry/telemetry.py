@@ -29,7 +29,7 @@ class Telemetry:
     processed by the agents, nor any secrets and env vars.
 
     Data collected includes:
-    - Version of crewAI
+    - Version of CrewAI
     - Version of Python
     - General OS (e.g. number of CPUs, macOS/Windows/Linux)
     - Number of agents and tasks in a crew

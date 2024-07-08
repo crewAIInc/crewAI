@@ -16,7 +16,7 @@ The `prompt_file` attribute facilitates full customization of the agent prompts,
 
 #### Example of a Custom Prompt File
 
-The custom prompts can be defined in a JSON file, similar to the example provided [here](https://github.com/joaomdmoura/crewAI/blob/main/src/crewai/translations/en.json).
+The custom prompts can be defined in a JSON file, similar to the example provided [here](https://github.com/joaomdmoura/CrewAI/blob/main/src/crewai/translations/en.json).
 
 ### Supported Languages
 

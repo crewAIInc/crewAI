@@ -1,6 +1,6 @@
 <img src='./crew_only_logo.png' width='250' class='mb-10'/>
 
-# crewAI Documentation
+# CrewAI Documentation
 
 Cutting-edge framework for orchestrating role-playing, autonomous AI agents. By fostering collaborative intelligence, CrewAI empowers agents to work together seamlessly, tackling complex tasks.
 
@@ -50,12 +50,12 @@ Cutting-edge framework for orchestrating role-playing, autonomous AI agents. By 
         <ul>
             <li>
                 <a href="./how-to/Start-a-New-CrewAI-Project">
-                    Starting Your crewAI Project
+                    Starting Your CrewAI Project
                 </a>
             </li>
             <li>
                 <a href="./how-to/Installing-CrewAI">
-                    Installing crewAI
+                    Installing CrewAI
                 </a>
             </li>
             <li>

@@ -1,6 +1,6 @@
 ---
-title: Using the Sequential Processes in crewAI
-description: A comprehensive guide to utilizing the sequential processes for task execution in crewAI projects.
+title: Using the Sequential Processes in CrewAI
+description: A comprehensive guide to utilizing the sequential processes for task execution in CrewAI projects.
 ---
 
 ## Introduction
