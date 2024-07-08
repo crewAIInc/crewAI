@@ -147,7 +147,6 @@ class Agent(BaseAgent):
         Returns:
             Output of the agent
         """
-        print("EXECUTE TASK AGENT:", self.role)
         if self.tools_handler:
             self.tools_handler.last_used_tool = {}  # type: ignore # Incompatible types in assignment (expression has type "dict[Never, Never]", variable has type "ToolCalling")
 
@@ -179,13 +178,6 @@ class Agent(BaseAgent):
         )
         self.agent_executor.tools_names = self.__tools_names(parsed_tools)
 
-        print("AGENT AGENT EXECUTOR TOOLS:", self.agent_executor.tools)
-        print(
-            "AGENT AGENT EXECUTOR TOOLS DESCRIPTION:",
-            self.agent_executor.tools_description,
-        )
-        print("AGENT AGENT EXECUTOR TOOLS NAMES:", self.agent_executor.tools_names)
-
         if self.crew and self.crew._train:
             task_prompt = self._training_handler(task_prompt=task_prompt)
         else:
@@ -198,7 +190,6 @@ class Agent(BaseAgent):
                 "tools": self.agent_executor.tools_description,
             }
         )["output"]
-        print("RESULT FROM agent_executor:", result)
 
         if self.max_rpm:
             self._rpm_controller.stop_rpm_counter()
@@ -292,12 +283,9 @@ class Agent(BaseAgent):
             agent=RunnableAgent(runnable=inner_agent), **executor_args
         )
 
-        # print("AGENT EXECUTOR REVIEW:", self.agent_executor.to)
-
     def get_delegation_tools(self, agents: List[BaseAgent]):
         agent_tools = AgentTools(agents=agents)
         tools = agent_tools.tools()
-        print("FOUND TOOLS IN AGENT TOOLS:", tools)
         return tools
 
     def get_code_execution_tools(self):
@@ -372,7 +360,6 @@ class Agent(BaseAgent):
                 for tool in tools
             ]
         )
-        print("render_text_description result", description)
         return description
 
     @staticmethod

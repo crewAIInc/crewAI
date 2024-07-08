@@ -99,7 +99,6 @@ class ToolUsage:
             self._printer.print(content=f"\n\n{error}\n", color="red")
             return error
         return f"{self._use(tool_string=tool_string, tool=tool, calling=calling)}"  # type: ignore # BUG?: "_use" of "ToolUsage" does not return a value (it only ever returns None)
-        return f"{self._use(tool_string=tool_string, tool=tool, calling=calling)}"  # type: ignore # BUG?: "_use" of "ToolUsage" does not return a value (it only ever returns None)
 
     def _use(
         self,
@@ -107,8 +106,6 @@ class ToolUsage:
         tool: BaseTool,
         calling: Union[ToolCalling, InstructorToolCalling],
     ) -> str:  # TODO: Fix this return type
-        tool_event = agentops.ToolEvent(name=calling.tool_name) if agentops else None
-        if self._check_tool_repeated_usage(calling=calling):  # type: ignore # _check_tool_repeated_usage of "ToolUsage" does not return a value (it only ever returns None)
         tool_event = agentops.ToolEvent(name=calling.tool_name) if agentops else None
         if self._check_tool_repeated_usage(calling=calling):  # type: ignore # _check_tool_repeated_usage of "ToolUsage" does not return a value (it only ever returns None)
             try:
@@ -128,7 +125,6 @@ class ToolUsage:
                 self.task.increment_tools_errors()
 
         result = None  # type: ignore # Incompatible types in assignment (expression has type "None", variable has type "str")
-        result = None  # type: ignore # Incompatible types in assignment (expression has type "None", variable has type "str")
 
         if self.tools_handler.cache:
             result = self.tools_handler.cache.read(  # type: ignore # Incompatible types in assignment (expression has type "str | None", variable has type "str")
@@ -141,6 +137,7 @@ class ToolUsage:
 
         if result is None:  #! finecwg: if not result --> if result is None
             try:
+                print("calling.tool_name: ", calling.tool_name)
                 if calling.tool_name in [
                     "Delegate work to coworker",
                     "Ask question to coworker",

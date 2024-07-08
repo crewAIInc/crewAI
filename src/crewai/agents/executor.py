@@ -120,9 +120,6 @@ class CrewAgentExecutor(AgentExecutor, CrewAgentExecutorMixin):
 
         Override this to take control of how the agent makes and acts on choices.
         """
-        print("TOOLS DESCRIPTION IN CREWAGENTEXECUTOR: ", self.tools_description)
-        print("TOOLS NAMES IN CREWAGENTEXECUTOR: ", self.tools_names)
-
         try:
             if self._should_force_answer():
                 error = self._i18n.errors("force_final_answer")
@@ -238,16 +235,6 @@ class CrewAgentExecutor(AgentExecutor, CrewAgentExecutorMixin):
                 agent=self.crew_agent,
                 action=agent_action,
             )
-            # print("TOOL USAGE CALLED IN CREWAGENTEXECUTOR: ", tool_usage)
-            # print(
-            #     "TOOL USAGE CALLED IN CREWAGENTEXECUTOR tool descriptions: ",
-            #     tool_usage.tools_description,
-            # )
-            # print(
-            #     "TOOL USAGE CALLED IN CREWAGENTEXECUTOR tool names: ",
-            #     tool_usage.tools_names,
-            # )
-            # print("TOOL USAGE PARSEL CALLED: ", agent_action.log)
             tool_calling = tool_usage.parse(agent_action.log)
 
             if isinstance(tool_calling, ToolUsageErrorException):

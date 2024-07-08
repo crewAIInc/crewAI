@@ -1,7 +1,7 @@
 from abc import ABC, abstractmethod
-from typing import Any, Optional
+from typing import Any
 
-from pydantic import BaseModel, Field, PrivateAttr
+from pydantic import BaseModel, Field
 
 
 class OutputConverter(BaseModel, ABC):

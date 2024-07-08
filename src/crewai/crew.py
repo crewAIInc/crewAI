@@ -431,23 +431,12 @@ class Crew(BaseModel):
                     agent for agent in self.agents if agent != task.agent
                 ]
                 if len(self.agents) > 1 and len(agents_for_delegation) > 0:
-                    print(
-                        "AGENTS FOR DELEGATION",
-                        [agt.role for agt in agents_for_delegation],
-                    )
-                    print(
-                        "ADDING DELEGATION TOOLS",
-                        task.agent.get_delegation_tools(agents_for_delegation),
-                    )
-                    print("TASK TOOLS BEFORE", task.tools)
                     delegation_tools = task.agent.get_delegation_tools(
                         agents_for_delegation
                     )
-                    print("ADDING DELEGATION TOOLS", delegation_tools)
 
                     # Add tools if they are not already in task.tools
                     for new_tool in delegation_tools:
-                        print("TRYING TO ADD TOOL TO EXECUTE TASK:", new_tool)
                         # Find the index of the tool with the same name
                         existing_tool_index = next(
                             (
@@ -460,24 +449,11 @@ class Crew(BaseModel):
 
                         if existing_tool_index is not None:
                             # Replace the existing tool
-                            print("REPLACING TOOL IN EXECUTE TASK:", new_tool.name)
                             task.tools[existing_tool_index] = new_tool
                         else:
                             # Add the new tool
                             task.tools.append(new_tool)
-                            print("ADDING TOOL TO EXECUTE TASK:", new_tool.name)
 
-                        print("CURRENT TOOL COUNT", len(task.tools))
-
-                        # if tool not in task.tools:
-                        #     print("ADDING TOOL TO EXECUTE TASK:", tool)
-                        #     print("TOOL CLASS", tool.__class__.__name__)
-                        #     print("Tool properties", tool.__dict__)
-                        #     task.tools.append(tool)
-                        #     print("CURRENT TOOL COUNT", len(task.tools))
-                    print("TASK TOOLS AFTER", task.tools)
-
-            print("TASK TOOLS", task.tools)
             role = task.agent.role if task.agent is not None else "None"
             self._logger.log("debug", f"== Working Agent: {role}", color="bold_purple")
             self._logger.log(

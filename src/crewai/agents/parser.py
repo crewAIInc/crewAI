@@ -39,38 +39,32 @@ class CrewAgentParser(ReActSingleInputOutputParser):
     agent: Any = None
 
     def parse(self, text: str) -> Union[AgentAction, AgentFinish]:
-        print("TEXT TO PARSE IN CREWAGENTPARSER:", text)
         includes_answer = FINAL_ANSWER_ACTION in text
         regex = (
             r"Action\s*\d*\s*:[\s]*(.*?)[\s]*Action\s*\d*\s*Input\s*\d*\s*:[\s]*(.*)"
         )
         action_match = re.search(regex, text, re.DOTALL)
         if action_match:
-            print("ACTION MATCH:", action_match.group(1).strip())
             if includes_answer:
                 raise OutputParserException(
                     f"{FINAL_ANSWER_AND_PARSABLE_ACTION_ERROR_MESSAGE}: {text}"
                 )
             action = action_match.group(1)
             clean_action = self._clean_action(action)
-            print("CLEAN ACTION:", clean_action)
+
             action_input = action_match.group(2).strip()
-            # TODO: TEST CLEAN MARKDOWN
+
             tool_input = action_input.strip(" ").strip('"')
             safe_tool_input = self._safe_repair_json(tool_input)
 
-            print("TOOL INPUT AFTER FORMATTING:", tool_input)
-            print("REPAIRED TOOL INPUT:", safe_tool_input)
             return AgentAction(clean_action, safe_tool_input, text)
 
         elif includes_answer:
-            print("INCLUDED ANSWER:", text.split(FINAL_ANSWER_ACTION)[-1].strip())
             return AgentFinish(
                 {"output": text.split(FINAL_ANSWER_ACTION)[-1].strip()}, text
             )
 
         if not re.search(r"Action\s*\d*\s*:[\s]*(.*?)", text, re.DOTALL):
-            print("MISSING ACTION AFTER THOUGHT", text)
             self.agent.increment_formatting_errors()
             raise OutputParserException(
                 f"Could not parse LLM output: `{text}`",
@@ -81,7 +75,6 @@ class CrewAgentParser(ReActSingleInputOutputParser):
         elif not re.search(
             r"[\s]*Action\s*\d*\s*Input\s*\d*\s*:[\s]*(.*)", text, re.DOTALL
         ):
-            print("MISSING ACTION INPUT AFTER ACTION", text)
             self.agent.increment_formatting_errors()
             raise OutputParserException(
                 f"Could not parse LLM output: `{text}`",
@@ -90,7 +83,6 @@ class CrewAgentParser(ReActSingleInputOutputParser):
                 send_to_llm=True,
             )
         else:
-            print("FORMAT ERROR", text)
             format = self._i18n.slice("format_without_tools")
             error = f"{format}"
             self.agent.increment_formatting_errors()
