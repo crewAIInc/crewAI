@@ -217,7 +217,7 @@ class Task(BaseModel):
                 f"The task '{self.description}' has no agent assigned, therefore it can't be executed directly and should be executed in a Crew using a specific process that support that, like hierarchical."
             )
 
-        self._execution_span = self._telemetry.task_started(self)
+        self._execution_span = self._telemetry.task_started(crew=agent.crew, task=self)
 
         if self.context:
             task_outputs: List[TaskOutput] = []
