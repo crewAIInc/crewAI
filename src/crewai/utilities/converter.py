@@ -49,7 +49,6 @@ class Converter(OutputConverter):
         """Create an instructor."""
         from crewai.utilities import Instructor
 
-        # TODO: JOAO REVIEW - Instructor doesn't have a max_attemps parameter. Should we remove it?
         inst = Instructor(
             llm=self.llm,
             max_attempts=self.max_attempts,

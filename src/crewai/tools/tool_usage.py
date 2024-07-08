@@ -119,7 +119,7 @@ class ToolUsage:
                     attempts=self._run_attempts,
                 )
                 result = self._format_result(result=result)  # type: ignore #  "_format_result" of "ToolUsage" does not return a value (it only ever returns None)
-                return result  # type: ignore # Fix the reutrn type of this function
+                return result  # type: ignore # Fix the return type of this function
 
             except Exception:
                 self.task.increment_tools_errors()
@@ -137,7 +137,6 @@ class ToolUsage:
 
         if result is None:  #! finecwg: if not result --> if result is None
             try:
-                print("calling.tool_name: ", calling.tool_name)
                 if calling.tool_name in [
                     "Delegate work to coworker",
                     "Ask question to coworker",
@@ -267,7 +266,6 @@ class ToolUsage:
             ):
                 return tool
         self.task.increment_tools_errors()
-        # TODO: IMPROVE THIS ERROR MESSAGE BECAUSE IT'S CONFUSING THE LLM
         if tool_name and tool_name != "":
             raise Exception(
                 f"Action '{tool_name}' don't exist, these are the only available Actions:\n {self.tools_description}"
@@ -366,7 +364,6 @@ class ToolUsage:
             return tool_input
         except Exception:
             # Clean and ensure the string is properly enclosed in braces
-            # TODO: MAKE SURE THE INPUT IS A STRING AND NOT A LIST
             tool_input = tool_input.strip()
             if not tool_input.startswith("{"):
                 tool_input = "{" + tool_input

@@ -19,14 +19,12 @@ class BaseAgentTools(BaseModel, ABC):
         pass
 
     def _get_coworker(self, coworker: Optional[str], **kwargs) -> Optional[str]:
-        print("RUNNING _get_coworker", coworker)
         coworker = coworker or kwargs.get("co_worker") or kwargs.get("coworker")
         if coworker:
             is_list = coworker.startswith("[") and coworker.endswith("]")
             if is_list:
                 coworker = coworker[1:-1].split(",")[0]
 
-        print("FORMATTED COWORKER:", coworker)
         return coworker
 
     def delegate_work(
@@ -48,11 +46,6 @@ class BaseAgentTools(BaseModel, ABC):
     ):
         """Execute the command."""
         try:
-            print("RUNNING _execute")
-            print("_execute AGENT:", agent_name)
-            print("_execte task:", task)
-            print("_execute context:", context)
-            print("_execute self.agents:", self.agents)
             if agent_name is None:
                 agent_name = ""
 
@@ -64,7 +57,6 @@ class BaseAgentTools(BaseModel, ABC):
             # when it should look like this:
             # {"task": "....", "coworker": "...."}
             agent_name = agent_name.casefold().replace('"', "").replace("\n", "")
-            print("AGENT NAME:", agent_name)
 
             agent = [  # type: ignore # Incompatible types in assignment (expression has type "list[BaseAgent]", variable has type "str | None")
                 available_agent
