@@ -167,10 +167,11 @@ class Telemetry:
         if self.ready:
             try:
                 tracer = trace.get_tracer("crewai.telemetry")
-                span = tracer.start_span("Task Execution")
 
                 created_span = tracer.start_span("Task Created")
 
+                self._add_attribute(created_span, "crew_id", str(crew.id))
+                self._add_attribute(created_span, "task_index", crew.tasks.index(task))
                 self._add_attribute(created_span, "task_id", str(task.id))
 
                 if crew.share_crew:
@@ -184,6 +185,10 @@ class Telemetry:
                 created_span.set_status(Status(StatusCode.OK))
                 created_span.end()
 
+                span = tracer.start_span("Task Execution")
+
+                self._add_attribute(span, "crew_id", str(crew.id))
+                self._add_attribute(span, "task_index", crew.tasks.index(task))
                 self._add_attribute(span, "task_id", str(task.id))
 
                 if crew.share_crew:
