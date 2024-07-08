@@ -222,8 +222,8 @@ class Task(BaseModel):
         if self.context:
             task_outputs: List[TaskOutput] = []
             for task in self.context:
-                if task.async_execution:
-                    task.wait_for_completion()
+                # if task.async_execution:
+                #     task.wait_for_completion()
                 if task.output:
                     task_outputs.append(task.output)
             context = aggregate_raw_outputs_from_task_outputs(task_outputs)
