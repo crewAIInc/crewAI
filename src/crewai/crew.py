@@ -168,7 +168,6 @@ class Crew(BaseModel):
         self._rpm_controller = RPMController(max_rpm=self.max_rpm, logger=self._logger)
         self._telemetry = Telemetry()
         self._telemetry.set_tracer()
-        self._telemetry.crew_creation(self)
         return self
 
     @model_validator(mode="after")
