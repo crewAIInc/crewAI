@@ -44,6 +44,12 @@ When assembling a crew, you combine agents with complementary roles and tools, a
 ```python
 from crewai import Crew, Agent, Task, Process
 from langchain_community.tools import DuckDuckGoSearchRun
+from crewai_tools import tool
+
+@tool('DuckDuckGoSearch')
+def search(search_query: str):
+    """Search the web for information on a given topic"""
+    return DuckDuckGoSearchRun().run(search_query)
 
 # Define agents with specific roles and tools
 researcher = Agent(
@@ -54,7 +60,7 @@ researcher = Agent(
         to the business.
         You're currently working on a project to analyze the
         trends and innovations in the space of artificial intelligence.""",
-    tools=[DuckDuckGoSearchRun()]
+    tools=[search]
 )
 
 writer = Agent(
