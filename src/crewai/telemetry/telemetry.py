@@ -96,7 +96,7 @@ class Telemetry:
 
                 if crew.share_crew:
                     self._add_attribute(
-                        span, "inputs", json.dumps(inputs) if inputs else None
+                        span, "crew_inputs", json.dumps(inputs) if inputs else None
                     )
 
                 self._add_attribute(span, "crew_process", crew.process)
@@ -292,7 +292,7 @@ class Telemetry:
                 )
                 self._add_attribute(span, "crew_id", str(crew.id))
                 self._add_attribute(
-                    span, "inputs", json.dumps(inputs) if inputs else None
+                    span, "crew_inputs", json.dumps(inputs) if inputs else None
                 )
                 self._add_attribute(
                     span,
