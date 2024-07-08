@@ -108,7 +108,7 @@ def test_task_callback():
         task_completed.assert_called_once_with(task.output)
 
 
-def test_task_callback_returns_task_ouput():
+def test_task_callback_returns_task_output():
     researcher = Agent(
         role="Researcher",
         goal="Make the best research and analysis on content about AI and AI agents",

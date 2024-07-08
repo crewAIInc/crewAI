@@ -62,7 +62,7 @@ def test_crew_config_conditional_requirement():
                     "agent": "Senior Researcher",
                 },
                 {
-                    "description": "Write a 1 amazing paragraph highlight for each idead that showcases how good an article about this topic could be, check references if necessary or search for more content but make sure it's unique, interesting and well written. Return the list of ideas with their paragraph and your notes.",
+                    "description": "Write a 1 amazing paragraph highlight for each idea that showcases how good an article about this topic could be, check references if necessary or search for more content but make sure it's unique, interesting and well written. Return the list of ideas with their paragraph and your notes.",
                     "expected_output": "A 4 paragraph article about AI.",
                     "agent": "Senior Writer",
                 },
@@ -362,7 +362,7 @@ def test_api_calls_throttling(capsys):
 # This test is not consistent, some issue is happening on the CI when it comes to Prompt tokens
 #  {'usage_metrics': {'completion_tokens': 34, 'prompt_tokens': 0, 'successful_requests': 2, 'total_tokens': 34}} CI OUTPUT
 #  {'usage_metrics': {'completion_tokens': 34, 'prompt_tokens': 314, 'successful_requests': 2, 'total_tokens': 348}}
-# The issue migh be related to the calculate_usage_metrics function
+# The issue might be related to the calculate_usage_metrics function
 # @pytest.mark.vcr(filter_headers=["authorization"])
 # def test_crew_full_output():
 #     agent = Agent(
@@ -401,7 +401,7 @@ def test_api_calls_throttling(capsys):
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
-def test_crew_kickoff_for_each_full_ouput():
+def test_crew_kickoff_for_each_full_output():
     inputs = [
         {"topic": "dog"},
         {"topic": "cat"},
@@ -441,7 +441,7 @@ def test_crew_kickoff_for_each_full_ouput():
 
 @pytest.mark.vcr(filter_headers=["authorization"])
 @pytest.mark.asyncio
-async def test_crew_async_kickoff_for_each_full_ouput():
+async def test_crew_async_kickoff_for_each_full_output():
     inputs = [
         {"topic": "dog"},
         {"topic": "cat"},
@@ -930,7 +930,7 @@ def test_task_with_no_arguments():
     )
 
     task = Task(
-        description="Look at the available data nd give me a sense on the total number of sales.",
+        description="Look at the available data and give me a sense on the total number of sales.",
         expected_output="The total number of sales as an integer",
         agent=researcher,
     )
@@ -979,7 +979,7 @@ def test_delegation_is_not_enabled_if_there_are_only_one_agent():
     )
 
     task = Task(
-        description="Look at the available data nd give me a sense on the total number of sales.",
+        description="Look at the available data and give me a sense on the total number of sales.",
         expected_output="The total number of sales as an integer",
         agent=researcher,
     )
@@ -1247,16 +1247,16 @@ def test_tools_with_custom_caching():
 
     writer1 = Agent(
         role="Writer",
-        goal="You write lesssons of math for kids.",
-        backstory="You're an expert in writting and you love to teach kids but you know nothing of math.",
+        goal="You write lessons of math for kids.",
+        backstory="You're an expert in writing and you love to teach kids but you know nothing of math.",
         tools=[multiplcation_tool],
         allow_delegation=False,
     )
 
     writer2 = Agent(
         role="Writer",
-        goal="You write lesssons of math for kids.",
-        backstory="You're an expert in writting and you love to teach kids but you know nothing of math.",
+        goal="You write lessons of math for kids.",
+        backstory="You're an expert in writing and you love to teach kids but you know nothing of math.",
         tools=[multiplcation_tool],
         allow_delegation=False,
     )
