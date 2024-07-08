@@ -21,14 +21,16 @@ Define your agents with distinct roles, backstories, and enhanced capabilities. 
 import os
 from langchain.llms import OpenAI
 from crewai import Agent
-from crewai_tools import SerperDevTool, BrowserbaseTool, ExaSearchTool
+from crewai_tools import SerperDevTool, BrowserbaseLoadTool, EXASearchTool
 
 os.environ["OPENAI_API_KEY"] = "Your OpenAI Key"
 os.environ["SERPER_API_KEY"] = "Your Serper Key"
+os.environ["BROWSERBASE_API_KEY"] = "Your BrowserBase Key"
+os.environ["BROWSERBASE_PROJECT_ID"] = "Your BrowserBase Project Id"
 
 search_tool = SerperDevTool()
-browser_tool = BrowserbaseTool()
-exa_search_tool = ExaSearchTool()
+browser_tool = BrowserbaseLoadTool()
+exa_search_tool = EXASearchTool()
 
 # Creating a senior researcher agent with advanced configurations
 researcher = Agent(
