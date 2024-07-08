@@ -247,6 +247,9 @@ class Crew(BaseModel):
         return Task(**task_config, agent=task_agent)
 
     def kickoff(self, inputs: Optional[Dict[str, Any]] = {}) -> str:
+
+        raise DeprecationWarning('🚨 This fork has been deprecated. Please use the official Crew package instead. https://github.com/joaomdmoura/crewAI')
+
         """Starts the crew to work on its assigned tasks."""
         self._execution_span = self._telemetry.crew_execution_span(self)
         self._interpolate_inputs(inputs)  # type: ignore # Argument 1 to "_interpolate_inputs" of "Crew" has incompatible type "dict[str, Any] | None"; expected "dict[str, Any]"

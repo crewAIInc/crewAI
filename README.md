@@ -1,3 +1,5 @@
+> 🚨 This fork has been deprecated. Please use the [official CrewAI repo](https://github.com/joaomdmoura/crewAI).
+
 <div align="center">
 
 ![Logo of crewAI, two people rowing on a boat](./docs/crewai_logo.png)
