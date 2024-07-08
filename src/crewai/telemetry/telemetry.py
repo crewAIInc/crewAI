@@ -120,7 +120,7 @@ class Telemetry:
                                 "llm": json.dumps(self._safe_llm_attributes(agent.llm)),
                                 "delegation_enabled?": agent.allow_delegation,
                                 "tools_names": [
-                                    tool.name.casefold() for tool in agent.tools
+                                    tool.name.casefold() for tool in agent.tools or []
                                 ],
                             }
                             for agent in crew.agents
@@ -145,7 +145,7 @@ class Telemetry:
                                     else None
                                 ),
                                 "tools_names": [
-                                    tool.name.casefold() for tool in task.tools
+                                    tool.name.casefold() for tool in task.tools or []
                                 ],
                             }
                             for task in crew.tasks
