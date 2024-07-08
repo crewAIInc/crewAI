@@ -123,7 +123,7 @@ result = my_crew.kickoff()
 print(result)
 ```
 
-### Different wayt to Kicking Off a Crew
+### Different ways to Kicking Off a Crew
 
 Once your crew is assembled, initiate the workflow with the appropriate kickoff method. CrewAI provides several methods for better control over the kickoff process: `kickoff()`, `kickoff_for_each()`, `kickoff_async()`, and `kickoff_for_each_async()`.
 

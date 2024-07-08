@@ -51,7 +51,7 @@ To optimize tool performance with caching, define custom caching strategies usin
 @tool("Tool with Caching")
 def cached_tool(argument: str) -> str:
     """Tool functionality description."""
-    return "Cachable result"
+    return "Cacheable result"
 
 def my_cache_strategy(arguments: dict, result: str) -> bool:
     # Define custom caching logic

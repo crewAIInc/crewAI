@@ -19,13 +19,13 @@ jobs:
       - name: Setup Python
         uses: actions/setup-python@v4
         with:
-          python-version: "3.10"
+          python-version: "3.11.9"
 
       - name: Install Requirements
         run: |
+          set -e
           pip install poetry
-          poetry lock &&
           poetry install
 
       - name: Run tests
-        run: poetry run pytest tests
+        run: poetry run pytest

@@ -1,7 +1,6 @@
 from abc import ABC, abstractmethod
 from typing import Any, Optional
 
-
 from pydantic import BaseModel, Field, PrivateAttr
 
 
@@ -27,8 +26,8 @@ class OutputConverter(BaseModel, ABC):
     llm: Any = Field(description="The language model to be used to convert the text.")
     model: Any = Field(description="The model to be used to convert the text.")
     instructions: str = Field(description="Conversion instructions to the LLM.")
-    max_attemps: Optional[int] = Field(
-        description="Max number of attemps to try to get the output formated.",
+    max_attempts: Optional[int] = Field(
+        description="Max number of attempts to try to get the output formatted.",
         default=3,
     )
 
@@ -42,7 +41,7 @@ class OutputConverter(BaseModel, ABC):
         """Convert text to json."""
         pass
 
-    @abstractmethod
-    def _is_gpt(self, llm):
+    @abstractmethod  # type: ignore #  Name "_is_gpt" already defined on line 25
+    def _is_gpt(self, llm):  # type: ignore #  Name "_is_gpt" already defined on line 25
         """Return if llm provided is of gpt from openai."""
         pass

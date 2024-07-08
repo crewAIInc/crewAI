@@ -20,7 +20,7 @@ from crewai.utilities.training_handler import CrewTrainingHandler
 
 agentops = None
 try:
-    import agentops
+    import agentops  # type: ignore # Name "agentops" already defined on line 21
     from agentops import track_agent
 except ImportError:
 
@@ -60,8 +60,8 @@ class Agent(BaseAgent):
         default=None,
         description="Maximum execution time for an agent to execute a task",
     )
-    agent_ops_agent_name: str = None
-    agent_ops_agent_id: str = None
+    agent_ops_agent_name: str = None  # type: ignore # Incompatible types in assignment (expression has type "None", variable has type "str")
+    agent_ops_agent_id: str = None  # type: ignore # Incompatible types in assignment (expression has type "None", variable has type "str")
     cache_handler: InstanceOf[CacheHandler] = Field(
         default=None, description="An instance of the CacheHandler class."
     )
@@ -90,6 +90,9 @@ class Agent(BaseAgent):
     response_template: Optional[str] = Field(
         default=None, description="Response format for the agent."
     )
+    tools_results: Optional[List[Any]] = Field(
+        default=[], description="Results of the tools used by the agent."
+    )
     allow_code_execution: Optional[bool] = Field(
         default=False, description="Enable code execution for the agent."
     )
@@ -116,7 +119,8 @@ class Agent(BaseAgent):
                 self.llm.callbacks.append(token_handler)
 
             if agentops and not any(
-                isinstance(handler, agentops.LangchainCallbackHandler) for handler in self.llm.callbacks
+                isinstance(handler, agentops.LangchainCallbackHandler)
+                for handler in self.llm.callbacks
             ):
                 agentops.stop_instrumenting()
                 self.llm.callbacks.append(agentops.LangchainCallbackHandler())
@@ -144,8 +148,7 @@ class Agent(BaseAgent):
             Output of the agent
         """
         if self.tools_handler:
-            # type: ignore # Incompatible types in assignment (expression has type "dict[Never, Never]", variable has type "ToolCalling")
-            self.tools_handler.last_used_tool = {}
+            self.tools_handler.last_used_tool = {}  # type: ignore # Incompatible types in assignment (expression has type "dict[Never, Never]", variable has type "ToolCalling")
 
         task_prompt = task.prompt()
 
@@ -165,8 +168,8 @@ class Agent(BaseAgent):
                 task_prompt += self.i18n.slice("memory").format(memory=memory)
 
         tools = tools or self.tools
-        # type: ignore # Argument 1 to "_parse_tools" of "Agent" has incompatible type "list[Any] | None"; expected "list[Any]"
-        parsed_tools = self._parse_tools(tools or [])
+
+        parsed_tools = self._parse_tools(tools or [])  # type: ignore # Argument 1 to "_parse_tools" of "Agent" has incompatible type "list[Any] | None"; expected "list[Any]"
         self.create_agent_executor(tools=tools)
         self.agent_executor.tools = parsed_tools
         self.agent_executor.task = task
@@ -188,6 +191,14 @@ class Agent(BaseAgent):
         )["output"]
         if self.max_rpm:
             self._rpm_controller.stop_rpm_counter()
+
+        # If there was any tool in self.tools_results that had result_as_answer
+        # set to True, return the results of the last tool that had
+        # result_as_answer set to True
+        for tool_result in self.tools_results:  # type: ignore # Item "None" of "list[Any] | None" has no attribute "__iter__" (not iterable)
+            if tool_result.get("result_as_answer", False):
+                result = tool_result["result"]
+
         return result
 
     def format_log_to_str(
@@ -288,7 +299,7 @@ class Agent(BaseAgent):
     def get_output_converter(self, llm, text, model, instructions):
         return Converter(llm=llm, text=text, model=model, instructions=instructions)
 
-    def _parse_tools(self, tools: List[Any]) -> List[LangChainTool]:
+    def _parse_tools(self, tools: List[Any]) -> List[LangChainTool]:  # type: ignore # Function "langchain_core.tools.tool" is not valid as a type
         """Parse tools to be used for the task."""
         tools_list = []
         try:
