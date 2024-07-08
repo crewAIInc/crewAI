@@ -441,7 +441,7 @@ class Crew(BaseModel):
                         existing_tool_index = next(
                             (
                                 index
-                                for index, tool in enumerate(task.tools)
+                                for index, tool in enumerate(task.tools or [])
                                 if tool.name == new_tool.name
                             ),
                             None,

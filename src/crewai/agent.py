@@ -1,4 +1,5 @@
 import os
+from inspect import signature
 from typing import Any, List, Optional, Tuple
 
 from langchain.agents.agent import RunnableAgent
@@ -173,7 +174,7 @@ class Agent(BaseAgent):
         self.agent_executor.tools = parsed_tools
         self.agent_executor.task = task
 
-        self.agent_executor.tools_description = self._render_text_description(
+        self.agent_executor.tools_description = self._render_text_description_and_args(
             parsed_tools
         )
         self.agent_executor.tools_names = self.__tools_names(parsed_tools)
@@ -360,7 +361,35 @@ class Agent(BaseAgent):
                 for tool in tools
             ]
         )
+
         return description
+
+    def _render_text_description_and_args(self, tools: List[BaseTool]) -> str:
+        """Render the tool name, description, and args in plain text.
+
+        Output will be in the format of:
+
+        .. code-block:: markdown
+
+            search: This tool is used for search, args: {"query": {"type": "string"}}
+            calculator: This tool is used for math, \
+    args: {"expression": {"type": "string"}}
+        """
+        tool_strings = []
+        for tool in tools:
+            args_schema = str(tool.args)
+            if hasattr(tool, "func") and tool.func:
+                sig = signature(tool.func)
+                description = (
+                    f"Tool Name: {tool.name}{sig}\nTool Description: {tool.description}"
+                )
+            else:
+                description = (
+                    f"Tool Name: {tool.name}\nTool Description: {tool.description}"
+                )
+            tool_strings.append(f"{description}\nTool Arguments: {args_schema}")
+
+        return "\n".join(tool_strings)
 
     @staticmethod
     def __tools_names(tools) -> str:

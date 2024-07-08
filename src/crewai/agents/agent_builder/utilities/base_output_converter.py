@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from typing import Any
+from typing import Any, Optional
 
 from pydantic import BaseModel, Field
 
@@ -25,7 +25,7 @@ class OutputConverter(BaseModel, ABC):
     llm: Any = Field(description="The language model to be used to convert the text.")
     model: Any = Field(description="The model to be used to convert the text.")
     instructions: str = Field(description="Conversion instructions to the LLM.")
-    max_attempts: int = Field(
+    max_attempts: Optional[int] = Field(
         description="Max number of attempts to try to get the output formatted.",
         default=3,
     )

@@ -1082,8 +1082,8 @@ def test_agent_usage_metrics_are_captured_for_hierarchical_process():
     assert result == '"Howdy!"'
 
     assert crew.usage_metrics == {
-        "total_tokens": 1927,
-        "prompt_tokens": 1557,
+        "total_tokens": 2217,
+        "prompt_tokens": 1847,
         "completion_tokens": 370,
         "successful_requests": 4,
     }
@@ -1113,7 +1113,7 @@ def test_hierarchical_crew_creation_tasks_with_agents():
     assert crew.manager_agent is not None
     assert crew.manager_agent.tools is not None
     assert crew.manager_agent.tools[0].description.startswith(
-        "Delegate a specific task to one of the following coworkers: [Senior Writer]"
+        "Delegate a specific task to one of the following coworkers: Senior Writer"
     )
 
 

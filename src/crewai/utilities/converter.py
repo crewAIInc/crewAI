@@ -3,9 +3,7 @@ import json
 from langchain.schema import HumanMessage, SystemMessage
 from langchain_openai import ChatOpenAI
 
-from crewai.agents.agent_builder.utilities.base_output_converter_base import (
-    OutputConverter,
-)
+from crewai.agents.agent_builder.utilities.base_output_converter import OutputConverter
 
 
 class ConverterError(Exception):
@@ -70,6 +68,7 @@ class Converter(OutputConverter):
         )
         return new_prompt | self.llm | parser
 
+    @property
     def is_gpt(self) -> bool:
         """Return if llm provided is of gpt from openai."""
         return isinstance(self.llm, ChatOpenAI) and self.llm.openai_api_base is None

@@ -4,10 +4,9 @@ from unittest import mock
 from unittest.mock import patch
 
 import pytest
-from langchain.tools import StructuredTool, tool
+from langchain.tools import tool
 from langchain_core.exceptions import OutputParserException
 from langchain_openai import ChatOpenAI
-from pydantic import BaseModel
 
 from crewai import Agent, Crew, Task
 from crewai.agents.cache import CacheHandler
