@@ -49,6 +49,11 @@ Cutting-edge framework for orchestrating role-playing, autonomous AI agents. By 
         <h2>How-To Guides</h2>
         <ul>
             <li>
+                <a href="./how-to/Start-a-New-CrewAI-Project">
+                    Starting Your crewAI Project
+                </a>
+            </li>
+            <li>
                 <a href="./how-to/Installing-CrewAI">
                     Installing crewAI
                 </a>
@@ -86,6 +91,11 @@ Cutting-edge framework for orchestrating role-playing, autonomous AI agents. By 
             <li>
                 <a href="./how-to/Coding-Agents">
                     Coding Agents
+                </a>
+            </li>
+            <li>
+                <a href="./how-to/Force-Tool-Ouput-as-Result">
+                    Forcing Tool Output as Result
                 </a>
             </li>
             <li>

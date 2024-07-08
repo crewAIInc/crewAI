@@ -156,18 +156,35 @@ class Telemetry:
             except Exception:
                 pass
 
-    def task_started(self, task: Task) -> Span | None:
+    def task_started(self, crew: Crew, task: Task) -> Span | None:
         """Records task started in a crew."""
         if self.ready:
             try:
                 tracer = trace.get_tracer("crewai.telemetry")
                 span = tracer.start_span("Task Execution")
 
+                created_span = tracer.start_span("Task Created")
+
+                self._add_attribute(created_span, "task_id", str(task.id))
+
+                if crew.share_crew:
+                    self._add_attribute(
+                        created_span, "formatted_description", task.description
+                    )
+                    self._add_attribute(
+                        created_span, "formatted_expected_output", task.expected_output
+                    )
+
+                created_span.set_status(Status(StatusCode.OK))
+                created_span.end()
+
                 self._add_attribute(span, "task_id", str(task.id))
-                self._add_attribute(span, "formatted_description", task.description)
-                self._add_attribute(
-                    span, "formatted_expected_output", task.expected_output
-                )
+
+                if crew.share_crew:
+                    self._add_attribute(span, "formatted_description", task.description)
+                    self._add_attribute(
+                        span, "formatted_expected_output", task.expected_output
+                    )
 
                 return span
             except Exception:

@@ -13,8 +13,7 @@ from pydantic_core import PydanticCustomError
 from crewai.agents.agent_builder.base_agent import BaseAgent
 from crewai.tasks.task_output import TaskOutput
 from crewai.telemetry.telemetry import Telemetry
-from crewai.utilities.converter import ConverterError
-from crewai.utilities.converter import Converter
+from crewai.utilities.converter import Converter, ConverterError
 from crewai.utilities.i18n import I18N
 from crewai.utilities.printer import Printer
 from crewai.utilities.pydantic_schema_parser import PydanticSchemaParser
@@ -186,14 +185,14 @@ class Task(BaseModel):
             Output of the task.
         """
 
-        self._execution_span = self._telemetry.task_started(self)
-
         agent = agent or self.agent
         if not agent:
             raise Exception(
                 f"The task '{self.description}' has no agent assigned, therefore it can't be executed directly "
                 "and should be executed in a Crew using a specific process that support that, like hierarchical."
             )
+
+        self._execution_span = self._telemetry.task_started(crew=agent.crew, task=self)
 
         if self.context:
             internal_context = []
@@ -292,7 +291,7 @@ class Task(BaseModel):
         copied_data = {k: v for k, v in copied_data.items() if v is not None}
 
         cloned_context = (
-            [task.copy() for task in self.context] if self.context else None
+            [task.copy(agents) for task in self.context] if self.context else None
         )
 
         def get_agent_by_role(role: str) -> Union["BaseAgent", None]:
@@ -310,15 +309,15 @@ class Task(BaseModel):
 
         return copied_task
 
-    def _create_converter(self, *args, **kwargs) -> Converter: # type: ignore
-      converter = self.agent.get_output_converter(  # type: ignore # Item "None" of "BaseAgent | None" has no attribute "get_output_converter"
-        *args, **kwargs
-      )
-      if self.converter_cls:
-        converter = self.converter_cls(  # type: ignore # Item "None" of "BaseAgent | None" has no attribute "get_output_converter"
-          *args, **kwargs
-        )          
-      return converter
+    def _create_converter(self, *args, **kwargs) -> Converter:  # type: ignore
+        converter = self.agent.get_output_converter(  # type: ignore # Item "None" of "BaseAgent | None" has no attribute "get_output_converter"
+            *args, **kwargs
+        )
+        if self.converter_cls:
+            converter = self.converter_cls(  # type: ignore # Item "None" of "BaseAgent | None" has no attribute "get_output_converter"
+                *args, **kwargs
+            )
+        return converter
 
     def _export_output(self, result: str) -> Any:
         exported_result = result
@@ -350,7 +349,7 @@ class Task(BaseModel):
                 model_schema = PydanticSchemaParser(model=model).get_schema()  # type: ignore # Argument "model" to "PydanticSchemaParser" has incompatible type "type[BaseModel] | None"; expected "type[BaseModel]"
                 instructions = f"{instructions}\n\nThe json should have the following structure, with the following keys:\n{model_schema}"
 
-            converter = self._create_converter( # type: ignore # Item "None" of "BaseAgent | None" has no attribute "get_output_converter"
+            converter = self._create_converter(  # type: ignore # Item "None" of "BaseAgent | None" has no attribute "get_output_converter"
                 llm=llm, text=result, model=model, instructions=instructions
             )
 
