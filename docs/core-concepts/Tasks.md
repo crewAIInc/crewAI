@@ -4,6 +4,7 @@ description: Detailed guide on managing and creating tasks within the CrewAI fra
 ---
 
 ## Overview of a Task
+
 !!! note "What is a Task?"
     In the CrewAI framework, tasks are specific assignments completed by agents. They provide all necessary details for execution, such as a description, the agent responsible, required tools, and more, facilitating a wide range of action complexities.
 

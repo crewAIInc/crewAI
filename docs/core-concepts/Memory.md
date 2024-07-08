@@ -4,6 +4,7 @@ description: Leveraging memory systems in the CrewAI framework to enhance agent 
 ---
 
 ## Introduction to Memory Systems in CrewAI
+
 !!! note "Enhancing Agent Intelligence"
     The CrewAI framework introduces a sophisticated memory system designed to significantly enhance the capabilities of AI agents. This system comprises short-term memory, long-term memory, entity memory, and contextual memory, each serving a unique purpose in aiding agents to remember, reason, and learn from past interactions.
 
@@ -47,124 +48,132 @@ my_crew = Crew(
 ## Additional Embedding Providers
 
 ### Using OpenAI embeddings (already default)
+
 ```python
 from crewai import Crew, Agent, Task, Process
 
 my_crew = Crew(
-		agents=[...],
-		tasks=[...],
-		process=Process.sequential,
-		memory=True,
-		verbose=True,
-		embedder={
-				"provider": "openai",
-				"config":{
-						"model": 'text-embedding-3-small'
-				}
-		}
+  agents=[...],
+  tasks=[...],
+  process=Process.sequential,
+  memory=True,
+  verbose=True,
+  embedder={
+    "provider": "openai",
+    "config":{
+      "model": 'text-embedding-3-small'
+    }
+  }
 )
 ```
 
 ### Using Google AI embeddings
+
 ```python
 from crewai import Crew, Agent, Task, Process
 
 my_crew = Crew(
-		agents=[...],
-		tasks=[...],
-		process=Process.sequential,
-		memory=True,
-		verbose=True,
-		embedder={
-			"provider": "google",
-			"config":{
-				"model": 'models/embedding-001',
-				"task_type": "retrieval_document",
-				"title": "Embeddings for Embedchain"
-			}
-		}
+  agents=[...],
+  tasks=[...],
+  process=Process.sequential,
+  memory=True,
+  verbose=True,
+  embedder={
+   "provider": "google",
+   "config":{
+    "model": 'models/embedding-001',
+    "task_type": "retrieval_document",
+    "title": "Embeddings for Embedchain"
+   }
+  }
 )
 ```
 
 ### Using Azure OpenAI embeddings
+
 ```python
 from crewai import Crew, Agent, Task, Process
 
 my_crew = Crew(
-		agents=[...],
-		tasks=[...],
-		process=Process.sequential,
-		memory=True,
-		verbose=True,
-		embedder={
-			"provider": "azure_openai",
-			"config":{
-				"model": 'text-embedding-ada-002',
-				"deployment_name": "you_embedding_model_deployment_name"
-			}
-		}
+  agents=[...],
+  tasks=[...],
+  process=Process.sequential,
+  memory=True,
+  verbose=True,
+  embedder={
+   "provider": "azure_openai",
+   "config":{
+    "model": 'text-embedding-ada-002',
+    "deployment_name": "you_embedding_model_deployment_name"
+   }
+  }
 )
 ```
 
 ### Using GPT4ALL embeddings
+
 ```python
 from crewai import Crew, Agent, Task, Process
 
 my_crew = Crew(
-		agents=[...],
-		tasks=[...],
-		process=Process.sequential,
-		memory=True,
-		verbose=True,
-		embedder={
-			"provider": "gpt4all"
-		}
+  agents=[...],
+  tasks=[...],
+  process=Process.sequential,
+  memory=True,
+  verbose=True,
+  embedder={
+   "provider": "gpt4all"
+  }
 )
 ```
 
 ### Using Vertex AI embeddings
+
 ```python
 from crewai import Crew, Agent, Task, Process
 
 my_crew = Crew(
-		agents=[...],
-		tasks=[...],
-		process=Process.sequential,
-		memory=True,
-		verbose=True,
-		embedder={
-			"provider": "vertexai",
-			"config":{
-				"model": 'textembedding-gecko'
-			}
-		}
+  agents=[...],
+  tasks=[...],
+  process=Process.sequential,
+  memory=True,
+  verbose=True,
+  embedder={
+   "provider": "vertexai",
+   "config":{
+    "model": 'textembedding-gecko'
+   }
+  }
 )
 ```
 
 ### Using Cohere embeddings
+
 ```python
 from crewai import Crew, Agent, Task, Process
 
 my_crew = Crew(
-		agents=[...],
-		tasks=[...],
-		process=Process.sequential,
-		memory=True,
-		verbose=True,
-		embedder={
-			"provider": "cohere",
-			"config":{
-				"model": "embed-english-v3.0"
-    		"vector_dimension": 1024
-			}
-		}
+  agents=[...],
+  tasks=[...],
+  process=Process.sequential,
+  memory=True,
+  verbose=True,
+  embedder={
+   "provider": "cohere",
+   "config":{
+    "model": "embed-english-v3.0"
+      "vector_dimension": 1024
+   }
+  }
 )
 ```
 
 ## Benefits of Using CrewAI's Memory System
+
 - **Adaptive Learning:** Crews become more efficient over time, adapting to new information and refining their approach to tasks.
 - **Enhanced Personalization:** Memory enables agents to remember user preferences and historical interactions, leading to personalized experiences.
 - **Improved Problem Solving:** Access to a rich memory store aids agents in making more informed decisions, drawing on past learnings and contextual insights.
 
 ## Getting Started
+
 Integrating CrewAI's memory system into your projects is straightforward. By leveraging the provided memory components and configurations, you can quickly empower your agents with the ability to remember, reason, and learn from their interactions, unlocking new levels of intelligence and capability.

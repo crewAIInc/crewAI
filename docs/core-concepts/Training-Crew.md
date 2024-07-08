@@ -4,11 +4,13 @@ description: Learn how to train your CrewAI agents by giving them feedback early
 ---
 
 ## Introduction
+
 The training feature in CrewAI allows you to train your AI agents using the command-line interface (CLI). By running the command `crewai train -n <n_iterations>`, you can specify the number of iterations for the training process.
 
 During training, CrewAI utilizes techniques to optimize the performance of your agents along with human feedback. This helps the agents improve their understanding, decision-making, and problem-solving abilities.
 
 ### Training Your Crew Using the CLI
+
 To use the training feature, follow these steps:
 
 1. Open your terminal or command prompt.
@@ -20,6 +22,7 @@ crewai train -n <n_iterations>
 ```
 
 ### Training Your Crew Programmatically
+
 To train your crew programmatically, use the following steps:
 
 1. Define the number of iterations for training.
@@ -39,8 +42,8 @@ To train your crew programmatically, use the following steps:
 
 !!! note "Replace `<n_iterations>` with the desired number of training iterations. This determines how many times the agents will go through the training process."
 
+### Key Points to Note
 
-### Key Points to Note:
 - **Positive Integer Requirement:** Ensure that the number of iterations (`n_iterations`) is a positive integer. The code will raise a `ValueError` if this condition is not met.
 - **Error Handling:** The code handles subprocess errors and unexpected exceptions, providing error messages to the user.
 
