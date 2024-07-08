@@ -200,7 +200,7 @@ class Task(BaseModel):
             context = "\n".join(context)
 
         self.prompt_context = context
-        tools = tools or self.tools
+        tools = tools or self.tools or []
 
         if self.async_execution:
             self._thread = threading.Thread(
@@ -355,7 +355,9 @@ class Task(BaseModel):
         if self.output_file:
             content = (
                 # type: ignore # "str" has no attribute "json"
-                exported_result if not self.output_pydantic else exported_result.json()
+                exported_result
+                if not self.output_pydantic
+                else exported_result.json()
             )
             self._save_file(content)
 

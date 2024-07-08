@@ -5,15 +5,15 @@ from typing import Any, Dict, List, Optional, Union
 
 from langchain_core.callbacks import BaseCallbackHandler
 from pydantic import (
-    UUID4,
-    BaseModel,
-    ConfigDict,
-    Field,
-    InstanceOf,
-    Json,
-    PrivateAttr,
-    field_validator,
-    model_validator,
+  UUID4,
+  BaseModel,
+  ConfigDict,
+  Field,
+  InstanceOf,
+  Json,
+  PrivateAttr,
+  field_validator,
+  model_validator,
 )
 from pydantic_core import PydanticCustomError
 
@@ -399,12 +399,37 @@ class Crew(BaseModel):
                         agents_for_delegation
                     )
                     print("ADDING DELEGATION TOOLS", delegation_tools)
-                    print("TASK TOOLS BEFORE", task.tools)
 
                     # Add tools if they are not already in task.tools
-                    for tool in delegation_tools:
-                        if tool not in task.tools:
-                            task.tools.append(tool)
+                    for new_tool in delegation_tools:
+                        print("TRYING TO ADD TOOL TO EXECUTE TASK:", new_tool)
+                        # Find the index of the tool with the same name
+                        existing_tool_index = next(
+                            (
+                                index
+                                for index, tool in enumerate(task.tools)
+                                if tool.name == new_tool.name
+                            ),
+                            None,
+                        )
+
+                        if existing_tool_index is not None:
+                            # Replace the existing tool
+                            print("REPLACING TOOL IN EXECUTE TASK:", new_tool.name)
+                            task.tools[existing_tool_index] = new_tool
+                        else:
+                            # Add the new tool
+                            task.tools.append(new_tool)
+                            print("ADDING TOOL TO EXECUTE TASK:", new_tool.name)
+
+                        print("CURRENT TOOL COUNT", len(task.tools))
+
+                        # if tool not in task.tools:
+                        #     print("ADDING TOOL TO EXECUTE TASK:", tool)
+                        #     print("TOOL CLASS", tool.__class__.__name__)
+                        #     print("Tool properties", tool.__dict__)
+                        #     task.tools.append(tool)
+                        #     print("CURRENT TOOL COUNT", len(task.tools))
                     print("TASK TOOLS AFTER", task.tools)
 
             print("TASK TOOLS", task.tools)
