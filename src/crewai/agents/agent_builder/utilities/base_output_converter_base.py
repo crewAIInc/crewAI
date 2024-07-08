@@ -25,8 +25,8 @@ class OutputConverter(BaseModel, ABC):
     llm: Any = Field(description="The language model to be used to convert the text.")
     model: Any = Field(description="The model to be used to convert the text.")
     instructions: str = Field(description="Conversion instructions to the LLM.")
-    max_attemps: int = Field(
-        description="Max number of attemps to try to get the output formated.",
+    max_attempts: int = Field(
+        description="Max number of attempts to try to get the output formatted.",
         default=3,
     )
 

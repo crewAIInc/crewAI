@@ -8,18 +8,18 @@ from crewai.agents.agent_builder.utilities.base_token_process import TokenProces
 
 
 class TokenCalcHandler(BaseCallbackHandler):
-    model: str = ""
+    model_name: str = ""
     token_cost_process: TokenProcess
 
-    def __init__(self, model, token_cost_process):
-        self.model = model
+    def __init__(self, model_name, token_cost_process):
+        self.model_name = model_name
         self.token_cost_process = token_cost_process
 
     def on_llm_start(
         self, serialized: Dict[str, Any], prompts: List[str], **kwargs: Any
     ) -> None:
         try:
-            encoding = tiktoken.encoding_for_model(self.model)
+            encoding = tiktoken.encoding_for_model(self.model_name)
         except KeyError:
             encoding = tiktoken.get_encoding("cl100k_base")
 

@@ -35,7 +35,7 @@ class CrewAgentExecutor(AgentExecutor, CrewAgentExecutorMixin):
     tools_handler: Optional[InstanceOf[ToolsHandler]] = None
     max_iterations: Optional[int] = 15
     have_forced_answer: bool = False
-    force_answer_max_iterations: Optional[int] = None
+    force_answer_max_iterations: Optional[int] = None  # type: ignore # Incompatible types in assignment (expression has type "int | None", base class "CrewAgentExecutorMixin" defined the type as "int")
     step_callback: Optional[Any] = None
     system_template: Optional[str] = None
     prompt_template: Optional[str] = None
@@ -235,6 +235,7 @@ class CrewAgentExecutor(AgentExecutor, CrewAgentExecutorMixin):
                 tools_names=self.tools_names,
                 function_calling_llm=self.function_calling_llm,
                 task=self.task,
+                agent=self.crew_agent,
                 action=agent_action,
             )
             # print("TOOL USAGE CALLED IN CREWAGENTEXECUTOR: ", tool_usage)

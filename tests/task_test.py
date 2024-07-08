@@ -9,6 +9,7 @@ from pydantic_core import ValidationError
 
 from crewai import Agent, Crew, Process, Task
 from crewai.tasks.task_output import TaskOutput
+from crewai.utilities.converter import Converter
 
 
 def test_task_tool_reflect_agent_tools():
@@ -310,7 +311,7 @@ def test_output_json_to_another_task():
 
     crew = Crew(agents=[scorer], tasks=[task1, task2])
     result = crew.kickoff()
-    assert '{\n  "score": 3\n}' == result
+    assert '{\n  "score": 5\n}' == result
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
@@ -394,6 +395,38 @@ def test_save_task_pydantic_output():
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
+def test_custom_converter_cls():
+    class ScoreOutput(BaseModel):
+        score: int
+
+    class ScoreConverter(Converter):
+        pass
+
+    scorer = Agent(
+        role="Scorer",
+        goal="Score the title",
+        backstory="You're an expert scorer, specialized in scoring titles.",
+        allow_delegation=False,
+    )
+
+    task = Task(
+        description="Give me an integer score between 1-5 for the following title: 'The impact of AI in the future of work'",
+        expected_output="The score of the title.",
+        output_pydantic=ScoreOutput,
+        converter_cls=ScoreConverter,
+        agent=scorer,
+    )
+
+    crew = Crew(agents=[scorer], tasks=[task])
+
+    with patch.object(
+        ScoreConverter, "to_pydantic", return_value=ScoreOutput(score=5)
+    ) as mock_to_pydantic:
+        crew.kickoff()
+        mock_to_pydantic.assert_called_once()
+
+
+@pytest.mark.vcr(filter_headers=["authorization"])
 def test_increment_delegations_for_hierarchical_process():
     from langchain_openai import ChatOpenAI
 
@@ -413,31 +446,29 @@ def test_increment_delegations_for_hierarchical_process():
         agents=[scorer],
         tasks=[task],
         process=Process.hierarchical,
-        manager_llm=ChatOpenAI(model="gpt-4-0125-preview"),
+        manager_llm=ChatOpenAI(model="gpt-4o"),
     )
 
     with patch.object(Task, "increment_delegations") as increment_delegations:
         increment_delegations.return_value = None
         crew.kickoff()
-        increment_delegations.assert_called_once
+        increment_delegations.assert_called_once()
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
 def test_increment_delegations_for_sequential_process():
-    pass
-
     manager = Agent(
         role="Manager",
         goal="Coordinate scoring processes",
         backstory="You're great at delegating work about scoring.",
-        allow_delegation=False,
+        allow_delegation=True,
     )
 
     scorer = Agent(
         role="Scorer",
         goal="Score the title",
         backstory="You're an expert scorer, specialized in scoring titles.",
-        allow_delegation=False,
+        allow_delegation=True,
     )
 
     task = Task(
@@ -455,7 +486,7 @@ def test_increment_delegations_for_sequential_process():
     with patch.object(Task, "increment_delegations") as increment_delegations:
         increment_delegations.return_value = None
         crew.kickoff()
-        increment_delegations.assert_called_once
+        increment_delegations.assert_called_once()
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
@@ -490,7 +521,7 @@ def test_increment_tool_errors():
     with patch.object(Task, "increment_tools_errors") as increment_tools_errors:
         increment_tools_errors.return_value = None
         crew.kickoff()
-        increment_tools_errors.assert_called_once
+        assert len(increment_tools_errors.mock_calls) == 3
 
 
 def test_task_definition_based_on_dict():

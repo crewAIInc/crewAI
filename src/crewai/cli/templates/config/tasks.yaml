@@ -12,4 +12,4 @@ reporting_task:
     Make sure the report is detailed and contains any and all relevant information.
   expected_output: >
     A fully fledge reports with the mains topics, each with a full section of information.
-    Formated as markdown with out '```'
+    Formatted as markdown without '```'

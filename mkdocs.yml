@@ -131,6 +131,7 @@ nav:
     - Using LangChain Tools: 'core-concepts/Using-LangChain-Tools.md'
     - Using LlamaIndex Tools: 'core-concepts/Using-LlamaIndex-Tools.md'
   - How to Guides:
+    - Starting Your crewAI Project: 'how-to/Start-a-New-CrewAI-Project.md'
     - Installing CrewAI: 'how-to/Installing-CrewAI.md'
     - Getting Started: 'how-to/Creating-a-Crew-and-kick-it-off.md'
     - Create Custom Tools: 'how-to/Create-Custom-Tools.md'
@@ -140,6 +141,7 @@ nav:
     - Connecting to any LLM: 'how-to/LLM-Connections.md'
     - Customizing Agents: 'how-to/Customizing-Agents.md'
     - Coding Agents: 'how-to/Coding-Agents.md'
+    - Forcing Tool Output as Result: 'how-to/Force-Tool-Ouput-as-Result.md'
     - Human Input on Execution: 'how-to/Human-Input-on-Execution.md'
     - Kickoff a Crew Asynchronously: 'how-to/Kickoff-async.md'
     - Kickoff a Crew for a List: 'how-to/Kickoff-for-each.md'

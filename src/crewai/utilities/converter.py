@@ -27,7 +27,7 @@ class Converter(OutputConverter):
             else:
                 return self._create_chain().invoke({})
         except Exception as e:
-            if current_attempt < self.max_attemps:
+            if current_attempt < self.max_attempts:
                 return self.to_pydantic(current_attempt + 1)
             return ConverterError(
                 f"Failed to convert text into a pydantic model due to the following error: {e}"
@@ -41,7 +41,7 @@ class Converter(OutputConverter):
             else:
                 return json.dumps(self._create_chain().invoke({}).model_dump())
         except Exception:
-            if current_attempt < self.max_attemps:
+            if current_attempt < self.max_attempts:
                 return self.to_json(current_attempt + 1)
             return ConverterError("Failed to convert text into JSON.")
 
@@ -52,7 +52,7 @@ class Converter(OutputConverter):
         # TODO: JOAO REVIEW - Instructor doesn't have a max_attemps parameter. Should we remove it?
         inst = Instructor(
             llm=self.llm,
-            # max_attemps=self.max_attemps,
+            max_attempts=self.max_attempts,
             model=self.model,
             content=self.text,
             instructions=self.instructions,

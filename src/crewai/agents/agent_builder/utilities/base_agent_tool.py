@@ -66,7 +66,7 @@ class BaseAgentTools(BaseModel, ABC):
             agent_name = agent_name.casefold().replace('"', "").replace("\n", "")
             print("AGENT NAME:", agent_name)
 
-            agent = [
+            agent = [  # type: ignore # Incompatible types in assignment (expression has type "list[BaseAgent]", variable has type "str | None")
                 available_agent
                 for available_agent in self.agents
                 if available_agent.role.casefold().replace("\n", "") == agent_name
@@ -86,7 +86,7 @@ class BaseAgentTools(BaseModel, ABC):
             )
 
         agent = agent[0]
-        task_with_assigned_agent = Task(
+        task_with_assigned_agent = Task(  # type: ignore # Incompatible types in assignment (expression has type "Task", variable has type "str")
             description=task,
             agent=agent,
             expected_output="Your best answer to your coworker asking you this, accounting for the context shared.",
