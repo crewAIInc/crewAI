@@ -4,6 +4,10 @@ from unittest import mock
 from unittest.mock import patch
 
 import pytest
+from langchain.tools import tool
+from langchain_core.exceptions import OutputParserException
+from langchain_openai import ChatOpenAI
+
 from crewai import Agent, Crew, Task
 from crewai.agents.cache import CacheHandler
 from crewai.agents.executor import CrewAgentExecutor
@@ -11,9 +15,6 @@ from crewai.agents.parser import CrewAgentParser
 from crewai.tools.tool_calling import InstructorToolCalling
 from crewai.tools.tool_usage import ToolUsage
 from crewai.utilities import RPMController
-from langchain.tools import tool
-from langchain_core.exceptions import OutputParserException
-from langchain_openai import ChatOpenAI
 
 
 def test_agent_creation():
@@ -630,8 +631,9 @@ def test_agent_use_specific_tasks_output_as_context(capsys):
 
     crew = Crew(agents=[agent1, agent2], tasks=tasks)
     result = crew.kickoff()
-    assert "bye" not in result.raw_output().lower()
-    assert "hi" in result.raw_output().lower() or "hello" in result.raw_output().lower()
+    print("LOWER RESULT", result.raw)
+    assert "bye" not in result.raw.lower()
+    assert "hi" in result.raw.lower() or "hello" in result.raw.lower()
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
@@ -643,7 +645,7 @@ def test_agent_step_callback():
     with patch.object(StepCallback, "callback") as callback:
 
         @tool
-        def learn_about_AI(topic) -> float:
+        def learn_about_AI(topic) -> str:
             """Useful for when you need to learn about AI to write an paragraph about it."""
             return "AI is a very broad field."
 
@@ -677,7 +679,7 @@ def test_agent_function_calling_llm():
     with patch.object(llm.client, "create", wraps=llm.client.create) as private_mock:
 
         @tool
-        def learn_about_AI(topic) -> float:
+        def learn_about_AI(topic) -> str:
             """Useful for when you need to learn about AI to write an paragraph about it."""
             return "AI is a very broad field."
 
@@ -749,8 +751,8 @@ def test_tool_result_as_answer_is_the_final_answer_for_the_agent():
     crew = Crew(agents=[agent1], tasks=tasks)
 
     result = crew.kickoff()
-    print("RESULT: ", result.raw_output())
-    assert result.raw_output() == "Howdy!"
+    print("RESULT: ", result.raw)
+    assert result.raw == "Howdy!"
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])

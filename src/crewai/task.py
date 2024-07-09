@@ -1,3 +1,4 @@
+import json
 import os
 import re
 import threading
@@ -98,6 +99,10 @@ class Task(BaseModel):
     human_input: Optional[bool] = Field(
         description="Whether the task should have a human review the final answer of the agent",
         default=False,
+    )
+    converter_cls: Optional[Type[Converter]] = Field(
+        description="A converter class used to export structured output",
+        default=None,
     )
 
     _telemetry: Telemetry
@@ -216,16 +221,13 @@ class Task(BaseModel):
             tools=tools,
         )
 
-        if self.output_file:
-            self._save_output(result)
-
         pydantic_output, json_output = self._export_output(result)
 
         task_output = TaskOutput(
             description=self.description,
             raw=result,
             pydantic=pydantic_output,
-            json=json_output,
+            json_dict=json_output,
             agent=agent.role,
             output_format=self._get_output_format(),
         )
@@ -237,6 +239,15 @@ class Task(BaseModel):
         if self._execution_span:
             self._telemetry.task_ended(self._execution_span, self)
             self._execution_span = None
+
+        if self.output_file:
+            content = (
+                json_output
+                if json_output
+                else pydantic_output.model_dump_json() if pydantic_output else result
+            )
+            print("CALLING SAVE FILE", content)
+            self._save_file(content)
 
         return task_output
 
@@ -312,10 +323,19 @@ class Task(BaseModel):
 
         if self.output_pydantic or self.output_json:
             model_output = self._convert_to_model(result)
+            print("MODEL OUTPUT", model_output)
             pydantic_output = (
                 model_output if isinstance(model_output, BaseModel) else None
             )
-            json_output = model_output if isinstance(model_output, dict) else None
+            print("PYDANTIC OUTPUT", pydantic_output)
+            if isinstance(model_output, str):
+                try:
+                    json_output = json.loads(model_output)
+                except json.JSONDecodeError:
+                    json_output = None
+            else:
+                json_output = model_output if isinstance(model_output, dict) else None
+            print("JSON OUTPUT", json_output)
 
         return pydantic_output, json_output
 
@@ -327,13 +347,18 @@ class Task(BaseModel):
         try:
             return self._validate_model(result, model)
         except Exception:
+            print("EXCEPTION IN _convert_to_model")
             return self._handle_partial_json(result, model)
 
     def _validate_model(
         self, result: str, model: Type[BaseModel]
     ) -> Union[dict, BaseModel]:
+        print("VALIDATE MODEL - RESULT", result)
+        print("VALIDATE MODEL - MODEL", model)
         exported_result = model.model_validate_json(result)
+        print("EXPORTED RESULT", exported_result)
         if self.output_json:
+            print("HERE IN _validate_model", self.output_json)
             return exported_result.model_dump()
         return exported_result
 
@@ -344,10 +369,12 @@ class Task(BaseModel):
         if match:
             try:
                 exported_result = model.model_validate_json(match.group(0))
+                print("EXPORTED RESULT in handle_partial", exported_result)
                 if self.output_json:
                     return exported_result.model_dump()
                 return exported_result
             except Exception:
+                print("EXCEPTION IN _handle_partial_json")
                 pass
 
         return self._convert_with_instructions(result, model)
@@ -355,15 +382,20 @@ class Task(BaseModel):
     def _convert_with_instructions(
         self, result: str, model: Type[BaseModel]
     ) -> Union[dict, BaseModel, str]:
+        print("CONVERT WITH INSTRUCTIONS - RESULT", result)
+        print("CONVERT WITH INSTRUCTIONS - model", model)
         llm = self.agent.function_calling_llm or self.agent.llm
         instructions = self._get_conversion_instructions(model, llm)
 
         converter = Converter(
             llm=llm, text=result, model=model, instructions=instructions
         )
+        print("CONVERTER", converter)
         exported_result = (
             converter.to_pydantic() if self.output_pydantic else converter.to_json()
         )
+
+        print("EXPORTED RESULT IN CONVERT WITH INSTRUCTIONS", exported_result)
 
         if isinstance(exported_result, ConverterError):
             Printer().print(
@@ -402,6 +434,7 @@ class Task(BaseModel):
         return isinstance(llm, ChatOpenAI) and llm.openai_api_base is None
 
     def _save_file(self, result: Any) -> None:
+        print("SAVING FILE with content", result)
         directory = os.path.dirname(self.output_file)  # type: ignore # Value of type variable "AnyOrLiteralStr" of "dirname" cannot be "str | None"
 
         if directory and not os.path.exists(directory):

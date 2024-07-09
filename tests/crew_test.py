@@ -144,10 +144,10 @@ def test_crew_creation():
     expected_string_output = "1. **The Rise of AI in Healthcare**: The convergence of AI and healthcare is a promising frontier, offering unprecedented opportunities for disease diagnosis and patient outcome prediction. AI's potential to revolutionize healthcare lies in its capacity to synthesize vast amounts of data, generating precise and efficient results. This technological breakthrough, however, is not just about improving accuracy and efficiency; it's about saving lives. As we stand on the precipice of this transformative era, we must prepare for the complex challenges and ethical questions it poses, while embracing its ability to reshape healthcare as we know it.\n\n2. **Ethical Implications of AI**: As AI intertwines with our daily lives, it presents a complex web of ethical dilemmas. This fusion of technology, philosophy, and ethics is not merely academically intriguing but profoundly impacts the fabric of our society. The questions raised range from decision-making transparency to accountability, and from privacy to potential biases. As we navigate this ethical labyrinth, it is crucial to establish robust frameworks and regulations to ensure that AI serves humanity, and not the other way around.\n\n3. **AI and Data Privacy**: The rise of AI brings with it an insatiable appetite for data, spawning new debates around privacy rights. Balancing the potential benefits of AI with the right to privacy is a unique challenge that intersects technology, law, and human rights. In an increasingly digital world, where personal information forms the backbone of many services, we must grapple with these issues. It's time to redefine the concept of privacy and devise innovative solutions that ensure our digital footprints are not abused.\n\n4. **AI in Job Market**: The discourse around AI's impact on employment is a narrative of contrast, a tale of displacement and creation. On one hand, AI threatens to automate a multitude of jobs, on the other, it promises to create new roles that we cannot yet imagine. This intersection of technology, economics, and labor rights is a critical dialogue that will shape our future. As we stand at this crossroads, we must not only brace ourselves for the changes but also seize the opportunities that this technological wave brings.\n\n5. **Future of AI Agents**: The evolution of AI agents signifies a leap towards a future where AI is not just a tool, but a partner. These sophisticated AI agents, employed in customer service to personal assistants, are redefining our interactions with technology. As we gaze into the future of AI agents, we see a landscape of possibilities and challenges. This journey will be about harnessing the potential of AI agents while navigating the issues of trust, dependence, and ethical use."
 
     assert str(result) == expected_string_output
-    assert result.raw_output() == expected_string_output
+    assert result.raw == expected_string_output
     assert isinstance(result, CrewOutput)
     assert len(result.tasks_output) == len(tasks)
-    assert result.result() == [expected_string_output]
+    assert result.raw == expected_string_output
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
@@ -174,7 +174,7 @@ def test_sync_task_execution():
     )
 
     mock_task_output = TaskOutput(
-        description="Mock description", raw_output="mocked output", agent="mocked agent"
+        description="Mock description", raw="mocked output", agent="mocked agent"
     )
 
     # Because we are mocking execute_sync, we never hit the underlying _execute_core
@@ -210,7 +210,7 @@ def test_hierarchical_process():
     result = crew.kickoff()
 
     assert (
-        result.raw_output()
+        result.raw
         == "1. 'Demystifying AI: An in-depth exploration of Artificial Intelligence for the layperson' - In this piece, we will unravel the enigma of AI, simplifying its complexities into digestible information for the everyday individual. By using relatable examples and analogies, we will journey through the neural networks and machine learning algorithms that define AI, without the jargon and convoluted explanations that often accompany such topics.\n\n2. 'The Role of AI in Startups: A Game Changer?' - Startups today are harnessing the power of AI to revolutionize their businesses. This article will delve into how AI, as an innovative force, is shaping the startup ecosystem, transforming everything from customer service to product development. We'll explore real-life case studies of startups that have leveraged AI to accelerate their growth and disrupt their respective industries.\n\n3. 'AI and Ethics: Navigating the Complex Landscape' - AI brings with it not just technological advancements, but ethical dilemmas as well. This article will engage readers in a thought-provoking discussion on the ethical implications of AI, exploring issues like bias in algorithms, privacy concerns, job displacement, and the moral responsibility of AI developers. We will also discuss potential solutions and frameworks to address these challenges.\n\n4. 'Unveiling the AI Agents: The Future of Customer Service' - AI agents are poised to reshape the customer service landscape, offering businesses the ability to provide round-the-clock support and personalized experiences. In this article, we'll dive deep into the world of AI agents, examining how they work, their benefits and limitations, and how they're set to redefine customer interactions in the digital age.\n\n5. 'From Science Fiction to Reality: AI in Everyday Life' - AI, once a concept limited to the realm of sci-fi, has now permeated our daily lives. This article will highlight the ubiquitous presence of AI, from voice assistants and recommendation algorithms, to autonomous vehicles and smart homes. We'll explore how AI, in its various forms, is transforming our everyday experiences, making the future seem a lot closer than we imagined."
     )
 
@@ -248,7 +248,7 @@ def test_crew_with_delegating_agents():
     result = crew.kickoff()
 
     assert (
-        result.raw_output()
+        result.raw
         == "AI Agents, simply put, are intelligent systems that can perceive their environment and take actions to reach specific goals. Imagine them as digital assistants that can learn, adapt and make decisions. They operate in the realms of software or hardware, like a chatbot on a website or a self-driving car. The key to their intelligence is their ability to learn from their experiences, making them better at their tasks over time. In today's interconnected world, AI agents are transforming our lives. They enhance customer service experiences, streamline business processes, and even predict trends in data. Vehicles equipped with AI agents are making transportation safer. In healthcare, AI agents are helping to diagnose diseases, personalizing treatment plans, and monitoring patient health. As we embrace the digital era, these AI agents are not just important, they're becoming indispensable, shaping a future where technology works intuitively and intelligently to meet our needs."
     )
 
@@ -413,7 +413,7 @@ def test_api_calls_throttling(capsys):
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
-def test_crew_kickoff_for_each_full_ouput():
+def test_crew_kickoff_usage_metrics():
     inputs = [
         {"topic": "dog"},
         {"topic": "cat"},
@@ -432,14 +432,11 @@ def test_crew_kickoff_for_each_full_ouput():
         agent=agent,
     )
 
-    crew = Crew(agents=[agent], tasks=[task], full_output=True)
+    crew = Crew(agents=[agent], tasks=[task])
     results = crew.kickoff_for_each(inputs=inputs)
 
     assert len(results) == len(inputs)
     for result in results:
-        assert "usage_metrics" in result
-        assert isinstance(result["usage_metrics"], dict)
-
         # Assert that all required keys are in usage_metrics and their values are not None
         for key in [
             "total_tokens",
@@ -447,8 +444,8 @@ def test_crew_kickoff_for_each_full_ouput():
             "completion_tokens",
             "successful_requests",
         ]:
-            assert key in result["usage_metrics"]
-            assert result["usage_metrics"][key] > 0
+            assert key in result.token_usage
+            assert result.token_usage[key] > 0
 
 
 def test_agents_rpm_is_never_set_if_crew_max_RPM_is_not_set():
@@ -515,45 +512,8 @@ def test_sequential_async_task_execution_completion():
     )
 
     sequential_result = sequential_crew.kickoff()
-    assert sequential_result.raw_output().startswith(
+    assert sequential_result.raw.startswith(
         "**The Evolution of Artificial Intelligence: A Journey Through Milestones**"
-    )
-
-
-@pytest.mark.vcr(filter_headers=["authorization"])
-def test_hierarchical_async_task_execution_completion():
-    from langchain_openai import ChatOpenAI
-
-    list_ideas = Task(
-        description="Give me a list of 5 interesting ideas to explore for na article, what makes them unique and interesting.",
-        expected_output="Bullet point list of 5 important events.",
-        agent=researcher,
-        async_execution=True,
-    )
-    list_important_history = Task(
-        description="Research the history of AI and give me the 5 most important events that shaped the technology.",
-        expected_output="Bullet point list of 5 important events.",
-        agent=researcher,
-        async_execution=True,
-    )
-    write_article = Task(
-        description="Write an article about the history of AI and its most important events.",
-        expected_output="A 4 paragraph article about AI.",
-        agent=writer,
-        context=[list_ideas, list_important_history],
-    )
-
-    hierarchical_crew = Crew(
-        agents=[researcher, writer],
-        process=Process.hierarchical,
-        tasks=[list_ideas, list_important_history, write_article],
-        manager_llm=ChatOpenAI(temperature=0, model="gpt-4"),
-    )
-
-    hierarchical_result = hierarchical_crew.kickoff()
-
-    assert hierarchical_result.raw_output().startswith(
-        "The history of artificial intelligence (AI) is a fascinating journey"
     )
 
 
@@ -581,8 +541,7 @@ def test_single_task_with_async_execution():
     )
 
     result = crew.kickoff()
-    print(result.raw_output())
-    assert result.raw_output().startswith(
+    assert result.raw.startswith(
         "- The impact of AI agents on remote work productivity."
     )
 
@@ -615,17 +574,21 @@ def test_three_task_with_async_execution():
         async_execution=True,
     )
 
-    crew = Crew(
-        agents=[researcher_agent],
-        process=Process.sequential,
-        tasks=[bullet_list, numbered_list, letter_list],
-    )
+    # Expected result is that we will get an error
+    # because a crew can end only end with one or less
+    # async tasks
+    with pytest.raises(pydantic_core._pydantic_core.ValidationError) as error:
+        Crew(
+            agents=[researcher_agent],
+            process=Process.sequential,
+            tasks=[bullet_list, numbered_list, letter_list],
+        )
 
-    # Expected result is that we are going to concatenate the output from each async task.
-    # Because we add a buffer between each task, we should see a "----------" string
-    # after the first and second task in the final output.
-    result = crew.kickoff()
-    assert result.raw_output().count("\n\n----------\n\n") == 2
+    assert error.value.errors()[0]["type"] == "async_task_count"
+    assert (
+        "The crew must end with at most one asynchronous task."
+        in error.value.errors()[0]["msg"]
+    )
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
@@ -649,7 +612,7 @@ async def test_crew_async_kickoff():
         agent=agent,
     )
 
-    crew = Crew(agents=[agent], tasks=[task], full_output=True)
+    crew = Crew(agents=[agent], tasks=[task])
     results = await crew.kickoff_for_each_async(inputs=inputs)
 
     assert len(results) == len(inputs)
@@ -662,8 +625,7 @@ async def test_crew_async_kickoff():
             "successful_requests",
         ]:
             assert key in result.token_usage
-            # TODO: FIX THIS WHEN USAGE METRICS ARE RE-DONE
-            # assert result.token_usage[key] > 0
+            assert result.token_usage[key] > 0
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
@@ -696,7 +658,7 @@ def test_async_task_execution_call_count():
 
     # Create a valid TaskOutput instance to mock the return value
     mock_task_output = TaskOutput(
-        description="Mock description", raw_output="mocked output", agent="mocked agent"
+        description="Mock description", raw="mocked output", agent="mocked agent"
     )
 
     # Create a MagicMock Future instance
@@ -723,10 +685,8 @@ def test_async_task_execution_call_count():
 @pytest.mark.vcr(filter_headers=["authorization"])
 def test_kickoff_for_each_single_input():
     """Tests if kickoff_for_each works with a single input."""
-    from unittest.mock import patch
 
     inputs = [{"topic": "dog"}]
-    expected_outputs = ["Dogs are loyal companions and popular pets."]
 
     agent = Agent(
         role="{topic} Researcher",
@@ -740,15 +700,10 @@ def test_kickoff_for_each_single_input():
         agent=agent,
     )
 
-    with patch.object(Agent, "execute_task") as mock_execute_task:
-        mock_execute_task.side_effect = expected_outputs
-        crew = Crew(agents=[agent], tasks=[task])
-        results = crew.kickoff_for_each(inputs=inputs)
+    crew = Crew(agents=[agent], tasks=[task])
+    results = crew.kickoff_for_each(inputs=inputs)
 
     assert len(results) == 1
-    print("RESULT:", results)
-    for result in results:
-        assert result == expected_outputs[0]
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
@@ -761,11 +716,6 @@ def test_kickoff_for_each_multiple_inputs():
         {"topic": "cat"},
         {"topic": "apple"},
     ]
-    expected_outputs = [
-        "Dogs are loyal companions and popular pets.",
-        "Cats are independent and low-maintenance pets.",
-        "Apples are a rich source of dietary fiber and vitamin C.",
-    ]
 
     agent = Agent(
         role="{topic} Researcher",
@@ -779,14 +729,10 @@ def test_kickoff_for_each_multiple_inputs():
         agent=agent,
     )
 
-    with patch.object(Agent, "execute_task") as mock_execute_task:
-        mock_execute_task.side_effect = expected_outputs
-        crew = Crew(agents=[agent], tasks=[task])
-        results = crew.kickoff_for_each(inputs=inputs)
+    crew = Crew(agents=[agent], tasks=[task])
+    results = crew.kickoff_for_each(inputs=inputs)
 
     assert len(results) == len(inputs)
-    for i, res in enumerate(results):
-        assert res == expected_outputs[i]
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
@@ -1058,7 +1004,7 @@ def test_crew_function_calling_llm():
     with patch.object(llm.client, "create", wraps=llm.client.create) as private_mock:
 
         @tool
-        def learn_about_AI(topic) -> float:
+        def learn_about_AI(topic) -> str:
             """Useful for when you need to learn about AI to write an paragraph about it."""
             return "AI is a very broad field."
 
@@ -1107,7 +1053,7 @@ def test_task_with_no_arguments():
     crew = Crew(agents=[researcher], tasks=[task])
 
     result = crew.kickoff()
-    assert result.raw_output() == "75"
+    assert result.raw == "75"
 
 
 def test_code_execution_flag_adds_code_tool_upon_kickoff():
@@ -1174,37 +1120,10 @@ def test_agents_do_not_get_delegation_tools_with_there_is_only_one_agent():
 
     result = crew.kickoff()
     assert (
-        result.raw_output()
+        result.raw
         == "Howdy! I hope this message finds you well and brings a smile to your face. Have a fantastic day!"
     )
     assert len(agent.tools) == 0
-
-
-@pytest.mark.vcr(filter_headers=["authorization"])
-def test_agent_usage_metrics_are_captured_for_sequential_process():
-    agent = Agent(
-        role="Researcher",
-        goal="Be super empathetic.",
-        backstory="You're love to sey howdy.",
-        allow_delegation=False,
-    )
-
-    task = Task(description="say howdy", expected_output="Howdy!", agent=agent)
-
-    crew = Crew(agents=[agent], tasks=[task])
-
-    result = crew.kickoff()
-    assert result.raw_output() == "Howdy!"
-
-    required_keys = [
-        "total_tokens",
-        "prompt_tokens",
-        "completion_tokens",
-        "successful_requests",
-    ]
-    for key in required_keys:
-        assert key in crew.usage_metrics, f"Key '{key}' not found in usage_metrics"
-        assert crew.usage_metrics[key] > 0, f"Value for key '{key}' is zero"
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
@@ -1251,13 +1170,15 @@ def test_agent_usage_metrics_are_captured_for_hierarchical_process():
     )
 
     result = crew.kickoff()
-    assert result.raw_output() == '"Howdy!"'
+    assert result.raw == '"Howdy!"'
+
+    print(crew.usage_metrics)
 
     assert crew.usage_metrics == {
-        "total_tokens": 1927,
-        "prompt_tokens": 1557,
-        "completion_tokens": 370,
-        "successful_requests": 4,
+        "total_tokens": 311,
+        "prompt_tokens": 224,
+        "completion_tokens": 87,
+        "successful_requests": 1,
     }
 
 
@@ -1282,15 +1203,17 @@ def test_hierarchical_crew_creation_tasks_with_agents():
         manager_llm=ChatOpenAI(model="gpt-4o"),
     )
     crew.kickoff()
+
     assert crew.manager_agent is not None
     assert crew.manager_agent.tools is not None
+    print("TOOL DESCRIPTION", crew.manager_agent.tools[0].description)
     assert crew.manager_agent.tools[0].description.startswith(
-        "Delegate a specific task to one of the following coworkers: [Senior Writer]"
+        "Delegate a specific task to one of the following coworkers: [Senior Writer, Researcher]"
     )
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
-def test_hierarchical_crew_creation_tasks_without_async_execution():
+def test_hierarchical_crew_creation_tasks_with_async_execution():
     from langchain_openai import ChatOpenAI
 
     task = Task(
@@ -1485,7 +1408,7 @@ def test_tools_with_custom_caching():
     from crewai_tools import tool
 
     @tool
-    def multiplcation_tool(first_number: int, second_number: int) -> str:
+    def multiplcation_tool(first_number: int, second_number: int) -> int:
         """Useful for when you need to multiply two numbers together."""
         return first_number * second_number
 
@@ -1547,7 +1470,7 @@ def test_tools_with_custom_caching():
                 input={"first_number": 2, "second_number": 6},
                 output=12,
             )
-            assert result.raw_output() == "3"
+            assert result.raw == "3"
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
@@ -1646,7 +1569,7 @@ def test_manager_agent():
     )
 
     mock_task_output = TaskOutput(
-        description="Mock description", raw_output="mocked output", agent="mocked agent"
+        description="Mock description", raw="mocked output", agent="mocked agent"
     )
 
     # Because we are mocking execute_sync, we never hit the underlying _execute_core

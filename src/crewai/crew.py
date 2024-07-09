@@ -254,6 +254,27 @@ class Crew(BaseModel):
 
         return self
 
+    @model_validator(mode="after")
+    def validate_end_with_at_most_one_async_task(self):
+        """Validates that the crew ends with at most one asynchronous task."""
+        final_async_task_count = 0
+
+        # Traverse tasks backward
+        for task in reversed(self.tasks):
+            if task.async_execution:
+                final_async_task_count += 1
+            else:
+                break  # Stop traversing as soon as a non-async task is encountered
+
+        if final_async_task_count > 1:
+            raise PydanticCustomError(
+                "async_task_count",
+                "The crew must end with at most one asynchronous task.",
+                {},
+            )
+
+        return self
+
     def _setup_from_config(self):
         assert self.config is not None, "Config should not be None."
 
@@ -347,8 +368,7 @@ class Crew(BaseModel):
         if self.process == Process.sequential:
             result = self._run_sequential_process()
         elif self.process == Process.hierarchical:
-            result, manager_metrics = self._run_hierarchical_process()  # type: ignore # Incompatible types in assignment (expression has type "str | dict[str, Any]", variable has type "str")
-            metrics.append(manager_metrics)
+            result = self._run_hierarchical_process()  # type: ignore # Incompatible types in assignment (expression has type "str | dict[str, Any]", variable has type "str")
         else:
             raise NotImplementedError(
                 f"The process '{self.process}' is not implemented yet."
@@ -502,11 +522,6 @@ class Crew(BaseModel):
                 task_outputs.append(task_output)
                 self._process_task_result(future_task, task_output)
 
-        final_string_output = aggregate_raw_outputs_from_task_outputs(task_outputs)
-        self._finish_execution(final_string_output)
-
-        token_usage = self.calculate_usage_metrics()
-
         # Important: There should only be one task output in the list
         #            If there are more or 0, something went wrong.
         if len(task_outputs) != 1:
@@ -516,10 +531,15 @@ class Crew(BaseModel):
 
         final_task_output = task_outputs[0]
 
+        final_string_output = final_task_output.raw
+        self._finish_execution(final_string_output)
+
+        token_usage = self.calculate_usage_metrics()
+
         return CrewOutput(
-            _raw=final_task_output.raw,
-            _pydantic=final_task_output.pydantic,
-            _json=final_task_output.json,
+            raw=final_task_output.raw,
+            pydantic=final_task_output.pydantic,
+            json_dict=final_task_output.json_dict,
             tasks_output=[task.output for task in self.tasks if task.output],
             token_usage=token_usage,
         )
@@ -530,7 +550,8 @@ class Crew(BaseModel):
         if self.output_log_file:
             self._file_handler.log(agent=role, task=output, status="completed")
 
-    def _run_hierarchical_process(self) -> Tuple[CrewOutput, Dict[str, Any]]:
+    # TODO: @joao, Breaking change. Changed return type. Usage metrics is included in crewoutput
+    def _run_hierarchical_process(self) -> CrewOutput:
         """Creates and assigns a manager agent to make sure the crew completes the tasks."""
         i18n = I18N(prompt_file=self.prompt_file)
         if self.manager_agent is not None:
@@ -564,7 +585,11 @@ class Crew(BaseModel):
                 )
 
             if task.async_execution:
-                context = aggregate_raw_outputs_from_task_outputs(task_outputs)
+                context = (
+                    aggregate_raw_outputs_from_tasks(task.context)
+                    if task.context
+                    else aggregate_raw_outputs_from_task_outputs(task_outputs)
+                )
                 future = task.execute_async(
                     agent=manager, context=context, tools=manager.tools
                 )
@@ -582,7 +607,11 @@ class Crew(BaseModel):
                     # Clear the futures list after processing all async results
                     futures.clear()
 
-                context = aggregate_raw_outputs_from_task_outputs(task_outputs)
+                context = (
+                    aggregate_raw_outputs_from_tasks(task.context)
+                    if task.context
+                    else aggregate_raw_outputs_from_task_outputs(task_outputs)
+                )
                 task_output = task.execute_sync(
                     agent=manager, context=context, tools=manager.tools
                 )
@@ -598,14 +627,26 @@ class Crew(BaseModel):
                 task_outputs.append(task_output)
                 self._process_task_result(future_task, task_output)
 
-        final_string_output = aggregate_raw_outputs_from_task_outputs(task_outputs)
+        # Important: There should only be one task output in the list
+        #            If there are more or 0, something went wrong.
+        if len(task_outputs) != 1:
+            raise ValueError(
+                "Something went wrong. Kickoff should return only one task output."
+            )
+
+        final_task_output = task_outputs[0]
+
+        final_string_output = final_task_output.raw
         self._finish_execution(final_string_output)
 
         token_usage = self.calculate_usage_metrics()
 
-        return (
-            self._format_output(task_outputs, token_usage),
-            token_usage,
+        return CrewOutput(
+            raw=final_task_output.raw,
+            pydantic=final_task_output.pydantic,
+            json_dict=final_task_output.json_dict,
+            tasks_output=[task.output for task in self.tasks if task.output],
+            token_usage=token_usage,
         )
 
     def copy(self):

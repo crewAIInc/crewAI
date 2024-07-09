@@ -4,12 +4,11 @@ import json
 from unittest.mock import MagicMock, patch
 
 import pytest
-from pydantic import BaseModel
-from pydantic_core import ValidationError
-
 from crewai import Agent, Crew, Process, Task
 from crewai.tasks.task_output import TaskOutput
 from crewai.utilities.converter import Converter
+from pydantic import BaseModel
+from pydantic_core import ValidationError
 
 
 def test_task_tool_reflect_agent_tools():
@@ -109,6 +108,8 @@ def test_task_callback():
 
 
 def test_task_callback_returns_task_ouput():
+    from crewai.tasks.output_format import OutputFormat
+
     researcher = Agent(
         role="Researcher",
         goal="Make the best research and analysis on content about AI and AI agents",
@@ -132,6 +133,8 @@ def test_task_callback_returns_task_ouput():
         task_completed.assert_called_once()
         callback_data = task_completed.call_args[0][0]
 
+        print("CALLBACK DATA", callback_data)
+
         # Check if callback_data is TaskOutput object or JSON string
         if isinstance(callback_data, TaskOutput):
             callback_data = json.dumps(callback_data.model_dump())
@@ -140,11 +143,14 @@ def test_task_callback_returns_task_ouput():
         output_dict = json.loads(callback_data)
         expected_output = {
             "description": task.description,
-            "exported_output": "exported_ok",
-            "raw_output": "exported_ok",
+            "raw": "exported_ok",
+            "pydantic": None,
+            "json_dict": None,
             "agent": researcher.role,
             "summary": "Give me a list of 5 interesting ideas to explore...",
+            "output_format": OutputFormat.RAW,
         }
+        print("OUTPUT DICT", output_dict)
         assert output_dict == expected_output
 
 
@@ -220,7 +226,7 @@ def test_output_pydantic():
 
     crew = Crew(agents=[scorer], tasks=[task])
     result = crew.kickoff()
-    assert isinstance(result, ScoreOutput)
+    assert isinstance(result.pydantic, ScoreOutput)
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
@@ -244,7 +250,8 @@ def test_output_json():
 
     crew = Crew(agents=[scorer], tasks=[task])
     result = crew.kickoff()
-    assert '{\n  "score": 4\n}' == result
+    print("RESULT JSON", result)
+    assert '{"score": 4}' == result.json
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
@@ -280,7 +287,11 @@ def test_output_pydantic_to_another_task():
 
     crew = Crew(agents=[scorer], tasks=[task1, task2], verbose=2)
     result = crew.kickoff()
-    assert 5 == result.score
+    pydantic_result = result.pydantic
+    assert isinstance(
+        pydantic_result, ScoreOutput
+    ), "Expected pydantic result to be of type ScoreOutput"
+    assert 5 == pydantic_result.score
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
@@ -311,7 +322,7 @@ def test_output_json_to_another_task():
 
     crew = Crew(agents=[scorer], tasks=[task1, task2])
     result = crew.kickoff()
-    assert '{\n  "score": 5\n}' == result
+    assert '{"score": 5}' == result.json
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
@@ -363,7 +374,9 @@ def test_save_task_json_output():
     with patch.object(Task, "_save_file") as save_file:
         save_file.return_value = None
         crew.kickoff()
-        save_file.assert_called_once_with('{\n  "score": 4\n}')
+        save_file.assert_called_once_with(
+            {"score": 4}
+        )  # TODO: @Joao, should this be a dict or a json string?
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
