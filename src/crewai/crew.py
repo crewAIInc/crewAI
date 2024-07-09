@@ -33,7 +33,10 @@ from crewai.tools.agent_tools import AgentTools
 from crewai.utilities import I18N, FileHandler, Logger, RPMController
 from crewai.utilities.constants import TRAINED_AGENTS_DATA_FILE, TRAINING_DATA_FILE
 from crewai.utilities.evaluators.task_evaluator import TaskEvaluator
-from crewai.utilities.formatter import aggregate_raw_outputs_from_task_outputs
+from crewai.utilities.formatter import (
+    aggregate_raw_outputs_from_task_outputs,
+    aggregate_raw_outputs_from_tasks,
+)
 from crewai.utilities.training_handler import CrewTrainingHandler
 
 try:
@@ -319,7 +322,6 @@ class Crew(BaseModel):
         self._execution_span = self._telemetry.crew_execution_span(self, inputs)
         if inputs is not None:
             self._interpolate_inputs(inputs)
-        self._interpolate_inputs(inputs)
         self._set_tasks_callbacks()
 
         i18n = I18N(prompt_file=self.prompt_file)
@@ -385,9 +387,7 @@ class Crew(BaseModel):
         self.usage_metrics = total_usage_metrics
         return results
 
-    async def kickoff_async(
-        self, inputs: Optional[CrewOutput] = {}
-    ) -> Union[str, Dict]:
+    async def kickoff_async(self, inputs: Optional[Dict[str, Any]] = {}) -> CrewOutput:
         """Asynchronous kickoff method to start the crew execution."""
         return await asyncio.to_thread(self.kickoff, inputs)
 
@@ -459,9 +459,13 @@ class Crew(BaseModel):
                 self._file_handler.log(
                     agent=role, task=task.description, status="started"
                 )
-            # TODO: IF USER OVERRIDE THE CONTEXT, PASS THAT
+
             if task.async_execution:
-                context = aggregate_raw_outputs_from_task_outputs(task_outputs)
+                context = (
+                    aggregate_raw_outputs_from_tasks(task.context)
+                    if task.context
+                    else aggregate_raw_outputs_from_task_outputs(task_outputs)
+                )
                 future = task.execute_async(
                     agent=task.agent, context=context, tools=task.tools
                 )
@@ -479,7 +483,11 @@ class Crew(BaseModel):
                     # Clear the futures list after processing all async results
                     futures.clear()
 
-                context = aggregate_raw_outputs_from_task_outputs(task_outputs)
+                context = (
+                    aggregate_raw_outputs_from_tasks(task.context)
+                    if task.context
+                    else aggregate_raw_outputs_from_task_outputs(task_outputs)
+                )
                 task_output = task.execute_sync(
                     agent=task.agent, context=context, tools=task.tools
                 )
@@ -499,7 +507,22 @@ class Crew(BaseModel):
 
         token_usage = self.calculate_usage_metrics()
 
-        return self._format_output(task_outputs, token_usage)
+        # Important: There should only be one task output in the list
+        #            If there are more or 0, something went wrong.
+        if len(task_outputs) != 1:
+            raise ValueError(
+                "Something went wrong. Kickoff should return only one task output."
+            )
+
+        final_task_output = task_outputs[0]
+
+        return CrewOutput(
+            _raw=final_task_output.raw,
+            _pydantic=final_task_output.pydantic,
+            _json=final_task_output.json,
+            tasks_output=[task.output for task in self.tasks if task.output],
+            token_usage=token_usage,
+        )
 
     def _process_task_result(self, task: Task, output: TaskOutput) -> None:
         role = task.agent.role if task.agent is not None else "None"
@@ -530,6 +553,7 @@ class Crew(BaseModel):
         task_outputs: List[TaskOutput] = []
         futures: List[Tuple[Task, Future[TaskOutput]]] = []
 
+        # TODO: IF USER OVERRIDE THE CONTEXT, PASS THAT
         for task in self.tasks:
             self._logger.log("debug", f"Working Agent: {manager.role}")
             self._logger.log("info", f"Starting Task: {task.description}")
@@ -633,18 +657,6 @@ class Crew(BaseModel):
         # type: ignore # "interpolate_inputs" of "Agent" does not return a value (it only ever returns None)
         for agent in self.agents:
             agent.interpolate_inputs(inputs)
-
-    def _format_output(
-        self, output: List[TaskOutput], token_usage: Optional[Dict[str, Any]]
-    ) -> CrewOutput:
-        """
-        Formats the output of the crew execution.
-        """
-        return CrewOutput(
-            output=output,
-            tasks_output=[task.output for task in self.tasks if task],
-            token_usage=token_usage,
-        )
 
     def _finish_execution(self, final_string_output: str) -> None:
         if self.max_rpm:
