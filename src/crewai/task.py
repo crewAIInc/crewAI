@@ -246,7 +246,6 @@ class Task(BaseModel):
                 if json_output
                 else pydantic_output.model_dump_json() if pydantic_output else result
             )
-            print("CALLING SAVE FILE", content)
             self._save_file(content)
 
         return task_output
@@ -315,6 +314,13 @@ class Task(BaseModel):
 
         return copied_task
 
+    def _create_converter(self, *args, **kwargs) -> Converter:
+        """Create a converter instance."""
+        converter = self.agent.get_output_converter(*args, **kwargs)
+        if self.converter_cls:
+            converter = self.converter_cls(*args, **kwargs)
+        return converter
+
     def _export_output(
         self, result: str
     ) -> Tuple[Optional[BaseModel], Optional[Dict[str, Any]]]:
@@ -323,11 +329,9 @@ class Task(BaseModel):
 
         if self.output_pydantic or self.output_json:
             model_output = self._convert_to_model(result)
-            print("MODEL OUTPUT", model_output)
             pydantic_output = (
                 model_output if isinstance(model_output, BaseModel) else None
             )
-            print("PYDANTIC OUTPUT", pydantic_output)
             if isinstance(model_output, str):
                 try:
                     json_output = json.loads(model_output)
@@ -335,7 +339,6 @@ class Task(BaseModel):
                     json_output = None
             else:
                 json_output = model_output if isinstance(model_output, dict) else None
-            print("JSON OUTPUT", json_output)
 
         return pydantic_output, json_output
 
@@ -347,18 +350,13 @@ class Task(BaseModel):
         try:
             return self._validate_model(result, model)
         except Exception:
-            print("EXCEPTION IN _convert_to_model")
             return self._handle_partial_json(result, model)
 
     def _validate_model(
         self, result: str, model: Type[BaseModel]
     ) -> Union[dict, BaseModel]:
-        print("VALIDATE MODEL - RESULT", result)
-        print("VALIDATE MODEL - MODEL", model)
         exported_result = model.model_validate_json(result)
-        print("EXPORTED RESULT", exported_result)
         if self.output_json:
-            print("HERE IN _validate_model", self.output_json)
             return exported_result.model_dump()
         return exported_result
 
@@ -369,12 +367,10 @@ class Task(BaseModel):
         if match:
             try:
                 exported_result = model.model_validate_json(match.group(0))
-                print("EXPORTED RESULT in handle_partial", exported_result)
                 if self.output_json:
                     return exported_result.model_dump()
                 return exported_result
             except Exception:
-                print("EXCEPTION IN _handle_partial_json")
                 pass
 
         return self._convert_with_instructions(result, model)
@@ -382,20 +378,16 @@ class Task(BaseModel):
     def _convert_with_instructions(
         self, result: str, model: Type[BaseModel]
     ) -> Union[dict, BaseModel, str]:
-        print("CONVERT WITH INSTRUCTIONS - RESULT", result)
-        print("CONVERT WITH INSTRUCTIONS - model", model)
         llm = self.agent.function_calling_llm or self.agent.llm
         instructions = self._get_conversion_instructions(model, llm)
 
-        converter = Converter(
+        converter = self._create_converter(
             llm=llm, text=result, model=model, instructions=instructions
         )
-        print("CONVERTER", converter)
         exported_result = (
             converter.to_pydantic() if self.output_pydantic else converter.to_json()
         )
 
-        print("EXPORTED RESULT IN CONVERT WITH INSTRUCTIONS", exported_result)
 
         if isinstance(exported_result, ConverterError):
             Printer().print(
@@ -434,7 +426,6 @@ class Task(BaseModel):
         return isinstance(llm, ChatOpenAI) and llm.openai_api_base is None
 
     def _save_file(self, result: Any) -> None:
-        print("SAVING FILE with content", result)
         directory = os.path.dirname(self.output_file)  # type: ignore # Value of type variable "AnyOrLiteralStr" of "dirname" cannot be "str | None"
 
         if directory and not os.path.exists(directory):
