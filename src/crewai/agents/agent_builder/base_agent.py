@@ -1,6 +1,7 @@
 import uuid
 from abc import ABC, abstractmethod
 from copy import copy as shallow_copy
+from hashlib import md5
 from typing import Any, Dict, List, Optional, TypeVar
 
 from pydantic import (
@@ -161,6 +162,10 @@ class BaseAgent(ABC, BaseModel):
         if not self._token_process:
             self._token_process = TokenProcess()
         return self
+
+    @property
+    def key(self):
+        return md5(self.role.encode()).hexdigest()
 
     @abstractmethod
     def execute_task(
