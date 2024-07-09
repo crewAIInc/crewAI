@@ -7,7 +7,6 @@ from unittest.mock import patch
 
 import pydantic_core
 import pytest
-
 from crewai.agent import Agent
 from crewai.agents.cache import CacheHandler
 from crewai.crew import Crew
@@ -85,6 +84,33 @@ def test_crew_config_conditional_requirement():
     assert [task.description for task in crew.tasks] == [
         task["description"] for task in parsed_config["tasks"]
     ]
+
+
+def test_async_task_context_validation():
+    task1 = Task(
+        description="Task 1",
+        async_execution=True,
+        expected_output="output",
+        agent=researcher,
+    )
+    task2 = Task(
+        description="Task 2",
+        async_execution=True,
+        expected_output="output",
+        agent=researcher,
+        context=[task1],
+    )
+    task3 = Task(
+        description="Task 3",
+        expected_output="output",
+        agent=researcher,
+    )
+
+    with pytest.raises(
+        ValueError,
+        match="Task 'Task 2' is asynchronous and cannot include other asynchronous tasks in its context.",
+    ):
+        Crew(tasks=[task1, task2, task3], agents=[researcher, writer])
 
 
 def test_crew_config_with_wrong_keys():

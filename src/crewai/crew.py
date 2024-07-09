@@ -275,6 +275,18 @@ class Crew(BaseModel):
 
         return self
 
+    @model_validator(mode="after")
+    def validate_async_task_cannot_include_async_tasks_in_context(self):
+        """Validates that if a task is set to be executed asynchronously, it cannot include other asynchronous tasks in its context."""
+        for task in self.tasks:
+            if task.async_execution and task.context:
+                async_tasks_in_context = [t for t in task.context if t.async_execution]
+                if async_tasks_in_context:
+                    raise ValueError(
+                        f"Task '{task.description}' is asynchronous and cannot include other asynchronous tasks in its context."
+                    )
+        return self
+
     def _setup_from_config(self):
         assert self.config is not None, "Config should not be None."
 
