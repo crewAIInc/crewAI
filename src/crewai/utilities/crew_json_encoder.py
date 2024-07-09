@@ -1,15 +1,10 @@
-import json
 from datetime import datetime
+import json
 from uuid import UUID
-
-from openai import BaseModel
+from pydantic import BaseModel
 
 
 class CrewJSONEncoder(json.JSONEncoder):
-    """
-    Custom JSON Encoder for Crew related objects.
-    """
-
     def default(self, obj):
         if isinstance(obj, datetime):
             return obj.isoformat()
@@ -17,6 +12,6 @@ class CrewJSONEncoder(json.JSONEncoder):
             return str(obj)
         if isinstance(obj, BaseModel):
             return obj.model_dump()
-        if isinstance(obj, set):
-            return list(obj)
-        return super().default(obj)
+        if hasattr(obj, "__dict__"):
+            return obj.__dict__
+        return str(obj)

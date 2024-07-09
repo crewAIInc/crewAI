@@ -1,6 +1,9 @@
 import os
 import pickle
 from datetime import datetime
+import json
+
+from crewai.utilities.crew_json_encoder import CrewJSONEncoder
 
 
 class FileHandler:
@@ -66,3 +69,37 @@ class PickleHandler:
                 return {}  # Return an empty dictionary if the file is empty or corrupted
             except Exception:
                 raise  # Raise any other exceptions that occur during loading
+
+
+class TaskOutputJsonHandler:
+    def __init__(self, file_name: str) -> None:
+        self.file_path = os.path.join(os.getcwd(), file_name)
+
+    def initialize_file(self) -> None:
+        if not os.path.exists(self.file_path) or os.path.getsize(self.file_path) == 0:
+            with open(self.file_path, "w") as file:
+                json.dump([], file)
+
+    def append(self, log) -> None:
+        if not os.path.exists(self.file_path) or os.path.getsize(self.file_path) == 0:
+            # Initialize the file with an empty list if it doesn't exist or is empty
+            with open(self.file_path, "w") as file:
+                json.dump([], file)
+        with open(self.file_path, "r+") as file:
+            try:
+                file_data = json.load(file)
+            except json.JSONDecodeError:
+                # If the file contains invalid JSON, initialize it with an empty list
+                file_data = []
+
+            file_data.append(log)
+            file.seek(0)
+            json.dump(file_data, file, indent=2, cls=CrewJSONEncoder)
+            file.truncate()
+
+    def load(self) -> list:
+        if not os.path.exists(self.file_path) or os.path.getsize(self.file_path) == 0:
+            return []
+
+        with open(self.file_path, "r") as file:
+            return json.load(file)
