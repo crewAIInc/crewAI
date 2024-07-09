@@ -7,6 +7,7 @@ from unittest.mock import patch
 
 import pydantic_core
 import pytest
+
 from crewai.agent import Agent
 from crewai.agents.cache import CacheHandler
 from crewai.crew import Crew
@@ -465,22 +466,6 @@ def test_agents_rpm_is_never_set_if_crew_max_RPM_is_not_set():
     Crew(agents=[agent], tasks=[task], verbose=2)
 
     assert agent._rpm_controller is None
-
-
-"""
-Future tests:
-TODO: 1 async task, 1 sync task. Make sure sync task waits for async to finish before starting.[]
-TODO: 3 async tasks, 1 sync task. Make sure sync task waits for async to finish before starting.
-TODO: 1 sync task, 1 async task. Make sure we wait for result from async before finishing crew.
-
-TODO: 3 async tasks, 1 sync task. Make sure context from all 3 async tasks is passed to sync task.
-TODO: 3 async tasks, 1 sync task. Pass in context from only 1 async task to sync task.
-
-TODO: Test pydantic output of CrewOutput and test type in CrewOutput result
-TODO: Test json output of CrewOutput and test type in CrewOutput result
-
-TODO: TEST THE SAME THING BUT WITH HIERARCHICAL PROCESS
-"""
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
@@ -1740,8 +1725,3 @@ def test__setup_for_training():
 
     for agent in agents:
         assert agent.allow_delegation is False
-
-
-# TODO: TEST EXPORT OUTPUT TASK WITH PYDANTIC
-# TODO: TEST EXPORT OUTPUT TASK WITH JSON
-# TODO: TEST EXPORT OUTPUT TASK CALLBACK
