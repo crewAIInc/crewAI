@@ -142,6 +142,7 @@ class Telemetry:
                                 "async_execution?": task.async_execution,
                                 "human_input?": task.human_input,
                                 "agent_role": task.agent.role if task.agent else "None",
+                                "agent_key": task.agent.key if task.agent else None,
                                 "context": (
                                     [task.description for task in task.context]
                                     if task.context
@@ -350,6 +351,7 @@ class Telemetry:
                                 "async_execution?": task.async_execution,
                                 "human_input?": task.human_input,
                                 "agent_role": task.agent.role if task.agent else "None",
+                                "agent_key": task.agent.key if task.agent else None,
                                 "context": (
                                     [task.description for task in task.context]
                                     if task.context
