@@ -7,6 +7,8 @@ from pydantic import BaseModel, Field, model_validator
 class TaskOutput(BaseModel):
     """Class that represents the result of a task."""
 
+    # TODO: MAKE SURE TO FULLY SUPPORT OUTPUT FILE
+
     description: str = Field(description="Description of the task")
     summary: Optional[str] = Field(description="Summary of the task", default=None)
     raw_output: str = Field(description="Result of the task")
@@ -43,7 +45,7 @@ class TaskOutput(BaseModel):
             return self.json_output[key]
         raise KeyError(f"Key '{key}' not found in pydantic_output or json_output")
 
-    def to_output_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> Dict[str, Any]:
         """Convert json_output and pydantic_output to a dictionary."""
         output_dict = {}
         if self.json_output:

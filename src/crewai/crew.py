@@ -459,7 +459,7 @@ class Crew(BaseModel):
                 self._file_handler.log(
                     agent=role, task=task.description, status="started"
                 )
-
+            # TODO: IF USER OVERRIDE THE CONTEXT, PASS THAT
             if task.async_execution:
                 context = aggregate_raw_outputs_from_task_outputs(task_outputs)
                 future = task.execute_async(
