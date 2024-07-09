@@ -97,6 +97,11 @@ class TaskOutputJsonHandler:
             json.dump(file_data, file, indent=2, cls=CrewJSONEncoder)
             file.truncate()
 
+    def reset(self):
+        """Reset the JSON file by creating an empty file."""
+        with open(self.file_path, "w") as f:
+            json.dump([], f)
+
     def load(self) -> list:
         if not os.path.exists(self.file_path) or os.path.getsize(self.file_path) == 0:
             return []

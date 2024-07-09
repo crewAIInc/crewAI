@@ -559,7 +559,6 @@ def test_hierarchical_async_task_execution_completion():
 
 @pytest.mark.vcr(filter_headers=["authorization"])
 def test_single_task_with_async_execution():
-
     researcher_agent = Agent(
         role="Researcher",
         goal="Make the best research and analysis on content about AI and AI agents",
@@ -713,7 +712,6 @@ def test_async_task_execution_call_count():
     ) as mock_execute_sync, patch.object(
         Task, "execute_async", return_value=mock_future
     ) as mock_execute_async:
-
         crew.kickoff()
 
         assert mock_execute_async.call_count == 2
@@ -1138,8 +1136,6 @@ def test_code_execution_flag_adds_code_tool_upon_kickoff():
 
 @pytest.mark.vcr(filter_headers=["authorization"])
 def test_delegation_is_not_enabled_if_there_are_only_one_agent():
-    from unittest.mock import patch
-
     researcher = Agent(
         role="Researcher",
         goal="Make the best research and analysis on content about AI and AI agents",
@@ -1825,3 +1821,68 @@ def test__setup_for_training():
 # TODO: TEST EXPORT OUTPUT TASK WITH PYDANTIC
 # TODO: TEST EXPORT OUTPUT TASK WITH JSON
 # TODO: TEST EXPORT OUTPUT TASK CALLBACK
+
+
+@pytest.mark.vcr(filter_headers=["authorization"])
+def test_replay_feature():
+    list_ideas = Task(
+        description="Generate a list of 5 interesting ideas to explore for an article, where each bulletpoint is under 15 words.",
+        expected_output="Bullet point list of 5 important events. No additional commentary.",
+        agent=researcher,
+    )
+    write = Task(
+        description="Write a sentence about the events",
+        expected_output="A sentence about the events",
+        agent=writer,
+        context=[list_ideas],
+    )
+
+    crew = Crew(
+        agents=[researcher, writer],
+        tasks=[list_ideas, write],
+        process=Process.sequential,
+    )
+
+    with patch.object(Task, "execute_sync") as mock_execute_task:
+        mock_execute_task.return_value = TaskOutput(
+            description="Mock description",
+            raw_output="Mocked output for list of ideas",
+            agent="Researcher",
+        )
+
+        crew.kickoff()
+        crew.replay_from_task(str(write.id))
+        # Ensure context was passed correctly
+        context_passed = mock_execute_task.call_args_list[1][1]["context"]
+        assert (
+            "Mocked output for list of ideas" in context_passed
+        )  # ensure context passed
+        assert mock_execute_task.call_count == 3
+
+
+# TODO: ENSURE INPUTS PASSED PROPERLY ONTO OUTPUT_JSON
+@pytest.mark.vcr(filter_headers=["authorization"])
+def test_replay_feature_ensure_inputs_passed():
+    agent = Agent(
+        role="{topic} Researcher",
+        goal="Express hot takes on {topic}.",
+        backstory="You have a lot of experience with {topic}.",
+    )
+
+    task = Task(
+        description="Give me an analysis around {topic}.",
+        expected_output="{points} bullet points about {topic}.",
+        agent=agent,
+    )
+
+    crew = Crew(agents=[agent], tasks=[task])
+    inputs = {"topic": "AI", "points": 5}
+    crew._interpolate_inputs(inputs=inputs)  # Manual call for now
+    # TODO: ENSURE INPUTS PASSED PROPERLY ONTO OUTPUT_JSON
+    # TODO: PATCH _store_execution_log WITH ATTR _inputs
+
+    # assert crew.tasks[0].description == "Give me an analysis around AI."
+    # assert crew.tasks[0].expected_output == "5 bullet points about AI."
+    # assert crew.agents[0].role == "AI Researcher"
+    # assert crew.agents[0].goal == "Express hot takes on AI."
+    # assert crew.agents[0].backstory == "You have a lot of experience with AI."
