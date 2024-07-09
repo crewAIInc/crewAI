@@ -961,3 +961,54 @@ def test_agent_use_trained_data(crew_training_handler):
     crew_training_handler.assert_has_calls(
         [mock.call(), mock.call("trained_agents_data.pkl"), mock.call().load()]
     )
+
+
+def test_agent_max_retry_limit():
+    agent = Agent(
+        role="test role",
+        goal="test goal",
+        backstory="test backstory",
+        max_retry_limit=1,
+    )
+
+    task = Task(
+        agent=agent,
+        description="Say the word: Hi",
+        expected_output="The word: Hi",
+        human_input=True,
+    )
+
+    error_message = "Error happening while sending prompt to model."
+    with patch.object(
+        CrewAgentExecutor, "invoke", wraps=agent.agent_executor.invoke
+    ) as invoke_mock:
+        invoke_mock.side_effect = Exception(error_message)
+
+        assert agent._times_executed == 0
+        assert agent.max_retry_limit == 1
+
+        with pytest.raises(Exception) as e:
+            agent.execute_task(
+                task=task,
+            )
+        assert e.value.args[0] == error_message
+        assert agent._times_executed == 2
+
+        invoke_mock.assert_has_calls(
+            [
+                mock.call(
+                    {
+                        "input": "Say the word: Hi\n\nThis is the expect criteria for your final answer: The word: Hi \n you MUST return the actual complete content as the final answer, not a summary.",
+                        "tool_names": "",
+                        "tools": "",
+                    }
+                ),
+                mock.call(
+                    {
+                        "input": "Say the word: Hi\n\nThis is the expect criteria for your final answer: The word: Hi \n you MUST return the actual complete content as the final answer, not a summary.",
+                        "tool_names": "",
+                        "tools": "",
+                    }
+                ),
+            ]
+        )

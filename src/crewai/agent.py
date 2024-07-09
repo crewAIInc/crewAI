@@ -7,7 +7,7 @@ from langchain.tools.render import render_text_description
 from langchain_core.agents import AgentAction
 from langchain_core.callbacks import BaseCallbackHandler
 from langchain_openai import ChatOpenAI
-from pydantic import Field, InstanceOf, model_validator, PrivateAttr
+from pydantic import Field, InstanceOf, PrivateAttr, model_validator
 
 from crewai.agents import CacheHandler, CrewAgentExecutor, CrewAgentParser
 from crewai.agents.agent_builder.base_agent import BaseAgent
@@ -54,6 +54,7 @@ class Agent(BaseAgent):
             tools: Tools at agents disposal
             step_callback: Callback to be executed after each step of the agent execution.
             callbacks: A list of callback functions from the langchain library that are triggered during the agent's execution process
+            max_retry_limit: Maximum number of retries for an agent to execute a task when an error occurs.
     """
 
     _times_executed: int = PrivateAttr(default=0)
