@@ -180,7 +180,7 @@ class Task(BaseModel):
         tools: Optional[List[Any]] = None,
     ) -> Future[TaskOutput]:
         """Execute the task asynchronously."""
-        future = Future()
+        future: Future[TaskOutput] = Future()
         threading.Thread(
             target=self._execute_task_async, args=(agent, context, tools, future)
         ).start()
@@ -387,7 +387,6 @@ class Task(BaseModel):
         exported_result = (
             converter.to_pydantic() if self.output_pydantic else converter.to_json()
         )
-
 
         if isinstance(exported_result, ConverterError):
             Printer().print(

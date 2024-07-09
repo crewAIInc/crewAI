@@ -7,7 +7,6 @@ from unittest.mock import patch
 
 import pydantic_core
 import pytest
-
 from crewai.agent import Agent
 from crewai.agents.cache import CacheHandler
 from crewai.crew import Crew
@@ -709,7 +708,6 @@ def test_kickoff_for_each_single_input():
 @pytest.mark.vcr(filter_headers=["authorization"])
 def test_kickoff_for_each_multiple_inputs():
     """Tests if kickoff_for_each works with multiple inputs."""
-    from unittest.mock import patch
 
     inputs = [
         {"topic": "dog"},
@@ -1084,7 +1082,6 @@ def test_code_execution_flag_adds_code_tool_upon_kickoff():
 
 @pytest.mark.vcr(filter_headers=["authorization"])
 def test_delegation_is_not_enabled_if_there_are_only_one_agent():
-    from unittest.mock import patch
 
     researcher = Agent(
         role="Researcher",
