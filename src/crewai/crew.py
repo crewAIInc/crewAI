@@ -276,15 +276,39 @@ class Crew(BaseModel):
         return self
 
     @model_validator(mode="after")
-    def validate_async_task_cannot_include_async_tasks_in_context(self):
-        """Validates that if a task is set to be executed asynchronously, it cannot include other asynchronous tasks in its context."""
-        for task in self.tasks:
+    def validate_async_task_cannot_include_sequential_async_tasks_in_context(self):
+        """
+        Validates that if a task is set to be executed asynchronously,
+        it cannot include other asynchronous tasks in its context unless
+        separated by a synchronous task.
+        """
+        for i, task in enumerate(self.tasks):
             if task.async_execution and task.context:
-                async_tasks_in_context = [t for t in task.context if t.async_execution]
-                if async_tasks_in_context:
-                    raise ValueError(
-                        f"Task '{task.description}' is asynchronous and cannot include other asynchronous tasks in its context."
-                    )
+                for context_task in task.context:
+                    if context_task.async_execution:
+                        for j in range(i - 1, -1, -1):
+                            if self.tasks[j] == context_task:
+                                raise ValueError(
+                                    f"Task '{task.description}' is asynchronous and cannot include other sequential asynchronous tasks in its context."
+                                )
+                            if not self.tasks[j].async_execution:
+                                break
+        return self
+
+    @model_validator(mode="after")
+    def validate_context_no_future_tasks(self):
+        """Validates that a task's context does not include future tasks."""
+        task_indices = {id(task): i for i, task in enumerate(self.tasks)}
+
+        for task in self.tasks:
+            if task.context:
+                for context_task in task.context:
+                    if id(context_task) not in task_indices:
+                        continue  # Skip context tasks not in the main tasks list
+                    if task_indices[id(context_task)] > task_indices[id(task)]:
+                        raise ValueError(
+                            f"Task '{task.description}' has a context dependency on a future task '{context_task.description}', which is not allowed."
+                        )
         return self
 
     def _setup_from_config(self):

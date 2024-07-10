@@ -7,6 +7,7 @@ from unittest.mock import patch
 
 import pydantic_core
 import pytest
+
 from crewai.agent import Agent
 from crewai.agents.cache import CacheHandler
 from crewai.crew import Crew
@@ -86,7 +87,7 @@ def test_crew_config_conditional_requirement():
     ]
 
 
-def test_async_task_context_validation():
+def test_async_task_cannot_include_sequential_async_tasks_in_context():
     task1 = Task(
         description="Task 1",
         async_execution=True,
@@ -102,15 +103,69 @@ def test_async_task_context_validation():
     )
     task3 = Task(
         description="Task 3",
+        async_execution=True,
+        expected_output="output",
+        agent=researcher,
+        context=[task2],
+    )
+    task4 = Task(
+        description="Task 4",
+        expected_output="output",
+        agent=writer,
+    )
+    task5 = Task(
+        description="Task 5",
+        async_execution=True,
+        expected_output="output",
+        agent=researcher,
+        context=[task4],
+    )
+
+    # This should raise an error because task2 is async and has task1 in its context without a sync task in between
+    with pytest.raises(
+        ValueError,
+        match="Task 'Task 2' is asynchronous and cannot include other sequential asynchronous tasks in its context.",
+    ):
+        Crew(tasks=[task1, task2, task3, task4, task5], agents=[researcher, writer])
+
+    # This should not raise an error because task5 has a sync task (task4) in its context
+    try:
+        Crew(tasks=[task1, task4, task5], agents=[researcher, writer])
+    except ValueError:
+        pytest.fail("Unexpected ValidationError raised")
+
+
+def test_context_no_future_tasks():
+
+    task2 = Task(
+        description="Task 2",
         expected_output="output",
         agent=researcher,
     )
+    task3 = Task(
+        description="Task 3",
+        expected_output="output",
+        agent=researcher,
+        context=[task2],
+    )
+    task4 = Task(
+        description="Task 4",
+        expected_output="output",
+        agent=researcher,
+    )
+    task1 = Task(
+        description="Task 1",
+        expected_output="output",
+        agent=researcher,
+        context=[task4],
+    )
 
+    # This should raise an error because task1 has a context dependency on a future task (task4)
     with pytest.raises(
         ValueError,
-        match="Task 'Task 2' is asynchronous and cannot include other asynchronous tasks in its context.",
+        match="Task 'Task 1' has a context dependency on a future task 'Task 4', which is not allowed.",
     ):
-        Crew(tasks=[task1, task2, task3], agents=[researcher, writer])
+        Crew(tasks=[task1, task2, task3, task4], agents=[researcher, writer])
 
 
 def test_crew_config_with_wrong_keys():
