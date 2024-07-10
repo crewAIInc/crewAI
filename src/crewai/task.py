@@ -211,6 +211,7 @@ class Task(BaseModel):
         tools: Optional[List[Any]],
     ) -> TaskOutput:
         """Run the core execution logic of the task."""
+        self.agent = agent
         agent = agent or self.agent
         if not agent:
             raise Exception(
