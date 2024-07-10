@@ -36,7 +36,9 @@ from crewai.utilities.constants import TRAINED_AGENTS_DATA_FILE, TRAINING_DATA_F
 from crewai.utilities.crew_json_encoder import CrewJSONEncoder
 from crewai.utilities.evaluators.task_evaluator import TaskEvaluator
 from crewai.utilities.file_handler import TaskOutputJsonHandler
-from crewai.utilities.formatter import aggregate_raw_outputs_from_task_outputs
+from crewai.utilities.formatter import (
+    aggregate_raw_outputs_from_task_outputs,
+)
 from crewai.utilities.training_handler import CrewTrainingHandler
 
 try:
@@ -267,6 +269,63 @@ class Crew(BaseModel):
 
         return self
 
+    @model_validator(mode="after")
+    def validate_end_with_at_most_one_async_task(self):
+        """Validates that the crew ends with at most one asynchronous task."""
+        final_async_task_count = 0
+
+        # Traverse tasks backward
+        for task in reversed(self.tasks):
+            if task.async_execution:
+                final_async_task_count += 1
+            else:
+                break  # Stop traversing as soon as a non-async task is encountered
+
+        if final_async_task_count > 1:
+            raise PydanticCustomError(
+                "async_task_count",
+                "The crew must end with at most one asynchronous task.",
+                {},
+            )
+
+        return self
+
+    @model_validator(mode="after")
+    def validate_async_task_cannot_include_sequential_async_tasks_in_context(self):
+        """
+        Validates that if a task is set to be executed asynchronously,
+        it cannot include other asynchronous tasks in its context unless
+        separated by a synchronous task.
+        """
+        for i, task in enumerate(self.tasks):
+            if task.async_execution and task.context:
+                for context_task in task.context:
+                    if context_task.async_execution:
+                        for j in range(i - 1, -1, -1):
+                            if self.tasks[j] == context_task:
+                                raise ValueError(
+                                    f"Task '{task.description}' is asynchronous and cannot include other sequential asynchronous tasks in its context."
+                                )
+                            if not self.tasks[j].async_execution:
+                                break
+        return self
+
+    @model_validator(mode="after")
+    def validate_context_no_future_tasks(self):
+        """Validates that a task's context does not include future tasks."""
+        task_indices = {id(task): i for i, task in enumerate(self.tasks)}
+
+        for task in self.tasks:
+            if task.context:
+                for context_task in task.context:
+                    if id(context_task) not in task_indices:
+                        continue  # Skip context tasks not in the main tasks list
+                    if task_indices[id(context_task)] > task_indices[id(task)]:
+                        raise ValueError(
+                            f"Task '{task.description}' has a context dependency on a future task '{context_task.description}', which is not allowed."
+                        )
+        return self
+
     def _setup_from_config(self):
         assert self.config is not None, "Config should not be None."
 
@@ -337,8 +396,7 @@ class Crew(BaseModel):
         self._task_output_handler.reset()
         if inputs is not None:
             self._inputs = inputs
-            self._interpolate_inputs(inputs)
-        # self._interpolate_inputs(inputs)
+            # self._interpolate_inputs(inputs)
         self._set_tasks_callbacks()
 
         i18n = I18N(prompt_file=self.prompt_file)
@@ -364,8 +422,7 @@ class Crew(BaseModel):
         if self.process == Process.sequential:
             result = self._run_sequential_process()
         elif self.process == Process.hierarchical:
-            result, manager_metrics = self._run_hierarchical_process()  # type: ignore # Incompatible types in assignment (expression has type "str | dict[str, Any]", variable has type "str")
-            metrics.append(manager_metrics)
+            result = self._run_hierarchical_process()  # type: ignore # Incompatible types in assignment (expression has type "str | dict[str, Any]", variable has type "str")
         else:
             raise NotImplementedError(
                 f"The process '{self.process}' is not implemented yet."
@@ -404,9 +461,7 @@ class Crew(BaseModel):
         self.usage_metrics = total_usage_metrics
         return results
 
-    async def kickoff_async(
-        self, inputs: Optional[CrewOutput] = {}
-    ) -> Union[str, Dict]:
+    async def kickoff_async(self, inputs: Optional[Dict[str, Any]] = {}) -> CrewOutput:
         """Asynchronous kickoff method to start the crew execution."""
         return await asyncio.to_thread(self.kickoff, inputs)
 

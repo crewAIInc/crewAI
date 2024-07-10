@@ -1,10 +1,11 @@
+import json
 import os
 import re
 import threading
 import uuid
 from concurrent.futures import Future
 from copy import copy
-from typing import Any, Dict, List, Optional, Type, Union
+from typing import Any, Dict, List, Optional, Tuple, Type, Union
 
 from langchain_openai import ChatOpenAI
 from opentelemetry.trace import Span
@@ -12,10 +13,10 @@ from pydantic import UUID4, BaseModel, Field, field_validator, model_validator
 from pydantic_core import PydanticCustomError
 
 from crewai.agents.agent_builder.base_agent import BaseAgent
+from crewai.tasks.output_format import OutputFormat
 from crewai.tasks.task_output import TaskOutput
 from crewai.telemetry.telemetry import Telemetry
 from crewai.utilities.converter import Converter, ConverterError
-from crewai.utilities.formatter import aggregate_raw_outputs_from_task_outputs
 from crewai.utilities.i18n import I18N
 from crewai.utilities.printer import Printer
 from crewai.utilities.pydantic_schema_parser import PydanticSchemaParser
@@ -99,6 +100,10 @@ class Task(BaseModel):
         description="Whether the task should have a human review the final answer of the agent",
         default=False,
     )
+    converter_cls: Optional[Type[Converter]] = Field(
+        description="A converter class used to export structured output",
+        default=None,
+    )
 
     _telemetry: Telemetry
     _execution_span: Span | None = None
@@ -159,18 +164,6 @@ class Task(BaseModel):
             )
         return self
 
-    def wait_for_completion(self) -> str | BaseModel:
-        """Wait for asynchronous task completion and return the output."""
-        assert self.async_execution, "Task is not set to be executed asynchronously."
-
-        if self._future:
-            self._future.result()  # Wait for the future to complete
-            self._future = None
-
-        assert self.output, "Task output is not set."
-
-        return self.output.exported_output
-
     def execute_sync(
         self,
         agent: Optional[BaseAgent] = None,
@@ -187,7 +180,7 @@ class Task(BaseModel):
         tools: Optional[List[Any]] = None,
     ) -> Future[TaskOutput]:
         """Execute the task asynchronously."""
-        future = Future()
+        future: Future[TaskOutput] = Future()
         threading.Thread(
             target=self._execute_task_async, args=(agent, context, tools, future)
         ).start()
@@ -220,31 +213,24 @@ class Task(BaseModel):
 
         self._execution_span = self._telemetry.task_started(crew=agent.crew, task=self)
 
-        if self.context:
-            task_outputs: List[TaskOutput] = []
-            for task in self.context:
-                # if task.async_execution:
-                #     task.wait_for_completion()
-                if task.output:
-                    task_outputs.append(task.output)
-            context = aggregate_raw_outputs_from_task_outputs(task_outputs)
-
         self.prompt_context = context
-        tools = tools or self.tools
+        tools = tools or self.tools or []
 
         result = agent.execute_task(
             task=self,
             context=context,
             tools=tools,
         )
-        exported_output = self._export_output(result)
+
+        pydantic_output, json_output = self._export_output(result)
 
         task_output = TaskOutput(
             description=self.description,
-            raw_output=result,
-            pydantic_output=exported_output["pydantic"],
-            json_output=exported_output["json"],
+            raw=result,
+            pydantic=pydantic_output,
+            json_dict=json_output,
             agent=agent.role,
+            output_format=self._get_output_format(),
         )
         self.output = task_output
 
@@ -254,6 +240,16 @@ class Task(BaseModel):
         if self._execution_span:
             self._telemetry.task_ended(self._execution_span, self)
             self._execution_span = None
+
+        if self.output_file:
+            content = (
+                json_output
+                if json_output
+                else pydantic_output.model_dump_json()
+                if pydantic_output
+                else result
+            )
+            self._save_file(content)
 
         return task_output
 
@@ -290,7 +286,7 @@ class Task(BaseModel):
         """Increment the delegations counter."""
         self.delegations += 1
 
-    def copy(self, agents: Optional[List["BaseAgent"]] = None) -> "Task":
+    def copy(self, agents: List["BaseAgent"]) -> "Task":
         """Create a deep copy of the Task."""
         exclude = {
             "id",
@@ -323,28 +319,39 @@ class Task(BaseModel):
 
         return copied_task
 
+    def _create_converter(self, *args, **kwargs) -> Converter:
+        """Create a converter instance."""
+        converter = self.agent.get_output_converter(*args, **kwargs)
+        if self.converter_cls:
+            converter = self.converter_cls(*args, **kwargs)
+        return converter
+
     def _export_output(
         self, result: str
-    ) -> Dict[str, Union[BaseModel, Dict[str, Any]]]:
-        output = {
-            "pydantic": None,
-            "json": None,
-        }
+    ) -> Tuple[Optional[BaseModel], Optional[Dict[str, Any]]]:
+        pydantic_output: Optional[BaseModel] = None
+        json_output: Optional[Dict[str, Any]] = None
 
         if self.output_pydantic or self.output_json:
             model_output = self._convert_to_model(result)
-            output["pydantic"] = (
+            pydantic_output = (
                 model_output if isinstance(model_output, BaseModel) else None
             )
-            output["json"] = model_output if isinstance(model_output, dict) else None
+            if isinstance(model_output, str):
+                try:
+                    json_output = json.loads(model_output)
+                except json.JSONDecodeError:
+                    json_output = None
+            else:
+                json_output = model_output if isinstance(model_output, dict) else None
 
-        if self.output_file:
-            self._save_output(output["raw"])
-
-        return output
+        return pydantic_output, json_output
 
     def _convert_to_model(self, result: str) -> Union[dict, BaseModel, str]:
         model = self.output_pydantic or self.output_json
+        if model is None:
+            return result
+
         try:
             return self._validate_model(result, model)
         except Exception:
@@ -379,7 +386,7 @@ class Task(BaseModel):
         llm = self.agent.function_calling_llm or self.agent.llm
         instructions = self._get_conversion_instructions(model, llm)
 
-        converter = Converter(
+        converter = self._create_converter(
             llm=llm, text=result, model=model, instructions=instructions
         )
         exported_result = (
@@ -395,6 +402,13 @@ class Task(BaseModel):
 
         return exported_result
 
+    def _get_output_format(self) -> OutputFormat:
+        if self.output_json:
+            return OutputFormat.JSON
+        if self.output_pydantic:
+            return OutputFormat.PYDANTIC
+        return OutputFormat.RAW
+
     def _get_conversion_instructions(self, model: Type[BaseModel], llm: Any) -> str:
         instructions = "I'm gonna convert this raw text into valid JSON."
         if not self._is_gpt(llm):
@@ -403,6 +417,9 @@ class Task(BaseModel):
         return instructions
 
     def _save_output(self, content: str) -> None:
+        if not self.output_file:
+            raise Exception("Output file path is not set.")
+
         directory = os.path.dirname(self.output_file)
         if directory and not os.path.exists(directory):
             os.makedirs(directory)

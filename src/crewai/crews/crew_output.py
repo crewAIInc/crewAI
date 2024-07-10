@@ -1,13 +1,22 @@
-from typing import Any, Dict, List
+import json
+from typing import Any, Dict, Optional
 
 from pydantic import BaseModel, Field
 
+from crewai.tasks.output_format import OutputFormat
 from crewai.tasks.task_output import TaskOutput
-from crewai.utilities.formatter import aggregate_raw_outputs_from_task_outputs
 
 
 class CrewOutput(BaseModel):
-    output: List[TaskOutput] = Field(description="Result of the final task")
+    """Class that represents the result of a crew."""
+
+    raw: str = Field(description="Raw output of crew", default="")
+    pydantic: Optional[BaseModel] = Field(
+        description="Pydantic output of Crew", default=None
+    )
+    json_dict: Optional[Dict[str, Any]] = Field(
+        description="JSON dict output of Crew", default=None
+    )
     tasks_output: list[TaskOutput] = Field(
         description="Output of each task", default=[]
     )
@@ -15,30 +24,37 @@ class CrewOutput(BaseModel):
         description="Processed token summary", default={}
     )
 
-    # TODO: Ask @joao what is the desired behavior here
-    def result(
-        self,
-    ) -> List[str | BaseModel | Dict[str, Any]]:
-        """Return the result of the task based on the available output."""
-        results = [output.result() for output in self.output]
-        return results
+    # TODO: Joao - Adding this safety check breakes when people want to see
+    #                   The full output of a CrewOutput.
+    # @property
+    # def pydantic(self) -> Optional[BaseModel]:
+    #     # Check if the final task output included a pydantic model
+    #     if self.tasks_output[-1].output_format != OutputFormat.PYDANTIC:
+    #         raise ValueError(
+    #             "No pydantic model found in the final task. Please make sure to set the output_pydantic property in the final task in your crew."
+    #         )
 
-    def raw_output(self) -> str:
-        """Return the raw output of the task."""
-        return aggregate_raw_outputs_from_task_outputs(self.output)
+    #     return self._pydantic
 
-    def to_output_dict(self) -> List[Dict[str, Any]]:
-        output_dict = [output.to_output_dict() for output in self.output]
-        return output_dict
+    @property
+    def json(self) -> Optional[str]:
+        if self.tasks_output[-1].output_format != OutputFormat.JSON:
+            raise ValueError(
+                "No JSON output found in the final task. Please make sure to set the output_json property in the final task in your crew."
+            )
 
-    def __getitem__(self, key: str) -> Any:
-        if len(self.output) == 0:
-            return None
-        elif len(self.output) == 1:
-            return self.output[0][key]
-        else:
-            return [output[key] for output in self.output]
+        return json.dumps(self.json_dict)
 
-    # TODO: Confirm with Joao that we want to print the raw output and not the object
+    def to_dict(self) -> Dict[str, Any]:
+        if self.json_dict:
+            return self.json_dict
+        if self.pydantic:
+            return self.pydantic.model_dump()
+        raise ValueError("No output to convert to dictionary")
+
     def __str__(self):
-        return str(self.raw_output())
+        if self.pydantic:
+            return str(self.pydantic)
+        if self.json_dict:
+            return str(self.json_dict)
+        return self.raw
