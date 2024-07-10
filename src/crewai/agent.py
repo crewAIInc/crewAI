@@ -174,6 +174,7 @@ class Agent(BaseAgent):
         self.agent_executor.tools = parsed_tools
         self.agent_executor.task = task
 
+        # TODO: COMPARE WITH ARGS AND WITHOUT ARGS
         self.agent_executor.tools_description = self._render_text_description_and_args(
             parsed_tools
         )

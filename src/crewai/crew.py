@@ -5,15 +5,15 @@ from typing import Any, Dict, List, Optional, Tuple, Union
 
 from langchain_core.callbacks import BaseCallbackHandler
 from pydantic import (
-    UUID4,
-    BaseModel,
-    ConfigDict,
-    Field,
-    InstanceOf,
-    Json,
-    PrivateAttr,
-    field_validator,
-    model_validator,
+  UUID4,
+  BaseModel,
+  ConfigDict,
+  Field,
+  InstanceOf,
+  Json,
+  PrivateAttr,
+  field_validator,
+  model_validator,
 )
 from pydantic_core import PydanticCustomError
 
@@ -446,10 +446,12 @@ class Crew(BaseModel):
                             ),
                             None,
                         )
+                        if not task.tools:
+                            task.tools = []
 
                         if existing_tool_index is not None:
                             # Replace the existing tool
-                            task.tools[existing_tool_index] = new_tool
+                            task.tools[existing_tool_index] = new_tool 
                         else:
                             # Add the new tool
                             task.tools.append(new_tool)
