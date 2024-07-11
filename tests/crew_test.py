@@ -1379,7 +1379,6 @@ def test_crew_does_not_interpolate_without_inputs():
             interpolate_task_inputs.assert_not_called()
 
 
-# TODO: Ask @joao if we want to start throwing errors if inputs are not provided
 # def test_crew_partial_inputs():
 #     agent = Agent(
 #         role="{topic} Researcher",
@@ -1403,7 +1402,6 @@ def test_crew_does_not_interpolate_without_inputs():
 #     assert crew.agents[0].backstory == "You have a lot of experience with AI."
 
 
-# TODO: If we do want ot throw errors if we are missing inputs. Add in this test.
 # def test_crew_invalid_inputs():
 #     agent = Agent(
 #         role="{topic} Researcher",

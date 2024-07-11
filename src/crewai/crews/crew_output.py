@@ -24,8 +24,6 @@ class CrewOutput(BaseModel):
         description="Processed token summary", default={}
     )
 
-    # TODO: Joao - Adding this safety check breakes when people want to see
-    #                   The full output of a CrewOutput.
     # @property
     # def pydantic(self) -> Optional[BaseModel]:
     #     # Check if the final task output included a pydantic model
