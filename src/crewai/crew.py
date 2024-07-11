@@ -645,8 +645,8 @@ class Crew(BaseModel):
         self, task: Task, agent: Optional[BaseAgent], color: str = "bold_purple"
     ):
         role = agent.role if agent else "None"
-        self._logger.log("debug", f"Working Agent: {role}", color=color)
-        self._logger.log("info", f"Starting Task: {task.description}", color=color)
+        self._logger.log("debug", f"== Working Agent: {role}", color=color)
+        self._logger.log("info", f"== Starting Task: {task.description}", color=color)
         if self.output_log_file:
             self._file_handler.log(agent=role, task=task.description, status="started")
 
