@@ -37,6 +37,7 @@ from crewai.utilities.formatter import (
     aggregate_raw_outputs_from_task_outputs,
     aggregate_raw_outputs_from_tasks,
 )
+from crewai.utilities.planning_handler import CrewPlanner
 from crewai.utilities.training_handler import CrewTrainingHandler
 
 try:
@@ -67,6 +68,7 @@ class Crew(BaseModel):
         task_callback: Callback to be executed after each task for every agents execution.
         step_callback: Callback to be executed after each step for every agents execution.
         share_crew: Whether you want to share the complete crew information and execution with crewAI to make the library better, and allow us to train models.
+        planning: Plan the crew execution and add the plan to the crew.
     """
 
     __hash__ = object.__hash__  # type: ignore
@@ -134,6 +136,10 @@ class Crew(BaseModel):
     output_log_file: Optional[Union[bool, str]] = Field(
         default=False,
         description="output_log_file",
+    )
+    planning: Optional[bool] = Field(
+        default=False,
+        description="Plan the crew execution and add the plan to the crew.",
     )
 
     @field_validator("id", mode="before")
@@ -399,6 +405,9 @@ class Crew(BaseModel):
 
             agent.create_agent_executor()
 
+        if self.planning:
+            self._handle_crew_planning()
+
         metrics = []
 
         if self.process == Process.sequential:
@@ -491,6 +500,14 @@ class Crew(BaseModel):
         self.usage_metrics = total_usage_metrics
 
         return results
+
+    def _handle_crew_planning(self):
+        """Handles the Crew planning."""
+        self._logger.log("info", "Planning the crew execution")
+        result = CrewPlanner(self.tasks)._handle_crew_planning()
+
+        for task, step_plan in zip(self.tasks, result.list_of_plans_per_task):
+            task.description += step_plan
 
     def _run_sequential_process(self) -> CrewOutput:
         """Executes tasks sequentially and returns the final output."""
