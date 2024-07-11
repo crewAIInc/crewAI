@@ -1,7 +1,9 @@
 import os
 import pickle
-from datetime import datetime
 import json
+
+from datetime import datetime
+from typing import Dict, Any, List
 
 from crewai.utilities.crew_json_encoder import CrewJSONEncoder
 
@@ -96,6 +98,18 @@ class TaskOutputJsonHandler:
             file.seek(0)
             json.dump(file_data, file, indent=2, cls=CrewJSONEncoder)
             file.truncate()
+
+    def update(self, task_index: int, log: Dict[str, Any]):
+        logs = self.load()
+        if task_index < len(logs):
+            logs[task_index] = log
+        else:
+            logs.append(log)
+        self.save(logs)
+
+    def save(self, logs: List[Dict[str, Any]]):
+        with open(self.file_path, "w") as file:
+            json.dump(logs, file, indent=2, cls=CrewJSONEncoder)
 
     def reset(self):
         """Reset the JSON file by creating an empty file."""

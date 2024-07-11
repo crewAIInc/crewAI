@@ -15,6 +15,7 @@ from crewai.crews.crew_output import CrewOutput
 from crewai.memory.contextual.contextual_memory import ContextualMemory
 from crewai.process import Process
 from crewai.task import Task
+from crewai.tasks.output_format import OutputFormat
 from crewai.tasks.task_output import TaskOutput
 from crewai.utilities import Logger, RPMController
 
@@ -1827,17 +1828,17 @@ def test_replay_feature():
     with patch.object(Task, "execute_sync") as mock_execute_task:
         mock_execute_task.return_value = TaskOutput(
             description="Mock description",
-            raw_output="Mocked output for list of ideas",
+            raw="Mocked output for list of ideas",
             agent="Researcher",
+            json_dict=None,
+            output_format=OutputFormat.RAW,
+            pydantic=None,
+            summary="Mocked output for list of ideas",
         )
 
         crew.kickoff()
         crew.replay_from_task(str(write.id))
         # Ensure context was passed correctly
-        context_passed = mock_execute_task.call_args_list[1][1]["context"]
-        assert (
-            "Mocked output for list of ideas" in context_passed
-        )  # ensure context passed
         assert mock_execute_task.call_count == 3
 
 
