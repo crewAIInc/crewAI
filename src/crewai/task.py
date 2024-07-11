@@ -303,8 +303,6 @@ class Task(BaseModel):
         )
 
         def get_agent_by_role(role: str) -> Union["BaseAgent", None]:
-            if agents is None:
-                return None
             return next((agent for agent in agents if agent.role == role), None)
 
         cloned_agent = get_agent_by_role(self.agent.role) if self.agent else None
