@@ -178,7 +178,7 @@ class Task(BaseModel):
         agent: BaseAgent | None = None,
         context: Optional[str] = None,
         tools: Optional[List[Any]] = None,
-    ) -> str | None:
+    ) -> Any:
         """Execute the task.
 
         Returns:
@@ -319,7 +319,7 @@ class Task(BaseModel):
             )
         return converter
 
-    def _export_output(self, result: str) -> Any:
+    def _export_output(self, result: str) -> Any:  # TODO: Refactor and fix type hints
         exported_result = result
         instructions = "I'm gonna convert this raw text into valid JSON."
 
