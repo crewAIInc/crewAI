@@ -750,9 +750,8 @@ class Crew(BaseModel):
                     json_dict=stored_output["json_dict"],
                     output_format=stored_output["output_format"],
                 )
+                self.tasks[task_index].output = task_output
                 task_outputs = [task_output]
-                context = self._set_context(task, task_outputs)
-
             else:
                 if task.agent and task.agent.allow_delegation:
                     agents_for_delegation = [
@@ -940,18 +939,6 @@ class Crew(BaseModel):
         # type: ignore # "interpolate_inputs" of "Agent" does not return a value (it only ever returns None)
         for agent in self.agents:
             agent.interpolate_inputs(inputs)
-
-    def _format_output(
-        self, output: List[TaskOutput], token_usage: Optional[Dict[str, Any]]
-    ) -> CrewOutput:
-        """
-        Formats the output of the crew execution.
-        """
-        return CrewOutput(
-            output=output,
-            tasks_output=[task.output for task in self.tasks if task and task.output],
-            token_usage=token_usage,
-        )
 
     def _finish_execution(self, final_string_output: str) -> None:
         if self.max_rpm:

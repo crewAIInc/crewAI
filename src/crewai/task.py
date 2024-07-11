@@ -381,7 +381,7 @@ class Task(BaseModel):
     def _convert_with_instructions(
         self, result: str, model: Type[BaseModel]
     ) -> Union[dict, BaseModel, str]:
-        llm = self.agent.function_calling_llm or self.agent.llm
+        llm = self.agent.function_calling_llm or self.agent.llm  # type: ignore # Item "None" of "BaseAgent | None" has no attribute "function_calling_llm"
         instructions = self._get_conversion_instructions(model, llm)
 
         converter = self._create_converter(
