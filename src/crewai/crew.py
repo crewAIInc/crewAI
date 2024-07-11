@@ -6,15 +6,15 @@ from typing import Any, Dict, List, Optional, Tuple, Union
 
 from langchain_core.callbacks import BaseCallbackHandler
 from pydantic import (
-    UUID4,
-    BaseModel,
-    ConfigDict,
-    Field,
-    InstanceOf,
-    Json,
-    PrivateAttr,
-    field_validator,
-    model_validator,
+  UUID4,
+  BaseModel,
+  ConfigDict,
+  Field,
+  InstanceOf,
+  Json,
+  PrivateAttr,
+  field_validator,
+  model_validator,
 )
 from pydantic_core import PydanticCustomError
 
@@ -34,8 +34,8 @@ from crewai.utilities import I18N, FileHandler, Logger, RPMController
 from crewai.utilities.constants import TRAINED_AGENTS_DATA_FILE, TRAINING_DATA_FILE
 from crewai.utilities.evaluators.task_evaluator import TaskEvaluator
 from crewai.utilities.formatter import (
-    aggregate_raw_outputs_from_task_outputs,
-    aggregate_raw_outputs_from_tasks,
+  aggregate_raw_outputs_from_task_outputs,
+  aggregate_raw_outputs_from_tasks,
 )
 from crewai.utilities.training_handler import CrewTrainingHandler
 
@@ -86,7 +86,7 @@ class Crew(BaseModel):
     tasks: List[Task] = Field(default_factory=list)
     agents: List[BaseAgent] = Field(default_factory=list)
     process: Process = Field(default=Process.sequential)
-    verbose: Union[int, bool] = Field(default=0)
+    verbose: int = Field(default=0)
     memory: bool = Field(
         default=False,
         description="Whether the crew should use memory to store memories of it's execution",
@@ -131,8 +131,8 @@ class Crew(BaseModel):
         default=None,
         description="Path to the prompt json file to be used for the crew.",
     )
-    output_log_file: Optional[Union[bool, str]] = Field(
-        default=False,
+    output_log_file: Optional[str] = Field(
+        default="",
         description="output_log_file",
     )
 
