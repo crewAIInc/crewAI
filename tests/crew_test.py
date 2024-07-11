@@ -1,5 +1,6 @@
 """Test Agent creation and execution basic functionality."""
 
+import os
 import json
 from concurrent.futures import Future
 from unittest import mock
@@ -18,6 +19,7 @@ from crewai.task import Task
 from crewai.tasks.output_format import OutputFormat
 from crewai.tasks.task_output import TaskOutput
 from crewai.utilities import Logger, RPMController
+from crewai.utilities.constants import CREW_TASKS_OUTPUT_FILE
 
 ceo = Agent(
     role="CEO",
@@ -1842,29 +1844,90 @@ def test_replay_feature():
         assert mock_execute_task.call_count == 3
 
 
-# TODO: ENSURE INPUTS PASSED PROPERLY ONTO OUTPUT_JSON
 @pytest.mark.vcr(filter_headers=["authorization"])
-def test_replay_feature_ensure_inputs_passed():
+def test_crew_replay_from_task_error():
+    task = Task(
+        description="Come up with a list of 5 interesting ideas to explore for an article",
+        expected_output="5 bullet points with a paragraph for each idea.",
+        agent=researcher,
+    )
+
+    crew = Crew(
+        agents=[researcher, writer],
+        tasks=[task],
+    )
+
+    with pytest.raises(TypeError) as e:
+        crew.replay_from_task()  # type: ignore purposefully throwing err
+        assert "task_id is required" in str(e)
+
+
+@pytest.mark.vcr(filter_headers=["authorization"])
+def test_crew_task_output_file_creation():
     agent = Agent(
-        role="{topic} Researcher",
-        goal="Express hot takes on {topic}.",
-        backstory="You have a lot of experience with {topic}.",
+        role="Content Writer",
+        goal="Write engaging content on various topics.",
+        backstory="You have a background in journalism and creative writing.",
     )
 
     task = Task(
-        description="Give me an analysis around {topic}.",
-        expected_output="{points} bullet points about {topic}.",
+        description="Write a detailed article about AI in healthcare.",
+        expected_output="A 1 paragraph article about AI.",
         agent=agent,
     )
 
     crew = Crew(agents=[agent], tasks=[task])
-    inputs = {"topic": "AI", "points": 5}
-    crew._interpolate_inputs(inputs=inputs)  # Manual call for now
-    # TODO: ENSURE INPUTS PASSED PROPERLY ONTO OUTPUT_JSON
-    # TODO: PATCH _store_execution_log WITH ATTR _inputs
 
-    # assert crew.tasks[0].description == "Give me an analysis around AI."
-    # assert crew.tasks[0].expected_output == "5 bullet points about AI."
-    # assert crew.agents[0].role == "AI Researcher"
-    # assert crew.agents[0].goal == "Express hot takes on AI."
-    # assert crew.agents[0].backstory == "You have a lot of experience with AI."
+    with patch.object(Task, "execute_sync") as mock_execute_task:
+        mock_execute_task.return_value = TaskOutput(
+            description="Write about AI in healthcare.",
+            raw="Artificial Intelligence (AI) is revolutionizing healthcare by enhancing diagnostic accuracy, personalizing treatment plans, and streamlining administrative tasks.",
+            agent="Content Writer",
+            json_dict=None,
+            output_format=OutputFormat.RAW,
+            pydantic=None,
+            summary="Write about AI in healthcare...",
+        )
+
+        crew.kickoff()
+
+        # Check if the crew_tasks_output.json file is created
+        assert os.path.exists(CREW_TASKS_OUTPUT_FILE)
+
+        # Clean up the file after test
+        if os.path.exists(CREW_TASKS_OUTPUT_FILE):
+            os.remove(CREW_TASKS_OUTPUT_FILE)
+
+
+@pytest.mark.vcr(filter_headers=["authorization"])
+def test_replay_without_output_tasks_json():
+    agent = Agent(
+        role="Technical Writer",
+        goal="Write detailed technical documentation.",
+        backstory="You have a background in software engineering and technical writing.",
+    )
+
+    task = Task(
+        description="Document the process of setting up a Python project.",
+        expected_output="A step-by-step guide on setting up a Python project.",
+        agent=agent,
+    )
+
+    crew = Crew(agents=[agent], tasks=[task])
+
+    with patch.object(Task, "execute_sync") as mock_execute_task:
+        mock_execute_task.return_value = TaskOutput(
+            description="Document the process of setting up a Python project.",
+            raw="To set up a Python project, first create a virtual environment...",
+            agent="Technical Writer",
+            json_dict=None,
+            output_format=OutputFormat.RAW,
+            pydantic=None,
+            summary="Document the process of setting up a Python project...",
+        )
+
+        if os.path.exists(CREW_TASKS_OUTPUT_FILE):
+            os.remove(CREW_TASKS_OUTPUT_FILE)
+
+        with pytest.raises(ValueError):
+            crew.replay_from_task(str(task.id))
