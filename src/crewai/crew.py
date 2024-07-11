@@ -1,6 +1,7 @@
 import asyncio
 import json
 import uuid
+from concurrent.futures import Future
 from typing import Any, Dict, List, Optional, Tuple, Union
 
 from langchain_core.callbacks import BaseCallbackHandler
@@ -20,16 +21,22 @@ from pydantic_core import PydanticCustomError
 from crewai.agent import Agent
 from crewai.agents.agent_builder.base_agent import BaseAgent
 from crewai.agents.cache import CacheHandler
+from crewai.crews.crew_output import CrewOutput
 from crewai.memory.entity.entity_memory import EntityMemory
 from crewai.memory.long_term.long_term_memory import LongTermMemory
 from crewai.memory.short_term.short_term_memory import ShortTermMemory
 from crewai.process import Process
 from crewai.task import Task
+from crewai.tasks.task_output import TaskOutput
 from crewai.telemetry import Telemetry
 from crewai.tools.agent_tools import AgentTools
 from crewai.utilities import I18N, FileHandler, Logger, RPMController
 from crewai.utilities.constants import TRAINED_AGENTS_DATA_FILE, TRAINING_DATA_FILE
 from crewai.utilities.evaluators.task_evaluator import TaskEvaluator
+from crewai.utilities.formatter import (
+    aggregate_raw_outputs_from_task_outputs,
+    aggregate_raw_outputs_from_tasks,
+)
 from crewai.utilities.training_handler import CrewTrainingHandler
 
 try:
@@ -57,7 +64,6 @@ class Crew(BaseModel):
         max_rpm: Maximum number of requests per minute for the crew execution to be respected.
         prompt_file: Path to the prompt json file to be used for the crew.
         id: A unique identifier for the crew instance.
-        full_output: Whether the crew should return the full output with all tasks outputs and token usage metrics or just the final output.
         task_callback: Callback to be executed after each task for every agents execution.
         step_callback: Callback to be executed after each step for every agents execution.
         share_crew: Whether you want to share the complete crew information and execution with crewAI to make the library better, and allow us to train models.
@@ -92,10 +98,6 @@ class Crew(BaseModel):
     usage_metrics: Optional[dict] = Field(
         default=None,
         description="Metrics for the LLM usage during all tasks execution.",
-    )
-    full_output: Optional[bool] = Field(
-        default=False,
-        description="Whether the crew should return the full output with all tasks outputs and token usage metrics or just the final output.",
     )
     manager_llm: Optional[Any] = Field(
         description="Language model that will run the agent.", default=None
@@ -252,6 +254,63 @@ class Crew(BaseModel):
 
         return self
 
+    @model_validator(mode="after")
+    def validate_end_with_at_most_one_async_task(self):
+        """Validates that the crew ends with at most one asynchronous task."""
+        final_async_task_count = 0
+
+        # Traverse tasks backward
+        for task in reversed(self.tasks):
+            if task.async_execution:
+                final_async_task_count += 1
+            else:
+                break  # Stop traversing as soon as a non-async task is encountered
+
+        if final_async_task_count > 1:
+            raise PydanticCustomError(
+                "async_task_count",
+                "The crew must end with at most one asynchronous task.",
+                {},
+            )
+
+        return self
+
+    @model_validator(mode="after")
+    def validate_async_task_cannot_include_sequential_async_tasks_in_context(self):
+        """
+        Validates that if a task is set to be executed asynchronously,
+        it cannot include other asynchronous tasks in its context unless
+        separated by a synchronous task.
+        """
+        for i, task in enumerate(self.tasks):
+            if task.async_execution and task.context:
+                for context_task in task.context:
+                    if context_task.async_execution:
+                        for j in range(i - 1, -1, -1):
+                            if self.tasks[j] == context_task:
+                                raise ValueError(
+                                    f"Task '{task.description}' is asynchronous and cannot include other sequential asynchronous tasks in its context."
+                                )
+                            if not self.tasks[j].async_execution:
+                                break
+        return self
+
+    @model_validator(mode="after")
+    def validate_context_no_future_tasks(self):
+        """Validates that a task's context does not include future tasks."""
+        task_indices = {id(task): i for i, task in enumerate(self.tasks)}
+
+        for task in self.tasks:
+            if task.context:
+                for context_task in task.context:
+                    if id(context_task) not in task_indices:
+                        continue  # Skip context tasks not in the main tasks list
+                    if task_indices[id(context_task)] > task_indices[id(task)]:
+                        raise ValueError(
+                            f"Task '{task.description}' has a context dependency on a future task '{context_task.description}', which is not allowed."
+                        )
+        return self
+
     def _setup_from_config(self):
         assert self.config is not None, "Config should not be None."
 
@@ -314,12 +373,12 @@ class Crew(BaseModel):
 
     def kickoff(
         self,
-        inputs: Optional[Dict[str, Any]] = {},
-    ) -> Union[str, Dict[str, Any]]:
+        inputs: Optional[Dict[str, Any]] = None,
+    ) -> CrewOutput:
         """Starts the crew to work on its assigned tasks."""
         self._execution_span = self._telemetry.crew_execution_span(self, inputs)
-
-        self._interpolate_inputs(inputs)  # type: ignore # Argument 1 to "_interpolate_inputs" of "Crew" has incompatible type "dict[str, Any] | None"; expected "dict[str, Any]"
+        if inputs is not None:
+            self._interpolate_inputs(inputs)
         self._set_tasks_callbacks()
 
         i18n = I18N(prompt_file=self.prompt_file)
@@ -345,8 +404,7 @@ class Crew(BaseModel):
         if self.process == Process.sequential:
             result = self._run_sequential_process()
         elif self.process == Process.hierarchical:
-            result, manager_metrics = self._run_hierarchical_process()  # type: ignore # Incompatible types in assignment (expression has type "str | dict[str, Any]", variable has type "str")
-            metrics.append(manager_metrics)
+            result = self._run_hierarchical_process()  # type: ignore # Incompatible types in assignment (expression has type "str | dict[str, Any]", variable has type "str")
         else:
             raise NotImplementedError(
                 f"The process '{self.process}' is not implemented yet."
@@ -359,11 +417,9 @@ class Crew(BaseModel):
 
         return result
 
-    def kickoff_for_each(
-        self, inputs: List[Dict[str, Any]]
-    ) -> List[Union[str, Dict[str, Any]]]:
+    def kickoff_for_each(self, inputs: List[Dict[str, Any]]) -> List[CrewOutput]:
         """Executes the Crew's workflow for each input in the list and aggregates results."""
-        results = []
+        results: List[CrewOutput] = []
 
         # Initialize the parent crew's usage metrics
         total_usage_metrics = {
@@ -387,18 +443,20 @@ class Crew(BaseModel):
         self.usage_metrics = total_usage_metrics
         return results
 
-    async def kickoff_async(
-        self, inputs: Optional[Dict[str, Any]] = {}
-    ) -> Union[str, Dict]:
+    async def kickoff_async(self, inputs: Optional[Dict[str, Any]] = {}) -> CrewOutput:
         """Asynchronous kickoff method to start the crew execution."""
         return await asyncio.to_thread(self.kickoff, inputs)
 
-    async def kickoff_for_each_async(self, inputs: List[Dict]) -> List[Any]:
+    async def kickoff_for_each_async(self, inputs: List[Dict]) -> List[CrewOutput]:
         crew_copies = [self.copy() for _ in inputs]
 
         async def run_crew(crew, input_data):
             return await crew.kickoff_async(inputs=input_data)
 
+        tasks = [
+            asyncio.create_task(run_crew(crew_copies[i], inputs[i]))
+            for i in range(len(inputs))
+        ]
         tasks = [
             asyncio.create_task(run_crew(crew_copies[i], inputs[i]))
             for i in range(len(inputs))
@@ -419,11 +477,25 @@ class Crew(BaseModel):
 
         self.usage_metrics = total_usage_metrics
 
+        total_usage_metrics = {
+            "total_tokens": 0,
+            "prompt_tokens": 0,
+            "completion_tokens": 0,
+            "successful_requests": 0,
+        }
+        for crew in crew_copies:
+            if crew.usage_metrics:
+                for key in total_usage_metrics:
+                    total_usage_metrics[key] += crew.usage_metrics.get(key, 0)
+
+        self.usage_metrics = total_usage_metrics
+
         return results
 
-    def _run_sequential_process(self) -> Union[str, Dict[str, Any]]:
+    def _run_sequential_process(self) -> CrewOutput:
         """Executes tasks sequentially and returns the final output."""
-        task_output = None
+        task_outputs: List[TaskOutput] = []
+        futures: List[Tuple[Task, Future[TaskOutput]]] = []
 
         for task in self.tasks:
             if task.agent and task.agent.allow_delegation:
@@ -443,28 +515,80 @@ class Crew(BaseModel):
                 self._file_handler.log(
                     agent=role, task=task.description, status="started"
                 )
-            output = task.execute(context=task_output)
 
-            if not task.async_execution:
-                task_output = output
+            if task.async_execution:
+                context = (
+                    aggregate_raw_outputs_from_tasks(task.context)
+                    if task.context
+                    else aggregate_raw_outputs_from_task_outputs(task_outputs)
+                )
+                future = task.execute_async(
+                    agent=task.agent, context=context, tools=task.tools
+                )
+                futures.append((task, future))
+            else:
+                # Before executing a synchronous task, wait for all async tasks to complete
+                if futures:
+                    # Clear task_outputs before processing async tasks
+                    task_outputs = []
+                    for future_task, future in futures:
+                        task_output = future.result()
+                        task_outputs.append(task_output)
+                        self._process_task_result(future_task, task_output)
 
-            role = task.agent.role if task.agent is not None else "None"
-            self._logger.log("debug", f"== [{role}] Task output: {task_output}\n\n")
+                    # Clear the futures list after processing all async results
+                    futures.clear()
 
-            if self.output_log_file:
-                self._file_handler.log(agent=role, task=task_output, status="completed")
+                context = (
+                    aggregate_raw_outputs_from_tasks(task.context)
+                    if task.context
+                    else aggregate_raw_outputs_from_task_outputs(task_outputs)
+                )
+                task_output = task.execute_sync(
+                    agent=task.agent, context=context, tools=task.tools
+                )
+                task_outputs = [task_output]
+                self._process_task_result(task, task_output)
 
-        self._finish_execution(task_output)
+        if futures:
+            # Clear task_outputs before processing async tasks
+            task_outputs = []
+            for future_task, future in futures:
+                task_output = future.result()
+                task_outputs.append(task_output)
+                self._process_task_result(future_task, task_output)
+
+        # Important: There should only be one task output in the list
+        #            If there are more or 0, something went wrong.
+        if len(task_outputs) != 1:
+            raise ValueError(
+                "Something went wrong. Kickoff should return only one task output."
+            )
+
+        final_task_output = task_outputs[0]
+
+        final_string_output = final_task_output.raw
+        self._finish_execution(final_string_output)
 
         token_usage = self.calculate_usage_metrics()
 
-        return self._format_output(task_output if task_output else "", token_usage)
+        return CrewOutput(
+            raw=final_task_output.raw,
+            pydantic=final_task_output.pydantic,
+            json_dict=final_task_output.json_dict,
+            tasks_output=[task.output for task in self.tasks if task.output],
+            token_usage=token_usage,
+        )
 
-    def _run_hierarchical_process(
-        self,
-    ) -> Tuple[Union[str, Dict[str, Any]], Dict[str, Any]]:
+    def _process_task_result(self, task: Task, output: TaskOutput) -> None:
+        role = task.agent.role if task.agent is not None else "None"
+        self._logger.log("debug", f"== [{role}] Task output: {output}\n\n")
+        if self.output_log_file:
+            self._file_handler.log(agent=role, task=output, status="completed")
+
+    # TODO: @joao, Breaking change. Changed return type. Usage metrics is included in crewoutput
+    def _run_hierarchical_process(self) -> CrewOutput:
         """Creates and assigns a manager agent to make sure the crew completes the tasks."""
-
         i18n = I18N(prompt_file=self.prompt_file)
         if self.manager_agent is not None:
             self.manager_agent.allow_delegation = True
@@ -483,8 +607,10 @@ class Crew(BaseModel):
             )
             self.manager_agent = manager
 
-        task_output = None
+        task_outputs: List[TaskOutput] = []
+        futures: List[Tuple[Task, Future[TaskOutput]]] = []
 
+        # TODO: IF USER OVERRIDE THE CONTEXT, PASS THAT
         for task in self.tasks:
             self._logger.log("debug", f"Working Agent: {manager.role}")
             self._logger.log("info", f"Starting Task: {task.description}")
@@ -494,27 +620,70 @@ class Crew(BaseModel):
                     agent=manager.role, task=task.description, status="started"
                 )
 
-            if task.agent:
-                manager.tools = task.agent.get_delegation_tools([task.agent])
+            if task.async_execution:
+                context = (
+                    aggregate_raw_outputs_from_tasks(task.context)
+                    if task.context
+                    else aggregate_raw_outputs_from_task_outputs(task_outputs)
+                )
+                future = task.execute_async(
+                    agent=manager, context=context, tools=manager.tools
+                )
+                futures.append((task, future))
             else:
-                manager.tools = manager.get_delegation_tools(self.agents)
-            task_output = task.execute(
-                agent=manager, context=task_output, tools=manager.tools
+                # Before executing a synchronous task, wait for all async tasks to complete
+                if futures:
+                    # Clear task_outputs before processing async tasks
+                    task_outputs = []
+                    for future_task, future in futures:
+                        task_output = future.result()
+                        task_outputs.append(task_output)
+                        self._process_task_result(future_task, task_output)
+
+                    # Clear the futures list after processing all async results
+                    futures.clear()
+
+                context = (
+                    aggregate_raw_outputs_from_tasks(task.context)
+                    if task.context
+                    else aggregate_raw_outputs_from_task_outputs(task_outputs)
+                )
+                task_output = task.execute_sync(
+                    agent=manager, context=context, tools=manager.tools
+                )
+                task_outputs = [task_output]
+                self._process_task_result(task, task_output)
+
+        # Process any remaining async results
+        if futures:
+            # Clear task_outputs before processing async tasks
+            task_outputs = []
+            for future_task, future in futures:
+                task_output = future.result()
+                task_outputs.append(task_output)
+                self._process_task_result(future_task, task_output)
+
+        # Important: There should only be one task output in the list
+        #            If there are more or 0, something went wrong.
+        if len(task_outputs) != 1:
+            raise ValueError(
+                "Something went wrong. Kickoff should return only one task output."
             )
 
-            self._logger.log("debug", f"[{manager.role}] Task output: {task_output}")
-            if self.output_log_file:
-                self._file_handler.log(
-                    agent=manager.role, task=task_output, status="completed"
-                )
+        final_task_output = task_outputs[0]
 
-        self._finish_execution(task_output)
+        final_string_output = final_task_output.raw
+        self._finish_execution(final_string_output)
 
         token_usage = self.calculate_usage_metrics()
 
-        return self._format_output(
-            task_output if task_output else "", token_usage
-        ), token_usage
+        return CrewOutput(
+            raw=final_task_output.raw,
+            pydantic=final_task_output.pydantic,
+            json_dict=final_task_output.json_dict,
+            tasks_output=[task.output for task in self.tasks if task.output],
+            token_usage=token_usage,
+        )
 
     def copy(self):
         """Create a deep copy of the Crew."""
@@ -566,31 +735,15 @@ class Crew(BaseModel):
         for agent in self.agents:
             agent.interpolate_inputs(inputs)
 
-    def _format_output(
-        self, output: str, token_usage: Optional[Dict[str, Any]] = None
-    ) -> Union[str, Dict[str, Any]]:
-        """
-        Formats the output of the crew execution.
-        If full_output is True, then returned data type will be a dictionary else returned outputs are string
-        """
-
-        if self.full_output:
-            return {
-                "final_output": output,
-                "tasks_outputs": [task.output for task in self.tasks if task],
-                "usage_metrics": token_usage,
-            }
-        else:
-            return output
-
-    def _finish_execution(self, output) -> None:
+    def _finish_execution(self, final_string_output: str) -> None:
         if self.max_rpm:
             self._rpm_controller.stop_rpm_counter()
         if agentops:
             agentops.end_session(
-                end_state="Success", end_state_reason="Finished Execution"
+                end_state="Success",
+                end_state_reason="Finished Execution",
             )
-        self._telemetry.end_crew(self, output)
+        self._telemetry.end_crew(self, final_string_output)
 
     def calculate_usage_metrics(self) -> Dict[str, int]:
         """Calculates and returns the usage metrics."""
