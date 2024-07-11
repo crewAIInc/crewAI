@@ -21,7 +21,7 @@ class CrewPlanner:
 
         planner_task = self._create_planner_task(planning_agent, tasks_summary)
 
-        return planner_task.execute()
+        return planner_task.execute_sync()
 
     def _create_planning_agent(self) -> Agent:
         """Creates the planning agent for the crew planning."""
