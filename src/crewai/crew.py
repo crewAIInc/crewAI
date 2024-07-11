@@ -346,7 +346,6 @@ class Crew(BaseModel):
             agent.create_agent_executor()
 
         if self.planning:
-            self._logger.log("info", "Planning the crew execution")
             self._handle_crew_planning()
 
         metrics = []
@@ -432,6 +431,7 @@ class Crew(BaseModel):
 
     def _handle_crew_planning(self):
         """Handles the Crew planning."""
+        self._logger.log("info", "Planning the crew execution")
         result = CrewPlanner(self.tasks)._handle_crew_planning()
 
         for task, step_plan in zip(self.tasks, result.list_of_plans_per_task):
