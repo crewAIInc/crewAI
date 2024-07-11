@@ -82,23 +82,6 @@ class TaskOutputJsonHandler:
             with open(self.file_path, "w") as file:
                 json.dump([], file)
 
-    def append(self, log) -> None:
-        if not os.path.exists(self.file_path) or os.path.getsize(self.file_path) == 0:
-            # Initialize the file with an empty list if it doesn't exist or is empty
-            with open(self.file_path, "w") as file:
-                json.dump([], file)
-        with open(self.file_path, "r+") as file:
-            try:
-                file_data = json.load(file)
-            except json.JSONDecodeError:
-                # If the file contains invalid JSON, initialize it with an empty list
-                file_data = []
-
-            file_data.append(log)
-            file.seek(0)
-            json.dump(file_data, file, indent=2, cls=CrewJSONEncoder)
-            file.truncate()
-
     def update(self, task_index: int, log: Dict[str, Any]):
         logs = self.load()
         if task_index < len(logs):
@@ -117,8 +100,23 @@ class TaskOutputJsonHandler:
             json.dump([], f)
 
     def load(self) -> list:
-        if not os.path.exists(self.file_path) or os.path.getsize(self.file_path) == 0:
-            return []
+        try:
+            if (
+                not os.path.exists(self.file_path)
+                or os.path.getsize(self.file_path) == 0
+            ):
+                return []
 
-        with open(self.file_path, "r") as file:
-            return json.load(file)
+            with open(self.file_path, "r") as file:
+                return json.load(file)
+        except FileNotFoundError:
+            print(f"File {self.file_path} not found. Returning empty list.")
+            return []
+        except json.JSONDecodeError:
+            print(
+                f"Error decoding JSON from file {self.file_path}. Returning empty list."
+            )
+            return []
+        except Exception as e:
+            print(f"An unexpected error occurred: {e}")
+            return []

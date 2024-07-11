@@ -32,7 +32,11 @@ from crewai.tasks.task_output import TaskOutput
 from crewai.telemetry import Telemetry
 from crewai.tools.agent_tools import AgentTools
 from crewai.utilities import I18N, FileHandler, Logger, RPMController
-from crewai.utilities.constants import TRAINED_AGENTS_DATA_FILE, TRAINING_DATA_FILE
+from crewai.utilities.constants import (
+    CREW_TASKS_OUTPUT_FILE,
+    TRAINED_AGENTS_DATA_FILE,
+    TRAINING_DATA_FILE,
+)
 from crewai.utilities.evaluators.task_evaluator import TaskEvaluator
 from crewai.utilities.file_handler import TaskOutputJsonHandler
 from crewai.utilities.formatter import (
@@ -76,7 +80,6 @@ class Crew(BaseModel):
     _rpm_controller: RPMController = PrivateAttr()
     _logger: Logger = PrivateAttr()
     _file_handler: FileHandler = PrivateAttr()
-    _task_output_handler: TaskOutputJsonHandler = PrivateAttr()
     _cache_handler: InstanceOf[CacheHandler] = PrivateAttr(default=CacheHandler())
     _short_term_memory: Optional[InstanceOf[ShortTermMemory]] = PrivateAttr()
     _long_term_memory: Optional[InstanceOf[LongTermMemory]] = PrivateAttr()
@@ -148,8 +151,6 @@ class Crew(BaseModel):
         description="List of execution logs for tasks",
     )
 
-    _log_file: str = PrivateAttr(default="crew_tasks_output.json")
-
     @field_validator("id", mode="before")
     @classmethod
     def _deny_user_set_id(cls, v: Optional[UUID4]) -> None:
@@ -181,7 +182,6 @@ class Crew(BaseModel):
         self._logger = Logger(self.verbose)
         if self.output_log_file:
             self._file_handler = FileHandler(self.output_log_file)
-        self._task_output_handler = TaskOutputJsonHandler(self._log_file)
         self._rpm_controller = RPMController(max_rpm=self.max_rpm, logger=self._logger)
         self._telemetry = Telemetry()
         self._telemetry.set_tracer()
@@ -392,7 +392,9 @@ class Crew(BaseModel):
     ) -> CrewOutput:
         """Starts the crew to work on its assigned tasks."""
         self._execution_span = self._telemetry.crew_execution_span(self, inputs)
-        self._task_output_handler.reset()
+        TaskOutputJsonHandler(CREW_TASKS_OUTPUT_FILE).initialize_file()
+        TaskOutputJsonHandler(CREW_TASKS_OUTPUT_FILE).reset()
+
         if inputs is not None:
             self._inputs = inputs
             self._interpolate_inputs(inputs)
@@ -522,9 +524,7 @@ class Crew(BaseModel):
             inputs = {}
         log = {
             "task_id": str(task.id),
-            "description": task.description,
             "expected_output": task.expected_output,
-            "agent_role": task.agent.role if task.agent else "None",
             "output": {
                 "description": output.description,
                 "summary": output.summary,
@@ -544,8 +544,7 @@ class Crew(BaseModel):
             self.execution_logs[task_index] = log
         else:
             self.execution_logs.append(log)
-
-        self._task_output_handler.update(task_index, log)
+        TaskOutputJsonHandler(CREW_TASKS_OUTPUT_FILE).update(task_index, log)
 
     def _run_sequential_process(self) -> CrewOutput:
         """Executes tasks sequentially and returns the final output."""
@@ -665,42 +664,6 @@ class Crew(BaseModel):
             )
         return task_outputs
 
-    def _get_agent(self, role: str) -> Optional[BaseAgent]:
-        """
-        Private method to get an agent by role.
-
-        Args:
-            role (str): The role of the agent to retrieve.
-
-        Returns:
-            Optional[BaseAgent]: The agent with the specified role, or None if not found.
-        """
-        for agent in self.agents:
-            if agent.role == role:
-                return agent
-        return None
-
-    def _initialize_execution(self, inputs: Optional[Dict[str, Any]]) -> None:
-        """Initializes the execution by setting up necessary attributes and states."""
-        self._execution_span = self._telemetry.crew_execution_span(self, inputs)
-        # self.execution_logs = []
-        self._task_output_handler.reset()
-        if inputs is not None:
-            self._inputs = inputs
-            self._interpolate_inputs(inputs)
-        self._set_tasks_callbacks()
-        i18n = I18N(prompt_file=self.prompt_file)
-        for agent in self.agents:
-            agent.i18n = i18n
-            agent.crew = self  # type: ignore[attr-defined]
-            if not agent.function_calling_llm:  # type: ignore[attr-defined]
-                agent.function_calling_llm = self.function_calling_llm  # type: ignore[attr-defined]
-            if agent.allow_code_execution:  # type: ignore[attr-defined]
-                agent.tools += agent.get_code_execution_tools()  # type: ignore[attr-defined]
-            if not agent.step_callback:  # type: ignore[attr-defined]
-                agent.step_callback = self.step_callback  # type: ignore[attr-defined]
-            agent.create_agent_executor()
-
     def _find_task_index(
         self, task_id: str, stored_outputs: List[Dict[str, Any]]
     ) -> Optional[int]:
@@ -716,7 +679,8 @@ class Crew(BaseModel):
     def replay_from_task(
         self, task_id: str, inputs: Dict[str, Any] | None = None
     ) -> CrewOutput:
-        stored_outputs = self._load_stored_outputs()
+        # stored_outputs = self._load_stored_outputs()
+        stored_outputs = TaskOutputJsonHandler(CREW_TASKS_OUTPUT_FILE).load()
         start_index = self._find_task_index(task_id, stored_outputs)
 
         if start_index is None:
@@ -851,25 +815,9 @@ class Crew(BaseModel):
             )
             self.manager_agent = manager
 
-    def _load_stored_outputs(self) -> List[Dict]:
-        try:
-            with open(self._log_file, "r") as f:
-                return json.load(f)
-        except FileNotFoundError:
-            self._logger.log(
-                "warning",
-                f"Log file {self._log_file} not found. Starting with empty logs.",
-            )
-            return []
-        except json.JSONDecodeError:
-            self._logger.log(
-                "error",
-                f"Failed to parse log file {self._log_file}. Starting with empty logs.",
-            )
-            return []
-
     def _run_hierarchical_process(self) -> CrewOutput:
         """Creates and assigns a manager agent to make sure the crew completes the tasks."""
+        self.execution_logs = []
         i18n = I18N(prompt_file=self.prompt_file)
         if self.manager_agent is not None:
             self.manager_agent.allow_delegation = True
