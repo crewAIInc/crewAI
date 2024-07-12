@@ -36,3 +36,13 @@ class Procedure(BaseModel):
         outputs = await asyncio.gather(*crew_kickoffs)
 
         return outputs
+
+    def __rshift__(self, other: Crew) -> "Procedure":
+        """
+        Implements the >> operator to add another Crew to an existing Procedure.
+        """
+        if not isinstance(other, Crew):
+            raise TypeError(
+                f"Unsupported operand type for >>: '{type(self).__name__}' and '{type(other).__name__}'"
+            )
+        return type(self)(crews=self.crews + [other])

@@ -180,3 +180,36 @@ async def test_procedure_chaining(mock_crew_factory):
         "completion_tokens": 75,
     }
     assert result[0].json_dict == {"key2": "value2"}
+
+
+def test_crew_rshift_operator():
+    """
+    Test that the >> operator correctly creates a Procedure from two Crews.
+    """
+    # Create minimal Crew instances
+    agent = Agent(role="Test Agent", goal="Test Goal", backstory="Test Backstory")
+    task = Task(agent=agent, description="Test Task", expected_output="Test Output")
+    crew1 = Crew(agents=[agent], tasks=[task])
+    crew2 = Crew(agents=[agent], tasks=[task])
+    crew3 = Crew(agents=[agent], tasks=[task])
+
+    # Test the >> operator
+    procedure = crew1 >> crew2
+
+    assert isinstance(procedure, Procedure)
+    assert len(procedure.crews) == 2
+    assert procedure.crews[0] == crew1
+    assert procedure.crews[1] == crew2
+
+    # Test chaining multiple crews
+    procedure = crew1 >> crew2 >> crew3
+
+    assert isinstance(procedure, Procedure)
+    assert len(procedure.crews) == 3
+    assert procedure.crews[0] == crew1
+    assert procedure.crews[1] == crew2
+    assert procedure.crews[2] == crew3
+
+    # Test error case: trying to shift with non-Crew object
+    with pytest.raises(TypeError):
+        crew1 >> "not a crew"

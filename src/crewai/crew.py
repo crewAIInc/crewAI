@@ -2,19 +2,19 @@ import asyncio
 import json
 import uuid
 from concurrent.futures import Future
-from typing import Any, Dict, List, Optional, Tuple, Union
+from typing import TYPE_CHECKING, Any, Dict, List, Optional, Tuple, Union
 
 from langchain_core.callbacks import BaseCallbackHandler
 from pydantic import (
-  UUID4,
-  BaseModel,
-  ConfigDict,
-  Field,
-  InstanceOf,
-  Json,
-  PrivateAttr,
-  field_validator,
-  model_validator,
+    UUID4,
+    BaseModel,
+    ConfigDict,
+    Field,
+    InstanceOf,
+    Json,
+    PrivateAttr,
+    field_validator,
+    model_validator,
 )
 from pydantic_core import PydanticCustomError
 
@@ -34,8 +34,8 @@ from crewai.utilities import I18N, FileHandler, Logger, RPMController
 from crewai.utilities.constants import TRAINED_AGENTS_DATA_FILE, TRAINING_DATA_FILE
 from crewai.utilities.evaluators.task_evaluator import TaskEvaluator
 from crewai.utilities.formatter import (
-  aggregate_raw_outputs_from_task_outputs,
-  aggregate_raw_outputs_from_tasks,
+    aggregate_raw_outputs_from_task_outputs,
+    aggregate_raw_outputs_from_tasks,
 )
 from crewai.utilities.training_handler import CrewTrainingHandler
 
@@ -43,6 +43,9 @@ try:
     import agentops
 except ImportError:
     agentops = None
+
+if TYPE_CHECKING:
+    from crewai.procedure.procedure import Procedure
 
 
 class Crew(BaseModel):
@@ -766,6 +769,18 @@ class Crew(BaseModel):
                 total_usage_metrics[key] += token_sum.get(key, 0)
 
         return total_usage_metrics
+
+    def __rshift__(self, other: "Crew") -> "Procedure":
+        """
+        Implements the >> operator to add another Crew to an existing Procedure.
+        """
+        from crewai.procedure.procedure import Procedure
+
+        if not isinstance(other, Crew):
+            raise TypeError(
+                f"Unsupported operand type for >>: '{type(self).__name__}' and '{type(other).__name__}'"
+            )
+        return Procedure(crews=[self, other])
 
     def __repr__(self):
         return f"Crew(id={self.id}, process={self.process}, number_of_agents={len(self.agents)}, number_of_tasks={len(self.tasks)})"
