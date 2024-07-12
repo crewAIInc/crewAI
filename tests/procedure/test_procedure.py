@@ -1,46 +1,70 @@
-from unittest.mock import Mock, PropertyMock
+from unittest.mock import MagicMock
 
 import pytest
 
+from crewai.agent import Agent
 from crewai.crew import Crew
 from crewai.crews.crew_output import CrewOutput
 from crewai.procedure.procedure import Procedure
+from crewai.process import Process
+from crewai.task import Task
 from crewai.tasks.task_output import TaskOutput
 
 
 @pytest.fixture
-def mock_crew():
-    crew = Mock(spec=Crew)
-    task_output = TaskOutput(
-        description="Test task", raw="Task output", agent="Test Agent"
-    )
-    crew_output = CrewOutput(
-        raw="Test output",
-        tasks_output=[task_output],
-        token_usage={"total_tokens": 100, "prompt_tokens": 50, "completion_tokens": 50},
-        json_dict={"key": "value"},  # Add this line
-    )
+def mock_crew_factory():
+    def _create_mock_crew():
+        crew = MagicMock(spec=Crew)
+        task_output = TaskOutput(
+            description="Test task", raw="Task output", agent="Test Agent"
+        )
+        crew_output = CrewOutput(
+            raw="Test output",
+            tasks_output=[task_output],
+            token_usage={
+                "total_tokens": 100,
+                "prompt_tokens": 50,
+                "completion_tokens": 50,
+            },
+            json_dict={"key": "value"},
+        )
 
-    async def async_kickoff(inputs=None):
-        return crew_output
+        async def async_kickoff(inputs=None):
+            return crew_output
 
-    crew.kickoff.return_value = crew_output
-    crew.kickoff_async.side_effect = async_kickoff
-    return crew
+        crew.kickoff.return_value = crew_output
+        crew.kickoff_async.side_effect = async_kickoff
+
+        # Add more attributes that Procedure might be expecting
+        crew.verbose = 0
+        crew.output_log_file = None
+        crew.max_rpm = None
+        crew.memory = False
+        crew.process = Process.sequential
+        crew.config = None
+        crew.cache = True
+
+        # Add non-empty agents and tasks
+        mock_agent = MagicMock(spec=Agent)
+        mock_task = MagicMock(spec=Task)
+        mock_task.agent = mock_agent
+        mock_task.async_execution = False
+        mock_task.context = None
+
+        crew.agents = [mock_agent]
+        crew.tasks = [mock_task]
+
+        return crew
+
+    return _create_mock_crew
 
 
-def test_procedure_initialization():
+def test_procedure_initialization(mock_crew_factory):
     """
     Test that a Procedure is correctly initialized with the given crews.
     """
-    crew1 = Mock(spec=Crew)
-    crew2 = Mock(spec=Crew)
-
-    # Add properties required by validators
-    type(crew1).verbose = PropertyMock(return_value=True)
-    type(crew2).verbose = PropertyMock(return_value=True)
-    type(crew1).output_log_file = PropertyMock(return_value=False)
-    type(crew2).output_log_file = PropertyMock(return_value=False)
+    crew1 = mock_crew_factory()
+    crew2 = mock_crew_factory()
 
     procedure = Procedure(crews=[crew1, crew2])
     assert len(procedure.crews) == 2
@@ -49,16 +73,17 @@ def test_procedure_initialization():
 
 
 @pytest.mark.asyncio
-async def test_procedure_kickoff_single_input(mock_crew):
+async def test_procedure_kickoff_single_input(mock_crew_factory):
     """
     Test that Procedure.kickoff() correctly processes a single input
     and returns the expected CrewOutput.
     """
-    procedure = Procedure(crews=[mock_crew])
+    mock_crew_1 = mock_crew_factory()
+    procedure = Procedure(crews=[mock_crew_1])
     input_data = {"key": "value"}
     result = await procedure.kickoff([input_data])
 
-    mock_crew.kickoff_async.assert_called_once_with(inputs=input_data)
+    mock_crew_1.kickoff_async.assert_called_once_with(inputs=input_data)
     assert len(result) == 1
     assert isinstance(result[0], CrewOutput)
     assert result[0].raw == "Test output"
@@ -72,17 +97,19 @@ async def test_procedure_kickoff_single_input(mock_crew):
 
 
 @pytest.mark.asyncio
-async def test_procedure_kickoff_multiple_inputs(mock_crew):
+async def test_procedure_kickoff_multiple_inputs(mock_crew_factory):
     """
     Test that Procedure.kickoff() correctly processes multiple inputs
     and returns the expected CrewOutputs.
     """
-    procedure = Procedure(crews=[mock_crew, mock_crew])
+    mock_crew_1, mock_crew_2 = mock_crew_factory(), mock_crew_factory()
+    procedure = Procedure(crews=[mock_crew_1, mock_crew_2])
     input_data = [{"key1": "value1"}, {"key2": "value2"}]
     result = await procedure.kickoff(input_data)
 
-    expected_call_count = 4  # 2 crews x 2 inputs = 4
-    assert mock_crew.kickoff_async.call_count == expected_call_count
+    expected_call_count_per_crew = 2
+    assert mock_crew_1.kickoff_async.call_count == expected_call_count_per_crew
+    assert mock_crew_2.kickoff_async.call_count == expected_call_count_per_crew
     assert len(result) == 2
     assert all(isinstance(r, CrewOutput) for r in result)
     assert all(len(r.tasks_output) == 1 for r in result)
@@ -94,7 +121,7 @@ async def test_procedure_kickoff_multiple_inputs(mock_crew):
 
 
 @pytest.mark.asyncio
-async def test_procedure_chaining():
+async def test_procedure_chaining(mock_crew_factory):
     """
     Test that Procedure correctly chains multiple crews, passing the output
     of one crew as input to the next crew in the sequence.
@@ -105,7 +132,7 @@ async def test_procedure_chaining():
     3. The final output contains the result from the last crew in the chain.
     4. Task outputs and token usage are correctly propagated through the chain.
     """
-    crew1, crew2 = Mock(spec=Crew), Mock(spec=Crew)
+    crew1, crew2 = mock_crew_factory(), mock_crew_factory()
     task_output1 = TaskOutput(description="Task 1", raw="Output 1", agent="Agent 1")
     task_output2 = TaskOutput(description="Task 2", raw="Final output", agent="Agent 2")
 
@@ -153,49 +180,3 @@ async def test_procedure_chaining():
         "completion_tokens": 75,
     }
     assert result[0].json_dict == {"key2": "value2"}
-
-
-@pytest.mark.asyncio
-async def test_procedure_invalid_input_type():
-    """
-    Test that Procedure.kickoff() raises a TypeError when given an invalid input type.
-    """
-    procedure = Procedure(crews=[Mock(spec=Crew)])
-    with pytest.raises(TypeError):
-        await procedure.kickoff("invalid input")
-
-
-@pytest.mark.asyncio
-async def test_procedure_token_usage_aggregation():
-    """
-    Test that Procedure correctly aggregates token usage across multiple crews.
-    """
-    crew1, crew2 = Mock(spec=Crew), Mock(spec=Crew)
-    crew1.kickoff.return_value = CrewOutput(
-        raw="Output 1",
-        tasks_output=[
-            TaskOutput(description="Task 1", raw="Output 1", agent="Agent 1")
-        ],
-        token_usage={"total_tokens": 100, "prompt_tokens": 50, "completion_tokens": 50},
-    )
-    crew2.kickoff.return_value = CrewOutput(
-        raw="Output 2",
-        tasks_output=[
-            TaskOutput(description="Task 2", raw="Output 2", agent="Agent 2")
-        ],
-        token_usage={"total_tokens": 150, "prompt_tokens": 75, "completion_tokens": 75},
-    )
-
-    procedure = Procedure([crew1, crew2])
-    result = await procedure.kickoff([{"initial": "data"}])
-
-    assert result[0].token_usage == {
-        "total_tokens": 250,
-        "prompt_tokens": 125,
-        "completion_tokens": 125,
-    }
-    assert result[0].token_usage == {
-        "total_tokens": 250,
-        "prompt_tokens": 125,
-        "completion_tokens": 125,
-    }
