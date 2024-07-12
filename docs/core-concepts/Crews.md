@@ -164,7 +164,7 @@ Kickoffs will now create a `crew_tasks_ouput.json` file with the output of the t
 
 
 ### Replaying from specific task Using the CLI
-To use the replay_from_tasks feature, follow these steps:
+To use the replay feature, follow these steps:
 
 1. Open your terminal or command prompt.
 2. Navigate to the directory where your CrewAI project is located.
