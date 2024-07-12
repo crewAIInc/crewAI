@@ -55,7 +55,7 @@ def train(n_iterations: int):
     "-t",
     "--task_id",
     type=str,
-    help="The task ID of the task to replay from. This will replay the task and all the tasks that were executed after it.",
+    help="Replay the crew from this task ID, including all subsequent tasks.",
 )
 def replay_from_task(task_id: str) -> None:
     """
