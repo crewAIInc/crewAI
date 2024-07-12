@@ -155,4 +155,23 @@ for async_result in async_results:
     print(async_result)
 ```
 
+### Replaying from specific task:
+You can now replay from a specific task using the `replay_from_task` method.
+
+The replay_from_tasks feature in CrewAI allows you to replay from a specific task using the command-line interface (CLI). By running the command `crewai replay_from_tasks -t <task_id>`, you can specify the task name for the replay process.
+
+Kickoffs will now create a `crew_tasks_ouput.json` file with the output of the tasks which you use to retrieve the task id to replay.
+
+
+### Replaying from specific task Using the CLI
+To use the replay_from_tasks feature, follow these steps:
+
+1. Open your terminal or command prompt.
+2. Navigate to the directory where your CrewAI project is located.
+3. Run the following command:
+
+```shell
+crewai replay-from-tasks -t <task_id>
+```
+
 These methods provide flexibility in how you manage and execute tasks within your crew, allowing for both synchronous and asynchronous workflows tailored to your needs
