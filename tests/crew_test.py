@@ -2032,3 +2032,243 @@ def test_replay_task_with_context():
         # Clean up the file after test
         if os.path.exists(CREW_TASKS_OUTPUT_FILE):
             os.remove(CREW_TASKS_OUTPUT_FILE)
+
+
+def test_replay_from_task_with_context():
+    agent = Agent(role="test_agent", backstory="Test Description", goal="Test Goal")
+    task1 = Task(
+        description="Context Task", expected_output="Say Task Output", agent=agent
+    )
+    task2 = Task(
+        description="Test Task", expected_output="Say Hi", agent=agent, context=[task1]
+    )
+
+    context_output = TaskOutput(
+        description="Context Task Output",
+        agent="test_agent",
+        raw="context raw output",
+        pydantic=None,
+        json_dict={},
+        output_format=OutputFormat.RAW,
+    )
+    task1.output = context_output
+
+    crew = Crew(agents=[agent], tasks=[task1, task2], process=Process.sequential)
+
+    with patch(
+        "crewai.utilities.task_output_handler.TaskOutputJsonHandler.load",
+        return_value=[
+            {
+                "task_id": str(task1.id),
+                "output": {
+                    "description": context_output.description,
+                    "summary": context_output.summary,
+                    "raw": context_output.raw,
+                    "pydantic": context_output.pydantic,
+                    "json_dict": context_output.json_dict,
+                    "output_format": context_output.output_format,
+                    "agent": context_output.agent,
+                },
+                "inputs": {},
+            },
+            {
+                "task_id": str(task2.id),
+                "output": {
+                    "description": "Test Task Output",
+                    "summary": None,
+                    "raw": "test raw output",
+                    "pydantic": None,
+                    "json_dict": {},
+                    "output_format": "json",
+                    "agent": "test_agent",
+                },
+                "inputs": {},
+            },
+        ],
+    ):
+        crew.replay_from_task(str(task2.id))
+
+        assert crew.tasks[1].context[0].output.raw == "context raw output"
+
+
+@pytest.mark.vcr(filter_headers=["authorization"])
+def test_replay_with_invalid_task_id():
+    agent = Agent(role="test_agent", backstory="Test Description", goal="Test Goal")
+    task1 = Task(
+        description="Context Task", expected_output="Say Task Output", agent=agent
+    )
+    task2 = Task(
+        description="Test Task", expected_output="Say Hi", agent=agent, context=[task1]
+    )
+
+    context_output = TaskOutput(
+        description="Context Task Output",
+        agent="test_agent",
+        raw="context raw output",
+        pydantic=None,
+        json_dict={},
+        output_format=OutputFormat.RAW,
+    )
+    task1.output = context_output
+
+    crew = Crew(agents=[agent], tasks=[task1, task2], process=Process.sequential)
+
+    with patch(
+        "crewai.utilities.task_output_handler.TaskOutputJsonHandler.load",
+        return_value=[
+            {
+                "task_id": str(task1.id),
+                "output": {
+                    "description": context_output.description,
+                    "summary": context_output.summary,
+                    "raw": context_output.raw,
+                    "pydantic": context_output.pydantic,
+                    "json_dict": context_output.json_dict,
+                    "output_format": context_output.output_format,
+                    "agent": context_output.agent,
+                },
+                "inputs": {},
+            },
+            {
+                "task_id": str(task2.id),
+                "output": {
+                    "description": "Test Task Output",
+                    "summary": None,
+                    "raw": "test raw output",
+                    "pydantic": None,
+                    "json_dict": {},
+                    "output_format": "json",
+                    "agent": "test_agent",
+                },
+                "inputs": {},
+            },
+        ],
+    ):
+        with pytest.raises(
+            ValueError,
+            match="Task with id bf5b09c9-69bd-4eb8-be12-f9e5bae31c2d not found in the crew's tasks.",
+        ):
+            crew.replay_from_task("bf5b09c9-69bd-4eb8-be12-f9e5bae31c2d")
+
+
+@patch.object(Crew, "_interpolate_inputs")
+def test_replay_interpolates_inputs_properly(mock_interpolate_inputs):
+    agent = Agent(role="test_agent", backstory="Test Description", goal="Test Goal")
+    task1 = Task(description="Context Task", expected_output="Say {name}", agent=agent)
+    task2 = Task(
+        description="Test Task",
+        expected_output="Say Hi to {name}",
+        agent=agent,
+        context=[task1],
+    )
+
+    context_output = TaskOutput(
+        description="Context Task Output",
+        agent="test_agent",
+        raw="context raw output",
+        pydantic=None,
+        json_dict={},
+        output_format=OutputFormat.RAW,
+    )
+    task1.output = context_output
+
+    crew = Crew(agents=[agent], tasks=[task1, task2], process=Process.sequential)
+    crew.kickoff(inputs={"name": "John"})
+
+    with patch(
+        "crewai.utilities.task_output_handler.TaskOutputJsonHandler.load",
+        return_value=[
+            {
+                "task_id": str(task1.id),
+                "output": {
+                    "description": context_output.description,
+                    "summary": context_output.summary,
+                    "raw": context_output.raw,
+                    "pydantic": context_output.pydantic,
+                    "json_dict": context_output.json_dict,
+                    "output_format": context_output.output_format,
+                    "agent": context_output.agent,
+                },
+                "inputs": {"name": "John"},
+            },
+            {
+                "task_id": str(task2.id),
+                "output": {
+                    "description": "Test Task Output",
+                    "summary": None,
+                    "raw": "test raw output",
+                    "pydantic": None,
+                    "json_dict": {},
+                    "output_format": "json",
+                    "agent": "test_agent",
+                },
+                "inputs": {"name": "John"},
+            },
+        ],
+    ):
+        crew.replay_from_task(str(task2.id))
+        assert crew._inputs == {"name": "John"}
+        assert mock_interpolate_inputs.call_count == 2
+
+
+@pytest.mark.vcr(filter_headers=["authorization"])
+def test_replay_from_task_setup_context():
+    agent = Agent(role="test_agent", backstory="Test Description", goal="Test Goal")
+    task1 = Task(description="Context Task", expected_output="Say {name}", agent=agent)
+    task2 = Task(
+        description="Test Task",
+        expected_output="Say Hi to {name}",
+        agent=agent,
+    )
+    context_output = TaskOutput(
+        description="Context Task Output",
+        agent="test_agent",
+        raw="context raw output",
+        pydantic=None,
+        json_dict={},
+        output_format=OutputFormat.RAW,
+    )
+    task1.output = context_output
+    crew = Crew(agents=[agent], tasks=[task1, task2], process=Process.sequential)
+    with patch(
+        "crewai.utilities.task_output_handler.TaskOutputJsonHandler.load",
+        return_value=[
+            {
+                "task_id": str(task1.id),
+                "output": {
+                    "description": context_output.description,
+                    "summary": context_output.summary,
+                    "raw": context_output.raw,
+                    "pydantic": context_output.pydantic,
+                    "json_dict": context_output.json_dict,
+                    "output_format": context_output.output_format,
+                    "agent": context_output.agent,
+                },
+                "inputs": {"name": "John"},
+            },
+            {
+                "task_id": str(task2.id),
+                "output": {
+                    "description": "Test Task Output",
+                    "summary": None,
+                    "raw": "test raw output",
+                    "pydantic": None,
+                    "json_dict": {},
+                    "output_format": "json",
+                    "agent": "test_agent",
+                },
+                "inputs": {"name": "John"},
+            },
+        ],
+    ):
+        crew.replay_from_task(str(task2.id))
+
+        # Check if the first task's output was set correctly
+        assert crew.tasks[0].output is not None
+        assert isinstance(crew.tasks[0].output, TaskOutput)
+        assert crew.tasks[0].output.description == "Context Task Output"
+        assert crew.tasks[0].output.agent == "test_agent"
+        assert crew.tasks[0].output.raw == "context raw output"
+        assert crew.tasks[0].output.output_format == OutputFormat.RAW
+
+        assert crew.tasks[1].prompt_context == "context raw output"
