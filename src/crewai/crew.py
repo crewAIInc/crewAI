@@ -765,7 +765,7 @@ class Crew(BaseModel):
             self.tasks[i].output = task_output
 
         self._logging_color = "bold_blue"
-        result = self._execute_tasks(self.tasks, self.manager_agent, start_index)
+        result = self._execute_tasks(self.tasks, self.manager_agent, start_index, True)
         self._logging_color = "bold_purple"
         return result
 
