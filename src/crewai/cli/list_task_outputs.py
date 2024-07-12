@@ -22,7 +22,7 @@ def show_task_outputs() -> None:
             tasks = json.load(f)
 
         for index, task in enumerate(tasks):
-            click.echo(f"Task {index}: {task['task_id']}")
+            click.echo(f"Task {index + 1}: {task['task_id']}")
             click.echo(f"Description: {task['output']['description']}")
             click.echo("---")
 
