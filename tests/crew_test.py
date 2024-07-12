@@ -1929,3 +1929,106 @@ def test_replay_without_output_tasks_json():
 
         with pytest.raises(ValueError):
             crew.replay_from_task(str(task.id))
+
+
+@pytest.mark.vcr(filter_headers=["authorization"])
+def test_replay_task_with_context():
+    agent1 = Agent(
+        role="Researcher",
+        goal="Research AI advancements.",
+        backstory="You are an expert in AI research.",
+    )
+    agent2 = Agent(
+        role="Writer",
+        goal="Write detailed articles on AI.",
+        backstory="You have a background in journalism and AI.",
+    )
+
+    task1 = Task(
+        description="Research the latest advancements in AI.",
+        expected_output="A detailed report on AI advancements.",
+        agent=agent1,
+    )
+    task2 = Task(
+        description="Summarize the AI advancements report.",
+        expected_output="A summary of the AI advancements report.",
+        agent=agent2,
+    )
+    task3 = Task(
+        description="Write an article based on the AI advancements summary.",
+        expected_output="An article on AI advancements.",
+        agent=agent2,
+    )
+    task4 = Task(
+        description="Create a presentation based on the AI advancements article.",
+        expected_output="A presentation on AI advancements.",
+        agent=agent2,
+        context=[task1],
+    )
+
+    crew = Crew(
+        agents=[agent1, agent2],
+        tasks=[task1, task2, task3, task4],
+        process=Process.sequential,
+    )
+
+    mock_task_output1 = TaskOutput(
+        description="Research the latest advancements in AI.",
+        raw="Detailed report on AI advancements...",
+        agent="Researcher",
+        json_dict=None,
+        output_format=OutputFormat.RAW,
+        pydantic=None,
+        summary="Detailed report on AI advancements...",
+    )
+    mock_task_output2 = TaskOutput(
+        description="Summarize the AI advancements report.",
+        raw="Summary of the AI advancements report...",
+        agent="Writer",
+        json_dict=None,
+        output_format=OutputFormat.RAW,
+        pydantic=None,
+        summary="Summary of the AI advancements report...",
+    )
+    mock_task_output3 = TaskOutput(
+        description="Write an article based on the AI advancements summary.",
+        raw="Article on AI advancements...",
+        agent="Writer",
+        json_dict=None,
+        output_format=OutputFormat.RAW,
+        pydantic=None,
+        summary="Article on AI advancements...",
+    )
+    mock_task_output4 = TaskOutput(
+        description="Create a presentation based on the AI advancements article.",
+        raw="Presentation on AI advancements...",
+        agent="Writer",
+        json_dict=None,
+        output_format=OutputFormat.RAW,
+        pydantic=None,
+        summary="Presentation on AI advancements...",
+    )
+
+    with patch.object(Task, "execute_sync") as mock_execute_task:
+        mock_execute_task.side_effect = [
+            mock_task_output1,
+            mock_task_output2,
+            mock_task_output3,
+            mock_task_output4,
+        ]
+
+        crew.kickoff()
+
+        # Check if the crew_tasks_output.json file is created
+        assert os.path.exists(CREW_TASKS_OUTPUT_FILE)
+
+        # Replay task4 and ensure it uses task1's context properly
+        with patch.object(Task, "execute_sync") as mock_replay_task:
+            mock_replay_task.return_value = mock_task_output4
+
+            replayed_output = crew.replay_from_task(str(task4.id))
+            assert replayed_output.raw == "Presentation on AI advancements..."
+
+        # Clean up the file after test
+        if os.path.exists(CREW_TASKS_OUTPUT_FILE):
+            os.remove(CREW_TASKS_OUTPUT_FILE)
