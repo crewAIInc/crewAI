@@ -16,6 +16,7 @@ from .tools import (
     JSONSearchTool,
     LlamaIndexTool,
     MDXSearchTool,
+    MultiOnTool,
     PDFSearchTool,
     PGSearchTool,
     RagTool,

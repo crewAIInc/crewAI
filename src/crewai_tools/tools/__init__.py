@@ -15,6 +15,7 @@ from .github_search_tool.github_search_tool import GithubSearchTool
 from .json_search_tool.json_search_tool import JSONSearchTool
 from .llamaindex_tool.llamaindex_tool import LlamaIndexTool
 from .mdx_seach_tool.mdx_search_tool import MDXSearchTool
+from .multion_tool.multion_tool import MultiOnTool
 from .pdf_search_tool.pdf_search_tool import PDFSearchTool
 from .pg_seach_tool.pg_search_tool import PGSearchTool
 from .rag.rag_tool import RagTool
