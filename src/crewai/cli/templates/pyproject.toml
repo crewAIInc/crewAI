@@ -6,7 +6,7 @@ authors = ["Your Name <you@example.com>"]
 
 [tool.poetry.dependencies]
 python = ">=3.10,<=3.13"
-crewai = { extras = ["tools"], version = "^0.35.8" }
+crewai = { extras = ["tools"], version = "^0.36.1" }
 
 [tool.poetry.scripts]
 {{folder_name}} = "{{folder_name}}.main:run"
