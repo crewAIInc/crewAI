@@ -593,6 +593,7 @@ class Crew(BaseModel):
         Returns:
             CrewOutput: Final output of the crew
         """
+
         task_outputs: List[TaskOutput] = []
         futures: List[Tuple[Task, Future[TaskOutput], int]] = []
         last_sync_output: Optional[TaskOutput] = None
@@ -608,12 +609,16 @@ class Crew(BaseModel):
                 continue
 
             self._prepare_task(task, manager)
-            agent_to_use = task.agent if task.agent else manager
+            if self.process == Process.hierarchical:
+                agent_to_use = manager
+            else:
+                agent_to_use = task.agent
             if agent_to_use is None:
                 raise ValueError(
                     f"No agent available for task: {task.description}. Ensure that either the task has an assigned agent or a manager agent is provided."
                 )
             self._log_task_start(task, agent_to_use)
+
             if task.async_execution:
                 context = self._set_context(
                     task, [last_sync_output] if last_sync_output else []
