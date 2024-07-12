@@ -220,7 +220,7 @@ class Telemetry:
         if self.ready:
             try:
                 self._add_attribute(
-                    span, "output", task.output.raw_output if task.output else ""
+                    span, "task_output", task.output.raw_output if task.output else ""
                 )
 
                 span.set_status(Status(StatusCode.OK))
