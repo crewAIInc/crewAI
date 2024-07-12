@@ -5,6 +5,7 @@ import pkg_resources
 from .create_crew import create_crew
 from .train_crew import train_crew
 from .replay_from_task import replay_task_command
+from .list_task_outputs import show_task_outputs
 
 
 @click.group()
@@ -69,6 +70,12 @@ def replay(task_id: str) -> None:
         replay_task_command(task_id)
     except Exception as e:
         click.echo(f"An error occurred while replaying: {e}", err=True)
+
+
+@crewai.command()
+def list_completed_tasks_ids():
+    """List all task outputs saved from crew_tasks_output.json."""
+    show_task_outputs()
 
 
 if __name__ == "__main__":
