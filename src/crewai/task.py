@@ -7,6 +7,8 @@ from concurrent.futures import Future
 from copy import copy
 from hashlib import md5
 from typing import Any, Dict, List, Optional, Tuple, Type, Union
+
+
 from langchain_openai import ChatOpenAI
 from opentelemetry.trace import Span
 from pydantic import UUID4, BaseModel, Field, field_validator, model_validator
@@ -177,10 +179,6 @@ class Task(BaseModel):
     def key(self) -> str:
         description = self._original_description or self.description
         return md5(description.encode()).hexdigest()
-
-    def wait_for_completion(self) -> str | BaseModel:
-        """Wait for asynchronous task completion and return the output."""
-        assert self.async_execution, "Task is not set to be executed asynchronously."
 
     def execute_async(
         self,
