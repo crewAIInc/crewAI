@@ -62,6 +62,6 @@ class AgentTools(BaseModel):
         task = Task(
             description=task,
             agent=agent,
-            expected_output="Your best answer to your coworker asking you this, accounting for the context shared.",
+            expected_output="Provide your most insightful response to your coworker's question, taking into consideration the context that has been provided.",
         )
         return agent.execute_task(task, context)

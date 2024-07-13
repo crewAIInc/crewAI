@@ -197,11 +197,11 @@ class ToolUsage:
         self.task.increment_tools_errors()
         if tool_name and tool_name != "":
             raise Exception(
-                f"Action '{tool_name}' don't exist, these are the only available Actions: {self.tools_description}"
+                f"I couldn't find the action '{tool_name}'. Here are the actions I can perform: {self.tools_description}"
             )
         else:
             raise Exception(
-                f"I forgot the Action name, these are the only available Actions: {self.tools_description}"
+                f"I can't remember the Action name, these are the available Actions I can use: {self.tools_description}"
             )
 
     def _render(self) -> str:
@@ -237,17 +237,23 @@ class ToolUsage:
                     else ToolCalling
                 )
                 converter = Converter(
-                    text=f"Only tools available:\n###\n{self._render()}\n\nReturn a valid schema for the tool, the tool name must be exactly equal one of the options, use this text to inform the valid ouput schema:\n\n{tool_string}```",
+                    text=f"Available tools are listed below:\n###\n{self._render()}\n\nPlease ensure the tool name matches exactly one of the options listed above. Use the following information to guide the correct output schema for the selected tool:\n\n{tool_string}```",
                     llm=self.function_calling_llm,
                     model=model,
                     instructions=dedent(
-                        """\
-                                            The schema should have the following structure, only two keys:
-                                            - tool_name: str
-                                            - arguments: dict (with all arguments being passed)
-
-                                            Example:
-                                            {"tool_name": "tool name", "arguments": {"arg_name1": "value", "arg_name2": 2}}""",
+                        """The schema must be structured as follows, containing only two main elements:
+                        tool_name: A string indicating the name of the tool.
+                        arguments: A dictionary that includes all the necessary arguments.
+                        
+                        For example:
+                        {
+                          "tool_name": "tool name",
+                          "arguments": {
+                            "arg_name1": "value",
+                            "arg_name2": 2
+                          }
+                        }
+                        """,
                     ),
                     max_attemps=1,
                 )
