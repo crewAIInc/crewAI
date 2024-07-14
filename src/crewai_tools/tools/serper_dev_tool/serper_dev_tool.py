@@ -27,7 +27,7 @@ class SerperDevTool(BaseTool):
 	location: Optional[str] = None
 	locale: Optional[str] = None
 	n_results: int = Field(default=10, description="Number of search results to return")
-  save_file: bool = Field(default=False, description="Flag to determine whether to save the results to a file")
+        save_file: bool = Field(default=False, description="Flag to determine whether to save the results to a file")
 
 	def _run(
 		self,
@@ -35,22 +35,19 @@ class SerperDevTool(BaseTool):
 	) -> Any:
 
 		search_query = kwargs.get('search_query') or kwargs.get('query')
-    save_file = kwargs.get('save_file', self.save_file)
-    n_results = kwargs.get('n_results', self.n_results)
+		save_file = kwargs.get('save_file', self.save_file)
+		n_results = kwargs.get('n_results', self.n_results)
 
-		payload = json.dumps(
-			{
-				"q": search_query,
-				"num": n_results,
-				"gl": self.country,
-				"location": self.location,
-				"hl": self.locale,
-			}
-		)
+		payload = { "q": search_query, "num": n_results }
+		payload["gl"] = self.country if self.country
+		payload["location"] = self.country if self.location
+		payload["hl"] = self.country if self.locale
+		
+		payload = json.dumps(payload)
 
 		headers = {
 			'X-API-KEY': os.environ['SERPER_API_KEY'],
-				'content-type': 'application/json'
+			'content-type': 'application/json'
 		}
 		response = requests.request("POST", self.search_url, headers=headers, data=payload)
 		results = response.json()
