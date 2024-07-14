@@ -68,4 +68,4 @@ class GithubSearchTool(RagTool):
         search_query: str,
         **kwargs: Any,
     ) -> Any:
-        return super()._run(query=search_query)
+        return super()._run(query=search_query, **kwargs)
