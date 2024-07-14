@@ -23,6 +23,7 @@ from .scrape_element_from_website.scrape_element_from_website import (
     ScrapeElementFromWebsiteTool,
 )
 from .scrape_website_tool.scrape_website_tool import ScrapeWebsiteTool
+from .scrapfly_scrape_website_tool.scrapfly_scrape_website_tool import ScrapflyScrapeWebsiteTool
 from .selenium_scraping_tool.selenium_scraping_tool import SeleniumScrapingTool
 from .serper_dev_tool.serper_dev_tool import SerperDevTool
 from .serply_api_tool.serply_web_search_tool import SerplyWebSearchTool
