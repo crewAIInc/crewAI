@@ -2,7 +2,7 @@ import os
 import json
 import requests
 
-from typing import Type, Any
+from typing import Optional, Type, Any
 from pydantic.v1 import BaseModel, Field
 from crewai_tools.tools.base_tool import BaseTool
 
@@ -23,25 +23,31 @@ class SerperDevTool(BaseTool):
 	description: str = "A tool that can be used to search the internet with a search_query."
 	args_schema: Type[BaseModel] = SerperDevToolSchema
 	search_url: str = "https://google.serper.dev/search"
+	country: Optional[str] = None
+	location: Optional[str] = None
+	locale: Optional[str] = None
 	n_results: int = Field(default=10, description="Number of search results to return")
-    	save_file: bool = Field(default=False, description="Flag to determine whether to save the results to a file")
+        save_file: bool = Field(default=False, description="Flag to determine whether to save the results to a file")
 
 	def _run(
 		self,
 		**kwargs: Any,
 	) -> Any:
+
+		search_query = kwargs.get('search_query') or kwargs.get('query')
 		save_file = kwargs.get('save_file', self.save_file)
-	
-	        n_results = kwargs.get('n_results', self.n_results)
+		n_results = kwargs.get('n_results', self.n_results)
 
-		search_query = kwargs.get('search_query')
-		if search_query is None:
-			search_query = kwargs.get('query')
+		payload = { "q": search_query, "num": n_results }
+		payload["gl"] = self.country if self.country
+		payload["location"] = self.country if self.location
+		payload["hl"] = self.country if self.locale
+		
+		payload = json.dumps(payload)
 
-		payload = json.dumps({"q": search_query, "num": n_results})
 		headers = {
-				'X-API-KEY': os.environ['SERPER_API_KEY'],
-				'content-type': 'application/json'
+			'X-API-KEY': os.environ['SERPER_API_KEY'],
+			'content-type': 'application/json'
 		}
 		response = requests.request("POST", self.search_url, headers=headers, data=payload)
 		results = response.json()
