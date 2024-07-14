@@ -22,6 +22,8 @@ class BaseTool(BaseModel, ABC):
     """Flag to check if the description has been updated."""
     cache_function: Optional[Callable] = lambda _args, _result: True
     """Function that will be used to determine if the tool should be cached, should return a boolean. If None, the tool will be cached."""
+    result_as_answer: bool = False
+    """Flag to check if the tool should be the final agent answer."""
 
     @validator("args_schema", always=True, pre=True)
     def _default_args_schema(cls, v: Type[V1BaseModel]) -> Type[V1BaseModel]:
@@ -85,12 +87,15 @@ class BaseTool(BaseModel, ABC):
 
     def _generate_description(self):
         args = []
+        args_description = []
         for arg, attribute in self.args_schema.schema()["properties"].items():
             if "type" in attribute:
                 args.append(f"{arg}: '{attribute['type']}'")
+            if "description" in attribute:
+                args_description.append(f"{arg}: '{attribute['description']}'")
 
         description = self.description.replace("\n", " ")
-        self.description = f"{self.name}({', '.join(args)}) - {description}"
+        self.description = f"{self.name}({', '.join(args)}) - {description} {', '.join(args_description)}"
 
 
 class Tool(BaseTool):
