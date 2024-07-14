@@ -5,7 +5,7 @@ from pydantic.v1 import BaseModel, Field
 from bs4 import BeautifulSoup
 from selenium import webdriver
 from selenium.webdriver.common.by import By
-from selenium.webdriver.firefox.options import Options
+from selenium.webdriver.chrome.options import Options
 
 from ..base_tool import BaseTool
 
