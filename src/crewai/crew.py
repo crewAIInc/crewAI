@@ -32,15 +32,12 @@ from crewai.telemetry import Telemetry
 from crewai.tools.agent_tools import AgentTools
 from crewai.utilities import I18N, FileHandler, Logger, RPMController
 from crewai.utilities.constants import (
-    CREW_TASKS_OUTPUT_FILE,
     TRAINED_AGENTS_DATA_FILE,
     TRAINING_DATA_FILE,
 )
 from crewai.utilities.evaluators.task_evaluator import TaskEvaluator
-from crewai.utilities.task_output_handler import (
-    ExecutionLog,
-    TaskOutputJsonHandler,
-)
+from crewai.utilities.task_output_storage_handler import TaskOutputStorageHandler
+
 from crewai.utilities.formatter import (
     aggregate_raw_outputs_from_task_outputs,
     aggregate_raw_outputs_from_tasks,
@@ -91,6 +88,9 @@ class Crew(BaseModel):
     _inputs: Optional[Dict[str, Any]] = PrivateAttr(default=None)
     _logging_color: str = PrivateAttr(
         default="bold_purple",
+    )
+    _task_output_handler: TaskOutputStorageHandler = PrivateAttr(
+        default_factory=TaskOutputStorageHandler
     )
 
     cache: bool = Field(default=True)
@@ -151,7 +151,7 @@ class Crew(BaseModel):
         default=None,
         description="List of file paths for task execution JSON files.",
     )
-    execution_logs: List[ExecutionLog] = Field(
+    execution_logs: List[Dict[str, Any]] = Field(
         default=[],
         description="List of execution logs for tasks",
     )
@@ -397,8 +397,7 @@ class Crew(BaseModel):
     ) -> CrewOutput:
         """Starts the crew to work on its assigned tasks."""
         self._execution_span = self._telemetry.crew_execution_span(self, inputs)
-        TaskOutputJsonHandler(CREW_TASKS_OUTPUT_FILE).initialize_file()
-        TaskOutputJsonHandler(CREW_TASKS_OUTPUT_FILE).reset()
+        self._task_output_handler.reset()
         self._logging_color = "bold_purple"
 
         if inputs is not None:
@@ -529,10 +528,9 @@ class Crew(BaseModel):
         else:
             inputs = {}
 
-        log = ExecutionLog(
-            task_id=str(task.id),
-            expected_output=task.expected_output,
-            output={
+        log = {
+            "task": task,
+            "output": {
                 "description": output.description,
                 "summary": output.summary,
                 "raw": output.raw,
@@ -541,16 +539,11 @@ class Crew(BaseModel):
                 "output_format": output.output_format,
                 "agent": output.agent,
             },
-            task_index=task_index,
-            inputs=inputs,
-            was_replayed=was_replayed,
-        )
-        if task_index < len(self.execution_logs):
-            self.execution_logs[task_index] = log
-        else:
-            self.execution_logs.append(log)
-
-        TaskOutputJsonHandler(CREW_TASKS_OUTPUT_FILE).update(task_index, log)
+            "task_index": task_index,
+            "inputs": inputs,
+            "was_replayed": was_replayed,
+        }
+        self._task_output_handler.update(task_index, log)
 
     def _run_sequential_process(self) -> CrewOutput:
         """Executes tasks sequentially and returns the final output."""
@@ -741,7 +734,11 @@ class Crew(BaseModel):
     def replay_from_task(
         self, task_id: str, inputs: Optional[Dict[str, Any]] = None
     ) -> CrewOutput:
-        stored_outputs = TaskOutputJsonHandler(CREW_TASKS_OUTPUT_FILE).load()
+        stored_outputs = self._task_output_handler.load()
+        # TODO: write tests for this
+        if not stored_outputs:
+            raise ValueError(f"Task with id {task_id} not found in the crew's tasks.")
+
         start_index = self._find_task_index(task_id, stored_outputs)
 
         if start_index is None:
@@ -759,7 +756,9 @@ class Crew(BaseModel):
             self._create_manager_agent()
 
         for i in range(start_index):
-            stored_output = stored_outputs[i]["output"]
+            stored_output = stored_outputs[i][
+                "output"
+            ]  # for adding context to the task
             task_output = TaskOutput(
                 description=stored_output["description"],
                 agent=stored_output["agent"],

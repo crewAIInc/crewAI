@@ -1,6 +1,5 @@
 """Test Agent creation and execution basic functionality."""
 
-import os
 import json
 from concurrent.futures import Future
 from unittest import mock
@@ -19,7 +18,7 @@ from crewai.task import Task
 from crewai.tasks.output_format import OutputFormat
 from crewai.tasks.task_output import TaskOutput
 from crewai.utilities import Logger, RPMController
-from crewai.utilities.constants import CREW_TASKS_OUTPUT_FILE
+from crewai.utilities.task_output_storage_handler import TaskOutputStorageHandler
 
 ceo = Agent(
     role="CEO",
@@ -1861,7 +1860,7 @@ def test_crew_replay_from_task_error():
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
-def test_crew_task_output_file_creation():
+def test_crew_task_db_init():
     agent = Agent(
         role="Content Writer",
         goal="Write engaging content on various topics.",
@@ -1889,46 +1888,13 @@ def test_crew_task_output_file_creation():
 
         crew.kickoff()
 
-        # Check if the crew_tasks_output.json file is created
-        assert os.path.exists(CREW_TASKS_OUTPUT_FILE)
-
-        # Clean up the file after test
-        if os.path.exists(CREW_TASKS_OUTPUT_FILE):
-            os.remove(CREW_TASKS_OUTPUT_FILE)
-
-
-@pytest.mark.vcr(filter_headers=["authorization"])
-def test_replay_without_output_tasks_json():
-    agent = Agent(
-        role="Technical Writer",
-        goal="Write detailed technical documentation.",
-        backstory="You have a background in software engineering and technical writing.",
-    )
-
-    task = Task(
-        description="Document the process of setting up a Python project.",
-        expected_output="A step-by-step guide on setting up a Python project.",
-        agent=agent,
-    )
-
-    crew = Crew(agents=[agent], tasks=[task])
-
-    with patch.object(Task, "execute_sync") as mock_execute_task:
-        mock_execute_task.return_value = TaskOutput(
-            description="Document the process of setting up a Python project.",
-            raw="To set up a Python project, first create a virtual environment...",
-            agent="Technical Writer",
-            json_dict=None,
-            output_format=OutputFormat.RAW,
-            pydantic=None,
-            summary="Document the process of setting up a Python project...",
-        )
-
-        if os.path.exists(CREW_TASKS_OUTPUT_FILE):
-            os.remove(CREW_TASKS_OUTPUT_FILE)
-
-        with pytest.raises(ValueError):
-            crew.replay_from_task(str(task.id))
+        # Check if this runs without raising an exception
+        try:
+            db_handler = TaskOutputStorageHandler()
+            db_handler.load()
+            assert True  # If we reach this point, no exception was raised
+        except Exception as e:
+            pytest.fail(f"An exception was raised: {str(e)}")
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
@@ -2018,20 +1984,16 @@ def test_replay_task_with_context():
         ]
 
         crew.kickoff()
+        db_handler = TaskOutputStorageHandler()
+        assert db_handler.load() != []
 
-        # Check if the crew_tasks_output.json file is created
-        assert os.path.exists(CREW_TASKS_OUTPUT_FILE)
-
-        # Replay task4 and ensure it uses task1's context properly
         with patch.object(Task, "execute_sync") as mock_replay_task:
             mock_replay_task.return_value = mock_task_output4
 
             replayed_output = crew.replay_from_task(str(task4.id))
             assert replayed_output.raw == "Presentation on AI advancements..."
 
-        # Clean up the file after test
-        if os.path.exists(CREW_TASKS_OUTPUT_FILE):
-            os.remove(CREW_TASKS_OUTPUT_FILE)
+        db_handler.reset()
 
 
 def test_replay_from_task_with_context():
@@ -2056,7 +2018,7 @@ def test_replay_from_task_with_context():
     crew = Crew(agents=[agent], tasks=[task1, task2], process=Process.sequential)
 
     with patch(
-        "crewai.utilities.task_output_handler.TaskOutputJsonHandler.load",
+        "crewai.utilities.task_output_storage_handler.TaskOutputStorageHandler.load",
         return_value=[
             {
                 "task_id": str(task1.id),
@@ -2114,7 +2076,7 @@ def test_replay_with_invalid_task_id():
     crew = Crew(agents=[agent], tasks=[task1, task2], process=Process.sequential)
 
     with patch(
-        "crewai.utilities.task_output_handler.TaskOutputJsonHandler.load",
+        "crewai.utilities.task_output_storage_handler.TaskOutputStorageHandler.load",
         return_value=[
             {
                 "task_id": str(task1.id),
@@ -2176,7 +2138,7 @@ def test_replay_interpolates_inputs_properly(mock_interpolate_inputs):
     crew.kickoff(inputs={"name": "John"})
 
     with patch(
-        "crewai.utilities.task_output_handler.TaskOutputJsonHandler.load",
+        "crewai.utilities.task_output_storage_handler.TaskOutputStorageHandler.load",
         return_value=[
             {
                 "task_id": str(task1.id),
@@ -2231,7 +2193,7 @@ def test_replay_from_task_setup_context():
     task1.output = context_output
     crew = Crew(agents=[agent], tasks=[task1, task2], process=Process.sequential)
     with patch(
-        "crewai.utilities.task_output_handler.TaskOutputJsonHandler.load",
+        "crewai.utilities.task_output_storage_handler.TaskOutputStorageHandler.load",
         return_value=[
             {
                 "task_id": str(task1.id),

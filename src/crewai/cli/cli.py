@@ -1,6 +1,10 @@
 import click
 import pkg_resources
 
+from crewai.memory.storage.kickoff_task_outputs_storage import (
+    KickoffTaskOutputsSQLiteStorage,
+)
+
 
 from .create_crew import create_crew
 from .train_crew import train_crew
@@ -69,6 +73,28 @@ def replay(task_id: str) -> None:
         replay_task_command(task_id)
     except Exception as e:
         click.echo(f"An error occurred while replaying: {e}", err=True)
+
+
+@crewai.command()
+def log_tasks_outputs() -> None:
+    """
+    Log your previously ran kickoff task outputs.
+    """
+    try:
+        storage = KickoffTaskOutputsSQLiteStorage()
+        tasks = storage.load()
+
+        if not tasks:
+            click.echo("No task outputs found.")
+            return
+
+        for index, task in enumerate(tasks, 1):
+            click.echo(f"Task {index}: {task['task_id']}")
+            click.echo(f"Description: {task['expected_output']}")
+            click.echo("------")
+
+    except Exception as e:
+        click.echo(f"An error occurred while logging task outputs: {e}", err=True)
 
 
 if __name__ == "__main__":
