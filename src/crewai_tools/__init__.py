@@ -24,10 +24,15 @@ from .tools import (
     ScrapeWebsiteTool,
     SeleniumScrapingTool,
     SerperDevTool,
+    SerplyWebSearchTool,
+    SerplyNewsSearchTool,
+    SerplyScholarSearchTool,
+    SerplyWebpageToMarkdownTool,
+    SerplyJobSearchTool,
     TXTSearchTool,
     WebsiteSearchTool,
     XMLSearchTool,
     YoutubeChannelSearchTool,
-    YoutubeVideoSearchTool,
+    YoutubeVideoSearchTool
 )
 from .tools.base_tool import BaseTool, Tool, tool
