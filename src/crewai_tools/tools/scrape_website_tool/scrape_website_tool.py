@@ -25,8 +25,7 @@ class ScrapeWebsiteTool(BaseTool):
 		'Accept-Language': 'en-US,en;q=0.9',
 		'Referer': 'https://www.google.com/',
 		'Connection': 'keep-alive',
-		'Upgrade-Insecure-Requests': '1',
-		'Accept-Encoding': 'gzip, deflate, br'
+		'Upgrade-Insecure-Requests': '1'
 	}
 
 	def __init__(self, website_url: Optional[str] = None, cookies: Optional[dict] = None, **kwargs):
