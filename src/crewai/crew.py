@@ -6,15 +6,15 @@ from typing import TYPE_CHECKING, Any, Dict, List, Optional, Tuple, Union
 
 from langchain_core.callbacks import BaseCallbackHandler
 from pydantic import (
-    UUID4,
-    BaseModel,
-    ConfigDict,
-    Field,
-    InstanceOf,
-    Json,
-    PrivateAttr,
-    field_validator,
-    model_validator,
+  UUID4,
+  BaseModel,
+  ConfigDict,
+  Field,
+  InstanceOf,
+  Json,
+  PrivateAttr,
+  field_validator,
+  model_validator,
 )
 from pydantic_core import PydanticCustomError
 
@@ -173,7 +173,6 @@ class Crew(BaseModel):
         self._rpm_controller = RPMController(max_rpm=self.max_rpm, logger=self._logger)
         self._telemetry = Telemetry()
         self._telemetry.set_tracer()
-        self._telemetry.crew_creation(self)
         return self
 
     @model_validator(mode="after")
@@ -506,7 +505,30 @@ class Crew(BaseModel):
                     agent for agent in self.agents if agent != task.agent
                 ]
                 if len(self.agents) > 1 and len(agents_for_delegation) > 0:
-                    task.tools += task.agent.get_delegation_tools(agents_for_delegation)
+                    delegation_tools = task.agent.get_delegation_tools(
+                        agents_for_delegation
+                    )
+
+                    # Add tools if they are not already in task.tools
+                    for new_tool in delegation_tools:
+                        # Find the index of the tool with the same name
+                        existing_tool_index = next(
+                            (
+                                index
+                                for index, tool in enumerate(task.tools or [])
+                                if tool.name == new_tool.name
+                            ),
+                            None,
+                        )
+                        if not task.tools:
+                            task.tools = []
+
+                        if existing_tool_index is not None:
+                            # Replace the existing tool
+                            task.tools[existing_tool_index] = new_tool 
+                        else:
+                            # Add the new tool
+                            task.tools.append(new_tool)
 
             role = task.agent.role if task.agent is not None else "None"
             self._logger.log("debug", f"== Working Agent: {role}", color="bold_purple")

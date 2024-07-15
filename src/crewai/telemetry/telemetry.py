@@ -80,7 +80,7 @@ class Telemetry:
                 self.ready = False
                 self.trace_set = False
 
-    def crew_creation(self, crew):
+    def crew_creation(self, crew: Crew, inputs: dict[str, Any] | None):
         """Records the creation of a crew."""
         if self.ready:
             try:
@@ -93,6 +93,12 @@ class Telemetry:
                 )
                 self._add_attribute(span, "python_version", platform.python_version())
                 self._add_attribute(span, "crew_id", str(crew.id))
+
+                if crew.share_crew:
+                    self._add_attribute(
+                        span, "crew_inputs", json.dumps(inputs) if inputs else None
+                    )
+
                 self._add_attribute(span, "crew_process", crew.process)
                 self._add_attribute(span, "crew_memory", crew.memory)
                 self._add_attribute(span, "crew_number_of_tasks", len(crew.tasks))
@@ -114,7 +120,7 @@ class Telemetry:
                                 "llm": json.dumps(self._safe_llm_attributes(agent.llm)),
                                 "delegation_enabled?": agent.allow_delegation,
                                 "tools_names": [
-                                    tool.name.casefold() for tool in agent.tools
+                                    tool.name.casefold() for tool in agent.tools or []
                                 ],
                             }
                             for agent in crew.agents
@@ -139,7 +145,7 @@ class Telemetry:
                                     else None
                                 ),
                                 "tools_names": [
-                                    tool.name.casefold() for tool in task.tools
+                                    tool.name.casefold() for tool in task.tools or []
                                 ],
                             }
                             for task in crew.tasks
@@ -161,10 +167,11 @@ class Telemetry:
         if self.ready:
             try:
                 tracer = trace.get_tracer("crewai.telemetry")
-                span = tracer.start_span("Task Execution")
 
                 created_span = tracer.start_span("Task Created")
 
+                self._add_attribute(created_span, "crew_id", str(crew.id))
+                self._add_attribute(created_span, "task_index", crew.tasks.index(task))
                 self._add_attribute(created_span, "task_id", str(task.id))
 
                 if crew.share_crew:
@@ -178,6 +185,10 @@ class Telemetry:
                 created_span.set_status(Status(StatusCode.OK))
                 created_span.end()
 
+                span = tracer.start_span("Task Execution")
+
+                self._add_attribute(span, "crew_id", str(crew.id))
+                self._add_attribute(span, "task_index", crew.tasks.index(task))
                 self._add_attribute(span, "task_id", str(task.id))
 
                 if crew.share_crew:
@@ -275,6 +286,8 @@ class Telemetry:
         """
         if (self.ready) and (crew.share_crew):
             try:
+                self.crew_creation(crew, inputs)
+
                 tracer = trace.get_tracer("crewai.telemetry")
                 span = tracer.start_span("Crew Execution")
                 self._add_attribute(
@@ -283,7 +296,9 @@ class Telemetry:
                     pkg_resources.get_distribution("crewai").version,
                 )
                 self._add_attribute(span, "crew_id", str(crew.id))
-                self._add_attribute(span, "inputs", json.dumps(inputs))
+                self._add_attribute(
+                    span, "crew_inputs", json.dumps(inputs) if inputs else None
+                )
                 self._add_attribute(
                     span,
                     "crew_agents",
