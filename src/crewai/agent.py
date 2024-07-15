@@ -5,7 +5,6 @@ from typing import Any, List, Optional, Tuple
 from langchain.agents.agent import RunnableAgent
 from langchain.agents.tools import BaseTool
 from langchain.agents.tools import tool as LangChainTool
-from langchain.tools.base import StructuredTool
 from langchain_core.agents import AgentAction
 from langchain_core.callbacks import BaseCallbackHandler
 from langchain_openai import ChatOpenAI
@@ -299,7 +298,7 @@ class Agent(BaseAgent):
             agent=RunnableAgent(runnable=inner_agent), **executor_args
         )
 
-    def get_delegation_tools(self, agents: List[BaseAgent]) -> List[StructuredTool]:
+    def get_delegation_tools(self, agents: List[BaseAgent]):
         agent_tools = AgentTools(agents=agents)
         tools = agent_tools.tools()
         return tools

@@ -14,7 +14,7 @@ class KickoffTaskOutputsSQLiteStorage:
     """
 
     def __init__(
-        self, db_path: str = f"{db_storage_path()}/kickoff_task_outputs.db"
+        self, db_path: str = f"{db_storage_path()}/long_term_memory_storage.dbs"
     ) -> None:
         self.db_path = db_path
         self._printer: Printer = Printer()
@@ -126,7 +126,7 @@ class KickoffTaskOutputsSQLiteStorage:
             with sqlite3.connect(self.db_path) as conn:
                 cursor = conn.cursor()
                 cursor.execute("""
-                SELECT task_id, expected_output, output, task_index, inputs, was_replayed, timestamp
+                SELECT *
                 FROM latest_kickoff_task_outputs
                 ORDER BY task_index
                 """)

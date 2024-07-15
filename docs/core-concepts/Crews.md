@@ -170,6 +170,13 @@ To use the replay feature, follow these steps:
 2. Navigate to the directory where your CrewAI project is located.
 3. Run the following command:
 
+To view latest kickoff task_ids use:
+
+```shell
+crewai log-tasks-outputs
+```
+
+
 ```shell
 crewai replay -t <task_id>
 ```

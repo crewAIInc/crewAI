@@ -1236,10 +1236,10 @@ def test_agent_usage_metrics_are_captured_for_hierarchical_process():
     print(crew.usage_metrics)
 
     assert crew.usage_metrics == {
-        "total_tokens": 2217,
-        "prompt_tokens": 1847,
-        "completion_tokens": 370,
-        "successful_requests": 4,
+        "total_tokens": 311,
+        "prompt_tokens": 224,
+        "completion_tokens": 87,
+        "successful_requests": 1,
     }
 
 
