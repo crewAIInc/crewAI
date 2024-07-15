@@ -112,14 +112,10 @@ class KickoffTaskOutputsSQLiteStorage:
                 if cursor.rowcount == 0:
                     self._printer.print(
                         f"No row found with task_index {task_index}. No update performed.",
-                        color="yellow",
-                    )
-                else:
-                    self._printer.print(
-                        f"Updated row with task_index {task_index}.", color="green"
+                        color="red",
                     )
         except sqlite3.Error as e:
-            self._printer.print(f"UPDATE ERROR: {e}", color="red")
+            self._printer.print(f"UPDATE KICKOFF TASK OUTPUTS ERROR: {e}", color="red")
 
     def load(self) -> Optional[List[Dict[str, Any]]]:
         try:
