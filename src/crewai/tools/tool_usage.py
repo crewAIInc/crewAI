@@ -151,16 +151,12 @@ class ToolUsage:
                             for k, v in calling.arguments.items()
                             if k in acceptable_args
                         }
-                        result = tool._run(**arguments)
+                        result = tool.invoke(input=arguments)
                     except Exception:
-                        if tool.args_schema:
-                            arguments = calling.arguments
-                            result = tool._run(**arguments)
-                        else:
-                            arguments = calling.arguments.values()  # type: ignore # Incompatible types in assignment (expression has type "dict_values[str, Any]", variable has type "dict[str, Any]")
-                            result = tool._run(*arguments)
+                        arguments = calling.arguments
+                        result = tool.invoke(input=arguments)
                 else:
-                    result = tool._run()
+                    result = tool.invoke(input={})
             except Exception as e:
                 self._run_attempts += 1
                 if self._run_attempts > self._max_parsing_attempts:
