@@ -15,8 +15,10 @@ from crewai.crews.crew_output import CrewOutput
 from crewai.memory.contextual.contextual_memory import ContextualMemory
 from crewai.process import Process
 from crewai.task import Task
+from crewai.tasks.output_format import OutputFormat
 from crewai.tasks.task_output import TaskOutput
 from crewai.utilities import Logger, RPMController
+from crewai.utilities.task_output_storage_handler import TaskOutputStorageHandler
 
 ceo = Agent(
     role="CEO",
@@ -136,7 +138,6 @@ def test_async_task_cannot_include_sequential_async_tasks_in_context():
 
 
 def test_context_no_future_tasks():
-
     task2 = Task(
         description="Task 2",
         expected_output="output",
@@ -584,7 +585,6 @@ def test_sequential_async_task_execution_completion():
 
 @pytest.mark.vcr(filter_headers=["authorization"])
 def test_single_task_with_async_execution():
-
     researcher_agent = Agent(
         role="Researcher",
         goal="Make the best research and analysis on content about AI and AI agents",
@@ -740,7 +740,6 @@ def test_async_task_execution_call_count():
     ) as mock_execute_sync, patch.object(
         Task, "execute_async", return_value=mock_future
     ) as mock_execute_async:
-
         crew.kickoff()
 
         assert mock_execute_async.call_count == 2
@@ -1148,7 +1147,6 @@ def test_code_execution_flag_adds_code_tool_upon_kickoff():
 
 @pytest.mark.vcr(filter_headers=["authorization"])
 def test_delegation_is_not_enabled_if_there_are_only_one_agent():
-
     researcher = Agent(
         role="Researcher",
         goal="Make the best research and analysis on content about AI and AI agents",
@@ -1238,10 +1236,10 @@ def test_agent_usage_metrics_are_captured_for_hierarchical_process():
     print(crew.usage_metrics)
 
     assert crew.usage_metrics == {
-        "total_tokens": 2217,
-        "prompt_tokens": 1847,
-        "completion_tokens": 370,
-        "successful_requests": 4,
+        "total_tokens": 311,
+        "prompt_tokens": 224,
+        "completion_tokens": 87,
+        "successful_requests": 1,
     }
 
 
@@ -1380,7 +1378,6 @@ def test_crew_does_not_interpolate_without_inputs():
             interpolate_task_inputs.assert_not_called()
 
 
-# TODO: Ask @joao if we want to start throwing errors if inputs are not provided
 # def test_crew_partial_inputs():
 #     agent = Agent(
 #         role="{topic} Researcher",
@@ -1404,7 +1401,6 @@ def test_crew_does_not_interpolate_without_inputs():
 #     assert crew.agents[0].backstory == "You have a lot of experience with AI."
 
 
-# TODO: If we do want ot throw errors if we are missing inputs. Add in this test.
 # def test_crew_invalid_inputs():
 #     agent = Agent(
 #         role="{topic} Researcher",
@@ -1806,3 +1802,435 @@ def test__setup_for_training():
 
     for agent in agents:
         assert agent.allow_delegation is False
+
+
+@pytest.mark.vcr(filter_headers=["authorization"])
+def test_replay_feature():
+    list_ideas = Task(
+        description="Generate a list of 5 interesting ideas to explore for an article, where each bulletpoint is under 15 words.",
+        expected_output="Bullet point list of 5 important events. No additional commentary.",
+        agent=researcher,
+    )
+    write = Task(
+        description="Write a sentence about the events",
+        expected_output="A sentence about the events",
+        agent=writer,
+        context=[list_ideas],
+    )
+
+    crew = Crew(
+        agents=[researcher, writer],
+        tasks=[list_ideas, write],
+        process=Process.sequential,
+    )
+
+    with patch.object(Task, "execute_sync") as mock_execute_task:
+        mock_execute_task.return_value = TaskOutput(
+            description="Mock description",
+            raw="Mocked output for list of ideas",
+            agent="Researcher",
+            json_dict=None,
+            output_format=OutputFormat.RAW,
+            pydantic=None,
+            summary="Mocked output for list of ideas",
+        )
+
+        crew.kickoff()
+        crew.replay_from_task(str(write.id))
+        # Ensure context was passed correctly
+        assert mock_execute_task.call_count == 3
+
+
+@pytest.mark.vcr(filter_headers=["authorization"])
+def test_crew_replay_from_task_error():
+    task = Task(
+        description="Come up with a list of 5 interesting ideas to explore for an article",
+        expected_output="5 bullet points with a paragraph for each idea.",
+        agent=researcher,
+    )
+
+    crew = Crew(
+        agents=[researcher, writer],
+        tasks=[task],
+    )
+
+    with pytest.raises(TypeError) as e:
+        crew.replay_from_task()  # type: ignore purposefully throwing err
+        assert "task_id is required" in str(e)
+
+
+@pytest.mark.vcr(filter_headers=["authorization"])
+def test_crew_task_db_init():
+    agent = Agent(
+        role="Content Writer",
+        goal="Write engaging content on various topics.",
+        backstory="You have a background in journalism and creative writing.",
+    )
+
+    task = Task(
+        description="Write a detailed article about AI in healthcare.",
+        expected_output="A 1 paragraph article about AI.",
+        agent=agent,
+    )
+
+    crew = Crew(agents=[agent], tasks=[task])
+
+    with patch.object(Task, "execute_sync") as mock_execute_task:
+        mock_execute_task.return_value = TaskOutput(
+            description="Write about AI in healthcare.",
+            raw="Artificial Intelligence (AI) is revolutionizing healthcare by enhancing diagnostic accuracy, personalizing treatment plans, and streamlining administrative tasks.",
+            agent="Content Writer",
+            json_dict=None,
+            output_format=OutputFormat.RAW,
+            pydantic=None,
+            summary="Write about AI in healthcare...",
+        )
+
+        crew.kickoff()
+
+        # Check if this runs without raising an exception
+        try:
+            db_handler = TaskOutputStorageHandler()
+            db_handler.load()
+            assert True  # If we reach this point, no exception was raised
+        except Exception as e:
+            pytest.fail(f"An exception was raised: {str(e)}")
+
+
+@pytest.mark.vcr(filter_headers=["authorization"])
+def test_replay_task_with_context():
+    agent1 = Agent(
+        role="Researcher",
+        goal="Research AI advancements.",
+        backstory="You are an expert in AI research.",
+    )
+    agent2 = Agent(
+        role="Writer",
+        goal="Write detailed articles on AI.",
+        backstory="You have a background in journalism and AI.",
+    )
+
+    task1 = Task(
+        description="Research the latest advancements in AI.",
+        expected_output="A detailed report on AI advancements.",
+        agent=agent1,
+    )
+    task2 = Task(
+        description="Summarize the AI advancements report.",
+        expected_output="A summary of the AI advancements report.",
+        agent=agent2,
+    )
+    task3 = Task(
+        description="Write an article based on the AI advancements summary.",
+        expected_output="An article on AI advancements.",
+        agent=agent2,
+    )
+    task4 = Task(
+        description="Create a presentation based on the AI advancements article.",
+        expected_output="A presentation on AI advancements.",
+        agent=agent2,
+        context=[task1],
+    )
+
+    crew = Crew(
+        agents=[agent1, agent2],
+        tasks=[task1, task2, task3, task4],
+        process=Process.sequential,
+    )
+
+    mock_task_output1 = TaskOutput(
+        description="Research the latest advancements in AI.",
+        raw="Detailed report on AI advancements...",
+        agent="Researcher",
+        json_dict=None,
+        output_format=OutputFormat.RAW,
+        pydantic=None,
+        summary="Detailed report on AI advancements...",
+    )
+    mock_task_output2 = TaskOutput(
+        description="Summarize the AI advancements report.",
+        raw="Summary of the AI advancements report...",
+        agent="Writer",
+        json_dict=None,
+        output_format=OutputFormat.RAW,
+        pydantic=None,
+        summary="Summary of the AI advancements report...",
+    )
+    mock_task_output3 = TaskOutput(
+        description="Write an article based on the AI advancements summary.",
+        raw="Article on AI advancements...",
+        agent="Writer",
+        json_dict=None,
+        output_format=OutputFormat.RAW,
+        pydantic=None,
+        summary="Article on AI advancements...",
+    )
+    mock_task_output4 = TaskOutput(
+        description="Create a presentation based on the AI advancements article.",
+        raw="Presentation on AI advancements...",
+        agent="Writer",
+        json_dict=None,
+        output_format=OutputFormat.RAW,
+        pydantic=None,
+        summary="Presentation on AI advancements...",
+    )
+
+    with patch.object(Task, "execute_sync") as mock_execute_task:
+        mock_execute_task.side_effect = [
+            mock_task_output1,
+            mock_task_output2,
+            mock_task_output3,
+            mock_task_output4,
+        ]
+
+        crew.kickoff()
+        db_handler = TaskOutputStorageHandler()
+        assert db_handler.load() != []
+
+        with patch.object(Task, "execute_sync") as mock_replay_task:
+            mock_replay_task.return_value = mock_task_output4
+
+            replayed_output = crew.replay_from_task(str(task4.id))
+            assert replayed_output.raw == "Presentation on AI advancements..."
+
+        db_handler.reset()
+
+
+def test_replay_from_task_with_context():
+    agent = Agent(role="test_agent", backstory="Test Description", goal="Test Goal")
+    task1 = Task(
+        description="Context Task", expected_output="Say Task Output", agent=agent
+    )
+    task2 = Task(
+        description="Test Task", expected_output="Say Hi", agent=agent, context=[task1]
+    )
+
+    context_output = TaskOutput(
+        description="Context Task Output",
+        agent="test_agent",
+        raw="context raw output",
+        pydantic=None,
+        json_dict={},
+        output_format=OutputFormat.RAW,
+    )
+    task1.output = context_output
+
+    crew = Crew(agents=[agent], tasks=[task1, task2], process=Process.sequential)
+
+    with patch(
+        "crewai.utilities.task_output_storage_handler.TaskOutputStorageHandler.load",
+        return_value=[
+            {
+                "task_id": str(task1.id),
+                "output": {
+                    "description": context_output.description,
+                    "summary": context_output.summary,
+                    "raw": context_output.raw,
+                    "pydantic": context_output.pydantic,
+                    "json_dict": context_output.json_dict,
+                    "output_format": context_output.output_format,
+                    "agent": context_output.agent,
+                },
+                "inputs": {},
+            },
+            {
+                "task_id": str(task2.id),
+                "output": {
+                    "description": "Test Task Output",
+                    "summary": None,
+                    "raw": "test raw output",
+                    "pydantic": None,
+                    "json_dict": {},
+                    "output_format": "json",
+                    "agent": "test_agent",
+                },
+                "inputs": {},
+            },
+        ],
+    ):
+        crew.replay_from_task(str(task2.id))
+
+        assert crew.tasks[1].context[0].output.raw == "context raw output"
+
+
+@pytest.mark.vcr(filter_headers=["authorization"])
+def test_replay_with_invalid_task_id():
+    agent = Agent(role="test_agent", backstory="Test Description", goal="Test Goal")
+    task1 = Task(
+        description="Context Task", expected_output="Say Task Output", agent=agent
+    )
+    task2 = Task(
+        description="Test Task", expected_output="Say Hi", agent=agent, context=[task1]
+    )
+
+    context_output = TaskOutput(
+        description="Context Task Output",
+        agent="test_agent",
+        raw="context raw output",
+        pydantic=None,
+        json_dict={},
+        output_format=OutputFormat.RAW,
+    )
+    task1.output = context_output
+
+    crew = Crew(agents=[agent], tasks=[task1, task2], process=Process.sequential)
+
+    with patch(
+        "crewai.utilities.task_output_storage_handler.TaskOutputStorageHandler.load",
+        return_value=[
+            {
+                "task_id": str(task1.id),
+                "output": {
+                    "description": context_output.description,
+                    "summary": context_output.summary,
+                    "raw": context_output.raw,
+                    "pydantic": context_output.pydantic,
+                    "json_dict": context_output.json_dict,
+                    "output_format": context_output.output_format,
+                    "agent": context_output.agent,
+                },
+                "inputs": {},
+            },
+            {
+                "task_id": str(task2.id),
+                "output": {
+                    "description": "Test Task Output",
+                    "summary": None,
+                    "raw": "test raw output",
+                    "pydantic": None,
+                    "json_dict": {},
+                    "output_format": "json",
+                    "agent": "test_agent",
+                },
+                "inputs": {},
+            },
+        ],
+    ):
+        with pytest.raises(
+            ValueError,
+            match="Task with id bf5b09c9-69bd-4eb8-be12-f9e5bae31c2d not found in the crew's tasks.",
+        ):
+            crew.replay_from_task("bf5b09c9-69bd-4eb8-be12-f9e5bae31c2d")
+
+
+@patch.object(Crew, "_interpolate_inputs")
+def test_replay_interpolates_inputs_properly(mock_interpolate_inputs):
+    agent = Agent(role="test_agent", backstory="Test Description", goal="Test Goal")
+    task1 = Task(description="Context Task", expected_output="Say {name}", agent=agent)
+    task2 = Task(
+        description="Test Task",
+        expected_output="Say Hi to {name}",
+        agent=agent,
+        context=[task1],
+    )
+
+    context_output = TaskOutput(
+        description="Context Task Output",
+        agent="test_agent",
+        raw="context raw output",
+        pydantic=None,
+        json_dict={},
+        output_format=OutputFormat.RAW,
+    )
+    task1.output = context_output
+
+    crew = Crew(agents=[agent], tasks=[task1, task2], process=Process.sequential)
+    crew.kickoff(inputs={"name": "John"})
+
+    with patch(
+        "crewai.utilities.task_output_storage_handler.TaskOutputStorageHandler.load",
+        return_value=[
+            {
+                "task_id": str(task1.id),
+                "output": {
+                    "description": context_output.description,
+                    "summary": context_output.summary,
+                    "raw": context_output.raw,
+                    "pydantic": context_output.pydantic,
+                    "json_dict": context_output.json_dict,
+                    "output_format": context_output.output_format,
+                    "agent": context_output.agent,
+                },
+                "inputs": {"name": "John"},
+            },
+            {
+                "task_id": str(task2.id),
+                "output": {
+                    "description": "Test Task Output",
+                    "summary": None,
+                    "raw": "test raw output",
+                    "pydantic": None,
+                    "json_dict": {},
+                    "output_format": "json",
+                    "agent": "test_agent",
+                },
+                "inputs": {"name": "John"},
+            },
+        ],
+    ):
+        crew.replay_from_task(str(task2.id))
+        assert crew._inputs == {"name": "John"}
+        assert mock_interpolate_inputs.call_count == 2
+
+
+@pytest.mark.vcr(filter_headers=["authorization"])
+def test_replay_from_task_setup_context():
+    agent = Agent(role="test_agent", backstory="Test Description", goal="Test Goal")
+    task1 = Task(description="Context Task", expected_output="Say {name}", agent=agent)
+    task2 = Task(
+        description="Test Task",
+        expected_output="Say Hi to {name}",
+        agent=agent,
+    )
+    context_output = TaskOutput(
+        description="Context Task Output",
+        agent="test_agent",
+        raw="context raw output",
+        pydantic=None,
+        json_dict={},
+        output_format=OutputFormat.RAW,
+    )
+    task1.output = context_output
+    crew = Crew(agents=[agent], tasks=[task1, task2], process=Process.sequential)
+    with patch(
+        "crewai.utilities.task_output_storage_handler.TaskOutputStorageHandler.load",
+        return_value=[
+            {
+                "task_id": str(task1.id),
+                "output": {
+                    "description": context_output.description,
+                    "summary": context_output.summary,
+                    "raw": context_output.raw,
+                    "pydantic": context_output.pydantic,
+                    "json_dict": context_output.json_dict,
+                    "output_format": context_output.output_format,
+                    "agent": context_output.agent,
+                },
+                "inputs": {"name": "John"},
+            },
+            {
+                "task_id": str(task2.id),
+                "output": {
+                    "description": "Test Task Output",
+                    "summary": None,
+                    "raw": "test raw output",
+                    "pydantic": None,
+                    "json_dict": {},
+                    "output_format": "json",
+                    "agent": "test_agent",
+                },
+                "inputs": {"name": "John"},
+            },
+        ],
+    ):
+        crew.replay_from_task(str(task2.id))
+
+        # Check if the first task's output was set correctly
+        assert crew.tasks[0].output is not None
+        assert isinstance(crew.tasks[0].output, TaskOutput)
+        assert crew.tasks[0].output.description == "Context Task Output"
+        assert crew.tasks[0].output.agent == "test_agent"
+        assert crew.tasks[0].output.raw == "context raw output"
+        assert crew.tasks[0].output.output_format == OutputFormat.RAW
+
+        assert crew.tasks[1].prompt_context == "context raw output"

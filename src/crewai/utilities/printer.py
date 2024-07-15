@@ -8,6 +8,8 @@ class Printer:
             self._print_bold_green(content)
         elif color == "bold_purple":
             self._print_bold_purple(content)
+        elif color == "bold_blue":
+            self._print_bold_blue(content)
         else:
             print(content)
 
@@ -22,3 +24,6 @@ class Printer:
 
     def _print_red(self, content):
         print("\033[91m {}\033[00m".format(content))
+
+    def _print_bold_blue(self, content):
+        print("\033[1m\033[94m {}\033[00m".format(content))

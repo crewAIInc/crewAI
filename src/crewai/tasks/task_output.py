@@ -11,9 +11,7 @@ class TaskOutput(BaseModel):
 
     description: str = Field(description="Description of the task")
     summary: Optional[str] = Field(description="Summary of the task", default=None)
-    raw: str = Field(
-        description="Raw output of the task", default=""
-    )  # TODO: @joao: breaking change, by renaming raw_output to raw, but now consistent with CrewOutput
+    raw: str = Field(description="Raw output of the task", default="")
     pydantic: Optional[BaseModel] = Field(
         description="Pydantic output of task", default=None
     )
