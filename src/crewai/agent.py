@@ -8,7 +8,7 @@ from langchain.agents.tools import tool as LangChainTool
 from langchain_core.agents import AgentAction
 from langchain_core.callbacks import BaseCallbackHandler
 from langchain_openai import ChatOpenAI
-from pydantic import Field, InstanceOf, model_validator
+from pydantic import Field, InstanceOf, PrivateAttr, model_validator
 
 from crewai.agents import CacheHandler, CrewAgentExecutor, CrewAgentParser
 from crewai.agents.agent_builder.base_agent import BaseAgent
@@ -55,8 +55,11 @@ class Agent(BaseAgent):
             tools: Tools at agents disposal
             step_callback: Callback to be executed after each step of the agent execution.
             callbacks: A list of callback functions from the langchain library that are triggered during the agent's execution process
+            allow_code_execution: Enable code execution for the agent.
+            max_retry_limit: Maximum number of retries for an agent to execute a task when an error occurs.
     """
 
+    _times_executed: int = PrivateAttr(default=0)
     max_execution_time: Optional[int] = Field(
         default=None,
         description="Maximum execution time for an agent to execute a task",
@@ -96,6 +99,10 @@ class Agent(BaseAgent):
     )
     allow_code_execution: Optional[bool] = Field(
         default=False, description="Enable code execution for the agent."
+    )
+    max_retry_limit: int = Field(
+        default=2,
+        description="Maximum number of retries for an agent to execute a task when an error occurs.",
     )
 
     def __init__(__pydantic_self__, **data):
@@ -185,13 +192,19 @@ class Agent(BaseAgent):
         else:
             task_prompt = self._use_trained_data(task_prompt=task_prompt)
 
-        result = self.agent_executor.invoke(
-            {
-                "input": task_prompt,
-                "tool_names": self.agent_executor.tools_names,
-                "tools": self.agent_executor.tools_description,
-            }
-        )["output"]
+        try:
+            result = self.agent_executor.invoke(
+                {
+                    "input": task_prompt,
+                    "tool_names": self.agent_executor.tools_names,
+                    "tools": self.agent_executor.tools_description,
+                }
+            )["output"]
+        except Exception as e:
+            self._times_executed += 1
+            if self._times_executed > self.max_retry_limit:
+                raise e
+            self.execute_task(task, context, tools)
 
         if self.max_rpm:
             self._rpm_controller.stop_rpm_counter()
