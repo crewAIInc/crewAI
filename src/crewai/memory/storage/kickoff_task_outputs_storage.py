@@ -14,7 +14,7 @@ class KickoffTaskOutputsSQLiteStorage:
     """
 
     def __init__(
-        self, db_path: str = f"{db_storage_path()}/long_term_memory_storage.db"
+        self, db_path: str = f"{db_storage_path()}/latest_kickoff_task_outputs.db"
     ) -> None:
         self.db_path = db_path
         self._printer: Printer = Printer()
