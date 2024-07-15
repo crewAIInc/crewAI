@@ -32,22 +32,6 @@ class TaskOutput(BaseModel):
         self.summary = f"{excerpt}..."
         return self
 
-    # TODO: Joao - Adding this safety check breakes when people want to see
-    #                   The full output of a TaskOutput or CrewOutput.
-    # @property
-    # def pydantic(self) -> Optional[BaseModel]:
-    #     # Check if the final task output included a pydantic model
-    #     if self.output_format != OutputFormat.PYDANTIC:
-    #         raise ValueError(
-    #             """
-    #             Invalid output format requested.
-    #             If you would like to access the pydantic model,
-    #             please make sure to set the output_pydantic property for the task.
-    #             """
-    #         )
-
-    #     return self._pydantic
-
     @property
     def json(self) -> Optional[str]:
         if self.output_format != OutputFormat.JSON:
@@ -66,7 +50,7 @@ class TaskOutput(BaseModel):
         output_dict = {}
         if self.json_dict:
             output_dict.update(self.json_dict)
-        if self.pydantic:
+        elif self.pydantic:
             output_dict.update(self.pydantic.model_dump())
         return output_dict
 
