@@ -7,7 +7,7 @@ class AgentTools(BaseAgentTools):
     """Default tools around agent delegation"""
 
     def tools(self):
-        coworkers = f"[{', '.join([f'{agent.role}' for agent in self.agents])}]"
+        coworkers = ", ".join([f"{agent.role}" for agent in self.agents])
         tools = [
             StructuredTool.from_function(
                 func=self.delegate_work,
