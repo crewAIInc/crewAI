@@ -127,7 +127,7 @@ llm = HuggingFaceHub(
 ```
 
 ## OpenAI Compatible API Endpoints
-Switch between APIs and models seamlessly using environment variables, supporting platforms like FastChat, LM Studio, and Mistral AI.
+Switch between APIs and models seamlessly using environment variables, supporting platforms like FastChat, LM Studio, Groq, and Mistral AI.
 
 ### Configuration Examples
 #### FastChat
@@ -142,6 +142,13 @@ Launch [LM Studio](https://lmstudio.ai) and go to the Server tab. Then select a 
 ```sh
 OPENAI_API_BASE="http://localhost:1234/v1"
 OPENAI_API_KEY="lm-studio"
+```
+
+#### Groq API
+```sh
+OPENAI_API_KEY=your-groq-api-key
+OPENAI_MODEL_NAME='llama3-8b-8192'
+OPENAI_API_BASE=https://api.groq.com/openai/v1
 ```
 
 #### Mistral API
