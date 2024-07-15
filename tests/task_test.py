@@ -1,15 +1,15 @@
 """Test Agent creation and execution basic functionality."""
 
+import hashlib
 import json
 from unittest.mock import MagicMock, patch
 
 import pytest
-from pydantic import BaseModel
-from pydantic_core import ValidationError
-
 from crewai import Agent, Crew, Process, Task
 from crewai.tasks.task_output import TaskOutput
 from crewai.utilities.converter import Converter
+from pydantic import BaseModel
+from pydantic_core import ValidationError
 
 
 def test_task_tool_reflect_agent_tools():
@@ -791,3 +791,22 @@ def test_task_output_str_with_none():
     )
 
     assert str(task_output) == ""
+
+
+def test_key():
+    original_description = "Give me a list of 5 interesting ideas about {topic} to explore for an article, what makes them unique and interesting."
+    original_expected_output = "Bullet point list of 5 interesting ideas about {topic}."
+    task = Task(
+        description=original_description,
+        expected_output=original_expected_output,
+    )
+    hash = hashlib.md5(
+        f"{original_description}|{original_expected_output}".encode()
+    ).hexdigest()
+
+    assert task.key == hash, "The key should be the hash of the description."
+
+    task.interpolate_inputs(inputs={"topic": "AI"})
+    assert (
+        task.key == hash
+    ), "The key should be the hash of the non-interpolated description."

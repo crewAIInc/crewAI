@@ -1,5 +1,6 @@
 """Test Agent creation and execution basic functionality."""
 
+import hashlib
 import json
 from concurrent.futures import Future
 from unittest import mock
@@ -2234,3 +2235,28 @@ def test_replay_from_task_setup_context():
         assert crew.tasks[0].output.output_format == OutputFormat.RAW
 
         assert crew.tasks[1].prompt_context == "context raw output"
+
+
+def test_key():
+    tasks = [
+        Task(
+            description="Give me a list of 5 interesting ideas to explore for na article, what makes them unique and interesting.",
+            expected_output="Bullet point list of 5 important events.",
+            agent=researcher,
+        ),
+        Task(
+            description="Write a 1 amazing paragraph highlight for each idea that showcases how good an article about this topic could be. Return the list of ideas with their paragraph and your notes.",
+            expected_output="A 4 paragraph article about AI.",
+            agent=writer,
+        ),
+    ]
+    crew = Crew(
+        agents=[researcher, writer],
+        process=Process.sequential,
+        tasks=tasks,
+    )
+    hash = hashlib.md5(
+        f"{researcher.key}|{writer.key}|{tasks[0].key}|{tasks[1].key}".encode()
+    ).hexdigest()
+
+    assert crew.key == hash
