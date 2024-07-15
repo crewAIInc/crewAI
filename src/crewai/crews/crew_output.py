@@ -24,18 +24,6 @@ class CrewOutput(BaseModel):
         description="Processed token summary", default={}
     )
 
-    # TODO: Joao - Adding this safety check breakes when people want to see
-    #                   The full output of a CrewOutput.
-    # @property
-    # def pydantic(self) -> Optional[BaseModel]:
-    #     # Check if the final task output included a pydantic model
-    #     if self.tasks_output[-1].output_format != OutputFormat.PYDANTIC:
-    #         raise ValueError(
-    #             "No pydantic model found in the final task. Please make sure to set the output_pydantic property in the final task in your crew."
-    #         )
-
-    #     return self._pydantic
-
     @property
     def json(self) -> Optional[str]:
         if self.tasks_output[-1].output_format != OutputFormat.JSON:
@@ -46,6 +34,9 @@ class CrewOutput(BaseModel):
         return json.dumps(self.json_dict)
 
     def to_dict(self) -> Dict[str, Any]:
+        print("Crew Output RAW", self.raw)
+        print("Crew Output JSON", self.json_dict)
+        print("Crew Output Pydantic", self.pydantic)
         if self.json_dict:
             return self.json_dict
         if self.pydantic:

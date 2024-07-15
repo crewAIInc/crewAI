@@ -12,21 +12,46 @@ class Procedure(BaseModel):
         ..., description="List of crews to be executed in sequence"
     )
 
-    async def kickoff(self, inputs: List[Dict[str, Any]]) -> List[CrewOutput]:
+    def kickoff(self, inputs: List[Dict[str, Any]]) -> List[CrewOutput]:
         current_inputs = inputs
 
-        for crew in self.crews:
+        for index, crew in enumerate(self.crews):
             # Process all inputs for the current crew
-            crew_outputs = await self._process_crew(crew, current_inputs)
-            print("Crew Outputs", crew_outputs)
+            crew_outputs = self._process_crew(crew, current_inputs)
 
-            # Prepare inputs for the next crew
-            current_inputs = [output.to_dict() for output in crew_outputs]
+            # If this is not the last crew, prepare inputs for the next crew
+            if index < len(self.crews) - 1:
+                current_inputs = [output.to_dict() for output in crew_outputs]
+            else:
+                # For the last crew, we don't need to convert the output to input
+                return crew_outputs
 
-        # Return the final outputs
         return crew_outputs
 
-    async def _process_crew(
+    async def kickoff_async(self, inputs: List[Dict[str, Any]]) -> List[CrewOutput]:
+        current_inputs = inputs
+        for index, crew in enumerate(self.crews):
+            # Process all inputs for the current crew
+            crew_outputs = await self._process_crew(crew, current_inputs)
+
+            # If this is not the last crew, prepare inputs for the next crew
+            if index < len(self.crews) - 1:
+                current_inputs = [output.to_dict() for output in crew_outputs]
+            else:
+                # For the last crew, we don't need to convert the output to input
+                return crew_outputs
+
+        return crew_outputs
+
+    def _process_crew(
+        self, crew: Crew, inputs: List[Dict[str, Any]]
+    ) -> List[CrewOutput]:
+        # Kickoff crew for each input
+        outputs = [crew.kickoff(inputs=input_data) for input_data in inputs]
+
+        return outputs
+
+    async def _process_crew_async(
         self, crew: Crew, inputs: List[Dict[str, Any]]
     ) -> List[CrewOutput]:
         # Kickoff crew asynchronously for each input
