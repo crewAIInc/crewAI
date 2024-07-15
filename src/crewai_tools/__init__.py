@@ -8,6 +8,7 @@ from .tools import (
 	DirectoryReadTool,
  	EXASearchTool,
 	FileReadTool,
+    FileWriterTool,
 	GithubSearchTool,
 	SerperDevTool,
 	TXTSearchTool,

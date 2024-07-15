@@ -6,6 +6,7 @@ from .directory_read_tool.directory_read_tool import DirectoryReadTool
 from .docx_search_tool.docx_search_tool import DOCXSearchTool
 from .exa_tools.exa_search_tool import EXASearchTool
 from .file_read_tool.file_read_tool import FileReadTool
+from .file_writer_tool.file_writer_tool import FileWriterTool
 from .github_search_tool.github_search_tool import GithubSearchTool
 from .serper_dev_tool.serper_dev_tool import SerperDevTool
 from .txt_search_tool.txt_search_tool import TXTSearchTool
