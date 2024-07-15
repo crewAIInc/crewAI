@@ -8,6 +8,7 @@ from unittest.mock import patch
 
 import pydantic_core
 import pytest
+
 from crewai.agent import Agent
 from crewai.agents.cache import CacheHandler
 from crewai.crew import Crew
@@ -2255,7 +2256,7 @@ def test_key():
         tasks=tasks,
     )
     hash = hashlib.md5(
-        f"{researcher.key}-{writer.key}-{tasks[0].key}-{tasks[1].key}".encode()
+        f"{researcher.key}|{writer.key}|{tasks[0].key}|{tasks[1].key}".encode()
     ).hexdigest()
 
     assert crew.key == hash

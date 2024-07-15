@@ -165,7 +165,8 @@ class BaseAgent(ABC, BaseModel):
 
     @property
     def key(self):
-        return md5(self.role.encode()).hexdigest()
+        source = [self.role, self.goal, self.backstory]
+        return md5("|".join(source).encode()).hexdigest()
 
     @abstractmethod
     def execute_task(

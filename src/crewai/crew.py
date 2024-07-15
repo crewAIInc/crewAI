@@ -330,11 +330,13 @@ class Crew(BaseModel):
                             f"Task '{task.description}' has a context dependency on a future task '{context_task.description}', which is not allowed."
                         )
         return self
-    
+
     @property
     def key(self) -> str:
-        parts = [agent.key for agent in self.agents] + [task.key for task in self.tasks]
-        return md5("-".join(parts).encode()).hexdigest()
+        source = [agent.key for agent in self.agents] + [
+            task.key for task in self.tasks
+        ]
+        return md5("|".join(source).encode()).hexdigest()
 
     def _setup_from_config(self):
         assert self.config is not None, "Config should not be None."

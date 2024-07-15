@@ -178,7 +178,10 @@ class Task(BaseModel):
     @property
     def key(self) -> str:
         description = self._original_description or self.description
-        return md5(description.encode()).hexdigest()
+        expected_output = self._original_expected_output or self.expected_output
+        source = [description, expected_output]
+
+        return md5("|".join(source).encode()).hexdigest()
 
     def execute_async(
         self,
@@ -245,7 +248,7 @@ class Task(BaseModel):
             self.callback(self.output)
 
         if self._execution_span:
-            self._telemetry.task_ended(self._execution_span, self)
+            self._telemetry.task_ended(self._execution_span, self, agent.crew)
             self._execution_span = None
 
         if self.output_file:

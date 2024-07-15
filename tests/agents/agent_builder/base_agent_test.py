@@ -1,9 +1,8 @@
 import hashlib
 from typing import Any, List, Optional
 
-from pydantic import BaseModel
-
 from crewai.agents.agent_builder.base_agent import BaseAgent
+from pydantic import BaseModel
 
 
 class TestAgent(BaseAgent):
@@ -33,5 +32,5 @@ def test_key():
         goal="test goal",
         backstory="test backstory",
     )
-    hash = hashlib.md5("test role".encode()).hexdigest()
+    hash = hashlib.md5("test role|test goal|test backstory".encode()).hexdigest()
     assert agent.key == hash

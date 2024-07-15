@@ -94,12 +94,6 @@ class Telemetry:
                 self._add_attribute(span, "python_version", platform.python_version())
                 self._add_attribute(span, "crew_key", crew.key)
                 self._add_attribute(span, "crew_id", str(crew.id))
-
-                if crew.share_crew:
-                    self._add_attribute(
-                        span, "crew_inputs", json.dumps(inputs) if inputs else None
-                    )
-
                 self._add_attribute(span, "crew_process", crew.process)
                 self._add_attribute(span, "crew_memory", crew.memory)
                 self._add_attribute(span, "crew_number_of_tasks", len(crew.tasks))
@@ -215,13 +209,16 @@ class Telemetry:
 
         return None
 
-    def task_ended(self, span: Span, task: Task):
+    def task_ended(self, span: Span, task: Task, crew: Crew):
         """Records task execution in a crew."""
         if self.ready:
             try:
-                self._add_attribute(
-                    span, "task_output", task.output.raw_output if task.output else ""
-                )
+                if crew.share_crew:
+                    self._add_attribute(
+                        span,
+                        "task_output",
+                        task.output.raw if task.output else "",
+                    )
 
                 span.set_status(Status(StatusCode.OK))
                 span.end()
@@ -300,8 +297,6 @@ class Telemetry:
 
         if (self.ready) and (crew.share_crew):
             try:
-                self.crew_creation(crew, inputs)
-
                 tracer = trace.get_tracer("crewai.telemetry")
                 span = tracer.start_span("Crew Execution")
                 self._add_attribute(
