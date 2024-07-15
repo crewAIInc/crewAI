@@ -171,7 +171,6 @@ class Telemetry:
                 created_span = tracer.start_span("Task Created")
 
                 self._add_attribute(created_span, "crew_id", str(crew.id))
-                self._add_attribute(created_span, "task_index", crew.tasks.index(task))
                 self._add_attribute(created_span, "task_id", str(task.id))
 
                 if crew.share_crew:
@@ -188,7 +187,6 @@ class Telemetry:
                 span = tracer.start_span("Task Execution")
 
                 self._add_attribute(span, "crew_id", str(crew.id))
-                self._add_attribute(span, "task_index", crew.tasks.index(task))
                 self._add_attribute(span, "task_id", str(task.id))
 
                 if crew.share_crew:
