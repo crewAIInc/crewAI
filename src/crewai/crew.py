@@ -755,7 +755,6 @@ class Crew(BaseModel):
         self, task_id: str, inputs: Optional[Dict[str, Any]] = None
     ) -> CrewOutput:
         stored_outputs = self._task_output_handler.load()
-        # TODO: write tests for this
         if not stored_outputs:
             raise ValueError(f"Task with id {task_id} not found in the crew's tasks.")
 
