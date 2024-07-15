@@ -114,6 +114,11 @@ Cutting-edge framework for orchestrating role-playing, autonomous AI agents. By 
                 </a>
             </li>
             <li>
+                <a href="./how-to/Replay-tasks-from-latest-Crew-Kickoff">
+                    Replay from a Task
+                </a>
+            </li>
+            <li>
                 <a href="./how-to/AgentOps-Observability">
                     Agent Monitoring with AgentOps
                 </a>

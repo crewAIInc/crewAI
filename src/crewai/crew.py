@@ -6,15 +6,15 @@ from typing import Any, Dict, List, Optional, Tuple, Union
 
 from langchain_core.callbacks import BaseCallbackHandler
 from pydantic import (
-  UUID4,
-  BaseModel,
-  ConfigDict,
-  Field,
-  InstanceOf,
-  Json,
-  PrivateAttr,
-  field_validator,
-  model_validator,
+    UUID4,
+    BaseModel,
+    ConfigDict,
+    Field,
+    InstanceOf,
+    Json,
+    PrivateAttr,
+    field_validator,
+    model_validator,
 )
 from pydantic_core import PydanticCustomError
 
@@ -31,8 +31,13 @@ from crewai.tasks.task_output import TaskOutput
 from crewai.telemetry import Telemetry
 from crewai.tools.agent_tools import AgentTools
 from crewai.utilities import I18N, FileHandler, Logger, RPMController
-from crewai.utilities.constants import TRAINED_AGENTS_DATA_FILE, TRAINING_DATA_FILE
+from crewai.utilities.constants import (
+    TRAINED_AGENTS_DATA_FILE,
+    TRAINING_DATA_FILE,
+)
 from crewai.utilities.evaluators.task_evaluator import TaskEvaluator
+from crewai.utilities.task_output_storage_handler import TaskOutputStorageHandler
+
 from crewai.utilities.formatter import (
     aggregate_raw_outputs_from_task_outputs,
     aggregate_raw_outputs_from_tasks,
@@ -80,6 +85,13 @@ class Crew(BaseModel):
     _entity_memory: Optional[InstanceOf[EntityMemory]] = PrivateAttr()
     _train: Optional[bool] = PrivateAttr(default=False)
     _train_iteration: Optional[int] = PrivateAttr()
+    _inputs: Optional[Dict[str, Any]] = PrivateAttr(default=None)
+    _logging_color: str = PrivateAttr(
+        default="bold_purple",
+    )
+    _task_output_handler: TaskOutputStorageHandler = PrivateAttr(
+        default_factory=TaskOutputStorageHandler
+    )
 
     cache: bool = Field(default=True)
     model_config = ConfigDict(arbitrary_types_allowed=True)
@@ -134,6 +146,14 @@ class Crew(BaseModel):
     output_log_file: Optional[Union[bool, str]] = Field(
         default=False,
         description="output_log_file",
+    )
+    task_execution_output_json_files: Optional[List[str]] = Field(
+        default=None,
+        description="List of file paths for task execution JSON files.",
+    )
+    execution_logs: List[Dict[str, Any]] = Field(
+        default=[],
+        description="List of execution logs for tasks",
     )
 
     @field_validator("id", mode="before")
@@ -376,7 +396,11 @@ class Crew(BaseModel):
     ) -> CrewOutput:
         """Starts the crew to work on its assigned tasks."""
         self._execution_span = self._telemetry.crew_execution_span(self, inputs)
+        self._task_output_handler.reset()
+        self._logging_color = "bold_purple"
+
         if inputs is not None:
+            self._inputs = inputs
             self._interpolate_inputs(inputs)
         self._set_tasks_callbacks()
 
@@ -403,7 +427,7 @@ class Crew(BaseModel):
         if self.process == Process.sequential:
             result = self._run_sequential_process()
         elif self.process == Process.hierarchical:
-            result = self._run_hierarchical_process()  # type: ignore # Incompatible types in assignment (expression has type "str | dict[str, Any]", variable has type "str")
+            result = self._run_hierarchical_process()
         else:
             raise NotImplementedError(
                 f"The process '{self.process}' is not implemented yet."
@@ -440,6 +464,7 @@ class Crew(BaseModel):
             results.append(output)
 
         self.usage_metrics = total_usage_metrics
+        self._task_output_handler.reset()
         return results
 
     async def kickoff_async(self, inputs: Optional[Dict[str, Any]] = {}) -> CrewOutput:
@@ -488,129 +513,48 @@ class Crew(BaseModel):
                     total_usage_metrics[key] += crew.usage_metrics.get(key, 0)
 
         self.usage_metrics = total_usage_metrics
-
+        self._task_output_handler.reset()
         return results
+
+    def _store_execution_log(
+        self,
+        task: Task,
+        output: TaskOutput,
+        task_index: int,
+        was_replayed: bool = False,
+    ):
+        if self._inputs:
+            inputs = self._inputs
+        else:
+            inputs = {}
+
+        log = {
+            "task": task,
+            "output": {
+                "description": output.description,
+                "summary": output.summary,
+                "raw": output.raw,
+                "pydantic": output.pydantic,
+                "json_dict": output.json_dict,
+                "output_format": output.output_format,
+                "agent": output.agent,
+            },
+            "task_index": task_index,
+            "inputs": inputs,
+            "was_replayed": was_replayed,
+        }
+        self._task_output_handler.update(task_index, log)
 
     def _run_sequential_process(self) -> CrewOutput:
         """Executes tasks sequentially and returns the final output."""
-        task_outputs: List[TaskOutput] = []
-        futures: List[Tuple[Task, Future[TaskOutput]]] = []
+        return self._execute_tasks(self.tasks)
 
-        for task in self.tasks:
-            if task.agent and task.agent.allow_delegation:
-                agents_for_delegation = [
-                    agent for agent in self.agents if agent != task.agent
-                ]
-                if len(self.agents) > 1 and len(agents_for_delegation) > 0:
-                    delegation_tools = task.agent.get_delegation_tools(
-                        agents_for_delegation
-                    )
-
-                    # Add tools if they are not already in task.tools
-                    for new_tool in delegation_tools:
-                        # Find the index of the tool with the same name
-                        existing_tool_index = next(
-                            (
-                                index
-                                for index, tool in enumerate(task.tools or [])
-                                if tool.name == new_tool.name
-                            ),
-                            None,
-                        )
-                        if not task.tools:
-                            task.tools = []
-
-                        if existing_tool_index is not None:
-                            # Replace the existing tool
-                            task.tools[existing_tool_index] = new_tool 
-                        else:
-                            # Add the new tool
-                            task.tools.append(new_tool)
-
-            role = task.agent.role if task.agent is not None else "None"
-            self._logger.log("debug", f"== Working Agent: {role}", color="bold_purple")
-            self._logger.log(
-                "info", f"== Starting Task: {task.description}", color="bold_purple"
-            )
-
-            if self.output_log_file:
-                self._file_handler.log(
-                    agent=role, task=task.description, status="started"
-                )
-
-            if task.async_execution:
-                context = (
-                    aggregate_raw_outputs_from_tasks(task.context)
-                    if task.context
-                    else aggregate_raw_outputs_from_task_outputs(task_outputs)
-                )
-                future = task.execute_async(
-                    agent=task.agent, context=context, tools=task.tools
-                )
-                futures.append((task, future))
-            else:
-                # Before executing a synchronous task, wait for all async tasks to complete
-                if futures:
-                    # Clear task_outputs before processing async tasks
-                    task_outputs = []
-                    for future_task, future in futures:
-                        task_output = future.result()
-                        task_outputs.append(task_output)
-                        self._process_task_result(future_task, task_output)
-
-                    # Clear the futures list after processing all async results
-                    futures.clear()
-
-                context = (
-                    aggregate_raw_outputs_from_tasks(task.context)
-                    if task.context
-                    else aggregate_raw_outputs_from_task_outputs(task_outputs)
-                )
-                task_output = task.execute_sync(
-                    agent=task.agent, context=context, tools=task.tools
-                )
-                task_outputs = [task_output]
-                self._process_task_result(task, task_output)
-
-        if futures:
-            # Clear task_outputs before processing async tasks
-            task_outputs = []
-            for future_task, future in futures:
-                task_output = future.result()
-                task_outputs.append(task_output)
-                self._process_task_result(future_task, task_output)
-
-        # Important: There should only be one task output in the list
-        #            If there are more or 0, something went wrong.
-        if len(task_outputs) != 1:
-            raise ValueError(
-                "Something went wrong. Kickoff should return only one task output."
-            )
-
-        final_task_output = task_outputs[0]
-
-        final_string_output = final_task_output.raw
-        self._finish_execution(final_string_output)
-
-        token_usage = self.calculate_usage_metrics()
-
-        return CrewOutput(
-            raw=final_task_output.raw,
-            pydantic=final_task_output.pydantic,
-            json_dict=final_task_output.json_dict,
-            tasks_output=[task.output for task in self.tasks if task.output],
-            token_usage=token_usage,
-        )
-
-    def _process_task_result(self, task: Task, output: TaskOutput) -> None:
-        role = task.agent.role if task.agent is not None else "None"
-        self._logger.log("debug", f"== [{role}] Task output: {output}\n\n")
-        if self.output_log_file:
-            self._file_handler.log(agent=role, task=output, status="completed")
-
-    # TODO: @joao, Breaking change. Changed return type. Usage metrics is included in crewoutput
     def _run_hierarchical_process(self) -> CrewOutput:
         """Creates and assigns a manager agent to make sure the crew completes the tasks."""
+        self._create_manager_agent()
+        return self._execute_tasks(self.tasks, self.manager_agent)
+
+    def _create_manager_agent(self):
         i18n = I18N(prompt_file=self.prompt_file)
         if self.manager_agent is not None:
             self.manager_agent.allow_delegation = True
@@ -629,74 +573,148 @@ class Crew(BaseModel):
             )
             self.manager_agent = manager
 
+    def _execute_tasks(
+        self,
+        tasks: List[Task],
+        manager: Optional[BaseAgent] = None,
+        start_index: Optional[int] = 0,
+        was_replayed: bool = False,
+    ) -> CrewOutput:
+        """Executes tasks sequentially and returns the final output.
+
+        Args:
+            tasks (List[Task]): List of tasks to execute
+            manager (Optional[BaseAgent], optional): Manager agent to use for delegation. Defaults to None.
+
+        Returns:
+            CrewOutput: Final output of the crew
+        """
+
         task_outputs: List[TaskOutput] = []
-        futures: List[Tuple[Task, Future[TaskOutput]]] = []
+        futures: List[Tuple[Task, Future[TaskOutput], int]] = []
+        last_sync_output: Optional[TaskOutput] = None
 
-        # TODO: IF USER OVERRIDE THE CONTEXT, PASS THAT
-        for task in self.tasks:
-            self._logger.log("debug", f"Working Agent: {manager.role}")
-            self._logger.log("info", f"Starting Task: {task.description}")
+        for task_index, task in enumerate(tasks):
+            if start_index is not None and task_index < start_index:
+                if task.output:
+                    if task.async_execution:
+                        task_outputs.append(task.output)
+                    else:
+                        task_outputs = [task.output]
+                        last_sync_output = task.output
+                continue
 
-            if self.output_log_file:
-                self._file_handler.log(
-                    agent=manager.role, task=task.description, status="started"
+            self._prepare_task(task, manager)
+            if self.process == Process.hierarchical:
+                agent_to_use = manager
+            else:
+                agent_to_use = task.agent
+            if agent_to_use is None:
+                raise ValueError(
+                    f"No agent available for task: {task.description}. Ensure that either the task has an assigned agent or a manager agent is provided."
                 )
+            self._log_task_start(task, agent_to_use)
 
             if task.async_execution:
-                context = (
-                    aggregate_raw_outputs_from_tasks(task.context)
-                    if task.context
-                    else aggregate_raw_outputs_from_task_outputs(task_outputs)
+                context = self._get_context(
+                    task, [last_sync_output] if last_sync_output else []
                 )
                 future = task.execute_async(
-                    agent=manager, context=context, tools=manager.tools
+                    agent=agent_to_use,
+                    context=context,
+                    tools=agent_to_use.tools,
                 )
-                futures.append((task, future))
+                futures.append((task, future, task_index))
             else:
-                # Before executing a synchronous task, wait for all async tasks to complete
                 if futures:
-                    # Clear task_outputs before processing async tasks
-                    task_outputs = []
-                    for future_task, future in futures:
-                        task_output = future.result()
-                        task_outputs.append(task_output)
-                        self._process_task_result(future_task, task_output)
-
-                    # Clear the futures list after processing all async results
+                    task_outputs.extend(
+                        self._process_async_tasks(futures, was_replayed)
+                    )
                     futures.clear()
 
-                context = (
-                    aggregate_raw_outputs_from_tasks(task.context)
-                    if task.context
-                    else aggregate_raw_outputs_from_task_outputs(task_outputs)
-                )
+                context = self._get_context(task, task_outputs)
                 task_output = task.execute_sync(
-                    agent=manager, context=context, tools=manager.tools
+                    agent=agent_to_use,
+                    context=context,
+                    tools=agent_to_use.tools,
                 )
                 task_outputs = [task_output]
                 self._process_task_result(task, task_output)
+                self._store_execution_log(task, task_output, task_index, was_replayed)
 
-        # Process any remaining async results
         if futures:
-            # Clear task_outputs before processing async tasks
-            task_outputs = []
-            for future_task, future in futures:
-                task_output = future.result()
-                task_outputs.append(task_output)
-                self._process_task_result(future_task, task_output)
+            task_outputs = self._process_async_tasks(futures, was_replayed)
 
-        # Important: There should only be one task output in the list
-        #            If there are more or 0, something went wrong.
+        return self._create_crew_output(task_outputs)
+
+    def _prepare_task(self, task: Task, manager: Optional[BaseAgent]):
+        if self.process == Process.hierarchical:
+            self._update_manager_tools(task, manager)
+        elif task.agent and task.agent.allow_delegation:
+            self._add_delegation_tools(task)
+
+    def _add_delegation_tools(self, task: Task):
+        agents_for_delegation = [agent for agent in self.agents if agent != task.agent]
+        if len(self.agents) > 1 and len(agents_for_delegation) > 0 and task.agent:
+            delegation_tools = task.agent.get_delegation_tools(agents_for_delegation)
+
+            # Add tools if they are not already in task.tools
+            for new_tool in delegation_tools:
+                # Find the index of the tool with the same name
+                existing_tool_index = next(
+                    (
+                        index
+                        for index, tool in enumerate(task.tools or [])
+                        if tool.name == new_tool.name
+                    ),
+                    None,
+                )
+                if not task.tools:
+                    task.tools = []
+
+                if existing_tool_index is not None:
+                    # Replace the existing tool
+                    task.tools[existing_tool_index] = new_tool
+                else:
+                    # Add the new tool
+                    task.tools.append(new_tool)
+
+    def _log_task_start(self, task: Task, agent: Optional[BaseAgent]):
+        color = self._logging_color
+        role = agent.role if agent else "None"
+        self._logger.log("debug", f"== Working Agent: {role}", color=color)
+        self._logger.log("info", f"== Starting Task: {task.description}", color=color)
+        if self.output_log_file:
+            self._file_handler.log(agent=role, task=task.description, status="started")
+
+    def _update_manager_tools(self, task: Task, manager: Optional[BaseAgent]):
+        if task.agent and manager:
+            manager.tools = task.agent.get_delegation_tools([task.agent])
+        if manager:
+            manager.tools = manager.get_delegation_tools(self.agents)
+
+    def _get_context(self, task: Task, task_outputs: List[TaskOutput]):
+        context = (
+            aggregate_raw_outputs_from_tasks(task.context)
+            if task.context
+            else aggregate_raw_outputs_from_task_outputs(task_outputs)
+        )
+        return context
+
+    def _process_task_result(self, task: Task, output: TaskOutput) -> None:
+        role = task.agent.role if task.agent is not None else "None"
+        self._logger.log("debug", f"== [{role}] Task output: {output}\n\n")
+        if self.output_log_file:
+            self._file_handler.log(agent=role, task=output, status="completed")
+
+    def _create_crew_output(self, task_outputs: List[TaskOutput]) -> CrewOutput:
         if len(task_outputs) != 1:
             raise ValueError(
                 "Something went wrong. Kickoff should return only one task output."
             )
-
         final_task_output = task_outputs[0]
-
         final_string_output = final_task_output.raw
         self._finish_execution(final_string_output)
-
         token_usage = self.calculate_usage_metrics()
 
         return CrewOutput(
@@ -706,6 +724,74 @@ class Crew(BaseModel):
             tasks_output=[task.output for task in self.tasks if task.output],
             token_usage=token_usage,
         )
+
+    def _process_async_tasks(
+        self,
+        futures: List[Tuple[Task, Future[TaskOutput], int]],
+        was_replayed: bool = False,
+    ) -> List[TaskOutput]:
+        task_outputs = []
+        for future_task, future, task_index in futures:
+            task_output = future.result()
+            task_outputs.append(task_output)
+            self._process_task_result(future_task, task_output)
+            self._store_execution_log(
+                future_task, task_output, task_index, was_replayed
+            )
+        return task_outputs
+
+    def _find_task_index(
+        self, task_id: str, stored_outputs: List[Any]
+    ) -> Optional[int]:
+        return next(
+            (
+                index
+                for (index, d) in enumerate(stored_outputs)
+                if d["task_id"] == str(task_id)
+            ),
+            None,
+        )
+
+    def replay_from_task(
+        self, task_id: str, inputs: Optional[Dict[str, Any]] = None
+    ) -> CrewOutput:
+        stored_outputs = self._task_output_handler.load()
+        if not stored_outputs:
+            raise ValueError(f"Task with id {task_id} not found in the crew's tasks.")
+
+        start_index = self._find_task_index(task_id, stored_outputs)
+
+        if start_index is None:
+            raise ValueError(f"Task with id {task_id} not found in the crew's tasks.")
+
+        replay_inputs = (
+            inputs if inputs is not None else stored_outputs[start_index]["inputs"]
+        )
+        self._inputs = replay_inputs
+
+        if replay_inputs:
+            self._interpolate_inputs(replay_inputs)
+
+        if self.process == Process.hierarchical:
+            self._create_manager_agent()
+
+        for i in range(start_index):
+            stored_output = stored_outputs[i][
+                "output"
+            ]  # for adding context to the task
+            task_output = TaskOutput(
+                description=stored_output["description"],
+                agent=stored_output["agent"],
+                raw=stored_output["raw"],
+                pydantic=stored_output["pydantic"],
+                json_dict=stored_output["json_dict"],
+                output_format=stored_output["output_format"],
+            )
+            self.tasks[i].output = task_output
+
+        self._logging_color = "bold_blue"
+        result = self._execute_tasks(self.tasks, self.manager_agent, start_index, True)
+        return result
 
     def copy(self):
         """Create a deep copy of the Crew."""

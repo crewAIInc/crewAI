@@ -81,7 +81,7 @@ def test_task_prompt_includes_expected_output():
 
     with patch.object(Agent, "execute_task") as execute:
         execute.return_value = "ok"
-        task.execute_sync()
+        task.execute_sync(agent=researcher)
         execute.assert_called_once_with(task=task, context=None, tools=[])
 
 
@@ -104,7 +104,7 @@ def test_task_callback():
 
     with patch.object(Agent, "execute_task") as execute:
         execute.return_value = "ok"
-        task.execute_sync()
+        task.execute_sync(agent=researcher)
         task_completed.assert_called_once_with(task.output)
 
 
@@ -129,7 +129,7 @@ def test_task_callback_returns_task_ouput():
 
     with patch.object(Agent, "execute_task") as execute:
         execute.return_value = "exported_ok"
-        task.execute_sync()
+        task.execute_sync(agent=researcher)
         # Ensure the callback is called with a TaskOutput object serialized to JSON
         task_completed.assert_called_once()
         callback_data = task_completed.call_args[0][0]
@@ -521,9 +521,7 @@ def test_save_task_json_output():
     with patch.object(Task, "_save_file") as save_file:
         save_file.return_value = None
         crew.kickoff()
-        save_file.assert_called_once_with(
-            {"score": 4}
-        )  # TODO: @Joao, should this be a dict or a json string?
+        save_file.assert_called_once_with({"score": 4})
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
