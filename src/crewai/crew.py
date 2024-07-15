@@ -464,6 +464,7 @@ class Crew(BaseModel):
             results.append(output)
 
         self.usage_metrics = total_usage_metrics
+        self._task_output_handler.reset()
         return results
 
     async def kickoff_async(self, inputs: Optional[Dict[str, Any]] = {}) -> CrewOutput:
@@ -512,7 +513,7 @@ class Crew(BaseModel):
                     total_usage_metrics[key] += crew.usage_metrics.get(key, 0)
 
         self.usage_metrics = total_usage_metrics
-
+        self._task_output_handler.reset()
         return results
 
     def _store_execution_log(

@@ -78,14 +78,16 @@ def replay(task_id: str) -> None:
 @crewai.command()
 def log_tasks_outputs() -> None:
     """
-    Log your previously ran kickoff task outputs.
+    Retrieve your latest crew.kickoff() task outputs.
     """
     try:
         storage = KickoffTaskOutputsSQLiteStorage()
         tasks = storage.load()
 
         if not tasks:
-            click.echo("No task outputs found.")
+            click.echo(
+                "No task outputs found. Only crew kickoff task outputs are logged."
+            )
             return
 
         for index, task in enumerate(tasks, 1):
