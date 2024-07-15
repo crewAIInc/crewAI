@@ -654,8 +654,29 @@ class Crew(BaseModel):
 
     def _add_delegation_tools(self, task: Task):
         agents_for_delegation = [agent for agent in self.agents if agent != task.agent]
-        if len(self.agents) > 1 and agents_for_delegation:
-            task.tools += task.agent.get_delegation_tools(agents_for_delegation)  # type: ignore
+        if len(self.agents) > 1 and len(agents_for_delegation) > 0 and task.agent:
+            delegation_tools = task.agent.get_delegation_tools(agents_for_delegation)
+
+            # Add tools if they are not already in task.tools
+            for new_tool in delegation_tools:
+                # Find the index of the tool with the same name
+                existing_tool_index = next(
+                    (
+                        index
+                        for index, tool in enumerate(task.tools or [])
+                        if tool.name == new_tool.name
+                    ),
+                    None,
+                )
+                if not task.tools:
+                    task.tools = []
+
+                if existing_tool_index is not None:
+                    # Replace the existing tool
+                    task.tools[existing_tool_index] = new_tool
+                else:
+                    # Add the new tool
+                    task.tools.append(new_tool)
 
     def _log_task_start(self, task: Task, agent: Optional[BaseAgent]):
         color = self._logging_color
