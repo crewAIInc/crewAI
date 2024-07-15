@@ -31,7 +31,7 @@ A crew in crewAI represents a collaborative group of agents working together to 
 | **Manager Agent** *(optional)* | `manager_agent`      | `manager` sets a custom agent that will be used as a manager.                                             |
 | **Manager Callbacks** *(optional)* | `manager_callbacks` | `manager_callbacks` takes a list of callback handlers to be executed by the manager agent when a hierarchical process is used. |
 | **Prompt File** *(optional)* | `prompt_file`         | Path to the prompt JSON file to be used for the crew.                                                     |
-
+| **Planning** *(optional)* | `planning`         |  Adds planning ability to the Crew. When activated before each Crew iteration, all Crew data is sent to an AgentPlanner that will plan the tasks and this plan will be added to each task description.                                                     |
 !!! note "Crew Max RPM"
     The `max_rpm` attribute sets the maximum number of requests per minute the crew can perform to avoid rate limits and will override individual agents' `max_rpm` settings if you set it.
 
