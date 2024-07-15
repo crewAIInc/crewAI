@@ -284,10 +284,10 @@ class Telemetry:
         """Records the complete execution of a crew.
         This is only collected if the user has opted-in to share the crew.
         """
+        self.crew_creation(crew, inputs)
+
         if (self.ready) and (crew.share_crew):
             try:
-                self.crew_creation(crew, inputs)
-
                 tracer = trace.get_tracer("crewai.telemetry")
                 span = tracer.start_span("Crew Execution")
                 self._add_attribute(
