@@ -77,7 +77,7 @@ class RAGStorage(Storage):
         if allow_reset:
             self.app.reset()
 
-    def save(self, value: Any, metadata: Dict[str, Any]) -> None:  # type: ignore # BUG?: Should be save(key, value, metadata)  Signature of "save" incompatible with supertype "Storage"
+    def save(self, value: Any, metadata: Dict[str, Any]) -> None:
         self._generate_embedding(value, metadata)
 
     def search(  # type: ignore # BUG?: Signature of "search" incompatible with supertype "Storage"
@@ -102,3 +102,7 @@ class RAGStorage(Storage):
     def _generate_embedding(self, text: str, metadata: Dict[str, Any]) -> Any:
         with suppress_logging():
             self.app.add(text, data_type="text", metadata=metadata)
+
+    def reset(self) -> None:
+        print("firing reset")
+        self.app.delete_session_chat_history()

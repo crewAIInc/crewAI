@@ -9,6 +9,7 @@ from crewai.memory.storage.kickoff_task_outputs_storage import (
 from .create_crew import create_crew
 from .train_crew import train_crew
 from .replay_from_task import replay_task_command
+from .reset_memories_command import reset_memories_command
 
 
 @click.group()
@@ -97,6 +98,22 @@ def log_tasks_outputs() -> None:
 
     except Exception as e:
         click.echo(f"An error occurred while logging task outputs: {e}", err=True)
+
+
+@crewai.command()
+@click.option("--long", is_flag=True, help="Reset LONG memory")
+@click.option("--short", is_flag=True, help="Reset SHORT memory")
+@click.option("--entity", is_flag=True, help="Reset ENTITY memory")
+@click.option("--all", is_flag=True, help="Reset ALL memories")
+def reset_memories(long, short, entity, all):
+    """
+    Reset the crew memories (long, short, entity, latest_crew_kickoff_ouputs)
+    """
+    try:
+        click.echo("Resetting memories")
+        reset_memories_command(long, short, entity, all)
+    except Exception as e:
+        click.echo(f"An error occurred while resetting memories: {e}", err=True)
 
 
 if __name__ == "__main__":

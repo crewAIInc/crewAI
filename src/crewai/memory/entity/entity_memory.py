@@ -23,3 +23,6 @@ class EntityMemory(Memory):
         """Saves an entity item into the SQLite storage."""
         data = f"{item.name}({item.type}): {item.description}"
         super().save(data, item.metadata)
+
+    def reset(self) -> None:
+        super().reset()
