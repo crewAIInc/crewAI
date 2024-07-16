@@ -4,13 +4,14 @@ import hashlib
 import json
 from concurrent.futures import Future
 from unittest import mock
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
 
 import pydantic_core
 import pytest
 
 from crewai.agent import Agent
 from crewai.agents.cache import CacheHandler
+from crewai.conditional_task import ConditionalTask
 from crewai.crew import Crew
 from crewai.crews.crew_output import CrewOutput
 from crewai.memory.contextual.contextual_memory import ContextualMemory
@@ -2260,3 +2261,93 @@ def test_key():
     ).hexdigest()
 
     assert crew.key == hash
+
+
+def test_conditional_task_requirement_breaks_when_singular_conditional_task():
+    task = ConditionalTask(
+        description="Come up with a list of 5 interesting ideas to explore for an article, then write one amazing paragraph highlight for each idea that showcases how good an article about this topic could be. Return the list of ideas with their paragraph and your notes.",
+        expected_output="5 bullet points with a paragraph for each idea.",
+    )
+
+    with pytest.raises(pydantic_core._pydantic_core.ValidationError):
+        Crew(
+            agents=[researcher, writer],
+            tasks=[task],
+        )
+
+
+def test_conditional_task_requirement_breaks_when_task_async():
+    task = ConditionalTask(
+        description="Come up with a list of 5 interesting ideas to explore for an article, then write one amazing paragraph highlight for each idea that showcases how good an article about this topic could be. Return the list of ideas with their paragraph and your notes.",
+        expected_output="5 bullet points with a paragraph for each idea.",
+        execute_async=True,
+    )
+
+    with pytest.raises(pydantic_core._pydantic_core.ValidationError):
+        Crew(
+            agents=[researcher, writer],
+            tasks=[task],
+        )
+
+
+@pytest.mark.vcr(filter_headers=["authorization"])
+def test_conditional_should_skip():
+    task1 = Task(description="Return hello", expected_output="say hi", agent=researcher)
+
+    condition_mock = MagicMock(return_value=False)
+    task2 = ConditionalTask(
+        description="Come up with a list of 5 interesting ideas to explore for an article, then write one amazing paragraph highlight for each idea that showcases how good an article about this topic could be. Return the list of ideas with their paragraph and your notes.",
+        expected_output="5 bullet points with a paragraph for each idea.",
+        condition=condition_mock,
+        agent=writer,
+    )
+    crew_met = Crew(
+        agents=[researcher, writer],
+        tasks=[task1, task2],
+    )
+    with patch.object(Task, "execute_sync") as mock_execute_sync:
+        mock_execute_sync.return_value = TaskOutput(
+            description="Task 1 description",
+            raw="Task 1 output",
+            agent="Researcher",
+        )
+
+        result = crew_met.kickoff()
+        assert mock_execute_sync.call_count == 1
+
+        assert condition_mock.call_count == 1
+        assert condition_mock() is False
+
+        assert task2.output is None
+        assert result.raw.startswith("Task 1 output")
+
+
+@pytest.mark.vcr(filter_headers=["authorization"])
+def test_conditional_should_execute():
+    task1 = Task(description="Return hello", expected_output="say hi", agent=researcher)
+
+    condition_mock = MagicMock(
+        return_value=True
+    )  # should execute this conditional task
+    task2 = ConditionalTask(
+        description="Come up with a list of 5 interesting ideas to explore for an article, then write one amazing paragraph highlight for each idea that showcases how good an article about this topic could be. Return the list of ideas with their paragraph and your notes.",
+        expected_output="5 bullet points with a paragraph for each idea.",
+        condition=condition_mock,
+        agent=writer,
+    )
+    crew_met = Crew(
+        agents=[researcher, writer],
+        tasks=[task1, task2],
+    )
+    with patch.object(Task, "execute_sync") as mock_execute_sync:
+        mock_execute_sync.return_value = TaskOutput(
+            description="Task 1 description",
+            raw="Task 1 output",
+            agent="Researcher",
+        )
+
+        crew_met.kickoff()
+
+        assert condition_mock.call_count == 1
+        assert condition_mock() is True
+        assert mock_execute_sync.call_count == 2
