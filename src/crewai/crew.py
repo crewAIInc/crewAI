@@ -714,6 +714,8 @@ class Crew(BaseModel):
         if self.process == Process.hierarchical:
             if manager:
                 self._update_manager_tools(task, manager)
+            else:
+                raise ValueError("Manager agent is required for hierarchical process.")
         elif task.agent and task.agent.allow_delegation:
             self._add_delegation_tools(task)
 
