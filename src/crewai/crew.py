@@ -647,6 +647,7 @@ class Crew(BaseModel):
                     f"No agent available for task: {task.description}. Ensure that either the task has an assigned agent or a manager agent is provided."
                 )
             self._log_task_start(task, agent_to_use)
+
             if isinstance(task, ConditionalTask):
                 if futures:
                     task_outputs.extend(
@@ -676,6 +677,7 @@ class Crew(BaseModel):
                             task_index,
                         )
                     continue
+
             if task.async_execution:
                 context = self._get_context(
                     task, [last_sync_output] if last_sync_output else []
