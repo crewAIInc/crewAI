@@ -740,34 +740,6 @@ class Crew(BaseModel):
                     # Add the new tool
                     task.tools.append(new_tool)
 
-    def _handle_conditional_task(
-        self,
-        task: ConditionalTask,
-        futures: List[Tuple[Task, Future[TaskOutput], int]],
-        task_outputs: List[TaskOutput],
-        task_index: int,
-        was_replayed: bool,
-    ) -> bool:
-        """
-        Handle conditional task execution.
-
-        Returns:
-            bool: True if the task should be executed, False if it should be skipped.
-        """
-        if futures:
-            task_outputs.extend(self._process_async_tasks(futures, was_replayed))
-            futures.clear()
-
-        previous_output = task_outputs[task_index - 1] if task_outputs else None
-        if previous_output is not None and not task.should_execute(previous_output):
-            self._logger.log(
-                "info",
-                f"Skipping conditional task: {task.description}",
-                color="yellow",
-            )
-            return False
-        return True
-
     def _log_task_start(self, task: Task, agent: Optional[BaseAgent]):
         color = self._logging_color
         role = agent.role if agent else "None"
