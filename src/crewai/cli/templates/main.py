@@ -21,3 +21,13 @@ def train():
 
     except Exception as e:
         raise Exception(f"An error occurred while training the crew: {e}")
+
+def replay_from_task():
+    """
+    Replay the crew execution from a specific task.
+    """
+    try:
+        {{crew_name}}Crew().crew().replay_from_task(task_id=sys.argv[1])
+
+    except Exception as e:
+        raise Exception(f"An error occurred while replaying the crew: {e}")

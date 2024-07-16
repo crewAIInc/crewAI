@@ -1,6 +1,7 @@
 import uuid
 from abc import ABC, abstractmethod
 from copy import copy as shallow_copy
+from hashlib import md5
 from typing import Any, Dict, List, Optional, TypeVar
 
 from pydantic import (
@@ -162,6 +163,11 @@ class BaseAgent(ABC, BaseModel):
             self._token_process = TokenProcess()
         return self
 
+    @property
+    def key(self):
+        source = [self.role, self.goal, self.backstory]
+        return md5("|".join(source).encode()).hexdigest()
+
     @abstractmethod
     def execute_task(
         self,
@@ -180,7 +186,7 @@ class BaseAgent(ABC, BaseModel):
         pass
 
     @abstractmethod
-    def get_delegation_tools(self, agents: List["BaseAgent"]):
+    def get_delegation_tools(self, agents: List["BaseAgent"]) -> List[Any]:
         """Set the task tools that init BaseAgenTools class."""
         pass
 

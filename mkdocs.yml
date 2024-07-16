@@ -145,6 +145,7 @@ nav:
     - Human Input on Execution: 'how-to/Human-Input-on-Execution.md'
     - Kickoff a Crew Asynchronously: 'how-to/Kickoff-async.md'
     - Kickoff a Crew for a List: 'how-to/Kickoff-for-each.md'
+    - Replay from a specific task from a kickoff: 'how-to/Replay-tasks-from-latest-Crew-Kickoff.md'
     - Agent Monitoring with AgentOps: 'how-to/AgentOps-Observability.md'
     - Agent Monitoring with LangTrace: 'how-to/Langtrace-Observability.md'
   - Tools Docs:
@@ -180,6 +181,7 @@ nav:
     - Landing Page Generator: https://github.com/joaomdmoura/crewAI-examples/tree/main/landing_page_generator"
     - Prepare for meetings: https://github.com/joaomdmoura/crewAI-examples/tree/main/prep-for-a-meeting"
   - Telemetry: 'telemetry/Telemetry.md'
+  - Change Log: 'https://github.com/crewAIInc/crewAI/releases'
 
 extra_css:
   - stylesheets/output.css

@@ -34,14 +34,16 @@ class CrewOutput(BaseModel):
         return json.dumps(self.json_dict)
 
     def to_dict(self) -> Dict[str, Any]:
+        """Convert json_output and pydantic_output to a dictionary."""
         print("Crew Output RAW", self.raw)
         print("Crew Output JSON", self.json_dict)
         print("Crew Output Pydantic", self.pydantic)
+        output_dict = {}
         if self.json_dict:
-            return self.json_dict
-        if self.pydantic:
-            return self.pydantic.model_dump()
-        raise ValueError("No output to convert to dictionary")
+            output_dict.update(self.json_dict)
+        elif self.pydantic:
+            output_dict.update(self.pydantic.model_dump())
+        return output_dict
 
     def __str__(self):
         if self.pydantic:
