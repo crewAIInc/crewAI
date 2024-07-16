@@ -660,7 +660,7 @@ class Crew(BaseModel):
                     previous_output
                 ):
                     self._logger.log(
-                        "info",
+                        "debug",
                         f"Skipping conditional task: {task.description}",
                         color="yellow",
                     )
@@ -670,6 +670,7 @@ class Crew(BaseModel):
                         agent=task.agent.role if task.agent else "",
                         output_format=OutputFormat.RAW,
                     )
+
                     if not was_replayed:
                         self._store_execution_log(
                             task,

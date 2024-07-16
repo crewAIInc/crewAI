@@ -18,11 +18,10 @@ class ConditionalTask(Task):
 
     def __init__(
         self,
-        *args,
         condition: Callable[[Any], bool],
         **kwargs,
     ):
-        super().__init__(*args, **kwargs)
+        super().__init__(**kwargs)
         self.condition = condition
 
     def should_execute(self, context: TaskOutput) -> bool:
