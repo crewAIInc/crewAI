@@ -15,6 +15,7 @@ class Procedure(BaseModel):
     def kickoff(self, inputs: List[Dict[str, Any]]) -> List[CrewOutput]:
         current_inputs = inputs
 
+        crew_outputs = []
         for index, crew in enumerate(self.crews):
             # Process all inputs for the current crew
             crew_outputs = self._process_crew(crew, current_inputs)
@@ -30,6 +31,8 @@ class Procedure(BaseModel):
 
     async def kickoff_async(self, inputs: List[Dict[str, Any]]) -> List[CrewOutput]:
         current_inputs = inputs
+
+        crew_outputs = []
         for index, crew in enumerate(self.crews):
             # Process all inputs for the current crew
             crew_outputs = await self._process_crew(crew, current_inputs)

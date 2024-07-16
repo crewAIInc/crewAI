@@ -7,15 +7,15 @@ from typing import TYPE_CHECKING, Any, Dict, List, Optional, Tuple, Union
 
 from langchain_core.callbacks import BaseCallbackHandler
 from pydantic import (
-  UUID4,
-  BaseModel,
-  ConfigDict,
-  Field,
-  InstanceOf,
-  Json,
-  PrivateAttr,
-  field_validator,
-  model_validator,
+    UUID4,
+    BaseModel,
+    ConfigDict,
+    Field,
+    InstanceOf,
+    Json,
+    PrivateAttr,
+    field_validator,
+    model_validator,
 )
 from pydantic_core import PydanticCustomError
 
@@ -35,13 +35,14 @@ from crewai.utilities import I18N, FileHandler, Logger, RPMController
 from crewai.utilities.constants import TRAINED_AGENTS_DATA_FILE, TRAINING_DATA_FILE
 from crewai.utilities.evaluators.task_evaluator import TaskEvaluator
 from crewai.utilities.formatter import (
-  aggregate_raw_outputs_from_task_outputs,
-  aggregate_raw_outputs_from_tasks,
-from crewai.utilities.formatter import (
     aggregate_raw_outputs_from_task_outputs,
     aggregate_raw_outputs_from_tasks,
 )
 from crewai.utilities.task_output_storage_handler import TaskOutputStorageHandler
+from crewai.utilities.training_handler import CrewTrainingHandler
+
+try:
+    import agentops
 except ImportError:
     agentops = None
 
