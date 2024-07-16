@@ -1,4 +1,6 @@
-from typing import Callable, Optional, Any
+from typing import Callable, Any
+
+from pydantic import Field
 from crewai.task import Task
 from crewai.tasks.task_output import TaskOutput
 
@@ -9,18 +11,21 @@ class ConditionalTask(Task):
     Note: This cannot be the only task you have in your crew and cannot be the first since its needs context from the previous task.
     """
 
-    condition: Optional[Callable[[TaskOutput], bool]] = None
+    condition: Callable[[TaskOutput], bool] = Field(
+        default=None,
+        description="Maximum number of retries for an agent to execute a task when an error occurs.",
+    )
 
     def __init__(
         self,
         *args,
-        condition: Optional[Callable[[TaskOutput], bool]] = None,
+        condition: Callable[[Any], bool],
         **kwargs,
     ):
         super().__init__(*args, **kwargs)
         self.condition = condition
 
-    def should_execute(self, context: Any) -> bool:
+    def should_execute(self, context: TaskOutput) -> bool:
         """
         Determines whether the conditional task should be executed based on the provided context.
 
