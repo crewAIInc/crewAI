@@ -11,7 +11,7 @@ import pytest
 
 from crewai.agent import Agent
 from crewai.agents.cache import CacheHandler
-from crewai.conditional_task import ConditionalTask
+from crewai.tasks.conditional_task import ConditionalTask
 from crewai.crew import Crew
 from crewai.crews.crew_output import CrewOutput
 from crewai.memory.contextual.contextual_memory import ContextualMemory
@@ -2264,9 +2264,13 @@ def test_key():
 
 
 def test_conditional_task_requirement_breaks_when_singular_conditional_task():
+    def condition_fn(output) -> bool:
+        return output.raw.startswith("Andrew Ng has!!")
+
     task = ConditionalTask(
         description="Come up with a list of 5 interesting ideas to explore for an article, then write one amazing paragraph highlight for each idea that showcases how good an article about this topic could be. Return the list of ideas with their paragraph and your notes.",
         expected_output="5 bullet points with a paragraph for each idea.",
+        condition=condition_fn,
     )
 
     with pytest.raises(pydantic_core._pydantic_core.ValidationError):
@@ -2276,17 +2280,54 @@ def test_conditional_task_requirement_breaks_when_singular_conditional_task():
         )
 
 
+@pytest.mark.vcr(filter_headers=["authorization"])
+def test_conditional_task_last_task():
+    def condition_fn(output) -> bool:
+        if output.raw == "Hi":
+            return False
+        return True
+
+    task1 = Task(
+        description="Say Hi",
+        expected_output="Hi",
+        agent=researcher,
+    )
+    task2 = ConditionalTask(
+        description="Come up with a list of 5 interesting ideas to explore for an article, then write one amazing paragraph highlight for each idea that showcases how good an article about this topic could be. Return the list of ideas with their paragraph and your notes.",
+        expected_output="5 bullet points with a paragraph for each idea.",
+        condition=condition_fn,
+        agent=writer,
+    )
+
+    crew = Crew(
+        agents=[researcher, writer],
+        tasks=[task1, task2],
+    )
+    result = crew.kickoff()
+    assert result.raw == "Hi"
+
+
 def test_conditional_task_requirement_breaks_when_task_async():
+    def my_condition(context):
+        return context.get("some_value") > 10
+
     task = ConditionalTask(
         description="Come up with a list of 5 interesting ideas to explore for an article, then write one amazing paragraph highlight for each idea that showcases how good an article about this topic could be. Return the list of ideas with their paragraph and your notes.",
         expected_output="5 bullet points with a paragraph for each idea.",
         execute_async=True,
+        condition=my_condition,
+        agent=researcher,
+    )
+    task2 = Task(
+        description="Say Hi",
+        expected_output="Hi",
+        agent=writer,
     )
 
     with pytest.raises(pydantic_core._pydantic_core.ValidationError):
         Crew(
             agents=[researcher, writer],
-            tasks=[task],
+            tasks=[task, task2],
         )
 
 
