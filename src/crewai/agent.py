@@ -205,7 +205,7 @@ class Agent(BaseAgent):
             self._times_executed += 1
             if self._times_executed > self.max_retry_limit:
                 raise e
-            return self.execute_task(task, context, tools)
+            result = self.execute_task(task, context, tools)
 
         if self.max_rpm:
             self._rpm_controller.stop_rpm_counter()

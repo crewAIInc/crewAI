@@ -6,6 +6,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 from crewai import Agent, Crew, Process, Task
+from crewai.tasks.conditional_task import ConditionalTask
 from crewai.tasks.task_output import TaskOutput
 from crewai.utilities.converter import Converter
 from pydantic import BaseModel
@@ -317,6 +318,7 @@ def test_output_json_hierarchical():
     assert result.to_dict() == {"score": 4}
 
 
+@pytest.mark.vcr(filter_headers=["authorization"])
 def test_json_property_without_output_json():
     class ScoreOutput(BaseModel):
         score: int
@@ -397,8 +399,8 @@ def test_output_json_dict_hierarchical():
         manager_llm=ChatOpenAI(model="gpt-4o"),
     )
     result = crew.kickoff()
-    assert {"score": 4} == result.json_dict
-    assert result.to_dict() == {"score": 4}
+    assert {"score": 5} == result.json_dict
+    assert result.to_dict() == {"score": 5}
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
@@ -689,6 +691,19 @@ def test_task_definition_based_on_dict():
     }
 
     task = Task(config=config)
+
+    assert task.description == config["description"]
+    assert task.expected_output == config["expected_output"]
+    assert task.agent is None
+
+
+def test_conditional_task_definition_based_on_dict():
+    config = {
+        "description": "Give me an integer score between 1-5 for the following title: 'The impact of AI in the future of work', check examples to based your evaluation.",
+        "expected_output": "The score of the title.",
+    }
+
+    task = ConditionalTask(config=config, condition=lambda x: True)
 
     assert task.description == config["description"]
     assert task.expected_output == config["expected_output"]

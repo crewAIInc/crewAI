@@ -38,10 +38,10 @@ class Converter(OutputConverter):
                 return self._create_instructor().to_json()
             else:
                 return json.dumps(self._create_chain().invoke({}).model_dump())
-        except Exception:
+        except Exception as e:
             if current_attempt < self.max_attempts:
                 return self.to_json(current_attempt + 1)
-            return ConverterError("Failed to convert text into JSON.")
+            return ConverterError(f"Failed to convert text into JSON, error: {e}.")
 
     def _create_instructor(self):
         """Create an instructor."""
