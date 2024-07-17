@@ -364,7 +364,7 @@ def test_manager_agent_delegating_to_all_agents():
     crew = Crew(
         agents=[researcher, writer],
         process=Process.hierarchical,
-        manager_llm=ChatOpenAI(temperature=0, model="gpt-4"),
+        manager_llm=ChatOpenAI(temperature=0, model="gpt-4o"),
         tasks=[task],
     )
 
