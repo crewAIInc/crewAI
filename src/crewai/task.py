@@ -328,7 +328,7 @@ class Task(BaseModel):
 
     def _create_converter(self, *args, **kwargs) -> Converter:
         """Create a converter instance."""
-        if self.agent:
+        if self.agent and not self.converter_cls:
             converter = self.agent.get_output_converter(*args, **kwargs)
         elif self.converter_cls:
             converter = self.converter_cls(*args, **kwargs)
