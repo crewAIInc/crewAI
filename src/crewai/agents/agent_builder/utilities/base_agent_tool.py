@@ -24,6 +24,7 @@ class BaseAgentTools(BaseModel, ABC):
             is_list = coworker.startswith("[") and coworker.endswith("]")
             if is_list:
                 coworker = coworker[1:-1].split(",")[0]
+
         return coworker
 
     def delegate_work(
@@ -40,11 +41,13 @@ class BaseAgentTools(BaseModel, ABC):
         coworker = self._get_coworker(coworker, **kwargs)
         return self._execute(coworker, question, context)
 
-    def _execute(self, agent: Union[str, None], task: str, context: Union[str, None]):
+    def _execute(
+        self, agent_name: Union[str, None], task: str, context: Union[str, None]
+    ):
         """Execute the command."""
         try:
-            if agent is None:
-                agent = ""
+            if agent_name is None:
+                agent_name = ""
 
             # It is important to remove the quotes from the agent name.
             # The reason we have to do this is because less-powerful LLM's
@@ -53,7 +56,7 @@ class BaseAgentTools(BaseModel, ABC):
             # {"task": "....", "coworker": "....
             # when it should look like this:
             # {"task": "....", "coworker": "...."}
-            agent_name = agent.casefold().replace('"', "").replace("\n", "")
+            agent_name = agent_name.casefold().replace('"', "").replace("\n", "")
 
             agent = [  # type: ignore # Incompatible types in assignment (expression has type "list[BaseAgent]", variable has type "str | None")
                 available_agent
@@ -75,9 +78,9 @@ class BaseAgentTools(BaseModel, ABC):
             )
 
         agent = agent[0]
-        task = Task(  # type: ignore # Incompatible types in assignment (expression has type "Task", variable has type "str")
+        task_with_assigned_agent = Task(  # type: ignore # Incompatible types in assignment (expression has type "Task", variable has type "str")
             description=task,
             agent=agent,
             expected_output="Your best answer to your coworker asking you this, accounting for the context shared.",
         )
-        return agent.execute_task(task, context)  # type: ignore # "str" has no attribute "execute_task"
+        return agent.execute_task(task_with_assigned_agent, context)
