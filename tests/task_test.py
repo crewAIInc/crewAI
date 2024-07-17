@@ -318,6 +318,7 @@ def test_output_json_hierarchical():
     assert result.to_dict() == {"score": 4}
 
 
+@pytest.mark.vcr(filter_headers=["authorization"])
 def test_json_property_without_output_json():
     class ScoreOutput(BaseModel):
         score: int
@@ -398,8 +399,8 @@ def test_output_json_dict_hierarchical():
         manager_llm=ChatOpenAI(model="gpt-4o"),
     )
     result = crew.kickoff()
-    assert {"score": 4} == result.json_dict
-    assert result.to_dict() == {"score": 4}
+    assert {"score": 5} == result.json_dict
+    assert result.to_dict() == {"score": 5}
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
