@@ -242,6 +242,8 @@ class CrewAgentExecutor(AgentExecutor, CrewAgentExecutorMixin):
             else:
                 if tool_calling.tool_name.casefold().strip() in [
                     name.casefold().strip() for name in name_to_tool_map
+                ] or tool_calling.tool_name.casefold().replace("_", " ") in [
+                    name.casefold().strip() for name in name_to_tool_map
                 ]:
                     observation = tool_usage.use(tool_calling, agent_action.log)
                 else:
