@@ -640,6 +640,7 @@ class Crew(BaseModel):
                 raise ValueError(
                     f"No agent available for task: {task.description}. Ensure that either the task has an assigned agent or a manager agent is provided."
                 )
+
             self._prepare_agent_tools(task, manager)
             self._log_task_start(task, agent_to_use.role)
 
