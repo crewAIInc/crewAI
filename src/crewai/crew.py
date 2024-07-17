@@ -39,12 +39,11 @@ from crewai.utilities.constants import (
     TRAINING_DATA_FILE,
 )
 from crewai.utilities.evaluators.task_evaluator import TaskEvaluator
-from crewai.utilities.task_output_storage_handler import TaskOutputStorageHandler
-
 from crewai.utilities.formatter import (
     aggregate_raw_outputs_from_task_outputs,
     aggregate_raw_outputs_from_tasks,
 )
+from crewai.utilities.task_output_storage_handler import TaskOutputStorageHandler
 from crewai.utilities.training_handler import CrewTrainingHandler
 
 try:
@@ -310,7 +309,7 @@ class Crew(BaseModel):
 
     @model_validator(mode="after")
     def validate_async_tasks_not_async(self) -> "Crew":
-        """Ensure the first task is not a ConditionalTask."""
+        """Ensure that ConditionalTask is not async."""
         for task in self.tasks:
             if task.async_execution and isinstance(task, ConditionalTask):
                 raise PydanticCustomError(
@@ -704,12 +703,7 @@ class Crew(BaseModel):
                 f"Skipping conditional task: {task.description}",
                 color="yellow",
             )
-            skipped_task_output = TaskOutput(
-                description=task.description,
-                raw="",
-                agent=task.agent.role if task.agent else "",
-                output_format=OutputFormat.RAW,
-            )
+            skipped_task_output = task.get_skipped_task_output()
 
             if not was_replayed:
                 self._store_execution_log(task, skipped_task_output, task_index)

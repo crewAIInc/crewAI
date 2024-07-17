@@ -8,15 +8,14 @@ from unittest.mock import MagicMock, patch
 
 import pydantic_core
 import pytest
-
 from crewai.agent import Agent
 from crewai.agents.cache import CacheHandler
-from crewai.tasks.conditional_task import ConditionalTask
 from crewai.crew import Crew
 from crewai.crews.crew_output import CrewOutput
 from crewai.memory.contextual.contextual_memory import ContextualMemory
 from crewai.process import Process
 from crewai.task import Task
+from crewai.tasks.conditional_task import ConditionalTask
 from crewai.tasks.output_format import OutputFormat
 from crewai.tasks.task_output import TaskOutput
 from crewai.utilities import Logger, RPMController
@@ -918,9 +917,7 @@ async def test_kickoff_async_basic_functionality_and_output():
 @pytest.mark.vcr(filter_headers=["authorization"])
 @pytest.mark.asyncio
 async def test_async_kickoff_for_each_async_basic_functionality_and_output():
-    """Tests the basic functionality and output of akickoff_for_each_async."""
-    from unittest.mock import patch
-
+    """Tests the basic functionality and output of kickoff_for_each_async."""
     inputs = [
         {"topic": "dog"},
         {"topic": "cat"},
@@ -946,8 +943,13 @@ async def test_async_kickoff_for_each_async_basic_functionality_and_output():
         agent=agent,
     )
 
+    async def mock_kickoff_async(**kwargs):
+        input_data = kwargs.get("inputs")
+        index = [input_["topic"] for input_ in inputs].index(input_data["topic"])
+        return expected_outputs[index]
+
     with patch.object(
-        Crew, "kickoff_async", side_effect=expected_outputs
+        Crew, "kickoff_async", side_effect=mock_kickoff_async
     ) as mock_kickoff_async:
         crew = Crew(agents=[agent], tasks=[task])
 
@@ -2281,10 +2283,8 @@ def test_conditional_task_requirement_breaks_when_singular_conditional_task():
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
-def test_conditional_task_last_task():
+def test_conditional_task_last_task_when_conditional_is_true():
     def condition_fn(output) -> bool:
-        if output.raw == "Hi":
-            return False
         return True
 
     task1 = Task(
@@ -2304,6 +2304,34 @@ def test_conditional_task_last_task():
         tasks=[task1, task2],
     )
     result = crew.kickoff()
+    assert result.raw.startswith(
+        "1. **The Rise of AI Agents in Customer Service: Revolutionizing Customer Interactions**"
+    )
+
+
+@pytest.mark.vcr(filter_headers=["authorization"])
+def test_conditional_task_last_task_when_conditional_is_false():
+    def condition_fn(output) -> bool:
+        return False
+
+    task1 = Task(
+        description="Say Hi",
+        expected_output="Hi",
+        agent=researcher,
+    )
+    task2 = ConditionalTask(
+        description="Come up with a list of 5 interesting ideas to explore for an article, then write one amazing paragraph highlight for each idea that showcases how good an article about this topic could be. Return the list of ideas with their paragraph and your notes.",
+        expected_output="5 bullet points with a paragraph for each idea.",
+        condition=condition_fn,
+        agent=writer,
+    )
+
+    crew = Crew(
+        agents=[researcher, writer],
+        tasks=[task1, task2],
+    )
+    result = crew.kickoff()
+    print(result.raw)
     assert result.raw == "Hi"
 
 

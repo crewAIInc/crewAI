@@ -4,8 +4,8 @@ description: Learn how to use conditional tasks in a crewAI kickoff
 ---
 
 ## Introduction
-Conditional Tasks in crewAI allow for dynamic workflow adaptation based on the outcomes of previous tasks. This powerful feature enables crews to make decisions and execute tasks selectively, enhancing the flexibility and efficiency of your AI-driven processes.
 
+Conditional Tasks in crewAI allow for dynamic workflow adaptation based on the outcomes of previous tasks. This powerful feature enables crews to make decisions and execute tasks selectively, enhancing the flexibility and efficiency of your AI-driven processes.
 
 ```python
 from typing import List
@@ -18,12 +18,10 @@ from crewai.task import Task
 from crewai_tools import SerperDevTool
 
 
-# Define a condition function for the conditional task - if false task will be skipped, true, then execute task
-def is_data_fetched(output: TaskOutput) -> bool:
-    if len(output.pydantic.events) >= 10: # this will skip this task
-        return False
-    return True
-
+# Define a condition function for the conditional task
+# if false task will be skipped, true, then execute task
+def is_data_missing(output: TaskOutput) -> bool:
+    return len(output.pydantic.events) < 10: # this will skip this task
 
 # Define the agents
 data_fetcher_agent = Agent(
@@ -54,7 +52,6 @@ class EventOutput(BaseModel):
 
 
 task1 = Task(
-    name="Data Fetching Task",
     description="Fetch data about events in San Francisco using Serper tool",
     expected_output="List of 10 things to do in SF this week",
     agent=data_fetcher_agent,
@@ -62,15 +59,17 @@ task1 = Task(
 )
 
 conditional_task = ConditionalTask(
-    name="Data Processing Task",
-    description="Process data if data fetching is successful",
-    expected_output="List of 11 Things to do in SF this week ",
-    condition=is_data_fetched,
+    description="""
+        Check if data is missing. If we have less than 10 events,
+        fetch more events using Serper tool so that
+        we have a total of 10 events in SF this week..
+        """,
+    expected_output="List of 10 Things to do in SF this week ",
+    condition=is_data_missing,
     agent=data_processor_agent,
 )
 
 task3 = Task(
-    name="Summary Generation Task",
     description="Generate summary of events in San Francisco from fetched data",
     expected_output="summary_generated",
     agent=summary_generator_agent,
