@@ -254,7 +254,9 @@ class Task(BaseModel):
             content = (
                 json_output
                 if json_output
-                else pydantic_output.model_dump_json() if pydantic_output else result
+                else pydantic_output.model_dump_json()
+                if pydantic_output
+                else result
             )
             self._save_file(content)
 
@@ -326,9 +328,14 @@ class Task(BaseModel):
 
     def _create_converter(self, *args, **kwargs) -> Converter:
         """Create a converter instance."""
-        converter = self.agent.get_output_converter(*args, **kwargs)
-        if self.converter_cls:
+        if self.agent:
+            converter = self.agent.get_output_converter(*args, **kwargs)
+        elif self.converter_cls:
             converter = self.converter_cls(*args, **kwargs)
+
+        if not converter:
+            raise Exception("No output converter found or set.")
+
         return converter
 
     def _export_output(
