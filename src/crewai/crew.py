@@ -649,34 +649,10 @@ class Crew(BaseModel):
             self._log_task_start(task, agent_to_use)
 
             if isinstance(task, ConditionalTask):
-                if futures:
-                    task_outputs.extend(
-                        self._process_async_tasks(futures, was_replayed)
-                    )
-                    futures.clear()
-
-                previous_output = task_outputs[task_index - 1] if task_outputs else None
-                if previous_output is not None and not task.should_execute(
-                    previous_output
-                ):
-                    self._logger.log(
-                        "debug",
-                        f"Skipping conditional task: {task.description}",
-                        color="yellow",
-                    )
-                    skipped_task_output = TaskOutput(
-                        description=task.description,
-                        raw="",
-                        agent=task.agent.role if task.agent else "",
-                        output_format=OutputFormat.RAW,
-                    )
-
-                    if not was_replayed:
-                        self._store_execution_log(
-                            task,
-                            skipped_task_output,
-                            task_index,
-                        )
+                skipped_task_output = self._handle_conditional_task(
+                    task, task_outputs, futures, task_index, was_replayed
+                )
+                if skipped_task_output:
                     continue
 
             if task.async_execution:
@@ -691,9 +667,7 @@ class Crew(BaseModel):
                 futures.append((task, future, task_index))
             else:
                 if futures:
-                    task_outputs.extend(
-                        self._process_async_tasks(futures, was_replayed)
-                    )
+                    task_outputs = self._process_async_tasks(futures, was_replayed)
                     futures.clear()
 
                 context = self._get_context(task, task_outputs)
@@ -710,6 +684,37 @@ class Crew(BaseModel):
             task_outputs = self._process_async_tasks(futures, was_replayed)
 
         return self._create_crew_output(task_outputs)
+
+    def _handle_conditional_task(
+        self,
+        task: ConditionalTask,
+        task_outputs: List[TaskOutput],
+        futures: List[Tuple[Task, Future[TaskOutput], int]],
+        task_index: int,
+        was_replayed: bool,
+    ) -> Optional[TaskOutput]:
+        if futures:
+            task_outputs = self._process_async_tasks(futures, was_replayed)
+            futures.clear()
+
+        previous_output = task_outputs[task_index - 1] if task_outputs else None
+        if previous_output is not None and not task.should_execute(previous_output):
+            self._logger.log(
+                "debug",
+                f"Skipping conditional task: {task.description}",
+                color="yellow",
+            )
+            skipped_task_output = TaskOutput(
+                description=task.description,
+                raw="",
+                agent=task.agent.role if task.agent else "",
+                output_format=OutputFormat.RAW,
+            )
+
+            if not was_replayed:
+                self._store_execution_log(task, skipped_task_output, task_index)
+            return skipped_task_output
+        return None
 
     def _prepare_task(self, task: Task, manager: Optional[BaseAgent]):
         if self.process == Process.hierarchical:
