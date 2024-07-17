@@ -28,6 +28,7 @@ from crewai.memory.long_term.long_term_memory import LongTermMemory
 from crewai.memory.short_term.short_term_memory import ShortTermMemory
 from crewai.process import Process
 from crewai.task import Task
+from crewai.tasks.conditional_task import ConditionalTask
 from crewai.tasks.task_output import TaskOutput
 from crewai.telemetry import Telemetry
 from crewai.tools.agent_tools import AgentTools
@@ -292,6 +293,29 @@ class Crew(BaseModel):
                 {},
             )
 
+        return self
+
+    @model_validator(mode="after")
+    def validate_first_task(self) -> "Crew":
+        """Ensure the first task is not a ConditionalTask."""
+        if self.tasks and isinstance(self.tasks[0], ConditionalTask):
+            raise PydanticCustomError(
+                "invalid_first_task",
+                "The first task cannot be a ConditionalTask.",
+                {},
+            )
+        return self
+
+    @model_validator(mode="after")
+    def validate_async_tasks_not_async(self) -> "Crew":
+        """Ensure that ConditionalTask is not async."""
+        for task in self.tasks:
+            if task.async_execution and isinstance(task, ConditionalTask):
+                raise PydanticCustomError(
+                    "invalid_async_conditional_task",
+                    f"Conditional Task: {task.description} , cannot be executed asynchronously.",  # type: ignore # Argument of type "str" cannot be assigned to parameter "message_template" of type "LiteralString"
+                    {},
+                )
         return self
 
     @model_validator(mode="after")
@@ -620,6 +644,14 @@ class Crew(BaseModel):
                 raise ValueError(
                     f"No agent available for task: {task.description}. Ensure that either the task has an assigned agent or a manager agent is provided."
                 )
+            self._log_task_start(task, agent_to_use)
+
+            if isinstance(task, ConditionalTask):
+                skipped_task_output = self._handle_conditional_task(
+                    task, task_outputs, futures, task_index, was_replayed
+                )
+                if skipped_task_output:
+                    continue
 
             if task.async_execution:
                 context = self._get_context(
@@ -634,10 +666,7 @@ class Crew(BaseModel):
                 futures.append((task, future, task_index))
             else:
                 if futures:
-                    task_outputs = []
-                    task_outputs.extend(
-                        self._process_async_tasks(futures, was_replayed)
-                    )
+                    task_outputs = self._process_async_tasks(futures, was_replayed)
                     futures.clear()
 
                 context = self._get_context(task, task_outputs)
@@ -655,6 +684,32 @@ class Crew(BaseModel):
             task_outputs = self._process_async_tasks(futures, was_replayed)
 
         return self._create_crew_output(task_outputs)
+
+    def _handle_conditional_task(
+        self,
+        task: ConditionalTask,
+        task_outputs: List[TaskOutput],
+        futures: List[Tuple[Task, Future[TaskOutput], int]],
+        task_index: int,
+        was_replayed: bool,
+    ) -> Optional[TaskOutput]:
+        if futures:
+            task_outputs = self._process_async_tasks(futures, was_replayed)
+            futures.clear()
+
+        previous_output = task_outputs[task_index - 1] if task_outputs else None
+        if previous_output is not None and not task.should_execute(previous_output):
+            self._logger.log(
+                "debug",
+                f"Skipping conditional task: {task.description}",
+                color="yellow",
+            )
+            skipped_task_output = task.get_skipped_task_output()
+
+            if not was_replayed:
+                self._store_execution_log(task, skipped_task_output, task_index)
+            return skipped_task_output
+        return None
 
     def _prepare_task(self, task: Task, manager: Optional[BaseAgent]):
         if self.process == Process.hierarchical:
