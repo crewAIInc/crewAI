@@ -286,7 +286,7 @@ def test_hierarchical_process():
     crew = Crew(
         agents=[researcher, writer],
         process=Process.hierarchical,
-        manager_llm=ChatOpenAI(temperature=0, model="gpt-4"),
+        manager_llm=ChatOpenAI(temperature=0, model="gpt-4o"),
         tasks=[task],
     )
 
@@ -310,6 +310,82 @@ def test_manager_llm_requirement_for_hierarchical_process():
             process=Process.hierarchical,
             tasks=[task],
         )
+
+
+@pytest.mark.vcr(filter_headers=["authorization"])
+def test_manager_agent_delegating_to_assigned_task_agent():
+    """
+    Test that the manager agent delegates to the assigned task agent.
+    """
+    from langchain_openai import ChatOpenAI
+
+    task = Task(
+        description="Come up with a list of 5 interesting ideas to explore for an article, then write one amazing paragraph highlight for each idea that showcases how good an article about this topic could be. Return the list of ideas with their paragraph and your notes.",
+        expected_output="5 bullet points with a paragraph for each idea.",
+        agent=researcher,
+    )
+
+    crew = Crew(
+        agents=[researcher, writer],
+        process=Process.hierarchical,
+        manager_llm=ChatOpenAI(temperature=0, model="gpt-4o"),
+        tasks=[task],
+    )
+
+    crew.kickoff()
+
+    # Check if the manager agent has the correct tools
+    assert crew.manager_agent is not None
+    assert crew.manager_agent.tools is not None
+
+    assert len(crew.manager_agent.tools) == 2
+    assert (
+        "Delegate a specific task to one of the following coworkers: Researcher\n"
+        in crew.manager_agent.tools[0].description
+    )
+    assert (
+        "Ask a specific question to one of the following coworkers: Researcher\n"
+        in crew.manager_agent.tools[1].description
+    )
+
+
+@pytest.mark.vcr(filter_headers=["authorization"])
+def test_manager_agent_delegating_to_all_agents():
+    """
+    Test that the manager agent delegates to all agents when none are specified.
+    """
+    from langchain_openai import ChatOpenAI
+
+    task = Task(
+        description="Come up with a list of 5 interesting ideas to explore for an article, then write one amazing paragraph highlight for each idea that showcases how good an article about this topic could be. Return the list of ideas with their paragraph and your notes.",
+        expected_output="5 bullet points with a paragraph for each idea.",
+    )
+
+    crew = Crew(
+        agents=[researcher, writer],
+        process=Process.hierarchical,
+        manager_llm=ChatOpenAI(temperature=0, model="gpt-4o"),
+        tasks=[task],
+    )
+
+    crew.kickoff()
+
+    assert crew.manager_agent is not None
+    assert crew.manager_agent.tools is not None
+
+    assert len(crew.manager_agent.tools) == 2
+    print(
+        "crew.manager_agent.tools[0].description",
+        crew.manager_agent.tools[0].description,
+    )
+    assert (
+        "Delegate a specific task to one of the following coworkers: Researcher, Senior Writer\n"
+        in crew.manager_agent.tools[0].description
+    )
+    assert (
+        "Ask a specific question to one of the following coworkers: Researcher, Senior Writer\n"
+        in crew.manager_agent.tools[1].description
+    )
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
