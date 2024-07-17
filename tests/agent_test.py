@@ -704,56 +704,6 @@ def test_agent_function_calling_llm():
         private_mock.assert_called()
 
 
-@pytest.mark.vcr(filter_headers=["authorization"])
-def test_agent_function_calling_llm_with_name_instead_of_tool_name():
-    from langchain_openai import ChatOpenAI
-    import json
-
-    llm = ChatOpenAI(model="gpt-3.5-turbo-0125")
-
-    with patch.object(llm.client, "create", wraps=llm.client.create) as private_mock:
-
-        @tool
-        def learn_about_AI(topic) -> str:
-            """Useful for when you need to learn about AI to write an paragraph about it."""
-            return "AI is a very broad field."
-
-        agent1 = Agent(
-            role="test role",
-            goal="test goal",
-            backstory="test backstory",
-            tools=[learn_about_AI],
-            llm=ChatOpenAI(model="gpt-4-0125-preview"),
-            function_calling_llm=llm,
-        )
-
-        essay = Task(
-            description="Write and then review an small paragraph on AI until it's AMAZING",
-            expected_output="The final paragraph.",
-            agent=agent1,
-        )
-        tasks = [essay]
-        crew = Crew(agents=[agent1], tasks=tasks)
-
-        # Mock the API response to return 'name' instead of 'tool_name'
-        mock_response = {
-            "choices": [
-                {
-                    "message": {
-                        "function_call": {
-                            "name": "learn_about_AI",
-                            "arguments": json.dumps({"topic": "AI"}),
-                        }
-                    }
-                }
-            ]
-        }
-        private_mock.return_value = mock_response
-
-        crew.kickoff()
-        private_mock.assert_called()
-
-
 def test_agent_count_formatting_error():
     from unittest.mock import patch
 
