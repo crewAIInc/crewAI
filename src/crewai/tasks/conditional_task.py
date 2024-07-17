@@ -1,7 +1,9 @@
-from typing import Callable, Any
+from typing import Any, Callable
 
 from pydantic import Field
+
 from crewai.task import Task
+from crewai.tasks.output_format import OutputFormat
 from crewai.tasks.task_output import TaskOutput
 
 
@@ -34,6 +36,12 @@ class ConditionalTask(Task):
         Returns:
             bool: True if the task should be executed, False otherwise.
         """
-        if self.condition:
-            return self.condition(context)
-        return True
+        return self.condition(context)
+
+    def get_skipped_task_output(self):
+        return TaskOutput(
+            description=self.description,
+            raw="",
+            agent=self.agent.role if self.agent else "",
+            output_format=OutputFormat.RAW,
+        )
