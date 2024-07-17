@@ -37,12 +37,11 @@ from crewai.utilities.constants import (
     TRAINING_DATA_FILE,
 )
 from crewai.utilities.evaluators.task_evaluator import TaskEvaluator
-from crewai.utilities.task_output_storage_handler import TaskOutputStorageHandler
-
 from crewai.utilities.formatter import (
     aggregate_raw_outputs_from_task_outputs,
     aggregate_raw_outputs_from_tasks,
 )
+from crewai.utilities.task_output_storage_handler import TaskOutputStorageHandler
 from crewai.utilities.training_handler import CrewTrainingHandler
 
 try:
@@ -621,12 +620,12 @@ class Crew(BaseModel):
                 raise ValueError(
                     f"No agent available for task: {task.description}. Ensure that either the task has an assigned agent or a manager agent is provided."
                 )
-            self._log_task_start(task, agent_to_use)
 
             if task.async_execution:
                 context = self._get_context(
                     task, [last_sync_output] if last_sync_output else []
                 )
+                self._log_task_start(task, agent_to_use.role)
                 future = task.execute_async(
                     agent=agent_to_use,
                     context=context,
@@ -635,12 +634,14 @@ class Crew(BaseModel):
                 futures.append((task, future, task_index))
             else:
                 if futures:
+                    task_outputs = []
                     task_outputs.extend(
                         self._process_async_tasks(futures, was_replayed)
                     )
                     futures.clear()
 
                 context = self._get_context(task, task_outputs)
+                self._log_task_start(task, agent_to_use.role)
                 task_output = task.execute_sync(
                     agent=agent_to_use,
                     context=context,
@@ -687,9 +688,8 @@ class Crew(BaseModel):
                     # Add the new tool
                     task.tools.append(new_tool)
 
-    def _log_task_start(self, task: Task, agent: Optional[BaseAgent]):
+    def _log_task_start(self, task: Task, role: str = "None"):
         color = self._logging_color
-        role = agent.role if agent else "None"
         self._logger.log("debug", f"== Working Agent: {role}", color=color)
         self._logger.log("info", f"== Starting Task: {task.description}", color=color)
         if self.output_log_file:
@@ -738,7 +738,7 @@ class Crew(BaseModel):
         futures: List[Tuple[Task, Future[TaskOutput], int]],
         was_replayed: bool = False,
     ) -> List[TaskOutput]:
-        task_outputs = []
+        task_outputs: List[TaskOutput] = []
         for future_task, future, task_index in futures:
             task_output = future.result()
             task_outputs.append(task_output)
