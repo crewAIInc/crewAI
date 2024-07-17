@@ -1355,6 +1355,7 @@ def test_crew_inputs_interpolate_both_agents_and_tasks_diff():
                 interpolate_task_inputs.assert_called()
 
 
+@pytest.mark.vcr(filter_headers=["authorization"])
 def test_crew_does_not_interpolate_without_inputs():
     from unittest.mock import patch
 
@@ -1997,6 +1998,7 @@ def test_replay_task_with_context():
         db_handler.reset()
 
 
+@pytest.mark.vcr(filter_headers=["authorization"])
 def test_replay_from_task_with_context():
     agent = Agent(role="test_agent", backstory="Test Description", goal="Test Goal")
     task1 = Task(
@@ -2114,6 +2116,7 @@ def test_replay_with_invalid_task_id():
             crew.replay_from_task("bf5b09c9-69bd-4eb8-be12-f9e5bae31c2d")
 
 
+@pytest.mark.vcr(filter_headers=["authorization"])
 @patch.object(Crew, "_interpolate_inputs")
 def test_replay_interpolates_inputs_properly(mock_interpolate_inputs):
     agent = Agent(role="test_agent", backstory="Test Description", goal="Test Goal")
