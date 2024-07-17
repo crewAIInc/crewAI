@@ -8,7 +8,6 @@ from copy import copy
 from hashlib import md5
 from typing import Any, Dict, List, Optional, Tuple, Type, Union
 
-
 from langchain_openai import ChatOpenAI
 from opentelemetry.trace import Span
 from pydantic import UUID4, BaseModel, Field, field_validator, model_validator
@@ -255,9 +254,7 @@ class Task(BaseModel):
             content = (
                 json_output
                 if json_output
-                else pydantic_output.model_dump_json()
-                if pydantic_output
-                else result
+                else pydantic_output.model_dump_json() if pydantic_output else result
             )
             self._save_file(content)
 
