@@ -635,16 +635,13 @@ class Crew(BaseModel):
                         last_sync_output = task.output
                 continue
 
-            self._prepare_task(task, manager)
-            if self.process == Process.hierarchical:
-                agent_to_use = manager
-            else:
-                agent_to_use = task.agent
+            agent_to_use = self._get_agent_to_use(task, manager)
             if agent_to_use is None:
                 raise ValueError(
                     f"No agent available for task: {task.description}. Ensure that either the task has an assigned agent or a manager agent is provided."
                 )
-            self._log_task_start(task, agent_to_use)
+            self._prepare_agent_tools(task, manager)
+            self._log_task_start(task, agent_to_use.role)
 
             if isinstance(task, ConditionalTask):
                 skipped_task_output = self._handle_conditional_task(
@@ -711,7 +708,7 @@ class Crew(BaseModel):
             return skipped_task_output
         return None
 
-    def _prepare_task(self, task: Task, manager: Optional[BaseAgent]):
+    def _prepare_agent_tools(self, task: Task, manager: Optional[BaseAgent]):
         if self.process == Process.hierarchical:
             if manager:
                 self._update_manager_tools(task, manager)
@@ -719,6 +716,13 @@ class Crew(BaseModel):
                 raise ValueError("Manager agent is required for hierarchical process.")
         elif task.agent and task.agent.allow_delegation:
             self._add_delegation_tools(task)
+
+    def _get_agent_to_use(
+        self, task: Task, manager: Optional[BaseAgent]
+    ) -> Optional[BaseAgent]:
+        if self.process == Process.hierarchical:
+            return manager
+        return task.agent
 
     def _add_delegation_tools(self, task: Task):
         agents_for_delegation = [agent for agent in self.agents if agent != task.agent]
