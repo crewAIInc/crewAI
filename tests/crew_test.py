@@ -1,13 +1,13 @@
 """Test Agent creation and execution basic functionality."""
 
+import hashlib
 import json
 from concurrent.futures import Future
 from unittest import mock
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
 
 import pydantic_core
 import pytest
-
 from crewai.agent import Agent
 from crewai.agents.cache import CacheHandler
 from crewai.crew import Crew
@@ -15,6 +15,7 @@ from crewai.crews.crew_output import CrewOutput
 from crewai.memory.contextual.contextual_memory import ContextualMemory
 from crewai.process import Process
 from crewai.task import Task
+from crewai.tasks.conditional_task import ConditionalTask
 from crewai.tasks.output_format import OutputFormat
 from crewai.tasks.task_output import TaskOutput
 from crewai.utilities import Logger, RPMController
@@ -285,7 +286,7 @@ def test_hierarchical_process():
     crew = Crew(
         agents=[researcher, writer],
         process=Process.hierarchical,
-        manager_llm=ChatOpenAI(temperature=0, model="gpt-4"),
+        manager_llm=ChatOpenAI(temperature=0, model="gpt-4o"),
         tasks=[task],
     )
 
@@ -309,6 +310,82 @@ def test_manager_llm_requirement_for_hierarchical_process():
             process=Process.hierarchical,
             tasks=[task],
         )
+
+
+@pytest.mark.vcr(filter_headers=["authorization"])
+def test_manager_agent_delegating_to_assigned_task_agent():
+    """
+    Test that the manager agent delegates to the assigned task agent.
+    """
+    from langchain_openai import ChatOpenAI
+
+    task = Task(
+        description="Come up with a list of 5 interesting ideas to explore for an article, then write one amazing paragraph highlight for each idea that showcases how good an article about this topic could be. Return the list of ideas with their paragraph and your notes.",
+        expected_output="5 bullet points with a paragraph for each idea.",
+        agent=researcher,
+    )
+
+    crew = Crew(
+        agents=[researcher, writer],
+        process=Process.hierarchical,
+        manager_llm=ChatOpenAI(temperature=0, model="gpt-4o"),
+        tasks=[task],
+    )
+
+    crew.kickoff()
+
+    # Check if the manager agent has the correct tools
+    assert crew.manager_agent is not None
+    assert crew.manager_agent.tools is not None
+
+    assert len(crew.manager_agent.tools) == 2
+    assert (
+        "Delegate a specific task to one of the following coworkers: Researcher\n"
+        in crew.manager_agent.tools[0].description
+    )
+    assert (
+        "Ask a specific question to one of the following coworkers: Researcher\n"
+        in crew.manager_agent.tools[1].description
+    )
+
+
+@pytest.mark.vcr(filter_headers=["authorization"])
+def test_manager_agent_delegating_to_all_agents():
+    """
+    Test that the manager agent delegates to all agents when none are specified.
+    """
+    from langchain_openai import ChatOpenAI
+
+    task = Task(
+        description="Come up with a list of 5 interesting ideas to explore for an article, then write one amazing paragraph highlight for each idea that showcases how good an article about this topic could be. Return the list of ideas with their paragraph and your notes.",
+        expected_output="5 bullet points with a paragraph for each idea.",
+    )
+
+    crew = Crew(
+        agents=[researcher, writer],
+        process=Process.hierarchical,
+        manager_llm=ChatOpenAI(temperature=0, model="gpt-4o"),
+        tasks=[task],
+    )
+
+    crew.kickoff()
+
+    assert crew.manager_agent is not None
+    assert crew.manager_agent.tools is not None
+
+    assert len(crew.manager_agent.tools) == 2
+    print(
+        "crew.manager_agent.tools[0].description",
+        crew.manager_agent.tools[0].description,
+    )
+    assert (
+        "Delegate a specific task to one of the following coworkers: Researcher, Senior Writer\n"
+        in crew.manager_agent.tools[0].description
+    )
+    assert (
+        "Ask a specific question to one of the following coworkers: Researcher, Senior Writer\n"
+        in crew.manager_agent.tools[1].description
+    )
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
@@ -916,9 +993,7 @@ async def test_kickoff_async_basic_functionality_and_output():
 @pytest.mark.vcr(filter_headers=["authorization"])
 @pytest.mark.asyncio
 async def test_async_kickoff_for_each_async_basic_functionality_and_output():
-    """Tests the basic functionality and output of akickoff_for_each_async."""
-    from unittest.mock import patch
-
+    """Tests the basic functionality and output of kickoff_for_each_async."""
     inputs = [
         {"topic": "dog"},
         {"topic": "cat"},
@@ -944,8 +1019,13 @@ async def test_async_kickoff_for_each_async_basic_functionality_and_output():
         agent=agent,
     )
 
+    async def mock_kickoff_async(**kwargs):
+        input_data = kwargs.get("inputs")
+        index = [input_["topic"] for input_ in inputs].index(input_data["topic"])
+        return expected_outputs[index]
+
     with patch.object(
-        Crew, "kickoff_async", side_effect=expected_outputs
+        Crew, "kickoff_async", side_effect=mock_kickoff_async
     ) as mock_kickoff_async:
         crew = Crew(agents=[agent], tasks=[task])
 
@@ -1354,6 +1434,7 @@ def test_crew_inputs_interpolate_both_agents_and_tasks_diff():
                 interpolate_task_inputs.assert_called()
 
 
+@pytest.mark.vcr(filter_headers=["authorization"])
 def test_crew_does_not_interpolate_without_inputs():
     from unittest.mock import patch
 
@@ -1996,6 +2077,7 @@ def test_replay_task_with_context():
         db_handler.reset()
 
 
+@pytest.mark.vcr(filter_headers=["authorization"])
 def test_replay_from_task_with_context():
     agent = Agent(role="test_agent", backstory="Test Description", goal="Test Goal")
     task1 = Task(
@@ -2113,6 +2195,7 @@ def test_replay_with_invalid_task_id():
             crew.replay_from_task("bf5b09c9-69bd-4eb8-be12-f9e5bae31c2d")
 
 
+@pytest.mark.vcr(filter_headers=["authorization"])
 @patch.object(Crew, "_interpolate_inputs")
 def test_replay_interpolates_inputs_properly(mock_interpolate_inputs):
     agent = Agent(role="test_agent", backstory="Test Description", goal="Test Goal")
@@ -2234,3 +2317,185 @@ def test_replay_from_task_setup_context():
         assert crew.tasks[0].output.output_format == OutputFormat.RAW
 
         assert crew.tasks[1].prompt_context == "context raw output"
+
+
+def test_key():
+    tasks = [
+        Task(
+            description="Give me a list of 5 interesting ideas to explore for na article, what makes them unique and interesting.",
+            expected_output="Bullet point list of 5 important events.",
+            agent=researcher,
+        ),
+        Task(
+            description="Write a 1 amazing paragraph highlight for each idea that showcases how good an article about this topic could be. Return the list of ideas with their paragraph and your notes.",
+            expected_output="A 4 paragraph article about AI.",
+            agent=writer,
+        ),
+    ]
+    crew = Crew(
+        agents=[researcher, writer],
+        process=Process.sequential,
+        tasks=tasks,
+    )
+    hash = hashlib.md5(
+        f"{researcher.key}|{writer.key}|{tasks[0].key}|{tasks[1].key}".encode()
+    ).hexdigest()
+
+    assert crew.key == hash
+
+
+def test_conditional_task_requirement_breaks_when_singular_conditional_task():
+    def condition_fn(output) -> bool:
+        return output.raw.startswith("Andrew Ng has!!")
+
+    task = ConditionalTask(
+        description="Come up with a list of 5 interesting ideas to explore for an article, then write one amazing paragraph highlight for each idea that showcases how good an article about this topic could be. Return the list of ideas with their paragraph and your notes.",
+        expected_output="5 bullet points with a paragraph for each idea.",
+        condition=condition_fn,
+    )
+
+    with pytest.raises(pydantic_core._pydantic_core.ValidationError):
+        Crew(
+            agents=[researcher, writer],
+            tasks=[task],
+        )
+
+
+@pytest.mark.vcr(filter_headers=["authorization"])
+def test_conditional_task_last_task_when_conditional_is_true():
+    def condition_fn(output) -> bool:
+        return True
+
+    task1 = Task(
+        description="Say Hi",
+        expected_output="Hi",
+        agent=researcher,
+    )
+    task2 = ConditionalTask(
+        description="Come up with a list of 5 interesting ideas to explore for an article, then write one amazing paragraph highlight for each idea that showcases how good an article about this topic could be. Return the list of ideas with their paragraph and your notes.",
+        expected_output="5 bullet points with a paragraph for each idea.",
+        condition=condition_fn,
+        agent=writer,
+    )
+
+    crew = Crew(
+        agents=[researcher, writer],
+        tasks=[task1, task2],
+    )
+    result = crew.kickoff()
+    assert result.raw.startswith(
+        "1. **The Rise of AI Agents in Customer Service: Revolutionizing Customer Interactions**"
+    )
+
+
+@pytest.mark.vcr(filter_headers=["authorization"])
+def test_conditional_task_last_task_when_conditional_is_false():
+    def condition_fn(output) -> bool:
+        return False
+
+    task1 = Task(
+        description="Say Hi",
+        expected_output="Hi",
+        agent=researcher,
+    )
+    task2 = ConditionalTask(
+        description="Come up with a list of 5 interesting ideas to explore for an article, then write one amazing paragraph highlight for each idea that showcases how good an article about this topic could be. Return the list of ideas with their paragraph and your notes.",
+        expected_output="5 bullet points with a paragraph for each idea.",
+        condition=condition_fn,
+        agent=writer,
+    )
+
+    crew = Crew(
+        agents=[researcher, writer],
+        tasks=[task1, task2],
+    )
+    result = crew.kickoff()
+    print(result.raw)
+    assert result.raw == "Hi"
+
+
+def test_conditional_task_requirement_breaks_when_task_async():
+    def my_condition(context):
+        return context.get("some_value") > 10
+
+    task = ConditionalTask(
+        description="Come up with a list of 5 interesting ideas to explore for an article, then write one amazing paragraph highlight for each idea that showcases how good an article about this topic could be. Return the list of ideas with their paragraph and your notes.",
+        expected_output="5 bullet points with a paragraph for each idea.",
+        execute_async=True,
+        condition=my_condition,
+        agent=researcher,
+    )
+    task2 = Task(
+        description="Say Hi",
+        expected_output="Hi",
+        agent=writer,
+    )
+
+    with pytest.raises(pydantic_core._pydantic_core.ValidationError):
+        Crew(
+            agents=[researcher, writer],
+            tasks=[task, task2],
+        )
+
+
+@pytest.mark.vcr(filter_headers=["authorization"])
+def test_conditional_should_skip():
+    task1 = Task(description="Return hello", expected_output="say hi", agent=researcher)
+
+    condition_mock = MagicMock(return_value=False)
+    task2 = ConditionalTask(
+        description="Come up with a list of 5 interesting ideas to explore for an article, then write one amazing paragraph highlight for each idea that showcases how good an article about this topic could be. Return the list of ideas with their paragraph and your notes.",
+        expected_output="5 bullet points with a paragraph for each idea.",
+        condition=condition_mock,
+        agent=writer,
+    )
+    crew_met = Crew(
+        agents=[researcher, writer],
+        tasks=[task1, task2],
+    )
+    with patch.object(Task, "execute_sync") as mock_execute_sync:
+        mock_execute_sync.return_value = TaskOutput(
+            description="Task 1 description",
+            raw="Task 1 output",
+            agent="Researcher",
+        )
+
+        result = crew_met.kickoff()
+        assert mock_execute_sync.call_count == 1
+
+        assert condition_mock.call_count == 1
+        assert condition_mock() is False
+
+        assert task2.output is None
+        assert result.raw.startswith("Task 1 output")
+
+
+@pytest.mark.vcr(filter_headers=["authorization"])
+def test_conditional_should_execute():
+    task1 = Task(description="Return hello", expected_output="say hi", agent=researcher)
+
+    condition_mock = MagicMock(
+        return_value=True
+    )  # should execute this conditional task
+    task2 = ConditionalTask(
+        description="Come up with a list of 5 interesting ideas to explore for an article, then write one amazing paragraph highlight for each idea that showcases how good an article about this topic could be. Return the list of ideas with their paragraph and your notes.",
+        expected_output="5 bullet points with a paragraph for each idea.",
+        condition=condition_mock,
+        agent=writer,
+    )
+    crew_met = Crew(
+        agents=[researcher, writer],
+        tasks=[task1, task2],
+    )
+    with patch.object(Task, "execute_sync") as mock_execute_sync:
+        mock_execute_sync.return_value = TaskOutput(
+            description="Task 1 description",
+            raw="Task 1 output",
+            agent="Researcher",
+        )
+
+        crew_met.kickoff()
+
+        assert condition_mock.call_count == 1
+        assert condition_mock() is True
+        assert mock_execute_sync.call_count == 2

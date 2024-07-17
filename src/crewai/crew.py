@@ -2,6 +2,7 @@ import asyncio
 import json
 import uuid
 from concurrent.futures import Future
+from hashlib import md5
 from typing import Any, Dict, List, Optional, Tuple, Union
 
 from langchain_core.callbacks import BaseCallbackHandler
@@ -27,6 +28,7 @@ from crewai.memory.long_term.long_term_memory import LongTermMemory
 from crewai.memory.short_term.short_term_memory import ShortTermMemory
 from crewai.process import Process
 from crewai.task import Task
+from crewai.tasks.conditional_task import ConditionalTask
 from crewai.tasks.task_output import TaskOutput
 from crewai.telemetry import Telemetry
 from crewai.tools.agent_tools import AgentTools
@@ -36,12 +38,11 @@ from crewai.utilities.constants import (
     TRAINING_DATA_FILE,
 )
 from crewai.utilities.evaluators.task_evaluator import TaskEvaluator
-from crewai.utilities.task_output_storage_handler import TaskOutputStorageHandler
-
 from crewai.utilities.formatter import (
     aggregate_raw_outputs_from_task_outputs,
     aggregate_raw_outputs_from_tasks,
 )
+from crewai.utilities.task_output_storage_handler import TaskOutputStorageHandler
 from crewai.utilities.training_handler import CrewTrainingHandler
 
 try:
@@ -295,6 +296,29 @@ class Crew(BaseModel):
         return self
 
     @model_validator(mode="after")
+    def validate_first_task(self) -> "Crew":
+        """Ensure the first task is not a ConditionalTask."""
+        if self.tasks and isinstance(self.tasks[0], ConditionalTask):
+            raise PydanticCustomError(
+                "invalid_first_task",
+                "The first task cannot be a ConditionalTask.",
+                {},
+            )
+        return self
+
+    @model_validator(mode="after")
+    def validate_async_tasks_not_async(self) -> "Crew":
+        """Ensure that ConditionalTask is not async."""
+        for task in self.tasks:
+            if task.async_execution and isinstance(task, ConditionalTask):
+                raise PydanticCustomError(
+                    "invalid_async_conditional_task",
+                    f"Conditional Task: {task.description} , cannot be executed asynchronously.",  # type: ignore # Argument of type "str" cannot be assigned to parameter "message_template" of type "LiteralString"
+                    {},
+                )
+        return self
+
+    @model_validator(mode="after")
     def validate_async_task_cannot_include_sequential_async_tasks_in_context(self):
         """
         Validates that if a task is set to be executed asynchronously,
@@ -329,6 +353,13 @@ class Crew(BaseModel):
                             f"Task '{task.description}' has a context dependency on a future task '{context_task.description}', which is not allowed."
                         )
         return self
+
+    @property
+    def key(self) -> str:
+        source = [agent.key for agent in self.agents] + [
+            task.key for task in self.tasks
+        ]
+        return md5("|".join(source).encode()).hexdigest()
 
     def _setup_from_config(self):
         assert self.config is not None, "Config should not be None."
@@ -604,21 +635,27 @@ class Crew(BaseModel):
                         last_sync_output = task.output
                 continue
 
-            self._prepare_task(task, manager)
-            if self.process == Process.hierarchical:
-                agent_to_use = manager
-            else:
-                agent_to_use = task.agent
+            agent_to_use = self._get_agent_to_use(task, manager)
             if agent_to_use is None:
                 raise ValueError(
                     f"No agent available for task: {task.description}. Ensure that either the task has an assigned agent or a manager agent is provided."
                 )
-            self._log_task_start(task, agent_to_use)
+
+            self._prepare_agent_tools(task, manager)
+            self._log_task_start(task, agent_to_use.role)
+
+            if isinstance(task, ConditionalTask):
+                skipped_task_output = self._handle_conditional_task(
+                    task, task_outputs, futures, task_index, was_replayed
+                )
+                if skipped_task_output:
+                    continue
 
             if task.async_execution:
                 context = self._get_context(
                     task, [last_sync_output] if last_sync_output else []
                 )
+                self._log_task_start(task, agent_to_use.role)
                 future = task.execute_async(
                     agent=agent_to_use,
                     context=context,
@@ -627,12 +664,11 @@ class Crew(BaseModel):
                 futures.append((task, future, task_index))
             else:
                 if futures:
-                    task_outputs.extend(
-                        self._process_async_tasks(futures, was_replayed)
-                    )
+                    task_outputs = self._process_async_tasks(futures, was_replayed)
                     futures.clear()
 
                 context = self._get_context(task, task_outputs)
+                self._log_task_start(task, agent_to_use.role)
                 task_output = task.execute_sync(
                     agent=agent_to_use,
                     context=context,
@@ -647,11 +683,47 @@ class Crew(BaseModel):
 
         return self._create_crew_output(task_outputs)
 
-    def _prepare_task(self, task: Task, manager: Optional[BaseAgent]):
+    def _handle_conditional_task(
+        self,
+        task: ConditionalTask,
+        task_outputs: List[TaskOutput],
+        futures: List[Tuple[Task, Future[TaskOutput], int]],
+        task_index: int,
+        was_replayed: bool,
+    ) -> Optional[TaskOutput]:
+        if futures:
+            task_outputs = self._process_async_tasks(futures, was_replayed)
+            futures.clear()
+
+        previous_output = task_outputs[task_index - 1] if task_outputs else None
+        if previous_output is not None and not task.should_execute(previous_output):
+            self._logger.log(
+                "debug",
+                f"Skipping conditional task: {task.description}",
+                color="yellow",
+            )
+            skipped_task_output = task.get_skipped_task_output()
+
+            if not was_replayed:
+                self._store_execution_log(task, skipped_task_output, task_index)
+            return skipped_task_output
+        return None
+
+    def _prepare_agent_tools(self, task: Task, manager: Optional[BaseAgent]):
         if self.process == Process.hierarchical:
-            self._update_manager_tools(task, manager)
+            if manager:
+                self._update_manager_tools(task, manager)
+            else:
+                raise ValueError("Manager agent is required for hierarchical process.")
         elif task.agent and task.agent.allow_delegation:
             self._add_delegation_tools(task)
+
+    def _get_agent_to_use(
+        self, task: Task, manager: Optional[BaseAgent]
+    ) -> Optional[BaseAgent]:
+        if self.process == Process.hierarchical:
+            return manager
+        return task.agent
 
     def _add_delegation_tools(self, task: Task):
         agents_for_delegation = [agent for agent in self.agents if agent != task.agent]
@@ -679,18 +751,17 @@ class Crew(BaseModel):
                     # Add the new tool
                     task.tools.append(new_tool)
 
-    def _log_task_start(self, task: Task, agent: Optional[BaseAgent]):
+    def _log_task_start(self, task: Task, role: str = "None"):
         color = self._logging_color
-        role = agent.role if agent else "None"
         self._logger.log("debug", f"== Working Agent: {role}", color=color)
         self._logger.log("info", f"== Starting Task: {task.description}", color=color)
         if self.output_log_file:
             self._file_handler.log(agent=role, task=task.description, status="started")
 
-    def _update_manager_tools(self, task: Task, manager: Optional[BaseAgent]):
-        if task.agent and manager:
+    def _update_manager_tools(self, task: Task, manager: BaseAgent):
+        if task.agent:
             manager.tools = task.agent.get_delegation_tools([task.agent])
-        if manager:
+        else:
             manager.tools = manager.get_delegation_tools(self.agents)
 
     def _get_context(self, task: Task, task_outputs: List[TaskOutput]):
@@ -730,7 +801,7 @@ class Crew(BaseModel):
         futures: List[Tuple[Task, Future[TaskOutput], int]],
         was_replayed: bool = False,
     ) -> List[TaskOutput]:
-        task_outputs = []
+        task_outputs: List[TaskOutput] = []
         for future_task, future, task_index in futures:
             task_output = future.result()
             task_outputs.append(task_output)
