@@ -25,6 +25,3 @@ class Memory:
 
     def search(self, query: str) -> Dict[str, Any]:
         return self.storage.search(query)
-
-    def reset(self) -> None:
-        self.storage.reset()

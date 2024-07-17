@@ -25,4 +25,9 @@ class ShortTermMemory(Memory):
         return self.storage.search(query=query, score_threshold=score_threshold)  # type: ignore # BUG? The reference is to the parent class, but the parent class does not have this parameters
 
     def reset(self) -> None:
-        self.storage.reset()
+        try:
+            self.storage.reset()
+        except Exception as e:
+            raise Exception(
+                f"An error occurred while resetting the short-term memory: {e}"
+            )

@@ -32,4 +32,4 @@ class LongTermMemory(Memory):
         return self.storage.load(task, latest_n)  # type: ignore # BUG?: "Storage" has no attribute "load"
 
     def reset(self) -> None:
-        self.storage.reset()  # type: ignore # BUG?: "Storage" has no attribute "reset"
+        self.storage.reset()

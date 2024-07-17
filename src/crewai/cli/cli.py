@@ -101,17 +101,23 @@ def log_tasks_outputs() -> None:
 
 
 @crewai.command()
-@click.option("--long", is_flag=True, help="Reset LONG memory")
-@click.option("--short", is_flag=True, help="Reset SHORT memory")
-@click.option("--entity", is_flag=True, help="Reset ENTITY memory")
-@click.option("--all", is_flag=True, help="Reset ALL memories")
-def reset_memories(long, short, entity, all):
+@click.option("-l", "--long", is_flag=True, help="Reset LONG TERM memory")
+@click.option("-s", "--short", is_flag=True, help="Reset SHORT TERM memory")
+@click.option("-e", "--entities", is_flag=True, help="Reset ENTITIES memory")
+@click.option(
+    "-k",
+    "--kickoff-outputs",
+    is_flag=True,
+    help="Reset LATEST KICKOFF TASK OUTPUTS",
+)
+@click.option("-a", "--all", is_flag=True, help="Reset ALL memories")
+def reset_memories(long, short, entities, kickoff_outputs, all):
     """
-    Reset the crew memories (long, short, entity, latest_crew_kickoff_ouputs)
+    Reset the crew memories (long, short, entity, latest_crew_kickoff_ouputs). This will delete all the data saved.
     """
     try:
         click.echo("Resetting memories")
-        reset_memories_command(long, short, entity, all)
+        reset_memories_command(long, short, entities, kickoff_outputs, all)
     except Exception as e:
         click.echo(f"An error occurred while resetting memories: {e}", err=True)
 

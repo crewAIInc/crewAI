@@ -21,8 +21,11 @@ class EntityMemory(Memory):
 
     def save(self, item: EntityMemoryItem) -> None:  # type: ignore # BUG?: Signature of "save" incompatible with supertype "Memory"
         """Saves an entity item into the SQLite storage."""
-        data = f"{item.naxme}({item.type}): {item.description}"
+        data = f"{item.name}({item.type}): {item.description}"
         super().save(data, item.metadata)
 
     def reset(self) -> None:
-        self.storage.reset()
+        try:
+            self.storage.reset()
+        except Exception as e:
+            raise Exception(f"An error occurred while resetting the entity memory: {e}")

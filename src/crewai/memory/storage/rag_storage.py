@@ -2,6 +2,7 @@ import contextlib
 import io
 import logging
 import os
+import shutil
 from typing import Any, Dict, List, Optional
 
 from embedchain import App
@@ -71,7 +72,7 @@ class RAGStorage(Storage):
 
         if embedder_config:
             config["embedder"] = embedder_config
-
+        self.type = type
         self.app = App.from_config(config=config)
         self.app.llm = FakeLLM()
         if allow_reset:
@@ -104,4 +105,9 @@ class RAGStorage(Storage):
             self.app.add(text, data_type="text", metadata=metadata)
 
     def reset(self) -> None:
-        self.app.reset()
+        try:
+            shutil.rmtree(f"{db_storage_path()}/{self.type}")
+        except Exception as e:
+            raise Exception(
+                f"An error occurred while resetting the {self.type} memory: {e}"
+            )
