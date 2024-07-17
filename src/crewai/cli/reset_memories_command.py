@@ -18,6 +18,7 @@ def reset_memories_command(long, short, entity, all) -> None:
         if all:
             ShortTermMemory().reset()
             EntityMemory().reset()
+            LongTermMemory().reset()
             click.echo("All memories have been reset.")
         else:
             if long:

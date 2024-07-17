@@ -104,5 +104,4 @@ class RAGStorage(Storage):
             self.app.add(text, data_type="text", metadata=metadata)
 
     def reset(self) -> None:
-        print("firing reset")
-        self.app.delete_session_chat_history()
+        self.app.reset()
