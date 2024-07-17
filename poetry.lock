@@ -2,22 +2,23 @@
 
 [[package]]
 name = "agentops"
-version = "0.1.12"
+version = "0.3.0"
 description = "Python SDK for developing AI agent evals and observability"
 optional = true
 python-versions = ">=3.7"
 files = [
-    {file = "agentops-0.1.12-py3-none-any.whl", hash = "sha256:b4b47c990638b74810cc1c38624ada162094b46e3fdd63883642a16bc5258386"},
-    {file = "agentops-0.1.12.tar.gz", hash = "sha256:c4f762482fb240fc3503907f52498f2d8d9e4f80236ee4a12bf039317a85fcd7"},
+    {file = "agentops-0.3.0-py3-none-any.whl", hash = "sha256:22aeb3355e66b32a2b2a9f676048b81979b2488feddb088f9266034b3ed50539"},
+    {file = "agentops-0.3.0.tar.gz", hash = "sha256:6c0c08a57410fa5e826a7bafa1deeba9f7b3524709427d9e1abbd0964caaf76b"},
 ]
 
 [package.dependencies]
 packaging = "23.2"
 psutil = "5.9.8"
 requests = "2.31.0"
+termcolor = "2.4.0"
 
 [package.extras]
-dev = ["pytest (==7.4.0)", "requests-mock (==1.11.0)"]
+dev = ["pytest (==7.4.0)", "requests-mock (==1.11.0)", "tach (==0.6.9)"]
 langchain = ["langchain (>=1.19,<2.0)"]
 
 [[package]]
@@ -2400,19 +2401,19 @@ tests = ["aiohttp", "duckdb", "pandas (>=1.4)", "polars (>=0.19)", "pytest", "py
 
 [[package]]
 name = "langchain"
-version = "0.2.8"
+version = "0.2.9"
 description = "Building applications with LLMs through composability"
 optional = false
 python-versions = "<4.0,>=3.8.1"
 files = [
-    {file = "langchain-0.2.8-py3-none-any.whl", hash = "sha256:53e7dfe50294a14200f33bec22b4e14cb63857ccf0a5500b0d18b0fd51285d58"},
-    {file = "langchain-0.2.8.tar.gz", hash = "sha256:7fecb309e3558cde4e5cf7e9ffb7c1ab3f07121c40a7ff3b0c27135f8120c296"},
+    {file = "langchain-0.2.9-py3-none-any.whl", hash = "sha256:be23fcb29adbd5059944f1fed08fa575f0739d420b1c4127531e0fbf5663fcca"},
+    {file = "langchain-0.2.9.tar.gz", hash = "sha256:cc326a7f6347787a19882928c324433b1a79df629bba45604b2d26495ee5d69c"},
 ]
 
 [package.dependencies]
 aiohttp = ">=3.8.3,<4.0.0"
 async-timeout = {version = ">=4.0.0,<5.0.0", markers = "python_version < \"3.11\""}
-langchain-core = ">=0.2.19,<0.3.0"
+langchain-core = ">=0.2.20,<0.3.0"
 langchain-text-splitters = ">=0.2.0,<0.3.0"
 langsmith = ">=0.1.17,<0.2.0"
 numpy = [
@@ -4035,6 +4036,19 @@ files = [
     {file = "pyarrow-17.0.0-cp312-cp312-win_amd64.whl", hash = "sha256:392bc9feabc647338e6c89267635e111d71edad5fcffba204425a7c8d13610d7"},
     {file = "pyarrow-17.0.0-cp38-cp38-macosx_10_15_x86_64.whl", hash = "sha256:af5ff82a04b2171415f1410cff7ebb79861afc5dae50be73ce06d6e870615204"},
     {file = "pyarrow-17.0.0-cp38-cp38-macosx_11_0_arm64.whl", hash = "sha256:edca18eaca89cd6382dfbcff3dd2d87633433043650c07375d095cd3517561d8"},
+    {file = "pyarrow-17.0.0-cp38-cp38-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:7c7916bff914ac5d4a8fe25b7a25e432ff921e72f6f2b7547d1e325c1ad9d155"},
+    {file = "pyarrow-17.0.0-cp38-cp38-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:f553ca691b9e94b202ff741bdd40f6ccb70cdd5fbf65c187af132f1317de6145"},
+    {file = "pyarrow-17.0.0-cp38-cp38-manylinux_2_28_aarch64.whl", hash = "sha256:0cdb0e627c86c373205a2f94a510ac4376fdc523f8bb36beab2e7f204416163c"},
+    {file = "pyarrow-17.0.0-cp38-cp38-manylinux_2_28_x86_64.whl", hash = "sha256:d7d192305d9d8bc9082d10f361fc70a73590a4c65cf31c3e6926cd72b76bc35c"},
+    {file = "pyarrow-17.0.0-cp38-cp38-win_amd64.whl", hash = "sha256:02dae06ce212d8b3244dd3e7d12d9c4d3046945a5933d28026598e9dbbda1fca"},
+    {file = "pyarrow-17.0.0-cp39-cp39-macosx_10_15_x86_64.whl", hash = "sha256:13d7a460b412f31e4c0efa1148e1d29bdf18ad1411eb6757d38f8fbdcc8645fb"},
+    {file = "pyarrow-17.0.0-cp39-cp39-macosx_11_0_arm64.whl", hash = "sha256:9b564a51fbccfab5a04a80453e5ac6c9954a9c5ef2890d1bcf63741909c3f8df"},
+    {file = "pyarrow-17.0.0-cp39-cp39-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:32503827abbc5aadedfa235f5ece8c4f8f8b0a3cf01066bc8d29de7539532687"},
+    {file = "pyarrow-17.0.0-cp39-cp39-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:a155acc7f154b9ffcc85497509bcd0d43efb80d6f733b0dc3bb14e281f131c8b"},
+    {file = "pyarrow-17.0.0-cp39-cp39-manylinux_2_28_aarch64.whl", hash = "sha256:dec8d129254d0188a49f8a1fc99e0560dc1b85f60af729f47de4046015f9b0a5"},
+    {file = "pyarrow-17.0.0-cp39-cp39-manylinux_2_28_x86_64.whl", hash = "sha256:a48ddf5c3c6a6c505904545c25a4ae13646ae1f8ba703c4df4a1bfe4f4006bda"},
+    {file = "pyarrow-17.0.0-cp39-cp39-win_amd64.whl", hash = "sha256:42bf93249a083aca230ba7e2786c5f673507fa97bbd9725a1e2754715151a204"},
+    {file = "pyarrow-17.0.0.tar.gz", hash = "sha256:4beca9521ed2c0921c1023e68d097d0299b62c362639ea315572a58f3f50fd28"},
 ]
 
 [package.dependencies]
@@ -4324,13 +4338,13 @@ files = [
 
 [[package]]
 name = "pyright"
-version = "1.1.371"
+version = "1.1.372"
 description = "Command line wrapper for pyright"
 optional = false
 python-versions = ">=3.7"
 files = [
-    {file = "pyright-1.1.371-py3-none-any.whl", hash = "sha256:cce52e42ff73943243e7e5e24f2a59dee81b97d99f4e3cf97370b27e8a1858cd"},
-    {file = "pyright-1.1.371.tar.gz", hash = "sha256:777b508b92dda2db476214c400ce043aad8d8f3dd0e10d284c96e79f298308b5"},
+    {file = "pyright-1.1.372-py3-none-any.whl", hash = "sha256:25b15fb8967740f0949fd35b963777187f0a0404c0bd753cc966ec139f3eaa0b"},
+    {file = "pyright-1.1.372.tar.gz", hash = "sha256:a9f5e0daa955daaa17e3d1ef76d3623e75f8afd5e37b437d3ff84d5b38c15420"},
 ]
 
 [package.dependencies]
@@ -5176,6 +5190,20 @@ files = [
 [package.extras]
 doc = ["reno", "sphinx"]
 test = ["pytest", "tornado (>=4.5)", "typeguard"]
+
+[[package]]
+name = "termcolor"
+version = "2.4.0"
+description = "ANSI color formatting for output in terminal"
+optional = true
+python-versions = ">=3.8"
+files = [
+    {file = "termcolor-2.4.0-py3-none-any.whl", hash = "sha256:9297c0df9c99445c2412e832e882a7884038a25617c60cea2ad69488d4040d63"},
+    {file = "termcolor-2.4.0.tar.gz", hash = "sha256:aab9e56047c8ac41ed798fa36d892a37aca6b3e9159f3e0c24bc64a9b3ac7b7a"},
+]
+
+[package.extras]
+tests = ["pytest", "pytest-cov"]
 
 [[package]]
 name = "tiktoken"
@@ -6128,4 +6156,4 @@ tools = ["crewai-tools"]
 [metadata]
 lock-version = "2.0"
 python-versions = ">=3.10,<=3.13"
-content-hash = "2cf5a3904e7cbcfebb85e198b6035252d47213a9b0dd3dd51837516e03b38d3e"
+content-hash = "e3a6a46f60e0787affa73f27ed182fe3e88d555de69fb91310ef01d4eebbb21f"
