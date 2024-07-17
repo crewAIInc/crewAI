@@ -370,17 +370,20 @@ def test_manager_agent_delegating_to_all_agents():
 
     crew.kickoff()
 
-    # Check if the manager agent has the correct tools
     assert crew.manager_agent is not None
     assert crew.manager_agent.tools is not None
 
-    assert len(crew.manager_agent.tools) == 1
+    assert len(crew.manager_agent.tools) == 2
+    print(
+        "crew.manager_agent.tools[0].description",
+        crew.manager_agent.tools[0].description,
+    )
     assert (
-        "Delegate a specific task to one of the following coworkers: Researcher, Writer\n"
+        "Delegate a specific task to one of the following coworkers: Researcher, Senior Writer\n"
         in crew.manager_agent.tools[0].description
     )
     assert (
-        "Ask a specific question to one of the following coworkers: Researcher, Writer\n"
+        "Ask a specific question to one of the following coworkers: Researcher, Senior Writer\n"
         in crew.manager_agent.tools[1].description
     )
 
