@@ -58,28 +58,63 @@ def test_reset_all_memories(
     MockLongTermMemory().reset.assert_called_once()
     MockTaskOutputStorageHandler().reset.assert_called_once()
 
-    assert "All memories have been reset." in result.output
+    assert result.output == "All memories have been reset.\n"
 
 
 @mock.patch("crewai.cli.reset_memories_command.ShortTermMemory")
 def test_reset_short_term_memories(MockShortTermMemory, runner):
     result = runner.invoke(reset_memories, ["-s"])
     MockShortTermMemory().reset.assert_called_once()
-    assert "Short term memory has been reset." in result.output
+    assert result.output == "Short term memory has been reset.\n"
 
 
 @mock.patch("crewai.cli.reset_memories_command.EntityMemory")
 def test_reset_entity_memories(MockEntityMemory, runner):
     result = runner.invoke(reset_memories, ["-e"])
     MockEntityMemory().reset.assert_called_once()
-    assert "Entity memory has been reset." in result.output
+    assert result.output == "Entity memory has been reset.\n"
 
 
 @mock.patch("crewai.cli.reset_memories_command.LongTermMemory")
 def test_reset_long_term_memories(MockLongTermMemory, runner):
     result = runner.invoke(reset_memories, ["-l"])
     MockLongTermMemory().reset.assert_called_once()
-    assert "Long term memory has been reset." in result.output
+    assert result.output == "Long term memory has been reset.\n"
+
+
+@mock.patch("crewai.cli.reset_memories_command.TaskOutputStorageHandler")
+def test_reset_kickoff_outputs(MockTaskOutputStorageHandler, runner):
+    result = runner.invoke(reset_memories, ["-k"])
+    MockTaskOutputStorageHandler().reset.assert_called_once()
+    assert result.output == "Latest Kickoff outputs stored has been reset.\n"
+
+
+@mock.patch("crewai.cli.reset_memories_command.ShortTermMemory")
+@mock.patch("crewai.cli.reset_memories_command.LongTermMemory")
+def test_reset_multiple_memory_flags(MockShortTermMemory, MockLongTermMemory, runner):
+    result = runner.invoke(
+        reset_memories,
+        [
+            "-s",
+            "-l",
+        ],
+    )
+    MockShortTermMemory().reset.assert_called_once()
+    MockLongTermMemory().reset.assert_called_once()
+    assert (
+        result.output
+        == "Long term memory has been reset.\nShort term memory has been reset.\n"
+    )
+
+
+def test_reset_no_memory_flags(runner):
+    result = runner.invoke(
+        reset_memories,
+    )
+    assert (
+        result.output
+        == "Please specify at least one memory type to reset using the appropriate flags.\n"
+    )
 
 
 def test_version_command(runner):

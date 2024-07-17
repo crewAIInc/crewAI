@@ -116,7 +116,11 @@ def reset_memories(long, short, entities, kickoff_outputs, all):
     Reset the crew memories (long, short, entity, latest_crew_kickoff_ouputs). This will delete all the data saved.
     """
     try:
-        click.echo("Resetting memories")
+        if not all and not (long or short or entities or kickoff_outputs):
+            click.echo(
+                "Please specify at least one memory type to reset using the appropriate flags."
+            )
+            return
         reset_memories_command(long, short, entities, kickoff_outputs, all)
     except Exception as e:
         click.echo(f"An error occurred while resetting memories: {e}", err=True)

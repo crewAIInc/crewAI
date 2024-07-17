@@ -35,7 +35,7 @@ def reset_memories_command(long, short, entity, kickoff_outputs, all) -> None:
                 click.echo("Entity memory has been reset.")
             if kickoff_outputs:
                 TaskOutputStorageHandler().reset()
-                click.echo("Latest Kickoff outputs memory has been reset.")
+                click.echo("Latest Kickoff outputs stored has been reset.")
 
     except subprocess.CalledProcessError as e:
         click.echo(f"An error occurred while resetting the memories: {e}", err=True)
