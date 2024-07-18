@@ -68,7 +68,14 @@ class ToolUsage:
         self.task = task
         self.action = action
         self.function_calling_llm = function_calling_llm
-
+      
+        # Handling bug (see https://github.com/langchain-ai/langchain/pull/16395): raise an error if tools_names have space for ChatOpenAI
+        if isinstance(self.function_calling_llm, ChatOpenAI):
+            if " " in self.tools_names:
+                raise Exception(
+                    "Tools names should not have spaces for ChatOpenAI models."
+                )
+              
         # Set the maximum parsing attempts for bigger models
         if (isinstance(self.function_calling_llm, ChatOpenAI)) and (
             self.function_calling_llm.openai_api_base is None
