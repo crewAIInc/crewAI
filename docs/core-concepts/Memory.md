@@ -161,6 +161,39 @@ my_crew = Crew(
 )
 ```
 
+### Resetting Memory
+```sh
+crewai reset_memories [OPTIONS]
+```
+
+#### Resetting Memory Options
+- **`-l, --long`**
+  - **Description:** Reset LONG TERM memory.
+  - **Type:** Flag (boolean)
+  - **Default:** False
+
+- **`-s, --short`**
+  - **Description:** Reset SHORT TERM memory.
+  - **Type:** Flag (boolean)
+  - **Default:** False
+
+- **`-e, --entities`**
+  - **Description:** Reset ENTITIES memory.
+  - **Type:** Flag (boolean)
+  - **Default:** False
+
+- **`-k, --kickoff-outputs`**
+  - **Description:** Reset LATEST KICKOFF TASK OUTPUTS.
+  - **Type:** Flag (boolean)
+  - **Default:** False
+
+- **`-a, --all`**
+  - **Description:** Reset ALL memories.
+  - **Type:** Flag (boolean)
+  - **Default:** False
+
+
+
 ## Benefits of Using crewAI's Memory System
 - **Adaptive Learning:** Crews become more efficient over time, adapting to new information and refining their approach to tasks.
 - **Enhanced Personalization:** Memory enables agents to remember user preferences and historical interactions, leading to personalized experiences.
