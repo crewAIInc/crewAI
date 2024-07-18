@@ -48,7 +48,7 @@ except ImportError:
     agentops = None
 
 if TYPE_CHECKING:
-    from crewai.procedure.procedure import Procedure
+    from crewai.pipeline.pipeline import Pipeline
 
 
 class Crew(BaseModel):
@@ -946,17 +946,17 @@ class Crew(BaseModel):
 
         return total_usage_metrics
 
-    def __rshift__(self, other: "Crew") -> "Procedure":
+    def __rshift__(self, other: "Crew") -> "Pipeline":
         """
-        Implements the >> operator to add another Crew to an existing Procedure.
+        Implements the >> operator to add another Crew to an existing Pipeline.
         """
-        from crewai.procedure.procedure import Procedure
+        from crewai.pipeline.pipeline import Pipeline
 
         if not isinstance(other, Crew):
             raise TypeError(
                 f"Unsupported operand type for >>: '{type(self).__name__}' and '{type(other).__name__}'"
             )
-        return Procedure(crews=[self, other])
+        return Pipeline(stages=[self, other])
 
     def __repr__(self):
         return f"Crew(id={self.id}, process={self.process}, number_of_agents={len(self.agents)}, number_of_tasks={len(self.tasks)})"
