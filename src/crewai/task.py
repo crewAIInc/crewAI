@@ -200,7 +200,7 @@ class Task(BaseModel):
         )
         exported_output = self._export_output(result)
 
-        # type: the responses are usually str but need to figuire out a more elegant solution here
+        # the responses are usually str but need to figuire out a more elegant solution here
         self.output = TaskOutput(
             description=self.description,
             exported_output=exported_output,

@@ -84,6 +84,12 @@ class Agent(BaseAgent):
     def __init__(__pydantic_self__, **data):
         config = data.pop("config", {})
         super().__init__(**config, **data)
+        print(
+            f"[CrewAI.Agent.__init__]: Agent: {__pydantic_self__.role} has been init with ToolsHandler: {__pydantic_self__.tools_handler}"
+        )
+        print(
+            f"[CrewAI.Agent.__init__]: Agent: {__pydantic_self__.role} has been init with ToolsHandler: {__pydantic_self__.callbacks}"
+        )
 
     @model_validator(mode="after")
     def set_agent_executor(self) -> "Agent":
@@ -104,6 +110,9 @@ class Agent(BaseAgent):
         if not self.agent_executor:
             if not self.cache_handler:
                 self.cache_handler = CacheHandler()
+            print(
+                f"[CrewAI.Agent.set_agent_executor]: calling set_cache_handler for agent {self}"
+            )
             self.set_cache_handler(self.cache_handler)
         return self
 
@@ -126,6 +135,11 @@ class Agent(BaseAgent):
         if self.tools_handler:
             # type: ignore # Incompatible types in assignment (expression has type "dict[Never, Never]", variable has type "ToolCalling")
             self.tools_handler.last_used_tool = {}
+            print(
+                f"[CrewAI.Agent.execute_task]: task has a tools_handler: {self.tools_handler}"
+            )
+        else:
+            print("[CrewAI.Agent.execute_task]: task DOES NOT HAVE a tools_handler")
 
         task_prompt = task.prompt()
 
@@ -246,6 +260,12 @@ class Agent(BaseAgent):
         bind = self.llm.bind(stop=stop_words)
 
         inner_agent = agent_args | execution_prompt | bind | CrewAgentParser(agent=self)
+
+        print(
+            f"[CrewAI.Agent.create_agent_executor]: setting the agent_executor for agent {self}"
+        )
+        callbacks = executor_args.get("callbacks", "No callbacks found")
+        print(f"[CrewAI.Agent.create_agent_executor]: callbacks are: {callbacks}")
         self.agent_executor = CrewAgentExecutor(
             agent=RunnableAgent(runnable=inner_agent), **executor_args
         )

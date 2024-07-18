@@ -208,7 +208,16 @@ class BaseAgent(ABC, BaseModel):
             cache_handler: An instance of the CacheHandler class.
         """
         if not self.tools_handler:
+            print(
+                "[CrewAI.BaseAgent.set_cache_handler]: Using the default ToolsHandler"
+            )
+            print(
+                f"[CrewAI.BaseAgent.set_cache_handler]: default ToolsHandler is being used by agent: {self}"
+            )
             self.tools_handler = ToolsHandler()
+        print(
+            f"[CrewAI.BaseAgent.set_cache_handler]: ToolsHandler = {self.tools_handler}"
+        )
         if self.cache:
             self.cache_handler = cache_handler
             self.tools_handler.cache = cache_handler
