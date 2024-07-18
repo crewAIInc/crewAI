@@ -94,6 +94,7 @@ class Crew(BaseModel):
         default_factory=TaskOutputStorageHandler
     )
 
+    name: Optional[str] = Field(default="")
     cache: bool = Field(default=True)
     model_config = ConfigDict(arbitrary_types_allowed=True)
     tasks: List[Task] = Field(default_factory=list)

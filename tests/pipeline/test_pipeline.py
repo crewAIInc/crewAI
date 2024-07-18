@@ -80,7 +80,7 @@ async def test_pipeline_process_streams_single_input(mock_crew_factory):
     mock_crew = mock_crew_factory()
     pipeline = Pipeline(stages=[mock_crew])
     input_data = [{"key": "value"}]
-    pipeline_result = await pipeline.process_streams(input_data)
+    pipeline_result = await pipeline.process_runs(input_data)
 
     mock_crew.kickoff_async.assert_called_once_with(inputs={"key": "value"})
     for stream_result in pipeline_result:
@@ -104,14 +104,12 @@ async def test_pipeline_process_streams_multiple_inputs(mock_crew_factory):
     mock_crew = mock_crew_factory()
     pipeline = Pipeline(stages=[mock_crew])
     input_data = [{"key1": "value1"}, {"key2": "value2"}]
-    pipeline_result = await pipeline.process_streams(input_data)
+    pipeline_result = await pipeline.process_runs(input_data)
 
     assert mock_crew.kickoff_async.call_count == 2
     assert len(pipeline_result) == 2
-    for stream_result in pipeline_result:
-        assert all(
-            isinstance(stream_output, CrewOutput) for stream_output in stream_result
-        )
+    for run_result in pipeline_result:
+        assert all(isinstance(run_output, CrewOutput) for run_output in run_result)
 
 
 @pytest.mark.asyncio
@@ -126,7 +124,7 @@ async def test_pipeline_with_parallel_stages(mock_crew_factory):
     pipeline = Pipeline(stages=[crew1, [crew2, crew3]])
     input_data = [{"initial": "data"}]
 
-    pipeline_result = await pipeline.process_streams(input_data)
+    pipeline_result = await pipeline.process_runs(input_data)
 
     crew1.kickoff_async.assert_called_once_with(
         inputs={"initial": "data", "key": "value"}
@@ -188,13 +186,13 @@ async def test_pipeline_data_accumulation(mock_crew_factory):
 
     pipeline = Pipeline(stages=[crew1, crew2])
     input_data = [{"initial": "data"}]
-    pipeline_result = await pipeline.process_streams(input_data)
+    pipeline_result = await pipeline.process_runs(input_data)
 
     assert len(pipeline_result) == 1
     print("RESULT: ", pipeline_result)
-    for stream_result in pipeline_result:
-        print("STREAM RESULT: ", stream_result)
-        assert stream_result[0].json_dict == {
+    for run_result in pipeline_result:
+        print("RUN RESULT: ", run_result)
+        assert run_result[0].json_dict == {
             "initial": "data",
             "key1": "value1",
             "key2": "value2",
