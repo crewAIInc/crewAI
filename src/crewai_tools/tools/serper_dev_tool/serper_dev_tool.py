@@ -1,3 +1,4 @@
+import datetime
 import os
 import json
 import requests
@@ -7,11 +8,11 @@ from pydantic.v1 import BaseModel, Field
 from crewai_tools.tools.base_tool import BaseTool
 
 def _save_results_to_file(content: str) -> None:
-    """Saves the search results to a file."""
-    filename = f"search_results_{datetime.now().strftime('%Y-%m-%d_%H-%M-%S')}.txt"
-    with open(filename, 'w') as file:
-        file.write(content)
-    print(f"Results saved to {filename}")
+		"""Saves the search results to a file."""
+		filename = f"search_results_{datetime.now().strftime('%Y-%m-%d_%H-%M-%S')}.txt"
+		with open(filename, 'w') as file:
+				file.write(content)
+		print(f"Results saved to {filename}")
 
 
 class SerperDevToolSchema(BaseModel):
@@ -23,11 +24,11 @@ class SerperDevTool(BaseTool):
 	description: str = "A tool that can be used to search the internet with a search_query."
 	args_schema: Type[BaseModel] = SerperDevToolSchema
 	search_url: str = "https://google.serper.dev/search"
-	country: Optional[str] = None
-	location: Optional[str] = None
-	locale: Optional[str] = None
-	n_results: int = Field(default=10, description="Number of search results to return")
-        save_file: bool = Field(default=False, description="Flag to determine whether to save the results to a file")
+	country: Optional[str] = ''
+	location: Optional[str] = ''
+	locale: Optional[str] = ''
+	n_results: int = 10
+	save_file: bool = False
 
 	def _run(
 		self,
@@ -39,18 +40,24 @@ class SerperDevTool(BaseTool):
 		n_results = kwargs.get('n_results', self.n_results)
 
 		payload = { "q": search_query, "num": n_results }
-		payload["gl"] = self.country if self.country
-		payload["location"] = self.country if self.location
-		payload["hl"] = self.country if self.locale
-		
+
+		if self.country != '':
+			payload["gl"] = self.country
+		if self.location != '':
+			payload["location"] = self.location
+		if self.locale != '':
+			payload["hl"] = self.locale
+
 		payload = json.dumps(payload)
 
 		headers = {
 			'X-API-KEY': os.environ['SERPER_API_KEY'],
 			'content-type': 'application/json'
 		}
+
 		response = requests.request("POST", self.search_url, headers=headers, data=payload)
 		results = response.json()
+
 		if 'organic' in results:
 			results = results['organic'][:self.n_results]
 			string = []
@@ -67,7 +74,7 @@ class SerperDevTool(BaseTool):
 
 			content = '\n'.join(string)
 			if save_file:
-                		_save_results_to_file(content)
+				_save_results_to_file(content)
 			return f"\nSearch results: {content}\n"
 		else:
 			return results
