@@ -82,8 +82,27 @@ class Pipeline(BaseModel):
 
             return traces_to_return
 
+        def format_crew_outputs(
+            all_stage_outputs: List[List[CrewOutput]],
+        ) -> List[List[CrewOutput]]:
+            formatted_crew_outputs: List[List[CrewOutput]] = []
+
+            # Handle all output stages except the final one
+            crew_outputs: List[CrewOutput] = []
+            for stage_outputs in all_stage_outputs[:-1]:
+                for output in stage_outputs:
+                    crew_outputs.append(output)
+
+            final_stage = all_stage_outputs[-1]
+            for output in final_stage:
+                copied_crew_outputs = crew_outputs.copy()
+                copied_crew_outputs.append(output)
+                formatted_crew_outputs.append(copied_crew_outputs)
+
+            return formatted_crew_outputs
+
         def build_pipeline_run_results(
-            final_stage_outputs: List[CrewOutput],
+            all_stage_outputs: List[List[CrewOutput]],
             traces: List[List[Union[str, Dict[str, Any]]]],
             token_usage: Dict[str, Any],
         ) -> List[PipelineRunResult]:
@@ -93,16 +112,21 @@ class Pipeline(BaseModel):
 
             pipeline_run_results: List[PipelineRunResult] = []
 
-            # Format traces
             formatted_traces = format_traces(traces)
+            formatted_crew_outputs = format_crew_outputs(all_stage_outputs)
 
-            for output, formatted_trace in zip(final_stage_outputs, formatted_traces):
-                # FORMAT TRACE
+            for crews_outputs, formatted_trace in zip(
+                formatted_crew_outputs, formatted_traces
+            ):
 
+                final_crew = crews_outputs[-1]
                 new_pipeline_run_result = PipelineRunResult(
-                    final_output=output,
                     token_usage=token_usage,
                     trace=formatted_trace,
+                    raw=final_crew.raw,
+                    pydantic=final_crew.pydantic,
+                    json_dict=final_crew.json_dict,
+                    crews_outputs=crews_outputs,
                 )
 
                 pipeline_run_results.append(new_pipeline_run_result)
@@ -112,9 +136,10 @@ class Pipeline(BaseModel):
         async def process_single_run(
             run_input: Dict[str, Any]
         ) -> List[PipelineRunResult]:
-            stages_queue = deque(self.stages)
+            stages_queue = deque(self.stages)  # TODO: Change over to forloop
             usage_metrics = {}
             stage_outputs: List[CrewOutput] = []
+            all_stage_outputs: List[List[CrewOutput]] = []
             traces: List[List[Union[str, Dict[str, Any]]]] = [[run_input]]
 
             stage = None
@@ -146,13 +171,16 @@ class Pipeline(BaseModel):
                     # Store output for final results
                     stage_outputs = parallel_outputs
 
+                all_stage_outputs.append(stage_outputs)
+
             print("STAGE OUTPUTS: ", stage_outputs)
             print("TRACES: ", traces)
             print("TOKEN USAGE: ", usage_metrics)
+            print("ALL STAGE OUTPUTS: ", all_stage_outputs)
 
             # Build final pipeline run results
             final_results = build_pipeline_run_results(
-                final_stage_outputs=stage_outputs,
+                all_stage_outputs=all_stage_outputs,
                 traces=traces,
                 token_usage=usage_metrics,
             )
