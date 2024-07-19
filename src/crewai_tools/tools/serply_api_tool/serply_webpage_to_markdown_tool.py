@@ -6,7 +6,7 @@ from crewai_tools.tools.rag.rag_tool import RagTool
 
 
 class SerplyWebpageToMarkdownToolSchema(BaseModel):
-    """Input for Serply Scholar Search."""
+    """Input for Serply Search."""
     url: str = Field(..., description="Mandatory url you want to use to fetch and convert to markdown")
 
 
@@ -24,7 +24,7 @@ class SerplyWebpageToMarkdownTool(RagTool):
             **kwargs
     ):
         """
-            proxy_location: (str): Where to get news, specifically for a specific country results.
+            proxy_location: (str): Where to perform the search, specifically for a specific country results.
                  ['US', 'CA', 'IE', 'GB', 'FR', 'DE', 'SE', 'IN', 'JP', 'KR', 'SG', 'AU', 'BR'] (defaults to US)
         """
         super().__init__(**kwargs)
