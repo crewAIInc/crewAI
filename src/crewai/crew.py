@@ -672,7 +672,6 @@ class Crew(BaseModel):
                 context = self._get_context(
                     task, [last_sync_output] if last_sync_output else []
                 )
-                self._log_task_start(task, agent_to_use.role)
                 future = task.execute_async(
                     agent=agent_to_use,
                     context=context,
@@ -685,7 +684,6 @@ class Crew(BaseModel):
                     futures.clear()
 
                 context = self._get_context(task, task_outputs)
-                self._log_task_start(task, agent_to_use.role)
                 task_output = task.execute_sync(
                     agent=agent_to_use,
                     context=context,
