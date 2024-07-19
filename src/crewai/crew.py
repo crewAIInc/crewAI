@@ -838,7 +838,7 @@ class Crew(BaseModel):
             None,
         )
 
-    def replay_from_task(
+    def replay(
         self, task_id: str, inputs: Optional[Dict[str, Any]] = None
     ) -> CrewOutput:
         stored_outputs = self._task_output_handler.load()
