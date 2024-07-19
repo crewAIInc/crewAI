@@ -13,7 +13,7 @@ class SerplyScholarSearchToolSchema(BaseModel):
 
 class SerplyScholarSearchTool(BaseTool):
     name: str = "Scholar Search"
-    description: str = "A tool to perform News article search with a search_query."
+    description: str = "A tool to perform scholarly literature search with a search_query."
     args_schema: Type[BaseModel] = SerplyScholarSearchToolSchema
     search_url: str = "https://api.serply.io/v1/scholar/"
     hl: Optional[str] = "us"
@@ -29,7 +29,7 @@ class SerplyScholarSearchTool(BaseTool):
         """
             param: hl (str): host Language code to display results in
                 (reference https://developers.google.com/custom-search/docs/xml_results?hl=en#wsInterfaceLanguages)
-            proxy_location: (str): Where to get news, specifically for a specific country results.
+            proxy_location: (str): Specify the proxy location for the search, specifically for a specific country results.
                  ['US', 'CA', 'IE', 'GB', 'FR', 'DE', 'SE', 'IN', 'JP', 'KR', 'SG', 'AU', 'BR'] (defaults to US)
         """
         super().__init__(**kwargs)

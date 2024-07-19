@@ -7,7 +7,7 @@ from crewai_tools.tools.rag.rag_tool import RagTool
 
 
 class SerplyJobSearchToolSchema(BaseModel):
-    """Input for Serply Scholar Search."""
+    """Input for Job Search."""
     search_query: str = Field(..., description="Mandatory search query you want to use to fetch jobs postings.")
 
 
