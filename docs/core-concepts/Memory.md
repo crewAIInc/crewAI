@@ -29,6 +29,11 @@ description: Leveraging memory systems in the crewAI framework to enhance agent 
 When configuring a crew, you can enable and customize each memory component to suit the crew's objectives and the nature of tasks it will perform.
 By default, the memory system is disabled, and you can ensure it is active by setting `memory=True` in the crew configuration. The memory will use OpenAI Embeddings by default, but you can change it by setting `embedder` to a different model.
 
+The 'embedder' only applies to **Short-Term Memory** which uses Chroma for RAG using EmbedChain package.  
+The **Long-Term Memory** uses SQLLite3 to store task results.  Currently, there is no way to override these storage implementations.
+The data storage files are saved into a platform specific location found using the appdirs package 
+and the name of the project which can be overridden using the **CREWAI_STORAGE_DIR** environment variable.
+
 ### Example: Configuring Memory for a Crew
 
 ```python
