@@ -18,6 +18,10 @@ from crewai.utilities import I18N, RPMController, Logger
 from crewai.agents import CacheHandler, ToolsHandler
 from crewai.utilities.token_counter_callback import TokenProcess
 
+import logging
+
+logger = logging.getLogger(__name__)
+
 
 class BaseAgent(ABC, BaseModel):
     """Abstract Base Class for all third party agents compatible with CrewAI.
@@ -208,15 +212,12 @@ class BaseAgent(ABC, BaseModel):
             cache_handler: An instance of the CacheHandler class.
         """
         if not self.tools_handler:
-            print(
-                "[CrewAI.BaseAgent.set_cache_handler]: Using the default ToolsHandler"
-            )
-            print(
-                f"[CrewAI.BaseAgent.set_cache_handler]: default ToolsHandler is being used by agent: {self}"
+            logger.info(
+                f"[CrewAI.BaseAgent.set_cache_handler]: Agent {self.role} 's ToolsHandler is being set to default"
             )
             self.tools_handler = ToolsHandler()
-        print(
-            f"[CrewAI.BaseAgent.set_cache_handler]: ToolsHandler = {self.tools_handler}"
+        logger.info(
+            f"[CrewAI.BaseAgent.set_cache_handler]: Agent {self.role} 's ToolsHandler is = {self.tools_handler}"
         )
         if self.cache:
             self.cache_handler = cache_handler
@@ -224,7 +225,7 @@ class BaseAgent(ABC, BaseModel):
         self.create_agent_executor()
 
     def increment_formatting_errors(self) -> None:
-        print("Formatting errors incremented")
+        logger.info("Formatting errors incremented")
 
     def copy(self):
         exclude = {

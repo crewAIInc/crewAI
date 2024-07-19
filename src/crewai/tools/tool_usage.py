@@ -10,6 +10,11 @@ from crewai.agents.tools_handler import ToolsHandler
 from crewai.telemetry import Telemetry
 from crewai.tools.tool_calling import InstructorToolCalling, ToolCalling
 from crewai.utilities import I18N, Converter, ConverterError, Printer
+import logging
+import time
+
+logger = logging.getLogger(__name__)
+
 
 OPENAI_BIGGER_MODELS = ["gpt-4"]
 
@@ -70,6 +75,8 @@ class ToolUsage:
                 self._max_parsing_attempts = 2
                 self._remember_format_after_usages = 4
 
+        logger.info(f"ToolUsage initialized with {len(tools)} tools for task: {task}")
+
     def parse(self, tool_string: str):
         """Parse the tool string and return the tool calling."""
         return self._tool_calling(tool_string)
@@ -77,10 +84,17 @@ class ToolUsage:
     def use(
         self, calling: Union[ToolCalling, InstructorToolCalling], tool_string: str
     ) -> str:
+        start_time = time.time()
+        logger.info(f"Tool usage started for: {calling.tool_name}")
+
         if isinstance(calling, ToolUsageErrorException):
             error = calling.message
             self._printer.print(content=f"\n\n{error}\n", color="red")
             self.task.increment_tools_errors()
+            duration = time.time() - start_time
+            logger.info(
+                f"Tool '{calling.tool_name}' executed in {duration:.2f} seconds"
+            )
             return error
 
         # BUG? The code below seems to be unreachable
@@ -90,8 +104,18 @@ class ToolUsage:
             error = getattr(e, "message", str(e))
             self.task.increment_tools_errors()
             self._printer.print(content=f"\n\n{error}\n", color="red")
+            duration = time.time() - start_time
+            logger.info(
+                f"Tool '{calling.tool_name}' executed in {duration:.2f} seconds"
+            )
             return error
-        return f"{self._use(tool_string=tool_string, tool=tool, calling=calling)}"  # type: ignore # BUG?: "_use" of "ToolUsage" does not return a value (it only ever returns None)
+
+        result = self._use(tool_string=tool_string, tool=tool, calling=calling)
+
+        duration = time.time() - start_time
+        logger.info(f"Tool '{calling.tool_name}' executed in {duration:.2f} seconds")
+
+        return result  # type: ignore # BUG?: "_use" of "ToolUsage" does not return a value (it only ever returns None)
 
     def _use(
         self,
@@ -99,6 +123,9 @@ class ToolUsage:
         tool: BaseTool,
         calling: Union[ToolCalling, InstructorToolCalling],
     ) -> None:  # TODO: Fix this return type
+        logger.debug(f"Executing tool: {tool.name}")
+        logger.debug(f"Tool input: {calling.arguments}")
+        start_time = time.time()
         if self._check_tool_repeated_usage(calling=calling):  # type: ignore # _check_tool_repeated_usage of "ToolUsage" does not return a value (it only ever returns None)
             try:
                 result = self._i18n.errors("task_repeated_usage").format(
@@ -111,10 +138,18 @@ class ToolUsage:
                     attempts=self._run_attempts,
                 )
                 result = self._format_result(result=result)  # type: ignore #  "_format_result" of "ToolUsage" does not return a value (it only ever returns None)
-                return result  # type: ignore # Fix the reutrn type of this function
+                logger.info(f"Tool '{tool.name}' output: {result[:100]}...")
 
             except Exception:
+                logger.error(f"Error executing tool '{tool.name}':", exc_info=True)
                 self.task.increment_tools_errors()
+            finally:
+                duration = time.time() - start_time
+                logger.info(
+                    f"Tool '{tool.name}' execution completed in {duration:.2f} seconds"
+                )
+
+            return result  # type: ignore # Fix the reutrn type of this function
 
         result = None  # type: ignore # Incompatible types in assignment (expression has type "None", variable has type "str")
 
@@ -122,6 +157,11 @@ class ToolUsage:
             result = self.tools_handler.cache.read(  # type: ignore # Incompatible types in assignment (expression has type "str | None", variable has type "str")
                 tool=calling.tool_name, input=calling.arguments
             )
+
+            if result:
+                logger.info(f"Cache hit for tool: {calling.tool_name}")
+            else:
+                logger.info(f"Cache miss for tool: {calling.tool_name}")
 
         if not result:
             try:
@@ -219,6 +259,7 @@ class ToolUsage:
             )
 
     def _select_tool(self, tool_name: str) -> BaseTool:
+        logger.debug(f"Selecting tool for name: {tool_name}")
         order_tools = sorted(
             self.tools,
             key=lambda tool: SequenceMatcher(
@@ -234,6 +275,7 @@ class ToolUsage:
                 ).ratio()
                 > 0.85
             ):
+                logger.info(f"Selected tool: {tool.name}")
                 return tool
         self.task.increment_tools_errors()
         if tool_name and tool_name != "":
@@ -270,6 +312,7 @@ class ToolUsage:
     def _tool_calling(
         self, tool_string: str
     ) -> Union[ToolCalling, InstructorToolCalling]:
+        logger.debug(f"Parsing tool string: {tool_string[:100]}...")
         try:
             if self.function_calling_llm:
                 model = (
