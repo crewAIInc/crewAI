@@ -100,16 +100,24 @@ Here is a list of the available tools and their descriptions:
 
 | Tool                        | Description                                                                                   |
 | :-------------------------- | :-------------------------------------------------------------------------------------------- |
+| **BrowserbaseLoadTool**     | A tool for interacting with and extracting data from web browsers.                            |
 | **CodeDocsSearchTool**      | A RAG tool optimized for searching through code documentation and related technical documents. |
+| **CodeInterpreterTool**     | A tool for interpreting python code.                                                          |
+| **ComposioTool**            | Enables use of Composio tools.                                                                |
 | **CSVSearchTool**           | A RAG tool designed for searching within CSV files, tailored to handle structured data.       |
 | **DirectorySearchTool**     | A RAG tool for searching within directories, useful for navigating through file systems.      |
 | **DOCXSearchTool**          | A RAG tool aimed at searching within DOCX documents, ideal for processing Word files.         |
 | **DirectoryReadTool**       | Facilitates reading and processing of directory structures and their contents.                |
+| **EXASearchTool**           | A tool designed for performing exhaustive searches across various data sources.               |
 | **FileReadTool**            | Enables reading and extracting data from files, supporting various file formats.              |
+| **FirecrawlSearchTool**     | A tool to search webpages using Firecrawl and return the results.                             |
+| **FirecrawlCrawlWebsiteTool** | A tool for crawling webpages using Firecrawl.                                               |
+| **FirecrawlScrapeWebsiteTool** | A tool for scraping webpages url using Firecrawl and returning its contents.               |
 | **GithubSearchTool**        | A RAG tool for searching within GitHub repositories, useful for code and documentation search.|
 | **SerperDevTool**           | A specialized tool for development purposes, with specific functionalities under development. |
 | **TXTSearchTool**           | A RAG tool focused on searching within text (.txt) files, suitable for unstructured data.     |
 | **JSONSearchTool**          | A RAG tool designed for searching within JSON files, catering to structured data handling.     |
+| **LlamaIndexTool**          | Enables the use of LlamaIndex tools.                                                          |
 | **MDXSearchTool**           | A RAG tool tailored for searching within Markdown (MDX) files, useful for documentation.      |
 | **PDFSearchTool**           | A RAG tool aimed at searching within PDF documents, ideal for processing scanned documents.    |
 | **PGSearchTool**            | A RAG tool optimized for searching within PostgreSQL databases, suitable for database queries. |
@@ -120,8 +128,6 @@ Here is a list of the available tools and their descriptions:
 | **XMLSearchTool**           | A RAG tool designed for searching within XML files, suitable for structured data formats.      |
 | **YoutubeChannelSearchTool**| A RAG tool for searching within YouTube channels, useful for video content analysis.           |
 | **YoutubeVideoSearchTool**  | A RAG tool aimed at searching within YouTube videos, ideal for video data extraction.          |
-| **BrowserbaseTool**         | A tool for interacting with and extracting data from web browsers.                            |
-| **ExaSearchTool**           | A tool designed for performing exhaustive searches across various data sources.               |
 
 ## Creating your own Tools
 
