@@ -1,21 +1,14 @@
-from typing import Any, Dict, List
+from typing import List
 
 from pydantic import BaseModel, Field
 
-from crewai.crews.crew_output import CrewOutput
+from crewai.pipeline.pipeline_run_result import PipelineRunResult
 
 
 class PipelineOutput(BaseModel):
-    final_outputs: List[CrewOutput] = Field(
-        description="List of final outputs from the last crew in the pipeline",
-        default=[],
-    )
-    token_usage: List[List[Dict[str, Any]]] = Field(
-        description="Token usage for each crew in each stream", default=[]
+    run_results: List[PipelineRunResult] = Field(
+        description="List of results for each run through the pipeline", default=[]
     )
 
-    def add_final_output(self, output: CrewOutput):
-        self.final_outputs.append(output)
-
-    def add_token_usage(self, usage: List[Dict[str, Any]]):
-        self.token_usage.append(usage)
+    def add_run_result(self, result: PipelineRunResult):
+        self.run_results.append(result)

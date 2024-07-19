@@ -1,11 +1,12 @@
 import asyncio
+from collections import deque
 from typing import Any, Dict, List, Union
 
 from pydantic import BaseModel, Field
 
 from crewai.crew import Crew
 from crewai.crews.crew_output import CrewOutput
-from crewai.pipeline.pipeline_output import PipelineOutput
+from crewai.pipeline.pipeline_run_result import PipelineRunResult
 
 """
 Pipeline Terminology:
@@ -38,6 +39,8 @@ Each input creates its own run, flowing through all stages of the pipeline.
 Multiple runs can be processed concurrently, each following the defined pipeline structure.
 """
 
+Trace = Union[Union[str, Dict[str, Any]], List[Union[str, Dict[str, Any]]]]
+
 
 class Pipeline(BaseModel):
     stages: List[Union[Crew, List[Crew]]] = Field(
@@ -46,42 +49,129 @@ class Pipeline(BaseModel):
 
     async def process_runs(
         self, run_inputs: List[Dict[str, Any]]
-    ) -> List[List[CrewOutput]]:
+    ) -> List[PipelineRunResult]:
         """
         Process multiple runs in parallel, with each run going through all stages.
         """
-        pipeline_output = PipelineOutput()
+        pipeline_results = []
 
-        async def process_single_run(run_input: Dict[str, Any]) -> List[CrewOutput]:
-            print("current_input in run", run_input)
-            stage_outputs = []
+        def format_traces(
+            traces: List[List[Union[str, Dict[str, Any]]]],
+        ) -> List[List[Trace]]:
+            formatted_traces: List[Trace] = []
 
-            for stage in self.stages:
+            # Process all traces except the last one
+            for trace in traces[:-1]:
+                if len(trace) == 1:
+                    formatted_traces.append(trace[0])
+                else:
+                    formatted_traces.append(trace)
+
+            # Handle the final stage trace
+            traces_to_return: List[List[Trace]] = []
+
+            final_trace = traces[-1]
+            if len(final_trace) == 1:
+                formatted_traces.append(final_trace)
+                traces_to_return.append(formatted_traces)
+            else:
+                for trace in final_trace:
+                    copied_traces = formatted_traces.copy()
+                    copied_traces.append(trace)
+                    traces_to_return.append(copied_traces)
+
+            return traces_to_return
+
+        def build_pipeline_run_results(
+            final_stage_outputs: List[CrewOutput],
+            traces: List[List[Union[str, Dict[str, Any]]]],
+            token_usage: Dict[str, Any],
+        ) -> List[PipelineRunResult]:
+            """
+            Build PipelineRunResult objects from the final stage outputs and traces.
+            """
+
+            pipeline_run_results: List[PipelineRunResult] = []
+
+            # Format traces
+            formatted_traces = format_traces(traces)
+
+            for output, formatted_trace in zip(final_stage_outputs, formatted_traces):
+                # FORMAT TRACE
+
+                new_pipeline_run_result = PipelineRunResult(
+                    final_output=output,
+                    token_usage=token_usage,
+                    trace=formatted_trace,
+                )
+
+                pipeline_run_results.append(new_pipeline_run_result)
+
+            return pipeline_run_results
+
+        async def process_single_run(
+            run_input: Dict[str, Any]
+        ) -> List[PipelineRunResult]:
+            stages_queue = deque(self.stages)
+            usage_metrics = {}
+            stage_outputs: List[CrewOutput] = []
+            traces: List[List[Union[str, Dict[str, Any]]]] = [[run_input]]
+
+            stage = None
+            while stages_queue:
+                stage = stages_queue.popleft()
+
                 if isinstance(stage, Crew):
                     # Process single crew
-                    stage_output = await stage.kickoff_async(inputs=run_input)
-                    stage_outputs = [stage_output]
+                    output = await stage.kickoff_async(inputs=run_input)
+                    # Update usage metrics and setup inputs for next stage
+                    usage_metrics[stage.name] = output.token_usage
+                    run_input.update(output.to_dict())
+                    # Update traces for single crew stage
+                    traces.append([stage.name or "No name"])
+                    # Store output for final results
+                    stage_outputs = [output]
+
                 else:
                     # Process each crew in parallel
                     parallel_outputs = await asyncio.gather(
                         *[crew.kickoff_async(inputs=run_input) for crew in stage]
                     )
+                    # Update usage metrics and setup inputs for next stage
+                    for crew, output in zip(stage, parallel_outputs):
+                        usage_metrics[crew.name] = output.token_usage
+                        run_input.update(output.to_dict())
+                    # Update traces for parallel stage
+                    traces.append([crew.name or "No name" for crew in stage])
+                    # Store output for final results
                     stage_outputs = parallel_outputs
 
-                # Convert all CrewOutputs from stage into a dictionary for next stage
-                # and update original run_input dictionary with new values
-                stage_output_dicts = [output.to_dict() for output in stage_outputs]
-                for stage_dict in stage_output_dicts:
-                    run_input.update(stage_dict)
-                    print("UPDATING run_input - new values:", run_input)
+            print("STAGE OUTPUTS: ", stage_outputs)
+            print("TRACES: ", traces)
+            print("TOKEN USAGE: ", usage_metrics)
 
-            # Return all CrewOutputs from this run
-            return stage_outputs
+            # Build final pipeline run results
+            final_results = build_pipeline_run_results(
+                final_stage_outputs=stage_outputs,
+                traces=traces,
+                token_usage=usage_metrics,
+            )
+            print("FINAL RESULTS: ", final_results)
+
+            # prepare traces for final results
+            return final_results
 
         # Process all runs in parallel
-        return await asyncio.gather(
+        all_run_results = await asyncio.gather(
             *(process_single_run(input_data) for input_data in run_inputs)
         )
+
+        # Flatten the list of lists into a single list of results
+        pipeline_results.extend(
+            result for run_result in all_run_results for result in run_result
+        )
+
+        return pipeline_results
 
     def __rshift__(self, other: Any) -> "Pipeline":
         """
@@ -100,5 +190,5 @@ class Pipeline(BaseModel):
 # Helper function to run the pipeline
 async def run_pipeline(
     pipeline: Pipeline, inputs: List[Dict[str, Any]]
-) -> List[List[CrewOutput]]:
+) -> List[PipelineRunResult]:
     return await pipeline.process_runs(inputs)
