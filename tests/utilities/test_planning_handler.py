@@ -1,4 +1,5 @@
 from unittest.mock import patch
+from crewai.tasks.task_output import TaskOutput
 
 import pytest
 
@@ -31,10 +32,15 @@ class TestCrewPlanner:
 
     def test_handle_crew_planning(self, crew_planner):
         with patch.object(Task, "execute_sync") as execute:
-            execute.return_value = PlannerTaskPydanticOutput(
-                list_of_plans_per_task=["Plan 1", "Plan 2", "Plan 3"]
+            execute.return_value = TaskOutput(
+                description="Description",
+                agent="agent",
+                pydantic=PlannerTaskPydanticOutput(
+                    list_of_plans_per_task=["Plan 1", "Plan 2", "Plan 3"]
+                ),
             )
             result = crew_planner._handle_crew_planning()
+
             assert isinstance(result, PlannerTaskPydanticOutput)
             assert len(result.list_of_plans_per_task) == len(crew_planner.tasks)
             execute.assert_called_once()

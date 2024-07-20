@@ -220,7 +220,7 @@ These methods provide flexibility in how you manage and execute tasks within you
 ### Replaying from specific task:
 You can now replay from a specific task using our cli command replay.
 
-The replay_from_tasks feature in CrewAI allows you to replay from a specific task using the command-line interface (CLI). By running the command `crewai replay -t <task_id>`, you can specify the `task_id` for the replay process.
+The replay feature in CrewAI allows you to replay from a specific task using the command-line interface (CLI). By running the command `crewai replay -t <task_id>`, you can specify the `task_id` for the replay process.
 
 Kickoffs will now save the latest kickoffs returned task outputs locally for you to be able to replay from.
 
