@@ -1,4 +1,4 @@
-from typing import List
+from typing import List, Optional
 
 from pydantic import BaseModel
 
@@ -14,14 +14,14 @@ class CrewPlanner:
     def __init__(self, tasks: List[Task]):
         self.tasks = tasks
 
-    def _handle_crew_planning(self):
+    def _handle_crew_planning(self) -> Optional[BaseModel]:
         """Handles the Crew planning by creating detailed step-by-step plans for each task."""
         planning_agent = self._create_planning_agent()
         tasks_summary = self._create_tasks_summary()
 
         planner_task = self._create_planner_task(planning_agent, tasks_summary)
 
-        return planner_task.execute_sync()
+        return planner_task.execute_sync().pydantic
 
     def _create_planning_agent(self) -> Agent:
         """Creates the planning agent for the crew planning."""
