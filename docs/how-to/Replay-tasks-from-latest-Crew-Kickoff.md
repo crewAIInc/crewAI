@@ -36,14 +36,14 @@ To replay from a task programmatically, use the following steps:
 2. Execute the replay command within a try-except block to handle potential errors.
 
 ```python
-   def replay_from_task():
+   def replay():
     """
     Replay the crew execution from a specific task.
     """
     task_id = '<task_id>'
     inputs = {"topic": "CrewAI Training"} # this is optional, you can pass in the inputs you want to replay otherwise uses the previous kickoffs inputs
     try:
-        YourCrewName_Crew().crew().replay_from_task(task_id=task_id, inputs=inputs)
+        YourCrewName_Crew().crew().replay(task_id=task_id, inputs=inputs)
 
     except Exception as e:
         raise Exception(f"An error occurred while replaying the crew: {e}")
