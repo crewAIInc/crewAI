@@ -33,13 +33,12 @@ def CrewBase(cls):
         def __init__(self, *args, **kwargs):
             super().__init__(*args, **kwargs)
             self.agents_config = self.load_yaml(
-                os.path.join(self.base_directory, self.original_agents_config_path)
+                os.path.join(self.base_directory, self.original_agents_config_path)  # type: ignore
             )
             self.tasks_config = self.load_yaml(
-                os.path.join(self.base_directory, self.original_tasks_config_path)
+                os.path.join(self.base_directory, self.original_tasks_config_path)  # type: ignore
             )
-            self.map_string_agent_to_task_agent()
-            self.map_task_contexts()
+            self._map_configs()
 
         @staticmethod
         def load_yaml(config_path: str):
@@ -84,5 +83,43 @@ def CrewBase(cls):
                         context_converted.append(tasks[context_task_name]())
 
                     self.tasks_config[task_name]["context"] = context_converted
+
+        def map_output_jsons(self):
+            all_functions = self._get_all_functions()
+
+            output_json_functions = {
+                name: cls
+                for name, cls in all_functions.items()
+                if hasattr(cls, "output_json")
+            }
+
+            for task_name, task_info in self.tasks_config.items():
+                output_json = task_info.get("output_json")
+                if output_json:
+                    self.tasks_config[task_name]["output_json"] = output_json_functions[
+                        output_json
+                    ]
+
+        def map_output_pydantics(self):
+            all_functions = self._get_all_functions()
+
+            output_pydantic_functions = {
+                name: cls
+                for name, cls in all_functions.items()
+                if hasattr(cls, "output_pydantic")
+            }
+
+            for task_name, task_info in self.tasks_config.items():
+                output_pydantic = task_info.get("output_pydantic")
+                if output_pydantic:
+                    self.tasks_config[task_name]["output_pydantic"] = (
+                        output_pydantic_functions[output_pydantic]
+                    )
+
+        def _map_configs(self):
+            self.map_string_agent_to_task_agent()
+            self.map_task_contexts()
+            self.map_output_jsons()
+            self.map_output_pydantics()
 
     return WrappedClass

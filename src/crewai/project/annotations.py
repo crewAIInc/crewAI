@@ -30,6 +30,16 @@ def agent(func):
     return func
 
 
+def output_json(cls):
+    cls.is_output_json = True
+    return cls
+
+
+def output_pydantic(cls):
+    cls.is_output_pydantic = True
+    return cls
+
+
 def crew(func):
     def wrapper(self, *args, **kwargs):
         instantiated_tasks = []
