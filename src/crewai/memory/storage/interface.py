@@ -9,3 +9,6 @@ class Storage:
 
     def search(self, key: str) -> Dict[str, Any]:  # type: ignore
         pass
+
+    def reset(self) -> None:
+        pass

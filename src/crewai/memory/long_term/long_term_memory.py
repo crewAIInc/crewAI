@@ -30,3 +30,6 @@ class LongTermMemory(Memory):
 
     def search(self, task: str, latest_n: int = 3) -> Dict[str, Any]:
         return self.storage.load(task, latest_n)  # type: ignore # BUG?: "Storage" has no attribute "load"
+
+    def reset(self) -> None:
+        self.storage.reset()

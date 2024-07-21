@@ -5,6 +5,7 @@ import threading
 import uuid
 from concurrent.futures import Future
 from copy import copy
+from hashlib import md5
 from typing import Any, Dict, List, Optional, Tuple, Type, Union
 
 from langchain_openai import ChatOpenAI
@@ -173,6 +174,14 @@ class Task(BaseModel):
         """Execute the task synchronously."""
         return self._execute_core(agent, context, tools)
 
+    @property
+    def key(self) -> str:
+        description = self._original_description or self.description
+        expected_output = self._original_expected_output or self.expected_output
+        source = [description, expected_output]
+
+        return md5("|".join(source).encode()).hexdigest()
+
     def execute_async(
         self,
         agent: BaseAgent | None = None,
@@ -205,6 +214,7 @@ class Task(BaseModel):
     ) -> TaskOutput:
         """Run the core execution logic of the task."""
         agent = agent or self.agent
+        self.agent = agent
         if not agent:
             raise Exception(
                 f"The task '{self.description}' has no agent assigned, therefore it can't be executed directly and should be executed in a Crew using a specific process that support that, like hierarchical."
@@ -237,14 +247,16 @@ class Task(BaseModel):
             self.callback(self.output)
 
         if self._execution_span:
-            self._telemetry.task_ended(self._execution_span, self)
+            self._telemetry.task_ended(self._execution_span, self, agent.crew)
             self._execution_span = None
 
         if self.output_file:
             content = (
                 json_output
                 if json_output
-                else pydantic_output.model_dump_json() if pydantic_output else result
+                else pydantic_output.model_dump_json()
+                if pydantic_output
+                else result
             )
             self._save_file(content)
 
@@ -316,9 +328,14 @@ class Task(BaseModel):
 
     def _create_converter(self, *args, **kwargs) -> Converter:
         """Create a converter instance."""
-        converter = self.agent.get_output_converter(*args, **kwargs)
-        if self.converter_cls:
+        if self.agent and not self.converter_cls:
+            converter = self.agent.get_output_converter(*args, **kwargs)
+        elif self.converter_cls:
             converter = self.converter_cls(*args, **kwargs)
+
+        if not converter:
+            raise Exception("No output converter found or set.")
+
         return converter
 
     def _export_output(
@@ -378,7 +395,7 @@ class Task(BaseModel):
     def _convert_with_instructions(
         self, result: str, model: Type[BaseModel]
     ) -> Union[dict, BaseModel, str]:
-        llm = self.agent.function_calling_llm or self.agent.llm
+        llm = self.agent.function_calling_llm or self.agent.llm  # type: ignore # Item "None" of "BaseAgent | None" has no attribute "function_calling_llm"
         instructions = self._get_conversion_instructions(model, llm)
 
         converter = self._create_converter(

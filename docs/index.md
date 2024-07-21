@@ -43,6 +43,11 @@ Cutting-edge framework for orchestrating role-playing, autonomous AI agents. By 
                     Memory
                 </a>
             </li>
+            <li>
+                <a href="./core-concepts/Planning">
+                    Planning
+                </a>
+            </li>
         </ul>
     </div>
     <div style="width:30%">
@@ -111,6 +116,16 @@ Cutting-edge framework for orchestrating role-playing, autonomous AI agents. By 
             <li>
                 <a href="./how-to/Kickoff-for-each">
                     Kickoff a Crew for a List
+                </a>
+            </li>
+            <li>
+                <a href="./how-to/Replay-tasks-from-latest-Crew-Kickoff">
+                    Replay from a Task
+                </a>
+            </li>
+            <li>
+                <a href="./how-to/Conditional-Tasks">
+                    Conditional Tasks
                 </a>
             </li>
             <li>

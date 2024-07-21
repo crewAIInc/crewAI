@@ -17,6 +17,16 @@ class CrewPydanticOutputParser(PydanticOutputParser):
 
     def parse_result(self, result: List[Generation], *, partial: bool = False) -> Any:
         result[0].text = self._transform_in_valid_json(result[0].text)
+
+        # Treating edge case of function calling llm returning the name instead of tool_name
+        json_object = json.loads(result[0].text)
+        json_object["tool_name"] = (
+            json_object["name"]
+            if "tool_name" not in json_object
+            else json_object["tool_name"]
+        )
+        result[0].text = json.dumps(json_object)
+
         json_object = super().parse_result(result)
         try:
             return self.pydantic_object.parse_obj(json_object)
