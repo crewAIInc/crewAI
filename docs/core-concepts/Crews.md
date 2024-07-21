@@ -136,7 +136,7 @@ crew = Crew(
     verbose=2
 )
 
-result = crew.kickoff()
+crew_output = crew.kickoff()
 
 # Accessing the crew output
 print(f"Raw Output: {crew_output.raw}")
