@@ -1917,13 +1917,13 @@ def test_replay_feature():
         )
 
         crew.kickoff()
-        crew.replay_from_task(str(write.id))
+        crew.replay(str(write.id))
         # Ensure context was passed correctly
         assert mock_execute_task.call_count == 3
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
-def test_crew_replay_from_task_error():
+def test_crew_replay_error():
     task = Task(
         description="Come up with a list of 5 interesting ideas to explore for an article",
         expected_output="5 bullet points with a paragraph for each idea.",
@@ -1936,7 +1936,7 @@ def test_crew_replay_from_task_error():
     )
 
     with pytest.raises(TypeError) as e:
-        crew.replay_from_task()  # type: ignore purposefully throwing err
+        crew.replay()  # type: ignore purposefully throwing err
         assert "task_id is required" in str(e)
 
 
@@ -2071,14 +2071,14 @@ def test_replay_task_with_context():
         with patch.object(Task, "execute_sync") as mock_replay_task:
             mock_replay_task.return_value = mock_task_output4
 
-            replayed_output = crew.replay_from_task(str(task4.id))
+            replayed_output = crew.replay(str(task4.id))
             assert replayed_output.raw == "Presentation on AI advancements..."
 
         db_handler.reset()
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
-def test_replay_from_task_with_context():
+def test_replay_with_context():
     agent = Agent(role="test_agent", backstory="Test Description", goal="Test Goal")
     task1 = Task(
         description="Context Task", expected_output="Say Task Output", agent=agent
@@ -2130,7 +2130,7 @@ def test_replay_from_task_with_context():
             },
         ],
     ):
-        crew.replay_from_task(str(task2.id))
+        crew.replay(str(task2.id))
 
         assert crew.tasks[1].context[0].output.raw == "context raw output"
 
@@ -2192,7 +2192,7 @@ def test_replay_with_invalid_task_id():
             ValueError,
             match="Task with id bf5b09c9-69bd-4eb8-be12-f9e5bae31c2d not found in the crew's tasks.",
         ):
-            crew.replay_from_task("bf5b09c9-69bd-4eb8-be12-f9e5bae31c2d")
+            crew.replay("bf5b09c9-69bd-4eb8-be12-f9e5bae31c2d")
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
@@ -2251,13 +2251,13 @@ def test_replay_interpolates_inputs_properly(mock_interpolate_inputs):
             },
         ],
     ):
-        crew.replay_from_task(str(task2.id))
+        crew.replay(str(task2.id))
         assert crew._inputs == {"name": "John"}
         assert mock_interpolate_inputs.call_count == 2
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
-def test_replay_from_task_setup_context():
+def test_replay_setup_context():
     agent = Agent(role="test_agent", backstory="Test Description", goal="Test Goal")
     task1 = Task(description="Context Task", expected_output="Say {name}", agent=agent)
     task2 = Task(
@@ -2306,7 +2306,7 @@ def test_replay_from_task_setup_context():
             },
         ],
     ):
-        crew.replay_from_task(str(task2.id))
+        crew.replay(str(task2.id))
 
         # Check if the first task's output was set correctly
         assert crew.tasks[0].output is not None

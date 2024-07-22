@@ -561,8 +561,13 @@ class Crew(BaseModel):
         self._logger.log("info", "Planning the crew execution")
         result = CrewPlanner(self.tasks)._handle_crew_planning()
 
-        for task, step_plan in zip(self.tasks, result.list_of_plans_per_task):
-            task.description += step_plan
+        if result is not None and hasattr(result, "list_of_plans_per_task"):
+            for task, step_plan in zip(self.tasks, result.list_of_plans_per_task):
+                task.description += step_plan
+        else:
+            self._logger.log(
+                "info", "Something went wrong with the planning process of the Crew"
+            )
 
     def _store_execution_log(
         self,
