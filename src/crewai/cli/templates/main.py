@@ -1,5 +1,4 @@
 #!/usr/bin/env python
-from pyexpat import model
 import sys
 from {{folder_name}}.crew import {{crew_name}}Crew
 
