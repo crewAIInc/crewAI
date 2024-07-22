@@ -1,3 +1,4 @@
+import logging
 from copy import deepcopy
 import os
 import re
@@ -13,6 +14,8 @@ from crewai.tasks.task_output import TaskOutput
 from crewai.utilities import I18N, ConverterError, Printer
 from crewai.utilities.pydantic_schema_parser import PydanticSchemaParser
 from crewai.agents.agent_builder.base_agent import BaseAgent
+
+logger = logging.getLogger(__name__)
 
 
 class Task(BaseModel):
@@ -101,6 +104,12 @@ class Task(BaseModel):
     def __init__(__pydantic_self__, **data):
         config = data.pop("config", {})
         super().__init__(**config, **data)
+        logger.info(
+            f"[CrewAI.Task.__init__]: Task initialized with description: {__pydantic_self__.description[:50]}..."
+        )
+        logger.info(
+            f"[CrewAI.Task.__init__]: Task has {len(__pydantic_self__.tools)} tools"
+        )
 
     @field_validator("id", mode="before")
     @classmethod
@@ -124,6 +133,7 @@ class Task(BaseModel):
         if self.config:
             for key, value in self.config.items():
                 setattr(self, key, value)
+        logger.info("[CrewAI.Task.set_attributes_based_on_config]: Task config applied")
         return self
 
     @model_validator(mode="after")
@@ -131,6 +141,9 @@ class Task(BaseModel):
         """Check if the tools are set."""
         if not self.tools and self.agent and self.agent.tools:
             self.tools.extend(self.agent.tools)
+        logger.info(
+            f"[CrewAI.Task.check_tools]: Task has {len(self.tools)} tools after check"
+        )
         return self
 
     @model_validator(mode="after")
@@ -143,6 +156,7 @@ class Task(BaseModel):
                 "Only one output type can be set, either output_pydantic or output_json.",
                 {},
             )
+        logger.info("[CrewAI.Task.check_output]: Task output type checked")
         return self
 
     def execute(  # type: ignore # Missing return statement
@@ -156,9 +170,13 @@ class Task(BaseModel):
         Returns:
             Output of the task.
         """
+        logger.info(
+            f"[CrewAI.Task.execute]: Starting execution of task: {self.description[:50]}..."
+        )
 
         agent = agent or self.agent
         if not agent:
+            logger.error("[CrewAI.Task.execute]: No agent assigned to task")
             raise Exception(
                 f"The task '{self.description}' has no agent assigned, therefore it can't be executed directly and should be executed in a Crew using a specific process that support that, like hierarchical."
             )
@@ -175,15 +193,19 @@ class Task(BaseModel):
             # type: ignore # Argument 1 to "join" of "str" has incompatible type "str | None"; expected "Iterable[str]"
             context = "\n".join(context)
 
+        logger.info("[CrewAI.Task.execute]: Context prepared for task")
+
         self.prompt_context = context
         tools = tools or self.tools
 
         if self.async_execution:
+            logger.info("[CrewAI.Task.execute]: Starting asynchronous execution")
             self.thread = threading.Thread(
                 target=self._execute, args=(agent, self, context, tools)
             )
             self.thread.start()
         else:
+            logger.info("[CrewAI.Task.execute]: Starting synchronous execution")
             result = self._execute(
                 task=self,
                 agent=agent,
@@ -193,6 +215,7 @@ class Task(BaseModel):
             return result
 
     def _execute(self, agent, task, context, tools):
+        logger.info(f"[CrewAI.Task._execute]: Executing task with agent: {agent.role}")
         result = agent.execute_task(
             task=task,
             context=context,
@@ -209,8 +232,10 @@ class Task(BaseModel):
         )
 
         if self.callback:
+            logger.info("[CrewAI.Task._execute]: Executing callback for task")
             self.callback(self.output)
 
+        logger.info("[CrewAI.Task._execute]: Task execution completed")
         return exported_output
 
     def prompt(self) -> str:
@@ -350,3 +375,6 @@ class Task(BaseModel):
 
     def __repr__(self):
         return f"Task(description={self.description}, expected_output={self.expected_output})"
+
+    def __str__(self):
+        return f"Task(description={self.description[:50]}[:50])"

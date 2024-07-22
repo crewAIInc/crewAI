@@ -61,7 +61,7 @@ class Agent(BaseAgent):
     )
     llm: Any = Field(
         default_factory=lambda: ChatOpenAI(
-            model=os.environ.get("OPENAI_MODEL_NAME", "gpt-4o")
+            model=os.environ.get("OPENAI_MODEL_NAME", "gpt-4o-mini")
         ),
         description="Language model that will run the agent.",
     )
@@ -179,13 +179,41 @@ class Agent(BaseAgent):
         else:
             task_prompt = self._use_trained_data(task_prompt=task_prompt)
 
+        logger.info(
+            f"[CrewAI.Agent.execute_task] Starting task execution for agent: {self.role}"
+        )
+
+        if hasattr(self, "callbacks") and self.callbacks:
+            logger.info(
+                f"[CrewAI.Agent.execute_task] Callbacks found for agent {self.role}: {self.callbacks}"
+            )
+            config = {"callbacks": self.callbacks}
+        else:
+            logger.warning(
+                f"[CrewAI.Agent.execute_task] No callbacks found for agent {self.role}"
+            )
+            config = {}
+
+        logger.info(
+            f"[CrewAI.Agent.execute_task] Invoking agent_executor with config: {config}"
+        )
+
         result = self.agent_executor.invoke(
             {
                 "input": task_prompt,
                 "tool_names": self.agent_executor.tools_names,
                 "tools": self.agent_executor.tools_description,
-            }
+            },
+            config=config,
         )["output"]
+
+        logger.info(
+            f"[CrewAI.Agent.execute_task] Task execution completed for agent {self.role}"
+        )
+        logger.debug(
+            f"[CrewAI.Agent.execute_task] Task result: {result[:100]}..."
+        )  # Log first 100 chars of result
+
         if self.max_rpm:
             self._rpm_controller.stop_rpm_counter()
         return result
