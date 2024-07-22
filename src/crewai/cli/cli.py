@@ -9,6 +9,7 @@ from crewai.memory.storage.kickoff_task_outputs_storage import (
 from .create_crew import create_crew
 from .train_crew import train_crew
 from .replay_from_task import replay_task_command
+from .reset_memories_command import reset_memories_command
 
 
 @click.group()
@@ -97,6 +98,32 @@ def log_tasks_outputs() -> None:
 
     except Exception as e:
         click.echo(f"An error occurred while logging task outputs: {e}", err=True)
+
+
+@crewai.command()
+@click.option("-l", "--long", is_flag=True, help="Reset LONG TERM memory")
+@click.option("-s", "--short", is_flag=True, help="Reset SHORT TERM memory")
+@click.option("-e", "--entities", is_flag=True, help="Reset ENTITIES memory")
+@click.option(
+    "-k",
+    "--kickoff-outputs",
+    is_flag=True,
+    help="Reset LATEST KICKOFF TASK OUTPUTS",
+)
+@click.option("-a", "--all", is_flag=True, help="Reset ALL memories")
+def reset_memories(long, short, entities, kickoff_outputs, all):
+    """
+    Reset the crew memories (long, short, entity, latest_crew_kickoff_ouputs). This will delete all the data saved.
+    """
+    try:
+        if not all and not (long or short or entities or kickoff_outputs):
+            click.echo(
+                "Please specify at least one memory type to reset using the appropriate flags."
+            )
+            return
+        reset_memories_command(long, short, entities, kickoff_outputs, all)
+    except Exception as e:
+        click.echo(f"An error occurred while resetting memories: {e}", err=True)
 
 
 if __name__ == "__main__":

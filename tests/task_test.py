@@ -5,12 +5,13 @@ import json
 from unittest.mock import MagicMock, patch
 
 import pytest
+from pydantic import BaseModel
+from pydantic_core import ValidationError
+
 from crewai import Agent, Crew, Process, Task
 from crewai.tasks.conditional_task import ConditionalTask
 from crewai.tasks.task_output import TaskOutput
 from crewai.utilities.converter import Converter
-from pydantic import BaseModel
-from pydantic_core import ValidationError
 
 
 def test_task_tool_reflect_agent_tools():

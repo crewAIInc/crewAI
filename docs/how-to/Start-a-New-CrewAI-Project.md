@@ -9,7 +9,7 @@ Welcome to the ultimate guide for starting a new CrewAI project. This document w
 
 ## Prerequisites
 
-We assume you have already installed CrewAI. If not, please refer to the [installation guide](how-to/Installing-CrewAI.md) to install CrewAI and its dependencies.
+We assume you have already installed CrewAI. If not, please refer to the [installation guide](https://docs.crewai.com/how-to/Installing-CrewAI/) to install CrewAI and its dependencies.
 
 ## Creating a New Project
 

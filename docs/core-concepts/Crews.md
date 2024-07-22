@@ -32,6 +32,7 @@ A crew in crewAI represents a collaborative group of agents working together to 
 | **Manager Agent** _(optional)_        | `manager_agent`        | `manager` sets a custom agent that will be used as a manager.                                                                                                                                                                                             |
 | **Manager Callbacks** _(optional)_    | `manager_callbacks`    | `manager_callbacks` takes a list of callback handlers to be executed by the manager agent when a hierarchical process is used.                                                                                                                            |
 | **Prompt File** _(optional)_          | `prompt_file`          | Path to the prompt JSON file to be used for the crew.                                                                                                                                                                                                     |
+| **Planning** *(optional)*             | `planning`             |  Adds planning ability to the Crew. When activated before each Crew iteration, all Crew data is sent to an AgentPlanner that will plan the tasks and this plan will be added to each task description.
 
 !!! note "Crew Max RPM"
 The `max_rpm` attribute sets the maximum number of requests per minute the crew can perform to avoid rate limits and will override individual agents' `max_rpm` settings if you set it.
@@ -45,6 +46,12 @@ When assembling a crew, you combine agents with complementary roles and tools, a
 ```python
 from crewai import Crew, Agent, Task, Process
 from langchain_community.tools import DuckDuckGoSearchRun
+from crewai_tools import tool
+
+@tool('DuckDuckGoSearch')
+def search(search_query: str):
+    """Search the web for information on a given topic"""
+    return DuckDuckGoSearchRun().run(search_query)
 
 # Define agents with specific roles and tools
 researcher = Agent(
@@ -55,7 +62,7 @@ researcher = Agent(
         to the business.
         You're currently working on a project to analyze the
         trends and innovations in the space of artificial intelligence.""",
-    tools=[DuckDuckGoSearchRun()]
+    tools=[search]
 )
 
 writer = Agent(
@@ -213,9 +220,9 @@ These methods provide flexibility in how you manage and execute tasks within you
 ### Replaying from specific task:
 You can now replay from a specific task using our cli command replay.
 
-The replay_from_tasks feature in CrewAI allows you to replay from a specific task using the command-line interface (CLI). By running the command `crewai replay -t <task_id>`, you can specify the `task_id` for the replay process.
+The replay feature in CrewAI allows you to replay from a specific task using the command-line interface (CLI). By running the command `crewai replay -t <task_id>`, you can specify the `task_id` for the replay process.
 
-Kickoffs will now save the latest kickoffs returned task outputs locally for you to be able to replay from. 
+Kickoffs will now save the latest kickoffs returned task outputs locally for you to be able to replay from.
 
 
 ### Replaying from specific task Using the CLI

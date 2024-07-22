@@ -43,6 +43,11 @@ Cutting-edge framework for orchestrating role-playing, autonomous AI agents. By 
                     Memory
                 </a>
             </li>
+            <li>
+                <a href="./core-concepts/Planning">
+                    Planning
+                </a>
+            </li>
         </ul>
     </div>
     <div style="width:30%">

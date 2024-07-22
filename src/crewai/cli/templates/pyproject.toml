@@ -6,12 +6,12 @@ authors = ["Your Name <you@example.com>"]
 
 [tool.poetry.dependencies]
 python = ">=3.10,<=3.13"
-crewai = { extras = ["tools"], version = "^0.35.8" }
+crewai = { extras = ["tools"], version = "^0.41.1" }
 
 [tool.poetry.scripts]
 {{folder_name}} = "{{folder_name}}.main:run"
 train = "{{folder_name}}.main:train"
-replay = "{{folder_name}}.main:replay_from_task"
+replay = "{{folder_name}}.main:replay"
 
 [build-system]
 requires = ["poetry-core"]

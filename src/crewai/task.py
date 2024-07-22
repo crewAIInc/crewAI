@@ -213,8 +213,8 @@ class Task(BaseModel):
         tools: Optional[List[Any]],
     ) -> TaskOutput:
         """Run the core execution logic of the task."""
-        self.agent = agent
         agent = agent or self.agent
+        self.agent = agent
         if not agent:
             raise Exception(
                 f"The task '{self.description}' has no agent assigned, therefore it can't be executed directly and should be executed in a Crew using a specific process that support that, like hierarchical."
@@ -254,7 +254,9 @@ class Task(BaseModel):
             content = (
                 json_output
                 if json_output
-                else pydantic_output.model_dump_json() if pydantic_output else result
+                else pydantic_output.model_dump_json()
+                if pydantic_output
+                else result
             )
             self._save_file(content)
 
@@ -326,9 +328,14 @@ class Task(BaseModel):
 
     def _create_converter(self, *args, **kwargs) -> Converter:
         """Create a converter instance."""
-        converter = self.agent.get_output_converter(*args, **kwargs)
-        if self.converter_cls:
+        if self.agent and not self.converter_cls:
+            converter = self.agent.get_output_converter(*args, **kwargs)
+        elif self.converter_cls:
             converter = self.converter_cls(*args, **kwargs)
+
+        if not converter:
+            raise Exception("No output converter found or set.")
+
         return converter
 
     def _export_output(
