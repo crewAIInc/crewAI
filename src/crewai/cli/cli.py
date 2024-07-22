@@ -142,7 +142,7 @@ def reset_memories(long, short, entities, kickoff_outputs, all):
     help="LLM Model to run the tests on the Crew. For now only accepting only OpenAI models.",
 )
 def test(n_iterations: int, model: str):
-    """Train the crew."""
+    """Test the crew and evaluate the results."""
     click.echo(f"Testing the crew for {n_iterations} iterations with model {model}")
     test_crew(n_iterations, model)
 
