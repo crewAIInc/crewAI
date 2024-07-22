@@ -30,6 +30,12 @@ def agent(func):
     return func
 
 
+def llm(func):
+    func.is_llm = True
+    func = memoize(func)
+    return func
+
+
 def output_json(cls):
     cls.is_output_json = True
     return cls
@@ -38,6 +44,16 @@ def output_json(cls):
 def output_pydantic(cls):
     cls.is_output_pydantic = True
     return cls
+
+
+def tool(func):
+    func.is_tool = True
+    return memoize(func)
+
+
+def callback(func):
+    func.is_callback = True
+    return memoize(func)
 
 
 def crew(func):

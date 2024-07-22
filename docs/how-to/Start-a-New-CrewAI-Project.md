@@ -79,7 +79,13 @@ research_candidates_task:
     {job_requirements}
   expected_output: >
     A list of 10 potential candidates with their contact information and brief profiles highlighting their suitability.
+  agent: researcher # THIS NEEDS TO MATCH THE AGENT NAME IN THE AGENTS.YAML FILE AND THE AGENT DEFINED IN THE Crew.PY FILE
+  context: # THESE NEED TO MATCH THE TASK NAMES DEFINED ABOVE AND THE TASKS.YAML FILE AND THE TASK DEFINED IN THE Crew.PY FILE
+    - researcher
 ```
+
+#### Referencing:
+Your defined functions with the same name will be used. For example, you can reference the agent for specific tasks from task.yaml file. Ensure your annotated agent and function name is the same otherwise your task wont recognize the reference properly.
 
 ## Installing Dependencies
 
