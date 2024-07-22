@@ -692,7 +692,7 @@ class Crew(BaseModel):
                 task_output = task.execute_sync(
                     agent=agent_to_use,
                     context=context,
-                    tools=agent_to_use.tools,
+                    tools=list(set(agent_to_use.tools or []).union(set(task.tools))),
                 )
                 task_outputs = [task_output]
                 self._process_task_result(task, task_output)
