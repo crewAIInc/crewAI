@@ -966,5 +966,11 @@ class Crew(BaseModel):
 
         return total_usage_metrics
 
+    def test(
+        self, n_iterations: int, model: str, inputs: Optional[Dict[str, Any]] = None
+    ) -> None:
+        """Test the crew with the given inputs."""
+        pass
+
     def __repr__(self):
         return f"Crew(id={self.id}, process={self.process}, number_of_agents={len(self.agents)}, number_of_tasks={len(self.tasks)})"

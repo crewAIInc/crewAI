@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+from pyexpat import model
 import sys
 from {{folder_name}}.crew import {{crew_name}}Crew
 
@@ -36,6 +37,19 @@ def replay():
     """
     try:
         {{crew_name}}Crew().crew().replay(task_id=sys.argv[1])
+
+    except Exception as e:
+        raise Exception(f"An error occurred while replaying the crew: {e}")
+
+def test():
+    """
+    Test the crew execution and returns the results.
+    """
+    inputs = {
+        "topic": "AI LLMs"
+    }
+    try:
+        {{crew_name}}Crew().crew().test(n_iterations=int(sys.argv[1]), model=sys.argv[2], inputs=inputs)
 
     except Exception as e:
         raise Exception(f"An error occurred while replaying the crew: {e}")
