@@ -39,3 +39,16 @@ def replay():
 
     except Exception as e:
         raise Exception(f"An error occurred while replaying the crew: {e}")
+
+def test():
+    """
+    Test the crew execution and returns the results.
+    """
+    inputs = {
+        "topic": "AI LLMs"
+    }
+    try:
+        {{crew_name}}Crew().crew().test(n_iterations=int(sys.argv[1]), model=sys.argv[2], inputs=inputs)
+
+    except Exception as e:
+        raise Exception(f"An error occurred while replaying the crew: {e}")
