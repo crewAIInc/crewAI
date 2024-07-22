@@ -3,7 +3,6 @@ from collections import deque
 from typing import Any, Dict, List, Union
 
 from pydantic import BaseModel, Field, model_validator
-from pydantic_core import PydanticCustomError
 
 from crewai.crew import Crew
 from crewai.crews.crew_output import CrewOutput
