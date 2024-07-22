@@ -35,9 +35,6 @@ class CrewOutput(BaseModel):
 
     def to_dict(self) -> Dict[str, Any]:
         """Convert json_output and pydantic_output to a dictionary."""
-        print("Crew Output RAW", self.raw)
-        print("Crew Output JSON", self.json_dict)
-        print("Crew Output Pydantic", self.pydantic)
         output_dict = {}
         if self.json_dict:
             output_dict.update(self.json_dict)

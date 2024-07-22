@@ -2,7 +2,8 @@ import asyncio
 from collections import deque
 from typing import Any, Dict, List, Union
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, model_validator
+from pydantic_core import PydanticCustomError
 
 from crewai.crew import Crew
 from crewai.crews.crew_output import CrewOutput
@@ -47,6 +48,26 @@ class Pipeline(BaseModel):
         ..., description="List of crews representing stages to be executed in sequence"
     )
 
+    @model_validator(mode="before")
+    @classmethod
+    def validate_stages(cls, values):
+        stages = values.get("stages", [])
+
+        def check_nesting_and_type(item, depth=0):
+            if depth > 1:
+                raise ValueError("Double nesting is not allowed in pipeline stages")
+            if isinstance(item, list):
+                for sub_item in item:
+                    check_nesting_and_type(sub_item, depth + 1)
+            elif not isinstance(item, Crew):
+                raise ValueError(
+                    f"Expected Crew instance or list of Crews, got {type(item)}"
+                )
+
+        for stage in stages:
+            check_nesting_and_type(stage)
+        return values
+
     async def process_runs(
         self, run_inputs: List[Dict[str, Any]]
     ) -> List[PipelineRunResult]:
@@ -58,6 +79,7 @@ class Pipeline(BaseModel):
         def format_traces(
             traces: List[List[Union[str, Dict[str, Any]]]],
         ) -> List[List[Trace]]:
+            print("INCOMING TRACES: ", traces)
             formatted_traces: List[Trace] = []
 
             # Process all traces except the last one
@@ -67,18 +89,23 @@ class Pipeline(BaseModel):
                 else:
                     formatted_traces.append(trace)
 
+            print("FORMATTED TRACES PRE LAST TRACE: ", formatted_traces)
+
             # Handle the final stage trace
             traces_to_return: List[List[Trace]] = []
 
             final_trace = traces[-1]
+            print("FINAL TRACE: ", final_trace)
             if len(final_trace) == 1:
-                formatted_traces.append(final_trace)
+                formatted_traces.append(final_trace[0])
                 traces_to_return.append(formatted_traces)
             else:
                 for trace in final_trace:
                     copied_traces = formatted_traces.copy()
                     copied_traces.append(trace)
                     traces_to_return.append(copied_traces)
+
+            print("TRACES TO RETURN", traces_to_return)
 
             return traces_to_return
 
@@ -136,11 +163,17 @@ class Pipeline(BaseModel):
         async def process_single_run(
             run_input: Dict[str, Any]
         ) -> List[PipelineRunResult]:
-            stages_queue = deque(self.stages)  # TODO: Change over to forloop
+            initial_input = run_input.copy()  # Create a copy of the initial input
+            current_input = (
+                run_input.copy()
+            )  # Create a working copy that will be updated
+            stages_queue = deque(self.stages)
             usage_metrics = {}
             stage_outputs: List[CrewOutput] = []
             all_stage_outputs: List[List[CrewOutput]] = []
-            traces: List[List[Union[str, Dict[str, Any]]]] = [[run_input]]
+            traces: List[List[Union[str, Dict[str, Any]]]] = [
+                [initial_input]
+            ]  # Use the initial input here
 
             stage = None
             while stages_queue:
@@ -148,35 +181,37 @@ class Pipeline(BaseModel):
 
                 if isinstance(stage, Crew):
                     # Process single crew
-                    output = await stage.kickoff_async(inputs=run_input)
+                    output = await stage.kickoff_async(inputs=current_input)
                     # Update usage metrics and setup inputs for next stage
-                    usage_metrics[stage.name] = output.token_usage
-                    run_input.update(output.to_dict())
+                    usage_metrics[stage.name or stage.id] = output.token_usage
+                    current_input.update(output.to_dict())  # Update the working copy
                     # Update traces for single crew stage
-                    traces.append([stage.name or "No name"])
+                    traces.append([stage.name or str(stage.id)])
                     # Store output for final results
                     stage_outputs = [output]
 
                 else:
                     # Process each crew in parallel
                     parallel_outputs = await asyncio.gather(
-                        *[crew.kickoff_async(inputs=run_input) for crew in stage]
+                        *[crew.kickoff_async(inputs=current_input) for crew in stage]
                     )
                     # Update usage metrics and setup inputs for next stage
                     for crew, output in zip(stage, parallel_outputs):
                         usage_metrics[crew.name] = output.token_usage
-                        run_input.update(output.to_dict())
+                        current_input.update(
+                            output.to_dict()
+                        )  # Update the working copy
                     # Update traces for parallel stage
-                    traces.append([crew.name or "No name" for crew in stage])
+                    traces.append([crew.name or str(crew.id) for crew in stage])
                     # Store output for final results
                     stage_outputs = parallel_outputs
 
                 all_stage_outputs.append(stage_outputs)
 
-            print("STAGE OUTPUTS: ", stage_outputs)
-            print("TRACES: ", traces)
-            print("TOKEN USAGE: ", usage_metrics)
-            print("ALL STAGE OUTPUTS: ", all_stage_outputs)
+            # print("STAGE OUTPUTS: ", stage_outputs)
+            # print("TRACES: ", traces)
+            # print("TOKEN USAGE: ", usage_metrics)
+            # print("ALL STAGE OUTPUTS: ", all_stage_outputs)
 
             # Build final pipeline run results
             final_results = build_pipeline_run_results(
