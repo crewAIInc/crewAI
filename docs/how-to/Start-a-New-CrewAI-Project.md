@@ -107,7 +107,6 @@ email_summarizer_task:
       Summarize the email into a 5 bullet point summary
     expected_output: >
       A 5 bullet point summary of the email
-    output_file: email_summary.md
     agent: email_summarizer
     context:
       - reporting_task
