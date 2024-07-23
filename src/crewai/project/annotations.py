@@ -56,6 +56,11 @@ def callback(func):
     return memoize(func)
 
 
+def cache_handler(func):
+    func.is_cache_handler = True
+    return memoize(func)
+
+
 def crew(func):
     def wrapper(self, *args, **kwargs):
         instantiated_tasks = []
