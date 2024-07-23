@@ -441,12 +441,8 @@ TODO: Figure out what is the proper output for a pipeline with multiple stages
 Options:
 - Should the final output only include the last stage's output?
 - Should the final output include the accumulation of previous stages' outputs?
-
-
 """
 
-
-# TODO: GET HELP FROM TEAM ON THIS ONE
 @pytest.mark.asyncio
 async def test_pipeline_data_accumulation(mock_crew_factory):
     crew1 = mock_crew_factory(name="Crew 1", output_json_dict={"key1": "value1"})
