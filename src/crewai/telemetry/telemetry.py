@@ -1,8 +1,10 @@
+from __future__ import annotations
+
 import asyncio
 import json
 import os
 import platform
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 import pkg_resources
 from opentelemetry import trace
@@ -10,7 +12,11 @@ from opentelemetry.exporter.otlp.proto.http.trace_exporter import OTLPSpanExport
 from opentelemetry.sdk.resources import SERVICE_NAME, Resource
 from opentelemetry.sdk.trace import TracerProvider
 from opentelemetry.sdk.trace.export import BatchSpanProcessor
-from opentelemetry.trace import Status, StatusCode
+from opentelemetry.trace import Span, Status, StatusCode
+
+if TYPE_CHECKING:
+    from crewai.crew import Crew
+    from crewai.task import Task
 
 
 class Telemetry:
@@ -74,7 +80,7 @@ class Telemetry:
                 self.ready = False
                 self.trace_set = False
 
-    def crew_creation(self, crew):
+    def crew_creation(self, crew: Crew, inputs: dict[str, Any] | None):
         """Records the creation of a crew."""
         if self.ready:
             try:
@@ -86,11 +92,9 @@ class Telemetry:
                     pkg_resources.get_distribution("crewai").version,
                 )
                 self._add_attribute(span, "python_version", platform.python_version())
+                self._add_attribute(span, "crew_key", crew.key)
                 self._add_attribute(span, "crew_id", str(crew.id))
                 self._add_attribute(span, "crew_process", crew.process)
-                self._add_attribute(
-                    span, "crew_language", crew.prompt_file if crew.i18n else "None"
-                )
                 self._add_attribute(span, "crew_memory", crew.memory)
                 self._add_attribute(span, "crew_number_of_tasks", len(crew.tasks))
                 self._add_attribute(span, "crew_number_of_agents", len(crew.agents))
@@ -100,8 +104,11 @@ class Telemetry:
                     json.dumps(
                         [
                             {
+                                "key": agent.key,
                                 "id": str(agent.id),
                                 "role": agent.role,
+                                "goal": agent.goal,
+                                "backstory": agent.backstory,
                                 "verbose?": agent.verbose,
                                 "max_iter": agent.max_iter,
                                 "max_rpm": agent.max_rpm,
@@ -109,7 +116,7 @@ class Telemetry:
                                 "llm": json.dumps(self._safe_llm_attributes(agent.llm)),
                                 "delegation_enabled?": agent.allow_delegation,
                                 "tools_names": [
-                                    tool.name.casefold() for tool in agent.tools
+                                    tool.name.casefold() for tool in agent.tools or []
                                 ],
                             }
                             for agent in crew.agents
@@ -122,11 +129,21 @@ class Telemetry:
                     json.dumps(
                         [
                             {
+                                "key": task.key,
                                 "id": str(task.id),
+                                "description": task.description,
+                                "expected_output": task.expected_output,
                                 "async_execution?": task.async_execution,
+                                "human_input?": task.human_input,
                                 "agent_role": task.agent.role if task.agent else "None",
+                                "agent_key": task.agent.key if task.agent else None,
+                                "context": (
+                                    [task.description for task in task.context]
+                                    if task.context
+                                    else None
+                                ),
                                 "tools_names": [
-                                    tool.name.casefold() for tool in task.tools
+                                    tool.name.casefold() for tool in task.tools or []
                                 ],
                             }
                             for task in crew.tasks
@@ -138,6 +155,71 @@ class Telemetry:
                 self._add_attribute(span, "platform_system", platform.system())
                 self._add_attribute(span, "platform_version", platform.version())
                 self._add_attribute(span, "cpus", os.cpu_count())
+
+                if crew.share_crew:
+                    self._add_attribute(
+                        span, "crew_inputs", json.dumps(inputs) if inputs else None
+                    )
+
+                span.set_status(Status(StatusCode.OK))
+                span.end()
+            except Exception:
+                pass
+
+    def task_started(self, crew: Crew, task: Task) -> Span | None:
+        """Records task started in a crew."""
+        if self.ready:
+            try:
+                tracer = trace.get_tracer("crewai.telemetry")
+
+                created_span = tracer.start_span("Task Created")
+
+                self._add_attribute(created_span, "crew_key", crew.key)
+                self._add_attribute(created_span, "crew_id", str(crew.id))
+                self._add_attribute(created_span, "task_key", task.key)
+                self._add_attribute(created_span, "task_id", str(task.id))
+
+                if crew.share_crew:
+                    self._add_attribute(
+                        created_span, "formatted_description", task.description
+                    )
+                    self._add_attribute(
+                        created_span, "formatted_expected_output", task.expected_output
+                    )
+
+                created_span.set_status(Status(StatusCode.OK))
+                created_span.end()
+
+                span = tracer.start_span("Task Execution")
+
+                self._add_attribute(span, "crew_key", crew.key)
+                self._add_attribute(span, "crew_id", str(crew.id))
+                self._add_attribute(span, "task_key", task.key)
+                self._add_attribute(span, "task_id", str(task.id))
+
+                if crew.share_crew:
+                    self._add_attribute(span, "formatted_description", task.description)
+                    self._add_attribute(
+                        span, "formatted_expected_output", task.expected_output
+                    )
+
+                return span
+            except Exception:
+                pass
+
+        return None
+
+    def task_ended(self, span: Span, task: Task, crew: Crew):
+        """Records task execution in a crew."""
+        if self.ready:
+            try:
+                if crew.share_crew:
+                    self._add_attribute(
+                        span,
+                        "task_output",
+                        task.output.raw if task.output else "",
+                    )
+
                 span.set_status(Status(StatusCode.OK))
                 span.end()
             except Exception:
@@ -207,10 +289,12 @@ class Telemetry:
             except Exception:
                 pass
 
-    def crew_execution_span(self, crew):
+    def crew_execution_span(self, crew: Crew, inputs: dict[str, Any] | None):
         """Records the complete execution of a crew.
         This is only collected if the user has opted-in to share the crew.
         """
+        self.crew_creation(crew, inputs)
+
         if (self.ready) and (crew.share_crew):
             try:
                 tracer = trace.get_tracer("crewai.telemetry")
@@ -220,13 +304,18 @@ class Telemetry:
                     "crewai_version",
                     pkg_resources.get_distribution("crewai").version,
                 )
+                self._add_attribute(span, "crew_key", crew.key)
                 self._add_attribute(span, "crew_id", str(crew.id))
+                self._add_attribute(
+                    span, "crew_inputs", json.dumps(inputs) if inputs else None
+                )
                 self._add_attribute(
                     span,
                     "crew_agents",
                     json.dumps(
                         [
                             {
+                                "key": agent.key,
                                 "id": str(agent.id),
                                 "role": agent.role,
                                 "goal": agent.goal,
@@ -238,7 +327,7 @@ class Telemetry:
                                 "llm": json.dumps(self._safe_llm_attributes(agent.llm)),
                                 "delegation_enabled?": agent.allow_delegation,
                                 "tools_names": [
-                                    tool.name.casefold() for tool in agent.tools
+                                    tool.name.casefold() for tool in agent.tools or []
                                 ],
                             }
                             for agent in crew.agents
@@ -253,16 +342,18 @@ class Telemetry:
                             {
                                 "id": str(task.id),
                                 "description": task.description,
+                                "expected_output": task.expected_output,
                                 "async_execution?": task.async_execution,
-                                "output": task.expected_output,
+                                "human_input?": task.human_input,
                                 "agent_role": task.agent.role if task.agent else "None",
+                                "agent_key": task.agent.key if task.agent else None,
                                 "context": (
                                     [task.description for task in task.context]
                                     if task.context
-                                    else "None"
+                                    else None
                                 ),
                                 "tools_names": [
-                                    tool.name.casefold() for tool in task.tools
+                                    tool.name.casefold() for tool in task.tools or []
                                 ],
                             }
                             for task in crew.tasks
@@ -273,7 +364,7 @@ class Telemetry:
             except Exception:
                 pass
 
-    def end_crew(self, crew, output):
+    def end_crew(self, crew, final_string_output):
         if (self.ready) and (crew.share_crew):
             try:
                 self._add_attribute(
@@ -281,7 +372,9 @@ class Telemetry:
                     "crewai_version",
                     pkg_resources.get_distribution("crewai").version,
                 )
-                self._add_attribute(crew._execution_span, "crew_output", output)
+                self._add_attribute(
+                    crew._execution_span, "crew_output", final_string_output
+                )
                 self._add_attribute(
                     crew._execution_span,
                     "crew_tasks_output",

@@ -12,3 +12,7 @@ old_en.json
 db/
 test.py
 rc-tests/*
+*.pkl
+temp/*
+.vscode/*
+crew_tasks_output.json

@@ -129,6 +129,7 @@ crew = Crew(
   agents=[researcher, writer],
   tasks=[task1, task2],
   verbose=2, # You can set it to 1 or 2 to different logging levels
+  process = Process.sequential
 )
 
 # Get your crew to work!
@@ -196,6 +197,7 @@ Please refer to the [Connect crewAI to LLMs](https://docs.crewai.com/how-to/LLM-
 - **ChatDev**: ChatDev introduced the idea of processes into the realm of AI agents, but its implementation is quite rigid. Customizations in ChatDev are limited and not geared towards production environments, which can hinder scalability and flexibility in real-world applications.
 
 **CrewAI's Advantage**: CrewAI is built with production in mind. It offers the flexibility of Autogen's conversational agents and the structured process approach of ChatDev, but without the rigidity. CrewAI's processes are designed to be dynamic and adaptable, fitting seamlessly into both development and production workflows.
+
 
 ## Contribution
 

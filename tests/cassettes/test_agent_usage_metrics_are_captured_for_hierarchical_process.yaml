@@ -8,20 +8,20 @@ interactions:
       allows you to properly evaluate the work of your team members.\nYour personal
       goal is: Manage the team to complete the task in the best way possible.\nYou
       ONLY have access to the following tools, and should NEVER make up tools that
-      are not listed here:\n\nDelegate work to co-worker: Delegate work to co-worker(coworker:
+      are not listed here:\n\nDelegate work to coworker: Delegate work to coworker(coworker:
       str, task: str, context: str) - Delegate a specific task to one of the following
-      co-workers: [Researcher]\nThe input to this tool should be the coworker, the
+      coworkers: [Researcher]\nThe input to this tool should be the coworker, the
       task you want them to do, and ALL necessary context to execute the task, they
       know nothing about the task, so share absolute everything you know, don''t reference
-      things but instead explain them.\nAsk question to co-worker: Ask question to
-      co-worker(coworker: str, question: str, context: str) - Ask a specific question
-      to one of the following co-workers: [Researcher]\nThe input to this tool should
+      things but instead explain them.\nAsk question to coworker: Ask question to
+      coworker(coworker: str, question: str, context: str) - Ask a specific question
+      to one of the following coworkers: [Researcher]\nThe input to this tool should
       be the coworker, the question you have for them, and ALL necessary context to
       ask the question properly, they know nothing about the question, so share absolute
       everything you know, don''t reference things but instead explain them.\n\nUse
       the following format:\n\nThought: you should always think about what to do\nAction:
-      the action to take, only one name of [Delegate work to co-worker, Ask question
-      to co-worker], just the name, exactly as it''s written.\nAction Input: the input
+      the action to take, only one name of [Delegate work to coworker, Ask question
+      to coworker], just the name, exactly as it''s written.\nAction Input: the input
       to the action, just a simple a python dictionary using \" to wrap keys and values.\nObservation:
       the result of the action\n\nOnce all necessary information is gathered:\n\nThought:
       I now know the final answer\nFinal Answer: the final answer to the original
@@ -1027,20 +1027,20 @@ interactions:
       allows you to properly evaluate the work of your team members.\nYour personal
       goal is: Manage the team to complete the task in the best way possible.\nYou
       ONLY have access to the following tools, and should NEVER make up tools that
-      are not listed here:\n\nDelegate work to co-worker: Delegate work to co-worker(coworker:
+      are not listed here:\n\nDelegate work to coworker: Delegate work to coworker(coworker:
       str, task: str, context: str) - Delegate a specific task to one of the following
-      co-workers: [Researcher]\nThe input to this tool should be the coworker, the
+      coworkers: [Researcher]\nThe input to this tool should be the coworker, the
       task you want them to do, and ALL necessary context to execute the task, they
       know nothing about the task, so share absolute everything you know, don''t reference
-      things but instead explain them.\nAsk question to co-worker: Ask question to
-      co-worker(coworker: str, question: str, context: str) - Ask a specific question
-      to one of the following co-workers: [Researcher]\nThe input to this tool should
+      things but instead explain them.\nAsk question to coworker: Ask question to
+      coworker(coworker: str, question: str, context: str) - Ask a specific question
+      to one of the following coworkers: [Researcher]\nThe input to this tool should
       be the coworker, the question you have for them, and ALL necessary context to
       ask the question properly, they know nothing about the question, so share absolute
       everything you know, don''t reference things but instead explain them.\n\nUse
       the following format:\n\nThought: you should always think about what to do\nAction:
-      the action to take, only one name of [Delegate work to co-worker, Ask question
-      to co-worker], just the name, exactly as it''s written.\nAction Input: the input
+      the action to take, only one name of [Delegate work to coworker, Ask question
+      to coworker], just the name, exactly as it''s written.\nAction Input: the input
       to the action, just a simple a python dictionary using \" to wrap keys and values.\nObservation:
       the result of the action\n\nOnce all necessary information is gathered:\n\nThought:
       I now know the final answer\nFinal Answer: the final answer to the original
@@ -1051,7 +1051,7 @@ interactions:
       job depends on it!\n\nThought: \nI need to delegate the task of saying \"hi\"
       to the researcher. I will provide them with the context that this is a simple
       greeting task and they should respond with \"Howdy!\".\n\nAction: \nDelegate
-      work to co-worker\n\nAction Input: \n{\n  \"coworker\": \"Researcher\",\n  \"task\":
+      work to coworker\n\nAction Input: \n{\n  \"coworker\": \"Researcher\",\n  \"task\":
       \"Say hi\",\n  \"context\": \"This is a simple task where you need to greet
       by saying ''Howdy!''. This is a common greeting in certain parts of the world,
       particularly in the southern United States. It''s a friendly, informal way to

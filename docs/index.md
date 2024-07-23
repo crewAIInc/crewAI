@@ -34,8 +34,18 @@ Cutting-edge framework for orchestrating role-playing, autonomous AI agents. By 
                 </a>
             </li>
             <li>
+                <a href="./core-concepts/Training-Crew">
+                    Training
+                </a>
+            </li>
+            <li>
                 <a href="./core-concepts/Memory">
                     Memory
+                </a>
+            </li>
+            <li>
+                <a href="./core-concepts/Planning">
+                    Planning
                 </a>
             </li>
         </ul>
@@ -43,6 +53,11 @@ Cutting-edge framework for orchestrating role-playing, autonomous AI agents. By 
     <div style="width:30%">
         <h2>How-To Guides</h2>
         <ul>
+            <li>
+                <a href="./how-to/Start-a-New-CrewAI-Project">
+                    Starting Your crewAI Project
+                </a>
+            </li>
             <li>
                 <a href="./how-to/Installing-CrewAI">
                     Installing crewAI
@@ -79,13 +94,48 @@ Cutting-edge framework for orchestrating role-playing, autonomous AI agents. By 
                 </a>
             </li>
             <li>
+                <a href="./how-to/Coding-Agents">
+                    Coding Agents
+                </a>
+            </li>
+            <li>
+                <a href="./how-to/Force-Tool-Ouput-as-Result">
+                    Forcing Tool Output as Result
+                </a>
+            </li>
+            <li>
                 <a href="./how-to/Human-Input-on-Execution">
                     Human Input on Execution
                 </a>
             </li>
             <li>
+                <a href="./how-to/Kickoff-async">
+                    Kickoff a Crew Asynchronously
+                </a>
+            </li>
+            <li>
+                <a href="./how-to/Kickoff-for-each">
+                    Kickoff a Crew for a List
+                </a>
+            </li>
+            <li>
+                <a href="./how-to/Replay-tasks-from-latest-Crew-Kickoff">
+                    Replay from a Task
+                </a>
+            </li>
+            <li>
+                <a href="./how-to/Conditional-Tasks">
+                    Conditional Tasks
+                </a>
+            </li>
+            <li>
                 <a href="./how-to/AgentOps-Observability">
                     Agent Monitoring with AgentOps
+                </a>
+            </li>
+            <li>
+                <a href="./how-to/Langtrace-Observability">
+                    Agent Monitoring with LangTrace
                 </a>
             </li>
         </ul>

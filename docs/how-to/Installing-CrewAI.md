@@ -12,7 +12,7 @@ Welcome to crewAI! This guide will walk you through the installation process for
 To install crewAI, you need to have Python >=3.10 and <=3.13 installed on your system:
 
 ```shell
-# Install the mains crewAI package
+# Install the main crewAI package
 pip install crewai
 
 # Install the main crewAI package and the tools package

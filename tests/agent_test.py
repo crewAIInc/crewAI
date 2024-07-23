@@ -1,5 +1,6 @@
 """Test Agent creation and execution basic functionality."""
 
+from unittest import mock
 from unittest.mock import patch
 
 import pytest
@@ -29,7 +30,7 @@ def test_agent_default_values():
     agent = Agent(role="test role", goal="test goal", backstory="test backstory")
 
     assert isinstance(agent.llm, ChatOpenAI)
-    assert agent.llm.model_name == "gpt-4"
+    assert agent.llm.model_name == "gpt-4o"
     assert agent.llm.temperature == 0.7
     assert agent.llm.verbose is False
     assert agent.allow_delegation is True
@@ -630,8 +631,9 @@ def test_agent_use_specific_tasks_output_as_context(capsys):
 
     crew = Crew(agents=[agent1, agent2], tasks=tasks)
     result = crew.kickoff()
-    assert "bye" not in result.lower()
-    assert "hi" in result.lower() or "hello" in result.lower()
+    print("LOWER RESULT", result.raw)
+    assert "bye" not in result.raw.lower()
+    assert "hi" in result.raw.lower() or "hello" in result.raw.lower()
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
@@ -643,7 +645,7 @@ def test_agent_step_callback():
     with patch.object(StepCallback, "callback") as callback:
 
         @tool
-        def learn_about_AI(topic) -> float:
+        def learn_about_AI(topic) -> str:
             """Useful for when you need to learn about AI to write an paragraph about it."""
             return "AI is a very broad field."
 
@@ -677,7 +679,7 @@ def test_agent_function_calling_llm():
     with patch.object(llm.client, "create", wraps=llm.client.create) as private_mock:
 
         @tool
-        def learn_about_AI(topic) -> float:
+        def learn_about_AI(topic) -> str:
             """Useful for when you need to learn about AI to write an paragraph about it."""
             return "AI is a very broad field."
 
@@ -722,6 +724,74 @@ def test_agent_count_formatting_error():
         mock_count_errors.assert_called_once()
 
 
+@pytest.mark.vcr(filter_headers=["authorization"])
+def test_tool_result_as_answer_is_the_final_answer_for_the_agent():
+    from crewai_tools import BaseTool
+
+    class MyCustomTool(BaseTool):
+        name: str = "Get Greetings"
+        description: str = "Get a random greeting back"
+
+        def _run(self) -> str:
+            return "Howdy!"
+
+    agent1 = Agent(
+        role="Data Scientist",
+        goal="Product amazing resports on AI",
+        backstory="You work with data and AI",
+        tools=[MyCustomTool(result_as_answer=True)],
+    )
+
+    essay = Task(
+        description="Write and then review an small paragraph on AI until it's AMAZING. But first use the `Get Greetings` tool to get a greeting.",
+        expected_output="The final paragraph with the full review on AI and no greeting.",
+        agent=agent1,
+    )
+    tasks = [essay]
+    crew = Crew(agents=[agent1], tasks=tasks)
+
+    result = crew.kickoff()
+    print("RESULT: ", result.raw)
+    assert result.raw == "Howdy!"
+
+
+@pytest.mark.vcr(filter_headers=["authorization"])
+def test_tool_usage_information_is_appended_to_agent():
+    from crewai_tools import BaseTool
+
+    class MyCustomTool(BaseTool):
+        name: str = "Decide Greetings"
+        description: str = "Decide what is the appropriate greeting to use"
+
+        def _run(self) -> str:
+            return "Howdy!"
+
+    agent1 = Agent(
+        role="Friendly Neighbor",
+        goal="Make everyone feel welcome",
+        backstory="You are the friendly neighbor",
+        tools=[MyCustomTool(result_as_answer=True)],
+    )
+
+    greeting = Task(
+        description="Say an appropriate greeting.",
+        expected_output="The greeting.",
+        agent=agent1,
+    )
+    tasks = [greeting]
+    crew = Crew(agents=[agent1], tasks=tasks)
+
+    crew.kickoff()
+    assert agent1.tools_results == [
+        {
+            "result": "Howdy!",
+            "tool_name": "Decide Greetings",
+            "tool_args": {},
+            "result_as_answer": True,
+        }
+    ]
+
+
 def test_agent_llm_uses_token_calc_handler_with_llm_has_model_name():
     agent1 = Agent(
         role="test role",
@@ -732,7 +802,7 @@ def test_agent_llm_uses_token_calc_handler_with_llm_has_model_name():
 
     assert len(agent1.llm.callbacks) == 1
     assert agent1.llm.callbacks[0].__class__.__name__ == "TokenCalcHandler"
-    assert agent1.llm.callbacks[0].model == "gpt-4"
+    assert agent1.llm.callbacks[0].model_name == "gpt-4o"
     assert (
         agent1.llm.callbacks[0].token_cost_process.__class__.__name__ == "TokenProcess"
     )
@@ -842,3 +912,105 @@ Thought:
 
 """
     )
+
+
+@patch("crewai.agent.CrewTrainingHandler")
+def test_agent_training_handler(crew_training_handler):
+    task_prompt = "What is 1 + 1?"
+    agent = Agent(
+        role="test role",
+        goal="test goal",
+        backstory="test backstory",
+        verbose=True,
+    )
+    crew_training_handler().load.return_value = {
+        f"{str(agent.id)}": {"0": {"human_feedback": "good"}}
+    }
+
+    result = agent._training_handler(task_prompt=task_prompt)
+
+    assert result == "What is 1 + 1?You MUST follow these feedbacks: \n good"
+
+    crew_training_handler.assert_has_calls(
+        [mock.call(), mock.call("training_data.pkl"), mock.call().load()]
+    )
+
+
+@patch("crewai.agent.CrewTrainingHandler")
+def test_agent_use_trained_data(crew_training_handler):
+    task_prompt = "What is 1 + 1?"
+    agent = Agent(
+        role="researcher",
+        goal="test goal",
+        backstory="test backstory",
+        verbose=True,
+    )
+    crew_training_handler().load.return_value = {
+        agent.role: {
+            "suggestions": [
+                "The result of the math operatio must be right.",
+                "Result must be better than 1.",
+            ]
+        }
+    }
+
+    result = agent._use_trained_data(task_prompt=task_prompt)
+
+    assert (
+        result == "What is 1 + 1?You MUST follow these feedbacks: \n "
+        "The result of the math operatio must be right.\n - Result must be better than 1."
+    )
+    crew_training_handler.assert_has_calls(
+        [mock.call(), mock.call("trained_agents_data.pkl"), mock.call().load()]
+    )
+
+
+def test_agent_max_retry_limit():
+    agent = Agent(
+        role="test role",
+        goal="test goal",
+        backstory="test backstory",
+        max_retry_limit=1,
+    )
+
+    task = Task(
+        agent=agent,
+        description="Say the word: Hi",
+        expected_output="The word: Hi",
+        human_input=True,
+    )
+
+    error_message = "Error happening while sending prompt to model."
+    with patch.object(
+        CrewAgentExecutor, "invoke", wraps=agent.agent_executor.invoke
+    ) as invoke_mock:
+        invoke_mock.side_effect = Exception(error_message)
+
+        assert agent._times_executed == 0
+        assert agent.max_retry_limit == 1
+
+        with pytest.raises(Exception) as e:
+            agent.execute_task(
+                task=task,
+            )
+        assert e.value.args[0] == error_message
+        assert agent._times_executed == 2
+
+        invoke_mock.assert_has_calls(
+            [
+                mock.call(
+                    {
+                        "input": "Say the word: Hi\n\nThis is the expect criteria for your final answer: The word: Hi \n you MUST return the actual complete content as the final answer, not a summary.",
+                        "tool_names": "",
+                        "tools": "",
+                    }
+                ),
+                mock.call(
+                    {
+                        "input": "Say the word: Hi\n\nThis is the expect criteria for your final answer: The word: Hi \n you MUST return the actual complete content as the final answer, not a summary.",
+                        "tool_names": "",
+                        "tools": "",
+                    }
+                ),
+            ]
+        )

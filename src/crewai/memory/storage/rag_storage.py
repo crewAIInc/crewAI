@@ -2,6 +2,7 @@ import contextlib
 import io
 import logging
 import os
+import shutil
 from typing import Any, Dict, List, Optional
 
 from embedchain import App
@@ -71,13 +72,13 @@ class RAGStorage(Storage):
 
         if embedder_config:
             config["embedder"] = embedder_config
-
+        self.type = type
         self.app = App.from_config(config=config)
         self.app.llm = FakeLLM()
         if allow_reset:
             self.app.reset()
 
-    def save(self, value: Any, metadata: Dict[str, Any]) -> None:  # type: ignore # BUG?: Should be save(key, value, metadata)  Signature of "save" incompatible with supertype "Storage"
+    def save(self, value: Any, metadata: Dict[str, Any]) -> None:
         self._generate_embedding(value, metadata)
 
     def search(  # type: ignore # BUG?: Signature of "search" incompatible with supertype "Storage"
@@ -102,3 +103,11 @@ class RAGStorage(Storage):
     def _generate_embedding(self, text: str, metadata: Dict[str, Any]) -> Any:
         with suppress_logging():
             self.app.add(text, data_type="text", metadata=metadata)
+
+    def reset(self) -> None:
+        try:
+            shutil.rmtree(f"{db_storage_path()}/{self.type}")
+        except Exception as e:
+            raise Exception(
+                f"An error occurred while resetting the {self.type} memory: {e}"
+            )
