@@ -16,7 +16,7 @@ We assume you have already installed CrewAI. If not, please refer to the [instal
 To create a new project, run the following CLI command:
 
 ```shell
-$ crewai create my_project
+$ crewai create <project_name>
 ```
 
 This command will create a new project folder with the following structure:
@@ -114,16 +114,18 @@ email_summarizer_task:
 ```
 
 Use the annotations are used to properly reference the agent and task in the crew.py file.
-Annotations include:
-- @agent
-- @task
-- @crew
-- @llm
-- @tool
-- @callback
-- @output_json
-- @output_pydantic
-- @cache_handler
+
+### Annotations include:
+* @agent
+* @task
+* @crew
+* @llm
+* @tool
+* @callback
+* @output_json
+* @output_pydantic
+* @cache_handler
+
 
 crew.py
 ```py
