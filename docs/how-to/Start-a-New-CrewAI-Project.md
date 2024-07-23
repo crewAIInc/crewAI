@@ -84,8 +84,70 @@ research_candidates_task:
     - researcher
 ```
 
-#### Referencing:
+### Referencing Variables:
 Your defined functions with the same name will be used. For example, you can reference the agent for specific tasks from task.yaml file. Ensure your annotated agent and function name is the same otherwise your task wont recognize the reference properly.
+
+#### Example References
+agent.yaml
+```yaml
+email_summarizer:
+    role: >
+      Email Summarizer
+    goal: >
+      Summarize emails into a concise and clear summary
+    backstory: >
+      You will create a 5 bullet point summary of the report
+    llm: mixtal_llm
+```
+
+task.yaml
+```yaml
+email_summarizer_task:
+    description: >
+      Summarize the email into a 5 bullet point summary
+    expected_output: >
+      A 5 bullet point summary of the email
+    output_file: email_summary.md
+    agent: email_summarizer
+    context:
+      - reporting_task
+      - research_task
+```
+
+Use the annotations are used to properly reference the agent and task in the crew.py file.
+Annotations include:
+- @agent
+- @task
+- @crew
+- @llm
+- @tool
+- @callback
+- @output_json
+- @output_pydantic
+- @cache_handler
+
+crew.py
+```py
+...
+    @llm
+    def mixtal_llm(self):
+        return ChatGroq(temperature=0, model_name="mixtral-8x7b-32768")
+
+    @agent
+    def email_summarizer(self) -> Agent:
+        return Agent(
+            config=self.agents_config["email_summarizer"],
+        )
+    ## ...other tasks defined
+    @task
+    def email_summarizer_task(self) -> Task:
+        return Task(
+            config=self.tasks_config["email_summarizer_task"],
+        )
+...
+```
+
+
 
 ## Installing Dependencies
 
