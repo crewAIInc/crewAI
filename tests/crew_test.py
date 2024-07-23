@@ -1360,24 +1360,19 @@ def test_hierarchical_crew_creation_tasks_with_async_execution():
     task = Task(
         description="Come up with a list of 5 interesting ideas to explore for an article, then write one amazing paragraph highlight for each idea that showcases how good an article about this topic could be. Return the list of ideas with their paragraph and your notes.",
         expected_output="5 bullet points with a paragraph for each idea.",
-        async_execution=True,  # should throw an error
+        async_execution=True,
     )
 
-    with pytest.raises(pydantic_core._pydantic_core.ValidationError) as exec_info:
-        Crew(
-            tasks=[task],
-            agents=[researcher],
-            process=Process.hierarchical,
-            manager_llm=ChatOpenAI(model="gpt-4o"),
-        )
+    crew = Crew(
+        tasks=[task],
+        agents=[researcher],
+        process=Process.hierarchical,
+        manager_llm=ChatOpenAI(model="gpt-4o"),
+    )
+    crew.kickoff()
 
-    assert (
-        exec_info.value.errors()[0]["type"] == "async_execution_in_hierarchical_process"
-    )
-    assert (
-        "Hierarchical process error: Tasks cannot be flagged with async_execution."
-        in exec_info.value.errors()[0]["msg"]
-    )
+    assert crew.manager_agent is not None
+    assert crew.tasks[0].agent is not None
 
 
 def test_crew_inputs_interpolate_both_agents_and_tasks():

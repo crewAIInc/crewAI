@@ -267,20 +267,6 @@ class Crew(BaseModel):
         return self
 
     @model_validator(mode="after")
-    def check_tasks_in_hierarchical_process_not_async(self):
-        """Validates that the tasks in hierarchical process are not flagged with async_execution."""
-        if self.process == Process.hierarchical:
-            for task in self.tasks:
-                if task.async_execution:
-                    raise PydanticCustomError(
-                        "async_execution_in_hierarchical_process",
-                        "Hierarchical process error: Tasks cannot be flagged with async_execution.",
-                        {},
-                    )
-
-        return self
-
-    @model_validator(mode="after")
     def validate_end_with_at_most_one_async_task(self):
         """Validates that the crew ends with at most one asynchronous task."""
         final_async_task_count = 0
