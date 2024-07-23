@@ -16,7 +16,7 @@ We assume you have already installed CrewAI. If not, please refer to the [instal
 To create a new project, run the following CLI command:
 
 ```shell
-$ crewai create my_project
+$ crewai create <project_name>
 ```
 
 This command will create a new project folder with the following structure:
