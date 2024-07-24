@@ -591,7 +591,7 @@ class Crew(BaseModel):
     def _run_hierarchical_process(self) -> CrewOutput:
         """Creates and assigns a manager agent to make sure the crew completes the tasks."""
         self._create_manager_agent()
-        return self._execute_tasks(self.tasks, self.manager_agent)
+        return self._execute_tasks(self.tasks)
 
     def _create_manager_agent(self):
         i18n = I18N(prompt_file=self.prompt_file)
@@ -615,7 +615,6 @@ class Crew(BaseModel):
     def _execute_tasks(
         self,
         tasks: List[Task],
-        manager: Optional[BaseAgent] = None,
         start_index: Optional[int] = 0,
         was_replayed: bool = False,
     ) -> CrewOutput:
@@ -643,13 +642,13 @@ class Crew(BaseModel):
                         last_sync_output = task.output
                 continue
 
-            agent_to_use = self._get_agent_to_use(task, manager)
+            agent_to_use = self._get_agent_to_use(task)
             if agent_to_use is None:
                 raise ValueError(
                     f"No agent available for task: {task.description}. Ensure that either the task has an assigned agent or a manager agent is provided."
                 )
 
-            self._prepare_agent_tools(task, manager)
+            self._prepare_agent_tools(task)
             self._log_task_start(task, agent_to_use.role)
 
             if isinstance(task, ConditionalTask):
@@ -715,20 +714,18 @@ class Crew(BaseModel):
             return skipped_task_output
         return None
 
-    def _prepare_agent_tools(self, task: Task, manager: Optional[BaseAgent]):
+    def _prepare_agent_tools(self, task: Task):
         if self.process == Process.hierarchical:
-            if manager:
-                self._update_manager_tools(task, manager)
+            if self.manager_agent:
+                self._update_manager_tools(task, self.manager_agent)
             else:
                 raise ValueError("Manager agent is required for hierarchical process.")
         elif task.agent and task.agent.allow_delegation:
             self._add_delegation_tools(task)
 
-    def _get_agent_to_use(
-        self, task: Task, manager: Optional[BaseAgent]
-    ) -> Optional[BaseAgent]:
+    def _get_agent_to_use(self, task: Task) -> Optional[BaseAgent]:
         if self.process == Process.hierarchical:
-            return manager
+            return self.manager_agent
         return task.agent
 
     def _add_delegation_tools(self, task: Task):
@@ -765,10 +762,13 @@ class Crew(BaseModel):
             self._file_handler.log(agent=role, task=task.description, status="started")
 
     def _update_manager_tools(self, task: Task, manager: BaseAgent):
-        if task.agent:
-            manager.tools = task.agent.get_delegation_tools([task.agent])
-        else:
-            manager.tools = manager.get_delegation_tools(self.agents)
+        if self.manager_agent:
+            if task.agent:
+                print("only delegate to one agent", task.agent)
+                self.manager_agent.tools = task.agent.get_delegation_tools([task.agent])
+            else:
+                print("manager can delegate to all agents")
+                manager.tools = manager.get_delegation_tools(self.agents)
 
     def _get_context(self, task: Task, task_outputs: List[TaskOutput]):
         context = (
@@ -867,7 +867,7 @@ class Crew(BaseModel):
             self.tasks[i].output = task_output
 
         self._logging_color = "bold_blue"
-        result = self._execute_tasks(self.tasks, self.manager_agent, start_index, True)
+        result = self._execute_tasks(self.tasks, start_index, True)
         return result
 
     def copy(self):
