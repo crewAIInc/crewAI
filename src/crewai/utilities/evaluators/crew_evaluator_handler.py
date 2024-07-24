@@ -12,13 +12,23 @@ from crewai.tasks.task_output import TaskOutput
 
 class TaskEvaluationPydanticOutput(BaseModel):
     quality: float = Field(
-        description="A score from 0 to 10 evaluating on completion, quality, and overall performance from the task_description and task_expected_output to the actual Task Output."
+        description="A score from 1 to 10 evaluating on completion, quality, and overall performance from the task_description and task_expected_output to the actual Task Output."
     )
 
 
 class CrewEvaluator:
-    tasks_scores = defaultdict(list)
-    iteration = 0
+    """
+    A class to evaluate the performance of the agents in the crew based on the tasks they have performed.
+
+    Attributes:
+        crew (Crew): The crew of agents to evaluate.
+        model (str): The model to use for evaluating the performance of the agents (for now ONLY OpenAI accepted).
+        tasks_scores (defaultdict): A dictionary to store the scores of the agents for each task.
+        iteration (int): The current iteration of the evaluation.
+    """
+
+    tasks_scores: defaultdict = defaultdict(list)
+    iteration: int = 0
 
     def __init__(self, crew, model: str):
         self.crew = crew
@@ -37,9 +47,9 @@ class CrewEvaluator:
         return Agent(
             role="Task Execution Evaluator",
             goal=(
-                "Your goal is to evaluate the performance of the agents in the crew based on the tasks they have performed."
+                "Your goal is to evaluate the performance of the agents in the crew based on the tasks they have performed using score from 1 to 10 evaluating on completion, quality, and overall performance."
             ),
-            backstory="Evaluator agent for crew evaluation",
+            backstory="Evaluator agent for crew evaluation with precise capabilities to evaluate the performance of the agents in the crew based on the tasks they have performed",
             verbose=False,
             llm=ChatOpenAI(model=self.model),
         )
@@ -49,38 +59,39 @@ class CrewEvaluator:
     ) -> Task:
         return Task(
             description=(
-                "Based on the task description and the expected output, compare and evaluate the performance of the agents in the crew based on the Task Output they have performed."
+                "Based on the task description and the expected output, compare and evaluate the performance of the agents in the crew based on the Task Output they have performed using score from 1 to 10 evaluating on completion, quality, and overall performance."
                 f"task_description: {task_to_evaluate.description}"
                 f"task_expected_output: {task_to_evaluate.expected_output}"
                 f"agent: {task_to_evaluate.agent.role if task_to_evaluate.agent else None}"
                 f"agent_goal: {task_to_evaluate.agent.goal if task_to_evaluate.agent else None}"
                 f"Task Output: {task_output}"
             ),
-            expected_output="Evaluation score based on the performance of the agents on the tasks",
+            expected_output="Evaluation Score from 1 to 10 based on the performance of the agents on the tasks",
             agent=evaluator_agent,
             output_pydantic=TaskEvaluationPydanticOutput,
         )
 
     def print_crew_evaluation_result(self) -> None:
-        self.tasks_scores
-        results = self.tasks_scores
-
-        task_averages = [sum(scores) / len(scores) for scores in zip(*results.values())]
+        """Prints the evaluation result of the crew in a table."""
+        task_averages = [
+            sum(scores) / len(scores) for scores in zip(*self.tasks_scores.values())
+        ]
         crew_average = sum(task_averages) / len(task_averages)
 
         # Create a table
-        table = Table(title="Task Scores")
+        table = Table(title="Tasks Scores \n (1-10 Higher is better)")
 
         # Add columns for the table
-        table.add_column("Task")
-        for run in range(1, len(results) + 1):
+        table.add_column("Tasks/Crew")
+        for run in range(1, len(self.tasks_scores) + 1):
             table.add_column(f"Run {run}")
         table.add_column("Avg. Total")
 
         # Add rows for each task
         for task_index in range(len(task_averages)):
             task_scores = [
-                results[run][task_index] for run in range(1, len(results) + 1)
+                self.tasks_scores[run][task_index]
+                for run in range(1, len(self.tasks_scores) + 1)
             ]
             avg_score = task_averages[task_index]
             table.add_row(
@@ -89,7 +100,8 @@ class CrewEvaluator:
 
         # Add a row for the crew average
         crew_scores = [
-            sum(results[run]) / len(results[run]) for run in range(1, len(results) + 1)
+            sum(self.tasks_scores[run]) / len(self.tasks_scores[run])
+            for run in range(1, len(self.tasks_scores) + 1)
         ]
         table.add_row("Crew", *map(str, crew_scores), f"{crew_average:.1f}")
 
@@ -98,6 +110,7 @@ class CrewEvaluator:
         console.print(table)
 
     def evaluate(self, task_output: TaskOutput):
+        """Evaluates the performance of the agents in the crew based on the tasks they have performed."""
         current_task = None
         for task in self.crew.tasks:
             if task.description == task_output.description:
