@@ -142,4 +142,6 @@ class CrewEvaluator:
         )
 
         evaluation_result = evaluation_task.execute_sync()
-        self.tasks_scores[self.iteration].append(evaluation_result.pydantic.quality)
+
+        if isinstance(evaluation_result.pydantic, TaskEvaluationPydanticOutput):
+            self.tasks_scores[self.iteration].append(evaluation_result.pydantic.quality)
