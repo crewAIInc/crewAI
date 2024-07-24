@@ -10,6 +10,7 @@ from .replay_from_task import replay_task_command
 from .reset_memories_command import reset_memories_command
 from .test_crew import test_crew
 from .train_crew import train_crew
+from .doc_generator import generate_documentation
 
 
 @click.group()
@@ -146,6 +147,18 @@ def test(n_iterations: int, model: str):
     click.echo(f"Testing the crew for {n_iterations} iterations with model {model}")
     test_crew(n_iterations, model)
 
+@crewai.command()
+@click.option('--output', '-o', default='crew_documentation.md', help='Output file for the documentation')
+@click.option('--format', '-f', default='markdown', help='Output format')
+def generate_docs(output, format):
+    """Generate documentation for the current project setup."""
+    try:
+        click.echo(f"Generating documentation in {format} format...")
+        generate_documentation(output, format)
+        click.echo(f"Documentation generated and saved to {output}")
+    except ValueError as e:
+        click.echo(f"Error: {str(e)}", err=True)
+        click.echo("Please ensure you are in the root directory of your CrewAI project.")
 
 if __name__ == "__main__":
     crewai()
