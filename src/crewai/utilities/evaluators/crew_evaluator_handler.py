@@ -145,3 +145,5 @@ class CrewEvaluator:
 
         if isinstance(evaluation_result.pydantic, TaskEvaluationPydanticOutput):
             self.tasks_scores[self.iteration].append(evaluation_result.pydantic.quality)
+        else:
+            raise ValueError("Evaluation result is not in the expected format")
