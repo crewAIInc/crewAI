@@ -8,6 +8,7 @@ from unittest.mock import MagicMock, patch
 
 import pydantic_core
 import pytest
+
 from crewai.agent import Agent
 from crewai.agents.cache import CacheHandler
 from crewai.crew import Crew
@@ -2499,3 +2500,34 @@ def test_conditional_should_execute():
         assert condition_mock.call_count == 1
         assert condition_mock() is True
         assert mock_execute_sync.call_count == 2
+
+
+@mock.patch("crewai.crew.CrewEvaluator")
+@mock.patch("crewai.crew.Crew.kickoff")
+def test_crew_testing_function(mock_kickoff, crew_evaluator):
+    task = Task(
+        description="Come up with a list of 5 interesting ideas to explore for an article, then write one amazing paragraph highlight for each idea that showcases how good an article about this topic could be. Return the list of ideas with their paragraph and your notes.",
+        expected_output="5 bullet points with a paragraph for each idea.",
+        agent=researcher,
+    )
+
+    crew = Crew(
+        agents=[researcher],
+        tasks=[task],
+    )
+    n_iterations = 2
+    crew.test(n_iterations, model="gpt-4o-mini", inputs={"topic": "AI"})
+
+    assert len(mock_kickoff.mock_calls) == n_iterations
+    mock_kickoff.assert_has_calls(
+        [mock.call(inputs={"topic": "AI"}), mock.call(inputs={"topic": "AI"})]
+    )
+
+    crew_evaluator.assert_has_calls(
+        [
+            mock.call(crew, "gpt-4o-mini"),
+            mock.call().set_iteration(1),
+            mock.call().set_iteration(2),
+            mock.call().print_crew_evaluation_result(),
+        ]
+    )

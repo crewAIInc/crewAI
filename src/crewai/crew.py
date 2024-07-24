@@ -970,7 +970,7 @@ class Crew(BaseModel):
     def test(
         self, n_iterations: int, model: str, inputs: Optional[Dict[str, Any]] = None
     ) -> None:
-        """Test the crew with the given inputs."""
+        """Test and evaluate the Crew with the given inputs for n iterations."""
         evaluator = CrewEvaluator(self, model)
 
         for i in range(1, n_iterations + 1):
