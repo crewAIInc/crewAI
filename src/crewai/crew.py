@@ -717,7 +717,7 @@ class Crew(BaseModel):
     def _prepare_agent_tools(self, task: Task):
         if self.process == Process.hierarchical:
             if self.manager_agent:
-                self._update_manager_tools(task, self.manager_agent)
+                self._update_manager_tools(task)
             else:
                 raise ValueError("Manager agent is required for hierarchical process.")
         elif task.agent and task.agent.allow_delegation:
@@ -761,12 +761,14 @@ class Crew(BaseModel):
         if self.output_log_file:
             self._file_handler.log(agent=role, task=task.description, status="started")
 
-    def _update_manager_tools(self, task: Task, manager: BaseAgent):
+    def _update_manager_tools(self, task: Task):
         if self.manager_agent:
             if task.agent:
                 self.manager_agent.tools = task.agent.get_delegation_tools([task.agent])
             else:
-                manager.tools = manager.get_delegation_tools(self.agents)
+                self.manager_agent.tools = self.manager_agent.get_delegation_tools(
+                    self.agents
+                )
 
     def _get_context(self, task: Task, task_outputs: List[TaskOutput]):
         context = (
