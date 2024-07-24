@@ -1354,7 +1354,7 @@ def test_hierarchical_crew_creation_tasks_with_agents():
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
-def test_hierarchical_crew_creation_async_tasks_with_agents():
+def test_hierarchical_crew_creation_tasks_with_async_execution():
     """
     Agents are not required for tasks in a hierarchical process but sometimes they are still added
     This test makes sure that the manager still delegates the task to the agent even if the agent is passed in the task
