@@ -1,4 +1,4 @@
-from typing import List, Optional
+from typing import Any, List
 
 from pydantic import BaseModel
 
@@ -11,17 +11,23 @@ class PlannerTaskPydanticOutput(BaseModel):
 
 
 class CrewPlanner:
-    def __init__(self, tasks: List[Task]):
+    def __init__(self, tasks: List[Task], planning_agent_llm: Any):
         self.tasks = tasks
+        self.planning_agent_llm = planning_agent_llm
 
-    def _handle_crew_planning(self) -> Optional[BaseModel]:
+    def _handle_crew_planning(self) -> PlannerTaskPydanticOutput:
         """Handles the Crew planning by creating detailed step-by-step plans for each task."""
         planning_agent = self._create_planning_agent()
         tasks_summary = self._create_tasks_summary()
 
         planner_task = self._create_planner_task(planning_agent, tasks_summary)
 
-        return planner_task.execute_sync().pydantic
+        result = planner_task.execute_sync()
+
+        if isinstance(result.pydantic, PlannerTaskPydanticOutput):
+            return result.pydantic
+
+        raise ValueError("Failed to get the Planning output")
 
     def _create_planning_agent(self) -> Agent:
         """Creates the planning agent for the crew planning."""
@@ -32,6 +38,7 @@ class CrewPlanner:
                 "available to each agent so that they can perform the tasks in an exemplary manner"
             ),
             backstory="Planner agent for crew planning",
+            llm=self.planning_agent_llm,
         )
 
     def _create_planner_task(self, planning_agent: Agent, tasks_summary: str) -> Task:

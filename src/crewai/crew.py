@@ -6,6 +6,7 @@ from hashlib import md5
 from typing import Any, Dict, List, Optional, Tuple, Union
 
 from langchain_core.callbacks import BaseCallbackHandler
+from langchain_openai import ChatOpenAI
 from pydantic import (
     UUID4,
     BaseModel,
@@ -153,6 +154,10 @@ class Crew(BaseModel):
     planning: Optional[bool] = Field(
         default=False,
         description="Plan the crew execution and add the plan to the crew.",
+    )
+    planning_llm: Optional[Any] = Field(
+        default=ChatOpenAI(model="gpt-4o-mini"),
+        description="Language model that will run the AgentPlanner if planning is True.",
     )
     task_execution_output_json_files: Optional[List[str]] = Field(
         default=None,
@@ -559,15 +564,12 @@ class Crew(BaseModel):
     def _handle_crew_planning(self):
         """Handles the Crew planning."""
         self._logger.log("info", "Planning the crew execution")
-        result = CrewPlanner(self.tasks)._handle_crew_planning()
+        result = CrewPlanner(
+            tasks=self.tasks, planning_agent_llm=self.planning_llm
+        )._handle_crew_planning()
 
-        if result is not None and hasattr(result, "list_of_plans_per_task"):
-            for task, step_plan in zip(self.tasks, result.list_of_plans_per_task):
-                task.description += step_plan
-        else:
-            self._logger.log(
-                "info", "Something went wrong with the planning process of the Crew"
-            )
+        for task, step_plan in zip(self.tasks, result.list_of_plans_per_task):
+            task.description += step_plan
 
     def _store_execution_log(
         self,
