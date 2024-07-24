@@ -60,10 +60,10 @@ class CrewEvaluator:
         return Task(
             description=(
                 "Based on the task description and the expected output, compare and evaluate the performance of the agents in the crew based on the Task Output they have performed using score from 1 to 10 evaluating on completion, quality, and overall performance."
-                f"task_description: {task_to_evaluate.description}"
-                f"task_expected_output: {task_to_evaluate.expected_output}"
-                f"agent: {task_to_evaluate.agent.role if task_to_evaluate.agent else None}"
-                f"agent_goal: {task_to_evaluate.agent.goal if task_to_evaluate.agent else None}"
+                f"task_description: {task_to_evaluate.description} "
+                f"task_expected_output: {task_to_evaluate.expected_output} "
+                f"agent: {task_to_evaluate.agent.role if task_to_evaluate.agent else None} "
+                f"agent_goal: {task_to_evaluate.agent.goal if task_to_evaluate.agent else None} "
                 f"Task Output: {task_output}"
             ),
             expected_output="Evaluation Score from 1 to 10 based on the performance of the agents on the tasks",
@@ -72,7 +72,21 @@ class CrewEvaluator:
         )
 
     def print_crew_evaluation_result(self) -> None:
-        """Prints the evaluation result of the crew in a table."""
+        """
+        Prints the evaluation result of the crew in a table.
+        A Crew with 2 tasks using the command crewai test -n 2
+        will output the following table:
+
+                        Task Scores
+                    (1-10 Higher is better)
+            ┏━━━━━━━━━━━━┳━━━━━━━┳━━━━━━━┳━━━━━━━━━━━━┓
+            ┃ Tasks/Crew ┃ Run 1 ┃ Run 2 ┃ Avg. Total ┃
+            ┡━━━━━━━━━━━━╇━━━━━━━╇━━━━━━━╇━━━━━━━━━━━━┩
+            │ Task 1     │ 10.0  │ 9.0   │ 9.5        │
+            │ Task 2     │ 9.0   │ 9.0   │ 9.0        │
+            │ Crew       │ 9.5   │ 9.0   │ 9.2        │
+            └────────────┴───────┴───────┴────────────┘
+        """
         task_averages = [
             sum(scores) / len(scores) for scores in zip(*self.tasks_scores.values())
         ]
