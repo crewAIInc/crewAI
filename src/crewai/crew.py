@@ -764,10 +764,8 @@ class Crew(BaseModel):
     def _update_manager_tools(self, task: Task, manager: BaseAgent):
         if self.manager_agent:
             if task.agent:
-                print("only delegate to one agent", task.agent)
                 self.manager_agent.tools = task.agent.get_delegation_tools([task.agent])
             else:
-                print("manager can delegate to all agents")
                 manager.tools = manager.get_delegation_tools(self.agents)
 
     def _get_context(self, task: Task, task_outputs: List[TaskOutput]):
