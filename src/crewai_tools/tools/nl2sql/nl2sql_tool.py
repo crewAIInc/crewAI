@@ -6,8 +6,8 @@ from sqlalchemy import create_engine, text
 from sqlalchemy.orm import sessionmaker
 
 
-class NL2SQL(BaseTool):
-    name: str = "NL2SQL"
+class NL2SQLTool(BaseTool):
+    name: str = "NL2SQLTool"
     description: str = "Converts natural language to SQL queries and executes them."
     db_uri: str = Field(
         title="Database URI",
