@@ -22,7 +22,7 @@ class CrewEvaluator:
 
     Attributes:
         crew (Crew): The crew of agents to evaluate.
-        model (str): The model to use for evaluating the performance of the agents (for now ONLY OpenAI accepted).
+        openai_model_name (str): The model to use for evaluating the performance of the agents (for now ONLY OpenAI accepted).
         tasks_scores (defaultdict): A dictionary to store the scores of the agents for each task.
         iteration (int): The current iteration of the evaluation.
     """
@@ -30,9 +30,9 @@ class CrewEvaluator:
     tasks_scores: defaultdict = defaultdict(list)
     iteration: int = 0
 
-    def __init__(self, crew, model: str):
+    def __init__(self, crew, openai_model_name: str):
         self.crew = crew
-        self.model = model
+        self.openai_model_name = openai_model_name
         self._setup_for_evaluating()
 
     def _setup_for_evaluating(self) -> None:
@@ -51,7 +51,7 @@ class CrewEvaluator:
             ),
             backstory="Evaluator agent for crew evaluation with precise capabilities to evaluate the performance of the agents in the crew based on the tasks they have performed",
             verbose=False,
-            llm=ChatOpenAI(model=self.model),
+            llm=ChatOpenAI(model=self.openai_model_name),
         )
 
     def _evaluation_task(

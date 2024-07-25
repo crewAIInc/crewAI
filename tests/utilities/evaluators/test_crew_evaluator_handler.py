@@ -8,6 +8,7 @@ from crewai.task import Task
 from crewai.tasks.task_output import TaskOutput
 from crewai.utilities.evaluators.crew_evaluator_handler import (
     CrewEvaluator,
+    TaskEvaluationPydanticOutput,
 )
 
 
@@ -22,7 +23,7 @@ class TestCrewEvaluator:
         )
         crew = Crew(agents=[agent], tasks=[task])
 
-        return CrewEvaluator(crew, model="gpt-4o-mini")
+        return CrewEvaluator(crew, openai_model_name="gpt-4o-mini")
 
     def test_setup_for_evaluating(self, crew_planner):
         crew_planner._setup_for_evaluating()
@@ -107,6 +108,6 @@ class TestCrewEvaluator:
         )
 
         with mock.patch.object(Task, "execute_sync") as execute:
-            execute().pydantic.quality = 9.5
+            execute().pydantic = TaskEvaluationPydanticOutput(quality=9.5)
             crew_planner.evaluate(task_output)
             assert crew_planner.tasks_scores[0] == [9.5]
