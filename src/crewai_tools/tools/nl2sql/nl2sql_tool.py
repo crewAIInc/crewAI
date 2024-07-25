@@ -63,8 +63,10 @@ class NL2SQL(BaseTool):
                 return data
             else:
                 return f"Query {sql_query} executed successfully"
+
         except Exception as e:
             session.rollback()
             raise e
+
         finally:
             session.close()
