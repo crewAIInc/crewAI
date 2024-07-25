@@ -66,11 +66,11 @@ class TaskEvaluator:
             "- Entities extracted from the task output, if any, their type, description, and relationships"
         )
 
-        instructions = "Convert this raw text into valid JSON."
+        instructions = "Convert all responses into valid JSON output."
 
         if not self._is_gpt(self.llm):
             model_schema = PydanticSchemaParser(model=TaskEvaluation).get_schema()
-            instructions = f"{instructions}\n\nYou must return json with the following schema:\n{model_schema}"
+            instructions = f"{instructions}\n\nReturn only valid JSON with the following schema:\n```json\n{model_schema}\n```"
 
         converter = Converter(
             llm=self.llm,
