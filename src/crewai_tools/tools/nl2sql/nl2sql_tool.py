@@ -40,11 +40,11 @@ class NL2SQL(BaseTool):
     def _run(self, sql_query: str):
         try:
             data = self.execute_sql(sql_query)
-        except Exception:
+        except Exception as exc:
             data = (
                 f"Based on these tables {self.tables} and columns {self.columns}, "
                 "you can create SQL queries to retrieve data from the database."
-                f"Get the original request {sql_query} and try to create a SQL query that retrieves the requested data."
+                f"Get the original request {sql_query} and the error {exc} and create the correct SQL query."
             )
 
         return data
@@ -53,7 +53,6 @@ class NL2SQL(BaseTool):
         engine = create_engine(self.db_uri)
         Session = sessionmaker(bind=engine)
         session = Session()
-
         try:
             result = session.execute(text(sql_query))
             session.commit()
@@ -64,11 +63,8 @@ class NL2SQL(BaseTool):
                 return data
             else:
                 return f"Query {sql_query} executed successfully"
-
         except Exception as e:
             session.rollback()
-            print(f"SQL execution error: {e}")
             raise e
-
         finally:
             session.close()
