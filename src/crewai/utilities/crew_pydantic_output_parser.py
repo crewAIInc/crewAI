@@ -20,6 +20,8 @@ class CrewPydanticOutputParser(PydanticOutputParser):
 
         # Treating edge case of function calling llm returning the name instead of tool_name
         json_object = json.loads(result[0].text)
+        if "tool_name" not in json_object:
+            json_object["tool_name"] = json_object.get("name", "")
         result[0].text = json.dumps(json_object)
 
         json_object = super().parse_result(result)

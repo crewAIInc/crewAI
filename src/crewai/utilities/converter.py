@@ -23,7 +23,7 @@ class Converter(OutputConverter):
             if self.is_gpt:
                 return self._create_instructor().to_pydantic()
             else:
-                return self._create_chain().invoke({"query": self.text})
+                return self._create_chain().invoke({})
         except Exception as e:
             if current_attempt < self.max_attempts:
                 return self.to_pydantic(current_attempt + 1)
