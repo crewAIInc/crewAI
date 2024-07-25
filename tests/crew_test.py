@@ -2516,7 +2516,7 @@ def test_crew_testing_function(mock_kickoff, crew_evaluator):
         tasks=[task],
     )
     n_iterations = 2
-    crew.test(n_iterations, model="gpt-4o-mini", inputs={"topic": "AI"})
+    crew.test(n_iterations, openai_model_name="gpt-4o-mini", inputs={"topic": "AI"})
 
     assert len(mock_kickoff.mock_calls) == n_iterations
     mock_kickoff.assert_has_calls(
