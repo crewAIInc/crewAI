@@ -25,7 +25,7 @@ From this point on, your crew will have planning enabled, and the tasks will be 
 
 #### Planning LLM
 
-Now you can define the LLM that will be used to plan the tasks. The default LLM is `gpt-4o-mini`, but you can change it to any other LLM as long as it is compatible.
+Now you can define the LLM that will be used to plan the tasks. You can use any ChatOpenAI LLM model available.
 
 ```python
 from crewai import Crew, Agent, Task, Process
