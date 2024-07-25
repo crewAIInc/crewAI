@@ -967,7 +967,7 @@ class Crew(BaseModel):
 
         return total_usage_metrics
 
-    async def test(
+    def test(
         self,
         n_iterations: int,
         openai_model_name: str,
@@ -978,7 +978,7 @@ class Crew(BaseModel):
 
         for i in range(1, n_iterations + 1):
             evaluator.set_iteration(i)
-            await self.kickoff_async(inputs=inputs)
+            self.kickoff(inputs=inputs)
 
         evaluator.print_crew_evaluation_result()
 
