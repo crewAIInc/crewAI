@@ -232,7 +232,7 @@ def callback_function(output: TaskOutput):
     print(f"""
         Task completed!
         Task: {output.description}
-        Output: {output.raw_output}
+        Output: {output.raw}
     """)
 
 research_task = Task(

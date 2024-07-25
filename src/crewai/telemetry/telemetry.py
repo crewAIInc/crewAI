@@ -383,7 +383,7 @@ class Telemetry:
                             {
                                 "id": str(task.id),
                                 "description": task.description,
-                                "output": task.output.raw_output,
+                                "output": task.output.raw,
                             }
                             for task in crew.tasks
                         ]
