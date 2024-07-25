@@ -129,6 +129,7 @@ nav:
     - Training: 'core-concepts/Training-Crew.md'
     - Memory: 'core-concepts/Memory.md'
     - Planning: 'core-concepts/Planning.md'
+    - Testing: 'core-concepts/Testing.md'
     - Using LangChain Tools: 'core-concepts/Using-LangChain-Tools.md'
     - Using LlamaIndex Tools: 'core-concepts/Using-LlamaIndex-Tools.md'
   - How to Guides:
