@@ -1,5 +1,6 @@
-from typing import Any, List
+from typing import Any, List, Optional
 
+from langchain_openai import ChatOpenAI
 from pydantic import BaseModel
 
 from crewai.agent import Agent
@@ -11,9 +12,13 @@ class PlannerTaskPydanticOutput(BaseModel):
 
 
 class CrewPlanner:
-    def __init__(self, tasks: List[Task], planning_agent_llm: Any):
+    def __init__(self, tasks: List[Task], planning_agent_llm: Optional[Any] = None):
         self.tasks = tasks
-        self.planning_agent_llm = planning_agent_llm
+
+        if planning_agent_llm is None:
+            self.planning_agent_llm = ChatOpenAI(model="gpt-4o-mini")
+        else:
+            self.planning_agent_llm = planning_agent_llm
 
     def _handle_crew_planning(self) -> PlannerTaskPydanticOutput:
         """Handles the Crew planning by creating detailed step-by-step plans for each task."""

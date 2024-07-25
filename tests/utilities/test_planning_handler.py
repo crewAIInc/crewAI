@@ -1,10 +1,10 @@
 from unittest.mock import patch
-from crewai.tasks.task_output import TaskOutput
 
 import pytest
 
 from crewai.agent import Agent
 from crewai.task import Task
+from crewai.tasks.task_output import TaskOutput
 from crewai.utilities.planning_handler import CrewPlanner, PlannerTaskPydanticOutput
 
 
@@ -28,7 +28,7 @@ class TestCrewPlanner:
                 agent=Agent(role="Agent 3", goal="Goal 3", backstory="Backstory 3"),
             ),
         ]
-        return CrewPlanner(tasks)
+        return CrewPlanner(tasks, None)
 
     def test_handle_crew_planning(self, crew_planner):
         with patch.object(Task, "execute_sync") as execute:

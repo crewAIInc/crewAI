@@ -6,7 +6,6 @@ from hashlib import md5
 from typing import Any, Dict, List, Optional, Tuple, Union
 
 from langchain_core.callbacks import BaseCallbackHandler
-from langchain_openai import ChatOpenAI
 from pydantic import (
     UUID4,
     BaseModel,
@@ -156,7 +155,7 @@ class Crew(BaseModel):
         description="Plan the crew execution and add the plan to the crew.",
     )
     planning_llm: Optional[Any] = Field(
-        default=ChatOpenAI(model="gpt-4o-mini"),
+        default=None,
         description="Language model that will run the AgentPlanner if planning is True.",
     )
     task_execution_output_json_files: Optional[List[str]] = Field(
