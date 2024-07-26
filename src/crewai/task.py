@@ -447,8 +447,11 @@ class Task(BaseModel):
         if directory and not os.path.exists(directory):
             os.makedirs(directory)
 
-        with open(self.output_file, "w", encoding="utf-8") as file:  # type: ignore # Argument 1 to "open" has incompatible type "str | None"; expected "int | str | bytes | PathLike[str] | PathLike[bytes]"
-            file.write(result)
+        with open(self.output_file, "w", encoding="utf-8") as file:
+            if isinstance(result, dict):
+                json.dump(result, file, ensure_ascii=False, indent=2)
+            else:
+                file.write(str(result))
         return None
 
     def __repr__(self):
