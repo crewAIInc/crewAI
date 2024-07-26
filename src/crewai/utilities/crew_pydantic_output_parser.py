@@ -14,7 +14,7 @@ class CrewPydanticOutputParser(PydanticOutputParser):
 
     pydantic_object: Type[BaseModel]
 
-    def parse_result(self, result: List[Generation], *, partial: bool = False) -> Any:
+    def parse_result(self, result: List[Generation]) -> Any:
         result[0].text = self._transform_in_valid_json(result[0].text)
 
         # Treating edge case of function calling llm returning the name instead of tool_name

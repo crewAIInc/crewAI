@@ -16,11 +16,13 @@ class PydanticSchemaParser(BaseModel):
         return self._get_model_schema(self.model)
 
     def _get_model_schema(self, model, depth=0) -> str:
-        lines = ["{"]
+        indent = "    " * depth
+        lines = [f"{indent}{{"]
         for field_name, field in model.model_fields.items():
             field_type_str = self._get_field_type(field, depth + 1)
-            lines.append(f"{' ' * 4 * (depth + 1)}{field_name}: {field_type_str}")
-        lines.append(f"{' ' * 4 * depth}}}")
+            lines.append(f"{indent}    {field_name}: {field_type_str},")
+        lines[-1] = lines[-1].rstrip(",")  # Remove trailing comma from last item
+        lines.append(f"{indent}}}")
         return "\n".join(lines)
 
     def _get_field_type(self, field, depth) -> str:
