@@ -1,10 +1,12 @@
 import json
 import re
+from ast import expr_context
 from typing import Any, Optional, Type, Union
 
 from langchain.schema import HumanMessage, SystemMessage
 from langchain_openai import ChatOpenAI
-from pydantic import BaseModel
+from pydantic import BaseModel, ValidationError
+from regex import P
 
 from crewai.agents.agent_builder.utilities.base_output_converter import OutputConverter
 from crewai.utilities.printer import Printer
@@ -93,10 +95,28 @@ def convert_to_model(
     try:
         escaped_result = json.dumps(json.loads(result, strict=False))
         return validate_model(escaped_result, model, bool(output_json))
-    except Exception:
+    except json.JSONDecodeError as e:
+        Printer().print(
+            content=f"Error parsing JSON: {e}. Attempting to handle partial JSON.",
+            color="yellow",
+        )
         return handle_partial_json(
             result, model, bool(output_json), agent, converter_cls
         )
+    except ValidationError as e:
+        Printer().print(
+            content=f"Pydantic validation error: {e}. Attempting to handle partial JSON.",
+            color="yellow",
+        )
+        return handle_partial_json(
+            result, model, bool(output_json), agent, converter_cls
+        )
+    except Exception as e:
+        Printer().print(
+            content=f"Unexpected error during model conversion: {type(e).__name__}: {e}. Returning original result.",
+            color="red",
+        )
+        return result
 
 
 def validate_model(
@@ -122,8 +142,21 @@ def handle_partial_json(
             if is_json_output:
                 return exported_result.model_dump()
             return exported_result
-        except Exception:
-            pass
+        except json.JSONDecodeError as e:
+            Printer().print(
+                content=f"Error parsing JSON: {e}. The extracted JSON-like string is not valid JSON. Attempting alternative conversion method.",
+                color="yellow",
+            )
+        except ValidationError as e:
+            Printer().print(
+                content=f"Pydantic validation error: {e}. The JSON structure doesn't match the expected model. Attempting alternative conversion method.",
+                color="yellow",
+            )
+        except Exception as e:
+            Printer().print(
+                content=f"Unexpected error during partial JSON handling: {type(e).__name__}: {e}. Attempting alternative conversion method.",
+                color="red",
+            )
 
     return convert_with_instructions(
         result, model, is_json_output, agent, converter_cls
