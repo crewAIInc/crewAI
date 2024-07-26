@@ -1,12 +1,10 @@
 import json
 import re
-from ast import expr_context
 from typing import Any, Optional, Type, Union
 
 from langchain.schema import HumanMessage, SystemMessage
 from langchain_openai import ChatOpenAI
 from pydantic import BaseModel, ValidationError
-from regex import P
 
 from crewai.agents.agent_builder.utilities.base_output_converter import OutputConverter
 from crewai.utilities.printer import Printer
