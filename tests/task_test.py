@@ -5,13 +5,12 @@ import json
 from unittest.mock import MagicMock, patch
 
 import pytest
-from pydantic import BaseModel
-from pydantic_core import ValidationError
-
 from crewai import Agent, Crew, Process, Task
 from crewai.tasks.conditional_task import ConditionalTask
 from crewai.tasks.task_output import TaskOutput
 from crewai.utilities.converter import Converter
+from pydantic import BaseModel
+from pydantic_core import ValidationError
 
 
 def test_task_tool_reflect_agent_tools():
@@ -826,3 +825,34 @@ def test_key():
     assert (
         task.key == hash
     ), "The key should be the hash of the non-interpolated description."
+
+
+def test_convert_to_model_with_escape_characters():
+    class EmailResponse(BaseModel):
+        previous_message_content: str
+
+    class EmailResponses(BaseModel):
+        responses: list[EmailResponse]
+    class TestTask(Task):
+        output_pydantic = EmailResponses
+
+    task = TestTask(description="Test task", expected_output="Test output")
+
+    json_string_with_escapes = """
+    {
+        "responses": [
+            {
+                "previous_message_content": "Hi Tom,\r\n\r\nNiamh has chosen the Mika phonics on"
+            }
+        ]
+    }
+    """
+
+    result = task._convert_to_model(json_string_with_escapes)
+
+    assert isinstance(result, EmailResponses)
+    assert len(result.responses) == 1
+    assert (
+        result.responses[0].previous_message_content
+        == "Hi Tom,\r\n\r\nNiamh has chosen the Mika phonics on"
+    )
