@@ -1,7 +1,7 @@
 # GithubSearchTool
 
 ## Description
-The GithubSearchTool is a Read, Append, and Generate (RAG) tool specifically designed for conducting semantic searches within GitHub repositories. Utilizing advanced semantic search capabilities, it sifts through code, pull requests, issues, and repositories, making it an essential tool for developers, researchers, or anyone in need of precise information from GitHub.
+The GithubSearchTool is a Retrieval Augmented Generation (RAG) tool specifically designed for conducting semantic searches within GitHub repositories. Utilizing advanced semantic search capabilities, it sifts through code, pull requests, issues, and repositories, making it an essential tool for developers, researchers, or anyone in need of precise information from GitHub.
 
 ## Installation
 To use the GithubSearchTool, first ensure the crewai_tools package is installed in your Python environment:
