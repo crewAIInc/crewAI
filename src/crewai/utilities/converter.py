@@ -84,6 +84,7 @@ def convert_to_model(
     output_pydantic: Optional[Type[BaseModel]],
     output_json: Optional[Type[BaseModel]],
     agent: Any,
+    converter_cls: Optional[Type[Converter]] = None,
 ) -> Union[dict, BaseModel, str]:
     model = output_pydantic or output_json
     if model is None:
@@ -93,7 +94,9 @@ def convert_to_model(
         escaped_result = json.dumps(json.loads(result, strict=False))
         return validate_model(escaped_result, model, bool(output_json))
     except Exception:
-        return handle_partial_json(result, model, bool(output_json), agent)
+        return handle_partial_json(
+            result, model, bool(output_json), agent, converter_cls
+        )
 
 
 def validate_model(
@@ -106,7 +109,11 @@ def validate_model(
 
 
 def handle_partial_json(
-    result: str, model: Type[BaseModel], is_json_output: bool, agent: Any
+    result: str,
+    model: Type[BaseModel],
+    is_json_output: bool,
+    agent: Any,
+    converter_cls: Optional[Type[Converter]] = None,
 ) -> Union[dict, BaseModel, str]:
     match = re.search(r"({.*})", result, re.DOTALL)
     if match:
@@ -118,17 +125,28 @@ def handle_partial_json(
         except Exception:
             pass
 
-    return convert_with_instructions(result, model, is_json_output, agent)
+    return convert_with_instructions(
+        result, model, is_json_output, agent, converter_cls
+    )
 
 
 def convert_with_instructions(
-    result: str, model: Type[BaseModel], is_json_output: bool, agent: Any
+    result: str,
+    model: Type[BaseModel],
+    is_json_output: bool,
+    agent: Any,
+    converter_cls: Optional[Type[Converter]] = None,
 ) -> Union[dict, BaseModel, str]:
     llm = agent.function_calling_llm or agent.llm
     instructions = get_conversion_instructions(model, llm)
 
     converter = create_converter(
-        llm=llm, text=result, model=model, instructions=instructions
+        agent=agent,
+        converter_cls=converter_cls,
+        llm=llm,
+        text=result,
+        model=model,
+        instructions=instructions,
     )
     exported_result = (
         converter.to_pydantic() if not is_json_output else converter.to_json()
@@ -158,5 +176,23 @@ def is_gpt(llm: Any) -> bool:
     return isinstance(llm, ChatOpenAI) and llm.openai_api_base is None
 
 
-def create_converter(*args, **kwargs) -> Converter:
-    return Converter(*args, **kwargs)
+def create_converter(
+    agent: Optional[Any] = None,
+    converter_cls: Optional[Type[Converter]] = None,
+    *args,
+    **kwargs,
+) -> Converter:
+    if agent and not converter_cls:
+        if hasattr(agent, "get_output_converter"):
+            converter = agent.get_output_converter(*args, **kwargs)
+        else:
+            raise AttributeError("Agent does not have a 'get_output_converter' method")
+    elif converter_cls:
+        converter = converter_cls(*args, **kwargs)
+    else:
+        raise ValueError("Either agent or converter_cls must be provided")
+
+    if not converter:
+        raise Exception("No output converter found or set.")
+
+    return converter

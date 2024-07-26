@@ -320,18 +320,6 @@ class Task(BaseModel):
 
         return copied_task
 
-    def _create_converter(self, *args, **kwargs) -> Converter:
-        """Create a converter instance."""
-        if self.agent and not self.converter_cls:
-            converter = self.agent.get_output_converter(*args, **kwargs)
-        elif self.converter_cls:
-            converter = self.converter_cls(*args, **kwargs)
-
-        if not converter:
-            raise Exception("No output converter found or set.")
-
-        return converter
-
     def _export_output(
         self, result: str
     ) -> Tuple[Optional[BaseModel], Optional[Dict[str, Any]]]:
@@ -340,7 +328,11 @@ class Task(BaseModel):
 
         if self.output_pydantic or self.output_json:
             model_output = convert_to_model(
-                result, self.output_pydantic, self.output_json, self.agent
+                result,
+                self.output_pydantic,
+                self.output_json,
+                self.agent,
+                self.converter_cls,
             )
 
             if isinstance(model_output, BaseModel):
