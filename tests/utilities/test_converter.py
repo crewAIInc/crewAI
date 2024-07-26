@@ -1,5 +1,5 @@
 import json
-from unittest.mock import Mock, patch
+from unittest.mock import MagicMock, Mock, patch
 
 import pytest
 from crewai.utilities.converter import (
@@ -225,9 +225,42 @@ def test_is_gpt_false():
     assert is_gpt(mock_llm) is False
 
 
-# Test for create_converter
-def test_create_converter():
+class CustomConverter(Converter):
+    pass
+
+
+def test_create_converter_with_mock_agent():
+    mock_agent = MagicMock()
+    mock_agent.get_output_converter.return_value = MagicMock(spec=Converter)
+
     converter = create_converter(
-        llm=Mock(), text="Sample", model=SimpleModel, instructions="Convert"
+        agent=mock_agent,
+        llm=Mock(),
+        text="Sample",
+        model=SimpleModel,
+        instructions="Convert",
     )
+
     assert isinstance(converter, Converter)
+    mock_agent.get_output_converter.assert_called_once()
+
+
+def test_create_converter_with_custom_converter():
+    converter = create_converter(
+        converter_cls=CustomConverter,
+        llm=Mock(),
+        text="Sample",
+        model=SimpleModel,
+        instructions="Convert",
+    )
+
+    assert isinstance(converter, CustomConverter)
+
+
+def test_create_converter_fails_without_agent_or_converter_cls():
+    with pytest.raises(
+        ValueError, match="Either agent or converter_cls must be provided"
+    ):
+        create_converter(
+            llm=Mock(), text="Sample", model=SimpleModel, instructions="Convert"
+        )
