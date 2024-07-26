@@ -37,6 +37,7 @@ from crewai.utilities.constants import (
     TRAINED_AGENTS_DATA_FILE,
     TRAINING_DATA_FILE,
 )
+from crewai.utilities.evaluators.crew_evaluator_handler import CrewEvaluator
 from crewai.utilities.evaluators.task_evaluator import TaskEvaluator
 from crewai.utilities.formatter import (
     aggregate_raw_outputs_from_task_outputs,
@@ -967,10 +968,19 @@ class Crew(BaseModel):
         return total_usage_metrics
 
     def test(
-        self, n_iterations: int, model: str, inputs: Optional[Dict[str, Any]] = None
+        self,
+        n_iterations: int,
+        openai_model_name: str,
+        inputs: Optional[Dict[str, Any]] = None,
     ) -> None:
-        """Test the crew with the given inputs."""
-        pass
+        """Test and evaluate the Crew with the given inputs for n iterations."""
+        evaluator = CrewEvaluator(self, openai_model_name)
+
+        for i in range(1, n_iterations + 1):
+            evaluator.set_iteration(i)
+            self.kickoff(inputs=inputs)
+
+        evaluator.print_crew_evaluation_result()
 
     def __repr__(self):
         return f"Crew(id={self.id}, process={self.process}, number_of_agents={len(self.agents)}, number_of_tasks={len(self.tasks)})"
