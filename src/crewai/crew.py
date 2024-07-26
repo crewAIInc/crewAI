@@ -155,6 +155,10 @@ class Crew(BaseModel):
         default=False,
         description="Plan the crew execution and add the plan to the crew.",
     )
+    planning_llm: Optional[Any] = Field(
+        default=None,
+        description="Language model that will run the AgentPlanner if planning is True.",
+    )
     task_execution_output_json_files: Optional[List[str]] = Field(
         default=None,
         description="List of file paths for task execution JSON files.",
@@ -560,15 +564,12 @@ class Crew(BaseModel):
     def _handle_crew_planning(self):
         """Handles the Crew planning."""
         self._logger.log("info", "Planning the crew execution")
-        result = CrewPlanner(self.tasks)._handle_crew_planning()
+        result = CrewPlanner(
+            tasks=self.tasks, planning_agent_llm=self.planning_llm
+        )._handle_crew_planning()
 
-        if result is not None and hasattr(result, "list_of_plans_per_task"):
-            for task, step_plan in zip(self.tasks, result.list_of_plans_per_task):
-                task.description += step_plan
-        else:
-            self._logger.log(
-                "info", "Something went wrong with the planning process of the Crew"
-            )
+        for task, step_plan in zip(self.tasks, result.list_of_plans_per_task):
+            task.description += step_plan
 
     def _store_execution_log(
         self,
