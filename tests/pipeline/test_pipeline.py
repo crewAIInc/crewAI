@@ -8,6 +8,7 @@ from crewai.crews.crew_output import CrewOutput
 from crewai.pipeline.pipeline import Pipeline
 from crewai.pipeline.pipeline_run_result import PipelineRunResult
 from crewai.process import Process
+from crewai.routers.pipeline_router import PipelineRouter
 from crewai.task import Task
 from crewai.tasks.task_output import TaskOutput
 from pydantic import BaseModel, ValidationError
@@ -63,6 +64,11 @@ def mock_crew_factory():
         return crew
 
     return _create_mock_crew
+
+
+@pytest.fixture
+def pipeline_router_factory():
+    return PipelineRouter()
 
 
 def test_pipeline_initialization(mock_crew_factory):
@@ -443,6 +449,7 @@ Options:
 - Should the final output include the accumulation of previous stages' outputs?
 """
 
+
 @pytest.mark.asyncio
 async def test_pipeline_data_accumulation(mock_crew_factory):
     crew1 = mock_crew_factory(name="Crew 1", output_json_dict={"key1": "value1"})
@@ -472,3 +479,11 @@ async def test_pipeline_data_accumulation(mock_crew_factory):
     assert len(final_result.crews_outputs) == 2
     assert final_result.crews_outputs[0].json_dict == {"key1": "value1"}
     assert final_result.crews_outputs[1].json_dict == {"key2": "value2"}
+
+
+def test_add_condition(pipeline_router_factory, mock_crew_factory):
+    pipeline_router = pipeline_router_factory()
+    crew = mock_crew_factory(name="Test Crew")
+    pipeline_router.add_condition(lambda x: x.get("score", 0) > 80, crew)
+    assert len(pipeline_router.conditions) == 1
+    assert pipeline_router.conditions[0][1] == crew
