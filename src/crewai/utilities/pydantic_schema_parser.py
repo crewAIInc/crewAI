@@ -20,7 +20,7 @@ class PydanticSchemaParser(BaseModel):
         for field_name, field in model.model_fields.items():
             field_type_str = self._get_field_type(field, depth + 1)
             lines.append(f"{' ' * 4 * (depth + 1)}{field_name}: {field_type_str}")
-        lines.append(f"{' ' * 4 * depth}")
+        lines.append(f"{' ' * 4 * depth}}}")
         return "\n".join(lines)
 
     def _get_field_type(self, field, depth) -> str:
