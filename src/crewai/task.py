@@ -1,6 +1,5 @@
 import json
 import os
-import re
 import threading
 import uuid
 from concurrent.futures import Future
@@ -8,7 +7,6 @@ from copy import copy
 from hashlib import md5
 from typing import Any, Dict, List, Optional, Tuple, Type, Union
 
-from langchain_openai import ChatOpenAI
 from opentelemetry.trace import Span
 from pydantic import UUID4, BaseModel, Field, field_validator, model_validator
 from pydantic_core import PydanticCustomError
@@ -17,10 +15,8 @@ from crewai.agents.agent_builder.base_agent import BaseAgent
 from crewai.tasks.output_format import OutputFormat
 from crewai.tasks.task_output import TaskOutput
 from crewai.telemetry.telemetry import Telemetry
-from crewai.utilities.converter import Converter, ConverterError, convert_to_model
+from crewai.utilities.converter import Converter, convert_to_model
 from crewai.utilities.i18n import I18N
-from crewai.utilities.printer import Printer
-from crewai.utilities.pydantic_schema_parser import PydanticSchemaParser
 
 
 class Task(BaseModel):
