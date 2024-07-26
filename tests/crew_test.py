@@ -1356,28 +1356,66 @@ def test_hierarchical_crew_creation_tasks_with_agents():
 
 @pytest.mark.vcr(filter_headers=["authorization"])
 def test_hierarchical_crew_creation_tasks_with_async_execution():
+    """
+    Agents are not required for tasks in a hierarchical process but sometimes they are still added
+    This test makes sure that the manager still delegates the task to the agent even if the agent is passed in the task
+    """
     from langchain_openai import ChatOpenAI
 
     task = Task(
-        description="Come up with a list of 5 interesting ideas to explore for an article, then write one amazing paragraph highlight for each idea that showcases how good an article about this topic could be. Return the list of ideas with their paragraph and your notes.",
-        expected_output="5 bullet points with a paragraph for each idea.",
-        async_execution=True,  # should throw an error
+        description="Write one amazing paragraph about AI.",
+        expected_output="A single paragraph with 4 sentences.",
+        agent=writer,
+        async_execution=True,
     )
 
-    with pytest.raises(pydantic_core._pydantic_core.ValidationError) as exec_info:
-        Crew(
-            tasks=[task],
-            agents=[researcher],
-            process=Process.hierarchical,
-            manager_llm=ChatOpenAI(model="gpt-4o"),
-        )
-
-    assert (
-        exec_info.value.errors()[0]["type"] == "async_execution_in_hierarchical_process"
+    crew = Crew(
+        tasks=[task],
+        agents=[writer, researcher, ceo],
+        process=Process.hierarchical,
+        manager_llm=ChatOpenAI(model="gpt-4o"),
     )
-    assert (
-        "Hierarchical process error: Tasks cannot be flagged with async_execution."
-        in exec_info.value.errors()[0]["msg"]
+
+    crew.kickoff()
+    assert crew.manager_agent is not None
+    assert crew.manager_agent.tools is not None
+    assert crew.manager_agent.tools[0].description.startswith(
+        "Delegate a specific task to one of the following coworkers: Senior Writer\n"
+    )
+
+
+@pytest.mark.vcr(filter_headers=["authorization"])
+def test_hierarchical_crew_creation_tasks_with_sync_last():
+    """
+    Agents are not required for tasks in a hierarchical process but sometimes they are still added
+    This test makes sure that the manager still delegates the task to the agent even if the agent is passed in the task
+    """
+    from langchain_openai import ChatOpenAI
+
+    task = Task(
+        description="Write one amazing paragraph about AI.",
+        expected_output="A single paragraph with 4 sentences.",
+        agent=writer,
+        async_execution=True,
+    )
+    task2 = Task(
+        description="Write one amazing paragraph about AI.",
+        expected_output="A single paragraph with 4 sentences.",
+        async_execution=False,
+    )
+
+    crew = Crew(
+        tasks=[task, task2],
+        agents=[writer, researcher, ceo],
+        process=Process.hierarchical,
+        manager_llm=ChatOpenAI(model="gpt-4o"),
+    )
+
+    crew.kickoff()
+    assert crew.manager_agent is not None
+    assert crew.manager_agent.tools is not None
+    assert crew.manager_agent.tools[0].description.startswith(
+        "Delegate a specific task to one of the following coworkers: Senior Writer, Researcher, CEO\n"
     )
 
 
