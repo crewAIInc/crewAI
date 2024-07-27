@@ -10,7 +10,7 @@ Welcome to the ultimate guide for starting a new CrewAI project. This document w
 Beforre we start there are a couple of things to note:
 
 1. CrewAI is a Python package and requires Python >=3.10 and <=3.13 to run.
-2. The preferred way of setting up CrewAI is using the crewai create command.This will create a new project folder and install a skeleton template for you to work on.
+2. The preferred way of setting up CrewAI is using the `crewai create` command.This will create a new project folder and install a skeleton template for you to work on.
 
 ## Prerequisites
 
@@ -62,7 +62,7 @@ Activate your virtual environment by running the following CLI command:
 $ source <venv-name>/bin/activate
 ```
 
-Now, to create a new CrewAIproject, run the following CLI command:
+Now, to create a new CrewAI project, run the following CLI command:
 
 ```shell
 $ crewai create <project_name>

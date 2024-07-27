@@ -12,7 +12,7 @@ Cutting-edge framework for orchestrating role-playing, autonomous AI agents. By 
                    Installing CrewAI
                  </a>
             </li>
-                        <li><a href='./getting-started/Start-a-New-CrewAI-Project-Template-Method.md'>
+            <li><a href='./getting-started/Start-a-New-CrewAI-Project-Template-Method.md'>
                    Start a New CrewAI Project: Template Method
                  </a>
             </li>
