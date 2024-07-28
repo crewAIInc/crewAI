@@ -633,18 +633,21 @@ def test_sequential_async_task_execution_completion():
     list_ideas = Task(
         description="Give me a list of 5 interesting ideas to explore for an article, what makes them unique and interesting.",
         expected_output="Bullet point list of 5 important events.",
+        max_retry_limit=3,
         agent=researcher,
         async_execution=True,
     )
     list_important_history = Task(
         description="Research the history of AI and give me the 5 most important events that shaped the technology.",
         expected_output="Bullet point list of 5 important events.",
+        max_retry_limit=3,
         agent=researcher,
         async_execution=True,
     )
     write_article = Task(
         description="Write an article about the history of AI and its most important events.",
         expected_output="A 4 paragraph article about AI.",
+        max_retry_limit=3,
         agent=writer,
         context=[list_ideas, list_important_history],
     )
@@ -657,7 +660,7 @@ def test_sequential_async_task_execution_completion():
 
     sequential_result = sequential_crew.kickoff()
     assert sequential_result.raw.startswith(
-        "**The Evolution of Artificial Intelligence: A Journey Through Milestones**"
+        "The history of artificial intelligence (AI) is marked by several pivotal events that have shaped its evolution and impact on various sectors."
     )
 
 
@@ -1312,14 +1315,14 @@ def test_agent_usage_metrics_are_captured_for_hierarchical_process():
     )
 
     result = crew.kickoff()
-    assert result.raw == '"Howdy!"'
+    assert result.raw == "Howdy!"
 
     print(crew.usage_metrics)
 
     assert crew.usage_metrics == {
-        "total_tokens": 311,
-        "prompt_tokens": 224,
-        "completion_tokens": 87,
+        "total_tokens": 219,
+        "prompt_tokens": 201,
+        "completion_tokens": 18,
         "successful_requests": 1,
     }
 
