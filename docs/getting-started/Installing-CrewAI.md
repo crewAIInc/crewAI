@@ -18,4 +18,7 @@ pip install crewai
 # Install the main crewAI package and the tools package
 # that includes a series of helpful tools for your agents
 pip install 'crewai[tools]'
+
+# Alternatively, you can also use:
+pip install crewai crewai-tools
 ```
