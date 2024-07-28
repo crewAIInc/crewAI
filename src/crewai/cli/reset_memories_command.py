@@ -9,10 +9,14 @@ from crewai.utilities.task_output_storage_handler import TaskOutputStorageHandle
 
 def reset_memories_command(long, short, entity, kickoff_outputs, all) -> None:
     """
-    Replay the crew execution from a specific task.
+    Reset the crew memories.
 
     Args:
-      task_id (str): The ID of the task to replay from.
+      long (bool): Whether to reset the long-term memory.
+      short (bool): Whether to reset the short-term memory.
+      entity (bool): Whether to reset the entity memory.
+      kickoff_outputs (bool): Whether to reset the latest kickoff task outputs.
+      all (bool): Whether to reset all memories.
     """
 
     try:

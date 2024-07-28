@@ -8,6 +8,7 @@ from unittest.mock import MagicMock, patch
 
 import pydantic_core
 import pytest
+
 from crewai.agent import Agent
 from crewai.agents.cache import CacheHandler
 from crewai.crew import Crew
@@ -673,18 +674,21 @@ def test_sequential_async_task_execution_completion():
     list_ideas = Task(
         description="Give me a list of 5 interesting ideas to explore for an article, what makes them unique and interesting.",
         expected_output="Bullet point list of 5 important events.",
+        max_retry_limit=3,
         agent=researcher,
         async_execution=True,
     )
     list_important_history = Task(
         description="Research the history of AI and give me the 5 most important events that shaped the technology.",
         expected_output="Bullet point list of 5 important events.",
+        max_retry_limit=3,
         agent=researcher,
         async_execution=True,
     )
     write_article = Task(
         description="Write an article about the history of AI and its most important events.",
         expected_output="A 4 paragraph article about AI.",
+        max_retry_limit=3,
         agent=writer,
         context=[list_ideas, list_important_history],
     )
@@ -697,7 +701,7 @@ def test_sequential_async_task_execution_completion():
 
     sequential_result = sequential_crew.kickoff()
     assert sequential_result.raw.startswith(
-        "**The Evolution of Artificial Intelligence: A Journey Through Milestones**"
+        "The history of artificial intelligence (AI) is marked by several pivotal events that have shaped its evolution and impact on various sectors."
     )
 
 
@@ -1352,14 +1356,14 @@ def test_agent_usage_metrics_are_captured_for_hierarchical_process():
     )
 
     result = crew.kickoff()
-    assert result.raw == '"Howdy!"'
+    assert result.raw == "Howdy!"
 
     print(crew.usage_metrics)
 
     assert crew.usage_metrics == {
-        "total_tokens": 311,
-        "prompt_tokens": 224,
-        "completion_tokens": 87,
+        "total_tokens": 219,
+        "prompt_tokens": 201,
+        "completion_tokens": 18,
         "successful_requests": 1,
     }
 
@@ -1396,28 +1400,66 @@ def test_hierarchical_crew_creation_tasks_with_agents():
 
 @pytest.mark.vcr(filter_headers=["authorization"])
 def test_hierarchical_crew_creation_tasks_with_async_execution():
+    """
+    Agents are not required for tasks in a hierarchical process but sometimes they are still added
+    This test makes sure that the manager still delegates the task to the agent even if the agent is passed in the task
+    """
     from langchain_openai import ChatOpenAI
 
     task = Task(
-        description="Come up with a list of 5 interesting ideas to explore for an article, then write one amazing paragraph highlight for each idea that showcases how good an article about this topic could be. Return the list of ideas with their paragraph and your notes.",
-        expected_output="5 bullet points with a paragraph for each idea.",
-        async_execution=True,  # should throw an error
+        description="Write one amazing paragraph about AI.",
+        expected_output="A single paragraph with 4 sentences.",
+        agent=writer,
+        async_execution=True,
     )
 
-    with pytest.raises(pydantic_core._pydantic_core.ValidationError) as exec_info:
-        Crew(
-            tasks=[task],
-            agents=[researcher],
-            process=Process.hierarchical,
-            manager_llm=ChatOpenAI(model="gpt-4o"),
-        )
-
-    assert (
-        exec_info.value.errors()[0]["type"] == "async_execution_in_hierarchical_process"
+    crew = Crew(
+        tasks=[task],
+        agents=[writer, researcher, ceo],
+        process=Process.hierarchical,
+        manager_llm=ChatOpenAI(model="gpt-4o"),
     )
-    assert (
-        "Hierarchical process error: Tasks cannot be flagged with async_execution."
-        in exec_info.value.errors()[0]["msg"]
+
+    crew.kickoff()
+    assert crew.manager_agent is not None
+    assert crew.manager_agent.tools is not None
+    assert crew.manager_agent.tools[0].description.startswith(
+        "Delegate a specific task to one of the following coworkers: Senior Writer\n"
+    )
+
+
+@pytest.mark.vcr(filter_headers=["authorization"])
+def test_hierarchical_crew_creation_tasks_with_sync_last():
+    """
+    Agents are not required for tasks in a hierarchical process but sometimes they are still added
+    This test makes sure that the manager still delegates the task to the agent even if the agent is passed in the task
+    """
+    from langchain_openai import ChatOpenAI
+
+    task = Task(
+        description="Write one amazing paragraph about AI.",
+        expected_output="A single paragraph with 4 sentences.",
+        agent=writer,
+        async_execution=True,
+    )
+    task2 = Task(
+        description="Write one amazing paragraph about AI.",
+        expected_output="A single paragraph with 4 sentences.",
+        async_execution=False,
+    )
+
+    crew = Crew(
+        tasks=[task, task2],
+        agents=[writer, researcher, ceo],
+        process=Process.hierarchical,
+        manager_llm=ChatOpenAI(model="gpt-4o"),
+    )
+
+    crew.kickoff()
+    assert crew.manager_agent is not None
+    assert crew.manager_agent.tools is not None
+    assert crew.manager_agent.tools[0].description.startswith(
+        "Delegate a specific task to one of the following coworkers: Senior Writer, Researcher, CEO\n"
     )
 
 
@@ -2540,3 +2582,34 @@ def test_conditional_should_execute():
         assert condition_mock.call_count == 1
         assert condition_mock() is True
         assert mock_execute_sync.call_count == 2
+
+
+@mock.patch("crewai.crew.CrewEvaluator")
+@mock.patch("crewai.crew.Crew.kickoff")
+def test_crew_testing_function(mock_kickoff, crew_evaluator):
+    task = Task(
+        description="Come up with a list of 5 interesting ideas to explore for an article, then write one amazing paragraph highlight for each idea that showcases how good an article about this topic could be. Return the list of ideas with their paragraph and your notes.",
+        expected_output="5 bullet points with a paragraph for each idea.",
+        agent=researcher,
+    )
+
+    crew = Crew(
+        agents=[researcher],
+        tasks=[task],
+    )
+    n_iterations = 2
+    crew.test(n_iterations, openai_model_name="gpt-4o-mini", inputs={"topic": "AI"})
+
+    assert len(mock_kickoff.mock_calls) == n_iterations
+    mock_kickoff.assert_has_calls(
+        [mock.call(inputs={"topic": "AI"}), mock.call(inputs={"topic": "AI"})]
+    )
+
+    crew_evaluator.assert_has_calls(
+        [
+            mock.call(crew, "gpt-4o-mini"),
+            mock.call().set_iteration(1),
+            mock.call().set_iteration(2),
+            mock.call().print_crew_evaluation_result(),
+        ]
+    )

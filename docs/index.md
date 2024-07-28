@@ -6,6 +6,19 @@ Cutting-edge framework for orchestrating role-playing, autonomous AI agents. By 
 
 <div style="display:flex; margin:0 auto; justify-content: center;">
     <div style="width:25%">
+        <h2>Getting Started</h2>
+        <ul>
+            <li><a href='./getting-started/Installing-CrewAI'>
+                   Installing CrewAI
+                 </a>
+            </li>
+            <li><a href='./getting-started/Start-a-New-CrewAI-Project-Template-Method'>
+                   Start a New CrewAI Project: Template Method
+                 </a>
+            </li>
+        </ul>
+    </div>
+    <div style="width:25%">
         <h2>Core Concepts</h2>
         <ul>
             <li>
