@@ -114,7 +114,7 @@ from langchain.agents import load_tools
 langchain_tools = load_tools(["google-serper"], llm=llm)
 
 agent1 = CustomAgent(
-    role="backstory agent",
+    role="agent role",
     goal="who is {input}?",
     backstory="agent backstory",
     verbose=True,
@@ -127,7 +127,7 @@ task1 = Task(
 )
 
 agent2 = Agent(
-    role="bio agent",
+    role="agent role",
     goal="summarize the short bio for {input} and if needed do more research",
     backstory="agent backstory",
     verbose=True,
