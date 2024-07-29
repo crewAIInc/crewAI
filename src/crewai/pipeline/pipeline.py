@@ -391,6 +391,15 @@ class Pipeline(BaseModel):
         return [crew_outputs + [output] for output in all_stage_outputs[-1]]
 
     def __rshift__(self, other: PipelineStage) -> Pipeline:
+        """
+        Implements the >> operator to add another Stage (Crew or List[Crew]) to an existing Pipeline.
+
+        Args:
+            other (Any): The stage to add.
+
+        Returns:
+            Pipeline: A new pipeline with the added stage.
+        """
         if isinstance(other, (Crew, Pipeline, PipelineRouter)):
             return type(self)(stages=self.stages + [other])
         elif isinstance(other, list) and all(isinstance(crew, Crew) for crew in other):
