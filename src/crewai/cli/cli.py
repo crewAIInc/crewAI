@@ -5,11 +5,11 @@ from crewai.memory.storage.kickoff_task_outputs_storage import (
     KickoffTaskOutputsSQLiteStorage,
 )
 
-
 from .create_crew import create_crew
-from .train_crew import train_crew
 from .replay_from_task import replay_task_command
 from .reset_memories_command import reset_memories_command
+from .test_crew import test_crew
+from .train_crew import train_crew
 
 
 @click.group()
@@ -124,6 +124,27 @@ def reset_memories(long, short, entities, kickoff_outputs, all):
         reset_memories_command(long, short, entities, kickoff_outputs, all)
     except Exception as e:
         click.echo(f"An error occurred while resetting memories: {e}", err=True)
+
+
+@crewai.command()
+@click.option(
+    "-n",
+    "--n_iterations",
+    type=int,
+    default=3,
+    help="Number of iterations to Test the crew",
+)
+@click.option(
+    "-m",
+    "--model",
+    type=str,
+    default="gpt-4o-mini",
+    help="LLM Model to run the tests on the Crew. For now only accepting only OpenAI models.",
+)
+def test(n_iterations: int, model: str):
+    """Test the crew and evaluate the results."""
+    click.echo(f"Testing the crew for {n_iterations} iterations with model {model}")
+    test_crew(n_iterations, model)
 
 
 if __name__ == "__main__":

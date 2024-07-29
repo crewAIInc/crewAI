@@ -119,6 +119,9 @@ theme:
 
 nav:
   - Home: '/'
+  - Getting Started:
+    - Installing CrewAI: 'getting-started/Installing-CrewAI.md'
+    - Starting a new CrewAI project: 'getting-started/Start-a-New-CrewAI-Project-Template-Method.md'
   - Core Concepts:
     - Agents: 'core-concepts/Agents.md'
     - Tasks: 'core-concepts/Tasks.md'
@@ -129,6 +132,7 @@ nav:
     - Training: 'core-concepts/Training-Crew.md'
     - Memory: 'core-concepts/Memory.md'
     - Planning: 'core-concepts/Planning.md'
+    - Testing: 'core-concepts/Testing.md'
     - Using LangChain Tools: 'core-concepts/Using-LangChain-Tools.md'
     - Using LlamaIndex Tools: 'core-concepts/Using-LlamaIndex-Tools.md'
   - How to Guides:
