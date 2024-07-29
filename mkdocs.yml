@@ -119,6 +119,9 @@ theme:
 
 nav:
   - Home: '/'
+  - Getting Started:
+    - Installing CrewAI: 'getting-started/Installing-CrewAI.md'
+    - Starting a new CrewAI project: 'getting-started/Start-a-New-CrewAI-Project-Template-Method.md'
   - Core Concepts:
     - Agents: 'core-concepts/Agents.md'
     - Tasks: 'core-concepts/Tasks.md'
