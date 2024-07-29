@@ -5,6 +5,7 @@ from typing import Any, Dict, List, Optional, Union
 from pydantic import UUID4, BaseModel, Field
 
 from crewai.crews.crew_output import CrewOutput
+from crewai.types.usage_metrics import UsageMetrics
 
 
 class PipelineRunResult(BaseModel):
@@ -23,7 +24,7 @@ class PipelineRunResult(BaseModel):
         description="JSON dict output of the pipeline run", default={}
     )
 
-    token_usage: Dict[str, Any] = Field(
+    token_usage: Dict[str, UsageMetrics] = Field(
         description="Token usage for each crew in the run"
     )
     trace: List[Any] = Field(
