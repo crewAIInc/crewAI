@@ -355,6 +355,9 @@ class Task(BaseModel):
         return OutputFormat.RAW
 
     def _save_file(self, result: Any) -> None:
+        if self.output_file is None:
+            raise ValueError("output_file is not set.")
+
         directory = os.path.dirname(self.output_file)  # type: ignore # Value of type variable "AnyOrLiteralStr" of "dirname" cannot be "str | None"
 
         if directory and not os.path.exists(directory):
@@ -363,6 +366,7 @@ class Task(BaseModel):
         with open(self.output_file, "w", encoding="utf-8") as file:
             if isinstance(result, dict):
                 import json
+
                 json.dump(result, file, ensure_ascii=False, indent=2)
             else:
                 file.write(str(result))
