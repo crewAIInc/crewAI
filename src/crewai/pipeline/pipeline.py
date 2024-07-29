@@ -2,14 +2,17 @@ from __future__ import annotations
 
 import asyncio
 import copy
-from typing import Any, Dict, List, Tuple, Union
+from typing import TYPE_CHECKING, Any, Dict, List, Tuple, Union
 
 from pydantic import BaseModel, Field, model_validator
 
 from crewai.crew import Crew
 from crewai.crews.crew_output import CrewOutput
 from crewai.pipeline.pipeline_run_result import PipelineRunResult
-from crewai.routers.pipeline_router import PipelineRouter
+from crewai.types.pipeline_stage import PipelineStage
+
+if TYPE_CHECKING:
+    from crewai.routers.pipeline_router import PipelineRouter
 
 Trace = Union[Union[str, Dict[str, Any]], List[Union[str, Dict[str, Any]]]]
 
@@ -46,7 +49,7 @@ Multiple runs can be processed concurrently, each following the defined pipeline
 
 
 class Pipeline(BaseModel):
-    stages: List[Union[Crew, "Pipeline", "PipelineRouter"]] = Field(
+    stages: List[PipelineStage] = Field(
         ..., description="List of crews representing stages to be executed in sequence"
     )
 
@@ -105,38 +108,38 @@ class Pipeline(BaseModel):
             stage_input = copy.deepcopy(current_input)
 
             if isinstance(stage, PipelineRouter):
-                next_stage = stage.route(stage_input)
-                traces.append([f"Routed to {next_stage.__class__.__name__}"])
-                stage = next_stage
+                next_pipeline, route_taken = stage.route(stage_input)
+                self.stages = (
+                    self.stages[: stage_index + 1]
+                    + list(next_pipeline.stages)
+                    + self.stages[stage_index + 1 :]
+                )
+                traces.append([{"router": stage.name, "route_taken": route_taken}])
+                stage_index += 1
+                continue
 
-            if isinstance(stage, Crew):
-                stage_outputs, stage_trace = await self._process_crew(
-                    stage, stage_input
-                )
-            elif isinstance(stage, Pipeline):
-                stage_outputs, stage_trace = await self._process_pipeline(
-                    stage, stage_input
-                )
-            else:
-                raise ValueError(f"Unsupported stage type: {type(stage)}")
+            stage_outputs, stage_trace = await self._process_stage(stage, stage_input)
 
             self._update_metrics_and_input(
                 usage_metrics, current_input, stage, stage_outputs
             )
             traces.append(stage_trace)
             all_stage_outputs.append(stage_outputs)
-
             stage_index += 1
 
         return self._build_pipeline_run_results(
             all_stage_outputs, traces, usage_metrics
         )
 
-    async def _process_crew(
-        self, crew: Crew, current_input: Dict[str, Any]
+    async def _process_stage(
+        self, stage: PipelineStage, current_input: Dict[str, Any]
     ) -> Tuple[List[CrewOutput], List[Union[str, Dict[str, Any]]]]:
-        output = await crew.kickoff_async(inputs=current_input)
-        return [output], [crew.name or str(crew.id)]
+        if isinstance(stage, Crew):
+            return await self._process_single_crew(stage, current_input)
+        elif isinstance(stage, list) and all(isinstance(crew, Crew) for crew in stage):
+            return await self._process_parallel_crews(stage, current_input)
+        else:
+            raise ValueError(f"Unsupported stage type: {type(stage)}")
 
     async def _process_pipeline(
         self, pipeline: "Pipeline", current_input: Dict[str, Any]
@@ -147,14 +150,6 @@ class Pipeline(BaseModel):
             f"Nested Pipeline: {pipeline.__class__.__name__}"
         ]
         return outputs, traces
-
-    async def _process_stage(
-        self, stage: Union[Crew, List[Crew]], current_input: Dict[str, Any]
-    ) -> Tuple[List[CrewOutput], List[Union[str, Dict[str, Any]]]]:
-        if isinstance(stage, Crew):
-            return await self._process_single_crew(stage, current_input)
-        else:
-            return await self._process_parallel_crews(stage, current_input)
 
     async def _process_single_crew(
         self, crew: Crew, current_input: Dict[str, Any]
@@ -174,13 +169,18 @@ class Pipeline(BaseModel):
         self,
         usage_metrics: Dict[str, Any],
         current_input: Dict[str, Any],
-        stage: Union[Crew, "Pipeline"],
+        stage: PipelineStage,
         outputs: List[CrewOutput],
     ) -> None:
-        for output in outputs:
-            if isinstance(stage, Crew):
-                usage_metrics[stage.name or str(stage.id)] = output.token_usage
-            current_input.update(output.to_dict())
+        if isinstance(stage, Crew):
+            usage_metrics[stage.name or str(stage.id)] = outputs[0].token_usage
+            current_input.update(outputs[0].to_dict())
+        elif isinstance(stage, list) and all(isinstance(crew, Crew) for crew in stage):
+            for crew, output in zip(stage, outputs):
+                usage_metrics[crew.name or str(crew.id)] = output.token_usage
+                current_input.update(output.to_dict())
+        else:
+            raise ValueError(f"Unsupported stage type: {type(stage)}")
 
     def _build_pipeline_run_results(
         self,
@@ -235,16 +235,12 @@ class Pipeline(BaseModel):
         ]
         return [crew_outputs + [output] for output in all_stage_outputs[-1]]
 
-    def __rshift__(self, other: Any) -> "Pipeline":
+    def __rshift__(self, other: PipelineStage) -> Pipeline:
         if isinstance(other, (Crew, Pipeline, PipelineRouter)):
+            return type(self)(stages=self.stages + [other])
+        elif isinstance(other, list) and all(isinstance(crew, Crew) for crew in other):
             return type(self)(stages=self.stages + [other])
         else:
             raise TypeError(
                 f"Unsupported operand type for >>: '{type(self).__name__}' and '{type(other).__name__}'"
             )
-
-
-# TODO: CHECK IF NECESSARY
-from crewai.routers.pipeline_router import PipelineRouter
-
-Pipeline.model_rebuild()
