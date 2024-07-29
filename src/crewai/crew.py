@@ -470,7 +470,6 @@ class Crew(BaseModel):
 
         self.usage_metrics = UsageMetrics()
         for metric in metrics:
-            # TODO: ADD A TEST TO MAKE SURE THIS WORKS PROPERLY.
             self.usage_metrics.add_usage_metrics(metric)
 
         return result
