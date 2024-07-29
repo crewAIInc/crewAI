@@ -199,9 +199,7 @@ class Agent(BaseAgent):
                     "tools": self.agent_executor.tools_description,
                 }
             )["output"]
-            print("Result when things went well:", result)
         except Exception as e:
-            print("FAILED TO EXECUTE TASK", e)
             self._times_executed += 1
             if self._times_executed > self.max_retry_limit:
                 raise e
@@ -217,7 +215,6 @@ class Agent(BaseAgent):
             if tool_result.get("result_as_answer", False):
                 result = tool_result["result"]
 
-        print("RESULT TO RETURN", result)
         return result
 
     def format_log_to_str(

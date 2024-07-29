@@ -96,7 +96,7 @@ class Crew(BaseModel):
         default_factory=TaskOutputStorageHandler
     )
 
-    name: Optional[str] = Field(default="")
+    name: Optional[str] = Field(default=None)
     cache: bool = Field(default=True)
     model_config = ConfigDict(arbitrary_types_allowed=True)
     tasks: List[Task] = Field(default_factory=list)
@@ -148,7 +148,7 @@ class Crew(BaseModel):
         description="Path to the prompt json file to be used for the crew.",
     )
     output_log_file: Optional[str] = Field(
-        default="",
+        default=None,
         description="output_log_file",
     )
     planning: Optional[bool] = Field(

@@ -170,12 +170,23 @@ class Pipeline(BaseModel):
     def _format_traces(
         self, traces: List[List[Union[str, Dict[str, Any]]]]
     ) -> List[List[Trace]]:
-        formatted_traces: List[Trace] = []
-        for trace in traces[:-1]:
-            formatted_traces.append(trace[0] if len(trace) == 1 else trace)
+        formatted_traces: List[Trace] = self._format_single_trace(traces[:-1])
+        return self._format_multiple_traces(formatted_traces, traces[-1])
 
+    def _format_single_trace(
+        self, traces: List[List[Union[str, Dict[str, Any]]]]
+    ) -> List[Trace]:
+        formatted_traces: List[Trace] = []
+        for trace in traces:
+            formatted_traces.append(trace[0] if len(trace) == 1 else trace)
+        return formatted_traces
+
+    def _format_multiple_traces(
+        self,
+        formatted_traces: List[Trace],
+        final_trace: List[Union[str, Dict[str, Any]]],
+    ) -> List[List[Trace]]:
         traces_to_return: List[List[Trace]] = []
-        final_trace = traces[-1]
         if len(final_trace) == 1:
             formatted_traces.append(final_trace[0])
             traces_to_return.append(formatted_traces)
@@ -184,7 +195,6 @@ class Pipeline(BaseModel):
                 copied_traces = formatted_traces.copy()
                 copied_traces.append(trace)
                 traces_to_return.append(copied_traces)
-
         return traces_to_return
 
     def _format_crew_outputs(
