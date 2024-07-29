@@ -54,23 +54,23 @@ class TaskEvaluator:
     def __init__(self, original_agent):
         self.llm = original_agent.llm
 
-    def evaluate(self, task, ouput) -> TaskEvaluation:
+    def evaluate(self, task, output) -> TaskEvaluation:
         evaluation_query = (
             f"Assess the quality of the task completed based on the description, expected output, and actual results.\n\n"
             f"Task Description:\n{task.description}\n\n"
             f"Expected Output:\n{task.expected_output}\n\n"
-            f"Actual Output:\n{ouput}\n\n"
+            f"Actual Output:\n{output}\n\n"
             "Please provide:\n"
             "- Bullet points suggestions to improve future similar tasks\n"
             "- A score from 0 to 10 evaluating on completion, quality, and overall performance"
             "- Entities extracted from the task output, if any, their type, description, and relationships"
         )
 
-        instructions = "I'm gonna convert this raw text into valid JSON."
+        instructions = "Convert all responses into valid JSON output."
 
         if not self._is_gpt(self.llm):
             model_schema = PydanticSchemaParser(model=TaskEvaluation).get_schema()
-            instructions = f"{instructions}\n\nThe json should have the following structure, with the following keys:\n{model_schema}"
+            instructions = f"{instructions}\n\nReturn only valid JSON with the following schema:\n```json\n{model_schema}\n```"
 
         converter = Converter(
             llm=self.llm,

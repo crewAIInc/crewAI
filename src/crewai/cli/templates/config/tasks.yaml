@@ -5,6 +5,7 @@ research_task:
     the current year is 2024.
   expected_output: >
     A list with 10 bullet points of the most relevant information about {topic}
+  agent: researcher
 
 reporting_task:
   description: >
@@ -13,3 +14,4 @@ reporting_task:
   expected_output: >
     A fully fledge reports with the mains topics, each with a full section of information.
     Formatted as markdown without '```'
+  agent: reporting_analyst

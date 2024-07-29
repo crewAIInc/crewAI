@@ -11,13 +11,12 @@ from crewai.process import Process
 from crewai.routers.pipeline_router import PipelineRouter
 from crewai.task import Task
 from crewai.tasks.task_output import TaskOutput
+from crewai.types.usage_metrics import UsageMetrics
 from pydantic import BaseModel, ValidationError
 
-DEFAULT_TOKEN_USAGE = {
-    "total_tokens": 100,
-    "prompt_tokens": 50,
-    "completion_tokens": 50,
-}
+DEFAULT_TOKEN_USAGE = UsageMetrics(
+    total_tokens=100, prompt_tokens=50, completion_tokens=50, successful_requests=3
+)
 
 
 @pytest.fixture

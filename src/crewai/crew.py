@@ -32,8 +32,10 @@ from crewai.tasks.conditional_task import ConditionalTask
 from crewai.tasks.task_output import TaskOutput
 from crewai.telemetry import Telemetry
 from crewai.tools.agent_tools import AgentTools
+from crewai.types.usage_metrics import UsageMetrics
 from crewai.utilities import I18N, FileHandler, Logger, RPMController
 from crewai.utilities.constants import TRAINED_AGENTS_DATA_FILE, TRAINING_DATA_FILE
+from crewai.utilities.evaluators.crew_evaluator_handler import CrewEvaluator
 from crewai.utilities.evaluators.task_evaluator import TaskEvaluator
 from crewai.utilities.formatter import (
     aggregate_raw_outputs_from_task_outputs,
@@ -96,7 +98,7 @@ class Crew(BaseModel):
         default_factory=TaskOutputStorageHandler
     )
 
-    name: Optional[str] = Field(default="")
+    name: Optional[str] = Field(default=None)
     cache: bool = Field(default=True)
     model_config = ConfigDict(arbitrary_types_allowed=True)
     tasks: List[Task] = Field(default_factory=list)
@@ -111,7 +113,7 @@ class Crew(BaseModel):
         default={"provider": "openai"},
         description="Configuration for the embedder to be used for the crew.",
     )
-    usage_metrics: Optional[dict] = Field(
+    usage_metrics: Optional[UsageMetrics] = Field(
         default=None,
         description="Metrics for the LLM usage during all tasks execution.",
     )
@@ -148,12 +150,16 @@ class Crew(BaseModel):
         description="Path to the prompt json file to be used for the crew.",
     )
     output_log_file: Optional[str] = Field(
-        default="",
+        default=None,
         description="output_log_file",
     )
     planning: Optional[bool] = Field(
         default=False,
         description="Plan the crew execution and add the plan to the crew.",
+    )
+    planning_llm: Optional[Any] = Field(
+        default=None,
+        description="Language model that will run the AgentPlanner if planning is True.",
     )
     task_execution_output_json_files: Optional[List[str]] = Field(
         default=None,
@@ -262,20 +268,6 @@ class Crew(BaseModel):
                     raise PydanticCustomError(
                         "missing_agent_in_task",
                         f"Sequential process error: Agent is missing in the task with the following description: {task.description}",  # type: ignore # Argument of type "str" cannot be assigned to parameter "message_template" of type "LiteralString"
-                        {},
-                    )
-
-        return self
-
-    @model_validator(mode="after")
-    def check_tasks_in_hierarchical_process_not_async(self):
-        """Validates that the tasks in hierarchical process are not flagged with async_execution."""
-        if self.process == Process.hierarchical:
-            for task in self.tasks:
-                if task.async_execution:
-                    raise PydanticCustomError(
-                        "async_execution_in_hierarchical_process",
-                        "Hierarchical process error: Tasks cannot be flagged with async_execution.",
                         {},
                     )
 
@@ -463,7 +455,7 @@ class Crew(BaseModel):
         if self.planning:
             self._handle_crew_planning()
 
-        metrics = []
+        metrics: List[UsageMetrics] = []
 
         if self.process == Process.sequential:
             result = self._run_sequential_process()
@@ -473,11 +465,12 @@ class Crew(BaseModel):
             raise NotImplementedError(
                 f"The process '{self.process}' is not implemented yet."
             )
+
         metrics += [agent._token_process.get_summary() for agent in self.agents]
 
-        self.usage_metrics = {
-            key: sum([m[key] for m in metrics if m is not None]) for key in metrics[0]
-        }
+        self.usage_metrics = UsageMetrics()
+        for metric in metrics:
+            self.usage_metrics.add_usage_metrics(metric)
 
         return result
 
@@ -486,12 +479,7 @@ class Crew(BaseModel):
         results: List[CrewOutput] = []
 
         # Initialize the parent crew's usage metrics
-        total_usage_metrics = {
-            "total_tokens": 0,
-            "prompt_tokens": 0,
-            "completion_tokens": 0,
-            "successful_requests": 0,
-        }
+        total_usage_metrics = UsageMetrics()
 
         for input_data in inputs:
             crew = self.copy()
@@ -499,8 +487,7 @@ class Crew(BaseModel):
             output = crew.kickoff(inputs=input_data)
 
             if crew.usage_metrics:
-                for key in total_usage_metrics:
-                    total_usage_metrics[key] += crew.usage_metrics.get(key, 0)
+                total_usage_metrics.add_usage_metrics(crew.usage_metrics)
 
             results.append(output)
 
@@ -529,29 +516,10 @@ class Crew(BaseModel):
 
         results = await asyncio.gather(*tasks)
 
-        total_usage_metrics = {
-            "total_tokens": 0,
-            "prompt_tokens": 0,
-            "completion_tokens": 0,
-            "successful_requests": 0,
-        }
+        total_usage_metrics = UsageMetrics()
         for crew in crew_copies:
             if crew.usage_metrics:
-                for key in total_usage_metrics:
-                    total_usage_metrics[key] += crew.usage_metrics.get(key, 0)
-
-        self.usage_metrics = total_usage_metrics
-
-        total_usage_metrics = {
-            "total_tokens": 0,
-            "prompt_tokens": 0,
-            "completion_tokens": 0,
-            "successful_requests": 0,
-        }
-        for crew in crew_copies:
-            if crew.usage_metrics:
-                for key in total_usage_metrics:
-                    total_usage_metrics[key] += crew.usage_metrics.get(key, 0)
+                total_usage_metrics.add_usage_metrics(crew.usage_metrics)
 
         self.usage_metrics = total_usage_metrics
         self._task_output_handler.reset()
@@ -560,15 +528,12 @@ class Crew(BaseModel):
     def _handle_crew_planning(self):
         """Handles the Crew planning."""
         self._logger.log("info", "Planning the crew execution")
-        result = CrewPlanner(self.tasks)._handle_crew_planning()
+        result = CrewPlanner(
+            tasks=self.tasks, planning_agent_llm=self.planning_llm
+        )._handle_crew_planning()
 
-        if result is not None and hasattr(result, "list_of_plans_per_task"):
-            for task, step_plan in zip(self.tasks, result.list_of_plans_per_task):
-                task.description += step_plan
-        else:
-            self._logger.log(
-                "info", "Something went wrong with the planning process of the Crew"
-            )
+        for task, step_plan in zip(self.tasks, result.list_of_plans_per_task):
+            task.description += step_plan
 
     def _store_execution_log(
         self,
@@ -606,7 +571,7 @@ class Crew(BaseModel):
     def _run_hierarchical_process(self) -> CrewOutput:
         """Creates and assigns a manager agent to make sure the crew completes the tasks."""
         self._create_manager_agent()
-        return self._execute_tasks(self.tasks, self.manager_agent)
+        return self._execute_tasks(self.tasks)
 
     def _create_manager_agent(self):
         i18n = I18N(prompt_file=self.prompt_file)
@@ -630,7 +595,6 @@ class Crew(BaseModel):
     def _execute_tasks(
         self,
         tasks: List[Task],
-        manager: Optional[BaseAgent] = None,
         start_index: Optional[int] = 0,
         was_replayed: bool = False,
     ) -> CrewOutput:
@@ -658,13 +622,13 @@ class Crew(BaseModel):
                         last_sync_output = task.output
                 continue
 
-            agent_to_use = self._get_agent_to_use(task, manager)
+            agent_to_use = self._get_agent_to_use(task)
             if agent_to_use is None:
                 raise ValueError(
                     f"No agent available for task: {task.description}. Ensure that either the task has an assigned agent or a manager agent is provided."
                 )
 
-            self._prepare_agent_tools(task, manager)
+            self._prepare_agent_tools(task)
             self._log_task_start(task, agent_to_use.role)
 
             if isinstance(task, ConditionalTask):
@@ -730,20 +694,18 @@ class Crew(BaseModel):
             return skipped_task_output
         return None
 
-    def _prepare_agent_tools(self, task: Task, manager: Optional[BaseAgent]):
+    def _prepare_agent_tools(self, task: Task):
         if self.process == Process.hierarchical:
-            if manager:
-                self._update_manager_tools(task, manager)
+            if self.manager_agent:
+                self._update_manager_tools(task)
             else:
                 raise ValueError("Manager agent is required for hierarchical process.")
         elif task.agent and task.agent.allow_delegation:
             self._add_delegation_tools(task)
 
-    def _get_agent_to_use(
-        self, task: Task, manager: Optional[BaseAgent]
-    ) -> Optional[BaseAgent]:
+    def _get_agent_to_use(self, task: Task) -> Optional[BaseAgent]:
         if self.process == Process.hierarchical:
-            return manager
+            return self.manager_agent
         return task.agent
 
     def _add_delegation_tools(self, task: Task):
@@ -779,11 +741,14 @@ class Crew(BaseModel):
         if self.output_log_file:
             self._file_handler.log(agent=role, task=task.description, status="started")
 
-    def _update_manager_tools(self, task: Task, manager: BaseAgent):
-        if task.agent:
-            manager.tools = task.agent.get_delegation_tools([task.agent])
-        else:
-            manager.tools = manager.get_delegation_tools(self.agents)
+    def _update_manager_tools(self, task: Task):
+        if self.manager_agent:
+            if task.agent:
+                self.manager_agent.tools = task.agent.get_delegation_tools([task.agent])
+            else:
+                self.manager_agent.tools = self.manager_agent.get_delegation_tools(
+                    self.agents
+                )
 
     def _get_context(self, task: Task, task_outputs: List[TaskOutput]):
         context = (
@@ -882,7 +847,7 @@ class Crew(BaseModel):
             self.tasks[i].output = task_output
 
         self._logging_color = "bold_blue"
-        result = self._execute_tasks(self.tasks, self.manager_agent, start_index, True)
+        result = self._execute_tasks(self.tasks, start_index, True)
         return result
 
     def copy(self):
@@ -945,27 +910,35 @@ class Crew(BaseModel):
             )
         self._telemetry.end_crew(self, final_string_output)
 
-    def calculate_usage_metrics(self) -> Dict[str, int]:
+    def calculate_usage_metrics(self) -> UsageMetrics:
         """Calculates and returns the usage metrics."""
-        total_usage_metrics = {
-            "total_tokens": 0,
-            "prompt_tokens": 0,
-            "completion_tokens": 0,
-            "successful_requests": 0,
-        }
+        total_usage_metrics = UsageMetrics()
 
         for agent in self.agents:
             if hasattr(agent, "_token_process"):
                 token_sum = agent._token_process.get_summary()
-                for key in total_usage_metrics:
-                    total_usage_metrics[key] += token_sum.get(key, 0)
+                total_usage_metrics.add_usage_metrics(token_sum)
 
         if self.manager_agent and hasattr(self.manager_agent, "_token_process"):
             token_sum = self.manager_agent._token_process.get_summary()
-            for key in total_usage_metrics:
-                total_usage_metrics[key] += token_sum.get(key, 0)
+            total_usage_metrics.add_usage_metrics(token_sum)
 
         return total_usage_metrics
+
+    def test(
+        self,
+        n_iterations: int,
+        openai_model_name: str,
+        inputs: Optional[Dict[str, Any]] = None,
+    ) -> None:
+        """Test and evaluate the Crew with the given inputs for n iterations."""
+        evaluator = CrewEvaluator(self, openai_model_name)
+
+        for i in range(1, n_iterations + 1):
+            evaluator.set_iteration(i)
+            self.kickoff(inputs=inputs)
+
+        evaluator.print_crew_evaluation_result()
 
     def __rshift__(self, other: "Crew") -> "Pipeline":
         """
