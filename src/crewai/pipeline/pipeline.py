@@ -121,7 +121,7 @@ class Pipeline(BaseModel):
         Returns:
             List[PipelineRunResult]: List of results from each run.
         """
-        pipeline_results = []
+        pipeline_results: List[PipelineRunResult] = []
 
         # Process all runs in parallel
         all_run_results = await asyncio.gather(
