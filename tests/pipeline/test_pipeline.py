@@ -10,13 +10,12 @@ from crewai.pipeline.pipeline_run_result import PipelineRunResult
 from crewai.process import Process
 from crewai.task import Task
 from crewai.tasks.task_output import TaskOutput
+from crewai.types.usage_metrics import UsageMetrics
 from pydantic import BaseModel, ValidationError
 
-DEFAULT_TOKEN_USAGE = {
-    "total_tokens": 100,
-    "prompt_tokens": 50,
-    "completion_tokens": 50,
-}
+DEFAULT_TOKEN_USAGE = UsageMetrics(
+    total_tokens=100, prompt_tokens=50, completion_tokens=50, successful_requests=3
+)
 
 
 @pytest.fixture
@@ -442,6 +441,7 @@ Options:
 - Should the final output only include the last stage's output?
 - Should the final output include the accumulation of previous stages' outputs?
 """
+
 
 @pytest.mark.asyncio
 async def test_pipeline_data_accumulation(mock_crew_factory):

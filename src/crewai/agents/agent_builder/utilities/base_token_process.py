@@ -1,4 +1,4 @@
-from typing import Any, Dict
+from crewai.types.usage_metrics import UsageMetrics
 
 
 class TokenProcess:
@@ -18,10 +18,10 @@ class TokenProcess:
     def sum_successful_requests(self, requests: int):
         self.successful_requests = self.successful_requests + requests
 
-    def get_summary(self) -> Dict[str, Any]:
-        return {
-            "total_tokens": self.total_tokens,
-            "prompt_tokens": self.prompt_tokens,
-            "completion_tokens": self.completion_tokens,
-            "successful_requests": self.successful_requests,
-        }
+    def get_summary(self) -> UsageMetrics:
+        return UsageMetrics(
+            total_tokens=self.total_tokens,
+            prompt_tokens=self.prompt_tokens,
+            completion_tokens=self.completion_tokens,
+            successful_requests=self.successful_requests,
+        )
