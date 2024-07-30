@@ -1,5 +1,4 @@
 from collections import defaultdict
-from datetime import datetime
 
 from langchain_openai import ChatOpenAI
 from pydantic import BaseModel, Field
@@ -31,7 +30,6 @@ class CrewEvaluator:
     tasks_scores: defaultdict = defaultdict(list)
     run_execution_times: defaultdict = defaultdict(list)
     iteration: int = 0
-    execution_time_elapsed_list = []
 
     def __init__(self, crew, openai_model_name: str):
         self.crew = crew
@@ -74,18 +72,6 @@ class CrewEvaluator:
     def set_iteration(self, iteration: int) -> None:
         self.iteration = iteration
 
-    def set_start_time(self) -> None:
-        """Sets the start time for the evaluation process."""
-        self._start_time = datetime.now().timestamp()
-
-    def set_end_time(self) -> None:
-        """Sets the end time for the evaluation process."""
-        self._end_time = datetime.now().timestamp()
-
-    def compute_execution_time(self) -> None:
-        """Calculates the execution time for the evaluation process."""
-        self.execution_time_elapsed_list.append(self._end_time - self._start_time)
-
     def print_crew_evaluation_result(self) -> None:
         """
         Prints the evaluation result of the crew in a table.
@@ -106,9 +92,6 @@ class CrewEvaluator:
             sum(scores) / len(scores) for scores in zip(*self.tasks_scores.values())
         ]
         crew_average = sum(task_averages) / len(task_averages)
-        # execution_time_avg = sum(self.execution_time_elapsed_list) / len(
-        #     self.execution_time_elapsed_list
-        # )
 
         # Create a table
         table = Table(title="Tasks Scores \n (1-10 Higher is better)")
