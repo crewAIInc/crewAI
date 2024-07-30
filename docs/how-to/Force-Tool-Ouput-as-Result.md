@@ -16,7 +16,7 @@ Here's an example of how to force the tool output as the result of an agent's ta
 # Define a custom tool that returns the result as the answer
 coding_agent =Agent(
         role="Data Scientist",
-        goal="Product amazing resports on AI",
+        goal="Product amazing reports on AI",
         backstory="You work with data and AI",
         tools=[MyCustomTool(result_as_answer=True)],
     )
