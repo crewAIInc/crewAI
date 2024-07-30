@@ -1,3 +1,1 @@
-from crewai.routers.pipeline_router import PipelineRouter
-
-__all__ = ["PipelineRouter"]
+from crewai.routers.router import Router

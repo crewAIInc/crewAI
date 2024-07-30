@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 import asyncio
 import copy
 from typing import Any, Dict, List, Tuple, Union
@@ -9,12 +7,11 @@ from pydantic import BaseModel, Field, model_validator
 from crewai.crew import Crew
 from crewai.crews.crew_output import CrewOutput
 from crewai.pipeline.pipeline_kickoff_result import PipelineKickoffResult
-from crewai.routers.pipeline_router import PipelineRouter
-from crewai.types.pipeline_stage import PipelineStage
+from crewai.routers.router import Router
 from crewai.types.usage_metrics import UsageMetrics
 
 Trace = Union[Union[str, Dict[str, Any]], List[Union[str, Dict[str, Any]]]]
-
+PipelineStage = Union[Crew, List[Crew], Router]
 
 """
 Developer Notes:
@@ -88,15 +85,6 @@ class Pipeline(BaseModel):
     @model_validator(mode="before")
     @classmethod
     def validate_stages(cls, values):
-        """
-        Validates the stages to ensure correct nesting and types.
-
-        Args:
-            values (dict): Dictionary containing the pipeline stages.
-
-        Returns:
-            dict: Validated stages.
-        """
         stages = values.get("stages", [])
 
         def check_nesting_and_type(item, depth=0):
@@ -105,9 +93,9 @@ class Pipeline(BaseModel):
             if isinstance(item, list):
                 for sub_item in item:
                     check_nesting_and_type(sub_item, depth + 1)
-            elif not isinstance(item, Crew):
+            elif not isinstance(item, (Crew, Router)):
                 raise ValueError(
-                    f"Expected Crew instance or list of Crews, got {type(item)}"
+                    f"Expected Crew instance, Router instance, or list of Crews, got {type(item)}"
                 )
 
         for stage in stages:
@@ -163,14 +151,16 @@ class Pipeline(BaseModel):
             stage = self.stages[stage_index]
             stage_input = copy.deepcopy(current_input)
 
-            if isinstance(stage, PipelineRouter):
+            if isinstance(stage, Router):
                 next_pipeline, route_taken = stage.route(stage_input)
                 self.stages = (
                     self.stages[: stage_index + 1]
                     + list(next_pipeline.stages)
                     + self.stages[stage_index + 1 :]
                 )
-                traces.append([{"router": stage.name, "route_taken": route_taken}])
+                traces.append(
+                    [{"router": stage.__class__.__name__, "route_taken": route_taken}]
+                )
                 stage_index += 1
                 continue
 
@@ -210,7 +200,7 @@ class Pipeline(BaseModel):
     async def _process_pipeline(
         self, pipeline: "Pipeline", current_input: Dict[str, Any]
     ) -> Tuple[List[CrewOutput], List[Union[str, Dict[str, Any]]]]:
-        results = await pipeline.process_single_run(current_input)
+        results = await pipeline.process_single_kickoff(current_input)
         outputs = [result.crews_outputs[-1] for result in results]
         traces: List[Union[str, Dict[str, Any]]] = [
             f"Nested Pipeline: {pipeline.__class__.__name__}"
@@ -388,7 +378,7 @@ class Pipeline(BaseModel):
         ]
         return [crew_outputs + [output] for output in all_stage_outputs[-1]]
 
-    def __rshift__(self, other: PipelineStage) -> Pipeline:
+    def __rshift__(self, other: PipelineStage) -> "Pipeline":
         """
         Implements the >> operator to add another Stage (Crew or List[Crew]) to an existing Pipeline.
 
@@ -398,14 +388,11 @@ class Pipeline(BaseModel):
         Returns:
             Pipeline: A new pipeline with the added stage.
         """
-        if isinstance(other, (Crew, Pipeline, PipelineRouter)):
-            return type(self)(stages=self.stages + [other])
-        elif isinstance(other, list) and all(isinstance(crew, Crew) for crew in other):
+        if isinstance(other, (Crew, Router)) or (
+            isinstance(other, list) and all(isinstance(item, Crew) for item in other)
+        ):
             return type(self)(stages=self.stages + [other])
         else:
             raise TypeError(
                 f"Unsupported operand type for >>: '{type(self).__name__}' and '{type(other).__name__}'"
             )
-
-
-Pipeline.model_rebuild()
