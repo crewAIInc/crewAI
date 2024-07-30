@@ -8,7 +8,7 @@ from crewai.crews.crew_output import CrewOutput
 from crewai.types.usage_metrics import UsageMetrics
 
 
-class PipelineRunResult(BaseModel):
+class PipelineKickoffResult(BaseModel):
     """Class that represents the result of a pipeline run."""
 
     id: UUID4 = Field(
