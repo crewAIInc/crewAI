@@ -632,21 +632,18 @@ def test_sequential_async_task_execution_completion():
     list_ideas = Task(
         description="Give me a list of 5 interesting ideas to explore for an article, what makes them unique and interesting.",
         expected_output="Bullet point list of 5 important events.",
-        max_retry_limit=3,
         agent=researcher,
         async_execution=True,
     )
     list_important_history = Task(
         description="Research the history of AI and give me the 5 most important events that shaped the technology.",
         expected_output="Bullet point list of 5 important events.",
-        max_retry_limit=3,
         agent=researcher,
         async_execution=True,
     )
     write_article = Task(
         description="Write an article about the history of AI and its most important events.",
         expected_output="A 4 paragraph article about AI.",
-        max_retry_limit=3,
         agent=writer,
         context=[list_ideas, list_important_history],
     )
