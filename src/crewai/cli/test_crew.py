@@ -1,8 +1,8 @@
 import subprocess
-import click
-import pytest
 
-pytest.skip(allow_module_level=True)
+import click
+
+# pytest.skip(allow_module_level=True)
 
 
 def test_crew(n_iterations: int, model: str) -> None:
