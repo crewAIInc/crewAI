@@ -8,7 +8,6 @@ from crewai.crews.crew_output import CrewOutput
 from crewai.pipeline.pipeline import Pipeline
 from crewai.pipeline.pipeline_run_result import PipelineRunResult
 from crewai.process import Process
-from crewai.routers.pipeline_router import PipelineRouter
 from crewai.task import Task
 from crewai.tasks.task_output import TaskOutput
 from crewai.types.usage_metrics import UsageMetrics
@@ -65,9 +64,9 @@ def mock_crew_factory():
     return _create_mock_crew
 
 
-@pytest.fixture
-def pipeline_router_factory():
-    return PipelineRouter()
+# @pytest.fixture
+# def pipeline_router_factory():
+#     return PipelineRouter()
 
 
 def test_pipeline_initialization(mock_crew_factory):

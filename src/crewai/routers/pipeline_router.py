@@ -3,20 +3,21 @@ from typing import Any, Callable, Dict, Tuple, Union
 from pydantic import BaseModel, Field
 
 from crewai.pipeline.pipeline import Pipeline
-
-RouteType = Tuple[Callable[[Dict[str, Any]], bool], Pipeline]
+from crewai.types.route import Route
 
 
 class PipelineRouter(BaseModel):
-    routes: Dict[str, RouteType] = Field(
+    routes: Dict[str, Route] = Field(
         default_factory=dict,
         description="Dictionary of route names to (condition, pipeline) tuples",
     )
-    default: Pipeline = Field(
+    default: "Pipeline" = Field(
         ..., description="Default pipeline if no conditions are met"
     )
 
-    def __init__(self, *routes: Union[Tuple[str, RouteType], Pipeline], **data):
+    def __init__(self, *routes: Union[Tuple[str, Route], "Pipeline"], **data):
+        from crewai.pipeline.pipeline import Pipeline
+
         routes_dict = {}
         default_pipeline = None
 
@@ -41,7 +42,10 @@ class PipelineRouter(BaseModel):
         super().__init__(routes=routes_dict, default=default_pipeline, **data)
 
     def add_route(
-        self, name: str, condition: Callable[[Dict[str, Any]], bool], pipeline: Pipeline
+        self,
+        name: str,
+        condition: Callable[[Dict[str, Any]], bool],
+        pipeline: "Pipeline",
     ) -> "PipelineRouter":
         """
         Add a named route with its condition and corresponding pipeline to the router.
@@ -57,7 +61,7 @@ class PipelineRouter(BaseModel):
         self.routes[name] = (condition, pipeline)
         return self
 
-    def route(self, input_dict: Dict[str, Any]) -> Tuple[Pipeline, str]:
+    def route(self, input_dict: Dict[str, Any]) -> Tuple["Pipeline", str]:
         """
         Evaluate the input against the conditions and return the appropriate pipeline.
 
@@ -72,3 +76,6 @@ class PipelineRouter(BaseModel):
                 return pipeline, name
 
         return self.default, "default"
+
+
+PipelineRouter.model_rebuild()

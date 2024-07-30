@@ -2,18 +2,16 @@ from __future__ import annotations
 
 import asyncio
 import copy
-from typing import TYPE_CHECKING, Any, Dict, List, Tuple, Union
+from typing import Any, Dict, List, Tuple, Union
 
 from pydantic import BaseModel, Field, model_validator
 
 from crewai.crew import Crew
 from crewai.crews.crew_output import CrewOutput
 from crewai.pipeline.pipeline_run_result import PipelineRunResult
+from crewai.routers.pipeline_router import PipelineRouter
 from crewai.types.pipeline_stage import PipelineStage
 from crewai.types.usage_metrics import UsageMetrics
-
-if TYPE_CHECKING:
-    from crewai.routers.pipeline_router import PipelineRouter
 
 Trace = Union[Union[str, Dict[str, Any]], List[Union[str, Dict[str, Any]]]]
 
@@ -54,7 +52,7 @@ Handling Traces and Crew Outputs:
 Pipeline Terminology:
 - Pipeline: The overall structure that defines a sequence of operations.
 - Stage: A distinct part of the pipeline, which can be either sequential or parallel.
-- Run: A specific execution of the pipeline for a given set of inputs, representing a single instance of processing through the pipeline.
+- Kickoff: A specific execution of the pipeline for a given set of inputs, representing a single instance of processing through the pipeline.
 - Branch: Parallel executions within a stage (e.g., concurrent crew operations).
 - Trace: The journey of an individual input through the entire pipeline.
 
@@ -408,3 +406,6 @@ class Pipeline(BaseModel):
             raise TypeError(
                 f"Unsupported operand type for >>: '{type(self).__name__}' and '{type(other).__name__}'"
             )
+
+
+Pipeline.model_rebuild()
