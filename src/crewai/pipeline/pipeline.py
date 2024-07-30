@@ -110,7 +110,7 @@ class Pipeline(BaseModel):
             check_nesting_and_type(stage)
         return values
 
-    async def process_runs(
+    async def kickoff(
         self, run_inputs: List[Dict[str, Any]]
     ) -> List[PipelineRunResult]:
         """
@@ -126,7 +126,7 @@ class Pipeline(BaseModel):
 
         # Process all runs in parallel
         all_run_results = await asyncio.gather(
-            *(self.process_single_run(input_data) for input_data in run_inputs)
+            *(self.process_single_kickoff(input_data) for input_data in run_inputs)
         )
 
         # Flatten the list of lists into a single list of results
@@ -136,7 +136,7 @@ class Pipeline(BaseModel):
 
         return pipeline_results
 
-    async def process_single_run(
+    async def process_single_kickoff(
         self, run_input: Dict[str, Any]
     ) -> List[PipelineRunResult]:
         """
