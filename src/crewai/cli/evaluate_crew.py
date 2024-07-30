@@ -2,12 +2,10 @@ import subprocess
 
 import click
 
-# pytest.skip(allow_module_level=True)
 
-
-def test_crew(n_iterations: int, model: str) -> None:
+def evaluate_crew(n_iterations: int, model: str) -> None:
     """
-    Test the crew by running a command in the Poetry environment.
+    Test and Evaluate the crew by running a command in the Poetry environment.
 
     Args:
         n_iterations (int): The number of iterations to test the crew.
