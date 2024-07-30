@@ -84,6 +84,10 @@ class TestCrewEvaluator:
             1: [10, 9, 8],
             2: [9, 8, 7],
         }
+        crew_planner.run_execution_times = {
+            1: [24, 45, 66],
+            2: [55, 33, 67],
+        }
 
         crew_planner.print_crew_evaluation_result()
 
@@ -98,6 +102,7 @@ class TestCrewEvaluator:
                 mock.call().add_row("Task 2", "9", "8", "8.5"),
                 mock.call().add_row("Task 3", "8", "7", "7.5"),
                 mock.call().add_row("Crew", "9.0", "8.0", "8.5"),
+                mock.call().add_row("Execution Time (s)", "135", "155", "145"),
             ]
         )
         console.assert_has_calls([mock.call(), mock.call().print(table())])
