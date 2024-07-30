@@ -23,10 +23,7 @@ def short_term_memory():
         expected_output="A list of relevant URLs based on the search query.",
         agent=agent,
     )
-    return ShortTermMemory(crew=Crew(
-        agents=[agent],
-        tasks=[task]
-    ))
+    return ShortTermMemory(crew=Crew(agents=[agent], tasks=[task]))
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
@@ -38,7 +35,11 @@ def test_save_and_search(short_term_memory):
         agent="test_agent",
         metadata={"task": "test_task"},
     )
-    short_term_memory.save(memory)
+    short_term_memory.save(
+        value=memory.data,
+        metadata=memory.metadata,
+        agent=memory.agent,
+    )
 
     find = short_term_memory.search("test value", score_threshold=0.01)[0]
     assert find["context"] == memory.data, "Data value mismatch."
