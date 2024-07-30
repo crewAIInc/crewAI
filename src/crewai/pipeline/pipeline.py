@@ -158,9 +158,7 @@ class Pipeline(BaseModel):
                     + list(next_pipeline.stages)
                     + self.stages[stage_index + 1 :]
                 )
-                traces.append(
-                    [{"router": stage.__class__.__name__, "route_taken": route_taken}]
-                )
+                traces.append([{"route_taken": route_taken}])
                 stage_index += 1
                 continue
 
@@ -196,16 +194,6 @@ class Pipeline(BaseModel):
             return await self._process_parallel_crews(stage, current_input)
         else:
             raise ValueError(f"Unsupported stage type: {type(stage)}")
-
-    async def _process_pipeline(
-        self, pipeline: "Pipeline", current_input: Dict[str, Any]
-    ) -> Tuple[List[CrewOutput], List[Union[str, Dict[str, Any]]]]:
-        results = await pipeline.process_single_kickoff(current_input)
-        outputs = [result.crews_outputs[-1] for result in results]
-        traces: List[Union[str, Dict[str, Any]]] = [
-            f"Nested Pipeline: {pipeline.__class__.__name__}"
-        ]
-        return outputs, traces
 
     async def _process_single_crew(
         self, crew: Crew, current_input: Dict[str, Any]

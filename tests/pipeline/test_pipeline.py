@@ -80,7 +80,7 @@ def mock_router_factory(mock_crew_factory):
                     pipeline=Pipeline(stages=[crew1]),
                 ),
                 "route2": Route(
-                    condition=lambda x: x.get("score", 0) > 50,
+                    condition=lambda x: 50 < x.get("score", 0) <= 80,
                     pipeline=Pipeline(stages=[crew2]),
                 ),
             },
@@ -504,37 +504,39 @@ async def test_pipeline_data_accumulation(mock_crew_factory):
 @pytest.mark.asyncio
 async def test_pipeline_with_router(mock_router_factory):
     router = mock_router_factory()
-    pipeline = Pipeline(stages=[router])
 
     # Test high score route
+    pipeline = Pipeline(stages=[router])
     result_high = await pipeline.kickoff([{"score": 90}])
     assert len(result_high) == 1
     assert result_high[0].json_dict is not None
     assert result_high[0].json_dict["output"] == "crew1"
     assert result_high[0].trace == [
         {"score": 90},
-        {"router": "Router", "route_taken": "route1"},
+        {"route_taken": "route1"},
         "Crew 1",
     ]
 
     # Test medium score route
+    pipeline = Pipeline(stages=[router])
     result_medium = await pipeline.kickoff([{"score": 60}])
     assert len(result_medium) == 1
     assert result_medium[0].json_dict is not None
     assert result_medium[0].json_dict["output"] == "crew2"
     assert result_medium[0].trace == [
         {"score": 60},
-        {"router": "Router", "route_taken": "route2"},
+        {"route_taken": "route2"},
         "Crew 2",
     ]
 
-    # Test low score (default) route
+    # Test low score route
+    pipeline = Pipeline(stages=[router])
     result_low = await pipeline.kickoff([{"score": 30}])
     assert len(result_low) == 1
     assert result_low[0].json_dict is not None
     assert result_low[0].json_dict["output"] == "crew3"
     assert result_low[0].trace == [
         {"score": 30},
-        {"router": "Router", "route_taken": "default"},
+        {"route_taken": "default"},
         "Crew 3",
     ]
