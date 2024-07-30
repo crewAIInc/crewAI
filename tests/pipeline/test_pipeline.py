@@ -6,7 +6,7 @@ from crewai.agent import Agent
 from crewai.crew import Crew
 from crewai.crews.crew_output import CrewOutput
 from crewai.pipeline.pipeline import Pipeline
-from crewai.pipeline.pipeline_run_result import PipelineRunResult
+from crewai.pipeline.pipeline_kickoff_result import PipelineKickoffResult
 from crewai.process import Process
 from crewai.task import Task
 from crewai.tasks.task_output import TaskOutput
@@ -113,7 +113,7 @@ async def test_pipeline_process_streams_single_input(mock_crew_factory):
     mock_crew.kickoff_async.assert_called_once_with(inputs={"key": "value"})
 
     for pipeline_result in pipeline_results:
-        assert isinstance(pipeline_result, PipelineRunResult)
+        assert isinstance(pipeline_result, PipelineKickoffResult)
         assert pipeline_result.raw == "Test output"
         assert len(pipeline_result.crews_outputs) == 1
         print("pipeline_result.token_usage", pipeline_result.token_usage)
@@ -199,7 +199,7 @@ async def test_pipeline_process_streams_single_input_pydantic_output(mock_crew_f
 
     print("pipeline_result.trace", pipeline_result.trace)
 
-    assert isinstance(pipeline_result, PipelineRunResult)
+    assert isinstance(pipeline_result, PipelineKickoffResult)
     assert pipeline_result.raw == "Test output"
     assert len(pipeline_result.crews_outputs) == 1
     assert pipeline_result.token_usage == {crew_name: DEFAULT_TOKEN_USAGE}

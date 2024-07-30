@@ -8,7 +8,7 @@ from pydantic import BaseModel, Field, model_validator
 
 from crewai.crew import Crew
 from crewai.crews.crew_output import CrewOutput
-from crewai.pipeline.pipeline_run_result import PipelineRunResult
+from crewai.pipeline.pipeline_kickoff_result import PipelineKickoffResult
 from crewai.routers.pipeline_router import PipelineRouter
 from crewai.types.pipeline_stage import PipelineStage
 from crewai.types.usage_metrics import UsageMetrics
@@ -21,12 +21,12 @@ Developer Notes:
 
 This module defines a Pipeline class that represents a sequence of operations (stages)
 to process inputs. Each stage can be either sequential or parallel, and the pipeline
-can process multiple runs concurrently.
+can process multiple kickoffs concurrently.
 
 Core Loop Explanation:
-1. The `process_runs` method processes multiple runs in parallel, each going through
+1. The `process_kickoffs` method processes multiple kickoffs in parallel, each going through
    all pipeline stages.
-2. The `process_single_run` method handles the processing of a single run through
+2. The `process_single_kickoff` method handles the processing of a single kickouff through
    all stages, updating metrics and input data along the way.
 3. The `_process_stage` method determines whether a stage is sequential or parallel
    and processes it accordingly.
@@ -34,8 +34,8 @@ Core Loop Explanation:
    execution of single and parallel crew stages.
 5. The `_update_metrics_and_input` method updates usage metrics and the current input
    with the outputs from a stage.
-6. The `_build_pipeline_run_results` method constructs the final results of the
-   pipeline run, including traces and outputs.
+6. The `_build_pipeline_kickoff_results` method constructs the final results of the
+   pipeline kickoff, including traces and outputs.
 
 Handling Traces and Crew Outputs:
 - During the processing of stages, we handle the results (traces and crew outputs)
@@ -45,9 +45,9 @@ Handling Traces and Crew Outputs:
   dictionary and passing it to the next stage. This merged dictionary allows for smooth
   data flow between stages.
 - For the final stage, in addition to passing the input data, we also need to prepare
-  the final outputs and traces to be returned as the overall result of the pipeline run.
+  the final outputs and traces to be returned as the overall result of the pipeline kickoff.
   In this case, we do not merge the results, as each result needs to be included
-  separately in its own pipeline run result.
+  separately in its own pipeline kickoff result.
 
 Pipeline Terminology:
 - Pipeline: The overall structure that defines a sequence of operations.
@@ -64,8 +64,8 @@ This represents a pipeline with three sequential stages:
 2. crew2 is the second stage, which takes the output from crew1 as its input, processes it, and passes its output to crew3.
 3. crew3 is the final stage, which takes the output from crew2 as its input and produces the final output of the pipeline.
 
-Each input creates its own run, flowing through all stages of the pipeline.
-Multiple runs can be processed concurrently, each following the defined pipeline structure.
+Each input creates its own kickoff, flowing through all stages of the pipeline.
+Multiple kickoffss can be processed concurrently, each following the defined pipeline structure.
 
 Another example pipeline structure:
 crew1 >> [crew2, crew3] >> crew4
@@ -75,8 +75,8 @@ This represents a pipeline with three stages:
 2. A parallel stage with two branches (crew2 and crew3 executing concurrently)
 3. Another sequential stage (crew4)
 
-Each input creates its own run, flowing through all stages of the pipeline.
-Multiple runs can be processed concurrently, each following the defined pipeline structure.
+Each input creates its own kickoff, flowing through all stages of the pipeline.
+Multiple kickoffs can be processed concurrently, each following the defined pipeline structure.
 """
 
 
@@ -115,22 +115,22 @@ class Pipeline(BaseModel):
         return values
 
     async def kickoff(
-        self, run_inputs: List[Dict[str, Any]]
-    ) -> List[PipelineRunResult]:
+        self, inputs: List[Dict[str, Any]]
+    ) -> List[PipelineKickoffResult]:
         """
         Processes multiple runs in parallel, each going through all pipeline stages.
 
         Args:
-            run_inputs (List[Dict[str, Any]]): List of inputs for each run.
+            inputs (List[Dict[str, Any]]): List of inputs for each run.
 
         Returns:
-            List[PipelineRunResult]: List of results from each run.
+            List[PipelineKickoffResult]: List of results from each run.
         """
-        pipeline_results: List[PipelineRunResult] = []
+        pipeline_results: List[PipelineKickoffResult] = []
 
         # Process all runs in parallel
         all_run_results = await asyncio.gather(
-            *(self.process_single_kickoff(input_data) for input_data in run_inputs)
+            *(self.process_single_kickoff(input_data) for input_data in inputs)
         )
 
         # Flatten the list of lists into a single list of results
@@ -141,19 +141,19 @@ class Pipeline(BaseModel):
         return pipeline_results
 
     async def process_single_kickoff(
-        self, run_input: Dict[str, Any]
-    ) -> List[PipelineRunResult]:
+        self, kickoff_input: Dict[str, Any]
+    ) -> List[PipelineKickoffResult]:
         """
         Processes a single run through all pipeline stages.
 
         Args:
-            run_input (Dict[str, Any]): The input for the run.
+            input (Dict[str, Any]): The input for the run.
 
         Returns:
-            List[PipelineRunResult]: The results of processing the run.
+            List[PipelineKickoffResult]: The results of processing the run.
         """
-        initial_input = copy.deepcopy(run_input)
-        current_input = copy.deepcopy(run_input)
+        initial_input = copy.deepcopy(kickoff_input)
+        current_input = copy.deepcopy(kickoff_input)
         pipeline_usage_metrics: Dict[str, UsageMetrics] = {}
         all_stage_outputs: List[List[CrewOutput]] = []
         traces: List[List[Union[str, Dict[str, Any]]]] = [[initial_input]]
@@ -183,7 +183,7 @@ class Pipeline(BaseModel):
             all_stage_outputs.append(stage_outputs)
             stage_index += 1
 
-        return self._build_pipeline_run_results(
+        return self._build_pipeline_kickoff_results(
             all_stage_outputs, traces, pipeline_usage_metrics
         )
 
@@ -277,12 +277,12 @@ class Pipeline(BaseModel):
         else:
             raise ValueError(f"Unsupported stage type: {type(stage)}")
 
-    def _build_pipeline_run_results(
+    def _build_pipeline_kickoff_results(
         self,
         all_stage_outputs: List[List[CrewOutput]],
         traces: List[List[Union[str, Dict[str, Any]]]],
         token_usage: Dict[str, UsageMetrics],
-    ) -> List[PipelineRunResult]:
+    ) -> List[PipelineKickoffResult]:
         """
         Builds the results of a pipeline run.
 
@@ -292,13 +292,13 @@ class Pipeline(BaseModel):
             token_usage (Dict[str, Any]): Token usage metrics.
 
         Returns:
-            List[PipelineRunResult]: The results of the pipeline run.
+            List[PipelineKickoffResult]: The results of the pipeline run.
         """
         formatted_traces = self._format_traces(traces)
         formatted_crew_outputs = self._format_crew_outputs(all_stage_outputs)
 
         return [
-            PipelineRunResult(
+            PipelineKickoffResult(
                 token_usage=token_usage,
                 trace=formatted_trace,
                 raw=crews_outputs[-1].raw,
