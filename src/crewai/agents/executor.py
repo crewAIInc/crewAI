@@ -143,7 +143,7 @@ class CrewAgentExecutor(AgentExecutor, CrewAgentExecutorMixin):
             intermediate_steps = self._prepare_intermediate_steps(intermediate_steps)
 
             # Call the LLM to see what to do.
-            output = self.agent.plan(  # type: ignore #  Incompatible types in assignment (expression has type "AgentAction | AgentFinish | list[AgentAction]", variable has type "AgentAction")
+            output = self.agent.plan(
                 intermediate_steps,
                 callbacks=run_manager.get_child() if run_manager else None,
                 **inputs,
@@ -217,7 +217,7 @@ class CrewAgentExecutor(AgentExecutor, CrewAgentExecutorMixin):
                     )
                     intermediate_steps = self._handle_context_length(intermediate_steps)
 
-                    output = self.agent.plan(  # type: ignore #  Incompatible types in assignment (expression has type "AgentAction | AgentFinish | list[AgentAction]", variable has type "AgentAction")
+                    output = self.agent.plan(
                         intermediate_steps,
                         callbacks=run_manager.get_child() if run_manager else None,
                         **inputs,
