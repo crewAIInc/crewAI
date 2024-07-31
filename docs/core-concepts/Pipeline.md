@@ -254,10 +254,10 @@ In this example, the router decides between an urgent pipeline and a normal pipe
 
 #### Benefits of Using Routers
 
-1. _Dynamic Workflow_: Adapt your pipeline's behavior based on input characteristics or intermediate results.
-2. _Efficiency_: Route urgent tasks to quicker processes, reserving more thorough pipelines for less time-sensitive inputs.
-3. _Flexibility_: Easily modify or extend your pipeline's logic without changing the core structure.
-4. _Scalability_: Handle a wide range of email types and urgency levels with a single pipeline structure.
+1. **Dynamic Workflow**: Adapt your pipeline's behavior based on input characteristics or intermediate results.
+2. **Efficiency**: Route urgent tasks to quicker processes, reserving more thorough pipelines for less time-sensitive inputs.
+3. **Flexibility**: Easily modify or extend your pipeline's logic without changing the core structure.
+4. **Scalability**: Handle a wide range of email types and urgency levels with a single pipeline structure.
 
 ### Error Handling and Validation
 
@@ -265,9 +265,3 @@ The Pipeline class includes validation mechanisms to ensure the robustness of th
 
 - Validates that stages contain only Crew instances or lists of Crew instances.
 - Prevents double nesting of stages to maintain a clear structure.
-
-## Best Practices for Pipelines
-
-1. **Clear Stage Definition**: Define each stage with a clear purpose and expected output.
-2. **Effective Data Flow**: Ensure that the output of each stage is in a format suitable for the input of the next stage.
-3. \*\*Parallel Proce
