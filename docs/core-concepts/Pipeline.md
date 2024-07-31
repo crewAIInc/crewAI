@@ -188,6 +188,77 @@ my_pipeline = Pipeline(
 )
 ```
 
+### Routers in Pipelines
+
+Routers are a powerful feature in crewAI pipelines that allow for dynamic decision-making and branching within your workflow. They enable you to direct the flow of execution based on specific conditions or criteria, making your pipelines more flexible and adaptive.
+
+#### What is a Router?
+
+A router in crewAI is a special component that can be included as a stage in your pipeline. It evaluates the input data and determines which path the execution should take next. This allows for conditional branching in your pipeline, where different crews or sub-pipelines can be executed based on the router's decision.
+
+#### Key Components of a Router
+
+1. **Routes**: A dictionary of named routes, each associated with a condition and a pipeline to execute if the condition is met.
+2. **Default Route**: A fallback pipeline that is executed if none of the defined route conditions are met.
+
+#### Creating a Router
+
+Here's an example of how to create a router:
+
+```python
+from crewai import Router, Route, Pipeline, Crew, Agent, Task
+
+# Define your agents
+classifier = Agent(name="Classifier", role="Email Classifier")
+urgent_handler = Agent(name="Urgent Handler", role="Urgent Email Processor")
+normal_handler = Agent(name="Normal Handler", role="Normal Email Processor")
+
+# Define your tasks
+classify_task = Task(description="Classify the email based on its content and metadata.")
+urgent_task = Task(description="Process and respond to urgent email quickly.")
+normal_task = Task(description="Process and respond to normal email thoroughly.")
+
+# Define your crews
+classification_crew = Crew(agents=[classifier], tasks=[classify_task]) # classify email between high and low urgency 1-10
+urgent_crew = Crew(agents=[urgent_handler], tasks=[urgent_task])
+normal_crew = Crew(agents=[normal_handler], tasks=[normal_task])
+
+# Create pipelines for different urgency levels
+urgent_pipeline = Pipeline(stages=[classification_crew, urgent_crew])
+normal_pipeline = Pipeline(stages=[classification_crew, normal_crew])
+
+# Create a router
+email_router = Router(
+    routes={
+        "high_urgency": Route(
+            condition=lambda x: x.get("urgency_score", 0) > 7,
+            pipeline=urgent_pipeline
+        ),
+        "low_urgency": Route(
+            condition=lambda x: x.get("urgency_score", 0) <= 7,
+            pipeline=normal_pipeline
+        )
+    },
+    default=Pipeline(stages=[normal_pipeline])  # Default to just classification if no urgency score
+)
+
+# Use the router in a main pipeline
+main_pipeline = Pipeline(stages=[email_router])
+
+inputs = [{"email": "..."}, {"email": "..."}]  # List of email data
+
+main_pipeline.kickoff(inputs=inputs)
+```
+
+In this example, the router decides between an urgent pipeline and a normal pipeline based on the urgency score of the email. If the urgency score is greater than 7, it routes to the urgent pipeline; otherwise, it uses the normal pipeline. If the input doesn't include an urgency score, it defaults to just the classification crew.
+
+#### Benefits of Using Routers
+
+1. _Dynamic Workflow_: Adapt your pipeline's behavior based on input characteristics or intermediate results.
+2. _Efficiency_: Route urgent tasks to quicker processes, reserving more thorough pipelines for less time-sensitive inputs.
+3. _Flexibility_: Easily modify or extend your pipeline's logic without changing the core structure.
+4. _Scalability_: Handle a wide range of email types and urgency levels with a single pipeline structure.
+
 ### Error Handling and Validation
 
 The Pipeline class includes validation mechanisms to ensure the robustness of the pipeline structure:
