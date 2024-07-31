@@ -1,5 +1,5 @@
 ---
-title: Starting a New CrewAI Project
+title: Starting a New CrewAI Project - Using Template
 description: A comprehensive guide to starting a new CrewAI project, including the latest updates and project setup methods.
 ---
 
@@ -7,13 +7,62 @@ description: A comprehensive guide to starting a new CrewAI project, including t
 
 Welcome to the ultimate guide for starting a new CrewAI project. This document will walk you through the steps to create, customize, and run your CrewAI project, ensuring you have everything you need to get started.
 
+Beforre we start there are a couple of things to note:
+
+1. CrewAI is a Python package and requires Python >=3.10 and <=3.13 to run.
+2. The preferred way of setting up CrewAI is using the `crewai create` command.This will create a new project folder and install a skeleton template for you to work on.
+
 ## Prerequisites
 
-We assume you have already installed CrewAI. If not, please refer to the [installation guide](https://docs.crewai.com/how-to/Installing-CrewAI/) to install CrewAI and its dependencies.
+Before getting started with CrewAI, make sure that you have installed it via pip:
+
+```shell
+$ pip install crewai crewai-tools
+```
+
+### Virtual Environemnts
+It is highly recommended that you use virtual environments to ensure that your CrewAI project is isolated from other projects and dependencies. Virtual environments provide a clean, separate workspace for each project, preventing conflicts between different versions of packages and libraries. This isolation is crucial for maintaining consistency and reproducibility in your development process. You have multiple options for setting up virtual environments depending on your operating system and Python version:
+
+1. Use venv (Python's built-in virtual environment tool):
+   venv is included with Python 3.3 and later, making it a convenient choice for many developers. It's lightweight and easy to use, perfect for simple project setups.
+
+   To set up virtual environments with venv, refer to the official [Python documentation](https://docs.python.org/3/tutorial/venv.html).
+
+2. Use Conda (A Python virtual environment manager):
+   Conda is an open-source package manager and environment management system for Python. It's widely used by data scientists, developers, and researchers to manage dependencies and environments in a reproducible way.
+
+   To set up virtual environments with Conda, refer to the official [Conda documentation](https://docs.conda.io/projects/conda/en/stable/user-guide/getting-started.html).
+
+3. Use Poetry (A Python package manager and dependency management tool):
+   Poetry is an open-source Python package manager that simplifies the installation of packages and their dependencies. Poetry offers a convenient way to manage virtual environments and dependencies.
+   Poetry is CrewAI's prefered tool for package / dependancy management in CrewAI.
+
+### Code IDEs
+
+Most users of CrewAI a Code Editor / Integrated Development Environment (IDE) for building there Crews. You can use any code IDE of your choice. Seee below for some popular options for Code Editors / Integrated Development Environments (IDE):
+
+- [Visual Studio Code](https://code.visualstudio.com/) - Most popular
+- [PyCharm](https://www.jetbrains.com/pycharm/)
+- [Cursor AI](https://cursor.com)
+
+Pick one that suits your style and needs.
 
 ## Creating a New Project
+In this example we will be using Venv as our virtual environment manager.
 
-To create a new project, run the following CLI command:
+To setup a virtual environment, run the following CLI command:
+
+```shell
+$ python3 -m venv <venv-name>
+```
+
+Activate your virtual environment by running the following CLI command:
+
+```shell
+$ source <venv-name>/bin/activate
+```
+
+Now, to create a new CrewAI project, run the following CLI command:
 
 ```shell
 $ crewai create <project_name>

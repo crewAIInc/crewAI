@@ -8,7 +8,6 @@ from unittest.mock import MagicMock, patch
 
 import pydantic_core
 import pytest
-
 from crewai.agent import Agent
 from crewai.agents.cache import CacheHandler
 from crewai.crew import Crew
@@ -69,7 +68,7 @@ def test_crew_config_conditional_requirement():
                     "agent": "Senior Researcher",
                 },
                 {
-                    "description": "Write a 1 amazing paragraph highlight for each idead that showcases how good an article about this topic could be, check references if necessary or search for more content but make sure it's unique, interesting and well written. Return the list of ideas with their paragraph and your notes.",
+                    "description": "Write a 1 amazing paragraph highlight for each idea that showcases how good an article about this topic could be, check references if necessary or search for more content but make sure it's unique, interesting and well written. Return the list of ideas with their paragraph and your notes.",
                     "expected_output": "A 4 paragraph article about AI.",
                     "agent": "Senior Writer",
                 },
@@ -657,7 +656,7 @@ def test_sequential_async_task_execution_completion():
 
     sequential_result = sequential_crew.kickoff()
     assert sequential_result.raw.startswith(
-        "**The Evolution of Artificial Intelligence: A Journey Through Milestones**"
+        "The history of artificial intelligence (AI) is marked by several pivotal events that have shaped its evolution and impact on various sectors."
     )
 
 
@@ -1189,7 +1188,7 @@ def test_task_with_no_arguments():
     )
 
     task = Task(
-        description="Look at the available data nd give me a sense on the total number of sales.",
+        description="Look at the available data and give me a sense on the total number of sales.",
         expected_output="The total number of sales as an integer",
         agent=researcher,
     )
@@ -1236,7 +1235,7 @@ def test_delegation_is_not_enabled_if_there_are_only_one_agent():
     )
 
     task = Task(
-        description="Look at the available data nd give me a sense on the total number of sales.",
+        description="Look at the available data and give me a sense on the total number of sales.",
         expected_output="The total number of sales as an integer",
         agent=researcher,
     )
@@ -1312,14 +1311,14 @@ def test_agent_usage_metrics_are_captured_for_hierarchical_process():
     )
 
     result = crew.kickoff()
-    assert result.raw == '"Howdy!"'
+    assert result.raw == "Howdy!"
 
     print(crew.usage_metrics)
 
     assert crew.usage_metrics == {
-        "total_tokens": 311,
-        "prompt_tokens": 224,
-        "completion_tokens": 87,
+        "total_tokens": 219,
+        "prompt_tokens": 201,
+        "completion_tokens": 18,
         "successful_requests": 1,
     }
 
@@ -1599,16 +1598,16 @@ def test_tools_with_custom_caching():
 
     writer1 = Agent(
         role="Writer",
-        goal="You write lesssons of math for kids.",
-        backstory="You're an expert in writting and you love to teach kids but you know nothing of math.",
+        goal="You write lessons of math for kids.",
+        backstory="You're an expert in writing and you love to teach kids but you know nothing of math.",
         tools=[multiplcation_tool],
         allow_delegation=False,
     )
 
     writer2 = Agent(
         role="Writer",
-        goal="You write lesssons of math for kids.",
-        backstory="You're an expert in writting and you love to teach kids but you know nothing of math.",
+        goal="You write lessons of math for kids.",
+        backstory="You're an expert in writing and you love to teach kids but you know nothing of math.",
         tools=[multiplcation_tool],
         allow_delegation=False,
     )

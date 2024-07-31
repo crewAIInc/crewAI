@@ -54,12 +54,12 @@ class TaskEvaluator:
     def __init__(self, original_agent):
         self.llm = original_agent.llm
 
-    def evaluate(self, task, ouput) -> TaskEvaluation:
+    def evaluate(self, task, output) -> TaskEvaluation:
         evaluation_query = (
             f"Assess the quality of the task completed based on the description, expected output, and actual results.\n\n"
             f"Task Description:\n{task.description}\n\n"
             f"Expected Output:\n{task.expected_output}\n\n"
-            f"Actual Output:\n{ouput}\n\n"
+            f"Actual Output:\n{output}\n\n"
             "Please provide:\n"
             "- Bullet points suggestions to improve future similar tasks\n"
             "- A score from 0 to 10 evaluating on completion, quality, and overall performance"

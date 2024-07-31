@@ -1,3 +1,4 @@
+from typing import Any, Dict, Optional
 from crewai.memory.memory import Memory
 from crewai.memory.short_term.short_term_memory_item import ShortTermMemoryItem
 from crewai.memory.storage.rag_storage import RAGStorage
@@ -18,8 +19,15 @@ class ShortTermMemory(Memory):
         )
         super().__init__(storage)
 
-    def save(self, item: ShortTermMemoryItem) -> None:
-        super().save(item.data, item.metadata, item.agent)
+    def save(
+        self,
+        value: Any,
+        metadata: Optional[Dict[str, Any]] = None,
+        agent: Optional[str] = None,
+    ) -> None:
+        item = ShortTermMemoryItem(data=value, metadata=metadata, agent=agent)
+
+        super().save(value=item.data, metadata=item.metadata, agent=item.agent)
 
     def search(self, query: str, score_threshold: float = 0.35):
         return self.storage.search(query=query, score_threshold=score_threshold)  # type: ignore # BUG? The reference is to the parent class, but the parent class does not have this parameters

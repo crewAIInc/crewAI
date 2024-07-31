@@ -397,7 +397,7 @@ def test_agent_moved_on_after_max_iterations():
     )
 
     task = Task(
-        description="The final answer is 42. But don't give it yet, instead keep using the `get_final_answer` tool over and over until you're told you can give yout final answer.",
+        description="The final answer is 42. But don't give it yet, instead keep using the `get_final_answer` tool over and over until you're told you can give your final answer.",
         expected_output="The final answer",
     )
     output = agent.execute_task(
@@ -948,7 +948,7 @@ def test_agent_use_trained_data(crew_training_handler):
     crew_training_handler().load.return_value = {
         agent.role: {
             "suggestions": [
-                "The result of the math operatio must be right.",
+                "The result of the math operation must be right.",
                 "Result must be better than 1.",
             ]
         }
@@ -958,7 +958,7 @@ def test_agent_use_trained_data(crew_training_handler):
 
     assert (
         result == "What is 1 + 1?You MUST follow these feedbacks: \n "
-        "The result of the math operatio must be right.\n - Result must be better than 1."
+        "The result of the math operation must be right.\n - Result must be better than 1."
     )
     crew_training_handler.assert_has_calls(
         [mock.call(), mock.call("trained_agents_data.pkl"), mock.call().load()]
