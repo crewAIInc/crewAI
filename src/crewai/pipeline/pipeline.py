@@ -53,7 +53,7 @@ Pipeline Terminology:
 - Trace: The journey of an individual input through the entire pipeline.
 
 Example pipeline structure:
-crew1 >> crew2 >> crew3
+crew1 >> crew2 >> crew3 
 
 This represents a pipeline with three sequential stages:
 1. crew1 is the first stage, which processes the input and passes its output to crew2.
