@@ -194,9 +194,3 @@ The Pipeline class includes validation mechanisms to ensure the robustness of th
 
 - Validates that stages contain only Crew instances or lists of Crew instances.
 - Prevents double nesting of stages to maintain a clear structure.
-
-## Best Practices for Pipelines
-
-1. **Clear Stage Definition**: Define each stage with a clear purpose and expected output.
-2. **Effective Data Flow**: Ensure that the output of each stage is in a format suitable for the input of the next stage.
-3. \*\*Parallel Proce
