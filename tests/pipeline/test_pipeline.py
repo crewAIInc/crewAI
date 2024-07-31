@@ -387,12 +387,6 @@ async def test_pipeline_with_parallel_stages_end_in_single_stage(mock_crew_facto
     assert pipeline_result_1.token_usage == expected_token_usage
 
 
-@pytest.mark.asyncio
-async def test_pipeline_with_parallel_stages_multiple_inputs(mock_crew_factory):
-    # TODO: implement
-    pass
-
-
 def test_pipeline_rshift_operator(mock_crew_factory):
     """
     Test that the >> operator correctly creates a Pipeline from Crews and lists of Crews.
