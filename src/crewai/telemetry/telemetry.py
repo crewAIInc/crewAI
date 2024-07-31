@@ -40,7 +40,7 @@ class Telemetry:
     - Roles of agents in a crew
     - Tools names available
 
-    Users can opt-in to sharing more complete data suing the `share_crew`
+    Users can opt-in to sharing more complete data using the `share_crew`
     attribute in the Crew class.
     """
 

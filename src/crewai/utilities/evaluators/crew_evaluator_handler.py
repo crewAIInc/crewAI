@@ -28,6 +28,7 @@ class CrewEvaluator:
     """
 
     tasks_scores: defaultdict = defaultdict(list)
+    run_execution_times: defaultdict = defaultdict(list)
     iteration: int = 0
 
     def __init__(self, crew, openai_model_name: str):
@@ -39,9 +40,6 @@ class CrewEvaluator:
         """Sets up the crew for evaluating."""
         for task in self.crew.tasks:
             task.callback = self.evaluate
-
-    def set_iteration(self, iteration: int) -> None:
-        self.iteration = iteration
 
     def _evaluator_agent(self):
         return Agent(
@@ -70,6 +68,9 @@ class CrewEvaluator:
             agent=evaluator_agent,
             output_pydantic=TaskEvaluationPydanticOutput,
         )
+
+    def set_iteration(self, iteration: int) -> None:
+        self.iteration = iteration
 
     def print_crew_evaluation_result(self) -> None:
         """
@@ -119,6 +120,16 @@ class CrewEvaluator:
         ]
         table.add_row("Crew", *map(str, crew_scores), f"{crew_average:.1f}")
 
+        run_exec_times = [
+            int(sum(tasks_exec_times))
+            for _, tasks_exec_times in self.run_execution_times.items()
+        ]
+        execution_time_avg = int(sum(run_exec_times) / len(run_exec_times))
+        table.add_row(
+            "Execution Time (s)",
+            *map(str, run_exec_times),
+            f"{execution_time_avg}",
+        )
         # Display the table in the terminal
         console = Console()
         console.print(table)
@@ -145,5 +156,8 @@ class CrewEvaluator:
 
         if isinstance(evaluation_result.pydantic, TaskEvaluationPydanticOutput):
             self.tasks_scores[self.iteration].append(evaluation_result.pydantic.quality)
+            self.run_execution_times[self.iteration].append(
+                current_task._execution_time
+            )
         else:
             raise ValueError("Evaluation result is not in the expected format")
