@@ -1,8 +1,8 @@
-import os
-import shutil
 from pathlib import Path
 
 import click
+
+from crewai.cli.utils import copy_template
 
 
 def create_pipeline(name, router=False):
@@ -17,36 +17,53 @@ def create_pipeline(name, router=False):
         click.secho(f"Error: Folder {folder_name} already exists.", fg="red")
         return
 
+    # Create directory structure
+    (project_root / "src" / folder_name).mkdir(parents=True)
+    (project_root / "src" / folder_name / "crews").mkdir(parents=True)
+    (project_root / "src" / folder_name / "tools").mkdir(parents=True)
+    (project_root / "src" / folder_name / "config").mkdir(parents=True)
+    (project_root / "tests").mkdir(exist_ok=True)
+
+    # Create .env file
+    with open(project_root / ".env", "w") as file:
+        file.write("OPENAI_API_KEY=YOUR_API_KEY")
+
     package_dir = Path(__file__).parent
     template_folder = "pipeline_router" if router else "pipeline"
     templates_dir = package_dir / "templates" / template_folder
 
-    # Copy the entire template directory structure
-    shutil.copytree(templates_dir, project_root)
+    # List of template files to copy
+    root_template_files = [".gitignore", "pyproject.toml", "README.md"]
+    src_template_files = ["__init__.py", "main.py", "pipeline.py"]
+    tools_template_files = ["tools/custom_tool.py", "tools/__init__.py"]
+    config_template_files = ["config/agents.yaml", "config/tasks.yaml"]
+    crew_template_files = ["crews/research_crew.py", "crews/write_x_crew.py"]
 
-    # Process and replace placeholders in specific files
-    files_to_process = [
-        "README.md",
-        "pyproject.toml",
-        "main.py",
-        "pipeline.py",
-        "crews/research_crew.py",
-        "crews/write_x_crew.py",
-        "crews/write_linkedin_crew.py",
-    ]
+    if router:
+        crew_template_files.append("crews/write_linkedin_crew.py")
 
-    for file_path in files_to_process:
-        full_path = project_root / file_path
-        if full_path.exists():
-            with open(full_path, "r") as file:
-                content = file.read()
+    # Copy and process root template files
+    for file_name in root_template_files:
+        src_file = templates_dir / file_name
+        dst_file = project_root / file_name
+        copy_template(src_file, dst_file, name, class_name, folder_name)
 
-            content = content.replace("{{name}}", name)
-            content = content.replace("{{crew_name}}", class_name)
-            content = content.replace("{{folder_name}}", folder_name)
-            content = content.replace("{{pipeline_name}}", class_name)  # Add this line
+    # Copy and process src template files
+    for file_name in src_template_files:
+        src_file = templates_dir / file_name
+        dst_file = project_root / "src" / folder_name / file_name
+        copy_template(src_file, dst_file, name, class_name, folder_name)
 
-            with open(full_path, "w") as file:
-                file.write(content)
+    # Copy tools and config files
+    for file_name in tools_template_files + config_template_files:
+        src_file = templates_dir / file_name
+        dst_file = project_root / "src" / folder_name / file_name
+        copy_template(src_file, dst_file, name, class_name, folder_name)
+
+    # Copy and process crew files
+    for file_name in crew_template_files:
+        src_file = templates_dir / file_name
+        dst_file = project_root / "src" / folder_name / file_name
+        copy_template(src_file, dst_file, name, class_name, folder_name)
 
     click.secho(f"Pipeline {name} created successfully!", fg="green", bold=True)
