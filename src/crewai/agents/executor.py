@@ -202,45 +202,17 @@ class CrewAgentExecutor(AgentExecutor, CrewAgentExecutorMixin):
             if LLMContextLengthExceededException(str(e))._is_context_limit_error(
                 str(e)
             ):
-                if "context_length_exceeded" in str(e):
-                    self._logger.log(
-                        "debug",
-                        "Context length exceeded. Asking user if they want to use summarize prompt to fit, this will reduce context length.",
-                        color="yellow",
-                    )
-                    user_choice = click.confirm(
-                        "Context length exceeded. Do you want to summarize the text to fit models context window?"
-                    )
-                    if user_choice:
-                        self._logger.log(
-                            "debug",
-                            "Context length exceeded. Using summarize prompt to fit, this will reduce context length.",
-                            color="bold_blue",
-                        )
-                        intermediate_steps = self._handle_context_length(
-                            intermediate_steps
-                        )
+                output = self._handle_context_length_error(
+                    intermediate_steps, run_manager, inputs
+                )
 
-                        output = self.agent.plan(
-                            intermediate_steps,
-                            callbacks=run_manager.get_child() if run_manager else None,
-                            **inputs,
-                        )
+                if isinstance(output, AgentFinish):
+                    yield output
+                elif isinstance(output, list):
+                    for step in output:
+                        yield step
+                return
 
-                        if isinstance(output, AgentFinish):
-                            yield output
-                        else:
-                            yield AgentStep(action=output, observation=None)
-                        return
-                    else:
-                        self._logger.log(
-                            "debug",
-                            "Context length exceeded. Consider using smaller text or RAG tools from crewai_tools.",
-                            color="red",
-                        )
-                        raise SystemExit(
-                            "Context length exceeded and user opted not to summarize. Consider using smaller text or RAG tools from crewai_tools."
-                        )
             yield AgentStep(
                 action=AgentAction("_Exception", str(e), str(e)),
                 observation=str(e),
@@ -387,3 +359,47 @@ class CrewAgentExecutor(AgentExecutor, CrewAgentExecutorMixin):
             return [summary_tuple]
 
         return intermediate_steps
+
+    def _handle_context_length_error(
+        self,
+        intermediate_steps: List[Tuple[AgentAction, str]],
+        run_manager: Optional[CallbackManagerForChainRun],
+        inputs: Dict[str, str],
+    ) -> Union[AgentFinish, List[AgentStep]]:
+        self._logger.log(
+            "debug",
+            "Context length exceeded. Asking user if they want to use summarize prompt to fit, this will reduce context length.",
+            color="yellow",
+        )
+        user_choice = click.confirm(
+            "Context length exceeded. Do you want to summarize the text to fit models context window?"
+        )
+        if user_choice:
+            self._logger.log(
+                "debug",
+                "Context length exceeded. Using summarize prompt to fit, this will reduce context length.",
+                color="bold_blue",
+            )
+            intermediate_steps = self._handle_context_length(intermediate_steps)
+
+            output = self.agent.plan(
+                intermediate_steps,
+                callbacks=run_manager.get_child() if run_manager else None,
+                **inputs,
+            )
+
+            if isinstance(output, AgentFinish):
+                return output
+            elif isinstance(output, AgentAction):
+                return [AgentStep(action=output, observation=None)]
+            else:
+                return [AgentStep(action=action, observation=None) for action in output]
+        else:
+            self._logger.log(
+                "debug",
+                "Context length exceeded. Consider using smaller text or RAG tools from crewai_tools.",
+                color="red",
+            )
+            raise SystemExit(
+                "Context length exceeded and user opted not to summarize. Consider using smaller text or RAG tools from crewai_tools."
+            )
