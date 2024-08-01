@@ -1,11 +1,12 @@
 import click
 import pkg_resources
 
+from crewai.cli.create_crew import create_crew
+from crewai.cli.create_pipeline import create_pipeline
 from crewai.memory.storage.kickoff_task_outputs_storage import (
     KickoffTaskOutputsSQLiteStorage,
 )
 
-from .create_crew import create_crew
 from .evaluate_crew import evaluate_crew
 from .replay_from_task import replay_task_command
 from .reset_memories_command import reset_memories_command
@@ -18,10 +19,23 @@ def crewai():
 
 
 @crewai.command()
-@click.argument("project_name")
-def create(project_name):
-    """Create a new crew."""
-    create_crew(project_name)
+@click.argument("type", type=click.Choice(["crew", "pipeline"]))
+@click.argument("name")
+@click.argument("crew_names", nargs=-1)
+def create(type, name, crew_names):
+    """Create a new crew or pipeline."""
+    if type == "crew":
+        create_crew(name)
+    elif type == "pipeline":
+        if not crew_names:
+            click.secho(
+                "Error: At least one crew name must be provided for a pipeline.",
+                fg="red",
+            )
+            return
+        create_pipeline(name, crew_names)
+    else:
+        click.secho("Error: Invalid type. Must be 'crew' or 'pipeline'.", fg="red")
 
 
 @crewai.command()

@@ -224,8 +224,8 @@ urgent_crew = Crew(agents=[urgent_handler], tasks=[urgent_task])
 normal_crew = Crew(agents=[normal_handler], tasks=[normal_task])
 
 # Create pipelines for different urgency levels
-urgent_pipeline = Pipeline(stages=[classification_crew, urgent_crew])
-normal_pipeline = Pipeline(stages=[classification_crew, normal_crew])
+urgent_pipeline = Pipeline(stages=[urgent_crew])
+normal_pipeline = Pipeline(stages=[normal_crew])
 
 # Create a router
 email_router = Router(
@@ -243,7 +243,7 @@ email_router = Router(
 )
 
 # Use the router in a main pipeline
-main_pipeline = Pipeline(stages=[email_router])
+main_pipeline = Pipeline(stages=[classification_crew, email_router])
 
 inputs = [{"email": "..."}, {"email": "..."}]  # List of email data
 
