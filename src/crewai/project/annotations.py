@@ -61,6 +61,11 @@ def router(func):
     return memoize(func)
 
 
+def pipeline(func):
+    func.is_pipeline = True
+    return memoize(func)
+
+
 def crew(func):
     def wrapper(self, *args, **kwargs):
         instantiated_tasks = []

@@ -21,19 +21,15 @@ def crewai():
 @crewai.command()
 @click.argument("type", type=click.Choice(["crew", "pipeline"]))
 @click.argument("name")
-@click.argument("crew_names", nargs=-1)
-def create(type, name, crew_names):
+@click.option(
+    "--router", is_flag=True, help="Create a pipeline with router functionality"
+)
+def create(type, name, router):
     """Create a new crew or pipeline."""
     if type == "crew":
         create_crew(name)
     elif type == "pipeline":
-        if not crew_names:
-            click.secho(
-                "Error: At least one crew name must be provided for a pipeline.",
-                fg="red",
-            )
-            return
-        create_pipeline(name, crew_names)
+        create_pipeline(name, router)
     else:
         click.secho("Error: Invalid type. Must be 'crew' or 'pipeline'.", fg="red")
 
