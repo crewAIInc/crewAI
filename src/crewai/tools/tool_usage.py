@@ -16,7 +16,7 @@ try:
 except ImportError:
     agentops = None
 
-OPENAI_BIGGER_MODELS = ["gpt-4"]
+OPENAI_BIGGER_MODELS = ["gpt-4o"]
 
 
 class ToolUsageErrorException(Exception):
