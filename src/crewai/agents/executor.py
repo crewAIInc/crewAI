@@ -1,7 +1,7 @@
 import threading
 import time
 from typing import Any, Dict, Iterator, List, Literal, Optional, Tuple, Union
-from prompt_toolkit import prompt
+import click
 
 
 from langchain.agents import AgentExecutor
@@ -13,18 +13,19 @@ from langchain_core.tools import BaseTool
 from langchain_core.utils.input import get_color_mapping
 from pydantic import InstanceOf
 
-from openai import BadRequestError
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langchain.chains.summarize import load_summarize_chain
 
 from crewai.agents.agent_builder.base_agent_executor_mixin import CrewAgentExecutorMixin
-from crewai.agents.agent_builder.utilities.yes_no_cli_validator import YesNoValidator
 from crewai.agents.tools_handler import ToolsHandler
 
 
 from crewai.tools.tool_usage import ToolUsage, ToolUsageErrorException
 from crewai.utilities import I18N
 from crewai.utilities.constants import TRAINING_DATA_FILE
+from crewai.utilities.exceptions.context_window_exceeding_exception import (
+    LLMContextLengthExceededException,
+)
 from crewai.utilities.training_handler import CrewTrainingHandler
 from crewai.utilities.logger import Logger
 
@@ -50,7 +51,7 @@ class CrewAgentExecutor(AgentExecutor, CrewAgentExecutorMixin):
     system_template: Optional[str] = None
     prompt_template: Optional[str] = None
     response_template: Optional[str] = None
-    _logger: Logger = Logger()
+    _logger: Logger = Logger(verbose_level=2)
     _fit_context_window_strategy: Optional[Literal["summarize"]] = "summarize"
 
     def _call(
@@ -197,46 +198,49 @@ class CrewAgentExecutor(AgentExecutor, CrewAgentExecutorMixin):
             yield AgentStep(action=output, observation=observation)
             return
 
-        except BadRequestError as e:
-            print("Bad Request Error", e)
-            if "context_length_exceeded" in str(e):
-                self._logger.log(
-                    "debug",
-                    "Context length exceeded. Asking user if they want to use summarize prompt to fit, this will reduce context length.",
-                    color="yellow",
-                )
-                user_choice = prompt(
-                    "Context length exceeded. Do you want to summarize the text to fit models context window? (Y/N): ",
-                    validator=YesNoValidator(),
-                ).lower()
-                if user_choice in ["y", "yes"]:
+        except Exception as e:
+            if LLMContextLengthExceededException(str(e))._is_context_limit_error(
+                str(e)
+            ):
+                if "context_length_exceeded" in str(e):
                     self._logger.log(
                         "debug",
-                        "Context length exceeded. Using summarize prompt to fit, this will reduce context length.",
-                        color="bold_blue",
+                        "Context length exceeded. Asking user if they want to use summarize prompt to fit, this will reduce context length.",
+                        color="yellow",
                     )
-                    intermediate_steps = self._handle_context_length(intermediate_steps)
-
-                    output = self.agent.plan(
-                        intermediate_steps,
-                        callbacks=run_manager.get_child() if run_manager else None,
-                        **inputs,
+                    user_choice = click.confirm(
+                        "Context length exceeded. Do you want to summarize the text to fit models context window?"
                     )
+                    if user_choice:
+                        self._logger.log(
+                            "debug",
+                            "Context length exceeded. Using summarize prompt to fit, this will reduce context length.",
+                            color="bold_blue",
+                        )
+                        intermediate_steps = self._handle_context_length(
+                            intermediate_steps
+                        )
 
-                    if isinstance(output, AgentFinish):
-                        yield output
+                        output = self.agent.plan(
+                            intermediate_steps,
+                            callbacks=run_manager.get_child() if run_manager else None,
+                            **inputs,
+                        )
+
+                        if isinstance(output, AgentFinish):
+                            yield output
+                        else:
+                            yield AgentStep(action=output, observation=None)
+                        return
                     else:
-                        yield AgentStep(action=output, observation=None)
-                    return
-                else:
-                    raise SystemExit(
-                        "Context length exceeded and user opted not to summarize. Consider using smaller text or RAG tools from crewai_tools."
-                    )
-
-            else:
-                raise e
-
-        except Exception as e:
+                        self._logger.log(
+                            "debug",
+                            "Context length exceeded. Consider using smaller text or RAG tools from crewai_tools.",
+                            color="red",
+                        )
+                        raise SystemExit(
+                            "Context length exceeded and user opted not to summarize. Consider using smaller text or RAG tools from crewai_tools."
+                        )
             yield AgentStep(
                 action=AgentAction("_Exception", str(e), str(e)),
                 observation=str(e),
@@ -364,8 +368,11 @@ class CrewAgentExecutor(AgentExecutor, CrewAgentExecutorMixin):
             )
             summarized_docs = []
             for doc in docs:
-                summary = summarize_chain.run([doc])
-                summarized_docs.append(summary)
+                summary = summarize_chain.invoke(
+                    {"input_documents": [doc]}, return_only_outputs=True
+                )
+
+                summarized_docs.append(summary["output_text"])
 
             formatted_results = "\n\n".join(summarized_docs)
             summary_step = AgentStep(

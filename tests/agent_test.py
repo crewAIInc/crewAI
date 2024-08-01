@@ -1024,8 +1024,6 @@ def test_handle_context_length_exceeds_limit():
         goal="test goal",
         backstory="test backstory",
     )
-    task = Task(description="test task", agent=agent, expected_output="test output")
-    # crew = Crew(agents=[agent], tasks=[task])
     original_action = AgentAction(
         tool="test_tool", tool_input="test_input", log="test_log"
     )
@@ -1041,7 +1039,7 @@ def test_handle_context_length_exceeds_limit():
             task=task,
         )
         private_mock.assert_called_once()
-        with patch("crewai.agents.executor.prompt") as mock_prompt:
+        with patch("crewai.agents.executor.click") as mock_prompt:
             mock_prompt.return_value = "y"
             with patch.object(
                 CrewAgentExecutor, "_handle_context_length"
@@ -1082,7 +1080,7 @@ def test_handle_context_length_exceeds_limit_cli_no():
             task=task,
         )
         private_mock.assert_called_once()
-        with patch("crewai.agents.executor.prompt") as mock_prompt:
+        with patch("crewai.agents.executor.click") as mock_prompt:
             mock_prompt.return_value = "n"
             pytest.raises(SystemExit)
             with patch.object(
