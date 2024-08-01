@@ -7,6 +7,7 @@ import pytest
 from langchain.tools import tool
 from langchain_core.exceptions import OutputParserException
 from langchain_openai import ChatOpenAI
+from langchain.schema import AgentAction
 
 from crewai import Agent, Crew, Task
 from crewai.agents.cache import CacheHandler
@@ -1014,3 +1015,77 @@ def test_agent_max_retry_limit():
                 ),
             ]
         )
+
+
+@pytest.mark.vcr(filter_headers=["authorization"])
+def test_handle_context_length_exceeds_limit():
+    agent = Agent(
+        role="test role",
+        goal="test goal",
+        backstory="test backstory",
+    )
+    task = Task(description="test task", agent=agent, expected_output="test output")
+    # crew = Crew(agents=[agent], tasks=[task])
+    original_action = AgentAction(
+        tool="test_tool", tool_input="test_input", log="test_log"
+    )
+
+    with patch.object(
+        CrewAgentExecutor, "_iter_next_step", wraps=agent.agent_executor._iter_next_step
+    ) as private_mock:
+        task = Task(
+            description="The final answer is 42. But don't give it yet, instead keep using the `get_final_answer` tool.",
+            expected_output="The final answer",
+        )
+        agent.execute_task(
+            task=task,
+        )
+        private_mock.assert_called_once()
+        with patch("crewai.agents.executor.prompt") as mock_prompt:
+            mock_prompt.return_value = "y"
+            with patch.object(
+                CrewAgentExecutor, "_handle_context_length"
+            ) as mock_handle_context:
+                mock_handle_context.side_effect = ValueError(
+                    "Context length limit exceeded"
+                )
+
+                long_input = "This is a very long input. " * 10000
+
+                # Attempt to handle context length, expecting the mocked error
+                with pytest.raises(ValueError) as excinfo:
+                    agent.agent_executor._handle_context_length(
+                        [(original_action, long_input)]
+                    )
+
+                assert "Context length limit exceeded" in str(excinfo.value)
+                mock_handle_context.assert_called_once()
+
+
+@pytest.mark.vcr(filter_headers=["authorization"])
+def test_handle_context_length_exceeds_limit_cli_no():
+    agent = Agent(
+        role="test role",
+        goal="test goal",
+        backstory="test backstory",
+    )
+    task = Task(description="test task", agent=agent, expected_output="test output")
+
+    with patch.object(
+        CrewAgentExecutor, "_iter_next_step", wraps=agent.agent_executor._iter_next_step
+    ) as private_mock:
+        task = Task(
+            description="The final answer is 42. But don't give it yet, instead keep using the `get_final_answer` tool.",
+            expected_output="The final answer",
+        )
+        agent.execute_task(
+            task=task,
+        )
+        private_mock.assert_called_once()
+        with patch("crewai.agents.executor.prompt") as mock_prompt:
+            mock_prompt.return_value = "n"
+
+            with patch.object(
+                CrewAgentExecutor, "_handle_context_length"
+            ) as mock_handle_context:
+                mock_handle_context.assert_not_called()
