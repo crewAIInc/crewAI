@@ -2,6 +2,7 @@ class LLMContextLengthExceededException(Exception):
     CONTEXT_LIMIT_ERRORS = [
         "maximum context length",
         "context length exceeded",
+        "context_length_exceeded",
         "context window full",
         "too many tokens",
         "input is too long",
