@@ -229,12 +229,10 @@ class CrewAgentExecutor(AgentExecutor, CrewAgentExecutorMixin):
                         yield AgentStep(action=output, observation=None)
                     return
                 else:
-                    self._logger.log(
-                        "info",
-                        "User chose not to use summarization. Try again with smaller text or use our various RAG tools from crewai_tools",
-                        color="red",
+                    raise SystemExit(
+                        "Context length exceeded and user opted not to summarize. Consider using smaller text or RAG tools from crewai_tools."
                     )
-                    raise e
+
             else:
                 raise e
 

@@ -1084,7 +1084,7 @@ def test_handle_context_length_exceeds_limit_cli_no():
         private_mock.assert_called_once()
         with patch("crewai.agents.executor.prompt") as mock_prompt:
             mock_prompt.return_value = "n"
-
+            pytest.raises(SystemExit)
             with patch.object(
                 CrewAgentExecutor, "_handle_context_length"
             ) as mock_handle_context:

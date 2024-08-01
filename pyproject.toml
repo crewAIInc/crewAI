@@ -29,6 +29,7 @@ jsonref = "^1.1.0"
 agentops = { version = "^0.3.0", optional = true }
 embedchain = "^0.1.114"
 json-repair = "^0.25.2"
+prompt-toolkit = "^3.0.47"
 
 [tool.poetry.extras]
 tools = ["crewai-tools"]
