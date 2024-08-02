@@ -17,8 +17,8 @@ class ResearchReport(BaseModel):
 @CrewBase
 class ResearchCrew():
 	"""Research Crew"""
-	agents_config = '../config/agents.yaml'
-	tasks_config = '../config/tasks.yaml'
+	agents_config = 'config/agents.yaml'
+	tasks_config = 'config/tasks.yaml'
 
 	@agent
 	def researcher(self) -> Agent:

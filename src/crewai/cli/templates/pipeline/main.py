@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 import asyncio
-from pipeline import {{pipeline_name}}Pipeline
+from {{folder_name}}.pipeline import {{pipeline_name}}Pipeline
 
 async def run():
     """

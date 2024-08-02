@@ -11,7 +11,7 @@ crewai = { extras = ["tools"], path = "/Users/brandonhancock/Code/crewai/crewAI"
 asyncio = "*"
 
 [tool.poetry.scripts]
-{{folder_name}} = "{{folder_name}}.src.{{folder_name}}.main:main"
+{{folder_name}} = "{{folder_name}}.main:main"
 
 [build-system]
 requires = ["poetry-core"]

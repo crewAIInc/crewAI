@@ -34,6 +34,8 @@ def CrewBase(cls):
                     "Unable to dynamically determine the project's base directory, you must run it from the project's root directory."
                 )
 
+            print("Base directory: ", self.base_directory)
+
             self.agents_config = self.load_yaml(
                 os.path.join(self.base_directory, self.original_agents_config_path)
             )

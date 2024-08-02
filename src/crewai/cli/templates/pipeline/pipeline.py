@@ -43,7 +43,7 @@ from .crews.write_x_crew import WriteXCrew
 # Uncomment the following code block to use Example 1
 
 @PipelineBase
-class ContentPipeline:
+class {{pipeline_name}}Pipeline:
     def __init__(self):
         # Initialize crews
         self.research_crew = ResearchCrew().crew()
@@ -64,12 +64,12 @@ class ContentPipeline:
         return results
 
 
-# EXAMPLE 2: Three-Stage Pipeline with Parallel Execution
+# EXAMPLE 2: Two-Stage Pipeline with Parallel Execution
 # -------------------------------------------------------
 # Uncomment the following code block to use Example 2
 
 # @PipelineBase
-# class ContentPipeline:
+# class {{pipeline_name}}Pipeline:
 #     def __init__(self):
 #         # Initialize crews
 #         self.research_crew = ResearchCrew().crew()

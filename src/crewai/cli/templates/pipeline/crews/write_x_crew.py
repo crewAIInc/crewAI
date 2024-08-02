@@ -10,8 +10,8 @@ from crewai.project import CrewBase, agent, crew, task
 @CrewBase
 class WriteXCrew():
 	"""Research Crew"""
-	agents_config = '../config/agents.yaml'
-	tasks_config = '../config/tasks.yaml'
+	agents_config = 'config/agents.yaml'
+	tasks_config = 'config/tasks.yaml'
 
 	@agent
 	def x_writer_agent(self) -> Agent:

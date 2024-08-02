@@ -1,8 +1,8 @@
+import os
+import shutil
 from pathlib import Path
 
 import click
-
-from crewai.cli.utils import copy_template
 
 
 def create_pipeline(name, router=False):
@@ -42,28 +42,40 @@ def create_pipeline(name, router=False):
     if router:
         crew_template_files.append("crews/write_linkedin_crew.py")
 
+    def process_file(src_file, dst_file):
+        with open(src_file, "r") as file:
+            content = file.read()
+
+        content = content.replace("{{name}}", name)
+        content = content.replace("{{crew_name}}", class_name)
+        content = content.replace("{{folder_name}}", folder_name)
+        content = content.replace("{{pipeline_name}}", class_name)
+
+        with open(dst_file, "w") as file:
+            file.write(content)
+
     # Copy and process root template files
     for file_name in root_template_files:
         src_file = templates_dir / file_name
         dst_file = project_root / file_name
-        copy_template(src_file, dst_file, name, class_name, folder_name)
+        process_file(src_file, dst_file)
 
     # Copy and process src template files
     for file_name in src_template_files:
         src_file = templates_dir / file_name
         dst_file = project_root / "src" / folder_name / file_name
-        copy_template(src_file, dst_file, name, class_name, folder_name)
+        process_file(src_file, dst_file)
 
     # Copy tools and config files
     for file_name in tools_template_files + config_template_files:
         src_file = templates_dir / file_name
         dst_file = project_root / "src" / folder_name / file_name
-        copy_template(src_file, dst_file, name, class_name, folder_name)
+        shutil.copy(src_file, dst_file)
 
     # Copy and process crew files
     for file_name in crew_template_files:
         src_file = templates_dir / file_name
         dst_file = project_root / "src" / folder_name / file_name
-        copy_template(src_file, dst_file, name, class_name, folder_name)
+        process_file(src_file, dst_file)
 
     click.secho(f"Pipeline {name} created successfully!", fg="green", bold=True)
