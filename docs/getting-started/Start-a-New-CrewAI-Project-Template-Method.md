@@ -39,7 +39,7 @@ It is highly recommended that you use virtual environments to ensure that your C
 
 ### Code IDEs
 
-Most users of CrewAI a Code Editor / Integrated Development Environment (IDE) for building there Crews. You can use any code IDE of your choice. Seee below for some popular options for Code Editors / Integrated Development Environments (IDE):
+Most users of CrewAI use a Code Editor / Integrated Development Environment (IDE) for building their Crews. You can use any code IDE of your choice. Seee below for some popular options for Code Editors / Integrated Development Environments (IDE):
 
 - [Visual Studio Code](https://code.visualstudio.com/) - Most popular
 - [PyCharm](https://www.jetbrains.com/pycharm/)
