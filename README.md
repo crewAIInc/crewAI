@@ -126,7 +126,7 @@ task2 = Task(
 crew = Crew(
   agents=[researcher, writer],
   tasks=[task1, task2],
-  verbose=True, # You can set it to 1 or 2 to different logging levels
+  verbose=True,
   process = Process.sequential
 )
 
