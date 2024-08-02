@@ -32,8 +32,8 @@ from crewai import Pipeline
 
 
 # Uncomment the crews you need for your chosen example
-from .crews.research_crew.research_crew import ResearchCrew
-from .crews.write_x_crew.write_x_crew import WriteXCrew
+from ..crews.research_crew.research_crew import ResearchCrew
+from ..crews.write_x_crew.write_x_crew import WriteXCrew
 # from .crews.write_linkedin_crew.write_linkedin_crew import WriteLinkedInCrew  # Uncomment for Example 2
 
 # EXAMPLE 1: Two-Stage Pipeline

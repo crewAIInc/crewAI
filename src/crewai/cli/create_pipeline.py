@@ -1,4 +1,3 @@
-import os
 import shutil
 from pathlib import Path
 
@@ -19,6 +18,7 @@ def create_pipeline(name, router=False):
 
     # Create directory structure
     (project_root / "src" / folder_name).mkdir(parents=True)
+    (project_root / "src" / folder_name / "pipelines").mkdir(parents=True)
     (project_root / "src" / folder_name / "crews").mkdir(parents=True)
     (project_root / "src" / folder_name / "tools").mkdir(parents=True)
     (project_root / "tests").mkdir(exist_ok=True)
@@ -33,9 +33,10 @@ def create_pipeline(name, router=False):
 
     # List of template files to copy
     root_template_files = [".gitignore", "pyproject.toml", "README.md"]
-    src_template_files = ["__init__.py", "main.py", "pipeline.py"]
+    src_template_files = ["__init__.py", "main.py"]
     tools_template_files = ["tools/__init__.py", "tools/custom_tool.py"]
     crew_folders = ["research_crew", "write_x_crew", "write_linkedin_crew"]
+    pipelines_folders = ["pipelines/__init__.py", "pipelines/pipeline.py"]
 
     def process_file(src_file, dst_file):
         with open(src_file, "r") as file:
@@ -66,6 +67,12 @@ def create_pipeline(name, router=False):
         src_file = templates_dir / file_name
         dst_file = project_root / "src" / folder_name / file_name
         shutil.copy(src_file, dst_file)
+
+    # Copy pipelines folders
+    for file_name in pipelines_folders:
+        src_file = templates_dir / file_name
+        dst_file = project_root / "src" / folder_name / file_name
+        process_file(src_file, dst_file)
 
     # Copy crew folders
     for crew_folder in crew_folders:
