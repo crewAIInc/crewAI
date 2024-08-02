@@ -470,7 +470,7 @@ def test_agent_respect_the_max_rpm_set_over_crew_rpm(capsys):
         agent=agent,
     )
 
-    crew = Crew(agents=[agent], tasks=[task], max_rpm=1, verbose=2)
+    crew = Crew(agents=[agent], tasks=[task], max_rpm=1, verbose=True)
 
     with patch.object(RPMController, "_wait_for_next_minute") as moveon:
         moveon.return_value = True
@@ -522,7 +522,7 @@ def test_agent_without_max_rpm_respet_crew_rpm(capsys):
         ),
     ]
 
-    crew = Crew(agents=[agent1, agent2], tasks=tasks, max_rpm=1, verbose=2)
+    crew = Crew(agents=[agent1, agent2], tasks=tasks, max_rpm=1, verbose=True)
 
     with patch.object(RPMController, "_wait_for_next_minute") as moveon:
         moveon.return_value = True
@@ -563,7 +563,7 @@ def test_agent_error_on_parsing_tool(capsys):
     crew = Crew(
         agents=[agent1],
         tasks=tasks,
-        verbose=2,
+        verbose=True,
         function_calling_llm=ChatOpenAI(model="gpt-4-0125-preview"),
     )
 
@@ -602,7 +602,7 @@ def test_agent_remembers_output_format_after_using_tools_too_many_times():
         )
     ]
 
-    crew = Crew(agents=[agent1], tasks=tasks, verbose=2)
+    crew = Crew(agents=[agent1], tasks=tasks, verbose=True)
 
     with patch.object(ToolUsage, "_remember_format") as remember_format:
         crew.kickoff()

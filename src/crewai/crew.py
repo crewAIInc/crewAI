@@ -196,7 +196,7 @@ class Crew(BaseModel):
     def set_private_attrs(self) -> "Crew":
         """Set private attributes."""
         self._cache_handler = CacheHandler()
-        self._logger = Logger()
+        self._logger = Logger(verbose=self.verbose)
         if self.output_log_file:
             self._file_handler = FileHandler(self.output_log_file)
         self._rpm_controller = RPMController(max_rpm=self.max_rpm, logger=self._logger)

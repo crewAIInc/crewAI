@@ -85,7 +85,7 @@ task = Task(description="""what is 3 + 5""",
 crew = Crew(
             agents=[general_agent],
             tasks=[task],
-            verbose=2
+            verbose=True
         )
 
 result = crew.kickoff()
