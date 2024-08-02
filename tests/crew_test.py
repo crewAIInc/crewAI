@@ -2591,3 +2591,26 @@ def test_hierarchical_verbose_manager_agent():
 
     assert crew.manager_agent is not None
     assert crew.manager_agent.verbose
+
+
+@pytest.mark.vcr(filter_headers=["authorization"])
+def test_hierarchical_verbose_false_manager_agent():
+    from langchain_openai import ChatOpenAI
+
+    task = Task(
+        description="Come up with a list of 5 interesting ideas to explore for an article, then write one amazing paragraph highlight for each idea that showcases how good an article about this topic could be. Return the list of ideas with their paragraph and your notes.",
+        expected_output="5 bullet points with a paragraph for each idea.",
+    )
+
+    crew = Crew(
+        agents=[researcher, writer],
+        tasks=[task],
+        process=Process.hierarchical,
+        manager_llm=ChatOpenAI(temperature=0, model="gpt-4o"),
+        verbose=False,
+    )
+
+    crew.kickoff()
+
+    assert crew.manager_agent is not None
+    assert not crew.manager_agent.verbose
