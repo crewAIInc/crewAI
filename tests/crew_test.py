@@ -449,7 +449,7 @@ def test_crew_verbose_output(capsys):
         assert expected_string in captured.out
 
     # Now test with verbose set to False
-    crew._logger = Logger(verbose_level=False)
+    crew._logger = Logger()
     crew.kickoff()
     captured = capsys.readouterr()
     assert captured.out == ""
@@ -475,7 +475,7 @@ def test_crew_verbose_levels_output(capsys):
         assert expected_string in captured.out
 
     # Now test with verbose set to 2
-    crew._logger = Logger(verbose_level=2)
+    crew._logger = Logger()
     crew.kickoff()
     captured = capsys.readouterr()
     expected_strings = [
