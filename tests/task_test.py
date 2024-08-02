@@ -1,5 +1,6 @@
 """Test Agent creation and execution basic functionality."""
 
+import os
 import hashlib
 import json
 from unittest.mock import MagicMock, patch
@@ -277,6 +278,7 @@ def test_output_json_sequential():
         description="Give me an integer score between 1-5 for the following title: 'The impact of AI in the future of work'",
         expected_output="The score of the title.",
         output_json=ScoreOutput,
+        output_file="score.json",
         agent=scorer,
     )
 
@@ -519,11 +521,13 @@ def test_save_task_json_output():
     )
 
     crew = Crew(agents=[scorer], tasks=[task])
+    crew.kickoff()
 
-    with patch.object(Task, "_save_file") as save_file:
-        save_file.return_value = None
-        crew.kickoff()
-        save_file.assert_called_once_with({"score": 4})
+    output_file_exists = os.path.exists("score.json")
+    assert output_file_exists
+    assert {"score": 4} == json.loads(open("score.json").read())
+    if output_file_exists:
+        os.remove("score.json")
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
@@ -547,11 +551,13 @@ def test_save_task_pydantic_output():
     )
 
     crew = Crew(agents=[scorer], tasks=[task])
+    crew.kickoff()
 
-    with patch.object(Task, "_save_file") as save_file:
-        save_file.return_value = None
-        crew.kickoff()
-        save_file.assert_called_once_with('{"score":4}')
+    output_file_exists = os.path.exists("score.json")
+    assert output_file_exists
+    assert {"score": 4} == json.loads(open("score.json").read())
+    if output_file_exists:
+        os.remove("score.json")
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
