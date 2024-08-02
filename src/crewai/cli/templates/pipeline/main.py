@@ -9,7 +9,7 @@ async def run():
     inputs = [
         {"topic": "AI wearables"},
     ]
-    pipeline = {{pipeline_name}}Pipeline().pipeline()
+    pipeline = {{pipeline_name}}Pipeline()
     results = await pipeline.kickoff(inputs)
     
     # Process and print results

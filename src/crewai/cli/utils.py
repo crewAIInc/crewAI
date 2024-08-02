@@ -2,8 +2,6 @@ import click
 
 
 def copy_template(src, dst, name, class_name, folder_name):
-    print(f"Copying {src} to {dst}")
-    print(f"Interpolating {name}, {class_name}, {folder_name}")
     """Copy a file from src to dst."""
     with open(src, "r") as file:
         content = file.read()

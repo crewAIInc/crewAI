@@ -7,6 +7,7 @@ from crewai.pipeline.pipeline import Pipeline
 from crewai.routers.router import Router
 
 
+# TODO: Could potentially remove. Need to check with @joao and @gui if this is needed for CrewAI+
 def PipelineBase(cls):
     class WrappedClass(cls):
         model_config = ConfigDict(arbitrary_types_allowed=True)
@@ -49,9 +50,7 @@ def PipelineBase(cls):
                 elif isinstance(stage, list) and all(
                     isinstance(item, Crew) for item in stage
                 ):
-                    self.stages.append(
-                        [crew_functions[item.__name__]() for item in stage]
-                    )
+                    self.stages.append(stage)
 
         def build_pipeline(self) -> Pipeline:
             return Pipeline(stages=self.stages)

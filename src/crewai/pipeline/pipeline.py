@@ -142,7 +142,7 @@ class Pipeline(BaseModel):
         """
         initial_input = copy.deepcopy(kickoff_input)
         current_input = copy.deepcopy(kickoff_input)
-        stages = copy.deepcopy(self.stages)
+        stages = self._copy_stages()
         pipeline_usage_metrics: Dict[str, UsageMetrics] = {}
         all_stage_outputs: List[List[CrewOutput]] = []
         traces: List[List[Union[str, Dict[str, Any]]]] = [[initial_input]]
@@ -151,6 +151,7 @@ class Pipeline(BaseModel):
         while stage_index < len(stages):
             stage = stages[stage_index]
             stage_input = copy.deepcopy(current_input)
+            print("stage_input", stage_input)
 
             if isinstance(stage, Router):
                 next_pipeline, route_taken = stage.route(stage_input)
@@ -164,6 +165,7 @@ class Pipeline(BaseModel):
                 continue
 
             stage_outputs, stage_trace = await self._process_stage(stage, stage_input)
+            print("stage_outputs", stage_outputs)
 
             self._update_metrics_and_input(
                 pipeline_usage_metrics, current_input, stage, stage_outputs
@@ -210,6 +212,8 @@ class Pipeline(BaseModel):
             Tuple[List[CrewOutput], List[Union[str, Dict[str, Any]]]]: The output and trace of the crew.
         """
         output = await crew.kickoff_async(inputs=current_input)
+        print("output from crew kickoff", output)
+        print("output from crew kickoff dict", output.to_dict())
         return [output], [crew.name or str(crew.id)]
 
     async def _process_parallel_crews(
@@ -366,6 +370,24 @@ class Pipeline(BaseModel):
             for output in stage_outputs
         ]
         return [crew_outputs + [output] for output in all_stage_outputs[-1]]
+
+    def _copy_stages(self):
+        """Create a deep copy of the Pipeline's stages."""
+        new_stages = []
+        for stage in self.stages:
+            if isinstance(stage, list):
+                new_stages.append(
+                    [
+                        crew.copy() if hasattr(crew, "copy") else copy.deepcopy(crew)
+                        for crew in stage
+                    ]
+                )
+            elif hasattr(stage, "copy"):
+                new_stages.append(stage.copy())
+            else:
+                new_stages.append(copy.deepcopy(stage))
+
+        return new_stages
 
     def __rshift__(self, other: PipelineStage) -> "Pipeline":
         """

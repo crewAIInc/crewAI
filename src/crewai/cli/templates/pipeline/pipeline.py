@@ -11,7 +11,7 @@ Key features:
 - The ResearchCrew's final task uses output_json to store all research findings in a JSON object.
 - This JSON object is then passed to the WriteXCrew, where tasks can access the research findings.
 
-Example 2: Three-Stage Pipeline with Parallel Execution
+Example 2: Two-Stage Pipeline with Parallel Execution
 -------------------------------------------------------
 This pipeline consists of three crews:
 1. ResearchCrew: Performs research on a given topic.
@@ -28,28 +28,24 @@ Usage:
 
 # Common imports for both examples
 from crewai import Pipeline
-from crewai.project.pipeline_base import PipelineBase
 
 
-from crewai.project.annotations import pipeline
 
 # Uncomment the crews you need for your chosen example
-from .crews.research_crew import ResearchCrew
-from .crews.write_x_crew import WriteXCrew
+from .crews.research_crew.research_crew import ResearchCrew
+from .crews.write_x_crew.write_x_crew import WriteXCrew
 # from .crews.write_linkedin_crew import WriteLinkedInCrew  # Uncomment for Example 2
 
 # EXAMPLE 1: Two-Stage Pipeline
 # -----------------------------
 # Uncomment the following code block to use Example 1
 
-@PipelineBase
 class {{pipeline_name}}Pipeline:
     def __init__(self):
         # Initialize crews
         self.research_crew = ResearchCrew().crew()
         self.write_x_crew = WriteXCrew().crew()
     
-    @pipeline
     def create_pipeline(self):
         return Pipeline(
             stages=[
@@ -58,7 +54,7 @@ class {{pipeline_name}}Pipeline:
             ]
         )
 
-    async def run(self, inputs):
+    async def kickoff(self, inputs):
         pipeline = self.create_pipeline()
         results = await pipeline.kickoff(inputs)
         return results
