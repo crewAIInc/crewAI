@@ -35,8 +35,26 @@ def create_pipeline(name, router=False):
     root_template_files = [".gitignore", "pyproject.toml", "README.md"]
     src_template_files = ["__init__.py", "main.py"]
     tools_template_files = ["tools/__init__.py", "tools/custom_tool.py"]
-    crew_folders = ["research_crew", "write_x_crew", "write_linkedin_crew"]
-    pipelines_folders = ["pipelines/__init__.py", "pipelines/pipeline.py"]
+
+    if router:
+        crew_folders = [
+            "classifier_crew",
+            "normal_crew",
+            "urgent_crew",
+        ]
+        pipelines_folders = [
+            "pipelines/__init__.py",
+            "pipelines/pipeline_classifier.py",
+            "pipelines/pipeline_normal.py",
+            "pipelines/pipeline_urgent.py",
+        ]
+    else:
+        crew_folders = [
+            "classifier_crew",
+            "normal_crew",
+            "urgent_crew",
+        ]
+        pipelines_folders = ["pipelines/__init__.py", "pipelines/pipeline.py"]
 
     def process_file(src_file, dst_file):
         with open(src_file, "r") as file:
