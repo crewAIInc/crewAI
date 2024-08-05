@@ -17,7 +17,7 @@ class TokenCalcHandler(BaseCallbackHandler):
         self.token_cost_process = token_cost_process
         try:
             self.encoding = tiktoken.encoding_for_model(self.model_name)
-        except KeyError as e:
+        except KeyError:
             self.encoding = tiktoken.get_encoding("cl100k_base")
 
     def on_llm_start(
