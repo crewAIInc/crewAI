@@ -7,15 +7,6 @@ assignees: ''
 
 ---
 
----
-name: Documentation Improvement
-about: Suggest improvements or report issues with CrewAI's documentation
-title: '[DOCS] '
-labels: documentation
-assignees: ''
-
----
-
 ## Documentation Page
 <!-- Provide a link to the documentation page that needs improvement -->
 
