@@ -6,7 +6,7 @@ class FirecrawlScrapeWebsiteToolSchema(BaseModel):
     url: str = Field(description="Website URL")
     page_options: Optional[Dict[str, Any]] = Field(default=None, description="Options for page scraping")
     extractor_options: Optional[Dict[str, Any]] = Field(default=None, description="Options for data extraction")
-    timeout: Optional[int] = Field(default=None, description="Timeout for the scraping operation")
+    timeout: Optional[int] = Field(default=None, description="Timeout in milliseconds for the scraping operation. The default value is 30000.")
 
 class FirecrawlScrapeWebsiteTool(BaseTool):
     name: str = "Firecrawl web scrape tool"
@@ -27,6 +27,13 @@ class FirecrawlScrapeWebsiteTool(BaseTool):
         self.firecrawl = FirecrawlApp(api_key=api_key)
 
     def _run(self, url: str, page_options: Optional[Dict[str, Any]] = None, extractor_options: Optional[Dict[str, Any]] = None, timeout: Optional[int] = None):
+        if page_options is None:
+            page_options = {}
+        if extractor_options is None:
+            extractor_options = {}
+        if timeout is None:
+            timeout = 30000
+
         options = {
             "pageOptions": page_options,
             "extractorOptions": extractor_options,
