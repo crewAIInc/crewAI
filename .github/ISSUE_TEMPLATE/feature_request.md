@@ -11,7 +11,7 @@ assignees: ''
 A clear and concise description of what the problem is. Ex. I'm always frustrated when [...]
 If possible attach the Issue related to it
 
-**Describe the solution you'd like**
+**Describe the solution you'd like / Use-case**
 A clear and concise description of what you want to happen.
 
 **Describe alternatives you've considered**
