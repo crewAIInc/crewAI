@@ -151,7 +151,6 @@ class Pipeline(BaseModel):
         while stage_index < len(stages):
             stage = stages[stage_index]
             stage_input = copy.deepcopy(current_input)
-            print("stage_input", stage_input)
 
             if isinstance(stage, Router):
                 next_pipeline, route_taken = stage.route(stage_input)
@@ -165,7 +164,6 @@ class Pipeline(BaseModel):
                 continue
 
             stage_outputs, stage_trace = await self._process_stage(stage, stage_input)
-            print("stage_outputs", stage_outputs)
 
             self._update_metrics_and_input(
                 pipeline_usage_metrics, current_input, stage, stage_outputs
@@ -212,8 +210,6 @@ class Pipeline(BaseModel):
             Tuple[List[CrewOutput], List[Union[str, Dict[str, Any]]]]: The output and trace of the crew.
         """
         output = await crew.kickoff_async(inputs=current_input)
-        print("output from crew kickoff", output)
-        print("output from crew kickoff dict", output.to_dict())
         return [output], [crew.name or str(crew.id)]
 
     async def _process_parallel_crews(
