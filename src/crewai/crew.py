@@ -102,7 +102,7 @@ class Crew(BaseModel):
     tasks: List[Task] = Field(default_factory=list)
     agents: List[BaseAgent] = Field(default_factory=list)
     process: Process = Field(default=Process.sequential)
-    verbose: Union[int, bool] = Field(default=0)
+    verbose: bool = Field(default=False)
     memory: bool = Field(
         default=False,
         description="Whether the crew should use memory to store memories of it's execution",
@@ -196,7 +196,7 @@ class Crew(BaseModel):
     def set_private_attrs(self) -> "Crew":
         """Set private attributes."""
         self._cache_handler = CacheHandler()
-        self._logger = Logger(self.verbose)
+        self._logger = Logger(verbose=self.verbose)
         if self.output_log_file:
             self._file_handler = FileHandler(self.output_log_file)
         self._rpm_controller = RPMController(max_rpm=self.max_rpm, logger=self._logger)

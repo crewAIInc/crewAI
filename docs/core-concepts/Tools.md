@@ -84,7 +84,7 @@ write = Task(
 crew = Crew(
     agents=[researcher, writer],
     tasks=[research, write],
-    verbose=2
+    verbose=True
 )
 
 # Execute tasks

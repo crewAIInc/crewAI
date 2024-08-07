@@ -51,7 +51,7 @@ class CrewAgentExecutor(AgentExecutor, CrewAgentExecutorMixin):
     system_template: Optional[str] = None
     prompt_template: Optional[str] = None
     response_template: Optional[str] = None
-    _logger: Logger = Logger(verbose_level=2)
+    _logger: Logger = Logger()
     _fit_context_window_strategy: Optional[Literal["summarize"]] = "summarize"
 
     def _call(

@@ -449,43 +449,11 @@ def test_crew_verbose_output(capsys):
         assert expected_string in captured.out
 
     # Now test with verbose set to False
-    crew._logger = Logger(verbose_level=False)
+    crew.verbose = False
+    crew._logger = Logger(verbose=False)
     crew.kickoff()
     captured = capsys.readouterr()
     assert captured.out == ""
-
-
-@pytest.mark.vcr(filter_headers=["authorization"])
-def test_crew_verbose_levels_output(capsys):
-    tasks = [
-        Task(
-            description="Write about AI advancements.",
-            expected_output="A 4 paragraph article about AI.",
-            agent=researcher,
-        )
-    ]
-
-    crew = Crew(agents=[researcher], tasks=tasks, process=Process.sequential, verbose=1)
-
-    crew.kickoff()
-    captured = capsys.readouterr()
-    expected_strings = ["Working Agent: Researcher", "[Researcher] Task output:"]
-
-    for expected_string in expected_strings:
-        assert expected_string in captured.out
-
-    # Now test with verbose set to 2
-    crew._logger = Logger(verbose_level=2)
-    crew.kickoff()
-    captured = capsys.readouterr()
-    expected_strings = [
-        "Working Agent: Researcher",
-        "Starting Task: Write about AI advancements.",
-        "[Researcher] Task output:",
-    ]
-
-    for expected_string in expected_strings:
-        assert expected_string in captured.out
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
@@ -561,7 +529,7 @@ def test_api_calls_throttling(capsys):
         agent=agent,
     )
 
-    crew = Crew(agents=[agent], tasks=[task], max_rpm=2, verbose=2)
+    crew = Crew(agents=[agent], tasks=[task], max_rpm=2, verbose=True)
 
     with patch.object(RPMController, "_wait_for_next_minute") as moveon:
         moveon.return_value = True
@@ -622,7 +590,7 @@ def test_agents_rpm_is_never_set_if_crew_max_RPM_is_not_set():
         agent=agent,
     )
 
-    Crew(agents=[agent], tasks=[task], verbose=2)
+    Crew(agents=[agent], tasks=[task], verbose=True)
 
     assert agent._rpm_controller is None
 
@@ -2568,3 +2536,49 @@ def test_crew_testing_function(mock_kickoff, crew_evaluator):
             mock.call().print_crew_evaluation_result(),
         ]
     )
+
+
+@pytest.mark.vcr(filter_headers=["authorization"])
+def test_hierarchical_verbose_manager_agent():
+    from langchain_openai import ChatOpenAI
+
+    task = Task(
+        description="Come up with a list of 5 interesting ideas to explore for an article, then write one amazing paragraph highlight for each idea that showcases how good an article about this topic could be. Return the list of ideas with their paragraph and your notes.",
+        expected_output="5 bullet points with a paragraph for each idea.",
+    )
+
+    crew = Crew(
+        agents=[researcher, writer],
+        tasks=[task],
+        process=Process.hierarchical,
+        manager_llm=ChatOpenAI(temperature=0, model="gpt-4o"),
+        verbose=True,
+    )
+
+    crew.kickoff()
+
+    assert crew.manager_agent is not None
+    assert crew.manager_agent.verbose
+
+
+@pytest.mark.vcr(filter_headers=["authorization"])
+def test_hierarchical_verbose_false_manager_agent():
+    from langchain_openai import ChatOpenAI
+
+    task = Task(
+        description="Come up with a list of 5 interesting ideas to explore for an article, then write one amazing paragraph highlight for each idea that showcases how good an article about this topic could be. Return the list of ideas with their paragraph and your notes.",
+        expected_output="5 bullet points with a paragraph for each idea.",
+    )
+
+    crew = Crew(
+        agents=[researcher, writer],
+        tasks=[task],
+        process=Process.hierarchical,
+        manager_llm=ChatOpenAI(temperature=0, model="gpt-4o"),
+        verbose=False,
+    )
+
+    crew.kickoff()
+
+    assert crew.manager_agent is not None
+    assert not crew.manager_agent.verbose
