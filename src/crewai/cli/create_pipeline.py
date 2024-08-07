@@ -50,9 +50,9 @@ def create_pipeline(name, router=False):
         ]
     else:
         crew_folders = [
-            "classifier_crew",
-            "normal_crew",
-            "urgent_crew",
+            "research_crew",
+            "planning_crew",
+            "execution_crew",
         ]
         pipelines_folders = ["pipelines/__init__.py", "pipelines/pipeline.py"]
 
