@@ -434,7 +434,7 @@ def test_output_pydantic_to_another_task():
         agent=scorer,
     )
 
-    crew = Crew(agents=[scorer], tasks=[task1, task2], verbose=2)
+    crew = Crew(agents=[scorer], tasks=[task1, task2], verbose=True)
     result = crew.kickoff()
     pydantic_result = result.pydantic
     assert isinstance(
