@@ -90,7 +90,7 @@ task = Task(
 crew = Crew(
     agents=[research_agent],
     tasks=[task],
-    verbose=2
+    verbose=True
 )
 
 result = crew.kickoff()
@@ -142,7 +142,7 @@ task = Task(
 crew = Crew(
     agents=[research_agent],
     tasks=[task],
-    verbose=2
+    verbose=True
 )
 
 result = crew.kickoff()
@@ -264,7 +264,7 @@ task1 = Task(
 crew = Crew(
     agents=[research_agent],
     tasks=[task1, task2, task3],
-    verbose=2
+    verbose=True
 )
 
 result = crew.kickoff()
