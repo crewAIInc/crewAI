@@ -81,10 +81,10 @@ class Router(BaseModel, Generic[T, U]):
         new_routes = {
             name: Route(
                 condition=deepcopy(route.condition),
-                pipeline=route.pipeline.copy(),
+                pipeline=route.pipeline.copy(),  # type: ignore
             )
             for name, route in self.routes.items()
         }
-        new_default = self.default.copy()
+        new_default = self.default.copy()  # type: ignore
 
         return Router(routes=new_routes, default=new_default)
