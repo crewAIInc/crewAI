@@ -245,6 +245,10 @@ def run():
 To run your project, use the following command:
 
 ```shell
+$ crewai run
+```
+or
+```shell
 $ poetry run my_project
 ```
 

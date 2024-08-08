@@ -9,6 +9,7 @@ from .create_crew import create_crew
 from .evaluate_crew import evaluate_crew
 from .replay_from_task import replay_task_command
 from .reset_memories_command import reset_memories_command
+from .run_crew import run_crew
 from .train_crew import train_crew
 
 
@@ -145,6 +146,13 @@ def test(n_iterations: int, model: str):
     """Test the crew and evaluate the results."""
     click.echo(f"Testing the crew for {n_iterations} iterations with model {model}")
     evaluate_crew(n_iterations, model)
+
+
+@crewai.command()
+def run():
+    """Run the crew."""
+    click.echo("Running the crew")
+    run_crew()
 
 
 if __name__ == "__main__":
