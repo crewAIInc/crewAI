@@ -50,10 +50,17 @@ def version(tools):
     default=5,
     help="Number of iterations to train the crew",
 )
-def train(n_iterations: int):
+@click.option(
+    "-f",
+    "--filename",
+    type=str,
+    default="trained_agents_data.pkl",
+    help="Path to a custom file for training",
+)
+def train(n_iterations: int, filename: str):
     """Train the crew."""
-    click.echo(f"Training the crew for {n_iterations} iterations")
-    train_crew(n_iterations)
+    click.echo(f"Training the Crew for {n_iterations} iterations")
+    train_crew(n_iterations, filename)
 
 
 @crewai.command()
