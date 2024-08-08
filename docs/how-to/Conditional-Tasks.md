@@ -79,7 +79,7 @@ task3 = Task(
 crew = Crew(
     agents=[data_fetcher_agent, data_processor_agent, summary_generator_agent],
     tasks=[task1, conditional_task, task3],
-    verbose=2,
+    verbose=True,
 )
 
 result = crew.kickoff()

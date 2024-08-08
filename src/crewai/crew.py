@@ -37,6 +37,7 @@ from crewai.utilities.constants import (
     TRAINED_AGENTS_DATA_FILE,
     TRAINING_DATA_FILE,
 )
+from crewai.utilities.evaluators.crew_evaluator_handler import CrewEvaluator
 from crewai.utilities.evaluators.task_evaluator import TaskEvaluator
 from crewai.utilities.formatter import (
     aggregate_raw_outputs_from_task_outputs,
@@ -101,7 +102,7 @@ class Crew(BaseModel):
     tasks: List[Task] = Field(default_factory=list)
     agents: List[BaseAgent] = Field(default_factory=list)
     process: Process = Field(default=Process.sequential)
-    verbose: Union[int, bool] = Field(default=0)
+    verbose: bool = Field(default=False)
     memory: bool = Field(
         default=False,
         description="Whether the crew should use memory to store memories of it's execution",
@@ -154,6 +155,10 @@ class Crew(BaseModel):
         default=False,
         description="Plan the crew execution and add the plan to the crew.",
     )
+    planning_llm: Optional[Any] = Field(
+        default=None,
+        description="Language model that will run the AgentPlanner if planning is True.",
+    )
     task_execution_output_json_files: Optional[List[str]] = Field(
         default=None,
         description="List of file paths for task execution JSON files.",
@@ -191,7 +196,7 @@ class Crew(BaseModel):
     def set_private_attrs(self) -> "Crew":
         """Set private attributes."""
         self._cache_handler = CacheHandler()
-        self._logger = Logger(self.verbose)
+        self._logger = Logger(verbose=self.verbose)
         if self.output_log_file:
             self._file_handler = FileHandler(self.output_log_file)
         self._rpm_controller = RPMController(max_rpm=self.max_rpm, logger=self._logger)
@@ -261,20 +266,6 @@ class Crew(BaseModel):
                     raise PydanticCustomError(
                         "missing_agent_in_task",
                         f"Sequential process error: Agent is missing in the task with the following description: {task.description}",  # type: ignore # Argument of type "str" cannot be assigned to parameter "message_template" of type "LiteralString"
-                        {},
-                    )
-
-        return self
-
-    @model_validator(mode="after")
-    def check_tasks_in_hierarchical_process_not_async(self):
-        """Validates that the tasks in hierarchical process are not flagged with async_execution."""
-        if self.process == Process.hierarchical:
-            for task in self.tasks:
-                if task.async_execution:
-                    raise PydanticCustomError(
-                        "async_execution_in_hierarchical_process",
-                        "Hierarchical process error: Tasks cannot be flagged with async_execution.",
                         {},
                     )
 
@@ -559,15 +550,12 @@ class Crew(BaseModel):
     def _handle_crew_planning(self):
         """Handles the Crew planning."""
         self._logger.log("info", "Planning the crew execution")
-        result = CrewPlanner(self.tasks)._handle_crew_planning()
+        result = CrewPlanner(
+            tasks=self.tasks, planning_agent_llm=self.planning_llm
+        )._handle_crew_planning()
 
-        if result is not None and hasattr(result, "list_of_plans_per_task"):
-            for task, step_plan in zip(self.tasks, result.list_of_plans_per_task):
-                task.description += step_plan
-        else:
-            self._logger.log(
-                "info", "Something went wrong with the planning process of the Crew"
-            )
+        for task, step_plan in zip(self.tasks, result.list_of_plans_per_task):
+            task.description += step_plan
 
     def _store_execution_log(
         self,
@@ -605,7 +593,7 @@ class Crew(BaseModel):
     def _run_hierarchical_process(self) -> CrewOutput:
         """Creates and assigns a manager agent to make sure the crew completes the tasks."""
         self._create_manager_agent()
-        return self._execute_tasks(self.tasks, self.manager_agent)
+        return self._execute_tasks(self.tasks)
 
     def _create_manager_agent(self):
         i18n = I18N(prompt_file=self.prompt_file)
@@ -629,7 +617,6 @@ class Crew(BaseModel):
     def _execute_tasks(
         self,
         tasks: List[Task],
-        manager: Optional[BaseAgent] = None,
         start_index: Optional[int] = 0,
         was_replayed: bool = False,
     ) -> CrewOutput:
@@ -657,13 +644,13 @@ class Crew(BaseModel):
                         last_sync_output = task.output
                 continue
 
-            agent_to_use = self._get_agent_to_use(task, manager)
+            agent_to_use = self._get_agent_to_use(task)
             if agent_to_use is None:
                 raise ValueError(
                     f"No agent available for task: {task.description}. Ensure that either the task has an assigned agent or a manager agent is provided."
                 )
 
-            self._prepare_agent_tools(task, manager)
+            self._prepare_agent_tools(task)
             self._log_task_start(task, agent_to_use.role)
 
             if isinstance(task, ConditionalTask):
@@ -729,20 +716,18 @@ class Crew(BaseModel):
             return skipped_task_output
         return None
 
-    def _prepare_agent_tools(self, task: Task, manager: Optional[BaseAgent]):
+    def _prepare_agent_tools(self, task: Task):
         if self.process == Process.hierarchical:
-            if manager:
-                self._update_manager_tools(task, manager)
+            if self.manager_agent:
+                self._update_manager_tools(task)
             else:
                 raise ValueError("Manager agent is required for hierarchical process.")
         elif task.agent and task.agent.allow_delegation:
             self._add_delegation_tools(task)
 
-    def _get_agent_to_use(
-        self, task: Task, manager: Optional[BaseAgent]
-    ) -> Optional[BaseAgent]:
+    def _get_agent_to_use(self, task: Task) -> Optional[BaseAgent]:
         if self.process == Process.hierarchical:
-            return manager
+            return self.manager_agent
         return task.agent
 
     def _add_delegation_tools(self, task: Task):
@@ -778,11 +763,14 @@ class Crew(BaseModel):
         if self.output_log_file:
             self._file_handler.log(agent=role, task=task.description, status="started")
 
-    def _update_manager_tools(self, task: Task, manager: BaseAgent):
-        if task.agent:
-            manager.tools = task.agent.get_delegation_tools([task.agent])
-        else:
-            manager.tools = manager.get_delegation_tools(self.agents)
+    def _update_manager_tools(self, task: Task):
+        if self.manager_agent:
+            if task.agent:
+                self.manager_agent.tools = task.agent.get_delegation_tools([task.agent])
+            else:
+                self.manager_agent.tools = self.manager_agent.get_delegation_tools(
+                    self.agents
+                )
 
     def _get_context(self, task: Task, task_outputs: List[TaskOutput]):
         context = (
@@ -881,7 +869,7 @@ class Crew(BaseModel):
             self.tasks[i].output = task_output
 
         self._logging_color = "bold_blue"
-        result = self._execute_tasks(self.tasks, self.manager_agent, start_index, True)
+        result = self._execute_tasks(self.tasks, start_index, True)
         return result
 
     def copy(self):
@@ -967,10 +955,19 @@ class Crew(BaseModel):
         return total_usage_metrics
 
     def test(
-        self, n_iterations: int, model: str, inputs: Optional[Dict[str, Any]] = None
+        self,
+        n_iterations: int,
+        openai_model_name: str,
+        inputs: Optional[Dict[str, Any]] = None,
     ) -> None:
-        """Test the crew with the given inputs."""
-        pass
+        """Test and evaluate the Crew with the given inputs for n iterations."""
+        evaluator = CrewEvaluator(self, openai_model_name)
+
+        for i in range(1, n_iterations + 1):
+            evaluator.set_iteration(i)
+            self.kickoff(inputs=inputs)
+
+        evaluator.print_crew_evaluation_result()
 
     def __repr__(self):
         return f"Crew(id={self.id}, process={self.process}, number_of_agents={len(self.agents)}, number_of_tasks={len(self.tasks)})"

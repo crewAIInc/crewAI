@@ -33,6 +33,7 @@ A crew in crewAI represents a collaborative group of agents working together to 
 | **Manager Callbacks** _(optional)_    | `manager_callbacks`    | `manager_callbacks` takes a list of callback handlers to be executed by the manager agent when a hierarchical process is used.                                                                                                                            |
 | **Prompt File** _(optional)_          | `prompt_file`          | Path to the prompt JSON file to be used for the crew.                                                                                                                                                                                                     |
 | **Planning** *(optional)*             | `planning`             |  Adds planning ability to the Crew. When activated before each Crew iteration, all Crew data is sent to an AgentPlanner that will plan the tasks and this plan will be added to each task description.
+| **Planning LLM** *(optional)*         | `planning_llm`         | The language model used by the AgentPlanner in a planning process. |
 
 !!! note "Crew Max RPM"
 The `max_rpm` attribute sets the maximum number of requests per minute the crew can perform to avoid rate limits and will override individual agents' `max_rpm` settings if you set it.
@@ -133,10 +134,10 @@ Once a crew has been executed, its output can be accessed through the `output` a
 crew = Crew(
     agents=[research_agent, writer_agent],
     tasks=[research_task, write_article_task],
-    verbose=2
+    verbose=True
 )
 
-result = crew.kickoff()
+crew_output = crew.kickoff()
 
 # Accessing the crew output
 print(f"Raw Output: {crew_output.raw}")

@@ -16,7 +16,7 @@ try:
 except ImportError:
     agentops = None
 
-OPENAI_BIGGER_MODELS = ["gpt-4"]
+OPENAI_BIGGER_MODELS = ["gpt-4o"]
 
 
 class ToolUsageErrorException(Exception):
@@ -86,7 +86,8 @@ class ToolUsage:
     ) -> str:
         if isinstance(calling, ToolUsageErrorException):
             error = calling.message
-            self._printer.print(content=f"\n\n{error}\n", color="red")
+            if self.agent.verbose:
+                self._printer.print(content=f"\n\n{error}\n", color="red")
             self.task.increment_tools_errors()
             return error
 
@@ -96,7 +97,8 @@ class ToolUsage:
         except Exception as e:
             error = getattr(e, "message", str(e))
             self.task.increment_tools_errors()
-            self._printer.print(content=f"\n\n{error}\n", color="red")
+            if self.agent.verbose:
+                self._printer.print(content=f"\n\n{error}\n", color="red")
             return error
         return f"{self._use(tool_string=tool_string, tool=tool, calling=calling)}"  # type: ignore # BUG?: "_use" of "ToolUsage" does not return a value (it only ever returns None)
 
@@ -112,7 +114,8 @@ class ToolUsage:
                 result = self._i18n.errors("task_repeated_usage").format(
                     tool_names=self.tools_names
                 )
-                self._printer.print(content=f"\n\n{result}\n", color="purple")
+                if self.agent.verbose:
+                    self._printer.print(content=f"\n\n{result}\n", color="purple")
                 self._telemetry.tool_repeated_usage(
                     llm=self.function_calling_llm,
                     tool_name=tool.name,
@@ -168,7 +171,10 @@ class ToolUsage:
                         f'\n{error_message}.\nMoving on then. {self._i18n.slice("format").format(tool_names=self.tools_names)}'
                     ).message
                     self.task.increment_tools_errors()
-                    self._printer.print(content=f"\n\n{error_message}\n", color="red")
+                    if self.agent.verbose:
+                        self._printer.print(
+                            content=f"\n\n{error_message}\n", color="red"
+                        )
                     return error  # type: ignore # No return value expected
 
                 self.task.increment_tools_errors()
@@ -192,7 +198,8 @@ class ToolUsage:
                     calling=calling, output=result, should_cache=should_cache
                 )
 
-        self._printer.print(content=f"\n\n{result}\n", color="purple")
+        if self.agent.verbose:
+            self._printer.print(content=f"\n\n{result}\n", color="purple")
         if agentops:
             agentops.record(tool_event)
         self._telemetry.tool_usage(
@@ -346,7 +353,8 @@ class ToolUsage:
             if self._run_attempts > self._max_parsing_attempts:
                 self._telemetry.tool_usage_error(llm=self.function_calling_llm)
                 self.task.increment_tools_errors()
-                self._printer.print(content=f"\n\n{e}\n", color="red")
+                if self.agent.verbose:
+                    self._printer.print(content=f"\n\n{e}\n", color="red")
                 return ToolUsageErrorException(  # type: ignore # Incompatible return value type (got "ToolUsageErrorException", expected "ToolCalling | InstructorToolCalling")
                     f'{self._i18n.errors("tool_usage_error").format(error=e)}\nMoving on then. {self._i18n.slice("format").format(tool_names=self.tools_names)}'
                 )

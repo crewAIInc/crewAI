@@ -5,13 +5,12 @@ import json
 from unittest.mock import MagicMock, patch
 
 import pytest
-from pydantic import BaseModel
-from pydantic_core import ValidationError
-
 from crewai import Agent, Crew, Process, Task
 from crewai.tasks.conditional_task import ConditionalTask
 from crewai.tasks.task_output import TaskOutput
 from crewai.utilities.converter import Converter
+from pydantic import BaseModel
+from pydantic_core import ValidationError
 
 
 def test_task_tool_reflect_agent_tools():
@@ -110,7 +109,7 @@ def test_task_callback():
         task_completed.assert_called_once_with(task.output)
 
 
-def test_task_callback_returns_task_ouput():
+def test_task_callback_returns_task_output():
     from crewai.tasks.output_format import OutputFormat
 
     researcher = Agent(
@@ -435,7 +434,7 @@ def test_output_pydantic_to_another_task():
         agent=scorer,
     )
 
-    crew = Crew(agents=[scorer], tasks=[task1, task2], verbose=2)
+    crew = Crew(agents=[scorer], tasks=[task1, task2], verbose=True)
     result = crew.kickoff()
     pydantic_result = result.pydantic
     assert isinstance(

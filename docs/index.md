@@ -6,6 +6,19 @@ Cutting-edge framework for orchestrating role-playing, autonomous AI agents. By 
 
 <div style="display:flex; margin:0 auto; justify-content: center;">
     <div style="width:25%">
+        <h2>Getting Started</h2>
+        <ul>
+            <li><a href='./getting-started/Installing-CrewAI'>
+                   Installing CrewAI
+                 </a>
+            </li>
+            <li><a href='./getting-started/Start-a-New-CrewAI-Project-Template-Method'>
+                   Start a New CrewAI Project: Template Method
+                 </a>
+            </li>
+        </ul>
+    </div>
+    <div style="width:25%">
         <h2>Core Concepts</h2>
         <ul>
             <li>
@@ -53,21 +66,6 @@ Cutting-edge framework for orchestrating role-playing, autonomous AI agents. By 
     <div style="width:30%">
         <h2>How-To Guides</h2>
         <ul>
-            <li>
-                <a href="./how-to/Start-a-New-CrewAI-Project">
-                    Starting Your crewAI Project
-                </a>
-            </li>
-            <li>
-                <a href="./how-to/Installing-CrewAI">
-                    Installing crewAI
-                </a>
-            </li>
-            <li>
-                <a href="./how-to/Creating-a-Crew-and-kick-it-off">
-                    Getting Started
-                </a>
-            </li>
             <li>
                 <a href="./how-to/Create-Custom-Tools">
                     Create Custom Tools

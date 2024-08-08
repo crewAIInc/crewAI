@@ -55,8 +55,6 @@ class Agent(BaseAgent):
             tools: Tools at agents disposal
             step_callback: Callback to be executed after each step of the agent execution.
             callbacks: A list of callback functions from the langchain library that are triggered during the agent's execution process
-            allow_code_execution: Enable code execution for the agent.
-            max_retry_limit: Maximum number of retries for an agent to execute a task when an error occurs.
     """
 
     _times_executed: int = PrivateAttr(default=0)
@@ -262,6 +260,7 @@ class Agent(BaseAgent):
             "tools_handler": self.tools_handler,
             "function_calling_llm": self.function_calling_llm,
             "callbacks": self.callbacks,
+            "max_tokens": self.max_tokens,
         }
 
         if self._rpm_controller:

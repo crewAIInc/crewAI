@@ -1,6 +1,6 @@
+import datetime
 import json
 import os
-import re
 import threading
 import uuid
 from concurrent.futures import Future
@@ -8,7 +8,6 @@ from copy import copy
 from hashlib import md5
 from typing import Any, Dict, List, Optional, Tuple, Type, Union
 
-from langchain_openai import ChatOpenAI
 from opentelemetry.trace import Span
 from pydantic import UUID4, BaseModel, Field, field_validator, model_validator
 from pydantic_core import PydanticCustomError
@@ -17,10 +16,8 @@ from crewai.agents.agent_builder.base_agent import BaseAgent
 from crewai.tasks.output_format import OutputFormat
 from crewai.tasks.task_output import TaskOutput
 from crewai.telemetry.telemetry import Telemetry
-from crewai.utilities.converter import Converter, ConverterError
+from crewai.utilities.converter import Converter, convert_to_model
 from crewai.utilities.i18n import I18N
-from crewai.utilities.printer import Printer
-from crewai.utilities.pydantic_schema_parser import PydanticSchemaParser
 
 
 class Task(BaseModel):
@@ -111,6 +108,7 @@ class Task(BaseModel):
     _original_description: str | None = None
     _original_expected_output: str | None = None
     _thread: threading.Thread | None = None
+    _execution_time: float | None = None
 
     def __init__(__pydantic_self__, **data):
         config = data.pop("config", {})
@@ -124,9 +122,15 @@ class Task(BaseModel):
                 "may_not_set_field", "This field is not to be set by the user.", {}
             )
 
+    def _set_start_execution_time(self) -> float:
+        return datetime.datetime.now().timestamp()
+
+    def _set_end_execution_time(self, start_time: float) -> None:
+        self._execution_time = datetime.datetime.now().timestamp() - start_time
+
     @field_validator("output_file")
     @classmethod
-    def output_file_validattion(cls, value: str) -> str:
+    def output_file_validation(cls, value: str) -> str:
         """Validate the output file path by removing the / from the beginning of the path."""
         if value.startswith("/"):
             return value[1:]
@@ -220,6 +224,7 @@ class Task(BaseModel):
                 f"The task '{self.description}' has no agent assigned, therefore it can't be executed directly and should be executed in a Crew using a specific process that support that, like hierarchical."
             )
 
+        start_time = self._set_start_execution_time()
         self._execution_span = self._telemetry.task_started(crew=agent.crew, task=self)
 
         self.prompt_context = context
@@ -243,6 +248,7 @@ class Task(BaseModel):
         )
         self.output = task_output
 
+        self._set_end_execution_time(start_time)
         if self.callback:
             self.callback(self.output)
 
@@ -326,18 +332,6 @@ class Task(BaseModel):
 
         return copied_task
 
-    def _create_converter(self, *args, **kwargs) -> Converter:
-        """Create a converter instance."""
-        if self.agent and not self.converter_cls:
-            converter = self.agent.get_output_converter(*args, **kwargs)
-        elif self.converter_cls:
-            converter = self.converter_cls(*args, **kwargs)
-
-        if not converter:
-            raise Exception("No output converter found or set.")
-
-        return converter
-
     def _export_output(
         self, result: str
     ) -> Tuple[Optional[BaseModel], Optional[Dict[str, Any]]]:
@@ -345,74 +339,25 @@ class Task(BaseModel):
         json_output: Optional[Dict[str, Any]] = None
 
         if self.output_pydantic or self.output_json:
-            model_output = self._convert_to_model(result)
-            pydantic_output = (
-                model_output if isinstance(model_output, BaseModel) else None
+            model_output = convert_to_model(
+                result,
+                self.output_pydantic,
+                self.output_json,
+                self.agent,
+                self.converter_cls,
             )
-            if isinstance(model_output, str):
+
+            if isinstance(model_output, BaseModel):
+                pydantic_output = model_output
+            elif isinstance(model_output, dict):
+                json_output = model_output
+            elif isinstance(model_output, str):
                 try:
                     json_output = json.loads(model_output)
                 except json.JSONDecodeError:
                     json_output = None
-            else:
-                json_output = model_output if isinstance(model_output, dict) else None
 
         return pydantic_output, json_output
-
-    def _convert_to_model(self, result: str) -> Union[dict, BaseModel, str]:
-        model = self.output_pydantic or self.output_json
-        if model is None:
-            return result
-
-        try:
-            return self._validate_model(result, model)
-        except Exception:
-            return self._handle_partial_json(result, model)
-
-    def _validate_model(
-        self, result: str, model: Type[BaseModel]
-    ) -> Union[dict, BaseModel]:
-        exported_result = model.model_validate_json(result)
-        if self.output_json:
-            return exported_result.model_dump()
-        return exported_result
-
-    def _handle_partial_json(
-        self, result: str, model: Type[BaseModel]
-    ) -> Union[dict, BaseModel, str]:
-        match = re.search(r"({.*})", result, re.DOTALL)
-        if match:
-            try:
-                exported_result = model.model_validate_json(match.group(0))
-                if self.output_json:
-                    return exported_result.model_dump()
-                return exported_result
-            except Exception:
-                pass
-
-        return self._convert_with_instructions(result, model)
-
-    def _convert_with_instructions(
-        self, result: str, model: Type[BaseModel]
-    ) -> Union[dict, BaseModel, str]:
-        llm = self.agent.function_calling_llm or self.agent.llm  # type: ignore # Item "None" of "BaseAgent | None" has no attribute "function_calling_llm"
-        instructions = self._get_conversion_instructions(model, llm)
-
-        converter = self._create_converter(
-            llm=llm, text=result, model=model, instructions=instructions
-        )
-        exported_result = (
-            converter.to_pydantic() if self.output_pydantic else converter.to_json()
-        )
-
-        if isinstance(exported_result, ConverterError):
-            Printer().print(
-                content=f"{exported_result.message} Using raw output instead.",
-                color="red",
-            )
-            return result
-
-        return exported_result
 
     def _get_output_format(self) -> OutputFormat:
         if self.output_json:
@@ -421,34 +366,22 @@ class Task(BaseModel):
             return OutputFormat.PYDANTIC
         return OutputFormat.RAW
 
-    def _get_conversion_instructions(self, model: Type[BaseModel], llm: Any) -> str:
-        instructions = "I'm gonna convert this raw text into valid JSON."
-        if not self._is_gpt(llm):
-            model_schema = PydanticSchemaParser(model=model).get_schema()
-            instructions = f"{instructions}\n\nThe json should have the following structure, with the following keys:\n{model_schema}"
-        return instructions
-
-    def _save_output(self, content: str) -> None:
-        if not self.output_file:
-            raise Exception("Output file path is not set.")
-
-        directory = os.path.dirname(self.output_file)
-        if directory and not os.path.exists(directory):
-            os.makedirs(directory)
-        with open(self.output_file, "w", encoding="utf-8") as file:
-            file.write(content)
-
-    def _is_gpt(self, llm) -> bool:
-        return isinstance(llm, ChatOpenAI) and llm.openai_api_base is None
-
     def _save_file(self, result: Any) -> None:
+        if self.output_file is None:
+            raise ValueError("output_file is not set.")
+
         directory = os.path.dirname(self.output_file)  # type: ignore # Value of type variable "AnyOrLiteralStr" of "dirname" cannot be "str | None"
 
         if directory and not os.path.exists(directory):
             os.makedirs(directory)
 
-        with open(self.output_file, "w", encoding="utf-8") as file:  # type: ignore # Argument 1 to "open" has incompatible type "str | None"; expected "int | str | bytes | PathLike[str] | PathLike[bytes]"
-            file.write(result)
+        with open(self.output_file, "w", encoding="utf-8") as file:
+            if isinstance(result, dict):
+                import json
+
+                json.dump(result, file, ensure_ascii=False, indent=2)
+            else:
+                file.write(str(result))
         return None
 
     def __repr__(self):
