@@ -1,15 +1,17 @@
 from .annotations import (
     agent,
+    cache_handler,
+    callback,
     crew,
-    task,
+    llm,
     output_json,
     output_pydantic,
+    pipeline,
+    task,
     tool,
-    callback,
-    llm,
-    cache_handler,
 )
 from .crew_base import CrewBase
+from .pipeline_base import PipelineBase
 
 __all__ = [
     "agent",
@@ -20,6 +22,8 @@ __all__ = [
     "tool",
     "callback",
     "CrewBase",
+    "PipelineBase",
     "llm",
     "cache_handler",
+    "pipeline",
 ]

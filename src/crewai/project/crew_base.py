@@ -24,6 +24,7 @@ def CrewBase(cls):
         original_agents_config_path = getattr(
             cls, "agents_config", "config/agents.yaml"
         )
+
         original_tasks_config_path = getattr(cls, "tasks_config", "config/tasks.yaml")
 
         def __init__(self, *args, **kwargs):
@@ -37,9 +38,11 @@ def CrewBase(cls):
             self.agents_config = self.load_yaml(
                 os.path.join(self.base_directory, self.original_agents_config_path)
             )
+
             self.tasks_config = self.load_yaml(
                 os.path.join(self.base_directory, self.original_tasks_config_path)
             )
+
             self.map_all_agent_variables()
             self.map_all_task_variables()
 

@@ -47,6 +47,11 @@ Cutting-edge framework for orchestrating role-playing, autonomous AI agents. By 
                 </a>
             </li>
             <li>
+                <a href="./core-concepts/Pipeline">
+                    Pipeline
+                </a>
+            </li>
+            <li>
                 <a href="./core-concepts/Training-Crew">
                     Training
                 </a>

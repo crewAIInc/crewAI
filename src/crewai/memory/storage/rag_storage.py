@@ -5,12 +5,12 @@ import os
 import shutil
 from typing import Any, Dict, List, Optional
 
-from embedchain import App
-from embedchain.llm.base import BaseLlm
-from embedchain.vectordb.chroma import InvalidDimensionException
-
 from crewai.memory.storage.interface import Storage
 from crewai.utilities.paths import db_storage_path
+from embedchain import App
+from embedchain.llm.base import BaseLlm
+from embedchain.models.data_type import DataType
+from embedchain.vectordb.chroma import InvalidDimensionException
 
 
 @contextlib.contextmanager
@@ -101,8 +101,7 @@ class RAGStorage(Storage):
         return [r for r in results if r["metadata"]["score"] >= score_threshold]
 
     def _generate_embedding(self, text: str, metadata: Dict[str, Any]) -> Any:
-        with suppress_logging():
-            self.app.add(text, data_type="text", metadata=metadata)
+        self.app.add(text, data_type=DataType.TEXT, metadata=metadata)
 
     def reset(self) -> None:
         try:

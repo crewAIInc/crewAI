@@ -1,0 +1,7 @@
+classify_email:
+  description: >
+    Classify the email: {email}
+    as urgent or normal.
+  expected_output: >
+    Classify the email from a scale of 1 to 10, where 1 is not urgent and 10 is urgent. Return the urgency score only.
+  agent: classifier

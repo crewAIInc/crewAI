@@ -5,6 +5,7 @@ from pydantic import BaseModel, Field
 
 from crewai.tasks.output_format import OutputFormat
 from crewai.tasks.task_output import TaskOutput
+from crewai.types.usage_metrics import UsageMetrics
 
 
 class CrewOutput(BaseModel):
@@ -20,9 +21,7 @@ class CrewOutput(BaseModel):
     tasks_output: list[TaskOutput] = Field(
         description="Output of each task", default=[]
     )
-    token_usage: Dict[str, Any] = Field(
-        description="Processed token summary", default={}
-    )
+    token_usage: UsageMetrics = Field(description="Processed token summary", default={})
 
     @property
     def json(self) -> Optional[str]:
