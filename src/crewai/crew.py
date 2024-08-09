@@ -936,6 +936,9 @@ class Crew(BaseModel):
         inputs: Optional[Dict[str, Any]] = None,
     ) -> None:
         """Test and evaluate the Crew with the given inputs for n iterations."""
+        self._test_execution_span = self._telemetry.test_execution_span(
+            self, inputs, openai_model_name
+        )
         evaluator = CrewEvaluator(self, openai_model_name)
 
         for i in range(1, n_iterations + 1):
