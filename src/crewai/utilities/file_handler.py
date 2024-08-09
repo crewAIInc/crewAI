@@ -1,7 +1,5 @@
 import os
 import pickle
-
-
 from datetime import datetime
 
 
@@ -32,14 +30,16 @@ class PickleHandler:
         Parameters:
         - file_name (str): The name of the file for saving and loading data.
         """
+        if not file_name.endswith(".pkl"):
+            file_name += ".pkl"
+
         self.file_path = os.path.join(os.getcwd(), file_name)
 
     def initialize_file(self) -> None:
         """
-        Initialize the file with an empty dictionary if it does not exist or is empty.
+        Initialize the file with an empty dictionary and overwrite any existing data.
         """
-        if not os.path.exists(self.file_path) or os.path.getsize(self.file_path) == 0:
-            self.save({})  # Save an empty dictionary to initialize the file
+        self.save({})
 
     def save(self, data) -> None:
         """

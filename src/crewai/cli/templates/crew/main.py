@@ -25,7 +25,7 @@ def train():
         "topic": "AI LLMs"
     }
     try:
-        {{crew_name}}Crew().crew().train(n_iterations=int(sys.argv[1]), inputs=inputs)
+        {{crew_name}}Crew().crew().train(n_iterations=int(sys.argv[1]), filename=sys.argv[2], inputs=inputs)
 
     except Exception as e:
         raise Exception(f"An error occurred while training the crew: {e}")
