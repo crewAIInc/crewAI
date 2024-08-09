@@ -136,9 +136,6 @@ nav:
     - Using LangChain Tools: 'core-concepts/Using-LangChain-Tools.md'
     - Using LlamaIndex Tools: 'core-concepts/Using-LlamaIndex-Tools.md'
   - How to Guides:
-    - Starting Your crewAI Project: 'how-to/Start-a-New-CrewAI-Project.md'
-    - Installing CrewAI: 'how-to/Installing-CrewAI.md'
-    - Getting Started: 'how-to/Creating-a-Crew-and-kick-it-off.md'
     - Create Custom Tools: 'how-to/Create-Custom-Tools.md'
     - Using Sequential Process: 'how-to/Sequential.md'
     - Using Hierarchical Process: 'how-to/Hierarchical.md'
