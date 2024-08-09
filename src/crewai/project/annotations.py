@@ -1,14 +1,4 @@
-def memoize(func):
-    cache = {}
-
-    def memoized_func(*args, **kwargs):
-        key = (args, tuple(kwargs.items()))
-        if key not in cache:
-            cache[key] = func(*args, **kwargs)
-        return cache[key]
-
-    memoized_func.__dict__.update(func.__dict__)
-    return memoized_func
+from crewai.project.utils import memoize
 
 
 def task(func):
@@ -58,6 +48,21 @@ def callback(func):
 
 def cache_handler(func):
     func.is_cache_handler = True
+    return memoize(func)
+
+
+def stage(func):
+    func.is_stage = True
+    return memoize(func)
+
+
+def router(func):
+    func.is_router = True
+    return memoize(func)
+
+
+def pipeline(func):
+    func.is_pipeline = True
     return memoize(func)
 
 

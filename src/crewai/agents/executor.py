@@ -69,7 +69,7 @@ class CrewAgentExecutor(AgentExecutor, CrewAgentExecutorMixin):
         )
         intermediate_steps: List[Tuple[AgentAction, str]] = []
         # Allowing human input given task setting
-        if self.task.human_input:
+        if self.task and self.task.human_input:
             self.should_ask_for_human_input = True
 
         # Let's start tracking the number of iterations and time elapsed
