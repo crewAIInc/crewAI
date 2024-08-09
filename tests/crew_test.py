@@ -8,6 +8,7 @@ from unittest.mock import MagicMock, patch
 
 import pydantic_core
 import pytest
+
 from crewai.agent import Agent
 from crewai.agents.cache import CacheHandler
 from crewai.crew import Crew
@@ -1798,7 +1799,9 @@ def test_crew_train_success(task_evaluator, crew_training_handler, kickoff):
         agents=[researcher, writer],
         tasks=[task],
     )
-    crew.train(n_iterations=2, inputs={"topic": "AI"})
+    crew.train(
+        n_iterations=2, inputs={"topic": "AI"}, filename="trained_agents_data.pkl"
+    )
     task_evaluator.assert_has_calls(
         [
             mock.call(researcher),
@@ -1882,7 +1885,7 @@ def test__setup_for_training():
     for agent in agents:
         assert agent.allow_delegation is True
 
-    crew._setup_for_training()
+    crew._setup_for_training("trained_agents_data.pkl")
 
     assert crew._train is True
     assert task.human_input is True
