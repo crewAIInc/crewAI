@@ -10,6 +10,7 @@ crewai = { extras = ["tools"], version = "^0.46.0" }
 
 [tool.poetry.scripts]
 {{folder_name}} = "{{folder_name}}.main:run"
+run_crew = "{{folder_name}}.main:run"
 train = "{{folder_name}}.main:train"
 replay = "{{folder_name}}.main:replay"
 test = "{{folder_name}}.main:test"
