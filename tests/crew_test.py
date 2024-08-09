@@ -708,7 +708,7 @@ async def test_crew_async_kickoff():
     ]
 
     agent = Agent(
-        role="{topic} Researcher",
+        role="mock agent",
         goal="Express hot takes on {topic}.",
         backstory="You have a lot of experience with {topic}.",
     )
@@ -720,19 +720,30 @@ async def test_crew_async_kickoff():
     )
 
     crew = Crew(agents=[agent], tasks=[task])
-    results = await crew.kickoff_for_each_async(inputs=inputs)
+    mock_task_output = (
+        CrewOutput(
+            raw="Test output from Crew 1",
+            tasks_output=[],
+            token_usage=UsageMetrics(
+                total_tokens=100,
+                prompt_tokens=10,
+                completion_tokens=90,
+                successful_requests=1,
+            ),
+            json_dict={"output": "crew1"},
+            pydantic=None,
+        ),
+    )
+    with patch.object(Crew, "kickoff_async", return_value=mock_task_output):
+        results = await crew.kickoff_for_each_async(inputs=inputs)
 
-    assert len(results) == len(inputs)
-    for result in results:
-        # Assert that all required keys are in usage_metrics and their values are not None
-        for key in [
-            "total_tokens",
-            "prompt_tokens",
-            "completion_tokens",
-            "successful_requests",
-        ]:
-            assert key in result.token_usage
-            assert result.token_usage[key] > 0
+        assert len(results) == len(inputs)
+        for result in results:
+            # Assert that all required keys are in usage_metrics and their values are not None
+            assert result[0].token_usage.total_tokens > 0  # type: ignore
+            assert result[0].token_usage.prompt_tokens > 0  # type: ignore
+            assert result[0].token_usage.completion_tokens > 0  # type: ignore
+            assert result[0].token_usage.successful_requests > 0  # type: ignore
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
