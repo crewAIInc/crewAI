@@ -34,7 +34,9 @@ from crewai.telemetry import Telemetry
 from crewai.tools.agent_tools import AgentTools
 from crewai.types.usage_metrics import UsageMetrics
 from crewai.utilities import I18N, FileHandler, Logger, RPMController
-from crewai.utilities.constants import TRAINED_AGENTS_DATA_FILE, TRAINING_DATA_FILE
+from crewai.utilities.constants import (
+    TRAINING_DATA_FILE,
+)
 from crewai.utilities.evaluators.crew_evaluator_handler import CrewEvaluator
 from crewai.utilities.evaluators.task_evaluator import TaskEvaluator
 from crewai.utilities.formatter import (
@@ -388,7 +390,7 @@ class Crew(BaseModel):
         del task_config["agent"]
         return Task(**task_config, agent=task_agent)
 
-    def _setup_for_training(self) -> None:
+    def _setup_for_training(self, filename: str) -> None:
         """Sets up the crew for training."""
         self._train = True
 
@@ -399,11 +401,13 @@ class Crew(BaseModel):
             agent.allow_delegation = False
 
         CrewTrainingHandler(TRAINING_DATA_FILE).initialize_file()
-        CrewTrainingHandler(TRAINED_AGENTS_DATA_FILE).initialize_file()
+        CrewTrainingHandler(filename).initialize_file()
 
-    def train(self, n_iterations: int, inputs: Optional[Dict[str, Any]] = {}) -> None:
+    def train(
+        self, n_iterations: int, filename: str, inputs: Optional[Dict[str, Any]] = {}
+    ) -> None:
         """Trains the crew for a given number of iterations."""
-        self._setup_for_training()
+        self._setup_for_training(filename)
 
         for n_iteration in range(n_iterations):
             self._train_iteration = n_iteration
@@ -416,7 +420,7 @@ class Crew(BaseModel):
                 training_data=training_data, agent_id=str(agent.id)
             )
 
-            CrewTrainingHandler(TRAINED_AGENTS_DATA_FILE).save_trained_data(
+            CrewTrainingHandler(filename).save_trained_data(
                 agent_id=str(agent.role), trained_data=result.model_dump()
             )
 
