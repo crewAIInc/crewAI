@@ -1,0 +1,6 @@
+normal_task:
+  description: >
+    Process and respond to normal email quickly.
+  expected_output: >
+    An email response to the normal email.
+  agent: normal_handler
