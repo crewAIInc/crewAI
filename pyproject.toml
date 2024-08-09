@@ -52,6 +52,7 @@ crewai-tools = "^0.4.26"
 pytest = "^8.0.0"
 pytest-vcr = "^1.0.2"
 python-dotenv = "1.0.0"
+pytest-asyncio = "^0.23.7"
 
 [tool.poetry.scripts]
 crewai = "crewai.cli.cli:crewai"
@@ -59,7 +60,7 @@ crewai = "crewai.cli.cli:crewai"
 [tool.mypy]
 ignore_missing_imports = true
 disable_error_code = 'import-untyped'
-exclude = ["cli/templates/main.py", "cli/templates/crew.py"]
+exclude = ["cli/templates"]
 
 [build-system]
 requires = ["poetry-core"]
