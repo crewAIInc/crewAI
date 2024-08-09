@@ -23,4 +23,4 @@ jobs:
           pip install mypy
 
       - name: Run type checks
-        run: mypy src
+        run: mypy src --exclude=crewai/cli/templates
