@@ -60,7 +60,7 @@ crewai = "crewai.cli.cli:crewai"
 [tool.mypy]
 ignore_missing_imports = true
 disable_error_code = 'import-untyped'
-exclude = ["cli/templates/crew/main.py", "cli/templates/crew/crew.py", "cli/templates/pipeline/pipelines/pipeline.py", "cli/templates/pipeline/main.py", "cli/templates/pipeline_router/main.py"]
+exclude = ["cli/templates]
 
 [build-system]
 requires = ["poetry-core"]
