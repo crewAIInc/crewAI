@@ -1,5 +1,6 @@
 import ast
 from difflib import SequenceMatcher
+import os
 from textwrap import dedent
 from typing import Any, List, Union
 
@@ -11,10 +12,12 @@ from crewai.telemetry import Telemetry
 from crewai.tools.tool_calling import InstructorToolCalling, ToolCalling
 from crewai.utilities import I18N, Converter, ConverterError, Printer
 
-try:
-    import agentops
-except ImportError:
-    agentops = None
+agentops = None
+if os.environ.get("AGENTOPS_API_KEY"):
+    try:
+        import agentops
+    except ImportError:
+        pass
 
 OPENAI_BIGGER_MODELS = ["gpt-4o"]
 

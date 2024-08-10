@@ -19,17 +19,24 @@ from crewai.utilities.constants import TRAINED_AGENTS_DATA_FILE, TRAINING_DATA_F
 from crewai.utilities.token_counter_callback import TokenCalcHandler
 from crewai.utilities.training_handler import CrewTrainingHandler
 
-agentops = None
-try:
-    import agentops  # type: ignore # Name "agentops" already defined on line 21
-    from agentops import track_agent
-except ImportError:
-
+def mock_agent_ops_provider():
     def track_agent():
         def noop(f):
             return f
 
         return noop
+    return track_agent
+
+agentops = None
+
+if os.environ.get("AGENTOPS_API_KEY"):
+    try:
+        import agentops  # type: ignore # Name "agentops" already defined on line 21
+        from agentops import track_agent
+    except ImportError:
+        track_agent = mock_agent_ops_provider()
+else:
+    track_agent = mock_agent_ops_provider()
 
 
 @track_agent()
