@@ -941,7 +941,7 @@ class Crew(BaseModel):
     ) -> None:
         """Test and evaluate the Crew with the given inputs for n iterations."""
         self._test_execution_span = self._telemetry.test_execution_span(
-            self, inputs, openai_model_name
+            self, n_iterations, inputs, openai_model_name
         )
         evaluator = CrewEvaluator(self, openai_model_name)
 
