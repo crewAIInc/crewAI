@@ -7,7 +7,7 @@ description: A comprehensive guide to starting a new CrewAI project, including t
 
 Welcome to the ultimate guide for starting a new CrewAI project. This document will walk you through the steps to create, customize, and run your CrewAI project, ensuring you have everything you need to get started.
 
-Beforre we start there are a couple of things to note:
+Before we start there are a couple of things to note:
 
 1. CrewAI is a Python package and requires Python >=3.10 and <=3.13 to run.
 2. The preferred way of setting up CrewAI is using the `crewai create` command.This will create a new project folder and install a skeleton template for you to work on.
