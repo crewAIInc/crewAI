@@ -56,7 +56,7 @@ from langchain_ollama import ChatOllama
 import os
 os.environ["OPENAI_API_KEY"] = "NA"
 
-llm = Ollama(
+llm = ChatOllama(
     model = "llama3.1",
     base_url = "http://localhost:11434")
 
