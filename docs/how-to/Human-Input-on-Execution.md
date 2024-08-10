@@ -81,7 +81,7 @@ task2 = Task(
 crew = Crew(
     agents=[researcher, writer],
     tasks=[task1, task2],
-    verbose=2,
+    verbose=True,
     memory=True,
 )
 

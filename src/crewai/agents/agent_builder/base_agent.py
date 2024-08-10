@@ -158,7 +158,7 @@ class BaseAgent(ABC, BaseModel):
     @model_validator(mode="after")
     def set_private_attrs(self):
         """Set private attributes."""
-        self._logger = Logger(self.verbose)
+        self._logger = Logger(verbose=self.verbose)
         if self.max_rpm and not self._rpm_controller:
             self._rpm_controller = RPMController(
                 max_rpm=self.max_rpm, logger=self._logger

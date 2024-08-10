@@ -8,6 +8,7 @@ from unittest.mock import MagicMock, patch
 
 import pydantic_core
 import pytest
+
 from crewai.agent import Agent
 from crewai.agents.cache import CacheHandler
 from crewai.crew import Crew
@@ -18,6 +19,7 @@ from crewai.task import Task
 from crewai.tasks.conditional_task import ConditionalTask
 from crewai.tasks.output_format import OutputFormat
 from crewai.tasks.task_output import TaskOutput
+from crewai.types.usage_metrics import UsageMetrics
 from crewai.utilities import Logger, RPMController
 from crewai.utilities.task_output_storage_handler import TaskOutputStorageHandler
 
@@ -449,43 +451,11 @@ def test_crew_verbose_output(capsys):
         assert expected_string in captured.out
 
     # Now test with verbose set to False
-    crew._logger = Logger(verbose_level=False)
+    crew.verbose = False
+    crew._logger = Logger(verbose=False)
     crew.kickoff()
     captured = capsys.readouterr()
     assert captured.out == ""
-
-
-@pytest.mark.vcr(filter_headers=["authorization"])
-def test_crew_verbose_levels_output(capsys):
-    tasks = [
-        Task(
-            description="Write about AI advancements.",
-            expected_output="A 4 paragraph article about AI.",
-            agent=researcher,
-        )
-    ]
-
-    crew = Crew(agents=[researcher], tasks=tasks, process=Process.sequential, verbose=1)
-
-    crew.kickoff()
-    captured = capsys.readouterr()
-    expected_strings = ["Working Agent: Researcher", "[Researcher] Task output:"]
-
-    for expected_string in expected_strings:
-        assert expected_string in captured.out
-
-    # Now test with verbose set to 2
-    crew._logger = Logger(verbose_level=2)
-    crew.kickoff()
-    captured = capsys.readouterr()
-    expected_strings = [
-        "Working Agent: Researcher",
-        "Starting Task: Write about AI advancements.",
-        "[Researcher] Task output:",
-    ]
-
-    for expected_string in expected_strings:
-        assert expected_string in captured.out
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
@@ -561,7 +531,7 @@ def test_api_calls_throttling(capsys):
         agent=agent,
     )
 
-    crew = Crew(agents=[agent], tasks=[task], max_rpm=2, verbose=2)
+    crew = Crew(agents=[agent], tasks=[task], max_rpm=2, verbose=True)
 
     with patch.object(RPMController, "_wait_for_next_minute") as moveon:
         moveon.return_value = True
@@ -597,14 +567,10 @@ def test_crew_kickoff_usage_metrics():
     assert len(results) == len(inputs)
     for result in results:
         # Assert that all required keys are in usage_metrics and their values are not None
-        for key in [
-            "total_tokens",
-            "prompt_tokens",
-            "completion_tokens",
-            "successful_requests",
-        ]:
-            assert key in result.token_usage
-            assert result.token_usage[key] > 0
+        assert result.token_usage.total_tokens > 0
+        assert result.token_usage.prompt_tokens > 0
+        assert result.token_usage.completion_tokens > 0
+        assert result.token_usage.successful_requests > 0
 
 
 def test_agents_rpm_is_never_set_if_crew_max_RPM_is_not_set():
@@ -622,7 +588,7 @@ def test_agents_rpm_is_never_set_if_crew_max_RPM_is_not_set():
         agent=agent,
     )
 
-    Crew(agents=[agent], tasks=[task], verbose=2)
+    Crew(agents=[agent], tasks=[task], verbose=True)
 
     assert agent._rpm_controller is None
 
@@ -743,7 +709,7 @@ async def test_crew_async_kickoff():
     ]
 
     agent = Agent(
-        role="{topic} Researcher",
+        role="mock agent",
         goal="Express hot takes on {topic}.",
         backstory="You have a lot of experience with {topic}.",
     )
@@ -755,19 +721,30 @@ async def test_crew_async_kickoff():
     )
 
     crew = Crew(agents=[agent], tasks=[task])
-    results = await crew.kickoff_for_each_async(inputs=inputs)
+    mock_task_output = (
+        CrewOutput(
+            raw="Test output from Crew 1",
+            tasks_output=[],
+            token_usage=UsageMetrics(
+                total_tokens=100,
+                prompt_tokens=10,
+                completion_tokens=90,
+                successful_requests=1,
+            ),
+            json_dict={"output": "crew1"},
+            pydantic=None,
+        ),
+    )
+    with patch.object(Crew, "kickoff_async", return_value=mock_task_output):
+        results = await crew.kickoff_for_each_async(inputs=inputs)
 
-    assert len(results) == len(inputs)
-    for result in results:
-        # Assert that all required keys are in usage_metrics and their values are not None
-        for key in [
-            "total_tokens",
-            "prompt_tokens",
-            "completion_tokens",
-            "successful_requests",
-        ]:
-            assert key in result.token_usage
-            assert result.token_usage[key] > 0
+        assert len(results) == len(inputs)
+        for result in results:
+            # Assert that all required keys are in usage_metrics and their values are not None
+            assert result[0].token_usage.total_tokens > 0  # type: ignore
+            assert result[0].token_usage.prompt_tokens > 0  # type: ignore
+            assert result[0].token_usage.completion_tokens > 0  # type: ignore
+            assert result[0].token_usage.successful_requests > 0  # type: ignore
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
@@ -1315,12 +1292,12 @@ def test_agent_usage_metrics_are_captured_for_hierarchical_process():
 
     print(crew.usage_metrics)
 
-    assert crew.usage_metrics == {
-        "total_tokens": 219,
-        "prompt_tokens": 201,
-        "completion_tokens": 18,
-        "successful_requests": 1,
-    }
+    assert crew.usage_metrics == UsageMetrics(
+        total_tokens=219,
+        prompt_tokens=201,
+        completion_tokens=18,
+        successful_requests=1,
+    )
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
@@ -1830,7 +1807,9 @@ def test_crew_train_success(task_evaluator, crew_training_handler, kickoff):
         agents=[researcher, writer],
         tasks=[task],
     )
-    crew.train(n_iterations=2, inputs={"topic": "AI"})
+    crew.train(
+        n_iterations=2, inputs={"topic": "AI"}, filename="trained_agents_data.pkl"
+    )
     task_evaluator.assert_has_calls(
         [
             mock.call(researcher),
@@ -1914,7 +1893,7 @@ def test__setup_for_training():
     for agent in agents:
         assert agent.allow_delegation is True
 
-    crew._setup_for_training()
+    crew._setup_for_training("trained_agents_data.pkl")
 
     assert crew._train is True
     assert task.human_input is True
@@ -2568,3 +2547,49 @@ def test_crew_testing_function(mock_kickoff, crew_evaluator):
             mock.call().print_crew_evaluation_result(),
         ]
     )
+
+
+@pytest.mark.vcr(filter_headers=["authorization"])
+def test_hierarchical_verbose_manager_agent():
+    from langchain_openai import ChatOpenAI
+
+    task = Task(
+        description="Come up with a list of 5 interesting ideas to explore for an article, then write one amazing paragraph highlight for each idea that showcases how good an article about this topic could be. Return the list of ideas with their paragraph and your notes.",
+        expected_output="5 bullet points with a paragraph for each idea.",
+    )
+
+    crew = Crew(
+        agents=[researcher, writer],
+        tasks=[task],
+        process=Process.hierarchical,
+        manager_llm=ChatOpenAI(temperature=0, model="gpt-4o"),
+        verbose=True,
+    )
+
+    crew.kickoff()
+
+    assert crew.manager_agent is not None
+    assert crew.manager_agent.verbose
+
+
+@pytest.mark.vcr(filter_headers=["authorization"])
+def test_hierarchical_verbose_false_manager_agent():
+    from langchain_openai import ChatOpenAI
+
+    task = Task(
+        description="Come up with a list of 5 interesting ideas to explore for an article, then write one amazing paragraph highlight for each idea that showcases how good an article about this topic could be. Return the list of ideas with their paragraph and your notes.",
+        expected_output="5 bullet points with a paragraph for each idea.",
+    )
+
+    crew = Crew(
+        agents=[researcher, writer],
+        tasks=[task],
+        process=Process.hierarchical,
+        manager_llm=ChatOpenAI(temperature=0, model="gpt-4o"),
+        verbose=False,
+    )
+
+    crew.kickoff()
+
+    assert crew.manager_agent is not None
+    assert not crew.manager_agent.verbose

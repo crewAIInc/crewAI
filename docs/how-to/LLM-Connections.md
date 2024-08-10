@@ -56,7 +56,7 @@ from langchain_ollama import ChatOllama
 import os
 os.environ["OPENAI_API_KEY"] = "NA"
 
-llm = Ollama(
+llm = ChatOllama(
     model = "llama3.1",
     base_url = "http://localhost:11434")
 
@@ -74,7 +74,7 @@ task = Task(description="""what is 3 + 5""",
 crew = Crew(
             agents=[general_agent],
             tasks=[task],
-            verbose=2
+            verbose=True
         )
 
 result = crew.kickoff()

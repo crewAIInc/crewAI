@@ -3,7 +3,7 @@ import json
 import uuid
 from concurrent.futures import Future
 from hashlib import md5
-from typing import Any, Dict, List, Optional, Tuple, Union
+from typing import TYPE_CHECKING, Any, Dict, List, Optional, Tuple, Union
 
 from langchain_core.callbacks import BaseCallbackHandler
 from pydantic import (
@@ -32,9 +32,9 @@ from crewai.tasks.conditional_task import ConditionalTask
 from crewai.tasks.task_output import TaskOutput
 from crewai.telemetry import Telemetry
 from crewai.tools.agent_tools import AgentTools
+from crewai.types.usage_metrics import UsageMetrics
 from crewai.utilities import I18N, FileHandler, Logger, RPMController
 from crewai.utilities.constants import (
-    TRAINED_AGENTS_DATA_FILE,
     TRAINING_DATA_FILE,
 )
 from crewai.utilities.evaluators.crew_evaluator_handler import CrewEvaluator
@@ -51,6 +51,9 @@ try:
     import agentops
 except ImportError:
     agentops = None
+
+if TYPE_CHECKING:
+    from crewai.pipeline.pipeline import Pipeline
 
 
 class Crew(BaseModel):
@@ -97,12 +100,13 @@ class Crew(BaseModel):
         default_factory=TaskOutputStorageHandler
     )
 
+    name: Optional[str] = Field(default=None)
     cache: bool = Field(default=True)
     model_config = ConfigDict(arbitrary_types_allowed=True)
     tasks: List[Task] = Field(default_factory=list)
     agents: List[BaseAgent] = Field(default_factory=list)
     process: Process = Field(default=Process.sequential)
-    verbose: Union[int, bool] = Field(default=0)
+    verbose: bool = Field(default=False)
     memory: bool = Field(
         default=False,
         description="Whether the crew should use memory to store memories of it's execution",
@@ -111,7 +115,7 @@ class Crew(BaseModel):
         default={"provider": "openai"},
         description="Configuration for the embedder to be used for the crew.",
     )
-    usage_metrics: Optional[dict] = Field(
+    usage_metrics: Optional[UsageMetrics] = Field(
         default=None,
         description="Metrics for the LLM usage during all tasks execution.",
     )
@@ -147,8 +151,8 @@ class Crew(BaseModel):
         default=None,
         description="Path to the prompt json file to be used for the crew.",
     )
-    output_log_file: Optional[Union[bool, str]] = Field(
-        default=False,
+    output_log_file: Optional[str] = Field(
+        default=None,
         description="output_log_file",
     )
     planning: Optional[bool] = Field(
@@ -196,7 +200,7 @@ class Crew(BaseModel):
     def set_private_attrs(self) -> "Crew":
         """Set private attributes."""
         self._cache_handler = CacheHandler()
-        self._logger = Logger(self.verbose)
+        self._logger = Logger(verbose=self.verbose)
         if self.output_log_file:
             self._file_handler = FileHandler(self.output_log_file)
         self._rpm_controller = RPMController(max_rpm=self.max_rpm, logger=self._logger)
@@ -386,7 +390,7 @@ class Crew(BaseModel):
         del task_config["agent"]
         return Task(**task_config, agent=task_agent)
 
-    def _setup_for_training(self) -> None:
+    def _setup_for_training(self, filename: str) -> None:
         """Sets up the crew for training."""
         self._train = True
 
@@ -397,11 +401,13 @@ class Crew(BaseModel):
             agent.allow_delegation = False
 
         CrewTrainingHandler(TRAINING_DATA_FILE).initialize_file()
-        CrewTrainingHandler(TRAINED_AGENTS_DATA_FILE).initialize_file()
+        CrewTrainingHandler(filename).initialize_file()
 
-    def train(self, n_iterations: int, inputs: Optional[Dict[str, Any]] = {}) -> None:
+    def train(
+        self, n_iterations: int, filename: str, inputs: Optional[Dict[str, Any]] = {}
+    ) -> None:
         """Trains the crew for a given number of iterations."""
-        self._setup_for_training()
+        self._setup_for_training(filename)
 
         for n_iteration in range(n_iterations):
             self._train_iteration = n_iteration
@@ -414,7 +420,7 @@ class Crew(BaseModel):
                 training_data=training_data, agent_id=str(agent.id)
             )
 
-            CrewTrainingHandler(TRAINED_AGENTS_DATA_FILE).save_trained_data(
+            CrewTrainingHandler(filename).save_trained_data(
                 agent_id=str(agent.role), trained_data=result.model_dump()
             )
 
@@ -453,7 +459,7 @@ class Crew(BaseModel):
         if self.planning:
             self._handle_crew_planning()
 
-        metrics = []
+        metrics: List[UsageMetrics] = []
 
         if self.process == Process.sequential:
             result = self._run_sequential_process()
@@ -463,11 +469,12 @@ class Crew(BaseModel):
             raise NotImplementedError(
                 f"The process '{self.process}' is not implemented yet."
             )
+
         metrics += [agent._token_process.get_summary() for agent in self.agents]
 
-        self.usage_metrics = {
-            key: sum([m[key] for m in metrics if m is not None]) for key in metrics[0]
-        }
+        self.usage_metrics = UsageMetrics()
+        for metric in metrics:
+            self.usage_metrics.add_usage_metrics(metric)
 
         return result
 
@@ -476,12 +483,7 @@ class Crew(BaseModel):
         results: List[CrewOutput] = []
 
         # Initialize the parent crew's usage metrics
-        total_usage_metrics = {
-            "total_tokens": 0,
-            "prompt_tokens": 0,
-            "completion_tokens": 0,
-            "successful_requests": 0,
-        }
+        total_usage_metrics = UsageMetrics()
 
         for input_data in inputs:
             crew = self.copy()
@@ -489,8 +491,7 @@ class Crew(BaseModel):
             output = crew.kickoff(inputs=input_data)
 
             if crew.usage_metrics:
-                for key in total_usage_metrics:
-                    total_usage_metrics[key] += crew.usage_metrics.get(key, 0)
+                total_usage_metrics.add_usage_metrics(crew.usage_metrics)
 
             results.append(output)
 
@@ -519,29 +520,10 @@ class Crew(BaseModel):
 
         results = await asyncio.gather(*tasks)
 
-        total_usage_metrics = {
-            "total_tokens": 0,
-            "prompt_tokens": 0,
-            "completion_tokens": 0,
-            "successful_requests": 0,
-        }
+        total_usage_metrics = UsageMetrics()
         for crew in crew_copies:
             if crew.usage_metrics:
-                for key in total_usage_metrics:
-                    total_usage_metrics[key] += crew.usage_metrics.get(key, 0)
-
-        self.usage_metrics = total_usage_metrics
-
-        total_usage_metrics = {
-            "total_tokens": 0,
-            "prompt_tokens": 0,
-            "completion_tokens": 0,
-            "successful_requests": 0,
-        }
-        for crew in crew_copies:
-            if crew.usage_metrics:
-                for key in total_usage_metrics:
-                    total_usage_metrics[key] += crew.usage_metrics.get(key, 0)
+                total_usage_metrics.add_usage_metrics(crew.usage_metrics)
 
         self.usage_metrics = total_usage_metrics
         self._task_output_handler.reset()
@@ -932,25 +914,18 @@ class Crew(BaseModel):
             )
         self._telemetry.end_crew(self, final_string_output)
 
-    def calculate_usage_metrics(self) -> Dict[str, int]:
+    def calculate_usage_metrics(self) -> UsageMetrics:
         """Calculates and returns the usage metrics."""
-        total_usage_metrics = {
-            "total_tokens": 0,
-            "prompt_tokens": 0,
-            "completion_tokens": 0,
-            "successful_requests": 0,
-        }
+        total_usage_metrics = UsageMetrics()
 
         for agent in self.agents:
             if hasattr(agent, "_token_process"):
                 token_sum = agent._token_process.get_summary()
-                for key in total_usage_metrics:
-                    total_usage_metrics[key] += token_sum.get(key, 0)
+                total_usage_metrics.add_usage_metrics(token_sum)
 
         if self.manager_agent and hasattr(self.manager_agent, "_token_process"):
             token_sum = self.manager_agent._token_process.get_summary()
-            for key in total_usage_metrics:
-                total_usage_metrics[key] += token_sum.get(key, 0)
+            total_usage_metrics.add_usage_metrics(token_sum)
 
         return total_usage_metrics
 
@@ -961,6 +936,9 @@ class Crew(BaseModel):
         inputs: Optional[Dict[str, Any]] = None,
     ) -> None:
         """Test and evaluate the Crew with the given inputs for n iterations."""
+        self._test_execution_span = self._telemetry.test_execution_span(
+            self, inputs, openai_model_name
+        )
         evaluator = CrewEvaluator(self, openai_model_name)
 
         for i in range(1, n_iterations + 1):
@@ -968,6 +946,18 @@ class Crew(BaseModel):
             self.kickoff(inputs=inputs)
 
         evaluator.print_crew_evaluation_result()
+
+    def __rshift__(self, other: "Crew") -> "Pipeline":
+        """
+        Implements the >> operator to add another Crew to an existing Pipeline.
+        """
+        from crewai.pipeline.pipeline import Pipeline
+
+        if not isinstance(other, Crew):
+            raise TypeError(
+                f"Unsupported operand type for >>: '{type(self).__name__}' and '{type(other).__name__}'"
+            )
+        return Pipeline(stages=[self, other])
 
     def __repr__(self):
         return f"Crew(id={self.id}, process={self.process}, number_of_agents={len(self.agents)}, number_of_tasks={len(self.tasks)})"

@@ -9,7 +9,7 @@ python = ">=3.10,<=3.13"
 crewai = { extras = ["tools"], version = "^0.46.0" }
 
 [tool.poetry.scripts]
-{{folder_name}} = "{{folder_name}}.main:run"
+{{folder_name}} = "{{folder_name}}.main:main"
 train = "{{folder_name}}.main:train"
 replay = "{{folder_name}}.main:replay"
 test = "{{folder_name}}.main:test"

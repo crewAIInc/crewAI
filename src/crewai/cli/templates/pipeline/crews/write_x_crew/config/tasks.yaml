@@ -1,0 +1,22 @@
+write_x_task:
+  description: >
+    Using the research report provided, create an engaging short form post about {topic}.
+    Your post should have a great hook, summarize key points, and be structured for easy
+    consumption on a digital platform. The post must be under 280 characters.
+    Follow these guidelines:
+    1. Start with an attention-grabbing hook
+    2. Condense the main insights from the research
+    3. Use clear, concise language
+    4. Include a call-to-action or thought-provoking question if space allows
+    5. Ensure the post flows well and is easy to read quickly
+
+    Here is the title of the research report you will be using
+
+    Title: {title}
+    Research: 
+    {body}
+
+  expected_output: >
+    A compelling X post under 280 characters that effectively summarizes the key findings
+    about {topic}, starts with a strong hook, and is optimized for engagement on the platform.
+  agent: x_writer_agent

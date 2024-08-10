@@ -47,6 +47,7 @@ class Task(BaseModel):
     tools_errors: int = 0
     delegations: int = 0
     i18n: I18N = I18N()
+    name: Optional[str] = Field(default=None)
     prompt_context: Optional[str] = None
     description: str = Field(description="Description of the actual task.")
     expected_output: str = Field(
