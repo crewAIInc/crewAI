@@ -8,8 +8,8 @@ from crewai.project import CrewBase, agent, crew, task
 # from crewai_tools import SerperDevTool
 
 @CrewBase
-class {{crew_name}}Crew():
-	"""{{crew_name}} crew"""
+class WriteLinkedInCrew():
+	"""Research Crew"""
 	agents_config = 'config/agents.yaml'
 	tasks_config = 'config/tasks.yaml'
 
@@ -17,7 +17,6 @@ class {{crew_name}}Crew():
 	def researcher(self) -> Agent:
 		return Agent(
 			config=self.agents_config['researcher'],
-			# tools=[MyCustomTool()], # Example of custom tool, loaded on the beginning of file
 			verbose=True
 		)
 
@@ -48,6 +47,5 @@ class {{crew_name}}Crew():
 			agents=self.agents, # Automatically created by the @agent decorator
 			tasks=self.tasks, # Automatically created by the @task decorator
 			process=Process.sequential,
-			verbose=2,
-			# process=Process.hierarchical, # In case you wanna use that instead https://docs.crewai.com/how-to/Hierarchical/
+			verbose=True,
 		)

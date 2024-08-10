@@ -134,7 +134,7 @@ Once a crew has been executed, its output can be accessed through the `output` a
 crew = Crew(
     agents=[research_agent, writer_agent],
     tasks=[research_task, write_article_task],
-    verbose=2
+    verbose=True
 )
 
 crew_output = crew.kickoff()

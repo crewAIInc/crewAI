@@ -7,7 +7,7 @@ description: A comprehensive guide to starting a new CrewAI project, including t
 
 Welcome to the ultimate guide for starting a new CrewAI project. This document will walk you through the steps to create, customize, and run your CrewAI project, ensuring you have everything you need to get started.
 
-Beforre we start there are a couple of things to note:
+Before we start there are a couple of things to note:
 
 1. CrewAI is a Python package and requires Python >=3.10 and <=3.13 to run.
 2. The preferred way of setting up CrewAI is using the `crewai create` command.This will create a new project folder and install a skeleton template for you to work on.
@@ -20,7 +20,7 @@ Before getting started with CrewAI, make sure that you have installed it via pip
 $ pip install crewai crewai-tools
 ```
 
-### Virtual Environemnts
+### Virtual Environments
 It is highly recommended that you use virtual environments to ensure that your CrewAI project is isolated from other projects and dependencies. Virtual environments provide a clean, separate workspace for each project, preventing conflicts between different versions of packages and libraries. This isolation is crucial for maintaining consistency and reproducibility in your development process. You have multiple options for setting up virtual environments depending on your operating system and Python version:
 
 1. Use venv (Python's built-in virtual environment tool):
@@ -39,7 +39,7 @@ It is highly recommended that you use virtual environments to ensure that your C
 
 ### Code IDEs
 
-Most users of CrewAI a Code Editor / Integrated Development Environment (IDE) for building there Crews. You can use any code IDE of your choice. Seee below for some popular options for Code Editors / Integrated Development Environments (IDE):
+Most users of CrewAI use a Code Editor / Integrated Development Environment (IDE) for building their Crews. You can use any code IDE of your choice. See below for some popular options for Code Editors / Integrated Development Environments (IDE):
 
 - [Visual Studio Code](https://code.visualstudio.com/) - Most popular
 - [PyCharm](https://www.jetbrains.com/pycharm/)
@@ -244,6 +244,10 @@ def run():
 
 To run your project, use the following command:
 
+```shell
+$ crewai run
+```
+or
 ```shell
 $ poetry run my_project
 ```

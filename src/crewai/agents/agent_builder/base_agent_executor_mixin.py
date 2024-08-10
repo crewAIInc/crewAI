@@ -3,7 +3,6 @@ from typing import TYPE_CHECKING, Optional
 
 from crewai.memory.entity.entity_memory_item import EntityMemoryItem
 from crewai.memory.long_term.long_term_memory_item import LongTermMemoryItem
-from crewai.memory.short_term.short_term_memory_item import ShortTermMemoryItem
 from crewai.utilities.converter import ConverterError
 from crewai.utilities.evaluators.task_evaluator import TaskEvaluator
 from crewai.utilities import I18N
@@ -39,18 +38,17 @@ class CrewAgentExecutorMixin:
             and "Action: Delegate work to coworker" not in output.log
         ):
             try:
-                memory = ShortTermMemoryItem(
-                    data=output.log,
-                    agent=self.crew_agent.role,
-                    metadata={
-                        "observation": self.task.description,
-                    },
-                )
                 if (
                     hasattr(self.crew, "_short_term_memory")
                     and self.crew._short_term_memory
                 ):
-                    self.crew._short_term_memory.save(memory)
+                    self.crew._short_term_memory.save(
+                        value=output.log,
+                        metadata={
+                            "observation": self.task.description,
+                        },
+                        agent=self.crew_agent.role,
+                    )
             except Exception as e:
                 print(f"Failed to add to short term memory: {e}")
                 pass

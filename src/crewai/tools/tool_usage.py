@@ -19,7 +19,7 @@ if os.environ.get("AGENTOPS_API_KEY"):
     except ImportError:
         pass
 
-OPENAI_BIGGER_MODELS = ["gpt-4"]
+OPENAI_BIGGER_MODELS = ["gpt-4o"]
 
 
 class ToolUsageErrorException(Exception):

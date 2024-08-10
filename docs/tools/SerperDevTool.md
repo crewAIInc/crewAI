@@ -40,10 +40,9 @@ The `SerperDevTool` comes with several parameters that will be passed to the API
 - **locale**: Optional. Specify the locale for the search results.
 - **n_results**: Number of search results to return. Default is `10`.
 
-The values for `country`, `location`, `lovale` and `search_url` can be found on the [Serper Playground](https://serper.dev/playground).
+The values for `country`, `location`, `locale` and `search_url` can be found on the [Serper Playground](https://serper.dev/playground).
 
 ## Example with Parameters
-
 Here is an example demonstrating how to use the tool with additional parameters:
 
 ```python
