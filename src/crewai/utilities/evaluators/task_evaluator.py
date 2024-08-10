@@ -8,8 +8,8 @@ from crewai.utilities import Converter
 from crewai.utilities.pydantic_schema_parser import PydanticSchemaParser
 
 
-def mock_agent_ops_provider(*args, **kwargs):
-    def track_agent():
+def mock_agent_ops_provider():
+    def track_agent(*args, **kwargs):
         def noop(f):
             return f
 
