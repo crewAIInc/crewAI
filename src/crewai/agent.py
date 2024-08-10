@@ -19,13 +19,16 @@ from crewai.utilities.constants import TRAINED_AGENTS_DATA_FILE, TRAINING_DATA_F
 from crewai.utilities.token_counter_callback import TokenCalcHandler
 from crewai.utilities.training_handler import CrewTrainingHandler
 
-def mock_agent_ops_provider():
+
+def mock_agent_ops_provider(*args, **kwargs):
     def track_agent():
         def noop(f):
             return f
 
         return noop
+
     return track_agent
+
 
 agentops = None
 
