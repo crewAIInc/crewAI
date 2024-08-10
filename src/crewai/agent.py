@@ -20,8 +20,8 @@ from crewai.utilities.token_counter_callback import TokenCalcHandler
 from crewai.utilities.training_handler import CrewTrainingHandler
 
 
-def mock_agent_ops_provider(*args, **kwargs):
-    def track_agent():
+def mock_agent_ops_provider():
+    def track_agent(*args, **kwargs):
         def noop(f):
             return f
 
