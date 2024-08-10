@@ -7,13 +7,16 @@ from pydantic import BaseModel, Field
 from crewai.utilities import Converter
 from crewai.utilities.pydantic_schema_parser import PydanticSchemaParser
 
-def mock_agent_ops_provider():
+
+def mock_agent_ops_provider(*args, **kwargs):
     def track_agent():
         def noop(f):
             return f
 
         return noop
+
     return track_agent
+
 
 agentops = None
 
