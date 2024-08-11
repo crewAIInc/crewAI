@@ -4,6 +4,7 @@ from .tools import (
     CodeInterpreterTool,
     ComposioTool,
     CSVSearchTool,
+    DallETool,
     DirectoryReadTool,
     DirectorySearchTool,
     DOCXSearchTool,
