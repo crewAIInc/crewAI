@@ -158,7 +158,7 @@ class CrewEvaluator:
 
         if isinstance(evaluation_result.pydantic, TaskEvaluationPydanticOutput):
             self._test_result_span = self._telemetry.individual_test_result_span(
-                self,
+                self.crew,
                 evaluation_result.pydantic.quality,
                 current_task._execution_time,
                 self.openai_model_name,
