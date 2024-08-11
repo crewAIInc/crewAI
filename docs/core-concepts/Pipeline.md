@@ -34,7 +34,7 @@ Each input creates its own run, flowing through all stages of the pipeline. Mult
 
 | Attribute  | Parameters | Description                                                                           |
 | :--------- | :--------- | :------------------------------------------------------------------------------------ |
-| **Stages** | `stages`   | A list of crews or lists of crews representing the stages to be executed in sequence. |
+| **Stages** | `stages`   | A list of crews, lists of crews, or routers representing the stages to be executed in sequence. |
 
 ## Creating a Pipeline
 
@@ -79,7 +79,7 @@ my_pipeline = Pipeline(
 ## Pipeline Output
 
 !!! note "Understanding Pipeline Outputs"
-The output of a pipeline in the crewAI framework is encapsulated within two main classes: `PipelineOutput` and `PipelineRunResult`. These classes provide a structured way to access the results of the pipeline's execution, including various formats such as raw strings, JSON, and Pydantic models.
+The output of a pipeline in the crewAI framework is encapsulated within the `PipelineKickoffResult` class. This class provides a structured way to access the results of the pipeline's execution, including various formats such as raw strings, JSON, and Pydantic models.
 
 ### Pipeline Output Attributes
 

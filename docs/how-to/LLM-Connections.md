@@ -9,7 +9,7 @@ description: Comprehensive guide on integrating CrewAI with various Large Langua
     By default, CrewAI uses OpenAI's GPT-4o model (specifically, the model specified by the OPENAI_MODEL_NAME environment variable, defaulting to "gpt-4o") for language processing. You can configure your agents to use a different model or API as described in this guide.
     By default, CrewAI uses OpenAI's GPT-4 model (specifically, the model specified by the OPENAI_MODEL_NAME environment variable, defaulting to "gpt-4") for language processing. You can configure your agents to use a different model or API as described in this guide.
 
-CrewAI provides extensive versatility in integrating with various Language Models (LLMs), including local options through Ollama such as  Llama and Mixtral to cloud-based solutions like Azure. Its compatibility extends to all [LangChain LLM components](https://python.langchain.com/v0.2/docs/integrations/llms/), offering a wide range of integration possibilities for customized AI applications.
+CrewAI provides extensive versatility in integrating with various Language Models (LLMs), including local options through Ollama such as Llama and Mixtral to cloud-based solutions like Azure. Its compatibility extends to all [LangChain LLM components](https://python.langchain.com/v0.2/docs/integrations/llms/), offering a wide range of integration possibilities for customized AI applications.
 
 The platform supports connections to an array of Generative AI models, including:
 
@@ -37,6 +37,7 @@ example_agent = Agent(
   verbose=True
 )
 ```
+
 ## Ollama Local Integration
 Ollama is preferred for local LLM integration, offering customization and privacy benefits. To integrate Ollama with CrewAI, you will need the `langchain-ollama` package. You can then set the following environment variables to connect to your Ollama instance running locally on port 11434.
 
@@ -47,8 +48,8 @@ os.environ[OPENAI_API_KEY]='' # No API Key required for Ollama
 ```
 
 ## Ollama Integration Step by Step (ex. for using Llama 3.1 8B locally)
-1. [Download and install Ollama](https://ollama.com/download).   
-2. After setting up the Ollama, Pull the Llama3.1 8B model by typing following lines into your terminal ```ollama run llama3.1```.   
+1. [Download and install Ollama](https://ollama.com/download).
+2. After setting up the Ollama, Pull the Llama3.1 8B model by typing following lines into your terminal ```ollama run llama3.1```.
 3. Llama3.1 should now be served locally on `http://localhost:11434`
 ```
 from crewai import Agent, Task, Crew
@@ -165,7 +166,7 @@ llm = ChatCohere()
 For Azure OpenAI API integration, set the following environment variables:
 ```sh
 
-os.environ[AZURE_OPENAI_DEPLOYMENT] = "You deployment"
+os.environ[AZURE_OPENAI_DEPLOYMENT] = "Your deployment"
 os.environ["OPENAI_API_VERSION"] = "2023-12-01-preview"
 os.environ["AZURE_OPENAI_ENDPOINT"] = "Your Endpoint"
 os.environ["AZURE_OPENAI_API_KEY"] = "<Your API Key>"
@@ -191,5 +192,6 @@ azure_agent = Agent(
   llm=azure_llm
 )
 ```
+
 ## Conclusion
 Integrating CrewAI with different LLMs expands the framework's versatility, allowing for customized, efficient AI solutions across various domains and platforms.

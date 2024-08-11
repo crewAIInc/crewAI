@@ -32,8 +32,8 @@ A crew in crewAI represents a collaborative group of agents working together to 
 | **Manager Agent** _(optional)_        | `manager_agent`        | `manager` sets a custom agent that will be used as a manager.                                                                                                                                                                                             |
 | **Manager Callbacks** _(optional)_    | `manager_callbacks`    | `manager_callbacks` takes a list of callback handlers to be executed by the manager agent when a hierarchical process is used.                                                                                                                            |
 | **Prompt File** _(optional)_          | `prompt_file`          | Path to the prompt JSON file to be used for the crew.                                                                                                                                                                                                     |
-| **Planning** *(optional)*             | `planning`             |  Adds planning ability to the Crew. When activated before each Crew iteration, all Crew data is sent to an AgentPlanner that will plan the tasks and this plan will be added to each task description.
-| **Planning LLM** *(optional)*         | `planning_llm`         | The language model used by the AgentPlanner in a planning process. |
+| **Planning** *(optional)*             | `planning`             | Adds planning ability to the Crew. When activated before each Crew iteration, all Crew data is sent to an AgentPlanner that will plan the tasks and this plan will be added to each task description.                                                     |
+| **Planning LLM** *(optional)*         | `planning_llm`         | The language model used by the AgentPlanner in a planning process.                                                                                                                                                                                        |
 
 !!! note "Crew Max RPM"
 The `max_rpm` attribute sets the maximum number of requests per minute the crew can perform to avoid rate limits and will override individual agents' `max_rpm` settings if you set it.
@@ -183,14 +183,14 @@ result = my_crew.kickoff()
 print(result)
 ```
 
-### Different ways to Kicking Off a Crew
+### Different Ways to Kick Off a Crew
 
 Once your crew is assembled, initiate the workflow with the appropriate kickoff method. CrewAI provides several methods for better control over the kickoff process: `kickoff()`, `kickoff_for_each()`, `kickoff_async()`, and `kickoff_for_each_async()`.
 
-`kickoff()`: Starts the execution process according to the defined process flow.
-`kickoff_for_each()`: Executes tasks for each agent individually.
-`kickoff_async()`: Initiates the workflow asynchronously.
-`kickoff_for_each_async()`: Executes tasks for each agent individually in an asynchronous manner.
+- `kickoff()`: Starts the execution process according to the defined process flow.
+- `kickoff_for_each()`: Executes tasks for each agent individually.
+- `kickoff_async()`: Initiates the workflow asynchronously.
+- `kickoff_for_each_async()`: Executes tasks for each agent individually in an asynchronous manner.
 
 ```python
 # Start the crew's task execution
@@ -215,30 +215,31 @@ for async_result in async_results:
     print(async_result)
 ```
 
-These methods provide flexibility in how you manage and execute tasks within your crew, allowing for both synchronous and asynchronous workflows tailored to your needs
+These methods provide flexibility in how you manage and execute tasks within your crew, allowing for both synchronous and asynchronous workflows tailored to your needs.
 
+### Replaying from a Specific Task
 
-### Replaying from specific task:
-You can now replay from a specific task using our cli command replay.
+You can now replay from a specific task using our CLI command `replay`.
 
 The replay feature in CrewAI allows you to replay from a specific task using the command-line interface (CLI). By running the command `crewai replay -t <task_id>`, you can specify the `task_id` for the replay process.
 
 Kickoffs will now save the latest kickoffs returned task outputs locally for you to be able to replay from.
 
+### Replaying from a Specific Task Using the CLI
 
-### Replaying from specific task Using the CLI
 To use the replay feature, follow these steps:
 
 1. Open your terminal or command prompt.
 2. Navigate to the directory where your CrewAI project is located.
 3. Run the following command:
 
-To view latest kickoff task_ids use:
+To view the latest kickoff task IDs, use:
 
 ```shell
 crewai log-tasks-outputs
 ```
 
+Then, to replay from a specific task, use:
 
 ```shell
 crewai replay -t <task_id>
