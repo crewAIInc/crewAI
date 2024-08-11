@@ -1,10 +1,18 @@
 from typing import Any, Union
 
-from crewai_tools import BaseTool
+from ..base_tool import BaseTool
 from pydantic import Field
 from sqlalchemy import create_engine, text
 from sqlalchemy.orm import sessionmaker
 
+from typing import Optional, Type, Any
+from pydantic.v1 import BaseModel
+
+class NL2SQLToolInput(BaseModel):
+    sql_query: str = Field(
+        title="SQL Query",
+        description="The SQL query to execute.",
+    )
 
 class NL2SQLTool(BaseTool):
     name: str = "NL2SQLTool"
@@ -15,6 +23,7 @@ class NL2SQLTool(BaseTool):
     )
     tables: list = []
     columns: dict = {}
+    args_schema: Type[BaseModel] = NL2SQLToolInput
 
     def model_post_init(self, __context: Any) -> None:
         data = {}
