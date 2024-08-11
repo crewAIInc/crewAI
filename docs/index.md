@@ -66,6 +66,11 @@ Cutting-edge framework for orchestrating role-playing, autonomous AI agents. By 
                     Planning
                 </a>
             </li>
+            <li>
+                <a href="./core-concepts/Testing">
+                    Testing
+                </a>
+            </li>
         </ul>
     </div>
     <div style="width:30%">
