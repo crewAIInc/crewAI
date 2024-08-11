@@ -25,8 +25,7 @@ class ScrapeWebsiteTool(BaseTool):
 		'Accept-Language': 'en-US,en;q=0.9',
 		'Referer': 'https://www.google.com/',
 		'Connection': 'keep-alive',
-		'Upgrade-Insecure-Requests': '1',
-		'Accept-Encoding': 'gzip, deflate, br'
+		'Upgrade-Insecure-Requests': '1'
 	}
 
 	def __init__(self, website_url: Optional[str] = None, cookies: Optional[dict] = None, **kwargs):
@@ -40,8 +39,8 @@ class ScrapeWebsiteTool(BaseTool):
 				self.cookies = {cookies["name"]: os.getenv(cookies["value"])}
 
 	def _run(
-		self,
-		**kwargs: Any,
+			self,
+			**kwargs: Any,
 	) -> Any:
 		website_url = kwargs.get('website_url', self.website_url)
 		page = requests.get(
@@ -50,9 +49,11 @@ class ScrapeWebsiteTool(BaseTool):
 			headers=self.headers,
 			cookies=self.cookies if self.cookies else {}
 		)
-		parsed = BeautifulSoup(page.content, "html.parser")
+
+		page.encoding = page.apparent_encoding
+		parsed = BeautifulSoup(page.text, "html.parser")
+
 		text = parsed.get_text()
 		text = '\n'.join([i for i in text.split('\n') if i.strip() != ''])
 		text = ' '.join([i for i in text.split(' ') if i.strip() != ''])
 		return text
-
