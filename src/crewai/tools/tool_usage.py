@@ -257,8 +257,8 @@ class ToolUsage:
         if not self.tools_handler:
             return False  # type: ignore # No return value expected
         if last_tool_usage := self.tools_handler.last_used_tool:
-            return (calling.tool_name == last_tool_usage.tool_name) and (  # type: ignore # No return value expected
-                calling.arguments == last_tool_usage.arguments
+            return (calling.tool_name.casefold() == last_tool_usage.tool_name.casefold()) and (  # type: ignore # No return value expected
+                str(calling.arguments).casefold() == str(last_tool_usage.arguments).casefold()
             )
 
     def _select_tool(self, tool_name: str) -> BaseTool:
