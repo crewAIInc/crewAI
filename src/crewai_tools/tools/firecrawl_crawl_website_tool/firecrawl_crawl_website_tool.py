@@ -26,6 +26,11 @@ class FirecrawlCrawlWebsiteTool(BaseTool):
         self.firecrawl = FirecrawlApp(api_key=api_key)
 
     def _run(self, url: str, crawler_options: Optional[Dict[str, Any]] = None, page_options: Optional[Dict[str, Any]] = None):
+        if (crawler_options is None):
+            crawler_options = {}
+        if (page_options is None):
+            page_options = {}
+
         options = {
             "crawlerOptions": crawler_options,
             "pageOptions": page_options
