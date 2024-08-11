@@ -10,6 +10,7 @@ from .tools import (
     DOCXSearchTool,
     EXASearchTool,
     FileReadTool,
+    FileWriterTool
     FirecrawlCrawlWebsiteTool,
     FirecrawlScrapeWebsiteTool,
     FirecrawlSearchTool,

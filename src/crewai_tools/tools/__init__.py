@@ -9,6 +9,7 @@ from .directory_search_tool.directory_search_tool import DirectorySearchTool
 from .docx_search_tool.docx_search_tool import DOCXSearchTool
 from .exa_tools.exa_search_tool import EXASearchTool
 from .file_read_tool.file_read_tool import FileReadTool
+from .file_writer_tool.file_writer_tool import FileWriterTool
 from .firecrawl_crawl_website_tool.firecrawl_crawl_website_tool import (
     FirecrawlCrawlWebsiteTool,
 )
