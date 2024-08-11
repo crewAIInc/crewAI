@@ -622,7 +622,7 @@ def test_sequential_async_task_execution_completion():
 
     sequential_result = sequential_crew.kickoff()
     assert sequential_result.raw.startswith(
-        "The history of artificial intelligence (AI) is marked by several pivotal events that have shaped its evolution and impact on various sectors."
+        "**The Evolution of Artificial Intelligence: Key Milestones in Shaping AI**"
     )
 
 
