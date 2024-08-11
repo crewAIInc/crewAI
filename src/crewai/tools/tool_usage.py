@@ -1,4 +1,5 @@
 import ast
+import json
 from difflib import SequenceMatcher
 import os
 from textwrap import dedent
@@ -344,7 +345,10 @@ class ToolUsage:
                 tool = self._select_tool(tool_name)
                 try:
                     tool_input = self._validate_tool_input(self.action.tool_input)
-                    arguments = ast.literal_eval(tool_input)
+                    try:
+                        arguments = ast.literal_eval(tool_input)
+                    except Exception:
+                        arguments = json.loads(tool_input)
                 except Exception:
                     return ToolUsageErrorException(  # type: ignore # Incompatible return value type (got "ToolUsageErrorException", expected "ToolCalling | InstructorToolCalling")
                         f'{self._i18n.errors("tool_arguments_error")}'
