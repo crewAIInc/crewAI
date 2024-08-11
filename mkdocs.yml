@@ -170,6 +170,8 @@ nav:
     - JSON RAG Search: 'tools/JSONSearchTool.md'
     - Docx Rag Search: 'tools/DOCXSearchTool.md'
     - MDX RAG Search: 'tools/MDXSearchTool.md'
+    - MySQL Tool: 'tools/MySQLTool.md'
+    - NL2SQL Tool: 'tools/NL2SQL.md'
     - PG RAG Search: 'tools/PGSearchTool.md'
     - Vision Tool: 'tools/VisionTool.md'
     - Website RAG Search: 'tools/WebsiteSearchTool.md'
