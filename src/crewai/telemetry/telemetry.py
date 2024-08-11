@@ -307,7 +307,8 @@ class Telemetry:
                 self._add_attribute(span, "quality", str(quality))
                 self._add_attribute(span, "exec_time", str(exec_time))
                 self._add_attribute(span, "model_name", model_name)
-                return span
+                span.set_status(Status(StatusCode.OK))
+                span.end()
             except Exception:
                 pass
 
@@ -338,7 +339,8 @@ class Telemetry:
                         span, "inputs", json.dumps(inputs) if inputs else None
                     )
 
-                return span
+                span.set_status(Status(StatusCode.OK))
+                span.end()
             except Exception:
                 pass
 
