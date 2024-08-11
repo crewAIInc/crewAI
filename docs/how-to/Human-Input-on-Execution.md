@@ -83,6 +83,7 @@ crew = Crew(
     tasks=[task1, task2],
     verbose=True,
     memory=True,
+    planning=True  # Enable planning feature for the crew
 )
 
 # Get your crew to work!

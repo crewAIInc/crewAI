@@ -7,10 +7,10 @@ description: A comprehensive guide to starting a new CrewAI project, including t
 
 Welcome to the ultimate guide for starting a new CrewAI project. This document will walk you through the steps to create, customize, and run your CrewAI project, ensuring you have everything you need to get started.
 
-Before we start there are a couple of things to note:
+Before we start, there are a couple of things to note:
 
 1. CrewAI is a Python package and requires Python >=3.10 and <=3.13 to run.
-2. The preferred way of setting up CrewAI is using the `crewai create` command.This will create a new project folder and install a skeleton template for you to work on.
+2. The preferred way of setting up CrewAI is using the `crewai create crew` command. This will create a new project folder and install a skeleton template for you to work on.
 
 ## Prerequisites
 
@@ -35,7 +35,7 @@ It is highly recommended that you use virtual environments to ensure that your C
 
 3. Use Poetry (A Python package manager and dependency management tool):
    Poetry is an open-source Python package manager that simplifies the installation of packages and their dependencies. Poetry offers a convenient way to manage virtual environments and dependencies.
-   Poetry is CrewAI's prefered tool for package / dependancy management in CrewAI.
+   Poetry is CrewAI's preferred tool for package / dependency management in CrewAI.
 
 ### Code IDEs
 
@@ -48,24 +48,13 @@ Most users of CrewAI use a Code Editor / Integrated Development Environment (IDE
 Pick one that suits your style and needs.
 
 ## Creating a New Project
-In this example we will be using Venv as our virtual environment manager.
+In this example, we will be using Venv as our virtual environment manager.
 
-To setup a virtual environment, run the following CLI command:
-
-```shell
-$ python3 -m venv <venv-name>
-```
-
-Activate your virtual environment by running the following CLI command:
+To set up a virtual environment, run the following CLI command:
+To create a new CrewAI project, run the following CLI command:
 
 ```shell
-$ source <venv-name>/bin/activate
-```
-
-Now, to create a new CrewAI project, run the following CLI command:
-
-```shell
-$ crewai create <project_name>
+$ crewai create crew <project_name>
 ```
 
 This command will create a new project folder with the following structure:
@@ -128,13 +117,13 @@ research_candidates_task:
     {job_requirements}
   expected_output: >
     A list of 10 potential candidates with their contact information and brief profiles highlighting their suitability.
-  agent: researcher # THIS NEEDS TO MATCH THE AGENT NAME IN THE AGENTS.YAML FILE AND THE AGENT DEFINED IN THE Crew.PY FILE
-  context: # THESE NEED TO MATCH THE TASK NAMES DEFINED ABOVE AND THE TASKS.YAML FILE AND THE TASK DEFINED IN THE Crew.PY FILE
+  agent: researcher # THIS NEEDS TO MATCH THE AGENT NAME IN THE AGENTS.YAML FILE AND THE AGENT DEFINED IN THE crew.py FILE
+  context: # THESE NEED TO MATCH THE TASK NAMES DEFINED ABOVE AND THE TASKS.YAML FILE AND THE TASK DEFINED IN THE crew.py FILE
     - researcher
 ```
 
 ### Referencing Variables:
-Your defined functions with the same name will be used. For example, you can reference the agent for specific tasks from task.yaml file. Ensure your annotated agent and function name is the same otherwise your task wont recognize the reference properly.
+Your defined functions with the same name will be used. For example, you can reference the agent for specific tasks from task.yaml file. Ensure your annotated agent and function name is the same otherwise your task won't recognize the reference properly.
 
 #### Example References
 agent.yaml
@@ -162,7 +151,7 @@ email_summarizer_task:
       - research_task
 ```
 
-Use the annotations are used to properly reference the agent and task in the crew.py file.
+Use the annotations to properly reference the agent and task in the crew.py file.
 
 ### Annotations include:
 * @agent
@@ -175,10 +164,9 @@ Use the annotations are used to properly reference the agent and task in the cre
 * @output_pydantic
 * @cache_handler
 
-
 crew.py
 ```py
-...
+# ...
     @llm
     def mixtal_llm(self):
         return ChatGroq(temperature=0, model_name="mixtral-8x7b-32768")
@@ -194,10 +182,8 @@ crew.py
         return Task(
             config=self.tasks_config["email_summarizer_task"],
         )
-...
+# ...
 ```
-
-
 
 ## Installing Dependencies
 
@@ -253,6 +239,26 @@ $ poetry run my_project
 ```
 
 This will initialize your crew of AI agents and begin task execution as defined in your configuration in the `main.py` file.
+
+### Replay Tasks from Latest Crew Kickoff
+
+CrewAI now includes a replay feature that allows you to list the tasks from the last run and replay from a specific one. To use this feature, run:
+
+```shell
+$ crewai replay <task_id>
+```
+
+Replace `<task_id>` with the ID of the task you want to replay.
+
+### Reset Crew Memory
+
+If you need to reset the memory of your crew before running it again, you can do so by calling the reset memory feature:
+
+```shell
+$ crewai reset-memory
+```
+
+This will clear the crew's memory, allowing for a fresh start.
 
 ## Deploying Your Project
 

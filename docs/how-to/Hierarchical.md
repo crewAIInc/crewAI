@@ -56,6 +56,7 @@ project_crew = Crew(
     process=Process.hierarchical,  # Specifies the hierarchical management approach
     memory=True,  # Enable memory usage for enhanced task execution
     manager_agent=None,  # Optional: explicitly set a specific agent as manager instead of the manager_llm
+    planning=True,  # Enable planning feature for pre-execution strategy
 )
 ```
 

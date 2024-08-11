@@ -9,6 +9,21 @@ CrewAI provides the ability to kickoff a crew asynchronously, allowing you to st
 ## Asynchronous Crew Execution
 To kickoff a crew asynchronously, use the `kickoff_async()` method. This method initiates the crew execution in a separate thread, allowing the main thread to continue executing other tasks.
 
+### Method Signature
+
+```python
+def kickoff_async(self, inputs: dict) -> CrewOutput:
+```
+
+### Parameters
+
+- `inputs` (dict): A dictionary containing the input data required for the tasks.
+
+### Returns
+
+- `CrewOutput`: An object representing the result of the crew execution.
+
+## Example
 Here's an example of how to kickoff a crew asynchronously:
 
 ```python
@@ -34,7 +49,6 @@ analysis_crew = Crew(
     tasks=[data_analysis_task]
 )
 
-# Execute the crew
+# Execute the crew asynchronously
 result = analysis_crew.kickoff_async(inputs={"ages": [25, 30, 35, 40, 45]})
 ```
-

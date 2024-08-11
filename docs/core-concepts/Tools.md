@@ -80,11 +80,12 @@ write = Task(
     output_file='blog-posts/new_post.md'  # The final blog post will be saved here
 )
 
-# Assemble a crew
+# Assemble a crew with planning enabled
 crew = Crew(
     agents=[researcher, writer],
     tasks=[research, write],
-    verbose=True
+    verbose=True,
+    planning=True,  # Enable planning feature
 )
 
 # Execute tasks
@@ -196,7 +197,6 @@ writer1 = Agent(
     )
     #...
 ```
-
 
 ## Conclusion
 Tools are pivotal in extending the capabilities of CrewAI agents, enabling them to undertake a broad spectrum of tasks and collaborate effectively. When building solutions with CrewAI, leverage both custom and existing tools to empower your agents and enhance the AI ecosystem. Consider utilizing error handling, caching mechanisms, and the flexibility of tool arguments to optimize your agents' performance and capabilities.

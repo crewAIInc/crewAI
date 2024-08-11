@@ -16,8 +16,10 @@ To use the training feature, follow these steps:
 3. Run the following command:
 
 ```shell
-crewai train -n <n_iterations>
+crewai train -n <n_iterations> <filename>
 ```
+
+!!! note "Replace `<n_iterations>` with the desired number of training iterations and `<filename>` with the appropriate filename ending with `.pkl`."
 
 ### Training Your Crew Programmatically
 To train your crew programmatically, use the following steps:
@@ -27,21 +29,20 @@ To train your crew programmatically, use the following steps:
 3. Execute the training command within a try-except block to handle potential errors.
 
 ```python
-    n_iterations = 2
-    inputs = {"topic": "CrewAI Training"}
+n_iterations = 2
+inputs = {"topic": "CrewAI Training"}
+filename = "your_model.pkl"
 
-    try:
-        YourCrewName_Crew().crew().train(n_iterations= n_iterations, inputs=inputs)
+try:
+    YourCrewName_Crew().crew().train(n_iterations=n_iterations, inputs=inputs, filename=filename)
 
-    except Exception as e:
-        raise Exception(f"An error occurred while training the crew: {e}")
+except Exception as e:
+    raise Exception(f"An error occurred while training the crew: {e}")
 ```
-
-!!! note "Replace `<n_iterations>` with the desired number of training iterations. This determines how many times the agents will go through the training process."
-
 
 ### Key Points to Note:
 - **Positive Integer Requirement:** Ensure that the number of iterations (`n_iterations`) is a positive integer. The code will raise a `ValueError` if this condition is not met.
+- **Filename Requirement:** Ensure that the filename ends with `.pkl`. The code will raise a `ValueError` if this condition is not met.
 - **Error Handling:** The code handles subprocess errors and unexpected exceptions, providing error messages to the user.
 
 It is important to note that the training process may take some time, depending on the complexity of your agents and will also require your feedback on each iteration.
