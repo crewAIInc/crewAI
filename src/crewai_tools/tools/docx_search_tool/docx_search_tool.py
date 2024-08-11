@@ -63,4 +63,4 @@ class DOCXSearchTool(RagTool):
         docx = kwargs.get("docx")
         if docx is not None:
             self.add(docx)
-        return super()._run(query=search_query)
+        return super()._run(query=search_query, **kwargs)
