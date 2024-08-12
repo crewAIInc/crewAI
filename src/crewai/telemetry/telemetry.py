@@ -98,65 +98,70 @@ class Telemetry:
                 self._add_attribute(span, "crew_memory", crew.memory)
                 self._add_attribute(span, "crew_number_of_tasks", len(crew.tasks))
                 self._add_attribute(span, "crew_number_of_agents", len(crew.agents))
-                self._add_attribute(
-                    span,
-                    "crew_agents",
-                    json.dumps(
-                        [
-                            {
-                                "key": agent.key,
-                                "id": str(agent.id),
-                                "role": agent.role,
-                                "goal": agent.goal,
-                                "backstory": agent.backstory,
-                                "verbose?": agent.verbose,
-                                "max_iter": agent.max_iter,
-                                "max_rpm": agent.max_rpm,
-                                "i18n": agent.i18n.prompt_file,
-                                "llm": json.dumps(self._safe_llm_attributes(agent.llm)),
-                                "delegation_enabled?": agent.allow_delegation,
-                                "tools_names": [
-                                    tool.name.casefold() for tool in agent.tools or []
-                                ],
-                            }
-                            for agent in crew.agents
-                        ]
-                    ),
-                )
-                self._add_attribute(
-                    span,
-                    "crew_tasks",
-                    json.dumps(
-                        [
-                            {
-                                "key": task.key,
-                                "id": str(task.id),
-                                "description": task.description,
-                                "expected_output": task.expected_output,
-                                "async_execution?": task.async_execution,
-                                "human_input?": task.human_input,
-                                "agent_role": task.agent.role if task.agent else "None",
-                                "agent_key": task.agent.key if task.agent else None,
-                                "context": (
-                                    [task.description for task in task.context]
-                                    if task.context
-                                    else None
-                                ),
-                                "tools_names": [
-                                    tool.name.casefold() for tool in task.tools or []
-                                ],
-                            }
-                            for task in crew.tasks
-                        ]
-                    ),
-                )
-                self._add_attribute(span, "platform", platform.platform())
-                self._add_attribute(span, "platform_release", platform.release())
-                self._add_attribute(span, "platform_system", platform.system())
-                self._add_attribute(span, "platform_version", platform.version())
-                self._add_attribute(span, "cpus", os.cpu_count())
-
                 if crew.share_crew:
+                    self._add_attribute(
+                        span,
+                        "crew_agents",
+                        json.dumps(
+                            [
+                                {
+                                    "key": agent.key,
+                                    "id": str(agent.id),
+                                    "role": agent.role,
+                                    "goal": agent.goal,
+                                    "backstory": agent.backstory,
+                                    "verbose?": agent.verbose,
+                                    "max_iter": agent.max_iter,
+                                    "max_rpm": agent.max_rpm,
+                                    "i18n": agent.i18n.prompt_file,
+                                    "llm": json.dumps(
+                                        self._safe_llm_attributes(agent.llm)
+                                    ),
+                                    "delegation_enabled?": agent.allow_delegation,
+                                    "tools_names": [
+                                        tool.name.casefold()
+                                        for tool in agent.tools or []
+                                    ],
+                                }
+                                for agent in crew.agents
+                            ]
+                        ),
+                    )
+                    self._add_attribute(
+                        span,
+                        "crew_tasks",
+                        json.dumps(
+                            [
+                                {
+                                    "key": task.key,
+                                    "id": str(task.id),
+                                    "description": task.description,
+                                    "expected_output": task.expected_output,
+                                    "async_execution?": task.async_execution,
+                                    "human_input?": task.human_input,
+                                    "agent_role": task.agent.role
+                                    if task.agent
+                                    else "None",
+                                    "agent_key": task.agent.key if task.agent else None,
+                                    "context": (
+                                        [task.description for task in task.context]
+                                        if task.context
+                                        else None
+                                    ),
+                                    "tools_names": [
+                                        tool.name.casefold()
+                                        for tool in task.tools or []
+                                    ],
+                                }
+                                for task in crew.tasks
+                            ]
+                        ),
+                    )
+                    self._add_attribute(span, "platform", platform.platform())
+                    self._add_attribute(span, "platform_release", platform.release())
+                    self._add_attribute(span, "platform_system", platform.system())
+                    self._add_attribute(span, "platform_version", platform.version())
+                    self._add_attribute(span, "cpus", os.cpu_count())
                     self._add_attribute(
                         span, "crew_inputs", json.dumps(inputs) if inputs else None
                     )
