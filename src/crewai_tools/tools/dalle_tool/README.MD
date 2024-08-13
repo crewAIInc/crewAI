@@ -38,4 +38,4 @@ Agent(
 )
 ```
 
-The parameter are based on the `client.images.generate` method from the OpenAI API. For more information on the parameters, please refer to the [OpenAI API documentation](https://platform.openai.com/docs/guides/images/introduction?lang=python).
+The parameters are based on the `client.images.generate` method from the OpenAI API. For more information on the parameters, please refer to the [OpenAI API documentation](https://platform.openai.com/docs/guides/images/introduction?lang=python).
