@@ -1,5 +1,3 @@
-Here's the rewritten README for the `FileWriterTool`:
-
 # FileWriterTool Documentation
 
 ## Description
