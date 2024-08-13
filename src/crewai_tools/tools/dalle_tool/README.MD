@@ -27,10 +27,10 @@ If needed you can also tweak the parameters of the DALL-E model by passing them 
 ```python
 from crewai_tools import DallETool
 
-dalle_tool = DallETool(model: str = "dall-e-3",
-                       size: str = "1024x1024",
-                       quality: str = "standard",
-                       n: int = 1)
+dalle_tool = DallETool(model="dall-e-3",
+                       size="1024x1024",
+                       quality="standard",
+                       n= 1)
 
 Agent(
     ...
