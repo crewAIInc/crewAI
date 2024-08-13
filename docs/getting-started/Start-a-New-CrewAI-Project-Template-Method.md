@@ -154,15 +154,15 @@ email_summarizer_task:
 Use the annotations to properly reference the agent and task in the crew.py file.
 
 ### Annotations include:
-* @agent
-* @task
-* @crew
-* @llm
-* @tool
-* @callback
-* @output_json
-* @output_pydantic
-* @cache_handler
+* [@agent](https://github.com/crewAIInc/crewAI/blob/97d7bfb52ad49a9f04db360e1b6612d98c91971e/src/crewai/project/annotations.py#L17)
+* [@task](https://github.com/crewAIInc/crewAI/blob/97d7bfb52ad49a9f04db360e1b6612d98c91971e/src/crewai/project/annotations.py#L4)
+* [@crew](https://github.com/crewAIInc/crewAI/blob/97d7bfb52ad49a9f04db360e1b6612d98c91971e/src/crewai/project/annotations.py#L69)
+* [@llm](https://github.com/crewAIInc/crewAI/blob/97d7bfb52ad49a9f04db360e1b6612d98c91971e/src/crewai/project/annotations.py#L23)
+* [@tool](https://github.com/crewAIInc/crewAI/blob/97d7bfb52ad49a9f04db360e1b6612d98c91971e/src/crewai/project/annotations.py#L39)
+* [@callback](https://github.com/crewAIInc/crewAI/blob/97d7bfb52ad49a9f04db360e1b6612d98c91971e/src/crewai/project/annotations.py#L44)
+* [@output_json](https://github.com/crewAIInc/crewAI/blob/97d7bfb52ad49a9f04db360e1b6612d98c91971e/src/crewai/project/annotations.py#L29)
+* [@output_pydantic](https://github.com/crewAIInc/crewAI/blob/97d7bfb52ad49a9f04db360e1b6612d98c91971e/src/crewai/project/annotations.py#L34)
+* [@cache_handler](https://github.com/crewAIInc/crewAI/blob/97d7bfb52ad49a9f04db360e1b6612d98c91971e/src/crewai/project/annotations.py#L49)
 
 crew.py
 ```py
