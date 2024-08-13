@@ -152,6 +152,9 @@ nav:
     - Agent Monitoring with AgentOps: 'how-to/AgentOps-Observability.md'
     - Agent Monitoring with LangTrace: 'how-to/Langtrace-Observability.md'
   - Tools Docs:
+    - Firecrawl Scrape Website Tool: 'tools/FirecrawlScrapeWebsiteTool.md'
+    - Firecrawl Crawl Website Tool: 'tools/FirecrawlCrawlWebsiteTool.md'
+    - Firecrawl Search Tool: 'tools/FirecrawlSearchTool.md'
     - Google Serper Search: 'tools/SerperDevTool.md'
     - Browserbase Web Loader: 'tools/BrowserbaseLoadTool.md'
     - Composio Tools: 'tools/ComposioTool.md'
