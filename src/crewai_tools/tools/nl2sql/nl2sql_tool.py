@@ -1,12 +1,11 @@
 from typing import Any, Union
 
 from ..base_tool import BaseTool
-from pydantic import Field
+from pydantic import BaseModel, Field
 from sqlalchemy import create_engine, text
 from sqlalchemy.orm import sessionmaker
 
-from typing import Optional, Type, Any
-from pydantic.v1 import BaseModel
+from typing import Type, Any
 
 class NL2SQLToolInput(BaseModel):
     sql_query: str = Field(
