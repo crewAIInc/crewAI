@@ -25,7 +25,7 @@ def create_pipeline(name, router=False):
 
     # Create .env file
     with open(project_root / ".env", "w") as file:
-        file.write("OPENAI_API_KEY=")
+        file.write("OPENAI_API_KEY=YOUR_API_KEY")
 
     package_dir = Path(__file__).parent
     template_folder = "pipeline_router" if router else "pipeline"
