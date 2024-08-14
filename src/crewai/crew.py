@@ -51,7 +51,7 @@ from crewai.utilities.training_handler import CrewTrainingHandler
 agentops = None
 if os.environ.get("AGENTOPS_API_KEY"):
     try:
-        import agentops
+        import agentops  # type: ignore
     except ImportError:
         pass
 
