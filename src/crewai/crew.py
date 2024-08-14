@@ -1,9 +1,9 @@
 import asyncio
 import json
+import os
 import uuid
 from concurrent.futures import Future
 from hashlib import md5
-import os
 from typing import TYPE_CHECKING, Any, Dict, List, Optional, Tuple, Union
 
 from langchain_core.callbacks import BaseCallbackHandler
@@ -47,7 +47,6 @@ from crewai.utilities.formatter import (
 from crewai.utilities.planning_handler import CrewPlanner
 from crewai.utilities.task_output_storage_handler import TaskOutputStorageHandler
 from crewai.utilities.training_handler import CrewTrainingHandler
-
 
 agentops = None
 if os.environ.get("AGENTOPS_API_KEY"):
@@ -541,7 +540,7 @@ class Crew(BaseModel):
         )._handle_crew_planning()
 
         for task, step_plan in zip(self.tasks, result.list_of_plans_per_task):
-            task.description += step_plan
+            task.description += step_plan.plan
 
     def _store_execution_log(
         self,
