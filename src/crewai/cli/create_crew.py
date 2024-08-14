@@ -29,7 +29,7 @@ def create_crew(name, parent_folder=None):
             (folder_path / "src" / folder_name / "tools").mkdir(parents=True)
             (folder_path / "src" / folder_name / "config").mkdir(parents=True)
             with open(folder_path / ".env", "w") as file:
-                file.write("OPENAI_API_KEY=YOUR_API_KEY")
+                file.write("OPENAI_API_KEY=")
     else:
         click.secho(
             f"\tFolder {folder_name} already exists. Please choose a different name.",
