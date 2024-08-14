@@ -147,7 +147,7 @@ os.environ[SOLAR_API_BASE]="https://api.upstage.ai/v1/solar"
 os.environ[SOLAR_API_KEY]="your-solar-api-key"
 ```
 
-# Free developer API key available here: https://console.upstage.ai/services/solar
+# Free developer API key available here: https://console.upstage.ai/api-keys
 # Langchain Example: https://github.com/langchain-ai/langchain/pull/18556
 
 
