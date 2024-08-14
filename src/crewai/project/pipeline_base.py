@@ -11,7 +11,7 @@ from crewai.routers.router import Router
 def PipelineBase(cls):
     class WrappedClass(cls):
         model_config = ConfigDict(arbitrary_types_allowed=True)
-        is_pipeline_class: bool = True
+        is_pipeline_class: bool = True  # type: ignore
 
         def __init__(self, *args, **kwargs):
             super().__init__(*args, **kwargs)
