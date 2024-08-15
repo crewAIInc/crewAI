@@ -185,7 +185,7 @@ class Task(BaseModel):
         expected_output = self._original_expected_output or self.expected_output
         source = [description, expected_output]
 
-        return md5("|".join(source).encode()).hexdigest()
+        return md5("|".join(source).encode(), usedforsecurity=False).hexdigest()
 
     def execute_async(
         self,
