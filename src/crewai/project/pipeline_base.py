@@ -1,7 +1,5 @@
 from typing import Callable, Dict
 
-from pydantic import ConfigDict
-
 from crewai.crew import Crew
 from crewai.pipeline.pipeline import Pipeline
 from crewai.routers.router import Router
@@ -10,7 +8,6 @@ from crewai.routers.router import Router
 # TODO: Could potentially remove. Need to check with @joao and @gui if this is needed for CrewAI+
 def PipelineBase(cls):
     class WrappedClass(cls):
-        model_config = ConfigDict(arbitrary_types_allowed=True)
         is_pipeline_class: bool = True
 
         def __init__(self, *args, **kwargs):

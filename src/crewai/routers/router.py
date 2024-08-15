@@ -24,8 +24,6 @@ class Router(BaseModel, Generic[T, U]):
     default: U = Field(..., description="Default pipeline if no conditions are met")
     _route_types: Dict[str, type] = PrivateAttr(default_factory=dict)
 
-    model_config = {"arbitrary_types_allowed": True}
-
     def __init__(self, routes: Dict[str, Route[T, U]], default: U, **data):
         super().__init__(routes=routes, default=default, **data)
         self._check_copyable(default)

@@ -2,13 +2,12 @@ import threading
 import time
 from typing import Union
 
-from pydantic import BaseModel, ConfigDict, Field, PrivateAttr, model_validator
+from pydantic import BaseModel, Field, PrivateAttr, model_validator
 
 from crewai.utilities.logger import Logger
 
 
 class RPMController(BaseModel):
-    model_config = ConfigDict(arbitrary_types_allowed=True)
     max_rpm: Union[int, None] = Field(default=None)
     logger: Logger = Field(default=None)
     _current_rpm: int = PrivateAttr(default=0)

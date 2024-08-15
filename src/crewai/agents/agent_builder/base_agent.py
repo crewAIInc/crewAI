@@ -7,7 +7,6 @@ from typing import Any, Dict, List, Optional, TypeVar
 from pydantic import (
     UUID4,
     BaseModel,
-    ConfigDict,
     Field,
     InstanceOf,
     PrivateAttr,
@@ -78,7 +77,6 @@ class BaseAgent(ABC, BaseModel):
     _rpm_controller: RPMController = PrivateAttr(default=None)
     _request_within_rpm_limit: Any = PrivateAttr(default=None)
     formatting_errors: int = 0
-    model_config = ConfigDict(arbitrary_types_allowed=True)
     id: UUID4 = Field(default_factory=uuid.uuid4, frozen=True)
     role: str = Field(description="Role of the agent")
     goal: str = Field(description="Objective of the agent")

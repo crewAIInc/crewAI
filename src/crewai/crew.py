@@ -1,16 +1,15 @@
 import asyncio
 import json
+import os
 import uuid
 from concurrent.futures import Future
 from hashlib import md5
-import os
 from typing import TYPE_CHECKING, Any, Dict, List, Optional, Tuple, Union
 
 from langchain_core.callbacks import BaseCallbackHandler
 from pydantic import (
     UUID4,
     BaseModel,
-    ConfigDict,
     Field,
     InstanceOf,
     Json,
@@ -47,7 +46,6 @@ from crewai.utilities.formatter import (
 from crewai.utilities.planning_handler import CrewPlanner
 from crewai.utilities.task_output_storage_handler import TaskOutputStorageHandler
 from crewai.utilities.training_handler import CrewTrainingHandler
-
 
 agentops = None
 if os.environ.get("AGENTOPS_API_KEY"):
@@ -106,7 +104,6 @@ class Crew(BaseModel):
 
     name: Optional[str] = Field(default=None)
     cache: bool = Field(default=True)
-    model_config = ConfigDict(arbitrary_types_allowed=True)
     tasks: List[Task] = Field(default_factory=list)
     agents: List[BaseAgent] = Field(default_factory=list)
     process: Process = Field(default=Process.sequential)
@@ -907,6 +904,8 @@ class Crew(BaseModel):
         # type: ignore # "interpolate_inputs" of "Agent" does not return a value (it only ever returns None)
         for agent in self.agents:
             agent.interpolate_inputs(inputs)
+
+            agent.parse_raw
 
     def _finish_execution(self, final_string_output: str) -> None:
         if self.max_rpm:
