@@ -62,6 +62,9 @@ ignore_missing_imports = true
 disable_error_code = 'import-untyped'
 exclude = ["cli/templates"]
 
+[tool.bandit]
+exclude_dirs = ["src/crewai/cli/templates"]
+
 [build-system]
 requires = ["poetry-core"]
 build-backend = "poetry.core.masonry.api"

@@ -363,7 +363,7 @@ class Crew(BaseModel):
         source = [agent.key for agent in self.agents] + [
             task.key for task in self.tasks
         ]
-        return md5("|".join(source).encode()).hexdigest()
+        return md5("|".join(source).encode(), usedforsecurity=False).hexdigest()
 
     def _setup_from_config(self):
         assert self.config is not None, "Config should not be None."
