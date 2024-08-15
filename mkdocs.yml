@@ -129,6 +129,7 @@ nav:
     - Processes: 'core-concepts/Processes.md'
     - Crews: 'core-concepts/Crews.md'
     - Collaboration: 'core-concepts/Collaboration.md'
+    - Pipeline: 'core-concepts/Pipeline.md'
     - Training: 'core-concepts/Training-Crew.md'
     - Memory: 'core-concepts/Memory.md'
     - Planning: 'core-concepts/Planning.md'
