@@ -73,11 +73,17 @@ class BaseAgent(ABC, BaseModel):
     """
 
     __hash__ = object.__hash__  # type: ignore
-    _logger: Logger = PrivateAttr()
-    _rpm_controller: RPMController = PrivateAttr(default=None)
+    _logger: Logger = PrivateAttr(default_factory=lambda: Logger(verbose=False))
+    _rpm_controller: Optional[RPMController] = PrivateAttr(default=None)
     _request_within_rpm_limit: Any = PrivateAttr(default=None)
-    formatting_errors: int = 0
+    _original_role: Optional[str] = PrivateAttr(default=None)
+    _original_goal: Optional[str] = PrivateAttr(default=None)
+    _original_backstory: Optional[str] = PrivateAttr(default=None)
+    _token_process: TokenProcess = PrivateAttr(default_factory=TokenProcess)
     id: UUID4 = Field(default_factory=uuid.uuid4, frozen=True)
+    formatting_errors: int = Field(
+        default=0, description="Number of formatting errors."
+    )
     role: str = Field(description="Role of the agent")
     goal: str = Field(description="Objective of the agent")
     backstory: str = Field(description="Backstory of the agent")
@@ -120,15 +126,6 @@ class BaseAgent(ABC, BaseModel):
     max_tokens: Optional[int] = Field(
         default=None, description="Maximum number of tokens for the agent's execution."
     )
-
-    _original_role: str | None = None
-    _original_goal: str | None = None
-    _original_backstory: str | None = None
-    _token_process: TokenProcess = TokenProcess()
-
-    def __init__(__pydantic_self__, **data):
-        config = data.pop("config", {})
-        super().__init__(**config, **data)
 
     @model_validator(mode="after")
     def set_config_attributes(self):
