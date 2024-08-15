@@ -10,6 +10,10 @@ class TaskOutput(BaseModel):
     """Class that represents the result of a task."""
 
     description: str = Field(description="Description of the task")
+    name: Optional[str] = Field(description="Name of the task", default=None)
+    expected_output: Optional[str] = Field(
+        description="Expected output of the task", default=None
+    )
     summary: Optional[str] = Field(description="Summary of the task", default=None)
     raw: str = Field(description="Raw output of the task", default="")
     pydantic: Optional[BaseModel] = Field(
