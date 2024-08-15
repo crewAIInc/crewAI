@@ -10,7 +10,7 @@ class CacheTools(BaseModel):
     name: str = "Hit Cache"
     cache_handler: CacheHandler = Field(
         description="Cache Handler for the crew",
-        default=CacheHandler(),
+        default_factory=CacheHandler,
     )
 
     def tool(self):
