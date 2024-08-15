@@ -54,7 +54,7 @@ To set up a virtual environment, run the following CLI command:
 To create a new CrewAI project, run the following CLI command:
 
 ```shell
-$ crewai create crew <project_name>
+$ crewai create <project_name>
 ```
 
 This command will create a new project folder with the following structure:
