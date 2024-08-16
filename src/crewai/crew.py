@@ -905,8 +905,6 @@ class Crew(BaseModel):
         for agent in self.agents:
             agent.interpolate_inputs(inputs)
 
-            agent.parse_raw
-
     def _finish_execution(self, final_string_output: str) -> None:
         if self.max_rpm:
             self._rpm_controller.stop_rpm_counter()
