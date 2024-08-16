@@ -108,7 +108,7 @@ class Task(BaseModel):
         default=None,
     )
 
-    _telemetry: Optional[Telemetry] = PrivateAttr(default_factory=None)
+    _telemetry: Telemetry = PrivateAttr(default_factory=Telemetry)
     _execution_span: Optional[Span] = PrivateAttr(default=None)
     _original_description: Optional[str] = PrivateAttr(default=None)
     _original_expected_output: Optional[str] = PrivateAttr(default=None)
@@ -136,12 +136,6 @@ class Task(BaseModel):
         if value.startswith("/"):
             return value[1:]
         return value
-
-    @model_validator(mode="after")
-    def set_private_attrs(self) -> "Task":
-        """Set private attributes."""
-        self._telemetry = Telemetry()
-        return self
 
     @model_validator(mode="after")
     def set_attributes_based_on_config(self) -> "Task":
