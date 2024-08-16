@@ -25,14 +25,20 @@ def mock_crew_factory():
         MockCrewClass = type("MockCrew", (MagicMock, Crew), {})
 
         class MockCrew(MockCrewClass):
-            def __deepcopy__(self, memo):
+            def __deepcopy__(self):
                 result = MockCrewClass()
                 result.kickoff_async = self.kickoff_async
                 result.name = self.name
                 return result
 
+            def copy(
+                self,
+            ):
+                return self
+
         crew = MockCrew()
         crew.name = name
+
         task_output = TaskOutput(
             description="Test task", raw="Task output", agent="Test Agent"
         )
@@ -44,8 +50,14 @@ def mock_crew_factory():
             pydantic=pydantic_output,
         )
 
-        async def async_kickoff(inputs=None):
+        async def kickoff_async(inputs=None):
             return crew_output
+
+        # Create an AsyncMock for kickoff_async
+        crew.kickoff_async = AsyncMock(side_effect=kickoff_async)
+
+        # Mock the synchronous kickoff method
+        crew.kickoff = MagicMock(return_value=crew_output)
 
         # Add more attributes that Procedure might be expecting
         crew.verbose = False
@@ -56,29 +68,15 @@ def mock_crew_factory():
         crew.config = None
         crew.cache = True
 
-        # # Create a valid Agent instance
-        mock_agent = Agent(
-            name="Mock Agent",
-            role="Mock Role",
-            goal="Mock Goal",
-            backstory="Mock Backstory",
-            allow_delegation=False,
-            verbose=False,
-        )
-
-        # Create a valid Task instance
-        mock_task = Task(
-            description="Return: Test output",
-            expected_output="Test output",
-            agent=mock_agent,
-            async_execution=False,
-            context=None,
-        )
+        # Add non-empty agents and tasks
+        mock_agent = MagicMock(spec=Agent)
+        mock_task = MagicMock(spec=Task)
+        mock_task.agent = mock_agent
+        mock_task.async_execution = False
+        mock_task.context = None
 
         crew.agents = [mock_agent]
         crew.tasks = [mock_task]
-
-        crew.kickoff_async = AsyncMock(side_effect=async_kickoff)
 
         return crew
 
@@ -115,9 +113,7 @@ def mock_router_factory(mock_crew_factory):
                 (
                     "route1"
                     if x.get("score", 0) > 80
-                    else "route2"
-                    if x.get("score", 0) > 50
-                    else "default"
+                    else "route2" if x.get("score", 0) > 50 else "default"
                 ),
             )
         )
@@ -477,31 +473,17 @@ async def test_pipeline_with_parallel_stages_end_in_single_stage(mock_crew_facto
     """
     Test that Pipeline correctly handles parallel stages.
     """
-    crew1 = Crew(name="Crew 1", tasks=[task], agents=[agent])
-    crew2 = Crew(name="Crew 2", tasks=[task], agents=[agent])
-    crew3 = Crew(name="Crew 3", tasks=[task], agents=[agent])
-    crew4 = Crew(name="Crew 4", tasks=[task], agents=[agent])
+    crew1 = mock_crew_factory(name="Crew 1")
+    crew2 = mock_crew_factory(name="Crew 2")
+    crew3 = mock_crew_factory(name="Crew 3")
+    crew4 = mock_crew_factory(name="Crew 4")
 
     pipeline = Pipeline(stages=[crew1, [crew2, crew3], crew4])
     input_data = [{"initial": "data"}]
 
     pipeline_result = await pipeline.kickoff(input_data)
 
-    with patch.object(Crew, "kickoff_async") as mock_kickoff:
-        mock_kickoff.return_value = CrewOutput(
-            raw="Test output",
-            tasks_output=[
-                TaskOutput(
-                    description="Test task", raw="Task output", agent="Test Agent"
-                )
-            ],
-            token_usage=DEFAULT_TOKEN_USAGE,
-            json_dict=None,
-            pydantic=None,
-        )
-        pipeline_result = await pipeline.kickoff(input_data)
-
-        mock_kickoff.assert_called_with(inputs={"initial": "data"})
+    crew1.kickoff_async.assert_called_once_with(inputs={"initial": "data"})
 
     assert len(pipeline_result) == 1
     pipeline_result_1 = pipeline_result[0]
@@ -649,33 +631,21 @@ Options:
 
 
 @pytest.mark.asyncio
-async def test_pipeline_data_accumulation():
-    crew1 = Crew(name="Crew 1", tasks=[task], agents=[agent])
-    crew2 = Crew(name="Crew 2", tasks=[task], agents=[agent])
+async def test_pipeline_data_accumulation(mock_crew_factory):
+    crew1 = mock_crew_factory(name="Crew 1", output_json_dict={"key1": "value1"})
+    crew2 = mock_crew_factory(name="Crew 2", output_json_dict={"key2": "value2"})
 
     pipeline = Pipeline(stages=[crew1, crew2])
     input_data = [{"initial": "data"}]
     results = await pipeline.kickoff(input_data)
 
-    with patch.object(Crew, "kickoff_async") as mock_kickoff:
-        mock_kickoff.side_effect = [
-            CrewOutput(
-                raw="Test output from Crew 1",
-                tasks_output=[],
-                token_usage=DEFAULT_TOKEN_USAGE,
-                json_dict={"key1": "value1"},
-                pydantic=None,
-            ),
-            CrewOutput(
-                raw="Test output from Crew 2",
-                tasks_output=[],
-                token_usage=DEFAULT_TOKEN_USAGE,
-                json_dict={"key2": "value2"},
-                pydantic=None,
-            ),
-        ]
+    # Check that crew1 was called with only the initial input
+    crew1.kickoff_async.assert_called_once_with(inputs={"initial": "data"})
 
-        results = await pipeline.kickoff(input_data)
+    # Check that crew2 was called with the combined input from the initial data and crew1's output
+    crew2.kickoff_async.assert_called_once_with(
+        inputs={"initial": "data", "key1": "value1"}
+    )
 
     # Check the final output
     assert len(results) == 1
