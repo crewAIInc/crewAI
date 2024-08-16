@@ -4,11 +4,6 @@ from unittest import mock
 from unittest.mock import patch
 
 import pytest
-from langchain.tools import tool
-from langchain_core.exceptions import OutputParserException
-from langchain_openai import ChatOpenAI
-from langchain.schema import AgentAction
-
 from crewai import Agent, Crew, Task
 from crewai.agents.cache import CacheHandler
 from crewai.agents.executor import CrewAgentExecutor
@@ -16,6 +11,10 @@ from crewai.agents.parser import CrewAgentParser
 from crewai.tools.tool_calling import InstructorToolCalling
 from crewai.tools.tool_usage import ToolUsage
 from crewai.utilities import RPMController
+from langchain.schema import AgentAction
+from langchain.tools import tool
+from langchain_core.exceptions import OutputParserException
+from langchain_openai import ChatOpenAI
 
 
 def test_agent_creation():
@@ -817,7 +816,7 @@ def test_agent_definition_based_on_dict():
         "verbose": True,
     }
 
-    agent = Agent(config=config)
+    agent = Agent(**config)
 
     assert agent.role == "test role"
     assert agent.goal == "test goal"
@@ -837,7 +836,7 @@ def test_agent_human_input():
         "backstory": "test backstory",
     }
 
-    agent = Agent(config=config)
+    agent = Agent(**config)
 
     task = Task(
         agent=agent,
