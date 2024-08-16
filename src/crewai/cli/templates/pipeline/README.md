@@ -15,12 +15,15 @@ pip install poetry
 Next, navigate to your project directory and install the dependencies:
 
 1. First lock the dependencies and then install them:
+
 ```bash
 poetry lock
 ```
+
 ```bash
 poetry install
 ```
+
 ### Customizing
 
 **Add your `OPENAI_API_KEY` into the `.env` file**
@@ -49,6 +52,7 @@ The {{name}} Crew is composed of multiple AI agents, each with unique roles, goa
 ## Support
 
 For support, questions, or feedback regarding the {{crew_name}} Crew or crewAI.
+
 - Visit our [documentation](https://docs.crewai.com)
 - Reach out to us through our [GitHub repository](https://github.com/joaomdmoura/crewai)
 - [Join our Discord](https://discord.com/invite/X4JWnZnxPb)
