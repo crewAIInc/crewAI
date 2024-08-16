@@ -113,10 +113,11 @@ class Agent(BaseAgent):
         description="Maximum number of retries for an agent to execute a task when an error occurs.",
     )
 
-    def __init__(__pydantic_self__, **data):
-        config = data.pop("config", {})
-        super().__init__(**config, **data)
-        __pydantic_self__.agent_ops_agent_name = __pydantic_self__.role
+    @model_validator(mode="after")
+    def set_agent_ops_agent_name(self) -> "Agent":
+        """Set agent ops agent name."""
+        self.agent_ops_agent_name = self.role
+        return self
 
     @model_validator(mode="after")
     def set_agent_executor(self) -> "Agent":
@@ -213,7 +214,7 @@ class Agent(BaseAgent):
                 raise e
             result = self.execute_task(task, context, tools)
 
-        if self.max_rpm:
+        if self.max_rpm and self._rpm_controller:
             self._rpm_controller.stop_rpm_counter()
 
         # If there was any tool in self.tools_results that had result_as_answer

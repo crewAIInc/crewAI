@@ -10,7 +10,6 @@ from langchain_core.callbacks import BaseCallbackHandler
 from pydantic import (
     UUID4,
     BaseModel,
-    ConfigDict,
     Field,
     InstanceOf,
     Json,
@@ -105,7 +104,6 @@ class Crew(BaseModel):
 
     name: Optional[str] = Field(default=None)
     cache: bool = Field(default=True)
-    model_config = ConfigDict(arbitrary_types_allowed=True)
     tasks: List[Task] = Field(default_factory=list)
     agents: List[BaseAgent] = Field(default_factory=list)
     process: Process = Field(default=Process.sequential)

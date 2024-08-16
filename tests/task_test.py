@@ -1,8 +1,8 @@
 """Test Agent creation and execution basic functionality."""
 
-import os
 import hashlib
 import json
+import os
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -703,7 +703,7 @@ def test_task_definition_based_on_dict():
         "expected_output": "The score of the title.",
     }
 
-    task = Task(config=config)
+    task = Task(**config)
 
     assert task.description == config["description"]
     assert task.expected_output == config["expected_output"]
@@ -716,7 +716,7 @@ def test_conditional_task_definition_based_on_dict():
         "expected_output": "The score of the title.",
     }
 
-    task = ConditionalTask(config=config, condition=lambda x: True)
+    task = ConditionalTask(**config, condition=lambda x: True)
 
     assert task.description == config["description"]
     assert task.expected_output == config["expected_output"]
