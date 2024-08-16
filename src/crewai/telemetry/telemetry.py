@@ -295,7 +295,7 @@ class Telemetry:
                 pass
 
     def individual_test_result_span(
-        self, crew: Crew, quality: int, exec_time: int, model_name: str
+        self, crew: Crew, quality: float, exec_time: int, model_name: str
     ):
         if self.ready:
             try:

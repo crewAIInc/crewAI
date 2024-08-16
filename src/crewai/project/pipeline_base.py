@@ -10,7 +10,7 @@ PipelineStage = Union[Crew, List[Crew], Router]
 # TODO: Could potentially remove. Need to check with @joao and @gui if this is needed for CrewAI+
 def PipelineBase(cls: Type[Any]) -> Type[Any]:
     class WrappedClass(cls):
-        is_pipeline_class: bool = True
+        is_pipeline_class: bool = True  # type: ignore
         stages: List[PipelineStage]
 
         def __init__(self, *args: Any, **kwargs: Any) -> None:

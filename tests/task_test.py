@@ -98,6 +98,7 @@ def test_task_callback():
     task_completed = MagicMock(return_value="done")
 
     task = Task(
+        name="Brainstorm",
         description="Give me a list of 5 interesting ideas to explore for na article, what makes them unique and interesting.",
         expected_output="Bullet point list of 5 interesting ideas.",
         agent=researcher,
@@ -108,6 +109,10 @@ def test_task_callback():
         execute.return_value = "ok"
         task.execute_sync(agent=researcher)
         task_completed.assert_called_once_with(task.output)
+
+        assert task.output.description == task.description
+        assert task.output.expected_output == task.expected_output
+        assert task.output.name == task.name
 
 
 def test_task_callback_returns_task_output():
@@ -149,6 +154,8 @@ def test_task_callback_returns_task_output():
             "json_dict": None,
             "agent": researcher.role,
             "summary": "Give me a list of 5 interesting ideas to explore...",
+            "name": None,
+            "expected_output": "Bullet point list of 5 interesting ideas.",
             "output_format": OutputFormat.RAW,
         }
         assert output_dict == expected_output

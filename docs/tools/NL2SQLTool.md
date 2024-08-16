@@ -47,8 +47,8 @@ The primary task goal was:
 
 So the Agent tried to get information from the DB, the first one is wrong so the Agent tries again and gets the correct information and passes to the next agent.
 
-![alt text](images/image-2.png)
-![alt text](images/image-3.png)
+![alt text](https://github.com/crewAIInc/crewAI-tools/blob/main/crewai_tools/tools/nl2sql/images/image-2.png?raw=true)
+![alt text](https://github.com/crewAIInc/crewAI-tools/raw/main/crewai_tools/tools/nl2sql/images/image-3.png)
 
 
 The second task goal was:
@@ -58,11 +58,11 @@ Include information on the average, maximum, and minimum monthly revenue for eac
 
 Now things start to get interesting, the Agent generates the SQL query to not only create the table but also insert the data into the table. And in the end the Agent still returns the final report which is exactly what was in the database.
 
-![alt text](images/image-4.png)
-![alt text](images/image-5.png)
+![alt text](https://github.com/crewAIInc/crewAI-tools/raw/main/crewai_tools/tools/nl2sql/images/image-4.png)
+![alt text](https://github.com/crewAIInc/crewAI-tools/raw/main/crewai_tools/tools/nl2sql/images/image-5.png)
 
-![alt text](images/image-9.png)
-![alt text](images/image-7.png)
+![alt text](https://github.com/crewAIInc/crewAI-tools/raw/main/crewai_tools/tools/nl2sql/images/image-9.png)
+![alt text](https://github.com/crewAIInc/crewAI-tools/raw/main/crewai_tools/tools/nl2sql/images/image-7.png)
 
 
 This is a simple example of how the NL2SQLTool can be used to interact with the database and generate reports based on the data in the database.

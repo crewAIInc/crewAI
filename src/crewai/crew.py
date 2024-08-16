@@ -50,7 +50,7 @@ from crewai.utilities.training_handler import CrewTrainingHandler
 agentops = None
 if os.environ.get("AGENTOPS_API_KEY"):
     try:
-        import agentops
+        import agentops  # type: ignore
     except ImportError:
         pass
 
@@ -361,7 +361,7 @@ class Crew(BaseModel):
         source = [agent.key for agent in self.agents] + [
             task.key for task in self.tasks
         ]
-        return md5("|".join(source).encode()).hexdigest()
+        return md5("|".join(source).encode(), usedforsecurity=False).hexdigest()
 
     def _setup_from_config(self):
         assert self.config is not None, "Config should not be None."
@@ -538,7 +538,7 @@ class Crew(BaseModel):
         )._handle_crew_planning()
 
         for task, step_plan in zip(self.tasks, result.list_of_plans_per_task):
-            task.description += step_plan
+            task.description += step_plan.plan
 
     def _store_execution_log(
         self,
