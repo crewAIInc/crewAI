@@ -185,7 +185,7 @@ class Task(BaseModel):
         expected_output = self._original_expected_output or self.expected_output
         source = [description, expected_output]
 
-        return md5("|".join(source).encode()).hexdigest()
+        return md5("|".join(source).encode(), usedforsecurity=False).hexdigest()
 
     def execute_async(
         self,
@@ -240,7 +240,9 @@ class Task(BaseModel):
         pydantic_output, json_output = self._export_output(result)
 
         task_output = TaskOutput(
+            name=self.name,
             description=self.description,
+            expected_output=self.expected_output,
             raw=result,
             pydantic=pydantic_output,
             json_dict=json_output,

@@ -6,12 +6,20 @@ def task(func):
         task.registration_order = []
 
     func.is_task = True
-    wrapped_func = memoize(func)
+    memoized_func = memoize(func)
 
     # Append the function name to the registration order list
     task.registration_order.append(func.__name__)
 
-    return wrapped_func
+    def wrapper(*args, **kwargs):
+        result = memoized_func(*args, **kwargs)
+
+        if not result.name:
+            result.name = func.__name__
+
+        return result
+
+    return wrapper
 
 
 def agent(func):
