@@ -1005,13 +1005,13 @@ files = [
 
 [[package]]
 name = "embedchain"
-version = "0.1.120"
+version = "0.1.121"
 description = "Simplest open source retrieval (RAG) framework"
 optional = false
 python-versions = "<=3.13,>=3.9"
 files = [
-    {file = "embedchain-0.1.120-py3-none-any.whl", hash = "sha256:9eaa946f8a7b394080c56067849d7852a78361dd5e7b099ebf42989c07a1814d"},
-    {file = "embedchain-0.1.120.tar.gz", hash = "sha256:6061c261a054d677e5b9c4062146d45e04e8572c67152120913d61aee4c22ae3"},
+    {file = "embedchain-0.1.121-py3-none-any.whl", hash = "sha256:c756e8750fb9e3431b6d2a0b0dfbb0dfebeae2d7669d3dd6894311a632abfe77"},
+    {file = "embedchain-0.1.121.tar.gz", hash = "sha256:1427a43fd92b0e5303d0d733ebcd5310df14da8bd8dba0b08818d0d3658e7c3e"},
 ]
 
 [package.dependencies]
@@ -1025,7 +1025,7 @@ langchain = ">0.2,<=0.3"
 langchain-cohere = ">=0.1.4,<0.2.0"
 langchain-community = ">=0.2.6,<0.3.0"
 langchain-openai = ">=0.1.7,<0.2.0"
-mem0ai = ">=0.0.9,<0.0.10"
+mem0ai = ">=0.0.20,<0.0.21"
 openai = ">=1.1.1"
 posthog = ">=3.0.2,<4.0.0"
 pypdf = ">=4.0.1,<5.0.0"
@@ -2707,20 +2707,22 @@ files = [
 
 [[package]]
 name = "mem0ai"
-version = "0.0.9"
+version = "0.0.20"
 description = "Long-term memory for AI Agents"
 optional = false
 python-versions = "<4.0,>=3.8"
 files = [
-    {file = "mem0ai-0.0.9-py3-none-any.whl", hash = "sha256:d4de435729af4fd3d597d022ffb2af89a0630d6c3b4769792bbe27d2ce816858"},
-    {file = "mem0ai-0.0.9.tar.gz", hash = "sha256:e4374d5d04aa3f543cd3325f700e4b62f5358ae1c6fa5c44b2ff790c10c4e5f1"},
+    {file = "mem0ai-0.0.20-py3-none-any.whl", hash = "sha256:c19b2082173c818f3516279f0924bfd763e2d18175560332c94e415e5131fd3b"},
+    {file = "mem0ai-0.0.20.tar.gz", hash = "sha256:459b96850156c8e51e321e3ab4e5f86fb00d75532c16ad41a3eb09578e0ce00a"},
 ]
 
 [package.dependencies]
 openai = ">=1.33.0,<2.0.0"
 posthog = ">=3.5.0,<4.0.0"
 pydantic = ">=2.7.3,<3.0.0"
+pytz = ">=2024.1,<2025.0"
 qdrant-client = ">=1.9.1,<2.0.0"
+sqlalchemy = ">=2.0.31,<3.0.0"
 
 [[package]]
 name = "mergedeep"
@@ -5572,6 +5574,7 @@ description = "Automatically mock your HTTP interactions to simplify and speed u
 optional = false
 python-versions = ">=3.8"
 files = [
+    {file = "vcrpy-6.0.1-py2.py3-none-any.whl", hash = "sha256:621c3fb2d6bd8aa9f87532c688e4575bcbbde0c0afeb5ebdb7e14cac409edfdd"},
     {file = "vcrpy-6.0.1.tar.gz", hash = "sha256:9e023fee7f892baa0bbda2f7da7c8ac51165c1c6e38ff8688683a12a4bde9278"},
 ]
 
@@ -6073,4 +6076,4 @@ tools = ["crewai-tools"]
 [metadata]
 lock-version = "2.0"
 python-versions = ">=3.10,<=3.13"
-content-hash = "91ba982ea96ca7be017d536784223d4ef83e86de05d11eb1c3ce0fc1b726f283"
+content-hash = "a69ccfe611edf0c3857cdf1dbcbdbd443b0130bff418713dce3993025cc14311"

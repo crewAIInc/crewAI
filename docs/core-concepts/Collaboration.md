@@ -25,6 +25,7 @@ The `Crew` class has been enriched with several attributes to support advanced f
 - **Crew Sharing (`share_crew`)**: Enables sharing of crew information with CrewAI for continuous improvement and training models. The privacy implications and benefits of this feature, including how it contributes to model improvement, should be outlined.
 - **Usage Metrics (`usage_metrics`)**: Stores all metrics for the language model (LLM) usage during all tasks' execution, providing insights into operational efficiency and areas for improvement. Detailed information on accessing and interpreting these metrics for performance analysis should be provided.
 - **Memory Usage (`memory`)**: Indicates whether the crew should use memory to store memories of its execution, enhancing task execution and agent learning.
+- **Memory Provider (`memory_provider`)**: Specifies the memory provider to be used by the crew for storing memories.
 - **Embedder Configuration (`embedder`)**: Specifies the configuration for the embedder to be used by the crew for understanding and generating language. This attribute supports customization of the language model provider.
 - **Cache Management (`cache`)**: Determines whether the crew should use a cache to store the results of tool executions, optimizing performance.
 - **Output Logging (`output_log_file`)**: Specifies the file path for logging the output of the crew execution.

@@ -197,6 +197,25 @@ crewai reset_memories [OPTIONS]
   - **Type:** Flag (boolean)
   - **Default:** False
 
+## Use Mem0 to store memories
+[Mem0](https://www.mem0.ai/) enhances AI assistants and agents with an intelligent memory layer, enabling personalized AI interactions. Mem0 remembers user preferences, adapts to individual needs, and continuously improves over time, making it ideal for customer support chatbots, AI assistants, and autonomous systems.
+
+In order to use Mem0 as the memory provider for your crew, you will have to set `MEM0_API_KEY` as an environment variable. Refer to the [Mem0 documentation](https://docs.mem0.ai/platform/quickstart) for more information on how to obtain an API key.
+
+### Example: Using Mem0 as the Memory Provider
+```python
+from crewai import Crew, Agent, Task, Process
+
+my_crew = Crew(
+		agents=[...],
+		tasks=[...],
+		process=Process.sequential,
+		memory=True,
+		verbose=True,
+		memory_provider="mem0"
+)
+```
+
 ## Benefits of Using crewAI's Memory System
 - **Adaptive Learning:** Crews become more efficient over time, adapting to new information and refining their approach to tasks.
 - **Enhanced Personalization:** Memory enables agents to remember user preferences and historical interactions, leading to personalized experiences.

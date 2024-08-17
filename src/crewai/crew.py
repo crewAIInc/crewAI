@@ -26,6 +26,7 @@ from crewai.crews.crew_output import CrewOutput
 from crewai.memory.entity.entity_memory import EntityMemory
 from crewai.memory.long_term.long_term_memory import LongTermMemory
 from crewai.memory.short_term.short_term_memory import ShortTermMemory
+from crewai.memory.user.user_memory import UserMemory
 from crewai.process import Process
 from crewai.task import Task
 from crewai.tasks.conditional_task import ConditionalTask
@@ -92,6 +93,7 @@ class Crew(BaseModel):
     _short_term_memory: Optional[InstanceOf[ShortTermMemory]] = PrivateAttr()
     _long_term_memory: Optional[InstanceOf[LongTermMemory]] = PrivateAttr()
     _entity_memory: Optional[InstanceOf[EntityMemory]] = PrivateAttr()
+    _user_memory: Optional[InstanceOf[UserMemory]] = PrivateAttr()
     _train: Optional[bool] = PrivateAttr(default=False)
     _train_iteration: Optional[int] = PrivateAttr()
     _inputs: Optional[Dict[str, Any]] = PrivateAttr(default=None)
@@ -111,6 +113,10 @@ class Crew(BaseModel):
     memory: bool = Field(
         default=False,
         description="Whether the crew should use memory to store memories of it's execution",
+    )
+    memory_provider: Optional[str] = Field(
+        default=None,
+        description="The memory provider to be used for the crew.",
     )
     embedder: Optional[dict] = Field(
         default={"provider": "openai"},
@@ -215,9 +221,16 @@ class Crew(BaseModel):
         if self.memory:
             self._long_term_memory = LongTermMemory()
             self._short_term_memory = ShortTermMemory(
-                crew=self, embedder_config=self.embedder
+                memory_provider=self.memory_provider,
+                crew=self,
+                embedder_config=self.embedder,
             )
-            self._entity_memory = EntityMemory(crew=self, embedder_config=self.embedder)
+            self._entity_memory = EntityMemory(
+                memory_provider=self.memory_provider,
+                crew=self,
+                embedder_config=self.embedder,
+            )
+            self._user_memory = UserMemory(crew=self)
         return self
 
     @model_validator(mode="after")

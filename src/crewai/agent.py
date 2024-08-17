@@ -176,9 +176,11 @@ class Agent(BaseAgent):
 
         if self.crew and self.crew.memory:
             contextual_memory = ContextualMemory(
+                self.crew.memory_provider,
                 self.crew._short_term_memory,
                 self.crew._long_term_memory,
                 self.crew._entity_memory,
+                self.crew._user_memory,
             )
             memory = contextual_memory.build_context_for_task(task, context)
             if memory.strip() != "":

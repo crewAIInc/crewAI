@@ -1,13 +1,22 @@
 from typing import Optional
 
-from crewai.memory import EntityMemory, LongTermMemory, ShortTermMemory
+from crewai.memory import EntityMemory, LongTermMemory, ShortTermMemory, UserMemory
 
 
 class ContextualMemory:
-    def __init__(self, stm: ShortTermMemory, ltm: LongTermMemory, em: EntityMemory):
+    def __init__(
+        self,
+        memory_provider: str,
+        stm: ShortTermMemory,
+        ltm: LongTermMemory,
+        em: EntityMemory,
+        um: UserMemory,
+    ):
+        self.memory_provider = memory_provider
         self.stm = stm
         self.ltm = ltm
         self.em = em
+        self.um = um
 
     def build_context_for_task(self, task, context) -> str:
         """
@@ -23,6 +32,8 @@ class ContextualMemory:
         context.append(self._fetch_ltm_context(task.description))
         context.append(self._fetch_stm_context(query))
         context.append(self._fetch_entity_context(query))
+        if self.memory_provider == "mem0":
+            context.append(self._fetch_user_memory(query))
         return "\n".join(filter(None, context))
 
     def _fetch_stm_context(self, query) -> str:
@@ -60,6 +71,19 @@ class ContextualMemory:
         """
         em_results = self.em.search(query)
         formatted_results = "\n".join(
-            [f"- {result['context']}" for result in em_results]  # type: ignore #  Invalid index type "str" for "str"; expected type "SupportsIndex | slice"
+            [
+                f"- {result['memory'] if self.memory_provider == 'mem0' else result['context']}"
+                for result in em_results
+            ]  # type: ignore #  Invalid index type "str" for "str"; expected type "SupportsIndex | slice"
         )
         return f"Entities:\n{formatted_results}" if em_results else ""
+
+    def _fetch_user_memory(self, query) -> str:
+        """
+        Fetches relevant user memory information from User Memory related to the task's description and expected_output,
+        """
+        um_results = self.um.search(query)
+        formatted_results = "\n".join(
+            [f"- {result['memory']}" for result in um_results]
+        )
+        return f"User memories/preferences:\n{formatted_results}" if um_results else ""

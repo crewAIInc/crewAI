@@ -1,6 +1,7 @@
 from crewai.memory.entity.entity_memory_item import EntityMemoryItem
 from crewai.memory.memory import Memory
 from crewai.memory.storage.rag_storage import RAGStorage
+from crewai.memory.storage.mem0_storage import Mem0Storage
 
 
 class EntityMemory(Memory):
@@ -10,18 +11,33 @@ class EntityMemory(Memory):
     Inherits from the Memory class.
     """
 
-    def __init__(self, crew=None, embedder_config=None):
-        storage = RAGStorage(
-            type="entities",
-            allow_reset=False,
-            embedder_config=embedder_config,
-            crew=crew,
-        )
+    def __init__(self, memory_provider, crew=None, embedder_config=None):
+        self.memory_provider = memory_provider
+        if self.memory_provider == "mem0":
+            storage = Mem0Storage(
+                type="entities",
+                crew=crew,
+            )
+        else:
+            storage = RAGStorage(
+                type="entities",
+                allow_reset=False,
+                embedder_config=embedder_config,
+                crew=crew,
+            )
         super().__init__(storage)
 
     def save(self, item: EntityMemoryItem) -> None:  # type: ignore # BUG?: Signature of "save" incompatible with supertype "Memory"
         """Saves an entity item into the SQLite storage."""
-        data = f"{item.name}({item.type}): {item.description}"
+        if self.memory_provider == "mem0":
+            data = f"""
+            Remember details about the following entity:
+            Name: {item.name}
+            Type: {item.type}
+            Entity Description: {item.description}
+            """
+        else:
+            data = f"{item.name}({item.type}): {item.description}"
         super().save(data, item.metadata)
 
     def reset(self) -> None:
