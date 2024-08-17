@@ -4,10 +4,10 @@ The CrewAI CLI provides a set of commands to interact with CrewAI, allowing you 
 
 ## Installation
 
-To use the CrewAI CLI, make sure you have CrewAI installed:
+To use the CrewAI CLI, make sure you have CrewAI & Poetry installed:
 
 ```
-pip install crewai
+pip install crewai poetry
 ```
 
 ## Basic Usage
