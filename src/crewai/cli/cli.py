@@ -8,6 +8,7 @@ from crewai.memory.storage.kickoff_task_outputs_storage import (
 )
 
 from .evaluate_crew import evaluate_crew
+from .install_crew import install_crew
 from .replay_from_task import replay_task_command
 from .reset_memories_command import reset_memories_command
 from .run_crew import run_crew
@@ -166,9 +167,15 @@ def test(n_iterations: int, model: str):
 
 
 @crewai.command()
+def install():
+    """Install the Crew."""
+    install_crew()
+
+
+@crewai.command()
 def run():
-    """Run the crew."""
-    click.echo("Running the crew")
+    """Run the Crew."""
+    click.echo("Running the Crew")
     run_crew()
 
 

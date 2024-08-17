@@ -109,8 +109,7 @@ To install the dependencies for your project, use Poetry:
 
 ```shell
 $ cd <project_name>
-$ poetry lock
-$ poetry install
+$ crewai install
 ```
 
 ## Running Your Pipeline Project
@@ -119,12 +118,6 @@ To run your pipeline project, use the following command:
 
 ```shell
 $ crewai run
-```
-
-or
-
-```shell
-$ poetry run <project_name>
 ```
 
 This will initialize your pipeline and begin task execution as defined in your `main.py` file.
