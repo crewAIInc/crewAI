@@ -15,7 +15,7 @@ if 'postmortem_result' not in st.session_state:
 
 st.title("AI Analysis")
 
-# Text input for user's custom request
+# Text input for user's custom request yes
 user_request = st.text_area("Enter your request for analysis:", 
                             "Analyze the latest advancements in AI in 2024. Identify key trends, breakthrough technologies, and potential industry impacts.")
 
