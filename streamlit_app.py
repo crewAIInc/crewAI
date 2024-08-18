@@ -1,7 +1,7 @@
 import streamlit as st
 from app import run_crew, run_postmortem
 
-st.set_page_config(page_title="AI Analysis", page_icon="🤖", layout="wide")
+st.set_page_config(page_title="SYZYGI AI Analysis", page_icon="🤖", layout="wide")
 
 # Initialize session state
 if 'analysis_complete' not in st.session_state:
@@ -13,7 +13,7 @@ if 'postmortem_complete' not in st.session_state:
 if 'postmortem_result' not in st.session_state:
     st.session_state.postmortem_result = None
 
-st.title("AI Analysis")
+st.title("SYZYGI AI Analysis")
 
 # Text input for user's custom request yes
 user_request = st.text_area("Enter your request for analysis:", 
@@ -52,7 +52,7 @@ if st.session_state.analysis_complete:
 
 st.sidebar.header("About")
 st.sidebar.info(
-    "This app uses CrewAI to analyze topics based on your custom request, generate a blog post about the findings, and conduct a postmortem analysis on the team's performance."
+    "This app uses a SYZYGI AI agent team to analyze topics based on your custom request, generate a blog post about the findings, and conduct a postmortem analysis on the team's performance."
 )
 
 # Add a reset button
