@@ -130,31 +130,43 @@ class BaseAgent(ABC, BaseModel):
     @model_validator(mode="before")
     @classmethod
     def process_config(cls, values):
-        config = values.get("config")
-        if config:
-            for key, value in config.items():
-                # Check if the key is a valid field in the model
-                if key in cls.model_fields:
-                    # Check if the field is not already set or is None
-                    if key not in values or values[key] is None:
-                        # Only set primitive types and lists
-                        if isinstance(value, (str, int, float, bool, list)):
+        config = values.get("config", {})
+        if not config:
+            return values
+
+        for key, value in config.items():
+            if key in cls.model_fields:
+                if key not in values or values[key] is None:
+                    if isinstance(value, (str, int, float, bool, list)):
+                        values[key] = value
+                    elif isinstance(value, dict):
+                        if key in values and isinstance(values[key], dict):
+                            values[key].update(value)
+                        else:
                             values[key] = value
-                        elif isinstance(value, dict):
-                            # For nested dicts, we might want to merge instead of replace
-                            if key in values and isinstance(values[key], dict):
-                                values[key].update(value)
-                            else:
-                                values[key] = value
+
+        # Remove the config from values to avoid duplicate processing
+        values.pop("config", None)
         return values
 
     @model_validator(mode="after")
-    def validate_required_fields(self):
+    def validate_and_set_attributes(self):
+        # Validate required fields
         for field in ["role", "goal", "backstory"]:
             if getattr(self, field) is None:
                 raise ValueError(
                     f"{field} must be provided either directly or through config"
                 )
+
+        # Set private attributes
+        self._logger = Logger(verbose=self.verbose)
+        if self.max_rpm and not self._rpm_controller:
+            self._rpm_controller = RPMController(
+                max_rpm=self.max_rpm, logger=self._logger
+            )
+        if not self._token_process:
+            self._token_process = TokenProcess()
+
         return self
 
     @field_validator("id", mode="before")
@@ -164,14 +176,6 @@ class BaseAgent(ABC, BaseModel):
             raise PydanticCustomError(
                 "may_not_set_field", "This field is not to be set by the user.", {}
             )
-
-    @model_validator(mode="after")
-    def set_attributes_based_on_config(self) -> "BaseAgent":
-        """Set attributes based on the agent configuration."""
-        if self.config:
-            for key, value in self.config.items():
-                setattr(self, key, value)
-        return self
 
     @model_validator(mode="after")
     def set_private_attrs(self):

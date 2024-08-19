@@ -25,6 +25,7 @@ from crewai.tasks.task_output import TaskOutput
 from crewai.telemetry.telemetry import Telemetry
 from crewai.utilities.converter import Converter, convert_to_model
 from crewai.utilities.i18n import I18N
+from crewai.utilities.validation import assert_not_none
 
 
 class Task(BaseModel):
@@ -119,17 +120,19 @@ class Task(BaseModel):
 
     @model_validator(mode="before")
     @classmethod
-    def process_config(cls, values):
-        config = values.get("config")
-        if config:
-            for key, value in config.items():
-                if key in cls.model_fields and (
-                    key not in values or values[key] is None
+    def process_config_and_validate(cls, values):
+        config = values.get("config", {})
+
+        # Process config
+        for key, value in config.items():
+            if key in cls.model_fields and (key not in values or values[key] is None):
+                if isinstance(value, (str, int, float, bool, list)) or (
+                    isinstance(value, dict) and key != "agent"
                 ):
-                    if isinstance(value, (str, int, float, bool, list)) or (
-                        isinstance(value, dict) and key != "agent"
-                    ):
-                        values[key] = value
+                    values[key] = value
+
+        # Remove config to avoid duplicate processing
+        values.pop("config", None)
         return values
 
     @model_validator(mode="after")
@@ -262,12 +265,12 @@ class Task(BaseModel):
 
         task_output = TaskOutput(
             name=self.name,
-            description=self.description,
+            description=assert_not_none(self.description),
             expected_output=self.expected_output,
             raw=result,
             pydantic=pydantic_output,
             json_dict=json_output,
-            agent=agent.role,
+            agent=assert_not_none(agent.role),
             output_format=self._get_output_format(),
         )
         self.output = task_output
@@ -342,7 +345,7 @@ class Task(BaseModel):
         def get_agent_by_role(role: str) -> Union["BaseAgent", None]:
             return next((agent for agent in agents if agent.role == role), None)
 
-        cloned_agent = get_agent_by_role(self.agent.role) if self.agent else None
+        cloned_agent = get_agent_by_role(assert_not_none(self.agent.role)) if self.agent else None
         cloned_tools = copy(self.tools) if self.tools else []
 
         copied_task = Task(

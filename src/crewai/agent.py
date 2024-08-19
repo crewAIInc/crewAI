@@ -113,46 +113,43 @@ class Agent(BaseAgent):
         description="Maximum number of retries for an agent to execute a task when an error occurs.",
     )
 
-    @model_validator(mode="before")
-    def set_config_attributes(cls, values):
-        if "config" in values and isinstance(values["config"], dict):
-            values.update(values["config"])
-        return values
-
     @model_validator(mode="after")
-    def set_agent_ops_agent_name(self) -> "Agent":
-        """Set agent ops agent name."""
+    def post_init_setup(self):
+        # Set agent_ops_agent_name
         self.agent_ops_agent_name = self.role
-        return self
 
-    @model_validator(mode="after")
-    def set_agent_executor(self) -> "Agent":
-        """Ensure agent executor and token process are set."""
+        # Set up LLM callbacks
         if hasattr(self.llm, "model_name"):
-            token_handler = TokenCalcHandler(self.llm.model_name, self._token_process)
+            self._setup_llm_callbacks()
 
-            # Ensure self.llm.callbacks is a list
-            if not isinstance(self.llm.callbacks, list):
-                self.llm.callbacks = []
-
-            # Check if an instance of TokenCalcHandler already exists in the list
-            if not any(
-                isinstance(handler, TokenCalcHandler) for handler in self.llm.callbacks
-            ):
-                self.llm.callbacks.append(token_handler)
-
-            if agentops and not any(
-                isinstance(handler, agentops.LangchainCallbackHandler)
-                for handler in self.llm.callbacks
-            ):
-                agentops.stop_instrumenting()
-                self.llm.callbacks.append(agentops.LangchainCallbackHandler())
-
+        # Set up agent executor
         if not self.agent_executor:
-            if not self.cache_handler:
-                self.cache_handler = CacheHandler()
-            self.set_cache_handler(self.cache_handler)
+            self._setup_agent_executor()
+
         return self
+
+    def _setup_llm_callbacks(self):
+        token_handler = TokenCalcHandler(self.llm.model_name, self._token_process)
+
+        if not isinstance(self.llm.callbacks, list):
+            self.llm.callbacks = []
+
+        if not any(
+            isinstance(handler, TokenCalcHandler) for handler in self.llm.callbacks
+        ):
+            self.llm.callbacks.append(token_handler)
+
+        if agentops and not any(
+            isinstance(handler, agentops.LangchainCallbackHandler)
+            for handler in self.llm.callbacks
+        ):
+            agentops.stop_instrumenting()
+            self.llm.callbacks.append(agentops.LangchainCallbackHandler())
+
+    def _setup_agent_executor(self):
+        if not self.cache_handler:
+            self.cache_handler = CacheHandler()
+        self.set_cache_handler(self.cache_handler)
 
     def execute_task(
         self,
