@@ -18,7 +18,6 @@ from crewai.utilities import Converter, Prompts
 from crewai.utilities.constants import TRAINED_AGENTS_DATA_FILE, TRAINING_DATA_FILE
 from crewai.utilities.token_counter_callback import TokenCalcHandler
 from crewai.utilities.training_handler import CrewTrainingHandler
-from crewai.utilities.validation import assert_not_none
 
 
 def mock_agent_ops_provider():
@@ -117,7 +116,7 @@ class Agent(BaseAgent):
     @model_validator(mode="after")
     def post_init_setup(self):
         # Set agent_ops_agent_name
-        self.agent_ops_agent_name = assert_not_none(self.role)
+        self.agent_ops_agent_name = self.role
 
         # Set up LLM callbacks
         if hasattr(self.llm, "model_name"):
@@ -292,9 +291,9 @@ class Agent(BaseAgent):
         ).task_execution()
 
         execution_prompt = prompt.partial(
-            goal=assert_not_none(self.goal),
-            role=assert_not_none(self.role),
-            backstory=assert_not_none(self.backstory),
+            goal=self.goal,
+            role=self.role,
+            backstory=self.backstory,
         )
 
         stop_words = [self.i18n.slice("observation")]

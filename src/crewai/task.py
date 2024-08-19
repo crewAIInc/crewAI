@@ -25,7 +25,6 @@ from crewai.tasks.task_output import TaskOutput
 from crewai.telemetry.telemetry import Telemetry
 from crewai.utilities.converter import Converter, convert_to_model
 from crewai.utilities.i18n import I18N
-from crewai.utilities.validation import assert_not_none
 
 
 class Task(BaseModel):
@@ -54,10 +53,10 @@ class Task(BaseModel):
     i18n: I18N = I18N()
     name: Optional[str] = Field(default=None)
     prompt_context: Optional[str] = None
-    description: Optional[str] = Field(
+    description: str = Field(
         default=None, description="Description of the actual task."
     )
-    expected_output: Optional[str] = Field(
+    expected_output: str = Field(
         default=None, description="Clear definition of expected output for the task."
     )
     config: Optional[Dict[str, Any]] = Field(
@@ -265,12 +264,12 @@ class Task(BaseModel):
 
         task_output = TaskOutput(
             name=self.name,
-            description=assert_not_none(self.description),
+            description=self.description,
             expected_output=self.expected_output,
             raw=result,
             pydantic=pydantic_output,
             json_dict=json_output,
-            agent=assert_not_none(agent.role),
+            agent=agent.role,
             output_format=self._get_output_format(),
         )
         self.output = task_output
@@ -345,7 +344,7 @@ class Task(BaseModel):
         def get_agent_by_role(role: str) -> Union["BaseAgent", None]:
             return next((agent for agent in agents if agent.role == role), None)
 
-        cloned_agent = get_agent_by_role(assert_not_none(self.agent.role)) if self.agent else None
+        cloned_agent = get_agent_by_role(self.agent.role) if self.agent else None
         cloned_tools = copy(self.tools) if self.tools else []
 
         copied_task = Task(

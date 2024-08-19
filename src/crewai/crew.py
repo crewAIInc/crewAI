@@ -46,7 +46,6 @@ from crewai.utilities.formatter import (
 from crewai.utilities.planning_handler import CrewPlanner
 from crewai.utilities.task_output_storage_handler import TaskOutputStorageHandler
 from crewai.utilities.training_handler import CrewTrainingHandler
-from crewai.utilities.validation import assert_not_none
 
 agentops = None
 if os.environ.get("AGENTOPS_API_KEY"):
@@ -636,7 +635,7 @@ class Crew(BaseModel):
                 )
 
             self._prepare_agent_tools(task)
-            self._log_task_start(task, assert_not_none(agent_to_use.role))
+            self._log_task_start(task, agent_to_use.role)
 
             if isinstance(task, ConditionalTask):
                 skipped_task_output = self._handle_conditional_task(

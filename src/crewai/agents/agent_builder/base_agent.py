@@ -84,9 +84,9 @@ class BaseAgent(ABC, BaseModel):
     formatting_errors: int = Field(
         default=0, description="Number of formatting errors."
     )
-    role: Optional[str] = Field(default=None, description="Role of the agent")
-    goal: Optional[str] = Field(default=None, description="Objective of the agent")
-    backstory: Optional[str] = Field(default=None, description="Backstory of the agent")
+    role: str = Field(default=None, description="Role of the agent")
+    goal: str = Field(default=None, description="Objective of the agent")
+    backstory: str = Field(default=None, description="Backstory of the agent")
     config: Optional[Dict[str, Any]] = Field(
         description="Configuration for the agent", default=None, exclude=True
     )
