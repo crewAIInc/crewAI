@@ -23,6 +23,7 @@ from crewai.agents.agent_builder.base_agent import BaseAgent
 from crewai.tasks.output_format import OutputFormat
 from crewai.tasks.task_output import TaskOutput
 from crewai.telemetry.telemetry import Telemetry
+from crewai.utilities.config import process_config
 from crewai.utilities.converter import Converter, convert_to_model
 from crewai.utilities.i18n import I18N
 
@@ -53,9 +54,9 @@ class Task(BaseModel):
     i18n: I18N = I18N()
     name: Optional[str] = Field(default=None)
     prompt_context: Optional[str] = None
-    description: str = Field(description="Description of the actual task."
-    )
-    expected_output: str = Field( description="Clear definition of expected output for the task."
+    description: str = Field(description="Description of the actual task.")
+    expected_output: str = Field(
+        description="Clear definition of expected output for the task."
     )
     config: Optional[Dict[str, Any]] = Field(
         description="Configuration for the agent",
@@ -117,20 +118,8 @@ class Task(BaseModel):
 
     @model_validator(mode="before")
     @classmethod
-    def process_config_and_validate(cls, values):
-        config = values.get("config", {})
-
-        # Process config
-        for key, value in config.items():
-            if key in cls.model_fields and (key not in values or values[key] is None):
-                if isinstance(value, (str, int, float, bool, list)) or (
-                    isinstance(value, dict) and key != "agent"
-                ):
-                    values[key] = value
-
-        # Remove config to avoid duplicate processing
-        values.pop("config", None)
-        return values
+    def process_model_config(cls, values):
+        return process_config(values, cls)
 
     @model_validator(mode="after")
     def validate_required_fields(self):

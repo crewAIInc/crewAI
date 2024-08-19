@@ -19,6 +19,7 @@ from crewai.agents.agent_builder.utilities.base_token_process import TokenProces
 from crewai.agents.cache.cache_handler import CacheHandler
 from crewai.agents.tools_handler import ToolsHandler
 from crewai.utilities import I18N, Logger, RPMController
+from crewai.utilities.config import process_config
 
 T = TypeVar("T", bound="BaseAgent")
 
@@ -129,25 +130,8 @@ class BaseAgent(ABC, BaseModel):
 
     @model_validator(mode="before")
     @classmethod
-    def process_config(cls, values):
-        config = values.get("config", {})
-        if not config:
-            return values
-
-        for key, value in config.items():
-            if key in cls.model_fields:
-                if key not in values or values[key] is None:
-                    if isinstance(value, (str, int, float, bool, list)):
-                        values[key] = value
-                    elif isinstance(value, dict):
-                        if key in values and isinstance(values[key], dict):
-                            values[key].update(value)
-                        else:
-                            values[key] = value
-
-        # Remove the config from values to avoid duplicate processing
-        values.pop("config", None)
-        return values
+    def process_model_config(cls, values):
+        return process_config(values, cls)
 
     @model_validator(mode="after")
     def validate_and_set_attributes(self):
