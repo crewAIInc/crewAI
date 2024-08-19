@@ -7,11 +7,14 @@ from crewai.memory.storage.kickoff_task_outputs_storage import (
     KickoffTaskOutputsSQLiteStorage,
 )
 
+from .deploy.main import DeployCommand
 from .evaluate_crew import evaluate_crew
 from .replay_from_task import replay_task_command
 from .reset_memories_command import reset_memories_command
 from .run_crew import run_crew
 from .train_crew import train_crew
+
+deploy_cmd = DeployCommand("myCrew_test")
 
 
 @click.group()
@@ -170,6 +173,55 @@ def run():
     """Run the crew."""
     click.echo("Running the crew")
     run_crew()
+
+
+# Deploy command group
+@crewai.group()
+def deploy():
+    """Deploy the Crew CLI group."""
+    pass
+
+
+@deploy.command(name="up")
+def deploy_up():
+    """Deploy the crew."""
+    deploy_cmd.deploy()
+
+
+@deploy.command(name="create")
+def deploy_create():
+    """Create a deployment."""
+    deploy_cmd.create_crew()
+
+
+@deploy.command(name="list")
+def deploy_list():
+    """List all deployments."""
+    deploy_cmd.list_crews()
+
+
+@deploy.command(name="status")
+def deply_status():
+    """Get the status of a deployment."""
+    deploy_cmd.get_crew_status()
+
+
+@deploy.command(name="logs")
+def deploy_logs():
+    """Get the logs of a deployment."""
+    deploy_cmd.get_crew_logs()
+
+
+@deploy.command(name="remove")
+def deploy_remove():
+    """Remove a deployment."""
+    deploy_cmd.remove_crew()
+
+
+@deploy.command(name="signup")
+def signup():
+    """Sign up for a deployment."""
+    deploy_cmd.signup()
 
 
 if __name__ == "__main__":
