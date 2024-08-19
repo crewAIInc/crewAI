@@ -1,13 +1,23 @@
 import os
+from dotenv import load_dotenv
 from crewai import Agent, Task, Crew, Process
 from crewai_tools import SerperDevTool
 
+# Load environment variables from .env file
+load_dotenv()
+
 def run_crew(user_request):
-    os.environ["OPENAI_API_KEY"] = ""
-    os.environ["SERPER_API_KEY"] = ""
+    # Access API keys from environment variables
+    openai_api_key = os.getenv("OPENAI_API_KEY")
+    serper_api_key = os.getenv("SERPER_API_KEY")
+
+    # Set API keys in environment variables
+    os.environ["OPENAI_API_KEY"] = openai_api_key
+    os.environ["SERPER_API_KEY"] = serper_api_key
 
     search_tool = SerperDevTool()
 
+    # Rest of the function remains the same
     researcher = Agent(
         role='Senior Research Analyst',
         goal='Conduct thorough analysis based on the given request',
@@ -53,11 +63,17 @@ def run_crew(user_request):
     return result
 
 def run_postmortem(postmortem_request, previous_result):
-    os.environ["OPENAI_API_KEY"] = ""
-    os.environ["SERPER_API_KEY"] = ""
+    # Access API keys from environment variables (already loaded in run_crew)
+    openai_api_key = os.getenv("OPENAI_API_KEY")
+    serper_api_key = os.getenv("SERPER_API_KEY")
+
+    # Set API keys in environment variables
+    os.environ["OPENAI_API_KEY"] = openai_api_key
+    os.environ["SERPER_API_KEY"] = serper_api_key
 
     search_tool = SerperDevTool()
 
+    # Rest of the function remains the same
     postmortem_analyst = Agent(
         role='Postmortem Analyst',
         goal='Conduct a thorough postmortem analysis of the team\'s performance',
