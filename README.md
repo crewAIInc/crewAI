@@ -38,7 +38,7 @@ To get started with Syzygi AI, follow these simple steps:
 ### 1. Installation
 
 ```shell
-pip install Syzygi
+pip install crewai
 ```
 
 If you want to install the 'Syzygi' package along with its optional features that include additional tools for agents, you can do so by using the following command:'. This command installs the basic package and also adds extra components which require more dependencies to function."
