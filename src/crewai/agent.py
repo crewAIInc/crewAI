@@ -115,14 +115,11 @@ class Agent(BaseAgent):
 
     @model_validator(mode="after")
     def post_init_setup(self):
-        # Set agent_ops_agent_name
         self.agent_ops_agent_name = self.role
 
-        # Set up LLM callbacks
         if hasattr(self.llm, "model_name"):
             self._setup_llm_callbacks()
 
-        # Set up agent executor
         if not self.agent_executor:
             self._setup_agent_executor()
 
