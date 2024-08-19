@@ -538,8 +538,7 @@ class Crew(BaseModel):
         )._handle_crew_planning()
 
         for task, step_plan in zip(self.tasks, result.list_of_plans_per_task):
-            if task.description:
-                task.description += step_plan.plan
+            task.description += step_plan.plan
 
     def _store_execution_log(
         self,

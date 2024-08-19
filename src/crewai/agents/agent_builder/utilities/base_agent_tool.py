@@ -61,20 +61,19 @@ class BaseAgentTools(BaseModel, ABC):
             agent = [  # type: ignore # Incompatible types in assignment (expression has type "list[BaseAgent]", variable has type "str | None")
                 available_agent
                 for available_agent in self.agents
-                if (available_agent.role or "").casefold().replace("\n", "")
-                == agent_name
+                if available_agent.role.casefold().replace("\n", "") == agent_name
             ]
         except Exception as _:
             return self.i18n.errors("agent_tool_unexsiting_coworker").format(
                 coworkers="\n".join(
-                    [f"- {(agent.role or "").casefold()}" for agent in self.agents]
+                    [f"- {agent.role.casefold()}" for agent in self.agents]
                 )
             )
 
         if not agent:
             return self.i18n.errors("agent_tool_unexsiting_coworker").format(
                 coworkers="\n".join(
-                    [f"- {(agent.role or "").casefold()}" for agent in self.agents]
+                    [f"- {agent.role.casefold()}" for agent in self.agents]
                 )
             )
 

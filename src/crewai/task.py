@@ -53,11 +53,9 @@ class Task(BaseModel):
     i18n: I18N = I18N()
     name: Optional[str] = Field(default=None)
     prompt_context: Optional[str] = None
-    description: str = Field(
-        default=None, description="Description of the actual task."
+    description: str = Field(description="Description of the actual task."
     )
-    expected_output: str = Field(
-        default=None, description="Clear definition of expected output for the task."
+    expected_output: str = Field( description="Clear definition of expected output for the task."
     )
     config: Optional[Dict[str, Any]] = Field(
         description="Configuration for the agent",
