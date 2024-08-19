@@ -21,10 +21,15 @@
 
 - [License](#license)
 
-## Why AI?
-
-The power of AI collaboration has too much to offer.
-AI is designed to enable AI agents to assume roles, share goals, and operate in a cohesive unit - much like a well-oiled crew. Whether you're building a smart assistant platform, an automated customer service ensemble, or a multi-agent research team, AI provides the backbone for sophisticated multi-agent interactions.
+## Why Transforming AI Agents?
+ Introduction
+The next generation AI foundation models will achieve reasoning and logic abilities equivalent to PhD level. And while AI doctors, AI lawyers, and AI engineers are not ready to hang out their shingles, every doctor, lawyer, and engineer will want a specialized AI partner to assist them in delivering premium service to their clients. 
+​
+The Problem
+AI agent teams partnering with professionals face poor coordination, limited adaptability, and inconsistent performance. Trust issues and integration hurdles hinder adoption. AI needs better collaboration mechanisms, adaptive learning, and robust feedback loops to improve. Enhancing communication skills and ethical decision-making is crucial. The goal is to create transparent, flexible AI agent teams that learn continuously, providing reliable assistance across various professional fields.
+ 
+The Solution
+We are developing an AI Agent Team Architecture called Syzygi (pronounced SIZ-in-jee) that mimics some features of the neural net Transformer Architecture used to train LLMs. Syzygi architecture provides power and flexibility for AI agents to synchronize their tasks on one project and train as a team over many projects. As they perform more varied tasks, they become more versatile and efficient as an organization - they learn to become a better team.
 
 ## Getting Started
 
