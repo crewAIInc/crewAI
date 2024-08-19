@@ -113,6 +113,12 @@ class Agent(BaseAgent):
         description="Maximum number of retries for an agent to execute a task when an error occurs.",
     )
 
+    @model_validator(mode="before")
+    def set_config_attributes(cls, values):
+        if "config" in values and isinstance(values["config"], dict):
+            values.update(values["config"])
+        return values
+
     @model_validator(mode="after")
     def set_agent_ops_agent_name(self) -> "Agent":
         """Set agent ops agent name."""

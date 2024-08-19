@@ -613,6 +613,8 @@ class Crew(BaseModel):
             CrewOutput: Final output of the crew
         """
 
+        print("TASKS", tasks)
+
         task_outputs: List[TaskOutput] = []
         futures: List[Tuple[Task, Future[TaskOutput], int]] = []
         last_sync_output: Optional[TaskOutput] = None
@@ -670,6 +672,8 @@ class Crew(BaseModel):
 
         if futures:
             task_outputs = self._process_async_tasks(futures, was_replayed)
+
+        print("TASK_OUTPUTS", task_outputs)
 
         return self._create_crew_output(task_outputs)
 

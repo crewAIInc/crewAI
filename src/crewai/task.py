@@ -53,9 +53,11 @@ class Task(BaseModel):
     i18n: I18N = I18N()
     name: Optional[str] = Field(default=None)
     prompt_context: Optional[str] = None
-    description: str = Field(description="Description of the actual task.")
-    expected_output: str = Field(
-        description="Clear definition of expected output for the task."
+    description: Optional[str] = Field(
+        default=None, description="Description of the actual task."
+    )
+    expected_output: Optional[str] = Field(
+        default=None, description="Clear definition of expected output for the task."
     )
     config: Optional[Dict[str, Any]] = Field(
         description="Configuration for the agent",
@@ -114,6 +116,31 @@ class Task(BaseModel):
     _original_expected_output: Optional[str] = PrivateAttr(default=None)
     _thread: Optional[threading.Thread] = PrivateAttr(default=None)
     _execution_time: Optional[float] = PrivateAttr(default=None)
+
+    @model_validator(mode="before")
+    @classmethod
+    def process_config(cls, values):
+        config = values.get("config")
+        if config:
+            for key, value in config.items():
+                if key in cls.model_fields and (
+                    key not in values or values[key] is None
+                ):
+                    if isinstance(value, (str, int, float, bool, list)) or (
+                        isinstance(value, dict) and key != "agent"
+                    ):
+                        values[key] = value
+        return values
+
+    @model_validator(mode="after")
+    def validate_required_fields(self):
+        required_fields = ["description", "expected_output"]
+        for field in required_fields:
+            if getattr(self, field) is None:
+                raise ValueError(
+                    f"{field} must be provided either directly or through config"
+                )
+        return self
 
     @field_validator("id", mode="before")
     @classmethod

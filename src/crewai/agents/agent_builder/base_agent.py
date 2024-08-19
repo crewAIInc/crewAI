@@ -84,14 +84,14 @@ class BaseAgent(ABC, BaseModel):
     formatting_errors: int = Field(
         default=0, description="Number of formatting errors."
     )
-    role: str = Field(description="Role of the agent")
-    goal: str = Field(description="Objective of the agent")
-    backstory: str = Field(description="Backstory of the agent")
+    role: Optional[str] = Field(default=None, description="Role of the agent")
+    goal: Optional[str] = Field(default=None, description="Objective of the agent")
+    backstory: Optional[str] = Field(default=None, description="Backstory of the agent")
+    config: Optional[Dict[str, Any]] = Field(
+        description="Configuration for the agent", default=None, exclude=True
+    )
     cache: bool = Field(
         default=True, description="Whether the agent should use a cache for tool usage."
-    )
-    config: Optional[Dict[str, Any]] = Field(
-        description="Configuration for the agent", default=None
     )
     verbose: bool = Field(
         default=False, description="Verbose mode for the Agent Execution"
@@ -127,11 +127,34 @@ class BaseAgent(ABC, BaseModel):
         default=None, description="Maximum number of tokens for the agent's execution."
     )
 
+    @model_validator(mode="before")
+    @classmethod
+    def process_config(cls, values):
+        config = values.get("config")
+        if config:
+            for key, value in config.items():
+                # Check if the key is a valid field in the model
+                if key in cls.model_fields:
+                    # Check if the field is not already set or is None
+                    if key not in values or values[key] is None:
+                        # Only set primitive types and lists
+                        if isinstance(value, (str, int, float, bool, list)):
+                            values[key] = value
+                        elif isinstance(value, dict):
+                            # For nested dicts, we might want to merge instead of replace
+                            if key in values and isinstance(values[key], dict):
+                                values[key].update(value)
+                            else:
+                                values[key] = value
+        return values
+
     @model_validator(mode="after")
-    def set_config_attributes(self):
-        if self.config:
-            for key, value in self.config.items():
-                setattr(self, key, value)
+    def validate_required_fields(self):
+        for field in ["role", "goal", "backstory"]:
+            if getattr(self, field) is None:
+                raise ValueError(
+                    f"{field} must be provided either directly or through config"
+                )
         return self
 
     @field_validator("id", mode="before")
