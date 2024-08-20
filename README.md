@@ -1,23 +1,14 @@
 <div align="center">
-
-
-
 # ****
 
 🤖 ****: Cutting-edge framework for orchestrating role-playing, autonomous AI agents. By fostering collaborative intelligence, AI empowers agents to work together seamlessly, tackling complex tasks.
-
 <h3>
-
 [Homepage](https://www.ai-hive.net/syzygi/) 
 
 </h3>
 
-
-
 </div>
-
 ## Table of contents
-
 
 - [License](#license)
 
@@ -41,13 +32,16 @@ To get started with Syzygi AI, follow these simple steps:
 pip install crewai
 ```
 
-If you want to install the 'Syzygi' package along with its optional features that include additional tools for agents, you can do so by using the following command:'. This command installs the basic package and also adds extra components which require more dependencies to function."
-
 ```shell
 pip install 'crewai[tools]'
 ```
 
-### 2. Setting Up Your Syzygi Crew
+```shell
+pip install -r requirements.txt
+```
+
+```
+### 2. Setting Up Your Syzygi Crew based on Crewai
 
 ```python
 import os
@@ -129,6 +123,12 @@ result = crew.kickoff()
 print("######################")
 print(result)
 ```
+## 3. run the user interface in streamlit
+
+```shell
+streamlit run streamlit_app.py
+
+## Other
 
 In addition to the sequential process, you can use the hierarchical process, which automatically assigns a manager to the defined crew to properly coordinate the planning and execution of tasks through delegation and validation of results. [See more about the processes here](https://docs.crewai.com/core-concepts/Processes/).
 
@@ -150,18 +150,10 @@ In addition to the sequential process, you can use the hierarchical process, whi
 
 ### Quick Tutorial
 
-
-
 ### Write Job Descriptions
 
-
-
-
-
-
 ## Connecting Your Crew to a Model
-
-crewAI supports using various LLMs through a variety of connection options. By default your agents will use the OpenAI API when querying the model. However, there are several other ways to allow your agents to connect to models. For example, you can configure your agents to use a local model via the Ollama tool.
+It supports using various LLMs through a variety of connection options. By default your agents will use the OpenAI API when querying the model. However, there are several other ways to allow your agents to connect to models. For example, you can configure your agents to use a local model via the Ollama tool.
 
 
 
@@ -176,7 +168,8 @@ crewAI supports using various LLMs through a variety of connection options. By d
 
 ## Contribution
 
-CrewAI is open-source and we welcome contributions. If you're looking to contribute, please:
+Syzygi is open-source and we welcome contributions. If you're looking to contribute, please: info@ai-hive.net
+
 
 - Fork the repository.
 - Create a new branch for your feature.
@@ -184,75 +177,7 @@ CrewAI is open-source and we welcome contributions. If you're looking to contrib
 - Send a pull request.
 - We appreciate your input!
 
-### Installing Dependencies
-
-```bash
-poetry lock
-poetry install
-```
-
-### Virtual Env
-
-```bash
-poetry shell
-```
-
-### Pre-commit hooks
-
-```bash
-pre-commit install
-```
-
-### Running Tests
-
-```bash
-poetry run pytest
-```
-
-### Running static type checks
-
-```bash
-poetry run mypy
-```
-
-### Packaging
-
-```bash
-poetry build
-```
-
-### Installing Locally
-
-```bash
-pip install dist/*.tar.gz
-```
-
-
-
-
-
-  - So we can understand how many users are using the latest version
-- Version of Python
-  - So we can decide on what versions to better support
-- General OS (e.g. number of CPUs, macOS/Windows/Linux)
-  - So we know what OS we should focus on and if we could build specific OS related features
-- Number of agents and tasks in a crew
-  - So we make sure we are testing internally with similar use cases and educate people on the best practices
-- Crew Process being used
-  - Understand where we should focus our efforts
-- If Agents are using memory or allowing delegation
-  - Understand if we improved the features or maybe even drop them
-- If Tasks are being executed in parallel or sequentially
-  - Understand if we should focus more on parallel execution
-- Language model being used
-  - Improved support on most used languages
-- Roles of agents in a crew
-  - Understand high level use cases so we can build better tools, integrations and examples about it
-- Tools names available
-  - Understand out of the publically available tools, which ones are being used the most so we can improve them
-
-Users can opt-in to Further Telemetry, sharing the complete telemetry data by setting the `share_crew` attribute to `True` on their Crews. Enabling `share_crew` results in the collection of detailed crew and task execution data, including `goal`, `backstory`, `context`, and `output` of tasks. This enables a deeper insight into usage patterns while respecting the user's choice to share.
 
 ## License
 
-CrewAI is released under the MIT License.
+Syzygi is released under the MIT License.
