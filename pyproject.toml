@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "crewai"
-version = "0.51.0"
+version = "0.51.1"
 description = "Cutting-edge framework for orchestrating role-playing, autonomous AI agents. By fostering collaborative intelligence, CrewAI empowers agents to work together seamlessly, tackling complex tasks."
 authors = ["Joao Moura <joao@crewai.com>"]
 readme = "README.md"
@@ -61,6 +61,9 @@ crewai = "crewai.cli.cli:crewai"
 ignore_missing_imports = true
 disable_error_code = 'import-untyped'
 exclude = ["cli/templates"]
+
+[tool.bandit]
+exclude_dirs = ["src/crewai/cli/templates"]
 
 [build-system]
 requires = ["poetry-core"]

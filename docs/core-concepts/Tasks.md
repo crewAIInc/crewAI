@@ -17,16 +17,17 @@ Tasks within crewAI can be collaborative, requiring multiple agents to work toge
 | **Description**                  | `description`     | A clear, concise statement of what the task entails.                                                                 |
 | **Agent**                        | `agent`           | The agent responsible for the task, assigned either directly or by the crew's process.                               |
 | **Expected Output**              | `expected_output` | A detailed description of what the task's completion looks like.                                                     |
-| **Tools** _(optional)_           | `tools`           | The functions or capabilities the agent can utilize to perform the task.                                             |
-| **Async Execution** _(optional)_ | `async_execution` | If set, the task executes asynchronously, allowing progression without waiting for completion.                       |
+| **Tools** _(optional)_           | `tools`           | The functions or capabilities the agent can utilize to perform the task. Defaults to an empty list.                  |
+| **Async Execution** _(optional)_ | `async_execution` | If set, the task executes asynchronously, allowing progression without waiting for completion. Defaults to False.    |
 | **Context** _(optional)_         | `context`         | Specifies tasks whose outputs are used as context for this task.                                                     |
-| **Config** _(optional)_          | `config`          | Additional configuration details for the agent executing the task, allowing further customization.                   |
+| **Config** _(optional)_          | `config`          | Additional configuration details for the agent executing the task, allowing further customization. Defaults to None. |
 | **Output JSON** _(optional)_     | `output_json`     | Outputs a JSON object, requiring an OpenAI client. Only one output format can be set.                                |
 | **Output Pydantic** _(optional)_ | `output_pydantic` | Outputs a Pydantic model object, requiring an OpenAI client. Only one output format can be set.                      |
 | **Output File** _(optional)_     | `output_file`     | Saves the task output to a file. If used with `Output JSON` or `Output Pydantic`, specifies how the output is saved. |
-| **Output** _(optional)_          | `output`          | The output of the task, containing the raw, JSON, and Pydantic output plus additional details.                       |
-| **Callback** _(optional)_        | `callback`        | A Python callable that is executed with the task's output upon completion.                                           |
-| **Human Input** _(optional)_     | `human_input`     | Indicates if the task requires human feedback at the end, useful for tasks needing human oversight.                  |
+| **Output** _(optional)_          | `output`          | An instance of `TaskOutput`, containing the raw, JSON, and Pydantic output plus additional details.                  |
+| **Callback** _(optional)_        | `callback`        | A callable that is executed with the task's output upon completion.                                                  |
+| **Human Input** _(optional)_     | `human_input`     | Indicates if the task requires human feedback at the end, useful for tasks needing human oversight. Defaults to False.|
+| **Converter Class** _(optional)_ | `converter_cls`   | A converter class used to export structured output. Defaults to None.                                                |
 
 ## Creating a Task
 
@@ -56,7 +57,7 @@ By default, the `TaskOutput` will only include the `raw` output. A `TaskOutput` 
 | Attribute         | Parameters      | Type                       | Description                                                                                        |
 | :---------------- | :-------------- | :------------------------- | :------------------------------------------------------------------------------------------------- |
 | **Description**   | `description`   | `str`                      | A brief description of the task.                                                                   |
-| **Summary**       | `summary`       | `Optional[str]`            | A short summary of the task, auto-generated from the description.                                  |
+| **Summary**       | `summary`       | `Optional[str]`            | A short summary of the task, auto-generated from the first 10 words of the description.            |
 | **Raw**           | `raw`           | `str`                      | The raw output of the task. This is the default format for the output.                             |
 | **Pydantic**      | `pydantic`      | `Optional[BaseModel]`      | A Pydantic model object representing the structured output of the task.                            |
 | **JSON Dict**     | `json_dict`     | `Optional[Dict[str, Any]]` | A dictionary representing the JSON output of the task.                                             |

@@ -1,13 +1,13 @@
 from datetime import datetime
 
+from pydantic import BaseModel, Field, PrivateAttr
+
 from crewai.utilities.printer import Printer
 
 
-class Logger:
-    _printer = Printer()
-
-    def __init__(self, verbose=False):
-        self.verbose = verbose
+class Logger(BaseModel):
+    verbose: bool = Field(default=False)
+    _printer: Printer = PrivateAttr(default_factory=Printer)
 
     def log(self, level, message, color="bold_green"):
         if self.verbose:
