@@ -12,7 +12,8 @@
 
 - [License](#license)
 
-## Why Transforming AI Agents?
+## Transform AI Agents
+
 ## Introduction
 The next generation AI foundation models will achieve reasoning and logic abilities equivalent to PhD level. And while AI doctors, AI lawyers, and AI engineers are not ready to hang out their shingles, every doctor, lawyer, and engineer will want a specialized AI partner to assist them in delivering premium service to their clients. 
 ​
