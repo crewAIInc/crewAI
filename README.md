@@ -49,80 +49,103 @@ import os
 from crewai import Agent, Task, Crew, Process
 from crewai_tools import SerperDevTool
 
-os.environ["OPENAI_API_KEY"] = "YOUR_API_KEY"
-os.environ["SERPER_API_KEY"] = "Your Key" # serper.dev API key
+def run_crew(user_request):
+    os.environ["OPENAI_API_KEY"] = ""
+    os.environ["SERPER_API_KEY"] = ""
 
+    search_tool = SerperDevTool()
 
+    researcher = Agent(
+        role='Senior Research Analyst',
+        goal='Conduct thorough analysis based on the given request',
+        backstory="""You work at a leading tech think tank.
+        Your expertise lies in identifying emerging trends and analyzing complex topics.
+        You have a knack for dissecting complex data and presenting actionable insights.""",
+        verbose=True,
+        allow_delegation=False,
+        tools=[search_tool]
+    )
+    writer = Agent(
+        role='Tech Content Strategist',
+        goal='Craft compelling content based on the analysis',
+        backstory="""You are a renowned Content Strategist, known for your insightful and engaging articles.
+        You transform complex concepts into compelling narratives.""",
+        verbose=True,
+        allow_delegation=True
+    )
 
-# os.environ["OPENAI_API_BASE"] = 'http://localhost:11434/v1'
-# os.environ["OPENAI_MODEL_NAME"] ='openhermes'  # Adjust based on available model
-# os.environ["OPENAI_API_KEY"] ='sk-111111111111111111111111111111111111111111111111'
+    task1 = Task(
+        description=f"Conduct a comprehensive analysis based on the following request: {user_request}",
+        expected_output="Full analysis report in bullet points",
+        agent=researcher
+    )
 
-# You can pass an optional llm attribute specifying what model you wanna use.
-# It can be a local model through Ollama / LM Studio or a remote
-# model like OpenAI, Mistral, Antrophic or others (https://docs.crewai.com/how-to/LLM-Connections/)
-#
-# import os
-# os.environ['OPENAI_MODEL_NAME'] = 'gpt-3.5-turbo'
-#
-# OR
-#
-# from langchain_openai import ChatOpenAI
+    task2 = Task(
+        description="""Using the insights provided, develop an engaging blog
+        post that highlights the most significant findings from the analysis.
+        Your post should be informative yet accessible, catering to a tech-savvy audience.
+        Make it sound engaging, avoid complex words so it doesn't sound like AI.""",
+        expected_output="Full blog post of at least 4 paragraphs",
+        agent=writer
+    )
 
-search_tool = SerperDevTool()
+    crew = Crew(
+        agents=[researcher, writer],
+        tasks=[task1, task2],
+        verbose=True,
+        process=Process.sequential
+    )
 
-# Define your agents with roles and goals
-researcher = Agent(
-  role='Senior Research Analyst',
-  goal='Uncover cutting-edge developments in AI and data science',
-  backstory="""You work at a leading tech think tank.
-  Your expertise lies in identifying emerging trends.
-  You have a knack for dissecting complex data and presenting actionable insights.""",
-  verbose=True,
-  allow_delegation=False,
-  # You can pass an optional llm attribute specifying what model you wanna use.
-  # llm=ChatOpenAI(model_name="gpt-3.5", temperature=0.7),
-  tools=[search_tool]
-)
-writer = Agent(
-  role='Tech Content Strategist',
-  goal='Craft compelling content on tech advancements',
-  backstory="""You are a renowned Content Strategist, known for your insightful and engaging articles.
-  You transform complex concepts into compelling narratives.""",
-  verbose=True,
-  allow_delegation=True
-)
+    result = crew.kickoff()
+    return result
 
-# Create tasks for your agents
-task1 = Task(
-  description="""Conduct a comprehensive analysis of the latest advancements in AI in 2024.
-  Identify key trends, breakthrough technologies, and potential industry impacts.""",
-  expected_output="Full analysis report in bullet points",
-  agent=researcher
-)
+def run_postmortem(postmortem_request, previous_result):
+    os.environ["OPENAI_API_KEY"] = ""
+    os.environ["SERPER_API_KEY"] = ""
 
-task2 = Task(
-  description="""Using the insights provided, develop an engaging blog
-  post that highlights the most significant AI advancements.
-  Your post should be informative yet accessible, catering to a tech-savvy audience.
-  Make it sound cool, avoid complex words so it doesn't sound like AI.""",
-  expected_output="Full blog post of at least 4 paragraphs",
-  agent=writer
-)
+    search_tool = SerperDevTool()
 
-# Instantiate your crew with a sequential process
-crew = Crew(
-  agents=[researcher, writer],
-  tasks=[task1, task2],
-  verbose=True,
-  process = Process.sequential
-)
+    postmortem_analyst = Agent(
+        role='Postmortem Analyst',
+        goal='Conduct a thorough postmortem analysis of the team\'s performance',
+        backstory="""You are an experienced project manager and analyst specializing in team performance and process improvement.
+        Your expertise lies in identifying strengths, weaknesses, and areas for improvement in team collaborations.""",
+        verbose=True,
+        allow_delegation=False,
+        tools=[search_tool]
+    )
 
-# Get your crew to work!
-result = crew.kickoff()
+    postmortem_task = Task(
+        description=f"""Analyze the team's performance based on the following request and the previous result:
+        Request: {postmortem_request}
+        Previous Result: {previous_result}
+        
+        Provide insights on what went well, what could be improved, and specific recommendations for future tasks.""",
+        expected_output="Detailed postmortem analysis with actionable insights",
+        agent=postmortem_analyst
+    )
 
-print("######################")
-print(result)
+    postmortem_crew = Crew(
+        agents=[postmortem_analyst],
+        tasks=[postmortem_task],
+        verbose=True,
+        process=Process.sequential
+    )
+
+    postmortem_result = postmortem_crew.kickoff()
+    return postmortem_result
+
+if __name__ == "__main__":
+    # This is just for testing the script directly
+    test_request = "Analyze the latest advancements in AI in 2024. Identify key trends, breakthrough technologies, and potential industry impacts."
+    result = run_crew(test_request)
+    print("######################")
+    print(result)
+    
+    test_postmortem_request = "Conduct a postmortem on the team's performance. How did we do and what could we improve for next time?"
+    postmortem_result = run_postmortem(test_postmortem_request, str(result))
+    print("######################")
+    print(postmortem_result)
 ```
 ## 3. run the user interface in streamlit
 
