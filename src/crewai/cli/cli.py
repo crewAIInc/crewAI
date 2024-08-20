@@ -14,7 +14,7 @@ from .reset_memories_command import reset_memories_command
 from .run_crew import run_crew
 from .train_crew import train_crew
 
-deploy_cmd = DeployCommand("myCrew_test")
+deploy_cmd = DeployCommand()
 
 
 @click.group()
