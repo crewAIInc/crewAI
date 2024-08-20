@@ -23,6 +23,7 @@ from crewai.agents.agent_builder.base_agent import BaseAgent
 from crewai.tasks.output_format import OutputFormat
 from crewai.tasks.task_output import TaskOutput
 from crewai.telemetry.telemetry import Telemetry
+from crewai.utilities.config import process_config
 from crewai.utilities.converter import Converter, convert_to_model
 from crewai.utilities.i18n import I18N
 
@@ -114,6 +115,21 @@ class Task(BaseModel):
     _original_expected_output: Optional[str] = PrivateAttr(default=None)
     _thread: Optional[threading.Thread] = PrivateAttr(default=None)
     _execution_time: Optional[float] = PrivateAttr(default=None)
+
+    @model_validator(mode="before")
+    @classmethod
+    def process_model_config(cls, values):
+        return process_config(values, cls)
+
+    @model_validator(mode="after")
+    def validate_required_fields(self):
+        required_fields = ["description", "expected_output"]
+        for field in required_fields:
+            if getattr(self, field) is None:
+                raise ValueError(
+                    f"{field} must be provided either directly or through config"
+                )
+        return self
 
     @field_validator("id", mode="before")
     @classmethod
