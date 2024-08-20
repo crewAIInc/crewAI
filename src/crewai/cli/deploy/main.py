@@ -1,37 +1,42 @@
-import json
-import os
 from os import getenv
 
 import requests
-from rich import print
+from rich.console import Console
 
-from .utils import fetch_and_json_env_file, get_git_remote_url, get_project_name
+from .utils import (
+    fetch_and_json_env_file,
+    get_auth_token,
+    get_git_remote_url,
+    get_project_name,
+)
 
-
-def get_auth_token():
-    return os.environ.get(
-        "TOKEN", "958303356b9a21884a83ddb6e774cc06c6f1dd0e04222fbc5a4e8a9ae02c140e"
-    )
+console = Console()
 
 
 class DeployCommand:
-    def __init__(self):
-        # self.base_url = os.environ.get("BASE_URL", "https://www.crewai.com/api")
-        self.base_url = getenv("BASE_URL", "http://localhost:3000/crewai_plus/api")
+    BASE_URL = getenv("BASE_URL", "http://localhost:3000/crewai_plus/api")
 
+    def __init__(self):
         self.project_name = get_project_name()
         self.remote_repo_url = get_git_remote_url()
 
-    def deploy(self):
-        print("Deploying the crew...")
-        response = requests.post(
-            f"{self.base_url}/crews/by-name/{self.project_name}/deploy",
-            headers={"Authorization": f"Bearer {get_auth_token()}"},
-        )
-        print(response.json())
+    def _make_request(self, method: str, endpoint: str, **kwargs) -> requests.Response:
+        url = f"{self.BASE_URL}/{endpoint}"
+        headers = {
+            "Authorization": f"Bearer {get_auth_token()}",
+            "Content-Type": "application/json",
+        }
+        return requests.request(method, url, headers=headers, **kwargs)
 
-    def create_crew(self):
-        print("Creating deployment...")
+    def deploy(self) -> None:
+        console.print("Deploying the crew...", style="bold blue")
+        response = self._make_request(
+            "POST", f"crews/by-name/{self.project_name}/deploy"
+        )
+        console.print(response.json())
+
+    def create_crew(self) -> None:
+        console.print("Creating deployment...", style="bold blue")
         env_vars = fetch_and_json_env_file()
         payload = {
             "deploy": {
@@ -40,94 +45,83 @@ class DeployCommand:
                 "env": env_vars,
             }
         }
-        response = requests.post(
-            f"{self.base_url}/crews",
-            data=json.dumps(payload),
-            headers={
-                "Authorization": f"Bearer {get_auth_token()}",
-                "Content-type": "application/json",
-            },
-        )
-        print(response.json())
+        response = self._make_request("POST", "crews", json=payload)
+        console.print(response.json())
 
-    def list_crews(self):
-        print("Listing all Crews")
-
-        response = requests.get(
-            f"{self.base_url}/crews",
-            headers={"Authorization": f"Bearer {get_auth_token()}"},
-        )
+    def list_crews(self) -> None:
+        console.print("Listing all Crews", style="bold blue")
+        response = self._make_request("GET", "crews")
         crews_data = response.json()
+
         if response.status_code == 200:
-            print()
-            if len(crews_data):
+            if crews_data:
                 for crew_data in crews_data:
-                    print(
-                        f"- {crew_data['name']} ({crew_data['uuid']}) [blue]\[{crew_data['status']}]"
+                    console.print(
+                        f"- {crew_data['name']} ({crew_data['uuid']}) [blue]{crew_data['status']}[/blue]"
                     )
             else:
-                print("You don't have any crews yet. Let's create one!")
-                print()
-                print("\t[green]crewai create --name \[name]")
+                console.print(
+                    "You don't have any crews yet. Let's create one!", style="yellow"
+                )
+                console.print("\t[green]crewai create --name [name][/green]")
 
-    def get_crew_status(self):
-        print("Getting deployment status...")
-        response = requests.get(
-            f"{self.base_url}/crews/by-name/{self.project_name}/status",
-            headers={"Authorization": f"Bearer {get_auth_token()}"},
+    def get_crew_status(self) -> None:
+        console.print("Getting deployment status...", style="bold blue")
+        response = self._make_request(
+            "GET", f"crews/by-name/{self.project_name}/status"
         )
+
         if response.status_code == 200:
             status_data = response.json()
-            print(status_data)
-            print("Name:\t", status_data["name"])
-            print("Status:\t", status_data["status"])
-            print()
-            print("usage:")
-            print(f"\tcrewai inputs --name \"{status_data['name']}\" ")
-            print(
+            console.print(f"Name:\t {status_data['name']}")
+            console.print(f"Status:\t {status_data['status']}")
+            console.print("\nUsage:")
+            console.print(f"\tcrewai inputs --name \"{status_data['name']}\"")
+            console.print(
                 f"\tcrewai kickoff --name \"{status_data['name']}\" --inputs [INPUTS]"
             )
         else:
-            print(response.json())
+            console.print(response.json(), style="bold red")
 
-    def get_crew_logs(self, log_type="deployment"):
-        print("Getting deployment logs...")
-        response = requests.get(
-            f"{self.base_url}/crews/by-name/{self.project_name}/logs/{log_type}",
-            headers={"Authorization": f"Bearer {get_auth_token()}"},
+    def get_crew_logs(self, log_type: str = "deployment") -> None:
+        console.print("Getting deployment logs...", style="bold blue")
+        response = self._make_request(
+            "GET", f"crews/by-name/{self.project_name}/logs/{log_type}"
         )
 
         if response.status_code == 200:
             log_messages = response.json()
             for log_message in log_messages:
-                print(
+                console.print(
                     f"{log_message['timestamp']} - {log_message['level']}: {log_message['message']}"
                 )
         else:
-            print(response.text)
+            console.print(response.text, style="bold red")
 
-    def remove_crew(self):
-        print("Removing deployment...")
-        response = requests.delete(
-            f"{self.base_url}/crews/by-name/{self.project_name}",
-            headers={"Authorization": f"Bearer {get_auth_token()}"},
-        )
+    def remove_crew(self) -> None:
+        console.print("Removing deployment...", style="bold blue")
+        response = self._make_request("DELETE", f"crews/by-name/{self.project_name}")
+
         if response.status_code == 204:
-            print(f"Crew '{self.project_name}' removed successfully.")
-
-    def signup(self):
-        print("Signing Up")
-        response = requests.get(f"{self.base_url}/signup_link")
-        if response.status_code == 200:
-            token = response.json()["token"]
-            signup_link = response.json()["signup_link"]
-            print("Temporary credentials: ", token)
-            print(
-                "We are trying to open the following signup link below.\n"
-                "If it doesn't open to you, copy-and-paste into our browser to procceed."
+            console.print(
+                f"Crew '{self.project_name}' removed successfully.", style="green"
             )
-            print()
-            print(signup_link)
-            # webbrowser.open(signup_link, new=2)
         else:
-            print(response.text)
+            console.print(
+                f"Failed to remove crew '{self.project_name}'", style="bold red"
+            )
+
+    def signup(self) -> None:
+        console.print("Signing Up", style="bold blue")
+        response = self._make_request("GET", "signup_link")
+
+        if response.status_code == 200:
+            data = response.json()
+            console.print(f"Temporary credentials: {data['token']}")
+            console.print(
+                "We are trying to open the following signup link below.\n"
+                "If it doesn't open for you, copy-and-paste into your browser to proceed."
+            )
+            console.print(f"\n{data['signup_link']}", style="underline blue")
+        else:
+            console.print(response.text, style="bold red")

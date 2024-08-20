@@ -1,3 +1,4 @@
+import os
 import re
 import subprocess
 
@@ -73,3 +74,9 @@ def fetch_and_json_env_file(env_file_path: str = ".env") -> dict:
         print(f"Error reading the .env file: {e}")
 
     return {}
+
+
+def get_auth_token():
+    return os.environ.get(
+        "TOKEN", "958303356b9a21884a83ddb6e774cc06c6f1dd0e04222fbc5a4e8a9ae02c140e"
+    )
