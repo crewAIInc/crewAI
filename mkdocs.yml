@@ -178,6 +178,7 @@ nav:
     - PG RAG Search: 'tools/PGSearchTool.md'
     - Scrape Website: 'tools/ScrapeWebsiteTool.md'
     - Selenium Scraper: 'tools/SeleniumScrapingTool.md'
+    - Spider Scraper: 'tools/SpiderTool.md'
     - TXT RAG Search: 'tools/TXTSearchTool.md'
     - Vision Tool: 'tools/VisionTool.md'
     - Website RAG Search: 'tools/WebsiteSearchTool.md'
