@@ -42,13 +42,19 @@ def get_project_name(pyproject_path: str = "pyproject.toml"):
         # Extract the project name
         project_name = pyproject_content["tool"]["poetry"]["name"]
 
+        if "crewai" not in pyproject_content["tool"]["poetry"]["dependencies"]:
+            raise Exception("crewai is not in the dependencies.")
+
         return project_name
+
     except FileNotFoundError:
         print(f"Error: {pyproject_path} not found.")
     except KeyError:
-        print("Error: 'name' not found in [tool.poetry] section.")
+        print(f"Error: {pyproject_path} is not a valid pyproject.toml file.")
     except tomllib.TOMLDecodeError:
         print(f"Error: {pyproject_path} is not a valid TOML file.")
+    except Exception as e:
+        print(f"Error reading the pyproject.toml file: {e}")
 
     return None
 

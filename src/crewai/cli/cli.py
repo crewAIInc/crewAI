@@ -1,3 +1,5 @@
+from typing import Optional
+
 import click
 import pkg_resources
 
@@ -183,9 +185,10 @@ def deploy():
 
 
 @deploy.command(name="up")
-def deploy_up():
+@click.option("-u", "--uuid", type=Optional[str], help="Crew UUID parameter")
+def deploy_up(uuid: Optional[str]):
     """Deploy the crew."""
-    deploy_cmd.deploy()
+    deploy_cmd.deploy(uuid=uuid)
 
 
 @deploy.command(name="create")
