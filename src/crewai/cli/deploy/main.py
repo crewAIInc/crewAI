@@ -22,8 +22,18 @@ class DeployCommand:
         """
         Initialize the DeployCommand with project name and API client.
         """
+        try:
+            access_token = get_auth_token()
+        except Exception:
+            console.print(
+                "Please sign up/login to CrewAI+ before using the CLI.",
+                style="bold red",
+            )
+            console.print("Run 'crewai signup' to sign up/login.", style="bold green")
+            raise SystemExit
+
         self.project_name = get_project_name()
-        self.client = CrewAPI(api_key=get_auth_token())
+        self.client = CrewAPI(api_key=access_token)
 
     def _handle_error(self, json_response: Dict[str, Any]) -> None:
         """

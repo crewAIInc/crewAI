@@ -9,15 +9,13 @@ from crewai.memory.storage.kickoff_task_outputs_storage import (
     KickoffTaskOutputsSQLiteStorage,
 )
 
-from .authentication.main import Authentication
+from .authentication.main import AuthenticationCommand
 from .deploy.main import DeployCommand
 from .evaluate_crew import evaluate_crew
 from .replay_from_task import replay_task_command
 from .reset_memories_command import reset_memories_command
 from .run_crew import run_crew
 from .train_crew import train_crew
-
-deploy_cmd = DeployCommand()
 
 
 @click.group()
@@ -181,7 +179,7 @@ def run():
 @crewai.command()
 def signup():
     """Sign Up/Login to CrewAI+."""
-    Authentication().signup()
+    AuthenticationCommand().signup()
 
 
 # DEPLOY CREWAI+ COMMANDS
@@ -194,12 +192,14 @@ def deploy():
 @deploy.command(name="create")
 def deploy_create():
     """Create a Crew deployment."""
+    deploy_cmd = DeployCommand()
     deploy_cmd.create_crew()
 
 
 @deploy.command(name="list")
 def deploy_list():
     """List all deployments."""
+    deploy_cmd = DeployCommand()
     deploy_cmd.list_crews()
 
 
@@ -207,6 +207,7 @@ def deploy_list():
 @click.option("-u", "--uuid", type=str, help="Crew UUID parameter")
 def deploy_push(uuid: Optional[str]):
     """Deploy the Crew."""
+    deploy_cmd = DeployCommand()
     deploy_cmd.deploy(uuid=uuid)
 
 
@@ -214,6 +215,7 @@ def deploy_push(uuid: Optional[str]):
 @click.option("-u", "--uuid", type=str, help="Crew UUID parameter")
 def deply_status(uuid: Optional[str]):
     """Get the status of a deployment."""
+    deploy_cmd = DeployCommand()
     deploy_cmd.get_crew_status(uuid=uuid)
 
 
@@ -221,6 +223,7 @@ def deply_status(uuid: Optional[str]):
 @click.option("-u", "--uuid", type=str, help="Crew UUID parameter")
 def deploy_logs(uuid: Optional[str]):
     """Get the logs of a deployment."""
+    deploy_cmd = DeployCommand()
     deploy_cmd.get_crew_logs(uuid=uuid)
 
 
@@ -228,6 +231,7 @@ def deploy_logs(uuid: Optional[str]):
 @click.option("-u", "--uuid", type=str, help="Crew UUID parameter")
 def deploy_remove(uuid: Optional[str]):
     """Remove a deployment."""
+    deploy_cmd = DeployCommand()
     deploy_cmd.remove_crew(uuid=uuid)
 
 

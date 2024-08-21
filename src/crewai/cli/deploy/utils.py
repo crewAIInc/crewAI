@@ -3,6 +3,8 @@ import subprocess
 
 import tomllib
 
+from ..authentication.utils import TokenManager
+
 
 def get_git_remote_url() -> str:
     """Get the Git repository's remote URL."""
@@ -81,5 +83,9 @@ def fetch_and_json_env_file(env_file_path: str = ".env") -> dict:
     return {}
 
 
-def get_auth_token():
-    return "<token>"
+def get_auth_token() -> str:
+    """Get the authentication token."""
+    access_token = TokenManager().get_token()
+    if not access_token:
+        raise Exception()
+    return access_token

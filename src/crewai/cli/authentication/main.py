@@ -1,24 +1,26 @@
 import time
 import webbrowser
-from typing import Any, Dict, Optional
+from typing import Any, Dict
 
 import requests
 from rich.console import Console
 
 from .constants import AUTH0_CLIENT_ID, AUTH0_DOMAIN
-from .utils import validate_token
+from .utils import TokenManager, validate_token
 
 console = Console()
 
 
-class Authentication:
+class AuthenticationCommand:
     DEVICE_CODE_URL = f"https://{AUTH0_DOMAIN}/oauth/device/code"
     TOKEN_URL = f"https://{AUTH0_DOMAIN}/oauth/token"
 
-    def signup(self) -> Optional[Dict[str, Any]]:
+    def __init__(self):
+        self.token_manager = TokenManager()
+
+    def signup(self) -> None:
         """Sign up to CrewAI+"""
         console.print("Signing Up to CrewAI+ \n", style="bold blue")
-
         device_code_data = self._get_device_code()
         self._display_auth_instructions(device_code_data)
 
@@ -29,7 +31,7 @@ class Authentication:
 
         device_code_payload = {
             "client_id": AUTH0_CLIENT_ID,
-            "scope": "openid profile email",
+            "scope": "openid",
             "audience": "https://dev-jzsr0j8zs0atl5ha.us.auth0.com/api/v2/",
         }
         response = requests.post(url=self.DEVICE_CODE_URL, data=device_code_payload)
@@ -42,9 +44,7 @@ class Authentication:
         console.print("2. Enter the following code: ", device_code_data["user_code"])
         webbrowser.open(device_code_data["verification_uri_complete"])
 
-    def _poll_for_token(
-        self, device_code_data: Dict[str, Any]
-    ) -> Optional[Dict[str, Any]]:
+    def _poll_for_token(self, device_code_data: Dict[str, Any]) -> None:
         """Poll the server for the token."""
         token_payload = {
             "grant_type": "urn:ietf:params:oauth:grant-type:device_code",
@@ -59,13 +59,10 @@ class Authentication:
 
             if response.status_code == 200:
                 validate_token(token_data["id_token"])
-                # current_user = jwt.decode(
-                #     token_data["id_token"],
-                #     algorithms=ALGORITHMS,
-                #     options={"verify_signature": False},
-                # )
+                expires_in = 360000  # Token expiration time in seconds
+                self.token_manager.save_tokens(token_data["access_token"], expires_in)
                 console.print("\nWelcome to CrewAI+ !!", style="green")
-                return token_data
+                return
 
             if token_data["error"] not in ("authorization_pending", "slow_down"):
                 raise requests.HTTPError(token_data["error_description"])
