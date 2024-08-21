@@ -5,7 +5,7 @@ from typing import Any, Dict
 import requests
 from rich.console import Console
 
-from .constants import AUTH0_CLIENT_ID, AUTH0_DOMAIN
+from .constants import AUTH0_AUDIENCE, AUTH0_CLIENT_ID, AUTH0_DOMAIN
 from .utils import TokenManager, validate_token
 
 console = Console()
@@ -32,7 +32,7 @@ class AuthenticationCommand:
         device_code_payload = {
             "client_id": AUTH0_CLIENT_ID,
             "scope": "openid",
-            "audience": "https://dev-jzsr0j8zs0atl5ha.us.auth0.com/api/v2/",
+            "audience": AUTH0_AUDIENCE,
         }
         response = requests.post(url=self.DEVICE_CODE_URL, data=device_code_payload)
         response.raise_for_status()
