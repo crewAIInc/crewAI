@@ -185,7 +185,7 @@ def deploy():
 
 
 @deploy.command(name="up")
-@click.option("-u", "--uuid", type=Optional[str], help="Crew UUID parameter")
+@click.option("-u", "--uuid", type=str, help="Crew UUID parameter")
 def deploy_up(uuid: Optional[str]):
     """Deploy the crew."""
     deploy_cmd.deploy(uuid=uuid)
@@ -204,21 +204,24 @@ def deploy_list():
 
 
 @deploy.command(name="status")
-def deply_status():
+@click.option("-u", "--uuid", type=str, help="Crew UUID parameter")
+def deply_status(uuid: Optional[str]):
     """Get the status of a deployment."""
-    deploy_cmd.get_crew_status()
+    deploy_cmd.get_crew_status(uuid=uuid)
 
 
 @deploy.command(name="logs")
-def deploy_logs():
+@click.option("-u", "--uuid", type=str, help="Crew UUID parameter")
+def deploy_logs(uuid: Optional[str]):
     """Get the logs of a deployment."""
-    deploy_cmd.get_crew_logs()
+    deploy_cmd.get_crew_logs(uuid=uuid)
 
 
 @deploy.command(name="remove")
-def deploy_remove():
+@click.option("-u", "--uuid", type=str, help="Crew UUID parameter")
+def deploy_remove(uuid: Optional[str]):
     """Remove a deployment."""
-    deploy_cmd.remove_crew()
+    deploy_cmd.remove_crew(uuid=uuid)
 
 
 @deploy.command(name="signup")

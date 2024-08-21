@@ -1,14 +1,19 @@
+import time
+import webbrowser
 from os import getenv
 from typing import Optional
 
+import requests
 from rich.console import Console
 
 from .api import CrewAPI
+from .constants import AUTH0_CLIENT_ID, AUTH0_DOMAIN
 from .utils import (
     fetch_and_json_env_file,
     get_auth_token,
     get_git_remote_url,
     get_project_name,
+    validate_token,
 )
 
 console = Console()
@@ -175,16 +180,56 @@ class DeployCommand:
 
     def signup(self) -> None:
         console.print("Signing Up", style="bold blue")
-        response = self.client.signup()
 
-        # signup_command(response["signup_link"])
-        if response.status_code == 200:
-            data = response.json()
-            console.print(f"Temporary credentials: {data['token']}")
-            console.print(
-                "We are trying to open the following signup link below.\n"
-                "If it doesn't open for you, copy-and-paste into your browser to proceed."
+        device_code_payload = {
+            "client_id": AUTH0_CLIENT_ID,
+            "scope": "openid profile email",
+            "audience": "https://dev-jzsr0j8zs0atl5ha.us.auth0.com/api/v2/",
+        }
+        device_code_response = requests.post(
+            f"https://{AUTH0_DOMAIN}/oauth/device/code",
+            data=device_code_payload,
+        )
+
+        if device_code_response.status_code != 200:
+            console.print("Error generating the device code")
+            raise
+
+        device_code_data = device_code_response.json()
+        console.print(
+            "1. Navigate to: ",
+            device_code_data["verification_uri_complete"],
+        )
+        console.print("2. Enter the following code: ", device_code_data["user_code"])
+        webbrowser.open(device_code_data["verification_uri_complete"])
+
+        token_payload = {
+            "grant_type": "urn:ietf:params:oauth:grant-type:device_code",
+            "device_code": device_code_data["device_code"],
+            "client_id": AUTH0_CLIENT_ID,
+        }
+
+        authenticated = False
+        while not authenticated:
+            token_response = requests.post(
+                f"https://{AUTH0_DOMAIN}/oauth/token", data=token_payload
             )
-            console.print(f"\n{data['signup_link']}", style="underline blue")
-        else:
-            console.print(response.text, style="bold red")
+
+            token_data = token_response.json()
+            if token_response.status_code == 200:
+                validate_token(token_data["id_token"])
+
+                # current_user = jwt.decode(
+                #     token_data["id_token"],
+                #     algorithms=ALGORITHMS,
+                #     options={"verify_signature": False},
+                # )
+
+                authenticated = True
+                console.print("\nWelcome to CrewAI+ !!", style="green")
+
+            elif token_data["error"] not in ("authorization_pending", "slow_down"):
+                console.print(token_data["error_description"])
+                raise
+            else:
+                time.sleep(device_code_data["interval"])
