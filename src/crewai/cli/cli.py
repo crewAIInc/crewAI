@@ -9,6 +9,7 @@ from crewai.memory.storage.kickoff_task_outputs_storage import (
     KickoffTaskOutputsSQLiteStorage,
 )
 
+from .authentication.main import Authentication
 from .deploy.main import DeployCommand
 from .evaluate_crew import evaluate_crew
 from .replay_from_task import replay_task_command
@@ -177,23 +178,22 @@ def run():
     run_crew()
 
 
-# Deploy command group
+@crewai.command()
+def signup():
+    """Sign Up/Login to CrewAI+."""
+    Authentication().signup()
+
+
+# DEPLOY CREWAI+ COMMANDS
 @crewai.group()
 def deploy():
     """Deploy the Crew CLI group."""
     pass
 
 
-@deploy.command(name="up")
-@click.option("-u", "--uuid", type=str, help="Crew UUID parameter")
-def deploy_up(uuid: Optional[str]):
-    """Deploy the crew."""
-    deploy_cmd.deploy(uuid=uuid)
-
-
 @deploy.command(name="create")
 def deploy_create():
-    """Create a deployment."""
+    """Create a Crew deployment."""
     deploy_cmd.create_crew()
 
 
@@ -201,6 +201,13 @@ def deploy_create():
 def deploy_list():
     """List all deployments."""
     deploy_cmd.list_crews()
+
+
+@deploy.command(name="push")
+@click.option("-u", "--uuid", type=str, help="Crew UUID parameter")
+def deploy_push(uuid: Optional[str]):
+    """Deploy the Crew."""
+    deploy_cmd.deploy(uuid=uuid)
 
 
 @deploy.command(name="status")
@@ -222,12 +229,6 @@ def deploy_logs(uuid: Optional[str]):
 def deploy_remove(uuid: Optional[str]):
     """Remove a deployment."""
     deploy_cmd.remove_crew(uuid=uuid)
-
-
-@deploy.command(name="signup")
-def signup():
-    """Sign up for a deployment."""
-    deploy_cmd.signup()
 
 
 if __name__ == "__main__":

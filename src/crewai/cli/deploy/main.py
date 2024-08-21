@@ -1,50 +1,85 @@
-import time
-import webbrowser
-from os import getenv
-from typing import Optional
+from typing import Any, Dict, List, Optional
 
-import requests
 from rich.console import Console
 
 from .api import CrewAPI
-from .constants import AUTH0_CLIENT_ID, AUTH0_DOMAIN
 from .utils import (
     fetch_and_json_env_file,
     get_auth_token,
     get_git_remote_url,
     get_project_name,
-    validate_token,
 )
 
 console = Console()
 
 
 class DeployCommand:
-    BASE_URL = getenv("BASE_URL", "http://localhost:3000/crewai_plus/api")
+    """
+    A class to handle deployment-related operations for CrewAI projects.
+    """
 
     def __init__(self):
+        """
+        Initialize the DeployCommand with project name and API client.
+        """
         self.project_name = get_project_name()
         self.client = CrewAPI(api_key=get_auth_token())
 
-    def _handle_error(self, json_response: dict) -> None:
-        error = json_response.get("error")
-        message = json_response.get("message")
-        console.print(
-            f"Error: {error}",
-            style="bold red",
-        )
-        console.print(
-            f"Message: {message}",
-            style="bold red",
-        )
+    def _handle_error(self, json_response: Dict[str, Any]) -> None:
+        """
+        Handle and display error messages from API responses.
+
+        Args:
+            json_response (Dict[str, Any]): The JSON response containing error information.
+        """
+        error = json_response.get("error", "Unknown error")
+        message = json_response.get("message", "No message provided")
+        console.print(f"Error: {error}", style="bold red")
+        console.print(f"Message: {message}", style="bold red")
 
     def _standard_no_param_error_message(self) -> None:
+        """
+        Display a standard error message when no UUID or project name is available.
+        """
         console.print(
-            "No uuid provided, project pyproject.toml not found or with error.",
+            "No UUID provided, project pyproject.toml not found or with error.",
             style="bold red",
         )
 
+    def _display_deployment_info(self, json_response: Dict[str, Any]) -> None:
+        """
+        Display deployment information.
+
+        Args:
+            json_response (Dict[str, Any]): The deployment information to display.
+        """
+        console.print("Deploying the crew...\n", style="bold blue")
+        for key, value in json_response.items():
+            console.print(f"{key.title()}: [green]{value}[/green]")
+        console.print("\nTo check the status of the deployment, run:")
+        console.print("crewai deploy status")
+        console.print(" or")
+        console.print(f"crewai deploy status --uuid \"{json_response['uuid']}\"")
+
+    def _display_logs(self, log_messages: List[Dict[str, Any]]) -> None:
+        """
+        Display log messages.
+
+        Args:
+            log_messages (List[Dict[str, Any]]): The log messages to display.
+        """
+        for log_message in log_messages:
+            console.print(
+                f"{log_message['timestamp']} - {log_message['level']}: {log_message['message']}"
+            )
+
     def deploy(self, uuid: Optional[str] = None) -> None:
+        """
+        Deploy a crew using either UUID or project name.
+
+        Args:
+            uuid (Optional[str]): The UUID of the crew to deploy.
+        """
         console.print("Starting deployment...", style="bold blue")
         if uuid:
             response = self.client.deploy_by_uuid(uuid)
@@ -56,29 +91,54 @@ class DeployCommand:
 
         json_response = response.json()
         if response.status_code == 200:
-            console.print("Deploying the crew...\n", style="bold blue")
-
-            for key, value in json_response.items():
-                console.print(f"{key.title()}: [green]{value}[/green]")
-
-            console.print("\nTo check the status of the deployment, run:")
-            console.print("crewai deploy status")
-            console.print(" or")
-            console.print(f"crewai deploy status --uuid \"{json_response['uuid']}\"")
-
+            self._display_deployment_info(json_response)
         else:
             self._handle_error(json_response)
 
     def create_crew(self) -> None:
+        """
+        Create a new crew deployment.
+        """
         console.print("Creating deployment...", style="bold blue")
         env_vars = fetch_and_json_env_file()
         remote_repo_url = get_git_remote_url()
 
+        self._confirm_input(env_vars, remote_repo_url)
+        payload = self._create_payload(remote_repo_url, env_vars)
+
+        response = self.client.create_crew(payload)
+        if response.status_code == 201:
+            self._display_creation_success(response.json())
+        else:
+            self._handle_error(response.json())
+
+    def _confirm_input(self, env_vars: Dict[str, str], remote_repo_url: str) -> None:
+        """
+        Confirm input parameters with the user.
+
+        Args:
+            env_vars (Dict[str, str]): Environment variables.
+            remote_repo_url (str): Remote repository URL.
+        """
         input(f"Press Enter to continue with the following Env vars: {env_vars}")
         input(
             f"Press Enter to continue with the following remote repository: {remote_repo_url}\n"
         )
-        payload = {
+
+    def _create_payload(
+        self, remote_repo_url: str, env_vars: Dict[str, str]
+    ) -> Dict[str, Any]:
+        """
+        Create the payload for crew creation.
+
+        Args:
+            remote_repo_url (str): Remote repository URL.
+            env_vars (Dict[str, str]): Environment variables.
+
+        Returns:
+            Dict[str, Any]: The payload for crew creation.
+        """
+        return {
             "deploy": {
                 "name": self.project_name,
                 "repo_clone_url": remote_repo_url,
@@ -86,39 +146,62 @@ class DeployCommand:
             }
         }
 
-        response = self.client.create_crew(payload)
-        if response.status_code == 201:
-            json_response = response.json()
-            console.print("Deployment created successfully!\n", style="bold green")
-            console.print(
-                f"Name: {self.project_name} ({json_response['uuid']})",
-                style="bold green",
-            )
-            console.print(f"Status: {json_response['status']}", style="bold green")
-            console.print("\nTo (re)deploy the crew, run:")
-            console.print("crewai deploy up")
-            console.print(" or")
-            console.print(f"crewai deploy --uuid {json_response['uuid']}")
-        else:
-            self._handle_error(response.json())
+    def _display_creation_success(self, json_response: Dict[str, Any]) -> None:
+        """
+        Display success message after crew creation.
+
+        Args:
+            json_response (Dict[str, Any]): The response containing crew information.
+        """
+        console.print("Deployment created successfully!\n", style="bold green")
+        console.print(
+            f"Name: {self.project_name} ({json_response['uuid']})", style="bold green"
+        )
+        console.print(f"Status: {json_response['status']}", style="bold green")
+        console.print("\nTo (re)deploy the crew, run:")
+        console.print("crewai deploy push")
+        console.print(" or")
+        console.print(f"crewai deploy push --uuid {json_response['uuid']}")
 
     def list_crews(self) -> None:
+        """
+        List all available crews.
+        """
         console.print("Listing all Crews\n", style="bold blue")
 
         response = self.client.list_crews()
         json_response = response.json()
         if response.status_code == 200:
-            for crew_data in json_response:
-                console.print(
-                    f"- {crew_data['name']} ({crew_data['uuid']}) [blue]{crew_data['status']}[/blue]"
-                )
+            self._display_crews(json_response)
         else:
+            self._display_no_crews_message()
+
+    def _display_crews(self, crews_data: List[Dict[str, Any]]) -> None:
+        """
+        Display the list of crews.
+
+        Args:
+            crews_data (List[Dict[str, Any]]): List of crew data to display.
+        """
+        for crew_data in crews_data:
             console.print(
-                "You don't have any crews yet. Let's create one!", style="yellow"
+                f"- {crew_data['name']} ({crew_data['uuid']}) [blue]{crew_data['status']}[/blue]"
             )
-            console.print("  [green]crewai create --name [name][/green]")
+
+    def _display_no_crews_message(self) -> None:
+        """
+        Display a message when no crews are available.
+        """
+        console.print("You don't have any Crews yet. Let's create one!", style="yellow")
+        console.print("  crewai create crew <crew_name>", style="green")
 
     def get_crew_status(self, uuid: Optional[str] = None) -> None:
+        """
+        Get the status of a crew.
+
+        Args:
+            uuid (Optional[str]): The UUID of the crew to check.
+        """
         console.print("Fetching deployment status...", style="bold blue")
         if uuid:
             response = self.client.status_by_uuid(uuid)
@@ -130,16 +213,29 @@ class DeployCommand:
 
         json_response = response.json()
         if response.status_code == 200:
-            console.print(f"Name:\t {json_response['name']}")
-            console.print(f"Status:\t {json_response['status']}")
-
+            self._display_crew_status(json_response)
         else:
             self._handle_error(json_response)
 
-    def get_crew_logs(
-        self, uuid: Optional[str], log_type: str = "dExacployment"
-    ) -> None:
-        console.print(f"Getting {log_type} logs...", style="bold blue")
+    def _display_crew_status(self, status_data: Dict[str, str]) -> None:
+        """
+        Display the status of a crew.
+
+        Args:
+            status_data (Dict[str, str]): The status data to display.
+        """
+        console.print(f"Name:\t {status_data['name']}")
+        console.print(f"Status:\t {status_data['status']}")
+
+    def get_crew_logs(self, uuid: Optional[str], log_type: str = "deployment") -> None:
+        """
+        Get logs for a crew.
+
+        Args:
+            uuid (Optional[str]): The UUID of the crew to get logs for.
+            log_type (str): The type of logs to retrieve (default: "deployment").
+        """
+        console.print(f"Fetching {log_type} logs...", style="bold blue")
 
         if uuid:
             response = self.client.logs_by_uuid(uuid, log_type)
@@ -150,15 +246,17 @@ class DeployCommand:
             return
 
         if response.status_code == 200:
-            log_messages = response.json()
-            for log_message in log_messages:
-                console.print(
-                    f"{log_message['timestamp']} - {log_message['level']}: {log_message['message']}"
-                )
+            self._display_logs(response.json())
         else:
-            console.print(response.text, style="bold red")
+            self._handle_error(response.json())
 
     def remove_crew(self, uuid: Optional[str]) -> None:
+        """
+        Remove a crew deployment.
+
+        Args:
+            uuid (Optional[str]): The UUID of the crew to remove.
+        """
         console.print("Removing deployment...", style="bold blue")
 
         if uuid:
@@ -177,59 +275,3 @@ class DeployCommand:
             console.print(
                 f"Failed to remove crew '{self.project_name}'", style="bold red"
             )
-
-    def signup(self) -> None:
-        console.print("Signing Up", style="bold blue")
-
-        device_code_payload = {
-            "client_id": AUTH0_CLIENT_ID,
-            "scope": "openid profile email",
-            "audience": "https://dev-jzsr0j8zs0atl5ha.us.auth0.com/api/v2/",
-        }
-        device_code_response = requests.post(
-            f"https://{AUTH0_DOMAIN}/oauth/device/code",
-            data=device_code_payload,
-        )
-
-        if device_code_response.status_code != 200:
-            console.print("Error generating the device code")
-            raise
-
-        device_code_data = device_code_response.json()
-        console.print(
-            "1. Navigate to: ",
-            device_code_data["verification_uri_complete"],
-        )
-        console.print("2. Enter the following code: ", device_code_data["user_code"])
-        webbrowser.open(device_code_data["verification_uri_complete"])
-
-        token_payload = {
-            "grant_type": "urn:ietf:params:oauth:grant-type:device_code",
-            "device_code": device_code_data["device_code"],
-            "client_id": AUTH0_CLIENT_ID,
-        }
-
-        authenticated = False
-        while not authenticated:
-            token_response = requests.post(
-                f"https://{AUTH0_DOMAIN}/oauth/token", data=token_payload
-            )
-
-            token_data = token_response.json()
-            if token_response.status_code == 200:
-                validate_token(token_data["id_token"])
-
-                # current_user = jwt.decode(
-                #     token_data["id_token"],
-                #     algorithms=ALGORITHMS,
-                #     options={"verify_signature": False},
-                # )
-
-                authenticated = True
-                console.print("\nWelcome to CrewAI+ !!", style="green")
-
-            elif token_data["error"] not in ("authorization_pending", "slow_down"):
-                console.print(token_data["error_description"])
-                raise
-            else:
-                time.sleep(device_code_data["interval"])
