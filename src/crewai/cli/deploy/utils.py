@@ -4,7 +4,8 @@ import subprocess
 import tomllib
 
 
-def get_git_remote_url():
+def get_git_remote_url() -> str:
+    """Get the Git repository's remote URL."""
     try:
         # Run the git remote -v command
         result = subprocess.run(
@@ -21,18 +22,16 @@ def get_git_remote_url():
             return matches[0]  # Return the first match (origin URL)
         else:
             print("No origin remote found.")
-            return None
+            return "No remote URL found"
 
     except subprocess.CalledProcessError as e:
-        print(f"Error running trying to fetch the Git Repository: {e}")
-        return None
+        return f"Error running trying to fetch the Git Repository: {e}"
     except FileNotFoundError:
-        print("Git command not found. Make sure Git is installed and in your PATH.")
-
-        return None
+        return "Git command not found. Make sure Git is installed and in your PATH."
 
 
 def get_project_name(pyproject_path: str = "pyproject.toml"):
+    """Get the project name from the pyproject.toml file."""
     try:
         # Read the pyproject.toml file
         with open(pyproject_path, "rb") as f:
@@ -59,6 +58,7 @@ def get_project_name(pyproject_path: str = "pyproject.toml"):
 
 
 def fetch_and_json_env_file(env_file_path: str = ".env") -> dict:
+    """Fetch the environment variables from a .env file and return them as a dictionary."""
     try:
         # Read the .env file
         with open(env_file_path, "r") as f:

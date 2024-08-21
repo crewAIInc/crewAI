@@ -104,7 +104,7 @@ class DeployCommand:
         remote_repo_url = get_git_remote_url()
 
         self._confirm_input(env_vars, remote_repo_url)
-        payload = self._create_payload(remote_repo_url, env_vars)
+        payload = self._create_payload(env_vars, remote_repo_url)
 
         response = self.client.create_crew(payload)
         if response.status_code == 201:
@@ -126,7 +126,9 @@ class DeployCommand:
         )
 
     def _create_payload(
-        self, remote_repo_url: str, env_vars: Dict[str, str]
+        self,
+        env_vars: Dict[str, str],
+        remote_repo_url: str,
     ) -> Dict[str, Any]:
         """
         Create the payload for crew creation.
