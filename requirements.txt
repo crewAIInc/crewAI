@@ -1,0 +1,4 @@
+crewai
+crewai[tools]
+langchain
+streamlit
