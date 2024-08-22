@@ -58,6 +58,31 @@ def get_project_name(pyproject_path: str = "pyproject.toml"):
 
     return None
 
+    def get_crewai_version(pyproject_path: str = "pyproject.toml") -> str:
+        """Get the version number of crewai from the pyproject.toml file."""
+        try:
+            # Read the pyproject.toml file
+            with open("pyproject.toml", "rb") as f:
+                pyproject_content = tomllib.load(f)
+
+            # Extract the version number of crewai
+            crewai_version = pyproject_content["tool"]["poetry"]["dependencies"][
+                "crewai"
+            ]["version"]
+
+            return crewai_version
+
+        except FileNotFoundError:
+            print(f"Error: {pyproject_path} not found.")
+        except KeyError:
+            print(f"Error: {pyproject_path} is not a valid pyproject.toml file.")
+        except tomllib.TOMLDecodeError:
+            print(f"Error: {pyproject_path} is not a valid TOML file.")
+        except Exception as e:
+            print(f"Error reading the pyproject.toml file: {e}")
+
+        return None
+
 
 def fetch_and_json_env_file(env_file_path: str = ".env") -> dict:
     """Fetch the environment variables from a .env file and return them as a dictionary."""
