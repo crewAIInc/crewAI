@@ -8,19 +8,18 @@ class CrewAPI:
     CrewAPI class to interact with the crewAI+ API.
     """
 
-    CREWAI_BASE_URL = getenv(
-        "CREWAI_BASE_URL", "https://dev.crewai.com/crewai_plus/api/v1/crews"
-    )
-
     def __init__(self, api_key: str) -> None:
         self.api_key = api_key
         self.headers = {
             "Authorization": f"Bearer {api_key}",
             "Content-Type": "application/json",
         }
+        self.base_url = getenv(
+            "CREWAI_BASE_URL", "https://dev.crewai.com/crewai_plus/api/v1/crews"
+        )
 
     def _make_request(self, method: str, endpoint: str, **kwargs) -> requests.Response:
-        url = f"{self.CREWAI_BASE_URL}/{endpoint}"
+        url = f"{self.base_url}/{endpoint}"
         return requests.request(method, url, headers=self.headers, **kwargs)
 
     # Deploy
