@@ -30,12 +30,22 @@ def validate_token(id_token: str) -> None:
 
 
 class TokenManager:
-    def __init__(self, file_path="tokens.enc"):
+    def __init__(self, file_path: str = "tokens.enc") -> None:
+        """
+        Initialize the TokenManager class.
+
+        :param file_path: The file path to store the encrypted tokens. Default is "tokens.enc".
+        """
         self.file_path = file_path
         self.key = self._get_or_create_key()
         self.fernet = Fernet(self.key)
 
-    def _get_or_create_key(self):
+    def _get_or_create_key(self) -> bytes:
+        """
+        Get or create the encryption key.
+
+        :return: The encryption key.
+        """
         key_filename = "secret.key"
 
         if self.read_secure_file(key_filename):
@@ -45,7 +55,13 @@ class TokenManager:
             self.save_secure_file(key_filename, key)
         return key
 
-    def save_tokens(self, access_token, expires_in):
+    def save_tokens(self, access_token: str, expires_in: int) -> None:
+        """
+        Save the access token and its expiration time.
+
+        :param access_token: The access token to save.
+        :param expires_in: The expiration time of the access token in seconds.
+        """
         expiration_time = datetime.now() + timedelta(seconds=expires_in)
         data = {
             "access_token": access_token,
@@ -55,6 +71,11 @@ class TokenManager:
         self.save_secure_file(self.file_path, encrypted_data)
 
     def get_token(self) -> Optional[str]:
+        """
+        Get the access token if it is valid and not expired.
+
+        :return: The access token if valid and not expired, otherwise None.
+        """
         encrypted_data = self.read_secure_file(self.file_path)
 
         decrypted_data = self.fernet.decrypt(encrypted_data)
@@ -66,7 +87,12 @@ class TokenManager:
 
         return data["access_token"]
 
-    def get_secure_storage_path(self):
+    def get_secure_storage_path(self) -> Path:
+        """
+        Get the secure storage path based on the operating system.
+
+        :return: The secure storage path.
+        """
         if sys.platform == "win32":
             # Windows: Use %LOCALAPPDATA%
             base_path = os.environ.get("LOCALAPPDATA")
@@ -84,7 +110,13 @@ class TokenManager:
 
         return storage_path
 
-    def save_secure_file(self, filename, content):
+    def save_secure_file(self, filename: str, content: bytes) -> None:
+        """
+        Save the content to a secure file.
+
+        :param filename: The name of the file.
+        :param content: The content to save.
+        """
         storage_path = self.get_secure_storage_path()
         file_path = storage_path / filename
 
@@ -94,7 +126,13 @@ class TokenManager:
         # Set appropriate permissions (read/write for owner only)
         os.chmod(file_path, 0o600)
 
-    def read_secure_file(self, filename):
+    def read_secure_file(self, filename: str) -> Optional[bytes]:
+        """
+        Read the content of a secure file.
+
+        :param filename: The name of the file.
+        :return: The content of the file if it exists, otherwise None.
+        """
         storage_path = self.get_secure_storage_path()
         file_path = storage_path / filename
 
