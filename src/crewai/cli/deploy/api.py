@@ -9,7 +9,7 @@ class CrewAPI:
     """
 
     CREWAI_BASE_URL = getenv(
-        "CREWAI_BASE_URL", "http://localhost:3000/crewai_plus/api/v1/crews"
+        "CREWAI_BASE_URL", "https://dev.crewai.com/crewai_plus/api/v1/crews"
     )
 
     def __init__(self, api_key: str) -> None:
