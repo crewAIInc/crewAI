@@ -118,7 +118,9 @@ class Agent(BaseAgent):
         self.agent_ops_agent_name = self.role
 
         # Different llms store the model name in different attributes
-        model_name = self.llm.model_name or self.llm.deployment_name
+        model_name = getattr(self.llm, "model_name", None) or getattr(
+            self.llm, "deployment_name", None
+        )
 
         if model_name:
             self._setup_llm_callbacks(model_name)
