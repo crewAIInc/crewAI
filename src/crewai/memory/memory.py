@@ -21,7 +21,7 @@ class Memory:
         if agent:
             metadata["agent"] = agent
 
-        self.storage.save(value, metadata)  # type: ignore # Maybe BUG? Should be self.storage.save(key, value, metadata)
+        self.storage.save(value, metadata)
 
     def search(self, query: str) -> Dict[str, Any]:
         return self.storage.search(query)
