@@ -117,16 +117,21 @@ class Agent(BaseAgent):
     def post_init_setup(self):
         self.agent_ops_agent_name = self.role
 
-        if hasattr(self.llm, "model_name"):
-            self._setup_llm_callbacks()
+        # Different llms store the model name in different attributes
+        model_name = getattr(self.llm, "model_name", None) or getattr(
+            self.llm, "deployment_name", None
+        )
+
+        if model_name:
+            self._setup_llm_callbacks(model_name)
 
         if not self.agent_executor:
             self._setup_agent_executor()
 
         return self
 
-    def _setup_llm_callbacks(self):
-        token_handler = TokenCalcHandler(self.llm.model_name, self._token_process)
+    def _setup_llm_callbacks(self, model_name: str):
+        token_handler = TokenCalcHandler(model_name, self._token_process)
 
         if not isinstance(self.llm.callbacks, list):
             self.llm.callbacks = []

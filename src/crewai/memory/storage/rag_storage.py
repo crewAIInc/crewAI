@@ -5,12 +5,13 @@ import os
 import shutil
 from typing import Any, Dict, List, Optional
 
-from crewai.memory.storage.interface import Storage
-from crewai.utilities.paths import db_storage_path
 from embedchain import App
 from embedchain.llm.base import BaseLlm
 from embedchain.models.data_type import DataType
 from embedchain.vectordb.chroma import InvalidDimensionException
+
+from crewai.memory.storage.interface import Storage
+from crewai.utilities.paths import db_storage_path
 
 
 @contextlib.contextmanager
@@ -77,12 +78,12 @@ class RAGStorage(Storage):
         self.app.llm = FakeLLM()
         if allow_reset:
             self.app.reset()
-            
+
     def _sanitize_role(self, role: str) -> str:
         """
         Sanitizes agent roles to ensure valid directory names.
         """
-        return role.replace('\n', '').replace(' ', '_').replace('/', '_')
+        return role.replace("\n", "").replace(" ", "_").replace("/", "_")
 
     def save(self, value: Any, metadata: Dict[str, Any]) -> None:
         self._generate_embedding(value, metadata)
