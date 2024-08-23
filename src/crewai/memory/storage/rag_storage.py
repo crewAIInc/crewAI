@@ -2,10 +2,12 @@ import contextlib
 import io
 import logging
 import os
+import shutil
 from typing import Any, Dict, List, Optional
 
 from embedchain import App
 from embedchain.llm.base import BaseLlm
+from embedchain.models.data_type import DataType
 from embedchain.vectordb.chroma import InvalidDimensionException
 
 from crewai.memory.storage.interface import Storage
@@ -46,7 +48,7 @@ class RAGStorage(Storage):
             os.environ["OPENAI_API_KEY"] = "fake"
 
         agents = crew.agents if crew else []
-        agents = [agent.role for agent in agents]
+        agents = [self._sanitize_role(agent.role) for agent in agents]
         agents = "_".join(agents)
 
         config = {
@@ -71,13 +73,19 @@ class RAGStorage(Storage):
 
         if embedder_config:
             config["embedder"] = embedder_config
-
+        self.type = type
         self.app = App.from_config(config=config)
         self.app.llm = FakeLLM()
         if allow_reset:
             self.app.reset()
 
-    def save(self, value: Any, metadata: Dict[str, Any]) -> None:  # type: ignore # BUG?: Should be save(key, value, metadata)  Signature of "save" incompatible with supertype "Storage"
+    def _sanitize_role(self, role: str) -> str:
+        """
+        Sanitizes agent roles to ensure valid directory names.
+        """
+        return role.replace("\n", "").replace(" ", "_").replace("/", "_")
+
+    def save(self, value: Any, metadata: Dict[str, Any]) -> None:
         self._generate_embedding(value, metadata)
 
     def search(  # type: ignore # BUG?: Signature of "search" incompatible with supertype "Storage"
@@ -100,5 +108,12 @@ class RAGStorage(Storage):
         return [r for r in results if r["metadata"]["score"] >= score_threshold]
 
     def _generate_embedding(self, text: str, metadata: Dict[str, Any]) -> Any:
-        with suppress_logging():
-            self.app.add(text, data_type="text", metadata=metadata)
+        self.app.add(text, data_type=DataType.TEXT, metadata=metadata)
+
+    def reset(self) -> None:
+        try:
+            shutil.rmtree(f"{db_storage_path()}/{self.type}")
+        except Exception as e:
+            raise Exception(
+                f"An error occurred while resetting the {self.type} memory: {e}"
+            )

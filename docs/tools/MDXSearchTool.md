@@ -4,7 +4,7 @@
     The MDXSearchTool is in continuous development. Features may be added or removed, and functionality could change unpredictably as we refine the tool.
 
 ## Description
-The MDX Search Tool is a component of the `crewai_tools` package aimed at facilitating advanced market data extraction. This tool is invaluable for researchers and analysts seeking quick access to market insights, especially within the AI sector. It simplifies the task of acquiring, interpreting, and organizing market data by interfacing with various data sources.
+The MDX Search Tool is a component of the `crewai_tools` package aimed at facilitating advanced markdown language extraction. It enables users to effectively search and extract relevant information from MD files using query-based searches. This tool is invaluable for data analysis, information management, and research tasks, streamlining the process of finding specific information within large document collections.
 
 ## Installation
 Before using the MDX Search Tool, ensure the `crewai_tools` package is installed. If it is not, you can install it with the following command:

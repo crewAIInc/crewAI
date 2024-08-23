@@ -11,6 +11,7 @@ env:
 jobs:
   deploy:
     runs-on: ubuntu-latest
+    timeout-minutes: 15
 
     steps:
       - name: Checkout code
@@ -19,13 +20,12 @@ jobs:
       - name: Setup Python
         uses: actions/setup-python@v4
         with:
-          python-version: "3.10"
+          python-version: "3.11.9"
 
       - name: Install Requirements
         run: |
-          sudo apt-get update &&
-          pip install poetry &&
-          poetry lock &&
+          set -e
+          pip install poetry
           poetry install
 
       - name: Run tests

@@ -103,3 +103,20 @@ class LTMSQLiteStorage:
                 color="red",
             )
         return None
+
+    def reset(
+        self,
+    ) -> None:
+        """Resets the LTM table with error handling."""
+        try:
+            with sqlite3.connect(self.db_path) as conn:
+                cursor = conn.cursor()
+                cursor.execute("DELETE FROM long_term_memories")
+                conn.commit()
+
+        except sqlite3.Error as e:
+            self._printer.print(
+                content=f"MEMORY ERROR: An error occurred while deleting all rows in LTM: {e}",
+                color="red",
+            )
+        return None

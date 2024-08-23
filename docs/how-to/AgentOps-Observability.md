@@ -4,8 +4,7 @@ description: Understanding and logging your agent performance with AgentOps.
 ---
 
 # Intro
-Observability is a key aspect of developing and deploying conversational AI agents. It allows developers to understand how their agents are performing, how their agents are interacting with users, and how their agents use external tools and APIs. AgentOps is a product independent of CrewAI that provides a comprehensive observability solution for agents. 
-
+Observability is a key aspect of developing and deploying conversational AI agents. It allows developers to understand how their agents are performing, how their agents are interacting with users, and how their agents use external tools and APIs. AgentOps is a product independent of CrewAI that provides a comprehensive observability solution for agents.
 
 ## AgentOps
 
@@ -23,53 +22,52 @@ Additionally, AgentOps provides session drilldowns for viewing Crew agent intera
 ![Viewing a step-by-step agent replay execution graph](..%2Fassets%2Fagentops-replay.png)
 
 ### Features
-- **LLM Cost Management and Tracking**: Track spend with foundation model providers
-- **Replay Analytics**: Watch step-by-step agent execution graphs
-- **Recursive Thought Detection**: Identify when agents fall into infinite loops
-- **Custom Reporting**: Create custom analytics on agent performance
-- **Analytics Dashboard**: Monitor high level statistics about agents in development and production
-- **Public Model Testing**: Test your agents against benchmarks and leaderboards
-- **Custom Tests**: Run your agents against domain specific tests
-- **Time Travel Debugging**: Restart your sessions from checkpoints
-- **Compliance and Security**: Create audit logs and detect potential threats such as profanity and PII leaks
-- **Prompt Injection Detection**: Identify potential code injection and secret leaks
+- **LLM Cost Management and Tracking**: Track spend with foundation model providers.
+- **Replay Analytics**: Watch step-by-step agent execution graphs.
+- **Recursive Thought Detection**: Identify when agents fall into infinite loops.
+- **Custom Reporting**: Create custom analytics on agent performance.
+- **Analytics Dashboard**: Monitor high-level statistics about agents in development and production.
+- **Public Model Testing**: Test your agents against benchmarks and leaderboards.
+- **Custom Tests**: Run your agents against domain-specific tests.
+- **Time Travel Debugging**: Restart your sessions from checkpoints.
+- **Compliance and Security**: Create audit logs and detect potential threats such as profanity and PII leaks.
+- **Prompt Injection Detection**: Identify potential code injection and secret leaks.
 
 ### Using AgentOps
 
 1. **Create an API Key:**
-Create a user API key here: [Create API Key](app.agentops.ai/account)
+   Create a user API key here: [Create API Key](https://app.agentops.ai/account)
 
 2. **Configure Your Environment:**
-Add your API key to your environment variables
+   Add your API key to your environment variables
 
-```
-AGENTOPS_API_KEY=<YOUR_AGENTOPS_API_KEY>
-```
+   ```bash
+   AGENTOPS_API_KEY=<YOUR_AGENTOPS_API_KEY>
+   ```
 
 3. **Install AgentOps:**
-Install AgentOps with:
-```
-pip install crewai[agentops]
-```
-or
-```
-pip install agentops
-```
+   Install AgentOps with:
+   ```bash
+   pip install crewai[agentops]
+   ```
+   or
+   ```bash
+   pip install agentops
+   ```
 
-Before using `Crew` in your script, include these lines:
+   Before using `Crew` in your script, include these lines:
 
-```python
-import agentops
-agentops.init()
-```
+   ```python
+   import agentops
+   agentops.init()
+   ```
 
-This will initiate an AgentOps session as well as automatically track Crew agents. For further info on how to outfit more complex agentic systems, check out the [AgentOps documentation](https://docs.agentops.ai) or join the [Discord](https://discord.gg/j4f3KbeH).
+   This will initiate an AgentOps session as well as automatically track Crew agents. For further info on how to outfit more complex agentic systems, check out the [AgentOps documentation](https://docs.agentops.ai) or join the [Discord](https://discord.gg/j4f3KbeH).
 
 ### Crew + AgentOps Examples
 - [Job Posting](https://github.com/joaomdmoura/crewAI-examples/tree/main/job-posting)
 - [Markdown Validator](https://github.com/joaomdmoura/crewAI-examples/tree/main/markdown_validator)
 - [Instagram Post](https://github.com/joaomdmoura/crewAI-examples/tree/main/instagram_post)
-
 
 ### Further Information
 

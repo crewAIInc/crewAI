@@ -12,7 +12,10 @@ class EntityMemory(Memory):
 
     def __init__(self, crew=None, embedder_config=None):
         storage = RAGStorage(
-            type="entities", allow_reset=False, embedder_config=embedder_config, crew=crew
+            type="entities",
+            allow_reset=False,
+            embedder_config=embedder_config,
+            crew=crew,
         )
         super().__init__(storage)
 
@@ -20,3 +23,9 @@ class EntityMemory(Memory):
         """Saves an entity item into the SQLite storage."""
         data = f"{item.name}({item.type}): {item.description}"
         super().save(data, item.metadata)
+
+    def reset(self) -> None:
+        try:
+            self.storage.reset()
+        except Exception as e:
+            raise Exception(f"An error occurred while resetting the entity memory: {e}")

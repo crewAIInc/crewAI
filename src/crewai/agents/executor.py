@@ -1,28 +1,32 @@
 import threading
 import time
-from typing import Any, Dict, Iterator, List, Optional, Tuple, Union
+from typing import Any, Dict, Iterator, List, Literal, Optional, Tuple, Union
 
+import click
 from langchain.agents import AgentExecutor
 from langchain.agents.agent import ExceptionTool
 from langchain.callbacks.manager import CallbackManagerForChainRun
+from langchain.chains.summarize import load_summarize_chain
+from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langchain_core.agents import AgentAction, AgentFinish, AgentStep
 from langchain_core.exceptions import OutputParserException
-from langchain_core.pydantic_v1 import root_validator
 from langchain_core.tools import BaseTool
 from langchain_core.utils.input import get_color_mapping
 from pydantic import InstanceOf
 
+from crewai.agents.agent_builder.base_agent_executor_mixin import CrewAgentExecutorMixin
 from crewai.agents.tools_handler import ToolsHandler
-from crewai.memory.entity.entity_memory_item import EntityMemoryItem
-from crewai.memory.long_term.long_term_memory_item import LongTermMemoryItem
-from crewai.memory.short_term.short_term_memory_item import ShortTermMemoryItem
 from crewai.tools.tool_usage import ToolUsage, ToolUsageErrorException
 from crewai.utilities import I18N
-from crewai.utilities.converter import ConverterError
-from crewai.utilities.evaluators.task_evaluator import TaskEvaluator
+from crewai.utilities.constants import TRAINING_DATA_FILE
+from crewai.utilities.exceptions.context_window_exceeding_exception import (
+    LLMContextLengthExceededException,
+)
+from crewai.utilities.logger import Logger
+from crewai.utilities.training_handler import CrewTrainingHandler
 
 
-class CrewAgentExecutor(AgentExecutor):
+class CrewAgentExecutor(AgentExecutor, CrewAgentExecutorMixin):
     _i18n: I18N = I18N()
     should_ask_for_human_input: bool = False
     llm: Any = None
@@ -38,66 +42,13 @@ class CrewAgentExecutor(AgentExecutor):
     tools_handler: Optional[InstanceOf[ToolsHandler]] = None
     max_iterations: Optional[int] = 15
     have_forced_answer: bool = False
-    force_answer_max_iterations: Optional[int] = None
+    force_answer_max_iterations: Optional[int] = None  # type: ignore # Incompatible types in assignment (expression has type "int | None", base class "CrewAgentExecutorMixin" defined the type as "int")
     step_callback: Optional[Any] = None
     system_template: Optional[str] = None
     prompt_template: Optional[str] = None
     response_template: Optional[str] = None
-
-    @root_validator()
-    def set_force_answer_max_iterations(cls, values: Dict) -> Dict:
-        values["force_answer_max_iterations"] = values["max_iterations"] - 2
-        return values
-
-    def _should_force_answer(self) -> bool:
-        return (
-            self.iterations == self.force_answer_max_iterations
-        ) and not self.have_forced_answer
-
-    def _create_short_term_memory(self, output) -> None:
-        if (
-            self.crew
-            and self.crew.memory
-            and "Action: Delegate work to co-worker" not in output.log
-        ):
-            memory = ShortTermMemoryItem(
-                data=output.log,
-                agent=self.crew_agent.role,
-                metadata={
-                    "observation": self.task.description,
-                },
-            )
-            self.crew._short_term_memory.save(memory)
-
-    def _create_long_term_memory(self, output) -> None:
-        if self.crew and self.crew.memory:
-            ltm_agent = TaskEvaluator(self.crew_agent)
-            evaluation = ltm_agent.evaluate(self.task, output.log)
-
-            if isinstance(evaluation, ConverterError):
-                return
-
-            long_term_memory = LongTermMemoryItem(
-                task=self.task.description,
-                agent=self.crew_agent.role,
-                quality=evaluation.quality,
-                datetime=str(time.time()),
-                expected_output=self.task.expected_output,
-                metadata={
-                    "suggestions": evaluation.suggestions,
-                    "quality": evaluation.quality,
-                },
-            )
-            self.crew._long_term_memory.save(long_term_memory)
-
-            for entity in evaluation.entities:
-                entity_memory = EntityMemoryItem(
-                    name=entity.name,
-                    type=entity.type,
-                    description=entity.description,
-                    relationships="\n".join([f"- {r}" for r in entity.relationships]),
-                )
-                self.crew._entity_memory.save(entity_memory)
+    _logger: Logger = Logger()
+    _fit_context_window_strategy: Optional[Literal["summarize"]] = "summarize"
 
     def _call(
         self,
@@ -114,7 +65,7 @@ class CrewAgentExecutor(AgentExecutor):
         )
         intermediate_steps: List[Tuple[AgentAction, str]] = []
         # Allowing human input given task setting
-        if self.task.human_input:
+        if self.task and self.task.human_input:
             self.should_ask_for_human_input = True
 
         # Let's start tracking the number of iterations and time elapsed
@@ -189,7 +140,7 @@ class CrewAgentExecutor(AgentExecutor):
             intermediate_steps = self._prepare_intermediate_steps(intermediate_steps)
 
             # Call the LLM to see what to do.
-            output = self.agent.plan(  # type: ignore #  Incompatible types in assignment (expression has type "AgentAction | AgentFinish | list[AgentAction]", variable has type "AgentAction")
+            output = self.agent.plan(
                 intermediate_steps,
                 callbacks=run_manager.get_child() if run_manager else None,
                 **inputs,
@@ -243,15 +194,37 @@ class CrewAgentExecutor(AgentExecutor):
             yield AgentStep(action=output, observation=observation)
             return
 
+        except Exception as e:
+            if LLMContextLengthExceededException(str(e))._is_context_limit_error(
+                str(e)
+            ):
+                output = self._handle_context_length_error(
+                    intermediate_steps, run_manager, inputs
+                )
+
+                if isinstance(output, AgentFinish):
+                    yield output
+                elif isinstance(output, list):
+                    for step in output:
+                        yield step
+                return
+
+            raise e
+
         # If the tool chosen is the finishing tool, then we end and return.
         if isinstance(output, AgentFinish):
             if self.should_ask_for_human_input:
+                human_feedback = self._ask_human_input(output.return_values["output"])
+
+                if self.crew and self.crew._train:
+                    self._handle_crew_training_output(output, human_feedback)
+
                 # Making sure we only ask for it once, so disabling for the next thought loop
                 self.should_ask_for_human_input = False
-                human_feedback = self._ask_human_input(output.return_values["output"])
                 action = AgentAction(
                     tool="Human Input", tool_input=human_feedback, log=output.log
                 )
+
                 yield AgentStep(
                     action=action,
                     observation=self._i18n.slice("human_feedback").format(
@@ -261,6 +234,9 @@ class CrewAgentExecutor(AgentExecutor):
                 return
 
             else:
+                if self.crew and self.crew._train:
+                    self._handle_crew_training_output(output)
+
                 yield output
                 return
 
@@ -282,14 +258,18 @@ class CrewAgentExecutor(AgentExecutor):
                 tools_names=self.tools_names,
                 function_calling_llm=self.function_calling_llm,
                 task=self.task,
+                agent=self.crew_agent,
                 action=agent_action,
             )
+
             tool_calling = tool_usage.parse(agent_action.log)
 
             if isinstance(tool_calling, ToolUsageErrorException):
                 observation = tool_calling.message
             else:
                 if tool_calling.tool_name.casefold().strip() in [
+                    name.casefold().strip() for name in name_to_tool_map
+                ] or tool_calling.tool_name.casefold().replace("_", " ") in [
                     name.casefold().strip() for name in name_to_tool_map
                 ]:
                     observation = tool_usage.use(tool_calling, agent_action.log)
@@ -300,8 +280,118 @@ class CrewAgentExecutor(AgentExecutor):
                     )
             yield AgentStep(action=agent_action, observation=observation)
 
-    def _ask_human_input(self, final_answer: dict) -> str:
-        """Get human input."""
-        return input(
-            self._i18n.slice("getting_input").format(final_answer=final_answer)
+    def _handle_crew_training_output(
+        self, output: AgentFinish, human_feedback: str | None = None
+    ) -> None:
+        """Function to handle the process of the training data."""
+        agent_id = str(self.crew_agent.id)
+
+        if (
+            CrewTrainingHandler(TRAINING_DATA_FILE).load()
+            and not self.should_ask_for_human_input
+        ):
+            training_data = CrewTrainingHandler(TRAINING_DATA_FILE).load()
+            if training_data.get(agent_id):
+                training_data[agent_id][self.crew._train_iteration][
+                    "improved_output"
+                ] = output.return_values["output"]
+                CrewTrainingHandler(TRAINING_DATA_FILE).save(training_data)
+
+        if self.should_ask_for_human_input and human_feedback is not None:
+            training_data = {
+                "initial_output": output.return_values["output"],
+                "human_feedback": human_feedback,
+                "agent": agent_id,
+                "agent_role": self.crew_agent.role,
+            }
+            CrewTrainingHandler(TRAINING_DATA_FILE).append(
+                self.crew._train_iteration, agent_id, training_data
+            )
+
+    def _handle_context_length(
+        self, intermediate_steps: List[Tuple[AgentAction, str]]
+    ) -> List[Tuple[AgentAction, str]]:
+        text = intermediate_steps[0][1]
+        original_action = intermediate_steps[0][0]
+
+        text_splitter = RecursiveCharacterTextSplitter(
+            separators=["\n\n", "\n"],
+            chunk_size=8000,
+            chunk_overlap=500,
         )
+
+        if self._fit_context_window_strategy == "summarize":
+            docs = text_splitter.create_documents([text])
+            self._logger.log(
+                "debug",
+                "Summarizing Content, it is recommended to use a RAG tool",
+                color="bold_blue",
+            )
+            summarize_chain = load_summarize_chain(
+                self.llm, chain_type="map_reduce", verbose=True
+            )
+            summarized_docs = []
+            for doc in docs:
+                summary = summarize_chain.invoke(
+                    {"input_documents": [doc]}, return_only_outputs=True
+                )
+
+                summarized_docs.append(summary["output_text"])
+
+            formatted_results = "\n\n".join(summarized_docs)
+            summary_step = AgentStep(
+                action=AgentAction(
+                    tool=original_action.tool,
+                    tool_input=original_action.tool_input,
+                    log=original_action.log,
+                ),
+                observation=formatted_results,
+            )
+            summary_tuple = (summary_step.action, summary_step.observation)
+            return [summary_tuple]
+
+        return intermediate_steps
+
+    def _handle_context_length_error(
+        self,
+        intermediate_steps: List[Tuple[AgentAction, str]],
+        run_manager: Optional[CallbackManagerForChainRun],
+        inputs: Dict[str, str],
+    ) -> Union[AgentFinish, List[AgentStep]]:
+        self._logger.log(
+            "debug",
+            "Context length exceeded. Asking user if they want to use summarize prompt to fit, this will reduce context length.",
+            color="yellow",
+        )
+        user_choice = click.confirm(
+            "Context length exceeded. Do you want to summarize the text to fit models context window?"
+        )
+        if user_choice:
+            self._logger.log(
+                "debug",
+                "Context length exceeded. Using summarize prompt to fit, this will reduce context length.",
+                color="bold_blue",
+            )
+            intermediate_steps = self._handle_context_length(intermediate_steps)
+
+            output = self.agent.plan(
+                intermediate_steps,
+                callbacks=run_manager.get_child() if run_manager else None,
+                **inputs,
+            )
+
+            if isinstance(output, AgentFinish):
+                return output
+            elif isinstance(output, AgentAction):
+                return [AgentStep(action=output, observation=None)]
+            else:
+                return [AgentStep(action=action, observation=None) for action in output]
+        else:
+            self._logger.log(
+                "debug",
+                "Context length exceeded. Consider using smaller text or RAG tools from crewai_tools.",
+                color="red",
+            )
+            raise SystemExit(
+                "Context length exceeded and user opted not to summarize. Consider using smaller text or RAG tools from crewai_tools."
+            )
