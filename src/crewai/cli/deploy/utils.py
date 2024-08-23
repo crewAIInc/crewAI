@@ -82,7 +82,7 @@ def get_crewai_version(pyproject_path: str = "pyproject.toml") -> str:
     except Exception as e:
         print(f"Error reading the pyproject.toml file: {e}")
 
-    return None
+    return "no-version-found"
 
 
 def fetch_and_json_env_file(env_file_path: str = ".env") -> dict:
