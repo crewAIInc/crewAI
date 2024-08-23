@@ -191,8 +191,7 @@ To install the dependencies for your project, you can use Poetry. First, navigat
 
 ```shell
 $ cd my_project
-$ poetry lock
-$ poetry install
+$ crewai install
 ```
 
 This will install the dependencies specified in the `pyproject.toml` file.
@@ -233,11 +232,6 @@ To run your project, use the following command:
 ```shell
 $ crewai run
 ```
-or
-```shell
-$ poetry run my_project
-```
-
 This will initialize your crew of AI agents and begin task execution as defined in your configuration in the `main.py` file.
 
 ### Replay Tasks from Latest Crew Kickoff

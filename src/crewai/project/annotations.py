@@ -1,3 +1,5 @@
+from functools import wraps
+
 from crewai.project.utils import memoize
 
 
@@ -5,13 +7,17 @@ def task(func):
     if not hasattr(task, "registration_order"):
         task.registration_order = []
 
-    func.is_task = True
-    wrapped_func = memoize(func)
+    @wraps(func)
+    def wrapper(*args, **kwargs):
+        result = func(*args, **kwargs)
+        if not result.name:
+            result.name = func.__name__
+        return result
 
-    # Append the function name to the registration order list
+    setattr(wrapper, "is_task", True)
     task.registration_order.append(func.__name__)
 
-    return wrapped_func
+    return memoize(wrapper)
 
 
 def agent(func):

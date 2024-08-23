@@ -1,0 +1,116 @@
+name: Bug report
+description: Create a report to help us improve CrewAI
+title: "[BUG]"
+labels: ["bug"]
+assignees: []
+body:
+  - type: textarea
+    id: description
+    attributes:
+      label: Description
+      description: Provide a clear and concise description of what the bug is.
+    validations:
+      required: true
+  - type: textarea
+    id: steps-to-reproduce
+    attributes:
+      label: Steps to Reproduce
+      description: Provide a step-by-step process to reproduce the behavior.
+      placeholder: |
+        1. Go to '...'
+        2. Click on '....'
+        3. Scroll down to '....'
+        4. See error
+    validations:
+      required: true
+  - type: textarea
+    id: expected-behavior
+    attributes:
+      label: Expected behavior
+      description: A clear and concise description of what you expected to happen.
+    validations:
+      required: true
+  - type: textarea
+    id: screenshots-code
+    attributes:
+      label: Screenshots/Code snippets
+      description: If applicable, add screenshots or code snippets to help explain your problem.
+    validations:
+      required: true
+  - type: dropdown
+    id: os
+    attributes:
+      label: Operating System
+      description: Select the operating system you're using
+      options:
+        - Ubuntu 20.04
+        - Ubuntu 22.04
+        - Ubuntu 24.04
+        - macOS Catalina
+        - macOS Big Sur
+        - macOS Monterey
+        - macOS Ventura
+        - macOS Sonoma
+        - Windows 10
+        - Windows 11
+        - Other (specify in additional context)
+    validations:
+      required: true
+  - type: dropdown
+    id: python-version
+    attributes:
+      label: Python Version
+      description: Version of Python your Crew is running on
+      options:
+        - '3.10'
+        - '3.11'
+        - '3.12'
+        - '3.13'
+    validations:
+      required: true
+  - type: input
+    id: crewai-version
+    attributes:
+      label: crewAI Version
+      description: What version of CrewAI are you using
+    validations:
+      required: true
+  - type: input
+    id: crewai-tools-version
+    attributes:
+      label: crewAI Tools Version
+      description: What version of CrewAI Tools are you using 
+    validations:
+      required: true
+  - type: dropdown
+    id: virtual-environment
+    attributes:
+      label: Virtual Environment
+      description: What Virtual Environment are you running your crew in.
+      options:
+        - Venv
+        - Conda
+        - Poetry
+    validations:
+      required: true
+  - type: textarea
+    id: evidence
+    attributes:
+      label: Evidence
+      description: Include relevant information, logs or error messages. These can be screenshots.
+    validations:
+      required: true
+  - type: textarea
+    id: possible-solution
+    attributes:
+      label: Possible Solution
+      description: Have a solution in mind? Please suggest it here, or write "None".
+    validations:
+      required: true
+  - type: textarea
+    id: additional-context
+    attributes:
+      label: Additional context
+      description: Add any other context about the problem here.
+    validations:
+      required: true

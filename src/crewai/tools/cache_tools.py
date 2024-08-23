@@ -1,5 +1,5 @@
 from langchain.tools import StructuredTool
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, Field
 
 from crewai.agents.cache import CacheHandler
 
@@ -7,11 +7,10 @@ from crewai.agents.cache import CacheHandler
 class CacheTools(BaseModel):
     """Default tools to hit the cache."""
 
-    model_config = ConfigDict(arbitrary_types_allowed=True)
     name: str = "Hit Cache"
     cache_handler: CacheHandler = Field(
         description="Cache Handler for the crew",
-        default=CacheHandler(),
+        default_factory=CacheHandler,
     )
 
     def tool(self):

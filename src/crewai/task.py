@@ -9,13 +9,21 @@ from hashlib import md5
 from typing import Any, Dict, List, Optional, Tuple, Type, Union
 
 from opentelemetry.trace import Span
-from pydantic import UUID4, BaseModel, Field, field_validator, model_validator
+from pydantic import (
+    UUID4,
+    BaseModel,
+    Field,
+    PrivateAttr,
+    field_validator,
+    model_validator,
+)
 from pydantic_core import PydanticCustomError
 
 from crewai.agents.agent_builder.base_agent import BaseAgent
 from crewai.tasks.output_format import OutputFormat
 from crewai.tasks.task_output import TaskOutput
 from crewai.telemetry.telemetry import Telemetry
+from crewai.utilities.config import process_config
 from crewai.utilities.converter import Converter, convert_to_model
 from crewai.utilities.i18n import I18N
 
@@ -38,9 +46,6 @@ class Task(BaseModel):
         output_pydantic: Pydantic model for task output.
         tools: List of tools/resources limited for task execution.
     """
-
-    class Config:
-        arbitrary_types_allowed = True
 
     __hash__ = object.__hash__  # type: ignore
     used_tools: int = 0
@@ -104,16 +109,27 @@ class Task(BaseModel):
         default=None,
     )
 
-    _telemetry: Telemetry
-    _execution_span: Span | None = None
-    _original_description: str | None = None
-    _original_expected_output: str | None = None
-    _thread: threading.Thread | None = None
-    _execution_time: float | None = None
+    _telemetry: Telemetry = PrivateAttr(default_factory=Telemetry)
+    _execution_span: Optional[Span] = PrivateAttr(default=None)
+    _original_description: Optional[str] = PrivateAttr(default=None)
+    _original_expected_output: Optional[str] = PrivateAttr(default=None)
+    _thread: Optional[threading.Thread] = PrivateAttr(default=None)
+    _execution_time: Optional[float] = PrivateAttr(default=None)
 
-    def __init__(__pydantic_self__, **data):
-        config = data.pop("config", {})
-        super().__init__(**config, **data)
+    @model_validator(mode="before")
+    @classmethod
+    def process_model_config(cls, values):
+        return process_config(values, cls)
+
+    @model_validator(mode="after")
+    def validate_required_fields(self):
+        required_fields = ["description", "expected_output"]
+        for field in required_fields:
+            if getattr(self, field) is None:
+                raise ValueError(
+                    f"{field} must be provided either directly or through config"
+                )
+        return self
 
     @field_validator("id", mode="before")
     @classmethod
@@ -136,12 +152,6 @@ class Task(BaseModel):
         if value.startswith("/"):
             return value[1:]
         return value
-
-    @model_validator(mode="after")
-    def set_private_attrs(self) -> "Task":
-        """Set private attributes."""
-        self._telemetry = Telemetry()
-        return self
 
     @model_validator(mode="after")
     def set_attributes_based_on_config(self) -> "Task":
@@ -185,7 +195,7 @@ class Task(BaseModel):
         expected_output = self._original_expected_output or self.expected_output
         source = [description, expected_output]
 
-        return md5("|".join(source).encode()).hexdigest()
+        return md5("|".join(source).encode(), usedforsecurity=False).hexdigest()
 
     def execute_async(
         self,
@@ -240,7 +250,9 @@ class Task(BaseModel):
         pydantic_output, json_output = self._export_output(result)
 
         task_output = TaskOutput(
+            name=self.name,
             description=self.description,
+            expected_output=self.expected_output,
             raw=result,
             pydantic=pydantic_output,
             json_dict=json_output,
@@ -261,9 +273,7 @@ class Task(BaseModel):
             content = (
                 json_output
                 if json_output
-                else pydantic_output.model_dump_json()
-                if pydantic_output
-                else result
+                else pydantic_output.model_dump_json() if pydantic_output else result
             )
             self._save_file(content)
 

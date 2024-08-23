@@ -1,6 +1,6 @@
 import ast
-from difflib import SequenceMatcher
 import os
+from difflib import SequenceMatcher
 from textwrap import dedent
 from typing import Any, List, Union
 
@@ -15,7 +15,7 @@ from crewai.utilities import I18N, Converter, ConverterError, Printer
 agentops = None
 if os.environ.get("AGENTOPS_API_KEY"):
     try:
-        import agentops
+        import agentops  # type: ignore
     except ImportError:
         pass
 
@@ -71,14 +71,14 @@ class ToolUsage:
         self.task = task
         self.action = action
         self.function_calling_llm = function_calling_llm
-      
+
         # Handling bug (see https://github.com/langchain-ai/langchain/pull/16395): raise an error if tools_names have space for ChatOpenAI
         if isinstance(self.function_calling_llm, ChatOpenAI):
             if " " in self.tools_names:
                 raise Exception(
                     "Tools names should not have spaces for ChatOpenAI models."
                 )
-              
+
         # Set the maximum parsing attempts for bigger models
         if (isinstance(self.function_calling_llm, ChatOpenAI)) and (
             self.function_calling_llm.openai_api_base is None
@@ -118,7 +118,7 @@ class ToolUsage:
         tool: BaseTool,
         calling: Union[ToolCalling, InstructorToolCalling],
     ) -> str:  # TODO: Fix this return type
-        tool_event = agentops.ToolEvent(name=calling.tool_name) if agentops else None
+        tool_event = agentops.ToolEvent(name=calling.tool_name) if agentops else None  # type: ignore
         if self._check_tool_repeated_usage(calling=calling):  # type: ignore # _check_tool_repeated_usage of "ToolUsage" does not return a value (it only ever returns None)
             try:
                 result = self._i18n.errors("task_repeated_usage").format(
