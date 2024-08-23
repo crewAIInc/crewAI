@@ -19,6 +19,7 @@ from crewai.agents.agent_builder.utilities.base_token_process import TokenProces
 from crewai.agents.cache.cache_handler import CacheHandler
 from crewai.agents.tools_handler import ToolsHandler
 from crewai.utilities import I18N, Logger, RPMController
+from crewai.utilities.config import process_config
 
 T = TypeVar("T", bound="BaseAgent")
 
@@ -87,11 +88,11 @@ class BaseAgent(ABC, BaseModel):
     role: str = Field(description="Role of the agent")
     goal: str = Field(description="Objective of the agent")
     backstory: str = Field(description="Backstory of the agent")
+    config: Optional[Dict[str, Any]] = Field(
+        description="Configuration for the agent", default=None, exclude=True
+    )
     cache: bool = Field(
         default=True, description="Whether the agent should use a cache for tool usage."
-    )
-    config: Optional[Dict[str, Any]] = Field(
-        description="Configuration for the agent", default=None
     )
     verbose: bool = Field(
         default=False, description="Verbose mode for the Agent Execution"
@@ -127,11 +128,29 @@ class BaseAgent(ABC, BaseModel):
         default=None, description="Maximum number of tokens for the agent's execution."
     )
 
+    @model_validator(mode="before")
+    @classmethod
+    def process_model_config(cls, values):
+        return process_config(values, cls)
+
     @model_validator(mode="after")
-    def set_config_attributes(self):
-        if self.config:
-            for key, value in self.config.items():
-                setattr(self, key, value)
+    def validate_and_set_attributes(self):
+        # Validate required fields
+        for field in ["role", "goal", "backstory"]:
+            if getattr(self, field) is None:
+                raise ValueError(
+                    f"{field} must be provided either directly or through config"
+                )
+
+        # Set private attributes
+        self._logger = Logger(verbose=self.verbose)
+        if self.max_rpm and not self._rpm_controller:
+            self._rpm_controller = RPMController(
+                max_rpm=self.max_rpm, logger=self._logger
+            )
+        if not self._token_process:
+            self._token_process = TokenProcess()
+
         return self
 
     @field_validator("id", mode="before")
@@ -141,14 +160,6 @@ class BaseAgent(ABC, BaseModel):
             raise PydanticCustomError(
                 "may_not_set_field", "This field is not to be set by the user.", {}
             )
-
-    @model_validator(mode="after")
-    def set_attributes_based_on_config(self) -> "BaseAgent":
-        """Set attributes based on the agent configuration."""
-        if self.config:
-            for key, value in self.config.items():
-                setattr(self, key, value)
-        return self
 
     @model_validator(mode="after")
     def set_private_attrs(self):

@@ -88,7 +88,7 @@ There are a couple of different ways you can use HuggingFace to host your LLM.
 
 ### Your own HuggingFace endpoint
 ```python
-from langchain_huggingface import HuggingFaceEndpoint,
+from langchain_huggingface import HuggingFaceEndpoint
 
 llm = HuggingFaceEndpoint(
     repo_id="microsoft/Phi-3-mini-4k-instruct",
