@@ -51,10 +51,10 @@ class TokenManager:
 
         if key is not None:
             return key
-        else:
-            new_key = Fernet.generate_key()
-            self.save_secure_file(key_filename, new_key)
-            return new_key
+
+        new_key = Fernet.generate_key()
+        self.save_secure_file(key_filename, new_key)
+        return new_key
 
     def save_tokens(self, access_token: str, expires_in: int) -> None:
         """

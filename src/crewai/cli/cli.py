@@ -189,6 +189,12 @@ def signup():
     AuthenticationCommand().signup()
 
 
+@crewai.command()
+def login():
+    """Sign Up/Login to CrewAI+."""
+    AuthenticationCommand().signup()
+
+
 # DEPLOY CREWAI+ COMMANDS
 @crewai.group()
 def deploy():
