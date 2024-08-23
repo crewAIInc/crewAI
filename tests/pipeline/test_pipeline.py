@@ -113,7 +113,9 @@ def mock_router_factory(mock_crew_factory):
                 (
                     "route1"
                     if x.get("score", 0) > 80
-                    else "route2" if x.get("score", 0) > 50 else "default"
+                    else "route2"
+                    if x.get("score", 0) > 50
+                    else "default"
                 ),
             )
         )
