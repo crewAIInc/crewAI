@@ -2,8 +2,8 @@ site_name: crewAI
 site_author: crewAI, Inc
 site_description: Cutting-edge framework for orchestrating role-playing, autonomous AI agents. By fostering collaborative intelligence, CrewAI empowers agents to work together seamlessly, tackling complex tasks.
 repo_name: crewAI
-repo_url: https://github.com/joaomdmoura/crewai/
-site_url: https://crewai.com
+repo_url: https://github.com/crewAIInc/crewAI
+site_url: https://docs.crewai.com
 edit_uri: edit/main/docs/
 copyright: Copyright &copy; 2024 crewAI, Inc
 
