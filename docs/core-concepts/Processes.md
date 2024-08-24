@@ -55,10 +55,5 @@ Emulates a corporate hierarchy, CrewAI allows specifying a custom manager agent 
 ## Process Class: Detailed Overview
 The `Process` class is implemented as an enumeration (`Enum`), ensuring type safety and restricting process values to the defined types (`sequential`, `hierarchical`). The consensual process is planned for future inclusion, emphasizing our commitment to continuous development and innovation.
 
-## Additional Task Features
-- **Asynchronous Execution**: Tasks can now be executed asynchronously, allowing for parallel processing and efficiency improvements. This feature is designed to enable tasks to be carried out concurrently, enhancing the overall productivity of the crew.
-- **Human Input Review**: An optional feature that enables the review of task outputs by humans to ensure quality and accuracy before finalization. This additional step introduces a layer of oversight, providing an opportunity for human intervention and validation.
-- **Output Customization**: Tasks support various output formats, including JSON (`output_json`), Pydantic models (`output_pydantic`), and file outputs (`output_file`), providing flexibility in how task results are captured and utilized. This allows for a wide range of output possibilities, catering to different needs and requirements.
-
 ## Conclusion
 The structured collaboration facilitated by processes within CrewAI is crucial for enabling systematic teamwork among agents. This documentation has been updated to reflect the latest features, enhancements, and the planned integration of the Consensual Process, ensuring users have access to the most current and comprehensive information.

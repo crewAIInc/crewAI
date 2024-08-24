@@ -12,7 +12,7 @@ description: Leveraging memory systems in the crewAI framework to enhance agent 
 | Component            | Description                                                  |
 | :------------------- | :----------------------------------------------------------- |
 | **Short-Term Memory**| Temporarily stores recent interactions and outcomes, enabling agents to recall and utilize information relevant to their current context during the current executions. |
-| **Long-Term Memory** | Preserves valuable insights and learnings from past executions, allowing agents to build and refine their knowledge over time. So Agents can remeber what they did right and wrong across multiple executions |
+| **Long-Term Memory** | Preserves valuable insights and learnings from past executions, allowing agents to build and refine their knowledge over time. So Agents can remember what they did right and wrong across multiple executions |
 | **Entity Memory**    | Captures and organizes information about entities (people, places, concepts) encountered during tasks, facilitating deeper understanding and relationship mapping. |
 | **Contextual Memory**| Maintains the context of interactions by combining `ShortTermMemory`, `LongTermMemory`, and `EntityMemory`, aiding in the coherence and relevance of agent responses over a sequence of tasks or a conversation. |
 
@@ -28,6 +28,11 @@ description: Leveraging memory systems in the crewAI framework to enhance agent 
 
 When configuring a crew, you can enable and customize each memory component to suit the crew's objectives and the nature of tasks it will perform.
 By default, the memory system is disabled, and you can ensure it is active by setting `memory=True` in the crew configuration. The memory will use OpenAI Embeddings by default, but you can change it by setting `embedder` to a different model.
+
+The 'embedder' only applies to **Short-Term Memory** which uses Chroma for RAG using EmbedChain package.
+The **Long-Term Memory** uses SQLLite3 to store task results.  Currently, there is no way to override these storage implementations.
+The data storage files are saved into a platform specific location found using the appdirs package
+and the name of the project which can be overridden using the **CREWAI_STORAGE_DIR** environment variable.
 
 ### Example: Configuring Memory for a Crew
 
@@ -100,7 +105,7 @@ my_crew = Crew(
 			"provider": "azure_openai",
 			"config":{
 				"model": 'text-embedding-ada-002',
-				"deployment_name": "you_embedding_model_deployment_name"
+				"deployment_name": "your_embedding_model_deployment_name"
 			}
 		}
 )
@@ -154,12 +159,43 @@ my_crew = Crew(
 		embedder={
 			"provider": "cohere",
 			"config":{
-				"model": "embed-english-v3.0"
-    		"vector_dimension": 1024
+				"model": "embed-english-v3.0",
+        "vector_dimension": 1024
 			}
 		}
 )
 ```
+
+### Resetting Memory
+```sh
+crewai reset_memories [OPTIONS]
+```
+
+#### Resetting Memory Options
+- **`-l, --long`**
+  - **Description:** Reset LONG TERM memory.
+  - **Type:** Flag (boolean)
+  - **Default:** False
+
+- **`-s, --short`**
+  - **Description:** Reset SHORT TERM memory.
+  - **Type:** Flag (boolean)
+  - **Default:** False
+
+- **`-e, --entities`**
+  - **Description:** Reset ENTITIES memory.
+  - **Type:** Flag (boolean)
+  - **Default:** False
+
+- **`-k, --kickoff-outputs`**
+  - **Description:** Reset LATEST KICKOFF TASK OUTPUTS.
+  - **Type:** Flag (boolean)
+  - **Default:** False
+
+- **`-a, --all`**
+  - **Description:** Reset ALL memories.
+  - **Type:** Flag (boolean)
+  - **Default:** False
 
 ## Benefits of Using crewAI's Memory System
 - **Adaptive Learning:** Crews become more efficient over time, adapting to new information and refining their approach to tasks.

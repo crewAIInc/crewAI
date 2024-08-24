@@ -1,14 +1,15 @@
 import os
+from inspect import signature
 from typing import Any, List, Optional, Tuple
 
 from langchain.agents.agent import RunnableAgent
+from langchain.agents.tools import BaseTool
 from langchain.agents.tools import tool as LangChainTool
-from langchain.tools.render import render_text_description
 from langchain_core.agents import AgentAction
 from langchain_core.callbacks import BaseCallbackHandler
 from langchain_core.runnables import RunnableConfig
 from langchain_openai import ChatOpenAI
-from pydantic import Field, InstanceOf, model_validator
+from pydantic import Field, InstanceOf, PrivateAttr, model_validator
 
 from crewai.agents import CacheHandler, CrewAgentExecutor, CrewAgentParser
 from crewai.agents.agent_builder.base_agent import BaseAgent
@@ -19,17 +20,27 @@ from crewai.utilities.constants import TRAINED_AGENTS_DATA_FILE, TRAINING_DATA_F
 from crewai.utilities.token_counter_callback import TokenCalcHandler
 from crewai.utilities.training_handler import CrewTrainingHandler
 
-agentops = None
-try:
-    import agentops  # type: ignore # Name "agentops" already defined on line 21
-    from agentops import track_agent
-except ImportError:
 
-    def track_agent():
+def mock_agent_ops_provider():
+    def track_agent(*args, **kwargs):
         def noop(f):
             return f
 
         return noop
+
+    return track_agent
+
+
+agentops = None
+
+if os.environ.get("AGENTOPS_API_KEY"):
+    try:
+        import agentops  # type: ignore # Name "agentops" already defined on line 21
+        from agentops import track_agent
+    except ImportError:
+        track_agent = mock_agent_ops_provider()
+else:
+    track_agent = mock_agent_ops_provider()
 
 
 @track_agent()
@@ -58,6 +69,7 @@ class Agent(BaseAgent):
             runnable_config: A runnable configuration to be used by the AgentExecutor
     """
 
+    _times_executed: int = PrivateAttr(default=0)
     max_execution_time: Optional[int] = Field(
         default=None,
         description="Maximum execution time for an agent to execute a task",
@@ -102,40 +114,50 @@ class Agent(BaseAgent):
     allow_code_execution: Optional[bool] = Field(
         default=False, description="Enable code execution for the agent."
     )
-
-    def __init__(__pydantic_self__, **data):
-        config = data.pop("config", {})
-        super().__init__(**config, **data)
-        __pydantic_self__.agent_ops_agent_name = __pydantic_self__.role
+    max_retry_limit: int = Field(
+        default=2,
+        description="Maximum number of retries for an agent to execute a task when an error occurs.",
+    )
 
     @model_validator(mode="after")
-    def set_agent_executor(self) -> "Agent":
-        """Ensure agent executor and token process are set."""
-        if hasattr(self.llm, "model_name"):
-            token_handler = TokenCalcHandler(self.llm.model_name, self._token_process)
+    def post_init_setup(self):
+        self.agent_ops_agent_name = self.role
 
-            # Ensure self.llm.callbacks is a list
-            if not isinstance(self.llm.callbacks, list):
-                self.llm.callbacks = []
+        # Different llms store the model name in different attributes
+        model_name = getattr(self.llm, "model_name", None) or getattr(
+            self.llm, "deployment_name", None
+        )
 
-            # Check if an instance of TokenCalcHandler already exists in the list
-            if not any(
-                isinstance(handler, TokenCalcHandler) for handler in self.llm.callbacks
-            ):
-                self.llm.callbacks.append(token_handler)
-
-            if agentops and not any(
-                isinstance(handler, agentops.LangchainCallbackHandler)
-                for handler in self.llm.callbacks
-            ):
-                agentops.stop_instrumenting()
-                self.llm.callbacks.append(agentops.LangchainCallbackHandler())
+        if model_name:
+            self._setup_llm_callbacks(model_name)
 
         if not self.agent_executor:
-            if not self.cache_handler:
-                self.cache_handler = CacheHandler()
-            self.set_cache_handler(self.cache_handler)
+            self._setup_agent_executor()
+
         return self
+
+    def _setup_llm_callbacks(self, model_name: str):
+        token_handler = TokenCalcHandler(model_name, self._token_process)
+
+        if not isinstance(self.llm.callbacks, list):
+            self.llm.callbacks = []
+
+        if not any(
+            isinstance(handler, TokenCalcHandler) for handler in self.llm.callbacks
+        ):
+            self.llm.callbacks.append(token_handler)
+
+        if agentops and not any(
+            isinstance(handler, agentops.LangchainCallbackHandler)
+            for handler in self.llm.callbacks
+        ):
+            agentops.stop_instrumenting()
+            self.llm.callbacks.append(agentops.LangchainCallbackHandler())
+
+    def _setup_agent_executor(self):
+        if not self.cache_handler:
+            self.cache_handler = CacheHandler()
+        self.set_cache_handler(self.cache_handler)
 
     def execute_task(
         self,
@@ -175,14 +197,15 @@ class Agent(BaseAgent):
             if memory.strip() != "":
                 task_prompt += self.i18n.slice("memory").format(memory=memory)
 
-        tools = tools or self.tools
-
-        parsed_tools = self._parse_tools(tools or [])  # type: ignore # Argument 1 to "_parse_tools" of "Agent" has incompatible type "list[Any] | None"; expected "list[Any]"
+        tools = tools or self.tools or []
+        parsed_tools = self._parse_tools(tools)
         self.create_agent_executor(tools=tools)
         self.agent_executor.tools = parsed_tools
         self.agent_executor.task = task
 
-        self.agent_executor.tools_description = render_text_description(parsed_tools)
+        self.agent_executor.tools_description = self._render_text_description_and_args(
+            parsed_tools
+        )
         self.agent_executor.tools_names = self.__tools_names(parsed_tools)
 
         if self.crew and self.crew._train:
@@ -190,15 +213,22 @@ class Agent(BaseAgent):
         else:
             task_prompt = self._use_trained_data(task_prompt=task_prompt)
 
-        result = self.agent_executor.invoke(
-            {
-                "input": task_prompt,
-                "tool_names": self.agent_executor.tools_names,
-                "tools": self.agent_executor.tools_description,
-            },
-            config=runnable_config or self.runnable_config,
-        )["output"]
-        if self.max_rpm:
+        try:
+            result = self.agent_executor.invoke(
+                {
+                    "input": task_prompt,
+                    "tool_names": self.agent_executor.tools_names,
+                    "tools": self.agent_executor.tools_description,
+                },
+                config=runnable_config or self.runnable_config,
+            )["output"]
+        except Exception as e:
+            self._times_executed += 1
+            if self._times_executed > self.max_retry_limit:
+                raise e
+            result = self.execute_task(task, context, tools)
+
+        if self.max_rpm and self._rpm_controller:
             self._rpm_controller.stop_rpm_counter()
 
         # If there was any tool in self.tools_results that had result_as_answer
@@ -229,7 +259,7 @@ class Agent(BaseAgent):
         Returns:
             An instance of the CrewAgentExecutor class.
         """
-        tools = tools or self.tools
+        tools = tools or self.tools or []
 
         agent_args = {
             "input": lambda x: x["input"],
@@ -255,6 +285,7 @@ class Agent(BaseAgent):
             "tools_handler": self.tools_handler,
             "function_calling_llm": self.function_calling_llm,
             "callbacks": self.callbacks,
+            "max_tokens": self.max_tokens,
         }
 
         if self._rpm_controller:
@@ -324,6 +355,7 @@ class Agent(BaseAgent):
             tools_list = []
             for tool in tools:
                 tools_list.append(tool)
+
         return tools_list
 
     def _training_handler(self, task_prompt: str) -> str:
@@ -349,6 +381,52 @@ class Agent(BaseAgent):
                     trained_data_output["suggestions"]
                 )
         return task_prompt
+
+    def _render_text_description(self, tools: List[BaseTool]) -> str:
+        """Render the tool name and description in plain text.
+
+        Output will be in the format of:
+
+        .. code-block:: markdown
+
+            search: This tool is used for search
+            calculator: This tool is used for math
+        """
+        description = "\n".join(
+            [
+                f"Tool name: {tool.name}\nTool description:\n{tool.description}"
+                for tool in tools
+            ]
+        )
+
+        return description
+
+    def _render_text_description_and_args(self, tools: List[BaseTool]) -> str:
+        """Render the tool name, description, and args in plain text.
+
+        Output will be in the format of:
+
+        .. code-block:: markdown
+
+            search: This tool is used for search, args: {"query": {"type": "string"}}
+            calculator: This tool is used for math, \
+    args: {"expression": {"type": "string"}}
+        """
+        tool_strings = []
+        for tool in tools:
+            args_schema = str(tool.args)
+            if hasattr(tool, "func") and tool.func:
+                sig = signature(tool.func)
+                description = (
+                    f"Tool Name: {tool.name}{sig}\nTool Description: {tool.description}"
+                )
+            else:
+                description = (
+                    f"Tool Name: {tool.name}\nTool Description: {tool.description}"
+                )
+            tool_strings.append(f"{description}\nTool Arguments: {args_schema}")
+
+        return "\n".join(tool_strings)
 
     @staticmethod
     def __tools_names(tools) -> str:

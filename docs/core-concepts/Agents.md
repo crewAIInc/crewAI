@@ -26,7 +26,7 @@ description: What are crewAI Agents and how to use them.
 | **Function Calling LLM** *(optional)* | `function_calling_llm`  | Specifies the language model that will handle the tool calling for this agent, overriding the crew function calling LLM if passed. Default is `None`.                                                                                          |
 | **Max Iter** *(optional)*  | `max_iter` | Max Iter is the maximum number of iterations the agent can perform before being forced to give its best answer. Default is `25`.                                                                                                                           |
 | **Max RPM** *(optional)*   | `max_rpm`  | Max RPM is the maximum number of requests per minute the agent can perform to avoid rate limits. It's optional and can be left unspecified, with a default value of `None`.                                                                               |
-| **Max Execution Time** *(optional)*   | `max_execution_time`  | Max Execution Time is the Maximum execution time for an agent to execute a task. It's optional and can be left unspecified, with a default value of `None`, meaning no max execution time.                                                                     |
+| **Max Execution Time** *(optional)*   | `max_execution_time`  | Max Execution Time is the maximum execution time for an agent to execute a task. It's optional and can be left unspecified, with a default value of `None`, meaning no max execution time.                                                                     |
 | **Verbose** *(optional)*   | `verbose`  | Setting this to `True` configures the internal logger to provide detailed execution logs, aiding in debugging and monitoring. Default is `False`.                                                                                              |
 | **Allow Delegation** *(optional)* | `allow_delegation`  | Agents can delegate tasks or questions to one another, ensuring that each task is handled by the most suitable agent. Default is `True`.                                                                                                       |
 | **Step Callback** *(optional)* | `step_callback`  | A function that is called after each step of the agent. This can be used to log the agent's actions or to perform other operations. It will overwrite the crew `step_callback`.                                                               |
@@ -35,6 +35,8 @@ description: What are crewAI Agents and how to use them.
 | **Prompt Template** *(optional)*     | `prompt_template`  | Specifies the prompt format for the agent. Default is `None`.                                                                                                                                                                  |
 | **Response Template** *(optional)*     | `response_template`  | Specifies the response format for the agent. Default is `None`.                                                                                                                                                                  |
 | **Runnable Config** *(optional)*     | `runnable_config`  | A Langchain-supported RunnableConfig to be used by the AgentExecutor. Default is `None`.                                                                                                                                                                  |
+| **Allow Code Execution** *(optional)*     | `allow_code_execution`  | Enable code execution for the agent. Default is `False`.                                                                                                                                                                  |
+| **Max Retry Limit** *(optional)*     | `max_retry_limit`  | Maximum number of retries for an agent to execute a task when an error occurs. Default is `2`.                                                                                                                                                                  |
 
 ## Creating an Agent
 
@@ -73,7 +75,8 @@ agent = Agent(
   tools_handler=my_tools_handler,  # Optional
   cache_handler=my_cache_handler,  # Optional
   callbacks=[callback1, callback2],  # Optional
-  agent_executor=my_agent_executor  # Optional
+  allow_code_execution=True,  # Optiona
+  max_retry_limit=2,  # Optional
 )
 ```
 
@@ -115,7 +118,7 @@ from langchain.agents import load_tools
 langchain_tools = load_tools(["google-serper"], llm=llm)
 
 agent1 = CustomAgent(
-    role="backstory agent",
+    role="agent role",
     goal="who is {input}?",
     backstory="agent backstory",
     verbose=True,
@@ -128,7 +131,7 @@ task1 = Task(
 )
 
 agent2 = Agent(
-    role="bio agent",
+    role="agent role",
     goal="summarize the short bio for {input} and if needed do more research",
     backstory="agent backstory",
     verbose=True,
@@ -144,7 +147,6 @@ task2 = Task(
 my_crew = Crew(agents=[agent1, agent2], tasks=[task1, task2])
 crew = my_crew.kickoff(inputs={"input": "Mark Twain"})
 ```
-
 
 ## Conclusion
 Agents are the building blocks of the CrewAI framework. By understanding how to define and interact with agents, you can create sophisticated AI systems that leverage the power of collaborative intelligence.

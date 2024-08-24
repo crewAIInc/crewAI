@@ -81,8 +81,9 @@ task2 = Task(
 crew = Crew(
     agents=[researcher, writer],
     tasks=[task1, task2],
-    verbose=2,
+    verbose=True,
     memory=True,
+    planning=True  # Enable planning feature for the crew
 )
 
 # Get your crew to work!

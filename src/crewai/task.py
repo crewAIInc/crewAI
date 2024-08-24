@@ -1,22 +1,31 @@
+import datetime
+import json
 import os
-import re
 import threading
 import uuid
+from concurrent.futures import Future
 from copy import copy
-from typing import Any, Dict, List, Optional, Type, Union
+from hashlib import md5
+from typing import Any, Dict, List, Optional, Tuple, Type, Union
 
-from langchain_openai import ChatOpenAI
 from opentelemetry.trace import Span
-from pydantic import UUID4, BaseModel, Field, field_validator, model_validator
+from pydantic import (
+    UUID4,
+    BaseModel,
+    Field,
+    PrivateAttr,
+    field_validator,
+    model_validator,
+)
 from pydantic_core import PydanticCustomError
 
 from crewai.agents.agent_builder.base_agent import BaseAgent
+from crewai.tasks.output_format import OutputFormat
 from crewai.tasks.task_output import TaskOutput
 from crewai.telemetry.telemetry import Telemetry
-from crewai.utilities.converter import ConverterError
+from crewai.utilities.config import process_config
+from crewai.utilities.converter import Converter, convert_to_model
 from crewai.utilities.i18n import I18N
-from crewai.utilities.printer import Printer
-from crewai.utilities.pydantic_schema_parser import PydanticSchemaParser
 
 
 class Task(BaseModel):
@@ -38,14 +47,12 @@ class Task(BaseModel):
         tools: List of tools/resources limited for task execution.
     """
 
-    class Config:
-        arbitrary_types_allowed = True
-
     __hash__ = object.__hash__  # type: ignore
     used_tools: int = 0
     tools_errors: int = 0
     delegations: int = 0
     i18n: I18N = I18N()
+    name: Optional[str] = Field(default=None)
     prompt_context: Optional[str] = None
     description: str = Field(description="Description of the actual task.")
     expected_output: str = Field(
@@ -97,16 +104,32 @@ class Task(BaseModel):
         description="Whether the task should have a human review the final answer of the agent",
         default=False,
     )
+    converter_cls: Optional[Type[Converter]] = Field(
+        description="A converter class used to export structured output",
+        default=None,
+    )
 
-    _telemetry: Telemetry
-    _execution_span: Span | None = None
-    _original_description: str | None = None
-    _original_expected_output: str | None = None
-    _thread: threading.Thread | None = None
+    _telemetry: Telemetry = PrivateAttr(default_factory=Telemetry)
+    _execution_span: Optional[Span] = PrivateAttr(default=None)
+    _original_description: Optional[str] = PrivateAttr(default=None)
+    _original_expected_output: Optional[str] = PrivateAttr(default=None)
+    _thread: Optional[threading.Thread] = PrivateAttr(default=None)
+    _execution_time: Optional[float] = PrivateAttr(default=None)
 
-    def __init__(__pydantic_self__, **data):
-        config = data.pop("config", {})
-        super().__init__(**config, **data)
+    @model_validator(mode="before")
+    @classmethod
+    def process_model_config(cls, values):
+        return process_config(values, cls)
+
+    @model_validator(mode="after")
+    def validate_required_fields(self):
+        required_fields = ["description", "expected_output"]
+        for field in required_fields:
+            if getattr(self, field) is None:
+                raise ValueError(
+                    f"{field} must be provided either directly or through config"
+                )
+        return self
 
     @field_validator("id", mode="before")
     @classmethod
@@ -116,19 +139,19 @@ class Task(BaseModel):
                 "may_not_set_field", "This field is not to be set by the user.", {}
             )
 
+    def _set_start_execution_time(self) -> float:
+        return datetime.datetime.now().timestamp()
+
+    def _set_end_execution_time(self, start_time: float) -> None:
+        self._execution_time = datetime.datetime.now().timestamp() - start_time
+
     @field_validator("output_file")
     @classmethod
-    def output_file_validattion(cls, value: str) -> str:
+    def output_file_validation(cls, value: str) -> str:
         """Validate the output file path by removing the / from the beginning of the path."""
         if value.startswith("/"):
             return value[1:]
         return value
-
-    @model_validator(mode="after")
-    def set_private_attrs(self) -> "Task":
-        """Set private attributes."""
-        self._telemetry = Telemetry()
-        return self
 
     @model_validator(mode="after")
     def set_attributes_based_on_config(self) -> "Task":
@@ -157,87 +180,106 @@ class Task(BaseModel):
             )
         return self
 
-    def wait_for_completion(self) -> str | BaseModel:
-        """Wait for asynchronous task completion and return the output."""
-        assert self.async_execution, "Task is not set to be executed asynchronously."
+    def execute_sync(
+        self,
+        agent: Optional[BaseAgent] = None,
+        context: Optional[str] = None,
+        tools: Optional[List[Any]] = None,
+    ) -> TaskOutput:
+        """Execute the task synchronously."""
+        return self._execute_core(agent, context, tools)
 
-        if self._thread:
-            self._thread.join()
-            self._thread = None
+    @property
+    def key(self) -> str:
+        description = self._original_description or self.description
+        expected_output = self._original_expected_output or self.expected_output
+        source = [description, expected_output]
 
-        assert self.output, "Task output is not set."
+        return md5("|".join(source).encode(), usedforsecurity=False).hexdigest()
 
-        return self.output.exported_output
-
-    def execute(  # type: ignore # Missing return statement
+    def execute_async(
         self,
         agent: BaseAgent | None = None,
         context: Optional[str] = None,
         tools: Optional[List[Any]] = None,
-    ) -> str:
-        """Execute the task.
+    ) -> Future[TaskOutput]:
+        """Execute the task asynchronously."""
+        future: Future[TaskOutput] = Future()
+        threading.Thread(
+            target=self._execute_task_async, args=(agent, context, tools, future)
+        ).start()
+        return future
 
-        Returns:
-            Output of the task.
-        """
+    def _execute_task_async(
+        self,
+        agent: Optional[BaseAgent],
+        context: Optional[str],
+        tools: Optional[List[Any]],
+        future: Future[TaskOutput],
+    ) -> None:
+        """Execute the task asynchronously with context handling."""
+        result = self._execute_core(agent, context, tools)
+        future.set_result(result)
 
-        self._execution_span = self._telemetry.task_started(self)
-
+    def _execute_core(
+        self,
+        agent: Optional[BaseAgent],
+        context: Optional[str],
+        tools: Optional[List[Any]],
+    ) -> TaskOutput:
+        """Run the core execution logic of the task."""
         agent = agent or self.agent
+        self.agent = agent
         if not agent:
             raise Exception(
                 f"The task '{self.description}' has no agent assigned, therefore it can't be executed directly and should be executed in a Crew using a specific process that support that, like hierarchical."
             )
 
-        if self.context:
-            context = []  # type: ignore # Incompatible types in assignment (expression has type "list[Never]", variable has type "str | None")
-            for task in self.context:
-                if task.async_execution:
-                    task.wait_for_completion()
-                if task.output:
-                    context.append(task.output.raw_output)  # type: ignore # Item "str" of "str | None" has no attribute "append"
-            context = "\n".join(context)  # type: ignore # Argument 1 to "join" of "str" has incompatible type "str | None"; expected "Iterable[str]"
+        start_time = self._set_start_execution_time()
+        self._execution_span = self._telemetry.task_started(crew=agent.crew, task=self)
 
         self.prompt_context = context
-        tools = tools or self.tools
+        tools = tools or self.tools or []
 
-        if self.async_execution:
-            self._thread = threading.Thread(
-                target=self._execute, args=(agent, self, context, tools)
-            )
-            self._thread.start()
-        else:
-            result = self._execute(
-                task=self,
-                agent=agent,
-                context=context,
-                tools=tools,
-            )
-            return result
-
-    def _execute(self, agent: "BaseAgent", task, context, tools):
         result = agent.execute_task(
-            task=task,
+            task=self,
             context=context,
             tools=tools,
         )
-        exported_output = self._export_output(result)
 
-        self.output = TaskOutput(  # type: ignore # the responses are usually str but need to figure out a more elegant solution here
+        pydantic_output, json_output = self._export_output(result)
+
+        task_output = TaskOutput(
+            name=self.name,
             description=self.description,
-            exported_output=exported_output,
-            raw_output=result,
+            expected_output=self.expected_output,
+            raw=result,
+            pydantic=pydantic_output,
+            json_dict=json_output,
             agent=agent.role,
+            output_format=self._get_output_format(),
         )
+        self.output = task_output
 
+        self._set_end_execution_time(start_time)
         if self.callback:
             self.callback(self.output)
 
         if self._execution_span:
-            self._telemetry.task_ended(self._execution_span, self)
+            self._telemetry.task_ended(self._execution_span, self, agent.crew)
             self._execution_span = None
 
-        return exported_output
+        if self.output_file:
+            content = (
+                json_output
+                if json_output
+                else pydantic_output.model_dump_json()
+                if pydantic_output
+                else result
+            )
+            self._save_file(content)
+
+        return task_output
 
     def prompt(self) -> str:
         """Prompt the task.
@@ -272,7 +314,7 @@ class Task(BaseModel):
         """Increment the delegations counter."""
         self.delegations += 1
 
-    def copy(self, agents: Optional[List["BaseAgent"]] = None) -> "Task":  # type: ignore # Signature of "copy" incompatible with supertype "BaseModel"
+    def copy(self, agents: List["BaseAgent"]) -> "Task":
         """Create a deep copy of the Task."""
         exclude = {
             "id",
@@ -285,11 +327,11 @@ class Task(BaseModel):
         copied_data = {k: v for k, v in copied_data.items() if v is not None}
 
         cloned_context = (
-            [task.copy() for task in self.context] if self.context else None
+            [task.copy(agents) for task in self.context] if self.context else None
         )
 
         def get_agent_by_role(role: str) -> Union["BaseAgent", None]:
-            return next((agent for agent in agents if agent.role == role), None)  # type: ignore # Item "None" of "list[BaseAgent] | None" has no attribute "__iter__" (not iterable)
+            return next((agent for agent in agents if agent.role == role), None)
 
         cloned_agent = get_agent_by_role(self.agent.role) if self.agent else None
         cloned_tools = copy(self.tools) if self.tools else []
@@ -303,73 +345,56 @@ class Task(BaseModel):
 
         return copied_task
 
-    def _export_output(self, result: str) -> Any:
-        exported_result = result
-        instructions = "I'm gonna convert this raw text into valid JSON."
+    def _export_output(
+        self, result: str
+    ) -> Tuple[Optional[BaseModel], Optional[Dict[str, Any]]]:
+        pydantic_output: Optional[BaseModel] = None
+        json_output: Optional[Dict[str, Any]] = None
 
         if self.output_pydantic or self.output_json:
-            model = self.output_pydantic or self.output_json
-
-            # try to convert task_output directly to pydantic/json
-            try:
-                exported_result = model.model_validate_json(result)  # type: ignore # Item "None" of "type[BaseModel] | None" has no attribute "model_validate_json"
-                if self.output_json:
-                    return exported_result.model_dump()  # type: ignore # "str" has no attribute "model_dump"
-                return exported_result
-            except Exception:
-                # sometimes the response contains valid JSON in the middle of text
-                match = re.search(r"({.*})", result, re.DOTALL)
-                if match:
-                    try:
-                        exported_result = model.model_validate_json(match.group(0))  # type: ignore # Item "None" of "type[BaseModel] | None" has no attribute "model_validate_json"
-                        if self.output_json:
-                            return exported_result.model_dump()  # type: ignore # "str" has no attribute "model_dump"
-                        return exported_result
-                    except Exception:
-                        pass
-
-            llm = getattr(self.agent, "function_calling_llm", None) or self.agent.llm  # type: ignore # Item "None" of "BaseAgent | None" has no attribute "function_calling_llm"
-            if not self._is_gpt(llm):
-                model_schema = PydanticSchemaParser(model=model).get_schema()  # type: ignore # Argument "model" to "PydanticSchemaParser" has incompatible type "type[BaseModel] | None"; expected "type[BaseModel]"
-                instructions = f"{instructions}\n\nThe json should have the following structure, with the following keys:\n{model_schema}"
-
-            converter = self.agent.get_output_converter(  # type: ignore # Item "None" of "BaseAgent | None" has no attribute "get_output_converter"
-                llm=llm, text=result, model=model, instructions=instructions
+            model_output = convert_to_model(
+                result,
+                self.output_pydantic,
+                self.output_json,
+                self.agent,
+                self.converter_cls,
             )
 
-            if self.output_pydantic:
-                exported_result = converter.to_pydantic()
-            elif self.output_json:
-                exported_result = converter.to_json()
+            if isinstance(model_output, BaseModel):
+                pydantic_output = model_output
+            elif isinstance(model_output, dict):
+                json_output = model_output
+            elif isinstance(model_output, str):
+                try:
+                    json_output = json.loads(model_output)
+                except json.JSONDecodeError:
+                    json_output = None
 
-            if isinstance(exported_result, ConverterError):
-                Printer().print(
-                    content=f"{exported_result.message} Using raw output instead.",
-                    color="red",
-                )
-                exported_result = result
+        return pydantic_output, json_output
 
-        if self.output_file:
-            content = (
-                exported_result
-                if not self.output_pydantic
-                else exported_result.model_dump_json()  # type: ignore # "str" has no attribute "json"
-            )
-            self._save_file(content)
-
-        return exported_result
-
-    def _is_gpt(self, llm) -> bool:
-        return isinstance(llm, ChatOpenAI) and llm.openai_api_base is None
+    def _get_output_format(self) -> OutputFormat:
+        if self.output_json:
+            return OutputFormat.JSON
+        if self.output_pydantic:
+            return OutputFormat.PYDANTIC
+        return OutputFormat.RAW
 
     def _save_file(self, result: Any) -> None:
+        if self.output_file is None:
+            raise ValueError("output_file is not set.")
+
         directory = os.path.dirname(self.output_file)  # type: ignore # Value of type variable "AnyOrLiteralStr" of "dirname" cannot be "str | None"
 
         if directory and not os.path.exists(directory):
             os.makedirs(directory)
 
-        with open(self.output_file, "w", encoding="utf-8") as file:  # type: ignore # Argument 1 to "open" has incompatible type "str | None"; expected "int | str | bytes | PathLike[str] | PathLike[bytes]"
-            file.write(result)
+        with open(self.output_file, "w", encoding="utf-8") as file:
+            if isinstance(result, dict):
+                import json
+
+                json.dump(result, file, ensure_ascii=False, indent=2)
+            else:
+                file.write(str(result))
         return None
 
     def __repr__(self):

@@ -1,4 +1,5 @@
 import ast
+import os
 from difflib import SequenceMatcher
 from textwrap import dedent
 from typing import Any, List, Union
@@ -11,12 +12,14 @@ from crewai.telemetry import Telemetry
 from crewai.tools.tool_calling import InstructorToolCalling, ToolCalling
 from crewai.utilities import I18N, Converter, ConverterError, Printer
 
-try:
-    import agentops
-except ImportError:
-    agentops = None
+agentops = None
+if os.environ.get("AGENTOPS_API_KEY"):
+    try:
+        import agentops  # type: ignore
+    except ImportError:
+        pass
 
-OPENAI_BIGGER_MODELS = ["gpt-4"]
+OPENAI_BIGGER_MODELS = ["gpt-4o"]
 
 
 class ToolUsageErrorException(Exception):
@@ -69,6 +72,13 @@ class ToolUsage:
         self.action = action
         self.function_calling_llm = function_calling_llm
 
+        # Handling bug (see https://github.com/langchain-ai/langchain/pull/16395): raise an error if tools_names have space for ChatOpenAI
+        if isinstance(self.function_calling_llm, ChatOpenAI):
+            if " " in self.tools_names:
+                raise Exception(
+                    "Tools names should not have spaces for ChatOpenAI models."
+                )
+
         # Set the maximum parsing attempts for bigger models
         if (isinstance(self.function_calling_llm, ChatOpenAI)) and (
             self.function_calling_llm.openai_api_base is None
@@ -86,7 +96,8 @@ class ToolUsage:
     ) -> str:
         if isinstance(calling, ToolUsageErrorException):
             error = calling.message
-            self._printer.print(content=f"\n\n{error}\n", color="red")
+            if self.agent.verbose:
+                self._printer.print(content=f"\n\n{error}\n", color="red")
             self.task.increment_tools_errors()
             return error
 
@@ -96,7 +107,8 @@ class ToolUsage:
         except Exception as e:
             error = getattr(e, "message", str(e))
             self.task.increment_tools_errors()
-            self._printer.print(content=f"\n\n{error}\n", color="red")
+            if self.agent.verbose:
+                self._printer.print(content=f"\n\n{error}\n", color="red")
             return error
         return f"{self._use(tool_string=tool_string, tool=tool, calling=calling)}"  # type: ignore # BUG?: "_use" of "ToolUsage" does not return a value (it only ever returns None)
 
@@ -106,20 +118,21 @@ class ToolUsage:
         tool: BaseTool,
         calling: Union[ToolCalling, InstructorToolCalling],
     ) -> str:  # TODO: Fix this return type
-        tool_event = agentops.ToolEvent(name=calling.tool_name) if agentops else None
+        tool_event = agentops.ToolEvent(name=calling.tool_name) if agentops else None  # type: ignore
         if self._check_tool_repeated_usage(calling=calling):  # type: ignore # _check_tool_repeated_usage of "ToolUsage" does not return a value (it only ever returns None)
             try:
                 result = self._i18n.errors("task_repeated_usage").format(
                     tool_names=self.tools_names
                 )
-                self._printer.print(content=f"\n\n{result}\n", color="purple")
+                if self.agent.verbose:
+                    self._printer.print(content=f"\n\n{result}\n", color="purple")
                 self._telemetry.tool_repeated_usage(
                     llm=self.function_calling_llm,
                     tool_name=tool.name,
                     attempts=self._run_attempts,
                 )
                 result = self._format_result(result=result)  # type: ignore #  "_format_result" of "ToolUsage" does not return a value (it only ever returns None)
-                return result  # type: ignore # Fix the reutrn type of this function
+                return result  # type: ignore # Fix the return type of this function
 
             except Exception:
                 self.task.increment_tools_errors()
@@ -151,16 +164,12 @@ class ToolUsage:
                             for k, v in calling.arguments.items()
                             if k in acceptable_args
                         }
-                        result = tool._run(**arguments)
+                        result = tool.invoke(input=arguments)
                     except Exception:
-                        if tool.args_schema:
-                            arguments = calling.arguments
-                            result = tool._run(**arguments)
-                        else:
-                            arguments = calling.arguments.values()  # type: ignore # Incompatible types in assignment (expression has type "dict_values[str, Any]", variable has type "dict[str, Any]")
-                            result = tool._run(*arguments)
+                        arguments = calling.arguments
+                        result = tool.invoke(input=arguments)
                 else:
-                    result = tool._run()
+                    result = tool.invoke(input={})
             except Exception as e:
                 self._run_attempts += 1
                 if self._run_attempts > self._max_parsing_attempts:
@@ -172,7 +181,10 @@ class ToolUsage:
                         f'\n{error_message}.\nMoving on then. {self._i18n.slice("format").format(tool_names=self.tools_names)}'
                     ).message
                     self.task.increment_tools_errors()
-                    self._printer.print(content=f"\n\n{error_message}\n", color="red")
+                    if self.agent.verbose:
+                        self._printer.print(
+                            content=f"\n\n{error_message}\n", color="red"
+                        )
                     return error  # type: ignore # No return value expected
 
                 self.task.increment_tools_errors()
@@ -196,7 +208,8 @@ class ToolUsage:
                     calling=calling, output=result, should_cache=should_cache
                 )
 
-        self._printer.print(content=f"\n\n{result}\n", color="purple")
+        if self.agent.verbose:
+            self._printer.print(content=f"\n\n{result}\n", color="purple")
         if agentops:
             agentops.record(tool_event)
         self._telemetry.tool_usage(
@@ -350,7 +363,8 @@ class ToolUsage:
             if self._run_attempts > self._max_parsing_attempts:
                 self._telemetry.tool_usage_error(llm=self.function_calling_llm)
                 self.task.increment_tools_errors()
-                self._printer.print(content=f"\n\n{e}\n", color="red")
+                if self.agent.verbose:
+                    self._printer.print(content=f"\n\n{e}\n", color="red")
                 return ToolUsageErrorException(  # type: ignore # Incompatible return value type (got "ToolUsageErrorException", expected "ToolCalling | InstructorToolCalling")
                     f'{self._i18n.errors("tool_usage_error").format(error=e)}\nMoving on then. {self._i18n.slice("format").format(tool_names=self.tools_names)}'
                 )

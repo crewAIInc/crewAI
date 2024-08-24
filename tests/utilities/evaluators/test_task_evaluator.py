@@ -56,8 +56,7 @@ def test_evaluate_training_data(converter_mock):
                 "based on the human feedback\n",
                 model=TrainingTaskEvaluation,
                 instructions="I'm gonna convert this raw text into valid JSON.\n\nThe json should have the "
-                "following structure, with the following keys:\n- suggestions: List[str]\n- "
-                "quality: float\n- final_summary: str",
+                "following structure, with the following keys:\n{\n    suggestions: List[str],\n    quality: float,\n    final_summary: str\n}",
             ),
             mock.call().to_pydantic(),
         ]

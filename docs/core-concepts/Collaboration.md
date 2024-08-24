@@ -28,6 +28,8 @@ The `Crew` class has been enriched with several attributes to support advanced f
 - **Embedder Configuration (`embedder`)**: Specifies the configuration for the embedder to be used by the crew for understanding and generating language. This attribute supports customization of the language model provider.
 - **Cache Management (`cache`)**: Determines whether the crew should use a cache to store the results of tool executions, optimizing performance.
 - **Output Logging (`output_log_file`)**: Specifies the file path for logging the output of the crew execution.
+- **Planning Mode (`planning`)**: Allows crews to plan their actions before executing tasks by setting `planning=True` when creating the `Crew` instance. This feature enhances coordination and efficiency.
+- **Replay Feature**: Introduces a new CLI for listing tasks from the last run and replaying from a specific task, enhancing task management and troubleshooting.
 
 ## Delegation: Dividing to Conquer
 Delegation enhances functionality by allowing agents to intelligently assign tasks or seek help, thereby amplifying the crew's overall capability.

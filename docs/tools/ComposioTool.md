@@ -2,7 +2,7 @@
 
 ## Description
 
-This tools is a wrapper around the composio toolset and gives your agent access to a wide variety of tools from the composio SDK.
+This tools is a wrapper around the composio set of tools and gives your agent access to a wide variety of tools from the composio SDK.
 
 ## Installation
 
@@ -19,7 +19,7 @@ after the installation is complete, either run `composio login` or export your c
 
 The following example demonstrates how to initialize the tool and execute a github action:
 
-1. Initialize toolset
+1. Initialize Composio tools
 
 ```python
 from composio import App

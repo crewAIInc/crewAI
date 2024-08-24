@@ -1,14 +1,17 @@
 """Test Agent creation and execution basic functionality."""
 
+import hashlib
 import json
+import os
 from unittest.mock import MagicMock, patch
 
 import pytest
+from crewai import Agent, Crew, Process, Task
+from crewai.tasks.conditional_task import ConditionalTask
+from crewai.tasks.task_output import TaskOutput
+from crewai.utilities.converter import Converter
 from pydantic import BaseModel
 from pydantic_core import ValidationError
-
-from crewai import Agent, Crew, Process, Task
-from crewai.tasks.task_output import TaskOutput
 
 
 def test_task_tool_reflect_agent_tools():
@@ -80,7 +83,7 @@ def test_task_prompt_includes_expected_output():
 
     with patch.object(Agent, "execute_task") as execute:
         execute.return_value = "ok"
-        task.execute()
+        task.execute_sync(agent=researcher)
         execute.assert_called_once_with(task=task, context=None, tools=[])
 
 
@@ -95,6 +98,7 @@ def test_task_callback():
     task_completed = MagicMock(return_value="done")
 
     task = Task(
+        name="Brainstorm",
         description="Give me a list of 5 interesting ideas to explore for na article, what makes them unique and interesting.",
         expected_output="Bullet point list of 5 interesting ideas.",
         agent=researcher,
@@ -103,11 +107,17 @@ def test_task_callback():
 
     with patch.object(Agent, "execute_task") as execute:
         execute.return_value = "ok"
-        task.execute()
+        task.execute_sync(agent=researcher)
         task_completed.assert_called_once_with(task.output)
 
+        assert task.output.description == task.description
+        assert task.output.expected_output == task.expected_output
+        assert task.output.name == task.name
 
-def test_task_callback_returns_task_ouput():
+
+def test_task_callback_returns_task_output():
+    from crewai.tasks.output_format import OutputFormat
+
     researcher = Agent(
         role="Researcher",
         goal="Make the best research and analysis on content about AI and AI agents",
@@ -126,7 +136,7 @@ def test_task_callback_returns_task_ouput():
 
     with patch.object(Agent, "execute_task") as execute:
         execute.return_value = "exported_ok"
-        task.execute()
+        task.execute_sync(agent=researcher)
         # Ensure the callback is called with a TaskOutput object serialized to JSON
         task_completed.assert_called_once()
         callback_data = task_completed.call_args[0][0]
@@ -139,10 +149,14 @@ def test_task_callback_returns_task_ouput():
         output_dict = json.loads(callback_data)
         expected_output = {
             "description": task.description,
-            "exported_output": "exported_ok",
-            "raw_output": "exported_ok",
+            "raw": "exported_ok",
+            "pydantic": None,
+            "json_dict": None,
             "agent": researcher.role,
             "summary": "Give me a list of 5 interesting ideas to explore...",
+            "name": None,
+            "expected_output": "Bullet point list of 5 interesting ideas.",
+            "output_format": OutputFormat.RAW,
         }
         assert output_dict == expected_output
 
@@ -161,7 +175,7 @@ def test_execute_with_agent():
     )
 
     with patch.object(Agent, "execute_task", return_value="ok") as execute:
-        task.execute(agent=researcher)
+        task.execute_sync(agent=researcher)
         execute.assert_called_once_with(task=task, context=None, tools=[])
 
 
@@ -181,7 +195,7 @@ def test_async_execution():
     )
 
     with patch.object(Agent, "execute_task", return_value="ok") as execute:
-        task.execute(agent=researcher)
+        task.execute_async(agent=researcher)
         execute.assert_called_once_with(task=task, context=None, tools=[])
 
 
@@ -199,7 +213,7 @@ def test_multiple_output_type_error():
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
-def test_output_pydantic():
+def test_output_pydantic_sequential():
     class ScoreOutput(BaseModel):
         score: int
 
@@ -217,13 +231,74 @@ def test_output_pydantic():
         agent=scorer,
     )
 
-    crew = Crew(agents=[scorer], tasks=[task])
+    crew = Crew(agents=[scorer], tasks=[task], process=Process.sequential)
     result = crew.kickoff()
-    assert isinstance(result, ScoreOutput)
+    assert isinstance(result.pydantic, ScoreOutput)
+    assert result.to_dict() == {"score": 4}
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
-def test_output_json():
+def test_output_pydantic_hierarchical():
+    from langchain_openai import ChatOpenAI
+
+    class ScoreOutput(BaseModel):
+        score: int
+
+    scorer = Agent(
+        role="Scorer",
+        goal="Score the title",
+        backstory="You're an expert scorer, specialized in scoring titles.",
+        allow_delegation=False,
+    )
+
+    task = Task(
+        description="Give me an integer score between 1-5 for the following title: 'The impact of AI in the future of work'",
+        expected_output="The score of the title.",
+        output_pydantic=ScoreOutput,
+        agent=scorer,
+    )
+
+    crew = Crew(
+        agents=[scorer],
+        tasks=[task],
+        process=Process.hierarchical,
+        manager_llm=ChatOpenAI(model="gpt-4o"),
+    )
+    result = crew.kickoff()
+    assert isinstance(result.pydantic, ScoreOutput)
+    assert result.to_dict() == {"score": 5}
+
+
+@pytest.mark.vcr(filter_headers=["authorization"])
+def test_output_json_sequential():
+    class ScoreOutput(BaseModel):
+        score: int
+
+    scorer = Agent(
+        role="Scorer",
+        goal="Score the title",
+        backstory="You're an expert scorer, specialized in scoring titles.",
+        allow_delegation=False,
+    )
+
+    task = Task(
+        description="Give me an integer score between 1-5 for the following title: 'The impact of AI in the future of work'",
+        expected_output="The score of the title.",
+        output_json=ScoreOutput,
+        output_file="score.json",
+        agent=scorer,
+    )
+
+    crew = Crew(agents=[scorer], tasks=[task], process=Process.sequential)
+    result = crew.kickoff()
+    assert '{"score": 4}' == result.json
+    assert result.to_dict() == {"score": 4}
+
+
+@pytest.mark.vcr(filter_headers=["authorization"])
+def test_output_json_hierarchical():
+    from langchain_openai import ChatOpenAI
+
     class ScoreOutput(BaseModel):
         score: int
 
@@ -241,9 +316,100 @@ def test_output_json():
         agent=scorer,
     )
 
-    crew = Crew(agents=[scorer], tasks=[task])
+    crew = Crew(
+        agents=[scorer],
+        tasks=[task],
+        process=Process.hierarchical,
+        manager_llm=ChatOpenAI(model="gpt-4o"),
+    )
     result = crew.kickoff()
-    assert '{\n  "score": 4\n}' == result
+    assert '{"score": 5}' == result.json
+    assert result.to_dict() == {"score": 5}
+
+
+@pytest.mark.vcr(filter_headers=["authorization"])
+def test_json_property_without_output_json():
+    class ScoreOutput(BaseModel):
+        score: int
+
+    scorer = Agent(
+        role="Scorer",
+        goal="Score the title",
+        backstory="You're an expert scorer, specialized in scoring titles.",
+        allow_delegation=False,
+    )
+
+    task = Task(
+        description="Give me an integer score between 1-5 for the following title: 'The impact of AI in the future of work'",
+        expected_output="The score of the title.",
+        output_pydantic=ScoreOutput,  # Using output_pydantic instead of output_json
+        agent=scorer,
+    )
+
+    crew = Crew(agents=[scorer], tasks=[task], process=Process.sequential)
+    result = crew.kickoff()
+
+    with pytest.raises(ValueError) as excinfo:
+        _ = result.json  # Attempt to access the json property
+
+    assert "No JSON output found in the final task." in str(excinfo.value)
+
+
+@pytest.mark.vcr(filter_headers=["authorization"])
+def test_output_json_dict_sequential():
+    class ScoreOutput(BaseModel):
+        score: int
+
+    scorer = Agent(
+        role="Scorer",
+        goal="Score the title",
+        backstory="You're an expert scorer, specialized in scoring titles.",
+        allow_delegation=False,
+    )
+
+    task = Task(
+        description="Give me an integer score between 1-5 for the following title: 'The impact of AI in the future of work'",
+        expected_output="The score of the title.",
+        output_json=ScoreOutput,
+        agent=scorer,
+    )
+
+    crew = Crew(agents=[scorer], tasks=[task], process=Process.sequential)
+    result = crew.kickoff()
+    assert {"score": 4} == result.json_dict
+    assert result.to_dict() == {"score": 4}
+
+
+@pytest.mark.vcr(filter_headers=["authorization"])
+def test_output_json_dict_hierarchical():
+    from langchain_openai import ChatOpenAI
+
+    class ScoreOutput(BaseModel):
+        score: int
+
+    scorer = Agent(
+        role="Scorer",
+        goal="Score the title",
+        backstory="You're an expert scorer, specialized in scoring titles.",
+        allow_delegation=False,
+    )
+
+    task = Task(
+        description="Give me an integer score between 1-5 for the following title: 'The impact of AI in the future of work'",
+        expected_output="The score of the title.",
+        output_json=ScoreOutput,
+        agent=scorer,
+    )
+
+    crew = Crew(
+        agents=[scorer],
+        tasks=[task],
+        process=Process.hierarchical,
+        manager_llm=ChatOpenAI(model="gpt-4o"),
+    )
+    result = crew.kickoff()
+    assert {"score": 4} == result.json_dict
+    assert result.to_dict() == {"score": 4}
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
@@ -277,9 +443,13 @@ def test_output_pydantic_to_another_task():
         agent=scorer,
     )
 
-    crew = Crew(agents=[scorer], tasks=[task1, task2], verbose=2)
+    crew = Crew(agents=[scorer], tasks=[task1, task2], verbose=True)
     result = crew.kickoff()
-    assert 5 == result.score
+    pydantic_result = result.pydantic
+    assert isinstance(
+        pydantic_result, ScoreOutput
+    ), "Expected pydantic result to be of type ScoreOutput"
+    assert 5 == pydantic_result.score
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
@@ -310,7 +480,7 @@ def test_output_json_to_another_task():
 
     crew = Crew(agents=[scorer], tasks=[task1, task2])
     result = crew.kickoff()
-    assert '{\n  "score": 5\n}' == result
+    assert '{"score": 4}' == result.json
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
@@ -358,11 +528,13 @@ def test_save_task_json_output():
     )
 
     crew = Crew(agents=[scorer], tasks=[task])
+    crew.kickoff()
 
-    with patch.object(Task, "_save_file") as save_file:
-        save_file.return_value = None
-        crew.kickoff()
-        save_file.assert_called_once_with('{\n  "score": 4\n}')
+    output_file_exists = os.path.exists("score.json")
+    assert output_file_exists
+    assert {"score": 4} == json.loads(open("score.json").read())
+    if output_file_exists:
+        os.remove("score.json")
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
@@ -386,11 +558,45 @@ def test_save_task_pydantic_output():
     )
 
     crew = Crew(agents=[scorer], tasks=[task])
+    crew.kickoff()
 
-    with patch.object(Task, "_save_file") as save_file:
-        save_file.return_value = None
+    output_file_exists = os.path.exists("score.json")
+    assert output_file_exists
+    assert {"score": 4} == json.loads(open("score.json").read())
+    if output_file_exists:
+        os.remove("score.json")
+
+
+@pytest.mark.vcr(filter_headers=["authorization"])
+def test_custom_converter_cls():
+    class ScoreOutput(BaseModel):
+        score: int
+
+    class ScoreConverter(Converter):
+        pass
+
+    scorer = Agent(
+        role="Scorer",
+        goal="Score the title",
+        backstory="You're an expert scorer, specialized in scoring titles.",
+        allow_delegation=False,
+    )
+
+    task = Task(
+        description="Give me an integer score between 1-5 for the following title: 'The impact of AI in the future of work'",
+        expected_output="The score of the title.",
+        output_pydantic=ScoreOutput,
+        converter_cls=ScoreConverter,
+        agent=scorer,
+    )
+
+    crew = Crew(agents=[scorer], tasks=[task])
+
+    with patch.object(
+        ScoreConverter, "to_pydantic", return_value=ScoreOutput(score=5)
+    ) as mock_to_pydantic:
         crew.kickoff()
-        save_file.assert_called_once_with('{"score":4}')
+        mock_to_pydantic.assert_called_once()
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
@@ -497,7 +703,20 @@ def test_task_definition_based_on_dict():
         "expected_output": "The score of the title.",
     }
 
-    task = Task(config=config)
+    task = Task(**config)
+
+    assert task.description == config["description"]
+    assert task.expected_output == config["expected_output"]
+    assert task.agent is None
+
+
+def test_conditional_task_definition_based_on_dict():
+    config = {
+        "description": "Give me an integer score between 1-5 for the following title: 'The impact of AI in the future of work', check examples to based your evaluation.",
+        "expected_output": "The score of the title.",
+    }
+
+    task = ConditionalTask(**config, condition=lambda x: True)
 
     assert task.description == config["description"]
     assert task.expected_output == config["expected_output"]
@@ -523,3 +742,99 @@ def test_interpolate_inputs():
         == "Give me a list of 5 interesting ideas about ML to explore for an article, what makes them unique and interesting."
     )
     assert task.expected_output == "Bullet point list of 5 interesting ideas about ML."
+
+
+def test_task_output_str_with_pydantic():
+    from crewai.tasks.output_format import OutputFormat
+
+    class ScoreOutput(BaseModel):
+        score: int
+
+    score_output = ScoreOutput(score=4)
+    task_output = TaskOutput(
+        description="Test task",
+        agent="Test Agent",
+        pydantic=score_output,
+        output_format=OutputFormat.PYDANTIC,
+    )
+
+    assert str(task_output) == str(score_output)
+
+
+def test_task_output_str_with_json_dict():
+    from crewai.tasks.output_format import OutputFormat
+
+    json_dict = {"score": 4}
+    task_output = TaskOutput(
+        description="Test task",
+        agent="Test Agent",
+        json_dict=json_dict,
+        output_format=OutputFormat.JSON,
+    )
+
+    assert str(task_output) == str(json_dict)
+
+
+def test_task_output_str_with_raw():
+    from crewai.tasks.output_format import OutputFormat
+
+    raw_output = "Raw task output"
+    task_output = TaskOutput(
+        description="Test task",
+        agent="Test Agent",
+        raw=raw_output,
+        output_format=OutputFormat.RAW,
+    )
+
+    assert str(task_output) == raw_output
+
+
+def test_task_output_str_with_pydantic_and_json_dict():
+    from crewai.tasks.output_format import OutputFormat
+
+    class ScoreOutput(BaseModel):
+        score: int
+
+    score_output = ScoreOutput(score=4)
+    json_dict = {"score": 4}
+    task_output = TaskOutput(
+        description="Test task",
+        agent="Test Agent",
+        pydantic=score_output,
+        json_dict=json_dict,
+        output_format=OutputFormat.PYDANTIC,
+    )
+
+    # When both pydantic and json_dict are present, pydantic should take precedence
+    assert str(task_output) == str(score_output)
+
+
+def test_task_output_str_with_none():
+    from crewai.tasks.output_format import OutputFormat
+
+    task_output = TaskOutput(
+        description="Test task",
+        agent="Test Agent",
+        output_format=OutputFormat.RAW,
+    )
+
+    assert str(task_output) == ""
+
+
+def test_key():
+    original_description = "Give me a list of 5 interesting ideas about {topic} to explore for an article, what makes them unique and interesting."
+    original_expected_output = "Bullet point list of 5 interesting ideas about {topic}."
+    task = Task(
+        description=original_description,
+        expected_output=original_expected_output,
+    )
+    hash = hashlib.md5(
+        f"{original_description}|{original_expected_output}".encode()
+    ).hexdigest()
+
+    assert task.key == hash, "The key should be the hash of the description."
+
+    task.interpolate_inputs(inputs={"topic": "AI"})
+    assert (
+        task.key == hash
+    ), "The key should be the hash of the non-interpolated description."

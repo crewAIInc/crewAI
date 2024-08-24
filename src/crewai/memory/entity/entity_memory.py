@@ -23,3 +23,9 @@ class EntityMemory(Memory):
         """Saves an entity item into the SQLite storage."""
         data = f"{item.name}({item.type}): {item.description}"
         super().save(data, item.metadata)
+
+    def reset(self) -> None:
+        try:
+            self.storage.reset()
+        except Exception as e:
+            raise Exception(f"An error occurred while resetting the entity memory: {e}")
