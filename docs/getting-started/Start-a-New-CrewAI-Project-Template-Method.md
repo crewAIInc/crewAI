@@ -191,7 +191,7 @@ To install the dependencies for your project, you can use Poetry. First, navigat
 
 ```shell
 $ cd my_project
-$ crewai install
+$ poetry install
 ```
 
 This will install the dependencies specified in the `pyproject.toml` file.
