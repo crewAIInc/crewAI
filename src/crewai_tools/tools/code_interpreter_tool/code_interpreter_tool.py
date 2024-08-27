@@ -27,7 +27,7 @@ class CodeInterpreterTool(BaseTool):
     args_schema: Type[BaseModel] = CodeInterpreterSchema
     default_image_tag: str = "code-interpreter:latest"
     code: Optional[str] = None
-    user_docker_file_path: Optional[str] = None
+    user_dockerfile_path: Optional[str] = None
 
     @staticmethod
     def _get_installed_package_path():
@@ -44,10 +44,8 @@ class CodeInterpreterTool(BaseTool):
             client.images.get(self.default_image_tag)
 
         except docker.errors.ImageNotFound:
-            if self.user_docker_file_path and os.path.exists(
-                self.user_docker_file_path
-            ):
-                dockerfile_path = self.user_docker_file_path
+            if self.user_dockerfile_path and os.path.exists(self.user_dockerfile_path):
+                dockerfile_path = self.user_dockerfile_path
             else:
                 package_path = self._get_installed_package_path()
                 dockerfile_path = os.path.join(

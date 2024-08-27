@@ -35,6 +35,6 @@ from crewai_tools import CodeInterpreterTool
 
 Agent(
     ...
-    tools=[CodeInterpreterTool(user_docker_file_path="<Dockerfile_path>")],
+    tools=[CodeInterpreterTool(user_dockerfile_path="<Dockerfile_path>")],
 )
 ```
