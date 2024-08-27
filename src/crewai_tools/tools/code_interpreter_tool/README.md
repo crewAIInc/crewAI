@@ -27,3 +27,14 @@ Agent(
     tools=[CodeInterpreterTool()],
 )
 ```
+
+Or if you need to pass your own Dockerfile just do this
+
+```python
+from crewai_tools import CodeInterpreterTool
+
+Agent(
+    ...
+    tools=[CodeInterpreterTool(user_docker_file_path="<Dockerfile_path>")],
+)
+```
