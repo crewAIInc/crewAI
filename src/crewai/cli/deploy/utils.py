@@ -1,9 +1,12 @@
 import sys
 import re
 import subprocess
-import ast
+
+from rich.console import Console
 
 from ..authentication.utils import TokenManager
+
+console = Console()
 
 
 if sys.version_info >= (3, 11):
@@ -53,13 +56,12 @@ def get_git_remote_url() -> str:
         if matches:
             return matches[0]  # Return the first match (origin URL)
         else:
-            print("No origin remote found.")
-            return "No remote URL found"
+            console.print("No origin remote found.", style="bold red")
 
     except subprocess.CalledProcessError as e:
-        return f"Error running trying to fetch the Git Repository: {e}"
+        console.print(f"Error running trying to fetch the Git Repository: {e}", style="bold red")
     except FileNotFoundError:
-        return "Git command not found. Make sure Git is installed and in your PATH."
+        console.print("Git command not found. Make sure Git is installed and in your PATH.", style="bold red")
 
 
 def get_project_name(pyproject_path: str = "pyproject.toml"):
