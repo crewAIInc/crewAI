@@ -39,7 +39,7 @@ def parse_toml(content):
         return simple_toml_parser(content)
 
 
-def get_git_remote_url() -> str:
+def get_git_remote_url() -> str | None:
     """Get the Git repository's remote URL."""
     try:
         # Run the git remote -v command
@@ -63,6 +63,8 @@ def get_git_remote_url() -> str:
     except FileNotFoundError:
         console.print("Git command not found. Make sure Git is installed and in your PATH.", style="bold red")
 
+    return None
+
 
 def get_project_name(pyproject_path: str = "pyproject.toml"):
     """Get the project name from the pyproject.toml file."""
@@ -83,7 +85,7 @@ def get_project_name(pyproject_path: str = "pyproject.toml"):
         print(f"Error: {pyproject_path} not found.")
     except KeyError:
         print(f"Error: {pyproject_path} is not a valid pyproject.toml file.")
-    except tomllib.TOMLDecodeError if sys.version_info >= (3, 11) else Exception as e:
+    except tomllib.TOMLDecodeError if sys.version_info >= (3, 11) else Exception as e:  # type: ignore
         print(
             f"Error: {pyproject_path} is not a valid TOML file."
             if sys.version_info >= (3, 11)
