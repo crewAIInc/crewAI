@@ -113,6 +113,11 @@ class DeployCommand:
         env_vars = fetch_and_json_env_file()
         remote_repo_url = get_git_remote_url()
 
+        if remote_repo_url is None:
+            console.print("No remote repository URL found.", style="bold red")
+            console.print("Please ensure your project has a valid remote repository.", style="yellow")
+            return
+
         self._confirm_input(env_vars, remote_repo_url)
         payload = self._create_payload(env_vars, remote_repo_url)
 
