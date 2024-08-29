@@ -1,6 +1,7 @@
 import sys
 import re
 import subprocess
+import ast
 
 from ..authentication.utils import TokenManager
 
@@ -92,32 +93,27 @@ def get_project_name(pyproject_path: str = "pyproject.toml"):
     return None
 
 
-def get_crewai_version(pyproject_path: str = "pyproject.toml") -> str:
-    """Get the version number of crewai from the pyproject.toml file."""
+def get_crewai_version(poetry_lock_path: str = "poetry.lock") -> str:
+    """Get the version number of crewai from the poetry.lock file."""
     try:
-        # Read the pyproject.toml file
-        with open(pyproject_path, "rb") as f:
-            pyproject_content = parse_toml(f.read())
+        with open(poetry_lock_path, "r") as f:
+            lock_content = f.read()
 
-        # Extract the version number of crewai
-        crewai_version = pyproject_content["tool"]["poetry"]["dependencies"]["crewai"][
-            "version"
-        ]
-
-        return crewai_version
+        match = re.search(
+            r'\[\[package\]\]\s*name\s*=\s*"crewai"\s*version\s*=\s*"([^"]+)"',
+            lock_content,
+            re.DOTALL,
+        )
+        if match:
+            return match.group(1)
+        else:
+            print("crewai package not found in poetry.lock")
+            return "no-version-found"
 
     except FileNotFoundError:
-        print(f"Error: {pyproject_path} not found.")
-    except KeyError:
-        print(f"Error: {pyproject_path} is not a valid pyproject.toml file.")
-    except tomllib.TOMLDecodeError if sys.version_info >= (3, 11) else Exception as e:
-        print(
-            f"Error: {pyproject_path} is not a valid TOML file."
-            if sys.version_info >= (3, 11)
-            else f"Error reading the pyproject.toml file: {e}"
-        )
+        print(f"Error: {poetry_lock_path} not found.")
     except Exception as e:
-        print(f"Error reading the pyproject.toml file: {e}")
+        print(f"Error reading the poetry.lock file: {e}")
 
     return "no-version-found"
 
