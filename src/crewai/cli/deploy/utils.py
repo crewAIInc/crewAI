@@ -66,11 +66,11 @@ def get_git_remote_url() -> str | None:
     return None
 
 
-def get_project_name(pyproject_path: str = "pyproject.toml"):
+def get_project_name(pyproject_path: str = "pyproject.toml") -> str | None:
     """Get the project name from the pyproject.toml file."""
     try:
         # Read the pyproject.toml file
-        with open(pyproject_path, "rb") as f:
+        with open(pyproject_path, "r") as f:
             pyproject_content = parse_toml(f.read())
 
         # Extract the project name

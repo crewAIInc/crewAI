@@ -33,6 +33,10 @@ class DeployCommand:
             raise SystemExit
 
         self.project_name = get_project_name()
+        if self.project_name is None:
+            console.print("No project name found. Please ensure your project has a valid pyproject.toml file.", style="bold red")
+            raise SystemExit
+
         self.client = CrewAPI(api_key=access_token)
 
     def _handle_error(self, json_response: Dict[str, Any]) -> None:
