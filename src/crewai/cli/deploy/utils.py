@@ -1,9 +1,38 @@
+import sys
 import re
 import subprocess
 
-import tomllib
-
 from ..authentication.utils import TokenManager
+
+
+if sys.version_info >= (3, 11):
+    import tomllib
+
+
+def simple_toml_parser(content):
+    result = {}
+    current_section = result
+    for line in content.split('\n'):
+        line = line.strip()
+        if line.startswith('[') and line.endswith(']'):
+            # New section
+            section = line[1:-1].split('.')
+            current_section = result
+            for key in section:
+                current_section = current_section.setdefault(key, {})
+        elif '=' in line:
+            key, value = line.split('=', 1)
+            key = key.strip()
+            value = value.strip().strip('"')
+            current_section[key] = value
+    return result
+
+
+def parse_toml(content):
+    if sys.version_info >= (3, 11):
+        return tomllib.loads(content)
+    else:
+        return simple_toml_parser(content)
 
 
 def get_git_remote_url() -> str:
@@ -37,7 +66,7 @@ def get_project_name(pyproject_path: str = "pyproject.toml"):
     try:
         # Read the pyproject.toml file
         with open(pyproject_path, "rb") as f:
-            pyproject_content = tomllib.load(f)
+            pyproject_content = parse_toml(f.read())
 
         # Extract the project name
         project_name = pyproject_content["tool"]["poetry"]["name"]
@@ -51,8 +80,12 @@ def get_project_name(pyproject_path: str = "pyproject.toml"):
         print(f"Error: {pyproject_path} not found.")
     except KeyError:
         print(f"Error: {pyproject_path} is not a valid pyproject.toml file.")
-    except tomllib.TOMLDecodeError:
-        print(f"Error: {pyproject_path} is not a valid TOML file.")
+    except tomllib.TOMLDecodeError if sys.version_info >= (3, 11) else Exception as e:
+        print(
+            f"Error: {pyproject_path} is not a valid TOML file."
+            if sys.version_info >= (3, 11)
+            else f"Error reading the pyproject.toml file: {e}"
+        )
     except Exception as e:
         print(f"Error reading the pyproject.toml file: {e}")
 
@@ -63,8 +96,8 @@ def get_crewai_version(pyproject_path: str = "pyproject.toml") -> str:
     """Get the version number of crewai from the pyproject.toml file."""
     try:
         # Read the pyproject.toml file
-        with open("pyproject.toml", "rb") as f:
-            pyproject_content = tomllib.load(f)
+        with open(pyproject_path, "rb") as f:
+            pyproject_content = parse_toml(f.read())
 
         # Extract the version number of crewai
         crewai_version = pyproject_content["tool"]["poetry"]["dependencies"]["crewai"][
@@ -77,8 +110,12 @@ def get_crewai_version(pyproject_path: str = "pyproject.toml") -> str:
         print(f"Error: {pyproject_path} not found.")
     except KeyError:
         print(f"Error: {pyproject_path} is not a valid pyproject.toml file.")
-    except tomllib.TOMLDecodeError:
-        print(f"Error: {pyproject_path} is not a valid TOML file.")
+    except tomllib.TOMLDecodeError if sys.version_info >= (3, 11) else Exception as e:
+        print(
+            f"Error: {pyproject_path} is not a valid TOML file."
+            if sys.version_info >= (3, 11)
+            else f"Error reading the pyproject.toml file: {e}"
+        )
     except Exception as e:
         print(f"Error reading the pyproject.toml file: {e}")
 
