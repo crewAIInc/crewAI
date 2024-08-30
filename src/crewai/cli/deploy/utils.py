@@ -13,6 +13,7 @@ if sys.version_info >= (3, 11):
     import tomllib
 
 
+# Drop the simple_toml_parser when we move to python3.11
 def simple_toml_parser(content):
     result = {}
     current_section = result
