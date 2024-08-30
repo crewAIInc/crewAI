@@ -462,7 +462,7 @@ class Telemetry:
             pass
 
     def _safe_llm_attributes(self, llm):
-        attributes = ["name", "model_name", "base_url", "model", "top_k", "temperature"]
+        attributes = ["name", "model_name", "model", "top_k", "temperature"]
         if llm:
             safe_attributes = {k: v for k, v in vars(llm).items() if k in attributes}
             safe_attributes["class"] = llm.__class__.__name__
