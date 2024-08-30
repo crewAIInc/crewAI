@@ -27,6 +27,7 @@ When the `share_crew` feature is enabled, detailed data including task descripti
 | Yes       | Test Execution Data | Includes: crew's randomly generated key and ID, number of iterations, model name used, quality score (float), execution time (in seconds). All non-personal. |
 | Yes       | Task Lifecycle Data | Includes: creation and execution start/end times, crew and task identifiers. Stored as spans with timestamps. No personal data. |
 | Yes       | LLM Attributes | Includes: name, model_name, model, top_k, temperature, and class name of the LLM. All technical, non-personal data. |
+| Yes       | Crew Deployment attempt using crewAI CLI | Includes: The fact a deploy is being made and crew id, and if it's trying to pull logs, no other data. |
 | No        | Agent's Expanded Data | Includes: goal description, backstory text, i18n prompt file identifier. Users should ensure no personal info is included in text fields. |
 | No        | Detailed Task Information | Includes: task description, expected output description, context references. Users should ensure no personal info is included in these fields. |
 | No        | Environment Information | Includes: platform, release, system, version, and CPU count. Example: 'Windows 10', 'x86_64'. No personal data. |

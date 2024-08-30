@@ -4,7 +4,7 @@ import asyncio
 import json
 import os
 import platform
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, Optional
 
 import pkg_resources
 from opentelemetry import trace
@@ -394,6 +394,63 @@ class Telemetry:
                         span, "inputs", json.dumps(inputs) if inputs else None
                     )
 
+                span.set_status(Status(StatusCode.OK))
+                span.end()
+            except Exception:
+                pass
+
+    def deploy_signup_error_span(self):
+        if self.ready:
+            try:
+                tracer = trace.get_tracer("crewai.telemetry")
+                span = tracer.start_span("Deploy Signup Error")
+                span.set_status(Status(StatusCode.OK))
+                span.end()
+            except Exception:
+                pass
+
+    def start_deployment_span(self, uuid: Optional[str] = None):
+        if self.ready:
+            try:
+                tracer = trace.get_tracer("crewai.telemetry")
+                span = tracer.start_span("Start Deployment")
+                if uuid:
+                    self._add_attribute(span, "uuid", uuid)
+                span.set_status(Status(StatusCode.OK))
+                span.end()
+            except Exception:
+                pass
+
+    def create_crew_deployment_span(self):
+        if self.ready:
+            try:
+                tracer = trace.get_tracer("crewai.telemetry")
+                span = tracer.start_span("Create Crew Deployment")
+                span.set_status(Status(StatusCode.OK))
+                span.end()
+            except Exception:
+                pass
+
+    def get_crew_logs_span(self, uuid: Optional[str], log_type: str = "deployment"):
+        if self.ready:
+            try:
+                tracer = trace.get_tracer("crewai.telemetry")
+                span = tracer.start_span("Get Crew Logs")
+                self._add_attribute(span, "log_type", log_type)
+                if uuid:
+                    self._add_attribute(span, "uuid", uuid)
+                span.set_status(Status(StatusCode.OK))
+                span.end()
+            except Exception:
+                pass
+
+    def remove_crew_span(self, uuid: Optional[str] = None):
+        if self.ready:
+            try:
+                tracer = trace.get_tracer("crewai.telemetry")
+                span = tracer.start_span("Remove Crew")
+                if uuid:
+                    self._add_attribute(span, "uuid", uuid)
                 span.set_status(Status(StatusCode.OK))
                 span.end()
             except Exception:
