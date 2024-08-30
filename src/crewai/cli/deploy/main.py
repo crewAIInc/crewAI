@@ -2,6 +2,7 @@ from typing import Any, Dict, List, Optional
 
 from rich.console import Console
 
+from crewai.telemetry import Telemetry
 from .api import CrewAPI
 from .utils import (
     fetch_and_json_env_file,
@@ -23,8 +24,13 @@ class DeployCommand:
         Initialize the DeployCommand with project name and API client.
         """
         try:
+            self._telemetry = Telemetry()
+            self._telemetry.set_tracer()
             access_token = get_auth_token()
         except Exception:
+            self._deploy_signup_error_span = self._telemetry.deploy_signup_error_span(
+                self
+            )
             console.print(
                 "Please sign up/login to CrewAI+ before using the CLI.",
                 style="bold red",
@@ -90,6 +96,7 @@ class DeployCommand:
         Args:
             uuid (Optional[str]): The UUID of the crew to deploy.
         """
+        self._start_deployment_span = self._telemetry.start_deployment_span(self, uuid)
         console.print("Starting deployment...", style="bold blue")
         if uuid:
             response = self.client.deploy_by_uuid(uuid)
@@ -109,6 +116,9 @@ class DeployCommand:
         """
         Create a new crew deployment.
         """
+        self._create_crew_deployment_span = self._telemetry.create_crew_deployment_span(
+            self
+        )
         console.print("Creating deployment...", style="bold blue")
         env_vars = fetch_and_json_env_file()
         remote_repo_url = get_git_remote_url()
@@ -247,6 +257,9 @@ class DeployCommand:
             uuid (Optional[str]): The UUID of the crew to get logs for.
             log_type (str): The type of logs to retrieve (default: "deployment").
         """
+        self._get_crew_logs_span = self._telemetry.get_crew_logs_span(
+            self, uuid, log_type
+        )
         console.print(f"Fetching {log_type} logs...", style="bold blue")
 
         if uuid:
@@ -269,6 +282,7 @@ class DeployCommand:
         Args:
             uuid (Optional[str]): The UUID of the crew to remove.
         """
+        self._remove_crew_span = self._telemetry.remove_crew_span(self, uuid)
         console.print("Removing deployment...", style="bold blue")
 
         if uuid:
