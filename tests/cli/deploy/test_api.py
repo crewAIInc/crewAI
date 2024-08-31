@@ -17,6 +17,7 @@ class TestCrewAPI(unittest.TestCase):
             {
                 "Authorization": f"Bearer {self.api_key}",
                 "Content-Type": "application/json",
+                "User-Agent": "CrewAI-CLI/no-version-found"
             },
         )
 

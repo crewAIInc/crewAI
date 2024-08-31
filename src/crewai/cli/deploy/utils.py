@@ -1,12 +1,46 @@
+import sys
 import re
 import subprocess
 
-import tomllib
+from rich.console import Console
 
 from ..authentication.utils import TokenManager
 
+console = Console()
 
-def get_git_remote_url() -> str:
+
+if sys.version_info >= (3, 11):
+    import tomllib
+
+
+# Drop the simple_toml_parser when we move to python3.11
+def simple_toml_parser(content):
+    result = {}
+    current_section = result
+    for line in content.split('\n'):
+        line = line.strip()
+        if line.startswith('[') and line.endswith(']'):
+            # New section
+            section = line[1:-1].split('.')
+            current_section = result
+            for key in section:
+                current_section = current_section.setdefault(key, {})
+        elif '=' in line:
+            key, value = line.split('=', 1)
+            key = key.strip()
+            value = value.strip().strip('"')
+            current_section[key] = value
+    return result
+
+
+def parse_toml(content):
+    if sys.version_info >= (3, 11):
+        return tomllib.loads(content)
+    else:
+        return simple_toml_parser(content)
+
+
+def get_git_remote_url() -> str | None:
     """Get the Git repository's remote URL."""
     try:
         # Run the git remote -v command
@@ -23,21 +57,22 @@ def get_git_remote_url() -> str:
         if matches:
             return matches[0]  # Return the first match (origin URL)
         else:
-            print("No origin remote found.")
-            return "No remote URL found"
+            console.print("No origin remote found.", style="bold red")
 
     except subprocess.CalledProcessError as e:
-        return f"Error running trying to fetch the Git Repository: {e}"
+        console.print(f"Error running trying to fetch the Git Repository: {e}", style="bold red")
     except FileNotFoundError:
-        return "Git command not found. Make sure Git is installed and in your PATH."
+        console.print("Git command not found. Make sure Git is installed and in your PATH.", style="bold red")
+
+    return None
 
 
-def get_project_name(pyproject_path: str = "pyproject.toml"):
+def get_project_name(pyproject_path: str = "pyproject.toml") -> str | None:
     """Get the project name from the pyproject.toml file."""
     try:
         # Read the pyproject.toml file
-        with open(pyproject_path, "rb") as f:
-            pyproject_content = tomllib.load(f)
+        with open(pyproject_path, "r") as f:
+            pyproject_content = parse_toml(f.read())
 
         # Extract the project name
         project_name = pyproject_content["tool"]["poetry"]["name"]
@@ -51,36 +86,39 @@ def get_project_name(pyproject_path: str = "pyproject.toml"):
         print(f"Error: {pyproject_path} not found.")
     except KeyError:
         print(f"Error: {pyproject_path} is not a valid pyproject.toml file.")
-    except tomllib.TOMLDecodeError:
-        print(f"Error: {pyproject_path} is not a valid TOML file.")
+    except tomllib.TOMLDecodeError if sys.version_info >= (3, 11) else Exception as e:  # type: ignore
+        print(
+            f"Error: {pyproject_path} is not a valid TOML file."
+            if sys.version_info >= (3, 11)
+            else f"Error reading the pyproject.toml file: {e}"
+        )
     except Exception as e:
         print(f"Error reading the pyproject.toml file: {e}")
 
     return None
 
 
-def get_crewai_version(pyproject_path: str = "pyproject.toml") -> str:
-    """Get the version number of crewai from the pyproject.toml file."""
+def get_crewai_version(poetry_lock_path: str = "poetry.lock") -> str:
+    """Get the version number of crewai from the poetry.lock file."""
     try:
-        # Read the pyproject.toml file
-        with open("pyproject.toml", "rb") as f:
-            pyproject_content = tomllib.load(f)
+        with open(poetry_lock_path, "r") as f:
+            lock_content = f.read()
 
-        # Extract the version number of crewai
-        crewai_version = pyproject_content["tool"]["poetry"]["dependencies"]["crewai"][
-            "version"
-        ]
-
-        return crewai_version
+        match = re.search(
+            r'\[\[package\]\]\s*name\s*=\s*"crewai"\s*version\s*=\s*"([^"]+)"',
+            lock_content,
+            re.DOTALL,
+        )
+        if match:
+            return match.group(1)
+        else:
+            print("crewai package not found in poetry.lock")
+            return "no-version-found"
 
     except FileNotFoundError:
-        print(f"Error: {pyproject_path} not found.")
-    except KeyError:
-        print(f"Error: {pyproject_path} is not a valid pyproject.toml file.")
-    except tomllib.TOMLDecodeError:
-        print(f"Error: {pyproject_path} is not a valid TOML file.")
+        print(f"Error: {poetry_lock_path} not found.")
     except Exception as e:
-        print(f"Error reading the pyproject.toml file: {e}")
+        print(f"Error reading the poetry.lock file: {e}")
 
     return "no-version-found"
 
