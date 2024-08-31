@@ -39,6 +39,10 @@ class DeployCommand:
             raise SystemExit
 
         self.project_name = get_project_name()
+        if self.project_name is None:
+            console.print("No project name found. Please ensure your project has a valid pyproject.toml file.", style="bold red")
+            raise SystemExit
+
         self.client = CrewAPI(api_key=access_token)
 
     def _handle_error(self, json_response: Dict[str, Any]) -> None:
@@ -122,6 +126,11 @@ class DeployCommand:
         console.print("Creating deployment...", style="bold blue")
         env_vars = fetch_and_json_env_file()
         remote_repo_url = get_git_remote_url()
+
+        if remote_repo_url is None:
+            console.print("No remote repository URL found.", style="bold red")
+            console.print("Please ensure your project has a valid remote repository.", style="yellow")
+            return
 
         self._confirm_input(env_vars, remote_repo_url)
         payload = self._create_payload(env_vars, remote_repo_url)

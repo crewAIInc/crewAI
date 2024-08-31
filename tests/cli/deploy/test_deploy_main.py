@@ -1,9 +1,10 @@
 import unittest
 from io import StringIO
 from unittest.mock import MagicMock, patch
+import sys
 
 from crewai.cli.deploy.main import DeployCommand
-
+from crewai.cli.deploy.utils import parse_toml
 
 class TestDeployCommand(unittest.TestCase):
     @patch("crewai.cli.deploy.main.get_auth_token")
@@ -151,3 +152,68 @@ class TestDeployCommand(unittest.TestCase):
             self.assertIn(
                 "Crew 'test_project' removed successfully", fake_out.getvalue()
             )
+
+    @unittest.skipIf(sys.version_info < (3, 11), "Requires Python 3.11+")
+    def test_parse_toml_python_311_plus(self):
+        toml_content = """
+        [tool.poetry]
+        name = "test_project"
+        version = "0.1.0"
+
+        [tool.poetry.dependencies]
+        python = "^3.11"
+        crewai = { extras = ["tools"], version = ">=0.51.0,<1.0.0" }
+        """
+        parsed = parse_toml(toml_content)
+        self.assertEqual(parsed['tool']['poetry']['name'], 'test_project')
+
+    @patch('builtins.open', new_callable=unittest.mock.mock_open, read_data="""
+    [tool.poetry]
+    name = "test_project"
+    version = "0.1.0"
+
+    [tool.poetry.dependencies]
+    python = "^3.10"
+    crewai = { extras = ["tools"], version = ">=0.51.0,<1.0.0" }
+    """)
+    def test_get_project_name_python_310(self, mock_open):
+        from crewai.cli.deploy.utils import get_project_name
+        project_name = get_project_name()
+        self.assertEqual(project_name, 'test_project')
+
+    @unittest.skipIf(sys.version_info < (3, 11), "Requires Python 3.11+")
+    @patch('builtins.open', new_callable=unittest.mock.mock_open, read_data="""
+    [tool.poetry]
+    name = "test_project"
+    version = "0.1.0"
+
+    [tool.poetry.dependencies]
+    python = "^3.11"
+    crewai = { extras = ["tools"], version = ">=0.51.0,<1.0.0" }
+    """)
+    def test_get_project_name_python_311_plus(self, mock_open):
+        from crewai.cli.deploy.utils import get_project_name
+        project_name = get_project_name()
+        self.assertEqual(project_name, 'test_project')
+
+    @patch('builtins.open', new_callable=unittest.mock.mock_open, read_data="""
+    [[package]]
+    name = "crewai"
+    version = "0.51.1"
+    description = "Some description"
+    category = "main"
+    optional = false
+    python-versions = ">=3.10,<4.0"
+    """)
+    def test_get_crewai_version(self, mock_open):
+        from crewai.cli.deploy.utils import get_crewai_version
+        version = get_crewai_version()
+        self.assertEqual(version, '0.51.1')
+
+    @patch('builtins.open', side_effect=FileNotFoundError)
+    def test_get_crewai_version_file_not_found(self, mock_open):
+        from crewai.cli.deploy.utils import get_crewai_version
+        with patch('sys.stdout', new=StringIO()) as fake_out:
+            version = get_crewai_version()
+            self.assertEqual(version, 'no-version-found')
+            self.assertIn("Error: poetry.lock not found.", fake_out.getvalue())
