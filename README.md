@@ -73,6 +73,7 @@ os.environ["SERPER_API_KEY"] = "Your Key" # serper.dev API key
 # You can pass an optional llm attribute specifying what model you wanna use.
 # It can be a local model through Ollama / LM Studio or a remote
 # model like OpenAI, Mistral, Antrophic or others (https://docs.crewai.com/how-to/LLM-Connections/)
+# If you don't specify a model, the default is OpenAI gpt-4o
 #
 # import os
 # os.environ['OPENAI_MODEL_NAME'] = 'gpt-3.5-turbo'
