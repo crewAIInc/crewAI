@@ -5,7 +5,7 @@
 <div align="left">
 
 # **crewAI Tools**
-This document provides a comprehensive guide for setting up sophisticated tools for [crewAI](https://github.com/joaomdmoura/crewai) agents, facilitating the creation of bespoke tooling to empower your AI solutions.
+Welcome to crewAI Tools! This repository provides a comprehensive guide for setting up sophisticated tools for [crewAI](https://github.com/crewAIInc/crewAI) agents, empowering your AI solutions with bespoke tooling.
 
 In the realm of CrewAI agents, tools are pivotal for enhancing functionality. This guide outlines the steps to equip your agents with an arsenal of ready-to-use tools and the methodology to craft your own.
 
@@ -13,7 +13,7 @@ In the realm of CrewAI agents, tools are pivotal for enhancing functionality. Th
 
 <h3>
 
-[Homepage](https://www.crewai.io/) | [Documentation](https://docs.crewai.com/) | [Chat with Docs](https://chatg.pt/DWjSBZn) | [Examples](https://github.com/joaomdmoura/crewai-examples) | [Discord](https://discord.com/invite/X4JWnZnxPb)
+[Homepage](https://www.crewai.io/) | [Documentation](https://docs.crewai.com/) | [Chat with Docs](https://chatg.pt/DWjSBZn) | [Examples](https://github.com/crewAIInc/crewAI-examples) | [Discord](https://discord.com/invite/X4JWnZnxPb)
 
 </h3>
 
@@ -26,6 +26,19 @@ In the realm of CrewAI agents, tools are pivotal for enhancing functionality. Th
 	- [Utilizing the `tool` Decorator](#utilizing-the-tool-decorator)
 - [Contribution Guidelines](#contribution-guidelines)
 - [Development Setup](#development-setup)
+
+## Available Tools
+
+crewAI Tools provides a wide range of pre-built tools, including:
+
+- File operations (FileWriterTool, FileReadTool)
+- Web scraping (ScrapeWebsiteTool, SeleniumScrapingTool)
+- Database interactions (PGSearchTool, MySQLSearchTool)
+- API integrations (SerperApiTool, EXASearchTool)
+- AI-powered tools (DallETool, VisionTool)
+- And many more!
+
+For a complete list and detailed documentation of each tool, please refer to the individual tool README files in the repository.
 
 ## Creating Your Tools
 
@@ -68,14 +81,15 @@ The `tool` decorator simplifies the process, transforming functions into tools w
 
 ## Contribution Guidelines
 
-We eagerly welcome contributions to enrich this toolset. To contribute:
+We welcome contributions! Here's how you can help:
 
-1. **Fork the Repository:** Begin with forking the repository to your GitHub account.
-2. **Feature Branch:** Create a new branch in your fork for the feature or improvement.
-3. **Implement Your Feature:** Add your contribution to the new branch.
-4. **Pull Request:** Submit a pull request from your feature branch to the main repository.
+1. Fork the repository
+2. Create a feature branch (`git checkout -b feature/AmazingFeature`)
+3. Commit your changes (`git commit -m 'Add some AmazingFeature'`)
+4. Push to the branch (`git push origin feature/AmazingFeature`)
+5. Open a Pull Request
 
-Your contributions are greatly appreciated and will help enhance this project.
+Please ensure your code adheres to our coding standards and includes appropriate tests.
 
 ## **Development Setup**
 
@@ -122,3 +136,9 @@ pip install dist/*.tar.gz
 ```
 
 Thank you for your interest in enhancing the capabilities of AI agents through advanced tooling. Your contributions make a significant impact.
+
+## Contact
+
+For questions or support, please join our [Discord community](https://discord.com/invite/X4JWnZnxPb) or open an issue in this repository.
+
+
