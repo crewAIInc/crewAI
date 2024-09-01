@@ -19,6 +19,11 @@ Before getting started with CrewAI, make sure that you have installed it via pip
 ```shell
 $ pip install crewai crewai-tools
 ```
+Alrernatively, you can have this installed
+
+```shell
+$ pip install 'crewai[tools]'
+```
 
 ### Virtual Environments
 It is highly recommended that you use virtual environments to ensure that your CrewAI project is isolated from other projects and dependencies. Virtual environments provide a clean, separate workspace for each project, preventing conflicts between different versions of packages and libraries. This isolation is crucial for maintaining consistency and reproducibility in your development process. You have multiple options for setting up virtual environments depending on your operating system and Python version:
