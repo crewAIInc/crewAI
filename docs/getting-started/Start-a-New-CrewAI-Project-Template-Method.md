@@ -51,6 +51,16 @@ Pick one that suits your style and needs.
 In this example, we will be using Venv as our virtual environment manager.
 
 To set up a virtual environment, run the following CLI command:
+
+```shell
+$ poetry new my-project
+$ cd my-project
+# A new virtual environment is created when you install dependencies
+$ poetry add requests
+# Activate virtual environment
+$ poetry shell
+```
+
 To create a new CrewAI project, run the following CLI command:
 
 ```shell
