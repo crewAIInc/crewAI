@@ -21,6 +21,7 @@ $ pip install crewai crewai-tools
 ```
 
 ### Virtual Environments
+
 It is highly recommended that you use virtual environments to ensure that your CrewAI project is isolated from other projects and dependencies. Virtual environments provide a clean, separate workspace for each project, preventing conflicts between different versions of packages and libraries. This isolation is crucial for maintaining consistency and reproducibility in your development process. You have multiple options for setting up virtual environments depending on your operating system and Python version:
 
 1. Use venv (Python's built-in virtual environment tool):
@@ -48,13 +49,14 @@ Most users of CrewAI use a Code Editor / Integrated Development Environment (IDE
 Pick one that suits your style and needs.
 
 ## Creating a New Project
+
 In this example, we will be using Venv as our virtual environment manager.
 
 To set up a virtual environment, run the following CLI command:
 To create a new CrewAI project, run the following CLI command:
 
 ```shell
-$ crewai create crew <project_name>
+$ crewai create <project_name>
 ```
 
 This command will create a new project folder with the following structure:
@@ -82,6 +84,7 @@ You can now start developing your project by editing the files in the `src/my_pr
 ## Customizing Your Project
 
 To customize your project, you can:
+
 - Modify `src/my_project/config/agents.yaml` to define your agents.
 - Modify `src/my_project/config/tasks.yaml` to define your tasks.
 - Modify `src/my_project/crew.py` to add your own logic, tools, and specific arguments.
@@ -123,48 +126,54 @@ research_candidates_task:
 ```
 
 ### Referencing Variables:
+
 Your defined functions with the same name will be used. For example, you can reference the agent for specific tasks from task.yaml file. Ensure your annotated agent and function name is the same otherwise your task won't recognize the reference properly.
 
 #### Example References
+
 agent.yaml
+
 ```yaml
 email_summarizer:
-    role: >
-      Email Summarizer
-    goal: >
-      Summarize emails into a concise and clear summary
-    backstory: >
-      You will create a 5 bullet point summary of the report
-    llm: mixtal_llm
+  role: >
+    Email Summarizer
+  goal: >
+    Summarize emails into a concise and clear summary
+  backstory: >
+    You will create a 5 bullet point summary of the report
+  llm: mixtal_llm
 ```
 
 task.yaml
+
 ```yaml
 email_summarizer_task:
-    description: >
-      Summarize the email into a 5 bullet point summary
-    expected_output: >
-      A 5 bullet point summary of the email
-    agent: email_summarizer
-    context:
-      - reporting_task
-      - research_task
+  description: >
+    Summarize the email into a 5 bullet point summary
+  expected_output: >
+    A 5 bullet point summary of the email
+  agent: email_summarizer
+  context:
+    - reporting_task
+    - research_task
 ```
 
 Use the annotations to properly reference the agent and task in the crew.py file.
 
 ### Annotations include:
-* [@agent](https://github.com/crewAIInc/crewAI/blob/97d7bfb52ad49a9f04db360e1b6612d98c91971e/src/crewai/project/annotations.py#L17)
-* [@task](https://github.com/crewAIInc/crewAI/blob/97d7bfb52ad49a9f04db360e1b6612d98c91971e/src/crewai/project/annotations.py#L4)
-* [@crew](https://github.com/crewAIInc/crewAI/blob/97d7bfb52ad49a9f04db360e1b6612d98c91971e/src/crewai/project/annotations.py#L69)
-* [@llm](https://github.com/crewAIInc/crewAI/blob/97d7bfb52ad49a9f04db360e1b6612d98c91971e/src/crewai/project/annotations.py#L23)
-* [@tool](https://github.com/crewAIInc/crewAI/blob/97d7bfb52ad49a9f04db360e1b6612d98c91971e/src/crewai/project/annotations.py#L39)
-* [@callback](https://github.com/crewAIInc/crewAI/blob/97d7bfb52ad49a9f04db360e1b6612d98c91971e/src/crewai/project/annotations.py#L44)
-* [@output_json](https://github.com/crewAIInc/crewAI/blob/97d7bfb52ad49a9f04db360e1b6612d98c91971e/src/crewai/project/annotations.py#L29)
-* [@output_pydantic](https://github.com/crewAIInc/crewAI/blob/97d7bfb52ad49a9f04db360e1b6612d98c91971e/src/crewai/project/annotations.py#L34)
-* [@cache_handler](https://github.com/crewAIInc/crewAI/blob/97d7bfb52ad49a9f04db360e1b6612d98c91971e/src/crewai/project/annotations.py#L49)
+
+- [@agent](https://github.com/crewAIInc/crewAI/blob/97d7bfb52ad49a9f04db360e1b6612d98c91971e/src/crewai/project/annotations.py#L17)
+- [@task](https://github.com/crewAIInc/crewAI/blob/97d7bfb52ad49a9f04db360e1b6612d98c91971e/src/crewai/project/annotations.py#L4)
+- [@crew](https://github.com/crewAIInc/crewAI/blob/97d7bfb52ad49a9f04db360e1b6612d98c91971e/src/crewai/project/annotations.py#L69)
+- [@llm](https://github.com/crewAIInc/crewAI/blob/97d7bfb52ad49a9f04db360e1b6612d98c91971e/src/crewai/project/annotations.py#L23)
+- [@tool](https://github.com/crewAIInc/crewAI/blob/97d7bfb52ad49a9f04db360e1b6612d98c91971e/src/crewai/project/annotations.py#L39)
+- [@callback](https://github.com/crewAIInc/crewAI/blob/97d7bfb52ad49a9f04db360e1b6612d98c91971e/src/crewai/project/annotations.py#L44)
+- [@output_json](https://github.com/crewAIInc/crewAI/blob/97d7bfb52ad49a9f04db360e1b6612d98c91971e/src/crewai/project/annotations.py#L29)
+- [@output_pydantic](https://github.com/crewAIInc/crewAI/blob/97d7bfb52ad49a9f04db360e1b6612d98c91971e/src/crewai/project/annotations.py#L34)
+- [@cache_handler](https://github.com/crewAIInc/crewAI/blob/97d7bfb52ad49a9f04db360e1b6612d98c91971e/src/crewai/project/annotations.py#L49)
 
 crew.py
+
 ```py
 # ...
     @llm
@@ -191,7 +200,7 @@ To install the dependencies for your project, you can use Poetry. First, navigat
 
 ```shell
 $ cd my_project
-$ crewai install
+$ poetry install
 ```
 
 This will install the dependencies specified in the `pyproject.toml` file.
@@ -230,8 +239,9 @@ def run():
 To run your project, use the following command:
 
 ```shell
-$ crewai run
+$ poetry run <project_name>
 ```
+
 This will initialize your crew of AI agents and begin task execution as defined in your configuration in the `main.py` file.
 
 ### Replay Tasks from Latest Crew Kickoff
