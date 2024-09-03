@@ -1,7 +1,7 @@
 from typing import Any, Type
 
 from embedchain.loaders.postgres import PostgresLoader
-from pydantic.v1 import BaseModel, Field
+from pydantic import BaseModel, Field
 
 from ..rag.rag_tool import RagTool
 
@@ -17,7 +17,9 @@ class PGSearchToolSchema(BaseModel):
 
 class PGSearchTool(RagTool):
     name: str = "Search a database's table content"
-    description: str = "A tool that can be used to semantic search a query from a database table's content."
+    description: str = (
+        "A tool that can be used to semantic search a query from a database table's content."
+    )
     args_schema: Type[BaseModel] = PGSearchToolSchema
     db_uri: str = Field(..., description="Mandatory database URI")
 

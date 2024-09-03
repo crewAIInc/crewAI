@@ -3,8 +3,9 @@ import os
 from typing import List, Optional, Type
 
 import docker
+from pydantic import BaseModel, Field
+
 from crewai_tools.tools.base_tool import BaseTool
-from pydantic.v1 import BaseModel, Field
 
 
 class CodeInterpreterSchema(BaseModel):

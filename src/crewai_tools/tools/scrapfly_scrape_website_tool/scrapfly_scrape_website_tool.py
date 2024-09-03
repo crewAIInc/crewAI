@@ -1,20 +1,31 @@
 import logging
+from typing import Any, Dict, Literal, Optional, Type
 
-from typing import Optional, Any, Type, Dict, Literal
-from pydantic.v1 import BaseModel, Field
+from pydantic import BaseModel, Field
+
 from crewai_tools.tools.base_tool import BaseTool
 
 logger = logging.getLogger(__file__)
 
+
 class ScrapflyScrapeWebsiteToolSchema(BaseModel):
     url: str = Field(description="Webpage URL")
-    scrape_format: Optional[Literal["raw", "markdown", "text"]] = Field(default="markdown", description="Webpage extraction format")
-    scrape_config: Optional[Dict[str, Any]] = Field(default=None, description="Scrapfly request scrape config")
-    ignore_scrape_failures: Optional[bool] = Field(default=None, description="whether to ignore failures")
+    scrape_format: Optional[Literal["raw", "markdown", "text"]] = Field(
+        default="markdown", description="Webpage extraction format"
+    )
+    scrape_config: Optional[Dict[str, Any]] = Field(
+        default=None, description="Scrapfly request scrape config"
+    )
+    ignore_scrape_failures: Optional[bool] = Field(
+        default=None, description="whether to ignore failures"
+    )
+
 
 class ScrapflyScrapeWebsiteTool(BaseTool):
     name: str = "Scrapfly web scraping API tool"
-    description: str = "Scrape a webpage url using Scrapfly and return its content as markdown or text"
+    description: str = (
+        "Scrape a webpage url using Scrapfly and return its content as markdown or text"
+    )
     args_schema: Type[BaseModel] = ScrapflyScrapeWebsiteToolSchema
     api_key: str = None
     scrapfly: Optional[Any] = None
@@ -29,7 +40,13 @@ class ScrapflyScrapeWebsiteTool(BaseTool):
             )
         self.scrapfly = ScrapflyClient(key=api_key)
 
-    def _run(self, url: str, scrape_format: str = "markdown", scrape_config: Optional[Dict[str, Any]] = None, ignore_scrape_failures: Optional[bool] = None):
+    def _run(
+        self,
+        url: str,
+        scrape_format: str = "markdown",
+        scrape_config: Optional[Dict[str, Any]] = None,
+        ignore_scrape_failures: Optional[bool] = None,
+    ):
         from scrapfly import ScrapeApiResponse, ScrapeConfig
 
         scrape_config = scrape_config if scrape_config is not None else {}
@@ -44,4 +61,3 @@ class ScrapflyScrapeWebsiteTool(BaseTool):
                 return None
             else:
                 raise e
-            

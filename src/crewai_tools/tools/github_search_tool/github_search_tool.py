@@ -1,7 +1,7 @@
 from typing import Any, List, Optional, Type
 
 from embedchain.loaders.github import GithubLoader
-from pydantic.v1 import BaseModel, Field
+from pydantic import BaseModel, Field
 
 from ..rag.rag_tool import RagTool
 
@@ -27,7 +27,9 @@ class GithubSearchToolSchema(FixedGithubSearchToolSchema):
 
 class GithubSearchTool(RagTool):
     name: str = "Search a github repo's content"
-    description: str = "A tool that can be used to semantic search a query from a github repo's content. This is not the GitHub API, but instead a tool that can provide semantic search capabilities."
+    description: str = (
+        "A tool that can be used to semantic search a query from a github repo's content. This is not the GitHub API, but instead a tool that can provide semantic search capabilities."
+    )
     summarize: bool = False
     gh_token: str
     args_schema: Type[BaseModel] = GithubSearchToolSchema

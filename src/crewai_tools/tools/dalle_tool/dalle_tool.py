@@ -1,9 +1,10 @@
 import json
 from typing import Type
 
-from crewai_tools.tools.base_tool import BaseTool
 from openai import OpenAI
-from pydantic.v1 import BaseModel
+from pydantic import BaseModel
+
+from crewai_tools.tools.base_tool import BaseTool
 
 
 class ImagePromptSchema(BaseModel):

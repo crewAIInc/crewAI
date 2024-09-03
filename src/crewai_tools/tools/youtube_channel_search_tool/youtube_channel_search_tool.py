@@ -1,7 +1,7 @@
 from typing import Any, Optional, Type
 
 from embedchain.models.data_type import DataType
-from pydantic.v1 import BaseModel, Field
+from pydantic import BaseModel, Field
 
 from ..rag.rag_tool import RagTool
 
@@ -25,7 +25,9 @@ class YoutubeChannelSearchToolSchema(FixedYoutubeChannelSearchToolSchema):
 
 class YoutubeChannelSearchTool(RagTool):
     name: str = "Search a Youtube Channels content"
-    description: str = "A tool that can be used to semantic search a query from a Youtube Channels content."
+    description: str = (
+        "A tool that can be used to semantic search a query from a Youtube Channels content."
+    )
     args_schema: Type[BaseModel] = YoutubeChannelSearchToolSchema
 
     def __init__(self, youtube_channel_handle: Optional[str] = None, **kwargs):

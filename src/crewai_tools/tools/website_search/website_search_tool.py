@@ -1,7 +1,7 @@
 from typing import Any, Optional, Type
 
 from embedchain.models.data_type import DataType
-from pydantic.v1 import BaseModel, Field
+from pydantic import BaseModel, Field
 
 from ..rag.rag_tool import RagTool
 
@@ -25,7 +25,9 @@ class WebsiteSearchToolSchema(FixedWebsiteSearchToolSchema):
 
 class WebsiteSearchTool(RagTool):
     name: str = "Search in a specific website"
-    description: str = "A tool that can be used to semantic search a query from a specific URL content."
+    description: str = (
+        "A tool that can be used to semantic search a query from a specific URL content."
+    )
     args_schema: Type[BaseModel] = WebsiteSearchToolSchema
 
     def __init__(self, website: Optional[str] = None, **kwargs):

@@ -1,14 +1,19 @@
 import os
-import requests
+from typing import Any, Optional, Type
 from urllib.parse import urlencode
-from typing import Type, Any, Optional
-from pydantic.v1 import BaseModel, Field
+
+import requests
+from pydantic import BaseModel, Field
+
 from crewai_tools.tools.base_tool import BaseTool
 
 
 class SerplyNewsSearchToolSchema(BaseModel):
     """Input for Serply News Search."""
-    search_query: str = Field(..., description="Mandatory search query you want to use to fetch news articles")
+
+    search_query: str = Field(
+        ..., description="Mandatory search query you want to use to fetch news articles"
+    )
 
 
 class SerplyNewsSearchTool(BaseTool):
@@ -21,15 +26,12 @@ class SerplyNewsSearchTool(BaseTool):
     limit: Optional[int] = 10
 
     def __init__(
-            self,
-            limit: Optional[int] = 10,
-            proxy_location: Optional[str] = "US",
-            **kwargs
+        self, limit: Optional[int] = 10, proxy_location: Optional[str] = "US", **kwargs
     ):
         """
-            param: limit (int): The maximum number of results to return [10-100, defaults to 10]
-            proxy_location: (str): Where to get news, specifically for a specific country results.
-                 ['US', 'CA', 'IE', 'GB', 'FR', 'DE', 'SE', 'IN', 'JP', 'KR', 'SG', 'AU', 'BR'] (defaults to US)
+        param: limit (int): The maximum number of results to return [10-100, defaults to 10]
+        proxy_location: (str): Where to get news, specifically for a specific country results.
+             ['US', 'CA', 'IE', 'GB', 'FR', 'DE', 'SE', 'IN', 'JP', 'KR', 'SG', 'AU', 'BR'] (defaults to US)
         """
         super().__init__(**kwargs)
         self.limit = limit
@@ -37,12 +39,12 @@ class SerplyNewsSearchTool(BaseTool):
         self.headers = {
             "X-API-KEY": os.environ["SERPLY_API_KEY"],
             "User-Agent": "crew-tools",
-            "X-Proxy-Location": proxy_location
+            "X-Proxy-Location": proxy_location,
         }
 
     def _run(
-            self,
-            **kwargs: Any,
+        self,
+        **kwargs: Any,
     ) -> Any:
         # build query parameters
         query_payload = {}
@@ -58,24 +60,28 @@ class SerplyNewsSearchTool(BaseTool):
         response = requests.request("GET", url, headers=self.headers)
         results = response.json()
         if "entries" in results:
-            results = results['entries']
+            results = results["entries"]
             string = []
-            for result in results[:self.limit]:
+            for result in results[: self.limit]:
                 try:
                     # follow url
-                    r = requests.get(result['link'])
-                    final_link = r.history[-1].headers['Location']
-                    string.append('\n'.join([
-                        f"Title: {result['title']}",
-                        f"Link: {final_link}",
-                        f"Source: {result['source']['title']}",
-                        f"Published: {result['published']}",
-                        "---"
-                    ]))
+                    r = requests.get(result["link"])
+                    final_link = r.history[-1].headers["Location"]
+                    string.append(
+                        "\n".join(
+                            [
+                                f"Title: {result['title']}",
+                                f"Link: {final_link}",
+                                f"Source: {result['source']['title']}",
+                                f"Published: {result['published']}",
+                                "---",
+                            ]
+                        )
+                    )
                 except KeyError:
                     continue
 
-            content = '\n'.join(string)
+            content = "\n".join(string)
             return f"\nSearch results: {content}\n"
         else:
             return results

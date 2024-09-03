@@ -1,8 +1,7 @@
 from typing import Any, Optional, Type
 
 from embedchain.models.data_type import DataType
-from pydantic import model_validator
-from pydantic.v1 import BaseModel, Field
+from pydantic import BaseModel, Field, model_validator
 
 from ..rag.rag_tool import RagTool
 
