@@ -1,6 +1,5 @@
 import asyncio
 import json
-import os
 import uuid
 from concurrent.futures import Future
 from hashlib import md5
@@ -47,12 +46,10 @@ from crewai.utilities.planning_handler import CrewPlanner
 from crewai.utilities.task_output_storage_handler import TaskOutputStorageHandler
 from crewai.utilities.training_handler import CrewTrainingHandler
 
-agentops = None
-if os.environ.get("AGENTOPS_API_KEY"):
-    try:
-        import agentops  # type: ignore
-    except ImportError:
-        pass
+try:
+    import agentops
+except ImportError:
+    agentops = None
 
 if TYPE_CHECKING:
     from crewai.pipeline.pipeline import Pipeline
