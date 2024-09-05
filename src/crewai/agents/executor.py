@@ -1,33 +1,29 @@
 import threading
 import time
 from typing import Any, Dict, Iterator, List, Literal, Optional, Tuple, Union
+
 import click
-
-
 from langchain.agents import AgentExecutor
 from langchain.agents.agent import ExceptionTool
 from langchain.callbacks.manager import CallbackManagerForChainRun
+from langchain.chains.summarize import load_summarize_chain
+from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langchain_core.agents import AgentAction, AgentFinish, AgentStep
 from langchain_core.exceptions import OutputParserException
 from langchain_core.tools import BaseTool
 from langchain_core.utils.input import get_color_mapping
 from pydantic import InstanceOf
 
-from langchain.text_splitter import RecursiveCharacterTextSplitter
-from langchain.chains.summarize import load_summarize_chain
-
 from crewai.agents.agent_builder.base_agent_executor_mixin import CrewAgentExecutorMixin
 from crewai.agents.tools_handler import ToolsHandler
-
-
 from crewai.tools.tool_usage import ToolUsage, ToolUsageErrorException
 from crewai.utilities import I18N
 from crewai.utilities.constants import TRAINING_DATA_FILE
 from crewai.utilities.exceptions.context_window_exceeding_exception import (
     LLMContextLengthExceededException,
 )
-from crewai.utilities.training_handler import CrewTrainingHandler
 from crewai.utilities.logger import Logger
+from crewai.utilities.training_handler import CrewTrainingHandler
 
 
 class CrewAgentExecutor(AgentExecutor, CrewAgentExecutorMixin):
@@ -69,7 +65,7 @@ class CrewAgentExecutor(AgentExecutor, CrewAgentExecutorMixin):
         )
         intermediate_steps: List[Tuple[AgentAction, str]] = []
         # Allowing human input given task setting
-        if self.task.human_input:
+        if self.task and self.task.human_input:
             self.should_ask_for_human_input = True
 
         # Let's start tracking the number of iterations and time elapsed
@@ -213,11 +209,7 @@ class CrewAgentExecutor(AgentExecutor, CrewAgentExecutorMixin):
                         yield step
                 return
 
-            yield AgentStep(
-                action=AgentAction("_Exception", str(e), str(e)),
-                observation=str(e),
-            )
-            return
+            raise e
 
         # If the tool chosen is the finishing tool, then we end and return.
         if isinstance(output, AgentFinish):

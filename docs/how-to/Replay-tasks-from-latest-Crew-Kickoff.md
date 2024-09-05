@@ -11,14 +11,13 @@ You must run `crew.kickoff()` before you can replay a task. Currently, only the 
 
 Here's an example of how to replay from a task:
 
-### Replaying from specific task Using the CLI
+### Replaying from Specific Task Using the CLI
 To use the replay feature, follow these steps:
 
 1. Open your terminal or command prompt.
 2. Navigate to the directory where your CrewAI project is located.
 3. Run the following command:
-
-To view latest kickoff task_ids use:
+To view the latest kickoff task_ids use:
 ```shell
 crewai log-tasks-outputs
 ```
@@ -29,21 +28,25 @@ crewai replay -t <task_id>
 ```
 
 
-### Replaying from a task Programmatically
+### Replaying from a Task Programmatically
 To replay from a task programmatically, use the following steps:
 
 1. Specify the task_id and input parameters for the replay process.
 2. Execute the replay command within a try-except block to handle potential errors.
 
 ```python
-   def replay():
+  def replay():
     """
     Replay the crew execution from a specific task.
     """
     task_id = '<task_id>'
-    inputs = {"topic": "CrewAI Training"} # this is optional, you can pass in the inputs you want to replay otherwise uses the previous kickoffs inputs
+    inputs = {"topic": "CrewAI Training"}  # This is optional; you can pass in the inputs you want to replay; otherwise, it uses the previous kickoff's inputs.
     try:
         YourCrewName_Crew().crew().replay(task_id=task_id, inputs=inputs)
 
-    except Exception as e:
+    except subprocess.CalledProcessError as e:
         raise Exception(f"An error occurred while replaying the crew: {e}")
+
+    except Exception as e:
+        raise Exception(f"An unexpected error occurred: {e}")
+```

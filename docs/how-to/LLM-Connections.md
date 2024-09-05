@@ -9,7 +9,7 @@ description: Comprehensive guide on integrating CrewAI with various Large Langua
     By default, CrewAI uses OpenAI's GPT-4o model (specifically, the model specified by the OPENAI_MODEL_NAME environment variable, defaulting to "gpt-4o") for language processing. You can configure your agents to use a different model or API as described in this guide.
     By default, CrewAI uses OpenAI's GPT-4 model (specifically, the model specified by the OPENAI_MODEL_NAME environment variable, defaulting to "gpt-4") for language processing. You can configure your agents to use a different model or API as described in this guide.
 
-CrewAI provides extensive versatility in integrating with various Language Models (LLMs), including local options through Ollama such as  Llama and Mixtral to cloud-based solutions like Azure. Its compatibility extends to all [LangChain LLM components](https://python.langchain.com/v0.2/docs/integrations/llms/), offering a wide range of integration possibilities for customized AI applications.
+CrewAI provides extensive versatility in integrating with various Language Models (LLMs), including local options through Ollama such as Llama and Mixtral to cloud-based solutions like Azure. Its compatibility extends to all [LangChain LLM components](https://python.langchain.com/v0.2/docs/integrations/llms/), offering a wide range of integration possibilities for customized AI applications.
 
 The platform supports connections to an array of Generative AI models, including:
 
@@ -37,6 +37,7 @@ example_agent = Agent(
   verbose=True
 )
 ```
+
 ## Ollama Local Integration
 Ollama is preferred for local LLM integration, offering customization and privacy benefits. To integrate Ollama with CrewAI, you will need the `langchain-ollama` package. You can then set the following environment variables to connect to your Ollama instance running locally on port 11434.
 
@@ -47,8 +48,8 @@ os.environ[OPENAI_API_KEY]='' # No API Key required for Ollama
 ```
 
 ## Ollama Integration Step by Step (ex. for using Llama 3.1 8B locally)
-1. [Download and install Ollama](https://ollama.com/download).   
-2. After setting up the Ollama, Pull the Llama3.1 8B model by typing following lines into your terminal ```ollama run llama3.1```.   
+1. [Download and install Ollama](https://ollama.com/download).
+2. After setting up the Ollama, Pull the Llama3.1 8B model by typing following lines into your terminal ```ollama run llama3.1```.
 3. Llama3.1 should now be served locally on `http://localhost:11434`
 ```
 from crewai import Agent, Task, Crew
@@ -56,7 +57,7 @@ from langchain_ollama import ChatOllama
 import os
 os.environ["OPENAI_API_KEY"] = "NA"
 
-llm = Ollama(
+llm = ChatOllama(
     model = "llama3.1",
     base_url = "http://localhost:11434")
 
@@ -87,7 +88,7 @@ There are a couple of different ways you can use HuggingFace to host your LLM.
 
 ### Your own HuggingFace endpoint
 ```python
-from langchain_huggingface import HuggingFaceEndpoint,
+from langchain_huggingface import HuggingFaceEndpoint
 
 llm = HuggingFaceEndpoint(
     repo_id="microsoft/Phi-3-mini-4k-instruct",
@@ -111,30 +112,30 @@ Switch between APIs and models seamlessly using environment variables, supportin
 ### Configuration Examples
 #### FastChat
 ```sh
-os.environ[OPENAI_API_BASE]="http://localhost:8001/v1"
-os.environ[OPENAI_MODEL_NAME]='oh-2.5m7b-q51'
-os.environ[OPENAI_API_KEY]=NA
+os.environ["OPENAI_API_BASE"]='http://localhost:8001/v1'
+os.environ["OPENAI_MODEL_NAME"]='oh-2.5m7b-q51'
+os.environ[OPENAI_API_KEY]='NA'
 ```
 
 #### LM Studio
 Launch [LM Studio](https://lmstudio.ai) and go to the Server tab. Then select a model from the dropdown menu and wait for it to load. Once it's loaded, click the green Start Server button and use the URL, port, and API key that's shown (you can modify them). Below is an example of the default settings as of LM Studio 0.2.19:
 ```sh
-os.environ[OPENAI_API_BASE]="http://localhost:1234/v1"
-os.environ[OPENAI_API_KEY]="lm-studio"
+os.environ["OPENAI_API_BASE"]='http://localhost:1234/v1'
+os.environ["OPENAI_API_KEY"]='lm-studio'
 ```
 
 #### Groq API
 ```sh
-os.environ[OPENAI_API_KEY]=your-groq-api-key
-os.environ[OPENAI_MODEL_NAME]='llama3-8b-8192'
-os.environ[OPENAI_API_BASE]=https://api.groq.com/openai/v1
+os.environ["OPENAI_API_KEY"]='your-groq-api-key'
+os.environ["OPENAI_MODEL_NAME"]='llama3-8b-8192'
+os.environ["OPENAI_API_BASE"]='https://api.groq.com/openai/v1'
 ```
 
 #### Mistral API
 ```sh
-os.environ[OPENAI_API_KEY]=your-mistral-api-key
-os.environ[OPENAI_API_BASE]=https://api.mistral.ai/v1
-os.environ[OPENAI_MODEL_NAME]="mistral-small"
+os.environ["OPENAI_API_KEY"]='your-mistral-api-key'
+os.environ["OPENAI_API_BASE"]='https://api.mistral.ai/v1'
+os.environ["OPENAI_MODEL_NAME"]='mistral-small'
 ```
 
 ### Solar
@@ -142,8 +143,8 @@ os.environ[OPENAI_MODEL_NAME]="mistral-small"
 from langchain_community.chat_models.solar import SolarChat
 ```
 ```sh
-os.environ[SOLAR_API_BASE]="https://api.upstage.ai/v1/solar"
-os.environ[SOLAR_API_KEY]="your-solar-api-key"
+os.environ["SOLAR_API_BASE"]='https://api.upstage.ai/v1/solar'
+os.environ["SOLAR_API_KEY"]='your-solar-api-key'
 ```
 
 # Free developer API key available here: https://console.upstage.ai/services/solar
@@ -154,7 +155,7 @@ os.environ[SOLAR_API_KEY]="your-solar-api-key"
 ```python
 from langchain_cohere import ChatCohere
 # Initialize language model
-os.environ["COHERE_API_KEY"] = "your-cohere-api-key"
+os.environ["COHERE_API_KEY"]='your-cohere-api-key'
 llm = ChatCohere()
 
 # Free developer API key available here: https://cohere.com/
@@ -165,10 +166,10 @@ llm = ChatCohere()
 For Azure OpenAI API integration, set the following environment variables:
 ```sh
 
-os.environ[AZURE_OPENAI_DEPLOYMENT] = "You deployment"
-os.environ["OPENAI_API_VERSION"] = "2023-12-01-preview"
-os.environ["AZURE_OPENAI_ENDPOINT"] = "Your Endpoint"
-os.environ["AZURE_OPENAI_API_KEY"] = "<Your API Key>"
+os.environ["AZURE_OPENAI_DEPLOYMENT"]='Your deployment'
+os.environ["OPENAI_API_VERSION"]='2023-12-01-preview'
+os.environ["AZURE_OPENAI_ENDPOINT"]='Your Endpoint'
+os.environ["AZURE_OPENAI_API_KEY"]='Your API Key'
 ```
 
 ### Example Agent with Azure LLM
@@ -191,5 +192,6 @@ azure_agent = Agent(
   llm=azure_llm
 )
 ```
+
 ## Conclusion
 Integrating CrewAI with different LLMs expands the framework's versatility, allowing for customized, efficient AI solutions across various domains and platforms.

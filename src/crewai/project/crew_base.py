@@ -1,25 +1,19 @@
 import inspect
-import os
 from pathlib import Path
 from typing import Any, Callable, Dict
 
 import yaml
 from dotenv import load_dotenv
-from pydantic import ConfigDict
 
 load_dotenv()
 
 
 def CrewBase(cls):
     class WrappedClass(cls):
-        model_config = ConfigDict(arbitrary_types_allowed=True)
         is_crew_class: bool = True  # type: ignore
 
-        base_directory = None
-        for frame_info in inspect.stack():
-            if "site-packages" not in frame_info.filename:
-                base_directory = Path(frame_info.filename).parent.resolve()
-                break
+        # Get the directory of the class being decorated
+        base_directory = Path(inspect.getfile(cls)).parent
 
         original_agents_config_path = getattr(
             cls, "agents_config", "config/agents.yaml"
@@ -29,25 +23,23 @@ def CrewBase(cls):
         def __init__(self, *args, **kwargs):
             super().__init__(*args, **kwargs)
 
-            if self.base_directory is None:
-                raise Exception(
-                    "Unable to dynamically determine the project's base directory, you must run it from the project's root directory."
-                )
+            agents_config_path = self.base_directory / self.original_agents_config_path
+            tasks_config_path = self.base_directory / self.original_tasks_config_path
 
-            self.agents_config = self.load_yaml(
-                os.path.join(self.base_directory, self.original_agents_config_path)
-            )
-            self.tasks_config = self.load_yaml(
-                os.path.join(self.base_directory, self.original_tasks_config_path)
-            )
+            self.agents_config = self.load_yaml(agents_config_path)
+            self.tasks_config = self.load_yaml(tasks_config_path)
+
             self.map_all_agent_variables()
             self.map_all_task_variables()
 
         @staticmethod
-        def load_yaml(config_path: str):
-            with open(config_path, "r") as file:
-                # parsedContent = YamlParser.parse(file)  # type: ignore # Argument 1 to "parse" has incompatible type "TextIOWrapper"; expected "YamlParser"
-                return yaml.safe_load(file)
+        def load_yaml(config_path: Path):
+            try:
+                with open(config_path, "r") as file:
+                    return yaml.safe_load(file)
+            except FileNotFoundError:
+                print(f"File not found: {config_path}")
+                raise
 
         def _get_all_functions(self):
             return {

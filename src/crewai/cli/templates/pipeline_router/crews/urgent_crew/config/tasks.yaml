@@ -1,0 +1,6 @@
+urgent_task:
+  description: >
+    Process and respond to urgent email quickly.
+  expected_output: >
+    An email response to the urgent email.
+  agent: urgent_handler

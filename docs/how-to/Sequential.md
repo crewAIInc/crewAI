@@ -18,7 +18,7 @@ The sequential process ensures tasks are executed one after the other, following
 To use the sequential process, assemble your crew and define tasks in the order they need to be executed.
 
 ```python
-from crewai import Crew, Process, Agent, Task
+from crewai import Crew, Process, Agent, Task, TaskOutput, CrewOutput
 
 # Define your agents
 researcher = Agent(
@@ -37,6 +37,7 @@ writer = Agent(
   backstory='A skilled writer with a talent for crafting compelling narratives'
 )
 
+# Define your tasks
 research_task = Task(description='Gather relevant data...', agent=researcher, expected_output='Raw Data')
 analysis_task = Task(description='Analyze the data...', agent=analyst, expected_output='Data Insights')
 writing_task = Task(description='Compose the report...', agent=writer, expected_output='Final Report')
@@ -50,6 +51,10 @@ report_crew = Crew(
 
 # Execute the crew
 result = report_crew.kickoff()
+
+# Accessing the type safe output
+task_output: TaskOutput = result.tasks[0].output
+crew_output: CrewOutput = result.output
 ```
 
 ### Workflow in Action
@@ -82,4 +87,4 @@ CrewAI tracks token usage across all tasks and agents. You can access these metr
 1. **Order Matters**: Arrange tasks in a logical sequence where each task builds upon the previous one.
 2. **Clear Task Descriptions**: Provide detailed descriptions for each task to guide the agents effectively.
 3. **Appropriate Agent Selection**: Match agents' skills and roles to the requirements of each task.
-4. **Use Context**: Leverage the context from previous tasks to inform subsequent ones
+4. **Use Context**: Leverage the context from previous tasks to inform subsequent ones.

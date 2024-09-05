@@ -8,6 +8,7 @@ from rich.table import Table
 from crewai.agent import Agent
 from crewai.task import Task
 from crewai.tasks.task_output import TaskOutput
+from crewai.telemetry import Telemetry
 
 
 class TaskEvaluationPydanticOutput(BaseModel):
@@ -34,6 +35,7 @@ class CrewEvaluator:
     def __init__(self, crew, openai_model_name: str):
         self.crew = crew
         self.openai_model_name = openai_model_name
+        self._telemetry = Telemetry()
         self._setup_for_evaluating()
 
     def _setup_for_evaluating(self) -> None:
@@ -155,6 +157,12 @@ class CrewEvaluator:
         evaluation_result = evaluation_task.execute_sync()
 
         if isinstance(evaluation_result.pydantic, TaskEvaluationPydanticOutput):
+            self._test_result_span = self._telemetry.individual_test_result_span(
+                self.crew,
+                evaluation_result.pydantic.quality,
+                current_task._execution_time,
+                self.openai_model_name,
+            )
             self.tasks_scores[self.iteration].append(evaluation_result.pydantic.quality)
             self.run_execution_times[self.iteration].append(
                 current_task._execution_time

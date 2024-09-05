@@ -1,27 +1,23 @@
-def memoize(func):
-    cache = {}
+from functools import wraps
 
-    def memoized_func(*args, **kwargs):
-        key = (args, tuple(kwargs.items()))
-        if key not in cache:
-            cache[key] = func(*args, **kwargs)
-        return cache[key]
-
-    memoized_func.__dict__.update(func.__dict__)
-    return memoized_func
+from crewai.project.utils import memoize
 
 
 def task(func):
     if not hasattr(task, "registration_order"):
         task.registration_order = []
 
-    func.is_task = True
-    wrapped_func = memoize(func)
+    @wraps(func)
+    def wrapper(*args, **kwargs):
+        result = func(*args, **kwargs)
+        if not result.name:
+            result.name = func.__name__
+        return result
 
-    # Append the function name to the registration order list
+    setattr(wrapper, "is_task", True)
     task.registration_order.append(func.__name__)
 
-    return wrapped_func
+    return memoize(wrapper)
 
 
 def agent(func):
@@ -58,6 +54,21 @@ def callback(func):
 
 def cache_handler(func):
     func.is_cache_handler = True
+    return memoize(func)
+
+
+def stage(func):
+    func.is_stage = True
+    return memoize(func)
+
+
+def router(func):
+    func.is_router = True
+    return memoize(func)
+
+
+def pipeline(func):
+    func.is_pipeline = True
     return memoize(func)
 
 

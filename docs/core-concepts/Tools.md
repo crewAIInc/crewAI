@@ -80,11 +80,12 @@ write = Task(
     output_file='blog-posts/new_post.md'  # The final blog post will be saved here
 )
 
-# Assemble a crew
+# Assemble a crew with planning enabled
 crew = Crew(
     agents=[researcher, writer],
     tasks=[research, write],
-    verbose=True
+    verbose=True,
+    planning=True,  # Enable planning feature
 )
 
 # Execute tasks
@@ -105,6 +106,7 @@ Here is a list of the available tools and their descriptions:
 | **CodeInterpreterTool**     | A tool for interpreting python code.                                                          |
 | **ComposioTool**            | Enables use of Composio tools.                                                                |
 | **CSVSearchTool**           | A RAG tool designed for searching within CSV files, tailored to handle structured data.       |
+| **DALL-E Tool**            | A tool for generating images using the DALL-E API.                                        |
 | **DirectorySearchTool**     | A RAG tool for searching within directories, useful for navigating through file systems.      |
 | **DOCXSearchTool**          | A RAG tool aimed at searching within DOCX documents, ideal for processing Word files.         |
 | **DirectoryReadTool**       | Facilitates reading and processing of directory structures and their contents.                |
@@ -121,6 +123,7 @@ Here is a list of the available tools and their descriptions:
 | **MDXSearchTool**           | A RAG tool tailored for searching within Markdown (MDX) files, useful for documentation.      |
 | **PDFSearchTool**           | A RAG tool aimed at searching within PDF documents, ideal for processing scanned documents.    |
 | **PGSearchTool**            | A RAG tool optimized for searching within PostgreSQL databases, suitable for database queries. |
+| **Vision Tool**            | A tool for generating images using the DALL-E API.                                        |
 | **RagTool**                 | A general-purpose RAG tool capable of handling various data sources and types.                 |
 | **ScrapeElementFromWebsiteTool** | Enables scraping specific elements from websites, useful for targeted data extraction.     |
 | **ScrapeWebsiteTool**       | Facilitates scraping entire websites, ideal for comprehensive data collection.                 |
@@ -194,7 +197,6 @@ writer1 = Agent(
     )
     #...
 ```
-
 
 ## Conclusion
 Tools are pivotal in extending the capabilities of CrewAI agents, enabling them to undertake a broad spectrum of tasks and collaborate effectively. When building solutions with CrewAI, leverage both custom and existing tools to empower your agents and enhance the AI ecosystem. Consider utilizing error handling, caching mechanisms, and the flexibility of tool arguments to optimize your agents' performance and capabilities.
