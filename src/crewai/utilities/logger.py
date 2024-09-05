@@ -3,7 +3,6 @@ from datetime import datetime
 from pydantic import BaseModel, Field, PrivateAttr
 
 from crewai.utilities.printer import Printer
-from datetime import datetime
 
 class Logger(BaseModel):
     verbose: bool = Field(default=False)
