@@ -7,7 +7,9 @@ description: How to monitor cost, latency, and performance of CrewAI Agents usin
 
 Langtrace is an open-source, external tool that helps you set up observability and evaluations for Large Language Models (LLMs), LLM frameworks, and Vector Databases. While not built directly into CrewAI, Langtrace can be used alongside CrewAI to gain deep visibility into the cost, latency, and performance of your CrewAI Agents. This integration allows you to log hyperparameters, monitor performance regressions, and establish a process for continuous improvement of your Agents.
 
-![Overview of a select series of agent session runs](..%2Fassets%2Flangtrace.gif)
+![Overview of a select series of agent session runs](..%2Fassets%2Flangtrace1.png)
+![Overview of agent traces](..%2Fassets%2Flangtrace2.png)
+![Overview of llm traces in details](..%2Fassets%2Flangtrace3.png)
 
 ## Setup Instructions
 
