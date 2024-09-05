@@ -4,6 +4,7 @@ from pydantic import BaseModel, Field, PrivateAttr
 
 from crewai.utilities.printer import Printer
 
+
 class Logger(BaseModel):
     verbose: bool = Field(default=False)
     _printer: Printer = PrivateAttr(default_factory=Printer)
