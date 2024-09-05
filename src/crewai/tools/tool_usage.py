@@ -413,7 +413,7 @@ class ToolUsage:
                     formatted_value = value.lower()
                 else:
                     # Assume the value is a string and needs quotes
-                    formatted_value = '"' + value.replace('"', '\\"') + '"'
+                    formatted_value = '"' + value.strip("'\"").replace('"', '\\"') + '"'
 
                 # Rebuild the entry with proper quoting
                 formatted_entry = f'"{key}": {formatted_value}'
