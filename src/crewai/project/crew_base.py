@@ -27,7 +27,9 @@ def CrewBase(cls):
             tasks_config_path = self.base_directory / self.original_tasks_config_path
 
             self.agents_config = self.load_yaml(agents_config_path)
+            print("agent_config", self.agents_config)
             self.tasks_config = self.load_yaml(tasks_config_path)
+            print("task_config", self.tasks_config)
 
             self.map_all_agent_variables()
             self.map_all_task_variables()
@@ -136,6 +138,8 @@ def CrewBase(cls):
                     output_pydantic_functions,
                 )
 
+                print(f"config for task {task_name}:", self.tasks_config[task_name])
+
         def _map_task_variables(
             self,
             task_name: str,
@@ -147,6 +151,7 @@ def CrewBase(cls):
             callback_functions: Dict[str, Callable],
             output_pydantic_functions: Dict[str, Callable],
         ) -> None:
+            # print("TASK INFO", task_info)
             if context_list := task_info.get("context"):
                 self.tasks_config[task_name]["context"] = [
                     tasks[context_task_name]() for context_task_name in context_list
@@ -174,5 +179,7 @@ def CrewBase(cls):
                 self.tasks_config[task_name]["callbacks"] = [
                     callback_functions[callback]() for callback in callbacks
                 ]
+
+            # print("FINAL TASK CONFIG", self.tasks_config)
 
     return WrappedClass
