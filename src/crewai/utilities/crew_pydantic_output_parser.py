@@ -5,8 +5,7 @@ import regex
 from langchain.output_parsers import PydanticOutputParser
 from langchain_core.exceptions import OutputParserException
 from langchain_core.outputs import Generation
-from langchain_core.pydantic_v1 import ValidationError
-from pydantic import BaseModel
+from pydantic import BaseModel, ValidationError
 
 
 class CrewPydanticOutputParser(PydanticOutputParser):
