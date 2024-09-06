@@ -2,8 +2,8 @@ site_name: crewAI
 site_author: crewAI, Inc
 site_description: Cutting-edge framework for orchestrating role-playing, autonomous AI agents. By fostering collaborative intelligence, CrewAI empowers agents to work together seamlessly, tackling complex tasks.
 repo_name: crewAI
-repo_url: https://github.com/joaomdmoura/crewai/
-site_url: https://crewai.com
+repo_url: https://github.com/crewAIInc/crewAI
+site_url: https://docs.crewai.com
 edit_uri: edit/main/docs/
 copyright: Copyright &copy; 2024 crewAI, Inc
 
@@ -119,6 +119,9 @@ theme:
 
 nav:
   - Home: '/'
+  - Getting Started:
+    - Installing CrewAI: 'getting-started/Installing-CrewAI.md'
+    - Starting a new CrewAI project: 'getting-started/Start-a-New-CrewAI-Project-Template-Method.md'
   - Core Concepts:
     - Agents: 'core-concepts/Agents.md'
     - Tasks: 'core-concepts/Tasks.md'
@@ -126,38 +129,62 @@ nav:
     - Processes: 'core-concepts/Processes.md'
     - Crews: 'core-concepts/Crews.md'
     - Collaboration: 'core-concepts/Collaboration.md'
+    - Pipeline: 'core-concepts/Pipeline.md'
+    - Training: 'core-concepts/Training-Crew.md'
     - Memory: 'core-concepts/Memory.md'
+    - Planning: 'core-concepts/Planning.md'
+    - Testing: 'core-concepts/Testing.md'
+    - Using LangChain Tools: 'core-concepts/Using-LangChain-Tools.md'
+    - Using LlamaIndex Tools: 'core-concepts/Using-LlamaIndex-Tools.md'
   - How to Guides:
-    - Installing CrewAI: 'how-to/Installing-CrewAI.md'
-    - Getting Started: 'how-to/Creating-a-Crew-and-kick-it-off.md'
     - Create Custom Tools: 'how-to/Create-Custom-Tools.md'
     - Using Sequential Process: 'how-to/Sequential.md'
     - Using Hierarchical Process: 'how-to/Hierarchical.md'
+    - Create your own Manager Agent: 'how-to/Your-Own-Manager-Agent.md'
     - Connecting to any LLM: 'how-to/LLM-Connections.md'
     - Customizing Agents: 'how-to/Customizing-Agents.md'
+    - Coding Agents: 'how-to/Coding-Agents.md'
+    - Forcing Tool Output as Result: 'how-to/Force-Tool-Ouput-as-Result.md'
     - Human Input on Execution: 'how-to/Human-Input-on-Execution.md'
+    - Kickoff a Crew Asynchronously: 'how-to/Kickoff-async.md'
+    - Kickoff a Crew for a List: 'how-to/Kickoff-for-each.md'
+    - Replay from a specific task from a kickoff: 'how-to/Replay-tasks-from-latest-Crew-Kickoff.md'
+    - Conditional Tasks: 'how-to/Conditional-Tasks.md'
     - Agent Monitoring with AgentOps: 'how-to/AgentOps-Observability.md'
+    - Agent Monitoring with LangTrace: 'how-to/Langtrace-Observability.md'
   - Tools Docs:
-    - Google Serper Search: 'tools/SerperDevTool.md'
     - Browserbase Web Loader: 'tools/BrowserbaseLoadTool.md'
-    - Scrape Website: 'tools/ScrapeWebsiteTool.md'
-    - Directory Read: 'tools/DirectoryReadTool.md'
-    - File Read: 'tools/FileReadTool.md'
-    - Selenium Scraper: 'tools/SeleniumScrapingTool.md'
-    - Directory RAG Search: 'tools/DirectorySearchTool.md'
-    - PDF RAG Search: 'tools/PDFSearchTool.md'
-    - TXT RAG Search: 'tools/TXTSearchTool.md'
-    - CSV RAG Search: 'tools/CSVSearchTool.md'
-    - XML RAG Search: 'tools/XMLSearchTool.md'
-    - JSON RAG Search: 'tools/JSONSearchTool.md'
-    - Docx Rag Search: 'tools/DOCXSearchTool.md'
-    - MDX RAG Search: 'tools/MDXSearchTool.md'
-    - PG RAG Search: 'tools/PGSearchTool.md'
-    - Website RAG Search: 'tools/WebsiteSearchTool.md'
-    - Github RAG Search: 'tools/GitHubSearchTool.md'
     - Code Docs RAG Search: 'tools/CodeDocsSearchTool.md'
-    - Youtube Video RAG Search: 'tools/YoutubeVideoSearchTool.md'
+    - Code Interpreter: 'tools/CodeInterpreterTool.md'
+    - Composio Tools: 'tools/ComposioTool.md'
+    - CSV RAG Search: 'tools/CSVSearchTool.md'
+    - DALL-E Tool: 'tools/DALL-ETool.md'
+    - Directory RAG Search: 'tools/DirectorySearchTool.md'
+    - Directory Read: 'tools/DirectoryReadTool.md'
+    - Docx Rag Search: 'tools/DOCXSearchTool.md'
+    - EXA Serch Web Loader: 'tools/EXASearchTool.md'
+    - File Read: 'tools/FileReadTool.md'
+    - File Write: 'tools/FileWriteTool.md'
+    - Firecrawl Crawl Website Tool: 'tools/FirecrawlCrawlWebsiteTool.md'
+    - Firecrawl Scrape Website Tool: 'tools/FirecrawlScrapeWebsiteTool.md'
+    - Firecrawl Search Tool: 'tools/FirecrgstawlSearchTool.md'
+    - Github RAG Search: 'tools/GitHubSearchTool.md'
+    - Google Serper Search: 'tools/SerperDevTool.md'
+    - JSON RAG Search: 'tools/JSONSearchTool.md'
+    - MDX RAG Search: 'tools/MDXSearchTool.md'
+    - MySQL Tool: 'tools/MySQLTool.md'
+    - NL2SQL Tool: 'tools/NL2SQLTool.md'
+    - PDF RAG Search: 'tools/PDFSearchTool.md'
+    - PG RAG Search: 'tools/PGSearchTool.md'
+    - Scrape Website: 'tools/ScrapeWebsiteTool.md'
+    - Selenium Scraper: 'tools/SeleniumScrapingTool.md'
+    - Spider Scraper: 'tools/SpiderTool.md'
+    - TXT RAG Search: 'tools/TXTSearchTool.md'
+    - Vision Tool: 'tools/VisionTool.md'
+    - Website RAG Search: 'tools/WebsiteSearchTool.md'
+    - XML RAG Search: 'tools/XMLSearchTool.md'
     - Youtube Channel RAG Search: 'tools/YoutubeChannelSearchTool.md'
+    - Youtube Video RAG Search: 'tools/YoutubeVideoSearchTool.md'
   - Examples:
     - Trip Planner Crew: https://github.com/joaomdmoura/crewAI-examples/tree/main/trip_planner"
     - Create Instagram Post: https://github.com/joaomdmoura/crewAI-examples/tree/main/instagram_post"
@@ -167,6 +194,7 @@ nav:
     - Landing Page Generator: https://github.com/joaomdmoura/crewAI-examples/tree/main/landing_page_generator"
     - Prepare for meetings: https://github.com/joaomdmoura/crewAI-examples/tree/main/prep-for-a-meeting"
   - Telemetry: 'telemetry/Telemetry.md'
+  - Change Log: 'https://github.com/crewAIInc/crewAI/releases'
 
 extra_css:
   - stylesheets/output.css
@@ -174,6 +202,7 @@ extra_css:
 
 plugins:
   - social
+  - search
 
 extra:
   analytics:

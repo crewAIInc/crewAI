@@ -48,7 +48,7 @@ tool = JSONSearchTool(
             },
         },
         "embedder": {
-            "provider": "google",
+            "provider": "google", # or openai, ollama, ...
             "config": {
                 "model": "models/embedding-001",
                 "task_type": "retrieval_document",

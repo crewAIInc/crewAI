@@ -8,11 +8,11 @@
 
 <h3>
 
-[Homepage](https://www.crewai.io/) | [Documentation](https://docs.crewai.com/) | [Chat with Docs](https://chatg.pt/DWjSBZn) | [Examples](https://github.com/joaomdmoura/crewai-examples) | [Discord](https://discord.com/invite/X4JWnZnxPb)
+[Homepage](https://www.crewai.com/) | [Documentation](https://docs.crewai.com/) | [Chat with Docs](https://chatg.pt/DWjSBZn) | [Examples](https://github.com/crewAIInc/crewAI-examples) | [Discord](https://discord.com/invite/X4JWnZnxPb)
 
 </h3>
 
-[![GitHub Repo stars](https://img.shields.io/github/stars/joaomdmoura/crewAI)](https://github.com/joaomdmoura/crewAI)
+[![GitHub Repo stars](https://img.shields.io/github/stars/joaomdmoura/crewAI)](https://github.com/crewAIInc/crewAI)
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](https://opensource.org/licenses/MIT)
 
 </div>
@@ -70,6 +70,18 @@ os.environ["SERPER_API_KEY"] = "Your Key" # serper.dev API key
 # os.environ["OPENAI_MODEL_NAME"] ='openhermes'  # Adjust based on available model
 # os.environ["OPENAI_API_KEY"] ='sk-111111111111111111111111111111111111111111111111'
 
+# You can pass an optional llm attribute specifying what model you wanna use.
+# It can be a local model through Ollama / LM Studio or a remote
+# model like OpenAI, Mistral, Antrophic or others (https://docs.crewai.com/how-to/LLM-Connections/)
+# If you don't specify a model, the default is OpenAI gpt-4o
+#
+# import os
+# os.environ['OPENAI_MODEL_NAME'] = 'gpt-3.5-turbo'
+#
+# OR
+#
+# from langchain_openai import ChatOpenAI
+
 search_tool = SerperDevTool()
 
 # Define your agents with roles and goals
@@ -81,18 +93,9 @@ researcher = Agent(
   You have a knack for dissecting complex data and presenting actionable insights.""",
   verbose=True,
   allow_delegation=False,
-  tools=[search_tool]
   # You can pass an optional llm attribute specifying what model you wanna use.
-  # It can be a local model through Ollama / LM Studio or a remote
-  # model like OpenAI, Mistral, Antrophic or others (https://docs.crewai.com/how-to/LLM-Connections/)
-  #
-  # import os
-  # os.environ['OPENAI_MODEL_NAME'] = 'gpt-3.5-turbo'
-  #
-  # OR
-  #
-  # from langchain_openai import ChatOpenAI
-  # llm=ChatOpenAI(model_name="gpt-3.5", temperature=0.7)
+  # llm=ChatOpenAI(model_name="gpt-3.5", temperature=0.7),
+  tools=[search_tool]
 )
 writer = Agent(
   role='Tech Content Strategist',
@@ -124,7 +127,8 @@ task2 = Task(
 crew = Crew(
   agents=[researcher, writer],
   tasks=[task1, task2],
-  verbose=2, # You can set it to 1 or 2 to different logging levels
+  verbose=True,
+  process = Process.sequential
 )
 
 # Get your crew to work!
@@ -150,12 +154,12 @@ In addition to the sequential process, you can use the hierarchical process, whi
 
 ## Examples
 
-You can test different real life examples of AI crews in the [crewAI-examples repo](https://github.com/joaomdmoura/crewAI-examples?tab=readme-ov-file):
+You can test different real life examples of AI crews in the [crewAI-examples repo](https://github.com/crewAIInc/crewAI-examples?tab=readme-ov-file):
 
-- [Landing Page Generator](https://github.com/joaomdmoura/crewAI-examples/tree/main/landing_page_generator)
+- [Landing Page Generator](https://github.com/crewAIInc/crewAI-examples/tree/main/landing_page_generator)
 - [Having Human input on the execution](https://docs.crewai.com/how-to/Human-Input-on-Execution)
-- [Trip Planner](https://github.com/joaomdmoura/crewAI-examples/tree/main/trip_planner)
-- [Stock Analysis](https://github.com/joaomdmoura/crewAI-examples/tree/main/stock_analysis)
+- [Trip Planner](https://github.com/crewAIInc/crewAI-examples/tree/main/trip_planner)
+- [Stock Analysis](https://github.com/crewAIInc/crewAI-examples/tree/main/stock_analysis)
 
 ### Quick Tutorial
 
@@ -163,19 +167,19 @@ You can test different real life examples of AI crews in the [crewAI-examples re
 
 ### Write Job Descriptions
 
-[Check out code for this example](https://github.com/joaomdmoura/crewAI-examples/tree/main/job-posting) or watch a video below:
+[Check out code for this example](https://github.com/crewAIInc/crewAI-examples/tree/main/job-posting) or watch a video below:
 
 [![Jobs postings](https://img.youtube.com/vi/u98wEMz-9to/maxresdefault.jpg)](https://www.youtube.com/watch?v=u98wEMz-9to "Jobs postings")
 
 ### Trip Planner
 
-[Check out code for this example](https://github.com/joaomdmoura/crewAI-examples/tree/main/trip_planner) or watch a video below:
+[Check out code for this example](https://github.com/crewAIInc/crewAI-examples/tree/main/trip_planner) or watch a video below:
 
 [![Trip Planner](https://img.youtube.com/vi/xis7rWp-hjs/maxresdefault.jpg)](https://www.youtube.com/watch?v=xis7rWp-hjs "Trip Planner")
 
 ### Stock Analysis
 
-[Check out code for this example](https://github.com/joaomdmoura/crewAI-examples/tree/main/stock_analysis) or watch a video below:
+[Check out code for this example](https://github.com/crewAIInc/crewAI-examples/tree/main/stock_analysis) or watch a video below:
 
 [![Stock Analysis](https://img.youtube.com/vi/e0Uj4yWdaAg/maxresdefault.jpg)](https://www.youtube.com/watch?v=e0Uj4yWdaAg "Stock Analysis")
 
@@ -187,11 +191,11 @@ Please refer to the [Connect crewAI to LLMs](https://docs.crewai.com/how-to/LLM-
 
 ## How CrewAI Compares
 
+**CrewAI's Advantage**: CrewAI is built with production in mind. It offers the flexibility of Autogen's conversational agents and the structured process approach of ChatDev, but without the rigidity. CrewAI's processes are designed to be dynamic and adaptable, fitting seamlessly into both development and production workflows.
+
 - **Autogen**: While Autogen does good in creating conversational agents capable of working together, it lacks an inherent concept of process. In Autogen, orchestrating agents' interactions requires additional programming, which can become complex and cumbersome as the scale of tasks grows.
 
 - **ChatDev**: ChatDev introduced the idea of processes into the realm of AI agents, but its implementation is quite rigid. Customizations in ChatDev are limited and not geared towards production environments, which can hinder scalability and flexibility in real-world applications.
-
-**CrewAI's Advantage**: CrewAI is built with production in mind. It offers the flexibility of Autogen's conversational agents and the structured process approach of ChatDev, but without the rigidity. CrewAI's processes are designed to be dynamic and adaptable, fitting seamlessly into both development and production workflows.
 
 ## Contribution
 
@@ -231,7 +235,7 @@ poetry run pytest
 ### Running static type checks
 
 ```bash
-poetry run pyright
+poetry run mypy
 ```
 
 ### Packaging
@@ -250,7 +254,7 @@ pip install dist/*.tar.gz
 
 CrewAI uses anonymous telemetry to collect usage data with the main purpose of helping us improve the library by focusing our efforts on the most used features, integrations and tools.
 
-There is NO data being collected on the prompts, tasks descriptions agents backstories or goals nor tools usage, no API calls, nor responses nor any data that is being processed by the agents, nor any secrets and env vars.
+It's pivotal to understand that **NO data is collected** concerning prompts, task descriptions, agents' backstories or goals, usage of tools, API calls, responses, any data processed by the agents, or secrets and environment variables, with the exception of the conditions mentioned. When the `share_crew` feature is enabled, detailed data including task descriptions, agents' backstories or goals, and other specific attributes are collected to provide deeper insights while respecting user privacy. We don't offer a way to disable it now, but we will in the future.
 
 Data collected includes:
 
@@ -275,7 +279,7 @@ Data collected includes:
 - Tools names available
   - Understand out of the publically available tools, which ones are being used the most so we can improve them
 
-Users can opt-in sharing the complete telemetry data by setting the `share_crew` attribute to `True` on their Crews.
+Users can opt-in to Further Telemetry, sharing the complete telemetry data by setting the `share_crew` attribute to `True` on their Crews. Enabling `share_crew` results in the collection of detailed crew and task execution data, including `goal`, `backstory`, `context`, and `output` of tasks. This enables a deeper insight into usage patterns while respecting the user's choice to share.
 
 ## License
 

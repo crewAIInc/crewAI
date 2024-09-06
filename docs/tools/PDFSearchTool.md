@@ -29,7 +29,7 @@ tool = PDFSearchTool(pdf='path/to/your/document.pdf')
 ```
 
 ## Arguments
-- `pdf`: **Optinal** The PDF path for the search. Can be provided at initialization or within the `run` method's arguments. If provided at initialization, the tool confines its search to the specified document.
+- `pdf`: **Optional** The PDF path for the search. Can be provided at initialization or within the `run` method's arguments. If provided at initialization, the tool confines its search to the specified document.
 
 ## Custom model and embeddings
 
@@ -48,7 +48,7 @@ tool = PDFSearchTool(
             ),
         ),
         embedder=dict(
-            provider="google",
+            provider="google", # or openai, ollama, ...
             config=dict(
                 model="models/embedding-001",
                 task_type="retrieval_document",

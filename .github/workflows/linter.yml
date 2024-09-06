@@ -1,0 +1,16 @@
+name: Lint
+
+on: [pull_request]
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Install Requirements
+        run: |
+          pip install ruff
+
+      - name: Run Ruff Linter
+        run: ruff check --exclude "templates","__init__.py"

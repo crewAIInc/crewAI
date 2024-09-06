@@ -4,27 +4,30 @@ description: Detailed guide on managing and creating tasks within the crewAI fra
 ---
 
 ## Overview of a Task
+
 !!! note "What is a Task?"
-    In the crewAI framework, tasks are specific assignments completed by agents. They provide all necessary details for execution, such as a description, the agent responsible, required tools, and more, facilitating a wide range of action complexities.
+In the crewAI framework, tasks are specific assignments completed by agents. They provide all necessary details for execution, such as a description, the agent responsible, required tools, and more, facilitating a wide range of action complexities.
 
 Tasks within crewAI can be collaborative, requiring multiple agents to work together. This is managed through the task properties and orchestrated by the Crew's process, enhancing teamwork and efficiency.
 
 ## Task Attributes
 
-| Attribute              | Description                                                                                   |
-| :----------------------| :-------------------------------------------------------------------------------------------- |
-| **Description**        | A clear, concise statement of what the task entails.                                          |
-| **Agent**              | The agent responsible for the task, assigned either directly or by the crew's process.        |
-| **Expected Output**    | A detailed description of what the task's completion looks like.                              |
-| **Tools** *(optional)* | The functions or capabilities the agent can utilize to perform the task.                      |
-| **Async Execution** *(optional)* | If set, the task executes asynchronously, allowing progression without waiting for completion.|
-| **Context**  *(optional)* | Specifies tasks whose outputs are used as context for this task.                              |
-| **Config** *(optional)* | Additional configuration details for the agent executing the task, allowing further customization. |
-| **Output JSON**  *(optional)* | Outputs a JSON object, requiring an OpenAI client. Only one output format can be set.         |
-| **Output Pydantic**  *(optional)* | Outputs a Pydantic model object, requiring an OpenAI client. Only one output format can be set. |
-| **Output File**  *(optional)* | Saves the task output to a file. If used with `Output JSON` or `Output Pydantic`, specifies how the output is saved. |
-| **Callback**  *(optional)* | A Python callable that is executed with the task's output upon completion.                    |
-| **Human Input** *(optional)* | Indicates if the task requires human feedback at the end, useful for tasks needing human oversight. |
+| Attribute                        | Parameters        | Description                                                                                                          |
+| :------------------------------- | :---------------- | :------------------------------------------------------------------------------------------------------------------- |
+| **Description**                  | `description`     | A clear, concise statement of what the task entails.                                                                 |
+| **Agent**                        | `agent`           | The agent responsible for the task, assigned either directly or by the crew's process.                               |
+| **Expected Output**              | `expected_output` | A detailed description of what the task's completion looks like.                                                     |
+| **Tools** _(optional)_           | `tools`           | The functions or capabilities the agent can utilize to perform the task. Defaults to an empty list.                  |
+| **Async Execution** _(optional)_ | `async_execution` | If set, the task executes asynchronously, allowing progression without waiting for completion. Defaults to False.    |
+| **Context** _(optional)_         | `context`         | Specifies tasks whose outputs are used as context for this task.                                                     |
+| **Config** _(optional)_          | `config`          | Additional configuration details for the agent executing the task, allowing further customization. Defaults to None. |
+| **Output JSON** _(optional)_     | `output_json`     | Outputs a JSON object, requiring an OpenAI client. Only one output format can be set.                                |
+| **Output Pydantic** _(optional)_ | `output_pydantic` | Outputs a Pydantic model object, requiring an OpenAI client. Only one output format can be set.                      |
+| **Output File** _(optional)_     | `output_file`     | Saves the task output to a file. If used with `Output JSON` or `Output Pydantic`, specifies how the output is saved. |
+| **Output** _(optional)_          | `output`          | An instance of `TaskOutput`, containing the raw, JSON, and Pydantic output plus additional details.                  |
+| **Callback** _(optional)_        | `callback`        | A callable that is executed with the task's output upon completion.                                                  |
+| **Human Input** _(optional)_     | `human_input`     | Indicates if the task requires human feedback at the end, useful for tasks needing human oversight. Defaults to False.|
+| **Converter Class** _(optional)_ | `converter_cls`   | A converter class used to export structured output. Defaults to None.                                                |
 
 ## Creating a Task
 
@@ -35,12 +38,75 @@ from crewai import Task
 
 task = Task(
     description='Find and summarize the latest and most relevant news on AI',
-    agent=sales_agent
+    agent=sales_agent,
+    expected_output='A bullet list summary of the top 5 most important AI news',
 )
 ```
 
 !!! note "Task Assignment"
-    Directly specify an `agent` for assignment or let the `hierarchical` CrewAI's process decide based on roles, availability, etc.
+Directly specify an `agent` for assignment or let the `hierarchical` CrewAI's process decide based on roles, availability, etc.
+
+## Task Output
+
+!!! note "Understanding Task Outputs"
+The output of a task in the crewAI framework is encapsulated within the `TaskOutput` class. This class provides a structured way to access results of a task, including various formats such as raw strings, JSON, and Pydantic models.
+By default, the `TaskOutput` will only include the `raw` output. A `TaskOutput` will only include the `pydantic` or `json_dict` output if the original `Task` object was configured with `output_pydantic` or `output_json`, respectively.
+
+### Task Output Attributes
+
+| Attribute         | Parameters      | Type                       | Description                                                                                        |
+| :---------------- | :-------------- | :------------------------- | :------------------------------------------------------------------------------------------------- |
+| **Description**   | `description`   | `str`                      | A brief description of the task.                                                                   |
+| **Summary**       | `summary`       | `Optional[str]`            | A short summary of the task, auto-generated from the first 10 words of the description.            |
+| **Raw**           | `raw`           | `str`                      | The raw output of the task. This is the default format for the output.                             |
+| **Pydantic**      | `pydantic`      | `Optional[BaseModel]`      | A Pydantic model object representing the structured output of the task.                            |
+| **JSON Dict**     | `json_dict`     | `Optional[Dict[str, Any]]` | A dictionary representing the JSON output of the task.                                             |
+| **Agent**         | `agent`         | `str`                      | The agent that executed the task.                                                                  |
+| **Output Format** | `output_format` | `OutputFormat`             | The format of the task output, with options including RAW, JSON, and Pydantic. The default is RAW. |
+
+### Task Output Methods and Properties
+
+| Method/Property | Description                                                                                       |
+| :-------------- | :------------------------------------------------------------------------------------------------ |
+| **json**        | Returns the JSON string representation of the task output if the output format is JSON.           |
+| **to_dict**     | Converts the JSON and Pydantic outputs to a dictionary.                                           |
+| \***\*str\*\*** | Returns the string representation of the task output, prioritizing Pydantic, then JSON, then raw. |
+
+### Accessing Task Outputs
+
+Once a task has been executed, its output can be accessed through the `output` attribute of the `Task` object. The `TaskOutput` class provides various ways to interact with and present this output.
+
+#### Example
+
+```python
+# Example task
+task = Task(
+    description='Find and summarize the latest AI news',
+    expected_output='A bullet list summary of the top 5 most important AI news',
+    agent=research_agent,
+    tools=[search_tool]
+)
+
+# Execute the crew
+crew = Crew(
+    agents=[research_agent],
+    tasks=[task],
+    verbose=True
+)
+
+result = crew.kickoff()
+
+# Accessing the task output
+task_output = task.output
+
+print(f"Task Description: {task_output.description}")
+print(f"Task Summary: {task_output.summary}")
+print(f"Raw Output: {task_output.raw}")
+if task_output.json_dict:
+    print(f"JSON Output: {json.dumps(task_output.json_dict, indent=2)}")
+if task_output.pydantic:
+    print(f"Pydantic Output: {task_output.pydantic}")
+```
 
 ## Integrating Tools with Tasks
 
@@ -77,7 +143,7 @@ task = Task(
 crew = Crew(
     agents=[research_agent],
     tasks=[task],
-    verbose=2
+    verbose=True
 )
 
 result = crew.kickoff()
@@ -88,7 +154,7 @@ This demonstrates how tasks with specific tools can override an agent's default 
 
 ## Referring to Other Tasks
 
-In crewAI, the output of one task is automatically relayed into the next one, but you can specifically define what tasks' output, including multiple should be used as context for another task.
+In crewAI, the output of one task is automatically relayed into the next one, but you can specifically define what tasks' output, including multiple, should be used as context for another task.
 
 This is useful when you have a task that depends on the output of another task that is not performed immediately after it. This is done through the `context` attribute of the task:
 
@@ -199,7 +265,7 @@ task1 = Task(
 crew = Crew(
     agents=[research_agent],
     tasks=[task1, task2, task3],
-    verbose=2
+    verbose=True
 )
 
 result = crew.kickoff()
@@ -224,6 +290,25 @@ While creating and executing tasks, certain validation mechanisms are in place t
 - Preventing the manual assignment of the `id` attribute to uphold the integrity of the unique identifier system.
 
 These validations help in maintaining the consistency and reliability of task executions within the crewAI framework.
+
+## Creating Directories when Saving Files
+
+You can now specify if a task should create directories when saving its output to a file. This is particularly useful for organizing outputs and ensuring that file paths are correctly structured.
+
+```python
+# ...
+
+save_output_task = Task(
+    description='Save the summarized AI news to a file',
+    expected_output='File saved successfully',
+    agent=research_agent,
+    tools=[file_save_tool],
+    output_file='outputs/ai_news_summary.txt',
+    create_directory=True
+)
+
+#...
+```
 
 ## Conclusion
 

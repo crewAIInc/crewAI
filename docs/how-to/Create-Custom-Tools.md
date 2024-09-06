@@ -7,6 +7,7 @@ description: Comprehensive guide on crafting, using, and managing custom tools w
 This guide provides detailed instructions on creating custom tools for the crewAI framework and how to efficiently manage and utilize these tools, incorporating the latest functionalities such as tool delegation, error handling, and dynamic tool calling. It also highlights the importance of collaboration tools, enabling agents to perform a wide range of actions.
 
 ### Prerequisites
+
 Before creating your own tools, ensure you have the crewAI extra tools package installed:
 
 ```bash
@@ -31,7 +32,7 @@ class MyCustomTool(BaseTool):
 
 ### Using the `tool` Decorator
 
-Alternatively, use the `tool` decorator for a direct approach to create tools. This requires specifying attributes and the tool's logic within a function.
+Alternatively, you can use the tool decorator `@tool`. This approach allows you to define the tool's attributes and functionality directly within a function, offering a concise and efficient way to create specialized tools tailored to your needs.
 
 ```python
 from crewai_tools import tool
@@ -42,6 +43,7 @@ def my_simple_tool(question: str) -> str:
     # Tool logic here
     return "Tool output"
 ```
+
 ### Defining a Cache Function for the Tool
 
 To optimize tool performance with caching, define custom caching strategies using the `cache_function` attribute.
@@ -50,7 +52,7 @@ To optimize tool performance with caching, define custom caching strategies usin
 @tool("Tool with Caching")
 def cached_tool(argument: str) -> str:
     """Tool functionality description."""
-    return "Cachable result"
+    return "Cacheable result"
 
 def my_cache_strategy(arguments: dict, result: str) -> bool:
     # Define custom caching logic
