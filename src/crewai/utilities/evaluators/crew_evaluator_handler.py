@@ -100,7 +100,7 @@ class CrewEvaluator:
 
         table = Table(title="Tasks Scores \n (1-10 Higher is better)", box=HEAVY_EDGE)
 
-        table.add_column("Tasks/Crew/Agents", style="cyan", no_wrap=True)
+        table.add_column("Tasks/Crew/Agents", style="cyan")
         for run in range(1, len(self.tasks_scores) + 1):
             table.add_column(f"Run {run}", justify="center")
         table.add_column("Avg. Total", justify="center")
@@ -112,23 +112,34 @@ class CrewEvaluator:
                 for run in range(1, len(self.tasks_scores) + 1)
             ]
             avg_score = task_averages[task_index]
+            agents = list(task.processed_by_agents)
 
-            # Format agents with line breaks
-            agents_str = "\n".join([f"- {agent}" for agent in task.processed_by_agents])
-
+            # Add the task row with the first agent
             table.add_row(
                 f"Task {task_index + 1}",
-                *map(lambda x: f"{x:.1f}", task_scores),
+                *[f"{score:.1f}" for score in task_scores],
                 f"{avg_score:.1f}",
-                agents_str,
+                f"- {agents[0]}" if agents else "",
             )
 
+            # Add rows for additional agents
+            for agent in agents[1:]:
+                table.add_row("", "", "", "", "", f"- {agent}")
+
+            # Add a blank separator row if it's not the last task
+            if task_index < len(self.crew.tasks) - 1:
+                table.add_row("", "", "", "", "", "")
+
+        # Add Crew and Execution Time rows
         crew_scores = [
             sum(self.tasks_scores[run]) / len(self.tasks_scores[run])
             for run in range(1, len(self.tasks_scores) + 1)
         ]
         table.add_row(
-            "Crew", *map(lambda x: f"{x:.2f}", crew_scores), f"{crew_average:.1f}", ""
+            "Crew",
+            *[f"{score:.2f}" for score in crew_scores],
+            f"{crew_average:.1f}",
+            "",
         )
 
         run_exec_times = [
