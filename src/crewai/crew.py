@@ -584,7 +584,10 @@ class Crew(BaseModel):
             self.manager_agent.allow_delegation = True
             manager = self.manager_agent
             if manager.tools is not None and len(manager.tools) > 0:
-                raise Exception("Manager agent should not have tools")
+                self._logger.log(
+                    "warning", "Manager agent should not have tools", color="orange"
+                )
+                manager.tools = []
             manager.tools = self.manager_agent.get_delegation_tools(self.agents)
         else:
             manager = Agent(
