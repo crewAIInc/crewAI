@@ -8,6 +8,7 @@ from langchain_core.tools import BaseTool
 from langchain_openai import ChatOpenAI
 
 from crewai.agents.tools_handler import ToolsHandler
+from crewai.task import Task
 from crewai.telemetry import Telemetry
 from crewai.tools.tool_calling import InstructorToolCalling, ToolCalling
 from crewai.utilities import I18N, Converter, ConverterError, Printer
@@ -51,7 +52,7 @@ class ToolUsage:
         original_tools: List[Any],
         tools_description: str,
         tools_names: str,
-        task: Any,
+        task: Task,
         function_calling_llm: Any,
         agent: Any,
         action: Any,
@@ -154,7 +155,10 @@ class ToolUsage:
                     "Delegate work to coworker",
                     "Ask question to coworker",
                 ]:
-                    self.task.increment_delegations()
+                    coworker = (
+                        calling.arguments.get("coworker") if calling.arguments else None
+                    )
+                    self.task.increment_delegations(coworker)
 
                 if calling.arguments:
                     try:
@@ -241,7 +245,7 @@ class ToolUsage:
             result = self._remember_format(result=result)  # type: ignore # "_remember_format" of "ToolUsage" does not return a value (it only ever returns None)
         return result
 
-    def _should_remember_format(self) -> None:
+    def _should_remember_format(self) -> bool:
         return self.task.used_tools % self._remember_format_after_usages == 0
 
     def _remember_format(self, result: str) -> None:
@@ -353,10 +357,10 @@ class ToolUsage:
                     return ToolUsageErrorException(  # type: ignore # Incompatible return value type (got "ToolUsageErrorException", expected "ToolCalling | InstructorToolCalling")
                         f'{self._i18n.errors("tool_arguments_error")}'
                     )
-                calling = ToolCalling(  # type: ignore # Unexpected keyword argument "log" for "ToolCalling"
+                calling = ToolCalling(
                     tool_name=tool.name,
                     arguments=arguments,
-                    log=tool_string,
+                    log=tool_string,  # type: ignore
                 )
         except Exception as e:
             self._run_attempts += 1
@@ -404,19 +408,19 @@ class ToolUsage:
                         '"' + value.replace('"', '\\"') + '"'
                     )  # Re-encapsulate with double quotes
                 elif value.isdigit():  # Check if value is a digit, hence integer
-                    formatted_value = value
+                    value = value
                 elif value.lower() in [
                     "true",
                     "false",
                     "null",
                 ]:  # Check for boolean and null values
-                    formatted_value = value.lower()
+                    value = value.lower()
                 else:
                     # Assume the value is a string and needs quotes
-                    formatted_value = '"' + value.replace('"', '\\"') + '"'
+                    value = '"' + value.replace('"', '\\"') + '"'
 
                 # Rebuild the entry with proper quoting
-                formatted_entry = f'"{key}": {formatted_value}'
+                formatted_entry = f'"{key}": {value}'
                 formatted_entries.append(formatted_entry)
 
             # Reconstruct the JSON string
