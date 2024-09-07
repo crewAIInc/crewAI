@@ -32,8 +32,8 @@ Each input creates its own run, flowing through all stages of the pipeline. Mult
 
 ## Pipeline Attributes
 
-| Attribute  | Parameters | Description                                                                           |
-| :--------- | :--------- | :------------------------------------------------------------------------------------ |
+| Attribute  | Parameters | Description                                                                                     |
+| :--------- | :--------- | :---------------------------------------------------------------------------------------------- |
 | **Stages** | `stages`   | A list of crews, lists of crews, or routers representing the stages to be executed in sequence. |
 
 ## Creating a Pipeline
@@ -239,7 +239,7 @@ email_router = Router(
             pipeline=normal_pipeline
         )
     },
-    default=Pipeline(stages=[normal_pipeline])  # Default to just classification if no urgency score
+    default=Pipeline(stages=[normal_pipeline])  # Default to just normal if no urgency score
 )
 
 # Use the router in a main pipeline
