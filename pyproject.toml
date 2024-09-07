@@ -8,7 +8,7 @@ packages = [{ include = "crewai", from = "src" }]
 
 [tool.poetry.urls]
 Homepage = "https://crewai.com"
-Documentation = "https://github.com/joaomdmoura/CrewAI/wiki/Index"
+Documentation = "https://docs.crewai.com"
 Repository = "https://github.com/crewAIInc/crewAI"
 
 [tool.poetry.dependencies]
