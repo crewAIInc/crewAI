@@ -103,7 +103,8 @@ def crew(func):
         for task_name in sorted_task_names:
             task_instance = tasks[task_name]()
             instantiated_tasks.append(task_instance)
-            if hasattr(task_instance, "agent"):
+            agent_instance = getattr(task_instance, "agent", None)
+            if agent_instance is not None:
                 agent_instance = task_instance.agent
                 if agent_instance.role not in agent_roles:
                     instantiated_agents.append(agent_instance)
