@@ -17,7 +17,7 @@ Before we start, there are a couple of things to note:
 Before getting started with CrewAI, make sure that you have installed it via pip:
 
 ```shell
-$ pip install crewai crewai-tools
+$ pip install 'crewai[tools]'
 ```
 
 ## Creating a New Project
