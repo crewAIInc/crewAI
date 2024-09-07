@@ -143,13 +143,12 @@ os.environ["OPENAI_MODEL_NAME"]='mistral-small'
 from langchain_community.chat_models.solar import SolarChat
 ```
 ```sh
-os.environ["SOLAR_API_BASE"]='https://api.upstage.ai/v1/solar'
-os.environ["SOLAR_API_KEY"]='your-solar-api-key'
-```
+os.environ[SOLAR_API_BASE]="https://api.upstage.ai/v1/solar"
+os.environ[SOLAR_API_KEY]="your-solar-api-key"
 
 # Free developer API key available here: https://console.upstage.ai/services/solar
 # Langchain Example: https://github.com/langchain-ai/langchain/pull/18556
-
+```
 
 ### Cohere
 ```python
