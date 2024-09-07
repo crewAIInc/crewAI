@@ -117,7 +117,7 @@ class DeployCommand:
         else:
             self._handle_error(json_response)
 
-    def create_crew(self) -> None:
+    def create_crew(self, confirm: bool) -> None:
         """
         Create a new crew deployment.
         """
@@ -136,7 +136,7 @@ class DeployCommand:
             )
             return
 
-        self._confirm_input(env_vars, remote_repo_url)
+        self._confirm_input(env_vars, remote_repo_url, confirm)
         payload = self._create_payload(env_vars, remote_repo_url)
 
         response = self.client.create_crew(payload)
@@ -145,18 +145,22 @@ class DeployCommand:
         else:
             self._handle_error(response.json())
 
-    def _confirm_input(self, env_vars: Dict[str, str], remote_repo_url: str) -> None:
+    def _confirm_input(
+        self, env_vars: Dict[str, str], remote_repo_url: str, confirm: bool
+    ) -> None:
         """
         Confirm input parameters with the user.
 
         Args:
             env_vars (Dict[str, str]): Environment variables.
             remote_repo_url (str): Remote repository URL.
+            confirm (bool): Whether to confirm input.
         """
-        input(f"Press Enter to continue with the following Env vars: {env_vars}")
-        input(
-            f"Press Enter to continue with the following remote repository: {remote_repo_url}\n"
-        )
+        if not confirm:
+            input(f"Press Enter to continue with the following Env vars: {env_vars}")
+            input(
+                f"Press Enter to continue with the following remote repository: {remote_repo_url}\n"
+            )
 
     def _create_payload(
         self,
