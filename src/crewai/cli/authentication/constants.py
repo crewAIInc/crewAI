@@ -1,4 +1,4 @@
 ALGORITHMS = ["RS256"]
-AUTH0_DOMAIN = "dev-jzsr0j8zs0atl5ha.us.auth0.com"
-AUTH0_CLIENT_ID = "CZtyRHuVW80HbLSjk4ggXNzjg4KAt7Oe"
-AUTH0_AUDIENCE = "https://dev-jzsr0j8zs0atl5ha.us.auth0.com/api/v2/"
+AUTH0_DOMAIN = "crewai.us.auth0.com"
+AUTH0_CLIENT_ID = "DEVC5Fw6NlRoSzmDCcOhVq85EfLBjKa8"
+AUTH0_AUDIENCE = "https://crewai.us.auth0.com/api/v2/"
