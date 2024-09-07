@@ -284,3 +284,39 @@ Users can opt-in to Further Telemetry, sharing the complete telemetry data by se
 ## License
 
 CrewAI is released under the MIT License.
+
+## Frequently Asked Questions (FAQ)
+
+### Q: What is CrewAI?
+A: CrewAI is a cutting-edge framework for orchestrating role-playing, autonomous AI agents. It enables agents to work together seamlessly, tackling complex tasks through collaborative intelligence.
+
+### Q: How do I install CrewAI?
+A: You can install CrewAI using pip:
+```shell
+pip install crewai
+```
+For additional tools, use:
+```shell
+pip install 'crewai[tools]'
+```
+
+### Q: Can I use CrewAI with local models?
+A: Yes, CrewAI supports various LLMs, including local models. You can configure your agents to use local models via tools like Ollama & LM Studio. Check the [LLM Connections documentation](https://docs.crewai.com/how-to/LLM-Connections/) for more details.
+
+### Q: What are the key features of CrewAI?
+A: Key features include role-based agent design, autonomous inter-agent delegation, flexible task management, process-driven execution, output saving as files, and compatibility with both open-source and proprietary models.
+
+### Q: How does CrewAI compare to other AI orchestration tools?
+A: CrewAI is designed with production in mind, offering flexibility similar to Autogen's conversational agents and structured processes like ChatDev, but with more adaptability for real-world applications.
+
+### Q: Is CrewAI open-source?
+A: Yes, CrewAI is open-source and welcomes contributions from the community.
+
+### Q: Does CrewAI collect any data?
+A: CrewAI uses anonymous telemetry to collect usage data for improvement purposes. No sensitive data (like prompts, task descriptions, or API calls) is collected. Users can opt-in to share more detailed data by setting `share_crew=True` on their Crews.
+
+### Q: Where can I find examples of CrewAI in action?
+A: You can find various real-life examples in the [crewAI-examples repository](https://github.com/crewAIInc/crewAI-examples), including trip planners, stock analysis tools, and more.
+
+### Q: How can I contribute to CrewAI?
+A: Contributions are welcome! You can fork the repository, create a new branch for your feature, add your improvement, and send a pull request. Check the Contribution section in the README for more details.
