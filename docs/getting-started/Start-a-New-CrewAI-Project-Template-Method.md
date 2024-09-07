@@ -20,46 +20,8 @@ Before getting started with CrewAI, make sure that you have installed it via pip
 $ pip install crewai crewai-tools
 ```
 
-### Virtual Environments
-It is highly recommended that you use virtual environments to ensure that your CrewAI project is isolated from other projects and dependencies. Virtual environments provide a clean, separate workspace for each project, preventing conflicts between different versions of packages and libraries. This isolation is crucial for maintaining consistency and reproducibility in your development process. You have multiple options for setting up virtual environments depending on your operating system and Python version:
-
-1. Use venv (Python's built-in virtual environment tool):
-   venv is included with Python 3.3 and later, making it a convenient choice for many developers. It's lightweight and easy to use, perfect for simple project setups.
-
-   To set up virtual environments with venv, refer to the official [Python documentation](https://docs.python.org/3/tutorial/venv.html).
-
-2. Use Conda (A Python virtual environment manager):
-   Conda is an open-source package manager and environment management system for Python. It's widely used by data scientists, developers, and researchers to manage dependencies and environments in a reproducible way.
-
-   To set up virtual environments with Conda, refer to the official [Conda documentation](https://docs.conda.io/projects/conda/en/stable/user-guide/getting-started.html).
-
-3. Use Poetry (A Python package manager and dependency management tool):
-   Poetry is an open-source Python package manager that simplifies the installation of packages and their dependencies. Poetry offers a convenient way to manage virtual environments and dependencies.
-   Poetry is CrewAI's preferred tool for package / dependency management in CrewAI.
-
-### Code IDEs
-
-Most users of CrewAI use a Code Editor / Integrated Development Environment (IDE) for building their Crews. You can use any code IDE of your choice. See below for some popular options for Code Editors / Integrated Development Environments (IDE):
-
-- [Visual Studio Code](https://code.visualstudio.com/) - Most popular
-- [PyCharm](https://www.jetbrains.com/pycharm/)
-- [Cursor AI](https://cursor.com)
-
-Pick one that suits your style and needs.
-
 ## Creating a New Project
-In this example, we will be using Venv as our virtual environment manager.
-
-To set up a virtual environment, run the following CLI command:
-
-```shell
-$ poetry new my-project
-$ cd my-project
-# A new virtual environment is created when you install dependencies
-$ poetry add requests
-# Activate virtual environment
-$ poetry shell
-```
+In this example, we will be using poetry as our virtual environment manager.
 
 To create a new CrewAI project, run the following CLI command:
 
