@@ -1,16 +1,15 @@
 import asyncio
 import json
+import os
 import uuid
 from concurrent.futures import Future
 from hashlib import md5
-import os
 from typing import TYPE_CHECKING, Any, Dict, List, Optional, Tuple, Union
 
 from langchain_core.callbacks import BaseCallbackHandler
 from pydantic import (
     UUID4,
     BaseModel,
-    ConfigDict,
     Field,
     InstanceOf,
     Json,
@@ -48,11 +47,10 @@ from crewai.utilities.planning_handler import CrewPlanner
 from crewai.utilities.task_output_storage_handler import TaskOutputStorageHandler
 from crewai.utilities.training_handler import CrewTrainingHandler
 
-
 agentops = None
 if os.environ.get("AGENTOPS_API_KEY"):
     try:
-        import agentops
+        import agentops  # type: ignore
     except ImportError:
         pass
 
@@ -106,7 +104,6 @@ class Crew(BaseModel):
 
     name: Optional[str] = Field(default=None)
     cache: bool = Field(default=True)
-    model_config = ConfigDict(arbitrary_types_allowed=True)
     tasks: List[Task] = Field(default_factory=list)
     agents: List[BaseAgent] = Field(default_factory=list)
     process: Process = Field(default=Process.sequential)
@@ -364,7 +361,7 @@ class Crew(BaseModel):
         source = [agent.key for agent in self.agents] + [
             task.key for task in self.tasks
         ]
-        return md5("|".join(source).encode()).hexdigest()
+        return md5("|".join(source).encode(), usedforsecurity=False).hexdigest()
 
     def _setup_from_config(self):
         assert self.config is not None, "Config should not be None."
@@ -541,7 +538,7 @@ class Crew(BaseModel):
         )._handle_crew_planning()
 
         for task, step_plan in zip(self.tasks, result.list_of_plans_per_task):
-            task.description += step_plan
+            task.description += step_plan.plan
 
     def _store_execution_log(
         self,
@@ -587,7 +584,10 @@ class Crew(BaseModel):
             self.manager_agent.allow_delegation = True
             manager = self.manager_agent
             if manager.tools is not None and len(manager.tools) > 0:
-                raise Exception("Manager agent should not have tools")
+                self._logger.log(
+                    "warning", "Manager agent should not have tools", color="orange"
+                )
+                manager.tools = []
             manager.tools = self.manager_agent.get_delegation_tools(self.agents)
         else:
             manager = Agent(

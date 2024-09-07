@@ -1,0 +1,65 @@
+name: Feature request
+description: Suggest a new feature for CrewAI
+title: "[FEATURE]"
+labels: ["feature-request"]
+assignees: []
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to fill out this feature request!
+  - type: dropdown
+    id: feature-area
+    attributes:
+      label: Feature Area
+      description: Which area of CrewAI does this feature primarily relate to?
+      options:
+        - Core functionality
+        - Agent capabilities
+        - Task management
+        - Integration with external tools
+        - Performance optimization
+        - Documentation
+        - Other (please specify in additional context)
+    validations:
+      required: true
+  - type: textarea
+    id: problem
+    attributes:
+      label: Is your feature request related to a an existing bug? Please link it here.
+      description: A link to the bug or NA if not related to an existing bug.
+    validations:
+      required: true
+  - type: textarea
+    id: solution
+    attributes:
+      label: Describe the solution you'd like
+      description: A clear and concise description of what you want to happen.
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Describe alternatives you've considered
+      description: A clear and concise description of any alternative solutions or features you've considered.
+    validations:
+      required: false
+  - type: textarea
+    id: context
+    attributes:
+      label: Additional context
+      description: Add any other context, screenshots, or examples about the feature request here.
+    validations:
+      required: false
+  - type: dropdown
+    id: willingness-to-contribute
+    attributes:
+      label: Willingness to Contribute
+      description: Would you be willing to contribute to the implementation of this feature?
+      options:
+        - Yes, I'd be happy to submit a pull request
+        - I could provide more detailed specifications
+        - I can test the feature once it's implemented
+        - No, I'm just suggesting the idea
+    validations:
+      required: true

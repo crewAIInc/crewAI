@@ -88,7 +88,7 @@ There are a couple of different ways you can use HuggingFace to host your LLM.
 
 ### Your own HuggingFace endpoint
 ```python
-from langchain_huggingface import HuggingFaceEndpoint,
+from langchain_huggingface import HuggingFaceEndpoint
 
 llm = HuggingFaceEndpoint(
     repo_id="microsoft/Phi-3-mini-4k-instruct",
@@ -112,30 +112,30 @@ Switch between APIs and models seamlessly using environment variables, supportin
 ### Configuration Examples
 #### FastChat
 ```sh
-os.environ[OPENAI_API_BASE]="http://localhost:8001/v1"
-os.environ[OPENAI_MODEL_NAME]='oh-2.5m7b-q51'
-os.environ[OPENAI_API_KEY]=NA
+os.environ["OPENAI_API_BASE"]='http://localhost:8001/v1'
+os.environ["OPENAI_MODEL_NAME"]='oh-2.5m7b-q51'
+os.environ[OPENAI_API_KEY]='NA'
 ```
 
 #### LM Studio
 Launch [LM Studio](https://lmstudio.ai) and go to the Server tab. Then select a model from the dropdown menu and wait for it to load. Once it's loaded, click the green Start Server button and use the URL, port, and API key that's shown (you can modify them). Below is an example of the default settings as of LM Studio 0.2.19:
 ```sh
-os.environ[OPENAI_API_BASE]="http://localhost:1234/v1"
-os.environ[OPENAI_API_KEY]="lm-studio"
+os.environ["OPENAI_API_BASE"]='http://localhost:1234/v1'
+os.environ["OPENAI_API_KEY"]='lm-studio'
 ```
 
 #### Groq API
 ```sh
-os.environ[OPENAI_API_KEY]=your-groq-api-key
-os.environ[OPENAI_MODEL_NAME]='llama3-8b-8192'
-os.environ[OPENAI_API_BASE]=https://api.groq.com/openai/v1
+os.environ["OPENAI_API_KEY"]='your-groq-api-key'
+os.environ["OPENAI_MODEL_NAME"]='llama3-8b-8192'
+os.environ["OPENAI_API_BASE"]='https://api.groq.com/openai/v1'
 ```
 
 #### Mistral API
 ```sh
-os.environ[OPENAI_API_KEY]=your-mistral-api-key
-os.environ[OPENAI_API_BASE]=https://api.mistral.ai/v1
-os.environ[OPENAI_MODEL_NAME]="mistral-small"
+os.environ["OPENAI_API_KEY"]='your-mistral-api-key'
+os.environ["OPENAI_API_BASE"]='https://api.mistral.ai/v1'
+os.environ["OPENAI_MODEL_NAME"]='mistral-small'
 ```
 
 ### Solar
@@ -146,15 +146,15 @@ from langchain_community.chat_models.solar import SolarChat
 os.environ[SOLAR_API_BASE]="https://api.upstage.ai/v1/solar"
 os.environ[SOLAR_API_KEY]="your-solar-api-key"
 
-# Free developer API key available here: https://console.upstage.ai/api-keys
-# Langchain Example: https://python.langchain.com/v0.2/docs/integrations/providers/upstage/
+# Free developer API key available here: https://console.upstage.ai/services/solar
+# Langchain Example: https://github.com/langchain-ai/langchain/pull/18556
 ```
 
 ### Cohere
 ```python
 from langchain_cohere import ChatCohere
 # Initialize language model
-os.environ["COHERE_API_KEY"] = "your-cohere-api-key"
+os.environ["COHERE_API_KEY"]='your-cohere-api-key'
 llm = ChatCohere()
 
 # Free developer API key available here: https://cohere.com/
@@ -165,10 +165,10 @@ llm = ChatCohere()
 For Azure OpenAI API integration, set the following environment variables:
 ```sh
 
-os.environ[AZURE_OPENAI_DEPLOYMENT] = "Your deployment"
-os.environ["OPENAI_API_VERSION"] = "2023-12-01-preview"
-os.environ["AZURE_OPENAI_ENDPOINT"] = "Your Endpoint"
-os.environ["AZURE_OPENAI_API_KEY"] = "<Your API Key>"
+os.environ["AZURE_OPENAI_DEPLOYMENT"]='Your deployment'
+os.environ["OPENAI_API_VERSION"]='2023-12-01-preview'
+os.environ["AZURE_OPENAI_ENDPOINT"]='Your Endpoint'
+os.environ["AZURE_OPENAI_API_KEY"]='Your API Key'
 ```
 
 ### Example Agent with Azure LLM

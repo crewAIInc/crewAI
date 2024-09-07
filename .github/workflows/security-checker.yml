@@ -1,0 +1,23 @@
+name: Security Checker
+
+on: [pull_request]
+
+jobs:
+  security-check:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.11.9"
+
+      - name: Install dependencies
+        run: pip install bandit
+
+      - name: Run Bandit
+        run: bandit -c pyproject.toml -r src/ -lll
+
