@@ -131,6 +131,7 @@ research_agent = Agent(
   verbose=True
 )
 
+# to perform a semantic search for a specified query from a text's content across the internet
 search_tool = SerperDevTool()
 
 task = Task(

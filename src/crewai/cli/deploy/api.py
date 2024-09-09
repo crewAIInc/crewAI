@@ -2,6 +2,8 @@ from os import getenv
 
 import requests
 
+from crewai.cli.deploy.utils import get_crewai_version
+
 
 class CrewAPI:
     """
@@ -13,9 +15,10 @@ class CrewAPI:
         self.headers = {
             "Authorization": f"Bearer {api_key}",
             "Content-Type": "application/json",
+            "User-Agent": f"CrewAI-CLI/{get_crewai_version()}",
         }
         self.base_url = getenv(
-            "CREWAI_BASE_URL", "https://dev.crewai.com/crewai_plus/api/v1/crews"
+            "CREWAI_BASE_URL", "https://crewai.com/crewai_plus/api/v1/crews"
         )
 
     def _make_request(self, method: str, endpoint: str, **kwargs) -> requests.Response:
