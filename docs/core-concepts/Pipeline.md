@@ -38,12 +38,18 @@ Each input creates its own run, flowing through all stages of the pipeline. Mult
 
 ## Creating a Pipeline
 
+There are 2 ways to create a pipeline in crewAI: using the CLI and manually. We recommend using the CLI approach for its simplicity and ease of use, but we'll cover both approaches.
+
+# TODO: UPDATE TO TALK ABOUT BOTH CLI & MANUAL METHOD
+
 When creating a pipeline, you define a series of stages, each consisting of either a single crew or a list of crews for parallel execution. The pipeline ensures that each stage is executed in order, with the output of one stage feeding into the next.
 
 ### Example: Assembling a Pipeline
 
 ```python
 from crewai import Crew, Agent, Task, Pipeline
+
+# Define your agents and tasks here...
 
 # Define your crews
 research_crew = Crew(
@@ -71,6 +77,8 @@ my_pipeline = Pipeline(
 ```
 
 ## Pipeline Methods
+
+# TODO: DROP PROCESS_RUNS AND UPDATE TO KICKOFF
 
 | Method           | Description                                                                                                                                                                    |
 | :--------------- | :----------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
