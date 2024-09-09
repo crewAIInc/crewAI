@@ -38,7 +38,15 @@ Each input creates its own run, flowing through all stages of the pipeline. Mult
 
 ## Creating a Pipeline
 
-There are 2 ways to create a pipeline in crewAI: using the CLI and manually. We recommend using the CLI approach for its simplicity and ease of use, but we'll cover both approaches.
+There are 2 ways to create a pipeline in crewAI: using the CLI and manually.
+
+The CLI approach will generate a working pipeline consisting of 2 crews in the crewAI . If you choose to go the manual route, you will need to create the agents, tasks, and crews yourself.
+
+We recommend using the CLI approach for its simplicity and ease of use, but we'll cover both approaches.
+
+### Using the CLI
+
+### Manual Method
 
 # TODO: UPDATE TO TALK ABOUT BOTH CLI & MANUAL METHOD
 
