@@ -29,14 +29,10 @@ class StructuredExampleFlow(Flow[ExampleState]):
         print(f"State after second_method: {self.state}")
         return "Second result"
 
-    @listen(start_method)
-    async def third_method(self, result):
-        print(f"Third method, received: {result}")
-        print(f"State before increment: {self.state}")
-        self.state.counter += 1
-        self.state.message += " - updated"
-        print(f"State after third_method: {self.state}")
-        return "Third result"
+    @listen(start_method or second_method)
+    async def logger(self):
+        print("OR METHOD RUNNING")
+        print("CURRENT STATE FROM OR: ", self.state)
 
 
 async def main():
