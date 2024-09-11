@@ -32,6 +32,6 @@ class StructuredExampleFlow(Flow[ExampleState]):
         return "Second result"
 
 
-# Run the flow
+# Instantiate and run the flow
 structured_flow = StructuredExampleFlow()
 structured_flow.run()
