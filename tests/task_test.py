@@ -15,7 +15,7 @@ from pydantic_core import ValidationError
 
 
 def test_task_tool_reflect_agent_tools():
-    from langchain.tools import tool
+    from crewai_tools import tool
 
     @tool
     def fake_tool() -> None:
@@ -39,7 +39,7 @@ def test_task_tool_reflect_agent_tools():
 
 
 def test_task_tool_takes_precedence_over_agent_tools():
-    from langchain.tools import tool
+    from crewai_tools import tool
 
     @tool
     def fake_tool() -> None:

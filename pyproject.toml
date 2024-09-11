@@ -30,6 +30,8 @@ agentops = { version = "^0.3.0", optional = true }
 embedchain = "^0.1.114"
 json-repair = "^0.25.2"
 auth0-python = "^4.7.1"
+poetry = "^1.8.3"
+litellm = "^1.44.22"
 
 [tool.poetry.extras]
 tools = ["crewai-tools"]

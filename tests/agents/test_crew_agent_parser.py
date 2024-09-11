@@ -1,13 +1,16 @@
 import pytest
 from crewai.agents.parser import CrewAgentParser
-from langchain_core.agents import AgentAction, AgentFinish
-from langchain_core.exceptions import OutputParserException
+from crewai.agents.crew_agent_executor import (
+    AgentAction,
+    AgentFinish,
+    OutputParserException,
+)
 
 
 @pytest.fixture
 def parser():
-    p = CrewAgentParser()
-    p.agent = MockAgent()
+    agent = MockAgent()
+    p = CrewAgentParser(agent)
     return p
 
 
@@ -206,21 +209,23 @@ def test_valid_final_answer_parsing(parser):
     )
     result = parser.parse(text)
     assert isinstance(result, AgentFinish)
-    assert result.return_values["output"] == "The temperature is 100 degrees"
+    assert result.output == "The temperature is 100 degrees"
 
 
 def test_missing_action_error(parser):
     text = "Thought: Let's find the temperature\nAction Input: what is the temperature in SF?"
     with pytest.raises(OutputParserException) as exc_info:
         parser.parse(text)
-    assert "Could not parse LLM output" in str(exc_info.value)
+    assert "Invalid Format: I missed the 'Action:' after 'Thought:'." in str(
+        exc_info.value
+    )
 
 
 def test_missing_action_input_error(parser):
     text = "Thought: Let's find the temperature\nAction: search"
     with pytest.raises(OutputParserException) as exc_info:
         parser.parse(text)
-    assert "Could not parse LLM output" in str(exc_info.value)
+    assert "I missed the 'Action Input:' after 'Action:'." in str(exc_info.value)
 
 
 def test_action_and_final_answer_error(parser):

@@ -102,14 +102,8 @@ class Telemetry:
                                     "max_iter": agent.max_iter,
                                     "max_rpm": agent.max_rpm,
                                     "i18n": agent.i18n.prompt_file,
-                                    "function_calling_llm": json.dumps(
-                                        self._safe_llm_attributes(
-                                            agent.function_calling_llm
-                                        )
-                                    ),
-                                    "llm": json.dumps(
-                                        self._safe_llm_attributes(agent.llm)
-                                    ),
+                                    "function_calling_llm": agent.function_calling_llm,
+                                    "llm": agent.llm,
                                     "delegation_enabled?": agent.allow_delegation,
                                     "allow_code_execution?": agent.allow_code_execution,
                                     "max_retry_limit": agent.max_retry_limit,
@@ -173,14 +167,8 @@ class Telemetry:
                                     "verbose?": agent.verbose,
                                     "max_iter": agent.max_iter,
                                     "max_rpm": agent.max_rpm,
-                                    "function_calling_llm": json.dumps(
-                                        self._safe_llm_attributes(
-                                            agent.function_calling_llm
-                                        )
-                                    ),
-                                    "llm": json.dumps(
-                                        self._safe_llm_attributes(agent.llm)
-                                    ),
+                                    "function_calling_llm": agent.function_calling_llm,
+                                    "llm": agent.llm,
                                     "delegation_enabled?": agent.allow_delegation,
                                     "allow_code_execution?": agent.allow_code_execution,
                                     "max_retry_limit": agent.max_retry_limit,
@@ -294,9 +282,7 @@ class Telemetry:
                 self._add_attribute(span, "tool_name", tool_name)
                 self._add_attribute(span, "attempts", attempts)
                 if llm:
-                    self._add_attribute(
-                        span, "llm", json.dumps(self._safe_llm_attributes(llm))
-                    )
+                    self._add_attribute(span, "llm", llm)
                 span.set_status(Status(StatusCode.OK))
                 span.end()
             except Exception:
@@ -316,9 +302,7 @@ class Telemetry:
                 self._add_attribute(span, "tool_name", tool_name)
                 self._add_attribute(span, "attempts", attempts)
                 if llm:
-                    self._add_attribute(
-                        span, "llm", json.dumps(self._safe_llm_attributes(llm))
-                    )
+                    self._add_attribute(span, "llm", llm)
                 span.set_status(Status(StatusCode.OK))
                 span.end()
             except Exception:
@@ -336,9 +320,7 @@ class Telemetry:
                     pkg_resources.get_distribution("crewai").version,
                 )
                 if llm:
-                    self._add_attribute(
-                        span, "llm", json.dumps(self._safe_llm_attributes(llm))
-                    )
+                    self._add_attribute(span, "llm", llm)
                 span.set_status(Status(StatusCode.OK))
                 span.end()
             except Exception:
@@ -491,7 +473,7 @@ class Telemetry:
                                 "max_iter": agent.max_iter,
                                 "max_rpm": agent.max_rpm,
                                 "i18n": agent.i18n.prompt_file,
-                                "llm": json.dumps(self._safe_llm_attributes(agent.llm)),
+                                "llm": agent.llm,
                                 "delegation_enabled?": agent.allow_delegation,
                                 "tools_names": [
                                     tool.name.casefold() for tool in agent.tools or []
@@ -567,11 +549,3 @@ class Telemetry:
             return span.set_attribute(key, value)
         except Exception:
             pass
-
-    def _safe_llm_attributes(self, llm):
-        attributes = ["name", "model_name", "model", "top_k", "temperature"]
-        if llm:
-            safe_attributes = {k: v for k, v in vars(llm).items() if k in attributes}
-            safe_attributes["class"] = llm.__class__.__name__
-            return safe_attributes
-        return {}

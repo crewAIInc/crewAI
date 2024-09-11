@@ -224,10 +224,8 @@ class BaseAgent(ABC, BaseModel):
 
         # Copy llm and clear callbacks
         existing_llm = shallow_copy(self.llm)
-        existing_llm.callbacks = []
         copied_data = self.model_dump(exclude=exclude)
         copied_data = {k: v for k, v in copied_data.items() if v is not None}
-
         copied_agent = type(self)(**copied_data, llm=existing_llm, tools=self.tools)
 
         return copied_agent

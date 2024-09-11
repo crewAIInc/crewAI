@@ -1,8 +1,5 @@
-from typing import Any, ClassVar, Optional
-
-from langchain.prompts import BasePromptTemplate, PromptTemplate
 from pydantic import BaseModel, Field
-
+from typing import Any, Optional
 from crewai.utilities import I18N
 
 
@@ -14,9 +11,9 @@ class Prompts(BaseModel):
     system_template: Optional[str] = None
     prompt_template: Optional[str] = None
     response_template: Optional[str] = None
-    SCRATCHPAD_SLICE: ClassVar[str] = "\n{agent_scratchpad}"
+    agent: Any
 
-    def task_execution(self) -> BasePromptTemplate:
+    def task_execution(self) -> str:
         """Generate a standard prompt for task execution."""
         slices = ["role_playing"]
         if len(self.tools) > 0:
@@ -42,12 +39,11 @@ class Prompts(BaseModel):
         system_template=None,
         prompt_template=None,
         response_template=None,
-    ) -> BasePromptTemplate:
+    ) -> str:
         """Constructs a prompt string from specified components."""
         if not system_template and not prompt_template:
             prompt_parts = [self.i18n.slice(component) for component in components]
-            prompt_parts.append(self.SCRATCHPAD_SLICE)
-            prompt = PromptTemplate.from_template("".join(prompt_parts))
+            prompt = "".join(prompt_parts)
         else:
             prompt_parts = [
                 self.i18n.slice(component)
@@ -56,9 +52,14 @@ class Prompts(BaseModel):
             ]
             system = system_template.replace("{{ .System }}", "".join(prompt_parts))
             prompt = prompt_template.replace(
-                "{{ .Prompt }}",
-                "".join([self.i18n.slice("task"), self.SCRATCHPAD_SLICE]),
+                "{{ .Prompt }}", "".join(self.i18n.slice("task"))
             )
             response = response_template.split("{{ .Response }}")[0]
-            prompt = PromptTemplate.from_template(f"{system}\n{prompt}\n{response}")
+            prompt = f"{system}\n{prompt}\n{response}"
+
+        prompt = (
+            prompt.replace("{goal}", self.agent.goal)
+            .replace("{role}", self.agent.role)
+            .replace("{backstory}", self.agent.backstory)
+        )
         return prompt

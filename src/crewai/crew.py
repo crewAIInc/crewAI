@@ -205,6 +205,11 @@ class Crew(BaseModel):
         if self.output_log_file:
             self._file_handler = FileHandler(self.output_log_file)
         self._rpm_controller = RPMController(max_rpm=self.max_rpm, logger=self._logger)
+        self.function_calling_llm = (
+            self.function_calling_llm.model_name
+            if hasattr(self.function_calling_llm, "model_name")
+            else self.function_calling_llm
+        )
         self._telemetry = Telemetry()
         self._telemetry.set_tracer()
         return self
@@ -588,8 +593,14 @@ class Crew(BaseModel):
                     "warning", "Manager agent should not have tools", color="orange"
                 )
                 manager.tools = []
+                raise Exception("Manager agent should not have tools")
             manager.tools = self.manager_agent.get_delegation_tools(self.agents)
         else:
+            self.manager_llm = (
+                self.manager_llm.model_name
+                if hasattr(self.manager_llm, "model_name")
+                else self.manager_llm
+            )
             manager = Agent(
                 role=i18n.retrieve("hierarchical_manager_agent", "role"),
                 goal=i18n.retrieve("hierarchical_manager_agent", "goal"),
@@ -921,16 +932,14 @@ class Crew(BaseModel):
     def calculate_usage_metrics(self) -> UsageMetrics:
         """Calculates and returns the usage metrics."""
         total_usage_metrics = UsageMetrics()
-
         for agent in self.agents:
             if hasattr(agent, "_token_process"):
                 token_sum = agent._token_process.get_summary()
                 total_usage_metrics.add_usage_metrics(token_sum)
-
         if self.manager_agent and hasattr(self.manager_agent, "_token_process"):
             token_sum = self.manager_agent._token_process.get_summary()
             total_usage_metrics.add_usage_metrics(token_sum)
-
+        self.usage_metrics = total_usage_metrics
         return total_usage_metrics
 
     def test(

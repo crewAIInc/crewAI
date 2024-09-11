@@ -1,6 +1,7 @@
 from typing import Any, Optional, Type
 
 import instructor
+from litellm import completion
 from pydantic import BaseModel, Field, PrivateAttr, model_validator
 
 
@@ -12,7 +13,7 @@ class Instructor(BaseModel):
     agent: Optional[Any] = Field(
         description="The agent that needs to use instructor.", default=None
     )
-    llm: Optional[Any] = Field(
+    llm: Optional[str] = Field(
         description="The agent that needs to use instructor.", default=None
     )
     instructions: Optional[str] = Field(
@@ -29,8 +30,8 @@ class Instructor(BaseModel):
         if self.agent and not self.llm:
             self.llm = self.agent.function_calling_llm or self.agent.llm
 
-        self._client = instructor.patch(
-            self.llm.client._client,
+        self._client = instructor.from_litellm(
+            completion,
             mode=instructor.Mode.TOOLS,
         )
         return self
@@ -45,6 +46,6 @@ class Instructor(BaseModel):
             messages.append({"role": "system", "content": self.instructions})
 
         model = self._client.chat.completions.create(
-            model=self.llm.model_name, response_model=self.model, messages=messages
+            model=self.llm, response_model=self.model, messages=messages
         )
         return model

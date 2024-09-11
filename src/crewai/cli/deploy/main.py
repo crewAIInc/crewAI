@@ -117,7 +117,7 @@ class DeployCommand:
         else:
             self._handle_error(json_response)
 
-    def create_crew(self, confirm: bool) -> None:
+    def create_crew(self, confirm: bool = False) -> None:
         """
         Create a new crew deployment.
         """

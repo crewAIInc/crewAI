@@ -1,10 +1,6 @@
 import re
 from typing import Any, Union
-
 from json_repair import repair_json
-from langchain.agents.output_parsers import ReActSingleInputOutputParser
-from langchain_core.agents import AgentAction, AgentFinish
-from langchain_core.exceptions import OutputParserException
 
 from crewai.utilities import I18N
 
@@ -14,7 +10,35 @@ MISSING_ACTION_INPUT_AFTER_ACTION_ERROR_MESSAGE = "I did it wrong. Invalid Forma
 FINAL_ANSWER_AND_PARSABLE_ACTION_ERROR_MESSAGE = "I did it wrong. Tried to both perform Action and give a Final Answer at the same time, I must do one or the other"
 
 
-class CrewAgentParser(ReActSingleInputOutputParser):
+class AgentAction:
+    tool: str
+    tool_input: str
+    text: str
+    result: str
+
+    def __init__(self, tool: str, tool_input: str, text: str):
+        self.tool = tool
+        self.tool_input = tool_input
+        self.text = text
+
+
+class AgentFinish:
+    output: str
+    text: str
+
+    def __init__(self, output: str, text: str):
+        self.output = output
+        self.text = text
+
+
+class OutputParserException(Exception):
+    error: str
+
+    def __init__(self, error: str):
+        self.error = error
+
+
+class CrewAgentParser:
     """Parses ReAct-style LLM calls that have a single tool input.
 
     Expects output to be in one of two formats.
@@ -38,6 +62,9 @@ class CrewAgentParser(ReActSingleInputOutputParser):
     _i18n: I18N = I18N()
     agent: Any = None
 
+    def __init__(self, agent: Any):
+        self.agent = agent
+
     def parse(self, text: str) -> Union[AgentAction, AgentFinish]:
         includes_answer = FINAL_ANSWER_ACTION in text
         regex = (
@@ -60,27 +87,19 @@ class CrewAgentParser(ReActSingleInputOutputParser):
             return AgentAction(clean_action, safe_tool_input, text)
 
         elif includes_answer:
-            return AgentFinish(
-                {"output": text.split(FINAL_ANSWER_ACTION)[-1].strip()}, text
-            )
+            return AgentFinish(text.split(FINAL_ANSWER_ACTION)[-1].strip(), text)
 
         if not re.search(r"Action\s*\d*\s*:[\s]*(.*?)", text, re.DOTALL):
             self.agent.increment_formatting_errors()
             raise OutputParserException(
-                f"Could not parse LLM output: `{text}`",
-                observation=f"{MISSING_ACTION_AFTER_THOUGHT_ERROR_MESSAGE}\n{self._i18n.slice('final_answer_format')}",
-                llm_output=text,
-                send_to_llm=True,
+                f"{MISSING_ACTION_AFTER_THOUGHT_ERROR_MESSAGE}\n{self._i18n.slice('final_answer_format')}",
             )
         elif not re.search(
             r"[\s]*Action\s*\d*\s*Input\s*\d*\s*:[\s]*(.*)", text, re.DOTALL
         ):
             self.agent.increment_formatting_errors()
             raise OutputParserException(
-                f"Could not parse LLM output: `{text}`",
-                observation=MISSING_ACTION_INPUT_AFTER_ACTION_ERROR_MESSAGE,
-                llm_output=text,
-                send_to_llm=True,
+                MISSING_ACTION_INPUT_AFTER_ACTION_ERROR_MESSAGE,
             )
         else:
             format = self._i18n.slice("format_without_tools")
@@ -88,9 +107,6 @@ class CrewAgentParser(ReActSingleInputOutputParser):
             self.agent.increment_formatting_errors()
             raise OutputParserException(
                 error,
-                observation=error,
-                llm_output=text,
-                send_to_llm=True,
             )
 
     def _clean_action(self, text: str) -> str:
