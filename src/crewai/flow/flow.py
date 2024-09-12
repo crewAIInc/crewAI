@@ -50,7 +50,6 @@ class FlowMeta(type):
         setattr(cls, "_start_methods", start_methods)
         setattr(cls, "_listeners", listeners)
 
-        # Inject the state type hint
         if "initial_state" in dct:
             initial_state = dct["initial_state"]
             if isinstance(initial_state, type) and issubclass(initial_state, BaseModel):
@@ -89,7 +88,7 @@ class Flow(Generic[T], metaclass=FlowMeta):
     def state(self) -> T:
         return self._state
 
-    async def run(self):
+    async def kickoff(self):
         if not self._start_methods:
             raise ValueError("No start method defined")
 

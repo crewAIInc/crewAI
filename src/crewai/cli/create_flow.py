@@ -34,9 +34,7 @@ def create_flow(name):
     tools_template_files = ["tools/__init__.py", "tools/custom_tool.py"]
 
     crew_folders = [
-        "research_crew",
-        "write_linkedin_crew",
-        "write_x_crew",
+        "poem_crew",
     ]
 
     def process_file(src_file, dst_file):

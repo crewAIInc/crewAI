@@ -11,6 +11,7 @@ asyncio = "*"
 
 [tool.poetry.scripts]
 {{folder_name}} = "{{folder_name}}.main:main"
+run_crew = "{{folder_name}}.main:main"
 
 [build-system]
 requires = ["poetry-core"]

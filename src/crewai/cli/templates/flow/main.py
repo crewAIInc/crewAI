@@ -1,39 +1,55 @@
 #!/usr/bin/env python
 import asyncio
+from random import randint
 
 from pydantic import BaseModel
 from crewai.flow.flow import Flow, listen, start
+from .crews.poem_crew.poem_crew import PoemCrew
 
-# TODO: THERE SHOULD BE 3 FLOWS IN HERE: SIMPLE, ASYNC, BRANCHING (with router)
+class PoemState(BaseModel):
+    sentence_count: int = 1
+    poem: str = ""
 
-class ExampleState(BaseModel):
-    counter: int = 0
-    message: str = ""
-
-class ExampleFlow(Flow[ExampleState]):
-    initial_state = ExampleState
+class PoemFlow(Flow[PoemState]):
+    initial_state = PoemState
 
     @start()
-    def start_method(self):
-        print("Starting the structured flow")
-        self.state.message = "Hello from structured flow"
+    def generate_sentence_count(self):
+        print("Generating sentence count")
+        # Generate a number between 1 and 5
+        self.state.sentence_count = randint(1, 5)  
 
-    @listen(start_method)
-    def second_method(self, result):
-        print(f"Second method, received: {result}")
-        print(f"State before increment: {self.state}")
-        self.state.counter += 1
-        self.state.message += " - updated"
-        print(f"State after second_method: {self.state}")
-        return "Second result"
+    @listen(generate_sentence_count)
+    def generate_poem(self):
+        print("Generating poem")
+        print(f"State before poem: {self.state}")
+        poem_crew = PoemCrew().crew()
+        result = poem_crew.kickoff(inputs={"sentence_count": self.state.sentence_count})
+        
+        print("Poem generated", result.raw)
+        self.state.poem = result.raw
+        
+        print(f"State after generate_poem: {self.state}")
 
-async def run(): 
+    @listen(generate_poem)
+    def save_poem(self):
+        print("Saving poem")
+        print(f"State before save_poem: {self.state}")
+        with open("poem.txt", "w") as f:
+            f.write(self.state.poem)
+        print(f"State after save_poem: {self.state}")
+
+async def run():
     """
     Run the flow.
     """
-    example_flow = ExampleFlow()
-    await example_flow.run()
+    poem_flow = PoemFlow()
+    await poem_flow.kickoff()
+
+
+def main():
+    asyncio.run(run())
 
 
 if __name__ == "__main__":
-    asyncio.run(run())
+    main()
