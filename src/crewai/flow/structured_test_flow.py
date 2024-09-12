@@ -9,7 +9,7 @@ class ExampleState(BaseModel):
     message: str = ""
 
 
-class StructuredExampleFlow(Flow[ExampleState]):
+class StructuredExampleFlow(Flow):
     initial_state = ExampleState
 
     @start()
@@ -41,7 +41,7 @@ class StructuredExampleFlow(Flow[ExampleState]):
 
 async def main():
     flow = StructuredExampleFlow()
-    await flow.run()
+    await flow.kickoff()
 
 
 asyncio.run(main())

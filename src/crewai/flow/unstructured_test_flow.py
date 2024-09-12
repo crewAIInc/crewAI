@@ -1,3 +1,5 @@
+import asyncio
+
 from crewai.flow.flow import Flow, listen, start
 
 
@@ -23,6 +25,9 @@ class FlexibleExampleFlow(Flow):
         return "Third result"
 
 
-# Run the flows
-flexible_flow = FlexibleExampleFlow()
-flexible_flow.run()
+async def main():
+    flow = FlexibleExampleFlow()
+    await flow.kickoff()
+
+
+asyncio.run(main())
