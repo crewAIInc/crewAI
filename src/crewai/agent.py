@@ -98,7 +98,7 @@ class Agent(BaseAgent):
     allow_code_execution: Optional[bool] = Field(
         default=False, description="Enable code execution for the agent."
     )
-    respect_context_window: Optional[bool] = Field(
+    respect_context_window: bool = Field(
         default=True,
         description="Keep messages under the context window size by summarizing content.",
     )

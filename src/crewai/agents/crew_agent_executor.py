@@ -24,7 +24,7 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
         task: Any,
         crew: Any,
         agent: Any,
-        prompt: str,
+        prompt: dict[str, str],
         max_iter: int,
         tools: List[Any],
         tools_names: str,
@@ -260,5 +260,5 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
     def _format_answer(self, answer: str) -> str:
         return CrewAgentParser(agent=self.agent).parse(answer)
 
-    def _format_msg(self, prompt: str, role: str = "user") -> List[Dict[str, str]]:
+    def _format_msg(self, prompt: str, role: str = "user") -> Dict[str, str]:
         return {"role": role, "content": prompt}
