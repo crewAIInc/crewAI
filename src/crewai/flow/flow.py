@@ -4,6 +4,8 @@ from typing import Any, Callable, Dict, Generic, List, Set, Type, TypeVar, Union
 
 from pydantic import BaseModel
 
+# TODO: Allow people to pass results from one method to another and not just state
+
 T = TypeVar("T", bound=Union[BaseModel, Dict[str, Any]])
 
 
