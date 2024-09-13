@@ -9,8 +9,7 @@ class ExampleState(BaseModel):
     message: str = ""
 
 
-class StructuredExampleFlow(Flow):
-    initial_state = ExampleState
+class StructuredExampleFlow(Flow[ExampleState]):
 
     @start()
     async def start_method(self):

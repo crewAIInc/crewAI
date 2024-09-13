@@ -115,6 +115,12 @@ class Flow(Generic[T], metaclass=FlowMeta):
     _listeners: Dict[str, tuple[str, List[str]]] = {}
     initial_state: Union[Type[T], T, None] = None
 
+    def __class_getitem__(cls, item):
+        print(f"[Flow.__class_getitem__] Getting initial state type: {item}")
+        class _FlowGeneric(cls):
+            _initial_state_T = item
+        return _FlowGeneric
+
     def __init__(self):
         print("[Flow.__init__] Initializing Flow")
         self._methods: Dict[str, Callable] = {}
@@ -134,7 +140,9 @@ class Flow(Generic[T], metaclass=FlowMeta):
 
     def _create_initial_state(self) -> T:
         print("[Flow._create_initial_state] Creating initial state")
-        if self.initial_state is None:
+        if self.initial_state is None and hasattr(self, "_initial_state_T"):
+            return self._initial_state_T()
+        elif self.initial_state is None:
             return {}  # type: ignore
         elif isinstance(self.initial_state, type):
             return self.initial_state()
