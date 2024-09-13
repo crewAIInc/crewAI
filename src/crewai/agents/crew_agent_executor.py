@@ -1,4 +1,4 @@
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Union
 
 from crewai.agents.agent_builder.base_agent_executor_mixin import CrewAgentExecutorMixin
 from crewai.agents.parser import CrewAgentParser
@@ -270,7 +270,7 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
         prompt = prompt.replace("{tools}", inputs["tools"])
         return prompt
 
-    def _format_answer(self, answer: str) -> str:
+    def _format_answer(self, answer: str) -> Union[AgentAction, AgentFinish]:
         return CrewAgentParser(agent=self.agent).parse(answer)
 
     def _format_msg(self, prompt: str, role: str = "user") -> Dict[str, str]:
