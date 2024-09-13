@@ -83,7 +83,7 @@ class TaskEvaluator:
             instructions = f"{instructions}\n\nReturn only valid JSON with the following schema:\n```json\n{model_schema}\n```"
 
         converter = Converter(
-            llm=self.function_calling_llm,
+            llm=self.llm,
             text=evaluation_query,
             model=TaskEvaluation,
             instructions=instructions,

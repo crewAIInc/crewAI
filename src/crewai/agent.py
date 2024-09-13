@@ -73,6 +73,10 @@ class Agent(BaseAgent):
         default=None,
         description="Callback to be executed after each step of the agent execution.",
     )
+    use_system_prompt: Optional[bool] = Field(
+        default=True,
+        description="Use system prompt for the agent.",
+    )
     llm: Any = Field(
         description="Language model that will run the agent.", default="gpt-4o"
     )
@@ -206,6 +210,7 @@ class Agent(BaseAgent):
             agent=self,
             tools=tools,
             i18n=self.i18n,
+            use_system_prompt=self.use_system_prompt,
             system_template=self.system_template,
             prompt_template=self.prompt_template,
             response_template=self.response_template,

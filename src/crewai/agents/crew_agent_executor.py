@@ -57,22 +57,22 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
         self.respect_context_window = respect_context_window
         self.request_within_rpm_limit = request_within_rpm_limit
         self.ask_for_human_input = False
-        self.messages = []
+        self.messages: List[Dict[str, str]] = []
         self.iterations = 0
         self.have_forced_answer = False
         self.name_to_tool_map = {tool.name: tool for tool in self.tools}
 
     def invoke(self, inputs: Dict[str, str]) -> Dict[str, Any]:
         if "system" in self.prompt:
-            system_prompt = self._format_prompt(self.prompt["system"], inputs)
-            user_prompt = self._format_prompt(self.prompt["user"], inputs)
+            system_prompt = self._format_prompt(self.prompt.get("system", ""), inputs)
+            user_prompt = self._format_prompt(self.prompt.get("user", ""), inputs)
 
             self.messages.append(self._format_msg(system_prompt, role="system"))
             self.messages.append(self._format_msg(user_prompt))
         else:
-            user_prompt = self._format_prompt(self.prompt["prompt"], inputs)
+            user_prompt = self._format_prompt(self.prompt.get("prompt", ""), inputs)
             self.messages.append(self._format_msg(user_prompt))
-        self.ask_for_human_input = inputs.get("ask_for_human_input", False)
+        self.ask_for_human_input = bool(inputs.get("ask_for_human_input", False))
 
         formatted_answer = self._invoke_loop()
 
@@ -135,7 +135,7 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
 
         return formatted_answer
 
-    def _use_tool(self, agent_action: AgentAction) -> None:
+    def _use_tool(self, agent_action: AgentAction) -> Any:
         tool_usage = ToolUsage(
             tools_handler=self.tools_handler,
             tools=self.tools,
@@ -143,7 +143,7 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
             tools_description=self.tools_description,
             tools_names=self.tools_names,
             function_calling_llm=self.function_calling_llm,
-            task=self.task,
+            task=self.task,  # type: ignore[arg-type]
             agent=self.agent,
             action=agent_action,
         )
@@ -188,7 +188,7 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
             )
             summarized_contents.append(summary)
 
-        merged_summary = " ".join(summarized_contents)
+        merged_summary = " ".join(str(content) for content in summarized_contents)
 
         self.messages = [
             self._format_msg(
@@ -226,6 +226,7 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
         ):
             training_data = CrewTrainingHandler(TRAINING_DATA_FILE).load()
             if training_data.get(agent_id):
+                # type: ignore[union-attr]
                 training_data[agent_id][self.crew._train_iteration][
                     "improved_output"
                 ] = result.output
@@ -238,9 +239,17 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
                 "agent": agent_id,
                 "agent_role": self.agent.role,
             }
-            CrewTrainingHandler(TRAINING_DATA_FILE).append(
-                self.crew._train_iteration, agent_id, training_data
-            )
+            # type: ignore[union-attr]
+            if isinstance(self.crew._train_iteration, int):
+                CrewTrainingHandler(TRAINING_DATA_FILE).append(
+                    self.crew._train_iteration, agent_id, training_data
+                )
+            else:
+                self._logger.log(
+                    "error",
+                    "Invalid train iteration type. Expected int.",
+                    color="red",
+                )
 
     def _format_prompt(self, prompt: str, inputs: Dict[str, str]) -> str:
         prompt = prompt.replace("{input}", inputs["input"])

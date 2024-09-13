@@ -201,7 +201,8 @@ class Crew(BaseModel):
         self._rpm_controller = RPMController(max_rpm=self.max_rpm, logger=self._logger)
         self.function_calling_llm = (
             self.function_calling_llm.model_name
-            if hasattr(self.function_calling_llm, "model_name")
+            if self.function_calling_llm is not None
+            and hasattr(self.function_calling_llm, "model_name")
             else self.function_calling_llm
         )
         self._telemetry = Telemetry()

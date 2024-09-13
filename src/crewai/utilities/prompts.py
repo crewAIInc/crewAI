@@ -11,9 +11,10 @@ class Prompts(BaseModel):
     system_template: Optional[str] = None
     prompt_template: Optional[str] = None
     response_template: Optional[str] = None
+    use_system_prompt: Optional[bool] = False
     agent: Any
 
-    def task_execution(self) -> str:
+    def task_execution(self) -> dict[str, str]:
         """Generate a standard prompt for task execution."""
         slices = ["role_playing"]
         if len(self.tools) > 0:
@@ -23,7 +24,11 @@ class Prompts(BaseModel):
         system = self._build_prompt(slices)
         slices.append("task")
 
-        if not self.system_template and not self.prompt_template:
+        if (
+            not self.system_template
+            and not self.prompt_template
+            and self.use_system_prompt
+        ):
             return {
                 "system": system,
                 "user": self._build_prompt(["task"]),

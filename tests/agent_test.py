@@ -856,6 +856,31 @@ def test_interpolate_inputs():
     assert agent.backstory == "I am the master of nothing"
 
 
+def test_not_using_system_prompt():
+    agent = Agent(
+        role="{topic} specialist",
+        goal="Figure {goal} out",
+        backstory="I am the master of {role}",
+        use_system_prompt=False,
+    )
+
+    agent.create_agent_executor()
+    assert not agent.agent_executor.prompt.get("user")
+    assert not agent.agent_executor.prompt.get("system")
+
+
+def test_using_system_prompt():
+    agent = Agent(
+        role="{topic} specialist",
+        goal="Figure {goal} out",
+        backstory="I am the master of {role}",
+    )
+
+    agent.create_agent_executor()
+    assert agent.agent_executor.prompt.get("user")
+    assert agent.agent_executor.prompt.get("system")
+
+
 def test_system_and_prompt_template():
     agent = Agent(
         role="{topic} specialist",
