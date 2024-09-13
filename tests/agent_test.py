@@ -67,7 +67,7 @@ def test_agent_execution():
     )
 
     output = agent.execute_task(task)
-    assert output == "The result of the math operation is 2."
+    assert output == "The result of the math operation 1 + 1 is 2."
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
@@ -91,7 +91,7 @@ def test_agent_execution_with_tools():
         expected_output="The result of the multiplication.",
     )
     output = agent.execute_task(task)
-    assert output == "12"
+    assert output == "The result of 3 times 4 is 12."
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
@@ -122,7 +122,7 @@ def test_logging_tool_usage():
     tool_usage = InstructorToolCalling(
         tool_name=multiplier.name, arguments={"first_number": 3, "second_number": 4}
     )
-    assert output == "12"
+    assert output == "The result of multiplying 3 times 4 is 12."
     assert agent.tools_handler.last_used_tool.tool_name == tool_usage.tool_name
     assert agent.tools_handler.last_used_tool.arguments == tool_usage.arguments
 
@@ -276,7 +276,7 @@ def test_agent_execution_with_specific_tools():
         expected_output="The result of the multiplication.",
     )
     output = agent.execute_task(task=task, tools=[multiplier])
-    assert output == "12"
+    assert output == "The result of 3 times 4 is 12."
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
@@ -312,7 +312,7 @@ def test_agent_custom_max_iterations():
 @pytest.mark.vcr(filter_headers=["authorization"])
 def test_agent_repeated_tool_usage(capsys):
     @tool
-    def get_final_answer(anything: str) -> float:
+    def get_final_answer() -> float:
         """Get the final answer but don't give it yet, just re-use this
         tool non-stop."""
         return 42

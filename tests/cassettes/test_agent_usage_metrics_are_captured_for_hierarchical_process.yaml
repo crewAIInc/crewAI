@@ -1,7 +1,7 @@
 interactions:
 - request:
-    body: '{"messages": [{"role": "user", "content": "You are Crew Manager. You are
-      a seasoned manager with a knack for getting the best out of your team.\nYou
+    body: '{"messages": [{"role": "system", "content": "You are Crew Manager. You
+      are a seasoned manager with a knack for getting the best out of your team.\nYou
       are also known for your ability to delegate work to the right people, and to
       ask the right questions to get the best out of your team.\nEven though you don''t
       perform tasks by yourself, you have a lot of experience in the field, which
@@ -32,11 +32,12 @@ interactions:
       just a simple python dictionary, enclosed in curly braces, using \" to wrap
       keys and values.\nObservation: the result of the action\n\nOnce all necessary
       information is gathered:\n\nThought: I now know the final answer\nFinal Answer:
-      the final answer to the original input question\n\nCurrent Task: Ask the researched
-      to say hi!\n\nThis is the expect criteria for your final answer: Howdy! \n you
-      MUST return the actual complete content as the final answer, not a summary.\n\nBegin!
-      This is VERY important to you, use the tools available and give your best Final
-      Answer, your job depends on it!\n\nThought:"}], "model": "gpt-4o", "stop": ["\nObservation"]}'
+      the final answer to the original input question\n"}, {"role": "user", "content":
+      "\nCurrent Task: Ask the researched to say hi!\n\nThis is the expect criteria
+      for your final answer: Howdy!\nyou MUST return the actual complete content as
+      the final answer, not a summary.\n\nBegin! This is VERY important to you, use
+      the tools available and give your best Final Answer, your job depends on it!\n\nThought:"}],
+      "model": "gpt-4o", "stop": ["\nObservation"]}'
     headers:
       accept:
       - application/json
@@ -45,16 +46,16 @@ interactions:
       connection:
       - keep-alive
       content-length:
-      - '2898'
+      - '2931'
       content-type:
       - application/json
       cookie:
-      - _cfuvid=8r8yFLG2b7e3n6pklgpsT05MHRvfdePz1ckAFvRQY8E-1725949790252-0.0.1.1-604800000;
-        __cf_bm=fuuc.ZDO3Y9B7nXE_8fBn7ykDAvAaK1VdxjZw0MTtsE-1725949790-1.0.1.1-pAJ7BWJMj1j3gS2ySR6xSBO7uFrjcB6ehFra4QVq14JqaiG4VDIjDO1C3WueKGRnSALSkpLQyJcJ2YVd_pXglQ
+      - __cf_bm=pgsskMPipgeSB6HhnkjwcOEfengIvt0p9whKNmTJVLs-1726215280-1.0.1.1-Gtqb.nO1U.cHTnd9mR9sEA5tpVo1.pexRrxqXOkn.6Mzja8mLG1URJsOLTfjMAAYpWaUQe4Rjmnr6lqQk5hAxQ;
+        _cfuvid=dp2yoCmGHVlURh_U78_UoIfnhcO5UhufnL5whkUSMTQ-1726214380689-0.0.1.1-604800000
       host:
       - api.openai.com
       user-agent:
-      - OpenAI/Python 1.44.0
+      - OpenAI/Python 1.45.0
       x-stainless-arch:
       - arm64
       x-stainless-async:
@@ -64,7 +65,7 @@ interactions:
       x-stainless-os:
       - MacOS
       x-stainless-package-version:
-      - 1.44.0
+      - 1.45.0
       x-stainless-raw-response:
       - 'true'
       x-stainless-runtime:
@@ -74,21 +75,24 @@ interactions:
     method: POST
     uri: https://api.openai.com/v1/chat/completions
   response:
-    content: "{\n  \"id\": \"chatcmpl-A5ofooOm4vHEgmJisQ2sqUSRMwdIy\",\n  \"object\":
-      \"chat.completion\",\n  \"created\": 1725949792,\n  \"model\": \"gpt-4o-2024-05-13\",\n
+    content: "{\n  \"id\": \"chatcmpl-A6vkm2JnEJolvn6fOmyMPw1YmjbnA\",\n  \"object\":
+      \"chat.completion\",\n  \"created\": 1726215336,\n  \"model\": \"gpt-4o-2024-05-13\",\n
       \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
-      \"assistant\",\n        \"content\": \"I need to ask the researcher to greet
-      by saying \\\"hi\\\".\\n\\nAction: Ask question to coworker\\nAction Input:
-      {\\\"question\\\": \\\"Can you say hi?\\\", \\\"context\\\": \\\"We need a greeting
-      from you that simply says hi.\\\", \\\"coworker\\\": \\\"Researcher\\\"}\\n\",\n
-      \       \"refusal\": null\n      },\n      \"logprobs\": null,\n      \"finish_reason\":
-      \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 638,\n    \"completion_tokens\":
-      57,\n    \"total_tokens\": 695\n  },\n  \"system_fingerprint\": \"fp_25624ae3a5\"\n}\n"
+      \"assistant\",\n        \"content\": \"Thought: I need to ask the Researcher
+      to say hi in a specific way, using the word \\\"Howdy!\\\" \\n\\nAction: Ask
+      question to coworker\\nAction Input: {\\\"question\\\": \\\"Can you say hi using
+      the word 'Howdy!'?\\\", \\\"context\\\": \\\"We need to greet someone in a friendly
+      manner using the specific word 'Howdy!'. Please ensure you respond exactly with
+      that.\\\" , \\\"coworker\\\": \\\"Researcher\\\"}\",\n        \"refusal\": null\n
+      \     },\n      \"logprobs\": null,\n      \"finish_reason\": \"stop\"\n    }\n
+      \ ],\n  \"usage\": {\n    \"prompt_tokens\": 642,\n    \"completion_tokens\":
+      89,\n    \"total_tokens\": 731,\n    \"completion_tokens_details\": {\n      \"reasoning_tokens\":
+      0\n    }\n  },\n  \"system_fingerprint\": \"fp_25624ae3a5\"\n}\n"
     headers:
       CF-Cache-Status:
       - DYNAMIC
       CF-RAY:
-      - 8c0d5db869a9cf35-SJC
+      - 8c26b0b69cdd2ab9-LAX
       Connection:
       - keep-alive
       Content-Encoding:
@@ -96,7 +100,7 @@ interactions:
       Content-Type:
       - application/json
       Date:
-      - Tue, 10 Sep 2024 06:29:53 GMT
+      - Fri, 13 Sep 2024 08:15:37 GMT
       Server:
       - cloudflare
       Transfer-Encoding:
@@ -110,7 +114,7 @@ interactions:
       openai-organization:
       - crewai-iuxna1
       openai-processing-ms:
-      - '730'
+      - '1400'
       openai-version:
       - '2020-10-01'
       strict-transport-security:
@@ -128,22 +132,24 @@ interactions:
       x-ratelimit-reset-tokens:
       - 1ms
       x-request-id:
-      - req_ae003e70db1e8725b09ec6bebb58f78c
+      - req_d0c296b6a0d9221b1df60af860126ad1
     http_version: HTTP/1.1
     status_code: 200
 - request:
-    body: '{"messages": [{"role": "user", "content": "You are Researcher. You''re
+    body: '{"messages": [{"role": "system", "content": "You are Researcher. You''re
       love to sey howdy.\nYour personal goal is: Be super empathetic.\nTo give my
       best complete final answer to the task use the exact following format:\n\nThought:
       I now can give a great answer\nFinal Answer: Your final answer must be the great
       and the most complete as possible, it must be outcome described.\n\nI MUST use
-      these formats, my job depends on it!\nCurrent Task: Can you say hi?\n\nThis
-      is the expect criteria for your final answer: Your best answer to your coworker
-      asking you this, accounting for the context shared. \n you MUST return the actual
-      complete content as the final answer, not a summary.\n\nThis is the context
-      you''re working with:\nWe need a greeting from you that simply says hi.\n\nBegin!
-      This is VERY important to you, use the tools available and give your best Final
-      Answer, your job depends on it!\n\nThought:"}], "model": "gpt-4o", "stop": ["\nObservation"]}'
+      these formats, my job depends on it!"}, {"role": "user", "content": "\nCurrent
+      Task: Can you say hi using the word ''Howdy!''?\n\nThis is the expect criteria
+      for your final answer: Your best answer to your coworker asking you this, accounting
+      for the context shared.\nyou MUST return the actual complete content as the
+      final answer, not a summary.\n\nThis is the context you''re working with:\nWe
+      need to greet someone in a friendly manner using the specific word ''Howdy!''.
+      Please ensure you respond exactly with that.\n\nBegin! This is VERY important
+      to you, use the tools available and give your best Final Answer, your job depends
+      on it!\n\nThought:"}], "model": "gpt-4o", "stop": ["\nObservation"]}'
     headers:
       accept:
       - application/json
@@ -152,16 +158,16 @@ interactions:
       connection:
       - keep-alive
       content-length:
-      - '957'
+      - '1090'
       content-type:
       - application/json
       cookie:
-      - _cfuvid=8r8yFLG2b7e3n6pklgpsT05MHRvfdePz1ckAFvRQY8E-1725949790252-0.0.1.1-604800000;
-        __cf_bm=fuuc.ZDO3Y9B7nXE_8fBn7ykDAvAaK1VdxjZw0MTtsE-1725949790-1.0.1.1-pAJ7BWJMj1j3gS2ySR6xSBO7uFrjcB6ehFra4QVq14JqaiG4VDIjDO1C3WueKGRnSALSkpLQyJcJ2YVd_pXglQ
+      - __cf_bm=pgsskMPipgeSB6HhnkjwcOEfengIvt0p9whKNmTJVLs-1726215280-1.0.1.1-Gtqb.nO1U.cHTnd9mR9sEA5tpVo1.pexRrxqXOkn.6Mzja8mLG1URJsOLTfjMAAYpWaUQe4Rjmnr6lqQk5hAxQ;
+        _cfuvid=dp2yoCmGHVlURh_U78_UoIfnhcO5UhufnL5whkUSMTQ-1726214380689-0.0.1.1-604800000
       host:
       - api.openai.com
       user-agent:
-      - OpenAI/Python 1.44.0
+      - OpenAI/Python 1.45.0
       x-stainless-arch:
       - arm64
       x-stainless-async:
@@ -171,7 +177,7 @@ interactions:
       x-stainless-os:
       - MacOS
       x-stainless-package-version:
-      - 1.44.0
+      - 1.45.0
       x-stainless-raw-response:
       - 'true'
       x-stainless-runtime:
@@ -181,19 +187,19 @@ interactions:
     method: POST
     uri: https://api.openai.com/v1/chat/completions
   response:
-    content: "{\n  \"id\": \"chatcmpl-A5ofpdekvNOpXqWlHn2aMguzxY4Ci\",\n  \"object\":
-      \"chat.completion\",\n  \"created\": 1725949793,\n  \"model\": \"gpt-4o-2024-05-13\",\n
+    content: "{\n  \"id\": \"chatcmpl-A6vkoBayktgWLRK3489ZYSLV2ltHH\",\n  \"object\":
+      \"chat.completion\",\n  \"created\": 1726215338,\n  \"model\": \"gpt-4o-2024-05-13\",\n
       \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
-      \"assistant\",\n        \"content\": \"Thought: I now can give a great answer\\nFinal
+      \"assistant\",\n        \"content\": \"I now can give a great answer\\nFinal
       Answer: Howdy!\",\n        \"refusal\": null\n      },\n      \"logprobs\":
       null,\n      \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\":
-      189,\n    \"completion_tokens\": 16,\n    \"total_tokens\": 205\n  },\n  \"system_fingerprint\":
-      \"fp_25624ae3a5\"\n}\n"
+      213,\n    \"completion_tokens\": 14,\n    \"total_tokens\": 227,\n    \"completion_tokens_details\":
+      {\n      \"reasoning_tokens\": 0\n    }\n  },\n  \"system_fingerprint\": \"fp_25624ae3a5\"\n}\n"
     headers:
       CF-Cache-Status:
       - DYNAMIC
       CF-RAY:
-      - 8c0d5dc10f5bcf35-SJC
+      - 8c26b0c89da92ab9-LAX
       Connection:
       - keep-alive
       Content-Encoding:
@@ -201,7 +207,7 @@ interactions:
       Content-Type:
       - application/json
       Date:
-      - Tue, 10 Sep 2024 06:29:53 GMT
+      - Fri, 13 Sep 2024 08:15:38 GMT
       Server:
       - cloudflare
       Transfer-Encoding:
@@ -215,7 +221,7 @@ interactions:
       openai-organization:
       - crewai-iuxna1
       openai-processing-ms:
-      - '353'
+      - '261'
       openai-version:
       - '2020-10-01'
       strict-transport-security:
@@ -227,175 +233,18 @@ interactions:
       x-ratelimit-remaining-requests:
       - '9999'
       x-ratelimit-remaining-tokens:
-      - '29999770'
+      - '29999745'
       x-ratelimit-reset-requests:
       - 6ms
       x-ratelimit-reset-tokens:
       - 0s
       x-request-id:
-      - req_b2b7c2ff8efec8666904566437542d89
+      - req_f04a848a7b5d77c7a77524d36f687173
     http_version: HTTP/1.1
     status_code: 200
 - request:
-    body: !!binary |
-      CqE4CiQKIgoMc2VydmljZS5uYW1lEhIKEGNyZXdBSS10ZWxlbWV0cnkS+DcKEgoQY3Jld2FpLnRl
-      bGVtZXRyeRK6BwoQzR8uFLd3a9oR2KfgR4ceihIIv0hTgHc+8N0qDENyZXcgQ3JlYXRlZDABOYij
-      WmowzvMXQZDpXGowzvMXShoKDmNyZXdhaV92ZXJzaW9uEggKBjAuNTUuMkoaCg5weXRob25fdmVy
-      c2lvbhIICgYzLjExLjdKLgoIY3Jld19rZXkSIgogMTdhNmNhMDNkODUwZmUyZjMwYzBhMTA1MWFk
-      NWY3ZTRKMQoHY3Jld19pZBImCiQ4YTY1YTczMS1jYjM5LTQ3ZDEtODNjNy1hNGQ5MDgzZTJkNTZK
-      HAoMY3Jld19wcm9jZXNzEgwKCnNlcXVlbnRpYWxKEQoLY3Jld19tZW1vcnkSAhAAShoKFGNyZXdf
-      bnVtYmVyX29mX3Rhc2tzEgIYAUobChVjcmV3X251bWJlcl9vZl9hZ2VudHMSAhgBStsCCgtjcmV3
-      X2FnZW50cxLLAgrIAlt7ImtleSI6ICI4YmQyMTM5YjU5NzUxODE1MDZlNDFmZDljNDU2M2Q3NSIs
-      ICJpZCI6ICI0ZTE0MTY4YS0zNDYwLTQzY2YtYjBkYi01ZDk0ZDRmZjVkMjkiLCAicm9sZSI6ICJS
-      ZXNlYXJjaGVyIiwgInZlcmJvc2U/IjogZmFsc2UsICJtYXhfaXRlciI6IDI1LCAibWF4X3JwbSI6
-      IG51bGwsICJmdW5jdGlvbl9jYWxsaW5nX2xsbSI6IG51bGwsICJsbG0iOiAiZ3B0LTRvIiwgImRl
-      bGVnYXRpb25fZW5hYmxlZD8iOiBmYWxzZSwgImFsbG93X2NvZGVfZXhlY3V0aW9uPyI6IGZhbHNl
-      LCAibWF4X3JldHJ5X2xpbWl0IjogMiwgInRvb2xzX25hbWVzIjogWyJyZXR1cm5fZGF0YSJdfV1K
-      jAIKCmNyZXdfdGFza3MS/QEK+gFbeyJrZXkiOiAiZjU5NDkyMDhkNmYzOWVlOTBhZDAwZTk3MWMx
-      NGFkZDMiLCAiaWQiOiAiYThhNWY5NjUtY2UzMi00YWY2LTgxOWMtZWRhYjBlMjVmYzI4IiwgImFz
-      eW5jX2V4ZWN1dGlvbj8iOiBmYWxzZSwgImh1bWFuX2lucHV0PyI6IGZhbHNlLCAiYWdlbnRfcm9s
-      ZSI6ICJSZXNlYXJjaGVyIiwgImFnZW50X2tleSI6ICI4YmQyMTM5YjU5NzUxODE1MDZlNDFmZDlj
-      NDU2M2Q3NSIsICJ0b29sc19uYW1lcyI6IFsicmV0dXJuX2RhdGEiXX1degIYAYUBAAEAABKOAgoQ
-      1yNmNb+YDYcHM/bPxUM5YhII04jp2HnpfLgqDFRhc2sgQ3JlYXRlZDABOZBHd2owzvMXQXjId2ow
-      zvMXSi4KCGNyZXdfa2V5EiIKIDE3YTZjYTAzZDg1MGZlMmYzMGMwYTEwNTFhZDVmN2U0SjEKB2Ny
-      ZXdfaWQSJgokOGE2NWE3MzEtY2IzOS00N2QxLTgzYzctYTRkOTA4M2UyZDU2Si4KCHRhc2tfa2V5
-      EiIKIGY1OTQ5MjA4ZDZmMzllZTkwYWQwMGU5NzFjMTRhZGQzSjEKB3Rhc2tfaWQSJgokYThhNWY5
-      NjUtY2UzMi00YWY2LTgxOWMtZWRhYjBlMjVmYzI4egIYAYUBAAEAABKOAQoQOsVvLiBFUcTImzHZ
-      3F5PdBIIVD7pnnrT/scqClRvb2wgVXNhZ2UwATlIEwONMM7zF0FoVQWNMM7zF0oaCg5jcmV3YWlf
-      dmVyc2lvbhIICgYwLjU1LjJKGgoJdG9vbF9uYW1lEg0KC3JldHVybl9kYXRhSg4KCGF0dGVtcHRz
-      EgIYAXoCGAGFAQABAAASkAIKEAkKfe91CFqUtqkL0G5cl3QSCHicrLmkRgE+Kg5UYXNrIEV4ZWN1
-      dGlvbjABOVj3d2owzvMXQchz6qswzvMXSi4KCGNyZXdfa2V5EiIKIDE3YTZjYTAzZDg1MGZlMmYz
-      MGMwYTEwNTFhZDVmN2U0SjEKB2NyZXdfaWQSJgokOGE2NWE3MzEtY2IzOS00N2QxLTgzYzctYTRk
-      OTA4M2UyZDU2Si4KCHRhc2tfa2V5EiIKIGY1OTQ5MjA4ZDZmMzllZTkwYWQwMGU5NzFjMTRhZGQz
-      SjEKB3Rhc2tfaWQSJgokYThhNWY5NjUtY2UzMi00YWY2LTgxOWMtZWRhYjBlMjVmYzI4egIYAYUB
-      AAEAABKfBwoQaQsvbwlF/Jl01g/xcN4+jhIIO+Ljp8+3ZZMqDENyZXcgQ3JlYXRlZDABObglrKww
-      zvMXQRjysawwzvMXShoKDmNyZXdhaV92ZXJzaW9uEggKBjAuNTUuMkoaCg5weXRob25fdmVyc2lv
-      bhIICgYzLjExLjdKLgoIY3Jld19rZXkSIgogOWM5ZDUyNThmZjEwNzgzMGE5Yzk2NWJiNzUyN2I4
-      MGRKMQoHY3Jld19pZBImCiQyNTM1ODc5MS04ZmRhLTQzMmEtOTQyOC00NjI5YzdhMWNjODRKHAoM
-      Y3Jld19wcm9jZXNzEgwKCnNlcXVlbnRpYWxKEQoLY3Jld19tZW1vcnkSAhAAShoKFGNyZXdfbnVt
-      YmVyX29mX3Rhc2tzEgIYAUobChVjcmV3X251bWJlcl9vZl9hZ2VudHMSAhgBSs0CCgtjcmV3X2Fn
-      ZW50cxK9Agq6Alt7ImtleSI6ICI5N2Y0MTdmM2UxZTMxY2YwYzEwOWY3NTI5YWM4ZjZiYyIsICJp
-      ZCI6ICIwMmI1ZTI3NS1lNzhkLTRiMmMtOWYzNS03MzViYWRhMzQyNGUiLCAicm9sZSI6ICJQcm9n
-      cmFtbWVyIiwgInZlcmJvc2U/IjogZmFsc2UsICJtYXhfaXRlciI6IDI1LCAibWF4X3JwbSI6IG51
-      bGwsICJmdW5jdGlvbl9jYWxsaW5nX2xsbSI6IG51bGwsICJsbG0iOiAiZ3B0LTRvIiwgImRlbGVn
-      YXRpb25fZW5hYmxlZD8iOiBmYWxzZSwgImFsbG93X2NvZGVfZXhlY3V0aW9uPyI6IHRydWUsICJt
-      YXhfcmV0cnlfbGltaXQiOiAyLCAidG9vbHNfbmFtZXMiOiBbXX1dSv8BCgpjcmV3X3Rhc2tzEvAB
-      Cu0BW3sia2V5IjogIjhlYzhiY2YyOGU3N2EzNjkyZDY2MzA0NWYyNWFjMjkyIiwgImlkIjogImMz
-      MjlhN2QwLTA0OTEtNDlmZi05YzAyLWU4ZmE2M2FiYjBkZSIsICJhc3luY19leGVjdXRpb24/Ijog
-      ZmFsc2UsICJodW1hbl9pbnB1dD8iOiBmYWxzZSwgImFnZW50X3JvbGUiOiAiUHJvZ3JhbW1lciIs
-      ICJhZ2VudF9rZXkiOiAiOTdmNDE3ZjNlMWUzMWNmMGMxMDlmNzUyOWFjOGY2YmMiLCAidG9vbHNf
-      bmFtZXMiOiBbXX1degIYAYUBAAEAABKOAgoQYYprErlXAv3ucQjTaAoj+xIIy+uhkV0E2W8qDFRh
-      c2sgQ3JlYXRlZDABOVDBBK0wzvMXQWi3Ba0wzvMXSi4KCGNyZXdfa2V5EiIKIDljOWQ1MjU4ZmYx
-      MDc4MzBhOWM5NjViYjc1MjdiODBkSjEKB2NyZXdfaWQSJgokMjUzNTg3OTEtOGZkYS00MzJhLTk0
-      MjgtNDYyOWM3YTFjYzg0Si4KCHRhc2tfa2V5EiIKIDhlYzhiY2YyOGU3N2EzNjkyZDY2MzA0NWYy
-      NWFjMjkySjEKB3Rhc2tfaWQSJgokYzMyOWE3ZDAtMDQ5MS00OWZmLTljMDItZThmYTYzYWJiMGRl
-      egIYAYUBAAEAABKQAgoQOlRtmvoXOxVa9Rg7ZHu6uBIIfloQo/OfIkgqDlRhc2sgRXhlY3V0aW9u
-      MAE5+BwGrTDO8xdBIDQIrTDO8xdKLgoIY3Jld19rZXkSIgogOWM5ZDUyNThmZjEwNzgzMGE5Yzk2
-      NWJiNzUyN2I4MGRKMQoHY3Jld19pZBImCiQyNTM1ODc5MS04ZmRhLTQzMmEtOTQyOC00NjI5Yzdh
-      MWNjODRKLgoIdGFza19rZXkSIgogOGVjOGJjZjI4ZTc3YTM2OTJkNjYzMDQ1ZjI1YWMyOTJKMQoH
-      dGFza19pZBImCiRjMzI5YTdkMC0wNDkxLTQ5ZmYtOWMwMi1lOGZhNjNhYmIwZGV6AhgBhQEAAQAA
-      Ep8HChCTRqDdiRGHsH2ElxzILlB5Egh74Hs+noUvcSoMQ3JldyBDcmVhdGVkMAE50MVhrTDO8xdB
-      CIdjrTDO8xdKGgoOY3Jld2FpX3ZlcnNpb24SCAoGMC41NS4yShoKDnB5dGhvbl92ZXJzaW9uEggK
-      BjMuMTEuN0ouCghjcmV3X2tleRIiCiAxN2E2Y2EwM2Q4NTBmZTJmMzBjMGExMDUxYWQ1ZjdlNEox
-      CgdjcmV3X2lkEiYKJGU4MmZlNzM5LWJhOTUtNGQ1MC1iZmQyLWUzNWNmNzQzYjIwMEocCgxjcmV3
-      X3Byb2Nlc3MSDAoKc2VxdWVudGlhbEoRCgtjcmV3X21lbW9yeRICEABKGgoUY3Jld19udW1iZXJf
-      b2ZfdGFza3MSAhgBShsKFWNyZXdfbnVtYmVyX29mX2FnZW50cxICGAFKzQIKC2NyZXdfYWdlbnRz
-      Er0CCroCW3sia2V5IjogIjhiZDIxMzliNTk3NTE4MTUwNmU0MWZkOWM0NTYzZDc1IiwgImlkIjog
-      ImMzZTZkZGFkLWI0ZWYtNDJiNC1hODVkLTYzM2RjZTZhNzhlYiIsICJyb2xlIjogIlJlc2VhcmNo
-      ZXIiLCAidmVyYm9zZT8iOiBmYWxzZSwgIm1heF9pdGVyIjogMjUsICJtYXhfcnBtIjogbnVsbCwg
-      ImZ1bmN0aW9uX2NhbGxpbmdfbGxtIjogbnVsbCwgImxsbSI6ICJncHQtNG8iLCAiZGVsZWdhdGlv
-      bl9lbmFibGVkPyI6IHRydWUsICJhbGxvd19jb2RlX2V4ZWN1dGlvbj8iOiBmYWxzZSwgIm1heF9y
-      ZXRyeV9saW1pdCI6IDIsICJ0b29sc19uYW1lcyI6IFtdfV1K/wEKCmNyZXdfdGFza3MS8AEK7QFb
-      eyJrZXkiOiAiZjU5NDkyMDhkNmYzOWVlOTBhZDAwZTk3MWMxNGFkZDMiLCAiaWQiOiAiZTQwOGQx
-      MmYtMzdjOC00ZWY1LWJkZjMtMTUzMGQyZTE5YWY5IiwgImFzeW5jX2V4ZWN1dGlvbj8iOiBmYWxz
-      ZSwgImh1bWFuX2lucHV0PyI6IGZhbHNlLCAiYWdlbnRfcm9sZSI6ICJSZXNlYXJjaGVyIiwgImFn
-      ZW50X2tleSI6ICI4YmQyMTM5YjU5NzUxODE1MDZlNDFmZDljNDU2M2Q3NSIsICJ0b29sc19uYW1l
-      cyI6IFtdfV16AhgBhQEAAQAAEo4CChB2Bkaeyjd+ze4z1VLGv8h5Egi8TQEEp9WMpCoMVGFzayBD
-      cmVhdGVkMAE56K55rTDO8xdBqAx6rTDO8xdKLgoIY3Jld19rZXkSIgogMTdhNmNhMDNkODUwZmUy
-      ZjMwYzBhMTA1MWFkNWY3ZTRKMQoHY3Jld19pZBImCiRlODJmZTczOS1iYTk1LTRkNTAtYmZkMi1l
-      MzVjZjc0M2IyMDBKLgoIdGFza19rZXkSIgogZjU5NDkyMDhkNmYzOWVlOTBhZDAwZTk3MWMxNGFk
-      ZDNKMQoHdGFza19pZBImCiRlNDA4ZDEyZi0zN2M4LTRlZjUtYmRmMy0xNTMwZDJlMTlhZjl6AhgB
-      hQEAAQAAEpACChBTwF7t0ytiXyEWcJs8jU5hEghXde5o+uLnPCoOVGFzayBFeGVjdXRpb24wATmI
-      O3qtMM7zF0HIj2zbMM7zF0ouCghjcmV3X2tleRIiCiAxN2E2Y2EwM2Q4NTBmZTJmMzBjMGExMDUx
-      YWQ1ZjdlNEoxCgdjcmV3X2lkEiYKJGU4MmZlNzM5LWJhOTUtNGQ1MC1iZmQyLWUzNWNmNzQzYjIw
-      MEouCgh0YXNrX2tleRIiCiBmNTk0OTIwOGQ2ZjM5ZWU5MGFkMDBlOTcxYzE0YWRkM0oxCgd0YXNr
-      X2lkEiYKJGU0MDhkMTJmLTM3YzgtNGVmNS1iZGYzLTE1MzBkMmUxOWFmOXoCGAGFAQABAAASoAcK
-      EMb1RKvkw3fsNMmO8TcD1nASCLqxSAuluHHpKgxDcmV3IENyZWF0ZWQwATn4EVDcMM7zF0HgelTc
-      MM7zF0oaCg5jcmV3YWlfdmVyc2lvbhIICgYwLjU1LjJKGgoOcHl0aG9uX3ZlcnNpb24SCAoGMy4x
-      MS43Si4KCGNyZXdfa2V5EiIKIDYxYTYwZDViMzYwMjFkMWFkYTU0MzRlYjJlMzg4NmVlSjEKB2Ny
-      ZXdfaWQSJgokYzZhNzU2MjAtY2JkYy00M2Y4LWFlZDAtMzA2MzViY2Q3ODU2ShwKDGNyZXdfcHJv
-      Y2VzcxIMCgpzZXF1ZW50aWFsShEKC2NyZXdfbWVtb3J5EgIQAEoaChRjcmV3X251bWJlcl9vZl90
-      YXNrcxICGAFKGwoVY3Jld19udW1iZXJfb2ZfYWdlbnRzEgIYAUrOAgoLY3Jld19hZ2VudHMSvgIK
-      uwJbeyJrZXkiOiAiZjVlYTk3MDViNzg3Zjc4MjUxNDJjODc0YjU4NzI2YzgiLCAiaWQiOiAiZWJk
-      Zjg4OGYtMmExNy00ZGZiLTk4NWQtOGI4NzQzOTRkNDVjIiwgInJvbGUiOiAiUmVzZWFyY2hlciIs
-      ICJ2ZXJib3NlPyI6IGZhbHNlLCAibWF4X2l0ZXIiOiAyNSwgIm1heF9ycG0iOiBudWxsLCAiZnVu
-      Y3Rpb25fY2FsbGluZ19sbG0iOiBudWxsLCAibGxtIjogImdwdC00byIsICJkZWxlZ2F0aW9uX2Vu
-      YWJsZWQ/IjogZmFsc2UsICJhbGxvd19jb2RlX2V4ZWN1dGlvbj8iOiBmYWxzZSwgIm1heF9yZXRy
-      eV9saW1pdCI6IDIsICJ0b29sc19uYW1lcyI6IFtdfV1K/wEKCmNyZXdfdGFza3MS8AEK7QFbeyJr
-      ZXkiOiAiZjQ1Njc5MjEyZDdiZjM3NWQxMWMyODQyMGZiNzJkMjQiLCAiaWQiOiAiYzdmZWFkMTUt
-      NzE1Mi00MzQ2LWFhNzYtZWEyOTc5MzU1YmQyIiwgImFzeW5jX2V4ZWN1dGlvbj8iOiBmYWxzZSwg
-      Imh1bWFuX2lucHV0PyI6IGZhbHNlLCAiYWdlbnRfcm9sZSI6ICJSZXNlYXJjaGVyIiwgImFnZW50
-      X2tleSI6ICJmNWVhOTcwNWI3ODdmNzgyNTE0MmM4NzRiNTg3MjZjOCIsICJ0b29sc19uYW1lcyI6
-      IFtdfV16AhgBhQEAAQAAEo4CChAzP4O/bXRX3hqW7u0GLgt9EggO4N74DPpiIyoMVGFzayBDcmVh
-      dGVkMAE5sDl13DDO8xdBgDt23DDO8xdKLgoIY3Jld19rZXkSIgogNjFhNjBkNWIzNjAyMWQxYWRh
-      NTQzNGViMmUzODg2ZWVKMQoHY3Jld19pZBImCiRjNmE3NTYyMC1jYmRjLTQzZjgtYWVkMC0zMDYz
-      NWJjZDc4NTZKLgoIdGFza19rZXkSIgogZjQ1Njc5MjEyZDdiZjM3NWQxMWMyODQyMGZiNzJkMjRK
-      MQoHdGFza19pZBImCiRjN2ZlYWQxNS03MTUyLTQzNDYtYWE3Ni1lYTI5NzkzNTViZDJ6AhgBhQEA
-      AQAAEpACChB5plTtJIcGbhjzP5bBenxMEgjdeCpGIx6RhSoOVGFzayBFeGVjdXRpb24wATlg53bc
-      MM7zF0FY1mf1MM7zF0ouCghjcmV3X2tleRIiCiA2MWE2MGQ1YjM2MDIxZDFhZGE1NDM0ZWIyZTM4
-      ODZlZUoxCgdjcmV3X2lkEiYKJGM2YTc1NjIwLWNiZGMtNDNmOC1hZWQwLTMwNjM1YmNkNzg1Nkou
-      Cgh0YXNrX2tleRIiCiBmNDU2NzkyMTJkN2JmMzc1ZDExYzI4NDIwZmI3MmQyNEoxCgd0YXNrX2lk
-      EiYKJGM3ZmVhZDE1LTcxNTItNDM0Ni1hYTc2LWVhMjk3OTM1NWJkMnoCGAGFAQABAAAS/gYKEOei
-      ORUWtNEtBsI+zhkW5QYSCENxbfig5gQEKgxDcmV3IENyZWF0ZWQwATmIO7j2MM7zF0HwZbz2MM7z
-      F0oaCg5jcmV3YWlfdmVyc2lvbhIICgYwLjU1LjJKGgoOcHl0aG9uX3ZlcnNpb24SCAoGMy4xMS43
-      Si4KCGNyZXdfa2V5EiIKIGZiNTE1ODk1YmU2YzdkM2M4ZDZmMWQ5Mjk5OTYxZDUxSjEKB2NyZXdf
-      aWQSJgokMGZjYjk1MDgtOTc2Mi00YjY2LTkxYjQtZDRhZGM2YTE4NTE3Sh4KDGNyZXdfcHJvY2Vz
-      cxIOCgxoaWVyYXJjaGljYWxKEQoLY3Jld19tZW1vcnkSAhAAShoKFGNyZXdfbnVtYmVyX29mX3Rh
-      c2tzEgIYAUobChVjcmV3X251bWJlcl9vZl9hZ2VudHMSAhgBSs4CCgtjcmV3X2FnZW50cxK+Agq7
-      Alt7ImtleSI6ICJmNWVhOTcwNWI3ODdmNzgyNTE0MmM4NzRiNTg3MjZjOCIsICJpZCI6ICJjMGQw
-      NDk1NC1lZjFkLTQ4ZGMtOTMxMS1jNzk2Y2VmZmMwZGMiLCAicm9sZSI6ICJSZXNlYXJjaGVyIiwg
-      InZlcmJvc2U/IjogZmFsc2UsICJtYXhfaXRlciI6IDI1LCAibWF4X3JwbSI6IG51bGwsICJmdW5j
-      dGlvbl9jYWxsaW5nX2xsbSI6IG51bGwsICJsbG0iOiAiZ3B0LTRvIiwgImRlbGVnYXRpb25fZW5h
-      YmxlZD8iOiBmYWxzZSwgImFsbG93X2NvZGVfZXhlY3V0aW9uPyI6IGZhbHNlLCAibWF4X3JldHJ5
-      X2xpbWl0IjogMiwgInRvb2xzX25hbWVzIjogW119XUrbAQoKY3Jld190YXNrcxLMAQrJAVt7Imtl
-      eSI6ICJiOTQ5ZmIwYjBhMWQyNGUyODY0OGFjNGZmOTVkZTI1OSIsICJpZCI6ICJhYjc5MWJiYy05
-      YjJhLTRjYWYtOWRjZi0xOGRhMWRhZDNlMjgiLCAiYXN5bmNfZXhlY3V0aW9uPyI6IGZhbHNlLCAi
-      aHVtYW5faW5wdXQ/IjogZmFsc2UsICJhZ2VudF9yb2xlIjogIk5vbmUiLCAiYWdlbnRfa2V5Ijog
-      bnVsbCwgInRvb2xzX25hbWVzIjogW119XXoCGAGFAQABAAASmwEKEFR8L+bwCdns2ZdzHazozDgS
-      CGEW0jBSadIJKgpUb29sIFVzYWdlMAE54AcoZzHO8xdBUA0rZzHO8xdKGgoOY3Jld2FpX3ZlcnNp
-      b24SCAoGMC41NS4ySicKCXRvb2xfbmFtZRIaChhBc2sgcXVlc3Rpb24gdG8gY293b3JrZXJKDgoI
-      YXR0ZW1wdHMSAhgBegIYAYUBAAEAAA==
-    headers:
-      Accept:
-      - '*/*'
-      Accept-Encoding:
-      - gzip, deflate
-      Connection:
-      - keep-alive
-      Content-Length:
-      - '7204'
-      Content-Type:
-      - application/x-protobuf
-      User-Agent:
-      - OTel-OTLP-Exporter-Python/1.27.0
-    method: POST
-    uri: https://telemetry.crewai.com:4319/v1/traces
-  response:
-    body:
-      string: "\n\0"
-    headers:
-      Content-Length:
-      - '2'
-      Content-Type:
-      - application/x-protobuf
-      Date:
-      - Tue, 10 Sep 2024 06:29:54 GMT
-    status:
-      code: 200
-      message: OK
-- request:
-    body: '{"messages": [{"role": "user", "content": "You are Crew Manager. You are
-      a seasoned manager with a knack for getting the best out of your team.\nYou
+    body: '{"messages": [{"role": "system", "content": "You are Crew Manager. You
+      are a seasoned manager with a knack for getting the best out of your team.\nYou
       are also known for your ability to delegate work to the right people, and to
       ask the right questions to get the best out of your team.\nEven though you don''t
       perform tasks by yourself, you have a lot of experience in the field, which
@@ -426,15 +275,17 @@ interactions:
       just a simple python dictionary, enclosed in curly braces, using \" to wrap
       keys and values.\nObservation: the result of the action\n\nOnce all necessary
       information is gathered:\n\nThought: I now know the final answer\nFinal Answer:
-      the final answer to the original input question\n\nCurrent Task: Ask the researched
-      to say hi!\n\nThis is the expect criteria for your final answer: Howdy! \n you
-      MUST return the actual complete content as the final answer, not a summary.\n\nBegin!
-      This is VERY important to you, use the tools available and give your best Final
-      Answer, your job depends on it!\n\nThought:"}, {"role": "assistant", "content":
-      "I need to ask the researcher to greet by saying \"hi\".\n\nAction: Ask question
-      to coworker\nAction Input: {\"question\": \"Can you say hi?\", \"context\":
-      \"We need a greeting from you that simply says hi.\", \"coworker\": \"Researcher\"}\n\nObservation:
-      Howdy!"}], "model": "gpt-4o", "stop": ["\nObservation"]}'
+      the final answer to the original input question\n"}, {"role": "user", "content":
+      "\nCurrent Task: Ask the researched to say hi!\n\nThis is the expect criteria
+      for your final answer: Howdy!\nyou MUST return the actual complete content as
+      the final answer, not a summary.\n\nBegin! This is VERY important to you, use
+      the tools available and give your best Final Answer, your job depends on it!\n\nThought:"},
+      {"role": "assistant", "content": "Thought: I need to ask the Researcher to say
+      hi in a specific way, using the word \"Howdy!\" \n\nAction: Ask question to
+      coworker\nAction Input: {\"question\": \"Can you say hi using the word ''Howdy!''?\",
+      \"context\": \"We need to greet someone in a friendly manner using the specific
+      word ''Howdy!''. Please ensure you respond exactly with that.\" , \"coworker\":
+      \"Researcher\"}\nObservation: Howdy!"}], "model": "gpt-4o", "stop": ["\nObservation"]}'
     headers:
       accept:
       - application/json
@@ -443,16 +294,16 @@ interactions:
       connection:
       - keep-alive
       content-length:
-      - '3198'
+      - '3368'
       content-type:
       - application/json
       cookie:
-      - _cfuvid=8r8yFLG2b7e3n6pklgpsT05MHRvfdePz1ckAFvRQY8E-1725949790252-0.0.1.1-604800000;
-        __cf_bm=fuuc.ZDO3Y9B7nXE_8fBn7ykDAvAaK1VdxjZw0MTtsE-1725949790-1.0.1.1-pAJ7BWJMj1j3gS2ySR6xSBO7uFrjcB6ehFra4QVq14JqaiG4VDIjDO1C3WueKGRnSALSkpLQyJcJ2YVd_pXglQ
+      - __cf_bm=pgsskMPipgeSB6HhnkjwcOEfengIvt0p9whKNmTJVLs-1726215280-1.0.1.1-Gtqb.nO1U.cHTnd9mR9sEA5tpVo1.pexRrxqXOkn.6Mzja8mLG1URJsOLTfjMAAYpWaUQe4Rjmnr6lqQk5hAxQ;
+        _cfuvid=dp2yoCmGHVlURh_U78_UoIfnhcO5UhufnL5whkUSMTQ-1726214380689-0.0.1.1-604800000
       host:
       - api.openai.com
       user-agent:
-      - OpenAI/Python 1.44.0
+      - OpenAI/Python 1.45.0
       x-stainless-arch:
       - arm64
       x-stainless-async:
@@ -462,7 +313,7 @@ interactions:
       x-stainless-os:
       - MacOS
       x-stainless-package-version:
-      - 1.44.0
+      - 1.45.0
       x-stainless-raw-response:
       - 'true'
       x-stainless-runtime:
@@ -472,20 +323,19 @@ interactions:
     method: POST
     uri: https://api.openai.com/v1/chat/completions
   response:
-    content: "{\n  \"id\": \"chatcmpl-A5ofqmvy3plxlYB44wmgkHzbRl3bO\",\n  \"object\":
-      \"chat.completion\",\n  \"created\": 1725949794,\n  \"model\": \"gpt-4o-2024-05-13\",\n
+    content: "{\n  \"id\": \"chatcmpl-A6vkqRrvR1ppFut5jYawjNwf90mHe\",\n  \"object\":
+      \"chat.completion\",\n  \"created\": 1726215340,\n  \"model\": \"gpt-4o-2024-05-13\",\n
       \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
-      \"assistant\",\n        \"content\": \"Thought: The researcher has responded
-      with \\\"Howdy!\\\" which meets the expected criteria for the final answer.\\n\\nFinal
+      \"assistant\",\n        \"content\": \"Thought: I now know the final answer\\nFinal
       Answer: Howdy!\",\n        \"refusal\": null\n      },\n      \"logprobs\":
       null,\n      \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\":
-      704,\n    \"completion_tokens\": 26,\n    \"total_tokens\": 730\n  },\n  \"system_fingerprint\":
-      \"fp_25624ae3a5\"\n}\n"
+      740,\n    \"completion_tokens\": 15,\n    \"total_tokens\": 755,\n    \"completion_tokens_details\":
+      {\n      \"reasoning_tokens\": 0\n    }\n  },\n  \"system_fingerprint\": \"fp_25624ae3a5\"\n}\n"
     headers:
       CF-Cache-Status:
       - DYNAMIC
       CF-RAY:
-      - 8c0d5dc42931cf35-SJC
+      - 8c26b0d1bd002ab9-LAX
       Connection:
       - keep-alive
       Content-Encoding:
@@ -493,7 +343,7 @@ interactions:
       Content-Type:
       - application/json
       Date:
-      - Tue, 10 Sep 2024 06:29:54 GMT
+      - Fri, 13 Sep 2024 08:15:40 GMT
       Server:
       - cloudflare
       Transfer-Encoding:
@@ -507,7 +357,7 @@ interactions:
       openai-organization:
       - crewai-iuxna1
       openai-processing-ms:
-      - '416'
+      - '376'
       openai-version:
       - '2020-10-01'
       strict-transport-security:
@@ -519,13 +369,13 @@ interactions:
       x-ratelimit-remaining-requests:
       - '9999'
       x-ratelimit-remaining-tokens:
-      - '29999228'
+      - '29999192'
       x-ratelimit-reset-requests:
       - 6ms
       x-ratelimit-reset-tokens:
       - 1ms
       x-request-id:
-      - req_e8a0152ee37e98d6c3d047ad2673c210
+      - req_784e5a87d9261e9efc2b3431fd803183
     http_version: HTTP/1.1
     status_code: 200
 version: 1

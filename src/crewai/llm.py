@@ -8,7 +8,6 @@ class LLM:
         self.stop = stop
         self.model = model
         litellm.callbacks = callbacks
-        litellm.set_verbose = True
 
     def call(self, messages: List[Dict[str, str]]) -> Dict[str, Any]:
         response = completion(

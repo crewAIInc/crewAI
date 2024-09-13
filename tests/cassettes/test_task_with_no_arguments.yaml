@@ -1,6 +1,6 @@
 interactions:
 - request:
-    body: '{"messages": [{"role": "user", "content": "You are Researcher. You''re
+    body: '{"messages": [{"role": "system", "content": "You are Researcher. You''re
       an expert researcher, specialized in technology, software engineering, AI and
       startups. You work as a freelancer and is now working on doing research and
       analysis for a new customer.\nYour personal goal is: Make the best research
@@ -14,12 +14,12 @@ interactions:
       curly braces, using \" to wrap keys and values.\nObservation: the result of
       the action\n\nOnce all necessary information is gathered:\n\nThought: I now
       know the final answer\nFinal Answer: the final answer to the original input
-      question\n\nCurrent Task: Look at the available data and give me a sense on
-      the total number of sales.\n\nThis is the expect criteria for your final answer:
-      The total number of sales as an integer \n you MUST return the actual complete
-      content as the final answer, not a summary.\n\nBegin! This is VERY important
-      to you, use the tools available and give your best Final Answer, your job depends
-      on it!\n\nThought:"}], "model": "gpt-4o", "stop": ["\nObservation"]}'
+      question\n"}, {"role": "user", "content": "\nCurrent Task: Look at the available
+      data and give me a sense on the total number of sales.\n\nThis is the expect
+      criteria for your final answer: The total number of sales as an integer\nyou
+      MUST return the actual complete content as the final answer, not a summary.\n\nBegin!
+      This is VERY important to you, use the tools available and give your best Final
+      Answer, your job depends on it!\n\nThought:"}], "model": "gpt-4o", "stop": ["\nObservation"]}'
     headers:
       accept:
       - application/json
@@ -28,15 +28,16 @@ interactions:
       connection:
       - keep-alive
       content-length:
-      - '1562'
+      - '1595'
       content-type:
       - application/json
       cookie:
-      - _cfuvid=_Qurzg7MGysLGzSugSD3ZV84qR5Lfxrt9mF2_tfTJqw-1725940709772-0.0.1.1-604800000
+      - __cf_bm=pgsskMPipgeSB6HhnkjwcOEfengIvt0p9whKNmTJVLs-1726215280-1.0.1.1-Gtqb.nO1U.cHTnd9mR9sEA5tpVo1.pexRrxqXOkn.6Mzja8mLG1URJsOLTfjMAAYpWaUQe4Rjmnr6lqQk5hAxQ;
+        _cfuvid=dp2yoCmGHVlURh_U78_UoIfnhcO5UhufnL5whkUSMTQ-1726214380689-0.0.1.1-604800000
       host:
       - api.openai.com
       user-agent:
-      - OpenAI/Python 1.44.0
+      - OpenAI/Python 1.45.0
       x-stainless-arch:
       - arm64
       x-stainless-async:
@@ -46,7 +47,7 @@ interactions:
       x-stainless-os:
       - MacOS
       x-stainless-package-version:
-      - 1.44.0
+      - 1.45.0
       x-stainless-raw-response:
       - 'true'
       x-stainless-runtime:
@@ -56,20 +57,20 @@ interactions:
     method: POST
     uri: https://api.openai.com/v1/chat/completions
   response:
-    content: "{\n  \"id\": \"chatcmpl-A5ofl7swaLG4pIsYI6uOhCUoJ6PmJ\",\n  \"object\":
-      \"chat.completion\",\n  \"created\": 1725949789,\n  \"model\": \"gpt-4o-2024-05-13\",\n
+    content: "{\n  \"id\": \"chatcmpl-A6vkfBA5gxeUc6fMxgDJw8DNdKWUR\",\n  \"object\":
+      \"chat.completion\",\n  \"created\": 1726215329,\n  \"model\": \"gpt-4o-2024-05-13\",\n
       \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
       \"assistant\",\n        \"content\": \"Thought: To determine the total number
-      of sales, I need to retrieve the relevant data using the provided tool.\\n\\nAction:
-      return_data\\nAction Input: {}\",\n        \"refusal\": null\n      },\n      \"logprobs\":
-      null,\n      \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\":
-      311,\n    \"completion_tokens\": 31,\n    \"total_tokens\": 342\n  },\n  \"system_fingerprint\":
-      \"fp_25624ae3a5\"\n}\n"
+      of sales, I need to access the available sales data.\\n\\nAction: return_data\\nAction
+      Input: {}\",\n        \"refusal\": null\n      },\n      \"logprobs\": null,\n
+      \     \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\":
+      316,\n    \"completion_tokens\": 28,\n    \"total_tokens\": 344,\n    \"completion_tokens_details\":
+      {\n      \"reasoning_tokens\": 0\n    }\n  },\n  \"system_fingerprint\": \"fp_25624ae3a5\"\n}\n"
     headers:
       CF-Cache-Status:
       - DYNAMIC
       CF-RAY:
-      - 8c0d5da9d80bcf35-SJC
+      - 8c26b090ba9f2ab9-LAX
       Connection:
       - keep-alive
       Content-Encoding:
@@ -77,15 +78,9 @@ interactions:
       Content-Type:
       - application/json
       Date:
-      - Tue, 10 Sep 2024 06:29:50 GMT
+      - Fri, 13 Sep 2024 08:15:30 GMT
       Server:
       - cloudflare
-      Set-Cookie:
-      - __cf_bm=fuuc.ZDO3Y9B7nXE_8fBn7ykDAvAaK1VdxjZw0MTtsE-1725949790-1.0.1.1-pAJ7BWJMj1j3gS2ySR6xSBO7uFrjcB6ehFra4QVq14JqaiG4VDIjDO1C3WueKGRnSALSkpLQyJcJ2YVd_pXglQ;
-        path=/; expires=Tue, 10-Sep-24 06:59:50 GMT; domain=.api.openai.com; HttpOnly;
-        Secure; SameSite=None
-      - _cfuvid=8r8yFLG2b7e3n6pklgpsT05MHRvfdePz1ckAFvRQY8E-1725949790252-0.0.1.1-604800000;
-        path=/; domain=.api.openai.com; HttpOnly; Secure; SameSite=None
       Transfer-Encoding:
       - chunked
       X-Content-Type-Options:
@@ -97,7 +92,7 @@ interactions:
       openai-organization:
       - crewai-iuxna1
       openai-processing-ms:
-      - '412'
+      - '520'
       openai-version:
       - '2020-10-01'
       strict-transport-security:
@@ -115,11 +110,11 @@ interactions:
       x-ratelimit-reset-tokens:
       - 0s
       x-request-id:
-      - req_4e80e622e96a173aeb4250a915aaf0a1
+      - req_20fc04ddd93617f021ab809c73c6b616
     http_version: HTTP/1.1
     status_code: 200
 - request:
-    body: '{"messages": [{"role": "user", "content": "You are Researcher. You''re
+    body: '{"messages": [{"role": "system", "content": "You are Researcher. You''re
       an expert researcher, specialized in technology, software engineering, AI and
       startups. You work as a freelancer and is now working on doing research and
       analysis for a new customer.\nYour personal goal is: Make the best research
@@ -133,15 +128,16 @@ interactions:
       curly braces, using \" to wrap keys and values.\nObservation: the result of
       the action\n\nOnce all necessary information is gathered:\n\nThought: I now
       know the final answer\nFinal Answer: the final answer to the original input
-      question\n\nCurrent Task: Look at the available data and give me a sense on
-      the total number of sales.\n\nThis is the expect criteria for your final answer:
-      The total number of sales as an integer \n you MUST return the actual complete
-      content as the final answer, not a summary.\n\nBegin! This is VERY important
-      to you, use the tools available and give your best Final Answer, your job depends
-      on it!\n\nThought:"}, {"role": "assistant", "content": "Thought: To determine
-      the total number of sales, I need to retrieve the relevant data using the provided
-      tool.\n\nAction: return_data\nAction Input: {}\nObservation: January: 5, February:
-      10, March: 15, April: 20, May: 25"}], "model": "gpt-4o", "stop": ["\nObservation"]}'
+      question\n"}, {"role": "user", "content": "\nCurrent Task: Look at the available
+      data and give me a sense on the total number of sales.\n\nThis is the expect
+      criteria for your final answer: The total number of sales as an integer\nyou
+      MUST return the actual complete content as the final answer, not a summary.\n\nBegin!
+      This is VERY important to you, use the tools available and give your best Final
+      Answer, your job depends on it!\n\nThought:"}, {"role": "assistant", "content":
+      "Thought: To determine the total number of sales, I need to access the available
+      sales data.\n\nAction: return_data\nAction Input: {}\nObservation: January:
+      5, February: 10, March: 15, April: 20, May: 25"}], "model": "gpt-4o", "stop":
+      ["\nObservation"]}'
     headers:
       accept:
       - application/json
@@ -150,16 +146,16 @@ interactions:
       connection:
       - keep-alive
       content-length:
-      - '1821'
+      - '1835'
       content-type:
       - application/json
       cookie:
-      - _cfuvid=8r8yFLG2b7e3n6pklgpsT05MHRvfdePz1ckAFvRQY8E-1725949790252-0.0.1.1-604800000;
-        __cf_bm=fuuc.ZDO3Y9B7nXE_8fBn7ykDAvAaK1VdxjZw0MTtsE-1725949790-1.0.1.1-pAJ7BWJMj1j3gS2ySR6xSBO7uFrjcB6ehFra4QVq14JqaiG4VDIjDO1C3WueKGRnSALSkpLQyJcJ2YVd_pXglQ
+      - __cf_bm=pgsskMPipgeSB6HhnkjwcOEfengIvt0p9whKNmTJVLs-1726215280-1.0.1.1-Gtqb.nO1U.cHTnd9mR9sEA5tpVo1.pexRrxqXOkn.6Mzja8mLG1URJsOLTfjMAAYpWaUQe4Rjmnr6lqQk5hAxQ;
+        _cfuvid=dp2yoCmGHVlURh_U78_UoIfnhcO5UhufnL5whkUSMTQ-1726214380689-0.0.1.1-604800000
       host:
       - api.openai.com
       user-agent:
-      - OpenAI/Python 1.44.0
+      - OpenAI/Python 1.45.0
       x-stainless-arch:
       - arm64
       x-stainless-async:
@@ -169,7 +165,7 @@ interactions:
       x-stainless-os:
       - MacOS
       x-stainless-package-version:
-      - 1.44.0
+      - 1.45.0
       x-stainless-raw-response:
       - 'true'
       x-stainless-runtime:
@@ -179,19 +175,20 @@ interactions:
     method: POST
     uri: https://api.openai.com/v1/chat/completions
   response:
-    content: "{\n  \"id\": \"chatcmpl-A5ofmokpsyXTvLWEB8yuRhwgFvzyb\",\n  \"object\":
-      \"chat.completion\",\n  \"created\": 1725949790,\n  \"model\": \"gpt-4o-2024-05-13\",\n
+    content: "{\n  \"id\": \"chatcmpl-A6vkhXxSL1gilTlyHqjtDpGJh3O2K\",\n  \"object\":
+      \"chat.completion\",\n  \"created\": 1726215331,\n  \"model\": \"gpt-4o-2024-05-13\",\n
       \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
-      \"assistant\",\n        \"content\": \"Thought: I now know the final answer.\\n\\nFinal
+      \"assistant\",\n        \"content\": \"Thought: I now know the final answer\\n\\nFinal
       Answer: The total number of sales is 75.\",\n        \"refusal\": null\n      },\n
       \     \"logprobs\": null,\n      \"finish_reason\": \"stop\"\n    }\n  ],\n
-      \ \"usage\": {\n    \"prompt_tokens\": 372,\n    \"completion_tokens\": 21,\n
-      \   \"total_tokens\": 393\n  },\n  \"system_fingerprint\": \"fp_25624ae3a5\"\n}\n"
+      \ \"usage\": {\n    \"prompt_tokens\": 374,\n    \"completion_tokens\": 21,\n
+      \   \"total_tokens\": 395,\n    \"completion_tokens_details\": {\n      \"reasoning_tokens\":
+      0\n    }\n  },\n  \"system_fingerprint\": \"fp_25624ae3a5\"\n}\n"
     headers:
       CF-Cache-Status:
       - DYNAMIC
       CF-RAY:
-      - 8c0d5dad4a1ccf35-SJC
+      - 8c26b09a3c352ab9-LAX
       Connection:
       - keep-alive
       Content-Encoding:
@@ -199,7 +196,7 @@ interactions:
       Content-Type:
       - application/json
       Date:
-      - Tue, 10 Sep 2024 06:29:50 GMT
+      - Fri, 13 Sep 2024 08:15:31 GMT
       Server:
       - cloudflare
       Transfer-Encoding:
@@ -213,7 +210,7 @@ interactions:
       openai-organization:
       - crewai-iuxna1
       openai-processing-ms:
-      - '383'
+      - '342'
       openai-version:
       - '2020-10-01'
       strict-transport-security:
@@ -225,13 +222,13 @@ interactions:
       x-ratelimit-remaining-requests:
       - '9999'
       x-ratelimit-remaining-tokens:
-      - '29999567'
+      - '29999571'
       x-ratelimit-reset-requests:
       - 6ms
       x-ratelimit-reset-tokens:
       - 0s
       x-request-id:
-      - req_684cfb5fa6b1f1776645a8419ac748d1
+      - req_6cf2bc30704c52005b7e52ac5163b311
     http_version: HTTP/1.1
     status_code: 200
 version: 1

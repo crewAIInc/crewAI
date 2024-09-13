@@ -1,16 +1,17 @@
 interactions:
 - request:
-    body: '{"messages": [{"role": "user", "content": "You are Scorer. You''re an expert
-      scorer, specialized in scoring titles.\nYour personal goal is: Score the title\nTo
-      give my best complete final answer to the task use the exact following format:\n\nThought:
-      I now can give a great answer\nFinal Answer: Your final answer must be the great
-      and the most complete as possible, it must be outcome described.\n\nI MUST use
-      these formats, my job depends on it!\nCurrent Task: Give me an integer score
-      between 1-5 for the following title: ''The impact of AI in the future of work''\n\nThis
-      is the expect criteria for your final answer: The score of the title. \n you
-      MUST return the actual complete content as the final answer, not a summary.\n\nBegin!
-      This is VERY important to you, use the tools available and give your best Final
-      Answer, your job depends on it!\n\nThought:"}], "model": "gpt-4o", "stop": ["\nObservation"]}'
+    body: '{"messages": [{"role": "system", "content": "You are Scorer. You''re an
+      expert scorer, specialized in scoring titles.\nYour personal goal is: Score
+      the title\nTo give my best complete final answer to the task use the exact following
+      format:\n\nThought: I now can give a great answer\nFinal Answer: Your final
+      answer must be the great and the most complete as possible, it must be outcome
+      described.\n\nI MUST use these formats, my job depends on it!"}, {"role": "user",
+      "content": "\nCurrent Task: Give me an integer score between 1-5 for the following
+      title: ''The impact of AI in the future of work''\n\nThis is the expect criteria
+      for your final answer: The score of the title.\nyou MUST return the actual complete
+      content as the final answer, not a summary.\n\nBegin! This is VERY important
+      to you, use the tools available and give your best Final Answer, your job depends
+      on it!\n\nThought:"}], "model": "gpt-4o", "stop": ["\nObservation"]}'
     headers:
       accept:
       - application/json
@@ -19,16 +20,16 @@ interactions:
       connection:
       - keep-alive
       content-length:
-      - '909'
+      - '942'
       content-type:
       - application/json
       cookie:
-      - _cfuvid=8r8yFLG2b7e3n6pklgpsT05MHRvfdePz1ckAFvRQY8E-1725949790252-0.0.1.1-604800000;
-        __cf_bm=qTXk7seke4Et7mXj5ryxZEKdR3jbP7FFNH1j6mL5OBg-1725952121-1.0.1.1-9ddbKXvDijnEjX038AuZVtACVKKa_z8_5jpAdSMj8dZv4uYq8eMX3T.StxUwNGv3NSHS7tMjAKNCIh4XWpW1pQ
+      - __cf_bm=pgsskMPipgeSB6HhnkjwcOEfengIvt0p9whKNmTJVLs-1726215280-1.0.1.1-Gtqb.nO1U.cHTnd9mR9sEA5tpVo1.pexRrxqXOkn.6Mzja8mLG1URJsOLTfjMAAYpWaUQe4Rjmnr6lqQk5hAxQ;
+        _cfuvid=dp2yoCmGHVlURh_U78_UoIfnhcO5UhufnL5whkUSMTQ-1726214380689-0.0.1.1-604800000
       host:
       - api.openai.com
       user-agent:
-      - OpenAI/Python 1.44.0
+      - OpenAI/Python 1.45.0
       x-stainless-arch:
       - arm64
       x-stainless-async:
@@ -38,7 +39,7 @@ interactions:
       x-stainless-os:
       - MacOS
       x-stainless-package-version:
-      - 1.44.0
+      - 1.45.0
       x-stainless-raw-response:
       - 'true'
       x-stainless-runtime:
@@ -48,19 +49,19 @@ interactions:
     method: POST
     uri: https://api.openai.com/v1/chat/completions
   response:
-    content: "{\n  \"id\": \"chatcmpl-A5pHOcBDqIcXRNmtSNWxQMIahir9K\",\n  \"object\":
-      \"chat.completion\",\n  \"created\": 1725952122,\n  \"model\": \"gpt-4o-2024-05-13\",\n
+    content: "{\n  \"id\": \"chatcmpl-A6voFmmV3j0rP7NPa5dbhi5cSlKT9\",\n  \"object\":
+      \"chat.completion\",\n  \"created\": 1726215551,\n  \"model\": \"gpt-4o-2024-05-13\",\n
       \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
       \"assistant\",\n        \"content\": \"Thought: I now can give a great answer\\nFinal
       Answer: 4\",\n        \"refusal\": null\n      },\n      \"logprobs\": null,\n
       \     \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\":
-      182,\n    \"completion_tokens\": 15,\n    \"total_tokens\": 197\n  },\n  \"system_fingerprint\":
-      \"fp_25624ae3a5\"\n}\n"
+      186,\n    \"completion_tokens\": 15,\n    \"total_tokens\": 201,\n    \"completion_tokens_details\":
+      {\n      \"reasoning_tokens\": 0\n    }\n  },\n  \"system_fingerprint\": \"fp_25624ae3a5\"\n}\n"
     headers:
       CF-Cache-Status:
       - DYNAMIC
       CF-RAY:
-      - 8c0d969dde092314-SJC
+      - 8c26b5fdbf762ab9-LAX
       Connection:
       - keep-alive
       Content-Encoding:
@@ -68,7 +69,7 @@ interactions:
       Content-Type:
       - application/json
       Date:
-      - Tue, 10 Sep 2024 07:08:42 GMT
+      - Fri, 13 Sep 2024 08:19:12 GMT
       Server:
       - cloudflare
       Transfer-Encoding:
@@ -82,7 +83,7 @@ interactions:
       openai-organization:
       - crewai-iuxna1
       openai-processing-ms:
-      - '296'
+      - '472'
       openai-version:
       - '2020-10-01'
       strict-transport-security:
@@ -100,18 +101,17 @@ interactions:
       x-ratelimit-reset-tokens:
       - 0s
       x-request-id:
-      - req_312830171ec04867f9349843428f0a95
+      - req_7acd6307b9b8842dee32247f11e9f2bf
     http_version: HTTP/1.1
     status_code: 200
 - request:
     body: '{"messages": [{"role": "user", "content": "4"}, {"role": "system", "content":
-      "I''m gonna convert this raw text into valid JSON.\n\nThe json should have the
-      following structure, with the following keys:\n{\n    score: int\n}"}], "model":
-      "gpt-4o", "tool_choice": {"type": "function", "function": {"name": "ScoreOutput"}},
-      "tools": [{"type": "function", "function": {"name": "ScoreOutput", "description":
-      "Correctly extracted `ScoreOutput` with all the required parameters with correct
-      types", "parameters": {"properties": {"score": {"title": "Score", "type": "integer"}},
-      "required": ["score"], "type": "object"}}}]}'
+      "I''m gonna convert this raw text into valid JSON."}], "model": "gpt-4o", "tool_choice":
+      {"type": "function", "function": {"name": "ScoreOutput"}}, "tools": [{"type":
+      "function", "function": {"name": "ScoreOutput", "description": "Correctly extracted
+      `ScoreOutput` with all the required parameters with correct types", "parameters":
+      {"properties": {"score": {"title": "Score", "type": "integer"}}, "required":
+      ["score"], "type": "object"}}}]}'
     headers:
       accept:
       - application/json
@@ -120,16 +120,16 @@ interactions:
       connection:
       - keep-alive
       content-length:
-      - '615'
+      - '519'
       content-type:
       - application/json
       cookie:
-      - _cfuvid=yMG4HwMFIQbW20zb7f_ElvINxRtWnRbaaUVp1YqP5vY-1725949937391-0.0.1.1-604800000;
-        __cf_bm=dZqO.IzyTeTJtVjqdGasb.YKMcnmImdwMqkzgUH.ss8-1725952122-1.0.1.1-baLdknEnjG7TJANmYkz9KVBu3acHbbFZTSGjo5EHMTh0Cm.3Irb9YCl.bPx_2HK5soOqDjTBA63FgPixVlSGRQ
+      - __cf_bm=n_BvuurPQNYmr4Xe9Yg_foBSFxwgwMpaTEdPHdqVgGQ-1726214721-1.0.1.1-WYudPPoSnx6FZSF9AMgWsJ8MlooxW8CnQiO2OS.lbnFdxsvYvd08ZsU2GLr1qne3Wxw6ebt_7iRVpoFdpAvarA;
+        _cfuvid=rXgn0vlVZcDxXcw1CtGMaLx8.GKpg0HOhhM.Ai36L2I-1726214721376-0.0.1.1-604800000
       host:
       - api.openai.com
       user-agent:
-      - OpenAI/Python 1.44.0
+      - OpenAI/Python 1.45.0
       x-stainless-arch:
       - arm64
       x-stainless-async:
@@ -139,7 +139,7 @@ interactions:
       x-stainless-os:
       - MacOS
       x-stainless-package-version:
-      - 1.44.0
+      - 1.45.0
       x-stainless-raw-response:
       - 'true'
       x-stainless-runtime:
@@ -149,22 +149,22 @@ interactions:
     method: POST
     uri: https://api.openai.com/v1/chat/completions
   response:
-    content: "{\n  \"id\": \"chatcmpl-A5pHPss1DutEaq8iHMZ5L0vv7dICa\",\n  \"object\":
-      \"chat.completion\",\n  \"created\": 1725952123,\n  \"model\": \"gpt-4o-2024-05-13\",\n
+    content: "{\n  \"id\": \"chatcmpl-A6voHuhFpsZCzoyuh4RDBkJMDUyPf\",\n  \"object\":
+      \"chat.completion\",\n  \"created\": 1726215553,\n  \"model\": \"gpt-4o-2024-05-13\",\n
       \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
       \"assistant\",\n        \"content\": null,\n        \"tool_calls\": [\n          {\n
-      \           \"id\": \"call_clFeqNRlvbSpg8oR6cz9bQb9\",\n            \"type\":
+      \           \"id\": \"call_hrizz1SAF9jYh1M6wluuYEMu\",\n            \"type\":
       \"function\",\n            \"function\": {\n              \"name\": \"ScoreOutput\",\n
       \             \"arguments\": \"{\\\"score\\\":4}\"\n            }\n          }\n
       \       ],\n        \"refusal\": null\n      },\n      \"logprobs\": null,\n
       \     \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\":
-      100,\n    \"completion_tokens\": 5,\n    \"total_tokens\": 105\n  },\n  \"system_fingerprint\":
-      \"fp_25624ae3a5\"\n}\n"
+      80,\n    \"completion_tokens\": 5,\n    \"total_tokens\": 85,\n    \"completion_tokens_details\":
+      {\n      \"reasoning_tokens\": 0\n    }\n  },\n  \"system_fingerprint\": \"fp_25624ae3a5\"\n}\n"
     headers:
       CF-Cache-Status:
       - DYNAMIC
       CF-RAY:
-      - 8c0d96a0eac4232c-SJC
+      - 8c26b6074e7f7e8f-LAX
       Connection:
       - keep-alive
       Content-Encoding:
@@ -172,7 +172,7 @@ interactions:
       Content-Type:
       - application/json
       Date:
-      - Tue, 10 Sep 2024 07:08:43 GMT
+      - Fri, 13 Sep 2024 08:19:13 GMT
       Server:
       - cloudflare
       Transfer-Encoding:
@@ -186,7 +186,7 @@ interactions:
       openai-organization:
       - crewai-iuxna1
       openai-processing-ms:
-      - '354'
+      - '175'
       openai-version:
       - '2020-10-01'
       strict-transport-security:
@@ -198,13 +198,13 @@ interactions:
       x-ratelimit-remaining-requests:
       - '9999'
       x-ratelimit-remaining-tokens:
-      - '29999947'
+      - '29999968'
       x-ratelimit-reset-requests:
       - 6ms
       x-ratelimit-reset-tokens:
       - 0s
       x-request-id:
-      - req_c7915ba5b82895fa13a6e5fe118e83c0
+      - req_b326cd1f7a12eaf2b3dd7a60c5683aab
     http_version: HTTP/1.1
     status_code: 200
 version: 1

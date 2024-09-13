@@ -2,123 +2,123 @@ interactions:
 - request:
     body: !!binary |
       Cqc1CiQKIgoMc2VydmljZS5uYW1lEhIKEGNyZXdBSS10ZWxlbWV0cnkS/jQKEgoQY3Jld2FpLnRl
-      bGVtZXRyeRKQAgoQv1q3KLNTSQHegw7HcZ9lTxIIEho2dg7dT20qDlRhc2sgRXhlY3V0aW9uMAE5
-      OAHCmj/O8xdBOFAnOkHO8xdKLgoIY3Jld19rZXkSIgogYWM3ZTc0NTkwNzJjN2VjMDZkZWFmOWQz
-      MmVjZWMxNWFKMQoHY3Jld19pZBImCiQ3ZjVkZTlhZC04MmE1LTRhYTAtYjUzZC1hZjNkYmEwNTgw
-      YjBKLgoIdGFza19rZXkSIgogNWZhNjVjMDZhOWUzMWYyYzY5NTQzMjY2OGFjZDYyZGRKMQoHdGFz
-      a19pZBImCiRlMGY5NDhhMi0xYTVlLTRiOWYtYmZjYS1hNTk0YTljNTI0MDV6AhgBhQEAAQAAEs4L
-      ChD05AJNs3YTmlpI7Cft5YuzEghRdyoclPL1yioMQ3JldyBDcmVhdGVkMAE5qNRxPEHO8xdBkLR3
-      PEHO8xdKGgoOY3Jld2FpX3ZlcnNpb24SCAoGMC41NS4yShoKDnB5dGhvbl92ZXJzaW9uEggKBjMu
+      bGVtZXRyeRKQAgoQM8+X8MPErDQWBPWgljEFGhIIp7GiPOOcZA8qDlRhc2sgRXhlY3V0aW9uMAE5
+      ICukmci/9BdBsDDuJMy/9BdKLgoIY3Jld19rZXkSIgogYWM3ZTc0NTkwNzJjN2VjMDZkZWFmOWQz
+      MmVjZWMxNWFKMQoHY3Jld19pZBImCiQ2NzZkYjYyOS0wNjdjLTRiZmQtYWI0My1jNjQ3ZmNiZDFm
+      YjJKLgoIdGFza19rZXkSIgogNWZhNjVjMDZhOWUzMWYyYzY5NTQzMjY2OGFjZDYyZGRKMQoHdGFz
+      a19pZBImCiQ5YmEyYmZhZC0zZjBiLTRjYjUtOTM0MC1jOWJmOTE0NmE3YzR6AhgBhQEAAQAAEs4L
+      ChDV3ApRCAw4oEpYwLp9ngpEEgjyVMlipZSLmyoMQ3JldyBDcmVhdGVkMAE56J3rJ8y/9BdB+LLu
+      J8y/9BdKGgoOY3Jld2FpX3ZlcnNpb24SCAoGMC41Ni4wShoKDnB5dGhvbl92ZXJzaW9uEggKBjMu
       MTEuN0ouCghjcmV3X2tleRIiCiBhYzdlNzQ1OTA3MmM3ZWMwNmRlYWY5ZDMyZWNlYzE1YUoxCgdj
-      cmV3X2lkEiYKJDFmNjY1NWUxLTI1MmYtNGFlYS1hMmM0LTMxYjNkNjhlYWQxYkocCgxjcmV3X3By
+      cmV3X2lkEiYKJGQzOTExYmNkLWYyNDctNDhhYy1hZTM4LTZhODlkMDZjNzUyMkocCgxjcmV3X3By
       b2Nlc3MSDAoKc2VxdWVudGlhbEoRCgtjcmV3X21lbW9yeRICEABKGgoUY3Jld19udW1iZXJfb2Zf
       dGFza3MSAhgCShsKFWNyZXdfbnVtYmVyX29mX2FnZW50cxICGAJKjAUKC2NyZXdfYWdlbnRzEvwE
-      CvkEW3sia2V5IjogIjhiZDIxMzliNTk3NTE4MTUwNmU0MWZkOWM0NTYzZDc1IiwgImlkIjogIjBl
-      NGQ4ZmUxLWI5NjctNDc4OS05YTdjLTVhZWNkOTc4MWI5NiIsICJyb2xlIjogIlJlc2VhcmNoZXIi
+      CvkEW3sia2V5IjogIjhiZDIxMzliNTk3NTE4MTUwNmU0MWZkOWM0NTYzZDc1IiwgImlkIjogIjY1
+      MGJmZDc1LTNmMzUtNDQ3OC04ZTk4LWQ0MmJiZGMzMGQwZSIsICJyb2xlIjogIlJlc2VhcmNoZXIi
       LCAidmVyYm9zZT8iOiBmYWxzZSwgIm1heF9pdGVyIjogMjUsICJtYXhfcnBtIjogbnVsbCwgImZ1
       bmN0aW9uX2NhbGxpbmdfbGxtIjogbnVsbCwgImxsbSI6ICJncHQtNG8iLCAiZGVsZWdhdGlvbl9l
       bmFibGVkPyI6IGZhbHNlLCAiYWxsb3dfY29kZV9leGVjdXRpb24/IjogZmFsc2UsICJtYXhfcmV0
       cnlfbGltaXQiOiAyLCAidG9vbHNfbmFtZXMiOiBbXX0sIHsia2V5IjogIjlhNTAxNWVmNDg5NWRj
-      NjI3OGQ1NDgxOGJhNDQ2YWY3IiwgImlkIjogIjljYjUzOTQwLWY3MmUtNGRjNC1iYjUwLWE1MTkz
-      NWNkYzc1MSIsICJyb2xlIjogIlNlbmlvciBXcml0ZXIiLCAidmVyYm9zZT8iOiBmYWxzZSwgIm1h
+      NjI3OGQ1NDgxOGJhNDQ2YWY3IiwgImlkIjogIjk0MTEyMzA3LWI1MjktNGVlYy1hZGVjLTYzZWY4
+      YmY5YjNhNiIsICJyb2xlIjogIlNlbmlvciBXcml0ZXIiLCAidmVyYm9zZT8iOiBmYWxzZSwgIm1h
       eF9pdGVyIjogMjUsICJtYXhfcnBtIjogbnVsbCwgImZ1bmN0aW9uX2NhbGxpbmdfbGxtIjogbnVs
       bCwgImxsbSI6ICJncHQtNG8iLCAiZGVsZWdhdGlvbl9lbmFibGVkPyI6IGZhbHNlLCAiYWxsb3df
       Y29kZV9leGVjdXRpb24/IjogZmFsc2UsICJtYXhfcmV0cnlfbGltaXQiOiAyLCAidG9vbHNfbmFt
       ZXMiOiBbXX1dSu8DCgpjcmV3X3Rhc2tzEuADCt0DW3sia2V5IjogImE4MDYxNzE3MmZmY2I5MGY4
-      OTdjMWE4YzMyYzMxMDJhIiwgImlkIjogIjg5ZTVkYmQxLWY3NjAtNDA3YS1hNzhhLWUzMjU3Mzk5
-      OWUxZCIsICJhc3luY19leGVjdXRpb24/IjogZmFsc2UsICJodW1hbl9pbnB1dD8iOiBmYWxzZSwg
+      OTdjMWE4YzMyYzMxMDJhIiwgImlkIjogImNlODkyOGU5LTY3NGUtNGU1MC1hNGQ0LTc0YjZiZWQw
+      MmI1NCIsICJhc3luY19leGVjdXRpb24/IjogZmFsc2UsICJodW1hbl9pbnB1dD8iOiBmYWxzZSwg
       ImFnZW50X3JvbGUiOiAiUmVzZWFyY2hlciIsICJhZ2VudF9rZXkiOiAiOGJkMjEzOWI1OTc1MTgx
       NTA2ZTQxZmQ5YzQ1NjNkNzUiLCAidG9vbHNfbmFtZXMiOiBbXX0sIHsia2V5IjogIjVmYTY1YzA2
-      YTllMzFmMmM2OTU0MzI2NjhhY2Q2MmRkIiwgImlkIjogImI2NWI4M2M1LTRlMzAtNDI3MC04MjM0
-      LWJkZmQ3NDdmY2FlMCIsICJhc3luY19leGVjdXRpb24/IjogZmFsc2UsICJodW1hbl9pbnB1dD8i
+      YTllMzFmMmM2OTU0MzI2NjhhY2Q2MmRkIiwgImlkIjogIjA0NmI1ZGVlLTMxM2EtNDJhMC05YTU1
+      LTBhNWY1MWI1ZjQ5NiIsICJhc3luY19leGVjdXRpb24/IjogZmFsc2UsICJodW1hbl9pbnB1dD8i
       OiBmYWxzZSwgImFnZW50X3JvbGUiOiAiU2VuaW9yIFdyaXRlciIsICJhZ2VudF9rZXkiOiAiOWE1
       MDE1ZWY0ODk1ZGM2Mjc4ZDU0ODE4YmE0NDZhZjciLCAidG9vbHNfbmFtZXMiOiBbXX1degIYAYUB
-      AAEAABKOAgoQ05/x0U+aqNgnkuIaLshvMxIINimtU084EvMqDFRhc2sgQ3JlYXRlZDABOZgayDxB
-      zvMXQSCryDxBzvMXSi4KCGNyZXdfa2V5EiIKIGFjN2U3NDU5MDcyYzdlYzA2ZGVhZjlkMzJlY2Vj
-      MTVhSjEKB2NyZXdfaWQSJgokMWY2NjU1ZTEtMjUyZi00YWVhLWEyYzQtMzFiM2Q2OGVhZDFiSi4K
+      AAEAABKOAgoQPYe0lfD5ZFehwCYhDbzNvBIIKeLDuEQM06IqDFRhc2sgQ3JlYXRlZDABOUh7AyjM
+      v/QXQXAbBCjMv/QXSi4KCGNyZXdfa2V5EiIKIGFjN2U3NDU5MDcyYzdlYzA2ZGVhZjlkMzJlY2Vj
+      MTVhSjEKB2NyZXdfaWQSJgokZDM5MTFiY2QtZjI0Ny00OGFjLWFlMzgtNmE4OWQwNmM3NTIySi4K
       CHRhc2tfa2V5EiIKIGE4MDYxNzE3MmZmY2I5MGY4OTdjMWE4YzMyYzMxMDJhSjEKB3Rhc2tfaWQS
-      JgokODllNWRiZDEtZjc2MC00MDdhLWE3OGEtZTMyNTczOTk5ZTFkegIYAYUBAAEAABKQAgoQLDuc
-      HO3E+JvnkvSFjEiT1hIIRvAh2zmMfscqDlRhc2sgRXhlY3V0aW9uMAE50OHIPEHO8xdBoHbjU0HO
-      8xdKLgoIY3Jld19rZXkSIgogYWM3ZTc0NTkwNzJjN2VjMDZkZWFmOWQzMmVjZWMxNWFKMQoHY3Jl
-      d19pZBImCiQxZjY2NTVlMS0yNTJmLTRhZWEtYTJjNC0zMWIzZDY4ZWFkMWJKLgoIdGFza19rZXkS
-      IgogYTgwNjE3MTcyZmZjYjkwZjg5N2MxYThjMzJjMzEwMmFKMQoHdGFza19pZBImCiQ4OWU1ZGJk
-      MS1mNzYwLTQwN2EtYTc4YS1lMzI1NzM5OTllMWR6AhgBhQEAAQAAEs4LChBDtcGpMngJhVasv/n0
-      vqoSEgg7uZCgataXlCoMQ3JldyBDcmVhdGVkMAE5uDX8VEHO8xdBiJwBVUHO8xdKGgoOY3Jld2Fp
-      X3ZlcnNpb24SCAoGMC41NS4yShoKDnB5dGhvbl92ZXJzaW9uEggKBjMuMTEuN0ouCghjcmV3X2tl
-      eRIiCiBkMjdkNDVhZDlkYTE1ODU0MzI1YjBhZjNiMGZiYzMyYkoxCgdjcmV3X2lkEiYKJDUwYTZh
-      YzcxLThhMzAtNGE1NC1hMzgwLTk5MjcxZjVhMTUyMUocCgxjcmV3X3Byb2Nlc3MSDAoKc2VxdWVu
+      JgokY2U4OTI4ZTktNjc0ZS00ZTUwLWE0ZDQtNzRiNmJlZDAyYjU0egIYAYUBAAEAABKQAgoQFEB9
+      f3QDZ4RJ5Q/KdX4ykRIIs1fOTw8JTI4qDlRhc2sgRXhlY3V0aW9uMAE52F0EKMy/9BdBeEuBn8y/
+      9BdKLgoIY3Jld19rZXkSIgogYWM3ZTc0NTkwNzJjN2VjMDZkZWFmOWQzMmVjZWMxNWFKMQoHY3Jl
+      d19pZBImCiRkMzkxMWJjZC1mMjQ3LTQ4YWMtYWUzOC02YTg5ZDA2Yzc1MjJKLgoIdGFza19rZXkS
+      IgogYTgwNjE3MTcyZmZjYjkwZjg5N2MxYThjMzJjMzEwMmFKMQoHdGFza19pZBImCiRjZTg5Mjhl
+      OS02NzRlLTRlNTAtYTRkNC03NGI2YmVkMDJiNTR6AhgBhQEAAQAAEs4LChB0NNx0DEPG7ZtDFItu
+      xsd1Egh7X6nqSD2c0yoMQ3JldyBDcmVhdGVkMAE5KN48ocy/9BdB2PZBocy/9BdKGgoOY3Jld2Fp
+      X3ZlcnNpb24SCAoGMC41Ni4wShoKDnB5dGhvbl92ZXJzaW9uEggKBjMuMTEuN0ouCghjcmV3X2tl
+      eRIiCiBkMjdkNDVhZDlkYTE1ODU0MzI1YjBhZjNiMGZiYzMyYkoxCgdjcmV3X2lkEiYKJDZmMTdj
+      MDhhLTkxOTgtNDZkMC1iZmQ5LTYxYjkxODBhMzlkNEocCgxjcmV3X3Byb2Nlc3MSDAoKc2VxdWVu
       dGlhbEoRCgtjcmV3X21lbW9yeRICEABKGgoUY3Jld19udW1iZXJfb2ZfdGFza3MSAhgCShsKFWNy
       ZXdfbnVtYmVyX29mX2FnZW50cxICGAJKjAUKC2NyZXdfYWdlbnRzEvwECvkEW3sia2V5IjogIjhi
-      ZDIxMzliNTk3NTE4MTUwNmU0MWZkOWM0NTYzZDc1IiwgImlkIjogIjBlNGQ4ZmUxLWI5NjctNDc4
-      OS05YTdjLTVhZWNkOTc4MWI5NiIsICJyb2xlIjogIlJlc2VhcmNoZXIiLCAidmVyYm9zZT8iOiBm
+      ZDIxMzliNTk3NTE4MTUwNmU0MWZkOWM0NTYzZDc1IiwgImlkIjogIjY1MGJmZDc1LTNmMzUtNDQ3
+      OC04ZTk4LWQ0MmJiZGMzMGQwZSIsICJyb2xlIjogIlJlc2VhcmNoZXIiLCAidmVyYm9zZT8iOiBm
       YWxzZSwgIm1heF9pdGVyIjogMjUsICJtYXhfcnBtIjogbnVsbCwgImZ1bmN0aW9uX2NhbGxpbmdf
       bGxtIjogbnVsbCwgImxsbSI6ICJncHQtNG8iLCAiZGVsZWdhdGlvbl9lbmFibGVkPyI6IGZhbHNl
       LCAiYWxsb3dfY29kZV9leGVjdXRpb24/IjogZmFsc2UsICJtYXhfcmV0cnlfbGltaXQiOiAyLCAi
       dG9vbHNfbmFtZXMiOiBbXX0sIHsia2V5IjogIjlhNTAxNWVmNDg5NWRjNjI3OGQ1NDgxOGJhNDQ2
-      YWY3IiwgImlkIjogIjljYjUzOTQwLWY3MmUtNGRjNC1iYjUwLWE1MTkzNWNkYzc1MSIsICJyb2xl
+      YWY3IiwgImlkIjogIjk0MTEyMzA3LWI1MjktNGVlYy1hZGVjLTYzZWY4YmY5YjNhNiIsICJyb2xl
       IjogIlNlbmlvciBXcml0ZXIiLCAidmVyYm9zZT8iOiBmYWxzZSwgIm1heF9pdGVyIjogMjUsICJt
       YXhfcnBtIjogbnVsbCwgImZ1bmN0aW9uX2NhbGxpbmdfbGxtIjogbnVsbCwgImxsbSI6ICJncHQt
       NG8iLCAiZGVsZWdhdGlvbl9lbmFibGVkPyI6IGZhbHNlLCAiYWxsb3dfY29kZV9leGVjdXRpb24/
       IjogZmFsc2UsICJtYXhfcmV0cnlfbGltaXQiOiAyLCAidG9vbHNfbmFtZXMiOiBbXX1dSu8DCgpj
       cmV3X3Rhc2tzEuADCt0DW3sia2V5IjogIjgxNmU5ZWJjNjlkYjY3YzY4YmI0ZjNlYTY1Y2NkYTU4
-      IiwgImlkIjogImYwZDEwMTdhLTJmYmYtNGMwMy05ZGFhLTQyNzE5OWVlNTc5NCIsICJhc3luY19l
+      IiwgImlkIjogIjFiYzk5YjZkLTNjYTMtNDBkZC1iZTU5LTA4ZjczMmQ0MjY3ZSIsICJhc3luY19l
       eGVjdXRpb24/IjogZmFsc2UsICJodW1hbl9pbnB1dD8iOiBmYWxzZSwgImFnZW50X3JvbGUiOiAi
       UmVzZWFyY2hlciIsICJhZ2VudF9rZXkiOiAiOGJkMjEzOWI1OTc1MTgxNTA2ZTQxZmQ5YzQ1NjNk
       NzUiLCAidG9vbHNfbmFtZXMiOiBbXX0sIHsia2V5IjogIjVmYTY1YzA2YTllMzFmMmM2OTU0MzI2
-      NjhhY2Q2MmRkIiwgImlkIjogIjY4MDJiZDg1LWQwNTktNDYyNy04MWI0LWRhZDlmMjJjMDIyNiIs
+      NjhhY2Q2MmRkIiwgImlkIjogImJhOTVlODE4LWI1YmEtNGJlZC1iY2M2LTgzNDQ0ZTRkNWI5NyIs
       ICJhc3luY19leGVjdXRpb24/IjogZmFsc2UsICJodW1hbl9pbnB1dD8iOiBmYWxzZSwgImFnZW50
       X3JvbGUiOiAiU2VuaW9yIFdyaXRlciIsICJhZ2VudF9rZXkiOiAiOWE1MDE1ZWY0ODk1ZGM2Mjc4
-      ZDU0ODE4YmE0NDZhZjciLCAidG9vbHNfbmFtZXMiOiBbXX1degIYAYUBAAEAABLOCwoQBzayil7b
-      hdq8wa2o1oTiGxIIsP0jUFbSJ/cqDENyZXcgQ3JlYXRlZDABOZiuwFVBzvMXQVgAw1VBzvMXShoK
-      DmNyZXdhaV92ZXJzaW9uEggKBjAuNTUuMkoaCg5weXRob25fdmVyc2lvbhIICgYzLjExLjdKLgoI
+      ZDU0ODE4YmE0NDZhZjciLCAidG9vbHNfbmFtZXMiOiBbXX1degIYAYUBAAEAABLOCwoQL77wVLD8
+      m0ICgLiHy8T/eRIIdPY90TRMryEqDENyZXcgQ3JlYXRlZDABOZAe5KHMv/QXQbBa56HMv/QXShoK
+      DmNyZXdhaV92ZXJzaW9uEggKBjAuNTYuMEoaCg5weXRob25fdmVyc2lvbhIICgYzLjExLjdKLgoI
       Y3Jld19rZXkSIgogZDI3ZDQ1YWQ5ZGExNTg1NDMyNWIwYWYzYjBmYmMzMmJKMQoHY3Jld19pZBIm
-      CiQ4YWNhNDc0YS00MDIxLTQyMTctODBiOS01OGI3MzlmN2YwMWVKHAoMY3Jld19wcm9jZXNzEgwK
+      CiRlNTkyMmI2NS00NjQ5LTQzZWYtYjAwOS01OWNiMDZkMjE5MjhKHAoMY3Jld19wcm9jZXNzEgwK
       CnNlcXVlbnRpYWxKEQoLY3Jld19tZW1vcnkSAhAAShoKFGNyZXdfbnVtYmVyX29mX3Rhc2tzEgIY
       AkobChVjcmV3X251bWJlcl9vZl9hZ2VudHMSAhgCSowFCgtjcmV3X2FnZW50cxL8BAr5BFt7Imtl
-      eSI6ICI4YmQyMTM5YjU5NzUxODE1MDZlNDFmZDljNDU2M2Q3NSIsICJpZCI6ICIwZTRkOGZlMS1i
-      OTY3LTQ3ODktOWE3Yy01YWVjZDk3ODFiOTYiLCAicm9sZSI6ICJSZXNlYXJjaGVyIiwgInZlcmJv
+      eSI6ICI4YmQyMTM5YjU5NzUxODE1MDZlNDFmZDljNDU2M2Q3NSIsICJpZCI6ICI2NTBiZmQ3NS0z
+      ZjM1LTQ0NzgtOGU5OC1kNDJiYmRjMzBkMGUiLCAicm9sZSI6ICJSZXNlYXJjaGVyIiwgInZlcmJv
       c2U/IjogZmFsc2UsICJtYXhfaXRlciI6IDI1LCAibWF4X3JwbSI6IG51bGwsICJmdW5jdGlvbl9j
       YWxsaW5nX2xsbSI6IG51bGwsICJsbG0iOiAiZ3B0LTRvIiwgImRlbGVnYXRpb25fZW5hYmxlZD8i
       OiBmYWxzZSwgImFsbG93X2NvZGVfZXhlY3V0aW9uPyI6IGZhbHNlLCAibWF4X3JldHJ5X2xpbWl0
       IjogMiwgInRvb2xzX25hbWVzIjogW119LCB7ImtleSI6ICI5YTUwMTVlZjQ4OTVkYzYyNzhkNTQ4
-      MThiYTQ0NmFmNyIsICJpZCI6ICI5Y2I1Mzk0MC1mNzJlLTRkYzQtYmI1MC1hNTE5MzVjZGM3NTEi
+      MThiYTQ0NmFmNyIsICJpZCI6ICI5NDExMjMwNy1iNTI5LTRlZWMtYWRlYy02M2VmOGJmOWIzYTYi
       LCAicm9sZSI6ICJTZW5pb3IgV3JpdGVyIiwgInZlcmJvc2U/IjogZmFsc2UsICJtYXhfaXRlciI6
       IDI1LCAibWF4X3JwbSI6IG51bGwsICJmdW5jdGlvbl9jYWxsaW5nX2xsbSI6IG51bGwsICJsbG0i
       OiAiZ3B0LTRvIiwgImRlbGVnYXRpb25fZW5hYmxlZD8iOiBmYWxzZSwgImFsbG93X2NvZGVfZXhl
       Y3V0aW9uPyI6IGZhbHNlLCAibWF4X3JldHJ5X2xpbWl0IjogMiwgInRvb2xzX25hbWVzIjogW119
       XUrvAwoKY3Jld190YXNrcxLgAwrdA1t7ImtleSI6ICI4MTZlOWViYzY5ZGI2N2M2OGJiNGYzZWE2
-      NWNjZGE1OCIsICJpZCI6ICIwZmRkMTM5Yi0xNzIxLTQ2MDQtOWQ4MC1mNDI4NmVmNGVkZTQiLCAi
+      NWNjZGE1OCIsICJpZCI6ICJiMmUxNzgxNC0yYjcwLTQ2ZTYtYTNkNS1iNmE3OTMzZjg2MWYiLCAi
       YXN5bmNfZXhlY3V0aW9uPyI6IGZhbHNlLCAiaHVtYW5faW5wdXQ/IjogZmFsc2UsICJhZ2VudF9y
       b2xlIjogIlJlc2VhcmNoZXIiLCAiYWdlbnRfa2V5IjogIjhiZDIxMzliNTk3NTE4MTUwNmU0MWZk
       OWM0NTYzZDc1IiwgInRvb2xzX25hbWVzIjogW119LCB7ImtleSI6ICI1ZmE2NWMwNmE5ZTMxZjJj
-      Njk1NDMyNjY4YWNkNjJkZCIsICJpZCI6ICJhMjFkNGJlMy1iODUzLTQ2YWItYWNiMy1jMTA3OThl
-      YjU0YjMiLCAiYXN5bmNfZXhlY3V0aW9uPyI6IGZhbHNlLCAiaHVtYW5faW5wdXQ/IjogZmFsc2Us
+      Njk1NDMyNjY4YWNkNjJkZCIsICJpZCI6ICI0ZDYzZWNjNy03NjA1LTQ3MGEtYWU2Yy0xYTk2OWM1
+      NDQ0MjEiLCAiYXN5bmNfZXhlY3V0aW9uPyI6IGZhbHNlLCAiaHVtYW5faW5wdXQ/IjogZmFsc2Us
       ICJhZ2VudF9yb2xlIjogIlNlbmlvciBXcml0ZXIiLCAiYWdlbnRfa2V5IjogIjlhNTAxNWVmNDg5
       NWRjNjI3OGQ1NDgxOGJhNDQ2YWY3IiwgInRvb2xzX25hbWVzIjogW119XXoCGAGFAQABAAAS/gEK
-      EDWekoIBphp8JU7MDs7lDF4SCEpFs3X+wfxYKhNDcmV3IFRlc3QgRXhlY3V0aW9uMAE5MDIdVkHO
-      8xdBqBIfVkHO8xdKGgoOY3Jld2FpX3ZlcnNpb24SCAoGMC41NS4ySi4KCGNyZXdfa2V5EiIKIDM5
-      NDkzZTE2MTYzNGE5ZWM0ZGM0ZTM5N2E5NzY5NTcySjEKB2NyZXdfaWQSJgokODBkYTlhMTktOTcw
-      YS00Nzc4LWE0NTUtOWQzNTcwNzBhNTE0ShEKCml0ZXJhdGlvbnMSAwoBMkobCgptb2RlbF9uYW1l
-      Eg0KC2dwdC00by1taW5pegIYAYUBAAEAABK8CQoQSRfJMAQbW7g+PoUl1V/0FhIIMFPUZybN4xcq
-      DENyZXcgQ3JlYXRlZDABOdjyHFdBzvMXQWD0H1dBzvMXShoKDmNyZXdhaV92ZXJzaW9uEggKBjAu
-      NTUuMkoaCg5weXRob25fdmVyc2lvbhIICgYzLjExLjdKLgoIY3Jld19rZXkSIgogZTNmZGEwZjMx
-      MTBmZTgwYjE4OTQ3YzAxNDcxNDMwYTRKMQoHY3Jld19pZBImCiQ4MTBmM2FiNi0xODgyLTRkNzIt
-      YWUzMi00MjNiY2Q3NTQ2ZjdKHgoMY3Jld19wcm9jZXNzEg4KDGhpZXJhcmNoaWNhbEoRCgtjcmV3
+      EIXTFjhQKqn+MAhbEqARaLMSCAYUMWopbtjRKhNDcmV3IFRlc3QgRXhlY3V0aW9uMAE5EOI2osy/
+      9BdBsGg4osy/9BdKGgoOY3Jld2FpX3ZlcnNpb24SCAoGMC41Ni4wSi4KCGNyZXdfa2V5EiIKIDM5
+      NDkzZTE2MTYzNGE5ZWM0ZGM0ZTM5N2E5NzY5NTcySjEKB2NyZXdfaWQSJgokMDlhZjRjZDEtZDVl
+      OS00NWY2LWIwY2YtMDAyZTQxYTAyNmVlShEKCml0ZXJhdGlvbnMSAwoBMkobCgptb2RlbF9uYW1l
+      Eg0KC2dwdC00by1taW5pegIYAYUBAAEAABK8CQoQk+4WXkRZF2qFqi/FZz1J0hIIM8CkeHeuAIIq
+      DENyZXcgQ3JlYXRlZDABOWg1gaLMv/QXQcBEg6LMv/QXShoKDmNyZXdhaV92ZXJzaW9uEggKBjAu
+      NTYuMEoaCg5weXRob25fdmVyc2lvbhIICgYzLjExLjdKLgoIY3Jld19rZXkSIgogZTNmZGEwZjMx
+      MTBmZTgwYjE4OTQ3YzAxNDcxNDMwYTRKMQoHY3Jld19pZBImCiQzYWQ0MWQ5Mi01OTA5LTQ3M2Et
+      YmI1Yy1lMDllMmM5YWQ2YTRKHgoMY3Jld19wcm9jZXNzEg4KDGhpZXJhcmNoaWNhbEoRCgtjcmV3
       X21lbW9yeRICEABKGgoUY3Jld19udW1iZXJfb2ZfdGFza3MSAhgBShsKFWNyZXdfbnVtYmVyX29m
       X2FnZW50cxICGAJKjAUKC2NyZXdfYWdlbnRzEvwECvkEW3sia2V5IjogIjhiZDIxMzliNTk3NTE4
-      MTUwNmU0MWZkOWM0NTYzZDc1IiwgImlkIjogIjBlNGQ4ZmUxLWI5NjctNDc4OS05YTdjLTVhZWNk
-      OTc4MWI5NiIsICJyb2xlIjogIlJlc2VhcmNoZXIiLCAidmVyYm9zZT8iOiBmYWxzZSwgIm1heF9p
+      MTUwNmU0MWZkOWM0NTYzZDc1IiwgImlkIjogIjY1MGJmZDc1LTNmMzUtNDQ3OC04ZTk4LWQ0MmJi
+      ZGMzMGQwZSIsICJyb2xlIjogIlJlc2VhcmNoZXIiLCAidmVyYm9zZT8iOiBmYWxzZSwgIm1heF9p
       dGVyIjogMjUsICJtYXhfcnBtIjogbnVsbCwgImZ1bmN0aW9uX2NhbGxpbmdfbGxtIjogbnVsbCwg
       ImxsbSI6ICJncHQtNG8iLCAiZGVsZWdhdGlvbl9lbmFibGVkPyI6IGZhbHNlLCAiYWxsb3dfY29k
       ZV9leGVjdXRpb24/IjogZmFsc2UsICJtYXhfcmV0cnlfbGltaXQiOiAyLCAidG9vbHNfbmFtZXMi
       OiBbXX0sIHsia2V5IjogIjlhNTAxNWVmNDg5NWRjNjI3OGQ1NDgxOGJhNDQ2YWY3IiwgImlkIjog
-      IjljYjUzOTQwLWY3MmUtNGRjNC1iYjUwLWE1MTkzNWNkYzc1MSIsICJyb2xlIjogIlNlbmlvciBX
+      Ijk0MTEyMzA3LWI1MjktNGVlYy1hZGVjLTYzZWY4YmY5YjNhNiIsICJyb2xlIjogIlNlbmlvciBX
       cml0ZXIiLCAidmVyYm9zZT8iOiBmYWxzZSwgIm1heF9pdGVyIjogMjUsICJtYXhfcnBtIjogbnVs
       bCwgImZ1bmN0aW9uX2NhbGxpbmdfbGxtIjogbnVsbCwgImxsbSI6ICJncHQtNG8iLCAiZGVsZWdh
       dGlvbl9lbmFibGVkPyI6IGZhbHNlLCAiYWxsb3dfY29kZV9leGVjdXRpb24/IjogZmFsc2UsICJt
       YXhfcmV0cnlfbGltaXQiOiAyLCAidG9vbHNfbmFtZXMiOiBbXX1dStsBCgpjcmV3X3Rhc2tzEswB
-      CskBW3sia2V5IjogIjVmYTY1YzA2YTllMzFmMmM2OTU0MzI2NjhhY2Q2MmRkIiwgImlkIjogImY2
-      MWY2OWVmLTBhOTQtNDU0ZS1hMzk5LTYzYTY1ODAzYjVkNyIsICJhc3luY19leGVjdXRpb24/Ijog
+      CskBW3sia2V5IjogIjVmYTY1YzA2YTllMzFmMmM2OTU0MzI2NjhhY2Q2MmRkIiwgImlkIjogIjFj
+      Mzg5YTA3LTUzMjktNDYxZS1iOGI1LWRkYzMyYTkzNzRiOCIsICJhc3luY19leGVjdXRpb24/Ijog
       ZmFsc2UsICJodW1hbl9pbnB1dD8iOiBmYWxzZSwgImFnZW50X3JvbGUiOiAiTm9uZSIsICJhZ2Vu
       dF9rZXkiOiBudWxsLCAidG9vbHNfbmFtZXMiOiBbXX1degIYAYUBAAEAAA==
     headers:
@@ -145,13 +145,13 @@ interactions:
       Content-Type:
       - application/x-protobuf
       Date:
-      - Tue, 10 Sep 2024 06:31:04 GMT
+      - Fri, 13 Sep 2024 08:17:26 GMT
     status:
       code: 200
       message: OK
 - request:
-    body: '{"messages": [{"role": "user", "content": "You are Crew Manager. You are
-      a seasoned manager with a knack for getting the best out of your team.\nYou
+    body: '{"messages": [{"role": "system", "content": "You are Crew Manager. You
+      are a seasoned manager with a knack for getting the best out of your team.\nYou
       are also known for your ability to delegate work to the right people, and to
       ask the right questions to get the best out of your team.\nEven though you don''t
       perform tasks by yourself, you have a lot of experience in the field, which
@@ -183,14 +183,15 @@ interactions:
       python dictionary, enclosed in curly braces, using \" to wrap keys and values.\nObservation:
       the result of the action\n\nOnce all necessary information is gathered:\n\nThought:
       I now know the final answer\nFinal Answer: the final answer to the original
-      input question\n\nCurrent Task: Come up with a list of 5 interesting ideas to
-      explore for an article, then write one amazing paragraph highlight for each
-      idea that showcases how good an article about this topic could be. Return the
-      list of ideas with their paragraph and your notes.\n\nThis is the expect criteria
-      for your final answer: 5 bullet points with a paragraph for each idea. \n you
-      MUST return the actual complete content as the final answer, not a summary.\n\nBegin!
-      This is VERY important to you, use the tools available and give your best Final
-      Answer, your job depends on it!\n\nThought:"}], "model": "gpt-4o", "stop": ["\nObservation"]}'
+      input question\n"}, {"role": "user", "content": "\nCurrent Task: Come up with
+      a list of 5 interesting ideas to explore for an article, then write one amazing
+      paragraph highlight for each idea that showcases how good an article about this
+      topic could be. Return the list of ideas with their paragraph and your notes.\n\nThis
+      is the expect criteria for your final answer: 5 bullet points with a paragraph
+      for each idea.\nyou MUST return the actual complete content as the final answer,
+      not a summary.\n\nBegin! This is VERY important to you, use the tools available
+      and give your best Final Answer, your job depends on it!\n\nThought:"}], "model":
+      "gpt-4o", "stop": ["\nObservation"]}'
     headers:
       accept:
       - application/json
@@ -199,16 +200,16 @@ interactions:
       connection:
       - keep-alive
       content-length:
-      - '3190'
+      - '3223'
       content-type:
       - application/json
       cookie:
-      - _cfuvid=8r8yFLG2b7e3n6pklgpsT05MHRvfdePz1ckAFvRQY8E-1725949790252-0.0.1.1-604800000;
-        __cf_bm=fuuc.ZDO3Y9B7nXE_8fBn7ykDAvAaK1VdxjZw0MTtsE-1725949790-1.0.1.1-pAJ7BWJMj1j3gS2ySR6xSBO7uFrjcB6ehFra4QVq14JqaiG4VDIjDO1C3WueKGRnSALSkpLQyJcJ2YVd_pXglQ
+      - __cf_bm=pgsskMPipgeSB6HhnkjwcOEfengIvt0p9whKNmTJVLs-1726215280-1.0.1.1-Gtqb.nO1U.cHTnd9mR9sEA5tpVo1.pexRrxqXOkn.6Mzja8mLG1URJsOLTfjMAAYpWaUQe4Rjmnr6lqQk5hAxQ;
+        _cfuvid=dp2yoCmGHVlURh_U78_UoIfnhcO5UhufnL5whkUSMTQ-1726214380689-0.0.1.1-604800000
       host:
       - api.openai.com
       user-agent:
-      - OpenAI/Python 1.44.0
+      - OpenAI/Python 1.45.0
       x-stainless-arch:
       - arm64
       x-stainless-async:
@@ -218,7 +219,7 @@ interactions:
       x-stainless-os:
       - MacOS
       x-stainless-package-version:
-      - 1.44.0
+      - 1.45.0
       x-stainless-raw-response:
       - 'true'
       x-stainless-runtime:
@@ -228,28 +229,32 @@ interactions:
     method: POST
     uri: https://api.openai.com/v1/chat/completions
   response:
-    content: "{\n  \"id\": \"chatcmpl-A5ogwQgZtjOBWmBf5mJxI1Rm0NZJw\",\n  \"object\":
-      \"chat.completion\",\n  \"created\": 1725949862,\n  \"model\": \"gpt-4o-2024-05-13\",\n
+    content: "{\n  \"id\": \"chatcmpl-A6vmX4XtkK8NEm9FV9htHvtsgf4iw\",\n  \"object\":
+      \"chat.completion\",\n  \"created\": 1726215445,\n  \"model\": \"gpt-4o-2024-05-13\",\n
       \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
-      \"assistant\",\n        \"content\": \"To complete this task, I need to first
-      come up with a list of 5 interesting ideas for the article. Once I have these
-      ideas, I'll need some in-depth information to write a compelling paragraph for
-      each. I should start by asking the Researcher to help brainstorm some intriguing
-      article topics.\\n\\nThought: I'll ask the Researcher to generate some interesting
-      article ideas.\\n\\nAction: Ask question to coworker\\nAction Input: {\\\"question\\\":
-      \\\"Can you generate a list of 5 interesting ideas for an article that have
-      the potential to captivate readers?\\\", \\\"context\\\": \\\"We need to come
-      up with an article that will engage our readers and showcase a compelling narrative
-      or unique angle. Your expertise in identifying trending or thought-provoking
-      topics will be crucial.\\\", \\\"coworker\\\": \\\"Researcher\\\"}\\n\",\n        \"refusal\":
-      null\n      },\n      \"logprobs\": null,\n      \"finish_reason\": \"stop\"\n
-      \   }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 694,\n    \"completion_tokens\":
-      158,\n    \"total_tokens\": 852\n  },\n  \"system_fingerprint\": \"fp_25624ae3a5\"\n}\n"
+      \"assistant\",\n        \"content\": \"Thought: To complete this task efficiently,
+      I will first delegate the objective of brainstorming 5 interesting ideas for
+      the article to the Researcher, considering their expertise in gathering and
+      analyzing information. Following this, I will then delegate the task of writing
+      an amazing paragraph highlight for each idea to the Senior Writer, who is skilled
+      in creating compelling content. Let's start with generating the ideas.\\n\\nAction:
+      Delegate work to coworker\\nAction Input: {\\\"task\\\": \\\"Come up with a
+      list of 5 interesting ideas to explore for an article.\\\", \\\"context\\\":
+      \\\"We need five engaging and interesting article topics. These topics should
+      be timely, relevant, and have a certain appeal that could attract readers. Consider
+      current events, popular culture, emerging trends, or intriguing subjects in
+      various fields such as technology, science, lifestyle, or history. The ultimate
+      goal is to have topics that can lead to a captivating and informative article.\\\",
+      \\\"coworker\\\": \\\"Researcher\\\"}\\n\",\n        \"refusal\": null\n      },\n
+      \     \"logprobs\": null,\n      \"finish_reason\": \"stop\"\n    }\n  ],\n
+      \ \"usage\": {\n    \"prompt_tokens\": 698,\n    \"completion_tokens\": 190,\n
+      \   \"total_tokens\": 888,\n    \"completion_tokens_details\": {\n      \"reasoning_tokens\":
+      0\n    }\n  },\n  \"system_fingerprint\": \"fp_25624ae3a5\"\n}\n"
     headers:
       CF-Cache-Status:
       - DYNAMIC
       CF-RAY:
-      - 8c0d5f700b4dcf35-SJC
+      - 8c26b361bf852ab9-LAX
       Connection:
       - keep-alive
       Content-Encoding:
@@ -257,7 +262,7 @@ interactions:
       Content-Type:
       - application/json
       Date:
-      - Tue, 10 Sep 2024 06:31:05 GMT
+      - Fri, 13 Sep 2024 08:17:27 GMT
       Server:
       - cloudflare
       Transfer-Encoding:
@@ -271,7 +276,7 @@ interactions:
       openai-organization:
       - crewai-iuxna1
       openai-processing-ms:
-      - '2180'
+      - '2155'
       openai-version:
       - '2020-10-01'
       strict-transport-security:
@@ -289,11 +294,11 @@ interactions:
       x-ratelimit-reset-tokens:
       - 1ms
       x-request-id:
-      - req_00f569121d22ce8fb7b462c61c3b91af
+      - req_20b6d5f2fc31413d5dfe069489fbb9de
     http_version: HTTP/1.1
     status_code: 200
 - request:
-    body: '{"messages": [{"role": "user", "content": "You are Researcher. You''re
+    body: '{"messages": [{"role": "system", "content": "You are Researcher. You''re
       an expert researcher, specialized in technology, software engineering, AI and
       startups. You work as a freelancer and is now working on doing research and
       analysis for a new customer.\nYour personal goal is: Make the best research
@@ -301,14 +306,16 @@ interactions:
       answer to the task use the exact following format:\n\nThought: I now can give
       a great answer\nFinal Answer: Your final answer must be the great and the most
       complete as possible, it must be outcome described.\n\nI MUST use these formats,
-      my job depends on it!\nCurrent Task: Can you generate a list of 5 interesting
-      ideas for an article that have the potential to captivate readers?\n\nThis is
-      the expect criteria for your final answer: Your best answer to your coworker
-      asking you this, accounting for the context shared. \n you MUST return the actual
-      complete content as the final answer, not a summary.\n\nThis is the context
-      you''re working with:\nWe need to come up with an article that will engage our
-      readers and showcase a compelling narrative or unique angle. Your expertise
-      in identifying trending or thought-provoking topics will be crucial.\n\nBegin!
+      my job depends on it!"}, {"role": "user", "content": "\nCurrent Task: Come up
+      with a list of 5 interesting ideas to explore for an article.\n\nThis is the
+      expect criteria for your final answer: Your best answer to your coworker asking
+      you this, accounting for the context shared.\nyou MUST return the actual complete
+      content as the final answer, not a summary.\n\nThis is the context you''re working
+      with:\nWe need five engaging and interesting article topics. These topics should
+      be timely, relevant, and have a certain appeal that could attract readers. Consider
+      current events, popular culture, emerging trends, or intriguing subjects in
+      various fields such as technology, science, lifestyle, or history. The ultimate
+      goal is to have topics that can lead to a captivating and informative article.\n\nBegin!
       This is VERY important to you, use the tools available and give your best Final
       Answer, your job depends on it!\n\nThought:"}], "model": "gpt-4o", "stop": ["\nObservation"]}'
     headers:
@@ -319,16 +326,16 @@ interactions:
       connection:
       - keep-alive
       content-length:
-      - '1414'
+      - '1601'
       content-type:
       - application/json
       cookie:
-      - _cfuvid=8r8yFLG2b7e3n6pklgpsT05MHRvfdePz1ckAFvRQY8E-1725949790252-0.0.1.1-604800000;
-        __cf_bm=fuuc.ZDO3Y9B7nXE_8fBn7ykDAvAaK1VdxjZw0MTtsE-1725949790-1.0.1.1-pAJ7BWJMj1j3gS2ySR6xSBO7uFrjcB6ehFra4QVq14JqaiG4VDIjDO1C3WueKGRnSALSkpLQyJcJ2YVd_pXglQ
+      - __cf_bm=pgsskMPipgeSB6HhnkjwcOEfengIvt0p9whKNmTJVLs-1726215280-1.0.1.1-Gtqb.nO1U.cHTnd9mR9sEA5tpVo1.pexRrxqXOkn.6Mzja8mLG1URJsOLTfjMAAYpWaUQe4Rjmnr6lqQk5hAxQ;
+        _cfuvid=dp2yoCmGHVlURh_U78_UoIfnhcO5UhufnL5whkUSMTQ-1726214380689-0.0.1.1-604800000
       host:
       - api.openai.com
       user-agent:
-      - OpenAI/Python 1.44.0
+      - OpenAI/Python 1.45.0
       x-stainless-arch:
       - arm64
       x-stainless-async:
@@ -338,7 +345,7 @@ interactions:
       x-stainless-os:
       - MacOS
       x-stainless-package-version:
-      - 1.44.0
+      - 1.45.0
       x-stainless-raw-response:
       - 'true'
       x-stainless-runtime:
@@ -348,58 +355,56 @@ interactions:
     method: POST
     uri: https://api.openai.com/v1/chat/completions
   response:
-    content: "{\n  \"id\": \"chatcmpl-A5ogzpNSVaUK8g2xUtBcQmWWyP1fe\",\n  \"object\":
-      \"chat.completion\",\n  \"created\": 1725949865,\n  \"model\": \"gpt-4o-2024-05-13\",\n
+    content: "{\n  \"id\": \"chatcmpl-A6vmaX0xiSnSwHX1ziXrF7i4DmbKb\",\n  \"object\":
+      \"chat.completion\",\n  \"created\": 1726215448,\n  \"model\": \"gpt-4o-2024-05-13\",\n
       \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
-      \"assistant\",\n        \"content\": \"Thought: I now can give a great answer\\nFinal
-      Answer: Here are five interesting ideas for an article that have the potential
-      to captivate readers:\\n\\n1. **The Rise of AI Agents in Everyday Life: From
-      Personal Assistants to Autonomous Vehicles**\\n   - **Overview**: This article
-      will delve into how AI agents are becoming an integral part of our daily lives.
-      By discussing various implementations like smart home devices, virtual assistants,
-      and self-driving cars, the piece will showcase the evolution and future potential
-      of AI agents.\\n   - **Highlights**:\\n     - Historical context of AI agents\\n
-      \    - Current applications in personal and professional settings\\n     - Future
-      trends and innovations\\n     - Ethical considerations and societal impact\\n\\n2.
-      **Breaking Down the Black Box: How Explainable AI is Transforming Trust in Machine
-      Learning**\\n   - **Overview**: This article will address one of the most critical
-      issues in AI today\u2014transparency and trust. By focusing on Explainable AI
-      (XAI), it will explore how researchers and developers are working to make AI
-      processes more understandable to humans.\\n   - **Highlights**:\\n     - Definition
-      and importance of Explainable AI\\n     - Examples of XAI tools and frameworks\\n
-      \    - Case studies demonstrating XAI in action\\n     - Challenges and future
-      directions in XAI research\\n\\n3. **AI in the Creative Arts: How Machines Are
-      Redefining Creativity**\\n   - **Overview**: This piece will investigate the
-      role of AI in creative fields such as music, art, and writing. The narrative
-      will discuss how AI tools are both collaborating with and challenging human
-      creativity.\\n   - **Highlights**:\\n     - Overview of AI applications in various
-      art forms\\n     - Success stories of AI-created art and music\\n     - Interviews
-      with artists and AI developers\\n     - Ethical and philosophical questions
-      surrounding AI and creativity\\n\\n4. **Startups at the Forefront: How AI is
-      Revolutionizing New Ventures**\\n   - **Overview**: This article will focus
-      on how startups are leveraging AI to innovate and disrupt traditional industries.
-      From healthcare to finance, it will provide a broad look at the startup ecosystem\u2019s
-      adoption of AI technologies.\\n   - **Highlights**:\\n     - Profiles of successful
-      AI-driven startups\\n     - Analysis of market trends and investment in AI\\n
-      \    - Challenges faced by AI startups\\n     - Predictions for future startup
-      innovations in AI\\n\\n5. **The Ethical Dilemmas of AI: Balancing Innovation
-      and Responsibility**\\n   - **Overview**: This deep-dive article will explore
-      the ethical considerations surrounding AI development and deployment. By examining
-      real-world scenarios and expert opinions, it will aim to provide a balanced
-      view on the moral responsibilities of AI practitioners.\\n   - **Highlights**:\\n
-      \    - Key ethical issues in AI like bias, privacy, and accountability\\n     -
-      Case studies showcasing ethical dilemmas\\n     - Insights from AI ethicists
-      and technologists\\n     - Frameworks and guidelines for ethical AI development\\n\\nThese
-      topics are designed to captivate readers by addressing current trends, ethical
-      considerations, and future possibilities in the realm of AI and AI agents.\",\n
+      \"assistant\",\n        \"content\": \"Thought: I now can give a great answer.\\nFinal
+      Answer:\\n\\n1. **The Rise of AI in Everyday Life: How Artificial Intelligence
+      is Transforming Common Household Devices**\\n   - Artificial intelligence isn't
+      confined to research labs or tech companies anymore; it's now a fixture in our
+      daily lives. From smart speakers listening to our commands to AI-driven home
+      security systems, explore how AI is making our homes smarter and our lives easier.
+      Dive into the latest advancements in AI technology, the ethical considerations
+      around data privacy, and real-world examples of AI in action around the house.\\n\\n2.
+      **The Future of Work: How AI and Automation are Reshaping Job Markets**\\n   -
+      With rapid advancements in AI and automation, the job market is undergoing significant
+      changes. Examine which industries are most affected and how workers can adapt
+      to these new technologies. Discuss the emergence of new job roles, the need
+      for upskilling, and the broader economic impact of an increasingly automated
+      workforce. Provide insights from experts in the field, real-life case studies,
+      and predictions for the future.\\n\\n3. **AI and Mental Health: Promises and
+      Pitfalls**\\n   - AI is making strides in the field of mental health, offering
+      innovative solutions for diagnosing and treating mental illnesses. This article
+      could explore AI's role in providing mental health support through apps and
+      virtual therapists, the accuracy and effectiveness of these tools compared to
+      traditional methods, and the ethical concerns surrounding AI in mental health
+      care. Include perspectives from mental health professionals and technologists
+      to provide a balanced view.\\n\\n4. **Cryptocurrency and AI: The Dynamic Duo
+      Changing the Financial Landscape**\\n   - The intersection of AI and cryptocurrency
+      is creating new opportunities and challenges in the financial world. Discuss
+      how AI algorithms are being used for cryptocurrency trading, fraud detection,
+      and financial forecasting. Explore the potential risks, regulatory concerns,
+      and the future of decentralized finance (DeFi) with AI integration. This topic
+      can provide readers with a nuanced understanding of two of the most talked-about
+      technologies today.\\n\\n5. **The Ethical Dilemmas of AI: Can Machines Make
+      Moral Decisions?**\\n   - As AI systems become more autonomous, the question
+      of whether machines can make ethical decisions becomes increasingly pertinent.
+      Delve into the philosophical and practical considerations of programming morality
+      into AI. Use real-world examples such as self-driving cars making split-second
+      decisions in accidents, AI in judicial systems, and how tech companies are approaching
+      the challenge of ethical AI. Discuss potential solutions, including AI ethics
+      guidelines and frameworks proposed by experts.\\n\\nThese topics are timely,
+      relevant, and have widespread appeal, ensuring that the resulting articles will
+      engage a broad audience while providing deep insights into the selected subjects.\",\n
       \       \"refusal\": null\n      },\n      \"logprobs\": null,\n      \"finish_reason\":
-      \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 267,\n    \"completion_tokens\":
-      621,\n    \"total_tokens\": 888\n  },\n  \"system_fingerprint\": \"fp_25624ae3a5\"\n}\n"
+      \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 301,\n    \"completion_tokens\":
+      529,\n    \"total_tokens\": 830,\n    \"completion_tokens_details\": {\n      \"reasoning_tokens\":
+      0\n    }\n  },\n  \"system_fingerprint\": \"fp_25624ae3a5\"\n}\n"
     headers:
       CF-Cache-Status:
       - DYNAMIC
       CF-RAY:
-      - 8c0d5f81de95cf35-SJC
+      - 8c26b3789ad22ab9-LAX
       Connection:
       - keep-alive
       Content-Encoding:
@@ -407,7 +412,7 @@ interactions:
       Content-Type:
       - application/json
       Date:
-      - Tue, 10 Sep 2024 06:31:14 GMT
+      - Fri, 13 Sep 2024 08:17:35 GMT
       Server:
       - cloudflare
       Transfer-Encoding:
@@ -421,7 +426,7 @@ interactions:
       openai-organization:
       - crewai-iuxna1
       openai-processing-ms:
-      - '8790'
+      - '6747'
       openai-version:
       - '2020-10-01'
       strict-transport-security:
@@ -433,52 +438,18 @@ interactions:
       x-ratelimit-remaining-requests:
       - '9999'
       x-ratelimit-remaining-tokens:
-      - '29999656'
+      - '29999618'
       x-ratelimit-reset-requests:
       - 6ms
       x-ratelimit-reset-tokens:
       - 0s
       x-request-id:
-      - req_87f1380e0f8704b218982c1ed817ac04
+      - req_3c50688a14d75f40fc64b5579540b4d1
     http_version: HTTP/1.1
     status_code: 200
 - request:
-    body: !!binary |
-      CtsBCiQKIgoMc2VydmljZS5uYW1lEhIKEGNyZXdBSS10ZWxlbWV0cnkSsgEKEgoQY3Jld2FpLnRl
-      bGVtZXRyeRKbAQoQZjC2eu/G19enA6qahJaHrBIIgCf/owO2LOUqClRvb2wgVXNhZ2UwATngRhMW
-      RM7zF0EwvCAWRM7zF0oaCg5jcmV3YWlfdmVyc2lvbhIICgYwLjU1LjJKJwoJdG9vbF9uYW1lEhoK
-      GEFzayBxdWVzdGlvbiB0byBjb3dvcmtlckoOCghhdHRlbXB0cxICGAF6AhgBhQEAAQAA
-    headers:
-      Accept:
-      - '*/*'
-      Accept-Encoding:
-      - gzip, deflate
-      Connection:
-      - keep-alive
-      Content-Length:
-      - '222'
-      Content-Type:
-      - application/x-protobuf
-      User-Agent:
-      - OTel-OTLP-Exporter-Python/1.27.0
-    method: POST
-    uri: https://telemetry.crewai.com:4319/v1/traces
-  response:
-    body:
-      string: "\n\0"
-    headers:
-      Content-Length:
-      - '2'
-      Content-Type:
-      - application/x-protobuf
-      Date:
-      - Tue, 10 Sep 2024 06:31:14 GMT
-    status:
-      code: 200
-      message: OK
-- request:
-    body: '{"messages": [{"role": "user", "content": "You are Crew Manager. You are
-      a seasoned manager with a knack for getting the best out of your team.\nYou
+    body: '{"messages": [{"role": "system", "content": "You are Crew Manager. You
+      are a seasoned manager with a knack for getting the best out of your team.\nYou
       are also known for your ability to delegate work to the right people, and to
       ask the right questions to get the best out of your team.\nEven though you don''t
       perform tasks by yourself, you have a lot of experience in the field, which
@@ -510,64 +481,64 @@ interactions:
       python dictionary, enclosed in curly braces, using \" to wrap keys and values.\nObservation:
       the result of the action\n\nOnce all necessary information is gathered:\n\nThought:
       I now know the final answer\nFinal Answer: the final answer to the original
-      input question\n\nCurrent Task: Come up with a list of 5 interesting ideas to
-      explore for an article, then write one amazing paragraph highlight for each
-      idea that showcases how good an article about this topic could be. Return the
-      list of ideas with their paragraph and your notes.\n\nThis is the expect criteria
-      for your final answer: 5 bullet points with a paragraph for each idea. \n you
-      MUST return the actual complete content as the final answer, not a summary.\n\nBegin!
-      This is VERY important to you, use the tools available and give your best Final
-      Answer, your job depends on it!\n\nThought:"}, {"role": "assistant", "content":
-      "To complete this task, I need to first come up with a list of 5 interesting
-      ideas for the article. Once I have these ideas, I''ll need some in-depth information
-      to write a compelling paragraph for each. I should start by asking the Researcher
-      to help brainstorm some intriguing article topics.\n\nThought: I''ll ask the
-      Researcher to generate some interesting article ideas.\n\nAction: Ask question
-      to coworker\nAction Input: {\"question\": \"Can you generate a list of 5 interesting
-      ideas for an article that have the potential to captivate readers?\", \"context\":
-      \"We need to come up with an article that will engage our readers and showcase
-      a compelling narrative or unique angle. Your expertise in identifying trending
-      or thought-provoking topics will be crucial.\", \"coworker\": \"Researcher\"}\n\nObservation:
-      Here are five interesting ideas for an article that have the potential to captivate
-      readers:\n\n1. **The Rise of AI Agents in Everyday Life: From Personal Assistants
-      to Autonomous Vehicles**\n   - **Overview**: This article will delve into how
-      AI agents are becoming an integral part of our daily lives. By discussing various
-      implementations like smart home devices, virtual assistants, and self-driving
-      cars, the piece will showcase the evolution and future potential of AI agents.\n   -
-      **Highlights**:\n     - Historical context of AI agents\n     - Current applications
-      in personal and professional settings\n     - Future trends and innovations\n     -
-      Ethical considerations and societal impact\n\n2. **Breaking Down the Black Box:
-      How Explainable AI is Transforming Trust in Machine Learning**\n   - **Overview**:
-      This article will address one of the most critical issues in AI today\u2014transparency
-      and trust. By focusing on Explainable AI (XAI), it will explore how researchers
-      and developers are working to make AI processes more understandable to humans.\n   -
-      **Highlights**:\n     - Definition and importance of Explainable AI\n     -
-      Examples of XAI tools and frameworks\n     - Case studies demonstrating XAI
-      in action\n     - Challenges and future directions in XAI research\n\n3. **AI
-      in the Creative Arts: How Machines Are Redefining Creativity**\n   - **Overview**:
-      This piece will investigate the role of AI in creative fields such as music,
-      art, and writing. The narrative will discuss how AI tools are both collaborating
-      with and challenging human creativity.\n   - **Highlights**:\n     - Overview
-      of AI applications in various art forms\n     - Success stories of AI-created
-      art and music\n     - Interviews with artists and AI developers\n     - Ethical
-      and philosophical questions surrounding AI and creativity\n\n4. **Startups at
-      the Forefront: How AI is Revolutionizing New Ventures**\n   - **Overview**:
-      This article will focus on how startups are leveraging AI to innovate and disrupt
-      traditional industries. From healthcare to finance, it will provide a broad
-      look at the startup ecosystem\u2019s adoption of AI technologies.\n   - **Highlights**:\n     -
-      Profiles of successful AI-driven startups\n     - Analysis of market trends
-      and investment in AI\n     - Challenges faced by AI startups\n     - Predictions
-      for future startup innovations in AI\n\n5. **The Ethical Dilemmas of AI: Balancing
-      Innovation and Responsibility**\n   - **Overview**: This deep-dive article will
-      explore the ethical considerations surrounding AI development and deployment.
-      By examining real-world scenarios and expert opinions, it will aim to provide
-      a balanced view on the moral responsibilities of AI practitioners.\n   - **Highlights**:\n     -
-      Key ethical issues in AI like bias, privacy, and accountability\n     - Case
-      studies showcasing ethical dilemmas\n     - Insights from AI ethicists and technologists\n     -
-      Frameworks and guidelines for ethical AI development\n\nThese topics are designed
-      to captivate readers by addressing current trends, ethical considerations, and
-      future possibilities in the realm of AI and AI agents."}], "model": "gpt-4o",
-      "stop": ["\nObservation"]}'
+      input question\n"}, {"role": "user", "content": "\nCurrent Task: Come up with
+      a list of 5 interesting ideas to explore for an article, then write one amazing
+      paragraph highlight for each idea that showcases how good an article about this
+      topic could be. Return the list of ideas with their paragraph and your notes.\n\nThis
+      is the expect criteria for your final answer: 5 bullet points with a paragraph
+      for each idea.\nyou MUST return the actual complete content as the final answer,
+      not a summary.\n\nBegin! This is VERY important to you, use the tools available
+      and give your best Final Answer, your job depends on it!\n\nThought:"}, {"role":
+      "assistant", "content": "Thought: To complete this task efficiently, I will
+      first delegate the objective of brainstorming 5 interesting ideas for the article
+      to the Researcher, considering their expertise in gathering and analyzing information.
+      Following this, I will then delegate the task of writing an amazing paragraph
+      highlight for each idea to the Senior Writer, who is skilled in creating compelling
+      content. Let''s start with generating the ideas.\n\nAction: Delegate work to
+      coworker\nAction Input: {\"task\": \"Come up with a list of 5 interesting ideas
+      to explore for an article.\", \"context\": \"We need five engaging and interesting
+      article topics. These topics should be timely, relevant, and have a certain
+      appeal that could attract readers. Consider current events, popular culture,
+      emerging trends, or intriguing subjects in various fields such as technology,
+      science, lifestyle, or history. The ultimate goal is to have topics that can
+      lead to a captivating and informative article.\", \"coworker\": \"Researcher\"}\n\nObservation:
+      1. **The Rise of AI in Everyday Life: How Artificial Intelligence is Transforming
+      Common Household Devices**\n   - Artificial intelligence isn''t confined to
+      research labs or tech companies anymore; it''s now a fixture in our daily lives.
+      From smart speakers listening to our commands to AI-driven home security systems,
+      explore how AI is making our homes smarter and our lives easier. Dive into the
+      latest advancements in AI technology, the ethical considerations around data
+      privacy, and real-world examples of AI in action around the house.\n\n2. **The
+      Future of Work: How AI and Automation are Reshaping Job Markets**\n   - With
+      rapid advancements in AI and automation, the job market is undergoing significant
+      changes. Examine which industries are most affected and how workers can adapt
+      to these new technologies. Discuss the emergence of new job roles, the need
+      for upskilling, and the broader economic impact of an increasingly automated
+      workforce. Provide insights from experts in the field, real-life case studies,
+      and predictions for the future.\n\n3. **AI and Mental Health: Promises and Pitfalls**\n   -
+      AI is making strides in the field of mental health, offering innovative solutions
+      for diagnosing and treating mental illnesses. This article could explore AI''s
+      role in providing mental health support through apps and virtual therapists,
+      the accuracy and effectiveness of these tools compared to traditional methods,
+      and the ethical concerns surrounding AI in mental health care. Include perspectives
+      from mental health professionals and technologists to provide a balanced view.\n\n4.
+      **Cryptocurrency and AI: The Dynamic Duo Changing the Financial Landscape**\n   -
+      The intersection of AI and cryptocurrency is creating new opportunities and
+      challenges in the financial world. Discuss how AI algorithms are being used
+      for cryptocurrency trading, fraud detection, and financial forecasting. Explore
+      the potential risks, regulatory concerns, and the future of decentralized finance
+      (DeFi) with AI integration. This topic can provide readers with a nuanced understanding
+      of two of the most talked-about technologies today.\n\n5. **The Ethical Dilemmas
+      of AI: Can Machines Make Moral Decisions?**\n   - As AI systems become more
+      autonomous, the question of whether machines can make ethical decisions becomes
+      increasingly pertinent. Delve into the philosophical and practical considerations
+      of programming morality into AI. Use real-world examples such as self-driving
+      cars making split-second decisions in accidents, AI in judicial systems, and
+      how tech companies are approaching the challenge of ethical AI. Discuss potential
+      solutions, including AI ethics guidelines and frameworks proposed by experts.\n\nThese
+      topics are timely, relevant, and have widespread appeal, ensuring that the resulting
+      articles will engage a broad audience while providing deep insights into the
+      selected subjects."}], "model": "gpt-4o", "stop": ["\nObservation"]}'
     headers:
       accept:
       - application/json
@@ -576,16 +547,16 @@ interactions:
       connection:
       - keep-alive
       content-length:
-      - '7196'
+      - '7193'
       content-type:
       - application/json
       cookie:
-      - _cfuvid=8r8yFLG2b7e3n6pklgpsT05MHRvfdePz1ckAFvRQY8E-1725949790252-0.0.1.1-604800000;
-        __cf_bm=fuuc.ZDO3Y9B7nXE_8fBn7ykDAvAaK1VdxjZw0MTtsE-1725949790-1.0.1.1-pAJ7BWJMj1j3gS2ySR6xSBO7uFrjcB6ehFra4QVq14JqaiG4VDIjDO1C3WueKGRnSALSkpLQyJcJ2YVd_pXglQ
+      - __cf_bm=pgsskMPipgeSB6HhnkjwcOEfengIvt0p9whKNmTJVLs-1726215280-1.0.1.1-Gtqb.nO1U.cHTnd9mR9sEA5tpVo1.pexRrxqXOkn.6Mzja8mLG1URJsOLTfjMAAYpWaUQe4Rjmnr6lqQk5hAxQ;
+        _cfuvid=dp2yoCmGHVlURh_U78_UoIfnhcO5UhufnL5whkUSMTQ-1726214380689-0.0.1.1-604800000
       host:
       - api.openai.com
       user-agent:
-      - OpenAI/Python 1.44.0
+      - OpenAI/Python 1.45.0
       x-stainless-arch:
       - arm64
       x-stainless-async:
@@ -595,7 +566,7 @@ interactions:
       x-stainless-os:
       - MacOS
       x-stainless-package-version:
-      - 1.44.0
+      - 1.45.0
       x-stainless-raw-response:
       - 'true'
       x-stainless-runtime:
@@ -605,31 +576,33 @@ interactions:
     method: POST
     uri: https://api.openai.com/v1/chat/completions
   response:
-    content: "{\n  \"id\": \"chatcmpl-A5oh8hUZe4YeZmjtTqvuvSFMaNIqm\",\n  \"object\":
-      \"chat.completion\",\n  \"created\": 1725949874,\n  \"model\": \"gpt-4o-2024-05-13\",\n
+    content: "{\n  \"id\": \"chatcmpl-A6vmikAztgzYUXMZIDW8zjDkLHT2A\",\n  \"object\":
+      \"chat.completion\",\n  \"created\": 1726215456,\n  \"model\": \"gpt-4o-2024-05-13\",\n
       \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
-      \"assistant\",\n        \"content\": \"Thought: I now need to delegate the writing
-      of one compelling paragraph for each article idea to the Senior Writer. This
-      will ensure that each paragraph is engaging and well-crafted.\\n\\nAction: Delegate
-      work to coworker\\nAction Input: {\\\"task\\\": \\\"Write one engaging paragraph
-      for each of the following article ideas to highlight their potential: \\\\n\\\\n1.
-      The Rise of AI Agents in Everyday Life: From Personal Assistants to Autonomous
-      Vehicles\\\\n2. Breaking Down the Black Box: How Explainable AI is Transforming
-      Trust in Machine Learning\\\\n3. AI in the Creative Arts: How Machines Are Redefining
-      Creativity\\\\n4. Startups at the Forefront: How AI is Revolutionizing New Ventures\\\\n5.
-      The Ethical Dilemmas of AI: Balancing Innovation and Responsibility\\\", \\\"context\\\":
-      \\\"We need to create compelling highlights for each article idea that showcase
-      its potential to captivate readers. Each paragraph should provide an engaging
-      snapshot that makes the topic feel exciting and worth exploring in-depth.\\\",
-      \\\"coworker\\\": \\\"Senior Writer\\\"}\\n\",\n        \"refusal\": null\n
-      \     },\n      \"logprobs\": null,\n      \"finish_reason\": \"stop\"\n    }\n
-      \ ],\n  \"usage\": {\n    \"prompt_tokens\": 1466,\n    \"completion_tokens\":
-      207,\n    \"total_tokens\": 1673\n  },\n  \"system_fingerprint\": \"fp_25624ae3a5\"\n}\n"
+      \"assistant\",\n        \"content\": \"Thought: Now that we have the 5 interesting
+      ideas, the next step is to delegate the task of writing an amazing paragraph
+      highlight for each idea to the Senior Writer. The paragraphs should showcase
+      how good an article about each topic could be.\\n\\nAction: Delegate work to
+      coworker\\nAction Input: {\\\"task\\\": \\\"Write an amazing paragraph highlight
+      for each of the following 5 article ideas.\\\", \\\"context\\\": \\\"We have
+      the following 5 topics that need a compelling introductory paragraph that showcases
+      the potential of each article. The paragraphs should be engaging and give a
+      clear indication of what the full article will explore, enticing readers to
+      want to read more.\\\\n\\\\n1. The Rise of AI in Everyday Life: How Artificial
+      Intelligence is Transforming Common Household Devices\\\\n2. The Future of Work:
+      How AI and Automation are Reshaping Job Markets\\\\n3. AI and Mental Health:
+      Promises and Pitfalls\\\\n4. Cryptocurrency and AI: The Dynamic Duo Changing
+      the Financial Landscape\\\\n5. The Ethical Dilemmas of AI: Can Machines Make
+      Moral Decisions?\\\", \\\"coworker\\\": \\\"Senior Writer\\\"}\\n\",\n        \"refusal\":
+      null\n      },\n      \"logprobs\": null,\n      \"finish_reason\": \"stop\"\n
+      \   }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 1411,\n    \"completion_tokens\":
+      221,\n    \"total_tokens\": 1632,\n    \"completion_tokens_details\": {\n      \"reasoning_tokens\":
+      0\n    }\n  },\n  \"system_fingerprint\": \"fp_25624ae3a5\"\n}\n"
     headers:
       CF-Cache-Status:
       - DYNAMIC
       CF-RAY:
-      - 8c0d5fb9b871cf35-SJC
+      - 8c26b3a958a12ab9-LAX
       Connection:
       - keep-alive
       Content-Encoding:
@@ -637,7 +610,7 @@ interactions:
       Content-Type:
       - application/json
       Date:
-      - Tue, 10 Sep 2024 06:31:17 GMT
+      - Fri, 13 Sep 2024 08:17:39 GMT
       Server:
       - cloudflare
       Transfer-Encoding:
@@ -651,7 +624,7 @@ interactions:
       openai-organization:
       - crewai-iuxna1
       openai-processing-ms:
-      - '2654'
+      - '2463'
       openai-version:
       - '2020-10-01'
       strict-transport-security:
@@ -669,178 +642,14 @@ interactions:
       x-ratelimit-reset-tokens:
       - 3ms
       x-request-id:
-      - req_af3831f53ba3fbc2d40ad5633260e692
-    http_version: HTTP/1.1
-    status_code: 200
-- request:
-    body: '{"messages": [{"role": "user", "content": "You are Senior Writer. You''re
-      a senior writer, specialized in technology, software engineering, AI and startups.
-      You work as a freelancer and are now working on writing content for a new customer.\nYour
-      personal goal is: Write the best content about AI and AI agents.\nTo give my
-      best complete final answer to the task use the exact following format:\n\nThought:
-      I now can give a great answer\nFinal Answer: Your final answer must be the great
-      and the most complete as possible, it must be outcome described.\n\nI MUST use
-      these formats, my job depends on it!\nCurrent Task: Write one engaging paragraph
-      for each of the following article ideas to highlight their potential: \n\n1.
-      The Rise of AI Agents in Everyday Life: From Personal Assistants to Autonomous
-      Vehicles\n2. Breaking Down the Black Box: How Explainable AI is Transforming
-      Trust in Machine Learning\n3. AI in the Creative Arts: How Machines Are Redefining
-      Creativity\n4. Startups at the Forefront: How AI is Revolutionizing New Ventures\n5.
-      The Ethical Dilemmas of AI: Balancing Innovation and Responsibility\n\nThis
-      is the expect criteria for your final answer: Your best answer to your coworker
-      asking you this, accounting for the context shared. \n you MUST return the actual
-      complete content as the final answer, not a summary.\n\nThis is the context
-      you''re working with:\nWe need to create compelling highlights for each article
-      idea that showcase its potential to captivate readers. Each paragraph should
-      provide an engaging snapshot that makes the topic feel exciting and worth exploring
-      in-depth.\n\nBegin! This is VERY important to you, use the tools available and
-      give your best Final Answer, your job depends on it!\n\nThought:"}], "model":
-      "gpt-4o", "stop": ["\nObservation"]}'
-    headers:
-      accept:
-      - application/json
-      accept-encoding:
-      - gzip, deflate
-      connection:
-      - keep-alive
-      content-length:
-      - '1795'
-      content-type:
-      - application/json
-      cookie:
-      - _cfuvid=8r8yFLG2b7e3n6pklgpsT05MHRvfdePz1ckAFvRQY8E-1725949790252-0.0.1.1-604800000;
-        __cf_bm=fuuc.ZDO3Y9B7nXE_8fBn7ykDAvAaK1VdxjZw0MTtsE-1725949790-1.0.1.1-pAJ7BWJMj1j3gS2ySR6xSBO7uFrjcB6ehFra4QVq14JqaiG4VDIjDO1C3WueKGRnSALSkpLQyJcJ2YVd_pXglQ
-      host:
-      - api.openai.com
-      user-agent:
-      - OpenAI/Python 1.44.0
-      x-stainless-arch:
-      - arm64
-      x-stainless-async:
-      - 'false'
-      x-stainless-lang:
-      - python
-      x-stainless-os:
-      - MacOS
-      x-stainless-package-version:
-      - 1.44.0
-      x-stainless-raw-response:
-      - 'true'
-      x-stainless-runtime:
-      - CPython
-      x-stainless-runtime-version:
-      - 3.11.7
-    method: POST
-    uri: https://api.openai.com/v1/chat/completions
-  response:
-    content: "{\n  \"id\": \"chatcmpl-A5ohCIHHkuKrBSb54XokLpbMnjOB4\",\n  \"object\":
-      \"chat.completion\",\n  \"created\": 1725949878,\n  \"model\": \"gpt-4o-2024-05-13\",\n
-      \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
-      \"assistant\",\n        \"content\": \"I now can give a great answer\\nFinal
-      Answer:\\n\\n1. The Rise of AI Agents in Everyday Life: From Personal Assistants
-      to Autonomous Vehicles\\nThe integration of AI agents into our daily routines
-      has reached a point where technology seamlessly enhances our lives in ways we
-      once only dreamed of. From the ubiquitous personal assistants like Siri and
-      Alexa streamlining our schedules and providing instant information, to autonomous
-      vehicles promising to revolutionize transportation by reducing traffic accidents
-      and enhancing commuting efficiency, AI agents are transforming the mundane into
-      the extraordinary. This article delves into the current advancements and future
-      potential of AI agents, illustrating how they are poised to redefine convenience,
-      safety, and productivity in the very fabric of our day-to-day experiences.\\n\\n2.
-      Breaking Down the Black Box: How Explainable AI is Transforming Trust in Machine
-      Learning\\nAs AI systems grow increasingly complex and embedded in critical
-      decision-making processes, the opacity of these so-called \\\"black box\\\"
-      models has raised concerns over accountability and trust. Explainable AI (XAI)
-      aims to peel back the layers of these intricate algorithms, offering transparency
-      that not only fosters trust but also enables better user understanding and control.
-      This article explores the frontiers of XAI, showcasing pioneering techniques
-      that demystify machine learning models, thus ensuring their decisions are comprehensible
-      and justifiable. Readers will discover how these innovations are crucial for
-      sectors ranging from healthcare to finance, where trust in AI-driven decisions
-      is paramount.\\n\\n3. AI in the Creative Arts: How Machines Are Redefining Creativity\\nIn
-      an era where artificial intelligence is venturing into the realm of creativity,
-      the creative process itself is being transformed in unprecedented ways. AI is
-      no longer confined to analytical tasks; it is now composing music, painting
-      artworks, scripting stories, and even creating compelling digital content. This
-      article investigates the symbiotic relationship between human creativity and
-      machine learning, highlighting groundbreaking projects where AI acts as an artistic
-      collaborator rather than a mere tool. Readers will be captivated by the ways
-      in which AI is challenging traditional definitions of creativity, opening new
-      avenues for artistic expression and innovation.\\n\\n4. Startups at the Forefront:
-      How AI is Revolutionizing New Ventures\\nArtificial intelligence is at the heart
-      of a new wave of innovation, particularly within the startup ecosystem. From
-      automating customer service through sophisticated chatbots to enhancing product
-      recommendations with predictive analytics, AI is enabling startups to disrupt
-      industries and scale rapidly. This article highlights the ingenuity of startups
-      leveraging AI to solve complex problems and create value in unique ways. Through
-      vivid examples and success stories, readers will gain insights into how these
-      agile companies are harnessing AI to not only compete with established players
-      but also to break new ground in their respective markets.\\n\\n5. The Ethical
-      Dilemmas of AI: Balancing Innovation and Responsibility\\nAs AI technology advances
-      at a rapid pace, it brings with it a host of ethical dilemmas that society must
-      grapple with. Issues such as bias in AI algorithms, invasion of privacy, and
-      the potential for job displacement pose significant challenges. This article
-      delves into the ethical landscape of AI, discussing the responsibilities of
-      developers, policymakers, and users in ensuring that AI innovations are implemented
-      ethically. By examining case studies and expert opinions, readers will understand
-      the importance of striking a balance between fostering technological innovation
-      and upholding ethical standards, ensuring that AI serves the greater good without
-      compromising human values.\",\n        \"refusal\": null\n      },\n      \"logprobs\":
-      null,\n      \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\":
-      347,\n    \"completion_tokens\": 665,\n    \"total_tokens\": 1012\n  },\n  \"system_fingerprint\":
-      \"fp_25624ae3a5\"\n}\n"
-    headers:
-      CF-Cache-Status:
-      - DYNAMIC
-      CF-RAY:
-      - 8c0d5fcf3e0fcf35-SJC
-      Connection:
-      - keep-alive
-      Content-Encoding:
-      - gzip
-      Content-Type:
-      - application/json
-      Date:
-      - Tue, 10 Sep 2024 06:31:26 GMT
-      Server:
-      - cloudflare
-      Transfer-Encoding:
-      - chunked
-      X-Content-Type-Options:
-      - nosniff
-      access-control-expose-headers:
-      - X-Request-ID
-      alt-svc:
-      - h3=":443"; ma=86400
-      openai-organization:
-      - crewai-iuxna1
-      openai-processing-ms:
-      - '8721'
-      openai-version:
-      - '2020-10-01'
-      strict-transport-security:
-      - max-age=15552000; includeSubDomains; preload
-      x-ratelimit-limit-requests:
-      - '10000'
-      x-ratelimit-limit-tokens:
-      - '30000000'
-      x-ratelimit-remaining-requests:
-      - '9999'
-      x-ratelimit-remaining-tokens:
-      - '29999562'
-      x-ratelimit-reset-requests:
-      - 6ms
-      x-ratelimit-reset-tokens:
-      - 0s
-      x-request-id:
-      - req_455a194c4c481646866a1c7f7f3a22fc
+      - req_41d9b2d6e2582da3e8046492e6694512
     http_version: HTTP/1.1
     status_code: 200
 - request:
     body: !!binary |
       CtwBCiQKIgoMc2VydmljZS5uYW1lEhIKEGNyZXdBSS10ZWxlbWV0cnkSswEKEgoQY3Jld2FpLnRl
-      bGVtZXRyeRKcAQoQO5bbf7Epmn9Ceyd8SL5wiBIIVln9HLAz7HwqClRvb2wgVXNhZ2UwATmo2hET
-      R87zF0FwVBsTR87zF0oaCg5jcmV3YWlfdmVyc2lvbhIICgYwLjU1LjJKKAoJdG9vbF9uYW1lEhsK
+      bGVtZXRyeRKcAQoQ2kwD1/T6wDgVKaY6flM14xII9s1Dgx1odGoqClRvb2wgVXNhZ2UwATkwBz5O
+      z7/0F0GwIUROz7/0F0oaCg5jcmV3YWlfdmVyc2lvbhIICgYwLjU2LjBKKAoJdG9vbF9uYW1lEhsK
       GURlbGVnYXRlIHdvcmsgdG8gY293b3JrZXJKDgoIYXR0ZW1wdHMSAhgBegIYAYUBAAEAAA==
     headers:
       Accept:
@@ -866,13 +675,208 @@ interactions:
       Content-Type:
       - application/x-protobuf
       Date:
-      - Tue, 10 Sep 2024 06:31:29 GMT
+      - Fri, 13 Sep 2024 08:17:41 GMT
     status:
       code: 200
       message: OK
 - request:
-    body: '{"messages": [{"role": "user", "content": "You are Crew Manager. You are
-      a seasoned manager with a knack for getting the best out of your team.\nYou
+    body: '{"messages": [{"role": "system", "content": "You are Senior Writer. You''re
+      a senior writer, specialized in technology, software engineering, AI and startups.
+      You work as a freelancer and are now working on writing content for a new customer.\nYour
+      personal goal is: Write the best content about AI and AI agents.\nTo give my
+      best complete final answer to the task use the exact following format:\n\nThought:
+      I now can give a great answer\nFinal Answer: Your final answer must be the great
+      and the most complete as possible, it must be outcome described.\n\nI MUST use
+      these formats, my job depends on it!"}, {"role": "user", "content": "\nCurrent
+      Task: Write an amazing paragraph highlight for each of the following 5 article
+      ideas.\n\nThis is the expect criteria for your final answer: Your best answer
+      to your coworker asking you this, accounting for the context shared.\nyou MUST
+      return the actual complete content as the final answer, not a summary.\n\nThis
+      is the context you''re working with:\nWe have the following 5 topics that need
+      a compelling introductory paragraph that showcases the potential of each article.
+      The paragraphs should be engaging and give a clear indication of what the full
+      article will explore, enticing readers to want to read more.\n\n1. The Rise
+      of AI in Everyday Life: How Artificial Intelligence is Transforming Common Household
+      Devices\n2. The Future of Work: How AI and Automation are Reshaping Job Markets\n3.
+      AI and Mental Health: Promises and Pitfalls\n4. Cryptocurrency and AI: The Dynamic
+      Duo Changing the Financial Landscape\n5. The Ethical Dilemmas of AI: Can Machines
+      Make Moral Decisions?\n\nBegin! This is VERY important to you, use the tools
+      available and give your best Final Answer, your job depends on it!\n\nThought:"}],
+      "model": "gpt-4o", "stop": ["\nObservation"]}'
+    headers:
+      accept:
+      - application/json
+      accept-encoding:
+      - gzip, deflate
+      connection:
+      - keep-alive
+      content-length:
+      - '1816'
+      content-type:
+      - application/json
+      cookie:
+      - __cf_bm=pgsskMPipgeSB6HhnkjwcOEfengIvt0p9whKNmTJVLs-1726215280-1.0.1.1-Gtqb.nO1U.cHTnd9mR9sEA5tpVo1.pexRrxqXOkn.6Mzja8mLG1URJsOLTfjMAAYpWaUQe4Rjmnr6lqQk5hAxQ;
+        _cfuvid=dp2yoCmGHVlURh_U78_UoIfnhcO5UhufnL5whkUSMTQ-1726214380689-0.0.1.1-604800000
+      host:
+      - api.openai.com
+      user-agent:
+      - OpenAI/Python 1.45.0
+      x-stainless-arch:
+      - arm64
+      x-stainless-async:
+      - 'false'
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - MacOS
+      x-stainless-package-version:
+      - 1.45.0
+      x-stainless-raw-response:
+      - 'true'
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.11.7
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    content: "{\n  \"id\": \"chatcmpl-A6vmmK7j4ifCvvJHruXiGVz9Y8VpF\",\n  \"object\":
+      \"chat.completion\",\n  \"created\": 1726215460,\n  \"model\": \"gpt-4o-2024-05-13\",\n
+      \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
+      \"assistant\",\n        \"content\": \"Thought: I now can give a great answer\\nFinal
+      Answer: \\n\\n1. **The Rise of AI in Everyday Life: How Artificial Intelligence
+      is Transforming Common Household Devices**\\nImagine waking up to a home that
+      knows you as well as you know yourself\u2014your coffee brews itself just the
+      way you like it, your refrigerator drafts a grocery list based on what you\u2019re
+      running low on, and your thermostat adjusts itself to create the perfect climate
+      as you move through your day. This isn't science fiction anymore; it\u2019s
+      the reality that AI is bringing into our homes. This article explores how artificial
+      intelligence is weaving its way into the fabric of our daily routines, transforming
+      ordinary household devices into smart, intuitive companions that make life simpler,
+      more efficient, and undeniably futuristic.\\n\\n2. **The Future of Work: How
+      AI and Automation are Reshaping Job Markets**\\nAs AI and automation continue
+      their inexorable rise, the job market as we know it is undergoing a seismic
+      shift. From chatbots handling customer service inquiries to robots performing
+      intricate surgeries, the scope of AI's impact is vast and varied. This article
+      delves into how these technologies are redefining roles across various industries,
+      creating new opportunities while phasing out traditional jobs. It provides a
+      comprehensive look at the future landscape of employment, offering insights
+      into how workers can adapt and thrive in a world intertwined with intelligent
+      machines.\\n\\n3. **AI and Mental Health: Promises and Pitfalls**\\nArtificial
+      Intelligence holds immense promise in the field of mental health, offering new
+      avenues for diagnosis, treatment, and support. By analyzing patterns in speech,
+      behavior, and even social media activity, AI can detect early signs of mental
+      health issues and provide personalized intervention strategies. However, the
+      use of AI also brings ethical and practical challenges, such as privacy concerns
+      and the risk of over-reliance on technology. This article examines both the
+      groundbreaking potential and the significant pitfalls of integrating AI into
+      mental healthcare, painting a balanced picture of what the future holds for
+      this delicate yet crucial field.\\n\\n4. **Cryptocurrency and AI: The Dynamic
+      Duo Changing the Financial Landscape**\\nThe worlds of cryptocurrency and artificial
+      intelligence are colliding, creating a dynamic duo that is set to revolutionize
+      the financial landscape. Imagine AI algorithms predicting market trends with
+      pinpoint accuracy, or blockchain technology bolstered by AI to detect and prevent
+      fraudulent transactions in real time. This article uncovers how these powerful
+      technologies are joining forces to create a more secure, efficient, and innovative
+      financial ecosystem. From automated trading bots to AI-driven credit scoring
+      systems, discover the myriad ways in which AI and cryptocurrency are reshaping
+      the future of finance.\\n\\n5. **The Ethical Dilemmas of AI: Can Machines Make
+      Moral Decisions?**\\nAs AI systems become more sophisticated, they\u2019re increasingly
+      being tasked with making decisions that have moral implications. From driverless
+      cars facing life-or-death split-second choices to algorithms determining criminal
+      sentencing, the ethical stakes are higher than ever. This article delves into
+      the complex and often controversial realm of AI ethics, exploring whether machines
+      can\u2014or should\u2014be trusted to make moral decisions. By examining real-world
+      applications and theoretical debates, it offers a thought-provoking look at
+      the ethical landscape of our AI-driven future and the moral quandaries that
+      come with it.\",\n        \"refusal\": null\n      },\n      \"logprobs\": null,\n
+      \     \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\":
+      351,\n    \"completion_tokens\": 648,\n    \"total_tokens\": 999,\n    \"completion_tokens_details\":
+      {\n      \"reasoning_tokens\": 0\n    }\n  },\n  \"system_fingerprint\": \"fp_25624ae3a5\"\n}\n"
+    headers:
+      CF-Cache-Status:
+      - DYNAMIC
+      CF-RAY:
+      - 8c26b3c33ffd2ab9-LAX
+      Connection:
+      - keep-alive
+      Content-Encoding:
+      - gzip
+      Content-Type:
+      - application/json
+      Date:
+      - Fri, 13 Sep 2024 08:17:49 GMT
+      Server:
+      - cloudflare
+      Transfer-Encoding:
+      - chunked
+      X-Content-Type-Options:
+      - nosniff
+      access-control-expose-headers:
+      - X-Request-ID
+      alt-svc:
+      - h3=":443"; ma=86400
+      openai-organization:
+      - crewai-iuxna1
+      openai-processing-ms:
+      - '8566'
+      openai-version:
+      - '2020-10-01'
+      strict-transport-security:
+      - max-age=15552000; includeSubDomains; preload
+      x-ratelimit-limit-requests:
+      - '10000'
+      x-ratelimit-limit-tokens:
+      - '30000000'
+      x-ratelimit-remaining-requests:
+      - '9999'
+      x-ratelimit-remaining-tokens:
+      - '29999566'
+      x-ratelimit-reset-requests:
+      - 6ms
+      x-ratelimit-reset-tokens:
+      - 0s
+      x-request-id:
+      - req_7a4c83c8fc7f0745f9fa5249c5818f6b
+    http_version: HTTP/1.1
+    status_code: 200
+- request:
+    body: !!binary |
+      CtwBCiQKIgoMc2VydmljZS5uYW1lEhIKEGNyZXdBSS10ZWxlbWV0cnkSswEKEgoQY3Jld2FpLnRl
+      bGVtZXRyeRKcAQoQgzyxzZZNItBy+dlGfSgCeBII9GW6XmBNBboqClRvb2wgVXNhZ2UwATl4cch8
+      0r/0F0H4Ds580r/0F0oaCg5jcmV3YWlfdmVyc2lvbhIICgYwLjU2LjBKKAoJdG9vbF9uYW1lEhsK
+      GURlbGVnYXRlIHdvcmsgdG8gY293b3JrZXJKDgoIYXR0ZW1wdHMSAhgBegIYAYUBAAEAAA==
+    headers:
+      Accept:
+      - '*/*'
+      Accept-Encoding:
+      - gzip, deflate
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '223'
+      Content-Type:
+      - application/x-protobuf
+      User-Agent:
+      - OTel-OTLP-Exporter-Python/1.27.0
+    method: POST
+    uri: https://telemetry.crewai.com:4319/v1/traces
+  response:
+    body:
+      string: "\n\0"
+    headers:
+      Content-Length:
+      - '2'
+      Content-Type:
+      - application/x-protobuf
+      Date:
+      - Fri, 13 Sep 2024 08:17:51 GMT
+    status:
+      code: 200
+      message: OK
+- request:
+    body: '{"messages": [{"role": "system", "content": "You are Crew Manager. You
+      are a seasoned manager with a knack for getting the best out of your team.\nYou
       are also known for your ability to delegate work to the right people, and to
       ask the right questions to get the best out of your team.\nEven though you don''t
       perform tasks by yourself, you have a lot of experience in the field, which
@@ -904,125 +908,123 @@ interactions:
       python dictionary, enclosed in curly braces, using \" to wrap keys and values.\nObservation:
       the result of the action\n\nOnce all necessary information is gathered:\n\nThought:
       I now know the final answer\nFinal Answer: the final answer to the original
-      input question\n\nCurrent Task: Come up with a list of 5 interesting ideas to
-      explore for an article, then write one amazing paragraph highlight for each
-      idea that showcases how good an article about this topic could be. Return the
-      list of ideas with their paragraph and your notes.\n\nThis is the expect criteria
-      for your final answer: 5 bullet points with a paragraph for each idea. \n you
-      MUST return the actual complete content as the final answer, not a summary.\n\nBegin!
-      This is VERY important to you, use the tools available and give your best Final
-      Answer, your job depends on it!\n\nThought:"}, {"role": "assistant", "content":
-      "To complete this task, I need to first come up with a list of 5 interesting
-      ideas for the article. Once I have these ideas, I''ll need some in-depth information
-      to write a compelling paragraph for each. I should start by asking the Researcher
-      to help brainstorm some intriguing article topics.\n\nThought: I''ll ask the
-      Researcher to generate some interesting article ideas.\n\nAction: Ask question
-      to coworker\nAction Input: {\"question\": \"Can you generate a list of 5 interesting
-      ideas for an article that have the potential to captivate readers?\", \"context\":
-      \"We need to come up with an article that will engage our readers and showcase
-      a compelling narrative or unique angle. Your expertise in identifying trending
-      or thought-provoking topics will be crucial.\", \"coworker\": \"Researcher\"}\n\nObservation:
-      Here are five interesting ideas for an article that have the potential to captivate
-      readers:\n\n1. **The Rise of AI Agents in Everyday Life: From Personal Assistants
-      to Autonomous Vehicles**\n   - **Overview**: This article will delve into how
-      AI agents are becoming an integral part of our daily lives. By discussing various
-      implementations like smart home devices, virtual assistants, and self-driving
-      cars, the piece will showcase the evolution and future potential of AI agents.\n   -
-      **Highlights**:\n     - Historical context of AI agents\n     - Current applications
-      in personal and professional settings\n     - Future trends and innovations\n     -
-      Ethical considerations and societal impact\n\n2. **Breaking Down the Black Box:
-      How Explainable AI is Transforming Trust in Machine Learning**\n   - **Overview**:
-      This article will address one of the most critical issues in AI today\u2014transparency
-      and trust. By focusing on Explainable AI (XAI), it will explore how researchers
-      and developers are working to make AI processes more understandable to humans.\n   -
-      **Highlights**:\n     - Definition and importance of Explainable AI\n     -
-      Examples of XAI tools and frameworks\n     - Case studies demonstrating XAI
-      in action\n     - Challenges and future directions in XAI research\n\n3. **AI
-      in the Creative Arts: How Machines Are Redefining Creativity**\n   - **Overview**:
-      This piece will investigate the role of AI in creative fields such as music,
-      art, and writing. The narrative will discuss how AI tools are both collaborating
-      with and challenging human creativity.\n   - **Highlights**:\n     - Overview
-      of AI applications in various art forms\n     - Success stories of AI-created
-      art and music\n     - Interviews with artists and AI developers\n     - Ethical
-      and philosophical questions surrounding AI and creativity\n\n4. **Startups at
-      the Forefront: How AI is Revolutionizing New Ventures**\n   - **Overview**:
-      This article will focus on how startups are leveraging AI to innovate and disrupt
-      traditional industries. From healthcare to finance, it will provide a broad
-      look at the startup ecosystem\u2019s adoption of AI technologies.\n   - **Highlights**:\n     -
-      Profiles of successful AI-driven startups\n     - Analysis of market trends
-      and investment in AI\n     - Challenges faced by AI startups\n     - Predictions
-      for future startup innovations in AI\n\n5. **The Ethical Dilemmas of AI: Balancing
-      Innovation and Responsibility**\n   - **Overview**: This deep-dive article will
-      explore the ethical considerations surrounding AI development and deployment.
-      By examining real-world scenarios and expert opinions, it will aim to provide
-      a balanced view on the moral responsibilities of AI practitioners.\n   - **Highlights**:\n     -
-      Key ethical issues in AI like bias, privacy, and accountability\n     - Case
-      studies showcasing ethical dilemmas\n     - Insights from AI ethicists and technologists\n     -
-      Frameworks and guidelines for ethical AI development\n\nThese topics are designed
-      to captivate readers by addressing current trends, ethical considerations, and
-      future possibilities in the realm of AI and AI agents."}, {"role": "assistant",
-      "content": "Thought: I now need to delegate the writing of one compelling paragraph
-      for each article idea to the Senior Writer. This will ensure that each paragraph
-      is engaging and well-crafted.\n\nAction: Delegate work to coworker\nAction Input:
-      {\"task\": \"Write one engaging paragraph for each of the following article
-      ideas to highlight their potential: \\n\\n1. The Rise of AI Agents in Everyday
-      Life: From Personal Assistants to Autonomous Vehicles\\n2. Breaking Down the
-      Black Box: How Explainable AI is Transforming Trust in Machine Learning\\n3.
-      AI in the Creative Arts: How Machines Are Redefining Creativity\\n4. Startups
-      at the Forefront: How AI is Revolutionizing New Ventures\\n5. The Ethical Dilemmas
-      of AI: Balancing Innovation and Responsibility\", \"context\": \"We need to
-      create compelling highlights for each article idea that showcase its potential
-      to captivate readers. Each paragraph should provide an engaging snapshot that
-      makes the topic feel exciting and worth exploring in-depth.\", \"coworker\":
-      \"Senior Writer\"}\n\nObservation: 1. The Rise of AI Agents in Everyday Life:
-      From Personal Assistants to Autonomous Vehicles\nThe integration of AI agents
-      into our daily routines has reached a point where technology seamlessly enhances
-      our lives in ways we once only dreamed of. From the ubiquitous personal assistants
-      like Siri and Alexa streamlining our schedules and providing instant information,
-      to autonomous vehicles promising to revolutionize transportation by reducing
-      traffic accidents and enhancing commuting efficiency, AI agents are transforming
-      the mundane into the extraordinary. This article delves into the current advancements
-      and future potential of AI agents, illustrating how they are poised to redefine
-      convenience, safety, and productivity in the very fabric of our day-to-day experiences.\n\n2.
-      Breaking Down the Black Box: How Explainable AI is Transforming Trust in Machine
-      Learning\nAs AI systems grow increasingly complex and embedded in critical decision-making
-      processes, the opacity of these so-called \"black box\" models has raised concerns
-      over accountability and trust. Explainable AI (XAI) aims to peel back the layers
-      of these intricate algorithms, offering transparency that not only fosters trust
-      but also enables better user understanding and control. This article explores
-      the frontiers of XAI, showcasing pioneering techniques that demystify machine
-      learning models, thus ensuring their decisions are comprehensible and justifiable.
-      Readers will discover how these innovations are crucial for sectors ranging
-      from healthcare to finance, where trust in AI-driven decisions is paramount.\n\n3.
-      AI in the Creative Arts: How Machines Are Redefining Creativity\nIn an era where
-      artificial intelligence is venturing into the realm of creativity, the creative
-      process itself is being transformed in unprecedented ways. AI is no longer confined
-      to analytical tasks; it is now composing music, painting artworks, scripting
-      stories, and even creating compelling digital content. This article investigates
-      the symbiotic relationship between human creativity and machine learning, highlighting
-      groundbreaking projects where AI acts as an artistic collaborator rather than
-      a mere tool. Readers will be captivated by the ways in which AI is challenging
-      traditional definitions of creativity, opening new avenues for artistic expression
-      and innovation.\n\n4. Startups at the Forefront: How AI is Revolutionizing New
-      Ventures\nArtificial intelligence is at the heart of a new wave of innovation,
-      particularly within the startup ecosystem. From automating customer service
-      through sophisticated chatbots to enhancing product recommendations with predictive
-      analytics, AI is enabling startups to disrupt industries and scale rapidly.
-      This article highlights the ingenuity of startups leveraging AI to solve complex
-      problems and create value in unique ways. Through vivid examples and success
-      stories, readers will gain insights into how these agile companies are harnessing
-      AI to not only compete with established players but also to break new ground
-      in their respective markets.\n\n5. The Ethical Dilemmas of AI: Balancing Innovation
-      and Responsibility\nAs AI technology advances at a rapid pace, it brings with
-      it a host of ethical dilemmas that society must grapple with. Issues such as
-      bias in AI algorithms, invasion of privacy, and the potential for job displacement
-      pose significant challenges. This article delves into the ethical landscape
-      of AI, discussing the responsibilities of developers, policymakers, and users
-      in ensuring that AI innovations are implemented ethically. By examining case
-      studies and expert opinions, readers will understand the importance of striking
-      a balance between fostering technological innovation and upholding ethical standards,
-      ensuring that AI serves the greater good without compromising human values."}],
-      "model": "gpt-4o", "stop": ["\nObservation"]}'
+      input question\n"}, {"role": "user", "content": "\nCurrent Task: Come up with
+      a list of 5 interesting ideas to explore for an article, then write one amazing
+      paragraph highlight for each idea that showcases how good an article about this
+      topic could be. Return the list of ideas with their paragraph and your notes.\n\nThis
+      is the expect criteria for your final answer: 5 bullet points with a paragraph
+      for each idea.\nyou MUST return the actual complete content as the final answer,
+      not a summary.\n\nBegin! This is VERY important to you, use the tools available
+      and give your best Final Answer, your job depends on it!\n\nThought:"}, {"role":
+      "assistant", "content": "Thought: To complete this task efficiently, I will
+      first delegate the objective of brainstorming 5 interesting ideas for the article
+      to the Researcher, considering their expertise in gathering and analyzing information.
+      Following this, I will then delegate the task of writing an amazing paragraph
+      highlight for each idea to the Senior Writer, who is skilled in creating compelling
+      content. Let''s start with generating the ideas.\n\nAction: Delegate work to
+      coworker\nAction Input: {\"task\": \"Come up with a list of 5 interesting ideas
+      to explore for an article.\", \"context\": \"We need five engaging and interesting
+      article topics. These topics should be timely, relevant, and have a certain
+      appeal that could attract readers. Consider current events, popular culture,
+      emerging trends, or intriguing subjects in various fields such as technology,
+      science, lifestyle, or history. The ultimate goal is to have topics that can
+      lead to a captivating and informative article.\", \"coworker\": \"Researcher\"}\n\nObservation:
+      1. **The Rise of AI in Everyday Life: How Artificial Intelligence is Transforming
+      Common Household Devices**\n   - Artificial intelligence isn''t confined to
+      research labs or tech companies anymore; it''s now a fixture in our daily lives.
+      From smart speakers listening to our commands to AI-driven home security systems,
+      explore how AI is making our homes smarter and our lives easier. Dive into the
+      latest advancements in AI technology, the ethical considerations around data
+      privacy, and real-world examples of AI in action around the house.\n\n2. **The
+      Future of Work: How AI and Automation are Reshaping Job Markets**\n   - With
+      rapid advancements in AI and automation, the job market is undergoing significant
+      changes. Examine which industries are most affected and how workers can adapt
+      to these new technologies. Discuss the emergence of new job roles, the need
+      for upskilling, and the broader economic impact of an increasingly automated
+      workforce. Provide insights from experts in the field, real-life case studies,
+      and predictions for the future.\n\n3. **AI and Mental Health: Promises and Pitfalls**\n   -
+      AI is making strides in the field of mental health, offering innovative solutions
+      for diagnosing and treating mental illnesses. This article could explore AI''s
+      role in providing mental health support through apps and virtual therapists,
+      the accuracy and effectiveness of these tools compared to traditional methods,
+      and the ethical concerns surrounding AI in mental health care. Include perspectives
+      from mental health professionals and technologists to provide a balanced view.\n\n4.
+      **Cryptocurrency and AI: The Dynamic Duo Changing the Financial Landscape**\n   -
+      The intersection of AI and cryptocurrency is creating new opportunities and
+      challenges in the financial world. Discuss how AI algorithms are being used
+      for cryptocurrency trading, fraud detection, and financial forecasting. Explore
+      the potential risks, regulatory concerns, and the future of decentralized finance
+      (DeFi) with AI integration. This topic can provide readers with a nuanced understanding
+      of two of the most talked-about technologies today.\n\n5. **The Ethical Dilemmas
+      of AI: Can Machines Make Moral Decisions?**\n   - As AI systems become more
+      autonomous, the question of whether machines can make ethical decisions becomes
+      increasingly pertinent. Delve into the philosophical and practical considerations
+      of programming morality into AI. Use real-world examples such as self-driving
+      cars making split-second decisions in accidents, AI in judicial systems, and
+      how tech companies are approaching the challenge of ethical AI. Discuss potential
+      solutions, including AI ethics guidelines and frameworks proposed by experts.\n\nThese
+      topics are timely, relevant, and have widespread appeal, ensuring that the resulting
+      articles will engage a broad audience while providing deep insights into the
+      selected subjects."}, {"role": "assistant", "content": "Thought: Now that we
+      have the 5 interesting ideas, the next step is to delegate the task of writing
+      an amazing paragraph highlight for each idea to the Senior Writer. The paragraphs
+      should showcase how good an article about each topic could be.\n\nAction: Delegate
+      work to coworker\nAction Input: {\"task\": \"Write an amazing paragraph highlight
+      for each of the following 5 article ideas.\", \"context\": \"We have the following
+      5 topics that need a compelling introductory paragraph that showcases the potential
+      of each article. The paragraphs should be engaging and give a clear indication
+      of what the full article will explore, enticing readers to want to read more.\\n\\n1.
+      The Rise of AI in Everyday Life: How Artificial Intelligence is Transforming
+      Common Household Devices\\n2. The Future of Work: How AI and Automation are
+      Reshaping Job Markets\\n3. AI and Mental Health: Promises and Pitfalls\\n4.
+      Cryptocurrency and AI: The Dynamic Duo Changing the Financial Landscape\\n5.
+      The Ethical Dilemmas of AI: Can Machines Make Moral Decisions?\", \"coworker\":
+      \"Senior Writer\"}\n\nObservation: 1. **The Rise of AI in Everyday Life: How
+      Artificial Intelligence is Transforming Common Household Devices**\nImagine
+      waking up to a home that knows you as well as you know yourself\u2014your coffee
+      brews itself just the way you like it, your refrigerator drafts a grocery list
+      based on what you\u2019re running low on, and your thermostat adjusts itself
+      to create the perfect climate as you move through your day. This isn''t science
+      fiction anymore; it\u2019s the reality that AI is bringing into our homes. This
+      article explores how artificial intelligence is weaving its way into the fabric
+      of our daily routines, transforming ordinary household devices into smart, intuitive
+      companions that make life simpler, more efficient, and undeniably futuristic.\n\n2.
+      **The Future of Work: How AI and Automation are Reshaping Job Markets**\nAs
+      AI and automation continue their inexorable rise, the job market as we know
+      it is undergoing a seismic shift. From chatbots handling customer service inquiries
+      to robots performing intricate surgeries, the scope of AI''s impact is vast
+      and varied. This article delves into how these technologies are redefining roles
+      across various industries, creating new opportunities while phasing out traditional
+      jobs. It provides a comprehensive look at the future landscape of employment,
+      offering insights into how workers can adapt and thrive in a world intertwined
+      with intelligent machines.\n\n3. **AI and Mental Health: Promises and Pitfalls**\nArtificial
+      Intelligence holds immense promise in the field of mental health, offering new
+      avenues for diagnosis, treatment, and support. By analyzing patterns in speech,
+      behavior, and even social media activity, AI can detect early signs of mental
+      health issues and provide personalized intervention strategies. However, the
+      use of AI also brings ethical and practical challenges, such as privacy concerns
+      and the risk of over-reliance on technology. This article examines both the
+      groundbreaking potential and the significant pitfalls of integrating AI into
+      mental healthcare, painting a balanced picture of what the future holds for
+      this delicate yet crucial field.\n\n4. **Cryptocurrency and AI: The Dynamic
+      Duo Changing the Financial Landscape**\nThe worlds of cryptocurrency and artificial
+      intelligence are colliding, creating a dynamic duo that is set to revolutionize
+      the financial landscape. Imagine AI algorithms predicting market trends with
+      pinpoint accuracy, or blockchain technology bolstered by AI to detect and prevent
+      fraudulent transactions in real time. This article uncovers how these powerful
+      technologies are joining forces to create a more secure, efficient, and innovative
+      financial ecosystem. From automated trading bots to AI-driven credit scoring
+      systems, discover the myriad ways in which AI and cryptocurrency are reshaping
+      the future of finance.\n\n5. **The Ethical Dilemmas of AI: Can Machines Make
+      Moral Decisions?**\nAs AI systems become more sophisticated, they\u2019re increasingly
+      being tasked with making decisions that have moral implications. From driverless
+      cars facing life-or-death split-second choices to algorithms determining criminal
+      sentencing, the ethical stakes are higher than ever. This article delves into
+      the complex and often controversial realm of AI ethics, exploring whether machines
+      can\u2014or should\u2014be trusted to make moral decisions. By examining real-world
+      applications and theoretical debates, it offers a thought-provoking look at
+      the ethical landscape of our AI-driven future and the moral quandaries that
+      come with it."}], "model": "gpt-4o", "stop": ["\nObservation"]}'
     headers:
       accept:
       - application/json
@@ -1031,16 +1033,16 @@ interactions:
       connection:
       - keep-alive
       content-length:
-      - '12119'
+      - '11898'
       content-type:
       - application/json
       cookie:
-      - _cfuvid=8r8yFLG2b7e3n6pklgpsT05MHRvfdePz1ckAFvRQY8E-1725949790252-0.0.1.1-604800000;
-        __cf_bm=fuuc.ZDO3Y9B7nXE_8fBn7ykDAvAaK1VdxjZw0MTtsE-1725949790-1.0.1.1-pAJ7BWJMj1j3gS2ySR6xSBO7uFrjcB6ehFra4QVq14JqaiG4VDIjDO1C3WueKGRnSALSkpLQyJcJ2YVd_pXglQ
+      - __cf_bm=pgsskMPipgeSB6HhnkjwcOEfengIvt0p9whKNmTJVLs-1726215280-1.0.1.1-Gtqb.nO1U.cHTnd9mR9sEA5tpVo1.pexRrxqXOkn.6Mzja8mLG1URJsOLTfjMAAYpWaUQe4Rjmnr6lqQk5hAxQ;
+        _cfuvid=dp2yoCmGHVlURh_U78_UoIfnhcO5UhufnL5whkUSMTQ-1726214380689-0.0.1.1-604800000
       host:
       - api.openai.com
       user-agent:
-      - OpenAI/Python 1.44.0
+      - OpenAI/Python 1.45.0
       x-stainless-arch:
       - arm64
       x-stainless-async:
@@ -1050,7 +1052,7 @@ interactions:
       x-stainless-os:
       - MacOS
       x-stainless-package-version:
-      - 1.44.0
+      - 1.45.0
       x-stainless-raw-response:
       - 'true'
       x-stainless-runtime:
@@ -1060,119 +1062,66 @@ interactions:
     method: POST
     uri: https://api.openai.com/v1/chat/completions
   response:
-    content: "{\n  \"id\": \"chatcmpl-A5ohLYjTu8KTfeXhCgXqPlSfrdiAc\",\n  \"object\":
-      \"chat.completion\",\n  \"created\": 1725949887,\n  \"model\": \"gpt-4o-2024-05-13\",\n
+    content: "{\n  \"id\": \"chatcmpl-A6vmwbLYD6ONjZtK6XXlGtEkL9wvF\",\n  \"object\":
+      \"chat.completion\",\n  \"created\": 1726215470,\n  \"model\": \"gpt-4o-2024-05-13\",\n
       \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
-      \"assistant\",\n        \"content\": \"Thought: I now have the compelling paragraphs
-      written by the Senior Writer for each of the article ideas. I will finalize
-      the task by presenting the list of ideas along with their paragraphs.\\n\\nFinal
-      Answer:\\n\\n1. **The Rise of AI Agents in Everyday Life: From Personal Assistants
-      to Autonomous Vehicles**\\n   - The integration of AI agents into our daily
-      routines has reached a point where technology seamlessly enhances our lives
-      in ways we once only dreamed of. From the ubiquitous personal assistants like
-      Siri and Alexa streamlining our schedules and providing instant information,
-      to autonomous vehicles promising to revolutionize transportation by reducing
-      traffic accidents and enhancing commuting efficiency, AI agents are transforming
-      the mundane into the extraordinary. This article delves into the current advancements
-      and future potential of AI agents, illustrating how they are poised to redefine
-      convenience, safety, and productivity in the very fabric of our day-to-day experiences.\\n\\n2.
-      **Breaking Down the Black Box: How Explainable AI is Transforming Trust in Machine
-      Learning**\\n   - As AI systems grow increasingly complex and embedded in critical
-      decision-making processes, the opacity of these so-called \\\"black box\\\"
-      models has raised concerns over accountability and trust. Explainable AI (XAI)
-      aims to peel back the layers of these intricate algorithms, offering transparency
-      that not only fosters trust but also enables better user understanding and control.
-      This article explores the frontiers of XAI, showcasing pioneering techniques
-      that demystify machine learning models, thus ensuring their decisions are comprehensible
-      and justifiable. Readers will discover how these innovations are crucial for
-      sectors ranging from healthcare to finance, where trust in AI-driven decisions
-      is paramount.\\n\\n3. **AI in the Creative Arts: How Machines Are Redefining
-      Creativity**\\n   - In an era where artificial intelligence is venturing into
-      the realm of creativity, the creative process itself is being transformed in
-      unprecedented ways. AI is no longer confined to analytical tasks; it is now
-      composing music, painting artworks, scripting stories, and even creating compelling
-      digital content. This article investigates the symbiotic relationship between
-      human creativity and machine learning, highlighting groundbreaking projects
-      where AI acts as an artistic collaborator rather than a mere tool. Readers will
-      be captivated by the ways in which AI is challenging traditional definitions
-      of creativity, opening new avenues for artistic expression and innovation.\\n\\n4.
-      **Startups at the Forefront: How AI is Revolutionizing New Ventures**\\n   -
-      Artificial intelligence is at the heart of a new wave of innovation, particularly
-      within the startup ecosystem. From automating customer service through sophisticated
-      chatbots to enhancing product recommendations with predictive analytics, AI
-      is enabling startups to disrupt industries and scale rapidly. This article highlights
-      the ingenuity of startups leveraging AI to solve complex problems and create
-      value in unique ways. Through vivid examples and success stories, readers will
-      gain insights into how these agile companies are harnessing AI to not only compete
-      with established players but also to break new ground in their respective markets.\\n\\n5.
-      **The Ethical Dilemmas of AI: Balancing Innovation and Responsibility**\\n   -
-      As AI technology advances at a rapid pace, it brings with it a host of ethical
-      dilemmas that society must grapple with. Issues such as bias in AI algorithms,
-      invasion of privacy, and the potential for job displacement pose significant
-      challenges. This article delves into the ethical landscape of AI, discussing
-      the responsibilities of developers, policymakers, and users in ensuring that
-      AI innovations are implemented ethically. By examining case studies and expert
-      opinions, readers will understand the importance of striking a balance between
-      fostering technological innovation and upholding ethical standards, ensuring
-      that AI serves the greater good without compromising human values.\\n\\nThought:
-      I now know the final answer.\\nFinal Answer: \\n\\n1. **The Rise of AI Agents
-      in Everyday Life: From Personal Assistants to Autonomous Vehicles**\\n   - The
-      integration of AI agents into our daily routines has reached a point where technology
-      seamlessly enhances our lives in ways we once only dreamed of. From the ubiquitous
-      personal assistants like Siri and Alexa streamlining our schedules and providing
-      instant information, to autonomous vehicles promising to revolutionize transportation
-      by reducing traffic accidents and enhancing commuting efficiency, AI agents
-      are transforming the mundane into the extraordinary. This article delves into
-      the current advancements and future potential of AI agents, illustrating how
-      they are poised to redefine convenience, safety, and productivity in the very
-      fabric of our day-to-day experiences.\\n\\n2. **Breaking Down the Black Box:
-      How Explainable AI is Transforming Trust in Machine Learning**\\n   - As AI
-      systems grow increasingly complex and embedded in critical decision-making processes,
-      the opacity of these so-called \\\"black box\\\" models has raised concerns
-      over accountability and trust. Explainable AI (XAI) aims to peel back the layers
-      of these intricate algorithms, offering transparency that not only fosters trust
-      but also enables better user understanding and control. This article explores
-      the frontiers of XAI, showcasing pioneering techniques that demystify machine
-      learning models, thus ensuring their decisions are comprehensible and justifiable.
-      Readers will discover how these innovations are crucial for sectors ranging
-      from healthcare to finance, where trust in AI-driven decisions is paramount.\\n\\n3.
-      **AI in the Creative Arts: How Machines Are Redefining Creativity**\\n   - In
-      an era where artificial intelligence is venturing into the realm of creativity,
-      the creative process itself is being transformed in unprecedented ways. AI is
-      no longer confined to analytical tasks; it is now composing music, painting
-      artworks, scripting stories, and even creating compelling digital content. This
-      article investigates the symbiotic relationship between human creativity and
-      machine learning, highlighting groundbreaking projects where AI acts as an artistic
-      collaborator rather than a mere tool. Readers will be captivated by the ways
-      in which AI is challenging traditional definitions of creativity, opening new
-      avenues for artistic expression and innovation.\\n\\n4. **Startups at the Forefront:
-      How AI is Revolutionizing New Ventures**\\n   - Artificial intelligence is at
-      the heart of a new wave of innovation, particularly within the startup ecosystem.
-      From automating customer service through sophisticated chatbots to enhancing
-      product recommendations with predictive analytics, AI is enabling startups to
-      disrupt industries and scale rapidly. This article highlights the ingenuity
-      of startups leveraging AI to solve complex problems and create value in unique
-      ways. Through vivid examples and success stories, readers will gain insights
-      into how these agile companies are harnessing AI to not only compete with established
-      players but also to break new ground in their respective markets.\\n\\n5. **The
-      Ethical Dilemmas of AI: Balancing Innovation and Responsibility**\\n   - As
-      AI technology advances at a rapid pace, it brings with it a host of ethical
-      dilemmas that society must grapple with. Issues such as bias in AI algorithms,
-      invasion of privacy, and the potential for job displacement pose significant
-      challenges. This article delves into the ethical landscape of AI, discussing
-      the responsibilities of developers, policymakers, and users in ensuring that
-      AI innovations are implemented ethically. By examining case studies and expert
-      opinions, readers will understand the importance of striking a balance between
-      fostering technological innovation and upholding ethical standards, ensuring
-      that AI serves the greater good without compromising human values.\",\n        \"refusal\":
-      null\n      },\n      \"logprobs\": null,\n      \"finish_reason\": \"stop\"\n
-      \   }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 2334,\n    \"completion_tokens\":
-      1390,\n    \"total_tokens\": 3724\n  },\n  \"system_fingerprint\": \"fp_25624ae3a5\"\n}\n"
+      \"assistant\",\n        \"content\": \"Thought: I now have a list of 5 interesting
+      ideas along with an amazing paragraph highlight for each idea, as requested.
+      This meets the criteria perfectly, so I will compile the final answer.\\n\\nFinal
+      Answer: \\n1. **The Rise of AI in Everyday Life: How Artificial Intelligence
+      is Transforming Common Household Devices**\\nImagine waking up to a home that
+      knows you as well as you know yourself\u2014your coffee brews itself just the
+      way you like it, your refrigerator drafts a grocery list based on what you\u2019re
+      running low on, and your thermostat adjusts itself to create the perfect climate
+      as you move through your day. This isn't science fiction anymore; it\u2019s
+      the reality that AI is bringing into our homes. This article explores how artificial
+      intelligence is weaving its way into the fabric of our daily routines, transforming
+      ordinary household devices into smart, intuitive companions that make life simpler,
+      more efficient, and undeniably futuristic.\\n\\n2. **The Future of Work: How
+      AI and Automation are Reshaping Job Markets**\\nAs AI and automation continue
+      their inexorable rise, the job market as we know it is undergoing a seismic
+      shift. From chatbots handling customer service inquiries to robots performing
+      intricate surgeries, the scope of AI's impact is vast and varied. This article
+      delves into how these technologies are redefining roles across various industries,
+      creating new opportunities while phasing out traditional jobs. It provides a
+      comprehensive look at the future landscape of employment, offering insights
+      into how workers can adapt and thrive in a world intertwined with intelligent
+      machines.\\n\\n3. **AI and Mental Health: Promises and Pitfalls**\\nArtificial
+      Intelligence holds immense promise in the field of mental health, offering new
+      avenues for diagnosis, treatment, and support. By analyzing patterns in speech,
+      behavior, and even social media activity, AI can detect early signs of mental
+      health issues and provide personalized intervention strategies. However, the
+      use of AI also brings ethical and practical challenges, such as privacy concerns
+      and the risk of over-reliance on technology. This article examines both the
+      groundbreaking potential and the significant pitfalls of integrating AI into
+      mental healthcare, painting a balanced picture of what the future holds for
+      this delicate yet crucial field.\\n\\n4. **Cryptocurrency and AI: The Dynamic
+      Duo Changing the Financial Landscape**\\nThe worlds of cryptocurrency and artificial
+      intelligence are colliding, creating a dynamic duo that is set to revolutionize
+      the financial landscape. Imagine AI algorithms predicting market trends with
+      pinpoint accuracy, or blockchain technology bolstered by AI to detect and prevent
+      fraudulent transactions in real time. This article uncovers how these powerful
+      technologies are joining forces to create a more secure, efficient, and innovative
+      financial ecosystem. From automated trading bots to AI-driven credit scoring
+      systems, discover the myriad ways in which AI and cryptocurrency are reshaping
+      the future of finance.\\n\\n5. **The Ethical Dilemmas of AI: Can Machines Make
+      Moral Decisions?**\\nAs AI systems become more sophisticated, they\u2019re increasingly
+      being tasked with making decisions that have moral implications. From driverless
+      cars facing life-or-death split-second choices to algorithms determining criminal
+      sentencing, the ethical stakes are higher than ever. This article delves into
+      the complex and often controversial realm of AI ethics, exploring whether machines
+      can\u2014or should\u2014be trusted to make moral decisions. By examining real-world
+      applications and theoretical debates, it offers a thought-provoking look at
+      the ethical landscape of our AI-driven future and the moral quandaries that
+      come with it.\",\n        \"refusal\": null\n      },\n      \"logprobs\": null,\n
+      \     \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\":
+      2273,\n    \"completion_tokens\": 677,\n    \"total_tokens\": 2950,\n    \"completion_tokens_details\":
+      {\n      \"reasoning_tokens\": 0\n    }\n  },\n  \"system_fingerprint\": \"fp_25624ae3a5\"\n}\n"
     headers:
       CF-Cache-Status:
       - DYNAMIC
       CF-RAY:
-      - 8c0d6009f821cf35-SJC
+      - 8c26b3fedfd12ab9-LAX
       Connection:
       - keep-alive
       Content-Encoding:
@@ -1180,7 +1129,7 @@ interactions:
       Content-Type:
       - application/json
       Date:
-      - Tue, 10 Sep 2024 06:31:44 GMT
+      - Fri, 13 Sep 2024 08:17:59 GMT
       Server:
       - cloudflare
       Transfer-Encoding:
@@ -1194,7 +1143,7 @@ interactions:
       openai-organization:
       - crewai-iuxna1
       openai-processing-ms:
-      - '16606'
+      - '8407'
       openai-version:
       - '2020-10-01'
       strict-transport-security:
@@ -1206,13 +1155,13 @@ interactions:
       x-ratelimit-remaining-requests:
       - '9999'
       x-ratelimit-remaining-tokens:
-      - '29997027'
+      - '29997085'
       x-ratelimit-reset-requests:
       - 6ms
       x-ratelimit-reset-tokens:
       - 5ms
       x-request-id:
-      - req_c01572cc8a5f1a18da173f34f2f6faa9
+      - req_99c677f40472a0cbb77ff87861cf5629
     http_version: HTTP/1.1
     status_code: 200
 version: 1

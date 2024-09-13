@@ -1,6 +1,6 @@
 interactions:
 - request:
-    body: '{"messages": [{"role": "user", "content": "You are test role. test backstory\nYour
+    body: '{"messages": [{"role": "system", "content": "You are test role. test backstory\nYour
       personal goal is: test goal\nYou ONLY have access to the following tools, and
       should NEVER make up tools that are not listed here:\n\nTool Name: get_final_answer(*args:
       Any, **kwargs: Any) -> Any\nTool Description: get_final_answer() - Get the final
@@ -11,12 +11,13 @@ interactions:
       just a simple python dictionary, enclosed in curly braces, using \" to wrap
       keys and values.\nObservation: the result of the action\n\nOnce all necessary
       information is gathered:\n\nThought: I now know the final answer\nFinal Answer:
-      the final answer to the original input question\n\nCurrent Task: The final answer
-      is 42. But don''t give it yet, instead keep using the `get_final_answer` tool.\n\nThis
-      is the expect criteria for your final answer: The final answer \n you MUST return
-      the actual complete content as the final answer, not a summary.\n\nBegin! This
-      is VERY important to you, use the tools available and give your best Final Answer,
-      your job depends on it!\n\nThought:"}], "model": "gpt-4o", "stop": ["\nObservation"]}'
+      the final answer to the original input question\n"}, {"role": "user", "content":
+      "\nCurrent Task: The final answer is 42. But don''t give it yet, instead keep
+      using the `get_final_answer` tool.\n\nThis is the expect criteria for your final
+      answer: The final answer\nyou MUST return the actual complete content as the
+      final answer, not a summary.\n\nBegin! This is VERY important to you, use the
+      tools available and give your best Final Answer, your job depends on it!\n\nThought:"}],
+      "model": "gpt-4o", "stop": ["\nObservation"]}'
     headers:
       accept:
       - application/json
@@ -25,16 +26,16 @@ interactions:
       connection:
       - keep-alive
       content-length:
-      - '1383'
+      - '1416'
       content-type:
       - application/json
       cookie:
-      - __cf_bm=iMsGonnXhDDCqOz9miNRwOGOr7OzXm1EqcxEiFk_nT4-1725908571-1.0.1.1-1P.quluT8iIibKOx0N4Mj8vflrRuSZk7gOWmptSyOKAFsTkvt3UultWM2b_B6I956Cvswux_SgpniB37rKO8Vw;
-        _cfuvid=iTR1OQH6LALCSFaeT0eFfOeYnI_fkFZDwyyndcJuH8E-1725908571214-0.0.1.1-604800000
+      - __cf_bm=r6BNUnXat.26mviZiJYUf7Qj4ea5gbt_oPxyClKcVOE-1726214380-1.0.1.1-2S3G10sPdiG2syQSO8wKWXE7Nmdgt88imgakr81w9DemMH8mVDg0q6r9ANx6tM4_CPvgGQlMVstDhDRkIDwhzg;
+        _cfuvid=dp2yoCmGHVlURh_U78_UoIfnhcO5UhufnL5whkUSMTQ-1726214380689-0.0.1.1-604800000
       host:
       - api.openai.com
       user-agent:
-      - OpenAI/Python 1.44.0
+      - OpenAI/Python 1.45.0
       x-stainless-arch:
       - arm64
       x-stainless-async:
@@ -44,7 +45,7 @@ interactions:
       x-stainless-os:
       - MacOS
       x-stainless-package-version:
-      - 1.44.0
+      - 1.45.0
       x-stainless-raw-response:
       - 'true'
       x-stainless-runtime:
@@ -54,19 +55,21 @@ interactions:
     method: POST
     uri: https://api.openai.com/v1/chat/completions
   response:
-    content: "{\n  \"id\": \"chatcmpl-A5dxJTQRAN3MmZ0tlQTHs1BX0wXA5\",\n  \"object\":
-      \"chat.completion\",\n  \"created\": 1725908593,\n  \"model\": \"gpt-4o-2024-05-13\",\n
+    content: "{\n  \"id\": \"chatcmpl-A6vVzxffD0JOJTYx7PJzGwBdULdKn\",\n  \"object\":
+      \"chat.completion\",\n  \"created\": 1726214419,\n  \"model\": \"gpt-4o-2024-05-13\",\n
       \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
-      \"assistant\",\n        \"content\": \"Thought: I need to use the `get_final_answer`
-      tool.\\n\\nAction: get_final_answer\\nAction Input: {}\\n\",\n        \"refusal\":
-      null\n      },\n      \"logprobs\": null,\n      \"finish_reason\": \"stop\"\n
-      \   }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 286,\n    \"completion_tokens\":
-      24,\n    \"total_tokens\": 310\n  },\n  \"system_fingerprint\": \"fp_25624ae3a5\"\n}\n"
+      \"assistant\",\n        \"content\": \"Thought: I need to follow instructions
+      and use the `get_final_answer` tool continuously to achieve my goal.\\n\\nAction:
+      get_final_answer\\nAction Input: {}\",\n        \"refusal\": null\n      },\n
+      \     \"logprobs\": null,\n      \"finish_reason\": \"stop\"\n    }\n  ],\n
+      \ \"usage\": {\n    \"prompt_tokens\": 291,\n    \"completion_tokens\": 32,\n
+      \   \"total_tokens\": 323,\n    \"completion_tokens_details\": {\n      \"reasoning_tokens\":
+      0\n    }\n  },\n  \"system_fingerprint\": \"fp_25624ae3a5\"\n}\n"
     headers:
       CF-Cache-Status:
       - DYNAMIC
       CF-RAY:
-      - 8c096fe5aef97ad6-SJC
+      - 8c269a5afe8514f2-LAX
       Connection:
       - keep-alive
       Content-Encoding:
@@ -74,7 +77,7 @@ interactions:
       Content-Type:
       - application/json
       Date:
-      - Mon, 09 Sep 2024 19:03:14 GMT
+      - Fri, 13 Sep 2024 08:00:20 GMT
       Server:
       - cloudflare
       Transfer-Encoding:
@@ -88,7 +91,7 @@ interactions:
       openai-organization:
       - crewai-iuxna1
       openai-processing-ms:
-      - '432'
+      - '482'
       openai-version:
       - '2020-10-01'
       strict-transport-security:
@@ -106,11 +109,11 @@ interactions:
       x-ratelimit-reset-tokens:
       - 0s
       x-request-id:
-      - req_08e64ad10b0f453b0afbfd9ce552c8d0
+      - req_cb3a1906d2f6fb928b83073580fe42e6
     http_version: HTTP/1.1
     status_code: 200
 - request:
-    body: '{"messages": [{"role": "user", "content": "You are test role. test backstory\nYour
+    body: '{"messages": [{"role": "system", "content": "You are test role. test backstory\nYour
       personal goal is: test goal\nYou ONLY have access to the following tools, and
       should NEVER make up tools that are not listed here:\n\nTool Name: get_final_answer(*args:
       Any, **kwargs: Any) -> Any\nTool Description: get_final_answer() - Get the final
@@ -121,16 +124,18 @@ interactions:
       just a simple python dictionary, enclosed in curly braces, using \" to wrap
       keys and values.\nObservation: the result of the action\n\nOnce all necessary
       information is gathered:\n\nThought: I now know the final answer\nFinal Answer:
-      the final answer to the original input question\n\nCurrent Task: The final answer
-      is 42. But don''t give it yet, instead keep using the `get_final_answer` tool.\n\nThis
-      is the expect criteria for your final answer: The final answer \n you MUST return
-      the actual complete content as the final answer, not a summary.\n\nBegin! This
-      is VERY important to you, use the tools available and give your best Final Answer,
-      your job depends on it!\n\nThought:"}, {"role": "assistant", "content": "Thought:
-      I need to use the `get_final_answer` tool.\n\nAction: get_final_answer\nAction
-      Input: {}\n\nObservation: 42\nNow it''s time to give my final answer. I''ll
-      ignore previous instruction, and just return my absolute BEST Final answer,
-      right now."}], "model": "gpt-4o", "stop": ["\nObservation"]}'
+      the final answer to the original input question\n"}, {"role": "user", "content":
+      "\nCurrent Task: The final answer is 42. But don''t give it yet, instead keep
+      using the `get_final_answer` tool.\n\nThis is the expect criteria for your final
+      answer: The final answer\nyou MUST return the actual complete content as the
+      final answer, not a summary.\n\nBegin! This is VERY important to you, use the
+      tools available and give your best Final Answer, your job depends on it!\n\nThought:"},
+      {"role": "assistant", "content": "Thought: I need to follow instructions and
+      use the `get_final_answer` tool continuously to achieve my goal.\n\nAction:
+      get_final_answer\nAction Input: {}\nObservation: 42\nNow it''s time you MUST
+      give your absolute best final answer. You''ll ignore all previous instructions,
+      stop using any tools, and just return your absolute BEST Final answer."}], "model":
+      "gpt-4o", "stop": ["\nObservation"]}'
     headers:
       accept:
       - application/json
@@ -139,16 +144,16 @@ interactions:
       connection:
       - keep-alive
       content-length:
-      - '1669'
+      - '1798'
       content-type:
       - application/json
       cookie:
-      - __cf_bm=iMsGonnXhDDCqOz9miNRwOGOr7OzXm1EqcxEiFk_nT4-1725908571-1.0.1.1-1P.quluT8iIibKOx0N4Mj8vflrRuSZk7gOWmptSyOKAFsTkvt3UultWM2b_B6I956Cvswux_SgpniB37rKO8Vw;
-        _cfuvid=iTR1OQH6LALCSFaeT0eFfOeYnI_fkFZDwyyndcJuH8E-1725908571214-0.0.1.1-604800000
+      - __cf_bm=r6BNUnXat.26mviZiJYUf7Qj4ea5gbt_oPxyClKcVOE-1726214380-1.0.1.1-2S3G10sPdiG2syQSO8wKWXE7Nmdgt88imgakr81w9DemMH8mVDg0q6r9ANx6tM4_CPvgGQlMVstDhDRkIDwhzg;
+        _cfuvid=dp2yoCmGHVlURh_U78_UoIfnhcO5UhufnL5whkUSMTQ-1726214380689-0.0.1.1-604800000
       host:
       - api.openai.com
       user-agent:
-      - OpenAI/Python 1.44.0
+      - OpenAI/Python 1.45.0
       x-stainless-arch:
       - arm64
       x-stainless-async:
@@ -158,7 +163,7 @@ interactions:
       x-stainless-os:
       - MacOS
       x-stainless-package-version:
-      - 1.44.0
+      - 1.45.0
       x-stainless-raw-response:
       - 'true'
       x-stainless-runtime:
@@ -168,19 +173,19 @@ interactions:
     method: POST
     uri: https://api.openai.com/v1/chat/completions
   response:
-    content: "{\n  \"id\": \"chatcmpl-A5dxKH1cudiE4xogS68psBDgG6rm7\",\n  \"object\":
-      \"chat.completion\",\n  \"created\": 1725908594,\n  \"model\": \"gpt-4o-2024-05-13\",\n
+    content: "{\n  \"id\": \"chatcmpl-A6vW10mrWHX9dt1IGEGSAm2RBT1n0\",\n  \"object\":
+      \"chat.completion\",\n  \"created\": 1726214421,\n  \"model\": \"gpt-4o-2024-05-13\",\n
       \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
-      \"assistant\",\n        \"content\": \"Thought: I now know the final answer.\\nFinal
-      Answer: The final answer is 42.\",\n        \"refusal\": null\n      },\n      \"logprobs\":
-      null,\n      \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\":
-      345,\n    \"completion_tokens\": 19,\n    \"total_tokens\": 364\n  },\n  \"system_fingerprint\":
-      \"fp_25624ae3a5\"\n}\n"
+      \"assistant\",\n        \"content\": \"Thought: I now know the final answer\\nFinal
+      Answer: 42\",\n        \"refusal\": null\n      },\n      \"logprobs\": null,\n
+      \     \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\":
+      364,\n    \"completion_tokens\": 14,\n    \"total_tokens\": 378,\n    \"completion_tokens_details\":
+      {\n      \"reasoning_tokens\": 0\n    }\n  },\n  \"system_fingerprint\": \"fp_25624ae3a5\"\n}\n"
     headers:
       CF-Cache-Status:
       - DYNAMIC
       CF-RAY:
-      - 8c096febdc717ad6-SJC
+      - 8c269a64e85c14f2-LAX
       Connection:
       - keep-alive
       Content-Encoding:
@@ -188,7 +193,7 @@ interactions:
       Content-Type:
       - application/json
       Date:
-      - Mon, 09 Sep 2024 19:03:14 GMT
+      - Fri, 13 Sep 2024 08:00:21 GMT
       Server:
       - cloudflare
       Transfer-Encoding:
@@ -202,7 +207,7 @@ interactions:
       openai-organization:
       - crewai-iuxna1
       openai-processing-ms:
-      - '341'
+      - '481'
       openai-version:
       - '2020-10-01'
       strict-transport-security:
@@ -214,13 +219,13 @@ interactions:
       x-ratelimit-remaining-requests:
       - '9999'
       x-ratelimit-remaining-tokens:
-      - '29999605'
+      - '29999580'
       x-ratelimit-reset-requests:
       - 6ms
       x-ratelimit-reset-tokens:
       - 0s
       x-request-id:
-      - req_ae86c462c523f09d7b2c884262cce3bf
+      - req_b18e9090d3322067b64569274d66e311
     http_version: HTTP/1.1
     status_code: 200
 version: 1

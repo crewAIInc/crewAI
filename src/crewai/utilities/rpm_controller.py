@@ -24,17 +24,26 @@ class RPMController(BaseModel):
         return self
 
     def check_or_wait(self):
+        print("check_or_waitcheck_or_waitcheck_or_waitcheck_or_wait")
         if self.max_rpm is None:
             return True
 
         def _check_and_increment():
+            print(
+                "_check_and_increment_check_and_increment_check_and_increment_check_and_increment"
+            )
             if self.max_rpm is not None and self._current_rpm < self.max_rpm:
                 self._current_rpm += 1
+                print("111111111111111")
+                print("self._current_rpm", self._current_rpm)
+                print("self.max_rpm", self.max_rpm)
                 return True
             elif self.max_rpm is not None:
+                print("22222222222222")
                 self.logger.log(
                     "info", "Max RPM reached, waiting for next minute to start."
                 )
+                print("CARALHO")
                 self._wait_for_next_minute()
                 self._current_rpm = 1
                 return True
@@ -52,7 +61,7 @@ class RPMController(BaseModel):
             self._timer = None
 
     def _wait_for_next_minute(self):
-        time.sleep(60)
+        time.sleep(1)
         self._current_rpm = 0
 
     def _reset_request_count(self):

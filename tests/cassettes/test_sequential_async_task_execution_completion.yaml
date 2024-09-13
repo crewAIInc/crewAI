@@ -1,104 +1,6 @@
 interactions:
 - request:
-    body: !!binary |
-      CvQdCiQKIgoMc2VydmljZS5uYW1lEhIKEGNyZXdBSS10ZWxlbWV0cnkSyx0KEgoQY3Jld2FpLnRl
-      bGVtZXRyeRKQAgoQo1LwxeLdOKLikeK9G8oj6BIICHa+MDAeo7EqDlRhc2sgRXhlY3V0aW9uMAE5
-      qJd5jiLG8xdBqIXruiLG8xdKLgoIY3Jld19rZXkSIgogMzkyNTdhYjk3NDA5YjVmNWY0MTk2NzNi
-      YjQxZDBkYzhKMQoHY3Jld19pZBImCiRhYTRkZTQ5Ny1mODdlLTQ0YTEtYTA4NS01YWNmY2VjZjgz
-      YjBKLgoIdGFza19rZXkSIgogMDZhNzMyMjBmNDE0OGE0YmJkNWJhY2IwZDBiNDRmY2VKMQoHdGFz
-      a19pZBImCiQ1NDgxMjY3ZC0xMzc5LTQ4NTAtODQ0Mi01NzIyZTVlOWJkNmV6AhgBhQEAAQAAEq8H
-      ChCPiQJAQtdsGt0H4nr7Uz/FEggxzMr/98aVlSoMQ3JldyBDcmVhdGVkMAE5YP5BuyLG8xdB+CBG
-      uyLG8xdKGgoOY3Jld2FpX3ZlcnNpb24SCAoGMC41NS4yShoKDnB5dGhvbl92ZXJzaW9uEggKBjMu
-      MTEuN0ouCghjcmV3X2tleRIiCiBlZTY3NDVkN2M4YWU4MmUwMGRmOTRkZTBmN2Y4NzExOEoxCgdj
-      cmV3X2lkEiYKJGJjNDZhZTJjLTRjN2UtNGFiNS05NzIyLTM0YTEwMDQ0MDQ3NkocCgxjcmV3X3By
-      b2Nlc3MSDAoKc2VxdWVudGlhbEoRCgtjcmV3X21lbW9yeRICEABKGgoUY3Jld19udW1iZXJfb2Zf
-      dGFza3MSAhgBShsKFWNyZXdfbnVtYmVyX29mX2FnZW50cxICGAFK1QIKC2NyZXdfYWdlbnRzEsUC
-      CsICW3sia2V5IjogImYzMzg2ZjZkOGRhNzVhYTQxNmE2ZTMxMDA1M2Y3Njk4IiwgImlkIjogImIx
-      ZWVmYzEyLTVjNjAtNDdhMS1iOGIyLWM4ZDhlZDg0NmI1OCIsICJyb2xlIjogInt0b3BpY30gUmVz
-      ZWFyY2hlciIsICJ2ZXJib3NlPyI6IGZhbHNlLCAibWF4X2l0ZXIiOiAyNSwgIm1heF9ycG0iOiBu
-      dWxsLCAiZnVuY3Rpb25fY2FsbGluZ19sbG0iOiBudWxsLCAibGxtIjogImdwdC00byIsICJkZWxl
-      Z2F0aW9uX2VuYWJsZWQ/IjogdHJ1ZSwgImFsbG93X2NvZGVfZXhlY3V0aW9uPyI6IGZhbHNlLCAi
-      bWF4X3JldHJ5X2xpbWl0IjogMiwgInRvb2xzX25hbWVzIjogW119XUqHAgoKY3Jld190YXNrcxL4
-      AQr1AVt7ImtleSI6ICIwNmE3MzIyMGY0MTQ4YTRiYmQ1YmFjYjBkMGI0NGZjZSIsICJpZCI6ICI4
-      ZDM0N2I0OC1kOThhLTQwZjYtODE1NS1jM2FjMGQ0YmE2M2EiLCAiYXN5bmNfZXhlY3V0aW9uPyI6
-      IGZhbHNlLCAiaHVtYW5faW5wdXQ/IjogZmFsc2UsICJhZ2VudF9yb2xlIjogInt0b3BpY30gUmVz
-      ZWFyY2hlciIsICJhZ2VudF9rZXkiOiAiZjMzODZmNmQ4ZGE3NWFhNDE2YTZlMzEwMDUzZjc2OTgi
-      LCAidG9vbHNfbmFtZXMiOiBbXX1degIYAYUBAAEAABKOAgoQP4m94fivp1uW/qfCvILe7BII9v6Q
-      lbTvSIYqDFRhc2sgQ3JlYXRlZDABOXDiYbsixvMXQSCWYrsixvMXSi4KCGNyZXdfa2V5EiIKIGU4
-      NzMzYTA2YTM3YmUyMTljYzRlMjJkZGI5YzAzZDg3SjEKB2NyZXdfaWQSJgokYmM0NmFlMmMtNGM3
-      ZS00YWI1LTk3MjItMzRhMTAwNDQwNDc2Si4KCHRhc2tfa2V5EiIKIDA2YTczMjIwZjQxNDhhNGJi
-      ZDViYWNiMGQwYjQ0ZmNlSjEKB3Rhc2tfaWQSJgokOGQzNDdiNDgtZDk4YS00MGY2LTgxNTUtYzNh
-      YzBkNGJhNjNhegIYAYUBAAEAABKQAgoQlXSqkejBRH8pK/c9np2UBBIIxsdzXoEU8iUqDlRhc2sg
-      RXhlY3V0aW9uMAE5EOxiuyLG8xdBaFbm3iLG8xdKLgoIY3Jld19rZXkSIgogZTg3MzNhMDZhMzdi
-      ZTIxOWNjNGUyMmRkYjljMDNkODdKMQoHY3Jld19pZBImCiRiYzQ2YWUyYy00YzdlLTRhYjUtOTcy
-      Mi0zNGExMDA0NDA0NzZKLgoIdGFza19rZXkSIgogMDZhNzMyMjBmNDE0OGE0YmJkNWJhY2IwZDBi
-      NDRmY2VKMQoHdGFza19pZBImCiQ4ZDM0N2I0OC1kOThhLTQwZjYtODE1NS1jM2FjMGQ0YmE2M2F6
-      AhgBhQEAAQAAEroNChCCwGa9nZMNbNfw1f6RHH7wEggw4eabu3W8ryoMQ3JldyBDcmVhdGVkMAE5
-      gL824CLG8xdBOLM64CLG8xdKGgoOY3Jld2FpX3ZlcnNpb24SCAoGMC41NS4yShoKDnB5dGhvbl92
-      ZXJzaW9uEggKBjMuMTEuN0ouCghjcmV3X2tleRIiCiAzZjhkNWMzYWI4ODJkNjg2OWQ5M2NiODFm
-      MGUyZWQ0YUoxCgdjcmV3X2lkEiYKJGM2NzllNmIzLTM5ODYtNDE4My04NDNiLTc4NDliNTdmZDY0
-      YkocCgxjcmV3X3Byb2Nlc3MSDAoKc2VxdWVudGlhbEoRCgtjcmV3X21lbW9yeRICEABKGgoUY3Jl
-      d19udW1iZXJfb2ZfdGFza3MSAhgDShsKFWNyZXdfbnVtYmVyX29mX2FnZW50cxICGAJKjAUKC2Ny
-      ZXdfYWdlbnRzEvwECvkEW3sia2V5IjogIjhiZDIxMzliNTk3NTE4MTUwNmU0MWZkOWM0NTYzZDc1
-      IiwgImlkIjogIjU4Mjg1YjY1LTI1ODEtNGRhOC1hNmExLTlhNTllMzFmNzcwMCIsICJyb2xlIjog
-      IlJlc2VhcmNoZXIiLCAidmVyYm9zZT8iOiBmYWxzZSwgIm1heF9pdGVyIjogMjUsICJtYXhfcnBt
-      IjogbnVsbCwgImZ1bmN0aW9uX2NhbGxpbmdfbGxtIjogbnVsbCwgImxsbSI6ICJncHQtNG8iLCAi
-      ZGVsZWdhdGlvbl9lbmFibGVkPyI6IGZhbHNlLCAiYWxsb3dfY29kZV9leGVjdXRpb24/IjogZmFs
-      c2UsICJtYXhfcmV0cnlfbGltaXQiOiAyLCAidG9vbHNfbmFtZXMiOiBbXX0sIHsia2V5IjogIjlh
-      NTAxNWVmNDg5NWRjNjI3OGQ1NDgxOGJhNDQ2YWY3IiwgImlkIjogIjY1MDFiNWQ2LTk0ODgtNDFh
-      ZC05NzdmLTAyYTk0ZDhmOGQ4NyIsICJyb2xlIjogIlNlbmlvciBXcml0ZXIiLCAidmVyYm9zZT8i
-      OiBmYWxzZSwgIm1heF9pdGVyIjogMjUsICJtYXhfcnBtIjogbnVsbCwgImZ1bmN0aW9uX2NhbGxp
-      bmdfbGxtIjogbnVsbCwgImxsbSI6ICJncHQtNG8iLCAiZGVsZWdhdGlvbl9lbmFibGVkPyI6IGZh
-      bHNlLCAiYWxsb3dfY29kZV9leGVjdXRpb24/IjogZmFsc2UsICJtYXhfcmV0cnlfbGltaXQiOiAy
-      LCAidG9vbHNfbmFtZXMiOiBbXX1dStsFCgpjcmV3X3Rhc2tzEswFCskFW3sia2V5IjogIjY3ODQ5
-      ZmY3MTdkYmFkYWJhMWI5NWQ1ZjJkZmNlZWExIiwgImlkIjogImM4NTIxNGM2LTJjMTgtNDVkOS1h
-      NjQxLTVkOWQwN2Y2YjA0OSIsICJhc3luY19leGVjdXRpb24/IjogdHJ1ZSwgImh1bWFuX2lucHV0
-      PyI6IGZhbHNlLCAiYWdlbnRfcm9sZSI6ICJSZXNlYXJjaGVyIiwgImFnZW50X2tleSI6ICI4YmQy
-      MTM5YjU5NzUxODE1MDZlNDFmZDljNDU2M2Q3NSIsICJ0b29sc19uYW1lcyI6IFtdfSwgeyJrZXki
-      OiAiZmM1NmRlYTM4Yzk5NzRiNmY1NWEyZTI4YzE0OTk4ODYiLCAiaWQiOiAiOWQ3OTYzYWMtY2M4
-      MS00MDRhLWE0MWEtMzllNzZhZThhYzA3IiwgImFzeW5jX2V4ZWN1dGlvbj8iOiBmYWxzZSwgImh1
-      bWFuX2lucHV0PyI6IGZhbHNlLCAiYWdlbnRfcm9sZSI6ICJSZXNlYXJjaGVyIiwgImFnZW50X2tl
-      eSI6ICI4YmQyMTM5YjU5NzUxODE1MDZlNDFmZDljNDU2M2Q3NSIsICJ0b29sc19uYW1lcyI6IFtd
-      fSwgeyJrZXkiOiAiOTRhODI2YzE5MzA1NTk2ODZiYWZiNDA5ZWU4Mzg3NmYiLCAiaWQiOiAiZmE3
-      M2U2OWUtNDE3Yi00MTNhLWEzMGMtM2VjYmIxMTM3NzNmIiwgImFzeW5jX2V4ZWN1dGlvbj8iOiBm
-      YWxzZSwgImh1bWFuX2lucHV0PyI6IGZhbHNlLCAiYWdlbnRfcm9sZSI6ICJTZW5pb3IgV3JpdGVy
-      IiwgImFnZW50X2tleSI6ICI5YTUwMTVlZjQ4OTVkYzYyNzhkNTQ4MThiYTQ0NmFmNyIsICJ0b29s
-      c19uYW1lcyI6IFtdfV16AhgBhQEAAQAAEo4CChBokQy/w7gPg3zD1cD/AdKZEggmWeb9OvEgxyoM
-      VGFzayBDcmVhdGVkMAE5kHld4CLG8xdB+Dhe4CLG8xdKLgoIY3Jld19rZXkSIgogM2Y4ZDVjM2Fi
-      ODgyZDY4NjlkOTNjYjgxZjBlMmVkNGFKMQoHY3Jld19pZBImCiRjNjc5ZTZiMy0zOTg2LTQxODMt
-      ODQzYi03ODQ5YjU3ZmQ2NGJKLgoIdGFza19rZXkSIgogNjc4NDlmZjcxN2RiYWRhYmExYjk1ZDVm
-      MmRmY2VlYTFKMQoHdGFza19pZBImCiRjODUyMTRjNi0yYzE4LTQ1ZDktYTY0MS01ZDlkMDdmNmIw
-      NDl6AhgBhQEAAQAA
-    headers:
-      Accept:
-      - '*/*'
-      Accept-Encoding:
-      - gzip, deflate
-      Connection:
-      - keep-alive
-      Content-Length:
-      - '3831'
-      Content-Type:
-      - application/x-protobuf
-      User-Agent:
-      - OTel-OTLP-Exporter-Python/1.27.0
-    method: POST
-    uri: https://telemetry.crewai.com:4319/v1/traces
-  response:
-    body:
-      string: "\n\0"
-    headers:
-      Content-Length:
-      - '2'
-      Content-Type:
-      - application/x-protobuf
-      Date:
-      - Tue, 10 Sep 2024 04:02:19 GMT
-    status:
-      code: 200
-      message: OK
-- request:
-    body: '{"messages": [{"role": "user", "content": "You are Researcher. You''re
+    body: '{"messages": [{"role": "system", "content": "You are Researcher. You''re
       an expert researcher, specialized in technology, software engineering, AI and
       startups. You work as a freelancer and is now working on doing research and
       analysis for a new customer.\nYour personal goal is: Make the best research
@@ -106,12 +8,13 @@ interactions:
       answer to the task use the exact following format:\n\nThought: I now can give
       a great answer\nFinal Answer: Your final answer must be the great and the most
       complete as possible, it must be outcome described.\n\nI MUST use these formats,
-      my job depends on it!\nCurrent Task: Give me a list of 5 interesting ideas to
-      explore for an article, what makes them unique and interesting.\n\nThis is the
-      expect criteria for your final answer: Bullet point list of 5 important events.
-      \n you MUST return the actual complete content as the final answer, not a summary.\n\nBegin!
-      This is VERY important to you, use the tools available and give your best Final
-      Answer, your job depends on it!\n\nThought:"}], "model": "gpt-4o", "stop": ["\nObservation"]}'
+      my job depends on it!"}, {"role": "user", "content": "\nCurrent Task: Give me
+      a list of 5 interesting ideas to explore for an article, what makes them unique
+      and interesting.\n\nThis is the expect criteria for your final answer: Bullet
+      point list of 5 important events.\nyou MUST return the actual complete content
+      as the final answer, not a summary.\n\nBegin! This is VERY important to you,
+      use the tools available and give your best Final Answer, your job depends on
+      it!\n\nThought:"}], "model": "gpt-4o", "stop": ["\nObservation"]}'
     headers:
       accept:
       - application/json
@@ -120,16 +23,16 @@ interactions:
       connection:
       - keep-alive
       content-length:
-      - '1120'
+      - '1153'
       content-type:
       - application/json
       cookie:
-      - _cfuvid=_Qurzg7MGysLGzSugSD3ZV84qR5Lfxrt9mF2_tfTJqw-1725940709772-0.0.1.1-604800000;
-        __cf_bm=_VKcRD0U2g9VfrlK3xy3AVQfynnKXZY2jX0QBkR8us8-1725940709-1.0.1.1-F0MIxvXffEPTFVqJ6cgovOMZ9E88rvBTRMj7aIlAQz.bEZJA5fip0HhCYxawoz1MDdwfQ2X_c9FjtN27PR.RHw
+      - __cf_bm=r6BNUnXat.26mviZiJYUf7Qj4ea5gbt_oPxyClKcVOE-1726214380-1.0.1.1-2S3G10sPdiG2syQSO8wKWXE7Nmdgt88imgakr81w9DemMH8mVDg0q6r9ANx6tM4_CPvgGQlMVstDhDRkIDwhzg;
+        _cfuvid=dp2yoCmGHVlURh_U78_UoIfnhcO5UhufnL5whkUSMTQ-1726214380689-0.0.1.1-604800000
       host:
       - api.openai.com
       user-agent:
-      - OpenAI/Python 1.44.0
+      - OpenAI/Python 1.45.0
       x-stainless-arch:
       - arm64
       x-stainless-async:
@@ -139,7 +42,7 @@ interactions:
       x-stainless-os:
       - MacOS
       x-stainless-package-version:
-      - 1.44.0
+      - 1.45.0
       x-stainless-raw-response:
       - 'true'
       x-stainless-runtime:
@@ -149,52 +52,51 @@ interactions:
     method: POST
     uri: https://api.openai.com/v1/chat/completions
   response:
-    content: "{\n  \"id\": \"chatcmpl-A5mMxZpeezPK1vOF1mAnpU3ip9QOj\",\n  \"object\":
-      \"chat.completion\",\n  \"created\": 1725940935,\n  \"model\": \"gpt-4o-2024-05-13\",\n
+    content: "{\n  \"id\": \"chatcmpl-A6vjJPYUkzAWwRPxS6JdiJwruJ9US\",\n  \"object\":
+      \"chat.completion\",\n  \"created\": 1726215245,\n  \"model\": \"gpt-4o-2024-05-13\",\n
       \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
-      \"assistant\",\n        \"content\": \"Thought: I now can give a great answer\\nFinal
-      Answer: \\n\\n1. **The Role of AI in Climate Change Mitigation**\\n   - **Uniqueness**:
-      This topic explores how artificial intelligence can be leveraged to predict
-      and mitigate the effects of climate change. \\n   - **Interesting Aspects**:
-      AI's ability to analyze vast amounts of environmental data, optimize energy
-      consumption, and enhance climate models makes it a compelling subject. It also
-      discusses the potential of AI in developing sustainable practices across industries,
-      like agriculture and manufacturing.\\n\\n2. **AI Agents in Personalized Healthcare**\\n
-      \  - **Uniqueness**: The use of AI agents for personalized healthcare solutions
-      is a rapidly growing field.\\n   - **Interesting Aspects**: Examining how AI
-      agents can provide tailored healthcare advice, predict potential health issues
-      before they become critical, and personalize treatment plans based on individual
-      genetic data. Exploring successful case studies and potential ethical concerns
-      adds depth to the subject.\\n\\n3. **The Evolution of AI in Creative Industries**\\n
-      \  - **Uniqueness**: AI in creative industries like music, writing, and visual
-      arts presents a fascinating blend of technology and human expression.\\n   -
-      **Interesting Aspects**: The article could delve into how AI is being used to
-      compose music, generate visual art, and even write literature. It will also
-      address the debate on AI's role in creativity, the collaboration between human
-      and machine, and the future implications for artists and creatives.\\n\\n4.
-      **AI Ethics and Governance: Balancing Innovation and Responsibility**\\n   -
-      **Uniqueness**: This explores the critical conversation around the ethical use
-      and regulation of AI technologies.\\n   - **Interesting Aspects**: It includes
-      a discussion on the challenges of creating ethical AI systems, the importance
-      of transparency and bias mitigation, and the role of global governance. Highlighting
-      real-world instances where ethical lapses occurred and how they were addressed
-      provides practical insights.\\n\\n5. **AI Agents in Enhancing Customer Experience**\\n
-      \  - **Uniqueness**: Focuses on how AI agents are transforming customer service
-      and experience across various industries.\\n   - **Interesting Aspects**: Discusses
-      the implementation of chatbots, virtual assistants, and recommendation engines
-      that predict customer needs and provide personalized service. The article can
-      cover success stories, technological advancements, and the challenges faced
-      in maintaining human-like interactions.\\n\\nThese topics each offer a unique
-      angle on the exciting developments in AI and AI agents, making them highly relevant
-      and engaging for readers interested in the field.\",\n        \"refusal\": null\n
-      \     },\n      \"logprobs\": null,\n      \"finish_reason\": \"stop\"\n    }\n
-      \ ],\n  \"usage\": {\n    \"prompt_tokens\": 216,\n    \"completion_tokens\":
-      500,\n    \"total_tokens\": 716\n  },\n  \"system_fingerprint\": \"fp_25624ae3a5\"\n}\n"
+      \"assistant\",\n        \"content\": \"Thought: I now can give a great answer\\n\\nFinal
+      Answer:\\n- **The Future of AI in Healthcare: Revolutionizing Diagnosis and
+      Treatment**\\n  - **Uniqueness**: This topic delves into how AI algorithms can
+      analyze medical images, predict patient outcomes, and suggest treatments, potentially
+      transforming the healthcare sector. By exploring cutting-edge applications like
+      AI-driven diagnostics, personalized medicine, and remote patient monitoring,
+      this article can capture the reader's interest in advancements that directly
+      impact health and well-being.\\n  \\n- **AI Agents in Customer Service: Enhancing
+      User Experience**\\n  - **Uniqueness**: Customer service is a field ripe for
+      AI intervention. This article would explore how AI agents can provide 24/7 support,
+      resolve issues more quickly, and offer personalized experiences. It could also
+      look into the integration of AI in chatbots, virtual assistants, and call centers,
+      highlighting real-world case studies and future trends.\\n\\n- **Ethical Considerations
+      in AI Development: Balancing Innovation and Responsibility**\\n  - **Uniqueness**:
+      The ethics of AI is a heavily debated topic, making it a compelling subject
+      for an article. This topic would cover the potential biases in AI systems, issues
+      of data privacy, the implications of autonomous decision-making, and the importance
+      of creating ethical guidelines. Insight into the ethical challenges faced by
+      developers and how those are being addressed would make for an in-depth and
+      thought-provoking read.\\n\\n- **AI in Creative Industries: Transforming Art,
+      Music, and Literature**\\n  - **Uniqueness**: AI\u2019s role in creative processes
+      is an exciting frontier. This article can explore how AI is being used to create
+      original works of art, compose music, write stories, and even produce movies.
+      Discussing tools like OpenAI\u2019s GPT, deep learning models in visual arts,
+      and AI-driven music composition software can illustrate the blend of creativity
+      and technology, captivating readers interested in the arts.\\n\\n- **AI and
+      the Future of Work: Adapting to an Automated World**\\n  - **Uniqueness**: With
+      the rise of AI, the nature of work is rapidly changing. This piece would look
+      into how AI is automating routine tasks, enhancing decision-making, and creating
+      new job roles. By examining sectors most affected by AI, such as manufacturing,
+      finance, and retail, and discussing the need for new skills and education, the
+      article can provide a comprehensive overview of the evolving workforce landscape,
+      relevant to both employers and employees.\",\n        \"refusal\": null\n      },\n
+      \     \"logprobs\": null,\n      \"finish_reason\": \"stop\"\n    }\n  ],\n
+      \ \"usage\": {\n    \"prompt_tokens\": 220,\n    \"completion_tokens\": 493,\n
+      \   \"total_tokens\": 713,\n    \"completion_tokens_details\": {\n      \"reasoning_tokens\":
+      0\n    }\n  },\n  \"system_fingerprint\": \"fp_25624ae3a5\"\n}\n"
     headers:
       CF-Cache-Status:
       - DYNAMIC
       CF-RAY:
-      - 8c0c857e88ff2ae0-LAX
+      - 8c26ae819f0d2ab9-LAX
       Connection:
       - keep-alive
       Content-Encoding:
@@ -202,7 +104,7 @@ interactions:
       Content-Type:
       - application/json
       Date:
-      - Tue, 10 Sep 2024 04:02:21 GMT
+      - Fri, 13 Sep 2024 08:14:12 GMT
       Server:
       - cloudflare
       Transfer-Encoding:
@@ -216,7 +118,7 @@ interactions:
       openai-organization:
       - crewai-iuxna1
       openai-processing-ms:
-      - '5708'
+      - '6664'
       openai-version:
       - '2020-10-01'
       strict-transport-security:
@@ -234,52 +136,11 @@ interactions:
       x-ratelimit-reset-tokens:
       - 0s
       x-request-id:
-      - req_78825e2d8d2ede0f53196dd2995beae4
+      - req_21a3a2a7558101a57083924d5115988f
     http_version: HTTP/1.1
     status_code: 200
 - request:
-    body: !!binary |
-      CuEECiQKIgoMc2VydmljZS5uYW1lEhIKEGNyZXdBSS10ZWxlbWV0cnkSuAQKEgoQY3Jld2FpLnRl
-      bGVtZXRyeRKQAgoQXL+BJREEcIiBMIKxPW24dxII6zaDa4InPLEqDlRhc2sgRXhlY3V0aW9uMAE5
-      MINe4CLG8xdBsDOsRyTG8xdKLgoIY3Jld19rZXkSIgogM2Y4ZDVjM2FiODgyZDY4NjlkOTNjYjgx
-      ZjBlMmVkNGFKMQoHY3Jld19pZBImCiRjNjc5ZTZiMy0zOTg2LTQxODMtODQzYi03ODQ5YjU3ZmQ2
-      NGJKLgoIdGFza19rZXkSIgogNjc4NDlmZjcxN2RiYWRhYmExYjk1ZDVmMmRmY2VlYTFKMQoHdGFz
-      a19pZBImCiRjODUyMTRjNi0yYzE4LTQ1ZDktYTY0MS01ZDlkMDdmNmIwNDl6AhgBhQEAAQAAEo4C
-      ChDeQ43+GPwgF6U3jwLKT093EggPvT/jXo7tRyoMVGFzayBDcmVhdGVkMAE54OHhRyTG8xdB6Cfk
-      RyTG8xdKLgoIY3Jld19rZXkSIgogM2Y4ZDVjM2FiODgyZDY4NjlkOTNjYjgxZjBlMmVkNGFKMQoH
-      Y3Jld19pZBImCiRjNjc5ZTZiMy0zOTg2LTQxODMtODQzYi03ODQ5YjU3ZmQ2NGJKLgoIdGFza19r
-      ZXkSIgogZmM1NmRlYTM4Yzk5NzRiNmY1NWEyZTI4YzE0OTk4ODZKMQoHdGFza19pZBImCiQ5ZDc5
-      NjNhYy1jYzgxLTQwNGEtYTQxYS0zOWU3NmFlOGFjMDd6AhgBhQEAAQAA
-    headers:
-      Accept:
-      - '*/*'
-      Accept-Encoding:
-      - gzip, deflate
-      Connection:
-      - keep-alive
-      Content-Length:
-      - '612'
-      Content-Type:
-      - application/x-protobuf
-      User-Agent:
-      - OTel-OTLP-Exporter-Python/1.27.0
-    method: POST
-    uri: https://telemetry.crewai.com:4319/v1/traces
-  response:
-    body:
-      string: "\n\0"
-    headers:
-      Content-Length:
-      - '2'
-      Content-Type:
-      - application/x-protobuf
-      Date:
-      - Tue, 10 Sep 2024 04:02:24 GMT
-    status:
-      code: 200
-      message: OK
-- request:
-    body: '{"messages": [{"role": "user", "content": "You are Researcher. You''re
+    body: '{"messages": [{"role": "system", "content": "You are Researcher. You''re
       an expert researcher, specialized in technology, software engineering, AI and
       startups. You work as a freelancer and is now working on doing research and
       analysis for a new customer.\nYour personal goal is: Make the best research
@@ -287,301 +148,42 @@ interactions:
       answer to the task use the exact following format:\n\nThought: I now can give
       a great answer\nFinal Answer: Your final answer must be the great and the most
       complete as possible, it must be outcome described.\n\nI MUST use these formats,
-      my job depends on it!\nCurrent Task: Research the history of AI and give me
-      the 5 most important events that shaped the technology.\n\nThis is the expect
-      criteria for your final answer: Bullet point list of 5 important events. \n
-      you MUST return the actual complete content as the final answer, not a summary.\n\nThis
-      is the context you''re working with:\n1. **The Role of AI in Climate Change
-      Mitigation**\n   - **Uniqueness**: This topic explores how artificial intelligence
-      can be leveraged to predict and mitigate the effects of climate change. \n   -
-      **Interesting Aspects**: AI''s ability to analyze vast amounts of environmental
-      data, optimize energy consumption, and enhance climate models makes it a compelling
-      subject. It also discusses the potential of AI in developing sustainable practices
-      across industries, like agriculture and manufacturing.\n\n2. **AI Agents in
-      Personalized Healthcare**\n   - **Uniqueness**: The use of AI agents for personalized
-      healthcare solutions is a rapidly growing field.\n   - **Interesting Aspects**:
-      Examining how AI agents can provide tailored healthcare advice, predict potential
-      health issues before they become critical, and personalize treatment plans based
-      on individual genetic data. Exploring successful case studies and potential
-      ethical concerns adds depth to the subject.\n\n3. **The Evolution of AI in Creative
-      Industries**\n   - **Uniqueness**: AI in creative industries like music, writing,
-      and visual arts presents a fascinating blend of technology and human expression.\n   -
-      **Interesting Aspects**: The article could delve into how AI is being used to
-      compose music, generate visual art, and even write literature. It will also
-      address the debate on AI''s role in creativity, the collaboration between human
-      and machine, and the future implications for artists and creatives.\n\n4. **AI
-      Ethics and Governance: Balancing Innovation and Responsibility**\n   - **Uniqueness**:
-      This explores the critical conversation around the ethical use and regulation
-      of AI technologies.\n   - **Interesting Aspects**: It includes a discussion
-      on the challenges of creating ethical AI systems, the importance of transparency
-      and bias mitigation, and the role of global governance. Highlighting real-world
-      instances where ethical lapses occurred and how they were addressed provides
-      practical insights.\n\n5. **AI Agents in Enhancing Customer Experience**\n   -
-      **Uniqueness**: Focuses on how AI agents are transforming customer service and
-      experience across various industries.\n   - **Interesting Aspects**: Discusses
-      the implementation of chatbots, virtual assistants, and recommendation engines
-      that predict customer needs and provide personalized service. The article can
-      cover success stories, technological advancements, and the challenges faced
-      in maintaining human-like interactions.\n\nThese topics each offer a unique
-      angle on the exciting developments in AI and AI agents, making them highly relevant
-      and engaging for readers interested in the field.\n\nBegin! This is VERY important
-      to you, use the tools available and give your best Final Answer, your job depends
-      on it!\n\nThought:"}], "model": "gpt-4o", "stop": ["\nObservation"]}'
-    headers:
-      accept:
-      - application/json
-      accept-encoding:
-      - gzip, deflate
-      connection:
-      - keep-alive
-      content-length:
-      - '3806'
-      content-type:
-      - application/json
-      cookie:
-      - _cfuvid=_Qurzg7MGysLGzSugSD3ZV84qR5Lfxrt9mF2_tfTJqw-1725940709772-0.0.1.1-604800000;
-        __cf_bm=_VKcRD0U2g9VfrlK3xy3AVQfynnKXZY2jX0QBkR8us8-1725940709-1.0.1.1-F0MIxvXffEPTFVqJ6cgovOMZ9E88rvBTRMj7aIlAQz.bEZJA5fip0HhCYxawoz1MDdwfQ2X_c9FjtN27PR.RHw
-      host:
-      - api.openai.com
-      user-agent:
-      - OpenAI/Python 1.44.0
-      x-stainless-arch:
-      - arm64
-      x-stainless-async:
-      - 'false'
-      x-stainless-lang:
-      - python
-      x-stainless-os:
-      - MacOS
-      x-stainless-package-version:
-      - 1.44.0
-      x-stainless-raw-response:
-      - 'true'
-      x-stainless-runtime:
-      - CPython
-      x-stainless-runtime-version:
-      - 3.11.7
-    method: POST
-    uri: https://api.openai.com/v1/chat/completions
-  response:
-    content: "{\n  \"id\": \"chatcmpl-A5mN3VYkwnjk0lsbsl5X5eK6xMAuz\",\n  \"object\":
-      \"chat.completion\",\n  \"created\": 1725940941,\n  \"model\": \"gpt-4o-2024-05-13\",\n
-      \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
-      \"assistant\",\n        \"content\": \"Thought: I now can give a great answer\\nFinal
-      Answer: \\n\\n1. **The Birth of AI (1956)**\\n   - **Event**: Dartmouth Conference\\n
-      \  - **Description**: The 1956 Dartmouth Conference, organized by John McCarthy,
-      Marvin Minsky, Nathaniel Rochester, and Claude Shannon, is widely considered
-      the birth of artificial intelligence as a field. The conference birthed the
-      term \\\"artificial intelligence\\\" and brought together leading researchers
-      to discuss the possibility of creating machines that could simulate every aspect
-      of human learning and intelligence. This event laid the foundation for AI research
-      and set the stage for future developments.\\n\\n2. **Development of the Perceptron
-      (1957)**\\n   - **Event**: Frank Rosenblatt's Perceptron\\n   - **Description**:
-      Frank Rosenblatt developed the Perceptron, a type of artificial neural network,
-      in 1957. The Perceptron model was significant because it offered a simple algorithm
-      for training neural networks and demonstrated that computers could learn from
-      data, leading to advancements in machine learning. Although initially limited
-      to linearly separable problems, the Perceptron laid the groundwork for future
-      neural network research and developments in AI.\\n\\n3. **The AI Winter (1970s-1980s)**\\n
-      \  - **Event**: AI Winter Periods\\n   - **Description**: The periods known
-      as AI Winters in the 1970s and 1980s were characterized by decreased funding
-      and interest in artificial intelligence research. These AI Winters occurred
-      due to the limitations of early AI systems to deliver on their ambitious promises,
-      leading to skepticism and reduced investments. This period is significant as
-      it forced researchers to reassess their approaches and led to the exploration
-      of new algorithms, ultimately contributing to the resurgence of AI in the following
-      decades.\\n\\n4. **IBM's Deep Blue Defeats Garry Kasparov (1997)**\\n   - **Event**:
-      Chess Match Victory\\n   - **Description**: In 1997, IBM's Deep Blue made history
-      by defeating world chess champion Garry Kasparov in a six-game match. This event
-      was crucial as it showcased the potential of AI to handle complex problem-solving
-      tasks and perform at a level on par with, or even superior to, human experts.
-      The victory of Deep Blue had a profound impact on public perception and interest
-      in artificial intelligence and demonstrated that AI could achieve significant
-      milestones in challenging domains.\\n\\n5. **The Rise of Deep Learning (2012)**\\n
-      \  - **Event**: AlexNet Wins ImageNet Competition\\n   - **Description**: The
-      success of AlexNet, a deep convolutional neural network, in winning the ImageNet
-      Large Scale Visual Recognition Challenge (ILSVRC) in 2012 marked a pivotal moment
-      for AI. Developed by Alex Krizhevsky, Ilya Sutskever, and Geoffrey Hinton, AlexNet
-      significantly outperformed previous methods and demonstrated the power of deep
-      learning to handle complex image recognition tasks. This event sparked widespread
-      interest in deep learning techniques and catalyzed advancements in various AI
-      applications, leading to the rapid development and deployment of AI technologies
-      across different industries.\",\n        \"refusal\": null\n      },\n      \"logprobs\":
-      null,\n      \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\":
-      707,\n    \"completion_tokens\": 641,\n    \"total_tokens\": 1348\n  },\n  \"system_fingerprint\":
-      \"fp_25624ae3a5\"\n}\n"
-    headers:
-      CF-Cache-Status:
-      - DYNAMIC
-      CF-RAY:
-      - 8c0c85a53b252ae0-LAX
-      Connection:
-      - keep-alive
-      Content-Encoding:
-      - gzip
-      Content-Type:
-      - application/json
-      Date:
-      - Tue, 10 Sep 2024 04:02:28 GMT
-      Server:
-      - cloudflare
-      Transfer-Encoding:
-      - chunked
-      X-Content-Type-Options:
-      - nosniff
-      access-control-expose-headers:
-      - X-Request-ID
-      alt-svc:
-      - h3=":443"; ma=86400
-      openai-organization:
-      - crewai-iuxna1
-      openai-processing-ms:
-      - '6960'
-      openai-version:
-      - '2020-10-01'
-      strict-transport-security:
-      - max-age=15552000; includeSubDomains; preload
-      x-ratelimit-limit-requests:
-      - '10000'
-      x-ratelimit-limit-tokens:
-      - '30000000'
-      x-ratelimit-remaining-requests:
-      - '9999'
-      x-ratelimit-remaining-tokens:
-      - '29999063'
-      x-ratelimit-reset-requests:
-      - 6ms
-      x-ratelimit-reset-tokens:
-      - 1ms
-      x-request-id:
-      - req_ff38cfbc7224f3225bd7d74fe677a890
-    http_version: HTTP/1.1
-    status_code: 200
-- request:
-    body: !!binary |
-      CuEECiQKIgoMc2VydmljZS5uYW1lEhIKEGNyZXdBSS10ZWxlbWV0cnkSuAQKEgoQY3Jld2FpLnRl
-      bGVtZXRyeRKQAgoQKPWn1vaaCPufN0x5MrCe2BIIl9us3NGftq0qDlRhc2sgRXhlY3V0aW9uMAE5
-      AB7lRyTG8xdBEDGpDibG8xdKLgoIY3Jld19rZXkSIgogM2Y4ZDVjM2FiODgyZDY4NjlkOTNjYjgx
-      ZjBlMmVkNGFKMQoHY3Jld19pZBImCiRjNjc5ZTZiMy0zOTg2LTQxODMtODQzYi03ODQ5YjU3ZmQ2
-      NGJKLgoIdGFza19rZXkSIgogZmM1NmRlYTM4Yzk5NzRiNmY1NWEyZTI4YzE0OTk4ODZKMQoHdGFz
-      a19pZBImCiQ5ZDc5NjNhYy1jYzgxLTQwNGEtYTQxYS0zOWU3NmFlOGFjMDd6AhgBhQEAAQAAEo4C
-      ChCSxdFEas2vCboHTP0YpLZuEgjtfoBKAxfpJioMVGFzayBDcmVhdGVkMAE5IN7mDibG8xdBUEfp
-      DibG8xdKLgoIY3Jld19rZXkSIgogM2Y4ZDVjM2FiODgyZDY4NjlkOTNjYjgxZjBlMmVkNGFKMQoH
-      Y3Jld19pZBImCiRjNjc5ZTZiMy0zOTg2LTQxODMtODQzYi03ODQ5YjU3ZmQ2NGJKLgoIdGFza19r
-      ZXkSIgogOTRhODI2YzE5MzA1NTk2ODZiYWZiNDA5ZWU4Mzg3NmZKMQoHdGFza19pZBImCiRmYTcz
-      ZTY5ZS00MTdiLTQxM2EtYTMwYy0zZWNiYjExMzc3M2Z6AhgBhQEAAQAA
-    headers:
-      Accept:
-      - '*/*'
-      Accept-Encoding:
-      - gzip, deflate
-      Connection:
-      - keep-alive
-      Content-Length:
-      - '612'
-      Content-Type:
-      - application/x-protobuf
-      User-Agent:
-      - OTel-OTLP-Exporter-Python/1.27.0
-    method: POST
-    uri: https://telemetry.crewai.com:4319/v1/traces
-  response:
-    body:
-      string: "\n\0"
-    headers:
-      Content-Length:
-      - '2'
-      Content-Type:
-      - application/x-protobuf
-      Date:
-      - Tue, 10 Sep 2024 04:02:29 GMT
-    status:
-      code: 200
-      message: OK
-- request:
-    body: '{"messages": [{"role": "user", "content": "You are Senior Writer. You''re
-      a senior writer, specialized in technology, software engineering, AI and startups.
-      You work as a freelancer and are now working on writing content for a new customer.\nYour
-      personal goal is: Write the best content about AI and AI agents.\nTo give my
-      best complete final answer to the task use the exact following format:\n\nThought:
-      I now can give a great answer\nFinal Answer: Your final answer must be the great
-      and the most complete as possible, it must be outcome described.\n\nI MUST use
-      these formats, my job depends on it!\nCurrent Task: Write an article about the
-      history of AI and its most important events.\n\nThis is the expect criteria
-      for your final answer: A 4 paragraph article about AI. \n you MUST return the
-      actual complete content as the final answer, not a summary.\n\nThis is the context
-      you''re working with:\n1. **The Role of AI in Climate Change Mitigation**\n   -
-      **Uniqueness**: This topic explores how artificial intelligence can be leveraged
-      to predict and mitigate the effects of climate change. \n   - **Interesting
-      Aspects**: AI''s ability to analyze vast amounts of environmental data, optimize
-      energy consumption, and enhance climate models makes it a compelling subject.
-      It also discusses the potential of AI in developing sustainable practices across
-      industries, like agriculture and manufacturing.\n\n2. **AI Agents in Personalized
-      Healthcare**\n   - **Uniqueness**: The use of AI agents for personalized healthcare
-      solutions is a rapidly growing field.\n   - **Interesting Aspects**: Examining
-      how AI agents can provide tailored healthcare advice, predict potential health
-      issues before they become critical, and personalize treatment plans based on
-      individual genetic data. Exploring successful case studies and potential ethical
-      concerns adds depth to the subject.\n\n3. **The Evolution of AI in Creative
-      Industries**\n   - **Uniqueness**: AI in creative industries like music, writing,
-      and visual arts presents a fascinating blend of technology and human expression.\n   -
-      **Interesting Aspects**: The article could delve into how AI is being used to
-      compose music, generate visual art, and even write literature. It will also
-      address the debate on AI''s role in creativity, the collaboration between human
-      and machine, and the future implications for artists and creatives.\n\n4. **AI
-      Ethics and Governance: Balancing Innovation and Responsibility**\n   - **Uniqueness**:
-      This explores the critical conversation around the ethical use and regulation
-      of AI technologies.\n   - **Interesting Aspects**: It includes a discussion
-      on the challenges of creating ethical AI systems, the importance of transparency
-      and bias mitigation, and the role of global governance. Highlighting real-world
-      instances where ethical lapses occurred and how they were addressed provides
-      practical insights.\n\n5. **AI Agents in Enhancing Customer Experience**\n   -
-      **Uniqueness**: Focuses on how AI agents are transforming customer service and
-      experience across various industries.\n   - **Interesting Aspects**: Discusses
-      the implementation of chatbots, virtual assistants, and recommendation engines
-      that predict customer needs and provide personalized service. The article can
-      cover success stories, technological advancements, and the challenges faced
-      in maintaining human-like interactions.\n\nThese topics each offer a unique
-      angle on the exciting developments in AI and AI agents, making them highly relevant
-      and engaging for readers interested in the field.\n\n----------\n\n1. **The
-      Birth of AI (1956)**\n   - **Event**: Dartmouth Conference\n   - **Description**:
-      The 1956 Dartmouth Conference, organized by John McCarthy, Marvin Minsky, Nathaniel
-      Rochester, and Claude Shannon, is widely considered the birth of artificial
-      intelligence as a field. The conference birthed the term \"artificial intelligence\"
-      and brought together leading researchers to discuss the possibility of creating
-      machines that could simulate every aspect of human learning and intelligence.
-      This event laid the foundation for AI research and set the stage for future
-      developments.\n\n2. **Development of the Perceptron (1957)**\n   - **Event**:
-      Frank Rosenblatt''s Perceptron\n   - **Description**: Frank Rosenblatt developed
-      the Perceptron, a type of artificial neural network, in 1957. The Perceptron
-      model was significant because it offered a simple algorithm for training neural
-      networks and demonstrated that computers could learn from data, leading to advancements
-      in machine learning. Although initially limited to linearly separable problems,
-      the Perceptron laid the groundwork for future neural network research and developments
-      in AI.\n\n3. **The AI Winter (1970s-1980s)**\n   - **Event**: AI Winter Periods\n   -
-      **Description**: The periods known as AI Winters in the 1970s and 1980s were
-      characterized by decreased funding and interest in artificial intelligence research.
-      These AI Winters occurred due to the limitations of early AI systems to deliver
-      on their ambitious promises, leading to skepticism and reduced investments.
-      This period is significant as it forced researchers to reassess their approaches
-      and led to the exploration of new algorithms, ultimately contributing to the
-      resurgence of AI in the following decades.\n\n4. **IBM''s Deep Blue Defeats
-      Garry Kasparov (1997)**\n   - **Event**: Chess Match Victory\n   - **Description**:
-      In 1997, IBM''s Deep Blue made history by defeating world chess champion Garry
-      Kasparov in a six-game match. This event was crucial as it showcased the potential
-      of AI to handle complex problem-solving tasks and perform at a level on par
-      with, or even superior to, human experts. The victory of Deep Blue had a profound
-      impact on public perception and interest in artificial intelligence and demonstrated
-      that AI could achieve significant milestones in challenging domains.\n\n5. **The
-      Rise of Deep Learning (2012)**\n   - **Event**: AlexNet Wins ImageNet Competition\n   -
-      **Description**: The success of AlexNet, a deep convolutional neural network,
-      in winning the ImageNet Large Scale Visual Recognition Challenge (ILSVRC) in
-      2012 marked a pivotal moment for AI. Developed by Alex Krizhevsky, Ilya Sutskever,
-      and Geoffrey Hinton, AlexNet significantly outperformed previous methods and
-      demonstrated the power of deep learning to handle complex image recognition
-      tasks. This event sparked widespread interest in deep learning techniques and
-      catalyzed advancements in various AI applications, leading to the rapid development
-      and deployment of AI technologies across different industries.\n\nBegin! This
+      my job depends on it!"}, {"role": "user", "content": "\nCurrent Task: Research
+      the history of AI and give me the 5 most important events that shaped the technology.\n\nThis
+      is the expect criteria for your final answer: Bullet point list of 5 important
+      events.\nyou MUST return the actual complete content as the final answer, not
+      a summary.\n\nThis is the context you''re working with:\n- **The Future of AI
+      in Healthcare: Revolutionizing Diagnosis and Treatment**\n  - **Uniqueness**:
+      This topic delves into how AI algorithms can analyze medical images, predict
+      patient outcomes, and suggest treatments, potentially transforming the healthcare
+      sector. By exploring cutting-edge applications like AI-driven diagnostics, personalized
+      medicine, and remote patient monitoring, this article can capture the reader''s
+      interest in advancements that directly impact health and well-being.\n  \n-
+      **AI Agents in Customer Service: Enhancing User Experience**\n  - **Uniqueness**:
+      Customer service is a field ripe for AI intervention. This article would explore
+      how AI agents can provide 24/7 support, resolve issues more quickly, and offer
+      personalized experiences. It could also look into the integration of AI in chatbots,
+      virtual assistants, and call centers, highlighting real-world case studies and
+      future trends.\n\n- **Ethical Considerations in AI Development: Balancing Innovation
+      and Responsibility**\n  - **Uniqueness**: The ethics of AI is a heavily debated
+      topic, making it a compelling subject for an article. This topic would cover
+      the potential biases in AI systems, issues of data privacy, the implications
+      of autonomous decision-making, and the importance of creating ethical guidelines.
+      Insight into the ethical challenges faced by developers and how those are being
+      addressed would make for an in-depth and thought-provoking read.\n\n- **AI in
+      Creative Industries: Transforming Art, Music, and Literature**\n  - **Uniqueness**:
+      AI\u2019s role in creative processes is an exciting frontier. This article can
+      explore how AI is being used to create original works of art, compose music,
+      write stories, and even produce movies. Discussing tools like OpenAI\u2019s
+      GPT, deep learning models in visual arts, and AI-driven music composition software
+      can illustrate the blend of creativity and technology, captivating readers interested
+      in the arts.\n\n- **AI and the Future of Work: Adapting to an Automated World**\n  -
+      **Uniqueness**: With the rise of AI, the nature of work is rapidly changing.
+      This piece would look into how AI is automating routine tasks, enhancing decision-making,
+      and creating new job roles. By examining sectors most affected by AI, such as
+      manufacturing, finance, and retail, and discussing the need for new skills and
+      education, the article can provide a comprehensive overview of the evolving
+      workforce landscape, relevant to both employers and employees.\n\nBegin! This
       is VERY important to you, use the tools available and give your best Final Answer,
       your job depends on it!\n\nThought:"}], "model": "gpt-4o", "stop": ["\nObservation"]}'
     headers:
@@ -592,16 +194,16 @@ interactions:
       connection:
       - keep-alive
       content-length:
-      - '6805'
+      - '3687'
       content-type:
       - application/json
       cookie:
-      - _cfuvid=_Qurzg7MGysLGzSugSD3ZV84qR5Lfxrt9mF2_tfTJqw-1725940709772-0.0.1.1-604800000;
-        __cf_bm=_VKcRD0U2g9VfrlK3xy3AVQfynnKXZY2jX0QBkR8us8-1725940709-1.0.1.1-F0MIxvXffEPTFVqJ6cgovOMZ9E88rvBTRMj7aIlAQz.bEZJA5fip0HhCYxawoz1MDdwfQ2X_c9FjtN27PR.RHw
+      - __cf_bm=r6BNUnXat.26mviZiJYUf7Qj4ea5gbt_oPxyClKcVOE-1726214380-1.0.1.1-2S3G10sPdiG2syQSO8wKWXE7Nmdgt88imgakr81w9DemMH8mVDg0q6r9ANx6tM4_CPvgGQlMVstDhDRkIDwhzg;
+        _cfuvid=dp2yoCmGHVlURh_U78_UoIfnhcO5UhufnL5whkUSMTQ-1726214380689-0.0.1.1-604800000
       host:
       - api.openai.com
       user-agent:
-      - OpenAI/Python 1.44.0
+      - OpenAI/Python 1.45.0
       x-stainless-arch:
       - arm64
       x-stainless-async:
@@ -611,7 +213,7 @@ interactions:
       x-stainless-os:
       - MacOS
       x-stainless-package-version:
-      - 1.44.0
+      - 1.45.0
       x-stainless-raw-response:
       - 'true'
       x-stainless-runtime:
@@ -621,52 +223,50 @@ interactions:
     method: POST
     uri: https://api.openai.com/v1/chat/completions
   response:
-    content: "{\n  \"id\": \"chatcmpl-A5mNB0AXF0YlW2bS8d1UCWhbECuD0\",\n  \"object\":
-      \"chat.completion\",\n  \"created\": 1725940949,\n  \"model\": \"gpt-4o-2024-05-13\",\n
+    content: "{\n  \"id\": \"chatcmpl-A6vjRbpGFbSbNiT8M7l0bDaTtGMTm\",\n  \"object\":
+      \"chat.completion\",\n  \"created\": 1726215253,\n  \"model\": \"gpt-4o-2024-05-13\",\n
       \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
-      \"assistant\",\n        \"content\": \"Thought: I now can give a great answer.\\nFinal
-      Answer: \\n\\nArtificial Intelligence (AI) has journeyed through pivotal milestones
-      that have transformed the technology landscape as we know it. The chronicles
-      of AI began at the 1956 Dartmouth Conference, which is often hailed as the birth
-      of AI. Organized by John McCarthy, Marvin Minsky, Nathaniel Rochester, and Claude
-      Shannon, this seminal event brought together top researchers to explore the
-      possibilities of creating machines capable of human-like learning and intelligence.
-      The term \u201Cartificial intelligence\u201D was coined during this landmark
-      conference, setting the stage for AI research and establishing a strong foundation
-      for future technological advancements.\\n\\nThe late 1950s witnessed the emergence
-      of the Perceptron, developed by Frank Rosenblatt in 1957. This was a type of
-      artificial neural network and represented a significant breakthrough, illustrating
-      that computers could learn from data. The simplicity of the Perceptron algorithm
-      provided a practical approach to training neural networks, thereby igniting
-      further advancements in the field of machine learning. Although limited to solving
-      linearly separable problems, the Perceptron paved the way for more complex neural
-      network theories and applications that would evolve in the subsequent decades.\\n\\nThe
-      evolution of AI has not been without its setbacks. The 1970s and 1980s experienced
-      what is referred to as the AI Winters\u2014periods characterized by reduced
-      funding and interest due to the underperformance of early AI systems compared
-      to the high expectations. These challenging times forced researchers to reassess
-      and refine their methodologies, leading to a renaissance in AI research in the
-      1990s and beyond. Notably, in 1997, IBM\u2019s Deep Blue achieved a major milestone
-      by defeating world chess champion Garry Kasparov. This victory demonstrated
-      AI's capability to tackle complex tasks and marked a significant moment in public
-      recognition of AI's potential.\\n\\nA major breakthrough in AI came in 2012
-      with the success of AlexNet in the ImageNet Large Scale Visual Recognition Challenge.
-      Developed by Alex Krizhevsky, Ilya Sutskever, and Geoffrey Hinton, AlexNet showcased
-      the power of deep convolutional neural networks in image recognition, substantially
-      outperforming previous models. This achievement accelerated the adoption and
-      advancement of deep learning techniques, which have since revolutionized numerous
-      AI applications across various industries. From its conception to its current
-      influential presence, AI continues to evolve, bringing transformative impacts
-      in areas ranging from personalized healthcare to creative industries, and even
-      in the domain of ethical governance.\",\n        \"refusal\": null\n      },\n
-      \     \"logprobs\": null,\n      \"finish_reason\": \"stop\"\n    }\n  ],\n
-      \ \"usage\": {\n    \"prompt_tokens\": 1323,\n    \"completion_tokens\": 501,\n
-      \   \"total_tokens\": 1824\n  },\n  \"system_fingerprint\": \"fp_25624ae3a5\"\n}\n"
+      \"assistant\",\n        \"content\": \"Thought: I now can give a great answer
+      \ \\nFinal Answer: Here are the five most important events that shaped the history
+      of AI:\\n\\n- **1956: Dartmouth Conference**  \\n  **Event:** This conference
+      is widely considered the birth of AI as a field of study.  \\n  **Significance:**
+      Organized by John McCarthy, Marvin Minsky, Nathaniel Rochester, and Claude Shannon,
+      the conference was the first time \\\"artificial intelligence\\\" was used as
+      a term. It aimed to explore ways in which machines could simulate aspects of
+      human intelligence, laying the groundwork for future AI research.\\n\\n- **1966:
+      ELIZA by Joseph Weizenbaum**  \\n  **Event:** The creation of ELIZA, an early
+      natural language processing computer program.  \\n  **Significance:** ELIZA
+      was an early attempt to simulate empathetic understanding in machines, laying
+      the foundation for future advancements in conversational AI and chatbots. It
+      demonstrated that machines could be programmed to mimic human dialogue, even
+      if superficially.\\n\\n- **1997: Deep Blue vs. Garry Kasparov**  \\n  **Event:**
+      IBM's Deep Blue defeated world chess champion Garry Kasparov.  \\n  **Significance:**
+      This was a landmark achievement that demonstrated the potential of AI in solving
+      complex problems and executing strategic thinking at a level that could surpass
+      human ability. It also spurred interest in the capabilities of AI for real-world
+      applications.\\n\\n- **2012: ImageNet and AlexNet**  \\n  **Event:** The success
+      of AlexNet in the ImageNet Large Scale Visual Recognition Challenge (ILSVRC).
+      \ \\n  **Significance:** AlexNet, a convolutional neural network (CNN), drastically
+      reduced the error rate compared to previous years, showcasing the power of deep
+      learning. This event revitalized AI research and led to an explosion of interest
+      and development in neural networks and deep learning technologies.\\n\\n- **2016:
+      AlphaGo Defeats Lee Sedol**  \\n  **Event:** Google's AI, AlphaGo, defeated
+      the world champion Go player Lee Sedol.  \\n  **Significance:** Go was long
+      considered a challenging game for AI due to its complexity and the vast number
+      of possible moves. AlphaGo's victory highlighted significant advancements in
+      AI's abilities in pattern recognition, strategic thinking, and learning without
+      direct human input, setting a new benchmark for AI's potential.\\n\\nThese events
+      have collectively contributed to the significant advancements in AI, shaping
+      its development and applications in various domains.\",\n        \"refusal\":
+      null\n      },\n      \"logprobs\": null,\n      \"finish_reason\": \"stop\"\n
+      \   }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 705,\n    \"completion_tokens\":
+      493,\n    \"total_tokens\": 1198,\n    \"completion_tokens_details\": {\n      \"reasoning_tokens\":
+      0\n    }\n  },\n  \"system_fingerprint\": \"fp_25624ae3a5\"\n}\n"
     headers:
       CF-Cache-Status:
       - DYNAMIC
       CF-RAY:
-      - 8c0c85d3f9b82ae0-LAX
+      - 8c26aeb44db62ab9-LAX
       Connection:
       - keep-alive
       Content-Encoding:
@@ -674,7 +274,7 @@ interactions:
       Content-Type:
       - application/json
       Date:
-      - Tue, 10 Sep 2024 04:02:35 GMT
+      - Fri, 13 Sep 2024 08:14:20 GMT
       Server:
       - cloudflare
       Transfer-Encoding:
@@ -688,7 +288,7 @@ interactions:
       openai-organization:
       - crewai-iuxna1
       openai-processing-ms:
-      - '5923'
+      - '6377'
       openai-version:
       - '2020-10-01'
       strict-transport-security:
@@ -700,13 +300,213 @@ interactions:
       x-ratelimit-remaining-requests:
       - '9999'
       x-ratelimit-remaining-tokens:
-      - '29998319'
+      - '29999100'
       x-ratelimit-reset-requests:
       - 6ms
       x-ratelimit-reset-tokens:
-      - 3ms
+      - 1ms
       x-request-id:
-      - req_04f852406374145c114d4e8d0e3f252d
+      - req_671cfb95a24f93eea4609886c8f55ba6
+    http_version: HTTP/1.1
+    status_code: 200
+- request:
+    body: '{"messages": [{"role": "system", "content": "You are Senior Writer. You''re
+      a senior writer, specialized in technology, software engineering, AI and startups.
+      You work as a freelancer and are now working on writing content for a new customer.\nYour
+      personal goal is: Write the best content about AI and AI agents.\nTo give my
+      best complete final answer to the task use the exact following format:\n\nThought:
+      I now can give a great answer\nFinal Answer: Your final answer must be the great
+      and the most complete as possible, it must be outcome described.\n\nI MUST use
+      these formats, my job depends on it!"}, {"role": "user", "content": "\nCurrent
+      Task: Write an article about the history of AI and its most important events.\n\nThis
+      is the expect criteria for your final answer: A 4 paragraph article about AI.\nyou
+      MUST return the actual complete content as the final answer, not a summary.\n\nThis
+      is the context you''re working with:\n- **The Future of AI in Healthcare: Revolutionizing
+      Diagnosis and Treatment**\n  - **Uniqueness**: This topic delves into how AI
+      algorithms can analyze medical images, predict patient outcomes, and suggest
+      treatments, potentially transforming the healthcare sector. By exploring cutting-edge
+      applications like AI-driven diagnostics, personalized medicine, and remote patient
+      monitoring, this article can capture the reader''s interest in advancements
+      that directly impact health and well-being.\n  \n- **AI Agents in Customer Service:
+      Enhancing User Experience**\n  - **Uniqueness**: Customer service is a field
+      ripe for AI intervention. This article would explore how AI agents can provide
+      24/7 support, resolve issues more quickly, and offer personalized experiences.
+      It could also look into the integration of AI in chatbots, virtual assistants,
+      and call centers, highlighting real-world case studies and future trends.\n\n-
+      **Ethical Considerations in AI Development: Balancing Innovation and Responsibility**\n  -
+      **Uniqueness**: The ethics of AI is a heavily debated topic, making it a compelling
+      subject for an article. This topic would cover the potential biases in AI systems,
+      issues of data privacy, the implications of autonomous decision-making, and
+      the importance of creating ethical guidelines. Insight into the ethical challenges
+      faced by developers and how those are being addressed would make for an in-depth
+      and thought-provoking read.\n\n- **AI in Creative Industries: Transforming Art,
+      Music, and Literature**\n  - **Uniqueness**: AI\u2019s role in creative processes
+      is an exciting frontier. This article can explore how AI is being used to create
+      original works of art, compose music, write stories, and even produce movies.
+      Discussing tools like OpenAI\u2019s GPT, deep learning models in visual arts,
+      and AI-driven music composition software can illustrate the blend of creativity
+      and technology, captivating readers interested in the arts.\n\n- **AI and the
+      Future of Work: Adapting to an Automated World**\n  - **Uniqueness**: With the
+      rise of AI, the nature of work is rapidly changing. This piece would look into
+      how AI is automating routine tasks, enhancing decision-making, and creating
+      new job roles. By examining sectors most affected by AI, such as manufacturing,
+      finance, and retail, and discussing the need for new skills and education, the
+      article can provide a comprehensive overview of the evolving workforce landscape,
+      relevant to both employers and employees.\n\n----------\n\nHere are the five
+      most important events that shaped the history of AI:\n\n- **1956: Dartmouth
+      Conference**  \n  **Event:** This conference is widely considered the birth
+      of AI as a field of study.  \n  **Significance:** Organized by John McCarthy,
+      Marvin Minsky, Nathaniel Rochester, and Claude Shannon, the conference was the
+      first time \"artificial intelligence\" was used as a term. It aimed to explore
+      ways in which machines could simulate aspects of human intelligence, laying
+      the groundwork for future AI research.\n\n- **1966: ELIZA by Joseph Weizenbaum**  \n  **Event:**
+      The creation of ELIZA, an early natural language processing computer program.  \n  **Significance:**
+      ELIZA was an early attempt to simulate empathetic understanding in machines,
+      laying the foundation for future advancements in conversational AI and chatbots.
+      It demonstrated that machines could be programmed to mimic human dialogue, even
+      if superficially.\n\n- **1997: Deep Blue vs. Garry Kasparov**  \n  **Event:**
+      IBM''s Deep Blue defeated world chess champion Garry Kasparov.  \n  **Significance:**
+      This was a landmark achievement that demonstrated the potential of AI in solving
+      complex problems and executing strategic thinking at a level that could surpass
+      human ability. It also spurred interest in the capabilities of AI for real-world
+      applications.\n\n- **2012: ImageNet and AlexNet**  \n  **Event:** The success
+      of AlexNet in the ImageNet Large Scale Visual Recognition Challenge (ILSVRC).  \n  **Significance:**
+      AlexNet, a convolutional neural network (CNN), drastically reduced the error
+      rate compared to previous years, showcasing the power of deep learning. This
+      event revitalized AI research and led to an explosion of interest and development
+      in neural networks and deep learning technologies.\n\n- **2016: AlphaGo Defeats
+      Lee Sedol**  \n  **Event:** Google''s AI, AlphaGo, defeated the world champion
+      Go player Lee Sedol.  \n  **Significance:** Go was long considered a challenging
+      game for AI due to its complexity and the vast number of possible moves. AlphaGo''s
+      victory highlighted significant advancements in AI''s abilities in pattern recognition,
+      strategic thinking, and learning without direct human input, setting a new benchmark
+      for AI''s potential.\n\nThese events have collectively contributed to the significant
+      advancements in AI, shaping its development and applications in various domains.\n\nBegin!
+      This is VERY important to you, use the tools available and give your best Final
+      Answer, your job depends on it!\n\nThought:"}], "model": "gpt-4o", "stop": ["\nObservation"]}'
+    headers:
+      accept:
+      - application/json
+      accept-encoding:
+      - gzip, deflate
+      connection:
+      - keep-alive
+      content-length:
+      - '6034'
+      content-type:
+      - application/json
+      cookie:
+      - __cf_bm=r6BNUnXat.26mviZiJYUf7Qj4ea5gbt_oPxyClKcVOE-1726214380-1.0.1.1-2S3G10sPdiG2syQSO8wKWXE7Nmdgt88imgakr81w9DemMH8mVDg0q6r9ANx6tM4_CPvgGQlMVstDhDRkIDwhzg;
+        _cfuvid=dp2yoCmGHVlURh_U78_UoIfnhcO5UhufnL5whkUSMTQ-1726214380689-0.0.1.1-604800000
+      host:
+      - api.openai.com
+      user-agent:
+      - OpenAI/Python 1.45.0
+      x-stainless-arch:
+      - arm64
+      x-stainless-async:
+      - 'false'
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - MacOS
+      x-stainless-package-version:
+      - 1.45.0
+      x-stainless-raw-response:
+      - 'true'
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.11.7
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    content: "{\n  \"id\": \"chatcmpl-A6vjZ8IU79R4QMrVF8A36JuOtuOcL\",\n  \"object\":
+      \"chat.completion\",\n  \"created\": 1726215261,\n  \"model\": \"gpt-4o-2024-05-13\",\n
+      \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
+      \"assistant\",\n        \"content\": \"I now can give a great answer\\nFinal
+      Answer: \\n\\nArtificial Intelligence (AI) has a rich history marked by significant
+      milestones that have collectively shaped its evolution and applications. The
+      journey of AI began in 1956 at the Dartmouth Conference, organized by John McCarthy,
+      Marvin Minsky, Nathaniel Rochester, and Claude Shannon. This conference marked
+      the birth of AI as a formal field of study. Here, the term \\\"artificial intelligence\\\"
+      was coined, and foundational questions about machines simulating aspects of
+      human intelligence were explored, setting the stage for future research and
+      development.\\n\\nOne of the early significant achievements in AI was the creation
+      of ELIZA by Joseph Weizenbaum in 1966. ELIZA was a pioneering natural language
+      processing computer program designed to simulate conversations by matching user
+      prompts to scripted responses. This early chatbot demonstrated that machines
+      could mimic human dialogue, laying the groundwork for advancements in conversational
+      AI. ELIZA's creation was pivotal as it showcased the potential for machines
+      to engage in seemingly empathetic human interactions, a cornerstone for future
+      developments in customer service AI agents and virtual assistants.\\n\\nThe
+      field of AI reached a historic milestone in 1997 when IBM\u2019s Deep Blue defeated
+      world chess champion Garry Kasparov. This event was a testament to AI's potential
+      in solving complex problems and executing strategic thinking at a level that
+      could surpass human ability. Deep Blue's victory not only captured public imagination
+      but also spurred interest in AI's capabilities for real-world applications,
+      from game theory to financial modeling.\\n\\nThe modern era of AI was profoundly
+      influenced by the success of AlexNet in the 2012 ImageNet Large Scale Visual
+      Recognition Challenge (ILSVRC). AlexNet, a convolutional neural network (CNN),
+      significantly outperformed previous models, showcasing the power of deep learning.
+      This event revitalized AI research and propelled advancements in neural networks
+      and deep learning technologies. Following this, in 2016, Google's AlphaGo achieved
+      a landmark victory by defeating world champion Go player Lee Sedol. This demonstrated
+      AI's prowess in pattern recognition, strategic thinking, and learning independent
+      of human instructions, setting a new benchmark for AI capabilities. \\n\\nThese
+      pivotal events have collectively contributed to the significant advancements
+      in AI, shaping its development and applications in various domains such as healthcare,
+      customer service, and creative industries. Each milestone has brought us closer
+      to understanding the immense potential of AI to revolutionize our world.\",\n
+      \       \"refusal\": null\n      },\n      \"logprobs\": null,\n      \"finish_reason\":
+      \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 1174,\n    \"completion_tokens\":
+      476,\n    \"total_tokens\": 1650,\n    \"completion_tokens_details\": {\n      \"reasoning_tokens\":
+      0\n    }\n  },\n  \"system_fingerprint\": \"fp_25624ae3a5\"\n}\n"
+    headers:
+      CF-Cache-Status:
+      - DYNAMIC
+      CF-RAY:
+      - 8c26aee67f3a2ab9-LAX
+      Connection:
+      - keep-alive
+      Content-Encoding:
+      - gzip
+      Content-Type:
+      - application/json
+      Date:
+      - Fri, 13 Sep 2024 08:14:28 GMT
+      Server:
+      - cloudflare
+      Transfer-Encoding:
+      - chunked
+      X-Content-Type-Options:
+      - nosniff
+      access-control-expose-headers:
+      - X-Request-ID
+      alt-svc:
+      - h3=":443"; ma=86400
+      openai-organization:
+      - crewai-iuxna1
+      openai-processing-ms:
+      - '7113'
+      openai-version:
+      - '2020-10-01'
+      strict-transport-security:
+      - max-age=15552000; includeSubDomains; preload
+      x-ratelimit-limit-requests:
+      - '10000'
+      x-ratelimit-limit-tokens:
+      - '30000000'
+      x-ratelimit-remaining-requests:
+      - '9999'
+      x-ratelimit-remaining-tokens:
+      - '29998520'
+      x-ratelimit-reset-requests:
+      - 6ms
+      x-ratelimit-reset-tokens:
+      - 2ms
+      x-request-id:
+      - req_de737e82c859d649dccfb2f5fa39ccd4
     http_version: HTTP/1.1
     status_code: 200
 version: 1

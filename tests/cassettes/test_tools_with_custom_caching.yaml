@@ -1,23 +1,24 @@
 interactions:
 - request:
-    body: '{"messages": [{"role": "user", "content": "You are Writer. You''re an expert
-      in writing and you love to teach kids but you know nothing of math.\nYour personal
-      goal is: You write lessons of math for kids.\nYou ONLY have access to the following
-      tools, and should NEVER make up tools that are not listed here:\n\nTool Name:
-      multiplcation_tool(*args: Any, **kwargs: Any) -> Any\nTool Description: multiplcation_tool(first_number:
-      ''integer'', second_number: ''integer'') - Useful for when you need to multiply
-      two numbers together. \nTool Arguments: {''first_number'': {''title'': ''First
-      Number'', ''type'': ''integer''}, ''second_number'': {''title'': ''Second Number'',
-      ''type'': ''integer''}}\n\nUse the following format:\n\nThought: you should
-      always think about what to do\nAction: the action to take, only one name of
-      [multiplcation_tool], just the name, exactly as it''s written.\nAction Input:
-      the input to the action, just a simple python dictionary, enclosed in curly
-      braces, using \" to wrap keys and values.\nObservation: the result of the action\n\nOnce
-      all necessary information is gathered:\n\nThought: I now know the final answer\nFinal
-      Answer: the final answer to the original input question\n\nCurrent Task: What
-      is 2 times 6? Return only the number after using the multiplication tool.\n\nThis
-      is the expect criteria for your final answer: the result of multiplication \n
-      you MUST return the actual complete content as the final answer, not a summary.\n\nBegin!
+    body: '{"messages": [{"role": "system", "content": "You are Writer. You''re an
+      expert in writing and you love to teach kids but you know nothing of math.\nYour
+      personal goal is: You write lessons of math for kids.\nYou ONLY have access
+      to the following tools, and should NEVER make up tools that are not listed here:\n\nTool
+      Name: multiplcation_tool(*args: Any, **kwargs: Any) -> Any\nTool Description:
+      multiplcation_tool(first_number: ''integer'', second_number: ''integer'') -
+      Useful for when you need to multiply two numbers together. \nTool Arguments:
+      {''first_number'': {''title'': ''First Number'', ''type'': ''integer''}, ''second_number'':
+      {''title'': ''Second Number'', ''type'': ''integer''}}\n\nUse the following
+      format:\n\nThought: you should always think about what to do\nAction: the action
+      to take, only one name of [multiplcation_tool], just the name, exactly as it''s
+      written.\nAction Input: the input to the action, just a simple python dictionary,
+      enclosed in curly braces, using \" to wrap keys and values.\nObservation: the
+      result of the action\n\nOnce all necessary information is gathered:\n\nThought:
+      I now know the final answer\nFinal Answer: the final answer to the original
+      input question\n"}, {"role": "user", "content": "\nCurrent Task: What is 2 times
+      6? Return only the number after using the multiplication tool.\n\nThis is the
+      expect criteria for your final answer: the result of multiplication\nyou MUST
+      return the actual complete content as the final answer, not a summary.\n\nBegin!
       This is VERY important to you, use the tools available and give your best Final
       Answer, your job depends on it!\n\nThought:"}], "model": "gpt-4o", "stop": ["\nObservation"]}'
     headers:
@@ -28,16 +29,16 @@ interactions:
       connection:
       - keep-alive
       content-length:
-      - '1626'
+      - '1659'
       content-type:
       - application/json
       cookie:
-      - _cfuvid=8r8yFLG2b7e3n6pklgpsT05MHRvfdePz1ckAFvRQY8E-1725949790252-0.0.1.1-604800000;
-        __cf_bm=fuuc.ZDO3Y9B7nXE_8fBn7ykDAvAaK1VdxjZw0MTtsE-1725949790-1.0.1.1-pAJ7BWJMj1j3gS2ySR6xSBO7uFrjcB6ehFra4QVq14JqaiG4VDIjDO1C3WueKGRnSALSkpLQyJcJ2YVd_pXglQ
+      - __cf_bm=pgsskMPipgeSB6HhnkjwcOEfengIvt0p9whKNmTJVLs-1726215280-1.0.1.1-Gtqb.nO1U.cHTnd9mR9sEA5tpVo1.pexRrxqXOkn.6Mzja8mLG1URJsOLTfjMAAYpWaUQe4Rjmnr6lqQk5hAxQ;
+        _cfuvid=dp2yoCmGHVlURh_U78_UoIfnhcO5UhufnL5whkUSMTQ-1726214380689-0.0.1.1-604800000
       host:
       - api.openai.com
       user-agent:
-      - OpenAI/Python 1.44.0
+      - OpenAI/Python 1.45.0
       x-stainless-arch:
       - arm64
       x-stainless-async:
@@ -47,7 +48,7 @@ interactions:
       x-stainless-os:
       - MacOS
       x-stainless-package-version:
-      - 1.44.0
+      - 1.45.0
       x-stainless-raw-response:
       - 'true'
       x-stainless-runtime:
@@ -57,20 +58,21 @@ interactions:
     method: POST
     uri: https://api.openai.com/v1/chat/completions
   response:
-    content: "{\n  \"id\": \"chatcmpl-A5ogT4SVyUN2nkPZrkotKmKGRAA0i\",\n  \"object\":
-      \"chat.completion\",\n  \"created\": 1725949833,\n  \"model\": \"gpt-4o-2024-05-13\",\n
+    content: "{\n  \"id\": \"chatcmpl-A6vlfgGZEUKSDmXYQE9Ge5yhnJGqJ\",\n  \"object\":
+      \"chat.completion\",\n  \"created\": 1726215391,\n  \"model\": \"gpt-4o-2024-05-13\",\n
       \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
       \"assistant\",\n        \"content\": \"Thought: I need to use the multiplication
-      tool to find out what 2 times 6 equals.\\n\\nAction: multiplcation_tool\\nAction
+      tool to find the result of multiplying 2 by 6.\\nAction: multiplcation_tool\\nAction
       Input: {\\\"first_number\\\": 2, \\\"second_number\\\": 6}\",\n        \"refusal\":
       null\n      },\n      \"logprobs\": null,\n      \"finish_reason\": \"stop\"\n
-      \   }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 337,\n    \"completion_tokens\":
-      43,\n    \"total_tokens\": 380\n  },\n  \"system_fingerprint\": \"fp_25624ae3a5\"\n}\n"
+      \   }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 342,\n    \"completion_tokens\":
+      44,\n    \"total_tokens\": 386,\n    \"completion_tokens_details\": {\n      \"reasoning_tokens\":
+      0\n    }\n  },\n  \"system_fingerprint\": \"fp_25624ae3a5\"\n}\n"
     headers:
       CF-Cache-Status:
       - DYNAMIC
       CF-RAY:
-      - 8c0d5eb8c875cf35-SJC
+      - 8c26b21338392ab9-LAX
       Connection:
       - keep-alive
       Content-Encoding:
@@ -78,7 +80,7 @@ interactions:
       Content-Type:
       - application/json
       Date:
-      - Tue, 10 Sep 2024 06:30:33 GMT
+      - Fri, 13 Sep 2024 08:16:32 GMT
       Server:
       - cloudflare
       Transfer-Encoding:
@@ -92,7 +94,7 @@ interactions:
       openai-organization:
       - crewai-iuxna1
       openai-processing-ms:
-      - '468'
+      - '608'
       openai-version:
       - '2020-10-01'
       strict-transport-security:
@@ -110,33 +112,34 @@ interactions:
       x-ratelimit-reset-tokens:
       - 0s
       x-request-id:
-      - req_ae95bd1bf69958d816484217d7600959
+      - req_8df78f41be9eeed4d64dafedf84fa333
     http_version: HTTP/1.1
     status_code: 200
 - request:
-    body: '{"messages": [{"role": "user", "content": "You are Writer. You''re an expert
-      in writing and you love to teach kids but you know nothing of math.\nYour personal
-      goal is: You write lessons of math for kids.\nYou ONLY have access to the following
-      tools, and should NEVER make up tools that are not listed here:\n\nTool Name:
-      multiplcation_tool(*args: Any, **kwargs: Any) -> Any\nTool Description: multiplcation_tool(first_number:
-      ''integer'', second_number: ''integer'') - Useful for when you need to multiply
-      two numbers together. \nTool Arguments: {''first_number'': {''title'': ''First
-      Number'', ''type'': ''integer''}, ''second_number'': {''title'': ''Second Number'',
-      ''type'': ''integer''}}\n\nUse the following format:\n\nThought: you should
-      always think about what to do\nAction: the action to take, only one name of
-      [multiplcation_tool], just the name, exactly as it''s written.\nAction Input:
-      the input to the action, just a simple python dictionary, enclosed in curly
-      braces, using \" to wrap keys and values.\nObservation: the result of the action\n\nOnce
-      all necessary information is gathered:\n\nThought: I now know the final answer\nFinal
-      Answer: the final answer to the original input question\n\nCurrent Task: What
-      is 2 times 6? Return only the number after using the multiplication tool.\n\nThis
-      is the expect criteria for your final answer: the result of multiplication \n
-      you MUST return the actual complete content as the final answer, not a summary.\n\nBegin!
+    body: '{"messages": [{"role": "system", "content": "You are Writer. You''re an
+      expert in writing and you love to teach kids but you know nothing of math.\nYour
+      personal goal is: You write lessons of math for kids.\nYou ONLY have access
+      to the following tools, and should NEVER make up tools that are not listed here:\n\nTool
+      Name: multiplcation_tool(*args: Any, **kwargs: Any) -> Any\nTool Description:
+      multiplcation_tool(first_number: ''integer'', second_number: ''integer'') -
+      Useful for when you need to multiply two numbers together. \nTool Arguments:
+      {''first_number'': {''title'': ''First Number'', ''type'': ''integer''}, ''second_number'':
+      {''title'': ''Second Number'', ''type'': ''integer''}}\n\nUse the following
+      format:\n\nThought: you should always think about what to do\nAction: the action
+      to take, only one name of [multiplcation_tool], just the name, exactly as it''s
+      written.\nAction Input: the input to the action, just a simple python dictionary,
+      enclosed in curly braces, using \" to wrap keys and values.\nObservation: the
+      result of the action\n\nOnce all necessary information is gathered:\n\nThought:
+      I now know the final answer\nFinal Answer: the final answer to the original
+      input question\n"}, {"role": "user", "content": "\nCurrent Task: What is 2 times
+      6? Return only the number after using the multiplication tool.\n\nThis is the
+      expect criteria for your final answer: the result of multiplication\nyou MUST
+      return the actual complete content as the final answer, not a summary.\n\nBegin!
       This is VERY important to you, use the tools available and give your best Final
       Answer, your job depends on it!\n\nThought:"}, {"role": "assistant", "content":
-      "Thought: I need to use the multiplication tool to find out what 2 times 6 equals.\n\nAction:
-      multiplcation_tool\nAction Input: {\"first_number\": 2, \"second_number\": 6}\nObservation:
-      12"}], "model": "gpt-4o", "stop": ["\nObservation"]}'
+      "Thought: I need to use the multiplication tool to find the result of multiplying
+      2 by 6.\nAction: multiplcation_tool\nAction Input: {\"first_number\": 2, \"second_number\":
+      6}\nObservation: 12"}], "model": "gpt-4o", "stop": ["\nObservation"]}'
     headers:
       accept:
       - application/json
@@ -145,16 +148,16 @@ interactions:
       connection:
       - keep-alive
       content-length:
-      - '1851'
+      - '1889'
       content-type:
       - application/json
       cookie:
-      - _cfuvid=8r8yFLG2b7e3n6pklgpsT05MHRvfdePz1ckAFvRQY8E-1725949790252-0.0.1.1-604800000;
-        __cf_bm=fuuc.ZDO3Y9B7nXE_8fBn7ykDAvAaK1VdxjZw0MTtsE-1725949790-1.0.1.1-pAJ7BWJMj1j3gS2ySR6xSBO7uFrjcB6ehFra4QVq14JqaiG4VDIjDO1C3WueKGRnSALSkpLQyJcJ2YVd_pXglQ
+      - __cf_bm=pgsskMPipgeSB6HhnkjwcOEfengIvt0p9whKNmTJVLs-1726215280-1.0.1.1-Gtqb.nO1U.cHTnd9mR9sEA5tpVo1.pexRrxqXOkn.6Mzja8mLG1URJsOLTfjMAAYpWaUQe4Rjmnr6lqQk5hAxQ;
+        _cfuvid=dp2yoCmGHVlURh_U78_UoIfnhcO5UhufnL5whkUSMTQ-1726214380689-0.0.1.1-604800000
       host:
       - api.openai.com
       user-agent:
-      - OpenAI/Python 1.44.0
+      - OpenAI/Python 1.45.0
       x-stainless-arch:
       - arm64
       x-stainless-async:
@@ -164,7 +167,7 @@ interactions:
       x-stainless-os:
       - MacOS
       x-stainless-package-version:
-      - 1.44.0
+      - 1.45.0
       x-stainless-raw-response:
       - 'true'
       x-stainless-runtime:
@@ -174,19 +177,19 @@ interactions:
     method: POST
     uri: https://api.openai.com/v1/chat/completions
   response:
-    content: "{\n  \"id\": \"chatcmpl-A5ogTLTCDfmhxCl7GTbveurHlm5xC\",\n  \"object\":
-      \"chat.completion\",\n  \"created\": 1725949833,\n  \"model\": \"gpt-4o-2024-05-13\",\n
+    content: "{\n  \"id\": \"chatcmpl-A6vlhea5YR07rjXhpLlPCU4BUAQ8x\",\n  \"object\":
+      \"chat.completion\",\n  \"created\": 1726215393,\n  \"model\": \"gpt-4o-2024-05-13\",\n
       \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
-      \"assistant\",\n        \"content\": \"Thought: I now know the final answer.\\nFinal
+      \"assistant\",\n        \"content\": \"Thought: I now know the final answer\\nFinal
       Answer: 12\",\n        \"refusal\": null\n      },\n      \"logprobs\": null,\n
       \     \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\":
-      388,\n    \"completion_tokens\": 14,\n    \"total_tokens\": 402\n  },\n  \"system_fingerprint\":
-      \"fp_25624ae3a5\"\n}\n"
+      394,\n    \"completion_tokens\": 14,\n    \"total_tokens\": 408,\n    \"completion_tokens_details\":
+      {\n      \"reasoning_tokens\": 0\n    }\n  },\n  \"system_fingerprint\": \"fp_25624ae3a5\"\n}\n"
     headers:
       CF-Cache-Status:
       - DYNAMIC
       CF-RAY:
-      - 8c0d5ebc8b29cf35-SJC
+      - 8c26b21d19872ab9-LAX
       Connection:
       - keep-alive
       Content-Encoding:
@@ -194,7 +197,7 @@ interactions:
       Content-Type:
       - application/json
       Date:
-      - Tue, 10 Sep 2024 06:30:34 GMT
+      - Fri, 13 Sep 2024 08:16:33 GMT
       Server:
       - cloudflare
       Transfer-Encoding:
@@ -208,7 +211,7 @@ interactions:
       openai-organization:
       - crewai-iuxna1
       openai-processing-ms:
-      - '311'
+      - '268'
       openai-version:
       - '2020-10-01'
       strict-transport-security:
@@ -220,145 +223,35 @@ interactions:
       x-ratelimit-remaining-requests:
       - '9999'
       x-ratelimit-remaining-tokens:
-      - '29999561'
+      - '29999558'
       x-ratelimit-reset-requests:
       - 6ms
       x-ratelimit-reset-tokens:
       - 0s
       x-request-id:
-      - req_a9d32d092b951bb648156e064fb38287
+      - req_75e562272971c801ad111ec8dcb824c4
     http_version: HTTP/1.1
     status_code: 200
 - request:
-    body: !!binary |
-      CtcjCiQKIgoMc2VydmljZS5uYW1lEhIKEGNyZXdBSS10ZWxlbWV0cnkSriMKEgoQY3Jld2FpLnRl
-      bGVtZXRyeRKQAgoQT86psjZanpIhC3EJ1TjCVxIIHCc2Ei97vMkqDlRhc2sgRXhlY3V0aW9uMAE5
-      mP36TDnO8xdBEBdHgjrO8xdKLgoIY3Jld19rZXkSIgogOThhN2QyMTQyNTIxMDc2OTM4Y2M4N2M3
-      NjlkZWRjZDNKMQoHY3Jld19pZBImCiQ0ZWZhMDhjYy02ODU5LTRjMTctODEwNS04YTQ2YTlhMDU2
-      NjdKLgoIdGFza19rZXkSIgogYWZhNjk4YjI2MmQzNTQzZjlhNjExZTRkNTE0NWVkNmFKMQoHdGFz
-      a19pZBImCiQ0ODRkMjk4Yy1jZjFiLTQ0MTMtOTAwNi03ZjM5MmI3NWE5ZWV6AhgBhQEAAQAAEp8H
-      ChAz4Y4Eb/ChpFdiJ7AjyDGwEgiEKzGwmj/J+yoMQ3JldyBDcmVhdGVkMAE5+FcigzrO8xdBmEMo
-      gzrO8xdKGgoOY3Jld2FpX3ZlcnNpb24SCAoGMC41NS4yShoKDnB5dGhvbl92ZXJzaW9uEggKBjMu
-      MTEuN0ouCghjcmV3X2tleRIiCiBjYTdjMDEzNmVjN2JmNWRlNzVkZTVkMjY2OTlkYTNiNEoxCgdj
-      cmV3X2lkEiYKJGQyOWY3OTc5LTQ5MzEtNDg3OC04MDcwLTY3YzQ4ZjQ4YmVlN0ocCgxjcmV3X3By
-      b2Nlc3MSDAoKc2VxdWVudGlhbEoRCgtjcmV3X21lbW9yeRICEABKGgoUY3Jld19udW1iZXJfb2Zf
-      dGFza3MSAhgBShsKFWNyZXdfbnVtYmVyX29mX2FnZW50cxICGAFKzgIKC2NyZXdfYWdlbnRzEr4C
-      CrsCW3sia2V5IjogIjhiZDIxMzliNTk3NTE4MTUwNmU0MWZkOWM0NTYzZDc1IiwgImlkIjogIjA0
-      MjY4ZTU4LTMyOGEtNGJhNi1hMjNmLTY3MTIwMWQ3NDU2NCIsICJyb2xlIjogIlJlc2VhcmNoZXIi
-      LCAidmVyYm9zZT8iOiBmYWxzZSwgIm1heF9pdGVyIjogMjUsICJtYXhfcnBtIjogbnVsbCwgImZ1
-      bmN0aW9uX2NhbGxpbmdfbGxtIjogbnVsbCwgImxsbSI6ICJncHQtNG8iLCAiZGVsZWdhdGlvbl9l
-      bmFibGVkPyI6IGZhbHNlLCAiYWxsb3dfY29kZV9leGVjdXRpb24/IjogZmFsc2UsICJtYXhfcmV0
-      cnlfbGltaXQiOiAyLCAidG9vbHNfbmFtZXMiOiBbXX1dSv4BCgpjcmV3X3Rhc2tzEu8BCuwBW3si
-      a2V5IjogIjk0NGFlZjBiYWM4NDBmMWMyN2JkODNhOTM3YmMzNjFiIiwgImlkIjogIjUwZDE4MmE0
-      LTdlNjAtNGQyNC1iOTg2LTNmNTMwY2I4NDc3ZCIsICJhc3luY19leGVjdXRpb24/IjogdHJ1ZSwg
-      Imh1bWFuX2lucHV0PyI6IGZhbHNlLCAiYWdlbnRfcm9sZSI6ICJSZXNlYXJjaGVyIiwgImFnZW50
-      X2tleSI6ICI4YmQyMTM5YjU5NzUxODE1MDZlNDFmZDljNDU2M2Q3NSIsICJ0b29sc19uYW1lcyI6
-      IFtdfV16AhgBhQEAAQAAEo4CChD/ATKGk/NjRyjiMZbdQHboEgiqJ5vVcnv78CoMVGFzayBDcmVh
-      dGVkMAE5kH86gzrO8xdBOOE6gzrO8xdKLgoIY3Jld19rZXkSIgogY2E3YzAxMzZlYzdiZjVkZTc1
-      ZGU1ZDI2Njk5ZGEzYjRKMQoHY3Jld19pZBImCiRkMjlmNzk3OS00OTMxLTQ4NzgtODA3MC02N2M0
-      OGY0OGJlZTdKLgoIdGFza19rZXkSIgogOTQ0YWVmMGJhYzg0MGYxYzI3YmQ4M2E5MzdiYzM2MWJK
-      MQoHdGFza19pZBImCiQ1MGQxODJhNC03ZTYwLTRkMjQtYjk4Ni0zZjUzMGNiODQ3N2R6AhgBhQEA
-      AQAAEpACChC4tbGV5A1/udtI49h+O6XdEgiJLFNkeN51QCoOVGFzayBFeGVjdXRpb24wATkwDDuD
-      Os7zF0FAMlCDOs7zF0ouCghjcmV3X2tleRIiCiBjYTdjMDEzNmVjN2JmNWRlNzVkZTVkMjY2OTlk
-      YTNiNEoxCgdjcmV3X2lkEiYKJGQyOWY3OTc5LTQ5MzEtNDg3OC04MDcwLTY3YzQ4ZjQ4YmVlN0ou
-      Cgh0YXNrX2tleRIiCiA5NDRhZWYwYmFjODQwZjFjMjdiZDgzYTkzN2JjMzYxYkoxCgd0YXNrX2lk
-      EiYKJDUwZDE4MmE0LTdlNjAtNGQyNC1iOTg2LTNmNTMwY2I4NDc3ZHoCGAGFAQABAAASghAKELjX
-      PC6X4jTc9pa87v7ipTcSCMYilIBaYPh1KgxDcmV3IENyZWF0ZWQwATlwEk6EOs7zF0HwwVCEOs7z
-      F0oaCg5jcmV3YWlfdmVyc2lvbhIICgYwLjU1LjJKGgoOcHl0aG9uX3ZlcnNpb24SCAoGMy4xMS43
-      Si4KCGNyZXdfa2V5EiIKIDc1ZDlmNTc1MjI2MzkyZWZiZGVkMGZhYmVkNTY1NmViSjEKB2NyZXdf
-      aWQSJgokMmE3MGE2MWItMTg5Ny00N2Y4LThjM2MtOGUwODViMWUwNTNiShwKDGNyZXdfcHJvY2Vz
-      cxIMCgpzZXF1ZW50aWFsShEKC2NyZXdfbWVtb3J5EgIQAEoaChRjcmV3X251bWJlcl9vZl90YXNr
-      cxICGARKGwoVY3Jld19udW1iZXJfb2ZfYWdlbnRzEgIYAkqpBQoLY3Jld19hZ2VudHMSmQUKlgVb
-      eyJrZXkiOiAiY2IyNTBjZmJmNzU0M2Y4ODkwMmZiZWQ0OTY4OTI1NWIiLCAiaWQiOiAiNTY5Mzky
-      MWQtYTkzNy00NzY2LTgxOTItYmM3NmI1YTM0MGIwIiwgInJvbGUiOiAiV3JpdGVyIiwgInZlcmJv
-      c2U/IjogZmFsc2UsICJtYXhfaXRlciI6IDI1LCAibWF4X3JwbSI6IG51bGwsICJmdW5jdGlvbl9j
-      YWxsaW5nX2xsbSI6IG51bGwsICJsbG0iOiAiZ3B0LTRvIiwgImRlbGVnYXRpb25fZW5hYmxlZD8i
-      OiBmYWxzZSwgImFsbG93X2NvZGVfZXhlY3V0aW9uPyI6IGZhbHNlLCAibWF4X3JldHJ5X2xpbWl0
-      IjogMiwgInRvb2xzX25hbWVzIjogWyJtdWx0aXBsY2F0aW9uX3Rvb2wiXX0sIHsia2V5IjogImNi
-      MjUwY2ZiZjc1NDNmODg5MDJmYmVkNDk2ODkyNTViIiwgImlkIjogImMwM2ExMzZjLTg0ZmQtNDY3
-      MS1iMGY5LWNjN2M2MTgzY2Q3OSIsICJyb2xlIjogIldyaXRlciIsICJ2ZXJib3NlPyI6IGZhbHNl
-      LCAibWF4X2l0ZXIiOiAyNSwgIm1heF9ycG0iOiBudWxsLCAiZnVuY3Rpb25fY2FsbGluZ19sbG0i
-      OiBudWxsLCAibGxtIjogImdwdC00byIsICJkZWxlZ2F0aW9uX2VuYWJsZWQ/IjogZmFsc2UsICJh
-      bGxvd19jb2RlX2V4ZWN1dGlvbj8iOiBmYWxzZSwgIm1heF9yZXRyeV9saW1pdCI6IDIsICJ0b29s
-      c19uYW1lcyI6IFsibXVsdGlwbGNhdGlvbl90b29sIl19XUqGCAoKY3Jld190YXNrcxL3Bwr0B1t7
-      ImtleSI6ICIzMGYzMjg2M2EyZWI3OThkMTA5NmM5MDcwMjgwOTgzMCIsICJpZCI6ICI3OTI4MTYx
-      ZC0yOWI5LTQxOGEtODMwMy1iOTVmNWY5NTNjMmQiLCAiYXN5bmNfZXhlY3V0aW9uPyI6IGZhbHNl
-      LCAiaHVtYW5faW5wdXQ/IjogZmFsc2UsICJhZ2VudF9yb2xlIjogIldyaXRlciIsICJhZ2VudF9r
-      ZXkiOiAiY2IyNTBjZmJmNzU0M2Y4ODkwMmZiZWQ0OTY4OTI1NWIiLCAidG9vbHNfbmFtZXMiOiBb
-      Im11bHRpcGxjYXRpb25fdG9vbCJdfSwgeyJrZXkiOiAiM2QwYmRlZTMxMjdhZjk5MGIzNjZjMTJk
-      ZGJkNGE4YTYiLCAiaWQiOiAiOTU2YmQ1NTEtNzgxYy00ZjBlLWJhYjctOTg0Yzk4ZWZjMDcxIiwg
-      ImFzeW5jX2V4ZWN1dGlvbj8iOiBmYWxzZSwgImh1bWFuX2lucHV0PyI6IGZhbHNlLCAiYWdlbnRf
-      cm9sZSI6ICJXcml0ZXIiLCAiYWdlbnRfa2V5IjogImNiMjUwY2ZiZjc1NDNmODg5MDJmYmVkNDk2
-      ODkyNTViIiwgInRvb2xzX25hbWVzIjogWyJtdWx0aXBsY2F0aW9uX3Rvb2wiXX0sIHsia2V5Ijog
-      IjMwZjMyODYzYTJlYjc5OGQxMDk2YzkwNzAyODA5ODMwIiwgImlkIjogIjJjOTVhNjc4LTViMDct
-      NDlmZS1iMjQ3LWQ3ZThjYzIwYjdjYiIsICJhc3luY19leGVjdXRpb24/IjogZmFsc2UsICJodW1h
-      bl9pbnB1dD8iOiBmYWxzZSwgImFnZW50X3JvbGUiOiAiV3JpdGVyIiwgImFnZW50X2tleSI6ICJj
-      YjI1MGNmYmY3NTQzZjg4OTAyZmJlZDQ5Njg5MjU1YiIsICJ0b29sc19uYW1lcyI6IFsibXVsdGlw
-      bGNhdGlvbl90b29sIl19LCB7ImtleSI6ICIzZDBiZGVlMzEyN2FmOTkwYjM2NmMxMmRkYmQ0YThh
-      NiIsICJpZCI6ICJkOWU3YWQ2OS1iZjc4LTQzYTctODIyNS02ZGY3ZjUyMjFkMTciLCAiYXN5bmNf
-      ZXhlY3V0aW9uPyI6IGZhbHNlLCAiaHVtYW5faW5wdXQ/IjogZmFsc2UsICJhZ2VudF9yb2xlIjog
-      IldyaXRlciIsICJhZ2VudF9rZXkiOiAiY2IyNTBjZmJmNzU0M2Y4ODkwMmZiZWQ0OTY4OTI1NWIi
-      LCAidG9vbHNfbmFtZXMiOiBbIm11bHRpcGxjYXRpb25fdG9vbCJdfV16AhgBhQEAAQAAEo4CChAp
-      G1vTzle3b7/PeUc0WKwdEgj1M5oqQ8hx9ioMVGFzayBDcmVhdGVkMAE5iGt9hDrO8xdBsAt+hDrO
-      8xdKLgoIY3Jld19rZXkSIgogNzVkOWY1NzUyMjYzOTJlZmJkZWQwZmFiZWQ1NjU2ZWJKMQoHY3Jl
-      d19pZBImCiQyYTcwYTYxYi0xODk3LTQ3ZjgtOGMzYy04ZTA4NWIxZTA1M2JKLgoIdGFza19rZXkS
-      IgogMzBmMzI4NjNhMmViNzk4ZDEwOTZjOTA3MDI4MDk4MzBKMQoHdGFza19pZBImCiQ3OTI4MTYx
-      ZC0yOWI5LTQxOGEtODMwMy1iOTVmNWY5NTNjMmR6AhgBhQEAAQAAEpUBChCgB+F4+43jNY80/0da
-      5dbiEgiEbnG3fzJ/KyoKVG9vbCBVc2FnZTABOXAEH6g6zvMXQXDsIqg6zvMXShoKDmNyZXdhaV92
-      ZXJzaW9uEggKBjAuNTUuMkohCgl0b29sX25hbWUSFAoSbXVsdGlwbGNhdGlvbl90b29sSg4KCGF0
-      dGVtcHRzEgIYAXoCGAGFAQABAAASkAIKEGEdsS5IORoVBCFlqMGP1yMSCDOFLpIByBecKg5UYXNr
-      IEV4ZWN1dGlvbjABOUhGfoQ6zvMXQaBz18g6zvMXSi4KCGNyZXdfa2V5EiIKIDc1ZDlmNTc1MjI2
-      MzkyZWZiZGVkMGZhYmVkNTY1NmViSjEKB2NyZXdfaWQSJgokMmE3MGE2MWItMTg5Ny00N2Y4LThj
-      M2MtOGUwODViMWUwNTNiSi4KCHRhc2tfa2V5EiIKIDMwZjMyODYzYTJlYjc5OGQxMDk2YzkwNzAy
-      ODA5ODMwSjEKB3Rhc2tfaWQSJgokNzkyODE2MWQtMjliOS00MThhLTgzMDMtYjk1ZjVmOTUzYzJk
-      egIYAYUBAAEAAA==
-    headers:
-      Accept:
-      - '*/*'
-      Accept-Encoding:
-      - gzip, deflate
-      Connection:
-      - keep-alive
-      Content-Length:
-      - '4570'
-      Content-Type:
-      - application/x-protobuf
-      User-Agent:
-      - OTel-OTLP-Exporter-Python/1.27.0
-    method: POST
-    uri: https://telemetry.crewai.com:4319/v1/traces
-  response:
-    body:
-      string: "\n\0"
-    headers:
-      Content-Length:
-      - '2'
-      Content-Type:
-      - application/x-protobuf
-      Date:
-      - Tue, 10 Sep 2024 06:30:34 GMT
-    status:
-      code: 200
-      message: OK
-- request:
-    body: '{"messages": [{"role": "user", "content": "You are Writer. You''re an expert
-      in writing and you love to teach kids but you know nothing of math.\nYour personal
-      goal is: You write lessons of math for kids.\nYou ONLY have access to the following
-      tools, and should NEVER make up tools that are not listed here:\n\nTool Name:
-      multiplcation_tool(*args: Any, **kwargs: Any) -> Any\nTool Description: multiplcation_tool(first_number:
-      ''integer'', second_number: ''integer'') - Useful for when you need to multiply
-      two numbers together. \nTool Arguments: {''first_number'': {''title'': ''First
-      Number'', ''type'': ''integer''}, ''second_number'': {''title'': ''Second Number'',
-      ''type'': ''integer''}}\n\nUse the following format:\n\nThought: you should
-      always think about what to do\nAction: the action to take, only one name of
-      [multiplcation_tool], just the name, exactly as it''s written.\nAction Input:
-      the input to the action, just a simple python dictionary, enclosed in curly
-      braces, using \" to wrap keys and values.\nObservation: the result of the action\n\nOnce
-      all necessary information is gathered:\n\nThought: I now know the final answer\nFinal
-      Answer: the final answer to the original input question\n\nCurrent Task: What
-      is 3 times 1? Return only the number after using the multiplication tool.\n\nThis
-      is the expect criteria for your final answer: the result of multiplication \n
-      you MUST return the actual complete content as the final answer, not a summary.\n\nThis
+    body: '{"messages": [{"role": "system", "content": "You are Writer. You''re an
+      expert in writing and you love to teach kids but you know nothing of math.\nYour
+      personal goal is: You write lessons of math for kids.\nYou ONLY have access
+      to the following tools, and should NEVER make up tools that are not listed here:\n\nTool
+      Name: multiplcation_tool(*args: Any, **kwargs: Any) -> Any\nTool Description:
+      multiplcation_tool(first_number: ''integer'', second_number: ''integer'') -
+      Useful for when you need to multiply two numbers together. \nTool Arguments:
+      {''first_number'': {''title'': ''First Number'', ''type'': ''integer''}, ''second_number'':
+      {''title'': ''Second Number'', ''type'': ''integer''}}\n\nUse the following
+      format:\n\nThought: you should always think about what to do\nAction: the action
+      to take, only one name of [multiplcation_tool], just the name, exactly as it''s
+      written.\nAction Input: the input to the action, just a simple python dictionary,
+      enclosed in curly braces, using \" to wrap keys and values.\nObservation: the
+      result of the action\n\nOnce all necessary information is gathered:\n\nThought:
+      I now know the final answer\nFinal Answer: the final answer to the original
+      input question\n"}, {"role": "user", "content": "\nCurrent Task: What is 3 times
+      1? Return only the number after using the multiplication tool.\n\nThis is the
+      expect criteria for your final answer: the result of multiplication\nyou MUST
+      return the actual complete content as the final answer, not a summary.\n\nThis
       is the context you''re working with:\n12\n\nBegin! This is VERY important to
       you, use the tools available and give your best Final Answer, your job depends
       on it!\n\nThought:"}], "model": "gpt-4o", "stop": ["\nObservation"]}'
@@ -370,16 +263,16 @@ interactions:
       connection:
       - keep-alive
       content-length:
-      - '1674'
+      - '1707'
       content-type:
       - application/json
       cookie:
-      - _cfuvid=8r8yFLG2b7e3n6pklgpsT05MHRvfdePz1ckAFvRQY8E-1725949790252-0.0.1.1-604800000;
-        __cf_bm=fuuc.ZDO3Y9B7nXE_8fBn7ykDAvAaK1VdxjZw0MTtsE-1725949790-1.0.1.1-pAJ7BWJMj1j3gS2ySR6xSBO7uFrjcB6ehFra4QVq14JqaiG4VDIjDO1C3WueKGRnSALSkpLQyJcJ2YVd_pXglQ
+      - __cf_bm=pgsskMPipgeSB6HhnkjwcOEfengIvt0p9whKNmTJVLs-1726215280-1.0.1.1-Gtqb.nO1U.cHTnd9mR9sEA5tpVo1.pexRrxqXOkn.6Mzja8mLG1URJsOLTfjMAAYpWaUQe4Rjmnr6lqQk5hAxQ;
+        _cfuvid=dp2yoCmGHVlURh_U78_UoIfnhcO5UhufnL5whkUSMTQ-1726214380689-0.0.1.1-604800000
       host:
       - api.openai.com
       user-agent:
-      - OpenAI/Python 1.44.0
+      - OpenAI/Python 1.45.0
       x-stainless-arch:
       - arm64
       x-stainless-async:
@@ -389,7 +282,7 @@ interactions:
       x-stainless-os:
       - MacOS
       x-stainless-package-version:
-      - 1.44.0
+      - 1.45.0
       x-stainless-raw-response:
       - 'true'
       x-stainless-runtime:
@@ -399,20 +292,21 @@ interactions:
     method: POST
     uri: https://api.openai.com/v1/chat/completions
   response:
-    content: "{\n  \"id\": \"chatcmpl-A5ogU1SE8g0wQlPqIYaTfdjjqkyZx\",\n  \"object\":
-      \"chat.completion\",\n  \"created\": 1725949834,\n  \"model\": \"gpt-4o-2024-05-13\",\n
+    content: "{\n  \"id\": \"chatcmpl-A6vli4ghee7Cetesc1B8xu0XcRW4S\",\n  \"object\":
+      \"chat.completion\",\n  \"created\": 1726215394,\n  \"model\": \"gpt-4o-2024-05-13\",\n
       \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
-      \"assistant\",\n        \"content\": \"Thought: To find out what 3 times 1 is,
-      I need to use the multiplication tool.\\n\\nAction: multiplcation_tool\\nAction
+      \"assistant\",\n        \"content\": \"I need to use the multiplication tool
+      to find the result of multiplying 3 by 1.\\n\\nAction: multiplcation_tool\\nAction
       Input: {\\\"first_number\\\": 3, \\\"second_number\\\": 1}\",\n        \"refusal\":
       null\n      },\n      \"logprobs\": null,\n      \"finish_reason\": \"stop\"\n
-      \   }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 347,\n    \"completion_tokens\":
-      44,\n    \"total_tokens\": 391\n  },\n  \"system_fingerprint\": \"fp_25624ae3a5\"\n}\n"
+      \   }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 352,\n    \"completion_tokens\":
+      42,\n    \"total_tokens\": 394,\n    \"completion_tokens_details\": {\n      \"reasoning_tokens\":
+      0\n    }\n  },\n  \"system_fingerprint\": \"fp_25624ae3a5\"\n}\n"
     headers:
       CF-Cache-Status:
       - DYNAMIC
       CF-RAY:
-      - 8c0d5ec00d35cf35-SJC
+      - 8c26b226cb062ab9-LAX
       Connection:
       - keep-alive
       Content-Encoding:
@@ -420,7 +314,7 @@ interactions:
       Content-Type:
       - application/json
       Date:
-      - Tue, 10 Sep 2024 06:30:34 GMT
+      - Fri, 13 Sep 2024 08:16:35 GMT
       Server:
       - cloudflare
       Transfer-Encoding:
@@ -434,7 +328,7 @@ interactions:
       openai-organization:
       - crewai-iuxna1
       openai-processing-ms:
-      - '464'
+      - '728'
       openai-version:
       - '2020-10-01'
       strict-transport-security:
@@ -452,32 +346,33 @@ interactions:
       x-ratelimit-reset-tokens:
       - 0s
       x-request-id:
-      - req_4cac9c4266189cc798e3e22d595f8702
+      - req_e75b7e740af677bcce06e01df80acab9
     http_version: HTTP/1.1
     status_code: 200
 - request:
-    body: '{"messages": [{"role": "user", "content": "You are Writer. You''re an expert
-      in writing and you love to teach kids but you know nothing of math.\nYour personal
-      goal is: You write lessons of math for kids.\nYou ONLY have access to the following
-      tools, and should NEVER make up tools that are not listed here:\n\nTool Name:
-      multiplcation_tool(*args: Any, **kwargs: Any) -> Any\nTool Description: multiplcation_tool(first_number:
-      ''integer'', second_number: ''integer'') - Useful for when you need to multiply
-      two numbers together. \nTool Arguments: {''first_number'': {''title'': ''First
-      Number'', ''type'': ''integer''}, ''second_number'': {''title'': ''Second Number'',
-      ''type'': ''integer''}}\n\nUse the following format:\n\nThought: you should
-      always think about what to do\nAction: the action to take, only one name of
-      [multiplcation_tool], just the name, exactly as it''s written.\nAction Input:
-      the input to the action, just a simple python dictionary, enclosed in curly
-      braces, using \" to wrap keys and values.\nObservation: the result of the action\n\nOnce
-      all necessary information is gathered:\n\nThought: I now know the final answer\nFinal
-      Answer: the final answer to the original input question\n\nCurrent Task: What
-      is 3 times 1? Return only the number after using the multiplication tool.\n\nThis
-      is the expect criteria for your final answer: the result of multiplication \n
-      you MUST return the actual complete content as the final answer, not a summary.\n\nThis
+    body: '{"messages": [{"role": "system", "content": "You are Writer. You''re an
+      expert in writing and you love to teach kids but you know nothing of math.\nYour
+      personal goal is: You write lessons of math for kids.\nYou ONLY have access
+      to the following tools, and should NEVER make up tools that are not listed here:\n\nTool
+      Name: multiplcation_tool(*args: Any, **kwargs: Any) -> Any\nTool Description:
+      multiplcation_tool(first_number: ''integer'', second_number: ''integer'') -
+      Useful for when you need to multiply two numbers together. \nTool Arguments:
+      {''first_number'': {''title'': ''First Number'', ''type'': ''integer''}, ''second_number'':
+      {''title'': ''Second Number'', ''type'': ''integer''}}\n\nUse the following
+      format:\n\nThought: you should always think about what to do\nAction: the action
+      to take, only one name of [multiplcation_tool], just the name, exactly as it''s
+      written.\nAction Input: the input to the action, just a simple python dictionary,
+      enclosed in curly braces, using \" to wrap keys and values.\nObservation: the
+      result of the action\n\nOnce all necessary information is gathered:\n\nThought:
+      I now know the final answer\nFinal Answer: the final answer to the original
+      input question\n"}, {"role": "user", "content": "\nCurrent Task: What is 3 times
+      1? Return only the number after using the multiplication tool.\n\nThis is the
+      expect criteria for your final answer: the result of multiplication\nyou MUST
+      return the actual complete content as the final answer, not a summary.\n\nThis
       is the context you''re working with:\n12\n\nBegin! This is VERY important to
       you, use the tools available and give your best Final Answer, your job depends
-      on it!\n\nThought:"}, {"role": "assistant", "content": "Thought: To find out
-      what 3 times 1 is, I need to use the multiplication tool.\n\nAction: multiplcation_tool\nAction
+      on it!\n\nThought:"}, {"role": "assistant", "content": "I need to use the multiplication
+      tool to find the result of multiplying 3 by 1.\n\nAction: multiplcation_tool\nAction
       Input: {\"first_number\": 3, \"second_number\": 1}\nObservation: 3"}], "model":
       "gpt-4o", "stop": ["\nObservation"]}'
     headers:
@@ -488,16 +383,16 @@ interactions:
       connection:
       - keep-alive
       content-length:
-      - '1895'
+      - '1929'
       content-type:
       - application/json
       cookie:
-      - _cfuvid=8r8yFLG2b7e3n6pklgpsT05MHRvfdePz1ckAFvRQY8E-1725949790252-0.0.1.1-604800000;
-        __cf_bm=fuuc.ZDO3Y9B7nXE_8fBn7ykDAvAaK1VdxjZw0MTtsE-1725949790-1.0.1.1-pAJ7BWJMj1j3gS2ySR6xSBO7uFrjcB6ehFra4QVq14JqaiG4VDIjDO1C3WueKGRnSALSkpLQyJcJ2YVd_pXglQ
+      - __cf_bm=pgsskMPipgeSB6HhnkjwcOEfengIvt0p9whKNmTJVLs-1726215280-1.0.1.1-Gtqb.nO1U.cHTnd9mR9sEA5tpVo1.pexRrxqXOkn.6Mzja8mLG1URJsOLTfjMAAYpWaUQe4Rjmnr6lqQk5hAxQ;
+        _cfuvid=dp2yoCmGHVlURh_U78_UoIfnhcO5UhufnL5whkUSMTQ-1726214380689-0.0.1.1-604800000
       host:
       - api.openai.com
       user-agent:
-      - OpenAI/Python 1.44.0
+      - OpenAI/Python 1.45.0
       x-stainless-arch:
       - arm64
       x-stainless-async:
@@ -507,7 +402,7 @@ interactions:
       x-stainless-os:
       - MacOS
       x-stainless-package-version:
-      - 1.44.0
+      - 1.45.0
       x-stainless-raw-response:
       - 'true'
       x-stainless-runtime:
@@ -517,19 +412,19 @@ interactions:
     method: POST
     uri: https://api.openai.com/v1/chat/completions
   response:
-    content: "{\n  \"id\": \"chatcmpl-A5ogVJ3eRA7wSBy0zYtun4eXBfGC2\",\n  \"object\":
-      \"chat.completion\",\n  \"created\": 1725949835,\n  \"model\": \"gpt-4o-2024-05-13\",\n
+    content: "{\n  \"id\": \"chatcmpl-A6vlkcAUAzKCaJFdsTeOlqfJEkjno\",\n  \"object\":
+      \"chat.completion\",\n  \"created\": 1726215396,\n  \"model\": \"gpt-4o-2024-05-13\",\n
       \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
       \"assistant\",\n        \"content\": \"Thought: I now know the final answer.\\nFinal
       Answer: 3\",\n        \"refusal\": null\n      },\n      \"logprobs\": null,\n
       \     \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\":
-      399,\n    \"completion_tokens\": 14,\n    \"total_tokens\": 413\n  },\n  \"system_fingerprint\":
-      \"fp_25624ae3a5\"\n}\n"
+      402,\n    \"completion_tokens\": 14,\n    \"total_tokens\": 416,\n    \"completion_tokens_details\":
+      {\n      \"reasoning_tokens\": 0\n    }\n  },\n  \"system_fingerprint\": \"fp_25624ae3a5\"\n}\n"
     headers:
       CF-Cache-Status:
       - DYNAMIC
       CF-RAY:
-      - 8c0d5ec4a848cf35-SJC
+      - 8c26b2317d572ab9-LAX
       Connection:
       - keep-alive
       Content-Encoding:
@@ -537,7 +432,7 @@ interactions:
       Content-Type:
       - application/json
       Date:
-      - Tue, 10 Sep 2024 06:30:35 GMT
+      - Fri, 13 Sep 2024 08:16:36 GMT
       Server:
       - cloudflare
       Transfer-Encoding:
@@ -551,7 +446,7 @@ interactions:
       openai-organization:
       - crewai-iuxna1
       openai-processing-ms:
-      - '273'
+      - '276'
       openai-version:
       - '2020-10-01'
       strict-transport-security:
@@ -569,28 +464,29 @@ interactions:
       x-ratelimit-reset-tokens:
       - 0s
       x-request-id:
-      - req_33837d21d986ff6f1938d91ba668082f
+      - req_ed5072b74658c9e2336bde95c82b952f
     http_version: HTTP/1.1
     status_code: 200
 - request:
-    body: '{"messages": [{"role": "user", "content": "You are Writer. You''re an expert
-      in writing and you love to teach kids but you know nothing of math.\nYour personal
-      goal is: You write lessons of math for kids.\nYou ONLY have access to the following
-      tools, and should NEVER make up tools that are not listed here:\n\nTool Name:
-      multiplcation_tool(*args: Any, **kwargs: Any) -> Any\nTool Description: multiplcation_tool(first_number:
-      ''integer'', second_number: ''integer'') - Useful for when you need to multiply
-      two numbers together. \nTool Arguments: {''first_number'': {''title'': ''First
-      Number'', ''type'': ''integer''}, ''second_number'': {''title'': ''Second Number'',
-      ''type'': ''integer''}}\n\nUse the following format:\n\nThought: you should
-      always think about what to do\nAction: the action to take, only one name of
-      [multiplcation_tool], just the name, exactly as it''s written.\nAction Input:
-      the input to the action, just a simple python dictionary, enclosed in curly
-      braces, using \" to wrap keys and values.\nObservation: the result of the action\n\nOnce
-      all necessary information is gathered:\n\nThought: I now know the final answer\nFinal
-      Answer: the final answer to the original input question\n\nCurrent Task: What
-      is 2 times 6? Return only the number after using the multiplication tool.\n\nThis
-      is the expect criteria for your final answer: the result of multiplication \n
-      you MUST return the actual complete content as the final answer, not a summary.\n\nThis
+    body: '{"messages": [{"role": "system", "content": "You are Writer. You''re an
+      expert in writing and you love to teach kids but you know nothing of math.\nYour
+      personal goal is: You write lessons of math for kids.\nYou ONLY have access
+      to the following tools, and should NEVER make up tools that are not listed here:\n\nTool
+      Name: multiplcation_tool(*args: Any, **kwargs: Any) -> Any\nTool Description:
+      multiplcation_tool(first_number: ''integer'', second_number: ''integer'') -
+      Useful for when you need to multiply two numbers together. \nTool Arguments:
+      {''first_number'': {''title'': ''First Number'', ''type'': ''integer''}, ''second_number'':
+      {''title'': ''Second Number'', ''type'': ''integer''}}\n\nUse the following
+      format:\n\nThought: you should always think about what to do\nAction: the action
+      to take, only one name of [multiplcation_tool], just the name, exactly as it''s
+      written.\nAction Input: the input to the action, just a simple python dictionary,
+      enclosed in curly braces, using \" to wrap keys and values.\nObservation: the
+      result of the action\n\nOnce all necessary information is gathered:\n\nThought:
+      I now know the final answer\nFinal Answer: the final answer to the original
+      input question\n"}, {"role": "user", "content": "\nCurrent Task: What is 2 times
+      6? Return only the number after using the multiplication tool.\n\nThis is the
+      expect criteria for your final answer: the result of multiplication\nyou MUST
+      return the actual complete content as the final answer, not a summary.\n\nThis
       is the context you''re working with:\n3\n\nBegin! This is VERY important to
       you, use the tools available and give your best Final Answer, your job depends
       on it!\n\nThought:"}], "model": "gpt-4o", "stop": ["\nObservation"]}'
@@ -602,16 +498,16 @@ interactions:
       connection:
       - keep-alive
       content-length:
-      - '1673'
+      - '1706'
       content-type:
       - application/json
       cookie:
-      - _cfuvid=8r8yFLG2b7e3n6pklgpsT05MHRvfdePz1ckAFvRQY8E-1725949790252-0.0.1.1-604800000;
-        __cf_bm=fuuc.ZDO3Y9B7nXE_8fBn7ykDAvAaK1VdxjZw0MTtsE-1725949790-1.0.1.1-pAJ7BWJMj1j3gS2ySR6xSBO7uFrjcB6ehFra4QVq14JqaiG4VDIjDO1C3WueKGRnSALSkpLQyJcJ2YVd_pXglQ
+      - __cf_bm=pgsskMPipgeSB6HhnkjwcOEfengIvt0p9whKNmTJVLs-1726215280-1.0.1.1-Gtqb.nO1U.cHTnd9mR9sEA5tpVo1.pexRrxqXOkn.6Mzja8mLG1URJsOLTfjMAAYpWaUQe4Rjmnr6lqQk5hAxQ;
+        _cfuvid=dp2yoCmGHVlURh_U78_UoIfnhcO5UhufnL5whkUSMTQ-1726214380689-0.0.1.1-604800000
       host:
       - api.openai.com
       user-agent:
-      - OpenAI/Python 1.44.0
+      - OpenAI/Python 1.45.0
       x-stainless-arch:
       - arm64
       x-stainless-async:
@@ -621,7 +517,7 @@ interactions:
       x-stainless-os:
       - MacOS
       x-stainless-package-version:
-      - 1.44.0
+      - 1.45.0
       x-stainless-raw-response:
       - 'true'
       x-stainless-runtime:
@@ -631,20 +527,21 @@ interactions:
     method: POST
     uri: https://api.openai.com/v1/chat/completions
   response:
-    content: "{\n  \"id\": \"chatcmpl-A5ogVluSJJ426avHjvdDs2xWhOUDo\",\n  \"object\":
-      \"chat.completion\",\n  \"created\": 1725949835,\n  \"model\": \"gpt-4o-2024-05-13\",\n
+    content: "{\n  \"id\": \"chatcmpl-A6vllQ3ZfgoHJO2N57xuv2O6y8oAG\",\n  \"object\":
+      \"chat.completion\",\n  \"created\": 1726215397,\n  \"model\": \"gpt-4o-2024-05-13\",\n
       \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
-      \"assistant\",\n        \"content\": \"To find what 2 times 6 is, I need to
-      use the multiplication tool.\\n\\nAction: multiplcation_tool\\nAction Input:
-      {\\\"first_number\\\": 2, \\\"second_number\\\": 6}\",\n        \"refusal\":
+      \"assistant\",\n        \"content\": \"Thought: I need to use the multiplication
+      tool to determine what 2 times 6 is. \\n\\nAction: multiplcation_tool\\nAction
+      Input: {\\\"first_number\\\": 2, \\\"second_number\\\": 6}\",\n        \"refusal\":
       null\n      },\n      \"logprobs\": null,\n      \"finish_reason\": \"stop\"\n
-      \   }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 347,\n    \"completion_tokens\":
-      41,\n    \"total_tokens\": 388\n  },\n  \"system_fingerprint\": \"fp_25624ae3a5\"\n}\n"
+      \   }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 352,\n    \"completion_tokens\":
+      43,\n    \"total_tokens\": 395,\n    \"completion_tokens_details\": {\n      \"reasoning_tokens\":
+      0\n    }\n  },\n  \"system_fingerprint\": \"fp_25624ae3a5\"\n}\n"
     headers:
       CF-Cache-Status:
       - DYNAMIC
       CF-RAY:
-      - 8c0d5ec739bfcf35-SJC
+      - 8c26b23a5d432ab9-LAX
       Connection:
       - keep-alive
       Content-Encoding:
@@ -652,7 +549,7 @@ interactions:
       Content-Type:
       - application/json
       Date:
-      - Tue, 10 Sep 2024 06:30:35 GMT
+      - Fri, 13 Sep 2024 08:16:38 GMT
       Server:
       - cloudflare
       Transfer-Encoding:
@@ -666,7 +563,7 @@ interactions:
       openai-organization:
       - crewai-iuxna1
       openai-processing-ms:
-      - '452'
+      - '519'
       openai-version:
       - '2020-10-01'
       strict-transport-security:
@@ -684,32 +581,33 @@ interactions:
       x-ratelimit-reset-tokens:
       - 0s
       x-request-id:
-      - req_e4d96848d2c562e0dbfa93086a8e5a94
+      - req_acdf9d8d26e9ccb4492fb5334b947c45
     http_version: HTTP/1.1
     status_code: 200
 - request:
-    body: '{"messages": [{"role": "user", "content": "You are Writer. You''re an expert
-      in writing and you love to teach kids but you know nothing of math.\nYour personal
-      goal is: You write lessons of math for kids.\nYou ONLY have access to the following
-      tools, and should NEVER make up tools that are not listed here:\n\nTool Name:
-      multiplcation_tool(*args: Any, **kwargs: Any) -> Any\nTool Description: multiplcation_tool(first_number:
-      ''integer'', second_number: ''integer'') - Useful for when you need to multiply
-      two numbers together. \nTool Arguments: {''first_number'': {''title'': ''First
-      Number'', ''type'': ''integer''}, ''second_number'': {''title'': ''Second Number'',
-      ''type'': ''integer''}}\n\nUse the following format:\n\nThought: you should
-      always think about what to do\nAction: the action to take, only one name of
-      [multiplcation_tool], just the name, exactly as it''s written.\nAction Input:
-      the input to the action, just a simple python dictionary, enclosed in curly
-      braces, using \" to wrap keys and values.\nObservation: the result of the action\n\nOnce
-      all necessary information is gathered:\n\nThought: I now know the final answer\nFinal
-      Answer: the final answer to the original input question\n\nCurrent Task: What
-      is 2 times 6? Return only the number after using the multiplication tool.\n\nThis
-      is the expect criteria for your final answer: the result of multiplication \n
-      you MUST return the actual complete content as the final answer, not a summary.\n\nThis
+    body: '{"messages": [{"role": "system", "content": "You are Writer. You''re an
+      expert in writing and you love to teach kids but you know nothing of math.\nYour
+      personal goal is: You write lessons of math for kids.\nYou ONLY have access
+      to the following tools, and should NEVER make up tools that are not listed here:\n\nTool
+      Name: multiplcation_tool(*args: Any, **kwargs: Any) -> Any\nTool Description:
+      multiplcation_tool(first_number: ''integer'', second_number: ''integer'') -
+      Useful for when you need to multiply two numbers together. \nTool Arguments:
+      {''first_number'': {''title'': ''First Number'', ''type'': ''integer''}, ''second_number'':
+      {''title'': ''Second Number'', ''type'': ''integer''}}\n\nUse the following
+      format:\n\nThought: you should always think about what to do\nAction: the action
+      to take, only one name of [multiplcation_tool], just the name, exactly as it''s
+      written.\nAction Input: the input to the action, just a simple python dictionary,
+      enclosed in curly braces, using \" to wrap keys and values.\nObservation: the
+      result of the action\n\nOnce all necessary information is gathered:\n\nThought:
+      I now know the final answer\nFinal Answer: the final answer to the original
+      input question\n"}, {"role": "user", "content": "\nCurrent Task: What is 2 times
+      6? Return only the number after using the multiplication tool.\n\nThis is the
+      expect criteria for your final answer: the result of multiplication\nyou MUST
+      return the actual complete content as the final answer, not a summary.\n\nThis
       is the context you''re working with:\n3\n\nBegin! This is VERY important to
       you, use the tools available and give your best Final Answer, your job depends
-      on it!\n\nThought:"}, {"role": "assistant", "content": "To find what 2 times
-      6 is, I need to use the multiplication tool.\n\nAction: multiplcation_tool\nAction
+      on it!\n\nThought:"}, {"role": "assistant", "content": "Thought: I need to use
+      the multiplication tool to determine what 2 times 6 is. \n\nAction: multiplcation_tool\nAction
       Input: {\"first_number\": 2, \"second_number\": 6}\nObservation: 12"}], "model":
       "gpt-4o", "stop": ["\nObservation"]}'
     headers:
@@ -720,16 +618,16 @@ interactions:
       connection:
       - keep-alive
       content-length:
-      - '1882'
+      - '1929'
       content-type:
       - application/json
       cookie:
-      - _cfuvid=8r8yFLG2b7e3n6pklgpsT05MHRvfdePz1ckAFvRQY8E-1725949790252-0.0.1.1-604800000;
-        __cf_bm=fuuc.ZDO3Y9B7nXE_8fBn7ykDAvAaK1VdxjZw0MTtsE-1725949790-1.0.1.1-pAJ7BWJMj1j3gS2ySR6xSBO7uFrjcB6ehFra4QVq14JqaiG4VDIjDO1C3WueKGRnSALSkpLQyJcJ2YVd_pXglQ
+      - __cf_bm=pgsskMPipgeSB6HhnkjwcOEfengIvt0p9whKNmTJVLs-1726215280-1.0.1.1-Gtqb.nO1U.cHTnd9mR9sEA5tpVo1.pexRrxqXOkn.6Mzja8mLG1URJsOLTfjMAAYpWaUQe4Rjmnr6lqQk5hAxQ;
+        _cfuvid=dp2yoCmGHVlURh_U78_UoIfnhcO5UhufnL5whkUSMTQ-1726214380689-0.0.1.1-604800000
       host:
       - api.openai.com
       user-agent:
-      - OpenAI/Python 1.44.0
+      - OpenAI/Python 1.45.0
       x-stainless-arch:
       - arm64
       x-stainless-async:
@@ -739,7 +637,7 @@ interactions:
       x-stainless-os:
       - MacOS
       x-stainless-package-version:
-      - 1.44.0
+      - 1.45.0
       x-stainless-raw-response:
       - 'true'
       x-stainless-runtime:
@@ -749,19 +647,19 @@ interactions:
     method: POST
     uri: https://api.openai.com/v1/chat/completions
   response:
-    content: "{\n  \"id\": \"chatcmpl-A5ogW4O5u08YX1Ww8QrINiUYs2Ga3\",\n  \"object\":
-      \"chat.completion\",\n  \"created\": 1725949836,\n  \"model\": \"gpt-4o-2024-05-13\",\n
+    content: "{\n  \"id\": \"chatcmpl-A6vln5zYbpv7pNuEaJ6ssJzlUA8I1\",\n  \"object\":
+      \"chat.completion\",\n  \"created\": 1726215399,\n  \"model\": \"gpt-4o-2024-05-13\",\n
       \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
-      \"assistant\",\n        \"content\": \"Thought: I now know the final answer.\\nFinal
+      \"assistant\",\n        \"content\": \"Thought: I now know the final answer\\nFinal
       Answer: 12\",\n        \"refusal\": null\n      },\n      \"logprobs\": null,\n
       \     \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\":
-      396,\n    \"completion_tokens\": 14,\n    \"total_tokens\": 410\n  },\n  \"system_fingerprint\":
-      \"fp_25624ae3a5\"\n}\n"
+      403,\n    \"completion_tokens\": 14,\n    \"total_tokens\": 417,\n    \"completion_tokens_details\":
+      {\n      \"reasoning_tokens\": 0\n    }\n  },\n  \"system_fingerprint\": \"fp_25624ae3a5\"\n}\n"
     headers:
       CF-Cache-Status:
       - DYNAMIC
       CF-RAY:
-      - 8c0d5ecb5c3dcf35-SJC
+      - 8c26b2455f572ab9-LAX
       Connection:
       - keep-alive
       Content-Encoding:
@@ -769,7 +667,7 @@ interactions:
       Content-Type:
       - application/json
       Date:
-      - Tue, 10 Sep 2024 06:30:36 GMT
+      - Fri, 13 Sep 2024 08:16:39 GMT
       Server:
       - cloudflare
       Transfer-Encoding:
@@ -783,7 +681,7 @@ interactions:
       openai-organization:
       - crewai-iuxna1
       openai-processing-ms:
-      - '222'
+      - '241'
       openai-version:
       - '2020-10-01'
       strict-transport-security:
@@ -795,34 +693,35 @@ interactions:
       x-ratelimit-remaining-requests:
       - '9999'
       x-ratelimit-remaining-tokens:
-      - '29999553'
+      - '29999550'
       x-ratelimit-reset-requests:
       - 6ms
       x-ratelimit-reset-tokens:
       - 0s
       x-request-id:
-      - req_484c9e96ed15e200d8ea43dd99b7a974
+      - req_3ee458076802087b1be65d975119fe35
     http_version: HTTP/1.1
     status_code: 200
 - request:
-    body: '{"messages": [{"role": "user", "content": "You are Writer. You''re an expert
-      in writing and you love to teach kids but you know nothing of math.\nYour personal
-      goal is: You write lessons of math for kids.\nYou ONLY have access to the following
-      tools, and should NEVER make up tools that are not listed here:\n\nTool Name:
-      multiplcation_tool(*args: Any, **kwargs: Any) -> Any\nTool Description: multiplcation_tool(first_number:
-      ''integer'', second_number: ''integer'') - Useful for when you need to multiply
-      two numbers together. \nTool Arguments: {''first_number'': {''title'': ''First
-      Number'', ''type'': ''integer''}, ''second_number'': {''title'': ''Second Number'',
-      ''type'': ''integer''}}\n\nUse the following format:\n\nThought: you should
-      always think about what to do\nAction: the action to take, only one name of
-      [multiplcation_tool], just the name, exactly as it''s written.\nAction Input:
-      the input to the action, just a simple python dictionary, enclosed in curly
-      braces, using \" to wrap keys and values.\nObservation: the result of the action\n\nOnce
-      all necessary information is gathered:\n\nThought: I now know the final answer\nFinal
-      Answer: the final answer to the original input question\n\nCurrent Task: What
-      is 3 times 1? Return only the number after using the multiplication tool.\n\nThis
-      is the expect criteria for your final answer: the result of multiplication \n
-      you MUST return the actual complete content as the final answer, not a summary.\n\nThis
+    body: '{"messages": [{"role": "system", "content": "You are Writer. You''re an
+      expert in writing and you love to teach kids but you know nothing of math.\nYour
+      personal goal is: You write lessons of math for kids.\nYou ONLY have access
+      to the following tools, and should NEVER make up tools that are not listed here:\n\nTool
+      Name: multiplcation_tool(*args: Any, **kwargs: Any) -> Any\nTool Description:
+      multiplcation_tool(first_number: ''integer'', second_number: ''integer'') -
+      Useful for when you need to multiply two numbers together. \nTool Arguments:
+      {''first_number'': {''title'': ''First Number'', ''type'': ''integer''}, ''second_number'':
+      {''title'': ''Second Number'', ''type'': ''integer''}}\n\nUse the following
+      format:\n\nThought: you should always think about what to do\nAction: the action
+      to take, only one name of [multiplcation_tool], just the name, exactly as it''s
+      written.\nAction Input: the input to the action, just a simple python dictionary,
+      enclosed in curly braces, using \" to wrap keys and values.\nObservation: the
+      result of the action\n\nOnce all necessary information is gathered:\n\nThought:
+      I now know the final answer\nFinal Answer: the final answer to the original
+      input question\n"}, {"role": "user", "content": "\nCurrent Task: What is 3 times
+      1? Return only the number after using the multiplication tool.\n\nThis is the
+      expect criteria for your final answer: the result of multiplication\nyou MUST
+      return the actual complete content as the final answer, not a summary.\n\nThis
       is the context you''re working with:\n12\n\nBegin! This is VERY important to
       you, use the tools available and give your best Final Answer, your job depends
       on it!\n\nThought:"}], "model": "gpt-4o", "stop": ["\nObservation"]}'
@@ -834,16 +733,16 @@ interactions:
       connection:
       - keep-alive
       content-length:
-      - '1674'
+      - '1707'
       content-type:
       - application/json
       cookie:
-      - _cfuvid=8r8yFLG2b7e3n6pklgpsT05MHRvfdePz1ckAFvRQY8E-1725949790252-0.0.1.1-604800000;
-        __cf_bm=fuuc.ZDO3Y9B7nXE_8fBn7ykDAvAaK1VdxjZw0MTtsE-1725949790-1.0.1.1-pAJ7BWJMj1j3gS2ySR6xSBO7uFrjcB6ehFra4QVq14JqaiG4VDIjDO1C3WueKGRnSALSkpLQyJcJ2YVd_pXglQ
+      - __cf_bm=pgsskMPipgeSB6HhnkjwcOEfengIvt0p9whKNmTJVLs-1726215280-1.0.1.1-Gtqb.nO1U.cHTnd9mR9sEA5tpVo1.pexRrxqXOkn.6Mzja8mLG1URJsOLTfjMAAYpWaUQe4Rjmnr6lqQk5hAxQ;
+        _cfuvid=dp2yoCmGHVlURh_U78_UoIfnhcO5UhufnL5whkUSMTQ-1726214380689-0.0.1.1-604800000
       host:
       - api.openai.com
       user-agent:
-      - OpenAI/Python 1.44.0
+      - OpenAI/Python 1.45.0
       x-stainless-arch:
       - arm64
       x-stainless-async:
@@ -853,7 +752,7 @@ interactions:
       x-stainless-os:
       - MacOS
       x-stainless-package-version:
-      - 1.44.0
+      - 1.45.0
       x-stainless-raw-response:
       - 'true'
       x-stainless-runtime:
@@ -863,20 +762,21 @@ interactions:
     method: POST
     uri: https://api.openai.com/v1/chat/completions
   response:
-    content: "{\n  \"id\": \"chatcmpl-A5ogWfeeVfG982UfA6NSS8lqrJodb\",\n  \"object\":
-      \"chat.completion\",\n  \"created\": 1725949836,\n  \"model\": \"gpt-4o-2024-05-13\",\n
+    content: "{\n  \"id\": \"chatcmpl-A6vlo5QZjmdcdTMAhyobRf2FrgfRv\",\n  \"object\":
+      \"chat.completion\",\n  \"created\": 1726215400,\n  \"model\": \"gpt-4o-2024-05-13\",\n
       \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
-      \"assistant\",\n        \"content\": \"Thought: To determine the result of multiplying
-      3 by 1, I need to use the multiplication tool.\\n\\nAction: multiplcation_tool\\nAction
-      Input: {\\\"first_number\\\": 3, \\\"second_number\\\": 1}\",\n        \"refusal\":
+      \"assistant\",\n        \"content\": \"I need to use the multiplication tool
+      to find out what 3 times 1 is. \\n\\nAction: multiplcation_tool\\nAction Input:
+      {\\\"first_number\\\": 3, \\\"second_number\\\": 1}\",\n        \"refusal\":
       null\n      },\n      \"logprobs\": null,\n      \"finish_reason\": \"stop\"\n
-      \   }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 347,\n    \"completion_tokens\":
-      45,\n    \"total_tokens\": 392\n  },\n  \"system_fingerprint\": \"fp_25624ae3a5\"\n}\n"
+      \   }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 352,\n    \"completion_tokens\":
+      42,\n    \"total_tokens\": 394,\n    \"completion_tokens_details\": {\n      \"reasoning_tokens\":
+      0\n    }\n  },\n  \"system_fingerprint\": \"fp_25624ae3a5\"\n}\n"
     headers:
       CF-Cache-Status:
       - DYNAMIC
       CF-RAY:
-      - 8c0d5ecd9d93cf35-SJC
+      - 8c26b24e1fba2ab9-LAX
       Connection:
       - keep-alive
       Content-Encoding:
@@ -884,7 +784,7 @@ interactions:
       Content-Type:
       - application/json
       Date:
-      - Tue, 10 Sep 2024 06:30:37 GMT
+      - Fri, 13 Sep 2024 08:16:41 GMT
       Server:
       - cloudflare
       Transfer-Encoding:
@@ -898,7 +798,7 @@ interactions:
       openai-organization:
       - crewai-iuxna1
       openai-processing-ms:
-      - '1116'
+      - '625'
       openai-version:
       - '2020-10-01'
       strict-transport-security:
@@ -916,34 +816,35 @@ interactions:
       x-ratelimit-reset-tokens:
       - 0s
       x-request-id:
-      - req_f598dfe4fe9a8ed0901139cba254da4d
+      - req_2ee74e83db3ceff3c56024f1fcebc85b
     http_version: HTTP/1.1
     status_code: 200
 - request:
-    body: '{"messages": [{"role": "user", "content": "You are Writer. You''re an expert
-      in writing and you love to teach kids but you know nothing of math.\nYour personal
-      goal is: You write lessons of math for kids.\nYou ONLY have access to the following
-      tools, and should NEVER make up tools that are not listed here:\n\nTool Name:
-      multiplcation_tool(*args: Any, **kwargs: Any) -> Any\nTool Description: multiplcation_tool(first_number:
-      ''integer'', second_number: ''integer'') - Useful for when you need to multiply
-      two numbers together. \nTool Arguments: {''first_number'': {''title'': ''First
-      Number'', ''type'': ''integer''}, ''second_number'': {''title'': ''Second Number'',
-      ''type'': ''integer''}}\n\nUse the following format:\n\nThought: you should
-      always think about what to do\nAction: the action to take, only one name of
-      [multiplcation_tool], just the name, exactly as it''s written.\nAction Input:
-      the input to the action, just a simple python dictionary, enclosed in curly
-      braces, using \" to wrap keys and values.\nObservation: the result of the action\n\nOnce
-      all necessary information is gathered:\n\nThought: I now know the final answer\nFinal
-      Answer: the final answer to the original input question\n\nCurrent Task: What
-      is 3 times 1? Return only the number after using the multiplication tool.\n\nThis
-      is the expect criteria for your final answer: the result of multiplication \n
-      you MUST return the actual complete content as the final answer, not a summary.\n\nThis
+    body: '{"messages": [{"role": "system", "content": "You are Writer. You''re an
+      expert in writing and you love to teach kids but you know nothing of math.\nYour
+      personal goal is: You write lessons of math for kids.\nYou ONLY have access
+      to the following tools, and should NEVER make up tools that are not listed here:\n\nTool
+      Name: multiplcation_tool(*args: Any, **kwargs: Any) -> Any\nTool Description:
+      multiplcation_tool(first_number: ''integer'', second_number: ''integer'') -
+      Useful for when you need to multiply two numbers together. \nTool Arguments:
+      {''first_number'': {''title'': ''First Number'', ''type'': ''integer''}, ''second_number'':
+      {''title'': ''Second Number'', ''type'': ''integer''}}\n\nUse the following
+      format:\n\nThought: you should always think about what to do\nAction: the action
+      to take, only one name of [multiplcation_tool], just the name, exactly as it''s
+      written.\nAction Input: the input to the action, just a simple python dictionary,
+      enclosed in curly braces, using \" to wrap keys and values.\nObservation: the
+      result of the action\n\nOnce all necessary information is gathered:\n\nThought:
+      I now know the final answer\nFinal Answer: the final answer to the original
+      input question\n"}, {"role": "user", "content": "\nCurrent Task: What is 3 times
+      1? Return only the number after using the multiplication tool.\n\nThis is the
+      expect criteria for your final answer: the result of multiplication\nyou MUST
+      return the actual complete content as the final answer, not a summary.\n\nThis
       is the context you''re working with:\n12\n\nBegin! This is VERY important to
       you, use the tools available and give your best Final Answer, your job depends
-      on it!\n\nThought:"}, {"role": "assistant", "content": "Thought: To determine
-      the result of multiplying 3 by 1, I need to use the multiplication tool.\n\nAction:
-      multiplcation_tool\nAction Input: {\"first_number\": 3, \"second_number\": 1}\nObservation:
-      3"}], "model": "gpt-4o", "stop": ["\nObservation"]}'
+      on it!\n\nThought:"}, {"role": "assistant", "content": "I need to use the multiplication
+      tool to find out what 3 times 1 is. \n\nAction: multiplcation_tool\nAction Input:
+      {\"first_number\": 3, \"second_number\": 1}\nObservation: 3"}], "model": "gpt-4o",
+      "stop": ["\nObservation"]}'
     headers:
       accept:
       - application/json
@@ -952,16 +853,16 @@ interactions:
       connection:
       - keep-alive
       content-length:
-      - '1911'
+      - '1919'
       content-type:
       - application/json
       cookie:
-      - _cfuvid=8r8yFLG2b7e3n6pklgpsT05MHRvfdePz1ckAFvRQY8E-1725949790252-0.0.1.1-604800000;
-        __cf_bm=fuuc.ZDO3Y9B7nXE_8fBn7ykDAvAaK1VdxjZw0MTtsE-1725949790-1.0.1.1-pAJ7BWJMj1j3gS2ySR6xSBO7uFrjcB6ehFra4QVq14JqaiG4VDIjDO1C3WueKGRnSALSkpLQyJcJ2YVd_pXglQ
+      - __cf_bm=pgsskMPipgeSB6HhnkjwcOEfengIvt0p9whKNmTJVLs-1726215280-1.0.1.1-Gtqb.nO1U.cHTnd9mR9sEA5tpVo1.pexRrxqXOkn.6Mzja8mLG1URJsOLTfjMAAYpWaUQe4Rjmnr6lqQk5hAxQ;
+        _cfuvid=dp2yoCmGHVlURh_U78_UoIfnhcO5UhufnL5whkUSMTQ-1726214380689-0.0.1.1-604800000
       host:
       - api.openai.com
       user-agent:
-      - OpenAI/Python 1.44.0
+      - OpenAI/Python 1.45.0
       x-stainless-arch:
       - arm64
       x-stainless-async:
@@ -971,7 +872,7 @@ interactions:
       x-stainless-os:
       - MacOS
       x-stainless-package-version:
-      - 1.44.0
+      - 1.45.0
       x-stainless-raw-response:
       - 'true'
       x-stainless-runtime:
@@ -981,19 +882,19 @@ interactions:
     method: POST
     uri: https://api.openai.com/v1/chat/completions
   response:
-    content: "{\n  \"id\": \"chatcmpl-A5ogXUWjE6dk7rSz7WKYhWO5r13Mm\",\n  \"object\":
-      \"chat.completion\",\n  \"created\": 1725949837,\n  \"model\": \"gpt-4o-2024-05-13\",\n
+    content: "{\n  \"id\": \"chatcmpl-A6vlq3H5FYNND8YNuyoiXPWwpA3e3\",\n  \"object\":
+      \"chat.completion\",\n  \"created\": 1726215402,\n  \"model\": \"gpt-4o-2024-05-13\",\n
       \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
       \"assistant\",\n        \"content\": \"Thought: I now know the final answer\\nFinal
       Answer: 3\",\n        \"refusal\": null\n      },\n      \"logprobs\": null,\n
       \     \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\":
-      400,\n    \"completion_tokens\": 14,\n    \"total_tokens\": 414\n  },\n  \"system_fingerprint\":
-      \"fp_25624ae3a5\"\n}\n"
+      402,\n    \"completion_tokens\": 14,\n    \"total_tokens\": 416,\n    \"completion_tokens_details\":
+      {\n      \"reasoning_tokens\": 0\n    }\n  },\n  \"system_fingerprint\": \"fp_25624ae3a5\"\n}\n"
     headers:
       CF-Cache-Status:
       - DYNAMIC
       CF-RAY:
-      - 8c0d5ed59b1ccf35-SJC
+      - 8c26b257f8d92ab9-LAX
       Connection:
       - keep-alive
       Content-Encoding:
@@ -1001,7 +902,7 @@ interactions:
       Content-Type:
       - application/json
       Date:
-      - Tue, 10 Sep 2024 06:30:38 GMT
+      - Fri, 13 Sep 2024 08:16:42 GMT
       Server:
       - cloudflare
       Transfer-Encoding:
@@ -1015,7 +916,7 @@ interactions:
       openai-organization:
       - crewai-iuxna1
       openai-processing-ms:
-      - '316'
+      - '270'
       openai-version:
       - '2020-10-01'
       strict-transport-security:
@@ -1027,13 +928,13 @@ interactions:
       x-ratelimit-remaining-requests:
       - '9999'
       x-ratelimit-remaining-tokens:
-      - '29999546'
+      - '29999552'
       x-ratelimit-reset-requests:
       - 6ms
       x-ratelimit-reset-tokens:
       - 0s
       x-request-id:
-      - req_3b43e748862045d6173962e9dce1b78c
+      - req_b53a16b6f63d7b6b7c318af2e8469408
     http_version: HTTP/1.1
     status_code: 200
 version: 1

@@ -1,15 +1,15 @@
 interactions:
 - request:
-    body: '{"messages": [{"role": "user", "content": "You are test role. test backstory\nYour
+    body: '{"messages": [{"role": "system", "content": "You are test role. test backstory\nYour
       personal goal is: test goal\nTo give my best complete final answer to the task
       use the exact following format:\n\nThought: I now can give a great answer\nFinal
       Answer: Your final answer must be the great and the most complete as possible,
       it must be outcome described.\n\nI MUST use these formats, my job depends on
-      it!\nCurrent Task: Just say hi.\n\nThis is the expect criteria for your final
-      answer: Your greeting.\nyou MUST return the actual complete content as the final
-      answer, not a summary.\n\nBegin! This is VERY important to you, use the tools
-      available and give your best Final Answer, your job depends on it!\n\nThought:"}],
-      "model": "gpt-4o", "stop": ["\nObservation"]}'
+      it!"}, {"role": "user", "content": "\nCurrent Task: Just say hi.\n\nThis is
+      the expect criteria for your final answer: Your greeting.\nyou MUST return the
+      actual complete content as the final answer, not a summary.\n\nBegin! This is
+      VERY important to you, use the tools available and give your best Final Answer,
+      your job depends on it!\n\nThought:"}], "model": "gpt-4o", "stop": ["\nObservation"]}'
     headers:
       accept:
       - application/json
@@ -18,11 +18,12 @@ interactions:
       connection:
       - keep-alive
       content-length:
-      - '764'
+      - '799'
       content-type:
       - application/json
       cookie:
-      - _cfuvid=NqphhptgCYl51k8kIFxQ.T4x1aYVbhAz5evGBO5HX5E-1726188007226-0.0.1.1-604800000
+      - __cf_bm=r6BNUnXat.26mviZiJYUf7Qj4ea5gbt_oPxyClKcVOE-1726214380-1.0.1.1-2S3G10sPdiG2syQSO8wKWXE7Nmdgt88imgakr81w9DemMH8mVDg0q6r9ANx6tM4_CPvgGQlMVstDhDRkIDwhzg;
+        _cfuvid=dp2yoCmGHVlURh_U78_UoIfnhcO5UhufnL5whkUSMTQ-1726214380689-0.0.1.1-604800000
       host:
       - api.openai.com
       user-agent:
@@ -46,19 +47,19 @@ interactions:
     method: POST
     uri: https://api.openai.com/v1/chat/completions
   response:
-    content: "{\n  \"id\": \"chatcmpl-A6tNJ1p3d1HLKrZtqVlgpFJ02EXoG\",\n  \"object\":
-      \"chat.completion\",\n  \"created\": 1726206193,\n  \"model\": \"gpt-4o-2024-05-13\",\n
+    content: "{\n  \"id\": \"chatcmpl-A6vdAZFKiLxpcQBT5iTVcDZc6h7vt\",\n  \"object\":
+      \"chat.completion\",\n  \"created\": 1726214864,\n  \"model\": \"gpt-4o-2024-05-13\",\n
       \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
-      \"assistant\",\n        \"content\": \"I now can give a great answer\\nFinal
+      \"assistant\",\n        \"content\": \"Thought: I now can give a great answer\\nFinal
       Answer: Hi!\",\n        \"refusal\": null\n      },\n      \"logprobs\": null,\n
       \     \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\":
-      149,\n    \"completion_tokens\": 13,\n    \"total_tokens\": 162,\n    \"completion_tokens_details\":
+      154,\n    \"completion_tokens\": 15,\n    \"total_tokens\": 169,\n    \"completion_tokens_details\":
       {\n      \"reasoning_tokens\": 0\n    }\n  },\n  \"system_fingerprint\": \"fp_25624ae3a5\"\n}\n"
     headers:
       CF-Cache-Status:
       - DYNAMIC
       CF-RAY:
-      - 8c25d18319117c44-LAX
+      - 8c26a537a8de2ab9-LAX
       Connection:
       - keep-alive
       Content-Encoding:
@@ -66,15 +67,9 @@ interactions:
       Content-Type:
       - application/json
       Date:
-      - Fri, 13 Sep 2024 05:43:13 GMT
+      - Fri, 13 Sep 2024 08:07:45 GMT
       Server:
       - cloudflare
-      Set-Cookie:
-      - __cf_bm=ClnNKAuXgV.ion8pbtUaEfUtQSyni9o4VnBEhtjLcvY-1726206193-1.0.1.1-irjAKQKLFXoFHYMHg.GoJNcvu6A7u6ASFzz_Sr3U6wi_72IUfIRiLp7tOwWp0WXUbEKvKk3dJqoTqwblHvq7Wg;
-        path=/; expires=Fri, 13-Sep-24 06:13:13 GMT; domain=.api.openai.com; HttpOnly;
-        Secure; SameSite=None
-      - _cfuvid=7gNruCM_IOsMgDEA4EI0g9dg0NDN5T9HigjiRwrAKc0-1726206193576-0.0.1.1-604800000;
-        path=/; domain=.api.openai.com; HttpOnly; Secure; SameSite=None
       Transfer-Encoding:
       - chunked
       X-Content-Type-Options:
@@ -86,7 +81,7 @@ interactions:
       openai-organization:
       - crewai-iuxna1
       openai-processing-ms:
-      - '278'
+      - '262'
       openai-version:
       - '2020-10-01'
       strict-transport-security:
@@ -98,127 +93,24 @@ interactions:
       x-ratelimit-remaining-requests:
       - '9999'
       x-ratelimit-remaining-tokens:
-      - '29999818'
+      - '29999817'
       x-ratelimit-reset-requests:
       - 6ms
       x-ratelimit-reset-tokens:
       - 0s
       x-request-id:
-      - req_508393c5be3af0df1b77f458001603b6
+      - req_8467a5a0b9549658e029d5d28b8619e4
     http_version: HTTP/1.1
     status_code: 200
 - request:
-    body: '{"messages": [{"role": "user", "content": "You are test role. test backstory\nYour
+    body: '{"messages": [{"role": "system", "content": "You are test role. test backstory\nYour
       personal goal is: test goal\nTo give my best complete final answer to the task
       use the exact following format:\n\nThought: I now can give a great answer\nFinal
       Answer: Your final answer must be the great and the most complete as possible,
       it must be outcome described.\n\nI MUST use these formats, my job depends on
-      it!\nCurrent Task: Just say bye.\n\nThis is the expect criteria for your final
-      answer: Your farewell.\nyou MUST return the actual complete content as the final
-      answer, not a summary.\n\nThis is the context you''re working with:\nHi!\n\nBegin!
-      This is VERY important to you, use the tools available and give your best Final
-      Answer, your job depends on it!\n\nThought:"}], "model": "gpt-4o", "stop": ["\nObservation"]}'
-    headers:
-      accept:
-      - application/json
-      accept-encoding:
-      - gzip, deflate
-      connection:
-      - keep-alive
-      content-length:
-      - '814'
-      content-type:
-      - application/json
-      cookie:
-      - _cfuvid=7gNruCM_IOsMgDEA4EI0g9dg0NDN5T9HigjiRwrAKc0-1726206193576-0.0.1.1-604800000;
-        __cf_bm=ClnNKAuXgV.ion8pbtUaEfUtQSyni9o4VnBEhtjLcvY-1726206193-1.0.1.1-irjAKQKLFXoFHYMHg.GoJNcvu6A7u6ASFzz_Sr3U6wi_72IUfIRiLp7tOwWp0WXUbEKvKk3dJqoTqwblHvq7Wg
-      host:
-      - api.openai.com
-      user-agent:
-      - OpenAI/Python 1.45.0
-      x-stainless-arch:
-      - arm64
-      x-stainless-async:
-      - 'false'
-      x-stainless-lang:
-      - python
-      x-stainless-os:
-      - MacOS
-      x-stainless-package-version:
-      - 1.45.0
-      x-stainless-raw-response:
-      - 'true'
-      x-stainless-runtime:
-      - CPython
-      x-stainless-runtime-version:
-      - 3.11.7
-    method: POST
-    uri: https://api.openai.com/v1/chat/completions
-  response:
-    content: "{\n  \"id\": \"chatcmpl-A6tNKg5xx1h379SmfwvVe9T0qx8Qk\",\n  \"object\":
-      \"chat.completion\",\n  \"created\": 1726206194,\n  \"model\": \"gpt-4o-2024-05-13\",\n
-      \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
-      \"assistant\",\n        \"content\": \"Thought: I now can give a great answer\\nFinal
-      Answer: Bye!\",\n        \"refusal\": null\n      },\n      \"logprobs\": null,\n
-      \     \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\":
-      159,\n    \"completion_tokens\": 15,\n    \"total_tokens\": 174,\n    \"completion_tokens_details\":
-      {\n      \"reasoning_tokens\": 0\n    }\n  },\n  \"system_fingerprint\": \"fp_157b3831f5\"\n}\n"
-    headers:
-      CF-Cache-Status:
-      - DYNAMIC
-      CF-RAY:
-      - 8c25d189de367c44-LAX
-      Connection:
-      - keep-alive
-      Content-Encoding:
-      - gzip
-      Content-Type:
-      - application/json
-      Date:
-      - Fri, 13 Sep 2024 05:43:15 GMT
-      Server:
-      - cloudflare
-      Transfer-Encoding:
-      - chunked
-      X-Content-Type-Options:
-      - nosniff
-      access-control-expose-headers:
-      - X-Request-ID
-      alt-svc:
-      - h3=":443"; ma=86400
-      openai-organization:
-      - crewai-iuxna1
-      openai-processing-ms:
-      - '261'
-      openai-version:
-      - '2020-10-01'
-      strict-transport-security:
-      - max-age=15552000; includeSubDomains; preload
-      x-ratelimit-limit-requests:
-      - '10000'
-      x-ratelimit-limit-tokens:
-      - '30000000'
-      x-ratelimit-remaining-requests:
-      - '9999'
-      x-ratelimit-remaining-tokens:
-      - '29999807'
-      x-ratelimit-reset-requests:
-      - 6ms
-      x-ratelimit-reset-tokens:
-      - 0s
-      x-request-id:
-      - req_5e4fa349168edad6c2eae435ee880756
-    http_version: HTTP/1.1
-    status_code: 200
-- request:
-    body: '{"messages": [{"role": "user", "content": "You are test role2. test backstory2\nYour
-      personal goal is: test goal2\nTo give my best complete final answer to the task
-      use the exact following format:\n\nThought: I now can give a great answer\nFinal
-      Answer: Your final answer must be the great and the most complete as possible,
-      it must be outcome described.\n\nI MUST use these formats, my job depends on
-      it!\nCurrent Task: Answer accordingly to the context you got.\n\nThis is the
-      expect criteria for your final answer: Your answer.\nyou MUST return the actual
-      complete content as the final answer, not a summary.\n\nThis is the context
+      it!"}, {"role": "user", "content": "\nCurrent Task: Just say bye.\n\nThis is
+      the expect criteria for your final answer: Your farewell.\nyou MUST return the
+      actual complete content as the final answer, not a summary.\n\nThis is the context
       you''re working with:\nHi!\n\nBegin! This is VERY important to you, use the
       tools available and give your best Final Answer, your job depends on it!\n\nThought:"}],
       "model": "gpt-4o", "stop": ["\nObservation"]}'
@@ -230,12 +122,12 @@ interactions:
       connection:
       - keep-alive
       content-length:
-      - '844'
+      - '849'
       content-type:
       - application/json
       cookie:
-      - _cfuvid=7gNruCM_IOsMgDEA4EI0g9dg0NDN5T9HigjiRwrAKc0-1726206193576-0.0.1.1-604800000;
-        __cf_bm=ClnNKAuXgV.ion8pbtUaEfUtQSyni9o4VnBEhtjLcvY-1726206193-1.0.1.1-irjAKQKLFXoFHYMHg.GoJNcvu6A7u6ASFzz_Sr3U6wi_72IUfIRiLp7tOwWp0WXUbEKvKk3dJqoTqwblHvq7Wg
+      - __cf_bm=r6BNUnXat.26mviZiJYUf7Qj4ea5gbt_oPxyClKcVOE-1726214380-1.0.1.1-2S3G10sPdiG2syQSO8wKWXE7Nmdgt88imgakr81w9DemMH8mVDg0q6r9ANx6tM4_CPvgGQlMVstDhDRkIDwhzg;
+        _cfuvid=dp2yoCmGHVlURh_U78_UoIfnhcO5UhufnL5whkUSMTQ-1726214380689-0.0.1.1-604800000
       host:
       - api.openai.com
       user-agent:
@@ -259,19 +151,19 @@ interactions:
     method: POST
     uri: https://api.openai.com/v1/chat/completions
   response:
-    content: "{\n  \"id\": \"chatcmpl-A6tNLvrOTcvGiku88z0yUR1qGt3Og\",\n  \"object\":
-      \"chat.completion\",\n  \"created\": 1726206195,\n  \"model\": \"gpt-4o-2024-05-13\",\n
+    content: "{\n  \"id\": \"chatcmpl-A6vdCI577RBkSAiAVtkvlUu8io7Cp\",\n  \"object\":
+      \"chat.completion\",\n  \"created\": 1726214866,\n  \"model\": \"gpt-4o-2024-05-13\",\n
       \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
       \"assistant\",\n        \"content\": \"Thought: I now can give a great answer\\nFinal
-      Answer: Hi!\",\n        \"refusal\": null\n      },\n      \"logprobs\": null,\n
+      Answer: Bye!\",\n        \"refusal\": null\n      },\n      \"logprobs\": null,\n
       \     \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\":
-      166,\n    \"completion_tokens\": 15,\n    \"total_tokens\": 181,\n    \"completion_tokens_details\":
-      {\n      \"reasoning_tokens\": 0\n    }\n  },\n  \"system_fingerprint\": \"fp_25624ae3a5\"\n}\n"
+      164,\n    \"completion_tokens\": 15,\n    \"total_tokens\": 179,\n    \"completion_tokens_details\":
+      {\n      \"reasoning_tokens\": 0\n    }\n  },\n  \"system_fingerprint\": \"fp_157b3831f5\"\n}\n"
     headers:
       CF-Cache-Status:
       - DYNAMIC
       CF-RAY:
-      - 8c25d1937dff7c44-LAX
+      - 8c26a53fbffa2ab9-LAX
       Connection:
       - keep-alive
       Content-Encoding:
@@ -279,7 +171,7 @@ interactions:
       Content-Type:
       - application/json
       Date:
-      - Fri, 13 Sep 2024 05:43:16 GMT
+      - Fri, 13 Sep 2024 08:07:46 GMT
       Server:
       - cloudflare
       Transfer-Encoding:
@@ -293,7 +185,7 @@ interactions:
       openai-organization:
       - crewai-iuxna1
       openai-processing-ms:
-      - '667'
+      - '253'
       openai-version:
       - '2020-10-01'
       strict-transport-security:
@@ -305,13 +197,117 @@ interactions:
       x-ratelimit-remaining-requests:
       - '9999'
       x-ratelimit-remaining-tokens:
-      - '29999799'
+      - '29999806'
       x-ratelimit-reset-requests:
       - 6ms
       x-ratelimit-reset-tokens:
       - 0s
       x-request-id:
-      - req_7220b5cf61789924adb498bf1b2db031
+      - req_41dc1b795cfe8063ca9aac31e0fae544
+    http_version: HTTP/1.1
+    status_code: 200
+- request:
+    body: '{"messages": [{"role": "system", "content": "You are test role2. test backstory2\nYour
+      personal goal is: test goal2\nTo give my best complete final answer to the task
+      use the exact following format:\n\nThought: I now can give a great answer\nFinal
+      Answer: Your final answer must be the great and the most complete as possible,
+      it must be outcome described.\n\nI MUST use these formats, my job depends on
+      it!"}, {"role": "user", "content": "\nCurrent Task: Answer accordingly to the
+      context you got.\n\nThis is the expect criteria for your final answer: Your
+      answer.\nyou MUST return the actual complete content as the final answer, not
+      a summary.\n\nThis is the context you''re working with:\nHi!\n\nBegin! This
+      is VERY important to you, use the tools available and give your best Final Answer,
+      your job depends on it!\n\nThought:"}], "model": "gpt-4o", "stop": ["\nObservation"]}'
+    headers:
+      accept:
+      - application/json
+      accept-encoding:
+      - gzip, deflate
+      connection:
+      - keep-alive
+      content-length:
+      - '879'
+      content-type:
+      - application/json
+      cookie:
+      - __cf_bm=r6BNUnXat.26mviZiJYUf7Qj4ea5gbt_oPxyClKcVOE-1726214380-1.0.1.1-2S3G10sPdiG2syQSO8wKWXE7Nmdgt88imgakr81w9DemMH8mVDg0q6r9ANx6tM4_CPvgGQlMVstDhDRkIDwhzg;
+        _cfuvid=dp2yoCmGHVlURh_U78_UoIfnhcO5UhufnL5whkUSMTQ-1726214380689-0.0.1.1-604800000
+      host:
+      - api.openai.com
+      user-agent:
+      - OpenAI/Python 1.45.0
+      x-stainless-arch:
+      - arm64
+      x-stainless-async:
+      - 'false'
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - MacOS
+      x-stainless-package-version:
+      - 1.45.0
+      x-stainless-raw-response:
+      - 'true'
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.11.7
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    content: "{\n  \"id\": \"chatcmpl-A6vdDlK54dGsCW1scWLPodVSIIsC1\",\n  \"object\":
+      \"chat.completion\",\n  \"created\": 1726214867,\n  \"model\": \"gpt-4o-2024-05-13\",\n
+      \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
+      \"assistant\",\n        \"content\": \"Thought: I now can give a great answer\\nFinal
+      Answer: Hi!\",\n        \"refusal\": null\n      },\n      \"logprobs\": null,\n
+      \     \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\":
+      171,\n    \"completion_tokens\": 15,\n    \"total_tokens\": 186,\n    \"completion_tokens_details\":
+      {\n      \"reasoning_tokens\": 0\n    }\n  },\n  \"system_fingerprint\": \"fp_25624ae3a5\"\n}\n"
+    headers:
+      CF-Cache-Status:
+      - DYNAMIC
+      CF-RAY:
+      - 8c26a548bfa52ab9-LAX
+      Connection:
+      - keep-alive
+      Content-Encoding:
+      - gzip
+      Content-Type:
+      - application/json
+      Date:
+      - Fri, 13 Sep 2024 08:07:47 GMT
+      Server:
+      - cloudflare
+      Transfer-Encoding:
+      - chunked
+      X-Content-Type-Options:
+      - nosniff
+      access-control-expose-headers:
+      - X-Request-ID
+      alt-svc:
+      - h3=":443"; ma=86400
+      openai-organization:
+      - crewai-iuxna1
+      openai-processing-ms:
+      - '282'
+      openai-version:
+      - '2020-10-01'
+      strict-transport-security:
+      - max-age=15552000; includeSubDomains; preload
+      x-ratelimit-limit-requests:
+      - '10000'
+      x-ratelimit-limit-tokens:
+      - '30000000'
+      x-ratelimit-remaining-requests:
+      - '9999'
+      x-ratelimit-remaining-tokens:
+      - '29999797'
+      x-ratelimit-reset-requests:
+      - 6ms
+      x-ratelimit-reset-tokens:
+      - 0s
+      x-request-id:
+      - req_206bc4e961b41929252461477f1fd092
     http_version: HTTP/1.1
     status_code: 200
 version: 1

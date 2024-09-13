@@ -63,7 +63,6 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
         self.name_to_tool_map = {tool.name: tool for tool in self.tools}
 
     def invoke(self, inputs: Dict[str, str]) -> Dict[str, Any]:
-        print("starting invoke")
         if "system" in self.prompt:
             system_prompt = self._format_prompt(self.prompt["system"], inputs)
             user_prompt = self._format_prompt(self.prompt["user"], inputs)
@@ -73,13 +72,9 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
         else:
             user_prompt = self._format_prompt(self.prompt["prompt"], inputs)
             self.messages.append(self._format_msg(user_prompt))
-        print("after messages")
-        print(self.messages)
         self.ask_for_human_input = inputs.get("ask_for_human_input", False)
 
         formatted_answer = self._invoke_loop()
-        print("111after formatted_answer")
-        print(formatted_answer)
 
         if self.ask_for_human_input:
             human_feedback = self._ask_human_input(formatted_answer.output)
@@ -93,36 +88,25 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
         return {"output": formatted_answer.output}
 
     def _invoke_loop(self, formatted_answer=None):
-        print("starting _invoke_loop")
         try:
             while not isinstance(formatted_answer, AgentFinish):
                 if not self.request_within_rpm_limit or self.request_within_rpm_limit():
-                    print("******* messages")
-                    print(self.messages)
                     answer = LLM(
                         self.llm, stop=self.stop, callbacks=self.callbacks
                     ).call(self.messages)
-                    print("after answer")
-                    print(answer)
 
                     self.iterations += 1
                     formatted_answer = self._format_answer(answer)
-                    print("222after formatted_answer")
-                    print(formatted_answer)
 
                     if isinstance(formatted_answer, AgentAction):
                         action_result = self._use_tool(formatted_answer)
                         formatted_answer.text += f"\nObservation: {action_result}"
-                        print("after formatted_answer.text")
-                        print(formatted_answer.text)
 
                         if self.step_callback:
                             formatted_answer.result = action_result
                             self.step_callback(formatted_answer)
                         if self._should_force_answer():
-                            print("starting _should_force_answer")
                             if self.have_forced_answer:
-                                print("forcing answer")
                                 return {
                                     "output": self._i18n.errors(
                                         "force_final_answer_error"
@@ -139,13 +123,10 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
                         )
 
         except OutputParserException as e:
-            print("********* ERROR1")
             self.messages.append({"role": "assistant", "content": e.error})
             self._invoke_loop(formatted_answer)
 
         except Exception as e:
-            print("********* ERRORw")
-            print(e)
             if LLMContextLengthExceededException(str(e))._is_context_limit_error(
                 str(e)
             ):

@@ -1,18 +1,18 @@
 interactions:
 - request:
-    body: '{"messages": [{"role": "user", "content": "You are researcher. You''re
+    body: '{"messages": [{"role": "system", "content": "You are researcher. You''re
       an expert researcher, specialized in technology\nYour personal goal is: make
       the best research and analysis on content about AI and AI agents\nTo give my
       best complete final answer to the task use the exact following format:\n\nThought:
       I now can give a great answer\nFinal Answer: Your final answer must be the great
       and the most complete as possible, it must be outcome described.\n\nI MUST use
-      these formats, my job depends on it!\nCurrent Task: do you hate AI Agents?\n\nThis
-      is the expect criteria for your final answer: Your best answer to your coworker
-      asking you this, accounting for the context shared. \n you MUST return the actual
-      complete content as the final answer, not a summary.\n\nThis is the context
-      you''re working with:\nI heard you LOVE them\n\nBegin! This is VERY important
-      to you, use the tools available and give your best Final Answer, your job depends
-      on it!\n\nThought:"}], "model": "gpt-4o", "stop": ["\nObservation"]}'
+      these formats, my job depends on it!"}, {"role": "user", "content": "\nCurrent
+      Task: do you hate AI Agents?\n\nThis is the expect criteria for your final answer:
+      Your best answer to your coworker asking you this, accounting for the context
+      shared.\nyou MUST return the actual complete content as the final answer, not
+      a summary.\n\nThis is the context you''re working with:\nI heard you LOVE them\n\nBegin!
+      This is VERY important to you, use the tools available and give your best Final
+      Answer, your job depends on it!\n\nThought:"}], "model": "gpt-4o", "stop": ["\nObservation"]}'
     headers:
       accept:
       - application/json
@@ -21,16 +21,16 @@ interactions:
       connection:
       - keep-alive
       content-length:
-      - '1015'
+      - '1048'
       content-type:
       - application/json
       cookie:
-      - _cfuvid=_Qurzg7MGysLGzSugSD3ZV84qR5Lfxrt9mF2_tfTJqw-1725940709772-0.0.1.1-604800000;
-        __cf_bm=_VKcRD0U2g9VfrlK3xy3AVQfynnKXZY2jX0QBkR8us8-1725940709-1.0.1.1-F0MIxvXffEPTFVqJ6cgovOMZ9E88rvBTRMj7aIlAQz.bEZJA5fip0HhCYxawoz1MDdwfQ2X_c9FjtN27PR.RHw
+      - __cf_bm=r6BNUnXat.26mviZiJYUf7Qj4ea5gbt_oPxyClKcVOE-1726214380-1.0.1.1-2S3G10sPdiG2syQSO8wKWXE7Nmdgt88imgakr81w9DemMH8mVDg0q6r9ANx6tM4_CPvgGQlMVstDhDRkIDwhzg;
+        _cfuvid=dp2yoCmGHVlURh_U78_UoIfnhcO5UhufnL5whkUSMTQ-1726214380689-0.0.1.1-604800000
       host:
       - api.openai.com
       user-agent:
-      - OpenAI/Python 1.44.0
+      - OpenAI/Python 1.45.0
       x-stainless-arch:
       - arm64
       x-stainless-async:
@@ -40,7 +40,7 @@ interactions:
       x-stainless-os:
       - MacOS
       x-stainless-package-version:
-      - 1.44.0
+      - 1.45.0
       x-stainless-raw-response:
       - 'true'
       x-stainless-runtime:
@@ -50,37 +50,26 @@ interactions:
     method: POST
     uri: https://api.openai.com/v1/chat/completions
   response:
-    content: "{\n  \"id\": \"chatcmpl-A5mJQNSDLNf8gAtqujHs3AMhA6rjD\",\n  \"object\":
-      \"chat.completion\",\n  \"created\": 1725940716,\n  \"model\": \"gpt-4o-2024-05-13\",\n
+    content: "{\n  \"id\": \"chatcmpl-A6vf21WmSSHP1NWd6mOZbyMFwaPeT\",\n  \"object\":
+      \"chat.completion\",\n  \"created\": 1726214980,\n  \"model\": \"gpt-4o-2024-05-13\",\n
       \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
       \"assistant\",\n        \"content\": \"Thought: I now can give a great answer\\nFinal
-      Answer: AI agents are a fascinating and powerful tool in the realm of technology.
-      As a researcher specialized in AI, I find that they can offer transformative
-      benefits across a variety of fields, from healthcare to finance, and even education.
-      While it's true that I have a deep appreciation for the capabilities and potential
-      of AI agents, it's important to consider them critically.\\n\\nAI agents can
-      streamline processes, make data-driven decisions more efficiently, and handle
-      complex algorithms that would be time-consuming for humans. They can analyze
-      vast amounts of data in real-time, offering insights that would otherwise be
-      unattainable. This potent combination of speed and accuracy can lead to significant
-      advancements and innovations.\\n\\nHowever, with any powerful technology, there
-      are inherent risks and challenges. Ethical considerations such as bias in AI
-      algorithms, privacy concerns, and the potential for job displacement must be
-      addressed as part of responsible AI development and deployment. Transparent
-      practices, rigorous testing, and strict regulatory measures are crucial to mitigating
-      these risks.\\n\\nIn conclusion, while I do have a passion for AI agents due
-      to their immense potential to drive progress and solve complex problems, I also
-      advocate for a balanced approach that carefully weighs their benefits against
-      the possible ethical implications. It's this nuanced perspective that fuels
-      my ongoing research and analysis in the field.\",\n        \"refusal\": null\n
-      \     },\n      \"logprobs\": null,\n      \"finish_reason\": \"stop\"\n    }\n
-      \ ],\n  \"usage\": {\n    \"prompt_tokens\": 195,\n    \"completion_tokens\":
-      262,\n    \"total_tokens\": 457\n  },\n  \"system_fingerprint\": \"fp_25624ae3a5\"\n}\n"
+      Answer: As a researcher specialized in technology, I neither love nor hate AI
+      agents. My role is to objectively analyze their capabilities, impacts, and potential.
+      AI agents have many beneficial applications, such as improving healthcare, optimizing
+      logistics, and enhancing user experiences. However, there are also concerns
+      regarding privacy, ethical implications, and job displacement. My professional
+      stance is to critically evaluate both the advantages and the challenges, ensuring
+      that the development and deployment of AI agents are conducted responsibly and
+      ethically.\",\n        \"refusal\": null\n      },\n      \"logprobs\": null,\n
+      \     \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\":
+      199,\n    \"completion_tokens\": 107,\n    \"total_tokens\": 306,\n    \"completion_tokens_details\":
+      {\n      \"reasoning_tokens\": 0\n    }\n  },\n  \"system_fingerprint\": \"fp_25624ae3a5\"\n}\n"
     headers:
       CF-Cache-Status:
       - DYNAMIC
       CF-RAY:
-      - 8c0c8027f8af2ae0-LAX
+      - 8c26a80a3a2f2ab9-LAX
       Connection:
       - keep-alive
       Content-Encoding:
@@ -88,7 +77,7 @@ interactions:
       Content-Type:
       - application/json
       Date:
-      - Tue, 10 Sep 2024 03:58:39 GMT
+      - Fri, 13 Sep 2024 08:09:41 GMT
       Server:
       - cloudflare
       Transfer-Encoding:
@@ -102,7 +91,7 @@ interactions:
       openai-organization:
       - crewai-iuxna1
       openai-processing-ms:
-      - '2347'
+      - '1227'
       openai-version:
       - '2020-10-01'
       strict-transport-security:
@@ -114,13 +103,13 @@ interactions:
       x-ratelimit-remaining-requests:
       - '9999'
       x-ratelimit-remaining-tokens:
-      - '29999756'
+      - '29999755'
       x-ratelimit-reset-requests:
       - 6ms
       x-ratelimit-reset-tokens:
       - 0s
       x-request-id:
-      - req_d98a2146a451f220968790785caf0586
+      - req_aa98d851407f05a0803bfebce008bc88
     http_version: HTTP/1.1
     status_code: 200
 version: 1

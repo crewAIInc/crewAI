@@ -2,32 +2,32 @@ interactions:
 - request:
     body: !!binary |
       CoQMCiQKIgoMc2VydmljZS5uYW1lEhIKEGNyZXdBSS10ZWxlbWV0cnkS2wsKEgoQY3Jld2FpLnRl
-      bGVtZXRyeRKQAgoQ0ls2SQO304erPSmIJIh2jxIIwges8fjVoJ0qDlRhc2sgRXhlY3V0aW9uMAE5
-      EGPSvTvO8xdB4KcsiT3O8xdKLgoIY3Jld19rZXkSIgogYzk3YjVmZWI1ZDFiNjZiYjU5MDA2YWFh
-      MDFhMjljZDZKMQoHY3Jld19pZBImCiRmMzY0M2RlNS1mNDdmLTQ3NmItYTc0YS1lN2UzNGE3MTBm
-      YTJKLgoIdGFza19rZXkSIgogNjM5OTY1MTdmM2YzZjFjOTRkNmJiNjE3YWEwYjFjNGZKMQoHdGFz
-      a19pZBImCiRiMzg5NTYzZi01YTliLTRhZTQtOTQ0Yi01NjJjODlmNTUxZGV6AhgBhQEAAQAAEqAH
-      ChDOTr3Qu5FF3i6S6tSgVn+uEgiX9Y5/JB9H2yoMQ3JldyBDcmVhdGVkMAE5kDBDij3O8xdBsNdJ
-      ij3O8xdKGgoOY3Jld2FpX3ZlcnNpb24SCAoGMC41NS4yShoKDnB5dGhvbl92ZXJzaW9uEggKBjMu
+      bGVtZXRyeRKQAgoQeuBHsSBQ9QAARl08s6cneBIIdKVqMmrxBYsqDlRhc2sgRXhlY3V0aW9uMAE5
+      2O94FsO/9BdBQMwrc8S/9BdKLgoIY3Jld19rZXkSIgogYzk3YjVmZWI1ZDFiNjZiYjU5MDA2YWFh
+      MDFhMjljZDZKMQoHY3Jld19pZBImCiRmZmVlNDlhMi1hNjU4LTQzYjItYjUyMS03YmRjNWE5MzI0
+      ZGZKLgoIdGFza19rZXkSIgogNjM5OTY1MTdmM2YzZjFjOTRkNmJiNjE3YWEwYjFjNGZKMQoHdGFz
+      a19pZBImCiQ1NjI5MGRhZi02NmIwLTQ2NTQtYmY5Ni0xZWZmNTI1ODUxMTZ6AhgBhQEAAQAAEqAH
+      ChDjMbz+xVz7CqkzMvlY2ehjEggHj3OhMOKYESoMQ3JldyBDcmVhdGVkMAE5yHohdMS/9BdByGIl
+      dMS/9BdKGgoOY3Jld2FpX3ZlcnNpb24SCAoGMC41Ni4wShoKDnB5dGhvbl92ZXJzaW9uEggKBjMu
       MTEuN0ouCghjcmV3X2tleRIiCiBjOTdiNWZlYjVkMWI2NmJiNTkwMDZhYWEwMWEyOWNkNkoxCgdj
-      cmV3X2lkEiYKJDAzNGNmZWVhLTM1ZmMtNDkzYS1iMTJjLWUzOTk0ZWM2ZTRjNkocCgxjcmV3X3By
+      cmV3X2lkEiYKJDcwMGJmNzYzLWYxYzUtNGJkMS04ZDcxLTYwNzQ1ZmU2Nzc2YkocCgxjcmV3X3By
       b2Nlc3MSDAoKc2VxdWVudGlhbEoRCgtjcmV3X21lbW9yeRICEABKGgoUY3Jld19udW1iZXJfb2Zf
       dGFza3MSAhgBShsKFWNyZXdfbnVtYmVyX29mX2FnZW50cxICGAFKzgIKC2NyZXdfYWdlbnRzEr4C
-      CrsCW3sia2V5IjogIjA3ZDk5YjYzMDQxMWQzNWZkOTA0N2E1MzJkNTNkZGE3IiwgImlkIjogIjdl
-      MDk2ZjJhLWM5MzQtNDE0Ni05YjQ5LWQxMTQyODY5YTQzNyIsICJyb2xlIjogIlJlc2VhcmNoZXIi
+      CrsCW3sia2V5IjogIjA3ZDk5YjYzMDQxMWQzNWZkOTA0N2E1MzJkNTNkZGE3IiwgImlkIjogIjYw
+      OWUzMjY5LTM3ZGQtNGY1ZS04MjE3LTBjZmFhNDUyOWM4MyIsICJyb2xlIjogIlJlc2VhcmNoZXIi
       LCAidmVyYm9zZT8iOiBmYWxzZSwgIm1heF9pdGVyIjogMjUsICJtYXhfcnBtIjogbnVsbCwgImZ1
       bmN0aW9uX2NhbGxpbmdfbGxtIjogbnVsbCwgImxsbSI6ICJncHQtNG8iLCAiZGVsZWdhdGlvbl9l
       bmFibGVkPyI6IGZhbHNlLCAiYWxsb3dfY29kZV9leGVjdXRpb24/IjogZmFsc2UsICJtYXhfcmV0
       cnlfbGltaXQiOiAyLCAidG9vbHNfbmFtZXMiOiBbXX1dSv8BCgpjcmV3X3Rhc2tzEvABCu0BW3si
-      a2V5IjogIjYzOTk2NTE3ZjNmM2YxYzk0ZDZiYjYxN2FhMGIxYzRmIiwgImlkIjogIjA3YmRiYmQ5
-      LTVkNDEtNGRhZC1iN2NlLTg5OThmN2UyNDUyZSIsICJhc3luY19leGVjdXRpb24/IjogZmFsc2Us
+      a2V5IjogIjYzOTk2NTE3ZjNmM2YxYzk0ZDZiYjYxN2FhMGIxYzRmIiwgImlkIjogIjFlYmY0ZmUy
+      LTRjZjktNDE3ZS05YWZjLWYzZmZmNjExYTA2NyIsICJhc3luY19leGVjdXRpb24/IjogZmFsc2Us
       ICJodW1hbl9pbnB1dD8iOiBmYWxzZSwgImFnZW50X3JvbGUiOiAiUmVzZWFyY2hlciIsICJhZ2Vu
       dF9rZXkiOiAiMDdkOTliNjMwNDExZDM1ZmQ5MDQ3YTUzMmQ1M2RkYTciLCAidG9vbHNfbmFtZXMi
-      OiBbXX1degIYAYUBAAEAABKOAgoQZAPppldt0bi8ab/v/G1cdxIIFYveYdEGAjAqDFRhc2sgQ3Jl
-      YXRlZDABOcjkW4o9zvMXQfhZXIo9zvMXSi4KCGNyZXdfa2V5EiIKIGM5N2I1ZmViNWQxYjY2YmI1
-      OTAwNmFhYTAxYTI5Y2Q2SjEKB2NyZXdfaWQSJgokMDM0Y2ZlZWEtMzVmYy00OTNhLWIxMmMtZTM5
-      OTRlYzZlNGM2Si4KCHRhc2tfa2V5EiIKIDYzOTk2NTE3ZjNmM2YxYzk0ZDZiYjYxN2FhMGIxYzRm
-      SjEKB3Rhc2tfaWQSJgokMDdiZGJiZDktNWQ0MS00ZGFkLWI3Y2UtODk5OGY3ZTI0NTJlegIYAYUB
+      OiBbXX1degIYAYUBAAEAABKOAgoQObHpHMrnezkL2FQcOL3O9hIIJLt3z1lUlikqDFRhc2sgQ3Jl
+      YXRlZDABOXhoQnTEv/QXQThDQ3TEv/QXSi4KCGNyZXdfa2V5EiIKIGM5N2I1ZmViNWQxYjY2YmI1
+      OTAwNmFhYTAxYTI5Y2Q2SjEKB2NyZXdfaWQSJgokNzAwYmY3NjMtZjFjNS00YmQxLThkNzEtNjA3
+      NDVmZTY3NzZiSi4KCHRhc2tfa2V5EiIKIDYzOTk2NTE3ZjNmM2YxYzk0ZDZiYjYxN2FhMGIxYzRm
+      SjEKB3Rhc2tfaWQSJgokMWViZjRmZTItNGNmOS00MTdlLTlhZmMtZjNmZmY2MTFhMDY3egIYAYUB
       AAEAAA==
     headers:
       Accept:
@@ -53,23 +53,23 @@ interactions:
       Content-Type:
       - application/x-protobuf
       Date:
-      - Tue, 10 Sep 2024 06:30:49 GMT
+      - Fri, 13 Sep 2024 08:16:51 GMT
     status:
       code: 200
       message: OK
 - request:
-    body: '{"messages": [{"role": "user", "content": "You are Researcher. You''re
+    body: '{"messages": [{"role": "system", "content": "You are Researcher. You''re
       an expert in research and you love to learn new things.\nYour personal goal
       is: You research about math.\nTo give my best complete final answer to the task
       use the exact following format:\n\nThought: I now can give a great answer\nFinal
       Answer: Your final answer must be the great and the most complete as possible,
       it must be outcome described.\n\nI MUST use these formats, my job depends on
-      it!\nCurrent Task: Research a topic to teach a kid aged 6 about math.\n\nThis
-      is the expect criteria for your final answer: A topic, explanation, angle, and
-      examples. \n you MUST return the actual complete content as the final answer,
-      not a summary.\n\nBegin! This is VERY important to you, use the tools available
-      and give your best Final Answer, your job depends on it!\n\nThought:"}], "model":
-      "gpt-4o", "stop": ["\nObservation"]}'
+      it!"}, {"role": "user", "content": "\nCurrent Task: Research a topic to teach
+      a kid aged 6 about math.\n\nThis is the expect criteria for your final answer:
+      A topic, explanation, angle, and examples.\nyou MUST return the actual complete
+      content as the final answer, not a summary.\n\nBegin! This is VERY important
+      to you, use the tools available and give your best Final Answer, your job depends
+      on it!\n\nThought:"}], "model": "gpt-4o", "stop": ["\nObservation"]}'
     headers:
       accept:
       - application/json
@@ -78,16 +78,16 @@ interactions:
       connection:
       - keep-alive
       content-length:
-      - '896'
+      - '929'
       content-type:
       - application/json
       cookie:
-      - _cfuvid=8r8yFLG2b7e3n6pklgpsT05MHRvfdePz1ckAFvRQY8E-1725949790252-0.0.1.1-604800000;
-        __cf_bm=fuuc.ZDO3Y9B7nXE_8fBn7ykDAvAaK1VdxjZw0MTtsE-1725949790-1.0.1.1-pAJ7BWJMj1j3gS2ySR6xSBO7uFrjcB6ehFra4QVq14JqaiG4VDIjDO1C3WueKGRnSALSkpLQyJcJ2YVd_pXglQ
+      - __cf_bm=pgsskMPipgeSB6HhnkjwcOEfengIvt0p9whKNmTJVLs-1726215280-1.0.1.1-Gtqb.nO1U.cHTnd9mR9sEA5tpVo1.pexRrxqXOkn.6Mzja8mLG1URJsOLTfjMAAYpWaUQe4Rjmnr6lqQk5hAxQ;
+        _cfuvid=dp2yoCmGHVlURh_U78_UoIfnhcO5UhufnL5whkUSMTQ-1726214380689-0.0.1.1-604800000
       host:
       - api.openai.com
       user-agent:
-      - OpenAI/Python 1.44.0
+      - OpenAI/Python 1.45.0
       x-stainless-arch:
       - arm64
       x-stainless-async:
@@ -97,7 +97,7 @@ interactions:
       x-stainless-os:
       - MacOS
       x-stainless-package-version:
-      - 1.44.0
+      - 1.45.0
       x-stainless-raw-response:
       - 'true'
       x-stainless-runtime:
@@ -107,42 +107,52 @@ interactions:
     method: POST
     uri: https://api.openai.com/v1/chat/completions
   response:
-    content: "{\n  \"id\": \"chatcmpl-A5ogg9cwsGe1Q6VAotj2obJsgsnut\",\n  \"object\":
-      \"chat.completion\",\n  \"created\": 1725949846,\n  \"model\": \"gpt-4o-2024-05-13\",\n
+    content: "{\n  \"id\": \"chatcmpl-A6vlxNAJmZbUL1nfjZkS0k7GXlQT5\",\n  \"object\":
+      \"chat.completion\",\n  \"created\": 1726215409,\n  \"model\": \"gpt-4o-2024-05-13\",\n
       \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
-      \"assistant\",\n        \"content\": \"Thought: I now can give a great answer\\nFinal
-      Answer: \\n\\n**Topic: Basic Addition and Subtraction**\\n\\n**Explanation:**\\nAddition
-      and subtraction are the two most fundamental concepts in math. Addition is when
-      you put things together, while subtraction is when you take things away. If
-      you can learn these concepts, you'll have a great foundation for other math
-      skills!\\n\\n**Angle:**\\nWe'll use a fun story with toys to explain how addition
-      and subtraction work. Kids love stories and toys, so this angle helps make learning
-      math both relatable and enjoyable.\\n\\n**Examples:**\\nLet's start with addition.\\n\\n**Addition:**\\n\\n\\\"Imagine
-      you have a collection of toy cars. You have 3 toy cars, and your friend gives
-      you 2 more toy cars. How many toy cars do you have now?\\\"\\n\\n1. Start with
-      the 3 toy cars you already have.\\n\\n \U0001F3CE\uFE0F \U0001F3CE\uFE0F \U0001F3CE\uFE0F\\n\\n2.
-      Now add the 2 toy cars your friend gave you.\\n\\n \U0001F3CE\uFE0F \U0001F3CE\uFE0F
-      \ + \U0001F3CE\uFE0F \U0001F3CE\uFE0F = \U0001F3CE\uFE0F \U0001F3CE\uFE0F \U0001F3CE\uFE0F
-      \U0001F3CE\uFE0F \U0001F3CE\uFE0F\\n\\n3. Count all the toy cars together:\\n\\n1,
-      2, 3, 4, 5 \\n\\n**So, 3 + 2 = 5. You have 5 toy cars now!**\\n\\nNow, let\u2019s
-      talk about subtraction.\\n\\n**Subtraction:**\\n\\n\\\"Imagine you have 5 pieces
-      of candy. You eat 2 pieces. How many pieces of candy do you have left?\\\"\\n\\n1.
-      Start with the 5 pieces of candy you have.\\n\\n \U0001F36C \U0001F36C \U0001F36C
-      \U0001F36C \U0001F36C\\n\\n2. Now take away (subtract) the 2 pieces you ate.\\n\\n\U0001F36C
-      \U0001F36C \U0001F36C \U0001F36C \U0001F36C  - \U0001F36C \U0001F36C  =  \U0001F36C
-      \U0001F36C \U0001F36C\\n\\n3. Count the remaining pieces of the candy:\\n\\n1,
-      2, 3\\n\\n**So, 5 - 2 = 3. You have 3 pieces of candy left!**\\n\\n---\\n\\nBy
-      using toy cars and candy in these examples, addition and subtraction become
-      easy to understand and fun to learn. You can even use real toys and candy at
-      home to practice more!\",\n        \"refusal\": null\n      },\n      \"logprobs\":
-      null,\n      \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\":
-      177,\n    \"completion_tokens\": 465,\n    \"total_tokens\": 642\n  },\n  \"system_fingerprint\":
-      \"fp_25624ae3a5\"\n}\n"
+      \"assistant\",\n        \"content\": \"I now can give a great answer\\n\\nFinal
+      Answer: \\n\\n**Topic:** Introduction to Addition\\n\\n**Explanation:** \\n\\nAddition
+      is one of the basic operations in mathematics that we use every day. It involves
+      putting together two or more numbers to find out how many things there are in
+      total. \\n\\n**Angle:** \\n\\nTo make this concept fun and engaging for a 6-year-old,
+      we'll use a playful, story-like approach that involves things they are familiar
+      with, such as toys, candies, or fruits.\\n\\n**Examples:**\\n\\n1. **Using Toys:**\\n\\n
+      \  Imagine you have a toy box. Inside, you first put 3 toy cars and then add
+      2 toy trucks. How many toys do you have in total now?\\n\\n   - We start with
+      3 toy cars:\\n     ```\\n     \U0001F697 \U0001F697 \U0001F697\\n     ```\\n
+      \  - Now, we add 2 toy trucks to the box:\\n     ```\\n     \U0001F697 \U0001F697
+      \U0001F697 \U0001F69B \U0001F69B\\n     ```\\n\\n   So, 3 cars plus 2 trucks
+      equals 5 toys in total. This is written as:\\n   ```\\n   3 + 2 = 5\\n   ```\\n\\n2.
+      **Using Candies:**\\n\\n   Let's say you have 4 candies, and your friend gives
+      you 3 more. How many candies do you have now?\\n\\n   - You start with 4 candies:\\n
+      \    ```\\n     \U0001F36C \U0001F36C \U0001F36C \U0001F36C\\n     ```\\n   -
+      Then, your friend gives you 3 more:\\n     ```\\n     \U0001F36C \U0001F36C
+      \U0001F36C \U0001F36C \U0001F36C \U0001F36C \U0001F36C\\n     ```\\n\\n   So,
+      4 candies plus 3 more candies equals 7 candies in total. This is written as:\\n
+      \  ```\\n   4 + 3 = 7\\n   ```\\n\\n3. **Using Fruits:**\\n\\n   Imagine you
+      have an apple tree with 5 apples on it, and you pick 2 more apples from another
+      tree. How many apples do you have now?\\n\\n   - You start with 5 apples:\\n
+      \    ```\\n     \U0001F34E \U0001F34E \U0001F34E \U0001F34E \U0001F34E\\n     ```\\n
+      \  - Then, you add the 2 apples you picked:\\n     ```\\n     \U0001F34E \U0001F34E
+      \U0001F34E \U0001F34E \U0001F34E \U0001F34E \U0001F34E\\n     ```\\n\\n   So,
+      5 apples plus 2 apples equals 7 apples in total. This is written as:\\n   ```\\n
+      \  5 + 2 = 7\\n   ```\\n\\n**Fun Activity to Reinforce Learning:**\\n\\nTry
+      playing a simple addition game with your child. You can use objects like blocks
+      or small toys. Ask your child to add a certain number of objects and then count
+      how many there are in total. For example:\\n\\n- Start with 1 block.\\n- Add
+      2 more blocks.\\n- Ask your child to count all the blocks together.\\n\\nThis
+      hands-on activity will help them understand addition in a tangible way.\\n\\nRemember,
+      always encourage your child and make the learning experience fun and interactive.
+      Celebrating small successes can boost their confidence and interest in learning
+      math.\",\n        \"refusal\": null\n      },\n      \"logprobs\": null,\n      \"finish_reason\":
+      \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 181,\n    \"completion_tokens\":
+      621,\n    \"total_tokens\": 802,\n    \"completion_tokens_details\": {\n      \"reasoning_tokens\":
+      0\n    }\n  },\n  \"system_fingerprint\": \"fp_25624ae3a5\"\n}\n"
     headers:
       CF-Cache-Status:
       - DYNAMIC
       CF-RAY:
-      - 8c0d5f09ee45cf35-SJC
+      - 8c26b2861b262ab9-LAX
       Connection:
       - keep-alive
       Content-Encoding:
@@ -150,7 +160,7 @@ interactions:
       Content-Type:
       - application/json
       Date:
-      - Tue, 10 Sep 2024 06:30:50 GMT
+      - Fri, 13 Sep 2024 08:16:56 GMT
       Server:
       - cloudflare
       Transfer-Encoding:
@@ -164,7 +174,7 @@ interactions:
       openai-organization:
       - crewai-iuxna1
       openai-processing-ms:
-      - '4585'
+      - '6972'
       openai-version:
       - '2020-10-01'
       strict-transport-security:
@@ -176,13 +186,13 @@ interactions:
       x-ratelimit-remaining-requests:
       - '9999'
       x-ratelimit-remaining-tokens:
-      - '29999786'
+      - '29999785'
       x-ratelimit-reset-requests:
       - 6ms
       x-ratelimit-reset-tokens:
       - 0s
       x-request-id:
-      - req_32c8e5c780fa3f2d8acea4c146434cb5
+      - req_33300fcc4fa4faa0c79b2d42739badce
     http_version: HTTP/1.1
     status_code: 200
 version: 1

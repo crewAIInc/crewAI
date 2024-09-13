@@ -1,6 +1,6 @@
 interactions:
 - request:
-    body: '{"messages": [{"role": "user", "content": "You are Researcher. You''re
+    body: '{"messages": [{"role": "system", "content": "You are Researcher. You''re
       an expert researcher, specialized in technology, software engineering, AI and
       startups. You work as a freelancer and is now working on doing research and
       analysis for a new customer.\nYour personal goal is: Make the best research
@@ -8,11 +8,11 @@ interactions:
       answer to the task use the exact following format:\n\nThought: I now can give
       a great answer\nFinal Answer: Your final answer must be the great and the most
       complete as possible, it must be outcome described.\n\nI MUST use these formats,
-      my job depends on it!\nCurrent Task: Say Hi\n\nThis is the expect criteria for
-      your final answer: Hi \n you MUST return the actual complete content as the
-      final answer, not a summary.\n\nBegin! This is VERY important to you, use the
-      tools available and give your best Final Answer, your job depends on it!\n\nThought:"}],
-      "model": "gpt-4o", "stop": ["\nObservation"]}'
+      my job depends on it!"}, {"role": "user", "content": "\nCurrent Task: Say Hi\n\nThis
+      is the expect criteria for your final answer: Hi\nyou MUST return the actual
+      complete content as the final answer, not a summary.\n\nBegin! This is VERY
+      important to you, use the tools available and give your best Final Answer, your
+      job depends on it!\n\nThought:"}], "model": "gpt-4o", "stop": ["\nObservation"]}'
     headers:
       accept:
       - application/json
@@ -21,16 +21,16 @@ interactions:
       connection:
       - keep-alive
       content-length:
-      - '984'
+      - '1017'
       content-type:
       - application/json
       cookie:
-      - _cfuvid=8r8yFLG2b7e3n6pklgpsT05MHRvfdePz1ckAFvRQY8E-1725949790252-0.0.1.1-604800000;
-        __cf_bm=fuuc.ZDO3Y9B7nXE_8fBn7ykDAvAaK1VdxjZw0MTtsE-1725949790-1.0.1.1-pAJ7BWJMj1j3gS2ySR6xSBO7uFrjcB6ehFra4QVq14JqaiG4VDIjDO1C3WueKGRnSALSkpLQyJcJ2YVd_pXglQ
+      - __cf_bm=pgsskMPipgeSB6HhnkjwcOEfengIvt0p9whKNmTJVLs-1726215280-1.0.1.1-Gtqb.nO1U.cHTnd9mR9sEA5tpVo1.pexRrxqXOkn.6Mzja8mLG1URJsOLTfjMAAYpWaUQe4Rjmnr6lqQk5hAxQ;
+        _cfuvid=dp2yoCmGHVlURh_U78_UoIfnhcO5UhufnL5whkUSMTQ-1726214380689-0.0.1.1-604800000
       host:
       - api.openai.com
       user-agent:
-      - OpenAI/Python 1.44.0
+      - OpenAI/Python 1.45.0
       x-stainless-arch:
       - arm64
       x-stainless-async:
@@ -40,7 +40,7 @@ interactions:
       x-stainless-os:
       - MacOS
       x-stainless-package-version:
-      - 1.44.0
+      - 1.45.0
       x-stainless-raw-response:
       - 'true'
       x-stainless-runtime:
@@ -50,19 +50,19 @@ interactions:
     method: POST
     uri: https://api.openai.com/v1/chat/completions
   response:
-    content: "{\n  \"id\": \"chatcmpl-A5ogo5sIsokh4ssXwTXE4lfWf8ia9\",\n  \"object\":
-      \"chat.completion\",\n  \"created\": 1725949854,\n  \"model\": \"gpt-4o-2024-05-13\",\n
+    content: "{\n  \"id\": \"chatcmpl-A6vmEX5buRGm5rx8zIsKm9JCdK5bd\",\n  \"object\":
+      \"chat.completion\",\n  \"created\": 1726215426,\n  \"model\": \"gpt-4o-2024-05-13\",\n
       \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
-      \"assistant\",\n        \"content\": \"I now can give a great answer.\\nFinal
+      \"assistant\",\n        \"content\": \"Thought: I now can give a great answer\\nFinal
       Answer: Hi\",\n        \"refusal\": null\n      },\n      \"logprobs\": null,\n
       \     \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\":
-      189,\n    \"completion_tokens\": 12,\n    \"total_tokens\": 201\n  },\n  \"system_fingerprint\":
-      \"fp_25624ae3a5\"\n}\n"
+      194,\n    \"completion_tokens\": 14,\n    \"total_tokens\": 208,\n    \"completion_tokens_details\":
+      {\n      \"reasoning_tokens\": 0\n    }\n  },\n  \"system_fingerprint\": \"fp_25624ae3a5\"\n}\n"
     headers:
       CF-Cache-Status:
       - DYNAMIC
       CF-RAY:
-      - 8c0d5f3deb04cf35-SJC
+      - 8c26b2ec58942ab9-LAX
       Connection:
       - keep-alive
       Content-Encoding:
@@ -70,7 +70,7 @@ interactions:
       Content-Type:
       - application/json
       Date:
-      - Tue, 10 Sep 2024 06:30:54 GMT
+      - Fri, 13 Sep 2024 08:17:06 GMT
       Server:
       - cloudflare
       Transfer-Encoding:
@@ -84,7 +84,7 @@ interactions:
       openai-organization:
       - crewai-iuxna1
       openai-processing-ms:
-      - '283'
+      - '381'
       openai-version:
       - '2020-10-01'
       strict-transport-security:
@@ -96,32 +96,33 @@ interactions:
       x-ratelimit-remaining-requests:
       - '9999'
       x-ratelimit-remaining-tokens:
-      - '29999764'
+      - '29999762'
       x-ratelimit-reset-requests:
       - 6ms
       x-ratelimit-reset-tokens:
       - 0s
       x-request-id:
-      - req_c80705caef46b1ac0879dd5a7d2504d0
+      - req_01821d38f049ae9be93117db5730d5d0
     http_version: HTTP/1.1
     status_code: 200
 - request:
-    body: '{"messages": [{"role": "user", "content": "You are Senior Writer. You''re
+    body: '{"messages": [{"role": "system", "content": "You are Senior Writer. You''re
       a senior writer, specialized in technology, software engineering, AI and startups.
       You work as a freelancer and are now working on writing content for a new customer.\nYour
       personal goal is: Write the best content about AI and AI agents.\nTo give my
       best complete final answer to the task use the exact following format:\n\nThought:
       I now can give a great answer\nFinal Answer: Your final answer must be the great
       and the most complete as possible, it must be outcome described.\n\nI MUST use
-      these formats, my job depends on it!\nCurrent Task: Come up with a list of 5
-      interesting ideas to explore for an article, then write one amazing paragraph
-      highlight for each idea that showcases how good an article about this topic
-      could be. Return the list of ideas with their paragraph and your notes.\n\nThis
-      is the expect criteria for your final answer: 5 bullet points with a paragraph
-      for each idea. \n you MUST return the actual complete content as the final answer,
-      not a summary.\n\nThis is the context you''re working with:\nHi\n\nBegin! This
-      is VERY important to you, use the tools available and give your best Final Answer,
-      your job depends on it!\n\nThought:"}], "model": "gpt-4o", "stop": ["\nObservation"]}'
+      these formats, my job depends on it!"}, {"role": "user", "content": "\nCurrent
+      Task: Come up with a list of 5 interesting ideas to explore for an article,
+      then write one amazing paragraph highlight for each idea that showcases how
+      good an article about this topic could be. Return the list of ideas with their
+      paragraph and your notes.\n\nThis is the expect criteria for your final answer:
+      5 bullet points with a paragraph for each idea.\nyou MUST return the actual
+      complete content as the final answer, not a summary.\n\nThis is the context
+      you''re working with:\nHi\n\nBegin! This is VERY important to you, use the tools
+      available and give your best Final Answer, your job depends on it!\n\nThought:"}],
+      "model": "gpt-4o", "stop": ["\nObservation"]}'
     headers:
       accept:
       - application/json
@@ -130,16 +131,16 @@ interactions:
       connection:
       - keep-alive
       content-length:
-      - '1285'
+      - '1318'
       content-type:
       - application/json
       cookie:
-      - _cfuvid=8r8yFLG2b7e3n6pklgpsT05MHRvfdePz1ckAFvRQY8E-1725949790252-0.0.1.1-604800000;
-        __cf_bm=fuuc.ZDO3Y9B7nXE_8fBn7ykDAvAaK1VdxjZw0MTtsE-1725949790-1.0.1.1-pAJ7BWJMj1j3gS2ySR6xSBO7uFrjcB6ehFra4QVq14JqaiG4VDIjDO1C3WueKGRnSALSkpLQyJcJ2YVd_pXglQ
+      - __cf_bm=pgsskMPipgeSB6HhnkjwcOEfengIvt0p9whKNmTJVLs-1726215280-1.0.1.1-Gtqb.nO1U.cHTnd9mR9sEA5tpVo1.pexRrxqXOkn.6Mzja8mLG1URJsOLTfjMAAYpWaUQe4Rjmnr6lqQk5hAxQ;
+        _cfuvid=dp2yoCmGHVlURh_U78_UoIfnhcO5UhufnL5whkUSMTQ-1726214380689-0.0.1.1-604800000
       host:
       - api.openai.com
       user-agent:
-      - OpenAI/Python 1.44.0
+      - OpenAI/Python 1.45.0
       x-stainless-arch:
       - arm64
       x-stainless-async:
@@ -149,7 +150,7 @@ interactions:
       x-stainless-os:
       - MacOS
       x-stainless-package-version:
-      - 1.44.0
+      - 1.45.0
       x-stainless-raw-response:
       - 'true'
       x-stainless-runtime:
@@ -159,61 +160,70 @@ interactions:
     method: POST
     uri: https://api.openai.com/v1/chat/completions
   response:
-    content: "{\n  \"id\": \"chatcmpl-A5ogpqWXWndvA20BCkjMOB6HaIgcN\",\n  \"object\":
-      \"chat.completion\",\n  \"created\": 1725949855,\n  \"model\": \"gpt-4o-2024-05-13\",\n
+    content: "{\n  \"id\": \"chatcmpl-A6vmF6s8cC7Gnyba4kU6lpZ7ke4dj\",\n  \"object\":
+      \"chat.completion\",\n  \"created\": 1726215427,\n  \"model\": \"gpt-4o-2024-05-13\",\n
       \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
-      \"assistant\",\n        \"content\": \"I now can give a great answer\\nFinal
-      Answer:\\n\\n1. **The Future of AI in Healthcare: Revolutionizing Diagnosis
-      and Treatment**\\n   Imagine a world where AI-driven algorithms can predict
-      illnesses before symptoms appear, ensuring early intervention and efficient
-      treatment. This article will explore the cutting-edge AI technologies transforming
-      healthcare, from personalized medicine to robotic surgeries. We'll delve into
-      real-world examples, such as AI's role in managing chronic diseases and enhancing
-      radiology through advanced image recognition. The potential to save lives and
-      reduce healthcare costs makes this a captivating and important topic for readers.\\n\\n2.
-      **AI Agents in the Workforce: Enhancing Productivity and Collaboration**\\n
-      \  As the adoption of AI in business accelerates, AI agents are becoming indispensable
-      assets within the modern workplace. This piece will highlight how AI agents
-      facilitate project management, streamline customer service, and augment decision-making
-      processes. By diving deep into case studies of companies successfully integrating
-      AI agents, we can reveal tangible benefits like increased productivity, improved
-      employee satisfaction, and better collaborative efforts. The article would emphasize
-      practical applications and inspire businesses to embrace AI technologies.\\n\\n3.
-      **Ethical Considerations of AI: Balancing Innovation and Responsibility**\\n
-      \  The rapid escalation of AI technologies brings significant ethical considerations
-      that must be addressed to prevent misuse and bias. This article will provide
-      a comprehensive analysis of the ethical dilemmas posed by AI, including data
-      privacy, algorithmic transparency, and the potential for job displacement. We'll
-      feature insights from leading ethicists and technologists on how to create responsible
-      AI, ensuring it benefits society while minimizing risks. Readers will gain a
-      nuanced understanding of the ethical landscape, fostering informed discussions
-      on AI governance.\\n\\n4. **AI Startups to Watch in 2024: Innovation at the
-      Cutting Edge**\\n   Startups are the bedrock of innovation in the AI sector,
-      often leading the charge with groundbreaking solutions. This article will focus
-      on the top AI startups to watch in 2024, spotlighting the innovative technologies
-      they're developing and the problems they're solving. We'll cover diverse industries,
-      from AI in environmental conservation to advancements in natural language processing.
-      By profiling these dynamic startups, readers will be inspired by the entrepreneurial
-      spirit and the potential for AI to drive global change.\\n\\n5. **The Role of
-      AI in Cybersecurity: Protecting the Digital Frontier**\\n   In an era where
-      cyber threats are becoming increasingly sophisticated, AI is a powerful tool
-      for enhancing cybersecurity measures. This article will examine how AI algorithms
-      detect and counteract cyber threats in real-time, fortifying network defenses
-      and safeguarding sensitive information. We'll explore success stories from companies
-      that have successfully implemented AI-driven cybersecurity solutions, demonstrating
-      reduced vulnerabilities and quicker response times. The emphasis on AI's critical
-      role in protecting digital infrastructures makes this an essential read for
-      anyone concerned with cybersecurity.\\n\\nBy focusing on these compelling and
-      varied topics, readers will be provided with in-depth insights into the transformative
-      power and challenges of AI in today's world.\",\n        \"refusal\": null\n
-      \     },\n      \"logprobs\": null,\n      \"finish_reason\": \"stop\"\n    }\n
-      \ ],\n  \"usage\": {\n    \"prompt_tokens\": 249,\n    \"completion_tokens\":
-      576,\n    \"total_tokens\": 825\n  },\n  \"system_fingerprint\": \"fp_25624ae3a5\"\n}\n"
+      \"assistant\",\n        \"content\": \"Thought: I now can give a great answer.\\nFinal
+      Answer:\\n\\n1. **How AI Agents are Revolutionizing Customer Service**\\n   AI
+      agents have the capability to transform customer service by providing round-the-clock
+      support, improving response times, and enhancing customer satisfaction. Traditional
+      customer service models often struggle to manage high volumes of inquiries efficiently.
+      AI agents, powered by advanced natural language processing and machine learning
+      algorithms, can handle multiple interactions simultaneously, offering personalized
+      and contextually relevant responses. They can also gather and analyze customer
+      data in real-time, which helps in preemptively resolving issues and ensuring
+      a seamless customer experience. With the integration of AI agents, businesses
+      can not only reduce operational costs but also elevate their customer service
+      standards to new heights.\\n\\n2. **The Role of AI in Predictive Maintenance
+      for Manufacturing**\\n   AI-driven predictive maintenance is a game-changer
+      for the manufacturing industry. This technology leverages AI algorithms to analyze
+      data collected from various sensors and predict equipment failures before they
+      happen. By identifying patterns and anomalies in the data, AI can forecast potential
+      breakdowns and schedule timely maintenance, thereby minimizing downtime and
+      extending the lifespan of machinery. The implementation of predictive maintenance
+      can lead to significant cost savings, enhanced productivity, and improved safety.
+      With AI at the helm, manufacturers can move from reactive to proactive maintenance
+      strategies, ensuring smoother operations and higher efficiency.\\n\\n3. **AI
+      Agents in Healthcare: Enhancing Diagnostics and Patient Care**\\n   The integration
+      of AI agents in healthcare holds the promise of revolutionizing diagnostics
+      and patient care. AI-powered tools can analyze complex medical data at unprecedented
+      speed and accuracy, assisting healthcare professionals in diagnosing conditions
+      earlier and more accurately. From interpreting medical imaging to predicting
+      patient outcomes based on historical data, AI agents provide invaluable support
+      that can lead to improved patient outcomes. Additionally, these agents can manage
+      administrative tasks, streamline patient management, and facilitate telemedicine
+      services, thereby allowing healthcare providers to focus more on patient care.
+      The potential of AI agents in healthcare is vast, promising a future where medical
+      practices are more efficient and patient-centric.\\n\\n4. **AI in Finance: From
+      Fraud Detection to Personalized Financial Advice**\\n   AI is steadily making
+      inroads into the finance sector, offering a myriad of benefits like enhanced
+      fraud detection and personalized financial advice. AI systems can analyze massive
+      volumes of financial transactions in real-time to detect unusual patterns indicative
+      of fraudulent activity, thus safeguarding assets and maintaining trust. On the
+      personal finance front, AI-powered tools can offer tailored financial advice
+      based on an individual\u2019s spending habits, financial goals, and market trends.
+      This not only democratizes access to high-quality financial planning but also
+      enables users to make informed decisions with greater confidence. The fusion
+      of AI with finance unlocks new opportunities for security, efficiency, and personalization
+      in managing finances.\\n\\n5. **Autonomous AI Agents in Supply Chain Management**\\n
+      \  The adoption of autonomous AI agents in supply chain management is set to
+      redefine the logistics landscape. These agents can optimize every aspect of
+      the supply chain, from inventory management to demand forecasting and route
+      optimization. By harnessing real-time data and predictive analytics, AI agents
+      can provide actionable insights that lead to cost reductions and efficiency
+      gains. For instance, they can predict stock shortages, optimize warehouse operations,
+      and streamline shipping routes to avoid delays. The ability of autonomous AI
+      agents to adapt and respond to changing conditions in real-time ensures a more
+      resilient and responsive supply chain, capable of meeting dynamic market demands
+      with precision and agility.\",\n        \"refusal\": null\n      },\n      \"logprobs\":
+      null,\n      \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\":
+      253,\n    \"completion_tokens\": 681,\n    \"total_tokens\": 934,\n    \"completion_tokens_details\":
+      {\n      \"reasoning_tokens\": 0\n    }\n  },\n  \"system_fingerprint\": \"fp_25624ae3a5\"\n}\n"
     headers:
       CF-Cache-Status:
       - DYNAMIC
       CF-RAY:
-      - 8c0d5f415d6dcf35-SJC
+      - 8c26b2f548372ab9-LAX
       Connection:
       - keep-alive
       Content-Encoding:
@@ -221,7 +231,7 @@ interactions:
       Content-Type:
       - application/json
       Date:
-      - Tue, 10 Sep 2024 06:31:01 GMT
+      - Fri, 13 Sep 2024 08:17:21 GMT
       Server:
       - cloudflare
       Transfer-Encoding:
@@ -235,7 +245,7 @@ interactions:
       openai-organization:
       - crewai-iuxna1
       openai-processing-ms:
-      - '6830'
+      - '13939'
       openai-version:
       - '2020-10-01'
       strict-transport-security:
@@ -253,7 +263,7 @@ interactions:
       x-ratelimit-reset-tokens:
       - 0s
       x-request-id:
-      - req_d9baf2fee0f41fb820c450ea7b3188bb
+      - req_643a3b7711849a42c786919b8704df54
     http_version: HTTP/1.1
     status_code: 200
 version: 1

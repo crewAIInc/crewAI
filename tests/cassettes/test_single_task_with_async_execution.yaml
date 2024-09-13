@@ -1,6 +1,6 @@
 interactions:
 - request:
-    body: '{"messages": [{"role": "user", "content": "You are Researcher. You''re
+    body: '{"messages": [{"role": "system", "content": "You are Researcher. You''re
       an expert researcher, specialized in technology, software engineering, AI and
       startups. You work as a freelancer and is now working on doing research and
       analysis for a new customer.\nYour personal goal is: Make the best research
@@ -8,13 +8,13 @@ interactions:
       answer to the task use the exact following format:\n\nThought: I now can give
       a great answer\nFinal Answer: Your final answer must be the great and the most
       complete as possible, it must be outcome described.\n\nI MUST use these formats,
-      my job depends on it!\nCurrent Task: Generate a list of 5 interesting ideas
-      to explore for an article, where each bulletpoint is under 15 words.\n\nThis
-      is the expect criteria for your final answer: Bullet point list of 5 important
-      events. No additional commentary. \n you MUST return the actual complete content
-      as the final answer, not a summary.\n\nBegin! This is VERY important to you,
-      use the tools available and give your best Final Answer, your job depends on
-      it!\n\nThought:"}], "model": "gpt-4o", "stop": ["\nObservation"]}'
+      my job depends on it!"}, {"role": "user", "content": "\nCurrent Task: Generate
+      a list of 5 interesting ideas to explore for an article, where each bulletpoint
+      is under 15 words.\n\nThis is the expect criteria for your final answer: Bullet
+      point list of 5 important events. No additional commentary.\nyou MUST return
+      the actual complete content as the final answer, not a summary.\n\nBegin! This
+      is VERY important to you, use the tools available and give your best Final Answer,
+      your job depends on it!\n\nThought:"}], "model": "gpt-4o", "stop": ["\nObservation"]}'
     headers:
       accept:
       - application/json
@@ -23,16 +23,16 @@ interactions:
       connection:
       - keep-alive
       content-length:
-      - '1149'
+      - '1182'
       content-type:
       - application/json
       cookie:
-      - _cfuvid=_Qurzg7MGysLGzSugSD3ZV84qR5Lfxrt9mF2_tfTJqw-1725940709772-0.0.1.1-604800000;
-        __cf_bm=_VKcRD0U2g9VfrlK3xy3AVQfynnKXZY2jX0QBkR8us8-1725940709-1.0.1.1-F0MIxvXffEPTFVqJ6cgovOMZ9E88rvBTRMj7aIlAQz.bEZJA5fip0HhCYxawoz1MDdwfQ2X_c9FjtN27PR.RHw
+      - __cf_bm=r6BNUnXat.26mviZiJYUf7Qj4ea5gbt_oPxyClKcVOE-1726214380-1.0.1.1-2S3G10sPdiG2syQSO8wKWXE7Nmdgt88imgakr81w9DemMH8mVDg0q6r9ANx6tM4_CPvgGQlMVstDhDRkIDwhzg;
+        _cfuvid=dp2yoCmGHVlURh_U78_UoIfnhcO5UhufnL5whkUSMTQ-1726214380689-0.0.1.1-604800000
       host:
       - api.openai.com
       user-agent:
-      - OpenAI/Python 1.44.0
+      - OpenAI/Python 1.45.0
       x-stainless-arch:
       - arm64
       x-stainless-async:
@@ -42,7 +42,7 @@ interactions:
       x-stainless-os:
       - MacOS
       x-stainless-package-version:
-      - 1.44.0
+      - 1.45.0
       x-stainless-raw-response:
       - 'true'
       x-stainless-runtime:
@@ -52,23 +52,24 @@ interactions:
     method: POST
     uri: https://api.openai.com/v1/chat/completions
   response:
-    content: "{\n  \"id\": \"chatcmpl-A5mNHjP00EuhSEOihIlTabUwpILCl\",\n  \"object\":
-      \"chat.completion\",\n  \"created\": 1725940955,\n  \"model\": \"gpt-4o-2024-05-13\",\n
+    content: "{\n  \"id\": \"chatcmpl-A6vjhgbakDE5CSmTuZteQupj6W1zL\",\n  \"object\":
+      \"chat.completion\",\n  \"created\": 1726215269,\n  \"model\": \"gpt-4o-2024-05-13\",\n
       \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
-      \"assistant\",\n        \"content\": \"I now can give a great answer.\\nFinal
-      Answer:\\n- AI agents in personalized healthcare diagnoses and treatment\\n-
-      Ethical considerations in autonomous artificial intelligence systems\\n- AI's
-      impact on autonomous cybersecurity defense mechanisms\\n- AI agents enhancing
-      personalized learning experiences in education\\n- The role of AI in sustainable
-      smart city development\",\n        \"refusal\": null\n      },\n      \"logprobs\":
-      null,\n      \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\":
-      222,\n    \"completion_tokens\": 60,\n    \"total_tokens\": 282\n  },\n  \"system_fingerprint\":
-      \"fp_25624ae3a5\"\n}\n"
+      \"assistant\",\n        \"content\": \"Thought: I now can give a great answer\\nFinal
+      Answer: \\n\\n- AI in healthcare: revolutionizing diagnostics and personalized
+      treatments.\\n- Autonomous driving: advancements and ethical considerations.\\n-
+      AI agents in customer service: improving efficiency and user experience.\\n-
+      Machine learning in financial markets: predicting trends and managing risks.\\n-
+      Natural language processing: transforming communication between humans and machines.\",\n
+      \       \"refusal\": null\n      },\n      \"logprobs\": null,\n      \"finish_reason\":
+      \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 226,\n    \"completion_tokens\":
+      73,\n    \"total_tokens\": 299,\n    \"completion_tokens_details\": {\n      \"reasoning_tokens\":
+      0\n    }\n  },\n  \"system_fingerprint\": \"fp_25624ae3a5\"\n}\n"
     headers:
       CF-Cache-Status:
       - DYNAMIC
       CF-RAY:
-      - 8c0c85fdec302ae0-LAX
+      - 8c26af197c4e2ab9-LAX
       Connection:
       - keep-alive
       Content-Encoding:
@@ -76,7 +77,7 @@ interactions:
       Content-Type:
       - application/json
       Date:
-      - Tue, 10 Sep 2024 04:02:36 GMT
+      - Fri, 13 Sep 2024 08:14:30 GMT
       Server:
       - cloudflare
       Transfer-Encoding:
@@ -90,7 +91,7 @@ interactions:
       openai-organization:
       - crewai-iuxna1
       openai-processing-ms:
-      - '787'
+      - '997'
       openai-version:
       - '2020-10-01'
       strict-transport-security:
@@ -108,7 +109,7 @@ interactions:
       x-ratelimit-reset-tokens:
       - 0s
       x-request-id:
-      - req_886e4076d9fc1c72c3197fbd5a15e106
+      - req_9101f02a815c1d22bec227144bad18c2
     http_version: HTTP/1.1
     status_code: 200
 version: 1

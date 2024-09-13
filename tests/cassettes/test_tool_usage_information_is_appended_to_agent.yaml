@@ -1,7 +1,7 @@
 interactions:
 - request:
-    body: '{"messages": [{"role": "user", "content": "You are Friendly Neighbor. You
-      are the friendly neighbor\nYour personal goal is: Make everyone feel welcome\nYou
+    body: '{"messages": [{"role": "system", "content": "You are Friendly Neighbor.
+      You are the friendly neighbor\nYour personal goal is: Make everyone feel welcome\nYou
       ONLY have access to the following tools, and should NEVER make up tools that
       are not listed here:\n\nTool Name: Decide Greetings() -> str\nTool Description:
       Decide Greetings() - Decide what is the appropriate greeting to use \nTool Arguments:
@@ -11,11 +11,12 @@ interactions:
       just a simple python dictionary, enclosed in curly braces, using \" to wrap
       keys and values.\nObservation: the result of the action\n\nOnce all necessary
       information is gathered:\n\nThought: I now know the final answer\nFinal Answer:
-      the final answer to the original input question\n\nCurrent Task: Say an appropriate
-      greeting.\n\nThis is the expect criteria for your final answer: The greeting.
-      \n you MUST return the actual complete content as the final answer, not a summary.\n\nBegin!
-      This is VERY important to you, use the tools available and give your best Final
-      Answer, your job depends on it!\n\nThought:"}], "model": "gpt-4o", "stop": ["\nObservation"]}'
+      the final answer to the original input question\n"}, {"role": "user", "content":
+      "\nCurrent Task: Say an appropriate greeting.\n\nThis is the expect criteria
+      for your final answer: The greeting.\nyou MUST return the actual complete content
+      as the final answer, not a summary.\n\nBegin! This is VERY important to you,
+      use the tools available and give your best Final Answer, your job depends on
+      it!\n\nThought:"}], "model": "gpt-4o", "stop": ["\nObservation"]}'
     headers:
       accept:
       - application/json
@@ -24,16 +25,16 @@ interactions:
       connection:
       - keep-alive
       content-length:
-      - '1292'
+      - '1325'
       content-type:
       - application/json
       cookie:
-      - __cf_bm=0urx.HTvFAks6NdKIyBgkYHokgDmu0IODHcGjveTcsc-1725908553-1.0.1.1-20xTCBCWXcEaWcP.UickTiVZDdyq2m4gXMr_o01Evhd7ISm7sDo.ZFff0JCABCHybWSxJJcDKkVFWoBYZXARBA;
-        _cfuvid=fvh4oCHffK9igNnKrZVnhUds71vh008aBFsjNmU_L.k-1725908553254-0.0.1.1-604800000
+      - __cf_bm=r6BNUnXat.26mviZiJYUf7Qj4ea5gbt_oPxyClKcVOE-1726214380-1.0.1.1-2S3G10sPdiG2syQSO8wKWXE7Nmdgt88imgakr81w9DemMH8mVDg0q6r9ANx6tM4_CPvgGQlMVstDhDRkIDwhzg;
+        _cfuvid=dp2yoCmGHVlURh_U78_UoIfnhcO5UhufnL5whkUSMTQ-1726214380689-0.0.1.1-604800000
       host:
       - api.openai.com
       user-agent:
-      - OpenAI/Python 1.44.0
+      - OpenAI/Python 1.45.0
       x-stainless-arch:
       - arm64
       x-stainless-async:
@@ -43,7 +44,7 @@ interactions:
       x-stainless-os:
       - MacOS
       x-stainless-package-version:
-      - 1.44.0
+      - 1.45.0
       x-stainless-raw-response:
       - 'true'
       x-stainless-runtime:
@@ -53,19 +54,20 @@ interactions:
     method: POST
     uri: https://api.openai.com/v1/chat/completions
   response:
-    content: "{\n  \"id\": \"chatcmpl-A5dzvAqTTB9wI56e472k24iPOG7hG\",\n  \"object\":
-      \"chat.completion\",\n  \"created\": 1725908755,\n  \"model\": \"gpt-4o-2024-05-13\",\n
+    content: "{\n  \"id\": \"chatcmpl-A6vee8YVsllW7jdvetallMJiF5302\",\n  \"object\":
+      \"chat.completion\",\n  \"created\": 1726214956,\n  \"model\": \"gpt-4o-2024-05-13\",\n
       \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
-      \"assistant\",\n        \"content\": \"Thought: I should decide on the appropriate
+      \"assistant\",\n        \"content\": \"Thought: I need to decide on the appropriate
       greeting to use.\\n\\nAction: Decide Greetings\\nAction Input: {}\",\n        \"refusal\":
       null\n      },\n      \"logprobs\": null,\n      \"finish_reason\": \"stop\"\n
-      \   }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 249,\n    \"completion_tokens\":
-      21,\n    \"total_tokens\": 270\n  },\n  \"system_fingerprint\": \"fp_25624ae3a5\"\n}\n"
+      \   }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 253,\n    \"completion_tokens\":
+      22,\n    \"total_tokens\": 275,\n    \"completion_tokens_details\": {\n      \"reasoning_tokens\":
+      0\n    }\n  },\n  \"system_fingerprint\": \"fp_25624ae3a5\"\n}\n"
     headers:
       CF-Cache-Status:
       - DYNAMIC
       CF-RAY:
-      - 8c0973d90ba17ad6-SJC
+      - 8c26a776bb0a2ab9-LAX
       Connection:
       - keep-alive
       Content-Encoding:
@@ -73,7 +75,7 @@ interactions:
       Content-Type:
       - application/json
       Date:
-      - Mon, 09 Sep 2024 19:05:55 GMT
+      - Fri, 13 Sep 2024 08:09:17 GMT
       Server:
       - cloudflare
       Transfer-Encoding:
@@ -87,7 +89,7 @@ interactions:
       openai-organization:
       - crewai-iuxna1
       openai-processing-ms:
-      - '366'
+      - '407'
       openai-version:
       - '2020-10-01'
       strict-transport-security:
@@ -99,18 +101,18 @@ interactions:
       x-ratelimit-remaining-requests:
       - '9999'
       x-ratelimit-remaining-tokens:
-      - '29999689'
+      - '29999688'
       x-ratelimit-reset-requests:
       - 6ms
       x-ratelimit-reset-tokens:
       - 0s
       x-request-id:
-      - req_ab247e2dd562132cd7ff036f7963d97a
+      - req_96ce4c333e34e29d6f0b6a6f2fbd7085
     http_version: HTTP/1.1
     status_code: 200
 - request:
-    body: '{"messages": [{"role": "user", "content": "You are Friendly Neighbor. You
-      are the friendly neighbor\nYour personal goal is: Make everyone feel welcome\nYou
+    body: '{"messages": [{"role": "system", "content": "You are Friendly Neighbor.
+      You are the friendly neighbor\nYour personal goal is: Make everyone feel welcome\nYou
       ONLY have access to the following tools, and should NEVER make up tools that
       are not listed here:\n\nTool Name: Decide Greetings() -> str\nTool Description:
       Decide Greetings() - Decide what is the appropriate greeting to use \nTool Arguments:
@@ -120,14 +122,14 @@ interactions:
       just a simple python dictionary, enclosed in curly braces, using \" to wrap
       keys and values.\nObservation: the result of the action\n\nOnce all necessary
       information is gathered:\n\nThought: I now know the final answer\nFinal Answer:
-      the final answer to the original input question\n\nCurrent Task: Say an appropriate
-      greeting.\n\nThis is the expect criteria for your final answer: The greeting.
-      \n you MUST return the actual complete content as the final answer, not a summary.\n\nBegin!
-      This is VERY important to you, use the tools available and give your best Final
-      Answer, your job depends on it!\n\nThought:"}, {"role": "assistant", "content":
-      "Thought: I should decide on the appropriate greeting to use.\n\nAction: Decide
-      Greetings\nAction Input: {}\nObservation: Howdy!"}], "model": "gpt-4o", "stop":
-      ["\nObservation"]}'
+      the final answer to the original input question\n"}, {"role": "user", "content":
+      "\nCurrent Task: Say an appropriate greeting.\n\nThis is the expect criteria
+      for your final answer: The greeting.\nyou MUST return the actual complete content
+      as the final answer, not a summary.\n\nBegin! This is VERY important to you,
+      use the tools available and give your best Final Answer, your job depends on
+      it!\n\nThought:"}, {"role": "assistant", "content": "Thought: I need to decide
+      on the appropriate greeting to use.\n\nAction: Decide Greetings\nAction Input:
+      {}\nObservation: Howdy!"}], "model": "gpt-4o", "stop": ["\nObservation"]}'
     headers:
       accept:
       - application/json
@@ -136,16 +138,16 @@ interactions:
       connection:
       - keep-alive
       content-length:
-      - '1457'
+      - '1491'
       content-type:
       - application/json
       cookie:
-      - __cf_bm=0urx.HTvFAks6NdKIyBgkYHokgDmu0IODHcGjveTcsc-1725908553-1.0.1.1-20xTCBCWXcEaWcP.UickTiVZDdyq2m4gXMr_o01Evhd7ISm7sDo.ZFff0JCABCHybWSxJJcDKkVFWoBYZXARBA;
-        _cfuvid=fvh4oCHffK9igNnKrZVnhUds71vh008aBFsjNmU_L.k-1725908553254-0.0.1.1-604800000
+      - __cf_bm=r6BNUnXat.26mviZiJYUf7Qj4ea5gbt_oPxyClKcVOE-1726214380-1.0.1.1-2S3G10sPdiG2syQSO8wKWXE7Nmdgt88imgakr81w9DemMH8mVDg0q6r9ANx6tM4_CPvgGQlMVstDhDRkIDwhzg;
+        _cfuvid=dp2yoCmGHVlURh_U78_UoIfnhcO5UhufnL5whkUSMTQ-1726214380689-0.0.1.1-604800000
       host:
       - api.openai.com
       user-agent:
-      - OpenAI/Python 1.44.0
+      - OpenAI/Python 1.45.0
       x-stainless-arch:
       - arm64
       x-stainless-async:
@@ -155,7 +157,7 @@ interactions:
       x-stainless-os:
       - MacOS
       x-stainless-package-version:
-      - 1.44.0
+      - 1.45.0
       x-stainless-raw-response:
       - 'true'
       x-stainless-runtime:
@@ -165,19 +167,19 @@ interactions:
     method: POST
     uri: https://api.openai.com/v1/chat/completions
   response:
-    content: "{\n  \"id\": \"chatcmpl-A5dzw2yCxPNE3vZsgu4xrXbQb30ZV\",\n  \"object\":
-      \"chat.completion\",\n  \"created\": 1725908756,\n  \"model\": \"gpt-4o-2024-05-13\",\n
+    content: "{\n  \"id\": \"chatcmpl-A6vegqx5dhQ0UjN0EpDkfZTMYbWir\",\n  \"object\":
+      \"chat.completion\",\n  \"created\": 1726214958,\n  \"model\": \"gpt-4o-2024-05-13\",\n
       \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
-      \"assistant\",\n        \"content\": \"Thought: I now know the final answer\\n\\nFinal
+      \"assistant\",\n        \"content\": \"Thought: I now know the final answer.\\n\\nFinal
       Answer: Howdy!\",\n        \"refusal\": null\n      },\n      \"logprobs\":
       null,\n      \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\":
-      279,\n    \"completion_tokens\": 15,\n    \"total_tokens\": 294\n  },\n  \"system_fingerprint\":
-      \"fp_25624ae3a5\"\n}\n"
+      284,\n    \"completion_tokens\": 15,\n    \"total_tokens\": 299,\n    \"completion_tokens_details\":
+      {\n      \"reasoning_tokens\": 0\n    }\n  },\n  \"system_fingerprint\": \"fp_25624ae3a5\"\n}\n"
     headers:
       CF-Cache-Status:
       - DYNAMIC
       CF-RAY:
-      - 8c0973dcaede7ad6-SJC
+      - 8c26a7804ac82ab9-LAX
       Connection:
       - keep-alive
       Content-Encoding:
@@ -185,7 +187,7 @@ interactions:
       Content-Type:
       - application/json
       Date:
-      - Mon, 09 Sep 2024 19:05:56 GMT
+      - Fri, 13 Sep 2024 08:09:18 GMT
       Server:
       - cloudflare
       Transfer-Encoding:
@@ -199,7 +201,7 @@ interactions:
       openai-organization:
       - crewai-iuxna1
       openai-processing-ms:
-      - '272'
+      - '290'
       openai-version:
       - '2020-10-01'
       strict-transport-security:
@@ -211,13 +213,13 @@ interactions:
       x-ratelimit-remaining-requests:
       - '9999'
       x-ratelimit-remaining-tokens:
-      - '29999657'
+      - '29999656'
       x-ratelimit-reset-requests:
       - 6ms
       x-ratelimit-reset-tokens:
       - 0s
       x-request-id:
-      - req_8a7681369835695b6a2bdb2c515ef03f
+      - req_dcf010a19504937f16b58f6a5ca2c8bf
     http_version: HTTP/1.1
     status_code: 200
 version: 1

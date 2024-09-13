@@ -1,6 +1,6 @@
 interactions:
 - request:
-    body: '{"messages": [{"role": "user", "content": "You are test role. test backstory\nYour
+    body: '{"messages": [{"role": "system", "content": "You are test role. test backstory\nYour
       personal goal is: test goal\nYou ONLY have access to the following tools, and
       should NEVER make up tools that are not listed here:\n\nTool Name: learn_about_AI(*args:
       Any, **kwargs: Any) -> Any\nTool Description: learn_about_AI() - Useful for
@@ -11,12 +11,13 @@ interactions:
       a simple python dictionary, enclosed in curly braces, using \" to wrap keys
       and values.\nObservation: the result of the action\n\nOnce all necessary information
       is gathered:\n\nThought: I now know the final answer\nFinal Answer: the final
-      answer to the original input question\n\nCurrent Task: Write and then review
-      an small paragraph on AI until it''s AMAZING\n\nThis is the expect criteria
-      for your final answer: The final paragraph. \n you MUST return the actual complete
-      content as the final answer, not a summary.\n\nBegin! This is VERY important
-      to you, use the tools available and give your best Final Answer, your job depends
-      on it!\n\nThought:"}], "model": "gpt-4-0125-preview", "stop": ["\nObservation"]}'
+      answer to the original input question\n"}, {"role": "user", "content": "\nCurrent
+      Task: Write and then review an small paragraph on AI until it''s AMAZING\n\nThis
+      is the expect criteria for your final answer: The final paragraph.\nyou MUST
+      return the actual complete content as the final answer, not a summary.\n\nBegin!
+      This is VERY important to you, use the tools available and give your best Final
+      Answer, your job depends on it!\n\nThought:"}], "model": "gpt-3.5-turbo-0125",
+      "stop": ["\nObservation"]}'
     headers:
       accept:
       - application/json
@@ -25,13 +26,16 @@ interactions:
       connection:
       - keep-alive
       content-length:
-      - '1355'
+      - '1388'
       content-type:
       - application/json
+      cookie:
+      - __cf_bm=r6BNUnXat.26mviZiJYUf7Qj4ea5gbt_oPxyClKcVOE-1726214380-1.0.1.1-2S3G10sPdiG2syQSO8wKWXE7Nmdgt88imgakr81w9DemMH8mVDg0q6r9ANx6tM4_CPvgGQlMVstDhDRkIDwhzg;
+        _cfuvid=dp2yoCmGHVlURh_U78_UoIfnhcO5UhufnL5whkUSMTQ-1726214380689-0.0.1.1-604800000
       host:
       - api.openai.com
       user-agent:
-      - OpenAI/Python 1.44.0
+      - OpenAI/Python 1.45.0
       x-stainless-arch:
       - arm64
       x-stainless-async:
@@ -41,7 +45,7 @@ interactions:
       x-stainless-os:
       - MacOS
       x-stainless-package-version:
-      - 1.44.0
+      - 1.45.0
       x-stainless-raw-response:
       - 'true'
       x-stainless-runtime:
@@ -51,20 +55,20 @@ interactions:
     method: POST
     uri: https://api.openai.com/v1/chat/completions
   response:
-    content: "{\n  \"id\": \"chatcmpl-A5dwdiZbRhOjopxIKQzrAwrq70S9n\",\n  \"object\":
-      \"chat.completion\",\n  \"created\": 1725908551,\n  \"model\": \"gpt-4-0125-preview\",\n
+    content: "{\n  \"id\": \"chatcmpl-A6veMHcsIuWc2cJTYdZlVhtywyc7M\",\n  \"object\":
+      \"chat.completion\",\n  \"created\": 1726214938,\n  \"model\": \"gpt-3.5-turbo-0125\",\n
       \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
-      \"assistant\",\n        \"content\": \"Thought: I should start by understanding
-      the basics and key aspects of AI to write an initial paragraph.\\nAction: learn_about_AI\\nAction
+      \"assistant\",\n        \"content\": \"I should gather information about AI
+      to write a compelling paragraph on the topic.\\n\\nAction: learn_about_AI\\nAction
       Input: {}\",\n        \"refusal\": null\n      },\n      \"logprobs\": null,\n
       \     \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\":
-      276,\n    \"completion_tokens\": 30,\n    \"total_tokens\": 306\n  },\n  \"system_fingerprint\":
-      null\n}\n"
+      280,\n    \"completion_tokens\": 25,\n    \"total_tokens\": 305,\n    \"completion_tokens_details\":
+      {\n      \"reasoning_tokens\": 0\n    }\n  },\n  \"system_fingerprint\": null\n}\n"
     headers:
       CF-Cache-Status:
       - DYNAMIC
       CF-RAY:
-      - 8c096ee02aed17e4-SJC
+      - 8c26a7017c922ab9-LAX
       Connection:
       - keep-alive
       Content-Encoding:
@@ -72,15 +76,9 @@ interactions:
       Content-Type:
       - application/json
       Date:
-      - Mon, 09 Sep 2024 19:02:33 GMT
+      - Fri, 13 Sep 2024 08:08:58 GMT
       Server:
       - cloudflare
-      Set-Cookie:
-      - __cf_bm=0urx.HTvFAks6NdKIyBgkYHokgDmu0IODHcGjveTcsc-1725908553-1.0.1.1-20xTCBCWXcEaWcP.UickTiVZDdyq2m4gXMr_o01Evhd7ISm7sDo.ZFff0JCABCHybWSxJJcDKkVFWoBYZXARBA;
-        path=/; expires=Mon, 09-Sep-24 19:32:33 GMT; domain=.api.openai.com; HttpOnly;
-        Secure; SameSite=None
-      - _cfuvid=fvh4oCHffK9igNnKrZVnhUds71vh008aBFsjNmU_L.k-1725908553254-0.0.1.1-604800000;
-        path=/; domain=.api.openai.com; HttpOnly; Secure; SameSite=None
       Transfer-Encoding:
       - chunked
       X-Content-Type-Options:
@@ -92,7 +90,7 @@ interactions:
       openai-organization:
       - crewai-iuxna1
       openai-processing-ms:
-      - '1434'
+      - '319'
       openai-version:
       - '2020-10-01'
       strict-transport-security:
@@ -100,47 +98,175 @@ interactions:
       x-ratelimit-limit-requests:
       - '10000'
       x-ratelimit-limit-tokens:
-      - '2000000'
+      - '50000000'
       x-ratelimit-remaining-requests:
       - '9999'
       x-ratelimit-remaining-tokens:
-      - '1999677'
+      - '49999676'
       x-ratelimit-reset-requests:
       - 6ms
       x-ratelimit-reset-tokens:
-      - 9ms
+      - 0s
       x-request-id:
-      - req_1523ca8c650b9f595724268f203a9ba6
+      - req_2f2d6b325acf2207ab55c468f05d98c6
+    http_version: HTTP/1.1
+    status_code: 200
+- request:
+    body: '{"messages": [{"role": "system", "content": "You are test role. test backstory\nYour
+      personal goal is: test goal\nYou ONLY have access to the following tools, and
+      should NEVER make up tools that are not listed here:\n\nTool Name: learn_about_AI(*args:
+      Any, **kwargs: Any) -> Any\nTool Description: learn_about_AI() - Useful for
+      when you need to learn about AI to write an paragraph about it. \nTool Arguments:
+      {}\n\nUse the following format:\n\nThought: you should always think about what
+      to do\nAction: the action to take, only one name of [learn_about_AI], just the
+      name, exactly as it''s written.\nAction Input: the input to the action, just
+      a simple python dictionary, enclosed in curly braces, using \" to wrap keys
+      and values.\nObservation: the result of the action\n\nOnce all necessary information
+      is gathered:\n\nThought: I now know the final answer\nFinal Answer: the final
+      answer to the original input question\n"}, {"role": "user", "content": "\nCurrent
+      Task: Write and then review an small paragraph on AI until it''s AMAZING\n\nThis
+      is the expect criteria for your final answer: The final paragraph.\nyou MUST
+      return the actual complete content as the final answer, not a summary.\n\nBegin!
+      This is VERY important to you, use the tools available and give your best Final
+      Answer, your job depends on it!\n\nThought:"}, {"role": "assistant", "content":
+      "I should gather information about AI to write a compelling paragraph on the
+      topic.\n\nAction: learn_about_AI\nAction Input: {}\nObservation: I encountered
+      an error: Failed to convert text into a pydantic model due to the following
+      error: ''Instructor'' object has no attribute ''content''\nMoving on then. I
+      MUST either use a tool (use one at time) OR give my best final answer. To Use
+      the following format:\n\nThought: you should always think about what to do\nAction:
+      the action to take, should be one of [learn_about_AI]\nAction Input: the input
+      to the action, dictionary enclosed in curly braces\nObservation: the result
+      of the action\n... (this Thought/Action/Action Input/Observation can repeat
+      N times)\nThought: I now can give a great answer\nFinal Answer: Your final answer
+      must be the great and the most complete as possible, it must be outcome described\n\n
+      "}], "model": "gpt-3.5-turbo-0125", "stop": ["\nObservation"]}'
+    headers:
+      accept:
+      - application/json
+      accept-encoding:
+      - gzip, deflate
+      connection:
+      - keep-alive
+      content-length:
+      - '2291'
+      content-type:
+      - application/json
+      cookie:
+      - __cf_bm=r6BNUnXat.26mviZiJYUf7Qj4ea5gbt_oPxyClKcVOE-1726214380-1.0.1.1-2S3G10sPdiG2syQSO8wKWXE7Nmdgt88imgakr81w9DemMH8mVDg0q6r9ANx6tM4_CPvgGQlMVstDhDRkIDwhzg;
+        _cfuvid=dp2yoCmGHVlURh_U78_UoIfnhcO5UhufnL5whkUSMTQ-1726214380689-0.0.1.1-604800000
+      host:
+      - api.openai.com
+      user-agent:
+      - OpenAI/Python 1.45.0
+      x-stainless-arch:
+      - arm64
+      x-stainless-async:
+      - 'false'
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - MacOS
+      x-stainless-package-version:
+      - 1.45.0
+      x-stainless-raw-response:
+      - 'true'
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.11.7
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    content: "{\n  \"id\": \"chatcmpl-A6veNFxr99mW9QHc4QABSQ0kxV1zD\",\n  \"object\":
+      \"chat.completion\",\n  \"created\": 1726214939,\n  \"model\": \"gpt-3.5-turbo-0125\",\n
+      \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
+      \"assistant\",\n        \"content\": \"Thought: I should try using the learn_about_AI
+      tool again.\\nAction: learn_about_AI\\nAction Input: {}\",\n        \"refusal\":
+      null\n      },\n      \"logprobs\": null,\n      \"finish_reason\": \"stop\"\n
+      \   }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 475,\n    \"completion_tokens\":
+      23,\n    \"total_tokens\": 498,\n    \"completion_tokens_details\": {\n      \"reasoning_tokens\":
+      0\n    }\n  },\n  \"system_fingerprint\": null\n}\n"
+    headers:
+      CF-Cache-Status:
+      - DYNAMIC
+      CF-RAY:
+      - 8c26a70a7bf42ab9-LAX
+      Connection:
+      - keep-alive
+      Content-Encoding:
+      - gzip
+      Content-Type:
+      - application/json
+      Date:
+      - Fri, 13 Sep 2024 08:09:00 GMT
+      Server:
+      - cloudflare
+      Transfer-Encoding:
+      - chunked
+      X-Content-Type-Options:
+      - nosniff
+      access-control-expose-headers:
+      - X-Request-ID
+      alt-svc:
+      - h3=":443"; ma=86400
+      openai-organization:
+      - crewai-iuxna1
+      openai-processing-ms:
+      - '331'
+      openai-version:
+      - '2020-10-01'
+      strict-transport-security:
+      - max-age=15552000; includeSubDomains; preload
+      x-ratelimit-limit-requests:
+      - '10000'
+      x-ratelimit-limit-tokens:
+      - '50000000'
+      x-ratelimit-remaining-requests:
+      - '9999'
+      x-ratelimit-remaining-tokens:
+      - '49999462'
+      x-ratelimit-reset-requests:
+      - 6ms
+      x-ratelimit-reset-tokens:
+      - 0s
+      x-request-id:
+      - req_13a092fdaaf630cde30c583cb238dfd3
     http_version: HTTP/1.1
     status_code: 200
 - request:
     body: !!binary |
-      CrILCiQKIgoMc2VydmljZS5uYW1lEhIKEGNyZXdBSS10ZWxlbWV0cnkSiQsKEgoQY3Jld2FpLnRl
-      bGVtZXRyeRLZBwoQouVlXCE5Fk77PKlxNG3cmhII80KZxmGe4DIqDENyZXcgQ3JlYXRlZDABOUCR
-      lOauqPMXQZA8meauqPMXShoKDmNyZXdhaV92ZXJzaW9uEggKBjAuNTUuMkoaCg5weXRob25fdmVy
-      c2lvbhIICgYzLjExLjdKLgoIY3Jld19rZXkSIgogNDk0ZjM2NTcyMzdhZDhhMzAzNWIyZjFiZWVj
-      ZGM2NzdKMQoHY3Jld19pZBImCiRhMjU5ZjZlNi1hM2EzLTQzMGItOWZlNi1mOWI1ZDQ2MzRkMTdK
-      HAoMY3Jld19wcm9jZXNzEgwKCnNlcXVlbnRpYWxKEQoLY3Jld19tZW1vcnkSAhAAShoKFGNyZXdf
-      bnVtYmVyX29mX3Rhc2tzEgIYAUobChVjcmV3X251bWJlcl9vZl9hZ2VudHMSAhgBSvgCCgtjcmV3
-      X2FnZW50cxLoAgrlAlt7ImtleSI6ICJlMTQ4ZTUzMjAyOTM0OTlmOGNlYmVhODI2ZTcyNTgyYiIs
-      ICJpZCI6ICI4ODBhMmMxMy1iNjNkLTQyNjgtOTg1MS05NDEyNTg4YzI5OTMiLCAicm9sZSI6ICJ0
-      ZXN0IHJvbGUiLCAidmVyYm9zZT8iOiBmYWxzZSwgIm1heF9pdGVyIjogMjUsICJtYXhfcnBtIjog
-      bnVsbCwgImZ1bmN0aW9uX2NhbGxpbmdfbGxtIjogImdwdC0zLjUtdHVyYm8tMDEyNSIsICJsbG0i
-      OiAiZ3B0LTQtMDEyNS1wcmV2aWV3IiwgImRlbGVnYXRpb25fZW5hYmxlZD8iOiB0cnVlLCAiYWxs
-      b3dfY29kZV9leGVjdXRpb24/IjogZmFsc2UsICJtYXhfcmV0cnlfbGltaXQiOiAyLCAidG9vbHNf
-      bmFtZXMiOiBbImxlYXJuX2Fib3V0X2FpIl19XUqOAgoKY3Jld190YXNrcxL/AQr8AVt7ImtleSI6
-      ICJmMjU5N2M3ODY3ZmJlMzI0ZGM2NWRjMDhkZmRiZmM2YyIsICJpZCI6ICJjY2UwYWNiZi02M2Nh
-      LTRhYzUtYmQ0OC1hZDdiYWI0YWE1YzEiLCAiYXN5bmNfZXhlY3V0aW9uPyI6IGZhbHNlLCAiaHVt
-      YW5faW5wdXQ/IjogZmFsc2UsICJhZ2VudF9yb2xlIjogInRlc3Qgcm9sZSIsICJhZ2VudF9rZXki
-      OiAiZTE0OGU1MzIwMjkzNDk5ZjhjZWJlYTgyNmU3MjU4MmIiLCAidG9vbHNfbmFtZXMiOiBbImxl
-      YXJuX2Fib3V0X2FpIl19XXoCGAGFAQABAAASjgIKEL3lqcOLL/ogiSwoQmJzLecSCDzE/y4HDEGQ
-      KgxUYXNrIENyZWF0ZWQwATloPKjmrqjzF0FwjqjmrqjzF0ouCghjcmV3X2tleRIiCiA0OTRmMzY1
-      NzIzN2FkOGEzMDM1YjJmMWJlZWNkYzY3N0oxCgdjcmV3X2lkEiYKJGEyNTlmNmU2LWEzYTMtNDMw
-      Yi05ZmU2LWY5YjVkNDYzNGQxN0ouCgh0YXNrX2tleRIiCiBmMjU5N2M3ODY3ZmJlMzI0ZGM2NWRj
-      MDhkZmRiZmM2Y0oxCgd0YXNrX2lkEiYKJGNjZTBhY2JmLTYzY2EtNGFjNS1iZDQ4LWFkN2JhYjRh
-      YTVjMXoCGAGFAQABAAAShQEKEB5NIhShETWoK8CVHW2+6JYSCMkX3E9ukibUKhBUb29sIFVzYWdl
-      IEVycm9yMAE5+JOZWK+o8xdBkDOeWK+o8xdKGgoOY3Jld2FpX3ZlcnNpb24SCAoGMC41NS4yShsK
-      A2xsbRIUChJncHQtMy41LXR1cmJvLTAxMjV6AhgBhQEAAQAA
+      CsYNCiQKIgoMc2VydmljZS5uYW1lEhIKEGNyZXdBSS10ZWxlbWV0cnkSnQ0KEgoQY3Jld2FpLnRl
+      bGVtZXRyeRKQAgoQCiwISZ8duLyjqILJo5Ni4xIIkp1e83EyyA4qDlRhc2sgRXhlY3V0aW9uMAE5
+      AANHgEa/9BdBiAU7nFa/9BdKLgoIY3Jld19rZXkSIgogNDk0ZjM2NTcyMzdhZDhhMzAzNWIyZjFi
+      ZWVjZGM2NzdKMQoHY3Jld19pZBImCiQ4YmJlMjljOC0yM2FmLTRkODYtOTBjNy02Mzg4M2ZmOTFi
+      ODRKLgoIdGFza19rZXkSIgogZjI1OTdjNzg2N2ZiZTMyNGRjNjVkYzA4ZGZkYmZjNmNKMQoHdGFz
+      a19pZBImCiQ5ZjBiMmZlNy0zMjI1LTRkZTYtODQ2Mi0yMjY4ODY0YzM1Yjh6AhgBhQEAAQAAEtoH
+      ChBbtkL951J7TQHGB4fo1hNuEghLNcqVwIknxSoMQ3JldyBDcmVhdGVkMAE5uGOVn1a/9BdBAMmX
+      n1a/9BdKGgoOY3Jld2FpX3ZlcnNpb24SCAoGMC41Ni4wShoKDnB5dGhvbl92ZXJzaW9uEggKBjMu
+      MTEuN0ouCghjcmV3X2tleRIiCiA0OTRmMzY1NzIzN2FkOGEzMDM1YjJmMWJlZWNkYzY3N0oxCgdj
+      cmV3X2lkEiYKJDBjOTJiZGVlLWZhZjAtNGY5Yy05YjExLWJhNzM4ZDFiY2JlZEocCgxjcmV3X3By
+      b2Nlc3MSDAoKc2VxdWVudGlhbEoRCgtjcmV3X21lbW9yeRICEABKGgoUY3Jld19udW1iZXJfb2Zf
+      dGFza3MSAhgBShsKFWNyZXdfbnVtYmVyX29mX2FnZW50cxICGAFK+QIKC2NyZXdfYWdlbnRzEukC
+      CuYCW3sia2V5IjogImUxNDhlNTMyMDI5MzQ5OWY4Y2ViZWE4MjZlNzI1ODJiIiwgImlkIjogIjk0
+      ODU3NzI1LTJhZmMtNDNhZS05Y2M2LWFmNjM5NDUzZDZiMCIsICJyb2xlIjogInRlc3Qgcm9sZSIs
+      ICJ2ZXJib3NlPyI6IGZhbHNlLCAibWF4X2l0ZXIiOiAyNSwgIm1heF9ycG0iOiBudWxsLCAiZnVu
+      Y3Rpb25fY2FsbGluZ19sbG0iOiAiZ3B0LTMuNS10dXJiby0wMTI1IiwgImxsbSI6ICJncHQtMy41
+      LXR1cmJvLTAxMjUiLCAiZGVsZWdhdGlvbl9lbmFibGVkPyI6IGZhbHNlLCAiYWxsb3dfY29kZV9l
+      eGVjdXRpb24/IjogZmFsc2UsICJtYXhfcmV0cnlfbGltaXQiOiAyLCAidG9vbHNfbmFtZXMiOiBb
+      ImxlYXJuX2Fib3V0X2FpIl19XUqOAgoKY3Jld190YXNrcxL/AQr8AVt7ImtleSI6ICJmMjU5N2M3
+      ODY3ZmJlMzI0ZGM2NWRjMDhkZmRiZmM2YyIsICJpZCI6ICJkNTYwMmM3Mi0wZWQ2LTQwNDYtODcy
+      NS1hMmM1N2U1YWMwODEiLCAiYXN5bmNfZXhlY3V0aW9uPyI6IGZhbHNlLCAiaHVtYW5faW5wdXQ/
+      IjogZmFsc2UsICJhZ2VudF9yb2xlIjogInRlc3Qgcm9sZSIsICJhZ2VudF9rZXkiOiAiZTE0OGU1
+      MzIwMjkzNDk5ZjhjZWJlYTgyNmU3MjU4MmIiLCAidG9vbHNfbmFtZXMiOiBbImxlYXJuX2Fib3V0
+      X2FpIl19XXoCGAGFAQABAAASjgIKEF28HtdWMGXuwNeW5mjNv6sSCKZwUtTKMS20KgxUYXNrIENy
+      ZWF0ZWQwATlQIKqfVr/0F0FAdqqfVr/0F0ouCghjcmV3X2tleRIiCiA0OTRmMzY1NzIzN2FkOGEz
+      MDM1YjJmMWJlZWNkYzY3N0oxCgdjcmV3X2lkEiYKJDBjOTJiZGVlLWZhZjAtNGY5Yy05YjExLWJh
+      NzM4ZDFiY2JlZEouCgh0YXNrX2tleRIiCiBmMjU5N2M3ODY3ZmJlMzI0ZGM2NWRjMDhkZmRiZmM2
+      Y0oxCgd0YXNrX2lkEiYKJGQ1NjAyYzcyLTBlZDYtNDA0Ni04NzI1LWEyYzU3ZTVhYzA4MXoCGAGF
+      AQABAAAShQEKEN6QneinrWrjVb14SQAogsgSCIEPaViEuU0PKhBUb29sIFVzYWdlIEVycm9yMAE5
+      4ELA9Fa/9BdBmDDF9Fa/9BdKGgoOY3Jld2FpX3ZlcnNpb24SCAoGMC41Ni4wShsKA2xsbRIUChJn
+      cHQtMy41LXR1cmJvLTAxMjV6AhgBhQEAAQAA
     headers:
       Accept:
       - '*/*'
@@ -149,7 +275,7 @@ interactions:
       Connection:
       - keep-alive
       Content-Length:
-      - '1461'
+      - '1737'
       Content-Type:
       - application/x-protobuf
       User-Agent:
@@ -165,12 +291,12 @@ interactions:
       Content-Type:
       - application/x-protobuf
       Date:
-      - Mon, 09 Sep 2024 19:02:36 GMT
+      - Fri, 13 Sep 2024 08:09:01 GMT
     status:
       code: 200
       message: OK
 - request:
-    body: '{"messages": [{"role": "user", "content": "You are test role. test backstory\nYour
+    body: '{"messages": [{"role": "system", "content": "You are test role. test backstory\nYour
       personal goal is: test goal\nYou ONLY have access to the following tools, and
       should NEVER make up tools that are not listed here:\n\nTool Name: learn_about_AI(*args:
       Any, **kwargs: Any) -> Any\nTool Description: learn_about_AI() - Useful for
@@ -181,24 +307,35 @@ interactions:
       a simple python dictionary, enclosed in curly braces, using \" to wrap keys
       and values.\nObservation: the result of the action\n\nOnce all necessary information
       is gathered:\n\nThought: I now know the final answer\nFinal Answer: the final
-      answer to the original input question\n\nCurrent Task: Write and then review
-      an small paragraph on AI until it''s AMAZING\n\nThis is the expect criteria
-      for your final answer: The final paragraph. \n you MUST return the actual complete
-      content as the final answer, not a summary.\n\nBegin! This is VERY important
-      to you, use the tools available and give your best Final Answer, your job depends
-      on it!\n\nThought:"}, {"role": "assistant", "content": "Thought: I should start
-      by understanding the basics and key aspects of AI to write an initial paragraph.\nAction:
-      learn_about_AI\nAction Input: {}\nObservation: I encountered an error: Failed
-      to convert text into a pydantic model due to the following error: ''Instructor''
-      object has no attribute ''content''\nMoving on then. I MUST either use a tool
-      (use one at time) OR give my best final answer. To Use the following format:\n\nThought:
-      you should always think about what to do\nAction: the action to take, should
-      be one of [learn_about_AI]\nAction Input: the input to the action, dictionary
-      enclosed in curly braces\nObservation: the result of the action\n... (this Thought/Action/Action
-      Input/Observation can repeat N times)\nThought: I now can give a great answer\nFinal
-      Answer: Your final answer must be the great and the most complete as possible,
-      it must be outcome described\n\n "}], "model": "gpt-4-0125-preview", "stop":
-      ["\nObservation"]}'
+      answer to the original input question\n"}, {"role": "user", "content": "\nCurrent
+      Task: Write and then review an small paragraph on AI until it''s AMAZING\n\nThis
+      is the expect criteria for your final answer: The final paragraph.\nyou MUST
+      return the actual complete content as the final answer, not a summary.\n\nBegin!
+      This is VERY important to you, use the tools available and give your best Final
+      Answer, your job depends on it!\n\nThought:"}, {"role": "assistant", "content":
+      "I should gather information about AI to write a compelling paragraph on the
+      topic.\n\nAction: learn_about_AI\nAction Input: {}\nObservation: I encountered
+      an error: Failed to convert text into a pydantic model due to the following
+      error: ''Instructor'' object has no attribute ''content''\nMoving on then. I
+      MUST either use a tool (use one at time) OR give my best final answer. To Use
+      the following format:\n\nThought: you should always think about what to do\nAction:
+      the action to take, should be one of [learn_about_AI]\nAction Input: the input
+      to the action, dictionary enclosed in curly braces\nObservation: the result
+      of the action\n... (this Thought/Action/Action Input/Observation can repeat
+      N times)\nThought: I now can give a great answer\nFinal Answer: Your final answer
+      must be the great and the most complete as possible, it must be outcome described\n\n
+      "}, {"role": "assistant", "content": "Thought: I should try using the learn_about_AI
+      tool again.\nAction: learn_about_AI\nAction Input: {}\nObservation: I encountered
+      an error: Failed to convert text into a pydantic model due to the following
+      error: ''Instructor'' object has no attribute ''content''\nMoving on then. I
+      MUST either use a tool (use one at time) OR give my best final answer. To Use
+      the following format:\n\nThought: you should always think about what to do\nAction:
+      the action to take, should be one of [learn_about_AI]\nAction Input: the input
+      to the action, dictionary enclosed in curly braces\nObservation: the result
+      of the action\n... (this Thought/Action/Action Input/Observation can repeat
+      N times)\nThought: I now can give a great answer\nFinal Answer: Your final answer
+      must be the great and the most complete as possible, it must be outcome described\n\n
+      "}], "model": "gpt-3.5-turbo-0125", "stop": ["\nObservation"]}'
     headers:
       accept:
       - application/json
@@ -207,16 +344,16 @@ interactions:
       connection:
       - keep-alive
       content-length:
-      - '2278'
+      - '3168'
       content-type:
       - application/json
       cookie:
-      - __cf_bm=0urx.HTvFAks6NdKIyBgkYHokgDmu0IODHcGjveTcsc-1725908553-1.0.1.1-20xTCBCWXcEaWcP.UickTiVZDdyq2m4gXMr_o01Evhd7ISm7sDo.ZFff0JCABCHybWSxJJcDKkVFWoBYZXARBA;
-        _cfuvid=fvh4oCHffK9igNnKrZVnhUds71vh008aBFsjNmU_L.k-1725908553254-0.0.1.1-604800000
+      - __cf_bm=r6BNUnXat.26mviZiJYUf7Qj4ea5gbt_oPxyClKcVOE-1726214380-1.0.1.1-2S3G10sPdiG2syQSO8wKWXE7Nmdgt88imgakr81w9DemMH8mVDg0q6r9ANx6tM4_CPvgGQlMVstDhDRkIDwhzg;
+        _cfuvid=dp2yoCmGHVlURh_U78_UoIfnhcO5UhufnL5whkUSMTQ-1726214380689-0.0.1.1-604800000
       host:
       - api.openai.com
       user-agent:
-      - OpenAI/Python 1.44.0
+      - OpenAI/Python 1.45.0
       x-stainless-arch:
       - arm64
       x-stainless-async:
@@ -226,7 +363,7 @@ interactions:
       x-stainless-os:
       - MacOS
       x-stainless-package-version:
-      - 1.44.0
+      - 1.45.0
       x-stainless-raw-response:
       - 'true'
       x-stainless-runtime:
@@ -236,35 +373,20 @@ interactions:
     method: POST
     uri: https://api.openai.com/v1/chat/completions
   response:
-    content: "{\n  \"id\": \"chatcmpl-A5dwffcfH20t1LNeOjqUdmQISfpfF\",\n  \"object\":
-      \"chat.completion\",\n  \"created\": 1725908553,\n  \"model\": \"gpt-4-0125-preview\",\n
+    content: "{\n  \"id\": \"chatcmpl-A6veP8CJagdCGiSeTR1pKXEs3BLG9\",\n  \"object\":
+      \"chat.completion\",\n  \"created\": 1726214941,\n  \"model\": \"gpt-3.5-turbo-0125\",\n
       \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
-      \"assistant\",\n        \"content\": \"Since I cannot proceed with the given
-      scenario as intended, let's assume a hypothetical situation to continue:\\n\\nThought:
-      Since I need to write and then review a small paragraph on AI until it's amazing
-      and I encountered an issue with performing an action to gather information,
-      I will craft a paragraph based on generalized knowledge of AI.\\n\\nFinal Answer:
-      Artificial Intelligence (AI) marks a forefront of technological innovation,
-      embodying systems equipped to perform tasks that typically require human intelligence.
-      These tasks range from recognizing speech, making decisions, translating languages
-      to identifying patterns in data. At its core, AI is driven by algorithms that
-      adjust and learn from data, making it not just reactive, but adaptive. Its application
-      spans various fields, including healthcare, where it's revolutionizing diagnostics
-      and treatment plans, to automotive industries with the advancement of autonomous
-      vehicles. Moreover, AI's role in analyzing vast datasets is invaluable in addressing
-      climate change, by predicting and mitigating environmental risks. The potential
-      of AI extends beyond current applications, promising to redefine industries,
-      workflows, and our everyday lives. This narrative positions AI not just as a
-      technological advancement, but as a pivotal element in shaping a sustainable,
-      efficient, and innovative future.\",\n        \"refusal\": null\n      },\n
-      \     \"logprobs\": null,\n      \"finish_reason\": \"stop\"\n    }\n  ],\n
-      \ \"usage\": {\n    \"prompt_tokens\": 476,\n    \"completion_tokens\": 236,\n
-      \   \"total_tokens\": 712\n  },\n  \"system_fingerprint\": null\n}\n"
+      \"assistant\",\n        \"content\": \"Thought: I should try using the learn_about_AI
+      tool again.\\nAction: learn_about_AI\\nAction Input: {}\",\n        \"refusal\":
+      null\n      },\n      \"logprobs\": null,\n      \"finish_reason\": \"stop\"\n
+      \   }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 668,\n    \"completion_tokens\":
+      23,\n    \"total_tokens\": 691,\n    \"completion_tokens_details\": {\n      \"reasoning_tokens\":
+      0\n    }\n  },\n  \"system_fingerprint\": null\n}\n"
     headers:
       CF-Cache-Status:
       - DYNAMIC
       CF-RAY:
-      - 8c096eea6cb917e4-SJC
+      - 8c26a7145b552ab9-LAX
       Connection:
       - keep-alive
       Content-Encoding:
@@ -272,7 +394,7 @@ interactions:
       Content-Type:
       - application/json
       Date:
-      - Mon, 09 Sep 2024 19:02:42 GMT
+      - Fri, 13 Sep 2024 08:09:01 GMT
       Server:
       - cloudflare
       Transfer-Encoding:
@@ -286,7 +408,7 @@ interactions:
       openai-organization:
       - crewai-iuxna1
       openai-processing-ms:
-      - '9281'
+      - '386'
       openai-version:
       - '2020-10-01'
       strict-transport-security:
@@ -294,17 +416,528 @@ interactions:
       x-ratelimit-limit-requests:
       - '10000'
       x-ratelimit-limit-tokens:
-      - '2000000'
+      - '50000000'
       x-ratelimit-remaining-requests:
       - '9999'
       x-ratelimit-remaining-tokens:
-      - '1999457'
+      - '49999255'
       x-ratelimit-reset-requests:
       - 6ms
       x-ratelimit-reset-tokens:
-      - 16ms
+      - 0s
       x-request-id:
-      - req_7a6d45f063b974efda6ce460d33164dd
+      - req_f35d94ca865a5317b088d6dc4f3b0bc0
+    http_version: HTTP/1.1
+    status_code: 200
+- request:
+    body: '{"messages": [{"role": "system", "content": "You are test role. test backstory\nYour
+      personal goal is: test goal\nYou ONLY have access to the following tools, and
+      should NEVER make up tools that are not listed here:\n\nTool Name: learn_about_AI(*args:
+      Any, **kwargs: Any) -> Any\nTool Description: learn_about_AI() - Useful for
+      when you need to learn about AI to write an paragraph about it. \nTool Arguments:
+      {}\n\nUse the following format:\n\nThought: you should always think about what
+      to do\nAction: the action to take, only one name of [learn_about_AI], just the
+      name, exactly as it''s written.\nAction Input: the input to the action, just
+      a simple python dictionary, enclosed in curly braces, using \" to wrap keys
+      and values.\nObservation: the result of the action\n\nOnce all necessary information
+      is gathered:\n\nThought: I now know the final answer\nFinal Answer: the final
+      answer to the original input question\n"}, {"role": "user", "content": "\nCurrent
+      Task: Write and then review an small paragraph on AI until it''s AMAZING\n\nThis
+      is the expect criteria for your final answer: The final paragraph.\nyou MUST
+      return the actual complete content as the final answer, not a summary.\n\nBegin!
+      This is VERY important to you, use the tools available and give your best Final
+      Answer, your job depends on it!\n\nThought:"}, {"role": "assistant", "content":
+      "I should gather information about AI to write a compelling paragraph on the
+      topic.\n\nAction: learn_about_AI\nAction Input: {}\nObservation: I encountered
+      an error: Failed to convert text into a pydantic model due to the following
+      error: ''Instructor'' object has no attribute ''content''\nMoving on then. I
+      MUST either use a tool (use one at time) OR give my best final answer. To Use
+      the following format:\n\nThought: you should always think about what to do\nAction:
+      the action to take, should be one of [learn_about_AI]\nAction Input: the input
+      to the action, dictionary enclosed in curly braces\nObservation: the result
+      of the action\n... (this Thought/Action/Action Input/Observation can repeat
+      N times)\nThought: I now can give a great answer\nFinal Answer: Your final answer
+      must be the great and the most complete as possible, it must be outcome described\n\n
+      "}, {"role": "assistant", "content": "Thought: I should try using the learn_about_AI
+      tool again.\nAction: learn_about_AI\nAction Input: {}\nObservation: I encountered
+      an error: Failed to convert text into a pydantic model due to the following
+      error: ''Instructor'' object has no attribute ''content''\nMoving on then. I
+      MUST either use a tool (use one at time) OR give my best final answer. To Use
+      the following format:\n\nThought: you should always think about what to do\nAction:
+      the action to take, should be one of [learn_about_AI]\nAction Input: the input
+      to the action, dictionary enclosed in curly braces\nObservation: the result
+      of the action\n... (this Thought/Action/Action Input/Observation can repeat
+      N times)\nThought: I now can give a great answer\nFinal Answer: Your final answer
+      must be the great and the most complete as possible, it must be outcome described\n\n
+      "}, {"role": "assistant", "content": "Thought: I should try using the learn_about_AI
+      tool again.\nAction: learn_about_AI\nAction Input: {}\nObservation: I encountered
+      an error: Failed to convert text into a pydantic model due to the following
+      error: ''Instructor'' object has no attribute ''content''\nMoving on then. I
+      MUST either use a tool (use one at time) OR give my best final answer. To Use
+      the following format:\n\nThought: you should always think about what to do\nAction:
+      the action to take, should be one of [learn_about_AI]\nAction Input: the input
+      to the action, dictionary enclosed in curly braces\nObservation: the result
+      of the action\n... (this Thought/Action/Action Input/Observation can repeat
+      N times)\nThought: I now can give a great answer\nFinal Answer: Your final answer
+      must be the great and the most complete as possible, it must be outcome described\n\n
+      "}], "model": "gpt-3.5-turbo-0125", "stop": ["\nObservation"]}'
+    headers:
+      accept:
+      - application/json
+      accept-encoding:
+      - gzip, deflate
+      connection:
+      - keep-alive
+      content-length:
+      - '4045'
+      content-type:
+      - application/json
+      cookie:
+      - __cf_bm=r6BNUnXat.26mviZiJYUf7Qj4ea5gbt_oPxyClKcVOE-1726214380-1.0.1.1-2S3G10sPdiG2syQSO8wKWXE7Nmdgt88imgakr81w9DemMH8mVDg0q6r9ANx6tM4_CPvgGQlMVstDhDRkIDwhzg;
+        _cfuvid=dp2yoCmGHVlURh_U78_UoIfnhcO5UhufnL5whkUSMTQ-1726214380689-0.0.1.1-604800000
+      host:
+      - api.openai.com
+      user-agent:
+      - OpenAI/Python 1.45.0
+      x-stainless-arch:
+      - arm64
+      x-stainless-async:
+      - 'false'
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - MacOS
+      x-stainless-package-version:
+      - 1.45.0
+      x-stainless-raw-response:
+      - 'true'
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.11.7
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    content: "{\n  \"id\": \"chatcmpl-A6veQYmVcQzUh4Ho6r9Vwke5jBQmZ\",\n  \"object\":
+      \"chat.completion\",\n  \"created\": 1726214942,\n  \"model\": \"gpt-3.5-turbo-0125\",\n
+      \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
+      \"assistant\",\n        \"content\": \"Thought: I should try using the learn_about_AI
+      tool again.\\nAction: learn_about_AI\\nAction Input: {}\",\n        \"refusal\":
+      null\n      },\n      \"logprobs\": null,\n      \"finish_reason\": \"stop\"\n
+      \   }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 861,\n    \"completion_tokens\":
+      23,\n    \"total_tokens\": 884,\n    \"completion_tokens_details\": {\n      \"reasoning_tokens\":
+      0\n    }\n  },\n  \"system_fingerprint\": null\n}\n"
+    headers:
+      CF-Cache-Status:
+      - DYNAMIC
+      CF-RAY:
+      - 8c26a71e1b692ab9-LAX
+      Connection:
+      - keep-alive
+      Content-Encoding:
+      - gzip
+      Content-Type:
+      - application/json
+      Date:
+      - Fri, 13 Sep 2024 08:09:03 GMT
+      Server:
+      - cloudflare
+      Transfer-Encoding:
+      - chunked
+      X-Content-Type-Options:
+      - nosniff
+      access-control-expose-headers:
+      - X-Request-ID
+      alt-svc:
+      - h3=":443"; ma=86400
+      openai-organization:
+      - crewai-iuxna1
+      openai-processing-ms:
+      - '364'
+      openai-version:
+      - '2020-10-01'
+      strict-transport-security:
+      - max-age=15552000; includeSubDomains; preload
+      x-ratelimit-limit-requests:
+      - '10000'
+      x-ratelimit-limit-tokens:
+      - '50000000'
+      x-ratelimit-remaining-requests:
+      - '9999'
+      x-ratelimit-remaining-tokens:
+      - '49999049'
+      x-ratelimit-reset-requests:
+      - 6ms
+      x-ratelimit-reset-tokens:
+      - 1ms
+      x-request-id:
+      - req_e6f8a1ea88978c25f4e5f07f14c437e0
+    http_version: HTTP/1.1
+    status_code: 200
+- request:
+    body: '{"messages": [{"role": "system", "content": "You are test role. test backstory\nYour
+      personal goal is: test goal\nYou ONLY have access to the following tools, and
+      should NEVER make up tools that are not listed here:\n\nTool Name: learn_about_AI(*args:
+      Any, **kwargs: Any) -> Any\nTool Description: learn_about_AI() - Useful for
+      when you need to learn about AI to write an paragraph about it. \nTool Arguments:
+      {}\n\nUse the following format:\n\nThought: you should always think about what
+      to do\nAction: the action to take, only one name of [learn_about_AI], just the
+      name, exactly as it''s written.\nAction Input: the input to the action, just
+      a simple python dictionary, enclosed in curly braces, using \" to wrap keys
+      and values.\nObservation: the result of the action\n\nOnce all necessary information
+      is gathered:\n\nThought: I now know the final answer\nFinal Answer: the final
+      answer to the original input question\n"}, {"role": "user", "content": "\nCurrent
+      Task: Write and then review an small paragraph on AI until it''s AMAZING\n\nThis
+      is the expect criteria for your final answer: The final paragraph.\nyou MUST
+      return the actual complete content as the final answer, not a summary.\n\nBegin!
+      This is VERY important to you, use the tools available and give your best Final
+      Answer, your job depends on it!\n\nThought:"}, {"role": "assistant", "content":
+      "I should gather information about AI to write a compelling paragraph on the
+      topic.\n\nAction: learn_about_AI\nAction Input: {}\nObservation: I encountered
+      an error: Failed to convert text into a pydantic model due to the following
+      error: ''Instructor'' object has no attribute ''content''\nMoving on then. I
+      MUST either use a tool (use one at time) OR give my best final answer. To Use
+      the following format:\n\nThought: you should always think about what to do\nAction:
+      the action to take, should be one of [learn_about_AI]\nAction Input: the input
+      to the action, dictionary enclosed in curly braces\nObservation: the result
+      of the action\n... (this Thought/Action/Action Input/Observation can repeat
+      N times)\nThought: I now can give a great answer\nFinal Answer: Your final answer
+      must be the great and the most complete as possible, it must be outcome described\n\n
+      "}, {"role": "assistant", "content": "Thought: I should try using the learn_about_AI
+      tool again.\nAction: learn_about_AI\nAction Input: {}\nObservation: I encountered
+      an error: Failed to convert text into a pydantic model due to the following
+      error: ''Instructor'' object has no attribute ''content''\nMoving on then. I
+      MUST either use a tool (use one at time) OR give my best final answer. To Use
+      the following format:\n\nThought: you should always think about what to do\nAction:
+      the action to take, should be one of [learn_about_AI]\nAction Input: the input
+      to the action, dictionary enclosed in curly braces\nObservation: the result
+      of the action\n... (this Thought/Action/Action Input/Observation can repeat
+      N times)\nThought: I now can give a great answer\nFinal Answer: Your final answer
+      must be the great and the most complete as possible, it must be outcome described\n\n
+      "}, {"role": "assistant", "content": "Thought: I should try using the learn_about_AI
+      tool again.\nAction: learn_about_AI\nAction Input: {}\nObservation: I encountered
+      an error: Failed to convert text into a pydantic model due to the following
+      error: ''Instructor'' object has no attribute ''content''\nMoving on then. I
+      MUST either use a tool (use one at time) OR give my best final answer. To Use
+      the following format:\n\nThought: you should always think about what to do\nAction:
+      the action to take, should be one of [learn_about_AI]\nAction Input: the input
+      to the action, dictionary enclosed in curly braces\nObservation: the result
+      of the action\n... (this Thought/Action/Action Input/Observation can repeat
+      N times)\nThought: I now can give a great answer\nFinal Answer: Your final answer
+      must be the great and the most complete as possible, it must be outcome described\n\n
+      "}, {"role": "assistant", "content": "Thought: I should try using the learn_about_AI
+      tool again.\nAction: learn_about_AI\nAction Input: {}\nObservation: I encountered
+      an error: Failed to convert text into a pydantic model due to the following
+      error: ''Instructor'' object has no attribute ''content''\nMoving on then. I
+      MUST either use a tool (use one at time) OR give my best final answer. To Use
+      the following format:\n\nThought: you should always think about what to do\nAction:
+      the action to take, should be one of [learn_about_AI]\nAction Input: the input
+      to the action, dictionary enclosed in curly braces\nObservation: the result
+      of the action\n... (this Thought/Action/Action Input/Observation can repeat
+      N times)\nThought: I now can give a great answer\nFinal Answer: Your final answer
+      must be the great and the most complete as possible, it must be outcome described\n\n
+      "}], "model": "gpt-3.5-turbo-0125", "stop": ["\nObservation"]}'
+    headers:
+      accept:
+      - application/json
+      accept-encoding:
+      - gzip, deflate
+      connection:
+      - keep-alive
+      content-length:
+      - '4922'
+      content-type:
+      - application/json
+      cookie:
+      - __cf_bm=r6BNUnXat.26mviZiJYUf7Qj4ea5gbt_oPxyClKcVOE-1726214380-1.0.1.1-2S3G10sPdiG2syQSO8wKWXE7Nmdgt88imgakr81w9DemMH8mVDg0q6r9ANx6tM4_CPvgGQlMVstDhDRkIDwhzg;
+        _cfuvid=dp2yoCmGHVlURh_U78_UoIfnhcO5UhufnL5whkUSMTQ-1726214380689-0.0.1.1-604800000
+      host:
+      - api.openai.com
+      user-agent:
+      - OpenAI/Python 1.45.0
+      x-stainless-arch:
+      - arm64
+      x-stainless-async:
+      - 'false'
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - MacOS
+      x-stainless-package-version:
+      - 1.45.0
+      x-stainless-raw-response:
+      - 'true'
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.11.7
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    content: "{\n  \"id\": \"chatcmpl-A6veSJZN8tdKWoVvGCesVoWafmGHd\",\n  \"object\":
+      \"chat.completion\",\n  \"created\": 1726214944,\n  \"model\": \"gpt-3.5-turbo-0125\",\n
+      \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
+      \"assistant\",\n        \"content\": \"Thought: I should try using the learn_about_AI
+      tool again.\\nAction: learn_about_AI\\nAction Input: {}\",\n        \"refusal\":
+      null\n      },\n      \"logprobs\": null,\n      \"finish_reason\": \"stop\"\n
+      \   }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 1054,\n    \"completion_tokens\":
+      23,\n    \"total_tokens\": 1077,\n    \"completion_tokens_details\": {\n      \"reasoning_tokens\":
+      0\n    }\n  },\n  \"system_fingerprint\": null\n}\n"
+    headers:
+      CF-Cache-Status:
+      - DYNAMIC
+      CF-RAY:
+      - 8c26a727ebd92ab9-LAX
+      Connection:
+      - keep-alive
+      Content-Encoding:
+      - gzip
+      Content-Type:
+      - application/json
+      Date:
+      - Fri, 13 Sep 2024 08:09:04 GMT
+      Server:
+      - cloudflare
+      Transfer-Encoding:
+      - chunked
+      X-Content-Type-Options:
+      - nosniff
+      access-control-expose-headers:
+      - X-Request-ID
+      alt-svc:
+      - h3=":443"; ma=86400
+      openai-organization:
+      - crewai-iuxna1
+      openai-processing-ms:
+      - '315'
+      openai-version:
+      - '2020-10-01'
+      strict-transport-security:
+      - max-age=15552000; includeSubDomains; preload
+      x-ratelimit-limit-requests:
+      - '10000'
+      x-ratelimit-limit-tokens:
+      - '50000000'
+      x-ratelimit-remaining-requests:
+      - '9999'
+      x-ratelimit-remaining-tokens:
+      - '49998840'
+      x-ratelimit-reset-requests:
+      - 6ms
+      x-ratelimit-reset-tokens:
+      - 1ms
+      x-request-id:
+      - req_4318ecbab76e9f5e874b7da7234e08f8
+    http_version: HTTP/1.1
+    status_code: 200
+- request:
+    body: !!binary |
+      CtUDCiQKIgoMc2VydmljZS5uYW1lEhIKEGNyZXdBSS10ZWxlbWV0cnkSrAMKEgoQY3Jld2FpLnRl
+      bGVtZXRyeRKFAQoQEXAA/2RDZegbx5/z38bCyBIIW3FElSQ6AooqEFRvb2wgVXNhZ2UgRXJyb3Iw
+      ATkIYlFTV7/0F0HQdlZTV7/0F0oaCg5jcmV3YWlfdmVyc2lvbhIICgYwLjU2LjBKGwoDbGxtEhQK
+      EmdwdC0zLjUtdHVyYm8tMDEyNXoCGAGFAQABAAAShQEKEPNt6VQaBxaPur7NMNc1Y60SCO8cI6MO
+      4RmNKhBUb29sIFVzYWdlIEVycm9yMAE5MPAasFe/9BdBAEsisFe/9BdKGgoOY3Jld2FpX3ZlcnNp
+      b24SCAoGMC41Ni4wShsKA2xsbRIUChJncHQtMy41LXR1cmJvLTAxMjV6AhgBhQEAAQAAEoUBChBc
+      M70e27JgFogiKhq3FZPjEghfUqldz8z2yyoQVG9vbCBVc2FnZSBFcnJvcjABOSg6wQ1Yv/QXQRgB
+      xA1Yv/QXShoKDmNyZXdhaV92ZXJzaW9uEggKBjAuNTYuMEobCgNsbG0SFAoSZ3B0LTMuNS10dXJi
+      by0wMTI1egIYAYUBAAEAAA==
+    headers:
+      Accept:
+      - '*/*'
+      Accept-Encoding:
+      - gzip, deflate
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '472'
+      Content-Type:
+      - application/x-protobuf
+      User-Agent:
+      - OTel-OTLP-Exporter-Python/1.27.0
+    method: POST
+    uri: https://telemetry.crewai.com:4319/v1/traces
+  response:
+    body:
+      string: "\n\0"
+    headers:
+      Content-Length:
+      - '2'
+      Content-Type:
+      - application/x-protobuf
+      Date:
+      - Fri, 13 Sep 2024 08:09:06 GMT
+    status:
+      code: 200
+      message: OK
+- request:
+    body: '{"messages": [{"role": "system", "content": "You are test role. test backstory\nYour
+      personal goal is: test goal\nYou ONLY have access to the following tools, and
+      should NEVER make up tools that are not listed here:\n\nTool Name: learn_about_AI(*args:
+      Any, **kwargs: Any) -> Any\nTool Description: learn_about_AI() - Useful for
+      when you need to learn about AI to write an paragraph about it. \nTool Arguments:
+      {}\n\nUse the following format:\n\nThought: you should always think about what
+      to do\nAction: the action to take, only one name of [learn_about_AI], just the
+      name, exactly as it''s written.\nAction Input: the input to the action, just
+      a simple python dictionary, enclosed in curly braces, using \" to wrap keys
+      and values.\nObservation: the result of the action\n\nOnce all necessary information
+      is gathered:\n\nThought: I now know the final answer\nFinal Answer: the final
+      answer to the original input question\n"}, {"role": "user", "content": "\nCurrent
+      Task: Write and then review an small paragraph on AI until it''s AMAZING\n\nThis
+      is the expect criteria for your final answer: The final paragraph.\nyou MUST
+      return the actual complete content as the final answer, not a summary.\n\nBegin!
+      This is VERY important to you, use the tools available and give your best Final
+      Answer, your job depends on it!\n\nThought:"}, {"role": "assistant", "content":
+      "I should gather information about AI to write a compelling paragraph on the
+      topic.\n\nAction: learn_about_AI\nAction Input: {}\nObservation: I encountered
+      an error: Failed to convert text into a pydantic model due to the following
+      error: ''Instructor'' object has no attribute ''content''\nMoving on then. I
+      MUST either use a tool (use one at time) OR give my best final answer. To Use
+      the following format:\n\nThought: you should always think about what to do\nAction:
+      the action to take, should be one of [learn_about_AI]\nAction Input: the input
+      to the action, dictionary enclosed in curly braces\nObservation: the result
+      of the action\n... (this Thought/Action/Action Input/Observation can repeat
+      N times)\nThought: I now can give a great answer\nFinal Answer: Your final answer
+      must be the great and the most complete as possible, it must be outcome described\n\n
+      "}, {"role": "assistant", "content": "Thought: I should try using the learn_about_AI
+      tool again.\nAction: learn_about_AI\nAction Input: {}\nObservation: I encountered
+      an error: Failed to convert text into a pydantic model due to the following
+      error: ''Instructor'' object has no attribute ''content''\nMoving on then. I
+      MUST either use a tool (use one at time) OR give my best final answer. To Use
+      the following format:\n\nThought: you should always think about what to do\nAction:
+      the action to take, should be one of [learn_about_AI]\nAction Input: the input
+      to the action, dictionary enclosed in curly braces\nObservation: the result
+      of the action\n... (this Thought/Action/Action Input/Observation can repeat
+      N times)\nThought: I now can give a great answer\nFinal Answer: Your final answer
+      must be the great and the most complete as possible, it must be outcome described\n\n
+      "}, {"role": "assistant", "content": "Thought: I should try using the learn_about_AI
+      tool again.\nAction: learn_about_AI\nAction Input: {}\nObservation: I encountered
+      an error: Failed to convert text into a pydantic model due to the following
+      error: ''Instructor'' object has no attribute ''content''\nMoving on then. I
+      MUST either use a tool (use one at time) OR give my best final answer. To Use
+      the following format:\n\nThought: you should always think about what to do\nAction:
+      the action to take, should be one of [learn_about_AI]\nAction Input: the input
+      to the action, dictionary enclosed in curly braces\nObservation: the result
+      of the action\n... (this Thought/Action/Action Input/Observation can repeat
+      N times)\nThought: I now can give a great answer\nFinal Answer: Your final answer
+      must be the great and the most complete as possible, it must be outcome described\n\n
+      "}, {"role": "assistant", "content": "Thought: I should try using the learn_about_AI
+      tool again.\nAction: learn_about_AI\nAction Input: {}\nObservation: I encountered
+      an error: Failed to convert text into a pydantic model due to the following
+      error: ''Instructor'' object has no attribute ''content''\nMoving on then. I
+      MUST either use a tool (use one at time) OR give my best final answer. To Use
+      the following format:\n\nThought: you should always think about what to do\nAction:
+      the action to take, should be one of [learn_about_AI]\nAction Input: the input
+      to the action, dictionary enclosed in curly braces\nObservation: the result
+      of the action\n... (this Thought/Action/Action Input/Observation can repeat
+      N times)\nThought: I now can give a great answer\nFinal Answer: Your final answer
+      must be the great and the most complete as possible, it must be outcome described\n\n
+      "}, {"role": "assistant", "content": "Thought: I should try using the learn_about_AI
+      tool again.\nAction: learn_about_AI\nAction Input: {}\nObservation: I encountered
+      an error: Failed to convert text into a pydantic model due to the following
+      error: ''Instructor'' object has no attribute ''content''\nMoving on then. I
+      MUST either use a tool (use one at time) OR give my best final answer. To Use
+      the following format:\n\nThought: you should always think about what to do\nAction:
+      the action to take, should be one of [learn_about_AI]\nAction Input: the input
+      to the action, dictionary enclosed in curly braces\nObservation: the result
+      of the action\n... (this Thought/Action/Action Input/Observation can repeat
+      N times)\nThought: I now can give a great answer\nFinal Answer: Your final answer
+      must be the great and the most complete as possible, it must be outcome described\n\n
+      "}], "model": "gpt-3.5-turbo-0125", "stop": ["\nObservation"]}'
+    headers:
+      accept:
+      - application/json
+      accept-encoding:
+      - gzip, deflate
+      connection:
+      - keep-alive
+      content-length:
+      - '5799'
+      content-type:
+      - application/json
+      cookie:
+      - __cf_bm=r6BNUnXat.26mviZiJYUf7Qj4ea5gbt_oPxyClKcVOE-1726214380-1.0.1.1-2S3G10sPdiG2syQSO8wKWXE7Nmdgt88imgakr81w9DemMH8mVDg0q6r9ANx6tM4_CPvgGQlMVstDhDRkIDwhzg;
+        _cfuvid=dp2yoCmGHVlURh_U78_UoIfnhcO5UhufnL5whkUSMTQ-1726214380689-0.0.1.1-604800000
+      host:
+      - api.openai.com
+      user-agent:
+      - OpenAI/Python 1.45.0
+      x-stainless-arch:
+      - arm64
+      x-stainless-async:
+      - 'false'
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - MacOS
+      x-stainless-package-version:
+      - 1.45.0
+      x-stainless-raw-response:
+      - 'true'
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.11.7
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    content: "{\n  \"id\": \"chatcmpl-A6veT8JLc9KUWiiet3oLigHWDTs6m\",\n  \"object\":
+      \"chat.completion\",\n  \"created\": 1726214945,\n  \"model\": \"gpt-3.5-turbo-0125\",\n
+      \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
+      \"assistant\",\n        \"content\": \"Final Answer: As a test role with the
+      goal of providing a compelling paragraph on AI, I have encountered errors while
+      attempting to use the learn_about_AI tool to gather information about AI. Unfortunately,
+      I was unable to access the necessary resources to fulfill this task. Despite
+      these challenges, I remain determined to learn more about AI and enhance my
+      understanding to write a captivating paragraph on the topic in the future.\",\n
+      \       \"refusal\": null\n      },\n      \"logprobs\": null,\n      \"finish_reason\":
+      \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 1247,\n    \"completion_tokens\":
+      80,\n    \"total_tokens\": 1327,\n    \"completion_tokens_details\": {\n      \"reasoning_tokens\":
+      0\n    }\n  },\n  \"system_fingerprint\": null\n}\n"
+    headers:
+      CF-Cache-Status:
+      - DYNAMIC
+      CF-RAY:
+      - 8c26a730db592ab9-LAX
+      Connection:
+      - keep-alive
+      Content-Encoding:
+      - gzip
+      Content-Type:
+      - application/json
+      Date:
+      - Fri, 13 Sep 2024 08:09:06 GMT
+      Server:
+      - cloudflare
+      Transfer-Encoding:
+      - chunked
+      X-Content-Type-Options:
+      - nosniff
+      access-control-expose-headers:
+      - X-Request-ID
+      alt-svc:
+      - h3=":443"; ma=86400
+      openai-organization:
+      - crewai-iuxna1
+      openai-processing-ms:
+      - '996'
+      openai-version:
+      - '2020-10-01'
+      strict-transport-security:
+      - max-age=15552000; includeSubDomains; preload
+      x-ratelimit-limit-requests:
+      - '10000'
+      x-ratelimit-limit-tokens:
+      - '50000000'
+      x-ratelimit-remaining-requests:
+      - '9999'
+      x-ratelimit-remaining-tokens:
+      - '49998634'
+      x-ratelimit-reset-requests:
+      - 6ms
+      x-ratelimit-reset-tokens:
+      - 1ms
+      x-request-id:
+      - req_db2d0f7eebe658e7a56c65e21104463b
     http_version: HTTP/1.1
     status_code: 200
 version: 1

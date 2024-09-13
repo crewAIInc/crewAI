@@ -1,98 +1,16 @@
 interactions:
 - request:
-    body: !!binary |
-      CvUWCiQKIgoMc2VydmljZS5uYW1lEhIKEGNyZXdBSS10ZWxlbWV0cnkSzBYKEgoQY3Jld2FpLnRl
-      bGVtZXRyeRKcAQoQNos7NTUhi9Q9y3PdWRDIThIIytsTOqJ+4uUqClRvb2wgVXNhZ2UwATlI7A6l
-      OM7zF0FwYhalOM7zF0oaCg5jcmV3YWlfdmVyc2lvbhIICgYwLjU1LjJKKAoJdG9vbF9uYW1lEhsK
-      GURlbGVnYXRlIHdvcmsgdG8gY293b3JrZXJKDgoIYXR0ZW1wdHMSAhgBegIYAYUBAAEAABKvBwoQ
-      G29LFLOqyOG8BJsFWhke0BIIouKGZbYG6uMqDENyZXcgQ3JlYXRlZDABOUCmCkw5zvMXQUiwFkw5
-      zvMXShoKDmNyZXdhaV92ZXJzaW9uEggKBjAuNTUuMkoaCg5weXRob25fdmVyc2lvbhIICgYzLjEx
-      LjdKLgoIY3Jld19rZXkSIgogOThhN2QyMTQyNTIxMDc2OTM4Y2M4N2M3NjlkZWRjZDNKMQoHY3Jl
-      d19pZBImCiQ1ZjhhZGQ1Yy0xNzRkLTRmM2YtODIwOC1lNzY1MTc4MWZhYzZKHAoMY3Jld19wcm9j
-      ZXNzEgwKCnNlcXVlbnRpYWxKEQoLY3Jld19tZW1vcnkSAhAAShoKFGNyZXdfbnVtYmVyX29mX3Rh
-      c2tzEgIYAUobChVjcmV3X251bWJlcl9vZl9hZ2VudHMSAhgBStUCCgtjcmV3X2FnZW50cxLFAgrC
-      Alt7ImtleSI6ICJmMzM4NmY2ZDhkYTc1YWE0MTZhNmUzMTAwNTNmNzY5OCIsICJpZCI6ICJkNmMw
-      MTZmMi1lOWQ1LTQ4NTctOGE5YS04MjQ4N2I5YjEyYTgiLCAicm9sZSI6ICJ7dG9waWN9IFJlc2Vh
-      cmNoZXIiLCAidmVyYm9zZT8iOiBmYWxzZSwgIm1heF9pdGVyIjogMjUsICJtYXhfcnBtIjogbnVs
-      bCwgImZ1bmN0aW9uX2NhbGxpbmdfbGxtIjogbnVsbCwgImxsbSI6ICJncHQtNG8iLCAiZGVsZWdh
-      dGlvbl9lbmFibGVkPyI6IHRydWUsICJhbGxvd19jb2RlX2V4ZWN1dGlvbj8iOiBmYWxzZSwgIm1h
-      eF9yZXRyeV9saW1pdCI6IDIsICJ0b29sc19uYW1lcyI6IFtdfV1KhwIKCmNyZXdfdGFza3MS+AEK
-      9QFbeyJrZXkiOiAiYWZhNjk4YjI2MmQzNTQzZjlhNjExZTRkNTE0NWVkNmEiLCAiaWQiOiAiY2Ri
-      NWQ2OTMtYzBlZS00YzYzLWFmNTEtNjBiYzJiNzUyZDdkIiwgImFzeW5jX2V4ZWN1dGlvbj8iOiBm
-      YWxzZSwgImh1bWFuX2lucHV0PyI6IGZhbHNlLCAiYWdlbnRfcm9sZSI6ICJ7dG9waWN9IFJlc2Vh
-      cmNoZXIiLCAiYWdlbnRfa2V5IjogImYzMzg2ZjZkOGRhNzVhYTQxNmE2ZTMxMDA1M2Y3Njk4Iiwg
-      InRvb2xzX25hbWVzIjogW119XXoCGAGFAQABAAASjgIKEJXUGSnaV9dgR1guzB5699wSCJXLmmTh
-      2XUjKgxUYXNrIENyZWF0ZWQwATkg8ERMOc7zF0Eg5EZMOc7zF0ouCghjcmV3X2tleRIiCiAzZjMw
-      MTI3YTM3NDQ4Y2EzNGNiMjk2MmI2OTQwZDNmNEoxCgdjcmV3X2lkEiYKJDVmOGFkZDVjLTE3NGQt
-      NGYzZi04MjA4LWU3NjUxNzgxZmFjNkouCgh0YXNrX2tleRIiCiBhZmE2OThiMjYyZDM1NDNmOWE2
-      MTFlNGQ1MTQ1ZWQ2YUoxCgd0YXNrX2lkEiYKJGNkYjVkNjkzLWMwZWUtNGM2My1hZjUxLTYwYmMy
-      Yjc1MmQ3ZHoCGAGFAQABAAASkAIKEGPL2Y1HyqcIjnHFF5Cu0iwSCHE2b2ByYgUoKg5UYXNrIEV4
-      ZWN1dGlvbjABOQhTSkw5zvMXQUCRTEw5zvMXSi4KCGNyZXdfa2V5EiIKIDNmMzAxMjdhMzc0NDhj
-      YTM0Y2IyOTYyYjY5NDBkM2Y0SjEKB2NyZXdfaWQSJgokNWY4YWRkNWMtMTc0ZC00ZjNmLTgyMDgt
-      ZTc2NTE3ODFmYWM2Si4KCHRhc2tfa2V5EiIKIGFmYTY5OGIyNjJkMzU0M2Y5YTYxMWU0ZDUxNDVl
-      ZDZhSjEKB3Rhc2tfaWQSJgokY2RiNWQ2OTMtYzBlZS00YzYzLWFmNTEtNjBiYzJiNzUyZDdkegIY
-      AYUBAAEAABKvBwoQnl+Nvr9UYTxFFOnAabTpYhIIXNfEm0neQk0qDENyZXcgQ3JlYXRlZDABOfhZ
-      6Uw5zvMXQZCI60w5zvMXShoKDmNyZXdhaV92ZXJzaW9uEggKBjAuNTUuMkoaCg5weXRob25fdmVy
-      c2lvbhIICgYzLjExLjdKLgoIY3Jld19rZXkSIgogOThhN2QyMTQyNTIxMDc2OTM4Y2M4N2M3Njlk
-      ZWRjZDNKMQoHY3Jld19pZBImCiQ0ZWZhMDhjYy02ODU5LTRjMTctODEwNS04YTQ2YTlhMDU2NjdK
-      HAoMY3Jld19wcm9jZXNzEgwKCnNlcXVlbnRpYWxKEQoLY3Jld19tZW1vcnkSAhAAShoKFGNyZXdf
-      bnVtYmVyX29mX3Rhc2tzEgIYAUobChVjcmV3X251bWJlcl9vZl9hZ2VudHMSAhgBStUCCgtjcmV3
-      X2FnZW50cxLFAgrCAlt7ImtleSI6ICJmMzM4NmY2ZDhkYTc1YWE0MTZhNmUzMTAwNTNmNzY5OCIs
-      ICJpZCI6ICJkYmZiYTRkOC04YTllLTQ2ZTEtYjM3Yy0yMjQ3ZGZjYTFhNmIiLCAicm9sZSI6ICJ7
-      dG9waWN9IFJlc2VhcmNoZXIiLCAidmVyYm9zZT8iOiBmYWxzZSwgIm1heF9pdGVyIjogMjUsICJt
-      YXhfcnBtIjogbnVsbCwgImZ1bmN0aW9uX2NhbGxpbmdfbGxtIjogbnVsbCwgImxsbSI6ICJncHQt
-      NG8iLCAiZGVsZWdhdGlvbl9lbmFibGVkPyI6IHRydWUsICJhbGxvd19jb2RlX2V4ZWN1dGlvbj8i
-      OiBmYWxzZSwgIm1heF9yZXRyeV9saW1pdCI6IDIsICJ0b29sc19uYW1lcyI6IFtdfV1KhwIKCmNy
-      ZXdfdGFza3MS+AEK9QFbeyJrZXkiOiAiYWZhNjk4YjI2MmQzNTQzZjlhNjExZTRkNTE0NWVkNmEi
-      LCAiaWQiOiAiNDg0ZDI5OGMtY2YxYi00NDEzLTkwMDYtN2YzOTJiNzVhOWVlIiwgImFzeW5jX2V4
-      ZWN1dGlvbj8iOiBmYWxzZSwgImh1bWFuX2lucHV0PyI6IGZhbHNlLCAiYWdlbnRfcm9sZSI6ICJ7
-      dG9waWN9IFJlc2VhcmNoZXIiLCAiYWdlbnRfa2V5IjogImYzMzg2ZjZkOGRhNzVhYTQxNmE2ZTMx
-      MDA1M2Y3Njk4IiwgInRvb2xzX25hbWVzIjogW119XXoCGAGFAQABAAASjgIKEIQ+qSYCoGQu5G5Q
-      GbtdU8QSCK3L2Mq3qXo/KgxUYXNrIENyZWF0ZWQwATmYgPpMOc7zF0G4zvpMOc7zF0ouCghjcmV3
-      X2tleRIiCiA5OGE3ZDIxNDI1MjEwNzY5MzhjYzg3Yzc2OWRlZGNkM0oxCgdjcmV3X2lkEiYKJDRl
-      ZmEwOGNjLTY4NTktNGMxNy04MTA1LThhNDZhOWEwNTY2N0ouCgh0YXNrX2tleRIiCiBhZmE2OThi
-      MjYyZDM1NDNmOWE2MTFlNGQ1MTQ1ZWQ2YUoxCgd0YXNrX2lkEiYKJDQ4NGQyOThjLWNmMWItNDQx
-      My05MDA2LTdmMzkyYjc1YTllZXoCGAGFAQABAAA=
-    headers:
-      Accept:
-      - '*/*'
-      Accept-Encoding:
-      - gzip, deflate
-      Connection:
-      - keep-alive
-      Content-Length:
-      - '2936'
-      Content-Type:
-      - application/x-protobuf
-      User-Agent:
-      - OTel-OTLP-Exporter-Python/1.27.0
-    method: POST
-    uri: https://telemetry.crewai.com:4319/v1/traces
-  response:
-    body:
-      string: "\n\0"
-    headers:
-      Content-Length:
-      - '2'
-      Content-Type:
-      - application/x-protobuf
-      Date:
-      - Tue, 10 Sep 2024 06:30:29 GMT
-    status:
-      code: 200
-      message: OK
-- request:
-    body: '{"messages": [{"role": "user", "content": "You are {topic} Researcher.
+    body: '{"messages": [{"role": "system", "content": "You are {topic} Researcher.
       You have a lot of experience with {topic}.\nYour personal goal is: Express hot
       takes on {topic}.\nTo give my best complete final answer to the task use the
       exact following format:\n\nThought: I now can give a great answer\nFinal Answer:
       Your final answer must be the great and the most complete as possible, it must
-      be outcome described.\n\nI MUST use these formats, my job depends on it!\nCurrent
-      Task: Give me an analysis around {topic}.\n\nThis is the expect criteria for
-      your final answer: {points} bullet points about {topic}. \n you MUST return
-      the actual complete content as the final answer, not a summary.\n\nBegin! This
-      is VERY important to you, use the tools available and give your best Final Answer,
-      your job depends on it!\n\nThought:"}], "model": "gpt-4o", "stop": ["\nObservation"]}'
+      be outcome described.\n\nI MUST use these formats, my job depends on it!"},
+      {"role": "user", "content": "\nCurrent Task: Give me an analysis around {topic}.\n\nThis
+      is the expect criteria for your final answer: {points} bullet points about {topic}.\nyou
+      MUST return the actual complete content as the final answer, not a summary.\n\nBegin!
+      This is VERY important to you, use the tools available and give your best Final
+      Answer, your job depends on it!\n\nThought:"}], "model": "gpt-4o", "stop": ["\nObservation"]}'
     headers:
       accept:
       - application/json
@@ -101,16 +19,16 @@ interactions:
       connection:
       - keep-alive
       content-length:
-      - '869'
+      - '902'
       content-type:
       - application/json
       cookie:
-      - _cfuvid=8r8yFLG2b7e3n6pklgpsT05MHRvfdePz1ckAFvRQY8E-1725949790252-0.0.1.1-604800000;
-        __cf_bm=fuuc.ZDO3Y9B7nXE_8fBn7ykDAvAaK1VdxjZw0MTtsE-1725949790-1.0.1.1-pAJ7BWJMj1j3gS2ySR6xSBO7uFrjcB6ehFra4QVq14JqaiG4VDIjDO1C3WueKGRnSALSkpLQyJcJ2YVd_pXglQ
+      - __cf_bm=pgsskMPipgeSB6HhnkjwcOEfengIvt0p9whKNmTJVLs-1726215280-1.0.1.1-Gtqb.nO1U.cHTnd9mR9sEA5tpVo1.pexRrxqXOkn.6Mzja8mLG1URJsOLTfjMAAYpWaUQe4Rjmnr6lqQk5hAxQ;
+        _cfuvid=dp2yoCmGHVlURh_U78_UoIfnhcO5UhufnL5whkUSMTQ-1726214380689-0.0.1.1-604800000
       host:
       - api.openai.com
       user-agent:
-      - OpenAI/Python 1.44.0
+      - OpenAI/Python 1.45.0
       x-stainless-arch:
       - arm64
       x-stainless-async:
@@ -120,7 +38,7 @@ interactions:
       x-stainless-os:
       - MacOS
       x-stainless-package-version:
-      - 1.44.0
+      - 1.45.0
       x-stainless-raw-response:
       - 'true'
       x-stainless-runtime:
@@ -130,52 +48,46 @@ interactions:
     method: POST
     uri: https://api.openai.com/v1/chat/completions
   response:
-    content: "{\n  \"id\": \"chatcmpl-A5ogO2gmM9SIjDENUKOLvYv08n3cS\",\n  \"object\":
-      \"chat.completion\",\n  \"created\": 1725949828,\n  \"model\": \"gpt-4o-2024-05-13\",\n
+    content: "{\n  \"id\": \"chatcmpl-A6vlZhchuKDoVc5LCYKCcaPBdJctE\",\n  \"object\":
+      \"chat.completion\",\n  \"created\": 1726215385,\n  \"model\": \"gpt-4o-2024-05-13\",\n
       \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
-      \"assistant\",\n        \"content\": \"I now can give a great answer.\\n\\nFinal
-      Answer: \\n\\n**Hot Takes on Artificial Intelligence: An Analysis**\\n\\n1.
-      **AI and Employment**:\\n   - AI is often viewed as a job destroyer, but it
-      can also be a job creator. The rise of AI industries has introduced new roles
-      in AI maintenance, development, and ethics oversight.\\n   - Industries resistant
-      to AI adoption risk falling behind. Companies that successfully integrate AI
-      will outpace competitors, fostering a future where AI augments human capabilities
-      rather than replacing them entirely.\\n\\n2. **AI Ethics and Bias**:\\n   -
-      One of the most pressing issues with AI is the propagation of bias. AI models
-      trained on biased data sets can magnify societal prejudices. It\u2019s crucial
-      to implement transparent AI development standards and continuous auditing to
-      ensure fairness.\\n   - On the flip side, AI has the potential to enhance ethical
-      decision-making if programmed with comprehensive and diverse ethical frameworks.
-      The controversy stems from whose ethics are integrated and how dynamic these
-      systems remain.\\n\\n3. **AI in Healthcare**:\\n   - AI is revolutionizing healthcare
-      through predictive analytics, personalized medicine, and improved diagnostic
-      accuracy. Early adopters in health tech enjoy these benefits, but there is a
-      significant gap in access to such advancements.\\n   - Critics argue that over-reliance
-      on AI could undermine the doctor-patient relationship, vital for holistic care.
-      Hence, the role of AI should be complementary to human expertise rather than
-      a replacement.\\n\\n4. **AI and Privacy**:\\n   - The capability of AI to collect
-      and analyze vast amounts of data poses severe privacy concerns. Instances of
-      data breaches and unauthorized surveillance highlight the need for stringent
-      data governance policies.\\n   - Yet, AI-driven data analysis can also bolster
-      cybersecurity by detecting anomalies and potential threats more efficiently
-      than traditional methods, presenting a dual-edged sword for privacy advocates.\\n\\n5.
-      **The Future of AGI (Artificial General Intelligence)**:\\n   - The pursuit
-      of AGI brings forth existential debates. While proponents argue that AGI can
-      solve complex global issues, skeptics warn about uncontrollable and unforeseeable
-      consequences without stringent regulatory landscapes.\\n   - Speculations about
-      AGI often overshadow practical AI advancements. Most businesses and societal
-      applications currently derive from narrow AI, which focuses on specific tasks
-      and industries.\\n\\nBy considering these nuanced perspectives, it's clear that
-      AI presents both opportunities and challenges. The discourse around its implementation,
-      ethics, and future will shape its role in society for decades to come.\",\n
+      \"assistant\",\n        \"content\": \"Thought: I now can give a great answer\\n\\nFinal
+      Answer: \\n\\nAnalysis of Climate Change:\\n\\n1. **Scientific Consensus**:
+      The overwhelming majority of scientists agree that climate change is real and
+      primarily driven by human activities, particularly the burning of fossil fuels.
+      This consensus is supported by a substantial body of evidence, including rising
+      global temperatures, melting ice caps, and increasing sea levels.\\n\\n2. **Economic
+      Impact**: Climate change has significant economic implications. It affects agricultural
+      productivity, damages infrastructure through extreme weather events, and imposes
+      costs on health systems due to increased incidence of climate-related diseases.
+      Transitioning to renewable energy, although initially costly, is seen as a necessary
+      step to mitigate these impacts.\\n\\n3. **Environmental Consequences**: The
+      environmental impacts of climate change are profound. They include loss of biodiversity,
+      habitat destruction, and alteration of ecosystems. Coral reefs, for instance,
+      are severely threatened by ocean acidification and rising sea temperatures,
+      which affect marine life and the livelihoods dependent on them.\\n\\n4. **Policy
+      and Legislation**: Governments around the world are implementing policies to
+      combat climate change. These include the Paris Agreement, which aims to limit
+      global warming to below 2 degrees Celsius above pre-industrial levels. Carbon
+      pricing, emission trading systems, and renewable energy incentives are some
+      of the tools being employed to achieve these goals.\\n\\n5. **Social and Ethical
+      Dimensions**: Climate change also poses social and ethical challenges. It disproportionately
+      affects vulnerable populations, including low-income communities, indigenous
+      peoples, and countries with less economic resilience. There is a growing discourse
+      on climate justice, emphasizing the need for equitable solutions that consider
+      those most affected by climate impacts.\\n\\nBy considering these key points,
+      it is evident that climate change is a complex issue that requires a multifaceted
+      approach to address effectively. The interplay between science, economics, environment,
+      policy, and social justice highlights the need for coordinated global action.\",\n
       \       \"refusal\": null\n      },\n      \"logprobs\": null,\n      \"finish_reason\":
-      \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 174,\n    \"completion_tokens\":
-      491,\n    \"total_tokens\": 665\n  },\n  \"system_fingerprint\": \"fp_25624ae3a5\"\n}\n"
+      \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 178,\n    \"completion_tokens\":
+      378,\n    \"total_tokens\": 556,\n    \"completion_tokens_details\": {\n      \"reasoning_tokens\":
+      0\n    }\n  },\n  \"system_fingerprint\": \"fp_25624ae3a5\"\n}\n"
     headers:
       CF-Cache-Status:
       - DYNAMIC
       CF-RAY:
-      - 8c0d5e981d7dcf35-SJC
+      - 8c26b1ec3aad2ab9-LAX
       Connection:
       - keep-alive
       Content-Encoding:
@@ -183,7 +95,7 @@ interactions:
       Content-Type:
       - application/json
       Date:
-      - Tue, 10 Sep 2024 06:30:33 GMT
+      - Fri, 13 Sep 2024 08:16:30 GMT
       Server:
       - cloudflare
       Transfer-Encoding:
@@ -197,7 +109,7 @@ interactions:
       openai-organization:
       - crewai-iuxna1
       openai-processing-ms:
-      - '4673'
+      - '4843'
       openai-version:
       - '2020-10-01'
       strict-transport-security:
@@ -215,7 +127,7 @@ interactions:
       x-ratelimit-reset-tokens:
       - 0s
       x-request-id:
-      - req_1787deeb0d62ed5ef0106a49b660d8d9
+      - req_ce683c0cf68f34b6c4012cb3dc721f2d
     http_version: HTTP/1.1
     status_code: 200
 version: 1
