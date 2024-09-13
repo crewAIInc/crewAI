@@ -1,7 +1,7 @@
 from typing import Any, Optional, Type
 
 from embedchain.loaders.directory_loader import DirectoryLoader
-from pydantic.v1 import BaseModel, Field
+from pydantic import BaseModel, Field
 
 from ..rag.rag_tool import RagTool
 

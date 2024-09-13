@@ -1,19 +1,20 @@
-from typing import Optional, Type, Any
-from pydantic.v1 import BaseModel, Field
+from typing import Any, Optional, Type
+
+from pydantic import BaseModel, Field
+
 from ..base_tool import BaseTool
 
 
 class FixedFileReadToolSchema(BaseModel):
     """Input for FileReadTool."""
+
     pass
 
 
 class FileReadToolSchema(FixedFileReadToolSchema):
     """Input for FileReadTool."""
-    file_path: str = Field(
-        ...,
-        description="Mandatory file full path to read the file"
-    )
+
+    file_path: str = Field(..., description="Mandatory file full path to read the file")
 
 
 class FileReadTool(BaseTool):
@@ -22,11 +23,7 @@ class FileReadTool(BaseTool):
     args_schema: Type[BaseModel] = FileReadToolSchema
     file_path: Optional[str] = None
 
-    def __init__(
-        self,
-        file_path: Optional[str] = None,
-        **kwargs
-    ):
+    def __init__(self, file_path: Optional[str] = None, **kwargs):
         super().__init__(**kwargs)
         if file_path is not None:
             self.file_path = file_path
@@ -39,8 +36,8 @@ class FileReadTool(BaseTool):
         **kwargs: Any,
     ) -> Any:
         try:
-            file_path = kwargs.get('file_path', self.file_path)
-            with open(file_path, 'r') as file:
+            file_path = kwargs.get("file_path", self.file_path)
+            with open(file_path, "r") as file:
                 return file.read()
         except Exception as e:
             return f"Fail to read the file {file_path}. Error: {e}"
