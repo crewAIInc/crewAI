@@ -4,7 +4,6 @@ from crewai.agent import Agent
 from crewai.task import Task
 from crewai.tasks.task_output import TaskOutput
 from crewai.telemetry import Telemetry
-from langchain_openai import ChatOpenAI
 from pydantic import BaseModel, Field
 from rich.box import HEAVY_EDGE
 from rich.console import Console
@@ -51,7 +50,7 @@ class CrewEvaluator:
             ),
             backstory="Evaluator agent for crew evaluation with precise capabilities to evaluate the performance of the agents in the crew based on the tasks they have performed",
             verbose=False,
-            llm=ChatOpenAI(model=self.openai_model_name),
+            llm=self.openai_model_name,
         )
 
     def _evaluation_task(

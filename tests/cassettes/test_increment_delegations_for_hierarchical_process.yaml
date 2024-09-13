@@ -1,0 +1,472 @@
+interactions:
+- request:
+    body: '{"messages": [{"role": "user", "content": "You are Crew Manager. You are
+      a seasoned manager with a knack for getting the best out of your team.\nYou
+      are also known for your ability to delegate work to the right people, and to
+      ask the right questions to get the best out of your team.\nEven though you don''t
+      perform tasks by yourself, you have a lot of experience in the field, which
+      allows you to properly evaluate the work of your team members.\nYour personal
+      goal is: Manage the team to complete the task in the best way possible.\nYou
+      ONLY have access to the following tools, and should NEVER make up tools that
+      are not listed here:\n\nTool Name: Delegate work to coworker(task: str, context:
+      str, coworker: Optional[str] = None, **kwargs)\nTool Description: Delegate a
+      specific task to one of the following coworkers: Scorer\nThe input to this tool
+      should be the coworker, the task you want them to do, and ALL necessary context
+      to execute the task, they know nothing about the task, so share absolute everything
+      you know, don''t reference things but instead explain them.\nTool Arguments:
+      {''task'': {''title'': ''Task'', ''type'': ''string''}, ''context'': {''title'':
+      ''Context'', ''type'': ''string''}, ''coworker'': {''title'': ''Coworker'',
+      ''type'': ''string''}, ''kwargs'': {''title'': ''Kwargs'', ''type'': ''object''}}\nTool
+      Name: Ask question to coworker(question: str, context: str, coworker: Optional[str]
+      = None, **kwargs)\nTool Description: Ask a specific question to one of the following
+      coworkers: Scorer\nThe input to this tool should be the coworker, the question
+      you have for them, and ALL necessary context to ask the question properly, they
+      know nothing about the question, so share absolute everything you know, don''t
+      reference things but instead explain them.\nTool Arguments: {''question'': {''title'':
+      ''Question'', ''type'': ''string''}, ''context'': {''title'': ''Context'', ''type'':
+      ''string''}, ''coworker'': {''title'': ''Coworker'', ''type'': ''string''},
+      ''kwargs'': {''title'': ''Kwargs'', ''type'': ''object''}}\n\nUse the following
+      format:\n\nThought: you should always think about what to do\nAction: the action
+      to take, only one name of [Delegate work to coworker, Ask question to coworker],
+      just the name, exactly as it''s written.\nAction Input: the input to the action,
+      just a simple python dictionary, enclosed in curly braces, using \" to wrap
+      keys and values.\nObservation: the result of the action\n\nOnce all necessary
+      information is gathered:\n\nThought: I now know the final answer\nFinal Answer:
+      the final answer to the original input question\n\nCurrent Task: Give me an
+      integer score between 1-5 for the following title: ''The impact of AI in the
+      future of work''\n\nThis is the expect criteria for your final answer: The score
+      of the title. \n you MUST return the actual complete content as the final answer,
+      not a summary.\n\nBegin! This is VERY important to you, use the tools available
+      and give your best Final Answer, your job depends on it!\n\nThought:"}], "model":
+      "gpt-4o", "stop": ["\nObservation"]}'
+    headers:
+      accept:
+      - application/json
+      accept-encoding:
+      - gzip, deflate
+      connection:
+      - keep-alive
+      content-length:
+      - '2980'
+      content-type:
+      - application/json
+      cookie:
+      - _cfuvid=wl8o2jxCEnNABWV8zufHzNbIUfqCUxybX7Vi.1Ga1Zw-1726128032785-0.0.1.1-604800000;
+        __cf_bm=P6UUFPZt3p6lqd7cohlJaH8_cHJme92vyvYAbmz9NJM-1726128032-1.0.1.1-SpOib44J8vNLUjryxJjCeKWYWh49FWI5zpJ4UI1znYGWjRzK.vHdTx9WD07B3165P6KCStQUSxIsZNjVxE16Cg
+      host:
+      - api.openai.com
+      user-agent:
+      - OpenAI/Python 1.44.0
+      x-stainless-arch:
+      - arm64
+      x-stainless-async:
+      - 'false'
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - MacOS
+      x-stainless-package-version:
+      - 1.44.0
+      x-stainless-raw-response:
+      - 'true'
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.11.7
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    content: "{\n  \"id\": \"chatcmpl-A6Z2yke9Z49R9L16MG3XgIVtfSCwY\",\n  \"object\":
+      \"chat.completion\",\n  \"created\": 1726128052,\n  \"model\": \"gpt-4o-2024-05-13\",\n
+      \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
+      \"assistant\",\n        \"content\": \"Thought: I need to gather an evaluation
+      score for the title \\\"The impact of AI in the future of work\\\" based on
+      some criteria. The best way to accomplish this is to delegate this task to Scorer
+      and provide all the necessary context.\\n\\nAction: Delegate work to coworker\\nAction
+      Input: {\\\"task\\\": \\\"Give an integer score between 1-5 for the following
+      title: 'The impact of AI in the future of work'\\\", \\\"context\\\": \\\"Please
+      evaluate the title based on relevance, clarity, and significance. The title
+      should be rated with an integer score where 1 means very poor and 5 means excellent.\\\",
+      \\\"coworker\\\": \\\"Scorer\\\"}\\n\",\n        \"refusal\": null\n      },\n
+      \     \"logprobs\": null,\n      \"finish_reason\": \"stop\"\n    }\n  ],\n
+      \ \"usage\": {\n    \"prompt_tokens\": 660,\n    \"completion_tokens\": 136,\n
+      \   \"total_tokens\": 796\n  },\n  \"system_fingerprint\": \"fp_25624ae3a5\"\n}\n"
+    headers:
+      CF-Cache-Status:
+      - DYNAMIC
+      CF-RAY:
+      - 8c1e5dc2e8ad6280-GRU
+      Connection:
+      - keep-alive
+      Content-Encoding:
+      - gzip
+      Content-Type:
+      - application/json
+      Date:
+      - Thu, 12 Sep 2024 08:00:54 GMT
+      Server:
+      - cloudflare
+      Transfer-Encoding:
+      - chunked
+      X-Content-Type-Options:
+      - nosniff
+      access-control-expose-headers:
+      - X-Request-ID
+      alt-svc:
+      - h3=":443"; ma=86400
+      openai-organization:
+      - crewai-iuxna1
+      openai-processing-ms:
+      - '1731'
+      openai-version:
+      - '2020-10-01'
+      strict-transport-security:
+      - max-age=15552000; includeSubDomains; preload
+      x-ratelimit-limit-requests:
+      - '10000'
+      x-ratelimit-limit-tokens:
+      - '30000000'
+      x-ratelimit-remaining-requests:
+      - '9999'
+      x-ratelimit-remaining-tokens:
+      - '29999270'
+      x-ratelimit-reset-requests:
+      - 6ms
+      x-ratelimit-reset-tokens:
+      - 1ms
+      x-request-id:
+      - req_1efbe90172036fca00dc98b82e1d36b7
+    http_version: HTTP/1.1
+    status_code: 200
+- request:
+    body: '{"messages": [{"role": "user", "content": "You are Scorer. You''re an expert
+      scorer, specialized in scoring titles.\nYour personal goal is: Score the title\nTo
+      give my best complete final answer to the task use the exact following format:\n\nThought:
+      I now can give a great answer\nFinal Answer: Your final answer must be the great
+      and the most complete as possible, it must be outcome described.\n\nI MUST use
+      these formats, my job depends on it!\nCurrent Task: Give an integer score between
+      1-5 for the following title: ''The impact of AI in the future of work''\n\nThis
+      is the expect criteria for your final answer: Your best answer to your coworker
+      asking you this, accounting for the context shared. \n you MUST return the actual
+      complete content as the final answer, not a summary.\n\nThis is the context
+      you''re working with:\nPlease evaluate the title based on relevance, clarity,
+      and significance. The title should be rated with an integer score where 1 means
+      very poor and 5 means excellent.\n\nBegin! This is VERY important to you, use
+      the tools available and give your best Final Answer, your job depends on it!\n\nThought:"}],
+      "model": "gpt-4o", "stop": ["\nObservation"]}'
+    headers:
+      accept:
+      - application/json
+      accept-encoding:
+      - gzip, deflate
+      connection:
+      - keep-alive
+      content-length:
+      - '1181'
+      content-type:
+      - application/json
+      cookie:
+      - _cfuvid=wl8o2jxCEnNABWV8zufHzNbIUfqCUxybX7Vi.1Ga1Zw-1726128032785-0.0.1.1-604800000;
+        __cf_bm=P6UUFPZt3p6lqd7cohlJaH8_cHJme92vyvYAbmz9NJM-1726128032-1.0.1.1-SpOib44J8vNLUjryxJjCeKWYWh49FWI5zpJ4UI1znYGWjRzK.vHdTx9WD07B3165P6KCStQUSxIsZNjVxE16Cg
+      host:
+      - api.openai.com
+      user-agent:
+      - OpenAI/Python 1.44.0
+      x-stainless-arch:
+      - arm64
+      x-stainless-async:
+      - 'false'
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - MacOS
+      x-stainless-package-version:
+      - 1.44.0
+      x-stainless-raw-response:
+      - 'true'
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.11.7
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    content: "{\n  \"id\": \"chatcmpl-A6Z3055c8eQwgrOGdho2OPHJJVpDm\",\n  \"object\":
+      \"chat.completion\",\n  \"created\": 1726128054,\n  \"model\": \"gpt-4o-2024-05-13\",\n
+      \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
+      \"assistant\",\n        \"content\": \"Thought: I now can give a great answer\\nFinal
+      Answer: 5\\n\\nThe title \\\"The impact of AI in the future of work\\\" is highly
+      relevant, clear, and significant. It addresses a current and crucial topic in
+      the field of technology and employment, making it an excellent choice.\",\n
+      \       \"refusal\": null\n      },\n      \"logprobs\": null,\n      \"finish_reason\":
+      \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 234,\n    \"completion_tokens\":
+      59,\n    \"total_tokens\": 293\n  },\n  \"system_fingerprint\": \"fp_157b3831f5\"\n}\n"
+    headers:
+      CF-Cache-Status:
+      - DYNAMIC
+      CF-RAY:
+      - 8c1e5dd3beab6280-GRU
+      Connection:
+      - keep-alive
+      Content-Encoding:
+      - gzip
+      Content-Type:
+      - application/json
+      Date:
+      - Thu, 12 Sep 2024 08:00:55 GMT
+      Server:
+      - cloudflare
+      Transfer-Encoding:
+      - chunked
+      X-Content-Type-Options:
+      - nosniff
+      access-control-expose-headers:
+      - X-Request-ID
+      alt-svc:
+      - h3=":443"; ma=86400
+      openai-organization:
+      - crewai-iuxna1
+      openai-processing-ms:
+      - '880'
+      openai-version:
+      - '2020-10-01'
+      strict-transport-security:
+      - max-age=15552000; includeSubDomains; preload
+      x-ratelimit-limit-requests:
+      - '10000'
+      x-ratelimit-limit-tokens:
+      - '30000000'
+      x-ratelimit-remaining-requests:
+      - '9999'
+      x-ratelimit-remaining-tokens:
+      - '29999714'
+      x-ratelimit-reset-requests:
+      - 6ms
+      x-ratelimit-reset-tokens:
+      - 0s
+      x-request-id:
+      - req_dd6f1578546f53814be3082794dc14a4
+    http_version: HTTP/1.1
+    status_code: 200
+- request:
+    body: !!binary |
+      CowVCiQKIgoMc2VydmljZS5uYW1lEhIKEGNyZXdBSS10ZWxlbWV0cnkS4xQKEgoQY3Jld2FpLnRl
+      bGVtZXRyeRKQAgoQeT26F/4hZ7e4TKDw2NUDRhIIi+R98k3og7gqDlRhc2sgRXhlY3V0aW9uMAE5
+      +DYNoVBw9BdBMDoLCFFw9BdKLgoIY3Jld19rZXkSIgogNWU2ZWZmZTY4MGE1ZDk3ZGMzODczYjE0
+      ODI1Y2NmYTNKMQoHY3Jld19pZBImCiQyZDg1MmM0YS0wNTRjLTQyMTctYTg4Zi01MDFlNmZkMDI4
+      YTRKLgoIdGFza19rZXkSIgogMjdlZjM4Y2M5OWRhNGE4ZGVkNzBlZDQwNmU0NGFiODZKMQoHdGFz
+      a19pZBImCiQ2ZmZjZjBmMC1iZDI0LTQ5ODYtODU3ZS01NTg4MzNhMDc2NTJ6AhgBhQEAAQAAEpgH
+      ChCshGAUQwPOSjb4/25P1xwiEgjLY8acTM9PSCoMQ3JldyBDcmVhdGVkMAE5WL3vCVFw9BdB0Bry
+      CVFw9BdKGgoOY3Jld2FpX3ZlcnNpb24SCAoGMC41NS4yShoKDnB5dGhvbl92ZXJzaW9uEggKBjMu
+      MTEuN0ouCghjcmV3X2tleRIiCiA1ZTZlZmZlNjgwYTVkOTdkYzM4NzNiMTQ4MjVjY2ZhM0oxCgdj
+      cmV3X2lkEiYKJDQxZTBiNzIzLTJkNzUtNDk4ZS1hZWY3LTQxZDkwY2U1YjI1ZEocCgxjcmV3X3By
+      b2Nlc3MSDAoKc2VxdWVudGlhbEoRCgtjcmV3X21lbW9yeRICEABKGgoUY3Jld19udW1iZXJfb2Zf
+      dGFza3MSAhgBShsKFWNyZXdfbnVtYmVyX29mX2FnZW50cxICGAFKygIKC2NyZXdfYWdlbnRzEroC
+      CrcCW3sia2V5IjogIjkyZTdlYjE5MTY2NGM5MzU3ODVlZDdkNDI0MGEyOTRkIiwgImlkIjogIjY5
+      ODY2NTc0LWZiNTktNDIzZi1iYTQ4LWE5NzJjMWNhM2NkMSIsICJyb2xlIjogIlNjb3JlciIsICJ2
+      ZXJib3NlPyI6IGZhbHNlLCAibWF4X2l0ZXIiOiAyNSwgIm1heF9ycG0iOiBudWxsLCAiZnVuY3Rp
+      b25fY2FsbGluZ19sbG0iOiBudWxsLCAibGxtIjogImdwdC00byIsICJkZWxlZ2F0aW9uX2VuYWJs
+      ZWQ/IjogZmFsc2UsICJhbGxvd19jb2RlX2V4ZWN1dGlvbj8iOiBmYWxzZSwgIm1heF9yZXRyeV9s
+      aW1pdCI6IDIsICJ0b29sc19uYW1lcyI6IFtdfV1K+wEKCmNyZXdfdGFza3MS7AEK6QFbeyJrZXki
+      OiAiMjdlZjM4Y2M5OWRhNGE4ZGVkNzBlZDQwNmU0NGFiODYiLCAiaWQiOiAiYTRkMmZmNjctMDU0
+      OS00MWZhLThjNTctZmY5ZTFlNDljZTZjIiwgImFzeW5jX2V4ZWN1dGlvbj8iOiBmYWxzZSwgImh1
+      bWFuX2lucHV0PyI6IGZhbHNlLCAiYWdlbnRfcm9sZSI6ICJTY29yZXIiLCAiYWdlbnRfa2V5Ijog
+      IjkyZTdlYjE5MTY2NGM5MzU3ODVlZDdkNDI0MGEyOTRkIiwgInRvb2xzX25hbWVzIjogW119XXoC
+      GAGFAQABAAASjgIKEBeiZsUSQ7wZrPp6CpPU4MUSCJWAFBAOLSjCKgxUYXNrIENyZWF0ZWQwATlA
+      0gEKUXD0F0EYLAIKUXD0F0ouCghjcmV3X2tleRIiCiA1ZTZlZmZlNjgwYTVkOTdkYzM4NzNiMTQ4
+      MjVjY2ZhM0oxCgdjcmV3X2lkEiYKJDQxZTBiNzIzLTJkNzUtNDk4ZS1hZWY3LTQxZDkwY2U1YjI1
+      ZEouCgh0YXNrX2tleRIiCiAyN2VmMzhjYzk5ZGE0YThkZWQ3MGVkNDA2ZTQ0YWI4NkoxCgd0YXNr
+      X2lkEiYKJGE0ZDJmZjY3LTA1NDktNDFmYS04YzU3LWZmOWUxZTQ5Y2U2Y3oCGAGFAQABAAASkAIK
+      ECNo+iuPtbkDcB86MRfKzR0SCCaDqJUCC4flKg5UYXNrIEV4ZWN1dGlvbjABORBXAgpRcPQXQcg3
+      CjdRcPQXSi4KCGNyZXdfa2V5EiIKIDVlNmVmZmU2ODBhNWQ5N2RjMzg3M2IxNDgyNWNjZmEzSjEK
+      B2NyZXdfaWQSJgokNDFlMGI3MjMtMmQ3NS00OThlLWFlZjctNDFkOTBjZTViMjVkSi4KCHRhc2tf
+      a2V5EiIKIDI3ZWYzOGNjOTlkYTRhOGRlZDcwZWQ0MDZlNDRhYjg2SjEKB3Rhc2tfaWQSJgokYTRk
+      MmZmNjctMDU0OS00MWZhLThjNTctZmY5ZTFlNDljZTZjegIYAYUBAAEAABL6BgoQaxxZBwOwuRxR
+      W/i8z+hr9BIIB2ymF/uT2RAqDENyZXcgQ3JlYXRlZDABOVhdUDtRcPQXQXiHVjtRcPQXShoKDmNy
+      ZXdhaV92ZXJzaW9uEggKBjAuNTUuMkoaCg5weXRob25fdmVyc2lvbhIICgYzLjExLjdKLgoIY3Jl
+      d19rZXkSIgogNWU2ZWZmZTY4MGE1ZDk3ZGMzODczYjE0ODI1Y2NmYTNKMQoHY3Jld19pZBImCiQ0
+      NjU3OTg0Ny05ODJlLTQ2ZDEtYmJmMy00MjQ5MTFmYWQwYWJKHgoMY3Jld19wcm9jZXNzEg4KDGhp
+      ZXJhcmNoaWNhbEoRCgtjcmV3X21lbW9yeRICEABKGgoUY3Jld19udW1iZXJfb2ZfdGFza3MSAhgB
+      ShsKFWNyZXdfbnVtYmVyX29mX2FnZW50cxICGAFKygIKC2NyZXdfYWdlbnRzEroCCrcCW3sia2V5
+      IjogIjkyZTdlYjE5MTY2NGM5MzU3ODVlZDdkNDI0MGEyOTRkIiwgImlkIjogIjYwOGNkYjYyLThi
+      MTktNDJmMy1iNTRhLTUyOThjZGVjZjM4MCIsICJyb2xlIjogIlNjb3JlciIsICJ2ZXJib3NlPyI6
+      IGZhbHNlLCAibWF4X2l0ZXIiOiAyNSwgIm1heF9ycG0iOiBudWxsLCAiZnVuY3Rpb25fY2FsbGlu
+      Z19sbG0iOiBudWxsLCAibGxtIjogImdwdC00byIsICJkZWxlZ2F0aW9uX2VuYWJsZWQ/IjogZmFs
+      c2UsICJhbGxvd19jb2RlX2V4ZWN1dGlvbj8iOiBmYWxzZSwgIm1heF9yZXRyeV9saW1pdCI6IDIs
+      ICJ0b29sc19uYW1lcyI6IFtdfV1K2wEKCmNyZXdfdGFza3MSzAEKyQFbeyJrZXkiOiAiMjdlZjM4
+      Y2M5OWRhNGE4ZGVkNzBlZDQwNmU0NGFiODYiLCAiaWQiOiAiZDUxMjNjMWYtN2IzMC00ZjNkLThk
+      MzItOWQ2YjhmODdmMzEyIiwgImFzeW5jX2V4ZWN1dGlvbj8iOiBmYWxzZSwgImh1bWFuX2lucHV0
+      PyI6IGZhbHNlLCAiYWdlbnRfcm9sZSI6ICJOb25lIiwgImFnZW50X2tleSI6IG51bGwsICJ0b29s
+      c19uYW1lcyI6IFtdfV16AhgBhQEAAQAA
+    headers:
+      Accept:
+      - '*/*'
+      Accept-Encoding:
+      - gzip, deflate
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '2703'
+      Content-Type:
+      - application/x-protobuf
+      User-Agent:
+      - OTel-OTLP-Exporter-Python/1.27.0
+    method: POST
+    uri: https://telemetry.crewai.com:4319/v1/traces
+  response:
+    body:
+      string: "\n\0"
+    headers:
+      Content-Length:
+      - '2'
+      Content-Type:
+      - application/x-protobuf
+      Date:
+      - Thu, 12 Sep 2024 08:00:56 GMT
+    status:
+      code: 200
+      message: OK
+- request:
+    body: '{"messages": [{"role": "user", "content": "You are Crew Manager. You are
+      a seasoned manager with a knack for getting the best out of your team.\nYou
+      are also known for your ability to delegate work to the right people, and to
+      ask the right questions to get the best out of your team.\nEven though you don''t
+      perform tasks by yourself, you have a lot of experience in the field, which
+      allows you to properly evaluate the work of your team members.\nYour personal
+      goal is: Manage the team to complete the task in the best way possible.\nYou
+      ONLY have access to the following tools, and should NEVER make up tools that
+      are not listed here:\n\nTool Name: Delegate work to coworker(task: str, context:
+      str, coworker: Optional[str] = None, **kwargs)\nTool Description: Delegate a
+      specific task to one of the following coworkers: Scorer\nThe input to this tool
+      should be the coworker, the task you want them to do, and ALL necessary context
+      to execute the task, they know nothing about the task, so share absolute everything
+      you know, don''t reference things but instead explain them.\nTool Arguments:
+      {''task'': {''title'': ''Task'', ''type'': ''string''}, ''context'': {''title'':
+      ''Context'', ''type'': ''string''}, ''coworker'': {''title'': ''Coworker'',
+      ''type'': ''string''}, ''kwargs'': {''title'': ''Kwargs'', ''type'': ''object''}}\nTool
+      Name: Ask question to coworker(question: str, context: str, coworker: Optional[str]
+      = None, **kwargs)\nTool Description: Ask a specific question to one of the following
+      coworkers: Scorer\nThe input to this tool should be the coworker, the question
+      you have for them, and ALL necessary context to ask the question properly, they
+      know nothing about the question, so share absolute everything you know, don''t
+      reference things but instead explain them.\nTool Arguments: {''question'': {''title'':
+      ''Question'', ''type'': ''string''}, ''context'': {''title'': ''Context'', ''type'':
+      ''string''}, ''coworker'': {''title'': ''Coworker'', ''type'': ''string''},
+      ''kwargs'': {''title'': ''Kwargs'', ''type'': ''object''}}\n\nUse the following
+      format:\n\nThought: you should always think about what to do\nAction: the action
+      to take, only one name of [Delegate work to coworker, Ask question to coworker],
+      just the name, exactly as it''s written.\nAction Input: the input to the action,
+      just a simple python dictionary, enclosed in curly braces, using \" to wrap
+      keys and values.\nObservation: the result of the action\n\nOnce all necessary
+      information is gathered:\n\nThought: I now know the final answer\nFinal Answer:
+      the final answer to the original input question\n\nCurrent Task: Give me an
+      integer score between 1-5 for the following title: ''The impact of AI in the
+      future of work''\n\nThis is the expect criteria for your final answer: The score
+      of the title. \n you MUST return the actual complete content as the final answer,
+      not a summary.\n\nBegin! This is VERY important to you, use the tools available
+      and give your best Final Answer, your job depends on it!\n\nThought:"}, {"role":
+      "assistant", "content": "Thought: I need to gather an evaluation score for the
+      title \"The impact of AI in the future of work\" based on some criteria. The
+      best way to accomplish this is to delegate this task to Scorer and provide all
+      the necessary context.\n\nAction: Delegate work to coworker\nAction Input: {\"task\":
+      \"Give an integer score between 1-5 for the following title: ''The impact of
+      AI in the future of work''\", \"context\": \"Please evaluate the title based
+      on relevance, clarity, and significance. The title should be rated with an integer
+      score where 1 means very poor and 5 means excellent.\", \"coworker\": \"Scorer\"}\n\nObservation:
+      5\n\nThe title \"The impact of AI in the future of work\" is highly relevant,
+      clear, and significant. It addresses a current and crucial topic in the field
+      of technology and employment, making it an excellent choice."}], "model": "gpt-4o",
+      "stop": ["\nObservation"]}'
+    headers:
+      accept:
+      - application/json
+      accept-encoding:
+      - gzip, deflate
+      connection:
+      - keep-alive
+      content-length:
+      - '3863'
+      content-type:
+      - application/json
+      cookie:
+      - _cfuvid=wl8o2jxCEnNABWV8zufHzNbIUfqCUxybX7Vi.1Ga1Zw-1726128032785-0.0.1.1-604800000;
+        __cf_bm=P6UUFPZt3p6lqd7cohlJaH8_cHJme92vyvYAbmz9NJM-1726128032-1.0.1.1-SpOib44J8vNLUjryxJjCeKWYWh49FWI5zpJ4UI1znYGWjRzK.vHdTx9WD07B3165P6KCStQUSxIsZNjVxE16Cg
+      host:
+      - api.openai.com
+      user-agent:
+      - OpenAI/Python 1.44.0
+      x-stainless-arch:
+      - arm64
+      x-stainless-async:
+      - 'false'
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - MacOS
+      x-stainless-package-version:
+      - 1.44.0
+      x-stainless-raw-response:
+      - 'true'
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.11.7
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    content: "{\n  \"id\": \"chatcmpl-A6Z32SMvj8xe2HIGWbtAU1NJiQQMu\",\n  \"object\":
+      \"chat.completion\",\n  \"created\": 1726128056,\n  \"model\": \"gpt-4o-2024-05-13\",\n
+      \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
+      \"assistant\",\n        \"content\": \"Thought: I now know the final answer\\n\\nFinal
+      Answer: 5\",\n        \"refusal\": null\n      },\n      \"logprobs\": null,\n
+      \     \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\":
+      848,\n    \"completion_tokens\": 14,\n    \"total_tokens\": 862\n  },\n  \"system_fingerprint\":
+      \"fp_25624ae3a5\"\n}\n"
+    headers:
+      CF-Cache-Status:
+      - DYNAMIC
+      CF-RAY:
+      - 8c1e5ddebb106280-GRU
+      Connection:
+      - keep-alive
+      Content-Encoding:
+      - gzip
+      Content-Type:
+      - application/json
+      Date:
+      - Thu, 12 Sep 2024 08:00:57 GMT
+      Server:
+      - cloudflare
+      Transfer-Encoding:
+      - chunked
+      X-Content-Type-Options:
+      - nosniff
+      access-control-expose-headers:
+      - X-Request-ID
+      alt-svc:
+      - h3=":443"; ma=86400
+      openai-organization:
+      - crewai-iuxna1
+      openai-processing-ms:
+      - '261'
+      openai-version:
+      - '2020-10-01'
+      strict-transport-security:
+      - max-age=15552000; includeSubDomains; preload
+      x-ratelimit-limit-requests:
+      - '10000'
+      x-ratelimit-limit-tokens:
+      - '30000000'
+      x-ratelimit-remaining-requests:
+      - '9999'
+      x-ratelimit-remaining-tokens:
+      - '29999062'
+      x-ratelimit-reset-requests:
+      - 6ms
+      x-ratelimit-reset-tokens:
+      - 1ms
+      x-request-id:
+      - req_fcdfbf430a138e20427a734ee04d6609
+    http_version: HTTP/1.1
+    status_code: 200
+version: 1

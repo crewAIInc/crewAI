@@ -6,7 +6,6 @@ from concurrent.futures import Future
 from hashlib import md5
 from typing import TYPE_CHECKING, Any, Dict, List, Optional, Tuple, Union
 
-from langchain_core.callbacks import BaseCallbackHandler
 from pydantic import (
     UUID4,
     BaseModel,
@@ -68,7 +67,6 @@ class Crew(BaseModel):
         manager_llm: The language model that will run manager agent.
         manager_agent: Custom agent that will be used as manager.
         memory: Whether the crew should use memory to store memories of it's execution.
-        manager_callbacks: The callback handlers to be executed by the manager agent when hierarchical process is used
         cache: Whether the crew should use a cache to store the results of the tools execution.
         function_calling_llm: The language model that will run the tool calling for all the agents.
         process: The process flow that the crew will follow (e.g., sequential, hierarchical).
@@ -125,10 +123,6 @@ class Crew(BaseModel):
     )
     manager_agent: Optional[BaseAgent] = Field(
         description="Custom agent that will be used as manager.", default=None
-    )
-    manager_callbacks: Optional[List[InstanceOf[BaseCallbackHandler]]] = Field(
-        default=None,
-        description="A list of callback handlers to be executed by the manager agent when hierarchical process is used",
     )
     function_calling_llm: Optional[Any] = Field(
         description="Language model that will run the agent.", default=None

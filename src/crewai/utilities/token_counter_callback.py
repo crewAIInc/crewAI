@@ -11,10 +11,7 @@ class TokenCalcHandler(CustomLogger):
             return
 
         self.token_cost_process.sum_successful_requests(1)
-        print("*** response_obj", response_obj)
-        self.token_cost_process.sum_prompt_tokens(
-            response_obj["usage"]["prompt_tokens"]
-        )
+        self.token_cost_process.sum_prompt_tokens(response_obj["usage"].prompt_tokens)
         self.token_cost_process.sum_completion_tokens(
-            response_obj["usage"]["completion_tokens"]
+            response_obj["usage"].completion_tokens
         )

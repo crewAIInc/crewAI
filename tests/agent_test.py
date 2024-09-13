@@ -12,10 +12,8 @@ from crewai.agents.parser import CrewAgentParser, OutputParserException
 from crewai.tools.tool_calling import InstructorToolCalling
 from crewai.tools.tool_usage import ToolUsage
 from crewai.utilities import RPMController
-from langchain.schema import AgentAction
 from crewai_tools import tool
-
-from langchain_openai import ChatOpenAI
+from crewai.agents.parser import AgentAction
 
 
 def test_agent_creation():
@@ -30,7 +28,7 @@ def test_agent_creation():
 def test_agent_default_values():
     agent = Agent(role="test role", goal="test goal", backstory="test backstory")
     assert agent.llm == "gpt-4o"
-    assert agent.allow_delegation is True
+    assert agent.allow_delegation is False
 
 
 def test_custom_llm():
@@ -41,6 +39,8 @@ def test_custom_llm():
 
 
 def test_custom_llm_with_langchain():
+    from langchain_openai import ChatOpenAI
+
     agent = Agent(
         role="test role",
         goal="test goal",
@@ -443,7 +443,7 @@ def test_agent_respect_the_max_rpm_set(capsys):
         moveon.assert_called()
 
 
-# @pytest.mark.vcr(filter_headers=["authorization"])
+@pytest.mark.vcr(filter_headers=["authorization"])
 def test_agent_respect_the_max_rpm_set_over_crew_rpm(capsys):
     from unittest.mock import patch
     from crewai_tools import tool
@@ -476,7 +476,6 @@ def test_agent_respect_the_max_rpm_set_over_crew_rpm(capsys):
         moveon.return_value = True
         crew.kickoff()
         captured = capsys.readouterr()
-        print("captured.out", captured.out)
         assert "Max RPM reached, waiting for next minute to start." not in captured.out
         moveon.assert_not_called()
 
@@ -564,7 +563,7 @@ def test_agent_error_on_parsing_tool(capsys):
         agents=[agent1],
         tasks=tasks,
         verbose=True,
-        function_calling_llm=ChatOpenAI(model="gpt-4-0125-preview"),
+        function_calling_llm="gpt-4",
     )
 
     with patch.object(ToolUsage, "_render") as force_exception:
@@ -612,7 +611,6 @@ def test_agent_remembers_output_format_after_using_tools_too_many_times():
 @pytest.mark.vcr(filter_headers=["authorization"])
 def test_agent_use_specific_tasks_output_as_context(capsys):
     agent1 = Agent(role="test role", goal="test goal", backstory="test backstory")
-
     agent2 = Agent(role="test role2", goal="test goal2", backstory="test backstory2")
 
     say_hi_task = Task(
@@ -641,7 +639,7 @@ def test_agent_use_specific_tasks_output_as_context(capsys):
 def test_agent_step_callback():
     class StepCallback:
         def callback(self, step):
-            print(step)
+            pass
 
     with patch.object(StepCallback, "callback") as callback:
 
@@ -673,7 +671,7 @@ def test_agent_step_callback():
 
 @pytest.mark.vcr(filter_headers=["authorization"])
 def test_agent_function_calling_llm():
-    llm = ChatOpenAI(model="gpt-3.5-turbo-0125")
+    llm = "gpt-3.5-turbo-0125"
 
     @tool
     def learn_about_AI(topic) -> str:
@@ -685,7 +683,7 @@ def test_agent_function_calling_llm():
         goal="test goal",
         backstory="test backstory",
         tools=[learn_about_AI],
-        llm=ChatOpenAI(model="gpt-4-0125-preview"),
+        llm="gpt-3.5-turbo-0125",
         function_calling_llm=llm,
     )
 
@@ -703,6 +701,8 @@ def test_agent_function_calling_llm():
         crew.kickoff()
         mock_instructor.assert_called()
         calls = mock_instructor.call_args_list
+        print("callscallscallscallscalls")
+        print(calls)
         assert any(
             call.kwargs.get("llm") == "gpt-3.5-turbo-0125" for call in calls
         ), "Instructor was not created with the expected model"
@@ -754,7 +754,6 @@ def test_tool_result_as_answer_is_the_final_answer_for_the_agent():
     crew = Crew(agents=[agent1], tasks=tasks)
 
     result = crew.kickoff()
-    print("RESULT: ", result.raw)
     assert result.raw == "Howdy!"
 
 
@@ -995,18 +994,18 @@ def test_agent_max_retry_limit():
             [
                 mock.call(
                     {
-                        "input": "Say the word: Hi\n\nThis is the expect criteria for your final answer: The word: Hi \n you MUST return the actual complete content as the final answer, not a summary.",
+                        "input": "Say the word: Hi\n\nThis is the expect criteria for your final answer: The word: Hi\nyou MUST return the actual complete content as the final answer, not a summary.",
                         "tool_names": "",
                         "tools": "",
-                        "should_ask_for_human_input": True,
+                        "ask_for_human_input": True,
                     }
                 ),
                 mock.call(
                     {
-                        "input": "Say the word: Hi\n\nThis is the expect criteria for your final answer: The word: Hi \n you MUST return the actual complete content as the final answer, not a summary.",
+                        "input": "Say the word: Hi\n\nThis is the expect criteria for your final answer: The word: Hi\nyou MUST return the actual complete content as the final answer, not a summary.",
                         "tool_names": "",
                         "tools": "",
-                        "should_ask_for_human_input": True,
+                        "ask_for_human_input": True,
                     }
                 ),
             ]
@@ -1021,7 +1020,7 @@ def test_handle_context_length_exceeds_limit():
         backstory="test backstory",
     )
     original_action = AgentAction(
-        tool="test_tool", tool_input="test_input", log="test_log"
+        tool="test_tool", tool_input="test_input", text="test_log"
     )
 
     with patch.object(

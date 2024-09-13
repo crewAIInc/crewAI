@@ -1,145 +1,15 @@
 interactions:
 - request:
     body: '{"messages": [{"role": "user", "content": "You are test role. test backstory\nYour
-      personal goal is: test goal\nYou ONLY have access to the following tools, and
-      should NEVER make up tools that are not listed here:\n\nTool Name: Delegate
-      work to coworker(task: str, context: str, coworker: Optional[str] = None, **kwargs)\nTool
-      Description: Delegate a specific task to one of the following coworkers: test
-      role2\nThe input to this tool should be the coworker, the task you want them
-      to do, and ALL necessary context to execute the task, they know nothing about
-      the task, so share absolute everything you know, don''t reference things but
-      instead explain them.\nTool Arguments: {''task'': {''title'': ''Task'', ''type'':
-      ''string''}, ''context'': {''title'': ''Context'', ''type'': ''string''}, ''coworker'':
-      {''title'': ''Coworker'', ''type'': ''string''}, ''kwargs'': {''title'': ''Kwargs'',
-      ''type'': ''object''}}\nTool Name: Ask question to coworker(question: str, context:
-      str, coworker: Optional[str] = None, **kwargs)\nTool Description: Ask a specific
-      question to one of the following coworkers: test role2\nThe input to this tool
-      should be the coworker, the question you have for them, and ALL necessary context
-      to ask the question properly, they know nothing about the question, so share
-      absolute everything you know, don''t reference things but instead explain them.\nTool
-      Arguments: {''question'': {''title'': ''Question'', ''type'': ''string''}, ''context'':
-      {''title'': ''Context'', ''type'': ''string''}, ''coworker'': {''title'': ''Coworker'',
-      ''type'': ''string''}, ''kwargs'': {''title'': ''Kwargs'', ''type'': ''object''}}\n\nUse
-      the following format:\n\nThought: you should always think about what to do\nAction:
-      the action to take, only one name of [Delegate work to coworker, Ask question
-      to coworker], just the name, exactly as it''s written.\nAction Input: the input
-      to the action, just a simple python dictionary, enclosed in curly braces, using
-      \" to wrap keys and values.\nObservation: the result of the action\n\nOnce all
-      necessary information is gathered:\n\nThought: I now know the final answer\nFinal
-      Answer: the final answer to the original input question\n\nCurrent Task: Just
-      say hi.\n\nThis is the expect criteria for your final answer: Your greeting.
-      \n you MUST return the actual complete content as the final answer, not a summary.\n\nBegin!
-      This is VERY important to you, use the tools available and give your best Final
-      Answer, your job depends on it!\n\nThought:"}], "model": "gpt-4o", "stop": ["\nObservation"]}'
-    headers:
-      accept:
-      - application/json
-      accept-encoding:
-      - gzip, deflate
-      connection:
-      - keep-alive
-      content-length:
-      - '2467'
-      content-type:
-      - application/json
-      cookie:
-      - __cf_bm=iMsGonnXhDDCqOz9miNRwOGOr7OzXm1EqcxEiFk_nT4-1725908571-1.0.1.1-1P.quluT8iIibKOx0N4Mj8vflrRuSZk7gOWmptSyOKAFsTkvt3UultWM2b_B6I956Cvswux_SgpniB37rKO8Vw;
-        _cfuvid=iTR1OQH6LALCSFaeT0eFfOeYnI_fkFZDwyyndcJuH8E-1725908571214-0.0.1.1-604800000
-      host:
-      - api.openai.com
-      user-agent:
-      - OpenAI/Python 1.44.0
-      x-stainless-arch:
-      - arm64
-      x-stainless-async:
-      - 'false'
-      x-stainless-lang:
-      - python
-      x-stainless-os:
-      - MacOS
-      x-stainless-package-version:
-      - 1.44.0
-      x-stainless-raw-response:
-      - 'true'
-      x-stainless-runtime:
-      - CPython
-      x-stainless-runtime-version:
-      - 3.11.7
-    method: POST
-    uri: https://api.openai.com/v1/chat/completions
-  response:
-    content: "{\n  \"id\": \"chatcmpl-A5dzeiqDrCjVKuTKGMamN5DDr97bc\",\n  \"object\":
-      \"chat.completion\",\n  \"created\": 1725908738,\n  \"model\": \"gpt-4o-2024-05-13\",\n
-      \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
-      \"assistant\",\n        \"content\": \"Thought: I need to consider how to handle
-      the current task which is to just say hi. Given the tools available, I can either
-      delegate the task to test role2 or ask them a question. \\n\\nAction: Ask question
-      to coworker\\nAction Input: {\\\"question\\\": \\\"Can you help me by saying
-      hi?\\\", \\\"context\\\": \\\"My task is to simply say hi, and I need your help
-      to complete this task.\\\", \\\"coworker\\\": \\\"test role2\\\"}\\n\",\n        \"refusal\":
-      null\n      },\n      \"logprobs\": null,\n      \"finish_reason\": \"stop\"\n
-      \   }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 552,\n    \"completion_tokens\":
-      96,\n    \"total_tokens\": 648\n  },\n  \"system_fingerprint\": \"fp_25624ae3a5\"\n}\n"
-    headers:
-      CF-Cache-Status:
-      - DYNAMIC
-      CF-RAY:
-      - 8c09736d6a8f7ad6-SJC
-      Connection:
-      - keep-alive
-      Content-Encoding:
-      - gzip
-      Content-Type:
-      - application/json
-      Date:
-      - Mon, 09 Sep 2024 19:05:39 GMT
-      Server:
-      - cloudflare
-      Transfer-Encoding:
-      - chunked
-      X-Content-Type-Options:
-      - nosniff
-      access-control-expose-headers:
-      - X-Request-ID
-      alt-svc:
-      - h3=":443"; ma=86400
-      openai-organization:
-      - crewai-iuxna1
-      openai-processing-ms:
-      - '879'
-      openai-version:
-      - '2020-10-01'
-      strict-transport-security:
-      - max-age=15552000; includeSubDomains; preload
-      x-ratelimit-limit-requests:
-      - '10000'
-      x-ratelimit-limit-tokens:
-      - '30000000'
-      x-ratelimit-remaining-requests:
-      - '9999'
-      x-ratelimit-remaining-tokens:
-      - '29999396'
-      x-ratelimit-reset-requests:
-      - 6ms
-      x-ratelimit-reset-tokens:
-      - 1ms
-      x-request-id:
-      - req_b6f10c8c065bc60b511a0533325b5f7e
-    http_version: HTTP/1.1
-    status_code: 200
-- request:
-    body: '{"messages": [{"role": "user", "content": "You are test role2. test backstory2\nYour
-      personal goal is: test goal2\nTo give my best complete final answer to the task
+      personal goal is: test goal\nTo give my best complete final answer to the task
       use the exact following format:\n\nThought: I now can give a great answer\nFinal
       Answer: Your final answer must be the great and the most complete as possible,
       it must be outcome described.\n\nI MUST use these formats, my job depends on
-      it!\nCurrent Task: Can you help me by saying hi?\n\nThis is the expect criteria
-      for your final answer: Your best answer to your coworker asking you this, accounting
-      for the context shared. \n you MUST return the actual complete content as the
-      final answer, not a summary.\n\nThis is the context you''re working with:\nMy
-      task is to simply say hi, and I need your help to complete this task.\n\nBegin!
-      This is VERY important to you, use the tools available and give your best Final
-      Answer, your job depends on it!\n\nThought:"}], "model": "gpt-4o", "stop": ["\nObservation"]}'
+      it!\nCurrent Task: Just say hi.\n\nThis is the expect criteria for your final
+      answer: Your greeting.\nyou MUST return the actual complete content as the final
+      answer, not a summary.\n\nBegin! This is VERY important to you, use the tools
+      available and give your best Final Answer, your job depends on it!\n\nThought:"}],
+      "model": "gpt-4o", "stop": ["\nObservation"]}'
     headers:
       accept:
       - application/json
@@ -148,16 +18,15 @@ interactions:
       connection:
       - keep-alive
       content-length:
-      - '975'
+      - '764'
       content-type:
       - application/json
       cookie:
-      - __cf_bm=iMsGonnXhDDCqOz9miNRwOGOr7OzXm1EqcxEiFk_nT4-1725908571-1.0.1.1-1P.quluT8iIibKOx0N4Mj8vflrRuSZk7gOWmptSyOKAFsTkvt3UultWM2b_B6I956Cvswux_SgpniB37rKO8Vw;
-        _cfuvid=iTR1OQH6LALCSFaeT0eFfOeYnI_fkFZDwyyndcJuH8E-1725908571214-0.0.1.1-604800000
+      - _cfuvid=NqphhptgCYl51k8kIFxQ.T4x1aYVbhAz5evGBO5HX5E-1726188007226-0.0.1.1-604800000
       host:
       - api.openai.com
       user-agent:
-      - OpenAI/Python 1.44.0
+      - OpenAI/Python 1.45.0
       x-stainless-arch:
       - arm64
       x-stainless-async:
@@ -167,7 +36,7 @@ interactions:
       x-stainless-os:
       - MacOS
       x-stainless-package-version:
-      - 1.44.0
+      - 1.45.0
       x-stainless-raw-response:
       - 'true'
       x-stainless-runtime:
@@ -177,19 +46,19 @@ interactions:
     method: POST
     uri: https://api.openai.com/v1/chat/completions
   response:
-    content: "{\n  \"id\": \"chatcmpl-A5dzfRUplszjSVhxWFMBsY9YmHxv6\",\n  \"object\":
-      \"chat.completion\",\n  \"created\": 1725908739,\n  \"model\": \"gpt-4o-2024-05-13\",\n
+    content: "{\n  \"id\": \"chatcmpl-A6tNJ1p3d1HLKrZtqVlgpFJ02EXoG\",\n  \"object\":
+      \"chat.completion\",\n  \"created\": 1726206193,\n  \"model\": \"gpt-4o-2024-05-13\",\n
       \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
-      \"assistant\",\n        \"content\": \"Thought: I now can give a great answer\\nFinal
+      \"assistant\",\n        \"content\": \"I now can give a great answer\\nFinal
       Answer: Hi!\",\n        \"refusal\": null\n      },\n      \"logprobs\": null,\n
       \     \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\":
-      197,\n    \"completion_tokens\": 15,\n    \"total_tokens\": 212\n  },\n  \"system_fingerprint\":
-      \"fp_25624ae3a5\"\n}\n"
+      149,\n    \"completion_tokens\": 13,\n    \"total_tokens\": 162,\n    \"completion_tokens_details\":
+      {\n      \"reasoning_tokens\": 0\n    }\n  },\n  \"system_fingerprint\": \"fp_25624ae3a5\"\n}\n"
     headers:
       CF-Cache-Status:
       - DYNAMIC
       CF-RAY:
-      - 8c097374e8c87ad6-SJC
+      - 8c25d18319117c44-LAX
       Connection:
       - keep-alive
       Content-Encoding:
@@ -197,9 +66,15 @@ interactions:
       Content-Type:
       - application/json
       Date:
-      - Mon, 09 Sep 2024 19:05:39 GMT
+      - Fri, 13 Sep 2024 05:43:13 GMT
       Server:
       - cloudflare
+      Set-Cookie:
+      - __cf_bm=ClnNKAuXgV.ion8pbtUaEfUtQSyni9o4VnBEhtjLcvY-1726206193-1.0.1.1-irjAKQKLFXoFHYMHg.GoJNcvu6A7u6ASFzz_Sr3U6wi_72IUfIRiLp7tOwWp0WXUbEKvKk3dJqoTqwblHvq7Wg;
+        path=/; expires=Fri, 13-Sep-24 06:13:13 GMT; domain=.api.openai.com; HttpOnly;
+        Secure; SameSite=None
+      - _cfuvid=7gNruCM_IOsMgDEA4EI0g9dg0NDN5T9HigjiRwrAKc0-1726206193576-0.0.1.1-604800000;
+        path=/; domain=.api.openai.com; HttpOnly; Secure; SameSite=None
       Transfer-Encoding:
       - chunked
       X-Content-Type-Options:
@@ -211,7 +86,7 @@ interactions:
       openai-organization:
       - crewai-iuxna1
       openai-processing-ms:
-      - '258'
+      - '278'
       openai-version:
       - '2020-10-01'
       strict-transport-security:
@@ -223,497 +98,13 @@ interactions:
       x-ratelimit-remaining-requests:
       - '9999'
       x-ratelimit-remaining-tokens:
-      - '29999766'
+      - '29999818'
       x-ratelimit-reset-requests:
       - 6ms
       x-ratelimit-reset-tokens:
       - 0s
       x-request-id:
-      - req_01632d20b8601bc3f4acae684870c803
-    http_version: HTTP/1.1
-    status_code: 200
-- request:
-    body: '{"messages": [{"role": "user", "content": "You are test role. test backstory\nYour
-      personal goal is: test goal\nYou ONLY have access to the following tools, and
-      should NEVER make up tools that are not listed here:\n\nTool Name: Delegate
-      work to coworker(task: str, context: str, coworker: Optional[str] = None, **kwargs)\nTool
-      Description: Delegate a specific task to one of the following coworkers: test
-      role2\nThe input to this tool should be the coworker, the task you want them
-      to do, and ALL necessary context to execute the task, they know nothing about
-      the task, so share absolute everything you know, don''t reference things but
-      instead explain them.\nTool Arguments: {''task'': {''title'': ''Task'', ''type'':
-      ''string''}, ''context'': {''title'': ''Context'', ''type'': ''string''}, ''coworker'':
-      {''title'': ''Coworker'', ''type'': ''string''}, ''kwargs'': {''title'': ''Kwargs'',
-      ''type'': ''object''}}\nTool Name: Ask question to coworker(question: str, context:
-      str, coworker: Optional[str] = None, **kwargs)\nTool Description: Ask a specific
-      question to one of the following coworkers: test role2\nThe input to this tool
-      should be the coworker, the question you have for them, and ALL necessary context
-      to ask the question properly, they know nothing about the question, so share
-      absolute everything you know, don''t reference things but instead explain them.\nTool
-      Arguments: {''question'': {''title'': ''Question'', ''type'': ''string''}, ''context'':
-      {''title'': ''Context'', ''type'': ''string''}, ''coworker'': {''title'': ''Coworker'',
-      ''type'': ''string''}, ''kwargs'': {''title'': ''Kwargs'', ''type'': ''object''}}\n\nUse
-      the following format:\n\nThought: you should always think about what to do\nAction:
-      the action to take, only one name of [Delegate work to coworker, Ask question
-      to coworker], just the name, exactly as it''s written.\nAction Input: the input
-      to the action, just a simple python dictionary, enclosed in curly braces, using
-      \" to wrap keys and values.\nObservation: the result of the action\n\nOnce all
-      necessary information is gathered:\n\nThought: I now know the final answer\nFinal
-      Answer: the final answer to the original input question\n\nCurrent Task: Just
-      say hi.\n\nThis is the expect criteria for your final answer: Your greeting.
-      \n you MUST return the actual complete content as the final answer, not a summary.\n\nBegin!
-      This is VERY important to you, use the tools available and give your best Final
-      Answer, your job depends on it!\n\nThought:"}, {"role": "assistant", "content":
-      "Thought: I need to consider how to handle the current task which is to just
-      say hi. Given the tools available, I can either delegate the task to test role2
-      or ask them a question. \n\nAction: Ask question to coworker\nAction Input:
-      {\"question\": \"Can you help me by saying hi?\", \"context\": \"My task is
-      to simply say hi, and I need your help to complete this task.\", \"coworker\":
-      \"test role2\"}\n\nObservation: Hi!"}], "model": "gpt-4o", "stop": ["\nObservation"]}'
-    headers:
-      accept:
-      - application/json
-      accept-encoding:
-      - gzip, deflate
-      connection:
-      - keep-alive
-      content-length:
-      - '2927'
-      content-type:
-      - application/json
-      cookie:
-      - __cf_bm=iMsGonnXhDDCqOz9miNRwOGOr7OzXm1EqcxEiFk_nT4-1725908571-1.0.1.1-1P.quluT8iIibKOx0N4Mj8vflrRuSZk7gOWmptSyOKAFsTkvt3UultWM2b_B6I956Cvswux_SgpniB37rKO8Vw;
-        _cfuvid=iTR1OQH6LALCSFaeT0eFfOeYnI_fkFZDwyyndcJuH8E-1725908571214-0.0.1.1-604800000
-      host:
-      - api.openai.com
-      user-agent:
-      - OpenAI/Python 1.44.0
-      x-stainless-arch:
-      - arm64
-      x-stainless-async:
-      - 'false'
-      x-stainless-lang:
-      - python
-      x-stainless-os:
-      - MacOS
-      x-stainless-package-version:
-      - 1.44.0
-      x-stainless-raw-response:
-      - 'true'
-      x-stainless-runtime:
-      - CPython
-      x-stainless-runtime-version:
-      - 3.11.7
-    method: POST
-    uri: https://api.openai.com/v1/chat/completions
-  response:
-    content: "{\n  \"id\": \"chatcmpl-A5dzfumk7ZBIa57yk9p2brs7cJSkx\",\n  \"object\":
-      \"chat.completion\",\n  \"created\": 1725908739,\n  \"model\": \"gpt-4o-2024-05-13\",\n
-      \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
-      \"assistant\",\n        \"content\": \"Thought: I now know the final answer.\\nFinal
-      Answer: Hi!\",\n        \"refusal\": null\n      },\n      \"logprobs\": null,\n
-      \     \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\":
-      656,\n    \"completion_tokens\": 14,\n    \"total_tokens\": 670\n  },\n  \"system_fingerprint\":
-      \"fp_25624ae3a5\"\n}\n"
-    headers:
-      CF-Cache-Status:
-      - DYNAMIC
-      CF-RAY:
-      - 8c097377ab587ad6-SJC
-      Connection:
-      - keep-alive
-      Content-Encoding:
-      - gzip
-      Content-Type:
-      - application/json
-      Date:
-      - Mon, 09 Sep 2024 19:05:40 GMT
-      Server:
-      - cloudflare
-      Transfer-Encoding:
-      - chunked
-      X-Content-Type-Options:
-      - nosniff
-      access-control-expose-headers:
-      - X-Request-ID
-      alt-svc:
-      - h3=":443"; ma=86400
-      openai-organization:
-      - crewai-iuxna1
-      openai-processing-ms:
-      - '199'
-      openai-version:
-      - '2020-10-01'
-      strict-transport-security:
-      - max-age=15552000; includeSubDomains; preload
-      x-ratelimit-limit-requests:
-      - '10000'
-      x-ratelimit-limit-tokens:
-      - '30000000'
-      x-ratelimit-remaining-requests:
-      - '9999'
-      x-ratelimit-remaining-tokens:
-      - '29999295'
-      x-ratelimit-reset-requests:
-      - 6ms
-      x-ratelimit-reset-tokens:
-      - 1ms
-      x-request-id:
-      - req_3dde81dd8c0ec39c49c3eb8557d09526
-    http_version: HTTP/1.1
-    status_code: 200
-- request:
-    body: '{"messages": [{"role": "user", "content": "You are test role. test backstory\nYour
-      personal goal is: test goal\nYou ONLY have access to the following tools, and
-      should NEVER make up tools that are not listed here:\n\nTool Name: Delegate
-      work to coworker(task: str, context: str, coworker: Optional[str] = None, **kwargs)\nTool
-      Description: Delegate a specific task to one of the following coworkers: test
-      role2\nThe input to this tool should be the coworker, the task you want them
-      to do, and ALL necessary context to execute the task, they know nothing about
-      the task, so share absolute everything you know, don''t reference things but
-      instead explain them.\nTool Arguments: {''task'': {''title'': ''Task'', ''type'':
-      ''string''}, ''context'': {''title'': ''Context'', ''type'': ''string''}, ''coworker'':
-      {''title'': ''Coworker'', ''type'': ''string''}, ''kwargs'': {''title'': ''Kwargs'',
-      ''type'': ''object''}}\nTool Name: Ask question to coworker(question: str, context:
-      str, coworker: Optional[str] = None, **kwargs)\nTool Description: Ask a specific
-      question to one of the following coworkers: test role2\nThe input to this tool
-      should be the coworker, the question you have for them, and ALL necessary context
-      to ask the question properly, they know nothing about the question, so share
-      absolute everything you know, don''t reference things but instead explain them.\nTool
-      Arguments: {''question'': {''title'': ''Question'', ''type'': ''string''}, ''context'':
-      {''title'': ''Context'', ''type'': ''string''}, ''coworker'': {''title'': ''Coworker'',
-      ''type'': ''string''}, ''kwargs'': {''title'': ''Kwargs'', ''type'': ''object''}}\n\nUse
-      the following format:\n\nThought: you should always think about what to do\nAction:
-      the action to take, only one name of [Delegate work to coworker, Ask question
-      to coworker], just the name, exactly as it''s written.\nAction Input: the input
-      to the action, just a simple python dictionary, enclosed in curly braces, using
-      \" to wrap keys and values.\nObservation: the result of the action\n\nOnce all
-      necessary information is gathered:\n\nThought: I now know the final answer\nFinal
-      Answer: the final answer to the original input question\n\nCurrent Task: Just
-      say bye.\n\nThis is the expect criteria for your final answer: Your farewell.
-      \n you MUST return the actual complete content as the final answer, not a summary.\n\nThis
-      is the context you''re working with:\nHi!\n\nBegin! This is VERY important to
-      you, use the tools available and give your best Final Answer, your job depends
-      on it!\n\nThought:"}], "model": "gpt-4o", "stop": ["\nObservation"]}'
-    headers:
-      accept:
-      - application/json
-      accept-encoding:
-      - gzip, deflate
-      connection:
-      - keep-alive
-      content-length:
-      - '2517'
-      content-type:
-      - application/json
-      cookie:
-      - __cf_bm=iMsGonnXhDDCqOz9miNRwOGOr7OzXm1EqcxEiFk_nT4-1725908571-1.0.1.1-1P.quluT8iIibKOx0N4Mj8vflrRuSZk7gOWmptSyOKAFsTkvt3UultWM2b_B6I956Cvswux_SgpniB37rKO8Vw;
-        _cfuvid=iTR1OQH6LALCSFaeT0eFfOeYnI_fkFZDwyyndcJuH8E-1725908571214-0.0.1.1-604800000
-      host:
-      - api.openai.com
-      user-agent:
-      - OpenAI/Python 1.44.0
-      x-stainless-arch:
-      - arm64
-      x-stainless-async:
-      - 'false'
-      x-stainless-lang:
-      - python
-      x-stainless-os:
-      - MacOS
-      x-stainless-package-version:
-      - 1.44.0
-      x-stainless-raw-response:
-      - 'true'
-      x-stainless-runtime:
-      - CPython
-      x-stainless-runtime-version:
-      - 3.11.7
-    method: POST
-    uri: https://api.openai.com/v1/chat/completions
-  response:
-    content: "{\n  \"id\": \"chatcmpl-A5dzgUnJ6aJi26kLV0OI3Wf4Ub7zD\",\n  \"object\":
-      \"chat.completion\",\n  \"created\": 1725908740,\n  \"model\": \"gpt-4o-2024-05-13\",\n
-      \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
-      \"assistant\",\n        \"content\": \"Thought: To successfully complete the
-      current task, which is to say \\\"bye,\\\" I need to ensure that my farewell
-      is complete and appropriate based on the given context \\\"Hi!\\\"\\n\\nFinal
-      Answer: Bye!\",\n        \"refusal\": null\n      },\n      \"logprobs\": null,\n
-      \     \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\":
-      562,\n    \"completion_tokens\": 40,\n    \"total_tokens\": 602\n  },\n  \"system_fingerprint\":
-      \"fp_25624ae3a5\"\n}\n"
-    headers:
-      CF-Cache-Status:
-      - DYNAMIC
-      CF-RAY:
-      - 8c09737b0e7c7ad6-SJC
-      Connection:
-      - keep-alive
-      Content-Encoding:
-      - gzip
-      Content-Type:
-      - application/json
-      Date:
-      - Mon, 09 Sep 2024 19:05:40 GMT
-      Server:
-      - cloudflare
-      Transfer-Encoding:
-      - chunked
-      X-Content-Type-Options:
-      - nosniff
-      access-control-expose-headers:
-      - X-Request-ID
-      alt-svc:
-      - h3=":443"; ma=86400
-      openai-organization:
-      - crewai-iuxna1
-      openai-processing-ms:
-      - '420'
-      openai-version:
-      - '2020-10-01'
-      strict-transport-security:
-      - max-age=15552000; includeSubDomains; preload
-      x-ratelimit-limit-requests:
-      - '10000'
-      x-ratelimit-limit-tokens:
-      - '30000000'
-      x-ratelimit-remaining-requests:
-      - '9999'
-      x-ratelimit-remaining-tokens:
-      - '29999385'
-      x-ratelimit-reset-requests:
-      - 6ms
-      x-ratelimit-reset-tokens:
-      - 1ms
-      x-request-id:
-      - req_a36a51c9e279c6f62c4f308c3dea9288
-    http_version: HTTP/1.1
-    status_code: 200
-- request:
-    body: !!binary |
-      CpAdCiQKIgoMc2VydmljZS5uYW1lEhIKEGNyZXdBSS10ZWxlbWV0cnkS5xwKEgoQY3Jld2FpLnRl
-      bGVtZXRyeRKTAQoQKTrI0qqKHI0agmKoIF2fJxIIALlc6B0wetEqClRvb2wgVXNhZ2UwATkI6S0+
-      2qjzF0HYzDM+2qjzF0oaCg5jcmV3YWlfdmVyc2lvbhIICgYwLjU1LjJKHwoJdG9vbF9uYW1lEhIK
-      EGdldF9maW5hbF9hbnN3ZXJKDgoIYXR0ZW1wdHMSAhgBegIYAYUBAAEAABKQAgoQ4zqgvs0vO2tA
-      EE6NuC3f4RIITkMhcPOTv5cqDlRhc2sgRXhlY3V0aW9uMAE5GBkSwdio8xdBQMJ3W9qo8xdKLgoI
-      Y3Jld19rZXkSIgogZDU1MTEzYmU0YWE0MWJhNjQzZDMyNjA0MmIyZjAzZjFKMQoHY3Jld19pZBIm
-      CiRjMGUxMTMwNy03ZTAwLTQyYTYtOGMxZi1iZWNiNGVmODgyMjRKLgoIdGFza19rZXkSIgogNGEz
-      MWI4NTEzM2EzYTI5NGM2ODUzZGE3NTdkNGJhZTdKMQoHdGFza19pZBImCiQ4MmRiZmQ1MS1iM2Zm
-      LTRhM2ItOTFiOC1jZmM1OTAzMTU2ODF6AhgBhQEAAQAAErANChD2AormT+lt31GMQlvvLPOeEgi6
-      HPKbtLNPcyoMQ3JldyBDcmVhdGVkMAE5eJR/Xdqo8xdBiJeFXdqo8xdKGgoOY3Jld2FpX3ZlcnNp
-      b24SCAoGMC41NS4yShoKDnB5dGhvbl92ZXJzaW9uEggKBjMuMTEuN0ouCghjcmV3X2tleRIiCiAx
-      MTFiODcyZDhmMGNmNzAzZjJlZmVmMDRjZjNhYzc5OEoxCgdjcmV3X2lkEiYKJDJiODRhNThiLWI1
-      MzQtNDA0ZS1iMzg0LTM5ZjhiNGJmMTdjZEocCgxjcmV3X3Byb2Nlc3MSDAoKc2VxdWVudGlhbEoR
-      CgtjcmV3X21lbW9yeRICEABKGgoUY3Jld19udW1iZXJfb2ZfdGFza3MSAhgDShsKFWNyZXdfbnVt
-      YmVyX29mX2FnZW50cxICGAJKhgUKC2NyZXdfYWdlbnRzEvYECvMEW3sia2V5IjogImUxNDhlNTMy
-      MDI5MzQ5OWY4Y2ViZWE4MjZlNzI1ODJiIiwgImlkIjogIjc4NjU3YTY4LTgwNGItNGYxNy1hNWI5
-      LTgxMjY0MmFiZGFjZiIsICJyb2xlIjogInRlc3Qgcm9sZSIsICJ2ZXJib3NlPyI6IGZhbHNlLCAi
-      bWF4X2l0ZXIiOiAyNSwgIm1heF9ycG0iOiBudWxsLCAiZnVuY3Rpb25fY2FsbGluZ19sbG0iOiBu
-      dWxsLCAibGxtIjogImdwdC00byIsICJkZWxlZ2F0aW9uX2VuYWJsZWQ/IjogdHJ1ZSwgImFsbG93
-      X2NvZGVfZXhlY3V0aW9uPyI6IGZhbHNlLCAibWF4X3JldHJ5X2xpbWl0IjogMiwgInRvb2xzX25h
-      bWVzIjogW119LCB7ImtleSI6ICJlN2U4ZWVhODg2YmNiOGYxMDQ1YWJlZWNmMTQyNWRiNyIsICJp
-      ZCI6ICI1OWUwZDk5NS1jOGNmLTQ3ZTYtYjJmMi1iN2EzYjkxNDExYzYiLCAicm9sZSI6ICJ0ZXN0
-      IHJvbGUyIiwgInZlcmJvc2U/IjogZmFsc2UsICJtYXhfaXRlciI6IDI1LCAibWF4X3JwbSI6IG51
-      bGwsICJmdW5jdGlvbl9jYWxsaW5nX2xsbSI6IG51bGwsICJsbG0iOiAiZ3B0LTRvIiwgImRlbGVn
-      YXRpb25fZW5hYmxlZD8iOiB0cnVlLCAiYWxsb3dfY29kZV9leGVjdXRpb24/IjogZmFsc2UsICJt
-      YXhfcmV0cnlfbGltaXQiOiAyLCAidG9vbHNfbmFtZXMiOiBbXX1dStcFCgpjcmV3X3Rhc2tzEsgF
-      CsUFW3sia2V5IjogIjMyMmRkYWUzYmM4MGMxZDQ1Yjg1ZmE3NzU2ZGI4NjY1IiwgImlkIjogImUz
-      MGE4MTNjLTc2ZDQtNGQ3My1hYTY5LTdjMzBkNDY2YzY0MCIsICJhc3luY19leGVjdXRpb24/Ijog
-      ZmFsc2UsICJodW1hbl9pbnB1dD8iOiBmYWxzZSwgImFnZW50X3JvbGUiOiAidGVzdCByb2xlIiwg
-      ImFnZW50X2tleSI6ICJlMTQ4ZTUzMjAyOTM0OTlmOGNlYmVhODI2ZTcyNTgyYiIsICJ0b29sc19u
-      YW1lcyI6IFtdfSwgeyJrZXkiOiAiY2M0ODc2ZjZlNTg4ZTcxMzQ5YmJkM2E2NTg4OGMzZTkiLCAi
-      aWQiOiAiMDZhOTA5NmMtMDE2Zi00MmQ5LWFkODctNGY3MTJlYmE2MWUxIiwgImFzeW5jX2V4ZWN1
-      dGlvbj8iOiBmYWxzZSwgImh1bWFuX2lucHV0PyI6IGZhbHNlLCAiYWdlbnRfcm9sZSI6ICJ0ZXN0
-      IHJvbGUiLCAiYWdlbnRfa2V5IjogImUxNDhlNTMyMDI5MzQ5OWY4Y2ViZWE4MjZlNzI1ODJiIiwg
-      InRvb2xzX25hbWVzIjogW119LCB7ImtleSI6ICJlMGIxM2UxMGQ3YTE0NmRjYzRjNDg4ZmNmOGQ3
-      NDhhMCIsICJpZCI6ICIyYmY3ZDVkZC0xZmI5LTQyNGQtYmEzNy1jZGZmMjhhMTQzOTkiLCAiYXN5
-      bmNfZXhlY3V0aW9uPyI6IGZhbHNlLCAiaHVtYW5faW5wdXQ/IjogZmFsc2UsICJhZ2VudF9yb2xl
-      IjogInRlc3Qgcm9sZTIiLCAiYWdlbnRfa2V5IjogImU3ZThlZWE4ODZiY2I4ZjEwNDVhYmVlY2Yx
-      NDI1ZGI3IiwgInRvb2xzX25hbWVzIjogW119XXoCGAGFAQABAAASjgIKEDdOiwdQizEW5yDtMP2/
-      ApQSCKJXucz/o+6LKgxUYXNrIENyZWF0ZWQwATlQhcle2qjzF0HYCcxe2qjzF0ouCghjcmV3X2tl
-      eRIiCiAxMTFiODcyZDhmMGNmNzAzZjJlZmVmMDRjZjNhYzc5OEoxCgdjcmV3X2lkEiYKJDJiODRh
-      NThiLWI1MzQtNDA0ZS1iMzg0LTM5ZjhiNGJmMTdjZEouCgh0YXNrX2tleRIiCiAzMjJkZGFlM2Jj
-      ODBjMWQ0NWI4NWZhNzc1NmRiODY2NUoxCgd0YXNrX2lkEiYKJGUzMGE4MTNjLTc2ZDQtNGQ3My1h
-      YTY5LTdjMzBkNDY2YzY0MHoCGAGFAQABAAASmwEKEOeLiSiZ+1fwdBLcJ+3aQp0SCDXV1vwUoQ9Q
-      KgpUb29sIFVzYWdlMAE58FAjwdqo8xdBcAAmwdqo8xdKGgoOY3Jld2FpX3ZlcnNpb24SCAoGMC41
-      NS4ySicKCXRvb2xfbmFtZRIaChhBc2sgcXVlc3Rpb24gdG8gY293b3JrZXJKDgoIYXR0ZW1wdHMS
-      AhgBegIYAYUBAAEAABKQAgoQoDiCLH7jGTuYTJajzBnzyxIIpQplwz2KyfwqDlRhc2sgRXhlY3V0
-      aW9uMAE5wIrMXtqo8xdBaGuL39qo8xdKLgoIY3Jld19rZXkSIgogMTExYjg3MmQ4ZjBjZjcwM2Yy
-      ZWZlZjA0Y2YzYWM3OThKMQoHY3Jld19pZBImCiQyYjg0YTU4Yi1iNTM0LTQwNGUtYjM4NC0zOWY4
-      YjRiZjE3Y2RKLgoIdGFza19rZXkSIgogMzIyZGRhZTNiYzgwYzFkNDViODVmYTc3NTZkYjg2NjVK
-      MQoHdGFza19pZBImCiRlMzBhODEzYy03NmQ0LTRkNzMtYWE2OS03YzMwZDQ2NmM2NDB6AhgBhQEA
-      AQAAEo4CChCYHnsa62GDJX2k5QWTgB0rEggynQrWQcmyXSoMVGFzayBDcmVhdGVkMAE5iCmd4Nqo
-      8xdBKLCe4Nqo8xdKLgoIY3Jld19rZXkSIgogMTExYjg3MmQ4ZjBjZjcwM2YyZWZlZjA0Y2YzYWM3
-      OThKMQoHY3Jld19pZBImCiQyYjg0YTU4Yi1iNTM0LTQwNGUtYjM4NC0zOWY4YjRiZjE3Y2RKLgoI
-      dGFza19rZXkSIgogY2M0ODc2ZjZlNTg4ZTcxMzQ5YmJkM2E2NTg4OGMzZTlKMQoHdGFza19pZBIm
-      CiQwNmE5MDk2Yy0wMTZmLTQyZDktYWQ4Ny00ZjcxMmViYTYxZTF6AhgBhQEAAQAAEpACChBEQo2P
-      rmFYi6DGJJvpIs96EgijAwClbSt62ioOVGFzayBFeGVjdXRpb24wATkQMZ/g2qjzF0HAV2QN26jz
-      F0ouCghjcmV3X2tleRIiCiAxMTFiODcyZDhmMGNmNzAzZjJlZmVmMDRjZjNhYzc5OEoxCgdjcmV3
-      X2lkEiYKJDJiODRhNThiLWI1MzQtNDA0ZS1iMzg0LTM5ZjhiNGJmMTdjZEouCgh0YXNrX2tleRIi
-      CiBjYzQ4NzZmNmU1ODhlNzEzNDliYmQzYTY1ODg4YzNlOUoxCgd0YXNrX2lkEiYKJDA2YTkwOTZj
-      LTAxNmYtNDJkOS1hZDg3LTRmNzEyZWJhNjFlMXoCGAGFAQABAAASjgIKEB3wWsBlrqHfRv8gc7b9
-      2VISCII9Y7FznkqZKgxUYXNrIENyZWF0ZWQwATnIAXoO26jzF0F4LHwO26jzF0ouCghjcmV3X2tl
-      eRIiCiAxMTFiODcyZDhmMGNmNzAzZjJlZmVmMDRjZjNhYzc5OEoxCgdjcmV3X2lkEiYKJDJiODRh
-      NThiLWI1MzQtNDA0ZS1iMzg0LTM5ZjhiNGJmMTdjZEouCgh0YXNrX2tleRIiCiBlMGIxM2UxMGQ3
-      YTE0NmRjYzRjNDg4ZmNmOGQ3NDhhMEoxCgd0YXNrX2lkEiYKJDJiZjdkNWRkLTFmYjktNDI0ZC1i
-      YTM3LWNkZmYyOGExNDM5OXoCGAGFAQABAAA=
-    headers:
-      Accept:
-      - '*/*'
-      Accept-Encoding:
-      - gzip, deflate
-      Connection:
-      - keep-alive
-      Content-Length:
-      - '3731'
-      Content-Type:
-      - application/x-protobuf
-      User-Agent:
-      - OTel-OTLP-Exporter-Python/1.27.0
-    method: POST
-    uri: https://telemetry.crewai.com:4319/v1/traces
-  response:
-    body:
-      string: "\n\0"
-    headers:
-      Content-Length:
-      - '2'
-      Content-Type:
-      - application/x-protobuf
-      Date:
-      - Mon, 09 Sep 2024 19:05:42 GMT
-    status:
-      code: 200
-      message: OK
-- request:
-    body: '{"messages": [{"role": "user", "content": "You are test role2. test backstory2\nYour
-      personal goal is: test goal2\nYou ONLY have access to the following tools, and
-      should NEVER make up tools that are not listed here:\n\nTool Name: Delegate
-      work to coworker(task: str, context: str, coworker: Optional[str] = None, **kwargs)\nTool
-      Description: Delegate a specific task to one of the following coworkers: test
-      role\nThe input to this tool should be the coworker, the task you want them
-      to do, and ALL necessary context to execute the task, they know nothing about
-      the task, so share absolute everything you know, don''t reference things but
-      instead explain them.\nTool Arguments: {''task'': {''title'': ''Task'', ''type'':
-      ''string''}, ''context'': {''title'': ''Context'', ''type'': ''string''}, ''coworker'':
-      {''title'': ''Coworker'', ''type'': ''string''}, ''kwargs'': {''title'': ''Kwargs'',
-      ''type'': ''object''}}\nTool Name: Ask question to coworker(question: str, context:
-      str, coworker: Optional[str] = None, **kwargs)\nTool Description: Ask a specific
-      question to one of the following coworkers: test role\nThe input to this tool
-      should be the coworker, the question you have for them, and ALL necessary context
-      to ask the question properly, they know nothing about the question, so share
-      absolute everything you know, don''t reference things but instead explain them.\nTool
-      Arguments: {''question'': {''title'': ''Question'', ''type'': ''string''}, ''context'':
-      {''title'': ''Context'', ''type'': ''string''}, ''coworker'': {''title'': ''Coworker'',
-      ''type'': ''string''}, ''kwargs'': {''title'': ''Kwargs'', ''type'': ''object''}}\n\nUse
-      the following format:\n\nThought: you should always think about what to do\nAction:
-      the action to take, only one name of [Delegate work to coworker, Ask question
-      to coworker], just the name, exactly as it''s written.\nAction Input: the input
-      to the action, just a simple python dictionary, enclosed in curly braces, using
-      \" to wrap keys and values.\nObservation: the result of the action\n\nOnce all
-      necessary information is gathered:\n\nThought: I now know the final answer\nFinal
-      Answer: the final answer to the original input question\n\nCurrent Task: Answer
-      accordingly to the context you got.\n\nThis is the expect criteria for your
-      final answer: Your answer. \n you MUST return the actual complete content as
-      the final answer, not a summary.\n\nThis is the context you''re working with:\nHi!\n\nBegin!
-      This is VERY important to you, use the tools available and give your best Final
-      Answer, your job depends on it!\n\nThought:"}], "model": "gpt-4o", "stop": ["\nObservation"]}'
-    headers:
-      accept:
-      - application/json
-      accept-encoding:
-      - gzip, deflate
-      connection:
-      - keep-alive
-      content-length:
-      - '2545'
-      content-type:
-      - application/json
-      cookie:
-      - __cf_bm=iMsGonnXhDDCqOz9miNRwOGOr7OzXm1EqcxEiFk_nT4-1725908571-1.0.1.1-1P.quluT8iIibKOx0N4Mj8vflrRuSZk7gOWmptSyOKAFsTkvt3UultWM2b_B6I956Cvswux_SgpniB37rKO8Vw;
-        _cfuvid=iTR1OQH6LALCSFaeT0eFfOeYnI_fkFZDwyyndcJuH8E-1725908571214-0.0.1.1-604800000
-      host:
-      - api.openai.com
-      user-agent:
-      - OpenAI/Python 1.44.0
-      x-stainless-arch:
-      - arm64
-      x-stainless-async:
-      - 'false'
-      x-stainless-lang:
-      - python
-      x-stainless-os:
-      - MacOS
-      x-stainless-package-version:
-      - 1.44.0
-      x-stainless-raw-response:
-      - 'true'
-      x-stainless-runtime:
-      - CPython
-      x-stainless-runtime-version:
-      - 3.11.7
-    method: POST
-    uri: https://api.openai.com/v1/chat/completions
-  response:
-    content: "{\n  \"id\": \"chatcmpl-A5dzh9UtjYFsx1FIyZNu4fcHCv4hd\",\n  \"object\":
-      \"chat.completion\",\n  \"created\": 1725908741,\n  \"model\": \"gpt-4o-2024-05-13\",\n
-      \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
-      \"assistant\",\n        \"content\": \"Thought: My job is to provide the best
-      possible answer based on the context \\\"Hi!\\\" and use the tools available
-      if necessary to gather more information. Since the provided context is minimal,
-      I need to clarify what the requester needs from me.\\n\\nAction: Ask question
-      to coworker\\nAction Input: {\\\"question\\\": \\\"What task do you need assistance
-      with?\\\", \\\"context\\\": \\\"The only information provided is 'Hi!'. Could
-      you please specify what task you need help with or any additional details?\\\",
-      \\\"coworker\\\": \\\"test role\\\"}\",\n        \"refusal\": null\n      },\n
-      \     \"logprobs\": null,\n      \"finish_reason\": \"stop\"\n    }\n  ],\n
-      \ \"usage\": {\n    \"prompt_tokens\": 567,\n    \"completion_tokens\": 108,\n
-      \   \"total_tokens\": 675\n  },\n  \"system_fingerprint\": \"fp_25624ae3a5\"\n}\n"
-    headers:
-      CF-Cache-Status:
-      - DYNAMIC
-      CF-RAY:
-      - 8c09737fead97ad6-SJC
-      Connection:
-      - keep-alive
-      Content-Encoding:
-      - gzip
-      Content-Type:
-      - application/json
-      Date:
-      - Mon, 09 Sep 2024 19:05:42 GMT
-      Server:
-      - cloudflare
-      Transfer-Encoding:
-      - chunked
-      X-Content-Type-Options:
-      - nosniff
-      access-control-expose-headers:
-      - X-Request-ID
-      alt-svc:
-      - h3=":443"; ma=86400
-      openai-organization:
-      - crewai-iuxna1
-      openai-processing-ms:
-      - '1522'
-      openai-version:
-      - '2020-10-01'
-      strict-transport-security:
-      - max-age=15552000; includeSubDomains; preload
-      x-ratelimit-limit-requests:
-      - '10000'
-      x-ratelimit-limit-tokens:
-      - '30000000'
-      x-ratelimit-remaining-requests:
-      - '9999'
-      x-ratelimit-remaining-tokens:
-      - '29999379'
-      x-ratelimit-reset-requests:
-      - 6ms
-      x-ratelimit-reset-tokens:
-      - 1ms
-      x-request-id:
-      - req_2e4f43ec6df32cf8fad8e75705a9b1a8
+      - req_508393c5be3af0df1b77f458001603b6
     http_version: HTTP/1.1
     status_code: 200
 - request:
@@ -722,14 +113,11 @@ interactions:
       use the exact following format:\n\nThought: I now can give a great answer\nFinal
       Answer: Your final answer must be the great and the most complete as possible,
       it must be outcome described.\n\nI MUST use these formats, my job depends on
-      it!\nCurrent Task: What task do you need assistance with?\n\nThis is the expect
-      criteria for your final answer: Your best answer to your coworker asking you
-      this, accounting for the context shared. \n you MUST return the actual complete
-      content as the final answer, not a summary.\n\nThis is the context you''re working
-      with:\nThe only information provided is ''Hi!''. Could you please specify what
-      task you need help with or any additional details?\n\nBegin! This is VERY important
-      to you, use the tools available and give your best Final Answer, your job depends
-      on it!\n\nThought:"}], "model": "gpt-4o", "stop": ["\nObservation"]}'
+      it!\nCurrent Task: Just say bye.\n\nThis is the expect criteria for your final
+      answer: Your farewell.\nyou MUST return the actual complete content as the final
+      answer, not a summary.\n\nThis is the context you''re working with:\nHi!\n\nBegin!
+      This is VERY important to you, use the tools available and give your best Final
+      Answer, your job depends on it!\n\nThought:"}], "model": "gpt-4o", "stop": ["\nObservation"]}'
     headers:
       accept:
       - application/json
@@ -738,16 +126,16 @@ interactions:
       connection:
       - keep-alive
       content-length:
-      - '1029'
+      - '814'
       content-type:
       - application/json
       cookie:
-      - __cf_bm=iMsGonnXhDDCqOz9miNRwOGOr7OzXm1EqcxEiFk_nT4-1725908571-1.0.1.1-1P.quluT8iIibKOx0N4Mj8vflrRuSZk7gOWmptSyOKAFsTkvt3UultWM2b_B6I956Cvswux_SgpniB37rKO8Vw;
-        _cfuvid=iTR1OQH6LALCSFaeT0eFfOeYnI_fkFZDwyyndcJuH8E-1725908571214-0.0.1.1-604800000
+      - _cfuvid=7gNruCM_IOsMgDEA4EI0g9dg0NDN5T9HigjiRwrAKc0-1726206193576-0.0.1.1-604800000;
+        __cf_bm=ClnNKAuXgV.ion8pbtUaEfUtQSyni9o4VnBEhtjLcvY-1726206193-1.0.1.1-irjAKQKLFXoFHYMHg.GoJNcvu6A7u6ASFzz_Sr3U6wi_72IUfIRiLp7tOwWp0WXUbEKvKk3dJqoTqwblHvq7Wg
       host:
       - api.openai.com
       user-agent:
-      - OpenAI/Python 1.44.0
+      - OpenAI/Python 1.45.0
       x-stainless-arch:
       - arm64
       x-stainless-async:
@@ -757,7 +145,7 @@ interactions:
       x-stainless-os:
       - MacOS
       x-stainless-package-version:
-      - 1.44.0
+      - 1.45.0
       x-stainless-raw-response:
       - 'true'
       x-stainless-runtime:
@@ -767,20 +155,19 @@ interactions:
     method: POST
     uri: https://api.openai.com/v1/chat/completions
   response:
-    content: "{\n  \"id\": \"chatcmpl-A5dzjBlbcYaqsY9FSUbOvbYhDni5X\",\n  \"object\":
-      \"chat.completion\",\n  \"created\": 1725908743,\n  \"model\": \"gpt-4o-2024-05-13\",\n
+    content: "{\n  \"id\": \"chatcmpl-A6tNKg5xx1h379SmfwvVe9T0qx8Qk\",\n  \"object\":
+      \"chat.completion\",\n  \"created\": 1726206194,\n  \"model\": \"gpt-4o-2024-05-13\",\n
       \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
       \"assistant\",\n        \"content\": \"Thought: I now can give a great answer\\nFinal
-      Answer: Hi! Could you please specify what task you need help with or provide
-      any additional details? Thank you!\",\n        \"refusal\": null\n      },\n
-      \     \"logprobs\": null,\n      \"finish_reason\": \"stop\"\n    }\n  ],\n
-      \ \"usage\": {\n    \"prompt_tokens\": 200,\n    \"completion_tokens\": 34,\n
-      \   \"total_tokens\": 234\n  },\n  \"system_fingerprint\": \"fp_25624ae3a5\"\n}\n"
+      Answer: Bye!\",\n        \"refusal\": null\n      },\n      \"logprobs\": null,\n
+      \     \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\":
+      159,\n    \"completion_tokens\": 15,\n    \"total_tokens\": 174,\n    \"completion_tokens_details\":
+      {\n      \"reasoning_tokens\": 0\n    }\n  },\n  \"system_fingerprint\": \"fp_157b3831f5\"\n}\n"
     headers:
       CF-Cache-Status:
       - DYNAMIC
       CF-RAY:
-      - 8c09738b6dae7ad6-SJC
+      - 8c25d189de367c44-LAX
       Connection:
       - keep-alive
       Content-Encoding:
@@ -788,7 +175,7 @@ interactions:
       Content-Type:
       - application/json
       Date:
-      - Mon, 09 Sep 2024 19:05:43 GMT
+      - Fri, 13 Sep 2024 05:43:15 GMT
       Server:
       - cloudflare
       Transfer-Encoding:
@@ -802,7 +189,7 @@ interactions:
       openai-organization:
       - crewai-iuxna1
       openai-processing-ms:
-      - '413'
+      - '261'
       openai-version:
       - '2020-10-01'
       strict-transport-security:
@@ -814,57 +201,27 @@ interactions:
       x-ratelimit-remaining-requests:
       - '9999'
       x-ratelimit-remaining-tokens:
-      - '29999753'
+      - '29999807'
       x-ratelimit-reset-requests:
       - 6ms
       x-ratelimit-reset-tokens:
       - 0s
       x-request-id:
-      - req_292b6d0fa818839ad01236355bf7e880
+      - req_5e4fa349168edad6c2eae435ee880756
     http_version: HTTP/1.1
     status_code: 200
 - request:
     body: '{"messages": [{"role": "user", "content": "You are test role2. test backstory2\nYour
-      personal goal is: test goal2\nYou ONLY have access to the following tools, and
-      should NEVER make up tools that are not listed here:\n\nTool Name: Delegate
-      work to coworker(task: str, context: str, coworker: Optional[str] = None, **kwargs)\nTool
-      Description: Delegate a specific task to one of the following coworkers: test
-      role\nThe input to this tool should be the coworker, the task you want them
-      to do, and ALL necessary context to execute the task, they know nothing about
-      the task, so share absolute everything you know, don''t reference things but
-      instead explain them.\nTool Arguments: {''task'': {''title'': ''Task'', ''type'':
-      ''string''}, ''context'': {''title'': ''Context'', ''type'': ''string''}, ''coworker'':
-      {''title'': ''Coworker'', ''type'': ''string''}, ''kwargs'': {''title'': ''Kwargs'',
-      ''type'': ''object''}}\nTool Name: Ask question to coworker(question: str, context:
-      str, coworker: Optional[str] = None, **kwargs)\nTool Description: Ask a specific
-      question to one of the following coworkers: test role\nThe input to this tool
-      should be the coworker, the question you have for them, and ALL necessary context
-      to ask the question properly, they know nothing about the question, so share
-      absolute everything you know, don''t reference things but instead explain them.\nTool
-      Arguments: {''question'': {''title'': ''Question'', ''type'': ''string''}, ''context'':
-      {''title'': ''Context'', ''type'': ''string''}, ''coworker'': {''title'': ''Coworker'',
-      ''type'': ''string''}, ''kwargs'': {''title'': ''Kwargs'', ''type'': ''object''}}\n\nUse
-      the following format:\n\nThought: you should always think about what to do\nAction:
-      the action to take, only one name of [Delegate work to coworker, Ask question
-      to coworker], just the name, exactly as it''s written.\nAction Input: the input
-      to the action, just a simple python dictionary, enclosed in curly braces, using
-      \" to wrap keys and values.\nObservation: the result of the action\n\nOnce all
-      necessary information is gathered:\n\nThought: I now know the final answer\nFinal
-      Answer: the final answer to the original input question\n\nCurrent Task: Answer
-      accordingly to the context you got.\n\nThis is the expect criteria for your
-      final answer: Your answer. \n you MUST return the actual complete content as
-      the final answer, not a summary.\n\nThis is the context you''re working with:\nHi!\n\nBegin!
-      This is VERY important to you, use the tools available and give your best Final
-      Answer, your job depends on it!\n\nThought:"}, {"role": "assistant", "content":
-      "Thought: My job is to provide the best possible answer based on the context
-      \"Hi!\" and use the tools available if necessary to gather more information.
-      Since the provided context is minimal, I need to clarify what the requester
-      needs from me.\n\nAction: Ask question to coworker\nAction Input: {\"question\":
-      \"What task do you need assistance with?\", \"context\": \"The only information
-      provided is ''Hi!''. Could you please specify what task you need help with or
-      any additional details?\", \"coworker\": \"test role\"}\nObservation: Hi! Could
-      you please specify what task you need help with or provide any additional details?
-      Thank you!"}], "model": "gpt-4o", "stop": ["\nObservation"]}'
+      personal goal is: test goal2\nTo give my best complete final answer to the task
+      use the exact following format:\n\nThought: I now can give a great answer\nFinal
+      Answer: Your final answer must be the great and the most complete as possible,
+      it must be outcome described.\n\nI MUST use these formats, my job depends on
+      it!\nCurrent Task: Answer accordingly to the context you got.\n\nThis is the
+      expect criteria for your final answer: Your answer.\nyou MUST return the actual
+      complete content as the final answer, not a summary.\n\nThis is the context
+      you''re working with:\nHi!\n\nBegin! This is VERY important to you, use the
+      tools available and give your best Final Answer, your job depends on it!\n\nThought:"}],
+      "model": "gpt-4o", "stop": ["\nObservation"]}'
     headers:
       accept:
       - application/json
@@ -873,16 +230,16 @@ interactions:
       connection:
       - keep-alive
       content-length:
-      - '3222'
+      - '844'
       content-type:
       - application/json
       cookie:
-      - __cf_bm=iMsGonnXhDDCqOz9miNRwOGOr7OzXm1EqcxEiFk_nT4-1725908571-1.0.1.1-1P.quluT8iIibKOx0N4Mj8vflrRuSZk7gOWmptSyOKAFsTkvt3UultWM2b_B6I956Cvswux_SgpniB37rKO8Vw;
-        _cfuvid=iTR1OQH6LALCSFaeT0eFfOeYnI_fkFZDwyyndcJuH8E-1725908571214-0.0.1.1-604800000
+      - _cfuvid=7gNruCM_IOsMgDEA4EI0g9dg0NDN5T9HigjiRwrAKc0-1726206193576-0.0.1.1-604800000;
+        __cf_bm=ClnNKAuXgV.ion8pbtUaEfUtQSyni9o4VnBEhtjLcvY-1726206193-1.0.1.1-irjAKQKLFXoFHYMHg.GoJNcvu6A7u6ASFzz_Sr3U6wi_72IUfIRiLp7tOwWp0WXUbEKvKk3dJqoTqwblHvq7Wg
       host:
       - api.openai.com
       user-agent:
-      - OpenAI/Python 1.44.0
+      - OpenAI/Python 1.45.0
       x-stainless-arch:
       - arm64
       x-stainless-async:
@@ -892,7 +249,7 @@ interactions:
       x-stainless-os:
       - MacOS
       x-stainless-package-version:
-      - 1.44.0
+      - 1.45.0
       x-stainless-raw-response:
       - 'true'
       x-stainless-runtime:
@@ -902,21 +259,19 @@ interactions:
     method: POST
     uri: https://api.openai.com/v1/chat/completions
   response:
-    content: "{\n  \"id\": \"chatcmpl-A5dzj9osiocPBXZN0MiQmLvGZ8ENt\",\n  \"object\":
-      \"chat.completion\",\n  \"created\": 1725908743,\n  \"model\": \"gpt-4o-2024-05-13\",\n
+    content: "{\n  \"id\": \"chatcmpl-A6tNLvrOTcvGiku88z0yUR1qGt3Og\",\n  \"object\":
+      \"chat.completion\",\n  \"created\": 1726206195,\n  \"model\": \"gpt-4o-2024-05-13\",\n
       \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
-      \"assistant\",\n        \"content\": \"Thought: Since there is no observation
-      provided, I will proceed with an answer based on the given context, \\\"Hi!\\\".\\n\\nFinal
-      Answer: Hello! How can I assist you today? Please let me know if there is anything
-      specific you need help with.\",\n        \"refusal\": null\n      },\n      \"logprobs\":
-      null,\n      \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\":
-      702,\n    \"completion_tokens\": 51,\n    \"total_tokens\": 753\n  },\n  \"system_fingerprint\":
-      \"fp_25624ae3a5\"\n}\n"
+      \"assistant\",\n        \"content\": \"Thought: I now can give a great answer\\nFinal
+      Answer: Hi!\",\n        \"refusal\": null\n      },\n      \"logprobs\": null,\n
+      \     \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\":
+      166,\n    \"completion_tokens\": 15,\n    \"total_tokens\": 181,\n    \"completion_tokens_details\":
+      {\n      \"reasoning_tokens\": 0\n    }\n  },\n  \"system_fingerprint\": \"fp_25624ae3a5\"\n}\n"
     headers:
       CF-Cache-Status:
       - DYNAMIC
       CF-RAY:
-      - 8c09738f49597ad6-SJC
+      - 8c25d1937dff7c44-LAX
       Connection:
       - keep-alive
       Content-Encoding:
@@ -924,7 +279,7 @@ interactions:
       Content-Type:
       - application/json
       Date:
-      - Mon, 09 Sep 2024 19:05:44 GMT
+      - Fri, 13 Sep 2024 05:43:16 GMT
       Server:
       - cloudflare
       Transfer-Encoding:
@@ -938,7 +293,7 @@ interactions:
       openai-organization:
       - crewai-iuxna1
       openai-processing-ms:
-      - '688'
+      - '667'
       openai-version:
       - '2020-10-01'
       strict-transport-security:
@@ -950,13 +305,13 @@ interactions:
       x-ratelimit-remaining-requests:
       - '9999'
       x-ratelimit-remaining-tokens:
-      - '29999222'
+      - '29999799'
       x-ratelimit-reset-requests:
       - 6ms
       x-ratelimit-reset-tokens:
-      - 1ms
+      - 0s
       x-request-id:
-      - req_4cbd99d9fc8ae79dcf745375e1575dd2
+      - req_7220b5cf61789924adb498bf1b2db031
     http_version: HTTP/1.1
     status_code: 200
 version: 1

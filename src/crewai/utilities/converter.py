@@ -213,9 +213,8 @@ def get_conversion_instructions(model: Type[BaseModel], llm: Any) -> str:
 
 
 def is_gpt(llm: Any) -> bool:
-    from langchain_openai import ChatOpenAI
-
-    return isinstance(llm, ChatOpenAI) and llm.openai_api_base is None
+    """Return if llm provided is of gpt from openai."""
+    return "gpt" in str(llm).lower()
 
 
 def create_converter(

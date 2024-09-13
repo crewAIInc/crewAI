@@ -94,8 +94,9 @@ class Agent(BaseAgent):
     allow_code_execution: Optional[bool] = Field(
         default=False, description="Enable code execution for the agent."
     )
-    sliding_context_window: Optional[bool] = Field(
-        default=False, description="Enable sliding context window for the agent."
+    respect_context_window: Optional[bool] = Field(
+        default=True,
+        description="Keep messages under the context window size by summarizing content.",
     )
     max_retry_limit: int = Field(
         default=2,
@@ -171,7 +172,7 @@ class Agent(BaseAgent):
                     "input": task_prompt,
                     "tool_names": self.agent_executor.tools_names,
                     "tools": self.agent_executor.tools_description,
-                    "should_ask_for_human_input": task.human_input,
+                    "ask_for_human_input": task.human_input,
                 }
             )["output"]
         except Exception as e:
@@ -232,7 +233,7 @@ class Agent(BaseAgent):
             tools_description=self._render_text_description_and_args(parsed_tools),
             step_callback=self.step_callback,
             function_calling_llm=self.function_calling_llm,
-            sliding_context_window=self.sliding_context_window,
+            respect_context_window=self.respect_context_window,
             request_within_rpm_limit=self._rpm_controller.check_or_wait
             if self._rpm_controller
             else None,
@@ -257,7 +258,7 @@ class Agent(BaseAgent):
     def get_output_converter(self, llm, text, model, instructions):
         return Converter(llm=llm, text=text, model=model, instructions=instructions)
 
-    def _parse_tools(self, tools: List[Any]) -> List[Any]:  # type: ignore # Function "langchain_core.tools.tool" is not valid as a type
+    def _parse_tools(self, tools: List[Any]) -> List[Any]:  # type: ignore
         """Parse tools to be used for the task."""
         tools_list = []
         try:

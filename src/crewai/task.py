@@ -243,13 +243,18 @@ class Task(BaseModel):
         tools = tools or self.tools or []
 
         self.processed_by_agents.add(agent.role)
+        print("====================================================")
+        print("context", self.prompt_context)
+        print("context", agent.role)
+        print("context", context)
 
         result = agent.execute_task(
             task=self,
             context=context,
             tools=tools,
         )
-
+        print("result", result)
+        print("====================================================")
         pydantic_output, json_output = self._export_output(result)
 
         task_output = TaskOutput(
@@ -276,7 +281,9 @@ class Task(BaseModel):
             content = (
                 json_output
                 if json_output
-                else pydantic_output.model_dump_json() if pydantic_output else result
+                else pydantic_output.model_dump_json()
+                if pydantic_output
+                else result
             )
             self._save_file(content)
 

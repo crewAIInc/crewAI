@@ -186,8 +186,6 @@ def test_clean_action_with_multiple_trailing_asterisks(parser):
 def test_clean_action_with_spaces_and_asterisks(parser):
     action = "  **  Ask question to senior researcher  **  "
     cleaned_action = parser._clean_action(action)
-    print(f"Original action: '{action}'")
-    print(f"Cleaned action: '{cleaned_action}'")
     assert cleaned_action == "Ask question to senior researcher"
 
 
@@ -245,7 +243,6 @@ def test_safe_repair_json(parser):
 def test_safe_repair_json_unrepairable(parser):
     invalid_json = "{invalid_json"
     result = parser._safe_repair_json(invalid_json)
-    print("result:", invalid_json)
     assert result == invalid_json  # Should return the original if unrepairable
 
 
@@ -297,7 +294,6 @@ def test_safe_repair_json_unescaped_characters(parser):
     invalid_json = '{"task": "Research XAI", "context": "Explainable AI", "coworker": "Senior Researcher\n"}'
     expected_repaired_json = '{"task": "Research XAI", "context": "Explainable AI", "coworker": "Senior Researcher"}'
     result = parser._safe_repair_json(invalid_json)
-    print("result:", result)
     assert result == expected_repaired_json
 
 

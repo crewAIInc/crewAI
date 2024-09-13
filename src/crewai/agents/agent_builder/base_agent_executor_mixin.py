@@ -24,9 +24,6 @@ class CrewAgentExecutorMixin:
 
     def _should_force_answer(self) -> bool:
         """Determine if a forced answer is required based on iteration count."""
-        print("*** self.iterations", self.iterations)
-        print("*** self.max_iter", self.max_iter)
-        print("*** self.have_forced_answer", self.have_forced_answer)
         return (self.iterations >= self.max_iter) and not self.have_forced_answer
 
     def _create_short_term_memory(self, output) -> None:

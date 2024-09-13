@@ -20,18 +20,24 @@ class Prompts(BaseModel):
             slices.append("tools")
         else:
             slices.append("no_tools")
-
+        system = self._build_prompt(slices)
         slices.append("task")
 
         if not self.system_template and not self.prompt_template:
-            return self._build_prompt(slices)
+            return {
+                "system": system,
+                "user": self._build_prompt(["task"]),
+                "prompt": self._build_prompt(slices),
+            }
         else:
-            return self._build_prompt(
-                slices,
-                self.system_template,
-                self.prompt_template,
-                self.response_template,
-            )
+            return {
+                "prompt": self._build_prompt(
+                    slices,
+                    self.system_template,
+                    self.prompt_template,
+                    self.response_template,
+                )
+            }
 
     def _build_prompt(
         self,

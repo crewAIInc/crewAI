@@ -19,7 +19,7 @@ from crewai.tasks.conditional_task import ConditionalTask
 from crewai.tasks.output_format import OutputFormat
 from crewai.tasks.task_output import TaskOutput
 from crewai.types.usage_metrics import UsageMetrics
-from crewai.utilities import Logger, RPMController
+from crewai.utilities import Logger
 from crewai.utilities.task_output_storage_handler import TaskOutputStorageHandler
 
 ceo = Agent(
@@ -225,7 +225,7 @@ def test_crew_creation():
 
     result = crew.kickoff()
 
-    expected_string_output = "**1. The Evolution of Autonomous AI Agents: From Simplicity to Sophistication**\n\nThe journey of autonomous AI agents spans decades, beginning with rule-based systems that followed strict, predefined instructions to accomplish tasks. Over time, these rudimentary agents have evolved into sophisticated models driven by advanced neural networks, capable of learning and making decisions independently. Significant milestones, such as the advent of machine learning, deep learning, and reinforcement learning, have propelled this evolution, enabling AI agents to transition from simple automation tools to intelligent entities performing complex functions in industries like finance, healthcare, and entertainment. As we look to the future, the potential capabilities of autonomous AI agents appear boundless, with innovations poised to usher in an era of unprecedented computational intelligence and autonomous decision-making.\n\n**2. Ethical Dimensions and Challenges of AI Agents**\n\nThe deployment of AI agents in various aspects of life presents profound ethical considerations that cannot be overlooked. Ethical challenges such as bias, transparency, and accountability have emerged, eliciting vigorous debates and necessitating thoughtful scrutiny. Case studies across different sectors reveal that AI agents can sometimes reinforce existing prejudices or make opaque decisions that are difficult to explain. To navigate these dilemmas, it's crucial to establish robust frameworks and guidelines that promote ethical AI development and application. Proposals include bias mitigation strategies, enforceable transparency standards, and accountability mechanisms to ensure AI agents act in ways that are fair, understandable, and responsible.\n\n**3. AI Agents in Healthcare: Revolutionizing Diagnosis and Treatment**\n\nThe integration of AI agents into healthcare is revolutionizing how diagnoses and treatments are handled, leading to enhanced patient outcomes and more efficient medical processes. AI agents are being harnessed to analyze vast datasets, identify patterns, and predict medical conditions with remarkable accuracy. Examples include AI-driven diagnostic tools that outperform traditional methods and virtual assistants that facilitate personalized patient care. However, integrating AI more deeply into healthcare presents unique challenges, including data privacy concerns and the need for rigorous validation of AI systems. Despite these hurdles, the opportunities for AI agents in medical research and patient care are boundless, promising a future where healthcare is both more effective and more accessible.\n\n**4. The Role of AI Agents in Personalized Consumer Experiences**\n\nAI agents are at the forefront of transforming personalized marketing and customer service, crafting unique consumer experiences across various industries. In e-commerce, AI algorithms analyze shopping behavior to recommend products tailored to individual preferences, while in entertainment, AI curates content that aligns with user tastes. The versatility of AI agents extends to customer service as well, where they handle inquiries and resolve issues with a level of efficiency and personalization that human agents struggle to match. The reception to AI-powered personalized interactions has been largely positive, reflecting an increasing consumer demand for bespoke services. As AI technology continues to advance, the scope and effectiveness of these personalized experiences are set to expand, offering a glimpse into a future where consumer engagement is more intuitive and engaging than ever before."
+    expected_string_output = "**The Emergence of Ethical AI: Balancing Innovation with Responsibility**\n\nThe growing deployment of artificial intelligence (AI) in various sectors has highlighted the critical need for ethical AI. As organizations leverage AI to enhance efficiency, the potential for misuse and unintentional bias has surged. This segment delves into the importance of developing transparent, fair, and accountable AI systems. It underscores the responsibility of tech companies and developers to balance innovation with ethical standards, ensuring that AI advancements benefit society without compromising moral principles. By incorporating ethical guidelines and audits into AI development, stakeholders can mitigate risks and promote trust in AI technologies.\n\n**AI in Healthcare: Revolutionizing Diagnosis and Treatment**\n\nArtificial intelligence is transforming the healthcare sector with unprecedented precision and efficiency. By enhancing diagnostic accuracy, personalizing treatment plans, and streamlining administrative processes, AI is revolutionizing how healthcare providers deliver care. This section of the article explores real-world examples and case studies that demonstrate the life-saving potential and cost-reduction benefits of AI-driven healthcare solutions. It highlights how machine learning algorithms can analyze vast amounts of medical data to detect diseases earlier and predict patient outcomes more accurately, ultimately leading to better patient care and resource management.\n\n**AI-Powered Personal Assistants: The Future of Human-Technology Interaction**\n\nThe evolution of AI-powered personal assistants, such as Siri, Alexa, and Google Assistant, is significantly changing the dynamics of human-technology interaction. These assistants have progressed from simple voice command tools to sophisticated systems that can manage tasks, provide personalized recommendations, and even handle complex queries. This paragraph focuses on the expanding capabilities of AI personal assistants and their growing impact on daily life and work productivity. As they become more intuitive and integrated into various devices and platforms, these AI assistants are poised to become indispensable partners in our digital lives, transforming how we access and use technology.\n\n**AI in Content Creation: From Art to News**\n\nArtificial intelligence is making waves in the realm of content creation, generating art, writing, and news with increasing sophistication. This topic investigates how AI is challenging traditional notions of creativity and originality, raising questions about the role of human artists and journalists. By analyzing the implications for content creators and consumers, this section illuminates the possibilities and limitations of AI-generated content. It discusses how AI can democratize media production, making it accessible to a broader audience, while also considering the ethical and philosophical debates surrounding the authenticity of AI-driven creativity."
 
     assert str(result) == expected_string_output
     assert result.raw == expected_string_output
@@ -277,8 +277,6 @@ def test_sync_task_execution():
 
 @pytest.mark.vcr(filter_headers=["authorization"])
 def test_hierarchical_process():
-    from langchain_openai import ChatOpenAI
-
     task = Task(
         description="Come up with a list of 5 interesting ideas to explore for an article, then write one amazing paragraph highlight for each idea that showcases how good an article about this topic could be. Return the list of ideas with their paragraph and your notes.",
         expected_output="5 bullet points with a paragraph for each idea.",
@@ -287,7 +285,7 @@ def test_hierarchical_process():
     crew = Crew(
         agents=[researcher, writer],
         process=Process.hierarchical,
-        manager_llm=ChatOpenAI(temperature=0, model="gpt-4o"),
+        manager_llm="gpt-4o",
         tasks=[task],
     )
 
@@ -295,7 +293,7 @@ def test_hierarchical_process():
 
     assert (
         result.raw
-        == "1. **Unlocking the Potential of AI in Healthcare: Revolutionizing Diagnosis and Treatment**\n   AI is rapidly transforming healthcare by providing innovative solutions for diagnosis and treatment. From predicting patient outcomes to personalizing treatment plans, AI-powered systems are becoming indispensable tools for medical professionals. Machine learning algorithms can analyze vast amounts of medical data with unparalleled speed and accuracy, allowing for earlier detection of diseases like cancer and more effective treatment options. Additionally, AI-driven diagnostic tools can help narrow down symptoms and suggest possible conditions, facilitating a quicker and more accurate diagnosis. As AI technology continues to evolve, it holds the promise of not only improving patient care but also making healthcare more efficient and accessible for everyone.\n\n2. **The Ethical Implications of AI: Balancing Innovation and Responsibility**\n   The rapid advancement of AI presents a host of ethical challenges that must be addressed to balance innovation with societal responsibility. Issues such as bias in AI algorithms, privacy concerns, and the potential for job displacement are critical topics that require careful consideration. Ensuring that AI systems are transparent and fair is essential to maintaining public trust. Moreover, establishing robust ethical guidelines and regulatory frameworks can help mitigate risks and promote the responsible use of AI. As we continue to explore the potential of AI, it is imperative to engage in a broader conversation about its ethical implications to ensure that the technology benefits all of humanity.\n\n3. **AI Agents in Everyday Life: Enhancing Productivity and Convenience**\n   AI agents are seamlessly integrating into our daily lives, enhancing productivity and convenience in unprecedented ways. Virtual assistants like Siri, Alexa, and Google Assistant help us manage our schedules, control smart home devices, and even make shopping easier with voice commands. Meanwhile, AI-driven applications can streamline tasks such as email sorting, data analysis, and project management, allowing us to focus on more critical and creative aspects of our work. In the near future, AI agents are expected to become even more intuitive and capable, further revolutionizing how we perform routine tasks and manage our daily lives. The ongoing advancements in AI are poised to make our lives more efficient, productive, and enjoyable.\n\n4. **The Future of Work with AI: Preparing for the Workforce of Tomorrow**\n   AI is set to redefine the future of work, making it essential for individuals and organizations to prepare for the changes ahead. Automation and AI-driven technologies are transforming industries, from manufacturing to finance, by increasing efficiency and reducing the need for manual labor. Workers will need to adapt by acquiring new skills and embracing lifelong learning to stay relevant in an AI-driven economy. Companies will also have to rethink their business models and workforce strategies to leverage AI effectively. By fostering a culture of continuous improvement and innovation, we can ensure that AI augments human capabilities rather than replacing them, paving the way for a more dynamic and prosperous workforce of tomorrow.\n\n5. **AI in Environmental Sustainability: Tackling Climate Change with Intelligent Solutions**\n   AI is emerging as a powerful tool in the fight against climate change, offering intelligent solutions for environmental sustainability. Machine learning algorithms can analyze complex datasets to predict climate patterns and monitor environmental changes in real-time. AI-driven models can optimize energy consumption in smart grids, reduce waste through improved recycling processes, and enhance the efficiency of renewable energy sources like solar and wind. Additionally, AI can support conservation efforts by tracking endangered species and managing natural resources more effectively. As we grapple with the challenges of climate change, AI stands out as a promising ally that can help us develop innovative strategies for a more sustainable future."
+        == "1. **The Future of AI in Healthcare: Transformations and Innovations**\n   - In the evolving landscape of healthcare, AI is poised to revolutionize patient care, diagnostics, and medical research. Imagine a world where AI-driven diagnostics can predict diseases before they manifest symptoms, personalized treatment plans are crafted using machine learning algorithms, and robotic surgeons operate with unparalleled precision. The infusion of AI into healthcare is not merely futuristic; it's happening now, with innovations such as predictive analytics in patient care, AI-powered telemedicine, and smart wearable devices tracking and analyzing health metrics in real-time. This article will delve into the groundbreaking advancements and forecast how AI will continue to transform the healthcare industry, improving outcomes and accessibility while addressing ethical and practical challenges.\n\n2. **AI Ethics and Bias: Navigating the Moral Landscape**\n   - As AI systems become more integrated into society, the ethical implications of their deployment must be rigorously examined. AI's potential to replicate and even amplify human biases poses a significant challenge, necessitating robust frameworks for fairness, accountability, and transparency. This article will explore the pressing ethical dilemmas, from biased algorithms affecting hiring practices to facial recognition technologies intruding on privacy rights. It will highlight ongoing efforts to create ethical guidelines and equitable AI systems, the role of diverse datasets in mitigating bias, and the importance of interdisciplinary collaboration between technologists, ethicists, and policymakers in shaping an ethical AI future.\n\n3. **Autonomous Agents: From Virtual Assistants to Adaptive Learning Bots**\n   - Autonomous agents are transforming how we interact with technology, moving beyond simple task automation to become sophisticated, adaptive entities capable of learning and evolving. This article will journey through the evolution of autonomous agents, showcasing virtual assistants like Siri and Alexa, and advancing to adaptive learning bots used in education and customer service. We'll examine their underlying technologies, such as natural language processing and reinforcement learning, and discuss real-world applications that demonstrate their potential to enhance productivity, learning experiences, and personalized user interactions. The promise of autonomous agents lies in their ability to continually adapt and improve, offering increasingly valuable assistance in our daily lives and work.\n\n4. **AI and the Future of Work: Opportunities and Challenges**\n   - The integration of AI into the workplace promises a future teeming with opportunities and challenges. While AI can augment human capabilities, streamline operations, and drive innovation, it also raises concerns about job displacement and workforce adaptation. This article will present a balanced view of the AI-driven future of work, examining sectors likely to experience the most significant transformations and highlighting stories of AI complementing human skills. We'll also address the need for upskilling and reskilling initiatives to prepare the workforce for an AI-enhanced job market, illustrating how businesses can leverage AI to foster a collaborative human-machine environment that maximizes efficiency and creativity.\n\n5. **AI-Driven Startups: Innovators Pushing the Boundaries of Technology**\n   - AI-driven startups are at the forefront of technological innovation, disrupting traditional industries and creating unprecedented solutions to complex problems. This article will spotlight some of the most dynamic AI startups, exploring their groundbreaking projects and the unique challenges they face. From AI in local agriculture optimizing crop yields to fintech startups using machine learning to revolutionize fraud detection, these companies are not just pushing the boundaries of what's possible but are also redefining how businesses operate. By decoding their success stories and the innovative minds behind them, we provide a glimpse into the future shaped by these AI pioneers and the limitless possibilities they unveil."
     )
 
 
@@ -318,8 +316,6 @@ def test_manager_agent_delegating_to_assigned_task_agent():
     """
     Test that the manager agent delegates to the assigned task agent.
     """
-    from langchain_openai import ChatOpenAI
-
     task = Task(
         description="Come up with a list of 5 interesting ideas to explore for an article, then write one amazing paragraph highlight for each idea that showcases how good an article about this topic could be. Return the list of ideas with their paragraph and your notes.",
         expected_output="5 bullet points with a paragraph for each idea.",
@@ -329,7 +325,7 @@ def test_manager_agent_delegating_to_assigned_task_agent():
     crew = Crew(
         agents=[researcher, writer],
         process=Process.hierarchical,
-        manager_llm=ChatOpenAI(temperature=0, model="gpt-4o"),
+        manager_llm="gpt-4o",
         tasks=[task],
     )
 
@@ -355,8 +351,6 @@ def test_manager_agent_delegating_to_all_agents():
     """
     Test that the manager agent delegates to all agents when none are specified.
     """
-    from langchain_openai import ChatOpenAI
-
     task = Task(
         description="Come up with a list of 5 interesting ideas to explore for an article, then write one amazing paragraph highlight for each idea that showcases how good an article about this topic could be. Return the list of ideas with their paragraph and your notes.",
         expected_output="5 bullet points with a paragraph for each idea.",
@@ -365,7 +359,7 @@ def test_manager_agent_delegating_to_all_agents():
     crew = Crew(
         agents=[researcher, writer],
         process=Process.hierarchical,
-        manager_llm=ChatOpenAI(temperature=0, model="gpt-4o"),
+        manager_llm="gpt-4o",
         tasks=[task],
     )
 
@@ -375,10 +369,6 @@ def test_manager_agent_delegating_to_all_agents():
     assert crew.manager_agent.tools is not None
 
     assert len(crew.manager_agent.tools) == 2
-    print(
-        "crew.manager_agent.tools[0].description",
-        crew.manager_agent.tools[0].description,
-    )
     assert (
         "Delegate a specific task to one of the following coworkers: Researcher, Senior Writer\n"
         in crew.manager_agent.tools[0].description
@@ -409,7 +399,7 @@ def test_crew_with_delegating_agents():
 
     assert (
         result.raw
-        == "In the rapidly evolving landscape of artificial intelligence, AI Agents stand out as transformative tools capable of revolutionizing various sectors. These autonomous entities, equipped with sophisticated algorithms and machine learning capabilities, can perform complex tasks that range from customer service in the retail industry to predictive maintenance in manufacturing. For instance, AI Agents in healthcare can analyze vast datasets to identify potential health issues before they become critical, thereby saving lives and reducing costs. Their ability to process information and learn from interactions enables them to adapt and optimize their performance over time.\n\nAI Agents have many applications across diverse fields. In the financial industry, they facilitate fraud detection by analyzing transaction patterns and flagging abnormalities. In customer service, they improve user experience through chatbots that can respond to inquiries with human-like interactions, reducing wait times and increasing satisfaction. In manufacturing, predictive maintenance powered by AI Agents helps forecast equipment failures before they occur, thereby improving operational efficiency and reducing downtime. The educational sector also benefits from AI Agents through personalized learning experiences and administrative task automation.\n\nDespite their significant benefits, AI Agents are not without challenges. Data privacy remains a prominent concern as these systems often need access to large volumes of personal information to function effectively. Additionally, there is the issue of bias in AI algorithms, which can lead to unfair outcomes if not properly addressed. The need for continuous monitoring and updating of AI systems to ensure they operate correctly and ethically further complicates their implementation. Moreover, the potential for job displacement due to automation raises social and economic considerations that must be managed carefully.\n\nLooking to the future, the role of AI Agents is poised to expand even further. Advances in machine learning, natural language processing, and other AI technologies will continue to enhance their capabilities. We can expect to see AI Agents playing even more integral roles in smart cities, autonomous vehicles, and complex problem-solving across sciences. The key to unlocking the full potential of AI Agents lies in addressing existing challenges and fostering an environment of collaboration between human intelligence and artificial systems. By doing so, we pave the way for a future where AI Agents not only drive efficiency and productivity but also contribute to a higher quality of life."
+        == "**The Transformative Power of AI Agents Across Industries**\n\nAI Agents are revolutionizing the landscape of multiple industries by bringing unprecedented advancements in automation, decision-making, and operational efficiency. These sophisticated algorithms, capable of learning from vast datasets, are optimizing supply chains, enhancing customer service through intelligent chatbots, and even enabling precision medicine by analyzing complex medical data. Their ability to process and analyze information at hyper-human speeds allows businesses to make more informed, data-driven decisions, ultimately leading to increased productivity and innovative solutions. As AI Agents continue to evolve, they promise not only to transform existing processes but also to create entirely new paradigms in how industries operate, making them indispensable tools in the digital age.\n\nIn the healthcare industry, AI Agents are revolutionizing the diagnosis and treatment of diseases. IBM Watson for Oncology, for instance, assists oncologists in making informed treatment decisions by analyzing medical literature, patient records, and clinical trials. This enables doctors to offer more precise and personalized treatment plans for cancer patients, significantly enhancing patient outcomes. Additionally, AI-powered diagnostic tools like Google DeepMind's AI system are capable of detecting eye diseases from retinal scans with unprecedented accuracy, allowing for earlier and potentially life-saving interventions.\n\nThe financial sector is experiencing a redefinition through AI Agents as well, particularly in advanced fraud detection and personalized financial services. JPMorgan Chase's AI program, COiN, efficiently reviews legal documents and extracts critical data at rates far surpassing that of human capabilities, reducing error rates and operational costs. Furthermore, robo-advisors like Betterment and Wealthfront provide personalized investment advice, managing individual portfolios via sophisticated algorithms that analyze market trends, risk tolerance, and financial goals, thereby democratizing access to high-quality financial advice.\n\nSimilarly, the retail and logistics industries are significantly benefiting from AI implementations. E-commerce giants like Amazon use AI-driven recommendation engines to personalize shopping experiences, while AI-powered chatbots in customer service handle inquiries with efficient, consistent, and instantaneous responses. In logistics, companies like DHL and FedEx use AI for route optimization, predictive maintenance, and demand forecasting, resulting in faster delivery times and reduced fuel consumption. These varied applications highlight the transformative power of AI Agents in enhancing productivity, accuracy, and innovation across industries.\n\nThrough these multifaceted applications, it becomes clear that AI Agents are not only improving operational efficiency and service delivery but also driving significant innovation and fostering new standards of excellence across industries. Their integration and evolution represent a transformative movement, poised to redefine the future landscape of numerous sectors."
     )
 
 
@@ -503,12 +493,10 @@ def test_cache_hitting_between_agents():
 @pytest.mark.vcr(filter_headers=["authorization"])
 def test_api_calls_throttling(capsys):
     from unittest.mock import patch
-
     from crewai_tools import tool
-    from langchain_openai import ChatOpenAI
 
     @tool
-    def get_final_answer(anything) -> float:
+    def get_final_answer() -> float:
         """Get the final answer but don't give it yet, just re-use this
         tool non-stop."""
         return 42
@@ -520,7 +508,7 @@ def test_api_calls_throttling(capsys):
         max_iter=5,
         allow_delegation=False,
         verbose=True,
-        llm=ChatOpenAI(model="gpt-4-0125-preview"),
+        llm="gpt-4-0125-preview",
     )
 
     task = Task(
@@ -532,12 +520,12 @@ def test_api_calls_throttling(capsys):
 
     crew = Crew(agents=[agent], tasks=[task], max_rpm=2, verbose=True)
 
-    with patch.object(RPMController, "_wait_for_next_minute") as moveon:
-        moveon.return_value = True
+    with patch("time.sleep") as mock_sleep:
+        mock_sleep.return_value = None
         crew.kickoff()
         captured = capsys.readouterr()
         assert "Max RPM reached, waiting for next minute to start." in captured.out
-        moveon.assert_called()
+        mock_sleep.assert_called_with(60)  # Assert that sleep was called with 1 second
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
@@ -620,7 +608,7 @@ def test_sequential_async_task_execution_completion():
 
     sequential_result = sequential_crew.kickoff()
     assert sequential_result.raw.startswith(
-        "The history of Artificial Intelligence (AI) is dotted with monumental events that have significantly shaped the trajectory of technological advancement."
+        "Artificial Intelligence (AI) has journeyed through pivotal milestones that have transformed the technology landscape as we know it."
     )
 
 
@@ -648,7 +636,7 @@ def test_single_task_with_async_execution():
 
     result = crew.kickoff()
     assert result.raw.startswith(
-        "- Future of AI in Healthcare and Personalized Treatment."
+        "- AI agents in personalized healthcare diagnoses and treatment"
     )
 
 
@@ -1114,13 +1102,12 @@ def test_dont_set_agents_step_callback_if_already_set():
 def test_crew_function_calling_llm():
     from unittest.mock import patch
     from crewai_tools import tool
-    from langchain_openai import ChatOpenAI
     from crewai.utilities import Instructor
 
-    llm = ChatOpenAI(model="gpt-3.5-turbo-0125")
+    llm = "gpt-3.5-turbo-0125"
 
     @tool
-    def learn_about_AI(topic) -> str:
+    def learn_about_AI() -> str:
         """Useful for when you need to learn about AI to write an paragraph about it."""
         return "AI is a very broad field."
 
@@ -1129,7 +1116,7 @@ def test_crew_function_calling_llm():
         goal="test goal",
         backstory="test backstory",
         tools=[learn_about_AI],
-        llm=ChatOpenAI(model="gpt-4-0125-preview"),
+        llm="gpt-4o-mini",
         function_calling_llm=llm,
     )
 
@@ -1286,9 +1273,9 @@ def test_agent_usage_metrics_are_captured_for_hierarchical_process():
     assert result.raw == "Howdy!"
 
     assert result.token_usage == UsageMetrics(
-        total_tokens=2706,
-        prompt_tokens=2548,
-        completion_tokens=158,
+        total_tokens=2565,
+        prompt_tokens=2424,
+        completion_tokens=141,
         successful_requests=5,
     )
 
@@ -1299,8 +1286,6 @@ def test_hierarchical_crew_creation_tasks_with_agents():
     Agents are not required for tasks in a hierarchical process but sometimes they are still added
     This test makes sure that the manager still delegates the task to the agent even if the agent is passed in the task
     """
-    from langchain_openai import ChatOpenAI
-
     task = Task(
         description="Write one amazing paragraph about AI.",
         expected_output="A single paragraph with 4 sentences.",
@@ -1311,13 +1296,12 @@ def test_hierarchical_crew_creation_tasks_with_agents():
         tasks=[task],
         agents=[writer, researcher],
         process=Process.hierarchical,
-        manager_llm=ChatOpenAI(model="gpt-4o"),
+        manager_llm="gpt-4o",
     )
     crew.kickoff()
 
     assert crew.manager_agent is not None
     assert crew.manager_agent.tools is not None
-    print("TOOL DESCRIPTION", crew.manager_agent.tools[0].description)
     assert crew.manager_agent.tools[0].description.startswith(
         "Delegate a specific task to one of the following coworkers: Senior Writer"
     )
@@ -1329,8 +1313,6 @@ def test_hierarchical_crew_creation_tasks_with_async_execution():
     Agents are not required for tasks in a hierarchical process but sometimes they are still added
     This test makes sure that the manager still delegates the task to the agent even if the agent is passed in the task
     """
-    from langchain_openai import ChatOpenAI
-
     task = Task(
         description="Write one amazing paragraph about AI.",
         expected_output="A single paragraph with 4 sentences.",
@@ -1342,7 +1324,7 @@ def test_hierarchical_crew_creation_tasks_with_async_execution():
         tasks=[task],
         agents=[writer, researcher, ceo],
         process=Process.hierarchical,
-        manager_llm=ChatOpenAI(model="gpt-4o"),
+        manager_llm="gpt-4o",
     )
 
     crew.kickoff()
@@ -1359,8 +1341,6 @@ def test_hierarchical_crew_creation_tasks_with_sync_last():
     Agents are not required for tasks in a hierarchical process but sometimes they are still added
     This test makes sure that the manager still delegates the task to the agent even if the agent is passed in the task
     """
-    from langchain_openai import ChatOpenAI
-
     task = Task(
         description="Write one amazing paragraph about AI.",
         expected_output="A single paragraph with 4 sentences.",
@@ -1377,7 +1357,7 @@ def test_hierarchical_crew_creation_tasks_with_sync_last():
         tasks=[task, task2],
         agents=[writer, researcher, ceo],
         process=Process.hierarchical,
-        manager_llm=ChatOpenAI(model="gpt-4o"),
+        manager_llm="gpt-4o",
     )
 
     crew.kickoff()
@@ -2394,7 +2374,7 @@ def test_conditional_task_last_task_when_conditional_is_true():
     )
     result = crew.kickoff()
     assert result.raw.startswith(
-        "1. **The Rise of Autonomous AI Agents in Daily Life**"
+        "1. **The Future of AI in Healthcare: Revolutionizing Diagnosis and Treatment**"
     )
 
 
@@ -2420,7 +2400,6 @@ def test_conditional_task_last_task_when_conditional_is_false():
         tasks=[task1, task2],
     )
     result = crew.kickoff()
-    print(result.raw)
     assert result.raw == "Hi"
 
 
@@ -2544,8 +2523,6 @@ def test_crew_testing_function(mock_kickoff, crew_evaluator):
 
 @pytest.mark.vcr(filter_headers=["authorization"])
 def test_hierarchical_verbose_manager_agent():
-    from langchain_openai import ChatOpenAI
-
     task = Task(
         description="Come up with a list of 5 interesting ideas to explore for an article, then write one amazing paragraph highlight for each idea that showcases how good an article about this topic could be. Return the list of ideas with their paragraph and your notes.",
         expected_output="5 bullet points with a paragraph for each idea.",
@@ -2555,7 +2532,7 @@ def test_hierarchical_verbose_manager_agent():
         agents=[researcher, writer],
         tasks=[task],
         process=Process.hierarchical,
-        manager_llm=ChatOpenAI(temperature=0, model="gpt-4o"),
+        manager_llm="gpt-4o",
         verbose=True,
     )
 
@@ -2567,8 +2544,6 @@ def test_hierarchical_verbose_manager_agent():
 
 @pytest.mark.vcr(filter_headers=["authorization"])
 def test_hierarchical_verbose_false_manager_agent():
-    from langchain_openai import ChatOpenAI
-
     task = Task(
         description="Come up with a list of 5 interesting ideas to explore for an article, then write one amazing paragraph highlight for each idea that showcases how good an article about this topic could be. Return the list of ideas with their paragraph and your notes.",
         expected_output="5 bullet points with a paragraph for each idea.",
@@ -2578,7 +2553,7 @@ def test_hierarchical_verbose_false_manager_agent():
         agents=[researcher, writer],
         tasks=[task],
         process=Process.hierarchical,
-        manager_llm=ChatOpenAI(temperature=0, model="gpt-4o"),
+        manager_llm="gpt-4o",
         verbose=False,
     )
 
