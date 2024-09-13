@@ -226,11 +226,17 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
         ):
             training_data = CrewTrainingHandler(TRAINING_DATA_FILE).load()
             if training_data.get(agent_id):
-                # type: ignore[union-attr]
-                training_data[agent_id][self.crew._train_iteration][
-                    "improved_output"
-                ] = result.output
-                CrewTrainingHandler(TRAINING_DATA_FILE).save(training_data)
+                if self.crew is not None and hasattr(self.crew, "_train_iteration"):
+                    training_data[agent_id][self.crew._train_iteration][
+                        "improved_output"
+                    ] = result.output
+                    CrewTrainingHandler(TRAINING_DATA_FILE).save(training_data)
+                else:
+                    self._logger.log(
+                        "error",
+                        "Invalid crew or missing _train_iteration attribute.",
+                        color="red",
+                    )
 
         if self.ask_for_human_input and human_feedback is not None:
             training_data = {
@@ -239,15 +245,22 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
                 "agent": agent_id,
                 "agent_role": self.agent.role,
             }
-            # type: ignore[union-attr]
-            if isinstance(self.crew._train_iteration, int):
-                CrewTrainingHandler(TRAINING_DATA_FILE).append(
-                    self.crew._train_iteration, agent_id, training_data
-                )
+            if self.crew is not None and hasattr(self.crew, "_train_iteration"):
+                train_iteration = self.crew._train_iteration
+                if isinstance(train_iteration, int):
+                    CrewTrainingHandler(TRAINING_DATA_FILE).append(
+                        train_iteration, agent_id, training_data
+                    )
+                else:
+                    self._logger.log(
+                        "error",
+                        "Invalid train iteration type. Expected int.",
+                        color="red",
+                    )
             else:
                 self._logger.log(
                     "error",
-                    "Invalid train iteration type. Expected int.",
+                    "Crew is None or does not have _train_iteration attribute.",
                     color="red",
                 )
 
