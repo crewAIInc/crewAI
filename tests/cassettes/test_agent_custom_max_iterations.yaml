@@ -17,7 +17,7 @@ interactions:
       answer: The final answer\nyou MUST return the actual complete content as the
       final answer, not a summary.\n\nBegin! This is VERY important to you, use the
       tools available and give your best Final Answer, your job depends on it!\n\nThought:"}],
-      "model": "gpt-4o", "stop": ["\nResult"]}'
+      "model": "gpt-4o", "stop": ["\nObservation:"]}'
     headers:
       accept:
       - application/json
@@ -26,12 +26,12 @@ interactions:
       connection:
       - keep-alive
       content-length:
-      - '1411'
+      - '1417'
       content-type:
       - application/json
       cookie:
-      - __cf_bm=J1VIPhfusyyXtwM.1L9zbe3jdnU7NVyHC3AWiKXO280-1726379702-1.0.1.1-LDa9RyXFli18t4ZEuVAENTChdNAkRtdWXRkRLbBHbCXdobugQ3T.arhMpSKwtnBRXKPcC4b66UA7BsSy1VXDHQ;
-        _cfuvid=Bz2zevKuFYZqnEFwqmqVHcRo5pT0fm0fTtc_6_VQs4g-1726379702153-0.0.1.1-604800000
+      - __cf_bm=xCQEG8vgEvQfut0bkj2xgre9z9ePZhdKdNxBphhvH6s-1726437753-1.0.1.1-5qo0zwDCcKDtqvIzDbp2sLEPCey8v5DAsf0Mg6f2RmooOW9FXTw2P66VCTTF.vCwTpWBIFk0vzKmBAPOt6urIg;
+        _cfuvid=TiTyEciy7HrUlIDEsELZqkUyM4Fyn8OldZd4JefFMOA-1726437753108-0.0.1.1-604800000
       host:
       - api.openai.com
       user-agent:
@@ -55,21 +55,20 @@ interactions:
     method: POST
     uri: https://api.openai.com/v1/chat/completions
   response:
-    content: "{\n  \"id\": \"chatcmpl-A7cdaJUnpi6am6a1IGFHBdptiUfH8\",\n  \"object\":
-      \"chat.completion\",\n  \"created\": 1726380182,\n  \"model\": \"gpt-4o-2024-05-13\",\n
+    content: "{\n  \"id\": \"chatcmpl-A7rfEIJOGEU5Zb4k0FrW7sD9Wxw3E\",\n  \"object\":
+      \"chat.completion\",\n  \"created\": 1726437944,\n  \"model\": \"gpt-4o-2024-05-13\",\n
       \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
-      \"assistant\",\n        \"content\": \"Thought: I need to use the get_final_answer
-      tool to move towards providing the final answer while following the instructions
-      closely.\\n\\nAction: get_final_answer\\nAction Input: {}\",\n        \"refusal\":
-      null\n      },\n      \"logprobs\": null,\n      \"finish_reason\": \"stop\"\n
-      \   }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 291,\n    \"completion_tokens\":
-      34,\n    \"total_tokens\": 325,\n    \"completion_tokens_details\": {\n      \"reasoning_tokens\":
+      \"assistant\",\n        \"content\": \"I should use the `get_final_answer` tool
+      to proceed as instructed.\\n\\nAction: get_final_answer\\nAction Input: {}\",\n
+      \       \"refusal\": null\n      },\n      \"logprobs\": null,\n      \"finish_reason\":
+      \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 291,\n    \"completion_tokens\":
+      25,\n    \"total_tokens\": 316,\n    \"completion_tokens_details\": {\n      \"reasoning_tokens\":
       0\n    }\n  },\n  \"system_fingerprint\": \"fp_25624ae3a5\"\n}\n"
     headers:
       CF-Cache-Status:
       - DYNAMIC
       CF-RAY:
-      - 8c36694b3c23745a-MIA
+      - 8c3beb7e3d5ea4ca-MIA
       Connection:
       - keep-alive
       Content-Encoding:
@@ -77,7 +76,7 @@ interactions:
       Content-Type:
       - application/json
       Date:
-      - Sun, 15 Sep 2024 06:03:02 GMT
+      - Sun, 15 Sep 2024 22:05:44 GMT
       Server:
       - cloudflare
       Transfer-Encoding:
@@ -91,7 +90,7 @@ interactions:
       openai-organization:
       - crewai-iuxna1
       openai-processing-ms:
-      - '343'
+      - '352'
       openai-version:
       - '2020-10-01'
       strict-transport-security:
@@ -109,7 +108,7 @@ interactions:
       x-ratelimit-reset-tokens:
       - 0s
       x-request-id:
-      - req_ab7eee32fd06d37449b5df7b2c79e611
+      - req_64c848f044cdd179c29c6092fa595d8a
     http_version: HTTP/1.1
     status_code: 200
 - request:
@@ -130,12 +129,11 @@ interactions:
       answer: The final answer\nyou MUST return the actual complete content as the
       final answer, not a summary.\n\nBegin! This is VERY important to you, use the
       tools available and give your best Final Answer, your job depends on it!\n\nThought:"},
-      {"role": "assistant", "content": "Thought: I need to use the get_final_answer
-      tool to move towards providing the final answer while following the instructions
-      closely.\n\nAction: get_final_answer\nAction Input: {}\nObservation: 42\nNow
-      it''s time you MUST give your absolute best final answer. You''ll ignore all
-      previous instructions, stop using any tools, and just return your absolute BEST
-      Final answer."}], "model": "gpt-4o", "stop": ["\nResult"]}'
+      {"role": "assistant", "content": "I should use the `get_final_answer` tool to
+      proceed as instructed.\n\nAction: get_final_answer\nAction Input: {}\nObservation:
+      42\nNow it''s time you MUST give your absolute best final answer. You''ll ignore
+      all previous instructions, stop using any tools, and just return your absolute
+      BEST Final answer."}], "model": "gpt-4o", "stop": ["\nObservation:"]}'
     headers:
       accept:
       - application/json
@@ -144,12 +142,12 @@ interactions:
       connection:
       - keep-alive
       content-length:
-      - '1819'
+      - '1758'
       content-type:
       - application/json
       cookie:
-      - __cf_bm=J1VIPhfusyyXtwM.1L9zbe3jdnU7NVyHC3AWiKXO280-1726379702-1.0.1.1-LDa9RyXFli18t4ZEuVAENTChdNAkRtdWXRkRLbBHbCXdobugQ3T.arhMpSKwtnBRXKPcC4b66UA7BsSy1VXDHQ;
-        _cfuvid=Bz2zevKuFYZqnEFwqmqVHcRo5pT0fm0fTtc_6_VQs4g-1726379702153-0.0.1.1-604800000
+      - __cf_bm=xCQEG8vgEvQfut0bkj2xgre9z9ePZhdKdNxBphhvH6s-1726437753-1.0.1.1-5qo0zwDCcKDtqvIzDbp2sLEPCey8v5DAsf0Mg6f2RmooOW9FXTw2P66VCTTF.vCwTpWBIFk0vzKmBAPOt6urIg;
+        _cfuvid=TiTyEciy7HrUlIDEsELZqkUyM4Fyn8OldZd4JefFMOA-1726437753108-0.0.1.1-604800000
       host:
       - api.openai.com
       user-agent:
@@ -173,19 +171,19 @@ interactions:
     method: POST
     uri: https://api.openai.com/v1/chat/completions
   response:
-    content: "{\n  \"id\": \"chatcmpl-A7cdbAnQ9iDYQdf8faeQV280ysQfT\",\n  \"object\":
-      \"chat.completion\",\n  \"created\": 1726380183,\n  \"model\": \"gpt-4o-2024-05-13\",\n
+    content: "{\n  \"id\": \"chatcmpl-A7rfE0jzkASheqOse4Do9Clz7Jmps\",\n  \"object\":
+      \"chat.completion\",\n  \"created\": 1726437944,\n  \"model\": \"gpt-4o-2024-05-13\",\n
       \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
-      \"assistant\",\n        \"content\": \"Thought: I now know the final answer\\nFinal
+      \"assistant\",\n        \"content\": \"Thought: I now know the final answer.\\nFinal
       Answer: 42\",\n        \"refusal\": null\n      },\n      \"logprobs\": null,\n
       \     \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\":
-      366,\n    \"completion_tokens\": 14,\n    \"total_tokens\": 380,\n    \"completion_tokens_details\":
+      357,\n    \"completion_tokens\": 14,\n    \"total_tokens\": 371,\n    \"completion_tokens_details\":
       {\n      \"reasoning_tokens\": 0\n    }\n  },\n  \"system_fingerprint\": \"fp_25624ae3a5\"\n}\n"
     headers:
       CF-Cache-Status:
       - DYNAMIC
       CF-RAY:
-      - 8c36694f8f34745a-MIA
+      - 8c3beb826b74a4ca-MIA
       Connection:
       - keep-alive
       Content-Encoding:
@@ -193,7 +191,7 @@ interactions:
       Content-Type:
       - application/json
       Date:
-      - Sun, 15 Sep 2024 06:03:03 GMT
+      - Sun, 15 Sep 2024 22:05:45 GMT
       Server:
       - cloudflare
       Transfer-Encoding:
@@ -207,7 +205,7 @@ interactions:
       openai-organization:
       - crewai-iuxna1
       openai-processing-ms:
-      - '200'
+      - '282'
       openai-version:
       - '2020-10-01'
       strict-transport-security:
@@ -219,13 +217,13 @@ interactions:
       x-ratelimit-remaining-requests:
       - '9999'
       x-ratelimit-remaining-tokens:
-      - '29999573'
+      - '29999590'
       x-ratelimit-reset-requests:
       - 6ms
       x-ratelimit-reset-tokens:
       - 0s
       x-request-id:
-      - req_ec94085451af9267aaa5eeb649a36fed
+      - req_58d8a25c65a9fc33194021ed33ff915d
     http_version: HTTP/1.1
     status_code: 200
 version: 1

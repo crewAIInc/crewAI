@@ -10,7 +10,7 @@ interactions:
       criteria for your final answer: 1 bullet point about dog that''s under 15 words.\nyou
       MUST return the actual complete content as the final answer, not a summary.\n\nBegin!
       This is VERY important to you, use the tools available and give your best Final
-      Answer, your job depends on it!\n\nThought:"}], "model": "gpt-4o", "stop": ["\nResult"]}'
+      Answer, your job depends on it!\n\nThought:"}], "model": "gpt-4o", "stop": ["\nObservation:"]}'
     headers:
       accept:
       - application/json
@@ -19,12 +19,12 @@ interactions:
       connection:
       - keep-alive
       content-length:
-      - '891'
+      - '897'
       content-type:
       - application/json
       cookie:
-      - __cf_bm=e.frhlfi1m.8j1hzfGzahuOh4rgR9gvx.2zCHQ2w_Vs-1726380612-1.0.1.1-T58wIEXn0GTV8AZMALaUyULORFkNEBuxpds8RSWAM0Ltrg2U7jLBEKs0nwIneMiBAiiOmyZaoaH2RyLtNcunLQ;
-        _cfuvid=Bz2zevKuFYZqnEFwqmqVHcRo5pT0fm0fTtc_6_VQs4g-1726379702153-0.0.1.1-604800000
+      - __cf_bm=xCQEG8vgEvQfut0bkj2xgre9z9ePZhdKdNxBphhvH6s-1726437753-1.0.1.1-5qo0zwDCcKDtqvIzDbp2sLEPCey8v5DAsf0Mg6f2RmooOW9FXTw2P66VCTTF.vCwTpWBIFk0vzKmBAPOt6urIg;
+        _cfuvid=TiTyEciy7HrUlIDEsELZqkUyM4Fyn8OldZd4JefFMOA-1726437753108-0.0.1.1-604800000
       host:
       - api.openai.com
       user-agent:
@@ -48,20 +48,20 @@ interactions:
     method: POST
     uri: https://api.openai.com/v1/chat/completions
   response:
-    content: "{\n  \"id\": \"chatcmpl-A7cnG6zQ2NdLYR9Vk5rdLTGTk0v9s\",\n  \"object\":
-      \"chat.completion\",\n  \"created\": 1726380782,\n  \"model\": \"gpt-4o-2024-05-13\",\n
+    content: "{\n  \"id\": \"chatcmpl-A7rjaSlroCa6VdsVN0B2m7QNUe12G\",\n  \"object\":
+      \"chat.completion\",\n  \"created\": 1726438214,\n  \"model\": \"gpt-4o-2024-05-13\",\n
       \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
-      \"assistant\",\n        \"content\": \"I now can give a great answer.\\nFinal
-      Answer: Dogs provide unmatched companionship and improve mental health.\",\n
+      \"assistant\",\n        \"content\": \"I now can give a great answer\\nFinal
+      Answer: Dogs are incredibly loyal and intuitive companions for humans.\",\n
       \       \"refusal\": null\n      },\n      \"logprobs\": null,\n      \"finish_reason\":
       \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 175,\n    \"completion_tokens\":
-      20,\n    \"total_tokens\": 195,\n    \"completion_tokens_details\": {\n      \"reasoning_tokens\":
+      21,\n    \"total_tokens\": 196,\n    \"completion_tokens_details\": {\n      \"reasoning_tokens\":
       0\n    }\n  },\n  \"system_fingerprint\": \"fp_25624ae3a5\"\n}\n"
     headers:
       CF-Cache-Status:
       - DYNAMIC
       CF-RAY:
-      - 8c3677f0a826745a-MIA
+      - 8c3bf214c88ca4ca-MIA
       Connection:
       - keep-alive
       Content-Encoding:
@@ -69,7 +69,7 @@ interactions:
       Content-Type:
       - application/json
       Date:
-      - Sun, 15 Sep 2024 06:13:02 GMT
+      - Sun, 15 Sep 2024 22:10:14 GMT
       Server:
       - cloudflare
       Transfer-Encoding:
@@ -83,7 +83,7 @@ interactions:
       openai-organization:
       - crewai-iuxna1
       openai-processing-ms:
-      - '254'
+      - '734'
       openai-version:
       - '2020-10-01'
       strict-transport-security:
@@ -101,7 +101,7 @@ interactions:
       x-ratelimit-reset-tokens:
       - 0s
       x-request-id:
-      - req_4c2bcb37503cc5e655c40322e916272f
+      - req_0b7440ac19b456d62ed5f15163e7a34b
     http_version: HTTP/1.1
     status_code: 200
 version: 1

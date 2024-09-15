@@ -20,6 +20,7 @@ class CrewAgentExecutorMixin:
     task: Optional["Task"]
     iterations: int
     have_forced_answer: bool
+    max_iter: int
     _i18n: I18N
 
     def _should_force_answer(self) -> bool:

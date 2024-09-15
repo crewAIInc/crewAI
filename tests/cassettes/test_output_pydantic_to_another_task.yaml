@@ -1,5 +1,86 @@
 interactions:
 - request:
+    body: !!binary |
+      CrwWCiQKIgoMc2VydmljZS5uYW1lEhIKEGNyZXdBSS10ZWxlbWV0cnkSkxYKEgoQY3Jld2FpLnRl
+      bGVtZXRyeRKQAgoQoEvgbX/oYBHFyjB5LAbWFRIIlLpo9M0euaUqDlRhc2sgRXhlY3V0aW9uMAE5
+      gN+96I6K9RdBeFdAKI+K9RdKLgoIY3Jld19rZXkSIgogNWU2ZWZmZTY4MGE1ZDk3ZGMzODczYjE0
+      ODI1Y2NmYTNKMQoHY3Jld19pZBImCiRjYmQxYmQwMy1hMmY1LTQ4M2MtYWU0Mi0wOThiMTJmYzQ5
+      ZmZKLgoIdGFza19rZXkSIgogMjdlZjM4Y2M5OWRhNGE4ZGVkNzBlZDQwNmU0NGFiODZKMQoHdGFz
+      a19pZBImCiRiMjExYjU0My0wMGVjLTRmYTgtYTBhMC1iNDNjMDVjYWYzMTR6AhgBhQEAAQAAEpoH
+      ChAeudcpmWOGq/Z/cYEVOBY8EggfbKuI66szLyoMQ3JldyBDcmVhdGVkMAE5kLkpKY+K9RdBgPEu
+      KY+K9RdKGgoOY3Jld2FpX3ZlcnNpb24SCAoGMC41Ni4wShoKDnB5dGhvbl92ZXJzaW9uEggKBjMu
+      MTEuN0ouCghjcmV3X2tleRIiCiA1ZTZlZmZlNjgwYTVkOTdkYzM4NzNiMTQ4MjVjY2ZhM0oxCgdj
+      cmV3X2lkEiYKJDczMjcwZmRkLTAzY2YtNDlhNy04YTRiLTU1NDc5NjIwZmM3OEoeCgxjcmV3X3By
+      b2Nlc3MSDgoMaGllcmFyY2hpY2FsShEKC2NyZXdfbWVtb3J5EgIQAEoaChRjcmV3X251bWJlcl9v
+      Zl90YXNrcxICGAFKGwoVY3Jld19udW1iZXJfb2ZfYWdlbnRzEgIYAUrKAgoLY3Jld19hZ2VudHMS
+      ugIKtwJbeyJrZXkiOiAiOTJlN2ViMTkxNjY0YzkzNTc4NWVkN2Q0MjQwYTI5NGQiLCAiaWQiOiAi
+      ZjdiNTA1YmItMWE2Zi00ZjM4LTk1YjctYWRjMmI1MjlhZmM0IiwgInJvbGUiOiAiU2NvcmVyIiwg
+      InZlcmJvc2U/IjogZmFsc2UsICJtYXhfaXRlciI6IDE1LCAibWF4X3JwbSI6IG51bGwsICJmdW5j
+      dGlvbl9jYWxsaW5nX2xsbSI6IG51bGwsICJsbG0iOiAiZ3B0LTRvIiwgImRlbGVnYXRpb25fZW5h
+      YmxlZD8iOiBmYWxzZSwgImFsbG93X2NvZGVfZXhlY3V0aW9uPyI6IGZhbHNlLCAibWF4X3JldHJ5
+      X2xpbWl0IjogMiwgInRvb2xzX25hbWVzIjogW119XUr7AQoKY3Jld190YXNrcxLsAQrpAVt7Imtl
+      eSI6ICIyN2VmMzhjYzk5ZGE0YThkZWQ3MGVkNDA2ZTQ0YWI4NiIsICJpZCI6ICI1ZTgzM2U0Ny0x
+      OWIyLTRhZjUtOWIzNy1lZjk0MWMzYWVmMmUiLCAiYXN5bmNfZXhlY3V0aW9uPyI6IGZhbHNlLCAi
+      aHVtYW5faW5wdXQ/IjogZmFsc2UsICJhZ2VudF9yb2xlIjogIlNjb3JlciIsICJhZ2VudF9rZXki
+      OiAiOTJlN2ViMTkxNjY0YzkzNTc4NWVkN2Q0MjQwYTI5NGQiLCAidG9vbHNfbmFtZXMiOiBbXX1d
+      egIYAYUBAAEAABKcAQoQJFCKl2JNFqX7yvF9fNmy+BII18QNJU4N3pUqClRvb2wgVXNhZ2UwATkw
+      tWe4j4r1F0Hg02u4j4r1F0oaCg5jcmV3YWlfdmVyc2lvbhIICgYwLjU2LjBKKAoJdG9vbF9uYW1l
+      EhsKGURlbGVnYXRlIHdvcmsgdG8gY293b3JrZXJKDgoIYXR0ZW1wdHMSAhgBegIYAYUBAAEAABKc
+      CQoQlbPCZ3wcnbhP9WCJuEJmFhII60QBm9CEs0gqDENyZXcgQ3JlYXRlZDABORjB/BWQivUXQWj1
+      /xWQivUXShoKDmNyZXdhaV92ZXJzaW9uEggKBjAuNTYuMEoaCg5weXRob25fdmVyc2lvbhIICgYz
+      LjExLjdKLgoIY3Jld19rZXkSIgogZDQyNjA4MzNhYjBjMjBiYjQ0OTIyYzc5OWFhOTZiNGFKMQoH
+      Y3Jld19pZBImCiQ3ZDc2ZGE1Yy0wZmNkLTRhYjItOWQ2Ny1hOTEzN2ExNjUwMGVKHAoMY3Jld19w
+      cm9jZXNzEgwKCnNlcXVlbnRpYWxKEQoLY3Jld19tZW1vcnkSAhAAShoKFGNyZXdfbnVtYmVyX29m
+      X3Rhc2tzEgIYAkobChVjcmV3X251bWJlcl9vZl9hZ2VudHMSAhgBSuUCCgtjcmV3X2FnZW50cxLV
+      AgrSAlt7ImtleSI6ICI5MmU3ZWIxOTE2NjRjOTM1Nzg1ZWQ3ZDQyNDBhMjk0ZCIsICJpZCI6ICI5
+      NjVkZTU3My03Y2Q0LTQwM2UtYTk2Mi03NzgzMDZiOGZkMjkiLCAicm9sZSI6ICJTY29yZXIiLCAi
+      dmVyYm9zZT8iOiB0cnVlLCAibWF4X2l0ZXIiOiAxNSwgIm1heF9ycG0iOiBudWxsLCAiZnVuY3Rp
+      b25fY2FsbGluZ19sbG0iOiAiZ3B0LTMuNS10dXJiby0wMTI1IiwgImxsbSI6ICJncHQtNC0wMTI1
+      LXByZXZpZXciLCAiZGVsZWdhdGlvbl9lbmFibGVkPyI6IGZhbHNlLCAiYWxsb3dfY29kZV9leGVj
+      dXRpb24/IjogZmFsc2UsICJtYXhfcmV0cnlfbGltaXQiOiAyLCAidG9vbHNfbmFtZXMiOiBbXX1d
+      SuQDCgpjcmV3X3Rhc2tzEtUDCtIDW3sia2V5IjogIjI3ZWYzOGNjOTlkYTRhOGRlZDcwZWQ0MDZl
+      NDRhYjg2IiwgImlkIjogImZlYWJkNDc2LWIwZDMtNGIwMS1iNjg1LTIyMGFlNGFhYTc1OCIsICJh
+      c3luY19leGVjdXRpb24/IjogZmFsc2UsICJodW1hbl9pbnB1dD8iOiBmYWxzZSwgImFnZW50X3Jv
+      bGUiOiAiU2NvcmVyIiwgImFnZW50X2tleSI6ICI5MmU3ZWIxOTE2NjRjOTM1Nzg1ZWQ3ZDQyNDBh
+      Mjk0ZCIsICJ0b29sc19uYW1lcyI6IFtdfSwgeyJrZXkiOiAiNjA5ZGVlMzkxMDg4Y2QxYzg3Yjhm
+      YTY2YWE2N2FkYmUiLCAiaWQiOiAiNGViMjJkZTktN2JjNy00N2NiLWI3YmQtOWM4OTYwY2YzNjM4
+      IiwgImFzeW5jX2V4ZWN1dGlvbj8iOiBmYWxzZSwgImh1bWFuX2lucHV0PyI6IGZhbHNlLCAiYWdl
+      bnRfcm9sZSI6ICJTY29yZXIiLCAiYWdlbnRfa2V5IjogIjkyZTdlYjE5MTY2NGM5MzU3ODVlZDdk
+      NDI0MGEyOTRkIiwgInRvb2xzX25hbWVzIjogW119XXoCGAGFAQABAAASjgIKEPTugSXqr4tAykjJ
+      g379un0SCAY8EkpVdy0EKgxUYXNrIENyZWF0ZWQwATmQHRQWkIr1F0HQuRQWkIr1F0ouCghjcmV3
+      X2tleRIiCiBkNDI2MDgzM2FiMGMyMGJiNDQ5MjJjNzk5YWE5NmI0YUoxCgdjcmV3X2lkEiYKJDdk
+      NzZkYTVjLTBmY2QtNGFiMi05ZDY3LWE5MTM3YTE2NTAwZUouCgh0YXNrX2tleRIiCiAyN2VmMzhj
+      Yzk5ZGE0YThkZWQ3MGVkNDA2ZTQ0YWI4NkoxCgd0YXNrX2lkEiYKJGZlYWJkNDc2LWIwZDMtNGIw
+      MS1iNjg1LTIyMGFlNGFhYTc1OHoCGAGFAQABAAA=
+    headers:
+      Accept:
+      - '*/*'
+      Accept-Encoding:
+      - gzip, deflate
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '2879'
+      Content-Type:
+      - application/x-protobuf
+      User-Agent:
+      - OTel-OTLP-Exporter-Python/1.27.0
+    method: POST
+    uri: https://telemetry.crewai.com:4319/v1/traces
+  response:
+    body:
+      string: "\n\0"
+    headers:
+      Content-Length:
+      - '2'
+      Content-Type:
+      - application/x-protobuf
+      Date:
+      - Sun, 15 Sep 2024 22:13:05 GMT
+    status:
+      code: 200
+      message: OK
+- request:
     body: '{"messages": [{"role": "system", "content": "You are Scorer. You''re an
       expert scorer, specialized in scoring titles.\nYour personal goal is: Score
       the title\nTo give my best complete final answer to the task use the exact following
@@ -23,6 +104,9 @@ interactions:
       - '955'
       content-type:
       - application/json
+      cookie:
+      - __cf_bm=xCQEG8vgEvQfut0bkj2xgre9z9ePZhdKdNxBphhvH6s-1726437753-1.0.1.1-5qo0zwDCcKDtqvIzDbp2sLEPCey8v5DAsf0Mg6f2RmooOW9FXTw2P66VCTTF.vCwTpWBIFk0vzKmBAPOt6urIg;
+        _cfuvid=TiTyEciy7HrUlIDEsELZqkUyM4Fyn8OldZd4JefFMOA-1726437753108-0.0.1.1-604800000
       host:
       - api.openai.com
       user-agent:
@@ -46,31 +130,34 @@ interactions:
     method: POST
     uri: https://api.openai.com/v1/chat/completions
   response:
-    content: "{\n  \"id\": \"chatcmpl-A7qhCtrJzZqYlScZZzOaKEQgqAu9p\",\n  \"object\":
-      \"chat.completion\",\n  \"created\": 1726434222,\n  \"model\": \"gpt-4-0125-preview\",\n
+    content: "{\n  \"id\": \"chatcmpl-A7rmK1EYsNEvdRepkaytriTwGoeOc\",\n  \"object\":
+      \"chat.completion\",\n  \"created\": 1726438384,\n  \"model\": \"gpt-4-0125-preview\",\n
       \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
-      \"assistant\",\n        \"content\": \"Thought: Evaluating the given title,
-      \\\"The impact of AI in the future of work,\\\" I consider several factors such
-      as originality, relevance, clarity, and curiosity or interest it may evoke in
-      the audience. Given the high level of interest in both AI technology and its
-      future implications across various industries, the title addresses a very relevant
-      and current topic. It is clear and straightforward, indicating a focus on the
-      effects AI technologies will have on future employment and workplace practices.
-      However, it might lack a bit of originality as many articles, research papers,
-      and discussions have centered around this subject. Despite this, it still holds
-      the potential to attract readers who are specifically interested in the implications
-      of AI advancements. Considering these aspects, I am ready to deliver a score
-      that balances these factors.\\n\\nFinal Answer: The score of the title \\\"The
-      impact of AI in the future of work\\\" is 4 out of 5.\",\n        \"refusal\":
+      \"assistant\",\n        \"content\": \"Thought: To score the title \\\"The impact
+      of AI in the future of work\\\" from 1 to 5 based on its quality, relevance,
+      and interest generation, I will consider its clarity, how intriguing it is for
+      an audience interested in future technology and employment trends, and its specificity
+      to the topic of AI's role in reshaping work environments. This title directly
+      addresses a significant and timely issue, suggesting a comprehensive exploration
+      of AI\u2019s influence on future job markets, productivity, and employment patterns.
+      It is broad enough to encompass various aspects yet focused enough to imply
+      a concentrated examination of AI. Thus, I should consider these elements to
+      determine its effectiveness in capturing interest and conveying the theme.\\n\\nFinal
+      Answer: Given its relevance, timeliness, and potential to engage a wide audience
+      interested in technology and the future of employment, I score the title \\\"The
+      impact of AI in the future of work\\\" a 4 out of 5. This score reflects its
+      strong appeal and significance in contemporary discussions, although it could
+      have been more compelling with the addition of an adjective or phrase to hint
+      at the nature of the impact or its detailed aspects.\",\n        \"refusal\":
       null\n      },\n      \"logprobs\": null,\n      \"finish_reason\": \"stop\"\n
       \   }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 187,\n    \"completion_tokens\":
-      184,\n    \"total_tokens\": 371,\n    \"completion_tokens_details\": {\n      \"reasoning_tokens\":
+      227,\n    \"total_tokens\": 414,\n    \"completion_tokens_details\": {\n      \"reasoning_tokens\":
       0\n    }\n  },\n  \"system_fingerprint\": null\n}\n"
     headers:
       CF-Cache-Status:
       - DYNAMIC
       CF-RAY:
-      - 8c3b909ebac3da67-MIA
+      - 8c3bf63b8c78a4ca-MIA
       Connection:
       - keep-alive
       Content-Encoding:
@@ -78,15 +165,9 @@ interactions:
       Content-Type:
       - application/json
       Date:
-      - Sun, 15 Sep 2024 21:03:45 GMT
+      - Sun, 15 Sep 2024 22:13:11 GMT
       Server:
       - cloudflare
-      Set-Cookie:
-      - __cf_bm=U4bRu.cxcYOJzuYu8YDqFGOG_bStliHvwrrWybnOT4Q-1726434225-1.0.1.1-Ln2mQdXLOw8aFfPToqSo2rubuKfjbOwy.6MkwNE.yrwj.xYp9_CMR5d7DgyDFo7Dg9FZ.mbS0EXpfyegtKrBvA;
-        path=/; expires=Sun, 15-Sep-24 21:33:45 GMT; domain=.api.openai.com; HttpOnly;
-        Secure; SameSite=None
-      - _cfuvid=oaBvxU1IGDsL1b_7lg0ginmBnzu3vxE4PjDdbXMzw30-1726434225737-0.0.1.1-604800000;
-        path=/; domain=.api.openai.com; HttpOnly; Secure; SameSite=None
       Transfer-Encoding:
       - chunked
       X-Content-Type-Options:
@@ -98,7 +179,7 @@ interactions:
       openai-organization:
       - crewai-iuxna1
       openai-processing-ms:
-      - '3708'
+      - '7210'
       openai-version:
       - '2020-10-01'
       strict-transport-security:
@@ -116,75 +197,22 @@ interactions:
       x-ratelimit-reset-tokens:
       - 6ms
       x-request-id:
-      - req_1ec0329b5b30280126588a974393cb1f
+      - req_1b2b7eca87133ebf1f4eebcf9ee05225
     http_version: HTTP/1.1
     status_code: 200
 - request:
-    body: !!binary |
-      Cu0LCiQKIgoMc2VydmljZS5uYW1lEhIKEGNyZXdBSS10ZWxlbWV0cnkSxAsKEgoQY3Jld2FpLnRl
-      bGVtZXRyeRKcCQoQF1ALWNqocakCcsD6DKqp0hIIvWN7/8Lh0qoqDENyZXcgQ3JlYXRlZDABOdgX
-      E9nGhvUXQagBGNnGhvUXShoKDmNyZXdhaV92ZXJzaW9uEggKBjAuNTYuMEoaCg5weXRob25fdmVy
-      c2lvbhIICgYzLjExLjdKLgoIY3Jld19rZXkSIgogZDQyNjA4MzNhYjBjMjBiYjQ0OTIyYzc5OWFh
-      OTZiNGFKMQoHY3Jld19pZBImCiQ1YmU4NTE1ZS04NDFlLTQ5M2YtYWNiNi1lZmRiYWMyNTg1YTJK
-      HAoMY3Jld19wcm9jZXNzEgwKCnNlcXVlbnRpYWxKEQoLY3Jld19tZW1vcnkSAhAAShoKFGNyZXdf
-      bnVtYmVyX29mX3Rhc2tzEgIYAkobChVjcmV3X251bWJlcl9vZl9hZ2VudHMSAhgBSuUCCgtjcmV3
-      X2FnZW50cxLVAgrSAlt7ImtleSI6ICI5MmU3ZWIxOTE2NjRjOTM1Nzg1ZWQ3ZDQyNDBhMjk0ZCIs
-      ICJpZCI6ICJmODUzNDgyOC05NTY3LTQ4MGMtOTE1Yi1iNjNiYTkyN2EyOWYiLCAicm9sZSI6ICJT
-      Y29yZXIiLCAidmVyYm9zZT8iOiB0cnVlLCAibWF4X2l0ZXIiOiAxNSwgIm1heF9ycG0iOiBudWxs
-      LCAiZnVuY3Rpb25fY2FsbGluZ19sbG0iOiAiZ3B0LTMuNS10dXJiby0wMTI1IiwgImxsbSI6ICJn
-      cHQtNC0wMTI1LXByZXZpZXciLCAiZGVsZWdhdGlvbl9lbmFibGVkPyI6IGZhbHNlLCAiYWxsb3df
-      Y29kZV9leGVjdXRpb24/IjogZmFsc2UsICJtYXhfcmV0cnlfbGltaXQiOiAyLCAidG9vbHNfbmFt
-      ZXMiOiBbXX1dSuQDCgpjcmV3X3Rhc2tzEtUDCtIDW3sia2V5IjogIjI3ZWYzOGNjOTlkYTRhOGRl
-      ZDcwZWQ0MDZlNDRhYjg2IiwgImlkIjogImQwNmQ1YzM2LTgzMjItNDBiMi1iNmY4LTM4MmQwZjk3
-      YTYwZSIsICJhc3luY19leGVjdXRpb24/IjogZmFsc2UsICJodW1hbl9pbnB1dD8iOiBmYWxzZSwg
-      ImFnZW50X3JvbGUiOiAiU2NvcmVyIiwgImFnZW50X2tleSI6ICI5MmU3ZWIxOTE2NjRjOTM1Nzg1
-      ZWQ3ZDQyNDBhMjk0ZCIsICJ0b29sc19uYW1lcyI6IFtdfSwgeyJrZXkiOiAiNjA5ZGVlMzkxMDg4
-      Y2QxYzg3YjhmYTY2YWE2N2FkYmUiLCAiaWQiOiAiNjYzZGMxY2YtMWVjZi00ZGUxLWIzNzgtZWQ5
-      MGEzYzFkNjI2IiwgImFzeW5jX2V4ZWN1dGlvbj8iOiBmYWxzZSwgImh1bWFuX2lucHV0PyI6IGZh
-      bHNlLCAiYWdlbnRfcm9sZSI6ICJTY29yZXIiLCAiYWdlbnRfa2V5IjogIjkyZTdlYjE5MTY2NGM5
-      MzU3ODVlZDdkNDI0MGEyOTRkIiwgInRvb2xzX25hbWVzIjogW119XXoCGAGFAQABAAASjgIKEBZw
-      aQ23FwFktzjlJug7SjESCAVrF5c3jABzKgxUYXNrIENyZWF0ZWQwATlY6iTZxob1F0FgPCXZxob1
-      F0ouCghjcmV3X2tleRIiCiBkNDI2MDgzM2FiMGMyMGJiNDQ5MjJjNzk5YWE5NmI0YUoxCgdjcmV3
-      X2lkEiYKJDViZTg1MTVlLTg0MWUtNDkzZi1hY2I2LWVmZGJhYzI1ODVhMkouCgh0YXNrX2tleRIi
-      CiAyN2VmMzhjYzk5ZGE0YThkZWQ3MGVkNDA2ZTQ0YWI4NkoxCgd0YXNrX2lkEiYKJGQwNmQ1YzM2
-      LTgzMjItNDBiMi1iNmY4LTM4MmQwZjk3YTYwZXoCGAGFAQABAAA=
-    headers:
-      Accept:
-      - '*/*'
-      Accept-Encoding:
-      - gzip, deflate
-      Connection:
-      - keep-alive
-      Content-Length:
-      - '1520'
-      Content-Type:
-      - application/x-protobuf
-      User-Agent:
-      - OTel-OTLP-Exporter-Python/1.27.0
-    method: POST
-    uri: https://telemetry.crewai.com:4319/v1/traces
-  response:
-    body:
-      string: "\n\0"
-    headers:
-      Content-Length:
-      - '2'
-      Content-Type:
-      - application/x-protobuf
-      Date:
-      - Sun, 15 Sep 2024 21:03:46 GMT
-    status:
-      code: 200
-      message: OK
-- request:
-    body: '{"messages": [{"role": "user", "content": "The score of the title \"The
-      impact of AI in the future of work\" is 4 out of 5."}, {"role": "system", "content":
-      "I''m gonna convert this raw text into valid JSON."}], "model": "gpt-3.5-turbo-0125",
-      "tool_choice": {"type": "function", "function": {"name": "ScoreOutput"}}, "tools":
-      [{"type": "function", "function": {"name": "ScoreOutput", "description": "Correctly
-      extracted `ScoreOutput` with all the required parameters with correct types",
-      "parameters": {"properties": {"score": {"title": "Score", "type": "integer"}},
-      "required": ["score"], "type": "object"}}}]}'
+    body: '{"messages": [{"role": "user", "content": "Given its relevance, timeliness,
+      and potential to engage a wide audience interested in technology and the future
+      of employment, I score the title \"The impact of AI in the future of work\"
+      a 4 out of 5. This score reflects its strong appeal and significance in contemporary
+      discussions, although it could have been more compelling with the addition of
+      an adjective or phrase to hint at the nature of the impact or its detailed aspects."},
+      {"role": "system", "content": "I''m gonna convert this raw text into valid JSON."}],
+      "model": "gpt-3.5-turbo-0125", "tool_choice": {"type": "function", "function":
+      {"name": "ScoreOutput"}}, "tools": [{"type": "function", "function": {"name":
+      "ScoreOutput", "description": "Correctly extracted `ScoreOutput` with all the
+      required parameters with correct types", "parameters": {"properties": {"score":
+      {"title": "Score", "type": "integer"}}, "required": ["score"], "type": "object"}}}]}'
     headers:
       accept:
       - application/json
@@ -193,9 +221,12 @@ interactions:
       connection:
       - keep-alive
       content-length:
-      - '610'
+      - '965'
       content-type:
       - application/json
+      cookie:
+      - __cf_bm=DurtHM6fkhfkA7g799_dwsE._nuW9E9Mn9HDzyFEsYs-1726437888-1.0.1.1-UoxJT1kLoPpNnFl48ADK4A8Pqx.svT3QTAd77nzKAMBqxSFs5eS6PBa.zKCvEqW2ezsF.T2kIV.wblTuq9HIhA;
+        _cfuvid=WvaYlp1s5wjHZ.MS6s.ZraavPzhWyZK3jqIKIgxM4f4-1726437888389-0.0.1.1-604800000
       host:
       - api.openai.com
       user-agent:
@@ -219,22 +250,22 @@ interactions:
     method: POST
     uri: https://api.openai.com/v1/chat/completions
   response:
-    content: "{\n  \"id\": \"chatcmpl-A7qhGAqF0tyq7Zsd5dhkBuMFCEoyb\",\n  \"object\":
-      \"chat.completion\",\n  \"created\": 1726434226,\n  \"model\": \"gpt-3.5-turbo-0125\",\n
+    content: "{\n  \"id\": \"chatcmpl-A7rmRvIwgdOtvpsVVBUK0lim1TVrb\",\n  \"object\":
+      \"chat.completion\",\n  \"created\": 1726438391,\n  \"model\": \"gpt-3.5-turbo-0125\",\n
       \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
       \"assistant\",\n        \"content\": null,\n        \"tool_calls\": [\n          {\n
-      \           \"id\": \"call_n4Y21fCYu9AVPgycpmMoJ4gD\",\n            \"type\":
+      \           \"id\": \"call_Qjgnl06BwK203MN55Pol6dIG\",\n            \"type\":
       \"function\",\n            \"function\": {\n              \"name\": \"ScoreOutput\",\n
       \             \"arguments\": \"{\\\"score\\\":4}\"\n            }\n          }\n
       \       ],\n        \"refusal\": null\n      },\n      \"logprobs\": null,\n
       \     \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\":
-      106,\n    \"completion_tokens\": 5,\n    \"total_tokens\": 111,\n    \"completion_tokens_details\":
+      168,\n    \"completion_tokens\": 5,\n    \"total_tokens\": 173,\n    \"completion_tokens_details\":
       {\n      \"reasoning_tokens\": 0\n    }\n  },\n  \"system_fingerprint\": null\n}\n"
     headers:
       CF-Cache-Status:
       - DYNAMIC
       CF-RAY:
-      - 8c3b90ba0802a564-MIA
+      - 8c3bf66c6ec5a4f8-MIA
       Connection:
       - keep-alive
       Content-Encoding:
@@ -242,15 +273,9 @@ interactions:
       Content-Type:
       - application/json
       Date:
-      - Sun, 15 Sep 2024 21:03:47 GMT
+      - Sun, 15 Sep 2024 22:13:12 GMT
       Server:
       - cloudflare
-      Set-Cookie:
-      - __cf_bm=61GPlaFb5TciPO.KrFK1uddcmnL0yRY_VvtpWJIciPE-1726434227-1.0.1.1-iQkb3V0sHPfhm0lLiHrNWZ6gAZmbNkbLhsTg8Kun2.8C8u7eY5Hfs.02YgEhgj20Dx_parqjiBc4jqODrJRRJQ;
-        path=/; expires=Sun, 15-Sep-24 21:33:47 GMT; domain=.api.openai.com; HttpOnly;
-        Secure; SameSite=None
-      - _cfuvid=1uOBf96K0KJOP_o57C1zabS9xpbv1Mhi.qYKg4zoKTE-1726434227146-0.0.1.1-604800000;
-        path=/; domain=.api.openai.com; HttpOnly; Secure; SameSite=None
       Transfer-Encoding:
       - chunked
       X-Content-Type-Options:
@@ -262,7 +287,7 @@ interactions:
       openai-organization:
       - crewai-iuxna1
       openai-processing-ms:
-      - '133'
+      - '145'
       openai-version:
       - '2020-10-01'
       strict-transport-security:
@@ -274,28 +299,28 @@ interactions:
       x-ratelimit-remaining-requests:
       - '9999'
       x-ratelimit-remaining-tokens:
-      - '49999949'
+      - '49999861'
       x-ratelimit-reset-requests:
       - 6ms
       x-ratelimit-reset-tokens:
       - 0s
       x-request-id:
-      - req_5ec29a709669d7bf4345e7cda7fbb1d6
+      - req_168ee4a6a69de5cd103f59bfde41d344
     http_version: HTTP/1.1
     status_code: 200
 - request:
     body: !!binary |
       CuEECiQKIgoMc2VydmljZS5uYW1lEhIKEGNyZXdBSS10ZWxlbWV0cnkSuAQKEgoQY3Jld2FpLnRl
-      bGVtZXRyeRKQAgoQPZe0R1kMSXdc1/YcIKcJABIIvdarrbeDOKkqDlRhc2sgRXhlY3V0aW9uMAE5
-      EHMl2caG9RdBwGRpUciG9RdKLgoIY3Jld19rZXkSIgogZDQyNjA4MzNhYjBjMjBiYjQ0OTIyYzc5
-      OWFhOTZiNGFKMQoHY3Jld19pZBImCiQ1YmU4NTE1ZS04NDFlLTQ5M2YtYWNiNi1lZmRiYWMyNTg1
-      YTJKLgoIdGFza19rZXkSIgogMjdlZjM4Y2M5OWRhNGE4ZGVkNzBlZDQwNmU0NGFiODZKMQoHdGFz
-      a19pZBImCiRkMDZkNWMzNi04MzIyLTQwYjItYjZmOC0zODJkMGY5N2E2MGV6AhgBhQEAAQAAEo4C
-      ChCbBVF7Fg0on6B3XB46hCFhEgjCoS57RDSyiSoMVGFzayBDcmVhdGVkMAE5IHu2UciG9RdBOOi4
-      UciG9RdKLgoIY3Jld19rZXkSIgogZDQyNjA4MzNhYjBjMjBiYjQ0OTIyYzc5OWFhOTZiNGFKMQoH
-      Y3Jld19pZBImCiQ1YmU4NTE1ZS04NDFlLTQ5M2YtYWNiNi1lZmRiYWMyNTg1YTJKLgoIdGFza19r
-      ZXkSIgogNjA5ZGVlMzkxMDg4Y2QxYzg3YjhmYTY2YWE2N2FkYmVKMQoHdGFza19pZBImCiQ2NjNk
-      YzFjZi0xZWNmLTRkZTEtYjM3OC1lZDkwYTNjMWQ2MjZ6AhgBhQEAAQAA
+      bGVtZXRyeRKQAgoQ7UZmYWz9dPHhSaYmr2HJ1xIINWTwqw0AbegqDlRhc2sgRXhlY3V0aW9uMAE5
+      2AsVFpCK9RdB4O16CpKK9RdKLgoIY3Jld19rZXkSIgogZDQyNjA4MzNhYjBjMjBiYjQ0OTIyYzc5
+      OWFhOTZiNGFKMQoHY3Jld19pZBImCiQ3ZDc2ZGE1Yy0wZmNkLTRhYjItOWQ2Ny1hOTEzN2ExNjUw
+      MGVKLgoIdGFza19rZXkSIgogMjdlZjM4Y2M5OWRhNGE4ZGVkNzBlZDQwNmU0NGFiODZKMQoHdGFz
+      a19pZBImCiRmZWFiZDQ3Ni1iMGQzLTRiMDEtYjY4NS0yMjBhZTRhYWE3NTh6AhgBhQEAAQAAEo4C
+      ChCnwCM0LGNUezBLUR8w9/LdEghwmXwCeWk0gyoMVGFzayBDcmVhdGVkMAE5qLDgCpKK9RdBIA7j
+      CpKK9RdKLgoIY3Jld19rZXkSIgogZDQyNjA4MzNhYjBjMjBiYjQ0OTIyYzc5OWFhOTZiNGFKMQoH
+      Y3Jld19pZBImCiQ3ZDc2ZGE1Yy0wZmNkLTRhYjItOWQ2Ny1hOTEzN2ExNjUwMGVKLgoIdGFza19r
+      ZXkSIgogNjA5ZGVlMzkxMDg4Y2QxYzg3YjhmYTY2YWE2N2FkYmVKMQoHdGFza19pZBImCiQ0ZWIy
+      MmRlOS03YmM3LTQ3Y2ItYjdiZC05Yzg5NjBjZjM2Mzh6AhgBhQEAAQAA
     headers:
       Accept:
       - '*/*'
@@ -320,7 +345,7 @@ interactions:
       Content-Type:
       - application/x-protobuf
       Date:
-      - Sun, 15 Sep 2024 21:03:51 GMT
+      - Sun, 15 Sep 2024 22:13:15 GMT
     status:
       code: 200
       message: OK
@@ -336,10 +361,15 @@ interactions:
       title: ''Return of the Jedi'', you MUST give it a score, use your best judgment\n\nThis
       is the expect criteria for your final answer: The score of the title.\nyou MUST
       return the actual complete content as the final answer, not a summary.\n\nThis
-      is the context you''re working with:\nThe score of the title \"The impact of
-      AI in the future of work\" is 4 out of 5.\n\nBegin! This is VERY important to
-      you, use the tools available and give your best Final Answer, your job depends
-      on it!\n\nThought:"}], "model": "gpt-4-0125-preview", "stop": ["\nObservation:"]}'
+      is the context you''re working with:\nGiven its relevance, timeliness, and potential
+      to engage a wide audience interested in technology and the future of employment,
+      I score the title \"The impact of AI in the future of work\" a 4 out of 5. This
+      score reflects its strong appeal and significance in contemporary discussions,
+      although it could have been more compelling with the addition of an adjective
+      or phrase to hint at the nature of the impact or its detailed aspects.\n\nBegin!
+      This is VERY important to you, use the tools available and give your best Final
+      Answer, your job depends on it!\n\nThought:"}], "model": "gpt-4-0125-preview",
+      "stop": ["\nObservation:"]}'
     headers:
       accept:
       - application/json
@@ -348,12 +378,12 @@ interactions:
       connection:
       - keep-alive
       content-length:
-      - '1183'
+      - '1538'
       content-type:
       - application/json
       cookie:
-      - __cf_bm=U4bRu.cxcYOJzuYu8YDqFGOG_bStliHvwrrWybnOT4Q-1726434225-1.0.1.1-Ln2mQdXLOw8aFfPToqSo2rubuKfjbOwy.6MkwNE.yrwj.xYp9_CMR5d7DgyDFo7Dg9FZ.mbS0EXpfyegtKrBvA;
-        _cfuvid=oaBvxU1IGDsL1b_7lg0ginmBnzu3vxE4PjDdbXMzw30-1726434225737-0.0.1.1-604800000
+      - __cf_bm=xCQEG8vgEvQfut0bkj2xgre9z9ePZhdKdNxBphhvH6s-1726437753-1.0.1.1-5qo0zwDCcKDtqvIzDbp2sLEPCey8v5DAsf0Mg6f2RmooOW9FXTw2P66VCTTF.vCwTpWBIFk0vzKmBAPOt6urIg;
+        _cfuvid=TiTyEciy7HrUlIDEsELZqkUyM4Fyn8OldZd4JefFMOA-1726437753108-0.0.1.1-604800000
       host:
       - api.openai.com
       user-agent:
@@ -377,29 +407,37 @@ interactions:
     method: POST
     uri: https://api.openai.com/v1/chat/completions
   response:
-    content: "{\n  \"id\": \"chatcmpl-A7qhHTs9reOtnPSa53lP5iWScwAKC\",\n  \"object\":
-      \"chat.completion\",\n  \"created\": 1726434227,\n  \"model\": \"gpt-4-0125-preview\",\n
+    content: "{\n  \"id\": \"chatcmpl-A7rmS2j9quR2LyvW27iLae2Fh6Pnj\",\n  \"object\":
+      \"chat.completion\",\n  \"created\": 1726438392,\n  \"model\": \"gpt-4-0125-preview\",\n
       \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
-      \"assistant\",\n        \"content\": \"Thought: Considering the provided context,
-      where the title \\\"The impact of AI in the future of work\\\" received a score
-      of 4 out of 5, I must analyze the appeal, relevance, and potential impact of
-      \\\"Return of the Jedi\\\" within its domain. \\\"Return of the Jedi\\\" is
-      a significant title in popular culture, notable for its broad appeal and historical
-      significance in the film industry. It also marks the conclusion of a major saga
-      that has deeply influenced the science fiction genre and pop culture. The title
-      is instantly recognizable, evokes curiosity and nostalgia, and has a large,
-      dedicated fanbase. Given these factors, while keeping in mind the scoring benchmark
-      set by the previous title, I must assign a score that reflects its standing
-      in its respective field.\\n\\nFinal Answer: The score of the title \\\"Return
-      of the Jedi\\\" is 5 out of 5.\",\n        \"refusal\": null\n      },\n      \"logprobs\":
-      null,\n      \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\":
-      245,\n    \"completion_tokens\": 176,\n    \"total_tokens\": 421,\n    \"completion_tokens_details\":
+      \"assistant\",\n        \"content\": \"Thought: To score the title \\\"Return
+      of the Jedi\\\", I'll consider its relevance, timelessness, audience engagement
+      potential, and iconic status. Compared to \\\"The impact of AI in the future
+      of work\\\", \\\"Return of the Jedi\\\" possesses a wide appeal not just limited
+      to technology or employment but spans across generations of movie enthusiasts,
+      especially within the science fiction and fantasy genre. Its timeless nature,
+      being part of the Star Wars saga, further elevates its status and engagement
+      potential. However, considering the need for a title to be informative or indicative
+      of its content for educational or thought-provoking purposes, \\\"Return of
+      the Jedi\\\" might not provide immediate insight into its subject matter for
+      those unfamiliar with the series, unlike the descriptive nature of \\\"The impact
+      of AI in the future of work\\\". Balancing these factors with the directive
+      to use my best judgment, I proceed to the scoring phase.\\n\\nFinal Answer:
+      Given the wide appeal, cultural significance, and iconic status of \\\"Return
+      of the Jedi\\\" but also considering its less informative nature compared to
+      a more descriptive title like \\\"The impact of AI in the future of work\\\",
+      I score \\\"Return of the Jedi\\\" a 4 out of 5. This score reflects its immense
+      popularity and ability to engage a broad audience while acknowledging a slight
+      limitation in immediate informational clarity for those outside the Star Wars
+      fanbase.\",\n        \"refusal\": null\n      },\n      \"logprobs\": null,\n
+      \     \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\":
+      307,\n    \"completion_tokens\": 273,\n    \"total_tokens\": 580,\n    \"completion_tokens_details\":
       {\n      \"reasoning_tokens\": 0\n    }\n  },\n  \"system_fingerprint\": null\n}\n"
     headers:
       CF-Cache-Status:
       - DYNAMIC
       CF-RAY:
-      - 8c3b90c10bc8da67-MIA
+      - 8c3bf67009f7a4ca-MIA
       Connection:
       - keep-alive
       Content-Encoding:
@@ -407,7 +445,7 @@ interactions:
       Content-Type:
       - application/json
       Date:
-      - Sun, 15 Sep 2024 21:03:51 GMT
+      - Sun, 15 Sep 2024 22:13:21 GMT
       Server:
       - cloudflare
       Transfer-Encoding:
@@ -421,7 +459,7 @@ interactions:
       openai-organization:
       - crewai-iuxna1
       openai-processing-ms:
-      - '4420'
+      - '9336'
       openai-version:
       - '2020-10-01'
       strict-transport-security:
@@ -433,24 +471,29 @@ interactions:
       x-ratelimit-remaining-requests:
       - '9999'
       x-ratelimit-remaining-tokens:
-      - '1999726'
+      - '1999637'
       x-ratelimit-reset-requests:
       - 6ms
       x-ratelimit-reset-tokens:
-      - 8ms
+      - 10ms
       x-request-id:
-      - req_6cba1aa98d009fcb48a24d44ce29b45e
+      - req_17ffaf0dfe381ad6153d2ecf9b94a400
     http_version: HTTP/1.1
     status_code: 200
 - request:
-    body: '{"messages": [{"role": "user", "content": "The score of the title \"Return
-      of the Jedi\" is 5 out of 5."}, {"role": "system", "content": "I''m gonna convert
-      this raw text into valid JSON."}], "model": "gpt-3.5-turbo-0125", "tool_choice":
-      {"type": "function", "function": {"name": "ScoreOutput"}}, "tools": [{"type":
-      "function", "function": {"name": "ScoreOutput", "description": "Correctly extracted
-      `ScoreOutput` with all the required parameters with correct types", "parameters":
-      {"properties": {"score": {"title": "Score", "type": "integer"}}, "required":
-      ["score"], "type": "object"}}}]}'
+    body: '{"messages": [{"role": "user", "content": "Given the wide appeal, cultural
+      significance, and iconic status of \"Return of the Jedi\" but also considering
+      its less informative nature compared to a more descriptive title like \"The
+      impact of AI in the future of work\", I score \"Return of the Jedi\" a 4 out
+      of 5. This score reflects its immense popularity and ability to engage a broad
+      audience while acknowledging a slight limitation in immediate informational
+      clarity for those outside the Star Wars fanbase."}, {"role": "system", "content":
+      "I''m gonna convert this raw text into valid JSON."}], "model": "gpt-3.5-turbo-0125",
+      "tool_choice": {"type": "function", "function": {"name": "ScoreOutput"}}, "tools":
+      [{"type": "function", "function": {"name": "ScoreOutput", "description": "Correctly
+      extracted `ScoreOutput` with all the required parameters with correct types",
+      "parameters": {"properties": {"score": {"title": "Score", "type": "integer"}},
+      "required": ["score"], "type": "object"}}}]}'
     headers:
       accept:
       - application/json
@@ -459,12 +502,12 @@ interactions:
       connection:
       - keep-alive
       content-length:
-      - '590'
+      - '997'
       content-type:
       - application/json
       cookie:
-      - __cf_bm=61GPlaFb5TciPO.KrFK1uddcmnL0yRY_VvtpWJIciPE-1726434227-1.0.1.1-iQkb3V0sHPfhm0lLiHrNWZ6gAZmbNkbLhsTg8Kun2.8C8u7eY5Hfs.02YgEhgj20Dx_parqjiBc4jqODrJRRJQ;
-        _cfuvid=1uOBf96K0KJOP_o57C1zabS9xpbv1Mhi.qYKg4zoKTE-1726434227146-0.0.1.1-604800000
+      - __cf_bm=DurtHM6fkhfkA7g799_dwsE._nuW9E9Mn9HDzyFEsYs-1726437888-1.0.1.1-UoxJT1kLoPpNnFl48ADK4A8Pqx.svT3QTAd77nzKAMBqxSFs5eS6PBa.zKCvEqW2ezsF.T2kIV.wblTuq9HIhA;
+        _cfuvid=WvaYlp1s5wjHZ.MS6s.ZraavPzhWyZK3jqIKIgxM4f4-1726437888389-0.0.1.1-604800000
       host:
       - api.openai.com
       user-agent:
@@ -488,22 +531,22 @@ interactions:
     method: POST
     uri: https://api.openai.com/v1/chat/completions
   response:
-    content: "{\n  \"id\": \"chatcmpl-A7qhMYbb7AQrzr1VuLxMudzPYDpeI\",\n  \"object\":
-      \"chat.completion\",\n  \"created\": 1726434232,\n  \"model\": \"gpt-3.5-turbo-0125\",\n
+    content: "{\n  \"id\": \"chatcmpl-A7rmcBhCWwmBCvR4VUK3lxF75J8kK\",\n  \"object\":
+      \"chat.completion\",\n  \"created\": 1726438402,\n  \"model\": \"gpt-3.5-turbo-0125\",\n
       \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
       \"assistant\",\n        \"content\": null,\n        \"tool_calls\": [\n          {\n
-      \           \"id\": \"call_huUzsqMuZOdNtSwXZfGvtJA3\",\n            \"type\":
+      \           \"id\": \"call_2dqg8FRxoCyM8wo81ehqh8Nm\",\n            \"type\":
       \"function\",\n            \"function\": {\n              \"name\": \"ScoreOutput\",\n
-      \             \"arguments\": \"{\\\"score\\\":5}\"\n            }\n          }\n
+      \             \"arguments\": \"{\\\"score\\\":4}\"\n            }\n          }\n
       \       ],\n        \"refusal\": null\n      },\n      \"logprobs\": null,\n
       \     \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\":
-      101,\n    \"completion_tokens\": 5,\n    \"total_tokens\": 106,\n    \"completion_tokens_details\":
+      172,\n    \"completion_tokens\": 5,\n    \"total_tokens\": 177,\n    \"completion_tokens_details\":
       {\n      \"reasoning_tokens\": 0\n    }\n  },\n  \"system_fingerprint\": null\n}\n"
     headers:
       CF-Cache-Status:
       - DYNAMIC
       CF-RAY:
-      - 8c3b90deafb9a564-MIA
+      - 8c3bf6ae5eff9071-MIA
       Connection:
       - keep-alive
       Content-Encoding:
@@ -511,7 +554,7 @@ interactions:
       Content-Type:
       - application/json
       Date:
-      - Sun, 15 Sep 2024 21:03:52 GMT
+      - Sun, 15 Sep 2024 22:13:22 GMT
       Server:
       - cloudflare
       Transfer-Encoding:
@@ -525,7 +568,7 @@ interactions:
       openai-organization:
       - crewai-iuxna1
       openai-processing-ms:
-      - '125'
+      - '148'
       openai-version:
       - '2020-10-01'
       strict-transport-security:
@@ -537,13 +580,13 @@ interactions:
       x-ratelimit-remaining-requests:
       - '9999'
       x-ratelimit-remaining-tokens:
-      - '49999955'
+      - '49999853'
       x-ratelimit-reset-requests:
       - 6ms
       x-ratelimit-reset-tokens:
       - 0s
       x-request-id:
-      - req_46a4ba39abf048848eefa4ee08a7d267
+      - req_17177b961b484fb61b474b04858bdd5b
     http_version: HTTP/1.1
     status_code: 200
 version: 1

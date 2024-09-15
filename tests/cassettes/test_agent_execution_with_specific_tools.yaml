@@ -18,7 +18,7 @@ interactions:
       answer: The result of the multiplication.\nyou MUST return the actual complete
       content as the final answer, not a summary.\n\nBegin! This is VERY important
       to you, use the tools available and give your best Final Answer, your job depends
-      on it!\n\nThought:"}], "model": "gpt-4o", "stop": ["\nResult"]}'
+      on it!\n\nThought:"}], "model": "gpt-4o", "stop": ["\nObservation:"]}'
     headers:
       accept:
       - application/json
@@ -27,12 +27,12 @@ interactions:
       connection:
       - keep-alive
       content-length:
-      - '1481'
+      - '1487'
       content-type:
       - application/json
       cookie:
-      - __cf_bm=J1VIPhfusyyXtwM.1L9zbe3jdnU7NVyHC3AWiKXO280-1726379702-1.0.1.1-LDa9RyXFli18t4ZEuVAENTChdNAkRtdWXRkRLbBHbCXdobugQ3T.arhMpSKwtnBRXKPcC4b66UA7BsSy1VXDHQ;
-        _cfuvid=Bz2zevKuFYZqnEFwqmqVHcRo5pT0fm0fTtc_6_VQs4g-1726379702153-0.0.1.1-604800000
+      - __cf_bm=xCQEG8vgEvQfut0bkj2xgre9z9ePZhdKdNxBphhvH6s-1726437753-1.0.1.1-5qo0zwDCcKDtqvIzDbp2sLEPCey8v5DAsf0Mg6f2RmooOW9FXTw2P66VCTTF.vCwTpWBIFk0vzKmBAPOt6urIg;
+        _cfuvid=TiTyEciy7HrUlIDEsELZqkUyM4Fyn8OldZd4JefFMOA-1726437753108-0.0.1.1-604800000
       host:
       - api.openai.com
       user-agent:
@@ -56,10 +56,10 @@ interactions:
     method: POST
     uri: https://api.openai.com/v1/chat/completions
   response:
-    content: "{\n  \"id\": \"chatcmpl-A7cW818UNh95SqIp4VH7Nj1ZzQy0R\",\n  \"object\":
-      \"chat.completion\",\n  \"created\": 1726379720,\n  \"model\": \"gpt-4o-2024-05-13\",\n
+    content: "{\n  \"id\": \"chatcmpl-A7re9A9RKMGzMiH2dosq9o7P8WV7W\",\n  \"object\":
+      \"chat.completion\",\n  \"created\": 1726437877,\n  \"model\": \"gpt-4o-2024-05-13\",\n
       \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
-      \"assistant\",\n        \"content\": \"I need to multiply 3 times 4 to get the
+      \"assistant\",\n        \"content\": \"I need to multiply 3 and 4 to find the
       result.\\n\\nAction: multiplier\\nAction Input: {\\\"first_number\\\": 3, \\\"second_number\\\":
       4}\",\n        \"refusal\": null\n      },\n      \"logprobs\": null,\n      \"finish_reason\":
       \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 309,\n    \"completion_tokens\":
@@ -69,7 +69,7 @@ interactions:
       CF-Cache-Status:
       - DYNAMIC
       CF-RAY:
-      - 8c365e021a3a221a-MIA
+      - 8c3be9dcecefda67-MIA
       Connection:
       - keep-alive
       Content-Encoding:
@@ -77,7 +77,7 @@ interactions:
       Content-Type:
       - application/json
       Date:
-      - Sun, 15 Sep 2024 05:55:20 GMT
+      - Sun, 15 Sep 2024 22:04:37 GMT
       Server:
       - cloudflare
       Transfer-Encoding:
@@ -91,7 +91,7 @@ interactions:
       openai-organization:
       - crewai-iuxna1
       openai-processing-ms:
-      - '427'
+      - '445'
       openai-version:
       - '2020-10-01'
       strict-transport-security:
@@ -109,7 +109,7 @@ interactions:
       x-ratelimit-reset-tokens:
       - 0s
       x-request-id:
-      - req_914195438428dd1aaa75462240ba582a
+      - req_ce7198f29e879022a7dc6b5561191a81
     http_version: HTTP/1.1
     status_code: 200
 - request:
@@ -132,8 +132,8 @@ interactions:
       content as the final answer, not a summary.\n\nBegin! This is VERY important
       to you, use the tools available and give your best Final Answer, your job depends
       on it!\n\nThought:"}, {"role": "assistant", "content": "I need to multiply 3
-      times 4 to get the result.\n\nAction: multiplier\nAction Input: {\"first_number\":
-      3, \"second_number\": 4}\nObservation: 12"}], "model": "gpt-4o", "stop": ["\nResult"]}'
+      and 4 to find the result.\n\nAction: multiplier\nAction Input: {\"first_number\":
+      3, \"second_number\": 4}\nObservation: 12"}], "model": "gpt-4o", "stop": ["\nObservation:"]}'
     headers:
       accept:
       - application/json
@@ -142,12 +142,12 @@ interactions:
       connection:
       - keep-alive
       content-length:
-      - '1664'
+      - '1669'
       content-type:
       - application/json
       cookie:
-      - __cf_bm=J1VIPhfusyyXtwM.1L9zbe3jdnU7NVyHC3AWiKXO280-1726379702-1.0.1.1-LDa9RyXFli18t4ZEuVAENTChdNAkRtdWXRkRLbBHbCXdobugQ3T.arhMpSKwtnBRXKPcC4b66UA7BsSy1VXDHQ;
-        _cfuvid=Bz2zevKuFYZqnEFwqmqVHcRo5pT0fm0fTtc_6_VQs4g-1726379702153-0.0.1.1-604800000
+      - __cf_bm=xCQEG8vgEvQfut0bkj2xgre9z9ePZhdKdNxBphhvH6s-1726437753-1.0.1.1-5qo0zwDCcKDtqvIzDbp2sLEPCey8v5DAsf0Mg6f2RmooOW9FXTw2P66VCTTF.vCwTpWBIFk0vzKmBAPOt6urIg;
+        _cfuvid=TiTyEciy7HrUlIDEsELZqkUyM4Fyn8OldZd4JefFMOA-1726437753108-0.0.1.1-604800000
       host:
       - api.openai.com
       user-agent:
@@ -171,10 +171,10 @@ interactions:
     method: POST
     uri: https://api.openai.com/v1/chat/completions
   response:
-    content: "{\n  \"id\": \"chatcmpl-A7cW8ofRmk1I1bM83WZbpwSacAzOA\",\n  \"object\":
-      \"chat.completion\",\n  \"created\": 1726379720,\n  \"model\": \"gpt-4o-2024-05-13\",\n
+    content: "{\n  \"id\": \"chatcmpl-A7reATDqdp29IyN4ALCSX4KIN003E\",\n  \"object\":
+      \"chat.completion\",\n  \"created\": 1726437878,\n  \"model\": \"gpt-4o-2024-05-13\",\n
       \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
-      \"assistant\",\n        \"content\": \"Thought: I now know the final answer.\\nFinal
+      \"assistant\",\n        \"content\": \"Thought: I now know the final answer\\nFinal
       Answer: The result of the multiplication is 12.\",\n        \"refusal\": null\n
       \     },\n      \"logprobs\": null,\n      \"finish_reason\": \"stop\"\n    }\n
       \ ],\n  \"usage\": {\n    \"prompt_tokens\": 352,\n    \"completion_tokens\":
@@ -184,7 +184,7 @@ interactions:
       CF-Cache-Status:
       - DYNAMIC
       CF-RAY:
-      - 8c365e069bf3221a-MIA
+      - 8c3be9e17a4bda67-MIA
       Connection:
       - keep-alive
       Content-Encoding:
@@ -192,7 +192,7 @@ interactions:
       Content-Type:
       - application/json
       Date:
-      - Sun, 15 Sep 2024 05:55:21 GMT
+      - Sun, 15 Sep 2024 22:04:38 GMT
       Server:
       - cloudflare
       Transfer-Encoding:
@@ -206,7 +206,7 @@ interactions:
       openai-organization:
       - crewai-iuxna1
       openai-processing-ms:
-      - '301'
+      - '319'
       openai-version:
       - '2020-10-01'
       strict-transport-security:
@@ -224,7 +224,7 @@ interactions:
       x-ratelimit-reset-tokens:
       - 0s
       x-request-id:
-      - req_ff66938775026b50a358cae4f42f436c
+      - req_ba6320acada82f83aa88e4730dd36809
     http_version: HTTP/1.1
     status_code: 200
 version: 1

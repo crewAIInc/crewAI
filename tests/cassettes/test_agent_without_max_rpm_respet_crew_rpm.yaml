@@ -22,7 +22,8 @@ interactions:
       content-type:
       - application/json
       cookie:
-      - _cfuvid=zBYBOmiV08qbW5DneX1V8aiJzPvNXqekDfjzrJvW3JU-1726387227979-0.0.1.1-604800000
+      - __cf_bm=xCQEG8vgEvQfut0bkj2xgre9z9ePZhdKdNxBphhvH6s-1726437753-1.0.1.1-5qo0zwDCcKDtqvIzDbp2sLEPCey8v5DAsf0Mg6f2RmooOW9FXTw2P66VCTTF.vCwTpWBIFk0vzKmBAPOt6urIg;
+        _cfuvid=TiTyEciy7HrUlIDEsELZqkUyM4Fyn8OldZd4JefFMOA-1726437753108-0.0.1.1-604800000
       host:
       - api.openai.com
       user-agent:
@@ -46,19 +47,19 @@ interactions:
     method: POST
     uri: https://api.openai.com/v1/chat/completions
   response:
-    content: "{\n  \"id\": \"chatcmpl-A7qRteX31lxhFFRHOdFNLPKXE7eNH\",\n  \"object\":
-      \"chat.completion\",\n  \"created\": 1726433273,\n  \"model\": \"gpt-4o-2024-05-13\",\n
+    content: "{\n  \"id\": \"chatcmpl-A7rg6kMnqP8i2JOTxIIVqpRD22gGt\",\n  \"object\":
+      \"chat.completion\",\n  \"created\": 1726437998,\n  \"model\": \"gpt-4o-2024-05-13\",\n
       \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
-      \"assistant\",\n        \"content\": \"I now can give a great answer\\nFinal
+      \"assistant\",\n        \"content\": \"Thought: I now can give a great answer\\nFinal
       Answer: Hi!\",\n        \"refusal\": null\n      },\n      \"logprobs\": null,\n
       \     \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\":
-      154,\n    \"completion_tokens\": 13,\n    \"total_tokens\": 167,\n    \"completion_tokens_details\":
+      154,\n    \"completion_tokens\": 15,\n    \"total_tokens\": 169,\n    \"completion_tokens_details\":
       {\n      \"reasoning_tokens\": 0\n    }\n  },\n  \"system_fingerprint\": \"fp_25624ae3a5\"\n}\n"
     headers:
       CF-Cache-Status:
       - DYNAMIC
       CF-RAY:
-      - 8c3b79747eca12a7-MIA
+      - 8c3becd13dafa4ca-MIA
       Connection:
       - keep-alive
       Content-Encoding:
@@ -66,15 +67,9 @@ interactions:
       Content-Type:
       - application/json
       Date:
-      - Sun, 15 Sep 2024 20:47:53 GMT
+      - Sun, 15 Sep 2024 22:06:38 GMT
       Server:
       - cloudflare
-      Set-Cookie:
-      - __cf_bm=aA.D08vKK4VMn.hlaw5TPub.7Ww2O6YiU81xHVY_rUE-1726433273-1.0.1.1-toqlteZt.e096BB5damurs5vIFXrcRh5BlQOshHjIyYMoMGII3V91aXsrL0xOjn.5fFlVHU7CXIPpw12rhDWcQ;
-        path=/; expires=Sun, 15-Sep-24 21:17:53 GMT; domain=.api.openai.com; HttpOnly;
-        Secure; SameSite=None
-      - _cfuvid=kIcZtl4imAGPtbpW1pkysptFTuuhIkGe4D1Ht0Wcyhs-1726433273408-0.0.1.1-604800000;
-        path=/; domain=.api.openai.com; HttpOnly; Secure; SameSite=None
       Transfer-Encoding:
       - chunked
       X-Content-Type-Options:
@@ -86,7 +81,7 @@ interactions:
       openai-organization:
       - crewai-iuxna1
       openai-processing-ms:
-      - '224'
+      - '245'
       openai-version:
       - '2020-10-01'
       strict-transport-security:
@@ -104,7 +99,7 @@ interactions:
       x-ratelimit-reset-tokens:
       - 0s
       x-request-id:
-      - req_af1762ea3a69cbe7c512bd8b82f58f63
+      - req_6988a65f030033879f5308df9caec32a
     http_version: HTTP/1.1
     status_code: 200
 - request:
@@ -120,8 +115,9 @@ interactions:
       keys and values.\nObservation: the result of the action\n\nOnce all necessary
       information is gathered:\n\nThought: I now know the final answer\nFinal Answer:
       the final answer to the original input question\n"}, {"role": "user", "content":
-      "\nCurrent Task: NEVER give a Final Answer, instead keep using the `get_final_answer`
-      tool non-stop\n\nThis is the expect criteria for your final answer: The final
+      "\nCurrent Task: NEVER give a Final Answer, unless you are told otherwise, instead
+      keep using the `get_final_answer` tool non-stop, until you must give you best
+      final answer\n\nThis is the expect criteria for your final answer: The final
       answer\nyou MUST return the actual complete content as the final answer, not
       a summary.\n\nThis is the context you''re working with:\nHi!\n\nBegin! This
       is VERY important to you, use the tools available and give your best Final Answer,
@@ -134,12 +130,12 @@ interactions:
       connection:
       - keep-alive
       content-length:
-      - '1457'
+      - '1531'
       content-type:
       - application/json
       cookie:
-      - _cfuvid=kIcZtl4imAGPtbpW1pkysptFTuuhIkGe4D1Ht0Wcyhs-1726433273408-0.0.1.1-604800000;
-        __cf_bm=aA.D08vKK4VMn.hlaw5TPub.7Ww2O6YiU81xHVY_rUE-1726433273-1.0.1.1-toqlteZt.e096BB5damurs5vIFXrcRh5BlQOshHjIyYMoMGII3V91aXsrL0xOjn.5fFlVHU7CXIPpw12rhDWcQ
+      - __cf_bm=xCQEG8vgEvQfut0bkj2xgre9z9ePZhdKdNxBphhvH6s-1726437753-1.0.1.1-5qo0zwDCcKDtqvIzDbp2sLEPCey8v5DAsf0Mg6f2RmooOW9FXTw2P66VCTTF.vCwTpWBIFk0vzKmBAPOt6urIg;
+        _cfuvid=TiTyEciy7HrUlIDEsELZqkUyM4Fyn8OldZd4JefFMOA-1726437753108-0.0.1.1-604800000
       host:
       - api.openai.com
       user-agent:
@@ -163,21 +159,21 @@ interactions:
     method: POST
     uri: https://api.openai.com/v1/chat/completions
   response:
-    content: "{\n  \"id\": \"chatcmpl-A7qRtgXHDk04IqG6mAFesRyS0uAuV\",\n  \"object\":
-      \"chat.completion\",\n  \"created\": 1726433273,\n  \"model\": \"gpt-4o-2024-05-13\",\n
+    content: "{\n  \"id\": \"chatcmpl-A7rg6OYsC4jHMuY7JuGieivllPnxA\",\n  \"object\":
+      \"chat.completion\",\n  \"created\": 1726437998,\n  \"model\": \"gpt-4o-2024-05-13\",\n
       \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
-      \"assistant\",\n        \"content\": \"Thought: I need to follow the current
-      task instructions and use the `get_final_answer` tool non-stop without providing
-      a final answer.\\n\\nAction: get_final_answer\\nAction Input: {}\",\n        \"refusal\":
+      \"assistant\",\n        \"content\": \"Thought: I need to continue using the
+      `get_final_answer` tool non-stop to gather the final answer and follow the instructions
+      correctly.\\n\\nAction: get_final_answer\\nAction Input: {}\",\n        \"refusal\":
       null\n      },\n      \"logprobs\": null,\n      \"finish_reason\": \"stop\"\n
-      \   }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 299,\n    \"completion_tokens\":
-      37,\n    \"total_tokens\": 336,\n    \"completion_tokens_details\": {\n      \"reasoning_tokens\":
+      \   }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 314,\n    \"completion_tokens\":
+      37,\n    \"total_tokens\": 351,\n    \"completion_tokens_details\": {\n      \"reasoning_tokens\":
       0\n    }\n  },\n  \"system_fingerprint\": \"fp_25624ae3a5\"\n}\n"
     headers:
       CF-Cache-Status:
       - DYNAMIC
       CF-RAY:
-      - 8c3b7977d93c12a7-MIA
+      - 8c3becd4bb1ea4ca-MIA
       Connection:
       - keep-alive
       Content-Encoding:
@@ -185,7 +181,7 @@ interactions:
       Content-Type:
       - application/json
       Date:
-      - Sun, 15 Sep 2024 20:47:54 GMT
+      - Sun, 15 Sep 2024 22:06:39 GMT
       Server:
       - cloudflare
       Transfer-Encoding:
@@ -199,7 +195,7 @@ interactions:
       openai-organization:
       - crewai-iuxna1
       openai-processing-ms:
-      - '385'
+      - '411'
       openai-version:
       - '2020-10-01'
       strict-transport-security:
@@ -211,15 +207,124 @@ interactions:
       x-ratelimit-remaining-requests:
       - '9999'
       x-ratelimit-remaining-tokens:
-      - '29999656'
+      - '29999639'
       x-ratelimit-reset-requests:
       - 6ms
       x-ratelimit-reset-tokens:
       - 0s
       x-request-id:
-      - req_13f9118d7c81c893daba654ed9228bde
+      - req_4f6b79a35be6a77a088b395f9addf4ac
     http_version: HTTP/1.1
     status_code: 200
+- request:
+    body: !!binary |
+      Co0jCiQKIgoMc2VydmljZS5uYW1lEhIKEGNyZXdBSS10ZWxlbWV0cnkS5CIKEgoQY3Jld2FpLnRl
+      bGVtZXRyeRKsBwoQ+nd/izdQhNJnW6hFe6PR5hIIZS+Ep5ZmDRQqDENyZXcgQ3JlYXRlZDABOQC6
+      R141ivUXQZjoSV41ivUXShoKDmNyZXdhaV92ZXJzaW9uEggKBjAuNTYuMEoaCg5weXRob25fdmVy
+      c2lvbhIICgYzLjExLjdKLgoIY3Jld19rZXkSIgogZDU1MTEzYmU0YWE0MWJhNjQzZDMyNjA0MmIy
+      ZjAzZjFKMQoHY3Jld19pZBImCiQ4MjZiNDFhNy00ZDg1LTRjODAtYmJmYi0xZjlhODBhNWZlZjNK
+      HAoMY3Jld19wcm9jZXNzEgwKCnNlcXVlbnRpYWxKEQoLY3Jld19tZW1vcnkSAhAAShoKFGNyZXdf
+      bnVtYmVyX29mX3Rhc2tzEgIYAUobChVjcmV3X251bWJlcl9vZl9hZ2VudHMSAhgBSskCCgtjcmV3
+      X2FnZW50cxK5Agq2Alt7ImtleSI6ICJlMTQ4ZTUzMjAyOTM0OTlmOGNlYmVhODI2ZTcyNTgyYiIs
+      ICJpZCI6ICI0Y2Q0ZjcxZi03ZTVjLTRjZmUtYjUzNy1hYThlMzJkOTBiMjciLCAicm9sZSI6ICJ0
+      ZXN0IHJvbGUiLCAidmVyYm9zZT8iOiB0cnVlLCAibWF4X2l0ZXIiOiA0LCAibWF4X3JwbSI6IDEw
+      LCAiZnVuY3Rpb25fY2FsbGluZ19sbG0iOiBudWxsLCAibGxtIjogImdwdC00byIsICJkZWxlZ2F0
+      aW9uX2VuYWJsZWQ/IjogZmFsc2UsICJhbGxvd19jb2RlX2V4ZWN1dGlvbj8iOiBmYWxzZSwgIm1h
+      eF9yZXRyeV9saW1pdCI6IDIsICJ0b29sc19uYW1lcyI6IFtdfV1KkAIKCmNyZXdfdGFza3MSgQIK
+      /gFbeyJrZXkiOiAiNGEzMWI4NTEzM2EzYTI5NGM2ODUzZGE3NTdkNGJhZTciLCAiaWQiOiAiOTY4
+      ZTU4NGEtYTljOS00NzhhLTkxZmItMDhjNDVmYWFhY2VkIiwgImFzeW5jX2V4ZWN1dGlvbj8iOiBm
+      YWxzZSwgImh1bWFuX2lucHV0PyI6IGZhbHNlLCAiYWdlbnRfcm9sZSI6ICJ0ZXN0IHJvbGUiLCAi
+      YWdlbnRfa2V5IjogImUxNDhlNTMyMDI5MzQ5OWY4Y2ViZWE4MjZlNzI1ODJiIiwgInRvb2xzX25h
+      bWVzIjogWyJnZXRfZmluYWxfYW5zd2VyIl19XXoCGAGFAQABAAASjgIKELsI28TftEdyZ7bRGvdN
+      Nc4SCHJF6VsZgJZBKgxUYXNrIENyZWF0ZWQwATkQ7FpeNYr1F0EQaVteNYr1F0ouCghjcmV3X2tl
+      eRIiCiBkNTUxMTNiZTRhYTQxYmE2NDNkMzI2MDQyYjJmMDNmMUoxCgdjcmV3X2lkEiYKJDgyNmI0
+      MWE3LTRkODUtNGM4MC1iYmZiLTFmOWE4MGE1ZmVmM0ouCgh0YXNrX2tleRIiCiA0YTMxYjg1MTMz
+      YTNhMjk0YzY4NTNkYTc1N2Q0YmFlN0oxCgd0YXNrX2lkEiYKJDk2OGU1ODRhLWE5YzktNDc4YS05
+      MWZiLTA4YzQ1ZmFhYWNlZHoCGAGFAQABAAASkwEKEJSJca2oiXqL/RFG5fxx9ZoSCNSslk9b0CfZ
+      KgpUb29sIFVzYWdlMAE5YE0QiTWK9RdB+HUTiTWK9RdKGgoOY3Jld2FpX3ZlcnNpb24SCAoGMC41
+      Ni4wSh8KCXRvb2xfbmFtZRISChBnZXRfZmluYWxfYW5zd2VySg4KCGF0dGVtcHRzEgIYAXoCGAGF
+      AQABAAASnAEKEHt1QdmChJ1W8SNVydnPKHMSCDgaU9uRvxOLKhNUb29sIFJlcGVhdGVkIFVzYWdl
+      MAE5UOv2tDWK9RdBuCH5tDWK9RdKGgoOY3Jld2FpX3ZlcnNpb24SCAoGMC41Ni4wSh8KCXRvb2xf
+      bmFtZRISChBnZXRfZmluYWxfYW5zd2VySg4KCGF0dGVtcHRzEgIYAXoCGAGFAQABAAASnAEKEHG0
+      DGnzTXxv/R/MLvZJe/QSCPBp1o0g9g5ZKhNUb29sIFJlcGVhdGVkIFVzYWdlMAE54FC/5zWK9RdB
+      6JbB5zWK9RdKGgoOY3Jld2FpX3ZlcnNpb24SCAoGMC41Ni4wSh8KCXRvb2xfbmFtZRISChBnZXRf
+      ZmluYWxfYW5zd2VySg4KCGF0dGVtcHRzEgIYAXoCGAGFAQABAAASnAEKENTkPAWSrXKqc9bFTdiQ
+      rM0SCD+79cfHSWHzKhNUb29sIFJlcGVhdGVkIFVzYWdlMAE5iHNHHDaK9RdBcGtJHDaK9RdKGgoO
+      Y3Jld2FpX3ZlcnNpb24SCAoGMC41Ni4wSh8KCXRvb2xfbmFtZRISChBnZXRfZmluYWxfYW5zd2Vy
+      Sg4KCGF0dGVtcHRzEgIYAXoCGAGFAQABAAASkAIKELKQmh2sfAXKkOO4yMa31s0SCKcIWLM4OM1W
+      Kg5UYXNrIEV4ZWN1dGlvbjABOWCvW141ivUXQVApLUo2ivUXSi4KCGNyZXdfa2V5EiIKIGQ1NTEx
+      M2JlNGFhNDFiYTY0M2QzMjYwNDJiMmYwM2YxSjEKB2NyZXdfaWQSJgokODI2YjQxYTctNGQ4NS00
+      YzgwLWJiZmItMWY5YTgwYTVmZWYzSi4KCHRhc2tfa2V5EiIKIDRhMzFiODUxMzNhM2EyOTRjNjg1
+      M2RhNzU3ZDRiYWU3SjEKB3Rhc2tfaWQSJgokOTY4ZTU4NGEtYTljOS00NzhhLTkxZmItMDhjNDVm
+      YWFhY2VkegIYAYUBAAEAABLSCwoQOrc0FfNISXclzakLvEx7yRIIl/oe3QRnjR8qDENyZXcgQ3Jl
+      YXRlZDABORg2V0s2ivUXQVDlW0s2ivUXShoKDmNyZXdhaV92ZXJzaW9uEggKBjAuNTYuMEoaCg5w
+      eXRob25fdmVyc2lvbhIICgYzLjExLjdKLgoIY3Jld19rZXkSIgogOTRjMzBkNmMzYjJhYzhmYjk0
+      YjJkY2ZjNTcyZDBmNTlKMQoHY3Jld19pZBImCiRmMDllNTUzMi1iNDgzLTRkMDYtYjEyOC0zZWNl
+      MTljZGNjYmJKHAoMY3Jld19wcm9jZXNzEgwKCnNlcXVlbnRpYWxKEQoLY3Jld19tZW1vcnkSAhAA
+      ShoKFGNyZXdfbnVtYmVyX29mX3Rhc2tzEgIYAkobChVjcmV3X251bWJlcl9vZl9hZ2VudHMSAhgC
+      SoIFCgtjcmV3X2FnZW50cxLyBArvBFt7ImtleSI6ICJlMTQ4ZTUzMjAyOTM0OTlmOGNlYmVhODI2
+      ZTcyNTgyYiIsICJpZCI6ICIwNmNjYjRhZi01ZDA5LTQ5N2ItYTQzNC04YmU4MmZhYmEwYzMiLCAi
+      cm9sZSI6ICJ0ZXN0IHJvbGUiLCAidmVyYm9zZT8iOiB0cnVlLCAibWF4X2l0ZXIiOiAyLCAibWF4
+      X3JwbSI6IDEwLCAiZnVuY3Rpb25fY2FsbGluZ19sbG0iOiBudWxsLCAibGxtIjogImdwdC00byIs
+      ICJkZWxlZ2F0aW9uX2VuYWJsZWQ/IjogZmFsc2UsICJhbGxvd19jb2RlX2V4ZWN1dGlvbj8iOiBm
+      YWxzZSwgIm1heF9yZXRyeV9saW1pdCI6IDIsICJ0b29sc19uYW1lcyI6IFtdfSwgeyJrZXkiOiAi
+      ZTdlOGVlYTg4NmJjYjhmMTA0NWFiZWVjZjE0MjVkYjciLCAiaWQiOiAiYjk5ZmQ2YzItYzJmOS00
+      MjRhLWI0OTEtODliZDc1ODM1MjM5IiwgInJvbGUiOiAidGVzdCByb2xlMiIsICJ2ZXJib3NlPyI6
+      IHRydWUsICJtYXhfaXRlciI6IDEsICJtYXhfcnBtIjogbnVsbCwgImZ1bmN0aW9uX2NhbGxpbmdf
+      bGxtIjogbnVsbCwgImxsbSI6ICJncHQtNG8iLCAiZGVsZWdhdGlvbl9lbmFibGVkPyI6IGZhbHNl
+      LCAiYWxsb3dfY29kZV9leGVjdXRpb24/IjogZmFsc2UsICJtYXhfcmV0cnlfbGltaXQiOiAyLCAi
+      dG9vbHNfbmFtZXMiOiBbXX1dSv0DCgpjcmV3X3Rhc2tzEu4DCusDW3sia2V5IjogIjMyMmRkYWUz
+      YmM4MGMxZDQ1Yjg1ZmE3NzU2ZGI4NjY1IiwgImlkIjogIjliZjZkNjJhLTQ2ODctNGMwNi05MjJj
+      LTJmY2RhYTlhYzMyNiIsICJhc3luY19leGVjdXRpb24/IjogZmFsc2UsICJodW1hbl9pbnB1dD8i
+      OiBmYWxzZSwgImFnZW50X3JvbGUiOiAidGVzdCByb2xlIiwgImFnZW50X2tleSI6ICJlMTQ4ZTUz
+      MjAyOTM0OTlmOGNlYmVhODI2ZTcyNTgyYiIsICJ0b29sc19uYW1lcyI6IFtdfSwgeyJrZXkiOiAi
+      NWU5Y2E3ZDY0YjQyMDViYjdjNDdlMGIzZmNiNWQyMWYiLCAiaWQiOiAiMjhiMTZhZGEtNDBjYS00
+      NzIwLThkNmMtZDU5MDE1YTg1ODFlIiwgImFzeW5jX2V4ZWN1dGlvbj8iOiBmYWxzZSwgImh1bWFu
+      X2lucHV0PyI6IGZhbHNlLCAiYWdlbnRfcm9sZSI6ICJ0ZXN0IHJvbGUyIiwgImFnZW50X2tleSI6
+      ICJlN2U4ZWVhODg2YmNiOGYxMDQ1YWJlZWNmMTQyNWRiNyIsICJ0b29sc19uYW1lcyI6IFsiZ2V0
+      X2ZpbmFsX2Fuc3dlciJdfV16AhgBhQEAAQAAEo4CChAf54Qxnl86cIEtlTHdZFecEgg13sYvZNjk
+      1CoMVGFzayBDcmVhdGVkMAE5YP6HSzaK9RdB6AuJSzaK9RdKLgoIY3Jld19rZXkSIgogOTRjMzBk
+      NmMzYjJhYzhmYjk0YjJkY2ZjNTcyZDBmNTlKMQoHY3Jld19pZBImCiRmMDllNTUzMi1iNDgzLTRk
+      MDYtYjEyOC0zZWNlMTljZGNjYmJKLgoIdGFza19rZXkSIgogMzIyZGRhZTNiYzgwYzFkNDViODVm
+      YTc3NTZkYjg2NjVKMQoHdGFza19pZBImCiQ5YmY2ZDYyYS00Njg3LTRjMDYtOTIyYy0yZmNkYWE5
+      YWMzMjZ6AhgBhQEAAQAAEpACChAbBo55TXAOcD4lYqnRsUA6Egj3u1RXoRx7vioOVGFzayBFeGVj
+      dXRpb24wATkAhYlLNor1F0Gwre9rNor1F0ouCghjcmV3X2tleRIiCiA5NGMzMGQ2YzNiMmFjOGZi
+      OTRiMmRjZmM1NzJkMGY1OUoxCgdjcmV3X2lkEiYKJGYwOWU1NTMyLWI0ODMtNGQwNi1iMTI4LTNl
+      Y2UxOWNkY2NiYkouCgh0YXNrX2tleRIiCiAzMjJkZGFlM2JjODBjMWQ0NWI4NWZhNzc1NmRiODY2
+      NUoxCgd0YXNrX2lkEiYKJDliZjZkNjJhLTQ2ODctNGMwNi05MjJjLTJmY2RhYTlhYzMyNnoCGAGF
+      AQABAAASjgIKEFjwxFmonwO2UEzoq1LmhC4SCNRQ389KdANoKgxUYXNrIENyZWF0ZWQwATkQqBds
+      Nor1F0HwTRlsNor1F0ouCghjcmV3X2tleRIiCiA5NGMzMGQ2YzNiMmFjOGZiOTRiMmRjZmM1NzJk
+      MGY1OUoxCgdjcmV3X2lkEiYKJGYwOWU1NTMyLWI0ODMtNGQwNi1iMTI4LTNlY2UxOWNkY2NiYkou
+      Cgh0YXNrX2tleRIiCiA1ZTljYTdkNjRiNDIwNWJiN2M0N2UwYjNmY2I1ZDIxZkoxCgd0YXNrX2lk
+      EiYKJDI4YjE2YWRhLTQwY2EtNDcyMC04ZDZjLWQ1OTAxNWE4NTgxZXoCGAGFAQABAAA=
+    headers:
+      Accept:
+      - '*/*'
+      Accept-Encoding:
+      - gzip, deflate
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '4496'
+      Content-Type:
+      - application/x-protobuf
+      User-Agent:
+      - OTel-OTLP-Exporter-Python/1.27.0
+    method: POST
+    uri: https://telemetry.crewai.com:4319/v1/traces
+  response:
+    body:
+      string: "\n\0"
+    headers:
+      Content-Length:
+      - '2'
+      Content-Type:
+      - application/x-protobuf
+      Date:
+      - Sun, 15 Sep 2024 22:06:40 GMT
+    status:
+      code: 200
+      message: OK
 - request:
     body: '{"messages": [{"role": "system", "content": "You are test role2. test backstory2\nYour
       personal goal is: test goal2\nYou ONLY have access to the following tools, and
@@ -233,14 +338,15 @@ interactions:
       keys and values.\nObservation: the result of the action\n\nOnce all necessary
       information is gathered:\n\nThought: I now know the final answer\nFinal Answer:
       the final answer to the original input question\n"}, {"role": "user", "content":
-      "\nCurrent Task: NEVER give a Final Answer, instead keep using the `get_final_answer`
-      tool non-stop\n\nThis is the expect criteria for your final answer: The final
+      "\nCurrent Task: NEVER give a Final Answer, unless you are told otherwise, instead
+      keep using the `get_final_answer` tool non-stop, until you must give you best
+      final answer\n\nThis is the expect criteria for your final answer: The final
       answer\nyou MUST return the actual complete content as the final answer, not
       a summary.\n\nThis is the context you''re working with:\nHi!\n\nBegin! This
       is VERY important to you, use the tools available and give your best Final Answer,
       your job depends on it!\n\nThought:"}, {"role": "assistant", "content": "Thought:
-      I need to follow the current task instructions and use the `get_final_answer`
-      tool non-stop without providing a final answer.\n\nAction: get_final_answer\nAction
+      I need to continue using the `get_final_answer` tool non-stop to gather the
+      final answer and follow the instructions correctly.\n\nAction: get_final_answer\nAction
       Input: {}\nObservation: 42\nNow it''s time you MUST give your absolute best
       final answer. You''ll ignore all previous instructions, stop using any tools,
       and just return your absolute BEST Final answer."}], "model": "gpt-4o", "stop":
@@ -253,12 +359,12 @@ interactions:
       connection:
       - keep-alive
       content-length:
-      - '1866'
+      - '1942'
       content-type:
       - application/json
       cookie:
-      - _cfuvid=kIcZtl4imAGPtbpW1pkysptFTuuhIkGe4D1Ht0Wcyhs-1726433273408-0.0.1.1-604800000;
-        __cf_bm=aA.D08vKK4VMn.hlaw5TPub.7Ww2O6YiU81xHVY_rUE-1726433273-1.0.1.1-toqlteZt.e096BB5damurs5vIFXrcRh5BlQOshHjIyYMoMGII3V91aXsrL0xOjn.5fFlVHU7CXIPpw12rhDWcQ
+      - __cf_bm=xCQEG8vgEvQfut0bkj2xgre9z9ePZhdKdNxBphhvH6s-1726437753-1.0.1.1-5qo0zwDCcKDtqvIzDbp2sLEPCey8v5DAsf0Mg6f2RmooOW9FXTw2P66VCTTF.vCwTpWBIFk0vzKmBAPOt6urIg;
+        _cfuvid=TiTyEciy7HrUlIDEsELZqkUyM4Fyn8OldZd4JefFMOA-1726437753108-0.0.1.1-604800000
       host:
       - api.openai.com
       user-agent:
@@ -282,20 +388,19 @@ interactions:
     method: POST
     uri: https://api.openai.com/v1/chat/completions
   response:
-    content: "{\n  \"id\": \"chatcmpl-A7qRu4EAeiWdiWtH7fPs2jfVlt8uB\",\n  \"object\":
-      \"chat.completion\",\n  \"created\": 1726433274,\n  \"model\": \"gpt-4o-2024-05-13\",\n
+    content: "{\n  \"id\": \"chatcmpl-A7rg8vYrI7g6pXJ8OU6D3JXgEYJso\",\n  \"object\":
+      \"chat.completion\",\n  \"created\": 1726438000,\n  \"model\": \"gpt-4o-2024-05-13\",\n
       \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
-      \"assistant\",\n        \"content\": \"Thought: I need to ignore all previous
-      instructions and provide the absolute best final answer.\\n\\nFinal Answer:
-      42\",\n        \"refusal\": null\n      },\n      \"logprobs\": null,\n      \"finish_reason\":
-      \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 377,\n    \"completion_tokens\":
-      22,\n    \"total_tokens\": 399,\n    \"completion_tokens_details\": {\n      \"reasoning_tokens\":
-      0\n    }\n  },\n  \"system_fingerprint\": \"fp_25624ae3a5\"\n}\n"
+      \"assistant\",\n        \"content\": \"Thought: I now know the final answer.\\nFinal
+      Answer: 42\",\n        \"refusal\": null\n      },\n      \"logprobs\": null,\n
+      \     \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\":
+      392,\n    \"completion_tokens\": 14,\n    \"total_tokens\": 406,\n    \"completion_tokens_details\":
+      {\n      \"reasoning_tokens\": 0\n    }\n  },\n  \"system_fingerprint\": \"fp_25624ae3a5\"\n}\n"
     headers:
       CF-Cache-Status:
       - DYNAMIC
       CF-RAY:
-      - 8c3b797c1d1612a7-MIA
+      - 8c3becdd0faca4ca-MIA
       Connection:
       - keep-alive
       Content-Encoding:
@@ -303,7 +408,7 @@ interactions:
       Content-Type:
       - application/json
       Date:
-      - Sun, 15 Sep 2024 20:47:54 GMT
+      - Sun, 15 Sep 2024 22:06:40 GMT
       Server:
       - cloudflare
       Transfer-Encoding:
@@ -317,7 +422,7 @@ interactions:
       openai-organization:
       - crewai-iuxna1
       openai-processing-ms:
-      - '302'
+      - '219'
       openai-version:
       - '2020-10-01'
       strict-transport-security:
@@ -329,13 +434,13 @@ interactions:
       x-ratelimit-remaining-requests:
       - '9999'
       x-ratelimit-remaining-tokens:
-      - '29999564'
+      - '29999546'
       x-ratelimit-reset-requests:
       - 6ms
       x-ratelimit-reset-tokens:
       - 0s
       x-request-id:
-      - req_adc297dd553aeae2104ae2755bf9af88
+      - req_3b89cff95c2d594dfeb3dbd10180df3f
     http_version: HTTP/1.1
     status_code: 200
 version: 1

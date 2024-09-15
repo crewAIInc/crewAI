@@ -14,7 +14,7 @@ interactions:
       point list of 5 important events. No additional commentary.\nyou MUST return
       the actual complete content as the final answer, not a summary.\n\nBegin! This
       is VERY important to you, use the tools available and give your best Final Answer,
-      your job depends on it!\n\nThought:"}], "model": "gpt-4o", "stop": ["\nResult"]}'
+      your job depends on it!\n\nThought:"}], "model": "gpt-4o", "stop": ["\nObservation:"]}'
     headers:
       accept:
       - application/json
@@ -23,12 +23,12 @@ interactions:
       connection:
       - keep-alive
       content-length:
-      - '1177'
+      - '1183'
       content-type:
       - application/json
       cookie:
-      - __cf_bm=e.frhlfi1m.8j1hzfGzahuOh4rgR9gvx.2zCHQ2w_Vs-1726380612-1.0.1.1-T58wIEXn0GTV8AZMALaUyULORFkNEBuxpds8RSWAM0Ltrg2U7jLBEKs0nwIneMiBAiiOmyZaoaH2RyLtNcunLQ;
-        _cfuvid=Bz2zevKuFYZqnEFwqmqVHcRo5pT0fm0fTtc_6_VQs4g-1726379702153-0.0.1.1-604800000
+      - __cf_bm=xCQEG8vgEvQfut0bkj2xgre9z9ePZhdKdNxBphhvH6s-1726437753-1.0.1.1-5qo0zwDCcKDtqvIzDbp2sLEPCey8v5DAsf0Mg6f2RmooOW9FXTw2P66VCTTF.vCwTpWBIFk0vzKmBAPOt6urIg;
+        _cfuvid=TiTyEciy7HrUlIDEsELZqkUyM4Fyn8OldZd4JefFMOA-1726437753108-0.0.1.1-604800000
       host:
       - api.openai.com
       user-agent:
@@ -52,22 +52,23 @@ interactions:
     method: POST
     uri: https://api.openai.com/v1/chat/completions
   response:
-    content: "{\n  \"id\": \"chatcmpl-A7cnF66xx59SaSyqusFzE8SDYfAYL\",\n  \"object\":
-      \"chat.completion\",\n  \"created\": 1726380781,\n  \"model\": \"gpt-4o-2024-05-13\",\n
+    content: "{\n  \"id\": \"chatcmpl-A7rjYkDls06QdX68UmypwtfHU2Wxz\",\n  \"object\":
+      \"chat.completion\",\n  \"created\": 1726438212,\n  \"model\": \"gpt-4o-2024-05-13\",\n
       \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
       \"assistant\",\n        \"content\": \"Thought: I now can give a great answer\\nFinal
-      Answer: \\n\\n- Ethical considerations in AI deployment.\\n- Future of AI in
-      healthcare diagnostics.\\n- AI-driven personalization in retail.\\n- Autonomous
-      vehicles' impact on urban planning.\\n- Advancements in natural language processing.\",\n
-      \       \"refusal\": null\n      },\n      \"logprobs\": null,\n      \"finish_reason\":
-      \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 226,\n    \"completion_tokens\":
-      53,\n    \"total_tokens\": 279,\n    \"completion_tokens_details\": {\n      \"reasoning_tokens\":
+      Answer: \\n- Ethical implications of AI decision-making in healthcare.\\n- The
+      future impact of AI on education systems.\\n- How AI agents revolutionize customer
+      service.\\n- AI's role in climate change mitigation strategies.\\n- Advances
+      in AI-driven cybersecurity solutions.\",\n        \"refusal\": null\n      },\n
+      \     \"logprobs\": null,\n      \"finish_reason\": \"stop\"\n    }\n  ],\n
+      \ \"usage\": {\n    \"prompt_tokens\": 226,\n    \"completion_tokens\": 61,\n
+      \   \"total_tokens\": 287,\n    \"completion_tokens_details\": {\n      \"reasoning_tokens\":
       0\n    }\n  },\n  \"system_fingerprint\": \"fp_992d1ea92d\"\n}\n"
     headers:
       CF-Cache-Status:
       - DYNAMIC
       CF-RAY:
-      - 8c3677e97b2d745a-MIA
+      - 8c3bf20b99a5a4ca-MIA
       Connection:
       - keep-alive
       Content-Encoding:
@@ -75,7 +76,7 @@ interactions:
       Content-Type:
       - application/json
       Date:
-      - Sun, 15 Sep 2024 06:13:01 GMT
+      - Sun, 15 Sep 2024 22:10:13 GMT
       Server:
       - cloudflare
       Transfer-Encoding:
@@ -89,7 +90,7 @@ interactions:
       openai-organization:
       - crewai-iuxna1
       openai-processing-ms:
-      - '711'
+      - '699'
       openai-version:
       - '2020-10-01'
       strict-transport-security:
@@ -107,7 +108,7 @@ interactions:
       x-ratelimit-reset-tokens:
       - 0s
       x-request-id:
-      - req_50f52792adf9aacdf97194b8bf612e53
+      - req_c6c3ceb8aa1f7dbc4f5cf2e033a96f49
     http_version: HTTP/1.1
     status_code: 200
 version: 1

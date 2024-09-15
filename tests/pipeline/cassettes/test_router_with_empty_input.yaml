@@ -9,7 +9,7 @@ interactions:
       is the expect criteria for your final answer: Test output\nyou MUST return the
       actual complete content as the final answer, not a summary.\n\nBegin! This is
       VERY important to you, use the tools available and give your best Final Answer,
-      your job depends on it!\n\nThought:"}], "model": "gpt-4o", "stop": ["\nResult"]}'
+      your job depends on it!\n\nThought:"}], "model": "gpt-4o", "stop": ["\nObservation:"]}'
     headers:
       accept:
       - application/json
@@ -18,12 +18,12 @@ interactions:
       connection:
       - keep-alive
       content-length:
-      - '798'
+      - '804'
       content-type:
       - application/json
       cookie:
-      - _cfuvid=Bz2zevKuFYZqnEFwqmqVHcRo5pT0fm0fTtc_6_VQs4g-1726379702153-0.0.1.1-604800000;
-        __cf_bm=NOn1n25T8u1eKhL05A4mBgpDvwojMRvK1SB7TGDEjFU-1726383316-1.0.1.1-kUyz.anEyDoe9wXgChl5UWW3Z9pFTgIpyZfqI6rucN2vXQHH6k.DSvUtilpKOPnhI4LtmQYBhxkJ6wKLfS3J8Q
+      - __cf_bm=xCQEG8vgEvQfut0bkj2xgre9z9ePZhdKdNxBphhvH6s-1726437753-1.0.1.1-5qo0zwDCcKDtqvIzDbp2sLEPCey8v5DAsf0Mg6f2RmooOW9FXTw2P66VCTTF.vCwTpWBIFk0vzKmBAPOt6urIg;
+        _cfuvid=TiTyEciy7HrUlIDEsELZqkUyM4Fyn8OldZd4JefFMOA-1726437753108-0.0.1.1-604800000
       host:
       - api.openai.com
       user-agent:
@@ -47,8 +47,8 @@ interactions:
     method: POST
     uri: https://api.openai.com/v1/chat/completions
   response:
-    content: "{\n  \"id\": \"chatcmpl-A7db3AjDrZmhKQhVlIXzeWDMoxYj6\",\n  \"object\":
-      \"chat.completion\",\n  \"created\": 1726383869,\n  \"model\": \"gpt-4o-2024-05-13\",\n
+    content: "{\n  \"id\": \"chatcmpl-A7rm1BwEDQ61LA3VrmrQh1gStb4N7\",\n  \"object\":
+      \"chat.completion\",\n  \"created\": 1726438365,\n  \"model\": \"gpt-4o-2024-05-13\",\n
       \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
       \"assistant\",\n        \"content\": \"Thought: I now can give a great answer\\nFinal
       Answer: Test output\",\n        \"refusal\": null\n      },\n      \"logprobs\":
@@ -59,7 +59,7 @@ interactions:
       CF-Cache-Status:
       - DYNAMIC
       CF-RAY:
-      - 8c36c3514d437454-MIA
+      - 8c3bf5c77c99a4ca-MIA
       Connection:
       - keep-alive
       Content-Encoding:
@@ -67,7 +67,7 @@ interactions:
       Content-Type:
       - application/json
       Date:
-      - Sun, 15 Sep 2024 07:04:30 GMT
+      - Sun, 15 Sep 2024 22:12:45 GMT
       Server:
       - cloudflare
       Transfer-Encoding:
@@ -81,7 +81,7 @@ interactions:
       openai-organization:
       - crewai-iuxna1
       openai-processing-ms:
-      - '265'
+      - '229'
       openai-version:
       - '2020-10-01'
       strict-transport-security:
@@ -99,7 +99,7 @@ interactions:
       x-ratelimit-reset-tokens:
       - 0s
       x-request-id:
-      - req_62bff89afcdb767715b4cd3e820eea22
+      - req_8dad9c2af7d4ba7f18e463a9fd9fd0b5
     http_version: HTTP/1.1
     status_code: 200
 version: 1

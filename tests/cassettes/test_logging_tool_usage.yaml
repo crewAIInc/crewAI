@@ -18,7 +18,7 @@ interactions:
       final answer: The result of the multiplication.\nyou MUST return the actual
       complete content as the final answer, not a summary.\n\nBegin! This is VERY
       important to you, use the tools available and give your best Final Answer, your
-      job depends on it!\n\nThought:"}], "model": "gpt-4o", "stop": ["\nResult"]}'
+      job depends on it!\n\nThought:"}], "model": "gpt-4o", "stop": ["\nObservation:"]}'
     headers:
       accept:
       - application/json
@@ -27,12 +27,12 @@ interactions:
       connection:
       - keep-alive
       content-length:
-      - '1482'
+      - '1488'
       content-type:
       - application/json
       cookie:
-      - __cf_bm=J1VIPhfusyyXtwM.1L9zbe3jdnU7NVyHC3AWiKXO280-1726379702-1.0.1.1-LDa9RyXFli18t4ZEuVAENTChdNAkRtdWXRkRLbBHbCXdobugQ3T.arhMpSKwtnBRXKPcC4b66UA7BsSy1VXDHQ;
-        _cfuvid=Bz2zevKuFYZqnEFwqmqVHcRo5pT0fm0fTtc_6_VQs4g-1726379702153-0.0.1.1-604800000
+      - __cf_bm=xCQEG8vgEvQfut0bkj2xgre9z9ePZhdKdNxBphhvH6s-1726437753-1.0.1.1-5qo0zwDCcKDtqvIzDbp2sLEPCey8v5DAsf0Mg6f2RmooOW9FXTw2P66VCTTF.vCwTpWBIFk0vzKmBAPOt6urIg;
+        _cfuvid=TiTyEciy7HrUlIDEsELZqkUyM4Fyn8OldZd4JefFMOA-1726437753108-0.0.1.1-604800000
       host:
       - api.openai.com
       user-agent:
@@ -56,20 +56,21 @@ interactions:
     method: POST
     uri: https://api.openai.com/v1/chat/completions
   response:
-    content: "{\n  \"id\": \"chatcmpl-A7cVsy4yPPjlE7K1vActM2QnAKJci\",\n  \"object\":
-      \"chat.completion\",\n  \"created\": 1726379704,\n  \"model\": \"gpt-4o-2024-05-13\",\n
+    content: "{\n  \"id\": \"chatcmpl-A7rcBYcmMt1dot38pphZhiWeTgoiy\",\n  \"object\":
+      \"chat.completion\",\n  \"created\": 1726437755,\n  \"model\": \"gpt-4o-2024-05-13\",\n
       \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
-      \"assistant\",\n        \"content\": \"To find the result of 3 times 4, I will
-      use the multiplier tool.\\n\\nAction: multiplier\\nAction Input: {\\\"first_number\\\":
-      3, \\\"second_number\\\": 4}\",\n        \"refusal\": null\n      },\n      \"logprobs\":
-      null,\n      \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\":
-      309,\n    \"completion_tokens\": 39,\n    \"total_tokens\": 348,\n    \"completion_tokens_details\":
-      {\n      \"reasoning_tokens\": 0\n    }\n  },\n  \"system_fingerprint\": \"fp_25624ae3a5\"\n}\n"
+      \"assistant\",\n        \"content\": \"To find the answer to what 3 times 4
+      is, I need to use the multiplier tool.\\n\\nAction: multiplier\\nAction Input:
+      {\\\"first_number\\\": 3, \\\"second_number\\\": 4}\",\n        \"refusal\":
+      null\n      },\n      \"logprobs\": null,\n      \"finish_reason\": \"stop\"\n
+      \   }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 309,\n    \"completion_tokens\":
+      42,\n    \"total_tokens\": 351,\n    \"completion_tokens_details\": {\n      \"reasoning_tokens\":
+      0\n    }\n  },\n  \"system_fingerprint\": \"fp_25624ae3a5\"\n}\n"
     headers:
       CF-Cache-Status:
       - DYNAMIC
       CF-RAY:
-      - 8c365d9dfe8c221a-MIA
+      - 8c3be6e1bc7f9ae3-MIA
       Connection:
       - keep-alive
       Content-Encoding:
@@ -77,7 +78,7 @@ interactions:
       Content-Type:
       - application/json
       Date:
-      - Sun, 15 Sep 2024 05:55:04 GMT
+      - Sun, 15 Sep 2024 22:02:35 GMT
       Server:
       - cloudflare
       Transfer-Encoding:
@@ -91,7 +92,7 @@ interactions:
       openai-organization:
       - crewai-iuxna1
       openai-processing-ms:
-      - '493'
+      - '549'
       openai-version:
       - '2020-10-01'
       strict-transport-security:
@@ -109,7 +110,7 @@ interactions:
       x-ratelimit-reset-tokens:
       - 0s
       x-request-id:
-      - req_06480ffe8c7c46462847c105d07948cf
+      - req_5b74cc78af40287e3c8c6a4f84ec1114
     http_version: HTTP/1.1
     status_code: 200
 - request:
@@ -132,9 +133,9 @@ interactions:
       complete content as the final answer, not a summary.\n\nBegin! This is VERY
       important to you, use the tools available and give your best Final Answer, your
       job depends on it!\n\nThought:"}, {"role": "assistant", "content": "To find
-      the result of 3 times 4, I will use the multiplier tool.\n\nAction: multiplier\nAction
-      Input: {\"first_number\": 3, \"second_number\": 4}\nObservation: 12"}], "model":
-      "gpt-4o", "stop": ["\nResult"]}'
+      the answer to what 3 times 4 is, I need to use the multiplier tool.\n\nAction:
+      multiplier\nAction Input: {\"first_number\": 3, \"second_number\": 4}\nObservation:
+      12"}], "model": "gpt-4o", "stop": ["\nObservation:"]}'
     headers:
       accept:
       - application/json
@@ -143,12 +144,12 @@ interactions:
       connection:
       - keep-alive
       content-length:
-      - '1682'
+      - '1699'
       content-type:
       - application/json
       cookie:
-      - __cf_bm=J1VIPhfusyyXtwM.1L9zbe3jdnU7NVyHC3AWiKXO280-1726379702-1.0.1.1-LDa9RyXFli18t4ZEuVAENTChdNAkRtdWXRkRLbBHbCXdobugQ3T.arhMpSKwtnBRXKPcC4b66UA7BsSy1VXDHQ;
-        _cfuvid=Bz2zevKuFYZqnEFwqmqVHcRo5pT0fm0fTtc_6_VQs4g-1726379702153-0.0.1.1-604800000
+      - __cf_bm=xCQEG8vgEvQfut0bkj2xgre9z9ePZhdKdNxBphhvH6s-1726437753-1.0.1.1-5qo0zwDCcKDtqvIzDbp2sLEPCey8v5DAsf0Mg6f2RmooOW9FXTw2P66VCTTF.vCwTpWBIFk0vzKmBAPOt6urIg;
+        _cfuvid=TiTyEciy7HrUlIDEsELZqkUyM4Fyn8OldZd4JefFMOA-1726437753108-0.0.1.1-604800000
       host:
       - api.openai.com
       user-agent:
@@ -172,19 +173,20 @@ interactions:
     method: POST
     uri: https://api.openai.com/v1/chat/completions
   response:
-    content: "{\n  \"id\": \"chatcmpl-A7cVs8Jl9JwOFzAM2aRBYjiQqvJVn\",\n  \"object\":
-      \"chat.completion\",\n  \"created\": 1726379704,\n  \"model\": \"gpt-4o-2024-05-13\",\n
+    content: "{\n  \"id\": \"chatcmpl-A7rcC6AwmPv3wDy410KcW6e5sPJbU\",\n  \"object\":
+      \"chat.completion\",\n  \"created\": 1726437756,\n  \"model\": \"gpt-4o-2024-05-13\",\n
       \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
       \"assistant\",\n        \"content\": \"Thought: I now know the final answer\\nFinal
-      Answer: 12\",\n        \"refusal\": null\n      },\n      \"logprobs\": null,\n
-      \     \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\":
-      356,\n    \"completion_tokens\": 14,\n    \"total_tokens\": 370,\n    \"completion_tokens_details\":
-      {\n      \"reasoning_tokens\": 0\n    }\n  },\n  \"system_fingerprint\": \"fp_25624ae3a5\"\n}\n"
+      Answer: The result of multiplying 3 times 4 is 12.\",\n        \"refusal\":
+      null\n      },\n      \"logprobs\": null,\n      \"finish_reason\": \"stop\"\n
+      \   }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 359,\n    \"completion_tokens\":
+      25,\n    \"total_tokens\": 384,\n    \"completion_tokens_details\": {\n      \"reasoning_tokens\":
+      0\n    }\n  },\n  \"system_fingerprint\": \"fp_25624ae3a5\"\n}\n"
     headers:
       CF-Cache-Status:
       - DYNAMIC
       CF-RAY:
-      - 8c365da2f911221a-MIA
+      - 8c3be6e70a959ae3-MIA
       Connection:
       - keep-alive
       Content-Encoding:
@@ -192,7 +194,7 @@ interactions:
       Content-Type:
       - application/json
       Date:
-      - Sun, 15 Sep 2024 05:55:05 GMT
+      - Sun, 15 Sep 2024 22:02:36 GMT
       Server:
       - cloudflare
       Transfer-Encoding:
@@ -206,7 +208,7 @@ interactions:
       openai-organization:
       - crewai-iuxna1
       openai-processing-ms:
-      - '227'
+      - '352'
       openai-version:
       - '2020-10-01'
       strict-transport-security:
@@ -218,13 +220,13 @@ interactions:
       x-ratelimit-remaining-requests:
       - '9999'
       x-ratelimit-remaining-tokens:
-      - '29999609'
+      - '29999607'
       x-ratelimit-reset-requests:
       - 6ms
       x-ratelimit-reset-tokens:
       - 0s
       x-request-id:
-      - req_2b60b35139ad7a346c8d3edb964ecd2e
+      - req_ba68729fe57052e1520a3e2a17527d9c
     http_version: HTTP/1.1
     status_code: 200
 version: 1

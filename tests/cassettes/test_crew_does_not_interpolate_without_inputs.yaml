@@ -1,5 +1,84 @@
 interactions:
 - request:
+    body: !!binary |
+      CtgVCiQKIgoMc2VydmljZS5uYW1lEhIKEGNyZXdBSS10ZWxlbWV0cnkSrxUKEgoQY3Jld2FpLnRl
+      bGVtZXRyeRKwBwoQxFloYmInFnHSFQ8miPFjWxIIFWJsma43jhIqDENyZXcgQ3JlYXRlZDABOSDd
+      qX9zivUXQfibrn9zivUXShoKDmNyZXdhaV92ZXJzaW9uEggKBjAuNTYuMEoaCg5weXRob25fdmVy
+      c2lvbhIICgYzLjExLjdKLgoIY3Jld19rZXkSIgogOThhN2QyMTQyNTIxMDc2OTM4Y2M4N2M3Njlk
+      ZWRjZDNKMQoHY3Jld19pZBImCiQ0MTliZGY4ZC02YjVhLTRkZTMtOGMzZC1mZTQwZjUzNThhYzJK
+      HAoMY3Jld19wcm9jZXNzEgwKCnNlcXVlbnRpYWxKEQoLY3Jld19tZW1vcnkSAhAAShoKFGNyZXdf
+      bnVtYmVyX29mX3Rhc2tzEgIYAUobChVjcmV3X251bWJlcl9vZl9hZ2VudHMSAhgBStYCCgtjcmV3
+      X2FnZW50cxLGAgrDAlt7ImtleSI6ICJmMzM4NmY2ZDhkYTc1YWE0MTZhNmUzMTAwNTNmNzY5OCIs
+      ICJpZCI6ICIzYzgyMzdmYi0zN2M5LTRlZDUtOTVlZC03N2ZjMDg0MDg3MjciLCAicm9sZSI6ICJ7
+      dG9waWN9IFJlc2VhcmNoZXIiLCAidmVyYm9zZT8iOiBmYWxzZSwgIm1heF9pdGVyIjogMTUsICJt
+      YXhfcnBtIjogbnVsbCwgImZ1bmN0aW9uX2NhbGxpbmdfbGxtIjogbnVsbCwgImxsbSI6ICJncHQt
+      NG8iLCAiZGVsZWdhdGlvbl9lbmFibGVkPyI6IGZhbHNlLCAiYWxsb3dfY29kZV9leGVjdXRpb24/
+      IjogZmFsc2UsICJtYXhfcmV0cnlfbGltaXQiOiAyLCAidG9vbHNfbmFtZXMiOiBbXX1dSocCCgpj
+      cmV3X3Rhc2tzEvgBCvUBW3sia2V5IjogImFmYTY5OGIyNjJkMzU0M2Y5YTYxMWU0ZDUxNDVlZDZh
+      IiwgImlkIjogIjdjNjgyYTI5LWYzZGYtNDA4Mi1hNGI0LTE4NmE0YzY3ZjY5MCIsICJhc3luY19l
+      eGVjdXRpb24/IjogZmFsc2UsICJodW1hbl9pbnB1dD8iOiBmYWxzZSwgImFnZW50X3JvbGUiOiAi
+      e3RvcGljfSBSZXNlYXJjaGVyIiwgImFnZW50X2tleSI6ICJmMzM4NmY2ZDhkYTc1YWE0MTZhNmUz
+      MTAwNTNmNzY5OCIsICJ0b29sc19uYW1lcyI6IFtdfV16AhgBhQEAAQAAEo4CChB6jOnjuP1Nbj80
+      OasMEvxfEgjVlxz68qKQSSoMVGFzayBDcmVhdGVkMAE5ADrMf3OK9RdBIAXNf3OK9RdKLgoIY3Jl
+      d19rZXkSIgogM2YzMDEyN2EzNzQ0OGNhMzRjYjI5NjJiNjk0MGQzZjRKMQoHY3Jld19pZBImCiQ0
+      MTliZGY4ZC02YjVhLTRkZTMtOGMzZC1mZTQwZjUzNThhYzJKLgoIdGFza19rZXkSIgogYWZhNjk4
+      YjI2MmQzNTQzZjlhNjExZTRkNTE0NWVkNmFKMQoHdGFza19pZBImCiQ3YzY4MmEyOS1mM2RmLTQw
+      ODItYTRiNC0xODZhNGM2N2Y2OTB6AhgBhQEAAQAAEpACChCvDSK36Rc5wbONXixmagLOEgjG7hlI
+      MrAi7CoOVGFzayBFeGVjdXRpb24wATnIZs1/c4r1F0GoDM9/c4r1F0ouCghjcmV3X2tleRIiCiAz
+      ZjMwMTI3YTM3NDQ4Y2EzNGNiMjk2MmI2OTQwZDNmNEoxCgdjcmV3X2lkEiYKJDQxOWJkZjhkLTZi
+      NWEtNGRlMy04YzNkLWZlNDBmNTM1OGFjMkouCgh0YXNrX2tleRIiCiBhZmE2OThiMjYyZDM1NDNm
+      OWE2MTFlNGQ1MTQ1ZWQ2YUoxCgd0YXNrX2lkEiYKJDdjNjgyYTI5LWYzZGYtNDA4Mi1hNGI0LTE4
+      NmE0YzY3ZjY5MHoCGAGFAQABAAASsAcKEIS2pY0ktxie/or5UzYhXqESCHHKDErIidiTKgxDcmV3
+      IENyZWF0ZWQwATko4EiAc4r1F0G4tkuAc4r1F0oaCg5jcmV3YWlfdmVyc2lvbhIICgYwLjU2LjBK
+      GgoOcHl0aG9uX3ZlcnNpb24SCAoGMy4xMS43Si4KCGNyZXdfa2V5EiIKIDk4YTdkMjE0MjUyMTA3
+      NjkzOGNjODdjNzY5ZGVkY2QzSjEKB2NyZXdfaWQSJgokZDM1MDU0MWYtNjZlNS00NTE3LTkzYjIt
+      MDhjOGUzMDNlZGJiShwKDGNyZXdfcHJvY2VzcxIMCgpzZXF1ZW50aWFsShEKC2NyZXdfbWVtb3J5
+      EgIQAEoaChRjcmV3X251bWJlcl9vZl90YXNrcxICGAFKGwoVY3Jld19udW1iZXJfb2ZfYWdlbnRz
+      EgIYAUrWAgoLY3Jld19hZ2VudHMSxgIKwwJbeyJrZXkiOiAiZjMzODZmNmQ4ZGE3NWFhNDE2YTZl
+      MzEwMDUzZjc2OTgiLCAiaWQiOiAiYTZjNTUzNzEtZjRhYS00YTQ0LTlkZDQtMTAyZTkyNjUxY2Fl
+      IiwgInJvbGUiOiAie3RvcGljfSBSZXNlYXJjaGVyIiwgInZlcmJvc2U/IjogZmFsc2UsICJtYXhf
+      aXRlciI6IDE1LCAibWF4X3JwbSI6IG51bGwsICJmdW5jdGlvbl9jYWxsaW5nX2xsbSI6IG51bGws
+      ICJsbG0iOiAiZ3B0LTRvIiwgImRlbGVnYXRpb25fZW5hYmxlZD8iOiBmYWxzZSwgImFsbG93X2Nv
+      ZGVfZXhlY3V0aW9uPyI6IGZhbHNlLCAibWF4X3JldHJ5X2xpbWl0IjogMiwgInRvb2xzX25hbWVz
+      IjogW119XUqHAgoKY3Jld190YXNrcxL4AQr1AVt7ImtleSI6ICJhZmE2OThiMjYyZDM1NDNmOWE2
+      MTFlNGQ1MTQ1ZWQ2YSIsICJpZCI6ICI2ODZjZWMzMy00M2NiLTQwMjMtYTliMy03YjI1NDI2ODQ0
+      NGQiLCAiYXN5bmNfZXhlY3V0aW9uPyI6IGZhbHNlLCAiaHVtYW5faW5wdXQ/IjogZmFsc2UsICJh
+      Z2VudF9yb2xlIjogInt0b3BpY30gUmVzZWFyY2hlciIsICJhZ2VudF9rZXkiOiAiZjMzODZmNmQ4
+      ZGE3NWFhNDE2YTZlMzEwMDUzZjc2OTgiLCAidG9vbHNfbmFtZXMiOiBbXX1degIYAYUBAAEAABKO
+      AgoQNHXkEnQNl2Q7+SvDnzMvsxIIWYgm0YNoMHEqDFRhc2sgQ3JlYXRlZDABOVACXoBzivUXQdiS
+      XoBzivUXSi4KCGNyZXdfa2V5EiIKIDk4YTdkMjE0MjUyMTA3NjkzOGNjODdjNzY5ZGVkY2QzSjEK
+      B2NyZXdfaWQSJgokZDM1MDU0MWYtNjZlNS00NTE3LTkzYjItMDhjOGUzMDNlZGJiSi4KCHRhc2tf
+      a2V5EiIKIGFmYTY5OGIyNjJkMzU0M2Y5YTYxMWU0ZDUxNDVlZDZhSjEKB3Rhc2tfaWQSJgokNjg2
+      Y2VjMzMtNDNjYi00MDIzLWE5YjMtN2IyNTQyNjg0NDRkegIYAYUBAAEAAA==
+    headers:
+      Accept:
+      - '*/*'
+      Accept-Encoding:
+      - gzip, deflate
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '2779'
+      Content-Type:
+      - application/x-protobuf
+      User-Agent:
+      - OTel-OTLP-Exporter-Python/1.27.0
+    method: POST
+    uri: https://telemetry.crewai.com:4319/v1/traces
+  response:
+    body:
+      string: "\n\0"
+    headers:
+      Content-Length:
+      - '2'
+      Content-Type:
+      - application/x-protobuf
+      Date:
+      - Sun, 15 Sep 2024 22:11:04 GMT
+    status:
+      code: 200
+      message: OK
+- request:
     body: '{"messages": [{"role": "system", "content": "You are {topic} Researcher.
       You have a lot of experience with {topic}.\nYour personal goal is: Express hot
       takes on {topic}.\nTo give my best complete final answer to the task use the
@@ -10,7 +89,7 @@ interactions:
       is the expect criteria for your final answer: {points} bullet points about {topic}.\nyou
       MUST return the actual complete content as the final answer, not a summary.\n\nBegin!
       This is VERY important to you, use the tools available and give your best Final
-      Answer, your job depends on it!\n\nThought:"}], "model": "gpt-4o", "stop": ["\nResult"]}'
+      Answer, your job depends on it!\n\nThought:"}], "model": "gpt-4o", "stop": ["\nObservation:"]}'
     headers:
       accept:
       - application/json
@@ -19,12 +98,12 @@ interactions:
       connection:
       - keep-alive
       content-length:
-      - '897'
+      - '903'
       content-type:
       - application/json
       cookie:
-      - _cfuvid=Bz2zevKuFYZqnEFwqmqVHcRo5pT0fm0fTtc_6_VQs4g-1726379702153-0.0.1.1-604800000;
-        __cf_bm=NOn1n25T8u1eKhL05A4mBgpDvwojMRvK1SB7TGDEjFU-1726383316-1.0.1.1-kUyz.anEyDoe9wXgChl5UWW3Z9pFTgIpyZfqI6rucN2vXQHH6k.DSvUtilpKOPnhI4LtmQYBhxkJ6wKLfS3J8Q
+      - __cf_bm=xCQEG8vgEvQfut0bkj2xgre9z9ePZhdKdNxBphhvH6s-1726437753-1.0.1.1-5qo0zwDCcKDtqvIzDbp2sLEPCey8v5DAsf0Mg6f2RmooOW9FXTw2P66VCTTF.vCwTpWBIFk0vzKmBAPOt6urIg;
+        _cfuvid=TiTyEciy7HrUlIDEsELZqkUyM4Fyn8OldZd4JefFMOA-1726437753108-0.0.1.1-604800000
       host:
       - api.openai.com
       user-agent:
@@ -48,21 +127,41 @@ interactions:
     method: POST
     uri: https://api.openai.com/v1/chat/completions
   response:
-    content: "{\n  \"id\": \"chatcmpl-A7dXA1fCP0pozLRZ7JejylBObenF5\",\n  \"object\":
-      \"chat.completion\",\n  \"created\": 1726383628,\n  \"model\": \"gpt-4o-2024-05-13\",\n
+    content: "{\n  \"id\": \"chatcmpl-A7rkLnhul1HBDWnEIvMzgKmbEeF3e\",\n  \"object\":
+      \"chat.completion\",\n  \"created\": 1726438261,\n  \"model\": \"gpt-4o-2024-05-13\",\n
       \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
       \"assistant\",\n        \"content\": \"Thought: I now can give a great answer
-      \ \\nFinal Answer: Please provide the specific topic and the points you would
-      like me to discuss about the topic.\",\n        \"refusal\": null\n      },\n
-      \     \"logprobs\": null,\n      \"finish_reason\": \"stop\"\n    }\n  ],\n
-      \ \"usage\": {\n    \"prompt_tokens\": 178,\n    \"completion_tokens\": 31,\n
-      \   \"total_tokens\": 209,\n    \"completion_tokens_details\": {\n      \"reasoning_tokens\":
+      \\nFinal Answer: \\n\\nAnalysis around {topic}:\\n\\n1. **Historical Context**:
+      Understanding the origin and development of {topic} provides a comprehensive
+      backdrop that highlights significant milestones, key figures, and critical events
+      that have shaped its current state. This perspective allows us to appreciate
+      the nuances and incremental advancements in the field.\\n\\n2. **Current Trends**:
+      Analyzing recent trends gives insight into where {topic} is heading. This includes
+      emerging technologies, methodologies, and practices that are shaping the present
+      landscape. Keeping up with these trends is crucial for staying relevant and
+      competitive in the field.\\n\\n3. **Challenges and Controversies**: Identifying
+      the major challenges and controversies within {topic} helps delineate areas
+      that require further research and debate. These might include ethical considerations,
+      regulatory hurdles, or technological limitations that need to be addressed to
+      ensure sustainable progress.\\n\\n4. **Impact and Applications**: Examining
+      the practical applications and impact of {topic} illustrates its relevance and
+      utility in various sectors. This involves looking at how {topic} has been implemented
+      in real-world scenarios and its effects on society, economy, and different industries.\\n\\n5.
+      **Future Outlook**: Projecting the future trajectory of {topic} offers predictions
+      based on current data, expert opinions, and trend analysis. This forward-looking
+      perspective can guide policymakers, researchers, and industry leaders in making
+      informed decisions that will shape the future landscape of {topic}.\\n\\nBy
+      exploring these points, we gain a holistic understanding of {topic}, its significance,
+      and the direction it is likely to take in the coming years.\",\n        \"refusal\":
+      null\n      },\n      \"logprobs\": null,\n      \"finish_reason\": \"stop\"\n
+      \   }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 178,\n    \"completion_tokens\":
+      324,\n    \"total_tokens\": 502,\n    \"completion_tokens_details\": {\n      \"reasoning_tokens\":
       0\n    }\n  },\n  \"system_fingerprint\": \"fp_25624ae3a5\"\n}\n"
     headers:
       CF-Cache-Status:
       - DYNAMIC
       CF-RAY:
-      - 8c36bd6dcdfd7454-MIA
+      - 8c3bf33c3db5a4ca-MIA
       Connection:
       - keep-alive
       Content-Encoding:
@@ -70,7 +169,7 @@ interactions:
       Content-Type:
       - application/json
       Date:
-      - Sun, 15 Sep 2024 07:00:29 GMT
+      - Sun, 15 Sep 2024 22:11:05 GMT
       Server:
       - cloudflare
       Transfer-Encoding:
@@ -84,7 +183,7 @@ interactions:
       openai-organization:
       - crewai-iuxna1
       openai-processing-ms:
-      - '359'
+      - '4206'
       openai-version:
       - '2020-10-01'
       strict-transport-security:
@@ -102,7 +201,7 @@ interactions:
       x-ratelimit-reset-tokens:
       - 0s
       x-request-id:
-      - req_390f92ba6820b394eb7f0c14df34828b
+      - req_52585c23a15970f6458a252aa783e69d
     http_version: HTTP/1.1
     status_code: 200
 version: 1

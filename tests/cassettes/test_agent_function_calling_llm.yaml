@@ -16,7 +16,7 @@ interactions:
       is the expect criteria for your final answer: The final paragraph.\nyou MUST
       return the actual complete content as the final answer, not a summary.\n\nBegin!
       This is VERY important to you, use the tools available and give your best Final
-      Answer, your job depends on it!\n\nThought:"}], "model": "gpt-4o", "stop": ["\nResult"]}'
+      Answer, your job depends on it!\n\nThought:"}], "model": "gpt-4o", "stop": ["\nObservation:"]}'
     headers:
       accept:
       - application/json
@@ -25,9 +25,12 @@ interactions:
       connection:
       - keep-alive
       content-length:
-      - '1371'
+      - '1377'
       content-type:
       - application/json
+      cookie:
+      - __cf_bm=xCQEG8vgEvQfut0bkj2xgre9z9ePZhdKdNxBphhvH6s-1726437753-1.0.1.1-5qo0zwDCcKDtqvIzDbp2sLEPCey8v5DAsf0Mg6f2RmooOW9FXTw2P66VCTTF.vCwTpWBIFk0vzKmBAPOt6urIg;
+        _cfuvid=TiTyEciy7HrUlIDEsELZqkUyM4Fyn8OldZd4JefFMOA-1726437753108-0.0.1.1-604800000
       host:
       - api.openai.com
       user-agent:
@@ -51,20 +54,20 @@ interactions:
     method: POST
     uri: https://api.openai.com/v1/chat/completions
   response:
-    content: "{\n  \"id\": \"chatcmpl-A7pYOSyCOlKTkdDHBdEGwBc8Q9Rcg\",\n  \"object\":
-      \"chat.completion\",\n  \"created\": 1726429832,\n  \"model\": \"gpt-4o-2024-05-13\",\n
+    content: "{\n  \"id\": \"chatcmpl-A7rgZEMI5yFepHogwjwlc6KVM7xW6\",\n  \"object\":
+      \"chat.completion\",\n  \"created\": 1726438027,\n  \"model\": \"gpt-4o-2024-05-13\",\n
       \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
-      \"assistant\",\n        \"content\": \"I need to gather information about AI
-      to write an excellent paragraph. \\n\\nAction: learn_about_AI\\nAction Input:
-      {}\",\n        \"refusal\": null\n      },\n      \"logprobs\": null,\n      \"finish_reason\":
-      \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 277,\n    \"completion_tokens\":
-      24,\n    \"total_tokens\": 301,\n    \"completion_tokens_details\": {\n      \"reasoning_tokens\":
-      0\n    }\n  },\n  \"system_fingerprint\": \"fp_25624ae3a5\"\n}\n"
+      \"assistant\",\n        \"content\": \"Thought: I should gather information
+      on AI to write an informative and amazing paragraph about it.\\n\\nAction: learn_about_AI\\nAction
+      Input: {}\",\n        \"refusal\": null\n      },\n      \"logprobs\": null,\n
+      \     \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\":
+      277,\n    \"completion_tokens\": 28,\n    \"total_tokens\": 305,\n    \"completion_tokens_details\":
+      {\n      \"reasoning_tokens\": 0\n    }\n  },\n  \"system_fingerprint\": \"fp_25624ae3a5\"\n}\n"
     headers:
       CF-Cache-Status:
       - DYNAMIC
       CF-RAY:
-      - 8c3b2572ba927431-MIA
+      - 8c3bed85bac2a4ca-MIA
       Connection:
       - keep-alive
       Content-Encoding:
@@ -72,15 +75,9 @@ interactions:
       Content-Type:
       - application/json
       Date:
-      - Sun, 15 Sep 2024 19:50:32 GMT
+      - Sun, 15 Sep 2024 22:07:07 GMT
       Server:
       - cloudflare
-      Set-Cookie:
-      - __cf_bm=FibOHMztCGP4kfVoS9BookQQGZtYBbmHXjtxEfZ..TU-1726429832-1.0.1.1-lrRK2EAGi8KuD70I.39t4tx0NkwutIhWn.vwMMIEnaijDRNqGNmezEyeqlLwLMlFGnfpapINdyJdCMhYqEg1Ow;
-        path=/; expires=Sun, 15-Sep-24 20:20:32 GMT; domain=.api.openai.com; HttpOnly;
-        Secure; SameSite=None
-      - _cfuvid=l2b2oP3HqGQzHTnAoFlscZueCqkrQ8_AiB_5gvF1K7U-1726429832537-0.0.1.1-604800000;
-        path=/; domain=.api.openai.com; HttpOnly; Secure; SameSite=None
       Transfer-Encoding:
       - chunked
       X-Content-Type-Options:
@@ -92,7 +89,7 @@ interactions:
       openai-organization:
       - crewai-iuxna1
       openai-processing-ms:
-      - '269'
+      - '326'
       openai-version:
       - '2020-10-01'
       strict-transport-security:
@@ -110,125 +107,7 @@ interactions:
       x-ratelimit-reset-tokens:
       - 0s
       x-request-id:
-      - req_09fae8d84a569255697f32b1dec4b4b8
-    http_version: HTTP/1.1
-    status_code: 200
-- request:
-    body: '{"messages": [{"role": "user", "content": "Only tools available:\n###\nTool
-      Name: learn_about_ai\nTool Description: learn_about_AI() - Useful for when you
-      need to learn about AI to write an paragraph about it. \nTool Arguments: {}\n\nReturn
-      a valid schema for the tool, the tool name must be exactly equal one of the
-      options, use this text to inform the valid output schema:\n\n### TEXT \nI need
-      to gather information about AI to write an excellent paragraph. \n\nAction:
-      learn_about_AI\nAction Input: {}"}, {"role": "system", "content": "The schema
-      should have the following structure, only two keys:\n- tool_name: str\n- arguments:
-      dict (with all arguments being passed)\n\nExample:\n{\"tool_name\": \"tool name\",
-      \"arguments\": {\"arg_name1\": \"value\", \"arg_name2\": 2}}"}], "model": "gpt-4o",
-      "tool_choice": {"type": "function", "function": {"name": "InstructorToolCalling"}},
-      "tools": [{"type": "function", "function": {"name": "InstructorToolCalling",
-      "description": "Correctly extracted `InstructorToolCalling` with all the required
-      parameters with correct types", "parameters": {"properties": {"tool_name": {"description":
-      "The name of the tool to be called.", "title": "Tool Name", "type": "string"},
-      "arguments": {"anyOf": [{"type": "object"}, {"type": "null"}], "description":
-      "A dictionary of arguments to be passed to the tool.", "title": "Arguments"}},
-      "required": ["arguments", "tool_name"], "type": "object"}}}]}'
-    headers:
-      accept:
-      - application/json
-      accept-encoding:
-      - gzip, deflate
-      connection:
-      - keep-alive
-      content-length:
-      - '1432'
-      content-type:
-      - application/json
-      host:
-      - api.openai.com
-      user-agent:
-      - OpenAI/Python 1.45.0
-      x-stainless-arch:
-      - arm64
-      x-stainless-async:
-      - 'false'
-      x-stainless-lang:
-      - python
-      x-stainless-os:
-      - MacOS
-      x-stainless-package-version:
-      - 1.45.0
-      x-stainless-raw-response:
-      - 'true'
-      x-stainless-runtime:
-      - CPython
-      x-stainless-runtime-version:
-      - 3.11.7
-    method: POST
-    uri: https://api.openai.com/v1/chat/completions
-  response:
-    content: "{\n  \"id\": \"chatcmpl-A7pYPq80ttzgRWVxT29zeNTbREDEW\",\n  \"object\":
-      \"chat.completion\",\n  \"created\": 1726429833,\n  \"model\": \"gpt-4o-2024-05-13\",\n
-      \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
-      \"assistant\",\n        \"content\": null,\n        \"tool_calls\": [\n          {\n
-      \           \"id\": \"call_pFDtg2TwvXTD9iMH50NrxA2i\",\n            \"type\":
-      \"function\",\n            \"function\": {\n              \"name\": \"InstructorToolCalling\",\n
-      \             \"arguments\": \"{\\\"tool_name\\\":\\\"learn_about_ai\\\",\\\"arguments\\\":null}\"\n
-      \           }\n          }\n        ],\n        \"refusal\": null\n      },\n
-      \     \"logprobs\": null,\n      \"finish_reason\": \"stop\"\n    }\n  ],\n
-      \ \"usage\": {\n    \"prompt_tokens\": 259,\n    \"completion_tokens\": 12,\n
-      \   \"total_tokens\": 271,\n    \"completion_tokens_details\": {\n      \"reasoning_tokens\":
-      0\n    }\n  },\n  \"system_fingerprint\": \"fp_25624ae3a5\"\n}\n"
-    headers:
-      CF-Cache-Status:
-      - DYNAMIC
-      CF-RAY:
-      - 8c3b25783ec68ddc-MIA
-      Connection:
-      - keep-alive
-      Content-Encoding:
-      - gzip
-      Content-Type:
-      - application/json
-      Date:
-      - Sun, 15 Sep 2024 19:50:33 GMT
-      Server:
-      - cloudflare
-      Set-Cookie:
-      - __cf_bm=HYHDoH_NPmJ_d6.NV7B4y7H6jBmyYIdQxtd0qko4NAI-1726429833-1.0.1.1-D3qXDhQcpfXTIkSCCBrsmQ.fJ2Qx4rDkwfEo8QbEPu_MLuA5OPtEMuZ1_SKj7yGzEIbhBRF6X5zLpNhjnAJmjw;
-        path=/; expires=Sun, 15-Sep-24 20:20:33 GMT; domain=.api.openai.com; HttpOnly;
-        Secure; SameSite=None
-      - _cfuvid=Vap0Gpj_VfS8LdBJJx_qA58dOZPA5S9majSAGqO4F9U-1726429833360-0.0.1.1-604800000;
-        path=/; domain=.api.openai.com; HttpOnly; Secure; SameSite=None
-      Transfer-Encoding:
-      - chunked
-      X-Content-Type-Options:
-      - nosniff
-      access-control-expose-headers:
-      - X-Request-ID
-      alt-svc:
-      - h3=":443"; ma=86400
-      openai-organization:
-      - crewai-iuxna1
-      openai-processing-ms:
-      - '236'
-      openai-version:
-      - '2020-10-01'
-      strict-transport-security:
-      - max-age=15552000; includeSubDomains; preload
-      x-ratelimit-limit-requests:
-      - '10000'
-      x-ratelimit-limit-tokens:
-      - '30000000'
-      x-ratelimit-remaining-requests:
-      - '9999'
-      x-ratelimit-remaining-tokens:
-      - '29999813'
-      x-ratelimit-reset-requests:
-      - 6ms
-      x-ratelimit-reset-tokens:
-      - 0s
-      x-request-id:
-      - req_051f2bd4c9c2445bc10cd52c0b4123a6
+      - req_932bbc6b2a64e0ae209eeeb563390460
     http_version: HTTP/1.1
     status_code: 200
 - request:
@@ -249,9 +128,11 @@ interactions:
       return the actual complete content as the final answer, not a summary.\n\nBegin!
       This is VERY important to you, use the tools available and give your best Final
       Answer, your job depends on it!\n\nThought:"}, {"role": "assistant", "content":
-      "I need to gather information about AI to write an excellent paragraph. \n\nAction:
-      learn_about_AI\nAction Input: {}\nObservation: AI is a very broad field."}],
-      "model": "gpt-4o", "stop": ["\nResult"]}'
+      "Thought: I should gather information on AI to write an informative and amazing
+      paragraph about it.\n\nAction: learn_about_AI\nAction Input: {}\nObservation:
+      You tried to use the tool <Mock name=''from_litellm().chat.completions.create().tool_name''
+      id=''11004817744''>, but it doesn''t exist. You must use one of the following
+      tools, use one at time: learn_about_ai."}], "model": "gpt-4o", "stop": ["\nObservation:"]}'
     headers:
       accept:
       - application/json
@@ -260,12 +141,12 @@ interactions:
       connection:
       - keep-alive
       content-length:
-      - '1564'
+      - '1776'
       content-type:
       - application/json
       cookie:
-      - __cf_bm=FibOHMztCGP4kfVoS9BookQQGZtYBbmHXjtxEfZ..TU-1726429832-1.0.1.1-lrRK2EAGi8KuD70I.39t4tx0NkwutIhWn.vwMMIEnaijDRNqGNmezEyeqlLwLMlFGnfpapINdyJdCMhYqEg1Ow;
-        _cfuvid=l2b2oP3HqGQzHTnAoFlscZueCqkrQ8_AiB_5gvF1K7U-1726429832537-0.0.1.1-604800000
+      - __cf_bm=xCQEG8vgEvQfut0bkj2xgre9z9ePZhdKdNxBphhvH6s-1726437753-1.0.1.1-5qo0zwDCcKDtqvIzDbp2sLEPCey8v5DAsf0Mg6f2RmooOW9FXTw2P66VCTTF.vCwTpWBIFk0vzKmBAPOt6urIg;
+        _cfuvid=TiTyEciy7HrUlIDEsELZqkUyM4Fyn8OldZd4JefFMOA-1726437753108-0.0.1.1-604800000
       host:
       - api.openai.com
       user-agent:
@@ -289,41 +170,21 @@ interactions:
     method: POST
     uri: https://api.openai.com/v1/chat/completions
   response:
-    content: "{\n  \"id\": \"chatcmpl-A7pYPZe2xU0f5FmhdhT3lGQUVGrTH\",\n  \"object\":
-      \"chat.completion\",\n  \"created\": 1726429833,\n  \"model\": \"gpt-4o-2024-05-13\",\n
+    content: "{\n  \"id\": \"chatcmpl-A7rgZoEMr1Lwa4sk2KRDNBexplmXQ\",\n  \"object\":
+      \"chat.completion\",\n  \"created\": 1726438027,\n  \"model\": \"gpt-4o-2024-05-13\",\n
       \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
-      \"assistant\",\n        \"content\": \"I now have the information needed to
-      write a paragraph. Here it is:\\n\\nArtificial Intelligence (AI) is revolutionizing
-      the way we live and work by enabling machines to perform tasks that traditionally
-      required human intelligence. From natural language processing and speech recognition
-      to autonomous vehicles and personalized recommendations, AI systems are designed
-      to learn from data, adapt to new inputs, and carry out complex tasks with remarkable
-      efficiency. AI not only enhances productivity and innovation but also opens
-      up new frontiers in scientific research, healthcare, and countless other industries.
-      As we continue to harness the power of AI, it is crucial to ensure ethical considerations
-      and responsible deployments to maximize its benefits for society while minimizing
-      potential risks.\\n\\nThought: I believe the paragraph is well-crafted, but
-      I should review it to ensure it meets the criteria of being amazing.\\n\\nReviewing
-      the paragraph, it seems informative, cohesive, and highlights the significance
-      and potential of AI. It also addresses the importance of ethical considerations,
-      which adds depth.\\n\\nFinal Answer: Artificial Intelligence (AI) is revolutionizing
-      the way we live and work by enabling machines to perform tasks that traditionally
-      required human intelligence. From natural language processing and speech recognition
-      to autonomous vehicles and personalized recommendations, AI systems are designed
-      to learn from data, adapt to new inputs, and carry out complex tasks with remarkable
-      efficiency. AI not only enhances productivity and innovation but also opens
-      up new frontiers in scientific research, healthcare, and countless other industries.
-      As we continue to harness the power of AI, it is crucial to ensure ethical considerations
-      and responsible deployments to maximize its benefits for society while minimizing
-      potential risks.\",\n        \"refusal\": null\n      },\n      \"logprobs\":
-      null,\n      \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\":
-      314,\n    \"completion_tokens\": 314,\n    \"total_tokens\": 628,\n    \"completion_tokens_details\":
-      {\n      \"reasoning_tokens\": 0\n    }\n  },\n  \"system_fingerprint\": \"fp_25624ae3a5\"\n}\n"
+      \"assistant\",\n        \"content\": \"Thought: It appears I used an incorrect
+      tool name earlier. I'll attempt using the correct tool to learn about AI.\\n\\nAction:
+      learn_about_AI\\nAction Input: {}\",\n        \"refusal\": null\n      },\n
+      \     \"logprobs\": null,\n      \"finish_reason\": \"stop\"\n    }\n  ],\n
+      \ \"usage\": {\n    \"prompt_tokens\": 367,\n    \"completion_tokens\": 33,\n
+      \   \"total_tokens\": 400,\n    \"completion_tokens_details\": {\n      \"reasoning_tokens\":
+      0\n    }\n  },\n  \"system_fingerprint\": \"fp_25624ae3a5\"\n}\n"
     headers:
       CF-Cache-Status:
       - DYNAMIC
       CF-RAY:
-      - 8c3b257b7e607431-MIA
+      - 8c3bed899887a4ca-MIA
       Connection:
       - keep-alive
       Content-Encoding:
@@ -331,7 +192,7 @@ interactions:
       Content-Type:
       - application/json
       Date:
-      - Sun, 15 Sep 2024 19:50:36 GMT
+      - Sun, 15 Sep 2024 22:07:08 GMT
       Server:
       - cloudflare
       Transfer-Encoding:
@@ -345,7 +206,7 @@ interactions:
       openai-organization:
       - crewai-iuxna1
       openai-processing-ms:
-      - '2838'
+      - '373'
       openai-version:
       - '2020-10-01'
       strict-transport-security:
@@ -357,13 +218,209 @@ interactions:
       x-ratelimit-remaining-requests:
       - '9999'
       x-ratelimit-remaining-tokens:
-      - '29999637'
+      - '29999585'
       x-ratelimit-reset-requests:
       - 6ms
       x-ratelimit-reset-tokens:
       - 0s
       x-request-id:
-      - req_848e03ef6a6129ae5b05bafac981e3ab
+      - req_d9a81adef7f496f86b1bb02d6f51dc27
+    http_version: HTTP/1.1
+    status_code: 200
+- request:
+    body: !!binary |
+      Cs0OCiQKIgoMc2VydmljZS5uYW1lEhIKEGNyZXdBSS10ZWxlbWV0cnkSpA4KEgoQY3Jld2FpLnRl
+      bGVtZXRyeRKRAQoQyUIuEmFH9oZY5MxkkXmECBII63TN/kAheSYqClRvb2wgVXNhZ2UwATmA2vt/
+      PIr1F0G4BgGAPIr1F0oaCg5jcmV3YWlfdmVyc2lvbhIICgYwLjU2LjBKHQoJdG9vbF9uYW1lEhAK
+      DmxlYXJuX2Fib3V0X0FJSg4KCGF0dGVtcHRzEgIYAXoCGAGFAQABAAASkQEKEOsByVg+JleiWKv+
+      WLh6LXoSCCyvF3NWwTLKKgpUb29sIFVzYWdlMAE5mEuKrjyK9RdByDeMrjyK9RdKGgoOY3Jld2Fp
+      X3ZlcnNpb24SCAoGMC41Ni4wSh0KCXRvb2xfbmFtZRIQCg5sZWFybl9hYm91dF9BSUoOCghhdHRl
+      bXB0cxICGAF6AhgBhQEAAQAAEpACChDcjlgxXTouKlicNTsgdxZEEgiaLrXzrF0GNyoOVGFzayBF
+      eGVjdXRpb24wATnQ+ZSKOIr1F0EIUYMDPYr1F0ouCghjcmV3X2tleRIiCiA0OTRmMzY1NzIzN2Fk
+      OGEzMDM1YjJmMWJlZWNkYzY3N0oxCgdjcmV3X2lkEiYKJDAyNDZmMDRkLWYzNmItNDdiNi04NTg4
+      LWM4NDUzYjQ3YzI4OUouCgh0YXNrX2tleRIiCiBmMjU5N2M3ODY3ZmJlMzI0ZGM2NWRjMDhkZmRi
+      ZmM2Y0oxCgd0YXNrX2lkEiYKJDhmNWYxNDhkLTNmMjQtNGFkZC05Mzc4LThlMmE0ODg4ZDI0OXoC
+      GAGFAQABAAASwQcKEFN6rRu5wpQi1V8PhlU/VJYSCNm9X+AY3xXeKgxDcmV3IENyZWF0ZWQwATl4
+      0/0EPYr1F0FgSAAFPYr1F0oaCg5jcmV3YWlfdmVyc2lvbhIICgYwLjU2LjBKGgoOcHl0aG9uX3Zl
+      cnNpb24SCAoGMy4xMS43Si4KCGNyZXdfa2V5EiIKIDQ5NGYzNjU3MjM3YWQ4YTMwMzViMmYxYmVl
+      Y2RjNjc3SjEKB2NyZXdfaWQSJgokMzA1NmZkYjItMWY2Yy00NWZkLWEyOTYtMjQwODc1OWE2NDNh
+      ShwKDGNyZXdfcHJvY2VzcxIMCgpzZXF1ZW50aWFsShEKC2NyZXdfbWVtb3J5EgIQAEoaChRjcmV3
+      X251bWJlcl9vZl90YXNrcxICGAFKGwoVY3Jld19udW1iZXJfb2ZfYWdlbnRzEgIYAUrgAgoLY3Jl
+      d19hZ2VudHMS0AIKzQJbeyJrZXkiOiAiZTE0OGU1MzIwMjkzNDk5ZjhjZWJlYTgyNmU3MjU4MmIi
+      LCAiaWQiOiAiOWI2YWRlNWMtOWQ0Yi00MTlkLWI1ODctMDM2MDcwOTRlMzZjIiwgInJvbGUiOiAi
+      dGVzdCByb2xlIiwgInZlcmJvc2U/IjogZmFsc2UsICJtYXhfaXRlciI6IDIsICJtYXhfcnBtIjog
+      bnVsbCwgImZ1bmN0aW9uX2NhbGxpbmdfbGxtIjogImdwdC00byIsICJsbG0iOiAiZ3B0LTRvIiwg
+      ImRlbGVnYXRpb25fZW5hYmxlZD8iOiBmYWxzZSwgImFsbG93X2NvZGVfZXhlY3V0aW9uPyI6IGZh
+      bHNlLCAibWF4X3JldHJ5X2xpbWl0IjogMiwgInRvb2xzX25hbWVzIjogWyJsZWFybl9hYm91dF9h
+      aSJdfV1KjgIKCmNyZXdfdGFza3MS/wEK/AFbeyJrZXkiOiAiZjI1OTdjNzg2N2ZiZTMyNGRjNjVk
+      YzA4ZGZkYmZjNmMiLCAiaWQiOiAiYzVlYzlkYmMtNzllYy00MTY4LWFhZDUtOGFhNWNkZTYyYTdm
+      IiwgImFzeW5jX2V4ZWN1dGlvbj8iOiBmYWxzZSwgImh1bWFuX2lucHV0PyI6IGZhbHNlLCAiYWdl
+      bnRfcm9sZSI6ICJ0ZXN0IHJvbGUiLCAiYWdlbnRfa2V5IjogImUxNDhlNTMyMDI5MzQ5OWY4Y2Vi
+      ZWE4MjZlNzI1ODJiIiwgInRvb2xzX25hbWVzIjogWyJsZWFybl9hYm91dF9haSJdfV16AhgBhQEA
+      AQAAEo4CChDcS8crtUlCKoN94WrUagPuEgjuL+aA0VgNDSoMVGFzayBDcmVhdGVkMAE50IIPBT2K
+      9RdBeOQPBT2K9RdKLgoIY3Jld19rZXkSIgogNDk0ZjM2NTcyMzdhZDhhMzAzNWIyZjFiZWVjZGM2
+      NzdKMQoHY3Jld19pZBImCiQzMDU2ZmRiMi0xZjZjLTQ1ZmQtYTI5Ni0yNDA4NzU5YTY0M2FKLgoI
+      dGFza19rZXkSIgogZjI1OTdjNzg2N2ZiZTMyNGRjNjVkYzA4ZGZkYmZjNmNKMQoHdGFza19pZBIm
+      CiRjNWVjOWRiYy03OWVjLTQxNjgtYWFkNS04YWE1Y2RlNjJhN2Z6AhgBhQEAAQAA
+    headers:
+      Accept:
+      - '*/*'
+      Accept-Encoding:
+      - gzip, deflate
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '1872'
+      Content-Type:
+      - application/x-protobuf
+      User-Agent:
+      - OTel-OTLP-Exporter-Python/1.27.0
+    method: POST
+    uri: https://telemetry.crewai.com:4319/v1/traces
+  response:
+    body:
+      string: "\n\0"
+    headers:
+      Content-Length:
+      - '2'
+      Content-Type:
+      - application/x-protobuf
+      Date:
+      - Sun, 15 Sep 2024 22:07:09 GMT
+    status:
+      code: 200
+      message: OK
+- request:
+    body: '{"messages": [{"role": "system", "content": "You are test role. test backstory\nYour
+      personal goal is: test goal\nYou ONLY have access to the following tools, and
+      should NEVER make up tools that are not listed here:\n\nTool Name: learn_about_AI(*args:
+      Any, **kwargs: Any) -> Any\nTool Description: learn_about_AI() - Useful for
+      when you need to learn about AI to write an paragraph about it. \nTool Arguments:
+      {}\n\nUse the following format:\n\nThought: you should always think about what
+      to do\nAction: the action to take, only one name of [learn_about_AI], just the
+      name, exactly as it''s written.\nAction Input: the input to the action, just
+      a simple python dictionary, enclosed in curly braces, using \" to wrap keys
+      and values.\nObservation: the result of the action\n\nOnce all necessary information
+      is gathered:\n\nThought: I now know the final answer\nFinal Answer: the final
+      answer to the original input question\n"}, {"role": "user", "content": "\nCurrent
+      Task: Write and then review an small paragraph on AI until it''s AMAZING\n\nThis
+      is the expect criteria for your final answer: The final paragraph.\nyou MUST
+      return the actual complete content as the final answer, not a summary.\n\nBegin!
+      This is VERY important to you, use the tools available and give your best Final
+      Answer, your job depends on it!\n\nThought:"}, {"role": "assistant", "content":
+      "Thought: I should gather information on AI to write an informative and amazing
+      paragraph about it.\n\nAction: learn_about_AI\nAction Input: {}\nObservation:
+      You tried to use the tool <Mock name=''from_litellm().chat.completions.create().tool_name''
+      id=''11004817744''>, but it doesn''t exist. You must use one of the following
+      tools, use one at time: learn_about_ai."}, {"role": "assistant", "content":
+      "Thought: It appears I used an incorrect tool name earlier. I''ll attempt using
+      the correct tool to learn about AI.\n\nAction: learn_about_AI\nAction Input:
+      {}\nObservation: You tried to use the tool <Mock name=''from_litellm().chat.completions.create().tool_name''
+      id=''11004817744''>, but it doesn''t exist. You must use one of the following
+      tools, use one at time: learn_about_ai.\nNow it''s time you MUST give your absolute
+      best final answer. You''ll ignore all previous instructions, stop using any
+      tools, and just return your absolute BEST Final answer."}], "model": "gpt-4o",
+      "stop": ["\nObservation:"]}'
+    headers:
+      accept:
+      - application/json
+      accept-encoding:
+      - gzip, deflate
+      connection:
+      - keep-alive
+      content-length:
+      - '2364'
+      content-type:
+      - application/json
+      cookie:
+      - __cf_bm=xCQEG8vgEvQfut0bkj2xgre9z9ePZhdKdNxBphhvH6s-1726437753-1.0.1.1-5qo0zwDCcKDtqvIzDbp2sLEPCey8v5DAsf0Mg6f2RmooOW9FXTw2P66VCTTF.vCwTpWBIFk0vzKmBAPOt6urIg;
+        _cfuvid=TiTyEciy7HrUlIDEsELZqkUyM4Fyn8OldZd4JefFMOA-1726437753108-0.0.1.1-604800000
+      host:
+      - api.openai.com
+      user-agent:
+      - OpenAI/Python 1.45.0
+      x-stainless-arch:
+      - arm64
+      x-stainless-async:
+      - 'false'
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - MacOS
+      x-stainless-package-version:
+      - 1.45.0
+      x-stainless-raw-response:
+      - 'true'
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.11.7
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    content: "{\n  \"id\": \"chatcmpl-A7rgadDMRHMZOqJpngwz9HTrEoj0A\",\n  \"object\":
+      \"chat.completion\",\n  \"created\": 1726438028,\n  \"model\": \"gpt-4o-2024-05-13\",\n
+      \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
+      \"assistant\",\n        \"content\": \"Thought: I need to write the paragraph
+      about AI based on my current knowledge without relying on tools.\\n\\nFinal
+      Answer: Artificial Intelligence (AI) is revolutionizing various industries by
+      enabling machines to mimic human intelligence processes. At its core, AI involves
+      the development of algorithms that can process vast amounts of data, recognize
+      patterns, and make decisions or predictions based on that information. This
+      technology is being utilized in diverse fields such as healthcare for diagnosing
+      diseases, finance for detecting fraudulent transactions, and automotive for
+      developing autonomous vehicles. As AI continues to evolve, it promises to bring
+      about even more transformative changes, enhancing efficiency and opening up
+      new possibilities that were previously unimaginable.\",\n        \"refusal\":
+      null\n      },\n      \"logprobs\": null,\n      \"finish_reason\": \"stop\"\n
+      \   }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 494,\n    \"completion_tokens\":
+      129,\n    \"total_tokens\": 623,\n    \"completion_tokens_details\": {\n      \"reasoning_tokens\":
+      0\n    }\n  },\n  \"system_fingerprint\": \"fp_25624ae3a5\"\n}\n"
+    headers:
+      CF-Cache-Status:
+      - DYNAMIC
+      CF-RAY:
+      - 8c3bed8dbedfa4ca-MIA
+      Connection:
+      - keep-alive
+      Content-Encoding:
+      - gzip
+      Content-Type:
+      - application/json
+      Date:
+      - Sun, 15 Sep 2024 22:07:09 GMT
+      Server:
+      - cloudflare
+      Transfer-Encoding:
+      - chunked
+      X-Content-Type-Options:
+      - nosniff
+      access-control-expose-headers:
+      - X-Request-ID
+      alt-svc:
+      - h3=":443"; ma=86400
+      openai-organization:
+      - crewai-iuxna1
+      openai-processing-ms:
+      - '1240'
+      openai-version:
+      - '2020-10-01'
+      strict-transport-security:
+      - max-age=15552000; includeSubDomains; preload
+      x-ratelimit-limit-requests:
+      - '10000'
+      x-ratelimit-limit-tokens:
+      - '30000000'
+      x-ratelimit-remaining-requests:
+      - '9999'
+      x-ratelimit-remaining-tokens:
+      - '29999448'
+      x-ratelimit-reset-requests:
+      - 6ms
+      x-ratelimit-reset-tokens:
+      - 1ms
+      x-request-id:
+      - req_4add93bd93764c1a7377e5ef7c1e58dc
     http_version: HTTP/1.1
     status_code: 200
 version: 1

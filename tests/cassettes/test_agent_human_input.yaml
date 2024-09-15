@@ -9,7 +9,7 @@ interactions:
       is the expect criteria for your final answer: The word: Hi\nyou MUST return
       the actual complete content as the final answer, not a summary.\n\nBegin! This
       is VERY important to you, use the tools available and give your best Final Answer,
-      your job depends on it!\n\nThought:"}], "model": "gpt-4o", "stop": ["\nResult"]}'
+      your job depends on it!\n\nThought:"}], "model": "gpt-4o", "stop": ["\nObservation:"]}'
     headers:
       accept:
       - application/json
@@ -18,12 +18,12 @@ interactions:
       connection:
       - keep-alive
       content-length:
-      - '796'
+      - '802'
       content-type:
       - application/json
       cookie:
-      - __cf_bm=J1VIPhfusyyXtwM.1L9zbe3jdnU7NVyHC3AWiKXO280-1726379702-1.0.1.1-LDa9RyXFli18t4ZEuVAENTChdNAkRtdWXRkRLbBHbCXdobugQ3T.arhMpSKwtnBRXKPcC4b66UA7BsSy1VXDHQ;
-        _cfuvid=Bz2zevKuFYZqnEFwqmqVHcRo5pT0fm0fTtc_6_VQs4g-1726379702153-0.0.1.1-604800000
+      - __cf_bm=xCQEG8vgEvQfut0bkj2xgre9z9ePZhdKdNxBphhvH6s-1726437753-1.0.1.1-5qo0zwDCcKDtqvIzDbp2sLEPCey8v5DAsf0Mg6f2RmooOW9FXTw2P66VCTTF.vCwTpWBIFk0vzKmBAPOt6urIg;
+        _cfuvid=TiTyEciy7HrUlIDEsELZqkUyM4Fyn8OldZd4JefFMOA-1726437753108-0.0.1.1-604800000
       host:
       - api.openai.com
       user-agent:
@@ -47,10 +47,10 @@ interactions:
     method: POST
     uri: https://api.openai.com/v1/chat/completions
   response:
-    content: "{\n  \"id\": \"chatcmpl-A7citp5EzhqmoUZZyB47RbRMGjGtu\",\n  \"object\":
-      \"chat.completion\",\n  \"created\": 1726380511,\n  \"model\": \"gpt-4o-2024-05-13\",\n
+    content: "{\n  \"id\": \"chatcmpl-A7rghw1ikc2KDBW7rGDzpSuMBExqh\",\n  \"object\":
+      \"chat.completion\",\n  \"created\": 1726438035,\n  \"model\": \"gpt-4o-2024-05-13\",\n
       \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
-      \"assistant\",\n        \"content\": \"I now can give a great answer\\nFinal
+      \"assistant\",\n        \"content\": \"I now can give a great answer  \\nFinal
       Answer: Hi\",\n        \"refusal\": null\n      },\n      \"logprobs\": null,\n
       \     \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\":
       158,\n    \"completion_tokens\": 12,\n    \"total_tokens\": 170,\n    \"completion_tokens_details\":
@@ -59,7 +59,7 @@ interactions:
       CF-Cache-Status:
       - DYNAMIC
       CF-RAY:
-      - 8c3671567a16745a-MIA
+      - 8c3bedb6fd61a4ca-MIA
       Connection:
       - keep-alive
       Content-Encoding:
@@ -67,7 +67,7 @@ interactions:
       Content-Type:
       - application/json
       Date:
-      - Sun, 15 Sep 2024 06:08:32 GMT
+      - Sun, 15 Sep 2024 22:07:15 GMT
       Server:
       - cloudflare
       Transfer-Encoding:
@@ -81,7 +81,7 @@ interactions:
       openai-organization:
       - crewai-iuxna1
       openai-processing-ms:
-      - '168'
+      - '203'
       openai-version:
       - '2020-10-01'
       strict-transport-security:
@@ -99,7 +99,7 @@ interactions:
       x-ratelimit-reset-tokens:
       - 0s
       x-request-id:
-      - req_c7a0c6b4e286546fb8d4258c4c2c97ca
+      - req_305f1af9f01bd7cc124c783701d43296
     http_version: HTTP/1.1
     status_code: 200
 - request:
@@ -113,7 +113,7 @@ interactions:
       the actual complete content as the final answer, not a summary.\n\nBegin! This
       is VERY important to you, use the tools available and give your best Final Answer,
       your job depends on it!\n\nThought:"}, {"role": "user", "content": "Feedback:
-      Don''t say hi, say Hello instead!"}], "model": "gpt-4o", "stop": ["\nResult"]}'
+      Don''t say hi, say Hello instead!"}], "model": "gpt-4o", "stop": ["\nObservation:"]}'
     headers:
       accept:
       - application/json
@@ -122,12 +122,12 @@ interactions:
       connection:
       - keep-alive
       content-length:
-      - '871'
+      - '877'
       content-type:
       - application/json
       cookie:
-      - __cf_bm=J1VIPhfusyyXtwM.1L9zbe3jdnU7NVyHC3AWiKXO280-1726379702-1.0.1.1-LDa9RyXFli18t4ZEuVAENTChdNAkRtdWXRkRLbBHbCXdobugQ3T.arhMpSKwtnBRXKPcC4b66UA7BsSy1VXDHQ;
-        _cfuvid=Bz2zevKuFYZqnEFwqmqVHcRo5pT0fm0fTtc_6_VQs4g-1726379702153-0.0.1.1-604800000
+      - __cf_bm=xCQEG8vgEvQfut0bkj2xgre9z9ePZhdKdNxBphhvH6s-1726437753-1.0.1.1-5qo0zwDCcKDtqvIzDbp2sLEPCey8v5DAsf0Mg6f2RmooOW9FXTw2P66VCTTF.vCwTpWBIFk0vzKmBAPOt6urIg;
+        _cfuvid=TiTyEciy7HrUlIDEsELZqkUyM4Fyn8OldZd4JefFMOA-1726437753108-0.0.1.1-604800000
       host:
       - api.openai.com
       user-agent:
@@ -151,8 +151,8 @@ interactions:
     method: POST
     uri: https://api.openai.com/v1/chat/completions
   response:
-    content: "{\n  \"id\": \"chatcmpl-A7ciuhncQCGI0gpHGqwSBbup7Ht2m\",\n  \"object\":
-      \"chat.completion\",\n  \"created\": 1726380512,\n  \"model\": \"gpt-4o-2024-05-13\",\n
+    content: "{\n  \"id\": \"chatcmpl-A7rghwFmYBKYgzWpo28U23xUEqBNX\",\n  \"object\":
+      \"chat.completion\",\n  \"created\": 1726438035,\n  \"model\": \"gpt-4o-2024-05-13\",\n
       \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
       \"assistant\",\n        \"content\": \"Thought: I now can give a great answer\\nFinal
       Answer: Hello\",\n        \"refusal\": null\n      },\n      \"logprobs\": null,\n
@@ -163,7 +163,7 @@ interactions:
       CF-Cache-Status:
       - DYNAMIC
       CF-RAY:
-      - 8c36715a1e50745a-MIA
+      - 8c3bedbadb56a4ca-MIA
       Connection:
       - keep-alive
       Content-Encoding:
@@ -171,7 +171,7 @@ interactions:
       Content-Type:
       - application/json
       Date:
-      - Sun, 15 Sep 2024 06:08:32 GMT
+      - Sun, 15 Sep 2024 22:07:16 GMT
       Server:
       - cloudflare
       Transfer-Encoding:
@@ -185,7 +185,7 @@ interactions:
       openai-organization:
       - crewai-iuxna1
       openai-processing-ms:
-      - '177'
+      - '190'
       openai-version:
       - '2020-10-01'
       strict-transport-security:
@@ -203,7 +203,7 @@ interactions:
       x-ratelimit-reset-tokens:
       - 0s
       x-request-id:
-      - req_95e33011911e151f5b883f8c70557776
+      - req_19d8efbeb07ee400608a1fb49aff3e7f
     http_version: HTTP/1.1
     status_code: 200
 version: 1

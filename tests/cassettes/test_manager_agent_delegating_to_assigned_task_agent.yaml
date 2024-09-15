@@ -1,59 +1,5 @@
 interactions:
 - request:
-    body: !!binary |
-      CqAKCiQKIgoMc2VydmljZS5uYW1lEhIKEGNyZXdBSS10ZWxlbWV0cnkS9wkKEgoQY3Jld2FpLnRl
-      bGVtZXRyeRLgCQoQHBDbrX0zYcrRe7g/EQ53IhIIQ/HTS/VVfrUqDENyZXcgQ3JlYXRlZDABORAt
-      EU0QVvUXQbiCE00QVvUXShoKDmNyZXdhaV92ZXJzaW9uEggKBjAuNTYuMEoaCg5weXRob25fdmVy
-      c2lvbhIICgYzLjExLjdKLgoIY3Jld19rZXkSIgogZTNmZGEwZjMxMTBmZTgwYjE4OTQ3YzAxNDcx
-      NDMwYTRKMQoHY3Jld19pZBImCiRlY2FjYzEyYS0yOWJhLTQ0MmItOGY4My0wZTIxYmZlNTM0M2NK
-      HgoMY3Jld19wcm9jZXNzEg4KDGhpZXJhcmNoaWNhbEoRCgtjcmV3X21lbW9yeRICEABKGgoUY3Jl
-      d19udW1iZXJfb2ZfdGFza3MSAhgBShsKFWNyZXdfbnVtYmVyX29mX2FnZW50cxICGAJKjAUKC2Ny
-      ZXdfYWdlbnRzEvwECvkEW3sia2V5IjogIjhiZDIxMzliNTk3NTE4MTUwNmU0MWZkOWM0NTYzZDc1
-      IiwgImlkIjogImJkMGM4ZDAxLTAyZGMtNGRhMi1iMjA3LTg3Zjg4ZjEwZDg3NCIsICJyb2xlIjog
-      IlJlc2VhcmNoZXIiLCAidmVyYm9zZT8iOiBmYWxzZSwgIm1heF9pdGVyIjogMTUsICJtYXhfcnBt
-      IjogbnVsbCwgImZ1bmN0aW9uX2NhbGxpbmdfbGxtIjogbnVsbCwgImxsbSI6ICJncHQtNG8iLCAi
-      ZGVsZWdhdGlvbl9lbmFibGVkPyI6IGZhbHNlLCAiYWxsb3dfY29kZV9leGVjdXRpb24/IjogZmFs
-      c2UsICJtYXhfcmV0cnlfbGltaXQiOiAyLCAidG9vbHNfbmFtZXMiOiBbXX0sIHsia2V5IjogIjlh
-      NTAxNWVmNDg5NWRjNjI3OGQ1NDgxOGJhNDQ2YWY3IiwgImlkIjogImU0ZGVkM2RjLTBkODQtNDkx
-      Yi05YmRiLWNjYTNmODJiMTQxMiIsICJyb2xlIjogIlNlbmlvciBXcml0ZXIiLCAidmVyYm9zZT8i
-      OiBmYWxzZSwgIm1heF9pdGVyIjogMTUsICJtYXhfcnBtIjogbnVsbCwgImZ1bmN0aW9uX2NhbGxp
-      bmdfbGxtIjogbnVsbCwgImxsbSI6ICJncHQtNG8iLCAiZGVsZWdhdGlvbl9lbmFibGVkPyI6IGZh
-      bHNlLCAiYWxsb3dfY29kZV9leGVjdXRpb24/IjogZmFsc2UsICJtYXhfcmV0cnlfbGltaXQiOiAy
-      LCAidG9vbHNfbmFtZXMiOiBbXX1dSv8BCgpjcmV3X3Rhc2tzEvABCu0BW3sia2V5IjogIjVmYTY1
-      YzA2YTllMzFmMmM2OTU0MzI2NjhhY2Q2MmRkIiwgImlkIjogImUzNzY1YzkzLWZmODgtNDA0Zi1i
-      ZGU4LTJhNjk5NTUxZTFmOSIsICJhc3luY19leGVjdXRpb24/IjogZmFsc2UsICJodW1hbl9pbnB1
-      dD8iOiBmYWxzZSwgImFnZW50X3JvbGUiOiAiUmVzZWFyY2hlciIsICJhZ2VudF9rZXkiOiAiOGJk
-      MjEzOWI1OTc1MTgxNTA2ZTQxZmQ5YzQ1NjNkNzUiLCAidG9vbHNfbmFtZXMiOiBbXX1degIYAYUB
-      AAEAAA==
-    headers:
-      Accept:
-      - '*/*'
-      Accept-Encoding:
-      - gzip, deflate
-      Connection:
-      - keep-alive
-      Content-Length:
-      - '1315'
-      Content-Type:
-      - application/x-protobuf
-      User-Agent:
-      - OTel-OTLP-Exporter-Python/1.27.0
-    method: POST
-    uri: https://telemetry.crewai.com:4319/v1/traces
-  response:
-    body:
-      string: "\n\0"
-    headers:
-      Content-Length:
-      - '2'
-      Content-Type:
-      - application/x-protobuf
-      Date:
-      - Sun, 15 Sep 2024 06:11:02 GMT
-    status:
-      code: 200
-      message: OK
-- request:
     body: '{"messages": [{"role": "system", "content": "You are Crew Manager. You
       are a seasoned manager with a knack for getting the best out of your team.\nYou
       are also known for your ability to delegate work to the right people, and to
@@ -94,7 +40,7 @@ interactions:
       answer: 5 bullet points with a paragraph for each idea.\nyou MUST return the
       actual complete content as the final answer, not a summary.\n\nBegin! This is
       VERY important to you, use the tools available and give your best Final Answer,
-      your job depends on it!\n\nThought:"}], "model": "gpt-4o", "stop": ["\nResult"]}'
+      your job depends on it!\n\nThought:"}], "model": "gpt-4o", "stop": ["\nObservation:"]}'
     headers:
       accept:
       - application/json
@@ -103,12 +49,12 @@ interactions:
       connection:
       - keep-alive
       content-length:
-      - '3188'
+      - '3194'
       content-type:
       - application/json
       cookie:
-      - __cf_bm=e.frhlfi1m.8j1hzfGzahuOh4rgR9gvx.2zCHQ2w_Vs-1726380612-1.0.1.1-T58wIEXn0GTV8AZMALaUyULORFkNEBuxpds8RSWAM0Ltrg2U7jLBEKs0nwIneMiBAiiOmyZaoaH2RyLtNcunLQ;
-        _cfuvid=Bz2zevKuFYZqnEFwqmqVHcRo5pT0fm0fTtc_6_VQs4g-1726379702153-0.0.1.1-604800000
+      - __cf_bm=xCQEG8vgEvQfut0bkj2xgre9z9ePZhdKdNxBphhvH6s-1726437753-1.0.1.1-5qo0zwDCcKDtqvIzDbp2sLEPCey8v5DAsf0Mg6f2RmooOW9FXTw2P66VCTTF.vCwTpWBIFk0vzKmBAPOt6urIg;
+        _cfuvid=TiTyEciy7HrUlIDEsELZqkUyM4Fyn8OldZd4JefFMOA-1726437753108-0.0.1.1-604800000
       host:
       - api.openai.com
       user-agent:
@@ -132,29 +78,32 @@ interactions:
     method: POST
     uri: https://api.openai.com/v1/chat/completions
   response:
-    content: "{\n  \"id\": \"chatcmpl-A7clJS44MzBYHv6Ofdl1wOfnUJRCY\",\n  \"object\":
-      \"chat.completion\",\n  \"created\": 1726380661,\n  \"model\": \"gpt-4o-2024-05-13\",\n
+    content: "{\n  \"id\": \"chatcmpl-A7rhf7Q4IfrMg5dhqVaxGAVz7XH34\",\n  \"object\":
+      \"chat.completion\",\n  \"created\": 1726438095,\n  \"model\": \"gpt-4o-2024-05-13\",\n
       \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
-      \"assistant\",\n        \"content\": \"To complete this task effectively, I
-      need to generate five interesting ideas for an article, and write one compelling
-      paragraph for each idea to illustrate its potential. I'll delegate this task
-      to the Researcher, providing clear instructions and all necessary context.\\n\\nAction:
-      Delegate work to coworker\\nAction Input: {\\\"task\\\": \\\"Generate 5 interesting
-      article ideas and write one engaging paragraph for each idea that showcases
-      its potential.\\\", \\\"context\\\": \\\"We need to come up with five engaging
-      ideas for articles. For each idea, write one paragraph that highlights its potential
-      and showcases how good an article about this topic could be. Make sure the ideas
-      are intriguing and diverse. This is a crucial task and a high-quality output
-      is necessary.\\\", \\\"coworker\\\": \\\"Researcher\\\"}\",\n        \"refusal\":
+      \"assistant\",\n        \"content\": \"To generate a list of 5 interesting article
+      ideas and write an engaging paragraph for each, I will first brainstorm a list
+      of potential topics. Then, I'll evaluate which ones hold the most promise. Given
+      that I don't have the Researcher to brainstorm with me, I can delegate the topic
+      generation and paragraph writing to them.\\n\\nAction: Delegate work to coworker\\nAction
+      Input: {\\\"coworker\\\": \\\"Researcher\\\", \\\"task\\\": \\\"Come up with
+      a list of 5 interesting ideas to explore for an article, then write one amazing
+      paragraph highlight for each idea that showcases how good an article about this
+      topic could be.\\\", \\\"context\\\": \\\"We need to generate 5 interesting
+      article ideas. Each idea should be accompanied by a well-constructed paragraph
+      that highlights how compelling an article on this subject would be. The topics
+      should be engaging and have broad appeal. Make sure the paragraphs are concise
+      but captivating, with the potential to draw readers in. This task is very critical,
+      and high-quality, creative input is necessary.\\\"}\\n\",\n        \"refusal\":
       null\n      },\n      \"logprobs\": null,\n      \"finish_reason\": \"stop\"\n
       \   }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 692,\n    \"completion_tokens\":
-      151,\n    \"total_tokens\": 843,\n    \"completion_tokens_details\": {\n      \"reasoning_tokens\":
+      205,\n    \"total_tokens\": 897,\n    \"completion_tokens_details\": {\n      \"reasoning_tokens\":
       0\n    }\n  },\n  \"system_fingerprint\": \"fp_25624ae3a5\"\n}\n"
     headers:
       CF-Cache-Status:
       - DYNAMIC
       CF-RAY:
-      - 8c3674f8699d745a-MIA
+      - 8c3bef2ccf63a4ca-MIA
       Connection:
       - keep-alive
       Content-Encoding:
@@ -162,7 +111,7 @@ interactions:
       Content-Type:
       - application/json
       Date:
-      - Sun, 15 Sep 2024 06:11:02 GMT
+      - Sun, 15 Sep 2024 22:08:17 GMT
       Server:
       - cloudflare
       Transfer-Encoding:
@@ -176,7 +125,7 @@ interactions:
       openai-organization:
       - crewai-iuxna1
       openai-processing-ms:
-      - '1519'
+      - '2022'
       openai-version:
       - '2020-10-01'
       strict-transport-security:
@@ -194,9 +143,63 @@ interactions:
       x-ratelimit-reset-tokens:
       - 1ms
       x-request-id:
-      - req_6bbabdbf2ef1cb5d9f25aacd6b69a5e3
+      - req_efbf010ada5457c149255589129d9815
     http_version: HTTP/1.1
     status_code: 200
+- request:
+    body: !!binary |
+      CqAKCiQKIgoMc2VydmljZS5uYW1lEhIKEGNyZXdBSS10ZWxlbWV0cnkS9wkKEgoQY3Jld2FpLnRl
+      bGVtZXRyeRLgCQoQYvvgne6vWKFUQ2MdcjZ/cxIIGTE9WHItE94qDENyZXcgQ3JlYXRlZDABOUDe
+      CMdMivUXQSABC8dMivUXShoKDmNyZXdhaV92ZXJzaW9uEggKBjAuNTYuMEoaCg5weXRob25fdmVy
+      c2lvbhIICgYzLjExLjdKLgoIY3Jld19rZXkSIgogZTNmZGEwZjMxMTBmZTgwYjE4OTQ3YzAxNDcx
+      NDMwYTRKMQoHY3Jld19pZBImCiQ4NGY0MTY0ZS1lZWJhLTRhOTgtODUyMy1iYTQyYTAxZmRlYjNK
+      HgoMY3Jld19wcm9jZXNzEg4KDGhpZXJhcmNoaWNhbEoRCgtjcmV3X21lbW9yeRICEABKGgoUY3Jl
+      d19udW1iZXJfb2ZfdGFza3MSAhgBShsKFWNyZXdfbnVtYmVyX29mX2FnZW50cxICGAJKjAUKC2Ny
+      ZXdfYWdlbnRzEvwECvkEW3sia2V5IjogIjhiZDIxMzliNTk3NTE4MTUwNmU0MWZkOWM0NTYzZDc1
+      IiwgImlkIjogImU3ZTllODljLTUyZDEtNGExMi05MmFhLTE3ZWY1MjhkN2IzNSIsICJyb2xlIjog
+      IlJlc2VhcmNoZXIiLCAidmVyYm9zZT8iOiBmYWxzZSwgIm1heF9pdGVyIjogMTUsICJtYXhfcnBt
+      IjogbnVsbCwgImZ1bmN0aW9uX2NhbGxpbmdfbGxtIjogbnVsbCwgImxsbSI6ICJncHQtNG8iLCAi
+      ZGVsZWdhdGlvbl9lbmFibGVkPyI6IGZhbHNlLCAiYWxsb3dfY29kZV9leGVjdXRpb24/IjogZmFs
+      c2UsICJtYXhfcmV0cnlfbGltaXQiOiAyLCAidG9vbHNfbmFtZXMiOiBbXX0sIHsia2V5IjogIjlh
+      NTAxNWVmNDg5NWRjNjI3OGQ1NDgxOGJhNDQ2YWY3IiwgImlkIjogImUwOWU4NWVmLWI0YzQtNDk4
+      MC1iMGQ5LWI4ZTI1YWFkODQ3YSIsICJyb2xlIjogIlNlbmlvciBXcml0ZXIiLCAidmVyYm9zZT8i
+      OiBmYWxzZSwgIm1heF9pdGVyIjogMTUsICJtYXhfcnBtIjogbnVsbCwgImZ1bmN0aW9uX2NhbGxp
+      bmdfbGxtIjogbnVsbCwgImxsbSI6ICJncHQtNG8iLCAiZGVsZWdhdGlvbl9lbmFibGVkPyI6IGZh
+      bHNlLCAiYWxsb3dfY29kZV9leGVjdXRpb24/IjogZmFsc2UsICJtYXhfcmV0cnlfbGltaXQiOiAy
+      LCAidG9vbHNfbmFtZXMiOiBbXX1dSv8BCgpjcmV3X3Rhc2tzEvABCu0BW3sia2V5IjogIjVmYTY1
+      YzA2YTllMzFmMmM2OTU0MzI2NjhhY2Q2MmRkIiwgImlkIjogImRmMTJmZGFlLWI3MzctNDFmZC1i
+      YzI5LWZiNDhhZTBhYTMzOSIsICJhc3luY19leGVjdXRpb24/IjogZmFsc2UsICJodW1hbl9pbnB1
+      dD8iOiBmYWxzZSwgImFnZW50X3JvbGUiOiAiUmVzZWFyY2hlciIsICJhZ2VudF9rZXkiOiAiOGJk
+      MjEzOWI1OTc1MTgxNTA2ZTQxZmQ5YzQ1NjNkNzUiLCAidG9vbHNfbmFtZXMiOiBbXX1degIYAYUB
+      AAEAAA==
+    headers:
+      Accept:
+      - '*/*'
+      Accept-Encoding:
+      - gzip, deflate
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '1315'
+      Content-Type:
+      - application/x-protobuf
+      User-Agent:
+      - OTel-OTLP-Exporter-Python/1.27.0
+    method: POST
+    uri: https://telemetry.crewai.com:4319/v1/traces
+  response:
+    body:
+      string: "\n\0"
+    headers:
+      Content-Length:
+      - '2'
+      Content-Type:
+      - application/x-protobuf
+      Date:
+      - Sun, 15 Sep 2024 22:08:19 GMT
+    status:
+      code: 200
+      message: OK
 - request:
     body: '{"messages": [{"role": "system", "content": "You are Researcher. You''re
       an expert researcher, specialized in technology, software engineering, AI and
@@ -206,18 +209,20 @@ interactions:
       answer to the task use the exact following format:\n\nThought: I now can give
       a great answer\nFinal Answer: Your final answer must be the great and the most
       complete as possible, it must be outcome described.\n\nI MUST use these formats,
-      my job depends on it!"}, {"role": "user", "content": "\nCurrent Task: Generate
-      5 interesting article ideas and write one engaging paragraph for each idea that
-      showcases its potential.\n\nThis is the expect criteria for your final answer:
+      my job depends on it!"}, {"role": "user", "content": "\nCurrent Task: Come up
+      with a list of 5 interesting ideas to explore for an article, then write one
+      amazing paragraph highlight for each idea that showcases how good an article
+      about this topic could be.\n\nThis is the expect criteria for your final answer:
       Your best answer to your coworker asking you this, accounting for the context
       shared.\nyou MUST return the actual complete content as the final answer, not
-      a summary.\n\nThis is the context you''re working with:\nWe need to come up
-      with five engaging ideas for articles. For each idea, write one paragraph that
-      highlights its potential and showcases how good an article about this topic
-      could be. Make sure the ideas are intriguing and diverse. This is a crucial
-      task and a high-quality output is necessary.\n\nBegin! This is VERY important
-      to you, use the tools available and give your best Final Answer, your job depends
-      on it!\n\nThought:"}], "model": "gpt-4o", "stop": ["\nResult"]}'
+      a summary.\n\nThis is the context you''re working with:\nWe need to generate
+      5 interesting article ideas. Each idea should be accompanied by a well-constructed
+      paragraph that highlights how compelling an article on this subject would be.
+      The topics should be engaging and have broad appeal. Make sure the paragraphs
+      are concise but captivating, with the potential to draw readers in. This task
+      is very critical, and high-quality, creative input is necessary.\n\nBegin! This
+      is VERY important to you, use the tools available and give your best Final Answer,
+      your job depends on it!\n\nThought:"}], "model": "gpt-4o", "stop": ["\nObservation:"]}'
     headers:
       accept:
       - application/json
@@ -226,12 +231,12 @@ interactions:
       connection:
       - keep-alive
       content-length:
-      - '1542'
+      - '1730'
       content-type:
       - application/json
       cookie:
-      - __cf_bm=e.frhlfi1m.8j1hzfGzahuOh4rgR9gvx.2zCHQ2w_Vs-1726380612-1.0.1.1-T58wIEXn0GTV8AZMALaUyULORFkNEBuxpds8RSWAM0Ltrg2U7jLBEKs0nwIneMiBAiiOmyZaoaH2RyLtNcunLQ;
-        _cfuvid=Bz2zevKuFYZqnEFwqmqVHcRo5pT0fm0fTtc_6_VQs4g-1726379702153-0.0.1.1-604800000
+      - __cf_bm=xCQEG8vgEvQfut0bkj2xgre9z9ePZhdKdNxBphhvH6s-1726437753-1.0.1.1-5qo0zwDCcKDtqvIzDbp2sLEPCey8v5DAsf0Mg6f2RmooOW9FXTw2P66VCTTF.vCwTpWBIFk0vzKmBAPOt6urIg;
+        _cfuvid=TiTyEciy7HrUlIDEsELZqkUyM4Fyn8OldZd4JefFMOA-1726437753108-0.0.1.1-604800000
       host:
       - api.openai.com
       user-agent:
@@ -255,68 +260,68 @@ interactions:
     method: POST
     uri: https://api.openai.com/v1/chat/completions
   response:
-    content: "{\n  \"id\": \"chatcmpl-A7clLDo2qoim3JtKFdQMTWbGUGZbn\",\n  \"object\":
-      \"chat.completion\",\n  \"created\": 1726380663,\n  \"model\": \"gpt-4o-2024-05-13\",\n
+    content: "{\n  \"id\": \"chatcmpl-A7rhhTA8ogaal5wjQo6LAdpj3eInn\",\n  \"object\":
+      \"chat.completion\",\n  \"created\": 1726438097,\n  \"model\": \"gpt-4o-2024-05-13\",\n
       \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
-      \"assistant\",\n        \"content\": \"Thought: I now can give a great answer\\n\\nFinal
-      Answer: \\n\\n1. **The Future of AI-Driven Healthcare: Revolutionizing Patient
-      Care**\\n   The application of artificial intelligence in healthcare is transforming
-      the way medical professionals diagnose, treat, and manage diseases. This article
-      will explore cutting-edge AI technologies that leverage machine learning, big
-      data analytics, and natural language processing to enhance patient outcomes.
-      By examining case studies and interviewing industry leaders, we'll uncover how
-      AI-driven solutions are reducing errors, personalizing treatments, and improving
-      the overall efficiency of healthcare systems. We will also address challenges
-      such as data privacy, ethical considerations, and the need for robust regulations,
-      painting a comprehensive picture of what the future holds for AI in healthcare.\\n\\n2.
-      **AI Agents in Customer Service: Enhancing User Experience through Automation**\\n
-      \  As businesses strive to improve customer experience while reducing operational
-      costs, AI agents have emerged as powerful tools for automating customer service
-      interactions. This article will dive into the world of AI-powered chatbots and
-      virtual assistants, highlighting their capabilities to handle complex queries,
-      learn from interactions, and provide 24/7 support. Featuring case studies from
-      various industries, we'll demonstrate how these intelligent agents not only
-      increase customer satisfaction but also free up human agents to tackle more
-      nuanced issues. Furthermore, we'll discuss the technical underpinnings, challenges
-      in deployment, and the future landscape of AI-driven customer service.\\n\\n3.
-      **AI and Ethics: Balancing Innovation with Responsibility**\\n   The rapid advancement
-      of artificial intelligence poses significant ethical questions that must be
-      addressed to ensure responsible innovation. This article will delve into the
-      ethical dilemmas associated with AI, such as bias, transparency, and accountability.
-      Through expert interviews and real-world examples, we will explore how different
-      stakeholders\u2014from tech giants to policymakers\u2014are grappling with these
-      issues. The article will highlight frameworks and guidelines being established
-      to govern AI development and use, emphasizing the importance of ethical considerations
-      in building public trust and ensuring social justice.\\n\\n4. **Startups Leveraging
-      AI: Success Stories and Emerging Trends**\\n   Startups around the globe are
-      harnessing the power of artificial intelligence to disrupt traditional industries
-      and create innovative solutions. This article will showcase success stories
-      of AI-driven startups that have made significant impacts in fields such as fintech,
-      healthtech, and e-commerce. By profiling these companies and their founders,
-      we will reveal the unique challenges they faced, the strategies they employed,
-      and the lessons they learned. Additionally, we'll identify emerging trends and
-      technologies in the startup ecosystem, providing insights into what the future
-      holds for AI entrepreneurship.\\n\\n5. **AI in Creative Industries: Transforming
-      Art, Music, and Literature**\\n   Artificial intelligence is not only confined
-      to technical domains; it is also making its mark in creative industries such
-      as art, music, and literature. This article will explore how AI tools are being
-      used by artists, musicians, and writers to push the boundaries of creativity
-      and produce groundbreaking works. By examining AI-generated art, music compositions,
-      and literary pieces, we'll discuss the implications of machine creativity on
-      human expression and the cultural landscape. Interviews with creators and technologists
-      will provide a deeper understanding of the collaborative process between humans
-      and machines and the potential for AI to redefine artistic endeavors.\\n\\nThese
-      five article ideas offer a diverse and engaging look into the world of AI, each
-      addressing different aspects and promising to captivate readers with their depth
-      and relevance.\",\n        \"refusal\": null\n      },\n      \"logprobs\":
-      null,\n      \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\":
-      290,\n    \"completion_tokens\": 671,\n    \"total_tokens\": 961,\n    \"completion_tokens_details\":
-      {\n      \"reasoning_tokens\": 0\n    }\n  },\n  \"system_fingerprint\": \"fp_992d1ea92d\"\n}\n"
+      \"assistant\",\n        \"content\": \"Thought: I now can give a great answer\\nFinal
+      Answer:\\n\\n1. **The Evolution and Future of AI in Healthcare**\\n   The incorporation
+      of AI in healthcare has gone from mere theoretical potential to transformative
+      reality. An article on this topic could explore how AI-driven tools are revolutionizing
+      diagnostics, treatment planning, and patient management. Imagine AI algorithms
+      predicting patient outcomes with unprecedented accuracy or robotic surgeries
+      that minimize human error. The piece can delve into notable successes, such
+      as AI-powered imaging systems detecting cancers earlier than human doctors,
+      and speculate on future innovations like personalized medicine tailored by AI.
+      Such a topic is bound to captivate readers, particularly those fascinated by
+      the intersection of technology and human welfare.\\n\\n2. **The Rise of AI Agents:
+      From Virtual Assistants to Autonomous Innovators**\\n   AI agents have evolved
+      from simple virtual assistants like Siri and Alexa to sophisticated autonomous
+      systems capable of handling complex tasks. This article could explore the incredible
+      advancements in AI agents, highlighting real-world applications from customer
+      service chatbots that provide human-like interaction to autonomous systems managing
+      entire supply chains. The narrative could also investigate the ethical implications
+      and societal impacts of increasingly independent AI, sparking curiosity about
+      the balance between innovation and control. By showcasing the transformative
+      potential and challenges of AI agents, this topic can engage readers interested
+      in the future of human-AI collaboration.\\n\\n3. **AI and Creativity: Can Machines
+      Be Truly Creative?**\\n   The debate over whether AI can possess creativity
+      similar to human beings is both intellectually stimulating and controversial.
+      An article on this topic could analyze AI-generated art, music, and literature,
+      examining how algorithms are trained to mimic human creative processes. By featuring
+      examples like AI-composed symphonies or AI-generated artworks displayed in galleries,
+      the piece can argue for the expanding role of AI in creative industries. Furthermore,
+      it can address the philosophical and ethical questions surrounding creative
+      ownership and the definition of creativity itself. Such an exploration is certain
+      to intrigue readers who ponder the limitations and potentials of artificial
+      intelligence.\\n\\n4. **AI\u2019s Role in Shaping Modern Startups: Innovation
+      and Efficiency Redefined**\\n   Startups are increasingly leveraging AI to disrupt
+      traditional business models and foster innovation. This article could illuminate
+      how young companies are using AI technologies to drive efficiency, from predictive
+      analytics in marketing to AI-enhanced customer personalization. By examining
+      case studies of startups that have successfully integrated AI, the piece can
+      offer inspiration and practical insights for entrepreneurs and investors alike.
+      Highlighting how AI democratizes data access and enables leaner, smarter operations,
+      this topic promises to capture the interest of a broad audience eager to understand
+      the dynamics of modern entrepreneurship.\\n\\n5. **Ethics in AI Development:
+      Balancing Innovation and Responsibility**\\n   As AI technologies proliferate,
+      the ethical considerations surrounding their development become increasingly
+      urgent. An article focusing on AI ethics can delve into issues such as bias
+      in algorithmic decision-making, data privacy concerns, and the societal impacts
+      of automation. By integrating expert opinions, case studies of ethical dilemmas,
+      and regulatory perspectives, the piece can provide a comprehensive overview
+      of the current ethical landscape in AI. Highlighting initiatives aimed at promoting
+      ethical AI, such as fairness in machine learning and transparency in AI operations,
+      this topic is sure to engage readers concerned with the moral responsibilities
+      that accompany technological progress.\",\n        \"refusal\": null\n      },\n
+      \     \"logprobs\": null,\n      \"finish_reason\": \"stop\"\n    }\n  ],\n
+      \ \"usage\": {\n    \"prompt_tokens\": 326,\n    \"completion_tokens\": 650,\n
+      \   \"total_tokens\": 976,\n    \"completion_tokens_details\": {\n      \"reasoning_tokens\":
+      0\n    }\n  },\n  \"system_fingerprint\": \"fp_992d1ea92d\"\n}\n"
     headers:
       CF-Cache-Status:
       - DYNAMIC
       CF-RAY:
-      - 8c36750c281c745a-MIA
+      - 8c3bef3e5b34a4ca-MIA
       Connection:
       - keep-alive
       Content-Encoding:
@@ -324,7 +329,7 @@ interactions:
       Content-Type:
       - application/json
       Date:
-      - Sun, 15 Sep 2024 06:11:11 GMT
+      - Sun, 15 Sep 2024 22:08:24 GMT
       Server:
       - cloudflare
       Transfer-Encoding:
@@ -338,7 +343,7 @@ interactions:
       openai-organization:
       - crewai-iuxna1
       openai-processing-ms:
-      - '7391'
+      - '6992'
       openai-version:
       - '2020-10-01'
       strict-transport-security:
@@ -350,20 +355,20 @@ interactions:
       x-ratelimit-remaining-requests:
       - '9999'
       x-ratelimit-remaining-tokens:
-      - '29999630'
+      - '29999585'
       x-ratelimit-reset-requests:
       - 6ms
       x-ratelimit-reset-tokens:
       - 0s
       x-request-id:
-      - req_fa3025812ebad87fcb5562f75631de9c
+      - req_5c03671dfa4dd708ec1e326668bfc515
     http_version: HTTP/1.1
     status_code: 200
 - request:
     body: !!binary |
       CtwBCiQKIgoMc2VydmljZS5uYW1lEhIKEGNyZXdBSS10ZWxlbWV0cnkSswEKEgoQY3Jld2FpLnRl
-      bGVtZXRyeRKcAQoQnyoGcc/ftsNnxe4MHuImEhIIV73Pb42FU2UqClRvb2wgVXNhZ2UwATmwhULa
-      Elb1F0GA+EXaElb1F0oaCg5jcmV3YWlfdmVyc2lvbhIICgYwLjU2LjBKKAoJdG9vbF9uYW1lEhsK
+      bGVtZXRyeRKcAQoQzDOMaM3OKUR388eathD2RhIIGaDmZAzZj+IqClRvb2wgVXNhZ2UwATmouJEr
+      T4r1F0HQt5crT4r1F0oaCg5jcmV3YWlfdmVyc2lvbhIICgYwLjU2LjBKKAoJdG9vbF9uYW1lEhsK
       GURlbGVnYXRlIHdvcmsgdG8gY293b3JrZXJKDgoIYXR0ZW1wdHMSAhgBegIYAYUBAAEAAA==
     headers:
       Accept:
@@ -389,7 +394,7 @@ interactions:
       Content-Type:
       - application/x-protobuf
       Date:
-      - Sun, 15 Sep 2024 06:11:12 GMT
+      - Sun, 15 Sep 2024 22:08:29 GMT
     status:
       code: 200
       message: OK
@@ -435,66 +440,68 @@ interactions:
       actual complete content as the final answer, not a summary.\n\nBegin! This is
       VERY important to you, use the tools available and give your best Final Answer,
       your job depends on it!\n\nThought:"}, {"role": "assistant", "content": "To
-      complete this task effectively, I need to generate five interesting ideas for
-      an article, and write one compelling paragraph for each idea to illustrate its
-      potential. I''ll delegate this task to the Researcher, providing clear instructions
-      and all necessary context.\n\nAction: Delegate work to coworker\nAction Input:
-      {\"task\": \"Generate 5 interesting article ideas and write one engaging paragraph
-      for each idea that showcases its potential.\", \"context\": \"We need to come
-      up with five engaging ideas for articles. For each idea, write one paragraph
-      that highlights its potential and showcases how good an article about this topic
-      could be. Make sure the ideas are intriguing and diverse. This is a crucial
-      task and a high-quality output is necessary.\", \"coworker\": \"Researcher\"}\nObservation:
-      1. **The Future of AI-Driven Healthcare: Revolutionizing Patient Care**\n   The
-      application of artificial intelligence in healthcare is transforming the way
-      medical professionals diagnose, treat, and manage diseases. This article will
-      explore cutting-edge AI technologies that leverage machine learning, big data
-      analytics, and natural language processing to enhance patient outcomes. By examining
-      case studies and interviewing industry leaders, we''ll uncover how AI-driven
-      solutions are reducing errors, personalizing treatments, and improving the overall
-      efficiency of healthcare systems. We will also address challenges such as data
-      privacy, ethical considerations, and the need for robust regulations, painting
-      a comprehensive picture of what the future holds for AI in healthcare.\n\n2.
-      **AI Agents in Customer Service: Enhancing User Experience through Automation**\n   As
-      businesses strive to improve customer experience while reducing operational
-      costs, AI agents have emerged as powerful tools for automating customer service
-      interactions. This article will dive into the world of AI-powered chatbots and
-      virtual assistants, highlighting their capabilities to handle complex queries,
-      learn from interactions, and provide 24/7 support. Featuring case studies from
-      various industries, we''ll demonstrate how these intelligent agents not only
-      increase customer satisfaction but also free up human agents to tackle more
-      nuanced issues. Furthermore, we''ll discuss the technical underpinnings, challenges
-      in deployment, and the future landscape of AI-driven customer service.\n\n3.
-      **AI and Ethics: Balancing Innovation with Responsibility**\n   The rapid advancement
-      of artificial intelligence poses significant ethical questions that must be
-      addressed to ensure responsible innovation. This article will delve into the
-      ethical dilemmas associated with AI, such as bias, transparency, and accountability.
-      Through expert interviews and real-world examples, we will explore how different
-      stakeholders\u2014from tech giants to policymakers\u2014are grappling with these
-      issues. The article will highlight frameworks and guidelines being established
-      to govern AI development and use, emphasizing the importance of ethical considerations
-      in building public trust and ensuring social justice.\n\n4. **Startups Leveraging
-      AI: Success Stories and Emerging Trends**\n   Startups around the globe are
-      harnessing the power of artificial intelligence to disrupt traditional industries
-      and create innovative solutions. This article will showcase success stories
-      of AI-driven startups that have made significant impacts in fields such as fintech,
-      healthtech, and e-commerce. By profiling these companies and their founders,
-      we will reveal the unique challenges they faced, the strategies they employed,
-      and the lessons they learned. Additionally, we''ll identify emerging trends
-      and technologies in the startup ecosystem, providing insights into what the
-      future holds for AI entrepreneurship.\n\n5. **AI in Creative Industries: Transforming
-      Art, Music, and Literature**\n   Artificial intelligence is not only confined
-      to technical domains; it is also making its mark in creative industries such
-      as art, music, and literature. This article will explore how AI tools are being
-      used by artists, musicians, and writers to push the boundaries of creativity
-      and produce groundbreaking works. By examining AI-generated art, music compositions,
-      and literary pieces, we''ll discuss the implications of machine creativity on
-      human expression and the cultural landscape. Interviews with creators and technologists
-      will provide a deeper understanding of the collaborative process between humans
-      and machines and the potential for AI to redefine artistic endeavors.\n\nThese
-      five article ideas offer a diverse and engaging look into the world of AI, each
-      addressing different aspects and promising to captivate readers with their depth
-      and relevance."}], "model": "gpt-4o", "stop": ["\nResult"]}'
+      generate a list of 5 interesting article ideas and write an engaging paragraph
+      for each, I will first brainstorm a list of potential topics. Then, I''ll evaluate
+      which ones hold the most promise. Given that I don''t have the Researcher to
+      brainstorm with me, I can delegate the topic generation and paragraph writing
+      to them.\n\nAction: Delegate work to coworker\nAction Input: {\"coworker\":
+      \"Researcher\", \"task\": \"Come up with a list of 5 interesting ideas to explore
+      for an article, then write one amazing paragraph highlight for each idea that
+      showcases how good an article about this topic could be.\", \"context\": \"We
+      need to generate 5 interesting article ideas. Each idea should be accompanied
+      by a well-constructed paragraph that highlights how compelling an article on
+      this subject would be. The topics should be engaging and have broad appeal.
+      Make sure the paragraphs are concise but captivating, with the potential to
+      draw readers in. This task is very critical, and high-quality, creative input
+      is necessary.\"}\n\nObservation: 1. **The Evolution and Future of AI in Healthcare**\n   The
+      incorporation of AI in healthcare has gone from mere theoretical potential to
+      transformative reality. An article on this topic could explore how AI-driven
+      tools are revolutionizing diagnostics, treatment planning, and patient management.
+      Imagine AI algorithms predicting patient outcomes with unprecedented accuracy
+      or robotic surgeries that minimize human error. The piece can delve into notable
+      successes, such as AI-powered imaging systems detecting cancers earlier than
+      human doctors, and speculate on future innovations like personalized medicine
+      tailored by AI. Such a topic is bound to captivate readers, particularly those
+      fascinated by the intersection of technology and human welfare.\n\n2. **The
+      Rise of AI Agents: From Virtual Assistants to Autonomous Innovators**\n   AI
+      agents have evolved from simple virtual assistants like Siri and Alexa to sophisticated
+      autonomous systems capable of handling complex tasks. This article could explore
+      the incredible advancements in AI agents, highlighting real-world applications
+      from customer service chatbots that provide human-like interaction to autonomous
+      systems managing entire supply chains. The narrative could also investigate
+      the ethical implications and societal impacts of increasingly independent AI,
+      sparking curiosity about the balance between innovation and control. By showcasing
+      the transformative potential and challenges of AI agents, this topic can engage
+      readers interested in the future of human-AI collaboration.\n\n3. **AI and Creativity:
+      Can Machines Be Truly Creative?**\n   The debate over whether AI can possess
+      creativity similar to human beings is both intellectually stimulating and controversial.
+      An article on this topic could analyze AI-generated art, music, and literature,
+      examining how algorithms are trained to mimic human creative processes. By featuring
+      examples like AI-composed symphonies or AI-generated artworks displayed in galleries,
+      the piece can argue for the expanding role of AI in creative industries. Furthermore,
+      it can address the philosophical and ethical questions surrounding creative
+      ownership and the definition of creativity itself. Such an exploration is certain
+      to intrigue readers who ponder the limitations and potentials of artificial
+      intelligence.\n\n4. **AI\u2019s Role in Shaping Modern Startups: Innovation
+      and Efficiency Redefined**\n   Startups are increasingly leveraging AI to disrupt
+      traditional business models and foster innovation. This article could illuminate
+      how young companies are using AI technologies to drive efficiency, from predictive
+      analytics in marketing to AI-enhanced customer personalization. By examining
+      case studies of startups that have successfully integrated AI, the piece can
+      offer inspiration and practical insights for entrepreneurs and investors alike.
+      Highlighting how AI democratizes data access and enables leaner, smarter operations,
+      this topic promises to capture the interest of a broad audience eager to understand
+      the dynamics of modern entrepreneurship.\n\n5. **Ethics in AI Development: Balancing
+      Innovation and Responsibility**\n   As AI technologies proliferate, the ethical
+      considerations surrounding their development become increasingly urgent. An
+      article focusing on AI ethics can delve into issues such as bias in algorithmic
+      decision-making, data privacy concerns, and the societal impacts of automation.
+      By integrating expert opinions, case studies of ethical dilemmas, and regulatory
+      perspectives, the piece can provide a comprehensive overview of the current
+      ethical landscape in AI. Highlighting initiatives aimed at promoting ethical
+      AI, such as fairness in machine learning and transparency in AI operations,
+      this topic is sure to engage readers concerned with the moral responsibilities
+      that accompany technological progress."}], "model": "gpt-4o", "stop": ["\nObservation:"]}'
     headers:
       accept:
       - application/json
@@ -503,12 +510,12 @@ interactions:
       connection:
       - keep-alive
       content-length:
-      - '7960'
+      - '8149'
       content-type:
       - application/json
       cookie:
-      - __cf_bm=e.frhlfi1m.8j1hzfGzahuOh4rgR9gvx.2zCHQ2w_Vs-1726380612-1.0.1.1-T58wIEXn0GTV8AZMALaUyULORFkNEBuxpds8RSWAM0Ltrg2U7jLBEKs0nwIneMiBAiiOmyZaoaH2RyLtNcunLQ;
-        _cfuvid=Bz2zevKuFYZqnEFwqmqVHcRo5pT0fm0fTtc_6_VQs4g-1726379702153-0.0.1.1-604800000
+      - __cf_bm=xCQEG8vgEvQfut0bkj2xgre9z9ePZhdKdNxBphhvH6s-1726437753-1.0.1.1-5qo0zwDCcKDtqvIzDbp2sLEPCey8v5DAsf0Mg6f2RmooOW9FXTw2P66VCTTF.vCwTpWBIFk0vzKmBAPOt6urIg;
+        _cfuvid=TiTyEciy7HrUlIDEsELZqkUyM4Fyn8OldZd4JefFMOA-1726437753108-0.0.1.1-604800000
       host:
       - api.openai.com
       user-agent:
@@ -532,68 +539,68 @@ interactions:
     method: POST
     uri: https://api.openai.com/v1/chat/completions
   response:
-    content: "{\n  \"id\": \"chatcmpl-A7clUQ22PYAkHQfevUiPCxDLwL1YK\",\n  \"object\":
-      \"chat.completion\",\n  \"created\": 1726380672,\n  \"model\": \"gpt-4o-2024-05-13\",\n
+    content: "{\n  \"id\": \"chatcmpl-A7rhpBmtsJ5sL7n9YqpJXdsdHguKU\",\n  \"object\":
+      \"chat.completion\",\n  \"created\": 1726438105,\n  \"model\": \"gpt-4o-2024-05-13\",\n
       \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
-      \"assistant\",\n        \"content\": \"Thought: I now know the final answer.\\nFinal
-      Answer:\\n\\n1. **The Future of AI-Driven Healthcare: Revolutionizing Patient
-      Care**\\n   The application of artificial intelligence in healthcare is transforming
-      the way medical professionals diagnose, treat, and manage diseases. This article
-      will explore cutting-edge AI technologies that leverage machine learning, big
-      data analytics, and natural language processing to enhance patient outcomes.
-      By examining case studies and interviewing industry leaders, we'll uncover how
-      AI-driven solutions are reducing errors, personalizing treatments, and improving
-      the overall efficiency of healthcare systems. We will also address challenges
-      such as data privacy, ethical considerations, and the need for robust regulations,
-      painting a comprehensive picture of what the future holds for AI in healthcare.\\n\\n2.
-      **AI Agents in Customer Service: Enhancing User Experience through Automation**\\n
-      \  As businesses strive to improve customer experience while reducing operational
-      costs, AI agents have emerged as powerful tools for automating customer service
-      interactions. This article will dive into the world of AI-powered chatbots and
-      virtual assistants, highlighting their capabilities to handle complex queries,
-      learn from interactions, and provide 24/7 support. Featuring case studies from
-      various industries, we'll demonstrate how these intelligent agents not only
-      increase customer satisfaction but also free up human agents to tackle more
-      nuanced issues. Furthermore, we'll discuss the technical underpinnings, challenges
-      in deployment, and the future landscape of AI-driven customer service.\\n\\n3.
-      **AI and Ethics: Balancing Innovation with Responsibility**\\n   The rapid advancement
-      of artificial intelligence poses significant ethical questions that must be
-      addressed to ensure responsible innovation. This article will delve into the
-      ethical dilemmas associated with AI, such as bias, transparency, and accountability.
-      Through expert interviews and real-world examples, we will explore how different
-      stakeholders\u2014from tech giants to policymakers\u2014are grappling with these
-      issues. The article will highlight frameworks and guidelines being established
-      to govern AI development and use, emphasizing the importance of ethical considerations
-      in building public trust and ensuring social justice.\\n\\n4. **Startups Leveraging
-      AI: Success Stories and Emerging Trends**\\n   Startups around the globe are
-      harnessing the power of artificial intelligence to disrupt traditional industries
-      and create innovative solutions. This article will showcase success stories
-      of AI-driven startups that have made significant impacts in fields such as fintech,
-      healthtech, and e-commerce. By profiling these companies and their founders,
-      we will reveal the unique challenges they faced, the strategies they employed,
-      and the lessons they learned. Additionally, we'll identify emerging trends and
-      technologies in the startup ecosystem, providing insights into what the future
-      holds for AI entrepreneurship.\\n\\n5. **AI in Creative Industries: Transforming
-      Art, Music, and Literature**\\n   Artificial intelligence is not only confined
-      to technical domains; it is also making its mark in creative industries such
-      as art, music, and literature. This article will explore how AI tools are being
-      used by artists, musicians, and writers to push the boundaries of creativity
-      and produce groundbreaking works. By examining AI-generated art, music compositions,
-      and literary pieces, we'll discuss the implications of machine creativity on
-      human expression and the cultural landscape. Interviews with creators and technologists
-      will provide a deeper understanding of the collaborative process between humans
-      and machines and the potential for AI to redefine artistic endeavors.\\n\\nThese
-      five article ideas offer a diverse and engaging look into the world of AI, each
-      addressing different aspects and promising to captivate readers with their depth
-      and relevance.\",\n        \"refusal\": null\n      },\n      \"logprobs\":
-      null,\n      \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\":
-      1507,\n    \"completion_tokens\": 669,\n    \"total_tokens\": 2176,\n    \"completion_tokens_details\":
-      {\n      \"reasoning_tokens\": 0\n    }\n  },\n  \"system_fingerprint\": \"fp_25624ae3a5\"\n}\n"
+      \"assistant\",\n        \"content\": \"Thought: I now know the final answer\\n\\nFinal
+      Answer:\\n1. **The Evolution and Future of AI in Healthcare**\\n   The incorporation
+      of AI in healthcare has gone from mere theoretical potential to transformative
+      reality. An article on this topic could explore how AI-driven tools are revolutionizing
+      diagnostics, treatment planning, and patient management. Imagine AI algorithms
+      predicting patient outcomes with unprecedented accuracy or robotic surgeries
+      that minimize human error. The piece can delve into notable successes, such
+      as AI-powered imaging systems detecting cancers earlier than human doctors,
+      and speculate on future innovations like personalized medicine tailored by AI.
+      Such a topic is bound to captivate readers, particularly those fascinated by
+      the intersection of technology and human welfare.\\n\\n2. **The Rise of AI Agents:
+      From Virtual Assistants to Autonomous Innovators**\\n   AI agents have evolved
+      from simple virtual assistants like Siri and Alexa to sophisticated autonomous
+      systems capable of handling complex tasks. This article could explore the incredible
+      advancements in AI agents, highlighting real-world applications from customer
+      service chatbots that provide human-like interaction to autonomous systems managing
+      entire supply chains. The narrative could also investigate the ethical implications
+      and societal impacts of increasingly independent AI, sparking curiosity about
+      the balance between innovation and control. By showcasing the transformative
+      potential and challenges of AI agents, this topic can engage readers interested
+      in the future of human-AI collaboration.\\n\\n3. **AI and Creativity: Can Machines
+      Be Truly Creative?**\\n   The debate over whether AI can possess creativity
+      similar to human beings is both intellectually stimulating and controversial.
+      An article on this topic could analyze AI-generated art, music, and literature,
+      examining how algorithms are trained to mimic human creative processes. By featuring
+      examples like AI-composed symphonies or AI-generated artworks displayed in galleries,
+      the piece can argue for the expanding role of AI in creative industries. Furthermore,
+      it can address the philosophical and ethical questions surrounding creative
+      ownership and the definition of creativity itself. Such an exploration is certain
+      to intrigue readers who ponder the limitations and potentials of artificial
+      intelligence.\\n\\n4. **AI\u2019s Role in Shaping Modern Startups: Innovation
+      and Efficiency Redefined**\\n   Startups are increasingly leveraging AI to disrupt
+      traditional business models and foster innovation. This article could illuminate
+      how young companies are using AI technologies to drive efficiency, from predictive
+      analytics in marketing to AI-enhanced customer personalization. By examining
+      case studies of startups that have successfully integrated AI, the piece can
+      offer inspiration and practical insights for entrepreneurs and investors alike.
+      Highlighting how AI democratizes data access and enables leaner, smarter operations,
+      this topic promises to capture the interest of a broad audience eager to understand
+      the dynamics of modern entrepreneurship.\\n\\n5. **Ethics in AI Development:
+      Balancing Innovation and Responsibility**\\n   As AI technologies proliferate,
+      the ethical considerations surrounding their development become increasingly
+      urgent. An article focusing on AI ethics can delve into issues such as bias
+      in algorithmic decision-making, data privacy concerns, and the societal impacts
+      of automation. By integrating expert opinions, case studies of ethical dilemmas,
+      and regulatory perspectives, the piece can provide a comprehensive overview
+      of the current ethical landscape in AI. Highlighting initiatives aimed at promoting
+      ethical AI, such as fairness in machine learning and transparency in AI operations,
+      this topic is sure to engage readers concerned with the moral responsibilities
+      that accompany technological progress.\",\n        \"refusal\": null\n      },\n
+      \     \"logprobs\": null,\n      \"finish_reason\": \"stop\"\n    }\n  ],\n
+      \ \"usage\": {\n    \"prompt_tokens\": 1541,\n    \"completion_tokens\": 649,\n
+      \   \"total_tokens\": 2190,\n    \"completion_tokens_details\": {\n      \"reasoning_tokens\":
+      0\n    }\n  },\n  \"system_fingerprint\": \"fp_25624ae3a5\"\n}\n"
     headers:
       CF-Cache-Status:
       - DYNAMIC
       CF-RAY:
-      - 8c36753ccb56745a-MIA
+      - 8c3bef6cfc02a4ca-MIA
       Connection:
       - keep-alive
       Content-Encoding:
@@ -601,7 +608,7 @@ interactions:
       Content-Type:
       - application/json
       Date:
-      - Sun, 15 Sep 2024 06:11:19 GMT
+      - Sun, 15 Sep 2024 22:08:32 GMT
       Server:
       - cloudflare
       Transfer-Encoding:
@@ -615,7 +622,7 @@ interactions:
       openai-organization:
       - crewai-iuxna1
       openai-processing-ms:
-      - '6887'
+      - '6275'
       openai-version:
       - '2020-10-01'
       strict-transport-security:
@@ -627,13 +634,13 @@ interactions:
       x-ratelimit-remaining-requests:
       - '9999'
       x-ratelimit-remaining-tokens:
-      - '29998048'
+      - '29998001'
       x-ratelimit-reset-requests:
       - 6ms
       x-ratelimit-reset-tokens:
       - 3ms
       x-request-id:
-      - req_4291fc7016fdd8d649daaa71568296cc
+      - req_a641a144f76075b8e0d9407e2684603a
     http_version: HTTP/1.1
     status_code: 200
 version: 1

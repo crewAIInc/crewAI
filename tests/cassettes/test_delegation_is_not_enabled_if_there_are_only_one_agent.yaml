@@ -1,113 +1,5 @@
 interactions:
 - request:
-    body: !!binary |
-      CqgiCiQKIgoMc2VydmljZS5uYW1lEhIKEGNyZXdBSS10ZWxlbWV0cnkS/yEKEgoQY3Jld2FpLnRl
-      bGVtZXRyeRK6BwoQTDQImRqTUkZJYSEjMszmpxII2o7x1t6D9G4qDENyZXcgQ3JlYXRlZDABOaD1
-      ECiLV/UXQejdEiiLV/UXShoKDmNyZXdhaV92ZXJzaW9uEggKBjAuNTYuMEoaCg5weXRob25fdmVy
-      c2lvbhIICgYzLjExLjdKLgoIY3Jld19rZXkSIgogMTdhNmNhMDNkODUwZmUyZjMwYzBhMTA1MWFk
-      NWY3ZTRKMQoHY3Jld19pZBImCiQzODUzOWFlYS1kMjdmLTQyNDctODRmNy0yMzY5NTkyMGMzZjdK
-      HAoMY3Jld19wcm9jZXNzEgwKCnNlcXVlbnRpYWxKEQoLY3Jld19tZW1vcnkSAhAAShoKFGNyZXdf
-      bnVtYmVyX29mX3Rhc2tzEgIYAUobChVjcmV3X251bWJlcl9vZl9hZ2VudHMSAhgBStsCCgtjcmV3
-      X2FnZW50cxLLAgrIAlt7ImtleSI6ICI4YmQyMTM5YjU5NzUxODE1MDZlNDFmZDljNDU2M2Q3NSIs
-      ICJpZCI6ICIwOWYwNjkxNy04MTdmLTQzNTItYjM4Ny1kOGQzMDUwMzM5ODciLCAicm9sZSI6ICJS
-      ZXNlYXJjaGVyIiwgInZlcmJvc2U/IjogZmFsc2UsICJtYXhfaXRlciI6IDE1LCAibWF4X3JwbSI6
-      IG51bGwsICJmdW5jdGlvbl9jYWxsaW5nX2xsbSI6IG51bGwsICJsbG0iOiAiZ3B0LTRvIiwgImRl
-      bGVnYXRpb25fZW5hYmxlZD8iOiBmYWxzZSwgImFsbG93X2NvZGVfZXhlY3V0aW9uPyI6IGZhbHNl
-      LCAibWF4X3JldHJ5X2xpbWl0IjogMiwgInRvb2xzX25hbWVzIjogWyJyZXR1cm5fZGF0YSJdfV1K
-      jAIKCmNyZXdfdGFza3MS/QEK+gFbeyJrZXkiOiAiZjU5NDkyMDhkNmYzOWVlOTBhZDAwZTk3MWMx
-      NGFkZDMiLCAiaWQiOiAiMTczZTc0ZGEtMDVhMC00YWM1LWEwNTEtZTNjOTI3MGNlMjZmIiwgImFz
-      eW5jX2V4ZWN1dGlvbj8iOiBmYWxzZSwgImh1bWFuX2lucHV0PyI6IGZhbHNlLCAiYWdlbnRfcm9s
-      ZSI6ICJSZXNlYXJjaGVyIiwgImFnZW50X2tleSI6ICI4YmQyMTM5YjU5NzUxODE1MDZlNDFmZDlj
-      NDU2M2Q3NSIsICJ0b29sc19uYW1lcyI6IFsicmV0dXJuX2RhdGEiXX1degIYAYUBAAEAABKOAgoQ
-      sRKENpe99zI5H8kiD/cuUxIIzASQ7kkGBssqDFRhc2sgQ3JlYXRlZDABOXBLgSiLV/UXQXidgSiL
-      V/UXSi4KCGNyZXdfa2V5EiIKIDE3YTZjYTAzZDg1MGZlMmYzMGMwYTEwNTFhZDVmN2U0SjEKB2Ny
-      ZXdfaWQSJgokMzg1MzlhZWEtZDI3Zi00MjQ3LTg0ZjctMjM2OTU5MjBjM2Y3Si4KCHRhc2tfa2V5
-      EiIKIGY1OTQ5MjA4ZDZmMzllZTkwYWQwMGU5NzFjMTRhZGQzSjEKB3Rhc2tfaWQSJgokMTczZTc0
-      ZGEtMDVhMC00YWM1LWEwNTEtZTNjOTI3MGNlMjZmegIYAYUBAAEAABKOAQoQdktHBPpa1W5yPl3L
-      7VjtuhIIhL+3wIYYKrkqClRvb2wgVXNhZ2UwATnYiihri1f1F0GIMitri1f1F0oaCg5jcmV3YWlf
-      dmVyc2lvbhIICgYwLjU2LjBKGgoJdG9vbF9uYW1lEg0KC3JldHVybl9kYXRhSg4KCGF0dGVtcHRz
-      EgIYAXoCGAGFAQABAAASkAIKEHv2J6sDXl0KSPKJXOc9BPQSCHCZ4XAozJDgKg5UYXNrIEV4ZWN1
-      dGlvbjABOYjEgSiLV/UXQbjKwZOLV/UXSi4KCGNyZXdfa2V5EiIKIDE3YTZjYTAzZDg1MGZlMmYz
-      MGMwYTEwNTFhZDVmN2U0SjEKB2NyZXdfaWQSJgokMzg1MzlhZWEtZDI3Zi00MjQ3LTg0ZjctMjM2
-      OTU5MjBjM2Y3Si4KCHRhc2tfa2V5EiIKIGY1OTQ5MjA4ZDZmMzllZTkwYWQwMGU5NzFjMTRhZGQz
-      SjEKB3Rhc2tfaWQSJgokMTczZTc0ZGEtMDVhMC00YWM1LWEwNTEtZTNjOTI3MGNlMjZmegIYAYUB
-      AAEAABKfBwoQpQSOax+S2mCJLeLHCDL6oBIIHHbfYtVaGGMqDENyZXcgQ3JlYXRlZDABOUCt2JSL
-      V/UXQZBq2pSLV/UXShoKDmNyZXdhaV92ZXJzaW9uEggKBjAuNTYuMEoaCg5weXRob25fdmVyc2lv
-      bhIICgYzLjExLjdKLgoIY3Jld19rZXkSIgogOWM5ZDUyNThmZjEwNzgzMGE5Yzk2NWJiNzUyN2I4
-      MGRKMQoHY3Jld19pZBImCiQ3YmUyYzg2Mi0yOGEzLTQ4M2EtOTBjMi1kZjQzYWUzN2JmOWRKHAoM
-      Y3Jld19wcm9jZXNzEgwKCnNlcXVlbnRpYWxKEQoLY3Jld19tZW1vcnkSAhAAShoKFGNyZXdfbnVt
-      YmVyX29mX3Rhc2tzEgIYAUobChVjcmV3X251bWJlcl9vZl9hZ2VudHMSAhgBSs0CCgtjcmV3X2Fn
-      ZW50cxK9Agq6Alt7ImtleSI6ICI5N2Y0MTdmM2UxZTMxY2YwYzEwOWY3NTI5YWM4ZjZiYyIsICJp
-      ZCI6ICI1Yzc0MzY1ZS1lMTEzLTRkNmUtYjcyOS01ODQxYWI5YmM0OTMiLCAicm9sZSI6ICJQcm9n
-      cmFtbWVyIiwgInZlcmJvc2U/IjogZmFsc2UsICJtYXhfaXRlciI6IDE1LCAibWF4X3JwbSI6IG51
-      bGwsICJmdW5jdGlvbl9jYWxsaW5nX2xsbSI6IG51bGwsICJsbG0iOiAiZ3B0LTRvIiwgImRlbGVn
-      YXRpb25fZW5hYmxlZD8iOiBmYWxzZSwgImFsbG93X2NvZGVfZXhlY3V0aW9uPyI6IHRydWUsICJt
-      YXhfcmV0cnlfbGltaXQiOiAyLCAidG9vbHNfbmFtZXMiOiBbXX1dSv8BCgpjcmV3X3Rhc2tzEvAB
-      Cu0BW3sia2V5IjogIjhlYzhiY2YyOGU3N2EzNjkyZDY2MzA0NWYyNWFjMjkyIiwgImlkIjogImM2
-      YjM1NWI3LTMxYzUtNDk5YS04ZTIwLWE5NTFkNTA2YmY0NyIsICJhc3luY19leGVjdXRpb24/Ijog
-      ZmFsc2UsICJodW1hbl9pbnB1dD8iOiBmYWxzZSwgImFnZW50X3JvbGUiOiAiUHJvZ3JhbW1lciIs
-      ICJhZ2VudF9rZXkiOiAiOTdmNDE3ZjNlMWUzMWNmMGMxMDlmNzUyOWFjOGY2YmMiLCAidG9vbHNf
-      bmFtZXMiOiBbXX1degIYAYUBAAEAABKOAgoQxtjkqz8P9PlgIKqNRkFFAxIIdW+RFtxChkoqDFRh
-      c2sgQ3JlYXRlZDABOVCX95SLV/UXQVjp95SLV/UXSi4KCGNyZXdfa2V5EiIKIDljOWQ1MjU4ZmYx
-      MDc4MzBhOWM5NjViYjc1MjdiODBkSjEKB2NyZXdfaWQSJgokN2JlMmM4NjItMjhhMy00ODNhLTkw
-      YzItZGY0M2FlMzdiZjlkSi4KCHRhc2tfa2V5EiIKIDhlYzhiY2YyOGU3N2EzNjkyZDY2MzA0NWYy
-      NWFjMjkySjEKB3Rhc2tfaWQSJgokYzZiMzU1YjctMzFjNS00OTlhLThlMjAtYTk1MWQ1MDZiZjQ3
-      egIYAYUBAAEAABKQAgoQWV7QBja0lQUUnwY0PoCi6RII57UVEzW1PWwqDlRhc2sgRXhlY3V0aW9u
-      MAE5UBT4lItX9RdBsP74lItX9RdKLgoIY3Jld19rZXkSIgogOWM5ZDUyNThmZjEwNzgzMGE5Yzk2
-      NWJiNzUyN2I4MGRKMQoHY3Jld19pZBImCiQ3YmUyYzg2Mi0yOGEzLTQ4M2EtOTBjMi1kZjQzYWUz
-      N2JmOWRKLgoIdGFza19rZXkSIgogOGVjOGJjZjI4ZTc3YTM2OTJkNjYzMDQ1ZjI1YWMyOTJKMQoH
-      dGFza19pZBImCiRjNmIzNTViNy0zMWM1LTQ5OWEtOGUyMC1hOTUxZDUwNmJmNDd6AhgBhQEAAQAA
-      Ep8HChCdl5wvV0+DxvTLkASidkYBEghVRWTYHClGsCoMQ3JldyBDcmVhdGVkMAE5cDwolYtX9RdB
-      6J8plYtX9RdKGgoOY3Jld2FpX3ZlcnNpb24SCAoGMC41Ni4wShoKDnB5dGhvbl92ZXJzaW9uEggK
-      BjMuMTEuN0ouCghjcmV3X2tleRIiCiAxN2E2Y2EwM2Q4NTBmZTJmMzBjMGExMDUxYWQ1ZjdlNEox
-      CgdjcmV3X2lkEiYKJDQ2MDdkYmY0LTdlMmUtNDc4MS05NTU0LWZiYmE3MzUzYTAzNEocCgxjcmV3
-      X3Byb2Nlc3MSDAoKc2VxdWVudGlhbEoRCgtjcmV3X21lbW9yeRICEABKGgoUY3Jld19udW1iZXJf
-      b2ZfdGFza3MSAhgBShsKFWNyZXdfbnVtYmVyX29mX2FnZW50cxICGAFKzQIKC2NyZXdfYWdlbnRz
-      Er0CCroCW3sia2V5IjogIjhiZDIxMzliNTk3NTE4MTUwNmU0MWZkOWM0NTYzZDc1IiwgImlkIjog
-      IjdiMmUwYjI4LTU1ZDItNGZhNS04ZTk2LTM2Y2NhMjM3Y2M4YyIsICJyb2xlIjogIlJlc2VhcmNo
-      ZXIiLCAidmVyYm9zZT8iOiBmYWxzZSwgIm1heF9pdGVyIjogMTUsICJtYXhfcnBtIjogbnVsbCwg
-      ImZ1bmN0aW9uX2NhbGxpbmdfbGxtIjogbnVsbCwgImxsbSI6ICJncHQtNG8iLCAiZGVsZWdhdGlv
-      bl9lbmFibGVkPyI6IHRydWUsICJhbGxvd19jb2RlX2V4ZWN1dGlvbj8iOiBmYWxzZSwgIm1heF9y
-      ZXRyeV9saW1pdCI6IDIsICJ0b29sc19uYW1lcyI6IFtdfV1K/wEKCmNyZXdfdGFza3MS8AEK7QFb
-      eyJrZXkiOiAiZjU5NDkyMDhkNmYzOWVlOTBhZDAwZTk3MWMxNGFkZDMiLCAiaWQiOiAiYTcwOWY0
-      ZWYtNmJkYS00NGVhLWEyYmItOTlkYzllZGQ2MDA2IiwgImFzeW5jX2V4ZWN1dGlvbj8iOiBmYWxz
-      ZSwgImh1bWFuX2lucHV0PyI6IGZhbHNlLCAiYWdlbnRfcm9sZSI6ICJSZXNlYXJjaGVyIiwgImFn
-      ZW50X2tleSI6ICI4YmQyMTM5YjU5NzUxODE1MDZlNDFmZDljNDU2M2Q3NSIsICJ0b29sc19uYW1l
-      cyI6IFtdfV16AhgBhQEAAQAAEo4CChD9aS3agMq39PYJucvWPHQdEggF9d74963fPioMVGFzayBD
-      cmVhdGVkMAE5YNMylYtX9RdBsBkzlYtX9RdKLgoIY3Jld19rZXkSIgogMTdhNmNhMDNkODUwZmUy
-      ZjMwYzBhMTA1MWFkNWY3ZTRKMQoHY3Jld19pZBImCiQ0NjA3ZGJmNC03ZTJlLTQ3ODEtOTU1NC1m
-      YmJhNzM1M2EwMzRKLgoIdGFza19rZXkSIgogZjU5NDkyMDhkNmYzOWVlOTBhZDAwZTk3MWMxNGFk
-      ZDNKMQoHdGFza19pZBImCiRhNzA5ZjRlZi02YmRhLTQ0ZWEtYTJiYi05OWRjOWVkZDYwMDZ6AhgB
-      hQEAAQAA
-    headers:
-      Accept:
-      - '*/*'
-      Accept-Encoding:
-      - gzip, deflate
-      Connection:
-      - keep-alive
-      Content-Length:
-      - '4395'
-      Content-Type:
-      - application/x-protobuf
-      User-Agent:
-      - OTel-OTLP-Exporter-Python/1.27.0
-    method: POST
-    uri: https://telemetry.crewai.com:4319/v1/traces
-  response:
-    body:
-      string: "\n\0"
-    headers:
-      Content-Length:
-      - '2'
-      Content-Type:
-      - application/x-protobuf
-      Date:
-      - Sun, 15 Sep 2024 06:38:12 GMT
-    status:
-      code: 200
-      message: OK
-- request:
     body: '{"messages": [{"role": "system", "content": "You are Researcher. You''re
       an expert researcher, specialized in technology, software engineering, AI and
       startups. You work as a freelancer and is now working on doing research and
@@ -122,7 +14,7 @@ interactions:
       integer\nyou MUST return the actual complete content as the final answer, not
       a summary.\n\nBegin! This is VERY important to you, use the tools available
       and give your best Final Answer, your job depends on it!\n\nThought:"}], "model":
-      "gpt-4o", "stop": ["\nResult"]}'
+      "gpt-4o", "stop": ["\nObservation:"]}'
     headers:
       accept:
       - application/json
@@ -131,12 +23,12 @@ interactions:
       connection:
       - keep-alive
       content-length:
-      - '1119'
+      - '1125'
       content-type:
       - application/json
       cookie:
-      - _cfuvid=Bz2zevKuFYZqnEFwqmqVHcRo5pT0fm0fTtc_6_VQs4g-1726379702153-0.0.1.1-604800000;
-        __cf_bm=Zqss5M7F0I3ujWWOyeGVyXrXruQvD3butDltZlDeBZc-1726381512-1.0.1.1-qqM346NIgOQgZmuydOkCpKfALZSi1RxBHjWfy4KEzxJV2kEOuF._xS9AfJH5x.JhtJUFx8TkXZlNL6GanAA7nQ
+      - __cf_bm=xCQEG8vgEvQfut0bkj2xgre9z9ePZhdKdNxBphhvH6s-1726437753-1.0.1.1-5qo0zwDCcKDtqvIzDbp2sLEPCey8v5DAsf0Mg6f2RmooOW9FXTw2P66VCTTF.vCwTpWBIFk0vzKmBAPOt6urIg;
+        _cfuvid=TiTyEciy7HrUlIDEsELZqkUyM4Fyn8OldZd4JefFMOA-1726437753108-0.0.1.1-604800000
       host:
       - api.openai.com
       user-agent:
@@ -160,25 +52,23 @@ interactions:
     method: POST
     uri: https://api.openai.com/v1/chat/completions
   response:
-    content: "{\n  \"id\": \"chatcmpl-A7dBZctjojTCELPq44ohNthjSGyzD\",\n  \"object\":
-      \"chat.completion\",\n  \"created\": 1726382289,\n  \"model\": \"gpt-4o-2024-05-13\",\n
+    content: "{\n  \"id\": \"chatcmpl-A7rjq7AWMBUw2Ygvy99QeI8F8qugO\",\n  \"object\":
+      \"chat.completion\",\n  \"created\": 1726438230,\n  \"model\": \"gpt-4o-2024-05-13\",\n
       \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
-      \"assistant\",\n        \"content\": \"Thought: I need to analyze the available
-      data to determine the exact total number of sales.\\n\\nAssuming I have access
-      to the data in some formatted file or database, I would review the data to count
-      the total number of sales entries.\\n\\nFinal Answer: The total number of sales
-      is [insert total number here as an integer]. \\n\\n(Note: As I lack access to
-      actual data in the context of this simulation, you'll need to insert the correct
-      total from your available data source.)\",\n        \"refusal\": null\n      },\n
-      \     \"logprobs\": null,\n      \"finish_reason\": \"stop\"\n    }\n  ],\n
-      \ \"usage\": {\n    \"prompt_tokens\": 215,\n    \"completion_tokens\": 95,\n
-      \   \"total_tokens\": 310,\n    \"completion_tokens_details\": {\n      \"reasoning_tokens\":
-      0\n    }\n  },\n  \"system_fingerprint\": \"fp_992d1ea92d\"\n}\n"
+      \"assistant\",\n        \"content\": \"Thought: I understand that the task is
+      to determine the total number of sales from the available data and provide the
+      exact integer. I will analyze the data and verify the total number of sales.\\n\\nFinal
+      Answer: [Please provide the data containing the sales information so I can analyze
+      and return the total number of sales. Without the data, I cannot complete the
+      task accurately.]\",\n        \"refusal\": null\n      },\n      \"logprobs\":
+      null,\n      \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\":
+      215,\n    \"completion_tokens\": 73,\n    \"total_tokens\": 288,\n    \"completion_tokens_details\":
+      {\n      \"reasoning_tokens\": 0\n    }\n  },\n  \"system_fingerprint\": \"fp_992d1ea92d\"\n}\n"
     headers:
       CF-Cache-Status:
       - DYNAMIC
       CF-RAY:
-      - 8c369cbd4b38743a-MIA
+      - 8c3bf27c2fd1a4ca-MIA
       Connection:
       - keep-alive
       Content-Encoding:
@@ -186,7 +76,7 @@ interactions:
       Content-Type:
       - application/json
       Date:
-      - Sun, 15 Sep 2024 06:38:12 GMT
+      - Sun, 15 Sep 2024 22:10:31 GMT
       Server:
       - cloudflare
       Transfer-Encoding:
@@ -200,7 +90,7 @@ interactions:
       openai-organization:
       - crewai-iuxna1
       openai-processing-ms:
-      - '2541'
+      - '860'
       openai-version:
       - '2020-10-01'
       strict-transport-security:
@@ -212,13 +102,13 @@ interactions:
       x-ratelimit-remaining-requests:
       - '9999'
       x-ratelimit-remaining-tokens:
-      - '29999736'
+      - '29999735'
       x-ratelimit-reset-requests:
       - 6ms
       x-ratelimit-reset-tokens:
       - 0s
       x-request-id:
-      - req_c0a217fc4fbf36ac939699d49f2f36d0
+      - req_262fcff70123f368f958e19ea7b5baea
     http_version: HTTP/1.1
     status_code: 200
 version: 1
