@@ -37,7 +37,7 @@ interactions:
       for your final answer: Howdy!\nyou MUST return the actual complete content as
       the final answer, not a summary.\n\nBegin! This is VERY important to you, use
       the tools available and give your best Final Answer, your job depends on it!\n\nThought:"}],
-      "model": "gpt-4o", "stop": ["\nObservation"]}'
+      "model": "gpt-4o", "stop": ["\nResult"]}'
     headers:
       accept:
       - application/json
@@ -46,12 +46,12 @@ interactions:
       connection:
       - keep-alive
       content-length:
-      - '2931'
+      - '2926'
       content-type:
       - application/json
       cookie:
-      - __cf_bm=pgsskMPipgeSB6HhnkjwcOEfengIvt0p9whKNmTJVLs-1726215280-1.0.1.1-Gtqb.nO1U.cHTnd9mR9sEA5tpVo1.pexRrxqXOkn.6Mzja8mLG1URJsOLTfjMAAYpWaUQe4Rjmnr6lqQk5hAxQ;
-        _cfuvid=dp2yoCmGHVlURh_U78_UoIfnhcO5UhufnL5whkUSMTQ-1726214380689-0.0.1.1-604800000
+      - _cfuvid=Bz2zevKuFYZqnEFwqmqVHcRo5pT0fm0fTtc_6_VQs4g-1726379702153-0.0.1.1-604800000;
+        __cf_bm=Zqss5M7F0I3ujWWOyeGVyXrXruQvD3butDltZlDeBZc-1726381512-1.0.1.1-qqM346NIgOQgZmuydOkCpKfALZSi1RxBHjWfy4KEzxJV2kEOuF._xS9AfJH5x.JhtJUFx8TkXZlNL6GanAA7nQ
       host:
       - api.openai.com
       user-agent:
@@ -75,24 +75,24 @@ interactions:
     method: POST
     uri: https://api.openai.com/v1/chat/completions
   response:
-    content: "{\n  \"id\": \"chatcmpl-A6vkm2JnEJolvn6fOmyMPw1YmjbnA\",\n  \"object\":
-      \"chat.completion\",\n  \"created\": 1726215336,\n  \"model\": \"gpt-4o-2024-05-13\",\n
+    content: "{\n  \"id\": \"chatcmpl-A7dBeClrEZGsoTRWJZnVcqH0jNbik\",\n  \"object\":
+      \"chat.completion\",\n  \"created\": 1726382294,\n  \"model\": \"gpt-4o-2024-05-13\",\n
       \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
-      \"assistant\",\n        \"content\": \"Thought: I need to ask the Researcher
-      to say hi in a specific way, using the word \\\"Howdy!\\\" \\n\\nAction: Ask
-      question to coworker\\nAction Input: {\\\"question\\\": \\\"Can you say hi using
-      the word 'Howdy!'?\\\", \\\"context\\\": \\\"We need to greet someone in a friendly
-      manner using the specific word 'Howdy!'. Please ensure you respond exactly with
-      that.\\\" , \\\"coworker\\\": \\\"Researcher\\\"}\",\n        \"refusal\": null\n
-      \     },\n      \"logprobs\": null,\n      \"finish_reason\": \"stop\"\n    }\n
-      \ ],\n  \"usage\": {\n    \"prompt_tokens\": 642,\n    \"completion_tokens\":
-      89,\n    \"total_tokens\": 731,\n    \"completion_tokens_details\": {\n      \"reasoning_tokens\":
+      \"assistant\",\n        \"content\": \"Thought: I need to communicate to the
+      Researcher that they should say \\\"hi\\\" in the specific form of \\\"Howdy!\\\"
+      to meet the expected criteria.\\n\\nAction: Ask question to coworker\\nAction
+      Input: {\\\"question\\\": \\\"Can you say hi?\\\", \\\"context\\\": \\\"Please
+      respond by saying 'Howdy!'. This specific phrase is important and needs to be
+      used exactly as it is.\\\", \\\"coworker\\\": \\\"Researcher\\\"}\",\n        \"refusal\":
+      null\n      },\n      \"logprobs\": null,\n      \"finish_reason\": \"stop\"\n
+      \   }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 642,\n    \"completion_tokens\":
+      87,\n    \"total_tokens\": 729,\n    \"completion_tokens_details\": {\n      \"reasoning_tokens\":
       0\n    }\n  },\n  \"system_fingerprint\": \"fp_25624ae3a5\"\n}\n"
     headers:
       CF-Cache-Status:
       - DYNAMIC
       CF-RAY:
-      - 8c26b0b69cdd2ab9-LAX
+      - 8c369cdb7b45743a-MIA
       Connection:
       - keep-alive
       Content-Encoding:
@@ -100,7 +100,7 @@ interactions:
       Content-Type:
       - application/json
       Date:
-      - Fri, 13 Sep 2024 08:15:37 GMT
+      - Sun, 15 Sep 2024 06:38:15 GMT
       Server:
       - cloudflare
       Transfer-Encoding:
@@ -114,7 +114,7 @@ interactions:
       openai-organization:
       - crewai-iuxna1
       openai-processing-ms:
-      - '1400'
+      - '901'
       openai-version:
       - '2020-10-01'
       strict-transport-security:
@@ -132,7 +132,7 @@ interactions:
       x-ratelimit-reset-tokens:
       - 1ms
       x-request-id:
-      - req_d0c296b6a0d9221b1df60af860126ad1
+      - req_1ec4ea3b8082e3ab9eb6a36c6efb7686
     http_version: HTTP/1.1
     status_code: 200
 - request:
@@ -142,14 +142,14 @@ interactions:
       I now can give a great answer\nFinal Answer: Your final answer must be the great
       and the most complete as possible, it must be outcome described.\n\nI MUST use
       these formats, my job depends on it!"}, {"role": "user", "content": "\nCurrent
-      Task: Can you say hi using the word ''Howdy!''?\n\nThis is the expect criteria
-      for your final answer: Your best answer to your coworker asking you this, accounting
-      for the context shared.\nyou MUST return the actual complete content as the
-      final answer, not a summary.\n\nThis is the context you''re working with:\nWe
-      need to greet someone in a friendly manner using the specific word ''Howdy!''.
-      Please ensure you respond exactly with that.\n\nBegin! This is VERY important
-      to you, use the tools available and give your best Final Answer, your job depends
-      on it!\n\nThought:"}], "model": "gpt-4o", "stop": ["\nObservation"]}'
+      Task: Can you say hi?\n\nThis is the expect criteria for your final answer:
+      Your best answer to your coworker asking you this, accounting for the context
+      shared.\nyou MUST return the actual complete content as the final answer, not
+      a summary.\n\nThis is the context you''re working with:\nPlease respond by saying
+      ''Howdy!''. This specific phrase is important and needs to be used exactly as
+      it is.\n\nBegin! This is VERY important to you, use the tools available and
+      give your best Final Answer, your job depends on it!\n\nThought:"}], "model":
+      "gpt-4o", "stop": ["\nResult"]}'
     headers:
       accept:
       - application/json
@@ -158,12 +158,12 @@ interactions:
       connection:
       - keep-alive
       content-length:
-      - '1090'
+      - '1044'
       content-type:
       - application/json
       cookie:
-      - __cf_bm=pgsskMPipgeSB6HhnkjwcOEfengIvt0p9whKNmTJVLs-1726215280-1.0.1.1-Gtqb.nO1U.cHTnd9mR9sEA5tpVo1.pexRrxqXOkn.6Mzja8mLG1URJsOLTfjMAAYpWaUQe4Rjmnr6lqQk5hAxQ;
-        _cfuvid=dp2yoCmGHVlURh_U78_UoIfnhcO5UhufnL5whkUSMTQ-1726214380689-0.0.1.1-604800000
+      - _cfuvid=Bz2zevKuFYZqnEFwqmqVHcRo5pT0fm0fTtc_6_VQs4g-1726379702153-0.0.1.1-604800000;
+        __cf_bm=Zqss5M7F0I3ujWWOyeGVyXrXruQvD3butDltZlDeBZc-1726381512-1.0.1.1-qqM346NIgOQgZmuydOkCpKfALZSi1RxBHjWfy4KEzxJV2kEOuF._xS9AfJH5x.JhtJUFx8TkXZlNL6GanAA7nQ
       host:
       - api.openai.com
       user-agent:
@@ -187,19 +187,19 @@ interactions:
     method: POST
     uri: https://api.openai.com/v1/chat/completions
   response:
-    content: "{\n  \"id\": \"chatcmpl-A6vkoBayktgWLRK3489ZYSLV2ltHH\",\n  \"object\":
-      \"chat.completion\",\n  \"created\": 1726215338,\n  \"model\": \"gpt-4o-2024-05-13\",\n
+    content: "{\n  \"id\": \"chatcmpl-A7dBgLOGpRozxm4WDngOLLygwxDRY\",\n  \"object\":
+      \"chat.completion\",\n  \"created\": 1726382296,\n  \"model\": \"gpt-4o-2024-05-13\",\n
       \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
-      \"assistant\",\n        \"content\": \"I now can give a great answer\\nFinal
+      \"assistant\",\n        \"content\": \"Thought: I now can give a great answer\\nFinal
       Answer: Howdy!\",\n        \"refusal\": null\n      },\n      \"logprobs\":
       null,\n      \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\":
-      213,\n    \"completion_tokens\": 14,\n    \"total_tokens\": 227,\n    \"completion_tokens_details\":
+      205,\n    \"completion_tokens\": 16,\n    \"total_tokens\": 221,\n    \"completion_tokens_details\":
       {\n      \"reasoning_tokens\": 0\n    }\n  },\n  \"system_fingerprint\": \"fp_25624ae3a5\"\n}\n"
     headers:
       CF-Cache-Status:
       - DYNAMIC
       CF-RAY:
-      - 8c26b0c89da92ab9-LAX
+      - 8c369ce69921743a-MIA
       Connection:
       - keep-alive
       Content-Encoding:
@@ -207,7 +207,7 @@ interactions:
       Content-Type:
       - application/json
       Date:
-      - Fri, 13 Sep 2024 08:15:38 GMT
+      - Sun, 15 Sep 2024 06:38:16 GMT
       Server:
       - cloudflare
       Transfer-Encoding:
@@ -221,7 +221,7 @@ interactions:
       openai-organization:
       - crewai-iuxna1
       openai-processing-ms:
-      - '261'
+      - '247'
       openai-version:
       - '2020-10-01'
       strict-transport-security:
@@ -233,15 +233,93 @@ interactions:
       x-ratelimit-remaining-requests:
       - '9999'
       x-ratelimit-remaining-tokens:
-      - '29999745'
+      - '29999755'
       x-ratelimit-reset-requests:
       - 6ms
       x-ratelimit-reset-tokens:
       - 0s
       x-request-id:
-      - req_f04a848a7b5d77c7a77524d36f687173
+      - req_9fa88c3d2864945204c78219ce4ad3db
     http_version: HTTP/1.1
     status_code: 200
+- request:
+    body: !!binary |
+      CpgVCiQKIgoMc2VydmljZS5uYW1lEhIKEGNyZXdBSS10ZWxlbWV0cnkS7xQKEgoQY3Jld2FpLnRl
+      bGVtZXRyeRKQAgoQ047wGg7qe0ftclgGsmSF4BIImTJCq5MiDJ0qDlRhc2sgRXhlY3V0aW9uMAE5
+      2DwzlYtX9RdBwNyNUoxX9RdKLgoIY3Jld19rZXkSIgogMTdhNmNhMDNkODUwZmUyZjMwYzBhMTA1
+      MWFkNWY3ZTRKMQoHY3Jld19pZBImCiQ0NjA3ZGJmNC03ZTJlLTQ3ODEtOTU1NC1mYmJhNzM1M2Ew
+      MzRKLgoIdGFza19rZXkSIgogZjU5NDkyMDhkNmYzOWVlOTBhZDAwZTk3MWMxNGFkZDNKMQoHdGFz
+      a19pZBImCiRhNzA5ZjRlZi02YmRhLTQ0ZWEtYTJiYi05OWRjOWVkZDYwMDZ6AhgBhQEAAQAAEqAH
+      ChDSvVQq6qfWvCMHLPtPVkd9EgihiIjY2/DWoioMQ3JldyBDcmVhdGVkMAE5ALdUU4xX9RdBIPNX
+      U4xX9RdKGgoOY3Jld2FpX3ZlcnNpb24SCAoGMC41Ni4wShoKDnB5dGhvbl92ZXJzaW9uEggKBjMu
+      MTEuN0ouCghjcmV3X2tleRIiCiA2MWE2MGQ1YjM2MDIxZDFhZGE1NDM0ZWIyZTM4ODZlZUoxCgdj
+      cmV3X2lkEiYKJDlhYWU0MTkyLTlmZjYtNDVjNi05M2NiLTlkMzZmNzhkYzAwNEocCgxjcmV3X3By
+      b2Nlc3MSDAoKc2VxdWVudGlhbEoRCgtjcmV3X21lbW9yeRICEABKGgoUY3Jld19udW1iZXJfb2Zf
+      dGFza3MSAhgBShsKFWNyZXdfbnVtYmVyX29mX2FnZW50cxICGAFKzgIKC2NyZXdfYWdlbnRzEr4C
+      CrsCW3sia2V5IjogImY1ZWE5NzA1Yjc4N2Y3ODI1MTQyYzg3NGI1ODcyNmM4IiwgImlkIjogIjQz
+      M2YxMTZhLTIyZGItNDFmMy1iNzUzLWI1OWY1OGE0YTYyMSIsICJyb2xlIjogIlJlc2VhcmNoZXIi
+      LCAidmVyYm9zZT8iOiBmYWxzZSwgIm1heF9pdGVyIjogMTUsICJtYXhfcnBtIjogbnVsbCwgImZ1
+      bmN0aW9uX2NhbGxpbmdfbGxtIjogbnVsbCwgImxsbSI6ICJncHQtNG8iLCAiZGVsZWdhdGlvbl9l
+      bmFibGVkPyI6IGZhbHNlLCAiYWxsb3dfY29kZV9leGVjdXRpb24/IjogZmFsc2UsICJtYXhfcmV0
+      cnlfbGltaXQiOiAyLCAidG9vbHNfbmFtZXMiOiBbXX1dSv8BCgpjcmV3X3Rhc2tzEvABCu0BW3si
+      a2V5IjogImY0NTY3OTIxMmQ3YmYzNzVkMTFjMjg0MjBmYjcyZDI0IiwgImlkIjogImFkZmZmNmM4
+      LWRiZjYtNGI0ZC05YmVmLTY5YWIzODU4ZDExNSIsICJhc3luY19leGVjdXRpb24/IjogZmFsc2Us
+      ICJodW1hbl9pbnB1dD8iOiBmYWxzZSwgImFnZW50X3JvbGUiOiAiUmVzZWFyY2hlciIsICJhZ2Vu
+      dF9rZXkiOiAiZjVlYTk3MDViNzg3Zjc4MjUxNDJjODc0YjU4NzI2YzgiLCAidG9vbHNfbmFtZXMi
+      OiBbXX1degIYAYUBAAEAABKOAgoQVP5qJprU+17ZhAmxwtf+nBII/hTJW5g8pvEqDFRhc2sgQ3Jl
+      YXRlZDABOTAMhFOMV/UXQSBihFOMV/UXSi4KCGNyZXdfa2V5EiIKIDYxYTYwZDViMzYwMjFkMWFk
+      YTU0MzRlYjJlMzg4NmVlSjEKB2NyZXdfaWQSJgokOWFhZTQxOTItOWZmNi00NWM2LTkzY2ItOWQz
+      NmY3OGRjMDA0Si4KCHRhc2tfa2V5EiIKIGY0NTY3OTIxMmQ3YmYzNzVkMTFjMjg0MjBmYjcyZDI0
+      SjEKB3Rhc2tfaWQSJgokYWRmZmY2YzgtZGJmNi00YjRkLTliZWYtNjlhYjM4NThkMTE1egIYAYUB
+      AAEAABKQAgoQF9Hx/1Pyibqn8K6GWJShYxII8FhFxFoAFTMqDlRhc2sgRXhlY3V0aW9uMAE5AJGE
+      U4xX9RdBKMRfs4xX9RdKLgoIY3Jld19rZXkSIgogNjFhNjBkNWIzNjAyMWQxYWRhNTQzNGViMmUz
+      ODg2ZWVKMQoHY3Jld19pZBImCiQ5YWFlNDE5Mi05ZmY2LTQ1YzYtOTNjYi05ZDM2Zjc4ZGMwMDRK
+      LgoIdGFza19rZXkSIgogZjQ1Njc5MjEyZDdiZjM3NWQxMWMyODQyMGZiNzJkMjRKMQoHdGFza19p
+      ZBImCiRhZGZmZjZjOC1kYmY2LTRiNGQtOWJlZi02OWFiMzg1OGQxMTV6AhgBhQEAAQAAEv4GChC+
+      1gKhJb1cnDkZaEcwRS8bEghZdxQ4PTmuryoMQ3JldyBDcmVhdGVkMAE5CDpjtIxX9RdBuOdktIxX
+      9RdKGgoOY3Jld2FpX3ZlcnNpb24SCAoGMC41Ni4wShoKDnB5dGhvbl92ZXJzaW9uEggKBjMuMTEu
+      N0ouCghjcmV3X2tleRIiCiBmYjUxNTg5NWJlNmM3ZDNjOGQ2ZjFkOTI5OTk2MWQ1MUoxCgdjcmV3
+      X2lkEiYKJDA3Y2E3YjI5LTU5NDctNDU3Ny05NmFkLWYwYjNjMWI1ZWU2NkoeCgxjcmV3X3Byb2Nl
+      c3MSDgoMaGllcmFyY2hpY2FsShEKC2NyZXdfbWVtb3J5EgIQAEoaChRjcmV3X251bWJlcl9vZl90
+      YXNrcxICGAFKGwoVY3Jld19udW1iZXJfb2ZfYWdlbnRzEgIYAUrOAgoLY3Jld19hZ2VudHMSvgIK
+      uwJbeyJrZXkiOiAiZjVlYTk3MDViNzg3Zjc4MjUxNDJjODc0YjU4NzI2YzgiLCAiaWQiOiAiOTA1
+      MWI0NzktNGM1Ni00YWFiLTliZjQtZDJmYmE4YTM2MzYwIiwgInJvbGUiOiAiUmVzZWFyY2hlciIs
+      ICJ2ZXJib3NlPyI6IGZhbHNlLCAibWF4X2l0ZXIiOiAxNSwgIm1heF9ycG0iOiBudWxsLCAiZnVu
+      Y3Rpb25fY2FsbGluZ19sbG0iOiBudWxsLCAibGxtIjogImdwdC00byIsICJkZWxlZ2F0aW9uX2Vu
+      YWJsZWQ/IjogZmFsc2UsICJhbGxvd19jb2RlX2V4ZWN1dGlvbj8iOiBmYWxzZSwgIm1heF9yZXRy
+      eV9saW1pdCI6IDIsICJ0b29sc19uYW1lcyI6IFtdfV1K2wEKCmNyZXdfdGFza3MSzAEKyQFbeyJr
+      ZXkiOiAiYjk0OWZiMGIwYTFkMjRlMjg2NDhhYzRmZjk1ZGUyNTkiLCAiaWQiOiAiNWY4OGYzZmYt
+      M2I5NC00MzU5LThiMWYtZTdkN2YzZGYwOWZiIiwgImFzeW5jX2V4ZWN1dGlvbj8iOiBmYWxzZSwg
+      Imh1bWFuX2lucHV0PyI6IGZhbHNlLCAiYWdlbnRfcm9sZSI6ICJOb25lIiwgImFnZW50X2tleSI6
+      IG51bGwsICJ0b29sc19uYW1lcyI6IFtdfV16AhgBhQEAAQAA
+    headers:
+      Accept:
+      - '*/*'
+      Accept-Encoding:
+      - gzip, deflate
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '2715'
+      Content-Type:
+      - application/x-protobuf
+      User-Agent:
+      - OTel-OTLP-Exporter-Python/1.27.0
+    method: POST
+    uri: https://telemetry.crewai.com:4319/v1/traces
+  response:
+    body:
+      string: "\n\0"
+    headers:
+      Content-Length:
+      - '2'
+      Content-Type:
+      - application/x-protobuf
+      Date:
+      - Sun, 15 Sep 2024 06:38:17 GMT
+    status:
+      code: 200
+      message: OK
 - request:
     body: '{"messages": [{"role": "system", "content": "You are Crew Manager. You
       are a seasoned manager with a knack for getting the best out of your team.\nYou
@@ -280,12 +358,12 @@ interactions:
       for your final answer: Howdy!\nyou MUST return the actual complete content as
       the final answer, not a summary.\n\nBegin! This is VERY important to you, use
       the tools available and give your best Final Answer, your job depends on it!\n\nThought:"},
-      {"role": "assistant", "content": "Thought: I need to ask the Researcher to say
-      hi in a specific way, using the word \"Howdy!\" \n\nAction: Ask question to
-      coworker\nAction Input: {\"question\": \"Can you say hi using the word ''Howdy!''?\",
-      \"context\": \"We need to greet someone in a friendly manner using the specific
-      word ''Howdy!''. Please ensure you respond exactly with that.\" , \"coworker\":
-      \"Researcher\"}\nObservation: Howdy!"}], "model": "gpt-4o", "stop": ["\nObservation"]}'
+      {"role": "assistant", "content": "Thought: I need to communicate to the Researcher
+      that they should say \"hi\" in the specific form of \"Howdy!\" to meet the expected
+      criteria.\n\nAction: Ask question to coworker\nAction Input: {\"question\":
+      \"Can you say hi?\", \"context\": \"Please respond by saying ''Howdy!''. This
+      specific phrase is important and needs to be used exactly as it is.\", \"coworker\":
+      \"Researcher\"}\nObservation: Howdy!"}], "model": "gpt-4o", "stop": ["\nResult"]}'
     headers:
       accept:
       - application/json
@@ -294,12 +372,12 @@ interactions:
       connection:
       - keep-alive
       content-length:
-      - '3368'
+      - '3370'
       content-type:
       - application/json
       cookie:
-      - __cf_bm=pgsskMPipgeSB6HhnkjwcOEfengIvt0p9whKNmTJVLs-1726215280-1.0.1.1-Gtqb.nO1U.cHTnd9mR9sEA5tpVo1.pexRrxqXOkn.6Mzja8mLG1URJsOLTfjMAAYpWaUQe4Rjmnr6lqQk5hAxQ;
-        _cfuvid=dp2yoCmGHVlURh_U78_UoIfnhcO5UhufnL5whkUSMTQ-1726214380689-0.0.1.1-604800000
+      - _cfuvid=Bz2zevKuFYZqnEFwqmqVHcRo5pT0fm0fTtc_6_VQs4g-1726379702153-0.0.1.1-604800000;
+        __cf_bm=Zqss5M7F0I3ujWWOyeGVyXrXruQvD3butDltZlDeBZc-1726381512-1.0.1.1-qqM346NIgOQgZmuydOkCpKfALZSi1RxBHjWfy4KEzxJV2kEOuF._xS9AfJH5x.JhtJUFx8TkXZlNL6GanAA7nQ
       host:
       - api.openai.com
       user-agent:
@@ -323,19 +401,19 @@ interactions:
     method: POST
     uri: https://api.openai.com/v1/chat/completions
   response:
-    content: "{\n  \"id\": \"chatcmpl-A6vkqRrvR1ppFut5jYawjNwf90mHe\",\n  \"object\":
-      \"chat.completion\",\n  \"created\": 1726215340,\n  \"model\": \"gpt-4o-2024-05-13\",\n
+    content: "{\n  \"id\": \"chatcmpl-A7dBhuq34XGMtWyiGMPShmxdAERfs\",\n  \"object\":
+      \"chat.completion\",\n  \"created\": 1726382297,\n  \"model\": \"gpt-4o-2024-05-13\",\n
       \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
-      \"assistant\",\n        \"content\": \"Thought: I now know the final answer\\nFinal
+      \"assistant\",\n        \"content\": \"Thought: I now know the final answer.\\nFinal
       Answer: Howdy!\",\n        \"refusal\": null\n      },\n      \"logprobs\":
       null,\n      \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\":
-      740,\n    \"completion_tokens\": 15,\n    \"total_tokens\": 755,\n    \"completion_tokens_details\":
+      738,\n    \"completion_tokens\": 15,\n    \"total_tokens\": 753,\n    \"completion_tokens_details\":
       {\n      \"reasoning_tokens\": 0\n    }\n  },\n  \"system_fingerprint\": \"fp_25624ae3a5\"\n}\n"
     headers:
       CF-Cache-Status:
       - DYNAMIC
       CF-RAY:
-      - 8c26b0d1bd002ab9-LAX
+      - 8c369ce9faf5743a-MIA
       Connection:
       - keep-alive
       Content-Encoding:
@@ -343,7 +421,7 @@ interactions:
       Content-Type:
       - application/json
       Date:
-      - Fri, 13 Sep 2024 08:15:40 GMT
+      - Sun, 15 Sep 2024 06:38:17 GMT
       Server:
       - cloudflare
       Transfer-Encoding:
@@ -357,7 +435,7 @@ interactions:
       openai-organization:
       - crewai-iuxna1
       openai-processing-ms:
-      - '376'
+      - '291'
       openai-version:
       - '2020-10-01'
       strict-transport-security:
@@ -375,7 +453,7 @@ interactions:
       x-ratelimit-reset-tokens:
       - 1ms
       x-request-id:
-      - req_784e5a87d9261e9efc2b3431fd803183
+      - req_0c37718cd0a2e822fd8894284f0c3ffc
     http_version: HTTP/1.1
     status_code: 200
 version: 1

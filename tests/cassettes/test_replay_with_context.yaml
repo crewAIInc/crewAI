@@ -10,7 +10,7 @@ interactions:
       content as the final answer, not a summary.\n\nThis is the context you''re working
       with:\ncontext raw output\n\nBegin! This is VERY important to you, use the tools
       available and give your best Final Answer, your job depends on it!\n\nThought:"}],
-      "model": "gpt-4o", "stop": ["\nObservation"]}'
+      "model": "gpt-4o", "stop": ["\nResult"]}'
     headers:
       accept:
       - application/json
@@ -19,12 +19,12 @@ interactions:
       connection:
       - keep-alive
       content-length:
-      - '855'
+      - '850'
       content-type:
       - application/json
       cookie:
-      - __cf_bm=pgsskMPipgeSB6HhnkjwcOEfengIvt0p9whKNmTJVLs-1726215280-1.0.1.1-Gtqb.nO1U.cHTnd9mR9sEA5tpVo1.pexRrxqXOkn.6Mzja8mLG1URJsOLTfjMAAYpWaUQe4Rjmnr6lqQk5hAxQ;
-        _cfuvid=dp2yoCmGHVlURh_U78_UoIfnhcO5UhufnL5whkUSMTQ-1726214380689-0.0.1.1-604800000
+      - _cfuvid=Bz2zevKuFYZqnEFwqmqVHcRo5pT0fm0fTtc_6_VQs4g-1726379702153-0.0.1.1-604800000;
+        __cf_bm=NOn1n25T8u1eKhL05A4mBgpDvwojMRvK1SB7TGDEjFU-1726383316-1.0.1.1-kUyz.anEyDoe9wXgChl5UWW3Z9pFTgIpyZfqI6rucN2vXQHH6k.DSvUtilpKOPnhI4LtmQYBhxkJ6wKLfS3J8Q
       host:
       - api.openai.com
       user-agent:
@@ -48,8 +48,8 @@ interactions:
     method: POST
     uri: https://api.openai.com/v1/chat/completions
   response:
-    content: "{\n  \"id\": \"chatcmpl-A6vm7Mnq8g7UjlxAC4EnWV0kPt3L9\",\n  \"object\":
-      \"chat.completion\",\n  \"created\": 1726215419,\n  \"model\": \"gpt-4o-2024-05-13\",\n
+    content: "{\n  \"id\": \"chatcmpl-A7dXS3qFdQE9OlkD91Dq0MssDai6D\",\n  \"object\":
+      \"chat.completion\",\n  \"created\": 1726383646,\n  \"model\": \"gpt-4o-2024-05-13\",\n
       \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
       \"assistant\",\n        \"content\": \"Thought: I now can give a great answer\\nFinal
       Answer: Hi\",\n        \"refusal\": null\n      },\n      \"logprobs\": null,\n
@@ -60,7 +60,7 @@ interactions:
       CF-Cache-Status:
       - DYNAMIC
       CF-RAY:
-      - 8c26b2c1487c2ab9-LAX
+      - 8c36bddfbd567454-MIA
       Connection:
       - keep-alive
       Content-Encoding:
@@ -68,7 +68,7 @@ interactions:
       Content-Type:
       - application/json
       Date:
-      - Fri, 13 Sep 2024 08:16:59 GMT
+      - Sun, 15 Sep 2024 07:00:47 GMT
       Server:
       - cloudflare
       Transfer-Encoding:
@@ -82,7 +82,7 @@ interactions:
       openai-organization:
       - crewai-iuxna1
       openai-processing-ms:
-      - '621'
+      - '243'
       openai-version:
       - '2020-10-01'
       strict-transport-security:
@@ -100,7 +100,7 @@ interactions:
       x-ratelimit-reset-tokens:
       - 0s
       x-request-id:
-      - req_631b12ca9e7b677c7bf67617d3a9d8b2
+      - req_1054d5a8789995f0b925658bbf35bfbd
     http_version: HTTP/1.1
     status_code: 200
 version: 1

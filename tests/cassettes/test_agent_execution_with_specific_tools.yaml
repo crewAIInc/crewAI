@@ -18,7 +18,7 @@ interactions:
       answer: The result of the multiplication.\nyou MUST return the actual complete
       content as the final answer, not a summary.\n\nBegin! This is VERY important
       to you, use the tools available and give your best Final Answer, your job depends
-      on it!\n\nThought:"}], "model": "gpt-4o", "stop": ["\nObservation"]}'
+      on it!\n\nThought:"}], "model": "gpt-4o", "stop": ["\nResult"]}'
     headers:
       accept:
       - application/json
@@ -27,12 +27,12 @@ interactions:
       connection:
       - keep-alive
       content-length:
-      - '1486'
+      - '1481'
       content-type:
       - application/json
       cookie:
-      - __cf_bm=r6BNUnXat.26mviZiJYUf7Qj4ea5gbt_oPxyClKcVOE-1726214380-1.0.1.1-2S3G10sPdiG2syQSO8wKWXE7Nmdgt88imgakr81w9DemMH8mVDg0q6r9ANx6tM4_CPvgGQlMVstDhDRkIDwhzg;
-        _cfuvid=dp2yoCmGHVlURh_U78_UoIfnhcO5UhufnL5whkUSMTQ-1726214380689-0.0.1.1-604800000
+      - __cf_bm=J1VIPhfusyyXtwM.1L9zbe3jdnU7NVyHC3AWiKXO280-1726379702-1.0.1.1-LDa9RyXFli18t4ZEuVAENTChdNAkRtdWXRkRLbBHbCXdobugQ3T.arhMpSKwtnBRXKPcC4b66UA7BsSy1VXDHQ;
+        _cfuvid=Bz2zevKuFYZqnEFwqmqVHcRo5pT0fm0fTtc_6_VQs4g-1726379702153-0.0.1.1-604800000
       host:
       - api.openai.com
       user-agent:
@@ -56,21 +56,20 @@ interactions:
     method: POST
     uri: https://api.openai.com/v1/chat/completions
   response:
-    content: "{\n  \"id\": \"chatcmpl-A6vVxDvIMMYwMIfUTqYsT8plGJiIr\",\n  \"object\":
-      \"chat.completion\",\n  \"created\": 1726214417,\n  \"model\": \"gpt-4o-2024-05-13\",\n
+    content: "{\n  \"id\": \"chatcmpl-A7cW818UNh95SqIp4VH7Nj1ZzQy0R\",\n  \"object\":
+      \"chat.completion\",\n  \"created\": 1726379720,\n  \"model\": \"gpt-4o-2024-05-13\",\n
       \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
-      \"assistant\",\n        \"content\": \"To find the result of the multiplication
-      of 3 and 4, I should use the multiplier tool.\\n\\nAction: multiplier\\nAction
-      Input: {\\\"first_number\\\": 3, \\\"second_number\\\": 4}\",\n        \"refusal\":
-      null\n      },\n      \"logprobs\": null,\n      \"finish_reason\": \"stop\"\n
-      \   }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 309,\n    \"completion_tokens\":
-      42,\n    \"total_tokens\": 351,\n    \"completion_tokens_details\": {\n      \"reasoning_tokens\":
+      \"assistant\",\n        \"content\": \"I need to multiply 3 times 4 to get the
+      result.\\n\\nAction: multiplier\\nAction Input: {\\\"first_number\\\": 3, \\\"second_number\\\":
+      4}\",\n        \"refusal\": null\n      },\n      \"logprobs\": null,\n      \"finish_reason\":
+      \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 309,\n    \"completion_tokens\":
+      35,\n    \"total_tokens\": 344,\n    \"completion_tokens_details\": {\n      \"reasoning_tokens\":
       0\n    }\n  },\n  \"system_fingerprint\": \"fp_25624ae3a5\"\n}\n"
     headers:
       CF-Cache-Status:
       - DYNAMIC
       CF-RAY:
-      - 8c269a48fd4c14f2-LAX
+      - 8c365e021a3a221a-MIA
       Connection:
       - keep-alive
       Content-Encoding:
@@ -78,7 +77,7 @@ interactions:
       Content-Type:
       - application/json
       Date:
-      - Fri, 13 Sep 2024 08:00:17 GMT
+      - Sun, 15 Sep 2024 05:55:20 GMT
       Server:
       - cloudflare
       Transfer-Encoding:
@@ -92,7 +91,7 @@ interactions:
       openai-organization:
       - crewai-iuxna1
       openai-processing-ms:
-      - '518'
+      - '427'
       openai-version:
       - '2020-10-01'
       strict-transport-security:
@@ -110,7 +109,7 @@ interactions:
       x-ratelimit-reset-tokens:
       - 0s
       x-request-id:
-      - req_237359a96574a6624e280d895b92dab8
+      - req_914195438428dd1aaa75462240ba582a
     http_version: HTTP/1.1
     status_code: 200
 - request:
@@ -132,10 +131,9 @@ interactions:
       answer: The result of the multiplication.\nyou MUST return the actual complete
       content as the final answer, not a summary.\n\nBegin! This is VERY important
       to you, use the tools available and give your best Final Answer, your job depends
-      on it!\n\nThought:"}, {"role": "assistant", "content": "To find the result of
-      the multiplication of 3 and 4, I should use the multiplier tool.\n\nAction:
-      multiplier\nAction Input: {\"first_number\": 3, \"second_number\": 4}\nObservation:
-      12"}], "model": "gpt-4o", "stop": ["\nObservation"]}'
+      on it!\n\nThought:"}, {"role": "assistant", "content": "I need to multiply 3
+      times 4 to get the result.\n\nAction: multiplier\nAction Input: {\"first_number\":
+      3, \"second_number\": 4}\nObservation: 12"}], "model": "gpt-4o", "stop": ["\nResult"]}'
     headers:
       accept:
       - application/json
@@ -144,12 +142,12 @@ interactions:
       connection:
       - keep-alive
       content-length:
-      - '1708'
+      - '1664'
       content-type:
       - application/json
       cookie:
-      - __cf_bm=r6BNUnXat.26mviZiJYUf7Qj4ea5gbt_oPxyClKcVOE-1726214380-1.0.1.1-2S3G10sPdiG2syQSO8wKWXE7Nmdgt88imgakr81w9DemMH8mVDg0q6r9ANx6tM4_CPvgGQlMVstDhDRkIDwhzg;
-        _cfuvid=dp2yoCmGHVlURh_U78_UoIfnhcO5UhufnL5whkUSMTQ-1726214380689-0.0.1.1-604800000
+      - __cf_bm=J1VIPhfusyyXtwM.1L9zbe3jdnU7NVyHC3AWiKXO280-1726379702-1.0.1.1-LDa9RyXFli18t4ZEuVAENTChdNAkRtdWXRkRLbBHbCXdobugQ3T.arhMpSKwtnBRXKPcC4b66UA7BsSy1VXDHQ;
+        _cfuvid=Bz2zevKuFYZqnEFwqmqVHcRo5pT0fm0fTtc_6_VQs4g-1726379702153-0.0.1.1-604800000
       host:
       - api.openai.com
       user-agent:
@@ -173,20 +171,20 @@ interactions:
     method: POST
     uri: https://api.openai.com/v1/chat/completions
   response:
-    content: "{\n  \"id\": \"chatcmpl-A6vVyzcZLTAWXKZzYxsdjaS40buha\",\n  \"object\":
-      \"chat.completion\",\n  \"created\": 1726214418,\n  \"model\": \"gpt-4o-2024-05-13\",\n
+    content: "{\n  \"id\": \"chatcmpl-A7cW8ofRmk1I1bM83WZbpwSacAzOA\",\n  \"object\":
+      \"chat.completion\",\n  \"created\": 1726379720,\n  \"model\": \"gpt-4o-2024-05-13\",\n
       \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
-      \"assistant\",\n        \"content\": \"Thought: I now know the final answer\\nFinal
-      Answer: The result of 3 times 4 is 12.\",\n        \"refusal\": null\n      },\n
-      \     \"logprobs\": null,\n      \"finish_reason\": \"stop\"\n    }\n  ],\n
-      \ \"usage\": {\n    \"prompt_tokens\": 359,\n    \"completion_tokens\": 24,\n
-      \   \"total_tokens\": 383,\n    \"completion_tokens_details\": {\n      \"reasoning_tokens\":
+      \"assistant\",\n        \"content\": \"Thought: I now know the final answer.\\nFinal
+      Answer: The result of the multiplication is 12.\",\n        \"refusal\": null\n
+      \     },\n      \"logprobs\": null,\n      \"finish_reason\": \"stop\"\n    }\n
+      \ ],\n  \"usage\": {\n    \"prompt_tokens\": 352,\n    \"completion_tokens\":
+      21,\n    \"total_tokens\": 373,\n    \"completion_tokens_details\": {\n      \"reasoning_tokens\":
       0\n    }\n  },\n  \"system_fingerprint\": \"fp_25624ae3a5\"\n}\n"
     headers:
       CF-Cache-Status:
       - DYNAMIC
       CF-RAY:
-      - 8c269a522da614f2-LAX
+      - 8c365e069bf3221a-MIA
       Connection:
       - keep-alive
       Content-Encoding:
@@ -194,7 +192,7 @@ interactions:
       Content-Type:
       - application/json
       Date:
-      - Fri, 13 Sep 2024 08:00:18 GMT
+      - Sun, 15 Sep 2024 05:55:21 GMT
       Server:
       - cloudflare
       Transfer-Encoding:
@@ -208,7 +206,7 @@ interactions:
       openai-organization:
       - crewai-iuxna1
       openai-processing-ms:
-      - '351'
+      - '301'
       openai-version:
       - '2020-10-01'
       strict-transport-security:
@@ -220,13 +218,13 @@ interactions:
       x-ratelimit-remaining-requests:
       - '9999'
       x-ratelimit-remaining-tokens:
-      - '29999604'
+      - '29999614'
       x-ratelimit-reset-requests:
       - 6ms
       x-ratelimit-reset-tokens:
       - 0s
       x-request-id:
-      - req_d638dc86471945ef509fa74d56061ed7
+      - req_ff66938775026b50a358cae4f42f436c
     http_version: HTTP/1.1
     status_code: 200
 version: 1

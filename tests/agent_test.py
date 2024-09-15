@@ -67,7 +67,7 @@ def test_agent_execution():
     )
 
     output = agent.execute_task(task)
-    assert output == "The result of the math operation 1 + 1 is 2."
+    assert output == "The result of 1 + 1 is 2."
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
@@ -91,7 +91,7 @@ def test_agent_execution_with_tools():
         expected_output="The result of the multiplication.",
     )
     output = agent.execute_task(task)
-    assert output == "The result of 3 times 4 is 12."
+    assert output == "The result of the multiplication is 12."
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
@@ -106,7 +106,6 @@ def test_logging_tool_usage():
         goal="test goal",
         backstory="test backstory",
         tools=[multiplier],
-        allow_delegation=False,
         verbose=True,
     )
 
@@ -122,7 +121,7 @@ def test_logging_tool_usage():
     tool_usage = InstructorToolCalling(
         tool_name=multiplier.name, arguments={"first_number": 3, "second_number": 4}
     )
-    assert output == "The result of multiplying 3 times 4 is 12."
+    assert output == "12"
     assert agent.tools_handler.last_used_tool.tool_name == tool_usage.tool_name
     assert agent.tools_handler.last_used_tool.arguments == tool_usage.arguments
 
@@ -276,7 +275,61 @@ def test_agent_execution_with_specific_tools():
         expected_output="The result of the multiplication.",
     )
     output = agent.execute_task(task=task, tools=[multiplier])
-    assert output == "The result of 3 times 4 is 12."
+    assert output == "The result of the multiplication is 12."
+
+
+@pytest.mark.vcr(filter_headers=["authorization"])
+def test_agent_powered_by_new_o_model_family_that_allows_skipping_tool():
+    @tool
+    def multiplier(first_number: int, second_number: int) -> float:
+        """Useful for when you need to multiply two numbers together."""
+        return first_number * second_number
+
+    agent = Agent(
+        role="test role",
+        goal="test goal",
+        backstory="test backstory",
+        llm="o1-preview",
+        max_iter=3,
+        use_system_prompt=False,
+        allow_delegation=False,
+        use_stop_words=False,
+    )
+
+    task = Task(
+        description="What is 3 times 4?",
+        agent=agent,
+        expected_output="The result of the multiplication.",
+    )
+    output = agent.execute_task(task=task, tools=[multiplier])
+    assert output == "12"
+
+
+@pytest.mark.vcr(filter_headers=["authorization"])
+def test_agent_powered_by_new_o_model_family_that_uses_tool():
+    @tool
+    def comapny_customer_data() -> float:
+        """Useful for getting customer related data."""
+        return "The company has 42 customers"
+
+    agent = Agent(
+        role="test role",
+        goal="test goal",
+        backstory="test backstory",
+        llm="o1-preview",
+        max_iter=3,
+        use_system_prompt=False,
+        allow_delegation=False,
+        use_stop_words=False,
+    )
+
+    task = Task(
+        description="How many customers does the company have?",
+        agent=agent,
+        expected_output="The number of customers",
+    )
+    output = agent.execute_task(task=task, tools=[comapny_customer_data])
+    assert output == "The company has 42 customers"
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
@@ -296,7 +349,7 @@ def test_agent_custom_max_iterations():
     )
 
     with patch.object(
-        LLM, "call", wraps=LLM("gpt-4o", stop=["\nObservation"]).call
+        LLM, "call", wraps=LLM("gpt-4o", stop=["\nObservation:"]).call
     ) as private_mock:
         task = Task(
             description="The final answer is 42. But don't give it yet, instead keep using the `get_final_answer` tool.",
@@ -385,7 +438,7 @@ def test_agent_repeated_tool_usage_check_even_with_disabled_cache(capsys):
 @pytest.mark.vcr(filter_headers=["authorization"])
 def test_agent_moved_on_after_max_iterations():
     @tool
-    def get_final_answer(numbers) -> float:
+    def get_final_answer() -> float:
         """Get the final answer but don't give it yet, just re-use this
         tool non-stop."""
         return 42
@@ -497,6 +550,7 @@ def test_agent_without_max_rpm_respet_crew_rpm(capsys):
         goal="test goal",
         backstory="test backstory",
         max_rpm=10,
+        max_iter=2,
         verbose=True,
         allow_delegation=False,
     )
@@ -548,6 +602,7 @@ def test_agent_error_on_parsing_tool(capsys):
         role="test role",
         goal="test goal",
         backstory="test backstory",
+        max_iter=1,
         verbose=True,
     )
     tasks = [
@@ -563,7 +618,7 @@ def test_agent_error_on_parsing_tool(capsys):
         agents=[agent1],
         tasks=tasks,
         verbose=True,
-        function_calling_llm="gpt-4",
+        function_calling_llm="gpt-4o",
     )
 
     with patch.object(ToolUsage, "_render") as force_exception:
@@ -671,10 +726,10 @@ def test_agent_step_callback():
 
 @pytest.mark.vcr(filter_headers=["authorization"])
 def test_agent_function_calling_llm():
-    llm = "gpt-3.5-turbo-0125"
+    llm = "gpt-4o"
 
     @tool
-    def learn_about_AI(topic) -> str:
+    def learn_about_AI() -> str:
         """Useful for when you need to learn about AI to write an paragraph about it."""
         return "AI is a very broad field."
 
@@ -683,7 +738,8 @@ def test_agent_function_calling_llm():
         goal="test goal",
         backstory="test backstory",
         tools=[learn_about_AI],
-        llm="gpt-3.5-turbo-0125",
+        llm="gpt-4o",
+        max_iter=2,
         function_calling_llm=llm,
     )
 
@@ -694,17 +750,26 @@ def test_agent_function_calling_llm():
     )
     tasks = [essay]
     crew = Crew(agents=[agent1], tasks=tasks)
+    from unittest.mock import patch, Mock
+    import instructor
 
-    from crewai.utilities import Instructor
+    with patch.object(instructor, "from_litellm") as mock_from_litellm:
+        mock_client = Mock()
+        mock_from_litellm.return_value = mock_client
+        mock_chat = Mock()
+        mock_client.chat = mock_chat
+        mock_completions = Mock()
+        mock_chat.completions = mock_completions
+        mock_create = Mock()
+        mock_completions.create = mock_create
 
-    with patch.object(Instructor, "__init__", return_value=None) as mock_instructor:
         crew.kickoff()
-        mock_instructor.assert_called()
-        calls = mock_instructor.call_args_list
-        print("callscallscallscallscalls")
-        print(calls)
+
+        mock_from_litellm.assert_called_once()
+        mock_create.assert_called()
+        calls = mock_create.call_args_list
         assert any(
-            call.kwargs.get("llm") == "gpt-3.5-turbo-0125" for call in calls
+            call.kwargs.get("model") == "gpt-4o" for call in calls
         ), "Instructor was not created with the expected model"
 
 

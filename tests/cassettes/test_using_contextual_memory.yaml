@@ -1,46 +1,49 @@
 interactions:
 - request:
     body: !!binary |
-      CsARCiQKIgoMc2VydmljZS5uYW1lEhIKEGNyZXdBSS10ZWxlbWV0cnkSlxEKEgoQY3Jld2FpLnRl
-      bGVtZXRyeRKQAgoQwlnAUtOr1Kqk+wbo1nt+5hII40xmcf53UNcqDlRhc2sgRXhlY3V0aW9uMAE5
-      wO1nosG/9BdBqG5rXcK/9BdKLgoIY3Jld19rZXkSIgogNzVkOWY1NzUyMjYzOTJlZmJkZWQwZmFi
-      ZWQ1NjU2ZWJKMQoHY3Jld19pZBImCiRkODQxZWNkMi0yZDNjLTQ1ZDMtOWRkMS05MGQ1NDFmOTg5
-      ZjFKLgoIdGFza19rZXkSIgogMzBmMzI4NjNhMmViNzk4ZDEwOTZjOTA3MDI4MDk4MzBKMQoHdGFz
-      a19pZBImCiQyMTk3YzkxYS1iMTkxLTQ5NzktYWRjNC02ODBlZTY1NTQ2NTh6AhgBhQEAAQAAEo4C
-      ChAFKiNfgDAaMI4CGyXV1GddEgjRQ58wqz3AOCoMVGFzayBDcmVhdGVkMAE54Ni5XcK/9BdBqHy8
-      XcK/9BdKLgoIY3Jld19rZXkSIgogNzVkOWY1NzUyMjYzOTJlZmJkZWQwZmFiZWQ1NjU2ZWJKMQoH
-      Y3Jld19pZBImCiRkODQxZWNkMi0yZDNjLTQ1ZDMtOWRkMS05MGQ1NDFmOTg5ZjFKLgoIdGFza19r
-      ZXkSIgogM2QwYmRlZTMxMjdhZjk5MGIzNjZjMTJkZGJkNGE4YTZKMQoHdGFza19pZBImCiRmMzVi
-      NGFkMi1jYzEyLTQzOGYtYTBiMS01OGM2ZGU3ZDZmZjd6AhgBhQEAAQAAEpUBChCyagumcqZECgla
-      PZqHXp+SEgigD1QRkD+3JCoKVG9vbCBVc2FnZTABOciQ07zCv/QXQSCg1bzCv/QXShoKDmNyZXdh
-      aV92ZXJzaW9uEggKBjAuNTYuMEohCgl0b29sX25hbWUSFAoSbXVsdGlwbGNhdGlvbl90b29sSg4K
-      CGF0dGVtcHRzEgIYAXoCGAGFAQABAAASkAIKEAiOAmMM8OAkEeMtcDaXWfUSCJ5LSSyib/tVKg5U
-      YXNrIEV4ZWN1dGlvbjABOXh+vV3Cv/QXQejQkA3Dv/QXSi4KCGNyZXdfa2V5EiIKIDc1ZDlmNTc1
-      MjI2MzkyZWZiZGVkMGZhYmVkNTY1NmViSjEKB2NyZXdfaWQSJgokZDg0MWVjZDItMmQzYy00NWQz
-      LTlkZDEtOTBkNTQxZjk4OWYxSi4KCHRhc2tfa2V5EiIKIDNkMGJkZWUzMTI3YWY5OTBiMzY2YzEy
-      ZGRiZDRhOGE2SjEKB3Rhc2tfaWQSJgokZjM1YjRhZDItY2MxMi00MzhmLWEwYjEtNThjNmRlN2Q2
-      ZmY3egIYAYUBAAEAABKgBwoQFfX/upLFVxUzDWY4EkCXtxII8vix8apKV7UqDENyZXcgQ3JlYXRl
-      ZDABOciNbRbDv/QXQfj8bhbDv/QXShoKDmNyZXdhaV92ZXJzaW9uEggKBjAuNTYuMEoaCg5weXRo
-      b25fdmVyc2lvbhIICgYzLjExLjdKLgoIY3Jld19rZXkSIgogYzk3YjVmZWI1ZDFiNjZiYjU5MDA2
-      YWFhMDFhMjljZDZKMQoHY3Jld19pZBImCiRmZmVlNDlhMi1hNjU4LTQzYjItYjUyMS03YmRjNWE5
-      MzI0ZGZKHAoMY3Jld19wcm9jZXNzEgwKCnNlcXVlbnRpYWxKEQoLY3Jld19tZW1vcnkSAhABShoK
-      FGNyZXdfbnVtYmVyX29mX3Rhc2tzEgIYAUobChVjcmV3X251bWJlcl9vZl9hZ2VudHMSAhgBSs4C
-      CgtjcmV3X2FnZW50cxK+Agq7Alt7ImtleSI6ICIwN2Q5OWI2MzA0MTFkMzVmZDkwNDdhNTMyZDUz
-      ZGRhNyIsICJpZCI6ICI4ZjcxNjgzOS1mNmVkLTQ0ZjUtOGIzYS1iNzY3YjJlNWU5YTIiLCAicm9s
-      ZSI6ICJSZXNlYXJjaGVyIiwgInZlcmJvc2U/IjogZmFsc2UsICJtYXhfaXRlciI6IDI1LCAibWF4
-      X3JwbSI6IG51bGwsICJmdW5jdGlvbl9jYWxsaW5nX2xsbSI6IG51bGwsICJsbG0iOiAiZ3B0LTRv
-      IiwgImRlbGVnYXRpb25fZW5hYmxlZD8iOiBmYWxzZSwgImFsbG93X2NvZGVfZXhlY3V0aW9uPyI6
-      IGZhbHNlLCAibWF4X3JldHJ5X2xpbWl0IjogMiwgInRvb2xzX25hbWVzIjogW119XUr/AQoKY3Jl
-      d190YXNrcxLwAQrtAVt7ImtleSI6ICI2Mzk5NjUxN2YzZjNmMWM5NGQ2YmI2MTdhYTBiMWM0ZiIs
-      ICJpZCI6ICI1NjI5MGRhZi02NmIwLTQ2NTQtYmY5Ni0xZWZmNTI1ODUxMTYiLCAiYXN5bmNfZXhl
-      Y3V0aW9uPyI6IGZhbHNlLCAiaHVtYW5faW5wdXQ/IjogZmFsc2UsICJhZ2VudF9yb2xlIjogIlJl
-      c2VhcmNoZXIiLCAiYWdlbnRfa2V5IjogIjA3ZDk5YjYzMDQxMWQzNWZkOTA0N2E1MzJkNTNkZGE3
-      IiwgInRvb2xzX25hbWVzIjogW119XXoCGAGFAQABAAASjgIKEN3XWG5JBC6OO4xZn/1snD0SCD4C
-      VIIT3EFvKgxUYXNrIENyZWF0ZWQwATlghngWw7/0F0HIyHgWw7/0F0ouCghjcmV3X2tleRIiCiBj
-      OTdiNWZlYjVkMWI2NmJiNTkwMDZhYWEwMWEyOWNkNkoxCgdjcmV3X2lkEiYKJGZmZWU0OWEyLWE2
-      NTgtNDNiMi1iNTIxLTdiZGM1YTkzMjRkZkouCgh0YXNrX2tleRIiCiA2Mzk5NjUxN2YzZjNmMWM5
-      NGQ2YmI2MTdhYTBiMWM0ZkoxCgd0YXNrX2lkEiYKJDU2MjkwZGFmLTY2YjAtNDY1NC1iZjk2LTFl
-      ZmY1MjU4NTExNnoCGAGFAQABAAA=
+      CtgSCiQKIgoMc2VydmljZS5uYW1lEhIKEGNyZXdBSS10ZWxlbWV0cnkSrxIKEgoQY3Jld2FpLnRl
+      bGVtZXRyeRKVAQoQ74O5MTYC3c0lEdF65J0U8xIIiUG/EOFLiOQqClRvb2wgVXNhZ2UwATmwmBx6
+      xFj1F0HYnSF6xFj1F0oaCg5jcmV3YWlfdmVyc2lvbhIICgYwLjU2LjBKIQoJdG9vbF9uYW1lEhQK
+      Em11bHRpcGxjYXRpb25fdG9vbEoOCghhdHRlbXB0cxICGAF6AhgBhQEAAQAAEpACChCkizlqLTzA
+      75al/IAvmk30EggAbo0Qh0fGGioOVGFzayBFeGVjdXRpb24wATlgdr9JxFj1F0FY6KyhxFj1F0ou
+      CghjcmV3X2tleRIiCiA3NWQ5ZjU3NTIyNjM5MmVmYmRlZDBmYWJlZDU2NTZlYkoxCgdjcmV3X2lk
+      EiYKJGQxMTFmY2JkLTA0NDMtNGU4MS1iZDM0LThmMGY4MzJkM2Q2NEouCgh0YXNrX2tleRIiCiAz
+      MGYzMjg2M2EyZWI3OThkMTA5NmM5MDcwMjgwOTgzMEoxCgd0YXNrX2lkEiYKJGEzNWM4YTFhLWYx
+      ZDUtNDg5MS04ZWMwLWRkZDU0NWMwNTMxNXoCGAGFAQABAAASjgIKEHgzN70LqmCXmVhUhzl1avYS
+      CFhuqbEL05axKgxUYXNrIENyZWF0ZWQwATn4+uqhxFj1F0EwOe2hxFj1F0ouCghjcmV3X2tleRIi
+      CiA3NWQ5ZjU3NTIyNjM5MmVmYmRlZDBmYWJlZDU2NTZlYkoxCgdjcmV3X2lkEiYKJGQxMTFmY2Jk
+      LTA0NDMtNGU4MS1iZDM0LThmMGY4MzJkM2Q2NEouCgh0YXNrX2tleRIiCiAzZDBiZGVlMzEyN2Fm
+      OTkwYjM2NmMxMmRkYmQ0YThhNkoxCgd0YXNrX2lkEiYKJDg0MjA5Yjk0LWE1NzAtNGRjYS1hZWQ5
+      LTBhNzRiZTAzN2I2MXoCGAGFAQABAAASlQEKEI8TOohazh6LTs2y3Fd0mM4SCMj/gBravc1BKgpU
+      b29sIFVzYWdlMAE5kFon0sRY9RdBWOws0sRY9RdKGgoOY3Jld2FpX3ZlcnNpb24SCAoGMC41Ni4w
+      SiEKCXRvb2xfbmFtZRIUChJtdWx0aXBsY2F0aW9uX3Rvb2xKDgoIYXR0ZW1wdHMSAhgBegIYAYUB
+      AAEAABKQAgoQhQKbJr4NZHhfptSptizHmBIIBljeVt6fHxsqDlRhc2sgRXhlY3V0aW9uMAE5KOHt
+      ocRY9RdBCOQa9sRY9RdKLgoIY3Jld19rZXkSIgogNzVkOWY1NzUyMjYzOTJlZmJkZWQwZmFiZWQ1
+      NjU2ZWJKMQoHY3Jld19pZBImCiRkMTExZmNiZC0wNDQzLTRlODEtYmQzNC04ZjBmODMyZDNkNjRK
+      LgoIdGFza19rZXkSIgogM2QwYmRlZTMxMjdhZjk5MGIzNjZjMTJkZGJkNGE4YTZKMQoHdGFza19p
+      ZBImCiQ4NDIwOWI5NC1hNTcwLTRkY2EtYWVkOS0wYTc0YmUwMzdiNjF6AhgBhQEAAQAAEqAHChD9
+      wH6iQY6q0LnwY2SbVZEiEgh6VY4FzhNv0yoMQ3JldyBDcmVhdGVkMAE5AGwOAMVY9RdBAOMPAMVY
+      9RdKGgoOY3Jld2FpX3ZlcnNpb24SCAoGMC41Ni4wShoKDnB5dGhvbl92ZXJzaW9uEggKBjMuMTEu
+      N0ouCghjcmV3X2tleRIiCiBjOTdiNWZlYjVkMWI2NmJiNTkwMDZhYWEwMWEyOWNkNkoxCgdjcmV3
+      X2lkEiYKJGVhNzMzNjcxLTllMzktNDI4Yi04MjdiLTlhNDQyNDE5MzAzNEocCgxjcmV3X3Byb2Nl
+      c3MSDAoKc2VxdWVudGlhbEoRCgtjcmV3X21lbW9yeRICEAFKGgoUY3Jld19udW1iZXJfb2ZfdGFz
+      a3MSAhgBShsKFWNyZXdfbnVtYmVyX29mX2FnZW50cxICGAFKzgIKC2NyZXdfYWdlbnRzEr4CCrsC
+      W3sia2V5IjogIjA3ZDk5YjYzMDQxMWQzNWZkOTA0N2E1MzJkNTNkZGE3IiwgImlkIjogImZjNzNj
+      YTMzLTA2NmEtNGQwMC1hNmIwLTZiMzZmYTljZTQ1YiIsICJyb2xlIjogIlJlc2VhcmNoZXIiLCAi
+      dmVyYm9zZT8iOiBmYWxzZSwgIm1heF9pdGVyIjogMTUsICJtYXhfcnBtIjogbnVsbCwgImZ1bmN0
+      aW9uX2NhbGxpbmdfbGxtIjogbnVsbCwgImxsbSI6ICJncHQtNG8iLCAiZGVsZWdhdGlvbl9lbmFi
+      bGVkPyI6IGZhbHNlLCAiYWxsb3dfY29kZV9leGVjdXRpb24/IjogZmFsc2UsICJtYXhfcmV0cnlf
+      bGltaXQiOiAyLCAidG9vbHNfbmFtZXMiOiBbXX1dSv8BCgpjcmV3X3Rhc2tzEvABCu0BW3sia2V5
+      IjogIjYzOTk2NTE3ZjNmM2YxYzk0ZDZiYjYxN2FhMGIxYzRmIiwgImlkIjogIjFkMDEwZjA3LTc1
+      ZWEtNDhmZS04YjBmLTVjYjI0NDRhYjdhMiIsICJhc3luY19leGVjdXRpb24/IjogZmFsc2UsICJo
+      dW1hbl9pbnB1dD8iOiBmYWxzZSwgImFnZW50X3JvbGUiOiAiUmVzZWFyY2hlciIsICJhZ2VudF9r
+      ZXkiOiAiMDdkOTliNjMwNDExZDM1ZmQ5MDQ3YTUzMmQ1M2RkYTciLCAidG9vbHNfbmFtZXMiOiBb
+      XX1degIYAYUBAAEAABKOAgoQxJP3t0dLwRjf1RKuwgwElhII+guMZ46TWigqDFRhc2sgQ3JlYXRl
+      ZDABOSB4GQDFWPUXQYi6GQDFWPUXSi4KCGNyZXdfa2V5EiIKIGM5N2I1ZmViNWQxYjY2YmI1OTAw
+      NmFhYTAxYTI5Y2Q2SjEKB2NyZXdfaWQSJgokZWE3MzM2NzEtOWUzOS00MjhiLTgyN2ItOWE0NDI0
+      MTkzMDM0Si4KCHRhc2tfa2V5EiIKIDYzOTk2NTE3ZjNmM2YxYzk0ZDZiYjYxN2FhMGIxYzRmSjEK
+      B3Rhc2tfaWQSJgokMWQwMTBmMDctNzVlYS00OGZlLThiMGYtNWNiMjQ0NGFiN2EyegIYAYUBAAEA
+      AA==
     headers:
       Accept:
       - '*/*'
@@ -49,7 +52,7 @@ interactions:
       Connection:
       - keep-alive
       Content-Length:
-      - '2243'
+      - '2395'
       Content-Type:
       - application/x-protobuf
       User-Agent:
@@ -65,7 +68,7 @@ interactions:
       Content-Type:
       - application/x-protobuf
       Date:
-      - Fri, 13 Sep 2024 08:16:46 GMT
+      - Sun, 15 Sep 2024 07:00:38 GMT
     status:
       code: 200
       message: OK
@@ -80,9 +83,9 @@ interactions:
       a kid aged 6 about math.\n\nThis is the expect criteria for your final answer:
       A topic, explanation, angle, and examples.\nyou MUST return the actual complete
       content as the final answer, not a summary.\n\n# Useful context: \n<MagicMock
-      name=''build_context_for_task()'' id=''6090081616''>\n\nBegin! This is VERY
+      name=''build_context_for_task()'' id=''16679052176''>\n\nBegin! This is VERY
       important to you, use the tools available and give your best Final Answer, your
-      job depends on it!\n\nThought:"}], "model": "gpt-4o", "stop": ["\nObservation"]}'
+      job depends on it!\n\nThought:"}], "model": "gpt-4o", "stop": ["\nResult"]}'
     headers:
       accept:
       - application/json
@@ -91,12 +94,12 @@ interactions:
       connection:
       - keep-alive
       content-length:
-      - '1012'
+      - '1008'
       content-type:
       - application/json
       cookie:
-      - __cf_bm=pgsskMPipgeSB6HhnkjwcOEfengIvt0p9whKNmTJVLs-1726215280-1.0.1.1-Gtqb.nO1U.cHTnd9mR9sEA5tpVo1.pexRrxqXOkn.6Mzja8mLG1URJsOLTfjMAAYpWaUQe4Rjmnr6lqQk5hAxQ;
-        _cfuvid=dp2yoCmGHVlURh_U78_UoIfnhcO5UhufnL5whkUSMTQ-1726214380689-0.0.1.1-604800000
+      - _cfuvid=Bz2zevKuFYZqnEFwqmqVHcRo5pT0fm0fTtc_6_VQs4g-1726379702153-0.0.1.1-604800000;
+        __cf_bm=NOn1n25T8u1eKhL05A4mBgpDvwojMRvK1SB7TGDEjFU-1726383316-1.0.1.1-kUyz.anEyDoe9wXgChl5UWW3Z9pFTgIpyZfqI6rucN2vXQHH6k.DSvUtilpKOPnhI4LtmQYBhxkJ6wKLfS3J8Q
       host:
       - api.openai.com
       user-agent:
@@ -120,41 +123,40 @@ interactions:
     method: POST
     uri: https://api.openai.com/v1/chat/completions
   response:
-    content: "{\n  \"id\": \"chatcmpl-A6vlsXWFdkvOC4HaYTjYfwqpR7mzV\",\n  \"object\":
-      \"chat.completion\",\n  \"created\": 1726215404,\n  \"model\": \"gpt-4o-2024-05-13\",\n
+    content: "{\n  \"id\": \"chatcmpl-A7dXHbbtSqEpWNQQ06gkSHE3oVQYB\",\n  \"object\":
+      \"chat.completion\",\n  \"created\": 1726383635,\n  \"model\": \"gpt-4o-2024-05-13\",\n
       \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
-      \"assistant\",\n        \"content\": \"I now can give a great answer\\n\\nFinal
-      Answer: \\n\\n**Topic: Basic Addition**\\n\\n**Explanation:**\\nAddition is
-      one of the most important math skills you'll learn. It's like putting things
-      together to get a bigger amount. We use the plus sign (+) to show addition.
-      For example, if you have 2 apples and you get 3 more apples, you can add them
-      together to find out how many apples you have in total.\\n\\n**Angle:**\\nLet's
-      think of addition as making a collection of your favorite toys bigger. Imagine
-      you have some toy cars and then you get even more toy cars. How many toy cars
-      do you have now? This way of thinking makes addition a fun and easy concept
-      to understand.\\n\\n**Examples:**\\n1. Counting Toys:\\n   - If you have 1 toy
-      car and you get 2 more, how many toy cars do you have now? \\n     - **1 + 2
-      = 3**\\n   - You have 4 dolls and your friend gives you 3 more dolls. How many
-      dolls do you have altogether?\\n     - **4 + 3 = 7**\\n\\n2. Fruit Addition:\\n
-      \  - You have 2 bananas and you find 1 more banana in the kitchen. How many
-      bananas do you have in all?\\n     - **2 + 1 = 3**\\n   - There are 5 apples
-      in a basket, and you pick 2 more apples from the tree. How many apples do you
-      now have?\\n     - **5 + 2 = 7**\\n\\n3. Counting Fingers:\\n   - Hold up 1
-      finger on your left hand and 2 fingers on your right hand. How many fingers
-      are you holding up in total?\\n     - **1 + 2 = 3**\\n   - Hold up 3 fingers
-      on one hand and 2 fingers on the other hand. How many fingers in total?\\n     -
-      **3 + 2 = 5**\\n\\nBy using toys, fruits, and even your own fingers, you can
-      practice and get better at addition. It's just like a magic trick where you
-      combine numbers to create a bigger number. Keep practicing, and soon you'll
-      be a math wizard!\",\n        \"refusal\": null\n      },\n      \"logprobs\":
-      null,\n      \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\":
-      205,\n    \"completion_tokens\": 441,\n    \"total_tokens\": 646,\n    \"completion_tokens_details\":
-      {\n      \"reasoning_tokens\": 0\n    }\n  },\n  \"system_fingerprint\": \"fp_25624ae3a5\"\n}\n"
+      \"assistant\",\n        \"content\": \"Thought: I now can give a great answer.\\nFinal
+      Answer: \\n\\n### Topic: Basic Addition\\n\\n#### Explanation:\\nAddition is
+      one of the first math concepts you'll learn. It means putting things together.
+      When you add, you combine two or more numbers to get a larger number.\\n\\n####
+      Angle:\\nMake it fun and relatable by using everyday objects the child is familiar
+      with, such as toys, fruit, or even their fingers. Using these objects can help
+      make the abstract concept of numbers more concrete.\\n\\n#### Examples:\\n\\n**Example
+      1: Using Toys**\\nImagine you have some toy cars. Let's say you have 3 toy cars,
+      and your friend gives you 2 more. How many toy cars do you have now?\\n\\n-
+      You have 3 toy cars.\\n- Your friend gives you 2 more toy cars.\\n- So, you
+      put 3 toy cars and 2 toy cars together.\\n- 3 + 2 = 5\\n- Now, you have 5 toy
+      cars in total!\\n\\n**Example 2: Using Fruit**\\nLet's use apples this time.
+      You have 4 apples, and you pick 3 more apples from the tree. How many apples
+      do you have now?\\n\\n- You have 4 apples.\\n- You pick 3 more apples.\\n- So,
+      you put 4 apples and 3 apples together.\\n- 4 + 3 = 7\\n- Now, you have 7 apples
+      altogether!\\n\\n**Example 3: Counting Fingers**\\nYou can also use your fingers
+      to help with addition. Hold out 5 fingers on one hand and 2 fingers on the other.
+      How many fingers are you holding up in total?\\n\\n- You hold out 5 fingers
+      on one hand.\\n- You hold out 2 more fingers on the other hand.\\n- So, you
+      put 5 fingers and 2 fingers together.\\n- 5 + 2 = 7\\n- You are holding up 7
+      fingers!\\n\\nBy using simple, everyday examples, learning addition becomes
+      more engaging and easier to understand.\",\n        \"refusal\": null\n      },\n
+      \     \"logprobs\": null,\n      \"finish_reason\": \"stop\"\n    }\n  ],\n
+      \ \"usage\": {\n    \"prompt_tokens\": 205,\n    \"completion_tokens\": 408,\n
+      \   \"total_tokens\": 613,\n    \"completion_tokens_details\": {\n      \"reasoning_tokens\":
+      0\n    }\n  },\n  \"system_fingerprint\": \"fp_25624ae3a5\"\n}\n"
     headers:
       CF-Cache-Status:
       - DYNAMIC
       CF-RAY:
-      - 8c26b26199f82ab9-LAX
+      - 8c36bd9a7a5b7454-MIA
       Connection:
       - keep-alive
       Content-Encoding:
@@ -162,7 +164,7 @@ interactions:
       Content-Type:
       - application/json
       Date:
-      - Fri, 13 Sep 2024 08:16:48 GMT
+      - Sun, 15 Sep 2024 07:00:40 GMT
       Server:
       - cloudflare
       Transfer-Encoding:
@@ -176,7 +178,7 @@ interactions:
       openai-organization:
       - crewai-iuxna1
       openai-processing-ms:
-      - '4690'
+      - '4413'
       openai-version:
       - '2020-10-01'
       strict-transport-security:
@@ -194,7 +196,7 @@ interactions:
       x-ratelimit-reset-tokens:
       - 0s
       x-request-id:
-      - req_13dba151c5d98d55bc0ed8be5dc50b7f
+      - req_759af35f5cde0069650a82d20e233751
     http_version: HTTP/1.1
     status_code: 200
 version: 1

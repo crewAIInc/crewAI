@@ -266,7 +266,7 @@ def test_output_pydantic_hierarchical():
     )
     result = crew.kickoff()
     assert isinstance(result.pydantic, ScoreOutput)
-    assert result.to_dict() == {"score": 5}
+    assert result.to_dict() == {"score": 4}
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
@@ -556,7 +556,7 @@ def test_save_task_pydantic_output():
 
     output_file_exists = os.path.exists("score.json")
     assert output_file_exists
-    assert {"score": 5} == json.loads(open("score.json").read())
+    assert {"score": 4} == json.loads(open("score.json").read())
     if output_file_exists:
         os.remove("score.json")
 

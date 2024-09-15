@@ -61,11 +61,10 @@ class Converter(OutputConverter):
 
     def _create_instructor(self):
         """Create an instructor."""
-        from crewai.utilities import Instructor
+        from crewai.utilities import InternalInstructor
 
-        inst = Instructor(
+        inst = InternalInstructor(
             llm=self.llm,
-            max_attempts=self.max_attempts,
             model=self.model,
             content=self.text,
             instructions=self.instructions,
@@ -90,7 +89,11 @@ class Converter(OutputConverter):
     @property
     def is_gpt(self) -> bool:
         """Return if llm provided is of gpt from openai."""
-        return "gpt" in str(self.llm).lower()
+        return (
+            "gpt" in str(self.llm).lower()
+            or "o1-preview" in str(self.llm).lower()
+            or "o1-mini" in str(self.llm).lower()
+        )
 
 
 def convert_to_model(
@@ -214,7 +217,11 @@ def get_conversion_instructions(model: Type[BaseModel], llm: Any) -> str:
 
 def is_gpt(llm: Any) -> bool:
     """Return if llm provided is of gpt from openai."""
-    return "gpt" in str(llm).lower()
+    return (
+        "gpt" in str(llm).lower()
+        or "o1-preview" in str(llm).lower()
+        or "o1-mini" in str(llm).lower()
+    )
 
 
 def create_converter(

@@ -16,7 +16,7 @@ interactions:
       for your final answer: The greeting.\nyou MUST return the actual complete content
       as the final answer, not a summary.\n\nBegin! This is VERY important to you,
       use the tools available and give your best Final Answer, your job depends on
-      it!\n\nThought:"}], "model": "gpt-4o", "stop": ["\nObservation"]}'
+      it!\n\nThought:"}], "model": "gpt-4o", "stop": ["\nResult"]}'
     headers:
       accept:
       - application/json
@@ -25,12 +25,12 @@ interactions:
       connection:
       - keep-alive
       content-length:
-      - '1325'
+      - '1320'
       content-type:
       - application/json
       cookie:
-      - __cf_bm=r6BNUnXat.26mviZiJYUf7Qj4ea5gbt_oPxyClKcVOE-1726214380-1.0.1.1-2S3G10sPdiG2syQSO8wKWXE7Nmdgt88imgakr81w9DemMH8mVDg0q6r9ANx6tM4_CPvgGQlMVstDhDRkIDwhzg;
-        _cfuvid=dp2yoCmGHVlURh_U78_UoIfnhcO5UhufnL5whkUSMTQ-1726214380689-0.0.1.1-604800000
+      - __cf_bm=J1VIPhfusyyXtwM.1L9zbe3jdnU7NVyHC3AWiKXO280-1726379702-1.0.1.1-LDa9RyXFli18t4ZEuVAENTChdNAkRtdWXRkRLbBHbCXdobugQ3T.arhMpSKwtnBRXKPcC4b66UA7BsSy1VXDHQ;
+        _cfuvid=Bz2zevKuFYZqnEFwqmqVHcRo5pT0fm0fTtc_6_VQs4g-1726379702153-0.0.1.1-604800000
       host:
       - api.openai.com
       user-agent:
@@ -54,20 +54,20 @@ interactions:
     method: POST
     uri: https://api.openai.com/v1/chat/completions
   response:
-    content: "{\n  \"id\": \"chatcmpl-A6vee8YVsllW7jdvetallMJiF5302\",\n  \"object\":
-      \"chat.completion\",\n  \"created\": 1726214956,\n  \"model\": \"gpt-4o-2024-05-13\",\n
+    content: "{\n  \"id\": \"chatcmpl-A7cipzmfs33Oipyi9MkR7Z3J98qEx\",\n  \"object\":
+      \"chat.completion\",\n  \"created\": 1726380507,\n  \"model\": \"gpt-4o-2024-05-13\",\n
       \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
-      \"assistant\",\n        \"content\": \"Thought: I need to decide on the appropriate
-      greeting to use.\\n\\nAction: Decide Greetings\\nAction Input: {}\",\n        \"refusal\":
-      null\n      },\n      \"logprobs\": null,\n      \"finish_reason\": \"stop\"\n
-      \   }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 253,\n    \"completion_tokens\":
-      22,\n    \"total_tokens\": 275,\n    \"completion_tokens_details\": {\n      \"reasoning_tokens\":
-      0\n    }\n  },\n  \"system_fingerprint\": \"fp_25624ae3a5\"\n}\n"
+      \"assistant\",\n        \"content\": \"I should use the Decide Greetings tool
+      to determine the appropriate greeting to use.\\n\\nAction: Decide Greetings\\nAction
+      Input: {}\",\n        \"refusal\": null\n      },\n      \"logprobs\": null,\n
+      \     \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\":
+      253,\n    \"completion_tokens\": 24,\n    \"total_tokens\": 277,\n    \"completion_tokens_details\":
+      {\n      \"reasoning_tokens\": 0\n    }\n  },\n  \"system_fingerprint\": \"fp_25624ae3a5\"\n}\n"
     headers:
       CF-Cache-Status:
       - DYNAMIC
       CF-RAY:
-      - 8c26a776bb0a2ab9-LAX
+      - 8c36713b7ce3745a-MIA
       Connection:
       - keep-alive
       Content-Encoding:
@@ -75,7 +75,7 @@ interactions:
       Content-Type:
       - application/json
       Date:
-      - Fri, 13 Sep 2024 08:09:17 GMT
+      - Sun, 15 Sep 2024 06:08:30 GMT
       Server:
       - cloudflare
       Transfer-Encoding:
@@ -89,7 +89,7 @@ interactions:
       openai-organization:
       - crewai-iuxna1
       openai-processing-ms:
-      - '407'
+      - '2829'
       openai-version:
       - '2020-10-01'
       strict-transport-security:
@@ -107,7 +107,7 @@ interactions:
       x-ratelimit-reset-tokens:
       - 0s
       x-request-id:
-      - req_96ce4c333e34e29d6f0b6a6f2fbd7085
+      - req_ab65defe46ff5e9b4cc4ee893f04fc52
     http_version: HTTP/1.1
     status_code: 200
 - request:
@@ -127,9 +127,10 @@ interactions:
       for your final answer: The greeting.\nyou MUST return the actual complete content
       as the final answer, not a summary.\n\nBegin! This is VERY important to you,
       use the tools available and give your best Final Answer, your job depends on
-      it!\n\nThought:"}, {"role": "assistant", "content": "Thought: I need to decide
-      on the appropriate greeting to use.\n\nAction: Decide Greetings\nAction Input:
-      {}\nObservation: Howdy!"}], "model": "gpt-4o", "stop": ["\nObservation"]}'
+      it!\n\nThought:"}, {"role": "assistant", "content": "I should use the Decide
+      Greetings tool to determine the appropriate greeting to use.\n\nAction: Decide
+      Greetings\nAction Input: {}\nObservation: Howdy!"}], "model": "gpt-4o", "stop":
+      ["\nResult"]}'
     headers:
       accept:
       - application/json
@@ -138,12 +139,12 @@ interactions:
       connection:
       - keep-alive
       content-length:
-      - '1491'
+      - '1509'
       content-type:
       - application/json
       cookie:
-      - __cf_bm=r6BNUnXat.26mviZiJYUf7Qj4ea5gbt_oPxyClKcVOE-1726214380-1.0.1.1-2S3G10sPdiG2syQSO8wKWXE7Nmdgt88imgakr81w9DemMH8mVDg0q6r9ANx6tM4_CPvgGQlMVstDhDRkIDwhzg;
-        _cfuvid=dp2yoCmGHVlURh_U78_UoIfnhcO5UhufnL5whkUSMTQ-1726214380689-0.0.1.1-604800000
+      - __cf_bm=J1VIPhfusyyXtwM.1L9zbe3jdnU7NVyHC3AWiKXO280-1726379702-1.0.1.1-LDa9RyXFli18t4ZEuVAENTChdNAkRtdWXRkRLbBHbCXdobugQ3T.arhMpSKwtnBRXKPcC4b66UA7BsSy1VXDHQ;
+        _cfuvid=Bz2zevKuFYZqnEFwqmqVHcRo5pT0fm0fTtc_6_VQs4g-1726379702153-0.0.1.1-604800000
       host:
       - api.openai.com
       user-agent:
@@ -167,19 +168,19 @@ interactions:
     method: POST
     uri: https://api.openai.com/v1/chat/completions
   response:
-    content: "{\n  \"id\": \"chatcmpl-A6vegqx5dhQ0UjN0EpDkfZTMYbWir\",\n  \"object\":
-      \"chat.completion\",\n  \"created\": 1726214958,\n  \"model\": \"gpt-4o-2024-05-13\",\n
+    content: "{\n  \"id\": \"chatcmpl-A7cisNcbAMuKdXiGmAC6SapLYbLYD\",\n  \"object\":
+      \"chat.completion\",\n  \"created\": 1726380510,\n  \"model\": \"gpt-4o-2024-05-13\",\n
       \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
       \"assistant\",\n        \"content\": \"Thought: I now know the final answer.\\n\\nFinal
       Answer: Howdy!\",\n        \"refusal\": null\n      },\n      \"logprobs\":
       null,\n      \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\":
-      284,\n    \"completion_tokens\": 15,\n    \"total_tokens\": 299,\n    \"completion_tokens_details\":
+      286,\n    \"completion_tokens\": 15,\n    \"total_tokens\": 301,\n    \"completion_tokens_details\":
       {\n      \"reasoning_tokens\": 0\n    }\n  },\n  \"system_fingerprint\": \"fp_25624ae3a5\"\n}\n"
     headers:
       CF-Cache-Status:
       - DYNAMIC
       CF-RAY:
-      - 8c26a7804ac82ab9-LAX
+      - 8c36714f2c8a745a-MIA
       Connection:
       - keep-alive
       Content-Encoding:
@@ -187,7 +188,7 @@ interactions:
       Content-Type:
       - application/json
       Date:
-      - Fri, 13 Sep 2024 08:09:18 GMT
+      - Sun, 15 Sep 2024 06:08:31 GMT
       Server:
       - cloudflare
       Transfer-Encoding:
@@ -201,7 +202,7 @@ interactions:
       openai-organization:
       - crewai-iuxna1
       openai-processing-ms:
-      - '290'
+      - '844'
       openai-version:
       - '2020-10-01'
       strict-transport-security:
@@ -213,13 +214,13 @@ interactions:
       x-ratelimit-remaining-requests:
       - '9999'
       x-ratelimit-remaining-tokens:
-      - '29999656'
+      - '29999651'
       x-ratelimit-reset-requests:
       - 6ms
       x-ratelimit-reset-tokens:
       - 0s
       x-request-id:
-      - req_dcf010a19504937f16b58f6a5ca2c8bf
+      - req_7499add242c39c532cfb1b856c2b6805
     http_version: HTTP/1.1
     status_code: 200
 version: 1

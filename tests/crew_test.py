@@ -226,7 +226,7 @@ def test_crew_creation():
 
     result = crew.kickoff()
 
-    expected_string_output = "**AI in Healthcare: Revolutionizing Diagnosis and Treatment**\n\nThe integration of AI into healthcare systems heralds a transformative era in the medical field, with the potential to save lives and significantly enhance the quality of patient care. Advanced AI algorithms excel at diagnosing complex diseases such as cancer by analyzing medical images with precision that rivals human expertise. Additionally, the implementation of AI-powered personalized treatment plans can optimize individual patient care, while predictive analytics anticipates complications before they occur, shifting the healthcare paradigm from reactive to proactive. This revolution not only promises to improve diagnostic accuracy but also aims to enhance overall patient outcomes by making healthcare delivery more efficient and anticipatory.\n\n**Ethical Considerations in AI Development: Balancing Innovation and Responsibility**\n\nAs AI technologies become increasingly embedded in daily life, the ethical implications of their development and deployment come to the forefront. This topic delves into the crucial need for ethical frameworks to manage AI's growth responsibly. Issues such as biases within machine learning models, privacy concerns, and the socio-economic impact on employment highlight the importance of creating AI systems that are fair and just. Ensuring these technologies support human values and dignity requires careful navigation of moral dilemmas and the establishment of stringent ethical standards. Therefore, balancing innovation with responsibility is essential to harness the full potential of AI in a way that benefits society as a whole.\n\n**AI Agents in Customer Service: Enhancing User Experience While Reducing Costs**\n\nAI agents, including chatbots and virtual assistants, are revolutionizing customer service by offering round-the-clock support and addressing routine inquiries with an efficiency unmatched by human representatives. The advancements in Natural Language Processing (NLP) enable these AI agents to understand and respond to customer queries in a more natural and conversational manner, significantly boosting user satisfaction. This seamless interaction not only enhances the customer experience but also reduces operational costs for businesses, as AI agents can manage a high volume of interactions simultaneously. As a result, companies benefit from streamlined customer service operations while customers enjoy quicker, more effective resolutions to their problems.\n\n**The Role of AI in Climate Change: Predicting and Mitigating Environmental Impact**\n\nThe role of AI in combating climate change is becoming increasingly prominent, offering innovative solutions to one of the most pressing issues facing humanity today. AI's ability to process and analyze enormous datasets allows for the accurate prediction of climate trends and the identification of effective strategies to reduce carbon footprints. By optimizing energy consumption and other key factors, AI technologies contribute substantially to efforts aimed at mitigating environmental impact. This exploration into AI's contributions to environmental sustainability highlights the potential for these technologies to go beyond conventional approaches, providing new tools in the global fight against climate change and fostering a more sustainable future."
+    expected_string_output = "**The Rise of AI in Healthcare: Personalization and Precision Medicine**\n\nThe integration of AI in healthcare is revolutionizing the way treatments are personalized for individual patients, ushering in the era of precision medicine. With the development of sophisticated AI algorithms, it's now possible to predict patient responses to various treatments based on their genetics and personal health data. This leads to highly tailored care plans that can significantly improve outcomes and patient satisfaction. By leveraging vast datasets and machine learning, healthcare providers can make more informed decisions, potentially reducing trial-and-error in treatment plans. This customization not only optimizes patient care but also offers considerable economic benefits by minimizing ineffective treatments, showcasing a profound leap in medical science and patient care.\n\n**AI Agents in Creative Arts: Shaping the Future of Music and Visual Arts**\n\nAI's foray into creative arts is reshaping the landscape of music and visual arts in unprecedented ways. AI-generated art is not just a novelty; it’s redefining the boundaries of creativity and sparking a global debate about the essence of artistic expression. Utilizing advanced algorithms and machine learning, AI can compose music, create paintings, and design visual media that rival human work. For instance, AI composers are creating symphonies that blend classical techniques with modern innovation, while AI visual artists are producing pieces that challenge traditional notions of art and authorship. This fusion of programming and artistry captivates a diverse audience, provoking thought and admiration, and suggesting a future where AI plays a collaborative role in creative endeavors.\n\n**Ethical Implications of AI Surveillance: Balancing Safety and Privacy**\n\nThe rise of AI-powered surveillance systems presents a complex conundrum: balancing enhanced security with the preservation of personal privacy. While these systems can significantly bolster public safety by predicting and preventing criminal activities, they also pose serious ethical challenges. Issues such as constant monitoring, data privacy, and potential misuse of surveillance data are at the forefront of public concern. Real-world examples, such as the implementation of facial recognition technology in public spaces, underscore the delicate balance that must be maintained. Policymakers and tech developers are under immense pressure to draft and enforce regulations that uphold privacy rights without compromising security, making this an urgent and highly relevant topic for our times.\n\n**AI in Education: Transforming Teaching and Learning Methods**\n\nAI is making transformative strides in the education sector by customizing learning experiences, offering real-time feedback, and automating administrative tasks, thereby transforming traditional teaching methods. Advanced AI tools assess individual student's learning patterns and tailor educational content to fit their unique needs, helping bridge learning gaps and optimizing academic performance. Additionally, AI-driven platforms provide teachers with deeper insights into student progress, enabling more targeted interventions. By automating routine administrative tasks, educators can focus more on teaching and less on paperwork. The integration of AI in education promises to democratize learning, making quality education accessible to all, and posing as a game-changer in the global education landscape."
 
     assert str(result) == expected_string_output
     assert result.raw == expected_string_output
@@ -294,7 +294,7 @@ def test_hierarchical_process():
 
     assert (
         result.raw
-        == "1. **The Future of AI Agents: From Healthcare to Education**  \nArtificial Intelligence agents are not just a futuristic concept; they are rapidly becoming integral to diverse fields including healthcare and education. Imagine an AI agent capable of diagnosing diseases with pinpoint accuracy or predicting student burnout before it occurs. With continual advancements, AI agents can offer personalized treatments, manage chronic conditions, and optimize educational curriculums to cater to individual learning styles. This dynamic shift could lead to more efficient, effective, and personalized approaches in both sectors, making lives better and educational experiences richer. The future promises an exciting horizon where AI agents revolutionize how we live, learn, and heal.\n\n2. **Blockchain Beyond Bitcoin: How Decentralized Technology is Reshaping Industries**  \nWhen most people hear \"blockchain,\" they think of Bitcoin and other cryptocurrencies. However, blockchain technology's potential reaches far beyond digital currencies. From supply chain transparency and secure voting systems to immutable medical records and decentralized finance, blockchain is infusing trust and transparency into multiple sectors. By eliminating intermediaries and ensuring data integrity, blockchain is poised to disrupt traditional business models, offering unprecedented efficiencies and new opportunities. This revolution underscores a foundational shift in how industries operate, emphasizing decentralization and direct peer-to-peer interaction.\n\n3. **The Rise of Remote Work: Transforming Corporate Culture and Collaboration**  \nThe COVID-19 pandemic has accelerated a trend that was already catching on: remote work. As companies worldwide adapt to this new norm, it's not just about working from home; it's about transforming the very essence of corporate culture and collaboration. The rise of remote work is leading to a more flexible, inclusive, and diverse work environment. Organizations are leveraging advanced collaboration tools and redefining team dynamics to maintain productivity and innovation. This paradigm shift is reshaping leadership styles, employee engagement, and organizational structure, heralding a future where remote work could become a permanent fixture in the professional landscape.\n\n4. **Sustainable Tech Innovations: Green Solutions for a Planet in Peril**  \nWith climate change and environmental degradation posing serious threats, sustainable tech innovations are more crucial than ever. From renewable energy solutions like solar and wind power to energy-efficient devices and sustainable manufacturing processes, technology is paving the way for a greener future. Companies are developing smart grids, eco-friendly gadgets, and recycling technologies that minimize waste and reduce the carbon footprint. These advancements are not just good for the planet; they represent significant business opportunities and regulatory advantages. As we face the urgency of environmental challenges, sustainable tech offers a beacon of hope and a clear path forward.\n\n5. **The Ethical Dilemma of AI: Balancing Innovation with Responsibility**  \nAs artificial intelligence rapidly advances, it presents an intriguing ethical dilemma: how do we balance groundbreaking innovation with responsible use? The potential for AI to enhance efficiencies, discover new insights, and create unprecedented opportunities is immense. However, concerns around privacy, biased algorithms, and autonomous decision-making necessitate robust ethical frameworks. This conversation demands a nuanced approach that involves policymakers, technologists, and ethicists working together. Addressing these ethical dilemmas is not just about averting risks but also about ensuring that AI systems are designed, deployed, and regulated in ways that foster trust and societal well-being."
+        == "1. **The Future of Work: How AI and Automation Are Shaping Careers**:\n   In a world rapidly driven by technological advancements, AI and automation are not just buzzwords—they are transforming the very fabric of our professional lives. This article delves into the impact of AI on the job market, exploring how careers are evolving with these innovations. From new job opportunities to the obsolescence of traditional roles, the future of work is a complex landscape of challenges and possibilities. Discover how professionals are adapting, what skills are becoming indispensable, and how organizations are strategically leveraging AI to thrive in a competitive environment.\n\n2. **AI Agents: The Creative Minds Behind Your Personal Assistants**:\n   Imagine having a personal assistant who anticipates your needs, learns from your preferences, and streamlines your daily activities, all without human intervention. AI agents, the sophisticated algorithms powering digital assistants like Siri, Alexa, and Google Assistant, are the unsung heroes of modern convenience. This article unveils the intricate world of AI agents, detailing their development, capabilities, and the groundbreaking technologies that enable their creativity and efficiency. Learn how these digital assistants are transforming personal and professional productivity, making life smarter and more efficient in ways we never thought possible.\n\n3. **From Sci-Fi to Reality: The Evolution of AI in Popular Culture**:\n   Artificial intelligence, once a figment of science fiction, is now an integral part of our reality. This article traces the fascinating journey of AI from its speculative roots in literature, films, and television to becoming a tangible force in modern society. Explore how popular culture has both predicted and shaped public perception of AI, and how these narratives influence technological advancements and ethical considerations. From the dystopian fears to utopian possibilities, see how the interplay between fiction and reality continues to shape the evolution of AI in our world.\n\n4. **Ethics in AI: Navigating the Moral Landscape of Machine Learning**:\n   As AI systems become increasingly autonomous and pervasive, the ethical implications of their use are more critical than ever. This article addresses the urgent need to navigate the complex moral landscape of machine learning and artificial intelligence. From bias in algorithms to privacy concerns and the accountability of AI decisions, delve into the ethical dilemmas that tech companies, policymakers, and society face. Understand the strategies being employed to ensure fair, transparent, and ethical AI development, and the ongoing debates that challenge our moral compass in the age of intelligent machines.\n\n5. **AI and the Arts: How Artificial Intelligence is Revolutionizing Creativity**:\n   The intersection of AI and the arts is redefining creativity, pushing the boundaries of what is possible in music, visual arts, literature, and beyond. This article explores the innovative ways in which AI is being utilized by artists to create, enhance, and inspire works of art. From generating original compositions to assisting in the creative process, AI's role in the arts is both collaborative and transformative. Discover how machine learning algorithms are enabling new forms of artistic expression and the implications for the future of creativity, heralding a new era where human ingenuity and artificial intelligence coalesce."
     )
 
 
@@ -400,7 +400,7 @@ def test_crew_with_delegating_agents():
 
     assert (
         result.raw
-        == "Artificial Intelligence (AI) Agents are transformative entities designed to automate processes, make decisions, and solve problems by mimicking human intelligence. These sophisticated systems leverage machine learning, natural language processing, and data analytics to perform tasks that traditionally required human intervention. From personal assistants like Siri and Alexa to complex decision-making systems in autonomous vehicles, AI Agents are increasingly becoming integral to our daily lives, promising enhanced efficiency and productivity across numerous domains.\n\nOne of the most prominent examples of AI Agents is their application in the healthcare industry. These intelligent systems can analyze vast amounts of medical data to assist in diagnostic processes, personalize treatment plans, and even predict outbreaks of diseases. For instance, IBM's Watson for Oncology utilizes AI to provide evidence-based treatment options by analyzing large datasets of medical literature and patient records. These capabilities not only improve the accuracy of diagnoses but also significantly reduce the time it takes to develop effective treatment plans, ultimately enhancing patient outcomes.\n\nBeyond healthcare, AI Agents are making strides in industries such as finance, retail, and manufacturing. In the financial sector, AI-driven chatbots and virtual assistants help manage customer inquiries, detect fraudulent activities, and offer personalized financial advice. Retailers use AI Agents to optimize supply chain operations, manage inventory, and enhance customer experiences through personalized recommendations. Meanwhile, in manufacturing, AI-powered agents are pivotal in predictive maintenance, quality control, and optimizing production lines. These applications underscore the versatility of AI Agents in transforming business operations and driving economic growth.\n\nDespite these notable benefits, the adoption of AI Agents also presents several challenges. Concerns about data privacy and security, ethical considerations regarding decision-making processes, and the potential for job displacement are significant hurdles that need to be addressed. As AI Agents become more autonomous, ensuring transparency and accountability in their operations is critical. Looking forward, the future of AI Agents holds immense potential. Continued advancements in AI technologies, coupled with robust regulatory frameworks, can further unlock the capabilities of AI Agents, making them indispensable assets in our quest for innovation and quality of life improvements. As we navigate this evolving landscape, fostering collaboration between AI developers, policymakers, and society at large will be crucial in harnessing the transformative potential of AI Agents."
+        == "AI agents are intelligent software entities designed to autonomously perform tasks and make decisions based on data, embodying the next significant leap in the AI evolution. These agents leverage complex algorithms and machine learning techniques to analyze vast datasets, adapt to new patterns, and execute actions without human intervention. From personal assistants like Siri and Alexa to sophisticated financial trading systems and healthcare diagnostics, AI agents are revolutionizing numerous industries by enhancing efficiency, accuracy, and decision-making capabilities. Their ability to operate independently while continuously learning and improving means they hold the transformative potential to redefine how businesses operate, drive innovation, and create unprecedented value across various sectors.\n\nArtificial Intelligence (AI) transcends the notion of simple automation by introducing systems capable of mimicking human intelligence. This evolution in technology doesn't just follow predefined rules but learns from patterns, makes decisions, and even anticipates future outcomes. Machine learning, a subset of AI, has brought about breakthroughs where software evolves by processing data and identifying patterns too complex for traditional algorithms. As a result, AI applications now span from image recognition to natural language processing, offering human-like interactions and unparalleled analytic capabilities.\n\nIn healthcare, AI's influence is particularly profound. It enhances diagnostic accuracy by analyzing medical images, predicting disease outbreaks, and personalizing treatment plans based on patient data. AI-driven innovations such as robotic surgeries and AI-powered diagnostic tools are spearheading a new era of medical breakthroughs, reducing human error rates and facilitating early detection of life-threatening conditions. This is just the tip of the iceberg, as ongoing research continues to uncover new possibilities for integrating AI in patient care, potentially offering solutions that were once the realm of science fiction.\n\nAI's integration into daily life also brings forth significant ethical and societal considerations. Issues surrounding privacy, data security, and the potential displacement of jobs by automation need to be carefully managed. Additionally, ensuring that AI systems are transparent and unbiased is critical to their widespread acceptance and trust. As humanity stands on the brink of this technological revolution, balancing innovation with responsibility will be key to harnessing AI's full potential to drive sustainable growth and improve quality of life globally.\n\nThus, Artificial Intelligence, with all its promises and challenges, is undeniably charting a course toward a future where intelligent systems will increasingly become integral to our lives, driving transformation across all domains of human endeavor."
     )
 
 
@@ -609,7 +609,7 @@ def test_sequential_async_task_execution_completion():
 
     sequential_result = sequential_crew.kickoff()
     assert sequential_result.raw.startswith(
-        "Artificial Intelligence (AI) has a rich history marked by significant milestones that have collectively shaped its evolution and applications."
+        "Article: The Pivotal Moments in the History of Artificial Intelligence\n\nArtificial Intelligence (AI)"
     )
 
 
@@ -636,9 +636,7 @@ def test_single_task_with_async_execution():
     )
 
     result = crew.kickoff()
-    assert result.raw.startswith(
-        "- AI in healthcare: revolutionizing diagnostics and personalized treatments."
-    )
+    assert result.raw.startswith("- Ethical considerations in AI deployment.")
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
@@ -1101,11 +1099,11 @@ def test_dont_set_agents_step_callback_if_already_set():
 
 @pytest.mark.vcr(filter_headers=["authorization"])
 def test_crew_function_calling_llm():
-    from unittest.mock import patch
+    from unittest.mock import patch, Mock
     from crewai_tools import tool
-    from crewai.utilities import Instructor
+    import instructor
 
-    llm = "gpt-3.5-turbo-0125"
+    llm = "gpt-4o"
 
     @tool
     def learn_about_AI() -> str:
@@ -1129,12 +1127,23 @@ def test_crew_function_calling_llm():
     tasks = [essay]
     crew = Crew(agents=[agent1], tasks=tasks)
 
-    with patch.object(Instructor, "__init__", return_value=None) as mock_instructor:
+    with patch.object(instructor, "from_litellm") as mock_from_litellm:
+        mock_client = Mock()
+        mock_from_litellm.return_value = mock_client
+        mock_chat = Mock()
+        mock_client.chat = mock_chat
+        mock_completions = Mock()
+        mock_chat.completions = mock_completions
+        mock_create = Mock()
+        mock_completions.create = mock_create
+
         crew.kickoff()
-        mock_instructor.assert_called()
-        calls = mock_instructor.call_args_list
+
+        mock_from_litellm.assert_called()
+        mock_create.assert_called()
+        calls = mock_create.call_args_list
         assert any(
-            call.kwargs.get("llm") == "gpt-3.5-turbo-0125" for call in calls
+            call.kwargs.get("model") == "gpt-4o" for call in calls
         ), "Instructor was not created with the expected model"
 
 
@@ -1164,7 +1173,7 @@ def test_task_with_no_arguments():
     crew = Crew(agents=[researcher], tasks=[task])
 
     result = crew.kickoff()
-    assert result.raw == "The total number of sales is 75."
+    assert result.raw == "January: 5, February: 10, March: 15, April: 20, May: 25"
 
 
 def test_code_execution_flag_adds_code_tool_upon_kickoff():
@@ -1274,9 +1283,9 @@ def test_agent_usage_metrics_are_captured_for_hierarchical_process():
     assert result.raw == "Howdy!"
 
     assert result.token_usage == UsageMetrics(
-        total_tokens=2695,
-        prompt_tokens=2548,
-        completion_tokens=147,
+        total_tokens=2677,
+        prompt_tokens=2528,
+        completion_tokens=149,
         successful_requests=5,
     )
 
@@ -2375,7 +2384,7 @@ def test_conditional_task_last_task_when_conditional_is_true():
     )
     result = crew.kickoff()
     assert result.raw.startswith(
-        "1. **How AI Agents are Revolutionizing Customer Service**"
+        "1. **The Rise of Autonomous AI Agents in Business Operations**"
     )
 
 

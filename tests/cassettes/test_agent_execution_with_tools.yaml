@@ -18,7 +18,7 @@ interactions:
       final answer: The result of the multiplication.\nyou MUST return the actual
       complete content as the final answer, not a summary.\n\nBegin! This is VERY
       important to you, use the tools available and give your best Final Answer, your
-      job depends on it!\n\nThought:"}], "model": "gpt-4o", "stop": ["\nObservation"]}'
+      job depends on it!\n\nThought:"}], "model": "gpt-4o", "stop": ["\nResult"]}'
     headers:
       accept:
       - application/json
@@ -27,12 +27,12 @@ interactions:
       connection:
       - keep-alive
       content-length:
-      - '1487'
+      - '1482'
       content-type:
       - application/json
       cookie:
-      - __cf_bm=r6BNUnXat.26mviZiJYUf7Qj4ea5gbt_oPxyClKcVOE-1726214380-1.0.1.1-2S3G10sPdiG2syQSO8wKWXE7Nmdgt88imgakr81w9DemMH8mVDg0q6r9ANx6tM4_CPvgGQlMVstDhDRkIDwhzg;
-        _cfuvid=dp2yoCmGHVlURh_U78_UoIfnhcO5UhufnL5whkUSMTQ-1726214380689-0.0.1.1-604800000
+      - __cf_bm=J1VIPhfusyyXtwM.1L9zbe3jdnU7NVyHC3AWiKXO280-1726379702-1.0.1.1-LDa9RyXFli18t4ZEuVAENTChdNAkRtdWXRkRLbBHbCXdobugQ3T.arhMpSKwtnBRXKPcC4b66UA7BsSy1VXDHQ;
+        _cfuvid=Bz2zevKuFYZqnEFwqmqVHcRo5pT0fm0fTtc_6_VQs4g-1726379702153-0.0.1.1-604800000
       host:
       - api.openai.com
       user-agent:
@@ -56,21 +56,20 @@ interactions:
     method: POST
     uri: https://api.openai.com/v1/chat/completions
   response:
-    content: "{\n  \"id\": \"chatcmpl-A6vVNRJrj67a3OCVl48sEnDFUEH9L\",\n  \"object\":
-      \"chat.completion\",\n  \"created\": 1726214381,\n  \"model\": \"gpt-4o-2024-05-13\",\n
+    content: "{\n  \"id\": \"chatcmpl-A7cVqFKzLVQKxonU04QK8t0uOSSRv\",\n  \"object\":
+      \"chat.completion\",\n  \"created\": 1726379702,\n  \"model\": \"gpt-4o-2024-05-13\",\n
       \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
-      \"assistant\",\n        \"content\": \"Thought: I need to multiply 3 by 4 to
-      find the result. I will use the multiplier tool to calculate this.\\n\\nAction:
-      multiplier\\nAction Input: {\\\"first_number\\\": 3, \\\"second_number\\\":
-      4}\",\n        \"refusal\": null\n      },\n      \"logprobs\": null,\n      \"finish_reason\":
-      \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 309,\n    \"completion_tokens\":
-      47,\n    \"total_tokens\": 356,\n    \"completion_tokens_details\": {\n      \"reasoning_tokens\":
-      0\n    }\n  },\n  \"system_fingerprint\": \"fp_25624ae3a5\"\n}\n"
+      \"assistant\",\n        \"content\": \"Thought: I need to multiply 3 and 4 to
+      get the final answer.\\n\\nAction: multiplier\\nAction Input: {\\\"first_number\\\":
+      3, \\\"second_number\\\": 4}\",\n        \"refusal\": null\n      },\n      \"logprobs\":
+      null,\n      \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\":
+      309,\n    \"completion_tokens\": 38,\n    \"total_tokens\": 347,\n    \"completion_tokens_details\":
+      {\n      \"reasoning_tokens\": 0\n    }\n  },\n  \"system_fingerprint\": \"fp_25624ae3a5\"\n}\n"
     headers:
       CF-Cache-Status:
       - DYNAMIC
       CF-RAY:
-      - 8c26996d2cb114f2-LAX
+      - 8c365d94a9e9221a-MIA
       Connection:
       - keep-alive
       Content-Encoding:
@@ -78,7 +77,7 @@ interactions:
       Content-Type:
       - application/json
       Date:
-      - Fri, 13 Sep 2024 07:59:42 GMT
+      - Sun, 15 Sep 2024 05:55:03 GMT
       Server:
       - cloudflare
       Transfer-Encoding:
@@ -92,7 +91,7 @@ interactions:
       openai-organization:
       - crewai-iuxna1
       openai-processing-ms:
-      - '634'
+      - '522'
       openai-version:
       - '2020-10-01'
       strict-transport-security:
@@ -104,13 +103,13 @@ interactions:
       x-ratelimit-remaining-requests:
       - '9999'
       x-ratelimit-remaining-tokens:
-      - '29999649'
+      - '29999648'
       x-ratelimit-reset-requests:
       - 6ms
       x-ratelimit-reset-tokens:
       - 0s
       x-request-id:
-      - req_23846317ffaaf8d0908de1779a6864b5
+      - req_75916c211ece70d778353334a3157687
     http_version: HTTP/1.1
     status_code: 200
 - request:
@@ -133,9 +132,9 @@ interactions:
       complete content as the final answer, not a summary.\n\nBegin! This is VERY
       important to you, use the tools available and give your best Final Answer, your
       job depends on it!\n\nThought:"}, {"role": "assistant", "content": "Thought:
-      I need to multiply 3 by 4 to find the result. I will use the multiplier tool
-      to calculate this.\n\nAction: multiplier\nAction Input: {\"first_number\": 3,
-      \"second_number\": 4}\nObservation: 12"}], "model": "gpt-4o", "stop": ["\nObservation"]}'
+      I need to multiply 3 and 4 to get the final answer.\n\nAction: multiplier\nAction
+      Input: {\"first_number\": 3, \"second_number\": 4}\nObservation: 12"}], "model":
+      "gpt-4o", "stop": ["\nResult"]}'
     headers:
       accept:
       - application/json
@@ -144,12 +143,12 @@ interactions:
       connection:
       - keep-alive
       content-length:
-      - '1727'
+      - '1678'
       content-type:
       - application/json
       cookie:
-      - __cf_bm=r6BNUnXat.26mviZiJYUf7Qj4ea5gbt_oPxyClKcVOE-1726214380-1.0.1.1-2S3G10sPdiG2syQSO8wKWXE7Nmdgt88imgakr81w9DemMH8mVDg0q6r9ANx6tM4_CPvgGQlMVstDhDRkIDwhzg;
-        _cfuvid=dp2yoCmGHVlURh_U78_UoIfnhcO5UhufnL5whkUSMTQ-1726214380689-0.0.1.1-604800000
+      - __cf_bm=J1VIPhfusyyXtwM.1L9zbe3jdnU7NVyHC3AWiKXO280-1726379702-1.0.1.1-LDa9RyXFli18t4ZEuVAENTChdNAkRtdWXRkRLbBHbCXdobugQ3T.arhMpSKwtnBRXKPcC4b66UA7BsSy1VXDHQ;
+        _cfuvid=Bz2zevKuFYZqnEFwqmqVHcRo5pT0fm0fTtc_6_VQs4g-1726379702153-0.0.1.1-604800000
       host:
       - api.openai.com
       user-agent:
@@ -173,20 +172,20 @@ interactions:
     method: POST
     uri: https://api.openai.com/v1/chat/completions
   response:
-    content: "{\n  \"id\": \"chatcmpl-A6vVPkhWVv0fzRUyU2v3vytOLmOXa\",\n  \"object\":
-      \"chat.completion\",\n  \"created\": 1726214383,\n  \"model\": \"gpt-4o-2024-05-13\",\n
+    content: "{\n  \"id\": \"chatcmpl-A7cVr9CGjkmLwdjZ4R3NFKB33aG6C\",\n  \"object\":
+      \"chat.completion\",\n  \"created\": 1726379703,\n  \"model\": \"gpt-4o-2024-05-13\",\n
       \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
       \"assistant\",\n        \"content\": \"Thought: I now know the final answer.\\nFinal
-      Answer: The result of 3 times 4 is 12.\",\n        \"refusal\": null\n      },\n
-      \     \"logprobs\": null,\n      \"finish_reason\": \"stop\"\n    }\n  ],\n
-      \ \"usage\": {\n    \"prompt_tokens\": 364,\n    \"completion_tokens\": 24,\n
-      \   \"total_tokens\": 388,\n    \"completion_tokens_details\": {\n      \"reasoning_tokens\":
+      Answer: The result of the multiplication is 12.\",\n        \"refusal\": null\n
+      \     },\n      \"logprobs\": null,\n      \"finish_reason\": \"stop\"\n    }\n
+      \ ],\n  \"usage\": {\n    \"prompt_tokens\": 355,\n    \"completion_tokens\":
+      21,\n    \"total_tokens\": 376,\n    \"completion_tokens_details\": {\n      \"reasoning_tokens\":
       0\n    }\n  },\n  \"system_fingerprint\": \"fp_25624ae3a5\"\n}\n"
     headers:
       CF-Cache-Status:
       - DYNAMIC
       CF-RAY:
-      - 8c269977bddd14f2-LAX
+      - 8c365d99dc9d221a-MIA
       Connection:
       - keep-alive
       Content-Encoding:
@@ -194,7 +193,7 @@ interactions:
       Content-Type:
       - application/json
       Date:
-      - Fri, 13 Sep 2024 07:59:43 GMT
+      - Sun, 15 Sep 2024 05:55:03 GMT
       Server:
       - cloudflare
       Transfer-Encoding:
@@ -208,7 +207,7 @@ interactions:
       openai-organization:
       - crewai-iuxna1
       openai-processing-ms:
-      - '373'
+      - '348'
       openai-version:
       - '2020-10-01'
       strict-transport-security:
@@ -220,13 +219,13 @@ interactions:
       x-ratelimit-remaining-requests:
       - '9999'
       x-ratelimit-remaining-tokens:
-      - '29999598'
+      - '29999609'
       x-ratelimit-reset-requests:
       - 6ms
       x-ratelimit-reset-tokens:
       - 0s
       x-request-id:
-      - req_d7c520171e7deff2ba576c9ad8492823
+      - req_e49e5c10a3e466cb81501c14b51fb826
     http_version: HTTP/1.1
     status_code: 200
 version: 1

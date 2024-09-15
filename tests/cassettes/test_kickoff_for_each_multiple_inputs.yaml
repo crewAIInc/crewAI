@@ -10,7 +10,7 @@ interactions:
       criteria for your final answer: 1 bullet point about dog that''s under 15 words.\nyou
       MUST return the actual complete content as the final answer, not a summary.\n\nBegin!
       This is VERY important to you, use the tools available and give your best Final
-      Answer, your job depends on it!\n\nThought:"}], "model": "gpt-4o", "stop": ["\nObservation"]}'
+      Answer, your job depends on it!\n\nThought:"}], "model": "gpt-4o", "stop": ["\nResult"]}'
     headers:
       accept:
       - application/json
@@ -19,12 +19,12 @@ interactions:
       connection:
       - keep-alive
       content-length:
-      - '896'
+      - '891'
       content-type:
       - application/json
       cookie:
-      - __cf_bm=r6BNUnXat.26mviZiJYUf7Qj4ea5gbt_oPxyClKcVOE-1726214380-1.0.1.1-2S3G10sPdiG2syQSO8wKWXE7Nmdgt88imgakr81w9DemMH8mVDg0q6r9ANx6tM4_CPvgGQlMVstDhDRkIDwhzg;
-        _cfuvid=dp2yoCmGHVlURh_U78_UoIfnhcO5UhufnL5whkUSMTQ-1726214380689-0.0.1.1-604800000
+      - __cf_bm=e.frhlfi1m.8j1hzfGzahuOh4rgR9gvx.2zCHQ2w_Vs-1726380612-1.0.1.1-T58wIEXn0GTV8AZMALaUyULORFkNEBuxpds8RSWAM0Ltrg2U7jLBEKs0nwIneMiBAiiOmyZaoaH2RyLtNcunLQ;
+        _cfuvid=Bz2zevKuFYZqnEFwqmqVHcRo5pT0fm0fTtc_6_VQs4g-1726379702153-0.0.1.1-604800000
       host:
       - api.openai.com
       user-agent:
@@ -48,20 +48,20 @@ interactions:
     method: POST
     uri: https://api.openai.com/v1/chat/completions
   response:
-    content: "{\n  \"id\": \"chatcmpl-A6vjlaPhYLnl3fsxY3EL7RBWgClJv\",\n  \"object\":
-      \"chat.completion\",\n  \"created\": 1726215273,\n  \"model\": \"gpt-4o-2024-05-13\",\n
+    content: "{\n  \"id\": \"chatcmpl-A7cnGxcomUc91XzRV4gXP1hqG87Of\",\n  \"object\":
+      \"chat.completion\",\n  \"created\": 1726380782,\n  \"model\": \"gpt-4o-2024-05-13\",\n
       \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
-      \"assistant\",\n        \"content\": \"Thought: I now can give a great answer
-      \ \\nFinal Answer: Dogs are loyal, loving companions with remarkable emotional
-      intelligence and social skills.\",\n        \"refusal\": null\n      },\n      \"logprobs\":
-      null,\n      \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\":
-      175,\n    \"completion_tokens\": 27,\n    \"total_tokens\": 202,\n    \"completion_tokens_details\":
+      \"assistant\",\n        \"content\": \"Thought: I now can give a great answer\\nFinal
+      Answer: Dogs are incredibly adaptable and thrive in diverse environments and
+      roles.\",\n        \"refusal\": null\n      },\n      \"logprobs\": null,\n
+      \     \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\":
+      175,\n    \"completion_tokens\": 25,\n    \"total_tokens\": 200,\n    \"completion_tokens_details\":
       {\n      \"reasoning_tokens\": 0\n    }\n  },\n  \"system_fingerprint\": \"fp_25624ae3a5\"\n}\n"
     headers:
       CF-Cache-Status:
       - DYNAMIC
       CF-RAY:
-      - 8c26af3198ad2ab9-LAX
+      - 8c3677f4daba745a-MIA
       Connection:
       - keep-alive
       Content-Encoding:
@@ -69,7 +69,7 @@ interactions:
       Content-Type:
       - application/json
       Date:
-      - Fri, 13 Sep 2024 08:14:33 GMT
+      - Sun, 15 Sep 2024 06:13:03 GMT
       Server:
       - cloudflare
       Transfer-Encoding:
@@ -83,7 +83,7 @@ interactions:
       openai-organization:
       - crewai-iuxna1
       openai-processing-ms:
-      - '352'
+      - '304'
       openai-version:
       - '2020-10-01'
       strict-transport-security:
@@ -101,7 +101,7 @@ interactions:
       x-ratelimit-reset-tokens:
       - 0s
       x-request-id:
-      - req_78015a901e7711e9b2988466088f173d
+      - req_b3397d7403447b3f9f018f5fdaf8e01b
     http_version: HTTP/1.1
     status_code: 200
 - request:
@@ -115,7 +115,7 @@ interactions:
       criteria for your final answer: 1 bullet point about cat that''s under 15 words.\nyou
       MUST return the actual complete content as the final answer, not a summary.\n\nBegin!
       This is VERY important to you, use the tools available and give your best Final
-      Answer, your job depends on it!\n\nThought:"}], "model": "gpt-4o", "stop": ["\nObservation"]}'
+      Answer, your job depends on it!\n\nThought:"}], "model": "gpt-4o", "stop": ["\nResult"]}'
     headers:
       accept:
       - application/json
@@ -124,12 +124,12 @@ interactions:
       connection:
       - keep-alive
       content-length:
-      - '896'
+      - '891'
       content-type:
       - application/json
       cookie:
-      - __cf_bm=r6BNUnXat.26mviZiJYUf7Qj4ea5gbt_oPxyClKcVOE-1726214380-1.0.1.1-2S3G10sPdiG2syQSO8wKWXE7Nmdgt88imgakr81w9DemMH8mVDg0q6r9ANx6tM4_CPvgGQlMVstDhDRkIDwhzg;
-        _cfuvid=dp2yoCmGHVlURh_U78_UoIfnhcO5UhufnL5whkUSMTQ-1726214380689-0.0.1.1-604800000
+      - __cf_bm=e.frhlfi1m.8j1hzfGzahuOh4rgR9gvx.2zCHQ2w_Vs-1726380612-1.0.1.1-T58wIEXn0GTV8AZMALaUyULORFkNEBuxpds8RSWAM0Ltrg2U7jLBEKs0nwIneMiBAiiOmyZaoaH2RyLtNcunLQ;
+        _cfuvid=Bz2zevKuFYZqnEFwqmqVHcRo5pT0fm0fTtc_6_VQs4g-1726379702153-0.0.1.1-604800000
       host:
       - api.openai.com
       user-agent:
@@ -153,20 +153,20 @@ interactions:
     method: POST
     uri: https://api.openai.com/v1/chat/completions
   response:
-    content: "{\n  \"id\": \"chatcmpl-A6vjmhIVdEjjiIn4ZnFn2Ie2dsHae\",\n  \"object\":
-      \"chat.completion\",\n  \"created\": 1726215274,\n  \"model\": \"gpt-4o-2024-05-13\",\n
+    content: "{\n  \"id\": \"chatcmpl-A7cnH90odq4LZpFIyCSgLNQZmkfoI\",\n  \"object\":
+      \"chat.completion\",\n  \"created\": 1726380783,\n  \"model\": \"gpt-4o-2024-05-13\",\n
       \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
       \"assistant\",\n        \"content\": \"Thought: I now can give a great answer\\nFinal
-      Answer: Cats are meticulous groomers, spending up to 50% of their awake time
-      cleaning themselves.\",\n        \"refusal\": null\n      },\n      \"logprobs\":
-      null,\n      \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\":
-      175,\n    \"completion_tokens\": 32,\n    \"total_tokens\": 207,\n    \"completion_tokens_details\":
+      Answer: Cats are experts in demanding affection yet fiercely guarding their
+      independence.\",\n        \"refusal\": null\n      },\n      \"logprobs\": null,\n
+      \     \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\":
+      175,\n    \"completion_tokens\": 25,\n    \"total_tokens\": 200,\n    \"completion_tokens_details\":
       {\n      \"reasoning_tokens\": 0\n    }\n  },\n  \"system_fingerprint\": \"fp_25624ae3a5\"\n}\n"
     headers:
       CF-Cache-Status:
       - DYNAMIC
       CF-RAY:
-      - 8c26af3a18342ab9-LAX
+      - 8c3677f93e1c745a-MIA
       Connection:
       - keep-alive
       Content-Encoding:
@@ -174,7 +174,7 @@ interactions:
       Content-Type:
       - application/json
       Date:
-      - Fri, 13 Sep 2024 08:14:35 GMT
+      - Sun, 15 Sep 2024 06:13:04 GMT
       Server:
       - cloudflare
       Transfer-Encoding:
@@ -188,7 +188,7 @@ interactions:
       openai-organization:
       - crewai-iuxna1
       openai-processing-ms:
-      - '506'
+      - '349'
       openai-version:
       - '2020-10-01'
       strict-transport-security:
@@ -206,150 +206,9 @@ interactions:
       x-ratelimit-reset-tokens:
       - 0s
       x-request-id:
-      - req_ccdc03638b86f6075b958250684fffdf
+      - req_d640077247b6fa67bfcdfee959326467
     http_version: HTTP/1.1
     status_code: 200
-- request:
-    body: !!binary |
-      Cv4wCiQKIgoMc2VydmljZS5uYW1lEhIKEGNyZXdBSS10ZWxlbWV0cnkS1TAKEgoQY3Jld2FpLnRl
-      bGVtZXRyeRKQAgoQV4TvBbaVOLxJ89VMldV35hIIIp0iDE7zWv0qDlRhc2sgRXhlY3V0aW9uMAE5
-      2L8tz6O/9BdByAxtYaS/9BdKLgoIY3Jld19rZXkSIgogYTljYzVkNDMzOTViMjFiMTgxYzgwYmQ0
-      MzUxY2NlYzhKMQoHY3Jld19pZBImCiRhZjdkMTE1Zi1lOGZhLTQ3YzktYjk3Ny03Nzk5ZTFmZWRj
-      ZDlKLgoIdGFza19rZXkSIgogZTllNmI3MmFhYzMyNjQ1OWRkNzA2OGYwYjE3MTdjMWNKMQoHdGFz
-      a19pZBImCiQxZjYxYmU5My1hZWZiLTQ5YTktYjM0Zi02ZjhjNjc0NGJhMTJ6AhgBhQEAAQAAErkN
-      ChDvzFChfE371NNngq9aLga8EgjxdtaDaC1o9SoMQ3JldyBDcmVhdGVkMAE5KAWtZKS/9BdBcOev
-      ZKS/9BdKGgoOY3Jld2FpX3ZlcnNpb24SCAoGMC41Ni4wShoKDnB5dGhvbl92ZXJzaW9uEggKBjMu
-      MTEuN0ouCghjcmV3X2tleRIiCiA2NmE5NjBkYzY5ZmZmNTc4YjI2YzYxZDRmN2M1YTlmZUoxCgdj
-      cmV3X2lkEiYKJDViOGZkNDdkLWRhYzMtNGE2Yi05MWFiLWJiZjViYjllMzMwZUocCgxjcmV3X3By
-      b2Nlc3MSDAoKc2VxdWVudGlhbEoRCgtjcmV3X21lbW9yeRICEABKGgoUY3Jld19udW1iZXJfb2Zf
-      dGFza3MSAhgDShsKFWNyZXdfbnVtYmVyX29mX2FnZW50cxICGAJKjAUKC2NyZXdfYWdlbnRzEvwE
-      CvkEW3sia2V5IjogIjhiZDIxMzliNTk3NTE4MTUwNmU0MWZkOWM0NTYzZDc1IiwgImlkIjogIjY1
-      MGJmZDc1LTNmMzUtNDQ3OC04ZTk4LWQ0MmJiZGMzMGQwZSIsICJyb2xlIjogIlJlc2VhcmNoZXIi
-      LCAidmVyYm9zZT8iOiBmYWxzZSwgIm1heF9pdGVyIjogMjUsICJtYXhfcnBtIjogbnVsbCwgImZ1
-      bmN0aW9uX2NhbGxpbmdfbGxtIjogbnVsbCwgImxsbSI6ICJncHQtNG8iLCAiZGVsZWdhdGlvbl9l
-      bmFibGVkPyI6IGZhbHNlLCAiYWxsb3dfY29kZV9leGVjdXRpb24/IjogZmFsc2UsICJtYXhfcmV0
-      cnlfbGltaXQiOiAyLCAidG9vbHNfbmFtZXMiOiBbXX0sIHsia2V5IjogIjlhNTAxNWVmNDg5NWRj
-      NjI3OGQ1NDgxOGJhNDQ2YWY3IiwgImlkIjogIjk0MTEyMzA3LWI1MjktNGVlYy1hZGVjLTYzZWY4
-      YmY5YjNhNiIsICJyb2xlIjogIlNlbmlvciBXcml0ZXIiLCAidmVyYm9zZT8iOiBmYWxzZSwgIm1h
-      eF9pdGVyIjogMjUsICJtYXhfcnBtIjogbnVsbCwgImZ1bmN0aW9uX2NhbGxpbmdfbGxtIjogbnVs
-      bCwgImxsbSI6ICJncHQtNG8iLCAiZGVsZWdhdGlvbl9lbmFibGVkPyI6IGZhbHNlLCAiYWxsb3df
-      Y29kZV9leGVjdXRpb24/IjogZmFsc2UsICJtYXhfcmV0cnlfbGltaXQiOiAyLCAidG9vbHNfbmFt
-      ZXMiOiBbXX1dStoFCgpjcmV3X3Rhc2tzEssFCsgFW3sia2V5IjogIjk0NGFlZjBiYWM4NDBmMWMy
-      N2JkODNhOTM3YmMzNjFiIiwgImlkIjogImRhMjY4MjE2LTEzMTYtNGFiMC04ZDMwLTdhMDk3ZTYx
-      MTQ2NCIsICJhc3luY19leGVjdXRpb24/IjogdHJ1ZSwgImh1bWFuX2lucHV0PyI6IGZhbHNlLCAi
-      YWdlbnRfcm9sZSI6ICJSZXNlYXJjaGVyIiwgImFnZW50X2tleSI6ICI4YmQyMTM5YjU5NzUxODE1
-      MDZlNDFmZDljNDU2M2Q3NSIsICJ0b29sc19uYW1lcyI6IFtdfSwgeyJrZXkiOiAiZmM1NmRlYTM4
-      Yzk5NzRiNmY1NWEyZTI4YzE0OTk4ODYiLCAiaWQiOiAiMjBjZWRmMjQtYTIxNS00NjZhLWJjZDIt
-      ZDQyODczNWFhOWM0IiwgImFzeW5jX2V4ZWN1dGlvbj8iOiB0cnVlLCAiaHVtYW5faW5wdXQ/Ijog
-      ZmFsc2UsICJhZ2VudF9yb2xlIjogIlJlc2VhcmNoZXIiLCAiYWdlbnRfa2V5IjogIjhiZDIxMzli
-      NTk3NTE4MTUwNmU0MWZkOWM0NTYzZDc1IiwgInRvb2xzX25hbWVzIjogW119LCB7ImtleSI6ICI5
-      NGE4MjZjMTkzMDU1OTY4NmJhZmI0MDllZTgzODc2ZiIsICJpZCI6ICI3MTIzYTExNC1jOWVkLTRi
-      YTQtOTc5Zi03MDIzZGE3MzFlOTEiLCAiYXN5bmNfZXhlY3V0aW9uPyI6IGZhbHNlLCAiaHVtYW5f
-      aW5wdXQ/IjogZmFsc2UsICJhZ2VudF9yb2xlIjogIlNlbmlvciBXcml0ZXIiLCAiYWdlbnRfa2V5
-      IjogIjlhNTAxNWVmNDg5NWRjNjI3OGQ1NDgxOGJhNDQ2YWY3IiwgInRvb2xzX25hbWVzIjogW119
-      XXoCGAGFAQABAAASsAcKEOCD6VxfNXhXEv9g8hyYtUYSCELhA6C9/bTFKgxDcmV3IENyZWF0ZWQw
-      ATnYyxJlpL/0F0FgVhRlpL/0F0oaCg5jcmV3YWlfdmVyc2lvbhIICgYwLjU2LjBKGgoOcHl0aG9u
-      X3ZlcnNpb24SCAoGMy4xMS43Si4KCGNyZXdfa2V5EiIKIGVlNjc0NWQ3YzhhZTgyZTAwZGY5NGRl
-      MGY3Zjg3MTE4SjEKB2NyZXdfaWQSJgokNmEzMzc0MzUtZGY5OC00YzhmLTg3YTMtMzY3Y2ZlZWFh
-      ZDYyShwKDGNyZXdfcHJvY2VzcxIMCgpzZXF1ZW50aWFsShEKC2NyZXdfbWVtb3J5EgIQAEoaChRj
-      cmV3X251bWJlcl9vZl90YXNrcxICGAFKGwoVY3Jld19udW1iZXJfb2ZfYWdlbnRzEgIYAUrWAgoL
-      Y3Jld19hZ2VudHMSxgIKwwJbeyJrZXkiOiAiZjMzODZmNmQ4ZGE3NWFhNDE2YTZlMzEwMDUzZjc2
-      OTgiLCAiaWQiOiAiOWY2OTdlMzEtNjhkNS00MWVhLTg1ZTEtMDkxNWY1MmYxMGVkIiwgInJvbGUi
-      OiAie3RvcGljfSBSZXNlYXJjaGVyIiwgInZlcmJvc2U/IjogZmFsc2UsICJtYXhfaXRlciI6IDI1
-      LCAibWF4X3JwbSI6IG51bGwsICJmdW5jdGlvbl9jYWxsaW5nX2xsbSI6IG51bGwsICJsbG0iOiAi
-      Z3B0LTRvIiwgImRlbGVnYXRpb25fZW5hYmxlZD8iOiBmYWxzZSwgImFsbG93X2NvZGVfZXhlY3V0
-      aW9uPyI6IGZhbHNlLCAibWF4X3JldHJ5X2xpbWl0IjogMiwgInRvb2xzX25hbWVzIjogW119XUqH
-      AgoKY3Jld190YXNrcxL4AQr1AVt7ImtleSI6ICIwNmE3MzIyMGY0MTQ4YTRiYmQ1YmFjYjBkMGI0
-      NGZjZSIsICJpZCI6ICJiYjNiMzYwZi1kMWU2LTRiMmEtYjU4My1lNGY5OTE4Yzg3M2UiLCAiYXN5
-      bmNfZXhlY3V0aW9uPyI6IGZhbHNlLCAiaHVtYW5faW5wdXQ/IjogZmFsc2UsICJhZ2VudF9yb2xl
-      IjogInt0b3BpY30gUmVzZWFyY2hlciIsICJhZ2VudF9rZXkiOiAiZjMzODZmNmQ4ZGE3NWFhNDE2
-      YTZlMzEwMDUzZjc2OTgiLCAidG9vbHNfbmFtZXMiOiBbXX1degIYAYUBAAEAABKOAgoQofe+DbdR
-      WzSyYxATqBH7bhIICAOJm3isF9gqDFRhc2sgQ3JlYXRlZDABOSjKHmWkv/QXQUgYH2Wkv/QXSi4K
-      CGNyZXdfa2V5EiIKIGQwZmVlNjkzMjM5NTg4NmYyMDNmNDQ2YjcyYzFiMDBhSjEKB2NyZXdfaWQS
-      JgokNmEzMzc0MzUtZGY5OC00YzhmLTg3YTMtMzY3Y2ZlZWFhZDYySi4KCHRhc2tfa2V5EiIKIDA2
-      YTczMjIwZjQxNDhhNGJiZDViYWNiMGQwYjQ0ZmNlSjEKB3Rhc2tfaWQSJgokYmIzYjM2MGYtZDFl
-      Ni00YjJhLWI1ODMtZTRmOTkxOGM4NzNlegIYAYUBAAEAABKQAgoQf+c55e1GwCVtH1B+8Ga/YBII
-      ZYxF0rR21EQqDlRhc2sgRXhlY3V0aW9uMAE5QEMfZaS/9BdBeIfPsKS/9BdKLgoIY3Jld19rZXkS
-      IgogZDBmZWU2OTMyMzk1ODg2ZjIwM2Y0NDZiNzJjMWIwMGFKMQoHY3Jld19pZBImCiQ2YTMzNzQz
-      NS1kZjk4LTRjOGYtODdhMy0zNjdjZmVlYWFkNjJKLgoIdGFza19rZXkSIgogMDZhNzMyMjBmNDE0
-      OGE0YmJkNWJhY2IwZDBiNDRmY2VKMQoHdGFza19pZBImCiRiYjNiMzYwZi1kMWU2LTRiMmEtYjU4
-      My1lNGY5OTE4Yzg3M2V6AhgBhQEAAQAAErAHChA2l4U/oQey8u4W497ylI6DEgj6ibb0AsS59ioM
-      Q3JldyBDcmVhdGVkMAE5iBo1sqS/9BdBAGw5sqS/9BdKGgoOY3Jld2FpX3ZlcnNpb24SCAoGMC41
-      Ni4wShoKDnB5dGhvbl92ZXJzaW9uEggKBjMuMTEuN0ouCghjcmV3X2tleRIiCiBlZTY3NDVkN2M4
-      YWU4MmUwMGRmOTRkZTBmN2Y4NzExOEoxCgdjcmV3X2lkEiYKJDFkZGQxYzVhLTJlMDAtNDBmOC04
-      ZDJlLTA3YTdlYjE0MzI3ZUocCgxjcmV3X3Byb2Nlc3MSDAoKc2VxdWVudGlhbEoRCgtjcmV3X21l
-      bW9yeRICEABKGgoUY3Jld19udW1iZXJfb2ZfdGFza3MSAhgBShsKFWNyZXdfbnVtYmVyX29mX2Fn
-      ZW50cxICGAFK1gIKC2NyZXdfYWdlbnRzEsYCCsMCW3sia2V5IjogImYzMzg2ZjZkOGRhNzVhYTQx
-      NmE2ZTMxMDA1M2Y3Njk4IiwgImlkIjogIjMzNjM1NDRhLWViMzEtNGE2OS1hZmNkLWFlYjIxNDI4
-      MTBjOSIsICJyb2xlIjogInt0b3BpY30gUmVzZWFyY2hlciIsICJ2ZXJib3NlPyI6IGZhbHNlLCAi
-      bWF4X2l0ZXIiOiAyNSwgIm1heF9ycG0iOiBudWxsLCAiZnVuY3Rpb25fY2FsbGluZ19sbG0iOiBu
-      dWxsLCAibGxtIjogImdwdC00byIsICJkZWxlZ2F0aW9uX2VuYWJsZWQ/IjogZmFsc2UsICJhbGxv
-      d19jb2RlX2V4ZWN1dGlvbj8iOiBmYWxzZSwgIm1heF9yZXRyeV9saW1pdCI6IDIsICJ0b29sc19u
-      YW1lcyI6IFtdfV1KhwIKCmNyZXdfdGFza3MS+AEK9QFbeyJrZXkiOiAiMDZhNzMyMjBmNDE0OGE0
-      YmJkNWJhY2IwZDBiNDRmY2UiLCAiaWQiOiAiNDBlZGVmZDItOWE4Ny00NzU5LTgxNTctNDBiZDI1
-      YjExN2RlIiwgImFzeW5jX2V4ZWN1dGlvbj8iOiBmYWxzZSwgImh1bWFuX2lucHV0PyI6IGZhbHNl
-      LCAiYWdlbnRfcm9sZSI6ICJ7dG9waWN9IFJlc2VhcmNoZXIiLCAiYWdlbnRfa2V5IjogImYzMzg2
-      ZjZkOGRhNzVhYTQxNmE2ZTMxMDA1M2Y3Njk4IiwgInRvb2xzX25hbWVzIjogW119XXoCGAGFAQAB
-      AAASjgIKEGcDme0P7+WnnxpOVIOH0VgSCE7qmMyEhYhhKgxUYXNrIENyZWF0ZWQwATkAR1SypL/0
-      F0GY/lSypL/0F0ouCghjcmV3X2tleRIiCiBkMGZlZTY5MzIzOTU4ODZmMjAzZjQ0NmI3MmMxYjAw
-      YUoxCgdjcmV3X2lkEiYKJDFkZGQxYzVhLTJlMDAtNDBmOC04ZDJlLTA3YTdlYjE0MzI3ZUouCgh0
-      YXNrX2tleRIiCiAwNmE3MzIyMGY0MTQ4YTRiYmQ1YmFjYjBkMGI0NGZjZUoxCgd0YXNrX2lkEiYK
-      JDQwZWRlZmQyLTlhODctNDc1OS04MTU3LTQwYmQyNWIxMTdkZXoCGAGFAQABAAASkAIKEKlVEw3t
-      CguH6SUOFd+mTQsSCOmsedMGQbWSKg5UYXNrIEV4ZWN1dGlvbjABOfhrVbKkv/QXQSjxigOlv/QX
-      Si4KCGNyZXdfa2V5EiIKIGQwZmVlNjkzMjM5NTg4NmYyMDNmNDQ2YjcyYzFiMDBhSjEKB2NyZXdf
-      aWQSJgokMWRkZDFjNWEtMmUwMC00MGY4LThkMmUtMDdhN2ViMTQzMjdlSi4KCHRhc2tfa2V5EiIK
-      IDA2YTczMjIwZjQxNDhhNGJiZDViYWNiMGQwYjQ0ZmNlSjEKB3Rhc2tfaWQSJgokNDBlZGVmZDIt
-      OWE4Ny00NzU5LTgxNTctNDBiZDI1YjExN2RlegIYAYUBAAEAABKwBwoQgCNudM4gQ4E8J5bbTjay
-      VRIIwttrzLhk8acqDENyZXcgQ3JlYXRlZDABOfD7YQSlv/QXQTjGaASlv/QXShoKDmNyZXdhaV92
-      ZXJzaW9uEggKBjAuNTYuMEoaCg5weXRob25fdmVyc2lvbhIICgYzLjExLjdKLgoIY3Jld19rZXkS
-      IgogZWU2NzQ1ZDdjOGFlODJlMDBkZjk0ZGUwZjdmODcxMThKMQoHY3Jld19pZBImCiQ1MTA1MDU3
-      MC1lNzA5LTRlNTEtYTRlOC0yYzA2MWJiODFlMzFKHAoMY3Jld19wcm9jZXNzEgwKCnNlcXVlbnRp
-      YWxKEQoLY3Jld19tZW1vcnkSAhAAShoKFGNyZXdfbnVtYmVyX29mX3Rhc2tzEgIYAUobChVjcmV3
-      X251bWJlcl9vZl9hZ2VudHMSAhgBStYCCgtjcmV3X2FnZW50cxLGAgrDAlt7ImtleSI6ICJmMzM4
-      NmY2ZDhkYTc1YWE0MTZhNmUzMTAwNTNmNzY5OCIsICJpZCI6ICJiNDU3Yjk2ZC1hMzUwLTQwZTIt
-      ODczMS0xYTVkYWNjNDQwYzMiLCAicm9sZSI6ICJ7dG9waWN9IFJlc2VhcmNoZXIiLCAidmVyYm9z
-      ZT8iOiBmYWxzZSwgIm1heF9pdGVyIjogMjUsICJtYXhfcnBtIjogbnVsbCwgImZ1bmN0aW9uX2Nh
-      bGxpbmdfbGxtIjogbnVsbCwgImxsbSI6ICJncHQtNG8iLCAiZGVsZWdhdGlvbl9lbmFibGVkPyI6
-      IGZhbHNlLCAiYWxsb3dfY29kZV9leGVjdXRpb24/IjogZmFsc2UsICJtYXhfcmV0cnlfbGltaXQi
-      OiAyLCAidG9vbHNfbmFtZXMiOiBbXX1dSocCCgpjcmV3X3Rhc2tzEvgBCvUBW3sia2V5IjogIjA2
-      YTczMjIwZjQxNDhhNGJiZDViYWNiMGQwYjQ0ZmNlIiwgImlkIjogIjQyMTc4MGIxLTQ2ZjUtNDdh
-      Mi1hMWE4LWY2M2U0MDljNmM2ZiIsICJhc3luY19leGVjdXRpb24/IjogZmFsc2UsICJodW1hbl9p
-      bnB1dD8iOiBmYWxzZSwgImFnZW50X3JvbGUiOiAie3RvcGljfSBSZXNlYXJjaGVyIiwgImFnZW50
-      X2tleSI6ICJmMzM4NmY2ZDhkYTc1YWE0MTZhNmUzMTAwNTNmNzY5OCIsICJ0b29sc19uYW1lcyI6
-      IFtdfV16AhgBhQEAAQAAEo4CChDxbsl37mCB/phFjX14e4mSEgg0QRqOiojmXioMVGFzayBDcmVh
-      dGVkMAE5iDOhBKW/9BdBqP6hBKW/9BdKLgoIY3Jld19rZXkSIgogMzkyNTdhYjk3NDA5YjVmNWY0
-      MTk2NzNiYjQxZDBkYzhKMQoHY3Jld19pZBImCiQ1MTA1MDU3MC1lNzA5LTRlNTEtYTRlOC0yYzA2
-      MWJiODFlMzFKLgoIdGFza19rZXkSIgogMDZhNzMyMjBmNDE0OGE0YmJkNWJhY2IwZDBiNDRmY2VK
-      MQoHdGFza19pZBImCiQ0MjE3ODBiMS00NmY1LTQ3YTItYTFhOC1mNjNlNDA5YzZjNmZ6AhgBhQEA
-      AQAA
-    headers:
-      Accept:
-      - '*/*'
-      Accept-Encoding:
-      - gzip, deflate
-      Connection:
-      - keep-alive
-      Content-Length:
-      - '6273'
-      Content-Type:
-      - application/x-protobuf
-      User-Agent:
-      - OTel-OTLP-Exporter-Python/1.27.0
-    method: POST
-    uri: https://telemetry.crewai.com:4319/v1/traces
-  response:
-    body:
-      string: "\n\0"
-    headers:
-      Content-Length:
-      - '2'
-      Content-Type:
-      - application/x-protobuf
-      Date:
-      - Fri, 13 Sep 2024 08:14:36 GMT
-    status:
-      code: 200
-      message: OK
 - request:
     body: '{"messages": [{"role": "system", "content": "You are apple Researcher.
       You have a lot of experience with apple.\nYour personal goal is: Express hot
@@ -362,7 +221,7 @@ interactions:
       under 15 words.\nyou MUST return the actual complete content as the final answer,
       not a summary.\n\nBegin! This is VERY important to you, use the tools available
       and give your best Final Answer, your job depends on it!\n\nThought:"}], "model":
-      "gpt-4o", "stop": ["\nObservation"]}'
+      "gpt-4o", "stop": ["\nResult"]}'
     headers:
       accept:
       - application/json
@@ -371,12 +230,12 @@ interactions:
       connection:
       - keep-alive
       content-length:
-      - '906'
+      - '901'
       content-type:
       - application/json
       cookie:
-      - __cf_bm=r6BNUnXat.26mviZiJYUf7Qj4ea5gbt_oPxyClKcVOE-1726214380-1.0.1.1-2S3G10sPdiG2syQSO8wKWXE7Nmdgt88imgakr81w9DemMH8mVDg0q6r9ANx6tM4_CPvgGQlMVstDhDRkIDwhzg;
-        _cfuvid=dp2yoCmGHVlURh_U78_UoIfnhcO5UhufnL5whkUSMTQ-1726214380689-0.0.1.1-604800000
+      - __cf_bm=e.frhlfi1m.8j1hzfGzahuOh4rgR9gvx.2zCHQ2w_Vs-1726380612-1.0.1.1-T58wIEXn0GTV8AZMALaUyULORFkNEBuxpds8RSWAM0Ltrg2U7jLBEKs0nwIneMiBAiiOmyZaoaH2RyLtNcunLQ;
+        _cfuvid=Bz2zevKuFYZqnEFwqmqVHcRo5pT0fm0fTtc_6_VQs4g-1726379702153-0.0.1.1-604800000
       host:
       - api.openai.com
       user-agent:
@@ -400,20 +259,20 @@ interactions:
     method: POST
     uri: https://api.openai.com/v1/chat/completions
   response:
-    content: "{\n  \"id\": \"chatcmpl-A6vjoxf8IOPXByENijzt35ZlnbHae\",\n  \"object\":
-      \"chat.completion\",\n  \"created\": 1726215276,\n  \"model\": \"gpt-4o-2024-05-13\",\n
+    content: "{\n  \"id\": \"chatcmpl-A7cnIuni5V5AvrJGYnJzlN6eDc2Vl\",\n  \"object\":
+      \"chat.completion\",\n  \"created\": 1726380784,\n  \"model\": \"gpt-4o-2024-05-13\",\n
       \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
-      \"assistant\",\n        \"content\": \"Thought: I now can give a great answer.\\nFinal
-      Answer: Apple's innovation drives the tech industry with seamless integration
-      and groundbreaking design.\",\n        \"refusal\": null\n      },\n      \"logprobs\":
+      \"assistant\",\n        \"content\": \"Thought: I now can give a great answer\\nFinal
+      Answer: Apple products combine innovative design with advanced functionality
+      for a seamless user experience.\",\n        \"refusal\": null\n      },\n      \"logprobs\":
       null,\n      \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\":
-      175,\n    \"completion_tokens\": 26,\n    \"total_tokens\": 201,\n    \"completion_tokens_details\":
+      175,\n    \"completion_tokens\": 27,\n    \"total_tokens\": 202,\n    \"completion_tokens_details\":
       {\n      \"reasoning_tokens\": 0\n    }\n  },\n  \"system_fingerprint\": \"fp_25624ae3a5\"\n}\n"
     headers:
       CF-Cache-Status:
       - DYNAMIC
       CF-RAY:
-      - 8c26af45ba832ab9-LAX
+      - 8c3677fe0970745a-MIA
       Connection:
       - keep-alive
       Content-Encoding:
@@ -421,7 +280,7 @@ interactions:
       Content-Type:
       - application/json
       Date:
-      - Fri, 13 Sep 2024 08:14:37 GMT
+      - Sun, 15 Sep 2024 06:13:04 GMT
       Server:
       - cloudflare
       Transfer-Encoding:
@@ -435,7 +294,7 @@ interactions:
       openai-organization:
       - crewai-iuxna1
       openai-processing-ms:
-      - '458'
+      - '375'
       openai-version:
       - '2020-10-01'
       strict-transport-security:
@@ -453,7 +312,7 @@ interactions:
       x-ratelimit-reset-tokens:
       - 0s
       x-request-id:
-      - req_c7c5ebb32af790a5f3a72ce52cf6ae52
+      - req_768e4a5c0016b1538e41ad29641a6c57
     http_version: HTTP/1.1
     status_code: 200
 version: 1

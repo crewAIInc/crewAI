@@ -12,7 +12,12 @@ from crewai.utilities.exceptions.context_window_exceeding_exception import (
 from crewai.utilities.logger import Logger
 from crewai.utilities.training_handler import CrewTrainingHandler
 from crewai.llm import LLM
-from crewai.agents.parser import AgentAction, AgentFinish, OutputParserException
+from crewai.agents.parser import (
+    AgentAction,
+    AgentFinish,
+    OutputParserException,
+    FINAL_ANSWER_AND_PARSABLE_ACTION_ERROR_MESSAGE,
+)
 
 
 class CrewAgentExecutor(CrewAgentExecutorMixin):
@@ -28,6 +33,7 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
         max_iter: int,
         tools: List[Any],
         tools_names: str,
+        use_stop_words: bool,
         stop_words: List[str],
         tools_description: str,
         tools_handler: ToolsHandler,
@@ -52,6 +58,7 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
         self.tools_handler = tools_handler
         self.original_tools = original_tools
         self.step_callback = step_callback
+        self.use_stop_words = use_stop_words
         self.tools_description = tools_description
         self.function_calling_llm = function_calling_llm
         self.respect_context_window = respect_context_window
@@ -73,7 +80,6 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
             user_prompt = self._format_prompt(self.prompt.get("prompt", ""), inputs)
             self.messages.append(self._format_msg(user_prompt))
         self.ask_for_human_input = bool(inputs.get("ask_for_human_input", False))
-
         formatted_answer = self._invoke_loop()
 
         if self.ask_for_human_input:
@@ -92,8 +98,20 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
             while not isinstance(formatted_answer, AgentFinish):
                 if not self.request_within_rpm_limit or self.request_within_rpm_limit():
                     answer = LLM(
-                        self.llm, stop=self.stop, callbacks=self.callbacks
+                        self.llm,
+                        stop=self.stop if self.use_stop_words else None,
+                        callbacks=self.callbacks,
                     ).call(self.messages)
+
+                    if not self.use_stop_words:
+                        try:
+                            self._format_answer(answer)
+                        except OutputParserException as e:
+                            if (
+                                FINAL_ANSWER_AND_PARSABLE_ACTION_ERROR_MESSAGE
+                                in e.error
+                            ):
+                                answer = answer.split("Observation:")[0].strip()
 
                     self.iterations += 1
                     formatted_answer = self._format_answer(answer)
@@ -101,27 +119,25 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
                     if isinstance(formatted_answer, AgentAction):
                         action_result = self._use_tool(formatted_answer)
                         formatted_answer.text += f"\nObservation: {action_result}"
-
                         if self.step_callback:
                             formatted_answer.result = action_result
                             self.step_callback(formatted_answer)
                         if self._should_force_answer():
                             if self.have_forced_answer:
-                                return {
-                                    "output": self._i18n.errors(
+                                return AgentFinish(
+                                    output=self._i18n.errors(
                                         "force_final_answer_error"
-                                    ).format(formatted_answer.text)
-                                }
+                                    ).format(formatted_answer.text),
+                                    text=formatted_answer.text,
+                                )
                             else:
                                 formatted_answer.text += (
                                     f'\n{self._i18n.errors("force_final_answer")}'
                                 )
                                 self.have_forced_answer = True
-
                         self.messages.append(
                             self._format_msg(formatted_answer.text, role="assistant")
                         )
-
         except OutputParserException as e:
             self.messages.append({"role": "assistant", "content": e.error})
             self._invoke_loop(formatted_answer)
@@ -132,7 +148,8 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
             ):
                 self._handle_context_length()
                 self._invoke_loop(formatted_answer)
-
+            else:
+                raise e
         return formatted_answer
 
     def _use_tool(self, agent_action: AgentAction) -> Any:
