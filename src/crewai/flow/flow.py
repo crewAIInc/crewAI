@@ -5,14 +5,37 @@ from typing import Any, Callable, Dict, Generic, List, Set, Type, TypeVar, Union
 from pydantic import BaseModel
 
 # TODO: Allow people to pass results from one method to another and not just state
+# TODO: Add in thiago and eduardo suggestions
+# TODO: Add the ability to for start to handle _and and _or conditions
 
 T = TypeVar("T", bound=Union[BaseModel, Dict[str, Any]])
 
 
-def start():
+def start(condition=None):
     def decorator(func):
         print(f"[start decorator] Decorating start method: {func.__name__}")
         func.__is_start_method__ = True
+        if condition is not None:
+            print(
+                f"[start decorator] Adding condition: {condition} to start method: {func.__name__}"
+            )
+            if isinstance(condition, str):
+                func.__trigger_methods__ = [condition]
+                func.__condition_type__ = "OR"
+            elif (
+                isinstance(condition, dict)
+                and "type" in condition
+                and "methods" in condition
+            ):
+                func.__trigger_methods__ = condition["methods"]
+                func.__condition_type__ = condition["type"]
+            elif callable(condition) and hasattr(condition, "__name__"):
+                func.__trigger_methods__ = [condition.__name__]
+                func.__condition_type__ = "OR"
+            else:
+                raise ValueError(
+                    "Condition must be a method, string, or a result of or_() or and_()"
+                )
         return func
 
     return decorator
@@ -95,10 +118,17 @@ class FlowMeta(type):
             if hasattr(attr_value, "__is_start_method__"):
                 print(f"[FlowMeta] Found start method: {attr_name}")
                 start_methods.append(attr_name)
-            if hasattr(attr_value, "__trigger_methods__"):
+                if hasattr(attr_value, "__trigger_methods__"):
+                    methods = attr_value.__trigger_methods__
+                    condition_type = getattr(attr_value, "__condition_type__", "OR")
+                    print(
+                        f"[FlowMeta] Conditions for start method {attr_name}:", methods
+                    )
+                    listeners[attr_name] = (condition_type, methods)
+            elif hasattr(attr_value, "__trigger_methods__"):
                 methods = attr_value.__trigger_methods__
                 condition_type = getattr(attr_value, "__condition_type__", "OR")
-                print(f"[FlowMeta] Conditions for {attr_name}:", methods)
+                print(f"[FlowMeta] Conditions for listener {attr_name}:", methods)
                 listeners[attr_name] = (condition_type, methods)
 
         setattr(cls, "_start_methods", start_methods)
