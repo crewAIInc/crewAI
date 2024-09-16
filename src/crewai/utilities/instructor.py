@@ -1,7 +1,7 @@
 from typing import Any, Optional, Type
 
 import instructor
-from litellm import completion
+import litellm
 from pydantic import BaseModel, Field, PrivateAttr, model_validator
 
 
@@ -31,7 +31,7 @@ class Instructor(BaseModel):
             self.llm = self.agent.function_calling_llm or self.agent.llm
 
         self._client = instructor.from_litellm(
-            completion,
+            litellm.completion,
             mode=instructor.Mode.TOOLS,
         )
         return self
