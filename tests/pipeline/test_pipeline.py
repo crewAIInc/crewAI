@@ -616,7 +616,6 @@ def test_pipeline_invalid_crew(mock_crew_factory):
         Pipeline(stages=[crew1, not_a_crew])
 
     error_msg = str(exc_info.value)
-    print(f"Full error message: {error_msg}")  # For debugging
     assert (
         "Expected Crew instance, Router instance, or list of Crews, got <class 'str'>"
         in error_msg

@@ -17,12 +17,12 @@ class TestValidateToken(unittest.TestCase):
         validate_token(mock_id_token)
 
         mock_asymmetric_verifier.assert_called_once_with(
-            "https://dev-jzsr0j8zs0atl5ha.us.auth0.com/.well-known/jwks.json"
+            "https://crewai.us.auth0.com/.well-known/jwks.json"
         )
         mock_token_verifier.assert_called_once_with(
             signature_verifier=mock_asymmetric_verifier.return_value,
-            issuer="https://dev-jzsr0j8zs0atl5ha.us.auth0.com/",
-            audience="CZtyRHuVW80HbLSjk4ggXNzjg4KAt7Oe",
+            issuer="https://crewai.us.auth0.com/",
+            audience="DEVC5Fw6NlRoSzmDCcOhVq85EfLBjKa8",
         )
         mock_verifier_instance.verify.assert_called_once_with(mock_id_token)
 

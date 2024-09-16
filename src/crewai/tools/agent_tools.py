@@ -1,5 +1,4 @@
 from langchain.tools import StructuredTool
-
 from crewai.agents.agent_builder.utilities.base_agent_tool import BaseAgentTools
 
 

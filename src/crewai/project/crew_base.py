@@ -89,7 +89,10 @@ def CrewBase(cls):
             callbacks: Dict[str, Callable],
         ) -> None:
             if llm := agent_info.get("llm"):
-                self.agents_config[agent_name]["llm"] = llms[llm]()
+                try:
+                    self.agents_config[agent_name]["llm"] = llms[llm]()
+                except KeyError:
+                    self.agents_config[agent_name]["llm"] = llm
 
             if tools := agent_info.get("tools"):
                 self.agents_config[agent_name]["tools"] = [
