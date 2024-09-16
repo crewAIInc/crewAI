@@ -13,18 +13,18 @@ A crew in crewAI represents a collaborative group of agents working together to 
 | :------------------------------------ | :--------------------- | :-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | **Tasks**                             | `tasks`                | A list of tasks assigned to the crew.                                                                                                                                                                                                                     |
 | **Agents**                            | `agents`               | A list of agents that are part of the crew.                                                                                                                                                                                                               |
-| **Process** _(optional)_              | `process`              | The process flow (e.g., sequential, hierarchical) the crew follows.                                                                                                                                                                                       |
-| **Verbose** _(optional)_              | `verbose`              | The verbosity level for logging during execution.                                                                                                                                                                                                         |
+| **Process** _(optional)_              | `process`              | The process flow (e.g., sequential, hierarchical) the crew follows. Default is `sequential`.                                                                                                                                                              |
+| **Verbose** _(optional)_              | `verbose`              | The verbosity level for logging during execution. Defaults to `False`.                                                                                                                                                                                    |
 | **Manager LLM** _(optional)_          | `manager_llm`          | The language model used by the manager agent in a hierarchical process. **Required when using a hierarchical process.**                                                                                                                                   |
 | **Function Calling LLM** _(optional)_ | `function_calling_llm` | If passed, the crew will use this LLM to do function calling for tools for all agents in the crew. Each agent can have its own LLM, which overrides the crew's LLM for function calling.                                                                  |
 | **Config** _(optional)_               | `config`               | Optional configuration settings for the crew, in `Json` or `Dict[str, Any]` format.                                                                                                                                                                       |
-| **Max RPM** _(optional)_              | `max_rpm`              | Maximum requests per minute the crew adheres to during execution.                                                                                                                                                                                         |
+| **Max RPM** _(optional)_              | `max_rpm`              | Maximum requests per minute the crew adheres to during execution. Defaults to `None`.                                                                                                                                                                     |
 | **Language** _(optional)_             | `language`             | Language used for the crew, defaults to English.                                                                                                                                                                                                          |
 | **Language File** _(optional)_        | `language_file`        | Path to the language file to be used for the crew.                                                                                                                                                                                                        |
-| **Memory** _(optional)_               | `memory`               | Utilized for storing execution memories (short-term, long-term, entity memory).                                                                                                                                                                           |
-| **Cache** _(optional)_                | `cache`                | Specifies whether to use a cache for storing the results of tools' execution.                                                                                                                                                                             |
-| **Embedder** _(optional)_             | `embedder`             | Configuration for the embedder to be used by the crew. Mostly used by memory for now.                                                                                                                                                                     |
-| **Full Output** _(optional)_          | `full_output`          | Whether the crew should return the full output with all tasks outputs or just the final output.                                                                                                                                                           |
+| **Memory** _(optional)_               | `memory`               | Utilized for storing execution memories (short-term, long-term, entity memory). Defaults to `False`.                                                                                                                                                       |
+| **Cache** _(optional)_                | `cache`                | Specifies whether to use a cache for storing the results of tools' execution. Defaults to `True`.                                                                                                                                                          |
+| **Embedder** _(optional)_             | `embedder`             | Configuration for the embedder to be used by the crew. Mostly used by memory for now. Default is `{"provider": "openai"}`.                                                                                                                                                                     |
+| **Full Output** _(optional)_          | `full_output`          | Whether the crew should return the full output with all tasks outputs or just the final output. Defaults to `False`.                                                                                                                                       |
 | **Step Callback** _(optional)_        | `step_callback`        | A function that is called after each step of every agent. This can be used to log the agent's actions or to perform other operations; it won't override the agent-specific `step_callback`.                                                               |
 | **Task Callback** _(optional)_        | `task_callback`        | A function that is called after the completion of each task. Useful for monitoring or additional operations post-task execution.                                                                                                                          |
 | **Share Crew** _(optional)_           | `share_crew`           | Whether you want to share the complete crew information and execution with the crewAI team to make the library better, and allow us to train models.                                                                                                      |
@@ -38,65 +38,6 @@ A crew in crewAI represents a collaborative group of agents working together to 
 !!! note "Crew Max RPM"
 The `max_rpm` attribute sets the maximum number of requests per minute the crew can perform to avoid rate limits and will override individual agents' `max_rpm` settings if you set it.
 
-## Creating a Crew
-
-When assembling a crew, you combine agents with complementary roles and tools, assign tasks, and select a process that dictates their execution order and interaction.
-
-### Example: Assembling a Crew
-
-```python
-from crewai import Crew, Agent, Task, Process
-from langchain_community.tools import DuckDuckGoSearchRun
-from crewai_tools import tool
-
-@tool('DuckDuckGoSearch')
-def search(search_query: str):
-    """Search the web for information on a given topic"""
-    return DuckDuckGoSearchRun().run(search_query)
-
-# Define agents with specific roles and tools
-researcher = Agent(
-    role='Senior Research Analyst',
-    goal='Discover innovative AI technologies',
-    backstory="""You're a senior research analyst at a large company.
-        You're responsible for analyzing data and providing insights
-        to the business.
-        You're currently working on a project to analyze the
-        trends and innovations in the space of artificial intelligence.""",
-    tools=[search]
-)
-
-writer = Agent(
-    role='Content Writer',
-    goal='Write engaging articles on AI discoveries',
-    backstory="""You're a senior writer at a large company.
-        You're responsible for creating content to the business.
-        You're currently working on a project to write about trends
-        and innovations in the space of AI for your next meeting.""",
-    verbose=True
-)
-
-# Create tasks for the agents
-research_task = Task(
-    description='Identify breakthrough AI technologies',
-    agent=researcher,
-    expected_output='A bullet list summary of the top 5 most important AI news'
-)
-write_article_task = Task(
-    description='Draft an article on the latest AI technologies',
-    agent=writer,
-    expected_output='3 paragraph blog post on the latest AI technologies'
-)
-
-# Assemble the crew with a sequential process
-my_crew = Crew(
-    agents=[researcher, writer],
-    tasks=[research_task, write_article_task],
-    process=Process.sequential,
-    full_output=True,
-    verbose=True,
-)
-```
 
 ## Crew Output
 
