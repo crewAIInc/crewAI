@@ -27,7 +27,7 @@ The `Crew` class has been enriched with several attributes to support advanced f
 - **Memory Usage (`memory`)**: Indicates whether the crew should use memory to store memories of its execution, enhancing task execution and agent learning.
 - **Embedder Configuration (`embedder`)**: Specifies the configuration for the embedder to be used by the crew for understanding and generating language. This attribute supports customization of the language model provider.
 - **Cache Management (`cache`)**: Determines whether the crew should use a cache to store the results of tool executions, optimizing performance.
-- **Output Logging (`output_log_file`)**: Specifies the file path for logging the output of the crew execution.
+- **Output Logging (`output_log_file`)**: Specifies the file path for logging the output of the crew's execution.
 - **Planning Mode (`planning`)**: Allows crews to plan their actions before executing tasks by setting `planning=True` when creating the `Crew` instance. This feature enhances coordination and efficiency.
 - **Replay Feature**: Introduces a new CLI for listing tasks from the last run and replaying from a specific task, enhancing task management and troubleshooting.
 

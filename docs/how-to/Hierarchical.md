@@ -16,6 +16,13 @@ By default, tasks in CrewAI are managed through a sequential process. However, a
 - **Task Delegation**: A manager agent allocates tasks among crew members based on their roles and capabilities.
 - **Result Validation**: The manager evaluates outcomes to ensure they meet the required standards.
 - **Efficient Workflow**: Emulates corporate structures, providing an organized approach to task management.
+- **System Prompt Handling**: Optionally specify whether the system should use predefined prompts.
+- **Stop Words Control**: Optionally specify whether stop words should be used, supporting various models including the o1 models.
+- **Context Window Respect**: Prioritize important context by enabling respect of the context window, which is now the default behavior.
+- **Delegation Control**: Delegation is now disabled by default to give users explicit control.
+- **Max Requests Per Minute**: Configurable option to set the maximum number of requests per minute.
+- **Max Iterations**: Limit the maximum number of iterations for obtaining a final answer.
+
 
 ## Implementing the Hierarchical Process
 To utilize the hierarchical process, it's essential to explicitly set the process attribute to `Process.hierarchical`, as the default behavior is `Process.sequential`. Define a crew with a designated manager and establish a clear chain of command.
@@ -38,6 +45,10 @@ researcher = Agent(
     cache=True,
     verbose=False,
     # tools=[]  # This can be optionally specified; defaults to an empty list
+    use_system_prompt=True,  # Enable or disable system prompts for this agent
+    use_stop_words=True,  # Enable or disable stop words for this agent
+    max_rpm=30,  # Limit on the number of requests per minute
+    max_iter=5  # Maximum number of iterations for a final answer
 )
 writer = Agent(
     role='Writer',
@@ -46,6 +57,10 @@ writer = Agent(
     cache=True,
     verbose=False,
     # tools=[]  # Optionally specify tools; defaults to an empty list
+    use_system_prompt=True,  # Enable or disable system prompts for this agent
+    use_stop_words=True,  # Enable or disable stop words for this agent
+    max_rpm=30,  # Limit on the number of requests per minute
+    max_iter=5  # Maximum number of iterations for a final answer
 )
 
 # Establishing the crew with a hierarchical process and additional configurations
@@ -54,6 +69,7 @@ project_crew = Crew(
     agents=[researcher, writer],
     manager_llm=ChatOpenAI(temperature=0, model="gpt-4"),  # Mandatory if manager_agent is not set
     process=Process.hierarchical,  # Specifies the hierarchical management approach
+    respect_context_window=True,  # Enable respect of the context window for tasks
     memory=True,  # Enable memory usage for enhanced task execution
     manager_agent=None,  # Optional: explicitly set a specific agent as manager instead of the manager_llm
     planning=True,  # Enable planning feature for pre-execution strategy

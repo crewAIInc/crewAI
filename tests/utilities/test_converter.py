@@ -213,16 +213,11 @@ def test_get_conversion_instructions_non_gpt():
 
 # Tests for is_gpt
 def test_is_gpt_true():
-    from langchain_openai import ChatOpenAI
-
-    mock_llm = Mock(spec=ChatOpenAI)
-    mock_llm.openai_api_base = None
-    assert is_gpt(mock_llm) is True
+    assert is_gpt("gpt-4") is True
 
 
 def test_is_gpt_false():
-    mock_llm = Mock()
-    assert is_gpt(mock_llm) is False
+    assert is_gpt("lol-4") is False
 
 
 class CustomConverter(Converter):

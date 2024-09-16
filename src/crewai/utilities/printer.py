@@ -1,5 +1,8 @@
+from typing import Optional
+
+
 class Printer:
-    def print(self, content: str, color: str):
+    def print(self, content: str, color: Optional[str] = None):
         if color == "purple":
             self._print_purple(content)
         elif color == "red":

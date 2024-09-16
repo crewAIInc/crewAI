@@ -52,7 +52,7 @@ class RPMController(BaseModel):
             self._timer = None
 
     def _wait_for_next_minute(self):
-        time.sleep(60)
+        time.sleep(1)
         self._current_rpm = 0
 
     def _reset_request_count(self):
