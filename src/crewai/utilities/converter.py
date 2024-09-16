@@ -61,11 +61,10 @@ class Converter(OutputConverter):
 
     def _create_instructor(self):
         """Create an instructor."""
-        from crewai.utilities import Instructor
+        from crewai.utilities import InternalInstructor
 
-        inst = Instructor(
+        inst = InternalInstructor(
             llm=self.llm,
-            max_attempts=self.max_attempts,
             model=self.model,
             content=self.text,
             instructions=self.instructions,
@@ -90,7 +89,11 @@ class Converter(OutputConverter):
     @property
     def is_gpt(self) -> bool:
         """Return if llm provided is of gpt from openai."""
-        return "gpt" in str(self.llm).lower()
+        return (
+            "gpt" in str(self.llm).lower()
+            or "o1-preview" in str(self.llm).lower()
+            or "o1-mini" in str(self.llm).lower()
+        )
 
 
 def convert_to_model(
@@ -101,25 +104,16 @@ def convert_to_model(
     converter_cls: Optional[Type[Converter]] = None,
 ) -> Union[dict, BaseModel, str]:
     model = output_pydantic or output_json
-
     if model is None:
         return result
     try:
         escaped_result = json.dumps(json.loads(result, strict=False))
         return validate_model(escaped_result, model, bool(output_json))
-    except json.JSONDecodeError as e:
-        Printer().print(
-            content=f"Error parsing JSON: {e}. Attempting to handle partial JSON.",
-            color="yellow",
-        )
+    except json.JSONDecodeError:
         return handle_partial_json(
             result, model, bool(output_json), agent, converter_cls
         )
-    except ValidationError as e:
-        Printer().print(
-            content=f"Pydantic validation error: {e}. Attempting to handle partial JSON.",
-            color="yellow",
-        )
+    except ValidationError:
         return handle_partial_json(
             result, model, bool(output_json), agent, converter_cls
         )
@@ -156,11 +150,8 @@ def handle_partial_json(
             return exported_result
         except json.JSONDecodeError:
             pass
-        except ValidationError as e:
-            Printer().print(
-                content=f"Pydantic validation error: {e}. The JSON structure doesn't match the expected model. Attempting alternative conversion method.",
-                color="yellow",
-            )
+        except ValidationError:
+            pass
         except Exception as e:
             Printer().print(
                 content=f"Unexpected error during partial JSON handling: {type(e).__name__}: {e}. Attempting alternative conversion method.",
@@ -214,7 +205,11 @@ def get_conversion_instructions(model: Type[BaseModel], llm: Any) -> str:
 
 def is_gpt(llm: Any) -> bool:
     """Return if llm provided is of gpt from openai."""
-    return "gpt" in str(llm).lower()
+    return (
+        "gpt" in str(llm).lower()
+        or "o1-preview" in str(llm).lower()
+        or "o1-mini" in str(llm).lower()
+    )
 
 
 def create_converter(

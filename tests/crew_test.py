@@ -226,7 +226,7 @@ def test_crew_creation():
 
     result = crew.kickoff()
 
-    expected_string_output = "**AI in Healthcare: Revolutionizing Diagnosis and Treatment**\n\nThe integration of AI into healthcare systems heralds a transformative era in the medical field, with the potential to save lives and significantly enhance the quality of patient care. Advanced AI algorithms excel at diagnosing complex diseases such as cancer by analyzing medical images with precision that rivals human expertise. Additionally, the implementation of AI-powered personalized treatment plans can optimize individual patient care, while predictive analytics anticipates complications before they occur, shifting the healthcare paradigm from reactive to proactive. This revolution not only promises to improve diagnostic accuracy but also aims to enhance overall patient outcomes by making healthcare delivery more efficient and anticipatory.\n\n**Ethical Considerations in AI Development: Balancing Innovation and Responsibility**\n\nAs AI technologies become increasingly embedded in daily life, the ethical implications of their development and deployment come to the forefront. This topic delves into the crucial need for ethical frameworks to manage AI's growth responsibly. Issues such as biases within machine learning models, privacy concerns, and the socio-economic impact on employment highlight the importance of creating AI systems that are fair and just. Ensuring these technologies support human values and dignity requires careful navigation of moral dilemmas and the establishment of stringent ethical standards. Therefore, balancing innovation with responsibility is essential to harness the full potential of AI in a way that benefits society as a whole.\n\n**AI Agents in Customer Service: Enhancing User Experience While Reducing Costs**\n\nAI agents, including chatbots and virtual assistants, are revolutionizing customer service by offering round-the-clock support and addressing routine inquiries with an efficiency unmatched by human representatives. The advancements in Natural Language Processing (NLP) enable these AI agents to understand and respond to customer queries in a more natural and conversational manner, significantly boosting user satisfaction. This seamless interaction not only enhances the customer experience but also reduces operational costs for businesses, as AI agents can manage a high volume of interactions simultaneously. As a result, companies benefit from streamlined customer service operations while customers enjoy quicker, more effective resolutions to their problems.\n\n**The Role of AI in Climate Change: Predicting and Mitigating Environmental Impact**\n\nThe role of AI in combating climate change is becoming increasingly prominent, offering innovative solutions to one of the most pressing issues facing humanity today. AI's ability to process and analyze enormous datasets allows for the accurate prediction of climate trends and the identification of effective strategies to reduce carbon footprints. By optimizing energy consumption and other key factors, AI technologies contribute substantially to efforts aimed at mitigating environmental impact. This exploration into AI's contributions to environmental sustainability highlights the potential for these technologies to go beyond conventional approaches, providing new tools in the global fight against climate change and fostering a more sustainable future."
+    expected_string_output = "**The Ethical Implications of AI in Warfare**\n\nAI in warfare raises profound ethical questions that extend far beyond the battlefield. Autonomous weapons systems, capable of making split-second decisions without human input, challenge our traditional notions of accountability. Who is to blame when an AI decides to strike? This article could delve into the current policies governing AI in military applications, scrutinizing the frameworks that aim to regulate autonomous weapons. Real-world examples, like the use of drones and AI-based surveillance, could provide a grounded view of these technologies in action. The potential for misuse by rogue states or non-state actors makes the need for comprehensive ethical guidelines all the more urgent. The debate could span legal, moral, and practical considerations, making this a multifaceted and highly relevant topic in today's world.\n\n**AI in Mental Health: Promises and Perils**\n\nThe integration of AI in mental health care presents a double-edged sword. On one hand, AI-driven tools like chatbots and predictive analytics can revolutionize diagnosis and treatment, making mental health care more accessible and personalized. On the other hand, these innovations come with significant ethical dilemmas. Can a machine truly understand the nuance and depth of human emotion? Issues of privacy, data security, and the impersonal nature of machine empathy are critical concerns. This article could explore case studies of AI applications in mental health, examining both their successes and pitfalls. The evolving patient-therapist relationship in an age of machine learning could offer intriguing insights into how we value human touch and expertise in one of the most sensitive areas of healthcare.\n\n**The Role of AI in Climate Change Mitigation**\n\nAI has emerged as a powerful ally in the fight against climate change, offering innovative solutions that were unimaginable a few years ago. From optimizing energy consumption to predicting extreme weather events, AI is at the forefront of environmental sustainability. This article could highlight ground-breaking projects where AI has made a tangible impact, such as Google's DeepMind reducing data center energy usage by 40%. However, the challenges are as significant as the opportunities. The reliance on data, the carbon footprint of large-scale AI operations, and the need for interdisciplinary collaboration pose substantial hurdles. By examining the intersection of AI and environmental science, this piece could offer a balanced view of the potential and limitations of technology in addressing one of the most urgent issues of our time.\n\n**AI and the Future of Work: Redefining Employment and Skills**\n\nAs AI continues to transform industries, the future of work is being redefined before our eyes. Automation and machine learning are not just eliminating jobs but also creating new ones, requiring a shift in skillsets and educational paradigms. This article could explore how different sectors, from manufacturing to healthcare, are adapting to AI-driven changes. The narrative could include personal stories of individuals who have navigated this transition, highlighting both the opportunities and challenges. Discussions around economic disparities, the digital divide, and the future of education would provide a comprehensive look at how society must evolve to keep pace with technological advancements. This topic is not just about the future of employment but also about the future of human potential and economic equality."
 
     assert str(result) == expected_string_output
     assert result.raw == expected_string_output
@@ -294,7 +294,7 @@ def test_hierarchical_process():
 
     assert (
         result.raw
-        == "1. **The Future of AI Agents: From Healthcare to Education**  \nArtificial Intelligence agents are not just a futuristic concept; they are rapidly becoming integral to diverse fields including healthcare and education. Imagine an AI agent capable of diagnosing diseases with pinpoint accuracy or predicting student burnout before it occurs. With continual advancements, AI agents can offer personalized treatments, manage chronic conditions, and optimize educational curriculums to cater to individual learning styles. This dynamic shift could lead to more efficient, effective, and personalized approaches in both sectors, making lives better and educational experiences richer. The future promises an exciting horizon where AI agents revolutionize how we live, learn, and heal.\n\n2. **Blockchain Beyond Bitcoin: How Decentralized Technology is Reshaping Industries**  \nWhen most people hear \"blockchain,\" they think of Bitcoin and other cryptocurrencies. However, blockchain technology's potential reaches far beyond digital currencies. From supply chain transparency and secure voting systems to immutable medical records and decentralized finance, blockchain is infusing trust and transparency into multiple sectors. By eliminating intermediaries and ensuring data integrity, blockchain is poised to disrupt traditional business models, offering unprecedented efficiencies and new opportunities. This revolution underscores a foundational shift in how industries operate, emphasizing decentralization and direct peer-to-peer interaction.\n\n3. **The Rise of Remote Work: Transforming Corporate Culture and Collaboration**  \nThe COVID-19 pandemic has accelerated a trend that was already catching on: remote work. As companies worldwide adapt to this new norm, it's not just about working from home; it's about transforming the very essence of corporate culture and collaboration. The rise of remote work is leading to a more flexible, inclusive, and diverse work environment. Organizations are leveraging advanced collaboration tools and redefining team dynamics to maintain productivity and innovation. This paradigm shift is reshaping leadership styles, employee engagement, and organizational structure, heralding a future where remote work could become a permanent fixture in the professional landscape.\n\n4. **Sustainable Tech Innovations: Green Solutions for a Planet in Peril**  \nWith climate change and environmental degradation posing serious threats, sustainable tech innovations are more crucial than ever. From renewable energy solutions like solar and wind power to energy-efficient devices and sustainable manufacturing processes, technology is paving the way for a greener future. Companies are developing smart grids, eco-friendly gadgets, and recycling technologies that minimize waste and reduce the carbon footprint. These advancements are not just good for the planet; they represent significant business opportunities and regulatory advantages. As we face the urgency of environmental challenges, sustainable tech offers a beacon of hope and a clear path forward.\n\n5. **The Ethical Dilemma of AI: Balancing Innovation with Responsibility**  \nAs artificial intelligence rapidly advances, it presents an intriguing ethical dilemma: how do we balance groundbreaking innovation with responsible use? The potential for AI to enhance efficiencies, discover new insights, and create unprecedented opportunities is immense. However, concerns around privacy, biased algorithms, and autonomous decision-making necessitate robust ethical frameworks. This conversation demands a nuanced approach that involves policymakers, technologists, and ethicists working together. Addressing these ethical dilemmas is not just about averting risks but also about ensuring that AI systems are designed, deployed, and regulated in ways that foster trust and societal well-being."
+        == "1. **The Evolution of AI Agents: From Simple Bots to Autonomous Digital Assistants**\n   - The journey of AI agents from rudimentary chatbots to fully autonomous digital assistants symbolizes the monumental strides made in artificial intelligence over the past few decades. Initially, AI agents were simple programmed entities, capable of executing only basic tasks such as answering FAQs or setting up reminders. However, advancements in machine learning, natural language processing, and neural networks have transformed these simplistic bots into sophisticated digital assistants like Siri, Alexa, and Google Assistant. These modern-day AI agents not only understand and respond to complex human commands but also predict user needs and adapt their behavior over time, making them indispensable in both personal and professional settings. They epitomize how far AI technologies have come and hint at an even more integrated and autonomous future.\n\n2. **AI in Healthcare: Revolutionizing Diagnosis, Treatment, and Patient Care**\n   - Artificial Intelligence is revolutionizing healthcare by enhancing diagnostic accuracy, personalizing treatment plans, and improving overall patient care. With their ability to analyze vast datasets quickly and accurately, AI-driven tools are aiding doctors in early and precise diagnosis of diseases, including cancers and rare genetic disorders. Additionally, AI algorithms are being employed to tailor treatment plans based on individual patient data, lifestyle, and genetic information, ensuring more effective and personalized healthcare. Beyond diagnosis and treatment, AI is also optimizing hospital operations, from predicting patient admission rates to managing logistics and resources. The integration of AI in healthcare not only promises to augment the capabilities of medical professionals but also aims to provide better health outcomes, reduced costs, and increased accessibility to quality care.\n\n3. **Ethics in AI: Navigating the Moral Dilemmas of Autonomous Systems**\n   - As AI systems become more autonomous and pervasive, they bring to the forefront pressing ethical dilemmas that society must navigate. These ethical challenges range from issues of bias and fairness in AI decisions to questions about the accountability and transparency of AI actions. For instance, how do we ensure that AI algorithms do not perpetuate existing societal biases in areas like hiring or law enforcement? Who is held responsible when an autonomous vehicle causes an accident? Additionally, there are concerns around privacy and the potential misuse of AI technologies for surveillance or coercion. Addressing these moral quandaries requires a concerted effort from policymakers, technologists, and ethicists to create robust frameworks and guidelines that ensure the ethical development and deployment of AI systems. Striking a balance between innovation and ethical considerations is crucial for building trust and securing the societal benefits of AI.\n\n4. **Startups Leveraging AI: Success Stories and Lessons Learned**\n   - In the competitive landscape of startups, those leveraging AI have demonstrated remarkable success, offering innovative solutions and setting new industry benchmarks. Companies like OpenAI, which focuses on artificial general intelligence, and UiPath, specializing in robotic process automation, have not only disrupted their respective fields but also attracted substantial investment and market interest. These startups exemplify how AI can be harnessed to solve complex problems, improve efficiency, and unlock new business opportunities. However, their journeys offer valuable lessons, such as the importance of a clear vision, the need for scalable and robust AI models, and the critical role of ethical considerations in AI development. By examining these success stories, aspiring entrepreneurs can glean insights into navigating the challenges of building AI-centric businesses and the immense potential that AI holds for driving future innovations.\n\n5. **The Future of Human-AI Collaboration: Opportunities and Challenges**\n   - The future of human-AI collaboration is poised to unlock unprecedented opportunities while presenting unique challenges that need to be thoughtfully addressed. As AI continues to mature, it will increasingly complement human capabilities, leading to enhanced productivity, creativity, and problem-solving across various domains. For instance, in workplaces, AI can handle repetitive tasks, allowing humans to focus on more strategic and creative activities. In scientific research, AI can analyze and interpret data at a scale beyond human capacity, driving new discoveries. However, this collaboration also raises challenges such as re-skilling the workforce to adapt to AI technologies, ensuring equitable access to AI advancements, and addressing ethical concerns related to autonomy and decision-making. Successfully navigating these challenges will require continuous dialogue, multidisciplinary collaboration, and a commitment to integrating human values into AI development. This balanced approach will be crucial in realizing the full potential of human-AI synergy."
     )
 
 
@@ -400,7 +400,7 @@ def test_crew_with_delegating_agents():
 
     assert (
         result.raw
-        == "Artificial Intelligence (AI) Agents are transformative entities designed to automate processes, make decisions, and solve problems by mimicking human intelligence. These sophisticated systems leverage machine learning, natural language processing, and data analytics to perform tasks that traditionally required human intervention. From personal assistants like Siri and Alexa to complex decision-making systems in autonomous vehicles, AI Agents are increasingly becoming integral to our daily lives, promising enhanced efficiency and productivity across numerous domains.\n\nOne of the most prominent examples of AI Agents is their application in the healthcare industry. These intelligent systems can analyze vast amounts of medical data to assist in diagnostic processes, personalize treatment plans, and even predict outbreaks of diseases. For instance, IBM's Watson for Oncology utilizes AI to provide evidence-based treatment options by analyzing large datasets of medical literature and patient records. These capabilities not only improve the accuracy of diagnoses but also significantly reduce the time it takes to develop effective treatment plans, ultimately enhancing patient outcomes.\n\nBeyond healthcare, AI Agents are making strides in industries such as finance, retail, and manufacturing. In the financial sector, AI-driven chatbots and virtual assistants help manage customer inquiries, detect fraudulent activities, and offer personalized financial advice. Retailers use AI Agents to optimize supply chain operations, manage inventory, and enhance customer experiences through personalized recommendations. Meanwhile, in manufacturing, AI-powered agents are pivotal in predictive maintenance, quality control, and optimizing production lines. These applications underscore the versatility of AI Agents in transforming business operations and driving economic growth.\n\nDespite these notable benefits, the adoption of AI Agents also presents several challenges. Concerns about data privacy and security, ethical considerations regarding decision-making processes, and the potential for job displacement are significant hurdles that need to be addressed. As AI Agents become more autonomous, ensuring transparency and accountability in their operations is critical. Looking forward, the future of AI Agents holds immense potential. Continued advancements in AI technologies, coupled with robust regulatory frameworks, can further unlock the capabilities of AI Agents, making them indispensable assets in our quest for innovation and quality of life improvements. As we navigate this evolving landscape, fostering collaboration between AI developers, policymakers, and society at large will be crucial in harnessing the transformative potential of AI Agents."
+        == "Artificial Intelligence (AI) is one of the most transformative technologies of the 21st century, poised to revolutionize numerous industries and everyday life. At its core, AI involves the development of computer systems that can perform tasks typically requiring human intelligence. These tasks include learning, reasoning, problem-solving, perception, and language understanding. The advent of AI has contributed to significant advancements in various fields such as healthcare, finance, transportation, and entertainment, making it an integral part of modern society.\n\nAI agents, or software programs that act autonomously to perform tasks, are an essential subset of AI technology. These agents function based on a set of rules or algorithms designed to interpret and respond to data in their environment. They are increasingly used in diverse applications, from virtual customer service representatives to complex predictive analytics in business. For instance, AI agents can analyze vast datasets to predict market trends, optimize supply chains, or even personalize user experiences on digital platforms. The versatility and efficiency of AI agents make them invaluable tools in enhancing productivity and driving innovation across numerous sectors.\n\nThe current applications of AI are vast and ever-expanding. In healthcare, AI-powered diagnostic tools are improving the accuracy of disease detection and enabling personalized treatment plans. In the financial sector, AI algorithms detect fraudulent transactions and manage investment portfolios with greater precision than traditional methods. Autonomous vehicles, another prominent application, are reshaping the transportation industry by promising safer and more efficient travel. Additionally, AI is playing a crucial role in entertainment, with recommendation engines in streaming services providing customized content to audiences, thereby transforming how media is consumed.\n\nLooking to the future, the potential implications of AI are both promising and challenging. On one hand, AI has the potential to drive unprecedented economic growth, enhance the quality of life, and solve some of humanity's most pressing problems, such as climate change and global health crises. However, these advancements also come with ethical considerations and potential risks. Issues such as data privacy, job displacement due to automation, and the need for robust regulatory frameworks require careful deliberation. As we integrate AI deeper into our lives, it is crucial to strike a balance between harnessing its benefits and addressing its challenges to ensure it serves the greater good.\n\nIn conclusion, AI and AI agents are dynamic forces that are already reshaping industries and have the potential to profoundly impact the future. By understanding and effectively leveraging these technologies, society can unlock new opportunities and tackle complex challenges. As we move forward, responsible development, deployment, and regulation of AI will be essential in maximizing its benefits while mitigating associated risks."
     )
 
 
@@ -429,12 +429,14 @@ def test_crew_verbose_output(capsys):
     crew.kickoff()
     captured = capsys.readouterr()
     expected_strings = [
-        "[DEBUG]: == Working Agent: Researcher",
-        "[INFO]: == Starting Task: Research AI advancements.",
-        "[DEBUG]: == [Researcher] Task output:",
-        "[DEBUG]: == Working Agent: Senior Writer",
-        "[INFO]: == Starting Task: Write about AI in healthcare.",
-        "[DEBUG]: == [Senior Writer] Task output:",
+        "\x1b[1m\x1b[95m# Agent:\x1b[00m \x1b[1m\x1b[92mResearcher",
+        "\x1b[00m\n\x1b[95m## Task:\x1b[00m \x1b[92mResearch AI advancements.",
+        "\x1b[1m\x1b[95m# Agent:\x1b[00m \x1b[1m\x1b[92mSenior Writer",
+        "\x1b[95m## Task:\x1b[00m \x1b[92mWrite about AI in healthcare.",
+        "\n\n\x1b[1m\x1b[95m# Agent:\x1b[00m \x1b[1m\x1b[92mResearcher",
+        "\x1b[00m\n\x1b[95m## Final Answer:",
+        "\n\n\x1b[1m\x1b[95m# Agent:\x1b[00m \x1b[1m\x1b[92mSenior Writer",
+        "\x1b[00m\n\x1b[95m## Final Answer:",
     ]
 
     for expected_string in expected_strings:
@@ -609,7 +611,7 @@ def test_sequential_async_task_execution_completion():
 
     sequential_result = sequential_crew.kickoff()
     assert sequential_result.raw.startswith(
-        "Artificial Intelligence (AI) has a rich history marked by significant milestones that have collectively shaped its evolution and applications."
+        "The history of artificial intelligence (AI) is a fascinating journey marked by pioneering milestones and groundbreaking innovations."
     )
 
 
@@ -637,7 +639,7 @@ def test_single_task_with_async_execution():
 
     result = crew.kickoff()
     assert result.raw.startswith(
-        "- AI in healthcare: revolutionizing diagnostics and personalized treatments."
+        "- Ethical considerations in deploying AI in healthcare."
     )
 
 
@@ -1101,11 +1103,11 @@ def test_dont_set_agents_step_callback_if_already_set():
 
 @pytest.mark.vcr(filter_headers=["authorization"])
 def test_crew_function_calling_llm():
-    from unittest.mock import patch
+    from unittest.mock import patch, Mock
     from crewai_tools import tool
-    from crewai.utilities import Instructor
+    import instructor
 
-    llm = "gpt-3.5-turbo-0125"
+    llm = "gpt-4o"
 
     @tool
     def learn_about_AI() -> str:
@@ -1129,12 +1131,23 @@ def test_crew_function_calling_llm():
     tasks = [essay]
     crew = Crew(agents=[agent1], tasks=tasks)
 
-    with patch.object(Instructor, "__init__", return_value=None) as mock_instructor:
+    with patch.object(instructor, "from_litellm") as mock_from_litellm:
+        mock_client = Mock()
+        mock_from_litellm.return_value = mock_client
+        mock_chat = Mock()
+        mock_client.chat = mock_chat
+        mock_completions = Mock()
+        mock_chat.completions = mock_completions
+        mock_create = Mock()
+        mock_completions.create = mock_create
+
         crew.kickoff()
-        mock_instructor.assert_called()
-        calls = mock_instructor.call_args_list
+
+        mock_from_litellm.assert_called()
+        mock_create.assert_called()
+        calls = mock_create.call_args_list
         assert any(
-            call.kwargs.get("llm") == "gpt-3.5-turbo-0125" for call in calls
+            call.kwargs.get("model") == "gpt-4o" for call in calls
         ), "Instructor was not created with the expected model"
 
 
@@ -1164,7 +1177,7 @@ def test_task_with_no_arguments():
     crew = Crew(agents=[researcher], tasks=[task])
 
     result = crew.kickoff()
-    assert result.raw == "The total number of sales is 75."
+    assert result.raw == "January: 5, February: 10, March: 15, April: 20, May: 25"
 
 
 def test_code_execution_flag_adds_code_tool_upon_kickoff():
@@ -1274,9 +1287,9 @@ def test_agent_usage_metrics_are_captured_for_hierarchical_process():
     assert result.raw == "Howdy!"
 
     assert result.token_usage == UsageMetrics(
-        total_tokens=2695,
-        prompt_tokens=2548,
-        completion_tokens=147,
+        total_tokens=2654,
+        prompt_tokens=2510,
+        completion_tokens=144,
         successful_requests=5,
     )
 
@@ -2375,7 +2388,7 @@ def test_conditional_task_last_task_when_conditional_is_true():
     )
     result = crew.kickoff()
     assert result.raw.startswith(
-        "1. **How AI Agents are Revolutionizing Customer Service**"
+        "1. **The Role of AI in Personalized Medicine: Revolutionizing Healthcare**"
     )
 
 

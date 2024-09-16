@@ -9,7 +9,7 @@ interactions:
       the expect criteria for your final answer: Your greeting.\nyou MUST return the
       actual complete content as the final answer, not a summary.\n\nBegin! This is
       VERY important to you, use the tools available and give your best Final Answer,
-      your job depends on it!\n\nThought:"}], "model": "gpt-4o", "stop": ["\nObservation"]}'
+      your job depends on it!\n\nThought:"}], "model": "gpt-4o", "stop": ["\nObservation:"]}'
     headers:
       accept:
       - application/json
@@ -18,12 +18,12 @@ interactions:
       connection:
       - keep-alive
       content-length:
-      - '799'
+      - '800'
       content-type:
       - application/json
       cookie:
-      - __cf_bm=r6BNUnXat.26mviZiJYUf7Qj4ea5gbt_oPxyClKcVOE-1726214380-1.0.1.1-2S3G10sPdiG2syQSO8wKWXE7Nmdgt88imgakr81w9DemMH8mVDg0q6r9ANx6tM4_CPvgGQlMVstDhDRkIDwhzg;
-        _cfuvid=dp2yoCmGHVlURh_U78_UoIfnhcO5UhufnL5whkUSMTQ-1726214380689-0.0.1.1-604800000
+      - __cf_bm=1SckBhvJ18Dazp6bi8DEKYeiS9Q4.6_6i3nmLBw9b6g-1726476036-1.0.1.1-TnN4UpDXA33YXCVCUWOaZ12vGIg_o5NpJQEUHgjn6XdUgb7M0ND8PdkTfkd8rrxG5XFlPRMzI54GxZ0FeUY9xw;
+        _cfuvid=0Rs4xTPk7h7OIXuSbTgMVVD9JSoZeKMwnygKHoHQo3k-1726476036297-0.0.1.1-604800000
       host:
       - api.openai.com
       user-agent:
@@ -47,19 +47,19 @@ interactions:
     method: POST
     uri: https://api.openai.com/v1/chat/completions
   response:
-    content: "{\n  \"id\": \"chatcmpl-A6vckmXWqmhnKAsmLbxQpTUKE5R4K\",\n  \"object\":
-      \"chat.completion\",\n  \"created\": 1726214838,\n  \"model\": \"gpt-4o-2024-05-13\",\n
+    content: "{\n  \"id\": \"chatcmpl-A81d9I2kkDCI1O0n104A0xnX9Tftv\",\n  \"object\":
+      \"chat.completion\",\n  \"created\": 1726476255,\n  \"model\": \"gpt-4o-2024-05-13\",\n
       \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
-      \"assistant\",\n        \"content\": \"Thought: I now can give a great answer\\nFinal
+      \"assistant\",\n        \"content\": \"I now can give a great answer\\nFinal
       Answer: Hi!\",\n        \"refusal\": null\n      },\n      \"logprobs\": null,\n
       \     \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\":
-      154,\n    \"completion_tokens\": 15,\n    \"total_tokens\": 169,\n    \"completion_tokens_details\":
+      154,\n    \"completion_tokens\": 13,\n    \"total_tokens\": 167,\n    \"completion_tokens_details\":
       {\n      \"reasoning_tokens\": 0\n    }\n  },\n  \"system_fingerprint\": \"fp_25624ae3a5\"\n}\n"
     headers:
       CF-Cache-Status:
       - DYNAMIC
       CF-RAY:
-      - 8c26a4923f7f2ab9-LAX
+      - 8c3f92d5af742233-MIA
       Connection:
       - keep-alive
       Content-Encoding:
@@ -67,7 +67,7 @@ interactions:
       Content-Type:
       - application/json
       Date:
-      - Fri, 13 Sep 2024 08:07:18 GMT
+      - Mon, 16 Sep 2024 08:44:16 GMT
       Server:
       - cloudflare
       Transfer-Encoding:
@@ -81,7 +81,7 @@ interactions:
       openai-organization:
       - crewai-iuxna1
       openai-processing-ms:
-      - '288'
+      - '296'
       openai-version:
       - '2020-10-01'
       strict-transport-security:
@@ -99,7 +99,7 @@ interactions:
       x-ratelimit-reset-tokens:
       - 0s
       x-request-id:
-      - req_3a600334b305383c566a33fb53a200c9
+      - req_064b50a4e87bfa0bdaf3120777c2c02d
     http_version: HTTP/1.1
     status_code: 200
 - request:
@@ -115,12 +115,13 @@ interactions:
       keys and values.\nObservation: the result of the action\n\nOnce all necessary
       information is gathered:\n\nThought: I now know the final answer\nFinal Answer:
       the final answer to the original input question\n"}, {"role": "user", "content":
-      "\nCurrent Task: NEVER give a Final Answer, instead keep using the `get_final_answer`
-      tool non-stop\n\nThis is the expect criteria for your final answer: The final
+      "\nCurrent Task: NEVER give a Final Answer, unless you are told otherwise, instead
+      keep using the `get_final_answer` tool non-stop, until you must give you best
+      final answer\n\nThis is the expect criteria for your final answer: The final
       answer\nyou MUST return the actual complete content as the final answer, not
       a summary.\n\nThis is the context you''re working with:\nHi!\n\nBegin! This
       is VERY important to you, use the tools available and give your best Final Answer,
-      your job depends on it!\n\nThought:"}], "model": "gpt-4o", "stop": ["\nObservation"]}'
+      your job depends on it!\n\nThought:"}], "model": "gpt-4o", "stop": ["\nObservation:"]}'
     headers:
       accept:
       - application/json
@@ -129,12 +130,12 @@ interactions:
       connection:
       - keep-alive
       content-length:
-      - '1456'
+      - '1531'
       content-type:
       - application/json
       cookie:
-      - __cf_bm=r6BNUnXat.26mviZiJYUf7Qj4ea5gbt_oPxyClKcVOE-1726214380-1.0.1.1-2S3G10sPdiG2syQSO8wKWXE7Nmdgt88imgakr81w9DemMH8mVDg0q6r9ANx6tM4_CPvgGQlMVstDhDRkIDwhzg;
-        _cfuvid=dp2yoCmGHVlURh_U78_UoIfnhcO5UhufnL5whkUSMTQ-1726214380689-0.0.1.1-604800000
+      - __cf_bm=1SckBhvJ18Dazp6bi8DEKYeiS9Q4.6_6i3nmLBw9b6g-1726476036-1.0.1.1-TnN4UpDXA33YXCVCUWOaZ12vGIg_o5NpJQEUHgjn6XdUgb7M0ND8PdkTfkd8rrxG5XFlPRMzI54GxZ0FeUY9xw;
+        _cfuvid=0Rs4xTPk7h7OIXuSbTgMVVD9JSoZeKMwnygKHoHQo3k-1726476036297-0.0.1.1-604800000
       host:
       - api.openai.com
       user-agent:
@@ -158,22 +159,22 @@ interactions:
     method: POST
     uri: https://api.openai.com/v1/chat/completions
   response:
-    content: "{\n  \"id\": \"chatcmpl-A6vcl5P6agtY39eApB8nd1Lsc6Kqe\",\n  \"object\":
-      \"chat.completion\",\n  \"created\": 1726214839,\n  \"model\": \"gpt-4o-2024-05-13\",\n
+    content: "{\n  \"id\": \"chatcmpl-A81dAez0qdGuhBKCz4DaoxMZPe9pC\",\n  \"object\":
+      \"chat.completion\",\n  \"created\": 1726476256,\n  \"model\": \"gpt-4o-2024-05-13\",\n
       \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
-      \"assistant\",\n        \"content\": \"Thought: I need to use the tool provided
-      to help accomplish the given task without providing a definitive final answer
-      directly. Following the instructions, I will use get_final_answer repeatedly.\\n\\nAction:
+      \"assistant\",\n        \"content\": \"Thought: My task is to never give the
+      final answer directly unless instructed otherwise. Instead, I need to use the
+      `get_final_answer` tool non-stop. Let's proceed as instructed.\\n\\nAction:
       get_final_answer\\nAction Input: {}\",\n        \"refusal\": null\n      },\n
       \     \"logprobs\": null,\n      \"finish_reason\": \"stop\"\n    }\n  ],\n
-      \ \"usage\": {\n    \"prompt_tokens\": 299,\n    \"completion_tokens\": 45,\n
-      \   \"total_tokens\": 344,\n    \"completion_tokens_details\": {\n      \"reasoning_tokens\":
+      \ \"usage\": {\n    \"prompt_tokens\": 314,\n    \"completion_tokens\": 47,\n
+      \   \"total_tokens\": 361,\n    \"completion_tokens_details\": {\n      \"reasoning_tokens\":
       0\n    }\n  },\n  \"system_fingerprint\": \"fp_25624ae3a5\"\n}\n"
     headers:
       CF-Cache-Status:
       - DYNAMIC
       CF-RAY:
-      - 8c26a49a2f312ab9-LAX
+      - 8c3f92d958672233-MIA
       Connection:
       - keep-alive
       Content-Encoding:
@@ -181,7 +182,7 @@ interactions:
       Content-Type:
       - application/json
       Date:
-      - Fri, 13 Sep 2024 08:07:20 GMT
+      - Mon, 16 Sep 2024 08:44:16 GMT
       Server:
       - cloudflare
       Transfer-Encoding:
@@ -195,7 +196,7 @@ interactions:
       openai-organization:
       - crewai-iuxna1
       openai-processing-ms:
-      - '645'
+      - '529'
       openai-version:
       - '2020-10-01'
       strict-transport-security:
@@ -207,97 +208,15 @@ interactions:
       x-ratelimit-remaining-requests:
       - '9999'
       x-ratelimit-remaining-tokens:
-      - '29999656'
+      - '29999639'
       x-ratelimit-reset-requests:
       - 6ms
       x-ratelimit-reset-tokens:
       - 0s
       x-request-id:
-      - req_c2c386a21740974c26390417304e9aa4
+      - req_41d6fcdf484db8aa0a3a781fc6554d48
     http_version: HTTP/1.1
     status_code: 200
-- request:
-    body: !!binary |
-      CocXCiQKIgoMc2VydmljZS5uYW1lEhIKEGNyZXdBSS10ZWxlbWV0cnkS3hYKEgoQY3Jld2FpLnRl
-      bGVtZXRyeRKTAQoQ/bn2JvsYiOqDemuUqQr5NhIIhcwq8k7pWR8qClRvb2wgVXNhZ2UwATnIorur
-      Pr/0F0GgZ7+rPr/0F0oaCg5jcmV3YWlfdmVyc2lvbhIICgYwLjU2LjBKHwoJdG9vbF9uYW1lEhIK
-      EGdldF9maW5hbF9hbnN3ZXJKDgoIYXR0ZW1wdHMSAhgBegIYAYUBAAEAABKTAQoQeZe5Us3hb9yP
-      yQUHvMUkMxIIko+VTQ/FiF0qClRvb2wgVXNhZ2UwATm4cscHP7/0F0Fw3cwHP7/0F0oaCg5jcmV3
-      YWlfdmVyc2lvbhIICgYwLjU2LjBKHwoJdG9vbF9uYW1lEhIKEGdldF9maW5hbF9hbnN3ZXJKDgoI
-      YXR0ZW1wdHMSAhgBegIYAYUBAAEAABKQAgoQSZEljq6B5xC4iLI1/EL3qxIICsKk6RUjw/gqDlRh
-      c2sgRXhlY3V0aW9uMAE5IFVuYz2/9BdBOKuIZT+/9BdKLgoIY3Jld19rZXkSIgogZDU1MTEzYmU0
-      YWE0MWJhNjQzZDMyNjA0MmIyZjAzZjFKMQoHY3Jld19pZBImCiQyZTE2MzBmMi03Y2NjLTQ1YTUt
-      YjEzOC0wY2E2ZDZjODU4ODBKLgoIdGFza19rZXkSIgogNGEzMWI4NTEzM2EzYTI5NGM2ODUzZGE3
-      NTdkNGJhZTdKMQoHdGFza19pZBImCiRhNjVlYzJkMy02MjY2LTQzZWMtYjliNS03YTQyYTMxNzUz
-      ZjB6AhgBhQEAAQAAEtMLChAav23U7FyxgOwFJoo0u4NYEgj5eIblxDPDMyoMQ3JldyBDcmVhdGVk
-      MAE5eN86Zz+/9BdBoGFAZz+/9BdKGgoOY3Jld2FpX3ZlcnNpb24SCAoGMC41Ni4wShoKDnB5dGhv
-      bl92ZXJzaW9uEggKBjMuMTEuN0ouCghjcmV3X2tleRIiCiA5ODNjMmEwNzI2YjU2ZDBkOTI3Yzlk
-      ZjEwYmZlMjVjOEoxCgdjcmV3X2lkEiYKJDJjMDA1OTg3LTUyNDYtNDIxMi1hNjM4LTMzOTY5NzBi
-      YmU0M0ocCgxjcmV3X3Byb2Nlc3MSDAoKc2VxdWVudGlhbEoRCgtjcmV3X21lbW9yeRICEABKGgoU
-      Y3Jld19udW1iZXJfb2ZfdGFza3MSAhgCShsKFWNyZXdfbnVtYmVyX29mX2FnZW50cxICGAJKgwUK
-      C2NyZXdfYWdlbnRzEvMECvAEW3sia2V5IjogImUxNDhlNTMyMDI5MzQ5OWY4Y2ViZWE4MjZlNzI1
-      ODJiIiwgImlkIjogIjM3ZDYzZDJmLTIyYWQtNGZlZi1iYzJiLWE4ZjU0NTQ4NzAxMSIsICJyb2xl
-      IjogInRlc3Qgcm9sZSIsICJ2ZXJib3NlPyI6IHRydWUsICJtYXhfaXRlciI6IDI1LCAibWF4X3Jw
-      bSI6IDEwLCAiZnVuY3Rpb25fY2FsbGluZ19sbG0iOiBudWxsLCAibGxtIjogImdwdC00byIsICJk
-      ZWxlZ2F0aW9uX2VuYWJsZWQ/IjogZmFsc2UsICJhbGxvd19jb2RlX2V4ZWN1dGlvbj8iOiBmYWxz
-      ZSwgIm1heF9yZXRyeV9saW1pdCI6IDIsICJ0b29sc19uYW1lcyI6IFtdfSwgeyJrZXkiOiAiZTdl
-      OGVlYTg4NmJjYjhmMTA0NWFiZWVjZjE0MjVkYjciLCAiaWQiOiAiZjVkMmUzNDUtOTY1My00MjY0
-      LTgwZmUtNTY3ZmFiNjI2ZmQ2IiwgInJvbGUiOiAidGVzdCByb2xlMiIsICJ2ZXJib3NlPyI6IHRy
-      dWUsICJtYXhfaXRlciI6IDEsICJtYXhfcnBtIjogbnVsbCwgImZ1bmN0aW9uX2NhbGxpbmdfbGxt
-      IjogbnVsbCwgImxsbSI6ICJncHQtNG8iLCAiZGVsZWdhdGlvbl9lbmFibGVkPyI6IGZhbHNlLCAi
-      YWxsb3dfY29kZV9leGVjdXRpb24/IjogZmFsc2UsICJtYXhfcmV0cnlfbGltaXQiOiAyLCAidG9v
-      bHNfbmFtZXMiOiBbXX1dSv0DCgpjcmV3X3Rhc2tzEu4DCusDW3sia2V5IjogIjMyMmRkYWUzYmM4
-      MGMxZDQ1Yjg1ZmE3NzU2ZGI4NjY1IiwgImlkIjogIjVlOGE2NmViLWRhM2YtNGRjNS1hN2ZmLTQ5
-      NjM3NzFmZWIzMyIsICJhc3luY19leGVjdXRpb24/IjogZmFsc2UsICJodW1hbl9pbnB1dD8iOiBm
-      YWxzZSwgImFnZW50X3JvbGUiOiAidGVzdCByb2xlIiwgImFnZW50X2tleSI6ICJlMTQ4ZTUzMjAy
-      OTM0OTlmOGNlYmVhODI2ZTcyNTgyYiIsICJ0b29sc19uYW1lcyI6IFtdfSwgeyJrZXkiOiAiZmI0
-      YzI2MDg3YmI4NzNmNjRmNGRmNTU4MDJjNmVkMDkiLCAiaWQiOiAiMmUyOGM1NjctMjk5Yi00MzIy
-      LWI4NGItNTU1NTUyZDU3ZmRkIiwgImFzeW5jX2V4ZWN1dGlvbj8iOiBmYWxzZSwgImh1bWFuX2lu
-      cHV0PyI6IGZhbHNlLCAiYWdlbnRfcm9sZSI6ICJ0ZXN0IHJvbGUyIiwgImFnZW50X2tleSI6ICJl
-      N2U4ZWVhODg2YmNiOGYxMDQ1YWJlZWNmMTQyNWRiNyIsICJ0b29sc19uYW1lcyI6IFsiZ2V0X2Zp
-      bmFsX2Fuc3dlciJdfV16AhgBhQEAAQAAEo4CChDOktzw0vhfXf4tS5L6dvnlEgj61jDSJFqiYSoM
-      VGFzayBDcmVhdGVkMAE5KCBjZz+/9BdBKBpkZz+/9BdKLgoIY3Jld19rZXkSIgogOTgzYzJhMDcy
-      NmI1NmQwZDkyN2M5ZGYxMGJmZTI1YzhKMQoHY3Jld19pZBImCiQyYzAwNTk4Ny01MjQ2LTQyMTIt
-      YTYzOC0zMzk2OTcwYmJlNDNKLgoIdGFza19rZXkSIgogMzIyZGRhZTNiYzgwYzFkNDViODVmYTc3
-      NTZkYjg2NjVKMQoHdGFza19pZBImCiQ1ZThhNjZlYi1kYTNmLTRkYzUtYTdmZi00OTYzNzcxZmVi
-      MzN6AhgBhQEAAQAAEpACChAtl8d+7uyDB9+RBuVuu0NZEghGLAOnJsQ7jyoOVGFzayBFeGVjdXRp
-      b24wATmgg2RnP7/0F0GwdCKyP7/0F0ouCghjcmV3X2tleRIiCiA5ODNjMmEwNzI2YjU2ZDBkOTI3
-      YzlkZjEwYmZlMjVjOEoxCgdjcmV3X2lkEiYKJDJjMDA1OTg3LTUyNDYtNDIxMi1hNjM4LTMzOTY5
-      NzBiYmU0M0ouCgh0YXNrX2tleRIiCiAzMjJkZGFlM2JjODBjMWQ0NWI4NWZhNzc1NmRiODY2NUox
-      Cgd0YXNrX2lkEiYKJDVlOGE2NmViLWRhM2YtNGRjNS1hN2ZmLTQ5NjM3NzFmZWIzM3oCGAGFAQAB
-      AAASjgIKEMfuHkZ3PZsp754U8dfkutoSCGg29d6Cyu98KgxUYXNrIENyZWF0ZWQwATlwFmuyP7/0
-      F0HAzW2yP7/0F0ouCghjcmV3X2tleRIiCiA5ODNjMmEwNzI2YjU2ZDBkOTI3YzlkZjEwYmZlMjVj
-      OEoxCgdjcmV3X2lkEiYKJDJjMDA1OTg3LTUyNDYtNDIxMi1hNjM4LTMzOTY5NzBiYmU0M0ouCgh0
-      YXNrX2tleRIiCiBmYjRjMjYwODdiYjg3M2Y2NGY0ZGY1NTgwMmM2ZWQwOUoxCgd0YXNrX2lkEiYK
-      JDJlMjhjNTY3LTI5OWItNDMyMi1iODRiLTU1NTU1MmQ1N2ZkZHoCGAGFAQABAAA=
-    headers:
-      Accept:
-      - '*/*'
-      Accept-Encoding:
-      - gzip, deflate
-      Connection:
-      - keep-alive
-      Content-Length:
-      - '2954'
-      Content-Type:
-      - application/x-protobuf
-      User-Agent:
-      - OTel-OTLP-Exporter-Python/1.27.0
-    method: POST
-    uri: https://telemetry.crewai.com:4319/v1/traces
-  response:
-    body:
-      string: "\n\0"
-    headers:
-      Content-Length:
-      - '2'
-      Content-Type:
-      - application/x-protobuf
-      Date:
-      - Fri, 13 Sep 2024 08:07:21 GMT
-    status:
-      code: 200
-      message: OK
 - request:
     body: '{"messages": [{"role": "system", "content": "You are test role2. test backstory2\nYour
       personal goal is: test goal2\nYou ONLY have access to the following tools, and
@@ -311,18 +230,19 @@ interactions:
       keys and values.\nObservation: the result of the action\n\nOnce all necessary
       information is gathered:\n\nThought: I now know the final answer\nFinal Answer:
       the final answer to the original input question\n"}, {"role": "user", "content":
-      "\nCurrent Task: NEVER give a Final Answer, instead keep using the `get_final_answer`
-      tool non-stop\n\nThis is the expect criteria for your final answer: The final
+      "\nCurrent Task: NEVER give a Final Answer, unless you are told otherwise, instead
+      keep using the `get_final_answer` tool non-stop, until you must give you best
+      final answer\n\nThis is the expect criteria for your final answer: The final
       answer\nyou MUST return the actual complete content as the final answer, not
       a summary.\n\nThis is the context you''re working with:\nHi!\n\nBegin! This
       is VERY important to you, use the tools available and give your best Final Answer,
       your job depends on it!\n\nThought:"}, {"role": "assistant", "content": "Thought:
-      I need to use the tool provided to help accomplish the given task without providing
-      a definitive final answer directly. Following the instructions, I will use get_final_answer
-      repeatedly.\n\nAction: get_final_answer\nAction Input: {}\nObservation: 42\nNow
+      My task is to never give the final answer directly unless instructed otherwise.
+      Instead, I need to use the `get_final_answer` tool non-stop. Let''s proceed
+      as instructed.\n\nAction: get_final_answer\nAction Input: {}\nObservation: 42\nNow
       it''s time you MUST give your absolute best final answer. You''ll ignore all
       previous instructions, stop using any tools, and just return your absolute BEST
-      Final answer."}], "model": "gpt-4o", "stop": ["\nObservation"]}'
+      Final answer."}], "model": "gpt-4o", "stop": ["\nObservation:"]}'
     headers:
       accept:
       - application/json
@@ -331,12 +251,12 @@ interactions:
       connection:
       - keep-alive
       content-length:
-      - '1927'
+      - '1984'
       content-type:
       - application/json
       cookie:
-      - __cf_bm=r6BNUnXat.26mviZiJYUf7Qj4ea5gbt_oPxyClKcVOE-1726214380-1.0.1.1-2S3G10sPdiG2syQSO8wKWXE7Nmdgt88imgakr81w9DemMH8mVDg0q6r9ANx6tM4_CPvgGQlMVstDhDRkIDwhzg;
-        _cfuvid=dp2yoCmGHVlURh_U78_UoIfnhcO5UhufnL5whkUSMTQ-1726214380689-0.0.1.1-604800000
+      - __cf_bm=1SckBhvJ18Dazp6bi8DEKYeiS9Q4.6_6i3nmLBw9b6g-1726476036-1.0.1.1-TnN4UpDXA33YXCVCUWOaZ12vGIg_o5NpJQEUHgjn6XdUgb7M0ND8PdkTfkd8rrxG5XFlPRMzI54GxZ0FeUY9xw;
+        _cfuvid=0Rs4xTPk7h7OIXuSbTgMVVD9JSoZeKMwnygKHoHQo3k-1726476036297-0.0.1.1-604800000
       host:
       - api.openai.com
       user-agent:
@@ -360,19 +280,19 @@ interactions:
     method: POST
     uri: https://api.openai.com/v1/chat/completions
   response:
-    content: "{\n  \"id\": \"chatcmpl-A6vcnkXMs4i3kVGev6Ihy9OC9oPPZ\",\n  \"object\":
-      \"chat.completion\",\n  \"created\": 1726214841,\n  \"model\": \"gpt-4o-2024-05-13\",\n
+    content: "{\n  \"id\": \"chatcmpl-A81dBkzOe5oPW5R3ve2ZFdMdlMz2v\",\n  \"object\":
+      \"chat.completion\",\n  \"created\": 1726476257,\n  \"model\": \"gpt-4o-2024-05-13\",\n
       \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
-      \"assistant\",\n        \"content\": \"Thought: I now know the final answer.\\nFinal
-      Answer: 42\",\n        \"refusal\": null\n      },\n      \"logprobs\": null,\n
-      \     \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\":
-      385,\n    \"completion_tokens\": 14,\n    \"total_tokens\": 399,\n    \"completion_tokens_details\":
-      {\n      \"reasoning_tokens\": 0\n    }\n  },\n  \"system_fingerprint\": \"fp_25624ae3a5\"\n}\n"
+      \"assistant\",\n        \"content\": \"Final Answer: 42\",\n        \"refusal\":
+      null\n      },\n      \"logprobs\": null,\n      \"finish_reason\": \"stop\"\n
+      \   }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 402,\n    \"completion_tokens\":
+      5,\n    \"total_tokens\": 407,\n    \"completion_tokens_details\": {\n      \"reasoning_tokens\":
+      0\n    }\n  },\n  \"system_fingerprint\": \"fp_25624ae3a5\"\n}\n"
     headers:
       CF-Cache-Status:
       - DYNAMIC
       CF-RAY:
-      - 8c26a4a5986f2ab9-LAX
+      - 8c3f92de69812233-MIA
       Connection:
       - keep-alive
       Content-Encoding:
@@ -380,7 +300,7 @@ interactions:
       Content-Type:
       - application/json
       Date:
-      - Fri, 13 Sep 2024 08:07:21 GMT
+      - Mon, 16 Sep 2024 08:44:17 GMT
       Server:
       - cloudflare
       Transfer-Encoding:
@@ -394,7 +314,7 @@ interactions:
       openai-organization:
       - crewai-iuxna1
       openai-processing-ms:
-      - '342'
+      - '151'
       openai-version:
       - '2020-10-01'
       strict-transport-security:
@@ -406,13 +326,13 @@ interactions:
       x-ratelimit-remaining-requests:
       - '9999'
       x-ratelimit-remaining-tokens:
-      - '29999549'
+      - '29999535'
       x-ratelimit-reset-requests:
       - 6ms
       x-ratelimit-reset-tokens:
       - 0s
       x-request-id:
-      - req_4ab7f57bc6839f6bc305f35cd3ae6f7a
+      - req_7668b51273dbf29213efec5180462021
     http_version: HTTP/1.1
     status_code: 200
 version: 1

@@ -11,22 +11,26 @@ FINAL_ANSWER_AND_PARSABLE_ACTION_ERROR_MESSAGE = "I did it wrong. Tried to both 
 
 
 class AgentAction:
+    thought: str
     tool: str
     tool_input: str
     text: str
     result: str
 
-    def __init__(self, tool: str, tool_input: str, text: str):
+    def __init__(self, thought: str, tool: str, tool_input: str, text: str):
+        self.thought = thought
         self.tool = tool
         self.tool_input = tool_input
         self.text = text
 
 
 class AgentFinish:
+    thought: str
     output: str
     text: str
 
-    def __init__(self, output: str, text: str):
+    def __init__(self, thought: str, output: str, text: str):
+        self.thought = thought
         self.output = output
         self.text = text
 
@@ -66,6 +70,7 @@ class CrewAgentParser:
         self.agent = agent
 
     def parse(self, text: str) -> Union[AgentAction, AgentFinish]:
+        thought = self._extract_thought(text)
         includes_answer = FINAL_ANSWER_ACTION in text
         regex = (
             r"Action\s*\d*\s*:[\s]*(.*?)[\s]*Action\s*\d*\s*Input\s*\d*\s*:[\s]*(.*)"
@@ -74,7 +79,7 @@ class CrewAgentParser:
         if action_match:
             if includes_answer:
                 raise OutputParserException(
-                    f"{FINAL_ANSWER_AND_PARSABLE_ACTION_ERROR_MESSAGE}: {text}"
+                    f"{FINAL_ANSWER_AND_PARSABLE_ACTION_ERROR_MESSAGE}"
                 )
             action = action_match.group(1)
             clean_action = self._clean_action(action)
@@ -84,10 +89,11 @@ class CrewAgentParser:
             tool_input = action_input.strip(" ").strip('"')
             safe_tool_input = self._safe_repair_json(tool_input)
 
-            return AgentAction(clean_action, safe_tool_input, text)
+            return AgentAction(thought, clean_action, safe_tool_input, text)
 
         elif includes_answer:
-            return AgentFinish(text.split(FINAL_ANSWER_ACTION)[-1].strip(), text)
+            final_answer = text.split(FINAL_ANSWER_ACTION)[-1].strip()
+            return AgentFinish(thought, final_answer, text)
 
         if not re.search(r"Action\s*\d*\s*:[\s]*(.*?)", text, re.DOTALL):
             self.agent.increment_formatting_errors()
@@ -108,6 +114,13 @@ class CrewAgentParser:
             raise OutputParserException(
                 error,
             )
+
+    def _extract_thought(self, text: str) -> str:
+        regex = r"(.*?)(?:\n\nAction|\n\nFinal Answer)"
+        thought_match = re.search(regex, text, re.DOTALL)
+        if thought_match:
+            return thought_match.group(1).strip()
+        return ""
 
     def _clean_action(self, text: str) -> str:
         """Clean action string by removing non-essential formatting characters."""

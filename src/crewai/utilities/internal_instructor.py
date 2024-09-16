@@ -2,29 +2,27 @@ from typing import Any, Optional, Type
 
 import instructor
 import litellm
-from pydantic import BaseModel, Field, PrivateAttr, model_validator
 
 
-class Instructor(BaseModel):
+class InternalInstructor:
     """Class that wraps an agent llm with instructor."""
 
-    _client: Any = PrivateAttr()
-    content: str = Field(description="Content to be sent to the instructor.")
-    agent: Optional[Any] = Field(
-        description="The agent that needs to use instructor.", default=None
-    )
-    llm: Optional[str] = Field(
-        description="The agent that needs to use instructor.", default=None
-    )
-    instructions: Optional[str] = Field(
-        description="Instructions to be sent to the instructor.",
-        default=None,
-    )
-    model: Type[BaseModel] = Field(
-        description="Pydantic model to be used to create an output."
-    )
+    def __init__(
+        self,
+        content: str,
+        model: Type,
+        agent: Optional[Any] = None,
+        llm: Optional[str] = None,
+        instructions: Optional[str] = None,
+    ):
+        self.content = content
+        self.agent = agent
+        self.llm = llm
+        self.instructions = instructions
+        self.model = model
+        self._client = None
+        self.set_instructor()
 
-    @model_validator(mode="after")
     def set_instructor(self):
         """Set instructor."""
         if self.agent and not self.llm:
@@ -34,7 +32,6 @@ class Instructor(BaseModel):
             litellm.completion,
             mode=instructor.Mode.TOOLS,
         )
-        return self
 
     def to_json(self):
         model = self.to_pydantic()
@@ -44,7 +41,6 @@ class Instructor(BaseModel):
         messages = [{"role": "user", "content": self.content}]
         if self.instructions:
             messages.append({"role": "system", "content": self.instructions})
-
         model = self._client.chat.completions.create(
             model=self.llm, response_model=self.model, messages=messages
         )

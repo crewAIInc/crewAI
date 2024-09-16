@@ -73,6 +73,10 @@ class Agent(BaseAgent):
         default=None,
         description="Callback to be executed after each step of the agent execution.",
     )
+    use_stop_words: bool = Field(
+        default=True,
+        description="Use stop words for the agent.",
+    )
     use_system_prompt: Optional[bool] = Field(
         default=True,
         description="Use system prompt for the agent.",
@@ -238,6 +242,7 @@ class Agent(BaseAgent):
             stop_words=stop_words,
             max_iter=self.max_iter,
             tools_handler=self.tools_handler,
+            use_stop_words=self.use_stop_words,
             tools_names=self.__tools_names(parsed_tools),
             tools_description=self._render_text_description_and_args(parsed_tools),
             step_callback=self.step_callback,

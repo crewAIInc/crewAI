@@ -113,8 +113,6 @@ class ToolUsage:
                 result = self._i18n.errors("task_repeated_usage").format(
                     tool_names=self.tools_names
                 )
-                if self.agent.verbose:
-                    self._printer.print(content=f"\n\n{result}\n", color="purple")
                 self._telemetry.tool_repeated_usage(
                     llm=self.function_calling_llm,
                     tool_name=tool.name,
@@ -200,8 +198,6 @@ class ToolUsage:
                     calling=calling, output=result, should_cache=should_cache
                 )
 
-        if self.agent.verbose:
-            self._printer.print(content=f"\n\n{result}\n", color="purple")
         if agentops:
             agentops.record(tool_event)
         self._telemetry.tool_usage(
@@ -300,7 +296,11 @@ class ToolUsage:
         return "\n--\n".join(descriptions)
 
     def _is_gpt(self, llm) -> bool:
-        return False if not llm else "gpt" in llm.lower()
+        return (
+            "gpt" in str(llm).lower()
+            or "o1-preview" in str(llm).lower()
+            or "o1-mini" in str(llm).lower()
+        )
 
     def _tool_calling(
         self, tool_string: str
@@ -313,7 +313,7 @@ class ToolUsage:
                     else ToolCalling
                 )
                 converter = Converter(
-                    text=f"Only tools available:\n###\n{self._render()}\n\nReturn a valid schema for the tool, the tool name must be exactly equal one of the options, use this text to inform the valid output schema:\n\n{tool_string}```",
+                    text=f"Only tools available:\n###\n{self._render()}\n\nReturn a valid schema for the tool, the tool name must be exactly equal one of the options, use this text to inform the valid output schema:\n\n### TEXT \n{tool_string}",
                     llm=self.function_calling_llm,
                     model=model,
                     instructions=dedent(

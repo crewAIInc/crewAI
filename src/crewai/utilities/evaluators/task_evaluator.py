@@ -92,7 +92,11 @@ class TaskEvaluator:
         return converter.to_pydantic()
 
     def _is_gpt(self, llm) -> bool:
-        return "gpt" in str(self.llm).lower()
+        return (
+            "gpt" in str(self.llm).lower()
+            or "o1-preview" in str(self.llm).lower()
+            or "o1-mini" in str(self.llm).lower()
+        )
 
     def evaluate_training_data(
         self, training_data: dict, agent_id: str

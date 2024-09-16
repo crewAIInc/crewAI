@@ -33,7 +33,7 @@ interactions:
       your final answer: The score of the title.\nyou MUST return the actual complete
       content as the final answer, not a summary.\n\nBegin! This is VERY important
       to you, use the tools available and give your best Final Answer, your job depends
-      on it!\n\nThought:"}], "model": "gpt-4o", "stop": ["\nObservation"]}'
+      on it!\n\nThought:"}], "model": "gpt-4o", "stop": ["\nObservation:"]}'
     headers:
       accept:
       - application/json
@@ -42,12 +42,12 @@ interactions:
       connection:
       - keep-alive
       content-length:
-      - '2640'
+      - '2641'
       content-type:
       - application/json
       cookie:
-      - __cf_bm=pgsskMPipgeSB6HhnkjwcOEfengIvt0p9whKNmTJVLs-1726215280-1.0.1.1-Gtqb.nO1U.cHTnd9mR9sEA5tpVo1.pexRrxqXOkn.6Mzja8mLG1URJsOLTfjMAAYpWaUQe4Rjmnr6lqQk5hAxQ;
-        _cfuvid=dp2yoCmGHVlURh_U78_UoIfnhcO5UhufnL5whkUSMTQ-1726214380689-0.0.1.1-604800000
+      - __cf_bm=1SckBhvJ18Dazp6bi8DEKYeiS9Q4.6_6i3nmLBw9b6g-1726476036-1.0.1.1-TnN4UpDXA33YXCVCUWOaZ12vGIg_o5NpJQEUHgjn6XdUgb7M0ND8PdkTfkd8rrxG5XFlPRMzI54GxZ0FeUY9xw;
+        _cfuvid=0Rs4xTPk7h7OIXuSbTgMVVD9JSoZeKMwnygKHoHQo3k-1726476036297-0.0.1.1-604800000
       host:
       - api.openai.com
       user-agent:
@@ -71,26 +71,25 @@ interactions:
     method: POST
     uri: https://api.openai.com/v1/chat/completions
   response:
-    content: "{\n  \"id\": \"chatcmpl-A6vp8du27ZEb6qG03UeIgpJJYmjNk\",\n  \"object\":
-      \"chat.completion\",\n  \"created\": 1726215606,\n  \"model\": \"gpt-4o-2024-05-13\",\n
+    content: "{\n  \"id\": \"chatcmpl-A81l8X2YQ0TtLiK8jDndhlyHEJJBX\",\n  \"object\":
+      \"chat.completion\",\n  \"created\": 1726476750,\n  \"model\": \"gpt-4o-2024-05-13\",\n
       \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
-      \"assistant\",\n        \"content\": \"To provide an accurate integer score
-      between 1-5 for the title 'The impact of AI in the future of work', I need to
-      delegate this task to the Scorer.\\n\\nAction: Delegate work to coworker\\nAction
-      Input: {\\\"task\\\": \\\"Provide an integer score between 1-5 for the title
-      'The impact of AI in the future of work'\\\", \\\"context\\\": \\\"We need you
-      to rate the given title based on your expert judgment. The scoring range is
-      between 1 and 5. Please provide a brief rationale for your rating as well, if
-      possible.\\\", \\\"coworker\\\": \\\"Scorer\\\"}\",\n        \"refusal\": null\n
-      \     },\n      \"logprobs\": null,\n      \"finish_reason\": \"stop\"\n    }\n
-      \ ],\n  \"usage\": {\n    \"prompt_tokens\": 584,\n    \"completion_tokens\":
-      126,\n    \"total_tokens\": 710,\n    \"completion_tokens_details\": {\n      \"reasoning_tokens\":
+      \"assistant\",\n        \"content\": \"To provide an accurate score for the
+      title, I need to delegate the task to the Scorer with all necessary context.\\n\\nAction:
+      Delegate work to coworker\\nAction Input: {\\n    \\\"coworker\\\": \\\"Scorer\\\",
+      \\n    \\\"task\\\": \\\"Provide an integer score between 1-5 for the following
+      title: 'The impact of AI in the future of work'\\\",\\n    \\\"context\\\":
+      \\\"The score should reflect how compelling and relevant the title is regarding
+      the integration and impact of Artificial Intelligence on future work scenarios.\\\"\\n}\",\n
+      \       \"refusal\": null\n      },\n      \"logprobs\": null,\n      \"finish_reason\":
+      \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 584,\n    \"completion_tokens\":
+      107,\n    \"total_tokens\": 691,\n    \"completion_tokens_details\": {\n      \"reasoning_tokens\":
       0\n    }\n  },\n  \"system_fingerprint\": \"fp_25624ae3a5\"\n}\n"
     headers:
       CF-Cache-Status:
       - DYNAMIC
       CF-RAY:
-      - 8c26b74ddb752ab9-LAX
+      - 8c3f9ee7efeb2233-MIA
       Connection:
       - keep-alive
       Content-Encoding:
@@ -98,7 +97,7 @@ interactions:
       Content-Type:
       - application/json
       Date:
-      - Fri, 13 Sep 2024 08:20:07 GMT
+      - Mon, 16 Sep 2024 08:52:31 GMT
       Server:
       - cloudflare
       Transfer-Encoding:
@@ -112,7 +111,7 @@ interactions:
       openai-organization:
       - crewai-iuxna1
       openai-processing-ms:
-      - '1743'
+      - '1342'
       openai-version:
       - '2020-10-01'
       strict-transport-security:
@@ -130,7 +129,7 @@ interactions:
       x-ratelimit-reset-tokens:
       - 1ms
       x-request-id:
-      - req_a4a571fc8e825316f692e01f2a3b41ba
+      - req_2e50a53cea35304479bf2471a6a1ef58
     http_version: HTTP/1.1
     status_code: 200
 - request:
@@ -140,16 +139,15 @@ interactions:
       format:\n\nThought: I now can give a great answer\nFinal Answer: Your final
       answer must be the great and the most complete as possible, it must be outcome
       described.\n\nI MUST use these formats, my job depends on it!"}, {"role": "user",
-      "content": "\nCurrent Task: Provide an integer score between 1-5 for the title
-      ''The impact of AI in the future of work''\n\nThis is the expect criteria for
-      your final answer: Your best answer to your coworker asking you this, accounting
+      "content": "\nCurrent Task: Provide an integer score between 1-5 for the following
+      title: ''The impact of AI in the future of work''\n\nThis is the expect criteria
+      for your final answer: Your best answer to your coworker asking you this, accounting
       for the context shared.\nyou MUST return the actual complete content as the
-      final answer, not a summary.\n\nThis is the context you''re working with:\nWe
-      need you to rate the given title based on your expert judgment. The scoring
-      range is between 1 and 5. Please provide a brief rationale for your rating as
-      well, if possible.\n\nBegin! This is VERY important to you, use the tools available
-      and give your best Final Answer, your job depends on it!\n\nThought:"}], "model":
-      "gpt-4o", "stop": ["\nObservation"]}'
+      final answer, not a summary.\n\nThis is the context you''re working with:\nThe
+      score should reflect how compelling and relevant the title is regarding the
+      integration and impact of Artificial Intelligence on future work scenarios.\n\nBegin!
+      This is VERY important to you, use the tools available and give your best Final
+      Answer, your job depends on it!\n\nThought:"}], "model": "gpt-4o", "stop": ["\nObservation:"]}'
     headers:
       accept:
       - application/json
@@ -158,12 +156,12 @@ interactions:
       connection:
       - keep-alive
       content-length:
-      - '1214'
+      - '1206'
       content-type:
       - application/json
       cookie:
-      - __cf_bm=pgsskMPipgeSB6HhnkjwcOEfengIvt0p9whKNmTJVLs-1726215280-1.0.1.1-Gtqb.nO1U.cHTnd9mR9sEA5tpVo1.pexRrxqXOkn.6Mzja8mLG1URJsOLTfjMAAYpWaUQe4Rjmnr6lqQk5hAxQ;
-        _cfuvid=dp2yoCmGHVlURh_U78_UoIfnhcO5UhufnL5whkUSMTQ-1726214380689-0.0.1.1-604800000
+      - __cf_bm=1SckBhvJ18Dazp6bi8DEKYeiS9Q4.6_6i3nmLBw9b6g-1726476036-1.0.1.1-TnN4UpDXA33YXCVCUWOaZ12vGIg_o5NpJQEUHgjn6XdUgb7M0ND8PdkTfkd8rrxG5XFlPRMzI54GxZ0FeUY9xw;
+        _cfuvid=0Rs4xTPk7h7OIXuSbTgMVVD9JSoZeKMwnygKHoHQo3k-1726476036297-0.0.1.1-604800000
       host:
       - api.openai.com
       user-agent:
@@ -187,25 +185,19 @@ interactions:
     method: POST
     uri: https://api.openai.com/v1/chat/completions
   response:
-    content: "{\n  \"id\": \"chatcmpl-A6vpApQ8II2bUOvaJpMJ9CbqfY2Ex\",\n  \"object\":
-      \"chat.completion\",\n  \"created\": 1726215608,\n  \"model\": \"gpt-4o-2024-05-13\",\n
+    content: "{\n  \"id\": \"chatcmpl-A81l9KA2dKXdw8jJrkcxKhWo5C6qT\",\n  \"object\":
+      \"chat.completion\",\n  \"created\": 1726476751,\n  \"model\": \"gpt-4o-2024-05-13\",\n
       \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
-      \"assistant\",\n        \"content\": \"Thought: I now can give a great answer\\nFinal
-      Answer: I would rate the title 'The impact of AI in the future of work' a 4
-      out of 5. The title is clear and directly addresses a relevant and timely topic.
-      It promises an exploration of the influence of artificial intelligence on the
-      future of employment, which is a subject of great interest and importance. However,
-      it could be slightly more specific to further enhance its appeal, such as specifying
-      which aspects of work (e.g., job displacement, skill evolution, industry-specific
-      impacts) it will focus on.\",\n        \"refusal\": null\n      },\n      \"logprobs\":
-      null,\n      \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\":
-      241,\n    \"completion_tokens\": 116,\n    \"total_tokens\": 357,\n    \"completion_tokens_details\":
-      {\n      \"reasoning_tokens\": 0\n    }\n  },\n  \"system_fingerprint\": \"fp_992d1ea92d\"\n}\n"
+      \"assistant\",\n        \"content\": \"Thought: I now can give a great answer.\\nFinal
+      Answer: 4\",\n        \"refusal\": null\n      },\n      \"logprobs\": null,\n
+      \     \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\":
+      228,\n    \"completion_tokens\": 15,\n    \"total_tokens\": 243,\n    \"completion_tokens_details\":
+      {\n      \"reasoning_tokens\": 0\n    }\n  },\n  \"system_fingerprint\": \"fp_25624ae3a5\"\n}\n"
     headers:
       CF-Cache-Status:
       - DYNAMIC
       CF-RAY:
-      - 8c26b7612dc92ab9-LAX
+      - 8c3f9ef24a902233-MIA
       Connection:
       - keep-alive
       Content-Encoding:
@@ -213,7 +205,7 @@ interactions:
       Content-Type:
       - application/json
       Date:
-      - Fri, 13 Sep 2024 08:20:10 GMT
+      - Mon, 16 Sep 2024 08:52:32 GMT
       Server:
       - cloudflare
       Transfer-Encoding:
@@ -227,7 +219,7 @@ interactions:
       openai-organization:
       - crewai-iuxna1
       openai-processing-ms:
-      - '1387'
+      - '314'
       openai-version:
       - '2020-10-01'
       strict-transport-security:
@@ -239,13 +231,13 @@ interactions:
       x-ratelimit-remaining-requests:
       - '9999'
       x-ratelimit-remaining-tokens:
-      - '29999714'
+      - '29999717'
       x-ratelimit-reset-requests:
       - 6ms
       x-ratelimit-reset-tokens:
       - 0s
       x-request-id:
-      - req_b6ff0770d4481c72e3558cd83d76e615
+      - req_fa9e1407947c78169d0f8b70f031f80c
     http_version: HTTP/1.1
     status_code: 200
 - request:
@@ -283,20 +275,13 @@ interactions:
       content as the final answer, not a summary.\n\nBegin! This is VERY important
       to you, use the tools available and give your best Final Answer, your job depends
       on it!\n\nThought:"}, {"role": "assistant", "content": "To provide an accurate
-      integer score between 1-5 for the title ''The impact of AI in the future of
-      work'', I need to delegate this task to the Scorer.\n\nAction: Delegate work
-      to coworker\nAction Input: {\"task\": \"Provide an integer score between 1-5
-      for the title ''The impact of AI in the future of work''\", \"context\": \"We
-      need you to rate the given title based on your expert judgment. The scoring
-      range is between 1 and 5. Please provide a brief rationale for your rating as
-      well, if possible.\", \"coworker\": \"Scorer\"}\nObservation: I would rate the
-      title ''The impact of AI in the future of work'' a 4 out of 5. The title is
-      clear and directly addresses a relevant and timely topic. It promises an exploration
-      of the influence of artificial intelligence on the future of employment, which
-      is a subject of great interest and importance. However, it could be slightly
-      more specific to further enhance its appeal, such as specifying which aspects
-      of work (e.g., job displacement, skill evolution, industry-specific impacts)
-      it will focus on."}], "model": "gpt-4o", "stop": ["\nObservation"]}'
+      score for the title, I need to delegate the task to the Scorer with all necessary
+      context.\n\nAction: Delegate work to coworker\nAction Input: {\n    \"coworker\":
+      \"Scorer\", \n    \"task\": \"Provide an integer score between 1-5 for the following
+      title: ''The impact of AI in the future of work''\",\n    \"context\": \"The
+      score should reflect how compelling and relevant the title is regarding the
+      integration and impact of Artificial Intelligence on future work scenarios.\"\n}\nObservation:
+      4"}], "model": "gpt-4o", "stop": ["\nObservation:"]}'
     headers:
       accept:
       - application/json
@@ -305,12 +290,12 @@ interactions:
       connection:
       - keep-alive
       content-length:
-      - '3725'
+      - '3198'
       content-type:
       - application/json
       cookie:
-      - __cf_bm=pgsskMPipgeSB6HhnkjwcOEfengIvt0p9whKNmTJVLs-1726215280-1.0.1.1-Gtqb.nO1U.cHTnd9mR9sEA5tpVo1.pexRrxqXOkn.6Mzja8mLG1URJsOLTfjMAAYpWaUQe4Rjmnr6lqQk5hAxQ;
-        _cfuvid=dp2yoCmGHVlURh_U78_UoIfnhcO5UhufnL5whkUSMTQ-1726214380689-0.0.1.1-604800000
+      - __cf_bm=1SckBhvJ18Dazp6bi8DEKYeiS9Q4.6_6i3nmLBw9b6g-1726476036-1.0.1.1-TnN4UpDXA33YXCVCUWOaZ12vGIg_o5NpJQEUHgjn6XdUgb7M0ND8PdkTfkd8rrxG5XFlPRMzI54GxZ0FeUY9xw;
+        _cfuvid=0Rs4xTPk7h7OIXuSbTgMVVD9JSoZeKMwnygKHoHQo3k-1726476036297-0.0.1.1-604800000
       host:
       - api.openai.com
       user-agent:
@@ -334,20 +319,19 @@ interactions:
     method: POST
     uri: https://api.openai.com/v1/chat/completions
   response:
-    content: "{\n  \"id\": \"chatcmpl-A6vpDvwJSM03OuDbYj6OWWMblLMwD\",\n  \"object\":
-      \"chat.completion\",\n  \"created\": 1726215611,\n  \"model\": \"gpt-4o-2024-05-13\",\n
+    content: "{\n  \"id\": \"chatcmpl-A81lAXZSR28oNpAYfswuPOsPNrgwT\",\n  \"object\":
+      \"chat.completion\",\n  \"created\": 1726476752,\n  \"model\": \"gpt-4o-2024-05-13\",\n
       \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
-      \"assistant\",\n        \"content\": \"Thought: I now have the final answer
-      from the Scorer.\\n\\nFinal Answer: 4\",\n        \"refusal\": null\n      },\n
-      \     \"logprobs\": null,\n      \"finish_reason\": \"stop\"\n    }\n  ],\n
-      \ \"usage\": {\n    \"prompt_tokens\": 819,\n    \"completion_tokens\": 18,\n
-      \   \"total_tokens\": 837,\n    \"completion_tokens_details\": {\n      \"reasoning_tokens\":
-      0\n    }\n  },\n  \"system_fingerprint\": \"fp_25624ae3a5\"\n}\n"
+      \"assistant\",\n        \"content\": \"Thought: I now know the final answer.\\n\\nFinal
+      Answer: 4\",\n        \"refusal\": null\n      },\n      \"logprobs\": null,\n
+      \     \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\":
+      699,\n    \"completion_tokens\": 14,\n    \"total_tokens\": 713,\n    \"completion_tokens_details\":
+      {\n      \"reasoning_tokens\": 0\n    }\n  },\n  \"system_fingerprint\": \"fp_25624ae3a5\"\n}\n"
     headers:
       CF-Cache-Status:
       - DYNAMIC
       CF-RAY:
-      - 8c26b76fdbd62ab9-LAX
+      - 8c3f9ef61b6a2233-MIA
       Connection:
       - keep-alive
       Content-Encoding:
@@ -355,7 +339,7 @@ interactions:
       Content-Type:
       - application/json
       Date:
-      - Fri, 13 Sep 2024 08:20:11 GMT
+      - Mon, 16 Sep 2024 08:52:32 GMT
       Server:
       - cloudflare
       Transfer-Encoding:
@@ -369,7 +353,7 @@ interactions:
       openai-organization:
       - crewai-iuxna1
       openai-processing-ms:
-      - '318'
+      - '289'
       openai-version:
       - '2020-10-01'
       strict-transport-security:
@@ -381,13 +365,13 @@ interactions:
       x-ratelimit-remaining-requests:
       - '9999'
       x-ratelimit-remaining-tokens:
-      - '29999103'
+      - '29999235'
       x-ratelimit-reset-requests:
       - 6ms
       x-ratelimit-reset-tokens:
       - 1ms
       x-request-id:
-      - req_77d5c12bb1af1c29348b67843bba8d12
+      - req_846b3a2ab18919d9a8657caeccaf99b1
     http_version: HTTP/1.1
     status_code: 200
 version: 1

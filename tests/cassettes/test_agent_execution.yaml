@@ -9,7 +9,7 @@ interactions:
       is the expect criteria for your final answer: the result of the math operation.\nyou
       MUST return the actual complete content as the final answer, not a summary.\n\nBegin!
       This is VERY important to you, use the tools available and give your best Final
-      Answer, your job depends on it!\n\nThought:"}], "model": "gpt-4o", "stop": ["\nObservation"]}'
+      Answer, your job depends on it!\n\nThought:"}], "model": "gpt-4o", "stop": ["\nObservation:"]}'
     headers:
       accept:
       - application/json
@@ -18,7 +18,7 @@ interactions:
       connection:
       - keep-alive
       content-length:
-      - '824'
+      - '825'
       content-type:
       - application/json
       host:
@@ -44,10 +44,10 @@ interactions:
     method: POST
     uri: https://api.openai.com/v1/chat/completions
   response:
-    content: "{\n  \"id\": \"chatcmpl-A6vVMzM73rBd8lIL6xiNCIahy03M2\",\n  \"object\":
-      \"chat.completion\",\n  \"created\": 1726214380,\n  \"model\": \"gpt-4o-2024-05-13\",\n
+    content: "{\n  \"id\": \"chatcmpl-A81Zb5EXVlHo7ayjdswJ9HHYWjHGl\",\n  \"object\":
+      \"chat.completion\",\n  \"created\": 1726476035,\n  \"model\": \"gpt-4o-2024-05-13\",\n
       \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
-      \"assistant\",\n        \"content\": \"Thought: I now can give a great answer.\\nFinal
+      \"assistant\",\n        \"content\": \"Thought: I now can give a great answer\\nFinal
       Answer: The result of the math operation 1 + 1 is 2.\",\n        \"refusal\":
       null\n      },\n      \"logprobs\": null,\n      \"finish_reason\": \"stop\"\n
       \   }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 163,\n    \"completion_tokens\":
@@ -57,7 +57,7 @@ interactions:
       CF-Cache-Status:
       - DYNAMIC
       CF-RAY:
-      - 8c2699624b2914f2-LAX
+      - 8c3f8d767dd6497e-MIA
       Connection:
       - keep-alive
       Content-Encoding:
@@ -65,14 +65,14 @@ interactions:
       Content-Type:
       - application/json
       Date:
-      - Fri, 13 Sep 2024 07:59:40 GMT
+      - Mon, 16 Sep 2024 08:40:36 GMT
       Server:
       - cloudflare
       Set-Cookie:
-      - __cf_bm=r6BNUnXat.26mviZiJYUf7Qj4ea5gbt_oPxyClKcVOE-1726214380-1.0.1.1-2S3G10sPdiG2syQSO8wKWXE7Nmdgt88imgakr81w9DemMH8mVDg0q6r9ANx6tM4_CPvgGQlMVstDhDRkIDwhzg;
-        path=/; expires=Fri, 13-Sep-24 08:29:40 GMT; domain=.api.openai.com; HttpOnly;
+      - __cf_bm=1SckBhvJ18Dazp6bi8DEKYeiS9Q4.6_6i3nmLBw9b6g-1726476036-1.0.1.1-TnN4UpDXA33YXCVCUWOaZ12vGIg_o5NpJQEUHgjn6XdUgb7M0ND8PdkTfkd8rrxG5XFlPRMzI54GxZ0FeUY9xw;
+        path=/; expires=Mon, 16-Sep-24 09:10:36 GMT; domain=.api.openai.com; HttpOnly;
         Secure; SameSite=None
-      - _cfuvid=dp2yoCmGHVlURh_U78_UoIfnhcO5UhufnL5whkUSMTQ-1726214380689-0.0.1.1-604800000;
+      - _cfuvid=0Rs4xTPk7h7OIXuSbTgMVVD9JSoZeKMwnygKHoHQo3k-1726476036297-0.0.1.1-604800000;
         path=/; domain=.api.openai.com; HttpOnly; Secure; SameSite=None
       Transfer-Encoding:
       - chunked
@@ -85,7 +85,7 @@ interactions:
       openai-organization:
       - crewai-iuxna1
       openai-processing-ms:
-      - '391'
+      - '439'
       openai-version:
       - '2020-10-01'
       strict-transport-security:
@@ -103,7 +103,7 @@ interactions:
       x-ratelimit-reset-tokens:
       - 0s
       x-request-id:
-      - req_ee64113c0ccf03c69b2cb1911423a3a2
+      - req_28dc8af842732f2615e9ee26069abc8e
     http_version: HTTP/1.1
     status_code: 200
 version: 1

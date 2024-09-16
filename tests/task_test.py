@@ -443,7 +443,7 @@ def test_output_pydantic_to_another_task():
     assert isinstance(
         pydantic_result, ScoreOutput
     ), "Expected pydantic result to be of type ScoreOutput"
-    assert 5 == pydantic_result.score
+    assert 3 == pydantic_result.score
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
@@ -556,7 +556,7 @@ def test_save_task_pydantic_output():
 
     output_file_exists = os.path.exists("score.json")
     assert output_file_exists
-    assert {"score": 5} == json.loads(open("score.json").read())
+    assert {"score": 4} == json.loads(open("score.json").read())
     if output_file_exists:
         os.remove("score.json")
 
@@ -685,7 +685,7 @@ def test_increment_tool_errors():
     with patch.object(Task, "increment_tools_errors") as increment_tools_errors:
         increment_tools_errors.return_value = None
         crew.kickoff()
-        assert len(increment_tools_errors.mock_calls) == 12
+        assert len(increment_tools_errors.mock_calls) == 9
 
 
 def test_task_definition_based_on_dict():

@@ -1,5 +1,67 @@
 interactions:
 - request:
+    body: !!binary |
+      CvQNCiQKIgoMc2VydmljZS5uYW1lEhIKEGNyZXdBSS10ZWxlbWV0cnkSyw0KEgoQY3Jld2FpLnRl
+      bGVtZXRyeRKcAQoQedulLaHnKIknaMbYMJnrURII9pBXAlq4vb8qClRvb2wgVXNhZ2UwATkYhSWi
+      Sa31F0EQjCuiSa31F0oaCg5jcmV3YWlfdmVyc2lvbhIICgYwLjU2LjNKKAoJdG9vbF9uYW1lEhsK
+      GURlbGVnYXRlIHdvcmsgdG8gY293b3JrZXJKDgoIYXR0ZW1wdHMSAhgBegIYAYUBAAEAABKVDAoQ
+      2VkiN174W/Swm+8FtbnQABIIpClEEw9wypsqDENyZXcgQ3JlYXRlZDABOVC3EDhKrfUXQai0FThK
+      rfUXShoKDmNyZXdhaV92ZXJzaW9uEggKBjAuNTYuM0oaCg5weXRob25fdmVyc2lvbhIICgYzLjEx
+      LjdKLgoIY3Jld19rZXkSIgogNmRkMDk4OWFiOWM2M2VlYTNjNzhiZWQ2NTdmYzUzZGZKMQoHY3Jl
+      d19pZBImCiQ1ZTM5MDI0My1mNGEyLTRkOWYtODQwNi01YzhjOGNiMWEzMjlKHgoMY3Jld19wcm9j
+      ZXNzEg4KDGhpZXJhcmNoaWNhbEoRCgtjcmV3X21lbW9yeRICEABKGgoUY3Jld19udW1iZXJfb2Zf
+      dGFza3MSAhgBShsKFWNyZXdfbnVtYmVyX29mX2FnZW50cxICGANKvwcKC2NyZXdfYWdlbnRzEq8H
+      CqwHW3sia2V5IjogIjlhNTAxNWVmNDg5NWRjNjI3OGQ1NDgxOGJhNDQ2YWY3IiwgImlkIjogImZl
+      YTZiMjliLWUzNDYtNGZjNi04ZTMzLTc1NzU2ZmNlMjY0MyIsICJyb2xlIjogIlNlbmlvciBXcml0
+      ZXIiLCAidmVyYm9zZT8iOiBmYWxzZSwgIm1heF9pdGVyIjogMTUsICJtYXhfcnBtIjogbnVsbCwg
+      ImZ1bmN0aW9uX2NhbGxpbmdfbGxtIjogbnVsbCwgImxsbSI6ICJncHQtNG8iLCAiZGVsZWdhdGlv
+      bl9lbmFibGVkPyI6IGZhbHNlLCAiYWxsb3dfY29kZV9leGVjdXRpb24/IjogZmFsc2UsICJtYXhf
+      cmV0cnlfbGltaXQiOiAyLCAidG9vbHNfbmFtZXMiOiBbXX0sIHsia2V5IjogIjhiZDIxMzliNTk3
+      NTE4MTUwNmU0MWZkOWM0NTYzZDc1IiwgImlkIjogImQ1N2VhNTkyLTgwY2YtNDk4YS04ZGQxLTY1
+      N2VjNWJlYWFmMyIsICJyb2xlIjogIlJlc2VhcmNoZXIiLCAidmVyYm9zZT8iOiBmYWxzZSwgIm1h
+      eF9pdGVyIjogMTUsICJtYXhfcnBtIjogbnVsbCwgImZ1bmN0aW9uX2NhbGxpbmdfbGxtIjogbnVs
+      bCwgImxsbSI6ICJncHQtNG8iLCAiZGVsZWdhdGlvbl9lbmFibGVkPyI6IGZhbHNlLCAiYWxsb3df
+      Y29kZV9leGVjdXRpb24/IjogZmFsc2UsICJtYXhfcmV0cnlfbGltaXQiOiAyLCAidG9vbHNfbmFt
+      ZXMiOiBbXX0sIHsia2V5IjogIjMyODIxN2I2YzI5NTliZGZjNDdjYWQwMGU4NDg5MGQwIiwgImlk
+      IjogImRlOTEwNzJmLTVlM2YtNDlmMS05Y2NiLTE5ZTdkY2RjNGJmNCIsICJyb2xlIjogIkNFTyIs
+      ICJ2ZXJib3NlPyI6IGZhbHNlLCAibWF4X2l0ZXIiOiAxNSwgIm1heF9ycG0iOiBudWxsLCAiZnVu
+      Y3Rpb25fY2FsbGluZ19sbG0iOiBudWxsLCAibGxtIjogImdwdC00byIsICJkZWxlZ2F0aW9uX2Vu
+      YWJsZWQ/IjogdHJ1ZSwgImFsbG93X2NvZGVfZXhlY3V0aW9uPyI6IGZhbHNlLCAibWF4X3JldHJ5
+      X2xpbWl0IjogMiwgInRvb2xzX25hbWVzIjogW119XUqBAgoKY3Jld190YXNrcxLyAQrvAVt7Imtl
+      eSI6ICJkYzZiYmM2Y2U3YTllNWMxZmZhMDA3ZThhZTIxYzc4YiIsICJpZCI6ICIyMzk1NmMxYS1l
+      YmRlLTQ5ZDctYTRhMS01ODQyY2U2YTJjNzEiLCAiYXN5bmNfZXhlY3V0aW9uPyI6IHRydWUsICJo
+      dW1hbl9pbnB1dD8iOiBmYWxzZSwgImFnZW50X3JvbGUiOiAiU2VuaW9yIFdyaXRlciIsICJhZ2Vu
+      dF9rZXkiOiAiOWE1MDE1ZWY0ODk1ZGM2Mjc4ZDU0ODE4YmE0NDZhZjciLCAidG9vbHNfbmFtZXMi
+      OiBbXX1degIYAYUBAAEAAA==
+    headers:
+      Accept:
+      - '*/*'
+      Accept-Encoding:
+      - gzip, deflate
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '1783'
+      Content-Type:
+      - application/x-protobuf
+      User-Agent:
+      - OTel-OTLP-Exporter-Python/1.27.0
+    method: POST
+    uri: https://telemetry.crewai.com:4319/v1/traces
+  response:
+    body:
+      string: "\n\0"
+    headers:
+      Content-Length:
+      - '2'
+      Content-Type:
+      - application/x-protobuf
+      Date:
+      - Mon, 16 Sep 2024 08:49:27 GMT
+    status:
+      code: 200
+      message: OK
+- request:
     body: '{"messages": [{"role": "system", "content": "You are Crew Manager. You
       are a seasoned manager with a knack for getting the best out of your team.\nYou
       are also known for your ability to delegate work to the right people, and to
@@ -37,7 +99,7 @@ interactions:
       criteria for your final answer: A single paragraph with 4 sentences.\nyou MUST
       return the actual complete content as the final answer, not a summary.\n\nBegin!
       This is VERY important to you, use the tools available and give your best Final
-      Answer, your job depends on it!\n\nThought:"}], "model": "gpt-4o", "stop": ["\nObservation"]}'
+      Answer, your job depends on it!\n\nThought:"}], "model": "gpt-4o", "stop": ["\nObservation:"]}'
     headers:
       accept:
       - application/json
@@ -46,12 +108,12 @@ interactions:
       connection:
       - keep-alive
       content-length:
-      - '2975'
+      - '2976'
       content-type:
       - application/json
       cookie:
-      - __cf_bm=pgsskMPipgeSB6HhnkjwcOEfengIvt0p9whKNmTJVLs-1726215280-1.0.1.1-Gtqb.nO1U.cHTnd9mR9sEA5tpVo1.pexRrxqXOkn.6Mzja8mLG1URJsOLTfjMAAYpWaUQe4Rjmnr6lqQk5hAxQ;
-        _cfuvid=dp2yoCmGHVlURh_U78_UoIfnhcO5UhufnL5whkUSMTQ-1726214380689-0.0.1.1-604800000
+      - __cf_bm=1SckBhvJ18Dazp6bi8DEKYeiS9Q4.6_6i3nmLBw9b6g-1726476036-1.0.1.1-TnN4UpDXA33YXCVCUWOaZ12vGIg_o5NpJQEUHgjn6XdUgb7M0ND8PdkTfkd8rrxG5XFlPRMzI54GxZ0FeUY9xw;
+        _cfuvid=0Rs4xTPk7h7OIXuSbTgMVVD9JSoZeKMwnygKHoHQo3k-1726476036297-0.0.1.1-604800000
       host:
       - api.openai.com
       user-agent:
@@ -75,28 +137,26 @@ interactions:
     method: POST
     uri: https://api.openai.com/v1/chat/completions
   response:
-    content: "{\n  \"id\": \"chatcmpl-A6vl2zDFjs2z1oDxDv75HcB216AZc\",\n  \"object\":
-      \"chat.completion\",\n  \"created\": 1726215352,\n  \"model\": \"gpt-4o-2024-05-13\",\n
+    content: "{\n  \"id\": \"chatcmpl-A81iBHGYcRvhKJ8xFOsQbh0m2krFW\",\n  \"object\":
+      \"chat.completion\",\n  \"created\": 1726476567,\n  \"model\": \"gpt-4o-2024-05-13\",\n
       \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
-      \"assistant\",\n        \"content\": \"Thought: I need to delegate this task
-      to our Senior Writer for the best results. I will provide a detailed context
-      about the task to ensure they understand what is required.\\n\\nAction: Delegate
-      work to coworker\\nAction Input: {\\\"task\\\": \\\"Write one amazing paragraph
-      about AI.\\\", \\\"context\\\": \\\"The task is to write a single paragraph
-      about Artificial Intelligence (AI) that is both informative and engaging. The
-      paragraph should consist of exactly four sentences. It should highlight AI's
-      capabilities, its impact on various industries, and its potential future advancements.
-      The tone should be optimistic and insightful, showcasing AI as a significant
-      innovation in technology.\\\", \\\"coworker\\\": \\\"Senior Writer\\\"}\",\n
-      \       \"refusal\": null\n      },\n      \"logprobs\": null,\n      \"finish_reason\":
-      \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 647,\n    \"completion_tokens\":
-      135,\n    \"total_tokens\": 782,\n    \"completion_tokens_details\": {\n      \"reasoning_tokens\":
-      0\n    }\n  },\n  \"system_fingerprint\": \"fp_25624ae3a5\"\n}\n"
+      \"assistant\",\n        \"content\": \"Thought: I need to delegate the task
+      of writing an amazing paragraph about AI with the specified criteria to our
+      Senior Writer. Providing clear and complete context will ensure that the Senior
+      Writer can execute the task effectively.\\n\\nAction: Delegate work to coworker\\nAction
+      Input: {\\\"coworker\\\": \\\"Senior Writer\\\", \\\"task\\\": \\\"Write one
+      amazing paragraph about AI\\\", \\\"context\\\": \\\"The paragraph should be
+      a single paragraph with exactly 4 sentences. It should be both engaging and
+      informative, highlighting the current impact, potential benefits, and future
+      possibilities of AI.\\\"}\\n\",\n        \"refusal\": null\n      },\n      \"logprobs\":
+      null,\n      \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\":
+      647,\n    \"completion_tokens\": 112,\n    \"total_tokens\": 759,\n    \"completion_tokens_details\":
+      {\n      \"reasoning_tokens\": 0\n    }\n  },\n  \"system_fingerprint\": \"fp_25624ae3a5\"\n}\n"
     headers:
       CF-Cache-Status:
       - DYNAMIC
       CF-RAY:
-      - 8c26b11aadc52ab9-LAX
+      - 8c3f9a6e0d0a2233-MIA
       Connection:
       - keep-alive
       Content-Encoding:
@@ -104,7 +164,7 @@ interactions:
       Content-Type:
       - application/json
       Date:
-      - Fri, 13 Sep 2024 08:15:54 GMT
+      - Mon, 16 Sep 2024 08:49:29 GMT
       Server:
       - cloudflare
       Transfer-Encoding:
@@ -118,7 +178,7 @@ interactions:
       openai-organization:
       - crewai-iuxna1
       openai-processing-ms:
-      - '1920'
+      - '1781'
       openai-version:
       - '2020-10-01'
       strict-transport-security:
@@ -136,7 +196,7 @@ interactions:
       x-ratelimit-reset-tokens:
       - 1ms
       x-request-id:
-      - req_6a6bba4e9164ee4331dedc1179855fe8
+      - req_77c7c6285138df32d459d2e078594a1d
     http_version: HTTP/1.1
     status_code: 200
 - request:
@@ -148,17 +208,15 @@ interactions:
       I now can give a great answer\nFinal Answer: Your final answer must be the great
       and the most complete as possible, it must be outcome described.\n\nI MUST use
       these formats, my job depends on it!"}, {"role": "user", "content": "\nCurrent
-      Task: Write one amazing paragraph about AI.\n\nThis is the expect criteria for
+      Task: Write one amazing paragraph about AI\n\nThis is the expect criteria for
       your final answer: Your best answer to your coworker asking you this, accounting
       for the context shared.\nyou MUST return the actual complete content as the
       final answer, not a summary.\n\nThis is the context you''re working with:\nThe
-      task is to write a single paragraph about Artificial Intelligence (AI) that
-      is both informative and engaging. The paragraph should consist of exactly four
-      sentences. It should highlight AI''s capabilities, its impact on various industries,
-      and its potential future advancements. The tone should be optimistic and insightful,
-      showcasing AI as a significant innovation in technology.\n\nBegin! This is VERY
-      important to you, use the tools available and give your best Final Answer, your
-      job depends on it!\n\nThought:"}], "model": "gpt-4o", "stop": ["\nObservation"]}'
+      paragraph should be a single paragraph with exactly 4 sentences. It should be
+      both engaging and informative, highlighting the current impact, potential benefits,
+      and future possibilities of AI.\n\nBegin! This is VERY important to you, use
+      the tools available and give your best Final Answer, your job depends on it!\n\nThought:"}],
+      "model": "gpt-4o", "stop": ["\nObservation:"]}'
     headers:
       accept:
       - application/json
@@ -167,12 +225,12 @@ interactions:
       connection:
       - keep-alive
       content-length:
-      - '1525'
+      - '1338'
       content-type:
       - application/json
       cookie:
-      - __cf_bm=pgsskMPipgeSB6HhnkjwcOEfengIvt0p9whKNmTJVLs-1726215280-1.0.1.1-Gtqb.nO1U.cHTnd9mR9sEA5tpVo1.pexRrxqXOkn.6Mzja8mLG1URJsOLTfjMAAYpWaUQe4Rjmnr6lqQk5hAxQ;
-        _cfuvid=dp2yoCmGHVlURh_U78_UoIfnhcO5UhufnL5whkUSMTQ-1726214380689-0.0.1.1-604800000
+      - __cf_bm=1SckBhvJ18Dazp6bi8DEKYeiS9Q4.6_6i3nmLBw9b6g-1726476036-1.0.1.1-TnN4UpDXA33YXCVCUWOaZ12vGIg_o5NpJQEUHgjn6XdUgb7M0ND8PdkTfkd8rrxG5XFlPRMzI54GxZ0FeUY9xw;
+        _cfuvid=0Rs4xTPk7h7OIXuSbTgMVVD9JSoZeKMwnygKHoHQo3k-1726476036297-0.0.1.1-604800000
       host:
       - api.openai.com
       user-agent:
@@ -196,29 +254,29 @@ interactions:
     method: POST
     uri: https://api.openai.com/v1/chat/completions
   response:
-    content: "{\n  \"id\": \"chatcmpl-A6vl5zjvrEI8Bfz7JiDLObqiGYXgX\",\n  \"object\":
-      \"chat.completion\",\n  \"created\": 1726215355,\n  \"model\": \"gpt-4o-2024-05-13\",\n
+    content: "{\n  \"id\": \"chatcmpl-A81iD7R2czEGtv4oyHHvoI5yJTWCo\",\n  \"object\":
+      \"chat.completion\",\n  \"created\": 1726476569,\n  \"model\": \"gpt-4o-2024-05-13\",\n
       \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
-      \"assistant\",\n        \"content\": \"I now can give a great answer.\\nFinal
-      Answer: Artificial Intelligence (AI) is revolutionizing the technological landscape
-      with its ability to analyze vast datasets, learn from patterns, and make autonomous
-      decisions with unprecedented precision. Across various industries\u2014ranging
-      from healthcare and finance to transportation and entertainment\u2014AI is enhancing
-      efficiencies, reducing costs, and enabling innovations that were previously
-      unimaginable. As AI continues to evolve, it promises groundbreaking advancements
-      such as personalized medicine, smarter cities, and more intuitive human-machine
-      interactions, making it a cornerstone of future technological progress. The
-      optimism surrounding AI is fueled by its immense potential to solve complex
-      problems and improve the quality of life, ushering in a new era of innovation
-      and opportunity.\",\n        \"refusal\": null\n      },\n      \"logprobs\":
-      null,\n      \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\":
-      281,\n    \"completion_tokens\": 139,\n    \"total_tokens\": 420,\n    \"completion_tokens_details\":
+      \"assistant\",\n        \"content\": \"Thought: I now can give a great answer\\n\\nFinal
+      Answer: Artificial Intelligence (AI) is revolutionizing industries by automating
+      complex tasks, improving efficiency, and enhancing decision-making processes,
+      making it an indispensable tool in today's technological landscape. Its current
+      impact spans sectors such as healthcare, where AI-driven diagnostics outperform
+      traditional methods, to finance, where it predicts market trends with unprecedented
+      accuracy. Beyond these immediate benefits, the potential for AI is boundless;
+      future advancements promise innovations like self-aware machines and more personalized
+      human-computer interactions that could reshape society as we know it. As we
+      continue to push the boundaries of what AI can achieve, it's crucial to navigate
+      ethical considerations and ensure these powerful technologies are developed
+      responsibly.\",\n        \"refusal\": null\n      },\n      \"logprobs\": null,\n
+      \     \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\":
+      250,\n    \"completion_tokens\": 141,\n    \"total_tokens\": 391,\n    \"completion_tokens_details\":
       {\n      \"reasoning_tokens\": 0\n    }\n  },\n  \"system_fingerprint\": \"fp_25624ae3a5\"\n}\n"
     headers:
       CF-Cache-Status:
       - DYNAMIC
       CF-RAY:
-      - 8c26b1302ef12ab9-LAX
+      - 8c3f9a7e79b02233-MIA
       Connection:
       - keep-alive
       Content-Encoding:
@@ -226,7 +284,7 @@ interactions:
       Content-Type:
       - application/json
       Date:
-      - Fri, 13 Sep 2024 08:15:57 GMT
+      - Mon, 16 Sep 2024 08:49:31 GMT
       Server:
       - cloudflare
       Transfer-Encoding:
@@ -240,7 +298,7 @@ interactions:
       openai-organization:
       - crewai-iuxna1
       openai-processing-ms:
-      - '2007'
+      - '1489'
       openai-version:
       - '2020-10-01'
       strict-transport-security:
@@ -252,15 +310,49 @@ interactions:
       x-ratelimit-remaining-requests:
       - '9999'
       x-ratelimit-remaining-tokens:
-      - '29999636'
+      - '29999683'
       x-ratelimit-reset-requests:
       - 6ms
       x-ratelimit-reset-tokens:
       - 0s
       x-request-id:
-      - req_6f6f98ac1c1e9df95ad0c1cbd4f6106a
+      - req_4ee8c586ff7b530cee8ef4ef22d99898
     http_version: HTTP/1.1
     status_code: 200
+- request:
+    body: !!binary |
+      CtwBCiQKIgoMc2VydmljZS5uYW1lEhIKEGNyZXdBSS10ZWxlbWV0cnkSswEKEgoQY3Jld2FpLnRl
+      bGVtZXRyeRKcAQoQQUxwEuLr/BXw2lxhhM60PxIIjyAUQWJqzpEqClRvb2wgVXNhZ2UwATkwQAFH
+      S631F0EgAQVHS631F0oaCg5jcmV3YWlfdmVyc2lvbhIICgYwLjU2LjNKKAoJdG9vbF9uYW1lEhsK
+      GURlbGVnYXRlIHdvcmsgdG8gY293b3JrZXJKDgoIYXR0ZW1wdHMSAhgBegIYAYUBAAEAAA==
+    headers:
+      Accept:
+      - '*/*'
+      Accept-Encoding:
+      - gzip, deflate
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '223'
+      Content-Type:
+      - application/x-protobuf
+      User-Agent:
+      - OTel-OTLP-Exporter-Python/1.27.0
+    method: POST
+    uri: https://telemetry.crewai.com:4319/v1/traces
+  response:
+    body:
+      string: "\n\0"
+    headers:
+      Content-Length:
+      - '2'
+      Content-Type:
+      - application/x-protobuf
+      Date:
+      - Mon, 16 Sep 2024 08:49:32 GMT
+    status:
+      code: 200
+      message: OK
 - request:
     body: '{"messages": [{"role": "system", "content": "You are Crew Manager. You
       are a seasoned manager with a knack for getting the best out of your team.\nYou
@@ -300,26 +392,24 @@ interactions:
       return the actual complete content as the final answer, not a summary.\n\nBegin!
       This is VERY important to you, use the tools available and give your best Final
       Answer, your job depends on it!\n\nThought:"}, {"role": "assistant", "content":
-      "Thought: I need to delegate this task to our Senior Writer for the best results.
-      I will provide a detailed context about the task to ensure they understand what
-      is required.\n\nAction: Delegate work to coworker\nAction Input: {\"task\":
-      \"Write one amazing paragraph about AI.\", \"context\": \"The task is to write
-      a single paragraph about Artificial Intelligence (AI) that is both informative
-      and engaging. The paragraph should consist of exactly four sentences. It should
-      highlight AI''s capabilities, its impact on various industries, and its potential
-      future advancements. The tone should be optimistic and insightful, showcasing
-      AI as a significant innovation in technology.\", \"coworker\": \"Senior Writer\"}\nObservation:
-      Artificial Intelligence (AI) is revolutionizing the technological landscape
-      with its ability to analyze vast datasets, learn from patterns, and make autonomous
-      decisions with unprecedented precision. Across various industries\u2014ranging
-      from healthcare and finance to transportation and entertainment\u2014AI is enhancing
-      efficiencies, reducing costs, and enabling innovations that were previously
-      unimaginable. As AI continues to evolve, it promises groundbreaking advancements
-      such as personalized medicine, smarter cities, and more intuitive human-machine
-      interactions, making it a cornerstone of future technological progress. The
-      optimism surrounding AI is fueled by its immense potential to solve complex
-      problems and improve the quality of life, ushering in a new era of innovation
-      and opportunity."}], "model": "gpt-4o", "stop": ["\nObservation"]}'
+      "Thought: I need to delegate the task of writing an amazing paragraph about
+      AI with the specified criteria to our Senior Writer. Providing clear and complete
+      context will ensure that the Senior Writer can execute the task effectively.\n\nAction:
+      Delegate work to coworker\nAction Input: {\"coworker\": \"Senior Writer\", \"task\":
+      \"Write one amazing paragraph about AI\", \"context\": \"The paragraph should
+      be a single paragraph with exactly 4 sentences. It should be both engaging and
+      informative, highlighting the current impact, potential benefits, and future
+      possibilities of AI.\"}\n\nObservation: Artificial Intelligence (AI) is revolutionizing
+      industries by automating complex tasks, improving efficiency, and enhancing
+      decision-making processes, making it an indispensable tool in today''s technological
+      landscape. Its current impact spans sectors such as healthcare, where AI-driven
+      diagnostics outperform traditional methods, to finance, where it predicts market
+      trends with unprecedented accuracy. Beyond these immediate benefits, the potential
+      for AI is boundless; future advancements promise innovations like self-aware
+      machines and more personalized human-computer interactions that could reshape
+      society as we know it. As we continue to push the boundaries of what AI can
+      achieve, it''s crucial to navigate ethical considerations and ensure these powerful
+      technologies are developed responsibly."}], "model": "gpt-4o", "stop": ["\nObservation:"]}'
     headers:
       accept:
       - application/json
@@ -328,12 +418,12 @@ interactions:
       connection:
       - keep-alive
       content-length:
-      - '4550'
+      - '4423'
       content-type:
       - application/json
       cookie:
-      - __cf_bm=pgsskMPipgeSB6HhnkjwcOEfengIvt0p9whKNmTJVLs-1726215280-1.0.1.1-Gtqb.nO1U.cHTnd9mR9sEA5tpVo1.pexRrxqXOkn.6Mzja8mLG1URJsOLTfjMAAYpWaUQe4Rjmnr6lqQk5hAxQ;
-        _cfuvid=dp2yoCmGHVlURh_U78_UoIfnhcO5UhufnL5whkUSMTQ-1726214380689-0.0.1.1-604800000
+      - __cf_bm=1SckBhvJ18Dazp6bi8DEKYeiS9Q4.6_6i3nmLBw9b6g-1726476036-1.0.1.1-TnN4UpDXA33YXCVCUWOaZ12vGIg_o5NpJQEUHgjn6XdUgb7M0ND8PdkTfkd8rrxG5XFlPRMzI54GxZ0FeUY9xw;
+        _cfuvid=0Rs4xTPk7h7OIXuSbTgMVVD9JSoZeKMwnygKHoHQo3k-1726476036297-0.0.1.1-604800000
       host:
       - api.openai.com
       user-agent:
@@ -357,29 +447,29 @@ interactions:
     method: POST
     uri: https://api.openai.com/v1/chat/completions
   response:
-    content: "{\n  \"id\": \"chatcmpl-A6vl8Md8wLZ7VmnR2BDMzuZZ47Tal\",\n  \"object\":
-      \"chat.completion\",\n  \"created\": 1726215358,\n  \"model\": \"gpt-4o-2024-05-13\",\n
+    content: "{\n  \"id\": \"chatcmpl-A81iF4tDVNh3Xvx6j28egZymcjqvV\",\n  \"object\":
+      \"chat.completion\",\n  \"created\": 1726476571,\n  \"model\": \"gpt-4o-2024-05-13\",\n
       \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
-      \"assistant\",\n        \"content\": \"Thought: I now know the final answer.\\nFinal
-      Answer: Artificial Intelligence (AI) is revolutionizing the technological landscape
-      with its ability to analyze vast datasets, learn from patterns, and make autonomous
-      decisions with unprecedented precision. Across various industries\u2014ranging
-      from healthcare and finance to transportation and entertainment\u2014AI is enhancing
-      efficiencies, reducing costs, and enabling innovations that were previously
-      unimaginable. As AI continues to evolve, it promises groundbreaking advancements
-      such as personalized medicine, smarter cities, and more intuitive human-machine
-      interactions, making it a cornerstone of future technological progress. The
-      optimism surrounding AI is fueled by its immense potential to solve complex
-      problems and improve the quality of life, ushering in a new era of innovation
-      and opportunity.\",\n        \"refusal\": null\n      },\n      \"logprobs\":
-      null,\n      \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\":
-      916,\n    \"completion_tokens\": 140,\n    \"total_tokens\": 1056,\n    \"completion_tokens_details\":
+      \"assistant\",\n        \"content\": \"Thought: I now know the final answer.\\n\\nFinal
+      Answer: Artificial Intelligence (AI) is revolutionizing industries by automating
+      complex tasks, improving efficiency, and enhancing decision-making processes,
+      making it an indispensable tool in today's technological landscape. Its current
+      impact spans sectors such as healthcare, where AI-driven diagnostics outperform
+      traditional methods, to finance, where it predicts market trends with unprecedented
+      accuracy. Beyond these immediate benefits, the potential for AI is boundless;
+      future advancements promise innovations like self-aware machines and more personalized
+      human-computer interactions that could reshape society as we know it. As we
+      continue to push the boundaries of what AI can achieve, it's crucial to navigate
+      ethical considerations and ensure these powerful technologies are developed
+      responsibly.\",\n        \"refusal\": null\n      },\n      \"logprobs\": null,\n
+      \     \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\":
+      893,\n    \"completion_tokens\": 140,\n    \"total_tokens\": 1033,\n    \"completion_tokens_details\":
       {\n      \"reasoning_tokens\": 0\n    }\n  },\n  \"system_fingerprint\": \"fp_25624ae3a5\"\n}\n"
     headers:
       CF-Cache-Status:
       - DYNAMIC
       CF-RAY:
-      - 8c26b142beb42ab9-LAX
+      - 8c3f9a8a4ccd2233-MIA
       Connection:
       - keep-alive
       Content-Encoding:
@@ -387,7 +477,7 @@ interactions:
       Content-Type:
       - application/json
       Date:
-      - Fri, 13 Sep 2024 08:16:00 GMT
+      - Mon, 16 Sep 2024 08:49:33 GMT
       Server:
       - cloudflare
       Transfer-Encoding:
@@ -401,7 +491,7 @@ interactions:
       openai-organization:
       - crewai-iuxna1
       openai-processing-ms:
-      - '2209'
+      - '2028'
       openai-version:
       - '2020-10-01'
       strict-transport-security:
@@ -413,13 +503,13 @@ interactions:
       x-ratelimit-remaining-requests:
       - '9999'
       x-ratelimit-remaining-tokens:
-      - '29998899'
+      - '29998929'
       x-ratelimit-reset-requests:
       - 6ms
       x-ratelimit-reset-tokens:
       - 2ms
       x-request-id:
-      - req_f01c9a3794f9ceeec3e1ffb6944804dd
+      - req_a6303d2e5a6600fa1cf89021032ad258
     http_version: HTTP/1.1
     status_code: 200
 version: 1

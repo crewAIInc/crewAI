@@ -749,9 +749,6 @@ class Crew(BaseModel):
                     task.tools.append(new_tool)
 
     def _log_task_start(self, task: Task, role: str = "None"):
-        color = self._logging_color
-        self._logger.log("debug", f"== Working Agent: {role}", color=color)
-        self._logger.log("info", f"== Starting Task: {task.description}", color=color)
         if self.output_log_file:
             self._file_handler.log(agent=role, task=task.description, status="started")
 
@@ -774,7 +771,6 @@ class Crew(BaseModel):
 
     def _process_task_result(self, task: Task, output: TaskOutput) -> None:
         role = task.agent.role if task.agent is not None else "None"
-        self._logger.log("debug", f"== [{role}] Task output: {output}\n\n")
         if self.output_log_file:
             self._file_handler.log(agent=role, task=output, status="completed")
 

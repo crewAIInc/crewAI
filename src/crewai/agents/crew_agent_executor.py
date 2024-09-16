@@ -1,10 +1,12 @@
+import json
+import re
 from typing import Any, Dict, List, Union
 
 from crewai.agents.agent_builder.base_agent_executor_mixin import CrewAgentExecutorMixin
 from crewai.agents.parser import CrewAgentParser
 from crewai.agents.tools_handler import ToolsHandler
 from crewai.tools.tool_usage import ToolUsage, ToolUsageErrorException
-from crewai.utilities import I18N
+from crewai.utilities import I18N, Printer
 from crewai.utilities.constants import TRAINING_DATA_FILE
 from crewai.utilities.exceptions.context_window_exceeding_exception import (
     LLMContextLengthExceededException,
@@ -12,7 +14,12 @@ from crewai.utilities.exceptions.context_window_exceeding_exception import (
 from crewai.utilities.logger import Logger
 from crewai.utilities.training_handler import CrewTrainingHandler
 from crewai.llm import LLM
-from crewai.agents.parser import AgentAction, AgentFinish, OutputParserException
+from crewai.agents.parser import (
+    AgentAction,
+    AgentFinish,
+    OutputParserException,
+    FINAL_ANSWER_AND_PARSABLE_ACTION_ERROR_MESSAGE,
+)
 
 
 class CrewAgentExecutor(CrewAgentExecutorMixin):
@@ -28,6 +35,7 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
         max_iter: int,
         tools: List[Any],
         tools_names: str,
+        use_stop_words: bool,
         stop_words: List[str],
         tools_description: str,
         tools_handler: ToolsHandler,
@@ -49,9 +57,11 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
         self.stop = stop_words
         self.max_iter = max_iter
         self.callbacks = callbacks
+        self._printer: Printer = Printer()
         self.tools_handler = tools_handler
         self.original_tools = original_tools
         self.step_callback = step_callback
+        self.use_stop_words = use_stop_words
         self.tools_description = tools_description
         self.function_calling_llm = function_calling_llm
         self.respect_context_window = respect_context_window
@@ -72,8 +82,10 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
         else:
             user_prompt = self._format_prompt(self.prompt.get("prompt", ""), inputs)
             self.messages.append(self._format_msg(user_prompt))
-        self.ask_for_human_input = bool(inputs.get("ask_for_human_input", False))
 
+        self._show_start_logs()
+
+        self.ask_for_human_input = bool(inputs.get("ask_for_human_input", False))
         formatted_answer = self._invoke_loop()
 
         if self.ask_for_human_input:
@@ -84,7 +96,8 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
             # Making sure we only ask for it once, so disabling for the next thought loop
             self.ask_for_human_input = False
             self.messages.append(self._format_msg(f"Feedback: {human_feedback}"))
-            formatted_answer = self._invoke_loop(None)
+            formatted_answer = self._invoke_loop()
+
         return {"output": formatted_answer.output}
 
     def _invoke_loop(self, formatted_answer=None):
@@ -92,8 +105,20 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
             while not isinstance(formatted_answer, AgentFinish):
                 if not self.request_within_rpm_limit or self.request_within_rpm_limit():
                     answer = LLM(
-                        self.llm, stop=self.stop, callbacks=self.callbacks
+                        self.llm,
+                        stop=self.stop if self.use_stop_words else None,
+                        callbacks=self.callbacks,
                     ).call(self.messages)
+
+                    if not self.use_stop_words:
+                        try:
+                            self._format_answer(answer)
+                        except OutputParserException as e:
+                            if (
+                                FINAL_ANSWER_AND_PARSABLE_ACTION_ERROR_MESSAGE
+                                in e.error
+                            ):
+                                answer = answer.split("Observation:")[0].strip()
 
                     self.iterations += 1
                     formatted_answer = self._format_answer(answer)
@@ -101,39 +126,89 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
                     if isinstance(formatted_answer, AgentAction):
                         action_result = self._use_tool(formatted_answer)
                         formatted_answer.text += f"\nObservation: {action_result}"
+                        formatted_answer.result = action_result
+                        self._show_logs(formatted_answer)
 
                         if self.step_callback:
-                            formatted_answer.result = action_result
                             self.step_callback(formatted_answer)
+
                         if self._should_force_answer():
                             if self.have_forced_answer:
-                                return {
-                                    "output": self._i18n.errors(
+                                return AgentFinish(
+                                    output=self._i18n.errors(
                                         "force_final_answer_error"
-                                    ).format(formatted_answer.text)
-                                }
+                                    ).format(formatted_answer.text),
+                                    text=formatted_answer.text,
+                                )
                             else:
                                 formatted_answer.text += (
                                     f'\n{self._i18n.errors("force_final_answer")}'
                                 )
                                 self.have_forced_answer = True
-
                         self.messages.append(
                             self._format_msg(formatted_answer.text, role="assistant")
                         )
-
         except OutputParserException as e:
             self.messages.append({"role": "assistant", "content": e.error})
-            self._invoke_loop(formatted_answer)
+            return self._invoke_loop(formatted_answer)
 
         except Exception as e:
             if LLMContextLengthExceededException(str(e))._is_context_limit_error(
                 str(e)
             ):
                 self._handle_context_length()
-                self._invoke_loop(formatted_answer)
+                return self._invoke_loop(formatted_answer)
+            else:
+                raise e
 
+        self._show_logs(formatted_answer)
         return formatted_answer
+
+    def _show_start_logs(self):
+        if self.agent.verbose or (
+            hasattr(self, "crew") and getattr(self.crew, "verbose", False)
+        ):
+            self._printer.print(
+                content=f"\033[1m\033[95m# Agent:\033[00m \033[1m\033[92m{self.agent.role}\033[00m"
+            )
+            self._printer.print(
+                content=f"\033[95m## Task:\033[00m \033[92m{self.task.description}\033[00m"
+            )
+
+    def _show_logs(self, formatted_answer: Union[AgentAction, AgentFinish]):
+        if self.agent.verbose or (
+            hasattr(self, "crew") and getattr(self.crew, "verbose", False)
+        ):
+            if isinstance(formatted_answer, AgentAction):
+                thought = re.sub(r"\n+", "\n", formatted_answer.thought)
+                formatted_json = json.dumps(
+                    json.loads(formatted_answer.tool_input),
+                    indent=2,
+                    ensure_ascii=False,
+                )
+                self._printer.print(
+                    content=f"\n\n\033[1m\033[95m# Agent:\033[00m \033[1m\033[92m{self.agent.role}\033[00m"
+                )
+                if thought and thought != "":
+                    self._printer.print(
+                        content=f"\033[95m## Thought:\033[00m \033[92m{thought}\033[00m"
+                    )
+                self._printer.print(
+                    content=f"\033[95m## Using tool:\033[00m \033[92m{formatted_answer.tool}\033[00m"
+                )
+                self._printer.print(
+                    content=f"\033[95m## Tool Input:\033[00m \033[92m\n{formatted_json}\033[00m"
+                )
+                self._printer.print(
+                    content=f"\033[95m## Tool Output:\033[00m \033[92m\n{formatted_answer.result}\033[00m"
+                )
+            elif isinstance(formatted_answer, AgentFinish):
+                self._printer.print(
+                    content=f"\n\n\033[1m\033[95m# Agent:\033[00m \033[1m\033[92m{self.agent.role}\033[00m"
+                )
+                self._printer.print(
+                    content=f"\033[95m## Final Answer:\033[00m \033[92m\n{formatted_answer.output}\033[00m"
+                )
 
     def _use_tool(self, agent_action: AgentAction) -> Any:
         tool_usage = ToolUsage(
