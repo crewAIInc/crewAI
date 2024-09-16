@@ -4,15 +4,28 @@ import asyncio
 import json
 import os
 import platform
+import warnings
 from typing import TYPE_CHECKING, Any, Optional
+from contextlib import contextmanager
 
-import pkg_resources
-from opentelemetry import trace
-from opentelemetry.exporter.otlp.proto.http.trace_exporter import OTLPSpanExporter
-from opentelemetry.sdk.resources import SERVICE_NAME, Resource
-from opentelemetry.sdk.trace import TracerProvider
-from opentelemetry.sdk.trace.export import BatchSpanProcessor
-from opentelemetry.trace import Span, Status, StatusCode
+
+@contextmanager
+def suppress_warnings():
+    with warnings.catch_warnings():
+        warnings.filterwarnings("ignore")
+        yield
+
+
+with suppress_warnings():
+    import pkg_resources
+
+
+from opentelemetry import trace  # noqa: E402
+from opentelemetry.exporter.otlp.proto.http.trace_exporter import OTLPSpanExporter  # noqa: E402
+from opentelemetry.sdk.resources import SERVICE_NAME, Resource  # noqa: E402
+from opentelemetry.sdk.trace import TracerProvider  # noqa: E402
+from opentelemetry.sdk.trace.export import BatchSpanProcessor  # noqa: E402
+from opentelemetry.trace import Span, Status, StatusCode  # noqa: E402
 
 if TYPE_CHECKING:
     from crewai.crew import Crew
@@ -62,8 +75,9 @@ class Telemetry:
     def set_tracer(self):
         if self.ready and not self.trace_set:
             try:
-                trace.set_tracer_provider(self.provider)
-                self.trace_set = True
+                with suppress_warnings():
+                    trace.set_tracer_provider(self.provider)
+                    self.trace_set = True
             except Exception:
                 self.ready = False
                 self.trace_set = False

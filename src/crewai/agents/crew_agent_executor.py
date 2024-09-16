@@ -83,6 +83,8 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
             user_prompt = self._format_prompt(self.prompt.get("prompt", ""), inputs)
             self.messages.append(self._format_msg(user_prompt))
 
+        self._show_start_logs()
+
         self.ask_for_human_input = bool(inputs.get("ask_for_human_input", False))
         formatted_answer = self._invoke_loop()
 
@@ -162,6 +164,17 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
         self._show_logs(formatted_answer)
         return formatted_answer
 
+    def _show_start_logs(self):
+        if self.agent.verbose or (
+            hasattr(self, "crew") and getattr(self.crew, "verbose", False)
+        ):
+            self._printer.print(
+                content=f"\033[1m\033[95m# Agent:\033[00m \033[1m\033[92m{self.agent.role}\033[00m"
+            )
+            self._printer.print(
+                content=f"\033[95m## Task:\033[00m \033[92m{self.task.description}\033[00m"
+            )
+
     def _show_logs(self, formatted_answer: Union[AgentAction, AgentFinish]):
         if self.agent.verbose or (
             hasattr(self, "crew") and getattr(self.crew, "verbose", False)
@@ -176,9 +189,10 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
                 self._printer.print(
                     content=f"\n\n\033[1m\033[95m# Agent:\033[00m \033[1m\033[92m{self.agent.role}\033[00m"
                 )
-                self._printer.print(
-                    content=f"\033[95m## Thought:\033[00m \033[92m{thought}\033[00m"
-                )
+                if thought and thought != "":
+                    self._printer.print(
+                        content=f"\033[95m## Thought:\033[00m \033[92m{thought}\033[00m"
+                    )
                 self._printer.print(
                     content=f"\033[95m## Using tool:\033[00m \033[92m{formatted_answer.tool}\033[00m"
                 )
