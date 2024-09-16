@@ -390,17 +390,17 @@ lxml = ["lxml"]
 
 [[package]]
 name = "boto3"
-version = "1.35.18"
+version = "1.35.19"
 description = "The AWS SDK for Python"
 optional = false
 python-versions = ">=3.8"
 files = [
-    {file = "boto3-1.35.18-py3-none-any.whl", hash = "sha256:71e237d3997cf93425947854d7b121c577944f391ba633afb0659e1015364704"},
-    {file = "boto3-1.35.18.tar.gz", hash = "sha256:fd130308f1f49d748a5fc63de92de79a995b51c79af3947ddde8815fcf0684fe"},
+    {file = "boto3-1.35.19-py3-none-any.whl", hash = "sha256:84b3fe1727945bc3cada832d969ddb3dc0d08fce1677064ca8bdc13a89c1a143"},
+    {file = "boto3-1.35.19.tar.gz", hash = "sha256:9979fe674780a0b7100eae9156d74ee374cd1638a9f61c77277e3ce712f3e496"},
 ]
 
 [package.dependencies]
-botocore = ">=1.35.18,<1.36.0"
+botocore = ">=1.35.19,<1.36.0"
 jmespath = ">=0.7.1,<2.0.0"
 s3transfer = ">=0.10.0,<0.11.0"
 
@@ -409,13 +409,13 @@ crt = ["botocore[crt] (>=1.21.0,<2.0a0)"]
 
 [[package]]
 name = "botocore"
-version = "1.35.18"
+version = "1.35.19"
 description = "Low-level, data-driven core of boto 3."
 optional = false
 python-versions = ">=3.8"
 files = [
-    {file = "botocore-1.35.18-py3-none-any.whl", hash = "sha256:1027083aeb1fe74057273410fd768e018e22f85adfbd717b5a69f578f7812b80"},
-    {file = "botocore-1.35.18.tar.gz", hash = "sha256:e59da8b91ab06683d2725b6cbbb0383b30c68a241c3c63363f4c5bff59b3c0c0"},
+    {file = "botocore-1.35.19-py3-none-any.whl", hash = "sha256:c83f7f0cacfe7c19b109b363ebfa8736e570d24922f16ed371681f58ebab44a9"},
+    {file = "botocore-1.35.19.tar.gz", hash = "sha256:42d6d8db7250cbd7899f786f9861e02cab17dc238f64d6acb976098ed9809625"},
 ]
 
 [package.dependencies]
@@ -833,13 +833,13 @@ colorama = {version = "*", markers = "platform_system == \"Windows\""}
 
 [[package]]
 name = "cohere"
-version = "5.9.1"
+version = "5.9.2"
 description = ""
 optional = false
 python-versions = "<4.0,>=3.8"
 files = [
-    {file = "cohere-5.9.1-py3-none-any.whl", hash = "sha256:8e1e1dde0e1a5ee5a3f22b890e0c927989f9326bab57b6b4be812a40e2565c3a"},
-    {file = "cohere-5.9.1.tar.gz", hash = "sha256:de9a828b91481882bf554e94a61ccc52843a09fbc58f53b8e1fa940b17ce1dc9"},
+    {file = "cohere-5.9.2-py3-none-any.whl", hash = "sha256:169ee06b0a54f8a913d42b19123bd72c1a72833275d544a52606d307f5547a7b"},
+    {file = "cohere-5.9.2.tar.gz", hash = "sha256:1860c527b2a8a5593873a342b0bf572220b6db7966c0782076b3f2740ab3d94d"},
 ]
 
 [package.dependencies]
@@ -1277,13 +1277,13 @@ test = ["pytest (>=6)"]
 
 [[package]]
 name = "fastapi"
-version = "0.114.1"
+version = "0.114.2"
 description = "FastAPI framework, high performance, easy to learn, fast to code, ready for production"
 optional = false
 python-versions = ">=3.8"
 files = [
-    {file = "fastapi-0.114.1-py3-none-any.whl", hash = "sha256:5d4746f6e4b7dff0b4f6b6c6d5445645285f662fe75886e99af7ee2d6b58bb3e"},
-    {file = "fastapi-0.114.1.tar.gz", hash = "sha256:1d7bbbeabbaae0acb0c22f0ab0b040f642d3093ca3645f8c876b6f91391861d8"},
+    {file = "fastapi-0.114.2-py3-none-any.whl", hash = "sha256:44474a22913057b1acb973ab90f4b671ba5200482e7622816d79105dcece1ac5"},
+    {file = "fastapi-0.114.2.tar.gz", hash = "sha256:0adb148b62edb09e8c6eeefa3ea934e8f276dabc038c5a82989ea6346050c3da"},
 ]
 
 [package.dependencies]
@@ -2255,13 +2255,13 @@ files = [
 
 [[package]]
 name = "identify"
-version = "2.6.0"
+version = "2.6.1"
 description = "File identification library for Python"
 optional = false
 python-versions = ">=3.8"
 files = [
-    {file = "identify-2.6.0-py2.py3-none-any.whl", hash = "sha256:e79ae4406387a9d300332b5fd366d8994f1525e8414984e1a59e058b2eda2dd0"},
-    {file = "identify-2.6.0.tar.gz", hash = "sha256:cb171c685bdc31bcc4c1734698736a7d5b6c8bf2e0c15117f4d469c8640ae5cf"},
+    {file = "identify-2.6.1-py2.py3-none-any.whl", hash = "sha256:53863bcac7caf8d2ed85bd20312ea5dcfc22226800f6d6881f232d861db5a8f0"},
+    {file = "identify-2.6.1.tar.gz", hash = "sha256:91478c5fb7c3aac5ff7bf9b4344f803843dc586832d5f110d672b19aa1984c98"},
 ]
 
 [package.extras]
@@ -2269,14 +2269,17 @@ license = ["ukkonen"]
 
 [[package]]
 name = "idna"
-version = "3.8"
+version = "3.10"
 description = "Internationalized Domain Names in Applications (IDNA)"
 optional = false
 python-versions = ">=3.6"
 files = [
-    {file = "idna-3.8-py3-none-any.whl", hash = "sha256:050b4e5baadcd44d760cedbd2b8e639f2ff89bbc7a5730fcc662954303377aac"},
-    {file = "idna-3.8.tar.gz", hash = "sha256:d838c2c0ed6fced7693d5e8ab8e734d5f8fda53a039c0164afb0b82e771e3603"},
+    {file = "idna-3.10-py3-none-any.whl", hash = "sha256:946d195a0d259cbba61165e88e65941f16e9b36ea6ddb97f00452bae8b1287d3"},
+    {file = "idna-3.10.tar.gz", hash = "sha256:12f65c9b470abda6dc35cf8e63cc574b1c52b11df2c86030af0ac09b01b13ea9"},
 ]
+
+[package.extras]
+all = ["flake8 (>=7.1.1)", "mypy (>=1.11.2)", "pytest (>=8.3.2)", "ruff (>=0.6.2)"]
 
 [[package]]
 name = "importlib-metadata"
@@ -2729,21 +2732,21 @@ langchain-community = ["langchain-community (>=0.2.4)"]
 
 [[package]]
 name = "langchain-community"
-version = "0.2.16"
+version = "0.2.17"
 description = "Community contributed LangChain integrations."
 optional = false
 python-versions = "<4.0,>=3.8.1"
 files = [
-    {file = "langchain_community-0.2.16-py3-none-any.whl", hash = "sha256:115e1419c176091d4e00240cb5a38612a249e70f213516b6cacae61a8794a868"},
-    {file = "langchain_community-0.2.16.tar.gz", hash = "sha256:ab416b793a7aed1fa46ebaffd29993296b02286a99819eabc43be2ea8e41ae78"},
+    {file = "langchain_community-0.2.17-py3-none-any.whl", hash = "sha256:d07c31b641e425fb8c3e7148ad6a62e1b54a9adac6e1173021a7dd3148266063"},
+    {file = "langchain_community-0.2.17.tar.gz", hash = "sha256:b0745c1fcf1bd532ed4388f90b47139d6a6c6ba48a87aa68aa32d4d6bb97259d"},
 ]
 
 [package.dependencies]
 aiohttp = ">=3.8.3,<4.0.0"
 dataclasses-json = ">=0.5.7,<0.7"
 langchain = ">=0.2.16,<0.3.0"
-langchain-core = ">=0.2.38,<0.3.0"
-langsmith = ">=0.1.0,<0.2.0"
+langchain-core = ">=0.2.39,<0.3.0"
+langsmith = ">=0.1.112,<0.2.0"
 numpy = [
     {version = ">=1,<2", markers = "python_version < \"3.12\""},
     {version = ">=1.26.0,<2.0.0", markers = "python_version >= \"3.12\""},
@@ -2755,13 +2758,13 @@ tenacity = ">=8.1.0,<8.4.0 || >8.4.0,<9.0.0"
 
 [[package]]
 name = "langchain-core"
-version = "0.2.39"
+version = "0.2.40"
 description = "Building applications with LLMs through composability"
 optional = false
 python-versions = "<4.0,>=3.8.1"
 files = [
-    {file = "langchain_core-0.2.39-py3-none-any.whl", hash = "sha256:5a5ad4e1c02d13e7021c026b2c7965069ad71ef67b018274cd52bab56e39143e"},
-    {file = "langchain_core-0.2.39.tar.gz", hash = "sha256:73d7b6f0b0212bc8069c3640d69e8d75faa51097784019ffa5c36c617c04acb0"},
+    {file = "langchain_core-0.2.40-py3-none-any.whl", hash = "sha256:71fff5cafa4b9c82a3a716e985f071383be452c35d8cc3169b3a393e6857fc99"},
+    {file = "langchain_core-0.2.40.tar.gz", hash = "sha256:c838ea0c0b73475a8e58ced3e306b6d926ef063721abd164f237c8664916f502"},
 ]
 
 [package.dependencies]
@@ -2793,17 +2796,17 @@ langchain-core = ">=0.2.38,<0.3.0"
 
 [[package]]
 name = "langchain-openai"
-version = "0.1.24"
+version = "0.1.25"
 description = "An integration package connecting OpenAI and LangChain"
 optional = false
 python-versions = "<4.0,>=3.8.1"
 files = [
-    {file = "langchain_openai-0.1.24-py3-none-any.whl", hash = "sha256:7dc27f1dd50090a409fb5e970b07aaf3ff32c027cc1e8da1d1272f950e93e02c"},
-    {file = "langchain_openai-0.1.24.tar.gz", hash = "sha256:3f7ef5c26d232685d3c367b7ec523799563c468725e4ca2e616d7c4a96bd16f3"},
+    {file = "langchain_openai-0.1.25-py3-none-any.whl", hash = "sha256:f0b34a233d0d9cb8fce6006c903e57085c493c4f0e32862b99063b96eaedb109"},
+    {file = "langchain_openai-0.1.25.tar.gz", hash = "sha256:eb116f744f820247a72f54313fb7c01524fba0927120d4e899e5e4ab41ad3928"},
 ]
 
 [package.dependencies]
-langchain-core = ">=0.2.39,<0.3.0"
+langchain-core = ">=0.2.40,<0.3.0"
 openai = ">=1.40.0,<2.0.0"
 tiktoken = ">=0.7,<1"
 
@@ -2843,13 +2846,13 @@ requests = ">=2,<3"
 
 [[package]]
 name = "litellm"
-version = "1.44.28"
+version = "1.46.0"
 description = "Library to easily interface with LLM API providers"
 optional = false
 python-versions = "!=2.7.*,!=3.0.*,!=3.1.*,!=3.2.*,!=3.3.*,!=3.4.*,!=3.5.*,!=3.6.*,!=3.7.*,>=3.8"
 files = [
-    {file = "litellm-1.44.28-py3-none-any.whl", hash = "sha256:a4476c1f076b7996a97bd5d51e53760be482f1ec888c0c626c7877d5c6ff0849"},
-    {file = "litellm-1.44.28.tar.gz", hash = "sha256:9a9055ce3f655201e4527786c219eaa98579c0134c031418bc38744fed3cd265"},
+    {file = "litellm-1.46.0-py3-none-any.whl", hash = "sha256:40209dc6368677d03b21b2c9d9cb91937c9648f741d42bb5a8f992a1cd31fb42"},
+    {file = "litellm-1.46.0.tar.gz", hash = "sha256:6707eb4b17a2eca714f81261c3b6f33297cd25470c4843b8297e345ebdff0560"},
 ]
 
 [package.dependencies]
@@ -4228,13 +4231,13 @@ testing = ["pytest", "pytest-cov", "wheel"]
 
 [[package]]
 name = "platformdirs"
-version = "4.3.2"
+version = "4.3.3"
 description = "A small Python package for determining appropriate platform-specific dirs, e.g. a `user data dir`."
 optional = false
 python-versions = ">=3.8"
 files = [
-    {file = "platformdirs-4.3.2-py3-none-any.whl", hash = "sha256:eb1c8582560b34ed4ba105009a4badf7f6f85768b30126f351328507b2beb617"},
-    {file = "platformdirs-4.3.2.tar.gz", hash = "sha256:9e5e27a08aa095dd127b9f2e764d74254f482fef22b0970773bfba79d091ab8c"},
+    {file = "platformdirs-4.3.3-py3-none-any.whl", hash = "sha256:50a5450e2e84f44539718293cbb1da0a0885c9d14adf21b77bae4e66fc99d9b5"},
+    {file = "platformdirs-4.3.3.tar.gz", hash = "sha256:d4e0b7d8ec176b341fb03cb11ca12d0276faa8c485f9cd218f613840463fc2c0"},
 ]
 
 [package.extras]
@@ -4837,14 +4840,17 @@ files = [
 
 [[package]]
 name = "pyreadline3"
-version = "3.4.3"
+version = "3.5.2"
 description = "A python implementation of GNU readline."
 optional = false
-python-versions = "*"
+python-versions = ">=3.8"
 files = [
-    {file = "pyreadline3-3.4.3-py3-none-any.whl", hash = "sha256:f832c5898f4f9a0f81d48a8c499b39d0179de1a465ea3def1a7e7231840b4ed6"},
-    {file = "pyreadline3-3.4.3.tar.gz", hash = "sha256:ebab0baca37f50e2faa1dd99a6da1c75de60e0d68a3b229c134bbd12786250e2"},
+    {file = "pyreadline3-3.5.2-py3-none-any.whl", hash = "sha256:a87d56791e2965b2b187e2ea33dcf664600842c997c0623c95cf8ef07db83de9"},
+    {file = "pyreadline3-3.5.2.tar.gz", hash = "sha256:ba82292e52c5a3bb256b291af0c40b457c1e8699cac9a873abbcaac8aef3a1bb"},
 ]
+
+[package.extras]
+dev = ["build", "flake8", "pytest", "twine"]
 
 [[package]]
 name = "pyright"
@@ -5665,18 +5671,18 @@ files = [
 
 [[package]]
 name = "setuptools"
-version = "74.1.2"
+version = "75.0.0"
 description = "Easily download, build, install, upgrade, and uninstall Python packages"
 optional = false
 python-versions = ">=3.8"
 files = [
-    {file = "setuptools-74.1.2-py3-none-any.whl", hash = "sha256:5f4c08aa4d3ebcb57a50c33b1b07e94315d7fc7230f7115e47fc99776c8ce308"},
-    {file = "setuptools-74.1.2.tar.gz", hash = "sha256:95b40ed940a1c67eb70fc099094bd6e99c6ee7c23aa2306f4d2697ba7916f9c6"},
+    {file = "setuptools-75.0.0-py3-none-any.whl", hash = "sha256:791ae94f04f78c880b5e614e560dd32d4b4af5d151bd9e7483e3377846caf90a"},
+    {file = "setuptools-75.0.0.tar.gz", hash = "sha256:25af69c809d9334cd8e653d385277abeb5a102dca255954005a7092d282575ea"},
 ]
 
 [package.extras]
 check = ["pytest-checkdocs (>=2.4)", "pytest-ruff (>=0.2.1)", "ruff (>=0.5.2)"]
-core = ["importlib-metadata (>=6)", "importlib-resources (>=5.10.2)", "jaraco.text (>=3.7)", "more-itertools (>=8.8)", "packaging (>=24)", "platformdirs (>=2.6.2)", "tomli (>=2.0.1)", "wheel (>=0.43.0)"]
+core = ["importlib-metadata (>=6)", "importlib-resources (>=5.10.2)", "jaraco.collections", "jaraco.functools", "jaraco.text (>=3.7)", "more-itertools", "more-itertools (>=8.8)", "packaging", "packaging (>=24)", "platformdirs (>=2.6.2)", "tomli (>=2.0.1)", "wheel (>=0.43.0)"]
 cover = ["pytest-cov"]
 doc = ["furo", "jaraco.packaging (>=9.3)", "jaraco.tidelift (>=1.4)", "pygments-github-lexers (==0.0.5)", "pyproject-hooks (!=1.1)", "rst.linker (>=1.9)", "sphinx (>=3.5)", "sphinx-favicon", "sphinx-inline-tabs", "sphinx-lint", "sphinx-notfound-page (>=1,<2)", "sphinx-reredirects", "sphinxcontrib-towncrier", "towncrier (<24.7)"]
 enabler = ["pytest-enabler (>=2.2)"]
@@ -6255,13 +6261,13 @@ typing-extensions = ">=3.7.4.3"
 
 [[package]]
 name = "types-requests"
-version = "2.32.0.20240907"
+version = "2.32.0.20240914"
 description = "Typing stubs for requests"
 optional = false
 python-versions = ">=3.8"
 files = [
-    {file = "types-requests-2.32.0.20240907.tar.gz", hash = "sha256:ff33935f061b5e81ec87997e91050f7b4af4f82027a7a7a9d9aaea04a963fdf8"},
-    {file = "types_requests-2.32.0.20240907-py3-none-any.whl", hash = "sha256:1d1e79faeaf9d42def77f3c304893dea17a97cae98168ac69f3cb465516ee8da"},
+    {file = "types-requests-2.32.0.20240914.tar.gz", hash = "sha256:2850e178db3919d9bf809e434eef65ba49d0e7e33ac92d588f4a5e295fffd405"},
+    {file = "types_requests-2.32.0.20240914-py3-none-any.whl", hash = "sha256:59c2f673eb55f32a99b2894faf6020e1a9f4a402ad0f192bfee0b64469054310"},
 ]
 
 [package.dependencies]
@@ -6962,13 +6968,13 @@ multidict = ">=4.0"
 
 [[package]]
 name = "zipp"
-version = "3.20.1"
+version = "3.20.2"
 description = "Backport of pathlib-compatible object wrapper for zip files"
 optional = false
 python-versions = ">=3.8"
 files = [
-    {file = "zipp-3.20.1-py3-none-any.whl", hash = "sha256:9960cd8967c8f85a56f920d5d507274e74f9ff813a0ab8889a5b5be2daf44064"},
-    {file = "zipp-3.20.1.tar.gz", hash = "sha256:c22b14cc4763c5a5b04134207736c107db42e9d3ef2d9779d465f5f1bcba572b"},
+    {file = "zipp-3.20.2-py3-none-any.whl", hash = "sha256:a817ac80d6cf4b23bf7f2828b7cabf326f15a001bea8b1f9b49631780ba28350"},
+    {file = "zipp-3.20.2.tar.gz", hash = "sha256:bc9eb26f4506fda01b81bcde0ca78103b6e62f991b381fec825435c836edbc29"},
 ]
 
 [package.extras]

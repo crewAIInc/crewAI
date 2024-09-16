@@ -46,8 +46,8 @@ interactions:
       content-type:
       - application/json
       cookie:
-      - __cf_bm=xCQEG8vgEvQfut0bkj2xgre9z9ePZhdKdNxBphhvH6s-1726437753-1.0.1.1-5qo0zwDCcKDtqvIzDbp2sLEPCey8v5DAsf0Mg6f2RmooOW9FXTw2P66VCTTF.vCwTpWBIFk0vzKmBAPOt6urIg;
-        _cfuvid=TiTyEciy7HrUlIDEsELZqkUyM4Fyn8OldZd4JefFMOA-1726437753108-0.0.1.1-604800000
+      - __cf_bm=1SckBhvJ18Dazp6bi8DEKYeiS9Q4.6_6i3nmLBw9b6g-1726476036-1.0.1.1-TnN4UpDXA33YXCVCUWOaZ12vGIg_o5NpJQEUHgjn6XdUgb7M0ND8PdkTfkd8rrxG5XFlPRMzI54GxZ0FeUY9xw;
+        _cfuvid=0Rs4xTPk7h7OIXuSbTgMVVD9JSoZeKMwnygKHoHQo3k-1726476036297-0.0.1.1-604800000
       host:
       - api.openai.com
       user-agent:
@@ -71,26 +71,25 @@ interactions:
     method: POST
     uri: https://api.openai.com/v1/chat/completions
   response:
-    content: "{\n  \"id\": \"chatcmpl-A7rmnx690ZOwNuTIxji78FdjhzrwF\",\n  \"object\":
-      \"chat.completion\",\n  \"created\": 1726438413,\n  \"model\": \"gpt-4o-2024-05-13\",\n
+    content: "{\n  \"id\": \"chatcmpl-A81l8X2YQ0TtLiK8jDndhlyHEJJBX\",\n  \"object\":
+      \"chat.completion\",\n  \"created\": 1726476750,\n  \"model\": \"gpt-4o-2024-05-13\",\n
       \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
-      \"assistant\",\n        \"content\": \"To provide an integer score between 1-5
-      for the given title, I need the expertise of a scorer.\\n\\nAction: Delegate
-      work to coworker\\nAction Input: {\\\"task\\\": \\\"Give an integer score between
-      1-5 for the following title: 'The impact of AI in the future of work'\\\", \\\"context\\\":
-      \\\"You need to score the title based on a given scale of 1-5, where 1 is the
-      lowest and 5 is the highest. The score should reflect the relevance, engagement,
-      and impact of the title. This is a critical task, so please evaluate carefully.\\\",
-      \\\"coworker\\\": \\\"Scorer\\\"}\",\n        \"refusal\": null\n      },\n
-      \     \"logprobs\": null,\n      \"finish_reason\": \"stop\"\n    }\n  ],\n
-      \ \"usage\": {\n    \"prompt_tokens\": 584,\n    \"completion_tokens\": 132,\n
-      \   \"total_tokens\": 716,\n    \"completion_tokens_details\": {\n      \"reasoning_tokens\":
+      \"assistant\",\n        \"content\": \"To provide an accurate score for the
+      title, I need to delegate the task to the Scorer with all necessary context.\\n\\nAction:
+      Delegate work to coworker\\nAction Input: {\\n    \\\"coworker\\\": \\\"Scorer\\\",
+      \\n    \\\"task\\\": \\\"Provide an integer score between 1-5 for the following
+      title: 'The impact of AI in the future of work'\\\",\\n    \\\"context\\\":
+      \\\"The score should reflect how compelling and relevant the title is regarding
+      the integration and impact of Artificial Intelligence on future work scenarios.\\\"\\n}\",\n
+      \       \"refusal\": null\n      },\n      \"logprobs\": null,\n      \"finish_reason\":
+      \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 584,\n    \"completion_tokens\":
+      107,\n    \"total_tokens\": 691,\n    \"completion_tokens_details\": {\n      \"reasoning_tokens\":
       0\n    }\n  },\n  \"system_fingerprint\": \"fp_25624ae3a5\"\n}\n"
     headers:
       CF-Cache-Status:
       - DYNAMIC
       CF-RAY:
-      - 8c3bf6f31ac7a4ca-MIA
+      - 8c3f9ee7efeb2233-MIA
       Connection:
       - keep-alive
       Content-Encoding:
@@ -98,7 +97,7 @@ interactions:
       Content-Type:
       - application/json
       Date:
-      - Sun, 15 Sep 2024 22:13:34 GMT
+      - Mon, 16 Sep 2024 08:52:31 GMT
       Server:
       - cloudflare
       Transfer-Encoding:
@@ -112,7 +111,7 @@ interactions:
       openai-organization:
       - crewai-iuxna1
       openai-processing-ms:
-      - '1197'
+      - '1342'
       openai-version:
       - '2020-10-01'
       strict-transport-security:
@@ -130,70 +129,9 @@ interactions:
       x-ratelimit-reset-tokens:
       - 1ms
       x-request-id:
-      - req_22ccd035c585d177a3064725202117cc
+      - req_2e50a53cea35304479bf2471a6a1ef58
     http_version: HTTP/1.1
     status_code: 200
-- request:
-    body: !!binary |
-      Cr8NCiQKIgoMc2VydmljZS5uYW1lEhIKEGNyZXdBSS10ZWxlbWV0cnkSlg0KEgoQY3Jld2FpLnRl
-      bGVtZXRyeRKcAQoQx0vMisshHVqjUHeJY/3uJRIIob6+ZmPL+ZAqClRvb2wgVXNhZ2UwATnYzoSg
-      lor1F0HYRYaglor1F0oaCg5jcmV3YWlfdmVyc2lvbhIICgYwLjU2LjBKKAoJdG9vbF9uYW1lEhsK
-      GURlbGVnYXRlIHdvcmsgdG8gY293b3JrZXJKDgoIYXR0ZW1wdHMSAhgBegIYAYUBAAEAABLPCQoQ
-      3DM1KAUayFeqqcsorHuy5xIIXwANUXIl6VMqDENyZXcgQ3JlYXRlZDABOTj/UuyWivUXQXArWOyW
-      ivUXShoKDmNyZXdhaV92ZXJzaW9uEggKBjAuNTYuMEoaCg5weXRob25fdmVyc2lvbhIICgYzLjEx
-      LjdKLgoIY3Jld19rZXkSIgogNzQyNzU3MzEyZWY3YmI0ZWUwYjA2NjJkMWMyZTIxNzlKMQoHY3Jl
-      d19pZBImCiQ3OGQzYjIyMy1hMGY2LTRkMDEtYjQyZi0wMmRhZDc3ZDJjMTVKHAoMY3Jld19wcm9j
-      ZXNzEgwKCnNlcXVlbnRpYWxKEQoLY3Jld19tZW1vcnkSAhAAShoKFGNyZXdfbnVtYmVyX29mX3Rh
-      c2tzEgIYAUobChVjcmV3X251bWJlcl9vZl9hZ2VudHMSAhgCSoAFCgtjcmV3X2FnZW50cxLwBArt
-      BFt7ImtleSI6ICI4OWNmMzExYjQ4YjUyMTY5ZDQyZjM5MjVjNWJlMWM1YSIsICJpZCI6ICI0YzU2
-      YzkwOC1hNjZmLTRjZWQtOTRjOS1iZGQyZTIxMTU2MDMiLCAicm9sZSI6ICJNYW5hZ2VyIiwgInZl
-      cmJvc2U/IjogZmFsc2UsICJtYXhfaXRlciI6IDE1LCAibWF4X3JwbSI6IG51bGwsICJmdW5jdGlv
-      bl9jYWxsaW5nX2xsbSI6IG51bGwsICJsbG0iOiAiZ3B0LTRvIiwgImRlbGVnYXRpb25fZW5hYmxl
-      ZD8iOiB0cnVlLCAiYWxsb3dfY29kZV9leGVjdXRpb24/IjogZmFsc2UsICJtYXhfcmV0cnlfbGlt
-      aXQiOiAyLCAidG9vbHNfbmFtZXMiOiBbXX0sIHsia2V5IjogIjkyZTdlYjE5MTY2NGM5MzU3ODVl
-      ZDdkNDI0MGEyOTRkIiwgImlkIjogIjUxY2ExMTYyLTE5MmItNDQwNi1hYzc4LTk1OTBkMTUzNmJm
-      NyIsICJyb2xlIjogIlNjb3JlciIsICJ2ZXJib3NlPyI6IGZhbHNlLCAibWF4X2l0ZXIiOiAxNSwg
-      Im1heF9ycG0iOiBudWxsLCAiZnVuY3Rpb25fY2FsbGluZ19sbG0iOiBudWxsLCAibGxtIjogImdw
-      dC00byIsICJkZWxlZ2F0aW9uX2VuYWJsZWQ/IjogdHJ1ZSwgImFsbG93X2NvZGVfZXhlY3V0aW9u
-      PyI6IGZhbHNlLCAibWF4X3JldHJ5X2xpbWl0IjogMiwgInRvb2xzX25hbWVzIjogW119XUr8AQoK
-      Y3Jld190YXNrcxLtAQrqAVt7ImtleSI6ICIyN2VmMzhjYzk5ZGE0YThkZWQ3MGVkNDA2ZTQ0YWI4
-      NiIsICJpZCI6ICJhMDljMzQ1Ni1kN2FmLTRkNDctODMxMS05ZTkyNGQ2MWI3Y2YiLCAiYXN5bmNf
-      ZXhlY3V0aW9uPyI6IGZhbHNlLCAiaHVtYW5faW5wdXQ/IjogZmFsc2UsICJhZ2VudF9yb2xlIjog
-      Ik1hbmFnZXIiLCAiYWdlbnRfa2V5IjogIjg5Y2YzMTFiNDhiNTIxNjlkNDJmMzkyNWM1YmUxYzVh
-      IiwgInRvb2xzX25hbWVzIjogW119XXoCGAGFAQABAAASjgIKECMskOva+CAdcfrJzrS+5ZISCB84
-      qtaLIezaKgxUYXNrIENyZWF0ZWQwATl4YwPtlor1F0HIJgTtlor1F0ouCghjcmV3X2tleRIiCiA3
-      NDI3NTczMTJlZjdiYjRlZTBiMDY2MmQxYzJlMjE3OUoxCgdjcmV3X2lkEiYKJDc4ZDNiMjIzLWEw
-      ZjYtNGQwMS1iNDJmLTAyZGFkNzdkMmMxNUouCgh0YXNrX2tleRIiCiAyN2VmMzhjYzk5ZGE0YThk
-      ZWQ3MGVkNDA2ZTQ0YWI4NkoxCgd0YXNrX2lkEiYKJGEwOWMzNDU2LWQ3YWYtNGQ0Ny04MzExLTll
-      OTI0ZDYxYjdjZnoCGAGFAQABAAA=
-    headers:
-      Accept:
-      - '*/*'
-      Accept-Encoding:
-      - gzip, deflate
-      Connection:
-      - keep-alive
-      Content-Length:
-      - '1730'
-      Content-Type:
-      - application/x-protobuf
-      User-Agent:
-      - OTel-OTLP-Exporter-Python/1.27.0
-    method: POST
-    uri: https://telemetry.crewai.com:4319/v1/traces
-  response:
-    body:
-      string: "\n\0"
-    headers:
-      Content-Length:
-      - '2'
-      Content-Type:
-      - application/x-protobuf
-      Date:
-      - Sun, 15 Sep 2024 22:13:35 GMT
-    status:
-      code: 200
-      message: OK
 - request:
     body: '{"messages": [{"role": "system", "content": "You are Scorer. You''re an
       expert scorer, specialized in scoring titles.\nYour personal goal is: Score
@@ -201,14 +139,13 @@ interactions:
       format:\n\nThought: I now can give a great answer\nFinal Answer: Your final
       answer must be the great and the most complete as possible, it must be outcome
       described.\n\nI MUST use these formats, my job depends on it!"}, {"role": "user",
-      "content": "\nCurrent Task: Give an integer score between 1-5 for the following
+      "content": "\nCurrent Task: Provide an integer score between 1-5 for the following
       title: ''The impact of AI in the future of work''\n\nThis is the expect criteria
       for your final answer: Your best answer to your coworker asking you this, accounting
       for the context shared.\nyou MUST return the actual complete content as the
-      final answer, not a summary.\n\nThis is the context you''re working with:\nYou
-      need to score the title based on a given scale of 1-5, where 1 is the lowest
-      and 5 is the highest. The score should reflect the relevance, engagement, and
-      impact of the title. This is a critical task, so please evaluate carefully.\n\nBegin!
+      final answer, not a summary.\n\nThis is the context you''re working with:\nThe
+      score should reflect how compelling and relevant the title is regarding the
+      integration and impact of Artificial Intelligence on future work scenarios.\n\nBegin!
       This is VERY important to you, use the tools available and give your best Final
       Answer, your job depends on it!\n\nThought:"}], "model": "gpt-4o", "stop": ["\nObservation:"]}'
     headers:
@@ -219,12 +156,12 @@ interactions:
       connection:
       - keep-alive
       content-length:
-      - '1282'
+      - '1206'
       content-type:
       - application/json
       cookie:
-      - __cf_bm=xCQEG8vgEvQfut0bkj2xgre9z9ePZhdKdNxBphhvH6s-1726437753-1.0.1.1-5qo0zwDCcKDtqvIzDbp2sLEPCey8v5DAsf0Mg6f2RmooOW9FXTw2P66VCTTF.vCwTpWBIFk0vzKmBAPOt6urIg;
-        _cfuvid=TiTyEciy7HrUlIDEsELZqkUyM4Fyn8OldZd4JefFMOA-1726437753108-0.0.1.1-604800000
+      - __cf_bm=1SckBhvJ18Dazp6bi8DEKYeiS9Q4.6_6i3nmLBw9b6g-1726476036-1.0.1.1-TnN4UpDXA33YXCVCUWOaZ12vGIg_o5NpJQEUHgjn6XdUgb7M0ND8PdkTfkd8rrxG5XFlPRMzI54GxZ0FeUY9xw;
+        _cfuvid=0Rs4xTPk7h7OIXuSbTgMVVD9JSoZeKMwnygKHoHQo3k-1726476036297-0.0.1.1-604800000
       host:
       - api.openai.com
       user-agent:
@@ -248,26 +185,19 @@ interactions:
     method: POST
     uri: https://api.openai.com/v1/chat/completions
   response:
-    content: "{\n  \"id\": \"chatcmpl-A7rmoIjP6VS4449ru5aoSUlvLWEQa\",\n  \"object\":
-      \"chat.completion\",\n  \"created\": 1726438414,\n  \"model\": \"gpt-4o-2024-05-13\",\n
+    content: "{\n  \"id\": \"chatcmpl-A81l9KA2dKXdw8jJrkcxKhWo5C6qT\",\n  \"object\":
+      \"chat.completion\",\n  \"created\": 1726476751,\n  \"model\": \"gpt-4o-2024-05-13\",\n
       \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
-      \"assistant\",\n        \"content\": \"Thought: I now can give a great answer\\n\\nFinal
-      Answer: I would give the title 'The impact of AI in the future of work' a score
-      of 5. The title is highly relevant given the widespread focus on artificial
-      intelligence and its implications for the future job market. It is engaging
-      as it taps into current technological trends and their potential transformative
-      effects. Additionally, the topic has considerable impact as it addresses a significant
-      area of interest for a broad audience, including professionals, policymakers,
-      and the general public who are keen on understanding how AI will shape the workforce.\",\n
-      \       \"refusal\": null\n      },\n      \"logprobs\": null,\n      \"finish_reason\":
-      \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 260,\n    \"completion_tokens\":
-      113,\n    \"total_tokens\": 373,\n    \"completion_tokens_details\": {\n      \"reasoning_tokens\":
-      0\n    }\n  },\n  \"system_fingerprint\": \"fp_992d1ea92d\"\n}\n"
+      \"assistant\",\n        \"content\": \"Thought: I now can give a great answer.\\nFinal
+      Answer: 4\",\n        \"refusal\": null\n      },\n      \"logprobs\": null,\n
+      \     \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\":
+      228,\n    \"completion_tokens\": 15,\n    \"total_tokens\": 243,\n    \"completion_tokens_details\":
+      {\n      \"reasoning_tokens\": 0\n    }\n  },\n  \"system_fingerprint\": \"fp_25624ae3a5\"\n}\n"
     headers:
       CF-Cache-Status:
       - DYNAMIC
       CF-RAY:
-      - 8c3bf6fc7effa4ca-MIA
+      - 8c3f9ef24a902233-MIA
       Connection:
       - keep-alive
       Content-Encoding:
@@ -275,7 +205,7 @@ interactions:
       Content-Type:
       - application/json
       Date:
-      - Sun, 15 Sep 2024 22:13:36 GMT
+      - Mon, 16 Sep 2024 08:52:32 GMT
       Server:
       - cloudflare
       Transfer-Encoding:
@@ -289,7 +219,7 @@ interactions:
       openai-organization:
       - crewai-iuxna1
       openai-processing-ms:
-      - '1182'
+      - '314'
       openai-version:
       - '2020-10-01'
       strict-transport-security:
@@ -301,13 +231,13 @@ interactions:
       x-ratelimit-remaining-requests:
       - '9999'
       x-ratelimit-remaining-tokens:
-      - '29999697'
+      - '29999717'
       x-ratelimit-reset-requests:
       - 6ms
       x-ratelimit-reset-tokens:
       - 0s
       x-request-id:
-      - req_3e90ecfb2998ad6a8a7679ea167223fc
+      - req_fa9e1407947c78169d0f8b70f031f80c
     http_version: HTTP/1.1
     status_code: 200
 - request:
@@ -344,22 +274,14 @@ interactions:
       your final answer: The score of the title.\nyou MUST return the actual complete
       content as the final answer, not a summary.\n\nBegin! This is VERY important
       to you, use the tools available and give your best Final Answer, your job depends
-      on it!\n\nThought:"}, {"role": "assistant", "content": "To provide an integer
-      score between 1-5 for the given title, I need the expertise of a scorer.\n\nAction:
-      Delegate work to coworker\nAction Input: {\"task\": \"Give an integer score
-      between 1-5 for the following title: ''The impact of AI in the future of work''\",
-      \"context\": \"You need to score the title based on a given scale of 1-5, where
-      1 is the lowest and 5 is the highest. The score should reflect the relevance,
-      engagement, and impact of the title. This is a critical task, so please evaluate
-      carefully.\", \"coworker\": \"Scorer\"}\nObservation: I would give the title
-      ''The impact of AI in the future of work'' a score of 5. The title is highly
-      relevant given the widespread focus on artificial intelligence and its implications
-      for the future job market. It is engaging as it taps into current technological
-      trends and their potential transformative effects. Additionally, the topic has
-      considerable impact as it addresses a significant area of interest for a broad
-      audience, including professionals, policymakers, and the general public who
-      are keen on understanding how AI will shape the workforce."}], "model": "gpt-4o",
-      "stop": ["\nObservation:"]}'
+      on it!\n\nThought:"}, {"role": "assistant", "content": "To provide an accurate
+      score for the title, I need to delegate the task to the Scorer with all necessary
+      context.\n\nAction: Delegate work to coworker\nAction Input: {\n    \"coworker\":
+      \"Scorer\", \n    \"task\": \"Provide an integer score between 1-5 for the following
+      title: ''The impact of AI in the future of work''\",\n    \"context\": \"The
+      score should reflect how compelling and relevant the title is regarding the
+      integration and impact of Artificial Intelligence on future work scenarios.\"\n}\nObservation:
+      4"}], "model": "gpt-4o", "stop": ["\nObservation:"]}'
     headers:
       accept:
       - application/json
@@ -368,12 +290,12 @@ interactions:
       connection:
       - keep-alive
       content-length:
-      - '3789'
+      - '3198'
       content-type:
       - application/json
       cookie:
-      - __cf_bm=xCQEG8vgEvQfut0bkj2xgre9z9ePZhdKdNxBphhvH6s-1726437753-1.0.1.1-5qo0zwDCcKDtqvIzDbp2sLEPCey8v5DAsf0Mg6f2RmooOW9FXTw2P66VCTTF.vCwTpWBIFk0vzKmBAPOt6urIg;
-        _cfuvid=TiTyEciy7HrUlIDEsELZqkUyM4Fyn8OldZd4JefFMOA-1726437753108-0.0.1.1-604800000
+      - __cf_bm=1SckBhvJ18Dazp6bi8DEKYeiS9Q4.6_6i3nmLBw9b6g-1726476036-1.0.1.1-TnN4UpDXA33YXCVCUWOaZ12vGIg_o5NpJQEUHgjn6XdUgb7M0ND8PdkTfkd8rrxG5XFlPRMzI54GxZ0FeUY9xw;
+        _cfuvid=0Rs4xTPk7h7OIXuSbTgMVVD9JSoZeKMwnygKHoHQo3k-1726476036297-0.0.1.1-604800000
       host:
       - api.openai.com
       user-agent:
@@ -397,19 +319,19 @@ interactions:
     method: POST
     uri: https://api.openai.com/v1/chat/completions
   response:
-    content: "{\n  \"id\": \"chatcmpl-A7rmqBb1WzihvtblpnWHVBeIiFFt4\",\n  \"object\":
-      \"chat.completion\",\n  \"created\": 1726438416,\n  \"model\": \"gpt-4o-2024-05-13\",\n
+    content: "{\n  \"id\": \"chatcmpl-A81lAXZSR28oNpAYfswuPOsPNrgwT\",\n  \"object\":
+      \"chat.completion\",\n  \"created\": 1726476752,\n  \"model\": \"gpt-4o-2024-05-13\",\n
       \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
       \"assistant\",\n        \"content\": \"Thought: I now know the final answer.\\n\\nFinal
-      Answer: 5\",\n        \"refusal\": null\n      },\n      \"logprobs\": null,\n
+      Answer: 4\",\n        \"refusal\": null\n      },\n      \"logprobs\": null,\n
       \     \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\":
-      822,\n    \"completion_tokens\": 14,\n    \"total_tokens\": 836,\n    \"completion_tokens_details\":
+      699,\n    \"completion_tokens\": 14,\n    \"total_tokens\": 713,\n    \"completion_tokens_details\":
       {\n      \"reasoning_tokens\": 0\n    }\n  },\n  \"system_fingerprint\": \"fp_25624ae3a5\"\n}\n"
     headers:
       CF-Cache-Status:
       - DYNAMIC
       CF-RAY:
-      - 8c3bf7062d4ba4ca-MIA
+      - 8c3f9ef61b6a2233-MIA
       Connection:
       - keep-alive
       Content-Encoding:
@@ -417,7 +339,7 @@ interactions:
       Content-Type:
       - application/json
       Date:
-      - Sun, 15 Sep 2024 22:13:36 GMT
+      - Mon, 16 Sep 2024 08:52:32 GMT
       Server:
       - cloudflare
       Transfer-Encoding:
@@ -431,7 +353,7 @@ interactions:
       openai-organization:
       - crewai-iuxna1
       openai-processing-ms:
-      - '264'
+      - '289'
       openai-version:
       - '2020-10-01'
       strict-transport-security:
@@ -443,13 +365,13 @@ interactions:
       x-ratelimit-remaining-requests:
       - '9999'
       x-ratelimit-remaining-tokens:
-      - '29999087'
+      - '29999235'
       x-ratelimit-reset-requests:
       - 6ms
       x-ratelimit-reset-tokens:
       - 1ms
       x-request-id:
-      - req_caa2e98e111655b1f0c5aa4923aca441
+      - req_846b3a2ab18919d9a8657caeccaf99b1
     http_version: HTTP/1.1
     status_code: 200
 version: 1

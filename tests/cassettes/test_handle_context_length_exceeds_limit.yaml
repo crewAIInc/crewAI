@@ -23,8 +23,7 @@ interactions:
       content-type:
       - application/json
       cookie:
-      - __cf_bm=xCQEG8vgEvQfut0bkj2xgre9z9ePZhdKdNxBphhvH6s-1726437753-1.0.1.1-5qo0zwDCcKDtqvIzDbp2sLEPCey8v5DAsf0Mg6f2RmooOW9FXTw2P66VCTTF.vCwTpWBIFk0vzKmBAPOt6urIg;
-        _cfuvid=TiTyEciy7HrUlIDEsELZqkUyM4Fyn8OldZd4JefFMOA-1726437753108-0.0.1.1-604800000
+      - _cfuvid=0Rs4xTPk7h7OIXuSbTgMVVD9JSoZeKMwnygKHoHQo3k-1726476036297-0.0.1.1-604800000
       host:
       - api.openai.com
       user-agent:
@@ -48,19 +47,19 @@ interactions:
     method: POST
     uri: https://api.openai.com/v1/chat/completions
   response:
-    content: "{\n  \"id\": \"chatcmpl-A7rgi9YmucciE8LeIUb5410E5REUs\",\n  \"object\":
-      \"chat.completion\",\n  \"created\": 1726438036,\n  \"model\": \"gpt-4o-2024-05-13\",\n
+    content: "{\n  \"id\": \"chatcmpl-A824mxqYVyrqbpWBwwzsrHe4puiVy\",\n  \"object\":
+      \"chat.completion\",\n  \"created\": 1726477968,\n  \"model\": \"gpt-4o-2024-05-13\",\n
       \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
       \"assistant\",\n        \"content\": \"I now can give a great answer\\nFinal
-      Answer: 42\",\n        \"refusal\": null\n      },\n      \"logprobs\": null,\n
-      \     \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\":
-      175,\n    \"completion_tokens\": 13,\n    \"total_tokens\": 188,\n    \"completion_tokens_details\":
+      Answer: The final answer is 42.\",\n        \"refusal\": null\n      },\n      \"logprobs\":
+      null,\n      \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\":
+      175,\n    \"completion_tokens\": 18,\n    \"total_tokens\": 193,\n    \"completion_tokens_details\":
       {\n      \"reasoning_tokens\": 0\n    }\n  },\n  \"system_fingerprint\": \"fp_25624ae3a5\"\n}\n"
     headers:
       CF-Cache-Status:
       - DYNAMIC
       CF-RAY:
-      - 8c3bedbeb8f8a4ca-MIA
+      - 8c3fbca42cc1dab5-MIA
       Connection:
       - keep-alive
       Content-Encoding:
@@ -68,9 +67,13 @@ interactions:
       Content-Type:
       - application/json
       Date:
-      - Sun, 15 Sep 2024 22:07:16 GMT
+      - Mon, 16 Sep 2024 09:12:48 GMT
       Server:
       - cloudflare
+      Set-Cookie:
+      - __cf_bm=RMvuhMDiBolorpQCGgUkLshn_UfX6nT6Om_uP.PeWN4-1726477968-1.0.1.1-ZPA3_T2RJtkxCDTT_fpoi3IySCOIFpdmCAq7Ny6r.YgPO2mm0654TL3n2tcWPGf1apxYxMKIyOYTj5OH.SgQEg;
+        path=/; expires=Mon, 16-Sep-24 09:42:48 GMT; domain=.api.openai.com; HttpOnly;
+        Secure; SameSite=None
       Transfer-Encoding:
       - chunked
       X-Content-Type-Options:
@@ -82,7 +85,7 @@ interactions:
       openai-organization:
       - crewai-iuxna1
       openai-processing-ms:
-      - '214'
+      - '255'
       openai-version:
       - '2020-10-01'
       strict-transport-security:
@@ -100,7 +103,7 @@ interactions:
       x-ratelimit-reset-tokens:
       - 0s
       x-request-id:
-      - req_56afa3f69808755881448d77b65028ff
+      - req_91cbeb266b1673d5e6652139ca74a52d
     http_version: HTTP/1.1
     status_code: 200
 version: 1

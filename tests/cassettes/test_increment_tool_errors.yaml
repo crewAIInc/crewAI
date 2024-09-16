@@ -1,31 +1,28 @@
 interactions:
 - request:
     body: !!binary |
-      Cv4KCiQKIgoMc2VydmljZS5uYW1lEhIKEGNyZXdBSS10ZWxlbWV0cnkS1QoKEgoQY3Jld2FpLnRl
-      bGVtZXRyeRKcAQoQA7Ak8+HdTzZ8dCLXCVdlTRIISoSA+VSb7lEqClRvb2wgVXNhZ2UwATkg/0qi
-      l4r1F0EwkU6il4r1F0oaCg5jcmV3YWlfdmVyc2lvbhIICgYwLjU2LjBKKAoJdG9vbF9uYW1lEhsK
-      GURlbGVnYXRlIHdvcmsgdG8gY293b3JrZXJKDgoIYXR0ZW1wdHMSAhgBegIYAYUBAAEAABKQAgoQ
-      KjkmX8EFiXvnul0iUU8FeBIILGqDXSUeEugqDlRhc2sgRXhlY3V0aW9uMAE5eF0E7ZaK9RdByHEU
-      w5eK9RdKLgoIY3Jld19rZXkSIgogNzQyNzU3MzEyZWY3YmI0ZWUwYjA2NjJkMWMyZTIxNzlKMQoH
-      Y3Jld19pZBImCiQ3OGQzYjIyMy1hMGY2LTRkMDEtYjQyZi0wMmRhZDc3ZDJjMTVKLgoIdGFza19r
-      ZXkSIgogMjdlZjM4Y2M5OWRhNGE4ZGVkNzBlZDQwNmU0NGFiODZKMQoHdGFza19pZBImCiRhMDlj
-      MzQ1Ni1kN2FmLTRkNDctODMxMS05ZTkyNGQ2MWI3Y2Z6AhgBhQEAAQAAEowHChDQ96itfdmDGwuy
-      OGbKyut0EghHttlAQi/n4CoMQ3JldyBDcmVhdGVkMAE5KNr0xJeK9RdBmOX2xJeK9RdKGgoOY3Jl
-      d2FpX3ZlcnNpb24SCAoGMC41Ni4wShoKDnB5dGhvbl92ZXJzaW9uEggKBjMuMTEuN0ouCghjcmV3
-      X2tleRIiCiAzMDNiOGVkZDViMDA4NzEwZDc2YWFmODI1YTcwOWU1NUoxCgdjcmV3X2lkEiYKJDQ1
-      NmNhMGM0LTUyMGMtNDI0Zi04ZTExLTU5MjQ2NmY4OGYzZUoeCgxjcmV3X3Byb2Nlc3MSDgoMaGll
-      cmFyY2hpY2FsShEKC2NyZXdfbWVtb3J5EgIQAEoaChRjcmV3X251bWJlcl9vZl90YXNrcxICGAFK
-      GwoVY3Jld19udW1iZXJfb2ZfYWdlbnRzEgIYAUrcAgoLY3Jld19hZ2VudHMSzAIKyQJbeyJrZXki
-      OiAiOTJlN2ViMTkxNjY0YzkzNTc4NWVkN2Q0MjQwYTI5NGQiLCAiaWQiOiAiZmYyMDFiMzEtMDhj
-      Zi00YzZhLTgwODYtMmFlOWM5MzM4ZTY5IiwgInJvbGUiOiAiU2NvcmVyIiwgInZlcmJvc2U/Ijog
-      ZmFsc2UsICJtYXhfaXRlciI6IDE1LCAibWF4X3JwbSI6IG51bGwsICJmdW5jdGlvbl9jYWxsaW5n
-      X2xsbSI6IG51bGwsICJsbG0iOiAiZ3B0LTRvIiwgImRlbGVnYXRpb25fZW5hYmxlZD8iOiBmYWxz
-      ZSwgImFsbG93X2NvZGVfZXhlY3V0aW9uPyI6IGZhbHNlLCAibWF4X3JldHJ5X2xpbWl0IjogMiwg
-      InRvb2xzX25hbWVzIjogWyJzY29yaW5nX2V4YW1wbGVzIl19XUrbAQoKY3Jld190YXNrcxLMAQrJ
-      AVt7ImtleSI6ICJmMzU3NWIwMTNjMjI5NGI3Y2M4ZTgwMzE1NWM4YmE0NiIsICJpZCI6ICI3MDY5
-      M2ExMC1jODIwLTRiZjctODk3Ni1kMmY4ZGY5MmQ0OTUiLCAiYXN5bmNfZXhlY3V0aW9uPyI6IGZh
-      bHNlLCAiaHVtYW5faW5wdXQ/IjogZmFsc2UsICJhZ2VudF9yb2xlIjogIk5vbmUiLCAiYWdlbnRf
-      a2V5IjogbnVsbCwgInRvb2xzX25hbWVzIjogW119XXoCGAGFAQABAAA=
+      Ct8JCiQKIgoMc2VydmljZS5uYW1lEhIKEGNyZXdBSS10ZWxlbWV0cnkStgkKEgoQY3Jld2FpLnRl
+      bGVtZXRyeRKQAgoQwFRBlo7Sl0vlJIfvv+KB1hIIVZdX6FRHrUUqDlRhc2sgRXhlY3V0aW9uMAE5
+      2OfQ6XSt9RdBuJhUk3Wt9RdKLgoIY3Jld19rZXkSIgogNzQyNzU3MzEyZWY3YmI0ZWUwYjA2NjJk
+      MWMyZTIxNzlKMQoHY3Jld19pZBImCiQ1YmM3N2Y2Mi02MWIxLTRhNjgtOTY3Mi00MWExNTc1NDEw
+      NzVKLgoIdGFza19rZXkSIgogMjdlZjM4Y2M5OWRhNGE4ZGVkNzBlZDQwNmU0NGFiODZKMQoHdGFz
+      a19pZBImCiQ2M2M5MmQ1YS0yNDA1LTRlOWQtYmIwYS0xNWEyMDc4YjFhNDR6AhgBhQEAAQAAEowH
+      ChBXEGZ5lj9JyYlbuncl/SBBEggfeYyBBrAzWCoMQ3JldyBDcmVhdGVkMAE5sBvtk3Wt9RdBgBfv
+      k3Wt9RdKGgoOY3Jld2FpX3ZlcnNpb24SCAoGMC41Ni4zShoKDnB5dGhvbl92ZXJzaW9uEggKBjMu
+      MTEuN0ouCghjcmV3X2tleRIiCiAzMDNiOGVkZDViMDA4NzEwZDc2YWFmODI1YTcwOWU1NUoxCgdj
+      cmV3X2lkEiYKJDQ5OWRmZGJkLTM2NWQtNGU3Yy04ZmU1LWUwOWE0YWZjZDZlOEoeCgxjcmV3X3By
+      b2Nlc3MSDgoMaGllcmFyY2hpY2FsShEKC2NyZXdfbWVtb3J5EgIQAEoaChRjcmV3X251bWJlcl9v
+      Zl90YXNrcxICGAFKGwoVY3Jld19udW1iZXJfb2ZfYWdlbnRzEgIYAUrcAgoLY3Jld19hZ2VudHMS
+      zAIKyQJbeyJrZXkiOiAiOTJlN2ViMTkxNjY0YzkzNTc4NWVkN2Q0MjQwYTI5NGQiLCAiaWQiOiAi
+      ODQ1ZjFhNDMtYmNjMC00YzQyLWJiNTgtMjk0YWNmYjQwMjg0IiwgInJvbGUiOiAiU2NvcmVyIiwg
+      InZlcmJvc2U/IjogZmFsc2UsICJtYXhfaXRlciI6IDE1LCAibWF4X3JwbSI6IG51bGwsICJmdW5j
+      dGlvbl9jYWxsaW5nX2xsbSI6IG51bGwsICJsbG0iOiAiZ3B0LTRvIiwgImRlbGVnYXRpb25fZW5h
+      YmxlZD8iOiBmYWxzZSwgImFsbG93X2NvZGVfZXhlY3V0aW9uPyI6IGZhbHNlLCAibWF4X3JldHJ5
+      X2xpbWl0IjogMiwgInRvb2xzX25hbWVzIjogWyJzY29yaW5nX2V4YW1wbGVzIl19XUrbAQoKY3Jl
+      d190YXNrcxLMAQrJAVt7ImtleSI6ICJmMzU3NWIwMTNjMjI5NGI3Y2M4ZTgwMzE1NWM4YmE0NiIs
+      ICJpZCI6ICJhNjEwMjc5NS1iM2VlLTRmMTMtODQ3My03YWJiYTkzNTMzMzAiLCAiYXN5bmNfZXhl
+      Y3V0aW9uPyI6IGZhbHNlLCAiaHVtYW5faW5wdXQ/IjogZmFsc2UsICJhZ2VudF9yb2xlIjogIk5v
+      bmUiLCAiYWdlbnRfa2V5IjogbnVsbCwgInRvb2xzX25hbWVzIjogW119XXoCGAGFAQABAAA=
     headers:
       Accept:
       - '*/*'
@@ -34,7 +31,7 @@ interactions:
       Connection:
       - keep-alive
       Content-Length:
-      - '1409'
+      - '1250'
       Content-Type:
       - application/x-protobuf
       User-Agent:
@@ -50,7 +47,7 @@ interactions:
       Content-Type:
       - application/x-protobuf
       Date:
-      - Sun, 15 Sep 2024 22:13:40 GMT
+      - Mon, 16 Sep 2024 08:52:37 GMT
     status:
       code: 200
       message: OK
@@ -107,8 +104,8 @@ interactions:
       content-type:
       - application/json
       cookie:
-      - __cf_bm=xCQEG8vgEvQfut0bkj2xgre9z9ePZhdKdNxBphhvH6s-1726437753-1.0.1.1-5qo0zwDCcKDtqvIzDbp2sLEPCey8v5DAsf0Mg6f2RmooOW9FXTw2P66VCTTF.vCwTpWBIFk0vzKmBAPOt6urIg;
-        _cfuvid=TiTyEciy7HrUlIDEsELZqkUyM4Fyn8OldZd4JefFMOA-1726437753108-0.0.1.1-604800000
+      - __cf_bm=1SckBhvJ18Dazp6bi8DEKYeiS9Q4.6_6i3nmLBw9b6g-1726476036-1.0.1.1-TnN4UpDXA33YXCVCUWOaZ12vGIg_o5NpJQEUHgjn6XdUgb7M0ND8PdkTfkd8rrxG5XFlPRMzI54GxZ0FeUY9xw;
+        _cfuvid=0Rs4xTPk7h7OIXuSbTgMVVD9JSoZeKMwnygKHoHQo3k-1726476036297-0.0.1.1-604800000
       host:
       - api.openai.com
       user-agent:
@@ -132,38 +129,35 @@ interactions:
     method: POST
     uri: https://api.openai.com/v1/chat/completions
   response:
-    content: "{\n  \"id\": \"chatcmpl-A7rmrleUP0T3H0IOUHqJips8kcmxI\",\n  \"object\":
-      \"chat.completion\",\n  \"created\": 1726438417,\n  \"model\": \"gpt-4-0125-preview\",\n
+    content: "{\n  \"id\": \"chatcmpl-A81lBF0zaA4TP9ttqpGSfH4uvOh52\",\n  \"object\":
+      \"chat.completion\",\n  \"created\": 1726476753,\n  \"model\": \"gpt-4-0125-preview\",\n
       \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
-      \"assistant\",\n        \"content\": \"Thought: To accurately evaluate the given
-      title 'The impact of AI in the future of work' against the specified criteria
-      (an integer score between 1-5), I need to understand the criteria that my coworker,
-      Scorer, will use for assessment. This involves knowing what makes a title score
-      a 1 versus a 5 and any gradations in between. I should gather all available
-      context regarding this scoring system before delegating the task of scoring
-      the title to Scorer. It's important to make sure the evaluation criteria are
-      clear to ensure the scoring process aligns with the expectations.\\n\\nAction:
-      Ask question to coworker\\n\\nAction Input: {\\\"question\\\": \\\"Can you explain
-      the criteria used to assign a score between 1-5 to a title? Specifically, I'm
-      interested in understanding what aspects or qualities of a title would make
-      it score at each level of this scale. The task at hand involves scoring the
-      title 'The impact of AI in the future of work', so examples relevant to technology
-      or future-oriented themes would be especially helpful.\\\", \\\"context\\\":
-      \\\"A score needs to be assigned to the title 'The impact of AI in the future
-      of work', based on its relevance, impact, originality, and clarity. The scoring
-      system ranges from 1 to 5, but the precise criteria for what constitutes each
-      score level hasn't been specified. Clear explanations and examples, especially
-      related to technology and future work, are sought to correctly evaluate titles.\\\",
-      \\\"coworker\\\": \\\"Scorer\\\"}\",\n        \"refusal\": null\n      },\n
-      \     \"logprobs\": null,\n      \"finish_reason\": \"stop\"\n    }\n  ],\n
-      \ \"usage\": {\n    \"prompt_tokens\": 676,\n    \"completion_tokens\": 303,\n
-      \   \"total_tokens\": 979,\n    \"completion_tokens_details\": {\n      \"reasoning_tokens\":
+      \"assistant\",\n        \"content\": \"Thought: To accurately score the title
+      \\\"The impact of AI in the future of work\\\" based on the provided criteria
+      and examples, I need to understand what specific attributes or factors should
+      be considered for the evaluation. Since I don't have immediate access to the
+      examples or any pre-defined criteria, it would be beneficial to clarify what
+      elements make a title score higher or lower within the 1-5 range. Is it the
+      clarity of the title, the relevance to current trends, the potential for engaging
+      discussion, or another factor altogether? Once I understand these criteria,
+      I can more effectively evaluate the title.\\n\\nAction: Ask question to coworker\\n\\nAction
+      Input: {\\\"question\\\": \\\"What specific criteria or factors should be considered
+      when scoring the title 'The impact of AI in the future of work' between 1-5?
+      Are we looking at clarity, relevance, potential for engaging discussion, or
+      any other specific attributes?\\\", \\\"context\\\": \\\"The task is to provide
+      an integer score between 1-5 for the mentioned title, based on examples and
+      criteria for evaluation. However, the examples and criteria have not been provided,
+      making it essential to understand what attributes or factors are crucial for
+      this evaluation.\\\", \\\"coworker\\\": \\\"Scorer\\\"}\",\n        \"refusal\":
+      null\n      },\n      \"logprobs\": null,\n      \"finish_reason\": \"stop\"\n
+      \   }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 676,\n    \"completion_tokens\":
+      248,\n    \"total_tokens\": 924,\n    \"completion_tokens_details\": {\n      \"reasoning_tokens\":
       0\n    }\n  },\n  \"system_fingerprint\": null\n}\n"
     headers:
       CF-Cache-Status:
       - DYNAMIC
       CF-RAY:
-      - 8c3bf709da7ba4ca-MIA
+      - 8c3f9ef9dc9c2233-MIA
       Connection:
       - keep-alive
       Content-Encoding:
@@ -171,7 +165,7 @@ interactions:
       Content-Type:
       - application/json
       Date:
-      - Sun, 15 Sep 2024 22:13:47 GMT
+      - Mon, 16 Sep 2024 08:52:39 GMT
       Server:
       - cloudflare
       Transfer-Encoding:
@@ -185,7 +179,7 @@ interactions:
       openai-organization:
       - crewai-iuxna1
       openai-processing-ms:
-      - '10074'
+      - '6679'
       openai-version:
       - '2020-10-01'
       strict-transport-security:
@@ -203,7 +197,7 @@ interactions:
       x-ratelimit-reset-tokens:
       - 22ms
       x-request-id:
-      - req_a4fa3852002703190519343ad106ab40
+      - req_8245019a3da6701f9b671febd97f8a8c
     http_version: HTTP/1.1
     status_code: 200
 - request:
@@ -219,22 +213,19 @@ interactions:
       curly braces, using \" to wrap keys and values.\nObservation: the result of
       the action\n\nOnce all necessary information is gathered:\n\nThought: I now
       know the final answer\nFinal Answer: the final answer to the original input
-      question\n"}, {"role": "user", "content": "\nCurrent Task: Can you explain the
-      criteria used to assign a score between 1-5 to a title? Specifically, I''m interested
-      in understanding what aspects or qualities of a title would make it score at
-      each level of this scale. The task at hand involves scoring the title ''The
-      impact of AI in the future of work'', so examples relevant to technology or
-      future-oriented themes would be especially helpful.\n\nThis is the expect criteria
-      for your final answer: Your best answer to your coworker asking you this, accounting
-      for the context shared.\nyou MUST return the actual complete content as the
-      final answer, not a summary.\n\nThis is the context you''re working with:\nA
-      score needs to be assigned to the title ''The impact of AI in the future of
-      work'', based on its relevance, impact, originality, and clarity. The scoring
-      system ranges from 1 to 5, but the precise criteria for what constitutes each
-      score level hasn''t been specified. Clear explanations and examples, especially
-      related to technology and future work, are sought to correctly evaluate titles.\n\nBegin!
-      This is VERY important to you, use the tools available and give your best Final
-      Answer, your job depends on it!\n\nThought:"}], "model": "gpt-4o", "stop": ["\nObservation:"]}'
+      question\n"}, {"role": "user", "content": "\nCurrent Task: What specific criteria
+      or factors should be considered when scoring the title ''The impact of AI in
+      the future of work'' between 1-5? Are we looking at clarity, relevance, potential
+      for engaging discussion, or any other specific attributes?\n\nThis is the expect
+      criteria for your final answer: Your best answer to your coworker asking you
+      this, accounting for the context shared.\nyou MUST return the actual complete
+      content as the final answer, not a summary.\n\nThis is the context you''re working
+      with:\nThe task is to provide an integer score between 1-5 for the mentioned
+      title, based on examples and criteria for evaluation. However, the examples
+      and criteria have not been provided, making it essential to understand what
+      attributes or factors are crucial for this evaluation.\n\nBegin! This is VERY
+      important to you, use the tools available and give your best Final Answer, your
+      job depends on it!\n\nThought:"}], "model": "gpt-4o", "stop": ["\nObservation:"]}'
     headers:
       accept:
       - application/json
@@ -243,12 +234,12 @@ interactions:
       connection:
       - keep-alive
       content-length:
-      - '2207'
+      - '1948'
       content-type:
       - application/json
       cookie:
-      - __cf_bm=xCQEG8vgEvQfut0bkj2xgre9z9ePZhdKdNxBphhvH6s-1726437753-1.0.1.1-5qo0zwDCcKDtqvIzDbp2sLEPCey8v5DAsf0Mg6f2RmooOW9FXTw2P66VCTTF.vCwTpWBIFk0vzKmBAPOt6urIg;
-        _cfuvid=TiTyEciy7HrUlIDEsELZqkUyM4Fyn8OldZd4JefFMOA-1726437753108-0.0.1.1-604800000
+      - __cf_bm=1SckBhvJ18Dazp6bi8DEKYeiS9Q4.6_6i3nmLBw9b6g-1726476036-1.0.1.1-TnN4UpDXA33YXCVCUWOaZ12vGIg_o5NpJQEUHgjn6XdUgb7M0ND8PdkTfkd8rrxG5XFlPRMzI54GxZ0FeUY9xw;
+        _cfuvid=0Rs4xTPk7h7OIXuSbTgMVVD9JSoZeKMwnygKHoHQo3k-1726476036297-0.0.1.1-604800000
       host:
       - api.openai.com
       user-agent:
@@ -272,22 +263,22 @@ interactions:
     method: POST
     uri: https://api.openai.com/v1/chat/completions
   response:
-    content: "{\n  \"id\": \"chatcmpl-A7rn1t222OXqmXGd9iBf7QoiWmPcL\",\n  \"object\":
-      \"chat.completion\",\n  \"created\": 1726438427,\n  \"model\": \"gpt-4o-2024-05-13\",\n
+    content: "{\n  \"id\": \"chatcmpl-A81lIQToUkwKyVfplL8CFSKbnE9l3\",\n  \"object\":
+      \"chat.completion\",\n  \"created\": 1726476760,\n  \"model\": \"gpt-4o-2024-05-13\",\n
       \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
-      \"assistant\",\n        \"content\": \"Thought: I need to obtain examples of
-      how titles are scored to understand the criteria for assigning scores between
-      1 and 5. These examples should ideally be related to technology and future-oriented
-      themes.\\n\\nAction: scoring_examples\\nAction Input: {}\",\n        \"refusal\":
-      null\n      },\n      \"logprobs\": null,\n      \"finish_reason\": \"stop\"\n
-      \   }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 433,\n    \"completion_tokens\":
-      48,\n    \"total_tokens\": 481,\n    \"completion_tokens_details\": {\n      \"reasoning_tokens\":
+      \"assistant\",\n        \"content\": \"Thought: I need to understand the specific
+      criteria or factors that are considered important when scoring titles. This
+      will help me accurately evaluate \\\"The impact of AI in the future of work\\\"
+      on a scale from 1 to 5.\\n\\nAction: scoring_examples\\nAction Input: {}\",\n
+      \       \"refusal\": null\n      },\n      \"logprobs\": null,\n      \"finish_reason\":
+      \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 380,\n    \"completion_tokens\":
+      55,\n    \"total_tokens\": 435,\n    \"completion_tokens_details\": {\n      \"reasoning_tokens\":
       0\n    }\n  },\n  \"system_fingerprint\": \"fp_25624ae3a5\"\n}\n"
     headers:
       CF-Cache-Status:
       - DYNAMIC
       CF-RAY:
-      - 8c3bf74ab95fa4ca-MIA
+      - 8c3f9f2578ca2233-MIA
       Connection:
       - keep-alive
       Content-Encoding:
@@ -295,7 +286,7 @@ interactions:
       Content-Type:
       - application/json
       Date:
-      - Sun, 15 Sep 2024 22:13:47 GMT
+      - Mon, 16 Sep 2024 08:52:40 GMT
       Server:
       - cloudflare
       Transfer-Encoding:
@@ -309,7 +300,7 @@ interactions:
       openai-organization:
       - crewai-iuxna1
       openai-processing-ms:
-      - '499'
+      - '632'
       openai-version:
       - '2020-10-01'
       strict-transport-security:
@@ -321,13 +312,13 @@ interactions:
       x-ratelimit-remaining-requests:
       - '9999'
       x-ratelimit-remaining-tokens:
-      - '29999469'
+      - '29999535'
       x-ratelimit-reset-requests:
       - 6ms
       x-ratelimit-reset-tokens:
-      - 1ms
+      - 0s
       x-request-id:
-      - req_349e72cf9271c787025e996bf10ce42f
+      - req_c69c025f2e32e70c389a19c58e26b008
     http_version: HTTP/1.1
     status_code: 200
 - request:
@@ -343,25 +334,22 @@ interactions:
       curly braces, using \" to wrap keys and values.\nObservation: the result of
       the action\n\nOnce all necessary information is gathered:\n\nThought: I now
       know the final answer\nFinal Answer: the final answer to the original input
-      question\n"}, {"role": "user", "content": "\nCurrent Task: Can you explain the
-      criteria used to assign a score between 1-5 to a title? Specifically, I''m interested
-      in understanding what aspects or qualities of a title would make it score at
-      each level of this scale. The task at hand involves scoring the title ''The
-      impact of AI in the future of work'', so examples relevant to technology or
-      future-oriented themes would be especially helpful.\n\nThis is the expect criteria
-      for your final answer: Your best answer to your coworker asking you this, accounting
-      for the context shared.\nyou MUST return the actual complete content as the
-      final answer, not a summary.\n\nThis is the context you''re working with:\nA
-      score needs to be assigned to the title ''The impact of AI in the future of
-      work'', based on its relevance, impact, originality, and clarity. The scoring
-      system ranges from 1 to 5, but the precise criteria for what constitutes each
-      score level hasn''t been specified. Clear explanations and examples, especially
-      related to technology and future work, are sought to correctly evaluate titles.\n\nBegin!
-      This is VERY important to you, use the tools available and give your best Final
-      Answer, your job depends on it!\n\nThought:"}, {"role": "assistant", "content":
-      "Thought: I need to obtain examples of how titles are scored to understand the
-      criteria for assigning scores between 1 and 5. These examples should ideally
-      be related to technology and future-oriented themes.\n\nAction: scoring_examples\nAction
+      question\n"}, {"role": "user", "content": "\nCurrent Task: What specific criteria
+      or factors should be considered when scoring the title ''The impact of AI in
+      the future of work'' between 1-5? Are we looking at clarity, relevance, potential
+      for engaging discussion, or any other specific attributes?\n\nThis is the expect
+      criteria for your final answer: Your best answer to your coworker asking you
+      this, accounting for the context shared.\nyou MUST return the actual complete
+      content as the final answer, not a summary.\n\nThis is the context you''re working
+      with:\nThe task is to provide an integer score between 1-5 for the mentioned
+      title, based on examples and criteria for evaluation. However, the examples
+      and criteria have not been provided, making it essential to understand what
+      attributes or factors are crucial for this evaluation.\n\nBegin! This is VERY
+      important to you, use the tools available and give your best Final Answer, your
+      job depends on it!\n\nThought:"}, {"role": "assistant", "content": "Thought:
+      I need to understand the specific criteria or factors that are considered important
+      when scoring titles. This will help me accurately evaluate \"The impact of AI
+      in the future of work\" on a scale from 1 to 5.\n\nAction: scoring_examples\nAction
       Input: {}\nObservation: \nI encountered an error while trying to use the tool.
       This was the error: Error.\n Tool scoring_examples accepts these inputs: scoring_examples()
       - Useful examples for scoring titles. .\nMoving on then. I MUST either use a
@@ -381,12 +369,12 @@ interactions:
       connection:
       - keep-alive
       content-length:
-      - '3303'
+      - '3055'
       content-type:
       - application/json
       cookie:
-      - __cf_bm=xCQEG8vgEvQfut0bkj2xgre9z9ePZhdKdNxBphhvH6s-1726437753-1.0.1.1-5qo0zwDCcKDtqvIzDbp2sLEPCey8v5DAsf0Mg6f2RmooOW9FXTw2P66VCTTF.vCwTpWBIFk0vzKmBAPOt6urIg;
-        _cfuvid=TiTyEciy7HrUlIDEsELZqkUyM4Fyn8OldZd4JefFMOA-1726437753108-0.0.1.1-604800000
+      - __cf_bm=1SckBhvJ18Dazp6bi8DEKYeiS9Q4.6_6i3nmLBw9b6g-1726476036-1.0.1.1-TnN4UpDXA33YXCVCUWOaZ12vGIg_o5NpJQEUHgjn6XdUgb7M0ND8PdkTfkd8rrxG5XFlPRMzI54GxZ0FeUY9xw;
+        _cfuvid=0Rs4xTPk7h7OIXuSbTgMVVD9JSoZeKMwnygKHoHQo3k-1726476036297-0.0.1.1-604800000
       host:
       - api.openai.com
       user-agent:
@@ -410,21 +398,21 @@ interactions:
     method: POST
     uri: https://api.openai.com/v1/chat/completions
   response:
-    content: "{\n  \"id\": \"chatcmpl-A7rn2kHS1KtaUeBSW6LFHrEBYtq87\",\n  \"object\":
-      \"chat.completion\",\n  \"created\": 1726438428,\n  \"model\": \"gpt-4o-2024-05-13\",\n
+    content: "{\n  \"id\": \"chatcmpl-A81lI9SpIOcixWcMY0sLZ725032T7\",\n  \"object\":
+      \"chat.completion\",\n  \"created\": 1726476760,\n  \"model\": \"gpt-4o-2024-05-13\",\n
       \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
-      \"assistant\",\n        \"content\": \"Thought: I need to attempt using the
-      tool again to obtain examples for scoring titles, as these are crucial to give
-      a complete and accurate answer.\\n\\nAction: scoring_examples\\nAction Input:
-      {}\",\n        \"refusal\": null\n      },\n      \"logprobs\": null,\n      \"finish_reason\":
-      \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 659,\n    \"completion_tokens\":
-      38,\n    \"total_tokens\": 697,\n    \"completion_tokens_details\": {\n      \"reasoning_tokens\":
+      \"assistant\",\n        \"content\": \"Thought: I should attempt to use the
+      scoring_examples tool again since I need examples to understand the criteria
+      for evaluating titles.\\n\\nAction: scoring_examples\\nAction Input: {}\",\n
+      \       \"refusal\": null\n      },\n      \"logprobs\": null,\n      \"finish_reason\":
+      \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 613,\n    \"completion_tokens\":
+      33,\n    \"total_tokens\": 646,\n    \"completion_tokens_details\": {\n      \"reasoning_tokens\":
       0\n    }\n  },\n  \"system_fingerprint\": \"fp_25624ae3a5\"\n}\n"
     headers:
       CF-Cache-Status:
       - DYNAMIC
       CF-RAY:
-      - 8c3bf74fb844a4ca-MIA
+      - 8c3f9f2b4a3f2233-MIA
       Connection:
       - keep-alive
       Content-Encoding:
@@ -432,7 +420,7 @@ interactions:
       Content-Type:
       - application/json
       Date:
-      - Sun, 15 Sep 2024 22:13:48 GMT
+      - Mon, 16 Sep 2024 08:52:41 GMT
       Server:
       - cloudflare
       Transfer-Encoding:
@@ -446,7 +434,7 @@ interactions:
       openai-organization:
       - crewai-iuxna1
       openai-processing-ms:
-      - '466'
+      - '464'
       openai-version:
       - '2020-10-01'
       strict-transport-security:
@@ -458,13 +446,13 @@ interactions:
       x-ratelimit-remaining-requests:
       - '9999'
       x-ratelimit-remaining-tokens:
-      - '29999208'
+      - '29999270'
       x-ratelimit-reset-requests:
       - 6ms
       x-ratelimit-reset-tokens:
       - 1ms
       x-request-id:
-      - req_87d530d6877e9a31b78ffbaa6cdfb071
+      - req_447b7dfb2046e9bcc3152694f9fc28d5
     http_version: HTTP/1.1
     status_code: 200
 - request:
@@ -480,25 +468,22 @@ interactions:
       curly braces, using \" to wrap keys and values.\nObservation: the result of
       the action\n\nOnce all necessary information is gathered:\n\nThought: I now
       know the final answer\nFinal Answer: the final answer to the original input
-      question\n"}, {"role": "user", "content": "\nCurrent Task: Can you explain the
-      criteria used to assign a score between 1-5 to a title? Specifically, I''m interested
-      in understanding what aspects or qualities of a title would make it score at
-      each level of this scale. The task at hand involves scoring the title ''The
-      impact of AI in the future of work'', so examples relevant to technology or
-      future-oriented themes would be especially helpful.\n\nThis is the expect criteria
-      for your final answer: Your best answer to your coworker asking you this, accounting
-      for the context shared.\nyou MUST return the actual complete content as the
-      final answer, not a summary.\n\nThis is the context you''re working with:\nA
-      score needs to be assigned to the title ''The impact of AI in the future of
-      work'', based on its relevance, impact, originality, and clarity. The scoring
-      system ranges from 1 to 5, but the precise criteria for what constitutes each
-      score level hasn''t been specified. Clear explanations and examples, especially
-      related to technology and future work, are sought to correctly evaluate titles.\n\nBegin!
-      This is VERY important to you, use the tools available and give your best Final
-      Answer, your job depends on it!\n\nThought:"}, {"role": "assistant", "content":
-      "Thought: I need to obtain examples of how titles are scored to understand the
-      criteria for assigning scores between 1 and 5. These examples should ideally
-      be related to technology and future-oriented themes.\n\nAction: scoring_examples\nAction
+      question\n"}, {"role": "user", "content": "\nCurrent Task: What specific criteria
+      or factors should be considered when scoring the title ''The impact of AI in
+      the future of work'' between 1-5? Are we looking at clarity, relevance, potential
+      for engaging discussion, or any other specific attributes?\n\nThis is the expect
+      criteria for your final answer: Your best answer to your coworker asking you
+      this, accounting for the context shared.\nyou MUST return the actual complete
+      content as the final answer, not a summary.\n\nThis is the context you''re working
+      with:\nThe task is to provide an integer score between 1-5 for the mentioned
+      title, based on examples and criteria for evaluation. However, the examples
+      and criteria have not been provided, making it essential to understand what
+      attributes or factors are crucial for this evaluation.\n\nBegin! This is VERY
+      important to you, use the tools available and give your best Final Answer, your
+      job depends on it!\n\nThought:"}, {"role": "assistant", "content": "Thought:
+      I need to understand the specific criteria or factors that are considered important
+      when scoring titles. This will help me accurately evaluate \"The impact of AI
+      in the future of work\" on a scale from 1 to 5.\n\nAction: scoring_examples\nAction
       Input: {}\nObservation: \nI encountered an error while trying to use the tool.
       This was the error: Error.\n Tool scoring_examples accepts these inputs: scoring_examples()
       - Useful examples for scoring titles. .\nMoving on then. I MUST either use a
@@ -509,9 +494,204 @@ interactions:
       the result of the action\n... (this Thought/Action/Action Input/Result can repeat
       N times)\nThought: I now can give a great answer\nFinal Answer: Your final answer
       must be the great and the most complete as possible, it must be outcome described\n\n
-      "}, {"role": "assistant", "content": "Thought: I need to attempt using the tool
-      again to obtain examples for scoring titles, as these are crucial to give a
-      complete and accurate answer.\n\nAction: scoring_examples\nAction Input: {}\nObservation:
+      "}, {"role": "assistant", "content": "Thought: I should attempt to use the scoring_examples
+      tool again since I need examples to understand the criteria for evaluating titles.\n\nAction:
+      scoring_examples\nAction Input: {}\nObservation: \nI encountered an error while
+      trying to use the tool. This was the error: Error.\n Tool scoring_examples accepts
+      these inputs: scoring_examples() - Useful examples for scoring titles. .\nMoving
+      on then. I MUST either use a tool (use one at time) OR give my best final answer
+      not both at the same time. To Use the following format:\n\nThought: you should
+      always think about what to do\nAction: the action to take, should be one of
+      [scoring_examples]\nAction Input: the input to the action, dictionary enclosed
+      in curly braces\nObservation: the result of the action\n... (this Thought/Action/Action
+      Input/Result can repeat N times)\nThought: I now can give a great answer\nFinal
+      Answer: Your final answer must be the great and the most complete as possible,
+      it must be outcome described\n\n "}], "model": "gpt-4o", "stop": ["\nObservation:"]}'
+    headers:
+      accept:
+      - application/json
+      accept-encoding:
+      - gzip, deflate
+      connection:
+      - keep-alive
+      content-length:
+      - '4080'
+      content-type:
+      - application/json
+      cookie:
+      - __cf_bm=1SckBhvJ18Dazp6bi8DEKYeiS9Q4.6_6i3nmLBw9b6g-1726476036-1.0.1.1-TnN4UpDXA33YXCVCUWOaZ12vGIg_o5NpJQEUHgjn6XdUgb7M0ND8PdkTfkd8rrxG5XFlPRMzI54GxZ0FeUY9xw;
+        _cfuvid=0Rs4xTPk7h7OIXuSbTgMVVD9JSoZeKMwnygKHoHQo3k-1726476036297-0.0.1.1-604800000
+      host:
+      - api.openai.com
+      user-agent:
+      - OpenAI/Python 1.45.0
+      x-stainless-arch:
+      - arm64
+      x-stainless-async:
+      - 'false'
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - MacOS
+      x-stainless-package-version:
+      - 1.45.0
+      x-stainless-raw-response:
+      - 'true'
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.11.7
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    content: "{\n  \"id\": \"chatcmpl-A81lJPd5FLU2fjPQws6gn4D0uShfu\",\n  \"object\":
+      \"chat.completion\",\n  \"created\": 1726476761,\n  \"model\": \"gpt-4o-2024-05-13\",\n
+      \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
+      \"assistant\",\n        \"content\": \"Thought: I should attempt to use the
+      scoring_examples tool again to obtain the examples needed for scoring titles.
+      This time, I'll ensure that the input is formatted correctly to avoid any issues.\\n\\nAction:
+      scoring_examples\\nAction Input: {}\",\n        \"refusal\": null\n      },\n
+      \     \"logprobs\": null,\n      \"finish_reason\": \"stop\"\n    }\n  ],\n
+      \ \"usage\": {\n    \"prompt_tokens\": 824,\n    \"completion_tokens\": 46,\n
+      \   \"total_tokens\": 870,\n    \"completion_tokens_details\": {\n      \"reasoning_tokens\":
+      0\n    }\n  },\n  \"system_fingerprint\": \"fp_25624ae3a5\"\n}\n"
+    headers:
+      CF-Cache-Status:
+      - DYNAMIC
+      CF-RAY:
+      - 8c3f9f300be32233-MIA
+      Connection:
+      - keep-alive
+      Content-Encoding:
+      - gzip
+      Content-Type:
+      - application/json
+      Date:
+      - Mon, 16 Sep 2024 08:52:42 GMT
+      Server:
+      - cloudflare
+      Transfer-Encoding:
+      - chunked
+      X-Content-Type-Options:
+      - nosniff
+      access-control-expose-headers:
+      - X-Request-ID
+      alt-svc:
+      - h3=":443"; ma=86400
+      openai-organization:
+      - crewai-iuxna1
+      openai-processing-ms:
+      - '503'
+      openai-version:
+      - '2020-10-01'
+      strict-transport-security:
+      - max-age=15552000; includeSubDomains; preload
+      x-ratelimit-limit-requests:
+      - '10000'
+      x-ratelimit-limit-tokens:
+      - '30000000'
+      x-ratelimit-remaining-requests:
+      - '9999'
+      x-ratelimit-remaining-tokens:
+      - '29999028'
+      x-ratelimit-reset-requests:
+      - 6ms
+      x-ratelimit-reset-tokens:
+      - 1ms
+      x-request-id:
+      - req_e7fbab1a3e9f3a1f9b6566d7cccc2dbe
+    http_version: HTTP/1.1
+    status_code: 200
+- request:
+    body: !!binary |
+      CpECCiQKIgoMc2VydmljZS5uYW1lEhIKEGNyZXdBSS10ZWxlbWV0cnkS6AEKEgoQY3Jld2FpLnRl
+      bGVtZXRyeRJoChAUEIOphW2OYs9t6CiWoXmGEgioWipNgxPpuyoQVG9vbCBVc2FnZSBFcnJvcjAB
+      Ofj58Wt3rfUXQYCtAWx3rfUXShoKDmNyZXdhaV92ZXJzaW9uEggKBjAuNTYuM3oCGAGFAQABAAAS
+      aAoQ1g7OL9J8Xt6TjSndzRIEShII3bYt+8dxQOYqEFRvb2wgVXNhZ2UgRXJyb3IwATmIzgqZd631
+      F0Ewmw6Zd631F0oaCg5jcmV3YWlfdmVyc2lvbhIICgYwLjU2LjN6AhgBhQEAAQAA
+    headers:
+      Accept:
+      - '*/*'
+      Accept-Encoding:
+      - gzip, deflate
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '276'
+      Content-Type:
+      - application/x-protobuf
+      User-Agent:
+      - OTel-OTLP-Exporter-Python/1.27.0
+    method: POST
+    uri: https://telemetry.crewai.com:4319/v1/traces
+  response:
+    body:
+      string: "\n\0"
+    headers:
+      Content-Length:
+      - '2'
+      Content-Type:
+      - application/x-protobuf
+      Date:
+      - Mon, 16 Sep 2024 08:52:42 GMT
+    status:
+      code: 200
+      message: OK
+- request:
+    body: '{"messages": [{"role": "system", "content": "You are Scorer. You''re an
+      expert scorer, specialized in scoring titles.\nYour personal goal is: Score
+      the title\nYou ONLY have access to the following tools, and should NEVER make
+      up tools that are not listed here:\n\nTool Name: scoring_examples(*args: Any,
+      **kwargs: Any) -> Any\nTool Description: scoring_examples() - Useful examples
+      for scoring titles. \nTool Arguments: {}\n\nUse the following format:\n\nThought:
+      you should always think about what to do\nAction: the action to take, only one
+      name of [scoring_examples], just the name, exactly as it''s written.\nAction
+      Input: the input to the action, just a simple python dictionary, enclosed in
+      curly braces, using \" to wrap keys and values.\nObservation: the result of
+      the action\n\nOnce all necessary information is gathered:\n\nThought: I now
+      know the final answer\nFinal Answer: the final answer to the original input
+      question\n"}, {"role": "user", "content": "\nCurrent Task: What specific criteria
+      or factors should be considered when scoring the title ''The impact of AI in
+      the future of work'' between 1-5? Are we looking at clarity, relevance, potential
+      for engaging discussion, or any other specific attributes?\n\nThis is the expect
+      criteria for your final answer: Your best answer to your coworker asking you
+      this, accounting for the context shared.\nyou MUST return the actual complete
+      content as the final answer, not a summary.\n\nThis is the context you''re working
+      with:\nThe task is to provide an integer score between 1-5 for the mentioned
+      title, based on examples and criteria for evaluation. However, the examples
+      and criteria have not been provided, making it essential to understand what
+      attributes or factors are crucial for this evaluation.\n\nBegin! This is VERY
+      important to you, use the tools available and give your best Final Answer, your
+      job depends on it!\n\nThought:"}, {"role": "assistant", "content": "Thought:
+      I need to understand the specific criteria or factors that are considered important
+      when scoring titles. This will help me accurately evaluate \"The impact of AI
+      in the future of work\" on a scale from 1 to 5.\n\nAction: scoring_examples\nAction
+      Input: {}\nObservation: \nI encountered an error while trying to use the tool.
+      This was the error: Error.\n Tool scoring_examples accepts these inputs: scoring_examples()
+      - Useful examples for scoring titles. .\nMoving on then. I MUST either use a
+      tool (use one at time) OR give my best final answer not both at the same time.
+      To Use the following format:\n\nThought: you should always think about what
+      to do\nAction: the action to take, should be one of [scoring_examples]\nAction
+      Input: the input to the action, dictionary enclosed in curly braces\nObservation:
+      the result of the action\n... (this Thought/Action/Action Input/Result can repeat
+      N times)\nThought: I now can give a great answer\nFinal Answer: Your final answer
+      must be the great and the most complete as possible, it must be outcome described\n\n
+      "}, {"role": "assistant", "content": "Thought: I should attempt to use the scoring_examples
+      tool again since I need examples to understand the criteria for evaluating titles.\n\nAction:
+      scoring_examples\nAction Input: {}\nObservation: \nI encountered an error while
+      trying to use the tool. This was the error: Error.\n Tool scoring_examples accepts
+      these inputs: scoring_examples() - Useful examples for scoring titles. .\nMoving
+      on then. I MUST either use a tool (use one at time) OR give my best final answer
+      not both at the same time. To Use the following format:\n\nThought: you should
+      always think about what to do\nAction: the action to take, should be one of
+      [scoring_examples]\nAction Input: the input to the action, dictionary enclosed
+      in curly braces\nObservation: the result of the action\n... (this Thought/Action/Action
+      Input/Result can repeat N times)\nThought: I now can give a great answer\nFinal
+      Answer: Your final answer must be the great and the most complete as possible,
+      it must be outcome described\n\n "}, {"role": "assistant", "content": "Thought:
+      I should attempt to use the scoring_examples tool again to obtain the examples
+      needed for scoring titles. This time, I''ll ensure that the input is formatted
+      correctly to avoid any issues.\n\nAction: scoring_examples\nAction Input: {}\nObservation:
       \nI encountered an error while trying to use the tool. This was the error: Error.\n
       Tool scoring_examples accepts these inputs: scoring_examples() - Useful examples
       for scoring titles. .\nMoving on then. I MUST either use a tool (use one at
@@ -531,12 +711,12 @@ interactions:
       connection:
       - keep-alive
       content-length:
-      - '4339'
+      - '5165'
       content-type:
       - application/json
       cookie:
-      - __cf_bm=xCQEG8vgEvQfut0bkj2xgre9z9ePZhdKdNxBphhvH6s-1726437753-1.0.1.1-5qo0zwDCcKDtqvIzDbp2sLEPCey8v5DAsf0Mg6f2RmooOW9FXTw2P66VCTTF.vCwTpWBIFk0vzKmBAPOt6urIg;
-        _cfuvid=TiTyEciy7HrUlIDEsELZqkUyM4Fyn8OldZd4JefFMOA-1726437753108-0.0.1.1-604800000
+      - __cf_bm=1SckBhvJ18Dazp6bi8DEKYeiS9Q4.6_6i3nmLBw9b6g-1726476036-1.0.1.1-TnN4UpDXA33YXCVCUWOaZ12vGIg_o5NpJQEUHgjn6XdUgb7M0ND8PdkTfkd8rrxG5XFlPRMzI54GxZ0FeUY9xw;
+        _cfuvid=0Rs4xTPk7h7OIXuSbTgMVVD9JSoZeKMwnygKHoHQo3k-1726476036297-0.0.1.1-604800000
       host:
       - api.openai.com
       user-agent:
@@ -560,258 +740,48 @@ interactions:
     method: POST
     uri: https://api.openai.com/v1/chat/completions
   response:
-    content: "{\n  \"id\": \"chatcmpl-A7rn3LOdwrTNy4G8DnyWQBmBhTQTt\",\n  \"object\":
-      \"chat.completion\",\n  \"created\": 1726438429,\n  \"model\": \"gpt-4o-2024-05-13\",\n
+    content: "{\n  \"id\": \"chatcmpl-A81lKEy11PpkVyLGltSBhEfz4JSZt\",\n  \"object\":
+      \"chat.completion\",\n  \"created\": 1726476762,\n  \"model\": \"gpt-4o-2024-05-13\",\n
       \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
-      \"assistant\",\n        \"content\": \"Thought: I should attempt to use the
-      tool again by providing the correct input format.\\n\\nAction: scoring_examples\\nAction
-      Input: {}\",\n        \"refusal\": null\n      },\n      \"logprobs\": null,\n
-      \     \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\":
-      875,\n    \"completion_tokens\": 26,\n    \"total_tokens\": 901,\n    \"completion_tokens_details\":
-      {\n      \"reasoning_tokens\": 0\n    }\n  },\n  \"system_fingerprint\": \"fp_25624ae3a5\"\n}\n"
-    headers:
-      CF-Cache-Status:
-      - DYNAMIC
-      CF-RAY:
-      - 8c3bf7549f38a4ca-MIA
-      Connection:
-      - keep-alive
-      Content-Encoding:
-      - gzip
-      Content-Type:
-      - application/json
-      Date:
-      - Sun, 15 Sep 2024 22:13:49 GMT
-      Server:
-      - cloudflare
-      Transfer-Encoding:
-      - chunked
-      X-Content-Type-Options:
-      - nosniff
-      access-control-expose-headers:
-      - X-Request-ID
-      alt-svc:
-      - h3=":443"; ma=86400
-      openai-organization:
-      - crewai-iuxna1
-      openai-processing-ms:
-      - '337'
-      openai-version:
-      - '2020-10-01'
-      strict-transport-security:
-      - max-age=15552000; includeSubDomains; preload
-      x-ratelimit-limit-requests:
-      - '10000'
-      x-ratelimit-limit-tokens:
-      - '30000000'
-      x-ratelimit-remaining-requests:
-      - '9999'
-      x-ratelimit-remaining-tokens:
-      - '29998962'
-      x-ratelimit-reset-requests:
-      - 6ms
-      x-ratelimit-reset-tokens:
-      - 2ms
-      x-request-id:
-      - req_724b4f2182156491bb759ce65e983275
-    http_version: HTTP/1.1
-    status_code: 200
-- request:
-    body: !!binary |
-      CvsCCiQKIgoMc2VydmljZS5uYW1lEhIKEGNyZXdBSS10ZWxlbWV0cnkS0gIKEgoQY3Jld2FpLnRl
-      bGVtZXRyeRJoChD/PK+BwEa94jnmgYBrvN3SEghFjDD48hzlgioQVG9vbCBVc2FnZSBFcnJvcjAB
-      Ocje31+aivUXQaD86V+aivUXShoKDmNyZXdhaV92ZXJzaW9uEggKBjAuNTYuMHoCGAGFAQABAAAS
-      aAoQKpCfervz4UKBHzjG/rxfsxII8A+p20EupwMqEFRvb2wgVXNhZ2UgRXJyb3IwATkgQGGOmor1
-      F0HQ4WSOmor1F0oaCg5jcmV3YWlfdmVyc2lvbhIICgYwLjU2LjB6AhgBhQEAAQAAEmgKELx9oOWQ
-      gA6FizMPxbBstewSCN047wIsTXoeKhBUb29sIFVzYWdlIEVycm9yMAE54PoptJqK9RdByGMutJqK
-      9RdKGgoOY3Jld2FpX3ZlcnNpb24SCAoGMC41Ni4wegIYAYUBAAEAAA==
-    headers:
-      Accept:
-      - '*/*'
-      Accept-Encoding:
-      - gzip, deflate
-      Connection:
-      - keep-alive
-      Content-Length:
-      - '382'
-      Content-Type:
-      - application/x-protobuf
-      User-Agent:
-      - OTel-OTLP-Exporter-Python/1.27.0
-    method: POST
-    uri: https://telemetry.crewai.com:4319/v1/traces
-  response:
-    body:
-      string: "\n\0"
-    headers:
-      Content-Length:
-      - '2'
-      Content-Type:
-      - application/x-protobuf
-      Date:
-      - Sun, 15 Sep 2024 22:13:50 GMT
-    status:
-      code: 200
-      message: OK
-- request:
-    body: '{"messages": [{"role": "system", "content": "You are Scorer. You''re an
-      expert scorer, specialized in scoring titles.\nYour personal goal is: Score
-      the title\nYou ONLY have access to the following tools, and should NEVER make
-      up tools that are not listed here:\n\nTool Name: scoring_examples(*args: Any,
-      **kwargs: Any) -> Any\nTool Description: scoring_examples() - Useful examples
-      for scoring titles. \nTool Arguments: {}\n\nUse the following format:\n\nThought:
-      you should always think about what to do\nAction: the action to take, only one
-      name of [scoring_examples], just the name, exactly as it''s written.\nAction
-      Input: the input to the action, just a simple python dictionary, enclosed in
-      curly braces, using \" to wrap keys and values.\nObservation: the result of
-      the action\n\nOnce all necessary information is gathered:\n\nThought: I now
-      know the final answer\nFinal Answer: the final answer to the original input
-      question\n"}, {"role": "user", "content": "\nCurrent Task: Can you explain the
-      criteria used to assign a score between 1-5 to a title? Specifically, I''m interested
-      in understanding what aspects or qualities of a title would make it score at
-      each level of this scale. The task at hand involves scoring the title ''The
-      impact of AI in the future of work'', so examples relevant to technology or
-      future-oriented themes would be especially helpful.\n\nThis is the expect criteria
-      for your final answer: Your best answer to your coworker asking you this, accounting
-      for the context shared.\nyou MUST return the actual complete content as the
-      final answer, not a summary.\n\nThis is the context you''re working with:\nA
-      score needs to be assigned to the title ''The impact of AI in the future of
-      work'', based on its relevance, impact, originality, and clarity. The scoring
-      system ranges from 1 to 5, but the precise criteria for what constitutes each
-      score level hasn''t been specified. Clear explanations and examples, especially
-      related to technology and future work, are sought to correctly evaluate titles.\n\nBegin!
-      This is VERY important to you, use the tools available and give your best Final
-      Answer, your job depends on it!\n\nThought:"}, {"role": "assistant", "content":
-      "Thought: I need to obtain examples of how titles are scored to understand the
-      criteria for assigning scores between 1 and 5. These examples should ideally
-      be related to technology and future-oriented themes.\n\nAction: scoring_examples\nAction
-      Input: {}\nObservation: \nI encountered an error while trying to use the tool.
-      This was the error: Error.\n Tool scoring_examples accepts these inputs: scoring_examples()
-      - Useful examples for scoring titles. .\nMoving on then. I MUST either use a
-      tool (use one at time) OR give my best final answer not both at the same time.
-      To Use the following format:\n\nThought: you should always think about what
-      to do\nAction: the action to take, should be one of [scoring_examples]\nAction
-      Input: the input to the action, dictionary enclosed in curly braces\nObservation:
-      the result of the action\n... (this Thought/Action/Action Input/Result can repeat
-      N times)\nThought: I now can give a great answer\nFinal Answer: Your final answer
-      must be the great and the most complete as possible, it must be outcome described\n\n
-      "}, {"role": "assistant", "content": "Thought: I need to attempt using the tool
-      again to obtain examples for scoring titles, as these are crucial to give a
-      complete and accurate answer.\n\nAction: scoring_examples\nAction Input: {}\nObservation:
-      \nI encountered an error while trying to use the tool. This was the error: Error.\n
-      Tool scoring_examples accepts these inputs: scoring_examples() - Useful examples
-      for scoring titles. .\nMoving on then. I MUST either use a tool (use one at
-      time) OR give my best final answer not both at the same time. To Use the following
-      format:\n\nThought: you should always think about what to do\nAction: the action
-      to take, should be one of [scoring_examples]\nAction Input: the input to the
-      action, dictionary enclosed in curly braces\nObservation: the result of the
-      action\n... (this Thought/Action/Action Input/Result can repeat N times)\nThought:
-      I now can give a great answer\nFinal Answer: Your final answer must be the great
-      and the most complete as possible, it must be outcome described\n\n "}, {"role":
-      "assistant", "content": "Thought: I should attempt to use the tool again by
-      providing the correct input format.\n\nAction: scoring_examples\nAction Input:
-      {}\nObservation: \nI encountered an error while trying to use the tool. This
-      was the error: Error.\n Tool scoring_examples accepts these inputs: scoring_examples()
-      - Useful examples for scoring titles. .\nMoving on then. I MUST either use a
-      tool (use one at time) OR give my best final answer not both at the same time.
-      To Use the following format:\n\nThought: you should always think about what
-      to do\nAction: the action to take, should be one of [scoring_examples]\nAction
-      Input: the input to the action, dictionary enclosed in curly braces\nObservation:
-      the result of the action\n... (this Thought/Action/Action Input/Result can repeat
-      N times)\nThought: I now can give a great answer\nFinal Answer: Your final answer
-      must be the great and the most complete as possible, it must be outcome described\n\n
-      "}], "model": "gpt-4o", "stop": ["\nObservation:"]}'
-    headers:
-      accept:
-      - application/json
-      accept-encoding:
-      - gzip, deflate
-      connection:
-      - keep-alive
-      content-length:
-      - '5314'
-      content-type:
-      - application/json
-      cookie:
-      - __cf_bm=xCQEG8vgEvQfut0bkj2xgre9z9ePZhdKdNxBphhvH6s-1726437753-1.0.1.1-5qo0zwDCcKDtqvIzDbp2sLEPCey8v5DAsf0Mg6f2RmooOW9FXTw2P66VCTTF.vCwTpWBIFk0vzKmBAPOt6urIg;
-        _cfuvid=TiTyEciy7HrUlIDEsELZqkUyM4Fyn8OldZd4JefFMOA-1726437753108-0.0.1.1-604800000
-      host:
-      - api.openai.com
-      user-agent:
-      - OpenAI/Python 1.45.0
-      x-stainless-arch:
-      - arm64
-      x-stainless-async:
-      - 'false'
-      x-stainless-lang:
-      - python
-      x-stainless-os:
-      - MacOS
-      x-stainless-package-version:
-      - 1.45.0
-      x-stainless-raw-response:
-      - 'true'
-      x-stainless-runtime:
-      - CPython
-      x-stainless-runtime-version:
-      - 3.11.7
-    method: POST
-    uri: https://api.openai.com/v1/chat/completions
-  response:
-    content: "{\n  \"id\": \"chatcmpl-A7rn37YY72GoOpEMIiCUmU307BiVl\",\n  \"object\":
-      \"chat.completion\",\n  \"created\": 1726438429,\n  \"model\": \"gpt-4o-2024-05-13\",\n
-      \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
-      \"assistant\",\n        \"content\": \"Thought: Given that I am unable to access
-      the scoring_examples tool, I will rely on my expertise to provide a detailed
-      answer based on the standard criteria for scoring titles.\\n\\nFinal Answer:
-      Here is your detailed answer on how to score a title between 1 and 5, specifically
-      for the title 'The impact of AI in the future of work':\\n\\n1. **Relevance**:\\n
-      \   - **Score 1**: The title is completely irrelevant to the given context or
-      topic.\\n    - **Score 2**: The title has limited relevance, touching only tangentially
-      on the topic.\\n    - **Score 3**: The title is moderately relevant but lacks
-      focus or specificity.\\n    - **Score 4**: The title is relevant and addresses
-      the topic directly with clear focus.\\n    - **Score 5**: The title is highly
-      relevant, directly addressing the core topic comprehensively and precisely.\\n\\n2.
-      **Impact**:\\n    - **Score 1**: The title suggests minimal or no significant
-      impact on the reader or the field.\\n    - **Score 2**: The title indicates
-      some impact but does not clearly convey its significance.\\n    - **Score 3**:
-      The title reflects a moderate impact, highlighting importance but lacking strong
-      emphasis.\\n    - **Score 4**: The title conveys a strong impact, clearly indicating
-      its importance to the field.\\n    - **Score 5**: The title suggests a profound
-      impact, compelling the reader with a sense of urgency or significance.\\n\\n3.
-      **Originality**:\\n    - **Score 1**: The title is generic, common, or overused,
-      with no original contribution.\\n    - **Score 2**: The title shows minimal
-      originality, being slightly more specific than a generic title.\\n    - **Score
-      3**: The title has some original elements but may still feel somewhat familiar.\\n
-      \   - **Score 4**: The title is original, presenting a fresh perspective on
-      the topic.\\n    - **Score 5**: The title is highly original, offering a unique
-      and innovative approach or angle.\\n\\n4. **Clarity**:\\n    - **Score 1**:
-      The title is confusing, ambiguous, or poorly worded.\\n    - **Score 2**: The
-      title is somewhat clear but may contain jargon or unclear elements.\\n    -
-      **Score 3**: The title is reasonably clear but could be more concise or straightforward.\\n
-      \   - **Score 4**: The title is clear, well-structured, and easy to understand.\\n
-      \   - **Score 5**: The title is exceptionally clear, concise, and leaves no
-      room for misinterpretation.\\n\\n**Example Application:**\\n\\nFor the title
-      'The impact of AI in the future of work', let's evaluate it based on the given
-      criteria:\\n\\n- **Relevance**: 5 (Highly relevant as it directly addresses
-      the topic of AI and its role in the future workplace)\\n- **Impact**: 4 (Conveys
-      strong impact, emphasizing the importance of AI in future work scenarios)\\n-
-      **Originality**: 3 (Moderately original; it is specific but the theme of AI
-      and future work is widely discussed)\\n- **Clarity**: 4 (Clear and straightforward
-      but could perhaps be more concise by rephrasing)\\n\\nOverall Score: This title
-      could be rated around a 4, as it effectively communicates its relevance, impact,
-      and clarity, but with room for slight improvement in originality and specificity.\\n\\nThis
-      detailed explanation should help you understand how to evaluate and score titles
-      effectively across different criteria.\",\n        \"refusal\": null\n      },\n
-      \     \"logprobs\": null,\n      \"finish_reason\": \"stop\"\n    }\n  ],\n
-      \ \"usage\": {\n    \"prompt_tokens\": 1079,\n    \"completion_tokens\": 723,\n
-      \   \"total_tokens\": 1802,\n    \"completion_tokens_details\": {\n      \"reasoning_tokens\":
+      \"assistant\",\n        \"content\": \"Thought: Since I am unable to get examples
+      from the tool, I will have to proceed by giving the best answer based on logical
+      reasoning and commonly accepted criteria for evaluating titles.\\n\\nFinal Answer:
+      When scoring the title \\\"The impact of AI in the future of work\\\" between
+      1-5, the following specific criteria or factors should be considered:\\n\\n1.
+      **Clarity**: The title should clearly convey the topic and scope of the content.
+      It should be easy to understand and leave no ambiguity about the subject matter.\\n2.
+      **Relevance**: The title should be relevant to current trends, issues, and discussions
+      in the field of Artificial Intelligence and the future of work. It should address
+      a significant and timely topic.\\n3. **Specificity**: The title should be specific
+      enough to give a clear indication of what aspects of AI and the future of work
+      will be explored, but broad enough to allow for a comprehensive discussion.\\n4.
+      **Engagement Potential**: The title should be engaging and intriguing, sparking
+      curiosity and interest in the audience. It should encourage readers to want
+      to learn more about the topic.\\n5. **Scope for Discussion**: The title should
+      have the potential to foster a meaningful and in-depth discussion. It should
+      open up avenues for exploring various impacts, challenges, and opportunities
+      related to AI in the future workplace.\\n\\nA score of 1 would indicate that
+      the title fails to meet these criteria, while a score of 5 would indicate that
+      the title excels in all these areas.\\n\\nGiven these criteria, here is an example
+      evaluation of \\\"The impact of AI in the future of work\\\":\\n\\n- **Clarity**:
+      The title is clear and straightforward. (Score: 5)\\n- **Relevance**: The topic
+      is highly relevant to current technological and societal trends. (Score: 5)\\n-
+      **Specificity**: The title could be a bit more specific, perhaps by narrowing
+      down what aspects of AI or which sectors of work will be impacted. (Score: 4)\\n-
+      **Engagement Potential**: The title is engaging, as it addresses a significant
+      and intriguing topic. (Score: 5)\\n- **Scope for Discussion**: The title opens
+      up a broad range of potential discussion points. (Score: 5)\\n\\nAverage Score:
+      (5+5+4+5+5)/5 = 4.8\\n\\nTherefore, \\\"The impact of AI in the future of work\\\"
+      would likely receive a high score, close to 5, when evaluated using these criteria.\",\n
+      \       \"refusal\": null\n      },\n      \"logprobs\": null,\n      \"finish_reason\":
+      \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 1048,\n    \"completion_tokens\":
+      509,\n    \"total_tokens\": 1557,\n    \"completion_tokens_details\": {\n      \"reasoning_tokens\":
       0\n    }\n  },\n  \"system_fingerprint\": \"fp_25624ae3a5\"\n}\n"
     headers:
       CF-Cache-Status:
       - DYNAMIC
       CF-RAY:
-      - 8c3bf7588c05a4ca-MIA
+      - 8c3f9f350d962233-MIA
       Connection:
       - keep-alive
       Content-Encoding:
@@ -819,7 +789,7 @@ interactions:
       Content-Type:
       - application/json
       Date:
-      - Sun, 15 Sep 2024 22:13:56 GMT
+      - Mon, 16 Sep 2024 08:52:47 GMT
       Server:
       - cloudflare
       Transfer-Encoding:
@@ -833,7 +803,7 @@ interactions:
       openai-organization:
       - crewai-iuxna1
       openai-processing-ms:
-      - '6345'
+      - '4695'
       openai-version:
       - '2020-10-01'
       strict-transport-security:
@@ -845,21 +815,20 @@ interactions:
       x-ratelimit-remaining-requests:
       - '9999'
       x-ratelimit-remaining-tokens:
-      - '29998730'
+      - '29998769'
       x-ratelimit-reset-requests:
       - 6ms
       x-ratelimit-reset-tokens:
       - 2ms
       x-request-id:
-      - req_7db731cf7c3002a7d8a6782e8be05509
+      - req_39ca8adb0689c76fb8166ebf8f70cc8e
     http_version: HTTP/1.1
     status_code: 200
 - request:
     body: !!binary |
-      CtsBCiQKIgoMc2VydmljZS5uYW1lEhIKEGNyZXdBSS10ZWxlbWV0cnkSsgEKEgoQY3Jld2FpLnRl
-      bGVtZXRyeRKbAQoQYEhRgslsu3bVH9xRWEA0BhIICcgmLW3l7DoqClRvb2wgVXNhZ2UwATkA2vw/
-      nIr1F0EAFQhAnIr1F0oaCg5jcmV3YWlfdmVyc2lvbhIICgYwLjU2LjBKJwoJdG9vbF9uYW1lEhoK
-      GEFzayBxdWVzdGlvbiB0byBjb3dvcmtlckoOCghhdHRlbXB0cxICGAF6AhgBhQEAAQAA
+      CqYBCiQKIgoMc2VydmljZS5uYW1lEhIKEGNyZXdBSS10ZWxlbWV0cnkSfgoSChBjcmV3YWkudGVs
+      ZW1ldHJ5EmgKEC2f4EvH1JAo9lxrfRcZXt4SCFwK6ZggQ9/hKhBUb29sIFVzYWdlIEVycm9yMAE5
+      YJeUyHet9RdB8FuayHet9RdKGgoOY3Jld2FpX3ZlcnNpb24SCAoGMC41Ni4zegIYAYUBAAEAAA==
     headers:
       Accept:
       - '*/*'
@@ -868,7 +837,7 @@ interactions:
       Connection:
       - keep-alive
       Content-Length:
-      - '222'
+      - '169'
       Content-Type:
       - application/x-protobuf
       User-Agent:
@@ -884,7 +853,7 @@ interactions:
       Content-Type:
       - application/x-protobuf
       Date:
-      - Sun, 15 Sep 2024 22:14:00 GMT
+      - Mon, 16 Sep 2024 08:52:47 GMT
     status:
       code: 200
       message: OK
@@ -928,63 +897,50 @@ interactions:
       return the actual complete content as the final answer, not a summary.\n\nBegin!
       This is VERY important to you, use the tools available and give your best Final
       Answer, your job depends on it!\n\nThought:"}, {"role": "assistant", "content":
-      "Thought: To accurately evaluate the given title ''The impact of AI in the future
-      of work'' against the specified criteria (an integer score between 1-5), I need
-      to understand the criteria that my coworker, Scorer, will use for assessment.
-      This involves knowing what makes a title score a 1 versus a 5 and any gradations
-      in between. I should gather all available context regarding this scoring system
-      before delegating the task of scoring the title to Scorer. It''s important to
-      make sure the evaluation criteria are clear to ensure the scoring process aligns
-      with the expectations.\n\nAction: Ask question to coworker\n\nAction Input:
-      {\"question\": \"Can you explain the criteria used to assign a score between
-      1-5 to a title? Specifically, I''m interested in understanding what aspects
-      or qualities of a title would make it score at each level of this scale. The
-      task at hand involves scoring the title ''The impact of AI in the future of
-      work'', so examples relevant to technology or future-oriented themes would be
-      especially helpful.\", \"context\": \"A score needs to be assigned to the title
-      ''The impact of AI in the future of work'', based on its relevance, impact,
-      originality, and clarity. The scoring system ranges from 1 to 5, but the precise
-      criteria for what constitutes each score level hasn''t been specified. Clear
-      explanations and examples, especially related to technology and future work,
-      are sought to correctly evaluate titles.\", \"coworker\": \"Scorer\"}\nObservation:
-      Here is your detailed answer on how to score a title between 1 and 5, specifically
-      for the title ''The impact of AI in the future of work'':\n\n1. **Relevance**:\n    -
-      **Score 1**: The title is completely irrelevant to the given context or topic.\n    -
-      **Score 2**: The title has limited relevance, touching only tangentially on
-      the topic.\n    - **Score 3**: The title is moderately relevant but lacks focus
-      or specificity.\n    - **Score 4**: The title is relevant and addresses the
-      topic directly with clear focus.\n    - **Score 5**: The title is highly relevant,
-      directly addressing the core topic comprehensively and precisely.\n\n2. **Impact**:\n    -
-      **Score 1**: The title suggests minimal or no significant impact on the reader
-      or the field.\n    - **Score 2**: The title indicates some impact but does not
-      clearly convey its significance.\n    - **Score 3**: The title reflects a moderate
-      impact, highlighting importance but lacking strong emphasis.\n    - **Score
-      4**: The title conveys a strong impact, clearly indicating its importance to
-      the field.\n    - **Score 5**: The title suggests a profound impact, compelling
-      the reader with a sense of urgency or significance.\n\n3. **Originality**:\n    -
-      **Score 1**: The title is generic, common, or overused, with no original contribution.\n    -
-      **Score 2**: The title shows minimal originality, being slightly more specific
-      than a generic title.\n    - **Score 3**: The title has some original elements
-      but may still feel somewhat familiar.\n    - **Score 4**: The title is original,
-      presenting a fresh perspective on the topic.\n    - **Score 5**: The title is
-      highly original, offering a unique and innovative approach or angle.\n\n4. **Clarity**:\n    -
-      **Score 1**: The title is confusing, ambiguous, or poorly worded.\n    - **Score
-      2**: The title is somewhat clear but may contain jargon or unclear elements.\n    -
-      **Score 3**: The title is reasonably clear but could be more concise or straightforward.\n    -
-      **Score 4**: The title is clear, well-structured, and easy to understand.\n    -
-      **Score 5**: The title is exceptionally clear, concise, and leaves no room for
-      misinterpretation.\n\n**Example Application:**\n\nFor the title ''The impact
-      of AI in the future of work'', let''s evaluate it based on the given criteria:\n\n-
-      **Relevance**: 5 (Highly relevant as it directly addresses the topic of AI and
-      its role in the future workplace)\n- **Impact**: 4 (Conveys strong impact, emphasizing
-      the importance of AI in future work scenarios)\n- **Originality**: 3 (Moderately
-      original; it is specific but the theme of AI and future work is widely discussed)\n-
-      **Clarity**: 4 (Clear and straightforward but could perhaps be more concise
-      by rephrasing)\n\nOverall Score: This title could be rated around a 4, as it
-      effectively communicates its relevance, impact, and clarity, but with room for
-      slight improvement in originality and specificity.\n\nThis detailed explanation
-      should help you understand how to evaluate and score titles effectively across
-      different criteria."}], "model": "gpt-4-0125-preview", "stop": ["\nObservation:"]}'
+      "Thought: To accurately score the title \"The impact of AI in the future of
+      work\" based on the provided criteria and examples, I need to understand what
+      specific attributes or factors should be considered for the evaluation. Since
+      I don''t have immediate access to the examples or any pre-defined criteria,
+      it would be beneficial to clarify what elements make a title score higher or
+      lower within the 1-5 range. Is it the clarity of the title, the relevance to
+      current trends, the potential for engaging discussion, or another factor altogether?
+      Once I understand these criteria, I can more effectively evaluate the title.\n\nAction:
+      Ask question to coworker\n\nAction Input: {\"question\": \"What specific criteria
+      or factors should be considered when scoring the title ''The impact of AI in
+      the future of work'' between 1-5? Are we looking at clarity, relevance, potential
+      for engaging discussion, or any other specific attributes?\", \"context\": \"The
+      task is to provide an integer score between 1-5 for the mentioned title, based
+      on examples and criteria for evaluation. However, the examples and criteria
+      have not been provided, making it essential to understand what attributes or
+      factors are crucial for this evaluation.\", \"coworker\": \"Scorer\"}\nObservation:
+      When scoring the title \"The impact of AI in the future of work\" between 1-5,
+      the following specific criteria or factors should be considered:\n\n1. **Clarity**:
+      The title should clearly convey the topic and scope of the content. It should
+      be easy to understand and leave no ambiguity about the subject matter.\n2. **Relevance**:
+      The title should be relevant to current trends, issues, and discussions in the
+      field of Artificial Intelligence and the future of work. It should address a
+      significant and timely topic.\n3. **Specificity**: The title should be specific
+      enough to give a clear indication of what aspects of AI and the future of work
+      will be explored, but broad enough to allow for a comprehensive discussion.\n4.
+      **Engagement Potential**: The title should be engaging and intriguing, sparking
+      curiosity and interest in the audience. It should encourage readers to want
+      to learn more about the topic.\n5. **Scope for Discussion**: The title should
+      have the potential to foster a meaningful and in-depth discussion. It should
+      open up avenues for exploring various impacts, challenges, and opportunities
+      related to AI in the future workplace.\n\nA score of 1 would indicate that the
+      title fails to meet these criteria, while a score of 5 would indicate that the
+      title excels in all these areas.\n\nGiven these criteria, here is an example
+      evaluation of \"The impact of AI in the future of work\":\n\n- **Clarity**:
+      The title is clear and straightforward. (Score: 5)\n- **Relevance**: The topic
+      is highly relevant to current technological and societal trends. (Score: 5)\n-
+      **Specificity**: The title could be a bit more specific, perhaps by narrowing
+      down what aspects of AI or which sectors of work will be impacted. (Score: 4)\n-
+      **Engagement Potential**: The title is engaging, as it addresses a significant
+      and intriguing topic. (Score: 5)\n- **Scope for Discussion**: The title opens
+      up a broad range of potential discussion points. (Score: 5)\n\nAverage Score:
+      (5+5+4+5+5)/5 = 4.8\n\nTherefore, \"The impact of AI in the future of work\"
+      would likely receive a high score, close to 5, when evaluated using these criteria."}],
+      "model": "gpt-4-0125-preview", "stop": ["\nObservation:"]}'
     headers:
       accept:
       - application/json
@@ -993,12 +949,12 @@ interactions:
       connection:
       - keep-alive
       content-length:
-      - '7633'
+      - '6512'
       content-type:
       - application/json
       cookie:
-      - __cf_bm=xCQEG8vgEvQfut0bkj2xgre9z9ePZhdKdNxBphhvH6s-1726437753-1.0.1.1-5qo0zwDCcKDtqvIzDbp2sLEPCey8v5DAsf0Mg6f2RmooOW9FXTw2P66VCTTF.vCwTpWBIFk0vzKmBAPOt6urIg;
-        _cfuvid=TiTyEciy7HrUlIDEsELZqkUyM4Fyn8OldZd4JefFMOA-1726437753108-0.0.1.1-604800000
+      - __cf_bm=1SckBhvJ18Dazp6bi8DEKYeiS9Q4.6_6i3nmLBw9b6g-1726476036-1.0.1.1-TnN4UpDXA33YXCVCUWOaZ12vGIg_o5NpJQEUHgjn6XdUgb7M0ND8PdkTfkd8rrxG5XFlPRMzI54GxZ0FeUY9xw;
+        _cfuvid=0Rs4xTPk7h7OIXuSbTgMVVD9JSoZeKMwnygKHoHQo3k-1726476036297-0.0.1.1-604800000
       host:
       - api.openai.com
       user-agent:
@@ -1022,34 +978,30 @@ interactions:
     method: POST
     uri: https://api.openai.com/v1/chat/completions
   response:
-    content: "{\n  \"id\": \"chatcmpl-A7rnAEjmu1Z22PltyaBJL8seuiyJx\",\n  \"object\":
-      \"chat.completion\",\n  \"created\": 1726438436,\n  \"model\": \"gpt-4-0125-preview\",\n
+    content: "{\n  \"id\": \"chatcmpl-A81lPXGHQidXo4yJaPzDZVihVwbVB\",\n  \"object\":
+      \"chat.completion\",\n  \"created\": 1726476767,\n  \"model\": \"gpt-4-0125-preview\",\n
       \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
-      \"assistant\",\n        \"content\": \"Thought: With the detailed criteria provided
-      by Scorer on how to score a title between 1 to 5, focusing on relevance, impact,
-      originality, and clarity, I now have a clear framework to evaluate the title
-      'The impact of AI in the future of work'. According to the explanation, this
-      title aligns closely with the highest standards of relevance and has a strong
-      impact, while its originality is moderate in the current discourse and its clarity
-      is considered high. Based on these insights, I can deduce an appropriate score
-      that balances these factors, keeping in mind the provided example application
-      which suggests a score of 4. This aligns closely with the evaluation and scoring
-      framework described by Scorer. The example given by Scorer explicitly evaluated
-      the title in question, providing sufficient rationale for a score. So, I can
-      confidently finalize my decision without further delegation.\\n\\nI now know
-      the final answer.\\n\\nFinal Answer: The score for the title 'The impact of
-      AI in the future of work' is 4. This score is based on its high relevance to
-      the topic, strong impact indicating its importance to the field, moderate originality
-      considering the wide discussion on AI and work, and high clarity in its expression.\",\n
-      \       \"refusal\": null\n      },\n      \"logprobs\": null,\n      \"finish_reason\":
-      \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 1653,\n    \"completion_tokens\":
-      244,\n    \"total_tokens\": 1897,\n    \"completion_tokens_details\": {\n      \"reasoning_tokens\":
+      \"assistant\",\n        \"content\": \"Thought: Based on the criteria outlined
+      by the response from Scorer, it seems clear now how to evaluate the title \\\"The
+      impact of AI in the future of work\\\". The criteria of clarity, relevance,
+      specificity, engagement potential, and scope for discussion will guide the scoring
+      process. The details provided indicate that the title does very well in most
+      areas, with slight room for improvement in specificity according to the given
+      evaluation. However, since the scoring must be an integer between 1 and 5, and
+      given the example evaluation breakdown, the final average suggests that the
+      title should be closely rounded or considered against the highest possible score,
+      which is 5, taking into account how it excels in most criteria with a minor
+      consideration for improvement in specificity.\\n\\nFinal Answer: The score of
+      the title \\\"The impact of AI in the future of work\\\" is 5.\",\n        \"refusal\":
+      null\n      },\n      \"logprobs\": null,\n      \"finish_reason\": \"stop\"\n
+      \   }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 1392,\n    \"completion_tokens\":
+      172,\n    \"total_tokens\": 1564,\n    \"completion_tokens_details\": {\n      \"reasoning_tokens\":
       0\n    }\n  },\n  \"system_fingerprint\": null\n}\n"
     headers:
       CF-Cache-Status:
       - DYNAMIC
       CF-RAY:
-      - 8c3bf78229b7a4ca-MIA
+      - 8c3f9f542fbf2233-MIA
       Connection:
       - keep-alive
       Content-Encoding:
@@ -1057,7 +1009,7 @@ interactions:
       Content-Type:
       - application/json
       Date:
-      - Sun, 15 Sep 2024 22:14:04 GMT
+      - Mon, 16 Sep 2024 08:52:52 GMT
       Server:
       - cloudflare
       Transfer-Encoding:
@@ -1071,7 +1023,7 @@ interactions:
       openai-organization:
       - crewai-iuxna1
       openai-processing-ms:
-      - '8312'
+      - '4929'
       openai-version:
       - '2020-10-01'
       strict-transport-security:
@@ -1083,13 +1035,13 @@ interactions:
       x-ratelimit-remaining-requests:
       - '9999'
       x-ratelimit-remaining-tokens:
-      - '1998139'
+      - '1998417'
       x-ratelimit-reset-requests:
       - 6ms
       x-ratelimit-reset-tokens:
-      - 55ms
+      - 47ms
       x-request-id:
-      - req_4d766138e37b0347f3d356bd6252f972
+      - req_7117672fbbb3038bfca668109915fdb9
     http_version: HTTP/1.1
     status_code: 200
 version: 1

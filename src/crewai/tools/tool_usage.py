@@ -113,8 +113,6 @@ class ToolUsage:
                 result = self._i18n.errors("task_repeated_usage").format(
                     tool_names=self.tools_names
                 )
-                if self.agent.verbose:
-                    self._printer.print(content=f"\n\n{result}\n", color="purple")
                 self._telemetry.tool_repeated_usage(
                     llm=self.function_calling_llm,
                     tool_name=tool.name,
@@ -200,8 +198,6 @@ class ToolUsage:
                     calling=calling, output=result, should_cache=should_cache
                 )
 
-        if self.agent.verbose:
-            self._printer.print(content=f"\n\n{result}\n", color="purple")
         if agentops:
             agentops.record(tool_event)
         self._telemetry.tool_usage(

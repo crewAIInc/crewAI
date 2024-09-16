@@ -1,10 +1,12 @@
+import json
+import re
 from typing import Any, Dict, List, Union
 
 from crewai.agents.agent_builder.base_agent_executor_mixin import CrewAgentExecutorMixin
 from crewai.agents.parser import CrewAgentParser
 from crewai.agents.tools_handler import ToolsHandler
 from crewai.tools.tool_usage import ToolUsage, ToolUsageErrorException
-from crewai.utilities import I18N
+from crewai.utilities import I18N, Printer
 from crewai.utilities.constants import TRAINING_DATA_FILE
 from crewai.utilities.exceptions.context_window_exceeding_exception import (
     LLMContextLengthExceededException,
@@ -55,6 +57,7 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
         self.stop = stop_words
         self.max_iter = max_iter
         self.callbacks = callbacks
+        self._printer: Printer = Printer()
         self.tools_handler = tools_handler
         self.original_tools = original_tools
         self.step_callback = step_callback
@@ -79,6 +82,7 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
         else:
             user_prompt = self._format_prompt(self.prompt.get("prompt", ""), inputs)
             self.messages.append(self._format_msg(user_prompt))
+
         self.ask_for_human_input = bool(inputs.get("ask_for_human_input", False))
         formatted_answer = self._invoke_loop()
 
@@ -90,7 +94,8 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
             # Making sure we only ask for it once, so disabling for the next thought loop
             self.ask_for_human_input = False
             self.messages.append(self._format_msg(f"Feedback: {human_feedback}"))
-            formatted_answer = self._invoke_loop(None)
+            formatted_answer = self._invoke_loop()
+
         return {"output": formatted_answer.output}
 
     def _invoke_loop(self, formatted_answer=None):
@@ -119,9 +124,12 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
                     if isinstance(formatted_answer, AgentAction):
                         action_result = self._use_tool(formatted_answer)
                         formatted_answer.text += f"\nObservation: {action_result}"
+                        formatted_answer.result = action_result
+                        self._show_logs(formatted_answer)
+
                         if self.step_callback:
-                            formatted_answer.result = action_result
                             self.step_callback(formatted_answer)
+
                         if self._should_force_answer():
                             if self.have_forced_answer:
                                 return AgentFinish(
@@ -140,17 +148,53 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
                         )
         except OutputParserException as e:
             self.messages.append({"role": "assistant", "content": e.error})
-            self._invoke_loop(formatted_answer)
+            return self._invoke_loop(formatted_answer)
 
         except Exception as e:
             if LLMContextLengthExceededException(str(e))._is_context_limit_error(
                 str(e)
             ):
                 self._handle_context_length()
-                self._invoke_loop(formatted_answer)
+                return self._invoke_loop(formatted_answer)
             else:
                 raise e
+
+        self._show_logs(formatted_answer)
         return formatted_answer
+
+    def _show_logs(self, formatted_answer: Union[AgentAction, AgentFinish]):
+        if self.agent.verbose or (
+            hasattr(self, "crew") and getattr(self.crew, "verbose", False)
+        ):
+            if isinstance(formatted_answer, AgentAction):
+                thought = re.sub(r"\n+", "\n", formatted_answer.thought)
+                formatted_json = json.dumps(
+                    json.loads(formatted_answer.tool_input),
+                    indent=2,
+                    ensure_ascii=False,
+                )
+                self._printer.print(
+                    content=f"\n\n\033[1m\033[95m# Agent:\033[00m \033[1m\033[92m{self.agent.role}\033[00m"
+                )
+                self._printer.print(
+                    content=f"\033[95m## Thought:\033[00m \033[92m{thought}\033[00m"
+                )
+                self._printer.print(
+                    content=f"\033[95m## Using tool:\033[00m \033[92m{formatted_answer.tool}\033[00m"
+                )
+                self._printer.print(
+                    content=f"\033[95m## Tool Input:\033[00m \033[92m\n{formatted_json}\033[00m"
+                )
+                self._printer.print(
+                    content=f"\033[95m## Tool Output:\033[00m \033[92m\n{formatted_answer.result}\033[00m"
+                )
+            elif isinstance(formatted_answer, AgentFinish):
+                self._printer.print(
+                    content=f"\n\n\033[1m\033[95m# Agent:\033[00m \033[1m\033[92m{self.agent.role}\033[00m"
+                )
+                self._printer.print(
+                    content=f"\033[95m## Final Answer:\033[00m \033[92m\n{formatted_answer.output}\033[00m"
+                )
 
     def _use_tool(self, agent_action: AgentAction) -> Any:
         tool_usage = ToolUsage(

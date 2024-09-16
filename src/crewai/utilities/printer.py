@@ -1,5 +1,5 @@
 class Printer:
-    def print(self, content: str, color: str):
+    def print(self, content: str, color: str = None):
         if color == "purple":
             self._print_purple(content)
         elif color == "red":

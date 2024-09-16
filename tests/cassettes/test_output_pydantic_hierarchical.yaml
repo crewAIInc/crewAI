@@ -51,8 +51,8 @@ interactions:
       content-type:
       - application/json
       cookie:
-      - __cf_bm=xCQEG8vgEvQfut0bkj2xgre9z9ePZhdKdNxBphhvH6s-1726437753-1.0.1.1-5qo0zwDCcKDtqvIzDbp2sLEPCey8v5DAsf0Mg6f2RmooOW9FXTw2P66VCTTF.vCwTpWBIFk0vzKmBAPOt6urIg;
-        _cfuvid=TiTyEciy7HrUlIDEsELZqkUyM4Fyn8OldZd4JefFMOA-1726437753108-0.0.1.1-604800000
+      - __cf_bm=1SckBhvJ18Dazp6bi8DEKYeiS9Q4.6_6i3nmLBw9b6g-1726476036-1.0.1.1-TnN4UpDXA33YXCVCUWOaZ12vGIg_o5NpJQEUHgjn6XdUgb7M0ND8PdkTfkd8rrxG5XFlPRMzI54GxZ0FeUY9xw;
+        _cfuvid=0Rs4xTPk7h7OIXuSbTgMVVD9JSoZeKMwnygKHoHQo3k-1726476036297-0.0.1.1-604800000
       host:
       - api.openai.com
       user-agent:
@@ -76,26 +76,26 @@ interactions:
     method: POST
     uri: https://api.openai.com/v1/chat/completions
   response:
-    content: "{\n  \"id\": \"chatcmpl-A7rm34IZQwsgOC0na79Lw2eUwseCZ\",\n  \"object\":
-      \"chat.completion\",\n  \"created\": 1726438367,\n  \"model\": \"gpt-4o-2024-05-13\",\n
+    content: "{\n  \"id\": \"chatcmpl-A81kPJ5q07mluDh2F8A3qXAGEogoC\",\n  \"object\":
+      \"chat.completion\",\n  \"created\": 1726476705,\n  \"model\": \"gpt-4o-2024-05-13\",\n
       \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
-      \"assistant\",\n        \"content\": \"To provide an accurate integer score
-      for the title \\\"The impact of AI in the future of work,\\\" I need to delegate
-      this task to the appropriate coworker, Scorer. They would be the best fit to
-      evaluate and provide a score based on their expertise.\\n\\nAction: Delegate
-      work to coworker\\nAction Input: {\\\"task\\\": \\\"Provide an integer score
-      between 1-5 for the title 'The impact of AI in the future of work'\\\", \\\"context\\\":
-      \\\"I need an integer score for this title to evaluate its impact. The scoring
-      should be based on relevance, clarity, and significance of the title.\\\", \\\"coworker\\\":
-      \\\"Scorer\\\"}\",\n        \"refusal\": null\n      },\n      \"logprobs\":
-      null,\n      \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\":
-      664,\n    \"completion_tokens\": 132,\n    \"total_tokens\": 796,\n    \"completion_tokens_details\":
-      {\n      \"reasoning_tokens\": 0\n    }\n  },\n  \"system_fingerprint\": \"fp_25624ae3a5\"\n}\n"
+      \"assistant\",\n        \"content\": \"I need to delegate the task of scoring
+      the title 'The impact of AI in the future of work' to the Scorer, providing
+      all necessary context for the task.\\n\\nAction: Delegate work to coworker\\nAction
+      Input: {\\\"task\\\": \\\"Give an integer score between 1-5 for the title 'The
+      impact of AI in the future of work'\\\", \\\"context\\\": \\\"This score is
+      based on how compelling and relevant the title is, ranging from 1 (least compelling)
+      to 5 (most compelling). The evaluation should consider aspects like clarity,
+      relevance, impact, and engagement.\\\", \\\"coworker\\\": \\\"Scorer\\\"}\",\n
+      \       \"refusal\": null\n      },\n      \"logprobs\": null,\n      \"finish_reason\":
+      \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 664,\n    \"completion_tokens\":
+      128,\n    \"total_tokens\": 792,\n    \"completion_tokens_details\": {\n      \"reasoning_tokens\":
+      0\n    }\n  },\n  \"system_fingerprint\": \"fp_25624ae3a5\"\n}\n"
     headers:
       CF-Cache-Status:
       - DYNAMIC
       CF-RAY:
-      - 8c3bf5d37d1aa4ca-MIA
+      - 8c3f9dccabde2233-MIA
       Connection:
       - keep-alive
       Content-Encoding:
@@ -103,7 +103,7 @@ interactions:
       Content-Type:
       - application/json
       Date:
-      - Sun, 15 Sep 2024 22:12:49 GMT
+      - Mon, 16 Sep 2024 08:51:47 GMT
       Server:
       - cloudflare
       Transfer-Encoding:
@@ -117,7 +117,7 @@ interactions:
       openai-organization:
       - crewai-iuxna1
       openai-processing-ms:
-      - '1355'
+      - '1785'
       openai-version:
       - '2020-10-01'
       strict-transport-security:
@@ -129,192 +129,84 @@ interactions:
       x-ratelimit-remaining-requests:
       - '9999'
       x-ratelimit-remaining-tokens:
-      - '29999268'
+      - '29999269'
       x-ratelimit-reset-requests:
       - 6ms
       x-ratelimit-reset-tokens:
       - 1ms
       x-request-id:
-      - req_bd22f2317616617144f14c9cbad8352d
-    http_version: HTTP/1.1
-    status_code: 200
-- request:
-    body: '{"messages": [{"role": "system", "content": "You are Scorer. You''re an
-      expert scorer, specialized in scoring titles.\nYour personal goal is: Score
-      the title\nTo give my best complete final answer to the task use the exact following
-      format:\n\nThought: I now can give a great answer\nFinal Answer: Your final
-      answer must be the great and the most complete as possible, it must be outcome
-      described.\n\nI MUST use these formats, my job depends on it!"}, {"role": "user",
-      "content": "\nCurrent Task: Provide an integer score between 1-5 for the title
-      ''The impact of AI in the future of work''\n\nThis is the expect criteria for
-      your final answer: Your best answer to your coworker asking you this, accounting
-      for the context shared.\nyou MUST return the actual complete content as the
-      final answer, not a summary.\n\nThis is the context you''re working with:\nI
-      need an integer score for this title to evaluate its impact. The scoring should
-      be based on relevance, clarity, and significance of the title.\n\nBegin! This
-      is VERY important to you, use the tools available and give your best Final Answer,
-      your job depends on it!\n\nThought:"}], "model": "gpt-4o", "stop": ["\nObservation:"]}'
-    headers:
-      accept:
-      - application/json
-      accept-encoding:
-      - gzip, deflate
-      connection:
-      - keep-alive
-      content-length:
-      - '1184'
-      content-type:
-      - application/json
-      cookie:
-      - __cf_bm=xCQEG8vgEvQfut0bkj2xgre9z9ePZhdKdNxBphhvH6s-1726437753-1.0.1.1-5qo0zwDCcKDtqvIzDbp2sLEPCey8v5DAsf0Mg6f2RmooOW9FXTw2P66VCTTF.vCwTpWBIFk0vzKmBAPOt6urIg;
-        _cfuvid=TiTyEciy7HrUlIDEsELZqkUyM4Fyn8OldZd4JefFMOA-1726437753108-0.0.1.1-604800000
-      host:
-      - api.openai.com
-      user-agent:
-      - OpenAI/Python 1.45.0
-      x-stainless-arch:
-      - arm64
-      x-stainless-async:
-      - 'false'
-      x-stainless-lang:
-      - python
-      x-stainless-os:
-      - MacOS
-      x-stainless-package-version:
-      - 1.45.0
-      x-stainless-raw-response:
-      - 'true'
-      x-stainless-runtime:
-      - CPython
-      x-stainless-runtime-version:
-      - 3.11.7
-    method: POST
-    uri: https://api.openai.com/v1/chat/completions
-  response:
-    content: "{\n  \"id\": \"chatcmpl-A7rm5LvYR20Ef91Cwtd7NL8bSxcbC\",\n  \"object\":
-      \"chat.completion\",\n  \"created\": 1726438369,\n  \"model\": \"gpt-4o-2024-05-13\",\n
-      \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
-      \"assistant\",\n        \"content\": \"Thought: I now can give a great answer\\nFinal
-      Answer: 5\",\n        \"refusal\": null\n      },\n      \"logprobs\": null,\n
-      \     \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\":
-      231,\n    \"completion_tokens\": 15,\n    \"total_tokens\": 246,\n    \"completion_tokens_details\":
-      {\n      \"reasoning_tokens\": 0\n    }\n  },\n  \"system_fingerprint\": \"fp_992d1ea92d\"\n}\n"
-    headers:
-      CF-Cache-Status:
-      - DYNAMIC
-      CF-RAY:
-      - 8c3bf5e0d872a4ca-MIA
-      Connection:
-      - keep-alive
-      Content-Encoding:
-      - gzip
-      Content-Type:
-      - application/json
-      Date:
-      - Sun, 15 Sep 2024 22:12:49 GMT
-      Server:
-      - cloudflare
-      Transfer-Encoding:
-      - chunked
-      X-Content-Type-Options:
-      - nosniff
-      access-control-expose-headers:
-      - X-Request-ID
-      alt-svc:
-      - h3=":443"; ma=86400
-      openai-organization:
-      - crewai-iuxna1
-      openai-processing-ms:
-      - '295'
-      openai-version:
-      - '2020-10-01'
-      strict-transport-security:
-      - max-age=15552000; includeSubDomains; preload
-      x-ratelimit-limit-requests:
-      - '10000'
-      x-ratelimit-limit-tokens:
-      - '30000000'
-      x-ratelimit-remaining-requests:
-      - '9999'
-      x-ratelimit-remaining-tokens:
-      - '29999722'
-      x-ratelimit-reset-requests:
-      - 6ms
-      x-ratelimit-reset-tokens:
-      - 0s
-      x-request-id:
-      - req_0e7f5029f6a98be4af68394a546fcc9a
+      - req_f778e80f8dc92d1126ba6ed5e44ed1f3
     http_version: HTTP/1.1
     status_code: 200
 - request:
     body: !!binary |
       Ct4eCiQKIgoMc2VydmljZS5uYW1lEhIKEGNyZXdBSS10ZWxlbWV0cnkStR4KEgoQY3Jld2FpLnRl
-      bGVtZXRyeRKeBwoQcDBWV3d837NXzY/t7MBmrBIIgaqLh7Fa6PMqDENyZXcgQ3JlYXRlZDABOag9
-      H8OLivUXQXBkIcOLivUXShoKDmNyZXdhaV92ZXJzaW9uEggKBjAuNTYuMEoaCg5weXRob25fdmVy
+      bGVtZXRyeRKeBwoQcKiMUVyF9nLRwbtsWg+kNxIIloxvYoluKHYqDENyZXcgQ3JlYXRlZDABOTia
+      kdZprfUXQYi8l9ZprfUXShoKDmNyZXdhaV92ZXJzaW9uEggKBjAuNTYuM0oaCg5weXRob25fdmVy
       c2lvbhIICgYzLjExLjdKLgoIY3Jld19rZXkSIgogZWI0ZjgyZTA5ZjNhYWJkODA2ZjNkMTU4MDMz
-      NjJlOWFKMQoHY3Jld19pZBImCiQxZWRkZjdmMS1lMGJiLTQyNTAtYWFmNS05NmUyYTVlZDNlMWNK
+      NjJlOWFKMQoHY3Jld19pZBImCiQ3MThhMzJmOS0yYzI4LTQ0NTAtYTEwNC0yNmE1MGE2NmEyYzdK
       HAoMY3Jld19wcm9jZXNzEgwKCnNlcXVlbnRpYWxKEQoLY3Jld19tZW1vcnkSAhAAShoKFGNyZXdf
       bnVtYmVyX29mX3Rhc2tzEgIYAUobChVjcmV3X251bWJlcl9vZl9hZ2VudHMSAhgBSs0CCgtjcmV3
       X2FnZW50cxK9Agq6Alt7ImtleSI6ICI2NzhkODgyNGQyMDgwMDNjNWVkMWE3Y2NlZWYxOTA5ZCIs
-      ICJpZCI6ICIwZDJiN2FkMS0xN2E5LTQwZGUtOThlYS1lOTU5NDQ0NDZhOWYiLCAicm9sZSI6ICJU
+      ICJpZCI6ICJiOTI1YWIyZS02OWY3LTQ1YTktOWJmNS1kOThkMTAyYTRhZTkiLCAicm9sZSI6ICJU
       ZXN0IFJvbGUiLCAidmVyYm9zZT8iOiBmYWxzZSwgIm1heF9pdGVyIjogMTUsICJtYXhfcnBtIjog
       bnVsbCwgImZ1bmN0aW9uX2NhbGxpbmdfbGxtIjogbnVsbCwgImxsbSI6ICJncHQtNG8iLCAiZGVs
       ZWdhdGlvbl9lbmFibGVkPyI6IGZhbHNlLCAiYWxsb3dfY29kZV9leGVjdXRpb24/IjogZmFsc2Us
       ICJtYXhfcmV0cnlfbGltaXQiOiAyLCAidG9vbHNfbmFtZXMiOiBbXX1dSv4BCgpjcmV3X3Rhc2tz
       Eu8BCuwBW3sia2V5IjogImU3ZWI4MjZhMTE0ZjhiMTQxOWM5NWRhNTc3NDEyOTliIiwgImlkIjog
-      IjRjMmUwMGVhLTU1MjctNGRlYi1hMWI3LWMwMTBjMDVmYzE4OSIsICJhc3luY19leGVjdXRpb24/
+      IjIzNmFmNDMxLTYzODUtNGNiMi05NDVjLWFlNGZiNGYwZDQ4YyIsICJhc3luY19leGVjdXRpb24/
       IjogZmFsc2UsICJodW1hbl9pbnB1dD8iOiBmYWxzZSwgImFnZW50X3JvbGUiOiAiVGVzdCBSb2xl
       IiwgImFnZW50X2tleSI6ICI2NzhkODgyNGQyMDgwMDNjNWVkMWE3Y2NlZWYxOTA5ZCIsICJ0b29s
-      c19uYW1lcyI6IFtdfV16AhgBhQEAAQAAEo4CChBhuyTm21royhQlL4QLy43MEggNr0vWOE5WVCoM
-      VGFzayBDcmVhdGVkMAE58E4vw4uK9RdBKJkvw4uK9RdKLgoIY3Jld19rZXkSIgogZWI0ZjgyZTA5
-      ZjNhYWJkODA2ZjNkMTU4MDMzNjJlOWFKMQoHY3Jld19pZBImCiQxZWRkZjdmMS1lMGJiLTQyNTAt
-      YWFmNS05NmUyYTVlZDNlMWNKLgoIdGFza19rZXkSIgogZTdlYjgyNmExMTRmOGIxNDE5Yzk1ZGE1
-      Nzc0MTI5OWJKMQoHdGFza19pZBImCiQ0YzJlMDBlYS01NTI3LTRkZWItYTFiNy1jMDEwYzA1ZmMx
-      ODl6AhgBhQEAAQAAEpACChBXFJqUCyM5SvO30zIsbt0EEggExrcqno7GgCoOVGFzayBFeGVjdXRp
-      b24wATk4wC/Di4r1F0GojSjii4r1F0ouCghjcmV3X2tleRIiCiBlYjRmODJlMDlmM2FhYmQ4MDZm
-      M2QxNTgwMzM2MmU5YUoxCgdjcmV3X2lkEiYKJDFlZGRmN2YxLWUwYmItNDI1MC1hYWY1LTk2ZTJh
-      NWVkM2UxY0ouCgh0YXNrX2tleRIiCiBlN2ViODI2YTExNGY4YjE0MTljOTVkYTU3NzQxMjk5Ykox
-      Cgd0YXNrX2lkEiYKJDRjMmUwMGVhLTU1MjctNGRlYi1hMWI3LWMwMTBjMDVmYzE4OXoCGAGFAQAB
-      AAASmAcKEDPAOMVOjNHNVIYclebULOESCFp/M+kyFPlMKgxDcmV3IENyZWF0ZWQwATmQ2+Dki4r1
-      F0GoxePki4r1F0oaCg5jcmV3YWlfdmVyc2lvbhIICgYwLjU2LjBKGgoOcHl0aG9uX3ZlcnNpb24S
+      c19uYW1lcyI6IFtdfV16AhgBhQEAAQAAEo4CChCe2i+DO5xDf8GH05MiWd70EghXL+tDkOoVqCoM
+      VGFzayBDcmVhdGVkMAE5cDyt1mmt9RdBGJ6t1mmt9RdKLgoIY3Jld19rZXkSIgogZWI0ZjgyZTA5
+      ZjNhYWJkODA2ZjNkMTU4MDMzNjJlOWFKMQoHY3Jld19pZBImCiQ3MThhMzJmOS0yYzI4LTQ0NTAt
+      YTEwNC0yNmE1MGE2NmEyYzdKLgoIdGFza19rZXkSIgogZTdlYjgyNmExMTRmOGIxNDE5Yzk1ZGE1
+      Nzc0MTI5OWJKMQoHdGFza19pZBImCiQyMzZhZjQzMS02Mzg1LTRjYjItOTQ1Yy1hZTRmYjRmMGQ0
+      OGN6AhgBhQEAAQAAEpACChANpHdm2yg0I/+MSkWhCnrLEgjy2KryM44WgSoOVGFzayBFeGVjdXRp
+      b24wATn4zK3Waa31F0Fwxcf7aa31F0ouCghjcmV3X2tleRIiCiBlYjRmODJlMDlmM2FhYmQ4MDZm
+      M2QxNTgwMzM2MmU5YUoxCgdjcmV3X2lkEiYKJDcxOGEzMmY5LTJjMjgtNDQ1MC1hMTA0LTI2YTUw
+      YTY2YTJjN0ouCgh0YXNrX2tleRIiCiBlN2ViODI2YTExNGY4YjE0MTljOTVkYTU3NzQxMjk5Ykox
+      Cgd0YXNrX2lkEiYKJDIzNmFmNDMxLTYzODUtNGNiMi05NDVjLWFlNGZiNGYwZDQ4Y3oCGAGFAQAB
+      AAASmAcKEP9CZQLB3qb/uPwGXSvomhkSCIDj6ScqpLOeKgxDcmV3IENyZWF0ZWQwATlArHz+aa31
+      F0EIzX/+aa31F0oaCg5jcmV3YWlfdmVyc2lvbhIICgYwLjU2LjNKGgoOcHl0aG9uX3ZlcnNpb24S
       CAoGMy4xMS43Si4KCGNyZXdfa2V5EiIKIDVlNmVmZmU2ODBhNWQ5N2RjMzg3M2IxNDgyNWNjZmEz
-      SjEKB2NyZXdfaWQSJgokY2ZhNjgzYjEtZTQwMi00ZTQ4LWE2ODgtNWIzMTY4ZThjODIzShwKDGNy
+      SjEKB2NyZXdfaWQSJgokZTViYjMxN2UtMDlhYy00MWJmLWIyM2QtYzM1ZDhhM2JhMmNlShwKDGNy
       ZXdfcHJvY2VzcxIMCgpzZXF1ZW50aWFsShEKC2NyZXdfbWVtb3J5EgIQAEoaChRjcmV3X251bWJl
       cl9vZl90YXNrcxICGAFKGwoVY3Jld19udW1iZXJfb2ZfYWdlbnRzEgIYAUrKAgoLY3Jld19hZ2Vu
       dHMSugIKtwJbeyJrZXkiOiAiOTJlN2ViMTkxNjY0YzkzNTc4NWVkN2Q0MjQwYTI5NGQiLCAiaWQi
-      OiAiZDdlNDhjY2UtOGM0Mi00ZTVmLThjYzQtMDk4OWRhZTIxNDM4IiwgInJvbGUiOiAiU2NvcmVy
+      OiAiOTNiNjQ0MDEtNDUwNC00NTVkLTgxNWEtYzMxMTk1NjYzMTRiIiwgInJvbGUiOiAiU2NvcmVy
       IiwgInZlcmJvc2U/IjogZmFsc2UsICJtYXhfaXRlciI6IDE1LCAibWF4X3JwbSI6IG51bGwsICJm
       dW5jdGlvbl9jYWxsaW5nX2xsbSI6IG51bGwsICJsbG0iOiAiZ3B0LTRvIiwgImRlbGVnYXRpb25f
       ZW5hYmxlZD8iOiBmYWxzZSwgImFsbG93X2NvZGVfZXhlY3V0aW9uPyI6IGZhbHNlLCAibWF4X3Jl
       dHJ5X2xpbWl0IjogMiwgInRvb2xzX25hbWVzIjogW119XUr7AQoKY3Jld190YXNrcxLsAQrpAVt7
-      ImtleSI6ICIyN2VmMzhjYzk5ZGE0YThkZWQ3MGVkNDA2ZTQ0YWI4NiIsICJpZCI6ICI5Njc5NTFj
-      Yi0yNjBjLTRjNjctYWQ3YS02ZGZiNjJmMjQ0ZDIiLCAiYXN5bmNfZXhlY3V0aW9uPyI6IGZhbHNl
+      ImtleSI6ICIyN2VmMzhjYzk5ZGE0YThkZWQ3MGVkNDA2ZTQ0YWI4NiIsICJpZCI6ICJlMzRlZDk0
+      NS0yMTZjLTQzYWItOTMxNy1jYWZjNzY1ZjEzMzciLCAiYXN5bmNfZXhlY3V0aW9uPyI6IGZhbHNl
       LCAiaHVtYW5faW5wdXQ/IjogZmFsc2UsICJhZ2VudF9yb2xlIjogIlNjb3JlciIsICJhZ2VudF9r
       ZXkiOiAiOTJlN2ViMTkxNjY0YzkzNTc4NWVkN2Q0MjQwYTI5NGQiLCAidG9vbHNfbmFtZXMiOiBb
-      XX1degIYAYUBAAEAABKOAgoQoglY12pH2HRQJyjKxZ2UZhII0svbGrquGiwqDFRhc2sgQ3JlYXRl
-      ZDABOdjI9uSLivUXQXhV9+SLivUXSi4KCGNyZXdfa2V5EiIKIDVlNmVmZmU2ODBhNWQ5N2RjMzg3
-      M2IxNDgyNWNjZmEzSjEKB2NyZXdfaWQSJgokY2ZhNjgzYjEtZTQwMi00ZTQ4LWE2ODgtNWIzMTY4
-      ZThjODIzSi4KCHRhc2tfa2V5EiIKIDI3ZWYzOGNjOTlkYTRhOGRlZDcwZWQ0MDZlNDRhYjg2SjEK
-      B3Rhc2tfaWQSJgokOTY3OTUxY2ItMjYwYy00YzY3LWFkN2EtNmRmYjYyZjI0NGQyegIYAYUBAAEA
-      ABKQAgoQ4eZ05j9E4U/lzfj677HRoxII6ORHwNP0ofwqDlRhc2sgRXhlY3V0aW9uMAE5sJ/35IuK
-      9RdBEHp0MoyK9RdKLgoIY3Jld19rZXkSIgogNWU2ZWZmZTY4MGE1ZDk3ZGMzODczYjE0ODI1Y2Nm
-      YTNKMQoHY3Jld19pZBImCiRjZmE2ODNiMS1lNDAyLTRlNDgtYTY4OC01YjMxNjhlOGM4MjNKLgoI
+      XX1degIYAYUBAAEAABKOAgoQqnIquE7GmRuaEhrwyvHu8xIIrqYeyUSgUAoqDFRhc2sgQ3JlYXRl
+      ZDABOdCTkf5prfUXQXj1kf5prfUXSi4KCGNyZXdfa2V5EiIKIDVlNmVmZmU2ODBhNWQ5N2RjMzg3
+      M2IxNDgyNWNjZmEzSjEKB2NyZXdfaWQSJgokZTViYjMxN2UtMDlhYy00MWJmLWIyM2QtYzM1ZDhh
+      M2JhMmNlSi4KCHRhc2tfa2V5EiIKIDI3ZWYzOGNjOTlkYTRhOGRlZDcwZWQ0MDZlNDRhYjg2SjEK
+      B3Rhc2tfaWQSJgokZTM0ZWQ5NDUtMjE2Yy00M2FiLTkzMTctY2FmYzc2NWYxMzM3egIYAYUBAAEA
+      ABKQAgoQ7Th2r7YR2lGZ+YvvqW1rNxII3/nWkhzBlCoqDlRhc2sgRXhlY3V0aW9uMAE5QCiS/mmt
+      9RdBWPw6Wmqt9RdKLgoIY3Jld19rZXkSIgogNWU2ZWZmZTY4MGE1ZDk3ZGMzODczYjE0ODI1Y2Nm
+      YTNKMQoHY3Jld19pZBImCiRlNWJiMzE3ZS0wOWFjLTQxYmYtYjIzZC1jMzVkOGEzYmEyY2VKLgoI
       dGFza19rZXkSIgogMjdlZjM4Y2M5OWRhNGE4ZGVkNzBlZDQwNmU0NGFiODZKMQoHdGFza19pZBIm
-      CiQ5Njc5NTFjYi0yNjBjLTRjNjctYWQ3YS02ZGZiNjJmMjQ0ZDJ6AhgBhQEAAQAAEpoHChCcfehZ
-      gXEG9OlwE9rbDIj0EggXCI0XGL0tiioMQ3JldyBDcmVhdGVkMAE5cAkKNYyK9RdBMN4LNYyK9RdK
-      GgoOY3Jld2FpX3ZlcnNpb24SCAoGMC41Ni4wShoKDnB5dGhvbl92ZXJzaW9uEggKBjMuMTEuN0ou
+      CiRlMzRlZDk0NS0yMTZjLTQzYWItOTMxNy1jYWZjNzY1ZjEzMzd6AhgBhQEAAQAAEpoHChAHqwiQ
+      NlKgOMRCu7dUdFv2EgjqR/ZsmJIPdyoMQ3JldyBDcmVhdGVkMAE5mBjxW2qt9RdBuN3yW2qt9RdK
+      GgoOY3Jld2FpX3ZlcnNpb24SCAoGMC41Ni4zShoKDnB5dGhvbl92ZXJzaW9uEggKBjMuMTEuN0ou
       CghjcmV3X2tleRIiCiA1ZTZlZmZlNjgwYTVkOTdkYzM4NzNiMTQ4MjVjY2ZhM0oxCgdjcmV3X2lk
-      EiYKJGU5OWRmMzQwLTJhMTctNDRjYy05ZDhlLTdjZGNkNDMwMTUzN0oeCgxjcmV3X3Byb2Nlc3MS
+      EiYKJDZiYWZhZTcyLWRlZTYtNDhkNS05ODE1LTEwNmI1OGU0ZWQ4MEoeCgxjcmV3X3Byb2Nlc3MS
       DgoMaGllcmFyY2hpY2FsShEKC2NyZXdfbWVtb3J5EgIQAEoaChRjcmV3X251bWJlcl9vZl90YXNr
       cxICGAFKGwoVY3Jld19udW1iZXJfb2ZfYWdlbnRzEgIYAUrKAgoLY3Jld19hZ2VudHMSugIKtwJb
-      eyJrZXkiOiAiOTJlN2ViMTkxNjY0YzkzNTc4NWVkN2Q0MjQwYTI5NGQiLCAiaWQiOiAiMmNiMzY0
-      Y2QtZGJkMC00MzcxLWIxYzUtZmE0YzU0NzhmZmZlIiwgInJvbGUiOiAiU2NvcmVyIiwgInZlcmJv
+      eyJrZXkiOiAiOTJlN2ViMTkxNjY0YzkzNTc4NWVkN2Q0MjQwYTI5NGQiLCAiaWQiOiAiNjQ3OGVl
+      ZDUtMGE5NC00MjUwLTgzY2QtYmE0NGY2MDdjZDc2IiwgInJvbGUiOiAiU2NvcmVyIiwgInZlcmJv
       c2U/IjogZmFsc2UsICJtYXhfaXRlciI6IDE1LCAibWF4X3JwbSI6IG51bGwsICJmdW5jdGlvbl9j
       YWxsaW5nX2xsbSI6IG51bGwsICJsbG0iOiAiZ3B0LTRvIiwgImRlbGVnYXRpb25fZW5hYmxlZD8i
       OiBmYWxzZSwgImFsbG93X2NvZGVfZXhlY3V0aW9uPyI6IGZhbHNlLCAibWF4X3JldHJ5X2xpbWl0
       IjogMiwgInRvb2xzX25hbWVzIjogW119XUr7AQoKY3Jld190YXNrcxLsAQrpAVt7ImtleSI6ICIy
-      N2VmMzhjYzk5ZGE0YThkZWQ3MGVkNDA2ZTQ0YWI4NiIsICJpZCI6ICI2OTgzOTNjMy02MzY1LTQ4
-      NzctOWU1My03MDEzOGFkMzEyMGQiLCAiYXN5bmNfZXhlY3V0aW9uPyI6IGZhbHNlLCAiaHVtYW5f
+      N2VmMzhjYzk5ZGE0YThkZWQ3MGVkNDA2ZTQ0YWI4NiIsICJpZCI6ICJmMDExMWRlOS1mNTIwLTRi
+      ODctODZjNS01MjE2MTdiNTNkZTUiLCAiYXN5bmNfZXhlY3V0aW9uPyI6IGZhbHNlLCAiaHVtYW5f
       aW5wdXQ/IjogZmFsc2UsICJhZ2VudF9yb2xlIjogIlNjb3JlciIsICJhZ2VudF9rZXkiOiAiOTJl
       N2ViMTkxNjY0YzkzNTc4NWVkN2Q0MjQwYTI5NGQiLCAidG9vbHNfbmFtZXMiOiBbXX1degIYAYUB
       AAEAAA==
@@ -342,10 +234,124 @@ interactions:
       Content-Type:
       - application/x-protobuf
       Date:
-      - Sun, 15 Sep 2024 22:12:50 GMT
+      - Mon, 16 Sep 2024 08:51:47 GMT
     status:
       code: 200
       message: OK
+- request:
+    body: '{"messages": [{"role": "system", "content": "You are Scorer. You''re an
+      expert scorer, specialized in scoring titles.\nYour personal goal is: Score
+      the title\nTo give my best complete final answer to the task use the exact following
+      format:\n\nThought: I now can give a great answer\nFinal Answer: Your final
+      answer must be the great and the most complete as possible, it must be outcome
+      described.\n\nI MUST use these formats, my job depends on it!"}, {"role": "user",
+      "content": "\nCurrent Task: Give an integer score between 1-5 for the title
+      ''The impact of AI in the future of work''\n\nThis is the expect criteria for
+      your final answer: Your best answer to your coworker asking you this, accounting
+      for the context shared.\nyou MUST return the actual complete content as the
+      final answer, not a summary.\n\nThis is the context you''re working with:\nThis
+      score is based on how compelling and relevant the title is, ranging from 1 (least
+      compelling) to 5 (most compelling). The evaluation should consider aspects like
+      clarity, relevance, impact, and engagement.\n\nBegin! This is VERY important
+      to you, use the tools available and give your best Final Answer, your job depends
+      on it!\n\nThought:"}], "model": "gpt-4o", "stop": ["\nObservation:"]}'
+    headers:
+      accept:
+      - application/json
+      accept-encoding:
+      - gzip, deflate
+      connection:
+      - keep-alive
+      content-length:
+      - '1247'
+      content-type:
+      - application/json
+      cookie:
+      - __cf_bm=1SckBhvJ18Dazp6bi8DEKYeiS9Q4.6_6i3nmLBw9b6g-1726476036-1.0.1.1-TnN4UpDXA33YXCVCUWOaZ12vGIg_o5NpJQEUHgjn6XdUgb7M0ND8PdkTfkd8rrxG5XFlPRMzI54GxZ0FeUY9xw;
+        _cfuvid=0Rs4xTPk7h7OIXuSbTgMVVD9JSoZeKMwnygKHoHQo3k-1726476036297-0.0.1.1-604800000
+      host:
+      - api.openai.com
+      user-agent:
+      - OpenAI/Python 1.45.0
+      x-stainless-arch:
+      - arm64
+      x-stainless-async:
+      - 'false'
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - MacOS
+      x-stainless-package-version:
+      - 1.45.0
+      x-stainless-raw-response:
+      - 'true'
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.11.7
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    content: "{\n  \"id\": \"chatcmpl-A81kRJdHyZ1KF7J0WZe4qUffyFuS7\",\n  \"object\":
+      \"chat.completion\",\n  \"created\": 1726476707,\n  \"model\": \"gpt-4o-2024-05-13\",\n
+      \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
+      \"assistant\",\n        \"content\": \"Thought: I now can give a great answer\\nFinal
+      Answer: 5 - The title 'The impact of AI in the future of work' is highly compelling
+      and relevant. It clearly addresses a significant and contemporary topic, promising
+      to deliver insights on how artificial intelligence will shape the workforce
+      in the future. The title is clear, engaging, and has a strong impact given the
+      widespread interest and importance of the subject.\",\n        \"refusal\":
+      null\n      },\n      \"logprobs\": null,\n      \"finish_reason\": \"stop\"\n
+      \   }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 245,\n    \"completion_tokens\":
+      82,\n    \"total_tokens\": 327,\n    \"completion_tokens_details\": {\n      \"reasoning_tokens\":
+      0\n    }\n  },\n  \"system_fingerprint\": \"fp_25624ae3a5\"\n}\n"
+    headers:
+      CF-Cache-Status:
+      - DYNAMIC
+      CF-RAY:
+      - 8c3f9ddcd8072233-MIA
+      Connection:
+      - keep-alive
+      Content-Encoding:
+      - gzip
+      Content-Type:
+      - application/json
+      Date:
+      - Mon, 16 Sep 2024 08:51:48 GMT
+      Server:
+      - cloudflare
+      Transfer-Encoding:
+      - chunked
+      X-Content-Type-Options:
+      - nosniff
+      access-control-expose-headers:
+      - X-Request-ID
+      alt-svc:
+      - h3=":443"; ma=86400
+      openai-organization:
+      - crewai-iuxna1
+      openai-processing-ms:
+      - '823'
+      openai-version:
+      - '2020-10-01'
+      strict-transport-security:
+      - max-age=15552000; includeSubDomains; preload
+      x-ratelimit-limit-requests:
+      - '10000'
+      x-ratelimit-limit-tokens:
+      - '30000000'
+      x-ratelimit-remaining-requests:
+      - '9999'
+      x-ratelimit-remaining-tokens:
+      - '29999707'
+      x-ratelimit-reset-requests:
+      - 6ms
+      x-ratelimit-reset-tokens:
+      - 0s
+      x-request-id:
+      - req_f6aabe41a9781542120379367d762eec
+    http_version: HTTP/1.1
+    status_code: 200
 - request:
     body: '{"messages": [{"role": "system", "content": "You are Crew Manager. You
       are a seasoned manager with a knack for getting the best out of your team.\nYou
@@ -385,15 +391,20 @@ interactions:
       your final answer: The score of the title.\nyou MUST return the actual complete
       content as the final answer, not a summary.\n\nBegin! This is VERY important
       to you, use the tools available and give your best Final Answer, your job depends
-      on it!\n\nThought:"}, {"role": "assistant", "content": "To provide an accurate
-      integer score for the title \"The impact of AI in the future of work,\" I need
-      to delegate this task to the appropriate coworker, Scorer. They would be the
-      best fit to evaluate and provide a score based on their expertise.\n\nAction:
-      Delegate work to coworker\nAction Input: {\"task\": \"Provide an integer score
-      between 1-5 for the title ''The impact of AI in the future of work''\", \"context\":
-      \"I need an integer score for this title to evaluate its impact. The scoring
-      should be based on relevance, clarity, and significance of the title.\", \"coworker\":
-      \"Scorer\"}\nObservation: 5"}], "model": "gpt-4o", "stop": ["\nObservation:"]}'
+      on it!\n\nThought:"}, {"role": "assistant", "content": "I need to delegate the
+      task of scoring the title ''The impact of AI in the future of work'' to the
+      Scorer, providing all necessary context for the task.\n\nAction: Delegate work
+      to coworker\nAction Input: {\"task\": \"Give an integer score between 1-5 for
+      the title ''The impact of AI in the future of work''\", \"context\": \"This
+      score is based on how compelling and relevant the title is, ranging from 1 (least
+      compelling) to 5 (most compelling). The evaluation should consider aspects like
+      clarity, relevance, impact, and engagement.\", \"coworker\": \"Scorer\"}\nObservation:
+      5 - The title ''The impact of AI in the future of work'' is highly compelling
+      and relevant. It clearly addresses a significant and contemporary topic, promising
+      to deliver insights on how artificial intelligence will shape the workforce
+      in the future. The title is clear, engaging, and has a strong impact given the
+      widespread interest and importance of the subject."}], "model": "gpt-4o", "stop":
+      ["\nObservation:"]}'
     headers:
       accept:
       - application/json
@@ -402,12 +413,12 @@ interactions:
       connection:
       - keep-alive
       content-length:
-      - '3662'
+      - '3993'
       content-type:
       - application/json
       cookie:
-      - __cf_bm=xCQEG8vgEvQfut0bkj2xgre9z9ePZhdKdNxBphhvH6s-1726437753-1.0.1.1-5qo0zwDCcKDtqvIzDbp2sLEPCey8v5DAsf0Mg6f2RmooOW9FXTw2P66VCTTF.vCwTpWBIFk0vzKmBAPOt6urIg;
-        _cfuvid=TiTyEciy7HrUlIDEsELZqkUyM4Fyn8OldZd4JefFMOA-1726437753108-0.0.1.1-604800000
+      - __cf_bm=1SckBhvJ18Dazp6bi8DEKYeiS9Q4.6_6i3nmLBw9b6g-1726476036-1.0.1.1-TnN4UpDXA33YXCVCUWOaZ12vGIg_o5NpJQEUHgjn6XdUgb7M0ND8PdkTfkd8rrxG5XFlPRMzI54GxZ0FeUY9xw;
+        _cfuvid=0Rs4xTPk7h7OIXuSbTgMVVD9JSoZeKMwnygKHoHQo3k-1726476036297-0.0.1.1-604800000
       host:
       - api.openai.com
       user-agent:
@@ -431,19 +442,19 @@ interactions:
     method: POST
     uri: https://api.openai.com/v1/chat/completions
   response:
-    content: "{\n  \"id\": \"chatcmpl-A7rm6ZUNSOvkysz90ydHyY9rHtmoY\",\n  \"object\":
-      \"chat.completion\",\n  \"created\": 1726438370,\n  \"model\": \"gpt-4o-2024-05-13\",\n
+    content: "{\n  \"id\": \"chatcmpl-A81kSraDJaYs5wutqKKLHeKxmfDHi\",\n  \"object\":
+      \"chat.completion\",\n  \"created\": 1726476708,\n  \"model\": \"gpt-4o-2024-05-13\",\n
       \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
       \"assistant\",\n        \"content\": \"Thought: I now know the final answer.\\nFinal
       Answer: 5\",\n        \"refusal\": null\n      },\n      \"logprobs\": null,\n
       \     \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\":
-      804,\n    \"completion_tokens\": 14,\n    \"total_tokens\": 818,\n    \"completion_tokens_details\":
+      867,\n    \"completion_tokens\": 14,\n    \"total_tokens\": 881,\n    \"completion_tokens_details\":
       {\n      \"reasoning_tokens\": 0\n    }\n  },\n  \"system_fingerprint\": \"fp_25624ae3a5\"\n}\n"
     headers:
       CF-Cache-Status:
       - DYNAMIC
       CF-RAY:
-      - 8c3bf5e48d97a4ca-MIA
+      - 8c3f9de3d9562233-MIA
       Connection:
       - keep-alive
       Content-Encoding:
@@ -451,7 +462,7 @@ interactions:
       Content-Type:
       - application/json
       Date:
-      - Sun, 15 Sep 2024 22:12:50 GMT
+      - Mon, 16 Sep 2024 08:51:49 GMT
       Server:
       - cloudflare
       Transfer-Encoding:
@@ -465,7 +476,7 @@ interactions:
       openai-organization:
       - crewai-iuxna1
       openai-processing-ms:
-      - '217'
+      - '301'
       openai-version:
       - '2020-10-01'
       strict-transport-security:
@@ -477,13 +488,13 @@ interactions:
       x-ratelimit-remaining-requests:
       - '9999'
       x-ratelimit-remaining-tokens:
-      - '29999119'
+      - '29999036'
       x-ratelimit-reset-requests:
       - 6ms
       x-ratelimit-reset-tokens:
       - 1ms
       x-request-id:
-      - req_d31f8d13a62e62896aeabdef2c3a7c17
+      - req_3b2499ced45cf4ac2b16aeaf49efd0d0
     http_version: HTTP/1.1
     status_code: 200
 - request:
@@ -506,8 +517,8 @@ interactions:
       content-type:
       - application/json
       cookie:
-      - __cf_bm=DurtHM6fkhfkA7g799_dwsE._nuW9E9Mn9HDzyFEsYs-1726437888-1.0.1.1-UoxJT1kLoPpNnFl48ADK4A8Pqx.svT3QTAd77nzKAMBqxSFs5eS6PBa.zKCvEqW2ezsF.T2kIV.wblTuq9HIhA;
-        _cfuvid=WvaYlp1s5wjHZ.MS6s.ZraavPzhWyZK3jqIKIgxM4f4-1726437888389-0.0.1.1-604800000
+      - __cf_bm=04EJuO0mh2HU6FxLd2CpOc6Z6MMpyxhMCz_t6onOpaY-1726476704-1.0.1.1-BHP4W7X58z8ba4ns2wYBcPx53or5JKBDisMn8i7dQluTmjuN201bym7OqEkZrmUlhr0n3oODNJf0SS5BVipRKg;
+        _cfuvid=JBsdqQQtLEVtIStEIeDR0TRIr0GMGhWKAyum6suoH.4-1726476704561-0.0.1.1-604800000
       host:
       - api.openai.com
       user-agent:
@@ -531,11 +542,11 @@ interactions:
     method: POST
     uri: https://api.openai.com/v1/chat/completions
   response:
-    content: "{\n  \"id\": \"chatcmpl-A7rm7JMPuXZKVDCovRcrIDcUYPImZ\",\n  \"object\":
-      \"chat.completion\",\n  \"created\": 1726438371,\n  \"model\": \"gpt-4o-2024-05-13\",\n
+    content: "{\n  \"id\": \"chatcmpl-A81kTfOnb70LVAtCbLxtzDT8qNrxf\",\n  \"object\":
+      \"chat.completion\",\n  \"created\": 1726476709,\n  \"model\": \"gpt-4o-2024-05-13\",\n
       \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
       \"assistant\",\n        \"content\": null,\n        \"tool_calls\": [\n          {\n
-      \           \"id\": \"call_Mssfz6WaNU3Kps3iPBoGO3kr\",\n            \"type\":
+      \           \"id\": \"call_xffzPK5ejiClraWHENMlKlFx\",\n            \"type\":
       \"function\",\n            \"function\": {\n              \"name\": \"ScoreOutput\",\n
       \             \"arguments\": \"{\\\"score\\\":5}\"\n            }\n          }\n
       \       ],\n        \"refusal\": null\n      },\n      \"logprobs\": null,\n
@@ -546,7 +557,7 @@ interactions:
       CF-Cache-Status:
       - DYNAMIC
       CF-RAY:
-      - 8c3bf5eadff29aeb-MIA
+      - 8c3f9dea98c15c7c-MIA
       Connection:
       - keep-alive
       Content-Encoding:
@@ -554,7 +565,7 @@ interactions:
       Content-Type:
       - application/json
       Date:
-      - Sun, 15 Sep 2024 22:12:51 GMT
+      - Mon, 16 Sep 2024 08:51:49 GMT
       Server:
       - cloudflare
       Transfer-Encoding:
@@ -568,7 +579,7 @@ interactions:
       openai-organization:
       - crewai-iuxna1
       openai-processing-ms:
-      - '157'
+      - '139'
       openai-version:
       - '2020-10-01'
       strict-transport-security:
@@ -586,7 +597,7 @@ interactions:
       x-ratelimit-reset-tokens:
       - 0s
       x-request-id:
-      - req_8aaf568446a6bae2272c34e2286eaf18
+      - req_c39fda889dfecf2a3c82b9cbf35181a4
     http_version: HTTP/1.1
     status_code: 200
 version: 1

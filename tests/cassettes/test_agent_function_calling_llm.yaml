@@ -29,8 +29,8 @@ interactions:
       content-type:
       - application/json
       cookie:
-      - __cf_bm=xCQEG8vgEvQfut0bkj2xgre9z9ePZhdKdNxBphhvH6s-1726437753-1.0.1.1-5qo0zwDCcKDtqvIzDbp2sLEPCey8v5DAsf0Mg6f2RmooOW9FXTw2P66VCTTF.vCwTpWBIFk0vzKmBAPOt6urIg;
-        _cfuvid=TiTyEciy7HrUlIDEsELZqkUyM4Fyn8OldZd4JefFMOA-1726437753108-0.0.1.1-604800000
+      - __cf_bm=1SckBhvJ18Dazp6bi8DEKYeiS9Q4.6_6i3nmLBw9b6g-1726476036-1.0.1.1-TnN4UpDXA33YXCVCUWOaZ12vGIg_o5NpJQEUHgjn6XdUgb7M0ND8PdkTfkd8rrxG5XFlPRMzI54GxZ0FeUY9xw;
+        _cfuvid=0Rs4xTPk7h7OIXuSbTgMVVD9JSoZeKMwnygKHoHQo3k-1726476036297-0.0.1.1-604800000
       host:
       - api.openai.com
       user-agent:
@@ -54,20 +54,20 @@ interactions:
     method: POST
     uri: https://api.openai.com/v1/chat/completions
   response:
-    content: "{\n  \"id\": \"chatcmpl-A7rgZEMI5yFepHogwjwlc6KVM7xW6\",\n  \"object\":
-      \"chat.completion\",\n  \"created\": 1726438027,\n  \"model\": \"gpt-4o-2024-05-13\",\n
+    content: "{\n  \"id\": \"chatcmpl-A81dOZZr6YkafluN0kvmrBi2eB7Qd\",\n  \"object\":
+      \"chat.completion\",\n  \"created\": 1726476270,\n  \"model\": \"gpt-4o-2024-05-13\",\n
       \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
-      \"assistant\",\n        \"content\": \"Thought: I should gather information
-      on AI to write an informative and amazing paragraph about it.\\n\\nAction: learn_about_AI\\nAction
-      Input: {}\",\n        \"refusal\": null\n      },\n      \"logprobs\": null,\n
-      \     \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\":
-      277,\n    \"completion_tokens\": 28,\n    \"total_tokens\": 305,\n    \"completion_tokens_details\":
-      {\n      \"reasoning_tokens\": 0\n    }\n  },\n  \"system_fingerprint\": \"fp_25624ae3a5\"\n}\n"
+      \"assistant\",\n        \"content\": \"I need to gather information about AI
+      to write an amazing paragraph.\\n\\nAction: learn_about_AI\\nAction Input: {}\",\n
+      \       \"refusal\": null\n      },\n      \"logprobs\": null,\n      \"finish_reason\":
+      \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 277,\n    \"completion_tokens\":
+      23,\n    \"total_tokens\": 300,\n    \"completion_tokens_details\": {\n      \"reasoning_tokens\":
+      0\n    }\n  },\n  \"system_fingerprint\": \"fp_25624ae3a5\"\n}\n"
     headers:
       CF-Cache-Status:
       - DYNAMIC
       CF-RAY:
-      - 8c3bed85bac2a4ca-MIA
+      - 8c3f9334c9c32233-MIA
       Connection:
       - keep-alive
       Content-Encoding:
@@ -75,7 +75,7 @@ interactions:
       Content-Type:
       - application/json
       Date:
-      - Sun, 15 Sep 2024 22:07:07 GMT
+      - Mon, 16 Sep 2024 08:44:31 GMT
       Server:
       - cloudflare
       Transfer-Encoding:
@@ -89,7 +89,7 @@ interactions:
       openai-organization:
       - crewai-iuxna1
       openai-processing-ms:
-      - '326'
+      - '293'
       openai-version:
       - '2020-10-01'
       strict-transport-security:
@@ -107,7 +107,7 @@ interactions:
       x-ratelimit-reset-tokens:
       - 0s
       x-request-id:
-      - req_932bbc6b2a64e0ae209eeeb563390460
+      - req_7a770db76636df3c1f359d214628c36b
     http_version: HTTP/1.1
     status_code: 200
 - request:
@@ -128,11 +128,11 @@ interactions:
       return the actual complete content as the final answer, not a summary.\n\nBegin!
       This is VERY important to you, use the tools available and give your best Final
       Answer, your job depends on it!\n\nThought:"}, {"role": "assistant", "content":
-      "Thought: I should gather information on AI to write an informative and amazing
-      paragraph about it.\n\nAction: learn_about_AI\nAction Input: {}\nObservation:
-      You tried to use the tool <Mock name=''from_litellm().chat.completions.create().tool_name''
-      id=''11004817744''>, but it doesn''t exist. You must use one of the following
-      tools, use one at time: learn_about_ai."}], "model": "gpt-4o", "stop": ["\nObservation:"]}'
+      "I need to gather information about AI to write an amazing paragraph.\n\nAction:
+      learn_about_AI\nAction Input: {}\nObservation: You tried to use the tool <Mock
+      name=''from_litellm().chat.completions.create().tool_name'' id=''6156551056''>,
+      but it doesn''t exist. You must use one of the following tools, use one at time:
+      learn_about_ai."}], "model": "gpt-4o", "stop": ["\nObservation:"]}'
     headers:
       accept:
       - application/json
@@ -141,12 +141,12 @@ interactions:
       connection:
       - keep-alive
       content-length:
-      - '1776'
+      - '1745'
       content-type:
       - application/json
       cookie:
-      - __cf_bm=xCQEG8vgEvQfut0bkj2xgre9z9ePZhdKdNxBphhvH6s-1726437753-1.0.1.1-5qo0zwDCcKDtqvIzDbp2sLEPCey8v5DAsf0Mg6f2RmooOW9FXTw2P66VCTTF.vCwTpWBIFk0vzKmBAPOt6urIg;
-        _cfuvid=TiTyEciy7HrUlIDEsELZqkUyM4Fyn8OldZd4JefFMOA-1726437753108-0.0.1.1-604800000
+      - __cf_bm=1SckBhvJ18Dazp6bi8DEKYeiS9Q4.6_6i3nmLBw9b6g-1726476036-1.0.1.1-TnN4UpDXA33YXCVCUWOaZ12vGIg_o5NpJQEUHgjn6XdUgb7M0ND8PdkTfkd8rrxG5XFlPRMzI54GxZ0FeUY9xw;
+        _cfuvid=0Rs4xTPk7h7OIXuSbTgMVVD9JSoZeKMwnygKHoHQo3k-1726476036297-0.0.1.1-604800000
       host:
       - api.openai.com
       user-agent:
@@ -170,21 +170,20 @@ interactions:
     method: POST
     uri: https://api.openai.com/v1/chat/completions
   response:
-    content: "{\n  \"id\": \"chatcmpl-A7rgZoEMr1Lwa4sk2KRDNBexplmXQ\",\n  \"object\":
-      \"chat.completion\",\n  \"created\": 1726438027,\n  \"model\": \"gpt-4o-2024-05-13\",\n
+    content: "{\n  \"id\": \"chatcmpl-A81dP17wotofhPcDbS8AVgba19LHh\",\n  \"object\":
+      \"chat.completion\",\n  \"created\": 1726476271,\n  \"model\": \"gpt-4o-2024-05-13\",\n
       \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
-      \"assistant\",\n        \"content\": \"Thought: It appears I used an incorrect
-      tool name earlier. I'll attempt using the correct tool to learn about AI.\\n\\nAction:
-      learn_about_AI\\nAction Input: {}\",\n        \"refusal\": null\n      },\n
-      \     \"logprobs\": null,\n      \"finish_reason\": \"stop\"\n    }\n  ],\n
-      \ \"usage\": {\n    \"prompt_tokens\": 367,\n    \"completion_tokens\": 33,\n
-      \   \"total_tokens\": 400,\n    \"completion_tokens_details\": {\n      \"reasoning_tokens\":
+      \"assistant\",\n        \"content\": \"Thought: I need to use the correct tool
+      to gather information about AI.\\n\\nAction: learn_about_AI\\nAction Input:
+      {}\",\n        \"refusal\": null\n      },\n      \"logprobs\": null,\n      \"finish_reason\":
+      \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 362,\n    \"completion_tokens\":
+      25,\n    \"total_tokens\": 387,\n    \"completion_tokens_details\": {\n      \"reasoning_tokens\":
       0\n    }\n  },\n  \"system_fingerprint\": \"fp_25624ae3a5\"\n}\n"
     headers:
       CF-Cache-Status:
       - DYNAMIC
       CF-RAY:
-      - 8c3bed899887a4ca-MIA
+      - 8c3f93387b162233-MIA
       Connection:
       - keep-alive
       Content-Encoding:
@@ -192,7 +191,7 @@ interactions:
       Content-Type:
       - application/json
       Date:
-      - Sun, 15 Sep 2024 22:07:08 GMT
+      - Mon, 16 Sep 2024 08:44:31 GMT
       Server:
       - cloudflare
       Transfer-Encoding:
@@ -206,7 +205,7 @@ interactions:
       openai-organization:
       - crewai-iuxna1
       openai-processing-ms:
-      - '373'
+      - '294'
       openai-version:
       - '2020-10-01'
       strict-transport-security:
@@ -218,50 +217,48 @@ interactions:
       x-ratelimit-remaining-requests:
       - '9999'
       x-ratelimit-remaining-tokens:
-      - '29999585'
+      - '29999593'
       x-ratelimit-reset-requests:
       - 6ms
       x-ratelimit-reset-tokens:
       - 0s
       x-request-id:
-      - req_d9a81adef7f496f86b1bb02d6f51dc27
+      - req_7c917e83ad38d3d70b9bb95a3f4281c5
     http_version: HTTP/1.1
     status_code: 200
 - request:
     body: !!binary |
-      Cs0OCiQKIgoMc2VydmljZS5uYW1lEhIKEGNyZXdBSS10ZWxlbWV0cnkSpA4KEgoQY3Jld2FpLnRl
-      bGVtZXRyeRKRAQoQyUIuEmFH9oZY5MxkkXmECBII63TN/kAheSYqClRvb2wgVXNhZ2UwATmA2vt/
-      PIr1F0G4BgGAPIr1F0oaCg5jcmV3YWlfdmVyc2lvbhIICgYwLjU2LjBKHQoJdG9vbF9uYW1lEhAK
-      DmxlYXJuX2Fib3V0X0FJSg4KCGF0dGVtcHRzEgIYAXoCGAGFAQABAAASkQEKEOsByVg+JleiWKv+
-      WLh6LXoSCCyvF3NWwTLKKgpUb29sIFVzYWdlMAE5mEuKrjyK9RdByDeMrjyK9RdKGgoOY3Jld2Fp
-      X3ZlcnNpb24SCAoGMC41Ni4wSh0KCXRvb2xfbmFtZRIQCg5sZWFybl9hYm91dF9BSUoOCghhdHRl
-      bXB0cxICGAF6AhgBhQEAAQAAEpACChDcjlgxXTouKlicNTsgdxZEEgiaLrXzrF0GNyoOVGFzayBF
-      eGVjdXRpb24wATnQ+ZSKOIr1F0EIUYMDPYr1F0ouCghjcmV3X2tleRIiCiA0OTRmMzY1NzIzN2Fk
-      OGEzMDM1YjJmMWJlZWNkYzY3N0oxCgdjcmV3X2lkEiYKJDAyNDZmMDRkLWYzNmItNDdiNi04NTg4
-      LWM4NDUzYjQ3YzI4OUouCgh0YXNrX2tleRIiCiBmMjU5N2M3ODY3ZmJlMzI0ZGM2NWRjMDhkZmRi
-      ZmM2Y0oxCgd0YXNrX2lkEiYKJDhmNWYxNDhkLTNmMjQtNGFkZC05Mzc4LThlMmE0ODg4ZDI0OXoC
-      GAGFAQABAAASwQcKEFN6rRu5wpQi1V8PhlU/VJYSCNm9X+AY3xXeKgxDcmV3IENyZWF0ZWQwATl4
-      0/0EPYr1F0FgSAAFPYr1F0oaCg5jcmV3YWlfdmVyc2lvbhIICgYwLjU2LjBKGgoOcHl0aG9uX3Zl
-      cnNpb24SCAoGMy4xMS43Si4KCGNyZXdfa2V5EiIKIDQ5NGYzNjU3MjM3YWQ4YTMwMzViMmYxYmVl
-      Y2RjNjc3SjEKB2NyZXdfaWQSJgokMzA1NmZkYjItMWY2Yy00NWZkLWEyOTYtMjQwODc1OWE2NDNh
-      ShwKDGNyZXdfcHJvY2VzcxIMCgpzZXF1ZW50aWFsShEKC2NyZXdfbWVtb3J5EgIQAEoaChRjcmV3
-      X251bWJlcl9vZl90YXNrcxICGAFKGwoVY3Jld19udW1iZXJfb2ZfYWdlbnRzEgIYAUrgAgoLY3Jl
-      d19hZ2VudHMS0AIKzQJbeyJrZXkiOiAiZTE0OGU1MzIwMjkzNDk5ZjhjZWJlYTgyNmU3MjU4MmIi
-      LCAiaWQiOiAiOWI2YWRlNWMtOWQ0Yi00MTlkLWI1ODctMDM2MDcwOTRlMzZjIiwgInJvbGUiOiAi
-      dGVzdCByb2xlIiwgInZlcmJvc2U/IjogZmFsc2UsICJtYXhfaXRlciI6IDIsICJtYXhfcnBtIjog
-      bnVsbCwgImZ1bmN0aW9uX2NhbGxpbmdfbGxtIjogImdwdC00byIsICJsbG0iOiAiZ3B0LTRvIiwg
-      ImRlbGVnYXRpb25fZW5hYmxlZD8iOiBmYWxzZSwgImFsbG93X2NvZGVfZXhlY3V0aW9uPyI6IGZh
-      bHNlLCAibWF4X3JldHJ5X2xpbWl0IjogMiwgInRvb2xzX25hbWVzIjogWyJsZWFybl9hYm91dF9h
-      aSJdfV1KjgIKCmNyZXdfdGFza3MS/wEK/AFbeyJrZXkiOiAiZjI1OTdjNzg2N2ZiZTMyNGRjNjVk
-      YzA4ZGZkYmZjNmMiLCAiaWQiOiAiYzVlYzlkYmMtNzllYy00MTY4LWFhZDUtOGFhNWNkZTYyYTdm
-      IiwgImFzeW5jX2V4ZWN1dGlvbj8iOiBmYWxzZSwgImh1bWFuX2lucHV0PyI6IGZhbHNlLCAiYWdl
-      bnRfcm9sZSI6ICJ0ZXN0IHJvbGUiLCAiYWdlbnRfa2V5IjogImUxNDhlNTMyMDI5MzQ5OWY4Y2Vi
-      ZWE4MjZlNzI1ODJiIiwgInRvb2xzX25hbWVzIjogWyJsZWFybl9hYm91dF9haSJdfV16AhgBhQEA
-      AQAAEo4CChDcS8crtUlCKoN94WrUagPuEgjuL+aA0VgNDSoMVGFzayBDcmVhdGVkMAE50IIPBT2K
-      9RdBeOQPBT2K9RdKLgoIY3Jld19rZXkSIgogNDk0ZjM2NTcyMzdhZDhhMzAzNWIyZjFiZWVjZGM2
-      NzdKMQoHY3Jld19pZBImCiQzMDU2ZmRiMi0xZjZjLTQ1ZmQtYTI5Ni0yNDA4NzU5YTY0M2FKLgoI
-      dGFza19rZXkSIgogZjI1OTdjNzg2N2ZiZTMyNGRjNjVkYzA4ZGZkYmZjNmNKMQoHdGFza19pZBIm
-      CiRjNWVjOWRiYy03OWVjLTQxNjgtYWFkNS04YWE1Y2RlNjJhN2Z6AhgBhQEAAQAA
+      CrkNCiQKIgoMc2VydmljZS5uYW1lEhIKEGNyZXdBSS10ZWxlbWV0cnkSkA0KEgoQY3Jld2FpLnRl
+      bGVtZXRyeRKRAQoQpLg+zmNSaBf8CXtgFCPtjBIIre8qDcpxfk8qClRvb2wgVXNhZ2UwATnYMBaL
+      BK31F0G4TRmLBK31F0oaCg5jcmV3YWlfdmVyc2lvbhIICgYwLjU2LjNKHQoJdG9vbF9uYW1lEhAK
+      DmxlYXJuX2Fib3V0X0FJSg4KCGF0dGVtcHRzEgIYAXoCGAGFAQABAAASkAIKEC2ogzacwzjiilvX
+      VaUxp4cSCK69vyJQbJiXKg5UYXNrIEV4ZWN1dGlvbjABOYD5S2cErfUXQZD53lQFrfUXSi4KCGNy
+      ZXdfa2V5EiIKIDQ5NGYzNjU3MjM3YWQ4YTMwMzViMmYxYmVlY2RjNjc3SjEKB2NyZXdfaWQSJgok
+      MjQ3ZTBmYTItMzc3OS00MGZjLWEzNjQtNzNhMWQ3MWZlNTdlSi4KCHRhc2tfa2V5EiIKIGYyNTk3
+      Yzc4NjdmYmUzMjRkYzY1ZGMwOGRmZGJmYzZjSjEKB3Rhc2tfaWQSJgokZGM2ODY4MTYtY2YxYS00
+      NWQ0LTg5OTAtNjM5YmViNTAyMzcyegIYAYUBAAEAABLBBwoQl0r89dn2elg90SeJueBK5xII0Gvo
+      m3estv8qDENyZXcgQ3JlYXRlZDABOcBZG1YFrfUXQQDeH1YFrfUXShoKDmNyZXdhaV92ZXJzaW9u
+      EggKBjAuNTYuM0oaCg5weXRob25fdmVyc2lvbhIICgYzLjExLjdKLgoIY3Jld19rZXkSIgogNDk0
+      ZjM2NTcyMzdhZDhhMzAzNWIyZjFiZWVjZGM2NzdKMQoHY3Jld19pZBImCiQyMTkzYTc4OS1jZmE0
+      LTRhZGMtOWM1ZS1mZmU2ODU4NGFkNWJKHAoMY3Jld19wcm9jZXNzEgwKCnNlcXVlbnRpYWxKEQoL
+      Y3Jld19tZW1vcnkSAhAAShoKFGNyZXdfbnVtYmVyX29mX3Rhc2tzEgIYAUobChVjcmV3X251bWJl
+      cl9vZl9hZ2VudHMSAhgBSuACCgtjcmV3X2FnZW50cxLQAgrNAlt7ImtleSI6ICJlMTQ4ZTUzMjAy
+      OTM0OTlmOGNlYmVhODI2ZTcyNTgyYiIsICJpZCI6ICJmNjZhOWQyZC0yMTMyLTRiNGQtODYyYy0x
+      NGRlYWQ1NTM0ZGMiLCAicm9sZSI6ICJ0ZXN0IHJvbGUiLCAidmVyYm9zZT8iOiBmYWxzZSwgIm1h
+      eF9pdGVyIjogMiwgIm1heF9ycG0iOiBudWxsLCAiZnVuY3Rpb25fY2FsbGluZ19sbG0iOiAiZ3B0
+      LTRvIiwgImxsbSI6ICJncHQtNG8iLCAiZGVsZWdhdGlvbl9lbmFibGVkPyI6IGZhbHNlLCAiYWxs
+      b3dfY29kZV9leGVjdXRpb24/IjogZmFsc2UsICJtYXhfcmV0cnlfbGltaXQiOiAyLCAidG9vbHNf
+      bmFtZXMiOiBbImxlYXJuX2Fib3V0X2FpIl19XUqOAgoKY3Jld190YXNrcxL/AQr8AVt7ImtleSI6
+      ICJmMjU5N2M3ODY3ZmJlMzI0ZGM2NWRjMDhkZmRiZmM2YyIsICJpZCI6ICJjNDYwMGI3OS01ZWRk
+      LTRlYWEtYjIzZC04NGU2MGIwYmM5NjYiLCAiYXN5bmNfZXhlY3V0aW9uPyI6IGZhbHNlLCAiaHVt
+      YW5faW5wdXQ/IjogZmFsc2UsICJhZ2VudF9yb2xlIjogInRlc3Qgcm9sZSIsICJhZ2VudF9rZXki
+      OiAiZTE0OGU1MzIwMjkzNDk5ZjhjZWJlYTgyNmU3MjU4MmIiLCAidG9vbHNfbmFtZXMiOiBbImxl
+      YXJuX2Fib3V0X2FpIl19XXoCGAGFAQABAAASjgIKED6Z3ECTN7q2chQHzy77oYoSCDzSMKlczGZs
+      KgxUYXNrIENyZWF0ZWQwATlQQEVWBa31F0HwSUZWBa31F0ouCghjcmV3X2tleRIiCiA0OTRmMzY1
+      NzIzN2FkOGEzMDM1YjJmMWJlZWNkYzY3N0oxCgdjcmV3X2lkEiYKJDIxOTNhNzg5LWNmYTQtNGFk
+      Yy05YzVlLWZmZTY4NTg0YWQ1YkouCgh0YXNrX2tleRIiCiBmMjU5N2M3ODY3ZmJlMzI0ZGM2NWRj
+      MDhkZmRiZmM2Y0oxCgd0YXNrX2lkEiYKJGM0NjAwYjc5LTVlZGQtNGVhYS1iMjNkLTg0ZTYwYjBi
+      Yzk2NnoCGAGFAQABAAA=
     headers:
       Accept:
       - '*/*'
@@ -270,7 +267,7 @@ interactions:
       Connection:
       - keep-alive
       Content-Length:
-      - '1872'
+      - '1724'
       Content-Type:
       - application/x-protobuf
       User-Agent:
@@ -286,7 +283,7 @@ interactions:
       Content-Type:
       - application/x-protobuf
       Date:
-      - Sun, 15 Sep 2024 22:07:09 GMT
+      - Mon, 16 Sep 2024 08:44:32 GMT
     status:
       code: 200
       message: OK
@@ -308,15 +305,14 @@ interactions:
       return the actual complete content as the final answer, not a summary.\n\nBegin!
       This is VERY important to you, use the tools available and give your best Final
       Answer, your job depends on it!\n\nThought:"}, {"role": "assistant", "content":
-      "Thought: I should gather information on AI to write an informative and amazing
-      paragraph about it.\n\nAction: learn_about_AI\nAction Input: {}\nObservation:
-      You tried to use the tool <Mock name=''from_litellm().chat.completions.create().tool_name''
-      id=''11004817744''>, but it doesn''t exist. You must use one of the following
-      tools, use one at time: learn_about_ai."}, {"role": "assistant", "content":
-      "Thought: It appears I used an incorrect tool name earlier. I''ll attempt using
-      the correct tool to learn about AI.\n\nAction: learn_about_AI\nAction Input:
-      {}\nObservation: You tried to use the tool <Mock name=''from_litellm().chat.completions.create().tool_name''
-      id=''11004817744''>, but it doesn''t exist. You must use one of the following
+      "I need to gather information about AI to write an amazing paragraph.\n\nAction:
+      learn_about_AI\nAction Input: {}\nObservation: You tried to use the tool <Mock
+      name=''from_litellm().chat.completions.create().tool_name'' id=''6156551056''>,
+      but it doesn''t exist. You must use one of the following tools, use one at time:
+      learn_about_ai."}, {"role": "assistant", "content": "Thought: I need to use
+      the correct tool to gather information about AI.\n\nAction: learn_about_AI\nAction
+      Input: {}\nObservation: You tried to use the tool <Mock name=''from_litellm().chat.completions.create().tool_name''
+      id=''6156551056''>, but it doesn''t exist. You must use one of the following
       tools, use one at time: learn_about_ai.\nNow it''s time you MUST give your absolute
       best final answer. You''ll ignore all previous instructions, stop using any
       tools, and just return your absolute BEST Final answer."}], "model": "gpt-4o",
@@ -329,12 +325,12 @@ interactions:
       connection:
       - keep-alive
       content-length:
-      - '2364'
+      - '2290'
       content-type:
       - application/json
       cookie:
-      - __cf_bm=xCQEG8vgEvQfut0bkj2xgre9z9ePZhdKdNxBphhvH6s-1726437753-1.0.1.1-5qo0zwDCcKDtqvIzDbp2sLEPCey8v5DAsf0Mg6f2RmooOW9FXTw2P66VCTTF.vCwTpWBIFk0vzKmBAPOt6urIg;
-        _cfuvid=TiTyEciy7HrUlIDEsELZqkUyM4Fyn8OldZd4JefFMOA-1726437753108-0.0.1.1-604800000
+      - __cf_bm=1SckBhvJ18Dazp6bi8DEKYeiS9Q4.6_6i3nmLBw9b6g-1726476036-1.0.1.1-TnN4UpDXA33YXCVCUWOaZ12vGIg_o5NpJQEUHgjn6XdUgb7M0ND8PdkTfkd8rrxG5XFlPRMzI54GxZ0FeUY9xw;
+        _cfuvid=0Rs4xTPk7h7OIXuSbTgMVVD9JSoZeKMwnygKHoHQo3k-1726476036297-0.0.1.1-604800000
       host:
       - api.openai.com
       user-agent:
@@ -358,29 +354,30 @@ interactions:
     method: POST
     uri: https://api.openai.com/v1/chat/completions
   response:
-    content: "{\n  \"id\": \"chatcmpl-A7rgadDMRHMZOqJpngwz9HTrEoj0A\",\n  \"object\":
-      \"chat.completion\",\n  \"created\": 1726438028,\n  \"model\": \"gpt-4o-2024-05-13\",\n
+    content: "{\n  \"id\": \"chatcmpl-A81dQ1Sz9wnIxRlMXndmRJCoa7UPK\",\n  \"object\":
+      \"chat.completion\",\n  \"created\": 1726476272,\n  \"model\": \"gpt-4o-2024-05-13\",\n
       \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
-      \"assistant\",\n        \"content\": \"Thought: I need to write the paragraph
-      about AI based on my current knowledge without relying on tools.\\n\\nFinal
-      Answer: Artificial Intelligence (AI) is revolutionizing various industries by
-      enabling machines to mimic human intelligence processes. At its core, AI involves
-      the development of algorithms that can process vast amounts of data, recognize
-      patterns, and make decisions or predictions based on that information. This
-      technology is being utilized in diverse fields such as healthcare for diagnosing
-      diseases, finance for detecting fraudulent transactions, and automotive for
-      developing autonomous vehicles. As AI continues to evolve, it promises to bring
-      about even more transformative changes, enhancing efficiency and opening up
-      new possibilities that were previously unimaginable.\",\n        \"refusal\":
+      \"assistant\",\n        \"content\": \"Thought: I will now give my best final
+      answer based on my knowledge.\\n\\nFinal Answer: Artificial intelligence (AI)
+      is a transformative technology designed to simulate human intelligence processes
+      by creating algorithms and models capable of performing tasks that typically
+      require human cognition. These tasks include learning, reasoning, problem-solving,
+      perception, and language understanding. AI can be classified into narrow AI,
+      which is specialized for specific tasks, and general AI, which has broader applicability
+      similar to human intelligence. The impact of AI spans various domains such as
+      healthcare, finance, transportation, and entertainment, offering unprecedented
+      efficiency and innovation. As AI continues to evolve, it holds the potential
+      to revolutionize industries and improve quality of life, while also presenting
+      ethical and societal challenges that require careful consideration.\",\n        \"refusal\":
       null\n      },\n      \"logprobs\": null,\n      \"finish_reason\": \"stop\"\n
-      \   }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 494,\n    \"completion_tokens\":
-      129,\n    \"total_tokens\": 623,\n    \"completion_tokens_details\": {\n      \"reasoning_tokens\":
+      \   }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 481,\n    \"completion_tokens\":
+      148,\n    \"total_tokens\": 629,\n    \"completion_tokens_details\": {\n      \"reasoning_tokens\":
       0\n    }\n  },\n  \"system_fingerprint\": \"fp_25624ae3a5\"\n}\n"
     headers:
       CF-Cache-Status:
       - DYNAMIC
       CF-RAY:
-      - 8c3bed8dbedfa4ca-MIA
+      - 8c3f933c0be72233-MIA
       Connection:
       - keep-alive
       Content-Encoding:
@@ -388,7 +385,7 @@ interactions:
       Content-Type:
       - application/json
       Date:
-      - Sun, 15 Sep 2024 22:07:09 GMT
+      - Mon, 16 Sep 2024 08:44:33 GMT
       Server:
       - cloudflare
       Transfer-Encoding:
@@ -402,7 +399,7 @@ interactions:
       openai-organization:
       - crewai-iuxna1
       openai-processing-ms:
-      - '1240'
+      - '1364'
       openai-version:
       - '2020-10-01'
       strict-transport-security:
@@ -414,13 +411,13 @@ interactions:
       x-ratelimit-remaining-requests:
       - '9999'
       x-ratelimit-remaining-tokens:
-      - '29999448'
+      - '29999468'
       x-ratelimit-reset-requests:
       - 6ms
       x-ratelimit-reset-tokens:
       - 1ms
       x-request-id:
-      - req_4add93bd93764c1a7377e5ef7c1e58dc
+      - req_ab7c60d0f96bb81c20be04e6a0c18604
     http_version: HTTP/1.1
     status_code: 200
 version: 1

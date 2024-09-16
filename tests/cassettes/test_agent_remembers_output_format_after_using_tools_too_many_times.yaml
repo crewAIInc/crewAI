@@ -30,8 +30,8 @@ interactions:
       content-type:
       - application/json
       cookie:
-      - __cf_bm=xCQEG8vgEvQfut0bkj2xgre9z9ePZhdKdNxBphhvH6s-1726437753-1.0.1.1-5qo0zwDCcKDtqvIzDbp2sLEPCey8v5DAsf0Mg6f2RmooOW9FXTw2P66VCTTF.vCwTpWBIFk0vzKmBAPOt6urIg;
-        _cfuvid=TiTyEciy7HrUlIDEsELZqkUyM4Fyn8OldZd4JefFMOA-1726437753108-0.0.1.1-604800000
+      - __cf_bm=1SckBhvJ18Dazp6bi8DEKYeiS9Q4.6_6i3nmLBw9b6g-1726476036-1.0.1.1-TnN4UpDXA33YXCVCUWOaZ12vGIg_o5NpJQEUHgjn6XdUgb7M0ND8PdkTfkd8rrxG5XFlPRMzI54GxZ0FeUY9xw;
+        _cfuvid=0Rs4xTPk7h7OIXuSbTgMVVD9JSoZeKMwnygKHoHQo3k-1726476036297-0.0.1.1-604800000
       host:
       - api.openai.com
       user-agent:
@@ -55,20 +55,21 @@ interactions:
     method: POST
     uri: https://api.openai.com/v1/chat/completions
   response:
-    content: "{\n  \"id\": \"chatcmpl-A7rg9lihh4lplQe2dRCFggNNY6Q9t\",\n  \"object\":
-      \"chat.completion\",\n  \"created\": 1726438001,\n  \"model\": \"gpt-4o-2024-05-13\",\n
+    content: "{\n  \"id\": \"chatcmpl-A81dCyHkEotalRMyRUxqbSRtdNny8\",\n  \"object\":
+      \"chat.completion\",\n  \"created\": 1726476258,\n  \"model\": \"gpt-4o-2024-05-13\",\n
       \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
-      \"assistant\",\n        \"content\": \"Thought: I should begin by using the
-      `get_final_answer` tool according to the given instructions.\\n\\nAction: get_final_answer\\nAction
-      Input: {}\",\n        \"refusal\": null\n      },\n      \"logprobs\": null,\n
-      \     \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\":
-      298,\n    \"completion_tokens\": 30,\n    \"total_tokens\": 328,\n    \"completion_tokens_details\":
-      {\n      \"reasoning_tokens\": 0\n    }\n  },\n  \"system_fingerprint\": \"fp_25624ae3a5\"\n}\n"
+      \"assistant\",\n        \"content\": \"Thought: I need to use the get_final_answer
+      tool continuously as instructed. I will keep using it until further notice.\\n\\nAction:
+      get_final_answer\\nAction Input: {}\",\n        \"refusal\": null\n      },\n
+      \     \"logprobs\": null,\n      \"finish_reason\": \"stop\"\n    }\n  ],\n
+      \ \"usage\": {\n    \"prompt_tokens\": 298,\n    \"completion_tokens\": 34,\n
+      \   \"total_tokens\": 332,\n    \"completion_tokens_details\": {\n      \"reasoning_tokens\":
+      0\n    }\n  },\n  \"system_fingerprint\": \"fp_25624ae3a5\"\n}\n"
     headers:
       CF-Cache-Status:
       - DYNAMIC
       CF-RAY:
-      - 8c3bece7787ba4ca-MIA
+      - 8c3f92e89bf02233-MIA
       Connection:
       - keep-alive
       Content-Encoding:
@@ -76,7 +77,7 @@ interactions:
       Content-Type:
       - application/json
       Date:
-      - Sun, 15 Sep 2024 22:06:42 GMT
+      - Mon, 16 Sep 2024 08:44:19 GMT
       Server:
       - cloudflare
       Transfer-Encoding:
@@ -90,7 +91,7 @@ interactions:
       openai-organization:
       - crewai-iuxna1
       openai-processing-ms:
-      - '407'
+      - '462'
       openai-version:
       - '2020-10-01'
       strict-transport-security:
@@ -108,7 +109,7 @@ interactions:
       x-ratelimit-reset-tokens:
       - 0s
       x-request-id:
-      - req_2009e4962b604e1929fd79cf3c2a5936
+      - req_1484c5ec7316dd4d9d64d2216c9f680b
     http_version: HTTP/1.1
     status_code: 200
 - request:
@@ -130,8 +131,127 @@ interactions:
       the actual complete content as the final answer, not a summary.\n\nBegin! This
       is VERY important to you, use the tools available and give your best Final Answer,
       your job depends on it!\n\nThought:"}, {"role": "assistant", "content": "Thought:
-      I should begin by using the `get_final_answer` tool according to the given instructions.\n\nAction:
-      get_final_answer\nAction Input: {}\nObservation: 42"}], "model": "gpt-4o", "stop":
+      I need to use the get_final_answer tool continuously as instructed. I will keep
+      using it until further notice.\n\nAction: get_final_answer\nAction Input: {}\nObservation:
+      42"}], "model": "gpt-4o", "stop": ["\nObservation:"]}'
+    headers:
+      accept:
+      - application/json
+      accept-encoding:
+      - gzip, deflate
+      connection:
+      - keep-alive
+      content-length:
+      - '1684'
+      content-type:
+      - application/json
+      cookie:
+      - __cf_bm=1SckBhvJ18Dazp6bi8DEKYeiS9Q4.6_6i3nmLBw9b6g-1726476036-1.0.1.1-TnN4UpDXA33YXCVCUWOaZ12vGIg_o5NpJQEUHgjn6XdUgb7M0ND8PdkTfkd8rrxG5XFlPRMzI54GxZ0FeUY9xw;
+        _cfuvid=0Rs4xTPk7h7OIXuSbTgMVVD9JSoZeKMwnygKHoHQo3k-1726476036297-0.0.1.1-604800000
+      host:
+      - api.openai.com
+      user-agent:
+      - OpenAI/Python 1.45.0
+      x-stainless-arch:
+      - arm64
+      x-stainless-async:
+      - 'false'
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - MacOS
+      x-stainless-package-version:
+      - 1.45.0
+      x-stainless-raw-response:
+      - 'true'
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.11.7
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    content: "{\n  \"id\": \"chatcmpl-A81dDvgIkvApznH0k0F2FO8ryKH6M\",\n  \"object\":
+      \"chat.completion\",\n  \"created\": 1726476259,\n  \"model\": \"gpt-4o-2024-05-13\",\n
+      \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
+      \"assistant\",\n        \"content\": \"Thought: I need to repeat using the get_final_answer
+      tool as directed.\\n\\nAction: get_final_answer\\nAction Input: {}\",\n        \"refusal\":
+      null\n      },\n      \"logprobs\": null,\n      \"finish_reason\": \"stop\"\n
+      \   }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 340,\n    \"completion_tokens\":
+      25,\n    \"total_tokens\": 365,\n    \"completion_tokens_details\": {\n      \"reasoning_tokens\":
+      0\n    }\n  },\n  \"system_fingerprint\": \"fp_25624ae3a5\"\n}\n"
+    headers:
+      CF-Cache-Status:
+      - DYNAMIC
+      CF-RAY:
+      - 8c3f92edcd512233-MIA
+      Connection:
+      - keep-alive
+      Content-Encoding:
+      - gzip
+      Content-Type:
+      - application/json
+      Date:
+      - Mon, 16 Sep 2024 08:44:20 GMT
+      Server:
+      - cloudflare
+      Transfer-Encoding:
+      - chunked
+      X-Content-Type-Options:
+      - nosniff
+      access-control-expose-headers:
+      - X-Request-ID
+      alt-svc:
+      - h3=":443"; ma=86400
+      openai-organization:
+      - crewai-iuxna1
+      openai-processing-ms:
+      - '1225'
+      openai-version:
+      - '2020-10-01'
+      strict-transport-security:
+      - max-age=15552000; includeSubDomains; preload
+      x-ratelimit-limit-requests:
+      - '10000'
+      x-ratelimit-limit-tokens:
+      - '30000000'
+      x-ratelimit-remaining-requests:
+      - '9999'
+      x-ratelimit-remaining-tokens:
+      - '29999609'
+      x-ratelimit-reset-requests:
+      - 6ms
+      x-ratelimit-reset-tokens:
+      - 0s
+      x-request-id:
+      - req_94d5980a61d05d93ea4d7ae84bf92bdc
+    http_version: HTTP/1.1
+    status_code: 200
+- request:
+    body: '{"messages": [{"role": "system", "content": "You are test role. test backstory\nYour
+      personal goal is: test goal\nYou ONLY have access to the following tools, and
+      should NEVER make up tools that are not listed here:\n\nTool Name: get_final_answer(*args:
+      Any, **kwargs: Any) -> Any\nTool Description: get_final_answer() - Get the final
+      answer but don''t give it yet, just re-use this         tool non-stop. \nTool
+      Arguments: {}\n\nUse the following format:\n\nThought: you should always think
+      about what to do\nAction: the action to take, only one name of [get_final_answer],
+      just the name, exactly as it''s written.\nAction Input: the input to the action,
+      just a simple python dictionary, enclosed in curly braces, using \" to wrap
+      keys and values.\nObservation: the result of the action\n\nOnce all necessary
+      information is gathered:\n\nThought: I now know the final answer\nFinal Answer:
+      the final answer to the original input question\n"}, {"role": "user", "content":
+      "\nCurrent Task: Use tool logic for `get_final_answer` but fon''t give you final
+      answer yet, instead keep using it unless you''re told to give your final answer\n\nThis
+      is the expect criteria for your final answer: The final answer\nyou MUST return
+      the actual complete content as the final answer, not a summary.\n\nBegin! This
+      is VERY important to you, use the tools available and give your best Final Answer,
+      your job depends on it!\n\nThought:"}, {"role": "assistant", "content": "Thought:
+      I need to use the get_final_answer tool continuously as instructed. I will keep
+      using it until further notice.\n\nAction: get_final_answer\nAction Input: {}\nObservation:
+      42"}, {"role": "assistant", "content": "Thought: I need to repeat using the
+      get_final_answer tool as directed.\n\nAction: get_final_answer\nAction Input:
+      {}\nObservation: I tried reusing the same input, I must stop using this action
+      input. I''ll try something else instead.\n\n"}], "model": "gpt-4o", "stop":
       ["\nObservation:"]}'
     headers:
       accept:
@@ -141,12 +261,12 @@ interactions:
       connection:
       - keep-alive
       content-length:
-      - '1662'
+      - '1958'
       content-type:
       - application/json
       cookie:
-      - __cf_bm=xCQEG8vgEvQfut0bkj2xgre9z9ePZhdKdNxBphhvH6s-1726437753-1.0.1.1-5qo0zwDCcKDtqvIzDbp2sLEPCey8v5DAsf0Mg6f2RmooOW9FXTw2P66VCTTF.vCwTpWBIFk0vzKmBAPOt6urIg;
-        _cfuvid=TiTyEciy7HrUlIDEsELZqkUyM4Fyn8OldZd4JefFMOA-1726437753108-0.0.1.1-604800000
+      - __cf_bm=1SckBhvJ18Dazp6bi8DEKYeiS9Q4.6_6i3nmLBw9b6g-1726476036-1.0.1.1-TnN4UpDXA33YXCVCUWOaZ12vGIg_o5NpJQEUHgjn6XdUgb7M0ND8PdkTfkd8rrxG5XFlPRMzI54GxZ0FeUY9xw;
+        _cfuvid=0Rs4xTPk7h7OIXuSbTgMVVD9JSoZeKMwnygKHoHQo3k-1726476036297-0.0.1.1-604800000
       host:
       - api.openai.com
       user-agent:
@@ -170,139 +290,21 @@ interactions:
     method: POST
     uri: https://api.openai.com/v1/chat/completions
   response:
-    content: "{\n  \"id\": \"chatcmpl-A7rgAmYLvPQG5aRhybYSWwNWFXKEK\",\n  \"object\":
-      \"chat.completion\",\n  \"created\": 1726438002,\n  \"model\": \"gpt-4o-2024-05-13\",\n
+    content: "{\n  \"id\": \"chatcmpl-A81dFTO7nGirkGKNQUKaPmBVJAa3q\",\n  \"object\":
+      \"chat.completion\",\n  \"created\": 1726476261,\n  \"model\": \"gpt-4o-2024-05-13\",\n
       \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
-      \"assistant\",\n        \"content\": \"Thought: I need to use the `get_final_answer`
-      tool again as instructed.\\n\\nAction: get_final_answer\\nAction Input: {}\",\n
-      \       \"refusal\": null\n      },\n      \"logprobs\": null,\n      \"finish_reason\":
-      \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 336,\n    \"completion_tokens\":
-      27,\n    \"total_tokens\": 363,\n    \"completion_tokens_details\": {\n      \"reasoning_tokens\":
-      0\n    }\n  },\n  \"system_fingerprint\": \"fp_25624ae3a5\"\n}\n"
-    headers:
-      CF-Cache-Status:
-      - DYNAMIC
-      CF-RAY:
-      - 8c3becebefb9a4ca-MIA
-      Connection:
-      - keep-alive
-      Content-Encoding:
-      - gzip
-      Content-Type:
-      - application/json
-      Date:
-      - Sun, 15 Sep 2024 22:06:43 GMT
-      Server:
-      - cloudflare
-      Transfer-Encoding:
-      - chunked
-      X-Content-Type-Options:
-      - nosniff
-      access-control-expose-headers:
-      - X-Request-ID
-      alt-svc:
-      - h3=":443"; ma=86400
-      openai-organization:
-      - crewai-iuxna1
-      openai-processing-ms:
-      - '327'
-      openai-version:
-      - '2020-10-01'
-      strict-transport-security:
-      - max-age=15552000; includeSubDomains; preload
-      x-ratelimit-limit-requests:
-      - '10000'
-      x-ratelimit-limit-tokens:
-      - '30000000'
-      x-ratelimit-remaining-requests:
-      - '9999'
-      x-ratelimit-remaining-tokens:
-      - '29999614'
-      x-ratelimit-reset-requests:
-      - 6ms
-      x-ratelimit-reset-tokens:
-      - 0s
-      x-request-id:
-      - req_1e320875f1dec43dcd554abdf0477bb6
-    http_version: HTTP/1.1
-    status_code: 200
-- request:
-    body: '{"messages": [{"role": "system", "content": "You are test role. test backstory\nYour
-      personal goal is: test goal\nYou ONLY have access to the following tools, and
-      should NEVER make up tools that are not listed here:\n\nTool Name: get_final_answer(*args:
-      Any, **kwargs: Any) -> Any\nTool Description: get_final_answer() - Get the final
-      answer but don''t give it yet, just re-use this         tool non-stop. \nTool
-      Arguments: {}\n\nUse the following format:\n\nThought: you should always think
-      about what to do\nAction: the action to take, only one name of [get_final_answer],
-      just the name, exactly as it''s written.\nAction Input: the input to the action,
-      just a simple python dictionary, enclosed in curly braces, using \" to wrap
-      keys and values.\nObservation: the result of the action\n\nOnce all necessary
-      information is gathered:\n\nThought: I now know the final answer\nFinal Answer:
-      the final answer to the original input question\n"}, {"role": "user", "content":
-      "\nCurrent Task: Use tool logic for `get_final_answer` but fon''t give you final
-      answer yet, instead keep using it unless you''re told to give your final answer\n\nThis
-      is the expect criteria for your final answer: The final answer\nyou MUST return
-      the actual complete content as the final answer, not a summary.\n\nBegin! This
-      is VERY important to you, use the tools available and give your best Final Answer,
-      your job depends on it!\n\nThought:"}, {"role": "assistant", "content": "Thought:
-      I should begin by using the `get_final_answer` tool according to the given instructions.\n\nAction:
-      get_final_answer\nAction Input: {}\nObservation: 42"}, {"role": "assistant",
-      "content": "Thought: I need to use the `get_final_answer` tool again as instructed.\n\nAction:
-      get_final_answer\nAction Input: {}\nObservation: I tried reusing the same input,
-      I must stop using this action input. I''ll try something else instead.\n\n"}],
-      "model": "gpt-4o", "stop": ["\nObservation:"]}'
-    headers:
-      accept:
-      - application/json
-      accept-encoding:
-      - gzip, deflate
-      connection:
-      - keep-alive
-      content-length:
-      - '1937'
-      content-type:
-      - application/json
-      cookie:
-      - __cf_bm=xCQEG8vgEvQfut0bkj2xgre9z9ePZhdKdNxBphhvH6s-1726437753-1.0.1.1-5qo0zwDCcKDtqvIzDbp2sLEPCey8v5DAsf0Mg6f2RmooOW9FXTw2P66VCTTF.vCwTpWBIFk0vzKmBAPOt6urIg;
-        _cfuvid=TiTyEciy7HrUlIDEsELZqkUyM4Fyn8OldZd4JefFMOA-1726437753108-0.0.1.1-604800000
-      host:
-      - api.openai.com
-      user-agent:
-      - OpenAI/Python 1.45.0
-      x-stainless-arch:
-      - arm64
-      x-stainless-async:
-      - 'false'
-      x-stainless-lang:
-      - python
-      x-stainless-os:
-      - MacOS
-      x-stainless-package-version:
-      - 1.45.0
-      x-stainless-raw-response:
-      - 'true'
-      x-stainless-runtime:
-      - CPython
-      x-stainless-runtime-version:
-      - 3.11.7
-    method: POST
-    uri: https://api.openai.com/v1/chat/completions
-  response:
-    content: "{\n  \"id\": \"chatcmpl-A7rgBK4Z1emCMHnntizv3UJNloOe4\",\n  \"object\":
-      \"chat.completion\",\n  \"created\": 1726438003,\n  \"model\": \"gpt-4o-2024-05-13\",\n
-      \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
-      \"assistant\",\n        \"content\": \"Thought: Despite the previous observation
-      conflicting with the initial instructions, I need to continue using the `get_final_answer`
-      tool.\\n\\nAction: get_final_answer\\nAction Input: {}\",\n        \"refusal\":
+      \"assistant\",\n        \"content\": \"Thought: I am required to use the given
+      tool continuously. The observation suggests I should change my approach this
+      time.\\n\\nAction: get_final_answer\\nAction Input: {}\",\n        \"refusal\":
       null\n      },\n      \"logprobs\": null,\n      \"finish_reason\": \"stop\"\n
-      \   }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 391,\n    \"completion_tokens\":
-      35,\n    \"total_tokens\": 426,\n    \"completion_tokens_details\": {\n      \"reasoning_tokens\":
+      \   }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 393,\n    \"completion_tokens\":
+      33,\n    \"total_tokens\": 426,\n    \"completion_tokens_details\": {\n      \"reasoning_tokens\":
       0\n    }\n  },\n  \"system_fingerprint\": \"fp_25624ae3a5\"\n}\n"
     headers:
       CF-Cache-Status:
       - DYNAMIC
       CF-RAY:
-      - 8c3becefdd5fa4ca-MIA
+      - 8c3f92f75ff32233-MIA
       Connection:
       - keep-alive
       Content-Encoding:
@@ -310,7 +312,7 @@ interactions:
       Content-Type:
       - application/json
       Date:
-      - Sun, 15 Sep 2024 22:06:44 GMT
+      - Mon, 16 Sep 2024 08:44:21 GMT
       Server:
       - cloudflare
       Transfer-Encoding:
@@ -324,7 +326,7 @@ interactions:
       openai-organization:
       - crewai-iuxna1
       openai-processing-ms:
-      - '839'
+      - '456'
       openai-version:
       - '2020-10-01'
       strict-transport-security:
@@ -336,81 +338,84 @@ interactions:
       x-ratelimit-remaining-requests:
       - '9999'
       x-ratelimit-remaining-tokens:
-      - '29999556'
+      - '29999551'
       x-ratelimit-reset-requests:
       - 6ms
       x-ratelimit-reset-tokens:
       - 0s
       x-request-id:
-      - req_346693d7c0d778ad6cb8dd3ce0d24d82
+      - req_cbebaad2f7b312ae1f46758b68bbcb8a
     http_version: HTTP/1.1
     status_code: 200
 - request:
     body: !!binary |
-      Cq0cCiQKIgoMc2VydmljZS5uYW1lEhIKEGNyZXdBSS10ZWxlbWV0cnkShBwKEgoQY3Jld2FpLnRl
-      bGVtZXRyeRKTAQoQ1HwMiOWHFRiqKm7mpjz55xIIvkTPMeUk9c8qClRvb2wgVXNhZ2UwATlwPjq8
-      Nor1F0GIKD28Nor1F0oaCg5jcmV3YWlfdmVyc2lvbhIICgYwLjU2LjBKHwoJdG9vbF9uYW1lEhIK
-      EGdldF9maW5hbF9hbnN3ZXJKDgoIYXR0ZW1wdHMSAhgBegIYAYUBAAEAABKQAgoQMi+4Ka7RjzTD
-      eXduODLhOxIIHaF0d+yM4LIqDlRhc2sgRXhlY3V0aW9uMAE5iAUabDaK9RdBuJUr2zaK9RdKLgoI
+      CswdCiQKIgoMc2VydmljZS5uYW1lEhIKEGNyZXdBSS10ZWxlbWV0cnkSox0KEgoQY3Jld2FpLnRl
+      bGVtZXRyeRKTAQoQbgQ8NbKfeXZOrejr/NzIdRIIlpStjIWVxFsqClRvb2wgVXNhZ2UwATnQmUce
+      Aq31F0H4qkoeAq31F0oaCg5jcmV3YWlfdmVyc2lvbhIICgYwLjU2LjNKHwoJdG9vbF9uYW1lEhIK
+      EGdldF9maW5hbF9hbnN3ZXJKDgoIYXR0ZW1wdHMSAhgBegIYAYUBAAEAABKQAgoQZ6woV8NI3ugq
+      hFpx2s1W1RIIKaDMLywHEtgqDlRhc2sgRXhlY3V0aW9uMAE52BZY7QGt9RdB0NsdOAKt9RdKLgoI
       Y3Jld19rZXkSIgogOTRjMzBkNmMzYjJhYzhmYjk0YjJkY2ZjNTcyZDBmNTlKMQoHY3Jld19pZBIm
-      CiRmMDllNTUzMi1iNDgzLTRkMDYtYjEyOC0zZWNlMTljZGNjYmJKLgoIdGFza19rZXkSIgogNWU5
-      Y2E3ZDY0YjQyMDViYjdjNDdlMGIzZmNiNWQyMWZKMQoHdGFza19pZBImCiQyOGIxNmFkYS00MGNh
-      LTQ3MjAtOGQ2Yy1kNTkwMTVhODU4MWV6AhgBhQEAAQAAEq4HChCoKRp6meN6h0CxUhczlRtqEggh
-      rGLcUaKD/ioMQ3JldyBDcmVhdGVkMAE50EhG3DaK9RdBGKJK3DaK9RdKGgoOY3Jld2FpX3ZlcnNp
-      b24SCAoGMC41Ni4wShoKDnB5dGhvbl92ZXJzaW9uEggKBjMuMTEuN0ouCghjcmV3X2tleRIiCiA3
-      M2FhYzI4NWU2NzQ2NjY3Zjc1MTQ3NjcwMDAzNDExMEoxCgdjcmV3X2lkEiYKJDVmZTY3NmNmLTVh
-      MzMtNDc2OS1hNTBjLTliN2IyYmJmN2M1YkocCgxjcmV3X3Byb2Nlc3MSDAoKc2VxdWVudGlhbEoR
+      CiRmYjc5NzczZS1kYzA4LTQzZTYtOGQ1My1iNTUyMmQ2MzQ0YmJKLgoIdGFza19rZXkSIgogNWU5
+      Y2E3ZDY0YjQyMDViYjdjNDdlMGIzZmNiNWQyMWZKMQoHdGFza19pZBImCiQwMjcxNjFmMi1kMzQ2
+      LTRjZTItOWNiNC0wMTQyYjk5OWFiNzN6AhgBhQEAAQAAEq4HChCIwC06uC4QUAP1LhGYrkMaEgjm
+      RuBZN7g+ISoMQ3JldyBDcmVhdGVkMAE5oIi+OAKt9RdBaCzBOAKt9RdKGgoOY3Jld2FpX3ZlcnNp
+      b24SCAoGMC41Ni4zShoKDnB5dGhvbl92ZXJzaW9uEggKBjMuMTEuN0ouCghjcmV3X2tleRIiCiA3
+      M2FhYzI4NWU2NzQ2NjY3Zjc1MTQ3NjcwMDAzNDExMEoxCgdjcmV3X2lkEiYKJGVmZWQyNjllLTJj
+      YWYtNDlkYy1hZDMzLTJkZGQ0MzhlNTg2ZEocCgxjcmV3X3Byb2Nlc3MSDAoKc2VxdWVudGlhbEoR
       CgtjcmV3X21lbW9yeRICEABKGgoUY3Jld19udW1iZXJfb2ZfdGFza3MSAhgBShsKFWNyZXdfbnVt
       YmVyX29mX2FnZW50cxICGAFKywIKC2NyZXdfYWdlbnRzErsCCrgCW3sia2V5IjogImUxNDhlNTMy
-      MDI5MzQ5OWY4Y2ViZWE4MjZlNzI1ODJiIiwgImlkIjogImRiYzNlYzM0LWU1ODQtNDExOS05Mjhi
-      LTk3MjNlZDU1NDUwOCIsICJyb2xlIjogInRlc3Qgcm9sZSIsICJ2ZXJib3NlPyI6IHRydWUsICJt
+      MDI5MzQ5OWY4Y2ViZWE4MjZlNzI1ODJiIiwgImlkIjogImQ4NWI1ZDI3LThhZTItNDFjOC1hMmNi
+      LTVmMDYzNDAzZDA5ZCIsICJyb2xlIjogInRlc3Qgcm9sZSIsICJ2ZXJib3NlPyI6IHRydWUsICJt
       YXhfaXRlciI6IDEsICJtYXhfcnBtIjogbnVsbCwgImZ1bmN0aW9uX2NhbGxpbmdfbGxtIjogbnVs
       bCwgImxsbSI6ICJncHQtNG8iLCAiZGVsZWdhdGlvbl9lbmFibGVkPyI6IGZhbHNlLCAiYWxsb3df
       Y29kZV9leGVjdXRpb24/IjogZmFsc2UsICJtYXhfcmV0cnlfbGltaXQiOiAyLCAidG9vbHNfbmFt
       ZXMiOiBbXX1dSpACCgpjcmV3X3Rhc2tzEoECCv4BW3sia2V5IjogImY3YTlmN2JiMWFlZTRiNmVm
-      MmM1MjZkMGE4YzJmMmFjIiwgImlkIjogIjA1Yjc2YTJiLWI5NTktNDE0Ni1iNWRhLWU4Mjc1MmIx
-      YzFlZSIsICJhc3luY19leGVjdXRpb24/IjogZmFsc2UsICJodW1hbl9pbnB1dD8iOiBmYWxzZSwg
+      MmM1MjZkMGE4YzJmMmFjIiwgImlkIjogIjkyYmJjZjE1LTM3OGItNDFiMy04Y2QxLTZlMjJmNzUz
+      ZGU4NCIsICJhc3luY19leGVjdXRpb24/IjogZmFsc2UsICJodW1hbl9pbnB1dD8iOiBmYWxzZSwg
       ImFnZW50X3JvbGUiOiAidGVzdCByb2xlIiwgImFnZW50X2tleSI6ICJlMTQ4ZTUzMjAyOTM0OTlm
       OGNlYmVhODI2ZTcyNTgyYiIsICJ0b29sc19uYW1lcyI6IFsiZ2V0X2ZpbmFsX2Fuc3dlciJdfV16
-      AhgBhQEAAQAAEo4CChAFjOPNgyoDQCPzWvBeCiLOEgi+mYFKPqLF/SoMVGFzayBDcmVhdGVkMAE5
-      wLRs3DaK9RdBOJtt3DaK9RdKLgoIY3Jld19rZXkSIgogNzNhYWMyODVlNjc0NjY2N2Y3NTE0NzY3
-      MDAwMzQxMTBKMQoHY3Jld19pZBImCiQ1ZmU2NzZjZi01YTMzLTQ3NjktYTUwYy05YjdiMmJiZjdj
-      NWJKLgoIdGFza19rZXkSIgogZjdhOWY3YmIxYWVlNGI2ZWYyYzUyNmQwYThjMmYyYWNKMQoHdGFz
-      a19pZBImCiQwNWI3NmEyYi1iOTU5LTQxNDYtYjVkYS1lODI3NTJiMWMxZWV6AhgBhQEAAQAAEnkK
-      EB1WOBrwf4QYBYVF1YNa6YISCMNgnghjx0NvKhBUb29sIFVzYWdlIEVycm9yMAE5AKJJ/zaK9RdB
-      4L5M/zaK9RdKGgoOY3Jld2FpX3ZlcnNpb24SCAoGMC41Ni4wSg8KA2xsbRIICgZncHQtNG96AhgB
-      hQEAAQAAEpACChDQvT75rzW+IaQek6UvEvcMEghrHbi0yALvfCoOVGFzayBFeGVjdXRpb24wATnI
-      AG7cNor1F0EovTceN4r1F0ouCghjcmV3X2tleRIiCiA3M2FhYzI4NWU2NzQ2NjY3Zjc1MTQ3Njcw
-      MDAzNDExMEoxCgdjcmV3X2lkEiYKJDVmZTY3NmNmLTVhMzMtNDc2OS1hNTBjLTliN2IyYmJmN2M1
-      YkouCgh0YXNrX2tleRIiCiBmN2E5ZjdiYjFhZWU0YjZlZjJjNTI2ZDBhOGMyZjJhY0oxCgd0YXNr
-      X2lkEiYKJDA1Yjc2YTJiLWI5NTktNDE0Ni1iNWRhLWU4Mjc1MmIxYzFlZXoCGAGFAQABAAASrgcK
-      EMgG5/1LdHfsEoCK5b0Grh0SCNZhsziQjOMGKgxDcmV3IENyZWF0ZWQwATmQ+TIfN4r1F0F4Vjkf
-      N4r1F0oaCg5jcmV3YWlfdmVyc2lvbhIICgYwLjU2LjBKGgoOcHl0aG9uX3ZlcnNpb24SCAoGMy4x
+      AhgBhQEAAQAAEo4CChALnbC1wsFOz6ZsGL+E7BGwEggi1X6gECzNLCoMVGFzayBDcmVhdGVkMAE5
+      4KzSOAKt9RdBsDHTOAKt9RdKLgoIY3Jld19rZXkSIgogNzNhYWMyODVlNjc0NjY2N2Y3NTE0NzY3
+      MDAwMzQxMTBKMQoHY3Jld19pZBImCiRlZmVkMjY5ZS0yY2FmLTQ5ZGMtYWQzMy0yZGRkNDM4ZTU4
+      NmRKLgoIdGFza19rZXkSIgogZjdhOWY3YmIxYWVlNGI2ZWYyYzUyNmQwYThjMmYyYWNKMQoHdGFz
+      a19pZBImCiQ5MmJiY2YxNS0zNzhiLTQxYjMtOGNkMS02ZTIyZjc1M2RlODR6AhgBhQEAAQAAEnkK
+      EMfPLA4oAmYQVyN96saoVs8SCFRTccJ4gsVKKhBUb29sIFVzYWdlIEVycm9yMAE5wJcdXwKt9RdB
+      KEUhXwKt9RdKGgoOY3Jld2FpX3ZlcnNpb24SCAoGMC41Ni4zSg8KA2xsbRIICgZncHQtNG96AhgB
+      hQEAAQAAEpACChDMyPaUQRUEljNhOSdeqK8WEgibPzFn929GbioOVGFzayBFeGVjdXRpb24wATkY
+      dNM4Aq31F0EAz9x9Aq31F0ouCghjcmV3X2tleRIiCiA3M2FhYzI4NWU2NzQ2NjY3Zjc1MTQ3Njcw
+      MDAzNDExMEoxCgdjcmV3X2lkEiYKJGVmZWQyNjllLTJjYWYtNDlkYy1hZDMzLTJkZGQ0MzhlNTg2
+      ZEouCgh0YXNrX2tleRIiCiBmN2E5ZjdiYjFhZWU0YjZlZjJjNTI2ZDBhOGMyZjJhY0oxCgd0YXNr
+      X2lkEiYKJDkyYmJjZjE1LTM3OGItNDFiMy04Y2QxLTZlMjJmNzUzZGU4NHoCGAGFAQABAAASrgcK
+      ECQw+XnJUkHXk/rEZb0SwrkSCErEw0a9ua3eKgxDcmV3IENyZWF0ZWQwATlIBOF+Aq31F0H4IuV+
+      Aq31F0oaCg5jcmV3YWlfdmVyc2lvbhIICgYwLjU2LjNKGgoOcHl0aG9uX3ZlcnNpb24SCAoGMy4x
       MS43Si4KCGNyZXdfa2V5EiIKIGQ1NTExM2JlNGFhNDFiYTY0M2QzMjYwNDJiMmYwM2YxSjEKB2Ny
-      ZXdfaWQSJgokMzYxZGZiMjYtZjJlZS00NmU5LWExZDQtNjdmNDNiOWMyNGVkShwKDGNyZXdfcHJv
+      ZXdfaWQSJgokMzQ0YTQ3MzYtMzMxYy00ZWRjLTllODYtYjcyNzRhMjI4MTNmShwKDGNyZXdfcHJv
       Y2VzcxIMCgpzZXF1ZW50aWFsShEKC2NyZXdfbWVtb3J5EgIQAEoaChRjcmV3X251bWJlcl9vZl90
       YXNrcxICGAFKGwoVY3Jld19udW1iZXJfb2ZfYWdlbnRzEgIYAUrLAgoLY3Jld19hZ2VudHMSuwIK
-      uAJbeyJrZXkiOiAiZTE0OGU1MzIwMjkzNDk5ZjhjZWJlYTgyNmU3MjU4MmIiLCAiaWQiOiAiZjNm
-      MDVkMjktZTMwNS00NjUzLTliMDAtOWIxZWZjNjVlNWE2IiwgInJvbGUiOiAidGVzdCByb2xlIiwg
+      uAJbeyJrZXkiOiAiZTE0OGU1MzIwMjkzNDk5ZjhjZWJlYTgyNmU3MjU4MmIiLCAiaWQiOiAiNjY2
+      NmZmZDItN2IyMC00YjcyLWI5ZDgtYTE0YTAwYjNlNDMyIiwgInJvbGUiOiAidGVzdCByb2xlIiwg
       InZlcmJvc2U/IjogdHJ1ZSwgIm1heF9pdGVyIjogNiwgIm1heF9ycG0iOiBudWxsLCAiZnVuY3Rp
       b25fY2FsbGluZ19sbG0iOiBudWxsLCAibGxtIjogImdwdC00byIsICJkZWxlZ2F0aW9uX2VuYWJs
       ZWQ/IjogZmFsc2UsICJhbGxvd19jb2RlX2V4ZWN1dGlvbj8iOiBmYWxzZSwgIm1heF9yZXRyeV9s
       aW1pdCI6IDIsICJ0b29sc19uYW1lcyI6IFtdfV1KkAIKCmNyZXdfdGFza3MSgQIK/gFbeyJrZXki
-      OiAiNGEzMWI4NTEzM2EzYTI5NGM2ODUzZGE3NTdkNGJhZTciLCAiaWQiOiAiOGNlY2IzMjQtNDk4
-      NC00NWM2LWE4OTYtNjI5OWZjOTNkMjQzIiwgImFzeW5jX2V4ZWN1dGlvbj8iOiBmYWxzZSwgImh1
+      OiAiNGEzMWI4NTEzM2EzYTI5NGM2ODUzZGE3NTdkNGJhZTciLCAiaWQiOiAiOWZhMzhhNjMtNGRj
+      MS00OTVjLWIxODEtZjU5ZmI0OGJkMzRlIiwgImFzeW5jX2V4ZWN1dGlvbj8iOiBmYWxzZSwgImh1
       bWFuX2lucHV0PyI6IGZhbHNlLCAiYWdlbnRfcm9sZSI6ICJ0ZXN0IHJvbGUiLCAiYWdlbnRfa2V5
       IjogImUxNDhlNTMyMDI5MzQ5OWY4Y2ViZWE4MjZlNzI1ODJiIiwgInRvb2xzX25hbWVzIjogWyJn
-      ZXRfZmluYWxfYW5zd2VyIl19XXoCGAGFAQABAAASjgIKEH8VW5Bu1TysVSxR3m3CTkcSCHqO9gI8
-      diTKKgxUYXNrIENyZWF0ZWQwATk4X1wfN4r1F0EIYV0fN4r1F0ouCghjcmV3X2tleRIiCiBkNTUx
-      MTNiZTRhYTQxYmE2NDNkMzI2MDQyYjJmMDNmMUoxCgdjcmV3X2lkEiYKJDM2MWRmYjI2LWYyZWUt
-      NDZlOS1hMWQ0LTY3ZjQzYjljMjRlZEouCgh0YXNrX2tleRIiCiA0YTMxYjg1MTMzYTNhMjk0YzY4
-      NTNkYTc1N2Q0YmFlN0oxCgd0YXNrX2lkEiYKJDhjZWNiMzI0LTQ5ODQtNDVjNi1hODk2LTYyOTlm
-      YzkzZDI0M3oCGAGFAQABAAASkwEKEDIHStI/FUrA/5SNV6oIqJoSCKXE9wcqFQ79KgpUb29sIFVz
-      YWdlMAE5GCeASTeK9RdBgNSDSTeK9RdKGgoOY3Jld2FpX3ZlcnNpb24SCAoGMC41Ni4wSh8KCXRv
+      ZXRfZmluYWxfYW5zd2VyIl19XXoCGAGFAQABAAASjgIKEHoAbzRyPIYB415xeZtj9jcSCMyvCgVi
+      vFxMKgxUYXNrIENyZWF0ZWQwATm4c/x+Aq31F0HIF/1+Aq31F0ouCghjcmV3X2tleRIiCiBkNTUx
+      MTNiZTRhYTQxYmE2NDNkMzI2MDQyYjJmMDNmMUoxCgdjcmV3X2lkEiYKJDM0NGE0NzM2LTMzMWMt
+      NGVkYy05ZTg2LWI3Mjc0YTIyODEzZkouCgh0YXNrX2tleRIiCiA0YTMxYjg1MTMzYTNhMjk0YzY4
+      NTNkYTc1N2Q0YmFlN0oxCgd0YXNrX2lkEiYKJDlmYTM4YTYzLTRkYzEtNDk1Yy1iMTgxLWY1OWZi
+      NDhiZDM0ZXoCGAGFAQABAAASkwEKEMS3gu7eYN/L/PcSFzgLALgSCLh3MlxlenzfKgpUb29sIFVz
+      YWdlMAE5EL5asAKt9RdB+CZfsAKt9RdKGgoOY3Jld2FpX3ZlcnNpb24SCAoGMC41Ni4zSh8KCXRv
       b2xfbmFtZRISChBnZXRfZmluYWxfYW5zd2VySg4KCGF0dGVtcHRzEgIYAXoCGAGFAQABAAASnAEK
-      EMhJzsBCibfl8YBdDDZK6lgSCHYKP3to52QIKhNUb29sIFJlcGVhdGVkIFVzYWdlMAE5wLl5bzeK
-      9RdBaAN+bzeK9RdKGgoOY3Jld2FpX3ZlcnNpb24SCAoGMC41Ni4wSh8KCXRvb2xfbmFtZRISChBn
-      ZXRfZmluYWxfYW5zd2VySg4KCGF0dGVtcHRzEgIYAXoCGAGFAQABAAA=
+      ENyIxycOeL+zq2UWZnP/g7oSCH/Nabl6DH84KhNUb29sIFJlcGVhdGVkIFVzYWdlMAE5CL+wCwOt
+      9RdB0Fa1CwOt9RdKGgoOY3Jld2FpX3ZlcnNpb24SCAoGMC41Ni4zSh8KCXRvb2xfbmFtZRISChBn
+      ZXRfZmluYWxfYW5zd2VySg4KCGF0dGVtcHRzEgIYAXoCGAGFAQABAAASnAEKEPCuPduFyw0iKcTc
+      NgnS+bkSCLR2bhOmQfADKhNUb29sIFJlcGVhdGVkIFVzYWdlMAE5yF56PAOt9RdBgFJ+PAOt9RdK
+      GgoOY3Jld2FpX3ZlcnNpb24SCAoGMC41Ni4zSh8KCXRvb2xfbmFtZRISChBnZXRfZmluYWxfYW5z
+      d2VySg4KCGF0dGVtcHRzEgIYAXoCGAGFAQABAAA=
     headers:
       Accept:
       - '*/*'
@@ -419,7 +424,7 @@ interactions:
       Connection:
       - keep-alive
       Content-Length:
-      - '3632'
+      - '3791'
       Content-Type:
       - application/x-protobuf
       User-Agent:
@@ -435,7 +440,7 @@ interactions:
       Content-Type:
       - application/x-protobuf
       Date:
-      - Sun, 15 Sep 2024 22:06:44 GMT
+      - Mon, 16 Sep 2024 08:44:22 GMT
     status:
       code: 200
       message: OK
@@ -458,140 +463,15 @@ interactions:
       the actual complete content as the final answer, not a summary.\n\nBegin! This
       is VERY important to you, use the tools available and give your best Final Answer,
       your job depends on it!\n\nThought:"}, {"role": "assistant", "content": "Thought:
-      I should begin by using the `get_final_answer` tool according to the given instructions.\n\nAction:
-      get_final_answer\nAction Input: {}\nObservation: 42"}, {"role": "assistant",
-      "content": "Thought: I need to use the `get_final_answer` tool again as instructed.\n\nAction:
-      get_final_answer\nAction Input: {}\nObservation: I tried reusing the same input,
-      I must stop using this action input. I''ll try something else instead.\n\n"},
-      {"role": "assistant", "content": "Thought: Despite the previous observation
-      conflicting with the initial instructions, I need to continue using the `get_final_answer`
-      tool.\n\nAction: get_final_answer\nAction Input: {}\nObservation: <MagicMock
-      name=''_remember_format()'' id=''6165001104''>"}], "model": "gpt-4o", "stop":
-      ["\nObservation:"]}'
-    headers:
-      accept:
-      - application/json
-      accept-encoding:
-      - gzip, deflate
-      connection:
-      - keep-alive
-      content-length:
-      - '2227'
-      content-type:
-      - application/json
-      cookie:
-      - __cf_bm=xCQEG8vgEvQfut0bkj2xgre9z9ePZhdKdNxBphhvH6s-1726437753-1.0.1.1-5qo0zwDCcKDtqvIzDbp2sLEPCey8v5DAsf0Mg6f2RmooOW9FXTw2P66VCTTF.vCwTpWBIFk0vzKmBAPOt6urIg;
-        _cfuvid=TiTyEciy7HrUlIDEsELZqkUyM4Fyn8OldZd4JefFMOA-1726437753108-0.0.1.1-604800000
-      host:
-      - api.openai.com
-      user-agent:
-      - OpenAI/Python 1.45.0
-      x-stainless-arch:
-      - arm64
-      x-stainless-async:
-      - 'false'
-      x-stainless-lang:
-      - python
-      x-stainless-os:
-      - MacOS
-      x-stainless-package-version:
-      - 1.45.0
-      x-stainless-raw-response:
-      - 'true'
-      x-stainless-runtime:
-      - CPython
-      x-stainless-runtime-version:
-      - 3.11.7
-    method: POST
-    uri: https://api.openai.com/v1/chat/completions
-  response:
-    content: "{\n  \"id\": \"chatcmpl-A7rgCVITVFENj5mPzSss1XotliqcY\",\n  \"object\":
-      \"chat.completion\",\n  \"created\": 1726438004,\n  \"model\": \"gpt-4o-2024-05-13\",\n
-      \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
-      \"assistant\",\n        \"content\": \"Thought: I should keep using the `get_final_answer`
-      tool until told otherwise.\\n\\nAction: get_final_answer\\nAction Input: {}\",\n
-      \       \"refusal\": null\n      },\n      \"logprobs\": null,\n      \"finish_reason\":
-      \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 448,\n    \"completion_tokens\":
-      27,\n    \"total_tokens\": 475,\n    \"completion_tokens_details\": {\n      \"reasoning_tokens\":
-      0\n    }\n  },\n  \"system_fingerprint\": \"fp_25624ae3a5\"\n}\n"
-    headers:
-      CF-Cache-Status:
-      - DYNAMIC
-      CF-RAY:
-      - 8c3becf71827a4ca-MIA
-      Connection:
-      - keep-alive
-      Content-Encoding:
-      - gzip
-      Content-Type:
-      - application/json
-      Date:
-      - Sun, 15 Sep 2024 22:06:44 GMT
-      Server:
-      - cloudflare
-      Transfer-Encoding:
-      - chunked
-      X-Content-Type-Options:
-      - nosniff
-      access-control-expose-headers:
-      - X-Request-ID
-      alt-svc:
-      - h3=":443"; ma=86400
-      openai-organization:
-      - crewai-iuxna1
-      openai-processing-ms:
-      - '346'
-      openai-version:
-      - '2020-10-01'
-      strict-transport-security:
-      - max-age=15552000; includeSubDomains; preload
-      x-ratelimit-limit-requests:
-      - '10000'
-      x-ratelimit-limit-tokens:
-      - '30000000'
-      x-ratelimit-remaining-requests:
-      - '9999'
-      x-ratelimit-remaining-tokens:
-      - '29999493'
-      x-ratelimit-reset-requests:
-      - 6ms
-      x-ratelimit-reset-tokens:
-      - 1ms
-      x-request-id:
-      - req_a5496407d640644980bbdf8dbe35dd02
-    http_version: HTTP/1.1
-    status_code: 200
-- request:
-    body: '{"messages": [{"role": "system", "content": "You are test role. test backstory\nYour
-      personal goal is: test goal\nYou ONLY have access to the following tools, and
-      should NEVER make up tools that are not listed here:\n\nTool Name: get_final_answer(*args:
-      Any, **kwargs: Any) -> Any\nTool Description: get_final_answer() - Get the final
-      answer but don''t give it yet, just re-use this         tool non-stop. \nTool
-      Arguments: {}\n\nUse the following format:\n\nThought: you should always think
-      about what to do\nAction: the action to take, only one name of [get_final_answer],
-      just the name, exactly as it''s written.\nAction Input: the input to the action,
-      just a simple python dictionary, enclosed in curly braces, using \" to wrap
-      keys and values.\nObservation: the result of the action\n\nOnce all necessary
-      information is gathered:\n\nThought: I now know the final answer\nFinal Answer:
-      the final answer to the original input question\n"}, {"role": "user", "content":
-      "\nCurrent Task: Use tool logic for `get_final_answer` but fon''t give you final
-      answer yet, instead keep using it unless you''re told to give your final answer\n\nThis
-      is the expect criteria for your final answer: The final answer\nyou MUST return
-      the actual complete content as the final answer, not a summary.\n\nBegin! This
-      is VERY important to you, use the tools available and give your best Final Answer,
-      your job depends on it!\n\nThought:"}, {"role": "assistant", "content": "Thought:
-      I should begin by using the `get_final_answer` tool according to the given instructions.\n\nAction:
-      get_final_answer\nAction Input: {}\nObservation: 42"}, {"role": "assistant",
-      "content": "Thought: I need to use the `get_final_answer` tool again as instructed.\n\nAction:
-      get_final_answer\nAction Input: {}\nObservation: I tried reusing the same input,
-      I must stop using this action input. I''ll try something else instead.\n\n"},
-      {"role": "assistant", "content": "Thought: Despite the previous observation
-      conflicting with the initial instructions, I need to continue using the `get_final_answer`
-      tool.\n\nAction: get_final_answer\nAction Input: {}\nObservation: <MagicMock
-      name=''_remember_format()'' id=''6165001104''>"}, {"role": "assistant", "content":
-      "Thought: I should keep using the `get_final_answer` tool until told otherwise.\n\nAction:
-      get_final_answer\nAction Input: {}\nObservation: I tried reusing the same input,
-      I must stop using this action input. I''ll try something else instead.\n\n"}],
+      I need to use the get_final_answer tool continuously as instructed. I will keep
+      using it until further notice.\n\nAction: get_final_answer\nAction Input: {}\nObservation:
+      42"}, {"role": "assistant", "content": "Thought: I need to repeat using the
+      get_final_answer tool as directed.\n\nAction: get_final_answer\nAction Input:
+      {}\nObservation: I tried reusing the same input, I must stop using this action
+      input. I''ll try something else instead.\n\n"}, {"role": "assistant", "content":
+      "Thought: I am required to use the given tool continuously. The observation
+      suggests I should change my approach this time.\n\nAction: get_final_answer\nAction
+      Input: {}\nObservation: <MagicMock name=''_remember_format()'' id=''6166739728''>"}],
       "model": "gpt-4o", "stop": ["\nObservation:"]}'
     headers:
       accept:
@@ -601,12 +481,12 @@ interactions:
       connection:
       - keep-alive
       content-length:
-      - '2509'
+      - '2232'
       content-type:
       - application/json
       cookie:
-      - __cf_bm=xCQEG8vgEvQfut0bkj2xgre9z9ePZhdKdNxBphhvH6s-1726437753-1.0.1.1-5qo0zwDCcKDtqvIzDbp2sLEPCey8v5DAsf0Mg6f2RmooOW9FXTw2P66VCTTF.vCwTpWBIFk0vzKmBAPOt6urIg;
-        _cfuvid=TiTyEciy7HrUlIDEsELZqkUyM4Fyn8OldZd4JefFMOA-1726437753108-0.0.1.1-604800000
+      - __cf_bm=1SckBhvJ18Dazp6bi8DEKYeiS9Q4.6_6i3nmLBw9b6g-1726476036-1.0.1.1-TnN4UpDXA33YXCVCUWOaZ12vGIg_o5NpJQEUHgjn6XdUgb7M0ND8PdkTfkd8rrxG5XFlPRMzI54GxZ0FeUY9xw;
+        _cfuvid=0Rs4xTPk7h7OIXuSbTgMVVD9JSoZeKMwnygKHoHQo3k-1726476036297-0.0.1.1-604800000
       host:
       - api.openai.com
       user-agent:
@@ -630,20 +510,21 @@ interactions:
     method: POST
     uri: https://api.openai.com/v1/chat/completions
   response:
-    content: "{\n  \"id\": \"chatcmpl-A7rgDxh5M09UMKXUPw62QCDvithQZ\",\n  \"object\":
-      \"chat.completion\",\n  \"created\": 1726438005,\n  \"model\": \"gpt-4o-2024-05-13\",\n
+    content: "{\n  \"id\": \"chatcmpl-A81dFMiLjMp5wwovFy6So7bknR1wb\",\n  \"object\":
+      \"chat.completion\",\n  \"created\": 1726476261,\n  \"model\": \"gpt-4o-2024-05-13\",\n
       \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
-      \"assistant\",\n        \"content\": \"Thought: I should keep trying to use
-      the tool.\\n\\nAction: get_final_answer\\nAction Input: {}\",\n        \"refusal\":
+      \"assistant\",\n        \"content\": \"Thought: The instruction clearly states
+      to use the tool non-stop. I will continue using the \\\"get_final_answer\\\"
+      tool.\\n\\nAction: get_final_answer\\nAction Input: {}\",\n        \"refusal\":
       null\n      },\n      \"logprobs\": null,\n      \"finish_reason\": \"stop\"\n
-      \   }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 503,\n    \"completion_tokens\":
-      21,\n    \"total_tokens\": 524,\n    \"completion_tokens_details\": {\n      \"reasoning_tokens\":
+      \   }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 448,\n    \"completion_tokens\":
+      35,\n    \"total_tokens\": 483,\n    \"completion_tokens_details\": {\n      \"reasoning_tokens\":
       0\n    }\n  },\n  \"system_fingerprint\": \"fp_25624ae3a5\"\n}\n"
     headers:
       CF-Cache-Status:
       - DYNAMIC
       CF-RAY:
-      - 8c3becfb3e50a4ca-MIA
+      - 8c3f92fc69612233-MIA
       Connection:
       - keep-alive
       Content-Encoding:
@@ -651,7 +532,7 @@ interactions:
       Content-Type:
       - application/json
       Date:
-      - Sun, 15 Sep 2024 22:06:45 GMT
+      - Mon, 16 Sep 2024 08:44:22 GMT
       Server:
       - cloudflare
       Transfer-Encoding:
@@ -665,7 +546,7 @@ interactions:
       openai-organization:
       - crewai-iuxna1
       openai-processing-ms:
-      - '342'
+      - '482'
       openai-version:
       - '2020-10-01'
       strict-transport-security:
@@ -677,13 +558,13 @@ interactions:
       x-ratelimit-remaining-requests:
       - '9999'
       x-ratelimit-remaining-tokens:
-      - '29999432'
+      - '29999492'
       x-ratelimit-reset-requests:
       - 6ms
       x-ratelimit-reset-tokens:
       - 1ms
       x-request-id:
-      - req_d5198a190ed00eb8376e0b541cd82d06
+      - req_43acfc04a4e38dd02debe1cb4d0d01cd
     http_version: HTTP/1.1
     status_code: 200
 - request:
@@ -705,19 +586,17 @@ interactions:
       the actual complete content as the final answer, not a summary.\n\nBegin! This
       is VERY important to you, use the tools available and give your best Final Answer,
       your job depends on it!\n\nThought:"}, {"role": "assistant", "content": "Thought:
-      I should begin by using the `get_final_answer` tool according to the given instructions.\n\nAction:
-      get_final_answer\nAction Input: {}\nObservation: 42"}, {"role": "assistant",
-      "content": "Thought: I need to use the `get_final_answer` tool again as instructed.\n\nAction:
-      get_final_answer\nAction Input: {}\nObservation: I tried reusing the same input,
-      I must stop using this action input. I''ll try something else instead.\n\n"},
-      {"role": "assistant", "content": "Thought: Despite the previous observation
-      conflicting with the initial instructions, I need to continue using the `get_final_answer`
-      tool.\n\nAction: get_final_answer\nAction Input: {}\nObservation: <MagicMock
-      name=''_remember_format()'' id=''6165001104''>"}, {"role": "assistant", "content":
-      "Thought: I should keep using the `get_final_answer` tool until told otherwise.\n\nAction:
-      get_final_answer\nAction Input: {}\nObservation: I tried reusing the same input,
-      I must stop using this action input. I''ll try something else instead.\n\n"},
-      {"role": "assistant", "content": "Thought: I should keep trying to use the tool.\n\nAction:
+      I need to use the get_final_answer tool continuously as instructed. I will keep
+      using it until further notice.\n\nAction: get_final_answer\nAction Input: {}\nObservation:
+      42"}, {"role": "assistant", "content": "Thought: I need to repeat using the
+      get_final_answer tool as directed.\n\nAction: get_final_answer\nAction Input:
+      {}\nObservation: I tried reusing the same input, I must stop using this action
+      input. I''ll try something else instead.\n\n"}, {"role": "assistant", "content":
+      "Thought: I am required to use the given tool continuously. The observation
+      suggests I should change my approach this time.\n\nAction: get_final_answer\nAction
+      Input: {}\nObservation: <MagicMock name=''_remember_format()'' id=''6166739728''>"},
+      {"role": "assistant", "content": "Thought: The instruction clearly states to
+      use the tool non-stop. I will continue using the \"get_final_answer\" tool.\n\nAction:
       get_final_answer\nAction Input: {}\nObservation: I tried reusing the same input,
       I must stop using this action input. I''ll try something else instead.\n\n"}],
       "model": "gpt-4o", "stop": ["\nObservation:"]}'
@@ -729,12 +608,12 @@ interactions:
       connection:
       - keep-alive
       content-length:
-      - '2759'
+      - '2554'
       content-type:
       - application/json
       cookie:
-      - __cf_bm=xCQEG8vgEvQfut0bkj2xgre9z9ePZhdKdNxBphhvH6s-1726437753-1.0.1.1-5qo0zwDCcKDtqvIzDbp2sLEPCey8v5DAsf0Mg6f2RmooOW9FXTw2P66VCTTF.vCwTpWBIFk0vzKmBAPOt6urIg;
-        _cfuvid=TiTyEciy7HrUlIDEsELZqkUyM4Fyn8OldZd4JefFMOA-1726437753108-0.0.1.1-604800000
+      - __cf_bm=1SckBhvJ18Dazp6bi8DEKYeiS9Q4.6_6i3nmLBw9b6g-1726476036-1.0.1.1-TnN4UpDXA33YXCVCUWOaZ12vGIg_o5NpJQEUHgjn6XdUgb7M0ND8PdkTfkd8rrxG5XFlPRMzI54GxZ0FeUY9xw;
+        _cfuvid=0Rs4xTPk7h7OIXuSbTgMVVD9JSoZeKMwnygKHoHQo3k-1726476036297-0.0.1.1-604800000
       host:
       - api.openai.com
       user-agent:
@@ -758,19 +637,290 @@ interactions:
     method: POST
     uri: https://api.openai.com/v1/chat/completions
   response:
-    content: "{\n  \"id\": \"chatcmpl-A7rgDgn7urx9ayEfsisjE3v51dZzS\",\n  \"object\":
-      \"chat.completion\",\n  \"created\": 1726438005,\n  \"model\": \"gpt-4o-2024-05-13\",\n
+    content: "{\n  \"id\": \"chatcmpl-A81dGfTkRF9w58yjyK9G3LxxHVgzs\",\n  \"object\":
+      \"chat.completion\",\n  \"created\": 1726476262,\n  \"model\": \"gpt-4o-2024-05-13\",\n
       \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
-      \"assistant\",\n        \"content\": \"Thought: I now know the final answer\\nFinal
+      \"assistant\",\n        \"content\": \"Thought: Since my job is to continuously
+      use the \\\"get_final_answer\\\" tool, I will keep following that instruction.
+      Although, it looks like there might be an issue with my current methodology.\\n\\nAction:
+      get_final_answer\\nAction Input: {}\",\n        \"refusal\": null\n      },\n
+      \     \"logprobs\": null,\n      \"finish_reason\": \"stop\"\n    }\n  ],\n
+      \ \"usage\": {\n    \"prompt_tokens\": 511,\n    \"completion_tokens\": 49,\n
+      \   \"total_tokens\": 560,\n    \"completion_tokens_details\": {\n      \"reasoning_tokens\":
+      0\n    }\n  },\n  \"system_fingerprint\": \"fp_25624ae3a5\"\n}\n"
+    headers:
+      CF-Cache-Status:
+      - DYNAMIC
+      CF-RAY:
+      - 8c3f93018ad32233-MIA
+      Connection:
+      - keep-alive
+      Content-Encoding:
+      - gzip
+      Content-Type:
+      - application/json
+      Date:
+      - Mon, 16 Sep 2024 08:44:23 GMT
+      Server:
+      - cloudflare
+      Transfer-Encoding:
+      - chunked
+      X-Content-Type-Options:
+      - nosniff
+      access-control-expose-headers:
+      - X-Request-ID
+      alt-svc:
+      - h3=":443"; ma=86400
+      openai-organization:
+      - crewai-iuxna1
+      openai-processing-ms:
+      - '538'
+      openai-version:
+      - '2020-10-01'
+      strict-transport-security:
+      - max-age=15552000; includeSubDomains; preload
+      x-ratelimit-limit-requests:
+      - '10000'
+      x-ratelimit-limit-tokens:
+      - '30000000'
+      x-ratelimit-remaining-requests:
+      - '9999'
+      x-ratelimit-remaining-tokens:
+      - '29999421'
+      x-ratelimit-reset-requests:
+      - 6ms
+      x-ratelimit-reset-tokens:
+      - 1ms
+      x-request-id:
+      - req_dc63d1637ec833ec4149438c0236dc77
+    http_version: HTTP/1.1
+    status_code: 200
+- request:
+    body: '{"messages": [{"role": "system", "content": "You are test role. test backstory\nYour
+      personal goal is: test goal\nYou ONLY have access to the following tools, and
+      should NEVER make up tools that are not listed here:\n\nTool Name: get_final_answer(*args:
+      Any, **kwargs: Any) -> Any\nTool Description: get_final_answer() - Get the final
+      answer but don''t give it yet, just re-use this         tool non-stop. \nTool
+      Arguments: {}\n\nUse the following format:\n\nThought: you should always think
+      about what to do\nAction: the action to take, only one name of [get_final_answer],
+      just the name, exactly as it''s written.\nAction Input: the input to the action,
+      just a simple python dictionary, enclosed in curly braces, using \" to wrap
+      keys and values.\nObservation: the result of the action\n\nOnce all necessary
+      information is gathered:\n\nThought: I now know the final answer\nFinal Answer:
+      the final answer to the original input question\n"}, {"role": "user", "content":
+      "\nCurrent Task: Use tool logic for `get_final_answer` but fon''t give you final
+      answer yet, instead keep using it unless you''re told to give your final answer\n\nThis
+      is the expect criteria for your final answer: The final answer\nyou MUST return
+      the actual complete content as the final answer, not a summary.\n\nBegin! This
+      is VERY important to you, use the tools available and give your best Final Answer,
+      your job depends on it!\n\nThought:"}, {"role": "assistant", "content": "Thought:
+      I need to use the get_final_answer tool continuously as instructed. I will keep
+      using it until further notice.\n\nAction: get_final_answer\nAction Input: {}\nObservation:
+      42"}, {"role": "assistant", "content": "Thought: I need to repeat using the
+      get_final_answer tool as directed.\n\nAction: get_final_answer\nAction Input:
+      {}\nObservation: I tried reusing the same input, I must stop using this action
+      input. I''ll try something else instead.\n\n"}, {"role": "assistant", "content":
+      "Thought: I am required to use the given tool continuously. The observation
+      suggests I should change my approach this time.\n\nAction: get_final_answer\nAction
+      Input: {}\nObservation: <MagicMock name=''_remember_format()'' id=''6166739728''>"},
+      {"role": "assistant", "content": "Thought: The instruction clearly states to
+      use the tool non-stop. I will continue using the \"get_final_answer\" tool.\n\nAction:
+      get_final_answer\nAction Input: {}\nObservation: I tried reusing the same input,
+      I must stop using this action input. I''ll try something else instead.\n\n"},
+      {"role": "assistant", "content": "Thought: Since my job is to continuously use
+      the \"get_final_answer\" tool, I will keep following that instruction. Although,
+      it looks like there might be an issue with my current methodology.\n\nAction:
+      get_final_answer\nAction Input: {}\nObservation: I tried reusing the same input,
+      I must stop using this action input. I''ll try something else instead.\n\n"}],
+      "model": "gpt-4o", "stop": ["\nObservation:"]}'
+    headers:
+      accept:
+      - application/json
+      accept-encoding:
+      - gzip, deflate
+      connection:
+      - keep-alive
+      content-length:
+      - '2950'
+      content-type:
+      - application/json
+      cookie:
+      - __cf_bm=1SckBhvJ18Dazp6bi8DEKYeiS9Q4.6_6i3nmLBw9b6g-1726476036-1.0.1.1-TnN4UpDXA33YXCVCUWOaZ12vGIg_o5NpJQEUHgjn6XdUgb7M0ND8PdkTfkd8rrxG5XFlPRMzI54GxZ0FeUY9xw;
+        _cfuvid=0Rs4xTPk7h7OIXuSbTgMVVD9JSoZeKMwnygKHoHQo3k-1726476036297-0.0.1.1-604800000
+      host:
+      - api.openai.com
+      user-agent:
+      - OpenAI/Python 1.45.0
+      x-stainless-arch:
+      - arm64
+      x-stainless-async:
+      - 'false'
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - MacOS
+      x-stainless-package-version:
+      - 1.45.0
+      x-stainless-raw-response:
+      - 'true'
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.11.7
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    content: "{\n  \"id\": \"chatcmpl-A81dHyncJrNBdtDX2J9xx9sFg4LHj\",\n  \"object\":
+      \"chat.completion\",\n  \"created\": 1726476263,\n  \"model\": \"gpt-4o-2024-05-13\",\n
+      \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
+      \"assistant\",\n        \"content\": \"Thought: I need to follow the instruction
+      to continuously use the \\\"get_final_answer\\\" tool, and I must ensure the
+      process continues.\\n\\nAction: get_final_answer\\nAction Input: {}\",\n        \"refusal\":
+      null\n      },\n      \"logprobs\": null,\n      \"finish_reason\": \"stop\"\n
+      \   }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 588,\n    \"completion_tokens\":
+      37,\n    \"total_tokens\": 625,\n    \"completion_tokens_details\": {\n      \"reasoning_tokens\":
+      0\n    }\n  },\n  \"system_fingerprint\": \"fp_25624ae3a5\"\n}\n"
+    headers:
+      CF-Cache-Status:
+      - DYNAMIC
+      CF-RAY:
+      - 8c3f93075c672233-MIA
+      Connection:
+      - keep-alive
+      Content-Encoding:
+      - gzip
+      Content-Type:
+      - application/json
+      Date:
+      - Mon, 16 Sep 2024 08:44:24 GMT
+      Server:
+      - cloudflare
+      Transfer-Encoding:
+      - chunked
+      X-Content-Type-Options:
+      - nosniff
+      access-control-expose-headers:
+      - X-Request-ID
+      alt-svc:
+      - h3=":443"; ma=86400
+      openai-organization:
+      - crewai-iuxna1
+      openai-processing-ms:
+      - '498'
+      openai-version:
+      - '2020-10-01'
+      strict-transport-security:
+      - max-age=15552000; includeSubDomains; preload
+      x-ratelimit-limit-requests:
+      - '10000'
+      x-ratelimit-limit-tokens:
+      - '30000000'
+      x-ratelimit-remaining-requests:
+      - '9999'
+      x-ratelimit-remaining-tokens:
+      - '29999333'
+      x-ratelimit-reset-requests:
+      - 6ms
+      x-ratelimit-reset-tokens:
+      - 1ms
+      x-request-id:
+      - req_da156e2a6b917eb583481366b9736aaf
+    http_version: HTTP/1.1
+    status_code: 200
+- request:
+    body: '{"messages": [{"role": "system", "content": "You are test role. test backstory\nYour
+      personal goal is: test goal\nYou ONLY have access to the following tools, and
+      should NEVER make up tools that are not listed here:\n\nTool Name: get_final_answer(*args:
+      Any, **kwargs: Any) -> Any\nTool Description: get_final_answer() - Get the final
+      answer but don''t give it yet, just re-use this         tool non-stop. \nTool
+      Arguments: {}\n\nUse the following format:\n\nThought: you should always think
+      about what to do\nAction: the action to take, only one name of [get_final_answer],
+      just the name, exactly as it''s written.\nAction Input: the input to the action,
+      just a simple python dictionary, enclosed in curly braces, using \" to wrap
+      keys and values.\nObservation: the result of the action\n\nOnce all necessary
+      information is gathered:\n\nThought: I now know the final answer\nFinal Answer:
+      the final answer to the original input question\n"}, {"role": "user", "content":
+      "\nCurrent Task: Use tool logic for `get_final_answer` but fon''t give you final
+      answer yet, instead keep using it unless you''re told to give your final answer\n\nThis
+      is the expect criteria for your final answer: The final answer\nyou MUST return
+      the actual complete content as the final answer, not a summary.\n\nBegin! This
+      is VERY important to you, use the tools available and give your best Final Answer,
+      your job depends on it!\n\nThought:"}, {"role": "assistant", "content": "Thought:
+      I need to use the get_final_answer tool continuously as instructed. I will keep
+      using it until further notice.\n\nAction: get_final_answer\nAction Input: {}\nObservation:
+      42"}, {"role": "assistant", "content": "Thought: I need to repeat using the
+      get_final_answer tool as directed.\n\nAction: get_final_answer\nAction Input:
+      {}\nObservation: I tried reusing the same input, I must stop using this action
+      input. I''ll try something else instead.\n\n"}, {"role": "assistant", "content":
+      "Thought: I am required to use the given tool continuously. The observation
+      suggests I should change my approach this time.\n\nAction: get_final_answer\nAction
+      Input: {}\nObservation: <MagicMock name=''_remember_format()'' id=''6166739728''>"},
+      {"role": "assistant", "content": "Thought: The instruction clearly states to
+      use the tool non-stop. I will continue using the \"get_final_answer\" tool.\n\nAction:
+      get_final_answer\nAction Input: {}\nObservation: I tried reusing the same input,
+      I must stop using this action input. I''ll try something else instead.\n\n"},
+      {"role": "assistant", "content": "Thought: Since my job is to continuously use
+      the \"get_final_answer\" tool, I will keep following that instruction. Although,
+      it looks like there might be an issue with my current methodology.\n\nAction:
+      get_final_answer\nAction Input: {}\nObservation: I tried reusing the same input,
+      I must stop using this action input. I''ll try something else instead.\n\n"},
+      {"role": "assistant", "content": "Thought: I need to follow the instruction
+      to continuously use the \"get_final_answer\" tool, and I must ensure the process
+      continues.\n\nAction: get_final_answer\nAction Input: {}\nObservation: <MagicMock
+      name=''_remember_format()'' id=''6166739728''>\nNow it''s time you MUST give
+      your absolute best final answer. You''ll ignore all previous instructions, stop
+      using any tools, and just return your absolute BEST Final answer."}], "model":
+      "gpt-4o", "stop": ["\nObservation:"]}'
+    headers:
+      accept:
+      - application/json
+      accept-encoding:
+      - gzip, deflate
+      connection:
+      - keep-alive
+      content-length:
+      - '3409'
+      content-type:
+      - application/json
+      cookie:
+      - __cf_bm=1SckBhvJ18Dazp6bi8DEKYeiS9Q4.6_6i3nmLBw9b6g-1726476036-1.0.1.1-TnN4UpDXA33YXCVCUWOaZ12vGIg_o5NpJQEUHgjn6XdUgb7M0ND8PdkTfkd8rrxG5XFlPRMzI54GxZ0FeUY9xw;
+        _cfuvid=0Rs4xTPk7h7OIXuSbTgMVVD9JSoZeKMwnygKHoHQo3k-1726476036297-0.0.1.1-604800000
+      host:
+      - api.openai.com
+      user-agent:
+      - OpenAI/Python 1.45.0
+      x-stainless-arch:
+      - arm64
+      x-stainless-async:
+      - 'false'
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - MacOS
+      x-stainless-package-version:
+      - 1.45.0
+      x-stainless-raw-response:
+      - 'true'
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.11.7
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    content: "{\n  \"id\": \"chatcmpl-A81dIZ471TYHvvwfq6xMnoSjisPzS\",\n  \"object\":
+      \"chat.completion\",\n  \"created\": 1726476264,\n  \"model\": \"gpt-4o-2024-05-13\",\n
+      \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
+      \"assistant\",\n        \"content\": \"Thought: I now know the final answer.\\nFinal
       Answer: 42\",\n        \"refusal\": null\n      },\n      \"logprobs\": null,\n
       \     \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\":
-      552,\n    \"completion_tokens\": 14,\n    \"total_tokens\": 566,\n    \"completion_tokens_details\":
+      679,\n    \"completion_tokens\": 14,\n    \"total_tokens\": 693,\n    \"completion_tokens_details\":
       {\n      \"reasoning_tokens\": 0\n    }\n  },\n  \"system_fingerprint\": \"fp_25624ae3a5\"\n}\n"
     headers:
       CF-Cache-Status:
       - DYNAMIC
       CF-RAY:
-      - 8c3becff4ce7a4ca-MIA
+      - 8c3f930c6dd02233-MIA
       Connection:
       - keep-alive
       Content-Encoding:
@@ -778,7 +928,7 @@ interactions:
       Content-Type:
       - application/json
       Date:
-      - Sun, 15 Sep 2024 22:06:46 GMT
+      - Mon, 16 Sep 2024 08:44:24 GMT
       Server:
       - cloudflare
       Transfer-Encoding:
@@ -792,7 +942,7 @@ interactions:
       openai-organization:
       - crewai-iuxna1
       openai-processing-ms:
-      - '227'
+      - '311'
       openai-version:
       - '2020-10-01'
       strict-transport-security:
@@ -804,13 +954,13 @@ interactions:
       x-ratelimit-remaining-requests:
       - '9999'
       x-ratelimit-remaining-tokens:
-      - '29999380'
+      - '29999229'
       x-ratelimit-reset-requests:
       - 6ms
       x-ratelimit-reset-tokens:
       - 1ms
       x-request-id:
-      - req_ca0389861e766f9cfefd191c4b7add4c
+      - req_8b0f5d9e252de9b81256fa65da33e25c
     http_version: HTTP/1.1
     status_code: 200
 version: 1

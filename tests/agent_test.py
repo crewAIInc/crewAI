@@ -67,7 +67,7 @@ def test_agent_execution():
     )
 
     output = agent.execute_task(task)
-    assert output == "1 + 1 equals 2."
+    assert output == "The result of the math operation 1 + 1 is 2."
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
@@ -121,7 +121,7 @@ def test_logging_tool_usage():
     tool_usage = InstructorToolCalling(
         tool_name=multiplier.name, arguments={"first_number": 3, "second_number": 4}
     )
-    assert output == "The result of multiplying 3 times 4 is 12."
+    assert output == "The result of 3 times 4 is 12."
     assert agent.tools_handler.last_used_tool.tool_name == tool_usage.tool_name
     assert agent.tools_handler.last_used_tool.arguments == tool_usage.arguments
 
@@ -275,7 +275,7 @@ def test_agent_execution_with_specific_tools():
         expected_output="The result of the multiplication.",
     )
     output = agent.execute_task(task=task, tools=[multiplier])
-    assert output == "The result of the multiplication is 12."
+    assert output == "The result of the multiplication of 3 times 4 is 12."
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
@@ -490,7 +490,7 @@ def test_agent_respect_the_max_rpm_set(capsys):
             task=task,
             tools=[get_final_answer],
         )
-        assert output == "The final answer is 42."
+        assert output == "42"
         captured = capsys.readouterr()
         assert "Max RPM reached, waiting for next minute to start." in captured.out
         moveon.assert_called()
@@ -1110,7 +1110,10 @@ def test_handle_context_length_exceeds_limit():
         backstory="test backstory",
     )
     original_action = AgentAction(
-        tool="test_tool", tool_input="test_input", text="test_log"
+        tool="test_tool",
+        tool_input="test_input",
+        text="test_log",
+        thought="test_thought",
     )
 
     with patch.object(

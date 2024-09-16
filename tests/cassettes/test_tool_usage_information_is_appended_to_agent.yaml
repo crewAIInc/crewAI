@@ -29,8 +29,8 @@ interactions:
       content-type:
       - application/json
       cookie:
-      - __cf_bm=xCQEG8vgEvQfut0bkj2xgre9z9ePZhdKdNxBphhvH6s-1726437753-1.0.1.1-5qo0zwDCcKDtqvIzDbp2sLEPCey8v5DAsf0Mg6f2RmooOW9FXTw2P66VCTTF.vCwTpWBIFk0vzKmBAPOt6urIg;
-        _cfuvid=TiTyEciy7HrUlIDEsELZqkUyM4Fyn8OldZd4JefFMOA-1726437753108-0.0.1.1-604800000
+      - __cf_bm=1SckBhvJ18Dazp6bi8DEKYeiS9Q4.6_6i3nmLBw9b6g-1726476036-1.0.1.1-TnN4UpDXA33YXCVCUWOaZ12vGIg_o5NpJQEUHgjn6XdUgb7M0ND8PdkTfkd8rrxG5XFlPRMzI54GxZ0FeUY9xw;
+        _cfuvid=0Rs4xTPk7h7OIXuSbTgMVVD9JSoZeKMwnygKHoHQo3k-1726476036297-0.0.1.1-604800000
       host:
       - api.openai.com
       user-agent:
@@ -54,20 +54,20 @@ interactions:
     method: POST
     uri: https://api.openai.com/v1/chat/completions
   response:
-    content: "{\n  \"id\": \"chatcmpl-A7rgg2dwGF3tJKDTQrXx4m449Bqa2\",\n  \"object\":
-      \"chat.completion\",\n  \"created\": 1726438034,\n  \"model\": \"gpt-4o-2024-05-13\",\n
+    content: "{\n  \"id\": \"chatcmpl-A81dUZqNO0SIaJAGNH1cymbNA9XKJ\",\n  \"object\":
+      \"chat.completion\",\n  \"created\": 1726476276,\n  \"model\": \"gpt-4o-2024-05-13\",\n
       \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
-      \"assistant\",\n        \"content\": \"Thought: I need to decide on the appropriate
+      \"assistant\",\n        \"content\": \"Thought: I should decide the appropriate
       greeting to use.\\nAction: Decide Greetings\\nAction Input: {}\",\n        \"refusal\":
       null\n      },\n      \"logprobs\": null,\n      \"finish_reason\": \"stop\"\n
       \   }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 253,\n    \"completion_tokens\":
-      22,\n    \"total_tokens\": 275,\n    \"completion_tokens_details\": {\n      \"reasoning_tokens\":
+      20,\n    \"total_tokens\": 273,\n    \"completion_tokens_details\": {\n      \"reasoning_tokens\":
       0\n    }\n  },\n  \"system_fingerprint\": \"fp_25624ae3a5\"\n}\n"
     headers:
       CF-Cache-Status:
       - DYNAMIC
       CF-RAY:
-      - 8c3bedaff9fba4ca-MIA
+      - 8c3f93573b602233-MIA
       Connection:
       - keep-alive
       Content-Encoding:
@@ -75,7 +75,7 @@ interactions:
       Content-Type:
       - application/json
       Date:
-      - Sun, 15 Sep 2024 22:07:14 GMT
+      - Mon, 16 Sep 2024 08:44:36 GMT
       Server:
       - cloudflare
       Transfer-Encoding:
@@ -89,7 +89,7 @@ interactions:
       openai-organization:
       - crewai-iuxna1
       openai-processing-ms:
-      - '285'
+      - '321'
       openai-version:
       - '2020-10-01'
       strict-transport-security:
@@ -107,7 +107,7 @@ interactions:
       x-ratelimit-reset-tokens:
       - 0s
       x-request-id:
-      - req_16f900dd0dcf23992103986f56753807
+      - req_9b631a8d7de10125a56f914f0d4d867c
     http_version: HTTP/1.1
     status_code: 200
 - request:
@@ -127,9 +127,9 @@ interactions:
       for your final answer: The greeting.\nyou MUST return the actual complete content
       as the final answer, not a summary.\n\nBegin! This is VERY important to you,
       use the tools available and give your best Final Answer, your job depends on
-      it!\n\nThought:"}, {"role": "assistant", "content": "Thought: I need to decide
-      on the appropriate greeting to use.\nAction: Decide Greetings\nAction Input:
-      {}\nObservation: Howdy!"}], "model": "gpt-4o", "stop": ["\nObservation:"]}'
+      it!\n\nThought:"}, {"role": "assistant", "content": "Thought: I should decide
+      the appropriate greeting to use.\nAction: Decide Greetings\nAction Input: {}\nObservation:
+      Howdy!"}], "model": "gpt-4o", "stop": ["\nObservation:"]}'
     headers:
       accept:
       - application/json
@@ -138,12 +138,12 @@ interactions:
       connection:
       - keep-alive
       content-length:
-      - '1490'
+      - '1486'
       content-type:
       - application/json
       cookie:
-      - __cf_bm=xCQEG8vgEvQfut0bkj2xgre9z9ePZhdKdNxBphhvH6s-1726437753-1.0.1.1-5qo0zwDCcKDtqvIzDbp2sLEPCey8v5DAsf0Mg6f2RmooOW9FXTw2P66VCTTF.vCwTpWBIFk0vzKmBAPOt6urIg;
-        _cfuvid=TiTyEciy7HrUlIDEsELZqkUyM4Fyn8OldZd4JefFMOA-1726437753108-0.0.1.1-604800000
+      - __cf_bm=1SckBhvJ18Dazp6bi8DEKYeiS9Q4.6_6i3nmLBw9b6g-1726476036-1.0.1.1-TnN4UpDXA33YXCVCUWOaZ12vGIg_o5NpJQEUHgjn6XdUgb7M0ND8PdkTfkd8rrxG5XFlPRMzI54GxZ0FeUY9xw;
+        _cfuvid=0Rs4xTPk7h7OIXuSbTgMVVD9JSoZeKMwnygKHoHQo3k-1726476036297-0.0.1.1-604800000
       host:
       - api.openai.com
       user-agent:
@@ -167,19 +167,19 @@ interactions:
     method: POST
     uri: https://api.openai.com/v1/chat/completions
   response:
-    content: "{\n  \"id\": \"chatcmpl-A7rggCZqf8jR41RpBo0wqYff8n0Qw\",\n  \"object\":
-      \"chat.completion\",\n  \"created\": 1726438034,\n  \"model\": \"gpt-4o-2024-05-13\",\n
+    content: "{\n  \"id\": \"chatcmpl-A81dVaXfznVt20XYg4EMmnwLdj7fh\",\n  \"object\":
+      \"chat.completion\",\n  \"created\": 1726476277,\n  \"model\": \"gpt-4o-2024-05-13\",\n
       \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
       \"assistant\",\n        \"content\": \"Thought: I now know the final answer.\\nFinal
       Answer: Howdy!\",\n        \"refusal\": null\n      },\n      \"logprobs\":
       null,\n      \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\":
-      284,\n    \"completion_tokens\": 15,\n    \"total_tokens\": 299,\n    \"completion_tokens_details\":
+      282,\n    \"completion_tokens\": 15,\n    \"total_tokens\": 297,\n    \"completion_tokens_details\":
       {\n      \"reasoning_tokens\": 0\n    }\n  },\n  \"system_fingerprint\": \"fp_25624ae3a5\"\n}\n"
     headers:
       CF-Cache-Status:
       - DYNAMIC
       CF-RAY:
-      - 8c3bedb38860a4ca-MIA
+      - 8c3f935b0c842233-MIA
       Connection:
       - keep-alive
       Content-Encoding:
@@ -187,7 +187,7 @@ interactions:
       Content-Type:
       - application/json
       Date:
-      - Sun, 15 Sep 2024 22:07:14 GMT
+      - Mon, 16 Sep 2024 08:44:37 GMT
       Server:
       - cloudflare
       Transfer-Encoding:
@@ -201,7 +201,7 @@ interactions:
       openai-organization:
       - crewai-iuxna1
       openai-processing-ms:
-      - '227'
+      - '262'
       openai-version:
       - '2020-10-01'
       strict-transport-security:
@@ -219,7 +219,7 @@ interactions:
       x-ratelimit-reset-tokens:
       - 0s
       x-request-id:
-      - req_c59c33de153567b2313183ec5184e8c1
+      - req_9911d2a2144da29ca7c93c4ea1b505e7
     http_version: HTTP/1.1
     status_code: 200
 version: 1
