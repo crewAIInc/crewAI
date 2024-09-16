@@ -11,31 +11,34 @@ description: What are crewAI Agents and how to use them.
       <li class='leading-3'>Make decisions</li>
       <li class='leading-3'>Communicate with other agents</li>
     </ul>
-      <br/>
+    <br/>
     Think of an agent as a member of a team, with specific skills and a particular job to do. Agents can have different roles like 'Researcher', 'Writer', or 'Customer Support', each contributing to the overall goal of the crew.
 
 ## Agent Attributes
 
 | Attribute                  | Parameter  | Description                                                                                                                                                                                                                                    |
-| :------------------------- | :---- | :--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Role**                   | `role`  | Defines the agent's function within the crew. It determines the kind of tasks the agent is best suited for.                                                                                                                                    |
-| **Goal**                   | `goal`  | The individual objective that the agent aims to achieve. It guides the agent's decision-making process.                                                                                                                                        |
-| **Backstory**              | `backstory`  | Provides context to the agent's role and goal, enriching the interaction and collaboration dynamics.                                                                                                                                           |
-| **LLM** *(optional)*       | `llm`  | Represents the language model that will run the agent. It dynamically fetches the model name from the `OPENAI_MODEL_NAME` environment variable, defaulting to "gpt-4" if not specified.                                                         |
-| **Tools** *(optional)*     | `tools`  | Set of capabilities or functions that the agent can use to perform tasks. Expected to be instances of custom classes compatible with the agent's execution environment. Tools are initialized with a default value of an empty list.             |
+| :------------------------- | :--------- | :--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Role**                   | `role`     | Defines the agent's function within the crew. It determines the kind of tasks the agent is best suited for.                                                                                                                                    |
+| **Goal**                   | `goal`     | The individual objective that the agent aims to achieve. It guides the agent's decision-making process.                                                                                                                                        |
+| **Backstory**              | `backstory`| Provides context to the agent's role and goal, enriching the interaction and collaboration dynamics.                                                                                                                                           |
+| **LLM** *(optional)*       | `llm`      | Represents the language model that will run the agent. It dynamically fetches the model name from the `OPENAI_MODEL_NAME` environment variable, defaulting to "gpt-4" if not specified.                                                         |
+| **Tools** *(optional)*     | `tools`    | Set of capabilities or functions that the agent can use to perform tasks. Expected to be instances of custom classes compatible with the agent's execution environment. Tools are initialized with a default value of an empty list.             |
 | **Function Calling LLM** *(optional)* | `function_calling_llm`  | Specifies the language model that will handle the tool calling for this agent, overriding the crew function calling LLM if passed. Default is `None`.                                                                                          |
 | **Max Iter** *(optional)*  | `max_iter` | Max Iter is the maximum number of iterations the agent can perform before being forced to give its best answer. Default is `25`.                                                                                                                           |
 | **Max RPM** *(optional)*   | `max_rpm`  | Max RPM is the maximum number of requests per minute the agent can perform to avoid rate limits. It's optional and can be left unspecified, with a default value of `None`.                                                                               |
 | **Max Execution Time** *(optional)*   | `max_execution_time`  | Max Execution Time is the maximum execution time for an agent to execute a task. It's optional and can be left unspecified, with a default value of `None`, meaning no max execution time.                                                                     |
 | **Verbose** *(optional)*   | `verbose`  | Setting this to `True` configures the internal logger to provide detailed execution logs, aiding in debugging and monitoring. Default is `False`.                                                                                              |
-| **Allow Delegation** *(optional)* | `allow_delegation`  | Agents can delegate tasks or questions to one another, ensuring that each task is handled by the most suitable agent. Default is `True`.                                                                                                       |
+| **Allow Delegation** *(optional)* | `allow_delegation`  | Agents can delegate tasks or questions to one another, ensuring that each task is handled by the most suitable agent. Default is `False`.
 | **Step Callback** *(optional)* | `step_callback`  | A function that is called after each step of the agent. This can be used to log the agent's actions or to perform other operations. It will overwrite the crew `step_callback`.                                                               |
 | **Cache** *(optional)*     | `cache`  | Indicates if the agent should use a cache for tool usage. Default is `True`.                                                                                                                                                                  |
 | **System Template** *(optional)*     | `system_template`  | Specifies the system format for the agent. Default is `None`.                                                                                                                                                                  |
 | **Prompt Template** *(optional)*     | `prompt_template`  | Specifies the prompt format for the agent. Default is `None`.                                                                                                                                                                  |
 | **Response Template** *(optional)*     | `response_template`  | Specifies the response format for the agent. Default is `None`.                                                                                                                                                                  |
 | **Allow Code Execution** *(optional)*     | `allow_code_execution`  | Enable code execution for the agent. Default is `False`.                                                                                                                                                                  |
-| **Max Retry Limit** *(optional)*     | `max_retry_limit`  | Maximum number of retries for an agent to execute a task when an error occurs. Default is `2`.                                                                                                                                                                  |
+| **Max Retry Limit** *(optional)*     | `max_retry_limit`  | Maximum number of retries for an agent to execute a task when an error occurs. Default is `2`.
+| **Use Stop Words** *(optional)*     | `use_stop_words`  | Adds the ability to not use stop words (to support o1 models). Default is `True`.                                                                                                                                                                  |
+| **Use System Prompt** *(optional)*     | `use_system_prompt`  | Adds the ability to not use system prompt (to support o1 models). Default is `True`.                                                                                                                                                                  |
+| **Respect Context Window** *(optional)*     | `respect_context_window`  | Summary strategy to avoid overflowing the context window. Default is `True`.                                                                                                                                                                  |
 
 ## Creating an Agent
 
@@ -63,7 +66,7 @@ agent = Agent(
   max_rpm=None, # Optional
   max_execution_time=None, # Optional
   verbose=True,  # Optional
-  allow_delegation=True,  # Optional
+  allow_delegation=False,  # Optional
   step_callback=my_intermediate_step_callback,  # Optional
   cache=True,  # Optional
   system_template=my_system_template,  # Optional
@@ -74,8 +77,11 @@ agent = Agent(
   tools_handler=my_tools_handler,  # Optional
   cache_handler=my_cache_handler,  # Optional
   callbacks=[callback1, callback2],  # Optional
-  allow_code_execution=True,  # Optiona
+  allow_code_execution=True,  # Optional
   max_retry_limit=2,  # Optional
+  use_stop_words=True,  # Optional
+  use_system_prompt=True,  # Optional
+  respect_context_window=True,  # Optional
 )
 ```
 
@@ -105,7 +111,7 @@ agent = Agent(
 
     BaseAgent includes attributes and methods required to integrate with your crews to run and delegate tasks to other agents within your own crew.
 
-    CrewAI is a universal multi agent framework that allows for all agents to work together to automate tasks and solve problems.
+    CrewAI is a universal multi-agent framework that allows for all agents to work together to automate tasks and solve problems.
 
 
 ```py

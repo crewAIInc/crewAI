@@ -5,9 +5,10 @@ description: Learn how to integrate LangChain tools with CrewAI agents to enhanc
 
 ## Using LangChain Tools
 !!! info "LangChain Integration"
-    CrewAI seamlessly integrates with LangChain’s comprehensive toolkit for search-based queries and more, here are the available built-in tools that are offered by Langchain [LangChain Toolkit](https://python.langchain.com/docs/integrations/tools/)
+    CrewAI seamlessly integrates with LangChain’s comprehensive [list of tools](https://python.langchain.com/docs/integrations/tools/), all of which can be used with crewAI.
 
 ```python
+import os
 from crewai import Agent
 from langchain.agents import Tool
 from langchain.utilities import GoogleSerperAPIWrapper

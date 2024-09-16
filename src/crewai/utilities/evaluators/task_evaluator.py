@@ -1,7 +1,6 @@
 import os
 from typing import List
 
-from langchain_openai import ChatOpenAI
 from pydantic import BaseModel, Field
 
 from crewai.utilities import Converter
@@ -93,7 +92,11 @@ class TaskEvaluator:
         return converter.to_pydantic()
 
     def _is_gpt(self, llm) -> bool:
-        return isinstance(llm, ChatOpenAI) and llm.openai_api_base is None
+        return (
+            "gpt" in str(self.llm).lower()
+            or "o1-preview" in str(self.llm).lower()
+            or "o1-mini" in str(self.llm).lower()
+        )
 
     def evaluate_training_data(
         self, training_data: dict, agent_id: str

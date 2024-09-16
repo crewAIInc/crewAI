@@ -72,7 +72,7 @@ asyncio.run(async_crew_execution())
 
 ## Example: Multiple Asynchronous Crew Executions
 
-In this example, we'll show how to kickoff multiple crews asynchronously and wait for all of them to complete using asyncio.gather():
+In this example, we'll show how to kickoff multiple crews asynchronously and wait for all of them to complete using `asyncio.gather()`:
 
 ```python
 import asyncio

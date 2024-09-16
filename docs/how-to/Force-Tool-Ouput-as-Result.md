@@ -1,27 +1,31 @@
 ---
 title: Forcing Tool Output as Result
-description: Learn how to force tool output as the result in of an Agent's task in CrewAI.
+description: Learn how to force tool output as the result in an Agent's task in CrewAI.
 ---
 
 ## Introduction
-In CrewAI, you can force the output of a tool as the result of an agent's task. This feature is useful when you want to ensure that the tool output is captured and returned as the task result, and avoid the agent modifying the output during the task execution.
+In CrewAI, you can force the output of a tool as the result of an agent's task. This feature is useful when you want to ensure that the tool output is captured and returned as the task result, avoiding any agent modification during the task execution.
 
 ## Forcing Tool Output as Result
-To force the tool output as the result of an agent's task, you can set the `result_as_answer` parameter to `True` when creating the agent. This parameter ensures that the tool output is captured and returned as the task result, without any modifications by the agent.
+To force the tool output as the result of an agent's task, you need to set the `result_as_answer` parameter to `True` when adding a tool to the agent. This parameter ensures that the tool output is captured and returned as the task result, without any modifications by the agent.
 
 Here's an example of how to force the tool output as the result of an agent's task:
 
 ```python
 # ...
 from crewai.agent import Agent
+from my_tool import MyCustomTool
 
-# Define a custom tool that returns the result as the answer
+# Create a coding agent with the custom tool
 coding_agent = Agent(
         role="Data Scientist",
         goal="Produce amazing reports on AI",
         backstory="You work with data and AI",
         tools=[MyCustomTool(result_as_answer=True)],
     )
+
+# Assuming the tool's execution and result population occurs within the system
+task_result = coding_agent.execute_task(task)
 ```
 
 ## Workflow in Action
