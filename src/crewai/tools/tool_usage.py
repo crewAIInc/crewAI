@@ -11,11 +11,10 @@ from crewai.tools.tool_calling import InstructorToolCalling, ToolCalling
 from crewai.utilities import I18N, Converter, ConverterError, Printer
 
 agentops = None
-if os.environ.get("AGENTOPS_API_KEY"):
-    try:
-        import agentops  # type: ignore
-    except ImportError:
-        pass
+try:
+    import agentops  # type: ignore
+except ImportError:
+    pass
 
 OPENAI_BIGGER_MODELS = ["gpt-4", "gpt-4o"]
 
