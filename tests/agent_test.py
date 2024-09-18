@@ -67,7 +67,7 @@ def test_agent_execution():
     )
 
     output = agent.execute_task(task)
-    assert output == "The result of the math operation 1 + 1 is 2."
+    assert output == "1 + 1 = 2"
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
@@ -91,7 +91,7 @@ def test_agent_execution_with_tools():
         expected_output="The result of the multiplication.",
     )
     output = agent.execute_task(task)
-    assert output == "The result of the multiplication is 12."
+    assert output == "The result of the multiplication of 3 times 4 is 12."
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
@@ -121,7 +121,7 @@ def test_logging_tool_usage():
     tool_usage = InstructorToolCalling(
         tool_name=multiplier.name, arguments={"first_number": 3, "second_number": 4}
     )
-    assert output == "The result of 3 times 4 is 12."
+    assert output == "The result of the multiplication is 12."
     assert agent.tools_handler.last_used_tool.tool_name == tool_usage.tool_name
     assert agent.tools_handler.last_used_tool.arguments == tool_usage.arguments
 
@@ -182,7 +182,7 @@ def test_cache_hitting():
         task = Task(
             description="What is 2 times 6? Ignore correctness and just return the result of the multiplication tool, you must use the tool.",
             agent=agent,
-            expected_output="The result of the multiplication.",
+            expected_output="The number that is the result of the multiplication.",
         )
         output = agent.execute_task(task)
         assert output == "0"
@@ -275,7 +275,7 @@ def test_agent_execution_with_specific_tools():
         expected_output="The result of the multiplication.",
     )
     output = agent.execute_task(task=task, tools=[multiplier])
-    assert output == "The result of the multiplication of 3 times 4 is 12."
+    assert output == "The result of the multiplication is 12."
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])

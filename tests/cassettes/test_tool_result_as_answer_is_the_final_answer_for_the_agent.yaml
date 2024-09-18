@@ -30,12 +30,12 @@ interactions:
       content-type:
       - application/json
       cookie:
-      - __cf_bm=1SckBhvJ18Dazp6bi8DEKYeiS9Q4.6_6i3nmLBw9b6g-1726476036-1.0.1.1-TnN4UpDXA33YXCVCUWOaZ12vGIg_o5NpJQEUHgjn6XdUgb7M0ND8PdkTfkd8rrxG5XFlPRMzI54GxZ0FeUY9xw;
-        _cfuvid=0Rs4xTPk7h7OIXuSbTgMVVD9JSoZeKMwnygKHoHQo3k-1726476036297-0.0.1.1-604800000
+      - __cf_bm=.8.5x0rqghNdtUCxfmwblfhuXiKyPm_cRq.NIa0heL0-1726642369-1.0.1.1-VbsAGqjOt45ZD50K2QW2oZrByLLIh6w8K4nAkLthTbXgU5qTgdf0mhvFId8Q2F3DcHUw9E72lVIZEN.YVlYINQ;
+        _cfuvid=o5s1Ux898x0eFNtzUCnG996iqyX3LgXDXq99C5oqnVE-1726642369248-0.0.1.1-604800000
       host:
       - api.openai.com
       user-agent:
-      - OpenAI/Python 1.45.0
+      - OpenAI/Python 1.46.0
       x-stainless-arch:
       - arm64
       x-stainless-async:
@@ -45,7 +45,7 @@ interactions:
       x-stainless-os:
       - MacOS
       x-stainless-package-version:
-      - 1.45.0
+      - 1.46.0
       x-stainless-raw-response:
       - 'true'
       x-stainless-runtime:
@@ -55,19 +55,20 @@ interactions:
     method: POST
     uri: https://api.openai.com/v1/chat/completions
   response:
-    content: "{\n  \"id\": \"chatcmpl-A81dRVN0HYdIEaw5cffnN3InceczQ\",\n  \"object\":
-      \"chat.completion\",\n  \"created\": 1726476273,\n  \"model\": \"gpt-4o-2024-05-13\",\n
+    content: "{\n  \"id\": \"chatcmpl-A8istS7EzduwxAQhYo0NJW9VnqC53\",\n  \"object\":
+      \"chat.completion\",\n  \"created\": 1726642523,\n  \"model\": \"gpt-4o-2024-05-13\",\n
       \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
-      \"assistant\",\n        \"content\": \"I will start by getting a greeting first.\\n\\nAction:
-      Get Greetings\\nAction Input: {}\",\n        \"refusal\": null\n      },\n      \"logprobs\":
-      null,\n      \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\":
-      284,\n    \"completion_tokens\": 18,\n    \"total_tokens\": 302,\n    \"completion_tokens_details\":
-      {\n      \"reasoning_tokens\": 0\n    }\n  },\n  \"system_fingerprint\": \"fp_25624ae3a5\"\n}\n"
+      \"assistant\",\n        \"content\": \"Thought: I should first use the Get Greetings
+      tool to get a greeting.\\n\\nAction: Get Greetings\\nAction Input: {}\",\n        \"refusal\":
+      null\n      },\n      \"logprobs\": null,\n      \"finish_reason\": \"stop\"\n
+      \   }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 284,\n    \"completion_tokens\":
+      24,\n    \"total_tokens\": 308,\n    \"completion_tokens_details\": {\n      \"reasoning_tokens\":
+      0\n    }\n  },\n  \"system_fingerprint\": \"fp_a5d11b2ef2\"\n}\n"
     headers:
       CF-Cache-Status:
       - DYNAMIC
       CF-RAY:
-      - 8c3f93467e922233-MIA
+      - 8c4f6e1b6cc9a67a-MIA
       Connection:
       - keep-alive
       Content-Encoding:
@@ -75,7 +76,7 @@ interactions:
       Content-Type:
       - application/json
       Date:
-      - Mon, 16 Sep 2024 08:44:34 GMT
+      - Wed, 18 Sep 2024 06:55:24 GMT
       Server:
       - cloudflare
       Transfer-Encoding:
@@ -89,7 +90,7 @@ interactions:
       openai-organization:
       - crewai-iuxna1
       openai-processing-ms:
-      - '258'
+      - '546'
       openai-version:
       - '2020-10-01'
       strict-transport-security:
@@ -107,9 +108,70 @@ interactions:
       x-ratelimit-reset-tokens:
       - 0s
       x-request-id:
-      - req_e7b16bcfdb1d0c0dd61e8fb153c2424d
+      - req_50735a58d0b3dd733c9131e79d125cb7
     http_version: HTTP/1.1
     status_code: 200
+- request:
+    body: !!binary |
+      Cr0NCiQKIgoMc2VydmljZS5uYW1lEhIKEGNyZXdBSS10ZWxlbWV0cnkSlA0KEgoQY3Jld2FpLnRl
+      bGVtZXRyeRKQAgoQdT3O/hAArJM9iRoFokT78hIIvvn7nHRFv1UqDlRhc2sgRXhlY3V0aW9uMAE5
+      yEYEdjhE9hdBIEOaAjpE9hdKLgoIY3Jld19rZXkSIgogNDk0ZjM2NTcyMzdhZDhhMzAzNWIyZjFi
+      ZWVjZGM2NzdKMQoHY3Jld19pZBImCiRhYjAyZTJkMi04MWEwLTRkZDYtOGM3ZC00NWU5MTE0OGNk
+      OGFKLgoIdGFza19rZXkSIgogZjI1OTdjNzg2N2ZiZTMyNGRjNjVkYzA4ZGZkYmZjNmNKMQoHdGFz
+      a19pZBImCiRmN2FjZjJhMC01YzlhLTRmYzgtOWUxNS02YzBlOGMxM2VmYzB6AhgBhQEAAQAAEsYH
+      ChDoBvRB5d+W/gnhlrn0ro3sEgjsUml3twsejSoMQ3JldyBDcmVhdGVkMAE5QCnPAzpE9hdBSPLQ
+      AzpE9hdKGgoOY3Jld2FpX3ZlcnNpb24SCAoGMC42MC40ShoKDnB5dGhvbl92ZXJzaW9uEggKBjMu
+      MTEuN0ouCghjcmV3X2tleRIiCiA3ZTY2MDg5ODk4NTlhNjdlZWM4OGVlZjdmY2U4NTIyNUoxCgdj
+      cmV3X2lkEiYKJGE5MjhkYjRlLTRjMWItNGEyMS1hMzUxLWViMDQ3Y2Y0NmYwN0ocCgxjcmV3X3By
+      b2Nlc3MSDAoKc2VxdWVudGlhbEoRCgtjcmV3X21lbW9yeRICEABKGgoUY3Jld19udW1iZXJfb2Zf
+      dGFza3MSAhgBShsKFWNyZXdfbnVtYmVyX29mX2FnZW50cxICGAFK4QIKC2NyZXdfYWdlbnRzEtEC
+      Cs4CW3sia2V5IjogIjIyYWNkNjExZTQ0ZWY1ZmFjMDViNTMzZDc1ZTg4OTNiIiwgImlkIjogImMz
+      ODcwZWE0LTQ1ZjgtNDhlMC05ZGYxLTc4OGU0ZDEzMzQ5ZSIsICJyb2xlIjogIkRhdGEgU2NpZW50
+      aXN0IiwgInZlcmJvc2U/IjogZmFsc2UsICJtYXhfaXRlciI6IDE1LCAibWF4X3JwbSI6IG51bGws
+      ICJmdW5jdGlvbl9jYWxsaW5nX2xsbSI6IG51bGwsICJsbG0iOiAiZ3B0LTRvIiwgImRlbGVnYXRp
+      b25fZW5hYmxlZD8iOiBmYWxzZSwgImFsbG93X2NvZGVfZXhlY3V0aW9uPyI6IGZhbHNlLCAibWF4
+      X3JldHJ5X2xpbWl0IjogMiwgInRvb2xzX25hbWVzIjogWyJnZXQgZ3JlZXRpbmdzIl19XUqSAgoK
+      Y3Jld190YXNrcxKDAgqAAlt7ImtleSI6ICJhMjc3YjM0YjJjMTQ2ZjBjNTZjNWUxMzU2ZThmOGE1
+      NyIsICJpZCI6ICI0N2I2NGRlYS1lM2FmLTRmNmEtYWExZC0zMTU0NzAwMmQxZGEiLCAiYXN5bmNf
+      ZXhlY3V0aW9uPyI6IGZhbHNlLCAiaHVtYW5faW5wdXQ/IjogZmFsc2UsICJhZ2VudF9yb2xlIjog
+      IkRhdGEgU2NpZW50aXN0IiwgImFnZW50X2tleSI6ICIyMmFjZDYxMWU0NGVmNWZhYzA1YjUzM2Q3
+      NWU4ODkzYiIsICJ0b29sc19uYW1lcyI6IFsiZ2V0IGdyZWV0aW5ncyJdfV16AhgBhQEAAQAAEo4C
+      ChDPvlJ+MbkTSXYraeenMGkPEgjh9zFlGLgmQioMVGFzayBDcmVhdGVkMAE5gFnhAzpE9hdBSAni
+      AzpE9hdKLgoIY3Jld19rZXkSIgogN2U2NjA4OTg5ODU5YTY3ZWVjODhlZWY3ZmNlODUyMjVKMQoH
+      Y3Jld19pZBImCiRhOTI4ZGI0ZS00YzFiLTRhMjEtYTM1MS1lYjA0N2NmNDZmMDdKLgoIdGFza19r
+      ZXkSIgogYTI3N2IzNGIyYzE0NmYwYzU2YzVlMTM1NmU4ZjhhNTdKMQoHdGFza19pZBImCiQ0N2I2
+      NGRlYS1lM2FmLTRmNmEtYWExZC0zMTU0NzAwMmQxZGF6AhgBhQEAAQAAEpABChDG3DErqYLQQbZD
+      UxDO/ISbEgjpBYYnMCGdUSoKVG9vbCBVc2FnZTABOZDV9zg6RPYXQeje+jg6RPYXShoKDmNyZXdh
+      aV92ZXJzaW9uEggKBjAuNjAuNEocCgl0b29sX25hbWUSDwoNR2V0IEdyZWV0aW5nc0oOCghhdHRl
+      bXB0cxICGAF6AhgBhQEAAQAA
+    headers:
+      Accept:
+      - '*/*'
+      Accept-Encoding:
+      - gzip, deflate
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '1728'
+      Content-Type:
+      - application/x-protobuf
+      User-Agent:
+      - OTel-OTLP-Exporter-Python/1.27.0
+    method: POST
+    uri: https://telemetry.crewai.com:4319/v1/traces
+  response:
+    body:
+      string: "\n\0"
+    headers:
+      Content-Length:
+      - '2'
+      Content-Type:
+      - application/x-protobuf
+      Date:
+      - Wed, 18 Sep 2024 06:55:27 GMT
+    status:
+      code: 200
+      message: OK
 - request:
     body: '{"messages": [{"role": "system", "content": "You are Data Scientist. You
       work with data and AI\nYour personal goal is: Product amazing resports on AI\nYou
@@ -128,9 +190,10 @@ interactions:
       answer: The final paragraph with the full review on AI and no greeting.\nyou
       MUST return the actual complete content as the final answer, not a summary.\n\nBegin!
       This is VERY important to you, use the tools available and give your best Final
-      Answer, your job depends on it!\n\nThought:"}, {"role": "assistant", "content":
-      "I will start by getting a greeting first.\n\nAction: Get Greetings\nAction
-      Input: {}\nObservation: Howdy!"}], "model": "gpt-4o", "stop": ["\nObservation:"]}'
+      Answer, your job depends on it!\n\nThought:"}, {"role": "user", "content": "Thought:
+      I should first use the Get Greetings tool to get a greeting.\n\nAction: Get
+      Greetings\nAction Input: {}\nObservation: Howdy!"}], "model": "gpt-4o", "stop":
+      ["\nObservation:"]}'
     headers:
       accept:
       - application/json
@@ -139,16 +202,16 @@ interactions:
       connection:
       - keep-alive
       content-length:
-      - '1583'
+      - '1606'
       content-type:
       - application/json
       cookie:
-      - __cf_bm=1SckBhvJ18Dazp6bi8DEKYeiS9Q4.6_6i3nmLBw9b6g-1726476036-1.0.1.1-TnN4UpDXA33YXCVCUWOaZ12vGIg_o5NpJQEUHgjn6XdUgb7M0ND8PdkTfkd8rrxG5XFlPRMzI54GxZ0FeUY9xw;
-        _cfuvid=0Rs4xTPk7h7OIXuSbTgMVVD9JSoZeKMwnygKHoHQo3k-1726476036297-0.0.1.1-604800000
+      - __cf_bm=.8.5x0rqghNdtUCxfmwblfhuXiKyPm_cRq.NIa0heL0-1726642369-1.0.1.1-VbsAGqjOt45ZD50K2QW2oZrByLLIh6w8K4nAkLthTbXgU5qTgdf0mhvFId8Q2F3DcHUw9E72lVIZEN.YVlYINQ;
+        _cfuvid=o5s1Ux898x0eFNtzUCnG996iqyX3LgXDXq99C5oqnVE-1726642369248-0.0.1.1-604800000
       host:
       - api.openai.com
       user-agent:
-      - OpenAI/Python 1.45.0
+      - OpenAI/Python 1.46.0
       x-stainless-arch:
       - arm64
       x-stainless-async:
@@ -158,7 +221,7 @@ interactions:
       x-stainless-os:
       - MacOS
       x-stainless-package-version:
-      - 1.45.0
+      - 1.46.0
       x-stainless-raw-response:
       - 'true'
       x-stainless-runtime:
@@ -168,28 +231,35 @@ interactions:
     method: POST
     uri: https://api.openai.com/v1/chat/completions
   response:
-    content: "{\n  \"id\": \"chatcmpl-A81dSYb24TPKO4io3XgvowueaAWLJ\",\n  \"object\":
-      \"chat.completion\",\n  \"created\": 1726476274,\n  \"model\": \"gpt-4o-2024-05-13\",\n
+    content: "{\n  \"id\": \"chatcmpl-A8isuL5rC0H2Pze4fa5Nq2OViF8Pq\",\n  \"object\":
+      \"chat.completion\",\n  \"created\": 1726642524,\n  \"model\": \"gpt-4o-2024-05-13\",\n
       \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
-      \"assistant\",\n        \"content\": \"Thought: Now, I will write and then review
-      a small paragraph on AI until it meets the AMAZING criteria.\\n\\nThought: I
-      now know the final answer\\nFinal Answer: Artificial Intelligence (AI) is revolutionizing
-      the world by offering unprecedented capabilities in various fields. From healthcare
-      and finance to transportation and entertainment, AI systems are enhancing efficiency,
-      accuracy, and decision-making. By leveraging massive datasets and advanced algorithms,
-      AI can perform complex tasks such as diagnosing diseases, predicting market
-      trends, optimizing logistics, and even creating art. As AI continues to evolve,
-      it holds the promise of solving some of humanity's most pressing challenges,
-      while also raising important ethical and societal questions about its deployment
-      and impact.\",\n        \"refusal\": null\n      },\n      \"logprobs\": null,\n
+      \"assistant\",\n        \"content\": \"Thought: I have obtained the greeting.
+      Now I will write a small paragraph on AI and review it to ensure it is amazing.\\n\\nArtificial
+      Intelligence (AI) is revolutionizing the way we interact with the world. From
+      autonomous vehicles to personalized recommendations, AI systems analyze vast
+      amounts of data to identify patterns and make decisions with impressive accuracy.
+      This transformative technology is enhancing productivity, driving innovation,
+      and opening new possibilities in various fields such as healthcare, finance,
+      and entertainment. As AI continues to evolve, it promises to tackle complex
+      challenges and improve quality of life, making it one of the most exciting advancements
+      of our time.\\n\\nThought: I now know the final answer.\\n\\nFinal Answer: Artificial
+      Intelligence (AI) is revolutionizing the way we interact with the world. From
+      autonomous vehicles to personalized recommendations, AI systems analyze vast
+      amounts of data to identify patterns and make decisions with impressive accuracy.
+      This transformative technology is enhancing productivity, driving innovation,
+      and opening new possibilities in various fields such as healthcare, finance,
+      and entertainment. As AI continues to evolve, it promises to tackle complex
+      challenges and improve quality of life, making it one of the most exciting advancements
+      of our time.\",\n        \"refusal\": null\n      },\n      \"logprobs\": null,\n
       \     \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\":
-      311,\n    \"completion_tokens\": 137,\n    \"total_tokens\": 448,\n    \"completion_tokens_details\":
-      {\n      \"reasoning_tokens\": 0\n    }\n  },\n  \"system_fingerprint\": \"fp_25624ae3a5\"\n}\n"
+      317,\n    \"completion_tokens\": 230,\n    \"total_tokens\": 547,\n    \"completion_tokens_details\":
+      {\n      \"reasoning_tokens\": 0\n    }\n  },\n  \"system_fingerprint\": \"fp_a5d11b2ef2\"\n}\n"
     headers:
       CF-Cache-Status:
       - DYNAMIC
       CF-RAY:
-      - 8c3f934a7f942233-MIA
+      - 8c4f6e20ff24a67a-MIA
       Connection:
       - keep-alive
       Content-Encoding:
@@ -197,7 +267,7 @@ interactions:
       Content-Type:
       - application/json
       Date:
-      - Mon, 16 Sep 2024 08:44:36 GMT
+      - Wed, 18 Sep 2024 06:55:28 GMT
       Server:
       - cloudflare
       Transfer-Encoding:
@@ -211,7 +281,7 @@ interactions:
       openai-organization:
       - crewai-iuxna1
       openai-processing-ms:
-      - '1636'
+      - '3615'
       openai-version:
       - '2020-10-01'
       strict-transport-security:
@@ -223,13 +293,13 @@ interactions:
       x-ratelimit-remaining-requests:
       - '9999'
       x-ratelimit-remaining-tokens:
-      - '29999635'
+      - '29999627'
       x-ratelimit-reset-requests:
       - 6ms
       x-ratelimit-reset-tokens:
       - 0s
       x-request-id:
-      - req_5e3304055a34cd3ed18429ba1367d0a8
+      - req_f36ea454550b2d0dad6dc4c86bd1c2ea
     http_version: HTTP/1.1
     status_code: 200
 version: 1

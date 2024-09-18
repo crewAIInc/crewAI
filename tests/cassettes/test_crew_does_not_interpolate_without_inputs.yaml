@@ -1,5 +1,92 @@
 interactions:
 - request:
+    body: !!binary |
+      CooZCiQKIgoMc2VydmljZS5uYW1lEhIKEGNyZXdBSS10ZWxlbWV0cnkS4RgKEgoQY3Jld2FpLnRl
+      bGVtZXRyeRKcAQoQmzJ4HAI1yTS4/gPC8rKfxRIIiD1uBvRlmHcqClRvb2wgVXNhZ2UwATnw09ZI
+      eUT2F0GozdlIeUT2F0oaCg5jcmV3YWlfdmVyc2lvbhIICgYwLjYwLjRKKAoJdG9vbF9uYW1lEhsK
+      GURlbGVnYXRlIHdvcmsgdG8gY293b3JrZXJKDgoIYXR0ZW1wdHMSAhgBegIYAYUBAAEAABKQAgoQ
+      LH+VMmvtWXWgwKLIUtUOdhIIkQX1xbwI3tIqDlRhc2sgRXhlY3V0aW9uMAE5YJOZKnhE9hdB+E1l
+      yXlE9hdKLgoIY3Jld19rZXkSIgogMjYzNGI4NjM4M2ZkNWE0M2RlMmExZWZiZDM2MzE4YjJKMQoH
+      Y3Jld19pZBImCiQ1OWNjZTAyNi1hYWNmLTRmYmYtOTZlZi01NDkxNzkzOTg0ZmVKLgoIdGFza19r
+      ZXkSIgogZGM2YmJjNmNlN2E5ZTVjMWZmYTAwN2U4YWUyMWM3OGJKMQoHdGFza19pZBImCiRlN2Iz
+      ZDA1Mi1iOTFkLTRiYTgtOWEzZi00OGQ1NDc3NzFjMTJ6AhgBhQEAAQAAErAHChBZhejEXBKYvNpj
+      RJULJQ34EghwWqBzUR8JlioMQ3JldyBDcmVhdGVkMAE56Mkpy3lE9hdBcE4sy3lE9hdKGgoOY3Jl
+      d2FpX3ZlcnNpb24SCAoGMC42MC40ShoKDnB5dGhvbl92ZXJzaW9uEggKBjMuMTEuN0ouCghjcmV3
+      X2tleRIiCiA5OGE3ZDIxNDI1MjEwNzY5MzhjYzg3Yzc2OWRlZGNkM0oxCgdjcmV3X2lkEiYKJGI3
+      OGI0MDczLWQ3M2MtNDAxOS05ODM2LWQ2Nzk4MWUzYTFiZkocCgxjcmV3X3Byb2Nlc3MSDAoKc2Vx
+      dWVudGlhbEoRCgtjcmV3X21lbW9yeRICEABKGgoUY3Jld19udW1iZXJfb2ZfdGFza3MSAhgBShsK
+      FWNyZXdfbnVtYmVyX29mX2FnZW50cxICGAFK1gIKC2NyZXdfYWdlbnRzEsYCCsMCW3sia2V5Ijog
+      ImYzMzg2ZjZkOGRhNzVhYTQxNmE2ZTMxMDA1M2Y3Njk4IiwgImlkIjogImJhNDRkYWI5LThhYmEt
+      NGUyMS05MThiLTA2OGExODk2NThjYSIsICJyb2xlIjogInt0b3BpY30gUmVzZWFyY2hlciIsICJ2
+      ZXJib3NlPyI6IGZhbHNlLCAibWF4X2l0ZXIiOiAxNSwgIm1heF9ycG0iOiBudWxsLCAiZnVuY3Rp
+      b25fY2FsbGluZ19sbG0iOiBudWxsLCAibGxtIjogImdwdC00byIsICJkZWxlZ2F0aW9uX2VuYWJs
+      ZWQ/IjogZmFsc2UsICJhbGxvd19jb2RlX2V4ZWN1dGlvbj8iOiBmYWxzZSwgIm1heF9yZXRyeV9s
+      aW1pdCI6IDIsICJ0b29sc19uYW1lcyI6IFtdfV1KhwIKCmNyZXdfdGFza3MS+AEK9QFbeyJrZXki
+      OiAiYWZhNjk4YjI2MmQzNTQzZjlhNjExZTRkNTE0NWVkNmEiLCAiaWQiOiAiM2FhMTQ4ZjQtODU4
+      Yy00ZDc3LWIzYWYtNTJiOTc3YWE3YjNlIiwgImFzeW5jX2V4ZWN1dGlvbj8iOiBmYWxzZSwgImh1
+      bWFuX2lucHV0PyI6IGZhbHNlLCAiYWdlbnRfcm9sZSI6ICJ7dG9waWN9IFJlc2VhcmNoZXIiLCAi
+      YWdlbnRfa2V5IjogImYzMzg2ZjZkOGRhNzVhYTQxNmE2ZTMxMDA1M2Y3Njk4IiwgInRvb2xzX25h
+      bWVzIjogW119XXoCGAGFAQABAAASjgIKEG1xBgoJAtiW9PUpgUPHPY4SCCF49bcB0RPDKgxUYXNr
+      IENyZWF0ZWQwATnQVT3LeUT2F0GI3j3LeUT2F0ouCghjcmV3X2tleRIiCiAzZjMwMTI3YTM3NDQ4
+      Y2EzNGNiMjk2MmI2OTQwZDNmNEoxCgdjcmV3X2lkEiYKJGI3OGI0MDczLWQ3M2MtNDAxOS05ODM2
+      LWQ2Nzk4MWUzYTFiZkouCgh0YXNrX2tleRIiCiBhZmE2OThiMjYyZDM1NDNmOWE2MTFlNGQ1MTQ1
+      ZWQ2YUoxCgd0YXNrX2lkEiYKJDNhYTE0OGY0LTg1OGMtNGQ3Ny1iM2FmLTUyYjk3N2FhN2IzZXoC
+      GAGFAQABAAASkAIKEJ8Mbn2tw37BRIbCuNu+F8kSCLzsFV+85LmNKg5UYXNrIEV4ZWN1dGlvbjAB
+      OagsPst5RPYXQQgXP8t5RPYXSi4KCGNyZXdfa2V5EiIKIDNmMzAxMjdhMzc0NDhjYTM0Y2IyOTYy
+      YjY5NDBkM2Y0SjEKB2NyZXdfaWQSJgokYjc4YjQwNzMtZDczYy00MDE5LTk4MzYtZDY3OTgxZTNh
+      MWJmSi4KCHRhc2tfa2V5EiIKIGFmYTY5OGIyNjJkMzU0M2Y5YTYxMWU0ZDUxNDVlZDZhSjEKB3Rh
+      c2tfaWQSJgokM2FhMTQ4ZjQtODU4Yy00ZDc3LWIzYWYtNTJiOTc3YWE3YjNlegIYAYUBAAEAABKw
+      BwoQJOT3kMEY4K9jz1q3ifuhhRIIWYvMlO22VoAqDENyZXcgQ3JlYXRlZDABOdAbmst5RPYXQfgy
+      nMt5RPYXShoKDmNyZXdhaV92ZXJzaW9uEggKBjAuNjAuNEoaCg5weXRob25fdmVyc2lvbhIICgYz
+      LjExLjdKLgoIY3Jld19rZXkSIgogOThhN2QyMTQyNTIxMDc2OTM4Y2M4N2M3NjlkZWRjZDNKMQoH
+      Y3Jld19pZBImCiQxMzU3MTI1YS1lMmNiLTQyYTItODJlMy0yNWVkN2FjMmVkNGVKHAoMY3Jld19w
+      cm9jZXNzEgwKCnNlcXVlbnRpYWxKEQoLY3Jld19tZW1vcnkSAhAAShoKFGNyZXdfbnVtYmVyX29m
+      X3Rhc2tzEgIYAUobChVjcmV3X251bWJlcl9vZl9hZ2VudHMSAhgBStYCCgtjcmV3X2FnZW50cxLG
+      AgrDAlt7ImtleSI6ICJmMzM4NmY2ZDhkYTc1YWE0MTZhNmUzMTAwNTNmNzY5OCIsICJpZCI6ICJj
+      NzIzYTQwMi1kYTkwLTQ4OWMtOTBiZS03MjM4MmRlMjQ2YmEiLCAicm9sZSI6ICJ7dG9waWN9IFJl
+      c2VhcmNoZXIiLCAidmVyYm9zZT8iOiBmYWxzZSwgIm1heF9pdGVyIjogMTUsICJtYXhfcnBtIjog
+      bnVsbCwgImZ1bmN0aW9uX2NhbGxpbmdfbGxtIjogbnVsbCwgImxsbSI6ICJncHQtNG8iLCAiZGVs
+      ZWdhdGlvbl9lbmFibGVkPyI6IGZhbHNlLCAiYWxsb3dfY29kZV9leGVjdXRpb24/IjogZmFsc2Us
+      ICJtYXhfcmV0cnlfbGltaXQiOiAyLCAidG9vbHNfbmFtZXMiOiBbXX1dSocCCgpjcmV3X3Rhc2tz
+      EvgBCvUBW3sia2V5IjogImFmYTY5OGIyNjJkMzU0M2Y5YTYxMWU0ZDUxNDVlZDZhIiwgImlkIjog
+      IjY4MTk2Y2FiLTU4MDAtNDRkOC04ZGFhLWMwZDdkN2M5OGIwYSIsICJhc3luY19leGVjdXRpb24/
+      IjogZmFsc2UsICJodW1hbl9pbnB1dD8iOiBmYWxzZSwgImFnZW50X3JvbGUiOiAie3RvcGljfSBS
+      ZXNlYXJjaGVyIiwgImFnZW50X2tleSI6ICJmMzM4NmY2ZDhkYTc1YWE0MTZhNmUzMTAwNTNmNzY5
+      OCIsICJ0b29sc19uYW1lcyI6IFtdfV16AhgBhQEAAQAAEo4CChALiRjIXSmtzPHXl1lfGOCyEghN
+      iGXEADXvyCoMVGFzayBDcmVhdGVkMAE5+D2vy3lE9hdBcKevy3lE9hdKLgoIY3Jld19rZXkSIgog
+      OThhN2QyMTQyNTIxMDc2OTM4Y2M4N2M3NjlkZWRjZDNKMQoHY3Jld19pZBImCiQxMzU3MTI1YS1l
+      MmNiLTQyYTItODJlMy0yNWVkN2FjMmVkNGVKLgoIdGFza19rZXkSIgogYWZhNjk4YjI2MmQzNTQz
+      ZjlhNjExZTRkNTE0NWVkNmFKMQoHdGFza19pZBImCiQ2ODE5NmNhYi01ODAwLTQ0ZDgtOGRhYS1j
+      MGQ3ZDdjOThiMGF6AhgBhQEAAQAA
+    headers:
+      Accept:
+      - '*/*'
+      Accept-Encoding:
+      - gzip, deflate
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '3213'
+      Content-Type:
+      - application/x-protobuf
+      User-Agent:
+      - OTel-OTLP-Exporter-Python/1.27.0
+    method: POST
+    uri: https://telemetry.crewai.com:4319/v1/traces
+  response:
+    body:
+      string: "\n\0"
+    headers:
+      Content-Length:
+      - '2'
+      Content-Type:
+      - application/x-protobuf
+      Date:
+      - Wed, 18 Sep 2024 06:59:58 GMT
+    status:
+      code: 200
+      message: OK
+- request:
     body: '{"messages": [{"role": "system", "content": "You are {topic} Researcher.
       You have a lot of experience with {topic}.\nYour personal goal is: Express hot
       takes on {topic}.\nTo give my best complete final answer to the task use the
@@ -23,12 +110,12 @@ interactions:
       content-type:
       - application/json
       cookie:
-      - __cf_bm=1SckBhvJ18Dazp6bi8DEKYeiS9Q4.6_6i3nmLBw9b6g-1726476036-1.0.1.1-TnN4UpDXA33YXCVCUWOaZ12vGIg_o5NpJQEUHgjn6XdUgb7M0ND8PdkTfkd8rrxG5XFlPRMzI54GxZ0FeUY9xw;
-        _cfuvid=0Rs4xTPk7h7OIXuSbTgMVVD9JSoZeKMwnygKHoHQo3k-1726476036297-0.0.1.1-604800000
+      - __cf_bm=.8.5x0rqghNdtUCxfmwblfhuXiKyPm_cRq.NIa0heL0-1726642369-1.0.1.1-VbsAGqjOt45ZD50K2QW2oZrByLLIh6w8K4nAkLthTbXgU5qTgdf0mhvFId8Q2F3DcHUw9E72lVIZEN.YVlYINQ;
+        _cfuvid=o5s1Ux898x0eFNtzUCnG996iqyX3LgXDXq99C5oqnVE-1726642369248-0.0.1.1-604800000
       host:
       - api.openai.com
       user-agent:
-      - OpenAI/Python 1.45.0
+      - OpenAI/Python 1.46.0
       x-stainless-arch:
       - arm64
       x-stainless-async:
@@ -38,7 +125,7 @@ interactions:
       x-stainless-os:
       - MacOS
       x-stainless-package-version:
-      - 1.45.0
+      - 1.46.0
       x-stainless-raw-response:
       - 'true'
       x-stainless-runtime:
@@ -48,22 +135,41 @@ interactions:
     method: POST
     uri: https://api.openai.com/v1/chat/completions
   response:
-    content: "{\n  \"id\": \"chatcmpl-A81iaVkas1NicpHu5DdXTYZdgBzKD\",\n  \"object\":
-      \"chat.completion\",\n  \"created\": 1726476592,\n  \"model\": \"gpt-4o-2024-05-13\",\n
+    content: "{\n  \"id\": \"chatcmpl-A8ixJpsrOts7ugpr8zOEdZWLA6VrV\",\n  \"object\":
+      \"chat.completion\",\n  \"created\": 1726642797,\n  \"model\": \"gpt-4o-2024-05-13\",\n
       \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
       \"assistant\",\n        \"content\": \"Thought: I now can give a great answer\\nFinal
-      Answer: Before I can provide the final answer, I need you to specify the topic
-      you're interested in for analysis. Please provide the topic and the specific
-      points you want me to cover so I can give you the best possible answer.\",\n
-      \       \"refusal\": null\n      },\n      \"logprobs\": null,\n      \"finish_reason\":
-      \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 178,\n    \"completion_tokens\":
-      57,\n    \"total_tokens\": 235,\n    \"completion_tokens_details\": {\n      \"reasoning_tokens\":
-      0\n    }\n  },\n  \"system_fingerprint\": \"fp_25624ae3a5\"\n}\n"
+      Answer: To provide a comprehensive analysis around {topic}, here are {points}
+      bullet points covering the subject in detail:\\n\\n1. **Historical Context**:
+      Discuss the origins and evolution of {topic} over the years. Explore how its
+      development has been influenced by cultural, technological, and economic changes.\\n\\n2.
+      **Key Players**: Identify and examine the major individuals, companies, or entities
+      that have significantly contributed to {topic}. Explain their roles, motivations,
+      and the impact they've had on the landscape.\\n\\n3. **Technological Advancements**:
+      Outline the technological milestones and innovations that have shaped {topic}.
+      Describe how these advancements have improved, altered, or redefined practices
+      or beliefs within the field.\\n\\n4. **Economic Impact**: Analyze the financial
+      implications of {topic}. This could involve market size, growth potential, employment
+      opportunities, and how it contributes to or affects the broader economy.\\n\\n5.
+      **Ethical and Social Considerations**: Examine the ethical dilemmas and social
+      issues that arise from {topic}. Discuss public perception, regulation issues,
+      and potential long-term societal impacts.\\n\\n6. **Current Trends and Future
+      Outlook**: Discuss the latest trends in {topic} and predict where it might be
+      headed in the future. Identify emerging opportunities, challenges, and potential
+      disruptors.\\n\\n7. **Case Studies and Examples**: Provide specific instances
+      or case studies that illustrate key points about {topic}. Real-world examples
+      help to better understand the practical applications and implications.\\n\\nBy
+      covering these points, you should have an extensive and thorough understanding
+      of {topic}, its history, current state, and future potential.\",\n        \"refusal\":
+      null\n      },\n      \"logprobs\": null,\n      \"finish_reason\": \"stop\"\n
+      \   }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 178,\n    \"completion_tokens\":
+      332,\n    \"total_tokens\": 510,\n    \"completion_tokens_details\": {\n      \"reasoning_tokens\":
+      0\n    }\n  },\n  \"system_fingerprint\": \"fp_a5d11b2ef2\"\n}\n"
     headers:
       CF-Cache-Status:
       - DYNAMIC
       CF-RAY:
-      - 8c3f9b0f3de32233-MIA
+      - 8c4f74cb7c13a67a-MIA
       Connection:
       - keep-alive
       Content-Encoding:
@@ -71,7 +177,7 @@ interactions:
       Content-Type:
       - application/json
       Date:
-      - Mon, 16 Sep 2024 08:49:53 GMT
+      - Wed, 18 Sep 2024 07:00:01 GMT
       Server:
       - cloudflare
       Transfer-Encoding:
@@ -85,7 +191,7 @@ interactions:
       openai-organization:
       - crewai-iuxna1
       openai-processing-ms:
-      - '672'
+      - '3479'
       openai-version:
       - '2020-10-01'
       strict-transport-security:
@@ -103,7 +209,7 @@ interactions:
       x-ratelimit-reset-tokens:
       - 0s
       x-request-id:
-      - req_f72800a3f8c894c44d784dbe5db72701
+      - req_036578d9aedf9212fdf8fc8f1f8b5df3
     http_version: HTTP/1.1
     status_code: 200
 version: 1
