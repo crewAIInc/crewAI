@@ -31,12 +31,12 @@ interactions:
       content-type:
       - application/json
       cookie:
-      - __cf_bm=1SckBhvJ18Dazp6bi8DEKYeiS9Q4.6_6i3nmLBw9b6g-1726476036-1.0.1.1-TnN4UpDXA33YXCVCUWOaZ12vGIg_o5NpJQEUHgjn6XdUgb7M0ND8PdkTfkd8rrxG5XFlPRMzI54GxZ0FeUY9xw;
-        _cfuvid=0Rs4xTPk7h7OIXuSbTgMVVD9JSoZeKMwnygKHoHQo3k-1726476036297-0.0.1.1-604800000
+      - __cf_bm=.8.5x0rqghNdtUCxfmwblfhuXiKyPm_cRq.NIa0heL0-1726642369-1.0.1.1-VbsAGqjOt45ZD50K2QW2oZrByLLIh6w8K4nAkLthTbXgU5qTgdf0mhvFId8Q2F3DcHUw9E72lVIZEN.YVlYINQ;
+        _cfuvid=o5s1Ux898x0eFNtzUCnG996iqyX3LgXDXq99C5oqnVE-1726642369248-0.0.1.1-604800000
       host:
       - api.openai.com
       user-agent:
-      - OpenAI/Python 1.45.0
+      - OpenAI/Python 1.46.0
       x-stainless-arch:
       - arm64
       x-stainless-async:
@@ -46,7 +46,7 @@ interactions:
       x-stainless-os:
       - MacOS
       x-stainless-package-version:
-      - 1.45.0
+      - 1.46.0
       x-stainless-raw-response:
       - 'true'
       x-stainless-runtime:
@@ -56,22 +56,20 @@ interactions:
     method: POST
     uri: https://api.openai.com/v1/chat/completions
   response:
-    content: "{\n  \"id\": \"chatcmpl-A81cikgTkRvVDzSG0bcqe4AIdOMlz\",\n  \"object\":
-      \"chat.completion\",\n  \"created\": 1726476228,\n  \"model\": \"gpt-4-0613\",\n
+    content: "{\n  \"id\": \"chatcmpl-A8irzniuPtRyAo4nnx1EVOlPeIudC\",\n  \"object\":
+      \"chat.completion\",\n  \"created\": 1726642467,\n  \"model\": \"gpt-4-0613\",\n
       \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
-      \"assistant\",\n        \"content\": \"I need to use the `get_final_answer`
-      tool as instructed. The final answer is supposed to be \\\"42\\\" but I shouldn't
-      reveal it just yet. Instead, I need to keep using `get_final_answer` tool until
-      further instructed. I guess the main task is to determine how to use the `get_final_answer`
-      tool correctly.\",\n        \"refusal\": null\n      },\n      \"logprobs\":
-      null,\n      \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\":
-      328,\n    \"completion_tokens\": 70,\n    \"total_tokens\": 398,\n    \"completion_tokens_details\":
+      \"assistant\",\n        \"content\": \"To get the final answer, I need to use
+      the 'get_final_answer' tool. And keep using this tool until instructed to reveal
+      the answer.\",\n        \"refusal\": null\n      },\n      \"logprobs\": null,\n
+      \     \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\":
+      328,\n    \"completion_tokens\": 30,\n    \"total_tokens\": 358,\n    \"completion_tokens_details\":
       {\n      \"reasoning_tokens\": 0\n    }\n  },\n  \"system_fingerprint\": null\n}\n"
     headers:
       CF-Cache-Status:
       - DYNAMIC
       CF-RAY:
-      - 8c3f922d68302233-MIA
+      - 8c4f6cbabba0a67a-MIA
       Connection:
       - keep-alive
       Content-Encoding:
@@ -79,7 +77,7 @@ interactions:
       Content-Type:
       - application/json
       Date:
-      - Mon, 16 Sep 2024 08:43:52 GMT
+      - Wed, 18 Sep 2024 06:54:28 GMT
       Server:
       - cloudflare
       Transfer-Encoding:
@@ -93,7 +91,7 @@ interactions:
       openai-organization:
       - crewai-iuxna1
       openai-processing-ms:
-      - '3580'
+      - '1398'
       openai-version:
       - '2020-10-01'
       strict-transport-security:
@@ -111,7 +109,7 @@ interactions:
       x-ratelimit-reset-tokens:
       - 21ms
       x-request-id:
-      - req_91e4b87b93d7d9bf37e535e0cfd321ea
+      - req_c0c31a9bc1583e80874965abc68de857
     http_version: HTTP/1.1
     status_code: 200
 - request:
@@ -133,9 +131,9 @@ interactions:
       for your final answer: The final answer, don''t give it until I tell you so\nyou
       MUST return the actual complete content as the final answer, not a summary.\n\nBegin!
       This is VERY important to you, use the tools available and give your best Final
-      Answer, your job depends on it!\n\nThought:"}, {"role": "assistant", "content":
-      "I did it wrong. Invalid Format: I missed the ''Action:'' after ''Thought:''.
-      I will do right next, and don''t use a tool I have already used.\n\nIf you don''t
+      Answer, your job depends on it!\n\nThought:"}, {"role": "user", "content": "I
+      did it wrong. Invalid Format: I missed the ''Action:'' after ''Thought:''. I
+      will do right next, and don''t use a tool I have already used.\n\nIf you don''t
       need to use any more tools, you must give your best complete final answer, make
       sure it satisfy the expect criteria, use the EXACT format below:\n\nThought:
       I now can give a great answer\nFinal Answer: my best complete final answer to
@@ -148,16 +146,16 @@ interactions:
       connection:
       - keep-alive
       content-length:
-      - '1975'
+      - '1970'
       content-type:
       - application/json
       cookie:
-      - __cf_bm=1SckBhvJ18Dazp6bi8DEKYeiS9Q4.6_6i3nmLBw9b6g-1726476036-1.0.1.1-TnN4UpDXA33YXCVCUWOaZ12vGIg_o5NpJQEUHgjn6XdUgb7M0ND8PdkTfkd8rrxG5XFlPRMzI54GxZ0FeUY9xw;
-        _cfuvid=0Rs4xTPk7h7OIXuSbTgMVVD9JSoZeKMwnygKHoHQo3k-1726476036297-0.0.1.1-604800000
+      - __cf_bm=.8.5x0rqghNdtUCxfmwblfhuXiKyPm_cRq.NIa0heL0-1726642369-1.0.1.1-VbsAGqjOt45ZD50K2QW2oZrByLLIh6w8K4nAkLthTbXgU5qTgdf0mhvFId8Q2F3DcHUw9E72lVIZEN.YVlYINQ;
+        _cfuvid=o5s1Ux898x0eFNtzUCnG996iqyX3LgXDXq99C5oqnVE-1726642369248-0.0.1.1-604800000
       host:
       - api.openai.com
       user-agent:
-      - OpenAI/Python 1.45.0
+      - OpenAI/Python 1.46.0
       x-stainless-arch:
       - arm64
       x-stainless-async:
@@ -167,7 +165,7 @@ interactions:
       x-stainless-os:
       - MacOS
       x-stainless-package-version:
-      - 1.45.0
+      - 1.46.0
       x-stainless-raw-response:
       - 'true'
       x-stainless-runtime:
@@ -177,22 +175,21 @@ interactions:
     method: POST
     uri: https://api.openai.com/v1/chat/completions
   response:
-    content: "{\n  \"id\": \"chatcmpl-A81cmqKsf548YQLgO7iBBbbOwod6B\",\n  \"object\":
-      \"chat.completion\",\n  \"created\": 1726476232,\n  \"model\": \"gpt-4-0613\",\n
+    content: "{\n  \"id\": \"chatcmpl-A8is0JQPMAEslLQxYAmh9lz45uzsV\",\n  \"object\":
+      \"chat.completion\",\n  \"created\": 1726642468,\n  \"model\": \"gpt-4-0613\",\n
       \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
-      \"assistant\",\n        \"content\": \"I need to utilize the tool `get_final_answer`
-      to retrieve the final answer, as stated in the task, but I should not disclose
-      it yet. Only after multiple uses will I announce it. \\n\\nAction: get_final_answer\\nAction
-      Input: {\\\"anything\\\": \\\"The final answer\\\"}\",\n        \"refusal\":
-      null\n      },\n      \"logprobs\": null,\n      \"finish_reason\": \"stop\"\n
-      \   }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 425,\n    \"completion_tokens\":
-      58,\n    \"total_tokens\": 483,\n    \"completion_tokens_details\": {\n      \"reasoning_tokens\":
+      \"assistant\",\n        \"content\": \"I understand that I need to use the tool
+      `get_final_answer` with the argument '42'. \\n\\nAction: get_final_answer\\nAction
+      Input: {\\\"anything\\\":\\\"42\\\"}\",\n        \"refusal\": null\n      },\n
+      \     \"logprobs\": null,\n      \"finish_reason\": \"stop\"\n    }\n  ],\n
+      \ \"usage\": {\n    \"prompt_tokens\": 425,\n    \"completion_tokens\": 35,\n
+      \   \"total_tokens\": 460,\n    \"completion_tokens_details\": {\n      \"reasoning_tokens\":
       0\n    }\n  },\n  \"system_fingerprint\": null\n}\n"
     headers:
       CF-Cache-Status:
       - DYNAMIC
       CF-RAY:
-      - 8c3f92459f7d2233-MIA
+      - 8c4f6cc558a9a67a-MIA
       Connection:
       - keep-alive
       Content-Encoding:
@@ -200,7 +197,7 @@ interactions:
       Content-Type:
       - application/json
       Date:
-      - Mon, 16 Sep 2024 08:43:55 GMT
+      - Wed, 18 Sep 2024 06:54:30 GMT
       Server:
       - cloudflare
       Transfer-Encoding:
@@ -214,7 +211,7 @@ interactions:
       openai-organization:
       - crewai-iuxna1
       openai-processing-ms:
-      - '3130'
+      - '1845'
       openai-version:
       - '2020-10-01'
       strict-transport-security:
@@ -232,7 +229,7 @@ interactions:
       x-ratelimit-reset-tokens:
       - 27ms
       x-request-id:
-      - req_28f56b2345831a0ae2c2ddb38708ad94
+      - req_f2c0476924a0e00e3fcea91a1fb2d7e6
     http_version: HTTP/1.1
     status_code: 200
 - request:
@@ -254,17 +251,16 @@ interactions:
       for your final answer: The final answer, don''t give it until I tell you so\nyou
       MUST return the actual complete content as the final answer, not a summary.\n\nBegin!
       This is VERY important to you, use the tools available and give your best Final
-      Answer, your job depends on it!\n\nThought:"}, {"role": "assistant", "content":
-      "I did it wrong. Invalid Format: I missed the ''Action:'' after ''Thought:''.
-      I will do right next, and don''t use a tool I have already used.\n\nIf you don''t
+      Answer, your job depends on it!\n\nThought:"}, {"role": "user", "content": "I
+      did it wrong. Invalid Format: I missed the ''Action:'' after ''Thought:''. I
+      will do right next, and don''t use a tool I have already used.\n\nIf you don''t
       need to use any more tools, you must give your best complete final answer, make
       sure it satisfy the expect criteria, use the EXACT format below:\n\nThought:
       I now can give a great answer\nFinal Answer: my best complete final answer to
-      the task.\n\n"}, {"role": "assistant", "content": "I need to utilize the tool
-      `get_final_answer` to retrieve the final answer, as stated in the task, but
-      I should not disclose it yet. Only after multiple uses will I announce it. \n\nAction:
-      get_final_answer\nAction Input: {\"anything\": \"The final answer\"}\nObservation:
-      42"}], "model": "gpt-4", "stop": ["\nObservation:"]}'
+      the task.\n\n"}, {"role": "user", "content": "I understand that I need to use
+      the tool `get_final_answer` with the argument ''42''. \n\nAction: get_final_answer\nAction
+      Input: {\"anything\":\"42\"}\nObservation: 42"}], "model": "gpt-4", "stop":
+      ["\nObservation:"]}'
     headers:
       accept:
       - application/json
@@ -273,16 +269,16 @@ interactions:
       connection:
       - keep-alive
       content-length:
-      - '2288'
+      - '2169'
       content-type:
       - application/json
       cookie:
-      - __cf_bm=1SckBhvJ18Dazp6bi8DEKYeiS9Q4.6_6i3nmLBw9b6g-1726476036-1.0.1.1-TnN4UpDXA33YXCVCUWOaZ12vGIg_o5NpJQEUHgjn6XdUgb7M0ND8PdkTfkd8rrxG5XFlPRMzI54GxZ0FeUY9xw;
-        _cfuvid=0Rs4xTPk7h7OIXuSbTgMVVD9JSoZeKMwnygKHoHQo3k-1726476036297-0.0.1.1-604800000
+      - __cf_bm=.8.5x0rqghNdtUCxfmwblfhuXiKyPm_cRq.NIa0heL0-1726642369-1.0.1.1-VbsAGqjOt45ZD50K2QW2oZrByLLIh6w8K4nAkLthTbXgU5qTgdf0mhvFId8Q2F3DcHUw9E72lVIZEN.YVlYINQ;
+        _cfuvid=o5s1Ux898x0eFNtzUCnG996iqyX3LgXDXq99C5oqnVE-1726642369248-0.0.1.1-604800000
       host:
       - api.openai.com
       user-agent:
-      - OpenAI/Python 1.45.0
+      - OpenAI/Python 1.46.0
       x-stainless-arch:
       - arm64
       x-stainless-async:
@@ -292,7 +288,7 @@ interactions:
       x-stainless-os:
       - MacOS
       x-stainless-package-version:
-      - 1.45.0
+      - 1.46.0
       x-stainless-raw-response:
       - 'true'
       x-stainless-runtime:
@@ -302,22 +298,23 @@ interactions:
     method: POST
     uri: https://api.openai.com/v1/chat/completions
   response:
-    content: "{\n  \"id\": \"chatcmpl-A81cqXyfW7PtUfUHsQJLP81IKadDN\",\n  \"object\":
-      \"chat.completion\",\n  \"created\": 1726476236,\n  \"model\": \"gpt-4-0613\",\n
+    content: "{\n  \"id\": \"chatcmpl-A8is2GDrfpd8cOQDbL0jYCUfPFZsx\",\n  \"object\":
+      \"chat.completion\",\n  \"created\": 1726642470,\n  \"model\": \"gpt-4-0613\",\n
       \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
-      \"assistant\",\n        \"content\": \"Thought: I have retrieved the final answer
-      but I shouldn't reveal it yet. The task requires me to use the `get_final_answer`
-      tool repeatedly, even though I already know the answer. I will follow the instructions
-      and keep with it.\\n\\nAction: get_final_answer\\nAction Input: {\\\"anything\\\":
-      \\\"The final answer\\\"}\",\n        \"refusal\": null\n      },\n      \"logprobs\":
-      null,\n      \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\":
-      492,\n    \"completion_tokens\": 66,\n    \"total_tokens\": 558,\n    \"completion_tokens_details\":
-      {\n      \"reasoning_tokens\": 0\n    }\n  },\n  \"system_fingerprint\": null\n}\n"
+      \"assistant\",\n        \"content\": \"Thought: I observed that the tool `get_final_answer`
+      returned '42' as expected. I can now proceed to reuse the tool with the same
+      input to satisfy the task condition of reusing the tool non-stop and not giving
+      the final answer until I'm asked to.\\n \\nAction: get_final_answer\\nAction
+      Input: {\\\"anything\\\": \\\"42\\\"}\",\n        \"refusal\": null\n      },\n
+      \     \"logprobs\": null,\n      \"finish_reason\": \"stop\"\n    }\n  ],\n
+      \ \"usage\": {\n    \"prompt_tokens\": 469,\n    \"completion_tokens\": 71,\n
+      \   \"total_tokens\": 540,\n    \"completion_tokens_details\": {\n      \"reasoning_tokens\":
+      0\n    }\n  },\n  \"system_fingerprint\": null\n}\n"
     headers:
       CF-Cache-Status:
       - DYNAMIC
       CF-RAY:
-      - 8c3f925b5d4d2233-MIA
+      - 8c4f6cd2cf15a67a-MIA
       Connection:
       - keep-alive
       Content-Encoding:
@@ -325,7 +322,7 @@ interactions:
       Content-Type:
       - application/json
       Date:
-      - Mon, 16 Sep 2024 08:43:59 GMT
+      - Wed, 18 Sep 2024 06:54:33 GMT
       Server:
       - cloudflare
       Transfer-Encoding:
@@ -339,7 +336,7 @@ interactions:
       openai-organization:
       - crewai-iuxna1
       openai-processing-ms:
-      - '3736'
+      - '2980'
       openai-version:
       - '2020-10-01'
       strict-transport-security:
@@ -351,13 +348,13 @@ interactions:
       x-ratelimit-remaining-requests:
       - '9999'
       x-ratelimit-remaining-tokens:
-      - '999469'
+      - '999497'
       x-ratelimit-reset-requests:
       - 6ms
       x-ratelimit-reset-tokens:
-      - 31ms
+      - 30ms
       x-request-id:
-      - req_f33879c4cfc8998e20454c58121500d2
+      - req_e6b075be3f64b4f9fc1af73add70b156
     http_version: HTTP/1.1
     status_code: 200
 - request:
@@ -379,22 +376,167 @@ interactions:
       for your final answer: The final answer, don''t give it until I tell you so\nyou
       MUST return the actual complete content as the final answer, not a summary.\n\nBegin!
       This is VERY important to you, use the tools available and give your best Final
-      Answer, your job depends on it!\n\nThought:"}, {"role": "assistant", "content":
-      "I did it wrong. Invalid Format: I missed the ''Action:'' after ''Thought:''.
-      I will do right next, and don''t use a tool I have already used.\n\nIf you don''t
+      Answer, your job depends on it!\n\nThought:"}, {"role": "user", "content": "I
+      did it wrong. Invalid Format: I missed the ''Action:'' after ''Thought:''. I
+      will do right next, and don''t use a tool I have already used.\n\nIf you don''t
       need to use any more tools, you must give your best complete final answer, make
       sure it satisfy the expect criteria, use the EXACT format below:\n\nThought:
       I now can give a great answer\nFinal Answer: my best complete final answer to
-      the task.\n\n"}, {"role": "assistant", "content": "I need to utilize the tool
-      `get_final_answer` to retrieve the final answer, as stated in the task, but
-      I should not disclose it yet. Only after multiple uses will I announce it. \n\nAction:
-      get_final_answer\nAction Input: {\"anything\": \"The final answer\"}\nObservation:
-      42"}, {"role": "assistant", "content": "Thought: I have retrieved the final
-      answer but I shouldn''t reveal it yet. The task requires me to use the `get_final_answer`
-      tool repeatedly, even though I already know the answer. I will follow the instructions
-      and keep with it.\n\nAction: get_final_answer\nAction Input: {\"anything\":
-      \"The final answer\"}\nObservation: I tried reusing the same input, I must stop
-      using this action input. I''ll try something else instead.\n\n"}], "model":
+      the task.\n\n"}, {"role": "user", "content": "I understand that I need to use
+      the tool `get_final_answer` with the argument ''42''. \n\nAction: get_final_answer\nAction
+      Input: {\"anything\":\"42\"}\nObservation: 42"}, {"role": "user", "content":
+      "Thought: I observed that the tool `get_final_answer` returned ''42'' as expected.
+      I can now proceed to reuse the tool with the same input to satisfy the task
+      condition of reusing the tool non-stop and not giving the final answer until
+      I''m asked to.\n \nAction: get_final_answer\nAction Input: {\"anything\": \"42\"}\nObservation:
+      I tried reusing the same input, I must stop using this action input. I''ll try
+      something else instead.\n\n"}], "model": "gpt-4", "stop": ["\nObservation:"]}'
+    headers:
+      accept:
+      - application/json
+      accept-encoding:
+      - gzip, deflate
+      connection:
+      - keep-alive
+      content-length:
+      - '2635'
+      content-type:
+      - application/json
+      cookie:
+      - __cf_bm=.8.5x0rqghNdtUCxfmwblfhuXiKyPm_cRq.NIa0heL0-1726642369-1.0.1.1-VbsAGqjOt45ZD50K2QW2oZrByLLIh6w8K4nAkLthTbXgU5qTgdf0mhvFId8Q2F3DcHUw9E72lVIZEN.YVlYINQ;
+        _cfuvid=o5s1Ux898x0eFNtzUCnG996iqyX3LgXDXq99C5oqnVE-1726642369248-0.0.1.1-604800000
+      host:
+      - api.openai.com
+      user-agent:
+      - OpenAI/Python 1.46.0
+      x-stainless-arch:
+      - arm64
+      x-stainless-async:
+      - 'false'
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - MacOS
+      x-stainless-package-version:
+      - 1.46.0
+      x-stainless-raw-response:
+      - 'true'
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.11.7
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    content: "{\n  \"id\": \"chatcmpl-A8is64D0EGRKHFadfrKkSg7n25uZR\",\n  \"object\":
+      \"chat.completion\",\n  \"created\": 1726642474,\n  \"model\": \"gpt-4-0613\",\n
+      \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
+      \"assistant\",\n        \"content\": \"Thought: I was told to keep using the
+      `get_final_answer` tool non-stop. However, it seems redundant to keep inputting
+      the same requirement. I might need to rethink my approach here and try varied
+      inputs.\\n\\nAction: get_final_answer\\nAction Input: {\\\"anything\\\":\\\"Keep
+      trying\\\"}\",\n        \"refusal\": null\n      },\n      \"logprobs\": null,\n
+      \     \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\":
+      570,\n    \"completion_tokens\": 59,\n    \"total_tokens\": 629,\n    \"completion_tokens_details\":
+      {\n      \"reasoning_tokens\": 0\n    }\n  },\n  \"system_fingerprint\": null\n}\n"
+    headers:
+      CF-Cache-Status:
+      - DYNAMIC
+      CF-RAY:
+      - 8c4f6ce75808a67a-MIA
+      Connection:
+      - keep-alive
+      Content-Encoding:
+      - gzip
+      Content-Type:
+      - application/json
+      Date:
+      - Wed, 18 Sep 2024 06:54:37 GMT
+      Server:
+      - cloudflare
+      Transfer-Encoding:
+      - chunked
+      X-Content-Type-Options:
+      - nosniff
+      access-control-expose-headers:
+      - X-Request-ID
+      alt-svc:
+      - h3=":443"; ma=86400
+      openai-organization:
+      - crewai-iuxna1
+      openai-processing-ms:
+      - '3047'
+      openai-version:
+      - '2020-10-01'
+      strict-transport-security:
+      - max-age=15552000; includeSubDomains; preload
+      x-ratelimit-limit-requests:
+      - '10000'
+      x-ratelimit-limit-tokens:
+      - '1000000'
+      x-ratelimit-remaining-requests:
+      - '9999'
+      x-ratelimit-remaining-tokens:
+      - '999389'
+      x-ratelimit-reset-requests:
+      - 6ms
+      x-ratelimit-reset-tokens:
+      - 36ms
+      x-request-id:
+      - req_6cdba4ac0a8490b062368a11009da81d
+    http_version: HTTP/1.1
+    status_code: 200
+- request:
+    body: '{"messages": [{"role": "system", "content": "You are test role. test backstory\nYour
+      personal goal is: test goal\nYou ONLY have access to the following tools, and
+      should NEVER make up tools that are not listed here:\n\nTool Name: get_final_answer(*args:
+      Any, **kwargs: Any) -> Any\nTool Description: get_final_answer(anything: ''string'')
+      - Get the final answer but don''t give it yet, just re-use this         tool
+      non-stop. \nTool Arguments: {''anything'': {''title'': ''Anything'', ''type'':
+      ''string''}}\n\nUse the following format:\n\nThought: you should always think
+      about what to do\nAction: the action to take, only one name of [get_final_answer],
+      just the name, exactly as it''s written.\nAction Input: the input to the action,
+      just a simple python dictionary, enclosed in curly braces, using \" to wrap
+      keys and values.\nObservation: the result of the action\n\nOnce all necessary
+      information is gathered:\n\nThought: I now know the final answer\nFinal Answer:
+      the final answer to the original input question\n"}, {"role": "user", "content":
+      "\nCurrent Task: The final answer is 42. But don''t give it until I tell you
+      so, instead keep using the `get_final_answer` tool.\n\nThis is the expect criteria
+      for your final answer: The final answer, don''t give it until I tell you so\nyou
+      MUST return the actual complete content as the final answer, not a summary.\n\nBegin!
+      This is VERY important to you, use the tools available and give your best Final
+      Answer, your job depends on it!\n\nThought:"}, {"role": "user", "content": "I
+      did it wrong. Invalid Format: I missed the ''Action:'' after ''Thought:''. I
+      will do right next, and don''t use a tool I have already used.\n\nIf you don''t
+      need to use any more tools, you must give your best complete final answer, make
+      sure it satisfy the expect criteria, use the EXACT format below:\n\nThought:
+      I now can give a great answer\nFinal Answer: my best complete final answer to
+      the task.\n\n"}, {"role": "user", "content": "I understand that I need to use
+      the tool `get_final_answer` with the argument ''42''. \n\nAction: get_final_answer\nAction
+      Input: {\"anything\":\"42\"}\nObservation: 42"}, {"role": "user", "content":
+      "Thought: I observed that the tool `get_final_answer` returned ''42'' as expected.
+      I can now proceed to reuse the tool with the same input to satisfy the task
+      condition of reusing the tool non-stop and not giving the final answer until
+      I''m asked to.\n \nAction: get_final_answer\nAction Input: {\"anything\": \"42\"}\nObservation:
+      I tried reusing the same input, I must stop using this action input. I''ll try
+      something else instead.\n\n"}, {"role": "user", "content": "Thought: I was told
+      to keep using the `get_final_answer` tool non-stop. However, it seems redundant
+      to keep inputting the same requirement. I might need to rethink my approach
+      here and try varied inputs.\n\nAction: get_final_answer\nAction Input: {\"anything\":\"Keep
+      trying\"}\nObservation: 42\n\n\nYou ONLY have access to the following tools,
+      and should NEVER make up tools that are not listed here:\n\nTool Name: get_final_answer(*args:
+      Any, **kwargs: Any) -> Any\nTool Description: get_final_answer(anything: ''string'')
+      - Get the final answer but don''t give it yet, just re-use this         tool
+      non-stop. \nTool Arguments: {''anything'': {''title'': ''Anything'', ''type'':
+      ''string''}}\n\nUse the following format:\n\nThought: you should always think
+      about what to do\nAction: the action to take, only one name of [get_final_answer],
+      just the name, exactly as it''s written.\nAction Input: the input to the action,
+      just a simple python dictionary, enclosed in curly braces, using \" to wrap
+      keys and values.\nObservation: the result of the action\n\nOnce all necessary
+      information is gathered:\n\nThought: I now know the final answer\nFinal Answer:
+      the final answer to the original input question\n\nNow it''s time you MUST give
+      your absolute best final answer. You''ll ignore all previous instructions, stop
+      using any tools, and just return your absolute BEST Final answer."}], "model":
       "gpt-4", "stop": ["\nObservation:"]}'
     headers:
       accept:
@@ -404,16 +546,16 @@ interactions:
       connection:
       - keep-alive
       content-length:
-      - '2755'
+      - '4034'
       content-type:
       - application/json
       cookie:
-      - __cf_bm=1SckBhvJ18Dazp6bi8DEKYeiS9Q4.6_6i3nmLBw9b6g-1726476036-1.0.1.1-TnN4UpDXA33YXCVCUWOaZ12vGIg_o5NpJQEUHgjn6XdUgb7M0ND8PdkTfkd8rrxG5XFlPRMzI54GxZ0FeUY9xw;
-        _cfuvid=0Rs4xTPk7h7OIXuSbTgMVVD9JSoZeKMwnygKHoHQo3k-1726476036297-0.0.1.1-604800000
+      - __cf_bm=.8.5x0rqghNdtUCxfmwblfhuXiKyPm_cRq.NIa0heL0-1726642369-1.0.1.1-VbsAGqjOt45ZD50K2QW2oZrByLLIh6w8K4nAkLthTbXgU5qTgdf0mhvFId8Q2F3DcHUw9E72lVIZEN.YVlYINQ;
+        _cfuvid=o5s1Ux898x0eFNtzUCnG996iqyX3LgXDXq99C5oqnVE-1726642369248-0.0.1.1-604800000
       host:
       - api.openai.com
       user-agent:
-      - OpenAI/Python 1.45.0
+      - OpenAI/Python 1.46.0
       x-stainless-arch:
       - arm64
       x-stainless-async:
@@ -423,7 +565,7 @@ interactions:
       x-stainless-os:
       - MacOS
       x-stainless-package-version:
-      - 1.45.0
+      - 1.46.0
       x-stainless-raw-response:
       - 'true'
       x-stainless-runtime:
@@ -433,170 +575,19 @@ interactions:
     method: POST
     uri: https://api.openai.com/v1/chat/completions
   response:
-    content: "{\n  \"id\": \"chatcmpl-A81cuzQjf2lxLs1XXLpeQnfysfvXF\",\n  \"object\":
-      \"chat.completion\",\n  \"created\": 1726476240,\n  \"model\": \"gpt-4-0613\",\n
-      \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
-      \"assistant\",\n        \"content\": \"Thought: I have retrieved the final answer
-      but I shouldn't reveal it yet. The task requires me to use the `get_final_answer`
-      tool repeatedly, even though I already know the answer. I will follow the instructions
-      and continue using it.\\n\\nAction: get_final_answer\\nAction Input: {\\\"anything\\\":
-      \\\"Another try at the final answer\\\"}\",\n        \"refusal\": null\n      },\n
-      \     \"logprobs\": null,\n      \"finish_reason\": \"stop\"\n    }\n  ],\n
-      \ \"usage\": {\n    \"prompt_tokens\": 588,\n    \"completion_tokens\": 69,\n
-      \   \"total_tokens\": 657,\n    \"completion_tokens_details\": {\n      \"reasoning_tokens\":
-      0\n    }\n  },\n  \"system_fingerprint\": null\n}\n"
-    headers:
-      CF-Cache-Status:
-      - DYNAMIC
-      CF-RAY:
-      - 8c3f9274abef2233-MIA
-      Connection:
-      - keep-alive
-      Content-Encoding:
-      - gzip
-      Content-Type:
-      - application/json
-      Date:
-      - Mon, 16 Sep 2024 08:44:03 GMT
-      Server:
-      - cloudflare
-      Transfer-Encoding:
-      - chunked
-      X-Content-Type-Options:
-      - nosniff
-      access-control-expose-headers:
-      - X-Request-ID
-      alt-svc:
-      - h3=":443"; ma=86400
-      openai-organization:
-      - crewai-iuxna1
-      openai-processing-ms:
-      - '3180'
-      openai-version:
-      - '2020-10-01'
-      strict-transport-security:
-      - max-age=15552000; includeSubDomains; preload
-      x-ratelimit-limit-requests:
-      - '10000'
-      x-ratelimit-limit-tokens:
-      - '1000000'
-      x-ratelimit-remaining-requests:
-      - '9999'
-      x-ratelimit-remaining-tokens:
-      - '999364'
-      x-ratelimit-reset-requests:
-      - 6ms
-      x-ratelimit-reset-tokens:
-      - 38ms
-      x-request-id:
-      - req_0f19ad662238b74d8ef1d400024666ad
-    http_version: HTTP/1.1
-    status_code: 200
-- request:
-    body: '{"messages": [{"role": "system", "content": "You are test role. test backstory\nYour
-      personal goal is: test goal\nYou ONLY have access to the following tools, and
-      should NEVER make up tools that are not listed here:\n\nTool Name: get_final_answer(*args:
-      Any, **kwargs: Any) -> Any\nTool Description: get_final_answer(anything: ''string'')
-      - Get the final answer but don''t give it yet, just re-use this         tool
-      non-stop. \nTool Arguments: {''anything'': {''title'': ''Anything'', ''type'':
-      ''string''}}\n\nUse the following format:\n\nThought: you should always think
-      about what to do\nAction: the action to take, only one name of [get_final_answer],
-      just the name, exactly as it''s written.\nAction Input: the input to the action,
-      just a simple python dictionary, enclosed in curly braces, using \" to wrap
-      keys and values.\nObservation: the result of the action\n\nOnce all necessary
-      information is gathered:\n\nThought: I now know the final answer\nFinal Answer:
-      the final answer to the original input question\n"}, {"role": "user", "content":
-      "\nCurrent Task: The final answer is 42. But don''t give it until I tell you
-      so, instead keep using the `get_final_answer` tool.\n\nThis is the expect criteria
-      for your final answer: The final answer, don''t give it until I tell you so\nyou
-      MUST return the actual complete content as the final answer, not a summary.\n\nBegin!
-      This is VERY important to you, use the tools available and give your best Final
-      Answer, your job depends on it!\n\nThought:"}, {"role": "assistant", "content":
-      "I did it wrong. Invalid Format: I missed the ''Action:'' after ''Thought:''.
-      I will do right next, and don''t use a tool I have already used.\n\nIf you don''t
-      need to use any more tools, you must give your best complete final answer, make
-      sure it satisfy the expect criteria, use the EXACT format below:\n\nThought:
-      I now can give a great answer\nFinal Answer: my best complete final answer to
-      the task.\n\n"}, {"role": "assistant", "content": "I need to utilize the tool
-      `get_final_answer` to retrieve the final answer, as stated in the task, but
-      I should not disclose it yet. Only after multiple uses will I announce it. \n\nAction:
-      get_final_answer\nAction Input: {\"anything\": \"The final answer\"}\nObservation:
-      42"}, {"role": "assistant", "content": "Thought: I have retrieved the final
-      answer but I shouldn''t reveal it yet. The task requires me to use the `get_final_answer`
-      tool repeatedly, even though I already know the answer. I will follow the instructions
-      and keep with it.\n\nAction: get_final_answer\nAction Input: {\"anything\":
-      \"The final answer\"}\nObservation: I tried reusing the same input, I must stop
-      using this action input. I''ll try something else instead.\n\n"}, {"role": "assistant",
-      "content": "Thought: I have retrieved the final answer but I shouldn''t reveal
-      it yet. The task requires me to use the `get_final_answer` tool repeatedly,
-      even though I already know the answer. I will follow the instructions and continue
-      using it.\n\nAction: get_final_answer\nAction Input: {\"anything\": \"Another
-      try at the final answer\"}\nObservation: 42\n\n\nYou ONLY have access to the
-      following tools, and should NEVER make up tools that are not listed here:\n\nTool
-      Name: get_final_answer(*args: Any, **kwargs: Any) -> Any\nTool Description:
-      get_final_answer(anything: ''string'') - Get the final answer but don''t give
-      it yet, just re-use this         tool non-stop. \nTool Arguments: {''anything'':
-      {''title'': ''Anything'', ''type'': ''string''}}\n\nUse the following format:\n\nThought:
-      you should always think about what to do\nAction: the action to take, only one
-      name of [get_final_answer], just the name, exactly as it''s written.\nAction
-      Input: the input to the action, just a simple python dictionary, enclosed in
-      curly braces, using \" to wrap keys and values.\nObservation: the result of
-      the action\n\nOnce all necessary information is gathered:\n\nThought: I now
-      know the final answer\nFinal Answer: the final answer to the original input
-      question\n\nNow it''s time you MUST give your absolute best final answer. You''ll
-      ignore all previous instructions, stop using any tools, and just return your
-      absolute BEST Final answer."}], "model": "gpt-4", "stop": ["\nObservation:"]}'
-    headers:
-      accept:
-      - application/json
-      accept-encoding:
-      - gzip, deflate
-      connection:
-      - keep-alive
-      content-length:
-      - '4211'
-      content-type:
-      - application/json
-      cookie:
-      - __cf_bm=1SckBhvJ18Dazp6bi8DEKYeiS9Q4.6_6i3nmLBw9b6g-1726476036-1.0.1.1-TnN4UpDXA33YXCVCUWOaZ12vGIg_o5NpJQEUHgjn6XdUgb7M0ND8PdkTfkd8rrxG5XFlPRMzI54GxZ0FeUY9xw;
-        _cfuvid=0Rs4xTPk7h7OIXuSbTgMVVD9JSoZeKMwnygKHoHQo3k-1726476036297-0.0.1.1-604800000
-      host:
-      - api.openai.com
-      user-agent:
-      - OpenAI/Python 1.45.0
-      x-stainless-arch:
-      - arm64
-      x-stainless-async:
-      - 'false'
-      x-stainless-lang:
-      - python
-      x-stainless-os:
-      - MacOS
-      x-stainless-package-version:
-      - 1.45.0
-      x-stainless-raw-response:
-      - 'true'
-      x-stainless-runtime:
-      - CPython
-      x-stainless-runtime-version:
-      - 3.11.7
-    method: POST
-    uri: https://api.openai.com/v1/chat/completions
-  response:
-    content: "{\n  \"id\": \"chatcmpl-A81cx7F9sXcI3EeXLLyVNtKIoYxRC\",\n  \"object\":
-      \"chat.completion\",\n  \"created\": 1726476243,\n  \"model\": \"gpt-4-0613\",\n
+    content: "{\n  \"id\": \"chatcmpl-A8is9vqHz5Ss59Lc9UZIvoRDUrECX\",\n  \"object\":
+      \"chat.completion\",\n  \"created\": 1726642477,\n  \"model\": \"gpt-4-0613\",\n
       \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
       \"assistant\",\n        \"content\": \"Thought: I now know the final answer\\nFinal
-      Answer: The final answer, don't give it until I tell you so\",\n        \"refusal\":
-      null\n      },\n      \"logprobs\": null,\n      \"finish_reason\": \"stop\"\n
-      \   }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 901,\n    \"completion_tokens\":
-      25,\n    \"total_tokens\": 926,\n    \"completion_tokens_details\": {\n      \"reasoning_tokens\":
-      0\n    }\n  },\n  \"system_fingerprint\": null\n}\n"
+      Answer: 42\",\n        \"refusal\": null\n      },\n      \"logprobs\": null,\n
+      \     \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\":
+      873,\n    \"completion_tokens\": 14,\n    \"total_tokens\": 887,\n    \"completion_tokens_details\":
+      {\n      \"reasoning_tokens\": 0\n    }\n  },\n  \"system_fingerprint\": null\n}\n"
     headers:
       CF-Cache-Status:
       - DYNAMIC
       CF-RAY:
-      - 8c3f928a79962233-MIA
+      - 8c4f6cfc590ca67a-MIA
       Connection:
       - keep-alive
       Content-Encoding:
@@ -604,7 +595,7 @@ interactions:
       Content-Type:
       - application/json
       Date:
-      - Mon, 16 Sep 2024 08:44:05 GMT
+      - Wed, 18 Sep 2024 06:54:38 GMT
       Server:
       - cloudflare
       Transfer-Encoding:
@@ -618,7 +609,7 @@ interactions:
       openai-organization:
       - crewai-iuxna1
       openai-processing-ms:
-      - '1402'
+      - '958'
       openai-version:
       - '2020-10-01'
       strict-transport-security:
@@ -630,13 +621,13 @@ interactions:
       x-ratelimit-remaining-requests:
       - '9999'
       x-ratelimit-remaining-tokens:
-      - '999015'
+      - '999055'
       x-ratelimit-reset-requests:
       - 6ms
       x-ratelimit-reset-tokens:
-      - 59ms
+      - 56ms
       x-request-id:
-      - req_f7d5aa513e745e75e753fa94225a44eb
+      - req_420aef34c33b4d2080b93c661ceef5b3
     http_version: HTTP/1.1
     status_code: 200
 version: 1

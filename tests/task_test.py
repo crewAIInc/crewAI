@@ -266,7 +266,7 @@ def test_output_pydantic_hierarchical():
     )
     result = crew.kickoff()
     assert isinstance(result.pydantic, ScoreOutput)
-    assert result.to_dict() == {"score": 5}
+    assert result.to_dict() == {"score": 4}
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
@@ -321,8 +321,8 @@ def test_output_json_hierarchical():
         manager_llm="gpt-4o",
     )
     result = crew.kickoff()
-    assert '{"score": 4}' == result.json
-    assert result.to_dict() == {"score": 4}
+    assert '{"score": 5}' == result.json
+    assert result.to_dict() == {"score": 5}
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
@@ -404,8 +404,8 @@ def test_output_json_dict_hierarchical():
         manager_llm="gpt-4o",
     )
     result = crew.kickoff()
-    assert {"score": 5} == result.json_dict
-    assert result.to_dict() == {"score": 5}
+    assert {"score": 4} == result.json_dict
+    assert result.to_dict() == {"score": 4}
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
@@ -443,7 +443,7 @@ def test_output_pydantic_to_another_task():
     assert isinstance(
         pydantic_result, ScoreOutput
     ), "Expected pydantic result to be of type ScoreOutput"
-    assert 3 == pydantic_result.score
+    assert 4 == pydantic_result.score
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
@@ -474,7 +474,7 @@ def test_output_json_to_another_task():
 
     crew = Crew(agents=[scorer], tasks=[task1, task2])
     result = crew.kickoff()
-    assert '{"score": 4}' == result.json
+    assert '{"score": 5}' == result.json
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
@@ -526,7 +526,7 @@ def test_save_task_json_output():
 
     output_file_exists = os.path.exists("score.json")
     assert output_file_exists
-    assert {"score": 4} == json.loads(open("score.json").read())
+    assert {"score": 5} == json.loads(open("score.json").read())
     if output_file_exists:
         os.remove("score.json")
 
@@ -556,7 +556,7 @@ def test_save_task_pydantic_output():
 
     output_file_exists = os.path.exists("score.json")
     assert output_file_exists
-    assert {"score": 4} == json.loads(open("score.json").read())
+    assert {"score": 5} == json.loads(open("score.json").read())
     if output_file_exists:
         os.remove("score.json")
 
@@ -685,7 +685,7 @@ def test_increment_tool_errors():
     with patch.object(Task, "increment_tools_errors") as increment_tools_errors:
         increment_tools_errors.return_value = None
         crew.kickoff()
-        assert len(increment_tools_errors.mock_calls) == 9
+        assert len(increment_tools_errors.mock_calls) == 12
 
 
 def test_task_definition_based_on_dict():

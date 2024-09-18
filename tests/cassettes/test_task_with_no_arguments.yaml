@@ -32,12 +32,12 @@ interactions:
       content-type:
       - application/json
       cookie:
-      - __cf_bm=1SckBhvJ18Dazp6bi8DEKYeiS9Q4.6_6i3nmLBw9b6g-1726476036-1.0.1.1-TnN4UpDXA33YXCVCUWOaZ12vGIg_o5NpJQEUHgjn6XdUgb7M0ND8PdkTfkd8rrxG5XFlPRMzI54GxZ0FeUY9xw;
-        _cfuvid=0Rs4xTPk7h7OIXuSbTgMVVD9JSoZeKMwnygKHoHQo3k-1726476036297-0.0.1.1-604800000
+      - __cf_bm=.8.5x0rqghNdtUCxfmwblfhuXiKyPm_cRq.NIa0heL0-1726642369-1.0.1.1-VbsAGqjOt45ZD50K2QW2oZrByLLIh6w8K4nAkLthTbXgU5qTgdf0mhvFId8Q2F3DcHUw9E72lVIZEN.YVlYINQ;
+        _cfuvid=o5s1Ux898x0eFNtzUCnG996iqyX3LgXDXq99C5oqnVE-1726642369248-0.0.1.1-604800000
       host:
       - api.openai.com
       user-agent:
-      - OpenAI/Python 1.45.0
+      - OpenAI/Python 1.46.0
       x-stainless-arch:
       - arm64
       x-stainless-async:
@@ -47,7 +47,7 @@ interactions:
       x-stainless-os:
       - MacOS
       x-stainless-package-version:
-      - 1.45.0
+      - 1.46.0
       x-stainless-raw-response:
       - 'true'
       x-stainless-runtime:
@@ -57,20 +57,20 @@ interactions:
     method: POST
     uri: https://api.openai.com/v1/chat/completions
   response:
-    content: "{\n  \"id\": \"chatcmpl-A81hwIiF0yRcQv7jq2GwvPwrR6Gt4\",\n  \"object\":
-      \"chat.completion\",\n  \"created\": 1726476552,\n  \"model\": \"gpt-4o-2024-05-13\",\n
+    content: "{\n  \"id\": \"chatcmpl-A8iwoTv36iLZqT6KS07JirqDNYkuA\",\n  \"object\":
+      \"chat.completion\",\n  \"created\": 1726642766,\n  \"model\": \"gpt-4o-2024-05-13\",\n
       \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
-      \"assistant\",\n        \"content\": \"Thought: I need to retrieve the sales-related
-      data to determine the total number of sales.\\n\\nAction: return_data\\nAction
-      Input: {}\",\n        \"refusal\": null\n      },\n      \"logprobs\": null,\n
-      \     \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\":
-      316,\n    \"completion_tokens\": 27,\n    \"total_tokens\": 343,\n    \"completion_tokens_details\":
-      {\n      \"reasoning_tokens\": 0\n    }\n  },\n  \"system_fingerprint\": \"fp_25624ae3a5\"\n}\n"
+      \"assistant\",\n        \"content\": \"Thought: To determine the total number
+      of sales, I need to retrieve the relevant data using the available tool.\\n\\nAction:
+      return_data\\nAction Input: {}\",\n        \"refusal\": null\n      },\n      \"logprobs\":
+      null,\n      \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\":
+      316,\n    \"completion_tokens\": 31,\n    \"total_tokens\": 347,\n    \"completion_tokens_details\":
+      {\n      \"reasoning_tokens\": 0\n    }\n  },\n  \"system_fingerprint\": \"fp_a5d11b2ef2\"\n}\n"
     headers:
       CF-Cache-Status:
       - DYNAMIC
       CF-RAY:
-      - 8c3f9a11b9f22233-MIA
+      - 8c4f74090cc7a67a-MIA
       Connection:
       - keep-alive
       Content-Encoding:
@@ -78,7 +78,7 @@ interactions:
       Content-Type:
       - application/json
       Date:
-      - Mon, 16 Sep 2024 08:49:12 GMT
+      - Wed, 18 Sep 2024 06:59:26 GMT
       Server:
       - cloudflare
       Transfer-Encoding:
@@ -92,7 +92,7 @@ interactions:
       openai-organization:
       - crewai-iuxna1
       openai-processing-ms:
-      - '526'
+      - '470'
       openai-version:
       - '2020-10-01'
       strict-transport-security:
@@ -110,67 +110,9 @@ interactions:
       x-ratelimit-reset-tokens:
       - 0s
       x-request-id:
-      - req_09f1cb82c83432b2dac1bb26fbd310a8
+      - req_a6d9bb5c6c5fae882a7207ad3efda1e2
     http_version: HTTP/1.1
     status_code: 200
-- request:
-    body: !!binary |
-      Cp4MCiQKIgoMc2VydmljZS5uYW1lEhIKEGNyZXdBSS10ZWxlbWV0cnkS9QsKEgoQY3Jld2FpLnRl
-      bGVtZXRyeRKQAgoQHo8k2NVrnMibUnOXEe2NhhIIcD1b5So2xZoqDlRhc2sgRXhlY3V0aW9uMAE5
-      wOqvoUOt9RdBAKiTx0at9RdKLgoIY3Jld19rZXkSIgogNDk0ZjM2NTcyMzdhZDhhMzAzNWIyZjFi
-      ZWVjZGM2NzdKMQoHY3Jld19pZBImCiQ4OGNkMWVlNS0xMzk2LTQ1NzEtOTYzNS1kZDQyNThhMTIx
-      NWRKLgoIdGFza19rZXkSIgogZjI1OTdjNzg2N2ZiZTMyNGRjNjVkYzA4ZGZkYmZjNmNKMQoHdGFz
-      a19pZBImCiQzMTgyOWJmMS0wYzcyLTQyYTgtOTYxZC0xOTdkZWRkNTNlYjB6AhgBhQEAAQAAEroH
-      ChDNWGsB26H/2wUK8p1oz/3JEgi6kfdTZpVqaSoMQ3JldyBDcmVhdGVkMAE5wNM8yUat9RdB4A9A
-      yUat9RdKGgoOY3Jld2FpX3ZlcnNpb24SCAoGMC41Ni4zShoKDnB5dGhvbl92ZXJzaW9uEggKBjMu
-      MTEuN0ouCghjcmV3X2tleRIiCiAxN2E2Y2EwM2Q4NTBmZTJmMzBjMGExMDUxYWQ1ZjdlNEoxCgdj
-      cmV3X2lkEiYKJGM2MmJmZjc0LWE1ZjMtNDNlNi05YmM1LTVlNGYxZDYzOWYyYUocCgxjcmV3X3By
-      b2Nlc3MSDAoKc2VxdWVudGlhbEoRCgtjcmV3X21lbW9yeRICEABKGgoUY3Jld19udW1iZXJfb2Zf
-      dGFza3MSAhgBShsKFWNyZXdfbnVtYmVyX29mX2FnZW50cxICGAFK2wIKC2NyZXdfYWdlbnRzEssC
-      CsgCW3sia2V5IjogIjhiZDIxMzliNTk3NTE4MTUwNmU0MWZkOWM0NTYzZDc1IiwgImlkIjogImY3
-      MzM4MjdiLWE5ODMtNGI2Ny05Nzk4LTE4MTU3YzM1ZmM4MyIsICJyb2xlIjogIlJlc2VhcmNoZXIi
-      LCAidmVyYm9zZT8iOiBmYWxzZSwgIm1heF9pdGVyIjogMTUsICJtYXhfcnBtIjogbnVsbCwgImZ1
-      bmN0aW9uX2NhbGxpbmdfbGxtIjogbnVsbCwgImxsbSI6ICJncHQtNG8iLCAiZGVsZWdhdGlvbl9l
-      bmFibGVkPyI6IGZhbHNlLCAiYWxsb3dfY29kZV9leGVjdXRpb24/IjogZmFsc2UsICJtYXhfcmV0
-      cnlfbGltaXQiOiAyLCAidG9vbHNfbmFtZXMiOiBbInJldHVybl9kYXRhIl19XUqMAgoKY3Jld190
-      YXNrcxL9AQr6AVt7ImtleSI6ICJmNTk0OTIwOGQ2ZjM5ZWU5MGFkMDBlOTcxYzE0YWRkMyIsICJp
-      ZCI6ICIwNjBkZTY0MC05MDhiLTRmZWMtOWRhNi1jNGM5ZTcxOTk4MTQiLCAiYXN5bmNfZXhlY3V0
-      aW9uPyI6IGZhbHNlLCAiaHVtYW5faW5wdXQ/IjogZmFsc2UsICJhZ2VudF9yb2xlIjogIlJlc2Vh
-      cmNoZXIiLCAiYWdlbnRfa2V5IjogIjhiZDIxMzliNTk3NTE4MTUwNmU0MWZkOWM0NTYzZDc1Iiwg
-      InRvb2xzX25hbWVzIjogWyJyZXR1cm5fZGF0YSJdfV16AhgBhQEAAQAAEo4CChBuh5yWDtOxW5pJ
-      ZX7isuC1Egj09NbFpFGNYCoMVGFzayBDcmVhdGVkMAE5yHFayUat9RdB2BVbyUat9RdKLgoIY3Jl
-      d19rZXkSIgogMTdhNmNhMDNkODUwZmUyZjMwYzBhMTA1MWFkNWY3ZTRKMQoHY3Jld19pZBImCiRj
-      NjJiZmY3NC1hNWYzLTQzZTYtOWJjNS01ZTRmMWQ2MzlmMmFKLgoIdGFza19rZXkSIgogZjU5NDky
-      MDhkNmYzOWVlOTBhZDAwZTk3MWMxNGFkZDNKMQoHdGFza19pZBImCiQwNjBkZTY0MC05MDhiLTRm
-      ZWMtOWRhNi1jNGM5ZTcxOTk4MTR6AhgBhQEAAQAA
-    headers:
-      Accept:
-      - '*/*'
-      Accept-Encoding:
-      - gzip, deflate
-      Connection:
-      - keep-alive
-      Content-Length:
-      - '1569'
-      Content-Type:
-      - application/x-protobuf
-      User-Agent:
-      - OTel-OTLP-Exporter-Python/1.27.0
-    method: POST
-    uri: https://telemetry.crewai.com:4319/v1/traces
-  response:
-    body:
-      string: "\n\0"
-    headers:
-      Content-Length:
-      - '2'
-      Content-Type:
-      - application/x-protobuf
-      Date:
-      - Mon, 16 Sep 2024 08:49:12 GMT
-    status:
-      code: 200
-      message: OK
 - request:
     body: '{"messages": [{"role": "system", "content": "You are Researcher. You''re
       an expert researcher, specialized in technology, software engineering, AI and
@@ -191,10 +133,11 @@ interactions:
       criteria for your final answer: The total number of sales as an integer\nyou
       MUST return the actual complete content as the final answer, not a summary.\n\nBegin!
       This is VERY important to you, use the tools available and give your best Final
-      Answer, your job depends on it!\n\nThought:"}, {"role": "assistant", "content":
-      "Thought: I need to retrieve the sales-related data to determine the total number
-      of sales.\n\nAction: return_data\nAction Input: {}\nObservation: January: 5,
-      February: 10, March: 15, April: 20, May: 25"}], "model": "gpt-4o", "stop": ["\nObservation:"]}'
+      Answer, your job depends on it!\n\nThought:"}, {"role": "user", "content": "Thought:
+      To determine the total number of sales, I need to retrieve the relevant data
+      using the available tool.\n\nAction: return_data\nAction Input: {}\nObservation:
+      January: 5, February: 10, March: 15, April: 20, May: 25"}], "model": "gpt-4o",
+      "stop": ["\nObservation:"]}'
     headers:
       accept:
       - application/json
@@ -203,16 +146,16 @@ interactions:
       connection:
       - keep-alive
       content-length:
-      - '1835'
+      - '1851'
       content-type:
       - application/json
       cookie:
-      - __cf_bm=1SckBhvJ18Dazp6bi8DEKYeiS9Q4.6_6i3nmLBw9b6g-1726476036-1.0.1.1-TnN4UpDXA33YXCVCUWOaZ12vGIg_o5NpJQEUHgjn6XdUgb7M0ND8PdkTfkd8rrxG5XFlPRMzI54GxZ0FeUY9xw;
-        _cfuvid=0Rs4xTPk7h7OIXuSbTgMVVD9JSoZeKMwnygKHoHQo3k-1726476036297-0.0.1.1-604800000
+      - __cf_bm=.8.5x0rqghNdtUCxfmwblfhuXiKyPm_cRq.NIa0heL0-1726642369-1.0.1.1-VbsAGqjOt45ZD50K2QW2oZrByLLIh6w8K4nAkLthTbXgU5qTgdf0mhvFId8Q2F3DcHUw9E72lVIZEN.YVlYINQ;
+        _cfuvid=o5s1Ux898x0eFNtzUCnG996iqyX3LgXDXq99C5oqnVE-1726642369248-0.0.1.1-604800000
       host:
       - api.openai.com
       user-agent:
-      - OpenAI/Python 1.45.0
+      - OpenAI/Python 1.46.0
       x-stainless-arch:
       - arm64
       x-stainless-async:
@@ -222,7 +165,7 @@ interactions:
       x-stainless-os:
       - MacOS
       x-stainless-package-version:
-      - 1.45.0
+      - 1.46.0
       x-stainless-raw-response:
       - 'true'
       x-stainless-runtime:
@@ -232,20 +175,20 @@ interactions:
     method: POST
     uri: https://api.openai.com/v1/chat/completions
   response:
-    content: "{\n  \"id\": \"chatcmpl-A81hw5s1FimOXvmw7AYeGx6hNEAfD\",\n  \"object\":
-      \"chat.completion\",\n  \"created\": 1726476552,\n  \"model\": \"gpt-4o-2024-05-13\",\n
+    content: "{\n  \"id\": \"chatcmpl-A8iwpK4Ay0WuR7bCQID3fjuoSkHyp\",\n  \"object\":
+      \"chat.completion\",\n  \"created\": 1726642767,\n  \"model\": \"gpt-4o-2024-05-13\",\n
       \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
       \"assistant\",\n        \"content\": \"Thought: I now know the final answer.\\n\\nFinal
-      Answer: January: 5, February: 10, March: 15, April: 20, May: 25\",\n        \"refusal\":
-      null\n      },\n      \"logprobs\": null,\n      \"finish_reason\": \"stop\"\n
-      \   }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 373,\n    \"completion_tokens\":
-      36,\n    \"total_tokens\": 409,\n    \"completion_tokens_details\": {\n      \"reasoning_tokens\":
-      0\n    }\n  },\n  \"system_fingerprint\": \"fp_25624ae3a5\"\n}\n"
+      Answer: The total number of sales is 75.\",\n        \"refusal\": null\n      },\n
+      \     \"logprobs\": null,\n      \"finish_reason\": \"stop\"\n    }\n  ],\n
+      \ \"usage\": {\n    \"prompt_tokens\": 377,\n    \"completion_tokens\": 21,\n
+      \   \"total_tokens\": 398,\n    \"completion_tokens_details\": {\n      \"reasoning_tokens\":
+      0\n    }\n  },\n  \"system_fingerprint\": \"fp_a5d11b2ef2\"\n}\n"
     headers:
       CF-Cache-Status:
       - DYNAMIC
       CF-RAY:
-      - 8c3f9a16db3a2233-MIA
+      - 8c4f740dff15a67a-MIA
       Connection:
       - keep-alive
       Content-Encoding:
@@ -253,7 +196,7 @@ interactions:
       Content-Type:
       - application/json
       Date:
-      - Mon, 16 Sep 2024 08:49:13 GMT
+      - Wed, 18 Sep 2024 06:59:27 GMT
       Server:
       - cloudflare
       Transfer-Encoding:
@@ -267,7 +210,7 @@ interactions:
       openai-organization:
       - crewai-iuxna1
       openai-processing-ms:
-      - '599'
+      - '334'
       openai-version:
       - '2020-10-01'
       strict-transport-security:
@@ -279,13 +222,13 @@ interactions:
       x-ratelimit-remaining-requests:
       - '9999'
       x-ratelimit-remaining-tokens:
-      - '29999572'
+      - '29999566'
       x-ratelimit-reset-requests:
       - 6ms
       x-ratelimit-reset-tokens:
       - 0s
       x-request-id:
-      - req_3797b9c525fa130a161625c186098d36
+      - req_dab50fc5c15eaafdb1a9e1edc821d98a
     http_version: HTTP/1.1
     status_code: 200
 version: 1

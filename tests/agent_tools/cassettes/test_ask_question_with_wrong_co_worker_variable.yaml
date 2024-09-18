@@ -25,12 +25,12 @@ interactions:
       content-type:
       - application/json
       cookie:
-      - __cf_bm=1SckBhvJ18Dazp6bi8DEKYeiS9Q4.6_6i3nmLBw9b6g-1726476036-1.0.1.1-TnN4UpDXA33YXCVCUWOaZ12vGIg_o5NpJQEUHgjn6XdUgb7M0ND8PdkTfkd8rrxG5XFlPRMzI54GxZ0FeUY9xw;
-        _cfuvid=0Rs4xTPk7h7OIXuSbTgMVVD9JSoZeKMwnygKHoHQo3k-1726476036297-0.0.1.1-604800000
+      - __cf_bm=.8.5x0rqghNdtUCxfmwblfhuXiKyPm_cRq.NIa0heL0-1726642369-1.0.1.1-VbsAGqjOt45ZD50K2QW2oZrByLLIh6w8K4nAkLthTbXgU5qTgdf0mhvFId8Q2F3DcHUw9E72lVIZEN.YVlYINQ;
+        _cfuvid=o5s1Ux898x0eFNtzUCnG996iqyX3LgXDXq99C5oqnVE-1726642369248-0.0.1.1-604800000
       host:
       - api.openai.com
       user-agent:
-      - OpenAI/Python 1.45.0
+      - OpenAI/Python 1.46.0
       x-stainless-arch:
       - arm64
       x-stainless-async:
@@ -40,7 +40,7 @@ interactions:
       x-stainless-os:
       - MacOS
       x-stainless-package-version:
-      - 1.45.0
+      - 1.46.0
       x-stainless-raw-response:
       - 'true'
       x-stainless-runtime:
@@ -50,27 +50,28 @@ interactions:
     method: POST
     uri: https://api.openai.com/v1/chat/completions
   response:
-    content: "{\n  \"id\": \"chatcmpl-A81dkIBLB3iUbp5yVV0UtIcXQEK7d\",\n  \"object\":
-      \"chat.completion\",\n  \"created\": 1726476292,\n  \"model\": \"gpt-4o-2024-05-13\",\n
+    content: "{\n  \"id\": \"chatcmpl-A8itJwg2Rf7SP6eMx3exZlflDAqWo\",\n  \"object\":
+      \"chat.completion\",\n  \"created\": 1726642549,\n  \"model\": \"gpt-4o-2024-05-13\",\n
       \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
       \"assistant\",\n        \"content\": \"Thought: I now can give a great answer\\nFinal
-      Answer: I do not hate AI agents; in fact, I appreciate them for their immense
-      potential and the numerous benefits they bring to various fields. My passion
-      for AI agents stems from their ability to streamline processes, enhance decision-making,
-      and provide innovative solutions to complex problems. They significantly contribute
-      to advancements in healthcare, finance, education, and many other sectors, making
-      tasks more efficient and freeing up human capacities for more creative and strategic
-      endeavors. So, to answer your question, I love AI agents because of the positive
-      impact they have on our world and their capability to drive technological progress.\",\n
-      \       \"refusal\": null\n      },\n      \"logprobs\": null,\n      \"finish_reason\":
-      \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 199,\n    \"completion_tokens\":
-      127,\n    \"total_tokens\": 326,\n    \"completion_tokens_details\": {\n      \"reasoning_tokens\":
-      0\n    }\n  },\n  \"system_fingerprint\": \"fp_25624ae3a5\"\n}\n"
+      Answer: As an expert researcher specialized in technology, I have a profound
+      appreciation for AI and AI agents. They represent a pinnacle of human innovation
+      and have the potential to greatly enhance various aspects of our lives. AI agents
+      can assist in automating mundane tasks, providing insights through data analysis,
+      and even offering companionship to those in need. However, it's also essential
+      to approach AI with a balanced perspective, acknowledging both its strengths
+      and the ethical considerations it raises. In short, I don't hate AI agents;
+      I recognize their immense potential and value while being mindful of the responsibilities
+      that come with their development and deployment.\",\n        \"refusal\": null\n
+      \     },\n      \"logprobs\": null,\n      \"finish_reason\": \"stop\"\n    }\n
+      \ ],\n  \"usage\": {\n    \"prompt_tokens\": 199,\n    \"completion_tokens\":
+      131,\n    \"total_tokens\": 330,\n    \"completion_tokens_details\": {\n      \"reasoning_tokens\":
+      0\n    }\n  },\n  \"system_fingerprint\": \"fp_a5d11b2ef2\"\n}\n"
     headers:
       CF-Cache-Status:
       - DYNAMIC
       CF-RAY:
-      - 8c3f93b95d3e2233-MIA
+      - 8c4f6ebc9a84a67a-MIA
       Connection:
       - keep-alive
       Content-Encoding:
@@ -78,7 +79,7 @@ interactions:
       Content-Type:
       - application/json
       Date:
-      - Mon, 16 Sep 2024 08:44:53 GMT
+      - Wed, 18 Sep 2024 06:55:51 GMT
       Server:
       - cloudflare
       Transfer-Encoding:
@@ -92,7 +93,7 @@ interactions:
       openai-organization:
       - crewai-iuxna1
       openai-processing-ms:
-      - '1189'
+      - '2379'
       openai-version:
       - '2020-10-01'
       strict-transport-security:
@@ -110,7 +111,7 @@ interactions:
       x-ratelimit-reset-tokens:
       - 0s
       x-request-id:
-      - req_920f3c16f8de451a0d9a615430347aa7
+      - req_15a5949e2566bb034b07c4cdad9cd404
     http_version: HTTP/1.1
     status_code: 200
 version: 1

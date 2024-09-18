@@ -25,12 +25,12 @@ interactions:
       content-type:
       - application/json
       cookie:
-      - __cf_bm=1SckBhvJ18Dazp6bi8DEKYeiS9Q4.6_6i3nmLBw9b6g-1726476036-1.0.1.1-TnN4UpDXA33YXCVCUWOaZ12vGIg_o5NpJQEUHgjn6XdUgb7M0ND8PdkTfkd8rrxG5XFlPRMzI54GxZ0FeUY9xw;
-        _cfuvid=0Rs4xTPk7h7OIXuSbTgMVVD9JSoZeKMwnygKHoHQo3k-1726476036297-0.0.1.1-604800000
+      - __cf_bm=.8.5x0rqghNdtUCxfmwblfhuXiKyPm_cRq.NIa0heL0-1726642369-1.0.1.1-VbsAGqjOt45ZD50K2QW2oZrByLLIh6w8K4nAkLthTbXgU5qTgdf0mhvFId8Q2F3DcHUw9E72lVIZEN.YVlYINQ;
+        _cfuvid=o5s1Ux898x0eFNtzUCnG996iqyX3LgXDXq99C5oqnVE-1726642369248-0.0.1.1-604800000
       host:
       - api.openai.com
       user-agent:
-      - OpenAI/Python 1.45.0
+      - OpenAI/Python 1.46.0
       x-stainless-arch:
       - arm64
       x-stainless-async:
@@ -40,7 +40,7 @@ interactions:
       x-stainless-os:
       - MacOS
       x-stainless-package-version:
-      - 1.45.0
+      - 1.46.0
       x-stainless-raw-response:
       - 'true'
       x-stainless-runtime:
@@ -50,34 +50,28 @@ interactions:
     method: POST
     uri: https://api.openai.com/v1/chat/completions
   response:
-    content: "{\n  \"id\": \"chatcmpl-A81dsDR0oIy60Go4lOiHoFauBk1Sl\",\n  \"object\":
-      \"chat.completion\",\n  \"created\": 1726476300,\n  \"model\": \"gpt-4o-2024-05-13\",\n
+    content: "{\n  \"id\": \"chatcmpl-A8itTPbch8sPUbRd8BJdzF4NXLPhg\",\n  \"object\":
+      \"chat.completion\",\n  \"created\": 1726642559,\n  \"model\": \"gpt-4o-2024-05-13\",\n
       \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
       \"assistant\",\n        \"content\": \"Thought: I now can give a great answer\\nFinal
-      Answer: As a researcher specialized in technology, particularly in AI and AI
-      agents, my feelings toward them are far more nuanced than simply loving or hating
-      them. AI agents represent a remarkable advancement in technology and hold tremendous
-      potential for improving various aspects of our lives and industries. They can
-      automate tedious tasks, provide intelligent data analysis, support decision-making,
-      and even enhance our creative processes. These capabilities can drive efficiency,
-      innovation, and economic growth.\\n\\nHowever, it is also crucial to acknowledge
-      the challenges and ethical considerations posed by AI agents. Issues such as
-      data privacy, security, job displacement, and the need for proper regulation
-      are significant concerns that must be carefully managed. Moreover, the development
-      and deployment of AI should be guided by principles that ensure fairness, transparency,
-      and accountability.\\n\\nIn essence, I appreciate the profound impact AI agents
-      can have, but I also recognize the importance of approaching their integration
-      into society with thoughtful consideration and responsibility. Balancing enthusiasm
-      with caution and ethical oversight is key to harnessing the full potential of
-      AI while mitigating its risks.\",\n        \"refusal\": null\n      },\n      \"logprobs\":
-      null,\n      \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\":
-      199,\n    \"completion_tokens\": 219,\n    \"total_tokens\": 418,\n    \"completion_tokens_details\":
-      {\n      \"reasoning_tokens\": 0\n    }\n  },\n  \"system_fingerprint\": \"fp_25624ae3a5\"\n}\n"
+      Answer: No, I do not hate AI agents. In fact, I appreciate their potential and
+      the positive impact they can have in various fields. AI agents can perform tasks
+      that are either too mundane or too complex for humans, thereby increasing productivity
+      and allowing us to focus on more creative and strategic activities. Moreover,
+      they can process and analyze vast amounts of data much more quickly and accurately
+      than humans, leading to better decision-making and innovations. As a researcher
+      specialized in technology, I am always excited to see advancements in AI and
+      AI agents, as they push the boundaries of what technology can achieve. So, yes,
+      I do love the possibilities they bring to our world.\",\n        \"refusal\":
+      null\n      },\n      \"logprobs\": null,\n      \"finish_reason\": \"stop\"\n
+      \   }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 199,\n    \"completion_tokens\":
+      144,\n    \"total_tokens\": 343,\n    \"completion_tokens_details\": {\n      \"reasoning_tokens\":
+      0\n    }\n  },\n  \"system_fingerprint\": \"fp_a5d11b2ef2\"\n}\n"
     headers:
       CF-Cache-Status:
       - DYNAMIC
       CF-RAY:
-      - 8c3f93ee7b872233-MIA
+      - 8c4f6efe3d94a67a-MIA
       Connection:
       - keep-alive
       Content-Encoding:
@@ -85,7 +79,7 @@ interactions:
       Content-Type:
       - application/json
       Date:
-      - Mon, 16 Sep 2024 08:45:02 GMT
+      - Wed, 18 Sep 2024 06:56:01 GMT
       Server:
       - cloudflare
       Transfer-Encoding:
@@ -99,7 +93,7 @@ interactions:
       openai-organization:
       - crewai-iuxna1
       openai-processing-ms:
-      - '2179'
+      - '1836'
       openai-version:
       - '2020-10-01'
       strict-transport-security:
@@ -117,7 +111,7 @@ interactions:
       x-ratelimit-reset-tokens:
       - 0s
       x-request-id:
-      - req_924c8676ca28af7092f32e2992bde2ec
+      - req_51693c1b5a37ada8922542e71cae13c2
     http_version: HTTP/1.1
     status_code: 200
 version: 1

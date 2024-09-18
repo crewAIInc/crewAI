@@ -29,12 +29,12 @@ interactions:
       content-type:
       - application/json
       cookie:
-      - __cf_bm=1SckBhvJ18Dazp6bi8DEKYeiS9Q4.6_6i3nmLBw9b6g-1726476036-1.0.1.1-TnN4UpDXA33YXCVCUWOaZ12vGIg_o5NpJQEUHgjn6XdUgb7M0ND8PdkTfkd8rrxG5XFlPRMzI54GxZ0FeUY9xw;
-        _cfuvid=0Rs4xTPk7h7OIXuSbTgMVVD9JSoZeKMwnygKHoHQo3k-1726476036297-0.0.1.1-604800000
+      - __cf_bm=.8.5x0rqghNdtUCxfmwblfhuXiKyPm_cRq.NIa0heL0-1726642369-1.0.1.1-VbsAGqjOt45ZD50K2QW2oZrByLLIh6w8K4nAkLthTbXgU5qTgdf0mhvFId8Q2F3DcHUw9E72lVIZEN.YVlYINQ;
+        _cfuvid=o5s1Ux898x0eFNtzUCnG996iqyX3LgXDXq99C5oqnVE-1726642369248-0.0.1.1-604800000
       host:
       - api.openai.com
       user-agent:
-      - OpenAI/Python 1.45.0
+      - OpenAI/Python 1.46.0
       x-stainless-arch:
       - arm64
       x-stainless-async:
@@ -44,7 +44,7 @@ interactions:
       x-stainless-os:
       - MacOS
       x-stainless-package-version:
-      - 1.45.0
+      - 1.46.0
       x-stainless-raw-response:
       - 'true'
       x-stainless-runtime:
@@ -54,20 +54,20 @@ interactions:
     method: POST
     uri: https://api.openai.com/v1/chat/completions
   response:
-    content: "{\n  \"id\": \"chatcmpl-A81dKYnfM65C4HE5bL7RpJ7fVJwzP\",\n  \"object\":
-      \"chat.completion\",\n  \"created\": 1726476266,\n  \"model\": \"gpt-4o-2024-05-13\",\n
+    content: "{\n  \"id\": \"chatcmpl-A8isdcW9hrigWzaUjwtRFDlm58um2\",\n  \"object\":
+      \"chat.completion\",\n  \"created\": 1726642507,\n  \"model\": \"gpt-4o-2024-05-13\",\n
       \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
-      \"assistant\",\n        \"content\": \"I need to gather information on AI to
-      write a comprehensive and compelling paragraph. \\n\\nAction: learn_about_AI\\nAction
+      \"assistant\",\n        \"content\": \"I need to gather detailed information
+      about AI to write an amazing paragraph.\\n\\nAction: learn_about_AI\\nAction
       Input: {}\",\n        \"refusal\": null\n      },\n      \"logprobs\": null,\n
       \     \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\":
-      277,\n    \"completion_tokens\": 26,\n    \"total_tokens\": 303,\n    \"completion_tokens_details\":
-      {\n      \"reasoning_tokens\": 0\n    }\n  },\n  \"system_fingerprint\": \"fp_25624ae3a5\"\n}\n"
+      277,\n    \"completion_tokens\": 24,\n    \"total_tokens\": 301,\n    \"completion_tokens_details\":
+      {\n      \"reasoning_tokens\": 0\n    }\n  },\n  \"system_fingerprint\": \"fp_8dd226ca9c\"\n}\n"
     headers:
       CF-Cache-Status:
       - DYNAMIC
       CF-RAY:
-      - 8c3f931bc9e52233-MIA
+      - 8c4f6db90e5da67a-MIA
       Connection:
       - keep-alive
       Content-Encoding:
@@ -75,7 +75,7 @@ interactions:
       Content-Type:
       - application/json
       Date:
-      - Mon, 16 Sep 2024 08:44:27 GMT
+      - Wed, 18 Sep 2024 06:55:08 GMT
       Server:
       - cloudflare
       Transfer-Encoding:
@@ -89,7 +89,7 @@ interactions:
       openai-organization:
       - crewai-iuxna1
       openai-processing-ms:
-      - '317'
+      - '301'
       openai-version:
       - '2020-10-01'
       strict-transport-security:
@@ -107,134 +107,9 @@ interactions:
       x-ratelimit-reset-tokens:
       - 0s
       x-request-id:
-      - req_d16433691cbdb514174499c0fad3dbd3
+      - req_fec2a48206ece37ddaa568c7a24cc613
     http_version: HTTP/1.1
     status_code: 200
-- request:
-    body: !!binary |
-      CqAqCiQKIgoMc2VydmljZS5uYW1lEhIKEGNyZXdBSS10ZWxlbWV0cnkS9ykKEgoQY3Jld2FpLnRl
-      bGVtZXRyeRKcAQoQUE+6/iVudhPJ17NGJqS08hIImmNEZKXidJMqE1Rvb2wgUmVwZWF0ZWQgVXNh
-      Z2UwATlg7xZtA631F0HocxltA631F0oaCg5jcmV3YWlfdmVyc2lvbhIICgYwLjU2LjNKHwoJdG9v
-      bF9uYW1lEhIKEGdldF9maW5hbF9hbnN3ZXJKDgoIYXR0ZW1wdHMSAhgBegIYAYUBAAEAABKcAQoQ
-      Yjqk3JA3QO6+AMH5eIpi+BIImGhW5qcn6F4qE1Rvb2wgUmVwZWF0ZWQgVXNhZ2UwATkgLXOkA631
-      F0GYAXekA631F0oaCg5jcmV3YWlfdmVyc2lvbhIICgYwLjU2LjNKHwoJdG9vbF9uYW1lEhIKEGdl
-      dF9maW5hbF9hbnN3ZXJKDgoIYXR0ZW1wdHMSAhgBegIYAYUBAAEAABKcAQoQMcdiybQMbo2QBY46
-      rdAfVBIIIxmLeiriwxUqE1Rvb2wgUmVwZWF0ZWQgVXNhZ2UwATlATwHUA631F0GInAfUA631F0oa
-      Cg5jcmV3YWlfdmVyc2lvbhIICgYwLjU2LjNKHwoJdG9vbF9uYW1lEhIKEGdldF9maW5hbF9hbnN3
-      ZXJKDgoIYXR0ZW1wdHMSAhgBegIYAYUBAAEAABKQAgoQtwVB4rph+ZDb2nhs3O4fHBIIWAMKntxq
-      zwUqDlRhc2sgRXhlY3V0aW9uMAE50Gn9fgKt9RdBKFdM+AOt9RdKLgoIY3Jld19rZXkSIgogZDU1
-      MTEzYmU0YWE0MWJhNjQzZDMyNjA0MmIyZjAzZjFKMQoHY3Jld19pZBImCiQzNDRhNDczNi0zMzFj
-      LTRlZGMtOWU4Ni1iNzI3NGEyMjgxM2ZKLgoIdGFza19rZXkSIgogNGEzMWI4NTEzM2EzYTI5NGM2
-      ODUzZGE3NTdkNGJhZTdKMQoHdGFza19pZBImCiQ5ZmEzOGE2My00ZGMxLTQ5NWMtYjE4MS1mNTlm
-      YjQ4YmQzNGV6AhgBhQEAAQAAErINChDSR8BdaQDSNuj/O1v94EfUEghQqud0N7mrBSoMQ3JldyBD
-      cmVhdGVkMAE5+Iv6+QOt9RdB8BUA+gOt9RdKGgoOY3Jld2FpX3ZlcnNpb24SCAoGMC41Ni4zShoK
-      DnB5dGhvbl92ZXJzaW9uEggKBjMuMTEuN0ouCghjcmV3X2tleRIiCiAxMTFiODcyZDhmMGNmNzAz
-      ZjJlZmVmMDRjZjNhYzc5OEoxCgdjcmV3X2lkEiYKJGVkYzcwZWY2LTM5NjgtNDlmMi04MTI2LTk0
-      YmRmYjFlMzNmNkocCgxjcmV3X3Byb2Nlc3MSDAoKc2VxdWVudGlhbEoRCgtjcmV3X21lbW9yeRIC
-      EABKGgoUY3Jld19udW1iZXJfb2ZfdGFza3MSAhgDShsKFWNyZXdfbnVtYmVyX29mX2FnZW50cxIC
-      GAJKiAUKC2NyZXdfYWdlbnRzEvgECvUEW3sia2V5IjogImUxNDhlNTMyMDI5MzQ5OWY4Y2ViZWE4
-      MjZlNzI1ODJiIiwgImlkIjogIjQ2ZGQyMDRhLTVmYTYtNDZhMi05ZDA0LTQ3YWM1YTEwYTgwMSIs
-      ICJyb2xlIjogInRlc3Qgcm9sZSIsICJ2ZXJib3NlPyI6IGZhbHNlLCAibWF4X2l0ZXIiOiAxNSwg
-      Im1heF9ycG0iOiBudWxsLCAiZnVuY3Rpb25fY2FsbGluZ19sbG0iOiBudWxsLCAibGxtIjogImdw
-      dC00byIsICJkZWxlZ2F0aW9uX2VuYWJsZWQ/IjogZmFsc2UsICJhbGxvd19jb2RlX2V4ZWN1dGlv
-      bj8iOiBmYWxzZSwgIm1heF9yZXRyeV9saW1pdCI6IDIsICJ0b29sc19uYW1lcyI6IFtdfSwgeyJr
-      ZXkiOiAiZTdlOGVlYTg4NmJjYjhmMTA0NWFiZWVjZjE0MjVkYjciLCAiaWQiOiAiODg1MWU1NzYt
-      NGIzYS00NjhkLTk2MmUtY2RkMDZhYjJhNjQwIiwgInJvbGUiOiAidGVzdCByb2xlMiIsICJ2ZXJi
-      b3NlPyI6IGZhbHNlLCAibWF4X2l0ZXIiOiAxNSwgIm1heF9ycG0iOiBudWxsLCAiZnVuY3Rpb25f
-      Y2FsbGluZ19sbG0iOiBudWxsLCAibGxtIjogImdwdC00byIsICJkZWxlZ2F0aW9uX2VuYWJsZWQ/
-      IjogZmFsc2UsICJhbGxvd19jb2RlX2V4ZWN1dGlvbj8iOiBmYWxzZSwgIm1heF9yZXRyeV9saW1p
-      dCI6IDIsICJ0b29sc19uYW1lcyI6IFtdfV1K1wUKCmNyZXdfdGFza3MSyAUKxQVbeyJrZXkiOiAi
-      MzIyZGRhZTNiYzgwYzFkNDViODVmYTc3NTZkYjg2NjUiLCAiaWQiOiAiZWZiYWM2NjAtYzNkZS00
-      ODgwLWFlMDctOGJlODY0MzhiNmRlIiwgImFzeW5jX2V4ZWN1dGlvbj8iOiBmYWxzZSwgImh1bWFu
-      X2lucHV0PyI6IGZhbHNlLCAiYWdlbnRfcm9sZSI6ICJ0ZXN0IHJvbGUiLCAiYWdlbnRfa2V5Ijog
-      ImUxNDhlNTMyMDI5MzQ5OWY4Y2ViZWE4MjZlNzI1ODJiIiwgInRvb2xzX25hbWVzIjogW119LCB7
-      ImtleSI6ICJjYzQ4NzZmNmU1ODhlNzEzNDliYmQzYTY1ODg4YzNlOSIsICJpZCI6ICI5NDMxMWVk
-      MS0xNjg4LTQ4NDAtOTRmYi1iOWU5MmZkZDI1NjkiLCAiYXN5bmNfZXhlY3V0aW9uPyI6IGZhbHNl
-      LCAiaHVtYW5faW5wdXQ/IjogZmFsc2UsICJhZ2VudF9yb2xlIjogInRlc3Qgcm9sZSIsICJhZ2Vu
-      dF9rZXkiOiAiZTE0OGU1MzIwMjkzNDk5ZjhjZWJlYTgyNmU3MjU4MmIiLCAidG9vbHNfbmFtZXMi
-      OiBbXX0sIHsia2V5IjogImUwYjEzZTEwZDdhMTQ2ZGNjNGM0ODhmY2Y4ZDc0OGEwIiwgImlkIjog
-      ImU4YzE1MzEyLWU5ODktNGEwMi1iZDE0LTNlYjExZTRiYTM3ZSIsICJhc3luY19leGVjdXRpb24/
-      IjogZmFsc2UsICJodW1hbl9pbnB1dD8iOiBmYWxzZSwgImFnZW50X3JvbGUiOiAidGVzdCByb2xl
-      MiIsICJhZ2VudF9rZXkiOiAiZTdlOGVlYTg4NmJjYjhmMTA0NWFiZWVjZjE0MjVkYjciLCAidG9v
-      bHNfbmFtZXMiOiBbXX1degIYAYUBAAEAABKOAgoQ/jX8vzUv0OJmWu6YPZqw5RIIMorBqdkTkTcq
-      DFRhc2sgQ3JlYXRlZDABORDsE/oDrfUXQeBwFPoDrfUXSi4KCGNyZXdfa2V5EiIKIDExMWI4NzJk
-      OGYwY2Y3MDNmMmVmZWYwNGNmM2FjNzk4SjEKB2NyZXdfaWQSJgokZWRjNzBlZjYtMzk2OC00OWYy
-      LTgxMjYtOTRiZGZiMWUzM2Y2Si4KCHRhc2tfa2V5EiIKIDMyMmRkYWUzYmM4MGMxZDQ1Yjg1ZmE3
-      NzU2ZGI4NjY1SjEKB3Rhc2tfaWQSJgokZWZiYWM2NjAtYzNkZS00ODgwLWFlMDctOGJlODY0Mzhi
-      NmRlegIYAYUBAAEAABKQAgoQtVc2pRiMYOgfYbpnENSd/hII3TcVDGjcWBoqDlRhc2sgRXhlY3V0
-      aW9uMAE5qKMU+gOt9RdB2FWVHgSt9RdKLgoIY3Jld19rZXkSIgogMTExYjg3MmQ4ZjBjZjcwM2Yy
-      ZWZlZjA0Y2YzYWM3OThKMQoHY3Jld19pZBImCiRlZGM3MGVmNi0zOTY4LTQ5ZjItODEyNi05NGJk
-      ZmIxZTMzZjZKLgoIdGFza19rZXkSIgogMzIyZGRhZTNiYzgwYzFkNDViODVmYTc3NTZkYjg2NjVK
-      MQoHdGFza19pZBImCiRlZmJhYzY2MC1jM2RlLTQ4ODAtYWUwNy04YmU4NjQzOGI2ZGV6AhgBhQEA
-      AQAAEo4CChDUr7db0U+BvOsw5RCDKZdmEghNLPhwtAwmXSoMVGFzayBDcmVhdGVkMAE5mG/KHgSt
-      9RdBYJDNHgSt9RdKLgoIY3Jld19rZXkSIgogMTExYjg3MmQ4ZjBjZjcwM2YyZWZlZjA0Y2YzYWM3
-      OThKMQoHY3Jld19pZBImCiRlZGM3MGVmNi0zOTY4LTQ5ZjItODEyNi05NGJkZmIxZTMzZjZKLgoI
-      dGFza19rZXkSIgogY2M0ODc2ZjZlNTg4ZTcxMzQ5YmJkM2E2NTg4OGMzZTlKMQoHdGFza19pZBIm
-      CiQ5NDMxMWVkMS0xNjg4LTQ4NDAtOTRmYi1iOWU5MmZkZDI1Njl6AhgBhQEAAQAAEpACChCZCGQq
-      +eu6vQ26058kvcQ4EghBHK/BSXTiCioOVGFzayBFeGVjdXRpb24wATlwNM4eBK31F0HgZrNBBK31
-      F0ouCghjcmV3X2tleRIiCiAxMTFiODcyZDhmMGNmNzAzZjJlZmVmMDRjZjNhYzc5OEoxCgdjcmV3
-      X2lkEiYKJGVkYzcwZWY2LTM5NjgtNDlmMi04MTI2LTk0YmRmYjFlMzNmNkouCgh0YXNrX2tleRIi
-      CiBjYzQ4NzZmNmU1ODhlNzEzNDliYmQzYTY1ODg4YzNlOUoxCgd0YXNrX2lkEiYKJDk0MzExZWQx
-      LTE2ODgtNDg0MC05NGZiLWI5ZTkyZmRkMjU2OXoCGAGFAQABAAASjgIKEDMSsyhv936fx4dQTtg8
-      GyESCP/F3olkDBA1KgxUYXNrIENyZWF0ZWQwATnoIeFBBK31F0GgIeNBBK31F0ouCghjcmV3X2tl
-      eRIiCiAxMTFiODcyZDhmMGNmNzAzZjJlZmVmMDRjZjNhYzc5OEoxCgdjcmV3X2lkEiYKJGVkYzcw
-      ZWY2LTM5NjgtNDlmMi04MTI2LTk0YmRmYjFlMzNmNkouCgh0YXNrX2tleRIiCiBlMGIxM2UxMGQ3
-      YTE0NmRjYzRjNDg4ZmNmOGQ3NDhhMEoxCgd0YXNrX2lkEiYKJGU4YzE1MzEyLWU5ODktNGEwMi1i
-      ZDE0LTNlYjExZTRiYTM3ZXoCGAGFAQABAAASkAIKEIVFkgMKchS2IU/5Vld5WGgSCLvfqk+PU0N+
-      Kg5UYXNrIEV4ZWN1dGlvbjABObia40EErfUXQYjQsGQErfUXSi4KCGNyZXdfa2V5EiIKIDExMWI4
-      NzJkOGYwY2Y3MDNmMmVmZWYwNGNmM2FjNzk4SjEKB2NyZXdfaWQSJgokZWRjNzBlZjYtMzk2OC00
-      OWYyLTgxMjYtOTRiZGZiMWUzM2Y2Si4KCHRhc2tfa2V5EiIKIGUwYjEzZTEwZDdhMTQ2ZGNjNGM0
-      ODhmY2Y4ZDc0OGEwSjEKB3Rhc2tfaWQSJgokZThjMTUzMTItZTk4OS00YTAyLWJkMTQtM2ViMTFl
-      NGJhMzdlegIYAYUBAAEAABK+BwoQ/a3X7p87NEUD4rXUpzZMpxIISF5tcD/+fXUqDENyZXcgQ3Jl
-      YXRlZDABOfDRF2cErfUXQSA1G2cErfUXShoKDmNyZXdhaV92ZXJzaW9uEggKBjAuNTYuM0oaCg5w
-      eXRob25fdmVyc2lvbhIICgYzLjExLjdKLgoIY3Jld19rZXkSIgogNDk0ZjM2NTcyMzdhZDhhMzAz
-      NWIyZjFiZWVjZGM2NzdKMQoHY3Jld19pZBImCiQyNDdlMGZhMi0zNzc5LTQwZmMtYTM2NC03M2Ex
-      ZDcxZmU1N2VKHAoMY3Jld19wcm9jZXNzEgwKCnNlcXVlbnRpYWxKEQoLY3Jld19tZW1vcnkSAhAA
-      ShoKFGNyZXdfbnVtYmVyX29mX3Rhc2tzEgIYAUobChVjcmV3X251bWJlcl9vZl9hZ2VudHMSAhgB
-      St0CCgtjcmV3X2FnZW50cxLNAgrKAlt7ImtleSI6ICJlMTQ4ZTUzMjAyOTM0OTlmOGNlYmVhODI2
-      ZTcyNTgyYiIsICJpZCI6ICIxMDE4ZTljZC03Yzg1LTQ0OWItOTg0OS0yMTkzYWNiOWY1NDUiLCAi
-      cm9sZSI6ICJ0ZXN0IHJvbGUiLCAidmVyYm9zZT8iOiBmYWxzZSwgIm1heF9pdGVyIjogMTUsICJt
-      YXhfcnBtIjogbnVsbCwgImZ1bmN0aW9uX2NhbGxpbmdfbGxtIjogbnVsbCwgImxsbSI6ICJncHQt
-      NG8iLCAiZGVsZWdhdGlvbl9lbmFibGVkPyI6IGZhbHNlLCAiYWxsb3dfY29kZV9leGVjdXRpb24/
-      IjogZmFsc2UsICJtYXhfcmV0cnlfbGltaXQiOiAyLCAidG9vbHNfbmFtZXMiOiBbImxlYXJuX2Fi
-      b3V0X2FpIl19XUqOAgoKY3Jld190YXNrcxL/AQr8AVt7ImtleSI6ICJmMjU5N2M3ODY3ZmJlMzI0
-      ZGM2NWRjMDhkZmRiZmM2YyIsICJpZCI6ICJkYzY4NjgxNi1jZjFhLTQ1ZDQtODk5MC02MzliZWI1
-      MDIzNzIiLCAiYXN5bmNfZXhlY3V0aW9uPyI6IGZhbHNlLCAiaHVtYW5faW5wdXQ/IjogZmFsc2Us
-      ICJhZ2VudF9yb2xlIjogInRlc3Qgcm9sZSIsICJhZ2VudF9rZXkiOiAiZTE0OGU1MzIwMjkzNDk5
-      ZjhjZWJlYTgyNmU3MjU4MmIiLCAidG9vbHNfbmFtZXMiOiBbImxlYXJuX2Fib3V0X2FpIl19XXoC
-      GAGFAQABAAASjgIKECPPnZEIV4LcTvnVh4AjQVESCOwIP55sahZeKgxUYXNrIENyZWF0ZWQwATk4
-      C0tnBK31F0EYt0tnBK31F0ouCghjcmV3X2tleRIiCiA0OTRmMzY1NzIzN2FkOGEzMDM1YjJmMWJl
-      ZWNkYzY3N0oxCgdjcmV3X2lkEiYKJDI0N2UwZmEyLTM3NzktNDBmYy1hMzY0LTczYTFkNzFmZTU3
-      ZUouCgh0YXNrX2tleRIiCiBmMjU5N2M3ODY3ZmJlMzI0ZGM2NWRjMDhkZmRiZmM2Y0oxCgd0YXNr
-      X2lkEiYKJGRjNjg2ODE2LWNmMWEtNDVkNC04OTkwLTYzOWJlYjUwMjM3MnoCGAGFAQABAAA=
-    headers:
-      Accept:
-      - '*/*'
-      Accept-Encoding:
-      - gzip, deflate
-      Connection:
-      - keep-alive
-      Content-Length:
-      - '5411'
-      Content-Type:
-      - application/x-protobuf
-      User-Agent:
-      - OTel-OTLP-Exporter-Python/1.27.0
-    method: POST
-    uri: https://telemetry.crewai.com:4319/v1/traces
-  response:
-    body:
-      string: "\n\0"
-    headers:
-      Content-Length:
-      - '2'
-      Content-Type:
-      - application/x-protobuf
-      Date:
-      - Mon, 16 Sep 2024 08:44:27 GMT
-    status:
-      code: 200
-      message: OK
 - request:
     body: '{"messages": [{"role": "system", "content": "You are test role. test backstory\nYour
       personal goal is: test goal\nYou ONLY have access to the following tools, and
@@ -252,10 +127,10 @@ interactions:
       is the expect criteria for your final answer: The final paragraph.\nyou MUST
       return the actual complete content as the final answer, not a summary.\n\nBegin!
       This is VERY important to you, use the tools available and give your best Final
-      Answer, your job depends on it!\n\nThought:"}, {"role": "assistant", "content":
-      "I need to gather information on AI to write a comprehensive and compelling
-      paragraph. \n\nAction: learn_about_AI\nAction Input: {}\nObservation: AI is
-      a very broad field."}], "model": "gpt-4o", "stop": ["\nObservation:"]}'
+      Answer, your job depends on it!\n\nThought:"}, {"role": "user", "content": "I
+      need to gather detailed information about AI to write an amazing paragraph.\n\nAction:
+      learn_about_AI\nAction Input: {}\nObservation: AI is a very broad field."}],
+      "model": "gpt-4o", "stop": ["\nObservation:"]}'
     headers:
       accept:
       - application/json
@@ -264,16 +139,16 @@ interactions:
       connection:
       - keep-alive
       content-length:
-      - '1585'
+      - '1571'
       content-type:
       - application/json
       cookie:
-      - __cf_bm=1SckBhvJ18Dazp6bi8DEKYeiS9Q4.6_6i3nmLBw9b6g-1726476036-1.0.1.1-TnN4UpDXA33YXCVCUWOaZ12vGIg_o5NpJQEUHgjn6XdUgb7M0ND8PdkTfkd8rrxG5XFlPRMzI54GxZ0FeUY9xw;
-        _cfuvid=0Rs4xTPk7h7OIXuSbTgMVVD9JSoZeKMwnygKHoHQo3k-1726476036297-0.0.1.1-604800000
+      - __cf_bm=.8.5x0rqghNdtUCxfmwblfhuXiKyPm_cRq.NIa0heL0-1726642369-1.0.1.1-VbsAGqjOt45ZD50K2QW2oZrByLLIh6w8K4nAkLthTbXgU5qTgdf0mhvFId8Q2F3DcHUw9E72lVIZEN.YVlYINQ;
+        _cfuvid=o5s1Ux898x0eFNtzUCnG996iqyX3LgXDXq99C5oqnVE-1726642369248-0.0.1.1-604800000
       host:
       - api.openai.com
       user-agent:
-      - OpenAI/Python 1.45.0
+      - OpenAI/Python 1.46.0
       x-stainless-arch:
       - arm64
       x-stainless-async:
@@ -283,7 +158,7 @@ interactions:
       x-stainless-os:
       - MacOS
       x-stainless-package-version:
-      - 1.45.0
+      - 1.46.0
       x-stainless-raw-response:
       - 'true'
       x-stainless-runtime:
@@ -293,44 +168,20 @@ interactions:
     method: POST
     uri: https://api.openai.com/v1/chat/completions
   response:
-    content: "{\n  \"id\": \"chatcmpl-A81dLFlNcdwCUS6oskZhOLnXWTuZJ\",\n  \"object\":
-      \"chat.completion\",\n  \"created\": 1726476267,\n  \"model\": \"gpt-4o-2024-05-13\",\n
+    content: "{\n  \"id\": \"chatcmpl-A8iseWB5Fq6uuygfyMSDHRuxjXnCD\",\n  \"object\":
+      \"chat.completion\",\n  \"created\": 1726642508,\n  \"model\": \"gpt-4o-2024-05-13\",\n
       \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
-      \"assistant\",\n        \"content\": \"Thought: I now need to integrate the
-      information into a well-written paragraph about AI and then review it to ensure
-      it meets the criteria of being AMAZING.\\n\\nAI, or Artificial Intelligence,
-      refers to the simulation of human intelligence in machines that are programmed
-      to think and learn like humans. This technology has revolutionized various fields,
-      including healthcare, finance, and robotics, by enabling systems to analyze
-      vast amounts of data, recognize patterns, and make informed decisions with minimal
-      human intervention. One of the most significant advantages of AI is its ability
-      to perform complex tasks with high accuracy and efficiency, transforming the
-      way businesses and services operate. From personalized recommendations on streaming
-      services to advanced diagnostic tools in medicine, AI has the potential to enhance
-      our everyday lives significantly. As AI continues to evolve, it holds the promise
-      of unlocking new possibilities and addressing some of the most pressing challenges
-      facing humanity today.\\n\\nThought: I should review this paragraph to ensure
-      it is thorough, engaging, and meets the criteria of being AMAZING.\\n\\nFinal
-      Answer: AI, or Artificial Intelligence, refers to the simulation of human intelligence
-      in machines that are programmed to think and learn like humans. This technology
-      has revolutionized various fields, including healthcare, finance, and robotics,
-      by enabling systems to analyze vast amounts of data, recognize patterns, and
-      make informed decisions with minimal human intervention. One of the most significant
-      advantages of AI is its ability to perform complex tasks with high accuracy
-      and efficiency, transforming the way businesses and services operate. From personalized
-      recommendations on streaming services to advanced diagnostic tools in medicine,
-      AI has the potential to enhance our everyday lives significantly. As AI continues
-      to evolve, it holds the promise of unlocking new possibilities and addressing
-      some of the most pressing challenges facing humanity today.\",\n        \"refusal\":
-      null\n      },\n      \"logprobs\": null,\n      \"finish_reason\": \"stop\"\n
-      \   }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 316,\n    \"completion_tokens\":
-      340,\n    \"total_tokens\": 656,\n    \"completion_tokens_details\": {\n      \"reasoning_tokens\":
-      0\n    }\n  },\n  \"system_fingerprint\": \"fp_25624ae3a5\"\n}\n"
+      \"assistant\",\n        \"content\": \"Thought: I need more specific and comprehensive
+      information on AI to craft an amazing paragraph.\\n\\nAction: learn_about_AI\\nAction
+      Input: {}\",\n        \"refusal\": null\n      },\n      \"logprobs\": null,\n
+      \     \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\":
+      314,\n    \"completion_tokens\": 27,\n    \"total_tokens\": 341,\n    \"completion_tokens_details\":
+      {\n      \"reasoning_tokens\": 0\n    }\n  },\n  \"system_fingerprint\": \"fp_8dd226ca9c\"\n}\n"
     headers:
       CF-Cache-Status:
       - DYNAMIC
       CF-RAY:
-      - 8c3f931f8ae12233-MIA
+      - 8c4f6dbcd851a67a-MIA
       Connection:
       - keep-alive
       Content-Encoding:
@@ -338,7 +189,7 @@ interactions:
       Content-Type:
       - application/json
       Date:
-      - Mon, 16 Sep 2024 08:44:30 GMT
+      - Wed, 18 Sep 2024 06:55:08 GMT
       Server:
       - cloudflare
       Transfer-Encoding:
@@ -352,7 +203,7 @@ interactions:
       openai-organization:
       - crewai-iuxna1
       openai-processing-ms:
-      - '3093'
+      - '326'
       openai-version:
       - '2020-10-01'
       strict-transport-security:
@@ -364,13 +215,1049 @@ interactions:
       x-ratelimit-remaining-requests:
       - '9999'
       x-ratelimit-remaining-tokens:
-      - '29999634'
+      - '29999635'
       x-ratelimit-reset-requests:
       - 6ms
       x-ratelimit-reset-tokens:
       - 0s
       x-request-id:
-      - req_b6e8cbff3e9c6ff452329ba9e7795ded
+      - req_4caca47bc16bd9e3244cde87274121c3
+    http_version: HTTP/1.1
+    status_code: 200
+- request:
+    body: '{"messages": [{"role": "system", "content": "You are test role. test backstory\nYour
+      personal goal is: test goal\nYou ONLY have access to the following tools, and
+      should NEVER make up tools that are not listed here:\n\nTool Name: learn_about_AI(*args:
+      Any, **kwargs: Any) -> Any\nTool Description: learn_about_AI() - Useful for
+      when you need to learn about AI to write an paragraph about it. \nTool Arguments:
+      {}\n\nUse the following format:\n\nThought: you should always think about what
+      to do\nAction: the action to take, only one name of [learn_about_AI], just the
+      name, exactly as it''s written.\nAction Input: the input to the action, just
+      a simple python dictionary, enclosed in curly braces, using \" to wrap keys
+      and values.\nObservation: the result of the action\n\nOnce all necessary information
+      is gathered:\n\nThought: I now know the final answer\nFinal Answer: the final
+      answer to the original input question\n"}, {"role": "user", "content": "\nCurrent
+      Task: Write and then review an small paragraph on AI until it''s AMAZING\n\nThis
+      is the expect criteria for your final answer: The final paragraph.\nyou MUST
+      return the actual complete content as the final answer, not a summary.\n\nBegin!
+      This is VERY important to you, use the tools available and give your best Final
+      Answer, your job depends on it!\n\nThought:"}, {"role": "user", "content": "I
+      need to gather detailed information about AI to write an amazing paragraph.\n\nAction:
+      learn_about_AI\nAction Input: {}\nObservation: AI is a very broad field."},
+      {"role": "user", "content": "Thought: I need more specific and comprehensive
+      information on AI to craft an amazing paragraph.\n\nAction: learn_about_AI\nAction
+      Input: {}\nObservation: I tried reusing the same input, I must stop using this
+      action input. I''ll try something else instead.\n\n"}], "model": "gpt-4o", "stop":
+      ["\nObservation:"]}'
+    headers:
+      accept:
+      - application/json
+      accept-encoding:
+      - gzip, deflate
+      connection:
+      - keep-alive
+      content-length:
+      - '1864'
+      content-type:
+      - application/json
+      cookie:
+      - __cf_bm=.8.5x0rqghNdtUCxfmwblfhuXiKyPm_cRq.NIa0heL0-1726642369-1.0.1.1-VbsAGqjOt45ZD50K2QW2oZrByLLIh6w8K4nAkLthTbXgU5qTgdf0mhvFId8Q2F3DcHUw9E72lVIZEN.YVlYINQ;
+        _cfuvid=o5s1Ux898x0eFNtzUCnG996iqyX3LgXDXq99C5oqnVE-1726642369248-0.0.1.1-604800000
+      host:
+      - api.openai.com
+      user-agent:
+      - OpenAI/Python 1.46.0
+      x-stainless-arch:
+      - arm64
+      x-stainless-async:
+      - 'false'
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - MacOS
+      x-stainless-package-version:
+      - 1.46.0
+      x-stainless-raw-response:
+      - 'true'
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.11.7
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    content: "{\n  \"id\": \"chatcmpl-A8isfSuqZVE2UnV79ukPDSg0U8Dla\",\n  \"object\":
+      \"chat.completion\",\n  \"created\": 1726642509,\n  \"model\": \"gpt-4o-2024-05-13\",\n
+      \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
+      \"assistant\",\n        \"content\": \"Thought: Since using empty inputs does
+      not yield specific results, I should focus on my understanding of AI and combine
+      it with detailed examples to craft an amazing paragraph.\\n\\nAction: learn_about_AI\\nAction
+      Input: {}\\n\",\n        \"refusal\": null\n      },\n      \"logprobs\": null,\n
+      \     \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\":
+      369,\n    \"completion_tokens\": 42,\n    \"total_tokens\": 411,\n    \"completion_tokens_details\":
+      {\n      \"reasoning_tokens\": 0\n    }\n  },\n  \"system_fingerprint\": \"fp_8dd226ca9c\"\n}\n"
+    headers:
+      CF-Cache-Status:
+      - DYNAMIC
+      CF-RAY:
+      - 8c4f6dc0da2fa67a-MIA
+      Connection:
+      - keep-alive
+      Content-Encoding:
+      - gzip
+      Content-Type:
+      - application/json
+      Date:
+      - Wed, 18 Sep 2024 06:55:09 GMT
+      Server:
+      - cloudflare
+      Transfer-Encoding:
+      - chunked
+      X-Content-Type-Options:
+      - nosniff
+      access-control-expose-headers:
+      - X-Request-ID
+      alt-svc:
+      - h3=":443"; ma=86400
+      openai-organization:
+      - crewai-iuxna1
+      openai-processing-ms:
+      - '554'
+      openai-version:
+      - '2020-10-01'
+      strict-transport-security:
+      - max-age=15552000; includeSubDomains; preload
+      x-ratelimit-limit-requests:
+      - '10000'
+      x-ratelimit-limit-tokens:
+      - '30000000'
+      x-ratelimit-remaining-requests:
+      - '9999'
+      x-ratelimit-remaining-tokens:
+      - '29999572'
+      x-ratelimit-reset-requests:
+      - 6ms
+      x-ratelimit-reset-tokens:
+      - 0s
+      x-request-id:
+      - req_1b28842c322de09c15d01c2289fee4a8
+    http_version: HTTP/1.1
+    status_code: 200
+- request:
+    body: '{"messages": [{"role": "system", "content": "You are test role. test backstory\nYour
+      personal goal is: test goal\nYou ONLY have access to the following tools, and
+      should NEVER make up tools that are not listed here:\n\nTool Name: learn_about_AI(*args:
+      Any, **kwargs: Any) -> Any\nTool Description: learn_about_AI() - Useful for
+      when you need to learn about AI to write an paragraph about it. \nTool Arguments:
+      {}\n\nUse the following format:\n\nThought: you should always think about what
+      to do\nAction: the action to take, only one name of [learn_about_AI], just the
+      name, exactly as it''s written.\nAction Input: the input to the action, just
+      a simple python dictionary, enclosed in curly braces, using \" to wrap keys
+      and values.\nObservation: the result of the action\n\nOnce all necessary information
+      is gathered:\n\nThought: I now know the final answer\nFinal Answer: the final
+      answer to the original input question\n"}, {"role": "user", "content": "\nCurrent
+      Task: Write and then review an small paragraph on AI until it''s AMAZING\n\nThis
+      is the expect criteria for your final answer: The final paragraph.\nyou MUST
+      return the actual complete content as the final answer, not a summary.\n\nBegin!
+      This is VERY important to you, use the tools available and give your best Final
+      Answer, your job depends on it!\n\nThought:"}, {"role": "user", "content": "I
+      need to gather detailed information about AI to write an amazing paragraph.\n\nAction:
+      learn_about_AI\nAction Input: {}\nObservation: AI is a very broad field."},
+      {"role": "user", "content": "Thought: I need more specific and comprehensive
+      information on AI to craft an amazing paragraph.\n\nAction: learn_about_AI\nAction
+      Input: {}\nObservation: I tried reusing the same input, I must stop using this
+      action input. I''ll try something else instead.\n\n"}, {"role": "user", "content":
+      "Thought: Since using empty inputs does not yield specific results, I should
+      focus on my understanding of AI and combine it with detailed examples to craft
+      an amazing paragraph.\n\nAction: learn_about_AI\nAction Input: {}\n\nObservation:
+      I tried reusing the same input, I must stop using this action input. I''ll try
+      something else instead.\n\n\n\n\nYou ONLY have access to the following tools,
+      and should NEVER make up tools that are not listed here:\n\nTool Name: learn_about_AI(*args:
+      Any, **kwargs: Any) -> Any\nTool Description: learn_about_AI() - Useful for
+      when you need to learn about AI to write an paragraph about it. \nTool Arguments:
+      {}\n\nUse the following format:\n\nThought: you should always think about what
+      to do\nAction: the action to take, only one name of [learn_about_AI], just the
+      name, exactly as it''s written.\nAction Input: the input to the action, just
+      a simple python dictionary, enclosed in curly braces, using \" to wrap keys
+      and values.\nObservation: the result of the action\n\nOnce all necessary information
+      is gathered:\n\nThought: I now know the final answer\nFinal Answer: the final
+      answer to the original input question\n"}], "model": "gpt-4o", "stop": ["\nObservation:"]}'
+    headers:
+      accept:
+      - application/json
+      accept-encoding:
+      - gzip, deflate
+      connection:
+      - keep-alive
+      content-length:
+      - '3053'
+      content-type:
+      - application/json
+      cookie:
+      - __cf_bm=.8.5x0rqghNdtUCxfmwblfhuXiKyPm_cRq.NIa0heL0-1726642369-1.0.1.1-VbsAGqjOt45ZD50K2QW2oZrByLLIh6w8K4nAkLthTbXgU5qTgdf0mhvFId8Q2F3DcHUw9E72lVIZEN.YVlYINQ;
+        _cfuvid=o5s1Ux898x0eFNtzUCnG996iqyX3LgXDXq99C5oqnVE-1726642369248-0.0.1.1-604800000
+      host:
+      - api.openai.com
+      user-agent:
+      - OpenAI/Python 1.46.0
+      x-stainless-arch:
+      - arm64
+      x-stainless-async:
+      - 'false'
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - MacOS
+      x-stainless-package-version:
+      - 1.46.0
+      x-stainless-raw-response:
+      - 'true'
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.11.7
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    content: "{\n  \"id\": \"chatcmpl-A8isf4mgZ1K4q0TsCCbV0fbUPIoJi\",\n  \"object\":
+      \"chat.completion\",\n  \"created\": 1726642509,\n  \"model\": \"gpt-4o-2024-05-13\",\n
+      \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
+      \"assistant\",\n        \"content\": \"Thought: To gather the best and most
+      comprehensive information about AI, I need to ensure the input for the tool
+      is clear and specific. This will help generate the required detailed information.\\n\\nAction:
+      learn_about_AI\\nAction Input: {}\",\n        \"refusal\": null\n      },\n
+      \     \"logprobs\": null,\n      \"finish_reason\": \"stop\"\n    }\n  ],\n
+      \ \"usage\": {\n    \"prompt_tokens\": 613,\n    \"completion_tokens\": 46,\n
+      \   \"total_tokens\": 659,\n    \"completion_tokens_details\": {\n      \"reasoning_tokens\":
+      0\n    }\n  },\n  \"system_fingerprint\": \"fp_8dd226ca9c\"\n}\n"
+    headers:
+      CF-Cache-Status:
+      - DYNAMIC
+      CF-RAY:
+      - 8c4f6dc64caaa67a-MIA
+      Connection:
+      - keep-alive
+      Content-Encoding:
+      - gzip
+      Content-Type:
+      - application/json
+      Date:
+      - Wed, 18 Sep 2024 06:55:10 GMT
+      Server:
+      - cloudflare
+      Transfer-Encoding:
+      - chunked
+      X-Content-Type-Options:
+      - nosniff
+      access-control-expose-headers:
+      - X-Request-ID
+      alt-svc:
+      - h3=":443"; ma=86400
+      openai-organization:
+      - crewai-iuxna1
+      openai-processing-ms:
+      - '470'
+      openai-version:
+      - '2020-10-01'
+      strict-transport-security:
+      - max-age=15552000; includeSubDomains; preload
+      x-ratelimit-limit-requests:
+      - '10000'
+      x-ratelimit-limit-tokens:
+      - '30000000'
+      x-ratelimit-remaining-requests:
+      - '9999'
+      x-ratelimit-remaining-tokens:
+      - '29999288'
+      x-ratelimit-reset-requests:
+      - 6ms
+      x-ratelimit-reset-tokens:
+      - 1ms
+      x-request-id:
+      - req_756b2e5e028bbfb1010f710e7c3109fa
+    http_version: HTTP/1.1
+    status_code: 200
+- request:
+    body: '{"messages": [{"role": "system", "content": "You are test role. test backstory\nYour
+      personal goal is: test goal\nYou ONLY have access to the following tools, and
+      should NEVER make up tools that are not listed here:\n\nTool Name: learn_about_AI(*args:
+      Any, **kwargs: Any) -> Any\nTool Description: learn_about_AI() - Useful for
+      when you need to learn about AI to write an paragraph about it. \nTool Arguments:
+      {}\n\nUse the following format:\n\nThought: you should always think about what
+      to do\nAction: the action to take, only one name of [learn_about_AI], just the
+      name, exactly as it''s written.\nAction Input: the input to the action, just
+      a simple python dictionary, enclosed in curly braces, using \" to wrap keys
+      and values.\nObservation: the result of the action\n\nOnce all necessary information
+      is gathered:\n\nThought: I now know the final answer\nFinal Answer: the final
+      answer to the original input question\n"}, {"role": "user", "content": "\nCurrent
+      Task: Write and then review an small paragraph on AI until it''s AMAZING\n\nThis
+      is the expect criteria for your final answer: The final paragraph.\nyou MUST
+      return the actual complete content as the final answer, not a summary.\n\nBegin!
+      This is VERY important to you, use the tools available and give your best Final
+      Answer, your job depends on it!\n\nThought:"}, {"role": "user", "content": "I
+      need to gather detailed information about AI to write an amazing paragraph.\n\nAction:
+      learn_about_AI\nAction Input: {}\nObservation: AI is a very broad field."},
+      {"role": "user", "content": "Thought: I need more specific and comprehensive
+      information on AI to craft an amazing paragraph.\n\nAction: learn_about_AI\nAction
+      Input: {}\nObservation: I tried reusing the same input, I must stop using this
+      action input. I''ll try something else instead.\n\n"}, {"role": "user", "content":
+      "Thought: Since using empty inputs does not yield specific results, I should
+      focus on my understanding of AI and combine it with detailed examples to craft
+      an amazing paragraph.\n\nAction: learn_about_AI\nAction Input: {}\n\nObservation:
+      I tried reusing the same input, I must stop using this action input. I''ll try
+      something else instead.\n\n\n\n\nYou ONLY have access to the following tools,
+      and should NEVER make up tools that are not listed here:\n\nTool Name: learn_about_AI(*args:
+      Any, **kwargs: Any) -> Any\nTool Description: learn_about_AI() - Useful for
+      when you need to learn about AI to write an paragraph about it. \nTool Arguments:
+      {}\n\nUse the following format:\n\nThought: you should always think about what
+      to do\nAction: the action to take, only one name of [learn_about_AI], just the
+      name, exactly as it''s written.\nAction Input: the input to the action, just
+      a simple python dictionary, enclosed in curly braces, using \" to wrap keys
+      and values.\nObservation: the result of the action\n\nOnce all necessary information
+      is gathered:\n\nThought: I now know the final answer\nFinal Answer: the final
+      answer to the original input question\n"}, {"role": "user", "content": "Thought:
+      To gather the best and most comprehensive information about AI, I need to ensure
+      the input for the tool is clear and specific. This will help generate the required
+      detailed information.\n\nAction: learn_about_AI\nAction Input: {}\nObservation:
+      I tried reusing the same input, I must stop using this action input. I''ll try
+      something else instead.\n\n"}], "model": "gpt-4o", "stop": ["\nObservation:"]}'
+    headers:
+      accept:
+      - application/json
+      accept-encoding:
+      - gzip, deflate
+      connection:
+      - keep-alive
+      content-length:
+      - '3444'
+      content-type:
+      - application/json
+      cookie:
+      - __cf_bm=.8.5x0rqghNdtUCxfmwblfhuXiKyPm_cRq.NIa0heL0-1726642369-1.0.1.1-VbsAGqjOt45ZD50K2QW2oZrByLLIh6w8K4nAkLthTbXgU5qTgdf0mhvFId8Q2F3DcHUw9E72lVIZEN.YVlYINQ;
+        _cfuvid=o5s1Ux898x0eFNtzUCnG996iqyX3LgXDXq99C5oqnVE-1726642369248-0.0.1.1-604800000
+      host:
+      - api.openai.com
+      user-agent:
+      - OpenAI/Python 1.46.0
+      x-stainless-arch:
+      - arm64
+      x-stainless-async:
+      - 'false'
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - MacOS
+      x-stainless-package-version:
+      - 1.46.0
+      x-stainless-raw-response:
+      - 'true'
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.11.7
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    content: "{\n  \"id\": \"chatcmpl-A8isgA8Az1GhfhG6WFWbFAZgDfgBl\",\n  \"object\":
+      \"chat.completion\",\n  \"created\": 1726642510,\n  \"model\": \"gpt-4o-2024-05-13\",\n
+      \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
+      \"assistant\",\n        \"content\": \"Thought: Reusing the same empty input
+      does not yield specific information. Let me rethink my approach and come up
+      with a clear action input that can help me gain comprehensive details about
+      AI for writing a paragraph.\\n\\nAction: learn_about_AI\\nAction Input: {\\\"focus\\\":
+      \\\"overview of AI, its applications, and its impact on society\\\"}\",\n        \"refusal\":
+      null\n      },\n      \"logprobs\": null,\n      \"finish_reason\": \"stop\"\n
+      \   }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 687,\n    \"completion_tokens\":
+      67,\n    \"total_tokens\": 754,\n    \"completion_tokens_details\": {\n      \"reasoning_tokens\":
+      0\n    }\n  },\n  \"system_fingerprint\": \"fp_8dd226ca9c\"\n}\n"
+    headers:
+      CF-Cache-Status:
+      - DYNAMIC
+      CF-RAY:
+      - 8c4f6dcb2f37a67a-MIA
+      Connection:
+      - keep-alive
+      Content-Encoding:
+      - gzip
+      Content-Type:
+      - application/json
+      Date:
+      - Wed, 18 Sep 2024 06:55:11 GMT
+      Server:
+      - cloudflare
+      Transfer-Encoding:
+      - chunked
+      X-Content-Type-Options:
+      - nosniff
+      access-control-expose-headers:
+      - X-Request-ID
+      alt-svc:
+      - h3=":443"; ma=86400
+      openai-organization:
+      - crewai-iuxna1
+      openai-processing-ms:
+      - '698'
+      openai-version:
+      - '2020-10-01'
+      strict-transport-security:
+      - max-age=15552000; includeSubDomains; preload
+      x-ratelimit-limit-requests:
+      - '10000'
+      x-ratelimit-limit-tokens:
+      - '30000000'
+      x-ratelimit-remaining-requests:
+      - '9999'
+      x-ratelimit-remaining-tokens:
+      - '29999199'
+      x-ratelimit-reset-requests:
+      - 6ms
+      x-ratelimit-reset-tokens:
+      - 1ms
+      x-request-id:
+      - req_b806b53d21e8b15e7a07cb8ac81e1ef1
+    http_version: HTTP/1.1
+    status_code: 200
+- request:
+    body: '{"messages": [{"role": "system", "content": "You are test role. test backstory\nYour
+      personal goal is: test goal\nYou ONLY have access to the following tools, and
+      should NEVER make up tools that are not listed here:\n\nTool Name: learn_about_AI(*args:
+      Any, **kwargs: Any) -> Any\nTool Description: learn_about_AI() - Useful for
+      when you need to learn about AI to write an paragraph about it. \nTool Arguments:
+      {}\n\nUse the following format:\n\nThought: you should always think about what
+      to do\nAction: the action to take, only one name of [learn_about_AI], just the
+      name, exactly as it''s written.\nAction Input: the input to the action, just
+      a simple python dictionary, enclosed in curly braces, using \" to wrap keys
+      and values.\nObservation: the result of the action\n\nOnce all necessary information
+      is gathered:\n\nThought: I now know the final answer\nFinal Answer: the final
+      answer to the original input question\n"}, {"role": "user", "content": "\nCurrent
+      Task: Write and then review an small paragraph on AI until it''s AMAZING\n\nThis
+      is the expect criteria for your final answer: The final paragraph.\nyou MUST
+      return the actual complete content as the final answer, not a summary.\n\nBegin!
+      This is VERY important to you, use the tools available and give your best Final
+      Answer, your job depends on it!\n\nThought:"}, {"role": "user", "content": "I
+      need to gather detailed information about AI to write an amazing paragraph.\n\nAction:
+      learn_about_AI\nAction Input: {}\nObservation: AI is a very broad field."},
+      {"role": "user", "content": "Thought: I need more specific and comprehensive
+      information on AI to craft an amazing paragraph.\n\nAction: learn_about_AI\nAction
+      Input: {}\nObservation: I tried reusing the same input, I must stop using this
+      action input. I''ll try something else instead.\n\n"}, {"role": "user", "content":
+      "Thought: Since using empty inputs does not yield specific results, I should
+      focus on my understanding of AI and combine it with detailed examples to craft
+      an amazing paragraph.\n\nAction: learn_about_AI\nAction Input: {}\n\nObservation:
+      I tried reusing the same input, I must stop using this action input. I''ll try
+      something else instead.\n\n\n\n\nYou ONLY have access to the following tools,
+      and should NEVER make up tools that are not listed here:\n\nTool Name: learn_about_AI(*args:
+      Any, **kwargs: Any) -> Any\nTool Description: learn_about_AI() - Useful for
+      when you need to learn about AI to write an paragraph about it. \nTool Arguments:
+      {}\n\nUse the following format:\n\nThought: you should always think about what
+      to do\nAction: the action to take, only one name of [learn_about_AI], just the
+      name, exactly as it''s written.\nAction Input: the input to the action, just
+      a simple python dictionary, enclosed in curly braces, using \" to wrap keys
+      and values.\nObservation: the result of the action\n\nOnce all necessary information
+      is gathered:\n\nThought: I now know the final answer\nFinal Answer: the final
+      answer to the original input question\n"}, {"role": "user", "content": "Thought:
+      To gather the best and most comprehensive information about AI, I need to ensure
+      the input for the tool is clear and specific. This will help generate the required
+      detailed information.\n\nAction: learn_about_AI\nAction Input: {}\nObservation:
+      I tried reusing the same input, I must stop using this action input. I''ll try
+      something else instead.\n\n"}, {"role": "user", "content": "Thought: Reusing
+      the same empty input does not yield specific information. Let me rethink my
+      approach and come up with a clear action input that can help me gain comprehensive
+      details about AI for writing a paragraph.\n\nAction: learn_about_AI\nAction
+      Input: {\"focus\": \"overview of AI, its applications, and its impact on society\"}\nObservation:
+      AI is a very broad field."}], "model": "gpt-4o", "stop": ["\nObservation:"]}'
+    headers:
+      accept:
+      - application/json
+      accept-encoding:
+      - gzip, deflate
+      connection:
+      - keep-alive
+      content-length:
+      - '3852'
+      content-type:
+      - application/json
+      cookie:
+      - __cf_bm=.8.5x0rqghNdtUCxfmwblfhuXiKyPm_cRq.NIa0heL0-1726642369-1.0.1.1-VbsAGqjOt45ZD50K2QW2oZrByLLIh6w8K4nAkLthTbXgU5qTgdf0mhvFId8Q2F3DcHUw9E72lVIZEN.YVlYINQ;
+        _cfuvid=o5s1Ux898x0eFNtzUCnG996iqyX3LgXDXq99C5oqnVE-1726642369248-0.0.1.1-604800000
+      host:
+      - api.openai.com
+      user-agent:
+      - OpenAI/Python 1.46.0
+      x-stainless-arch:
+      - arm64
+      x-stainless-async:
+      - 'false'
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - MacOS
+      x-stainless-package-version:
+      - 1.46.0
+      x-stainless-raw-response:
+      - 'true'
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.11.7
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    content: "{\n  \"id\": \"chatcmpl-A8ish3cQhdHclBSU1BvU407pRYZhs\",\n  \"object\":
+      \"chat.completion\",\n  \"created\": 1726642511,\n  \"model\": \"gpt-4o-2024-05-13\",\n
+      \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
+      \"assistant\",\n        \"content\": \"Thought: I received a broader comment
+      about AI being a very broad field. I'll try a different approach to get more
+      detailed information about AI.\\n\\nAction: learn_about_AI\\nAction Input: {}\",\n
+      \       \"refusal\": null\n      },\n      \"logprobs\": null,\n      \"finish_reason\":
+      \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 767,\n    \"completion_tokens\":
+      38,\n    \"total_tokens\": 805,\n    \"completion_tokens_details\": {\n      \"reasoning_tokens\":
+      0\n    }\n  },\n  \"system_fingerprint\": \"fp_8dd226ca9c\"\n}\n"
+    headers:
+      CF-Cache-Status:
+      - DYNAMIC
+      CF-RAY:
+      - 8c4f6dd18ae2a67a-MIA
+      Connection:
+      - keep-alive
+      Content-Encoding:
+      - gzip
+      Content-Type:
+      - application/json
+      Date:
+      - Wed, 18 Sep 2024 06:55:12 GMT
+      Server:
+      - cloudflare
+      Transfer-Encoding:
+      - chunked
+      X-Content-Type-Options:
+      - nosniff
+      access-control-expose-headers:
+      - X-Request-ID
+      alt-svc:
+      - h3=":443"; ma=86400
+      openai-organization:
+      - crewai-iuxna1
+      openai-processing-ms:
+      - '449'
+      openai-version:
+      - '2020-10-01'
+      strict-transport-security:
+      - max-age=15552000; includeSubDomains; preload
+      x-ratelimit-limit-requests:
+      - '10000'
+      x-ratelimit-limit-tokens:
+      - '30000000'
+      x-ratelimit-remaining-requests:
+      - '9999'
+      x-ratelimit-remaining-tokens:
+      - '29999106'
+      x-ratelimit-reset-requests:
+      - 6ms
+      x-ratelimit-reset-tokens:
+      - 1ms
+      x-request-id:
+      - req_f6eb889d6c4b0ec7c87820799602eaf2
+    http_version: HTTP/1.1
+    status_code: 200
+- request:
+    body: '{"messages": [{"role": "system", "content": "You are test role. test backstory\nYour
+      personal goal is: test goal\nYou ONLY have access to the following tools, and
+      should NEVER make up tools that are not listed here:\n\nTool Name: learn_about_AI(*args:
+      Any, **kwargs: Any) -> Any\nTool Description: learn_about_AI() - Useful for
+      when you need to learn about AI to write an paragraph about it. \nTool Arguments:
+      {}\n\nUse the following format:\n\nThought: you should always think about what
+      to do\nAction: the action to take, only one name of [learn_about_AI], just the
+      name, exactly as it''s written.\nAction Input: the input to the action, just
+      a simple python dictionary, enclosed in curly braces, using \" to wrap keys
+      and values.\nObservation: the result of the action\n\nOnce all necessary information
+      is gathered:\n\nThought: I now know the final answer\nFinal Answer: the final
+      answer to the original input question\n"}, {"role": "user", "content": "\nCurrent
+      Task: Write and then review an small paragraph on AI until it''s AMAZING\n\nThis
+      is the expect criteria for your final answer: The final paragraph.\nyou MUST
+      return the actual complete content as the final answer, not a summary.\n\nBegin!
+      This is VERY important to you, use the tools available and give your best Final
+      Answer, your job depends on it!\n\nThought:"}, {"role": "user", "content": "I
+      need to gather detailed information about AI to write an amazing paragraph.\n\nAction:
+      learn_about_AI\nAction Input: {}\nObservation: AI is a very broad field."},
+      {"role": "user", "content": "Thought: I need more specific and comprehensive
+      information on AI to craft an amazing paragraph.\n\nAction: learn_about_AI\nAction
+      Input: {}\nObservation: I tried reusing the same input, I must stop using this
+      action input. I''ll try something else instead.\n\n"}, {"role": "user", "content":
+      "Thought: Since using empty inputs does not yield specific results, I should
+      focus on my understanding of AI and combine it with detailed examples to craft
+      an amazing paragraph.\n\nAction: learn_about_AI\nAction Input: {}\n\nObservation:
+      I tried reusing the same input, I must stop using this action input. I''ll try
+      something else instead.\n\n\n\n\nYou ONLY have access to the following tools,
+      and should NEVER make up tools that are not listed here:\n\nTool Name: learn_about_AI(*args:
+      Any, **kwargs: Any) -> Any\nTool Description: learn_about_AI() - Useful for
+      when you need to learn about AI to write an paragraph about it. \nTool Arguments:
+      {}\n\nUse the following format:\n\nThought: you should always think about what
+      to do\nAction: the action to take, only one name of [learn_about_AI], just the
+      name, exactly as it''s written.\nAction Input: the input to the action, just
+      a simple python dictionary, enclosed in curly braces, using \" to wrap keys
+      and values.\nObservation: the result of the action\n\nOnce all necessary information
+      is gathered:\n\nThought: I now know the final answer\nFinal Answer: the final
+      answer to the original input question\n"}, {"role": "user", "content": "Thought:
+      To gather the best and most comprehensive information about AI, I need to ensure
+      the input for the tool is clear and specific. This will help generate the required
+      detailed information.\n\nAction: learn_about_AI\nAction Input: {}\nObservation:
+      I tried reusing the same input, I must stop using this action input. I''ll try
+      something else instead.\n\n"}, {"role": "user", "content": "Thought: Reusing
+      the same empty input does not yield specific information. Let me rethink my
+      approach and come up with a clear action input that can help me gain comprehensive
+      details about AI for writing a paragraph.\n\nAction: learn_about_AI\nAction
+      Input: {\"focus\": \"overview of AI, its applications, and its impact on society\"}\nObservation:
+      AI is a very broad field."}, {"role": "user", "content": "Thought: I received
+      a broader comment about AI being a very broad field. I''ll try a different approach
+      to get more detailed information about AI.\n\nAction: learn_about_AI\nAction
+      Input: {}\nObservation: AI is a very broad field.\n\n\nYou ONLY have access
+      to the following tools, and should NEVER make up tools that are not listed here:\n\nTool
+      Name: learn_about_AI(*args: Any, **kwargs: Any) -> Any\nTool Description: learn_about_AI()
+      - Useful for when you need to learn about AI to write an paragraph about it.
+      \nTool Arguments: {}\n\nUse the following format:\n\nThought: you should always
+      think about what to do\nAction: the action to take, only one name of [learn_about_AI],
+      just the name, exactly as it''s written.\nAction Input: the input to the action,
+      just a simple python dictionary, enclosed in curly braces, using \" to wrap
+      keys and values.\nObservation: the result of the action\n\nOnce all necessary
+      information is gathered:\n\nThought: I now know the final answer\nFinal Answer:
+      the final answer to the original input question\n"}], "model": "gpt-4o", "stop":
+      ["\nObservation:"]}'
+    headers:
+      accept:
+      - application/json
+      accept-encoding:
+      - gzip, deflate
+      connection:
+      - keep-alive
+      content-length:
+      - '4928'
+      content-type:
+      - application/json
+      cookie:
+      - __cf_bm=.8.5x0rqghNdtUCxfmwblfhuXiKyPm_cRq.NIa0heL0-1726642369-1.0.1.1-VbsAGqjOt45ZD50K2QW2oZrByLLIh6w8K4nAkLthTbXgU5qTgdf0mhvFId8Q2F3DcHUw9E72lVIZEN.YVlYINQ;
+        _cfuvid=o5s1Ux898x0eFNtzUCnG996iqyX3LgXDXq99C5oqnVE-1726642369248-0.0.1.1-604800000
+      host:
+      - api.openai.com
+      user-agent:
+      - OpenAI/Python 1.46.0
+      x-stainless-arch:
+      - arm64
+      x-stainless-async:
+      - 'false'
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - MacOS
+      x-stainless-package-version:
+      - 1.46.0
+      x-stainless-raw-response:
+      - 'true'
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.11.7
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    content: "{\n  \"id\": \"chatcmpl-A8isilwNtEyAdfnAjd6ZsjydTQbzo\",\n  \"object\":
+      \"chat.completion\",\n  \"created\": 1726642512,\n  \"model\": \"gpt-4o-2024-05-13\",\n
+      \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
+      \"assistant\",\n        \"content\": \"Thought: My previous approach with empty
+      inputs hasn't worked. I need to provide a specific and clear input to get the
+      detailed information I need.\\n\\nAction: learn_about_AI\\nAction Input: {\\\"subject\\\":
+      \\\"overview, applications, and societal impact of AI\\\"}\",\n        \"refusal\":
+      null\n      },\n      \"logprobs\": null,\n      \"finish_reason\": \"stop\"\n
+      \   }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 992,\n    \"completion_tokens\":
+      51,\n    \"total_tokens\": 1043,\n    \"completion_tokens_details\": {\n      \"reasoning_tokens\":
+      0\n    }\n  },\n  \"system_fingerprint\": \"fp_8dd226ca9c\"\n}\n"
+    headers:
+      CF-Cache-Status:
+      - DYNAMIC
+      CF-RAY:
+      - 8c4f6dd66d39a67a-MIA
+      Connection:
+      - keep-alive
+      Content-Encoding:
+      - gzip
+      Content-Type:
+      - application/json
+      Date:
+      - Wed, 18 Sep 2024 06:55:13 GMT
+      Server:
+      - cloudflare
+      Transfer-Encoding:
+      - chunked
+      X-Content-Type-Options:
+      - nosniff
+      access-control-expose-headers:
+      - X-Request-ID
+      alt-svc:
+      - h3=":443"; ma=86400
+      openai-organization:
+      - crewai-iuxna1
+      openai-processing-ms:
+      - '677'
+      openai-version:
+      - '2020-10-01'
+      strict-transport-security:
+      - max-age=15552000; includeSubDomains; preload
+      x-ratelimit-limit-requests:
+      - '10000'
+      x-ratelimit-limit-tokens:
+      - '30000000'
+      x-ratelimit-remaining-requests:
+      - '9999'
+      x-ratelimit-remaining-tokens:
+      - '29998852'
+      x-ratelimit-reset-requests:
+      - 6ms
+      x-ratelimit-reset-tokens:
+      - 2ms
+      x-request-id:
+      - req_b9c2444e58d608e67e208c0e2f30a238
+    http_version: HTTP/1.1
+    status_code: 200
+- request:
+    body: '{"messages": [{"role": "system", "content": "You are test role. test backstory\nYour
+      personal goal is: test goal\nYou ONLY have access to the following tools, and
+      should NEVER make up tools that are not listed here:\n\nTool Name: learn_about_AI(*args:
+      Any, **kwargs: Any) -> Any\nTool Description: learn_about_AI() - Useful for
+      when you need to learn about AI to write an paragraph about it. \nTool Arguments:
+      {}\n\nUse the following format:\n\nThought: you should always think about what
+      to do\nAction: the action to take, only one name of [learn_about_AI], just the
+      name, exactly as it''s written.\nAction Input: the input to the action, just
+      a simple python dictionary, enclosed in curly braces, using \" to wrap keys
+      and values.\nObservation: the result of the action\n\nOnce all necessary information
+      is gathered:\n\nThought: I now know the final answer\nFinal Answer: the final
+      answer to the original input question\n"}, {"role": "user", "content": "\nCurrent
+      Task: Write and then review an small paragraph on AI until it''s AMAZING\n\nThis
+      is the expect criteria for your final answer: The final paragraph.\nyou MUST
+      return the actual complete content as the final answer, not a summary.\n\nBegin!
+      This is VERY important to you, use the tools available and give your best Final
+      Answer, your job depends on it!\n\nThought:"}, {"role": "user", "content": "I
+      need to gather detailed information about AI to write an amazing paragraph.\n\nAction:
+      learn_about_AI\nAction Input: {}\nObservation: AI is a very broad field."},
+      {"role": "user", "content": "Thought: I need more specific and comprehensive
+      information on AI to craft an amazing paragraph.\n\nAction: learn_about_AI\nAction
+      Input: {}\nObservation: I tried reusing the same input, I must stop using this
+      action input. I''ll try something else instead.\n\n"}, {"role": "user", "content":
+      "Thought: Since using empty inputs does not yield specific results, I should
+      focus on my understanding of AI and combine it with detailed examples to craft
+      an amazing paragraph.\n\nAction: learn_about_AI\nAction Input: {}\n\nObservation:
+      I tried reusing the same input, I must stop using this action input. I''ll try
+      something else instead.\n\n\n\n\nYou ONLY have access to the following tools,
+      and should NEVER make up tools that are not listed here:\n\nTool Name: learn_about_AI(*args:
+      Any, **kwargs: Any) -> Any\nTool Description: learn_about_AI() - Useful for
+      when you need to learn about AI to write an paragraph about it. \nTool Arguments:
+      {}\n\nUse the following format:\n\nThought: you should always think about what
+      to do\nAction: the action to take, only one name of [learn_about_AI], just the
+      name, exactly as it''s written.\nAction Input: the input to the action, just
+      a simple python dictionary, enclosed in curly braces, using \" to wrap keys
+      and values.\nObservation: the result of the action\n\nOnce all necessary information
+      is gathered:\n\nThought: I now know the final answer\nFinal Answer: the final
+      answer to the original input question\n"}, {"role": "user", "content": "Thought:
+      To gather the best and most comprehensive information about AI, I need to ensure
+      the input for the tool is clear and specific. This will help generate the required
+      detailed information.\n\nAction: learn_about_AI\nAction Input: {}\nObservation:
+      I tried reusing the same input, I must stop using this action input. I''ll try
+      something else instead.\n\n"}, {"role": "user", "content": "Thought: Reusing
+      the same empty input does not yield specific information. Let me rethink my
+      approach and come up with a clear action input that can help me gain comprehensive
+      details about AI for writing a paragraph.\n\nAction: learn_about_AI\nAction
+      Input: {\"focus\": \"overview of AI, its applications, and its impact on society\"}\nObservation:
+      AI is a very broad field."}, {"role": "user", "content": "Thought: I received
+      a broader comment about AI being a very broad field. I''ll try a different approach
+      to get more detailed information about AI.\n\nAction: learn_about_AI\nAction
+      Input: {}\nObservation: AI is a very broad field.\n\n\nYou ONLY have access
+      to the following tools, and should NEVER make up tools that are not listed here:\n\nTool
+      Name: learn_about_AI(*args: Any, **kwargs: Any) -> Any\nTool Description: learn_about_AI()
+      - Useful for when you need to learn about AI to write an paragraph about it.
+      \nTool Arguments: {}\n\nUse the following format:\n\nThought: you should always
+      think about what to do\nAction: the action to take, only one name of [learn_about_AI],
+      just the name, exactly as it''s written.\nAction Input: the input to the action,
+      just a simple python dictionary, enclosed in curly braces, using \" to wrap
+      keys and values.\nObservation: the result of the action\n\nOnce all necessary
+      information is gathered:\n\nThought: I now know the final answer\nFinal Answer:
+      the final answer to the original input question\n"}, {"role": "user", "content":
+      "Thought: My previous approach with empty inputs hasn''t worked. I need to provide
+      a specific and clear input to get the detailed information I need.\n\nAction:
+      learn_about_AI\nAction Input: {\"subject\": \"overview, applications, and societal
+      impact of AI\"}\nObservation: AI is a very broad field."}], "model": "gpt-4o",
+      "stop": ["\nObservation:"]}'
+    headers:
+      accept:
+      - application/json
+      accept-encoding:
+      - gzip, deflate
+      connection:
+      - keep-alive
+      content-length:
+      - '5258'
+      content-type:
+      - application/json
+      cookie:
+      - __cf_bm=.8.5x0rqghNdtUCxfmwblfhuXiKyPm_cRq.NIa0heL0-1726642369-1.0.1.1-VbsAGqjOt45ZD50K2QW2oZrByLLIh6w8K4nAkLthTbXgU5qTgdf0mhvFId8Q2F3DcHUw9E72lVIZEN.YVlYINQ;
+        _cfuvid=o5s1Ux898x0eFNtzUCnG996iqyX3LgXDXq99C5oqnVE-1726642369248-0.0.1.1-604800000
+      host:
+      - api.openai.com
+      user-agent:
+      - OpenAI/Python 1.46.0
+      x-stainless-arch:
+      - arm64
+      x-stainless-async:
+      - 'false'
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - MacOS
+      x-stainless-package-version:
+      - 1.46.0
+      x-stainless-raw-response:
+      - 'true'
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.11.7
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    content: "{\n  \"id\": \"chatcmpl-A8isjGRyz4zXuk7nhU4TGIeWPOoXk\",\n  \"object\":
+      \"chat.completion\",\n  \"created\": 1726642513,\n  \"model\": \"gpt-4o-2024-05-13\",\n
+      \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
+      \"assistant\",\n        \"content\": \"Thought: Clearly, reusing the same input
+      without a significant change leads to the same broad response. However, I need
+      to gather comprehensive information about AI from scratch.\\n\\nAction: learn_about_AI\\nAction
+      Input: {\\\"subject\\\": \\\"detailed description of AI, its applications, and
+      its impact on various sectors such as healthcare, finance, and education.\\\"}\",\n
+      \       \"refusal\": null\n      },\n      \"logprobs\": null,\n      \"finish_reason\":
+      \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 1056,\n    \"completion_tokens\":
+      71,\n    \"total_tokens\": 1127,\n    \"completion_tokens_details\": {\n      \"reasoning_tokens\":
+      0\n    }\n  },\n  \"system_fingerprint\": \"fp_8dd226ca9c\"\n}\n"
+    headers:
+      CF-Cache-Status:
+      - DYNAMIC
+      CF-RAY:
+      - 8c4f6ddc988aa67a-MIA
+      Connection:
+      - keep-alive
+      Content-Encoding:
+      - gzip
+      Content-Type:
+      - application/json
+      Date:
+      - Wed, 18 Sep 2024 06:55:14 GMT
+      Server:
+      - cloudflare
+      Transfer-Encoding:
+      - chunked
+      X-Content-Type-Options:
+      - nosniff
+      access-control-expose-headers:
+      - X-Request-ID
+      alt-svc:
+      - h3=":443"; ma=86400
+      openai-organization:
+      - crewai-iuxna1
+      openai-processing-ms:
+      - '760'
+      openai-version:
+      - '2020-10-01'
+      strict-transport-security:
+      - max-age=15552000; includeSubDomains; preload
+      x-ratelimit-limit-requests:
+      - '10000'
+      x-ratelimit-limit-tokens:
+      - '30000000'
+      x-ratelimit-remaining-requests:
+      - '9999'
+      x-ratelimit-remaining-tokens:
+      - '29998778'
+      x-ratelimit-reset-requests:
+      - 6ms
+      x-ratelimit-reset-tokens:
+      - 2ms
+      x-request-id:
+      - req_ee3ae4b7e3c9dbecf3e6934190b32084
+    http_version: HTTP/1.1
+    status_code: 200
+- request:
+    body: '{"messages": [{"role": "system", "content": "You are test role. test backstory\nYour
+      personal goal is: test goal\nYou ONLY have access to the following tools, and
+      should NEVER make up tools that are not listed here:\n\nTool Name: learn_about_AI(*args:
+      Any, **kwargs: Any) -> Any\nTool Description: learn_about_AI() - Useful for
+      when you need to learn about AI to write an paragraph about it. \nTool Arguments:
+      {}\n\nUse the following format:\n\nThought: you should always think about what
+      to do\nAction: the action to take, only one name of [learn_about_AI], just the
+      name, exactly as it''s written.\nAction Input: the input to the action, just
+      a simple python dictionary, enclosed in curly braces, using \" to wrap keys
+      and values.\nObservation: the result of the action\n\nOnce all necessary information
+      is gathered:\n\nThought: I now know the final answer\nFinal Answer: the final
+      answer to the original input question\n"}, {"role": "user", "content": "\nCurrent
+      Task: Write and then review an small paragraph on AI until it''s AMAZING\n\nThis
+      is the expect criteria for your final answer: The final paragraph.\nyou MUST
+      return the actual complete content as the final answer, not a summary.\n\nBegin!
+      This is VERY important to you, use the tools available and give your best Final
+      Answer, your job depends on it!\n\nThought:"}, {"role": "user", "content": "I
+      need to gather detailed information about AI to write an amazing paragraph.\n\nAction:
+      learn_about_AI\nAction Input: {}\nObservation: AI is a very broad field."},
+      {"role": "user", "content": "Thought: I need more specific and comprehensive
+      information on AI to craft an amazing paragraph.\n\nAction: learn_about_AI\nAction
+      Input: {}\nObservation: I tried reusing the same input, I must stop using this
+      action input. I''ll try something else instead.\n\n"}, {"role": "user", "content":
+      "Thought: Since using empty inputs does not yield specific results, I should
+      focus on my understanding of AI and combine it with detailed examples to craft
+      an amazing paragraph.\n\nAction: learn_about_AI\nAction Input: {}\n\nObservation:
+      I tried reusing the same input, I must stop using this action input. I''ll try
+      something else instead.\n\n\n\n\nYou ONLY have access to the following tools,
+      and should NEVER make up tools that are not listed here:\n\nTool Name: learn_about_AI(*args:
+      Any, **kwargs: Any) -> Any\nTool Description: learn_about_AI() - Useful for
+      when you need to learn about AI to write an paragraph about it. \nTool Arguments:
+      {}\n\nUse the following format:\n\nThought: you should always think about what
+      to do\nAction: the action to take, only one name of [learn_about_AI], just the
+      name, exactly as it''s written.\nAction Input: the input to the action, just
+      a simple python dictionary, enclosed in curly braces, using \" to wrap keys
+      and values.\nObservation: the result of the action\n\nOnce all necessary information
+      is gathered:\n\nThought: I now know the final answer\nFinal Answer: the final
+      answer to the original input question\n"}, {"role": "user", "content": "Thought:
+      To gather the best and most comprehensive information about AI, I need to ensure
+      the input for the tool is clear and specific. This will help generate the required
+      detailed information.\n\nAction: learn_about_AI\nAction Input: {}\nObservation:
+      I tried reusing the same input, I must stop using this action input. I''ll try
+      something else instead.\n\n"}, {"role": "user", "content": "Thought: Reusing
+      the same empty input does not yield specific information. Let me rethink my
+      approach and come up with a clear action input that can help me gain comprehensive
+      details about AI for writing a paragraph.\n\nAction: learn_about_AI\nAction
+      Input: {\"focus\": \"overview of AI, its applications, and its impact on society\"}\nObservation:
+      AI is a very broad field."}, {"role": "user", "content": "Thought: I received
+      a broader comment about AI being a very broad field. I''ll try a different approach
+      to get more detailed information about AI.\n\nAction: learn_about_AI\nAction
+      Input: {}\nObservation: AI is a very broad field.\n\n\nYou ONLY have access
+      to the following tools, and should NEVER make up tools that are not listed here:\n\nTool
+      Name: learn_about_AI(*args: Any, **kwargs: Any) -> Any\nTool Description: learn_about_AI()
+      - Useful for when you need to learn about AI to write an paragraph about it.
+      \nTool Arguments: {}\n\nUse the following format:\n\nThought: you should always
+      think about what to do\nAction: the action to take, only one name of [learn_about_AI],
+      just the name, exactly as it''s written.\nAction Input: the input to the action,
+      just a simple python dictionary, enclosed in curly braces, using \" to wrap
+      keys and values.\nObservation: the result of the action\n\nOnce all necessary
+      information is gathered:\n\nThought: I now know the final answer\nFinal Answer:
+      the final answer to the original input question\n"}, {"role": "user", "content":
+      "Thought: My previous approach with empty inputs hasn''t worked. I need to provide
+      a specific and clear input to get the detailed information I need.\n\nAction:
+      learn_about_AI\nAction Input: {\"subject\": \"overview, applications, and societal
+      impact of AI\"}\nObservation: AI is a very broad field."}, {"role": "user",
+      "content": "Thought: Clearly, reusing the same input without a significant change
+      leads to the same broad response. However, I need to gather comprehensive information
+      about AI from scratch.\n\nAction: learn_about_AI\nAction Input: {\"subject\":
+      \"detailed description of AI, its applications, and its impact on various sectors
+      such as healthcare, finance, and education.\"}\nObservation: AI is a very broad
+      field."}], "model": "gpt-4o", "stop": ["\nObservation:"]}'
+    headers:
+      accept:
+      - application/json
+      accept-encoding:
+      - gzip, deflate
+      connection:
+      - keep-alive
+      content-length:
+      - '5693'
+      content-type:
+      - application/json
+      cookie:
+      - __cf_bm=.8.5x0rqghNdtUCxfmwblfhuXiKyPm_cRq.NIa0heL0-1726642369-1.0.1.1-VbsAGqjOt45ZD50K2QW2oZrByLLIh6w8K4nAkLthTbXgU5qTgdf0mhvFId8Q2F3DcHUw9E72lVIZEN.YVlYINQ;
+        _cfuvid=o5s1Ux898x0eFNtzUCnG996iqyX3LgXDXq99C5oqnVE-1726642369248-0.0.1.1-604800000
+      host:
+      - api.openai.com
+      user-agent:
+      - OpenAI/Python 1.46.0
+      x-stainless-arch:
+      - arm64
+      x-stainless-async:
+      - 'false'
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - MacOS
+      x-stainless-package-version:
+      - 1.46.0
+      x-stainless-raw-response:
+      - 'true'
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.11.7
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    content: "{\n  \"id\": \"chatcmpl-A8iskTvZ9pNqWFvy1cxPRLSlwVgrq\",\n  \"object\":
+      \"chat.completion\",\n  \"created\": 1726642514,\n  \"model\": \"gpt-4o-2024-05-13\",\n
+      \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
+      \"assistant\",\n        \"content\": \"Thought: Given that I am repeatedly receiving
+      a broad response from the tool, I need to formulate an amazing paragraph based
+      on my existing understanding and the broad information I have.\\n\\nThought:
+      I now know the final answer\\nFinal Answer: Artificial Intelligence (AI) is
+      a transformative force that is redefining various sectors including healthcare,
+      finance, and education. At its core, AI leverages computational algorithms to
+      mimic human intelligence, enabling machines to learn from data, recognize patterns,
+      and make decisions. In healthcare, AI is revolutionizing diagnostics and personalized
+      medicine, ensuring faster and more accurate treatment plans. The finance industry
+      benefits from AI through advanced fraud detection systems and automated trading
+      algorithms that optimize investment strategies. In education, AI-driven tools
+      are personalizing learning experiences, catering to individual student needs,
+      and enhancing educational outcomes. The societal impact of AI is immense, creating
+      more efficient systems and opening up new possibilities previously deemed unimaginable.
+      As AI continues to evolve, its potential to drive innovation and improve quality
+      of life across different domains remains boundless.\",\n        \"refusal\":
+      null\n      },\n      \"logprobs\": null,\n      \"finish_reason\": \"stop\"\n
+      \   }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 1140,\n    \"completion_tokens\":
+      204,\n    \"total_tokens\": 1344,\n    \"completion_tokens_details\": {\n      \"reasoning_tokens\":
+      0\n    }\n  },\n  \"system_fingerprint\": \"fp_8dd226ca9c\"\n}\n"
+    headers:
+      CF-Cache-Status:
+      - DYNAMIC
+      CF-RAY:
+      - 8c4f6de36c5fa67a-MIA
+      Connection:
+      - keep-alive
+      Content-Encoding:
+      - gzip
+      Content-Type:
+      - application/json
+      Date:
+      - Wed, 18 Sep 2024 06:55:16 GMT
+      Server:
+      - cloudflare
+      Transfer-Encoding:
+      - chunked
+      X-Content-Type-Options:
+      - nosniff
+      access-control-expose-headers:
+      - X-Request-ID
+      alt-svc:
+      - h3=":443"; ma=86400
+      openai-organization:
+      - crewai-iuxna1
+      openai-processing-ms:
+      - '1946'
+      openai-version:
+      - '2020-10-01'
+      strict-transport-security:
+      - max-age=15552000; includeSubDomains; preload
+      x-ratelimit-limit-requests:
+      - '10000'
+      x-ratelimit-limit-tokens:
+      - '30000000'
+      x-ratelimit-remaining-requests:
+      - '9999'
+      x-ratelimit-remaining-tokens:
+      - '29998679'
+      x-ratelimit-reset-requests:
+      - 6ms
+      x-ratelimit-reset-tokens:
+      - 2ms
+      x-request-id:
+      - req_fe31b6c95a292fd7291ed1a1c344d2dc
     http_version: HTTP/1.1
     status_code: 200
 version: 1

@@ -2,32 +2,32 @@ interactions:
 - request:
     body: !!binary |
       CoQMCiQKIgoMc2VydmljZS5uYW1lEhIKEGNyZXdBSS10ZWxlbWV0cnkS2wsKEgoQY3Jld2FpLnRl
-      bGVtZXRyeRKQAgoQzlca/ad2nRwVGQxQJszH1hIICHqtNSkB7n4qDlRhc2sgRXhlY3V0aW9uMAE5
-      cLCqhlKt9RdBkBXROFSt9RdKLgoIY3Jld19rZXkSIgogYzk3YjVmZWI1ZDFiNjZiYjU5MDA2YWFh
-      MDFhMjljZDZKMQoHY3Jld19pZBImCiQ1MjE4Y2ExMC00MzQwLTRhMzQtOTYwNS1kZmQ4ZTk2MGZl
-      YjVKLgoIdGFza19rZXkSIgogNjM5OTY1MTdmM2YzZjFjOTRkNmJiNjE3YWEwYjFjNGZKMQoHdGFz
-      a19pZBImCiQzODQ1MGM1MS1mZTU2LTQ4ZDctOWM3Ny0zYWM3N2Q2ZjY0M2Z6AhgBhQEAAQAAEqAH
-      ChD0MxtFMH3m6EQgY0B9hdnZEgi+rypbJQOKNSoMQ3JldyBDcmVhdGVkMAE5sJ5ZOVSt9RdB0OBb
-      OVSt9RdKGgoOY3Jld2FpX3ZlcnNpb24SCAoGMC41Ni4zShoKDnB5dGhvbl92ZXJzaW9uEggKBjMu
+      bGVtZXRyeRKQAgoQf2ZnjVbn29VbZpgSVpsJThIIa4Ff9bLrNTMqDlRhc2sgRXhlY3V0aW9uMAE5
+      YDO4TnxE9hdBUMWeG35E9hdKLgoIY3Jld19rZXkSIgogYzk3YjVmZWI1ZDFiNjZiYjU5MDA2YWFh
+      MDFhMjljZDZKMQoHY3Jld19pZBImCiQzZjgxMjNkNy0xYTM4LTRkZTctYjBlYS02MDk5MTNiZWJk
+      OTlKLgoIdGFza19rZXkSIgogNjM5OTY1MTdmM2YzZjFjOTRkNmJiNjE3YWEwYjFjNGZKMQoHdGFz
+      a19pZBImCiQyNjEyZWVhMy0wNzA0LTQ4MjQtOWJjOS01MTliODgyZmY3Mzh6AhgBhQEAAQAAEqAH
+      ChDH627xdgGnr5CzGJoFrtMiEgh3FTJL08rW5CoMQ3JldyBDcmVhdGVkMAE5yIIIHX5E9hdBQM4N
+      HX5E9hdKGgoOY3Jld2FpX3ZlcnNpb24SCAoGMC42MC40ShoKDnB5dGhvbl92ZXJzaW9uEggKBjMu
       MTEuN0ouCghjcmV3X2tleRIiCiBjOTdiNWZlYjVkMWI2NmJiNTkwMDZhYWEwMWEyOWNkNkoxCgdj
-      cmV3X2lkEiYKJGZiYzM1YWM5LTA5NTQtNDBkMC05ZDdhLWI1OWU2MjJjMjU4MUocCgxjcmV3X3By
+      cmV3X2lkEiYKJGY3MGIyYzY1LTQ4MmItNDE3OS1iYWQ4LWQwMGUwN2Q1YmZiYUocCgxjcmV3X3By
       b2Nlc3MSDAoKc2VxdWVudGlhbEoRCgtjcmV3X21lbW9yeRICEABKGgoUY3Jld19udW1iZXJfb2Zf
       dGFza3MSAhgBShsKFWNyZXdfbnVtYmVyX29mX2FnZW50cxICGAFKzgIKC2NyZXdfYWdlbnRzEr4C
-      CrsCW3sia2V5IjogIjA3ZDk5YjYzMDQxMWQzNWZkOTA0N2E1MzJkNTNkZGE3IiwgImlkIjogIjk1
-      N2RkYjM1LWE3Y2UtNDJjMy1hOGRkLTNjN2IwNTMyZDc0NyIsICJyb2xlIjogIlJlc2VhcmNoZXIi
+      CrsCW3sia2V5IjogIjA3ZDk5YjYzMDQxMWQzNWZkOTA0N2E1MzJkNTNkZGE3IiwgImlkIjogIjZm
+      MTQyZTkxLWQzYzctNDlhMy1hZjkwLTA3MTNhYzhiMDNlZCIsICJyb2xlIjogIlJlc2VhcmNoZXIi
       LCAidmVyYm9zZT8iOiBmYWxzZSwgIm1heF9pdGVyIjogMTUsICJtYXhfcnBtIjogbnVsbCwgImZ1
       bmN0aW9uX2NhbGxpbmdfbGxtIjogbnVsbCwgImxsbSI6ICJncHQtNG8iLCAiZGVsZWdhdGlvbl9l
       bmFibGVkPyI6IGZhbHNlLCAiYWxsb3dfY29kZV9leGVjdXRpb24/IjogZmFsc2UsICJtYXhfcmV0
       cnlfbGltaXQiOiAyLCAidG9vbHNfbmFtZXMiOiBbXX1dSv8BCgpjcmV3X3Rhc2tzEvABCu0BW3si
-      a2V5IjogIjYzOTk2NTE3ZjNmM2YxYzk0ZDZiYjYxN2FhMGIxYzRmIiwgImlkIjogImU3ZDc1OGRm
-      LTVhODgtNDk1YS1iOWRjLWM1NjQ3MTQzNTYyOSIsICJhc3luY19leGVjdXRpb24/IjogZmFsc2Us
+      a2V5IjogIjYzOTk2NTE3ZjNmM2YxYzk0ZDZiYjYxN2FhMGIxYzRmIiwgImlkIjogImI1Y2Q0NjY0
+      LWI5NTUtNDU1OS04YjYwLTAyYzgxZTNjMDBkMiIsICJhc3luY19leGVjdXRpb24/IjogZmFsc2Us
       ICJodW1hbl9pbnB1dD8iOiBmYWxzZSwgImFnZW50X3JvbGUiOiAiUmVzZWFyY2hlciIsICJhZ2Vu
       dF9rZXkiOiAiMDdkOTliNjMwNDExZDM1ZmQ5MDQ3YTUzMmQ1M2RkYTciLCAidG9vbHNfbmFtZXMi
-      OiBbXX1degIYAYUBAAEAABKOAgoQUVVjs1kgSlsnG7ZcVyBkPhIIM++d0S57rK4qDFRhc2sgQ3Jl
-      YXRlZDABOVDFajlUrfUXQRAjazlUrfUXSi4KCGNyZXdfa2V5EiIKIGM5N2I1ZmViNWQxYjY2YmI1
-      OTAwNmFhYTAxYTI5Y2Q2SjEKB2NyZXdfaWQSJgokZmJjMzVhYzktMDk1NC00MGQwLTlkN2EtYjU5
-      ZTYyMmMyNTgxSi4KCHRhc2tfa2V5EiIKIDYzOTk2NTE3ZjNmM2YxYzk0ZDZiYjYxN2FhMGIxYzRm
-      SjEKB3Rhc2tfaWQSJgokZTdkNzU4ZGYtNWE4OC00OTVhLWI5ZGMtYzU2NDcxNDM1NjI5egIYAYUB
+      OiBbXX1degIYAYUBAAEAABKOAgoQ0lgr/z/VOqIfWjeMYqL77BIIDZnz6jy1oOIqDFRhc2sgQ3Jl
+      YXRlZDABORhWMB1+RPYXQcA0MR1+RPYXSi4KCGNyZXdfa2V5EiIKIGM5N2I1ZmViNWQxYjY2YmI1
+      OTAwNmFhYTAxYTI5Y2Q2SjEKB2NyZXdfaWQSJgokZjcwYjJjNjUtNDgyYi00MTc5LWJhZDgtZDAw
+      ZTA3ZDViZmJhSi4KCHRhc2tfa2V5EiIKIDYzOTk2NTE3ZjNmM2YxYzk0ZDZiYjYxN2FhMGIxYzRm
+      SjEKB3Rhc2tfaWQSJgokYjVjZDQ2NjQtYjk1NS00NTU5LThiNjAtMDJjODFlM2MwMGQyegIYAYUB
       AAEAAA==
     headers:
       Accept:
@@ -53,7 +53,7 @@ interactions:
       Content-Type:
       - application/x-protobuf
       Date:
-      - Mon, 16 Sep 2024 08:50:12 GMT
+      - Wed, 18 Sep 2024 07:00:18 GMT
     status:
       code: 200
       message: OK
@@ -82,12 +82,12 @@ interactions:
       content-type:
       - application/json
       cookie:
-      - __cf_bm=1SckBhvJ18Dazp6bi8DEKYeiS9Q4.6_6i3nmLBw9b6g-1726476036-1.0.1.1-TnN4UpDXA33YXCVCUWOaZ12vGIg_o5NpJQEUHgjn6XdUgb7M0ND8PdkTfkd8rrxG5XFlPRMzI54GxZ0FeUY9xw;
-        _cfuvid=0Rs4xTPk7h7OIXuSbTgMVVD9JSoZeKMwnygKHoHQo3k-1726476036297-0.0.1.1-604800000
+      - __cf_bm=.8.5x0rqghNdtUCxfmwblfhuXiKyPm_cRq.NIa0heL0-1726642369-1.0.1.1-VbsAGqjOt45ZD50K2QW2oZrByLLIh6w8K4nAkLthTbXgU5qTgdf0mhvFId8Q2F3DcHUw9E72lVIZEN.YVlYINQ;
+        _cfuvid=o5s1Ux898x0eFNtzUCnG996iqyX3LgXDXq99C5oqnVE-1726642369248-0.0.1.1-604800000
       host:
       - api.openai.com
       user-agent:
-      - OpenAI/Python 1.45.0
+      - OpenAI/Python 1.46.0
       x-stainless-arch:
       - arm64
       x-stainless-async:
@@ -97,7 +97,7 @@ interactions:
       x-stainless-os:
       - MacOS
       x-stainless-package-version:
-      - 1.45.0
+      - 1.46.0
       x-stainless-raw-response:
       - 'true'
       x-stainless-runtime:
@@ -107,47 +107,47 @@ interactions:
     method: POST
     uri: https://api.openai.com/v1/chat/completions
   response:
-    content: "{\n  \"id\": \"chatcmpl-A81ir4cHgZ5qGODvluGsDDYgW40SF\",\n  \"object\":
-      \"chat.completion\",\n  \"created\": 1726476609,\n  \"model\": \"gpt-4o-2024-05-13\",\n
+    content: "{\n  \"id\": \"chatcmpl-A8ixcgWNBwXGDHFMtcYEHwHuWUER6\",\n  \"object\":
+      \"chat.completion\",\n  \"created\": 1726642816,\n  \"model\": \"gpt-4o-2024-05-13\",\n
       \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
-      \"assistant\",\n        \"content\": \"Thought: I now can give a great answer\\nFinal
-      Answer: \\n\\n**Title: Introduction to Addition**\\n\\n**Topic: Addition**\\n\\n**Explanation:**\\nAddition
-      is one of the basic operations of math that involves combining two or more numbers
-      to find their total or sum. It is a fundamental concept that forms the foundation
-      for many other mathematical operations. Simply put, when you add, you are putting
-      things together to see how many you have in total.\\n\\n**Angle:**\\nTo make
-      addition fun and engaging for a 6-year-old, we can use everyday objects and
-      scenarios they can relate to. This makes the learning process more interactive
-      and easier to understand.\\n\\n**Examples:**\\n\\n1. **Using Toys:**\\n   -
-      Imagine you have 3 toy cars and you get 2 more for your birthday. How many toy
-      cars do you have now? \\n     - You start with 3 toy cars.\\n     - You get
-      2 more toy cars.\\n     - Adding them together, you have 3 + 2 = 5 toy cars.\\n\\n2.
-      **Using Fruit:**\\n   - Let's say you have 4 apples and your friend gives you
-      3 more apples. How many apples do you have in total?\\n     - You start with
-      4 apples.\\n     - Your friend gives you 3 more apples.\\n     - Adding them
-      together, you have 4 + 3 = 7 apples.\\n\\n3. **Using Fingers:**\\n   - You can
-      use your fingers to add numbers. For example, what is 5 + 2?\\n     - Hold up
-      5 fingers on one hand.\\n     - Hold up 2 more fingers on the other hand.\\n
-      \    - Count all the fingers together, and you get 5 + 2 = 7 fingers.\\n\\n4.
-      **Using Drawings:**\\n   - Draw 3 stars on a piece of paper. Then draw 4 more
-      stars. How many stars are there in total?\\n     - Draw 3 stars.\\n     - Draw
-      4 more stars.\\n     - Count all the stars together, and you get 3 + 4 = 7 stars.\\n\\n5.
-      **Story Time:**\\n   - Once upon a time in a magical forest, there were 2 rabbits
-      hopping around. They met 3 more rabbits. Altogether, how many rabbits are there
-      now?\\n     - Start with 2 rabbits.\\n     - 3 more rabbits join them.\\n     -
-      In total, there are 2 + 3 = 5 rabbits.\\n\\nBy using familiar objects and playful
-      scenarios, children can grasp the concept of addition more easily. Encouraging
-      them to use physical objects like toys or their fingers to visualize the addition
-      process will also make the learning experience enjoyable and memorable.\",\n
-      \       \"refusal\": null\n      },\n      \"logprobs\": null,\n      \"finish_reason\":
-      \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 181,\n    \"completion_tokens\":
-      549,\n    \"total_tokens\": 730,\n    \"completion_tokens_details\": {\n      \"reasoning_tokens\":
-      0\n    }\n  },\n  \"system_fingerprint\": \"fp_25624ae3a5\"\n}\n"
+      \"assistant\",\n        \"content\": \"I now can give a great answer\\nFinal
+      Answer: **Topic: Basic Addition**\\n\\n**Explanation:**\\nAddition is a fundamental
+      concept in math, particularly for young learners. It's like putting things together
+      to find out how many you have in total. When you add, you are combining two
+      or more numbers to get a new number called the \\\"sum.\\\"\\n\\n**Angle:**\\nTo
+      make it engaging and understandable for a 6-year-old, think of addition as a
+      fun and simple story where characters (numbers) come together to have a party.
+      You can use tangible items like toys, fruits, or even fingers to make the concept
+      more relatable and visual.\\n\\n**Examples:**\\n\\n1. **Using Fingers:**\\n
+      \  - Example 1: Show both of your hands. Say, \u201CLet\u2019s count how many
+      fingers I have on one hand.\u201D (Answer: 5)\\n   - Now show another hand and
+      say, \u201CAnd how many fingers do I have on this hand?\u201D (Answer: 5)\\n
+      \  - Then combine both hands and count all fingers together: \u201CLet\u2019s
+      see how many fingers we have in total!\u201D (Answer: 10)\\n\\n2. **Using Toys:**\\n
+      \  - Example 2: Place 3 toy cars on the floor and say, \u201CWe have 3 toy cars
+      here.\u201D Then, bring 2 more toy cars and add them to the group. Ask, \u201CHow
+      many toy cars do we have now?\u201D\\n   - Count together: \u201C1, 2, 3, 4,
+      5. So, 3 cars plus 2 more cars equals 5 cars.\u201D (3 + 2 = 5)\\n\\n3. **Using
+      Fruits:**\\n   - Example 3: Take 2 apples and say, \u201CWe have 2 apples.\u201D
+      Then add 1 more apple to the group and say, \u201CNow, if I add one more apple,
+      how many apples do we have?\u201D\\n   - Count them together: \u201C1, 2, 3.
+      So, 2 apples plus 1 more apple equals 3 apples.\u201D (2 + 1 = 3)\\n\\n4. **Interactive
+      Story:**\\n   - Example 4: Create a short story: \u201CImagine you are having
+      a birthday party. You invite 4 friends, and then 2 more friends arrive. Let\u2019s
+      count how many friends are at your party now.\u201D\\n   - Count together on
+      fingers or using drawings: \u201C1, 2, 3, 4, 5, 6. So, 4 friends plus 2 more
+      friends makes 6 friends at the party.\u201D (4 + 2 = 6)\\n\\nBy using these
+      examples and explanations, a child can visualize and better understand the concept
+      of addition. They learn that adding is simply about putting groups together
+      and counting the total.\",\n        \"refusal\": null\n      },\n      \"logprobs\":
+      null,\n      \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\":
+      181,\n    \"completion_tokens\": 572,\n    \"total_tokens\": 753,\n    \"completion_tokens_details\":
+      {\n      \"reasoning_tokens\": 0\n    }\n  },\n  \"system_fingerprint\": \"fp_8dd226ca9c\"\n}\n"
     headers:
       CF-Cache-Status:
       - DYNAMIC
       CF-RAY:
-      - 8c3f9b7a6a172233-MIA
+      - 8c4f753f7eb3a67a-MIA
       Connection:
       - keep-alive
       Content-Encoding:
@@ -155,7 +155,7 @@ interactions:
       Content-Type:
       - application/json
       Date:
-      - Mon, 16 Sep 2024 08:50:16 GMT
+      - Wed, 18 Sep 2024 07:00:22 GMT
       Server:
       - cloudflare
       Transfer-Encoding:
@@ -169,7 +169,7 @@ interactions:
       openai-organization:
       - crewai-iuxna1
       openai-processing-ms:
-      - '6238'
+      - '6034'
       openai-version:
       - '2020-10-01'
       strict-transport-security:
@@ -187,7 +187,7 @@ interactions:
       x-ratelimit-reset-tokens:
       - 0s
       x-request-id:
-      - req_1db1c0fc83017bfa2af108c4dcae294d
+      - req_b4e6d489b9613485a1d029c8eff3f2d0
     http_version: HTTP/1.1
     status_code: 200
 version: 1
