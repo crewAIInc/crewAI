@@ -111,7 +111,6 @@ def and_(*conditions):
         elif isinstance(condition, str):
             methods.append(condition)
         elif callable(condition):
-            # Extract the __name__ even if the function is wrapped by a decorator
             methods.append(getattr(condition, "__name__", repr(condition)))
         else:
             raise ValueError("Invalid condition in and_()")
