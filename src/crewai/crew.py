@@ -200,10 +200,9 @@ class Crew(BaseModel):
             self._file_handler = FileHandler(self.output_log_file)
         self._rpm_controller = RPMController(max_rpm=self.max_rpm, logger=self._logger)
         self.function_calling_llm = (
-            self.function_calling_llm.model_name
-            if self.function_calling_llm is not None
-            and hasattr(self.function_calling_llm, "model_name")
-            else self.function_calling_llm
+            getattr(self.function_calling_llm, "model_name", None)
+            or getattr(self.function_calling_llm, "deployment_name", None)
+            or self.function_calling_llm
         )
         self._telemetry = Telemetry()
         self._telemetry.set_tracer()
@@ -592,9 +591,9 @@ class Crew(BaseModel):
             manager.tools = self.manager_agent.get_delegation_tools(self.agents)
         else:
             self.manager_llm = (
-                self.manager_llm.model_name
-                if hasattr(self.manager_llm, "model_name")
-                else self.manager_llm
+                getattr(self.manager_llm, "model_name", None)
+                or getattr(self.manager_llm, "deployment_name", None)
+                or self.manager_llm
             )
             manager = Agent(
                 role=i18n.retrieve("hierarchical_manager_agent", "role"),
@@ -605,6 +604,7 @@ class Crew(BaseModel):
                 verbose=self.verbose,
             )
             self.manager_agent = manager
+        manager.crew = self
 
     def _execute_tasks(
         self,
@@ -936,10 +936,10 @@ class Crew(BaseModel):
     def test(
         self,
         n_iterations: int,
-        openai_model_name: str,
+        openai_model_name: Optional[str] = None,
         inputs: Optional[Dict[str, Any]] = None,
     ) -> None:
-        """Test and evaluate the Crew with the given inputs for n iterations."""
+        """Test and evaluate the Crew with the given inputs for n iterations concurrently using concurrent.futures."""
         self._test_execution_span = self._telemetry.test_execution_span(
             self, n_iterations, inputs, openai_model_name
         )

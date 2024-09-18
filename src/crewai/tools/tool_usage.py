@@ -17,7 +17,7 @@ if os.environ.get("AGENTOPS_API_KEY"):
     except ImportError:
         pass
 
-OPENAI_BIGGER_MODELS = ["gpt-4", "gpt-4o"]
+OPENAI_BIGGER_MODELS = ["gpt-4", "gpt-4o", "o1-preview", "o1-mini"]
 
 
 class ToolUsageErrorException(Exception):
@@ -71,10 +71,12 @@ class ToolUsage:
         self.function_calling_llm = function_calling_llm
 
         # Set the maximum parsing attempts for bigger models
-        if self._is_gpt(self.function_calling_llm) and "4" in self.function_calling_llm:
-            if self.function_calling_llm in OPENAI_BIGGER_MODELS:
-                self._max_parsing_attempts = 2
-                self._remember_format_after_usages = 4
+        if (
+            self._is_gpt(self.function_calling_llm)
+            and self.function_calling_llm in OPENAI_BIGGER_MODELS
+        ):
+            self._max_parsing_attempts = 2
+            self._remember_format_after_usages = 4
 
     def parse(self, tool_string: str):
         """Parse the tool string and return the tool calling."""
