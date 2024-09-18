@@ -35,7 +35,7 @@ class TaskOutput(BaseModel):
         return self
 
     @property
-    def json(self) -> str:
+    def json(self) -> Optional[str]:
         if self.output_format != OutputFormat.JSON:
             raise ValueError(
                 """

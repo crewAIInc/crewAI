@@ -118,11 +118,15 @@ class Agent(BaseAgent):
     @model_validator(mode="after")
     def post_init_setup(self):
         self.agent_ops_agent_name = self.role
-        self.llm = self.llm.model_name if hasattr(self.llm, "model_name") else self.llm
+        self.llm = (
+            getattr(self.llm, "model_name", None)
+            or getattr(self.llm, "deployment_name", None)
+            or self.llm
+        )
         self.function_calling_llm = (
-            self.function_calling_llm.model_name
-            if hasattr(self.function_calling_llm, "model_name")
-            else self.function_calling_llm
+            getattr(self.function_calling_llm, "model_name", None)
+            or getattr(self.function_calling_llm, "deployment_name", None)
+            or self.function_calling_llm
         )
         if not self.agent_executor:
             self._setup_agent_executor()
