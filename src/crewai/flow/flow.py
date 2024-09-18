@@ -94,10 +94,10 @@ def or_(*conditions):
     for condition in conditions:
         if isinstance(condition, dict) and "methods" in condition:
             methods.extend(condition["methods"])
-        elif callable(condition) and hasattr(condition, "__name__"):
-            methods.append(condition.__name__)
         elif isinstance(condition, str):
             methods.append(condition)
+        elif callable(condition):
+            methods.append(getattr(condition, "__name__", repr(condition)))
         else:
             raise ValueError("Invalid condition in or_()")
     return {"type": "OR", "methods": methods}
@@ -108,10 +108,11 @@ def and_(*conditions):
     for condition in conditions:
         if isinstance(condition, dict) and "methods" in condition:
             methods.extend(condition["methods"])
-        elif callable(condition) and hasattr(condition, "__name__"):
-            methods.append(condition.__name__)
         elif isinstance(condition, str):
             methods.append(condition)
+        elif callable(condition):
+            # Extract the __name__ even if the function is wrapped by a decorator
+            methods.append(getattr(condition, "__name__", repr(condition)))
         else:
             raise ValueError("Invalid condition in and_()")
     return {"type": "AND", "methods": methods}
@@ -281,6 +282,7 @@ class Flow(Generic[T], metaclass=FlowMeta):
             )
             await self._execute_listeners(listener, listener_result)
         except Exception as e:
-            print(
-                f"[Flow._execute_single_listener] Error in method {listener}: {str(e)}"
-            )
+            print(f"[Flow._execute_single_listener] Error in method {listener}: {e}")
+            import traceback
+
+            traceback.print_exc()
