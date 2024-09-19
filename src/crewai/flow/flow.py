@@ -124,6 +124,10 @@ class FlowMeta(type):
             elif hasattr(attr_value, "__is_router__"):
                 routers[attr_value.__router_for__] = attr_name
 
+        setattr(cls, "_start_methods", start_methods)
+        setattr(cls, "_listeners", listeners)
+        setattr(cls, "_routers", routers)
+
         return cls
 
 
