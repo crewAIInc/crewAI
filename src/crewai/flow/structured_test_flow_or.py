@@ -10,7 +10,6 @@ class ExampleState(BaseModel):
 
 
 class StructuredExampleFlow(Flow[ExampleState]):
-    initial_state = ExampleState
 
     @start()
     async def start_method(self):

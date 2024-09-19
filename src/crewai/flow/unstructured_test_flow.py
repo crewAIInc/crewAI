@@ -11,15 +11,15 @@ class FlexibleExampleFlow(Flow):
         return "Start result"
 
     @listen(start_method)
-    def second_method(self, result):
-        print(f"Second method, received: {result}")
+    def second_method(self):
+        print("Second method")
         self.state["counter"] += 1
         self.state["message"] = "Hello from flexible flow"
         return "Second result"
 
     @listen(second_method)
-    def third_method(self, result):
-        print(f"Third method, received: {result}")
+    def third_method(self):
+        print("Third method")
         print(f"Final counter value: {self.state["counter"]}")
         print(f"Final message: {self.state["message"]}")
         return "Third result"

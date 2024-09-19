@@ -9,8 +9,7 @@ class ExampleState(BaseModel):
     message: str = ""
 
 
-class StructuredExampleFlow(Flow):
-    initial_state = ExampleState
+class StructuredExampleFlow(Flow[ExampleState]):
 
     @start()
     async def start_method(self):
@@ -21,8 +20,7 @@ class StructuredExampleFlow(Flow):
         return "Start result"
 
     @listen(start_method)
-    async def second_method(self, result):
-        print(f"Second method, received: {result}")
+    async def second_method(self):
         print(f"State before increment: {self.state}")
         self.state.counter += 1
         self.state.message += " - updated"
@@ -30,8 +28,7 @@ class StructuredExampleFlow(Flow):
         return "Second result"
 
     @listen(start_method)
-    async def third_method(self, result):
-        print(f"Third method, received: {result}")
+    async def third_method(self):
         print(f"State before increment: {self.state}")
         self.state.counter += 1
         self.state.message += " - updated"
