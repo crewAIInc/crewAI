@@ -5,16 +5,16 @@ from openai import OpenAI
 
 
 class ExampleFlow(Flow):
+    client = OpenAI()
+    model = "gpt-4o-mini"
 
     @start()
-    def start_method(self):
+    def generate_city(self):
         print("Starting flow")
-        client = OpenAI()
 
-        response = client.chat.completions.create(
-            model="gpt-4o-mini",
+        response = self.client.chat.completions.create(
+            model=self.model,
             messages=[
-                {"role": "system", "content": "You are a helpful assistant."},
                 {
                     "role": "user",
                     "content": "Return the name of a random city in the world.",
@@ -23,14 +23,25 @@ class ExampleFlow(Flow):
         )
 
         random_city = response.choices[0].message.content
-        print("random_city", random_city)
-
+        print("---- Random City ----")
+        print(random_city)
         return random_city
 
-    @listen(start_method)
-    def second_method(self, result):
-        print("Second method received:", result)
-        # print("Second city", result)
+    @listen(generate_city)
+    def generate_fun_fact(self, random_city):
+        response = self.client.chat.completions.create(
+            model=self.model,
+            messages=[
+                {
+                    "role": "user",
+                    "content": f"Tell me a fun fact about {random_city}",
+                },
+            ],
+        )
+
+        fun_fact = response.choices[0].message.content
+        print("---- Fun Fact ----")
+        print(fun_fact)
 
 
 async def main():

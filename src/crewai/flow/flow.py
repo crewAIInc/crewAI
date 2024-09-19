@@ -169,9 +169,18 @@ class Flow(Generic[T], metaclass=FlowMeta):
         if not self._start_methods:
             raise ValueError("No start method defined")
 
-        for start_method in self._start_methods:
-            result = await self._execute_method(self._methods[start_method])
-            await self._execute_listeners(start_method, result)
+        # Create tasks for all start methods
+        tasks = [
+            self._execute_start_method(start_method)
+            for start_method in self._start_methods
+        ]
+
+        # Run all start methods concurrently
+        await asyncio.gather(*tasks)
+
+    async def _execute_start_method(self, start_method: str):
+        result = await self._execute_method(self._methods[start_method])
+        await self._execute_listeners(start_method, result)
 
     async def _execute_method(self, method: Callable, *args, **kwargs):
         if asyncio.iscoroutinefunction(method):
