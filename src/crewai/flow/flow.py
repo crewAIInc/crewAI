@@ -13,7 +13,6 @@ T = TypeVar("T", bound=Union[BaseModel, Dict[str, Any]])
 
 def start(condition=None):
     def decorator(func):
-        print(f"[start decorator] Decorating start method: {func.__name__}")
         func.__is_start_method__ = True
         if condition is not None:
             if isinstance(condition, str):
@@ -64,9 +63,6 @@ def listen(condition):
 
 def router(method):
     def decorator(func):
-        print(
-            f"[router decorator] Decorating router: {func.__name__} for method: {method.__name__}"
-        )
         func.__is_router__ = True
         func.__router_for__ = method.__name__
         return func
@@ -144,7 +140,6 @@ class Flow(Generic[T], metaclass=FlowMeta):
         return _FlowGeneric
 
     def __init__(self):
-        print("[Flow.__init__] Initializing Flow")
         self._methods: Dict[str, Callable] = {}
         self._state = self._create_initial_state()
         self._completed_methods: Set[str] = set()
@@ -157,7 +152,6 @@ class Flow(Generic[T], metaclass=FlowMeta):
                 self._methods[method_name] = getattr(self, method_name)
 
     def _create_initial_state(self) -> T:
-        print("[Flow._create_initial_state] Creating initial state")
         if self.initial_state is None and hasattr(self, "_initial_state_T"):
             return self._initial_state_T()  # type: ignore
         if self.initial_state is None:
@@ -172,26 +166,20 @@ class Flow(Generic[T], metaclass=FlowMeta):
         return self._state
 
     async def kickoff(self):
-        print("[Flow.kickoff] Starting kickoff")
         if not self._start_methods:
             raise ValueError("No start method defined")
 
         for start_method in self._start_methods:
-            print(f"[Flow.kickoff] Executing start method: {start_method}")
             result = await self._execute_method(self._methods[start_method])
             await self._execute_listeners(start_method, result)
 
     async def _execute_method(self, method: Callable, *args, **kwargs):
-        print(f"[Flow._execute_method] Executing method: {method.__name__}")
-        if inspect.iscoroutinefunction(method):
+        if asyncio.iscoroutinefunction(method):
             return await method(*args, **kwargs)
         else:
             return method(*args, **kwargs)
 
     async def _execute_listeners(self, trigger_method: str, result: Any):
-        print(
-            f"[Flow._execute_listeners] Executing listeners for trigger method: {trigger_method}"
-        )
         listener_tasks = []
 
         if trigger_method in self._routers:
@@ -220,14 +208,22 @@ class Flow(Generic[T], metaclass=FlowMeta):
         await asyncio.gather(*listener_tasks)
 
     async def _execute_single_listener(self, listener: str, result: Any):
-        print(f"[Flow._execute_single_listener] Executing listener: {listener}")
         try:
             method = self._methods[listener]
             sig = inspect.signature(method)
-            if len(sig.parameters) > 1:  # More than just 'self'
+            params = list(sig.parameters.values())
+
+            # Exclude 'self' parameter
+            method_params = [p for p in params if p.name != "self"]
+
+            if method_params:
+                # If listener expects parameters, pass the result
                 listener_result = await self._execute_method(method, result)
             else:
+                # If listener does not expect parameters, call without arguments
                 listener_result = await self._execute_method(method)
+
+            # Execute listeners of this listener
             await self._execute_listeners(listener, listener_result)
         except Exception as e:
             print(f"[Flow._execute_single_listener] Error in method {listener}: {e}")
