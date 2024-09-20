@@ -9,8 +9,7 @@ class ExampleState(BaseModel):
     success_flag: bool = False
 
 
-class StructuredExampleFlow(Flow):
-    initial_state = ExampleState
+class RouterFlow(Flow[ExampleState]):
 
     @start()
     async def start_method(self):
@@ -35,7 +34,7 @@ class StructuredExampleFlow(Flow):
 
 
 async def main():
-    flow = StructuredExampleFlow()
+    flow = RouterFlow()
     await flow.kickoff()
 
 
