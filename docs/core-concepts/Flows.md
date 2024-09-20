@@ -358,8 +358,15 @@ Third method running
 
 - The easiest way to create flows with Crews is to use the `crewai create flow <name_of_flow>` command. This will create a new CrewAI project for you that includes a folders for your Crews.
 
-##
-
 ```
 
 ```
+
+## Next Steps
+
+- Recommend checking out our flow examples in the CrewAI Examples repository to see more use cases.
+- Currently, there are 4 flow examples:
+  - email auto responder flow
+  - lead score flow
+  - Write a book flow
+  - Meeting assistant flow

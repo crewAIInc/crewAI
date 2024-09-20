@@ -2,11 +2,7 @@ import asyncio
 import inspect
 from typing import Any, Callable, Dict, Generic, List, Set, Type, TypeVar, Union
 
-from pydantic import BaseModel
-
-# TODO: Allow people to pass results from one method to another and not just state
-# TODO: Add in thiago and eduardo suggestions
-# TODO: Add the ability to for start to handle _and and _or conditions
+from pydantic import BaseModel, Field
 
 T = TypeVar("T", bound=Union[BaseModel, Dict[str, Any]])
 
@@ -144,6 +140,7 @@ class Flow(Generic[T], metaclass=FlowMeta):
         self._state = self._create_initial_state()
         self._completed_methods: Set[str] = set()
         self._pending_and_listeners: Dict[str, Set[str]] = {}
+        self._flow_output = FlowOutput()
 
         for method_name in dir(self):
             if callable(getattr(self, method_name)) and not method_name.startswith(
@@ -183,10 +180,13 @@ class Flow(Generic[T], metaclass=FlowMeta):
         await self._execute_listeners(start_method, result)
 
     async def _execute_method(self, method: Callable, *args, **kwargs):
-        if asyncio.iscoroutinefunction(method):
-            return await method(*args, **kwargs)
-        else:
-            return method(*args, **kwargs)
+        result = (
+            await method(*args, **kwargs)
+            if asyncio.iscoroutinefunction(method)
+            else method(*args, **kwargs)
+        )
+        self._flow_output.add_method_output(result)
+        return result
 
     async def _execute_listeners(self, trigger_method: str, result: Any):
         listener_tasks = []
@@ -239,3 +239,28 @@ class Flow(Generic[T], metaclass=FlowMeta):
             import traceback
 
             traceback.print_exc()
+
+
+class FlowOutput(BaseModel):
+    state: Dict[str, Any] = Field(
+        default_factory=dict, description="Final state of the flow"
+    )
+    method_outputs: List[Any] = Field(
+        default_factory=list, description="List of outputs from all executed methods"
+    )
+
+    @property
+    def final_output(self) -> Any:
+        """Get the output of the last executed method."""
+        return self.method_outputs[-1] if self.method_outputs else None
+
+    def add_method_output(self, output: Any):
+        """Add a method output to the list and update the final method name."""
+        self.method_outputs.append(output)
+
+    def update_state(self, new_state: Dict[str, Any]):
+        """Update the flow state."""
+        self.state.update(new_state)
+
+    class Config:
+        arbitrary_types_allowed = True
