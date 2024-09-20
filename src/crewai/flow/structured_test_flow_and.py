@@ -1,41 +1,26 @@
 import asyncio
 
-from crewai.flow.flow import Flow, listen, start
-from pydantic import BaseModel
+from crewai.flow.flow import Flow, and_, listen, start
 
 
-class ExampleState(BaseModel):
-    counter: int = 0
-    message: str = ""
-
-
-class StructuredExampleFlow(Flow):
-    initial_state = ExampleState
+class AndExampleFlow(Flow):
 
     @start()
-    async def start_method(self):
-        print("Starting the structured flow")
-        print(f"State in start_method: {self.state}")
-        self.state.message = "Hello from structured flow"
-        print(f"State after start_method: {self.state}")
-        return "Start result"
+    def start_method(self):
+        self.state["greeting"] = "Hello from the start method"
 
     @listen(start_method)
-    async def second_method(self):
-        print(f"State before increment: {self.state}")
-        self.state.counter += 1
-        self.state.message += " - updated"
-        print(f"State after second_method: {self.state}")
-        return "Second result"
+    def second_method(self):
+        self.state["joke"] = "What do computers eat? Microchips."
 
-    @listen(start_method and second_method)
-    async def logger(self):
-        print("AND METHOD RUNNING")
-        print("CURRENT STATE FROM OR: ", self.state)
+    @listen(and_(start_method, second_method))
+    def logger(self):
+        print("---- Logger ----")
+        print(self.state)
 
 
 async def main():
-    flow = StructuredExampleFlow()
+    flow = AndExampleFlow()
     await flow.kickoff()
 
 

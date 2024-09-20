@@ -118,7 +118,7 @@ import asyncio
 
 from crewai.flow.flow import Flow, listen, start
 
-class StructuredExampleFlow(Flow):
+class UntructuredExampleFlow(Flow):
 
     @start()
     async def first_method(self):
@@ -139,7 +139,7 @@ class StructuredExampleFlow(Flow):
 
 
 async def main():
-    flow = StructuredExampleFlow()
+    flow = UntructuredExampleFlow()
     await flow.kickoff()
 
 
@@ -214,3 +214,96 @@ asyncio.run(main())
   - You want to leverage IDE features like auto-completion and type checking for better developer experience.
 
 By providing both unstructured and structured state management options, CrewAI Flows empowers developers to build AI workflows that are both flexible and robust, catering to a wide range of application requirements.
+
+## Flow Control
+
+### Conditional Logic
+
+#### or
+
+The `or_` function in Flows allows you to listen to multiple methods and trigger the listener method when any of the specified methods emit an output.
+
+```python
+import asyncio
+from crewai.flow.flow import Flow, listen, or_, start
+
+class OrExampleFlow(Flow):
+
+    @start()
+    def start_method(self):
+        return "Hello from the start method"
+
+    @listen(start_method)
+    def second_method(self):
+        return "Hello from the second method"
+
+    @listen(or_(start_method, second_method))
+    def logger(self, result):
+        print(f"Logger: {result}")
+
+
+async def main():
+    flow = OrExampleFlow()
+    await flow.kickoff()
+
+
+asyncio.run(main())
+```
+
+When you run this Flow, the `logger` method will be triggered by the output of either the `start_method` or the `second_method`. The `or_` function is to listen to multiple methods and trigger the listener method when any of the specified methods emit an output.
+
+The output of the Flow will be:
+
+```
+Logger: Hello from the start method
+Logger: Hello from the second method
+```
+
+#### and
+
+The `and_` function in Flows allows you to listen to multiple methods and trigger the listener method only when all the specified methods emit an output.
+
+```python
+import asyncio
+from crewai.flow.flow import Flow, and_, listen, start
+
+class AndExampleFlow(Flow):
+
+    @start()
+    def start_method(self):
+        self.state["greeting"] = "Hello from the start method"
+
+    @listen(start_method)
+    def second_method(self):
+        self.state["joke"] = "What do computers eat? Microchips."
+
+    @listen(and_(start_method, second_method))
+    def logger(self):
+        print("---- Logger ----")
+        print(self.state)
+
+
+async def main():
+    flow = AndExampleFlow()
+    await flow.kickoff()
+
+
+asyncio.run(main())
+```
+
+When you run this Flow, the `logger` method will be triggered only when both the `start_method` and the `second_method` emit an output. The `and_` function is used to listen to multiple methods and trigger the listener method only when all the specified methods emit an output.
+
+The output of the Flow will be:
+
+```
+---- Logger ----
+{'greeting': 'Hello from the start method', 'joke': 'What do computers eat? Microchips.'}
+```
+
+### Router
+
+## Adding Crews to Flows
+
+- The easiest way to create flows with Crews is to use the `crewai create flow <name_of_flow>` command. This will create a new CrewAI project for you that includes a folders for your Crews.
+
+##
