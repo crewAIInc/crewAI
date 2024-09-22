@@ -119,10 +119,10 @@ class Agent(BaseAgent):
     def post_init_setup(self):
         self.agent_ops_agent_name = self.role
         self.llm = (
-            os.environ.get("OPENAI_MODEL_NAME")
-            or getattr(self.llm, "model_name", None)
+            getattr(self.llm, "model_name", None)
             or getattr(self.llm, "deployment_name", None)
             or self.llm
+            or os.environ.get("OPENAI_MODEL_NAME")
         )
         self.function_calling_llm = (
             getattr(self.function_calling_llm, "model_name", None)
