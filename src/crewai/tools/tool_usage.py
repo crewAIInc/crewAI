@@ -4,9 +4,6 @@ from difflib import SequenceMatcher
 from textwrap import dedent
 from typing import Any, List, Union
 
-from langchain_core.tools import BaseTool
-from langchain_openai import ChatOpenAI
-
 from crewai.agents.tools_handler import ToolsHandler
 from crewai.task import Task
 from crewai.telemetry import Telemetry
@@ -20,7 +17,7 @@ if os.environ.get("AGENTOPS_API_KEY"):
     except ImportError:
         pass
 
-OPENAI_BIGGER_MODELS = ["gpt-4o"]
+OPENAI_BIGGER_MODELS = ["gpt-4", "gpt-4o", "o1-preview", "o1-mini"]
 
 
 class ToolUsageErrorException(Exception):
@@ -48,7 +45,7 @@ class ToolUsage:
     def __init__(
         self,
         tools_handler: ToolsHandler,
-        tools: List[BaseTool],
+        tools: List[Any],
         original_tools: List[Any],
         tools_description: str,
         tools_names: str,
@@ -73,20 +70,13 @@ class ToolUsage:
         self.action = action
         self.function_calling_llm = function_calling_llm
 
-        # Handling bug (see https://github.com/langchain-ai/langchain/pull/16395): raise an error if tools_names have space for ChatOpenAI
-        if isinstance(self.function_calling_llm, ChatOpenAI):
-            if " " in self.tools_names:
-                raise Exception(
-                    "Tools names should not have spaces for ChatOpenAI models."
-                )
-
         # Set the maximum parsing attempts for bigger models
-        if (isinstance(self.function_calling_llm, ChatOpenAI)) and (
-            self.function_calling_llm.openai_api_base is None
+        if (
+            self._is_gpt(self.function_calling_llm)
+            and self.function_calling_llm in OPENAI_BIGGER_MODELS
         ):
-            if self.function_calling_llm.model_name in OPENAI_BIGGER_MODELS:
-                self._max_parsing_attempts = 2
-                self._remember_format_after_usages = 4
+            self._max_parsing_attempts = 2
+            self._remember_format_after_usages = 4
 
     def parse(self, tool_string: str):
         """Parse the tool string and return the tool calling."""
@@ -116,7 +106,7 @@ class ToolUsage:
     def _use(
         self,
         tool_string: str,
-        tool: BaseTool,
+        tool: Any,
         calling: Union[ToolCalling, InstructorToolCalling],
     ) -> str:  # TODO: Fix this return type
         tool_event = agentops.ToolEvent(name=calling.tool_name) if agentops else None  # type: ignore
@@ -125,8 +115,6 @@ class ToolUsage:
                 result = self._i18n.errors("task_repeated_usage").format(
                     tool_names=self.tools_names
                 )
-                if self.agent.verbose:
-                    self._printer.print(content=f"\n\n{result}\n", color="purple")
                 self._telemetry.tool_repeated_usage(
                     llm=self.function_calling_llm,
                     tool_name=tool.name,
@@ -212,8 +200,6 @@ class ToolUsage:
                     calling=calling, output=result, should_cache=should_cache
                 )
 
-        if self.agent.verbose:
-            self._printer.print(content=f"\n\n{result}\n", color="purple")
         if agentops:
             agentops.record(tool_event)
         self._telemetry.tool_usage(
@@ -265,7 +251,7 @@ class ToolUsage:
                 calling.arguments == last_tool_usage.arguments
             )
 
-    def _select_tool(self, tool_name: str) -> BaseTool:
+    def _select_tool(self, tool_name: str) -> Any:
         order_tools = sorted(
             self.tools,
             key=lambda tool: SequenceMatcher(
@@ -285,7 +271,7 @@ class ToolUsage:
         self.task.increment_tools_errors()
         if tool_name and tool_name != "":
             raise Exception(
-                f"Action '{tool_name}' don't exist, these are the only available Actions:\n {self.tools_description}"
+                f"Action '{tool_name}' don't exist, these are the only available Actions:\n{self.tools_description}"
             )
         else:
             raise Exception(
@@ -312,7 +298,11 @@ class ToolUsage:
         return "\n--\n".join(descriptions)
 
     def _is_gpt(self, llm) -> bool:
-        return isinstance(llm, ChatOpenAI) and llm.openai_api_base is None
+        return (
+            "gpt" in str(llm).lower()
+            or "o1-preview" in str(llm).lower()
+            or "o1-mini" in str(llm).lower()
+        )
 
     def _tool_calling(
         self, tool_string: str
@@ -325,7 +315,7 @@ class ToolUsage:
                     else ToolCalling
                 )
                 converter = Converter(
-                    text=f"Only tools available:\n###\n{self._render()}\n\nReturn a valid schema for the tool, the tool name must be exactly equal one of the options, use this text to inform the valid output schema:\n\n{tool_string}```",
+                    text=f"Only tools available:\n###\n{self._render()}\n\nReturn a valid schema for the tool, the tool name must be exactly equal one of the options, use this text to inform the valid output schema:\n\n### TEXT \n{tool_string}",
                     llm=self.function_calling_llm,
                     model=model,
                     instructions=dedent(

@@ -1,13 +1,16 @@
 import pytest
 from crewai.agents.parser import CrewAgentParser
-from langchain_core.agents import AgentAction, AgentFinish
-from langchain_core.exceptions import OutputParserException
+from crewai.agents.crew_agent_executor import (
+    AgentAction,
+    AgentFinish,
+    OutputParserException,
+)
 
 
 @pytest.fixture
 def parser():
-    p = CrewAgentParser()
-    p.agent = MockAgent()
+    agent = MockAgent()
+    p = CrewAgentParser(agent)
     return p
 
 
@@ -183,8 +186,6 @@ def test_clean_action_with_multiple_trailing_asterisks(parser):
 def test_clean_action_with_spaces_and_asterisks(parser):
     action = "  **  Ask question to senior researcher  **  "
     cleaned_action = parser._clean_action(action)
-    print(f"Original action: '{action}'")
-    print(f"Cleaned action: '{cleaned_action}'")
     assert cleaned_action == "Ask question to senior researcher"
 
 
@@ -206,21 +207,23 @@ def test_valid_final_answer_parsing(parser):
     )
     result = parser.parse(text)
     assert isinstance(result, AgentFinish)
-    assert result.return_values["output"] == "The temperature is 100 degrees"
+    assert result.output == "The temperature is 100 degrees"
 
 
 def test_missing_action_error(parser):
     text = "Thought: Let's find the temperature\nAction Input: what is the temperature in SF?"
     with pytest.raises(OutputParserException) as exc_info:
         parser.parse(text)
-    assert "Could not parse LLM output" in str(exc_info.value)
+    assert "Invalid Format: I missed the 'Action:' after 'Thought:'." in str(
+        exc_info.value
+    )
 
 
 def test_missing_action_input_error(parser):
     text = "Thought: Let's find the temperature\nAction: search"
     with pytest.raises(OutputParserException) as exc_info:
         parser.parse(text)
-    assert "Could not parse LLM output" in str(exc_info.value)
+    assert "I missed the 'Action Input:' after 'Action:'." in str(exc_info.value)
 
 
 def test_action_and_final_answer_error(parser):
@@ -240,7 +243,6 @@ def test_safe_repair_json(parser):
 def test_safe_repair_json_unrepairable(parser):
     invalid_json = "{invalid_json"
     result = parser._safe_repair_json(invalid_json)
-    print("result:", invalid_json)
     assert result == invalid_json  # Should return the original if unrepairable
 
 
@@ -292,7 +294,6 @@ def test_safe_repair_json_unescaped_characters(parser):
     invalid_json = '{"task": "Research XAI", "context": "Explainable AI", "coworker": "Senior Researcher\n"}'
     expected_repaired_json = '{"task": "Research XAI", "context": "Explainable AI", "coworker": "Senior Researcher"}'
     result = parser._safe_repair_json(invalid_json)
-    print("result:", result)
     assert result == expected_repaired_json
 
 

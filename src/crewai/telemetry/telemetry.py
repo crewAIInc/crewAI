@@ -4,15 +4,28 @@ import asyncio
 import json
 import os
 import platform
+import warnings
 from typing import TYPE_CHECKING, Any, Optional
+from contextlib import contextmanager
 
-import pkg_resources
-from opentelemetry import trace
-from opentelemetry.exporter.otlp.proto.http.trace_exporter import OTLPSpanExporter
-from opentelemetry.sdk.resources import SERVICE_NAME, Resource
-from opentelemetry.sdk.trace import TracerProvider
-from opentelemetry.sdk.trace.export import BatchSpanProcessor
-from opentelemetry.trace import Span, Status, StatusCode
+
+@contextmanager
+def suppress_warnings():
+    with warnings.catch_warnings():
+        warnings.filterwarnings("ignore")
+        yield
+
+
+with suppress_warnings():
+    import pkg_resources
+
+
+from opentelemetry import trace  # noqa: E402
+from opentelemetry.exporter.otlp.proto.http.trace_exporter import OTLPSpanExporter  # noqa: E402
+from opentelemetry.sdk.resources import SERVICE_NAME, Resource  # noqa: E402
+from opentelemetry.sdk.trace import TracerProvider  # noqa: E402
+from opentelemetry.sdk.trace.export import BatchSpanProcessor  # noqa: E402
+from opentelemetry.trace import Span, Status, StatusCode  # noqa: E402
 
 if TYPE_CHECKING:
     from crewai.crew import Crew
@@ -62,8 +75,9 @@ class Telemetry:
     def set_tracer(self):
         if self.ready and not self.trace_set:
             try:
-                trace.set_tracer_provider(self.provider)
-                self.trace_set = True
+                with suppress_warnings():
+                    trace.set_tracer_provider(self.provider)
+                    self.trace_set = True
             except Exception:
                 self.ready = False
                 self.trace_set = False
@@ -102,14 +116,8 @@ class Telemetry:
                                     "max_iter": agent.max_iter,
                                     "max_rpm": agent.max_rpm,
                                     "i18n": agent.i18n.prompt_file,
-                                    "function_calling_llm": json.dumps(
-                                        self._safe_llm_attributes(
-                                            agent.function_calling_llm
-                                        )
-                                    ),
-                                    "llm": json.dumps(
-                                        self._safe_llm_attributes(agent.llm)
-                                    ),
+                                    "function_calling_llm": agent.function_calling_llm,
+                                    "llm": agent.llm,
                                     "delegation_enabled?": agent.allow_delegation,
                                     "allow_code_execution?": agent.allow_code_execution,
                                     "max_retry_limit": agent.max_retry_limit,
@@ -173,14 +181,8 @@ class Telemetry:
                                     "verbose?": agent.verbose,
                                     "max_iter": agent.max_iter,
                                     "max_rpm": agent.max_rpm,
-                                    "function_calling_llm": json.dumps(
-                                        self._safe_llm_attributes(
-                                            agent.function_calling_llm
-                                        )
-                                    ),
-                                    "llm": json.dumps(
-                                        self._safe_llm_attributes(agent.llm)
-                                    ),
+                                    "function_calling_llm": agent.function_calling_llm,
+                                    "llm": agent.llm,
                                     "delegation_enabled?": agent.allow_delegation,
                                     "allow_code_execution?": agent.allow_code_execution,
                                     "max_retry_limit": agent.max_retry_limit,
@@ -294,9 +296,7 @@ class Telemetry:
                 self._add_attribute(span, "tool_name", tool_name)
                 self._add_attribute(span, "attempts", attempts)
                 if llm:
-                    self._add_attribute(
-                        span, "llm", json.dumps(self._safe_llm_attributes(llm))
-                    )
+                    self._add_attribute(span, "llm", llm)
                 span.set_status(Status(StatusCode.OK))
                 span.end()
             except Exception:
@@ -316,9 +316,7 @@ class Telemetry:
                 self._add_attribute(span, "tool_name", tool_name)
                 self._add_attribute(span, "attempts", attempts)
                 if llm:
-                    self._add_attribute(
-                        span, "llm", json.dumps(self._safe_llm_attributes(llm))
-                    )
+                    self._add_attribute(span, "llm", llm)
                 span.set_status(Status(StatusCode.OK))
                 span.end()
             except Exception:
@@ -336,9 +334,7 @@ class Telemetry:
                     pkg_resources.get_distribution("crewai").version,
                 )
                 if llm:
-                    self._add_attribute(
-                        span, "llm", json.dumps(self._safe_llm_attributes(llm))
-                    )
+                    self._add_attribute(span, "llm", llm)
                 span.set_status(Status(StatusCode.OK))
                 span.end()
             except Exception:
@@ -491,7 +487,7 @@ class Telemetry:
                                 "max_iter": agent.max_iter,
                                 "max_rpm": agent.max_rpm,
                                 "i18n": agent.i18n.prompt_file,
-                                "llm": json.dumps(self._safe_llm_attributes(agent.llm)),
+                                "llm": agent.llm,
                                 "delegation_enabled?": agent.allow_delegation,
                                 "tools_names": [
                                     tool.name.casefold() for tool in agent.tools or []
@@ -567,11 +563,3 @@ class Telemetry:
             return span.set_attribute(key, value)
         except Exception:
             pass
-
-    def _safe_llm_attributes(self, llm):
-        attributes = ["name", "model_name", "model", "top_k", "temperature"]
-        if llm:
-            safe_attributes = {k: v for k, v in vars(llm).items() if k in attributes}
-            safe_attributes["class"] = llm.__class__.__name__
-            return safe_attributes
-        return {}

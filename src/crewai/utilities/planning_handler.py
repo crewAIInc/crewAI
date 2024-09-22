@@ -1,6 +1,4 @@
 from typing import Any, List, Optional
-
-from langchain_openai import ChatOpenAI
 from pydantic import BaseModel, Field
 
 from crewai.agent import Agent
@@ -27,7 +25,7 @@ class CrewPlanner:
         self.tasks = tasks
 
         if planning_agent_llm is None:
-            self.planning_agent_llm = ChatOpenAI(model="gpt-4o-mini")
+            self.planning_agent_llm = "gpt-4o-mini"
         else:
             self.planning_agent_llm = planning_agent_llm
 

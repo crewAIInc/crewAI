@@ -71,25 +71,59 @@ To customize your pipeline project, you can:
 3. Modify `src/<project_name>/main.py` to set up and run your pipelines.
 4. Add your environment variables into the `.env` file.
 
-### Example: Defining a Pipeline
+## Example 1: Defining a Two-Stage Sequential Pipeline
 
-Here's an example of how to define a pipeline in `src/<project_name>/pipelines/normal_pipeline.py`:
+Here's an example of how to define a pipeline with sequential stages in `src/<project_name>/pipelines/pipeline.py`:
 
 ```python
 from crewai import Pipeline
 from crewai.project import PipelineBase
-from ..crews.normal_crew import NormalCrew
+from ..crews.research_crew.research_crew import ResearchCrew
+from ..crews.write_x_crew.write_x_crew import WriteXCrew
 
 @PipelineBase
-class NormalPipeline:
+class SequentialPipeline:
     def __init__(self):
         # Initialize crews
-        self.normal_crew = NormalCrew().crew()
+        self.research_crew = ResearchCrew().crew()
+        self.write_x_crew = WriteXCrew().crew()
 
     def create_pipeline(self):
         return Pipeline(
             stages=[
-                self.normal_crew
+                self.research_crew,
+                self.write_x_crew
+            ]
+        )
+
+    async def kickoff(self, inputs):
+        pipeline = self.create_pipeline()
+        results = await pipeline.kickoff(inputs)
+        return results
+```
+
+## Example 2: Defining a Two-Stage Pipeline with Parallel Execution
+
+```python
+from crewai import Pipeline
+from crewai.project import PipelineBase
+from ..crews.research_crew.research_crew import ResearchCrew
+from ..crews.write_x_crew.write_x_crew import WriteXCrew
+from ..crews.write_linkedin_crew.write_linkedin_crew import WriteLinkedInCrew
+
+@PipelineBase
+class ParallelExecutionPipeline:
+    def __init__(self):
+        # Initialize crews
+        self.research_crew = ResearchCrew().crew()
+        self.write_x_crew = WriteXCrew().crew()
+        self.write_linkedin_crew = WriteLinkedInCrew().crew()
+
+    def create_pipeline(self):
+        return Pipeline(
+            stages=[
+                self.research_crew,
+                [self.write_x_crew, self.write_linkedin_crew]  # Parallel execution
             ]
         )
 

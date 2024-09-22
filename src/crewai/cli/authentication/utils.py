@@ -79,7 +79,7 @@ class TokenManager:
         """
         encrypted_data = self.read_secure_file(self.file_path)
 
-        decrypted_data = self.fernet.decrypt(encrypted_data)
+        decrypted_data = self.fernet.decrypt(encrypted_data)  # type: ignore
         data = json.loads(decrypted_data)
 
         expiration = datetime.fromisoformat(data["expiration"])

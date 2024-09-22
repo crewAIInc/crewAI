@@ -1,5 +1,7 @@
 ---
+
 title: Starting a New CrewAI Project - Using Template
+
 description: A comprehensive guide to starting a new CrewAI project, including the latest updates and project setup methods.
 ---
 
@@ -21,6 +23,7 @@ $ pip install 'crewai[tools]'
 ```
 
 ## Creating a New Project
+
 In this example, we will be using poetry as our virtual environment manager.
 
 To create a new CrewAI project, run the following CLI command:
@@ -95,10 +98,13 @@ research_candidates_task:
 ```
 
 ### Referencing Variables:
-Your defined functions with the same name will be used. For example, you can reference the agent for specific tasks from task.yaml file. Ensure your annotated agent and function name is the same otherwise your task won't recognize the reference properly.
+
+Your defined functions with the same name will be used. For example, you can reference the agent for specific tasks from `tasks.yaml` file. Ensure your annotated agent and function name are the same; otherwise, your task won't recognize the reference properly.
 
 #### Example References
-agent.yaml
+
+`agents.yaml`
+
 ```yaml
 email_summarizer:
     role: >
@@ -110,7 +116,8 @@ email_summarizer:
     llm: mixtal_llm
 ```
 
-task.yaml
+`tasks.yaml`
+
 ```yaml
 email_summarizer_task:
     description: >
@@ -123,37 +130,34 @@ email_summarizer_task:
       - research_task
 ```
 
-Use the annotations to properly reference the agent and task in the crew.py file.
+Use the annotations to properly reference the agent and task in the `crew.py` file.
 
 ### Annotations include:
-* [@agent](https://github.com/crewAIInc/crewAI/blob/97d7bfb52ad49a9f04db360e1b6612d98c91971e/src/crewai/project/annotations.py#L17)
-* [@task](https://github.com/crewAIInc/crewAI/blob/97d7bfb52ad49a9f04db360e1b6612d98c91971e/src/crewai/project/annotations.py#L4)
-* [@crew](https://github.com/crewAIInc/crewAI/blob/97d7bfb52ad49a9f04db360e1b6612d98c91971e/src/crewai/project/annotations.py#L69)
-* [@llm](https://github.com/crewAIInc/crewAI/blob/97d7bfb52ad49a9f04db360e1b6612d98c91971e/src/crewai/project/annotations.py#L23)
-* [@tool](https://github.com/crewAIInc/crewAI/blob/97d7bfb52ad49a9f04db360e1b6612d98c91971e/src/crewai/project/annotations.py#L39)
-* [@callback](https://github.com/crewAIInc/crewAI/blob/97d7bfb52ad49a9f04db360e1b6612d98c91971e/src/crewai/project/annotations.py#L44)
-* [@output_json](https://github.com/crewAIInc/crewAI/blob/97d7bfb52ad49a9f04db360e1b6612d98c91971e/src/crewai/project/annotations.py#L29)
-* [@output_pydantic](https://github.com/crewAIInc/crewAI/blob/97d7bfb52ad49a9f04db360e1b6612d98c91971e/src/crewai/project/annotations.py#L34)
-* [@cache_handler](https://github.com/crewAIInc/crewAI/blob/97d7bfb52ad49a9f04db360e1b6612d98c91971e/src/crewai/project/annotations.py#L49)
 
-crew.py
-```py
+* `@agent`
+* `@task`
+* `@crew`
+* `@tool`
+* `@callback`
+* `@output_json`
+* `@output_pydantic`
+* `@cache_handler`
+
+`crew.py`
+
+```python
 # ...
-    @llm
-    def mixtal_llm(self):
-        return ChatGroq(temperature=0, model_name="mixtral-8x7b-32768")
+@agent
+def email_summarizer(self) -> Agent:
+    return Agent(
+        config=self.agents_config["email_summarizer"],
+    )
 
-    @agent
-    def email_summarizer(self) -> Agent:
-        return Agent(
-            config=self.agents_config["email_summarizer"],
-        )
-    ## ...other tasks defined
-    @task
-    def email_summarizer_task(self) -> Task:
-        return Task(
-            config=self.tasks_config["email_summarizer_task"],
-        )
+@task
+def email_summarizer_task(self) -> Task:
+    return Task(
+        config=self.tasks_config["email_summarizer_task"],
+    )
 # ...
 ```
 
@@ -172,7 +176,7 @@ This will install the dependencies specified in the `pyproject.toml` file.
 
 Any variable interpolated in your `agents.yaml` and `tasks.yaml` files like `{variable}` will be replaced by the value of the variable in the `main.py` file.
 
-#### agents.yaml
+#### tasks.yaml
 
 ```yaml
 research_task:
@@ -204,6 +208,7 @@ To run your project, use the following command:
 ```shell
 $ crewai run
 ```
+
 This will initialize your crew of AI agents and begin task execution as defined in your configuration in the `main.py` file.
 
 ### Replay Tasks from Latest Crew Kickoff

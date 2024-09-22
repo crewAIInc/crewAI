@@ -1,341 +1,40 @@
 interactions:
 - request:
-    body: '{"messages": [{"role": "user", "content": "You are test role. test backstory\nYour
-      personal goal is: test goal\n\nYou ONLY have access to the following tools,
-      and should NEVER make up tools that are not listed here:\n\nlearn_about_AI:
-      learn_about_AI(topic) -> float - Useful for when you need to learn about AI
-      to write an paragraph about it.\n\nUse the following format:\n\nThought: you
-      should always think about what to do\nAction: the action to take, only one name
-      of [learn_about_AI], just the name, exactly as it''s written.\nAction Input:
-      the input to the action, just a simple a python dictionary using \" to wrap
-      keys and values.\nObservation: the result of the action\n\nOnce all necessary
-      information is gathered:\n\nThought: I now know the final answer\nFinal Answer:
-      the final answer to the original input question\n\n\nCurrent Task: Write and
-      then review an small paragraph on AI until it''s AMAZING\n\nThis is the expect
-      criteria for your final answer: The final paragraph. \n you MUST return the
-      actual complete content as the final answer, not a summary.\n\nBegin! This is
-      VERY important to you, use the tools available and give your best Final Answer,
-      your job depends on it!\n\nThought: \n"}], "model": "gpt-4", "n": 1, "stop":
-      ["\nObservation"], "stream": true, "temperature": 0.7}'
+    body: '{"messages": [{"role": "system", "content": "You are test role. test backstory\nYour
+      personal goal is: test goal\nYou ONLY have access to the following tools, and
+      should NEVER make up tools that are not listed here:\n\nTool Name: learn_about_AI(*args:
+      Any, **kwargs: Any) -> Any\nTool Description: learn_about_AI() - Useful for
+      when you need to learn about AI to write an paragraph about it. \nTool Arguments:
+      {}\n\nUse the following format:\n\nThought: you should always think about what
+      to do\nAction: the action to take, only one name of [learn_about_AI], just the
+      name, exactly as it''s written.\nAction Input: the input to the action, just
+      a simple python dictionary, enclosed in curly braces, using \" to wrap keys
+      and values.\nObservation: the result of the action\n\nOnce all necessary information
+      is gathered:\n\nThought: I now know the final answer\nFinal Answer: the final
+      answer to the original input question\n"}, {"role": "user", "content": "\nCurrent
+      Task: Write and then review an small paragraph on AI until it''s AMAZING\n\nThis
+      is the expect criteria for your final answer: The final paragraph.\nyou MUST
+      return the actual complete content as the final answer, not a summary.\n\nBegin!
+      This is VERY important to you, use the tools available and give your best Final
+      Answer, your job depends on it!\n\nThought:"}], "model": "gpt-4o", "stop": ["\nObservation:"]}'
     headers:
       accept:
       - application/json
       accept-encoding:
-      - gzip, deflate, br
+      - gzip, deflate
       connection:
       - keep-alive
       content-length:
-      - '1298'
-      content-type:
-      - application/json
-      host:
-      - api.openai.com
-      user-agent:
-      - OpenAI/Python 1.12.0
-      x-stainless-arch:
-      - arm64
-      x-stainless-async:
-      - 'false'
-      x-stainless-lang:
-      - python
-      x-stainless-os:
-      - MacOS
-      x-stainless-package-version:
-      - 1.12.0
-      x-stainless-runtime:
-      - CPython
-      x-stainless-runtime-version:
-      - 3.11.7
-    method: POST
-    uri: https://api.openai.com/v1/chat/completions
-  response:
-    body:
-      string: 'data: {"id":"chatcmpl-8yMSI3nB1qhBDGj8O1lIfXg4GBD7O","object":"chat.completion.chunk","created":1709396690,"model":"gpt-4-0613","system_fingerprint":null,"choices":[{"index":0,"delta":{"role":"assistant","content":""},"logprobs":null,"finish_reason":null}]}
-
-
-        data: {"id":"chatcmpl-8yMSI3nB1qhBDGj8O1lIfXg4GBD7O","object":"chat.completion.chunk","created":1709396690,"model":"gpt-4-0613","system_fingerprint":null,"choices":[{"index":0,"delta":{"content":"I"},"logprobs":null,"finish_reason":null}]}
-
-
-        data: {"id":"chatcmpl-8yMSI3nB1qhBDGj8O1lIfXg4GBD7O","object":"chat.completion.chunk","created":1709396690,"model":"gpt-4-0613","system_fingerprint":null,"choices":[{"index":0,"delta":{"content":"
-        need"},"logprobs":null,"finish_reason":null}]}
-
-
-        data: {"id":"chatcmpl-8yMSI3nB1qhBDGj8O1lIfXg4GBD7O","object":"chat.completion.chunk","created":1709396690,"model":"gpt-4-0613","system_fingerprint":null,"choices":[{"index":0,"delta":{"content":"
-        to"},"logprobs":null,"finish_reason":null}]}
-
-
-        data: {"id":"chatcmpl-8yMSI3nB1qhBDGj8O1lIfXg4GBD7O","object":"chat.completion.chunk","created":1709396690,"model":"gpt-4-0613","system_fingerprint":null,"choices":[{"index":0,"delta":{"content":"
-        write"},"logprobs":null,"finish_reason":null}]}
-
-
-        data: {"id":"chatcmpl-8yMSI3nB1qhBDGj8O1lIfXg4GBD7O","object":"chat.completion.chunk","created":1709396690,"model":"gpt-4-0613","system_fingerprint":null,"choices":[{"index":0,"delta":{"content":"
-        a"},"logprobs":null,"finish_reason":null}]}
-
-
-        data: {"id":"chatcmpl-8yMSI3nB1qhBDGj8O1lIfXg4GBD7O","object":"chat.completion.chunk","created":1709396690,"model":"gpt-4-0613","system_fingerprint":null,"choices":[{"index":0,"delta":{"content":"
-        paragraph"},"logprobs":null,"finish_reason":null}]}
-
-
-        data: {"id":"chatcmpl-8yMSI3nB1qhBDGj8O1lIfXg4GBD7O","object":"chat.completion.chunk","created":1709396690,"model":"gpt-4-0613","system_fingerprint":null,"choices":[{"index":0,"delta":{"content":"
-        on"},"logprobs":null,"finish_reason":null}]}
-
-
-        data: {"id":"chatcmpl-8yMSI3nB1qhBDGj8O1lIfXg4GBD7O","object":"chat.completion.chunk","created":1709396690,"model":"gpt-4-0613","system_fingerprint":null,"choices":[{"index":0,"delta":{"content":"
-        AI"},"logprobs":null,"finish_reason":null}]}
-
-
-        data: {"id":"chatcmpl-8yMSI3nB1qhBDGj8O1lIfXg4GBD7O","object":"chat.completion.chunk","created":1709396690,"model":"gpt-4-0613","system_fingerprint":null,"choices":[{"index":0,"delta":{"content":","},"logprobs":null,"finish_reason":null}]}
-
-
-        data: {"id":"chatcmpl-8yMSI3nB1qhBDGj8O1lIfXg4GBD7O","object":"chat.completion.chunk","created":1709396690,"model":"gpt-4-0613","system_fingerprint":null,"choices":[{"index":0,"delta":{"content":"
-        but"},"logprobs":null,"finish_reason":null}]}
-
-
-        data: {"id":"chatcmpl-8yMSI3nB1qhBDGj8O1lIfXg4GBD7O","object":"chat.completion.chunk","created":1709396690,"model":"gpt-4-0613","system_fingerprint":null,"choices":[{"index":0,"delta":{"content":"
-        first"},"logprobs":null,"finish_reason":null}]}
-
-
-        data: {"id":"chatcmpl-8yMSI3nB1qhBDGj8O1lIfXg4GBD7O","object":"chat.completion.chunk","created":1709396690,"model":"gpt-4-0613","system_fingerprint":null,"choices":[{"index":0,"delta":{"content":"
-        I"},"logprobs":null,"finish_reason":null}]}
-
-
-        data: {"id":"chatcmpl-8yMSI3nB1qhBDGj8O1lIfXg4GBD7O","object":"chat.completion.chunk","created":1709396690,"model":"gpt-4-0613","system_fingerprint":null,"choices":[{"index":0,"delta":{"content":"
-        should"},"logprobs":null,"finish_reason":null}]}
-
-
-        data: {"id":"chatcmpl-8yMSI3nB1qhBDGj8O1lIfXg4GBD7O","object":"chat.completion.chunk","created":1709396690,"model":"gpt-4-0613","system_fingerprint":null,"choices":[{"index":0,"delta":{"content":"
-        learn"},"logprobs":null,"finish_reason":null}]}
-
-
-        data: {"id":"chatcmpl-8yMSI3nB1qhBDGj8O1lIfXg4GBD7O","object":"chat.completion.chunk","created":1709396690,"model":"gpt-4-0613","system_fingerprint":null,"choices":[{"index":0,"delta":{"content":"
-        more"},"logprobs":null,"finish_reason":null}]}
-
-
-        data: {"id":"chatcmpl-8yMSI3nB1qhBDGj8O1lIfXg4GBD7O","object":"chat.completion.chunk","created":1709396690,"model":"gpt-4-0613","system_fingerprint":null,"choices":[{"index":0,"delta":{"content":"
-        about"},"logprobs":null,"finish_reason":null}]}
-
-
-        data: {"id":"chatcmpl-8yMSI3nB1qhBDGj8O1lIfXg4GBD7O","object":"chat.completion.chunk","created":1709396690,"model":"gpt-4-0613","system_fingerprint":null,"choices":[{"index":0,"delta":{"content":"
-        the"},"logprobs":null,"finish_reason":null}]}
-
-
-        data: {"id":"chatcmpl-8yMSI3nB1qhBDGj8O1lIfXg4GBD7O","object":"chat.completion.chunk","created":1709396690,"model":"gpt-4-0613","system_fingerprint":null,"choices":[{"index":0,"delta":{"content":"
-        topic"},"logprobs":null,"finish_reason":null}]}
-
-
-        data: {"id":"chatcmpl-8yMSI3nB1qhBDGj8O1lIfXg4GBD7O","object":"chat.completion.chunk","created":1709396690,"model":"gpt-4-0613","system_fingerprint":null,"choices":[{"index":0,"delta":{"content":"
-        to"},"logprobs":null,"finish_reason":null}]}
-
-
-        data: {"id":"chatcmpl-8yMSI3nB1qhBDGj8O1lIfXg4GBD7O","object":"chat.completion.chunk","created":1709396690,"model":"gpt-4-0613","system_fingerprint":null,"choices":[{"index":0,"delta":{"content":"
-        make"},"logprobs":null,"finish_reason":null}]}
-
-
-        data: {"id":"chatcmpl-8yMSI3nB1qhBDGj8O1lIfXg4GBD7O","object":"chat.completion.chunk","created":1709396690,"model":"gpt-4-0613","system_fingerprint":null,"choices":[{"index":0,"delta":{"content":"
-        sure"},"logprobs":null,"finish_reason":null}]}
-
-
-        data: {"id":"chatcmpl-8yMSI3nB1qhBDGj8O1lIfXg4GBD7O","object":"chat.completion.chunk","created":1709396690,"model":"gpt-4-0613","system_fingerprint":null,"choices":[{"index":0,"delta":{"content":"
-        the"},"logprobs":null,"finish_reason":null}]}
-
-
-        data: {"id":"chatcmpl-8yMSI3nB1qhBDGj8O1lIfXg4GBD7O","object":"chat.completion.chunk","created":1709396690,"model":"gpt-4-0613","system_fingerprint":null,"choices":[{"index":0,"delta":{"content":"
-        paragraph"},"logprobs":null,"finish_reason":null}]}
-
-
-        data: {"id":"chatcmpl-8yMSI3nB1qhBDGj8O1lIfXg4GBD7O","object":"chat.completion.chunk","created":1709396690,"model":"gpt-4-0613","system_fingerprint":null,"choices":[{"index":0,"delta":{"content":"
-        is"},"logprobs":null,"finish_reason":null}]}
-
-
-        data: {"id":"chatcmpl-8yMSI3nB1qhBDGj8O1lIfXg4GBD7O","object":"chat.completion.chunk","created":1709396690,"model":"gpt-4-0613","system_fingerprint":null,"choices":[{"index":0,"delta":{"content":"
-        accurate"},"logprobs":null,"finish_reason":null}]}
-
-
-        data: {"id":"chatcmpl-8yMSI3nB1qhBDGj8O1lIfXg4GBD7O","object":"chat.completion.chunk","created":1709396690,"model":"gpt-4-0613","system_fingerprint":null,"choices":[{"index":0,"delta":{"content":"
-        and"},"logprobs":null,"finish_reason":null}]}
-
-
-        data: {"id":"chatcmpl-8yMSI3nB1qhBDGj8O1lIfXg4GBD7O","object":"chat.completion.chunk","created":1709396690,"model":"gpt-4-0613","system_fingerprint":null,"choices":[{"index":0,"delta":{"content":"
-        detailed"},"logprobs":null,"finish_reason":null}]}
-
-
-        data: {"id":"chatcmpl-8yMSI3nB1qhBDGj8O1lIfXg4GBD7O","object":"chat.completion.chunk","created":1709396690,"model":"gpt-4-0613","system_fingerprint":null,"choices":[{"index":0,"delta":{"content":".\n\n"},"logprobs":null,"finish_reason":null}]}
-
-
-        data: {"id":"chatcmpl-8yMSI3nB1qhBDGj8O1lIfXg4GBD7O","object":"chat.completion.chunk","created":1709396690,"model":"gpt-4-0613","system_fingerprint":null,"choices":[{"index":0,"delta":{"content":"Action"},"logprobs":null,"finish_reason":null}]}
-
-
-        data: {"id":"chatcmpl-8yMSI3nB1qhBDGj8O1lIfXg4GBD7O","object":"chat.completion.chunk","created":1709396690,"model":"gpt-4-0613","system_fingerprint":null,"choices":[{"index":0,"delta":{"content":":"},"logprobs":null,"finish_reason":null}]}
-
-
-        data: {"id":"chatcmpl-8yMSI3nB1qhBDGj8O1lIfXg4GBD7O","object":"chat.completion.chunk","created":1709396690,"model":"gpt-4-0613","system_fingerprint":null,"choices":[{"index":0,"delta":{"content":"
-        \n"},"logprobs":null,"finish_reason":null}]}
-
-
-        data: {"id":"chatcmpl-8yMSI3nB1qhBDGj8O1lIfXg4GBD7O","object":"chat.completion.chunk","created":1709396690,"model":"gpt-4-0613","system_fingerprint":null,"choices":[{"index":0,"delta":{"content":"learn"},"logprobs":null,"finish_reason":null}]}
-
-
-        data: {"id":"chatcmpl-8yMSI3nB1qhBDGj8O1lIfXg4GBD7O","object":"chat.completion.chunk","created":1709396690,"model":"gpt-4-0613","system_fingerprint":null,"choices":[{"index":0,"delta":{"content":"_about"},"logprobs":null,"finish_reason":null}]}
-
-
-        data: {"id":"chatcmpl-8yMSI3nB1qhBDGj8O1lIfXg4GBD7O","object":"chat.completion.chunk","created":1709396690,"model":"gpt-4-0613","system_fingerprint":null,"choices":[{"index":0,"delta":{"content":"_AI"},"logprobs":null,"finish_reason":null}]}
-
-
-        data: {"id":"chatcmpl-8yMSI3nB1qhBDGj8O1lIfXg4GBD7O","object":"chat.completion.chunk","created":1709396690,"model":"gpt-4-0613","system_fingerprint":null,"choices":[{"index":0,"delta":{"content":"\n\n"},"logprobs":null,"finish_reason":null}]}
-
-
-        data: {"id":"chatcmpl-8yMSI3nB1qhBDGj8O1lIfXg4GBD7O","object":"chat.completion.chunk","created":1709396690,"model":"gpt-4-0613","system_fingerprint":null,"choices":[{"index":0,"delta":{"content":"Action"},"logprobs":null,"finish_reason":null}]}
-
-
-        data: {"id":"chatcmpl-8yMSI3nB1qhBDGj8O1lIfXg4GBD7O","object":"chat.completion.chunk","created":1709396690,"model":"gpt-4-0613","system_fingerprint":null,"choices":[{"index":0,"delta":{"content":"
-        Input"},"logprobs":null,"finish_reason":null}]}
-
-
-        data: {"id":"chatcmpl-8yMSI3nB1qhBDGj8O1lIfXg4GBD7O","object":"chat.completion.chunk","created":1709396690,"model":"gpt-4-0613","system_fingerprint":null,"choices":[{"index":0,"delta":{"content":":"},"logprobs":null,"finish_reason":null}]}
-
-
-        data: {"id":"chatcmpl-8yMSI3nB1qhBDGj8O1lIfXg4GBD7O","object":"chat.completion.chunk","created":1709396690,"model":"gpt-4-0613","system_fingerprint":null,"choices":[{"index":0,"delta":{"content":"
-        \n"},"logprobs":null,"finish_reason":null}]}
-
-
-        data: {"id":"chatcmpl-8yMSI3nB1qhBDGj8O1lIfXg4GBD7O","object":"chat.completion.chunk","created":1709396690,"model":"gpt-4-0613","system_fingerprint":null,"choices":[{"index":0,"delta":{"content":"{\n"},"logprobs":null,"finish_reason":null}]}
-
-
-        data: {"id":"chatcmpl-8yMSI3nB1qhBDGj8O1lIfXg4GBD7O","object":"chat.completion.chunk","created":1709396690,"model":"gpt-4-0613","system_fingerprint":null,"choices":[{"index":0,"delta":{"content":"
-        "},"logprobs":null,"finish_reason":null}]}
-
-
-        data: {"id":"chatcmpl-8yMSI3nB1qhBDGj8O1lIfXg4GBD7O","object":"chat.completion.chunk","created":1709396690,"model":"gpt-4-0613","system_fingerprint":null,"choices":[{"index":0,"delta":{"content":"
-        \""},"logprobs":null,"finish_reason":null}]}
-
-
-        data: {"id":"chatcmpl-8yMSI3nB1qhBDGj8O1lIfXg4GBD7O","object":"chat.completion.chunk","created":1709396690,"model":"gpt-4-0613","system_fingerprint":null,"choices":[{"index":0,"delta":{"content":"topic"},"logprobs":null,"finish_reason":null}]}
-
-
-        data: {"id":"chatcmpl-8yMSI3nB1qhBDGj8O1lIfXg4GBD7O","object":"chat.completion.chunk","created":1709396690,"model":"gpt-4-0613","system_fingerprint":null,"choices":[{"index":0,"delta":{"content":"\":"},"logprobs":null,"finish_reason":null}]}
-
-
-        data: {"id":"chatcmpl-8yMSI3nB1qhBDGj8O1lIfXg4GBD7O","object":"chat.completion.chunk","created":1709396690,"model":"gpt-4-0613","system_fingerprint":null,"choices":[{"index":0,"delta":{"content":"
-        \""},"logprobs":null,"finish_reason":null}]}
-
-
-        data: {"id":"chatcmpl-8yMSI3nB1qhBDGj8O1lIfXg4GBD7O","object":"chat.completion.chunk","created":1709396690,"model":"gpt-4-0613","system_fingerprint":null,"choices":[{"index":0,"delta":{"content":"Art"},"logprobs":null,"finish_reason":null}]}
-
-
-        data: {"id":"chatcmpl-8yMSI3nB1qhBDGj8O1lIfXg4GBD7O","object":"chat.completion.chunk","created":1709396690,"model":"gpt-4-0613","system_fingerprint":null,"choices":[{"index":0,"delta":{"content":"ificial"},"logprobs":null,"finish_reason":null}]}
-
-
-        data: {"id":"chatcmpl-8yMSI3nB1qhBDGj8O1lIfXg4GBD7O","object":"chat.completion.chunk","created":1709396690,"model":"gpt-4-0613","system_fingerprint":null,"choices":[{"index":0,"delta":{"content":"
-        Intelligence"},"logprobs":null,"finish_reason":null}]}
-
-
-        data: {"id":"chatcmpl-8yMSI3nB1qhBDGj8O1lIfXg4GBD7O","object":"chat.completion.chunk","created":1709396690,"model":"gpt-4-0613","system_fingerprint":null,"choices":[{"index":0,"delta":{"content":"\"\n"},"logprobs":null,"finish_reason":null}]}
-
-
-        data: {"id":"chatcmpl-8yMSI3nB1qhBDGj8O1lIfXg4GBD7O","object":"chat.completion.chunk","created":1709396690,"model":"gpt-4-0613","system_fingerprint":null,"choices":[{"index":0,"delta":{"content":"}\n"},"logprobs":null,"finish_reason":null}]}
-
-
-        data: {"id":"chatcmpl-8yMSI3nB1qhBDGj8O1lIfXg4GBD7O","object":"chat.completion.chunk","created":1709396690,"model":"gpt-4-0613","system_fingerprint":null,"choices":[{"index":0,"delta":{},"logprobs":null,"finish_reason":"stop"}]}
-
-
-        data: [DONE]
-
-
-        '
-    headers:
-      CF-Cache-Status:
-      - DYNAMIC
-      CF-RAY:
-      - 85e2bd445d9ea4f9-GRU
-      Cache-Control:
-      - no-cache, must-revalidate
-      Connection:
-      - keep-alive
-      Content-Type:
-      - text/event-stream
-      Date:
-      - Sat, 02 Mar 2024 16:24:51 GMT
-      Server:
-      - cloudflare
-      Set-Cookie:
-      - __cf_bm=tyKaWMsy2kZuA89sUzsD20Of3NOe7njYgPWzLsxsM8M-1709396691-1.0.1.1-cNX.pW6MzyFDwquOs.qym9oqbXSMWA6UGfl9YYn.uiQVEttXex8.FyyheEhIEXDHRfmU34AnRJ0qEhMJcuLp4A;
-        path=/; expires=Sat, 02-Mar-24 16:54:51 GMT; domain=.api.openai.com; HttpOnly;
-        Secure; SameSite=None
-      - _cfuvid=uAVyHLdvVKenvQCExJCZaCR93cAE_6B8DL0QqEWLRkY-1709396691226-0.0.1.1-604800000;
-        path=/; domain=.api.openai.com; HttpOnly; Secure; SameSite=None
-      Transfer-Encoding:
-      - chunked
-      access-control-allow-origin:
-      - '*'
-      alt-svc:
-      - h3=":443"; ma=86400
-      openai-model:
-      - gpt-4-0613
-      openai-organization:
-      - crewai-iuxna1
-      openai-processing-ms:
-      - '254'
-      openai-version:
-      - '2020-10-01'
-      strict-transport-security:
-      - max-age=15724800; includeSubDomains
-      x-ratelimit-limit-requests:
-      - '10000'
-      x-ratelimit-limit-tokens:
-      - '300000'
-      x-ratelimit-remaining-requests:
-      - '9999'
-      x-ratelimit-remaining-tokens:
-      - '299699'
-      x-ratelimit-reset-requests:
-      - 6ms
-      x-ratelimit-reset-tokens:
-      - 60ms
-      x-request-id:
-      - req_fd9a5270f40cc8781ab2652f92587470
-    status:
-      code: 200
-      message: OK
-- request:
-    body: '{"messages": [{"role": "user", "content": "You are test role. test backstory\nYour
-      personal goal is: test goal\n\nYou ONLY have access to the following tools,
-      and should NEVER make up tools that are not listed here:\n\nlearn_about_AI:
-      learn_about_AI(topic) -> float - Useful for when you need to learn about AI
-      to write an paragraph about it.\n\nUse the following format:\n\nThought: you
-      should always think about what to do\nAction: the action to take, only one name
-      of [learn_about_AI], just the name, exactly as it''s written.\nAction Input:
-      the input to the action, just a simple a python dictionary using \" to wrap
-      keys and values.\nObservation: the result of the action\n\nOnce all necessary
-      information is gathered:\n\nThought: I now know the final answer\nFinal Answer:
-      the final answer to the original input question\n\n\nCurrent Task: Write and
-      then review an small paragraph on AI until it''s AMAZING\n\nThis is the expect
-      criteria for your final answer: The final paragraph. \n you MUST return the
-      actual complete content as the final answer, not a summary.\n\nBegin! This is
-      VERY important to you, use the tools available and give your best Final Answer,
-      your job depends on it!\n\nThought: \nI need to write a paragraph on AI, but
-      first I should learn more about the topic to make sure the paragraph is accurate
-      and detailed.\n\nAction: \nlearn_about_AI\n\nAction Input: \n{\n  \"topic\":
-      \"Artificial Intelligence\"\n}\n\nObservation: AI is a very broad field.\n"}],
-      "model": "gpt-4", "n": 1, "stop": ["\nObservation"], "stream": true, "temperature":
-      0.7}'
-    headers:
-      accept:
-      - application/json
-      accept-encoding:
-      - gzip, deflate, br
-      connection:
-      - keep-alive
-      content-length:
-      - '1569'
+      - '1377'
       content-type:
       - application/json
       cookie:
-      - __cf_bm=tyKaWMsy2kZuA89sUzsD20Of3NOe7njYgPWzLsxsM8M-1709396691-1.0.1.1-cNX.pW6MzyFDwquOs.qym9oqbXSMWA6UGfl9YYn.uiQVEttXex8.FyyheEhIEXDHRfmU34AnRJ0qEhMJcuLp4A;
-        _cfuvid=uAVyHLdvVKenvQCExJCZaCR93cAE_6B8DL0QqEWLRkY-1709396691226-0.0.1.1-604800000
+      - __cf_bm=.8.5x0rqghNdtUCxfmwblfhuXiKyPm_cRq.NIa0heL0-1726642369-1.0.1.1-VbsAGqjOt45ZD50K2QW2oZrByLLIh6w8K4nAkLthTbXgU5qTgdf0mhvFId8Q2F3DcHUw9E72lVIZEN.YVlYINQ;
+        _cfuvid=o5s1Ux898x0eFNtzUCnG996iqyX3LgXDXq99C5oqnVE-1726642369248-0.0.1.1-604800000
       host:
       - api.openai.com
       user-agent:
-      - OpenAI/Python 1.12.0
+      - OpenAI/Python 1.46.0
       x-stainless-arch:
       - arm64
       x-stainless-async:
@@ -345,7 +44,9 @@ interactions:
       x-stainless-os:
       - MacOS
       x-stainless-package-version:
-      - 1.12.0
+      - 1.46.0
+      x-stainless-raw-response:
+      - 'true'
       x-stainless-runtime:
       - CPython
       x-stainless-runtime-version:
@@ -353,393 +54,101 @@ interactions:
     method: POST
     uri: https://api.openai.com/v1/chat/completions
   response:
-    body:
-      string: 'data: {"id":"chatcmpl-8yMSKGp0mzhIoaskWgk8isUpfvuJr","object":"chat.completion.chunk","created":1709396692,"model":"gpt-4-0613","system_fingerprint":null,"choices":[{"index":0,"delta":{"role":"assistant","content":""},"logprobs":null,"finish_reason":null}]}
-
-
-        data: {"id":"chatcmpl-8yMSKGp0mzhIoaskWgk8isUpfvuJr","object":"chat.completion.chunk","created":1709396692,"model":"gpt-4-0613","system_fingerprint":null,"choices":[{"index":0,"delta":{"content":"Thought"},"logprobs":null,"finish_reason":null}]}
-
-
-        data: {"id":"chatcmpl-8yMSKGp0mzhIoaskWgk8isUpfvuJr","object":"chat.completion.chunk","created":1709396692,"model":"gpt-4-0613","system_fingerprint":null,"choices":[{"index":0,"delta":{"content":":"},"logprobs":null,"finish_reason":null}]}
-
-
-        data: {"id":"chatcmpl-8yMSKGp0mzhIoaskWgk8isUpfvuJr","object":"chat.completion.chunk","created":1709396692,"model":"gpt-4-0613","system_fingerprint":null,"choices":[{"index":0,"delta":{"content":"
-        \n"},"logprobs":null,"finish_reason":null}]}
-
-
-        data: {"id":"chatcmpl-8yMSKGp0mzhIoaskWgk8isUpfvuJr","object":"chat.completion.chunk","created":1709396692,"model":"gpt-4-0613","system_fingerprint":null,"choices":[{"index":0,"delta":{"content":"The"},"logprobs":null,"finish_reason":null}]}
-
-
-        data: {"id":"chatcmpl-8yMSKGp0mzhIoaskWgk8isUpfvuJr","object":"chat.completion.chunk","created":1709396692,"model":"gpt-4-0613","system_fingerprint":null,"choices":[{"index":0,"delta":{"content":"
-        information"},"logprobs":null,"finish_reason":null}]}
-
-
-        data: {"id":"chatcmpl-8yMSKGp0mzhIoaskWgk8isUpfvuJr","object":"chat.completion.chunk","created":1709396692,"model":"gpt-4-0613","system_fingerprint":null,"choices":[{"index":0,"delta":{"content":"
-        I"},"logprobs":null,"finish_reason":null}]}
-
-
-        data: {"id":"chatcmpl-8yMSKGp0mzhIoaskWgk8isUpfvuJr","object":"chat.completion.chunk","created":1709396692,"model":"gpt-4-0613","system_fingerprint":null,"choices":[{"index":0,"delta":{"content":"
-        received"},"logprobs":null,"finish_reason":null}]}
-
-
-        data: {"id":"chatcmpl-8yMSKGp0mzhIoaskWgk8isUpfvuJr","object":"chat.completion.chunk","created":1709396692,"model":"gpt-4-0613","system_fingerprint":null,"choices":[{"index":0,"delta":{"content":"
-        is"},"logprobs":null,"finish_reason":null}]}
-
-
-        data: {"id":"chatcmpl-8yMSKGp0mzhIoaskWgk8isUpfvuJr","object":"chat.completion.chunk","created":1709396692,"model":"gpt-4-0613","system_fingerprint":null,"choices":[{"index":0,"delta":{"content":"
-        a"},"logprobs":null,"finish_reason":null}]}
-
-
-        data: {"id":"chatcmpl-8yMSKGp0mzhIoaskWgk8isUpfvuJr","object":"chat.completion.chunk","created":1709396692,"model":"gpt-4-0613","system_fingerprint":null,"choices":[{"index":0,"delta":{"content":"
-        bit"},"logprobs":null,"finish_reason":null}]}
-
-
-        data: {"id":"chatcmpl-8yMSKGp0mzhIoaskWgk8isUpfvuJr","object":"chat.completion.chunk","created":1709396692,"model":"gpt-4-0613","system_fingerprint":null,"choices":[{"index":0,"delta":{"content":"
-        vague"},"logprobs":null,"finish_reason":null}]}
-
-
-        data: {"id":"chatcmpl-8yMSKGp0mzhIoaskWgk8isUpfvuJr","object":"chat.completion.chunk","created":1709396692,"model":"gpt-4-0613","system_fingerprint":null,"choices":[{"index":0,"delta":{"content":"."},"logprobs":null,"finish_reason":null}]}
-
-
-        data: {"id":"chatcmpl-8yMSKGp0mzhIoaskWgk8isUpfvuJr","object":"chat.completion.chunk","created":1709396692,"model":"gpt-4-0613","system_fingerprint":null,"choices":[{"index":0,"delta":{"content":"
-        AI"},"logprobs":null,"finish_reason":null}]}
-
-
-        data: {"id":"chatcmpl-8yMSKGp0mzhIoaskWgk8isUpfvuJr","object":"chat.completion.chunk","created":1709396692,"model":"gpt-4-0613","system_fingerprint":null,"choices":[{"index":0,"delta":{"content":"
-        is"},"logprobs":null,"finish_reason":null}]}
-
-
-        data: {"id":"chatcmpl-8yMSKGp0mzhIoaskWgk8isUpfvuJr","object":"chat.completion.chunk","created":1709396692,"model":"gpt-4-0613","system_fingerprint":null,"choices":[{"index":0,"delta":{"content":"
-        indeed"},"logprobs":null,"finish_reason":null}]}
-
-
-        data: {"id":"chatcmpl-8yMSKGp0mzhIoaskWgk8isUpfvuJr","object":"chat.completion.chunk","created":1709396692,"model":"gpt-4-0613","system_fingerprint":null,"choices":[{"index":0,"delta":{"content":"
-        a"},"logprobs":null,"finish_reason":null}]}
-
-
-        data: {"id":"chatcmpl-8yMSKGp0mzhIoaskWgk8isUpfvuJr","object":"chat.completion.chunk","created":1709396692,"model":"gpt-4-0613","system_fingerprint":null,"choices":[{"index":0,"delta":{"content":"
-        broad"},"logprobs":null,"finish_reason":null}]}
-
-
-        data: {"id":"chatcmpl-8yMSKGp0mzhIoaskWgk8isUpfvuJr","object":"chat.completion.chunk","created":1709396692,"model":"gpt-4-0613","system_fingerprint":null,"choices":[{"index":0,"delta":{"content":"
-        field"},"logprobs":null,"finish_reason":null}]}
-
-
-        data: {"id":"chatcmpl-8yMSKGp0mzhIoaskWgk8isUpfvuJr","object":"chat.completion.chunk","created":1709396692,"model":"gpt-4-0613","system_fingerprint":null,"choices":[{"index":0,"delta":{"content":","},"logprobs":null,"finish_reason":null}]}
-
-
-        data: {"id":"chatcmpl-8yMSKGp0mzhIoaskWgk8isUpfvuJr","object":"chat.completion.chunk","created":1709396692,"model":"gpt-4-0613","system_fingerprint":null,"choices":[{"index":0,"delta":{"content":"
-        but"},"logprobs":null,"finish_reason":null}]}
-
-
-        data: {"id":"chatcmpl-8yMSKGp0mzhIoaskWgk8isUpfvuJr","object":"chat.completion.chunk","created":1709396692,"model":"gpt-4-0613","system_fingerprint":null,"choices":[{"index":0,"delta":{"content":"
-        this"},"logprobs":null,"finish_reason":null}]}
-
-
-        data: {"id":"chatcmpl-8yMSKGp0mzhIoaskWgk8isUpfvuJr","object":"chat.completion.chunk","created":1709396692,"model":"gpt-4-0613","system_fingerprint":null,"choices":[{"index":0,"delta":{"content":"
-        doesn"},"logprobs":null,"finish_reason":null}]}
-
-
-        data: {"id":"chatcmpl-8yMSKGp0mzhIoaskWgk8isUpfvuJr","object":"chat.completion.chunk","created":1709396692,"model":"gpt-4-0613","system_fingerprint":null,"choices":[{"index":0,"delta":{"content":"''t"},"logprobs":null,"finish_reason":null}]}
-
-
-        data: {"id":"chatcmpl-8yMSKGp0mzhIoaskWgk8isUpfvuJr","object":"chat.completion.chunk","created":1709396692,"model":"gpt-4-0613","system_fingerprint":null,"choices":[{"index":0,"delta":{"content":"
-        help"},"logprobs":null,"finish_reason":null}]}
-
-
-        data: {"id":"chatcmpl-8yMSKGp0mzhIoaskWgk8isUpfvuJr","object":"chat.completion.chunk","created":1709396692,"model":"gpt-4-0613","system_fingerprint":null,"choices":[{"index":0,"delta":{"content":"
-        me"},"logprobs":null,"finish_reason":null}]}
-
-
-        data: {"id":"chatcmpl-8yMSKGp0mzhIoaskWgk8isUpfvuJr","object":"chat.completion.chunk","created":1709396692,"model":"gpt-4-0613","system_fingerprint":null,"choices":[{"index":0,"delta":{"content":"
-        write"},"logprobs":null,"finish_reason":null}]}
-
-
-        data: {"id":"chatcmpl-8yMSKGp0mzhIoaskWgk8isUpfvuJr","object":"chat.completion.chunk","created":1709396692,"model":"gpt-4-0613","system_fingerprint":null,"choices":[{"index":0,"delta":{"content":"
-        a"},"logprobs":null,"finish_reason":null}]}
-
-
-        data: {"id":"chatcmpl-8yMSKGp0mzhIoaskWgk8isUpfvuJr","object":"chat.completion.chunk","created":1709396692,"model":"gpt-4-0613","system_fingerprint":null,"choices":[{"index":0,"delta":{"content":"
-        detailed"},"logprobs":null,"finish_reason":null}]}
-
-
-        data: {"id":"chatcmpl-8yMSKGp0mzhIoaskWgk8isUpfvuJr","object":"chat.completion.chunk","created":1709396692,"model":"gpt-4-0613","system_fingerprint":null,"choices":[{"index":0,"delta":{"content":"
-        paragraph"},"logprobs":null,"finish_reason":null}]}
-
-
-        data: {"id":"chatcmpl-8yMSKGp0mzhIoaskWgk8isUpfvuJr","object":"chat.completion.chunk","created":1709396692,"model":"gpt-4-0613","system_fingerprint":null,"choices":[{"index":0,"delta":{"content":"."},"logprobs":null,"finish_reason":null}]}
-
-
-        data: {"id":"chatcmpl-8yMSKGp0mzhIoaskWgk8isUpfvuJr","object":"chat.completion.chunk","created":1709396692,"model":"gpt-4-0613","system_fingerprint":null,"choices":[{"index":0,"delta":{"content":"
-        I"},"logprobs":null,"finish_reason":null}]}
-
-
-        data: {"id":"chatcmpl-8yMSKGp0mzhIoaskWgk8isUpfvuJr","object":"chat.completion.chunk","created":1709396692,"model":"gpt-4-0613","system_fingerprint":null,"choices":[{"index":0,"delta":{"content":"
-        should"},"logprobs":null,"finish_reason":null}]}
-
-
-        data: {"id":"chatcmpl-8yMSKGp0mzhIoaskWgk8isUpfvuJr","object":"chat.completion.chunk","created":1709396692,"model":"gpt-4-0613","system_fingerprint":null,"choices":[{"index":0,"delta":{"content":"
-        try"},"logprobs":null,"finish_reason":null}]}
-
-
-        data: {"id":"chatcmpl-8yMSKGp0mzhIoaskWgk8isUpfvuJr","object":"chat.completion.chunk","created":1709396692,"model":"gpt-4-0613","system_fingerprint":null,"choices":[{"index":0,"delta":{"content":"
-        to"},"logprobs":null,"finish_reason":null}]}
-
-
-        data: {"id":"chatcmpl-8yMSKGp0mzhIoaskWgk8isUpfvuJr","object":"chat.completion.chunk","created":1709396692,"model":"gpt-4-0613","system_fingerprint":null,"choices":[{"index":0,"delta":{"content":"
-        learn"},"logprobs":null,"finish_reason":null}]}
-
-
-        data: {"id":"chatcmpl-8yMSKGp0mzhIoaskWgk8isUpfvuJr","object":"chat.completion.chunk","created":1709396692,"model":"gpt-4-0613","system_fingerprint":null,"choices":[{"index":0,"delta":{"content":"
-        more"},"logprobs":null,"finish_reason":null}]}
-
-
-        data: {"id":"chatcmpl-8yMSKGp0mzhIoaskWgk8isUpfvuJr","object":"chat.completion.chunk","created":1709396692,"model":"gpt-4-0613","system_fingerprint":null,"choices":[{"index":0,"delta":{"content":"
-        about"},"logprobs":null,"finish_reason":null}]}
-
-
-        data: {"id":"chatcmpl-8yMSKGp0mzhIoaskWgk8isUpfvuJr","object":"chat.completion.chunk","created":1709396692,"model":"gpt-4-0613","system_fingerprint":null,"choices":[{"index":0,"delta":{"content":"
-        a"},"logprobs":null,"finish_reason":null}]}
-
-
-        data: {"id":"chatcmpl-8yMSKGp0mzhIoaskWgk8isUpfvuJr","object":"chat.completion.chunk","created":1709396692,"model":"gpt-4-0613","system_fingerprint":null,"choices":[{"index":0,"delta":{"content":"
-        specific"},"logprobs":null,"finish_reason":null}]}
-
-
-        data: {"id":"chatcmpl-8yMSKGp0mzhIoaskWgk8isUpfvuJr","object":"chat.completion.chunk","created":1709396692,"model":"gpt-4-0613","system_fingerprint":null,"choices":[{"index":0,"delta":{"content":"
-        aspect"},"logprobs":null,"finish_reason":null}]}
-
-
-        data: {"id":"chatcmpl-8yMSKGp0mzhIoaskWgk8isUpfvuJr","object":"chat.completion.chunk","created":1709396692,"model":"gpt-4-0613","system_fingerprint":null,"choices":[{"index":0,"delta":{"content":"
-        of"},"logprobs":null,"finish_reason":null}]}
-
-
-        data: {"id":"chatcmpl-8yMSKGp0mzhIoaskWgk8isUpfvuJr","object":"chat.completion.chunk","created":1709396692,"model":"gpt-4-0613","system_fingerprint":null,"choices":[{"index":0,"delta":{"content":"
-        AI"},"logprobs":null,"finish_reason":null}]}
-
-
-        data: {"id":"chatcmpl-8yMSKGp0mzhIoaskWgk8isUpfvuJr","object":"chat.completion.chunk","created":1709396692,"model":"gpt-4-0613","system_fingerprint":null,"choices":[{"index":0,"delta":{"content":".\n\n"},"logprobs":null,"finish_reason":null}]}
-
-
-        data: {"id":"chatcmpl-8yMSKGp0mzhIoaskWgk8isUpfvuJr","object":"chat.completion.chunk","created":1709396692,"model":"gpt-4-0613","system_fingerprint":null,"choices":[{"index":0,"delta":{"content":"Action"},"logprobs":null,"finish_reason":null}]}
-
-
-        data: {"id":"chatcmpl-8yMSKGp0mzhIoaskWgk8isUpfvuJr","object":"chat.completion.chunk","created":1709396692,"model":"gpt-4-0613","system_fingerprint":null,"choices":[{"index":0,"delta":{"content":":"},"logprobs":null,"finish_reason":null}]}
-
-
-        data: {"id":"chatcmpl-8yMSKGp0mzhIoaskWgk8isUpfvuJr","object":"chat.completion.chunk","created":1709396692,"model":"gpt-4-0613","system_fingerprint":null,"choices":[{"index":0,"delta":{"content":"
-        \n"},"logprobs":null,"finish_reason":null}]}
-
-
-        data: {"id":"chatcmpl-8yMSKGp0mzhIoaskWgk8isUpfvuJr","object":"chat.completion.chunk","created":1709396692,"model":"gpt-4-0613","system_fingerprint":null,"choices":[{"index":0,"delta":{"content":"learn"},"logprobs":null,"finish_reason":null}]}
-
-
-        data: {"id":"chatcmpl-8yMSKGp0mzhIoaskWgk8isUpfvuJr","object":"chat.completion.chunk","created":1709396692,"model":"gpt-4-0613","system_fingerprint":null,"choices":[{"index":0,"delta":{"content":"_about"},"logprobs":null,"finish_reason":null}]}
-
-
-        data: {"id":"chatcmpl-8yMSKGp0mzhIoaskWgk8isUpfvuJr","object":"chat.completion.chunk","created":1709396692,"model":"gpt-4-0613","system_fingerprint":null,"choices":[{"index":0,"delta":{"content":"_AI"},"logprobs":null,"finish_reason":null}]}
-
-
-        data: {"id":"chatcmpl-8yMSKGp0mzhIoaskWgk8isUpfvuJr","object":"chat.completion.chunk","created":1709396692,"model":"gpt-4-0613","system_fingerprint":null,"choices":[{"index":0,"delta":{"content":"\n\n"},"logprobs":null,"finish_reason":null}]}
-
-
-        data: {"id":"chatcmpl-8yMSKGp0mzhIoaskWgk8isUpfvuJr","object":"chat.completion.chunk","created":1709396692,"model":"gpt-4-0613","system_fingerprint":null,"choices":[{"index":0,"delta":{"content":"Action"},"logprobs":null,"finish_reason":null}]}
-
-
-        data: {"id":"chatcmpl-8yMSKGp0mzhIoaskWgk8isUpfvuJr","object":"chat.completion.chunk","created":1709396692,"model":"gpt-4-0613","system_fingerprint":null,"choices":[{"index":0,"delta":{"content":"
-        Input"},"logprobs":null,"finish_reason":null}]}
-
-
-        data: {"id":"chatcmpl-8yMSKGp0mzhIoaskWgk8isUpfvuJr","object":"chat.completion.chunk","created":1709396692,"model":"gpt-4-0613","system_fingerprint":null,"choices":[{"index":0,"delta":{"content":":"},"logprobs":null,"finish_reason":null}]}
-
-
-        data: {"id":"chatcmpl-8yMSKGp0mzhIoaskWgk8isUpfvuJr","object":"chat.completion.chunk","created":1709396692,"model":"gpt-4-0613","system_fingerprint":null,"choices":[{"index":0,"delta":{"content":"
-        \n"},"logprobs":null,"finish_reason":null}]}
-
-
-        data: {"id":"chatcmpl-8yMSKGp0mzhIoaskWgk8isUpfvuJr","object":"chat.completion.chunk","created":1709396692,"model":"gpt-4-0613","system_fingerprint":null,"choices":[{"index":0,"delta":{"content":"{\n"},"logprobs":null,"finish_reason":null}]}
-
-
-        data: {"id":"chatcmpl-8yMSKGp0mzhIoaskWgk8isUpfvuJr","object":"chat.completion.chunk","created":1709396692,"model":"gpt-4-0613","system_fingerprint":null,"choices":[{"index":0,"delta":{"content":"
-        "},"logprobs":null,"finish_reason":null}]}
-
-
-        data: {"id":"chatcmpl-8yMSKGp0mzhIoaskWgk8isUpfvuJr","object":"chat.completion.chunk","created":1709396692,"model":"gpt-4-0613","system_fingerprint":null,"choices":[{"index":0,"delta":{"content":"
-        \""},"logprobs":null,"finish_reason":null}]}
-
-
-        data: {"id":"chatcmpl-8yMSKGp0mzhIoaskWgk8isUpfvuJr","object":"chat.completion.chunk","created":1709396692,"model":"gpt-4-0613","system_fingerprint":null,"choices":[{"index":0,"delta":{"content":"topic"},"logprobs":null,"finish_reason":null}]}
-
-
-        data: {"id":"chatcmpl-8yMSKGp0mzhIoaskWgk8isUpfvuJr","object":"chat.completion.chunk","created":1709396692,"model":"gpt-4-0613","system_fingerprint":null,"choices":[{"index":0,"delta":{"content":"\":"},"logprobs":null,"finish_reason":null}]}
-
-
-        data: {"id":"chatcmpl-8yMSKGp0mzhIoaskWgk8isUpfvuJr","object":"chat.completion.chunk","created":1709396692,"model":"gpt-4-0613","system_fingerprint":null,"choices":[{"index":0,"delta":{"content":"
-        \""},"logprobs":null,"finish_reason":null}]}
-
-
-        data: {"id":"chatcmpl-8yMSKGp0mzhIoaskWgk8isUpfvuJr","object":"chat.completion.chunk","created":1709396692,"model":"gpt-4-0613","system_fingerprint":null,"choices":[{"index":0,"delta":{"content":"Machine"},"logprobs":null,"finish_reason":null}]}
-
-
-        data: {"id":"chatcmpl-8yMSKGp0mzhIoaskWgk8isUpfvuJr","object":"chat.completion.chunk","created":1709396692,"model":"gpt-4-0613","system_fingerprint":null,"choices":[{"index":0,"delta":{"content":"
-        Learning"},"logprobs":null,"finish_reason":null}]}
-
-
-        data: {"id":"chatcmpl-8yMSKGp0mzhIoaskWgk8isUpfvuJr","object":"chat.completion.chunk","created":1709396692,"model":"gpt-4-0613","system_fingerprint":null,"choices":[{"index":0,"delta":{"content":"\"\n"},"logprobs":null,"finish_reason":null}]}
-
-
-        data: {"id":"chatcmpl-8yMSKGp0mzhIoaskWgk8isUpfvuJr","object":"chat.completion.chunk","created":1709396692,"model":"gpt-4-0613","system_fingerprint":null,"choices":[{"index":0,"delta":{"content":"}\n"},"logprobs":null,"finish_reason":null}]}
-
-
-        data: {"id":"chatcmpl-8yMSKGp0mzhIoaskWgk8isUpfvuJr","object":"chat.completion.chunk","created":1709396692,"model":"gpt-4-0613","system_fingerprint":null,"choices":[{"index":0,"delta":{},"logprobs":null,"finish_reason":"stop"}]}
-
-
-        data: [DONE]
-
-
-        '
+    content: "{\n  \"id\": \"chatcmpl-A8isdcW9hrigWzaUjwtRFDlm58um2\",\n  \"object\":
+      \"chat.completion\",\n  \"created\": 1726642507,\n  \"model\": \"gpt-4o-2024-05-13\",\n
+      \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
+      \"assistant\",\n        \"content\": \"I need to gather detailed information
+      about AI to write an amazing paragraph.\\n\\nAction: learn_about_AI\\nAction
+      Input: {}\",\n        \"refusal\": null\n      },\n      \"logprobs\": null,\n
+      \     \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\":
+      277,\n    \"completion_tokens\": 24,\n    \"total_tokens\": 301,\n    \"completion_tokens_details\":
+      {\n      \"reasoning_tokens\": 0\n    }\n  },\n  \"system_fingerprint\": \"fp_8dd226ca9c\"\n}\n"
     headers:
       CF-Cache-Status:
       - DYNAMIC
       CF-RAY:
-      - 85e2bd4f99dda4f9-GRU
-      Cache-Control:
-      - no-cache, must-revalidate
+      - 8c4f6db90e5da67a-MIA
       Connection:
       - keep-alive
+      Content-Encoding:
+      - gzip
       Content-Type:
-      - text/event-stream
+      - application/json
       Date:
-      - Sat, 02 Mar 2024 16:24:52 GMT
+      - Wed, 18 Sep 2024 06:55:08 GMT
       Server:
       - cloudflare
       Transfer-Encoding:
       - chunked
-      access-control-allow-origin:
-      - '*'
+      X-Content-Type-Options:
+      - nosniff
+      access-control-expose-headers:
+      - X-Request-ID
       alt-svc:
       - h3=":443"; ma=86400
-      openai-model:
-      - gpt-4-0613
       openai-organization:
       - crewai-iuxna1
       openai-processing-ms:
-      - '264'
+      - '301'
       openai-version:
       - '2020-10-01'
       strict-transport-security:
-      - max-age=15724800; includeSubDomains
+      - max-age=15552000; includeSubDomains; preload
       x-ratelimit-limit-requests:
       - '10000'
       x-ratelimit-limit-tokens:
-      - '300000'
+      - '30000000'
       x-ratelimit-remaining-requests:
       - '9999'
       x-ratelimit-remaining-tokens:
-      - '299635'
+      - '29999677'
       x-ratelimit-reset-requests:
       - 6ms
       x-ratelimit-reset-tokens:
-      - 73ms
+      - 0s
       x-request-id:
-      - req_5a5542e90d13d75d8bd90a6c9509c79d
-    status:
-      code: 200
-      message: OK
+      - req_fec2a48206ece37ddaa568c7a24cc613
+    http_version: HTTP/1.1
+    status_code: 200
 - request:
-    body: !!binary |
-      CsUICiQKIgoMc2VydmljZS5uYW1lEhIKEGNyZXdBSS10ZWxlbWV0cnkSnAgKEgoQY3Jld2FpLnRl
-      bGVtZXRyeRKFCAoQHotngVaSqvyamDwqLDrhRRIIxdFx6egEuloqDENyZXcgQ3JlYXRlZDABOdAX
-      LLg7/7gXQWD0Lbg7/7gXShoKDmNyZXdhaV92ZXJzaW9uEggKBjAuMTYuM0oaCg5weXRob25fdmVy
-      c2lvbhIICgYzLjExLjdKMQoHY3Jld19pZBImCiRiNDZjNTVjYS1mYzI0LTRjNTQtOWIzYy05ZWE4
-      ZWFlN2YwMzdKHAoMY3Jld19wcm9jZXNzEgwKCnNlcXVlbnRpYWxKFQoNY3Jld19sYW5ndWFnZRIE
-      CgJlbkoaChRjcmV3X251bWJlcl9vZl90YXNrcxICGAFKGwoVY3Jld19udW1iZXJfb2ZfYWdlbnRz
-      EgIYAUrbAgoLY3Jld19hZ2VudHMSywIKyAJbeyJpZCI6ICIwNWEzNjhmMy0wMzYxLTQ3ZDItYWU2
-      NC01ZDM5MDU3MzA2YzQiLCAicm9sZSI6ICJ0ZXN0IHJvbGUiLCAibWVtb3J5X2VuYWJsZWQ/Ijog
-      ZmFsc2UsICJ2ZXJib3NlPyI6IGZhbHNlLCAibWF4X2l0ZXIiOiAxNSwgIm1heF9ycG0iOiBudWxs
-      LCAiaTE4biI6ICJlbiIsICJsbG0iOiAie1wibmFtZVwiOiBudWxsLCBcIm1vZGVsX25hbWVcIjog
-      XCJncHQtNFwiLCBcInRlbXBlcmF0dXJlXCI6IDAuNywgXCJjbGFzc1wiOiBcIkNoYXRPcGVuQUlc
-      In0iLCAiZGVsZWdhdGlvbl9lbmFibGVkPyI6IHRydWUsICJ0b29sc19uYW1lcyI6IFsibGVhcm5f
-      YWJvdXRfQUkiXX1dSpsBCgpjcmV3X3Rhc2tzEowBCokBW3siaWQiOiAiMmI4MjU0MWQtOWRmZC00
-      ZWMyLTk3ZTItYzY3NWE0ZTA0ZTEyIiwgImFzeW5jX2V4ZWN1dGlvbj8iOiBmYWxzZSwgImFnZW50
-      X3JvbGUiOiAidGVzdCByb2xlIiwgInRvb2xzX25hbWVzIjogWyJsZWFybl9hYm91dF9BSSJdfV1K
-      KAoIcGxhdGZvcm0SHAoabWFjT1MtMTQuMy1hcm02NC1hcm0tNjRiaXRKHAoQcGxhdGZvcm1fcmVs
-      ZWFzZRIICgYyMy4zLjBKGwoPcGxhdGZvcm1fc3lzdGVtEggKBkRhcndpbkp7ChBwbGF0Zm9ybV92
-      ZXJzaW9uEmcKZURhcndpbiBLZXJuZWwgVmVyc2lvbiAyMy4zLjA6IFdlZCBEZWMgMjAgMjE6MzA6
-      NTkgUFNUIDIwMjM7IHJvb3Q6eG51LTEwMDAyLjgxLjV+Ny9SRUxFQVNFX0FSTTY0X1Q2MDMwSgoK
-      BGNwdXMSAhgMegIYAQ==
-    headers:
-      Accept:
-      - '*/*'
-      Accept-Encoding:
-      - gzip, deflate, br
-      Connection:
-      - keep-alive
-      Content-Length:
-      - '1096'
-      Content-Type:
-      - application/x-protobuf
-      User-Agent:
-      - OTel-OTLP-Exporter-Python/1.23.0
-    method: POST
-    uri: http://telemetry.crewai.com:4318/v1/traces
-  response:
-    body:
-      string: "\n\0"
-    headers:
-      Content-Length:
-      - '2'
-      Content-Type:
-      - application/x-protobuf
-      Date:
-      - Sat, 02 Mar 2024 16:24:55 GMT
-    status:
-      code: 200
-      message: OK
-- request:
-    body: '{"messages": [{"role": "user", "content": "You are test role. test backstory\nYour
-      personal goal is: test goal\n\nYou ONLY have access to the following tools,
-      and should NEVER make up tools that are not listed here:\n\nlearn_about_AI:
-      learn_about_AI(topic) -> float - Useful for when you need to learn about AI
-      to write an paragraph about it.\n\nUse the following format:\n\nThought: you
-      should always think about what to do\nAction: the action to take, only one name
-      of [learn_about_AI], just the name, exactly as it''s written.\nAction Input:
-      the input to the action, just a simple a python dictionary using \" to wrap
-      keys and values.\nObservation: the result of the action\n\nOnce all necessary
-      information is gathered:\n\nThought: I now know the final answer\nFinal Answer:
-      the final answer to the original input question\n\n\nCurrent Task: Write and
-      then review an small paragraph on AI until it''s AMAZING\n\nThis is the expect
-      criteria for your final answer: The final paragraph. \n you MUST return the
-      actual complete content as the final answer, not a summary.\n\nBegin! This is
-      VERY important to you, use the tools available and give your best Final Answer,
-      your job depends on it!\n\nThought: \nI need to write a paragraph on AI, but
-      first I should learn more about the topic to make sure the paragraph is accurate
-      and detailed.\n\nAction: \nlearn_about_AI\n\nAction Input: \n{\n  \"topic\":
-      \"Artificial Intelligence\"\n}\n\nObservation: AI is a very broad field.\nThought:
-      \nThe information I received is a bit vague. AI is indeed a broad field, but
-      this doesn''t help me write a detailed paragraph. I should try to learn more
-      about a specific aspect of AI.\n\nAction: \nlearn_about_AI\n\nAction Input:
-      \n{\n  \"topic\": \"Machine Learning\"\n}\n\nObservation: AI is a very broad
-      field.\n"}], "model": "gpt-4", "n": 1, "stop": ["\nObservation"], "stream":
-      true, "temperature": 0.7}'
+    body: '{"messages": [{"role": "system", "content": "You are test role. test backstory\nYour
+      personal goal is: test goal\nYou ONLY have access to the following tools, and
+      should NEVER make up tools that are not listed here:\n\nTool Name: learn_about_AI(*args:
+      Any, **kwargs: Any) -> Any\nTool Description: learn_about_AI() - Useful for
+      when you need to learn about AI to write an paragraph about it. \nTool Arguments:
+      {}\n\nUse the following format:\n\nThought: you should always think about what
+      to do\nAction: the action to take, only one name of [learn_about_AI], just the
+      name, exactly as it''s written.\nAction Input: the input to the action, just
+      a simple python dictionary, enclosed in curly braces, using \" to wrap keys
+      and values.\nObservation: the result of the action\n\nOnce all necessary information
+      is gathered:\n\nThought: I now know the final answer\nFinal Answer: the final
+      answer to the original input question\n"}, {"role": "user", "content": "\nCurrent
+      Task: Write and then review an small paragraph on AI until it''s AMAZING\n\nThis
+      is the expect criteria for your final answer: The final paragraph.\nyou MUST
+      return the actual complete content as the final answer, not a summary.\n\nBegin!
+      This is VERY important to you, use the tools available and give your best Final
+      Answer, your job depends on it!\n\nThought:"}, {"role": "user", "content": "I
+      need to gather detailed information about AI to write an amazing paragraph.\n\nAction:
+      learn_about_AI\nAction Input: {}\nObservation: AI is a very broad field."}],
+      "model": "gpt-4o", "stop": ["\nObservation:"]}'
     headers:
       accept:
       - application/json
       accept-encoding:
-      - gzip, deflate, br
+      - gzip, deflate
       connection:
       - keep-alive
       content-length:
-      - '1892'
+      - '1571'
       content-type:
       - application/json
       cookie:
-      - __cf_bm=tyKaWMsy2kZuA89sUzsD20Of3NOe7njYgPWzLsxsM8M-1709396691-1.0.1.1-cNX.pW6MzyFDwquOs.qym9oqbXSMWA6UGfl9YYn.uiQVEttXex8.FyyheEhIEXDHRfmU34AnRJ0qEhMJcuLp4A;
-        _cfuvid=uAVyHLdvVKenvQCExJCZaCR93cAE_6B8DL0QqEWLRkY-1709396691226-0.0.1.1-604800000
+      - __cf_bm=.8.5x0rqghNdtUCxfmwblfhuXiKyPm_cRq.NIa0heL0-1726642369-1.0.1.1-VbsAGqjOt45ZD50K2QW2oZrByLLIh6w8K4nAkLthTbXgU5qTgdf0mhvFId8Q2F3DcHUw9E72lVIZEN.YVlYINQ;
+        _cfuvid=o5s1Ux898x0eFNtzUCnG996iqyX3LgXDXq99C5oqnVE-1726642369248-0.0.1.1-604800000
       host:
       - api.openai.com
       user-agent:
-      - OpenAI/Python 1.12.0
+      - OpenAI/Python 1.46.0
       x-stainless-arch:
       - arm64
       x-stainless-async:
@@ -749,7 +158,9 @@ interactions:
       x-stainless-os:
       - MacOS
       x-stainless-package-version:
-      - 1.12.0
+      - 1.46.0
+      x-stainless-raw-response:
+      - 'true'
       x-stainless-runtime:
       - CPython
       x-stainless-runtime-version:
@@ -757,329 +168,105 @@ interactions:
     method: POST
     uri: https://api.openai.com/v1/chat/completions
   response:
-    body:
-      string: 'data: {"id":"chatcmpl-8yMSMYE1dFpoUIIX6TU6myRwSjJUt","object":"chat.completion.chunk","created":1709396694,"model":"gpt-4-0613","system_fingerprint":null,"choices":[{"index":0,"delta":{"role":"assistant","content":""},"logprobs":null,"finish_reason":null}]}
-
-
-        data: {"id":"chatcmpl-8yMSMYE1dFpoUIIX6TU6myRwSjJUt","object":"chat.completion.chunk","created":1709396694,"model":"gpt-4-0613","system_fingerprint":null,"choices":[{"index":0,"delta":{"content":"Thought"},"logprobs":null,"finish_reason":null}]}
-
-
-        data: {"id":"chatcmpl-8yMSMYE1dFpoUIIX6TU6myRwSjJUt","object":"chat.completion.chunk","created":1709396694,"model":"gpt-4-0613","system_fingerprint":null,"choices":[{"index":0,"delta":{"content":":"},"logprobs":null,"finish_reason":null}]}
-
-
-        data: {"id":"chatcmpl-8yMSMYE1dFpoUIIX6TU6myRwSjJUt","object":"chat.completion.chunk","created":1709396694,"model":"gpt-4-0613","system_fingerprint":null,"choices":[{"index":0,"delta":{"content":"
-        \n"},"logprobs":null,"finish_reason":null}]}
-
-
-        data: {"id":"chatcmpl-8yMSMYE1dFpoUIIX6TU6myRwSjJUt","object":"chat.completion.chunk","created":1709396694,"model":"gpt-4-0613","system_fingerprint":null,"choices":[{"index":0,"delta":{"content":"The"},"logprobs":null,"finish_reason":null}]}
-
-
-        data: {"id":"chatcmpl-8yMSMYE1dFpoUIIX6TU6myRwSjJUt","object":"chat.completion.chunk","created":1709396694,"model":"gpt-4-0613","system_fingerprint":null,"choices":[{"index":0,"delta":{"content":"
-        information"},"logprobs":null,"finish_reason":null}]}
-
-
-        data: {"id":"chatcmpl-8yMSMYE1dFpoUIIX6TU6myRwSjJUt","object":"chat.completion.chunk","created":1709396694,"model":"gpt-4-0613","system_fingerprint":null,"choices":[{"index":0,"delta":{"content":"
-        obtained"},"logprobs":null,"finish_reason":null}]}
-
-
-        data: {"id":"chatcmpl-8yMSMYE1dFpoUIIX6TU6myRwSjJUt","object":"chat.completion.chunk","created":1709396694,"model":"gpt-4-0613","system_fingerprint":null,"choices":[{"index":0,"delta":{"content":"
-        is"},"logprobs":null,"finish_reason":null}]}
-
-
-        data: {"id":"chatcmpl-8yMSMYE1dFpoUIIX6TU6myRwSjJUt","object":"chat.completion.chunk","created":1709396694,"model":"gpt-4-0613","system_fingerprint":null,"choices":[{"index":0,"delta":{"content":"
-        still"},"logprobs":null,"finish_reason":null}]}
-
-
-        data: {"id":"chatcmpl-8yMSMYE1dFpoUIIX6TU6myRwSjJUt","object":"chat.completion.chunk","created":1709396694,"model":"gpt-4-0613","system_fingerprint":null,"choices":[{"index":0,"delta":{"content":"
-        quite"},"logprobs":null,"finish_reason":null}]}
-
-
-        data: {"id":"chatcmpl-8yMSMYE1dFpoUIIX6TU6myRwSjJUt","object":"chat.completion.chunk","created":1709396694,"model":"gpt-4-0613","system_fingerprint":null,"choices":[{"index":0,"delta":{"content":"
-        general"},"logprobs":null,"finish_reason":null}]}
-
-
-        data: {"id":"chatcmpl-8yMSMYE1dFpoUIIX6TU6myRwSjJUt","object":"chat.completion.chunk","created":1709396694,"model":"gpt-4-0613","system_fingerprint":null,"choices":[{"index":0,"delta":{"content":"."},"logprobs":null,"finish_reason":null}]}
-
-
-        data: {"id":"chatcmpl-8yMSMYE1dFpoUIIX6TU6myRwSjJUt","object":"chat.completion.chunk","created":1709396694,"model":"gpt-4-0613","system_fingerprint":null,"choices":[{"index":0,"delta":{"content":"
-        However"},"logprobs":null,"finish_reason":null}]}
-
-
-        data: {"id":"chatcmpl-8yMSMYE1dFpoUIIX6TU6myRwSjJUt","object":"chat.completion.chunk","created":1709396694,"model":"gpt-4-0613","system_fingerprint":null,"choices":[{"index":0,"delta":{"content":","},"logprobs":null,"finish_reason":null}]}
-
-
-        data: {"id":"chatcmpl-8yMSMYE1dFpoUIIX6TU6myRwSjJUt","object":"chat.completion.chunk","created":1709396694,"model":"gpt-4-0613","system_fingerprint":null,"choices":[{"index":0,"delta":{"content":"
-        I"},"logprobs":null,"finish_reason":null}]}
-
-
-        data: {"id":"chatcmpl-8yMSMYE1dFpoUIIX6TU6myRwSjJUt","object":"chat.completion.chunk","created":1709396694,"model":"gpt-4-0613","system_fingerprint":null,"choices":[{"index":0,"delta":{"content":"
-        can"},"logprobs":null,"finish_reason":null}]}
-
-
-        data: {"id":"chatcmpl-8yMSMYE1dFpoUIIX6TU6myRwSjJUt","object":"chat.completion.chunk","created":1709396694,"model":"gpt-4-0613","system_fingerprint":null,"choices":[{"index":0,"delta":{"content":"
-        start"},"logprobs":null,"finish_reason":null}]}
-
-
-        data: {"id":"chatcmpl-8yMSMYE1dFpoUIIX6TU6myRwSjJUt","object":"chat.completion.chunk","created":1709396694,"model":"gpt-4-0613","system_fingerprint":null,"choices":[{"index":0,"delta":{"content":"
-        drafting"},"logprobs":null,"finish_reason":null}]}
-
-
-        data: {"id":"chatcmpl-8yMSMYE1dFpoUIIX6TU6myRwSjJUt","object":"chat.completion.chunk","created":1709396694,"model":"gpt-4-0613","system_fingerprint":null,"choices":[{"index":0,"delta":{"content":"
-        a"},"logprobs":null,"finish_reason":null}]}
-
-
-        data: {"id":"chatcmpl-8yMSMYE1dFpoUIIX6TU6myRwSjJUt","object":"chat.completion.chunk","created":1709396694,"model":"gpt-4-0613","system_fingerprint":null,"choices":[{"index":0,"delta":{"content":"
-        paragraph"},"logprobs":null,"finish_reason":null}]}
-
-
-        data: {"id":"chatcmpl-8yMSMYE1dFpoUIIX6TU6myRwSjJUt","object":"chat.completion.chunk","created":1709396694,"model":"gpt-4-0613","system_fingerprint":null,"choices":[{"index":0,"delta":{"content":"
-        based"},"logprobs":null,"finish_reason":null}]}
-
-
-        data: {"id":"chatcmpl-8yMSMYE1dFpoUIIX6TU6myRwSjJUt","object":"chat.completion.chunk","created":1709396694,"model":"gpt-4-0613","system_fingerprint":null,"choices":[{"index":0,"delta":{"content":"
-        on"},"logprobs":null,"finish_reason":null}]}
-
-
-        data: {"id":"chatcmpl-8yMSMYE1dFpoUIIX6TU6myRwSjJUt","object":"chat.completion.chunk","created":1709396694,"model":"gpt-4-0613","system_fingerprint":null,"choices":[{"index":0,"delta":{"content":"
-        the"},"logprobs":null,"finish_reason":null}]}
-
-
-        data: {"id":"chatcmpl-8yMSMYE1dFpoUIIX6TU6myRwSjJUt","object":"chat.completion.chunk","created":1709396694,"model":"gpt-4-0613","system_fingerprint":null,"choices":[{"index":0,"delta":{"content":"
-        general"},"logprobs":null,"finish_reason":null}]}
-
-
-        data: {"id":"chatcmpl-8yMSMYE1dFpoUIIX6TU6myRwSjJUt","object":"chat.completion.chunk","created":1709396694,"model":"gpt-4-0613","system_fingerprint":null,"choices":[{"index":0,"delta":{"content":"
-        understanding"},"logprobs":null,"finish_reason":null}]}
-
-
-        data: {"id":"chatcmpl-8yMSMYE1dFpoUIIX6TU6myRwSjJUt","object":"chat.completion.chunk","created":1709396694,"model":"gpt-4-0613","system_fingerprint":null,"choices":[{"index":0,"delta":{"content":"
-        of"},"logprobs":null,"finish_reason":null}]}
-
-
-        data: {"id":"chatcmpl-8yMSMYE1dFpoUIIX6TU6myRwSjJUt","object":"chat.completion.chunk","created":1709396694,"model":"gpt-4-0613","system_fingerprint":null,"choices":[{"index":0,"delta":{"content":"
-        AI"},"logprobs":null,"finish_reason":null}]}
-
-
-        data: {"id":"chatcmpl-8yMSMYE1dFpoUIIX6TU6myRwSjJUt","object":"chat.completion.chunk","created":1709396694,"model":"gpt-4-0613","system_fingerprint":null,"choices":[{"index":0,"delta":{"content":"
-        and"},"logprobs":null,"finish_reason":null}]}
-
-
-        data: {"id":"chatcmpl-8yMSMYE1dFpoUIIX6TU6myRwSjJUt","object":"chat.completion.chunk","created":1709396694,"model":"gpt-4-0613","system_fingerprint":null,"choices":[{"index":0,"delta":{"content":"
-        Machine"},"logprobs":null,"finish_reason":null}]}
-
-
-        data: {"id":"chatcmpl-8yMSMYE1dFpoUIIX6TU6myRwSjJUt","object":"chat.completion.chunk","created":1709396694,"model":"gpt-4-0613","system_fingerprint":null,"choices":[{"index":0,"delta":{"content":"
-        Learning"},"logprobs":null,"finish_reason":null}]}
-
-
-        data: {"id":"chatcmpl-8yMSMYE1dFpoUIIX6TU6myRwSjJUt","object":"chat.completion.chunk","created":1709396694,"model":"gpt-4-0613","system_fingerprint":null,"choices":[{"index":0,"delta":{"content":"."},"logprobs":null,"finish_reason":null}]}
-
-
-        data: {"id":"chatcmpl-8yMSMYE1dFpoUIIX6TU6myRwSjJUt","object":"chat.completion.chunk","created":1709396694,"model":"gpt-4-0613","system_fingerprint":null,"choices":[{"index":0,"delta":{"content":"
-        I"},"logprobs":null,"finish_reason":null}]}
-
-
-        data: {"id":"chatcmpl-8yMSMYE1dFpoUIIX6TU6myRwSjJUt","object":"chat.completion.chunk","created":1709396694,"model":"gpt-4-0613","system_fingerprint":null,"choices":[{"index":0,"delta":{"content":"
-        will"},"logprobs":null,"finish_reason":null}]}
-
-
-        data: {"id":"chatcmpl-8yMSMYE1dFpoUIIX6TU6myRwSjJUt","object":"chat.completion.chunk","created":1709396694,"model":"gpt-4-0613","system_fingerprint":null,"choices":[{"index":0,"delta":{"content":"
-        then"},"logprobs":null,"finish_reason":null}]}
-
-
-        data: {"id":"chatcmpl-8yMSMYE1dFpoUIIX6TU6myRwSjJUt","object":"chat.completion.chunk","created":1709396694,"model":"gpt-4-0613","system_fingerprint":null,"choices":[{"index":0,"delta":{"content":"
-        review"},"logprobs":null,"finish_reason":null}]}
-
-
-        data: {"id":"chatcmpl-8yMSMYE1dFpoUIIX6TU6myRwSjJUt","object":"chat.completion.chunk","created":1709396694,"model":"gpt-4-0613","system_fingerprint":null,"choices":[{"index":0,"delta":{"content":"
-        it"},"logprobs":null,"finish_reason":null}]}
-
-
-        data: {"id":"chatcmpl-8yMSMYE1dFpoUIIX6TU6myRwSjJUt","object":"chat.completion.chunk","created":1709396694,"model":"gpt-4-0613","system_fingerprint":null,"choices":[{"index":0,"delta":{"content":"
-        to"},"logprobs":null,"finish_reason":null}]}
-
-
-        data: {"id":"chatcmpl-8yMSMYE1dFpoUIIX6TU6myRwSjJUt","object":"chat.completion.chunk","created":1709396694,"model":"gpt-4-0613","system_fingerprint":null,"choices":[{"index":0,"delta":{"content":"
-        see"},"logprobs":null,"finish_reason":null}]}
-
-
-        data: {"id":"chatcmpl-8yMSMYE1dFpoUIIX6TU6myRwSjJUt","object":"chat.completion.chunk","created":1709396694,"model":"gpt-4-0613","system_fingerprint":null,"choices":[{"index":0,"delta":{"content":"
-        if"},"logprobs":null,"finish_reason":null}]}
-
-
-        data: {"id":"chatcmpl-8yMSMYE1dFpoUIIX6TU6myRwSjJUt","object":"chat.completion.chunk","created":1709396694,"model":"gpt-4-0613","system_fingerprint":null,"choices":[{"index":0,"delta":{"content":"
-        it"},"logprobs":null,"finish_reason":null}]}
-
-
-        data: {"id":"chatcmpl-8yMSMYE1dFpoUIIX6TU6myRwSjJUt","object":"chat.completion.chunk","created":1709396694,"model":"gpt-4-0613","system_fingerprint":null,"choices":[{"index":0,"delta":{"content":"
-        needs"},"logprobs":null,"finish_reason":null}]}
-
-
-        data: {"id":"chatcmpl-8yMSMYE1dFpoUIIX6TU6myRwSjJUt","object":"chat.completion.chunk","created":1709396694,"model":"gpt-4-0613","system_fingerprint":null,"choices":[{"index":0,"delta":{"content":"
-        more"},"logprobs":null,"finish_reason":null}]}
-
-
-        data: {"id":"chatcmpl-8yMSMYE1dFpoUIIX6TU6myRwSjJUt","object":"chat.completion.chunk","created":1709396694,"model":"gpt-4-0613","system_fingerprint":null,"choices":[{"index":0,"delta":{"content":"
-        details"},"logprobs":null,"finish_reason":null}]}
-
-
-        data: {"id":"chatcmpl-8yMSMYE1dFpoUIIX6TU6myRwSjJUt","object":"chat.completion.chunk","created":1709396694,"model":"gpt-4-0613","system_fingerprint":null,"choices":[{"index":0,"delta":{"content":".\n\n"},"logprobs":null,"finish_reason":null}]}
-
-
-        data: {"id":"chatcmpl-8yMSMYE1dFpoUIIX6TU6myRwSjJUt","object":"chat.completion.chunk","created":1709396694,"model":"gpt-4-0613","system_fingerprint":null,"choices":[{"index":0,"delta":{"content":"Action"},"logprobs":null,"finish_reason":null}]}
-
-
-        data: {"id":"chatcmpl-8yMSMYE1dFpoUIIX6TU6myRwSjJUt","object":"chat.completion.chunk","created":1709396694,"model":"gpt-4-0613","system_fingerprint":null,"choices":[{"index":0,"delta":{"content":":"},"logprobs":null,"finish_reason":null}]}
-
-
-        data: {"id":"chatcmpl-8yMSMYE1dFpoUIIX6TU6myRwSjJUt","object":"chat.completion.chunk","created":1709396694,"model":"gpt-4-0613","system_fingerprint":null,"choices":[{"index":0,"delta":{"content":"
-        \n"},"logprobs":null,"finish_reason":null}]}
-
-
-        data: {"id":"chatcmpl-8yMSMYE1dFpoUIIX6TU6myRwSjJUt","object":"chat.completion.chunk","created":1709396694,"model":"gpt-4-0613","system_fingerprint":null,"choices":[{"index":0,"delta":{"content":"N"},"logprobs":null,"finish_reason":null}]}
-
-
-        data: {"id":"chatcmpl-8yMSMYE1dFpoUIIX6TU6myRwSjJUt","object":"chat.completion.chunk","created":1709396694,"model":"gpt-4-0613","system_fingerprint":null,"choices":[{"index":0,"delta":{"content":"/A"},"logprobs":null,"finish_reason":null}]}
-
-
-        data: {"id":"chatcmpl-8yMSMYE1dFpoUIIX6TU6myRwSjJUt","object":"chat.completion.chunk","created":1709396694,"model":"gpt-4-0613","system_fingerprint":null,"choices":[{"index":0,"delta":{"content":"\n\n"},"logprobs":null,"finish_reason":null}]}
-
-
-        data: {"id":"chatcmpl-8yMSMYE1dFpoUIIX6TU6myRwSjJUt","object":"chat.completion.chunk","created":1709396694,"model":"gpt-4-0613","system_fingerprint":null,"choices":[{"index":0,"delta":{"content":"Action"},"logprobs":null,"finish_reason":null}]}
-
-
-        data: {"id":"chatcmpl-8yMSMYE1dFpoUIIX6TU6myRwSjJUt","object":"chat.completion.chunk","created":1709396694,"model":"gpt-4-0613","system_fingerprint":null,"choices":[{"index":0,"delta":{"content":"
-        Input"},"logprobs":null,"finish_reason":null}]}
-
-
-        data: {"id":"chatcmpl-8yMSMYE1dFpoUIIX6TU6myRwSjJUt","object":"chat.completion.chunk","created":1709396694,"model":"gpt-4-0613","system_fingerprint":null,"choices":[{"index":0,"delta":{"content":":"},"logprobs":null,"finish_reason":null}]}
-
-
-        data: {"id":"chatcmpl-8yMSMYE1dFpoUIIX6TU6myRwSjJUt","object":"chat.completion.chunk","created":1709396694,"model":"gpt-4-0613","system_fingerprint":null,"choices":[{"index":0,"delta":{"content":"
-        \n"},"logprobs":null,"finish_reason":null}]}
-
-
-        data: {"id":"chatcmpl-8yMSMYE1dFpoUIIX6TU6myRwSjJUt","object":"chat.completion.chunk","created":1709396694,"model":"gpt-4-0613","system_fingerprint":null,"choices":[{"index":0,"delta":{"content":"N"},"logprobs":null,"finish_reason":null}]}
-
-
-        data: {"id":"chatcmpl-8yMSMYE1dFpoUIIX6TU6myRwSjJUt","object":"chat.completion.chunk","created":1709396694,"model":"gpt-4-0613","system_fingerprint":null,"choices":[{"index":0,"delta":{"content":"/A"},"logprobs":null,"finish_reason":null}]}
-
-
-        data: {"id":"chatcmpl-8yMSMYE1dFpoUIIX6TU6myRwSjJUt","object":"chat.completion.chunk","created":1709396694,"model":"gpt-4-0613","system_fingerprint":null,"choices":[{"index":0,"delta":{"content":"\n"},"logprobs":null,"finish_reason":null}]}
-
-
-        data: {"id":"chatcmpl-8yMSMYE1dFpoUIIX6TU6myRwSjJUt","object":"chat.completion.chunk","created":1709396694,"model":"gpt-4-0613","system_fingerprint":null,"choices":[{"index":0,"delta":{},"logprobs":null,"finish_reason":"stop"}]}
-
-
-        data: [DONE]
-
-
-        '
+    content: "{\n  \"id\": \"chatcmpl-A8iseWB5Fq6uuygfyMSDHRuxjXnCD\",\n  \"object\":
+      \"chat.completion\",\n  \"created\": 1726642508,\n  \"model\": \"gpt-4o-2024-05-13\",\n
+      \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
+      \"assistant\",\n        \"content\": \"Thought: I need more specific and comprehensive
+      information on AI to craft an amazing paragraph.\\n\\nAction: learn_about_AI\\nAction
+      Input: {}\",\n        \"refusal\": null\n      },\n      \"logprobs\": null,\n
+      \     \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\":
+      314,\n    \"completion_tokens\": 27,\n    \"total_tokens\": 341,\n    \"completion_tokens_details\":
+      {\n      \"reasoning_tokens\": 0\n    }\n  },\n  \"system_fingerprint\": \"fp_8dd226ca9c\"\n}\n"
     headers:
       CF-Cache-Status:
       - DYNAMIC
       CF-RAY:
-      - 85e2bd5dfb10a4f9-GRU
-      Cache-Control:
-      - no-cache, must-revalidate
+      - 8c4f6dbcd851a67a-MIA
       Connection:
       - keep-alive
+      Content-Encoding:
+      - gzip
       Content-Type:
-      - text/event-stream
+      - application/json
       Date:
-      - Sat, 02 Mar 2024 16:24:55 GMT
+      - Wed, 18 Sep 2024 06:55:08 GMT
       Server:
       - cloudflare
       Transfer-Encoding:
       - chunked
-      access-control-allow-origin:
-      - '*'
+      X-Content-Type-Options:
+      - nosniff
+      access-control-expose-headers:
+      - X-Request-ID
       alt-svc:
       - h3=":443"; ma=86400
-      openai-model:
-      - gpt-4-0613
       openai-organization:
       - crewai-iuxna1
       openai-processing-ms:
-      - '346'
+      - '326'
       openai-version:
       - '2020-10-01'
       strict-transport-security:
-      - max-age=15724800; includeSubDomains
+      - max-age=15552000; includeSubDomains; preload
       x-ratelimit-limit-requests:
       - '10000'
       x-ratelimit-limit-tokens:
-      - '300000'
+      - '30000000'
       x-ratelimit-remaining-requests:
       - '9999'
       x-ratelimit-remaining-tokens:
-      - '299559'
+      - '29999635'
       x-ratelimit-reset-requests:
       - 6ms
       x-ratelimit-reset-tokens:
-      - 88ms
+      - 0s
       x-request-id:
-      - req_b04a82449c3361fa6829ae5f3df870ac
-    status:
-      code: 200
-      message: OK
+      - req_4caca47bc16bd9e3244cde87274121c3
+    http_version: HTTP/1.1
+    status_code: 200
 - request:
-    body: '{"messages": [{"role": "user", "content": "You are test role. test backstory\nYour
-      personal goal is: test goal\n\nYou ONLY have access to the following tools,
-      and should NEVER make up tools that are not listed here:\n\nlearn_about_AI:
-      learn_about_AI(topic) -> float - Useful for when you need to learn about AI
-      to write an paragraph about it.\n\nUse the following format:\n\nThought: you
-      should always think about what to do\nAction: the action to take, only one name
-      of [learn_about_AI], just the name, exactly as it''s written.\nAction Input:
-      the input to the action, just a simple a python dictionary using \" to wrap
-      keys and values.\nObservation: the result of the action\n\nOnce all necessary
-      information is gathered:\n\nThought: I now know the final answer\nFinal Answer:
-      the final answer to the original input question\n\n\nCurrent Task: Write and
-      then review an small paragraph on AI until it''s AMAZING\n\nThis is the expect
-      criteria for your final answer: The final paragraph. \n you MUST return the
-      actual complete content as the final answer, not a summary.\n\nBegin! This is
-      VERY important to you, use the tools available and give your best Final Answer,
-      your job depends on it!\n\nThought: \nI need to write a paragraph on AI, but
-      first I should learn more about the topic to make sure the paragraph is accurate
-      and detailed.\n\nAction: \nlearn_about_AI\n\nAction Input: \n{\n  \"topic\":
-      \"Artificial Intelligence\"\n}\n\nObservation: AI is a very broad field.\nThought:
-      \nThe information I received is a bit vague. AI is indeed a broad field, but
-      this doesn''t help me write a detailed paragraph. I should try to learn more
-      about a specific aspect of AI.\n\nAction: \nlearn_about_AI\n\nAction Input:
-      \n{\n  \"topic\": \"Machine Learning\"\n}\n\nObservation: AI is a very broad
-      field.\nThought: \nThe information obtained is still quite general. However,
-      I can start drafting a paragraph based on the general understanding of AI and
-      Machine Learning. I will then review it to see if it needs more details.\n\nAction:
-      \nN/A\n\nAction Input: \nN/A\n\nObservation: I encountered an error: Action
-      ''N/A'' don''t exist, these are the only available Actions: learn_about_AI:
-      learn_about_AI(topic) -> float - Useful for when you need to learn about AI
-      to write an paragraph about it.\nMoving on then. I MUST either use a tool (use
-      one at time) OR give my best final answer. To Use the following format:\n\nThought:
-      you should always think about what to do\nAction: the action to take, should
-      be one of [learn_about_AI]\nAction Input: the input to the action, dictionary\nObservation:
-      the result of the action\n... (this Thought/Action/Action Input/Observation
-      can repeat N times)\nThought: I now can give a great answer\nFinal Answer: my
-      best complete final answer to the task.\nYour final answer must be the great
-      and the most complete as possible, it must be outcome described\n\n \n"}], "model":
-      "gpt-4", "n": 1, "stop": ["\nObservation"], "stream": true, "temperature": 0.7}'
+    body: '{"messages": [{"role": "system", "content": "You are test role. test backstory\nYour
+      personal goal is: test goal\nYou ONLY have access to the following tools, and
+      should NEVER make up tools that are not listed here:\n\nTool Name: learn_about_AI(*args:
+      Any, **kwargs: Any) -> Any\nTool Description: learn_about_AI() - Useful for
+      when you need to learn about AI to write an paragraph about it. \nTool Arguments:
+      {}\n\nUse the following format:\n\nThought: you should always think about what
+      to do\nAction: the action to take, only one name of [learn_about_AI], just the
+      name, exactly as it''s written.\nAction Input: the input to the action, just
+      a simple python dictionary, enclosed in curly braces, using \" to wrap keys
+      and values.\nObservation: the result of the action\n\nOnce all necessary information
+      is gathered:\n\nThought: I now know the final answer\nFinal Answer: the final
+      answer to the original input question\n"}, {"role": "user", "content": "\nCurrent
+      Task: Write and then review an small paragraph on AI until it''s AMAZING\n\nThis
+      is the expect criteria for your final answer: The final paragraph.\nyou MUST
+      return the actual complete content as the final answer, not a summary.\n\nBegin!
+      This is VERY important to you, use the tools available and give your best Final
+      Answer, your job depends on it!\n\nThought:"}, {"role": "user", "content": "I
+      need to gather detailed information about AI to write an amazing paragraph.\n\nAction:
+      learn_about_AI\nAction Input: {}\nObservation: AI is a very broad field."},
+      {"role": "user", "content": "Thought: I need more specific and comprehensive
+      information on AI to craft an amazing paragraph.\n\nAction: learn_about_AI\nAction
+      Input: {}\nObservation: I tried reusing the same input, I must stop using this
+      action input. I''ll try something else instead.\n\n"}], "model": "gpt-4o", "stop":
+      ["\nObservation:"]}'
     headers:
       accept:
       - application/json
       accept-encoding:
-      - gzip, deflate, br
+      - gzip, deflate
       connection:
       - keep-alive
       content-length:
-      - '2981'
+      - '1864'
       content-type:
       - application/json
       cookie:
-      - __cf_bm=tyKaWMsy2kZuA89sUzsD20Of3NOe7njYgPWzLsxsM8M-1709396691-1.0.1.1-cNX.pW6MzyFDwquOs.qym9oqbXSMWA6UGfl9YYn.uiQVEttXex8.FyyheEhIEXDHRfmU34AnRJ0qEhMJcuLp4A;
-        _cfuvid=uAVyHLdvVKenvQCExJCZaCR93cAE_6B8DL0QqEWLRkY-1709396691226-0.0.1.1-604800000
+      - __cf_bm=.8.5x0rqghNdtUCxfmwblfhuXiKyPm_cRq.NIa0heL0-1726642369-1.0.1.1-VbsAGqjOt45ZD50K2QW2oZrByLLIh6w8K4nAkLthTbXgU5qTgdf0mhvFId8Q2F3DcHUw9E72lVIZEN.YVlYINQ;
+        _cfuvid=o5s1Ux898x0eFNtzUCnG996iqyX3LgXDXq99C5oqnVE-1726642369248-0.0.1.1-604800000
       host:
       - api.openai.com
       user-agent:
-      - OpenAI/Python 1.12.0
+      - OpenAI/Python 1.46.0
       x-stainless-arch:
       - arm64
       x-stainless-async:
@@ -1089,7 +276,9 @@ interactions:
       x-stainless-os:
       - MacOS
       x-stainless-package-version:
-      - 1.12.0
+      - 1.46.0
+      x-stainless-raw-response:
+      - 'true'
       x-stainless-runtime:
       - CPython
       x-stainless-runtime-version:
@@ -1097,548 +286,978 @@ interactions:
     method: POST
     uri: https://api.openai.com/v1/chat/completions
   response:
-    body:
-      string: 'data: {"id":"chatcmpl-8yMSPcUiBivhwWT1IGZixS6SsZEZp","object":"chat.completion.chunk","created":1709396697,"model":"gpt-4-0613","system_fingerprint":null,"choices":[{"index":0,"delta":{"role":"assistant","content":""},"logprobs":null,"finish_reason":null}]}
-
-
-        data: {"id":"chatcmpl-8yMSPcUiBivhwWT1IGZixS6SsZEZp","object":"chat.completion.chunk","created":1709396697,"model":"gpt-4-0613","system_fingerprint":null,"choices":[{"index":0,"delta":{"content":"Thought"},"logprobs":null,"finish_reason":null}]}
-
-
-        data: {"id":"chatcmpl-8yMSPcUiBivhwWT1IGZixS6SsZEZp","object":"chat.completion.chunk","created":1709396697,"model":"gpt-4-0613","system_fingerprint":null,"choices":[{"index":0,"delta":{"content":":"},"logprobs":null,"finish_reason":null}]}
-
-
-        data: {"id":"chatcmpl-8yMSPcUiBivhwWT1IGZixS6SsZEZp","object":"chat.completion.chunk","created":1709396697,"model":"gpt-4-0613","system_fingerprint":null,"choices":[{"index":0,"delta":{"content":"
-        \n"},"logprobs":null,"finish_reason":null}]}
-
-
-        data: {"id":"chatcmpl-8yMSPcUiBivhwWT1IGZixS6SsZEZp","object":"chat.completion.chunk","created":1709396697,"model":"gpt-4-0613","system_fingerprint":null,"choices":[{"index":0,"delta":{"content":"Having"},"logprobs":null,"finish_reason":null}]}
-
-
-        data: {"id":"chatcmpl-8yMSPcUiBivhwWT1IGZixS6SsZEZp","object":"chat.completion.chunk","created":1709396697,"model":"gpt-4-0613","system_fingerprint":null,"choices":[{"index":0,"delta":{"content":"
-        done"},"logprobs":null,"finish_reason":null}]}
-
-
-        data: {"id":"chatcmpl-8yMSPcUiBivhwWT1IGZixS6SsZEZp","object":"chat.completion.chunk","created":1709396697,"model":"gpt-4-0613","system_fingerprint":null,"choices":[{"index":0,"delta":{"content":"
-        my"},"logprobs":null,"finish_reason":null}]}
-
-
-        data: {"id":"chatcmpl-8yMSPcUiBivhwWT1IGZixS6SsZEZp","object":"chat.completion.chunk","created":1709396697,"model":"gpt-4-0613","system_fingerprint":null,"choices":[{"index":0,"delta":{"content":"
-        research"},"logprobs":null,"finish_reason":null}]}
-
-
-        data: {"id":"chatcmpl-8yMSPcUiBivhwWT1IGZixS6SsZEZp","object":"chat.completion.chunk","created":1709396697,"model":"gpt-4-0613","system_fingerprint":null,"choices":[{"index":0,"delta":{"content":","},"logprobs":null,"finish_reason":null}]}
-
-
-        data: {"id":"chatcmpl-8yMSPcUiBivhwWT1IGZixS6SsZEZp","object":"chat.completion.chunk","created":1709396697,"model":"gpt-4-0613","system_fingerprint":null,"choices":[{"index":0,"delta":{"content":"
-        I"},"logprobs":null,"finish_reason":null}]}
-
-
-        data: {"id":"chatcmpl-8yMSPcUiBivhwWT1IGZixS6SsZEZp","object":"chat.completion.chunk","created":1709396697,"model":"gpt-4-0613","system_fingerprint":null,"choices":[{"index":0,"delta":{"content":"
-        will"},"logprobs":null,"finish_reason":null}]}
-
-
-        data: {"id":"chatcmpl-8yMSPcUiBivhwWT1IGZixS6SsZEZp","object":"chat.completion.chunk","created":1709396697,"model":"gpt-4-0613","system_fingerprint":null,"choices":[{"index":0,"delta":{"content":"
-        now"},"logprobs":null,"finish_reason":null}]}
-
-
-        data: {"id":"chatcmpl-8yMSPcUiBivhwWT1IGZixS6SsZEZp","object":"chat.completion.chunk","created":1709396697,"model":"gpt-4-0613","system_fingerprint":null,"choices":[{"index":0,"delta":{"content":"
-        write"},"logprobs":null,"finish_reason":null}]}
-
-
-        data: {"id":"chatcmpl-8yMSPcUiBivhwWT1IGZixS6SsZEZp","object":"chat.completion.chunk","created":1709396697,"model":"gpt-4-0613","system_fingerprint":null,"choices":[{"index":0,"delta":{"content":"
-        the"},"logprobs":null,"finish_reason":null}]}
-
-
-        data: {"id":"chatcmpl-8yMSPcUiBivhwWT1IGZixS6SsZEZp","object":"chat.completion.chunk","created":1709396697,"model":"gpt-4-0613","system_fingerprint":null,"choices":[{"index":0,"delta":{"content":"
-        initial"},"logprobs":null,"finish_reason":null}]}
-
-
-        data: {"id":"chatcmpl-8yMSPcUiBivhwWT1IGZixS6SsZEZp","object":"chat.completion.chunk","created":1709396697,"model":"gpt-4-0613","system_fingerprint":null,"choices":[{"index":0,"delta":{"content":"
-        draft"},"logprobs":null,"finish_reason":null}]}
-
-
-        data: {"id":"chatcmpl-8yMSPcUiBivhwWT1IGZixS6SsZEZp","object":"chat.completion.chunk","created":1709396697,"model":"gpt-4-0613","system_fingerprint":null,"choices":[{"index":0,"delta":{"content":"
-        of"},"logprobs":null,"finish_reason":null}]}
-
-
-        data: {"id":"chatcmpl-8yMSPcUiBivhwWT1IGZixS6SsZEZp","object":"chat.completion.chunk","created":1709396697,"model":"gpt-4-0613","system_fingerprint":null,"choices":[{"index":0,"delta":{"content":"
-        the"},"logprobs":null,"finish_reason":null}]}
-
-
-        data: {"id":"chatcmpl-8yMSPcUiBivhwWT1IGZixS6SsZEZp","object":"chat.completion.chunk","created":1709396697,"model":"gpt-4-0613","system_fingerprint":null,"choices":[{"index":0,"delta":{"content":"
-        paragraph"},"logprobs":null,"finish_reason":null}]}
-
-
-        data: {"id":"chatcmpl-8yMSPcUiBivhwWT1IGZixS6SsZEZp","object":"chat.completion.chunk","created":1709396697,"model":"gpt-4-0613","system_fingerprint":null,"choices":[{"index":0,"delta":{"content":"
-        based"},"logprobs":null,"finish_reason":null}]}
-
-
-        data: {"id":"chatcmpl-8yMSPcUiBivhwWT1IGZixS6SsZEZp","object":"chat.completion.chunk","created":1709396697,"model":"gpt-4-0613","system_fingerprint":null,"choices":[{"index":0,"delta":{"content":"
-        on"},"logprobs":null,"finish_reason":null}]}
-
-
-        data: {"id":"chatcmpl-8yMSPcUiBivhwWT1IGZixS6SsZEZp","object":"chat.completion.chunk","created":1709396697,"model":"gpt-4-0613","system_fingerprint":null,"choices":[{"index":0,"delta":{"content":"
-        my"},"logprobs":null,"finish_reason":null}]}
-
-
-        data: {"id":"chatcmpl-8yMSPcUiBivhwWT1IGZixS6SsZEZp","object":"chat.completion.chunk","created":1709396697,"model":"gpt-4-0613","system_fingerprint":null,"choices":[{"index":0,"delta":{"content":"
-        current"},"logprobs":null,"finish_reason":null}]}
-
-
-        data: {"id":"chatcmpl-8yMSPcUiBivhwWT1IGZixS6SsZEZp","object":"chat.completion.chunk","created":1709396697,"model":"gpt-4-0613","system_fingerprint":null,"choices":[{"index":0,"delta":{"content":"
-        understanding"},"logprobs":null,"finish_reason":null}]}
-
-
-        data: {"id":"chatcmpl-8yMSPcUiBivhwWT1IGZixS6SsZEZp","object":"chat.completion.chunk","created":1709396697,"model":"gpt-4-0613","system_fingerprint":null,"choices":[{"index":0,"delta":{"content":"
-        of"},"logprobs":null,"finish_reason":null}]}
-
-
-        data: {"id":"chatcmpl-8yMSPcUiBivhwWT1IGZixS6SsZEZp","object":"chat.completion.chunk","created":1709396697,"model":"gpt-4-0613","system_fingerprint":null,"choices":[{"index":0,"delta":{"content":"
-        AI"},"logprobs":null,"finish_reason":null}]}
-
-
-        data: {"id":"chatcmpl-8yMSPcUiBivhwWT1IGZixS6SsZEZp","object":"chat.completion.chunk","created":1709396697,"model":"gpt-4-0613","system_fingerprint":null,"choices":[{"index":0,"delta":{"content":"
-        and"},"logprobs":null,"finish_reason":null}]}
-
-
-        data: {"id":"chatcmpl-8yMSPcUiBivhwWT1IGZixS6SsZEZp","object":"chat.completion.chunk","created":1709396697,"model":"gpt-4-0613","system_fingerprint":null,"choices":[{"index":0,"delta":{"content":"
-        Machine"},"logprobs":null,"finish_reason":null}]}
-
-
-        data: {"id":"chatcmpl-8yMSPcUiBivhwWT1IGZixS6SsZEZp","object":"chat.completion.chunk","created":1709396697,"model":"gpt-4-0613","system_fingerprint":null,"choices":[{"index":0,"delta":{"content":"
-        Learning"},"logprobs":null,"finish_reason":null}]}
-
-
-        data: {"id":"chatcmpl-8yMSPcUiBivhwWT1IGZixS6SsZEZp","object":"chat.completion.chunk","created":1709396697,"model":"gpt-4-0613","system_fingerprint":null,"choices":[{"index":0,"delta":{"content":".\n\n"},"logprobs":null,"finish_reason":null}]}
-
-
-        data: {"id":"chatcmpl-8yMSPcUiBivhwWT1IGZixS6SsZEZp","object":"chat.completion.chunk","created":1709396697,"model":"gpt-4-0613","system_fingerprint":null,"choices":[{"index":0,"delta":{"content":"Final"},"logprobs":null,"finish_reason":null}]}
-
-
-        data: {"id":"chatcmpl-8yMSPcUiBivhwWT1IGZixS6SsZEZp","object":"chat.completion.chunk","created":1709396697,"model":"gpt-4-0613","system_fingerprint":null,"choices":[{"index":0,"delta":{"content":"
-        Answer"},"logprobs":null,"finish_reason":null}]}
-
-
-        data: {"id":"chatcmpl-8yMSPcUiBivhwWT1IGZixS6SsZEZp","object":"chat.completion.chunk","created":1709396697,"model":"gpt-4-0613","system_fingerprint":null,"choices":[{"index":0,"delta":{"content":":"},"logprobs":null,"finish_reason":null}]}
-
-
-        data: {"id":"chatcmpl-8yMSPcUiBivhwWT1IGZixS6SsZEZp","object":"chat.completion.chunk","created":1709396697,"model":"gpt-4-0613","system_fingerprint":null,"choices":[{"index":0,"delta":{"content":"
-        \n"},"logprobs":null,"finish_reason":null}]}
-
-
-        data: {"id":"chatcmpl-8yMSPcUiBivhwWT1IGZixS6SsZEZp","object":"chat.completion.chunk","created":1709396697,"model":"gpt-4-0613","system_fingerprint":null,"choices":[{"index":0,"delta":{"content":"Art"},"logprobs":null,"finish_reason":null}]}
-
-
-        data: {"id":"chatcmpl-8yMSPcUiBivhwWT1IGZixS6SsZEZp","object":"chat.completion.chunk","created":1709396697,"model":"gpt-4-0613","system_fingerprint":null,"choices":[{"index":0,"delta":{"content":"ificial"},"logprobs":null,"finish_reason":null}]}
-
-
-        data: {"id":"chatcmpl-8yMSPcUiBivhwWT1IGZixS6SsZEZp","object":"chat.completion.chunk","created":1709396697,"model":"gpt-4-0613","system_fingerprint":null,"choices":[{"index":0,"delta":{"content":"
-        Intelligence"},"logprobs":null,"finish_reason":null}]}
-
-
-        data: {"id":"chatcmpl-8yMSPcUiBivhwWT1IGZixS6SsZEZp","object":"chat.completion.chunk","created":1709396697,"model":"gpt-4-0613","system_fingerprint":null,"choices":[{"index":0,"delta":{"content":"
-        ("},"logprobs":null,"finish_reason":null}]}
-
-
-        data: {"id":"chatcmpl-8yMSPcUiBivhwWT1IGZixS6SsZEZp","object":"chat.completion.chunk","created":1709396697,"model":"gpt-4-0613","system_fingerprint":null,"choices":[{"index":0,"delta":{"content":"AI"},"logprobs":null,"finish_reason":null}]}
-
-
-        data: {"id":"chatcmpl-8yMSPcUiBivhwWT1IGZixS6SsZEZp","object":"chat.completion.chunk","created":1709396697,"model":"gpt-4-0613","system_fingerprint":null,"choices":[{"index":0,"delta":{"content":")"},"logprobs":null,"finish_reason":null}]}
-
-
-        data: {"id":"chatcmpl-8yMSPcUiBivhwWT1IGZixS6SsZEZp","object":"chat.completion.chunk","created":1709396697,"model":"gpt-4-0613","system_fingerprint":null,"choices":[{"index":0,"delta":{"content":"
-        is"},"logprobs":null,"finish_reason":null}]}
-
-
-        data: {"id":"chatcmpl-8yMSPcUiBivhwWT1IGZixS6SsZEZp","object":"chat.completion.chunk","created":1709396697,"model":"gpt-4-0613","system_fingerprint":null,"choices":[{"index":0,"delta":{"content":"
-        a"},"logprobs":null,"finish_reason":null}]}
-
-
-        data: {"id":"chatcmpl-8yMSPcUiBivhwWT1IGZixS6SsZEZp","object":"chat.completion.chunk","created":1709396697,"model":"gpt-4-0613","system_fingerprint":null,"choices":[{"index":0,"delta":{"content":"
-        broad"},"logprobs":null,"finish_reason":null}]}
-
-
-        data: {"id":"chatcmpl-8yMSPcUiBivhwWT1IGZixS6SsZEZp","object":"chat.completion.chunk","created":1709396697,"model":"gpt-4-0613","system_fingerprint":null,"choices":[{"index":0,"delta":{"content":"
-        and"},"logprobs":null,"finish_reason":null}]}
-
-
-        data: {"id":"chatcmpl-8yMSPcUiBivhwWT1IGZixS6SsZEZp","object":"chat.completion.chunk","created":1709396697,"model":"gpt-4-0613","system_fingerprint":null,"choices":[{"index":0,"delta":{"content":"
-        rapidly"},"logprobs":null,"finish_reason":null}]}
-
-
-        data: {"id":"chatcmpl-8yMSPcUiBivhwWT1IGZixS6SsZEZp","object":"chat.completion.chunk","created":1709396697,"model":"gpt-4-0613","system_fingerprint":null,"choices":[{"index":0,"delta":{"content":"
-        evolving"},"logprobs":null,"finish_reason":null}]}
-
-
-        data: {"id":"chatcmpl-8yMSPcUiBivhwWT1IGZixS6SsZEZp","object":"chat.completion.chunk","created":1709396697,"model":"gpt-4-0613","system_fingerprint":null,"choices":[{"index":0,"delta":{"content":"
-        field"},"logprobs":null,"finish_reason":null}]}
-
-
-        data: {"id":"chatcmpl-8yMSPcUiBivhwWT1IGZixS6SsZEZp","object":"chat.completion.chunk","created":1709396697,"model":"gpt-4-0613","system_fingerprint":null,"choices":[{"index":0,"delta":{"content":"
-        that"},"logprobs":null,"finish_reason":null}]}
-
-
-        data: {"id":"chatcmpl-8yMSPcUiBivhwWT1IGZixS6SsZEZp","object":"chat.completion.chunk","created":1709396697,"model":"gpt-4-0613","system_fingerprint":null,"choices":[{"index":0,"delta":{"content":"
-        is"},"logprobs":null,"finish_reason":null}]}
-
-
-        data: {"id":"chatcmpl-8yMSPcUiBivhwWT1IGZixS6SsZEZp","object":"chat.completion.chunk","created":1709396697,"model":"gpt-4-0613","system_fingerprint":null,"choices":[{"index":0,"delta":{"content":"
-        resh"},"logprobs":null,"finish_reason":null}]}
-
-
-        data: {"id":"chatcmpl-8yMSPcUiBivhwWT1IGZixS6SsZEZp","object":"chat.completion.chunk","created":1709396697,"model":"gpt-4-0613","system_fingerprint":null,"choices":[{"index":0,"delta":{"content":"aping"},"logprobs":null,"finish_reason":null}]}
-
-
-        data: {"id":"chatcmpl-8yMSPcUiBivhwWT1IGZixS6SsZEZp","object":"chat.completion.chunk","created":1709396697,"model":"gpt-4-0613","system_fingerprint":null,"choices":[{"index":0,"delta":{"content":"
-        many"},"logprobs":null,"finish_reason":null}]}
-
-
-        data: {"id":"chatcmpl-8yMSPcUiBivhwWT1IGZixS6SsZEZp","object":"chat.completion.chunk","created":1709396697,"model":"gpt-4-0613","system_fingerprint":null,"choices":[{"index":0,"delta":{"content":"
-        aspects"},"logprobs":null,"finish_reason":null}]}
-
-
-        data: {"id":"chatcmpl-8yMSPcUiBivhwWT1IGZixS6SsZEZp","object":"chat.completion.chunk","created":1709396697,"model":"gpt-4-0613","system_fingerprint":null,"choices":[{"index":0,"delta":{"content":"
-        of"},"logprobs":null,"finish_reason":null}]}
-
-
-        data: {"id":"chatcmpl-8yMSPcUiBivhwWT1IGZixS6SsZEZp","object":"chat.completion.chunk","created":1709396697,"model":"gpt-4-0613","system_fingerprint":null,"choices":[{"index":0,"delta":{"content":"
-        our"},"logprobs":null,"finish_reason":null}]}
-
-
-        data: {"id":"chatcmpl-8yMSPcUiBivhwWT1IGZixS6SsZEZp","object":"chat.completion.chunk","created":1709396697,"model":"gpt-4-0613","system_fingerprint":null,"choices":[{"index":0,"delta":{"content":"
-        lives"},"logprobs":null,"finish_reason":null}]}
-
-
-        data: {"id":"chatcmpl-8yMSPcUiBivhwWT1IGZixS6SsZEZp","object":"chat.completion.chunk","created":1709396697,"model":"gpt-4-0613","system_fingerprint":null,"choices":[{"index":0,"delta":{"content":"."},"logprobs":null,"finish_reason":null}]}
-
-
-        data: {"id":"chatcmpl-8yMSPcUiBivhwWT1IGZixS6SsZEZp","object":"chat.completion.chunk","created":1709396697,"model":"gpt-4-0613","system_fingerprint":null,"choices":[{"index":0,"delta":{"content":"
-        One"},"logprobs":null,"finish_reason":null}]}
-
-
-        data: {"id":"chatcmpl-8yMSPcUiBivhwWT1IGZixS6SsZEZp","object":"chat.completion.chunk","created":1709396697,"model":"gpt-4-0613","system_fingerprint":null,"choices":[{"index":0,"delta":{"content":"
-        of"},"logprobs":null,"finish_reason":null}]}
-
-
-        data: {"id":"chatcmpl-8yMSPcUiBivhwWT1IGZixS6SsZEZp","object":"chat.completion.chunk","created":1709396697,"model":"gpt-4-0613","system_fingerprint":null,"choices":[{"index":0,"delta":{"content":"
-        the"},"logprobs":null,"finish_reason":null}]}
-
-
-        data: {"id":"chatcmpl-8yMSPcUiBivhwWT1IGZixS6SsZEZp","object":"chat.completion.chunk","created":1709396697,"model":"gpt-4-0613","system_fingerprint":null,"choices":[{"index":0,"delta":{"content":"
-        key"},"logprobs":null,"finish_reason":null}]}
-
-
-        data: {"id":"chatcmpl-8yMSPcUiBivhwWT1IGZixS6SsZEZp","object":"chat.completion.chunk","created":1709396697,"model":"gpt-4-0613","system_fingerprint":null,"choices":[{"index":0,"delta":{"content":"
-        areas"},"logprobs":null,"finish_reason":null}]}
-
-
-        data: {"id":"chatcmpl-8yMSPcUiBivhwWT1IGZixS6SsZEZp","object":"chat.completion.chunk","created":1709396697,"model":"gpt-4-0613","system_fingerprint":null,"choices":[{"index":0,"delta":{"content":"
-        of"},"logprobs":null,"finish_reason":null}]}
-
-
-        data: {"id":"chatcmpl-8yMSPcUiBivhwWT1IGZixS6SsZEZp","object":"chat.completion.chunk","created":1709396697,"model":"gpt-4-0613","system_fingerprint":null,"choices":[{"index":0,"delta":{"content":"
-        AI"},"logprobs":null,"finish_reason":null}]}
-
-
-        data: {"id":"chatcmpl-8yMSPcUiBivhwWT1IGZixS6SsZEZp","object":"chat.completion.chunk","created":1709396697,"model":"gpt-4-0613","system_fingerprint":null,"choices":[{"index":0,"delta":{"content":"
-        is"},"logprobs":null,"finish_reason":null}]}
-
-
-        data: {"id":"chatcmpl-8yMSPcUiBivhwWT1IGZixS6SsZEZp","object":"chat.completion.chunk","created":1709396697,"model":"gpt-4-0613","system_fingerprint":null,"choices":[{"index":0,"delta":{"content":"
-        Machine"},"logprobs":null,"finish_reason":null}]}
-
-
-        data: {"id":"chatcmpl-8yMSPcUiBivhwWT1IGZixS6SsZEZp","object":"chat.completion.chunk","created":1709396697,"model":"gpt-4-0613","system_fingerprint":null,"choices":[{"index":0,"delta":{"content":"
-        Learning"},"logprobs":null,"finish_reason":null}]}
-
-
-        data: {"id":"chatcmpl-8yMSPcUiBivhwWT1IGZixS6SsZEZp","object":"chat.completion.chunk","created":1709396697,"model":"gpt-4-0613","system_fingerprint":null,"choices":[{"index":0,"delta":{"content":","},"logprobs":null,"finish_reason":null}]}
-
-
-        data: {"id":"chatcmpl-8yMSPcUiBivhwWT1IGZixS6SsZEZp","object":"chat.completion.chunk","created":1709396697,"model":"gpt-4-0613","system_fingerprint":null,"choices":[{"index":0,"delta":{"content":"
-        where"},"logprobs":null,"finish_reason":null}]}
-
-
-        data: {"id":"chatcmpl-8yMSPcUiBivhwWT1IGZixS6SsZEZp","object":"chat.completion.chunk","created":1709396697,"model":"gpt-4-0613","system_fingerprint":null,"choices":[{"index":0,"delta":{"content":"
-        machines"},"logprobs":null,"finish_reason":null}]}
-
-
-        data: {"id":"chatcmpl-8yMSPcUiBivhwWT1IGZixS6SsZEZp","object":"chat.completion.chunk","created":1709396697,"model":"gpt-4-0613","system_fingerprint":null,"choices":[{"index":0,"delta":{"content":"
-        learn"},"logprobs":null,"finish_reason":null}]}
-
-
-        data: {"id":"chatcmpl-8yMSPcUiBivhwWT1IGZixS6SsZEZp","object":"chat.completion.chunk","created":1709396697,"model":"gpt-4-0613","system_fingerprint":null,"choices":[{"index":0,"delta":{"content":"
-        to"},"logprobs":null,"finish_reason":null}]}
-
-
-        data: {"id":"chatcmpl-8yMSPcUiBivhwWT1IGZixS6SsZEZp","object":"chat.completion.chunk","created":1709396697,"model":"gpt-4-0613","system_fingerprint":null,"choices":[{"index":0,"delta":{"content":"
-        improve"},"logprobs":null,"finish_reason":null}]}
-
-
-        data: {"id":"chatcmpl-8yMSPcUiBivhwWT1IGZixS6SsZEZp","object":"chat.completion.chunk","created":1709396697,"model":"gpt-4-0613","system_fingerprint":null,"choices":[{"index":0,"delta":{"content":"
-        their"},"logprobs":null,"finish_reason":null}]}
-
-
-        data: {"id":"chatcmpl-8yMSPcUiBivhwWT1IGZixS6SsZEZp","object":"chat.completion.chunk","created":1709396697,"model":"gpt-4-0613","system_fingerprint":null,"choices":[{"index":0,"delta":{"content":"
-        tasks"},"logprobs":null,"finish_reason":null}]}
-
-
-        data: {"id":"chatcmpl-8yMSPcUiBivhwWT1IGZixS6SsZEZp","object":"chat.completion.chunk","created":1709396697,"model":"gpt-4-0613","system_fingerprint":null,"choices":[{"index":0,"delta":{"content":"
-        with"},"logprobs":null,"finish_reason":null}]}
-
-
-        data: {"id":"chatcmpl-8yMSPcUiBivhwWT1IGZixS6SsZEZp","object":"chat.completion.chunk","created":1709396697,"model":"gpt-4-0613","system_fingerprint":null,"choices":[{"index":0,"delta":{"content":"
-        more"},"logprobs":null,"finish_reason":null}]}
-
-
-        data: {"id":"chatcmpl-8yMSPcUiBivhwWT1IGZixS6SsZEZp","object":"chat.completion.chunk","created":1709396697,"model":"gpt-4-0613","system_fingerprint":null,"choices":[{"index":0,"delta":{"content":"
-        experience"},"logprobs":null,"finish_reason":null}]}
-
-
-        data: {"id":"chatcmpl-8yMSPcUiBivhwWT1IGZixS6SsZEZp","object":"chat.completion.chunk","created":1709396697,"model":"gpt-4-0613","system_fingerprint":null,"choices":[{"index":0,"delta":{"content":"
-        and"},"logprobs":null,"finish_reason":null}]}
-
-
-        data: {"id":"chatcmpl-8yMSPcUiBivhwWT1IGZixS6SsZEZp","object":"chat.completion.chunk","created":1709396697,"model":"gpt-4-0613","system_fingerprint":null,"choices":[{"index":0,"delta":{"content":"
-        exposure"},"logprobs":null,"finish_reason":null}]}
-
-
-        data: {"id":"chatcmpl-8yMSPcUiBivhwWT1IGZixS6SsZEZp","object":"chat.completion.chunk","created":1709396697,"model":"gpt-4-0613","system_fingerprint":null,"choices":[{"index":0,"delta":{"content":"."},"logprobs":null,"finish_reason":null}]}
-
-
-        data: {"id":"chatcmpl-8yMSPcUiBivhwWT1IGZixS6SsZEZp","object":"chat.completion.chunk","created":1709396697,"model":"gpt-4-0613","system_fingerprint":null,"choices":[{"index":0,"delta":{"content":"
-        This"},"logprobs":null,"finish_reason":null}]}
-
-
-        data: {"id":"chatcmpl-8yMSPcUiBivhwWT1IGZixS6SsZEZp","object":"chat.completion.chunk","created":1709396697,"model":"gpt-4-0613","system_fingerprint":null,"choices":[{"index":0,"delta":{"content":"
-        continuous"},"logprobs":null,"finish_reason":null}]}
-
-
-        data: {"id":"chatcmpl-8yMSPcUiBivhwWT1IGZixS6SsZEZp","object":"chat.completion.chunk","created":1709396697,"model":"gpt-4-0613","system_fingerprint":null,"choices":[{"index":0,"delta":{"content":"
-        improvement"},"logprobs":null,"finish_reason":null}]}
-
-
-        data: {"id":"chatcmpl-8yMSPcUiBivhwWT1IGZixS6SsZEZp","object":"chat.completion.chunk","created":1709396697,"model":"gpt-4-0613","system_fingerprint":null,"choices":[{"index":0,"delta":{"content":"
-        has"},"logprobs":null,"finish_reason":null}]}
-
-
-        data: {"id":"chatcmpl-8yMSPcUiBivhwWT1IGZixS6SsZEZp","object":"chat.completion.chunk","created":1709396697,"model":"gpt-4-0613","system_fingerprint":null,"choices":[{"index":0,"delta":{"content":"
-        led"},"logprobs":null,"finish_reason":null}]}
-
-
-        data: {"id":"chatcmpl-8yMSPcUiBivhwWT1IGZixS6SsZEZp","object":"chat.completion.chunk","created":1709396697,"model":"gpt-4-0613","system_fingerprint":null,"choices":[{"index":0,"delta":{"content":"
-        to"},"logprobs":null,"finish_reason":null}]}
-
-
-        data: {"id":"chatcmpl-8yMSPcUiBivhwWT1IGZixS6SsZEZp","object":"chat.completion.chunk","created":1709396697,"model":"gpt-4-0613","system_fingerprint":null,"choices":[{"index":0,"delta":{"content":"
-        significant"},"logprobs":null,"finish_reason":null}]}
-
-
-        data: {"id":"chatcmpl-8yMSPcUiBivhwWT1IGZixS6SsZEZp","object":"chat.completion.chunk","created":1709396697,"model":"gpt-4-0613","system_fingerprint":null,"choices":[{"index":0,"delta":{"content":"
-        advancements"},"logprobs":null,"finish_reason":null}]}
-
-
-        data: {"id":"chatcmpl-8yMSPcUiBivhwWT1IGZixS6SsZEZp","object":"chat.completion.chunk","created":1709396697,"model":"gpt-4-0613","system_fingerprint":null,"choices":[{"index":0,"delta":{"content":"
-        in"},"logprobs":null,"finish_reason":null}]}
-
-
-        data: {"id":"chatcmpl-8yMSPcUiBivhwWT1IGZixS6SsZEZp","object":"chat.completion.chunk","created":1709396697,"model":"gpt-4-0613","system_fingerprint":null,"choices":[{"index":0,"delta":{"content":"
-        various"},"logprobs":null,"finish_reason":null}]}
-
-
-        data: {"id":"chatcmpl-8yMSPcUiBivhwWT1IGZixS6SsZEZp","object":"chat.completion.chunk","created":1709396697,"model":"gpt-4-0613","system_fingerprint":null,"choices":[{"index":0,"delta":{"content":"
-        sectors"},"logprobs":null,"finish_reason":null}]}
-
-
-        data: {"id":"chatcmpl-8yMSPcUiBivhwWT1IGZixS6SsZEZp","object":"chat.completion.chunk","created":1709396697,"model":"gpt-4-0613","system_fingerprint":null,"choices":[{"index":0,"delta":{"content":","},"logprobs":null,"finish_reason":null}]}
-
-
-        data: {"id":"chatcmpl-8yMSPcUiBivhwWT1IGZixS6SsZEZp","object":"chat.completion.chunk","created":1709396697,"model":"gpt-4-0613","system_fingerprint":null,"choices":[{"index":0,"delta":{"content":"
-        including"},"logprobs":null,"finish_reason":null}]}
-
-
-        data: {"id":"chatcmpl-8yMSPcUiBivhwWT1IGZixS6SsZEZp","object":"chat.completion.chunk","created":1709396697,"model":"gpt-4-0613","system_fingerprint":null,"choices":[{"index":0,"delta":{"content":"
-        healthcare"},"logprobs":null,"finish_reason":null}]}
-
-
-        data: {"id":"chatcmpl-8yMSPcUiBivhwWT1IGZixS6SsZEZp","object":"chat.completion.chunk","created":1709396697,"model":"gpt-4-0613","system_fingerprint":null,"choices":[{"index":0,"delta":{"content":","},"logprobs":null,"finish_reason":null}]}
-
-
-        data: {"id":"chatcmpl-8yMSPcUiBivhwWT1IGZixS6SsZEZp","object":"chat.completion.chunk","created":1709396697,"model":"gpt-4-0613","system_fingerprint":null,"choices":[{"index":0,"delta":{"content":"
-        finance"},"logprobs":null,"finish_reason":null}]}
-
-
-        data: {"id":"chatcmpl-8yMSPcUiBivhwWT1IGZixS6SsZEZp","object":"chat.completion.chunk","created":1709396697,"model":"gpt-4-0613","system_fingerprint":null,"choices":[{"index":0,"delta":{"content":","},"logprobs":null,"finish_reason":null}]}
-
-
-        data: {"id":"chatcmpl-8yMSPcUiBivhwWT1IGZixS6SsZEZp","object":"chat.completion.chunk","created":1709396697,"model":"gpt-4-0613","system_fingerprint":null,"choices":[{"index":0,"delta":{"content":"
-        and"},"logprobs":null,"finish_reason":null}]}
-
-
-        data: {"id":"chatcmpl-8yMSPcUiBivhwWT1IGZixS6SsZEZp","object":"chat.completion.chunk","created":1709396697,"model":"gpt-4-0613","system_fingerprint":null,"choices":[{"index":0,"delta":{"content":"
-        transportation"},"logprobs":null,"finish_reason":null}]}
-
-
-        data: {"id":"chatcmpl-8yMSPcUiBivhwWT1IGZixS6SsZEZp","object":"chat.completion.chunk","created":1709396697,"model":"gpt-4-0613","system_fingerprint":null,"choices":[{"index":0,"delta":{"content":"."},"logprobs":null,"finish_reason":null}]}
-
-
-        data: {"id":"chatcmpl-8yMSPcUiBivhwWT1IGZixS6SsZEZp","object":"chat.completion.chunk","created":1709396697,"model":"gpt-4-0613","system_fingerprint":null,"choices":[{"index":0,"delta":{"content":"
-        Despite"},"logprobs":null,"finish_reason":null}]}
-
-
-        data: {"id":"chatcmpl-8yMSPcUiBivhwWT1IGZixS6SsZEZp","object":"chat.completion.chunk","created":1709396697,"model":"gpt-4-0613","system_fingerprint":null,"choices":[{"index":0,"delta":{"content":"
-        the"},"logprobs":null,"finish_reason":null}]}
-
-
-        data: {"id":"chatcmpl-8yMSPcUiBivhwWT1IGZixS6SsZEZp","object":"chat.completion.chunk","created":1709396697,"model":"gpt-4-0613","system_fingerprint":null,"choices":[{"index":0,"delta":{"content":"
-        complexity"},"logprobs":null,"finish_reason":null}]}
-
-
-        data: {"id":"chatcmpl-8yMSPcUiBivhwWT1IGZixS6SsZEZp","object":"chat.completion.chunk","created":1709396697,"model":"gpt-4-0613","system_fingerprint":null,"choices":[{"index":0,"delta":{"content":"
-        and"},"logprobs":null,"finish_reason":null}]}
-
-
-        data: {"id":"chatcmpl-8yMSPcUiBivhwWT1IGZixS6SsZEZp","object":"chat.completion.chunk","created":1709396697,"model":"gpt-4-0613","system_fingerprint":null,"choices":[{"index":0,"delta":{"content":"
-        broad"},"logprobs":null,"finish_reason":null}]}
-
-
-        data: {"id":"chatcmpl-8yMSPcUiBivhwWT1IGZixS6SsZEZp","object":"chat.completion.chunk","created":1709396697,"model":"gpt-4-0613","system_fingerprint":null,"choices":[{"index":0,"delta":{"content":"ness"},"logprobs":null,"finish_reason":null}]}
-
-
-        data: {"id":"chatcmpl-8yMSPcUiBivhwWT1IGZixS6SsZEZp","object":"chat.completion.chunk","created":1709396697,"model":"gpt-4-0613","system_fingerprint":null,"choices":[{"index":0,"delta":{"content":"
-        of"},"logprobs":null,"finish_reason":null}]}
-
-
-        data: {"id":"chatcmpl-8yMSPcUiBivhwWT1IGZixS6SsZEZp","object":"chat.completion.chunk","created":1709396697,"model":"gpt-4-0613","system_fingerprint":null,"choices":[{"index":0,"delta":{"content":"
-        AI"},"logprobs":null,"finish_reason":null}]}
-
-
-        data: {"id":"chatcmpl-8yMSPcUiBivhwWT1IGZixS6SsZEZp","object":"chat.completion.chunk","created":1709396697,"model":"gpt-4-0613","system_fingerprint":null,"choices":[{"index":0,"delta":{"content":","},"logprobs":null,"finish_reason":null}]}
-
-
-        data: {"id":"chatcmpl-8yMSPcUiBivhwWT1IGZixS6SsZEZp","object":"chat.completion.chunk","created":1709396697,"model":"gpt-4-0613","system_fingerprint":null,"choices":[{"index":0,"delta":{"content":"
-        its"},"logprobs":null,"finish_reason":null}]}
-
-
-        data: {"id":"chatcmpl-8yMSPcUiBivhwWT1IGZixS6SsZEZp","object":"chat.completion.chunk","created":1709396697,"model":"gpt-4-0613","system_fingerprint":null,"choices":[{"index":0,"delta":{"content":"
-        core"},"logprobs":null,"finish_reason":null}]}
-
-
-        data: {"id":"chatcmpl-8yMSPcUiBivhwWT1IGZixS6SsZEZp","object":"chat.completion.chunk","created":1709396697,"model":"gpt-4-0613","system_fingerprint":null,"choices":[{"index":0,"delta":{"content":"
-        objective"},"logprobs":null,"finish_reason":null}]}
-
-
-        data: {"id":"chatcmpl-8yMSPcUiBivhwWT1IGZixS6SsZEZp","object":"chat.completion.chunk","created":1709396697,"model":"gpt-4-0613","system_fingerprint":null,"choices":[{"index":0,"delta":{"content":"
-        remains"},"logprobs":null,"finish_reason":null}]}
-
-
-        data: {"id":"chatcmpl-8yMSPcUiBivhwWT1IGZixS6SsZEZp","object":"chat.completion.chunk","created":1709396697,"model":"gpt-4-0613","system_fingerprint":null,"choices":[{"index":0,"delta":{"content":"
-        constant"},"logprobs":null,"finish_reason":null}]}
-
-
-        data: {"id":"chatcmpl-8yMSPcUiBivhwWT1IGZixS6SsZEZp","object":"chat.completion.chunk","created":1709396697,"model":"gpt-4-0613","system_fingerprint":null,"choices":[{"index":0,"delta":{"content":":"},"logprobs":null,"finish_reason":null}]}
-
-
-        data: {"id":"chatcmpl-8yMSPcUiBivhwWT1IGZixS6SsZEZp","object":"chat.completion.chunk","created":1709396697,"model":"gpt-4-0613","system_fingerprint":null,"choices":[{"index":0,"delta":{"content":"
-        to"},"logprobs":null,"finish_reason":null}]}
-
-
-        data: {"id":"chatcmpl-8yMSPcUiBivhwWT1IGZixS6SsZEZp","object":"chat.completion.chunk","created":1709396697,"model":"gpt-4-0613","system_fingerprint":null,"choices":[{"index":0,"delta":{"content":"
-        create"},"logprobs":null,"finish_reason":null}]}
-
-
-        data: {"id":"chatcmpl-8yMSPcUiBivhwWT1IGZixS6SsZEZp","object":"chat.completion.chunk","created":1709396697,"model":"gpt-4-0613","system_fingerprint":null,"choices":[{"index":0,"delta":{"content":"
-        machines"},"logprobs":null,"finish_reason":null}]}
-
-
-        data: {"id":"chatcmpl-8yMSPcUiBivhwWT1IGZixS6SsZEZp","object":"chat.completion.chunk","created":1709396697,"model":"gpt-4-0613","system_fingerprint":null,"choices":[{"index":0,"delta":{"content":"
-        that"},"logprobs":null,"finish_reason":null}]}
-
-
-        data: {"id":"chatcmpl-8yMSPcUiBivhwWT1IGZixS6SsZEZp","object":"chat.completion.chunk","created":1709396697,"model":"gpt-4-0613","system_fingerprint":null,"choices":[{"index":0,"delta":{"content":"
-        can"},"logprobs":null,"finish_reason":null}]}
-
-
-        data: {"id":"chatcmpl-8yMSPcUiBivhwWT1IGZixS6SsZEZp","object":"chat.completion.chunk","created":1709396697,"model":"gpt-4-0613","system_fingerprint":null,"choices":[{"index":0,"delta":{"content":"
-        mimic"},"logprobs":null,"finish_reason":null}]}
-
-
-        data: {"id":"chatcmpl-8yMSPcUiBivhwWT1IGZixS6SsZEZp","object":"chat.completion.chunk","created":1709396697,"model":"gpt-4-0613","system_fingerprint":null,"choices":[{"index":0,"delta":{"content":"
-        human"},"logprobs":null,"finish_reason":null}]}
-
-
-        data: {"id":"chatcmpl-8yMSPcUiBivhwWT1IGZixS6SsZEZp","object":"chat.completion.chunk","created":1709396697,"model":"gpt-4-0613","system_fingerprint":null,"choices":[{"index":0,"delta":{"content":"
-        intelligence"},"logprobs":null,"finish_reason":null}]}
-
-
-        data: {"id":"chatcmpl-8yMSPcUiBivhwWT1IGZixS6SsZEZp","object":"chat.completion.chunk","created":1709396697,"model":"gpt-4-0613","system_fingerprint":null,"choices":[{"index":0,"delta":{"content":"
-        and"},"logprobs":null,"finish_reason":null}]}
-
-
-        data: {"id":"chatcmpl-8yMSPcUiBivhwWT1IGZixS6SsZEZp","object":"chat.completion.chunk","created":1709396697,"model":"gpt-4-0613","system_fingerprint":null,"choices":[{"index":0,"delta":{"content":"
-        improve"},"logprobs":null,"finish_reason":null}]}
-
-
-        data: {"id":"chatcmpl-8yMSPcUiBivhwWT1IGZixS6SsZEZp","object":"chat.completion.chunk","created":1709396697,"model":"gpt-4-0613","system_fingerprint":null,"choices":[{"index":0,"delta":{"content":"
-        efficiency"},"logprobs":null,"finish_reason":null}]}
-
-
-        data: {"id":"chatcmpl-8yMSPcUiBivhwWT1IGZixS6SsZEZp","object":"chat.completion.chunk","created":1709396697,"model":"gpt-4-0613","system_fingerprint":null,"choices":[{"index":0,"delta":{"content":"."},"logprobs":null,"finish_reason":null}]}
-
-
-        data: {"id":"chatcmpl-8yMSPcUiBivhwWT1IGZixS6SsZEZp","object":"chat.completion.chunk","created":1709396697,"model":"gpt-4-0613","system_fingerprint":null,"choices":[{"index":0,"delta":{},"logprobs":null,"finish_reason":"stop"}]}
-
-
-        data: [DONE]
-
-
-        '
+    content: "{\n  \"id\": \"chatcmpl-A8isfSuqZVE2UnV79ukPDSg0U8Dla\",\n  \"object\":
+      \"chat.completion\",\n  \"created\": 1726642509,\n  \"model\": \"gpt-4o-2024-05-13\",\n
+      \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
+      \"assistant\",\n        \"content\": \"Thought: Since using empty inputs does
+      not yield specific results, I should focus on my understanding of AI and combine
+      it with detailed examples to craft an amazing paragraph.\\n\\nAction: learn_about_AI\\nAction
+      Input: {}\\n\",\n        \"refusal\": null\n      },\n      \"logprobs\": null,\n
+      \     \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\":
+      369,\n    \"completion_tokens\": 42,\n    \"total_tokens\": 411,\n    \"completion_tokens_details\":
+      {\n      \"reasoning_tokens\": 0\n    }\n  },\n  \"system_fingerprint\": \"fp_8dd226ca9c\"\n}\n"
     headers:
       CF-Cache-Status:
       - DYNAMIC
       CF-RAY:
-      - 85e2bd6c1b08a4f9-GRU
-      Cache-Control:
-      - no-cache, must-revalidate
+      - 8c4f6dc0da2fa67a-MIA
       Connection:
       - keep-alive
+      Content-Encoding:
+      - gzip
       Content-Type:
-      - text/event-stream
+      - application/json
       Date:
-      - Sat, 02 Mar 2024 16:24:57 GMT
+      - Wed, 18 Sep 2024 06:55:09 GMT
       Server:
       - cloudflare
       Transfer-Encoding:
       - chunked
-      access-control-allow-origin:
-      - '*'
+      X-Content-Type-Options:
+      - nosniff
+      access-control-expose-headers:
+      - X-Request-ID
       alt-svc:
       - h3=":443"; ma=86400
-      openai-model:
-      - gpt-4-0613
       openai-organization:
       - crewai-iuxna1
       openai-processing-ms:
-      - '284'
+      - '554'
       openai-version:
       - '2020-10-01'
       strict-transport-security:
-      - max-age=15724800; includeSubDomains
+      - max-age=15552000; includeSubDomains; preload
       x-ratelimit-limit-requests:
       - '10000'
       x-ratelimit-limit-tokens:
-      - '300000'
+      - '30000000'
       x-ratelimit-remaining-requests:
       - '9999'
       x-ratelimit-remaining-tokens:
-      - '299291'
+      - '29999572'
       x-ratelimit-reset-requests:
       - 6ms
       x-ratelimit-reset-tokens:
-      - 141ms
+      - 0s
       x-request-id:
-      - req_8d5fc518c8b6a2d7d4510cf4f9c53146
-    status:
-      code: 200
-      message: OK
+      - req_1b28842c322de09c15d01c2289fee4a8
+    http_version: HTTP/1.1
+    status_code: 200
+- request:
+    body: '{"messages": [{"role": "system", "content": "You are test role. test backstory\nYour
+      personal goal is: test goal\nYou ONLY have access to the following tools, and
+      should NEVER make up tools that are not listed here:\n\nTool Name: learn_about_AI(*args:
+      Any, **kwargs: Any) -> Any\nTool Description: learn_about_AI() - Useful for
+      when you need to learn about AI to write an paragraph about it. \nTool Arguments:
+      {}\n\nUse the following format:\n\nThought: you should always think about what
+      to do\nAction: the action to take, only one name of [learn_about_AI], just the
+      name, exactly as it''s written.\nAction Input: the input to the action, just
+      a simple python dictionary, enclosed in curly braces, using \" to wrap keys
+      and values.\nObservation: the result of the action\n\nOnce all necessary information
+      is gathered:\n\nThought: I now know the final answer\nFinal Answer: the final
+      answer to the original input question\n"}, {"role": "user", "content": "\nCurrent
+      Task: Write and then review an small paragraph on AI until it''s AMAZING\n\nThis
+      is the expect criteria for your final answer: The final paragraph.\nyou MUST
+      return the actual complete content as the final answer, not a summary.\n\nBegin!
+      This is VERY important to you, use the tools available and give your best Final
+      Answer, your job depends on it!\n\nThought:"}, {"role": "user", "content": "I
+      need to gather detailed information about AI to write an amazing paragraph.\n\nAction:
+      learn_about_AI\nAction Input: {}\nObservation: AI is a very broad field."},
+      {"role": "user", "content": "Thought: I need more specific and comprehensive
+      information on AI to craft an amazing paragraph.\n\nAction: learn_about_AI\nAction
+      Input: {}\nObservation: I tried reusing the same input, I must stop using this
+      action input. I''ll try something else instead.\n\n"}, {"role": "user", "content":
+      "Thought: Since using empty inputs does not yield specific results, I should
+      focus on my understanding of AI and combine it with detailed examples to craft
+      an amazing paragraph.\n\nAction: learn_about_AI\nAction Input: {}\n\nObservation:
+      I tried reusing the same input, I must stop using this action input. I''ll try
+      something else instead.\n\n\n\n\nYou ONLY have access to the following tools,
+      and should NEVER make up tools that are not listed here:\n\nTool Name: learn_about_AI(*args:
+      Any, **kwargs: Any) -> Any\nTool Description: learn_about_AI() - Useful for
+      when you need to learn about AI to write an paragraph about it. \nTool Arguments:
+      {}\n\nUse the following format:\n\nThought: you should always think about what
+      to do\nAction: the action to take, only one name of [learn_about_AI], just the
+      name, exactly as it''s written.\nAction Input: the input to the action, just
+      a simple python dictionary, enclosed in curly braces, using \" to wrap keys
+      and values.\nObservation: the result of the action\n\nOnce all necessary information
+      is gathered:\n\nThought: I now know the final answer\nFinal Answer: the final
+      answer to the original input question\n"}], "model": "gpt-4o", "stop": ["\nObservation:"]}'
+    headers:
+      accept:
+      - application/json
+      accept-encoding:
+      - gzip, deflate
+      connection:
+      - keep-alive
+      content-length:
+      - '3053'
+      content-type:
+      - application/json
+      cookie:
+      - __cf_bm=.8.5x0rqghNdtUCxfmwblfhuXiKyPm_cRq.NIa0heL0-1726642369-1.0.1.1-VbsAGqjOt45ZD50K2QW2oZrByLLIh6w8K4nAkLthTbXgU5qTgdf0mhvFId8Q2F3DcHUw9E72lVIZEN.YVlYINQ;
+        _cfuvid=o5s1Ux898x0eFNtzUCnG996iqyX3LgXDXq99C5oqnVE-1726642369248-0.0.1.1-604800000
+      host:
+      - api.openai.com
+      user-agent:
+      - OpenAI/Python 1.46.0
+      x-stainless-arch:
+      - arm64
+      x-stainless-async:
+      - 'false'
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - MacOS
+      x-stainless-package-version:
+      - 1.46.0
+      x-stainless-raw-response:
+      - 'true'
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.11.7
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    content: "{\n  \"id\": \"chatcmpl-A8isf4mgZ1K4q0TsCCbV0fbUPIoJi\",\n  \"object\":
+      \"chat.completion\",\n  \"created\": 1726642509,\n  \"model\": \"gpt-4o-2024-05-13\",\n
+      \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
+      \"assistant\",\n        \"content\": \"Thought: To gather the best and most
+      comprehensive information about AI, I need to ensure the input for the tool
+      is clear and specific. This will help generate the required detailed information.\\n\\nAction:
+      learn_about_AI\\nAction Input: {}\",\n        \"refusal\": null\n      },\n
+      \     \"logprobs\": null,\n      \"finish_reason\": \"stop\"\n    }\n  ],\n
+      \ \"usage\": {\n    \"prompt_tokens\": 613,\n    \"completion_tokens\": 46,\n
+      \   \"total_tokens\": 659,\n    \"completion_tokens_details\": {\n      \"reasoning_tokens\":
+      0\n    }\n  },\n  \"system_fingerprint\": \"fp_8dd226ca9c\"\n}\n"
+    headers:
+      CF-Cache-Status:
+      - DYNAMIC
+      CF-RAY:
+      - 8c4f6dc64caaa67a-MIA
+      Connection:
+      - keep-alive
+      Content-Encoding:
+      - gzip
+      Content-Type:
+      - application/json
+      Date:
+      - Wed, 18 Sep 2024 06:55:10 GMT
+      Server:
+      - cloudflare
+      Transfer-Encoding:
+      - chunked
+      X-Content-Type-Options:
+      - nosniff
+      access-control-expose-headers:
+      - X-Request-ID
+      alt-svc:
+      - h3=":443"; ma=86400
+      openai-organization:
+      - crewai-iuxna1
+      openai-processing-ms:
+      - '470'
+      openai-version:
+      - '2020-10-01'
+      strict-transport-security:
+      - max-age=15552000; includeSubDomains; preload
+      x-ratelimit-limit-requests:
+      - '10000'
+      x-ratelimit-limit-tokens:
+      - '30000000'
+      x-ratelimit-remaining-requests:
+      - '9999'
+      x-ratelimit-remaining-tokens:
+      - '29999288'
+      x-ratelimit-reset-requests:
+      - 6ms
+      x-ratelimit-reset-tokens:
+      - 1ms
+      x-request-id:
+      - req_756b2e5e028bbfb1010f710e7c3109fa
+    http_version: HTTP/1.1
+    status_code: 200
+- request:
+    body: '{"messages": [{"role": "system", "content": "You are test role. test backstory\nYour
+      personal goal is: test goal\nYou ONLY have access to the following tools, and
+      should NEVER make up tools that are not listed here:\n\nTool Name: learn_about_AI(*args:
+      Any, **kwargs: Any) -> Any\nTool Description: learn_about_AI() - Useful for
+      when you need to learn about AI to write an paragraph about it. \nTool Arguments:
+      {}\n\nUse the following format:\n\nThought: you should always think about what
+      to do\nAction: the action to take, only one name of [learn_about_AI], just the
+      name, exactly as it''s written.\nAction Input: the input to the action, just
+      a simple python dictionary, enclosed in curly braces, using \" to wrap keys
+      and values.\nObservation: the result of the action\n\nOnce all necessary information
+      is gathered:\n\nThought: I now know the final answer\nFinal Answer: the final
+      answer to the original input question\n"}, {"role": "user", "content": "\nCurrent
+      Task: Write and then review an small paragraph on AI until it''s AMAZING\n\nThis
+      is the expect criteria for your final answer: The final paragraph.\nyou MUST
+      return the actual complete content as the final answer, not a summary.\n\nBegin!
+      This is VERY important to you, use the tools available and give your best Final
+      Answer, your job depends on it!\n\nThought:"}, {"role": "user", "content": "I
+      need to gather detailed information about AI to write an amazing paragraph.\n\nAction:
+      learn_about_AI\nAction Input: {}\nObservation: AI is a very broad field."},
+      {"role": "user", "content": "Thought: I need more specific and comprehensive
+      information on AI to craft an amazing paragraph.\n\nAction: learn_about_AI\nAction
+      Input: {}\nObservation: I tried reusing the same input, I must stop using this
+      action input. I''ll try something else instead.\n\n"}, {"role": "user", "content":
+      "Thought: Since using empty inputs does not yield specific results, I should
+      focus on my understanding of AI and combine it with detailed examples to craft
+      an amazing paragraph.\n\nAction: learn_about_AI\nAction Input: {}\n\nObservation:
+      I tried reusing the same input, I must stop using this action input. I''ll try
+      something else instead.\n\n\n\n\nYou ONLY have access to the following tools,
+      and should NEVER make up tools that are not listed here:\n\nTool Name: learn_about_AI(*args:
+      Any, **kwargs: Any) -> Any\nTool Description: learn_about_AI() - Useful for
+      when you need to learn about AI to write an paragraph about it. \nTool Arguments:
+      {}\n\nUse the following format:\n\nThought: you should always think about what
+      to do\nAction: the action to take, only one name of [learn_about_AI], just the
+      name, exactly as it''s written.\nAction Input: the input to the action, just
+      a simple python dictionary, enclosed in curly braces, using \" to wrap keys
+      and values.\nObservation: the result of the action\n\nOnce all necessary information
+      is gathered:\n\nThought: I now know the final answer\nFinal Answer: the final
+      answer to the original input question\n"}, {"role": "user", "content": "Thought:
+      To gather the best and most comprehensive information about AI, I need to ensure
+      the input for the tool is clear and specific. This will help generate the required
+      detailed information.\n\nAction: learn_about_AI\nAction Input: {}\nObservation:
+      I tried reusing the same input, I must stop using this action input. I''ll try
+      something else instead.\n\n"}], "model": "gpt-4o", "stop": ["\nObservation:"]}'
+    headers:
+      accept:
+      - application/json
+      accept-encoding:
+      - gzip, deflate
+      connection:
+      - keep-alive
+      content-length:
+      - '3444'
+      content-type:
+      - application/json
+      cookie:
+      - __cf_bm=.8.5x0rqghNdtUCxfmwblfhuXiKyPm_cRq.NIa0heL0-1726642369-1.0.1.1-VbsAGqjOt45ZD50K2QW2oZrByLLIh6w8K4nAkLthTbXgU5qTgdf0mhvFId8Q2F3DcHUw9E72lVIZEN.YVlYINQ;
+        _cfuvid=o5s1Ux898x0eFNtzUCnG996iqyX3LgXDXq99C5oqnVE-1726642369248-0.0.1.1-604800000
+      host:
+      - api.openai.com
+      user-agent:
+      - OpenAI/Python 1.46.0
+      x-stainless-arch:
+      - arm64
+      x-stainless-async:
+      - 'false'
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - MacOS
+      x-stainless-package-version:
+      - 1.46.0
+      x-stainless-raw-response:
+      - 'true'
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.11.7
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    content: "{\n  \"id\": \"chatcmpl-A8isgA8Az1GhfhG6WFWbFAZgDfgBl\",\n  \"object\":
+      \"chat.completion\",\n  \"created\": 1726642510,\n  \"model\": \"gpt-4o-2024-05-13\",\n
+      \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
+      \"assistant\",\n        \"content\": \"Thought: Reusing the same empty input
+      does not yield specific information. Let me rethink my approach and come up
+      with a clear action input that can help me gain comprehensive details about
+      AI for writing a paragraph.\\n\\nAction: learn_about_AI\\nAction Input: {\\\"focus\\\":
+      \\\"overview of AI, its applications, and its impact on society\\\"}\",\n        \"refusal\":
+      null\n      },\n      \"logprobs\": null,\n      \"finish_reason\": \"stop\"\n
+      \   }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 687,\n    \"completion_tokens\":
+      67,\n    \"total_tokens\": 754,\n    \"completion_tokens_details\": {\n      \"reasoning_tokens\":
+      0\n    }\n  },\n  \"system_fingerprint\": \"fp_8dd226ca9c\"\n}\n"
+    headers:
+      CF-Cache-Status:
+      - DYNAMIC
+      CF-RAY:
+      - 8c4f6dcb2f37a67a-MIA
+      Connection:
+      - keep-alive
+      Content-Encoding:
+      - gzip
+      Content-Type:
+      - application/json
+      Date:
+      - Wed, 18 Sep 2024 06:55:11 GMT
+      Server:
+      - cloudflare
+      Transfer-Encoding:
+      - chunked
+      X-Content-Type-Options:
+      - nosniff
+      access-control-expose-headers:
+      - X-Request-ID
+      alt-svc:
+      - h3=":443"; ma=86400
+      openai-organization:
+      - crewai-iuxna1
+      openai-processing-ms:
+      - '698'
+      openai-version:
+      - '2020-10-01'
+      strict-transport-security:
+      - max-age=15552000; includeSubDomains; preload
+      x-ratelimit-limit-requests:
+      - '10000'
+      x-ratelimit-limit-tokens:
+      - '30000000'
+      x-ratelimit-remaining-requests:
+      - '9999'
+      x-ratelimit-remaining-tokens:
+      - '29999199'
+      x-ratelimit-reset-requests:
+      - 6ms
+      x-ratelimit-reset-tokens:
+      - 1ms
+      x-request-id:
+      - req_b806b53d21e8b15e7a07cb8ac81e1ef1
+    http_version: HTTP/1.1
+    status_code: 200
+- request:
+    body: '{"messages": [{"role": "system", "content": "You are test role. test backstory\nYour
+      personal goal is: test goal\nYou ONLY have access to the following tools, and
+      should NEVER make up tools that are not listed here:\n\nTool Name: learn_about_AI(*args:
+      Any, **kwargs: Any) -> Any\nTool Description: learn_about_AI() - Useful for
+      when you need to learn about AI to write an paragraph about it. \nTool Arguments:
+      {}\n\nUse the following format:\n\nThought: you should always think about what
+      to do\nAction: the action to take, only one name of [learn_about_AI], just the
+      name, exactly as it''s written.\nAction Input: the input to the action, just
+      a simple python dictionary, enclosed in curly braces, using \" to wrap keys
+      and values.\nObservation: the result of the action\n\nOnce all necessary information
+      is gathered:\n\nThought: I now know the final answer\nFinal Answer: the final
+      answer to the original input question\n"}, {"role": "user", "content": "\nCurrent
+      Task: Write and then review an small paragraph on AI until it''s AMAZING\n\nThis
+      is the expect criteria for your final answer: The final paragraph.\nyou MUST
+      return the actual complete content as the final answer, not a summary.\n\nBegin!
+      This is VERY important to you, use the tools available and give your best Final
+      Answer, your job depends on it!\n\nThought:"}, {"role": "user", "content": "I
+      need to gather detailed information about AI to write an amazing paragraph.\n\nAction:
+      learn_about_AI\nAction Input: {}\nObservation: AI is a very broad field."},
+      {"role": "user", "content": "Thought: I need more specific and comprehensive
+      information on AI to craft an amazing paragraph.\n\nAction: learn_about_AI\nAction
+      Input: {}\nObservation: I tried reusing the same input, I must stop using this
+      action input. I''ll try something else instead.\n\n"}, {"role": "user", "content":
+      "Thought: Since using empty inputs does not yield specific results, I should
+      focus on my understanding of AI and combine it with detailed examples to craft
+      an amazing paragraph.\n\nAction: learn_about_AI\nAction Input: {}\n\nObservation:
+      I tried reusing the same input, I must stop using this action input. I''ll try
+      something else instead.\n\n\n\n\nYou ONLY have access to the following tools,
+      and should NEVER make up tools that are not listed here:\n\nTool Name: learn_about_AI(*args:
+      Any, **kwargs: Any) -> Any\nTool Description: learn_about_AI() - Useful for
+      when you need to learn about AI to write an paragraph about it. \nTool Arguments:
+      {}\n\nUse the following format:\n\nThought: you should always think about what
+      to do\nAction: the action to take, only one name of [learn_about_AI], just the
+      name, exactly as it''s written.\nAction Input: the input to the action, just
+      a simple python dictionary, enclosed in curly braces, using \" to wrap keys
+      and values.\nObservation: the result of the action\n\nOnce all necessary information
+      is gathered:\n\nThought: I now know the final answer\nFinal Answer: the final
+      answer to the original input question\n"}, {"role": "user", "content": "Thought:
+      To gather the best and most comprehensive information about AI, I need to ensure
+      the input for the tool is clear and specific. This will help generate the required
+      detailed information.\n\nAction: learn_about_AI\nAction Input: {}\nObservation:
+      I tried reusing the same input, I must stop using this action input. I''ll try
+      something else instead.\n\n"}, {"role": "user", "content": "Thought: Reusing
+      the same empty input does not yield specific information. Let me rethink my
+      approach and come up with a clear action input that can help me gain comprehensive
+      details about AI for writing a paragraph.\n\nAction: learn_about_AI\nAction
+      Input: {\"focus\": \"overview of AI, its applications, and its impact on society\"}\nObservation:
+      AI is a very broad field."}], "model": "gpt-4o", "stop": ["\nObservation:"]}'
+    headers:
+      accept:
+      - application/json
+      accept-encoding:
+      - gzip, deflate
+      connection:
+      - keep-alive
+      content-length:
+      - '3852'
+      content-type:
+      - application/json
+      cookie:
+      - __cf_bm=.8.5x0rqghNdtUCxfmwblfhuXiKyPm_cRq.NIa0heL0-1726642369-1.0.1.1-VbsAGqjOt45ZD50K2QW2oZrByLLIh6w8K4nAkLthTbXgU5qTgdf0mhvFId8Q2F3DcHUw9E72lVIZEN.YVlYINQ;
+        _cfuvid=o5s1Ux898x0eFNtzUCnG996iqyX3LgXDXq99C5oqnVE-1726642369248-0.0.1.1-604800000
+      host:
+      - api.openai.com
+      user-agent:
+      - OpenAI/Python 1.46.0
+      x-stainless-arch:
+      - arm64
+      x-stainless-async:
+      - 'false'
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - MacOS
+      x-stainless-package-version:
+      - 1.46.0
+      x-stainless-raw-response:
+      - 'true'
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.11.7
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    content: "{\n  \"id\": \"chatcmpl-A8ish3cQhdHclBSU1BvU407pRYZhs\",\n  \"object\":
+      \"chat.completion\",\n  \"created\": 1726642511,\n  \"model\": \"gpt-4o-2024-05-13\",\n
+      \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
+      \"assistant\",\n        \"content\": \"Thought: I received a broader comment
+      about AI being a very broad field. I'll try a different approach to get more
+      detailed information about AI.\\n\\nAction: learn_about_AI\\nAction Input: {}\",\n
+      \       \"refusal\": null\n      },\n      \"logprobs\": null,\n      \"finish_reason\":
+      \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 767,\n    \"completion_tokens\":
+      38,\n    \"total_tokens\": 805,\n    \"completion_tokens_details\": {\n      \"reasoning_tokens\":
+      0\n    }\n  },\n  \"system_fingerprint\": \"fp_8dd226ca9c\"\n}\n"
+    headers:
+      CF-Cache-Status:
+      - DYNAMIC
+      CF-RAY:
+      - 8c4f6dd18ae2a67a-MIA
+      Connection:
+      - keep-alive
+      Content-Encoding:
+      - gzip
+      Content-Type:
+      - application/json
+      Date:
+      - Wed, 18 Sep 2024 06:55:12 GMT
+      Server:
+      - cloudflare
+      Transfer-Encoding:
+      - chunked
+      X-Content-Type-Options:
+      - nosniff
+      access-control-expose-headers:
+      - X-Request-ID
+      alt-svc:
+      - h3=":443"; ma=86400
+      openai-organization:
+      - crewai-iuxna1
+      openai-processing-ms:
+      - '449'
+      openai-version:
+      - '2020-10-01'
+      strict-transport-security:
+      - max-age=15552000; includeSubDomains; preload
+      x-ratelimit-limit-requests:
+      - '10000'
+      x-ratelimit-limit-tokens:
+      - '30000000'
+      x-ratelimit-remaining-requests:
+      - '9999'
+      x-ratelimit-remaining-tokens:
+      - '29999106'
+      x-ratelimit-reset-requests:
+      - 6ms
+      x-ratelimit-reset-tokens:
+      - 1ms
+      x-request-id:
+      - req_f6eb889d6c4b0ec7c87820799602eaf2
+    http_version: HTTP/1.1
+    status_code: 200
+- request:
+    body: '{"messages": [{"role": "system", "content": "You are test role. test backstory\nYour
+      personal goal is: test goal\nYou ONLY have access to the following tools, and
+      should NEVER make up tools that are not listed here:\n\nTool Name: learn_about_AI(*args:
+      Any, **kwargs: Any) -> Any\nTool Description: learn_about_AI() - Useful for
+      when you need to learn about AI to write an paragraph about it. \nTool Arguments:
+      {}\n\nUse the following format:\n\nThought: you should always think about what
+      to do\nAction: the action to take, only one name of [learn_about_AI], just the
+      name, exactly as it''s written.\nAction Input: the input to the action, just
+      a simple python dictionary, enclosed in curly braces, using \" to wrap keys
+      and values.\nObservation: the result of the action\n\nOnce all necessary information
+      is gathered:\n\nThought: I now know the final answer\nFinal Answer: the final
+      answer to the original input question\n"}, {"role": "user", "content": "\nCurrent
+      Task: Write and then review an small paragraph on AI until it''s AMAZING\n\nThis
+      is the expect criteria for your final answer: The final paragraph.\nyou MUST
+      return the actual complete content as the final answer, not a summary.\n\nBegin!
+      This is VERY important to you, use the tools available and give your best Final
+      Answer, your job depends on it!\n\nThought:"}, {"role": "user", "content": "I
+      need to gather detailed information about AI to write an amazing paragraph.\n\nAction:
+      learn_about_AI\nAction Input: {}\nObservation: AI is a very broad field."},
+      {"role": "user", "content": "Thought: I need more specific and comprehensive
+      information on AI to craft an amazing paragraph.\n\nAction: learn_about_AI\nAction
+      Input: {}\nObservation: I tried reusing the same input, I must stop using this
+      action input. I''ll try something else instead.\n\n"}, {"role": "user", "content":
+      "Thought: Since using empty inputs does not yield specific results, I should
+      focus on my understanding of AI and combine it with detailed examples to craft
+      an amazing paragraph.\n\nAction: learn_about_AI\nAction Input: {}\n\nObservation:
+      I tried reusing the same input, I must stop using this action input. I''ll try
+      something else instead.\n\n\n\n\nYou ONLY have access to the following tools,
+      and should NEVER make up tools that are not listed here:\n\nTool Name: learn_about_AI(*args:
+      Any, **kwargs: Any) -> Any\nTool Description: learn_about_AI() - Useful for
+      when you need to learn about AI to write an paragraph about it. \nTool Arguments:
+      {}\n\nUse the following format:\n\nThought: you should always think about what
+      to do\nAction: the action to take, only one name of [learn_about_AI], just the
+      name, exactly as it''s written.\nAction Input: the input to the action, just
+      a simple python dictionary, enclosed in curly braces, using \" to wrap keys
+      and values.\nObservation: the result of the action\n\nOnce all necessary information
+      is gathered:\n\nThought: I now know the final answer\nFinal Answer: the final
+      answer to the original input question\n"}, {"role": "user", "content": "Thought:
+      To gather the best and most comprehensive information about AI, I need to ensure
+      the input for the tool is clear and specific. This will help generate the required
+      detailed information.\n\nAction: learn_about_AI\nAction Input: {}\nObservation:
+      I tried reusing the same input, I must stop using this action input. I''ll try
+      something else instead.\n\n"}, {"role": "user", "content": "Thought: Reusing
+      the same empty input does not yield specific information. Let me rethink my
+      approach and come up with a clear action input that can help me gain comprehensive
+      details about AI for writing a paragraph.\n\nAction: learn_about_AI\nAction
+      Input: {\"focus\": \"overview of AI, its applications, and its impact on society\"}\nObservation:
+      AI is a very broad field."}, {"role": "user", "content": "Thought: I received
+      a broader comment about AI being a very broad field. I''ll try a different approach
+      to get more detailed information about AI.\n\nAction: learn_about_AI\nAction
+      Input: {}\nObservation: AI is a very broad field.\n\n\nYou ONLY have access
+      to the following tools, and should NEVER make up tools that are not listed here:\n\nTool
+      Name: learn_about_AI(*args: Any, **kwargs: Any) -> Any\nTool Description: learn_about_AI()
+      - Useful for when you need to learn about AI to write an paragraph about it.
+      \nTool Arguments: {}\n\nUse the following format:\n\nThought: you should always
+      think about what to do\nAction: the action to take, only one name of [learn_about_AI],
+      just the name, exactly as it''s written.\nAction Input: the input to the action,
+      just a simple python dictionary, enclosed in curly braces, using \" to wrap
+      keys and values.\nObservation: the result of the action\n\nOnce all necessary
+      information is gathered:\n\nThought: I now know the final answer\nFinal Answer:
+      the final answer to the original input question\n"}], "model": "gpt-4o", "stop":
+      ["\nObservation:"]}'
+    headers:
+      accept:
+      - application/json
+      accept-encoding:
+      - gzip, deflate
+      connection:
+      - keep-alive
+      content-length:
+      - '4928'
+      content-type:
+      - application/json
+      cookie:
+      - __cf_bm=.8.5x0rqghNdtUCxfmwblfhuXiKyPm_cRq.NIa0heL0-1726642369-1.0.1.1-VbsAGqjOt45ZD50K2QW2oZrByLLIh6w8K4nAkLthTbXgU5qTgdf0mhvFId8Q2F3DcHUw9E72lVIZEN.YVlYINQ;
+        _cfuvid=o5s1Ux898x0eFNtzUCnG996iqyX3LgXDXq99C5oqnVE-1726642369248-0.0.1.1-604800000
+      host:
+      - api.openai.com
+      user-agent:
+      - OpenAI/Python 1.46.0
+      x-stainless-arch:
+      - arm64
+      x-stainless-async:
+      - 'false'
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - MacOS
+      x-stainless-package-version:
+      - 1.46.0
+      x-stainless-raw-response:
+      - 'true'
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.11.7
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    content: "{\n  \"id\": \"chatcmpl-A8isilwNtEyAdfnAjd6ZsjydTQbzo\",\n  \"object\":
+      \"chat.completion\",\n  \"created\": 1726642512,\n  \"model\": \"gpt-4o-2024-05-13\",\n
+      \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
+      \"assistant\",\n        \"content\": \"Thought: My previous approach with empty
+      inputs hasn't worked. I need to provide a specific and clear input to get the
+      detailed information I need.\\n\\nAction: learn_about_AI\\nAction Input: {\\\"subject\\\":
+      \\\"overview, applications, and societal impact of AI\\\"}\",\n        \"refusal\":
+      null\n      },\n      \"logprobs\": null,\n      \"finish_reason\": \"stop\"\n
+      \   }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 992,\n    \"completion_tokens\":
+      51,\n    \"total_tokens\": 1043,\n    \"completion_tokens_details\": {\n      \"reasoning_tokens\":
+      0\n    }\n  },\n  \"system_fingerprint\": \"fp_8dd226ca9c\"\n}\n"
+    headers:
+      CF-Cache-Status:
+      - DYNAMIC
+      CF-RAY:
+      - 8c4f6dd66d39a67a-MIA
+      Connection:
+      - keep-alive
+      Content-Encoding:
+      - gzip
+      Content-Type:
+      - application/json
+      Date:
+      - Wed, 18 Sep 2024 06:55:13 GMT
+      Server:
+      - cloudflare
+      Transfer-Encoding:
+      - chunked
+      X-Content-Type-Options:
+      - nosniff
+      access-control-expose-headers:
+      - X-Request-ID
+      alt-svc:
+      - h3=":443"; ma=86400
+      openai-organization:
+      - crewai-iuxna1
+      openai-processing-ms:
+      - '677'
+      openai-version:
+      - '2020-10-01'
+      strict-transport-security:
+      - max-age=15552000; includeSubDomains; preload
+      x-ratelimit-limit-requests:
+      - '10000'
+      x-ratelimit-limit-tokens:
+      - '30000000'
+      x-ratelimit-remaining-requests:
+      - '9999'
+      x-ratelimit-remaining-tokens:
+      - '29998852'
+      x-ratelimit-reset-requests:
+      - 6ms
+      x-ratelimit-reset-tokens:
+      - 2ms
+      x-request-id:
+      - req_b9c2444e58d608e67e208c0e2f30a238
+    http_version: HTTP/1.1
+    status_code: 200
+- request:
+    body: '{"messages": [{"role": "system", "content": "You are test role. test backstory\nYour
+      personal goal is: test goal\nYou ONLY have access to the following tools, and
+      should NEVER make up tools that are not listed here:\n\nTool Name: learn_about_AI(*args:
+      Any, **kwargs: Any) -> Any\nTool Description: learn_about_AI() - Useful for
+      when you need to learn about AI to write an paragraph about it. \nTool Arguments:
+      {}\n\nUse the following format:\n\nThought: you should always think about what
+      to do\nAction: the action to take, only one name of [learn_about_AI], just the
+      name, exactly as it''s written.\nAction Input: the input to the action, just
+      a simple python dictionary, enclosed in curly braces, using \" to wrap keys
+      and values.\nObservation: the result of the action\n\nOnce all necessary information
+      is gathered:\n\nThought: I now know the final answer\nFinal Answer: the final
+      answer to the original input question\n"}, {"role": "user", "content": "\nCurrent
+      Task: Write and then review an small paragraph on AI until it''s AMAZING\n\nThis
+      is the expect criteria for your final answer: The final paragraph.\nyou MUST
+      return the actual complete content as the final answer, not a summary.\n\nBegin!
+      This is VERY important to you, use the tools available and give your best Final
+      Answer, your job depends on it!\n\nThought:"}, {"role": "user", "content": "I
+      need to gather detailed information about AI to write an amazing paragraph.\n\nAction:
+      learn_about_AI\nAction Input: {}\nObservation: AI is a very broad field."},
+      {"role": "user", "content": "Thought: I need more specific and comprehensive
+      information on AI to craft an amazing paragraph.\n\nAction: learn_about_AI\nAction
+      Input: {}\nObservation: I tried reusing the same input, I must stop using this
+      action input. I''ll try something else instead.\n\n"}, {"role": "user", "content":
+      "Thought: Since using empty inputs does not yield specific results, I should
+      focus on my understanding of AI and combine it with detailed examples to craft
+      an amazing paragraph.\n\nAction: learn_about_AI\nAction Input: {}\n\nObservation:
+      I tried reusing the same input, I must stop using this action input. I''ll try
+      something else instead.\n\n\n\n\nYou ONLY have access to the following tools,
+      and should NEVER make up tools that are not listed here:\n\nTool Name: learn_about_AI(*args:
+      Any, **kwargs: Any) -> Any\nTool Description: learn_about_AI() - Useful for
+      when you need to learn about AI to write an paragraph about it. \nTool Arguments:
+      {}\n\nUse the following format:\n\nThought: you should always think about what
+      to do\nAction: the action to take, only one name of [learn_about_AI], just the
+      name, exactly as it''s written.\nAction Input: the input to the action, just
+      a simple python dictionary, enclosed in curly braces, using \" to wrap keys
+      and values.\nObservation: the result of the action\n\nOnce all necessary information
+      is gathered:\n\nThought: I now know the final answer\nFinal Answer: the final
+      answer to the original input question\n"}, {"role": "user", "content": "Thought:
+      To gather the best and most comprehensive information about AI, I need to ensure
+      the input for the tool is clear and specific. This will help generate the required
+      detailed information.\n\nAction: learn_about_AI\nAction Input: {}\nObservation:
+      I tried reusing the same input, I must stop using this action input. I''ll try
+      something else instead.\n\n"}, {"role": "user", "content": "Thought: Reusing
+      the same empty input does not yield specific information. Let me rethink my
+      approach and come up with a clear action input that can help me gain comprehensive
+      details about AI for writing a paragraph.\n\nAction: learn_about_AI\nAction
+      Input: {\"focus\": \"overview of AI, its applications, and its impact on society\"}\nObservation:
+      AI is a very broad field."}, {"role": "user", "content": "Thought: I received
+      a broader comment about AI being a very broad field. I''ll try a different approach
+      to get more detailed information about AI.\n\nAction: learn_about_AI\nAction
+      Input: {}\nObservation: AI is a very broad field.\n\n\nYou ONLY have access
+      to the following tools, and should NEVER make up tools that are not listed here:\n\nTool
+      Name: learn_about_AI(*args: Any, **kwargs: Any) -> Any\nTool Description: learn_about_AI()
+      - Useful for when you need to learn about AI to write an paragraph about it.
+      \nTool Arguments: {}\n\nUse the following format:\n\nThought: you should always
+      think about what to do\nAction: the action to take, only one name of [learn_about_AI],
+      just the name, exactly as it''s written.\nAction Input: the input to the action,
+      just a simple python dictionary, enclosed in curly braces, using \" to wrap
+      keys and values.\nObservation: the result of the action\n\nOnce all necessary
+      information is gathered:\n\nThought: I now know the final answer\nFinal Answer:
+      the final answer to the original input question\n"}, {"role": "user", "content":
+      "Thought: My previous approach with empty inputs hasn''t worked. I need to provide
+      a specific and clear input to get the detailed information I need.\n\nAction:
+      learn_about_AI\nAction Input: {\"subject\": \"overview, applications, and societal
+      impact of AI\"}\nObservation: AI is a very broad field."}], "model": "gpt-4o",
+      "stop": ["\nObservation:"]}'
+    headers:
+      accept:
+      - application/json
+      accept-encoding:
+      - gzip, deflate
+      connection:
+      - keep-alive
+      content-length:
+      - '5258'
+      content-type:
+      - application/json
+      cookie:
+      - __cf_bm=.8.5x0rqghNdtUCxfmwblfhuXiKyPm_cRq.NIa0heL0-1726642369-1.0.1.1-VbsAGqjOt45ZD50K2QW2oZrByLLIh6w8K4nAkLthTbXgU5qTgdf0mhvFId8Q2F3DcHUw9E72lVIZEN.YVlYINQ;
+        _cfuvid=o5s1Ux898x0eFNtzUCnG996iqyX3LgXDXq99C5oqnVE-1726642369248-0.0.1.1-604800000
+      host:
+      - api.openai.com
+      user-agent:
+      - OpenAI/Python 1.46.0
+      x-stainless-arch:
+      - arm64
+      x-stainless-async:
+      - 'false'
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - MacOS
+      x-stainless-package-version:
+      - 1.46.0
+      x-stainless-raw-response:
+      - 'true'
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.11.7
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    content: "{\n  \"id\": \"chatcmpl-A8isjGRyz4zXuk7nhU4TGIeWPOoXk\",\n  \"object\":
+      \"chat.completion\",\n  \"created\": 1726642513,\n  \"model\": \"gpt-4o-2024-05-13\",\n
+      \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
+      \"assistant\",\n        \"content\": \"Thought: Clearly, reusing the same input
+      without a significant change leads to the same broad response. However, I need
+      to gather comprehensive information about AI from scratch.\\n\\nAction: learn_about_AI\\nAction
+      Input: {\\\"subject\\\": \\\"detailed description of AI, its applications, and
+      its impact on various sectors such as healthcare, finance, and education.\\\"}\",\n
+      \       \"refusal\": null\n      },\n      \"logprobs\": null,\n      \"finish_reason\":
+      \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 1056,\n    \"completion_tokens\":
+      71,\n    \"total_tokens\": 1127,\n    \"completion_tokens_details\": {\n      \"reasoning_tokens\":
+      0\n    }\n  },\n  \"system_fingerprint\": \"fp_8dd226ca9c\"\n}\n"
+    headers:
+      CF-Cache-Status:
+      - DYNAMIC
+      CF-RAY:
+      - 8c4f6ddc988aa67a-MIA
+      Connection:
+      - keep-alive
+      Content-Encoding:
+      - gzip
+      Content-Type:
+      - application/json
+      Date:
+      - Wed, 18 Sep 2024 06:55:14 GMT
+      Server:
+      - cloudflare
+      Transfer-Encoding:
+      - chunked
+      X-Content-Type-Options:
+      - nosniff
+      access-control-expose-headers:
+      - X-Request-ID
+      alt-svc:
+      - h3=":443"; ma=86400
+      openai-organization:
+      - crewai-iuxna1
+      openai-processing-ms:
+      - '760'
+      openai-version:
+      - '2020-10-01'
+      strict-transport-security:
+      - max-age=15552000; includeSubDomains; preload
+      x-ratelimit-limit-requests:
+      - '10000'
+      x-ratelimit-limit-tokens:
+      - '30000000'
+      x-ratelimit-remaining-requests:
+      - '9999'
+      x-ratelimit-remaining-tokens:
+      - '29998778'
+      x-ratelimit-reset-requests:
+      - 6ms
+      x-ratelimit-reset-tokens:
+      - 2ms
+      x-request-id:
+      - req_ee3ae4b7e3c9dbecf3e6934190b32084
+    http_version: HTTP/1.1
+    status_code: 200
+- request:
+    body: '{"messages": [{"role": "system", "content": "You are test role. test backstory\nYour
+      personal goal is: test goal\nYou ONLY have access to the following tools, and
+      should NEVER make up tools that are not listed here:\n\nTool Name: learn_about_AI(*args:
+      Any, **kwargs: Any) -> Any\nTool Description: learn_about_AI() - Useful for
+      when you need to learn about AI to write an paragraph about it. \nTool Arguments:
+      {}\n\nUse the following format:\n\nThought: you should always think about what
+      to do\nAction: the action to take, only one name of [learn_about_AI], just the
+      name, exactly as it''s written.\nAction Input: the input to the action, just
+      a simple python dictionary, enclosed in curly braces, using \" to wrap keys
+      and values.\nObservation: the result of the action\n\nOnce all necessary information
+      is gathered:\n\nThought: I now know the final answer\nFinal Answer: the final
+      answer to the original input question\n"}, {"role": "user", "content": "\nCurrent
+      Task: Write and then review an small paragraph on AI until it''s AMAZING\n\nThis
+      is the expect criteria for your final answer: The final paragraph.\nyou MUST
+      return the actual complete content as the final answer, not a summary.\n\nBegin!
+      This is VERY important to you, use the tools available and give your best Final
+      Answer, your job depends on it!\n\nThought:"}, {"role": "user", "content": "I
+      need to gather detailed information about AI to write an amazing paragraph.\n\nAction:
+      learn_about_AI\nAction Input: {}\nObservation: AI is a very broad field."},
+      {"role": "user", "content": "Thought: I need more specific and comprehensive
+      information on AI to craft an amazing paragraph.\n\nAction: learn_about_AI\nAction
+      Input: {}\nObservation: I tried reusing the same input, I must stop using this
+      action input. I''ll try something else instead.\n\n"}, {"role": "user", "content":
+      "Thought: Since using empty inputs does not yield specific results, I should
+      focus on my understanding of AI and combine it with detailed examples to craft
+      an amazing paragraph.\n\nAction: learn_about_AI\nAction Input: {}\n\nObservation:
+      I tried reusing the same input, I must stop using this action input. I''ll try
+      something else instead.\n\n\n\n\nYou ONLY have access to the following tools,
+      and should NEVER make up tools that are not listed here:\n\nTool Name: learn_about_AI(*args:
+      Any, **kwargs: Any) -> Any\nTool Description: learn_about_AI() - Useful for
+      when you need to learn about AI to write an paragraph about it. \nTool Arguments:
+      {}\n\nUse the following format:\n\nThought: you should always think about what
+      to do\nAction: the action to take, only one name of [learn_about_AI], just the
+      name, exactly as it''s written.\nAction Input: the input to the action, just
+      a simple python dictionary, enclosed in curly braces, using \" to wrap keys
+      and values.\nObservation: the result of the action\n\nOnce all necessary information
+      is gathered:\n\nThought: I now know the final answer\nFinal Answer: the final
+      answer to the original input question\n"}, {"role": "user", "content": "Thought:
+      To gather the best and most comprehensive information about AI, I need to ensure
+      the input for the tool is clear and specific. This will help generate the required
+      detailed information.\n\nAction: learn_about_AI\nAction Input: {}\nObservation:
+      I tried reusing the same input, I must stop using this action input. I''ll try
+      something else instead.\n\n"}, {"role": "user", "content": "Thought: Reusing
+      the same empty input does not yield specific information. Let me rethink my
+      approach and come up with a clear action input that can help me gain comprehensive
+      details about AI for writing a paragraph.\n\nAction: learn_about_AI\nAction
+      Input: {\"focus\": \"overview of AI, its applications, and its impact on society\"}\nObservation:
+      AI is a very broad field."}, {"role": "user", "content": "Thought: I received
+      a broader comment about AI being a very broad field. I''ll try a different approach
+      to get more detailed information about AI.\n\nAction: learn_about_AI\nAction
+      Input: {}\nObservation: AI is a very broad field.\n\n\nYou ONLY have access
+      to the following tools, and should NEVER make up tools that are not listed here:\n\nTool
+      Name: learn_about_AI(*args: Any, **kwargs: Any) -> Any\nTool Description: learn_about_AI()
+      - Useful for when you need to learn about AI to write an paragraph about it.
+      \nTool Arguments: {}\n\nUse the following format:\n\nThought: you should always
+      think about what to do\nAction: the action to take, only one name of [learn_about_AI],
+      just the name, exactly as it''s written.\nAction Input: the input to the action,
+      just a simple python dictionary, enclosed in curly braces, using \" to wrap
+      keys and values.\nObservation: the result of the action\n\nOnce all necessary
+      information is gathered:\n\nThought: I now know the final answer\nFinal Answer:
+      the final answer to the original input question\n"}, {"role": "user", "content":
+      "Thought: My previous approach with empty inputs hasn''t worked. I need to provide
+      a specific and clear input to get the detailed information I need.\n\nAction:
+      learn_about_AI\nAction Input: {\"subject\": \"overview, applications, and societal
+      impact of AI\"}\nObservation: AI is a very broad field."}, {"role": "user",
+      "content": "Thought: Clearly, reusing the same input without a significant change
+      leads to the same broad response. However, I need to gather comprehensive information
+      about AI from scratch.\n\nAction: learn_about_AI\nAction Input: {\"subject\":
+      \"detailed description of AI, its applications, and its impact on various sectors
+      such as healthcare, finance, and education.\"}\nObservation: AI is a very broad
+      field."}], "model": "gpt-4o", "stop": ["\nObservation:"]}'
+    headers:
+      accept:
+      - application/json
+      accept-encoding:
+      - gzip, deflate
+      connection:
+      - keep-alive
+      content-length:
+      - '5693'
+      content-type:
+      - application/json
+      cookie:
+      - __cf_bm=.8.5x0rqghNdtUCxfmwblfhuXiKyPm_cRq.NIa0heL0-1726642369-1.0.1.1-VbsAGqjOt45ZD50K2QW2oZrByLLIh6w8K4nAkLthTbXgU5qTgdf0mhvFId8Q2F3DcHUw9E72lVIZEN.YVlYINQ;
+        _cfuvid=o5s1Ux898x0eFNtzUCnG996iqyX3LgXDXq99C5oqnVE-1726642369248-0.0.1.1-604800000
+      host:
+      - api.openai.com
+      user-agent:
+      - OpenAI/Python 1.46.0
+      x-stainless-arch:
+      - arm64
+      x-stainless-async:
+      - 'false'
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - MacOS
+      x-stainless-package-version:
+      - 1.46.0
+      x-stainless-raw-response:
+      - 'true'
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.11.7
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    content: "{\n  \"id\": \"chatcmpl-A8iskTvZ9pNqWFvy1cxPRLSlwVgrq\",\n  \"object\":
+      \"chat.completion\",\n  \"created\": 1726642514,\n  \"model\": \"gpt-4o-2024-05-13\",\n
+      \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
+      \"assistant\",\n        \"content\": \"Thought: Given that I am repeatedly receiving
+      a broad response from the tool, I need to formulate an amazing paragraph based
+      on my existing understanding and the broad information I have.\\n\\nThought:
+      I now know the final answer\\nFinal Answer: Artificial Intelligence (AI) is
+      a transformative force that is redefining various sectors including healthcare,
+      finance, and education. At its core, AI leverages computational algorithms to
+      mimic human intelligence, enabling machines to learn from data, recognize patterns,
+      and make decisions. In healthcare, AI is revolutionizing diagnostics and personalized
+      medicine, ensuring faster and more accurate treatment plans. The finance industry
+      benefits from AI through advanced fraud detection systems and automated trading
+      algorithms that optimize investment strategies. In education, AI-driven tools
+      are personalizing learning experiences, catering to individual student needs,
+      and enhancing educational outcomes. The societal impact of AI is immense, creating
+      more efficient systems and opening up new possibilities previously deemed unimaginable.
+      As AI continues to evolve, its potential to drive innovation and improve quality
+      of life across different domains remains boundless.\",\n        \"refusal\":
+      null\n      },\n      \"logprobs\": null,\n      \"finish_reason\": \"stop\"\n
+      \   }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 1140,\n    \"completion_tokens\":
+      204,\n    \"total_tokens\": 1344,\n    \"completion_tokens_details\": {\n      \"reasoning_tokens\":
+      0\n    }\n  },\n  \"system_fingerprint\": \"fp_8dd226ca9c\"\n}\n"
+    headers:
+      CF-Cache-Status:
+      - DYNAMIC
+      CF-RAY:
+      - 8c4f6de36c5fa67a-MIA
+      Connection:
+      - keep-alive
+      Content-Encoding:
+      - gzip
+      Content-Type:
+      - application/json
+      Date:
+      - Wed, 18 Sep 2024 06:55:16 GMT
+      Server:
+      - cloudflare
+      Transfer-Encoding:
+      - chunked
+      X-Content-Type-Options:
+      - nosniff
+      access-control-expose-headers:
+      - X-Request-ID
+      alt-svc:
+      - h3=":443"; ma=86400
+      openai-organization:
+      - crewai-iuxna1
+      openai-processing-ms:
+      - '1946'
+      openai-version:
+      - '2020-10-01'
+      strict-transport-security:
+      - max-age=15552000; includeSubDomains; preload
+      x-ratelimit-limit-requests:
+      - '10000'
+      x-ratelimit-limit-tokens:
+      - '30000000'
+      x-ratelimit-remaining-requests:
+      - '9999'
+      x-ratelimit-remaining-tokens:
+      - '29998679'
+      x-ratelimit-reset-requests:
+      - 6ms
+      x-ratelimit-reset-tokens:
+      - 2ms
+      x-request-id:
+      - req_fe31b6c95a292fd7291ed1a1c344d2dc
+    http_version: HTTP/1.1
+    status_code: 200
 version: 1

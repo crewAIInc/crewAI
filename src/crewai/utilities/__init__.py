@@ -1,7 +1,7 @@
 from .converter import Converter, ConverterError
 from .file_handler import FileHandler
 from .i18n import I18N
-from .instructor import Instructor
+from .internal_instructor import InternalInstructor
 from .logger import Logger
 from .parser import YamlParser
 from .printer import Printer
@@ -16,7 +16,7 @@ __all__ = [
     "ConverterError",
     "FileHandler",
     "I18N",
-    "Instructor",
+    "InternalInstructor",
     "Logger",
     "Printer",
     "Prompts",
