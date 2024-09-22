@@ -82,7 +82,7 @@ class Agent(BaseAgent):
         description="Use system prompt for the agent.",
     )
     llm: Any = Field(
-        description="Language model that will run the agent.", default="gpt-4o"
+        description="Language model that will run the agent.", default="gpt-4o-mini"
     )
     function_calling_llm: Optional[Any] = Field(
         description="Language model that will run the agent.", default=None
