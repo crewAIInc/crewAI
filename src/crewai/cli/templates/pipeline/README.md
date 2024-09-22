@@ -17,11 +17,7 @@ Next, navigate to your project directory and install the dependencies:
 1. First lock the dependencies and then install them:
 
 ```bash
-poetry lock
-```
-
-```bash
-poetry install
+crewai install
 ```
 
 ### Customizing
@@ -38,7 +34,7 @@ poetry install
 To kickstart your crew of AI agents and begin task execution, run this from the root folder of your project:
 
 ```bash
-poetry run {{folder_name}}
+crewai run
 ```
 
 This command initializes the {{name}} Crew, assembling the agents and assigning them tasks as defined in your configuration.

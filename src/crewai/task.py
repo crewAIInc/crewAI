@@ -6,7 +6,7 @@ import uuid
 from concurrent.futures import Future
 from copy import copy
 from hashlib import md5
-from typing import Any, Dict, List, Optional, Tuple, Type, Union
+from typing import Any, Dict, List, Optional, Set, Tuple, Type, Union
 
 from opentelemetry.trace import Span
 from pydantic import (
@@ -23,6 +23,7 @@ from crewai.agents.agent_builder.base_agent import BaseAgent
 from crewai.tasks.output_format import OutputFormat
 from crewai.tasks.task_output import TaskOutput
 from crewai.telemetry.telemetry import Telemetry
+from crewai.utilities.config import process_config
 from crewai.utilities.converter import Converter, convert_to_model
 from crewai.utilities.i18n import I18N
 
@@ -107,6 +108,7 @@ class Task(BaseModel):
         description="A converter class used to export structured output",
         default=None,
     )
+    processed_by_agents: Set[str] = Field(default_factory=set)
 
     _telemetry: Telemetry = PrivateAttr(default_factory=Telemetry)
     _execution_span: Optional[Span] = PrivateAttr(default=None)
@@ -114,6 +116,21 @@ class Task(BaseModel):
     _original_expected_output: Optional[str] = PrivateAttr(default=None)
     _thread: Optional[threading.Thread] = PrivateAttr(default=None)
     _execution_time: Optional[float] = PrivateAttr(default=None)
+
+    @model_validator(mode="before")
+    @classmethod
+    def process_model_config(cls, values):
+        return process_config(values, cls)
+
+    @model_validator(mode="after")
+    def validate_required_fields(self):
+        required_fields = ["description", "expected_output"]
+        for field in required_fields:
+            if getattr(self, field) is None:
+                raise ValueError(
+                    f"{field} must be provided either directly or through config"
+                )
+        return self
 
     @field_validator("id", mode="before")
     @classmethod
@@ -225,6 +242,8 @@ class Task(BaseModel):
         self.prompt_context = context
         tools = tools or self.tools or []
 
+        self.processed_by_agents.add(agent.role)
+
         result = agent.execute_task(
             task=self,
             context=context,
@@ -257,7 +276,9 @@ class Task(BaseModel):
             content = (
                 json_output
                 if json_output
-                else pydantic_output.model_dump_json() if pydantic_output else result
+                else pydantic_output.model_dump_json()
+                if pydantic_output
+                else result
             )
             self._save_file(content)
 
@@ -292,8 +313,10 @@ class Task(BaseModel):
         """Increment the tools errors counter."""
         self.tools_errors += 1
 
-    def increment_delegations(self) -> None:
+    def increment_delegations(self, agent_name: Optional[str]) -> None:
         """Increment the delegations counter."""
+        if agent_name:
+            self.processed_by_agents.add(agent_name)
         self.delegations += 1
 
     def copy(self, agents: List["BaseAgent"]) -> "Task":

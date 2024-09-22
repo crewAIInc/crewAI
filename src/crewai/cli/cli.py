@@ -1,3 +1,5 @@
+from typing import Optional
+
 import click
 import pkg_resources
 
@@ -7,7 +9,10 @@ from crewai.memory.storage.kickoff_task_outputs_storage import (
     KickoffTaskOutputsSQLiteStorage,
 )
 
+from .authentication.main import AuthenticationCommand
+from .deploy.main import DeployCommand
 from .evaluate_crew import evaluate_crew
+from .install_crew import install_crew
 from .replay_from_task import replay_task_command
 from .reset_memories_command import reset_memories_command
 from .run_crew import run_crew
@@ -166,10 +171,82 @@ def test(n_iterations: int, model: str):
 
 
 @crewai.command()
+def install():
+    """Install the Crew."""
+    install_crew()
+
+
+@crewai.command()
 def run():
-    """Run the crew."""
-    click.echo("Running the crew")
+    """Run the Crew."""
+    click.echo("Running the Crew")
     run_crew()
+
+
+@crewai.command()
+def signup():
+    """Sign Up/Login to CrewAI+."""
+    AuthenticationCommand().signup()
+
+
+@crewai.command()
+def login():
+    """Sign Up/Login to CrewAI+."""
+    AuthenticationCommand().signup()
+
+
+# DEPLOY CREWAI+ COMMANDS
+@crewai.group()
+def deploy():
+    """Deploy the Crew CLI group."""
+    pass
+
+
+@deploy.command(name="create")
+@click.option("-y", "--yes", is_flag=True, help="Skip the confirmation prompt")
+def deploy_create(yes: bool):
+    """Create a Crew deployment."""
+    deploy_cmd = DeployCommand()
+    deploy_cmd.create_crew(yes)
+
+
+@deploy.command(name="list")
+def deploy_list():
+    """List all deployments."""
+    deploy_cmd = DeployCommand()
+    deploy_cmd.list_crews()
+
+
+@deploy.command(name="push")
+@click.option("-u", "--uuid", type=str, help="Crew UUID parameter")
+def deploy_push(uuid: Optional[str]):
+    """Deploy the Crew."""
+    deploy_cmd = DeployCommand()
+    deploy_cmd.deploy(uuid=uuid)
+
+
+@deploy.command(name="status")
+@click.option("-u", "--uuid", type=str, help="Crew UUID parameter")
+def deply_status(uuid: Optional[str]):
+    """Get the status of a deployment."""
+    deploy_cmd = DeployCommand()
+    deploy_cmd.get_crew_status(uuid=uuid)
+
+
+@deploy.command(name="logs")
+@click.option("-u", "--uuid", type=str, help="Crew UUID parameter")
+def deploy_logs(uuid: Optional[str]):
+    """Get the logs of a deployment."""
+    deploy_cmd = DeployCommand()
+    deploy_cmd.get_crew_logs(uuid=uuid)
+
+
+@deploy.command(name="remove")
+@click.option("-u", "--uuid", type=str, help="Crew UUID parameter")
+def deploy_remove(uuid: Optional[str]):
+    """Remove a deployment."""
+    deploy_cmd = DeployCommand()
+    deploy_cmd.remove_crew(uuid=uuid)
 
 
 if __name__ == "__main__":

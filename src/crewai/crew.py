@@ -6,7 +6,6 @@ from concurrent.futures import Future
 from hashlib import md5
 from typing import TYPE_CHECKING, Any, Dict, List, Optional, Tuple, Union
 
-from langchain_core.callbacks import BaseCallbackHandler
 from pydantic import (
     UUID4,
     BaseModel,
@@ -69,7 +68,6 @@ class Crew(BaseModel):
         manager_llm: The language model that will run manager agent.
         manager_agent: Custom agent that will be used as manager.
         memory: Whether the crew should use memory to store memories of it's execution.
-        manager_callbacks: The callback handlers to be executed by the manager agent when hierarchical process is used
         cache: Whether the crew should use a cache to store the results of the tools execution.
         function_calling_llm: The language model that will run the tool calling for all the agents.
         process: The process flow that the crew will follow (e.g., sequential, hierarchical).
@@ -131,10 +129,6 @@ class Crew(BaseModel):
     )
     manager_agent: Optional[BaseAgent] = Field(
         description="Custom agent that will be used as manager.", default=None
-    )
-    manager_callbacks: Optional[List[InstanceOf[BaseCallbackHandler]]] = Field(
-        default=None,
-        description="A list of callback handlers to be executed by the manager agent when hierarchical process is used",
     )
     function_calling_llm: Optional[Any] = Field(
         description="Language model that will run the agent.", default=None
@@ -211,6 +205,11 @@ class Crew(BaseModel):
         if self.output_log_file:
             self._file_handler = FileHandler(self.output_log_file)
         self._rpm_controller = RPMController(max_rpm=self.max_rpm, logger=self._logger)
+        self.function_calling_llm = (
+            getattr(self.function_calling_llm, "model_name", None)
+            or getattr(self.function_calling_llm, "deployment_name", None)
+            or self.function_calling_llm
+        )
         self._telemetry = Telemetry()
         self._telemetry.set_tracer()
         return self
@@ -527,10 +526,6 @@ class Crew(BaseModel):
             asyncio.create_task(run_crew(crew_copies[i], inputs[i]))
             for i in range(len(inputs))
         ]
-        tasks = [
-            asyncio.create_task(run_crew(crew_copies[i], inputs[i]))
-            for i in range(len(inputs))
-        ]
 
         results = await asyncio.gather(*tasks)
 
@@ -597,9 +592,18 @@ class Crew(BaseModel):
             self.manager_agent.allow_delegation = True
             manager = self.manager_agent
             if manager.tools is not None and len(manager.tools) > 0:
+                self._logger.log(
+                    "warning", "Manager agent should not have tools", color="orange"
+                )
+                manager.tools = []
                 raise Exception("Manager agent should not have tools")
             manager.tools = self.manager_agent.get_delegation_tools(self.agents)
         else:
+            self.manager_llm = (
+                getattr(self.manager_llm, "model_name", None)
+                or getattr(self.manager_llm, "deployment_name", None)
+                or self.manager_llm
+            )
             manager = Agent(
                 role=i18n.retrieve("hierarchical_manager_agent", "role"),
                 goal=i18n.retrieve("hierarchical_manager_agent", "goal"),
@@ -609,6 +613,7 @@ class Crew(BaseModel):
                 verbose=self.verbose,
             )
             self.manager_agent = manager
+        manager.crew = self
 
     def _execute_tasks(
         self,
@@ -753,9 +758,6 @@ class Crew(BaseModel):
                     task.tools.append(new_tool)
 
     def _log_task_start(self, task: Task, role: str = "None"):
-        color = self._logging_color
-        self._logger.log("debug", f"== Working Agent: {role}", color=color)
-        self._logger.log("info", f"== Starting Task: {task.description}", color=color)
         if self.output_log_file:
             self._file_handler.log(agent=role, task=task.description, status="started")
 
@@ -778,7 +780,6 @@ class Crew(BaseModel):
 
     def _process_task_result(self, task: Task, output: TaskOutput) -> None:
         role = task.agent.role if task.agent is not None else "None"
-        self._logger.log("debug", f"== [{role}] Task output: {output}\n\n")
         if self.output_log_file:
             self._file_handler.log(agent=role, task=output, status="completed")
 
@@ -931,25 +932,23 @@ class Crew(BaseModel):
     def calculate_usage_metrics(self) -> UsageMetrics:
         """Calculates and returns the usage metrics."""
         total_usage_metrics = UsageMetrics()
-
         for agent in self.agents:
             if hasattr(agent, "_token_process"):
                 token_sum = agent._token_process.get_summary()
                 total_usage_metrics.add_usage_metrics(token_sum)
-
         if self.manager_agent and hasattr(self.manager_agent, "_token_process"):
             token_sum = self.manager_agent._token_process.get_summary()
             total_usage_metrics.add_usage_metrics(token_sum)
-
+        self.usage_metrics = total_usage_metrics
         return total_usage_metrics
 
     def test(
         self,
         n_iterations: int,
-        openai_model_name: str,
+        openai_model_name: Optional[str] = None,
         inputs: Optional[Dict[str, Any]] = None,
     ) -> None:
-        """Test and evaluate the Crew with the given inputs for n iterations."""
+        """Test and evaluate the Crew with the given inputs for n iterations concurrently using concurrent.futures."""
         self._test_execution_span = self._telemetry.test_execution_span(
             self, n_iterations, inputs, openai_model_name
         )

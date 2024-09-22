@@ -12,7 +12,7 @@ A pipeline in crewAI represents a structured workflow that allows for the sequen
 Understanding the following terms is crucial for working effectively with pipelines:
 
 - **Stage**: A distinct part of the pipeline, which can be either sequential (a single crew) or parallel (multiple crews executing concurrently).
-- **Run**: A specific execution of the pipeline for a given set of inputs, representing a single instance of processing through the pipeline.
+- **Kickoff**: A specific execution of the pipeline for a given set of inputs, representing a single instance of processing through the pipeline.
 - **Branch**: Parallel executions within a stage (e.g., concurrent crew operations).
 - **Trace**: The journey of an individual input through the entire pipeline, capturing the path and transformations it undergoes.
 
@@ -28,13 +28,13 @@ This represents a pipeline with three stages:
 2. A parallel stage with two branches (crew2 and crew3 executing concurrently)
 3. Another sequential stage (crew4)
 
-Each input creates its own run, flowing through all stages of the pipeline. Multiple runs can be processed concurrently, each following the defined pipeline structure.
+Each input creates its own kickoff, flowing through all stages of the pipeline. Multiple kickoffs can be processed concurrently, each following the defined pipeline structure.
 
 ## Pipeline Attributes
 
-| Attribute  | Parameters | Description                                                                           |
-| :--------- | :--------- | :------------------------------------------------------------------------------------ |
-| **Stages** | `stages`   | A list of crews, lists of crews, or routers representing the stages to be executed in sequence. |
+| Attribute  | Parameters  | Description                                                                                                        |
+| :--------- | :---------- | :----------------------------------------------------------------------------------------------------------------- |
+| **Stages** | `stages`   | A list of `PipelineStage` (crews, lists of crews, or routers) representing the stages to be executed in sequence. |
 
 ## Creating a Pipeline
 
@@ -43,7 +43,7 @@ When creating a pipeline, you define a series of stages, each consisting of eith
 ### Example: Assembling a Pipeline
 
 ```python
-from crewai import Crew, Agent, Task, Pipeline
+from crewai import Crew, Process, Pipeline
 
 # Define your crews
 research_crew = Crew(
@@ -74,7 +74,8 @@ my_pipeline = Pipeline(
 
 | Method           | Description                                                                                                                                                                    |
 | :--------------- | :----------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **process_runs** | Executes the pipeline, processing all stages and returning the results. This method initiates one or more runs through the pipeline, handling the flow of data between stages. |
+| **kickoff**      | Executes the pipeline, processing all stages and returning the results. This method initiates one or more kickoffs through the pipeline, handling the flow of data between stages. |
+| **process_runs** | Runs the pipeline for each input provided, handling the flow and transformation of data between stages. |
 
 ## Pipeline Output
 
@@ -99,12 +100,12 @@ The output of a pipeline in the crewAI framework is encapsulated within the `Pip
 | Attribute         | Parameters      | Type                       | Description                                                                                   |
 | :---------------- | :-------------- | :------------------------- | :-------------------------------------------------------------------------------------------- |
 | **ID**            | `id`            | `UUID4`                    | A unique identifier for the run result.                                                       |
-| **Raw**           | `raw`           | `str`                      | The raw output of the final stage in the pipeline run.                                        |
-| **Pydantic**      | `pydantic`      | `Optional[BaseModel]`      | A Pydantic model object representing the structured output of the final stage, if applicable. |
-| **JSON Dict**     | `json_dict`     | `Optional[Dict[str, Any]]` | A dictionary representing the JSON output of the final stage, if applicable.                  |
-| **Token Usage**   | `token_usage`   | `Dict[str, Any]`           | A summary of token usage across all stages of the pipeline run.                               |
-| **Trace**         | `trace`         | `List[Any]`                | A trace of the journey of inputs through the pipeline run.                                    |
-| **Crews Outputs** | `crews_outputs` | `List[CrewOutput]`         | A list of `CrewOutput` objects, representing the outputs from each crew in the pipeline run.  |
+| **Raw**           | `raw`           | `str`                      | The raw output of the final stage in the pipeline kickoff.                                           |
+| **Pydantic**      | `pydantic`      | `Any`                      | A Pydantic model object representing the structured output of the final stage, if applicable. |
+| **JSON Dict**     | `json_dict`     | `Union[Dict[str, Any], None]` | A dictionary representing the JSON output of the final stage, if applicable.                  |
+| **Token Usage**   | `token_usage`   | `Dict[str, UsageMetrics]`  | A summary of token usage across all stages of the pipeline kickoff.                          |
+| **Trace**         | `trace`         | `List[Any]`                | A trace of the journey of inputs through the pipeline kickoff.                                |
+| **Crews Outputs** | `crews_outputs` | `List[CrewOutput]`         | A list of `CrewOutput` objects, representing the outputs from each crew in the pipeline kickoff.  |
 
 ### Pipeline Run Result Methods and Properties
 
@@ -112,7 +113,7 @@ The output of a pipeline in the crewAI framework is encapsulated within the `Pip
 | :-------------- | :------------------------------------------------------------------------------------------------------- |
 | **json**        | Returns the JSON string representation of the run result if the output format of the final task is JSON. |
 | **to_dict**     | Converts the JSON and Pydantic outputs to a dictionary.                                                  |
-| \***\*str\*\*** | Returns the string representation of the run result, prioritizing Pydantic, then JSON, then raw.         |
+| **str**         | Returns the string representation of the run result, prioritizing Pydantic, then JSON, then raw.         |
 
 ### Accessing Pipeline Outputs
 
@@ -239,7 +240,7 @@ email_router = Router(
             pipeline=normal_pipeline
         )
     },
-    default=Pipeline(stages=[normal_pipeline])  # Default to just classification if no urgency score
+    default=Pipeline(stages=[normal_pipeline])  # Default to just normal if no urgency score
 )
 
 # Use the router in a main pipeline
@@ -247,7 +248,7 @@ main_pipeline = Pipeline(stages=[classification_crew, email_router])
 
 inputs = [{"email": "..."}, {"email": "..."}]  # List of email data
 
-main_pipeline.kickoff(inputs=inputs)
+main_pipeline.kickoff(inputs=inputs=inputs)
 ```
 
 In this example, the router decides between an urgent pipeline and a normal pipeline based on the urgency score of the email. If the urgency score is greater than 7, it routes to the urgent pipeline; otherwise, it uses the normal pipeline. If the input doesn't include an urgency score, it defaults to just the classification crew.
@@ -261,7 +262,7 @@ In this example, the router decides between an urgent pipeline and a normal pipe
 
 ### Error Handling and Validation
 
-The Pipeline class includes validation mechanisms to ensure the robustness of the pipeline structure:
+The `Pipeline` class includes validation mechanisms to ensure the robustness of the pipeline structure:
 
 - Validates that stages contain only Crew instances or lists of Crew instances.
 - Prevents double nesting of stages to maintain a clear structure.

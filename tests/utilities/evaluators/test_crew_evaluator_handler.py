@@ -1,7 +1,6 @@
 from unittest import mock
 
 import pytest
-
 from crewai.agent import Agent
 from crewai.crew import Crew
 from crewai.task import Task
@@ -45,7 +44,7 @@ class TestCrewEvaluator:
             == "Evaluator agent for crew evaluation with precise capabilities to evaluate the performance of the agents in the crew based on the tasks they have performed"
         )
         assert agent.verbose is False
-        assert agent.llm.model_name == "gpt-4o-mini"
+        assert agent.llm == "gpt-4o-mini"
 
     def test_evaluation_task(self, crew_planner):
         evaluator_agent = Agent(
@@ -80,6 +79,7 @@ class TestCrewEvaluator:
     @mock.patch("crewai.utilities.evaluators.crew_evaluator_handler.Console")
     @mock.patch("crewai.utilities.evaluators.crew_evaluator_handler.Table")
     def test_print_crew_evaluation_result(self, table, console, crew_planner):
+        # Set up task scores and execution times
         crew_planner.tasks_scores = {
             1: [10, 9, 8],
             2: [9, 8, 7],
@@ -89,22 +89,45 @@ class TestCrewEvaluator:
             2: [55, 33, 67],
         }
 
+        # Mock agents and assign them to tasks
+        crew_planner.crew.agents = [
+            mock.Mock(role="Agent 1"),
+            mock.Mock(role="Agent 2"),
+        ]
+        crew_planner.crew.tasks = [
+            mock.Mock(
+                agent=crew_planner.crew.agents[0], processed_by_agents=["Agent 1"]
+            ),
+            mock.Mock(
+                agent=crew_planner.crew.agents[1], processed_by_agents=["Agent 2"]
+            ),
+        ]
+
+        # Run the method
         crew_planner.print_crew_evaluation_result()
 
+        # Verify that the table is created with the appropriate structure and rows
         table.assert_has_calls(
             [
-                mock.call(title="Tasks Scores \n (1-10 Higher is better)"),
-                mock.call().add_column("Tasks/Crew"),
-                mock.call().add_column("Run 1"),
-                mock.call().add_column("Run 2"),
-                mock.call().add_column("Avg. Total"),
-                mock.call().add_row("Task 1", "10", "9", "9.5"),
-                mock.call().add_row("Task 2", "9", "8", "8.5"),
-                mock.call().add_row("Task 3", "8", "7", "7.5"),
-                mock.call().add_row("Crew", "9.0", "8.0", "8.5"),
-                mock.call().add_row("Execution Time (s)", "135", "155", "145"),
+                mock.call(
+                    title="Tasks Scores \n (1-10 Higher is better)", box=mock.ANY
+                ),  # Title and styling
+                mock.call().add_column("Tasks/Crew/Agents", style="cyan"),  # Columns
+                mock.call().add_column("Run 1", justify="center"),
+                mock.call().add_column("Run 2", justify="center"),
+                mock.call().add_column("Avg. Total", justify="center"),
+                mock.call().add_column("Agents", style="green"),
+                # Verify rows for tasks with agents
+                mock.call().add_row("Task 1", "10.0", "9.0", "9.5", "- Agent 1"),
+                mock.call().add_row("", "", "", "", "", ""),  # Blank row between tasks
+                mock.call().add_row("Task 2", "9.0", "8.0", "8.5", "- Agent 2"),
+                # Add crew averages and execution times
+                mock.call().add_row("Crew", "9.00", "8.00", "8.5", ""),
+                mock.call().add_row("Execution Time (s)", "135", "155", "145", ""),
             ]
         )
+
+        # Ensure the console prints the table
         console.assert_has_calls([mock.call(), mock.call().print(table())])
 
     def test_evaluate(self, crew_planner):

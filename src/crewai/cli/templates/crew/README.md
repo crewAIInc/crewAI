@@ -14,12 +14,9 @@ pip install poetry
 
 Next, navigate to your project directory and install the dependencies:
 
-1. First lock the dependencies and then install them:
+1. First lock the dependencies and install them by using the CLI command:
 ```bash
-poetry lock
-```
-```bash
-poetry install
+crewai install
 ```
 ### Customizing
 
@@ -36,10 +33,6 @@ To kickstart your crew of AI agents and begin task execution, run this from the 
 
 ```bash
 $ crewai run
-```
-or
-```bash
-poetry run {{folder_name}}
 ```
 
 This command initializes the {{name}} Crew, assembling the agents and assigning them tasks as defined in your configuration.

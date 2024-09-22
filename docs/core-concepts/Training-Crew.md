@@ -16,7 +16,7 @@ To use the training feature, follow these steps:
 3. Run the following command:
 
 ```shell
-crewai train -n <n_iterations> <filename>
+crewai train -n <n_iterations> <filename> (optional)
 ```
 
 !!! note "Replace `<n_iterations>` with the desired number of training iterations and `<filename>` with the appropriate filename ending with `.pkl`."

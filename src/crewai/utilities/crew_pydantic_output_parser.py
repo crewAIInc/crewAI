@@ -1,34 +1,31 @@
 import json
-from typing import Any, List, Type
-
 import regex
-from langchain.output_parsers import PydanticOutputParser
-from langchain_core.exceptions import OutputParserException
-from langchain_core.outputs import Generation
-from langchain_core.pydantic_v1 import ValidationError
-from pydantic import BaseModel
+from typing import Any, Type
+
+from crewai.agents.parser import OutputParserException
+from pydantic import BaseModel, ValidationError
 
 
-class CrewPydanticOutputParser(PydanticOutputParser):
+class CrewPydanticOutputParser:
     """Parses the text into pydantic models"""
 
     pydantic_object: Type[BaseModel]
 
-    def parse_result(self, result: List[Generation]) -> Any:
-        result[0].text = self._transform_in_valid_json(result[0].text)
+    def parse_result(self, result: str) -> Any:
+        result = self._transform_in_valid_json(result)
 
         # Treating edge case of function calling llm returning the name instead of tool_name
-        json_object = json.loads(result[0].text)
+        json_object = json.loads(result)
         if "tool_name" not in json_object:
             json_object["tool_name"] = json_object.get("name", "")
-        result[0].text = json.dumps(json_object)
+        result = json.dumps(json_object)
 
         try:
             return self.pydantic_object.model_validate(json_object)
         except ValidationError as e:
             name = self.pydantic_object.__name__
             msg = f"Failed to parse {name} from completion {json_object}. Got: {e}"
-            raise OutputParserException(msg, llm_output=json_object)
+            raise OutputParserException(error=msg)
 
     def _transform_in_valid_json(self, text) -> str:
         text = text.replace("```", "").replace("json", "")
