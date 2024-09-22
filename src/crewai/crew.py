@@ -110,6 +110,18 @@ class Crew(BaseModel):
         default=False,
         description="Whether the crew should use memory to store memories of it's execution",
     )
+    short_term_memory: Optional[InstanceOf[ShortTermMemory]] = Field(
+        default=None,
+        description="An Instance of the ShortTermMemory to be used by the Crew",
+    )
+    long_term_memory: Optional[InstanceOf[LongTermMemory]] = Field(
+        default=None,
+        description="An Instance of the LongTermMemory to be used by the Crew",
+    )
+    entity_memory: Optional[InstanceOf[EntityMemory]] = Field(
+        default=None,
+        description="An Instance of the EntityMemory to be used by the Crew",
+    )
     embedder: Optional[dict] = Field(
         default={"provider": "openai"},
         description="Configuration for the embedder to be used for the crew.",
@@ -212,11 +224,11 @@ class Crew(BaseModel):
     def create_crew_memory(self) -> "Crew":
         """Set private attributes."""
         if self.memory:
-            self._long_term_memory = LongTermMemory()
-            self._short_term_memory = ShortTermMemory(
+            self._long_term_memory = self.long_term_memory if self.long_term_memory else LongTermMemory()
+            self._short_term_memory = self.short_term_memory if self.short_term_memory else ShortTermMemory(
                 crew=self, embedder_config=self.embedder
             )
-            self._entity_memory = EntityMemory(crew=self, embedder_config=self.embedder)
+            self._entity_memory = self.entity_memory if self.entity_memory else EntityMemory(crew=self, embedder_config=self.embedder)
         return self
 
     @model_validator(mode="after")
