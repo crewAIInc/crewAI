@@ -13,9 +13,13 @@ class ShortTermMemory(Memory):
     MemoryItem instances.
     """
 
-    def __init__(self, crew=None, embedder_config=None):
-        storage = RAGStorage(
-            type="short_term", embedder_config=embedder_config, crew=crew
+    def __init__(self, crew=None, embedder_config=None, storage=None):
+        storage = (
+            storage
+            if storage
+            else RAGStorage(
+                type="short_term", embedder_config=embedder_config, crew=crew
+            )
         )
         super().__init__(storage)
 
