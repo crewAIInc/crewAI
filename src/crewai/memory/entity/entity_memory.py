@@ -1,5 +1,6 @@
 from crewai.memory.entity.entity_memory_item import EntityMemoryItem
 from crewai.memory.memory import Memory
+from crewai.memory.storage.interface import Storage
 from crewai.memory.storage.rag_storage import RAGStorage
 
 
@@ -10,12 +11,13 @@ class EntityMemory(Memory):
     Inherits from the Memory class.
     """
 
-    def __init__(self, crew=None, embedder_config=None):
-        storage = RAGStorage(
-            type="entities",
-            allow_reset=False,
-            embedder_config=embedder_config,
-            crew=crew,
+    def __init__(self, crew=None, embedder_config=None, storage: Storage=None):
+        storage = (
+            storage
+            if storage
+            else RAGStorage(
+                type="entities", allow_reset=False, embedder_config=embedder_config, crew=crew
+            )
         )
         super().__init__(storage)
 
