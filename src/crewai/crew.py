@@ -944,7 +944,7 @@ class Crew(BaseModel):
     def test(
         self,
         n_iterations: int,
-        openai_model_name: str = "",
+        openai_model_name: Optional[str] = None,
         inputs: Optional[Dict[str, Any]] = None,
     ) -> None:
         """Test and evaluate the Crew with the given inputs for n iterations concurrently using concurrent.futures."""
