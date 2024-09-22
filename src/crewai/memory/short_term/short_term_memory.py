@@ -1,6 +1,5 @@
 from typing import Any, Dict, Optional
 from crewai.memory.memory import Memory
-from crewai.memory.storage.interface import Storage
 from crewai.memory.short_term.short_term_memory_item import ShortTermMemoryItem
 from crewai.memory.storage.rag_storage import RAGStorage
 
@@ -14,7 +13,7 @@ class ShortTermMemory(Memory):
     MemoryItem instances.
     """
 
-    def __init__(self, crew=None, embedder_config=None, storage: Storage | None=None):
+    def __init__(self, crew=None, embedder_config=None, storage=None):
         storage = (
             storage
             if storage
