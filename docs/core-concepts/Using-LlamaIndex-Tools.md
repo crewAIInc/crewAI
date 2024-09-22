@@ -35,10 +35,10 @@ query_tool = LlamaIndexTool.from_query_engine(
 
 # Create and assign the tools to an agent
 agent = Agent(
-  role='Research Analyst',
-  goal='Provide up-to-date market analysis',
-  backstory='An expert analyst with a keen eye for market trends.',
-  tools=[tool, *tools, query_tool]
+    role='Research Analyst',
+    goal='Provide up-to-date market analysis',
+    backstory='An expert analyst with a keen eye for market trends.',
+    tools=[tool, *tools, query_tool]
 )
 
 # rest of the code ...
@@ -54,4 +54,4 @@ To effectively use the LlamaIndexTool, follow these steps:
     pip install 'crewai[tools]'
     ```
 
-2. **Install and Use LlamaIndex**: Follow LlamaIndex documentation [LlamaIndex Documentation](https://docs.llamaindex.ai/) to set up a RAG/agent pipeline.
+2. **Install and Use LlamaIndex**: Follow the LlamaIndex documentation [LlamaIndex Documentation](https://docs.llamaindex.ai/) to set up a RAG/agent pipeline.

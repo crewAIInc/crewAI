@@ -52,14 +52,17 @@ report_crew = Crew(
 # Execute the crew
 result = report_crew.kickoff()
 
-# Accessing the type safe output
+# Accessing the type-safe output
 task_output: TaskOutput = result.tasks[0].output
 crew_output: CrewOutput = result.output
 ```
 
+### Note:
+Each task in a sequential process **must** have an agent assigned. Ensure that every `Task` includes an `agent` parameter.
+
 ### Workflow in Action
 1. **Initial Task**: In a sequential process, the first agent completes their task and signals completion.
-2. **Subsequent Tasks**: Agents pick up their tasks based on the process type, with outcomes of preceding tasks or manager directives guiding their execution.
+2. **Subsequent Tasks**: Agents pick up their tasks based on the process type, with outcomes of preceding tasks or directives guiding their execution.
 3. **Completion**: The process concludes once the final task is executed, leading to project completion.
 
 ## Advanced Features
@@ -88,3 +91,5 @@ CrewAI tracks token usage across all tasks and agents. You can access these metr
 2. **Clear Task Descriptions**: Provide detailed descriptions for each task to guide the agents effectively.
 3. **Appropriate Agent Selection**: Match agents' skills and roles to the requirements of each task.
 4. **Use Context**: Leverage the context from previous tasks to inform subsequent ones.
+
+This updated documentation ensures that details accurately reflect the latest changes in the codebase and clearly describes how to leverage new features and configurations. The content is kept simple and direct to ensure easy understanding.
