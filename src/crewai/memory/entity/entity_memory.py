@@ -11,7 +11,7 @@ class EntityMemory(Memory):
     Inherits from the Memory class.
     """
 
-    def __init__(self, crew=None, embedder_config=None, storage: Storage=None):
+    def __init__(self, crew=None, embedder_config=None, storage: Storage | None=None):
         storage = (
             storage
             if storage

@@ -15,7 +15,7 @@ class LongTermMemory(Memory):
     LongTermMemoryItem instances.
     """
 
-    def __init__(self, storage: Storage=None):
+    def __init__(self, storage: Storage: Storage | None=None):
         storage = storage if storage else LTMSQLiteStorage()
         super().__init__(storage)
 
