@@ -27,7 +27,7 @@ def test_agent_creation():
 
 def test_agent_default_values():
     agent = Agent(role="test role", goal="test goal", backstory="test backstory")
-    assert agent.llm == "gpt-4o"
+    assert agent.llm == "gpt-4o-mini"
     assert agent.allow_delegation is False
 
 
