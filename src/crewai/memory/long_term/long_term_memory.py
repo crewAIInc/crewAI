@@ -16,7 +16,7 @@ class LongTermMemory(Memory):
     """
 
     def __init__(self, storage: Storage=None):
-        storage = storage if storage esle LTMSQLiteStorage()
+        storage = storage if storage else LTMSQLiteStorage()
         super().__init__(storage)
 
     def save(self, item: LongTermMemoryItem) -> None:  # type: ignore # BUG?: Signature of "save" incompatible with supertype "Memory"
