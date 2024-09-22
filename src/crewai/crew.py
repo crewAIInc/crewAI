@@ -513,10 +513,6 @@ class Crew(BaseModel):
             asyncio.create_task(run_crew(crew_copies[i], inputs[i]))
             for i in range(len(inputs))
         ]
-        tasks = [
-            asyncio.create_task(run_crew(crew_copies[i], inputs[i]))
-            for i in range(len(inputs))
-        ]
 
         results = await asyncio.gather(*tasks)
 
