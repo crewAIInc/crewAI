@@ -224,11 +224,19 @@ class Crew(BaseModel):
     def create_crew_memory(self) -> "Crew":
         """Set private attributes."""
         if self.memory:
-            self._long_term_memory = self.long_term_memory if self.long_term_memory else LongTermMemory()
-            self._short_term_memory = self.short_term_memory if self.short_term_memory else ShortTermMemory(
-                crew=self, embedder_config=self.embedder
+            self._long_term_memory = (
+                self.long_term_memory if self.long_term_memory else LongTermMemory()
             )
-            self._entity_memory = self.entity_memory if self.entity_memory else EntityMemory(crew=self, embedder_config=self.embedder)
+            self._short_term_memory = (
+                self.short_term_memory
+                if self.short_term_memory
+                else ShortTermMemory(crew=self, embedder_config=self.embedder)
+            )
+            self._entity_memory = (
+                self.entity_memory
+                if self.entity_memory
+                else EntityMemory(crew=self, embedder_config=self.embedder)
+            )
         return self
 
     @model_validator(mode="after")
@@ -948,10 +956,9 @@ class Crew(BaseModel):
         inputs: Optional[Dict[str, Any]] = None,
     ) -> None:
         """Test and evaluate the Crew with the given inputs for n iterations concurrently using concurrent.futures."""
-        # type: ignore[arg-type]
         self._test_execution_span = self._telemetry.test_execution_span(
             self, n_iterations, inputs, openai_model_name
-        )
+        )  # type: ignore[arg-type]
         evaluator = CrewEvaluator(self, openai_model_name)  # type: ignore[arg-type]
 
         for i in range(1, n_iterations + 1):
