@@ -27,7 +27,7 @@ python-dotenv = "^1.0.0"
 appdirs = "^1.4.4"
 jsonref = "^1.1.0"
 agentops = { version = "^0.3.0", optional = true }
-embedchain = "^0.1.121"
+embedchain = "0.1.122"
 json-repair = "^0.25.2"
 auth0-python = "^4.7.1"
 poetry = "^1.8.3"
