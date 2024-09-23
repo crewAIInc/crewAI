@@ -27,7 +27,8 @@ class Converter(OutputConverter):
             if self.is_gpt:
                 return self._create_instructor().to_pydantic()
             else:
-                return LLM(model=self.llm).call(
+                llm = self._create_llm()
+                return llm.call(
                     [
                         {"role": "system", "content": self.instructions},
                         {"role": "user", "content": self.text},
@@ -46,8 +47,9 @@ class Converter(OutputConverter):
             if self.is_gpt:
                 return self._create_instructor().to_json()
             else:
+                llm = self._create_llm()
                 return json.dumps(
-                    LLM(model=self.llm).call(
+                    llm.call(
                         [
                             {"role": "system", "content": self.instructions},
                             {"role": "user", "content": self.text},
@@ -58,6 +60,19 @@ class Converter(OutputConverter):
             if current_attempt < self.max_attempts:
                 return self.to_json(current_attempt + 1)
             return ConverterError(f"Failed to convert text into JSON, error: {e}.")
+
+    def _create_llm(self):
+        """Create an LLM instance."""
+        if isinstance(self.llm, str):
+            return LLM(model=self.llm)
+        elif isinstance(self.llm, LLM):
+            return self.llm
+        else:
+            return LLM(
+                model=self.llm.model,
+                provider=getattr(self.llm, "provider", "litellm"),
+                **getattr(self.llm, "llm_kwargs", {}),
+            )
 
     def _create_instructor(self):
         """Create an instructor."""

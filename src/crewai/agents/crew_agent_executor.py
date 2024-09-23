@@ -104,11 +104,23 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
         try:
             while not isinstance(formatted_answer, AgentFinish):
                 if not self.request_within_rpm_limit or self.request_within_rpm_limit():
-                    answer = LLM(
-                        self.llm,
-                        stop=self.stop if self.use_stop_words else None,
-                        callbacks=self.callbacks,
-                    ).call(self.messages)
+                    if isinstance(self.llm, str):
+                        llm = LLM(
+                            model=self.llm,
+                            stop=self.stop if self.use_stop_words else None,
+                            callbacks=self.callbacks,
+                        )
+                    elif isinstance(self.llm, LLM):
+                        llm = self.llm
+                    else:
+                        llm = LLM(
+                            model=self.llm.model,
+                            provider=getattr(self.llm, "provider", "litellm"),
+                            stop=self.stop if self.use_stop_words else None,
+                            callbacks=self.callbacks,
+                            **getattr(self.llm, "llm_kwargs", {}),
+                        )
+                    answer = llm.call(self.messages)
 
                     if not self.use_stop_words:
                         try:
@@ -241,7 +253,16 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
         return tool_result
 
     def _summarize_messages(self) -> None:
-        llm = LLM(self.llm)
+        if isinstance(self.llm, str):
+            llm = LLM(model=self.llm)
+        elif isinstance(self.llm, LLM):
+            llm = self.llm
+        else:
+            llm = LLM(
+                model=self.llm.model,
+                provider=getattr(self.llm, "provider", "litellm"),
+                **getattr(self.llm, "llm_kwargs", {}),
+            )
         messages_groups = []
 
         for message in self.messages:
