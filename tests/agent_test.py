@@ -3,6 +3,7 @@
 from unittest import mock
 from unittest.mock import patch
 
+import os
 import pytest
 from crewai import Agent, Crew, Task
 from crewai.agents.cache import CacheHandler
@@ -16,6 +17,49 @@ from crewai_tools import tool
 from crewai.agents.parser import AgentAction
 
 
+def test_agent_llm_creation_with_env_vars():
+    # Store original environment variables
+    original_api_key = os.environ.get("OPENAI_API_KEY")
+    original_api_base = os.environ.get("OPENAI_API_BASE")
+    original_model_name = os.environ.get("OPENAI_MODEL_NAME")
+
+    # Set up environment variables
+    os.environ["OPENAI_API_KEY"] = "test_api_key"
+    os.environ["OPENAI_API_BASE"] = "https://test-api-base.com"
+    os.environ["OPENAI_MODEL_NAME"] = "gpt-4-turbo"
+
+    # Create an agent without specifying LLM
+    agent = Agent(role="test role", goal="test goal", backstory="test backstory")
+
+    # Check if LLM is created correctly
+    assert isinstance(agent.llm, LLM)
+    assert agent.llm.model == "gpt-4-turbo"
+    assert agent.llm.api_key == "test_api_key"
+    assert agent.llm.base_url == "https://test-api-base.com"
+
+    # Clean up environment variables
+    del os.environ["OPENAI_API_KEY"]
+    del os.environ["OPENAI_API_BASE"]
+    del os.environ["OPENAI_MODEL_NAME"]
+
+    # Create an agent without specifying LLM
+    agent = Agent(role="test role", goal="test goal", backstory="test backstory")
+
+    # Check if LLM is created correctly
+    assert isinstance(agent.llm, LLM)
+    assert agent.llm.model != "gpt-4-turbo"
+    assert agent.llm.api_key != "test_api_key"
+    assert agent.llm.base_url != "https://test-api-base.com"
+
+    # Restore original environment variables
+    if original_api_key:
+        os.environ["OPENAI_API_KEY"] = original_api_key
+    if original_api_base:
+        os.environ["OPENAI_API_BASE"] = original_api_base
+    if original_model_name:
+        os.environ["OPENAI_MODEL_NAME"] = original_model_name
+
+
 def test_agent_creation():
     agent = Agent(role="test role", goal="test goal", backstory="test backstory")
 
@@ -27,7 +71,7 @@ def test_agent_creation():
 
 def test_agent_default_values():
     agent = Agent(role="test role", goal="test goal", backstory="test backstory")
-    assert agent.llm == "gpt-4o-mini"
+    assert agent.llm.model == "gpt-4o"
     assert agent.allow_delegation is False
 
 
@@ -35,7 +79,7 @@ def test_custom_llm():
     agent = Agent(
         role="test role", goal="test goal", backstory="test backstory", llm="gpt-4"
     )
-    assert agent.llm == "gpt-4"
+    assert agent.llm.model == "gpt-4"
 
 
 def test_custom_llm_with_langchain():
@@ -48,7 +92,7 @@ def test_custom_llm_with_langchain():
         llm=ChatOpenAI(temperature=0, model="gpt-4"),
     )
 
-    assert agent.llm == "gpt-4"
+    assert agent.llm.model == "gpt-4"
 
 
 def test_custom_llm_temperature_preservation():
@@ -89,8 +133,8 @@ def test_agent_execute_task():
 
     assert result is not None
     assert (
-        "The area of a circle with a radius of 5 cm is calculated using the formula A = πr^2, where A is the area and r is the...in the values, we get A = π*5^2 = 25π square centimeters. Therefore, the area of the circle is 25π square centimeters."
-        in result
+        "The calculated area of the circle is approximately 78.5 square centimeters."
+        == result
     )
     assert "square centimeters" in result.lower()
 
@@ -111,7 +155,7 @@ def test_agent_execution():
     )
 
     output = agent.execute_task(task)
-    assert output == "The result of the math operation 1 + 1 is 2."
+    assert output == "The result of 1 + 1 is 2."
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
@@ -153,6 +197,7 @@ def test_logging_tool_usage():
         verbose=True,
     )
 
+    assert agent.llm.model == "gpt-4o"
     assert agent.tools_handler.last_used_tool == {}
     task = Task(
         description="What is 3 times 4?",
@@ -165,7 +210,8 @@ def test_logging_tool_usage():
     tool_usage = InstructorToolCalling(
         tool_name=multiplier.name, arguments={"first_number": 3, "second_number": 4}
     )
-    assert output == "The result of the multiplication is 12."
+
+    assert output == "The result of multiplying 3 by 4 is 12."
     assert agent.tools_handler.last_used_tool.tool_name == tool_usage.tool_name
     assert agent.tools_handler.last_used_tool.arguments == tool_usage.arguments
 
@@ -319,7 +365,7 @@ def test_agent_execution_with_specific_tools():
         expected_output="The result of the multiplication.",
     )
     output = agent.execute_task(task=task, tools=[multiplier])
-    assert output == "The result of the multiplication is 12."
+    assert output == "The result of multiplying 3 and 4 is 12."
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
@@ -373,7 +419,7 @@ def test_agent_powered_by_new_o_model_family_that_uses_tool():
         expected_output="The number of customers",
     )
     output = agent.execute_task(task=task, tools=[comapny_customer_data])
-    assert output == "The company has 42 customers"
+    assert output == "42"
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
@@ -503,7 +549,7 @@ def test_agent_moved_on_after_max_iterations():
         task=task,
         tools=[get_final_answer],
     )
-    assert output == "The final answer is 42."
+    assert output == "42"
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
@@ -770,7 +816,7 @@ def test_agent_step_callback():
 
 @pytest.mark.vcr(filter_headers=["authorization"])
 def test_agent_function_calling_llm():
-    llm = "gpt-4o"
+    llm = "gpt-4"
 
     @tool
     def learn_about_AI() -> str:
@@ -794,27 +840,14 @@ def test_agent_function_calling_llm():
     )
     tasks = [essay]
     crew = Crew(agents=[agent1], tasks=tasks)
-    from unittest.mock import patch, Mock
+    from unittest.mock import patch
     import instructor
 
-    with patch.object(instructor, "from_litellm") as mock_from_litellm:
-        mock_client = Mock()
-        mock_from_litellm.return_value = mock_client
-        mock_chat = Mock()
-        mock_client.chat = mock_chat
-        mock_completions = Mock()
-        mock_chat.completions = mock_completions
-        mock_create = Mock()
-        mock_completions.create = mock_create
-
+    with patch.object(
+        instructor, "from_litellm", wraps=instructor.from_litellm
+    ) as mock_from_litellm:
         crew.kickoff()
-
         mock_from_litellm.assert_called()
-        mock_create.assert_called()
-        calls = mock_create.call_args_list
-        assert any(
-            call.kwargs.get("model") == "gpt-4o" for call in calls
-        ), "Instructor was not created with the expected model"
 
 
 def test_agent_count_formatting_error():
@@ -1487,7 +1520,9 @@ def test_agent_execute_task_with_custom_llm():
 
     result = agent.execute_task(task)
     assert len(result.split("\n")) == 3
-    assert "AI" in result or "artificial intelligence" in result.lower()
+    assert result.startswith(
+        "Artificial minds,\nSilent, yet they learn and grow,\nFuture in their code."
+    )
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])

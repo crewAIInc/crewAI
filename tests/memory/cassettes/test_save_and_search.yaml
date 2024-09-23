@@ -18,7 +18,7 @@ interactions:
       host:
       - api.openai.com
       user-agent:
-      - OpenAI/Python 1.46.0
+      - OpenAI/Python 1.47.0
       x-stainless-arch:
       - arm64
       x-stainless-async:
@@ -28,7 +28,7 @@ interactions:
       x-stainless-os:
       - MacOS
       x-stainless-package-version:
-      - 1.46.0
+      - 1.47.0
       x-stainless-runtime:
       - CPython
       x-stainless-runtime-version:
@@ -44,7 +44,7 @@ interactions:
       CF-Cache-Status:
       - DYNAMIC
       CF-RAY:
-      - 8c4f77726a5231dd-MIA
+      - 8c787bca3cc3a55a-MIA
       Connection:
       - keep-alive
       Content-Encoding:
@@ -52,14 +52,14 @@ interactions:
       Content-Type:
       - application/json
       Date:
-      - Wed, 18 Sep 2024 07:01:46 GMT
+      - Mon, 23 Sep 2024 06:30:00 GMT
       Server:
       - cloudflare
       Set-Cookie:
-      - __cf_bm=0ZvAQJal4IggmhNYJn6vwMiq9uXLjFBQFKgz4j4UHsQ-1726642906-1.0.1.1-iBmwygaTeP8w1PqCBPbPtcqK7iL4lATOByD0exKm.gQQinB6BYIzNKjJgXh_vBwiAJdfIwvEB7.P6glGpG60yA;
-        path=/; expires=Wed, 18-Sep-24 07:31:46 GMT; domain=.api.openai.com; HttpOnly;
+      - __cf_bm=F5u9gb7KRyY1cAARltaHgvVM8ubNoKD7SMGrH5DtLbQ-1727073000-1.0.1.1-dDDD2xWZ6h1YC7X5_iCjLGFluy3vLv2__TgImNYEUGftqBzoSo8aabDvW6BLgat406LIi_sstGYuveruDrkU2A;
+        path=/; expires=Mon, 23-Sep-24 07:00:00 GMT; domain=.api.openai.com; HttpOnly;
         Secure; SameSite=None
-      - _cfuvid=b1f8HyzAsh1ZNzykiCwkmsDdvbzYmW8iUgXiHxBKsUg-1726642906341-0.0.1.1-604800000;
+      - _cfuvid=L4yiOsKvZS6yrbrcs.47PE_L2OacuuIRiiLZ_.G.feE-1727073000502-0.0.1.1-604800000;
         path=/; domain=.api.openai.com; HttpOnly; Secure; SameSite=None
       Transfer-Encoding:
       - chunked
@@ -69,14 +69,12 @@ interactions:
       - '*'
       access-control-expose-headers:
       - X-Request-ID
-      alt-svc:
-      - h3=":443"; ma=86400
       openai-model:
       - text-embedding-ada-002
       openai-organization:
       - crewai-iuxna1
       openai-processing-ms:
-      - '18'
+      - '20'
       openai-version:
       - '2020-10-01'
       strict-transport-security:
@@ -88,15 +86,51 @@ interactions:
       x-ratelimit-remaining-requests:
       - '9999'
       x-ratelimit-remaining-tokens:
-      - '9999947'
+      - '9999946'
       x-ratelimit-reset-requests:
       - 6ms
       x-ratelimit-reset-tokens:
       - 0s
       x-request-id:
-      - req_75668c831a2afbb5ba6fe652ec177590
+      - req_b2bafa4863a3ace990a004434c2993b8
     http_version: HTTP/1.1
     status_code: 200
+- request:
+    body: !!binary |
+      CtACCiQKIgoMc2VydmljZS5uYW1lEhIKEGNyZXdBSS10ZWxlbWV0cnkSpwIKEgoQY3Jld2FpLnRl
+      bGVtZXRyeRKQAgoQnJn3W0DhBvOoUROgPAyx8BIIkSuqQ/dOUzIqDlRhc2sgRXhlY3V0aW9uMAE5
+      QEb/BbfL9xdBoB+9+L3L9xdKLgoIY3Jld19rZXkSIgogZTNmZGEwZjMxMTBmZTgwYjE4OTQ3YzAx
+      NDcxNDMwYTRKMQoHY3Jld19pZBImCiRhZTU5NjRlYy03YzAyLTQ0OTItOWU4Yi0yZWE1NDVlNzUw
+      NzJKLgoIdGFza19rZXkSIgogNWZhNjVjMDZhOWUzMWYyYzY5NTQzMjY2OGFjZDYyZGRKMQoHdGFz
+      a19pZBImCiRjNDYyZWE5MC03YmE2LTRkNjAtOTYxMC04ZjJjMGNlMTBkMjV6AhgBhQEAAQAA
+    headers:
+      Accept:
+      - '*/*'
+      Accept-Encoding:
+      - gzip, deflate
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '339'
+      Content-Type:
+      - application/x-protobuf
+      User-Agent:
+      - OTel-OTLP-Exporter-Python/1.27.0
+    method: POST
+    uri: https://telemetry.crewai.com:4319/v1/traces
+  response:
+    body:
+      string: "\n\0"
+    headers:
+      Content-Length:
+      - '2'
+      Content-Type:
+      - application/x-protobuf
+      Date:
+      - Mon, 23 Sep 2024 06:30:01 GMT
+    status:
+      code: 200
+      message: OK
 - request:
     body: '{"input": ["test value"], "model": "text-embedding-ada-002", "encoding_format":
       "base64"}'
@@ -112,12 +146,12 @@ interactions:
       content-type:
       - application/json
       cookie:
-      - __cf_bm=0ZvAQJal4IggmhNYJn6vwMiq9uXLjFBQFKgz4j4UHsQ-1726642906-1.0.1.1-iBmwygaTeP8w1PqCBPbPtcqK7iL4lATOByD0exKm.gQQinB6BYIzNKjJgXh_vBwiAJdfIwvEB7.P6glGpG60yA;
-        _cfuvid=b1f8HyzAsh1ZNzykiCwkmsDdvbzYmW8iUgXiHxBKsUg-1726642906341-0.0.1.1-604800000
+      - __cf_bm=F5u9gb7KRyY1cAARltaHgvVM8ubNoKD7SMGrH5DtLbQ-1727073000-1.0.1.1-dDDD2xWZ6h1YC7X5_iCjLGFluy3vLv2__TgImNYEUGftqBzoSo8aabDvW6BLgat406LIi_sstGYuveruDrkU2A;
+        _cfuvid=L4yiOsKvZS6yrbrcs.47PE_L2OacuuIRiiLZ_.G.feE-1727073000502-0.0.1.1-604800000
       host:
       - api.openai.com
       user-agent:
-      - OpenAI/Python 1.46.0
+      - OpenAI/Python 1.47.0
       x-stainless-arch:
       - arm64
       x-stainless-async:
@@ -127,7 +161,7 @@ interactions:
       x-stainless-os:
       - MacOS
       x-stainless-package-version:
-      - 1.46.0
+      - 1.47.0
       x-stainless-runtime:
       - CPython
       x-stainless-runtime-version:
@@ -143,7 +177,7 @@ interactions:
       CF-Cache-Status:
       - DYNAMIC
       CF-RAY:
-      - 8c4f77760c0531dd-MIA
+      - 8c787bcf5f7fa55a-MIA
       Connection:
       - keep-alive
       Content-Encoding:
@@ -151,7 +185,7 @@ interactions:
       Content-Type:
       - application/json
       Date:
-      - Wed, 18 Sep 2024 07:01:47 GMT
+      - Mon, 23 Sep 2024 06:30:02 GMT
       Server:
       - cloudflare
       Transfer-Encoding:
@@ -169,7 +203,7 @@ interactions:
       openai-organization:
       - crewai-iuxna1
       openai-processing-ms:
-      - '35'
+      - '19'
       openai-version:
       - '2020-10-01'
       strict-transport-security:
@@ -187,7 +221,7 @@ interactions:
       x-ratelimit-reset-tokens:
       - 0s
       x-request-id:
-      - req_61182cfe4cb4a0ba4c832a2884797ec1
+      - req_fa902b1170eac707f124d4c83cb36ed4
     http_version: HTTP/1.1
     status_code: 200
 version: 1

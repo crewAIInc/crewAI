@@ -23,8 +23,8 @@ interactions:
       content-type:
       - application/json
       cookie:
-      - _cfuvid=ntPBCCgVUz_nq5Umsn4Dh2nras_FFFm.Om6wrSeiU00-1727053206899-0.0.1.1-604800000;
-        __cf_bm=XKEjZqa9jLHDkJm09f6GoOFObGBsS.2iO2iQsVxfDtg-1727053206-1.0.1.1-AhT2h4tFAfFhcbWhI7x8he9L6T0eCndS2.n6pMSK3iFkx0qYlA5Y.iniDaQVaO1ukiEEoEJGaV2tL967WYm1uA
+      - __cf_bm=MSMbC3L9m33fbO5Mdj70NJMu6kJCjhuwRcYuWJdJkYQ-1727071769-1.0.1.1-Dok5J431gUNvLRyLNrUo0A.FXXIuZUUooIMFSj74XUDgQJt0mlhf6QEEo6s9wXLhByXrdKr6cxYGBEkQoDslXg;
+        _cfuvid=5cK2hfLqTXw1WjB81uT.sGmmA67JIxSKSQeEHQ3zOQw-1727071769966-0.0.1.1-604800000
       host:
       - api.openai.com
       user-agent:
@@ -48,20 +48,20 @@ interactions:
     method: POST
     uri: https://api.openai.com/v1/chat/completions
   response:
-    content: "{\n  \"id\": \"chatcmpl-AARwUOwdCef7zlbZVd35TW4Dh7TCb\",\n  \"object\":
-      \"chat.completion\",\n  \"created\": 1727054054,\n  \"model\": \"gpt-3.5-turbo-0125\",\n
+    content: "{\n  \"id\": \"chatcmpl-AAWjHGqK7mZezYlqr41rJe2kjljCU\",\n  \"object\":
+      \"chat.completion\",\n  \"created\": 1727072455,\n  \"model\": \"gpt-3.5-turbo-0125\",\n
       \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
       \"assistant\",\n        \"content\": \"I now can give a great answer\\n\\nFinal
-      Answer: Artificial minds,\\nLearning, evolving, creating,\\nAI's future shines.\",\n
-      \       \"refusal\": null\n      },\n      \"logprobs\": null,\n      \"finish_reason\":
-      \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 173,\n    \"completion_tokens\":
-      25,\n    \"total_tokens\": 198,\n    \"completion_tokens_details\": {\n      \"reasoning_tokens\":
-      0\n    }\n  },\n  \"system_fingerprint\": null\n}\n"
+      Answer:  \\nArtificial minds,\\nSilent, yet they learn and grow,\\nFuture in
+      their code.\",\n        \"refusal\": null\n      },\n      \"logprobs\": null,\n
+      \     \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\":
+      173,\n    \"completion_tokens\": 30,\n    \"total_tokens\": 203,\n    \"completion_tokens_details\":
+      {\n      \"reasoning_tokens\": 0\n    }\n  },\n  \"system_fingerprint\": null\n}\n"
     headers:
       CF-Cache-Status:
       - DYNAMIC
       CF-RAY:
-      - 8c76ad41c8748db8-MIA
+      - 8c786e7f4ea367e0-MIA
       Connection:
       - keep-alive
       Content-Encoding:
@@ -69,7 +69,7 @@ interactions:
       Content-Type:
       - application/json
       Date:
-      - Mon, 23 Sep 2024 01:14:15 GMT
+      - Mon, 23 Sep 2024 06:20:56 GMT
       Server:
       - cloudflare
       Transfer-Encoding:
@@ -81,7 +81,7 @@ interactions:
       openai-organization:
       - crewai-iuxna1
       openai-processing-ms:
-      - '309'
+      - '551'
       openai-version:
       - '2020-10-01'
       strict-transport-security:
@@ -99,7 +99,7 @@ interactions:
       x-ratelimit-reset-tokens:
       - 0s
       x-request-id:
-      - req_99e66f59c3f84fd35bc2613cfabc05fb
+      - req_74e1a77ed0bf7f1655aae4c1eb6bd536
     http_version: HTTP/1.1
     status_code: 200
 version: 1

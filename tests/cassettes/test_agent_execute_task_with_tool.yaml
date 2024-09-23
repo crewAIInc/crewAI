@@ -30,8 +30,8 @@ interactions:
       content-type:
       - application/json
       cookie:
-      - _cfuvid=ntPBCCgVUz_nq5Umsn4Dh2nras_FFFm.Om6wrSeiU00-1727053206899-0.0.1.1-604800000;
-        __cf_bm=XKEjZqa9jLHDkJm09f6GoOFObGBsS.2iO2iQsVxfDtg-1727053206-1.0.1.1-AhT2h4tFAfFhcbWhI7x8he9L6T0eCndS2.n6pMSK3iFkx0qYlA5Y.iniDaQVaO1ukiEEoEJGaV2tL967WYm1uA
+      - __cf_bm=MSMbC3L9m33fbO5Mdj70NJMu6kJCjhuwRcYuWJdJkYQ-1727071769-1.0.1.1-Dok5J431gUNvLRyLNrUo0A.FXXIuZUUooIMFSj74XUDgQJt0mlhf6QEEo6s9wXLhByXrdKr6cxYGBEkQoDslXg;
+        _cfuvid=5cK2hfLqTXw1WjB81uT.sGmmA67JIxSKSQeEHQ3zOQw-1727071769966-0.0.1.1-604800000
       host:
       - api.openai.com
       user-agent:
@@ -55,21 +55,20 @@ interactions:
     method: POST
     uri: https://api.openai.com/v1/chat/completions
   response:
-    content: "{\n  \"id\": \"chatcmpl-AARydRDFzcD2NUmMGzemsV0dp6kkG\",\n  \"object\":
-      \"chat.completion\",\n  \"created\": 1727054187,\n  \"model\": \"gpt-3.5-turbo-0125\",\n
+    content: "{\n  \"id\": \"chatcmpl-AAWjFk1ftklXM4I6lKulmMsGwlD4T\",\n  \"object\":
+      \"chat.completion\",\n  \"created\": 1727072453,\n  \"model\": \"gpt-3.5-turbo-0125\",\n
       \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
-      \"assistant\",\n        \"content\": \"I should use the dummy tool to get a
-      result for 'test query'.\\n\\nAction: \\ndummy_tool\\n\\nAction Input: \\n{\\\"query\\\":
-      \\\"test query\\\"}\\n\\nObservation:\",\n        \"refusal\": null\n      },\n
-      \     \"logprobs\": null,\n      \"finish_reason\": \"stop\"\n    }\n  ],\n
-      \ \"usage\": {\n    \"prompt_tokens\": 295,\n    \"completion_tokens\": 35,\n
-      \   \"total_tokens\": 330,\n    \"completion_tokens_details\": {\n      \"reasoning_tokens\":
-      0\n    }\n  },\n  \"system_fingerprint\": null\n}\n"
+      \"assistant\",\n        \"content\": \"I need to use the dummy tool to get a
+      result for the 'test query'.\\nI should proceed with calling the dummy_tool
+      to generate the result.\",\n        \"refusal\": null\n      },\n      \"logprobs\":
+      null,\n      \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\":
+      295,\n    \"completion_tokens\": 30,\n    \"total_tokens\": 325,\n    \"completion_tokens_details\":
+      {\n      \"reasoning_tokens\": 0\n    }\n  },\n  \"system_fingerprint\": null\n}\n"
     headers:
       CF-Cache-Status:
       - DYNAMIC
       CF-RAY:
-      - 8c76b07cac90a658-MIA
+      - 8c786e6fee0267e0-MIA
       Connection:
       - keep-alive
       Content-Encoding:
@@ -77,13 +76,9 @@ interactions:
       Content-Type:
       - application/json
       Date:
-      - Mon, 23 Sep 2024 01:16:27 GMT
+      - Mon, 23 Sep 2024 06:20:53 GMT
       Server:
       - cloudflare
-      Set-Cookie:
-      - __cf_bm=FPv5AG0QfMct7pC4bGELrm0mofIR9eOmKbA9ZOBKH1A-1727054187-1.0.1.1-yGihcpK8XfnbQp9TshK.R3aGtK0umkkBzW1cEJ4BUaLxTvhxuQ3Bd7zP14Qol_FycSsfzHXZoM_upbtrAH5EtQ;
-        path=/; expires=Mon, 23-Sep-24 01:46:27 GMT; domain=.api.openai.com; HttpOnly;
-        Secure; SameSite=None
       Transfer-Encoding:
       - chunked
       X-Content-Type-Options:
@@ -93,7 +88,7 @@ interactions:
       openai-organization:
       - crewai-iuxna1
       openai-processing-ms:
-      - '437'
+      - '515'
       openai-version:
       - '2020-10-01'
       strict-transport-security:
@@ -111,7 +106,7 @@ interactions:
       x-ratelimit-reset-tokens:
       - 0s
       x-request-id:
-      - req_4528f488436ec971e75e0da5f926a802
+      - req_e9e44287d5051c4df35529e658c06b70
     http_version: HTTP/1.1
     status_code: 200
 - request:
@@ -132,10 +127,12 @@ interactions:
       answer: The result from the dummy tool\nyou MUST return the actual complete
       content as the final answer, not a summary.\n\nBegin! This is VERY important
       to you, use the tools available and give your best Final Answer, your job depends
-      on it!\n\nThought:"}, {"role": "user", "content": "I should use the dummy tool
-      to get a result for ''test query''.\n\nAction: \ndummy_tool\n\nAction Input:
-      \n{\"query\": \"test query\"}\n\nObservation:\nObservation: Dummy result for:
-      test query"}], "model": "gpt-3.5-turbo"}'
+      on it!\n\nThought:"}, {"role": "user", "content": "I did it wrong. Invalid Format:
+      I missed the ''Action:'' after ''Thought:''. I will do right next, and don''t
+      use a tool I have already used.\n\nIf you don''t need to use any more tools,
+      you must give your best complete final answer, make sure it satisfy the expect
+      criteria, use the EXACT format below:\n\nThought: I now can give a great answer\nFinal
+      Answer: my best complete final answer to the task.\n\n"}], "model": "gpt-3.5-turbo"}'
     headers:
       accept:
       - application/json
@@ -144,12 +141,12 @@ interactions:
       connection:
       - keep-alive
       content-length:
-      - '1609'
+      - '1819'
       content-type:
       - application/json
       cookie:
-      - _cfuvid=ntPBCCgVUz_nq5Umsn4Dh2nras_FFFm.Om6wrSeiU00-1727053206899-0.0.1.1-604800000;
-        __cf_bm=FPv5AG0QfMct7pC4bGELrm0mofIR9eOmKbA9ZOBKH1A-1727054187-1.0.1.1-yGihcpK8XfnbQp9TshK.R3aGtK0umkkBzW1cEJ4BUaLxTvhxuQ3Bd7zP14Qol_FycSsfzHXZoM_upbtrAH5EtQ
+      - __cf_bm=MSMbC3L9m33fbO5Mdj70NJMu6kJCjhuwRcYuWJdJkYQ-1727071769-1.0.1.1-Dok5J431gUNvLRyLNrUo0A.FXXIuZUUooIMFSj74XUDgQJt0mlhf6QEEo6s9wXLhByXrdKr6cxYGBEkQoDslXg;
+        _cfuvid=5cK2hfLqTXw1WjB81uT.sGmmA67JIxSKSQeEHQ3zOQw-1727071769966-0.0.1.1-604800000
       host:
       - api.openai.com
       user-agent:
@@ -173,19 +170,21 @@ interactions:
     method: POST
     uri: https://api.openai.com/v1/chat/completions
   response:
-    content: "{\n  \"id\": \"chatcmpl-AARyetCGaZezXJxRa6LAmYL8UMQiI\",\n  \"object\":
-      \"chat.completion\",\n  \"created\": 1727054188,\n  \"model\": \"gpt-3.5-turbo-0125\",\n
+    content: "{\n  \"id\": \"chatcmpl-AAWjGoNc8nz1gH48uF7LbaAxGU8QP\",\n  \"object\":
+      \"chat.completion\",\n  \"created\": 1727072454,\n  \"model\": \"gpt-3.5-turbo-0125\",\n
       \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
-      \"assistant\",\n        \"content\": \"Final Answer: Dummy result for: test
-      query\",\n        \"refusal\": null\n      },\n      \"logprobs\": null,\n      \"finish_reason\":
-      \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 343,\n    \"completion_tokens\":
-      9,\n    \"total_tokens\": 352,\n    \"completion_tokens_details\": {\n      \"reasoning_tokens\":
+      \"assistant\",\n        \"content\": \"Thought: I should use the dummy_tool
+      to get a result for 'test query'\\nAction: dummy_tool\\nAction Input: {\\\"query\\\":
+      \\\"test query\\\"}\\nObservation: A result from the dummy tool for 'test query'\\n\",\n
+      \       \"refusal\": null\n      },\n      \"logprobs\": null,\n      \"finish_reason\":
+      \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 392,\n    \"completion_tokens\":
+      46,\n    \"total_tokens\": 438,\n    \"completion_tokens_details\": {\n      \"reasoning_tokens\":
       0\n    }\n  },\n  \"system_fingerprint\": null\n}\n"
     headers:
       CF-Cache-Status:
       - DYNAMIC
       CF-RAY:
-      - 8c76b082bc53a658-MIA
+      - 8c786e75489167e0-MIA
       Connection:
       - keep-alive
       Content-Encoding:
@@ -193,7 +192,7 @@ interactions:
       Content-Type:
       - application/json
       Date:
-      - Mon, 23 Sep 2024 01:16:28 GMT
+      - Mon, 23 Sep 2024 06:20:54 GMT
       Server:
       - cloudflare
       Transfer-Encoding:
@@ -205,7 +204,7 @@ interactions:
       openai-organization:
       - crewai-iuxna1
       openai-processing-ms:
-      - '172'
+      - '535'
       openai-version:
       - '2020-10-01'
       strict-transport-security:
@@ -217,13 +216,134 @@ interactions:
       x-ratelimit-remaining-requests:
       - '9999'
       x-ratelimit-remaining-tokens:
-      - '49999624'
+      - '49999570'
       x-ratelimit-reset-requests:
       - 6ms
       x-ratelimit-reset-tokens:
       - 0s
       x-request-id:
-      - req_9f59c353b6d763db5393356e52f0ceaa
+      - req_fcac5f009f7e45d96f3984084e40c73d
+    http_version: HTTP/1.1
+    status_code: 200
+- request:
+    body: '{"messages": [{"role": "system", "content": "You are test role. test backstory\nYour
+      personal goal is: test goal\nYou ONLY have access to the following tools, and
+      should NEVER make up tools that are not listed here:\n\nTool Name: dummy_tool(*args:
+      Any, **kwargs: Any) -> Any\nTool Description: dummy_tool(query: ''string'')
+      - Useful for when you need to get a dummy result for a query. \nTool Arguments:
+      {''query'': {''title'': ''Query'', ''type'': ''string''}}\n\nUse the following
+      format:\n\nThought: you should always think about what to do\nAction: the action
+      to take, only one name of [dummy_tool], just the name, exactly as it''s written.\nAction
+      Input: the input to the action, just a simple python dictionary, enclosed in
+      curly braces, using \" to wrap keys and values.\nObservation: the result of
+      the action\n\nOnce all necessary information is gathered:\n\nThought: I now
+      know the final answer\nFinal Answer: the final answer to the original input
+      question\n"}, {"role": "user", "content": "\nCurrent Task: Use the dummy tool
+      to get a result for ''test query''\n\nThis is the expect criteria for your final
+      answer: The result from the dummy tool\nyou MUST return the actual complete
+      content as the final answer, not a summary.\n\nBegin! This is VERY important
+      to you, use the tools available and give your best Final Answer, your job depends
+      on it!\n\nThought:"}, {"role": "user", "content": "I did it wrong. Invalid Format:
+      I missed the ''Action:'' after ''Thought:''. I will do right next, and don''t
+      use a tool I have already used.\n\nIf you don''t need to use any more tools,
+      you must give your best complete final answer, make sure it satisfy the expect
+      criteria, use the EXACT format below:\n\nThought: I now can give a great answer\nFinal
+      Answer: my best complete final answer to the task.\n\n"}, {"role": "user", "content":
+      "Thought: I should use the dummy_tool to get a result for ''test query''\nAction:
+      dummy_tool\nAction Input: {\"query\": \"test query\"}\nObservation: A result
+      from the dummy tool for ''test query''\n\nObservation: Dummy result for: test
+      query"}], "model": "gpt-3.5-turbo"}'
+    headers:
+      accept:
+      - application/json
+      accept-encoding:
+      - gzip, deflate
+      connection:
+      - keep-alive
+      content-length:
+      - '2089'
+      content-type:
+      - application/json
+      cookie:
+      - __cf_bm=MSMbC3L9m33fbO5Mdj70NJMu6kJCjhuwRcYuWJdJkYQ-1727071769-1.0.1.1-Dok5J431gUNvLRyLNrUo0A.FXXIuZUUooIMFSj74XUDgQJt0mlhf6QEEo6s9wXLhByXrdKr6cxYGBEkQoDslXg;
+        _cfuvid=5cK2hfLqTXw1WjB81uT.sGmmA67JIxSKSQeEHQ3zOQw-1727071769966-0.0.1.1-604800000
+      host:
+      - api.openai.com
+      user-agent:
+      - OpenAI/Python 1.47.0
+      x-stainless-arch:
+      - arm64
+      x-stainless-async:
+      - 'false'
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - MacOS
+      x-stainless-package-version:
+      - 1.47.0
+      x-stainless-raw-response:
+      - 'true'
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.11.7
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    content: "{\n  \"id\": \"chatcmpl-AAWjHDL4kEf1KCF1YT1Xc5RWrpc2m\",\n  \"object\":
+      \"chat.completion\",\n  \"created\": 1727072455,\n  \"model\": \"gpt-3.5-turbo-0125\",\n
+      \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
+      \"assistant\",\n        \"content\": \"Thought: I now can give a great answer\\nFinal
+      Answer: Dummy result for: test query\",\n        \"refusal\": null\n      },\n
+      \     \"logprobs\": null,\n      \"finish_reason\": \"stop\"\n    }\n  ],\n
+      \ \"usage\": {\n    \"prompt_tokens\": 451,\n    \"completion_tokens\": 19,\n
+      \   \"total_tokens\": 470,\n    \"completion_tokens_details\": {\n      \"reasoning_tokens\":
+      0\n    }\n  },\n  \"system_fingerprint\": null\n}\n"
+    headers:
+      CF-Cache-Status:
+      - DYNAMIC
+      CF-RAY:
+      - 8c786e7afbdd67e0-MIA
+      Connection:
+      - keep-alive
+      Content-Encoding:
+      - gzip
+      Content-Type:
+      - application/json
+      Date:
+      - Mon, 23 Sep 2024 06:20:55 GMT
+      Server:
+      - cloudflare
+      Transfer-Encoding:
+      - chunked
+      X-Content-Type-Options:
+      - nosniff
+      access-control-expose-headers:
+      - X-Request-ID
+      alt-svc:
+      - h3=":443"; ma=86400
+      openai-organization:
+      - crewai-iuxna1
+      openai-processing-ms:
+      - '288'
+      openai-version:
+      - '2020-10-01'
+      strict-transport-security:
+      - max-age=15552000; includeSubDomains; preload
+      x-ratelimit-limit-requests:
+      - '10000'
+      x-ratelimit-limit-tokens:
+      - '50000000'
+      x-ratelimit-remaining-requests:
+      - '9999'
+      x-ratelimit-remaining-tokens:
+      - '49999511'
+      x-ratelimit-reset-requests:
+      - 6ms
+      x-ratelimit-reset-tokens:
+      - 0s
+      x-request-id:
+      - req_65fb196482224379c9eeb1949b2f257d
     http_version: HTTP/1.1
     status_code: 200
 version: 1
