@@ -85,6 +85,3 @@ class LLM:
         except Exception as e:
             logging.error(f"LiteLLM call failed: {str(e)}")
             raise  # Re-raise the exception after logging
-
-    def __getattr__(self, name):
-        return self.kwargs.get(name)

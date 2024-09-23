@@ -22,6 +22,7 @@ from crewai.agent import Agent
 from crewai.agents.agent_builder.base_agent import BaseAgent
 from crewai.agents.cache import CacheHandler
 from crewai.crews.crew_output import CrewOutput
+from crewai.llm import LLM
 from crewai.memory.entity.entity_memory import EntityMemory
 from crewai.memory.long_term.long_term_memory import LongTermMemory
 from crewai.memory.short_term.short_term_memory import ShortTermMemory
@@ -211,11 +212,15 @@ class Crew(BaseModel):
         if self.output_log_file:
             self._file_handler = FileHandler(self.output_log_file)
         self._rpm_controller = RPMController(max_rpm=self.max_rpm, logger=self._logger)
-        self.function_calling_llm = (
-            getattr(self.function_calling_llm, "model_name", None)
-            or getattr(self.function_calling_llm, "deployment_name", None)
-            or self.function_calling_llm
-        )
+        if self.function_calling_llm:
+            if isinstance(self.function_calling_llm, str):
+                self.function_calling_llm = LLM(model=self.function_calling_llm)
+            elif not isinstance(self.function_calling_llm, LLM):
+                self.function_calling_llm = LLM(
+                    model=getattr(self.function_calling_llm, "model_name", None)
+                    or getattr(self.function_calling_llm, "deployment_name", None)
+                    or str(self.function_calling_llm)
+                )
         self._telemetry = Telemetry()
         self._telemetry.set_tracer()
         return self
