@@ -1,5 +1,4 @@
 from typing import Any, Dict, List
-from litellm import completion
 import litellm
 
 
@@ -10,7 +9,7 @@ class LLM:
         litellm.callbacks = callbacks
 
     def call(self, messages: List[Dict[str, str]]) -> Dict[str, Any]:
-        response = completion(
+        response = litellm.completion(
             stop=self.stop, model=self.model, messages=messages, num_retries=5
         )
         return response["choices"][0]["message"]["content"]

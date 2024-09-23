@@ -1,7 +1,7 @@
 from typing import Any, Optional, Type
 
 import instructor
-from litellm import completion
+import litellm
 
 
 class InternalInstructor:
@@ -29,7 +29,7 @@ class InternalInstructor:
             self.llm = self.agent.function_calling_llm or self.agent.llm
 
         self._client = instructor.from_litellm(
-            completion,
+            litellm.completion,
             mode=instructor.Mode.TOOLS,
         )
 
