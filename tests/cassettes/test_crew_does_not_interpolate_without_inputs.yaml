@@ -1,63 +1,63 @@
 interactions:
 - request:
     body: !!binary |
-      CooZCiQKIgoMc2VydmljZS5uYW1lEhIKEGNyZXdBSS10ZWxlbWV0cnkS4RgKEgoQY3Jld2FpLnRl
-      bGVtZXRyeRKcAQoQmzJ4HAI1yTS4/gPC8rKfxRIIiD1uBvRlmHcqClRvb2wgVXNhZ2UwATnw09ZI
-      eUT2F0GozdlIeUT2F0oaCg5jcmV3YWlfdmVyc2lvbhIICgYwLjYwLjRKKAoJdG9vbF9uYW1lEhsK
+      CoYZCiQKIgoMc2VydmljZS5uYW1lEhIKEGNyZXdBSS10ZWxlbWV0cnkS3RgKEgoQY3Jld2FpLnRl
+      bGVtZXRyeRKcAQoQs2TDXqXaAIV1NDWXPtFG6BIIn1Mg+psRgNYqClRvb2wgVXNhZ2UwATnwHQUO
+      pMv3F0FAvQsOpMv3F0oaCg5jcmV3YWlfdmVyc2lvbhIICgYwLjYxLjBKKAoJdG9vbF9uYW1lEhsK
       GURlbGVnYXRlIHdvcmsgdG8gY293b3JrZXJKDgoIYXR0ZW1wdHMSAhgBegIYAYUBAAEAABKQAgoQ
-      LH+VMmvtWXWgwKLIUtUOdhIIkQX1xbwI3tIqDlRhc2sgRXhlY3V0aW9uMAE5YJOZKnhE9hdB+E1l
-      yXlE9hdKLgoIY3Jld19rZXkSIgogMjYzNGI4NjM4M2ZkNWE0M2RlMmExZWZiZDM2MzE4YjJKMQoH
-      Y3Jld19pZBImCiQ1OWNjZTAyNi1hYWNmLTRmYmYtOTZlZi01NDkxNzkzOTg0ZmVKLgoIdGFza19r
-      ZXkSIgogZGM2YmJjNmNlN2E5ZTVjMWZmYTAwN2U4YWUyMWM3OGJKMQoHdGFza19pZBImCiRlN2Iz
-      ZDA1Mi1iOTFkLTRiYTgtOWEzZi00OGQ1NDc3NzFjMTJ6AhgBhQEAAQAAErAHChBZhejEXBKYvNpj
-      RJULJQ34EghwWqBzUR8JlioMQ3JldyBDcmVhdGVkMAE56Mkpy3lE9hdBcE4sy3lE9hdKGgoOY3Jl
-      d2FpX3ZlcnNpb24SCAoGMC42MC40ShoKDnB5dGhvbl92ZXJzaW9uEggKBjMuMTEuN0ouCghjcmV3
-      X2tleRIiCiA5OGE3ZDIxNDI1MjEwNzY5MzhjYzg3Yzc2OWRlZGNkM0oxCgdjcmV3X2lkEiYKJGI3
-      OGI0MDczLWQ3M2MtNDAxOS05ODM2LWQ2Nzk4MWUzYTFiZkocCgxjcmV3X3Byb2Nlc3MSDAoKc2Vx
+      n7QAPNKWG08E+oJxc/TyUhII10rDbnR4kzIqDlRhc2sgRXhlY3V0aW9uMAE58D7n46LL9xdBEOvb
+      iqTL9xdKLgoIY3Jld19rZXkSIgogMjYzNGI4NjM4M2ZkNWE0M2RlMmExZWZiZDM2MzE4YjJKMQoH
+      Y3Jld19pZBImCiQ1NDdiNjBjYy03Njk4LTQ4OTUtYWM5My1lYTJmNTAzNDIwNjFKLgoIdGFza19r
+      ZXkSIgogZGM2YmJjNmNlN2E5ZTVjMWZmYTAwN2U4YWUyMWM3OGJKMQoHdGFza19pZBImCiQ4NTAz
+      OTU1NS1mOWU0LTRhYTUtYTVkOS04Mjc0ZWNlMmM1NGR6AhgBhQEAAQAAEq4HChDh4XOVm+CyLcId
+      Jt/J8Tq3Egj5t+gdQvgfDSoMQ3JldyBDcmVhdGVkMAE5qN80jKTL9xdB8Mc2jKTL9xdKGgoOY3Jl
+      d2FpX3ZlcnNpb24SCAoGMC42MS4wShoKDnB5dGhvbl92ZXJzaW9uEggKBjMuMTEuN0ouCghjcmV3
+      X2tleRIiCiA5OGE3ZDIxNDI1MjEwNzY5MzhjYzg3Yzc2OWRlZGNkM0oxCgdjcmV3X2lkEiYKJGJm
+      ZDAzZmRjLTVkMTItNGMzYy1iNmI5LTUyODYzODBiZTViNkocCgxjcmV3X3Byb2Nlc3MSDAoKc2Vx
       dWVudGlhbEoRCgtjcmV3X21lbW9yeRICEABKGgoUY3Jld19udW1iZXJfb2ZfdGFza3MSAhgBShsK
-      FWNyZXdfbnVtYmVyX29mX2FnZW50cxICGAFK1gIKC2NyZXdfYWdlbnRzEsYCCsMCW3sia2V5Ijog
-      ImYzMzg2ZjZkOGRhNzVhYTQxNmE2ZTMxMDA1M2Y3Njk4IiwgImlkIjogImJhNDRkYWI5LThhYmEt
-      NGUyMS05MThiLTA2OGExODk2NThjYSIsICJyb2xlIjogInt0b3BpY30gUmVzZWFyY2hlciIsICJ2
+      FWNyZXdfbnVtYmVyX29mX2FnZW50cxICGAFK1AIKC2NyZXdfYWdlbnRzEsQCCsECW3sia2V5Ijog
+      ImYzMzg2ZjZkOGRhNzVhYTQxNmE2ZTMxMDA1M2Y3Njk4IiwgImlkIjogIjBhMzc2YmY2LTM3NzIt
+      NDM2OS05NmJhLWRkNzQ3MGNkZDNiMCIsICJyb2xlIjogInt0b3BpY30gUmVzZWFyY2hlciIsICJ2
       ZXJib3NlPyI6IGZhbHNlLCAibWF4X2l0ZXIiOiAxNSwgIm1heF9ycG0iOiBudWxsLCAiZnVuY3Rp
-      b25fY2FsbGluZ19sbG0iOiBudWxsLCAibGxtIjogImdwdC00byIsICJkZWxlZ2F0aW9uX2VuYWJs
-      ZWQ/IjogZmFsc2UsICJhbGxvd19jb2RlX2V4ZWN1dGlvbj8iOiBmYWxzZSwgIm1heF9yZXRyeV9s
-      aW1pdCI6IDIsICJ0b29sc19uYW1lcyI6IFtdfV1KhwIKCmNyZXdfdGFza3MS+AEK9QFbeyJrZXki
-      OiAiYWZhNjk4YjI2MmQzNTQzZjlhNjExZTRkNTE0NWVkNmEiLCAiaWQiOiAiM2FhMTQ4ZjQtODU4
-      Yy00ZDc3LWIzYWYtNTJiOTc3YWE3YjNlIiwgImFzeW5jX2V4ZWN1dGlvbj8iOiBmYWxzZSwgImh1
-      bWFuX2lucHV0PyI6IGZhbHNlLCAiYWdlbnRfcm9sZSI6ICJ7dG9waWN9IFJlc2VhcmNoZXIiLCAi
-      YWdlbnRfa2V5IjogImYzMzg2ZjZkOGRhNzVhYTQxNmE2ZTMxMDA1M2Y3Njk4IiwgInRvb2xzX25h
-      bWVzIjogW119XXoCGAGFAQABAAASjgIKEG1xBgoJAtiW9PUpgUPHPY4SCCF49bcB0RPDKgxUYXNr
-      IENyZWF0ZWQwATnQVT3LeUT2F0GI3j3LeUT2F0ouCghjcmV3X2tleRIiCiAzZjMwMTI3YTM3NDQ4
-      Y2EzNGNiMjk2MmI2OTQwZDNmNEoxCgdjcmV3X2lkEiYKJGI3OGI0MDczLWQ3M2MtNDAxOS05ODM2
-      LWQ2Nzk4MWUzYTFiZkouCgh0YXNrX2tleRIiCiBhZmE2OThiMjYyZDM1NDNmOWE2MTFlNGQ1MTQ1
-      ZWQ2YUoxCgd0YXNrX2lkEiYKJDNhYTE0OGY0LTg1OGMtNGQ3Ny1iM2FmLTUyYjk3N2FhN2IzZXoC
-      GAGFAQABAAASkAIKEJ8Mbn2tw37BRIbCuNu+F8kSCLzsFV+85LmNKg5UYXNrIEV4ZWN1dGlvbjAB
-      OagsPst5RPYXQQgXP8t5RPYXSi4KCGNyZXdfa2V5EiIKIDNmMzAxMjdhMzc0NDhjYTM0Y2IyOTYy
-      YjY5NDBkM2Y0SjEKB2NyZXdfaWQSJgokYjc4YjQwNzMtZDczYy00MDE5LTk4MzYtZDY3OTgxZTNh
-      MWJmSi4KCHRhc2tfa2V5EiIKIGFmYTY5OGIyNjJkMzU0M2Y5YTYxMWU0ZDUxNDVlZDZhSjEKB3Rh
-      c2tfaWQSJgokM2FhMTQ4ZjQtODU4Yy00ZDc3LWIzYWYtNTJiOTc3YWE3YjNlegIYAYUBAAEAABKw
-      BwoQJOT3kMEY4K9jz1q3ifuhhRIIWYvMlO22VoAqDENyZXcgQ3JlYXRlZDABOdAbmst5RPYXQfgy
-      nMt5RPYXShoKDmNyZXdhaV92ZXJzaW9uEggKBjAuNjAuNEoaCg5weXRob25fdmVyc2lvbhIICgYz
-      LjExLjdKLgoIY3Jld19rZXkSIgogOThhN2QyMTQyNTIxMDc2OTM4Y2M4N2M3NjlkZWRjZDNKMQoH
-      Y3Jld19pZBImCiQxMzU3MTI1YS1lMmNiLTQyYTItODJlMy0yNWVkN2FjMmVkNGVKHAoMY3Jld19w
-      cm9jZXNzEgwKCnNlcXVlbnRpYWxKEQoLY3Jld19tZW1vcnkSAhAAShoKFGNyZXdfbnVtYmVyX29m
-      X3Rhc2tzEgIYAUobChVjcmV3X251bWJlcl9vZl9hZ2VudHMSAhgBStYCCgtjcmV3X2FnZW50cxLG
-      AgrDAlt7ImtleSI6ICJmMzM4NmY2ZDhkYTc1YWE0MTZhNmUzMTAwNTNmNzY5OCIsICJpZCI6ICJj
-      NzIzYTQwMi1kYTkwLTQ4OWMtOTBiZS03MjM4MmRlMjQ2YmEiLCAicm9sZSI6ICJ7dG9waWN9IFJl
-      c2VhcmNoZXIiLCAidmVyYm9zZT8iOiBmYWxzZSwgIm1heF9pdGVyIjogMTUsICJtYXhfcnBtIjog
-      bnVsbCwgImZ1bmN0aW9uX2NhbGxpbmdfbGxtIjogbnVsbCwgImxsbSI6ICJncHQtNG8iLCAiZGVs
-      ZWdhdGlvbl9lbmFibGVkPyI6IGZhbHNlLCAiYWxsb3dfY29kZV9leGVjdXRpb24/IjogZmFsc2Us
-      ICJtYXhfcmV0cnlfbGltaXQiOiAyLCAidG9vbHNfbmFtZXMiOiBbXX1dSocCCgpjcmV3X3Rhc2tz
-      EvgBCvUBW3sia2V5IjogImFmYTY5OGIyNjJkMzU0M2Y5YTYxMWU0ZDUxNDVlZDZhIiwgImlkIjog
-      IjY4MTk2Y2FiLTU4MDAtNDRkOC04ZGFhLWMwZDdkN2M5OGIwYSIsICJhc3luY19leGVjdXRpb24/
-      IjogZmFsc2UsICJodW1hbl9pbnB1dD8iOiBmYWxzZSwgImFnZW50X3JvbGUiOiAie3RvcGljfSBS
-      ZXNlYXJjaGVyIiwgImFnZW50X2tleSI6ICJmMzM4NmY2ZDhkYTc1YWE0MTZhNmUzMTAwNTNmNzY5
-      OCIsICJ0b29sc19uYW1lcyI6IFtdfV16AhgBhQEAAQAAEo4CChALiRjIXSmtzPHXl1lfGOCyEghN
-      iGXEADXvyCoMVGFzayBDcmVhdGVkMAE5+D2vy3lE9hdBcKevy3lE9hdKLgoIY3Jld19rZXkSIgog
-      OThhN2QyMTQyNTIxMDc2OTM4Y2M4N2M3NjlkZWRjZDNKMQoHY3Jld19pZBImCiQxMzU3MTI1YS1l
-      MmNiLTQyYTItODJlMy0yNWVkN2FjMmVkNGVKLgoIdGFza19rZXkSIgogYWZhNjk4YjI2MmQzNTQz
-      ZjlhNjExZTRkNTE0NWVkNmFKMQoHdGFza19pZBImCiQ2ODE5NmNhYi01ODAwLTQ0ZDgtOGRhYS1j
-      MGQ3ZDdjOThiMGF6AhgBhQEAAQAA
+      b25fY2FsbGluZ19sbG0iOiAiIiwgImxsbSI6ICJncHQtNG8iLCAiZGVsZWdhdGlvbl9lbmFibGVk
+      PyI6IGZhbHNlLCAiYWxsb3dfY29kZV9leGVjdXRpb24/IjogZmFsc2UsICJtYXhfcmV0cnlfbGlt
+      aXQiOiAyLCAidG9vbHNfbmFtZXMiOiBbXX1dSocCCgpjcmV3X3Rhc2tzEvgBCvUBW3sia2V5Ijog
+      ImFmYTY5OGIyNjJkMzU0M2Y5YTYxMWU0ZDUxNDVlZDZhIiwgImlkIjogIjI1YjNmMmRlLWY0Y2Yt
+      NGQ0MC04Y2Y3LTIzMmUwYWE2NGEzYyIsICJhc3luY19leGVjdXRpb24/IjogZmFsc2UsICJodW1h
+      bl9pbnB1dD8iOiBmYWxzZSwgImFnZW50X3JvbGUiOiAie3RvcGljfSBSZXNlYXJjaGVyIiwgImFn
+      ZW50X2tleSI6ICJmMzM4NmY2ZDhkYTc1YWE0MTZhNmUzMTAwNTNmNzY5OCIsICJ0b29sc19uYW1l
+      cyI6IFtdfV16AhgBhQEAAQAAEo4CChCB3qYtuPN5TuMow1lg6hKwEgjPFg3YlxOYlCoMVGFzayBD
+      cmVhdGVkMAE5cHZOjKTL9xdBAFlPjKTL9xdKLgoIY3Jld19rZXkSIgogM2YzMDEyN2EzNzQ0OGNh
+      MzRjYjI5NjJiNjk0MGQzZjRKMQoHY3Jld19pZBImCiRiZmQwM2ZkYy01ZDEyLTRjM2MtYjZiOS01
+      Mjg2MzgwYmU1YjZKLgoIdGFza19rZXkSIgogYWZhNjk4YjI2MmQzNTQzZjlhNjExZTRkNTE0NWVk
+      NmFKMQoHdGFza19pZBImCiQyNWIzZjJkZS1mNGNmLTRkNDAtOGNmNy0yMzJlMGFhNjRhM2N6AhgB
+      hQEAAQAAEpACChCbi7ZUSDOkOegVcPQM8lO5EghSojxiqaxOTioOVGFzayBFeGVjdXRpb24wATmY
+      k0+MpMv3F0EQelCMpMv3F0ouCghjcmV3X2tleRIiCiAzZjMwMTI3YTM3NDQ4Y2EzNGNiMjk2MmI2
+      OTQwZDNmNEoxCgdjcmV3X2lkEiYKJGJmZDAzZmRjLTVkMTItNGMzYy1iNmI5LTUyODYzODBiZTVi
+      NkouCgh0YXNrX2tleRIiCiBhZmE2OThiMjYyZDM1NDNmOWE2MTFlNGQ1MTQ1ZWQ2YUoxCgd0YXNr
+      X2lkEiYKJDI1YjNmMmRlLWY0Y2YtNGQ0MC04Y2Y3LTIzMmUwYWE2NGEzY3oCGAGFAQABAAASrgcK
+      EEa/QJk/ohGXUej2gla0Zh4SCCcfrgjyHZE1KgxDcmV3IENyZWF0ZWQwATl4b8WMpMv3F0HIqceM
+      pMv3F0oaCg5jcmV3YWlfdmVyc2lvbhIICgYwLjYxLjBKGgoOcHl0aG9uX3ZlcnNpb24SCAoGMy4x
+      MS43Si4KCGNyZXdfa2V5EiIKIDk4YTdkMjE0MjUyMTA3NjkzOGNjODdjNzY5ZGVkY2QzSjEKB2Ny
+      ZXdfaWQSJgokNjg2NDE1YzctNGFmNy00NmE4LTg5ODEtNzE1MWQ3MWI0MGVlShwKDGNyZXdfcHJv
+      Y2VzcxIMCgpzZXF1ZW50aWFsShEKC2NyZXdfbWVtb3J5EgIQAEoaChRjcmV3X251bWJlcl9vZl90
+      YXNrcxICGAFKGwoVY3Jld19udW1iZXJfb2ZfYWdlbnRzEgIYAUrUAgoLY3Jld19hZ2VudHMSxAIK
+      wQJbeyJrZXkiOiAiZjMzODZmNmQ4ZGE3NWFhNDE2YTZlMzEwMDUzZjc2OTgiLCAiaWQiOiAiODgw
+      ZjM1NjctNTljNC00MjM5LThlOGEtODViODVmZmIwNDQwIiwgInJvbGUiOiAie3RvcGljfSBSZXNl
+      YXJjaGVyIiwgInZlcmJvc2U/IjogZmFsc2UsICJtYXhfaXRlciI6IDE1LCAibWF4X3JwbSI6IG51
+      bGwsICJmdW5jdGlvbl9jYWxsaW5nX2xsbSI6ICIiLCAibGxtIjogImdwdC00byIsICJkZWxlZ2F0
+      aW9uX2VuYWJsZWQ/IjogZmFsc2UsICJhbGxvd19jb2RlX2V4ZWN1dGlvbj8iOiBmYWxzZSwgIm1h
+      eF9yZXRyeV9saW1pdCI6IDIsICJ0b29sc19uYW1lcyI6IFtdfV1KhwIKCmNyZXdfdGFza3MS+AEK
+      9QFbeyJrZXkiOiAiYWZhNjk4YjI2MmQzNTQzZjlhNjExZTRkNTE0NWVkNmEiLCAiaWQiOiAiMTBj
+      ODkxN2MtOTRmMy00NjZiLWEwNzYtNGFlM2U4ZTRlMjM5IiwgImFzeW5jX2V4ZWN1dGlvbj8iOiBm
+      YWxzZSwgImh1bWFuX2lucHV0PyI6IGZhbHNlLCAiYWdlbnRfcm9sZSI6ICJ7dG9waWN9IFJlc2Vh
+      cmNoZXIiLCAiYWdlbnRfa2V5IjogImYzMzg2ZjZkOGRhNzVhYTQxNmE2ZTMxMDA1M2Y3Njk4Iiwg
+      InRvb2xzX25hbWVzIjogW119XXoCGAGFAQABAAASjgIKEIqklZq8JIOZJmwC3XWxfNQSCDLK4PSW
+      iNJcKgxUYXNrIENyZWF0ZWQwATmwDwuNpMv3F0HIiAuNpMv3F0ouCghjcmV3X2tleRIiCiA5OGE3
+      ZDIxNDI1MjEwNzY5MzhjYzg3Yzc2OWRlZGNkM0oxCgdjcmV3X2lkEiYKJDY4NjQxNWM3LTRhZjct
+      NDZhOC04OTgxLTcxNTFkNzFiNDBlZUouCgh0YXNrX2tleRIiCiBhZmE2OThiMjYyZDM1NDNmOWE2
+      MTFlNGQ1MTQ1ZWQ2YUoxCgd0YXNrX2lkEiYKJDEwYzg5MTdjLTk0ZjMtNDY2Yi1hMDc2LTRhZTNl
+      OGU0ZTIzOXoCGAGFAQABAAA=
     headers:
       Accept:
       - '*/*'
@@ -66,7 +66,7 @@ interactions:
       Connection:
       - keep-alive
       Content-Length:
-      - '3213'
+      - '3209'
       Content-Type:
       - application/x-protobuf
       User-Agent:
@@ -82,7 +82,7 @@ interactions:
       Content-Type:
       - application/x-protobuf
       Date:
-      - Wed, 18 Sep 2024 06:59:58 GMT
+      - Mon, 23 Sep 2024 06:28:11 GMT
     status:
       code: 200
       message: OK
@@ -97,7 +97,7 @@ interactions:
       is the expect criteria for your final answer: {points} bullet points about {topic}.\nyou
       MUST return the actual complete content as the final answer, not a summary.\n\nBegin!
       This is VERY important to you, use the tools available and give your best Final
-      Answer, your job depends on it!\n\nThought:"}], "model": "gpt-4o", "stop": ["\nObservation:"]}'
+      Answer, your job depends on it!\n\nThought:"}], "model": "gpt-4o"}'
     headers:
       accept:
       - application/json
@@ -106,16 +106,16 @@ interactions:
       connection:
       - keep-alive
       content-length:
-      - '903'
+      - '875'
       content-type:
       - application/json
       cookie:
-      - __cf_bm=.8.5x0rqghNdtUCxfmwblfhuXiKyPm_cRq.NIa0heL0-1726642369-1.0.1.1-VbsAGqjOt45ZD50K2QW2oZrByLLIh6w8K4nAkLthTbXgU5qTgdf0mhvFId8Q2F3DcHUw9E72lVIZEN.YVlYINQ;
-        _cfuvid=o5s1Ux898x0eFNtzUCnG996iqyX3LgXDXq99C5oqnVE-1726642369248-0.0.1.1-604800000
+      - __cf_bm=hYfEMfBWpIoRPjx9ZBZg6DVeMOMr1IZt9ioup8yWZs0-1727072673-1.0.1.1-Ro7GCLuWS0K5ob0mSTYSmovONKNyxsK6oSA5io_Vwqhe6P0G7Ow4CuZUaWAaCdFGQUd7XZiFH0mI_sQC3uqe0g;
+        _cfuvid=5cK2hfLqTXw1WjB81uT.sGmmA67JIxSKSQeEHQ3zOQw-1727071769966-0.0.1.1-604800000
       host:
       - api.openai.com
       user-agent:
-      - OpenAI/Python 1.46.0
+      - OpenAI/Python 1.47.0
       x-stainless-arch:
       - arm64
       x-stainless-async:
@@ -125,7 +125,7 @@ interactions:
       x-stainless-os:
       - MacOS
       x-stainless-package-version:
-      - 1.46.0
+      - 1.47.0
       x-stainless-raw-response:
       - 'true'
       x-stainless-runtime:
@@ -135,41 +135,32 @@ interactions:
     method: POST
     uri: https://api.openai.com/v1/chat/completions
   response:
-    content: "{\n  \"id\": \"chatcmpl-A8ixJpsrOts7ugpr8zOEdZWLA6VrV\",\n  \"object\":
-      \"chat.completion\",\n  \"created\": 1726642797,\n  \"model\": \"gpt-4o-2024-05-13\",\n
+    content: "{\n  \"id\": \"chatcmpl-AAWqIBJtflB7mLCkhG53PhPgojxAS\",\n  \"object\":
+      \"chat.completion\",\n  \"created\": 1727072890,\n  \"model\": \"gpt-4o-2024-05-13\",\n
       \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
       \"assistant\",\n        \"content\": \"Thought: I now can give a great answer\\nFinal
-      Answer: To provide a comprehensive analysis around {topic}, here are {points}
-      bullet points covering the subject in detail:\\n\\n1. **Historical Context**:
-      Discuss the origins and evolution of {topic} over the years. Explore how its
-      development has been influenced by cultural, technological, and economic changes.\\n\\n2.
-      **Key Players**: Identify and examine the major individuals, companies, or entities
-      that have significantly contributed to {topic}. Explain their roles, motivations,
-      and the impact they've had on the landscape.\\n\\n3. **Technological Advancements**:
-      Outline the technological milestones and innovations that have shaped {topic}.
-      Describe how these advancements have improved, altered, or redefined practices
-      or beliefs within the field.\\n\\n4. **Economic Impact**: Analyze the financial
-      implications of {topic}. This could involve market size, growth potential, employment
-      opportunities, and how it contributes to or affects the broader economy.\\n\\n5.
-      **Ethical and Social Considerations**: Examine the ethical dilemmas and social
-      issues that arise from {topic}. Discuss public perception, regulation issues,
-      and potential long-term societal impacts.\\n\\n6. **Current Trends and Future
-      Outlook**: Discuss the latest trends in {topic} and predict where it might be
-      headed in the future. Identify emerging opportunities, challenges, and potential
-      disruptors.\\n\\n7. **Case Studies and Examples**: Provide specific instances
-      or case studies that illustrate key points about {topic}. Real-world examples
-      help to better understand the practical applications and implications.\\n\\nBy
-      covering these points, you should have an extensive and thorough understanding
-      of {topic}, its history, current state, and future potential.\",\n        \"refusal\":
-      null\n      },\n      \"logprobs\": null,\n      \"finish_reason\": \"stop\"\n
-      \   }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 178,\n    \"completion_tokens\":
-      332,\n    \"total_tokens\": 510,\n    \"completion_tokens_details\": {\n      \"reasoning_tokens\":
-      0\n    }\n  },\n  \"system_fingerprint\": \"fp_a5d11b2ef2\"\n}\n"
+      Answer: Your final answer must be the great and the most complete as possible,
+      it must be outcome described.\\n\\nNote: To give you a precise and customized
+      answer, I need you to fill in the placeholders in your request. Specifically,
+      I need the actual \\\"topic\\\" and \\\"points\\\" you want me to analyze and
+      discuss. Here is a guideline on how I can proceed once these placeholders are
+      filled:\\n\\n1. **Detailed Explanation**: Elaborate on the background, definitions,
+      and significance of the topic.\\n2. **Current Trends**: Highlight any current
+      developments, ongoing discussions, or prevalent trends related to the topic.\\n3.
+      **Challenges and Controversies**: Identify key challenges, disputes, or polarizing
+      opinions within the topic.\\n4. **Future Directions**: Suggest possible future
+      developments, advancements, or shifts in the field or discussion of the topic.\\n5.
+      **Practical Implications**: Discuss how the topic affects real-world situations,
+      practices, and the broader society.\\n\\nPlease provide the specific information
+      to proceed.\",\n        \"refusal\": null\n      },\n      \"logprobs\": null,\n
+      \     \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\":
+      178,\n    \"completion_tokens\": 218,\n    \"total_tokens\": 396,\n    \"completion_tokens_details\":
+      {\n      \"reasoning_tokens\": 0\n    }\n  },\n  \"system_fingerprint\": \"fp_e375328146\"\n}\n"
     headers:
       CF-Cache-Status:
       - DYNAMIC
       CF-RAY:
-      - 8c4f74cb7c13a67a-MIA
+      - 8c78791bca22a4ee-MIA
       Connection:
       - keep-alive
       Content-Encoding:
@@ -177,7 +168,7 @@ interactions:
       Content-Type:
       - application/json
       Date:
-      - Wed, 18 Sep 2024 07:00:01 GMT
+      - Mon, 23 Sep 2024 06:28:13 GMT
       Server:
       - cloudflare
       Transfer-Encoding:
@@ -186,12 +177,10 @@ interactions:
       - nosniff
       access-control-expose-headers:
       - X-Request-ID
-      alt-svc:
-      - h3=":443"; ma=86400
       openai-organization:
       - crewai-iuxna1
       openai-processing-ms:
-      - '3479'
+      - '3102'
       openai-version:
       - '2020-10-01'
       strict-transport-security:
@@ -209,7 +198,7 @@ interactions:
       x-ratelimit-reset-tokens:
       - 0s
       x-request-id:
-      - req_036578d9aedf9212fdf8fc8f1f8b5df3
+      - req_08904130079670a6035874a846a0eb5c
     http_version: HTTP/1.1
     status_code: 200
 version: 1

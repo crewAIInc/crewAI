@@ -37,7 +37,7 @@ interactions:
       for your final answer: Howdy!\nyou MUST return the actual complete content as
       the final answer, not a summary.\n\nBegin! This is VERY important to you, use
       the tools available and give your best Final Answer, your job depends on it!\n\nThought:"}],
-      "model": "gpt-4o", "stop": ["\nObservation:"]}'
+      "model": "gpt-4o"}'
     headers:
       accept:
       - application/json
@@ -46,16 +46,16 @@ interactions:
       connection:
       - keep-alive
       content-length:
-      - '2932'
+      - '2904'
       content-type:
       - application/json
       cookie:
-      - __cf_bm=.8.5x0rqghNdtUCxfmwblfhuXiKyPm_cRq.NIa0heL0-1726642369-1.0.1.1-VbsAGqjOt45ZD50K2QW2oZrByLLIh6w8K4nAkLthTbXgU5qTgdf0mhvFId8Q2F3DcHUw9E72lVIZEN.YVlYINQ;
-        _cfuvid=o5s1Ux898x0eFNtzUCnG996iqyX3LgXDXq99C5oqnVE-1726642369248-0.0.1.1-604800000
+      - __cf_bm=hYfEMfBWpIoRPjx9ZBZg6DVeMOMr1IZt9ioup8yWZs0-1727072673-1.0.1.1-Ro7GCLuWS0K5ob0mSTYSmovONKNyxsK6oSA5io_Vwqhe6P0G7Ow4CuZUaWAaCdFGQUd7XZiFH0mI_sQC3uqe0g;
+        _cfuvid=5cK2hfLqTXw1WjB81uT.sGmmA67JIxSKSQeEHQ3zOQw-1727071769966-0.0.1.1-604800000
       host:
       - api.openai.com
       user-agent:
-      - OpenAI/Python 1.46.0
+      - OpenAI/Python 1.47.0
       x-stainless-arch:
       - arm64
       x-stainless-async:
@@ -65,7 +65,7 @@ interactions:
       x-stainless-os:
       - MacOS
       x-stainless-package-version:
-      - 1.46.0
+      - 1.47.0
       x-stainless-raw-response:
       - 'true'
       x-stainless-runtime:
@@ -75,24 +75,23 @@ interactions:
     method: POST
     uri: https://api.openai.com/v1/chat/completions
   response:
-    content: "{\n  \"id\": \"chatcmpl-A8iwrWHEPOD0QNGximDXfFZJQkkv6\",\n  \"object\":
-      \"chat.completion\",\n  \"created\": 1726642769,\n  \"model\": \"gpt-4o-2024-05-13\",\n
+    content: "{\n  \"id\": \"chatcmpl-AAWpp40Mb2cQZ77dG7irpQXwEIYYP\",\n  \"object\":
+      \"chat.completion\",\n  \"created\": 1727072861,\n  \"model\": \"gpt-4o-2024-05-13\",\n
       \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
-      \"assistant\",\n        \"content\": \"Thought: I need to get the Researcher
-      to say \\\"Howdy!\\\" as per the given task. First, I will ask the Researcher
-      to say hi.\\n\\nAction: Ask question to coworker\\nAction Input: {\\\"question\\\":
-      \\\"Can you please greet by saying 'Howdy!'?\\\", \\\"context\\\": \\\"We need
-      you to provide a greeting specifically with the word 'Howdy!' as a test task.\\\",
-      \\\"coworker\\\": \\\"Researcher\\\"}\\n\",\n        \"refusal\": null\n      },\n
-      \     \"logprobs\": null,\n      \"finish_reason\": \"stop\"\n    }\n  ],\n
-      \ \"usage\": {\n    \"prompt_tokens\": 642,\n    \"completion_tokens\": 89,\n
-      \   \"total_tokens\": 731,\n    \"completion_tokens_details\": {\n      \"reasoning_tokens\":
-      0\n    }\n  },\n  \"system_fingerprint\": \"fp_a5d11b2ef2\"\n}\n"
+      \"assistant\",\n        \"content\": \"Thought: To complete the task and meet
+      the required criteria, I need to instruct the Researcher to say \\\"Howdy!\\\".
+      I will use the appropriate tool to delegate this task.\\n\\nAction: Delegate
+      work to coworker\\nAction Input: {\\\"task\\\": \\\"Say 'Howdy!'\\\", \\\"context\\\":
+      \\\"I need you to simply say 'Howdy!' in response.\\\", \\\"coworker\\\": \\\"Researcher\\\"}\",\n
+      \       \"refusal\": null\n      },\n      \"logprobs\": null,\n      \"finish_reason\":
+      \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 642,\n    \"completion_tokens\":
+      80,\n    \"total_tokens\": 722,\n    \"completion_tokens_details\": {\n      \"reasoning_tokens\":
+      0\n    }\n  },\n  \"system_fingerprint\": \"fp_e375328146\"\n}\n"
     headers:
       CF-Cache-Status:
       - DYNAMIC
       CF-RAY:
-      - 8c4f741e4d77a67a-MIA
+      - 8c7878653949a4ee-MIA
       Connection:
       - keep-alive
       Content-Encoding:
@@ -100,7 +99,7 @@ interactions:
       Content-Type:
       - application/json
       Date:
-      - Wed, 18 Sep 2024 06:59:31 GMT
+      - Mon, 23 Sep 2024 06:27:42 GMT
       Server:
       - cloudflare
       Transfer-Encoding:
@@ -109,12 +108,10 @@ interactions:
       - nosniff
       access-control-expose-headers:
       - X-Request-ID
-      alt-svc:
-      - h3=":443"; ma=86400
       openai-organization:
       - crewai-iuxna1
       openai-processing-ms:
-      - '1133'
+      - '1062'
       openai-version:
       - '2020-10-01'
       strict-transport-security:
@@ -132,7 +129,7 @@ interactions:
       x-ratelimit-reset-tokens:
       - 1ms
       x-request-id:
-      - req_20ad9dda0e3d06a71ef2568ad7fd7531
+      - req_b804748b6676c84283da92f554a2040f
     http_version: HTTP/1.1
     status_code: 200
 - request:
@@ -142,14 +139,13 @@ interactions:
       I now can give a great answer\nFinal Answer: Your final answer must be the great
       and the most complete as possible, it must be outcome described.\n\nI MUST use
       these formats, my job depends on it!"}, {"role": "user", "content": "\nCurrent
-      Task: Can you please greet by saying ''Howdy!''?\n\nThis is the expect criteria
-      for your final answer: Your best answer to your coworker asking you this, accounting
-      for the context shared.\nyou MUST return the actual complete content as the
-      final answer, not a summary.\n\nThis is the context you''re working with:\nWe
-      need you to provide a greeting specifically with the word ''Howdy!'' as a test
-      task.\n\nBegin! This is VERY important to you, use the tools available and give
-      your best Final Answer, your job depends on it!\n\nThought:"}], "model": "gpt-4o",
-      "stop": ["\nObservation:"]}'
+      Task: Say ''Howdy!''\n\nThis is the expect criteria for your final answer: Your
+      best answer to your coworker asking you this, accounting for the context shared.\nyou
+      MUST return the actual complete content as the final answer, not a summary.\n\nThis
+      is the context you''re working with:\nI need you to simply say ''Howdy!'' in
+      response.\n\nBegin! This is VERY important to you, use the tools available and
+      give your best Final Answer, your job depends on it!\n\nThought:"}], "model":
+      "gpt-4o"}'
     headers:
       accept:
       - application/json
@@ -158,16 +154,16 @@ interactions:
       connection:
       - keep-alive
       content-length:
-      - '1053'
+      - '958'
       content-type:
       - application/json
       cookie:
-      - __cf_bm=.8.5x0rqghNdtUCxfmwblfhuXiKyPm_cRq.NIa0heL0-1726642369-1.0.1.1-VbsAGqjOt45ZD50K2QW2oZrByLLIh6w8K4nAkLthTbXgU5qTgdf0mhvFId8Q2F3DcHUw9E72lVIZEN.YVlYINQ;
-        _cfuvid=o5s1Ux898x0eFNtzUCnG996iqyX3LgXDXq99C5oqnVE-1726642369248-0.0.1.1-604800000
+      - __cf_bm=hYfEMfBWpIoRPjx9ZBZg6DVeMOMr1IZt9ioup8yWZs0-1727072673-1.0.1.1-Ro7GCLuWS0K5ob0mSTYSmovONKNyxsK6oSA5io_Vwqhe6P0G7Ow4CuZUaWAaCdFGQUd7XZiFH0mI_sQC3uqe0g;
+        _cfuvid=5cK2hfLqTXw1WjB81uT.sGmmA67JIxSKSQeEHQ3zOQw-1727071769966-0.0.1.1-604800000
       host:
       - api.openai.com
       user-agent:
-      - OpenAI/Python 1.46.0
+      - OpenAI/Python 1.47.0
       x-stainless-arch:
       - arm64
       x-stainless-async:
@@ -177,7 +173,7 @@ interactions:
       x-stainless-os:
       - MacOS
       x-stainless-package-version:
-      - 1.46.0
+      - 1.47.0
       x-stainless-raw-response:
       - 'true'
       x-stainless-runtime:
@@ -187,19 +183,19 @@ interactions:
     method: POST
     uri: https://api.openai.com/v1/chat/completions
   response:
-    content: "{\n  \"id\": \"chatcmpl-A8iwt20HH961rsJsKatJwhLGctYdL\",\n  \"object\":
-      \"chat.completion\",\n  \"created\": 1726642771,\n  \"model\": \"gpt-4o-2024-05-13\",\n
+    content: "{\n  \"id\": \"chatcmpl-AAWpq1vzDhWR3jJLDFPSjjM1rmTtu\",\n  \"object\":
+      \"chat.completion\",\n  \"created\": 1727072862,\n  \"model\": \"gpt-4o-2024-05-13\",\n
       \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
-      \"assistant\",\n        \"content\": \"Thought: I now can give a great answer.\\nFinal
+      \"assistant\",\n        \"content\": \"Thought: I now can give a great answer\\nFinal
       Answer: Howdy!\",\n        \"refusal\": null\n      },\n      \"logprobs\":
       null,\n      \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\":
-      206,\n    \"completion_tokens\": 16,\n    \"total_tokens\": 222,\n    \"completion_tokens_details\":
-      {\n      \"reasoning_tokens\": 0\n    }\n  },\n  \"system_fingerprint\": \"fp_a5d11b2ef2\"\n}\n"
+      194,\n    \"completion_tokens\": 16,\n    \"total_tokens\": 210,\n    \"completion_tokens_details\":
+      {\n      \"reasoning_tokens\": 0\n    }\n  },\n  \"system_fingerprint\": \"fp_52a7f40b0b\"\n}\n"
     headers:
       CF-Cache-Status:
       - DYNAMIC
       CF-RAY:
-      - 8c4f7427d9daa67a-MIA
+      - 8c78786e2e75a4ee-MIA
       Connection:
       - keep-alive
       Content-Encoding:
@@ -207,7 +203,7 @@ interactions:
       Content-Type:
       - application/json
       Date:
-      - Wed, 18 Sep 2024 06:59:31 GMT
+      - Mon, 23 Sep 2024 06:27:42 GMT
       Server:
       - cloudflare
       Transfer-Encoding:
@@ -216,12 +212,10 @@ interactions:
       - nosniff
       access-control-expose-headers:
       - X-Request-ID
-      alt-svc:
-      - h3=":443"; ma=86400
       openai-organization:
       - crewai-iuxna1
       openai-processing-ms:
-      - '451'
+      - '248'
       openai-version:
       - '2020-10-01'
       strict-transport-security:
@@ -233,13 +227,13 @@ interactions:
       x-ratelimit-remaining-requests:
       - '9999'
       x-ratelimit-remaining-tokens:
-      - '29999755'
+      - '29999771'
       x-ratelimit-reset-requests:
       - 6ms
       x-ratelimit-reset-tokens:
       - 0s
       x-request-id:
-      - req_889a88d9e5f094e58e7d41b5125c3c5e
+      - req_17b227b7d695c375da94bf65a75e6628
     http_version: HTTP/1.1
     status_code: 200
 - request:
@@ -280,12 +274,12 @@ interactions:
       for your final answer: Howdy!\nyou MUST return the actual complete content as
       the final answer, not a summary.\n\nBegin! This is VERY important to you, use
       the tools available and give your best Final Answer, your job depends on it!\n\nThought:"},
-      {"role": "user", "content": "Thought: I need to get the Researcher to say \"Howdy!\"
-      as per the given task. First, I will ask the Researcher to say hi.\n\nAction:
-      Ask question to coworker\nAction Input: {\"question\": \"Can you please greet
-      by saying ''Howdy!''?\", \"context\": \"We need you to provide a greeting specifically
-      with the word ''Howdy!'' as a test task.\", \"coworker\": \"Researcher\"}\n\nObservation:
-      Howdy!"}], "model": "gpt-4o", "stop": ["\nObservation:"]}'
+      {"role": "user", "content": "Thought: To complete the task and meet the required
+      criteria, I need to instruct the Researcher to say \"Howdy!\". I will use the
+      appropriate tool to delegate this task.\n\nAction: Delegate work to coworker\nAction
+      Input: {\"task\": \"Say ''Howdy!''\", \"context\": \"I need you to simply say
+      ''Howdy!'' in response.\", \"coworker\": \"Researcher\"}\nObservation: Howdy!"}],
+      "model": "gpt-4o"}'
     headers:
       accept:
       - application/json
@@ -294,16 +288,16 @@ interactions:
       connection:
       - keep-alive
       content-length:
-      - '3356'
+      - '3303'
       content-type:
       - application/json
       cookie:
-      - __cf_bm=.8.5x0rqghNdtUCxfmwblfhuXiKyPm_cRq.NIa0heL0-1726642369-1.0.1.1-VbsAGqjOt45ZD50K2QW2oZrByLLIh6w8K4nAkLthTbXgU5qTgdf0mhvFId8Q2F3DcHUw9E72lVIZEN.YVlYINQ;
-        _cfuvid=o5s1Ux898x0eFNtzUCnG996iqyX3LgXDXq99C5oqnVE-1726642369248-0.0.1.1-604800000
+      - __cf_bm=hYfEMfBWpIoRPjx9ZBZg6DVeMOMr1IZt9ioup8yWZs0-1727072673-1.0.1.1-Ro7GCLuWS0K5ob0mSTYSmovONKNyxsK6oSA5io_Vwqhe6P0G7Ow4CuZUaWAaCdFGQUd7XZiFH0mI_sQC3uqe0g;
+        _cfuvid=5cK2hfLqTXw1WjB81uT.sGmmA67JIxSKSQeEHQ3zOQw-1727071769966-0.0.1.1-604800000
       host:
       - api.openai.com
       user-agent:
-      - OpenAI/Python 1.46.0
+      - OpenAI/Python 1.47.0
       x-stainless-arch:
       - arm64
       x-stainless-async:
@@ -313,7 +307,7 @@ interactions:
       x-stainless-os:
       - MacOS
       x-stainless-package-version:
-      - 1.46.0
+      - 1.47.0
       x-stainless-raw-response:
       - 'true'
       x-stainless-runtime:
@@ -323,19 +317,19 @@ interactions:
     method: POST
     uri: https://api.openai.com/v1/chat/completions
   response:
-    content: "{\n  \"id\": \"chatcmpl-A8iwuhjW2Tk994yySpoPTgDCR8f5j\",\n  \"object\":
-      \"chat.completion\",\n  \"created\": 1726642772,\n  \"model\": \"gpt-4o-2024-05-13\",\n
+    content: "{\n  \"id\": \"chatcmpl-AAWprwbmZT08E5nIRpF0XP4RE27qU\",\n  \"object\":
+      \"chat.completion\",\n  \"created\": 1727072863,\n  \"model\": \"gpt-4o-2024-05-13\",\n
       \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
       \"assistant\",\n        \"content\": \"Thought: I now know the final answer.\\nFinal
       Answer: Howdy!\",\n        \"refusal\": null\n      },\n      \"logprobs\":
       null,\n      \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\":
-      740,\n    \"completion_tokens\": 15,\n    \"total_tokens\": 755,\n    \"completion_tokens_details\":
-      {\n      \"reasoning_tokens\": 0\n    }\n  },\n  \"system_fingerprint\": \"fp_a5d11b2ef2\"\n}\n"
+      731,\n    \"completion_tokens\": 15,\n    \"total_tokens\": 746,\n    \"completion_tokens_details\":
+      {\n      \"reasoning_tokens\": 0\n    }\n  },\n  \"system_fingerprint\": \"fp_e375328146\"\n}\n"
     headers:
       CF-Cache-Status:
       - DYNAMIC
       CF-RAY:
-      - 8c4f742cab89a67a-MIA
+      - 8c787871b8faa4ee-MIA
       Connection:
       - keep-alive
       Content-Encoding:
@@ -343,7 +337,7 @@ interactions:
       Content-Type:
       - application/json
       Date:
-      - Wed, 18 Sep 2024 06:59:32 GMT
+      - Mon, 23 Sep 2024 06:27:43 GMT
       Server:
       - cloudflare
       Transfer-Encoding:
@@ -352,12 +346,10 @@ interactions:
       - nosniff
       access-control-expose-headers:
       - X-Request-ID
-      alt-svc:
-      - h3=":443"; ma=86400
       openai-organization:
       - crewai-iuxna1
       openai-processing-ms:
-      - '277'
+      - '281'
       openai-version:
       - '2020-10-01'
       strict-transport-security:
@@ -369,13 +361,13 @@ interactions:
       x-ratelimit-remaining-requests:
       - '9999'
       x-ratelimit-remaining-tokens:
-      - '29999196'
+      - '29999202'
       x-ratelimit-reset-requests:
       - 6ms
       x-ratelimit-reset-tokens:
       - 1ms
       x-request-id:
-      - req_a08821bbc1fe36ea0ec19b81aa2b924e
+      - req_592cdfa976a10df5fe3eccf58fb8113d
     http_version: HTTP/1.1
     status_code: 200
 version: 1

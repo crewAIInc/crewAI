@@ -9,7 +9,7 @@ interactions:
       is the expect criteria for your final answer: The word: Hi\nyou MUST return
       the actual complete content as the final answer, not a summary.\n\nBegin! This
       is VERY important to you, use the tools available and give your best Final Answer,
-      your job depends on it!\n\nThought:"}], "model": "gpt-4o", "stop": ["\nObservation:"]}'
+      your job depends on it!\n\nThought:"}], "model": "gpt-4o"}'
     headers:
       accept:
       - application/json
@@ -18,16 +18,16 @@ interactions:
       connection:
       - keep-alive
       content-length:
-      - '802'
+      - '774'
       content-type:
       - application/json
       cookie:
-      - __cf_bm=.8.5x0rqghNdtUCxfmwblfhuXiKyPm_cRq.NIa0heL0-1726642369-1.0.1.1-VbsAGqjOt45ZD50K2QW2oZrByLLIh6w8K4nAkLthTbXgU5qTgdf0mhvFId8Q2F3DcHUw9E72lVIZEN.YVlYINQ;
-        _cfuvid=o5s1Ux898x0eFNtzUCnG996iqyX3LgXDXq99C5oqnVE-1726642369248-0.0.1.1-604800000
+      - __cf_bm=MSMbC3L9m33fbO5Mdj70NJMu6kJCjhuwRcYuWJdJkYQ-1727071769-1.0.1.1-Dok5J431gUNvLRyLNrUo0A.FXXIuZUUooIMFSj74XUDgQJt0mlhf6QEEo6s9wXLhByXrdKr6cxYGBEkQoDslXg;
+        _cfuvid=5cK2hfLqTXw1WjB81uT.sGmmA67JIxSKSQeEHQ3zOQw-1727071769966-0.0.1.1-604800000
       host:
       - api.openai.com
       user-agent:
-      - OpenAI/Python 1.46.0
+      - OpenAI/Python 1.47.0
       x-stainless-arch:
       - arm64
       x-stainless-async:
@@ -37,7 +37,7 @@ interactions:
       x-stainless-os:
       - MacOS
       x-stainless-package-version:
-      - 1.46.0
+      - 1.47.0
       x-stainless-raw-response:
       - 'true'
       x-stainless-runtime:
@@ -47,19 +47,19 @@ interactions:
     method: POST
     uri: https://api.openai.com/v1/chat/completions
   response:
-    content: "{\n  \"id\": \"chatcmpl-A8iszsSsO9sgAarQbVqvWnWmeWZKR\",\n  \"object\":
-      \"chat.completion\",\n  \"created\": 1726642529,\n  \"model\": \"gpt-4o-2024-05-13\",\n
+    content: "{\n  \"id\": \"chatcmpl-AAWipyHyYHlxpbMUuDNwI1YKUXHYd\",\n  \"object\":
+      \"chat.completion\",\n  \"created\": 1727072427,\n  \"model\": \"gpt-4o-2024-05-13\",\n
       \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
-      \"assistant\",\n        \"content\": \"I now can give a great answer\\nFinal
+      \"assistant\",\n        \"content\": \"I now can give a great answer.\\nFinal
       Answer: Hi\",\n        \"refusal\": null\n      },\n      \"logprobs\": null,\n
       \     \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\":
       158,\n    \"completion_tokens\": 12,\n    \"total_tokens\": 170,\n    \"completion_tokens_details\":
-      {\n      \"reasoning_tokens\": 0\n    }\n  },\n  \"system_fingerprint\": \"fp_a5d11b2ef2\"\n}\n"
+      {\n      \"reasoning_tokens\": 0\n    }\n  },\n  \"system_fingerprint\": \"fp_e375328146\"\n}\n"
     headers:
       CF-Cache-Status:
       - DYNAMIC
       CF-RAY:
-      - 8c4f6e425d39a67a-MIA
+      - 8c786dcd1c95a540-MIA
       Connection:
       - keep-alive
       Content-Encoding:
@@ -67,7 +67,7 @@ interactions:
       Content-Type:
       - application/json
       Date:
-      - Wed, 18 Sep 2024 06:55:30 GMT
+      - Mon, 23 Sep 2024 06:20:27 GMT
       Server:
       - cloudflare
       Transfer-Encoding:
@@ -76,12 +76,10 @@ interactions:
       - nosniff
       access-control-expose-headers:
       - X-Request-ID
-      alt-svc:
-      - h3=":443"; ma=86400
       openai-organization:
       - crewai-iuxna1
       openai-processing-ms:
-      - '461'
+      - '252'
       openai-version:
       - '2020-10-01'
       strict-transport-security:
@@ -99,7 +97,7 @@ interactions:
       x-ratelimit-reset-tokens:
       - 0s
       x-request-id:
-      - req_2f5fe8814fb582daec3583a6c11954c8
+      - req_631576dd331554985369fcb072419b1e
     http_version: HTTP/1.1
     status_code: 200
 - request:
@@ -113,7 +111,7 @@ interactions:
       the actual complete content as the final answer, not a summary.\n\nBegin! This
       is VERY important to you, use the tools available and give your best Final Answer,
       your job depends on it!\n\nThought:"}, {"role": "user", "content": "Feedback:
-      Don''t say hi, say Hello instead!"}], "model": "gpt-4o", "stop": ["\nObservation:"]}'
+      Don''t say hi, say Hello instead!"}], "model": "gpt-4o"}'
     headers:
       accept:
       - application/json
@@ -122,16 +120,16 @@ interactions:
       connection:
       - keep-alive
       content-length:
-      - '877'
+      - '849'
       content-type:
       - application/json
       cookie:
-      - __cf_bm=.8.5x0rqghNdtUCxfmwblfhuXiKyPm_cRq.NIa0heL0-1726642369-1.0.1.1-VbsAGqjOt45ZD50K2QW2oZrByLLIh6w8K4nAkLthTbXgU5qTgdf0mhvFId8Q2F3DcHUw9E72lVIZEN.YVlYINQ;
-        _cfuvid=o5s1Ux898x0eFNtzUCnG996iqyX3LgXDXq99C5oqnVE-1726642369248-0.0.1.1-604800000
+      - __cf_bm=MSMbC3L9m33fbO5Mdj70NJMu6kJCjhuwRcYuWJdJkYQ-1727071769-1.0.1.1-Dok5J431gUNvLRyLNrUo0A.FXXIuZUUooIMFSj74XUDgQJt0mlhf6QEEo6s9wXLhByXrdKr6cxYGBEkQoDslXg;
+        _cfuvid=5cK2hfLqTXw1WjB81uT.sGmmA67JIxSKSQeEHQ3zOQw-1727071769966-0.0.1.1-604800000
       host:
       - api.openai.com
       user-agent:
-      - OpenAI/Python 1.46.0
+      - OpenAI/Python 1.47.0
       x-stainless-arch:
       - arm64
       x-stainless-async:
@@ -141,7 +139,7 @@ interactions:
       x-stainless-os:
       - MacOS
       x-stainless-package-version:
-      - 1.46.0
+      - 1.47.0
       x-stainless-raw-response:
       - 'true'
       x-stainless-runtime:
@@ -151,19 +149,19 @@ interactions:
     method: POST
     uri: https://api.openai.com/v1/chat/completions
   response:
-    content: "{\n  \"id\": \"chatcmpl-A8it0bHMQFGmRaHDdBQFZUaI8528N\",\n  \"object\":
-      \"chat.completion\",\n  \"created\": 1726642530,\n  \"model\": \"gpt-4o-2024-05-13\",\n
+    content: "{\n  \"id\": \"chatcmpl-AAWipafXhM3wWia1nmEBa2mmuJAjn\",\n  \"object\":
+      \"chat.completion\",\n  \"created\": 1727072427,\n  \"model\": \"gpt-4o-2024-05-13\",\n
       \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
       \"assistant\",\n        \"content\": \"Thought: I now can give a great answer\\nFinal
       Answer: Hello\",\n        \"refusal\": null\n      },\n      \"logprobs\": null,\n
       \     \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\":
       172,\n    \"completion_tokens\": 14,\n    \"total_tokens\": 186,\n    \"completion_tokens_details\":
-      {\n      \"reasoning_tokens\": 0\n    }\n  },\n  \"system_fingerprint\": \"fp_a5d11b2ef2\"\n}\n"
+      {\n      \"reasoning_tokens\": 0\n    }\n  },\n  \"system_fingerprint\": \"fp_e375328146\"\n}\n"
     headers:
       CF-Cache-Status:
       - DYNAMIC
       CF-RAY:
-      - 8c4f6e475f7aa67a-MIA
+      - 8c786dd09eb2a540-MIA
       Connection:
       - keep-alive
       Content-Encoding:
@@ -171,7 +169,7 @@ interactions:
       Content-Type:
       - application/json
       Date:
-      - Wed, 18 Sep 2024 06:55:30 GMT
+      - Mon, 23 Sep 2024 06:20:27 GMT
       Server:
       - cloudflare
       Transfer-Encoding:
@@ -180,12 +178,10 @@ interactions:
       - nosniff
       access-control-expose-headers:
       - X-Request-ID
-      alt-svc:
-      - h3=":443"; ma=86400
       openai-organization:
       - crewai-iuxna1
       openai-processing-ms:
-      - '254'
+      - '260'
       openai-version:
       - '2020-10-01'
       strict-transport-security:
@@ -203,7 +199,7 @@ interactions:
       x-ratelimit-reset-tokens:
       - 0s
       x-request-id:
-      - req_a46f84bef803aed7a26d67aef3deaea7
+      - req_8bbbefdb7bac0ca88b61c64598a61da5
     http_version: HTTP/1.1
     status_code: 200
 version: 1

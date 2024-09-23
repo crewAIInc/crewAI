@@ -15,7 +15,8 @@ interactions:
       content-type:
       - application/json
       cookie:
-      - _cfuvid=FFmP82tY.BP0BFYwK4ix5zIa5fG5Ye7tnJ1DN70SSx4-1727048166266-0.0.1.1-604800000
+      - __cf_bm=MSMbC3L9m33fbO5Mdj70NJMu6kJCjhuwRcYuWJdJkYQ-1727071769-1.0.1.1-Dok5J431gUNvLRyLNrUo0A.FXXIuZUUooIMFSj74XUDgQJt0mlhf6QEEo6s9wXLhByXrdKr6cxYGBEkQoDslXg;
+        _cfuvid=5cK2hfLqTXw1WjB81uT.sGmmA67JIxSKSQeEHQ3zOQw-1727071769966-0.0.1.1-604800000
       host:
       - api.openai.com
       user-agent:
@@ -39,8 +40,8 @@ interactions:
     method: POST
     uri: https://api.openai.com/v1/chat/completions
   response:
-    content: "{\n  \"id\": \"chatcmpl-AARioD9fe66arqP951Q6m1N5BgDqV\",\n  \"object\":
-      \"chat.completion\",\n  \"created\": 1727053206,\n  \"model\": \"gpt-3.5-turbo-0125\",\n
+    content: "{\n  \"id\": \"chatcmpl-AAWisKFPcCD0U2wk3pMUOtpragxTW\",\n  \"object\":
+      \"chat.completion\",\n  \"created\": 1727072430,\n  \"model\": \"gpt-3.5-turbo-0125\",\n
       \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
       \"assistant\",\n        \"content\": \"Hello, World!\\n\",\n        \"refusal\":
       null\n      },\n      \"logprobs\": null,\n      \"finish_reason\": \"stop\"\n
@@ -51,7 +52,7 @@ interactions:
       CF-Cache-Status:
       - DYNAMIC
       CF-RAY:
-      - 8c76988ceede8759-MIA
+      - 8c786de3a96ba540-MIA
       Connection:
       - keep-alive
       Content-Encoding:
@@ -59,15 +60,9 @@ interactions:
       Content-Type:
       - application/json
       Date:
-      - Mon, 23 Sep 2024 01:00:06 GMT
+      - Mon, 23 Sep 2024 06:20:30 GMT
       Server:
       - cloudflare
-      Set-Cookie:
-      - __cf_bm=XKEjZqa9jLHDkJm09f6GoOFObGBsS.2iO2iQsVxfDtg-1727053206-1.0.1.1-AhT2h4tFAfFhcbWhI7x8he9L6T0eCndS2.n6pMSK3iFkx0qYlA5Y.iniDaQVaO1ukiEEoEJGaV2tL967WYm1uA;
-        path=/; expires=Mon, 23-Sep-24 01:30:06 GMT; domain=.api.openai.com; HttpOnly;
-        Secure; SameSite=None
-      - _cfuvid=ntPBCCgVUz_nq5Umsn4Dh2nras_FFFm.Om6wrSeiU00-1727053206899-0.0.1.1-604800000;
-        path=/; domain=.api.openai.com; HttpOnly; Secure; SameSite=None
       Transfer-Encoding:
       - chunked
       X-Content-Type-Options:
@@ -77,7 +72,7 @@ interactions:
       openai-organization:
       - crewai-iuxna1
       openai-processing-ms:
-      - '110'
+      - '103'
       openai-version:
       - '2020-10-01'
       strict-transport-security:
@@ -95,7 +90,7 @@ interactions:
       x-ratelimit-reset-tokens:
       - 0s
       x-request-id:
-      - req_e2bb166ffe6d65c17da2b1d3afaef830
+      - req_b88eff940c1267eb38ac3a3f49dad28a
     http_version: HTTP/1.1
     status_code: 200
 version: 1

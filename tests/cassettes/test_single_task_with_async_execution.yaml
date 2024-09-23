@@ -1,63 +1,5 @@
 interactions:
 - request:
-    body: !!binary |
-      CoMMCiQKIgoMc2VydmljZS5uYW1lEhIKEGNyZXdBSS10ZWxlbWV0cnkS2gsKEgoQY3Jld2FpLnRl
-      bGVtZXRyeRKQAgoQF1mA7YSdqh+Nlt/1jc1G+hIIx7jN4YqNxNMqDlRhc2sgRXhlY3V0aW9uMAE5
-      KL3OX2xE9hdBcJJXA25E9hdKLgoIY3Jld19rZXkSIgogM2Y4ZDVjM2FiODgyZDY4NjlkOTNjYjgx
-      ZjBlMmVkNGFKMQoHY3Jld19pZBImCiQxMTYwMjljMC03ZTA3LTQ4ZjUtYTEyMS02NDY4ZGY1NThj
-      MDJKLgoIdGFza19rZXkSIgogOTRhODI2YzE5MzA1NTk2ODZiYWZiNDA5ZWU4Mzg3NmZKMQoHdGFz
-      a19pZBImCiQ1MGYxODNmOC0yYTRhLTRhMzUtYTE3ZS01ZWE5Yjc5NjY3NmV6AhgBhQEAAQAAEp8H
-      ChBZ3gdNigucV9EAc3sL7kLyEggMga3Z+WvRcyoMQ3JldyBDcmVhdGVkMAE52GubBW5E9hdBeFeh
-      BW5E9hdKGgoOY3Jld2FpX3ZlcnNpb24SCAoGMC42MC40ShoKDnB5dGhvbl92ZXJzaW9uEggKBjMu
-      MTEuN0ouCghjcmV3X2tleRIiCiBhOWNjNWQ0MzM5NWIyMWIxODFjODBiZDQzNTFjY2VjOEoxCgdj
-      cmV3X2lkEiYKJGI4MWY3ODdjLWM5ZjYtNDJjZS1hNGU0LTBiZTM4ZmViZmU5OUocCgxjcmV3X3By
-      b2Nlc3MSDAoKc2VxdWVudGlhbEoRCgtjcmV3X21lbW9yeRICEABKGgoUY3Jld19udW1iZXJfb2Zf
-      dGFza3MSAhgBShsKFWNyZXdfbnVtYmVyX29mX2FnZW50cxICGAFKzgIKC2NyZXdfYWdlbnRzEr4C
-      CrsCW3sia2V5IjogIjhiZDIxMzliNTk3NTE4MTUwNmU0MWZkOWM0NTYzZDc1IiwgImlkIjogImVl
-      ZTc5OWM5LTcwOWUtNDdhNi05OTQ3LWFjYWYzNTYxZTBjMSIsICJyb2xlIjogIlJlc2VhcmNoZXIi
-      LCAidmVyYm9zZT8iOiBmYWxzZSwgIm1heF9pdGVyIjogMTUsICJtYXhfcnBtIjogbnVsbCwgImZ1
-      bmN0aW9uX2NhbGxpbmdfbGxtIjogbnVsbCwgImxsbSI6ICJncHQtNG8iLCAiZGVsZWdhdGlvbl9l
-      bmFibGVkPyI6IGZhbHNlLCAiYWxsb3dfY29kZV9leGVjdXRpb24/IjogZmFsc2UsICJtYXhfcmV0
-      cnlfbGltaXQiOiAyLCAidG9vbHNfbmFtZXMiOiBbXX1dSv4BCgpjcmV3X3Rhc2tzEu8BCuwBW3si
-      a2V5IjogImU5ZTZiNzJhYWMzMjY0NTlkZDcwNjhmMGIxNzE3YzFjIiwgImlkIjogIjRiZTQxZDMy
-      LTk4YzctNGFjYS05MzQxLWUzZWU3ZWFhODA5YSIsICJhc3luY19leGVjdXRpb24/IjogdHJ1ZSwg
-      Imh1bWFuX2lucHV0PyI6IGZhbHNlLCAiYWdlbnRfcm9sZSI6ICJSZXNlYXJjaGVyIiwgImFnZW50
-      X2tleSI6ICI4YmQyMTM5YjU5NzUxODE1MDZlNDFmZDljNDU2M2Q3NSIsICJ0b29sc19uYW1lcyI6
-      IFtdfV16AhgBhQEAAQAAEo4CChCKvz4jL0P7onLWpLiUNE3aEgjJ12kLbT/1VSoMVGFzayBDcmVh
-      dGVkMAE5QMTBBW5E9hdB4M3CBW5E9hdKLgoIY3Jld19rZXkSIgogYTljYzVkNDMzOTViMjFiMTgx
-      YzgwYmQ0MzUxY2NlYzhKMQoHY3Jld19pZBImCiRiODFmNzg3Yy1jOWY2LTQyY2UtYTRlNC0wYmUz
-      OGZlYmZlOTlKLgoIdGFza19rZXkSIgogZTllNmI3MmFhYzMyNjQ1OWRkNzA2OGYwYjE3MTdjMWNK
-      MQoHdGFza19pZBImCiQ0YmU0MWQzMi05OGM3LTRhY2EtOTM0MS1lM2VlN2VhYTgwOWF6AhgBhQEA
-      AQAA
-    headers:
-      Accept:
-      - '*/*'
-      Accept-Encoding:
-      - gzip, deflate
-      Connection:
-      - keep-alive
-      Content-Length:
-      - '1542'
-      Content-Type:
-      - application/x-protobuf
-      User-Agent:
-      - OTel-OTLP-Exporter-Python/1.27.0
-    method: POST
-    uri: https://telemetry.crewai.com:4319/v1/traces
-  response:
-    body:
-      string: "\n\0"
-    headers:
-      Content-Length:
-      - '2'
-      Content-Type:
-      - application/x-protobuf
-      Date:
-      - Wed, 18 Sep 2024 06:59:07 GMT
-    status:
-      code: 200
-      message: OK
-- request:
     body: '{"messages": [{"role": "system", "content": "You are Researcher. You''re
       an expert researcher, specialized in technology, software engineering, AI and
       startups. You work as a freelancer and is now working on doing research and
@@ -72,7 +14,7 @@ interactions:
       point list of 5 important events. No additional commentary.\nyou MUST return
       the actual complete content as the final answer, not a summary.\n\nBegin! This
       is VERY important to you, use the tools available and give your best Final Answer,
-      your job depends on it!\n\nThought:"}], "model": "gpt-4o", "stop": ["\nObservation:"]}'
+      your job depends on it!\n\nThought:"}], "model": "gpt-4o"}'
     headers:
       accept:
       - application/json
@@ -81,16 +23,16 @@ interactions:
       connection:
       - keep-alive
       content-length:
-      - '1183'
+      - '1155'
       content-type:
       - application/json
       cookie:
-      - __cf_bm=.8.5x0rqghNdtUCxfmwblfhuXiKyPm_cRq.NIa0heL0-1726642369-1.0.1.1-VbsAGqjOt45ZD50K2QW2oZrByLLIh6w8K4nAkLthTbXgU5qTgdf0mhvFId8Q2F3DcHUw9E72lVIZEN.YVlYINQ;
-        _cfuvid=o5s1Ux898x0eFNtzUCnG996iqyX3LgXDXq99C5oqnVE-1726642369248-0.0.1.1-604800000
+      - __cf_bm=hYfEMfBWpIoRPjx9ZBZg6DVeMOMr1IZt9ioup8yWZs0-1727072673-1.0.1.1-Ro7GCLuWS0K5ob0mSTYSmovONKNyxsK6oSA5io_Vwqhe6P0G7Ow4CuZUaWAaCdFGQUd7XZiFH0mI_sQC3uqe0g;
+        _cfuvid=5cK2hfLqTXw1WjB81uT.sGmmA67JIxSKSQeEHQ3zOQw-1727071769966-0.0.1.1-604800000
       host:
       - api.openai.com
       user-agent:
-      - OpenAI/Python 1.46.0
+      - OpenAI/Python 1.47.0
       x-stainless-arch:
       - arm64
       x-stainless-async:
@@ -100,7 +42,7 @@ interactions:
       x-stainless-os:
       - MacOS
       x-stainless-package-version:
-      - 1.46.0
+      - 1.47.0
       x-stainless-raw-response:
       - 'true'
       x-stainless-runtime:
@@ -110,22 +52,23 @@ interactions:
     method: POST
     uri: https://api.openai.com/v1/chat/completions
   response:
-    content: "{\n  \"id\": \"chatcmpl-A8iwVZJRc8V2J9cfDxTwy9vPPG6PF\",\n  \"object\":
-      \"chat.completion\",\n  \"created\": 1726642747,\n  \"model\": \"gpt-4o-2024-05-13\",\n
+    content: "{\n  \"id\": \"chatcmpl-AAWos4PhVEa12n461vMapMdtaRocw\",\n  \"object\":
+      \"chat.completion\",\n  \"created\": 1727072802,\n  \"model\": \"gpt-4o-2024-05-13\",\n
       \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
-      \"assistant\",\n        \"content\": \"Thought: I now can give a great answer\\nFinal
-      Answer: \\n\\n- AI in climate change: strategies and solutions.\\n- AI agents
-      revolutionizing customer service.\\n- Ethical considerations in AI development
-      and deployment.\\n- AI's impact on healthcare and diagnostics.\\n- Autonomous
-      AI agents in smart homes.\",\n        \"refusal\": null\n      },\n      \"logprobs\":
-      null,\n      \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\":
-      226,\n    \"completion_tokens\": 58,\n    \"total_tokens\": 284,\n    \"completion_tokens_details\":
-      {\n      \"reasoning_tokens\": 0\n    }\n  },\n  \"system_fingerprint\": \"fp_a5d11b2ef2\"\n}\n"
+      \"assistant\",\n        \"content\": \"I now can give a great answer\\nFinal
+      Answer: \\n\\n- The rise of AI in healthcare diagnostics.\\n- AI agents improving
+      customer service efficiency.\\n- Autonomous vehicles and their impact on urban
+      planning.\\n- Ethical considerations in AI and machine learning.\\n- AI's role
+      in personalized education and learning.\",\n        \"refusal\": null\n      },\n
+      \     \"logprobs\": null,\n      \"finish_reason\": \"stop\"\n    }\n  ],\n
+      \ \"usage\": {\n    \"prompt_tokens\": 226,\n    \"completion_tokens\": 58,\n
+      \   \"total_tokens\": 284,\n    \"completion_tokens_details\": {\n      \"reasoning_tokens\":
+      0\n    }\n  },\n  \"system_fingerprint\": \"fp_e375328146\"\n}\n"
     headers:
       CF-Cache-Status:
       - DYNAMIC
       CF-RAY:
-      - 8c4f738f7e4da67a-MIA
+      - 8c7876f50a21a4ee-MIA
       Connection:
       - keep-alive
       Content-Encoding:
@@ -133,7 +76,7 @@ interactions:
       Content-Type:
       - application/json
       Date:
-      - Wed, 18 Sep 2024 06:59:09 GMT
+      - Mon, 23 Sep 2024 06:26:43 GMT
       Server:
       - cloudflare
       Transfer-Encoding:
@@ -142,12 +85,10 @@ interactions:
       - nosniff
       access-control-expose-headers:
       - X-Request-ID
-      alt-svc:
-      - h3=":443"; ma=86400
       openai-organization:
       - crewai-iuxna1
       openai-processing-ms:
-      - '1860'
+      - '1053'
       openai-version:
       - '2020-10-01'
       strict-transport-security:
@@ -165,7 +106,7 @@ interactions:
       x-ratelimit-reset-tokens:
       - 0s
       x-request-id:
-      - req_f2dc09cd9a5104fcdaec3b3959f941db
+      - req_71180b3feca76c173a8646291041efd6
     http_version: HTTP/1.1
     status_code: 200
 version: 1
