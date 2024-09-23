@@ -73,7 +73,6 @@ class ToolUsage:
         # Set the maximum parsing attempts for bigger models
         if (
             self.function_calling_llm
-            and self._is_gpt(self.function_calling_llm)
             and self.function_calling_llm in OPENAI_BIGGER_MODELS
         ):
             self._max_parsing_attempts = 2
@@ -299,13 +298,6 @@ class ToolUsage:
             )
         return "\n--\n".join(descriptions)
 
-    def _is_gpt(self, llm) -> bool:
-        return (
-            "gpt" in str(llm.model).lower()
-            or "o1-preview" in str(llm.model).lower()
-            or "o1-mini" in str(llm.model).lower()
-        )
-
     def _tool_calling(
         self, tool_string: str
     ) -> Union[ToolCalling, InstructorToolCalling]:
@@ -314,12 +306,8 @@ class ToolUsage:
                 print("self.function_calling_llm")
                 model = (
                     InstructorToolCalling
-                    if self._is_gpt(self.function_calling_llm)
+                    if self.function_calling_llm.supports_function_calling()
                     else ToolCalling
-                )
-                print("model", model)
-                print(
-                    "self.function_calling_llm.model", self.function_calling_llm.model
                 )
                 converter = Converter(
                     text=f"Only tools available:\n###\n{self._render()}\n\nReturn a valid schema for the tool, the tool name must be exactly equal one of the options, use this text to inform the valid output schema:\n\n### TEXT \n{tool_string}",
