@@ -33,7 +33,7 @@ class ContextualMemory:
         context.append(self._fetch_stm_context(query))
         context.append(self._fetch_entity_context(query))
         if self.memory_provider == "mem0":
-            context.append(self._fetch_user_memory(query))
+            context.append(self._fetch_user_memories(query))
         return "\n".join(filter(None, context))
 
     def _fetch_stm_context(self, query) -> str:
