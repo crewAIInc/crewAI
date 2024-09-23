@@ -447,11 +447,113 @@ Third method running
 
 ## Adding Crews to Flows
 
-- The easiest way to create flows with Crews is to use the `crewai create flow <name_of_flow>` command. This will create a new CrewAI project for you that includes a folders for your Crews.
+Creating a flow with multiple crews in CrewAI is straightforward. You can generate a new CrewAI project that includes all the scaffolding needed to create a flow with multiple crews by running the following command:
 
+```bash
+crewai create flow name_of_flow
 ```
 
+This command will generate a new CrewAI project with the necessary folder structure. The generated project includes a prebuilt crew called `poem_crew` that is already working. You can use this crew as a template by copying, pasting, and editing it to create other crews.
+
+### Folder Structure
+
+After running the `crewai create flow name_of_flow` command, you will see a folder structure similar to the following:
+
 ```
+name_of_flow/
+├── crews/
+│   └── poem_crew/
+│       ├── config/
+│       │   ├── agents.yaml
+│       │   └── tasks.yaml
+│       ├── poem_crew.py
+├── tools/
+│   └── custom_tool.py
+├── main.py
+├── README.md
+├── pyproject.toml
+└── .gitignore
+```
+
+### Building Your Crews
+
+In the `crews` folder, you can define multiple crews. Each crew will have its own folder containing configuration files and the crew definition file. For example, the `poem_crew` folder contains:
+
+- `config/agents.yaml`: Defines the agents for the crew.
+- `config/tasks.yaml`: Defines the tasks for the crew.
+- `poem_crew.py`: Contains the crew definition, including agents, tasks, and the crew itself.
+
+You can copy, paste, and edit the `poem_crew` to create other crews.
+
+### Connecting Crews in `main.py`
+
+The `main.py` file is where you create your flow and connect the crews together. You can define your flow by using the `Flow` class and the decorators `@start` and `@listen` to specify the flow of execution.
+
+Here's an example of how you can connect the `poem_crew` in the `main.py` file:
+
+```python:src/crewai/cli/templates/flow/main.py
+startLine: 1
+endLine: 54
+```
+
+In this example, the `PoemFlow` class defines a flow that generates a sentence count, uses the `PoemCrew` to generate a poem, and then saves the poem to a file. The flow is kicked off by calling the `kickoff()` method.
+
+### Customizing Your Flow
+
+You can customize your flow by adding more crews and defining additional methods in the `main.py` file. Use the `@start` decorator to mark the starting methods of your flow and the `@listen` decorator to define methods that should be triggered by the output of other methods.
+
+For example, you can add another crew and connect it to the existing flow:
+
+```python
+import asyncio
+from random import randint
+from pydantic import BaseModel
+from crewai.flow.flow import Flow, listen, start
+from .crews.poem_crew.poem_crew import PoemCrew
+from .crews.another_crew.another_crew import AnotherCrew
+
+class ExampleState(BaseModel):
+    sentence_count: int = 1
+    poem: str = ""
+    analysis: str = ""
+
+class ExampleFlow(Flow[ExampleState]):
+
+    @start()
+    def generate_sentence_count(self):
+        print("Generating sentence count")
+        self.state.sentence_count = randint(1, 5)
+
+    @listen(generate_sentence_count)
+    def generate_poem(self):
+        print("Generating poem")
+        poem_crew = PoemCrew().crew()
+        result = poem_crew.kickoff(inputs={"sentence_count": self.state.sentence_count})
+        self.state.poem = result.raw
+
+    @listen(generate_poem)
+    def analyze_poem(self):
+        print("Analyzing poem")
+        analysis_crew = AnotherCrew().crew()
+        result = analysis_crew.kickoff(inputs={"poem": self.state.poem})
+        self.state.analysis = result.raw
+
+    @listen(analyze_poem)
+    def save_results(self):
+        print("Saving results")
+        with open("results.txt", "w") as f:
+            f.write(f"Poem: {self.state.poem}\nAnalysis: {self.state.analysis}")
+
+async def main():
+    flow = ExampleFlow()
+    await flow.kickoff()
+
+asyncio.run(main())
+```
+
+In this example, the `ExampleFlow` class defines a flow that generates a sentence count, uses the `PoemCrew` to generate a poem, uses another crew (`AnotherCrew`) to analyze the poem, and then saves the results to a file.
+
+By following this structure, you can easily build complex flows that connect multiple crews and manage the flow of execution in your AI applications.
 
 ## Next Steps
 
