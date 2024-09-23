@@ -816,7 +816,7 @@ def test_agent_step_callback():
 
 @pytest.mark.vcr(filter_headers=["authorization"])
 def test_agent_function_calling_llm():
-    llm = "gpt-4"
+    llm = "gpt-4o"
 
     @tool
     def learn_about_AI() -> str:
