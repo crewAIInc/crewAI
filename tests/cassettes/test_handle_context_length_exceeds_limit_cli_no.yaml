@@ -23,8 +23,8 @@ interactions:
       content-type:
       - application/json
       cookie:
-      - __cf_bm=MSMbC3L9m33fbO5Mdj70NJMu6kJCjhuwRcYuWJdJkYQ-1727071769-1.0.1.1-Dok5J431gUNvLRyLNrUo0A.FXXIuZUUooIMFSj74XUDgQJt0mlhf6QEEo6s9wXLhByXrdKr6cxYGBEkQoDslXg;
-        _cfuvid=5cK2hfLqTXw1WjB81uT.sGmmA67JIxSKSQeEHQ3zOQw-1727071769966-0.0.1.1-604800000
+      - __cf_bm=4rzJDR3F8S3Dp4B_qwylZU0mdm_WUwmv8vNHHp3IplM-1727119501-1.0.1.1-qobO_Sf88yG1qtXFnLgykvyc9YXR_fm1J7ZpXIhvtynVnsz67Uwcf4122PgHs4GMrlvZMaL6z_UVcVYSYUJOKQ;
+        _cfuvid=9K_ipT1uTVyDTneB1W5OZHPxCh36aOsDZCBnsQTONqQ-1727119501207-0.0.1.1-604800000
       host:
       - api.openai.com
       user-agent:
@@ -48,8 +48,8 @@ interactions:
     method: POST
     uri: https://api.openai.com/v1/chat/completions
   response:
-    content: "{\n  \"id\": \"chatcmpl-AAWireZhP7od1XZE5kSVyUR5dQ8Lw\",\n  \"object\":
-      \"chat.completion\",\n  \"created\": 1727072429,\n  \"model\": \"gpt-4o-2024-05-13\",\n
+    content: "{\n  \"id\": \"chatcmpl-AAj4qBVvfGImXCcKJ1Kb3y2erzKoU\",\n  \"object\":
+      \"chat.completion\",\n  \"created\": 1727119920,\n  \"model\": \"gpt-4o-2024-05-13\",\n
       \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
       \"assistant\",\n        \"content\": \"Thought: I now can give a great answer\\nFinal
       Answer: The final answer is 42.\",\n        \"refusal\": null\n      },\n      \"logprobs\":
@@ -60,7 +60,7 @@ interactions:
       CF-Cache-Status:
       - DYNAMIC
       CF-RAY:
-      - 8c786ddc8d77a540-MIA
+      - 8c7cf54af93f228a-MIA
       Connection:
       - keep-alive
       Content-Encoding:
@@ -68,7 +68,7 @@ interactions:
       Content-Type:
       - application/json
       Date:
-      - Mon, 23 Sep 2024 06:20:30 GMT
+      - Mon, 23 Sep 2024 19:32:00 GMT
       Server:
       - cloudflare
       Transfer-Encoding:
@@ -77,10 +77,12 @@ interactions:
       - nosniff
       access-control-expose-headers:
       - X-Request-ID
+      alt-svc:
+      - h3=":443"; ma=86400
       openai-organization:
       - crewai-iuxna1
       openai-processing-ms:
-      - '328'
+      - '320'
       openai-version:
       - '2020-10-01'
       strict-transport-security:
@@ -98,7 +100,7 @@ interactions:
       x-ratelimit-reset-tokens:
       - 0s
       x-request-id:
-      - req_1d96d62632c980b48cb36424d958d821
+      - req_496df3f16b55f8f5b71d1beaa9a7de00
     http_version: HTTP/1.1
     status_code: 200
 version: 1

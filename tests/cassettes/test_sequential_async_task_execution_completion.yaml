@@ -1,100 +1,74 @@
 interactions:
 - request:
     body: !!binary |
-      CsQpCiQKIgoMc2VydmljZS5uYW1lEhIKEGNyZXdBSS10ZWxlbWV0cnkSmykKEgoQY3Jld2FpLnRl
-      bGVtZXRyeRKQAgoQNi1tG0q8+NvnEbLrKkZFUxIINcb6V0krGS8qDlRhc2sgRXhlY3V0aW9uMAE5
-      aHUtDIvL9xdB4J76OIvL9xdKLgoIY3Jld19rZXkSIgogZDBmZWU2OTMyMzk1ODg2ZjIwM2Y0NDZi
-      NzJjMWIwMGFKMQoHY3Jld19pZBImCiQxMDAxMWZlZi04MzkyLTRmNTAtOTE0NC0yZjI3MDY5Mzg2
-      ZDVKLgoIdGFza19rZXkSIgogMDZhNzMyMjBmNDE0OGE0YmJkNWJhY2IwZDBiNDRmY2VKMQoHdGFz
-      a19pZBImCiQyMTc1NmI4Yi1mMDYxLTQxN2YtYmNmZC05ZjQxM2NjMzY4YWR6AhgBhQEAAQAAEq4H
-      ChBM8nS/X9gr9M/lKnH9HIxqEggehwX5wjq+xCoMQ3JldyBDcmVhdGVkMAE54KG1OYvL9xdBaA68
-      OYvL9xdKGgoOY3Jld2FpX3ZlcnNpb24SCAoGMC42MS4wShoKDnB5dGhvbl92ZXJzaW9uEggKBjMu
+      Cu8dCiQKIgoMc2VydmljZS5uYW1lEhIKEGNyZXdBSS10ZWxlbWV0cnkSxh0KEgoQY3Jld2FpLnRl
+      bGVtZXRyeRKQAgoQDAcqRSgmlvK3hQWCVUPthhIIPiCF1oDMWoIqDlRhc2sgRXhlY3V0aW9uMAE5
+      kDWa7MX29xdBwNofFMb29xdKLgoIY3Jld19rZXkSIgogMzkyNTdhYjk3NDA5YjVmNWY0MTk2NzNi
+      YjQxZDBkYzhKMQoHY3Jld19pZBImCiRiMGY5OTgzNi04MTMxLTRkYzktOTg3Ny02ZDBkMWYzYmMx
+      MjRKLgoIdGFza19rZXkSIgogMDZhNzMyMjBmNDE0OGE0YmJkNWJhY2IwZDBiNDRmY2VKMQoHdGFz
+      a19pZBImCiRhZDY1ZjBmMS02ZjUwLTRjMzYtOGI5Mi1hMmJiZjIzNWU3MDV6AhgBhQEAAQAAEq4H
+      ChB9G8nO9tsotroguLcKao7bEgiNa0DtsIETJioMQ3JldyBDcmVhdGVkMAE5WKqZFMb29xdBqE+f
+      FMb29xdKGgoOY3Jld2FpX3ZlcnNpb24SCAoGMC42MS4wShoKDnB5dGhvbl92ZXJzaW9uEggKBjMu
       MTEuN0ouCghjcmV3X2tleRIiCiBlZTY3NDVkN2M4YWU4MmUwMGRmOTRkZTBmN2Y4NzExOEoxCgdj
-      cmV3X2lkEiYKJDUwMTY2M2Y5LTQ1NWEtNDg4Mi05MjRkLTA1N2U0NGQ5MDkwMUocCgxjcmV3X3By
+      cmV3X2lkEiYKJGE4MTY0ZTgxLTM0ZjgtNDE2MC1hZTFiLTkyYTIyNjYxNDI5ZkocCgxjcmV3X3By
       b2Nlc3MSDAoKc2VxdWVudGlhbEoRCgtjcmV3X21lbW9yeRICEABKGgoUY3Jld19udW1iZXJfb2Zf
       dGFza3MSAhgBShsKFWNyZXdfbnVtYmVyX29mX2FnZW50cxICGAFK1AIKC2NyZXdfYWdlbnRzEsQC
-      CsECW3sia2V5IjogImYzMzg2ZjZkOGRhNzVhYTQxNmE2ZTMxMDA1M2Y3Njk4IiwgImlkIjogIjNm
-      YjU2N2MwLTcxMTMtNGE4OC1iMTc5LTJmZGM4OTdkNjAxYyIsICJyb2xlIjogInt0b3BpY30gUmVz
+      CsECW3sia2V5IjogImYzMzg2ZjZkOGRhNzVhYTQxNmE2ZTMxMDA1M2Y3Njk4IiwgImlkIjogImVk
+      NjNlZjJjLWVhYWEtNGVkMi04MWVhLWZkMDFkMzRmMzFlMSIsICJyb2xlIjogInt0b3BpY30gUmVz
       ZWFyY2hlciIsICJ2ZXJib3NlPyI6IGZhbHNlLCAibWF4X2l0ZXIiOiAxNSwgIm1heF9ycG0iOiBu
       dWxsLCAiZnVuY3Rpb25fY2FsbGluZ19sbG0iOiAiIiwgImxsbSI6ICJncHQtNG8iLCAiZGVsZWdh
       dGlvbl9lbmFibGVkPyI6IGZhbHNlLCAiYWxsb3dfY29kZV9leGVjdXRpb24/IjogZmFsc2UsICJt
       YXhfcmV0cnlfbGltaXQiOiAyLCAidG9vbHNfbmFtZXMiOiBbXX1dSocCCgpjcmV3X3Rhc2tzEvgB
-      CvUBW3sia2V5IjogIjA2YTczMjIwZjQxNDhhNGJiZDViYWNiMGQwYjQ0ZmNlIiwgImlkIjogImJi
-      YzRmN2I0LTBhNGQtNDRhYy05NDY2LTgyOGYyYjI0MWE5NyIsICJhc3luY19leGVjdXRpb24/Ijog
+      CvUBW3sia2V5IjogIjA2YTczMjIwZjQxNDhhNGJiZDViYWNiMGQwYjQ0ZmNlIiwgImlkIjogIjkw
+      MDg3MTE5LWRkZTctNGM5ZC1hNjI3LWQwMWM4ODM1MzdlZiIsICJhc3luY19leGVjdXRpb24/Ijog
       ZmFsc2UsICJodW1hbl9pbnB1dD8iOiBmYWxzZSwgImFnZW50X3JvbGUiOiAie3RvcGljfSBSZXNl
       YXJjaGVyIiwgImFnZW50X2tleSI6ICJmMzM4NmY2ZDhkYTc1YWE0MTZhNmUzMTAwNTNmNzY5OCIs
-      ICJ0b29sc19uYW1lcyI6IFtdfV16AhgBhQEAAQAAEo4CChB5YtIOsdwgKBkWmqgnM0o1EghKVqQo
-      DcA86ioMVGFzayBDcmVhdGVkMAE5MEvkOYvL9xdB6FDlOYvL9xdKLgoIY3Jld19rZXkSIgogMzky
-      NTdhYjk3NDA5YjVmNWY0MTk2NzNiYjQxZDBkYzhKMQoHY3Jld19pZBImCiQ1MDE2NjNmOS00NTVh
-      LTQ4ODItOTI0ZC0wNTdlNDRkOTA5MDFKLgoIdGFza19rZXkSIgogMDZhNzMyMjBmNDE0OGE0YmJk
-      NWJhY2IwZDBiNDRmY2VKMQoHdGFza19pZBImCiRiYmM0ZjdiNC0wYTRkLTQ0YWMtOTQ2Ni04Mjhm
-      MmIyNDFhOTd6AhgBhQEAAQAAEpACChCaIe6FSC8J9ExLEh/Ta6A8Egi2RCJnvHzaYyoOVGFzayBF
-      eGVjdXRpb24wATkwwuU5i8v3F0FY549qi8v3F0ouCghjcmV3X2tleRIiCiAzOTI1N2FiOTc0MDli
-      NWY1ZjQxOTY3M2JiNDFkMGRjOEoxCgdjcmV3X2lkEiYKJDUwMTY2M2Y5LTQ1NWEtNDg4Mi05MjRk
-      LTA1N2U0NGQ5MDkwMUouCgh0YXNrX2tleRIiCiAwNmE3MzIyMGY0MTQ4YTRiYmQ1YmFjYjBkMGI0
-      NGZjZUoxCgd0YXNrX2lkEiYKJGJiYzRmN2I0LTBhNGQtNDRhYy05NDY2LTgyOGYyYjI0MWE5N3oC
-      GAGFAQABAAASrgcKEHe8HXdn54tSkNgaslAfAT8SCK8qotnZNJdJKgxDcmV3IENyZWF0ZWQwATlQ
-      lQxri8v3F0GIwRFri8v3F0oaCg5jcmV3YWlfdmVyc2lvbhIICgYwLjYxLjBKGgoOcHl0aG9uX3Zl
-      cnNpb24SCAoGMy4xMS43Si4KCGNyZXdfa2V5EiIKIGVlNjc0NWQ3YzhhZTgyZTAwZGY5NGRlMGY3
-      Zjg3MTE4SjEKB2NyZXdfaWQSJgokOWU1MTdlYWYtYTU1Ni00ZTkzLWJjY2ItNDBiZjUwM2MzMTg5
+      ICJ0b29sc19uYW1lcyI6IFtdfV16AhgBhQEAAQAAEo4CChD55vqg3b4Fph5db7e5+Bj4EghvpUrG
+      enunZSoMVGFzayBDcmVhdGVkMAE5mNLWFMb29xdByMTXFMb29xdKLgoIY3Jld19rZXkSIgogZTg3
+      MzNhMDZhMzdiZTIxOWNjNGUyMmRkYjljMDNkODdKMQoHY3Jld19pZBImCiRhODE2NGU4MS0zNGY4
+      LTQxNjAtYWUxYi05MmEyMjY2MTQyOWZKLgoIdGFza19rZXkSIgogMDZhNzMyMjBmNDE0OGE0YmJk
+      NWJhY2IwZDBiNDRmY2VKMQoHdGFza19pZBImCiQ5MDA4NzExOS1kZGU3LTRjOWQtYTYyNy1kMDFj
+      ODgzNTM3ZWZ6AhgBhQEAAQAAEpACChC2IYKEjlYMBXITyAQwPXPhEgifuxX6kElDHyoOVGFzayBF
+      eGVjdXRpb24wATlQVdgUxvb3F0Eg6wtOxvb3F0ouCghjcmV3X2tleRIiCiBlODczM2EwNmEzN2Jl
+      MjE5Y2M0ZTIyZGRiOWMwM2Q4N0oxCgdjcmV3X2lkEiYKJGE4MTY0ZTgxLTM0ZjgtNDE2MC1hZTFi
+      LTkyYTIyNjYxNDI5ZkouCgh0YXNrX2tleRIiCiAwNmE3MzIyMGY0MTQ4YTRiYmQ1YmFjYjBkMGI0
+      NGZjZUoxCgd0YXNrX2lkEiYKJDkwMDg3MTE5LWRkZTctNGM5ZC1hNjI3LWQwMWM4ODM1MzdlZnoC
+      GAGFAQABAAAStg0KEMBPE+uVeZS3afiyiltYqdUSCIFP2GznJXSoKgxDcmV3IENyZWF0ZWQwATlA
+      WVRPxvb3F0HoJVhPxvb3F0oaCg5jcmV3YWlfdmVyc2lvbhIICgYwLjYxLjBKGgoOcHl0aG9uX3Zl
+      cnNpb24SCAoGMy4xMS43Si4KCGNyZXdfa2V5EiIKIDNmOGQ1YzNhYjg4MmQ2ODY5ZDkzY2I4MWYw
+      ZTJlZDRhSjEKB2NyZXdfaWQSJgokNGNkYTRkODgtMjI5NS00MjQwLWE2NGYtNmE1NjM1ZDQzMWI0
       ShwKDGNyZXdfcHJvY2VzcxIMCgpzZXF1ZW50aWFsShEKC2NyZXdfbWVtb3J5EgIQAEoaChRjcmV3
-      X251bWJlcl9vZl90YXNrcxICGAFKGwoVY3Jld19udW1iZXJfb2ZfYWdlbnRzEgIYAUrUAgoLY3Jl
-      d19hZ2VudHMSxAIKwQJbeyJrZXkiOiAiZjMzODZmNmQ4ZGE3NWFhNDE2YTZlMzEwMDUzZjc2OTgi
-      LCAiaWQiOiAiNDczMmZjMTUtZDQ2MS00NzExLTlmM2UtZmFjY2YzMTQ2ZGYwIiwgInJvbGUiOiAi
-      e3RvcGljfSBSZXNlYXJjaGVyIiwgInZlcmJvc2U/IjogZmFsc2UsICJtYXhfaXRlciI6IDE1LCAi
-      bWF4X3JwbSI6IG51bGwsICJmdW5jdGlvbl9jYWxsaW5nX2xsbSI6ICIiLCAibGxtIjogImdwdC00
-      byIsICJkZWxlZ2F0aW9uX2VuYWJsZWQ/IjogZmFsc2UsICJhbGxvd19jb2RlX2V4ZWN1dGlvbj8i
-      OiBmYWxzZSwgIm1heF9yZXRyeV9saW1pdCI6IDIsICJ0b29sc19uYW1lcyI6IFtdfV1KhwIKCmNy
-      ZXdfdGFza3MS+AEK9QFbeyJrZXkiOiAiMDZhNzMyMjBmNDE0OGE0YmJkNWJhY2IwZDBiNDRmY2Ui
-      LCAiaWQiOiAiMWIxOWU1ZGYtZDA1Yi00ZjM1LTljY2ItODRmMTM0ZmRmOTU0IiwgImFzeW5jX2V4
-      ZWN1dGlvbj8iOiBmYWxzZSwgImh1bWFuX2lucHV0PyI6IGZhbHNlLCAiYWdlbnRfcm9sZSI6ICJ7
-      dG9waWN9IFJlc2VhcmNoZXIiLCAiYWdlbnRfa2V5IjogImYzMzg2ZjZkOGRhNzVhYTQxNmE2ZTMx
-      MDA1M2Y3Njk4IiwgInRvb2xzX25hbWVzIjogW119XXoCGAGFAQABAAASjgIKEOeypU2jBNkQn1l/
-      N8V9rdUSCIUD7fPiSH1mKgxUYXNrIENyZWF0ZWQwATlo7jtri8v3F0Hw+zxri8v3F0ouCghjcmV3
-      X2tleRIiCiBlODczM2EwNmEzN2JlMjE5Y2M0ZTIyZGRiOWMwM2Q4N0oxCgdjcmV3X2lkEiYKJDll
-      NTE3ZWFmLWE1NTYtNGU5My1iY2NiLTQwYmY1MDNjMzE4OUouCgh0YXNrX2tleRIiCiAwNmE3MzIy
-      MGY0MTQ4YTRiYmQ1YmFjYjBkMGI0NGZjZUoxCgd0YXNrX2lkEiYKJDFiMTllNWRmLWQwNWItNGYz
-      NS05Y2NiLTg0ZjEzNGZkZjk1NHoCGAGFAQABAAASkAIKEGoE2YVWpuUcrvlw7LUnKfYSCIxeFiB4
-      ZayLKg5UYXNrIEV4ZWN1dGlvbjABOQh1PWuLy/cXQRhPpJeLy/cXSi4KCGNyZXdfa2V5EiIKIGU4
-      NzMzYTA2YTM3YmUyMTljYzRlMjJkZGI5YzAzZDg3SjEKB2NyZXdfaWQSJgokOWU1MTdlYWYtYTU1
-      Ni00ZTkzLWJjY2ItNDBiZjUwM2MzMTg5Si4KCHRhc2tfa2V5EiIKIDA2YTczMjIwZjQxNDhhNGJi
-      ZDViYWNiMGQwYjQ0ZmNlSjEKB3Rhc2tfaWQSJgokMWIxOWU1ZGYtZDA1Yi00ZjM1LTljY2ItODRm
-      MTM0ZmRmOTU0egIYAYUBAAEAABK2DQoQEeSAYwvCsgK/HBt764N6dRIIlpw1mYujHe0qDENyZXcg
-      Q3JlYXRlZDABOaBM9ZiLy/cXQVDo+ZiLy/cXShoKDmNyZXdhaV92ZXJzaW9uEggKBjAuNjEuMEoa
-      Cg5weXRob25fdmVyc2lvbhIICgYzLjExLjdKLgoIY3Jld19rZXkSIgogM2Y4ZDVjM2FiODgyZDY4
-      NjlkOTNjYjgxZjBlMmVkNGFKMQoHY3Jld19pZBImCiQ2OTI0YzI5Yy1mNGNkLTRkNDktYjUzYy02
-      YzhhMjFhOWUyZmVKHAoMY3Jld19wcm9jZXNzEgwKCnNlcXVlbnRpYWxKEQoLY3Jld19tZW1vcnkS
-      AhAAShoKFGNyZXdfbnVtYmVyX29mX3Rhc2tzEgIYA0obChVjcmV3X251bWJlcl9vZl9hZ2VudHMS
-      AhgCSogFCgtjcmV3X2FnZW50cxL4BAr1BFt7ImtleSI6ICI4YmQyMTM5YjU5NzUxODE1MDZlNDFm
-      ZDljNDU2M2Q3NSIsICJpZCI6ICJlYjBhZGY0Mi02YjA2LTRkMTItYTU4Zi00ODYwOTU0YjJiNDUi
-      LCAicm9sZSI6ICJSZXNlYXJjaGVyIiwgInZlcmJvc2U/IjogZmFsc2UsICJtYXhfaXRlciI6IDE1
-      LCAibWF4X3JwbSI6IG51bGwsICJmdW5jdGlvbl9jYWxsaW5nX2xsbSI6ICIiLCAibGxtIjogImdw
-      dC00byIsICJkZWxlZ2F0aW9uX2VuYWJsZWQ/IjogZmFsc2UsICJhbGxvd19jb2RlX2V4ZWN1dGlv
-      bj8iOiBmYWxzZSwgIm1heF9yZXRyeV9saW1pdCI6IDIsICJ0b29sc19uYW1lcyI6IFtdfSwgeyJr
-      ZXkiOiAiOWE1MDE1ZWY0ODk1ZGM2Mjc4ZDU0ODE4YmE0NDZhZjciLCAiaWQiOiAiNjc2NzdlY2Et
-      N2E5My00YWVlLWJhY2UtOTQyZmY5OWE0ZTkyIiwgInJvbGUiOiAiU2VuaW9yIFdyaXRlciIsICJ2
-      ZXJib3NlPyI6IGZhbHNlLCAibWF4X2l0ZXIiOiAxNSwgIm1heF9ycG0iOiBudWxsLCAiZnVuY3Rp
-      b25fY2FsbGluZ19sbG0iOiAiIiwgImxsbSI6ICJncHQtNG8iLCAiZGVsZWdhdGlvbl9lbmFibGVk
-      PyI6IGZhbHNlLCAiYWxsb3dfY29kZV9leGVjdXRpb24/IjogZmFsc2UsICJtYXhfcmV0cnlfbGlt
-      aXQiOiAyLCAidG9vbHNfbmFtZXMiOiBbXX1dStsFCgpjcmV3X3Rhc2tzEswFCskFW3sia2V5Ijog
-      IjY3ODQ5ZmY3MTdkYmFkYWJhMWI5NWQ1ZjJkZmNlZWExIiwgImlkIjogIjJhMjAyYmUxLWJjY2Qt
-      NDQ0MC1iMTE1LTczZTc2ZDRhZmNiZSIsICJhc3luY19leGVjdXRpb24/IjogdHJ1ZSwgImh1bWFu
-      X2lucHV0PyI6IGZhbHNlLCAiYWdlbnRfcm9sZSI6ICJSZXNlYXJjaGVyIiwgImFnZW50X2tleSI6
-      ICI4YmQyMTM5YjU5NzUxODE1MDZlNDFmZDljNDU2M2Q3NSIsICJ0b29sc19uYW1lcyI6IFtdfSwg
-      eyJrZXkiOiAiZmM1NmRlYTM4Yzk5NzRiNmY1NWEyZTI4YzE0OTk4ODYiLCAiaWQiOiAiMWY3ZTUw
-      ZjItZjM0NC00ODk5LTg3MDUtZDk2MzkxOTBiMzM2IiwgImFzeW5jX2V4ZWN1dGlvbj8iOiBmYWxz
-      ZSwgImh1bWFuX2lucHV0PyI6IGZhbHNlLCAiYWdlbnRfcm9sZSI6ICJSZXNlYXJjaGVyIiwgImFn
-      ZW50X2tleSI6ICI4YmQyMTM5YjU5NzUxODE1MDZlNDFmZDljNDU2M2Q3NSIsICJ0b29sc19uYW1l
-      cyI6IFtdfSwgeyJrZXkiOiAiOTRhODI2YzE5MzA1NTk2ODZiYWZiNDA5ZWU4Mzg3NmYiLCAiaWQi
-      OiAiNjA2ZDY2ZDktZjk0Ni00OTJiLWFhMDctNDhiYzc2MWE3ZjU5IiwgImFzeW5jX2V4ZWN1dGlv
-      bj8iOiBmYWxzZSwgImh1bWFuX2lucHV0PyI6IGZhbHNlLCAiYWdlbnRfcm9sZSI6ICJTZW5pb3Ig
-      V3JpdGVyIiwgImFnZW50X2tleSI6ICI5YTUwMTVlZjQ4OTVkYzYyNzhkNTQ4MThiYTQ0NmFmNyIs
-      ICJ0b29sc19uYW1lcyI6IFtdfV16AhgBhQEAAQAAEo4CChBGJN1b18xUFI9Y8HlmtXkFEghHJfCz
-      CQoSvSoMVGFzayBDcmVhdGVkMAE5sCQXmYvL9xdBoPcXmYvL9xdKLgoIY3Jld19rZXkSIgogM2Y4
-      ZDVjM2FiODgyZDY4NjlkOTNjYjgxZjBlMmVkNGFKMQoHY3Jld19pZBImCiQ2OTI0YzI5Yy1mNGNk
-      LTRkNDktYjUzYy02YzhhMjFhOWUyZmVKLgoIdGFza19rZXkSIgogNjc4NDlmZjcxN2RiYWRhYmEx
-      Yjk1ZDVmMmRmY2VlYTFKMQoHdGFza19pZBImCiQyYTIwMmJlMS1iY2NkLTQ0NDAtYjExNS03M2U3
-      NmQ0YWZjYmV6AhgBhQEAAQAA
+      X251bWJlcl9vZl90YXNrcxICGANKGwoVY3Jld19udW1iZXJfb2ZfYWdlbnRzEgIYAkqIBQoLY3Jl
+      d19hZ2VudHMS+AQK9QRbeyJrZXkiOiAiOGJkMjEzOWI1OTc1MTgxNTA2ZTQxZmQ5YzQ1NjNkNzUi
+      LCAiaWQiOiAiZDBlZTdjZTEtNTQzYy00MGQ2LTg2MDUtMmI0MzBjOTljZGU5IiwgInJvbGUiOiAi
+      UmVzZWFyY2hlciIsICJ2ZXJib3NlPyI6IGZhbHNlLCAibWF4X2l0ZXIiOiAxNSwgIm1heF9ycG0i
+      OiBudWxsLCAiZnVuY3Rpb25fY2FsbGluZ19sbG0iOiAiIiwgImxsbSI6ICJncHQtNG8iLCAiZGVs
+      ZWdhdGlvbl9lbmFibGVkPyI6IGZhbHNlLCAiYWxsb3dfY29kZV9leGVjdXRpb24/IjogZmFsc2Us
+      ICJtYXhfcmV0cnlfbGltaXQiOiAyLCAidG9vbHNfbmFtZXMiOiBbXX0sIHsia2V5IjogIjlhNTAx
+      NWVmNDg5NWRjNjI3OGQ1NDgxOGJhNDQ2YWY3IiwgImlkIjogIjFmY2U3YzM0LWM4NDgtNDc5MS04
+      YTU4LTU3OGEwMDBmYjRiNSIsICJyb2xlIjogIlNlbmlvciBXcml0ZXIiLCAidmVyYm9zZT8iOiBm
+      YWxzZSwgIm1heF9pdGVyIjogMTUsICJtYXhfcnBtIjogbnVsbCwgImZ1bmN0aW9uX2NhbGxpbmdf
+      bGxtIjogIiIsICJsbG0iOiAiZ3B0LTRvIiwgImRlbGVnYXRpb25fZW5hYmxlZD8iOiBmYWxzZSwg
+      ImFsbG93X2NvZGVfZXhlY3V0aW9uPyI6IGZhbHNlLCAibWF4X3JldHJ5X2xpbWl0IjogMiwgInRv
+      b2xzX25hbWVzIjogW119XUrbBQoKY3Jld190YXNrcxLMBQrJBVt7ImtleSI6ICI2Nzg0OWZmNzE3
+      ZGJhZGFiYTFiOTVkNWYyZGZjZWVhMSIsICJpZCI6ICIxN2JhMmUzNS0wYWZkLTQzNzgtOWUwMS1l
+      NDk4NGYwZWIwNGMiLCAiYXN5bmNfZXhlY3V0aW9uPyI6IHRydWUsICJodW1hbl9pbnB1dD8iOiBm
+      YWxzZSwgImFnZW50X3JvbGUiOiAiUmVzZWFyY2hlciIsICJhZ2VudF9rZXkiOiAiOGJkMjEzOWI1
+      OTc1MTgxNTA2ZTQxZmQ5YzQ1NjNkNzUiLCAidG9vbHNfbmFtZXMiOiBbXX0sIHsia2V5IjogImZj
+      NTZkZWEzOGM5OTc0YjZmNTVhMmUyOGMxNDk5ODg2IiwgImlkIjogIjFjNjZkMzEwLWViYTAtNGVj
+      ZS04M2VmLTA4NjlmZWI4ZTk0YiIsICJhc3luY19leGVjdXRpb24/IjogZmFsc2UsICJodW1hbl9p
+      bnB1dD8iOiBmYWxzZSwgImFnZW50X3JvbGUiOiAiUmVzZWFyY2hlciIsICJhZ2VudF9rZXkiOiAi
+      OGJkMjEzOWI1OTc1MTgxNTA2ZTQxZmQ5YzQ1NjNkNzUiLCAidG9vbHNfbmFtZXMiOiBbXX0sIHsi
+      a2V5IjogIjk0YTgyNmMxOTMwNTU5Njg2YmFmYjQwOWVlODM4NzZmIiwgImlkIjogIjBiMGY2MGQ2
+      LWY4NDktNGQyNi1hMmZjLWE2ZDIwNDBmODU3MyIsICJhc3luY19leGVjdXRpb24/IjogZmFsc2Us
+      ICJodW1hbl9pbnB1dD8iOiBmYWxzZSwgImFnZW50X3JvbGUiOiAiU2VuaW9yIFdyaXRlciIsICJh
+      Z2VudF9rZXkiOiAiOWE1MDE1ZWY0ODk1ZGM2Mjc4ZDU0ODE4YmE0NDZhZjciLCAidG9vbHNfbmFt
+      ZXMiOiBbXX1degIYAYUBAAEAABKOAgoQbjQRrOCT87RafWO2SEUamxIIhEm61JDjD8kqDFRhc2sg
+      Q3JlYXRlZDABOdhEdk/G9vcXQfgPd0/G9vcXSi4KCGNyZXdfa2V5EiIKIDNmOGQ1YzNhYjg4MmQ2
+      ODY5ZDkzY2I4MWYwZTJlZDRhSjEKB2NyZXdfaWQSJgokNGNkYTRkODgtMjI5NS00MjQwLWE2NGYt
+      NmE1NjM1ZDQzMWI0Si4KCHRhc2tfa2V5EiIKIDY3ODQ5ZmY3MTdkYmFkYWJhMWI5NWQ1ZjJkZmNl
+      ZWExSjEKB3Rhc2tfaWQSJgokMTdiYTJlMzUtMGFmZC00Mzc4LTllMDEtZTQ5ODRmMGViMDRjegIY
+      AYUBAAEAAA==
     headers:
       Accept:
       - '*/*'
@@ -103,7 +77,7 @@ interactions:
       Connection:
       - keep-alive
       Content-Length:
-      - '5319'
+      - '3826'
       Content-Type:
       - application/x-protobuf
       User-Agent:
@@ -119,7 +93,7 @@ interactions:
       Content-Type:
       - application/x-protobuf
       Date:
-      - Mon, 23 Sep 2024 06:26:26 GMT
+      - Mon, 23 Sep 2024 19:38:38 GMT
     status:
       code: 200
       message: OK
@@ -151,8 +125,8 @@ interactions:
       content-type:
       - application/json
       cookie:
-      - __cf_bm=hYfEMfBWpIoRPjx9ZBZg6DVeMOMr1IZt9ioup8yWZs0-1727072673-1.0.1.1-Ro7GCLuWS0K5ob0mSTYSmovONKNyxsK6oSA5io_Vwqhe6P0G7Ow4CuZUaWAaCdFGQUd7XZiFH0mI_sQC3uqe0g;
-        _cfuvid=5cK2hfLqTXw1WjB81uT.sGmmA67JIxSKSQeEHQ3zOQw-1727071769966-0.0.1.1-604800000
+      - __cf_bm=4rzJDR3F8S3Dp4B_qwylZU0mdm_WUwmv8vNHHp3IplM-1727119501-1.0.1.1-qobO_Sf88yG1qtXFnLgykvyc9YXR_fm1J7ZpXIhvtynVnsz67Uwcf4122PgHs4GMrlvZMaL6z_UVcVYSYUJOKQ;
+        _cfuvid=9K_ipT1uTVyDTneB1W5OZHPxCh36aOsDZCBnsQTONqQ-1727119501207-0.0.1.1-604800000
       host:
       - api.openai.com
       user-agent:
@@ -176,38 +150,48 @@ interactions:
     method: POST
     uri: https://api.openai.com/v1/chat/completions
   response:
-    content: "{\n  \"id\": \"chatcmpl-AAWoZVhLdGMuRBfBmtG0XhlcYOFZX\",\n  \"object\":
-      \"chat.completion\",\n  \"created\": 1727072783,\n  \"model\": \"gpt-4o-2024-05-13\",\n
+    content: "{\n  \"id\": \"chatcmpl-AAjBCIs1X7L0zUbqWWX9e4hNX7HPR\",\n  \"object\":
+      \"chat.completion\",\n  \"created\": 1727120314,\n  \"model\": \"gpt-4o-2024-05-13\",\n
       \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
       \"assistant\",\n        \"content\": \"Thought: I now can give a great answer\\nFinal
-      Answer: \\n\\n- Autonomous AI Agents in Creative Industries: An exploration
-      of how AI is transforming the creative sector, from automated content generation
-      to AI-driven design tools. Unique aspects include the ethical implications and
-      the collaboration between human creativity and machine learning.\\n\\n- AI in
-      Predictive Healthcare: A look at how artificial intelligence is being used to
-      predict diseases before they manifest, optimize treatment plans, and improve
-      patient outcomes. This is interesting because it integrates big data, machine
-      learning, and real-time analytics to revolutionize medical science.\\n\\n- AI
-      and Ethical Decision Making: An examination of how AI can be programmed to make
-      ethical decisions, particularly in autonomous systems like self-driving cars
-      and military applications. This topic is compelling due to its philosophical,
-      social, and technical challenges.\\n\\n- AI for Sustainable Development: Investigating
-      how AI technologies are being leveraged to address environmental challenges,
-      such as climate change, resource management, and wildlife conservation. This
-      is significant due to the pressing need for sustainable solutions and the innovative
-      use of technology.\\n\\n- AI in Personal Finance: How AI-driven applications
-      are reshaping personal finance management, from robo-advisors to fraud detection
-      and personalized financial planning. The unique angle here is the blend of advanced
-      analytics, user behavior insights, and financial technology (fintech).\",\n
-      \       \"refusal\": null\n      },\n      \"logprobs\": null,\n      \"finish_reason\":
-      \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 220,\n    \"completion_tokens\":
-      261,\n    \"total_tokens\": 481,\n    \"completion_tokens_details\": {\n      \"reasoning_tokens\":
-      0\n    }\n  },\n  \"system_fingerprint\": \"fp_e375328146\"\n}\n"
+      Answer: \\n\\n1. **Transforming Industries with AI Agents: Case Studies and
+      Future Implications**\\n   - *What makes it unique and interesting:* This article
+      could explore significant real-world applications of AI agents in various industries
+      such as healthcare, finance, retail, and transportation. Highlighting successful
+      case studies will provide readers with a clear understanding of how AI agents
+      are currently revolutionizing these fields and what future advancements might
+      look like.\\n\\n2. **Ethics and AI: Navigating the Moral Dilemmas of Autonomous
+      Agents**\\n   - *What makes it unique and interesting:* This article delves
+      into the ethical concerns and moral dilemmas associated with deploying AI agents.
+      By discussing topics like bias in AI, decision-making accountability, and the
+      potential societal impacts, the article can engage readers in a crucial conversation
+      about responsible AI development.\\n\\n3. **The Evolution of AI Agents: From
+      Rule-Based Systems to Reinforcement Learning**\\n   - *What makes it unique
+      and interesting:* Tracing the historical development of AI agents offers readers
+      a comprehensive view of how these technologies have evolved. Comparing early
+      rule-based systems with modern reinforcement learning techniques can highlight
+      significant advancements and provide context for current trends and future possibilities
+      in AI research.\\n\\n4. **AI in Personal Assistants: How Intelligent Agents
+      are Changing Daily Life**\\n   - *What makes it unique and interesting:* This
+      article can focus on how AI-powered personal assistants like Siri, Alexa, and
+      Google Assistant are impacting everyday life. Covering aspects such as efficiency
+      in time management, accessibility, and improving quality of life, the article
+      can show readers the practical benefits and challenges associated with these
+      ubiquitous technologies.\\n\\n5. **The Future of Work: AI Agents and Job Transformation**\\n
+      \  - *What makes it unique and interesting:* Focusing on the profound ways AI
+      agents are expected to transform the job market, this article can examine both
+      the opportunities and challenges. Discussing topics like job displacement, the
+      creation of new job categories, and the skills workers will need to thrive in
+      an AI-driven economy will provide valuable insights for readers concerned about
+      the future of work.\",\n        \"refusal\": null\n      },\n      \"logprobs\":
+      null,\n      \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\":
+      220,\n    \"completion_tokens\": 424,\n    \"total_tokens\": 644,\n    \"completion_tokens_details\":
+      {\n      \"reasoning_tokens\": 0\n    }\n  },\n  \"system_fingerprint\": \"fp_e375328146\"\n}\n"
     headers:
       CF-Cache-Status:
       - DYNAMIC
       CF-RAY:
-      - 8c78767df867a4ee-MIA
+      - 8c7cfeeaef9ca4c7-MIA
       Connection:
       - keep-alive
       Content-Encoding:
@@ -215,7 +199,7 @@ interactions:
       Content-Type:
       - application/json
       Date:
-      - Mon, 23 Sep 2024 06:26:27 GMT
+      - Mon, 23 Sep 2024 19:38:40 GMT
       Server:
       - cloudflare
       Transfer-Encoding:
@@ -227,7 +211,7 @@ interactions:
       openai-organization:
       - crewai-iuxna1
       openai-processing-ms:
-      - '4417'
+      - '6324'
       openai-version:
       - '2020-10-01'
       strict-transport-security:
@@ -245,22 +229,22 @@ interactions:
       x-ratelimit-reset-tokens:
       - 0s
       x-request-id:
-      - req_4e65dfd6e78a2d886db56471933820f4
+      - req_ebd48756080ec8889a413d4f494948a4
     http_version: HTTP/1.1
     status_code: 200
 - request:
     body: !!binary |
       CuEECiQKIgoMc2VydmljZS5uYW1lEhIKEGNyZXdBSS10ZWxlbWV0cnkSuAQKEgoQY3Jld2FpLnRl
-      bGVtZXRyeRKQAgoQSZIidtG9VQRZ6zDF3xCGmBIIGkyL8WWfrugqDlRhc2sgRXhlY3V0aW9uMAE5
-      UC4YmYvL9xdBSKg8sYzL9xdKLgoIY3Jld19rZXkSIgogM2Y4ZDVjM2FiODgyZDY4NjlkOTNjYjgx
-      ZjBlMmVkNGFKMQoHY3Jld19pZBImCiQ2OTI0YzI5Yy1mNGNkLTRkNDktYjUzYy02YzhhMjFhOWUy
-      ZmVKLgoIdGFza19rZXkSIgogNjc4NDlmZjcxN2RiYWRhYmExYjk1ZDVmMmRmY2VlYTFKMQoHdGFz
-      a19pZBImCiQyYTIwMmJlMS1iY2NkLTQ0NDAtYjExNS03M2U3NmQ0YWZjYmV6AhgBhQEAAQAAEo4C
-      ChDr27/Vbkfz+DE5rXfpIWthEgi1PbqZ5Ne5YSoMVGFzayBDcmVhdGVkMAE5sFpUsYzL9xdBMBZV
-      sYzL9xdKLgoIY3Jld19rZXkSIgogM2Y4ZDVjM2FiODgyZDY4NjlkOTNjYjgxZjBlMmVkNGFKMQoH
-      Y3Jld19pZBImCiQ2OTI0YzI5Yy1mNGNkLTRkNDktYjUzYy02YzhhMjFhOWUyZmVKLgoIdGFza19r
-      ZXkSIgogZmM1NmRlYTM4Yzk5NzRiNmY1NWEyZTI4YzE0OTk4ODZKMQoHdGFza19pZBImCiQxZjdl
-      NTBmMi1mMzQ0LTQ4OTktODcwNS1kOTYzOTE5MGIzMzZ6AhgBhQEAAQAA
+      bGVtZXRyeRKQAgoQOS6RAh1lubwRfi/a//bx2hIIIJypWkYUbDQqDlRhc2sgRXhlY3V0aW9uMAE5
+      MFp3T8b29xdB6PbM2sf29xdKLgoIY3Jld19rZXkSIgogM2Y4ZDVjM2FiODgyZDY4NjlkOTNjYjgx
+      ZjBlMmVkNGFKMQoHY3Jld19pZBImCiQ0Y2RhNGQ4OC0yMjk1LTQyNDAtYTY0Zi02YTU2MzVkNDMx
+      YjRKLgoIdGFza19rZXkSIgogNjc4NDlmZjcxN2RiYWRhYmExYjk1ZDVmMmRmY2VlYTFKMQoHdGFz
+      a19pZBImCiQxN2JhMmUzNS0wYWZkLTQzNzgtOWUwMS1lNDk4NGYwZWIwNGN6AhgBhQEAAQAAEo4C
+      ChDgzA89gN+HjfmYWH8IclgDEgjQTmbwj6lPmSoMVGFzayBDcmVhdGVkMAE5UPzr2sf29xdBoDzt
+      2sf29xdKLgoIY3Jld19rZXkSIgogM2Y4ZDVjM2FiODgyZDY4NjlkOTNjYjgxZjBlMmVkNGFKMQoH
+      Y3Jld19pZBImCiQ0Y2RhNGQ4OC0yMjk1LTQyNDAtYTY0Zi02YTU2MzVkNDMxYjRKLgoIdGFza19r
+      ZXkSIgogZmM1NmRlYTM4Yzk5NzRiNmY1NWEyZTI4YzE0OTk4ODZKMQoHdGFza19pZBImCiQxYzY2
+      ZDMxMC1lYmEwLTRlY2UtODNlZi0wODY5ZmViOGU5NGJ6AhgBhQEAAQAA
     headers:
       Accept:
       - '*/*'
@@ -285,7 +269,7 @@ interactions:
       Content-Type:
       - application/x-protobuf
       Date:
-      - Mon, 23 Sep 2024 06:26:31 GMT
+      - Mon, 23 Sep 2024 19:38:43 GMT
     status:
       code: 200
       message: OK
@@ -302,28 +286,38 @@ interactions:
       the history of AI and give me the 5 most important events that shaped the technology.\n\nThis
       is the expect criteria for your final answer: Bullet point list of 5 important
       events.\nyou MUST return the actual complete content as the final answer, not
-      a summary.\n\nThis is the context you''re working with:\n- Autonomous AI Agents
-      in Creative Industries: An exploration of how AI is transforming the creative
-      sector, from automated content generation to AI-driven design tools. Unique
-      aspects include the ethical implications and the collaboration between human
-      creativity and machine learning.\n\n- AI in Predictive Healthcare: A look at
-      how artificial intelligence is being used to predict diseases before they manifest,
-      optimize treatment plans, and improve patient outcomes. This is interesting
-      because it integrates big data, machine learning, and real-time analytics to
-      revolutionize medical science.\n\n- AI and Ethical Decision Making: An examination
-      of how AI can be programmed to make ethical decisions, particularly in autonomous
-      systems like self-driving cars and military applications. This topic is compelling
-      due to its philosophical, social, and technical challenges.\n\n- AI for Sustainable
-      Development: Investigating how AI technologies are being leveraged to address
-      environmental challenges, such as climate change, resource management, and wildlife
-      conservation. This is significant due to the pressing need for sustainable solutions
-      and the innovative use of technology.\n\n- AI in Personal Finance: How AI-driven
-      applications are reshaping personal finance management, from robo-advisors to
-      fraud detection and personalized financial planning. The unique angle here is
-      the blend of advanced analytics, user behavior insights, and financial technology
-      (fintech).\n\nBegin! This is VERY important to you, use the tools available
-      and give your best Final Answer, your job depends on it!\n\nThought:"}], "model":
-      "gpt-4o"}'
+      a summary.\n\nThis is the context you''re working with:\n1. **Transforming Industries
+      with AI Agents: Case Studies and Future Implications**\n   - *What makes it
+      unique and interesting:* This article could explore significant real-world applications
+      of AI agents in various industries such as healthcare, finance, retail, and
+      transportation. Highlighting successful case studies will provide readers with
+      a clear understanding of how AI agents are currently revolutionizing these fields
+      and what future advancements might look like.\n\n2. **Ethics and AI: Navigating
+      the Moral Dilemmas of Autonomous Agents**\n   - *What makes it unique and interesting:*
+      This article delves into the ethical concerns and moral dilemmas associated
+      with deploying AI agents. By discussing topics like bias in AI, decision-making
+      accountability, and the potential societal impacts, the article can engage readers
+      in a crucial conversation about responsible AI development.\n\n3. **The Evolution
+      of AI Agents: From Rule-Based Systems to Reinforcement Learning**\n   - *What
+      makes it unique and interesting:* Tracing the historical development of AI agents
+      offers readers a comprehensive view of how these technologies have evolved.
+      Comparing early rule-based systems with modern reinforcement learning techniques
+      can highlight significant advancements and provide context for current trends
+      and future possibilities in AI research.\n\n4. **AI in Personal Assistants:
+      How Intelligent Agents are Changing Daily Life**\n   - *What makes it unique
+      and interesting:* This article can focus on how AI-powered personal assistants
+      like Siri, Alexa, and Google Assistant are impacting everyday life. Covering
+      aspects such as efficiency in time management, accessibility, and improving
+      quality of life, the article can show readers the practical benefits and challenges
+      associated with these ubiquitous technologies.\n\n5. **The Future of Work: AI
+      Agents and Job Transformation**\n   - *What makes it unique and interesting:*
+      Focusing on the profound ways AI agents are expected to transform the job market,
+      this article can examine both the opportunities and challenges. Discussing topics
+      like job displacement, the creation of new job categories, and the skills workers
+      will need to thrive in an AI-driven economy will provide valuable insights for
+      readers concerned about the future of work.\n\nBegin! This is VERY important
+      to you, use the tools available and give your best Final Answer, your job depends
+      on it!\n\nThought:"}], "model": "gpt-4o"}'
     headers:
       accept:
       - application/json
@@ -332,12 +326,12 @@ interactions:
       connection:
       - keep-alive
       content-length:
-      - '2638'
+      - '3469'
       content-type:
       - application/json
       cookie:
-      - __cf_bm=hYfEMfBWpIoRPjx9ZBZg6DVeMOMr1IZt9ioup8yWZs0-1727072673-1.0.1.1-Ro7GCLuWS0K5ob0mSTYSmovONKNyxsK6oSA5io_Vwqhe6P0G7Ow4CuZUaWAaCdFGQUd7XZiFH0mI_sQC3uqe0g;
-        _cfuvid=5cK2hfLqTXw1WjB81uT.sGmmA67JIxSKSQeEHQ3zOQw-1727071769966-0.0.1.1-604800000
+      - __cf_bm=4rzJDR3F8S3Dp4B_qwylZU0mdm_WUwmv8vNHHp3IplM-1727119501-1.0.1.1-qobO_Sf88yG1qtXFnLgykvyc9YXR_fm1J7ZpXIhvtynVnsz67Uwcf4122PgHs4GMrlvZMaL6z_UVcVYSYUJOKQ;
+        _cfuvid=9K_ipT1uTVyDTneB1W5OZHPxCh36aOsDZCBnsQTONqQ-1727119501207-0.0.1.1-604800000
       host:
       - api.openai.com
       user-agent:
@@ -361,59 +355,49 @@ interactions:
     method: POST
     uri: https://api.openai.com/v1/chat/completions
   response:
-    content: "{\n  \"id\": \"chatcmpl-AAWodN8f6VuTubcBeK55Cvbb32QyF\",\n  \"object\":
-      \"chat.completion\",\n  \"created\": 1727072787,\n  \"model\": \"gpt-4o-2024-05-13\",\n
+    content: "{\n  \"id\": \"chatcmpl-AAjBIUZywReZFX3oQ8EKUK2GUOF20\",\n  \"object\":
+      \"chat.completion\",\n  \"created\": 1727120320,\n  \"model\": \"gpt-4o-2024-05-13\",\n
       \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
-      \"assistant\",\n        \"content\": \"Thought: I have gathered sufficient context
-      and defined the scope of the task, which is to identify and detail the five
-      most important events that have shaped AI technology. Now, I will compile this
-      information into a structured answer format.\\n\\nFinal Answer: \\n\\n1. **The
-      Dartmouth Conference (1956):**\\n   - **Event Description:** The Dartmouth Conference,
-      held in the summer of 1956, is widely considered the birthplace of artificial
-      intelligence as a field. Organized by John McCarthy, Marvin Minsky, Nathaniel
-      Rochester, and Claude Shannon, this event brought together leading researchers
-      to discuss the development of intelligent machines.\\n   - **Impact:** The conference
-      laid the foundation for AI research and formalized the term \\\"artificial intelligence.\\\"
-      It set the stage for future advancements and established AI as a distinct academic
-      discipline.\\n\\n2. **Development of the Perceptron (1957):**\\n   - **Event
-      Description:** Frank Rosenblatt developed the Perceptron, an early version of
-      a neural network inspired by biological neurons. The Perceptron was capable
-      of pattern recognition and learning from data.\\n   - **Impact:** This development
-      marked significant progress in machine learning and neural networks. Although
-      initial excitement waned due to limitations, it eventually led to the resurgence
-      of interest in neural networks and deep learning in later decades.\\n\\n3. **IBM's
-      Deep Blue Defeats Garry Kasparov (1997):**\\n   - **Event Description:** IBM's
-      Deep Blue, a chess-playing computer, defeated the reigning world chess champion,
-      Garry Kasparov, in a six-game match.\\n   - **Impact:** This event demonstrated
-      the potential of AI to perform complex, human-like tasks at a high level. It
-      also spurred public interest and investment in AI, highlighting the advances
-      in machine learning and computational power.\\n\\n4. **Introduction of Google's
-      AlphaGo (2016):**\\n   - **Event Description:** Google's AlphaGo, developed
-      by DeepMind, defeated Lee Sedol, one of the world's greatest Go players, in
-      a five-game match.\\n   - **Impact:** AlphaGo's victory showcased the potential
-      of deep learning and reinforcement learning in mastering complex tasks that
-      were previously thought to be beyond the reach of machines. This event underscored
-      the rapid advancements in AI and accelerated research and development in various
-      AI subfields.\\n\\n5. **The Rise of Transformer Models (2017):**\\n   - **Event
-      Description:** Google researchers introduced the Transformer architecture in
-      a paper titled \\\"Attention Is All You Need.\\\" This architecture revolutionized
-      natural language processing (NLP) by enabling more efficient and effective handling
-      of sequential data.\\n   - **Impact:** Transformers have since become the foundation
-      for state-of-the-art NLP models, including BERT and GPT. These models have significantly
-      advanced language understanding, translation, and generation tasks, paving the
-      way for more sophisticated AI applications in diverse industries, including
-      creative content generation and personal finance.\\n\\nEach of these events
-      has played a critical role in shaping the evolution of AI technology, influencing
-      subsequent developments and opening new frontiers in various sectors.\",\n        \"refusal\":
-      null\n      },\n      \"logprobs\": null,\n      \"finish_reason\": \"stop\"\n
-      \   }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 472,\n    \"completion_tokens\":
-      612,\n    \"total_tokens\": 1084,\n    \"completion_tokens_details\": {\n      \"reasoning_tokens\":
+      \"assistant\",\n        \"content\": \"Thought: I now can give a great answer.
+      \\n\\nFinal Answer: \\n\\n1. **Turing Test (1950)**\\n   - Alan Turing published
+      a paper titled \\\"Computing Machinery and Intelligence\\\" in which he proposed
+      the idea of the Turing Test. This test was designed to evaluate whether a machine
+      could exhibit intelligent behavior equivalent to, or indistinguishable from,
+      that of a human. The Turing Test has had a lasting impact on AI research and
+      is often considered the cornerstone of AI philosophy.\\n\\n2. **Dartmouth Workshop
+      (1956)**\\n   - The Dartmouth Conference, held in the summer of 1956, is widely
+      considered the birth of AI as a field of study. During this workshop, the term
+      \\\"Artificial Intelligence\\\" was coined by John McCarthy. This event brought
+      together the leading minds in computing and laid the foundational goals and
+      principles for AI research.\\n\\n3. **Development of Expert Systems (1970s-1980s)**\\n
+      \  - The development of expert systems represented a major leap in AI technology.
+      These systems aimed to emulate the decision-making abilities of a human expert
+      in specific domains, such as medical diagnosis and financial planning. Prominent
+      examples include MYCIN and DENDRAL. Expert systems demonstrated the practical
+      utility of AI in real-world applications and contributed significantly to commercial
+      interests in AI.\\n\\n4. **Deep Learning Breakthrough (2012)**\\n   - A significant
+      milestone in AI was the advent of deep learning, particularly marked by AlexNet's
+      victory in the ImageNet Large Scale Visual Recognition Challenge in 2012. Developed
+      by Alex Krizhevsky, Ilya Sutskever, and Geoffrey Hinton, AlexNet significantly
+      outperformed other approaches in image recognition tasks. This success spurred
+      widespread interest and investment in deep learning, leading to major advancements
+      in fields such as computer vision, natural language processing, and autonomous
+      systems.\\n\\n5. **AlphaGo Defeats Lee Sedol (2016)**\\n   - In March 2016,
+      Google DeepMind's AlphaGo program made headlines by defeating Lee Sedol, one
+      of the world's top Go players, in a five-game match. Go is a highly complex
+      board game with more possible moves than there are atoms in the universe, making
+      it a major challenge for AI. AlphaGo's victory was seen as a landmark achievement
+      demonstrating the potential of reinforcement learning and deep neural networks
+      in tackling complex, strategic problems.\",\n        \"refusal\": null\n      },\n
+      \     \"logprobs\": null,\n      \"finish_reason\": \"stop\"\n    }\n  ],\n
+      \ \"usage\": {\n    \"prompt_tokens\": 635,\n    \"completion_tokens\": 487,\n
+      \   \"total_tokens\": 1122,\n    \"completion_tokens_details\": {\n      \"reasoning_tokens\":
       0\n    }\n  },\n  \"system_fingerprint\": \"fp_e375328146\"\n}\n"
     headers:
       CF-Cache-Status:
       - DYNAMIC
       CF-RAY:
-      - 8c78769b5ddfa4ee-MIA
+      - 8c7cff145e9ea4c7-MIA
       Connection:
       - keep-alive
       Content-Encoding:
@@ -421,7 +405,7 @@ interactions:
       Content-Type:
       - application/json
       Date:
-      - Mon, 23 Sep 2024 06:26:36 GMT
+      - Mon, 23 Sep 2024 19:38:47 GMT
       Server:
       - cloudflare
       Transfer-Encoding:
@@ -430,12 +414,10 @@ interactions:
       - nosniff
       access-control-expose-headers:
       - X-Request-ID
-      alt-svc:
-      - h3=":443"; ma=86400
       openai-organization:
       - crewai-iuxna1
       openai-processing-ms:
-      - '8204'
+      - '6392'
       openai-version:
       - '2020-10-01'
       strict-transport-security:
@@ -447,28 +429,28 @@ interactions:
       x-ratelimit-remaining-requests:
       - '9999'
       x-ratelimit-remaining-tokens:
-      - '29999354'
+      - '29999146'
       x-ratelimit-reset-requests:
       - 6ms
       x-ratelimit-reset-tokens:
       - 1ms
       x-request-id:
-      - req_8e811ea0d36c446e9829aa73963a31c1
+      - req_06ed39b3850587ab2e7087c7e425f36b
     http_version: HTTP/1.1
     status_code: 200
 - request:
     body: !!binary |
       CuEECiQKIgoMc2VydmljZS5uYW1lEhIKEGNyZXdBSS10ZWxlbWV0cnkSuAQKEgoQY3Jld2FpLnRl
-      bGVtZXRyeRKQAgoQqATO6ZB8b4pxPqRf9VmxShIIrtNtVUZa3NkqDlRhc2sgRXhlY3V0aW9uMAE5
-      sFRVsYzL9xdBwGm3qo7L9xdKLgoIY3Jld19rZXkSIgogM2Y4ZDVjM2FiODgyZDY4NjlkOTNjYjgx
-      ZjBlMmVkNGFKMQoHY3Jld19pZBImCiQ2OTI0YzI5Yy1mNGNkLTRkNDktYjUzYy02YzhhMjFhOWUy
-      ZmVKLgoIdGFza19rZXkSIgogZmM1NmRlYTM4Yzk5NzRiNmY1NWEyZTI4YzE0OTk4ODZKMQoHdGFz
-      a19pZBImCiQxZjdlNTBmMi1mMzQ0LTQ4OTktODcwNS1kOTYzOTE5MGIzMzZ6AhgBhQEAAQAAEo4C
-      ChB3phRo2l1wmcRuIRvs90EgEgiEEMphYrVw0CoMVGFzayBDcmVhdGVkMAE5GL/Xqo7L9xdBmPfY
-      qo7L9xdKLgoIY3Jld19rZXkSIgogM2Y4ZDVjM2FiODgyZDY4NjlkOTNjYjgxZjBlMmVkNGFKMQoH
-      Y3Jld19pZBImCiQ2OTI0YzI5Yy1mNGNkLTRkNDktYjUzYy02YzhhMjFhOWUyZmVKLgoIdGFza19r
-      ZXkSIgogOTRhODI2YzE5MzA1NTk2ODZiYWZiNDA5ZWU4Mzg3NmZKMQoHdGFza19pZBImCiQ2MDZk
-      NjZkOS1mOTQ2LTQ5MmItYWEwNy00OGJjNzYxYTdmNTl6AhgBhQEAAQAA
+      bGVtZXRyeRKQAgoQKlp59MyI74i5x7OuPwve4BIIixradmNX6qsqDlRhc2sgRXhlY3V0aW9uMAE5
+      wIrt2sf29xdB6I76aMn29xdKLgoIY3Jld19rZXkSIgogM2Y4ZDVjM2FiODgyZDY4NjlkOTNjYjgx
+      ZjBlMmVkNGFKMQoHY3Jld19pZBImCiQ0Y2RhNGQ4OC0yMjk1LTQyNDAtYTY0Zi02YTU2MzVkNDMx
+      YjRKLgoIdGFza19rZXkSIgogZmM1NmRlYTM4Yzk5NzRiNmY1NWEyZTI4YzE0OTk4ODZKMQoHdGFz
+      a19pZBImCiQxYzY2ZDMxMC1lYmEwLTRlY2UtODNlZi0wODY5ZmViOGU5NGJ6AhgBhQEAAQAAEo4C
+      ChB22jwQL91b3JN/8yr6H/0KEgjKgFpyoCJ1VyoMVGFzayBDcmVhdGVkMAE54GFcacn29xdBOHFe
+      acn29xdKLgoIY3Jld19rZXkSIgogM2Y4ZDVjM2FiODgyZDY4NjlkOTNjYjgxZjBlMmVkNGFKMQoH
+      Y3Jld19pZBImCiQ0Y2RhNGQ4OC0yMjk1LTQyNDAtYTY0Zi02YTU2MzVkNDMxYjRKLgoIdGFza19r
+      ZXkSIgogOTRhODI2YzE5MzA1NTk2ODZiYWZiNDA5ZWU4Mzg3NmZKMQoHdGFza19pZBImCiQwYjBm
+      NjBkNi1mODQ5LTRkMjYtYTJmYy1hNmQyMDQwZjg1NzN6AhgBhQEAAQAA
     headers:
       Accept:
       - '*/*'
@@ -493,7 +475,7 @@ interactions:
       Content-Type:
       - application/x-protobuf
       Date:
-      - Mon, 23 Sep 2024 06:26:41 GMT
+      - Mon, 23 Sep 2024 19:38:48 GMT
     status:
       code: 200
       message: OK
@@ -509,64 +491,67 @@ interactions:
       Task: Write an article about the history of AI and its most important events.\n\nThis
       is the expect criteria for your final answer: A 4 paragraph article about AI.\nyou
       MUST return the actual complete content as the final answer, not a summary.\n\nThis
-      is the context you''re working with:\n- Autonomous AI Agents in Creative Industries:
-      An exploration of how AI is transforming the creative sector, from automated
-      content generation to AI-driven design tools. Unique aspects include the ethical
-      implications and the collaboration between human creativity and machine learning.\n\n-
-      AI in Predictive Healthcare: A look at how artificial intelligence is being
-      used to predict diseases before they manifest, optimize treatment plans, and
-      improve patient outcomes. This is interesting because it integrates big data,
-      machine learning, and real-time analytics to revolutionize medical science.\n\n-
-      AI and Ethical Decision Making: An examination of how AI can be programmed to
-      make ethical decisions, particularly in autonomous systems like self-driving
-      cars and military applications. This topic is compelling due to its philosophical,
-      social, and technical challenges.\n\n- AI for Sustainable Development: Investigating
-      how AI technologies are being leveraged to address environmental challenges,
-      such as climate change, resource management, and wildlife conservation. This
-      is significant due to the pressing need for sustainable solutions and the innovative
-      use of technology.\n\n- AI in Personal Finance: How AI-driven applications are
-      reshaping personal finance management, from robo-advisors to fraud detection
-      and personalized financial planning. The unique angle here is the blend of advanced
-      analytics, user behavior insights, and financial technology (fintech).\n\n----------\n\n1.
-      **The Dartmouth Conference (1956):**\n   - **Event Description:** The Dartmouth
-      Conference, held in the summer of 1956, is widely considered the birthplace
-      of artificial intelligence as a field. Organized by John McCarthy, Marvin Minsky,
-      Nathaniel Rochester, and Claude Shannon, this event brought together leading
-      researchers to discuss the development of intelligent machines.\n   - **Impact:**
-      The conference laid the foundation for AI research and formalized the term \"artificial
-      intelligence.\" It set the stage for future advancements and established AI
-      as a distinct academic discipline.\n\n2. **Development of the Perceptron (1957):**\n   -
-      **Event Description:** Frank Rosenblatt developed the Perceptron, an early version
-      of a neural network inspired by biological neurons. The Perceptron was capable
-      of pattern recognition and learning from data.\n   - **Impact:** This development
-      marked significant progress in machine learning and neural networks. Although
-      initial excitement waned due to limitations, it eventually led to the resurgence
-      of interest in neural networks and deep learning in later decades.\n\n3. **IBM''s
-      Deep Blue Defeats Garry Kasparov (1997):**\n   - **Event Description:** IBM''s
-      Deep Blue, a chess-playing computer, defeated the reigning world chess champion,
-      Garry Kasparov, in a six-game match.\n   - **Impact:** This event demonstrated
-      the potential of AI to perform complex, human-like tasks at a high level. It
-      also spurred public interest and investment in AI, highlighting the advances
-      in machine learning and computational power.\n\n4. **Introduction of Google''s
-      AlphaGo (2016):**\n   - **Event Description:** Google''s AlphaGo, developed
-      by DeepMind, defeated Lee Sedol, one of the world''s greatest Go players, in
-      a five-game match.\n   - **Impact:** AlphaGo''s victory showcased the potential
-      of deep learning and reinforcement learning in mastering complex tasks that
-      were previously thought to be beyond the reach of machines. This event underscored
-      the rapid advancements in AI and accelerated research and development in various
-      AI subfields.\n\n5. **The Rise of Transformer Models (2017):**\n   - **Event
-      Description:** Google researchers introduced the Transformer architecture in
-      a paper titled \"Attention Is All You Need.\" This architecture revolutionized
-      natural language processing (NLP) by enabling more efficient and effective handling
-      of sequential data.\n   - **Impact:** Transformers have since become the foundation
-      for state-of-the-art NLP models, including BERT and GPT. These models have significantly
-      advanced language understanding, translation, and generation tasks, paving the
-      way for more sophisticated AI applications in diverse industries, including
-      creative content generation and personal finance.\n\nEach of these events has
-      played a critical role in shaping the evolution of AI technology, influencing
-      subsequent developments and opening new frontiers in various sectors.\n\nBegin!
-      This is VERY important to you, use the tools available and give your best Final
-      Answer, your job depends on it!\n\nThought:"}], "model": "gpt-4o"}'
+      is the context you''re working with:\n1. **Transforming Industries with AI Agents:
+      Case Studies and Future Implications**\n   - *What makes it unique and interesting:*
+      This article could explore significant real-world applications of AI agents
+      in various industries such as healthcare, finance, retail, and transportation.
+      Highlighting successful case studies will provide readers with a clear understanding
+      of how AI agents are currently revolutionizing these fields and what future
+      advancements might look like.\n\n2. **Ethics and AI: Navigating the Moral Dilemmas
+      of Autonomous Agents**\n   - *What makes it unique and interesting:* This article
+      delves into the ethical concerns and moral dilemmas associated with deploying
+      AI agents. By discussing topics like bias in AI, decision-making accountability,
+      and the potential societal impacts, the article can engage readers in a crucial
+      conversation about responsible AI development.\n\n3. **The Evolution of AI Agents:
+      From Rule-Based Systems to Reinforcement Learning**\n   - *What makes it unique
+      and interesting:* Tracing the historical development of AI agents offers readers
+      a comprehensive view of how these technologies have evolved. Comparing early
+      rule-based systems with modern reinforcement learning techniques can highlight
+      significant advancements and provide context for current trends and future possibilities
+      in AI research.\n\n4. **AI in Personal Assistants: How Intelligent Agents are
+      Changing Daily Life**\n   - *What makes it unique and interesting:* This article
+      can focus on how AI-powered personal assistants like Siri, Alexa, and Google
+      Assistant are impacting everyday life. Covering aspects such as efficiency in
+      time management, accessibility, and improving quality of life, the article can
+      show readers the practical benefits and challenges associated with these ubiquitous
+      technologies.\n\n5. **The Future of Work: AI Agents and Job Transformation**\n   -
+      *What makes it unique and interesting:* Focusing on the profound ways AI agents
+      are expected to transform the job market, this article can examine both the
+      opportunities and challenges. Discussing topics like job displacement, the creation
+      of new job categories, and the skills workers will need to thrive in an AI-driven
+      economy will provide valuable insights for readers concerned about the future
+      of work.\n\n----------\n\n1. **Turing Test (1950)**\n   - Alan Turing published
+      a paper titled \"Computing Machinery and Intelligence\" in which he proposed
+      the idea of the Turing Test. This test was designed to evaluate whether a machine
+      could exhibit intelligent behavior equivalent to, or indistinguishable from,
+      that of a human. The Turing Test has had a lasting impact on AI research and
+      is often considered the cornerstone of AI philosophy.\n\n2. **Dartmouth Workshop
+      (1956)**\n   - The Dartmouth Conference, held in the summer of 1956, is widely
+      considered the birth of AI as a field of study. During this workshop, the term
+      \"Artificial Intelligence\" was coined by John McCarthy. This event brought
+      together the leading minds in computing and laid the foundational goals and
+      principles for AI research.\n\n3. **Development of Expert Systems (1970s-1980s)**\n   -
+      The development of expert systems represented a major leap in AI technology.
+      These systems aimed to emulate the decision-making abilities of a human expert
+      in specific domains, such as medical diagnosis and financial planning. Prominent
+      examples include MYCIN and DENDRAL. Expert systems demonstrated the practical
+      utility of AI in real-world applications and contributed significantly to commercial
+      interests in AI.\n\n4. **Deep Learning Breakthrough (2012)**\n   - A significant
+      milestone in AI was the advent of deep learning, particularly marked by AlexNet''s
+      victory in the ImageNet Large Scale Visual Recognition Challenge in 2012. Developed
+      by Alex Krizhevsky, Ilya Sutskever, and Geoffrey Hinton, AlexNet significantly
+      outperformed other approaches in image recognition tasks. This success spurred
+      widespread interest and investment in deep learning, leading to major advancements
+      in fields such as computer vision, natural language processing, and autonomous
+      systems.\n\n5. **AlphaGo Defeats Lee Sedol (2016)**\n   - In March 2016, Google
+      DeepMind''s AlphaGo program made headlines by defeating Lee Sedol, one of the
+      world''s top Go players, in a five-game match. Go is a highly complex board
+      game with more possible moves than there are atoms in the universe, making it
+      a major challenge for AI. AlphaGo''s victory was seen as a landmark achievement
+      demonstrating the potential of reinforcement learning and deep neural networks
+      in tackling complex, strategic problems.\n\nBegin! This is VERY important to
+      you, use the tools available and give your best Final Answer, your job depends
+      on it!\n\nThought:"}], "model": "gpt-4o"}'
     headers:
       accept:
       - application/json
@@ -575,12 +560,12 @@ interactions:
       connection:
       - keep-alive
       content-length:
-      - '5535'
+      - '5740'
       content-type:
       - application/json
       cookie:
-      - __cf_bm=hYfEMfBWpIoRPjx9ZBZg6DVeMOMr1IZt9ioup8yWZs0-1727072673-1.0.1.1-Ro7GCLuWS0K5ob0mSTYSmovONKNyxsK6oSA5io_Vwqhe6P0G7Ow4CuZUaWAaCdFGQUd7XZiFH0mI_sQC3uqe0g;
-        _cfuvid=5cK2hfLqTXw1WjB81uT.sGmmA67JIxSKSQeEHQ3zOQw-1727071769966-0.0.1.1-604800000
+      - __cf_bm=4rzJDR3F8S3Dp4B_qwylZU0mdm_WUwmv8vNHHp3IplM-1727119501-1.0.1.1-qobO_Sf88yG1qtXFnLgykvyc9YXR_fm1J7ZpXIhvtynVnsz67Uwcf4122PgHs4GMrlvZMaL6z_UVcVYSYUJOKQ;
+        _cfuvid=9K_ipT1uTVyDTneB1W5OZHPxCh36aOsDZCBnsQTONqQ-1727119501207-0.0.1.1-604800000
       host:
       - api.openai.com
       user-agent:
@@ -604,50 +589,57 @@ interactions:
     method: POST
     uri: https://api.openai.com/v1/chat/completions
   response:
-    content: "{\n  \"id\": \"chatcmpl-AAWom9jmunmdkBLhDpXeBWpAgJjft\",\n  \"object\":
-      \"chat.completion\",\n  \"created\": 1727072796,\n  \"model\": \"gpt-4o-2024-05-13\",\n
+    content: "{\n  \"id\": \"chatcmpl-AAjBPgQTp1noCX3ZRlyuXnvlYy0sp\",\n  \"object\":
+      \"chat.completion\",\n  \"created\": 1727120327,\n  \"model\": \"gpt-4o-2024-05-13\",\n
       \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
       \"assistant\",\n        \"content\": \"I now can give a great answer\\nFinal
-      Answer: The history of artificial intelligence (AI) is marked by a series of
-      pivotal events that have shaped its progress and applications across diverse
-      sectors. One of the earliest and most significant milestones was the Dartmouth
-      Conference in 1956. Organized by John McCarthy, Marvin Minsky, Nathaniel Rochester,
-      and Claude Shannon, this conference is considered the birthplace of AI as a
-      formal academic discipline. It brought together leading researchers to discuss
-      the development of intelligent machines, laying the groundwork for future advancements
-      and establishing AI as a legitimate field of study.\\n\\nA significant leap
-      in machine learning came with the development of the Perceptron in 1957 by Frank
-      Rosenblatt. The Perceptron was an early neural network model inspired by biological
-      neurons, capable of pattern recognition and learning from data. Although initial
-      enthusiasm for the Perceptron waned due to its limitations, it paved the way
-      for the resurgence of interest in neural networks and deep learning technologies
-      that would dominate AI research in later decades.\\n\\nThe world witnessed a
-      dramatic demonstration of AI's potential in 1997 when IBM's Deep Blue defeated
-      Garry Kasparov, the reigning world chess champion, in a six-game match. This
-      event underscored AI's capacity to perform complex and strategically intense
-      tasks, sparking widespread public interest and increasing investment in AI research.
-      It highlighted the advances in machine learning and computational power necessary
-      to challenge human expertise in specific domains.\\n\\nAnother landmark event
-      was the introduction of Google's AlphaGo in 2016. Developed by DeepMind, AlphaGo
-      defeated Lee Sedol, one of the world's greatest Go players, in a historic five-game
-      match. AlphaGo's victory showcased the effectiveness of deep learning and reinforcement
-      learning in mastering complex tasks previously thought to be beyond the reach
-      of machines. This victory accelerated AI research and development, including
-      the advent of transformer models like BERT and GPT. Introduced in 2017, these
-      transformers revolutionized natural language processing by enabling more efficient
-      and effective handling of sequential data, paving the way for sophisticated
-      AI applications in creative content generation, personal finance, and beyond.
-      Each of these milestones has been instrumental in advancing AI technology, broadening
-      its applications, and driving innovation across multiple industries.\",\n        \"refusal\":
-      null\n      },\n      \"logprobs\": null,\n      \"finish_reason\": \"stop\"\n
-      \   }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 1024,\n    \"completion_tokens\":
-      448,\n    \"total_tokens\": 1472,\n    \"completion_tokens_details\": {\n      \"reasoning_tokens\":
+      Answer: The history of Artificial Intelligence (AI) is a fascinating journey
+      marked by pioneering breakthroughs and revolutionary innovations. One of the
+      most significant early milestones was the Turing Test, proposed by Alan Turing
+      in 1950 in his seminal paper \\\"Computing Machinery and Intelligence.\\\" Turing's
+      idea was to evaluate whether a machine could exhibit intelligent behavior indistinguishable
+      from that of a human, setting a lasting philosophical foundation for AI research.
+      This concept remains a touchstone in debates about machine intelligence and
+      continues to inspire new generations of AI researchers globally.\\n\\nThe formal
+      inception of AI as a field of study occurred during the Dartmouth Conference
+      in 1956, an event often regarded as the official birth of AI. Organized by John
+      McCarthy and other luminaries in computing, this workshop introduced the term
+      \\\"Artificial Intelligence\\\" and gathered leading experts to lay down the
+      foundational goals and principles for AI research. It was here that the potential
+      and scope of AI began to take shape, setting the stage for future advancements
+      and inspiring a long-term commitment to the pursuit of machine intelligence.\\n\\nThe
+      development of expert systems in the 1970s and 1980s marked another crucial
+      chapter in AI's history. These systems were designed to mimic the decision-making
+      abilities of human experts in specific domains such as medical diagnosis and
+      financial planning. Notable examples like MYCIN and DENDRAL showcased the practical
+      utility of AI in solving real-world problems, thereby attracting significant
+      commercial interest. Expert systems demonstrated that AI could have tangible,
+      beneficial impacts on various industries, cementing its role as a valuable technological
+      tool.\\n\\nA significant leap forward occurred in 2012 with the advent of deep
+      learning, particularly highlighted by AlexNet's triumph in the ImageNet Large
+      Scale Visual Recognition Challenge. Developed by Alex Krizhevsky, Ilya Sutskever,
+      and Geoffrey Hinton, AlexNet delivered unprecedented performance in image recognition
+      tasks, catalyzing widespread interest and investment in deep learning technologies.
+      This led to rapid advancements in fields such as computer vision and natural
+      language processing. The 2016 victory of Google DeepMind's AlphaGo over Go champion
+      Lee Sedol further underscored AI's potential; AlphaGo's achievement in a game
+      with more possible moves than atoms in the universe showcased the efficacy of
+      reinforcement learning and deep neural networks, opening new horizons for AI's
+      application in complex, strategic domains.\\n\\nThe trajectory of AI, from the
+      early days of the Turing Test to the revolutionary triumphs of deep learning
+      and reinforcement learning, illustrates a dynamic and transformative journey.
+      Each milestone not only represents a significant technical achievement but also
+      sets the stage for the future possibilities of AI, promising even more profound
+      impacts on technology and society.\",\n        \"refusal\": null\n      },\n
+      \     \"logprobs\": null,\n      \"finish_reason\": \"stop\"\n    }\n  ],\n
+      \ \"usage\": {\n    \"prompt_tokens\": 1096,\n    \"completion_tokens\": 544,\n
+      \   \"total_tokens\": 1640,\n    \"completion_tokens_details\": {\n      \"reasoning_tokens\":
       0\n    }\n  },\n  \"system_fingerprint\": \"fp_e375328146\"\n}\n"
     headers:
       CF-Cache-Status:
       - DYNAMIC
       CF-RAY:
-      - 8c7876d0f971a4ee-MIA
+      - 8c7cff3e2eeca4c7-MIA
       Connection:
       - keep-alive
       Content-Encoding:
@@ -655,7 +647,7 @@ interactions:
       Content-Type:
       - application/json
       Date:
-      - Mon, 23 Sep 2024 06:26:41 GMT
+      - Mon, 23 Sep 2024 19:38:55 GMT
       Server:
       - cloudflare
       Transfer-Encoding:
@@ -667,7 +659,7 @@ interactions:
       openai-organization:
       - crewai-iuxna1
       openai-processing-ms:
-      - '5207'
+      - '7449'
       openai-version:
       - '2020-10-01'
       strict-transport-security:
@@ -679,13 +671,13 @@ interactions:
       x-ratelimit-remaining-requests:
       - '9999'
       x-ratelimit-remaining-tokens:
-      - '29998636'
+      - '29998585'
       x-ratelimit-reset-requests:
       - 6ms
       x-ratelimit-reset-tokens:
       - 2ms
       x-request-id:
-      - req_04b42b485d6c6d15eae9f3e15a38abd9
+      - req_06eb4f30a47922cb19473a1eb44c47ba
     http_version: HTTP/1.1
     status_code: 200
 version: 1

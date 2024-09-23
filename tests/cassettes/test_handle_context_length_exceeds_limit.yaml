@@ -23,8 +23,8 @@ interactions:
       content-type:
       - application/json
       cookie:
-      - __cf_bm=MSMbC3L9m33fbO5Mdj70NJMu6kJCjhuwRcYuWJdJkYQ-1727071769-1.0.1.1-Dok5J431gUNvLRyLNrUo0A.FXXIuZUUooIMFSj74XUDgQJt0mlhf6QEEo6s9wXLhByXrdKr6cxYGBEkQoDslXg;
-        _cfuvid=5cK2hfLqTXw1WjB81uT.sGmmA67JIxSKSQeEHQ3zOQw-1727071769966-0.0.1.1-604800000
+      - __cf_bm=4rzJDR3F8S3Dp4B_qwylZU0mdm_WUwmv8vNHHp3IplM-1727119501-1.0.1.1-qobO_Sf88yG1qtXFnLgykvyc9YXR_fm1J7ZpXIhvtynVnsz67Uwcf4122PgHs4GMrlvZMaL6z_UVcVYSYUJOKQ;
+        _cfuvid=9K_ipT1uTVyDTneB1W5OZHPxCh36aOsDZCBnsQTONqQ-1727119501207-0.0.1.1-604800000
       host:
       - api.openai.com
       user-agent:
@@ -48,19 +48,19 @@ interactions:
     method: POST
     uri: https://api.openai.com/v1/chat/completions
   response:
-    content: "{\n  \"id\": \"chatcmpl-AAWiq3ZXbrsPZhDypdsRuNxoHKxDl\",\n  \"object\":
-      \"chat.completion\",\n  \"created\": 1727072428,\n  \"model\": \"gpt-4o-2024-05-13\",\n
+    content: "{\n  \"id\": \"chatcmpl-AAj4peyGxBrZKrLmBuryTa7hgNUt6\",\n  \"object\":
+      \"chat.completion\",\n  \"created\": 1727119919,\n  \"model\": \"gpt-4o-2024-05-13\",\n
       \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
-      \"assistant\",\n        \"content\": \"I now can give a great answer\\nFinal
+      \"assistant\",\n        \"content\": \"Thought: I now can give a great answer\\nFinal
       Answer: The final answer is 42.\",\n        \"refusal\": null\n      },\n      \"logprobs\":
       null,\n      \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\":
-      175,\n    \"completion_tokens\": 18,\n    \"total_tokens\": 193,\n    \"completion_tokens_details\":
+      175,\n    \"completion_tokens\": 20,\n    \"total_tokens\": 195,\n    \"completion_tokens_details\":
       {\n      \"reasoning_tokens\": 0\n    }\n  },\n  \"system_fingerprint\": \"fp_e375328146\"\n}\n"
     headers:
       CF-Cache-Status:
       - DYNAMIC
       CF-RAY:
-      - 8c786dd6aa31a540-MIA
+      - 8c7cf544f848228a-MIA
       Connection:
       - keep-alive
       Content-Encoding:
@@ -68,7 +68,7 @@ interactions:
       Content-Type:
       - application/json
       Date:
-      - Mon, 23 Sep 2024 06:20:29 GMT
+      - Mon, 23 Sep 2024 19:31:59 GMT
       Server:
       - cloudflare
       Transfer-Encoding:
@@ -80,7 +80,7 @@ interactions:
       openai-organization:
       - crewai-iuxna1
       openai-processing-ms:
-      - '294'
+      - '341'
       openai-version:
       - '2020-10-01'
       strict-transport-security:
@@ -98,7 +98,7 @@ interactions:
       x-ratelimit-reset-tokens:
       - 0s
       x-request-id:
-      - req_eedadebe43f21fc46d3523afecf742db
+      - req_288ceeff8023e0bbc8989147cf9794a9
     http_version: HTTP/1.1
     status_code: 200
 version: 1

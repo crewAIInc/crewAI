@@ -1,92 +1,5 @@
 interactions:
 - request:
-    body: !!binary |
-      CoYZCiQKIgoMc2VydmljZS5uYW1lEhIKEGNyZXdBSS10ZWxlbWV0cnkS3RgKEgoQY3Jld2FpLnRl
-      bGVtZXRyeRKcAQoQs2TDXqXaAIV1NDWXPtFG6BIIn1Mg+psRgNYqClRvb2wgVXNhZ2UwATnwHQUO
-      pMv3F0FAvQsOpMv3F0oaCg5jcmV3YWlfdmVyc2lvbhIICgYwLjYxLjBKKAoJdG9vbF9uYW1lEhsK
-      GURlbGVnYXRlIHdvcmsgdG8gY293b3JrZXJKDgoIYXR0ZW1wdHMSAhgBegIYAYUBAAEAABKQAgoQ
-      n7QAPNKWG08E+oJxc/TyUhII10rDbnR4kzIqDlRhc2sgRXhlY3V0aW9uMAE58D7n46LL9xdBEOvb
-      iqTL9xdKLgoIY3Jld19rZXkSIgogMjYzNGI4NjM4M2ZkNWE0M2RlMmExZWZiZDM2MzE4YjJKMQoH
-      Y3Jld19pZBImCiQ1NDdiNjBjYy03Njk4LTQ4OTUtYWM5My1lYTJmNTAzNDIwNjFKLgoIdGFza19r
-      ZXkSIgogZGM2YmJjNmNlN2E5ZTVjMWZmYTAwN2U4YWUyMWM3OGJKMQoHdGFza19pZBImCiQ4NTAz
-      OTU1NS1mOWU0LTRhYTUtYTVkOS04Mjc0ZWNlMmM1NGR6AhgBhQEAAQAAEq4HChDh4XOVm+CyLcId
-      Jt/J8Tq3Egj5t+gdQvgfDSoMQ3JldyBDcmVhdGVkMAE5qN80jKTL9xdB8Mc2jKTL9xdKGgoOY3Jl
-      d2FpX3ZlcnNpb24SCAoGMC42MS4wShoKDnB5dGhvbl92ZXJzaW9uEggKBjMuMTEuN0ouCghjcmV3
-      X2tleRIiCiA5OGE3ZDIxNDI1MjEwNzY5MzhjYzg3Yzc2OWRlZGNkM0oxCgdjcmV3X2lkEiYKJGJm
-      ZDAzZmRjLTVkMTItNGMzYy1iNmI5LTUyODYzODBiZTViNkocCgxjcmV3X3Byb2Nlc3MSDAoKc2Vx
-      dWVudGlhbEoRCgtjcmV3X21lbW9yeRICEABKGgoUY3Jld19udW1iZXJfb2ZfdGFza3MSAhgBShsK
-      FWNyZXdfbnVtYmVyX29mX2FnZW50cxICGAFK1AIKC2NyZXdfYWdlbnRzEsQCCsECW3sia2V5Ijog
-      ImYzMzg2ZjZkOGRhNzVhYTQxNmE2ZTMxMDA1M2Y3Njk4IiwgImlkIjogIjBhMzc2YmY2LTM3NzIt
-      NDM2OS05NmJhLWRkNzQ3MGNkZDNiMCIsICJyb2xlIjogInt0b3BpY30gUmVzZWFyY2hlciIsICJ2
-      ZXJib3NlPyI6IGZhbHNlLCAibWF4X2l0ZXIiOiAxNSwgIm1heF9ycG0iOiBudWxsLCAiZnVuY3Rp
-      b25fY2FsbGluZ19sbG0iOiAiIiwgImxsbSI6ICJncHQtNG8iLCAiZGVsZWdhdGlvbl9lbmFibGVk
-      PyI6IGZhbHNlLCAiYWxsb3dfY29kZV9leGVjdXRpb24/IjogZmFsc2UsICJtYXhfcmV0cnlfbGlt
-      aXQiOiAyLCAidG9vbHNfbmFtZXMiOiBbXX1dSocCCgpjcmV3X3Rhc2tzEvgBCvUBW3sia2V5Ijog
-      ImFmYTY5OGIyNjJkMzU0M2Y5YTYxMWU0ZDUxNDVlZDZhIiwgImlkIjogIjI1YjNmMmRlLWY0Y2Yt
-      NGQ0MC04Y2Y3LTIzMmUwYWE2NGEzYyIsICJhc3luY19leGVjdXRpb24/IjogZmFsc2UsICJodW1h
-      bl9pbnB1dD8iOiBmYWxzZSwgImFnZW50X3JvbGUiOiAie3RvcGljfSBSZXNlYXJjaGVyIiwgImFn
-      ZW50X2tleSI6ICJmMzM4NmY2ZDhkYTc1YWE0MTZhNmUzMTAwNTNmNzY5OCIsICJ0b29sc19uYW1l
-      cyI6IFtdfV16AhgBhQEAAQAAEo4CChCB3qYtuPN5TuMow1lg6hKwEgjPFg3YlxOYlCoMVGFzayBD
-      cmVhdGVkMAE5cHZOjKTL9xdBAFlPjKTL9xdKLgoIY3Jld19rZXkSIgogM2YzMDEyN2EzNzQ0OGNh
-      MzRjYjI5NjJiNjk0MGQzZjRKMQoHY3Jld19pZBImCiRiZmQwM2ZkYy01ZDEyLTRjM2MtYjZiOS01
-      Mjg2MzgwYmU1YjZKLgoIdGFza19rZXkSIgogYWZhNjk4YjI2MmQzNTQzZjlhNjExZTRkNTE0NWVk
-      NmFKMQoHdGFza19pZBImCiQyNWIzZjJkZS1mNGNmLTRkNDAtOGNmNy0yMzJlMGFhNjRhM2N6AhgB
-      hQEAAQAAEpACChCbi7ZUSDOkOegVcPQM8lO5EghSojxiqaxOTioOVGFzayBFeGVjdXRpb24wATmY
-      k0+MpMv3F0EQelCMpMv3F0ouCghjcmV3X2tleRIiCiAzZjMwMTI3YTM3NDQ4Y2EzNGNiMjk2MmI2
-      OTQwZDNmNEoxCgdjcmV3X2lkEiYKJGJmZDAzZmRjLTVkMTItNGMzYy1iNmI5LTUyODYzODBiZTVi
-      NkouCgh0YXNrX2tleRIiCiBhZmE2OThiMjYyZDM1NDNmOWE2MTFlNGQ1MTQ1ZWQ2YUoxCgd0YXNr
-      X2lkEiYKJDI1YjNmMmRlLWY0Y2YtNGQ0MC04Y2Y3LTIzMmUwYWE2NGEzY3oCGAGFAQABAAASrgcK
-      EEa/QJk/ohGXUej2gla0Zh4SCCcfrgjyHZE1KgxDcmV3IENyZWF0ZWQwATl4b8WMpMv3F0HIqceM
-      pMv3F0oaCg5jcmV3YWlfdmVyc2lvbhIICgYwLjYxLjBKGgoOcHl0aG9uX3ZlcnNpb24SCAoGMy4x
-      MS43Si4KCGNyZXdfa2V5EiIKIDk4YTdkMjE0MjUyMTA3NjkzOGNjODdjNzY5ZGVkY2QzSjEKB2Ny
-      ZXdfaWQSJgokNjg2NDE1YzctNGFmNy00NmE4LTg5ODEtNzE1MWQ3MWI0MGVlShwKDGNyZXdfcHJv
-      Y2VzcxIMCgpzZXF1ZW50aWFsShEKC2NyZXdfbWVtb3J5EgIQAEoaChRjcmV3X251bWJlcl9vZl90
-      YXNrcxICGAFKGwoVY3Jld19udW1iZXJfb2ZfYWdlbnRzEgIYAUrUAgoLY3Jld19hZ2VudHMSxAIK
-      wQJbeyJrZXkiOiAiZjMzODZmNmQ4ZGE3NWFhNDE2YTZlMzEwMDUzZjc2OTgiLCAiaWQiOiAiODgw
-      ZjM1NjctNTljNC00MjM5LThlOGEtODViODVmZmIwNDQwIiwgInJvbGUiOiAie3RvcGljfSBSZXNl
-      YXJjaGVyIiwgInZlcmJvc2U/IjogZmFsc2UsICJtYXhfaXRlciI6IDE1LCAibWF4X3JwbSI6IG51
-      bGwsICJmdW5jdGlvbl9jYWxsaW5nX2xsbSI6ICIiLCAibGxtIjogImdwdC00byIsICJkZWxlZ2F0
-      aW9uX2VuYWJsZWQ/IjogZmFsc2UsICJhbGxvd19jb2RlX2V4ZWN1dGlvbj8iOiBmYWxzZSwgIm1h
-      eF9yZXRyeV9saW1pdCI6IDIsICJ0b29sc19uYW1lcyI6IFtdfV1KhwIKCmNyZXdfdGFza3MS+AEK
-      9QFbeyJrZXkiOiAiYWZhNjk4YjI2MmQzNTQzZjlhNjExZTRkNTE0NWVkNmEiLCAiaWQiOiAiMTBj
-      ODkxN2MtOTRmMy00NjZiLWEwNzYtNGFlM2U4ZTRlMjM5IiwgImFzeW5jX2V4ZWN1dGlvbj8iOiBm
-      YWxzZSwgImh1bWFuX2lucHV0PyI6IGZhbHNlLCAiYWdlbnRfcm9sZSI6ICJ7dG9waWN9IFJlc2Vh
-      cmNoZXIiLCAiYWdlbnRfa2V5IjogImYzMzg2ZjZkOGRhNzVhYTQxNmE2ZTMxMDA1M2Y3Njk4Iiwg
-      InRvb2xzX25hbWVzIjogW119XXoCGAGFAQABAAASjgIKEIqklZq8JIOZJmwC3XWxfNQSCDLK4PSW
-      iNJcKgxUYXNrIENyZWF0ZWQwATmwDwuNpMv3F0HIiAuNpMv3F0ouCghjcmV3X2tleRIiCiA5OGE3
-      ZDIxNDI1MjEwNzY5MzhjYzg3Yzc2OWRlZGNkM0oxCgdjcmV3X2lkEiYKJDY4NjQxNWM3LTRhZjct
-      NDZhOC04OTgxLTcxNTFkNzFiNDBlZUouCgh0YXNrX2tleRIiCiBhZmE2OThiMjYyZDM1NDNmOWE2
-      MTFlNGQ1MTQ1ZWQ2YUoxCgd0YXNrX2lkEiYKJDEwYzg5MTdjLTk0ZjMtNDY2Yi1hMDc2LTRhZTNl
-      OGU0ZTIzOXoCGAGFAQABAAA=
-    headers:
-      Accept:
-      - '*/*'
-      Accept-Encoding:
-      - gzip, deflate
-      Connection:
-      - keep-alive
-      Content-Length:
-      - '3209'
-      Content-Type:
-      - application/x-protobuf
-      User-Agent:
-      - OTel-OTLP-Exporter-Python/1.27.0
-    method: POST
-    uri: https://telemetry.crewai.com:4319/v1/traces
-  response:
-    body:
-      string: "\n\0"
-    headers:
-      Content-Length:
-      - '2'
-      Content-Type:
-      - application/x-protobuf
-      Date:
-      - Mon, 23 Sep 2024 06:28:11 GMT
-    status:
-      code: 200
-      message: OK
-- request:
     body: '{"messages": [{"role": "system", "content": "You are {topic} Researcher.
       You have a lot of experience with {topic}.\nYour personal goal is: Express hot
       takes on {topic}.\nTo give my best complete final answer to the task use the
@@ -110,8 +23,8 @@ interactions:
       content-type:
       - application/json
       cookie:
-      - __cf_bm=hYfEMfBWpIoRPjx9ZBZg6DVeMOMr1IZt9ioup8yWZs0-1727072673-1.0.1.1-Ro7GCLuWS0K5ob0mSTYSmovONKNyxsK6oSA5io_Vwqhe6P0G7Ow4CuZUaWAaCdFGQUd7XZiFH0mI_sQC3uqe0g;
-        _cfuvid=5cK2hfLqTXw1WjB81uT.sGmmA67JIxSKSQeEHQ3zOQw-1727071769966-0.0.1.1-604800000
+      - __cf_bm=iOyeV6o_mR0USNA.hPdpKPtAzYgMoprpObRHvn0tmcc-1727120402-1.0.1.1-yMOSz4qncmM1wdtrwFfBQNfITkLs2w_sxijeM44F7aSIrclbkQ2G_18su02eVMVPMW2O55B1rty8BiY_WAoayg;
+        _cfuvid=9K_ipT1uTVyDTneB1W5OZHPxCh36aOsDZCBnsQTONqQ-1727119501207-0.0.1.1-604800000
       host:
       - api.openai.com
       user-agent:
@@ -135,32 +48,53 @@ interactions:
     method: POST
     uri: https://api.openai.com/v1/chat/completions
   response:
-    content: "{\n  \"id\": \"chatcmpl-AAWqIBJtflB7mLCkhG53PhPgojxAS\",\n  \"object\":
-      \"chat.completion\",\n  \"created\": 1727072890,\n  \"model\": \"gpt-4o-2024-05-13\",\n
+    content: "{\n  \"id\": \"chatcmpl-AAjGugPVSdpJbJ1JFa7KzaOZ70f7n\",\n  \"object\":
+      \"chat.completion\",\n  \"created\": 1727120668,\n  \"model\": \"gpt-4o-2024-05-13\",\n
       \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
-      \"assistant\",\n        \"content\": \"Thought: I now can give a great answer\\nFinal
-      Answer: Your final answer must be the great and the most complete as possible,
-      it must be outcome described.\\n\\nNote: To give you a precise and customized
-      answer, I need you to fill in the placeholders in your request. Specifically,
-      I need the actual \\\"topic\\\" and \\\"points\\\" you want me to analyze and
-      discuss. Here is a guideline on how I can proceed once these placeholders are
-      filled:\\n\\n1. **Detailed Explanation**: Elaborate on the background, definitions,
-      and significance of the topic.\\n2. **Current Trends**: Highlight any current
-      developments, ongoing discussions, or prevalent trends related to the topic.\\n3.
-      **Challenges and Controversies**: Identify key challenges, disputes, or polarizing
-      opinions within the topic.\\n4. **Future Directions**: Suggest possible future
-      developments, advancements, or shifts in the field or discussion of the topic.\\n5.
-      **Practical Implications**: Discuss how the topic affects real-world situations,
-      practices, and the broader society.\\n\\nPlease provide the specific information
-      to proceed.\",\n        \"refusal\": null\n      },\n      \"logprobs\": null,\n
-      \     \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\":
-      178,\n    \"completion_tokens\": 218,\n    \"total_tokens\": 396,\n    \"completion_tokens_details\":
-      {\n      \"reasoning_tokens\": 0\n    }\n  },\n  \"system_fingerprint\": \"fp_e375328146\"\n}\n"
+      \"assistant\",\n        \"content\": \"Thought: I now can give a great answer
+      \ \\nFinal Answer: To provide an in-depth analysis of the topic, let\u2019s
+      go through a structured approach with specific bullet points:\\n\\n1. **Historical
+      Context**:\\n   - Detail the origins and development of {topic} over time.\\n
+      \  - Highlight key milestones that influenced its evolution.\\n\\n2. **Current
+      Landscape**:\\n   - Describe the present state of {topic}, including notable
+      figures, organizations, or trends.\\n   - Mention relevant statistics and data
+      to provide a clear picture.\\n\\n3. **Key Challenges**:\\n   - Identify the
+      major obstacles and issues currently facing {topic}.\\n   - Discuss the potential
+      impacts of these challenges on future developments.\\n\\n4. **Innovative Developments**:\\n
+      \  - Point out the latest advancements and breakthroughs within {topic}.\\n
+      \  - Explain how these innovations are potentially solving existing problems
+      or creating new opportunities.\\n\\n5. **Future Prospects**:\\n   - Predict
+      the possible future directions and trends for {topic}.\\n   - Consider both
+      optimistic and pessimistic scenarios based on current trajectories and challenges.\\n\\nFinal
+      Answer:\\n\\n1. **Historical Context**:\\n   - The origins of {topic} trace
+      back to [detailed origins], evolving significantly through [key periods].\\n
+      \  - Notable milestones include [milestone 1], [milestone 2], and [milestone
+      3], each contributing to the evolution of {topic}.\\n\\n2. **Current Landscape**:\\n
+      \  - Today, {topic} is characterized by [description of the current state],
+      involving key players like [notable figures/organizations].\\n   - Current trends
+      include [trend 1], [trend 2], with significant statistics such as [relevant
+      statistics].\\n\\n3. **Key Challenges**: \\n   - Major obstacles include [challenge
+      1], which affects [specific area], and [challenge 2], impacting [another specific
+      area].\\n   - These challenges could significantly hinder future developments
+      in {topic} if not addressed.\\n\\n4. **Innovative Developments**:\\n   - The
+      latest advancements in {topic} involve [innovation 1], which addresses [specific
+      issue], and [innovation 2], opening new doors for [another aspect].\\n   - Innovations
+      like [innovation 3] are particularly promising for [reason], showing great potential
+      for future solutions.\\n\\n5. **Future Prospects**:\\n   - The future of {topic}
+      may head towards [optimistic scenario] if current trends continue positively.\\n
+      \  - However, there\u2019s also the risk of [pessimistic scenario], stemming
+      from the persistence of present challenges.\\n\\nThis comprehensive analysis
+      covers the essential aspects of {topic}, providing a robust understanding of
+      its past, present, challenges, innovations, and future prospects.\",\n        \"refusal\":
+      null\n      },\n      \"logprobs\": null,\n      \"finish_reason\": \"stop\"\n
+      \   }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 178,\n    \"completion_tokens\":
+      545,\n    \"total_tokens\": 723,\n    \"completion_tokens_details\": {\n      \"reasoning_tokens\":
+      0\n    }\n  },\n  \"system_fingerprint\": \"fp_e375328146\"\n}\n"
     headers:
       CF-Cache-Status:
       - DYNAMIC
       CF-RAY:
-      - 8c78791bca22a4ee-MIA
+      - 8c7d0790affca4c7-MIA
       Connection:
       - keep-alive
       Content-Encoding:
@@ -168,7 +102,7 @@ interactions:
       Content-Type:
       - application/json
       Date:
-      - Mon, 23 Sep 2024 06:28:13 GMT
+      - Mon, 23 Sep 2024 19:44:35 GMT
       Server:
       - cloudflare
       Transfer-Encoding:
@@ -180,7 +114,7 @@ interactions:
       openai-organization:
       - crewai-iuxna1
       openai-processing-ms:
-      - '3102'
+      - '6663'
       openai-version:
       - '2020-10-01'
       strict-transport-security:
@@ -198,7 +132,7 @@ interactions:
       x-ratelimit-reset-tokens:
       - 0s
       x-request-id:
-      - req_08904130079670a6035874a846a0eb5c
+      - req_81038443e9a2b946e995b6671311fe36
     http_version: HTTP/1.1
     status_code: 200
 version: 1
