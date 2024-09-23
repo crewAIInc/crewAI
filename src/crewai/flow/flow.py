@@ -2,7 +2,7 @@ import asyncio
 import inspect
 from typing import Any, Callable, Dict, Generic, List, Set, Type, TypeVar, Union
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel
 
 T = TypeVar("T", bound=Union[BaseModel, Dict[str, Any]])
 
@@ -140,7 +140,7 @@ class Flow(Generic[T], metaclass=FlowMeta):
         self._state = self._create_initial_state()
         self._completed_methods: Set[str] = set()
         self._pending_and_listeners: Dict[str, Set[str]] = {}
-        self._flow_output = FlowOutput()
+        self._method_outputs: List[Any] = []  # List to store all method outputs
 
         for method_name in dir(self):
             if callable(getattr(self, method_name)) and not method_name.startswith(
@@ -162,7 +162,12 @@ class Flow(Generic[T], metaclass=FlowMeta):
     def state(self) -> T:
         return self._state
 
-    async def kickoff(self):
+    @property
+    def method_outputs(self) -> List[Any]:
+        """Returns the list of all outputs from executed methods."""
+        return self._method_outputs
+
+    async def kickoff(self) -> Any:
         if not self._start_methods:
             raise ValueError("No start method defined")
 
@@ -175,6 +180,12 @@ class Flow(Generic[T], metaclass=FlowMeta):
         # Run all start methods concurrently
         await asyncio.gather(*tasks)
 
+        # Return the final output (from the last executed method)
+        if self._method_outputs:
+            return self._method_outputs[-1]
+        else:
+            return None  # Or raise an exception if no methods were executed
+
     async def _execute_start_method(self, start_method: str):
         result = await self._execute_method(self._methods[start_method])
         await self._execute_listeners(start_method, result)
@@ -185,7 +196,7 @@ class Flow(Generic[T], metaclass=FlowMeta):
             if asyncio.iscoroutinefunction(method)
             else method(*args, **kwargs)
         )
-        self._flow_output.add_method_output(result)
+        self._method_outputs.append(result)  # Store the output
         return result
 
     async def _execute_listeners(self, trigger_method: str, result: Any):
@@ -239,28 +250,3 @@ class Flow(Generic[T], metaclass=FlowMeta):
             import traceback
 
             traceback.print_exc()
-
-
-class FlowOutput(BaseModel):
-    state: Dict[str, Any] = Field(
-        default_factory=dict, description="Final state of the flow"
-    )
-    method_outputs: List[Any] = Field(
-        default_factory=list, description="List of outputs from all executed methods"
-    )
-
-    @property
-    def final_output(self) -> Any:
-        """Get the output of the last executed method."""
-        return self.method_outputs[-1] if self.method_outputs else None
-
-    def add_method_output(self, output: Any):
-        """Add a method output to the list and update the final method name."""
-        self.method_outputs.append(output)
-
-    def update_state(self, new_state: Dict[str, Any]):
-        """Update the flow state."""
-        self.state.update(new_state)
-
-    class Config:
-        arbitrary_types_allowed = True

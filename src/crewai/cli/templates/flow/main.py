@@ -11,7 +11,6 @@ class PoemState(BaseModel):
     poem: str = ""
 
 class PoemFlow(Flow[PoemState]):
-    initial_state = PoemState
 
     @start()
     def generate_sentence_count(self):
