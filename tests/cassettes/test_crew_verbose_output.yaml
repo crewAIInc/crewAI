@@ -1,592 +1,43 @@
 interactions:
 - request:
     body: !!binary |
-      Cs0RCiQKIgoMc2VydmljZS5uYW1lEhIKEGNyZXdBSS10ZWxlbWV0cnkSpBEKEgoQY3Jld2FpLnRl
-      bGVtZXRyeRKcAQoQcnADgjIRMj4Sycw3tAhTBRIIK4Yo3IM5cs8qClRvb2wgVXNhZ2UwATn4Bk+g
-      d8v3F0HAkPygd8v3F0oaCg5jcmV3YWlfdmVyc2lvbhIICgYwLjYxLjBKKAoJdG9vbF9uYW1lEhsK
-      GURlbGVnYXRlIHdvcmsgdG8gY293b3JrZXJKDgoIYXR0ZW1wdHMSAhgBegIYAYUBAAEAABKQAgoQ
-      /13gsFoeSzFq9YfIp8xdbBII0y7RcVa7ahUqDlRhc2sgRXhlY3V0aW9uMAE5oGF5FHLL9xdBWOtZ
-      WnjL9xdKLgoIY3Jld19rZXkSIgogZTY0OTU3M2EyNmU1ODc5MGNhYzIxYTM3Y2Q0NDQzN2FKMQoH
-      Y3Jld19pZBImCiQ0ZjNhNGIwYi1lOWE0LTQ0MjQtOWYyMy04YTc0OGJlMWMxY2RKLgoIdGFza19r
-      ZXkSIgogMGI5ZDY1ZGI2YjdhZWRmYjM5OGM1OWUyYTlmNzFlYzVKMQoHdGFza19pZBImCiQ4NDQ2
-      YzQ4My1jZDlhLTQwNmUtOTFmZS01YzkwZDhiOTgzNmF6AhgBhQEAAQAAEsoLChDRgQ35IBxhBOdw
-      6+jsLespEgixNjMMu+qK2yoMQ3JldyBDcmVhdGVkMAE5ePFHX3jL9xdBWHNPX3jL9xdKGgoOY3Jl
-      d2FpX3ZlcnNpb24SCAoGMC42MS4wShoKDnB5dGhvbl92ZXJzaW9uEggKBjMuMTEuN0ouCghjcmV3
-      X2tleRIiCiA5YmYyY2RlNmJjNWM0MjAxZDY5YjliY2ZmZjM1YmZiOUoxCgdjcmV3X2lkEiYKJDY1
-      N2ZhOWIyLWZjNjItNDBiMi04ZTA3LTM1ZDM5NjZhMDNjYUocCgxjcmV3X3Byb2Nlc3MSDAoKc2Vx
-      dWVudGlhbEoRCgtjcmV3X21lbW9yeRICEABKGgoUY3Jld19udW1iZXJfb2ZfdGFza3MSAhgCShsK
-      FWNyZXdfbnVtYmVyX29mX2FnZW50cxICGAJKiAUKC2NyZXdfYWdlbnRzEvgECvUEW3sia2V5Ijog
-      IjhiZDIxMzliNTk3NTE4MTUwNmU0MWZkOWM0NTYzZDc1IiwgImlkIjogImViMGFkZjQyLTZiMDYt
-      NGQxMi1hNThmLTQ4NjA5NTRiMmI0NSIsICJyb2xlIjogIlJlc2VhcmNoZXIiLCAidmVyYm9zZT8i
-      OiBmYWxzZSwgIm1heF9pdGVyIjogMTUsICJtYXhfcnBtIjogbnVsbCwgImZ1bmN0aW9uX2NhbGxp
-      bmdfbGxtIjogIiIsICJsbG0iOiAiZ3B0LTRvIiwgImRlbGVnYXRpb25fZW5hYmxlZD8iOiBmYWxz
-      ZSwgImFsbG93X2NvZGVfZXhlY3V0aW9uPyI6IGZhbHNlLCAibWF4X3JldHJ5X2xpbWl0IjogMiwg
-      InRvb2xzX25hbWVzIjogW119LCB7ImtleSI6ICI5YTUwMTVlZjQ4OTVkYzYyNzhkNTQ4MThiYTQ0
-      NmFmNyIsICJpZCI6ICI2NzY3N2VjYS03YTkzLTRhZWUtYmFjZS05NDJmZjk5YTRlOTIiLCAicm9s
-      ZSI6ICJTZW5pb3IgV3JpdGVyIiwgInZlcmJvc2U/IjogZmFsc2UsICJtYXhfaXRlciI6IDE1LCAi
-      bWF4X3JwbSI6IG51bGwsICJmdW5jdGlvbl9jYWxsaW5nX2xsbSI6ICIiLCAibGxtIjogImdwdC00
-      byIsICJkZWxlZ2F0aW9uX2VuYWJsZWQ/IjogZmFsc2UsICJhbGxvd19jb2RlX2V4ZWN1dGlvbj8i
-      OiBmYWxzZSwgIm1heF9yZXRyeV9saW1pdCI6IDIsICJ0b29sc19uYW1lcyI6IFtdfV1K7wMKCmNy
-      ZXdfdGFza3MS4AMK3QNbeyJrZXkiOiAiNTljNzM4ZDRkYWU3OTZlNWEyMmRiYzJlNTE5OGMyMGQi
-      LCAiaWQiOiAiZjg4NzRjNjktY2ZkOC00NmM0LWE3ZjQtNjYwMDBmNTUzMDY1IiwgImFzeW5jX2V4
-      ZWN1dGlvbj8iOiBmYWxzZSwgImh1bWFuX2lucHV0PyI6IGZhbHNlLCAiYWdlbnRfcm9sZSI6ICJS
-      ZXNlYXJjaGVyIiwgImFnZW50X2tleSI6ICI4YmQyMTM5YjU5NzUxODE1MDZlNDFmZDljNDU2M2Q3
-      NSIsICJ0b29sc19uYW1lcyI6IFtdfSwgeyJrZXkiOiAiYzUwMmM1NzQ1YzI3ODFhZjUxYjJmM2Vm
-      NWQ2MmZjNzQiLCAiaWQiOiAiMGQ2MjYwZTEtZDQzNS00Njg3LWI3YmYtNGY0MDU2MDU4ODA4Iiwg
-      ImFzeW5jX2V4ZWN1dGlvbj8iOiBmYWxzZSwgImh1bWFuX2lucHV0PyI6IGZhbHNlLCAiYWdlbnRf
-      cm9sZSI6ICJTZW5pb3IgV3JpdGVyIiwgImFnZW50X2tleSI6ICI5YTUwMTVlZjQ4OTVkYzYyNzhk
-      NTQ4MThiYTQ0NmFmNyIsICJ0b29sc19uYW1lcyI6IFtdfV16AhgBhQEAAQAAEo4CChDhj/wa1OG3
-      59BCY/LmqxQGEggAPic/qzWjDioMVGFzayBDcmVhdGVkMAE5WMp/X3jL9xdBGKWAX3jL9xdKLgoI
-      Y3Jld19rZXkSIgogOWJmMmNkZTZiYzVjNDIwMWQ2OWI5YmNmZmYzNWJmYjlKMQoHY3Jld19pZBIm
-      CiQ2NTdmYTliMi1mYzYyLTQwYjItOGUwNy0zNWQzOTY2YTAzY2FKLgoIdGFza19rZXkSIgogNTlj
-      NzM4ZDRkYWU3OTZlNWEyMmRiYzJlNTE5OGMyMGRKMQoHdGFza19pZBImCiRmODg3NGM2OS1jZmQ4
-      LTQ2YzQtYTdmNC02NjAwMGY1NTMwNjV6AhgBhQEAAQAA
-    headers:
-      Accept:
-      - '*/*'
-      Accept-Encoding:
-      - gzip, deflate
-      Connection:
-      - keep-alive
-      Content-Length:
-      - '2256'
-      Content-Type:
-      - application/x-protobuf
-      User-Agent:
-      - OTel-OTLP-Exporter-Python/1.27.0
-    method: POST
-    uri: https://telemetry.crewai.com:4319/v1/traces
-  response:
-    body:
-      string: "\n\0"
-    headers:
-      Content-Length:
-      - '2'
-      Content-Type:
-      - application/x-protobuf
-      Date:
-      - Mon, 23 Sep 2024 06:25:01 GMT
-    status:
-      code: 200
-      message: OK
-- request:
-    body: '{"messages": [{"role": "system", "content": "You are Researcher. You''re
-      an expert researcher, specialized in technology, software engineering, AI and
-      startups. You work as a freelancer and is now working on doing research and
-      analysis for a new customer.\nYour personal goal is: Make the best research
-      and analysis on content about AI and AI agents\nTo give my best complete final
-      answer to the task use the exact following format:\n\nThought: I now can give
-      a great answer\nFinal Answer: Your final answer must be the great and the most
-      complete as possible, it must be outcome described.\n\nI MUST use these formats,
-      my job depends on it!"}, {"role": "user", "content": "\nCurrent Task: Research
-      AI advancements.\n\nThis is the expect criteria for your final answer: A full
-      report on AI advancements.\nyou MUST return the actual complete content as the
-      final answer, not a summary.\n\nBegin! This is VERY important to you, use the
-      tools available and give your best Final Answer, your job depends on it!\n\nThought:"}],
-      "model": "gpt-4o"}'
-    headers:
-      accept:
-      - application/json
-      accept-encoding:
-      - gzip, deflate
-      connection:
-      - keep-alive
-      content-length:
-      - '1040'
-      content-type:
-      - application/json
-      cookie:
-      - __cf_bm=hYfEMfBWpIoRPjx9ZBZg6DVeMOMr1IZt9ioup8yWZs0-1727072673-1.0.1.1-Ro7GCLuWS0K5ob0mSTYSmovONKNyxsK6oSA5io_Vwqhe6P0G7Ow4CuZUaWAaCdFGQUd7XZiFH0mI_sQC3uqe0g;
-        _cfuvid=5cK2hfLqTXw1WjB81uT.sGmmA67JIxSKSQeEHQ3zOQw-1727071769966-0.0.1.1-604800000
-      host:
-      - api.openai.com
-      user-agent:
-      - OpenAI/Python 1.47.0
-      x-stainless-arch:
-      - arm64
-      x-stainless-async:
-      - 'false'
-      x-stainless-lang:
-      - python
-      x-stainless-os:
-      - MacOS
-      x-stainless-package-version:
-      - 1.47.0
-      x-stainless-raw-response:
-      - 'true'
-      x-stainless-runtime:
-      - CPython
-      x-stainless-runtime-version:
-      - 3.11.7
-    method: POST
-    uri: https://api.openai.com/v1/chat/completions
-  response:
-    content: "{\n  \"id\": \"chatcmpl-AAWnER3NnPtV2498pAgwzhh7oOnmw\",\n  \"object\":
-      \"chat.completion\",\n  \"created\": 1727072700,\n  \"model\": \"gpt-4o-2024-05-13\",\n
-      \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
-      \"assistant\",\n        \"content\": \"Thought: I now can give a great answer\\n\\nFinal
-      Answer: \\n\\n**AI Advancements: A Comprehensive Report**\\n\\n**1. Introduction**\\n\\nArtificial
-      Intelligence (AI) has rapidly evolved over the past few decades, revolutionizing
-      industries and redefining the boundaries of technological capabilities. This
-      comprehensive report delves into the significant advancements in AI, focusing
-      on key areas such as machine learning, natural language processing, computer
-      vision, robotics, and AI ethics. The report also discusses recent breakthroughs,
-      applications across various domains, and the potential future trajectories of
-      AI technologies.\\n\\n**2. Machine Learning**\\n\\n**2.1 Deep Learning**\\n\\nDeep
-      learning has been at the forefront of AI research, driven by the use of neural
-      networks with many layers. Recent advancements in deep learning include:\\n\\n-
-      **Transformer Models**: Models like BERT (Bidirectional Encoder Representations
-      from Transformers), GPT-3 (Generative Pre-trained Transformer 3), and T5 (Text-To-Text
-      Transfer Transformer) have revolutionized natural language understanding and
-      generation tasks. GPT-3, developed by OpenAI, is particularly noteworthy for
-      its ability to generate human-like text and its versatile applications ranging
-      from chatbots to content creation.\\n\\n- **AutoML**: Automated Machine Learning
-      (AutoML) tools have made it easier to create and deploy machine learning models
-      without extensive expertise. Google\u2019s AutoML and H2O.ai\u2019s Driverless
-      AI are popular platforms that automate the end-to-end process of applying machine
-      learning.\\n\\n**2.2 Reinforcement Learning**\\n\\nReinforcement learning (RL)
-      has seen considerable advancements, particularly in developing agents capable
-      of playing and mastering complex games:\\n\\n- **AlphaGo and AlphaZero**: Developed
-      by DeepMind, AlphaGo defeated the world champion Go player, demonstrating the
-      potential of RL. AlphaZero, an evolution of AlphaGo, uses a generalized approach
-      to master multiple games like chess and Shogi without human input.\\n\\n- **OpenAI\u2019s
-      Dota 2 Bot**: OpenAI developed a reinforcement learning bot that has defeated
-      professional human players in the complex video game Dota 2, showcasing RL\u2019s
-      capabilities in managing dynamic and strategic decision-making processes.\\n\\n**3.
-      Natural Language Processing (NLP)**\\n\\n**3.1 Language Models**\\n\\nThe development
-      of large-scale language models has significantly improved NLP capabilities:\\n\\n-
-      **GPT-3**: As one of the most powerful language models, GPT-3 can generate coherent
-      and contextually relevant text across diverse topics. Its pre-training on vast
-      datasets allows it to execute tasks such as translation, summarization, and
-      question-answering with high accuracy.\\n\\n**3.2 Conversational AI**\\n\\nImproved
-      conversational AI has led to more effective and natural interactions between
-      humans and machines:\\n\\n- **Dialogflow and Microsoft Bot Framework**: These
-      platforms help developers create sophisticated conversational agents that can
-      handle a wide range of use cases, from customer service to virtual personal
-      assistants.\\n\\n**4. Computer Vision**\\n\\n**4.1 Object Detection and Recognition**\\n\\nAdvancements
-      in computer vision have enabled more accurate and efficient object detection
-      and recognition:\\n\\n- **YOLO (You Only Look Once)**: YOLO models have improved
-      real-time object detection, offering a balance of speed and accuracy. The latest
-      iterations, such as YOLOv4 and YOLOv5, continue to push the boundaries of what\u2019s
-      possible in real-time applications.\\n\\n- **ImageNet Challenge**: The competition
-      has spurred advancements in image recognition models, with architectures like
-      ResNet, EfficientNet, and Vision Transformers (ViTs) achieving state-of-the-art
-      performance.\\n\\n**4.2 Generative Adversarial Networks (GANs)**\\n\\nGANs have
-      opened new possibilities in creating realistic images and videos:\\n\\n- **StyleGAN**:
-      Developed by NVIDIA, StyleGAN can generate highly realistic human faces and
-      has applications in art, entertainment, and virtual reality.\\n\\n- **DeepFakes**:
-      Although controversial, deepfake technology demonstrates the power of GANs in
-      synthesizing realistic human videos, with implications for both creative industries
-      and cybersecurity.\\n\\n**5. Robotics**\\n\\n**5.1 Autonomous Systems**\\n\\nAI-driven
-      robotics has made significant strides in autonomy and adaptability:\\n\\n- **Boston
-      Dynamics**: Robots like Spot and Atlas show remarkable agility and adaptability
-      in complex environments, with applications in inspection, logistics, and emergency
-      response.\\n\\n- **Self-Driving Cars**: Companies like Waymo, Tesla, and Cruise
-      are at the forefront of developing autonomous vehicles, combining deep learning,
-      computer vision, and sensor fusion to navigate and operate in real-world conditions.\\n\\n**5.2
-      Collaborative Robots (Cobots)**\\n\\nCobots are designed to work alongside humans,
-      enhancing productivity and safety:\\n\\n- **Universal Robots**: Their cobots
-      are used in various industries, including manufacturing, healthcare, and logistics,
-      to assist with repetitive and precise tasks.\\n\\n**6. AI Ethics**\\n\\n**6.1
-      Bias and Fairness**\\n\\nAddressing bias and ensuring fairness in AI systems
-      is a critical area of research:\\n\\n- **Fairness Indicators**: Tools like IBM\u2019s
-      AI Fairness 360 and Google\u2019s What-If Tool help developers assess and mitigate
-      biases in their models.\\n  \\n**6.2 Transparency and Accountability**\\n\\nEnsuring
-      transparency in AI decision-making processes is crucial for building trust:\\n\\n-
-      **Explainable AI (XAI)**: Research in XAI aims to make AI models more interpretable
-      and their decisions more understandable to humans, with frameworks like LIME
-      (Local Interpretable Model-agnostic Explanations) and SHAP (SHapley Additive
-      exPlanations) leading the way.\\n\\n**6.3 Privacy**\\n\\nPrivacy-preserving
-      techniques are essential as AI systems handle more sensitive data:\\n\\n- **Federated
-      Learning**: This approach trains models across decentralized devices or servers
-      without sharing data, enhancing privacy while still benefiting from the collective
-      learning process.\\n\\n**7. Future Trajectories**\\n\\n**7.1 AI and Quantum
-      Computing**\\n\\nQuantum computing holds the potential to transform AI by vastly
-      increasing computational power:\\n\\n- **Quantum Machine Learning (QML)**: The
-      integration of quantum computing with machine learning algorithms could lead
-      to breakthroughs in processing speed and problem-solving capabilities.\\n\\n**7.2
-      AI in Healthcare**\\n\\nAI is poised to revolutionize healthcare with early
-      disease detection, personalized treatment, and efficient healthcare delivery:\\n\\n-
-      **Predictive Analytics**: AI models can predict disease outbreaks, patient deterioration,
-      and treatment outcomes using large-scale health data.\\n\\n- **Drug Discovery**:
-      AI accelerates drug discovery and development, identifying potential drug candidates
-      and optimizing clinical trials.\\n\\n**7.3 Edge AI**\\n\\nEdge AI brings computation
-      and data storage closer to the data source for real-time decision-making:\\n\\n-
-      **Applications**: IoT devices, autonomous vehicles, and smart cities benefit
-      from Edge AI\u2019s low latency and improved data privacy.\\n\\n**8. Conclusion**\\n\\nThe
-      advancements in AI have shown remarkable potential across various domains, driving
-      innovation and transforming traditional practices. From deep learning and NLP
-      to computer vision and robotics, the continuous evolution of AI technologies
-      promises to address complex challenges and create new opportunities. The future
-      of AI looks promising, with ongoing research in ethical considerations, quantum
-      computing, and healthcare shaping the next generation of intelligent systems.\\n\\nEnd
-      of report.\",\n        \"refusal\": null\n      },\n      \"logprobs\": null,\n
-      \     \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\":
-      200,\n    \"completion_tokens\": 1432,\n    \"total_tokens\": 1632,\n    \"completion_tokens_details\":
-      {\n      \"reasoning_tokens\": 0\n    }\n  },\n  \"system_fingerprint\": \"fp_e375328146\"\n}\n"
-    headers:
-      CF-Cache-Status:
-      - DYNAMIC
-      CF-RAY:
-      - 8c787479edefa4ee-MIA
-      Connection:
-      - keep-alive
-      Content-Encoding:
-      - gzip
-      Content-Type:
-      - application/json
-      Date:
-      - Mon, 23 Sep 2024 06:25:37 GMT
-      Server:
-      - cloudflare
-      Transfer-Encoding:
-      - chunked
-      X-Content-Type-Options:
-      - nosniff
-      access-control-expose-headers:
-      - X-Request-ID
-      openai-organization:
-      - crewai-iuxna1
-      openai-processing-ms:
-      - '37403'
-      openai-version:
-      - '2020-10-01'
-      strict-transport-security:
-      - max-age=15552000; includeSubDomains; preload
-      x-ratelimit-limit-requests:
-      - '10000'
-      x-ratelimit-limit-tokens:
-      - '30000000'
-      x-ratelimit-remaining-requests:
-      - '9999'
-      x-ratelimit-remaining-tokens:
-      - '29999750'
-      x-ratelimit-reset-requests:
-      - 6ms
-      x-ratelimit-reset-tokens:
-      - 0s
-      x-request-id:
-      - req_57d633a8462063e38430fe5d8b604da1
-    http_version: HTTP/1.1
-    status_code: 200
-- request:
-    body: !!binary |
-      CuEECiQKIgoMc2VydmljZS5uYW1lEhIKEGNyZXdBSS10ZWxlbWV0cnkSuAQKEgoQY3Jld2FpLnRl
-      bGVtZXRyeRKQAgoQvp8t/970/FzxD1zlq90whhIIZ7aIqW00RWYqDlRhc2sgRXhlY3V0aW9uMAE5
-      CPuAX3jL9xdBSFlEJ4HL9xdKLgoIY3Jld19rZXkSIgogOWJmMmNkZTZiYzVjNDIwMWQ2OWI5YmNm
-      ZmYzNWJmYjlKMQoHY3Jld19pZBImCiQ2NTdmYTliMi1mYzYyLTQwYjItOGUwNy0zNWQzOTY2YTAz
-      Y2FKLgoIdGFza19rZXkSIgogNTljNzM4ZDRkYWU3OTZlNWEyMmRiYzJlNTE5OGMyMGRKMQoHdGFz
-      a19pZBImCiRmODg3NGM2OS1jZmQ4LTQ2YzQtYTdmNC02NjAwMGY1NTMwNjV6AhgBhQEAAQAAEo4C
-      ChAYH2Up8qDHZ6qRrD7XINvWEgicQto8kTXZYyoMVGFzayBDcmVhdGVkMAE54EekJ4HL9xdBmDWp
-      J4HL9xdKLgoIY3Jld19rZXkSIgogOWJmMmNkZTZiYzVjNDIwMWQ2OWI5YmNmZmYzNWJmYjlKMQoH
-      Y3Jld19pZBImCiQ2NTdmYTliMi1mYzYyLTQwYjItOGUwNy0zNWQzOTY2YTAzY2FKLgoIdGFza19r
-      ZXkSIgogYzUwMmM1NzQ1YzI3ODFhZjUxYjJmM2VmNWQ2MmZjNzRKMQoHdGFza19pZBImCiQwZDYy
-      NjBlMS1kNDM1LTQ2ODctYjdiZi00ZjQwNTYwNTg4MDh6AhgBhQEAAQAA
-    headers:
-      Accept:
-      - '*/*'
-      Accept-Encoding:
-      - gzip, deflate
-      Connection:
-      - keep-alive
-      Content-Length:
-      - '612'
-      Content-Type:
-      - application/x-protobuf
-      User-Agent:
-      - OTel-OTLP-Exporter-Python/1.27.0
-    method: POST
-    uri: https://telemetry.crewai.com:4319/v1/traces
-  response:
-    body:
-      string: "\n\0"
-    headers:
-      Content-Length:
-      - '2'
-      Content-Type:
-      - application/x-protobuf
-      Date:
-      - Mon, 23 Sep 2024 06:25:41 GMT
-    status:
-      code: 200
-      message: OK
-- request:
-    body: '{"messages": [{"role": "system", "content": "You are Senior Writer. You''re
-      a senior writer, specialized in technology, software engineering, AI and startups.
-      You work as a freelancer and are now working on writing content for a new customer.\nYour
-      personal goal is: Write the best content about AI and AI agents.\nTo give my
-      best complete final answer to the task use the exact following format:\n\nThought:
-      I now can give a great answer\nFinal Answer: Your final answer must be the great
-      and the most complete as possible, it must be outcome described.\n\nI MUST use
-      these formats, my job depends on it!"}, {"role": "user", "content": "\nCurrent
-      Task: Write about AI in healthcare.\n\nThis is the expect criteria for your
-      final answer: A 4 paragraph article about AI.\nyou MUST return the actual complete
-      content as the final answer, not a summary.\n\nThis is the context you''re working
-      with:\n**AI Advancements: A Comprehensive Report**\n\n**1. Introduction**\n\nArtificial
-      Intelligence (AI) has rapidly evolved over the past few decades, revolutionizing
-      industries and redefining the boundaries of technological capabilities. This
-      comprehensive report delves into the significant advancements in AI, focusing
-      on key areas such as machine learning, natural language processing, computer
-      vision, robotics, and AI ethics. The report also discusses recent breakthroughs,
-      applications across various domains, and the potential future trajectories of
-      AI technologies.\n\n**2. Machine Learning**\n\n**2.1 Deep Learning**\n\nDeep
-      learning has been at the forefront of AI research, driven by the use of neural
-      networks with many layers. Recent advancements in deep learning include:\n\n-
-      **Transformer Models**: Models like BERT (Bidirectional Encoder Representations
-      from Transformers), GPT-3 (Generative Pre-trained Transformer 3), and T5 (Text-To-Text
-      Transfer Transformer) have revolutionized natural language understanding and
-      generation tasks. GPT-3, developed by OpenAI, is particularly noteworthy for
-      its ability to generate human-like text and its versatile applications ranging
-      from chatbots to content creation.\n\n- **AutoML**: Automated Machine Learning
-      (AutoML) tools have made it easier to create and deploy machine learning models
-      without extensive expertise. Google\u2019s AutoML and H2O.ai\u2019s Driverless
-      AI are popular platforms that automate the end-to-end process of applying machine
-      learning.\n\n**2.2 Reinforcement Learning**\n\nReinforcement learning (RL) has
-      seen considerable advancements, particularly in developing agents capable of
-      playing and mastering complex games:\n\n- **AlphaGo and AlphaZero**: Developed
-      by DeepMind, AlphaGo defeated the world champion Go player, demonstrating the
-      potential of RL. AlphaZero, an evolution of AlphaGo, uses a generalized approach
-      to master multiple games like chess and Shogi without human input.\n\n- **OpenAI\u2019s
-      Dota 2 Bot**: OpenAI developed a reinforcement learning bot that has defeated
-      professional human players in the complex video game Dota 2, showcasing RL\u2019s
-      capabilities in managing dynamic and strategic decision-making processes.\n\n**3.
-      Natural Language Processing (NLP)**\n\n**3.1 Language Models**\n\nThe development
-      of large-scale language models has significantly improved NLP capabilities:\n\n-
-      **GPT-3**: As one of the most powerful language models, GPT-3 can generate coherent
-      and contextually relevant text across diverse topics. Its pre-training on vast
-      datasets allows it to execute tasks such as translation, summarization, and
-      question-answering with high accuracy.\n\n**3.2 Conversational AI**\n\nImproved
-      conversational AI has led to more effective and natural interactions between
-      humans and machines:\n\n- **Dialogflow and Microsoft Bot Framework**: These
-      platforms help developers create sophisticated conversational agents that can
-      handle a wide range of use cases, from customer service to virtual personal
-      assistants.\n\n**4. Computer Vision**\n\n**4.1 Object Detection and Recognition**\n\nAdvancements
-      in computer vision have enabled more accurate and efficient object detection
-      and recognition:\n\n- **YOLO (You Only Look Once)**: YOLO models have improved
-      real-time object detection, offering a balance of speed and accuracy. The latest
-      iterations, such as YOLOv4 and YOLOv5, continue to push the boundaries of what\u2019s
-      possible in real-time applications.\n\n- **ImageNet Challenge**: The competition
-      has spurred advancements in image recognition models, with architectures like
-      ResNet, EfficientNet, and Vision Transformers (ViTs) achieving state-of-the-art
-      performance.\n\n**4.2 Generative Adversarial Networks (GANs)**\n\nGANs have
-      opened new possibilities in creating realistic images and videos:\n\n- **StyleGAN**:
-      Developed by NVIDIA, StyleGAN can generate highly realistic human faces and
-      has applications in art, entertainment, and virtual reality.\n\n- **DeepFakes**:
-      Although controversial, deepfake technology demonstrates the power of GANs in
-      synthesizing realistic human videos, with implications for both creative industries
-      and cybersecurity.\n\n**5. Robotics**\n\n**5.1 Autonomous Systems**\n\nAI-driven
-      robotics has made significant strides in autonomy and adaptability:\n\n- **Boston
-      Dynamics**: Robots like Spot and Atlas show remarkable agility and adaptability
-      in complex environments, with applications in inspection, logistics, and emergency
-      response.\n\n- **Self-Driving Cars**: Companies like Waymo, Tesla, and Cruise
-      are at the forefront of developing autonomous vehicles, combining deep learning,
-      computer vision, and sensor fusion to navigate and operate in real-world conditions.\n\n**5.2
-      Collaborative Robots (Cobots)**\n\nCobots are designed to work alongside humans,
-      enhancing productivity and safety:\n\n- **Universal Robots**: Their cobots are
-      used in various industries, including manufacturing, healthcare, and logistics,
-      to assist with repetitive and precise tasks.\n\n**6. AI Ethics**\n\n**6.1 Bias
-      and Fairness**\n\nAddressing bias and ensuring fairness in AI systems is a critical
-      area of research:\n\n- **Fairness Indicators**: Tools like IBM\u2019s AI Fairness
-      360 and Google\u2019s What-If Tool help developers assess and mitigate biases
-      in their models.\n  \n**6.2 Transparency and Accountability**\n\nEnsuring transparency
-      in AI decision-making processes is crucial for building trust:\n\n- **Explainable
-      AI (XAI)**: Research in XAI aims to make AI models more interpretable and their
-      decisions more understandable to humans, with frameworks like LIME (Local Interpretable
-      Model-agnostic Explanations) and SHAP (SHapley Additive exPlanations) leading
-      the way.\n\n**6.3 Privacy**\n\nPrivacy-preserving techniques are essential as
-      AI systems handle more sensitive data:\n\n- **Federated Learning**: This approach
-      trains models across decentralized devices or servers without sharing data,
-      enhancing privacy while still benefiting from the collective learning process.\n\n**7.
-      Future Trajectories**\n\n**7.1 AI and Quantum Computing**\n\nQuantum computing
-      holds the potential to transform AI by vastly increasing computational power:\n\n-
-      **Quantum Machine Learning (QML)**: The integration of quantum computing with
-      machine learning algorithms could lead to breakthroughs in processing speed
-      and problem-solving capabilities.\n\n**7.2 AI in Healthcare**\n\nAI is poised
-      to revolutionize healthcare with early disease detection, personalized treatment,
-      and efficient healthcare delivery:\n\n- **Predictive Analytics**: AI models
-      can predict disease outbreaks, patient deterioration, and treatment outcomes
-      using large-scale health data.\n\n- **Drug Discovery**: AI accelerates drug
-      discovery and development, identifying potential drug candidates and optimizing
-      clinical trials.\n\n**7.3 Edge AI**\n\nEdge AI brings computation and data storage
-      closer to the data source for real-time decision-making:\n\n- **Applications**:
-      IoT devices, autonomous vehicles, and smart cities benefit from Edge AI\u2019s
-      low latency and improved data privacy.\n\n**8. Conclusion**\n\nThe advancements
-      in AI have shown remarkable potential across various domains, driving innovation
-      and transforming traditional practices. From deep learning and NLP to computer
-      vision and robotics, the continuous evolution of AI technologies promises to
-      address complex challenges and create new opportunities. The future of AI looks
-      promising, with ongoing research in ethical considerations, quantum computing,
-      and healthcare shaping the next generation of intelligent systems.\n\nEnd of
-      report.\n\nBegin! This is VERY important to you, use the tools available and
-      give your best Final Answer, your job depends on it!\n\nThought:"}], "model":
-      "gpt-4o"}'
-    headers:
-      accept:
-      - application/json
-      accept-encoding:
-      - gzip, deflate
-      connection:
-      - keep-alive
-      content-length:
-      - '8679'
-      content-type:
-      - application/json
-      cookie:
-      - __cf_bm=hYfEMfBWpIoRPjx9ZBZg6DVeMOMr1IZt9ioup8yWZs0-1727072673-1.0.1.1-Ro7GCLuWS0K5ob0mSTYSmovONKNyxsK6oSA5io_Vwqhe6P0G7Ow4CuZUaWAaCdFGQUd7XZiFH0mI_sQC3uqe0g;
-        _cfuvid=5cK2hfLqTXw1WjB81uT.sGmmA67JIxSKSQeEHQ3zOQw-1727071769966-0.0.1.1-604800000
-      host:
-      - api.openai.com
-      user-agent:
-      - OpenAI/Python 1.47.0
-      x-stainless-arch:
-      - arm64
-      x-stainless-async:
-      - 'false'
-      x-stainless-lang:
-      - python
-      x-stainless-os:
-      - MacOS
-      x-stainless-package-version:
-      - 1.47.0
-      x-stainless-raw-response:
-      - 'true'
-      x-stainless-runtime:
-      - CPython
-      x-stainless-runtime-version:
-      - 3.11.7
-    method: POST
-    uri: https://api.openai.com/v1/chat/completions
-  response:
-    content: "{\n  \"id\": \"chatcmpl-AAWnqIYfVloc4mkTN7P4OqHrHrtTO\",\n  \"object\":
-      \"chat.completion\",\n  \"created\": 1727072738,\n  \"model\": \"gpt-4o-2024-05-13\",\n
-      \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
-      \"assistant\",\n        \"content\": \"I now can give a great answer.\\n\\nFinal
-      Answer: \\n\\nArtificial Intelligence (AI) has emerged as a transformative force
-      in healthcare, offering groundbreaking advancements that promise to revolutionize
-      the industry. AI technologies, including machine learning, natural language
-      processing (NLP), and computer vision, are being integrated into various healthcare
-      applications to enhance diagnostic accuracy, streamline administrative processes,
-      and deliver personalized patient care. Predictive analytics powered by AI can
-      analyze vast amounts of data to predict disease outbreaks, patient deterioration,
-      and treatment outcomes, ultimately improving healthcare delivery and patient
-      outcomes.\\n\\nOne of the most significant contributions of AI in healthcare
-      is in the area of diagnostics. AI algorithms, particularly those using deep
-      learning, have demonstrated tremendous accuracy in interpreting medical images
-      such as X-rays, MRIs, and CT scans. These AI-driven diagnostic tools can detect
-      anomalies and diseases, including cancers and cardiovascular conditions, at
-      stages that may be challenging for human eyes. AI's ability to continuously
-      learn and improve from data means that diagnostic tools can become even more
-      precise over time, thus aiding doctors in making more informed decisions.\\n\\nIn
-      the realm of personalized medicine, AI is playing a crucial role in tailoring
-      treatments based on individual patient data. AI systems can analyze genetic
-      information, lifestyle data, and treatment responses to develop personalized
-      treatment plans that are more effective and have fewer side effects. Moreover,
-      AI-driven predictive analytics can help identify patients who are at risk of
-      developing specific conditions, enabling preventive measures and early interventions.
-      By offering insights at an individual level, AI is paving the way for more proactive
-      and customized healthcare solutions.\\n\\nFurthermore, AI is streamlining administrative
-      tasks in healthcare settings, resulting in increased efficiency and reduced
-      burdens on healthcare professionals. Natural language processing (NLP) is employed
-      to automate the documentation process, allowing doctors to spend more time with
-      patients and less on paperwork. AI chatbots and virtual assistants are used
-      for initial patient interactions, appointment scheduling, and answering common
-      queries, thereby improving patient engagement and satisfaction. These advancements
-      not only optimize the workflow within healthcare institutions but also contribute
-      to a more patient-centric approach to healthcare delivery.\\n\\nIn conclusion,
-      AI's integration into healthcare is unlocking new potentials and reshaping the
-      entire landscape of medical practice and patient care. From enabling early and
-      accurate diagnostics to providing tailored treatment plans and enhancing administrative
-      efficiency, AI is set to revolutionize healthcare. As AI continues to evolve,
-      its applications in healthcare will grow, offering innovative solutions to some
-      of the most pressing challenges in the field and ensuring a brighter future
-      for global health.\",\n        \"refusal\": null\n      },\n      \"logprobs\":
-      null,\n      \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\":
-      1623,\n    \"completion_tokens\": 496,\n    \"total_tokens\": 2119,\n    \"completion_tokens_details\":
-      {\n      \"reasoning_tokens\": 0\n    }\n  },\n  \"system_fingerprint\": \"fp_e375328146\"\n}\n"
-    headers:
-      CF-Cache-Status:
-      - DYNAMIC
-      CF-RAY:
-      - 8c787565a8f8a4ee-MIA
-      Connection:
-      - keep-alive
-      Content-Encoding:
-      - gzip
-      Content-Type:
-      - application/json
-      Date:
-      - Mon, 23 Sep 2024 06:25:45 GMT
-      Server:
-      - cloudflare
-      Transfer-Encoding:
-      - chunked
-      X-Content-Type-Options:
-      - nosniff
-      access-control-expose-headers:
-      - X-Request-ID
-      openai-organization:
-      - crewai-iuxna1
-      openai-processing-ms:
-      - '7439'
-      openai-version:
-      - '2020-10-01'
-      strict-transport-security:
-      - max-age=15552000; includeSubDomains; preload
-      x-ratelimit-limit-requests:
-      - '10000'
-      x-ratelimit-limit-tokens:
-      - '30000000'
-      x-ratelimit-remaining-requests:
-      - '9999'
-      x-ratelimit-remaining-tokens:
-      - '29997876'
-      x-ratelimit-reset-requests:
-      - 6ms
-      x-ratelimit-reset-tokens:
-      - 4ms
-      x-request-id:
-      - req_f36b869fee7cc35b8a3bb23b5581df9d
-    http_version: HTTP/1.1
-    status_code: 200
-- request:
-    body: !!binary |
       Cq4QCiQKIgoMc2VydmljZS5uYW1lEhIKEGNyZXdBSS10ZWxlbWV0cnkShRAKEgoQY3Jld2FpLnRl
-      bGVtZXRyeRKQAgoQx7yWGjjYFypLu9ExAZfezxIID5NRnQm8458qDlRhc2sgRXhlY3V0aW9uMAE5
-      eOGpJ4HL9xdBIPfh+ILL9xdKLgoIY3Jld19rZXkSIgogOWJmMmNkZTZiYzVjNDIwMWQ2OWI5YmNm
-      ZmYzNWJmYjlKMQoHY3Jld19pZBImCiQ2NTdmYTliMi1mYzYyLTQwYjItOGUwNy0zNWQzOTY2YTAz
-      Y2FKLgoIdGFza19rZXkSIgogYzUwMmM1NzQ1YzI3ODFhZjUxYjJmM2VmNWQ2MmZjNzRKMQoHdGFz
-      a19pZBImCiQwZDYyNjBlMS1kNDM1LTQ2ODctYjdiZi00ZjQwNTYwNTg4MDh6AhgBhQEAAQAAEsoL
-      ChD87AlO0AjyjjjLEOA9hd2DEghvqOJfBC6/5CoMQ3JldyBDcmVhdGVkMAE54MkN+YLL9xdB6FYZ
-      +YLL9xdKGgoOY3Jld2FpX3ZlcnNpb24SCAoGMC42MS4wShoKDnB5dGhvbl92ZXJzaW9uEggKBjMu
+      bGVtZXRyeRKQAgoQ0BRv4tPLpDND+OX1IEEp+hIIMxLnCfLFq3oqDlRhc2sgRXhlY3V0aW9uMAE5
+      WHzw4LL29xdBwGI9Gbf29xdKLgoIY3Jld19rZXkSIgogZTY0OTU3M2EyNmU1ODc5MGNhYzIxYTM3
+      Y2Q0NDQzN2FKMQoHY3Jld19pZBImCiQ2OGM1MDA1Yy0xYjkwLTRiYTYtOWFjMi1lOWE5MDIwMTYx
+      NzlKLgoIdGFza19rZXkSIgogMGI5ZDY1ZGI2YjdhZWRmYjM5OGM1OWUyYTlmNzFlYzVKMQoHdGFz
+      a19pZBImCiQwMTUwZjAzMC1lNWIyLTQzYjItOWY0Yi0zZjIxNGJlMjc5MGJ6AhgBhQEAAQAAEsoL
+      ChBJezPUsTBTPd+Cu0gKuDmmEggk8RIkEQNvoioMQ3JldyBDcmVhdGVkMAE5IGq/G7f29xdBGGvG
+      G7f29xdKGgoOY3Jld2FpX3ZlcnNpb24SCAoGMC42MS4wShoKDnB5dGhvbl92ZXJzaW9uEggKBjMu
       MTEuN0ouCghjcmV3X2tleRIiCiA5YmYyY2RlNmJjNWM0MjAxZDY5YjliY2ZmZjM1YmZiOUoxCgdj
-      cmV3X2lkEiYKJDY1N2ZhOWIyLWZjNjItNDBiMi04ZTA3LTM1ZDM5NjZhMDNjYUocCgxjcmV3X3By
+      cmV3X2lkEiYKJGQxMDcxMDI2LTUxOTYtNGJjNC05NzRmLWNhZTk3NDVlZjUzNEocCgxjcmV3X3By
       b2Nlc3MSDAoKc2VxdWVudGlhbEoRCgtjcmV3X21lbW9yeRICEABKGgoUY3Jld19udW1iZXJfb2Zf
       dGFza3MSAhgCShsKFWNyZXdfbnVtYmVyX29mX2FnZW50cxICGAJKiAUKC2NyZXdfYWdlbnRzEvgE
-      CvUEW3sia2V5IjogIjhiZDIxMzliNTk3NTE4MTUwNmU0MWZkOWM0NTYzZDc1IiwgImlkIjogImVi
-      MGFkZjQyLTZiMDYtNGQxMi1hNThmLTQ4NjA5NTRiMmI0NSIsICJyb2xlIjogIlJlc2VhcmNoZXIi
+      CvUEW3sia2V5IjogIjhiZDIxMzliNTk3NTE4MTUwNmU0MWZkOWM0NTYzZDc1IiwgImlkIjogImQw
+      ZWU3Y2UxLTU0M2MtNDBkNi04NjA1LTJiNDMwYzk5Y2RlOSIsICJyb2xlIjogIlJlc2VhcmNoZXIi
       LCAidmVyYm9zZT8iOiBmYWxzZSwgIm1heF9pdGVyIjogMTUsICJtYXhfcnBtIjogbnVsbCwgImZ1
       bmN0aW9uX2NhbGxpbmdfbGxtIjogIiIsICJsbG0iOiAiZ3B0LTRvIiwgImRlbGVnYXRpb25fZW5h
       YmxlZD8iOiBmYWxzZSwgImFsbG93X2NvZGVfZXhlY3V0aW9uPyI6IGZhbHNlLCAibWF4X3JldHJ5
       X2xpbWl0IjogMiwgInRvb2xzX25hbWVzIjogW119LCB7ImtleSI6ICI5YTUwMTVlZjQ4OTVkYzYy
-      NzhkNTQ4MThiYTQ0NmFmNyIsICJpZCI6ICI2NzY3N2VjYS03YTkzLTRhZWUtYmFjZS05NDJmZjk5
-      YTRlOTIiLCAicm9sZSI6ICJTZW5pb3IgV3JpdGVyIiwgInZlcmJvc2U/IjogZmFsc2UsICJtYXhf
+      NzhkNTQ4MThiYTQ0NmFmNyIsICJpZCI6ICIxZmNlN2MzNC1jODQ4LTQ3OTEtOGE1OC01NzhhMDAw
+      ZmI0YjUiLCAicm9sZSI6ICJTZW5pb3IgV3JpdGVyIiwgInZlcmJvc2U/IjogZmFsc2UsICJtYXhf
       aXRlciI6IDE1LCAibWF4X3JwbSI6IG51bGwsICJmdW5jdGlvbl9jYWxsaW5nX2xsbSI6ICIiLCAi
       bGxtIjogImdwdC00byIsICJkZWxlZ2F0aW9uX2VuYWJsZWQ/IjogZmFsc2UsICJhbGxvd19jb2Rl
       X2V4ZWN1dGlvbj8iOiBmYWxzZSwgIm1heF9yZXRyeV9saW1pdCI6IDIsICJ0b29sc19uYW1lcyI6
       IFtdfV1K7wMKCmNyZXdfdGFza3MS4AMK3QNbeyJrZXkiOiAiNTljNzM4ZDRkYWU3OTZlNWEyMmRi
-      YzJlNTE5OGMyMGQiLCAiaWQiOiAiZjg4NzRjNjktY2ZkOC00NmM0LWE3ZjQtNjYwMDBmNTUzMDY1
+      YzJlNTE5OGMyMGQiLCAiaWQiOiAiMGE1OGY4NTAtYmNiMi00ZTg4LThlZjItNjZlN2ZkYjYxZGFh
       IiwgImFzeW5jX2V4ZWN1dGlvbj8iOiBmYWxzZSwgImh1bWFuX2lucHV0PyI6IGZhbHNlLCAiYWdl
       bnRfcm9sZSI6ICJSZXNlYXJjaGVyIiwgImFnZW50X2tleSI6ICI4YmQyMTM5YjU5NzUxODE1MDZl
       NDFmZDljNDU2M2Q3NSIsICJ0b29sc19uYW1lcyI6IFtdfSwgeyJrZXkiOiAiYzUwMmM1NzQ1YzI3
-      ODFhZjUxYjJmM2VmNWQ2MmZjNzQiLCAiaWQiOiAiMGQ2MjYwZTEtZDQzNS00Njg3LWI3YmYtNGY0
-      MDU2MDU4ODA4IiwgImFzeW5jX2V4ZWN1dGlvbj8iOiBmYWxzZSwgImh1bWFuX2lucHV0PyI6IGZh
+      ODFhZjUxYjJmM2VmNWQ2MmZjNzQiLCAiaWQiOiAiMDBmYjJhZDEtYzgzNy00NzdkLTk5YjEtZmUz
+      YmZhNjQ3YTJmIiwgImFzeW5jX2V4ZWN1dGlvbj8iOiBmYWxzZSwgImh1bWFuX2lucHV0PyI6IGZh
       bHNlLCAiYWdlbnRfcm9sZSI6ICJTZW5pb3IgV3JpdGVyIiwgImFnZW50X2tleSI6ICI5YTUwMTVl
       ZjQ4OTVkYzYyNzhkNTQ4MThiYTQ0NmFmNyIsICJ0b29sc19uYW1lcyI6IFtdfV16AhgBhQEAAQAA
-      Eo4CChBbZmItu6yO7MHVwK3voQ2eEgiRpoH4ctNxpioMVGFzayBDcmVhdGVkMAE5qEdA+YLL9xdB
-      CDJB+YLL9xdKLgoIY3Jld19rZXkSIgogOWJmMmNkZTZiYzVjNDIwMWQ2OWI5YmNmZmYzNWJmYjlK
-      MQoHY3Jld19pZBImCiQ2NTdmYTliMi1mYzYyLTQwYjItOGUwNy0zNWQzOTY2YTAzY2FKLgoIdGFz
-      a19rZXkSIgogNTljNzM4ZDRkYWU3OTZlNWEyMmRiYzJlNTE5OGMyMGRKMQoHdGFza19pZBImCiRm
-      ODg3NGM2OS1jZmQ4LTQ2YzQtYTdmNC02NjAwMGY1NTMwNjV6AhgBhQEAAQAA
+      Eo4CChAVrspJpC/D6L8RPk0V8FY3EggYSTWITyauZyoMVGFzayBDcmVhdGVkMAE5WILxG7f29xdB
+      KAfyG7f29xdKLgoIY3Jld19rZXkSIgogOWJmMmNkZTZiYzVjNDIwMWQ2OWI5YmNmZmYzNWJmYjlK
+      MQoHY3Jld19pZBImCiRkMTA3MTAyNi01MTk2LTRiYzQtOTc0Zi1jYWU5NzQ1ZWY1MzRKLgoIdGFz
+      a19rZXkSIgogNTljNzM4ZDRkYWU3OTZlNWEyMmRiYzJlNTE5OGMyMGRKMQoHdGFza19pZBImCiQw
+      YTU4Zjg1MC1iY2IyLTRlODgtOGVmMi02NmU3ZmRiNjFkYWF6AhgBhQEAAQAA
     headers:
       Accept:
       - '*/*'
@@ -611,7 +62,7 @@ interactions:
       Content-Type:
       - application/x-protobuf
       Date:
-      - Mon, 23 Sep 2024 06:25:51 GMT
+      - Mon, 23 Sep 2024 19:37:33 GMT
     status:
       code: 200
       message: OK
@@ -642,8 +93,8 @@ interactions:
       content-type:
       - application/json
       cookie:
-      - __cf_bm=hYfEMfBWpIoRPjx9ZBZg6DVeMOMr1IZt9ioup8yWZs0-1727072673-1.0.1.1-Ro7GCLuWS0K5ob0mSTYSmovONKNyxsK6oSA5io_Vwqhe6P0G7Ow4CuZUaWAaCdFGQUd7XZiFH0mI_sQC3uqe0g;
-        _cfuvid=5cK2hfLqTXw1WjB81uT.sGmmA67JIxSKSQeEHQ3zOQw-1727071769966-0.0.1.1-604800000
+      - __cf_bm=4rzJDR3F8S3Dp4B_qwylZU0mdm_WUwmv8vNHHp3IplM-1727119501-1.0.1.1-qobO_Sf88yG1qtXFnLgykvyc9YXR_fm1J7ZpXIhvtynVnsz67Uwcf4122PgHs4GMrlvZMaL6z_UVcVYSYUJOKQ;
+        _cfuvid=9K_ipT1uTVyDTneB1W5OZHPxCh36aOsDZCBnsQTONqQ-1727119501207-0.0.1.1-604800000
       host:
       - api.openai.com
       user-agent:
@@ -667,105 +118,90 @@ interactions:
     method: POST
     uri: https://api.openai.com/v1/chat/completions
   response:
-    content: "{\n  \"id\": \"chatcmpl-AAWnyBuS7mPx9mfxttEM4xQy3vhHA\",\n  \"object\":
-      \"chat.completion\",\n  \"created\": 1727072746,\n  \"model\": \"gpt-4o-2024-05-13\",\n
+    content: "{\n  \"id\": \"chatcmpl-AAjA83Nx8VoMxpEXaKtdd5WyorV4z\",\n  \"object\":
+      \"chat.completion\",\n  \"created\": 1727120248,\n  \"model\": \"gpt-4o-2024-05-13\",\n
       \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
       \"assistant\",\n        \"content\": \"Thought: I now can give a great answer\\nFinal
-      Answer: \\n\\n**Full Report on AI Advancements**\\n\\n### Introduction\\nArtificial
-      Intelligence (AI) has rapidly evolved over the last decade, reshaping industries,
-      revolutionizing technology, and pushing the boundaries of what machines can
-      achieve. This report delves into the most recent advancements in AI, highlighting
-      breakthroughs, emerging trends, and the societal impacts of these innovations.\\n\\n###
-      Recent Breakthroughs in AI\\n\\n1. **Natural Language Processing (NLP)**\\n
-      \   - **GPT-3 and Beyond:** One of the most notable advancements in NLP is the
-      development of OpenAI's GPT-3, a language model with 175 billion parameters.
-      It can generate human-like text, translate languages, write essays, and even
-      generate code. This architecture represents a significant leap from its predecessor,
-      GPT-2, which had 1.5 billion parameters.\\n    - **Transformer Models:** The
-      Transformer model, introduced in 2017, has become the backbone of many state-of-the-art
-      NLP models. Enhancements such as BERT (Bidirectional Encoder Representations
-      from Transformers), and its variants like RoBERTa and T5, have further refined
-      tasks like text classification, sentiment analysis, and question answering.\\n\\n2.
-      **Computer Vision**\\n    - **Generative Adversarial Networks (GANs):** GANs,
-      introduced by Ian Goodfellow in 2014, continue to advance, enabling the creation
-      of highly realistic images, videos, and even art. StyleGAN2, developed by NVIDIA,
-      is a prime example of the growing capabilities of these networks in generating
-      photorealistic images.\\n    - **Self-Supervised Learning:** Techniques such
-      as self-supervised learning (e.g., SimCLR, BYOL) have shown promise in reducing
-      the reliance on large labeled datasets. These methods enable the model to learn
-      from unlabeled data, thereby democratizing AI by making it accessible to industries
-      with fewer labeled resources.\\n\\n3. **Reinforcement Learning**\\n    - **AlphaGo
-      and Beyond:** DeepMind's AlphaGo, AlphaGo Zero, and MuZero represent significant
-      milestones in reinforcement learning. MuZero, in particular, is capable of mastering
-      games like chess and Go without known rules, demonstrating generalization beyond
-      specific tasks.\\n    - **Robotics and Control:** Reinforcement learning algorithms
-      have improved in handling complex control tasks, including robotic manipulation,
-      autonomous driving, and game playing. Algorithms like Proximal Policy Optimization
-      (PPO) and Soft Actor-Critic (SAC) provide more stable and sample-efficient training
-      methods.\\n\\n4. **Ethical AI and Explainability**\\n    - **Fairness, Accountability,
-      and Transparency (FAT):** There is a growing emphasis on developing ethical
-      AI systems that are fair, accountable, and transparent. Efforts include creating
-      bias detection tools, developing explainable AI models (e.g., LIME, SHAP), and
-      implementing rigorous testing and validation procedures.\\n    - **Policy and
-      Governance:** Governments and organizations are increasingly focusing on AI
-      governance, formulating ethical guidelines, and regulatory frameworks. Notable
-      examples include the European Union's AI Act and the OECD AI Principles.\\n\\n###
-      Emerging Trends in AI\\n\\n1. **AI in Healthcare**\\n    - **Medical Imaging:**
-      AI models are revolutionizing medical imaging by improving diagnostic accuracy
-      in radiology, pathology, and ophthalmology. Examples include detecting tumors,
-      classifying retinal diseases, and identifying rare genetic disorders.\\n    -
-      **Drug Discovery:** AI algorithms are being deployed to accelerate drug discovery
-      processes, predicting molecular behavior, and identifying potential drug candidates
-      faster than traditional methods.\\n\\n2. **Edge AI and IoT Integration**\\n
-      \   - **Efficient AI Models:** There is a move towards developing lightweight
-      AI models suitable for deployment on edge devices, such as smartphones, wearables,
-      and IoT devices. Techniques like model quantization, pruning, and knowledge
-      distillation are being used to reduce model size while maintaining performance.\\n
-      \   - **AI-enhanced IoT:** The integration of AI with IoT is leading to smarter,
-      more autonomous systems in sectors like agriculture, manufacturing, and smart
-      cities, enhancing efficiency and decision-making processes.\\n\\n3. **AI-driven
-      Personalization**\\n    - **Recommendation Systems:** Advanced AI-driven recommendation
-      systems personalize user experiences in e-commerce, media streaming, and social
-      media. These systems utilize collaborative filtering, content-based filtering,
-      and hybrid models to provide tailored content and product recommendations.\\n
-      \   - **Customer Service:** AI-powered chatbots and virtual assistants are becoming
-      more sophisticated, capable of handling complex customer inquiries, providing
-      personalized assistance, and improving user satisfaction.\\n\\n### Societal
-      Impacts of AI\\n\\n1. **Economic Transformation**\\n    - **Job Displacement
-      and Creation:** While AI is automating many tasks, leading to job displacement
-      in certain sectors, it is also creating new job opportunities, particularly
-      in AI development, maintenance, and ethical AI governance.\\n    - **Productivity
-      and Growth:** AI is driving productivity improvements and economic growth by
-      optimizing operations, reducing costs, and enabling innovation across industries.\\n\\n2.
-      **Social and Ethical Considerations**\\n    - **Bias and Discrimination:** AI
-      systems can perpetuate or even exacerbate biases present in training data, leading
-      to discriminatory outcomes. Addressing these biases is crucial for developing
-      fair and equitable AI systems.\\n    - **Privacy and Surveillance:** The increasing
-      use of AI in surveillance and data analysis raises significant privacy concerns.
-      Balancing the benefits of AI with the right to privacy remains an ongoing challenge.\\n\\n3.
-      **Global Competitiveness**\\n    - **Investment in AI Research:** Countries
-      and companies are investing heavily in AI research and development to maintain
-      competitive advantages. China, the United States, and the European Union are
-      leading in AI research outputs and applications.\\n    - **International Collaboration:**
-      There is a growing emphasis on international collaboration in AI research to
-      tackle global challenges, such as climate change, pandemics, and cybersecurity.\\n\\n###
-      Conclusion\\nThe advancements in AI across various domains signify a transformative
-      era in technology and innovation. As AI continues to evolve, it is imperative
-      to address the ethical, social, and economic challenges that accompany its development.
-      Harnessing the potential of AI responsibly and inclusively will be key to maximizing
-      its benefits for society.\\n\\n---\\n\\nThis full report provides a comprehensive
-      overview of the latest advancements in AI, spanning key areas of development,
-      emerging trends, and the broader societal impact. It underscores the importance
-      of continued research, ethical considerations, and international collaboration
-      in driving AI forward.\",\n        \"refusal\": null\n      },\n      \"logprobs\":
-      null,\n      \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\":
-      200,\n    \"completion_tokens\": 1293,\n    \"total_tokens\": 1493,\n    \"completion_tokens_details\":
-      {\n      \"reasoning_tokens\": 0\n    }\n  },\n  \"system_fingerprint\": \"fp_e375328146\"\n}\n"
+      Answer: \\n\\n---\\n\\n## AI Advancements Report\\n\\n### Introduction\\n\\nThe
+      field of Artificial Intelligence (AI) has seen remarkable growth and advancement
+      in recent years. From the development of sophisticated machine learning algorithms
+      to advancements in natural language processing and robotics, AI technology is
+      transforming various sectors. This report provides a comprehensive overview
+      of the most recent advancements in AI, focusing on several key areas including
+      machine learning, AI agents, natural language processing, and autonomous systems.\\n\\n###
+      Machine Learning Advancements\\n\\n**1. Deep Learning Techniques**: \\nDeep
+      learning, a subset of machine learning, has achieved incredible strides primarily
+      due to advancements in neural network architectures such as Convolutional Neural
+      Networks (CNNs), Recurrent Neural Networks (RNNs), and more recently, Transformers.
+      Transformer models like BERT, GPT-3, and their derivatives are revolutionizing
+      tasks like language translation, text generation, and even code completion.\\n\\n**2.
+      Reinforcement Learning**:\\nReinforcement Learning (RL) has seen significant
+      improvements, especially with algorithms such as Deep Q-Networks (DQN) and Proximal
+      Policy Optimization (PPO). These have enabled AI to achieve superhuman performance
+      in complex games like Go and Dota 2 through self-play and environment interaction.\\n\\n**3.
+      Federated Learning**:\\nFederated learning is another promising advancement
+      allowing decentralized data usage. This approach trains machine learning models
+      across multiple decentralized devices without sharing data, thus addressing
+      privacy concerns and making AI more robust across different data sources.\\n\\n**4.
+      Transfer Learning**:\\nTransfer learning is becoming increasingly important
+      for handling tasks with limited labeled data. By leveraging pre-trained models
+      on extensive datasets, AI systems can be fine-tuned for specific, smaller datasets,
+      thus reducing training costs and improving efficiency.\\n\\n### AI Agents\\n\\n**1.
+      Autonomous Agents**:\\nAutonomous agents, designed to perform tasks independently,
+      have shown impressive progress. Innovations in algorithmic approaches enable
+      these agents to learn from their environment and interact intelligently. Use
+      cases range from personal assistants like Siri and Alexa to complex industrial
+      robotics.\\n\\n**2. Multi-Agent Systems**:\\nResearch in multi-agent systems,
+      where multiple intelligent agents interact, is paving the way for collaborative
+      robotics, enhanced simulations, and more efficient swarm intelligence applications.
+      These systems are essential in logistics, traffic management, and dynamic system
+      optimization.\\n\\n**3. Ethical Considerations**:\\nWith the increasing autonomy
+      of AI agents, ethical considerations have come to the forefront. The AI community
+      is actively working on frameworks for ensuring ethical behavior, transparency,
+      accountability, and bias mitigation in AI systems.\\n\\n### Natural Language
+      Processing (NLP)\\n\\n**1. Language Models**:\\nLarge language models like OpenAI's
+      GPT-3 and Google's BERT have set new benchmarks in NLP. These models, trained
+      on vast datasets, can generate human-like text, translate languages, and even
+      perform specific tasks with little to no additional training.\\n\\n**2. Dialog
+      Systems**:\\nAI-driven dialog systems or chatbots are becoming more sophisticated,
+      achieving higher accuracy in understanding and generating human language. These
+      systems are widely used in customer service, automated personal assistants,
+      and even in mental health support via virtual therapists.\\n\\n**3. Sentiment
+      and Emotion Analysis**:\\nImproved algorithms for sentiment and emotion analysis
+      are enabling AI to understand and respond to human emotions better. This has
+      significant applications in market research, user experience design, and content
+      personalization.\\n\\n**4. Low-Resource Language Processing**:\\nAdvancements
+      are also being made in low-resource language processing, which focuses on developing
+      NLP models for languages with limited datasets. This democratizes AI and ensures
+      that diverse linguistic communities benefit from technological advancements.\\n\\n###
+      Autonomous Systems\\n\\n**1. Self-Driving Cars**:\\nSelf-driving technology
+      continues to advance, with companies like Waymo, Tesla, and Cruise leading the
+      charge. Improvements in sensor technology, machine learning algorithms, and
+      real-time data processing are making autonomous vehicles more reliable and safe.\\n\\n**2.
+      Drone Technology**:\\nAI is significantly enhancing drone capabilities, making
+      them more autonomous and efficient. Applications range from delivery services,
+      agriculture, search and rescue operations, to military usage.\\n\\n**3. Robotics**:\\nRobotic
+      systems are incorporating AI to perform increasingly complex tasks. From robotic
+      arms in manufacturing to humanoid robots in healthcare and customer service,
+      the integration of AI in robotics is creating more efficient, versatile, and
+      intelligent machines.\\n\\n### Conclusion\\n\\nThe advancements in AI are creating
+      opportunities across various sectors and transforming how tasks are performed.
+      However, with these advancements come challenges including ethical considerations,
+      data privacy, and the need for robust regulatory frameworks. Continued research
+      and collaboration across industries and academic institutions will be crucial
+      in harnessing the full potential of AI while addressing its challenges.\\n\\n---\\n\\nThis
+      full report on AI advancements covers modern strides in machine learning, AI
+      agents, natural language processing, and autonomous systems, reflecting the
+      ongoing evolution and potential future directions of the field.\",\n        \"refusal\":
+      null\n      },\n      \"logprobs\": null,\n      \"finish_reason\": \"stop\"\n
+      \   }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 200,\n    \"completion_tokens\":
+      980,\n    \"total_tokens\": 1180,\n    \"completion_tokens_details\": {\n      \"reasoning_tokens\":
+      0\n    }\n  },\n  \"system_fingerprint\": \"fp_e375328146\"\n}\n"
     headers:
       CF-Cache-Status:
       - DYNAMIC
       CF-RAY:
-      - 8c7875967b8fa4ee-MIA
+      - 8c7cfd52d826a4c7-MIA
       Connection:
       - keep-alive
       Content-Encoding:
@@ -773,7 +209,7 @@ interactions:
       Content-Type:
       - application/json
       Date:
-      - Mon, 23 Sep 2024 06:26:09 GMT
+      - Mon, 23 Sep 2024 19:37:42 GMT
       Server:
       - cloudflare
       Transfer-Encoding:
@@ -782,12 +218,10 @@ interactions:
       - nosniff
       access-control-expose-headers:
       - X-Request-ID
-      alt-svc:
-      - h3=":443"; ma=86400
       openai-organization:
       - crewai-iuxna1
       openai-processing-ms:
-      - '23402'
+      - '13888'
       openai-version:
       - '2020-10-01'
       strict-transport-security:
@@ -805,22 +239,22 @@ interactions:
       x-ratelimit-reset-tokens:
       - 0s
       x-request-id:
-      - req_0c883177821a0049982093a3cee231b2
+      - req_cb7cd055c050f13f3251c4e55f52c199
     http_version: HTTP/1.1
     status_code: 200
 - request:
     body: !!binary |
       CuEECiQKIgoMc2VydmljZS5uYW1lEhIKEGNyZXdBSS10ZWxlbWV0cnkSuAQKEgoQY3Jld2FpLnRl
-      bGVtZXRyeRKQAgoQX3iO6MWx0EqRfH3e7Nk3BRIIdvbd5KerfK4qDlRhc2sgRXhlY3V0aW9uMAE5
-      eMZB+YLL9xdBoPqqiIjL9xdKLgoIY3Jld19rZXkSIgogOWJmMmNkZTZiYzVjNDIwMWQ2OWI5YmNm
-      ZmYzNWJmYjlKMQoHY3Jld19pZBImCiQ2NTdmYTliMi1mYzYyLTQwYjItOGUwNy0zNWQzOTY2YTAz
-      Y2FKLgoIdGFza19rZXkSIgogNTljNzM4ZDRkYWU3OTZlNWEyMmRiYzJlNTE5OGMyMGRKMQoHdGFz
-      a19pZBImCiRmODg3NGM2OS1jZmQ4LTQ2YzQtYTdmNC02NjAwMGY1NTMwNjV6AhgBhQEAAQAAEo4C
-      ChCagZ5NdJyfdXqoRWAIb3iqEgiFvP6roZIyYCoMVGFzayBDcmVhdGVkMAE5QOrZiIjL9xdBOLvo
-      iIjL9xdKLgoIY3Jld19rZXkSIgogOWJmMmNkZTZiYzVjNDIwMWQ2OWI5YmNmZmYzNWJmYjlKMQoH
-      Y3Jld19pZBImCiQ2NTdmYTliMi1mYzYyLTQwYjItOGUwNy0zNWQzOTY2YTAzY2FKLgoIdGFza19r
-      ZXkSIgogYzUwMmM1NzQ1YzI3ODFhZjUxYjJmM2VmNWQ2MmZjNzRKMQoHdGFza19pZBImCiQwZDYy
-      NjBlMS1kNDM1LTQ2ODctYjdiZi00ZjQwNTYwNTg4MDh6AhgBhQEAAQAA
+      bGVtZXRyeRKQAgoQqvtEi1/iL9AGqQYa9eIRihIIyQuVnIqvb4QqDlRhc2sgRXhlY3V0aW9uMAE5
+      6GTyG7f29xdBCMVzcbr29xdKLgoIY3Jld19rZXkSIgogOWJmMmNkZTZiYzVjNDIwMWQ2OWI5YmNm
+      ZmYzNWJmYjlKMQoHY3Jld19pZBImCiRkMTA3MTAyNi01MTk2LTRiYzQtOTc0Zi1jYWU5NzQ1ZWY1
+      MzRKLgoIdGFza19rZXkSIgogNTljNzM4ZDRkYWU3OTZlNWEyMmRiYzJlNTE5OGMyMGRKMQoHdGFz
+      a19pZBImCiQwYTU4Zjg1MC1iY2IyLTRlODgtOGVmMi02NmU3ZmRiNjFkYWF6AhgBhQEAAQAAEo4C
+      ChCa8Q/wu9XTzAB8MCDWJ1uDEgheAkzGI3H5mSoMVGFzayBDcmVhdGVkMAE5SAaYcbr29xdBqPCY
+      cbr29xdKLgoIY3Jld19rZXkSIgogOWJmMmNkZTZiYzVjNDIwMWQ2OWI5YmNmZmYzNWJmYjlKMQoH
+      Y3Jld19pZBImCiRkMTA3MTAyNi01MTk2LTRiYzQtOTc0Zi1jYWU5NzQ1ZWY1MzRKLgoIdGFza19r
+      ZXkSIgogYzUwMmM1NzQ1YzI3ODFhZjUxYjJmM2VmNWQ2MmZjNzRKMQoHdGFza19pZBImCiQwMGZi
+      MmFkMS1jODM3LTQ3N2QtOTliMS1mZTNiZmE2NDdhMmZ6AhgBhQEAAQAA
     headers:
       Accept:
       - '*/*'
@@ -845,7 +279,7 @@ interactions:
       Content-Type:
       - application/x-protobuf
       Date:
-      - Mon, 23 Sep 2024 06:26:11 GMT
+      - Mon, 23 Sep 2024 19:37:48 GMT
     status:
       code: 200
       message: OK
@@ -861,93 +295,77 @@ interactions:
       Task: Write about AI in healthcare.\n\nThis is the expect criteria for your
       final answer: A 4 paragraph article about AI.\nyou MUST return the actual complete
       content as the final answer, not a summary.\n\nThis is the context you''re working
-      with:\n**Full Report on AI Advancements**\n\n### Introduction\nArtificial Intelligence
-      (AI) has rapidly evolved over the last decade, reshaping industries, revolutionizing
-      technology, and pushing the boundaries of what machines can achieve. This report
-      delves into the most recent advancements in AI, highlighting breakthroughs,
-      emerging trends, and the societal impacts of these innovations.\n\n### Recent
-      Breakthroughs in AI\n\n1. **Natural Language Processing (NLP)**\n    - **GPT-3
-      and Beyond:** One of the most notable advancements in NLP is the development
-      of OpenAI''s GPT-3, a language model with 175 billion parameters. It can generate
-      human-like text, translate languages, write essays, and even generate code.
-      This architecture represents a significant leap from its predecessor, GPT-2,
-      which had 1.5 billion parameters.\n    - **Transformer Models:** The Transformer
-      model, introduced in 2017, has become the backbone of many state-of-the-art
-      NLP models. Enhancements such as BERT (Bidirectional Encoder Representations
-      from Transformers), and its variants like RoBERTa and T5, have further refined
-      tasks like text classification, sentiment analysis, and question answering.\n\n2.
-      **Computer Vision**\n    - **Generative Adversarial Networks (GANs):** GANs,
-      introduced by Ian Goodfellow in 2014, continue to advance, enabling the creation
-      of highly realistic images, videos, and even art. StyleGAN2, developed by NVIDIA,
-      is a prime example of the growing capabilities of these networks in generating
-      photorealistic images.\n    - **Self-Supervised Learning:** Techniques such
-      as self-supervised learning (e.g., SimCLR, BYOL) have shown promise in reducing
-      the reliance on large labeled datasets. These methods enable the model to learn
-      from unlabeled data, thereby democratizing AI by making it accessible to industries
-      with fewer labeled resources.\n\n3. **Reinforcement Learning**\n    - **AlphaGo
-      and Beyond:** DeepMind''s AlphaGo, AlphaGo Zero, and MuZero represent significant
-      milestones in reinforcement learning. MuZero, in particular, is capable of mastering
-      games like chess and Go without known rules, demonstrating generalization beyond
-      specific tasks.\n    - **Robotics and Control:** Reinforcement learning algorithms
-      have improved in handling complex control tasks, including robotic manipulation,
-      autonomous driving, and game playing. Algorithms like Proximal Policy Optimization
-      (PPO) and Soft Actor-Critic (SAC) provide more stable and sample-efficient training
-      methods.\n\n4. **Ethical AI and Explainability**\n    - **Fairness, Accountability,
-      and Transparency (FAT):** There is a growing emphasis on developing ethical
-      AI systems that are fair, accountable, and transparent. Efforts include creating
-      bias detection tools, developing explainable AI models (e.g., LIME, SHAP), and
-      implementing rigorous testing and validation procedures.\n    - **Policy and
-      Governance:** Governments and organizations are increasingly focusing on AI
-      governance, formulating ethical guidelines, and regulatory frameworks. Notable
-      examples include the European Union''s AI Act and the OECD AI Principles.\n\n###
-      Emerging Trends in AI\n\n1. **AI in Healthcare**\n    - **Medical Imaging:**
-      AI models are revolutionizing medical imaging by improving diagnostic accuracy
-      in radiology, pathology, and ophthalmology. Examples include detecting tumors,
-      classifying retinal diseases, and identifying rare genetic disorders.\n    -
-      **Drug Discovery:** AI algorithms are being deployed to accelerate drug discovery
-      processes, predicting molecular behavior, and identifying potential drug candidates
-      faster than traditional methods.\n\n2. **Edge AI and IoT Integration**\n    -
-      **Efficient AI Models:** There is a move towards developing lightweight AI models
-      suitable for deployment on edge devices, such as smartphones, wearables, and
-      IoT devices. Techniques like model quantization, pruning, and knowledge distillation
-      are being used to reduce model size while maintaining performance.\n    - **AI-enhanced
-      IoT:** The integration of AI with IoT is leading to smarter, more autonomous
-      systems in sectors like agriculture, manufacturing, and smart cities, enhancing
-      efficiency and decision-making processes.\n\n3. **AI-driven Personalization**\n    -
-      **Recommendation Systems:** Advanced AI-driven recommendation systems personalize
-      user experiences in e-commerce, media streaming, and social media. These systems
-      utilize collaborative filtering, content-based filtering, and hybrid models
-      to provide tailored content and product recommendations.\n    - **Customer Service:**
-      AI-powered chatbots and virtual assistants are becoming more sophisticated,
-      capable of handling complex customer inquiries, providing personalized assistance,
-      and improving user satisfaction.\n\n### Societal Impacts of AI\n\n1. **Economic
-      Transformation**\n    - **Job Displacement and Creation:** While AI is automating
-      many tasks, leading to job displacement in certain sectors, it is also creating
-      new job opportunities, particularly in AI development, maintenance, and ethical
-      AI governance.\n    - **Productivity and Growth:** AI is driving productivity
-      improvements and economic growth by optimizing operations, reducing costs, and
-      enabling innovation across industries.\n\n2. **Social and Ethical Considerations**\n    -
-      **Bias and Discrimination:** AI systems can perpetuate or even exacerbate biases
-      present in training data, leading to discriminatory outcomes. Addressing these
-      biases is crucial for developing fair and equitable AI systems.\n    - **Privacy
-      and Surveillance:** The increasing use of AI in surveillance and data analysis
-      raises significant privacy concerns. Balancing the benefits of AI with the right
-      to privacy remains an ongoing challenge.\n\n3. **Global Competitiveness**\n    -
-      **Investment in AI Research:** Countries and companies are investing heavily
-      in AI research and development to maintain competitive advantages. China, the
-      United States, and the European Union are leading in AI research outputs and
-      applications.\n    - **International Collaboration:** There is a growing emphasis
-      on international collaboration in AI research to tackle global challenges, such
-      as climate change, pandemics, and cybersecurity.\n\n### Conclusion\nThe advancements
-      in AI across various domains signify a transformative era in technology and
-      innovation. As AI continues to evolve, it is imperative to address the ethical,
-      social, and economic challenges that accompany its development. Harnessing the
-      potential of AI responsibly and inclusively will be key to maximizing its benefits
-      for society.\n\n---\n\nThis full report provides a comprehensive overview of
-      the latest advancements in AI, spanning key areas of development, emerging trends,
-      and the broader societal impact. It underscores the importance of continued
-      research, ethical considerations, and international collaboration in driving
-      AI forward.\n\nBegin! This is VERY important to you, use the tools available
+      with:\n---\n\n## AI Advancements Report\n\n### Introduction\n\nThe field of
+      Artificial Intelligence (AI) has seen remarkable growth and advancement in recent
+      years. From the development of sophisticated machine learning algorithms to
+      advancements in natural language processing and robotics, AI technology is transforming
+      various sectors. This report provides a comprehensive overview of the most recent
+      advancements in AI, focusing on several key areas including machine learning,
+      AI agents, natural language processing, and autonomous systems.\n\n### Machine
+      Learning Advancements\n\n**1. Deep Learning Techniques**: \nDeep learning, a
+      subset of machine learning, has achieved incredible strides primarily due to
+      advancements in neural network architectures such as Convolutional Neural Networks
+      (CNNs), Recurrent Neural Networks (RNNs), and more recently, Transformers. Transformer
+      models like BERT, GPT-3, and their derivatives are revolutionizing tasks like
+      language translation, text generation, and even code completion.\n\n**2. Reinforcement
+      Learning**:\nReinforcement Learning (RL) has seen significant improvements,
+      especially with algorithms such as Deep Q-Networks (DQN) and Proximal Policy
+      Optimization (PPO). These have enabled AI to achieve superhuman performance
+      in complex games like Go and Dota 2 through self-play and environment interaction.\n\n**3.
+      Federated Learning**:\nFederated learning is another promising advancement allowing
+      decentralized data usage. This approach trains machine learning models across
+      multiple decentralized devices without sharing data, thus addressing privacy
+      concerns and making AI more robust across different data sources.\n\n**4. Transfer
+      Learning**:\nTransfer learning is becoming increasingly important for handling
+      tasks with limited labeled data. By leveraging pre-trained models on extensive
+      datasets, AI systems can be fine-tuned for specific, smaller datasets, thus
+      reducing training costs and improving efficiency.\n\n### AI Agents\n\n**1. Autonomous
+      Agents**:\nAutonomous agents, designed to perform tasks independently, have
+      shown impressive progress. Innovations in algorithmic approaches enable these
+      agents to learn from their environment and interact intelligently. Use cases
+      range from personal assistants like Siri and Alexa to complex industrial robotics.\n\n**2.
+      Multi-Agent Systems**:\nResearch in multi-agent systems, where multiple intelligent
+      agents interact, is paving the way for collaborative robotics, enhanced simulations,
+      and more efficient swarm intelligence applications. These systems are essential
+      in logistics, traffic management, and dynamic system optimization.\n\n**3. Ethical
+      Considerations**:\nWith the increasing autonomy of AI agents, ethical considerations
+      have come to the forefront. The AI community is actively working on frameworks
+      for ensuring ethical behavior, transparency, accountability, and bias mitigation
+      in AI systems.\n\n### Natural Language Processing (NLP)\n\n**1. Language Models**:\nLarge
+      language models like OpenAI''s GPT-3 and Google''s BERT have set new benchmarks
+      in NLP. These models, trained on vast datasets, can generate human-like text,
+      translate languages, and even perform specific tasks with little to no additional
+      training.\n\n**2. Dialog Systems**:\nAI-driven dialog systems or chatbots are
+      becoming more sophisticated, achieving higher accuracy in understanding and
+      generating human language. These systems are widely used in customer service,
+      automated personal assistants, and even in mental health support via virtual
+      therapists.\n\n**3. Sentiment and Emotion Analysis**:\nImproved algorithms for
+      sentiment and emotion analysis are enabling AI to understand and respond to
+      human emotions better. This has significant applications in market research,
+      user experience design, and content personalization.\n\n**4. Low-Resource Language
+      Processing**:\nAdvancements are also being made in low-resource language processing,
+      which focuses on developing NLP models for languages with limited datasets.
+      This democratizes AI and ensures that diverse linguistic communities benefit
+      from technological advancements.\n\n### Autonomous Systems\n\n**1. Self-Driving
+      Cars**:\nSelf-driving technology continues to advance, with companies like Waymo,
+      Tesla, and Cruise leading the charge. Improvements in sensor technology, machine
+      learning algorithms, and real-time data processing are making autonomous vehicles
+      more reliable and safe.\n\n**2. Drone Technology**:\nAI is significantly enhancing
+      drone capabilities, making them more autonomous and efficient. Applications
+      range from delivery services, agriculture, search and rescue operations, to
+      military usage.\n\n**3. Robotics**:\nRobotic systems are incorporating AI to
+      perform increasingly complex tasks. From robotic arms in manufacturing to humanoid
+      robots in healthcare and customer service, the integration of AI in robotics
+      is creating more efficient, versatile, and intelligent machines.\n\n### Conclusion\n\nThe
+      advancements in AI are creating opportunities across various sectors and transforming
+      how tasks are performed. However, with these advancements come challenges including
+      ethical considerations, data privacy, and the need for robust regulatory frameworks.
+      Continued research and collaboration across industries and academic institutions
+      will be crucial in harnessing the full potential of AI while addressing its
+      challenges.\n\n---\n\nThis full report on AI advancements covers modern strides
+      in machine learning, AI agents, natural language processing, and autonomous
+      systems, reflecting the ongoing evolution and potential future directions of
+      the field.\n\nBegin! This is VERY important to you, use the tools available
       and give your best Final Answer, your job depends on it!\n\nThought:"}], "model":
       "gpt-4o"}'
     headers:
@@ -958,12 +376,12 @@ interactions:
       connection:
       - keep-alive
       content-length:
-      - '7952'
+      - '6688'
       content-type:
       - application/json
       cookie:
-      - __cf_bm=hYfEMfBWpIoRPjx9ZBZg6DVeMOMr1IZt9ioup8yWZs0-1727072673-1.0.1.1-Ro7GCLuWS0K5ob0mSTYSmovONKNyxsK6oSA5io_Vwqhe6P0G7Ow4CuZUaWAaCdFGQUd7XZiFH0mI_sQC3uqe0g;
-        _cfuvid=5cK2hfLqTXw1WjB81uT.sGmmA67JIxSKSQeEHQ3zOQw-1727071769966-0.0.1.1-604800000
+      - __cf_bm=4rzJDR3F8S3Dp4B_qwylZU0mdm_WUwmv8vNHHp3IplM-1727119501-1.0.1.1-qobO_Sf88yG1qtXFnLgykvyc9YXR_fm1J7ZpXIhvtynVnsz67Uwcf4122PgHs4GMrlvZMaL6z_UVcVYSYUJOKQ;
+        _cfuvid=9K_ipT1uTVyDTneB1W5OZHPxCh36aOsDZCBnsQTONqQ-1727119501207-0.0.1.1-604800000
       host:
       - api.openai.com
       user-agent:
@@ -987,52 +405,57 @@ interactions:
     method: POST
     uri: https://api.openai.com/v1/chat/completions
   response:
-    content: "{\n  \"id\": \"chatcmpl-AAWoM9SvHJau5L5oJxoqXnnVITFHm\",\n  \"object\":
-      \"chat.completion\",\n  \"created\": 1727072770,\n  \"model\": \"gpt-4o-2024-05-13\",\n
+    content: "{\n  \"id\": \"chatcmpl-AAjANlhkE7zghkXymeCJ5y0uDChIn\",\n  \"object\":
+      \"chat.completion\",\n  \"created\": 1727120263,\n  \"model\": \"gpt-4o-2024-05-13\",\n
       \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
-      \"assistant\",\n        \"content\": \"I now can give a great answer.\\n\\nFinal
-      Answer: Artificial Intelligence (AI) is making significant strides in the healthcare
-      sector, heralding a new era of medical diagnosis, treatment, and patient care.
-      One of the most promising applications of AI in healthcare is in medical imaging.
-      AI algorithms can analyze medical images with remarkable accuracy, identifying
-      abnormalities such as tumors, fractures, and other pathologies. These advancements
-      are aiding radiologists and other medical professionals in making faster and
-      more accurate diagnoses, ultimately improving patient outcomes. For instance,
-      AI models are being used to detect early signs of diseases like cancer and diabetes
-      in imaging modalities such as MRI, CT scans, and retinal photographs.\\n\\nIn
-      addition to medical imaging, AI is revolutionizing the drug discovery process.
-      Traditionally, developing a new drug is a time-consuming and expensive endeavor,
-      often taking years and costing billions of dollars. AI is streamlining this
-      process by predicting how different molecules will behave and identifying potential
-      drug candidates at a fraction of the time and cost. Machine learning algorithms
-      analyze vast datasets of biological information to uncover new drug targets
-      and design novel compounds. Companies like DeepMind and Atomwise are at the
-      forefront of this innovation, utilizing AI to expedite the discovery of treatments
-      for diseases like ALS and COVID-19.\\n\\nAI is also playing a crucial role in
-      personalized medicine, tailoring treatments to individual patients based on
-      their genetic makeup, lifestyle, and other factors. By analyzing data from electronic
-      health records, wearable devices, and genetic tests, AI can help doctors develop
-      personalized treatment plans that are more effective and have fewer side effects.
-      This approach is particularly beneficial in managing chronic diseases such as
-      diabetes, cardiovascular diseases, and cancer, where individualized treatment
-      plans can significantly improve patient outcomes.\\n\\nLastly, AI-driven virtual
-      assistants and chatbots are enhancing patient engagement and streamlining administrative
-      tasks in healthcare settings. These AI tools can handle a wide range of functions,
-      from scheduling appointments and sending medication reminders to providing patients
-      with information about their conditions and treatments. This not only improves
-      patient satisfaction and adherence to treatment plans but also allows healthcare
-      professionals to focus more on direct patient care. The integration of AI in
-      healthcare is poised to continue growing, offering new opportunities to improve
-      the quality and efficiency of medical care.\\n\\n\",\n        \"refusal\": null\n
-      \     },\n      \"logprobs\": null,\n      \"finish_reason\": \"stop\"\n    }\n
-      \ ],\n  \"usage\": {\n    \"prompt_tokens\": 1484,\n    \"completion_tokens\":
-      439,\n    \"total_tokens\": 1923,\n    \"completion_tokens_details\": {\n      \"reasoning_tokens\":
+      \"assistant\",\n        \"content\": \"Thought: I now can give a great answer\\nFinal
+      Answer: \\n\\nArtificial Intelligence (AI) is poised to revolutionize the healthcare
+      industry in unprecedented ways. One of the most promising applications is in
+      predictive analytics. By analyzing vast amounts of patient data, AI algorithms
+      can identify patterns that are invisible to the human eye. This capability allows
+      for early detection of diseases such as cancer, diabetes, and heart conditions,
+      enabling healthcare providers to intervene more effectively and improve patient
+      outcomes. Additionally, AI-powered predictive analytics can assist in predicting
+      patient deterioration, ensuring timely care and potentially saving lives.\\n\\nMoreover,
+      AI contributes significantly to the field of medical imaging. Traditional methods
+      of reading and interpreting medical images can be time-consuming and prone to
+      human error. AI systems equipped with deep learning techniques, such as Convolutional
+      Neural Networks (CNNs), can analyze medical images with high accuracy and speed.
+      These systems are capable of identifying anomalies in X-rays, MRIs, and CT scans,
+      offering diagnostic support to radiologists and reducing the risk of misdiagnosis.
+      Consequently, integrating AI into medical imaging workflows can enhance diagnostic
+      accuracy and expedite treatment planning.\\n\\nIn the realm of personalized
+      medicine, AI is making substantial headway. Machine learning algorithms can
+      analyze genetic information alongside other health data to recommend individualized
+      treatment plans. This approach ensures that therapies are tailored to the unique
+      genetic makeup and medical history of each patient, maximizing treatment efficacy
+      and minimizing adverse effects. Personalized medicine driven by AI has the potential
+      to revolutionize cancer treatment, where bespoke treatment regimens can significantly
+      improve patient survival rates and quality of life.\\n\\nLastly, AI-powered
+      virtual assistants are transforming patient care and administrative workflows.
+      AI chatbots and virtual health assistants can provide patients with instant
+      medical information, schedule appointments, and even offer preliminary diagnoses
+      based on symptoms. These tools not only enhance patient engagement and satisfaction
+      but also alleviate administrative burdens on healthcare providers. By handling
+      routine inquiries and tasks, AI assistants free up healthcare professionals
+      to focus on more critical patient care activities, thereby improving overall
+      efficiency in healthcare delivery systems.\\n\\nIn summary, the integration
+      of AI in healthcare is driving major advancements across predictive analytics,
+      medical imaging, personalized medicine, and patient care management. While these
+      innovations hold great promise, they also pose challenges such as data privacy
+      concerns, the need for validation and regulation, and the potential for bias
+      in AI systems. Addressing these challenges will be essential to fully harness
+      the transformative power of AI in healthcare, ensuring that these technologies
+      deliver safe, efficient, and equitable benefits for all patients.\",\n        \"refusal\":
+      null\n      },\n      \"logprobs\": null,\n      \"finish_reason\": \"stop\"\n
+      \   }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 1171,\n    \"completion_tokens\":
+      496,\n    \"total_tokens\": 1667,\n    \"completion_tokens_details\": {\n      \"reasoning_tokens\":
       0\n    }\n  },\n  \"system_fingerprint\": \"fp_e375328146\"\n}\n"
     headers:
       CF-Cache-Status:
       - DYNAMIC
       CF-RAY:
-      - 8c78762bcce6a4ee-MIA
+      - 8c7cfdac5e0fa4c7-MIA
       Connection:
       - keep-alive
       Content-Encoding:
@@ -1040,7 +463,7 @@ interactions:
       Content-Type:
       - application/json
       Date:
-      - Mon, 23 Sep 2024 06:26:16 GMT
+      - Mon, 23 Sep 2024 19:37:50 GMT
       Server:
       - cloudflare
       Transfer-Encoding:
@@ -1052,7 +475,7 @@ interactions:
       openai-organization:
       - crewai-iuxna1
       openai-processing-ms:
-      - '5978'
+      - '6749'
       openai-version:
       - '2020-10-01'
       strict-transport-security:
@@ -1064,13 +487,582 @@ interactions:
       x-ratelimit-remaining-requests:
       - '9999'
       x-ratelimit-remaining-tokens:
-      - '29998036'
+      - '29998354'
       x-ratelimit-reset-requests:
       - 6ms
       x-ratelimit-reset-tokens:
       - 3ms
       x-request-id:
-      - req_a41d3b6493109b85c40a338c4ce5b0cb
+      - req_3081dee742866440dc5e0f7a0611c1e6
+    http_version: HTTP/1.1
+    status_code: 200
+- request:
+    body: !!binary |
+      Cq4QCiQKIgoMc2VydmljZS5uYW1lEhIKEGNyZXdBSS10ZWxlbWV0cnkShRAKEgoQY3Jld2FpLnRl
+      bGVtZXRyeRKQAgoQXlxrA6HMiAqtajodDDnL9BIIUrRu3tADZ6MqDlRhc2sgRXhlY3V0aW9uMAE5
+      QCuZcbr29xdBUMfTJLz29xdKLgoIY3Jld19rZXkSIgogOWJmMmNkZTZiYzVjNDIwMWQ2OWI5YmNm
+      ZmYzNWJmYjlKMQoHY3Jld19pZBImCiRkMTA3MTAyNi01MTk2LTRiYzQtOTc0Zi1jYWU5NzQ1ZWY1
+      MzRKLgoIdGFza19rZXkSIgogYzUwMmM1NzQ1YzI3ODFhZjUxYjJmM2VmNWQ2MmZjNzRKMQoHdGFz
+      a19pZBImCiQwMGZiMmFkMS1jODM3LTQ3N2QtOTliMS1mZTNiZmE2NDdhMmZ6AhgBhQEAAQAAEsoL
+      ChDQKMyfyhElAopNohfmcaciEgiJlnZFsxnJjSoMQ3JldyBDcmVhdGVkMAE5MKf1JLz29xdBYG/9
+      JLz29xdKGgoOY3Jld2FpX3ZlcnNpb24SCAoGMC42MS4wShoKDnB5dGhvbl92ZXJzaW9uEggKBjMu
+      MTEuN0ouCghjcmV3X2tleRIiCiA5YmYyY2RlNmJjNWM0MjAxZDY5YjliY2ZmZjM1YmZiOUoxCgdj
+      cmV3X2lkEiYKJGQxMDcxMDI2LTUxOTYtNGJjNC05NzRmLWNhZTk3NDVlZjUzNEocCgxjcmV3X3By
+      b2Nlc3MSDAoKc2VxdWVudGlhbEoRCgtjcmV3X21lbW9yeRICEABKGgoUY3Jld19udW1iZXJfb2Zf
+      dGFza3MSAhgCShsKFWNyZXdfbnVtYmVyX29mX2FnZW50cxICGAJKiAUKC2NyZXdfYWdlbnRzEvgE
+      CvUEW3sia2V5IjogIjhiZDIxMzliNTk3NTE4MTUwNmU0MWZkOWM0NTYzZDc1IiwgImlkIjogImQw
+      ZWU3Y2UxLTU0M2MtNDBkNi04NjA1LTJiNDMwYzk5Y2RlOSIsICJyb2xlIjogIlJlc2VhcmNoZXIi
+      LCAidmVyYm9zZT8iOiBmYWxzZSwgIm1heF9pdGVyIjogMTUsICJtYXhfcnBtIjogbnVsbCwgImZ1
+      bmN0aW9uX2NhbGxpbmdfbGxtIjogIiIsICJsbG0iOiAiZ3B0LTRvIiwgImRlbGVnYXRpb25fZW5h
+      YmxlZD8iOiBmYWxzZSwgImFsbG93X2NvZGVfZXhlY3V0aW9uPyI6IGZhbHNlLCAibWF4X3JldHJ5
+      X2xpbWl0IjogMiwgInRvb2xzX25hbWVzIjogW119LCB7ImtleSI6ICI5YTUwMTVlZjQ4OTVkYzYy
+      NzhkNTQ4MThiYTQ0NmFmNyIsICJpZCI6ICIxZmNlN2MzNC1jODQ4LTQ3OTEtOGE1OC01NzhhMDAw
+      ZmI0YjUiLCAicm9sZSI6ICJTZW5pb3IgV3JpdGVyIiwgInZlcmJvc2U/IjogZmFsc2UsICJtYXhf
+      aXRlciI6IDE1LCAibWF4X3JwbSI6IG51bGwsICJmdW5jdGlvbl9jYWxsaW5nX2xsbSI6ICIiLCAi
+      bGxtIjogImdwdC00byIsICJkZWxlZ2F0aW9uX2VuYWJsZWQ/IjogZmFsc2UsICJhbGxvd19jb2Rl
+      X2V4ZWN1dGlvbj8iOiBmYWxzZSwgIm1heF9yZXRyeV9saW1pdCI6IDIsICJ0b29sc19uYW1lcyI6
+      IFtdfV1K7wMKCmNyZXdfdGFza3MS4AMK3QNbeyJrZXkiOiAiNTljNzM4ZDRkYWU3OTZlNWEyMmRi
+      YzJlNTE5OGMyMGQiLCAiaWQiOiAiMGE1OGY4NTAtYmNiMi00ZTg4LThlZjItNjZlN2ZkYjYxZGFh
+      IiwgImFzeW5jX2V4ZWN1dGlvbj8iOiBmYWxzZSwgImh1bWFuX2lucHV0PyI6IGZhbHNlLCAiYWdl
+      bnRfcm9sZSI6ICJSZXNlYXJjaGVyIiwgImFnZW50X2tleSI6ICI4YmQyMTM5YjU5NzUxODE1MDZl
+      NDFmZDljNDU2M2Q3NSIsICJ0b29sc19uYW1lcyI6IFtdfSwgeyJrZXkiOiAiYzUwMmM1NzQ1YzI3
+      ODFhZjUxYjJmM2VmNWQ2MmZjNzQiLCAiaWQiOiAiMDBmYjJhZDEtYzgzNy00NzdkLTk5YjEtZmUz
+      YmZhNjQ3YTJmIiwgImFzeW5jX2V4ZWN1dGlvbj8iOiBmYWxzZSwgImh1bWFuX2lucHV0PyI6IGZh
+      bHNlLCAiYWdlbnRfcm9sZSI6ICJTZW5pb3IgV3JpdGVyIiwgImFnZW50X2tleSI6ICI5YTUwMTVl
+      ZjQ4OTVkYzYyNzhkNTQ4MThiYTQ0NmFmNyIsICJ0b29sc19uYW1lcyI6IFtdfV16AhgBhQEAAQAA
+      Eo4CChAmPmvtPftm2O7lX3FkCy5bEgg+u2SBcB8NSyoMVGFzayBDcmVhdGVkMAE5eHwPJbz29xdB
+      ePkPJbz29xdKLgoIY3Jld19rZXkSIgogOWJmMmNkZTZiYzVjNDIwMWQ2OWI5YmNmZmYzNWJmYjlK
+      MQoHY3Jld19pZBImCiRkMTA3MTAyNi01MTk2LTRiYzQtOTc0Zi1jYWU5NzQ1ZWY1MzRKLgoIdGFz
+      a19rZXkSIgogNTljNzM4ZDRkYWU3OTZlNWEyMmRiYzJlNTE5OGMyMGRKMQoHdGFza19pZBImCiQw
+      YTU4Zjg1MC1iY2IyLTRlODgtOGVmMi02NmU3ZmRiNjFkYWF6AhgBhQEAAQAA
+    headers:
+      Accept:
+      - '*/*'
+      Accept-Encoding:
+      - gzip, deflate
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '2097'
+      Content-Type:
+      - application/x-protobuf
+      User-Agent:
+      - OTel-OTLP-Exporter-Python/1.27.0
+    method: POST
+    uri: https://telemetry.crewai.com:4319/v1/traces
+  response:
+    body:
+      string: "\n\0"
+    headers:
+      Content-Length:
+      - '2'
+      Content-Type:
+      - application/x-protobuf
+      Date:
+      - Mon, 23 Sep 2024 19:37:53 GMT
+    status:
+      code: 200
+      message: OK
+- request:
+    body: '{"messages": [{"role": "system", "content": "You are Researcher. You''re
+      an expert researcher, specialized in technology, software engineering, AI and
+      startups. You work as a freelancer and is now working on doing research and
+      analysis for a new customer.\nYour personal goal is: Make the best research
+      and analysis on content about AI and AI agents\nTo give my best complete final
+      answer to the task use the exact following format:\n\nThought: I now can give
+      a great answer\nFinal Answer: Your final answer must be the great and the most
+      complete as possible, it must be outcome described.\n\nI MUST use these formats,
+      my job depends on it!"}, {"role": "user", "content": "\nCurrent Task: Research
+      AI advancements.\n\nThis is the expect criteria for your final answer: A full
+      report on AI advancements.\nyou MUST return the actual complete content as the
+      final answer, not a summary.\n\nBegin! This is VERY important to you, use the
+      tools available and give your best Final Answer, your job depends on it!\n\nThought:"}],
+      "model": "gpt-4o"}'
+    headers:
+      accept:
+      - application/json
+      accept-encoding:
+      - gzip, deflate
+      connection:
+      - keep-alive
+      content-length:
+      - '1040'
+      content-type:
+      - application/json
+      cookie:
+      - __cf_bm=4rzJDR3F8S3Dp4B_qwylZU0mdm_WUwmv8vNHHp3IplM-1727119501-1.0.1.1-qobO_Sf88yG1qtXFnLgykvyc9YXR_fm1J7ZpXIhvtynVnsz67Uwcf4122PgHs4GMrlvZMaL6z_UVcVYSYUJOKQ;
+        _cfuvid=9K_ipT1uTVyDTneB1W5OZHPxCh36aOsDZCBnsQTONqQ-1727119501207-0.0.1.1-604800000
+      host:
+      - api.openai.com
+      user-agent:
+      - OpenAI/Python 1.47.0
+      x-stainless-arch:
+      - arm64
+      x-stainless-async:
+      - 'false'
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - MacOS
+      x-stainless-package-version:
+      - 1.47.0
+      x-stainless-raw-response:
+      - 'true'
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.11.7
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    content: "{\n  \"id\": \"chatcmpl-AAjAUvfwQhP0hx8qxM6cFroEzlugN\",\n  \"object\":
+      \"chat.completion\",\n  \"created\": 1727120270,\n  \"model\": \"gpt-4o-2024-05-13\",\n
+      \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
+      \"assistant\",\n        \"content\": \"Thought: I now can give a great answer\\nFinal
+      Answer: \\n\\n# Full Report on AI Advancements\\n\\n## Table of Contents\\n\\n1.
+      Introduction\\n2. Major Advancements in AI Technology\\n    - Machine Learning
+      and Deep Learning\\n    - Natural Language Processing\\n    - Computer Vision\\n
+      \   - Robotics and Automation\\n3. AI in Industry Applications\\n    - Healthcare\\n
+      \   - Automotive\\n    - Finance\\n    - Retail\\n    - Manufacturing\\n4. Emerging
+      Trends in AI\\n    - Explainable AI (XAI)\\n    - AI Ethics and Fairness\\n
+      \   - AI Hardware advancements\\n    - Federated Learning\\n5. Challenges and
+      Opportunities\\n    - Data Privacy\\n    - Bias and Fairness\\n    - Job Displacement\\n
+      \   - Continued Innovation\\n6. Conclusion\\n\\n---\\n\\n## Introduction\\n\\nArtificial
+      Intelligence (AI) has progressed significantly over the last decade, transforming
+      from a buzzword into a pivotal technology that is reshaping industries and society.
+      From advancing machine learning algorithms to breakthroughs in robotics, the
+      field of AI is in a state of constant evolution. This report delves into the
+      key advancements in AI technology, applications across various industries, emerging
+      trends, and the challenges and opportunities that lie ahead.\\n\\n## Major Advancements
+      in AI Technology\\n\\n### Machine Learning and Deep Learning\\n\\n**Machine
+      Learning (ML)** involves algorithms that enable computers to learn from and
+      make decisions based on data. **Deep Learning (DL)**, a subset of ML, uses neural
+      networks with many layers (hence \\\"deep\\\") to analyze various factors of
+      data. Significant advancements in deep learning have led to breakthroughs in
+      many fields, including:\\n\\n- **Convolutional Neural Networks (CNNs)**: Pioneering
+      advancements in image and video recognition.\\n- **Recurrent Neural Networks
+      (RNNs)**: Enhanced performance in sequential data tasks like language translation
+      and speech recognition.\\n- **Generative Adversarial Networks (GANs)**: Improved
+      capabilities in generating high-fidelity synthetic data for various applications,
+      from art creation to drug discovery.\\n\\n### Natural Language Processing\\n\\n**Natural
+      Language Processing (NLP)** combines computer science, AI, and linguistics to
+      enable computers to understand, interpret, and respond to human language. Notable
+      advancements in NLP include:\\n\\n- **Transformers and BERT (Bidirectional Encoder
+      Representations from Transformers)**: Revolutionized NLP by allowing models
+      to understand context in language models better.\\n- **GPT-3**: With 175 billion
+      parameters, GPT-3 has exhibited unprecedented capabilities in text generation,
+      language translation, and even rudimentary reasoning tasks.\\n\\n### Computer
+      Vision\\n\\n**Computer Vision (CV)** enables machines to interpret and make
+      decisions based on visual data. Recent advancements include:\\n \\n- **Object
+      Detection**: Improved algorithms for real-time detection and classification
+      of objects within images and videos.\\n- **Facial Recognition**: Enhanced accuracy
+      and security measures, aiding sectors like security, retail, and even healthcare
+      for diagnostic purposes.\\n- **Autonomous Systems**: Advancements in CV have
+      propelled self-driving vehicle technology and robotic navigation.\\n\\n### Robotics
+      and Automation\\n\\nAI-driven robotics and automation systems have advanced
+      significantly. Key developments include:\\n\\n- **Robotic Process Automation
+      (RPA)**: Automating repetitive tasks in industries like finance, HR, and customer
+      service.\\n- **Collaborative Robots (Cobots)**: Designed to work alongside humans,
+      enhancing safety and productivity in manufacturing environments.\\n- **Intelligent
+      Agents and Assistants**: Improvements in AI assistants like Alexa, Google Assistant,
+      and others.\\n\\n## AI in Industry Applications\\n\\n### Healthcare\\n\\nAI
+      is revolutionizing healthcare by enabling more accurate diagnoses, personalized
+      treatment plans, and efficient administrative processes. Key applications include:\\n\\n-
+      **Medical Imaging**: Enhanced accuracy in detecting diseases from X-rays, MRIs,
+      and CT scans.\\n- **Predictive Analytics**: AI models predicting patient outcomes
+      and potential outbreaks (such as during the COVID-19 pandemic).\\n- **Drug Discovery**:
+      Accelerating the drug development process by using AI to analyze vast datasets
+      and predict the efficacy of new therapies.\\n\\n### Automotive\\n\\nAI has impacted
+      the automotive sector primarily through advancements in autonomous driving.
+      This includes:\\n\\n- **Self-Driving Cars**: Enhanced algorithms for better
+      real-time decision-making and obstacle avoidance.\\n- **Driver Assistance Systems**:
+      AI-powered systems like adaptive cruise control and lane-keeping assistance
+      improving road safety.\\n\\n### Finance\\n\\nAI's ability to process and analyze
+      large datasets quickly makes it invaluable in financial services. Applications
+      include:\\n\\n- **Fraud Detection**: Using ML models to detect abnormal transactions
+      and patterns indicative of fraudulent activity.\\n- **Algorithmic Trading**:
+      High-frequency trading algorithms making split-second decisions based on market
+      data.\\n- **Customer Service**: AI chatbots providing 24/7 support to customers.\\n\\n###
+      Retail\\n\\nThe retail industry leverages AI for a range of applications:\\n\\n-
+      **Personalized Shopping Experiences**: Recommender systems offering personalized
+      product suggestions.\\n- **Inventory Management**: Predictive analytics optimizing
+      stock levels and reducing waste.\\n- **Sales Forecasting**: Improved accuracy
+      in sales predictions to better manage supply chains.\\n\\n### Manufacturing\\n\\nIn
+      manufacturing, AI is used to optimize production processes, maintain equipment,
+      and ensure quality control. Significant applications include:\\n\\n- **Predictive
+      Maintenance**: AI models predicting equipment failures before they occur to
+      reduce downtime.\\n- **Quality Inspection**: Using computer vision to detect
+      defects in products with high accuracy.\\n- **Supply Chain Optimization**: AI
+      algorithms streamlining the supply chain to improve efficiency.\\n\\n## Emerging
+      Trends in AI\\n\\n### Explainable AI (XAI)\\n\\nExplainable AI aims to make
+      AI decision-making processes transparent, thereby improving the trustworthiness
+      of AI systems. Techniques are being developed to allow users to understand and
+      interpret the outputs of complex AI models.\\n\\n### AI Ethics and Fairness\\n\\nWith
+      the widespread adoption of AI, ethical considerations have come to the forefront.
+      Research focuses on developing frameworks to ensure AI systems are fair, accountable,
+      and transparent, addressing biases in data and algorithms.\\n\\n### AI Hardware
+      Advancements\\n\\nThe development of specialized hardware, such as GPUs and
+      TPUs, has accelerated AI research and applications. New hardware is being tailored
+      specifically for AI computations, enhancing performance and efficiency.\\n\\n###
+      Federated Learning\\n\\nFederated learning allows AI models to be trained across
+      decentralized devices without centralizing data, thereby preserving privacy.
+      This approach promotes data privacy and security while leveraging diverse datasets.\\n\\n##
+      Challenges and Opportunities\\n\\n### Data Privacy\\n\\nThe need to protect
+      user data is paramount. AI systems must comply with regulations like GDPR and
+      CCPA, balancing innovation with stringent data protection measures.\\n\\n###
+      Bias and Fairness\\n\\nAI systems often learn biases present in training data,
+      leading to unfair or discriminatory outcomes. Ongoing research aims to detect,
+      measure, and mitigate bias in AI models.\\n\\n### Job Displacement\\n\\nWhile
+      AI creates new opportunities, it also poses the risk of job displacement in
+      various sectors. Strategies to reskill and upskill workers are essential to
+      address this challenge.\\n\\n### Continued Innovation\\n\\nThe future of AI
+      is filled with potential. As technology advances, interdisciplinary collaboration
+      and investment in research will be critical to overcoming current limitations
+      and unlocking new possibilities.\\n\\n## Conclusion\\n\\nAI advancements have
+      transformative potential across multiple domains, from healthcare and automotive
+      to finance and retail. With emerging trends like explainable AI, ethical considerations,
+      and specialized hardware, the landscape of AI continues to evolve. Despite challenges
+      around data privacy, bias, and job displacement, the opportunities for innovation
+      and societal impact remain substantial. As AI technology progresses, ensuring
+      ethical practices and addressing societal concerns will be key to harnessing
+      its full potential.\\n\\n---\\n\\nThis comprehensive report outlines the current
+      state and future trajectory of AI advancements, offering insights into its transformative
+      capabilities and the associated societal implications.\",\n        \"refusal\":
+      null\n      },\n      \"logprobs\": null,\n      \"finish_reason\": \"stop\"\n
+      \   }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 200,\n    \"completion_tokens\":
+      1545,\n    \"total_tokens\": 1745,\n    \"completion_tokens_details\": {\n      \"reasoning_tokens\":
+      0\n    }\n  },\n  \"system_fingerprint\": \"fp_e375328146\"\n}\n"
+    headers:
+      CF-Cache-Status:
+      - DYNAMIC
+      CF-RAY:
+      - 8c7cfdd9fbeea4c7-MIA
+      Connection:
+      - keep-alive
+      Content-Encoding:
+      - gzip
+      Content-Type:
+      - application/json
+      Date:
+      - Mon, 23 Sep 2024 19:38:17 GMT
+      Server:
+      - cloudflare
+      Transfer-Encoding:
+      - chunked
+      X-Content-Type-Options:
+      - nosniff
+      access-control-expose-headers:
+      - X-Request-ID
+      openai-organization:
+      - crewai-iuxna1
+      openai-processing-ms:
+      - '26540'
+      openai-version:
+      - '2020-10-01'
+      strict-transport-security:
+      - max-age=15552000; includeSubDomains; preload
+      x-ratelimit-limit-requests:
+      - '10000'
+      x-ratelimit-limit-tokens:
+      - '30000000'
+      x-ratelimit-remaining-requests:
+      - '9999'
+      x-ratelimit-remaining-tokens:
+      - '29999750'
+      x-ratelimit-reset-requests:
+      - 6ms
+      x-ratelimit-reset-tokens:
+      - 0s
+      x-request-id:
+      - req_2a852a4059f2f643921e3568e6f7079d
+    http_version: HTTP/1.1
+    status_code: 200
+- request:
+    body: !!binary |
+      CuEECiQKIgoMc2VydmljZS5uYW1lEhIKEGNyZXdBSS10ZWxlbWV0cnkSuAQKEgoQY3Jld2FpLnRl
+      bGVtZXRyeRKQAgoQSuPrW1jFl1nGI+rjONAl5BIIsbMFl7FFmD8qDlRhc2sgRXhlY3V0aW9uMAE5
+      QCwQJbz29xdBEBP7d8L29xdKLgoIY3Jld19rZXkSIgogOWJmMmNkZTZiYzVjNDIwMWQ2OWI5YmNm
+      ZmYzNWJmYjlKMQoHY3Jld19pZBImCiRkMTA3MTAyNi01MTk2LTRiYzQtOTc0Zi1jYWU5NzQ1ZWY1
+      MzRKLgoIdGFza19rZXkSIgogNTljNzM4ZDRkYWU3OTZlNWEyMmRiYzJlNTE5OGMyMGRKMQoHdGFz
+      a19pZBImCiQwYTU4Zjg1MC1iY2IyLTRlODgtOGVmMi02NmU3ZmRiNjFkYWF6AhgBhQEAAQAAEo4C
+      ChAL7EkEZDIdyOJZzQVJo1XOEgjO+hg4vh35fCoMVGFzayBDcmVhdGVkMAE5AEQWeML29xdBAD4X
+      eML29xdKLgoIY3Jld19rZXkSIgogOWJmMmNkZTZiYzVjNDIwMWQ2OWI5YmNmZmYzNWJmYjlKMQoH
+      Y3Jld19pZBImCiRkMTA3MTAyNi01MTk2LTRiYzQtOTc0Zi1jYWU5NzQ1ZWY1MzRKLgoIdGFza19r
+      ZXkSIgogYzUwMmM1NzQ1YzI3ODFhZjUxYjJmM2VmNWQ2MmZjNzRKMQoHdGFza19pZBImCiQwMGZi
+      MmFkMS1jODM3LTQ3N2QtOTliMS1mZTNiZmE2NDdhMmZ6AhgBhQEAAQAA
+    headers:
+      Accept:
+      - '*/*'
+      Accept-Encoding:
+      - gzip, deflate
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '612'
+      Content-Type:
+      - application/x-protobuf
+      User-Agent:
+      - OTel-OTLP-Exporter-Python/1.27.0
+    method: POST
+    uri: https://telemetry.crewai.com:4319/v1/traces
+  response:
+    body:
+      string: "\n\0"
+    headers:
+      Content-Length:
+      - '2'
+      Content-Type:
+      - application/x-protobuf
+      Date:
+      - Mon, 23 Sep 2024 19:38:18 GMT
+    status:
+      code: 200
+      message: OK
+- request:
+    body: '{"messages": [{"role": "system", "content": "You are Senior Writer. You''re
+      a senior writer, specialized in technology, software engineering, AI and startups.
+      You work as a freelancer and are now working on writing content for a new customer.\nYour
+      personal goal is: Write the best content about AI and AI agents.\nTo give my
+      best complete final answer to the task use the exact following format:\n\nThought:
+      I now can give a great answer\nFinal Answer: Your final answer must be the great
+      and the most complete as possible, it must be outcome described.\n\nI MUST use
+      these formats, my job depends on it!"}, {"role": "user", "content": "\nCurrent
+      Task: Write about AI in healthcare.\n\nThis is the expect criteria for your
+      final answer: A 4 paragraph article about AI.\nyou MUST return the actual complete
+      content as the final answer, not a summary.\n\nThis is the context you''re working
+      with:\n# Full Report on AI Advancements\n\n## Table of Contents\n\n1. Introduction\n2.
+      Major Advancements in AI Technology\n    - Machine Learning and Deep Learning\n    -
+      Natural Language Processing\n    - Computer Vision\n    - Robotics and Automation\n3.
+      AI in Industry Applications\n    - Healthcare\n    - Automotive\n    - Finance\n    -
+      Retail\n    - Manufacturing\n4. Emerging Trends in AI\n    - Explainable AI
+      (XAI)\n    - AI Ethics and Fairness\n    - AI Hardware advancements\n    - Federated
+      Learning\n5. Challenges and Opportunities\n    - Data Privacy\n    - Bias and
+      Fairness\n    - Job Displacement\n    - Continued Innovation\n6. Conclusion\n\n---\n\n##
+      Introduction\n\nArtificial Intelligence (AI) has progressed significantly over
+      the last decade, transforming from a buzzword into a pivotal technology that
+      is reshaping industries and society. From advancing machine learning algorithms
+      to breakthroughs in robotics, the field of AI is in a state of constant evolution.
+      This report delves into the key advancements in AI technology, applications
+      across various industries, emerging trends, and the challenges and opportunities
+      that lie ahead.\n\n## Major Advancements in AI Technology\n\n### Machine Learning
+      and Deep Learning\n\n**Machine Learning (ML)** involves algorithms that enable
+      computers to learn from and make decisions based on data. **Deep Learning (DL)**,
+      a subset of ML, uses neural networks with many layers (hence \"deep\") to analyze
+      various factors of data. Significant advancements in deep learning have led
+      to breakthroughs in many fields, including:\n\n- **Convolutional Neural Networks
+      (CNNs)**: Pioneering advancements in image and video recognition.\n- **Recurrent
+      Neural Networks (RNNs)**: Enhanced performance in sequential data tasks like
+      language translation and speech recognition.\n- **Generative Adversarial Networks
+      (GANs)**: Improved capabilities in generating high-fidelity synthetic data for
+      various applications, from art creation to drug discovery.\n\n### Natural Language
+      Processing\n\n**Natural Language Processing (NLP)** combines computer science,
+      AI, and linguistics to enable computers to understand, interpret, and respond
+      to human language. Notable advancements in NLP include:\n\n- **Transformers
+      and BERT (Bidirectional Encoder Representations from Transformers)**: Revolutionized
+      NLP by allowing models to understand context in language models better.\n- **GPT-3**:
+      With 175 billion parameters, GPT-3 has exhibited unprecedented capabilities
+      in text generation, language translation, and even rudimentary reasoning tasks.\n\n###
+      Computer Vision\n\n**Computer Vision (CV)** enables machines to interpret and
+      make decisions based on visual data. Recent advancements include:\n \n- **Object
+      Detection**: Improved algorithms for real-time detection and classification
+      of objects within images and videos.\n- **Facial Recognition**: Enhanced accuracy
+      and security measures, aiding sectors like security, retail, and even healthcare
+      for diagnostic purposes.\n- **Autonomous Systems**: Advancements in CV have
+      propelled self-driving vehicle technology and robotic navigation.\n\n### Robotics
+      and Automation\n\nAI-driven robotics and automation systems have advanced significantly.
+      Key developments include:\n\n- **Robotic Process Automation (RPA)**: Automating
+      repetitive tasks in industries like finance, HR, and customer service.\n- **Collaborative
+      Robots (Cobots)**: Designed to work alongside humans, enhancing safety and productivity
+      in manufacturing environments.\n- **Intelligent Agents and Assistants**: Improvements
+      in AI assistants like Alexa, Google Assistant, and others.\n\n## AI in Industry
+      Applications\n\n### Healthcare\n\nAI is revolutionizing healthcare by enabling
+      more accurate diagnoses, personalized treatment plans, and efficient administrative
+      processes. Key applications include:\n\n- **Medical Imaging**: Enhanced accuracy
+      in detecting diseases from X-rays, MRIs, and CT scans.\n- **Predictive Analytics**:
+      AI models predicting patient outcomes and potential outbreaks (such as during
+      the COVID-19 pandemic).\n- **Drug Discovery**: Accelerating the drug development
+      process by using AI to analyze vast datasets and predict the efficacy of new
+      therapies.\n\n### Automotive\n\nAI has impacted the automotive sector primarily
+      through advancements in autonomous driving. This includes:\n\n- **Self-Driving
+      Cars**: Enhanced algorithms for better real-time decision-making and obstacle
+      avoidance.\n- **Driver Assistance Systems**: AI-powered systems like adaptive
+      cruise control and lane-keeping assistance improving road safety.\n\n### Finance\n\nAI''s
+      ability to process and analyze large datasets quickly makes it invaluable in
+      financial services. Applications include:\n\n- **Fraud Detection**: Using ML
+      models to detect abnormal transactions and patterns indicative of fraudulent
+      activity.\n- **Algorithmic Trading**: High-frequency trading algorithms making
+      split-second decisions based on market data.\n- **Customer Service**: AI chatbots
+      providing 24/7 support to customers.\n\n### Retail\n\nThe retail industry leverages
+      AI for a range of applications:\n\n- **Personalized Shopping Experiences**:
+      Recommender systems offering personalized product suggestions.\n- **Inventory
+      Management**: Predictive analytics optimizing stock levels and reducing waste.\n-
+      **Sales Forecasting**: Improved accuracy in sales predictions to better manage
+      supply chains.\n\n### Manufacturing\n\nIn manufacturing, AI is used to optimize
+      production processes, maintain equipment, and ensure quality control. Significant
+      applications include:\n\n- **Predictive Maintenance**: AI models predicting
+      equipment failures before they occur to reduce downtime.\n- **Quality Inspection**:
+      Using computer vision to detect defects in products with high accuracy.\n- **Supply
+      Chain Optimization**: AI algorithms streamlining the supply chain to improve
+      efficiency.\n\n## Emerging Trends in AI\n\n### Explainable AI (XAI)\n\nExplainable
+      AI aims to make AI decision-making processes transparent, thereby improving
+      the trustworthiness of AI systems. Techniques are being developed to allow users
+      to understand and interpret the outputs of complex AI models.\n\n### AI Ethics
+      and Fairness\n\nWith the widespread adoption of AI, ethical considerations have
+      come to the forefront. Research focuses on developing frameworks to ensure AI
+      systems are fair, accountable, and transparent, addressing biases in data and
+      algorithms.\n\n### AI Hardware Advancements\n\nThe development of specialized
+      hardware, such as GPUs and TPUs, has accelerated AI research and applications.
+      New hardware is being tailored specifically for AI computations, enhancing performance
+      and efficiency.\n\n### Federated Learning\n\nFederated learning allows AI models
+      to be trained across decentralized devices without centralizing data, thereby
+      preserving privacy. This approach promotes data privacy and security while leveraging
+      diverse datasets.\n\n## Challenges and Opportunities\n\n### Data Privacy\n\nThe
+      need to protect user data is paramount. AI systems must comply with regulations
+      like GDPR and CCPA, balancing innovation with stringent data protection measures.\n\n###
+      Bias and Fairness\n\nAI systems often learn biases present in training data,
+      leading to unfair or discriminatory outcomes. Ongoing research aims to detect,
+      measure, and mitigate bias in AI models.\n\n### Job Displacement\n\nWhile AI
+      creates new opportunities, it also poses the risk of job displacement in various
+      sectors. Strategies to reskill and upskill workers are essential to address
+      this challenge.\n\n### Continued Innovation\n\nThe future of AI is filled with
+      potential. As technology advances, interdisciplinary collaboration and investment
+      in research will be critical to overcoming current limitations and unlocking
+      new possibilities.\n\n## Conclusion\n\nAI advancements have transformative potential
+      across multiple domains, from healthcare and automotive to finance and retail.
+      With emerging trends like explainable AI, ethical considerations, and specialized
+      hardware, the landscape of AI continues to evolve. Despite challenges around
+      data privacy, bias, and job displacement, the opportunities for innovation and
+      societal impact remain substantial. As AI technology progresses, ensuring ethical
+      practices and addressing societal concerns will be key to harnessing its full
+      potential.\n\n---\n\nThis comprehensive report outlines the current state and
+      future trajectory of AI advancements, offering insights into its transformative
+      capabilities and the associated societal implications.\n\nBegin! This is VERY
+      important to you, use the tools available and give your best Final Answer, your
+      job depends on it!\n\nThought:"}], "model": "gpt-4o"}'
+    headers:
+      accept:
+      - application/json
+      accept-encoding:
+      - gzip, deflate
+      connection:
+      - keep-alive
+      content-length:
+      - '9650'
+      content-type:
+      - application/json
+      cookie:
+      - __cf_bm=4rzJDR3F8S3Dp4B_qwylZU0mdm_WUwmv8vNHHp3IplM-1727119501-1.0.1.1-qobO_Sf88yG1qtXFnLgykvyc9YXR_fm1J7ZpXIhvtynVnsz67Uwcf4122PgHs4GMrlvZMaL6z_UVcVYSYUJOKQ;
+        _cfuvid=9K_ipT1uTVyDTneB1W5OZHPxCh36aOsDZCBnsQTONqQ-1727119501207-0.0.1.1-604800000
+      host:
+      - api.openai.com
+      user-agent:
+      - OpenAI/Python 1.47.0
+      x-stainless-arch:
+      - arm64
+      x-stainless-async:
+      - 'false'
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - MacOS
+      x-stainless-package-version:
+      - 1.47.0
+      x-stainless-raw-response:
+      - 'true'
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.11.7
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    content: "{\n  \"id\": \"chatcmpl-AAjAvu1eu7DnwtOe1FFR1grN6zfol\",\n  \"object\":
+      \"chat.completion\",\n  \"created\": 1727120297,\n  \"model\": \"gpt-4o-2024-05-13\",\n
+      \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
+      \"assistant\",\n        \"content\": \"I now can give a great answer.\\n\\nFinal
+      Answer:\\n\\nArtificial Intelligence (AI) is ushering in a new era in healthcare,
+      revolutionizing how we diagnose, treat, and manage diseases. One of the most
+      noteworthy advancements is in the field of medical imaging. AI algorithms have
+      demonstrated exceptional accuracy in interpreting X-rays, MRIs, and CT scans,
+      often surpassing the diagnostic capabilities of human radiologists. These AI
+      systems can detect anomalies and patterns that may be imperceptible to the human
+      eye, leading to earlier and more accurate diagnoses. For instance, AI-powered
+      tools are being used to identify early signs of diseases like cancer, enabling
+      more effective and timely interventions.\\n\\nPredictive analytics is another
+      area where AI is making significant strides. By analyzing vast amounts of patient
+      data, AI models can predict patient outcomes and potential health risks, allowing
+      for more proactive and personalized care. During the COVID-19 pandemic, predictive
+      analytics played a crucial role in forecasting virus outbreaks and hospital
+      resource needs. This capability extends to chronic disease management as well,
+      where AI can predict flare-ups or complications, enabling preventative measures
+      that improve patient outcomes and reduce healthcare costs.\\n\\nThe process
+      of drug discovery has also been transformed by AI. Traditional drug development
+      is a time-consuming and costly endeavor, often taking years and billions of
+      dollars to bring a new drug to market. AI accelerates this process by analyzing
+      large datasets to identify potential drug candidates and predict their efficacy.
+      This not only shortens the development cycle but also reduces costs, making
+      it feasible to explore treatments for rare or complex diseases that were previously
+      ignored due to economic constraints. Companies are now leveraging AI to identify
+      novel compounds and repurpose existing drugs for new therapeutic uses.\\n\\nLastly,
+      AI is streamlining administrative processes within the healthcare system. From
+      scheduling appointments to managing patient records, AI-driven automation reduces
+      the administrative burden on healthcare professionals, allowing them to focus
+      more on patient care. Natural Language Processing (NLP) technologies are being
+      used to transcribe medical notes, facilitate patient-doctor communication, and
+      extract actionable insights from unstructured data. This holistic integration
+      of AI into both clinical and administrative functions is paving the way for
+      a more efficient, accurate, and patient-centric healthcare system. \\n\\nIn
+      summary, AI's impact on healthcare is profound, offering promising solutions
+      for improving diagnostic accuracy, patient outcomes, drug development, and administrative
+      efficiency. As these technologies continue to evolve, the future of healthcare
+      looks increasingly capable of addressing the complex challenges of modern medicine.\",\n
+      \       \"refusal\": null\n      },\n      \"logprobs\": null,\n      \"finish_reason\":
+      \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 1736,\n    \"completion_tokens\":
+      489,\n    \"total_tokens\": 2225,\n    \"completion_tokens_details\": {\n      \"reasoning_tokens\":
+      0\n    }\n  },\n  \"system_fingerprint\": \"fp_e375328146\"\n}\n"
+    headers:
+      CF-Cache-Status:
+      - DYNAMIC
+      CF-RAY:
+      - 8c7cfe83cf62a4c7-MIA
+      Connection:
+      - keep-alive
+      Content-Encoding:
+      - gzip
+      Content-Type:
+      - application/json
+      Date:
+      - Mon, 23 Sep 2024 19:38:26 GMT
+      Server:
+      - cloudflare
+      Transfer-Encoding:
+      - chunked
+      X-Content-Type-Options:
+      - nosniff
+      access-control-expose-headers:
+      - X-Request-ID
+      openai-organization:
+      - crewai-iuxna1
+      openai-processing-ms:
+      - '8528'
+      openai-version:
+      - '2020-10-01'
+      strict-transport-security:
+      - max-age=15552000; includeSubDomains; preload
+      x-ratelimit-limit-requests:
+      - '10000'
+      x-ratelimit-limit-tokens:
+      - '30000000'
+      x-ratelimit-remaining-requests:
+      - '9999'
+      x-ratelimit-remaining-tokens:
+      - '29997636'
+      x-ratelimit-reset-requests:
+      - 6ms
+      x-ratelimit-reset-tokens:
+      - 4ms
+      x-request-id:
+      - req_0e7015aa2b3dc41e49d3f1b7ea2f11d5
     http_version: HTTP/1.1
     status_code: 200
 version: 1

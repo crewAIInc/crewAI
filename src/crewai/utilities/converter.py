@@ -2,7 +2,6 @@ import json
 import re
 from typing import Any, Optional, Type, Union
 
-from crewai.llm import LLM
 from pydantic import BaseModel, ValidationError
 
 from crewai.agents.agent_builder.utilities.base_output_converter import OutputConverter
@@ -24,7 +23,7 @@ class Converter(OutputConverter):
     def to_pydantic(self, current_attempt=1):
         """Convert text to pydantic."""
         try:
-            if self.is_gpt:
+            if self.llm.supports_function_calling():
                 return self._create_instructor().to_pydantic()
             else:
                 return self.llm.call(
@@ -43,7 +42,7 @@ class Converter(OutputConverter):
     def to_json(self, current_attempt=1):
         """Convert text to json."""
         try:
-            if self.is_gpt:
+            if self.llm.supports_function_calling():
                 return self._create_instructor().to_json()
             else:
                 return json.dumps(
@@ -85,15 +84,6 @@ class Converter(OutputConverter):
             ]
         )
         return parser.parse_result(result)
-
-    @property
-    def is_gpt(self) -> bool:
-        """Return if llm provided is of gpt from openai."""
-        return (
-            "gpt" in str(self.llm.model).lower()
-            or "o1-preview" in str(self.llm.model).lower()
-            or "o1-mini" in str(self.llm.model).lower()
-        )
 
 
 def convert_to_model(
@@ -202,19 +192,10 @@ def convert_with_instructions(
 
 def get_conversion_instructions(model: Type[BaseModel], llm: Any) -> str:
     instructions = "I'm gonna convert this raw text into valid JSON."
-    if not is_gpt(llm):
+    if llm.supports_function_calling():
         model_schema = PydanticSchemaParser(model=model).get_schema()
         instructions = f"{instructions}\n\nThe json should have the following structure, with the following keys:\n{model_schema}"
     return instructions
-
-
-def is_gpt(llm: LLM) -> bool:
-    """Return if llm provided is of gpt from openai."""
-    return (
-        "gpt" in str(llm.model).lower()
-        or "o1-preview" in str(llm.model).lower()
-        or "o1-mini" in str(llm.model).lower()
-    )
 
 
 def create_converter(

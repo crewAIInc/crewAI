@@ -31,8 +31,8 @@ interactions:
       content-type:
       - application/json
       cookie:
-      - __cf_bm=MSMbC3L9m33fbO5Mdj70NJMu6kJCjhuwRcYuWJdJkYQ-1727071769-1.0.1.1-Dok5J431gUNvLRyLNrUo0A.FXXIuZUUooIMFSj74XUDgQJt0mlhf6QEEo6s9wXLhByXrdKr6cxYGBEkQoDslXg;
-        _cfuvid=5cK2hfLqTXw1WjB81uT.sGmmA67JIxSKSQeEHQ3zOQw-1727071769966-0.0.1.1-604800000
+      - __cf_bm=4rzJDR3F8S3Dp4B_qwylZU0mdm_WUwmv8vNHHp3IplM-1727119501-1.0.1.1-qobO_Sf88yG1qtXFnLgykvyc9YXR_fm1J7ZpXIhvtynVnsz67Uwcf4122PgHs4GMrlvZMaL6z_UVcVYSYUJOKQ;
+        _cfuvid=9K_ipT1uTVyDTneB1W5OZHPxCh36aOsDZCBnsQTONqQ-1727119501207-0.0.1.1-604800000
       host:
       - api.openai.com
       user-agent:
@@ -56,20 +56,21 @@ interactions:
     method: POST
     uri: https://api.openai.com/v1/chat/completions
   response:
-    content: "{\n  \"id\": \"chatcmpl-AAX07vqXF0y6c30BRAu1MmEL13cSH\",\n  \"object\":
-      \"chat.completion\",\n  \"created\": 1727073499,\n  \"model\": \"gpt-4o-2024-05-13\",\n
+    content: "{\n  \"id\": \"chatcmpl-AAiy8MccDskNvL26mxPPzqRQGWJwu\",\n  \"object\":
+      \"chat.completion\",\n  \"created\": 1727119504,\n  \"model\": \"gpt-4o-2024-05-13\",\n
       \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
-      \"assistant\",\n        \"content\": \"Thought: I need to multiply 3 by 4 to
-      find the answer.\\nAction: multiplier\\nAction Input: {\\\"first_number\\\":
-      3, \\\"second_number\\\": 4}\",\n        \"refusal\": null\n      },\n      \"logprobs\":
-      null,\n      \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\":
-      309,\n    \"completion_tokens\": 37,\n    \"total_tokens\": 346,\n    \"completion_tokens_details\":
-      {\n      \"reasoning_tokens\": 0\n    }\n  },\n  \"system_fingerprint\": \"fp_e375328146\"\n}\n"
+      \"assistant\",\n        \"content\": \"Thought: I need to find the result of
+      multiplying 3 by 4 using the available tool.\\n\\nAction: multiplier\\nAction
+      Input: {\\\"first_number\\\": 3, \\\"second_number\\\": 4}\",\n        \"refusal\":
+      null\n      },\n      \"logprobs\": null,\n      \"finish_reason\": \"stop\"\n
+      \   }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 309,\n    \"completion_tokens\":
+      41,\n    \"total_tokens\": 350,\n    \"completion_tokens_details\": {\n      \"reasoning_tokens\":
+      0\n    }\n  },\n  \"system_fingerprint\": \"fp_e375328146\"\n}\n"
     headers:
       CF-Cache-Status:
       - DYNAMIC
       CF-RAY:
-      - 8c7887fa2cef7461-MIA
+      - 8c7ceb287a61228a-MIA
       Connection:
       - keep-alive
       Content-Encoding:
@@ -77,13 +78,9 @@ interactions:
       Content-Type:
       - application/json
       Date:
-      - Mon, 23 Sep 2024 06:38:19 GMT
+      - Mon, 23 Sep 2024 19:25:05 GMT
       Server:
       - cloudflare
-      Set-Cookie:
-      - __cf_bm=NWmPw03QmmBrmzmrwFLHNPR2YDJadYf_Y43muEwLZIQ-1727073499-1.0.1.1-1RWe4_mKmII8TI8dDIkwLavSlCBgjXDyLwk99rS.5CkqLS_nWYvRPLvvEO7QcC5Z9B3SUsjGBebmmv7Q3c8kLQ;
-        path=/; expires=Mon, 23-Sep-24 07:08:19 GMT; domain=.api.openai.com; HttpOnly;
-        Secure; SameSite=None
       Transfer-Encoding:
       - chunked
       X-Content-Type-Options:
@@ -93,7 +90,7 @@ interactions:
       openai-organization:
       - crewai-iuxna1
       openai-processing-ms:
-      - '533'
+      - '892'
       openai-version:
       - '2020-10-01'
       strict-transport-security:
@@ -111,7 +108,7 @@ interactions:
       x-ratelimit-reset-tokens:
       - 0s
       x-request-id:
-      - req_0425d030bff846d90ee77f73c6fb1efa
+      - req_e573cee35dd4ed7052374c2076bcfdfd
     http_version: HTTP/1.1
     status_code: 200
 - request:
@@ -134,8 +131,9 @@ interactions:
       complete content as the final answer, not a summary.\n\nBegin! This is VERY
       important to you, use the tools available and give your best Final Answer, your
       job depends on it!\n\nThought:"}, {"role": "user", "content": "Thought: I need
-      to multiply 3 by 4 to find the answer.\nAction: multiplier\nAction Input: {\"first_number\":
-      3, \"second_number\": 4}\nObservation: 12"}], "model": "gpt-4o"}'
+      to find the result of multiplying 3 by 4 using the available tool.\n\nAction:
+      multiplier\nAction Input: {\"first_number\": 3, \"second_number\": 4}\nObservation:
+      12"}], "model": "gpt-4o"}'
     headers:
       accept:
       - application/json
@@ -144,12 +142,12 @@ interactions:
       connection:
       - keep-alive
       content-length:
-      - '1643'
+      - '1673'
       content-type:
       - application/json
       cookie:
-      - __cf_bm=NWmPw03QmmBrmzmrwFLHNPR2YDJadYf_Y43muEwLZIQ-1727073499-1.0.1.1-1RWe4_mKmII8TI8dDIkwLavSlCBgjXDyLwk99rS.5CkqLS_nWYvRPLvvEO7QcC5Z9B3SUsjGBebmmv7Q3c8kLQ;
-        _cfuvid=5cK2hfLqTXw1WjB81uT.sGmmA67JIxSKSQeEHQ3zOQw-1727071769966-0.0.1.1-604800000
+      - __cf_bm=4rzJDR3F8S3Dp4B_qwylZU0mdm_WUwmv8vNHHp3IplM-1727119501-1.0.1.1-qobO_Sf88yG1qtXFnLgykvyc9YXR_fm1J7ZpXIhvtynVnsz67Uwcf4122PgHs4GMrlvZMaL6z_UVcVYSYUJOKQ;
+        _cfuvid=9K_ipT1uTVyDTneB1W5OZHPxCh36aOsDZCBnsQTONqQ-1727119501207-0.0.1.1-604800000
       host:
       - api.openai.com
       user-agent:
@@ -173,20 +171,19 @@ interactions:
     method: POST
     uri: https://api.openai.com/v1/chat/completions
   response:
-    content: "{\n  \"id\": \"chatcmpl-AAX08asL2vbNU1PjZDevzYleVSR7t\",\n  \"object\":
-      \"chat.completion\",\n  \"created\": 1727073500,\n  \"model\": \"gpt-4o-2024-05-13\",\n
+    content: "{\n  \"id\": \"chatcmpl-AAiyARhQJG0O7z0TsRq5mpVTnzItT\",\n  \"object\":
+      \"chat.completion\",\n  \"created\": 1727119506,\n  \"model\": \"gpt-4o-2024-05-13\",\n
       \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
       \"assistant\",\n        \"content\": \"Thought: I now know the final answer.\\nFinal
-      Answer: The result of multiplying 3 by 4 is 12.\",\n        \"refusal\": null\n
-      \     },\n      \"logprobs\": null,\n      \"finish_reason\": \"stop\"\n    }\n
-      \ ],\n  \"usage\": {\n    \"prompt_tokens\": 354,\n    \"completion_tokens\":
-      25,\n    \"total_tokens\": 379,\n    \"completion_tokens_details\": {\n      \"reasoning_tokens\":
-      0\n    }\n  },\n  \"system_fingerprint\": \"fp_e375328146\"\n}\n"
+      Answer: 12\",\n        \"refusal\": null\n      },\n      \"logprobs\": null,\n
+      \     \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\":
+      358,\n    \"completion_tokens\": 14,\n    \"total_tokens\": 372,\n    \"completion_tokens_details\":
+      {\n      \"reasoning_tokens\": 0\n    }\n  },\n  \"system_fingerprint\": \"fp_e375328146\"\n}\n"
     headers:
       CF-Cache-Status:
       - DYNAMIC
       CF-RAY:
-      - 8c7887ff6f487461-MIA
+      - 8c7ceb2ffce6228a-MIA
       Connection:
       - keep-alive
       Content-Encoding:
@@ -194,7 +191,7 @@ interactions:
       Content-Type:
       - application/json
       Date:
-      - Mon, 23 Sep 2024 06:38:20 GMT
+      - Mon, 23 Sep 2024 19:25:06 GMT
       Server:
       - cloudflare
       Transfer-Encoding:
@@ -203,12 +200,10 @@ interactions:
       - nosniff
       access-control-expose-headers:
       - X-Request-ID
-      alt-svc:
-      - h3=":443"; ma=86400
       openai-organization:
       - crewai-iuxna1
       openai-processing-ms:
-      - '360'
+      - '413'
       openai-version:
       - '2020-10-01'
       strict-transport-security:
@@ -220,13 +215,13 @@ interactions:
       x-ratelimit-remaining-requests:
       - '9999'
       x-ratelimit-remaining-tokens:
-      - '29999612'
+      - '29999604'
       x-ratelimit-reset-requests:
       - 6ms
       x-ratelimit-reset-tokens:
       - 0s
       x-request-id:
-      - req_f370cdd959646dc9ab97f5d4a382737c
+      - req_1269cefbd31802ed3d9a39c843df5411
     http_version: HTTP/1.1
     status_code: 200
 version: 1

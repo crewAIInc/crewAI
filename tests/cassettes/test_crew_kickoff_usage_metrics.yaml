@@ -23,8 +23,8 @@ interactions:
       content-type:
       - application/json
       cookie:
-      - __cf_bm=hYfEMfBWpIoRPjx9ZBZg6DVeMOMr1IZt9ioup8yWZs0-1727072673-1.0.1.1-Ro7GCLuWS0K5ob0mSTYSmovONKNyxsK6oSA5io_Vwqhe6P0G7Ow4CuZUaWAaCdFGQUd7XZiFH0mI_sQC3uqe0g;
-        _cfuvid=5cK2hfLqTXw1WjB81uT.sGmmA67JIxSKSQeEHQ3zOQw-1727071769966-0.0.1.1-604800000
+      - __cf_bm=4rzJDR3F8S3Dp4B_qwylZU0mdm_WUwmv8vNHHp3IplM-1727119501-1.0.1.1-qobO_Sf88yG1qtXFnLgykvyc9YXR_fm1J7ZpXIhvtynVnsz67Uwcf4122PgHs4GMrlvZMaL6z_UVcVYSYUJOKQ;
+        _cfuvid=9K_ipT1uTVyDTneB1W5OZHPxCh36aOsDZCBnsQTONqQ-1727119501207-0.0.1.1-604800000
       host:
       - api.openai.com
       user-agent:
@@ -48,20 +48,20 @@ interactions:
     method: POST
     uri: https://api.openai.com/v1/chat/completions
   response:
-    content: "{\n  \"id\": \"chatcmpl-AAWoWbLjQnAkeByTCr74pSmzh4L6y\",\n  \"object\":
-      \"chat.completion\",\n  \"created\": 1727072780,\n  \"model\": \"gpt-4o-2024-05-13\",\n
+    content: "{\n  \"id\": \"chatcmpl-AAjB9nLmjkTqB5Xlpal5vRWIgqsLl\",\n  \"object\":
+      \"chat.completion\",\n  \"created\": 1727120311,\n  \"model\": \"gpt-4o-2024-05-13\",\n
       \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
       \"assistant\",\n        \"content\": \"I now can give a great answer\\nFinal
-      Answer: Dogs are loyal and affectionate companions that enhance humans' emotional
-      well-being.\",\n        \"refusal\": null\n      },\n      \"logprobs\": null,\n
-      \     \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\":
-      175,\n    \"completion_tokens\": 25,\n    \"total_tokens\": 200,\n    \"completion_tokens_details\":
-      {\n      \"reasoning_tokens\": 0\n    }\n  },\n  \"system_fingerprint\": \"fp_e375328146\"\n}\n"
+      Answer: Dogs enhance human well-being through companionship and emotional support.\",\n
+      \       \"refusal\": null\n      },\n      \"logprobs\": null,\n      \"finish_reason\":
+      \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 175,\n    \"completion_tokens\":
+      22,\n    \"total_tokens\": 197,\n    \"completion_tokens_details\": {\n      \"reasoning_tokens\":
+      0\n    }\n  },\n  \"system_fingerprint\": \"fp_e375328146\"\n}\n"
     headers:
       CF-Cache-Status:
       - DYNAMIC
       CF-RAY:
-      - 8c78766f3904a4ee-MIA
+      - 8c7cfedb9ecba4c7-MIA
       Connection:
       - keep-alive
       Content-Encoding:
@@ -69,7 +69,7 @@ interactions:
       Content-Type:
       - application/json
       Date:
-      - Mon, 23 Sep 2024 06:26:21 GMT
+      - Mon, 23 Sep 2024 19:38:32 GMT
       Server:
       - cloudflare
       Transfer-Encoding:
@@ -81,7 +81,7 @@ interactions:
       openai-organization:
       - crewai-iuxna1
       openai-processing-ms:
-      - '487'
+      - '424'
       openai-version:
       - '2020-10-01'
       strict-transport-security:
@@ -99,146 +99,9 @@ interactions:
       x-ratelimit-reset-tokens:
       - 0s
       x-request-id:
-      - req_64c3491ce9e82df5e8dc62fbc65a3387
+      - req_3d7b78b19025f8ed516b954e9354c6a4
     http_version: HTTP/1.1
     status_code: 200
-- request:
-    body: !!binary |
-      Cs0vCiQKIgoMc2VydmljZS5uYW1lEhIKEGNyZXdBSS10ZWxlbWV0cnkSpC8KEgoQY3Jld2FpLnRl
-      bGVtZXRyeRKQAgoQ6tyPLtXthQJ+RlbZhzBnyxIIXLgvBMgiVZkqDlRhc2sgRXhlY3V0aW9uMAE5
-      uPnoiIjL9xdBQDi1A4rL9xdKLgoIY3Jld19rZXkSIgogOWJmMmNkZTZiYzVjNDIwMWQ2OWI5YmNm
-      ZmYzNWJmYjlKMQoHY3Jld19pZBImCiQ2NTdmYTliMi1mYzYyLTQwYjItOGUwNy0zNWQzOTY2YTAz
-      Y2FKLgoIdGFza19rZXkSIgogYzUwMmM1NzQ1YzI3ODFhZjUxYjJmM2VmNWQ2MmZjNzRKMQoHdGFz
-      a19pZBImCiQwZDYyNjBlMS1kNDM1LTQ2ODctYjdiZi00ZjQwNTYwNTg4MDh6AhgBhQEAAQAAEs0L
-      ChA25gcO8zeND7gbAE4gu3FuEgh6CVaanwV0VSoMQ3JldyBDcmVhdGVkMAE54GS5BYrL9xdB8D3G
-      BYrL9xdKGgoOY3Jld2FpX3ZlcnNpb24SCAoGMC42MS4wShoKDnB5dGhvbl92ZXJzaW9uEggKBjMu
-      MTEuN0ouCghjcmV3X2tleRIiCiA0NzNlNGRiZDI5OTg3NzEyMGViNzVjMjVkYTYyMjM3NUoxCgdj
-      cmV3X2lkEiYKJDAzZmVkOTkyLTg4ZGMtNDdmNS04Y2E4LTI0M2FmNzNjNTZhNUocCgxjcmV3X3By
-      b2Nlc3MSDAoKc2VxdWVudGlhbEoRCgtjcmV3X21lbW9yeRICEABKGgoUY3Jld19udW1iZXJfb2Zf
-      dGFza3MSAhgCShsKFWNyZXdfbnVtYmVyX29mX2FnZW50cxICGAJK/QQKC2NyZXdfYWdlbnRzEu0E
-      CuoEW3sia2V5IjogIjMyODIxN2I2YzI5NTliZGZjNDdjYWQwMGU4NDg5MGQwIiwgImlkIjogIjY4
-      YmNkNDFjLThmMjEtNDY3MS05Zjg1LWMyMTNmOTVjMjUxNiIsICJyb2xlIjogIkNFTyIsICJ2ZXJi
-      b3NlPyI6IGZhbHNlLCAibWF4X2l0ZXIiOiAxNSwgIm1heF9ycG0iOiBudWxsLCAiZnVuY3Rpb25f
-      Y2FsbGluZ19sbG0iOiAiIiwgImxsbSI6ICJncHQtNG8iLCAiZGVsZWdhdGlvbl9lbmFibGVkPyI6
-      IHRydWUsICJhbGxvd19jb2RlX2V4ZWN1dGlvbj8iOiBmYWxzZSwgIm1heF9yZXRyeV9saW1pdCI6
-      IDIsICJ0b29sc19uYW1lcyI6IFtdfSwgeyJrZXkiOiAiOGJkMjEzOWI1OTc1MTgxNTA2ZTQxZmQ5
-      YzQ1NjNkNzUiLCAiaWQiOiAiZWIwYWRmNDItNmIwNi00ZDEyLWE1OGYtNDg2MDk1NGIyYjQ1Iiwg
-      InJvbGUiOiAiUmVzZWFyY2hlciIsICJ2ZXJib3NlPyI6IGZhbHNlLCAibWF4X2l0ZXIiOiAxNSwg
-      Im1heF9ycG0iOiBudWxsLCAiZnVuY3Rpb25fY2FsbGluZ19sbG0iOiAiIiwgImxsbSI6ICJncHQt
-      NG8iLCAiZGVsZWdhdGlvbl9lbmFibGVkPyI6IGZhbHNlLCAiYWxsb3dfY29kZV9leGVjdXRpb24/
-      IjogZmFsc2UsICJtYXhfcmV0cnlfbGltaXQiOiAyLCAidG9vbHNfbmFtZXMiOiBbXX1dSv0DCgpj
-      cmV3X3Rhc2tzEu4DCusDW3sia2V5IjogIjA4Y2RlOTA5MzkxNjk5NDU3MzMwMmM3MTE3YTk2Y2Q1
-      IiwgImlkIjogIjY0YjI2ZGQ5LTNjOGYtNGQwYS1hODQwLTU5NGFkZGEzZmQ4MCIsICJhc3luY19l
-      eGVjdXRpb24/IjogZmFsc2UsICJodW1hbl9pbnB1dD8iOiBmYWxzZSwgImFnZW50X3JvbGUiOiAi
-      Q0VPIiwgImFnZW50X2tleSI6ICIzMjgyMTdiNmMyOTU5YmRmYzQ3Y2FkMDBlODQ4OTBkMCIsICJ0
-      b29sc19uYW1lcyI6IFsibXVsdGlwbGllciJdfSwgeyJrZXkiOiAiODBhYTc1Njk5ZjRhZDYyOTFk
-      YmUxMGU0ZDY2OTgwMjkiLCAiaWQiOiAiN2U4YTg5MDEtMjJiMC00MzIzLWFjODMtZGFhMmY5NzJk
-      YmNmIiwgImFzeW5jX2V4ZWN1dGlvbj8iOiBmYWxzZSwgImh1bWFuX2lucHV0PyI6IGZhbHNlLCAi
-      YWdlbnRfcm9sZSI6ICJSZXNlYXJjaGVyIiwgImFnZW50X2tleSI6ICI4YmQyMTM5YjU5NzUxODE1
-      MDZlNDFmZDljNDU2M2Q3NSIsICJ0b29sc19uYW1lcyI6IFsibXVsdGlwbGllciJdfV16AhgBhQEA
-      AQAAEo4CChAgJOZCqNr0jsnpCx+HJd5rEgh/VB7PhiI+QCoMVGFzayBDcmVhdGVkMAE5wAyLBorL
-      9xdByNWMBorL9xdKLgoIY3Jld19rZXkSIgogNDczZTRkYmQyOTk4NzcxMjBlYjc1YzI1ZGE2MjIz
-      NzVKMQoHY3Jld19pZBImCiQwM2ZlZDk5Mi04OGRjLTQ3ZjUtOGNhOC0yNDNhZjczYzU2YTVKLgoI
-      dGFza19rZXkSIgogMDhjZGU5MDkzOTE2OTk0NTczMzAyYzcxMTdhOTZjZDVKMQoHdGFza19pZBIm
-      CiQ2NGIyNmRkOS0zYzhmLTRkMGEtYTg0MC01OTRhZGRhM2ZkODB6AhgBhQEAAQAAEo0BChBdS9tg
-      2w4mSLFmIdXiNNDFEgiTsldjuwlfeSoKVG9vbCBVc2FnZTABOcj+aDiKy/cXQXiabTiKy/cXShoK
-      DmNyZXdhaV92ZXJzaW9uEggKBjAuNjEuMEoZCgl0b29sX25hbWUSDAoKbXVsdGlwbGllckoOCghh
-      dHRlbXB0cxICGAF6AhgBhQEAAQAAEpACChC36+eSQOOYma+2ykmwzA0REggB4hRx7SI4cSoOVGFz
-      ayBFeGVjdXRpb24wATnIUo0Gisv3F0F4Cvpjisv3F0ouCghjcmV3X2tleRIiCiA0NzNlNGRiZDI5
-      OTg3NzEyMGViNzVjMjVkYTYyMjM3NUoxCgdjcmV3X2lkEiYKJDAzZmVkOTkyLTg4ZGMtNDdmNS04
-      Y2E4LTI0M2FmNzNjNTZhNUouCgh0YXNrX2tleRIiCiAwOGNkZTkwOTM5MTY5OTQ1NzMzMDJjNzEx
-      N2E5NmNkNUoxCgd0YXNrX2lkEiYKJDY0YjI2ZGQ5LTNjOGYtNGQwYS1hODQwLTU5NGFkZGEzZmQ4
-      MHoCGAGFAQABAAASjgIKEABHBVnzrcOiZ8f2iaBIDfISCND2mYQ4fqKVKgxUYXNrIENyZWF0ZWQw
-      ATlIsR5kisv3F0GQFiFkisv3F0ouCghjcmV3X2tleRIiCiA0NzNlNGRiZDI5OTg3NzEyMGViNzVj
-      MjVkYTYyMjM3NUoxCgdjcmV3X2lkEiYKJDAzZmVkOTkyLTg4ZGMtNDdmNS04Y2E4LTI0M2FmNzNj
-      NTZhNUouCgh0YXNrX2tleRIiCiA4MGFhNzU2OTlmNGFkNjI5MWRiZTEwZTRkNjY5ODAyOUoxCgd0
-      YXNrX2lkEiYKJDdlOGE4OTAxLTIyYjAtNDMyMy1hYzgzLWRhYTJmOTcyZGJjZnoCGAGFAQABAAAS
-      jQEKEKMirlGA3Gx/5iK8WnDUY+ESCFzCLqx55LvvKgpUb29sIFVzYWdlMAE5eBT2lIrL9xdBoCv4
-      lIrL9xdKGgoOY3Jld2FpX3ZlcnNpb24SCAoGMC42MS4wShkKCXRvb2xfbmFtZRIMCgptdWx0aXBs
-      aWVySg4KCGF0dGVtcHRzEgIYAXoCGAGFAQABAAASkAIKEI8hIu2ojbzehcq98vHDlgsSCGfJnJkQ
-      NJWgKg5UYXNrIEV4ZWN1dGlvbjABOagMImSKy/cXQcC5yLaKy/cXSi4KCGNyZXdfa2V5EiIKIDQ3
-      M2U0ZGJkMjk5ODc3MTIwZWI3NWMyNWRhNjIyMzc1SjEKB2NyZXdfaWQSJgokMDNmZWQ5OTItODhk
-      Yy00N2Y1LThjYTgtMjQzYWY3M2M1NmE1Si4KCHRhc2tfa2V5EiIKIDgwYWE3NTY5OWY0YWQ2Mjkx
-      ZGJlMTBlNGQ2Njk4MDI5SjEKB3Rhc2tfaWQSJgokN2U4YTg5MDEtMjJiMC00MzIzLWFjODMtZGFh
-      MmY5NzJkYmNmegIYAYUBAAEAABLGBwoQVExezvNw4vfomQc7NquQXBIII5iOOYx3mBQqDENyZXcg
-      Q3JlYXRlZDABOcgpO7iKy/cXQWBYPbiKy/cXShoKDmNyZXdhaV92ZXJzaW9uEggKBjAuNjEuMEoa
-      Cg5weXRob25fdmVyc2lvbhIICgYzLjExLjdKLgoIY3Jld19rZXkSIgogNDA1M2RhOGI0OWI0MDZj
-      MzIzYzY2OTU2MDE0YTFkOThKMQoHY3Jld19pZBImCiRiNzRiYWZkZC02ZWNmLTQ2YzctODdjNC05
-      MjFiNjQ1NTNkNDlKHAoMY3Jld19wcm9jZXNzEgwKCnNlcXVlbnRpYWxKEQoLY3Jld19tZW1vcnkS
-      AhAAShoKFGNyZXdfbnVtYmVyX29mX3Rhc2tzEgIYAUobChVjcmV3X251bWJlcl9vZl9hZ2VudHMS
-      AhgBStYCCgtjcmV3X2FnZW50cxLGAgrDAlt7ImtleSI6ICJkNmM1N2QwMzAzMmQ2OTk3NGY2Njkx
-      ZjU1YThlMzVlMyIsICJpZCI6ICIxZThhZmMxMC0xNjM5LTRlMzEtYjQ0Mi03Y2I2NTMwYWNkNWUi
-      LCAicm9sZSI6ICJWZXJ5IGhlbHBmdWwgYXNzaXN0YW50IiwgInZlcmJvc2U/IjogdHJ1ZSwgIm1h
-      eF9pdGVyIjogMiwgIm1heF9ycG0iOiBudWxsLCAiZnVuY3Rpb25fY2FsbGluZ19sbG0iOiAiIiwg
-      ImxsbSI6ICJncHQtNG8iLCAiZGVsZWdhdGlvbl9lbmFibGVkPyI6IGZhbHNlLCAiYWxsb3dfY29k
-      ZV9leGVjdXRpb24/IjogZmFsc2UsICJtYXhfcmV0cnlfbGltaXQiOiAyLCAidG9vbHNfbmFtZXMi
-      OiBbXX1dSp0CCgpjcmV3X3Rhc2tzEo4CCosCW3sia2V5IjogIjJhYjM3NzY0NTdhZGFhOGUxZjE2
-      NTAzOWMwMWY3MTQ0IiwgImlkIjogImQxM2U4ZmNmLThmMjAtNDY0Ni04YThiLWIyYmZiOTJkNzky
-      YyIsICJhc3luY19leGVjdXRpb24/IjogZmFsc2UsICJodW1hbl9pbnB1dD8iOiBmYWxzZSwgImFn
-      ZW50X3JvbGUiOiAiVmVyeSBoZWxwZnVsIGFzc2lzdGFudCIsICJhZ2VudF9rZXkiOiAiZDZjNTdk
-      MDMwMzJkNjk5NzRmNjY5MWY1NWE4ZTM1ZTMiLCAidG9vbHNfbmFtZXMiOiBbImdldF9maW5hbF9h
-      bnN3ZXIiXX1degIYAYUBAAEAABKOAgoQDv6AI/pw1LsM/IaJQZgDzxII/VgT9dtOSuMqDFRhc2sg
-      Q3JlYXRlZDABORjaU7iKy/cXQdg3VLiKy/cXSi4KCGNyZXdfa2V5EiIKIDQwNTNkYThiNDliNDA2
-      YzMyM2M2Njk1NjAxNGExZDk4SjEKB2NyZXdfaWQSJgokYjc0YmFmZGQtNmVjZi00NmM3LTg3YzQt
-      OTIxYjY0NTUzZDQ5Si4KCHRhc2tfa2V5EiIKIDJhYjM3NzY0NTdhZGFhOGUxZjE2NTAzOWMwMWY3
-      MTQ0SjEKB3Rhc2tfaWQSJgokZDEzZThmY2YtOGYyMC00NjQ2LThhOGItYjJiZmI5MmQ3OTJjegIY
-      AYUBAAEAABKTAQoQA8ZUpJ6SuEFHS/RzrjIa3BIIN6hYwr4JLrIqClRvb2wgVXNhZ2UwATmQ+WPo
-      isv3F0Hw0Wfoisv3F0oaCg5jcmV3YWlfdmVyc2lvbhIICgYwLjYxLjBKHwoJdG9vbF9uYW1lEhIK
-      EGdldF9maW5hbF9hbnN3ZXJKDgoIYXR0ZW1wdHMSAhgBegIYAYUBAAEAABKQAgoQBkes8sSgSc92
-      LFRoKPdmmBII3007ic0OQhQqDlRhc2sgRXhlY3V0aW9uMAE5uGZUuIrL9xdBKAsBC4vL9xdKLgoI
-      Y3Jld19rZXkSIgogNDA1M2RhOGI0OWI0MDZjMzIzYzY2OTU2MDE0YTFkOThKMQoHY3Jld19pZBIm
-      CiRiNzRiYWZkZC02ZWNmLTQ2YzctODdjNC05MjFiNjQ1NTNkNDlKLgoIdGFza19rZXkSIgogMmFi
-      Mzc3NjQ1N2FkYWE4ZTFmMTY1MDM5YzAxZjcxNDRKMQoHdGFza19pZBImCiRkMTNlOGZjZi04ZjIw
-      LTQ2NDYtOGE4Yi1iMmJmYjkyZDc5MmN6AhgBhQEAAQAAEq4HChAqF8nt0mJFKmB4BBKPOCF8EggL
-      ztg+QFz6cyoMQ3JldyBDcmVhdGVkMAE5sHECDIvL9xdB8PUGDIvL9xdKGgoOY3Jld2FpX3ZlcnNp
-      b24SCAoGMC42MS4wShoKDnB5dGhvbl92ZXJzaW9uEggKBjMuMTEuN0ouCghjcmV3X2tleRIiCiBl
-      ZTY3NDVkN2M4YWU4MmUwMGRmOTRkZTBmN2Y4NzExOEoxCgdjcmV3X2lkEiYKJDEwMDExZmVmLTgz
-      OTItNGY1MC05MTQ0LTJmMjcwNjkzODZkNUocCgxjcmV3X3Byb2Nlc3MSDAoKc2VxdWVudGlhbEoR
-      CgtjcmV3X21lbW9yeRICEABKGgoUY3Jld19udW1iZXJfb2ZfdGFza3MSAhgBShsKFWNyZXdfbnVt
-      YmVyX29mX2FnZW50cxICGAFK1AIKC2NyZXdfYWdlbnRzEsQCCsECW3sia2V5IjogImYzMzg2ZjZk
-      OGRhNzVhYTQxNmE2ZTMxMDA1M2Y3Njk4IiwgImlkIjogIjlkYTUyMmMyLTUyNTYtNGVlMS1iYTVl
-      LTAyZGYyNjBiMjViMyIsICJyb2xlIjogInt0b3BpY30gUmVzZWFyY2hlciIsICJ2ZXJib3NlPyI6
-      IGZhbHNlLCAibWF4X2l0ZXIiOiAxNSwgIm1heF9ycG0iOiBudWxsLCAiZnVuY3Rpb25fY2FsbGlu
-      Z19sbG0iOiAiIiwgImxsbSI6ICJncHQtNG8iLCAiZGVsZWdhdGlvbl9lbmFibGVkPyI6IGZhbHNl
-      LCAiYWxsb3dfY29kZV9leGVjdXRpb24/IjogZmFsc2UsICJtYXhfcmV0cnlfbGltaXQiOiAyLCAi
-      dG9vbHNfbmFtZXMiOiBbXX1dSocCCgpjcmV3X3Rhc2tzEvgBCvUBW3sia2V5IjogIjA2YTczMjIw
-      ZjQxNDhhNGJiZDViYWNiMGQwYjQ0ZmNlIiwgImlkIjogIjIxNzU2YjhiLWYwNjEtNDE3Zi1iY2Zk
-      LTlmNDEzY2MzNjhhZCIsICJhc3luY19leGVjdXRpb24/IjogZmFsc2UsICJodW1hbl9pbnB1dD8i
-      OiBmYWxzZSwgImFnZW50X3JvbGUiOiAie3RvcGljfSBSZXNlYXJjaGVyIiwgImFnZW50X2tleSI6
-      ICJmMzM4NmY2ZDhkYTc1YWE0MTZhNmUzMTAwNTNmNzY5OCIsICJ0b29sc19uYW1lcyI6IFtdfV16
-      AhgBhQEAAQAAEo4CChCye26oi75ppo7O/cfnAWEwEgg5xSx3EWh9EioMVGFzayBDcmVhdGVkMAE5
-      8BEsDIvL9xdB8AstDIvL9xdKLgoIY3Jld19rZXkSIgogZDBmZWU2OTMyMzk1ODg2ZjIwM2Y0NDZi
-      NzJjMWIwMGFKMQoHY3Jld19pZBImCiQxMDAxMWZlZi04MzkyLTRmNTAtOTE0NC0yZjI3MDY5Mzg2
-      ZDVKLgoIdGFza19rZXkSIgogMDZhNzMyMjBmNDE0OGE0YmJkNWJhY2IwZDBiNDRmY2VKMQoHdGFz
-      a19pZBImCiQyMTc1NmI4Yi1mMDYxLTQxN2YtYmNmZC05ZjQxM2NjMzY4YWR6AhgBhQEAAQAA
-    headers:
-      Accept:
-      - '*/*'
-      Accept-Encoding:
-      - gzip, deflate
-      Connection:
-      - keep-alive
-      Content-Length:
-      - '6096'
-      Content-Type:
-      - application/x-protobuf
-      User-Agent:
-      - OTel-OTLP-Exporter-Python/1.27.0
-    method: POST
-    uri: https://telemetry.crewai.com:4319/v1/traces
-  response:
-    body:
-      string: "\n\0"
-    headers:
-      Content-Length:
-      - '2'
-      Content-Type:
-      - application/x-protobuf
-      Date:
-      - Mon, 23 Sep 2024 06:26:21 GMT
-    status:
-      code: 200
-      message: OK
 - request:
     body: '{"messages": [{"role": "system", "content": "You are cat Researcher. You
       have a lot of experience with cat.\nYour personal goal is: Express hot takes
@@ -263,8 +126,8 @@ interactions:
       content-type:
       - application/json
       cookie:
-      - __cf_bm=hYfEMfBWpIoRPjx9ZBZg6DVeMOMr1IZt9ioup8yWZs0-1727072673-1.0.1.1-Ro7GCLuWS0K5ob0mSTYSmovONKNyxsK6oSA5io_Vwqhe6P0G7Ow4CuZUaWAaCdFGQUd7XZiFH0mI_sQC3uqe0g;
-        _cfuvid=5cK2hfLqTXw1WjB81uT.sGmmA67JIxSKSQeEHQ3zOQw-1727071769966-0.0.1.1-604800000
+      - __cf_bm=4rzJDR3F8S3Dp4B_qwylZU0mdm_WUwmv8vNHHp3IplM-1727119501-1.0.1.1-qobO_Sf88yG1qtXFnLgykvyc9YXR_fm1J7ZpXIhvtynVnsz67Uwcf4122PgHs4GMrlvZMaL6z_UVcVYSYUJOKQ;
+        _cfuvid=9K_ipT1uTVyDTneB1W5OZHPxCh36aOsDZCBnsQTONqQ-1727119501207-0.0.1.1-604800000
       host:
       - api.openai.com
       user-agent:
@@ -288,11 +151,11 @@ interactions:
     method: POST
     uri: https://api.openai.com/v1/chat/completions
   response:
-    content: "{\n  \"id\": \"chatcmpl-AAWoXVx5J6YSdhvKUnLx6gvylqs3Q\",\n  \"object\":
-      \"chat.completion\",\n  \"created\": 1727072781,\n  \"model\": \"gpt-4o-2024-05-13\",\n
+    content: "{\n  \"id\": \"chatcmpl-AAjBAqpHRK6FpJ4j0Y6VU0GZlPYK1\",\n  \"object\":
+      \"chat.completion\",\n  \"created\": 1727120312,\n  \"model\": \"gpt-4o-2024-05-13\",\n
       \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
       \"assistant\",\n        \"content\": \"Thought: I now can give a great answer\\nFinal
-      Answer: Cats communicate through body language more than vocalizations.\",\n
+      Answer: Cats communicate more through body language than vocal sounds.\",\n
       \       \"refusal\": null\n      },\n      \"logprobs\": null,\n      \"finish_reason\":
       \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 175,\n    \"completion_tokens\":
       23,\n    \"total_tokens\": 198,\n    \"completion_tokens_details\": {\n      \"reasoning_tokens\":
@@ -301,7 +164,7 @@ interactions:
       CF-Cache-Status:
       - DYNAMIC
       CF-RAY:
-      - 8c7876740b79a4ee-MIA
+      - 8c7cfee08e5ea4c7-MIA
       Connection:
       - keep-alive
       Content-Encoding:
@@ -309,7 +172,7 @@ interactions:
       Content-Type:
       - application/json
       Date:
-      - Mon, 23 Sep 2024 06:26:22 GMT
+      - Mon, 23 Sep 2024 19:38:32 GMT
       Server:
       - cloudflare
       Transfer-Encoding:
@@ -321,7 +184,7 @@ interactions:
       openai-organization:
       - crewai-iuxna1
       openai-processing-ms:
-      - '545'
+      - '397'
       openai-version:
       - '2020-10-01'
       strict-transport-security:
@@ -339,9 +202,134 @@ interactions:
       x-ratelimit-reset-tokens:
       - 0s
       x-request-id:
-      - req_5c3dcd1f5756322c0f8d8d3a7946462c
+      - req_0c6060686dcef26d037a66d03320c0d5
     http_version: HTTP/1.1
     status_code: 200
+- request:
+    body: !!binary |
+      Cp4qCiQKIgoMc2VydmljZS5uYW1lEhIKEGNyZXdBSS10ZWxlbWV0cnkS9SkKEgoQY3Jld2FpLnRl
+      bGVtZXRyeRKQAgoQxbIzgpExM9iuiLR0kWBRAhIIj9ZAAGp/Ik0qDlRhc2sgRXhlY3V0aW9uMAE5
+      sP8fjcT29xdBIBJz5MT29xdKLgoIY3Jld19rZXkSIgogNDczZTRkYmQyOTk4NzcxMjBlYjc1YzI1
+      ZGE2MjIzNzVKMQoHY3Jld19pZBImCiRmZWVkMzJjMS03ZDZmLTQxYTQtYTMxZi02YTk5ZjYxZWRh
+      ZDRKLgoIdGFza19rZXkSIgogMDhjZGU5MDkzOTE2OTk0NTczMzAyYzcxMTdhOTZjZDVKMQoHdGFz
+      a19pZBImCiQ3YjI4YjE3OC1lYTI3LTRhOGQtOWRkZi0xNTViNDY5NDgxYmJ6AhgBhQEAAQAAEo4C
+      ChCycMWpaaAcqpmR/ND6I8HGEgiLmqJmmKFp4yoMVGFzayBDcmVhdGVkMAE5KBuU5MT29xdBYF+V
+      5MT29xdKLgoIY3Jld19rZXkSIgogNDczZTRkYmQyOTk4NzcxMjBlYjc1YzI1ZGE2MjIzNzVKMQoH
+      Y3Jld19pZBImCiRmZWVkMzJjMS03ZDZmLTQxYTQtYTMxZi02YTk5ZjYxZWRhZDRKLgoIdGFza19r
+      ZXkSIgogODBhYTc1Njk5ZjRhZDYyOTFkYmUxMGU0ZDY2OTgwMjlKMQoHdGFza19pZBImCiQ2N2Ey
+      MWU5Ny0xNWUwLTQ1Y2ItOTVhZi1lYmI5MTAxNmRhMDh6AhgBhQEAAQAAEo0BChCKE3DwetQk3Qgt
+      I1pK4SDkEgj+v/piaC/VpCoKVG9vbCBVc2FnZTABOegW4jTF9vcXQVBB5jTF9vcXShoKDmNyZXdh
+      aV92ZXJzaW9uEggKBjAuNjEuMEoZCgl0b29sX25hbWUSDAoKbXVsdGlwbGllckoOCghhdHRlbXB0
+      cxICGAF6AhgBhQEAAQAAEpACChAAStWWjwwrdKUP0imL4UKvEgih8bIREK+xsioOVGFzayBFeGVj
+      dXRpb24wATlI4JXkxPb3F0FQB1lbxfb3F0ouCghjcmV3X2tleRIiCiA0NzNlNGRiZDI5OTg3NzEy
+      MGViNzVjMjVkYTYyMjM3NUoxCgdjcmV3X2lkEiYKJGZlZWQzMmMxLTdkNmYtNDFhNC1hMzFmLTZh
+      OTlmNjFlZGFkNEouCgh0YXNrX2tleRIiCiA4MGFhNzU2OTlmNGFkNjI5MWRiZTEwZTRkNjY5ODAy
+      OUoxCgd0YXNrX2lkEiYKJDY3YTIxZTk3LTE1ZTAtNDVjYi05NWFmLWViYjkxMDE2ZGEwOHoCGAGF
+      AQABAAASxgcKEJRkBdoVKFYqHbALq+dVbGwSCHgLSppLxoz1KgxDcmV3IENyZWF0ZWQwATlQkqRc
+      xfb3F0FQ/adcxfb3F0oaCg5jcmV3YWlfdmVyc2lvbhIICgYwLjYxLjBKGgoOcHl0aG9uX3ZlcnNp
+      b24SCAoGMy4xMS43Si4KCGNyZXdfa2V5EiIKIDQwNTNkYThiNDliNDA2YzMyM2M2Njk1NjAxNGEx
+      ZDk4SjEKB2NyZXdfaWQSJgokZjQwMmY3ZWUtMjExYS00NTc3LWI5MTctZmIyMTU1N2YxNDI2ShwK
+      DGNyZXdfcHJvY2VzcxIMCgpzZXF1ZW50aWFsShEKC2NyZXdfbWVtb3J5EgIQAEoaChRjcmV3X251
+      bWJlcl9vZl90YXNrcxICGAFKGwoVY3Jld19udW1iZXJfb2ZfYWdlbnRzEgIYAUrWAgoLY3Jld19h
+      Z2VudHMSxgIKwwJbeyJrZXkiOiAiZDZjNTdkMDMwMzJkNjk5NzRmNjY5MWY1NWE4ZTM1ZTMiLCAi
+      aWQiOiAiOWQ3ZmRkNDQtMTAxOS00ZTNhLTlkZjItNGMyZWRlOWRiMTM5IiwgInJvbGUiOiAiVmVy
+      eSBoZWxwZnVsIGFzc2lzdGFudCIsICJ2ZXJib3NlPyI6IHRydWUsICJtYXhfaXRlciI6IDIsICJt
+      YXhfcnBtIjogbnVsbCwgImZ1bmN0aW9uX2NhbGxpbmdfbGxtIjogIiIsICJsbG0iOiAiZ3B0LTRv
+      IiwgImRlbGVnYXRpb25fZW5hYmxlZD8iOiBmYWxzZSwgImFsbG93X2NvZGVfZXhlY3V0aW9uPyI6
+      IGZhbHNlLCAibWF4X3JldHJ5X2xpbWl0IjogMiwgInRvb2xzX25hbWVzIjogW119XUqdAgoKY3Jl
+      d190YXNrcxKOAgqLAlt7ImtleSI6ICIyYWIzNzc2NDU3YWRhYThlMWYxNjUwMzljMDFmNzE0NCIs
+      ICJpZCI6ICJjYmFkMGYyNC05Nzg2LTRhMzktYjYwMC02MzUxYWVmOTA4ODIiLCAiYXN5bmNfZXhl
+      Y3V0aW9uPyI6IGZhbHNlLCAiaHVtYW5faW5wdXQ/IjogZmFsc2UsICJhZ2VudF9yb2xlIjogIlZl
+      cnkgaGVscGZ1bCBhc3Npc3RhbnQiLCAiYWdlbnRfa2V5IjogImQ2YzU3ZDAzMDMyZDY5OTc0ZjY2
+      OTFmNTVhOGUzNWUzIiwgInRvb2xzX25hbWVzIjogWyJnZXRfZmluYWxfYW5zd2VyIl19XXoCGAGF
+      AQABAAASjgIKENpl5fkO3yMVdsqMmBb+QNASCBUjQV+67CnmKgxUYXNrIENyZWF0ZWQwATkAdMdc
+      xfb3F0H4G8hcxfb3F0ouCghjcmV3X2tleRIiCiA0MDUzZGE4YjQ5YjQwNmMzMjNjNjY5NTYwMTRh
+      MWQ5OEoxCgdjcmV3X2lkEiYKJGY0MDJmN2VlLTIxMWEtNDU3Ny1iOTE3LWZiMjE1NTdmMTQyNkou
+      Cgh0YXNrX2tleRIiCiAyYWIzNzc2NDU3YWRhYThlMWYxNjUwMzljMDFmNzE0NEoxCgd0YXNrX2lk
+      EiYKJGNiYWQwZjI0LTk3ODYtNGEzOS1iNjAwLTYzNTFhZWY5MDg4MnoCGAGFAQABAAASkwEKEH0v
+      jm3eW18AZRryHmeTRsgSCKV/8Thkp0ViKgpUb29sIFVzYWdlMAE5UBRjlMX29xdBeCVmlMX29xdK
+      GgoOY3Jld2FpX3ZlcnNpb24SCAoGMC42MS4wSh8KCXRvb2xfbmFtZRISChBnZXRfZmluYWxfYW5z
+      d2VySg4KCGF0dGVtcHRzEgIYAXoCGAGFAQABAAASkAIKEJ7TctgL4yO6Dv3bajJcN6gSCN03BPeL
+      eegGKg5UYXNrIEV4ZWN1dGlvbjABOQBuyFzF9vcXQUADk7zF9vcXSi4KCGNyZXdfa2V5EiIKIDQw
+      NTNkYThiNDliNDA2YzMyM2M2Njk1NjAxNGExZDk4SjEKB2NyZXdfaWQSJgokZjQwMmY3ZWUtMjEx
+      YS00NTc3LWI5MTctZmIyMTU1N2YxNDI2Si4KCHRhc2tfa2V5EiIKIDJhYjM3NzY0NTdhZGFhOGUx
+      ZjE2NTAzOWMwMWY3MTQ0SjEKB3Rhc2tfaWQSJgokY2JhZDBmMjQtOTc4Ni00YTM5LWI2MDAtNjM1
+      MWFlZjkwODgyegIYAYUBAAEAABKuBwoQJKJKkHdOIx5OAZKtHF5KqRII2r8u8cnbrmYqDENyZXcg
+      Q3JlYXRlZDABOWCTgr3F9vcXQdhthb3F9vcXShoKDmNyZXdhaV92ZXJzaW9uEggKBjAuNjEuMEoa
+      Cg5weXRob25fdmVyc2lvbhIICgYzLjExLjdKLgoIY3Jld19rZXkSIgogZWU2NzQ1ZDdjOGFlODJl
+      MDBkZjk0ZGUwZjdmODcxMThKMQoHY3Jld19pZBImCiQ5MWQ2YTk1ZS1hY2Q5LTRlNDItOTVkZC02
+      YmI1NzVkZGNmZjVKHAoMY3Jld19wcm9jZXNzEgwKCnNlcXVlbnRpYWxKEQoLY3Jld19tZW1vcnkS
+      AhAAShoKFGNyZXdfbnVtYmVyX29mX3Rhc2tzEgIYAUobChVjcmV3X251bWJlcl9vZl9hZ2VudHMS
+      AhgBStQCCgtjcmV3X2FnZW50cxLEAgrBAlt7ImtleSI6ICJmMzM4NmY2ZDhkYTc1YWE0MTZhNmUz
+      MTAwNTNmNzY5OCIsICJpZCI6ICIxNjUyMjZhOC0wZTg3LTRkODItOWE4OC02NjhhNWRjNzQwNDMi
+      LCAicm9sZSI6ICJ7dG9waWN9IFJlc2VhcmNoZXIiLCAidmVyYm9zZT8iOiBmYWxzZSwgIm1heF9p
+      dGVyIjogMTUsICJtYXhfcnBtIjogbnVsbCwgImZ1bmN0aW9uX2NhbGxpbmdfbGxtIjogIiIsICJs
+      bG0iOiAiZ3B0LTRvIiwgImRlbGVnYXRpb25fZW5hYmxlZD8iOiBmYWxzZSwgImFsbG93X2NvZGVf
+      ZXhlY3V0aW9uPyI6IGZhbHNlLCAibWF4X3JldHJ5X2xpbWl0IjogMiwgInRvb2xzX25hbWVzIjog
+      W119XUqHAgoKY3Jld190YXNrcxL4AQr1AVt7ImtleSI6ICIwNmE3MzIyMGY0MTQ4YTRiYmQ1YmFj
+      YjBkMGI0NGZjZSIsICJpZCI6ICJmZTFlMDZiMS00ZGZjLTRjMzktYjkxZi0xZmRiMTBmM2M0N2Qi
+      LCAiYXN5bmNfZXhlY3V0aW9uPyI6IGZhbHNlLCAiaHVtYW5faW5wdXQ/IjogZmFsc2UsICJhZ2Vu
+      dF9yb2xlIjogInt0b3BpY30gUmVzZWFyY2hlciIsICJhZ2VudF9rZXkiOiAiZjMzODZmNmQ4ZGE3
+      NWFhNDE2YTZlMzEwMDUzZjc2OTgiLCAidG9vbHNfbmFtZXMiOiBbXX1degIYAYUBAAEAABKOAgoQ
+      otsMPWzuvKM5ERStV7NoMBIIcTTBwltHYJwqDFRhc2sgQ3JlYXRlZDABORjxnr3F9vcXQdB5n73F
+      9vcXSi4KCGNyZXdfa2V5EiIKIGQwZmVlNjkzMjM5NTg4NmYyMDNmNDQ2YjcyYzFiMDBhSjEKB2Ny
+      ZXdfaWQSJgokOTFkNmE5NWUtYWNkOS00ZTQyLTk1ZGQtNmJiNTc1ZGRjZmY1Si4KCHRhc2tfa2V5
+      EiIKIDA2YTczMjIwZjQxNDhhNGJiZDViYWNiMGQwYjQ0ZmNlSjEKB3Rhc2tfaWQSJgokZmUxZTA2
+      YjEtNGRmYy00YzM5LWI5MWYtMWZkYjEwZjNjNDdkegIYAYUBAAEAABKQAgoQuIZkB/iIB8kYDpq1
+      eXQmLxIIgckm2aX00CkqDlRhc2sgRXhlY3V0aW9uMAE5IMCfvcX29xdBKN3268X29xdKLgoIY3Jl
+      d19rZXkSIgogZDBmZWU2OTMyMzk1ODg2ZjIwM2Y0NDZiNzJjMWIwMGFKMQoHY3Jld19pZBImCiQ5
+      MWQ2YTk1ZS1hY2Q5LTRlNDItOTVkZC02YmI1NzVkZGNmZjVKLgoIdGFza19rZXkSIgogMDZhNzMy
+      MjBmNDE0OGE0YmJkNWJhY2IwZDBiNDRmY2VKMQoHdGFza19pZBImCiRmZTFlMDZiMS00ZGZjLTRj
+      MzktYjkxZi0xZmRiMTBmM2M0N2R6AhgBhQEAAQAAEq4HChAzLxQHzWtBlQGs7QyYnAr/EghfsQ6w
+      Ukr64SoMQ3JldyBDcmVhdGVkMAE5mGt17MX29xdB8G557MX29xdKGgoOY3Jld2FpX3ZlcnNpb24S
+      CAoGMC42MS4wShoKDnB5dGhvbl92ZXJzaW9uEggKBjMuMTEuN0ouCghjcmV3X2tleRIiCiBlZTY3
+      NDVkN2M4YWU4MmUwMGRmOTRkZTBmN2Y4NzExOEoxCgdjcmV3X2lkEiYKJGIwZjk5ODM2LTgxMzEt
+      NGRjOS05ODc3LTZkMGQxZjNiYzEyNEocCgxjcmV3X3Byb2Nlc3MSDAoKc2VxdWVudGlhbEoRCgtj
+      cmV3X21lbW9yeRICEABKGgoUY3Jld19udW1iZXJfb2ZfdGFza3MSAhgBShsKFWNyZXdfbnVtYmVy
+      X29mX2FnZW50cxICGAFK1AIKC2NyZXdfYWdlbnRzEsQCCsECW3sia2V5IjogImYzMzg2ZjZkOGRh
+      NzVhYTQxNmE2ZTMxMDA1M2Y3Njk4IiwgImlkIjogIjJkMjZiNTVmLWFhNzctNDJiOC05NDgyLTky
+      MDRlMjJjZDA1MiIsICJyb2xlIjogInt0b3BpY30gUmVzZWFyY2hlciIsICJ2ZXJib3NlPyI6IGZh
+      bHNlLCAibWF4X2l0ZXIiOiAxNSwgIm1heF9ycG0iOiBudWxsLCAiZnVuY3Rpb25fY2FsbGluZ19s
+      bG0iOiAiIiwgImxsbSI6ICJncHQtNG8iLCAiZGVsZWdhdGlvbl9lbmFibGVkPyI6IGZhbHNlLCAi
+      YWxsb3dfY29kZV9leGVjdXRpb24/IjogZmFsc2UsICJtYXhfcmV0cnlfbGltaXQiOiAyLCAidG9v
+      bHNfbmFtZXMiOiBbXX1dSocCCgpjcmV3X3Rhc2tzEvgBCvUBW3sia2V5IjogIjA2YTczMjIwZjQx
+      NDhhNGJiZDViYWNiMGQwYjQ0ZmNlIiwgImlkIjogImFkNjVmMGYxLTZmNTAtNGMzNi04YjkyLWEy
+      YmJmMjM1ZTcwNSIsICJhc3luY19leGVjdXRpb24/IjogZmFsc2UsICJodW1hbl9pbnB1dD8iOiBm
+      YWxzZSwgImFnZW50X3JvbGUiOiAie3RvcGljfSBSZXNlYXJjaGVyIiwgImFnZW50X2tleSI6ICJm
+      MzM4NmY2ZDhkYTc1YWE0MTZhNmUzMTAwNTNmNzY5OCIsICJ0b29sc19uYW1lcyI6IFtdfV16AhgB
+      hQEAAQAAEo4CChDHD8DdiDNUTCq5DhfEeNvmEgic9o4hLbBPyyoMVGFzayBDcmVhdGVkMAE5gBSZ
+      7MX29xdBANCZ7MX29xdKLgoIY3Jld19rZXkSIgogMzkyNTdhYjk3NDA5YjVmNWY0MTk2NzNiYjQx
+      ZDBkYzhKMQoHY3Jld19pZBImCiRiMGY5OTgzNi04MTMxLTRkYzktOTg3Ny02ZDBkMWYzYmMxMjRK
+      LgoIdGFza19rZXkSIgogMDZhNzMyMjBmNDE0OGE0YmJkNWJhY2IwZDBiNDRmY2VKMQoHdGFza19p
+      ZBImCiRhZDY1ZjBmMS02ZjUwLTRjMzYtOGI5Mi1hMmJiZjIzNWU3MDV6AhgBhQEAAQAA
+    headers:
+      Accept:
+      - '*/*'
+      Accept-Encoding:
+      - gzip, deflate
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '5409'
+      Content-Type:
+      - application/x-protobuf
+      User-Agent:
+      - OTel-OTLP-Exporter-Python/1.27.0
+    method: POST
+    uri: https://telemetry.crewai.com:4319/v1/traces
+  response:
+    body:
+      string: "\n\0"
+    headers:
+      Content-Length:
+      - '2'
+      Content-Type:
+      - application/x-protobuf
+      Date:
+      - Mon, 23 Sep 2024 19:38:33 GMT
+    status:
+      code: 200
+      message: OK
 - request:
     body: '{"messages": [{"role": "system", "content": "You are apple Researcher.
       You have a lot of experience with apple.\nYour personal goal is: Express hot
@@ -367,8 +355,8 @@ interactions:
       content-type:
       - application/json
       cookie:
-      - __cf_bm=hYfEMfBWpIoRPjx9ZBZg6DVeMOMr1IZt9ioup8yWZs0-1727072673-1.0.1.1-Ro7GCLuWS0K5ob0mSTYSmovONKNyxsK6oSA5io_Vwqhe6P0G7Ow4CuZUaWAaCdFGQUd7XZiFH0mI_sQC3uqe0g;
-        _cfuvid=5cK2hfLqTXw1WjB81uT.sGmmA67JIxSKSQeEHQ3zOQw-1727071769966-0.0.1.1-604800000
+      - __cf_bm=4rzJDR3F8S3Dp4B_qwylZU0mdm_WUwmv8vNHHp3IplM-1727119501-1.0.1.1-qobO_Sf88yG1qtXFnLgykvyc9YXR_fm1J7ZpXIhvtynVnsz67Uwcf4122PgHs4GMrlvZMaL6z_UVcVYSYUJOKQ;
+        _cfuvid=9K_ipT1uTVyDTneB1W5OZHPxCh36aOsDZCBnsQTONqQ-1727119501207-0.0.1.1-604800000
       host:
       - api.openai.com
       user-agent:
@@ -392,20 +380,20 @@ interactions:
     method: POST
     uri: https://api.openai.com/v1/chat/completions
   response:
-    content: "{\n  \"id\": \"chatcmpl-AAWoYEWeEKl4qg6fzpT4DAQrg6Als\",\n  \"object\":
-      \"chat.completion\",\n  \"created\": 1727072782,\n  \"model\": \"gpt-4o-2024-05-13\",\n
+    content: "{\n  \"id\": \"chatcmpl-AAjBBC2rsl1x28PvkOv61HHD9mxXU\",\n  \"object\":
+      \"chat.completion\",\n  \"created\": 1727120313,\n  \"model\": \"gpt-4o-2024-05-13\",\n
       \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
       \"assistant\",\n        \"content\": \"I now can give a great answer\\nFinal
-      Answer: Apple's ecosystem integration remains unmatched in seamlessness and
-      user experience.\\n\",\n        \"refusal\": null\n      },\n      \"logprobs\":
+      Answer: Apple consistently redefines technology with groundbreaking innovation
+      and user-centric design.\",\n        \"refusal\": null\n      },\n      \"logprobs\":
       null,\n      \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\":
-      175,\n    \"completion_tokens\": 23,\n    \"total_tokens\": 198,\n    \"completion_tokens_details\":
+      175,\n    \"completion_tokens\": 24,\n    \"total_tokens\": 199,\n    \"completion_tokens_details\":
       {\n      \"reasoning_tokens\": 0\n    }\n  },\n  \"system_fingerprint\": \"fp_a5d11b2ef2\"\n}\n"
     headers:
       CF-Cache-Status:
       - DYNAMIC
       CF-RAY:
-      - 8c7876793ddba4ee-MIA
+      - 8c7cfee4cd89a4c7-MIA
       Connection:
       - keep-alive
       Content-Encoding:
@@ -413,7 +401,7 @@ interactions:
       Content-Type:
       - application/json
       Date:
-      - Mon, 23 Sep 2024 06:26:22 GMT
+      - Mon, 23 Sep 2024 19:38:33 GMT
       Server:
       - cloudflare
       Transfer-Encoding:
@@ -425,7 +413,7 @@ interactions:
       openai-organization:
       - crewai-iuxna1
       openai-processing-ms:
-      - '350'
+      - '564'
       openai-version:
       - '2020-10-01'
       strict-transport-security:
@@ -443,7 +431,7 @@ interactions:
       x-ratelimit-reset-tokens:
       - 0s
       x-request-id:
-      - req_cdf0e737614edc6b747aa25069874b3f
+      - req_52028ac0424df3be774a1ff742002fcc
     http_version: HTTP/1.1
     status_code: 200
 version: 1

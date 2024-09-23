@@ -20,15 +20,15 @@ interactions:
     uri: http://localhost:8080/api/generate
   response:
     body:
-      string: '{"model":"gemma2:latest","created_at":"2024-09-23T06:20:48.880425Z","response":"I
-        am Gemma, an open-weights AI assistant developed by Google DeepMind.  \n","done":true,"done_reason":"stop","context":[106,1645,108,6176,4926,235292,108,54657,575,235248,235284,235276,3907,235265,7702,708,692,235336,109,107,108,106,2516,108,235285,1144,137061,235269,671,2174,235290,30316,16481,20409,6990,731,6238,20555,35777,235265,139,108],"total_duration":1166032791,"load_duration":54671041,"prompt_eval_count":25,"prompt_eval_duration":57236000,"eval_count":19,"eval_duration":1052127000}'
+      string: '{"model":"gemma2:latest","created_at":"2024-09-23T19:32:16.78299Z","response":"I
+        am Gemma, an open-weights AI assistant developed by Google DeepMind.  \n","done":true,"done_reason":"stop","context":[106,1645,108,6176,4926,235292,108,54657,575,235248,235284,235276,3907,235265,7702,708,692,235336,109,107,108,106,2516,108,235285,1144,137061,235269,671,2174,235290,30316,16481,20409,6990,731,6238,20555,35777,235265,139,108],"total_duration":1004471958,"load_duration":30832083,"prompt_eval_count":25,"prompt_eval_duration":59568000,"eval_count":19,"eval_duration":898677000}'
     headers:
       Content-Length:
-      - '575'
+      - '573'
       Content-Type:
       - application/json; charset=utf-8
       Date:
-      - Mon, 23 Sep 2024 06:20:48 GMT
+      - Mon, 23 Sep 2024 19:32:16 GMT
     status:
       code: 200
       message: OK

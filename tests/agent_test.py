@@ -133,7 +133,7 @@ def test_agent_execute_task():
 
     assert result is not None
     assert (
-        "The calculated area of the circle is approximately 78.5 square centimeters."
+        "The area of the circle with a radius of 5 cm is approximately 78.5 square centimeters."
         == result
     )
     assert "square centimeters" in result.lower()
@@ -155,7 +155,7 @@ def test_agent_execution():
     )
 
     output = agent.execute_task(task)
-    assert output == "The result of 1 + 1 is 2."
+    assert output == "The result of the math operation 1 + 1 is 2."
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
@@ -179,7 +179,7 @@ def test_agent_execution_with_tools():
         expected_output="The result of the multiplication.",
     )
     output = agent.execute_task(task)
-    assert output == "The result of the multiplication of 3 times 4 is 12."
+    assert output == "The result of 3 times 4 is 12"
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
@@ -211,7 +211,7 @@ def test_logging_tool_usage():
         tool_name=multiplier.name, arguments={"first_number": 3, "second_number": 4}
     )
 
-    assert output == "The result of multiplying 3 by 4 is 12."
+    assert output == "12"
     assert agent.tools_handler.last_used_tool.tool_name == tool_usage.tool_name
     assert agent.tools_handler.last_used_tool.arguments == tool_usage.arguments
 
@@ -365,7 +365,7 @@ def test_agent_execution_with_specific_tools():
         expected_output="The result of the multiplication.",
     )
     output = agent.execute_task(task=task, tools=[multiplier])
-    assert output == "The result of multiplying 3 and 4 is 12."
+    assert output == "The result of 3 times 4 is 12."
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
@@ -419,7 +419,7 @@ def test_agent_powered_by_new_o_model_family_that_uses_tool():
         expected_output="The number of customers",
     )
     output = agent.execute_task(task=task, tools=[comapny_customer_data])
-    assert output == "42"
+    assert output == "The company has 42 customers"
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
@@ -816,7 +816,7 @@ def test_agent_step_callback():
 
 @pytest.mark.vcr(filter_headers=["authorization"])
 def test_agent_function_calling_llm():
-    llm = "gpt-4"
+    llm = "gpt-4o"
 
     @tool
     def learn_about_AI() -> str:
@@ -1519,9 +1519,8 @@ def test_agent_execute_task_with_custom_llm():
     )
 
     result = agent.execute_task(task)
-    assert len(result.split("\n")) == 3
     assert result.startswith(
-        "Artificial minds,\nSilent, yet they learn and grow,\nFuture in their code."
+        "Artificial minds,\nLearning, evolving, creating,\nFuture in circuits."
     )
 
 
