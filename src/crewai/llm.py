@@ -48,9 +48,13 @@ class LLM:
         self.callbacks = callbacks
         self.kwargs = kwargs
 
+        litellm.drop_params = True
         litellm.callbacks = callbacks
 
-    def call(self, messages: List[Dict[str, str]]) -> str:
+    def call(self, messages: List[Dict[str, str]], callbacks: List[Any] = []) -> str:
+        if callbacks and len(callbacks) > 0:
+            litellm.callbacks = callbacks
+
         try:
             params = {
                 "model": self.model,
