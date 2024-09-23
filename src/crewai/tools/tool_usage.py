@@ -302,7 +302,6 @@ class ToolUsage:
     ) -> Union[ToolCalling, InstructorToolCalling]:
         try:
             if self.function_calling_llm:
-                print("self.function_calling_llm")
                 model = (
                     InstructorToolCalling
                     if self.function_calling_llm.supports_function_calling()
@@ -323,9 +322,7 @@ class ToolUsage:
                     ),
                     max_attempts=1,
                 )
-                print("converter", converter)
                 tool_object = converter.to_pydantic()
-                print("tool_object", tool_object)
                 calling = ToolCalling(
                     tool_name=tool_object["tool_name"],
                     arguments=tool_object["arguments"],
