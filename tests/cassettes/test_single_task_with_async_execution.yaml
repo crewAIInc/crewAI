@@ -27,8 +27,8 @@ interactions:
       content-type:
       - application/json
       cookie:
-      - __cf_bm=hYfEMfBWpIoRPjx9ZBZg6DVeMOMr1IZt9ioup8yWZs0-1727072673-1.0.1.1-Ro7GCLuWS0K5ob0mSTYSmovONKNyxsK6oSA5io_Vwqhe6P0G7Ow4CuZUaWAaCdFGQUd7XZiFH0mI_sQC3uqe0g;
-        _cfuvid=5cK2hfLqTXw1WjB81uT.sGmmA67JIxSKSQeEHQ3zOQw-1727071769966-0.0.1.1-604800000
+      - __cf_bm=4rzJDR3F8S3Dp4B_qwylZU0mdm_WUwmv8vNHHp3IplM-1727119501-1.0.1.1-qobO_Sf88yG1qtXFnLgykvyc9YXR_fm1J7ZpXIhvtynVnsz67Uwcf4122PgHs4GMrlvZMaL6z_UVcVYSYUJOKQ;
+        _cfuvid=9K_ipT1uTVyDTneB1W5OZHPxCh36aOsDZCBnsQTONqQ-1727119501207-0.0.1.1-604800000
       host:
       - api.openai.com
       user-agent:
@@ -52,23 +52,24 @@ interactions:
     method: POST
     uri: https://api.openai.com/v1/chat/completions
   response:
-    content: "{\n  \"id\": \"chatcmpl-AAWos4PhVEa12n461vMapMdtaRocw\",\n  \"object\":
-      \"chat.completion\",\n  \"created\": 1727072802,\n  \"model\": \"gpt-4o-2024-05-13\",\n
+    content: "{\n  \"id\": \"chatcmpl-AAjBXUFBJkwIAQQMF5gROAafcg9ew\",\n  \"object\":
+      \"chat.completion\",\n  \"created\": 1727120335,\n  \"model\": \"gpt-4o-2024-05-13\",\n
       \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
-      \"assistant\",\n        \"content\": \"I now can give a great answer\\nFinal
-      Answer: \\n\\n- The rise of AI in healthcare diagnostics.\\n- AI agents improving
-      customer service efficiency.\\n- Autonomous vehicles and their impact on urban
-      planning.\\n- Ethical considerations in AI and machine learning.\\n- AI's role
-      in personalized education and learning.\",\n        \"refusal\": null\n      },\n
-      \     \"logprobs\": null,\n      \"finish_reason\": \"stop\"\n    }\n  ],\n
-      \ \"usage\": {\n    \"prompt_tokens\": 226,\n    \"completion_tokens\": 58,\n
-      \   \"total_tokens\": 284,\n    \"completion_tokens_details\": {\n      \"reasoning_tokens\":
+      \"assistant\",\n        \"content\": \"Thought: I now can give a great answer.\\nFinal
+      Answer: \\n- AI in healthcare: Revolutionizing diagnostics and personalized
+      treatment.\\n- Ethical concerns in advanced AI deployment and human safety.\\n-
+      AI-driven automation in finance and its economic impacts.\\n- Development and
+      regulation of AI-powered autonomous vehicles.\\n- The role of AI in climate
+      change solutions and environmental monitoring.\",\n        \"refusal\": null\n
+      \     },\n      \"logprobs\": null,\n      \"finish_reason\": \"stop\"\n    }\n
+      \ ],\n  \"usage\": {\n    \"prompt_tokens\": 226,\n    \"completion_tokens\":
+      71,\n    \"total_tokens\": 297,\n    \"completion_tokens_details\": {\n      \"reasoning_tokens\":
       0\n    }\n  },\n  \"system_fingerprint\": \"fp_e375328146\"\n}\n"
     headers:
       CF-Cache-Status:
       - DYNAMIC
       CF-RAY:
-      - 8c7876f50a21a4ee-MIA
+      - 8c7cff713b83a4c7-MIA
       Connection:
       - keep-alive
       Content-Encoding:
@@ -76,7 +77,7 @@ interactions:
       Content-Type:
       - application/json
       Date:
-      - Mon, 23 Sep 2024 06:26:43 GMT
+      - Mon, 23 Sep 2024 19:38:56 GMT
       Server:
       - cloudflare
       Transfer-Encoding:
@@ -88,7 +89,7 @@ interactions:
       openai-organization:
       - crewai-iuxna1
       openai-processing-ms:
-      - '1053'
+      - '1295'
       openai-version:
       - '2020-10-01'
       strict-transport-security:
@@ -106,7 +107,7 @@ interactions:
       x-ratelimit-reset-tokens:
       - 0s
       x-request-id:
-      - req_71180b3feca76c173a8646291041efd6
+      - req_d8f8ba53885b4f54ebb4aa1d9466d495
     http_version: HTTP/1.1
     status_code: 200
 version: 1

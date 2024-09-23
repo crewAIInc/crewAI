@@ -14,8 +14,8 @@ interactions:
       content-type:
       - application/json
       cookie:
-      - __cf_bm=MSMbC3L9m33fbO5Mdj70NJMu6kJCjhuwRcYuWJdJkYQ-1727071769-1.0.1.1-Dok5J431gUNvLRyLNrUo0A.FXXIuZUUooIMFSj74XUDgQJt0mlhf6QEEo6s9wXLhByXrdKr6cxYGBEkQoDslXg;
-        _cfuvid=5cK2hfLqTXw1WjB81uT.sGmmA67JIxSKSQeEHQ3zOQw-1727071769966-0.0.1.1-604800000
+      - __cf_bm=4rzJDR3F8S3Dp4B_qwylZU0mdm_WUwmv8vNHHp3IplM-1727119501-1.0.1.1-qobO_Sf88yG1qtXFnLgykvyc9YXR_fm1J7ZpXIhvtynVnsz67Uwcf4122PgHs4GMrlvZMaL6z_UVcVYSYUJOKQ;
+        _cfuvid=9K_ipT1uTVyDTneB1W5OZHPxCh36aOsDZCBnsQTONqQ-1727119501207-0.0.1.1-604800000
       host:
       - api.openai.com
       user-agent:
@@ -39,8 +39,8 @@ interactions:
     method: POST
     uri: https://api.openai.com/v1/chat/completions
   response:
-    content: "{\n  \"id\": \"chatcmpl-AAWiq9fETpi57ojiRW8b3EZCZRung\",\n  \"object\":
-      \"chat.completion\",\n  \"created\": 1727072428,\n  \"model\": \"gpt-3.5-turbo-0125\",\n
+    content: "{\n  \"id\": \"chatcmpl-AAj4oqJU4EknJeYsqXm62yRat4ux5\",\n  \"object\":
+      \"chat.completion\",\n  \"created\": 1727119918,\n  \"model\": \"gpt-3.5-turbo-0125\",\n
       \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
       \"assistant\",\n        \"content\": \"Hello, World!\",\n        \"refusal\":
       null\n      },\n      \"logprobs\": null,\n      \"finish_reason\": \"stop\"\n
@@ -51,7 +51,7 @@ interactions:
       CF-Cache-Status:
       - DYNAMIC
       CF-RAY:
-      - 8c786dd40897a540-MIA
+      - 8c7cf5414ad7228a-MIA
       Connection:
       - keep-alive
       Content-Encoding:
@@ -59,7 +59,7 @@ interactions:
       Content-Type:
       - application/json
       Date:
-      - Mon, 23 Sep 2024 06:20:28 GMT
+      - Mon, 23 Sep 2024 19:31:58 GMT
       Server:
       - cloudflare
       Transfer-Encoding:
@@ -71,7 +71,7 @@ interactions:
       openai-organization:
       - crewai-iuxna1
       openai-processing-ms:
-      - '122'
+      - '152'
       openai-version:
       - '2020-10-01'
       strict-transport-security:
@@ -89,7 +89,7 @@ interactions:
       x-ratelimit-reset-tokens:
       - 0s
       x-request-id:
-      - req_8bf321491952322290b5d8d5002572d0
+      - req_2857b2a73a656753055ee9e0297f5b3b
     http_version: HTTP/1.1
     status_code: 200
 version: 1

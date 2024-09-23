@@ -27,8 +27,8 @@ interactions:
       content-type:
       - application/json
       cookie:
-      - __cf_bm=hYfEMfBWpIoRPjx9ZBZg6DVeMOMr1IZt9ioup8yWZs0-1727072673-1.0.1.1-Ro7GCLuWS0K5ob0mSTYSmovONKNyxsK6oSA5io_Vwqhe6P0G7Ow4CuZUaWAaCdFGQUd7XZiFH0mI_sQC3uqe0g;
-        _cfuvid=5cK2hfLqTXw1WjB81uT.sGmmA67JIxSKSQeEHQ3zOQw-1727071769966-0.0.1.1-604800000
+      - __cf_bm=iOyeV6o_mR0USNA.hPdpKPtAzYgMoprpObRHvn0tmcc-1727120402-1.0.1.1-yMOSz4qncmM1wdtrwFfBQNfITkLs2w_sxijeM44F7aSIrclbkQ2G_18su02eVMVPMW2O55B1rty8BiY_WAoayg;
+        _cfuvid=9K_ipT1uTVyDTneB1W5OZHPxCh36aOsDZCBnsQTONqQ-1727119501207-0.0.1.1-604800000
       host:
       - api.openai.com
       user-agent:
@@ -52,20 +52,22 @@ interactions:
     method: POST
     uri: https://api.openai.com/v1/chat/completions
   response:
-    content: "{\n  \"id\": \"chatcmpl-AAWpn1I1SgIZNkFITWhrjHPw6THgg\",\n  \"object\":
-      \"chat.completion\",\n  \"created\": 1727072859,\n  \"model\": \"gpt-4o-2024-05-13\",\n
+    content: "{\n  \"id\": \"chatcmpl-AAjGODzqxxoYoLekrh9mn6EVJ3u1K\",\n  \"object\":
+      \"chat.completion\",\n  \"created\": 1727120636,\n  \"model\": \"gpt-4o-2024-05-13\",\n
       \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
-      \"assistant\",\n        \"content\": \"Thought: I now can give a great answer\\nFinal
-      Answer: The total number of sales is 42.\",\n        \"refusal\": null\n      },\n
-      \     \"logprobs\": null,\n      \"finish_reason\": \"stop\"\n    }\n  ],\n
-      \ \"usage\": {\n    \"prompt_tokens\": 215,\n    \"completion_tokens\": 22,\n
-      \   \"total_tokens\": 237,\n    \"completion_tokens_details\": {\n      \"reasoning_tokens\":
+      \"assistant\",\n        \"content\": \"Thought: I am ready to gather and analyze
+      the available data to determine the total number of sales.\\n\\nFinal Answer:
+      Without access to specific data provided by the user, I am unable to determine
+      the total number of sales. Please provide the relevant data to analyze.\",\n
+      \       \"refusal\": null\n      },\n      \"logprobs\": null,\n      \"finish_reason\":
+      \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 215,\n    \"completion_tokens\":
+      52,\n    \"total_tokens\": 267,\n    \"completion_tokens_details\": {\n      \"reasoning_tokens\":
       0\n    }\n  },\n  \"system_fingerprint\": \"fp_e375328146\"\n}\n"
     headers:
       CF-Cache-Status:
       - DYNAMIC
       CF-RAY:
-      - 8c78785c0d43a4ee-MIA
+      - 8c7d06c959cda4c7-MIA
       Connection:
       - keep-alive
       Content-Encoding:
@@ -73,7 +75,7 @@ interactions:
       Content-Type:
       - application/json
       Date:
-      - Mon, 23 Sep 2024 06:27:40 GMT
+      - Mon, 23 Sep 2024 19:43:57 GMT
       Server:
       - cloudflare
       Transfer-Encoding:
@@ -85,7 +87,7 @@ interactions:
       openai-organization:
       - crewai-iuxna1
       openai-processing-ms:
-      - '436'
+      - '1012'
       openai-version:
       - '2020-10-01'
       strict-transport-security:
@@ -103,7 +105,7 @@ interactions:
       x-ratelimit-reset-tokens:
       - 0s
       x-request-id:
-      - req_92522d49416afb4b73e41ebe566909b0
+      - req_4590c8a5d19e584086de6ef59554282f
     http_version: HTTP/1.1
     status_code: 200
 version: 1

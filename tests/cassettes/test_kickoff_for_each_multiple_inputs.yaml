@@ -23,8 +23,8 @@ interactions:
       content-type:
       - application/json
       cookie:
-      - __cf_bm=hYfEMfBWpIoRPjx9ZBZg6DVeMOMr1IZt9ioup8yWZs0-1727072673-1.0.1.1-Ro7GCLuWS0K5ob0mSTYSmovONKNyxsK6oSA5io_Vwqhe6P0G7Ow4CuZUaWAaCdFGQUd7XZiFH0mI_sQC3uqe0g;
-        _cfuvid=5cK2hfLqTXw1WjB81uT.sGmmA67JIxSKSQeEHQ3zOQw-1727071769966-0.0.1.1-604800000
+      - __cf_bm=4rzJDR3F8S3Dp4B_qwylZU0mdm_WUwmv8vNHHp3IplM-1727119501-1.0.1.1-qobO_Sf88yG1qtXFnLgykvyc9YXR_fm1J7ZpXIhvtynVnsz67Uwcf4122PgHs4GMrlvZMaL6z_UVcVYSYUJOKQ;
+        _cfuvid=9K_ipT1uTVyDTneB1W5OZHPxCh36aOsDZCBnsQTONqQ-1727119501207-0.0.1.1-604800000
       host:
       - api.openai.com
       user-agent:
@@ -48,20 +48,20 @@ interactions:
     method: POST
     uri: https://api.openai.com/v1/chat/completions
   response:
-    content: "{\n  \"id\": \"chatcmpl-AAWou6Wu9wOMMi7dz5epdD61OFilF\",\n  \"object\":
-      \"chat.completion\",\n  \"created\": 1727072804,\n  \"model\": \"gpt-4o-2024-05-13\",\n
+    content: "{\n  \"id\": \"chatcmpl-AAjBazgZ6dthVOD2y546ynWOOI37J\",\n  \"object\":
+      \"chat.completion\",\n  \"created\": 1727120338,\n  \"model\": \"gpt-4o-2024-05-13\",\n
       \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
       \"assistant\",\n        \"content\": \"I now can give a great answer\\nFinal
-      Answer: Dogs are incredibly loyal creatures and often regarded as man's best
-      friend.\",\n        \"refusal\": null\n      },\n      \"logprobs\": null,\n
-      \     \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\":
-      175,\n    \"completion_tokens\": 24,\n    \"total_tokens\": 199,\n    \"completion_tokens_details\":
-      {\n      \"reasoning_tokens\": 0\n    }\n  },\n  \"system_fingerprint\": \"fp_e375328146\"\n}\n"
+      Answer: Dogs are incredibly loyal and provide unmatched companionship.\",\n
+      \       \"refusal\": null\n      },\n      \"logprobs\": null,\n      \"finish_reason\":
+      \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 175,\n    \"completion_tokens\":
+      20,\n    \"total_tokens\": 195,\n    \"completion_tokens_details\": {\n      \"reasoning_tokens\":
+      0\n    }\n  },\n  \"system_fingerprint\": \"fp_e375328146\"\n}\n"
     headers:
       CF-Cache-Status:
       - DYNAMIC
       CF-RAY:
-      - 8c78770329d7a4ee-MIA
+      - 8c7cff80ecf3a4c7-MIA
       Connection:
       - keep-alive
       Content-Encoding:
@@ -69,7 +69,7 @@ interactions:
       Content-Type:
       - application/json
       Date:
-      - Mon, 23 Sep 2024 06:26:44 GMT
+      - Mon, 23 Sep 2024 19:38:58 GMT
       Server:
       - cloudflare
       Transfer-Encoding:
@@ -81,7 +81,7 @@ interactions:
       openai-organization:
       - crewai-iuxna1
       openai-processing-ms:
-      - '398'
+      - '374'
       openai-version:
       - '2020-10-01'
       strict-transport-security:
@@ -99,7 +99,7 @@ interactions:
       x-ratelimit-reset-tokens:
       - 0s
       x-request-id:
-      - req_c9124decc1b7354296e77b3fa8db1e55
+      - req_6c0a1faa17451b338b5acac10b6f205e
     http_version: HTTP/1.1
     status_code: 200
 - request:
@@ -126,8 +126,8 @@ interactions:
       content-type:
       - application/json
       cookie:
-      - __cf_bm=hYfEMfBWpIoRPjx9ZBZg6DVeMOMr1IZt9ioup8yWZs0-1727072673-1.0.1.1-Ro7GCLuWS0K5ob0mSTYSmovONKNyxsK6oSA5io_Vwqhe6P0G7Ow4CuZUaWAaCdFGQUd7XZiFH0mI_sQC3uqe0g;
-        _cfuvid=5cK2hfLqTXw1WjB81uT.sGmmA67JIxSKSQeEHQ3zOQw-1727071769966-0.0.1.1-604800000
+      - __cf_bm=4rzJDR3F8S3Dp4B_qwylZU0mdm_WUwmv8vNHHp3IplM-1727119501-1.0.1.1-qobO_Sf88yG1qtXFnLgykvyc9YXR_fm1J7ZpXIhvtynVnsz67Uwcf4122PgHs4GMrlvZMaL6z_UVcVYSYUJOKQ;
+        _cfuvid=9K_ipT1uTVyDTneB1W5OZHPxCh36aOsDZCBnsQTONqQ-1727119501207-0.0.1.1-604800000
       host:
       - api.openai.com
       user-agent:
@@ -151,20 +151,20 @@ interactions:
     method: POST
     uri: https://api.openai.com/v1/chat/completions
   response:
-    content: "{\n  \"id\": \"chatcmpl-AAWovNyWXCapkBXdOEmi3olUhjy71\",\n  \"object\":
-      \"chat.completion\",\n  \"created\": 1727072805,\n  \"model\": \"gpt-4o-2024-05-13\",\n
+    content: "{\n  \"id\": \"chatcmpl-AAjBcBPyDwuyebKrMfncWqMWLaWNn\",\n  \"object\":
+      \"chat.completion\",\n  \"created\": 1727120340,\n  \"model\": \"gpt-4o-2024-05-13\",\n
       \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
-      \"assistant\",\n        \"content\": \"Thought: I now can give a great answer\\n\\nFinal
-      Answer: Cats are independent and often misunderstood for their complex and unique
-      behaviors.\",\n        \"refusal\": null\n      },\n      \"logprobs\": null,\n
-      \     \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\":
+      \"assistant\",\n        \"content\": \"Thought: I now can give a great answer\\nFinal
+      Answer: Cats are independent creatures with strong territorial instincts and
+      aloof personalities.\",\n        \"refusal\": null\n      },\n      \"logprobs\":
+      null,\n      \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\":
       175,\n    \"completion_tokens\": 26,\n    \"total_tokens\": 201,\n    \"completion_tokens_details\":
       {\n      \"reasoning_tokens\": 0\n    }\n  },\n  \"system_fingerprint\": \"fp_e375328146\"\n}\n"
     headers:
       CF-Cache-Status:
       - DYNAMIC
       CF-RAY:
-      - 8c787708bc7fa4ee-MIA
+      - 8c7cff851b2da4c7-MIA
       Connection:
       - keep-alive
       Content-Encoding:
@@ -172,7 +172,7 @@ interactions:
       Content-Type:
       - application/json
       Date:
-      - Mon, 23 Sep 2024 06:26:46 GMT
+      - Mon, 23 Sep 2024 19:39:00 GMT
       Server:
       - cloudflare
       Transfer-Encoding:
@@ -181,12 +181,10 @@ interactions:
       - nosniff
       access-control-expose-headers:
       - X-Request-ID
-      alt-svc:
-      - h3=":443"; ma=86400
       openai-organization:
       - crewai-iuxna1
       openai-processing-ms:
-      - '485'
+      - '1028'
       openai-version:
       - '2020-10-01'
       strict-transport-security:
@@ -204,175 +202,9 @@ interactions:
       x-ratelimit-reset-tokens:
       - 0s
       x-request-id:
-      - req_8fa0c3238ad3f5706a2168cce018b31f
+      - req_cf169690f0f3f7e5cedd139896d3e3ed
     http_version: HTTP/1.1
     status_code: 200
-- request:
-    body: !!binary |
-      Crg8CiQKIgoMc2VydmljZS5uYW1lEhIKEGNyZXdBSS10ZWxlbWV0cnkSjzwKEgoQY3Jld2FpLnRl
-      bGVtZXRyeRKQAgoQQpMwb+LASPtrY3P3MNN8vxIIXjhgx2+Y8VAqDlRhc2sgRXhlY3V0aW9uMAE5
-      QFnZqo7L9xdBgAEt/4/L9xdKLgoIY3Jld19rZXkSIgogM2Y4ZDVjM2FiODgyZDY4NjlkOTNjYjgx
-      ZjBlMmVkNGFKMQoHY3Jld19pZBImCiQ2OTI0YzI5Yy1mNGNkLTRkNDktYjUzYy02YzhhMjFhOWUy
-      ZmVKLgoIdGFza19rZXkSIgogOTRhODI2YzE5MzA1NTk2ODZiYWZiNDA5ZWU4Mzg3NmZKMQoHdGFz
-      a19pZBImCiQ2MDZkNjZkOS1mOTQ2LTQ5MmItYWEwNy00OGJjNzYxYTdmNTl6AhgBhQEAAQAAEp0H
-      ChBChSxQ8GnQfeNPkSOjoADdEggRmAFDwUEsOyoMQ3JldyBDcmVhdGVkMAE5cG8FBZDL9xdBsIEc
-      BZDL9xdKGgoOY3Jld2FpX3ZlcnNpb24SCAoGMC42MS4wShoKDnB5dGhvbl92ZXJzaW9uEggKBjMu
-      MTEuN0ouCghjcmV3X2tleRIiCiBhOWNjNWQ0MzM5NWIyMWIxODFjODBiZDQzNTFjY2VjOEoxCgdj
-      cmV3X2lkEiYKJDY3NTVlOWEzLTBjYTMtNDdlNy04NmEzLTM0YzdkY2ViNjBiM0ocCgxjcmV3X3By
-      b2Nlc3MSDAoKc2VxdWVudGlhbEoRCgtjcmV3X21lbW9yeRICEABKGgoUY3Jld19udW1iZXJfb2Zf
-      dGFza3MSAhgBShsKFWNyZXdfbnVtYmVyX29mX2FnZW50cxICGAFKzAIKC2NyZXdfYWdlbnRzErwC
-      CrkCW3sia2V5IjogIjhiZDIxMzliNTk3NTE4MTUwNmU0MWZkOWM0NTYzZDc1IiwgImlkIjogIjU1
-      YTY4OTliLTUwYzYtNDE3Zi1hNDYzLWU5NDk0Njg1MTNjZSIsICJyb2xlIjogIlJlc2VhcmNoZXIi
-      LCAidmVyYm9zZT8iOiBmYWxzZSwgIm1heF9pdGVyIjogMTUsICJtYXhfcnBtIjogbnVsbCwgImZ1
-      bmN0aW9uX2NhbGxpbmdfbGxtIjogIiIsICJsbG0iOiAiZ3B0LTRvIiwgImRlbGVnYXRpb25fZW5h
-      YmxlZD8iOiBmYWxzZSwgImFsbG93X2NvZGVfZXhlY3V0aW9uPyI6IGZhbHNlLCAibWF4X3JldHJ5
-      X2xpbWl0IjogMiwgInRvb2xzX25hbWVzIjogW119XUr+AQoKY3Jld190YXNrcxLvAQrsAVt7Imtl
-      eSI6ICJlOWU2YjcyYWFjMzI2NDU5ZGQ3MDY4ZjBiMTcxN2MxYyIsICJpZCI6ICIxNzc3YmZhZi1j
-      YWJmLTQzMjItYTcyOS0wNGVkYzMxYTA0ZjgiLCAiYXN5bmNfZXhlY3V0aW9uPyI6IHRydWUsICJo
-      dW1hbl9pbnB1dD8iOiBmYWxzZSwgImFnZW50X3JvbGUiOiAiUmVzZWFyY2hlciIsICJhZ2VudF9r
-      ZXkiOiAiOGJkMjEzOWI1OTc1MTgxNTA2ZTQxZmQ5YzQ1NjNkNzUiLCAidG9vbHNfbmFtZXMiOiBb
-      XX1degIYAYUBAAEAABKOAgoQn+VoFcXBxh01ogAwkZnCzBIIHK71fkX05v8qDFRhc2sgQ3JlYXRl
-      ZDABOdhnOwWQy/cXQThSPAWQy/cXSi4KCGNyZXdfa2V5EiIKIGE5Y2M1ZDQzMzk1YjIxYjE4MWM4
-      MGJkNDM1MWNjZWM4SjEKB2NyZXdfaWQSJgokNjc1NWU5YTMtMGNhMy00N2U3LTg2YTMtMzRjN2Rj
-      ZWI2MGIzSi4KCHRhc2tfa2V5EiIKIGU5ZTZiNzJhYWMzMjY0NTlkZDcwNjhmMGIxNzE3YzFjSjEK
-      B3Rhc2tfaWQSJgokMTc3N2JmYWYtY2FiZi00MzIyLWE3MjktMDRlZGMzMWEwNGY4egIYAYUBAAEA
-      ABKQAgoQRIdQu8FpFKXwwfpC3pMxyxII4jeudMl75mMqDlRhc2sgRXhlY3V0aW9uMAE5KKg8BZDL
-      9xdB4MCeWZDL9xdKLgoIY3Jld19rZXkSIgogYTljYzVkNDMzOTViMjFiMTgxYzgwYmQ0MzUxY2Nl
-      YzhKMQoHY3Jld19pZBImCiQ2NzU1ZTlhMy0wY2EzLTQ3ZTctODZhMy0zNGM3ZGNlYjYwYjNKLgoI
-      dGFza19rZXkSIgogZTllNmI3MmFhYzMyNjQ1OWRkNzA2OGYwYjE3MTdjMWNKMQoHdGFza19pZBIm
-      CiQxNzc3YmZhZi1jYWJmLTQzMjItYTcyOS0wNGVkYzMxYTA0Zjh6AhgBhQEAAQAAErUNChDtpudu
-      bBrYa3cWzZlxD+D7Eggalhcc+Al6oyoMQ3JldyBDcmVhdGVkMAE5cHXcXpDL9xdBgIrfXpDL9xdK
-      GgoOY3Jld2FpX3ZlcnNpb24SCAoGMC42MS4wShoKDnB5dGhvbl92ZXJzaW9uEggKBjMuMTEuN0ou
-      CghjcmV3X2tleRIiCiA2NmE5NjBkYzY5ZmZmNTc4YjI2YzYxZDRmN2M1YTlmZUoxCgdjcmV3X2lk
-      EiYKJDExODM5MDA5LWMxZWYtNDExNS05ODk4LThiOTgzMzVmYzc0YkocCgxjcmV3X3Byb2Nlc3MS
-      DAoKc2VxdWVudGlhbEoRCgtjcmV3X21lbW9yeRICEABKGgoUY3Jld19udW1iZXJfb2ZfdGFza3MS
-      AhgDShsKFWNyZXdfbnVtYmVyX29mX2FnZW50cxICGAJKiAUKC2NyZXdfYWdlbnRzEvgECvUEW3si
-      a2V5IjogIjhiZDIxMzliNTk3NTE4MTUwNmU0MWZkOWM0NTYzZDc1IiwgImlkIjogImViMGFkZjQy
-      LTZiMDYtNGQxMi1hNThmLTQ4NjA5NTRiMmI0NSIsICJyb2xlIjogIlJlc2VhcmNoZXIiLCAidmVy
-      Ym9zZT8iOiBmYWxzZSwgIm1heF9pdGVyIjogMTUsICJtYXhfcnBtIjogbnVsbCwgImZ1bmN0aW9u
-      X2NhbGxpbmdfbGxtIjogIiIsICJsbG0iOiAiZ3B0LTRvIiwgImRlbGVnYXRpb25fZW5hYmxlZD8i
-      OiBmYWxzZSwgImFsbG93X2NvZGVfZXhlY3V0aW9uPyI6IGZhbHNlLCAibWF4X3JldHJ5X2xpbWl0
-      IjogMiwgInRvb2xzX25hbWVzIjogW119LCB7ImtleSI6ICI5YTUwMTVlZjQ4OTVkYzYyNzhkNTQ4
-      MThiYTQ0NmFmNyIsICJpZCI6ICI2NzY3N2VjYS03YTkzLTRhZWUtYmFjZS05NDJmZjk5YTRlOTIi
-      LCAicm9sZSI6ICJTZW5pb3IgV3JpdGVyIiwgInZlcmJvc2U/IjogZmFsc2UsICJtYXhfaXRlciI6
-      IDE1LCAibWF4X3JwbSI6IG51bGwsICJmdW5jdGlvbl9jYWxsaW5nX2xsbSI6ICIiLCAibGxtIjog
-      ImdwdC00byIsICJkZWxlZ2F0aW9uX2VuYWJsZWQ/IjogZmFsc2UsICJhbGxvd19jb2RlX2V4ZWN1
-      dGlvbj8iOiBmYWxzZSwgIm1heF9yZXRyeV9saW1pdCI6IDIsICJ0b29sc19uYW1lcyI6IFtdfV1K
-      2gUKCmNyZXdfdGFza3MSywUKyAVbeyJrZXkiOiAiOTQ0YWVmMGJhYzg0MGYxYzI3YmQ4M2E5Mzdi
-      YzM2MWIiLCAiaWQiOiAiMTliOTk2ODUtNDE1My00YTYxLWE3MjMtNzliMWY3MzFiNjczIiwgImFz
-      eW5jX2V4ZWN1dGlvbj8iOiB0cnVlLCAiaHVtYW5faW5wdXQ/IjogZmFsc2UsICJhZ2VudF9yb2xl
-      IjogIlJlc2VhcmNoZXIiLCAiYWdlbnRfa2V5IjogIjhiZDIxMzliNTk3NTE4MTUwNmU0MWZkOWM0
-      NTYzZDc1IiwgInRvb2xzX25hbWVzIjogW119LCB7ImtleSI6ICJmYzU2ZGVhMzhjOTk3NGI2ZjU1
-      YTJlMjhjMTQ5OTg4NiIsICJpZCI6ICJjOTQ3ZjNhYi01MmFhLTQ1N2ItOTVmYS1hYzc1MjhjMWQw
-      MDIiLCAiYXN5bmNfZXhlY3V0aW9uPyI6IHRydWUsICJodW1hbl9pbnB1dD8iOiBmYWxzZSwgImFn
-      ZW50X3JvbGUiOiAiUmVzZWFyY2hlciIsICJhZ2VudF9rZXkiOiAiOGJkMjEzOWI1OTc1MTgxNTA2
-      ZTQxZmQ5YzQ1NjNkNzUiLCAidG9vbHNfbmFtZXMiOiBbXX0sIHsia2V5IjogIjk0YTgyNmMxOTMw
-      NTU5Njg2YmFmYjQwOWVlODM4NzZmIiwgImlkIjogImU4NDU0ZGZmLWQwMzQtNDFiOS1hZWEyLWJm
-      N2M4NjZhNGFiZiIsICJhc3luY19leGVjdXRpb24/IjogZmFsc2UsICJodW1hbl9pbnB1dD8iOiBm
-      YWxzZSwgImFnZW50X3JvbGUiOiAiU2VuaW9yIFdyaXRlciIsICJhZ2VudF9rZXkiOiAiOWE1MDE1
-      ZWY0ODk1ZGM2Mjc4ZDU0ODE4YmE0NDZhZjciLCAidG9vbHNfbmFtZXMiOiBbXX1degIYAYUBAAEA
-      ABKuBwoQdNR+t2I285LPFLOMuCWk0hIIgPeDXR2J7aMqDENyZXcgQ3JlYXRlZDABOYh3WF+Qy/cX
-      QZgVWl+Qy/cXShoKDmNyZXdhaV92ZXJzaW9uEggKBjAuNjEuMEoaCg5weXRob25fdmVyc2lvbhII
-      CgYzLjExLjdKLgoIY3Jld19rZXkSIgogZWU2NzQ1ZDdjOGFlODJlMDBkZjk0ZGUwZjdmODcxMThK
-      MQoHY3Jld19pZBImCiRlZDBhMDM2Mi0xZTc3LTQzY2QtOTg3Yi05NGY1MTNmMTkzOTVKHAoMY3Jl
-      d19wcm9jZXNzEgwKCnNlcXVlbnRpYWxKEQoLY3Jld19tZW1vcnkSAhAAShoKFGNyZXdfbnVtYmVy
-      X29mX3Rhc2tzEgIYAUobChVjcmV3X251bWJlcl9vZl9hZ2VudHMSAhgBStQCCgtjcmV3X2FnZW50
-      cxLEAgrBAlt7ImtleSI6ICJmMzM4NmY2ZDhkYTc1YWE0MTZhNmUzMTAwNTNmNzY5OCIsICJpZCI6
-      ICI5M2Y0MjFlZi03MTE1LTQ5YzEtYTA4OC1jNDFhYjZhMTFiZTUiLCAicm9sZSI6ICJ7dG9waWN9
-      IFJlc2VhcmNoZXIiLCAidmVyYm9zZT8iOiBmYWxzZSwgIm1heF9pdGVyIjogMTUsICJtYXhfcnBt
-      IjogbnVsbCwgImZ1bmN0aW9uX2NhbGxpbmdfbGxtIjogIiIsICJsbG0iOiAiZ3B0LTRvIiwgImRl
-      bGVnYXRpb25fZW5hYmxlZD8iOiBmYWxzZSwgImFsbG93X2NvZGVfZXhlY3V0aW9uPyI6IGZhbHNl
-      LCAibWF4X3JldHJ5X2xpbWl0IjogMiwgInRvb2xzX25hbWVzIjogW119XUqHAgoKY3Jld190YXNr
-      cxL4AQr1AVt7ImtleSI6ICIwNmE3MzIyMGY0MTQ4YTRiYmQ1YmFjYjBkMGI0NGZjZSIsICJpZCI6
-      ICJkNjkzYjY1NC04NzIzLTRlZGQtOTMwMS0zMzc5M2U4NjU2MWQiLCAiYXN5bmNfZXhlY3V0aW9u
-      PyI6IGZhbHNlLCAiaHVtYW5faW5wdXQ/IjogZmFsc2UsICJhZ2VudF9yb2xlIjogInt0b3BpY30g
-      UmVzZWFyY2hlciIsICJhZ2VudF9rZXkiOiAiZjMzODZmNmQ4ZGE3NWFhNDE2YTZlMzEwMDUzZjc2
-      OTgiLCAidG9vbHNfbmFtZXMiOiBbXX1degIYAYUBAAEAABKOAgoQ1umWc0LLBuwdg2t7fuIpIBII
-      NkuTgM/FauUqDFRhc2sgQ3JlYXRlZDABOXj8ZV+Qy/cXQZhKZl+Qy/cXSi4KCGNyZXdfa2V5EiIK
-      IGQwZmVlNjkzMjM5NTg4NmYyMDNmNDQ2YjcyYzFiMDBhSjEKB2NyZXdfaWQSJgokZWQwYTAzNjIt
-      MWU3Ny00M2NkLTk4N2ItOTRmNTEzZjE5Mzk1Si4KCHRhc2tfa2V5EiIKIDA2YTczMjIwZjQxNDhh
-      NGJiZDViYWNiMGQwYjQ0ZmNlSjEKB3Rhc2tfaWQSJgokZDY5M2I2NTQtODcyMy00ZWRkLTkzMDEt
-      MzM3OTNlODY1NjFkegIYAYUBAAEAABKQAgoQLmnMdE2fEHN5CwSXOQo5nxII1m3Ry2E+LEwqDlRh
-      c2sgRXhlY3V0aW9uMAE5qHFmX5DL9xdBCGonjJDL9xdKLgoIY3Jld19rZXkSIgogZDBmZWU2OTMy
-      Mzk1ODg2ZjIwM2Y0NDZiNzJjMWIwMGFKMQoHY3Jld19pZBImCiRlZDBhMDM2Mi0xZTc3LTQzY2Qt
-      OTg3Yi05NGY1MTNmMTkzOTVKLgoIdGFza19rZXkSIgogMDZhNzMyMjBmNDE0OGE0YmJkNWJhY2Iw
-      ZDBiNDRmY2VKMQoHdGFza19pZBImCiRkNjkzYjY1NC04NzIzLTRlZGQtOTMwMS0zMzc5M2U4NjU2
-      MWR6AhgBhQEAAQAAEq4HChC3KQZwByxUlWg7f+kfLbtPEghpdl9N1G2UMyoMQ3JldyBDcmVhdGVk
-      MAE5QKKhjZDL9xdBSF+ljZDL9xdKGgoOY3Jld2FpX3ZlcnNpb24SCAoGMC42MS4wShoKDnB5dGhv
-      bl92ZXJzaW9uEggKBjMuMTEuN0ouCghjcmV3X2tleRIiCiBlZTY3NDVkN2M4YWU4MmUwMGRmOTRk
-      ZTBmN2Y4NzExOEoxCgdjcmV3X2lkEiYKJDIxOWJhZmQwLTM2OTgtNDc4Ni05YjEyLWE0YTY0NTQx
-      ODc2Y0ocCgxjcmV3X3Byb2Nlc3MSDAoKc2VxdWVudGlhbEoRCgtjcmV3X21lbW9yeRICEABKGgoU
-      Y3Jld19udW1iZXJfb2ZfdGFza3MSAhgBShsKFWNyZXdfbnVtYmVyX29mX2FnZW50cxICGAFK1AIK
-      C2NyZXdfYWdlbnRzEsQCCsECW3sia2V5IjogImYzMzg2ZjZkOGRhNzVhYTQxNmE2ZTMxMDA1M2Y3
-      Njk4IiwgImlkIjogIjBiZjNjMmM2LWVhNzUtNDY1MC1hMmJlLWM3MDBhYzc2MzNhYyIsICJyb2xl
-      IjogInt0b3BpY30gUmVzZWFyY2hlciIsICJ2ZXJib3NlPyI6IGZhbHNlLCAibWF4X2l0ZXIiOiAx
-      NSwgIm1heF9ycG0iOiBudWxsLCAiZnVuY3Rpb25fY2FsbGluZ19sbG0iOiAiIiwgImxsbSI6ICJn
-      cHQtNG8iLCAiZGVsZWdhdGlvbl9lbmFibGVkPyI6IGZhbHNlLCAiYWxsb3dfY29kZV9leGVjdXRp
-      b24/IjogZmFsc2UsICJtYXhfcmV0cnlfbGltaXQiOiAyLCAidG9vbHNfbmFtZXMiOiBbXX1dSocC
-      CgpjcmV3X3Rhc2tzEvgBCvUBW3sia2V5IjogIjA2YTczMjIwZjQxNDhhNGJiZDViYWNiMGQwYjQ0
-      ZmNlIiwgImlkIjogIjlkMGJjZTU2LTc1ZDMtNGYxMy1hNDYyLThjM2IzMWEwYzU0YiIsICJhc3lu
-      Y19leGVjdXRpb24/IjogZmFsc2UsICJodW1hbl9pbnB1dD8iOiBmYWxzZSwgImFnZW50X3JvbGUi
-      OiAie3RvcGljfSBSZXNlYXJjaGVyIiwgImFnZW50X2tleSI6ICJmMzM4NmY2ZDhkYTc1YWE0MTZh
-      NmUzMTAwNTNmNzY5OCIsICJ0b29sc19uYW1lcyI6IFtdfV16AhgBhQEAAQAAEo4CChCx2ocZ8jGy
-      jHEPdBCUQj04EgidgU7AQm0GNSoMVGFzayBDcmVhdGVkMAE5ECC4jZDL9xdBEJ24jZDL9xdKLgoI
-      Y3Jld19rZXkSIgogZDBmZWU2OTMyMzk1ODg2ZjIwM2Y0NDZiNzJjMWIwMGFKMQoHY3Jld19pZBIm
-      CiQyMTliYWZkMC0zNjk4LTQ3ODYtOWIxMi1hNGE2NDU0MTg3NmNKLgoIdGFza19rZXkSIgogMDZh
-      NzMyMjBmNDE0OGE0YmJkNWJhY2IwZDBiNDRmY2VKMQoHdGFza19pZBImCiQ5ZDBiY2U1Ni03NWQz
-      LTRmMTMtYTQ2Mi04YzNiMzFhMGM1NGJ6AhgBhQEAAQAAEpACChByRqIedV4yGEsd/5evAEqJEgjD
-      BIZmSAq/eSoOVGFzayBFeGVjdXRpb24wATkY77iNkMv3F0Egh162kMv3F0ouCghjcmV3X2tleRIi
-      CiBkMGZlZTY5MzIzOTU4ODZmMjAzZjQ0NmI3MmMxYjAwYUoxCgdjcmV3X2lkEiYKJDIxOWJhZmQw
-      LTM2OTgtNDc4Ni05YjEyLWE0YTY0NTQxODc2Y0ouCgh0YXNrX2tleRIiCiAwNmE3MzIyMGY0MTQ4
-      YTRiYmQ1YmFjYjBkMGI0NGZjZUoxCgd0YXNrX2lkEiYKJDlkMGJjZTU2LTc1ZDMtNGYxMy1hNDYy
-      LThjM2IzMWEwYzU0YnoCGAGFAQABAAASrgcKEBZ2EKa/w/Td40fWG4+AD9sSCF8x2elKIDuXKgxD
-      cmV3IENyZWF0ZWQwATnQYv+2kMv3F0FgmAe3kMv3F0oaCg5jcmV3YWlfdmVyc2lvbhIICgYwLjYx
-      LjBKGgoOcHl0aG9uX3ZlcnNpb24SCAoGMy4xMS43Si4KCGNyZXdfa2V5EiIKIGVlNjc0NWQ3Yzhh
-      ZTgyZTAwZGY5NGRlMGY3Zjg3MTE4SjEKB2NyZXdfaWQSJgokYThkOTgyM2MtYTExNi00Yjc0LWI0
-      ZjktNDZiZWVhZWNiZTdhShwKDGNyZXdfcHJvY2VzcxIMCgpzZXF1ZW50aWFsShEKC2NyZXdfbWVt
-      b3J5EgIQAEoaChRjcmV3X251bWJlcl9vZl90YXNrcxICGAFKGwoVY3Jld19udW1iZXJfb2ZfYWdl
-      bnRzEgIYAUrUAgoLY3Jld19hZ2VudHMSxAIKwQJbeyJrZXkiOiAiZjMzODZmNmQ4ZGE3NWFhNDE2
-      YTZlMzEwMDUzZjc2OTgiLCAiaWQiOiAiNjZkOWRlM2YtNjg5Yy00MjBiLTgxOWEtNWEzMmExN2U3
-      NWM4IiwgInJvbGUiOiAie3RvcGljfSBSZXNlYXJjaGVyIiwgInZlcmJvc2U/IjogZmFsc2UsICJt
-      YXhfaXRlciI6IDE1LCAibWF4X3JwbSI6IG51bGwsICJmdW5jdGlvbl9jYWxsaW5nX2xsbSI6ICIi
-      LCAibGxtIjogImdwdC00byIsICJkZWxlZ2F0aW9uX2VuYWJsZWQ/IjogZmFsc2UsICJhbGxvd19j
-      b2RlX2V4ZWN1dGlvbj8iOiBmYWxzZSwgIm1heF9yZXRyeV9saW1pdCI6IDIsICJ0b29sc19uYW1l
-      cyI6IFtdfV1KhwIKCmNyZXdfdGFza3MS+AEK9QFbeyJrZXkiOiAiMDZhNzMyMjBmNDE0OGE0YmJk
-      NWJhY2IwZDBiNDRmY2UiLCAiaWQiOiAiZTIwMDIwYmQtYWQ2Mi00N2M2LThjNTMtMWExOTRiZTNh
-      ZTc2IiwgImFzeW5jX2V4ZWN1dGlvbj8iOiBmYWxzZSwgImh1bWFuX2lucHV0PyI6IGZhbHNlLCAi
-      YWdlbnRfcm9sZSI6ICJ7dG9waWN9IFJlc2VhcmNoZXIiLCAiYWdlbnRfa2V5IjogImYzMzg2ZjZk
-      OGRhNzVhYTQxNmE2ZTMxMDA1M2Y3Njk4IiwgInRvb2xzX25hbWVzIjogW119XXoCGAGFAQABAAAS
-      jgIKENhDF6T0BsqceoxL3FJkRdASCFl0DrYoIc8BKgxUYXNrIENyZWF0ZWQwATmwpjq3kMv3F0HQ
-      7ju3kMv3F0ouCghjcmV3X2tleRIiCiAzOTI1N2FiOTc0MDliNWY1ZjQxOTY3M2JiNDFkMGRjOEox
-      CgdjcmV3X2lkEiYKJGE4ZDk4MjNjLWExMTYtNGI3NC1iNGY5LTQ2YmVlYWVjYmU3YUouCgh0YXNr
-      X2tleRIiCiAwNmE3MzIyMGY0MTQ4YTRiYmQ1YmFjYjBkMGI0NGZjZUoxCgd0YXNrX2lkEiYKJGUy
-      MDAyMGJkLWFkNjItNDdjNi04YzUzLTFhMTk0YmUzYWU3NnoCGAGFAQABAAA=
-    headers:
-      Accept:
-      - '*/*'
-      Accept-Encoding:
-      - gzip, deflate
-      Connection:
-      - keep-alive
-      Content-Length:
-      - '7739'
-      Content-Type:
-      - application/x-protobuf
-      User-Agent:
-      - OTel-OTLP-Exporter-Python/1.27.0
-    method: POST
-    uri: https://telemetry.crewai.com:4319/v1/traces
-  response:
-    body:
-      string: "\n\0"
-    headers:
-      Content-Length:
-      - '2'
-      Content-Type:
-      - application/x-protobuf
-      Date:
-      - Mon, 23 Sep 2024 06:26:46 GMT
-    status:
-      code: 200
-      message: OK
 - request:
     body: '{"messages": [{"role": "system", "content": "You are apple Researcher.
       You have a lot of experience with apple.\nYour personal goal is: Express hot
@@ -398,8 +230,8 @@ interactions:
       content-type:
       - application/json
       cookie:
-      - __cf_bm=hYfEMfBWpIoRPjx9ZBZg6DVeMOMr1IZt9ioup8yWZs0-1727072673-1.0.1.1-Ro7GCLuWS0K5ob0mSTYSmovONKNyxsK6oSA5io_Vwqhe6P0G7Ow4CuZUaWAaCdFGQUd7XZiFH0mI_sQC3uqe0g;
-        _cfuvid=5cK2hfLqTXw1WjB81uT.sGmmA67JIxSKSQeEHQ3zOQw-1727071769966-0.0.1.1-604800000
+      - __cf_bm=4rzJDR3F8S3Dp4B_qwylZU0mdm_WUwmv8vNHHp3IplM-1727119501-1.0.1.1-qobO_Sf88yG1qtXFnLgykvyc9YXR_fm1J7ZpXIhvtynVnsz67Uwcf4122PgHs4GMrlvZMaL6z_UVcVYSYUJOKQ;
+        _cfuvid=9K_ipT1uTVyDTneB1W5OZHPxCh36aOsDZCBnsQTONqQ-1727119501207-0.0.1.1-604800000
       host:
       - api.openai.com
       user-agent:
@@ -423,20 +255,20 @@ interactions:
     method: POST
     uri: https://api.openai.com/v1/chat/completions
   response:
-    content: "{\n  \"id\": \"chatcmpl-AAWowZ7aGJoSapoAvKODHvyFLxNw2\",\n  \"object\":
-      \"chat.completion\",\n  \"created\": 1727072806,\n  \"model\": \"gpt-4o-2024-05-13\",\n
+    content: "{\n  \"id\": \"chatcmpl-AAjBcgnSyTxNccnmpmkt7so6POwNo\",\n  \"object\":
+      \"chat.completion\",\n  \"created\": 1727120340,\n  \"model\": \"gpt-4o-2024-05-13\",\n
       \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
-      \"assistant\",\n        \"content\": \"I now can give a great answer.\\nFinal
-      Answer: Apple revolutionized technology with its innovative ecosystem and user-friendly
-      design.\",\n        \"refusal\": null\n      },\n      \"logprobs\": null,\n
-      \     \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\":
-      175,\n    \"completion_tokens\": 24,\n    \"total_tokens\": 199,\n    \"completion_tokens_details\":
+      \"assistant\",\n        \"content\": \"Thought: I now can give a great answer.\\nFinal
+      Answer: \\\"Apples are nutrient-rich fruits that offer various health benefits
+      and culinary versatility.\\\"\",\n        \"refusal\": null\n      },\n      \"logprobs\":
+      null,\n      \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\":
+      175,\n    \"completion_tokens\": 29,\n    \"total_tokens\": 204,\n    \"completion_tokens_details\":
       {\n      \"reasoning_tokens\": 0\n    }\n  },\n  \"system_fingerprint\": \"fp_a5d11b2ef2\"\n}\n"
     headers:
       CF-Cache-Status:
       - DYNAMIC
       CF-RAY:
-      - 8c78770f6f8da4ee-MIA
+      - 8c7cff91d8dea4c7-MIA
       Connection:
       - keep-alive
       Content-Encoding:
@@ -444,7 +276,7 @@ interactions:
       Content-Type:
       - application/json
       Date:
-      - Mon, 23 Sep 2024 06:26:46 GMT
+      - Mon, 23 Sep 2024 19:39:01 GMT
       Server:
       - cloudflare
       Transfer-Encoding:
@@ -456,7 +288,7 @@ interactions:
       openai-organization:
       - crewai-iuxna1
       openai-processing-ms:
-      - '353'
+      - '931'
       openai-version:
       - '2020-10-01'
       strict-transport-security:
@@ -474,7 +306,7 @@ interactions:
       x-ratelimit-reset-tokens:
       - 0s
       x-request-id:
-      - req_ad2073440d985b47ebc5f45f57902985
+      - req_9217737816e32f033ac27be04c8d7e28
     http_version: HTTP/1.1
     status_code: 200
 version: 1

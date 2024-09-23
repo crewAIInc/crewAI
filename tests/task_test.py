@@ -321,8 +321,8 @@ def test_output_json_hierarchical():
         manager_llm="gpt-4o",
     )
     result = crew.kickoff()
-    assert '{"score": 4}' == result.json
-    assert result.to_dict() == {"score": 4}
+    assert '{"score": 5}' == result.json
+    assert result.to_dict() == {"score": 5}
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
@@ -474,7 +474,7 @@ def test_output_json_to_another_task():
 
     crew = Crew(agents=[scorer], tasks=[task1, task2])
     result = crew.kickoff()
-    assert '{"score": 5}' == result.json
+    assert '{"score": 4}' == result.json
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
@@ -685,7 +685,7 @@ def test_increment_tool_errors():
     with patch.object(Task, "increment_tools_errors") as increment_tools_errors:
         increment_tools_errors.return_value = None
         crew.kickoff()
-        assert len(increment_tools_errors.mock_calls) == 9
+        assert len(increment_tools_errors.mock_calls) == 18
 
 
 def test_task_definition_based_on_dict():

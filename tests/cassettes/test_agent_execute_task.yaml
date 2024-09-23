@@ -47,30 +47,31 @@ interactions:
     method: POST
     uri: https://api.openai.com/v1/chat/completions
   response:
-    content: "{\n  \"id\": \"chatcmpl-AAWc3f0wdIr8yohCeoM8A3NkxSS1V\",\n  \"object\":
-      \"chat.completion\",\n  \"created\": 1727072007,\n  \"model\": \"gpt-4o-mini-2024-07-18\",\n
+    content: "{\n  \"id\": \"chatcmpl-AAiy2QlMHdKgUCRKL35DNxlBX1XoQ\",\n  \"object\":
+      \"chat.completion\",\n  \"created\": 1727119498,\n  \"model\": \"gpt-4o-mini-2024-07-18\",\n
       \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
       \"assistant\",\n        \"content\": \"I now can give a great answer. \\n\\nTo
-      calculate the area of a circle, we use the formula:\\n\\n\\\\[ \\n\\\\text{Area}
-      = \\\\pi r^2 \\n\\\\]\\n\\nwhere \\\\( r \\\\) is the radius of the circle.
-      In this case, the radius \\\\( r = 5 \\\\) cm.\\n\\nNow, substituting the value
-      of the radius into the formula:\\n\\n\\\\[\\n\\\\text{Area} = \\\\pi (5 \\\\,
-      \\\\text{cm})^2 \\n\\\\]\\n\\\\[\\n\\\\text{Area} = \\\\pi (25 \\\\, \\\\text{cm}^2)
-      \\n\\\\]\\n\\\\[\\n\\\\text{Area} = 25\\\\pi \\\\, \\\\text{cm}^2 \\n\\\\]\\n\\nUsing
-      \\\\( \\\\pi \\\\approx 3.14 \\\\) for approximation:\\n\\n\\\\[\\n\\\\text{Area}
-      \\\\approx 25 \\\\times 3.14 \\\\, \\\\text{cm}^2 \\n\\\\]\\n\\\\[\\n\\\\text{Area}
-      \\\\approx 78.5 \\\\, \\\\text{cm}^2 \\n\\\\]\\n\\nThus, the area of the circle
-      with a radius of 5 cm is:\\n\\nFinal Answer: The calculated area of the circle
-      is approximately 78.5 square centimeters.\",\n        \"refusal\": null\n      },\n
-      \     \"logprobs\": null,\n      \"finish_reason\": \"stop\"\n    }\n  ],\n
-      \ \"usage\": {\n    \"prompt_tokens\": 182,\n    \"completion_tokens\": 254,\n
-      \   \"total_tokens\": 436,\n    \"completion_tokens_details\": {\n      \"reasoning_tokens\":
-      0\n    }\n  },\n  \"system_fingerprint\": \"fp_1bb46167f9\"\n}\n"
+      calculate the area of a circle, we use the formula:\\n\\n\\\\[ \\\\text{Area}
+      = \\\\pi r^2 \\\\]\\n\\nwhere \\\\( r \\\\) is the radius of the circle. In
+      this case, the radius \\\\( r \\\\) is 5 cm.\\n\\nSubstituting the value of
+      the radius into the formula:\\n\\n\\\\[ \\\\text{Area} = \\\\pi (5 \\\\, \\\\text{cm})^2
+      \\\\]\\n\\nCalculating \\\\( (5 \\\\, \\\\text{cm})^2 \\\\):\\n\\n\\\\[ (5 \\\\,
+      \\\\text{cm})^2 = 25 \\\\, \\\\text{cm}^2 \\\\]\\n\\nNow substituting back into
+      the area formula:\\n\\n\\\\[ \\\\text{Area} = \\\\pi \\\\times 25 \\\\, \\\\text{cm}^2
+      \\\\]\\n\\nUsing the approximation \\\\( \\\\pi \\\\approx 3.14 \\\\):\\n\\n\\\\[
+      \\\\text{Area} \\\\approx 3.14 \\\\times 25 \\\\, \\\\text{cm}^2 \\\\]\\n\\nCalculating
+      that gives:\\n\\n\\\\[ \\\\text{Area} \\\\approx 78.5 \\\\, \\\\text{cm}^2 \\\\]\\n\\nThus,
+      the area of the circle with a radius of 5 cm is approximately 78.5 square centimeters.\\n\\nFinal
+      Answer: The area of the circle with a radius of 5 cm is approximately 78.5 square
+      centimeters.\",\n        \"refusal\": null\n      },\n      \"logprobs\": null,\n
+      \     \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\":
+      182,\n    \"completion_tokens\": 288,\n    \"total_tokens\": 470,\n    \"completion_tokens_details\":
+      {\n      \"reasoning_tokens\": 0\n    }\n  },\n  \"system_fingerprint\": \"fp_1bb46167f9\"\n}\n"
     headers:
       CF-Cache-Status:
       - DYNAMIC
       CF-RAY:
-      - 8c78638c3f388d9d-MIA
+      - 8c7ceafdfebe228a-MIA
       Connection:
       - keep-alive
       Content-Encoding:
@@ -78,14 +79,14 @@ interactions:
       Content-Type:
       - application/json
       Date:
-      - Mon, 23 Sep 2024 06:13:29 GMT
+      - Mon, 23 Sep 2024 19:25:01 GMT
       Server:
       - cloudflare
       Set-Cookie:
-      - __cf_bm=vmaz6ybk30RNoJyL.2DOjggLzTpOa2A4xrXKEtywCGI-1727072009-1.0.1.1-547._RUGUXsM4GWm43lLDGO1XQxBJLlrryLjl4NnQUUpPmtnWpkTmEzKjDsIbrCu8HqE_48urIKNj7tYwQcJpQ;
-        path=/; expires=Mon, 23-Sep-24 06:43:29 GMT; domain=.api.openai.com; HttpOnly;
+      - __cf_bm=4rzJDR3F8S3Dp4B_qwylZU0mdm_WUwmv8vNHHp3IplM-1727119501-1.0.1.1-qobO_Sf88yG1qtXFnLgykvyc9YXR_fm1J7ZpXIhvtynVnsz67Uwcf4122PgHs4GMrlvZMaL6z_UVcVYSYUJOKQ;
+        path=/; expires=Mon, 23-Sep-24 19:55:01 GMT; domain=.api.openai.com; HttpOnly;
         Secure; SameSite=None
-      - _cfuvid=us4l1LvU9c9.1Ixmndsq37GYds_z2WTzBYtSSWYHEyg-1727072009986-0.0.1.1-604800000;
+      - _cfuvid=9K_ipT1uTVyDTneB1W5OZHPxCh36aOsDZCBnsQTONqQ-1727119501207-0.0.1.1-604800000;
         path=/; domain=.api.openai.com; HttpOnly; Secure; SameSite=None
       Transfer-Encoding:
       - chunked
@@ -96,7 +97,7 @@ interactions:
       openai-organization:
       - crewai-iuxna1
       openai-processing-ms:
-      - '2714'
+      - '3038'
       openai-version:
       - '2020-10-01'
       strict-transport-security:
@@ -108,13 +109,13 @@ interactions:
       x-ratelimit-remaining-requests:
       - '29999'
       x-ratelimit-remaining-tokens:
-      - '149999775'
+      - '149999774'
       x-ratelimit-reset-requests:
       - 2ms
       x-ratelimit-reset-tokens:
       - 0s
       x-request-id:
-      - req_b33d286ea9a1f6f9023047812a492076
+      - req_216377f6ea107752b4ab83a534ff9d97
     http_version: HTTP/1.1
     status_code: 200
 version: 1
