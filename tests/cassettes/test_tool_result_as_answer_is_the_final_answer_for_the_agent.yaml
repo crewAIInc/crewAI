@@ -17,7 +17,7 @@ interactions:
       answer: The final paragraph with the full review on AI and no greeting.\nyou
       MUST return the actual complete content as the final answer, not a summary.\n\nBegin!
       This is VERY important to you, use the tools available and give your best Final
-      Answer, your job depends on it!\n\nThought:"}], "model": "gpt-4o", "stop": ["\nObservation:"]}'
+      Answer, your job depends on it!\n\nThought:"}], "model": "gpt-4o"}'
     headers:
       accept:
       - application/json
@@ -26,16 +26,16 @@ interactions:
       connection:
       - keep-alive
       content-length:
-      - '1440'
+      - '1412'
       content-type:
       - application/json
       cookie:
-      - __cf_bm=.8.5x0rqghNdtUCxfmwblfhuXiKyPm_cRq.NIa0heL0-1726642369-1.0.1.1-VbsAGqjOt45ZD50K2QW2oZrByLLIh6w8K4nAkLthTbXgU5qTgdf0mhvFId8Q2F3DcHUw9E72lVIZEN.YVlYINQ;
-        _cfuvid=o5s1Ux898x0eFNtzUCnG996iqyX3LgXDXq99C5oqnVE-1726642369248-0.0.1.1-604800000
+      - __cf_bm=MSMbC3L9m33fbO5Mdj70NJMu6kJCjhuwRcYuWJdJkYQ-1727071769-1.0.1.1-Dok5J431gUNvLRyLNrUo0A.FXXIuZUUooIMFSj74XUDgQJt0mlhf6QEEo6s9wXLhByXrdKr6cxYGBEkQoDslXg;
+        _cfuvid=5cK2hfLqTXw1WjB81uT.sGmmA67JIxSKSQeEHQ3zOQw-1727071769966-0.0.1.1-604800000
       host:
       - api.openai.com
       user-agent:
-      - OpenAI/Python 1.46.0
+      - OpenAI/Python 1.47.0
       x-stainless-arch:
       - arm64
       x-stainless-async:
@@ -45,7 +45,7 @@ interactions:
       x-stainless-os:
       - MacOS
       x-stainless-package-version:
-      - 1.46.0
+      - 1.47.0
       x-stainless-raw-response:
       - 'true'
       x-stainless-runtime:
@@ -55,20 +55,20 @@ interactions:
     method: POST
     uri: https://api.openai.com/v1/chat/completions
   response:
-    content: "{\n  \"id\": \"chatcmpl-A8istS7EzduwxAQhYo0NJW9VnqC53\",\n  \"object\":
-      \"chat.completion\",\n  \"created\": 1726642523,\n  \"model\": \"gpt-4o-2024-05-13\",\n
+    content: "{\n  \"id\": \"chatcmpl-AAWihUzj6pkkXGmf1kV0DWInfwPsO\",\n  \"object\":
+      \"chat.completion\",\n  \"created\": 1727072419,\n  \"model\": \"gpt-4o-2024-05-13\",\n
       \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
-      \"assistant\",\n        \"content\": \"Thought: I should first use the Get Greetings
-      tool to get a greeting.\\n\\nAction: Get Greetings\\nAction Input: {}\",\n        \"refusal\":
-      null\n      },\n      \"logprobs\": null,\n      \"finish_reason\": \"stop\"\n
-      \   }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 284,\n    \"completion_tokens\":
-      24,\n    \"total_tokens\": 308,\n    \"completion_tokens_details\": {\n      \"reasoning_tokens\":
-      0\n    }\n  },\n  \"system_fingerprint\": \"fp_a5d11b2ef2\"\n}\n"
+      \"assistant\",\n        \"content\": \"Thought: First, I will use the Get Greetings
+      tool to get a random greeting.\\nAction: Get Greetings\\nAction Input: {}\",\n
+      \       \"refusal\": null\n      },\n      \"logprobs\": null,\n      \"finish_reason\":
+      \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 284,\n    \"completion_tokens\":
+      26,\n    \"total_tokens\": 310,\n    \"completion_tokens_details\": {\n      \"reasoning_tokens\":
+      0\n    }\n  },\n  \"system_fingerprint\": \"fp_e375328146\"\n}\n"
     headers:
       CF-Cache-Status:
       - DYNAMIC
       CF-RAY:
-      - 8c4f6e1b6cc9a67a-MIA
+      - 8c786d9ced75a540-MIA
       Connection:
       - keep-alive
       Content-Encoding:
@@ -76,7 +76,7 @@ interactions:
       Content-Type:
       - application/json
       Date:
-      - Wed, 18 Sep 2024 06:55:24 GMT
+      - Mon, 23 Sep 2024 06:20:19 GMT
       Server:
       - cloudflare
       Transfer-Encoding:
@@ -85,12 +85,10 @@ interactions:
       - nosniff
       access-control-expose-headers:
       - X-Request-ID
-      alt-svc:
-      - h3=":443"; ma=86400
       openai-organization:
       - crewai-iuxna1
       openai-processing-ms:
-      - '546'
+      - '486'
       openai-version:
       - '2020-10-01'
       strict-transport-security:
@@ -108,42 +106,42 @@ interactions:
       x-ratelimit-reset-tokens:
       - 0s
       x-request-id:
-      - req_50735a58d0b3dd733c9131e79d125cb7
+      - req_737ab6d981728391d88f6d18d3ff10b1
     http_version: HTTP/1.1
     status_code: 200
 - request:
     body: !!binary |
-      Cr0NCiQKIgoMc2VydmljZS5uYW1lEhIKEGNyZXdBSS10ZWxlbWV0cnkSlA0KEgoQY3Jld2FpLnRl
-      bGVtZXRyeRKQAgoQdT3O/hAArJM9iRoFokT78hIIvvn7nHRFv1UqDlRhc2sgRXhlY3V0aW9uMAE5
-      yEYEdjhE9hdBIEOaAjpE9hdKLgoIY3Jld19rZXkSIgogNDk0ZjM2NTcyMzdhZDhhMzAzNWIyZjFi
-      ZWVjZGM2NzdKMQoHY3Jld19pZBImCiRhYjAyZTJkMi04MWEwLTRkZDYtOGM3ZC00NWU5MTE0OGNk
-      OGFKLgoIdGFza19rZXkSIgogZjI1OTdjNzg2N2ZiZTMyNGRjNjVkYzA4ZGZkYmZjNmNKMQoHdGFz
-      a19pZBImCiRmN2FjZjJhMC01YzlhLTRmYzgtOWUxNS02YzBlOGMxM2VmYzB6AhgBhQEAAQAAEsYH
-      ChDoBvRB5d+W/gnhlrn0ro3sEgjsUml3twsejSoMQ3JldyBDcmVhdGVkMAE5QCnPAzpE9hdBSPLQ
-      AzpE9hdKGgoOY3Jld2FpX3ZlcnNpb24SCAoGMC42MC40ShoKDnB5dGhvbl92ZXJzaW9uEggKBjMu
+      CrsNCiQKIgoMc2VydmljZS5uYW1lEhIKEGNyZXdBSS10ZWxlbWV0cnkSkg0KEgoQY3Jld2FpLnRl
+      bGVtZXRyeRKQAgoQEtOCKCLiqKXEo6MvlxbOrBIIkFHVHkEYi7YqDlRhc2sgRXhlY3V0aW9uMAE5
+      GLvgAvvK9xdBGOK14zbL9xdKLgoIY3Jld19rZXkSIgogNDk0ZjM2NTcyMzdhZDhhMzAzNWIyZjFi
+      ZWVjZGM2NzdKMQoHY3Jld19pZBImCiRlYmIyMGExNS1kODI2LTRiOGUtYjBkMi1hMDQ3OTIxYzU2
+      ZWFKLgoIdGFza19rZXkSIgogZjI1OTdjNzg2N2ZiZTMyNGRjNjVkYzA4ZGZkYmZjNmNKMQoHdGFz
+      a19pZBImCiQ1Y2ZkYjRlYS0xYzYzLTQ5NmYtYjEzNS1iOWZiMmZhNjkxMjJ6AhgBhQEAAQAAEsQH
+      ChCy+1KDrKu5g4qMN3JBGXJIEghOgmDS/IjczioMQ3JldyBDcmVhdGVkMAE5AFID6TbL9xdBkPIO
+      6TbL9xdKGgoOY3Jld2FpX3ZlcnNpb24SCAoGMC42MS4wShoKDnB5dGhvbl92ZXJzaW9uEggKBjMu
       MTEuN0ouCghjcmV3X2tleRIiCiA3ZTY2MDg5ODk4NTlhNjdlZWM4OGVlZjdmY2U4NTIyNUoxCgdj
-      cmV3X2lkEiYKJGE5MjhkYjRlLTRjMWItNGEyMS1hMzUxLWViMDQ3Y2Y0NmYwN0ocCgxjcmV3X3By
+      cmV3X2lkEiYKJDg2ZjBiYTRiLTg4NDUtNDI1Ny1hZTUzLThjM2M4YzkyOWZhOUocCgxjcmV3X3By
       b2Nlc3MSDAoKc2VxdWVudGlhbEoRCgtjcmV3X21lbW9yeRICEABKGgoUY3Jld19udW1iZXJfb2Zf
-      dGFza3MSAhgBShsKFWNyZXdfbnVtYmVyX29mX2FnZW50cxICGAFK4QIKC2NyZXdfYWdlbnRzEtEC
-      Cs4CW3sia2V5IjogIjIyYWNkNjExZTQ0ZWY1ZmFjMDViNTMzZDc1ZTg4OTNiIiwgImlkIjogImMz
-      ODcwZWE0LTQ1ZjgtNDhlMC05ZGYxLTc4OGU0ZDEzMzQ5ZSIsICJyb2xlIjogIkRhdGEgU2NpZW50
+      dGFza3MSAhgBShsKFWNyZXdfbnVtYmVyX29mX2FnZW50cxICGAFK3wIKC2NyZXdfYWdlbnRzEs8C
+      CswCW3sia2V5IjogIjIyYWNkNjExZTQ0ZWY1ZmFjMDViNTMzZDc1ZTg4OTNiIiwgImlkIjogIjU4
+      OTE3YzZkLTIxYjEtNDZkMS04YzlhLThjYjY3YjkyNTlkYiIsICJyb2xlIjogIkRhdGEgU2NpZW50
       aXN0IiwgInZlcmJvc2U/IjogZmFsc2UsICJtYXhfaXRlciI6IDE1LCAibWF4X3JwbSI6IG51bGws
-      ICJmdW5jdGlvbl9jYWxsaW5nX2xsbSI6IG51bGwsICJsbG0iOiAiZ3B0LTRvIiwgImRlbGVnYXRp
-      b25fZW5hYmxlZD8iOiBmYWxzZSwgImFsbG93X2NvZGVfZXhlY3V0aW9uPyI6IGZhbHNlLCAibWF4
-      X3JldHJ5X2xpbWl0IjogMiwgInRvb2xzX25hbWVzIjogWyJnZXQgZ3JlZXRpbmdzIl19XUqSAgoK
-      Y3Jld190YXNrcxKDAgqAAlt7ImtleSI6ICJhMjc3YjM0YjJjMTQ2ZjBjNTZjNWUxMzU2ZThmOGE1
-      NyIsICJpZCI6ICI0N2I2NGRlYS1lM2FmLTRmNmEtYWExZC0zMTU0NzAwMmQxZGEiLCAiYXN5bmNf
-      ZXhlY3V0aW9uPyI6IGZhbHNlLCAiaHVtYW5faW5wdXQ/IjogZmFsc2UsICJhZ2VudF9yb2xlIjog
-      IkRhdGEgU2NpZW50aXN0IiwgImFnZW50X2tleSI6ICIyMmFjZDYxMWU0NGVmNWZhYzA1YjUzM2Q3
-      NWU4ODkzYiIsICJ0b29sc19uYW1lcyI6IFsiZ2V0IGdyZWV0aW5ncyJdfV16AhgBhQEAAQAAEo4C
-      ChDPvlJ+MbkTSXYraeenMGkPEgjh9zFlGLgmQioMVGFzayBDcmVhdGVkMAE5gFnhAzpE9hdBSAni
-      AzpE9hdKLgoIY3Jld19rZXkSIgogN2U2NjA4OTg5ODU5YTY3ZWVjODhlZWY3ZmNlODUyMjVKMQoH
-      Y3Jld19pZBImCiRhOTI4ZGI0ZS00YzFiLTRhMjEtYTM1MS1lYjA0N2NmNDZmMDdKLgoIdGFza19r
-      ZXkSIgogYTI3N2IzNGIyYzE0NmYwYzU2YzVlMTM1NmU4ZjhhNTdKMQoHdGFza19pZBImCiQ0N2I2
-      NGRlYS1lM2FmLTRmNmEtYWExZC0zMTU0NzAwMmQxZGF6AhgBhQEAAQAAEpABChDG3DErqYLQQbZD
-      UxDO/ISbEgjpBYYnMCGdUSoKVG9vbCBVc2FnZTABOZDV9zg6RPYXQeje+jg6RPYXShoKDmNyZXdh
-      aV92ZXJzaW9uEggKBjAuNjAuNEocCgl0b29sX25hbWUSDwoNR2V0IEdyZWV0aW5nc0oOCghhdHRl
-      bXB0cxICGAF6AhgBhQEAAQAA
+      ICJmdW5jdGlvbl9jYWxsaW5nX2xsbSI6ICIiLCAibGxtIjogImdwdC00byIsICJkZWxlZ2F0aW9u
+      X2VuYWJsZWQ/IjogZmFsc2UsICJhbGxvd19jb2RlX2V4ZWN1dGlvbj8iOiBmYWxzZSwgIm1heF9y
+      ZXRyeV9saW1pdCI6IDIsICJ0b29sc19uYW1lcyI6IFsiZ2V0IGdyZWV0aW5ncyJdfV1KkgIKCmNy
+      ZXdfdGFza3MSgwIKgAJbeyJrZXkiOiAiYTI3N2IzNGIyYzE0NmYwYzU2YzVlMTM1NmU4ZjhhNTci
+      LCAiaWQiOiAiNTZmZjU1ODgtMDk5MS00MzQzLTkzZDQtOWQzMTNjOThiYmE3IiwgImFzeW5jX2V4
+      ZWN1dGlvbj8iOiBmYWxzZSwgImh1bWFuX2lucHV0PyI6IGZhbHNlLCAiYWdlbnRfcm9sZSI6ICJE
+      YXRhIFNjaWVudGlzdCIsICJhZ2VudF9rZXkiOiAiMjJhY2Q2MTFlNDRlZjVmYWMwNWI1MzNkNzVl
+      ODg5M2IiLCAidG9vbHNfbmFtZXMiOiBbImdldCBncmVldGluZ3MiXX1degIYAYUBAAEAABKOAgoQ
+      K1PxNU+oRcidsenrwbvtGBII+x0Fyw5TOfQqDFRhc2sgQ3JlYXRlZDABObAhKek2y/cXQfC9Kek2
+      y/cXSi4KCGNyZXdfa2V5EiIKIDdlNjYwODk4OTg1OWE2N2VlYzg4ZWVmN2ZjZTg1MjI1SjEKB2Ny
+      ZXdfaWQSJgokODZmMGJhNGItODg0NS00MjU3LWFlNTMtOGMzYzhjOTI5ZmE5Si4KCHRhc2tfa2V5
+      EiIKIGEyNzdiMzRiMmMxNDZmMGM1NmM1ZTEzNTZlOGY4YTU3SjEKB3Rhc2tfaWQSJgokNTZmZjU1
+      ODgtMDk5MS00MzQzLTkzZDQtOWQzMTNjOThiYmE3egIYAYUBAAEAABKQAQoQaI8f0ggCW5LzVHv7
+      7cWX7hIIeYKNb9inb2AqClRvb2wgVXNhZ2UwATnY0DkaN8v3F0EIqz4aN8v3F0oaCg5jcmV3YWlf
+      dmVyc2lvbhIICgYwLjYxLjBKHAoJdG9vbF9uYW1lEg8KDUdldCBHcmVldGluZ3NKDgoIYXR0ZW1w
+      dHMSAhgBegIYAYUBAAEAAA==
     headers:
       Accept:
       - '*/*'
@@ -152,7 +150,7 @@ interactions:
       Connection:
       - keep-alive
       Content-Length:
-      - '1728'
+      - '1726'
       Content-Type:
       - application/x-protobuf
       User-Agent:
@@ -168,7 +166,7 @@ interactions:
       Content-Type:
       - application/x-protobuf
       Date:
-      - Wed, 18 Sep 2024 06:55:27 GMT
+      - Mon, 23 Sep 2024 06:20:21 GMT
     status:
       code: 200
       message: OK
@@ -191,9 +189,8 @@ interactions:
       MUST return the actual complete content as the final answer, not a summary.\n\nBegin!
       This is VERY important to you, use the tools available and give your best Final
       Answer, your job depends on it!\n\nThought:"}, {"role": "user", "content": "Thought:
-      I should first use the Get Greetings tool to get a greeting.\n\nAction: Get
-      Greetings\nAction Input: {}\nObservation: Howdy!"}], "model": "gpt-4o", "stop":
-      ["\nObservation:"]}'
+      First, I will use the Get Greetings tool to get a random greeting.\nAction:
+      Get Greetings\nAction Input: {}\nObservation: Howdy!"}], "model": "gpt-4o"}'
     headers:
       accept:
       - application/json
@@ -202,16 +199,16 @@ interactions:
       connection:
       - keep-alive
       content-length:
-      - '1606'
+      - '1582'
       content-type:
       - application/json
       cookie:
-      - __cf_bm=.8.5x0rqghNdtUCxfmwblfhuXiKyPm_cRq.NIa0heL0-1726642369-1.0.1.1-VbsAGqjOt45ZD50K2QW2oZrByLLIh6w8K4nAkLthTbXgU5qTgdf0mhvFId8Q2F3DcHUw9E72lVIZEN.YVlYINQ;
-        _cfuvid=o5s1Ux898x0eFNtzUCnG996iqyX3LgXDXq99C5oqnVE-1726642369248-0.0.1.1-604800000
+      - __cf_bm=MSMbC3L9m33fbO5Mdj70NJMu6kJCjhuwRcYuWJdJkYQ-1727071769-1.0.1.1-Dok5J431gUNvLRyLNrUo0A.FXXIuZUUooIMFSj74XUDgQJt0mlhf6QEEo6s9wXLhByXrdKr6cxYGBEkQoDslXg;
+        _cfuvid=5cK2hfLqTXw1WjB81uT.sGmmA67JIxSKSQeEHQ3zOQw-1727071769966-0.0.1.1-604800000
       host:
       - api.openai.com
       user-agent:
-      - OpenAI/Python 1.46.0
+      - OpenAI/Python 1.47.0
       x-stainless-arch:
       - arm64
       x-stainless-async:
@@ -221,7 +218,7 @@ interactions:
       x-stainless-os:
       - MacOS
       x-stainless-package-version:
-      - 1.46.0
+      - 1.47.0
       x-stainless-raw-response:
       - 'true'
       x-stainless-runtime:
@@ -231,35 +228,54 @@ interactions:
     method: POST
     uri: https://api.openai.com/v1/chat/completions
   response:
-    content: "{\n  \"id\": \"chatcmpl-A8isuL5rC0H2Pze4fa5Nq2OViF8Pq\",\n  \"object\":
-      \"chat.completion\",\n  \"created\": 1726642524,\n  \"model\": \"gpt-4o-2024-05-13\",\n
+    content: "{\n  \"id\": \"chatcmpl-AAWiiJRBrG5eg3dcJldWn6IvxnWvu\",\n  \"object\":
+      \"chat.completion\",\n  \"created\": 1727072420,\n  \"model\": \"gpt-4o-2024-05-13\",\n
       \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
-      \"assistant\",\n        \"content\": \"Thought: I have obtained the greeting.
-      Now I will write a small paragraph on AI and review it to ensure it is amazing.\\n\\nArtificial
-      Intelligence (AI) is revolutionizing the way we interact with the world. From
-      autonomous vehicles to personalized recommendations, AI systems analyze vast
-      amounts of data to identify patterns and make decisions with impressive accuracy.
-      This transformative technology is enhancing productivity, driving innovation,
-      and opening new possibilities in various fields such as healthcare, finance,
-      and entertainment. As AI continues to evolve, it promises to tackle complex
-      challenges and improve quality of life, making it one of the most exciting advancements
-      of our time.\\n\\nThought: I now know the final answer.\\n\\nFinal Answer: Artificial
-      Intelligence (AI) is revolutionizing the way we interact with the world. From
-      autonomous vehicles to personalized recommendations, AI systems analyze vast
-      amounts of data to identify patterns and make decisions with impressive accuracy.
-      This transformative technology is enhancing productivity, driving innovation,
-      and opening new possibilities in various fields such as healthcare, finance,
-      and entertainment. As AI continues to evolve, it promises to tackle complex
-      challenges and improve quality of life, making it one of the most exciting advancements
-      of our time.\",\n        \"refusal\": null\n      },\n      \"logprobs\": null,\n
-      \     \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\":
-      317,\n    \"completion_tokens\": 230,\n    \"total_tokens\": 547,\n    \"completion_tokens_details\":
-      {\n      \"reasoning_tokens\": 0\n    }\n  },\n  \"system_fingerprint\": \"fp_a5d11b2ef2\"\n}\n"
+      \"assistant\",\n        \"content\": \"Thought: With the greeting received,
+      I will now proceed to write a small paragraph on AI and review it until it is
+      amazing.\\n\\nThought: Here is the initial paragraph on AI:\\n\\n\\\"Artificial
+      Intelligence (AI) is revolutionizing the way we interact with technology and
+      the world around us. From autonomous vehicles to personalized recommendations,
+      AI algorithms are becoming more integrated into our daily lives, making tasks
+      efficient and predictions more accurate. As AI continues to advance, it holds
+      the potential to solve complex problems, create new industries, and enhance
+      human capabilities in unprecedented ways.\\\"\\n\\nThought: The paragraph needs
+      to be reviewed and enhanced to meet the criteria of being amazing.\\n\\nReview
+      1: \\\"Artificial Intelligence (AI) is revolutionizing the way we interact with
+      technology and the world around us. From autonomous vehicles to personalized
+      recommendations, AI algorithms are becoming more integrated into our daily lives,
+      making tasks efficient and predictions more accurate. As AI continues to advance,
+      it holds the potential to solve complex problems, create new industries, and
+      enhance human capabilities in unprecedented ways.\\\"\\n\\nEnhancement 1: \\\"Artificial
+      Intelligence (AI) is not just a technological breakthrough; it is a paradigm
+      shift that is transforming our interaction with the world. From self-driving
+      cars to tailored recommendations, AI's sophisticated algorithms are seamlessly
+      integrating into our daily activities, enhancing both efficiency and accuracy.
+      Beyond convenience, AI is poised to tackle intricate challenges, foster innovation
+      across industries, and augment human capacities beyond our current imagination.\\\"\\n\\nFinal
+      Review and Touch:\\n\\n\\\"Artificial Intelligence (AI) is not just a technological
+      breakthrough; it represents a paradigm shift in the way we engage with technology
+      and the world. From self-driving cars to personalized recommendations, sophisticated
+      AI algorithms are seamlessly integrating into our daily activities, enhancing
+      both efficiency and precision. Far beyond convenience, AI holds the promise
+      of addressing complex global challenges, driving innovation across various sectors,
+      and amplifying human potential in ways previously unimaginable.\\\"\\n\\nThought:
+      I now know the final answer.\\nFinal Answer: \\\"Artificial Intelligence (AI)
+      is not just a technological breakthrough; it represents a paradigm shift in
+      the way we engage with technology and the world. From self-driving cars to personalized
+      recommendations, sophisticated AI algorithms are seamlessly integrating into
+      our daily activities, enhancing both efficiency and precision. Far beyond convenience,
+      AI holds the promise of addressing complex global challenges, driving innovation
+      across various sectors, and amplifying human potential in ways previously unimaginable.\\\"\",\n
+      \       \"refusal\": null\n      },\n      \"logprobs\": null,\n      \"finish_reason\":
+      \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 319,\n    \"completion_tokens\":
+      474,\n    \"total_tokens\": 793,\n    \"completion_tokens_details\": {\n      \"reasoning_tokens\":
+      0\n    }\n  },\n  \"system_fingerprint\": \"fp_e375328146\"\n}\n"
     headers:
       CF-Cache-Status:
       - DYNAMIC
       CF-RAY:
-      - 8c4f6e20ff24a67a-MIA
+      - 8c786da1e9c7a540-MIA
       Connection:
       - keep-alive
       Content-Encoding:
@@ -267,7 +283,7 @@ interactions:
       Content-Type:
       - application/json
       Date:
-      - Wed, 18 Sep 2024 06:55:28 GMT
+      - Mon, 23 Sep 2024 06:20:25 GMT
       Server:
       - cloudflare
       Transfer-Encoding:
@@ -276,12 +292,10 @@ interactions:
       - nosniff
       access-control-expose-headers:
       - X-Request-ID
-      alt-svc:
-      - h3=":443"; ma=86400
       openai-organization:
       - crewai-iuxna1
       openai-processing-ms:
-      - '3615'
+      - '5388'
       openai-version:
       - '2020-10-01'
       strict-transport-security:
@@ -293,13 +307,13 @@ interactions:
       x-ratelimit-remaining-requests:
       - '9999'
       x-ratelimit-remaining-tokens:
-      - '29999627'
+      - '29999625'
       x-ratelimit-reset-requests:
       - 6ms
       x-ratelimit-reset-tokens:
       - 0s
       x-request-id:
-      - req_f36ea454550b2d0dad6dc4c86bd1c2ea
+      - req_21c885225c9e1647f4dce74da0994572
     http_version: HTTP/1.1
     status_code: 200
 version: 1

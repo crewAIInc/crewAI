@@ -53,7 +53,8 @@ class Telemetry:
             self.resource = Resource(
                 attributes={SERVICE_NAME: "crewAI-telemetry"},
             )
-            self.provider = TracerProvider(resource=self.resource)
+            with suppress_warnings():
+                self.provider = TracerProvider(resource=self.resource)
 
             processor = BatchSpanProcessor(
                 OTLPSpanExporter(
@@ -116,8 +117,10 @@ class Telemetry:
                                     "max_iter": agent.max_iter,
                                     "max_rpm": agent.max_rpm,
                                     "i18n": agent.i18n.prompt_file,
-                                    "function_calling_llm": agent.function_calling_llm,
-                                    "llm": agent.llm,
+                                    "function_calling_llm": agent.function_calling_llm.model
+                                    if agent.function_calling_llm
+                                    else "",
+                                    "llm": agent.llm.model,
                                     "delegation_enabled?": agent.allow_delegation,
                                     "allow_code_execution?": agent.allow_code_execution,
                                     "max_retry_limit": agent.max_retry_limit,
@@ -181,8 +184,10 @@ class Telemetry:
                                     "verbose?": agent.verbose,
                                     "max_iter": agent.max_iter,
                                     "max_rpm": agent.max_rpm,
-                                    "function_calling_llm": agent.function_calling_llm,
-                                    "llm": agent.llm,
+                                    "function_calling_llm": agent.function_calling_llm.model
+                                    if agent.function_calling_llm
+                                    else "",
+                                    "llm": agent.llm.model,
                                     "delegation_enabled?": agent.allow_delegation,
                                     "allow_code_execution?": agent.allow_code_execution,
                                     "max_retry_limit": agent.max_retry_limit,
@@ -487,7 +492,7 @@ class Telemetry:
                                 "max_iter": agent.max_iter,
                                 "max_rpm": agent.max_rpm,
                                 "i18n": agent.i18n.prompt_file,
-                                "llm": agent.llm,
+                                "llm": agent.llm.model,
                                 "delegation_enabled?": agent.allow_delegation,
                                 "tools_names": [
                                     tool.name.casefold() for tool in agent.tools or []

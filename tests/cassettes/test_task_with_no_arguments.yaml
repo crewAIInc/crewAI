@@ -19,7 +19,7 @@ interactions:
       criteria for your final answer: The total number of sales as an integer\nyou
       MUST return the actual complete content as the final answer, not a summary.\n\nBegin!
       This is VERY important to you, use the tools available and give your best Final
-      Answer, your job depends on it!\n\nThought:"}], "model": "gpt-4o", "stop": ["\nObservation:"]}'
+      Answer, your job depends on it!\n\nThought:"}], "model": "gpt-4o"}'
     headers:
       accept:
       - application/json
@@ -28,16 +28,16 @@ interactions:
       connection:
       - keep-alive
       content-length:
-      - '1596'
+      - '1568'
       content-type:
       - application/json
       cookie:
-      - __cf_bm=.8.5x0rqghNdtUCxfmwblfhuXiKyPm_cRq.NIa0heL0-1726642369-1.0.1.1-VbsAGqjOt45ZD50K2QW2oZrByLLIh6w8K4nAkLthTbXgU5qTgdf0mhvFId8Q2F3DcHUw9E72lVIZEN.YVlYINQ;
-        _cfuvid=o5s1Ux898x0eFNtzUCnG996iqyX3LgXDXq99C5oqnVE-1726642369248-0.0.1.1-604800000
+      - __cf_bm=hYfEMfBWpIoRPjx9ZBZg6DVeMOMr1IZt9ioup8yWZs0-1727072673-1.0.1.1-Ro7GCLuWS0K5ob0mSTYSmovONKNyxsK6oSA5io_Vwqhe6P0G7Ow4CuZUaWAaCdFGQUd7XZiFH0mI_sQC3uqe0g;
+        _cfuvid=5cK2hfLqTXw1WjB81uT.sGmmA67JIxSKSQeEHQ3zOQw-1727071769966-0.0.1.1-604800000
       host:
       - api.openai.com
       user-agent:
-      - OpenAI/Python 1.46.0
+      - OpenAI/Python 1.47.0
       x-stainless-arch:
       - arm64
       x-stainless-async:
@@ -47,7 +47,7 @@ interactions:
       x-stainless-os:
       - MacOS
       x-stainless-package-version:
-      - 1.46.0
+      - 1.47.0
       x-stainless-raw-response:
       - 'true'
       x-stainless-runtime:
@@ -57,20 +57,20 @@ interactions:
     method: POST
     uri: https://api.openai.com/v1/chat/completions
   response:
-    content: "{\n  \"id\": \"chatcmpl-A8iwoTv36iLZqT6KS07JirqDNYkuA\",\n  \"object\":
-      \"chat.completion\",\n  \"created\": 1726642766,\n  \"model\": \"gpt-4o-2024-05-13\",\n
+    content: "{\n  \"id\": \"chatcmpl-AAWplgWFF3VJAzreifmSLLQE7tIqy\",\n  \"object\":
+      \"chat.completion\",\n  \"created\": 1727072857,\n  \"model\": \"gpt-4o-2024-05-13\",\n
       \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
-      \"assistant\",\n        \"content\": \"Thought: To determine the total number
-      of sales, I need to retrieve the relevant data using the available tool.\\n\\nAction:
-      return_data\\nAction Input: {}\",\n        \"refusal\": null\n      },\n      \"logprobs\":
-      null,\n      \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\":
-      316,\n    \"completion_tokens\": 31,\n    \"total_tokens\": 347,\n    \"completion_tokens_details\":
-      {\n      \"reasoning_tokens\": 0\n    }\n  },\n  \"system_fingerprint\": \"fp_a5d11b2ef2\"\n}\n"
+      \"assistant\",\n        \"content\": \"Thought: I need to retrieve the sales-related
+      data in order to determine the total number of sales.\\n\\nAction: return_data\\nAction
+      Input: {}\",\n        \"refusal\": null\n      },\n      \"logprobs\": null,\n
+      \     \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\":
+      316,\n    \"completion_tokens\": 29,\n    \"total_tokens\": 345,\n    \"completion_tokens_details\":
+      {\n      \"reasoning_tokens\": 0\n    }\n  },\n  \"system_fingerprint\": \"fp_e375328146\"\n}\n"
     headers:
       CF-Cache-Status:
       - DYNAMIC
       CF-RAY:
-      - 8c4f74090cc7a67a-MIA
+      - 8c78784dddeca4ee-MIA
       Connection:
       - keep-alive
       Content-Encoding:
@@ -78,7 +78,7 @@ interactions:
       Content-Type:
       - application/json
       Date:
-      - Wed, 18 Sep 2024 06:59:26 GMT
+      - Mon, 23 Sep 2024 06:27:38 GMT
       Server:
       - cloudflare
       Transfer-Encoding:
@@ -87,12 +87,10 @@ interactions:
       - nosniff
       access-control-expose-headers:
       - X-Request-ID
-      alt-svc:
-      - h3=":443"; ma=86400
       openai-organization:
       - crewai-iuxna1
       openai-processing-ms:
-      - '470'
+      - '421'
       openai-version:
       - '2020-10-01'
       strict-transport-security:
@@ -110,7 +108,7 @@ interactions:
       x-ratelimit-reset-tokens:
       - 0s
       x-request-id:
-      - req_a6d9bb5c6c5fae882a7207ad3efda1e2
+      - req_3adef297ba23a952d3bf9407259a4205
     http_version: HTTP/1.1
     status_code: 200
 - request:
@@ -134,10 +132,9 @@ interactions:
       MUST return the actual complete content as the final answer, not a summary.\n\nBegin!
       This is VERY important to you, use the tools available and give your best Final
       Answer, your job depends on it!\n\nThought:"}, {"role": "user", "content": "Thought:
-      To determine the total number of sales, I need to retrieve the relevant data
-      using the available tool.\n\nAction: return_data\nAction Input: {}\nObservation:
-      January: 5, February: 10, March: 15, April: 20, May: 25"}], "model": "gpt-4o",
-      "stop": ["\nObservation:"]}'
+      I need to retrieve the sales-related data in order to determine the total number
+      of sales.\n\nAction: return_data\nAction Input: {}\nObservation: January: 5,
+      February: 10, March: 15, April: 20, May: 25"}], "model": "gpt-4o"}'
     headers:
       accept:
       - application/json
@@ -146,16 +143,16 @@ interactions:
       connection:
       - keep-alive
       content-length:
-      - '1851'
+      - '1811'
       content-type:
       - application/json
       cookie:
-      - __cf_bm=.8.5x0rqghNdtUCxfmwblfhuXiKyPm_cRq.NIa0heL0-1726642369-1.0.1.1-VbsAGqjOt45ZD50K2QW2oZrByLLIh6w8K4nAkLthTbXgU5qTgdf0mhvFId8Q2F3DcHUw9E72lVIZEN.YVlYINQ;
-        _cfuvid=o5s1Ux898x0eFNtzUCnG996iqyX3LgXDXq99C5oqnVE-1726642369248-0.0.1.1-604800000
+      - __cf_bm=hYfEMfBWpIoRPjx9ZBZg6DVeMOMr1IZt9ioup8yWZs0-1727072673-1.0.1.1-Ro7GCLuWS0K5ob0mSTYSmovONKNyxsK6oSA5io_Vwqhe6P0G7Ow4CuZUaWAaCdFGQUd7XZiFH0mI_sQC3uqe0g;
+        _cfuvid=5cK2hfLqTXw1WjB81uT.sGmmA67JIxSKSQeEHQ3zOQw-1727071769966-0.0.1.1-604800000
       host:
       - api.openai.com
       user-agent:
-      - OpenAI/Python 1.46.0
+      - OpenAI/Python 1.47.0
       x-stainless-arch:
       - arm64
       x-stainless-async:
@@ -165,7 +162,7 @@ interactions:
       x-stainless-os:
       - MacOS
       x-stainless-package-version:
-      - 1.46.0
+      - 1.47.0
       x-stainless-raw-response:
       - 'true'
       x-stainless-runtime:
@@ -175,20 +172,20 @@ interactions:
     method: POST
     uri: https://api.openai.com/v1/chat/completions
   response:
-    content: "{\n  \"id\": \"chatcmpl-A8iwpK4Ay0WuR7bCQID3fjuoSkHyp\",\n  \"object\":
-      \"chat.completion\",\n  \"created\": 1726642767,\n  \"model\": \"gpt-4o-2024-05-13\",\n
+    content: "{\n  \"id\": \"chatcmpl-AAWpmcGTU5NSCVQZyFp1rGvX61I38\",\n  \"object\":
+      \"chat.completion\",\n  \"created\": 1727072858,\n  \"model\": \"gpt-4o-2024-05-13\",\n
       \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
       \"assistant\",\n        \"content\": \"Thought: I now know the final answer.\\n\\nFinal
       Answer: The total number of sales is 75.\",\n        \"refusal\": null\n      },\n
       \     \"logprobs\": null,\n      \"finish_reason\": \"stop\"\n    }\n  ],\n
-      \ \"usage\": {\n    \"prompt_tokens\": 377,\n    \"completion_tokens\": 21,\n
-      \   \"total_tokens\": 398,\n    \"completion_tokens_details\": {\n      \"reasoning_tokens\":
-      0\n    }\n  },\n  \"system_fingerprint\": \"fp_a5d11b2ef2\"\n}\n"
+      \ \"usage\": {\n    \"prompt_tokens\": 375,\n    \"completion_tokens\": 21,\n
+      \   \"total_tokens\": 396,\n    \"completion_tokens_details\": {\n      \"reasoning_tokens\":
+      0\n    }\n  },\n  \"system_fingerprint\": \"fp_e375328146\"\n}\n"
     headers:
       CF-Cache-Status:
       - DYNAMIC
       CF-RAY:
-      - 8c4f740dff15a67a-MIA
+      - 8c787854694ca4ee-MIA
       Connection:
       - keep-alive
       Content-Encoding:
@@ -196,7 +193,7 @@ interactions:
       Content-Type:
       - application/json
       Date:
-      - Wed, 18 Sep 2024 06:59:27 GMT
+      - Mon, 23 Sep 2024 06:27:39 GMT
       Server:
       - cloudflare
       Transfer-Encoding:
@@ -205,12 +202,10 @@ interactions:
       - nosniff
       access-control-expose-headers:
       - X-Request-ID
-      alt-svc:
-      - h3=":443"; ma=86400
       openai-organization:
       - crewai-iuxna1
       openai-processing-ms:
-      - '334'
+      - '375'
       openai-version:
       - '2020-10-01'
       strict-transport-security:
@@ -222,13 +217,13 @@ interactions:
       x-ratelimit-remaining-requests:
       - '9999'
       x-ratelimit-remaining-tokens:
-      - '29999566'
+      - '29999568'
       x-ratelimit-reset-requests:
       - 6ms
       x-ratelimit-reset-tokens:
       - 0s
       x-request-id:
-      - req_dab50fc5c15eaafdb1a9e1edc821d98a
+      - req_427b17b195ca8d94e868f62495cab227
     http_version: HTTP/1.1
     status_code: 200
 version: 1

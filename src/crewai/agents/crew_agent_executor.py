@@ -13,7 +13,6 @@ from crewai.utilities.exceptions.context_window_exceeding_exception import (
 )
 from crewai.utilities.logger import Logger
 from crewai.utilities.training_handler import CrewTrainingHandler
-from crewai.llm import LLM
 from crewai.agents.parser import (
     AgentAction,
     AgentFinish,
@@ -104,11 +103,10 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
         try:
             while not isinstance(formatted_answer, AgentFinish):
                 if not self.request_within_rpm_limit or self.request_within_rpm_limit():
-                    answer = LLM(
-                        self.llm,
-                        stop=self.stop if self.use_stop_words else None,
+                    answer = self.llm.call(
+                        self.messages,
                         callbacks=self.callbacks,
-                    ).call(self.messages)
+                    )
 
                     if not self.use_stop_words:
                         try:
@@ -127,6 +125,7 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
                         action_result = self._use_tool(formatted_answer)
                         formatted_answer.text += f"\nObservation: {action_result}"
                         formatted_answer.result = action_result
+                        print("formatted_answer", formatted_answer)
                         self._show_logs(formatted_answer)
 
                         if self.step_callback:
@@ -182,7 +181,7 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
             if isinstance(formatted_answer, AgentAction):
                 thought = re.sub(r"\n+", "\n", formatted_answer.thought)
                 formatted_json = json.dumps(
-                    json.loads(formatted_answer.tool_input),
+                    formatted_answer.tool_input,
                     indent=2,
                     ensure_ascii=False,
                 )
@@ -241,7 +240,6 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
         return tool_result
 
     def _summarize_messages(self) -> None:
-        llm = LLM(self.llm)
         messages_groups = []
 
         for message in self.messages:
@@ -251,7 +249,7 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
 
         summarized_contents = []
         for group in messages_groups:
-            summary = llm.call(
+            summary = self.llm.call(
                 [
                     self._format_msg(
                         self._i18n.slices("summarizer_system_message"), role="system"
@@ -259,7 +257,8 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
                     self._format_msg(
                         self._i18n.errors("sumamrize_instruction").format(group=group),
                     ),
-                ]
+                ],
+                callbacks=self.callbacks,
             )
             summarized_contents.append(summary)
 

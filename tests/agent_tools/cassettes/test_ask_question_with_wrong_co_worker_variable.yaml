@@ -12,7 +12,7 @@ interactions:
       shared.\nyou MUST return the actual complete content as the final answer, not
       a summary.\n\nThis is the context you''re working with:\nI heard you LOVE them\n\nBegin!
       This is VERY important to you, use the tools available and give your best Final
-      Answer, your job depends on it!\n\nThought:"}], "model": "gpt-4o", "stop": ["\nObservation:"]}'
+      Answer, your job depends on it!\n\nThought:"}], "model": "gpt-4o"}'
     headers:
       accept:
       - application/json
@@ -21,16 +21,16 @@ interactions:
       connection:
       - keep-alive
       content-length:
-      - '1049'
+      - '1021'
       content-type:
       - application/json
       cookie:
-      - __cf_bm=.8.5x0rqghNdtUCxfmwblfhuXiKyPm_cRq.NIa0heL0-1726642369-1.0.1.1-VbsAGqjOt45ZD50K2QW2oZrByLLIh6w8K4nAkLthTbXgU5qTgdf0mhvFId8Q2F3DcHUw9E72lVIZEN.YVlYINQ;
-        _cfuvid=o5s1Ux898x0eFNtzUCnG996iqyX3LgXDXq99C5oqnVE-1726642369248-0.0.1.1-604800000
+      - __cf_bm=MSMbC3L9m33fbO5Mdj70NJMu6kJCjhuwRcYuWJdJkYQ-1727071769-1.0.1.1-Dok5J431gUNvLRyLNrUo0A.FXXIuZUUooIMFSj74XUDgQJt0mlhf6QEEo6s9wXLhByXrdKr6cxYGBEkQoDslXg;
+        _cfuvid=5cK2hfLqTXw1WjB81uT.sGmmA67JIxSKSQeEHQ3zOQw-1727071769966-0.0.1.1-604800000
       host:
       - api.openai.com
       user-agent:
-      - OpenAI/Python 1.46.0
+      - OpenAI/Python 1.47.0
       x-stainless-arch:
       - arm64
       x-stainless-async:
@@ -40,7 +40,7 @@ interactions:
       x-stainless-os:
       - MacOS
       x-stainless-package-version:
-      - 1.46.0
+      - 1.47.0
       x-stainless-raw-response:
       - 'true'
       x-stainless-runtime:
@@ -50,28 +50,29 @@ interactions:
     method: POST
     uri: https://api.openai.com/v1/chat/completions
   response:
-    content: "{\n  \"id\": \"chatcmpl-A8itJwg2Rf7SP6eMx3exZlflDAqWo\",\n  \"object\":
-      \"chat.completion\",\n  \"created\": 1726642549,\n  \"model\": \"gpt-4o-2024-05-13\",\n
+    content: "{\n  \"id\": \"chatcmpl-AAWjpUYrvj7ClMTGMDbzjPaXp6riF\",\n  \"object\":
+      \"chat.completion\",\n  \"created\": 1727072489,\n  \"model\": \"gpt-4o-2024-05-13\",\n
       \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
       \"assistant\",\n        \"content\": \"Thought: I now can give a great answer\\nFinal
-      Answer: As an expert researcher specialized in technology, I have a profound
-      appreciation for AI and AI agents. They represent a pinnacle of human innovation
-      and have the potential to greatly enhance various aspects of our lives. AI agents
-      can assist in automating mundane tasks, providing insights through data analysis,
-      and even offering companionship to those in need. However, it's also essential
-      to approach AI with a balanced perspective, acknowledging both its strengths
-      and the ethical considerations it raises. In short, I don't hate AI agents;
-      I recognize their immense potential and value while being mindful of the responsibilities
-      that come with their development and deployment.\",\n        \"refusal\": null\n
-      \     },\n      \"logprobs\": null,\n      \"finish_reason\": \"stop\"\n    }\n
-      \ ],\n  \"usage\": {\n    \"prompt_tokens\": 199,\n    \"completion_tokens\":
-      131,\n    \"total_tokens\": 330,\n    \"completion_tokens_details\": {\n      \"reasoning_tokens\":
-      0\n    }\n  },\n  \"system_fingerprint\": \"fp_a5d11b2ef2\"\n}\n"
+      Answer: As an expert researcher specialized in technology and AI, I do not harbor
+      feelings of hate towards AI agents. In fact, the notion of hate or love for
+      a technology is somewhat misplaced. AI agents are tools created to solve specific
+      problems and enhance our capabilities. They can transform industries, improve
+      efficiencies, and even save lives in fields such as healthcare. My enthusiasm
+      and interest in AI agents come from their potential to innovate and drive progress.
+      While it is essential to be mindful of ethical considerations and responsible
+      use, it is equally important to remain objective. My goal as a researcher is
+      to contribute to balanced and insightful analysis, exploring both the benefits
+      and challenges of AI, and not to personalize or emotionally charge the discussion
+      about technological tools.\",\n        \"refusal\": null\n      },\n      \"logprobs\":
+      null,\n      \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\":
+      199,\n    \"completion_tokens\": 157,\n    \"total_tokens\": 356,\n    \"completion_tokens_details\":
+      {\n      \"reasoning_tokens\": 0\n    }\n  },\n  \"system_fingerprint\": \"fp_e375328146\"\n}\n"
     headers:
       CF-Cache-Status:
       - DYNAMIC
       CF-RAY:
-      - 8c4f6ebc9a84a67a-MIA
+      - 8c786f517df3a4ee-MIA
       Connection:
       - keep-alive
       Content-Encoding:
@@ -79,7 +80,7 @@ interactions:
       Content-Type:
       - application/json
       Date:
-      - Wed, 18 Sep 2024 06:55:51 GMT
+      - Mon, 23 Sep 2024 06:21:31 GMT
       Server:
       - cloudflare
       Transfer-Encoding:
@@ -88,12 +89,10 @@ interactions:
       - nosniff
       access-control-expose-headers:
       - X-Request-ID
-      alt-svc:
-      - h3=":443"; ma=86400
       openai-organization:
       - crewai-iuxna1
       openai-processing-ms:
-      - '2379'
+      - '1901'
       openai-version:
       - '2020-10-01'
       strict-transport-security:
@@ -111,7 +110,7 @@ interactions:
       x-ratelimit-reset-tokens:
       - 0s
       x-request-id:
-      - req_15a5949e2566bb034b07c4cdad9cd404
+      - req_81054bfacae2244f4fdb8ea8dff9060c
     http_version: HTTP/1.1
     status_code: 200
 version: 1
