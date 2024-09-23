@@ -175,9 +175,8 @@ class StateExampleFlow(Flow[ExampleState]):
 async def main():
     flow = StateExampleFlow()
     final_output = await flow.kickoff()
-    print("---- Final Output ----")
-    print(final_output)
-    print("---- Final State ----")
+    print(f"Final Output: {final_output}")
+    print("Final State:")
     print(flow.state)
 
 asyncio.run(main())
@@ -188,9 +187,8 @@ In this example, the state is updated by both `first_method` and `second_method`
 The output of the Flow will be:
 
 ```
----- Final Output ----
-Hello from first_method - updated by second_method
----- Final State ----
+Final Output: Hello from first_method - updated by second_method
+Final State:
 counter=2 message='Hello from first_method - updated by second_method'
 ```
 
@@ -491,37 +489,25 @@ The `main.py` file is where you create your flow and connect the crews together.
 
 Here's an example of how you can connect the `poem_crew` in the `main.py` file:
 
-```python:src/crewai/cli/templates/flow/main.py
-startLine: 1
-endLine: 54
-```
-
-In this example, the `PoemFlow` class defines a flow that generates a sentence count, uses the `PoemCrew` to generate a poem, and then saves the poem to a file. The flow is kicked off by calling the `kickoff()` method.
-
-### Customizing Your Flow
-
-You can customize your flow by adding more crews and defining additional methods in the `main.py` file. Use the `@start` decorator to mark the starting methods of your flow and the `@listen` decorator to define methods that should be triggered by the output of other methods.
-
-For example, you can add another crew and connect it to the existing flow:
-
 ```python
+#!/usr/bin/env python
 import asyncio
 from random import randint
+
 from pydantic import BaseModel
 from crewai.flow.flow import Flow, listen, start
 from .crews.poem_crew.poem_crew import PoemCrew
-from .crews.another_crew.another_crew import AnotherCrew
 
-class ExampleState(BaseModel):
+class PoemState(BaseModel):
     sentence_count: int = 1
     poem: str = ""
-    analysis: str = ""
 
-class ExampleFlow(Flow[ExampleState]):
+class PoemFlow(Flow[PoemState]):
 
     @start()
     def generate_sentence_count(self):
         print("Generating sentence count")
+        # Generate a number between 1 and 5
         self.state.sentence_count = randint(1, 5)
 
     @listen(generate_sentence_count)
@@ -529,31 +515,31 @@ class ExampleFlow(Flow[ExampleState]):
         print("Generating poem")
         poem_crew = PoemCrew().crew()
         result = poem_crew.kickoff(inputs={"sentence_count": self.state.sentence_count})
+
+        print("Poem generated", result.raw)
         self.state.poem = result.raw
 
     @listen(generate_poem)
-    def analyze_poem(self):
-        print("Analyzing poem")
-        analysis_crew = AnotherCrew().crew()
-        result = analysis_crew.kickoff(inputs={"poem": self.state.poem})
-        self.state.analysis = result.raw
+    def save_poem(self):
+        print("Saving poem")
+        with open("poem.txt", "w") as f:
+            f.write(self.state.poem)
 
-    @listen(analyze_poem)
-    def save_results(self):
-        print("Saving results")
-        with open("results.txt", "w") as f:
-            f.write(f"Poem: {self.state.poem}\nAnalysis: {self.state.analysis}")
+async def run():
+    """
+    Run the flow.
+    """
+    poem_flow = PoemFlow()
+    await poem_flow.kickoff()
 
-async def main():
-    flow = ExampleFlow()
-    await flow.kickoff()
+def main():
+    asyncio.run(run())
 
-asyncio.run(main())
+if __name__ == "__main__":
+    main()
 ```
 
-In this example, the `ExampleFlow` class defines a flow that generates a sentence count, uses the `PoemCrew` to generate a poem, uses another crew (`AnotherCrew`) to analyze the poem, and then saves the results to a file.
-
-By following this structure, you can easily build complex flows that connect multiple crews and manage the flow of execution in your AI applications.
+In this example, the `PoemFlow` class defines a flow that generates a sentence count, uses the `PoemCrew` to generate a poem, and then saves the poem to a file. The flow is kicked off by calling the `kickoff()` method.
 
 ## Next Steps
 
