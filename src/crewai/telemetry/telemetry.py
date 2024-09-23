@@ -53,7 +53,8 @@ class Telemetry:
             self.resource = Resource(
                 attributes={SERVICE_NAME: "crewAI-telemetry"},
             )
-            self.provider = TracerProvider(resource=self.resource)
+            with suppress_warnings():
+                self.provider = TracerProvider(resource=self.resource)
 
             processor = BatchSpanProcessor(
                 OTLPSpanExporter(
