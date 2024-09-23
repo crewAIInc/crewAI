@@ -17,13 +17,13 @@ class I18N(BaseModel):
         """Load prompts from a JSON file."""
         try:
             if self.prompt_file:
-                with open(self.prompt_file, "r") as f:
+                with open(self.prompt_file, "r", encoding="utf-8") as f:
                     self._prompts = json.load(f)
             else:
                 dir_path = os.path.dirname(os.path.realpath(__file__))
                 prompts_path = os.path.join(dir_path, "../translations/en.json")
 
-                with open(prompts_path, "r") as f:
+                with open(prompts_path, "r", encoding="utf-8") as f:
                     self._prompts = json.load(f)
         except FileNotFoundError:
             raise Exception(f"Prompt file '{self.prompt_file}' not found.")

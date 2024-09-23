@@ -22,6 +22,7 @@ from crewai.agent import Agent
 from crewai.agents.agent_builder.base_agent import BaseAgent
 from crewai.agents.cache import CacheHandler
 from crewai.crews.crew_output import CrewOutput
+from crewai.llm import LLM
 from crewai.memory.entity.entity_memory import EntityMemory
 from crewai.memory.long_term.long_term_memory import LongTermMemory
 from crewai.memory.short_term.short_term_memory import ShortTermMemory
@@ -116,6 +117,18 @@ class Crew(BaseModel):
         default=None,
         description="The memory provider to be used for the crew.",
     )
+    short_term_memory: Optional[InstanceOf[ShortTermMemory]] = Field(
+        default=None,
+        description="An Instance of the ShortTermMemory to be used by the Crew",
+    )
+    long_term_memory: Optional[InstanceOf[LongTermMemory]] = Field(
+        default=None,
+        description="An Instance of the LongTermMemory to be used by the Crew",
+    )
+    entity_memory: Optional[InstanceOf[EntityMemory]] = Field(
+        default=None,
+        description="An Instance of the EntityMemory to be used by the Crew",
+    )
     embedder: Optional[dict] = Field(
         default={"provider": "openai"},
         description="Configuration for the embedder to be used for the crew.",
@@ -205,11 +218,15 @@ class Crew(BaseModel):
         if self.output_log_file:
             self._file_handler = FileHandler(self.output_log_file)
         self._rpm_controller = RPMController(max_rpm=self.max_rpm, logger=self._logger)
-        self.function_calling_llm = (
-            getattr(self.function_calling_llm, "model_name", None)
-            or getattr(self.function_calling_llm, "deployment_name", None)
-            or self.function_calling_llm
-        )
+        if self.function_calling_llm:
+            if isinstance(self.function_calling_llm, str):
+                self.function_calling_llm = LLM(model=self.function_calling_llm)
+            elif not isinstance(self.function_calling_llm, LLM):
+                self.function_calling_llm = LLM(
+                    model=getattr(self.function_calling_llm, "model_name", None)
+                    or getattr(self.function_calling_llm, "deployment_name", None)
+                    or str(self.function_calling_llm)
+                )
         self._telemetry = Telemetry()
         self._telemetry.set_tracer()
         return self
@@ -218,11 +235,17 @@ class Crew(BaseModel):
     def create_crew_memory(self) -> "Crew":
         """Set private attributes."""
         if self.memory:
-            self._long_term_memory = LongTermMemory()
-            self._short_term_memory = ShortTermMemory(
-                memory_provider=self.memory_provider,
-                crew=self,
-                embedder_config=self.embedder,
+            self._long_term_memory = (
+                self.long_term_memory if self.long_term_memory else LongTermMemory()
+            )
+            self._short_term_memory = (
+                self.short_term_memory
+                if self.short_term_memory
+                else ShortTermMemory(
+                    memory_provider=self.memory_provider,
+                    crew=self,
+                    embedder_config=self.embedder,
+                )
             )
             self._entity_memory = EntityMemory(
                 memory_provider=self.memory_provider,
@@ -950,9 +973,12 @@ class Crew(BaseModel):
     ) -> None:
         """Test and evaluate the Crew with the given inputs for n iterations concurrently using concurrent.futures."""
         self._test_execution_span = self._telemetry.test_execution_span(
-            self, n_iterations, inputs, openai_model_name
-        )
-        evaluator = CrewEvaluator(self, openai_model_name)
+            self,
+            n_iterations,
+            inputs,
+            openai_model_name,  # type: ignore[arg-type]
+        )  # type: ignore[arg-type]
+        evaluator = CrewEvaluator(self, openai_model_name)  # type: ignore[arg-type]
 
         for i in range(1, n_iterations + 1):
             evaluator.set_iteration(i)

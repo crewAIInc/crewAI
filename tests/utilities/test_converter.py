@@ -2,6 +2,7 @@ import json
 from unittest.mock import MagicMock, Mock, patch
 
 import pytest
+from crewai.llm import LLM
 from crewai.utilities.converter import (
     Converter,
     ConverterError,
@@ -213,11 +214,13 @@ def test_get_conversion_instructions_non_gpt():
 
 # Tests for is_gpt
 def test_is_gpt_true():
-    assert is_gpt("gpt-4") is True
+    llm = LLM(model="gpt-4")
+    assert is_gpt(llm) is True
 
 
 def test_is_gpt_false():
-    assert is_gpt("lol-4") is False
+    llm = LLM(model="lol-4")
+    assert is_gpt(llm) is False
 
 
 class CustomConverter(Converter):

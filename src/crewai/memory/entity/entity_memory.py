@@ -11,7 +11,9 @@ class EntityMemory(Memory):
     Inherits from the Memory class.
     """
 
-    def __init__(self, memory_provider, crew=None, embedder_config=None):
+    def __init__(
+        self, memory_provider=None, crew=None, embedder_config=None, storage=None
+    ):
         self.memory_provider = memory_provider
         if self.memory_provider == "mem0":
             storage = Mem0Storage(
@@ -19,11 +21,15 @@ class EntityMemory(Memory):
                 crew=crew,
             )
         else:
-            storage = RAGStorage(
-                type="entities",
-                allow_reset=False,
-                embedder_config=embedder_config,
-                crew=crew,
+            storage = (
+                storage
+                if storage
+                else RAGStorage(
+                    type="entities",
+                    allow_reset=False,
+                    embedder_config=embedder_config,
+                    crew=crew,
+                )
             )
         super().__init__(storage)
 

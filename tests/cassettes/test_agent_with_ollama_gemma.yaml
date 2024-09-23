@@ -1,0 +1,34 @@
+interactions:
+- request:
+    body: '{"model": "gemma2:latest", "prompt": "### User:\nRespond in 20 words. Who
+      are you?\n\n", "options": {}, "stream": false}'
+    headers:
+      Accept:
+      - '*/*'
+      Accept-Encoding:
+      - gzip, deflate
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '120'
+      Content-Type:
+      - application/json
+      User-Agent:
+      - python-requests/2.31.0
+    method: POST
+    uri: http://localhost:8080/api/generate
+  response:
+    body:
+      string: '{"model":"gemma2:latest","created_at":"2024-09-23T06:20:47.360017Z","response":"I
+        am Gemma, an open-weights AI assistant created by Google DeepMind.  \n","done":true,"done_reason":"stop","context":[106,1645,108,6176,4926,235292,108,54657,575,235248,235284,235276,3907,235265,7702,708,692,235336,109,107,108,106,2516,108,235285,1144,137061,235269,671,2174,235290,30316,16481,20409,5483,731,6238,20555,35777,235265,139,108],"total_duration":16684034208,"load_duration":15183058167,"prompt_eval_count":25,"prompt_eval_duration":219553000,"eval_count":19,"eval_duration":1266804000}'
+    headers:
+      Content-Length:
+      - '578'
+      Content-Type:
+      - application/json; charset=utf-8
+      Date:
+      - Mon, 23 Sep 2024 06:20:47 GMT
+    status:
+      code: 200
+      message: OK
+version: 1

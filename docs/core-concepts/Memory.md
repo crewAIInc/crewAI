@@ -28,7 +28,7 @@ description: Leveraging memory systems in the crewAI framework to enhance agent 
 ## Implementing Memory in Your Crew
 
 When configuring a crew, you can enable and customize each memory component to suit the crew's objectives and the nature of tasks it will perform.
-By default, the memory system is disabled, and you can ensure it is active by setting `memory=True` in the crew configuration. The memory will use OpenAI embeddings by default, but you can change it by setting `embedder` to a different model.
+By default, the memory system is disabled, and you can ensure it is active by setting `memory=True` in the crew configuration. The memory will use OpenAI embeddings by default, but you can change it by setting `embedder` to a different model. It's also possible to initialize the memory instance with your own instance.
 
 The 'embedder' only applies to **Short-Term Memory** which uses Chroma for RAG using the EmbedChain package.
 The **Long-Term Memory** uses SQLite3 to store task results. Currently, there is no way to override these storage implementations.
@@ -49,6 +49,45 @@ my_crew = Crew(
     verbose=True
 )
 ```
+
+### Example: Use Custom Memory Instances e.g FAISS as the VectorDB
+
+```python
+from crewai import Crew, Agent, Task, Process
+
+# Assemble your crew with memory capabilities
+my_crew = Crew(
+    agents=[...],
+    tasks=[...],
+    process="Process.sequential",
+    memory=True,
+    long_term_memory=EnhanceLongTermMemory(
+        storage=LTMSQLiteStorage(
+            db_path="/my_data_dir/my_crew1/long_term_memory_storage.db"
+        )
+    ),
+    short_term_memory=EnhanceShortTermMemory(
+        storage=CustomRAGStorage(
+            crew_name="my_crew",
+            storage_type="short_term",
+            data_dir="//my_data_dir",
+            model=embedder["model"],
+            dimension=embedder["dimension"],
+        ),
+    ),
+    entity_memory=EnhanceEntityMemory(
+        storage=CustomRAGStorage(
+            crew_name="my_crew",
+            storage_type="entities",
+            data_dir="//my_data_dir",
+            model=embedder["model"],
+            dimension=embedder["dimension"],
+        ),
+    ),
+    verbose=True,
+)
+```
+
 
 ## Additional Embedding Providers
 

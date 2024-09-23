@@ -1,5 +1,90 @@
 interactions:
 - request:
+    body: !!binary |
+      CpIYCiQKIgoMc2VydmljZS5uYW1lEhIKEGNyZXdBSS10ZWxlbWV0cnkS6RcKEgoQY3Jld2FpLnRl
+      bGVtZXRyeRKVAQoQ2wlYGhLVkzhEH6Wkzi7xnhIIdx41gZUV7bkqClRvb2wgVXNhZ2UwATnQgXwF
+      psv3F0EY24AFpsv3F0oaCg5jcmV3YWlfdmVyc2lvbhIICgYwLjYxLjBKIQoJdG9vbF9uYW1lEhQK
+      Em11bHRpcGxjYXRpb25fdG9vbEoOCghhdHRlbXB0cxICGAF6AhgBhQEAAQAAEpACChBp60Q5Fv28
+      pHM3PEzm9W1UEgjPJFgjNn9+DCoOVGFzayBFeGVjdXRpb24wATmgOUXEpcv3F0Hwvb8kpsv3F0ou
+      CghjcmV3X2tleRIiCiA3NWQ5ZjU3NTIyNjM5MmVmYmRlZDBmYWJlZDU2NTZlYkoxCgdjcmV3X2lk
+      EiYKJDljZTlhZjE4LWFhMmMtNDc3Mi04M2YyLTA5ZWE2MjAxYjEzOUouCgh0YXNrX2tleRIiCiAz
+      ZDBiZGVlMzEyN2FmOTkwYjM2NmMxMmRkYmQ0YThhNkoxCgd0YXNrX2lkEiYKJGM5YWRiNzE3LWY5
+      MGItNDk0Yy05M2VhLTJmNDg1Njc0MTQ5ZnoCGAGFAQABAAASjgIKEFTnLG+/gko3cvZ6MW0bufMS
+      CAYibsVXEAXGKgxUYXNrIENyZWF0ZWQwATm4mvckpsv3F0FQTPkkpsv3F0ouCghjcmV3X2tleRIi
+      CiA3NWQ5ZjU3NTIyNjM5MmVmYmRlZDBmYWJlZDU2NTZlYkoxCgdjcmV3X2lkEiYKJDljZTlhZjE4
+      LWFhMmMtNDc3Mi04M2YyLTA5ZWE2MjAxYjEzOUouCgh0YXNrX2tleRIiCiAzMGYzMjg2M2EyZWI3
+      OThkMTA5NmM5MDcwMjgwOTgzMEoxCgd0YXNrX2lkEiYKJGI3Y2RlOWI1LWE4ZTUtNDU1MS04OTFl
+      LTJmZjY0MWYzNjE3MXoCGAGFAQABAAASlQEKEMNo6m4B90FJWZq9nGjku3ESCLJB/gaRHwGDKgpU
+      b29sIFVzYWdlMAE5MOCVX6bL9xdBoEqdX6bL9xdKGgoOY3Jld2FpX3ZlcnNpb24SCAoGMC42MS4w
+      SiEKCXRvb2xfbmFtZRIUChJtdWx0aXBsY2F0aW9uX3Rvb2xKDgoIYXR0ZW1wdHMSAhgBegIYAYUB
+      AAEAABKQAgoQ3srvFcsulPifKoG/1k87ZRIILh8C7ih9C0sqDlRhc2sgRXhlY3V0aW9uMAE5OM35
+      JKbL9xdBKKRIh6bL9xdKLgoIY3Jld19rZXkSIgogNzVkOWY1NzUyMjYzOTJlZmJkZWQwZmFiZWQ1
+      NjU2ZWJKMQoHY3Jld19pZBImCiQ5Y2U5YWYxOC1hYTJjLTQ3NzItODNmMi0wOWVhNjIwMWIxMzlK
+      LgoIdGFza19rZXkSIgogMzBmMzI4NjNhMmViNzk4ZDEwOTZjOTA3MDI4MDk4MzBKMQoHdGFza19p
+      ZBImCiRiN2NkZTliNS1hOGU1LTQ1NTEtODkxZS0yZmY2NDFmMzYxNzF6AhgBhQEAAQAAEo4CChBY
+      YWzUPA+2j+4CttPau+6PEgiU4KiWSHWTzioMVGFzayBDcmVhdGVkMAE54Gt9h6bL9xdB2Ip/h6bL
+      9xdKLgoIY3Jld19rZXkSIgogNzVkOWY1NzUyMjYzOTJlZmJkZWQwZmFiZWQ1NjU2ZWJKMQoHY3Jl
+      d19pZBImCiQ5Y2U5YWYxOC1hYTJjLTQ3NzItODNmMi0wOWVhNjIwMWIxMzlKLgoIdGFza19rZXkS
+      IgogM2QwYmRlZTMxMjdhZjk5MGIzNjZjMTJkZGJkNGE4YTZKMQoHdGFza19pZBImCiRmOTNkOGMz
+      Ni1hMzNmLTRmMGItYmE4Yy0wMDRiMjcyMzJkMjZ6AhgBhQEAAQAAEpUBChDdBTkr9u6gNLMVoUrG
+      7hG+EgiFv2w6IvUBGioKVG9vbCBVc2FnZTABOQC9cb2my/cXQTAgdb2my/cXShoKDmNyZXdhaV92
+      ZXJzaW9uEggKBjAuNjEuMEohCgl0b29sX25hbWUSFAoSbXVsdGlwbGNhdGlvbl90b29sSg4KCGF0
+      dGVtcHRzEgIYAXoCGAGFAQABAAASkAIKENWH7Z/KtRdd80/10IXy5iMSCEJbshw/PdIoKg5UYXNr
+      IEV4ZWN1dGlvbjABOYg+gIemy/cXQeiQEuOmy/cXSi4KCGNyZXdfa2V5EiIKIDc1ZDlmNTc1MjI2
+      MzkyZWZiZGVkMGZhYmVkNTY1NmViSjEKB2NyZXdfaWQSJgokOWNlOWFmMTgtYWEyYy00NzcyLTgz
+      ZjItMDllYTYyMDFiMTM5Si4KCHRhc2tfa2V5EiIKIDNkMGJkZWUzMTI3YWY5OTBiMzY2YzEyZGRi
+      ZDRhOGE2SjEKB3Rhc2tfaWQSJgokZjkzZDhjMzYtYTMzZi00ZjBiLWJhOGMtMDA0YjI3MjMyZDI2
+      egIYAYUBAAEAABKeBwoQH9DiannBz1BQYoOXs/P4kxIII9rJ+KhsoT8qDENyZXcgQ3JlYXRlZDAB
+      OQACqPumy/cXQSicqfumy/cXShoKDmNyZXdhaV92ZXJzaW9uEggKBjAuNjEuMEoaCg5weXRob25f
+      dmVyc2lvbhIICgYzLjExLjdKLgoIY3Jld19rZXkSIgogYzk3YjVmZWI1ZDFiNjZiYjU5MDA2YWFh
+      MDFhMjljZDZKMQoHY3Jld19pZBImCiQwYjUzNjAyOS1mZjE3LTQwNGEtOGQ5Ny0wYzliOGE1ODIx
+      ZGZKHAoMY3Jld19wcm9jZXNzEgwKCnNlcXVlbnRpYWxKEQoLY3Jld19tZW1vcnkSAhABShoKFGNy
+      ZXdfbnVtYmVyX29mX3Rhc2tzEgIYAUobChVjcmV3X251bWJlcl9vZl9hZ2VudHMSAhgBSswCCgtj
+      cmV3X2FnZW50cxK8Agq5Alt7ImtleSI6ICIwN2Q5OWI2MzA0MTFkMzVmZDkwNDdhNTMyZDUzZGRh
+      NyIsICJpZCI6ICJkM2FiZTQ3ZS1hMzFlLTQ3MzMtODhlOS0yODJmYjM0ZDBkZTgiLCAicm9sZSI6
+      ICJSZXNlYXJjaGVyIiwgInZlcmJvc2U/IjogZmFsc2UsICJtYXhfaXRlciI6IDE1LCAibWF4X3Jw
+      bSI6IG51bGwsICJmdW5jdGlvbl9jYWxsaW5nX2xsbSI6ICIiLCAibGxtIjogImdwdC00byIsICJk
+      ZWxlZ2F0aW9uX2VuYWJsZWQ/IjogZmFsc2UsICJhbGxvd19jb2RlX2V4ZWN1dGlvbj8iOiBmYWxz
+      ZSwgIm1heF9yZXRyeV9saW1pdCI6IDIsICJ0b29sc19uYW1lcyI6IFtdfV1K/wEKCmNyZXdfdGFz
+      a3MS8AEK7QFbeyJrZXkiOiAiNjM5OTY1MTdmM2YzZjFjOTRkNmJiNjE3YWEwYjFjNGYiLCAiaWQi
+      OiAiZDQ1MTZmMjEtN2ExNC00ZGUyLTllMzEtMzU4NjllNDkyYzQ4IiwgImFzeW5jX2V4ZWN1dGlv
+      bj8iOiBmYWxzZSwgImh1bWFuX2lucHV0PyI6IGZhbHNlLCAiYWdlbnRfcm9sZSI6ICJSZXNlYXJj
+      aGVyIiwgImFnZW50X2tleSI6ICIwN2Q5OWI2MzA0MTFkMzVmZDkwNDdhNTMyZDUzZGRhNyIsICJ0
+      b29sc19uYW1lcyI6IFtdfV16AhgBhQEAAQAAEo4CChDou+gou6fzCBXNlUYJ7r/uEgiAWsyrR6xC
+      +CoMVGFzayBDcmVhdGVkMAE5IIW0+6bL9xdBiMe0+6bL9xdKLgoIY3Jld19rZXkSIgogYzk3YjVm
+      ZWI1ZDFiNjZiYjU5MDA2YWFhMDFhMjljZDZKMQoHY3Jld19pZBImCiQwYjUzNjAyOS1mZjE3LTQw
+      NGEtOGQ5Ny0wYzliOGE1ODIxZGZKLgoIdGFza19rZXkSIgogNjM5OTY1MTdmM2YzZjFjOTRkNmJi
+      NjE3YWEwYjFjNGZKMQoHdGFza19pZBImCiRkNDUxNmYyMS03YTE0LTRkZTItOWUzMS0zNTg2OWU0
+      OTJjNDh6AhgBhQEAAQAA
+    headers:
+      Accept:
+      - '*/*'
+      Accept-Encoding:
+      - gzip, deflate
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '3093'
+      Content-Type:
+      - application/x-protobuf
+      User-Agent:
+      - OTel-OTLP-Exporter-Python/1.27.0
+    method: POST
+    uri: https://telemetry.crewai.com:4319/v1/traces
+  response:
+    body:
+      string: "\n\0"
+    headers:
+      Content-Length:
+      - '2'
+      Content-Type:
+      - application/x-protobuf
+      Date:
+      - Mon, 23 Sep 2024 06:28:21 GMT
+    status:
+      code: 200
+      message: OK
+- request:
     body: '{"messages": [{"role": "system", "content": "You are Researcher. You''re
       an expert in research and you love to learn new things.\nYour personal goal
       is: You research about math.\nTo give my best complete final answer to the task
@@ -10,9 +95,9 @@ interactions:
       a kid aged 6 about math.\n\nThis is the expect criteria for your final answer:
       A topic, explanation, angle, and examples.\nyou MUST return the actual complete
       content as the final answer, not a summary.\n\n# Useful context: \n<MagicMock
-      name=''build_context_for_task()'' id=''6248576016''>\n\nBegin! This is VERY
+      name=''build_context_for_task()'' id=''6104293392''>\n\nBegin! This is VERY
       important to you, use the tools available and give your best Final Answer, your
-      job depends on it!\n\nThought:"}], "model": "gpt-4o", "stop": ["\nObservation:"]}'
+      job depends on it!\n\nThought:"}], "model": "gpt-4o"}'
     headers:
       accept:
       - application/json
@@ -21,16 +106,16 @@ interactions:
       connection:
       - keep-alive
       content-length:
-      - '1013'
+      - '985'
       content-type:
       - application/json
       cookie:
-      - __cf_bm=.8.5x0rqghNdtUCxfmwblfhuXiKyPm_cRq.NIa0heL0-1726642369-1.0.1.1-VbsAGqjOt45ZD50K2QW2oZrByLLIh6w8K4nAkLthTbXgU5qTgdf0mhvFId8Q2F3DcHUw9E72lVIZEN.YVlYINQ;
-        _cfuvid=o5s1Ux898x0eFNtzUCnG996iqyX3LgXDXq99C5oqnVE-1726642369248-0.0.1.1-604800000
+      - __cf_bm=hYfEMfBWpIoRPjx9ZBZg6DVeMOMr1IZt9ioup8yWZs0-1727072673-1.0.1.1-Ro7GCLuWS0K5ob0mSTYSmovONKNyxsK6oSA5io_Vwqhe6P0G7Ow4CuZUaWAaCdFGQUd7XZiFH0mI_sQC3uqe0g;
+        _cfuvid=5cK2hfLqTXw1WjB81uT.sGmmA67JIxSKSQeEHQ3zOQw-1727071769966-0.0.1.1-604800000
       host:
       - api.openai.com
       user-agent:
-      - OpenAI/Python 1.46.0
+      - OpenAI/Python 1.47.0
       x-stainless-arch:
       - arm64
       x-stainless-async:
@@ -40,7 +125,7 @@ interactions:
       x-stainless-os:
       - MacOS
       x-stainless-package-version:
-      - 1.46.0
+      - 1.47.0
       x-stainless-raw-response:
       - 'true'
       x-stainless-runtime:
@@ -50,46 +135,43 @@ interactions:
     method: POST
     uri: https://api.openai.com/v1/chat/completions
   response:
-    content: "{\n  \"id\": \"chatcmpl-A8ixUVF2BmlnWHdi81FoqTu5gQAC4\",\n  \"object\":
-      \"chat.completion\",\n  \"created\": 1726642808,\n  \"model\": \"gpt-4o-2024-05-13\",\n
+    content: "{\n  \"id\": \"chatcmpl-AAWqSu16OCJZOFngJuEoV0HyBxdYL\",\n  \"object\":
+      \"chat.completion\",\n  \"created\": 1727072900,\n  \"model\": \"gpt-4o-2024-05-13\",\n
       \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
-      \"assistant\",\n        \"content\": \"I now can give a great answer.\\n\\nFinal
-      Answer: \\n\\n**Topic: Basic Shapes and Their Properties**\\n\\n**Explanation:**\\nToday,
-      we will learn about basic shapes. Shapes are everywhere around us and are one
-      of the first things we can learn about math. Shapes help us understand and describe
-      the objects and world around us.\\n\\n**Angle:**\\nLet's examine each shape,
-      recognizing its name, how many sides it has, and where we might see it in our
-      everyday life.\\n\\n**Examples:**\\n\\n1. **Circle:**\\n   - **Explanation:**
-      A circle is a round shape that has no corners and no sides. All the points on
-      the edge of a circle are the same distance from the center.\\n   - **Everyday
-      Examples:** Wheels of a car, a coin, a clock.\\n   - **Image:** ![A circle](https://upload.wikimedia.org/wikipedia/commons/thumb/0/0e/Circle_-_black_simple.svg/1024px-Circle_-_black_simple.svg.png)\\n\\n2.
-      **Square:**\\n   - **Explanation:** A square has four equal sides and four corners
-      (right angles). Every side is the same length.\\n   - **Everyday Examples:**
-      A checkerboard, a window, a piece of bread.\\n   - **Image:** ![A square](https://upload.wikimedia.org/wikipedia/commons/thumb/e/e0/Simple_square.svg/1024px-Simple_square.svg.png)\\n\\n3.
-      **Triangle:**\\n   - **Explanation:** A triangle has three sides and three corners.
-      Triangles can come in different shapes \u2013 they can be tall and narrow or
-      short and wide.\\n   - **Everyday Examples:** A slice of pizza, a road sign,
-      a pyramid.\\n   - **Image:** ![A triangle](https://upload.wikimedia.org/wikipedia/commons/thumb/e/e4/Triangle_-_black_simple.svg/1024px-Triangle_-_black_simple.svg.png)\\n\\n4.
-      **Rectangle:**\\n   - **Explanation:** A rectangle has four sides and four right-angled
-      corners, but unlike the square, opposite sides are equal.\\n   - **Everyday
-      Examples:** A door, a book cover, a smartphone.\\n   - **Image:** ![A rectangle](https://upload.wikimedia.org/wikipedia/commons/thumb/d/d6/Black_rectangle.svg/1024px-Black_rectangle.svg.png)\\n\\n5.
-      **Oval:**\\n   - **Explanation:** An oval looks like a circle that has been
-      stretched out. It has no corners or straight sides.\\n   - **Everyday Examples:**
-      An egg, a racetrack, a mirror.\\n   - **Image:** ![An oval](https://upload.wikimedia.org/wikipedia/commons/thumb/1/19/Oval_shape.svg/1024px-Oval_shape.svg.png)\\n\\n**Interactive
-      Activity:**\\nUsing colored paper, scissors, and glue, you can cut out these
-      shapes and arrange them to make fun pictures. For example:\\n- Use a circle
-      for the sun.\\n- Use triangles for trees.\\n- Use squares and rectangles to
-      make a house.\\n\\nBy recognizing and enjoying these shapes, children can build
-      a solid foundation in geometry, an essential aspect of math that they will build
-      upon as they grow.\",\n        \"refusal\": null\n      },\n      \"logprobs\":
-      null,\n      \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\":
-      205,\n    \"completion_tokens\": 655,\n    \"total_tokens\": 860,\n    \"completion_tokens_details\":
-      {\n      \"reasoning_tokens\": 0\n    }\n  },\n  \"system_fingerprint\": \"fp_8dd226ca9c\"\n}\n"
+      \"assistant\",\n        \"content\": \"Thought: I now can give a great answer\\nFinal
+      Answer: \\n\\n**Topic: Basic Addition**\\n\\n**Explanation:** Addition is one
+      of the fundamental operations in math that kids need to understand early on.
+      It involves putting together two or more numbers to find their total.\\n\\n**Angle:**
+      Let's make it fun and relatable by connecting addition to real-life situations
+      that a 6-year-old can easily understand. We'll use simple, everyday objects
+      like toys or fruits.\\n\\n**Examples:**\\n\\n1. **Toys Example:**\\n   - Imagine
+      you have 2 toy cars and your friend gives you 3 more toy cars. How many toy
+      cars do you have now? \\n   - Here, you have 2 + 3 = 5 toy cars.\\n\\n2. **Fruits
+      Example:**\\n   - You have 4 apples, and your mom gives you 2 more apples. How
+      many apples do you have in total?\\n   - Here, you have 4 + 2 = 6 apples.\\n\\n3.
+      **Fingers Example:**\\n   - Let's use our fingers! Show 3 fingers on one hand
+      and 2 fingers on the other hand. How many fingers are showing in total?\\n   -
+      Here, you have 3 + 2 = 5 fingers.\\n\\n**Activities to Reinforce Learning:**\\n\\n1.
+      **Counting Objects:**\\n   - Give the child a set of small objects like beads,
+      buttons, or crayons. Ask them to count out a certain number in one pile and
+      another number in a second pile, then combine the piles and count the total.\\n\\n2.
+      **Drawing Addition:**\\n   - Let the child draw pictures representing addition
+      problems. For instance, they can draw 2 apples on one side and 3 on the other
+      side. Then, they count all the apples together.\\n\\n3. **Story Problems:**\\n
+      \  - Create simple story problems that involve addition. For example, \\\"You
+      have 1 balloon, and you get 2 more balloons. How many balloons do you have altogether?\\\"
+      Ask the child to solve it and draw the balloons if they need to.\\n\\nBy relating
+      addition to everyday activities and objects, it makes the learning experience
+      both fun and meaningful for a 6-year-old child.\\n\\n\",\n        \"refusal\":
+      null\n      },\n      \"logprobs\": null,\n      \"finish_reason\": \"stop\"\n
+      \   }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 205,\n    \"completion_tokens\":
+      447,\n    \"total_tokens\": 652,\n    \"completion_tokens_details\": {\n      \"reasoning_tokens\":
+      0\n    }\n  },\n  \"system_fingerprint\": \"fp_3537616b13\"\n}\n"
     headers:
       CF-Cache-Status:
       - DYNAMIC
       CF-RAY:
-      - 8c4f750eee74a67a-MIA
+      - 8c78795d1b26a4ee-MIA
       Connection:
       - keep-alive
       Content-Encoding:
@@ -97,7 +179,7 @@ interactions:
       Content-Type:
       - application/json
       Date:
-      - Wed, 18 Sep 2024 07:00:15 GMT
+      - Mon, 23 Sep 2024 06:28:32 GMT
       Server:
       - cloudflare
       Transfer-Encoding:
@@ -106,12 +188,10 @@ interactions:
       - nosniff
       access-control-expose-headers:
       - X-Request-ID
-      alt-svc:
-      - h3=":443"; ma=86400
       openai-organization:
       - crewai-iuxna1
       openai-processing-ms:
-      - '7410'
+      - '11512'
       openai-version:
       - '2020-10-01'
       strict-transport-security:
@@ -129,7 +209,7 @@ interactions:
       x-ratelimit-reset-tokens:
       - 0s
       x-request-id:
-      - req_4525c82a4e06307fc5b2e7ff1e6982cd
+      - req_6f40c6658665d8d99561a2c56ab974ff
     http_version: HTTP/1.1
     status_code: 200
 version: 1
