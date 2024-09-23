@@ -1,5 +1,6 @@
+from typing import Any, Dict, Optional
+
 from crewai.memory.memory import Memory
-from crewai.memory.user.user_memory_item import UserMemoryItem
 from crewai.memory.storage.mem0_storage import Mem0Storage
 
 
@@ -15,9 +16,22 @@ class UserMemory(Memory):
         storage = Mem0Storage(type="user", crew=crew)
         super().__init__(storage)
 
-    def save(self, item: UserMemoryItem) -> None:
-        data = f"Remember the details about the user: {item.data}"
-        super().save(data, item.metadata, user=item.user)
+    def save(
+        self,
+        value,
+        metadata: Optional[Dict[str, Any]] = None,
+        agent: Optional[str] = None,
+    ) -> None:
+        data = f"Remember the details about the user: {value}"
+        super().save(data, metadata)
 
-    def search(self, query: str, score_threshold: float = 0.35):
-        return self.storage.search(query=query, score_threshold=score_threshold)
+    def search(
+        self,
+        query: str,
+        limit: int = 3,
+        filters: dict = {},
+        score_threshold: float = 0.35,
+    ):
+        return super().search(
+            query=query, limit=limit, filters=filters, score_threshold=score_threshold
+        )
