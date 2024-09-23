@@ -132,7 +132,6 @@ def handle_partial_json(
     converter_cls: Optional[Type[Converter]] = None,
 ) -> Union[dict, BaseModel, str]:
     match = re.search(r"({.*})", result, re.DOTALL)
-    print("handle_partial_json")
     if match:
         try:
             exported_result = model.model_validate_json(match.group(0))
@@ -161,11 +160,8 @@ def convert_with_instructions(
     agent: Any,
     converter_cls: Optional[Type[Converter]] = None,
 ) -> Union[dict, BaseModel, str]:
-    print("convert_with_instructions")
     llm = agent.function_calling_llm or agent.llm
-    print("llm", llm)
     instructions = get_conversion_instructions(model, llm)
-    print("instructions", instructions)
     converter = create_converter(
         agent=agent,
         converter_cls=converter_cls,
@@ -174,11 +170,9 @@ def convert_with_instructions(
         model=model,
         instructions=instructions,
     )
-    print("converter", converter)
     exported_result = (
         converter.to_pydantic() if not is_json_output else converter.to_json()
     )
-    print("exported_result", exported_result)
 
     if isinstance(exported_result, ConverterError):
         Printer().print(
