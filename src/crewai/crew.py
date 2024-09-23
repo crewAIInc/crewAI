@@ -962,7 +962,10 @@ class Crew(BaseModel):
     ) -> None:
         """Test and evaluate the Crew with the given inputs for n iterations concurrently using concurrent.futures."""
         self._test_execution_span = self._telemetry.test_execution_span(
-            self, n_iterations, inputs, openai_model_name
+            self,
+            n_iterations,
+            inputs,
+            openai_model_name,  # type: ignore[arg-type]
         )  # type: ignore[arg-type]
         evaluator = CrewEvaluator(self, openai_model_name)  # type: ignore[arg-type]
 
