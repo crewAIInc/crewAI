@@ -93,9 +93,9 @@ class TaskEvaluator:
 
     def _is_gpt(self, llm) -> bool:
         return (
-            "gpt" in str(self.llm).lower()
-            or "o1-preview" in str(self.llm).lower()
-            or "o1-mini" in str(self.llm).lower()
+            "gpt" in str(self.llm.model).lower()
+            or "o1-preview" in str(self.llm.model).lower()
+            or "o1-mini" in str(self.llm.model).lower()
         )
 
     def evaluate_training_data(

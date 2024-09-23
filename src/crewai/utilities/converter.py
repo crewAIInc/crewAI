@@ -27,8 +27,7 @@ class Converter(OutputConverter):
             if self.is_gpt:
                 return self._create_instructor().to_pydantic()
             else:
-                llm = self._create_llm()
-                return llm.call(
+                return self.llm.call(
                     [
                         {"role": "system", "content": self.instructions},
                         {"role": "user", "content": self.text},
@@ -47,9 +46,8 @@ class Converter(OutputConverter):
             if self.is_gpt:
                 return self._create_instructor().to_json()
             else:
-                llm = self._create_llm()
                 return json.dumps(
-                    llm.call(
+                    self.llm.call(
                         [
                             {"role": "system", "content": self.instructions},
                             {"role": "user", "content": self.text},
@@ -60,19 +58,6 @@ class Converter(OutputConverter):
             if current_attempt < self.max_attempts:
                 return self.to_json(current_attempt + 1)
             return ConverterError(f"Failed to convert text into JSON, error: {e}.")
-
-    def _create_llm(self):
-        """Create an LLM instance."""
-        if isinstance(self.llm, str):
-            return LLM(model=self.llm)
-        elif isinstance(self.llm, LLM):
-            return self.llm
-        else:
-            return LLM(
-                model=self.llm.model,
-                provider=getattr(self.llm, "provider", "litellm"),
-                **getattr(self.llm, "llm_kwargs", {}),
-            )
 
     def _create_instructor(self):
         """Create an instructor."""
@@ -93,7 +78,7 @@ class Converter(OutputConverter):
         )
 
         parser = CrewPydanticOutputParser(pydantic_object=self.model)
-        result = LLM(model=self.llm).call(
+        result = self.llm.call(
             [
                 {"role": "system", "content": self.instructions},
                 {"role": "user", "content": self.text},
@@ -105,9 +90,9 @@ class Converter(OutputConverter):
     def is_gpt(self) -> bool:
         """Return if llm provided is of gpt from openai."""
         return (
-            "gpt" in str(self.llm).lower()
-            or "o1-preview" in str(self.llm).lower()
-            or "o1-mini" in str(self.llm).lower()
+            "gpt" in str(self.llm.model).lower()
+            or "o1-preview" in str(self.llm.model).lower()
+            or "o1-mini" in str(self.llm.model).lower()
         )
 
 
@@ -157,6 +142,7 @@ def handle_partial_json(
     converter_cls: Optional[Type[Converter]] = None,
 ) -> Union[dict, BaseModel, str]:
     match = re.search(r"({.*})", result, re.DOTALL)
+    print("handle_partial_json")
     if match:
         try:
             exported_result = model.model_validate_json(match.group(0))
@@ -185,8 +171,11 @@ def convert_with_instructions(
     agent: Any,
     converter_cls: Optional[Type[Converter]] = None,
 ) -> Union[dict, BaseModel, str]:
+    print("convert_with_instructions")
     llm = agent.function_calling_llm or agent.llm
+    print("llm", llm)
     instructions = get_conversion_instructions(model, llm)
+    print("instructions", instructions)
     converter = create_converter(
         agent=agent,
         converter_cls=converter_cls,
@@ -195,10 +184,11 @@ def convert_with_instructions(
         model=model,
         instructions=instructions,
     )
-
+    print("converter", converter)
     exported_result = (
         converter.to_pydantic() if not is_json_output else converter.to_json()
     )
+    print("exported_result", exported_result)
 
     if isinstance(exported_result, ConverterError):
         Printer().print(
@@ -218,12 +208,12 @@ def get_conversion_instructions(model: Type[BaseModel], llm: Any) -> str:
     return instructions
 
 
-def is_gpt(llm: Any) -> bool:
+def is_gpt(llm: LLM) -> bool:
     """Return if llm provided is of gpt from openai."""
     return (
-        "gpt" in str(llm).lower()
-        or "o1-preview" in str(llm).lower()
-        or "o1-mini" in str(llm).lower()
+        "gpt" in str(llm.model).lower()
+        or "o1-preview" in str(llm.model).lower()
+        or "o1-mini" in str(llm.model).lower()
     )
 
 
