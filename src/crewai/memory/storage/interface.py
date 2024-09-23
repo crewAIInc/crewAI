@@ -10,7 +10,7 @@ class Storage:
     def search(
         self, query: str, limit: int, filters: Dict, score_threshold: float
     ) -> Dict[str, Any]:  # type: ignore
-        pass
+        return {}
 
     def reset(self) -> None:
         pass
