@@ -85,7 +85,6 @@ class ToolUsage:
     def use(
         self, calling: Union[ToolCalling, InstructorToolCalling], tool_string: str
     ) -> str:
-        print("calling", calling)
         if isinstance(calling, ToolUsageErrorException):
             error = calling.message
             if self.agent.verbose:
@@ -332,7 +331,6 @@ class ToolUsage:
                     arguments=tool_object["arguments"],
                     log=tool_string,  # type: ignore
                 )
-                print("calling", calling)
 
                 if isinstance(calling, ConverterError):
                     raise calling
