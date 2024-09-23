@@ -125,7 +125,6 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
                         action_result = self._use_tool(formatted_answer)
                         formatted_answer.text += f"\nObservation: {action_result}"
                         formatted_answer.result = action_result
-                        print("formatted_answer", formatted_answer)
                         self._show_logs(formatted_answer)
 
                         if self.step_callback:
