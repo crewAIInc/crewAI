@@ -132,7 +132,9 @@ class Agent(BaseAgent):
             model_name = os.environ.get("OPENAI_MODEL_NAME", "gpt-4o-mini")
             llm_params = {"model": model_name}
 
-            api_base = os.environ.get("OPENAI_API_BASE")
+            api_base = os.environ.get("OPENAI_API_BASE") or os.environ.get(
+                "OPENAI_BASE_URL"
+            )
             if api_base:
                 llm_params["base_url"] = api_base
 
