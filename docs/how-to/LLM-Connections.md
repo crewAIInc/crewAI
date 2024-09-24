@@ -66,8 +66,7 @@ claude_agent = Agent(
 For more detailed configuration, use the LLM class:
 
 ```python
-from crewai import Agent
-from crewai.llm import LLM
+from crewai import Agent, LLM
 
 llm = LLM(
     model="gpt-4",
