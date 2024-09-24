@@ -102,7 +102,8 @@ class BaseAgent(ABC, BaseModel):
         description="Maximum number of requests per minute for the agent execution to be respected.",
     )
     allow_delegation: bool = Field(
-        default=True, description="Allow delegation of tasks to agents"
+        default=False,
+        description="Enable agent to delegate and ask questions among each other.",
     )
     tools: Optional[List[Any]] = Field(
         default_factory=list, description="Tools at agents' disposal"
@@ -224,10 +225,8 @@ class BaseAgent(ABC, BaseModel):
 
         # Copy llm and clear callbacks
         existing_llm = shallow_copy(self.llm)
-        existing_llm.callbacks = []
         copied_data = self.model_dump(exclude=exclude)
         copied_data = {k: v for k, v in copied_data.items() if v is not None}
-
         copied_agent = type(self)(**copied_data, llm=existing_llm, tools=self.tools)
 
         return copied_agent

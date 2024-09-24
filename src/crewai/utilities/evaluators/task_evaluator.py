@@ -1,7 +1,6 @@
 import os
 from typing import List
 
-from langchain_openai import ChatOpenAI
 from pydantic import BaseModel, Field
 
 from crewai.utilities import Converter
@@ -79,7 +78,7 @@ class TaskEvaluator:
 
         instructions = "Convert all responses into valid JSON output."
 
-        if not self._is_gpt(self.llm):
+        if not self.llm.supports_function_calling():
             model_schema = PydanticSchemaParser(model=TaskEvaluation).get_schema()
             instructions = f"{instructions}\n\nReturn only valid JSON with the following schema:\n```json\n{model_schema}\n```"
 
@@ -91,9 +90,6 @@ class TaskEvaluator:
         )
 
         return converter.to_pydantic()
-
-    def _is_gpt(self, llm) -> bool:
-        return isinstance(llm, ChatOpenAI) and llm.openai_api_base is None
 
     def evaluate_training_data(
         self, training_data: dict, agent_id: str
@@ -125,7 +121,7 @@ class TaskEvaluator:
         )
         instructions = "I'm gonna convert this raw text into valid JSON."
 
-        if not self._is_gpt(self.llm):
+        if not self.llm.supports_function_calling():
             model_schema = PydanticSchemaParser(
                 model=TrainingTaskEvaluation
             ).get_schema()

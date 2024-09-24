@@ -203,10 +203,11 @@ def deploy():
 
 
 @deploy.command(name="create")
-def deploy_create():
+@click.option("-y", "--yes", is_flag=True, help="Skip the confirmation prompt")
+def deploy_create(yes: bool):
     """Create a Crew deployment."""
     deploy_cmd = DeployCommand()
-    deploy_cmd.create_crew()
+    deploy_cmd.create_crew(yes)
 
 
 @deploy.command(name="list")

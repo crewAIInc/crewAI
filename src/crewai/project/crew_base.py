@@ -35,7 +35,7 @@ def CrewBase(cls):
         @staticmethod
         def load_yaml(config_path: Path):
             try:
-                with open(config_path, "r") as file:
+                with open(config_path, "r", encoding="utf-8") as file:
                     return yaml.safe_load(file)
             except FileNotFoundError:
                 print(f"File not found: {config_path}")
@@ -89,7 +89,10 @@ def CrewBase(cls):
             callbacks: Dict[str, Callable],
         ) -> None:
             if llm := agent_info.get("llm"):
-                self.agents_config[agent_name]["llm"] = llms[llm]()
+                try:
+                    self.agents_config[agent_name]["llm"] = llms[llm]()
+                except KeyError:
+                    self.agents_config[agent_name]["llm"] = llm
 
             if tools := agent_info.get("tools"):
                 self.agents_config[agent_name]["tools"] = [

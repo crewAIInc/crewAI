@@ -6,7 +6,7 @@ import uuid
 from concurrent.futures import Future
 from copy import copy
 from hashlib import md5
-from typing import Any, Dict, List, Optional, Tuple, Type, Union
+from typing import Any, Dict, List, Optional, Set, Tuple, Type, Union
 
 from opentelemetry.trace import Span
 from pydantic import (
@@ -108,6 +108,7 @@ class Task(BaseModel):
         description="A converter class used to export structured output",
         default=None,
     )
+    processed_by_agents: Set[str] = Field(default_factory=set)
 
     _telemetry: Telemetry = PrivateAttr(default_factory=Telemetry)
     _execution_span: Optional[Span] = PrivateAttr(default=None)
@@ -241,6 +242,8 @@ class Task(BaseModel):
         self.prompt_context = context
         tools = tools or self.tools or []
 
+        self.processed_by_agents.add(agent.role)
+
         result = agent.execute_task(
             task=self,
             context=context,
@@ -310,8 +313,10 @@ class Task(BaseModel):
         """Increment the tools errors counter."""
         self.tools_errors += 1
 
-    def increment_delegations(self) -> None:
+    def increment_delegations(self, agent_name: Optional[str]) -> None:
         """Increment the delegations counter."""
+        if agent_name:
+            self.processed_by_agents.add(agent_name)
         self.delegations += 1
 
     def copy(self, agents: List["BaseAgent"]) -> "Task":

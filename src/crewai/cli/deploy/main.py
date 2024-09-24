@@ -2,6 +2,7 @@ from typing import Any, Dict, List, Optional
 
 from rich.console import Console
 
+from crewai.telemetry import Telemetry
 from .api import CrewAPI
 from .utils import (
     fetch_and_json_env_file,
@@ -23,8 +24,11 @@ class DeployCommand:
         Initialize the DeployCommand with project name and API client.
         """
         try:
+            self._telemetry = Telemetry()
+            self._telemetry.set_tracer()
             access_token = get_auth_token()
         except Exception:
+            self._deploy_signup_error_span = self._telemetry.deploy_signup_error_span()
             console.print(
                 "Please sign up/login to CrewAI+ before using the CLI.",
                 style="bold red",
@@ -33,6 +37,13 @@ class DeployCommand:
             raise SystemExit
 
         self.project_name = get_project_name()
+        if self.project_name is None:
+            console.print(
+                "No project name found. Please ensure your project has a valid pyproject.toml file.",
+                style="bold red",
+            )
+            raise SystemExit
+
         self.client = CrewAPI(api_key=access_token)
 
     def _handle_error(self, json_response: Dict[str, Any]) -> None:
@@ -90,6 +101,7 @@ class DeployCommand:
         Args:
             uuid (Optional[str]): The UUID of the crew to deploy.
         """
+        self._start_deployment_span = self._telemetry.start_deployment_span(uuid)
         console.print("Starting deployment...", style="bold blue")
         if uuid:
             response = self.client.deploy_by_uuid(uuid)
@@ -105,15 +117,26 @@ class DeployCommand:
         else:
             self._handle_error(json_response)
 
-    def create_crew(self) -> None:
+    def create_crew(self, confirm: bool = False) -> None:
         """
         Create a new crew deployment.
         """
+        self._create_crew_deployment_span = (
+            self._telemetry.create_crew_deployment_span()
+        )
         console.print("Creating deployment...", style="bold blue")
         env_vars = fetch_and_json_env_file()
         remote_repo_url = get_git_remote_url()
 
-        self._confirm_input(env_vars, remote_repo_url)
+        if remote_repo_url is None:
+            console.print("No remote repository URL found.", style="bold red")
+            console.print(
+                "Please ensure your project has a valid remote repository.",
+                style="yellow",
+            )
+            return
+
+        self._confirm_input(env_vars, remote_repo_url, confirm)
         payload = self._create_payload(env_vars, remote_repo_url)
 
         response = self.client.create_crew(payload)
@@ -122,18 +145,22 @@ class DeployCommand:
         else:
             self._handle_error(response.json())
 
-    def _confirm_input(self, env_vars: Dict[str, str], remote_repo_url: str) -> None:
+    def _confirm_input(
+        self, env_vars: Dict[str, str], remote_repo_url: str, confirm: bool
+    ) -> None:
         """
         Confirm input parameters with the user.
 
         Args:
             env_vars (Dict[str, str]): Environment variables.
             remote_repo_url (str): Remote repository URL.
+            confirm (bool): Whether to confirm input.
         """
-        input(f"Press Enter to continue with the following Env vars: {env_vars}")
-        input(
-            f"Press Enter to continue with the following remote repository: {remote_repo_url}\n"
-        )
+        if not confirm:
+            input(f"Press Enter to continue with the following Env vars: {env_vars}")
+            input(
+                f"Press Enter to continue with the following remote repository: {remote_repo_url}\n"
+            )
 
     def _create_payload(
         self,
@@ -247,6 +274,7 @@ class DeployCommand:
             uuid (Optional[str]): The UUID of the crew to get logs for.
             log_type (str): The type of logs to retrieve (default: "deployment").
         """
+        self._get_crew_logs_span = self._telemetry.get_crew_logs_span(uuid, log_type)
         console.print(f"Fetching {log_type} logs...", style="bold blue")
 
         if uuid:
@@ -269,6 +297,7 @@ class DeployCommand:
         Args:
             uuid (Optional[str]): The UUID of the crew to remove.
         """
+        self._remove_crew_span = self._telemetry.remove_crew_span(uuid)
         console.print("Removing deployment...", style="bold blue")
 
         if uuid:
