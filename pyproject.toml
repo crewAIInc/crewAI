@@ -32,6 +32,7 @@ json-repair = "^0.25.2"
 auth0-python = "^4.7.1"
 poetry = "^1.8.3"
 litellm = "^1.44.22"
+graphviz = "^0.20.3"
 
 [tool.poetry.extras]
 tools = ["crewai-tools"]

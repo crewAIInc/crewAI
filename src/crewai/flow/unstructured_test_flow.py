@@ -27,7 +27,8 @@ class FlexibleExampleFlow(Flow):
 
 async def main():
     flow = FlexibleExampleFlow()
-    await flow.kickoff()
+    # await flow.kickoff()
+    flow.visualize()
 
 
 asyncio.run(main())

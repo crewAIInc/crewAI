@@ -20,7 +20,8 @@ class OrExampleFlow(Flow):
 
 async def main():
     flow = OrExampleFlow()
-    await flow.kickoff()
+    flow.visualize()
+    # await flow.kickoff()
 
 
 asyncio.run(main())

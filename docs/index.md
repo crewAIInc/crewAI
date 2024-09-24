@@ -54,6 +54,11 @@ Cutting-edge framework for orchestrating role-playing, autonomous AI agents. By 
                 </a>
             </li>
             <li>
+                <a href="./core-concepts/Flows">
+                    Flows
+                </a>
+            </li>
+            <li>
                 <a href="./core-concepts/Pipeline">
                     Pipeline
                 </a>
@@ -191,6 +196,26 @@ Cutting-edge framework for orchestrating role-playing, autonomous AI agents. By 
             <li>
                 <a target='_blank' href="https://github.com/joaomdmoura/crewAI-examples/tree/main/landing_page_generator">
                     Landing Page Generator
+                </a>
+            </li>
+            <li>
+                <a target='_blank' href="https://github.com/crewAIInc/crewAI-examples/tree/main/email_auto_responder_flow">
+                    Email Auto Responder Flow
+                </a>
+            </li>
+            <li>
+                <a target='_blank' href="https://github.com/crewAIInc/crewAI-examples/tree/main/lead-score-flow">
+                    Lead Score Flow
+                </a>
+            </li>
+            <li>
+                <a target='_blank' href="https://github.com/crewAIInc/crewAI-examples/tree/main/write_a_book_with_flows">
+                    Write a Book Flow
+                </a>
+            </li>
+            <li>
+                <a target='_blank' href="https://github.com/crewAIInc/crewAI-examples/tree/main/meeting_assistant_flow">
+                    Meeting Assistant Flow
                 </a>
             </li>
         </ul>

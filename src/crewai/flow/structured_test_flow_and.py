@@ -21,7 +21,7 @@ class AndExampleFlow(Flow):
 
 async def main():
     flow = AndExampleFlow()
-    await flow.kickoff()
+    flow.visualize()
 
 
 asyncio.run(main())

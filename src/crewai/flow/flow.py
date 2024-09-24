@@ -2,6 +2,7 @@ import asyncio
 import inspect
 from typing import Any, Callable, Dict, Generic, List, Set, Type, TypeVar, Union
 
+import graphviz
 from pydantic import BaseModel
 
 T = TypeVar("T", bound=Union[BaseModel, Dict[str, Any]])
@@ -250,3 +251,103 @@ class Flow(Generic[T], metaclass=FlowMeta):
             import traceback
 
             traceback.print_exc()
+
+    def visualize(self, filename="flow_graph"):
+        dot = graphviz.Digraph(comment="Flow Graph", engine="dot")
+        dot.attr(
+            rankdir="TB", size="20,20", splines="curved"
+        )  # Changed to curved splines
+
+        # Color scheme (using company colors)
+        colors = {
+            "bg": "#FFFFFF",
+            "start": "#FF5A50",
+            "method": "#333333",
+            "router_outline": "#FF5A50",
+            "edge": "#333333",
+            "text": "#FFFFFF",
+        }
+
+        dot.attr(bgcolor=colors["bg"])
+
+        # Add nodes for each relevant method
+        for method_name, method in self._methods.items():
+            if (
+                hasattr(method, "__is_start_method__")
+                or method_name in self._listeners
+                or method_name in self._routers.values()
+            ):
+                shape = "rectangle"
+                style = "filled,rounded"
+                fillcolor = colors["method"]
+
+                if hasattr(method, "__is_start_method__"):
+                    fillcolor = colors["start"]
+
+                dot.node(
+                    method_name,
+                    method_name,
+                    shape=shape,
+                    style=style,
+                    fillcolor=fillcolor,
+                    fontcolor=colors["text"],
+                    penwidth="2",
+                )
+
+        # Add edges and enhanced router representation
+        for method_name, method in self._methods.items():
+            if method_name in self._listeners:
+                condition_type, trigger_methods = self._listeners[method_name]
+                for trigger in trigger_methods:
+                    if condition_type == "AND":
+                        dot.edge(
+                            trigger,
+                            method_name,
+                            color=colors["edge"],
+                            style="dashed",
+                            penwidth="2",
+                        )
+                    else:  # OR condition
+                        dot.edge(
+                            trigger, method_name, color=colors["edge"], penwidth="2"
+                        )
+
+            if method_name in self._routers.values():
+                for trigger, router in self._routers.items():
+                    if router == method_name:
+                        # Create a subgraph for the router and its outputs
+                        subgraph_name = f"cluster_{method_name}"
+                        subgraph = graphviz.Digraph(name=subgraph_name)
+                        subgraph.attr(
+                            label="",
+                            style="filled,rounded",
+                            color=colors["router_outline"],
+                            fillcolor=colors["method"],
+                            penwidth="3",
+                        )  # Changed to solid line and increased penwidth
+
+                        # Router label (method name) and outputs
+                        label = f"{method_name}\\n\\nPossible outcomes:\\n• Success\\n• Failure"
+                        subgraph.node(
+                            method_name,
+                            label,
+                            shape="plaintext",
+                            fontcolor=colors["text"],
+                        )
+
+                        # Add the subgraph to the main graph
+                        dot.subgraph(subgraph)
+
+                        # Connect trigger to router (to the border of the subgraph)
+                        dot.edge(
+                            trigger,
+                            method_name,
+                            color=colors["edge"],
+                            style="solid",
+                            penwidth="2",
+                            lhead=subgraph_name,
+                        )
+
+        # Render and save the graph
+        dot.render(filename, format="png", cleanup=True, view=True)
+        print(f"Graph saved as {filename}.png")

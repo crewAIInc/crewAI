@@ -35,7 +35,7 @@ class RouterFlow(Flow[ExampleState]):
 
 async def main():
     flow = RouterFlow()
-    await flow.kickoff()
+    flow.visualize()
 
 
 asyncio.run(main())
