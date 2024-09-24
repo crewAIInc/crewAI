@@ -1,4 +1,3 @@
-```markdown
 ---
 title: crewAI Tasks
 description: Detailed guide on managing and creating tasks within the crewAI framework, reflecting the latest codebase updates.
