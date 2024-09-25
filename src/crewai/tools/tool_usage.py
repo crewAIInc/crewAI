@@ -80,7 +80,6 @@ class ToolUsage:
 
     def parse(self, tool_string: str):
         """Parse the tool string and return the tool calling."""
-        print("tool_string", tool_string)
         return self._tool_calling(tool_string)
 
     def use(

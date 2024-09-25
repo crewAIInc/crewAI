@@ -166,8 +166,9 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
         if self.agent.verbose or (
             hasattr(self, "crew") and getattr(self.crew, "verbose", False)
         ):
+            agent_role = self.agent.role.split("\n")[0]
             self._printer.print(
-                content=f"\033[1m\033[95m# Agent:\033[00m \033[1m\033[92m{self.agent.role}\033[00m"
+                content=f"\033[1m\033[95m# Agent:\033[00m \033[1m\033[92m{agent_role}\033[00m"
             )
             self._printer.print(
                 content=f"\033[95m## Task:\033[00m \033[92m{self.task.description}\033[00m"
@@ -177,6 +178,7 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
         if self.agent.verbose or (
             hasattr(self, "crew") and getattr(self.crew, "verbose", False)
         ):
+            agent_role = self.agent.role.split("\n")[0]
             if isinstance(formatted_answer, AgentAction):
                 thought = re.sub(r"\n+", "\n", formatted_answer.thought)
                 formatted_json = json.dumps(
@@ -185,7 +187,7 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
                     ensure_ascii=False,
                 )
                 self._printer.print(
-                    content=f"\n\n\033[1m\033[95m# Agent:\033[00m \033[1m\033[92m{self.agent.role}\033[00m"
+                    content=f"\n\n\033[1m\033[95m# Agent:\033[00m \033[1m\033[92m{agent_role}\033[00m"
                 )
                 if thought and thought != "":
                     self._printer.print(
@@ -202,10 +204,10 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
                 )
             elif isinstance(formatted_answer, AgentFinish):
                 self._printer.print(
-                    content=f"\n\n\033[1m\033[95m# Agent:\033[00m \033[1m\033[92m{self.agent.role}\033[00m"
+                    content=f"\n\n\033[1m\033[95m# Agent:\033[00m \033[1m\033[92m{agent_role}\033[00m"
                 )
                 self._printer.print(
-                    content=f"\033[95m## Final Answer:\033[00m \033[92m\n{formatted_answer.output}\033[00m"
+                    content=f"\033[95m## Final Answer:\033[00m \033[92m\n{formatted_answer.output}\033[00m\n\n"
                 )
 
     def _use_tool(self, agent_action: AgentAction) -> Any:
