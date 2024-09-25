@@ -1,7 +1,8 @@
 import requests
 from os import getenv
-from crewai.cli.deploy.utils import get_crewai_version
+from crewai.cli.utils import get_crewai_version
 from urllib.parse import urljoin
+
 
 class PlusAPI:
     """
