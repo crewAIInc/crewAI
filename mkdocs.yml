@@ -162,7 +162,7 @@ nav:
     - Directory RAG Search: 'tools/DirectorySearchTool.md'
     - Directory Read: 'tools/DirectoryReadTool.md'
     - Docx Rag Search: 'tools/DOCXSearchTool.md'
-    - EXA Serch Web Loader: 'tools/EXASearchTool.md'
+    - EXA Search Web Loader: 'tools/EXASearchTool.md'
     - File Read: 'tools/FileReadTool.md'
     - File Write: 'tools/FileWriteTool.md'
     - Firecrawl Crawl Website Tool: 'tools/FirecrawlCrawlWebsiteTool.md'
