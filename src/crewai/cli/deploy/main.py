@@ -3,13 +3,13 @@ from typing import Any, Dict, List, Optional
 from rich.console import Console
 
 from crewai.telemetry import Telemetry
-from .api import CrewAPI
-from .utils import (
+from crewai.cli.utils import (
     fetch_and_json_env_file,
     get_auth_token,
     get_git_remote_url,
     get_project_name,
 )
+from .api import CrewAPI
 
 console = Console()
 
