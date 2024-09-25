@@ -25,8 +25,8 @@ interactions:
       content-type:
       - application/json
       cookie:
-      - __cf_bm=4rzJDR3F8S3Dp4B_qwylZU0mdm_WUwmv8vNHHp3IplM-1727119501-1.0.1.1-qobO_Sf88yG1qtXFnLgykvyc9YXR_fm1J7ZpXIhvtynVnsz67Uwcf4122PgHs4GMrlvZMaL6z_UVcVYSYUJOKQ;
-        _cfuvid=9K_ipT1uTVyDTneB1W5OZHPxCh36aOsDZCBnsQTONqQ-1727119501207-0.0.1.1-604800000
+      - __cf_bm=rb61BZH2ejzD5YPmLaEJqI7km71QqyNJGTVdNxBq6qk-1727213194-1.0.1.1-pJ49onmgX9IugEMuYQMralzD7oj_6W.CHbSu4Su1z3NyjTGYg.rhgJZWng8feFYah._oSnoYlkTjpK1Wd2C9FA;
+        _cfuvid=lbRdAddVWV6W3f5Dm9SaOPWDUOxqtZBSPr_fTW26nEA-1727213194587-0.0.1.1-604800000
       host:
       - api.openai.com
       user-agent:
@@ -50,28 +50,28 @@ interactions:
     method: POST
     uri: https://api.openai.com/v1/chat/completions
   response:
-    content: "{\n  \"id\": \"chatcmpl-AAj5XXXw78AeZ5uNUvDiQGNKU2frE\",\n  \"object\":
-      \"chat.completion\",\n  \"created\": 1727119963,\n  \"model\": \"gpt-4o-2024-05-13\",\n
+    content: "{\n  \"id\": \"chatcmpl-AB7WnyWZFoccBH9YB7ghLbR1L8Wqa\",\n  \"object\":
+      \"chat.completion\",\n  \"created\": 1727213909,\n  \"model\": \"gpt-4o-2024-05-13\",\n
       \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
       \"assistant\",\n        \"content\": \"Thought: I now can give a great answer\\nFinal
-      Answer: As a researcher specializing in technology and AI, I don't hate AI agents.
-      In fact, I find them incredibly fascinating and beneficial. AI agents have the
-      potential to transform various industries, improve efficiencies, and offer new
-      solutions to complex problems. Their ability to learn, adapt, and perform tasks
-      that were once thought to require human intelligence is remarkable. While it's
-      important to consider ethical implications and ensure that AI systems are designed
-      and deployed responsibly, I believe their overall positive impact on society
-      and technology is significant. So to clarify, I don't hate AI agents; rather,
-      I am quite enthusiastic about their potential and the advancements they bring
-      to the field of technology.\",\n        \"refusal\": null\n      },\n      \"logprobs\":
-      null,\n      \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\":
-      199,\n    \"completion_tokens\": 142,\n    \"total_tokens\": 341,\n    \"completion_tokens_details\":
-      {\n      \"reasoning_tokens\": 0\n    }\n  },\n  \"system_fingerprint\": \"fp_e375328146\"\n}\n"
+      Answer: As an expert researcher specialized in technology, I don't harbor emotions
+      such as hate towards AI agents. Instead, my focus is on understanding, analyzing,
+      and leveraging their potential to advance various fields. AI agents, when designed
+      and implemented effectively, can greatly augment human capabilities, streamline
+      processes, and provide valuable insights that might otherwise be overlooked.
+      My enthusiasm for AI agents stems from their ability to transform industries
+      and improve everyday life, making complex tasks more manageable and enhancing
+      overall efficiency. This passion drives my research and commitment to making
+      meaningful contributions in the realm of AI and AI agents.\",\n        \"refusal\":
+      null\n      },\n      \"logprobs\": null,\n      \"finish_reason\": \"stop\"\n
+      \   }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 199,\n    \"completion_tokens\":
+      126,\n    \"total_tokens\": 325,\n    \"completion_tokens_details\": {\n      \"reasoning_tokens\":
+      0\n    }\n  },\n  \"system_fingerprint\": \"fp_e375328146\"\n}\n"
     headers:
       CF-Cache-Status:
       - DYNAMIC
       CF-RAY:
-      - 8c7cf65b6b9ea4c7-MIA
+      - 8c85ebf47e661cf3-GRU
       Connection:
       - keep-alive
       Content-Encoding:
@@ -79,7 +79,7 @@ interactions:
       Content-Type:
       - application/json
       Date:
-      - Mon, 23 Sep 2024 19:32:45 GMT
+      - Tue, 24 Sep 2024 21:38:31 GMT
       Server:
       - cloudflare
       Transfer-Encoding:
@@ -91,11 +91,11 @@ interactions:
       openai-organization:
       - crewai-iuxna1
       openai-processing-ms:
-      - '2138'
+      - '2498'
       openai-version:
       - '2020-10-01'
       strict-transport-security:
-      - max-age=15552000; includeSubDomains; preload
+      - max-age=31536000; includeSubDomains; preload
       x-ratelimit-limit-requests:
       - '10000'
       x-ratelimit-limit-tokens:
@@ -109,7 +109,7 @@ interactions:
       x-ratelimit-reset-tokens:
       - 0s
       x-request-id:
-      - req_67302da4502eba196fde8c40d9647577
+      - req_b7e2cb0620e45d3d74310d3f0166551f
     http_version: HTTP/1.1
     status_code: 200
 version: 1

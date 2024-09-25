@@ -80,6 +80,7 @@ class ToolUsage:
 
     def parse(self, tool_string: str):
         """Parse the tool string and return the tool calling."""
+        print("tool_string", tool_string)
         return self._tool_calling(tool_string)
 
     def use(
@@ -297,59 +298,78 @@ class ToolUsage:
             )
         return "\n--\n".join(descriptions)
 
+    def _function_calling(self, tool_string: str):
+        model = (
+            InstructorToolCalling
+            if self.function_calling_llm.supports_function_calling()
+            else ToolCalling
+        )
+        converter = Converter(
+            text=f"Only tools available:\n###\n{self._render()}\n\nReturn a valid schema for the tool, the tool name must be exactly equal one of the options, use this text to inform the valid output schema:\n\n### TEXT \n{tool_string}",
+            llm=self.function_calling_llm,
+            model=model,
+            instructions=dedent(
+                """\
+        The schema should have the following structure, only two keys:
+        - tool_name: str
+        - arguments: dict (always a dictionary, with all arguments being passed)
+
+        Example:
+        {"tool_name": "tool name", "arguments": {"arg_name1": "value", "arg_name2": 2}}""",
+            ),
+            max_attempts=1,
+        )
+        tool_object = converter.to_pydantic()
+        calling = ToolCalling(
+            tool_name=tool_object["tool_name"],
+            arguments=tool_object["arguments"],
+            log=tool_string,  # type: ignore
+        )
+
+        if isinstance(calling, ConverterError):
+            raise calling
+
+        return calling
+
+    def _original_tool_calling(self, tool_string: str, raise_error: bool = False):
+        tool_name = self.action.tool
+        tool = self._select_tool(tool_name)
+        try:
+            tool_input = self._validate_tool_input(self.action.tool_input)
+            arguments = ast.literal_eval(tool_input)
+        except Exception:
+            if raise_error:
+                raise
+            else:
+                return ToolUsageErrorException(  # type: ignore # Incompatible return value type (got "ToolUsageErrorException", expected "ToolCalling | InstructorToolCalling")
+                    f'{self._i18n.errors("tool_arguments_error")}'
+                )
+
+        if not isinstance(arguments, dict):
+            if raise_error:
+                raise
+            else:
+                return ToolUsageErrorException(  # type: ignore # Incompatible return value type (got "ToolUsageErrorException", expected "ToolCalling | InstructorToolCalling")
+                    f'{self._i18n.errors("tool_arguments_error")}'
+                )
+
+        return ToolCalling(
+            tool_name=tool.name,
+            arguments=arguments,
+            log=tool_string,  # type: ignore
+        )
+
     def _tool_calling(
         self, tool_string: str
     ) -> Union[ToolCalling, InstructorToolCalling]:
         try:
-            if self.function_calling_llm:
-                model = (
-                    InstructorToolCalling
-                    if self.function_calling_llm.supports_function_calling()
-                    else ToolCalling
-                )
-                converter = Converter(
-                    text=f"Only tools available:\n###\n{self._render()}\n\nReturn a valid schema for the tool, the tool name must be exactly equal one of the options, use this text to inform the valid output schema:\n\n### TEXT \n{tool_string}",
-                    llm=self.function_calling_llm,
-                    model=model,
-                    instructions=dedent(
-                        """\
-              The schema should have the following structure, only two keys:
-              - tool_name: str
-              - arguments: dict (with all arguments being passed)
-
-              Example:
-              {"tool_name": "tool name", "arguments": {"arg_name1": "value", "arg_name2": 2}}""",
-                    ),
-                    max_attempts=1,
-                )
-                tool_object = converter.to_pydantic()
-                calling = ToolCalling(
-                    tool_name=tool_object["tool_name"],
-                    arguments=tool_object["arguments"],
-                    log=tool_string,  # type: ignore
-                )
-
-                if isinstance(calling, ConverterError):
-                    raise calling
-            else:
-                tool_name = self.action.tool
-                tool = self._select_tool(tool_name)
-                try:
-                    tool_input = self._validate_tool_input(self.action.tool_input)
-                    arguments = ast.literal_eval(tool_input)
-                except Exception:
-                    return ToolUsageErrorException(  # type: ignore # Incompatible return value type (got "ToolUsageErrorException", expected "ToolCalling | InstructorToolCalling")
-                        f'{self._i18n.errors("tool_arguments_error")}'
-                    )
-                if not isinstance(arguments, dict):
-                    return ToolUsageErrorException(  # type: ignore # Incompatible return value type (got "ToolUsageErrorException", expected "ToolCalling | InstructorToolCalling")
-                        f'{self._i18n.errors("tool_arguments_error")}'
-                    )
-                calling = ToolCalling(
-                    tool_name=tool.name,
-                    arguments=arguments,
-                    log=tool_string,  # type: ignore
-                )
+            try:
+                return self._original_tool_calling(tool_string, raise_error=True)
+            except Exception:
+                if self.function_calling_llm:
+                    return self._function_calling(tool_string)
+                else:
+                    return self._original_tool_calling(tool_string)
         except Exception as e:
             self._run_attempts += 1
             if self._run_attempts > self._max_parsing_attempts:
@@ -361,8 +381,6 @@ class ToolUsage:
                     f'{self._i18n.errors("tool_usage_error").format(error=e)}\nMoving on then. {self._i18n.slice("format").format(tool_names=self.tools_names)}'
                 )
             return self._tool_calling(tool_string)
-
-        return calling
 
     def _validate_tool_input(self, tool_input: str) -> str:
         try:

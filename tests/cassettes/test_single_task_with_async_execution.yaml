@@ -1,5 +1,63 @@
 interactions:
 - request:
+    body: !!binary |
+      CoEMCiQKIgoMc2VydmljZS5uYW1lEhIKEGNyZXdBSS10ZWxlbWV0cnkS2AsKEgoQY3Jld2FpLnRl
+      bGVtZXRyeRKQAgoQ1lPH3Bis4hD4M7Sez2t96RIIIffb2kCAAqMqDlRhc2sgRXhlY3V0aW9uMAE5
+      WIEZIiVM+BdBSK51sSZM+BdKLgoIY3Jld19rZXkSIgogM2Y4ZDVjM2FiODgyZDY4NjlkOTNjYjgx
+      ZjBlMmVkNGFKMQoHY3Jld19pZBImCiQyYjZmY2ZmYS1lNDQ0LTQ4YjYtYWNjNi0xZTVhMDY2OTQ1
+      NWJKLgoIdGFza19rZXkSIgogOTRhODI2YzE5MzA1NTk2ODZiYWZiNDA5ZWU4Mzg3NmZKMQoHdGFz
+      a19pZBImCiQxMTU5NmU3OS0yYzllLTQzOWYtYWViMS0xMThhMTI2ZDNiYzN6AhgBhQEAAQAAEp0H
+      ChBEYWf4sVuYMd8/Oxr4ONAsEghO/cKNNKdq0CoMQ3JldyBDcmVhdGVkMAE5KCBKsyZM+BdByI5P
+      syZM+BdKGgoOY3Jld2FpX3ZlcnNpb24SCAoGMC42MS4wShoKDnB5dGhvbl92ZXJzaW9uEggKBjMu
+      MTEuN0ouCghjcmV3X2tleRIiCiBhOWNjNWQ0MzM5NWIyMWIxODFjODBiZDQzNTFjY2VjOEoxCgdj
+      cmV3X2lkEiYKJDkzNGJkMDZiLTY2ZDktNDE0MC1iZGE3LTQzMDZmNmM3Y2Q0N0ocCgxjcmV3X3By
+      b2Nlc3MSDAoKc2VxdWVudGlhbEoRCgtjcmV3X21lbW9yeRICEABKGgoUY3Jld19udW1iZXJfb2Zf
+      dGFza3MSAhgBShsKFWNyZXdfbnVtYmVyX29mX2FnZW50cxICGAFKzAIKC2NyZXdfYWdlbnRzErwC
+      CrkCW3sia2V5IjogIjhiZDIxMzliNTk3NTE4MTUwNmU0MWZkOWM0NTYzZDc1IiwgImlkIjogIjY3
+      MWMzYzdmLWNjMzUtNGU5MS1hYjgzLWVmZGVjOWU3Y2ZiNyIsICJyb2xlIjogIlJlc2VhcmNoZXIi
+      LCAidmVyYm9zZT8iOiBmYWxzZSwgIm1heF9pdGVyIjogMTUsICJtYXhfcnBtIjogbnVsbCwgImZ1
+      bmN0aW9uX2NhbGxpbmdfbGxtIjogIiIsICJsbG0iOiAiZ3B0LTRvIiwgImRlbGVnYXRpb25fZW5h
+      YmxlZD8iOiBmYWxzZSwgImFsbG93X2NvZGVfZXhlY3V0aW9uPyI6IGZhbHNlLCAibWF4X3JldHJ5
+      X2xpbWl0IjogMiwgInRvb2xzX25hbWVzIjogW119XUr+AQoKY3Jld190YXNrcxLvAQrsAVt7Imtl
+      eSI6ICJlOWU2YjcyYWFjMzI2NDU5ZGQ3MDY4ZjBiMTcxN2MxYyIsICJpZCI6ICI4YmFkNTJiZi05
+      MGM0LTQ0ZDgtYmNlZi0xODBkZTA2MjRiYWYiLCAiYXN5bmNfZXhlY3V0aW9uPyI6IHRydWUsICJo
+      dW1hbl9pbnB1dD8iOiBmYWxzZSwgImFnZW50X3JvbGUiOiAiUmVzZWFyY2hlciIsICJhZ2VudF9r
+      ZXkiOiAiOGJkMjEzOWI1OTc1MTgxNTA2ZTQxZmQ5YzQ1NjNkNzUiLCAidG9vbHNfbmFtZXMiOiBb
+      XX1degIYAYUBAAEAABKOAgoQduJhIxVspIn9gWgZzmXHrhIILYsCkB2V4ckqDFRhc2sgQ3JlYXRl
+      ZDABORCOYrMmTPgXQdDrYrMmTPgXSi4KCGNyZXdfa2V5EiIKIGE5Y2M1ZDQzMzk1YjIxYjE4MWM4
+      MGJkNDM1MWNjZWM4SjEKB2NyZXdfaWQSJgokOTM0YmQwNmItNjZkOS00MTQwLWJkYTctNDMwNmY2
+      YzdjZDQ3Si4KCHRhc2tfa2V5EiIKIGU5ZTZiNzJhYWMzMjY0NTlkZDcwNjhmMGIxNzE3YzFjSjEK
+      B3Rhc2tfaWQSJgokOGJhZDUyYmYtOTBjNC00NGQ4LWJjZWYtMTgwZGUwNjI0YmFmegIYAYUBAAEA
+      AA==
+    headers:
+      Accept:
+      - '*/*'
+      Accept-Encoding:
+      - gzip, deflate
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '1540'
+      Content-Type:
+      - application/x-protobuf
+      User-Agent:
+      - OTel-OTLP-Exporter-Python/1.27.0
+    method: POST
+    uri: https://telemetry.crewai.com:4319/v1/traces
+  response:
+    body:
+      string: "\n\0"
+    headers:
+      Content-Length:
+      - '2'
+      Content-Type:
+      - application/x-protobuf
+      Date:
+      - Tue, 24 Sep 2024 21:43:06 GMT
+    status:
+      code: 200
+      message: OK
+- request:
     body: '{"messages": [{"role": "system", "content": "You are Researcher. You''re
       an expert researcher, specialized in technology, software engineering, AI and
       startups. You work as a freelancer and is now working on doing research and
@@ -27,8 +85,8 @@ interactions:
       content-type:
       - application/json
       cookie:
-      - __cf_bm=4rzJDR3F8S3Dp4B_qwylZU0mdm_WUwmv8vNHHp3IplM-1727119501-1.0.1.1-qobO_Sf88yG1qtXFnLgykvyc9YXR_fm1J7ZpXIhvtynVnsz67Uwcf4122PgHs4GMrlvZMaL6z_UVcVYSYUJOKQ;
-        _cfuvid=9K_ipT1uTVyDTneB1W5OZHPxCh36aOsDZCBnsQTONqQ-1727119501207-0.0.1.1-604800000
+      - __cf_bm=9.8sBYBkvBR8R1K_bVF7xgU..80XKlEIg3N2OBbTSCU-1727214102-1.0.1.1-.qiTLXbPamYUMSuyNsOEB9jhGu.jOifujOrx9E2JZvStbIZ9RTIiE44xKKNfLPxQkOi6qAT3h6htK8lPDGV_5g;
+        _cfuvid=lbRdAddVWV6W3f5Dm9SaOPWDUOxqtZBSPr_fTW26nEA-1727213194587-0.0.1.1-604800000
       host:
       - api.openai.com
       user-agent:
@@ -52,24 +110,23 @@ interactions:
     method: POST
     uri: https://api.openai.com/v1/chat/completions
   response:
-    content: "{\n  \"id\": \"chatcmpl-AAjBXUFBJkwIAQQMF5gROAafcg9ew\",\n  \"object\":
-      \"chat.completion\",\n  \"created\": 1727120335,\n  \"model\": \"gpt-4o-2024-05-13\",\n
+    content: "{\n  \"id\": \"chatcmpl-AB7bGdQd8mh4zvM4UaLl93hex1Ys3\",\n  \"object\":
+      \"chat.completion\",\n  \"created\": 1727214186,\n  \"model\": \"gpt-4o-2024-05-13\",\n
       \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
       \"assistant\",\n        \"content\": \"Thought: I now can give a great answer.\\nFinal
-      Answer: \\n- AI in healthcare: Revolutionizing diagnostics and personalized
-      treatment.\\n- Ethical concerns in advanced AI deployment and human safety.\\n-
-      AI-driven automation in finance and its economic impacts.\\n- Development and
-      regulation of AI-powered autonomous vehicles.\\n- The role of AI in climate
-      change solutions and environmental monitoring.\",\n        \"refusal\": null\n
-      \     },\n      \"logprobs\": null,\n      \"finish_reason\": \"stop\"\n    }\n
-      \ ],\n  \"usage\": {\n    \"prompt_tokens\": 226,\n    \"completion_tokens\":
-      71,\n    \"total_tokens\": 297,\n    \"completion_tokens_details\": {\n      \"reasoning_tokens\":
+      Answer:\\n- Ethical implications of AI in law enforcement and surveillance.\\n-
+      AI advancements in personalized healthcare and diagnostics.\\n- Autonomous AI
+      agents in financial market trading.\\n- Collaboration between AI and humans
+      in creative arts.\\n- AI-driven climate modeling and environmental monitoring.\",\n
+      \       \"refusal\": null\n      },\n      \"logprobs\": null,\n      \"finish_reason\":
+      \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 226,\n    \"completion_tokens\":
+      61,\n    \"total_tokens\": 287,\n    \"completion_tokens_details\": {\n      \"reasoning_tokens\":
       0\n    }\n  },\n  \"system_fingerprint\": \"fp_e375328146\"\n}\n"
     headers:
       CF-Cache-Status:
       - DYNAMIC
       CF-RAY:
-      - 8c7cff713b83a4c7-MIA
+      - 8c85f2b7c92f1cf3-GRU
       Connection:
       - keep-alive
       Content-Encoding:
@@ -77,7 +134,7 @@ interactions:
       Content-Type:
       - application/json
       Date:
-      - Mon, 23 Sep 2024 19:38:56 GMT
+      - Tue, 24 Sep 2024 21:43:07 GMT
       Server:
       - cloudflare
       Transfer-Encoding:
@@ -89,11 +146,11 @@ interactions:
       openai-organization:
       - crewai-iuxna1
       openai-processing-ms:
-      - '1295'
+      - '939'
       openai-version:
       - '2020-10-01'
       strict-transport-security:
-      - max-age=15552000; includeSubDomains; preload
+      - max-age=31536000; includeSubDomains; preload
       x-ratelimit-limit-requests:
       - '10000'
       x-ratelimit-limit-tokens:
@@ -107,7 +164,7 @@ interactions:
       x-ratelimit-reset-tokens:
       - 0s
       x-request-id:
-      - req_d8f8ba53885b4f54ebb4aa1d9466d495
+      - req_4a6962cfb5b3418a75c19cfc1c2e7227
     http_version: HTTP/1.1
     status_code: 200
 version: 1
