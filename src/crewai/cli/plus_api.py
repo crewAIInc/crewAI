@@ -1,7 +1,7 @@
 import requests
 from os import getenv
 from crewai.cli.deploy.utils import get_crewai_version
-
+from urllib.parse import urljoin
 
 class PlusAPI:
     """
@@ -19,5 +19,5 @@ class PlusAPI:
         self.base_url = getenv("CREWAI_BASE_URL", "https://app.crewai.com")
 
     def _make_request(self, method: str, endpoint: str, **kwargs) -> requests.Response:
-        url = f"{self.base_url}/{endpoint}"
+        url = urljoin(self.base_url, endpoint)
         return requests.request(method, url, headers=self.headers, **kwargs)
