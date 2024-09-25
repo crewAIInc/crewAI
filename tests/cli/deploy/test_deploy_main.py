@@ -8,7 +8,7 @@ from crewai.cli.utils import parse_toml
 
 
 class TestDeployCommand(unittest.TestCase):
-    @patch("crewai.cli.deploy.main.get_auth_token")
+    @patch("crewai.cli.command.get_auth_token")
     @patch("crewai.cli.deploy.main.get_project_name")
     @patch("crewai.cli.deploy.main.CrewAPI")
     def setUp(self, mock_crew_api, mock_get_project_name, mock_get_auth_token):
@@ -20,22 +20,22 @@ class TestDeployCommand(unittest.TestCase):
         self.mock_get_project_name.return_value = "test_project"
 
         self.deploy_command = DeployCommand()
-        self.mock_client = self.deploy_command.client
+        self.mock_client = self.deploy_command.crew_api_client
 
     def test_init_success(self):
         self.assertEqual(self.deploy_command.project_name, "test_project")
         self.mock_crew_api.assert_called_once_with(api_key="test_token")
 
-    @patch("crewai.cli.deploy.main.get_auth_token")
+    @patch("crewai.cli.command.get_auth_token")
     def test_init_failure(self, mock_get_auth_token):
         mock_get_auth_token.side_effect = Exception("Auth failed")
 
         with self.assertRaises(SystemExit):
             DeployCommand()
 
-    def test_handle_error(self):
+    def test_handle_plus_api_error(self):
         with patch("sys.stdout", new=StringIO()) as fake_out:
-            self.deploy_command._handle_error(
+            self.deploy_command._handle_plus_api_error(
                 {"error": "Test error", "message": "Test message"}
             )
             self.assertIn("Error: Test error", fake_out.getvalue())
