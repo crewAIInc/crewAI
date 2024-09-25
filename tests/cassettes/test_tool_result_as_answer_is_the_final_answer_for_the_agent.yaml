@@ -30,8 +30,8 @@ interactions:
       content-type:
       - application/json
       cookie:
-      - __cf_bm=4rzJDR3F8S3Dp4B_qwylZU0mdm_WUwmv8vNHHp3IplM-1727119501-1.0.1.1-qobO_Sf88yG1qtXFnLgykvyc9YXR_fm1J7ZpXIhvtynVnsz67Uwcf4122PgHs4GMrlvZMaL6z_UVcVYSYUJOKQ;
-        _cfuvid=9K_ipT1uTVyDTneB1W5OZHPxCh36aOsDZCBnsQTONqQ-1727119501207-0.0.1.1-604800000
+      - __cf_bm=rb61BZH2ejzD5YPmLaEJqI7km71QqyNJGTVdNxBq6qk-1727213194-1.0.1.1-pJ49onmgX9IugEMuYQMralzD7oj_6W.CHbSu4Su1z3NyjTGYg.rhgJZWng8feFYah._oSnoYlkTjpK1Wd2C9FA;
+        _cfuvid=lbRdAddVWV6W3f5Dm9SaOPWDUOxqtZBSPr_fTW26nEA-1727213194587-0.0.1.1-604800000
       host:
       - api.openai.com
       user-agent:
@@ -55,20 +55,20 @@ interactions:
     method: POST
     uri: https://api.openai.com/v1/chat/completions
   response:
-    content: "{\n  \"id\": \"chatcmpl-AAj4Z5IeRW1YC2x0Xv4aS0wq2CTHS\",\n  \"object\":
-      \"chat.completion\",\n  \"created\": 1727119903,\n  \"model\": \"gpt-4o-2024-05-13\",\n
+    content: "{\n  \"id\": \"chatcmpl-AB7WF40CXhA3hdWFV0w1Py8m9X6E5\",\n  \"object\":
+      \"chat.completion\",\n  \"created\": 1727213875,\n  \"model\": \"gpt-4o-2024-05-13\",\n
       \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
-      \"assistant\",\n        \"content\": \"Thought: To start off, let's get a greeting
-      using the available tool.\\n\\nAction: Get Greetings\\nAction Input: {}\",\n
-      \       \"refusal\": null\n      },\n      \"logprobs\": null,\n      \"finish_reason\":
-      \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 284,\n    \"completion_tokens\":
-      24,\n    \"total_tokens\": 308,\n    \"completion_tokens_details\": {\n      \"reasoning_tokens\":
-      0\n    }\n  },\n  \"system_fingerprint\": \"fp_e375328146\"\n}\n"
+      \"assistant\",\n        \"content\": \"Thought: I should start by using the
+      Get Greetings tool to get a random greeting.\\n\\nAction: Get Greetings\\nAction
+      Input: {}\",\n        \"refusal\": null\n      },\n      \"logprobs\": null,\n
+      \     \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\":
+      284,\n    \"completion_tokens\": 26,\n    \"total_tokens\": 310,\n    \"completion_tokens_details\":
+      {\n      \"reasoning_tokens\": 0\n    }\n  },\n  \"system_fingerprint\": \"fp_e375328146\"\n}\n"
     headers:
       CF-Cache-Status:
       - DYNAMIC
       CF-RAY:
-      - 8c7cf4e54cf6228a-MIA
+      - 8c85eb23cd701cf3-GRU
       Connection:
       - keep-alive
       Content-Encoding:
@@ -76,7 +76,7 @@ interactions:
       Content-Type:
       - application/json
       Date:
-      - Mon, 23 Sep 2024 19:31:44 GMT
+      - Tue, 24 Sep 2024 21:37:56 GMT
       Server:
       - cloudflare
       Transfer-Encoding:
@@ -88,11 +88,11 @@ interactions:
       openai-organization:
       - crewai-iuxna1
       openai-processing-ms:
-      - '756'
+      - '521'
       openai-version:
       - '2020-10-01'
       strict-transport-security:
-      - max-age=15552000; includeSubDomains; preload
+      - max-age=31536000; includeSubDomains; preload
       x-ratelimit-limit-requests:
       - '10000'
       x-ratelimit-limit-tokens:
@@ -106,42 +106,39 @@ interactions:
       x-ratelimit-reset-tokens:
       - 0s
       x-request-id:
-      - req_07dc5126eb6381299f713ba6a960b090
+      - req_d0737c9b1f07bfb15487d0d04284f260
     http_version: HTTP/1.1
     status_code: 200
 - request:
     body: !!binary |
-      CrsNCiQKIgoMc2VydmljZS5uYW1lEhIKEGNyZXdBSS10ZWxlbWV0cnkSkg0KEgoQY3Jld2FpLnRl
-      bGVtZXRyeRKQAgoQ0cJsoggmM/+I3CqXQHoSxhIIJwqd4YFbcroqDlRhc2sgRXhlY3V0aW9uMAE5
-      qPYvKT729xdBIFzvs2b29xdKLgoIY3Jld19rZXkSIgogNDk0ZjM2NTcyMzdhZDhhMzAzNWIyZjFi
-      ZWVjZGM2NzdKMQoHY3Jld19pZBImCiQzN2E5MjhiOC02OWNhLTRiNWMtYWJjZi1kM2YxODJmM2Yz
-      ZTlKLgoIdGFza19rZXkSIgogZjI1OTdjNzg2N2ZiZTMyNGRjNjVkYzA4ZGZkYmZjNmNKMQoHdGFz
-      a19pZBImCiRhOTQwY2ZlMi0wZDA0LTQ4YmQtOWM5YS1iOTg3NzRjNjNlMmN6AhgBhQEAAQAAEsQH
-      ChD0qfKLLJZ+zhBulxG6uOFaEgglhNr5KN4N8yoMQ3JldyBDcmVhdGVkMAE58ECwu2b29xdBgIi1
-      u2b29xdKGgoOY3Jld2FpX3ZlcnNpb24SCAoGMC42MS4wShoKDnB5dGhvbl92ZXJzaW9uEggKBjMu
+      CqgMCiQKIgoMc2VydmljZS5uYW1lEhIKEGNyZXdBSS10ZWxlbWV0cnkS/wsKEgoQY3Jld2FpLnRl
+      bGVtZXRyeRKQAgoQEm+HPIG0bZY/UytlpKjeURIIzbGEu+Oo+tMqDlRhc2sgRXhlY3V0aW9uMAE5
+      eJfTNW1L+BdBeD5dZt5L+BdKLgoIY3Jld19rZXkSIgogNDk0ZjM2NTcyMzdhZDhhMzAzNWIyZjFi
+      ZWVjZGM2NzdKMQoHY3Jld19pZBImCiQ0Mzg4MzMyNS1hYjEwLTQxYjYtODI1Ny1lODVjYTk1ZWNj
+      NzJKLgoIdGFza19rZXkSIgogZjI1OTdjNzg2N2ZiZTMyNGRjNjVkYzA4ZGZkYmZjNmNKMQoHdGFz
+      a19pZBImCiRjYTFmMzYwNy0wZjg0LTRlYjUtYTQ4Yy1lYmFjMzAxMGM2ZWJ6AhgBhQEAAQAAEsQH
+      ChC3lq21iz10UM0bo/m4yEnHEgjfYn8uhj036ioMQ3JldyBDcmVhdGVkMAE5uLY5bd5L+BdBINs+
+      bd5L+BdKGgoOY3Jld2FpX3ZlcnNpb24SCAoGMC42MS4wShoKDnB5dGhvbl92ZXJzaW9uEggKBjMu
       MTEuN0ouCghjcmV3X2tleRIiCiA3ZTY2MDg5ODk4NTlhNjdlZWM4OGVlZjdmY2U4NTIyNUoxCgdj
-      cmV3X2lkEiYKJGVkNjNmYzMxLTEwOTItNGM4MS1iNGYwLWZkYzY0OTkwYTZlOUocCgxjcmV3X3By
+      cmV3X2lkEiYKJDFhMjIxMWNmLTAyOWQtNDUwMy1hMDIxLTQzMjVmOTQ5OWQ3YkocCgxjcmV3X3By
       b2Nlc3MSDAoKc2VxdWVudGlhbEoRCgtjcmV3X21lbW9yeRICEABKGgoUY3Jld19udW1iZXJfb2Zf
       dGFza3MSAhgBShsKFWNyZXdfbnVtYmVyX29mX2FnZW50cxICGAFK3wIKC2NyZXdfYWdlbnRzEs8C
-      CswCW3sia2V5IjogIjIyYWNkNjExZTQ0ZWY1ZmFjMDViNTMzZDc1ZTg4OTNiIiwgImlkIjogIjU4
-      NjZiYjIzLThkNTYtNGZhMi04NzM3LTY3MGRlOGQ1NWRlMiIsICJyb2xlIjogIkRhdGEgU2NpZW50
+      CswCW3sia2V5IjogIjIyYWNkNjExZTQ0ZWY1ZmFjMDViNTMzZDc1ZTg4OTNiIiwgImlkIjogImIx
+      ZGQ3MDRjLTczMDAtNGVhZS04ZmYzLTIyYzE0NTc5NzQ2ZSIsICJyb2xlIjogIkRhdGEgU2NpZW50
       aXN0IiwgInZlcmJvc2U/IjogZmFsc2UsICJtYXhfaXRlciI6IDE1LCAibWF4X3JwbSI6IG51bGws
       ICJmdW5jdGlvbl9jYWxsaW5nX2xsbSI6ICIiLCAibGxtIjogImdwdC00byIsICJkZWxlZ2F0aW9u
       X2VuYWJsZWQ/IjogZmFsc2UsICJhbGxvd19jb2RlX2V4ZWN1dGlvbj8iOiBmYWxzZSwgIm1heF9y
       ZXRyeV9saW1pdCI6IDIsICJ0b29sc19uYW1lcyI6IFsiZ2V0IGdyZWV0aW5ncyJdfV1KkgIKCmNy
       ZXdfdGFza3MSgwIKgAJbeyJrZXkiOiAiYTI3N2IzNGIyYzE0NmYwYzU2YzVlMTM1NmU4ZjhhNTci
-      LCAiaWQiOiAiZDQ2NjBiMjQtZmQxNy00OGViLTk0ZTEtN2QyYTc1ZTE0ODkyIiwgImFzeW5jX2V4
+      LCAiaWQiOiAiZDc5OTFlOGQtNzI0Zi00ZGQ1LWI1ZWUtNDAxNGVmMmEyMDgxIiwgImFzeW5jX2V4
       ZWN1dGlvbj8iOiBmYWxzZSwgImh1bWFuX2lucHV0PyI6IGZhbHNlLCAiYWdlbnRfcm9sZSI6ICJE
       YXRhIFNjaWVudGlzdCIsICJhZ2VudF9rZXkiOiAiMjJhY2Q2MTFlNDRlZjVmYWMwNWI1MzNkNzVl
       ODg5M2IiLCAidG9vbHNfbmFtZXMiOiBbImdldCBncmVldGluZ3MiXX1degIYAYUBAAEAABKOAgoQ
-      UkxcndZ6c6aOmO/S5O38KxIIbHEq0xFyEJQqDFRhc2sgQ3JlYXRlZDABOcgcxbtm9vcXQRhjxbtm
-      9vcXSi4KCGNyZXdfa2V5EiIKIDdlNjYwODk4OTg1OWE2N2VlYzg4ZWVmN2ZjZTg1MjI1SjEKB2Ny
-      ZXdfaWQSJgokZWQ2M2ZjMzEtMTA5Mi00YzgxLWI0ZjAtZmRjNjQ5OTBhNmU5Si4KCHRhc2tfa2V5
-      EiIKIGEyNzdiMzRiMmMxNDZmMGM1NmM1ZTEzNTZlOGY4YTU3SjEKB3Rhc2tfaWQSJgokZDQ2NjBi
-      MjQtZmQxNy00OGViLTk0ZTEtN2QyYTc1ZTE0ODkyegIYAYUBAAEAABKQAQoQ6dGSeDR11IXX2iZH
-      89xoiRIIROrrvc7XvMwqClRvb2wgVXNhZ2UwATn4NJn5Zvb3F0EY7pz5Zvb3F0oaCg5jcmV3YWlf
-      dmVyc2lvbhIICgYwLjYxLjBKHAoJdG9vbF9uYW1lEg8KDUdldCBHcmVldGluZ3NKDgoIYXR0ZW1w
-      dHMSAhgBegIYAYUBAAEAAA==
+      Ipnb+wuVyO/6K2F+fu2ZARIIXxLM6dFgtCMqDFRhc2sgQ3JlYXRlZDABOXAaVW3eS/gXQdCHVW3e
+      S/gXSi4KCGNyZXdfa2V5EiIKIDdlNjYwODk4OTg1OWE2N2VlYzg4ZWVmN2ZjZTg1MjI1SjEKB2Ny
+      ZXdfaWQSJgokMWEyMjExY2YtMDI5ZC00NTAzLWEwMjEtNDMyNWY5NDk5ZDdiSi4KCHRhc2tfa2V5
+      EiIKIGEyNzdiMzRiMmMxNDZmMGM1NmM1ZTEzNTZlOGY4YTU3SjEKB3Rhc2tfaWQSJgokZDc5OTFl
+      OGQtNzI0Zi00ZGQ1LWI1ZWUtNDAxNGVmMmEyMDgxegIYAYUBAAEAAA==
     headers:
       Accept:
       - '*/*'
@@ -150,7 +147,7 @@ interactions:
       Connection:
       - keep-alive
       Content-Length:
-      - '1726'
+      - '1579'
       Content-Type:
       - application/x-protobuf
       User-Agent:
@@ -166,7 +163,7 @@ interactions:
       Content-Type:
       - application/x-protobuf
       Date:
-      - Mon, 23 Sep 2024 19:31:47 GMT
+      - Tue, 24 Sep 2024 21:37:56 GMT
     status:
       code: 200
       message: OK
@@ -188,9 +185,9 @@ interactions:
       answer: The final paragraph with the full review on AI and no greeting.\nyou
       MUST return the actual complete content as the final answer, not a summary.\n\nBegin!
       This is VERY important to you, use the tools available and give your best Final
-      Answer, your job depends on it!\n\nThought:"}, {"role": "user", "content": "Thought:
-      To start off, let''s get a greeting using the available tool.\n\nAction: Get
-      Greetings\nAction Input: {}\nObservation: Howdy!"}], "model": "gpt-4o"}'
+      Answer, your job depends on it!\n\nThought:"}, {"role": "assistant", "content":
+      "Thought: I should start by using the Get Greetings tool to get a random greeting.\n\nAction:
+      Get Greetings\nAction Input: {}\nObservation: Howdy!"}], "model": "gpt-4o"}'
     headers:
       accept:
       - application/json
@@ -199,12 +196,12 @@ interactions:
       connection:
       - keep-alive
       content-length:
-      - '1578'
+      - '1595'
       content-type:
       - application/json
       cookie:
-      - __cf_bm=4rzJDR3F8S3Dp4B_qwylZU0mdm_WUwmv8vNHHp3IplM-1727119501-1.0.1.1-qobO_Sf88yG1qtXFnLgykvyc9YXR_fm1J7ZpXIhvtynVnsz67Uwcf4122PgHs4GMrlvZMaL6z_UVcVYSYUJOKQ;
-        _cfuvid=9K_ipT1uTVyDTneB1W5OZHPxCh36aOsDZCBnsQTONqQ-1727119501207-0.0.1.1-604800000
+      - __cf_bm=rb61BZH2ejzD5YPmLaEJqI7km71QqyNJGTVdNxBq6qk-1727213194-1.0.1.1-pJ49onmgX9IugEMuYQMralzD7oj_6W.CHbSu4Su1z3NyjTGYg.rhgJZWng8feFYah._oSnoYlkTjpK1Wd2C9FA;
+        _cfuvid=lbRdAddVWV6W3f5Dm9SaOPWDUOxqtZBSPr_fTW26nEA-1727213194587-0.0.1.1-604800000
       host:
       - api.openai.com
       user-agent:
@@ -228,46 +225,42 @@ interactions:
     method: POST
     uri: https://api.openai.com/v1/chat/completions
   response:
-    content: "{\n  \"id\": \"chatcmpl-AAj4aCYF9uva9uOy59JFrPKfExTUw\",\n  \"object\":
-      \"chat.completion\",\n  \"created\": 1727119904,\n  \"model\": \"gpt-4o-2024-05-13\",\n
+    content: "{\n  \"id\": \"chatcmpl-AB7WGcsBd3iW1colmI280lUeERSVO\",\n  \"object\":
+      \"chat.completion\",\n  \"created\": 1727213876,\n  \"model\": \"gpt-4o-2024-05-13\",\n
       \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
-      \"assistant\",\n        \"content\": \"Thought: Now that I have the greeting
-      \\\"Howdy!\\\", I can focus on drafting an amazing paragraph on AI. Remember,
-      the final answer should be the complete content on AI without the greeting.\\n\\nThought:
-      I'll draft a paragraph on AI, emphasizing its transformative impact, current
-      applications, and future potential.\\n\\n---\\n\\nAI, or artificial intelligence,
-      has rapidly evolved from being a conceptual theory to a practical tool that's
-      transforming industries around the globe. By mimicking human intelligence, AI
-      systems can perform tasks such as speech recognition, decision-making, and language
-      translation with remarkable accuracy. In healthcare, AI is revolutionizing diagnostics
-      with enhanced imaging techniques and personalized treatment plans. In the business
-      world, AI-driven analytics enable companies to make data-driven decisions, optimize
-      operations, and improve customer experiences. The future of AI promises even
-      greater advancements, potentially introducing self-improving systems that can
-      learn and adapt autonomously. As we continue to integrate AI into our daily
-      lives, it is crucial to consider ethical implications and ensure that these
-      technologies are developed responsibly.\\n\\n---\\n\\nThought: I now know the
-      final answer.\\n\\nFinal Answer: \\n\\nAI, or artificial intelligence, has rapidly
-      evolved from being a conceptual theory to a practical tool that's transforming
-      industries around the globe. By mimicking human intelligence, AI systems can
-      perform tasks such as speech recognition, decision-making, and language translation
-      with remarkable accuracy. In healthcare, AI is revolutionizing diagnostics with
-      enhanced imaging techniques and personalized treatment plans. In the business
-      world, AI-driven analytics enable companies to make data-driven decisions, optimize
-      operations, and improve customer experiences. The future of AI promises even
-      greater advancements, potentially introducing self-improving systems that can
-      learn and adapt autonomously. As we continue to integrate AI into our daily
-      lives, it is crucial to consider ethical implications and ensure that these
-      technologies are developed responsibly.\",\n        \"refusal\": null\n      },\n
-      \     \"logprobs\": null,\n      \"finish_reason\": \"stop\"\n    }\n  ],\n
-      \ \"usage\": {\n    \"prompt_tokens\": 317,\n    \"completion_tokens\": 360,\n
-      \   \"total_tokens\": 677,\n    \"completion_tokens_details\": {\n      \"reasoning_tokens\":
+      \"assistant\",\n        \"content\": \"Thought: I now have a greeting and can
+      focus on writing and reviewing a small paragraph about AI until it is amazing.\\n\\nArtificial
+      Intelligence (AI) represents one of the most transformative technologies of
+      our time, promising to redefine industries and enhance human capabilities in
+      unprecedented ways. From machine learning algorithms that predict consumer behavior
+      to autonomous systems that drive cars and diagnose diseases, the potential applications
+      of AI are vast and varied. By enabling machines to learn from data, make decisions,
+      and even improve over time, AI is not only increasing efficiency but also opening
+      new avenues for innovation. However, the ethical considerations and challenges
+      associated with AI, such as ensuring privacy and preventing bias, underscore
+      the importance of responsible development and deployment. In embracing AI\u2019s
+      potential, we stand on the brink of a new era where intelligent systems enrich
+      our lives while fostering sustainable progress.\\n\\nFinal Answer: Artificial
+      Intelligence (AI) represents one of the most transformative technologies of
+      our time, promising to redefine industries and enhance human capabilities in
+      unprecedented ways. From machine learning algorithms that predict consumer behavior
+      to autonomous systems that drive cars and diagnose diseases, the potential applications
+      of AI are vast and varied. By enabling machines to learn from data, make decisions,
+      and even improve over time, AI is not only increasing efficiency but also opening
+      new avenues for innovation. However, the ethical considerations and challenges
+      associated with AI, such as ensuring privacy and preventing bias, underscore
+      the importance of responsible development and deployment. In embracing AI\u2019s
+      potential, we stand on the brink of a new era where intelligent systems enrich
+      our lives while fostering sustainable progress.\",\n        \"refusal\": null\n
+      \     },\n      \"logprobs\": null,\n      \"finish_reason\": \"stop\"\n    }\n
+      \ ],\n  \"usage\": {\n    \"prompt_tokens\": 319,\n    \"completion_tokens\":
+      309,\n    \"total_tokens\": 628,\n    \"completion_tokens_details\": {\n      \"reasoning_tokens\":
       0\n    }\n  },\n  \"system_fingerprint\": \"fp_e375328146\"\n}\n"
     headers:
       CF-Cache-Status:
       - DYNAMIC
       CF-RAY:
-      - 8c7cf4ebcd84228a-MIA
+      - 8c85eb28db581cf3-GRU
       Connection:
       - keep-alive
       Content-Encoding:
@@ -275,7 +268,7 @@ interactions:
       Content-Type:
       - application/json
       Date:
-      - Mon, 23 Sep 2024 19:31:55 GMT
+      - Tue, 24 Sep 2024 21:38:01 GMT
       Server:
       - cloudflare
       Transfer-Encoding:
@@ -287,11 +280,11 @@ interactions:
       openai-organization:
       - crewai-iuxna1
       openai-processing-ms:
-      - '10328'
+      - '4477'
       openai-version:
       - '2020-10-01'
       strict-transport-security:
-      - max-age=15552000; includeSubDomains; preload
+      - max-age=31536000; includeSubDomains; preload
       x-ratelimit-limit-requests:
       - '10000'
       x-ratelimit-limit-tokens:
@@ -299,13 +292,13 @@ interactions:
       x-ratelimit-remaining-requests:
       - '9999'
       x-ratelimit-remaining-tokens:
-      - '29999628'
+      - '29999625'
       x-ratelimit-reset-requests:
       - 6ms
       x-ratelimit-reset-tokens:
       - 0s
       x-request-id:
-      - req_52d8fb9efbce21a08d66bc1d95d71905
+      - req_bbfe512aa3a05220da4bd4537796bc59
     http_version: HTTP/1.1
     status_code: 200
 version: 1

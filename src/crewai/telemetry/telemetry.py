@@ -301,7 +301,7 @@ class Telemetry:
                 self._add_attribute(span, "tool_name", tool_name)
                 self._add_attribute(span, "attempts", attempts)
                 if llm:
-                    self._add_attribute(span, "llm", llm)
+                    self._add_attribute(span, "llm", llm.model)
                 span.set_status(Status(StatusCode.OK))
                 span.end()
             except Exception:
@@ -321,7 +321,7 @@ class Telemetry:
                 self._add_attribute(span, "tool_name", tool_name)
                 self._add_attribute(span, "attempts", attempts)
                 if llm:
-                    self._add_attribute(span, "llm", llm)
+                    self._add_attribute(span, "llm", llm.model)
                 span.set_status(Status(StatusCode.OK))
                 span.end()
             except Exception:
@@ -339,7 +339,7 @@ class Telemetry:
                     pkg_resources.get_distribution("crewai").version,
                 )
                 if llm:
-                    self._add_attribute(span, "llm", llm)
+                    self._add_attribute(span, "llm", llm.model)
                 span.set_status(Status(StatusCode.OK))
                 span.end()
             except Exception:

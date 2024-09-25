@@ -133,8 +133,8 @@ def test_agent_execute_task():
 
     assert result is not None
     assert (
-        "The area of the circle with a radius of 5 cm is approximately 78.5 square centimeters."
-        == result
+        result
+        == "The calculated area of the circle is approximately 78.5 square centimeters."
     )
     assert "square centimeters" in result.lower()
 
@@ -155,7 +155,7 @@ def test_agent_execution():
     )
 
     output = agent.execute_task(task)
-    assert output == "The result of the math operation 1 + 1 is 2."
+    assert output == "1 + 1 is 2"
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
@@ -179,7 +179,7 @@ def test_agent_execution_with_tools():
         expected_output="The result of the multiplication.",
     )
     output = agent.execute_task(task)
-    assert output == "The result of 3 times 4 is 12"
+    assert output == "The result of the multiplication is 12."
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
@@ -211,7 +211,7 @@ def test_logging_tool_usage():
         tool_name=multiplier.name, arguments={"first_number": 3, "second_number": 4}
     )
 
-    assert output == "12"
+    assert output == "The result of the multiplication is 12."
     assert agent.tools_handler.last_used_tool.tool_name == tool_usage.tool_name
     assert agent.tools_handler.last_used_tool.arguments == tool_usage.arguments
 
@@ -365,7 +365,7 @@ def test_agent_execution_with_specific_tools():
         expected_output="The result of the multiplication.",
     )
     output = agent.execute_task(task=task, tools=[multiplier])
-    assert output == "The result of 3 times 4 is 12."
+    assert output == "The result of the multiplication is 12."
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
@@ -383,7 +383,6 @@ def test_agent_powered_by_new_o_model_family_that_allows_skipping_tool():
         max_iter=3,
         use_system_prompt=False,
         allow_delegation=False,
-        use_stop_words=False,
     )
 
     task = Task(
@@ -410,7 +409,6 @@ def test_agent_powered_by_new_o_model_family_that_uses_tool():
         max_iter=3,
         use_system_prompt=False,
         allow_delegation=False,
-        use_stop_words=False,
     )
 
     task = Task(
@@ -419,7 +417,7 @@ def test_agent_powered_by_new_o_model_family_that_uses_tool():
         expected_output="The number of customers",
     )
     output = agent.execute_task(task=task, tools=[comapny_customer_data])
-    assert output == "The company has 42 customers"
+    assert output == "42"
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
@@ -549,7 +547,7 @@ def test_agent_moved_on_after_max_iterations():
         task=task,
         tools=[get_final_answer],
     )
-    assert output == "42"
+    assert output == "The final answer is 42."
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
@@ -580,7 +578,7 @@ def test_agent_respect_the_max_rpm_set(capsys):
             task=task,
             tools=[get_final_answer],
         )
-        assert output == "42"
+        assert output == "The final answer is 42."
         captured = capsys.readouterr()
         assert "Max RPM reached, waiting for next minute to start." in captured.out
         moveon.assert_called()
@@ -710,12 +708,13 @@ def test_agent_error_on_parsing_tool(capsys):
         verbose=True,
         function_calling_llm="gpt-4o",
     )
-
-    with patch.object(ToolUsage, "_render") as force_exception:
-        force_exception.side_effect = Exception("Error on parsing tool.")
-        crew.kickoff()
-        captured = capsys.readouterr()
-        assert "Error on parsing tool." in captured.out
+    with patch.object(ToolUsage, "_original_tool_calling") as force_exception_1:
+        force_exception_1.side_effect = Exception("Error on parsing tool.")
+        with patch.object(ToolUsage, "_render") as force_exception_2:
+            force_exception_2.side_effect = Exception("Error on parsing tool.")
+            crew.kickoff()
+    captured = capsys.readouterr()
+    assert "Error on parsing tool." in captured.out
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
@@ -842,12 +841,16 @@ def test_agent_function_calling_llm():
     crew = Crew(agents=[agent1], tasks=tasks)
     from unittest.mock import patch
     import instructor
+    from crewai.tools.tool_usage import ToolUsage
 
     with patch.object(
         instructor, "from_litellm", wraps=instructor.from_litellm
-    ) as mock_from_litellm:
+    ) as mock_from_litellm, patch.object(
+        ToolUsage, "_original_tool_calling", side_effect=Exception("Forced exception")
+    ) as mock_original_tool_calling:
         crew.kickoff()
         mock_from_litellm.assert_called()
+        mock_original_tool_calling.assert_called()
 
 
 def test_agent_count_formatting_error():
@@ -1520,7 +1523,7 @@ def test_agent_execute_task_with_custom_llm():
 
     result = agent.execute_task(task)
     assert result.startswith(
-        "Artificial minds,\nLearning, evolving, creating,\nFuture in circuits."
+        "Artificial minds,\nCoding thoughts in circuits bright,\nAI's silent might."
     )
 
 

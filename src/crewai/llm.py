@@ -78,6 +78,7 @@ class LLM:
                 "api_key": self.api_key,
                 **self.kwargs,
             }
+
             # Remove None values to avoid passing unnecessary parameters
             params = {k: v for k, v in params.items() if v is not None}
 
@@ -91,6 +92,14 @@ class LLM:
         try:
             params = get_supported_openai_params(model=self.model)
             return "response_format" in params
+        except Exception as e:
+            logging.error(f"Failed to get supported params: {str(e)}")
+            return False
+
+    def supports_stop_words(self) -> bool:
+        try:
+            params = get_supported_openai_params(model=self.model)
+            return "stop" in params
         except Exception as e:
             logging.error(f"Failed to get supported params: {str(e)}")
             return False

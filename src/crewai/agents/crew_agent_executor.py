@@ -34,7 +34,6 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
         max_iter: int,
         tools: List[Any],
         tools_names: str,
-        use_stop_words: bool,
         stop_words: List[str],
         tools_description: str,
         tools_handler: ToolsHandler,
@@ -60,7 +59,7 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
         self.tools_handler = tools_handler
         self.original_tools = original_tools
         self.step_callback = step_callback
-        self.use_stop_words = use_stop_words
+        self.use_stop_words = self.llm.supports_stop_words()
         self.tools_description = tools_description
         self.function_calling_llm = function_calling_llm
         self.respect_context_window = respect_context_window
@@ -146,6 +145,7 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
                         self.messages.append(
                             self._format_msg(formatted_answer.text, role="user")
                         )
+
         except OutputParserException as e:
             self.messages.append({"role": "user", "content": e.error})
             return self._invoke_loop(formatted_answer)
