@@ -17,7 +17,7 @@
     "task_with_context": "{task}\n\nThis is the context you're working with:\n{context}",
     "expected_output": "\nThis is the expect criteria for your final answer: {expected_output}\nyou MUST return the actual complete content as the final answer, not a summary.",
     "human_feedback": "You got human feedback on your work, re-evaluate it and give a new Final Answer when ready.\n {human_feedback}",
-    "getting_input": "This is the agent's final answer: {final_answer}\nPlease provide feedback: ",
+    "getting_input": "This is the agent's final answer: {final_answer}\n\n",
     "summarizer_system_message": "You are a helpful assistant that summarizes text.",
     "sumamrize_instruction": "Summarize the following text, make sure to include all the important information: {group}",
     "summary": "This is a summary of our conversation so far:\n{merged_summary}"

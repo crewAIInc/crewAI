@@ -2335,6 +2335,50 @@ def test_key():
     assert crew.key == hash
 
 
+def test_key_with_interpolated_inputs():
+    researcher = Agent(
+        role="{topic} Researcher",
+        goal="Make the best research and analysis on content {topic}",
+        backstory="You're an expert researcher, specialized in technology, software engineering, AI and startups. You work as a freelancer and is now working on doing research and analysis for a new customer.",
+        allow_delegation=False,
+    )
+
+    writer = Agent(
+        role="{topic} Senior Writer",
+        goal="Write the best content about {topic}",
+        backstory="You're a senior writer, specialized in technology, software engineering, AI and startups. You work as a freelancer and are now working on writing content for a new customer.",
+        allow_delegation=False,
+    )
+
+    tasks = [
+        Task(
+            description="Give me a list of 5 interesting ideas about {topic} to explore for an article, what makes them unique and interesting.",
+            expected_output="Bullet point list of 5 important events.",
+            agent=researcher,
+        ),
+        Task(
+            description="Write a 1 amazing paragraph highlight for each idea of {topic} that showcases how good an article about this topic could be. Return the list of ideas with their paragraph and your notes.",
+            expected_output="A 4 paragraph article about AI.",
+            agent=writer,
+        ),
+    ]
+
+    crew = Crew(
+        agents=[researcher, writer],
+        process=Process.sequential,
+        tasks=tasks,
+    )
+    hash = hashlib.md5(
+        f"{researcher.key}|{writer.key}|{tasks[0].key}|{tasks[1].key}".encode()
+    ).hexdigest()
+
+    assert crew.key == hash
+
+    curr_key = crew.key
+    crew._interpolate_inputs({"topic": "AI"})
+    assert crew.key == curr_key
+
+
 def test_conditional_task_requirement_breaks_when_singular_conditional_task():
     def condition_fn(output) -> bool:
         return output.raw.startswith("Andrew Ng has!!")

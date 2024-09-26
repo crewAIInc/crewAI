@@ -176,7 +176,11 @@ class BaseAgent(ABC, BaseModel):
 
     @property
     def key(self):
-        source = [self.role, self.goal, self.backstory]
+        source = [
+            self._original_role or self.role,
+            self._original_goal or self.goal,
+            self._original_backstory or self.backstory,
+        ]
         return md5("|".join(source).encode(), usedforsecurity=False).hexdigest()
 
     @abstractmethod

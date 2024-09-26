@@ -49,7 +49,7 @@ class TaskEvaluation(BaseModel):
 
 class TrainingTaskEvaluation(BaseModel):
     suggestions: List[str] = Field(
-        description="Based on the Human Feedbacks and the comparison between Initial Outputs and Improved outputs provide action items based on human_feedback for future tasks."
+        description="List of clear, actionable instructions derived from the Human Feedbacks to enhance the Agent's performance. Analyze the differences between Initial Outputs and Improved Outputs to generate specific action items for future tasks. Ensure all key and specific points from the human feedback are incorporated into these instructions."
     )
     quality: float = Field(
         description="A score from 0 to 10 evaluating on completion, quality, and overall performance from the improved output to the initial output based on the human feedback."
@@ -116,7 +116,7 @@ class TaskEvaluator:
             "Assess the quality of the training data based on the llm output, human feedback , and llm output improved result.\n\n"
             f"{final_aggregated_data}"
             "Please provide:\n"
-            "- Based on the Human Feedbacks and the comparison between Initial Outputs and Improved outputs provide action items based on human_feedback for future tasks\n"
+            "- Provide a list of clear, actionable instructions derived from the Human Feedbacks to enhance the Agent's performance. Analyze the differences between Initial Outputs and Improved Outputs to generate specific action items for future tasks. Ensure all key and specificpoints from the human feedback are incorporated into these instructions.\n"
             "- A score from 0 to 10 evaluating on completion, quality, and overall performance from the improved output to the initial output based on the human feedback\n"
         )
         instructions = "I'm gonna convert this raw text into valid JSON."

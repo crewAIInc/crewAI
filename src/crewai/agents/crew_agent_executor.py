@@ -96,6 +96,9 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
             self.messages.append(self._format_msg(f"Feedback: {human_feedback}"))
             formatted_answer = self._invoke_loop()
 
+            if self.crew and self.crew._train:
+                self._handle_crew_training_output(formatted_answer)
+
         return {"output": formatted_answer.output}
 
     def _invoke_loop(self, formatted_answer=None):
@@ -294,24 +297,16 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
     ) -> None:
         """Function to handle the process of the training data."""
         agent_id = str(self.agent.id)
-
         if (
             CrewTrainingHandler(TRAINING_DATA_FILE).load()
             and not self.ask_for_human_input
         ):
             training_data = CrewTrainingHandler(TRAINING_DATA_FILE).load()
             if training_data.get(agent_id):
-                if self.crew is not None and hasattr(self.crew, "_train_iteration"):
-                    training_data[agent_id][self.crew._train_iteration][
-                        "improved_output"
-                    ] = result.output
-                    CrewTrainingHandler(TRAINING_DATA_FILE).save(training_data)
-                else:
-                    self._logger.log(
-                        "error",
-                        "Invalid crew or missing _train_iteration attribute.",
-                        color="red",
-                    )
+                training_data[agent_id][self.crew._train_iteration][
+                    "improved_output"
+                ] = result.output
+                CrewTrainingHandler(TRAINING_DATA_FILE).save(training_data)
 
         if self.ask_for_human_input and human_feedback is not None:
             training_data = {
