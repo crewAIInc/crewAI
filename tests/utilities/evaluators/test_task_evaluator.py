@@ -25,6 +25,7 @@ def test_evaluate_training_data(converter_mock):
     }
     agent_id = "agent_id"
     original_agent = MagicMock()
+    original_agent.llm.supports_function_calling.return_value = False
     function_return_value = TrainingTaskEvaluation(
         suggestions=[
             "The initial output was already good, having a detailed explanation. However, the improved output "

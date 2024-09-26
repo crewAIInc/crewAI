@@ -176,7 +176,7 @@ This will install the dependencies specified in the `pyproject.toml` file.
 
 Any variable interpolated in your `agents.yaml` and `tasks.yaml` files like `{variable}` will be replaced by the value of the variable in the `main.py` file.
 
-#### agents.yaml
+#### tasks.yaml
 
 ```yaml
 research_task:

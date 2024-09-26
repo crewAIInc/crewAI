@@ -3,6 +3,7 @@
 from unittest import mock
 from unittest.mock import patch
 
+import os
 import pytest
 from crewai import Agent, Crew, Task
 from crewai.agents.cache import CacheHandler
@@ -16,6 +17,49 @@ from crewai_tools import tool
 from crewai.agents.parser import AgentAction
 
 
+def test_agent_llm_creation_with_env_vars():
+    # Store original environment variables
+    original_api_key = os.environ.get("OPENAI_API_KEY")
+    original_api_base = os.environ.get("OPENAI_API_BASE")
+    original_model_name = os.environ.get("OPENAI_MODEL_NAME")
+
+    # Set up environment variables
+    os.environ["OPENAI_API_KEY"] = "test_api_key"
+    os.environ["OPENAI_API_BASE"] = "https://test-api-base.com"
+    os.environ["OPENAI_MODEL_NAME"] = "gpt-4-turbo"
+
+    # Create an agent without specifying LLM
+    agent = Agent(role="test role", goal="test goal", backstory="test backstory")
+
+    # Check if LLM is created correctly
+    assert isinstance(agent.llm, LLM)
+    assert agent.llm.model == "gpt-4-turbo"
+    assert agent.llm.api_key == "test_api_key"
+    assert agent.llm.base_url == "https://test-api-base.com"
+
+    # Clean up environment variables
+    del os.environ["OPENAI_API_KEY"]
+    del os.environ["OPENAI_API_BASE"]
+    del os.environ["OPENAI_MODEL_NAME"]
+
+    # Create an agent without specifying LLM
+    agent = Agent(role="test role", goal="test goal", backstory="test backstory")
+
+    # Check if LLM is created correctly
+    assert isinstance(agent.llm, LLM)
+    assert agent.llm.model != "gpt-4-turbo"
+    assert agent.llm.api_key != "test_api_key"
+    assert agent.llm.base_url != "https://test-api-base.com"
+
+    # Restore original environment variables
+    if original_api_key:
+        os.environ["OPENAI_API_KEY"] = original_api_key
+    if original_api_base:
+        os.environ["OPENAI_API_BASE"] = original_api_base
+    if original_model_name:
+        os.environ["OPENAI_MODEL_NAME"] = original_model_name
+
+
 def test_agent_creation():
     agent = Agent(role="test role", goal="test goal", backstory="test backstory")
 
@@ -27,7 +71,7 @@ def test_agent_creation():
 
 def test_agent_default_values():
     agent = Agent(role="test role", goal="test goal", backstory="test backstory")
-    assert agent.llm == "gpt-4o"
+    assert agent.llm.model == "gpt-4o"
     assert agent.allow_delegation is False
 
 
@@ -35,7 +79,7 @@ def test_custom_llm():
     agent = Agent(
         role="test role", goal="test goal", backstory="test backstory", llm="gpt-4"
     )
-    assert agent.llm == "gpt-4"
+    assert agent.llm.model == "gpt-4"
 
 
 def test_custom_llm_with_langchain():
@@ -48,7 +92,51 @@ def test_custom_llm_with_langchain():
         llm=ChatOpenAI(temperature=0, model="gpt-4"),
     )
 
-    assert agent.llm == "gpt-4"
+    assert agent.llm.model == "gpt-4"
+
+
+def test_custom_llm_temperature_preservation():
+    from langchain_openai import ChatOpenAI
+
+    langchain_llm = ChatOpenAI(temperature=0.7, model="gpt-4")
+    agent = Agent(
+        role="temperature test role",
+        goal="temperature test goal",
+        backstory="temperature test backstory",
+        llm=langchain_llm,
+    )
+
+    assert isinstance(agent.llm, LLM)
+    assert agent.llm.model == "gpt-4"
+    assert agent.llm.temperature == 0.7
+
+
+@pytest.mark.vcr(filter_headers=["authorization"])
+def test_agent_execute_task():
+    from langchain_openai import ChatOpenAI
+    from crewai import Task
+
+    agent = Agent(
+        role="Math Tutor",
+        goal="Solve math problems accurately",
+        backstory="You are an experienced math tutor with a knack for explaining complex concepts simply.",
+        llm=ChatOpenAI(temperature=0.7, model="gpt-4o-mini"),
+    )
+
+    task = Task(
+        description="Calculate the area of a circle with radius 5 cm.",
+        expected_output="The calculated area of the circle in square centimeters.",
+        agent=agent,
+    )
+
+    result = agent.execute_task(task)
+
+    assert result is not None
+    assert (
+        result
+        == "The calculated area of the circle is approximately 78.5 square centimeters."
+    )
+    assert "square centimeters" in result.lower()
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
@@ -67,7 +155,7 @@ def test_agent_execution():
     )
 
     output = agent.execute_task(task)
-    assert output == "The result of the math operation 1 + 1 is 2."
+    assert output == "1 + 1 is 2"
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
@@ -109,6 +197,7 @@ def test_logging_tool_usage():
         verbose=True,
     )
 
+    assert agent.llm.model == "gpt-4o"
     assert agent.tools_handler.last_used_tool == {}
     task = Task(
         description="What is 3 times 4?",
@@ -121,7 +210,8 @@ def test_logging_tool_usage():
     tool_usage = InstructorToolCalling(
         tool_name=multiplier.name, arguments={"first_number": 3, "second_number": 4}
     )
-    assert output == "The result of 3 times 4 is 12."
+
+    assert output == "The result of the multiplication is 12."
     assert agent.tools_handler.last_used_tool.tool_name == tool_usage.tool_name
     assert agent.tools_handler.last_used_tool.arguments == tool_usage.arguments
 
@@ -182,7 +272,7 @@ def test_cache_hitting():
         task = Task(
             description="What is 2 times 6? Ignore correctness and just return the result of the multiplication tool, you must use the tool.",
             agent=agent,
-            expected_output="The result of the multiplication.",
+            expected_output="The number that is the result of the multiplication tool.",
         )
         output = agent.execute_task(task)
         assert output == "0"
@@ -275,7 +365,7 @@ def test_agent_execution_with_specific_tools():
         expected_output="The result of the multiplication.",
     )
     output = agent.execute_task(task=task, tools=[multiplier])
-    assert output == "The result of the multiplication of 3 times 4 is 12."
+    assert output == "The result of the multiplication is 12."
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
@@ -293,7 +383,6 @@ def test_agent_powered_by_new_o_model_family_that_allows_skipping_tool():
         max_iter=3,
         use_system_prompt=False,
         allow_delegation=False,
-        use_stop_words=False,
     )
 
     task = Task(
@@ -320,7 +409,6 @@ def test_agent_powered_by_new_o_model_family_that_uses_tool():
         max_iter=3,
         use_system_prompt=False,
         allow_delegation=False,
-        use_stop_words=False,
     )
 
     task = Task(
@@ -329,7 +417,7 @@ def test_agent_powered_by_new_o_model_family_that_uses_tool():
         expected_output="The number of customers",
     )
     output = agent.execute_task(task=task, tools=[comapny_customer_data])
-    assert output == "The company has 42 customers"
+    assert output == "42"
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
@@ -490,7 +578,7 @@ def test_agent_respect_the_max_rpm_set(capsys):
             task=task,
             tools=[get_final_answer],
         )
-        assert output == "42"
+        assert output == "The final answer is 42."
         captured = capsys.readouterr()
         assert "Max RPM reached, waiting for next minute to start." in captured.out
         moveon.assert_called()
@@ -620,12 +708,13 @@ def test_agent_error_on_parsing_tool(capsys):
         verbose=True,
         function_calling_llm="gpt-4o",
     )
-
-    with patch.object(ToolUsage, "_render") as force_exception:
-        force_exception.side_effect = Exception("Error on parsing tool.")
-        crew.kickoff()
-        captured = capsys.readouterr()
-        assert "Error on parsing tool." in captured.out
+    with patch.object(ToolUsage, "_original_tool_calling") as force_exception_1:
+        force_exception_1.side_effect = Exception("Error on parsing tool.")
+        with patch.object(ToolUsage, "_render") as force_exception_2:
+            force_exception_2.side_effect = Exception("Error on parsing tool.")
+            crew.kickoff()
+    captured = capsys.readouterr()
+    assert "Error on parsing tool." in captured.out
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
@@ -750,27 +839,18 @@ def test_agent_function_calling_llm():
     )
     tasks = [essay]
     crew = Crew(agents=[agent1], tasks=tasks)
-    from unittest.mock import patch, Mock
+    from unittest.mock import patch
     import instructor
+    from crewai.tools.tool_usage import ToolUsage
 
-    with patch.object(instructor, "from_litellm") as mock_from_litellm:
-        mock_client = Mock()
-        mock_from_litellm.return_value = mock_client
-        mock_chat = Mock()
-        mock_client.chat = mock_chat
-        mock_completions = Mock()
-        mock_chat.completions = mock_completions
-        mock_create = Mock()
-        mock_completions.create = mock_create
-
+    with patch.object(
+        instructor, "from_litellm", wraps=instructor.from_litellm
+    ) as mock_from_litellm, patch.object(
+        ToolUsage, "_original_tool_calling", side_effect=Exception("Forced exception")
+    ) as mock_original_tool_calling:
         crew.kickoff()
-
         mock_from_litellm.assert_called()
-        mock_create.assert_called()
-        calls = mock_create.call_args_list
-        assert any(
-            call.kwargs.get("model") == "gpt-4o" for call in calls
-        ), "Instructor was not created with the expected model"
+        mock_original_tool_calling.assert_called()
 
 
 def test_agent_count_formatting_error():
@@ -1102,6 +1182,88 @@ def test_agent_max_retry_limit():
         )
 
 
+def test_agent_with_llm():
+    agent = Agent(
+        role="test role",
+        goal="test goal",
+        backstory="test backstory",
+        llm=LLM(model="gpt-3.5-turbo", temperature=0.7),
+    )
+
+    assert isinstance(agent.llm, LLM)
+    assert agent.llm.model == "gpt-3.5-turbo"
+    assert agent.llm.temperature == 0.7
+
+
+def test_agent_with_custom_stop_words():
+    stop_words = ["STOP", "END"]
+    agent = Agent(
+        role="test role",
+        goal="test goal",
+        backstory="test backstory",
+        llm=LLM(model="gpt-3.5-turbo", stop=stop_words),
+    )
+
+    assert isinstance(agent.llm, LLM)
+    assert agent.llm.stop == stop_words
+
+
+def test_agent_with_callbacks():
+    def dummy_callback(response):
+        pass
+
+    agent = Agent(
+        role="test role",
+        goal="test goal",
+        backstory="test backstory",
+        llm=LLM(model="gpt-3.5-turbo", callbacks=[dummy_callback]),
+    )
+
+    assert isinstance(agent.llm, LLM)
+    assert len(agent.llm.callbacks) == 1
+    assert agent.llm.callbacks[0] == dummy_callback
+
+
+def test_agent_with_additional_kwargs():
+    agent = Agent(
+        role="test role",
+        goal="test goal",
+        backstory="test backstory",
+        llm=LLM(
+            model="gpt-3.5-turbo",
+            temperature=0.8,
+            top_p=0.9,
+            presence_penalty=0.1,
+            frequency_penalty=0.1,
+        ),
+    )
+
+    assert isinstance(agent.llm, LLM)
+    assert agent.llm.model == "gpt-3.5-turbo"
+    assert agent.llm.temperature == 0.8
+    assert agent.llm.top_p == 0.9
+    assert agent.llm.presence_penalty == 0.1
+    assert agent.llm.frequency_penalty == 0.1
+
+
+@pytest.mark.vcr(filter_headers=["authorization"])
+def test_llm_call():
+    llm = LLM(model="gpt-3.5-turbo")
+    messages = [{"role": "user", "content": "Say 'Hello, World!'"}]
+
+    response = llm.call(messages)
+    assert "Hello, World!" in response
+
+
+@pytest.mark.vcr(filter_headers=["authorization"])
+def test_llm_call_with_error():
+    llm = LLM(model="non-existent-model")
+    messages = [{"role": "user", "content": "This should fail"}]
+
+    with pytest.raises(Exception):
+        llm.call(messages)
+
+
 @pytest.mark.vcr(filter_headers=["authorization"])
 def test_handle_context_length_exceeds_limit():
     agent = Agent(
@@ -1172,3 +1334,214 @@ def test_handle_context_length_exceeds_limit_cli_no():
             CrewAgentExecutor, "_handle_context_length"
         ) as mock_handle_context:
             mock_handle_context.assert_not_called()
+
+
+def test_agent_with_all_llm_attributes():
+    agent = Agent(
+        role="test role",
+        goal="test goal",
+        backstory="test backstory",
+        llm=LLM(
+            model="gpt-3.5-turbo",
+            timeout=10,
+            temperature=0.7,
+            top_p=0.9,
+            n=1,
+            stop=["STOP", "END"],
+            max_tokens=100,
+            presence_penalty=0.1,
+            frequency_penalty=0.1,
+            logit_bias={50256: -100},  # Example: bias against the EOT token
+            response_format={"type": "json_object"},
+            seed=42,
+            logprobs=True,
+            top_logprobs=5,
+            base_url="https://api.openai.com/v1",
+            api_version="2023-05-15",
+            api_key="sk-your-api-key-here",
+        ),
+    )
+
+    assert isinstance(agent.llm, LLM)
+    assert agent.llm.model == "gpt-3.5-turbo"
+    assert agent.llm.timeout == 10
+    assert agent.llm.temperature == 0.7
+    assert agent.llm.top_p == 0.9
+    assert agent.llm.n == 1
+    assert agent.llm.stop == ["STOP", "END"]
+    assert agent.llm.max_tokens == 100
+    assert agent.llm.presence_penalty == 0.1
+    assert agent.llm.frequency_penalty == 0.1
+    assert agent.llm.logit_bias == {50256: -100}
+    assert agent.llm.response_format == {"type": "json_object"}
+    assert agent.llm.seed == 42
+    assert agent.llm.logprobs
+    assert agent.llm.top_logprobs == 5
+    assert agent.llm.base_url == "https://api.openai.com/v1"
+    assert agent.llm.api_version == "2023-05-15"
+    assert agent.llm.api_key == "sk-your-api-key-here"
+
+
+@pytest.mark.vcr(filter_headers=["authorization"])
+def test_llm_call_with_all_attributes():
+    llm = LLM(
+        model="gpt-3.5-turbo",
+        temperature=0.7,
+        max_tokens=50,
+        stop=["STOP"],
+        presence_penalty=0.1,
+        frequency_penalty=0.1,
+    )
+    messages = [{"role": "user", "content": "Say 'Hello, World!' and then say STOP"}]
+
+    response = llm.call(messages)
+    assert "Hello, World!" in response
+    assert "STOP" not in response
+
+
+@pytest.mark.vcr(filter_headers=["authorization"])
+def test_agent_with_ollama_gemma():
+    agent = Agent(
+        role="test role",
+        goal="test goal",
+        backstory="test backstory",
+        llm=LLM(
+            model="ollama/gemma2:latest",
+            base_url="http://localhost:8080",
+        ),
+    )
+
+    assert isinstance(agent.llm, LLM)
+    assert agent.llm.model == "ollama/gemma2:latest"
+    assert agent.llm.base_url == "http://localhost:8080"
+
+    task = "Respond in 20 words. Who are you?"
+    response = agent.llm.call([{"role": "user", "content": task}])
+
+    assert response
+    assert len(response.split()) <= 25  # Allow a little flexibility in word count
+    assert "Gemma" in response or "AI" in response or "language model" in response
+
+
+@pytest.mark.vcr(filter_headers=["authorization"])
+def test_llm_call_with_ollama_gemma():
+    llm = LLM(
+        model="ollama/gemma2:latest",
+        base_url="http://localhost:8080",
+        temperature=0.7,
+        max_tokens=30,
+    )
+    messages = [{"role": "user", "content": "Respond in 20 words. Who are you?"}]
+
+    response = llm.call(messages)
+
+    assert response
+    assert len(response.split()) <= 25  # Allow a little flexibility in word count
+    assert "Gemma" in response or "AI" in response or "language model" in response
+
+
+@pytest.mark.vcr(filter_headers=["authorization"])
+def test_agent_execute_task_basic():
+    agent = Agent(
+        role="test role",
+        goal="test goal",
+        backstory="test backstory",
+        llm=LLM(model="gpt-3.5-turbo"),
+    )
+
+    task = Task(
+        description="Calculate 2 + 2",
+        expected_output="The result of the calculation",
+        agent=agent,
+    )
+
+    result = agent.execute_task(task)
+    assert "4" in result
+
+
+@pytest.mark.vcr(filter_headers=["authorization"])
+def test_agent_execute_task_with_context():
+    agent = Agent(
+        role="test role",
+        goal="test goal",
+        backstory="test backstory",
+        llm=LLM(model="gpt-3.5-turbo"),
+    )
+
+    task = Task(
+        description="Summarize the given context in one sentence",
+        expected_output="A one-sentence summary",
+        agent=agent,
+    )
+
+    context = "The quick brown fox jumps over the lazy dog. This sentence contains every letter of the alphabet."
+
+    result = agent.execute_task(task, context=context)
+    assert len(result.split(".")) == 3
+    assert "fox" in result.lower() and "dog" in result.lower()
+
+
+@pytest.mark.vcr(filter_headers=["authorization"])
+def test_agent_execute_task_with_tool():
+    @tool
+    def dummy_tool(query: str) -> str:
+        """Useful for when you need to get a dummy result for a query."""
+        return f"Dummy result for: {query}"
+
+    agent = Agent(
+        role="test role",
+        goal="test goal",
+        backstory="test backstory",
+        llm=LLM(model="gpt-3.5-turbo"),
+        tools=[dummy_tool],
+    )
+
+    task = Task(
+        description="Use the dummy tool to get a result for 'test query'",
+        expected_output="The result from the dummy tool",
+        agent=agent,
+    )
+
+    result = agent.execute_task(task)
+    assert "Dummy result for: test query" in result
+
+
+@pytest.mark.vcr(filter_headers=["authorization"])
+def test_agent_execute_task_with_custom_llm():
+    agent = Agent(
+        role="test role",
+        goal="test goal",
+        backstory="test backstory",
+        llm=LLM(model="gpt-3.5-turbo", temperature=0.7, max_tokens=50),
+    )
+
+    task = Task(
+        description="Write a haiku about AI",
+        expected_output="A haiku (3 lines, 5-7-5 syllable pattern) about AI",
+        agent=agent,
+    )
+
+    result = agent.execute_task(task)
+    assert result.startswith(
+        "Artificial minds,\nCoding thoughts in circuits bright,\nAI's silent might."
+    )
+
+
+@pytest.mark.vcr(filter_headers=["authorization"])
+def test_agent_execute_task_with_ollama():
+    agent = Agent(
+        role="test role",
+        goal="test goal",
+        backstory="test backstory",
+        llm=LLM(model="ollama/gemma2:latest", base_url="http://localhost:8080"),
+    )
+
+    task = Task(
+        description="Explain what AI is in one sentence",
+        expected_output="A one-sentence explanation of AI",
+        agent=agent,
+    )
+
+    result = agent.execute_task(task)
+    assert len(result.split(".")) == 2
+    assert "AI" in result or "artificial intelligence" in result.lower()

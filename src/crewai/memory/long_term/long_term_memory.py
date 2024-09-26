@@ -14,8 +14,8 @@ class LongTermMemory(Memory):
     LongTermMemoryItem instances.
     """
 
-    def __init__(self):
-        storage = LTMSQLiteStorage()
+    def __init__(self, storage=None):
+        storage = storage if storage else LTMSQLiteStorage()
         super().__init__(storage)
 
     def save(self, item: LongTermMemoryItem) -> None:  # type: ignore # BUG?: Signature of "save" incompatible with supertype "Memory"

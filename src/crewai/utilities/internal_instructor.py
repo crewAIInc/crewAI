@@ -42,6 +42,6 @@ class InternalInstructor:
         if self.instructions:
             messages.append({"role": "system", "content": self.instructions})
         model = self._client.chat.completions.create(
-            model=self.llm, response_model=self.model, messages=messages
+            model=self.llm.model, response_model=self.model, messages=messages
         )
         return model

@@ -19,7 +19,7 @@ interactions:
       criteria for your final answer: The total number of sales as an integer\nyou
       MUST return the actual complete content as the final answer, not a summary.\n\nBegin!
       This is VERY important to you, use the tools available and give your best Final
-      Answer, your job depends on it!\n\nThought:"}], "model": "gpt-4o", "stop": ["\nObservation:"]}'
+      Answer, your job depends on it!\n\nThought:"}], "model": "gpt-4o"}'
     headers:
       accept:
       - application/json
@@ -28,16 +28,16 @@ interactions:
       connection:
       - keep-alive
       content-length:
-      - '1596'
+      - '1568'
       content-type:
       - application/json
       cookie:
-      - __cf_bm=1SckBhvJ18Dazp6bi8DEKYeiS9Q4.6_6i3nmLBw9b6g-1726476036-1.0.1.1-TnN4UpDXA33YXCVCUWOaZ12vGIg_o5NpJQEUHgjn6XdUgb7M0ND8PdkTfkd8rrxG5XFlPRMzI54GxZ0FeUY9xw;
-        _cfuvid=0Rs4xTPk7h7OIXuSbTgMVVD9JSoZeKMwnygKHoHQo3k-1726476036297-0.0.1.1-604800000
+      - __cf_bm=9.8sBYBkvBR8R1K_bVF7xgU..80XKlEIg3N2OBbTSCU-1727214102-1.0.1.1-.qiTLXbPamYUMSuyNsOEB9jhGu.jOifujOrx9E2JZvStbIZ9RTIiE44xKKNfLPxQkOi6qAT3h6htK8lPDGV_5g;
+        _cfuvid=lbRdAddVWV6W3f5Dm9SaOPWDUOxqtZBSPr_fTW26nEA-1727213194587-0.0.1.1-604800000
       host:
       - api.openai.com
       user-agent:
-      - OpenAI/Python 1.45.0
+      - OpenAI/Python 1.47.0
       x-stainless-arch:
       - arm64
       x-stainless-async:
@@ -47,7 +47,7 @@ interactions:
       x-stainless-os:
       - MacOS
       x-stainless-package-version:
-      - 1.45.0
+      - 1.47.0
       x-stainless-raw-response:
       - 'true'
       x-stainless-runtime:
@@ -57,20 +57,20 @@ interactions:
     method: POST
     uri: https://api.openai.com/v1/chat/completions
   response:
-    content: "{\n  \"id\": \"chatcmpl-A81hwIiF0yRcQv7jq2GwvPwrR6Gt4\",\n  \"object\":
-      \"chat.completion\",\n  \"created\": 1726476552,\n  \"model\": \"gpt-4o-2024-05-13\",\n
+    content: "{\n  \"id\": \"chatcmpl-AB7c8ieBqEbQdKzYTe6QChiS2830e\",\n  \"object\":
+      \"chat.completion\",\n  \"created\": 1727214240,\n  \"model\": \"gpt-4o-2024-05-13\",\n
       \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
-      \"assistant\",\n        \"content\": \"Thought: I need to retrieve the sales-related
-      data to determine the total number of sales.\\n\\nAction: return_data\\nAction
-      Input: {}\",\n        \"refusal\": null\n      },\n      \"logprobs\": null,\n
-      \     \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\":
-      316,\n    \"completion_tokens\": 27,\n    \"total_tokens\": 343,\n    \"completion_tokens_details\":
-      {\n      \"reasoning_tokens\": 0\n    }\n  },\n  \"system_fingerprint\": \"fp_25624ae3a5\"\n}\n"
+      \"assistant\",\n        \"content\": \"Thought: I need to retrieve the data
+      related to sales to provide the total number of sales as an integer.\\n\\nAction:
+      return_data\\nAction Input: {}\",\n        \"refusal\": null\n      },\n      \"logprobs\":
+      null,\n      \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\":
+      316,\n    \"completion_tokens\": 31,\n    \"total_tokens\": 347,\n    \"completion_tokens_details\":
+      {\n      \"reasoning_tokens\": 0\n    }\n  },\n  \"system_fingerprint\": \"fp_e375328146\"\n}\n"
     headers:
       CF-Cache-Status:
       - DYNAMIC
       CF-RAY:
-      - 8c3f9a11b9f22233-MIA
+      - 8c85f409ae4e1cf3-GRU
       Connection:
       - keep-alive
       Content-Encoding:
@@ -78,7 +78,7 @@ interactions:
       Content-Type:
       - application/json
       Date:
-      - Mon, 16 Sep 2024 08:49:12 GMT
+      - Tue, 24 Sep 2024 21:44:01 GMT
       Server:
       - cloudflare
       Transfer-Encoding:
@@ -87,16 +87,14 @@ interactions:
       - nosniff
       access-control-expose-headers:
       - X-Request-ID
-      alt-svc:
-      - h3=":443"; ma=86400
       openai-organization:
       - crewai-iuxna1
       openai-processing-ms:
-      - '526'
+      - '508'
       openai-version:
       - '2020-10-01'
       strict-transport-security:
-      - max-age=15552000; includeSubDomains; preload
+      - max-age=31536000; includeSubDomains; preload
       x-ratelimit-limit-requests:
       - '10000'
       x-ratelimit-limit-tokens:
@@ -104,45 +102,47 @@ interactions:
       x-ratelimit-remaining-requests:
       - '9999'
       x-ratelimit-remaining-tokens:
-      - '29999621'
+      - '29999622'
       x-ratelimit-reset-requests:
       - 6ms
       x-ratelimit-reset-tokens:
       - 0s
       x-request-id:
-      - req_09f1cb82c83432b2dac1bb26fbd310a8
+      - req_83f07f34517c5559eba83c0a1059de4c
     http_version: HTTP/1.1
     status_code: 200
 - request:
     body: !!binary |
-      Cp4MCiQKIgoMc2VydmljZS5uYW1lEhIKEGNyZXdBSS10ZWxlbWV0cnkS9QsKEgoQY3Jld2FpLnRl
-      bGVtZXRyeRKQAgoQHo8k2NVrnMibUnOXEe2NhhIIcD1b5So2xZoqDlRhc2sgRXhlY3V0aW9uMAE5
-      wOqvoUOt9RdBAKiTx0at9RdKLgoIY3Jld19rZXkSIgogNDk0ZjM2NTcyMzdhZDhhMzAzNWIyZjFi
-      ZWVjZGM2NzdKMQoHY3Jld19pZBImCiQ4OGNkMWVlNS0xMzk2LTQ1NzEtOTYzNS1kZDQyNThhMTIx
-      NWRKLgoIdGFza19rZXkSIgogZjI1OTdjNzg2N2ZiZTMyNGRjNjVkYzA4ZGZkYmZjNmNKMQoHdGFz
-      a19pZBImCiQzMTgyOWJmMS0wYzcyLTQyYTgtOTYxZC0xOTdkZWRkNTNlYjB6AhgBhQEAAQAAEroH
-      ChDNWGsB26H/2wUK8p1oz/3JEgi6kfdTZpVqaSoMQ3JldyBDcmVhdGVkMAE5wNM8yUat9RdB4A9A
-      yUat9RdKGgoOY3Jld2FpX3ZlcnNpb24SCAoGMC41Ni4zShoKDnB5dGhvbl92ZXJzaW9uEggKBjMu
-      MTEuN0ouCghjcmV3X2tleRIiCiAxN2E2Y2EwM2Q4NTBmZTJmMzBjMGExMDUxYWQ1ZjdlNEoxCgdj
-      cmV3X2lkEiYKJGM2MmJmZjc0LWE1ZjMtNDNlNi05YmM1LTVlNGYxZDYzOWYyYUocCgxjcmV3X3By
-      b2Nlc3MSDAoKc2VxdWVudGlhbEoRCgtjcmV3X21lbW9yeRICEABKGgoUY3Jld19udW1iZXJfb2Zf
-      dGFza3MSAhgBShsKFWNyZXdfbnVtYmVyX29mX2FnZW50cxICGAFK2wIKC2NyZXdfYWdlbnRzEssC
-      CsgCW3sia2V5IjogIjhiZDIxMzliNTk3NTE4MTUwNmU0MWZkOWM0NTYzZDc1IiwgImlkIjogImY3
-      MzM4MjdiLWE5ODMtNGI2Ny05Nzk4LTE4MTU3YzM1ZmM4MyIsICJyb2xlIjogIlJlc2VhcmNoZXIi
-      LCAidmVyYm9zZT8iOiBmYWxzZSwgIm1heF9pdGVyIjogMTUsICJtYXhfcnBtIjogbnVsbCwgImZ1
-      bmN0aW9uX2NhbGxpbmdfbGxtIjogbnVsbCwgImxsbSI6ICJncHQtNG8iLCAiZGVsZWdhdGlvbl9l
-      bmFibGVkPyI6IGZhbHNlLCAiYWxsb3dfY29kZV9leGVjdXRpb24/IjogZmFsc2UsICJtYXhfcmV0
-      cnlfbGltaXQiOiAyLCAidG9vbHNfbmFtZXMiOiBbInJldHVybl9kYXRhIl19XUqMAgoKY3Jld190
-      YXNrcxL9AQr6AVt7ImtleSI6ICJmNTk0OTIwOGQ2ZjM5ZWU5MGFkMDBlOTcxYzE0YWRkMyIsICJp
-      ZCI6ICIwNjBkZTY0MC05MDhiLTRmZWMtOWRhNi1jNGM5ZTcxOTk4MTQiLCAiYXN5bmNfZXhlY3V0
-      aW9uPyI6IGZhbHNlLCAiaHVtYW5faW5wdXQ/IjogZmFsc2UsICJhZ2VudF9yb2xlIjogIlJlc2Vh
-      cmNoZXIiLCAiYWdlbnRfa2V5IjogIjhiZDIxMzliNTk3NTE4MTUwNmU0MWZkOWM0NTYzZDc1Iiwg
-      InRvb2xzX25hbWVzIjogWyJyZXR1cm5fZGF0YSJdfV16AhgBhQEAAQAAEo4CChBuh5yWDtOxW5pJ
-      ZX7isuC1Egj09NbFpFGNYCoMVGFzayBDcmVhdGVkMAE5yHFayUat9RdB2BVbyUat9RdKLgoIY3Jl
-      d19rZXkSIgogMTdhNmNhMDNkODUwZmUyZjMwYzBhMTA1MWFkNWY3ZTRKMQoHY3Jld19pZBImCiRj
-      NjJiZmY3NC1hNWYzLTQzZTYtOWJjNS01ZTRmMWQ2MzlmMmFKLgoIdGFza19rZXkSIgogZjU5NDky
-      MDhkNmYzOWVlOTBhZDAwZTk3MWMxNGFkZDNKMQoHdGFza19pZBImCiQwNjBkZTY0MC05MDhiLTRm
-      ZWMtOWRhNi1jNGM5ZTcxOTk4MTR6AhgBhQEAAQAA
+      CpcNCiQKIgoMc2VydmljZS5uYW1lEhIKEGNyZXdBSS10ZWxlbWV0cnkS7gwKEgoQY3Jld2FpLnRl
+      bGVtZXRyeRJ5ChBYs4zhwoXOQFfR3HwGmUeCEgjJAik1Lh4xXioQVG9vbCBVc2FnZSBFcnJvcjAB
+      OWjpWrAyTPgXQfA9ZbAyTPgXShoKDmNyZXdhaV92ZXJzaW9uEggKBjAuNjEuMEoPCgNsbG0SCAoG
+      Z3B0LTRvegIYAYUBAAEAABKQAgoQRXf2dhPAua74lNxhJK3uEhII9cI1Ij2yKBEqDlRhc2sgRXhl
+      Y3V0aW9uMAE5KBckvidM+BdBWCiuRjNM+BdKLgoIY3Jld19rZXkSIgogNDk0ZjM2NTcyMzdhZDhh
+      MzAzNWIyZjFiZWVjZGM2NzdKMQoHY3Jld19pZBImCiRlOGFhNGExNi04ZmIzLTRmYTQtYTMxMi0x
+      MWYwM2ZjMDEwYTBKLgoIdGFza19rZXkSIgogZjI1OTdjNzg2N2ZiZTMyNGRjNjVkYzA4ZGZkYmZj
+      NmNKMQoHdGFza19pZBImCiRjNDVjZGEyMi1iMmFiLTRlNDQtYWZiNC01Y2JjYTZkNzRiYmR6AhgB
+      hQEAAQAAErgHChBqnF88QWTHsXDo7/m7vZesEgj2Jf82pBsJJCoMQ3JldyBDcmVhdGVkMAE56Oyh
+      STNM+BdBcGulSTNM+BdKGgoOY3Jld2FpX3ZlcnNpb24SCAoGMC42MS4wShoKDnB5dGhvbl92ZXJz
+      aW9uEggKBjMuMTEuN0ouCghjcmV3X2tleRIiCiAxN2E2Y2EwM2Q4NTBmZTJmMzBjMGExMDUxYWQ1
+      ZjdlNEoxCgdjcmV3X2lkEiYKJGFmYzMyYzczLThhMzctNDY1Mi05NmZiLWY4Y2Y3MzgxNjEzOUoc
+      CgxjcmV3X3Byb2Nlc3MSDAoKc2VxdWVudGlhbEoRCgtjcmV3X21lbW9yeRICEABKGgoUY3Jld19u
+      dW1iZXJfb2ZfdGFza3MSAhgBShsKFWNyZXdfbnVtYmVyX29mX2FnZW50cxICGAFK2QIKC2NyZXdf
+      YWdlbnRzEskCCsYCW3sia2V5IjogIjhiZDIxMzliNTk3NTE4MTUwNmU0MWZkOWM0NTYzZDc1Iiwg
+      ImlkIjogImZjN2Y1YjEzLTQ1ODctNDZmNS05NWE4LTFkMDFmYjI0YWZjOCIsICJyb2xlIjogIlJl
+      c2VhcmNoZXIiLCAidmVyYm9zZT8iOiBmYWxzZSwgIm1heF9pdGVyIjogMTUsICJtYXhfcnBtIjog
+      bnVsbCwgImZ1bmN0aW9uX2NhbGxpbmdfbGxtIjogIiIsICJsbG0iOiAiZ3B0LTRvIiwgImRlbGVn
+      YXRpb25fZW5hYmxlZD8iOiBmYWxzZSwgImFsbG93X2NvZGVfZXhlY3V0aW9uPyI6IGZhbHNlLCAi
+      bWF4X3JldHJ5X2xpbWl0IjogMiwgInRvb2xzX25hbWVzIjogWyJyZXR1cm5fZGF0YSJdfV1KjAIK
+      CmNyZXdfdGFza3MS/QEK+gFbeyJrZXkiOiAiZjU5NDkyMDhkNmYzOWVlOTBhZDAwZTk3MWMxNGFk
+      ZDMiLCAiaWQiOiAiOTQwNzQ0NjAtNTljMC00MGY1LTk0M2ItYjlhN2IyNjY1YTExIiwgImFzeW5j
+      X2V4ZWN1dGlvbj8iOiBmYWxzZSwgImh1bWFuX2lucHV0PyI6IGZhbHNlLCAiYWdlbnRfcm9sZSI6
+      ICJSZXNlYXJjaGVyIiwgImFnZW50X2tleSI6ICI4YmQyMTM5YjU5NzUxODE1MDZlNDFmZDljNDU2
+      M2Q3NSIsICJ0b29sc19uYW1lcyI6IFsicmV0dXJuX2RhdGEiXX1degIYAYUBAAEAABKOAgoQWGIX
+      4Xvhj/7+mp64g2/lmxIIn59S3sbsueQqDFRhc2sgQ3JlYXRlZDABOfjovUkzTPgXQXBSvkkzTPgX
+      Si4KCGNyZXdfa2V5EiIKIDE3YTZjYTAzZDg1MGZlMmYzMGMwYTEwNTFhZDVmN2U0SjEKB2NyZXdf
+      aWQSJgokYWZjMzJjNzMtOGEzNy00NjUyLTk2ZmItZjhjZjczODE2MTM5Si4KCHRhc2tfa2V5EiIK
+      IGY1OTQ5MjA4ZDZmMzllZTkwYWQwMGU5NzFjMTRhZGQzSjEKB3Rhc2tfaWQSJgokOTQwNzQ0NjAt
+      NTljMC00MGY1LTk0M2ItYjlhN2IyNjY1YTExegIYAYUBAAEAAA==
     headers:
       Accept:
       - '*/*'
@@ -151,7 +151,7 @@ interactions:
       Connection:
       - keep-alive
       Content-Length:
-      - '1569'
+      - '1690'
       Content-Type:
       - application/x-protobuf
       User-Agent:
@@ -167,7 +167,7 @@ interactions:
       Content-Type:
       - application/x-protobuf
       Date:
-      - Mon, 16 Sep 2024 08:49:12 GMT
+      - Tue, 24 Sep 2024 21:44:01 GMT
     status:
       code: 200
       message: OK
@@ -192,9 +192,9 @@ interactions:
       MUST return the actual complete content as the final answer, not a summary.\n\nBegin!
       This is VERY important to you, use the tools available and give your best Final
       Answer, your job depends on it!\n\nThought:"}, {"role": "assistant", "content":
-      "Thought: I need to retrieve the sales-related data to determine the total number
-      of sales.\n\nAction: return_data\nAction Input: {}\nObservation: January: 5,
-      February: 10, March: 15, April: 20, May: 25"}], "model": "gpt-4o", "stop": ["\nObservation:"]}'
+      "Thought: I need to retrieve the data related to sales to provide the total
+      number of sales as an integer.\n\nAction: return_data\nAction Input: {}\nObservation:
+      January: 5, February: 10, March: 15, April: 20, May: 25"}], "model": "gpt-4o"}'
     headers:
       accept:
       - application/json
@@ -203,16 +203,16 @@ interactions:
       connection:
       - keep-alive
       content-length:
-      - '1835'
+      - '1822'
       content-type:
       - application/json
       cookie:
-      - __cf_bm=1SckBhvJ18Dazp6bi8DEKYeiS9Q4.6_6i3nmLBw9b6g-1726476036-1.0.1.1-TnN4UpDXA33YXCVCUWOaZ12vGIg_o5NpJQEUHgjn6XdUgb7M0ND8PdkTfkd8rrxG5XFlPRMzI54GxZ0FeUY9xw;
-        _cfuvid=0Rs4xTPk7h7OIXuSbTgMVVD9JSoZeKMwnygKHoHQo3k-1726476036297-0.0.1.1-604800000
+      - __cf_bm=9.8sBYBkvBR8R1K_bVF7xgU..80XKlEIg3N2OBbTSCU-1727214102-1.0.1.1-.qiTLXbPamYUMSuyNsOEB9jhGu.jOifujOrx9E2JZvStbIZ9RTIiE44xKKNfLPxQkOi6qAT3h6htK8lPDGV_5g;
+        _cfuvid=lbRdAddVWV6W3f5Dm9SaOPWDUOxqtZBSPr_fTW26nEA-1727213194587-0.0.1.1-604800000
       host:
       - api.openai.com
       user-agent:
-      - OpenAI/Python 1.45.0
+      - OpenAI/Python 1.47.0
       x-stainless-arch:
       - arm64
       x-stainless-async:
@@ -222,7 +222,7 @@ interactions:
       x-stainless-os:
       - MacOS
       x-stainless-package-version:
-      - 1.45.0
+      - 1.47.0
       x-stainless-raw-response:
       - 'true'
       x-stainless-runtime:
@@ -232,20 +232,20 @@ interactions:
     method: POST
     uri: https://api.openai.com/v1/chat/completions
   response:
-    content: "{\n  \"id\": \"chatcmpl-A81hw5s1FimOXvmw7AYeGx6hNEAfD\",\n  \"object\":
-      \"chat.completion\",\n  \"created\": 1726476552,\n  \"model\": \"gpt-4o-2024-05-13\",\n
+    content: "{\n  \"id\": \"chatcmpl-AB7c94bEPIg4rOK2mD2QZ2Od5xIXs\",\n  \"object\":
+      \"chat.completion\",\n  \"created\": 1727214241,\n  \"model\": \"gpt-4o-2024-05-13\",\n
       \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
       \"assistant\",\n        \"content\": \"Thought: I now know the final answer.\\n\\nFinal
-      Answer: January: 5, February: 10, March: 15, April: 20, May: 25\",\n        \"refusal\":
-      null\n      },\n      \"logprobs\": null,\n      \"finish_reason\": \"stop\"\n
-      \   }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 373,\n    \"completion_tokens\":
-      36,\n    \"total_tokens\": 409,\n    \"completion_tokens_details\": {\n      \"reasoning_tokens\":
-      0\n    }\n  },\n  \"system_fingerprint\": \"fp_25624ae3a5\"\n}\n"
+      Answer: The total number of sales is 75.\",\n        \"refusal\": null\n      },\n
+      \     \"logprobs\": null,\n      \"finish_reason\": \"stop\"\n    }\n  ],\n
+      \ \"usage\": {\n    \"prompt_tokens\": 377,\n    \"completion_tokens\": 21,\n
+      \   \"total_tokens\": 398,\n    \"completion_tokens_details\": {\n      \"reasoning_tokens\":
+      0\n    }\n  },\n  \"system_fingerprint\": \"fp_e375328146\"\n}\n"
     headers:
       CF-Cache-Status:
       - DYNAMIC
       CF-RAY:
-      - 8c3f9a16db3a2233-MIA
+      - 8c85f410f9931cf3-GRU
       Connection:
       - keep-alive
       Content-Encoding:
@@ -253,7 +253,7 @@ interactions:
       Content-Type:
       - application/json
       Date:
-      - Mon, 16 Sep 2024 08:49:13 GMT
+      - Tue, 24 Sep 2024 21:44:02 GMT
       Server:
       - cloudflare
       Transfer-Encoding:
@@ -262,16 +262,14 @@ interactions:
       - nosniff
       access-control-expose-headers:
       - X-Request-ID
-      alt-svc:
-      - h3=":443"; ma=86400
       openai-organization:
       - crewai-iuxna1
       openai-processing-ms:
-      - '599'
+      - '318'
       openai-version:
       - '2020-10-01'
       strict-transport-security:
-      - max-age=15552000; includeSubDomains; preload
+      - max-age=31536000; includeSubDomains; preload
       x-ratelimit-limit-requests:
       - '10000'
       x-ratelimit-limit-tokens:
@@ -279,13 +277,13 @@ interactions:
       x-ratelimit-remaining-requests:
       - '9999'
       x-ratelimit-remaining-tokens:
-      - '29999572'
+      - '29999567'
       x-ratelimit-reset-requests:
       - 6ms
       x-ratelimit-reset-tokens:
       - 0s
       x-request-id:
-      - req_3797b9c525fa130a161625c186098d36
+      - req_6359d0b5a619bc298105eef983d1e3f6
     http_version: HTTP/1.1
     status_code: 200
 version: 1

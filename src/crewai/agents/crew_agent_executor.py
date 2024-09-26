@@ -13,7 +13,6 @@ from crewai.utilities.exceptions.context_window_exceeding_exception import (
 )
 from crewai.utilities.logger import Logger
 from crewai.utilities.training_handler import CrewTrainingHandler
-from crewai.llm import LLM
 from crewai.agents.parser import (
     AgentAction,
     AgentFinish,
@@ -35,7 +34,6 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
         max_iter: int,
         tools: List[Any],
         tools_names: str,
-        use_stop_words: bool,
         stop_words: List[str],
         tools_description: str,
         tools_handler: ToolsHandler,
@@ -61,7 +59,7 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
         self.tools_handler = tools_handler
         self.original_tools = original_tools
         self.step_callback = step_callback
-        self.use_stop_words = use_stop_words
+        self.use_stop_words = self.llm.supports_stop_words()
         self.tools_description = tools_description
         self.function_calling_llm = function_calling_llm
         self.respect_context_window = respect_context_window
@@ -104,11 +102,10 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
         try:
             while not isinstance(formatted_answer, AgentFinish):
                 if not self.request_within_rpm_limit or self.request_within_rpm_limit():
-                    answer = LLM(
-                        self.llm,
-                        stop=self.stop if self.use_stop_words else None,
+                    answer = self.llm.call(
+                        self.messages,
                         callbacks=self.callbacks,
-                    ).call(self.messages)
+                    )
 
                     if not self.use_stop_words:
                         try:
@@ -146,10 +143,11 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
                                 )
                                 self.have_forced_answer = True
                         self.messages.append(
-                            self._format_msg(formatted_answer.text, role="assistant")
+                            self._format_msg(formatted_answer.text, role="user")
                         )
+
         except OutputParserException as e:
-            self.messages.append({"role": "assistant", "content": e.error})
+            self.messages.append({"role": "user", "content": e.error})
             return self._invoke_loop(formatted_answer)
 
         except Exception as e:
@@ -168,8 +166,9 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
         if self.agent.verbose or (
             hasattr(self, "crew") and getattr(self.crew, "verbose", False)
         ):
+            agent_role = self.agent.role.split("\n")[0]
             self._printer.print(
-                content=f"\033[1m\033[95m# Agent:\033[00m \033[1m\033[92m{self.agent.role}\033[00m"
+                content=f"\033[1m\033[95m# Agent:\033[00m \033[1m\033[92m{agent_role}\033[00m"
             )
             self._printer.print(
                 content=f"\033[95m## Task:\033[00m \033[92m{self.task.description}\033[00m"
@@ -179,15 +178,16 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
         if self.agent.verbose or (
             hasattr(self, "crew") and getattr(self.crew, "verbose", False)
         ):
+            agent_role = self.agent.role.split("\n")[0]
             if isinstance(formatted_answer, AgentAction):
                 thought = re.sub(r"\n+", "\n", formatted_answer.thought)
                 formatted_json = json.dumps(
-                    json.loads(formatted_answer.tool_input),
+                    formatted_answer.tool_input,
                     indent=2,
                     ensure_ascii=False,
                 )
                 self._printer.print(
-                    content=f"\n\n\033[1m\033[95m# Agent:\033[00m \033[1m\033[92m{self.agent.role}\033[00m"
+                    content=f"\n\n\033[1m\033[95m# Agent:\033[00m \033[1m\033[92m{agent_role}\033[00m"
                 )
                 if thought and thought != "":
                     self._printer.print(
@@ -204,10 +204,10 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
                 )
             elif isinstance(formatted_answer, AgentFinish):
                 self._printer.print(
-                    content=f"\n\n\033[1m\033[95m# Agent:\033[00m \033[1m\033[92m{self.agent.role}\033[00m"
+                    content=f"\n\n\033[1m\033[95m# Agent:\033[00m \033[1m\033[92m{agent_role}\033[00m"
                 )
                 self._printer.print(
-                    content=f"\033[95m## Final Answer:\033[00m \033[92m\n{formatted_answer.output}\033[00m"
+                    content=f"\033[95m## Final Answer:\033[00m \033[92m\n{formatted_answer.output}\033[00m\n\n"
                 )
 
     def _use_tool(self, agent_action: AgentAction) -> Any:
@@ -241,7 +241,6 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
         return tool_result
 
     def _summarize_messages(self) -> None:
-        llm = LLM(self.llm)
         messages_groups = []
 
         for message in self.messages:
@@ -251,7 +250,7 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
 
         summarized_contents = []
         for group in messages_groups:
-            summary = llm.call(
+            summary = self.llm.call(
                 [
                     self._format_msg(
                         self._i18n.slices("summarizer_system_message"), role="system"
@@ -259,7 +258,8 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
                     self._format_msg(
                         self._i18n.errors("sumamrize_instruction").format(group=group),
                     ),
-                ]
+                ],
+                callbacks=self.callbacks,
             )
             summarized_contents.append(summary)
 

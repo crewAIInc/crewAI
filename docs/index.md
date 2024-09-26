@@ -54,6 +54,11 @@ Cutting-edge framework for orchestrating role-playing, autonomous AI agents. By 
                 </a>
             </li>
             <li>
+                <a href="./core-concepts/LLMs">
+                    LLMs
+                </a>
+            </li>
+            <li>
                 <a href="./core-concepts/Flows">
                     Flows
                 </a>

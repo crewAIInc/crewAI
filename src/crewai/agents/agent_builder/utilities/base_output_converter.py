@@ -39,9 +39,3 @@ class OutputConverter(BaseModel, ABC):
     def to_json(self, current_attempt=1):
         """Convert text to json."""
         pass
-
-    @property
-    @abstractmethod
-    def is_gpt(self) -> bool:
-        """Return if llm provided is of gpt from openai."""
-        pass

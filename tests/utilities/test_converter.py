@@ -2,6 +2,7 @@ import json
 from unittest.mock import MagicMock, Mock, patch
 
 import pytest
+from crewai.llm import LLM
 from crewai.utilities.converter import (
     Converter,
     ConverterError,
@@ -10,10 +11,11 @@ from crewai.utilities.converter import (
     create_converter,
     get_conversion_instructions,
     handle_partial_json,
-    is_gpt,
     validate_model,
 )
 from pydantic import BaseModel
+
+from crewai.utilities.pydantic_schema_parser import PydanticSchemaParser
 
 
 # Sample Pydantic models for testing
@@ -197,14 +199,20 @@ def test_convert_with_instructions_failure(
 def test_get_conversion_instructions_gpt():
     mock_llm = Mock()
     mock_llm.openai_api_base = None
-    with patch("crewai.utilities.converter.is_gpt", return_value=True):
+    with patch.object(LLM, "supports_function_calling") as supports_function_calling:
+        supports_function_calling.return_value = True
         instructions = get_conversion_instructions(SimpleModel, mock_llm)
-        assert instructions == "I'm gonna convert this raw text into valid JSON."
+        model_schema = PydanticSchemaParser(model=SimpleModel).get_schema()
+        assert (
+            instructions
+            == f"I'm gonna convert this raw text into valid JSON.\n\nThe json should have the following structure, with the following keys:\n{model_schema}"
+        )
 
 
 def test_get_conversion_instructions_non_gpt():
     mock_llm = Mock()
-    with patch("crewai.utilities.converter.is_gpt", return_value=False):
+    with patch.object(LLM, "supports_function_calling") as supports_function_calling:
+        supports_function_calling.return_value = False
         with patch("crewai.utilities.converter.PydanticSchemaParser") as mock_parser:
             mock_parser.return_value.get_schema.return_value = "Sample schema"
             instructions = get_conversion_instructions(SimpleModel, mock_llm)
@@ -212,12 +220,14 @@ def test_get_conversion_instructions_non_gpt():
 
 
 # Tests for is_gpt
-def test_is_gpt_true():
-    assert is_gpt("gpt-4") is True
+def test_supports_function_calling_true():
+    llm = LLM(model="gpt-4o")
+    assert llm.supports_function_calling() is True
 
 
-def test_is_gpt_false():
-    assert is_gpt("lol-4") is False
+def test_supports_function_calling_false():
+    llm = LLM(model="non-existent-model")
+    assert llm.supports_function_calling() is False
 
 
 class CustomConverter(Converter):
