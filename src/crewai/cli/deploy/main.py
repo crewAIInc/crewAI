@@ -2,7 +2,6 @@ from typing import Any, Dict, List, Optional
 
 from rich.console import Console
 
-from .api import CrewAPI
 from crewai.cli.command import BaseCommand, PlusAPIMixin
 from crewai.cli.utils import (
     fetch_and_json_env_file,
@@ -25,9 +24,7 @@ class DeployCommand(BaseCommand, PlusAPIMixin):
 
         BaseCommand.__init__(self)
         PlusAPIMixin.__init__(self, telemetry=self._telemetry)
-
         self.project_name = get_project_name(require=True)
-        self.crew_api_client = CrewAPI(api_key=self.access_token)
 
     def _standard_no_param_error_message(self) -> None:
         """
@@ -75,9 +72,9 @@ class DeployCommand(BaseCommand, PlusAPIMixin):
         self._start_deployment_span = self._telemetry.start_deployment_span(uuid)
         console.print("Starting deployment...", style="bold blue")
         if uuid:
-            response = self.crew_api_client.deploy_by_uuid(uuid)
+            response = self.plus_api_client.deploy_by_uuid(uuid)
         elif self.project_name:
-            response = self.crew_api_client.deploy_by_name(self.project_name)
+            response = self.plus_api_client.deploy_by_name(self.project_name)
         else:
             self._standard_no_param_error_message()
             return
@@ -110,7 +107,7 @@ class DeployCommand(BaseCommand, PlusAPIMixin):
         self._confirm_input(env_vars, remote_repo_url, confirm)
         payload = self._create_payload(env_vars, remote_repo_url)
 
-        response = self.crew_api_client.create_crew(payload)
+        response = self.plus_api_client.create_crew(payload)
         if response.status_code == 201:
             self._display_creation_success(response.json())
         else:
@@ -179,7 +176,7 @@ class DeployCommand(BaseCommand, PlusAPIMixin):
         """
         console.print("Listing all Crews\n", style="bold blue")
 
-        response = self.crew_api_client.list_crews()
+        response = self.plus_api_client.list_crews()
         json_response = response.json()
         if response.status_code == 200:
             self._display_crews(json_response)
@@ -214,9 +211,9 @@ class DeployCommand(BaseCommand, PlusAPIMixin):
         """
         console.print("Fetching deployment status...", style="bold blue")
         if uuid:
-            response = self.crew_api_client.status_by_uuid(uuid)
+            response = self.plus_api_client.crew_status_by_uuid(uuid)
         elif self.project_name:
-            response = self.crew_api_client.status_by_name(self.project_name)
+            response = self.plus_api_client.crew_status_by_name(self.project_name)
         else:
             self._standard_no_param_error_message()
             return
@@ -249,9 +246,9 @@ class DeployCommand(BaseCommand, PlusAPIMixin):
         console.print(f"Fetching {log_type} logs...", style="bold blue")
 
         if uuid:
-            response = self.crew_api_client.logs_by_uuid(uuid, log_type)
+            response = self.plus_api_client.crew_by_uuid(uuid, log_type)
         elif self.project_name:
-            response = self.crew_api_client.logs_by_name(self.project_name, log_type)
+            response = self.plus_api_client.crew_by_name(self.project_name, log_type)
         else:
             self._standard_no_param_error_message()
             return
@@ -272,9 +269,9 @@ class DeployCommand(BaseCommand, PlusAPIMixin):
         console.print("Removing deployment...", style="bold blue")
 
         if uuid:
-            response = self.crew_api_client.delete_by_uuid(uuid)
+            response = self.plus_api_client.delete_crew_by_uuid(uuid)
         elif self.project_name:
-            response = self.crew_api_client.delete_by_name(self.project_name)
+            response = self.plus_api_client.delete_crew_by_name(self.project_name)
         else:
             self._standard_no_param_error_message()
             return

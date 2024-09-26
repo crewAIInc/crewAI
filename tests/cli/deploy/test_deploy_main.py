@@ -10,21 +10,21 @@ from crewai.cli.utils import parse_toml
 class TestDeployCommand(unittest.TestCase):
     @patch("crewai.cli.command.get_auth_token")
     @patch("crewai.cli.deploy.main.get_project_name")
-    @patch("crewai.cli.deploy.main.CrewAPI")
-    def setUp(self, mock_crew_api, mock_get_project_name, mock_get_auth_token):
+    @patch("crewai.cli.command.PlusAPI")
+    def setUp(self, mock_plus_api, mock_get_project_name, mock_get_auth_token):
         self.mock_get_auth_token = mock_get_auth_token
         self.mock_get_project_name = mock_get_project_name
-        self.mock_crew_api = mock_crew_api
+        self.mock_plus_api = mock_plus_api
 
         self.mock_get_auth_token.return_value = "test_token"
         self.mock_get_project_name.return_value = "test_project"
 
         self.deploy_command = DeployCommand()
-        self.mock_client = self.deploy_command.crew_api_client
+        self.mock_client = self.deploy_command.plus_api_client
 
     def test_init_success(self):
         self.assertEqual(self.deploy_command.project_name, "test_project")
-        self.mock_crew_api.assert_called_once_with(api_key="test_token")
+        self.mock_plus_api.assert_called_once_with(api_key="test_token")
 
     @patch("crewai.cli.command.get_auth_token")
     def test_init_failure(self, mock_get_auth_token):
@@ -122,7 +122,7 @@ class TestDeployCommand(unittest.TestCase):
         mock_response = MagicMock()
         mock_response.status_code = 200
         mock_response.json.return_value = {"name": "TestCrew", "status": "active"}
-        self.mock_client.status_by_name.return_value = mock_response
+        self.mock_client.crew_status_by_name.return_value = mock_response
 
         with patch("sys.stdout", new=StringIO()) as fake_out:
             self.deploy_command.get_crew_status()
@@ -136,7 +136,7 @@ class TestDeployCommand(unittest.TestCase):
             {"timestamp": "2023-01-01", "level": "INFO", "message": "Log1"},
             {"timestamp": "2023-01-02", "level": "ERROR", "message": "Log2"},
         ]
-        self.mock_client.logs_by_name.return_value = mock_response
+        self.mock_client.crew_by_name.return_value = mock_response
 
         with patch("sys.stdout", new=StringIO()) as fake_out:
             self.deploy_command.get_crew_logs(None)
@@ -146,7 +146,7 @@ class TestDeployCommand(unittest.TestCase):
     def test_remove_crew(self):
         mock_response = MagicMock()
         mock_response.status_code = 204
-        self.mock_client.delete_by_name.return_value = mock_response
+        self.mock_client.delete_crew_by_name.return_value = mock_response
 
         with patch("sys.stdout", new=StringIO()) as fake_out:
             self.deploy_command.remove_crew(None)

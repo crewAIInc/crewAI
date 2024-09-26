@@ -17,8 +17,7 @@ class PlusAPIMixin:
     def __init__(self, telemetry):
         try:
             telemetry.set_tracer()
-            self.access_token = get_auth_token()
-            self.plus_api_client = PlusAPI(api_key=self.access_token)
+            self.plus_api_client = PlusAPI(api_key=get_auth_token())
         except Exception:
             self._deploy_signup_error_span = telemetry.deploy_signup_error_span()
             console.print(
