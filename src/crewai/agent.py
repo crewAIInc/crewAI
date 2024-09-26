@@ -344,8 +344,9 @@ class Agent(BaseAgent):
                 human_feedbacks = [
                     i["human_feedback"] for i in data.get(agent_id, {}).values()
                 ]
-                task_prompt += "You MUST follow these feedbacks: \n " + "\n - ".join(
-                    human_feedbacks
+                task_prompt += (
+                    "\n\nYou MUST follow these instructions: \n "
+                    + "\n - ".join(human_feedbacks)
                 )
 
         return task_prompt
@@ -354,8 +355,9 @@ class Agent(BaseAgent):
         """Use trained data for the agent task prompt to improve output."""
         if data := CrewTrainingHandler(TRAINED_AGENTS_DATA_FILE).load():
             if trained_data_output := data.get(self.role):
-                task_prompt += "You MUST follow these feedbacks: \n " + "\n - ".join(
-                    trained_data_output["suggestions"]
+                task_prompt += (
+                    "\n\nYou MUST follow these instructions: \n - "
+                    + "\n - ".join(trained_data_output["suggestions"])
                 )
         return task_prompt
 
