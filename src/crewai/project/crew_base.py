@@ -1,14 +1,19 @@
 import inspect
 from pathlib import Path
-from typing import Any, Callable, Dict
+from typing import Any, Callable, Dict, Type, TypeVar
 
 import yaml
 from dotenv import load_dotenv
 
+from crewai.crew import Crew
+
 load_dotenv()
 
 
-def CrewBase(cls):
+T = TypeVar("T", bound=Type[Any])
+
+
+def CrewBase(cls: T) -> T:
     class WrappedClass(cls):
         is_crew_class: bool = True  # type: ignore
 
@@ -31,6 +36,19 @@ def CrewBase(cls):
 
             self.map_all_agent_variables()
             self.map_all_task_variables()
+
+        def crew(self) -> "Crew":
+            agents = [
+                getattr(self, name)()
+                for name, func in self._get_all_functions().items()
+                if hasattr(func, "is_agent")
+            ]
+            tasks = [
+                getattr(self, name)()
+                for name, func in self._get_all_functions().items()
+                if hasattr(func, "is_task")
+            ]
+            return Crew(agents=agents, tasks=tasks)
 
         @staticmethod
         def load_yaml(config_path: Path):
