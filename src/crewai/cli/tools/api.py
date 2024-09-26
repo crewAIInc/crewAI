@@ -11,14 +11,14 @@ class ToolsAPI(PlusAPI):
     def publish(
         self,
         handle: str,
-        public: bool,
+        is_public: bool,
         version: str,
         description: Optional[str],
         encoded_file: str,
     ):
         params = {
             "handle": handle,
-            "public": public,
+            "public": is_public,
             "version": version,
             "file": encoded_file,
             "description": description,
