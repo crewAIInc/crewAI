@@ -26,14 +26,7 @@ class DeployCommand(BaseCommand, PlusAPIMixin):
         BaseCommand.__init__(self)
         PlusAPIMixin.__init__(self, telemetry=self._telemetry)
 
-        self.project_name = get_project_name()
-        if self.project_name is None:
-            console.print(
-                "No project name found. Please ensure your project has a valid pyproject.toml file.",
-                style="bold red",
-            )
-            raise SystemExit
-
+        self.project_name = get_project_name(require=True)
         self.crew_api_client = CrewAPI(api_key=self.access_token)
 
     def _standard_no_param_error_message(self) -> None:

@@ -3,8 +3,10 @@ import re
 import subprocess
 import sys
 
-from rich.console import Console
 from crewai.cli.authentication.utils import TokenManager
+from functools import reduce
+from rich.console import Console
+from typing import Any, Dict, List
 
 if sys.version_info >= (3, 11):
     import tomllib
@@ -88,21 +90,51 @@ def get_git_remote_url() -> str | None:
     return None
 
 
-def get_project_name(pyproject_path: str = "pyproject.toml") -> str | None:
+def get_project_name(
+    pyproject_path: str = "pyproject.toml", require: bool = False
+) -> str | None:
     """Get the project name from the pyproject.toml file."""
+    return _get_project_attribute(
+        pyproject_path, ["tool", "poetry", "name"], require=require
+    )
+
+
+def get_project_version(
+    pyproject_path: str = "pyproject.toml", require: bool = False
+) -> str | None:
+    """Get the project version from the pyproject.toml file."""
+    return _get_project_attribute(
+        pyproject_path, ["tool", "poetry", "version"], require=require
+    )
+
+
+def get_project_description(
+    pyproject_path: str = "pyproject.toml", require: bool = False
+) -> str | None:
+    """Get the project description from the pyproject.toml file."""
+    return _get_project_attribute(
+        pyproject_path, ["tool", "poetry", "description"], require=require
+    )
+
+
+def _get_project_attribute(
+    pyproject_path: str, keys: List[str], require: bool
+) -> Any | None:
+    """Get an attribute from the pyproject.toml file."""
+    attribute = None
+
     try:
-        # Read the pyproject.toml file
         with open(pyproject_path, "r") as f:
             pyproject_content = parse_toml(f.read())
 
-        # Extract the project name
-        project_name = pyproject_content["tool"]["poetry"]["name"]
-
-        if "crewai" not in pyproject_content["tool"]["poetry"]["dependencies"]:
+        dependencies = (
+            _get_nested_value(pyproject_content, ["tool", "poetry", "dependencies"])
+            or {}
+        )
+        if "crewai" not in dependencies:
             raise Exception("crewai is not in the dependencies.")
 
-        return project_name
-
+        attribute = _get_nested_value(pyproject_content, keys)
     except FileNotFoundError:
         print(f"Error: {pyproject_path} not found.")
     except KeyError:
@@ -116,7 +148,18 @@ def get_project_name(pyproject_path: str = "pyproject.toml") -> str | None:
     except Exception as e:
         print(f"Error reading the pyproject.toml file: {e}")
 
-    return None
+    if require and not attribute:
+        console.print(
+            f"Unable to read '{'.'.join(keys)}' in the pyproject.toml file. Please verify that the file exists and contains the specified attribute.",
+            style="bold red",
+        )
+        raise SystemExit
+
+    return attribute
+
+
+def _get_nested_value(data: Dict[str, Any], keys: List[str]) -> Any:
+    return reduce(dict.__getitem__, keys, data)
 
 
 def get_crewai_version(poetry_lock_path: str = "poetry.lock") -> str:
