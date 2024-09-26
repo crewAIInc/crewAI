@@ -4,7 +4,6 @@ import os
 import subprocess
 import tempfile
 
-from .api import ToolsAPI
 from crewai.cli.command import BaseCommand, PlusAPIMixin
 from crewai.cli.utils import (
     get_project_name,
@@ -24,7 +23,6 @@ class ToolCommand(BaseCommand, PlusAPIMixin):
     def __init__(self):
         BaseCommand.__init__(self)
         PlusAPIMixin.__init__(self, telemetry=self._telemetry)
-        self.tools_api_client = ToolsAPI(api_key=self.access_token)
 
     def publish(self, is_public: bool):
         project_name = get_project_name(require=True)
@@ -59,7 +57,7 @@ class ToolCommand(BaseCommand, PlusAPIMixin):
 
             encoded_tarball = base64.b64encode(tarball_contents).decode("utf-8")
 
-        publish_response = self.tools_api_client.publish(
+        publish_response = self.plus_api_client.publish_tool(
             handle=project_name,
             is_public=is_public,
             version=project_version,
@@ -91,7 +89,7 @@ class ToolCommand(BaseCommand, PlusAPIMixin):
         )
 
     def install(self, handle: str):
-        get_response = self.tools_api_client.get(handle)
+        get_response = self.plus_api_client.get_tool(handle)
 
         if get_response.status_code == 404:
             console.print(

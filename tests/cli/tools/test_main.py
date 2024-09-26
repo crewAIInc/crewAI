@@ -7,7 +7,7 @@ from unittest.mock import patch, MagicMock
 
 class TestToolCommand(unittest.TestCase):
     @patch("crewai.cli.tools.main.subprocess.run")
-    @patch("crewai.cli.tools.main.ToolsAPI.get")
+    @patch("crewai.cli.plus_api.PlusAPI.get_tool")
     def test_install_success(self, mock_get, mock_subprocess_run):
         mock_get_response = MagicMock()
         mock_get_response.status_code = 200
@@ -62,7 +62,7 @@ class TestToolCommand(unittest.TestCase):
 
         self.assertIn("Succesfully installed sample-tool", output)
 
-    @patch("crewai.cli.tools.main.ToolsAPI.get")
+    @patch("crewai.cli.plus_api.PlusAPI.get_tool")
     def test_install_tool_not_found(self, mock_get):
         mock_get_response = MagicMock()
         mock_get_response.status_code = 404
@@ -78,7 +78,7 @@ class TestToolCommand(unittest.TestCase):
         mock_get.assert_called_once_with("non-existent-tool")
         self.assertIn("No tool found with this name", output)
 
-    @patch("crewai.cli.tools.main.ToolsAPI.get")
+    @patch("crewai.cli.plus_api.PlusAPI.get_tool")
     def test_install_api_error(self, mock_get):
         mock_get_response = MagicMock()
         mock_get_response.status_code = 500
@@ -108,7 +108,7 @@ class TestToolCommand(unittest.TestCase):
         new_callable=unittest.mock.mock_open,
         read_data=b"sample tarball content",
     )
-    @patch("crewai.cli.tools.main.ToolsAPI.publish")
+    @patch("crewai.cli.plus_api.PlusAPI.publish_tool")
     def test_publish_success(
         self,
         mock_publish,
@@ -158,7 +158,7 @@ class TestToolCommand(unittest.TestCase):
         new_callable=unittest.mock.mock_open,
         read_data=b"sample tarball content",
     )
-    @patch("crewai.cli.tools.main.ToolsAPI.publish")
+    @patch("crewai.cli.plus_api.PlusAPI.publish_tool")
     def test_publish_failure(
         self,
         mock_publish,
@@ -199,7 +199,7 @@ class TestToolCommand(unittest.TestCase):
         new_callable=unittest.mock.mock_open,
         read_data=b"sample tarball content",
     )
-    @patch("crewai.cli.tools.main.ToolsAPI.publish")
+    @patch("crewai.cli.plus_api.PlusAPI.publish_tool")
     def test_publish_api_error(
         self,
         mock_publish,

@@ -1,5 +1,6 @@
 from typing import Dict, Any
 from rich.console import Console
+from crewai.cli.plus_api import PlusAPI
 from crewai.cli.utils import get_auth_token
 from crewai.telemetry.telemetry import Telemetry
 
@@ -17,6 +18,7 @@ class PlusAPIMixin:
         try:
             telemetry.set_tracer()
             self.access_token = get_auth_token()
+            self.plus_api_client = PlusAPI(api_key=self.access_token)
         except Exception:
             self._deploy_signup_error_span = telemetry.deploy_signup_error_span()
             console.print(

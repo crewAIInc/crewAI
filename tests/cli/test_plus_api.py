@@ -1,19 +1,19 @@
 import unittest
 from unittest.mock import MagicMock, patch
-from crewai.cli.tools.api import ToolsAPI
+from crewai.cli.plus_api import PlusAPI
 
 
-class TestToolsAPI(unittest.TestCase):
+class TestPlusAPI(unittest.TestCase):
     def setUp(self):
         self.api_key = "test_api_key"
-        self.api = ToolsAPI(self.api_key)
+        self.api = PlusAPI(self.api_key)
 
     @patch("crewai.cli.plus_api.PlusAPI._make_request")
     def test_get_tool(self, mock_make_request):
         mock_response = MagicMock()
         mock_make_request.return_value = mock_response
 
-        response = self.api.get("test_tool_handle")
+        response = self.api.get_tool("test_tool_handle")
 
         mock_make_request.assert_called_once_with(
             "GET", "/crewai_plus/api/v1/tools/test_tool_handle"
@@ -30,7 +30,9 @@ class TestToolsAPI(unittest.TestCase):
         description = "Test tool description"
         encoded_file = "encoded_test_file"
 
-        response = self.api.publish(handle, public, version, description, encoded_file)
+        response = self.api.publish_tool(
+            handle, public, version, description, encoded_file
+        )
 
         params = {
             "handle": handle,
@@ -54,7 +56,9 @@ class TestToolsAPI(unittest.TestCase):
         description = None
         encoded_file = "encoded_test_file"
 
-        response = self.api.publish(handle, public, version, description, encoded_file)
+        response = self.api.publish_tool(
+            handle, public, version, description, encoded_file
+        )
 
         params = {
             "handle": handle,
