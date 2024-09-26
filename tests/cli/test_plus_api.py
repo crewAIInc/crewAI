@@ -1,14 +1,13 @@
+import os
 import unittest
-from os import environ
 from unittest.mock import MagicMock, patch
+from crewai.cli.plus_api import PlusAPI
 
-from crewai.cli.deploy.api import CrewAPI
 
-
-class TestCrewAPI(unittest.TestCase):
+class TestPlusAPI(unittest.TestCase):
     def setUp(self):
         self.api_key = "test_api_key"
-        self.api = CrewAPI(self.api_key)
+        self.api = PlusAPI(self.api_key)
 
     def test_init(self):
         self.assertEqual(self.api.api_key, self.api_key)
@@ -21,6 +20,70 @@ class TestCrewAPI(unittest.TestCase):
                 "X-Crewai-Version": "no-version-found",
             },
         )
+
+    @patch("crewai.cli.plus_api.PlusAPI._make_request")
+    def test_get_tool(self, mock_make_request):
+        mock_response = MagicMock()
+        mock_make_request.return_value = mock_response
+
+        response = self.api.get_tool("test_tool_handle")
+
+        mock_make_request.assert_called_once_with(
+            "GET", "/crewai_plus/api/v1/tools/test_tool_handle"
+        )
+        self.assertEqual(response, mock_response)
+
+    @patch("crewai.cli.plus_api.PlusAPI._make_request")
+    def test_publish_tool(self, mock_make_request):
+        mock_response = MagicMock()
+        mock_make_request.return_value = mock_response
+        handle = "test_tool_handle"
+        public = True
+        version = "1.0.0"
+        description = "Test tool description"
+        encoded_file = "encoded_test_file"
+
+        response = self.api.publish_tool(
+            handle, public, version, description, encoded_file
+        )
+
+        params = {
+            "handle": handle,
+            "public": public,
+            "version": version,
+            "file": encoded_file,
+            "description": description,
+        }
+        mock_make_request.assert_called_once_with(
+            "POST", "/crewai_plus/api/v1/tools", json=params
+        )
+        self.assertEqual(response, mock_response)
+
+    @patch("crewai.cli.plus_api.PlusAPI._make_request")
+    def test_publish_tool_without_description(self, mock_make_request):
+        mock_response = MagicMock()
+        mock_make_request.return_value = mock_response
+        handle = "test_tool_handle"
+        public = False
+        version = "2.0.0"
+        description = None
+        encoded_file = "encoded_test_file"
+
+        response = self.api.publish_tool(
+            handle, public, version, description, encoded_file
+        )
+
+        params = {
+            "handle": handle,
+            "public": public,
+            "version": version,
+            "file": encoded_file,
+            "description": description,
+        }
+        mock_make_request.assert_called_once_with(
+            "POST", "/crewai_plus/api/v1/tools", json=params
+        )
+        self.assertEqual(response, mock_response)
 
     @patch("crewai.cli.plus_api.requests.request")
     def test_make_request(self, mock_request):
@@ -49,53 +112,53 @@ class TestCrewAPI(unittest.TestCase):
         )
 
     @patch("crewai.cli.plus_api.PlusAPI._make_request")
-    def test_status_by_name(self, mock_make_request):
-        self.api.status_by_name("test_project")
+    def test_crew_status_by_name(self, mock_make_request):
+        self.api.crew_status_by_name("test_project")
         mock_make_request.assert_called_once_with(
             "GET", "/crewai_plus/api/v1/crews/by-name/test_project/status"
         )
 
     @patch("crewai.cli.plus_api.PlusAPI._make_request")
-    def test_status_by_uuid(self, mock_make_request):
-        self.api.status_by_uuid("test_uuid")
+    def test_crew_status_by_uuid(self, mock_make_request):
+        self.api.crew_status_by_uuid("test_uuid")
         mock_make_request.assert_called_once_with(
             "GET", "/crewai_plus/api/v1/crews/test_uuid/status"
         )
 
     @patch("crewai.cli.plus_api.PlusAPI._make_request")
-    def test_logs_by_name(self, mock_make_request):
-        self.api.logs_by_name("test_project")
+    def test_crew_by_name(self, mock_make_request):
+        self.api.crew_by_name("test_project")
         mock_make_request.assert_called_once_with(
             "GET", "/crewai_plus/api/v1/crews/by-name/test_project/logs/deployment"
         )
 
-        self.api.logs_by_name("test_project", "custom_log")
+        self.api.crew_by_name("test_project", "custom_log")
         mock_make_request.assert_called_with(
             "GET", "/crewai_plus/api/v1/crews/by-name/test_project/logs/custom_log"
         )
 
     @patch("crewai.cli.plus_api.PlusAPI._make_request")
-    def test_logs_by_uuid(self, mock_make_request):
-        self.api.logs_by_uuid("test_uuid")
+    def test_crew_by_uuid(self, mock_make_request):
+        self.api.crew_by_uuid("test_uuid")
         mock_make_request.assert_called_once_with(
             "GET", "/crewai_plus/api/v1/crews/test_uuid/logs/deployment"
         )
 
-        self.api.logs_by_uuid("test_uuid", "custom_log")
+        self.api.crew_by_uuid("test_uuid", "custom_log")
         mock_make_request.assert_called_with(
             "GET", "/crewai_plus/api/v1/crews/test_uuid/logs/custom_log"
         )
 
     @patch("crewai.cli.plus_api.PlusAPI._make_request")
-    def test_delete_by_name(self, mock_make_request):
-        self.api.delete_by_name("test_project")
+    def test_delete_crew_by_name(self, mock_make_request):
+        self.api.delete_crew_by_name("test_project")
         mock_make_request.assert_called_once_with(
             "DELETE", "/crewai_plus/api/v1/crews/by-name/test_project"
         )
 
     @patch("crewai.cli.plus_api.PlusAPI._make_request")
-    def test_delete_by_uuid(self, mock_make_request):
-        self.api.delete_by_uuid("test_uuid")
+    def test_delete_crew_by_uuid(self, mock_make_request):
+        self.api.delete_crew_by_uuid("test_uuid")
         mock_make_request.assert_called_once_with(
             "DELETE", "/crewai_plus/api/v1/crews/test_uuid"
         )
@@ -105,7 +168,7 @@ class TestCrewAPI(unittest.TestCase):
         self.api.list_crews()
         mock_make_request.assert_called_once_with("GET", "/crewai_plus/api/v1/crews")
 
-    @patch("crewai.cli.deploy.api.CrewAPI._make_request")
+    @patch("crewai.cli.plus_api.PlusAPI._make_request")
     def test_create_crew(self, mock_make_request):
         payload = {"name": "test_crew"}
         self.api.create_crew(payload)
@@ -113,9 +176,9 @@ class TestCrewAPI(unittest.TestCase):
             "POST", "/crewai_plus/api/v1/crews", json=payload
         )
 
-    @patch.dict(environ, {"CREWAI_BASE_URL": "https://custom-url.com/api"})
+    @patch.dict(os.environ, {"CREWAI_BASE_URL": "https://custom-url.com/api"})
     def test_custom_base_url(self):
-        custom_api = CrewAPI("test_key")
+        custom_api = PlusAPI("test_key")
         self.assertEqual(
             custom_api.base_url,
             "https://custom-url.com/api",

@@ -2,19 +2,17 @@ from typing import Any, Dict, List, Optional
 
 from rich.console import Console
 
-from crewai.telemetry import Telemetry
+from crewai.cli.command import BaseCommand, PlusAPIMixin
 from crewai.cli.utils import (
     fetch_and_json_env_file,
-    get_auth_token,
     get_git_remote_url,
     get_project_name,
 )
-from .api import CrewAPI
 
 console = Console()
 
 
-class DeployCommand:
+class DeployCommand(BaseCommand, PlusAPIMixin):
     """
     A class to handle deployment-related operations for CrewAI projects.
     """
@@ -23,40 +21,10 @@ class DeployCommand:
         """
         Initialize the DeployCommand with project name and API client.
         """
-        try:
-            self._telemetry = Telemetry()
-            self._telemetry.set_tracer()
-            access_token = get_auth_token()
-        except Exception:
-            self._deploy_signup_error_span = self._telemetry.deploy_signup_error_span()
-            console.print(
-                "Please sign up/login to CrewAI+ before using the CLI.",
-                style="bold red",
-            )
-            console.print("Run 'crewai signup' to sign up/login.", style="bold green")
-            raise SystemExit
 
-        self.project_name = get_project_name()
-        if self.project_name is None:
-            console.print(
-                "No project name found. Please ensure your project has a valid pyproject.toml file.",
-                style="bold red",
-            )
-            raise SystemExit
-
-        self.client = CrewAPI(api_key=access_token)
-
-    def _handle_error(self, json_response: Dict[str, Any]) -> None:
-        """
-        Handle and display error messages from API responses.
-
-        Args:
-            json_response (Dict[str, Any]): The JSON response containing error information.
-        """
-        error = json_response.get("error", "Unknown error")
-        message = json_response.get("message", "No message provided")
-        console.print(f"Error: {error}", style="bold red")
-        console.print(f"Message: {message}", style="bold red")
+        BaseCommand.__init__(self)
+        PlusAPIMixin.__init__(self, telemetry=self._telemetry)
+        self.project_name = get_project_name(require=True)
 
     def _standard_no_param_error_message(self) -> None:
         """
@@ -104,9 +72,9 @@ class DeployCommand:
         self._start_deployment_span = self._telemetry.start_deployment_span(uuid)
         console.print("Starting deployment...", style="bold blue")
         if uuid:
-            response = self.client.deploy_by_uuid(uuid)
+            response = self.plus_api_client.deploy_by_uuid(uuid)
         elif self.project_name:
-            response = self.client.deploy_by_name(self.project_name)
+            response = self.plus_api_client.deploy_by_name(self.project_name)
         else:
             self._standard_no_param_error_message()
             return
@@ -115,7 +83,7 @@ class DeployCommand:
         if response.status_code == 200:
             self._display_deployment_info(json_response)
         else:
-            self._handle_error(json_response)
+            self._handle_plus_api_error(json_response)
 
     def create_crew(self, confirm: bool = False) -> None:
         """
@@ -139,11 +107,11 @@ class DeployCommand:
         self._confirm_input(env_vars, remote_repo_url, confirm)
         payload = self._create_payload(env_vars, remote_repo_url)
 
-        response = self.client.create_crew(payload)
+        response = self.plus_api_client.create_crew(payload)
         if response.status_code == 201:
             self._display_creation_success(response.json())
         else:
-            self._handle_error(response.json())
+            self._handle_plus_api_error(response.json())
 
     def _confirm_input(
         self, env_vars: Dict[str, str], remote_repo_url: str, confirm: bool
@@ -208,7 +176,7 @@ class DeployCommand:
         """
         console.print("Listing all Crews\n", style="bold blue")
 
-        response = self.client.list_crews()
+        response = self.plus_api_client.list_crews()
         json_response = response.json()
         if response.status_code == 200:
             self._display_crews(json_response)
@@ -243,9 +211,9 @@ class DeployCommand:
         """
         console.print("Fetching deployment status...", style="bold blue")
         if uuid:
-            response = self.client.status_by_uuid(uuid)
+            response = self.plus_api_client.crew_status_by_uuid(uuid)
         elif self.project_name:
-            response = self.client.status_by_name(self.project_name)
+            response = self.plus_api_client.crew_status_by_name(self.project_name)
         else:
             self._standard_no_param_error_message()
             return
@@ -254,7 +222,7 @@ class DeployCommand:
         if response.status_code == 200:
             self._display_crew_status(json_response)
         else:
-            self._handle_error(json_response)
+            self._handle_plus_api_error(json_response)
 
     def _display_crew_status(self, status_data: Dict[str, str]) -> None:
         """
@@ -278,9 +246,9 @@ class DeployCommand:
         console.print(f"Fetching {log_type} logs...", style="bold blue")
 
         if uuid:
-            response = self.client.logs_by_uuid(uuid, log_type)
+            response = self.plus_api_client.crew_by_uuid(uuid, log_type)
         elif self.project_name:
-            response = self.client.logs_by_name(self.project_name, log_type)
+            response = self.plus_api_client.crew_by_name(self.project_name, log_type)
         else:
             self._standard_no_param_error_message()
             return
@@ -288,7 +256,7 @@ class DeployCommand:
         if response.status_code == 200:
             self._display_logs(response.json())
         else:
-            self._handle_error(response.json())
+            self._handle_plus_api_error(response.json())
 
     def remove_crew(self, uuid: Optional[str]) -> None:
         """
@@ -301,9 +269,9 @@ class DeployCommand:
         console.print("Removing deployment...", style="bold blue")
 
         if uuid:
-            response = self.client.delete_by_uuid(uuid)
+            response = self.plus_api_client.delete_crew_by_uuid(uuid)
         elif self.project_name:
-            response = self.client.delete_by_name(self.project_name)
+            response = self.plus_api_client.delete_crew_by_name(self.project_name)
         else:
             self._standard_no_param_error_message()
             return
