@@ -1093,7 +1093,7 @@ def test_agent_training_handler(crew_training_handler):
 
     result = agent._training_handler(task_prompt=task_prompt)
 
-    assert result == "What is 1 + 1?You MUST follow these feedbacks: \n good"
+    assert result == "What is 1 + 1?\n\nYou MUST follow these instructions: \n good"
 
     crew_training_handler.assert_has_calls(
         [mock.call(), mock.call("training_data.pkl"), mock.call().load()]
@@ -1121,8 +1121,8 @@ def test_agent_use_trained_data(crew_training_handler):
     result = agent._use_trained_data(task_prompt=task_prompt)
 
     assert (
-        result == "What is 1 + 1?You MUST follow these feedbacks: \n "
-        "The result of the math operation must be right.\n - Result must be better than 1."
+        result == "What is 1 + 1?\n\nYou MUST follow these instructions: \n"
+        " - The result of the math operation must be right.\n - Result must be better than 1."
     )
     crew_training_handler.assert_has_calls(
         [mock.call(), mock.call("trained_agents_data.pkl"), mock.call().load()]
@@ -1205,7 +1205,7 @@ def test_agent_with_custom_stop_words():
     )
 
     assert isinstance(agent.llm, LLM)
-    assert agent.llm.stop == stop_words
+    assert agent.llm.stop == stop_words + ["\nObservation:"]
 
 
 def test_agent_with_callbacks():
@@ -1368,7 +1368,7 @@ def test_agent_with_all_llm_attributes():
     assert agent.llm.temperature == 0.7
     assert agent.llm.top_p == 0.9
     assert agent.llm.n == 1
-    assert agent.llm.stop == ["STOP", "END"]
+    assert agent.llm.stop == ["STOP", "END", "\nObservation:"]
     assert agent.llm.max_tokens == 100
     assert agent.llm.presence_penalty == 0.1
     assert agent.llm.frequency_penalty == 0.1
