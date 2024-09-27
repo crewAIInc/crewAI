@@ -70,7 +70,10 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
         self.log_error_after = 3
         self.have_forced_answer = False
         self.name_to_tool_map = {tool.name: tool for tool in self.tools}
-        self.llm.stop = self.stop
+        if self.llm.stop:
+            self.llm.stop = list(set(self.llm.stop + self.stop))
+        else:
+            self.llm.stop = self.stop
 
     def invoke(self, inputs: Dict[str, str]) -> Dict[str, Any]:
         if "system" in self.prompt:
