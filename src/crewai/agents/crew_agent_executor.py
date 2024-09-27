@@ -67,8 +67,10 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
         self.ask_for_human_input = False
         self.messages: List[Dict[str, str]] = []
         self.iterations = 0
+        self.log_error_after = 3
         self.have_forced_answer = False
         self.name_to_tool_map = {tool.name: tool for tool in self.tools}
+        self.llm.stop = self.stop
 
     def invoke(self, inputs: Dict[str, str]) -> Dict[str, Any]:
         if "system" in self.prompt:
@@ -151,6 +153,11 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
 
         except OutputParserException as e:
             self.messages.append({"role": "user", "content": e.error})
+            if self.iterations > self.log_error_after:
+                self._printer.print(
+                    content=f"Error parsing LLM output, agent will retry: {e.error}",
+                    color="red",
+                )
             return self._invoke_loop(formatted_answer)
 
         except Exception as e:
@@ -245,21 +252,21 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
 
     def _summarize_messages(self) -> None:
         messages_groups = []
-
         for message in self.messages:
             content = message["content"]
-            for i in range(0, len(content), 5000):
-                messages_groups.append(content[i : i + 5000])
+            cut_size = self.llm.get_context_window_size()
+            for i in range(0, len(content), cut_size):
+                messages_groups.append(content[i : i + cut_size])
 
         summarized_contents = []
         for group in messages_groups:
             summary = self.llm.call(
                 [
                     self._format_msg(
-                        self._i18n.slices("summarizer_system_message"), role="system"
+                        self._i18n.slice("summarizer_system_message"), role="system"
                     ),
                     self._format_msg(
-                        self._i18n.errors("sumamrize_instruction").format(group=group),
+                        self._i18n.slice("sumamrize_instruction").format(group=group),
                     ),
                 ],
                 callbacks=self.callbacks,
@@ -270,7 +277,7 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
 
         self.messages = [
             self._format_msg(
-                self._i18n.errors("summary").format(merged_summary=merged_summary)
+                self._i18n.slice("summary").format(merged_summary=merged_summary)
             )
         ]
 
