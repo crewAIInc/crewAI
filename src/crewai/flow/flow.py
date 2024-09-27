@@ -2,6 +2,7 @@ import asyncio
 import inspect
 from typing import Any, Callable, Dict, Generic, List, Set, Type, TypeVar, Union
 
+from crewai.flow.flow_visualizer import visualize_flow
 from pydantic import BaseModel
 
 T = TypeVar("T", bound=Union[BaseModel, Dict[str, Any]])
@@ -250,3 +251,6 @@ class Flow(Generic[T], metaclass=FlowMeta):
             import traceback
 
             traceback.print_exc()
+
+    def visualize(self, filename: str = "crewai_flow_graph"):
+        visualize_flow(self, filename)
