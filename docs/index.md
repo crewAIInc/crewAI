@@ -165,7 +165,7 @@ Cutting-edge framework for orchestrating role-playing, autonomous AI agents. By 
             </li>
         </ul>
     </div>
-    <div style="width:30%">
+    <!-- <div style="width:30%">
         <h2>Examples</h2>
         <ul>
             <li>
@@ -224,5 +224,5 @@ Cutting-edge framework for orchestrating role-playing, autonomous AI agents. By 
                 </a>
             </li>
         </ul>
-    </div>
+    </div> -->
 </div>
