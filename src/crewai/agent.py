@@ -104,7 +104,7 @@ class Agent(BaseAgent):
         description="Keep messages under the context window size by summarizing content.",
     )
     max_iter: int = Field(
-        default=15,
+        default=20,
         description="Maximum number of iterations for an agent to execute a task before giving it's best answer",
     )
     max_retry_limit: int = Field(
