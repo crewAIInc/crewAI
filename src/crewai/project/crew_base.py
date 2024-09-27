@@ -45,7 +45,7 @@ def CrewBase(cls: T) -> T:
             ]
             tasks = [
                 getattr(self, name)()
-                for name, func in self._get_all_functions().items()
+                for name, func in reversed(self._get_all_functions().items())
                 if hasattr(func, "is_task")
             ]
             return Crew(agents=agents, tasks=tasks)
