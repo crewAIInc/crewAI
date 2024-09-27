@@ -7663,4 +7663,4 @@ tools = ["crewai-tools"]
 [metadata]
 lock-version = "2.0"
 python-versions = ">=3.10,<=3.13"
-content-hash = "8edc2b56582cce28793790bf6526cf35ccf54b982a5cfd97330f0f3d6ac2a5b9"
+content-hash = "13875b4236719007d8c126a03deefc6c59ce6717e39547d3d099053a89359eb0"

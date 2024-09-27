@@ -38,6 +38,7 @@ networkx = "^3.3"
 ipython = "^8.27.0"
 pyvis = "^0.3.2"
 playwright = "^1.47.0"
+pillow = "^10.4.0"
 
 [tool.poetry.extras]
 tools = ["crewai-tools"]
