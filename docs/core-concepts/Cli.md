@@ -85,20 +85,20 @@ Example:
 crewai replay -t task_123456
 ```
 
-### 5. log_tasks_outputs
+### 5. log-tasks-outputs
 
 Retrieve your latest crew.kickoff() task outputs.
 
 ```
-crewai log_tasks_outputs
+crewai log-tasks-outputs
 ```
 
-### 6. reset_memories
+### 6. reset-memories
 
 Reset the crew memories (long, short, entity, latest_crew_kickoff_outputs).
 
 ```
-crewai reset_memories [OPTIONS]
+crewai reset-memories [OPTIONS]
 ```
 
 - `-l, --long`: Reset LONG TERM memory
@@ -109,8 +109,8 @@ crewai reset_memories [OPTIONS]
 
 Example:
 ```
-crewai reset_memories --long --short
-crewai reset_memories --all
+crewai reset-memories --long --short
+crewai reset-memories --all
 ```
 
 ### 7. test
