@@ -56,6 +56,7 @@ class FlowVisualizer:
             },
         }
 
+    # TODO: DROP LIB FOLDER POST GENERATION
     def visualize(self, filename):
         net = Network(
             directed=True,
