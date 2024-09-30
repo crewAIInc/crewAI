@@ -207,30 +207,6 @@ class TestDeployCommand(unittest.TestCase):
         project_name = get_project_name()
         self.assertEqual(project_name, "test_project")
 
-    @patch(
-        "builtins.open",
-        new_callable=unittest.mock.mock_open,
-        read_data="""
-    [[package]]
-    name = "crewai"
-    version = "0.51.1"
-    description = "Some description"
-    category = "main"
-    optional = false
-    python-versions = ">=3.10,<4.0"
-    """,
-    )
-    def test_get_crewai_version(self, mock_open):
+    def test_get_crewai_version(self):
         from crewai.cli.utils import get_crewai_version
-
-        version = get_crewai_version()
-        self.assertEqual(version, "0.51.1")
-
-    @patch("builtins.open", side_effect=FileNotFoundError)
-    def test_get_crewai_version_file_not_found(self, mock_open):
-        from crewai.cli.utils import get_crewai_version
-
-        with patch("sys.stdout", new=StringIO()) as fake_out:
-            version = get_crewai_version()
-            self.assertEqual(version, "no-version-found")
-            self.assertIn("Error: poetry.lock not found.", fake_out.getvalue())
+        assert type(get_crewai_version()) is str

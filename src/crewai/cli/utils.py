@@ -2,6 +2,7 @@ import click
 import re
 import subprocess
 import sys
+import importlib.metadata
 
 from crewai.cli.authentication.utils import TokenManager
 from functools import reduce
@@ -162,29 +163,9 @@ def _get_nested_value(data: Dict[str, Any], keys: List[str]) -> Any:
     return reduce(dict.__getitem__, keys, data)
 
 
-def get_crewai_version(poetry_lock_path: str = "poetry.lock") -> str:
-    """Get the version number of crewai from the poetry.lock file."""
-    try:
-        with open(poetry_lock_path, "r") as f:
-            lock_content = f.read()
-
-        match = re.search(
-            r'\[\[package\]\]\s*name\s*=\s*"crewai"\s*version\s*=\s*"([^"]+)"',
-            lock_content,
-            re.DOTALL,
-        )
-        if match:
-            return match.group(1)
-        else:
-            print("crewai package not found in poetry.lock")
-            return "no-version-found"
-
-    except FileNotFoundError:
-        print(f"Error: {poetry_lock_path} not found.")
-    except Exception as e:
-        print(f"Error reading the poetry.lock file: {e}")
-
-    return "no-version-found"
+def get_crewai_version() -> str:
+    """Get the version number of CrewAI running the CLI"""
+    return importlib.metadata.version("crewai")
 
 
 def fetch_and_json_env_file(env_file_path: str = ".env") -> dict:

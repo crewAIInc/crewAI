@@ -11,15 +11,10 @@ class TestPlusAPI(unittest.TestCase):
 
     def test_init(self):
         self.assertEqual(self.api.api_key, self.api_key)
-        self.assertEqual(
-            self.api.headers,
-            {
-                "Authorization": f"Bearer {self.api_key}",
-                "Content-Type": "application/json",
-                "User-Agent": "CrewAI-CLI/no-version-found",
-                "X-Crewai-Version": "no-version-found",
-            },
-        )
+        self.assertEqual(self.api.headers["Authorization"], f"Bearer {self.api_key}")
+        self.assertEqual(self.api.headers["Content-Type"], "application/json")
+        self.assertTrue("CrewAI-CLI/" in self.api.headers["User-Agent"])
+        self.assertTrue(self.api.headers["X-Crewai-Version"])
 
     @patch("crewai.cli.plus_api.PlusAPI._make_request")
     def test_get_tool(self, mock_make_request):
