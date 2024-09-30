@@ -96,16 +96,19 @@ class PyvisFlowVisualizer(FlowVisualizer):
                 )
 
         # Add edges
+        print("self.flow._routers.values()", self.flow._routers)
         for method_name in self.flow._listeners:
+            print("Listeners for", method_name)
             condition_type, trigger_methods = self.flow._listeners[method_name]
             is_and_condition = condition_type == "AND"
 
             for trigger in trigger_methods:
+                print("Trigger", trigger)
                 if trigger in self.flow._methods:
-                    is_router_edge = (
-                        trigger in self.flow._routers.values()
-                        or method_name in self.flow._routers.values()
+                    is_router_edge = any(
+                        trigger in paths for paths in self.flow._router_paths.values()
                     )
+                    print("is_router_edge", is_router_edge)
                     edge_color = (
                         self.colors["router_edge"]
                         if is_router_edge
