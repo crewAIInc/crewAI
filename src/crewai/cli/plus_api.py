@@ -27,6 +27,9 @@ class PlusAPI:
         url = urljoin(self.base_url, endpoint)
         return requests.request(method, url, headers=self.headers, **kwargs)
 
+    def login_to_tool_repository(self):
+        return self._make_request("POST", f"{self.TOOLS_RESOURCE}/login")
+
     def get_tool(self, handle: str):
         return self._make_request("GET", f"{self.TOOLS_RESOURCE}/{handle}")
 

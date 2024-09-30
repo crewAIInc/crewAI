@@ -13,11 +13,7 @@ class TestToolCommand(unittest.TestCase):
         mock_get_response.status_code = 200
         mock_get_response.json.return_value = {
             "handle": "sample-tool",
-            "repository": {
-                "handle": "sample-repo",
-                "url": "https://example.com/repo",
-                "credentials": "my_very_secret",
-            },
+            "repository": {"handle": "sample-repo", "url": "https://example.com/repo"},
         }
         mock_get.return_value = mock_get_response
         mock_subprocess_run.return_value = MagicMock(stderr=None)
@@ -29,30 +25,6 @@ class TestToolCommand(unittest.TestCase):
             output = fake_out.getvalue()
 
         mock_get.assert_called_once_with("sample-tool")
-        mock_subprocess_run.assert_any_call(
-            [
-                "poetry",
-                "source",
-                "add",
-                "--priority=explicit",
-                "crewai-sample-repo",
-                "https://example.com/repo",
-            ],
-            text=True,
-            check=True,
-        )
-        mock_subprocess_run.assert_any_call(
-            [
-                "poetry",
-                "config",
-                "http-basic.crewai-sample-repo",
-                "my_very_secret",
-                '""',
-            ],
-            capture_output=False,
-            text=True,
-            check=True,
-        )
         mock_subprocess_run.assert_any_call(
             ["poetry", "add", "--source", "crewai-sample-repo", "sample-tool"],
             capture_output=False,
@@ -224,6 +196,56 @@ class TestToolCommand(unittest.TestCase):
         mock_publish.assert_called_once()
         self.assertIn("Failed to publish tool", output)
 
+    @patch("crewai.cli.plus_api.PlusAPI.login_to_tool_repository")
+    @patch("crewai.cli.tools.main.subprocess.run")
+    def test_login_success(self, mock_subprocess_run, mock_login):
+        mock_login_response = MagicMock()
+        mock_login_response.status_code = 200
+        mock_login_response.json.return_value = {
+            "repositories": [
+                {
+                    "handle": "tools",
+                    "url": "https://example.com/repo",
+                }
+            ],
+            "credential": {
+                "username": "user",
+                "password": "pass"
+            },
+        }
+        mock_login.return_value = mock_login_response
 
-if __name__ == "__main__":
-    unittest.main()
+        mock_subprocess_run.return_value = MagicMock(stderr=None)
+
+        tool_command = ToolCommand()
+
+        with patch("sys.stdout", new=StringIO()) as fake_out:
+            tool_command.login()
+            output = fake_out.getvalue()
+
+        mock_login.assert_called_once()
+        mock_subprocess_run.assert_any_call(
+            [
+                "poetry",
+                "source",
+                "add",
+                "--priority=explicit",
+                "crewai-tools",
+                "https://example.com/repo",
+            ],
+            text=True,
+            check=True
+        )
+        mock_subprocess_run.assert_any_call(
+            [
+                "poetry",
+                "config",
+                "http-basic.crewai-tools",
+                "user",
+                "pass",
+            ],
+            capture_output=False,
+            text=True,
+            check=True,
+        )
+        self.assertIn("Succesfully authenticated to the tool repository", output)

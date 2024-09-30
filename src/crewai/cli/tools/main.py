@@ -103,15 +103,27 @@ class ToolCommand(BaseCommand, PlusAPIMixin):
             )
             raise SystemExit
 
-        self._add_repository_to_poetry(get_response.json())
         self._add_package(get_response.json())
 
         console.print(f"Succesfully installed {handle}", style="bold green")
 
-    def _add_repository_to_poetry(self, tool_details):
-        repository_handle = f"crewai-{tool_details['repository']['handle']}"
-        repository_url = tool_details["repository"]["url"]
-        repository_credentials = tool_details["repository"]["credentials"]
+    def login(self):
+        login_response = self.plus_api_client.login_to_tool_repository()
+
+        if login_response.status_code != 200:
+            console.print(
+                "Failed to authenticate to the tool repository. Make sure you have the access to tools.", style="bold red"
+            )
+            raise SystemExit
+
+        login_response_json = login_response.json()
+        for repository in login_response_json["repositories"]:
+            self._add_repository_to_poetry(repository, login_response_json["credential"])
+
+        console.print(f"Succesfully authenticated to the tool repository.", style="bold green")
+
+    def _add_repository_to_poetry(self, repository, credentials):
+        repository_handle = f"crewai-{repository['handle']}"
 
         add_repository_command = [
             "poetry",
@@ -119,7 +131,7 @@ class ToolCommand(BaseCommand, PlusAPIMixin):
             "add",
             "--priority=explicit",
             repository_handle,
-            repository_url,
+            repository["url"],
         ]
         add_repository_result = subprocess.run(
             add_repository_command, text=True, check=True
@@ -133,8 +145,8 @@ class ToolCommand(BaseCommand, PlusAPIMixin):
             "poetry",
             "config",
             f"http-basic.{repository_handle}",
-            repository_credentials,
-            '""',
+            credentials["username"],
+            credentials["password"],
         ]
         add_repository_credentials_result = subprocess.run(
             add_repository_credentials_command,

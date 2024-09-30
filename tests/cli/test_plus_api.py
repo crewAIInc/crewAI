@@ -17,6 +17,18 @@ class TestPlusAPI(unittest.TestCase):
         self.assertTrue(self.api.headers["X-Crewai-Version"])
 
     @patch("crewai.cli.plus_api.PlusAPI._make_request")
+    def test_login_to_tool_repository(self, mock_make_request):
+        mock_response = MagicMock()
+        mock_make_request.return_value = mock_response
+
+        response = self.api.login_to_tool_repository()
+
+        mock_make_request.assert_called_once_with(
+            "POST", "/crewai_plus/api/v1/tools/login"
+        )
+        self.assertEqual(response, mock_response)
+
+    @patch("crewai.cli.plus_api.PlusAPI._make_request")
     def test_get_tool(self, mock_make_request):
         mock_response = MagicMock()
         mock_make_request.return_value = mock_response
