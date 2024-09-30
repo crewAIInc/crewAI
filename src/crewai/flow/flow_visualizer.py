@@ -68,11 +68,8 @@ class PyvisFlowVisualizer(FlowVisualizer):
         for method_name, level in node_levels.items():
             level_nodes.setdefault(level, []).append(method_name)
 
-        print("level_nodes", level_nodes)
-
         # Compute positions
         for level, nodes in level_nodes.items():
-            print("level", level, "nodes", nodes)
             x_offset = -(len(nodes) - 1) * x_spacing / 2  # Center nodes horizontally
             for i, method_name in enumerate(nodes):
                 x = x_offset + i * x_spacing
@@ -96,31 +93,35 @@ class PyvisFlowVisualizer(FlowVisualizer):
                 )
 
         # Add edges
-        print("self.flow._routers.values()", self.flow._routers)
         for method_name in self.flow._listeners:
-            print("Listeners for", method_name)
             condition_type, trigger_methods = self.flow._listeners[method_name]
             is_and_condition = condition_type == "AND"
 
             for trigger in trigger_methods:
-                print("Trigger", trigger)
                 if trigger in self.flow._methods:
                     is_router_edge = any(
                         trigger in paths for paths in self.flow._router_paths.values()
                     )
-                    print("is_router_edge", is_router_edge)
                     edge_color = (
                         self.colors["router_edge"]
                         if is_router_edge
                         else self.colors["edge"]
                     )
+
+                    # **New: Determine if this is a cycle edge to apply curvature**
+                    is_cycle_edge = trigger == method_name
                     edge_style = {
                         "color": edge_color,
                         "width": 2,
                         "arrows": "to",
                         "dashes": True if is_router_edge or is_and_condition else False,
-                        "smooth": {"type": "cubicBezier"},
+                        "smooth": (
+                            {"type": "curvedCCW", "roundness": 0.5}
+                            if is_cycle_edge
+                            else {"type": "cubicBezier"}
+                        ),
                     }
+
                     net.add_edge(trigger, method_name, **edge_style)
 
         # Add edges from router methods to their possible paths
@@ -136,7 +137,10 @@ class PyvisFlowVisualizer(FlowVisualizer):
                             "width": 2,
                             "arrows": "to",
                             "dashes": True,
-                            "smooth": {"type": "cubicBezier"},
+                            "smooth": {
+                                "type": "curvedCW",
+                                "roundness": 0.3,
+                            },  # Curvature for router edges
                         }
                         net.add_edge(router_method_name, listener_name, **edge_style)
 
@@ -144,16 +148,16 @@ class PyvisFlowVisualizer(FlowVisualizer):
         net.set_options(
             """
             var options = {
-            "physics": {
-                "enabled": false
-            },
-            "edges": {
-                "smooth": {
-                "enabled": true,
-                "type": "cubicBezier",
-                "roundness": 0.5
+                "physics": {
+                    "enabled": false
+                },
+                "edges": {
+                    "smooth": {
+                        "enabled": true,
+                        "type": "cubicBezier",
+                        "roundness": 0.5
+                    }
                 }
-            }
             }
             """
         )
