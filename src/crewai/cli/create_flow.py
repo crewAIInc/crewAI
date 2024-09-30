@@ -38,7 +38,7 @@ def create_flow(name):
     ]
 
     def process_file(src_file, dst_file):
-        if src_file.suffix in ['.pyc', '.pyo', '.pyd']:
+        if src_file.suffix in [".pyc", ".pyo", ".pyd"]:
             return
 
         try:
