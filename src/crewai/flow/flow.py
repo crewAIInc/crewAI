@@ -58,10 +58,12 @@ def listen(condition):
     return decorator
 
 
-def router(method):
+def router(method, paths=None):
     def decorator(func):
         func.__is_router__ = True
         func.__router_for__ = method.__name__
+        if paths:
+            func.__router_paths__ = paths
         return func
 
     return decorator
@@ -102,6 +104,7 @@ class FlowMeta(type):
         start_methods = []
         listeners = {}
         routers = {}
+        router_paths = {}
 
         for attr_name, attr_value in dct.items():
             if hasattr(attr_value, "__is_start_method__"):
@@ -116,10 +119,24 @@ class FlowMeta(type):
                 listeners[attr_name] = (condition_type, methods)
             elif hasattr(attr_value, "__is_router__"):
                 routers[attr_value.__router_for__] = attr_name
+                if hasattr(attr_value, "__router_paths__"):
+                    router_paths[attr_name] = attr_value.__router_paths__
+
+                # **Register router as a listener to its triggering method**
+                trigger_method_name = attr_value.__router_for__
+                methods = [trigger_method_name]
+                condition_type = "OR"
+                listeners[attr_name] = (condition_type, methods)
 
         setattr(cls, "_start_methods", start_methods)
         setattr(cls, "_listeners", listeners)
         setattr(cls, "_routers", routers)
+        setattr(cls, "_router_paths", router_paths)
+
+        print("Start methods:", start_methods)
+        print("Listeners:", listeners)
+        print("Routers:", routers)
+        print("Router paths:", router_paths)
 
         return cls
 
@@ -128,6 +145,7 @@ class Flow(Generic[T], metaclass=FlowMeta):
     _start_methods: List[str] = []
     _listeners: Dict[str, tuple[str, List[str]]] = {}
     _routers: Dict[str, str] = {}
+    _router_paths: Dict[str, List[str]] = {}
     initial_state: Union[Type[T], T, None] = None
 
     def __class_getitem__(cls, item):
