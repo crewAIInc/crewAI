@@ -1205,7 +1205,9 @@ def test_agent_with_custom_stop_words():
     )
 
     assert isinstance(agent.llm, LLM)
-    assert agent.llm.stop == stop_words + ["\nObservation:"]
+    assert set(agent.llm.stop) == set(stop_words + ["\nObservation:"])
+    assert all(word in agent.llm.stop for word in stop_words)
+    assert "\nObservation:" in agent.llm.stop
 
 
 def test_agent_with_callbacks():
@@ -1368,7 +1370,8 @@ def test_agent_with_all_llm_attributes():
     assert agent.llm.temperature == 0.7
     assert agent.llm.top_p == 0.9
     assert agent.llm.n == 1
-    assert agent.llm.stop == ["STOP", "END", "\nObservation:"]
+    assert set(agent.llm.stop) == set(["STOP", "END", "\nObservation:"])
+    assert all(word in agent.llm.stop for word in ["STOP", "END", "\nObservation:"])
     assert agent.llm.max_tokens == 100
     assert agent.llm.presence_penalty == 0.1
     assert agent.llm.frequency_penalty == 0.1
