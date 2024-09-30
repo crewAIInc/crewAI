@@ -64,25 +64,8 @@ from crewai_tools import SerperDevTool
 os.environ["OPENAI_API_KEY"] = "YOUR_API_KEY"
 os.environ["SERPER_API_KEY"] = "Your Key" # serper.dev API key
 
-# You can choose to use a local model through Ollama for example. See https://docs.crewai.com/how-to/LLM-Connections/ for more information.
-
-# os.environ["OPENAI_API_BASE"] = 'http://localhost:11434/v1'
-# os.environ["OPENAI_MODEL_NAME"] ='openhermes'  # Adjust based on available model
-# os.environ["OPENAI_API_KEY"] ='sk-111111111111111111111111111111111111111111111111'
-
-# You can pass an optional llm attribute specifying what model you wanna use.
 # It can be a local model through Ollama / LM Studio or a remote
 # model like OpenAI, Mistral, Antrophic or others (https://docs.crewai.com/how-to/LLM-Connections/)
-# If you don't specify a model, the default is OpenAI gpt-4o
-#
-# import os
-# os.environ['OPENAI_MODEL_NAME'] = 'gpt-3.5-turbo'
-#
-# OR
-#
-# from langchain_openai import ChatOpenAI
-
-search_tool = SerperDevTool()
 
 # Define your agents with roles and goals
 researcher = Agent(
@@ -95,7 +78,7 @@ researcher = Agent(
   allow_delegation=False,
   # You can pass an optional llm attribute specifying what model you wanna use.
   # llm=ChatOpenAI(model_name="gpt-3.5", temperature=0.7),
-  tools=[search_tool]
+  tools=[SerperDevTool()]
 )
 writer = Agent(
   role='Tech Content Strategist',

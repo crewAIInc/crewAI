@@ -1,0 +1,81 @@
+interactions:
+- request:
+    body: !!binary |
+      CrcCCiQKIgoMc2VydmljZS5uYW1lEhIKEGNyZXdBSS10ZWxlbWV0cnkSjgIKEgoQY3Jld2FpLnRl
+      bGVtZXRyeRJoChA/Q8UW5bidCRtKvri5fOaNEgh5qLzvLvZJkioQVG9vbCBVc2FnZSBFcnJvcjAB
+      OYjFVQr1TPgXQXCXhwr1TPgXShoKDmNyZXdhaV92ZXJzaW9uEggKBjAuNjEuMHoCGAGFAQABAAAS
+      jQEKEChQTWQ07t26ELkZmP5RresSCHEivRGBpsP7KgpUb29sIFVzYWdlMAE5sKkbC/VM+BdB8MIc
+      C/VM+BdKGgoOY3Jld2FpX3ZlcnNpb24SCAoGMC42MS4wShkKCXRvb2xfbmFtZRIMCgpkdW1teV90
+      b29sSg4KCGF0dGVtcHRzEgIYAXoCGAGFAQABAAA=
+    headers:
+      Accept:
+      - '*/*'
+      Accept-Encoding:
+      - gzip, deflate
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '314'
+      Content-Type:
+      - application/x-protobuf
+      User-Agent:
+      - OTel-OTLP-Exporter-Python/1.27.0
+    method: POST
+    uri: https://telemetry.crewai.com:4319/v1/traces
+  response:
+    body:
+      string: "\n\0"
+    headers:
+      Content-Length:
+      - '2'
+      Content-Type:
+      - application/x-protobuf
+      Date:
+      - Tue, 24 Sep 2024 21:57:54 GMT
+    status:
+      code: 200
+      message: OK
+- request:
+    body: '{"model": "gemma2:latest", "prompt": "### System:\nYou are test role. test
+      backstory\nYour personal goal is: test goal\nTo give my best complete final
+      answer to the task use the exact following format:\n\nThought: I now can give
+      a great answer\nFinal Answer: Your final answer must be the great and the most
+      complete as possible, it must be outcome described.\n\nI MUST use these formats,
+      my job depends on it!\n\n### User:\n\nCurrent Task: Explain what AI is in one
+      sentence\n\nThis is the expect criteria for your final answer: A one-sentence
+      explanation of AI\nyou MUST return the actual complete content as the final
+      answer, not a summary.\n\nBegin! This is VERY important to you, use the tools
+      available and give your best Final Answer, your job depends on it!\n\nThought:\n\n",
+      "options": {}, "stream": false}'
+    headers:
+      Accept:
+      - '*/*'
+      Accept-Encoding:
+      - gzip, deflate
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '815'
+      Content-Type:
+      - application/json
+      User-Agent:
+      - python-requests/2.31.0
+    method: POST
+    uri: http://localhost:8080/api/generate
+  response:
+    body:
+      string: '{"model":"gemma2:latest","created_at":"2024-09-24T21:57:55.835715Z","response":"Thought:
+        I can explain AI in one sentence. \n\nFinal Answer: Artificial intelligence
+        (AI) is the ability of computer systems to perform tasks that typically require
+        human intelligence, such as learning, problem-solving, and decision-making.  \n","done":true,"done_reason":"stop","context":[106,1645,108,6176,1479,235292,108,2045,708,2121,4731,235265,2121,135147,108,6922,3749,6789,603,235292,2121,6789,108,1469,2734,970,1963,3407,2048,3448,577,573,6911,1281,573,5463,2412,5920,235292,109,65366,235292,590,1490,798,2734,476,1775,3448,108,11263,10358,235292,3883,2048,3448,2004,614,573,1775,578,573,1546,3407,685,3077,235269,665,2004,614,17526,6547,235265,109,235285,44472,1281,1450,32808,235269,970,3356,12014,611,665,235341,109,6176,4926,235292,109,6846,12297,235292,36576,1212,16481,603,575,974,13060,109,1596,603,573,5246,12830,604,861,2048,3448,235292,586,974,235290,47366,15844,576,16481,108,4747,44472,2203,573,5579,3407,3381,685,573,2048,3448,235269,780,476,13367,235265,109,12694,235341,1417,603,50471,2845,577,692,235269,1281,573,8112,2506,578,2734,861,1963,14124,10358,235269,861,3356,12014,611,665,235341,109,65366,235292,109,107,108,106,2516,108,65366,235292,590,798,10200,16481,575,974,13060,235265,235248,109,11263,10358,235292,42456,17273,591,11716,235275,603,573,7374,576,6875,5188,577,3114,13333,674,15976,2817,3515,17273,235269,1582,685,6044,235269,3210,235290,60495,235269,578,4530,235290,14577,235265,139,108],"total_duration":3370959792,"load_duration":20611750,"prompt_eval_count":173,"prompt_eval_duration":688036000,"eval_count":51,"eval_duration":2660291000}'
+    headers:
+      Content-Length:
+      - '1662'
+      Content-Type:
+      - application/json; charset=utf-8
+      Date:
+      - Tue, 24 Sep 2024 21:57:55 GMT
+    status:
+      code: 200
+      message: OK
+version: 1

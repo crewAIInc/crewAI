@@ -54,10 +54,15 @@ Cutting-edge framework for orchestrating role-playing, autonomous AI agents. By 
                 </a>
             </li>
             <li>
+                <a href="./core-concepts/LLMs">
+                    LLMs
+                </a>
+            </li>
+            <!-- <li>
                 <a href="./core-concepts/Flows">
                     Flows
                 </a>
-            </li>
+            </li> -->
             <li>
                 <a href="./core-concepts/Pipeline">
                     Pipeline
@@ -85,7 +90,7 @@ Cutting-edge framework for orchestrating role-playing, autonomous AI agents. By 
             </li>
         </ul>
     </div>
-    <div style="width:30%">
+    <div style="width:25%">
         <h2>How-To Guides</h2>
         <ul>
             <li>
@@ -160,7 +165,7 @@ Cutting-edge framework for orchestrating role-playing, autonomous AI agents. By 
             </li>
         </ul>
     </div>
-    <div style="width:30%">
+    <!-- <div style="width:25%">
         <h2>Examples</h2>
         <ul>
             <li>
@@ -219,5 +224,5 @@ Cutting-edge framework for orchestrating role-playing, autonomous AI agents. By 
                 </a>
             </li>
         </ul>
-    </div>
+    </div> -->
 </div>

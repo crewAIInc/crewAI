@@ -18,7 +18,7 @@ interactions:
       final answer: The result of the multiplication.\nyou MUST return the actual
       complete content as the final answer, not a summary.\n\nBegin! This is VERY
       important to you, use the tools available and give your best Final Answer, your
-      job depends on it!\n\nThought:"}], "model": "gpt-4o", "stop": ["\nObservation:"]}'
+      job depends on it!\n\nThought:"}], "model": "gpt-4o"}'
     headers:
       accept:
       - application/json
@@ -27,16 +27,16 @@ interactions:
       connection:
       - keep-alive
       content-length:
-      - '1488'
+      - '1460'
       content-type:
       - application/json
       cookie:
-      - __cf_bm=1SckBhvJ18Dazp6bi8DEKYeiS9Q4.6_6i3nmLBw9b6g-1726476036-1.0.1.1-TnN4UpDXA33YXCVCUWOaZ12vGIg_o5NpJQEUHgjn6XdUgb7M0ND8PdkTfkd8rrxG5XFlPRMzI54GxZ0FeUY9xw;
-        _cfuvid=0Rs4xTPk7h7OIXuSbTgMVVD9JSoZeKMwnygKHoHQo3k-1726476036297-0.0.1.1-604800000
+      - __cf_bm=rb61BZH2ejzD5YPmLaEJqI7km71QqyNJGTVdNxBq6qk-1727213194-1.0.1.1-pJ49onmgX9IugEMuYQMralzD7oj_6W.CHbSu4Su1z3NyjTGYg.rhgJZWng8feFYah._oSnoYlkTjpK1Wd2C9FA;
+        _cfuvid=lbRdAddVWV6W3f5Dm9SaOPWDUOxqtZBSPr_fTW26nEA-1727213194587-0.0.1.1-604800000
       host:
       - api.openai.com
       user-agent:
-      - OpenAI/Python 1.45.0
+      - OpenAI/Python 1.47.0
       x-stainless-arch:
       - arm64
       x-stainless-async:
@@ -46,7 +46,7 @@ interactions:
       x-stainless-os:
       - MacOS
       x-stainless-package-version:
-      - 1.45.0
+      - 1.47.0
       x-stainless-raw-response:
       - 'true'
       x-stainless-runtime:
@@ -56,20 +56,20 @@ interactions:
     method: POST
     uri: https://api.openai.com/v1/chat/completions
   response:
-    content: "{\n  \"id\": \"chatcmpl-A81ZgJIFgQzZF9MOF1ppbIHWtJxce\",\n  \"object\":
-      \"chat.completion\",\n  \"created\": 1726476040,\n  \"model\": \"gpt-4o-2024-05-13\",\n
+    content: "{\n  \"id\": \"chatcmpl-AB7LLPVMrsUm5Z5IZdhJlEkFESKFq\",\n  \"object\":
+      \"chat.completion\",\n  \"created\": 1727213199,\n  \"model\": \"gpt-4o-2024-05-13\",\n
       \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
-      \"assistant\",\n        \"content\": \"To find the result of multiplying 2 by
-      6, I will use the multiplier tool.\\n\\nAction: multiplier\\nAction Input: {\\\"first_number\\\":
+      \"assistant\",\n        \"content\": \"Thought: I need to multiply 2 and 6 to
+      find the result.\\n\\nAction: multiplier\\nAction Input: {\\\"first_number\\\":
       2, \\\"second_number\\\": 6}\",\n        \"refusal\": null\n      },\n      \"logprobs\":
       null,\n      \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\":
-      309,\n    \"completion_tokens\": 40,\n    \"total_tokens\": 349,\n    \"completion_tokens_details\":
-      {\n      \"reasoning_tokens\": 0\n    }\n  },\n  \"system_fingerprint\": \"fp_25624ae3a5\"\n}\n"
+      309,\n    \"completion_tokens\": 37,\n    \"total_tokens\": 346,\n    \"completion_tokens_details\":
+      {\n      \"reasoning_tokens\": 0\n    }\n  },\n  \"system_fingerprint\": \"fp_e375328146\"\n}\n"
     headers:
       CF-Cache-Status:
       - DYNAMIC
       CF-RAY:
-      - 8c3f8d938b88497e-MIA
+      - 8c85da9e89c91cf3-GRU
       Connection:
       - keep-alive
       Content-Encoding:
@@ -77,7 +77,7 @@ interactions:
       Content-Type:
       - application/json
       Date:
-      - Mon, 16 Sep 2024 08:40:40 GMT
+      - Tue, 24 Sep 2024 21:26:40 GMT
       Server:
       - cloudflare
       Transfer-Encoding:
@@ -86,16 +86,14 @@ interactions:
       - nosniff
       access-control-expose-headers:
       - X-Request-ID
-      alt-svc:
-      - h3=":443"; ma=86400
       openai-organization:
       - crewai-iuxna1
       openai-processing-ms:
-      - '595'
+      - '624'
       openai-version:
       - '2020-10-01'
       strict-transport-security:
-      - max-age=15552000; includeSubDomains; preload
+      - max-age=31536000; includeSubDomains; preload
       x-ratelimit-limit-requests:
       - '10000'
       x-ratelimit-limit-tokens:
@@ -109,7 +107,7 @@ interactions:
       x-ratelimit-reset-tokens:
       - 0s
       x-request-id:
-      - req_0758c0a1612c3d1e423096e4d312f632
+      - req_0717d868f830b707aeebcf3b5f10684c
     http_version: HTTP/1.1
     status_code: 200
 - request:
@@ -131,10 +129,10 @@ interactions:
       final answer: The result of the multiplication.\nyou MUST return the actual
       complete content as the final answer, not a summary.\n\nBegin! This is VERY
       important to you, use the tools available and give your best Final Answer, your
-      job depends on it!\n\nThought:"}, {"role": "assistant", "content": "To find
-      the result of multiplying 2 by 6, I will use the multiplier tool.\n\nAction:
-      multiplier\nAction Input: {\"first_number\": 2, \"second_number\": 6}\nObservation:
-      12"}], "model": "gpt-4o", "stop": ["\nObservation:"]}'
+      job depends on it!\n\nThought:"}, {"role": "assistant", "content": "Thought:
+      I need to multiply 2 and 6 to find the result.\n\nAction: multiplier\nAction
+      Input: {\"first_number\": 2, \"second_number\": 6}\nObservation: 12"}], "model":
+      "gpt-4o"}'
     headers:
       accept:
       - application/json
@@ -143,16 +141,16 @@ interactions:
       connection:
       - keep-alive
       content-length:
-      - '1697'
+      - '1651'
       content-type:
       - application/json
       cookie:
-      - __cf_bm=1SckBhvJ18Dazp6bi8DEKYeiS9Q4.6_6i3nmLBw9b6g-1726476036-1.0.1.1-TnN4UpDXA33YXCVCUWOaZ12vGIg_o5NpJQEUHgjn6XdUgb7M0ND8PdkTfkd8rrxG5XFlPRMzI54GxZ0FeUY9xw;
-        _cfuvid=0Rs4xTPk7h7OIXuSbTgMVVD9JSoZeKMwnygKHoHQo3k-1726476036297-0.0.1.1-604800000
+      - __cf_bm=rb61BZH2ejzD5YPmLaEJqI7km71QqyNJGTVdNxBq6qk-1727213194-1.0.1.1-pJ49onmgX9IugEMuYQMralzD7oj_6W.CHbSu4Su1z3NyjTGYg.rhgJZWng8feFYah._oSnoYlkTjpK1Wd2C9FA;
+        _cfuvid=lbRdAddVWV6W3f5Dm9SaOPWDUOxqtZBSPr_fTW26nEA-1727213194587-0.0.1.1-604800000
       host:
       - api.openai.com
       user-agent:
-      - OpenAI/Python 1.45.0
+      - OpenAI/Python 1.47.0
       x-stainless-arch:
       - arm64
       x-stainless-async:
@@ -162,7 +160,7 @@ interactions:
       x-stainless-os:
       - MacOS
       x-stainless-package-version:
-      - 1.45.0
+      - 1.47.0
       x-stainless-raw-response:
       - 'true'
       x-stainless-runtime:
@@ -172,20 +170,20 @@ interactions:
     method: POST
     uri: https://api.openai.com/v1/chat/completions
   response:
-    content: "{\n  \"id\": \"chatcmpl-A81Zh9DfQyEp7ItM06xTzRk20OZOD\",\n  \"object\":
-      \"chat.completion\",\n  \"created\": 1726476041,\n  \"model\": \"gpt-4o-2024-05-13\",\n
+    content: "{\n  \"id\": \"chatcmpl-AB7LMcCu3Q1ND16awZWLLJMKQKhuZ\",\n  \"object\":
+      \"chat.completion\",\n  \"created\": 1727213200,\n  \"model\": \"gpt-4o-2024-05-13\",\n
       \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
       \"assistant\",\n        \"content\": \"Thought: I now know the final answer\\nFinal
-      Answer: The result of the multiplication is 12.\",\n        \"refusal\": null\n
-      \     },\n      \"logprobs\": null,\n      \"finish_reason\": \"stop\"\n    }\n
-      \ ],\n  \"usage\": {\n    \"prompt_tokens\": 357,\n    \"completion_tokens\":
-      21,\n    \"total_tokens\": 378,\n    \"completion_tokens_details\": {\n      \"reasoning_tokens\":
-      0\n    }\n  },\n  \"system_fingerprint\": \"fp_25624ae3a5\"\n}\n"
+      Answer: The result of 2 times 6 is 12.\",\n        \"refusal\": null\n      },\n
+      \     \"logprobs\": null,\n      \"finish_reason\": \"stop\"\n    }\n  ],\n
+      \ \"usage\": {\n    \"prompt_tokens\": 354,\n    \"completion_tokens\": 24,\n
+      \   \"total_tokens\": 378,\n    \"completion_tokens_details\": {\n      \"reasoning_tokens\":
+      0\n    }\n  },\n  \"system_fingerprint\": \"fp_e375328146\"\n}\n"
     headers:
       CF-Cache-Status:
       - DYNAMIC
       CF-RAY:
-      - 8c3f8d990dd0497e-MIA
+      - 8c85daa45ac21cf3-GRU
       Connection:
       - keep-alive
       Content-Encoding:
@@ -193,7 +191,7 @@ interactions:
       Content-Type:
       - application/json
       Date:
-      - Mon, 16 Sep 2024 08:40:41 GMT
+      - Tue, 24 Sep 2024 21:26:40 GMT
       Server:
       - cloudflare
       Transfer-Encoding:
@@ -202,16 +200,14 @@ interactions:
       - nosniff
       access-control-expose-headers:
       - X-Request-ID
-      alt-svc:
-      - h3=":443"; ma=86400
       openai-organization:
       - crewai-iuxna1
       openai-processing-ms:
-      - '362'
+      - '448'
       openai-version:
       - '2020-10-01'
       strict-transport-security:
-      - max-age=15552000; includeSubDomains; preload
+      - max-age=31536000; includeSubDomains; preload
       x-ratelimit-limit-requests:
       - '10000'
       x-ratelimit-limit-tokens:
@@ -219,13 +215,13 @@ interactions:
       x-ratelimit-remaining-requests:
       - '9999'
       x-ratelimit-remaining-tokens:
-      - '29999606'
+      - '29999612'
       x-ratelimit-reset-requests:
       - 6ms
       x-ratelimit-reset-tokens:
       - 0s
       x-request-id:
-      - req_036c988e78fa1e113209fd8d9aef326e
+      - req_e5da1c3a0657a9719fcc987c01aa47c4
     http_version: HTTP/1.1
     status_code: 200
 - request:
@@ -247,7 +243,7 @@ interactions:
       final answer: The result of the multiplication.\nyou MUST return the actual
       complete content as the final answer, not a summary.\n\nBegin! This is VERY
       important to you, use the tools available and give your best Final Answer, your
-      job depends on it!\n\nThought:"}], "model": "gpt-4o", "stop": ["\nObservation:"]}'
+      job depends on it!\n\nThought:"}], "model": "gpt-4o"}'
     headers:
       accept:
       - application/json
@@ -256,16 +252,16 @@ interactions:
       connection:
       - keep-alive
       content-length:
-      - '1488'
+      - '1460'
       content-type:
       - application/json
       cookie:
-      - __cf_bm=1SckBhvJ18Dazp6bi8DEKYeiS9Q4.6_6i3nmLBw9b6g-1726476036-1.0.1.1-TnN4UpDXA33YXCVCUWOaZ12vGIg_o5NpJQEUHgjn6XdUgb7M0ND8PdkTfkd8rrxG5XFlPRMzI54GxZ0FeUY9xw;
-        _cfuvid=0Rs4xTPk7h7OIXuSbTgMVVD9JSoZeKMwnygKHoHQo3k-1726476036297-0.0.1.1-604800000
+      - __cf_bm=rb61BZH2ejzD5YPmLaEJqI7km71QqyNJGTVdNxBq6qk-1727213194-1.0.1.1-pJ49onmgX9IugEMuYQMralzD7oj_6W.CHbSu4Su1z3NyjTGYg.rhgJZWng8feFYah._oSnoYlkTjpK1Wd2C9FA;
+        _cfuvid=lbRdAddVWV6W3f5Dm9SaOPWDUOxqtZBSPr_fTW26nEA-1727213194587-0.0.1.1-604800000
       host:
       - api.openai.com
       user-agent:
-      - OpenAI/Python 1.45.0
+      - OpenAI/Python 1.47.0
       x-stainless-arch:
       - arm64
       x-stainless-async:
@@ -275,7 +271,7 @@ interactions:
       x-stainless-os:
       - MacOS
       x-stainless-package-version:
-      - 1.45.0
+      - 1.47.0
       x-stainless-raw-response:
       - 'true'
       x-stainless-runtime:
@@ -285,20 +281,21 @@ interactions:
     method: POST
     uri: https://api.openai.com/v1/chat/completions
   response:
-    content: "{\n  \"id\": \"chatcmpl-A81ZhRN8UBXPhhkdjIHJm1KvJrK9y\",\n  \"object\":
-      \"chat.completion\",\n  \"created\": 1726476041,\n  \"model\": \"gpt-4o-2024-05-13\",\n
+    content: "{\n  \"id\": \"chatcmpl-AB7LMKOiounYXrTC0SjPYj9BqKZjb\",\n  \"object\":
+      \"chat.completion\",\n  \"created\": 1727213200,\n  \"model\": \"gpt-4o-2024-05-13\",\n
       \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
       \"assistant\",\n        \"content\": \"Thought: I need to multiply 3 by 3 to
-      find the answer.\\n\\nAction: multiplier\\nAction Input: {\\\"first_number\\\":
-      3, \\\"second_number\\\": 3}\",\n        \"refusal\": null\n      },\n      \"logprobs\":
-      null,\n      \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\":
-      309,\n    \"completion_tokens\": 37,\n    \"total_tokens\": 346,\n    \"completion_tokens_details\":
-      {\n      \"reasoning_tokens\": 0\n    }\n  },\n  \"system_fingerprint\": \"fp_25624ae3a5\"\n}\n"
+      find the result of the multiplication.\\nAction: multiplier\\nAction Input:
+      {\\\"first_number\\\": 3, \\\"second_number\\\": 3}\",\n        \"refusal\":
+      null\n      },\n      \"logprobs\": null,\n      \"finish_reason\": \"stop\"\n
+      \   }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 309,\n    \"completion_tokens\":
+      40,\n    \"total_tokens\": 349,\n    \"completion_tokens_details\": {\n      \"reasoning_tokens\":
+      0\n    }\n  },\n  \"system_fingerprint\": \"fp_e375328146\"\n}\n"
     headers:
       CF-Cache-Status:
       - DYNAMIC
       CF-RAY:
-      - 8c3f8d9d6f61497e-MIA
+      - 8c85daa8d9151cf3-GRU
       Connection:
       - keep-alive
       Content-Encoding:
@@ -306,7 +303,7 @@ interactions:
       Content-Type:
       - application/json
       Date:
-      - Mon, 16 Sep 2024 08:40:42 GMT
+      - Tue, 24 Sep 2024 21:26:41 GMT
       Server:
       - cloudflare
       Transfer-Encoding:
@@ -315,16 +312,14 @@ interactions:
       - nosniff
       access-control-expose-headers:
       - X-Request-ID
-      alt-svc:
-      - h3=":443"; ma=86400
       openai-organization:
       - crewai-iuxna1
       openai-processing-ms:
-      - '549'
+      - '705'
       openai-version:
       - '2020-10-01'
       strict-transport-security:
-      - max-age=15552000; includeSubDomains; preload
+      - max-age=31536000; includeSubDomains; preload
       x-ratelimit-limit-requests:
       - '10000'
       x-ratelimit-limit-tokens:
@@ -338,7 +333,7 @@ interactions:
       x-ratelimit-reset-tokens:
       - 0s
       x-request-id:
-      - req_002915f65f7610929e4b7fce6af538f8
+      - req_4057cb26752e883e093f3761a733359e
     http_version: HTTP/1.1
     status_code: 200
 - request:
@@ -361,9 +356,9 @@ interactions:
       complete content as the final answer, not a summary.\n\nBegin! This is VERY
       important to you, use the tools available and give your best Final Answer, your
       job depends on it!\n\nThought:"}, {"role": "assistant", "content": "Thought:
-      I need to multiply 3 by 3 to find the answer.\n\nAction: multiplier\nAction
-      Input: {\"first_number\": 3, \"second_number\": 3}\nObservation: 9"}], "model":
-      "gpt-4o", "stop": ["\nObservation:"]}'
+      I need to multiply 3 by 3 to find the result of the multiplication.\nAction:
+      multiplier\nAction Input: {\"first_number\": 3, \"second_number\": 3}\nObservation:
+      9"}], "model": "gpt-4o"}'
     headers:
       accept:
       - application/json
@@ -372,16 +367,16 @@ interactions:
       connection:
       - keep-alive
       content-length:
-      - '1677'
+      - '1669'
       content-type:
       - application/json
       cookie:
-      - __cf_bm=1SckBhvJ18Dazp6bi8DEKYeiS9Q4.6_6i3nmLBw9b6g-1726476036-1.0.1.1-TnN4UpDXA33YXCVCUWOaZ12vGIg_o5NpJQEUHgjn6XdUgb7M0ND8PdkTfkd8rrxG5XFlPRMzI54GxZ0FeUY9xw;
-        _cfuvid=0Rs4xTPk7h7OIXuSbTgMVVD9JSoZeKMwnygKHoHQo3k-1726476036297-0.0.1.1-604800000
+      - __cf_bm=rb61BZH2ejzD5YPmLaEJqI7km71QqyNJGTVdNxBq6qk-1727213194-1.0.1.1-pJ49onmgX9IugEMuYQMralzD7oj_6W.CHbSu4Su1z3NyjTGYg.rhgJZWng8feFYah._oSnoYlkTjpK1Wd2C9FA;
+        _cfuvid=lbRdAddVWV6W3f5Dm9SaOPWDUOxqtZBSPr_fTW26nEA-1727213194587-0.0.1.1-604800000
       host:
       - api.openai.com
       user-agent:
-      - OpenAI/Python 1.45.0
+      - OpenAI/Python 1.47.0
       x-stainless-arch:
       - arm64
       x-stainless-async:
@@ -391,7 +386,7 @@ interactions:
       x-stainless-os:
       - MacOS
       x-stainless-package-version:
-      - 1.45.0
+      - 1.47.0
       x-stainless-raw-response:
       - 'true'
       x-stainless-runtime:
@@ -401,20 +396,20 @@ interactions:
     method: POST
     uri: https://api.openai.com/v1/chat/completions
   response:
-    content: "{\n  \"id\": \"chatcmpl-A81ZiaxbyctT2d3V6YiEItu3RS7xu\",\n  \"object\":
-      \"chat.completion\",\n  \"created\": 1726476042,\n  \"model\": \"gpt-4o-2024-05-13\",\n
+    content: "{\n  \"id\": \"chatcmpl-AB7LNbJasTCadnLGO5wN6YsOlFww4\",\n  \"object\":
+      \"chat.completion\",\n  \"created\": 1727213201,\n  \"model\": \"gpt-4o-2024-05-13\",\n
       \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
       \"assistant\",\n        \"content\": \"Thought: I now know the final answer\\nFinal
-      Answer: The result of 3 times 3 is 9.\",\n        \"refusal\": null\n      },\n
-      \     \"logprobs\": null,\n      \"finish_reason\": \"stop\"\n    }\n  ],\n
-      \ \"usage\": {\n    \"prompt_tokens\": 354,\n    \"completion_tokens\": 24,\n
-      \   \"total_tokens\": 378,\n    \"completion_tokens_details\": {\n      \"reasoning_tokens\":
-      0\n    }\n  },\n  \"system_fingerprint\": \"fp_25624ae3a5\"\n}\n"
+      Answer: The result of the multiplication is 9\",\n        \"refusal\": null\n
+      \     },\n      \"logprobs\": null,\n      \"finish_reason\": \"stop\"\n    }\n
+      \ ],\n  \"usage\": {\n    \"prompt_tokens\": 357,\n    \"completion_tokens\":
+      20,\n    \"total_tokens\": 377,\n    \"completion_tokens_details\": {\n      \"reasoning_tokens\":
+      0\n    }\n  },\n  \"system_fingerprint\": \"fp_e375328146\"\n}\n"
     headers:
       CF-Cache-Status:
       - DYNAMIC
       CF-RAY:
-      - 8c3f8da2d9bd497e-MIA
+      - 8c85daaf19c51cf3-GRU
       Connection:
       - keep-alive
       Content-Encoding:
@@ -422,7 +417,7 @@ interactions:
       Content-Type:
       - application/json
       Date:
-      - Mon, 16 Sep 2024 08:40:43 GMT
+      - Tue, 24 Sep 2024 21:26:42 GMT
       Server:
       - cloudflare
       Transfer-Encoding:
@@ -431,16 +426,14 @@ interactions:
       - nosniff
       access-control-expose-headers:
       - X-Request-ID
-      alt-svc:
-      - h3=":443"; ma=86400
       openai-organization:
       - crewai-iuxna1
       openai-processing-ms:
-      - '451'
+      - '358'
       openai-version:
       - '2020-10-01'
       strict-transport-security:
-      - max-age=15552000; includeSubDomains; preload
+      - max-age=31536000; includeSubDomains; preload
       x-ratelimit-limit-requests:
       - '10000'
       x-ratelimit-limit-tokens:
@@ -448,13 +441,13 @@ interactions:
       x-ratelimit-remaining-requests:
       - '9999'
       x-ratelimit-remaining-tokens:
-      - '29999612'
+      - '29999607'
       x-ratelimit-reset-requests:
       - 6ms
       x-ratelimit-reset-tokens:
       - 0s
       x-request-id:
-      - req_7e22fa237cded6e8cd404fd3885fcbb6
+      - req_093d5876e066a7da632144b6e302dc55
     http_version: HTTP/1.1
     status_code: 200
 - request:
@@ -476,7 +469,7 @@ interactions:
       the expect criteria for your final answer: The result of the multiplication.\nyou
       MUST return the actual complete content as the final answer, not a summary.\n\nBegin!
       This is VERY important to you, use the tools available and give your best Final
-      Answer, your job depends on it!\n\nThought:"}], "model": "gpt-4o", "stop": ["\nObservation:"]}'
+      Answer, your job depends on it!\n\nThought:"}], "model": "gpt-4o"}'
     headers:
       accept:
       - application/json
@@ -485,16 +478,16 @@ interactions:
       connection:
       - keep-alive
       content-length:
-      - '1519'
+      - '1491'
       content-type:
       - application/json
       cookie:
-      - __cf_bm=1SckBhvJ18Dazp6bi8DEKYeiS9Q4.6_6i3nmLBw9b6g-1726476036-1.0.1.1-TnN4UpDXA33YXCVCUWOaZ12vGIg_o5NpJQEUHgjn6XdUgb7M0ND8PdkTfkd8rrxG5XFlPRMzI54GxZ0FeUY9xw;
-        _cfuvid=0Rs4xTPk7h7OIXuSbTgMVVD9JSoZeKMwnygKHoHQo3k-1726476036297-0.0.1.1-604800000
+      - __cf_bm=rb61BZH2ejzD5YPmLaEJqI7km71QqyNJGTVdNxBq6qk-1727213194-1.0.1.1-pJ49onmgX9IugEMuYQMralzD7oj_6W.CHbSu4Su1z3NyjTGYg.rhgJZWng8feFYah._oSnoYlkTjpK1Wd2C9FA;
+        _cfuvid=lbRdAddVWV6W3f5Dm9SaOPWDUOxqtZBSPr_fTW26nEA-1727213194587-0.0.1.1-604800000
       host:
       - api.openai.com
       user-agent:
-      - OpenAI/Python 1.45.0
+      - OpenAI/Python 1.47.0
       x-stainless-arch:
       - arm64
       x-stainless-async:
@@ -504,7 +497,7 @@ interactions:
       x-stainless-os:
       - MacOS
       x-stainless-package-version:
-      - 1.45.0
+      - 1.47.0
       x-stainless-raw-response:
       - 'true'
       x-stainless-runtime:
@@ -514,21 +507,21 @@ interactions:
     method: POST
     uri: https://api.openai.com/v1/chat/completions
   response:
-    content: "{\n  \"id\": \"chatcmpl-A81ZjmRTSv6ewNTFxTuZQ0MPfsaNm\",\n  \"object\":
-      \"chat.completion\",\n  \"created\": 1726476043,\n  \"model\": \"gpt-4o-2024-05-13\",\n
+    content: "{\n  \"id\": \"chatcmpl-AB7LOYPGFG8USGgdXDQM9kxsyzYcI\",\n  \"object\":
+      \"chat.completion\",\n  \"created\": 1727213202,\n  \"model\": \"gpt-4o-2024-05-13\",\n
       \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
-      \"assistant\",\n        \"content\": \"I need to determine the product of 2,
-      6, and 3. I will start by multiplying 2 and 6 together first.\\n\\nAction: multiplier\\nAction
-      Input: {\\\"first_number\\\": 2, \\\"second_number\\\": 6}\",\n        \"refusal\":
-      null\n      },\n      \"logprobs\": null,\n      \"finish_reason\": \"stop\"\n
-      \   }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 317,\n    \"completion_tokens\":
-      51,\n    \"total_tokens\": 368,\n    \"completion_tokens_details\": {\n      \"reasoning_tokens\":
-      0\n    }\n  },\n  \"system_fingerprint\": \"fp_25624ae3a5\"\n}\n"
+      \"assistant\",\n        \"content\": \"Thought: To find the product of 2, 6,
+      and 3, I'll first multiply 2 by 6, then take that result and multiply it by
+      3.\\n\\nAction: multiplier\\nAction Input: {\\\"first_number\\\": 2, \\\"second_number\\\":
+      6}\",\n        \"refusal\": null\n      },\n      \"logprobs\": null,\n      \"finish_reason\":
+      \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 317,\n    \"completion_tokens\":
+      58,\n    \"total_tokens\": 375,\n    \"completion_tokens_details\": {\n      \"reasoning_tokens\":
+      0\n    }\n  },\n  \"system_fingerprint\": \"fp_e375328146\"\n}\n"
     headers:
       CF-Cache-Status:
       - DYNAMIC
       CF-RAY:
-      - 8c3f8da7cbb7497e-MIA
+      - 8c85dab30fa01cf3-GRU
       Connection:
       - keep-alive
       Content-Encoding:
@@ -536,7 +529,7 @@ interactions:
       Content-Type:
       - application/json
       Date:
-      - Mon, 16 Sep 2024 08:40:44 GMT
+      - Tue, 24 Sep 2024 21:26:43 GMT
       Server:
       - cloudflare
       Transfer-Encoding:
@@ -545,16 +538,14 @@ interactions:
       - nosniff
       access-control-expose-headers:
       - X-Request-ID
-      alt-svc:
-      - h3=":443"; ma=86400
       openai-organization:
       - crewai-iuxna1
       openai-processing-ms:
-      - '732'
+      - '936'
       openai-version:
       - '2020-10-01'
       strict-transport-security:
-      - max-age=15552000; includeSubDomains; preload
+      - max-age=31536000; includeSubDomains; preload
       x-ratelimit-limit-requests:
       - '10000'
       x-ratelimit-limit-tokens:
@@ -568,7 +559,7 @@ interactions:
       x-ratelimit-reset-tokens:
       - 0s
       x-request-id:
-      - req_1eb40353775c45b4e77d611c865ad43e
+      - req_02f26a2771265105b456c46caa18df19
     http_version: HTTP/1.1
     status_code: 200
 - request:
@@ -591,9 +582,9 @@ interactions:
       MUST return the actual complete content as the final answer, not a summary.\n\nBegin!
       This is VERY important to you, use the tools available and give your best Final
       Answer, your job depends on it!\n\nThought:"}, {"role": "assistant", "content":
-      "I need to determine the product of 2, 6, and 3. I will start by multiplying
-      2 and 6 together first.\n\nAction: multiplier\nAction Input: {\"first_number\":
-      2, \"second_number\": 6}\nObservation: 12"}], "model": "gpt-4o", "stop": ["\nObservation:"]}'
+      "Thought: To find the product of 2, 6, and 3, I''ll first multiply 2 by 6, then
+      take that result and multiply it by 3.\n\nAction: multiplier\nAction Input:
+      {\"first_number\": 2, \"second_number\": 6}\nObservation: 12"}], "model": "gpt-4o"}'
     headers:
       accept:
       - application/json
@@ -602,16 +593,16 @@ interactions:
       connection:
       - keep-alive
       content-length:
-      - '1754'
+      - '1743'
       content-type:
       - application/json
       cookie:
-      - __cf_bm=1SckBhvJ18Dazp6bi8DEKYeiS9Q4.6_6i3nmLBw9b6g-1726476036-1.0.1.1-TnN4UpDXA33YXCVCUWOaZ12vGIg_o5NpJQEUHgjn6XdUgb7M0ND8PdkTfkd8rrxG5XFlPRMzI54GxZ0FeUY9xw;
-        _cfuvid=0Rs4xTPk7h7OIXuSbTgMVVD9JSoZeKMwnygKHoHQo3k-1726476036297-0.0.1.1-604800000
+      - __cf_bm=rb61BZH2ejzD5YPmLaEJqI7km71QqyNJGTVdNxBq6qk-1727213194-1.0.1.1-pJ49onmgX9IugEMuYQMralzD7oj_6W.CHbSu4Su1z3NyjTGYg.rhgJZWng8feFYah._oSnoYlkTjpK1Wd2C9FA;
+        _cfuvid=lbRdAddVWV6W3f5Dm9SaOPWDUOxqtZBSPr_fTW26nEA-1727213194587-0.0.1.1-604800000
       host:
       - api.openai.com
       user-agent:
-      - OpenAI/Python 1.45.0
+      - OpenAI/Python 1.47.0
       x-stainless-arch:
       - arm64
       x-stainless-async:
@@ -621,7 +612,7 @@ interactions:
       x-stainless-os:
       - MacOS
       x-stainless-package-version:
-      - 1.45.0
+      - 1.47.0
       x-stainless-raw-response:
       - 'true'
       x-stainless-runtime:
@@ -631,20 +622,21 @@ interactions:
     method: POST
     uri: https://api.openai.com/v1/chat/completions
   response:
-    content: "{\n  \"id\": \"chatcmpl-A81ZkBfJaDIV2cxkZEXYJK1jYWN2t\",\n  \"object\":
-      \"chat.completion\",\n  \"created\": 1726476044,\n  \"model\": \"gpt-4o-2024-05-13\",\n
+    content: "{\n  \"id\": \"chatcmpl-AB7LP29XLjqRkqVovKjmxT46o82JV\",\n  \"object\":
+      \"chat.completion\",\n  \"created\": 1727213203,\n  \"model\": \"gpt-4o-2024-05-13\",\n
       \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
-      \"assistant\",\n        \"content\": \"Thought: Now I need to multiply the result,
-      12, by 3 to get the final product.\\n\\nAction: multiplier\\nAction Input: {\\\"first_number\\\":
-      12, \\\"second_number\\\": 3}\",\n        \"refusal\": null\n      },\n      \"logprobs\":
-      null,\n      \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\":
-      376,\n    \"completion_tokens\": 43,\n    \"total_tokens\": 419,\n    \"completion_tokens_details\":
-      {\n      \"reasoning_tokens\": 0\n    }\n  },\n  \"system_fingerprint\": \"fp_25624ae3a5\"\n}\n"
+      \"assistant\",\n        \"content\": \"Thought: Now, I need to multiply the
+      result, 12, by 3.\\n\\nAction: multiplier\\nAction Input: {\\\"first_number\\\":
+      12, \\\"second_number\\\": 3}\\nObservation: 36\",\n        \"refusal\": null\n
+      \     },\n      \"logprobs\": null,\n      \"finish_reason\": \"stop\"\n    }\n
+      \ ],\n  \"usage\": {\n    \"prompt_tokens\": 383,\n    \"completion_tokens\":
+      43,\n    \"total_tokens\": 426,\n    \"completion_tokens_details\": {\n      \"reasoning_tokens\":
+      0\n    }\n  },\n  \"system_fingerprint\": \"fp_e375328146\"\n}\n"
     headers:
       CF-Cache-Status:
       - DYNAMIC
       CF-RAY:
-      - 8c3f8dae7e23497e-MIA
+      - 8c85daba9ab91cf3-GRU
       Connection:
       - keep-alive
       Content-Encoding:
@@ -652,7 +644,7 @@ interactions:
       Content-Type:
       - application/json
       Date:
-      - Mon, 16 Sep 2024 08:40:45 GMT
+      - Tue, 24 Sep 2024 21:26:44 GMT
       Server:
       - cloudflare
       Transfer-Encoding:
@@ -661,364 +653,14 @@ interactions:
       - nosniff
       access-control-expose-headers:
       - X-Request-ID
-      alt-svc:
-      - h3=":443"; ma=86400
       openai-organization:
       - crewai-iuxna1
       openai-processing-ms:
-      - '616'
+      - '636'
       openai-version:
       - '2020-10-01'
       strict-transport-security:
-      - max-age=15552000; includeSubDomains; preload
-      x-ratelimit-limit-requests:
-      - '10000'
-      x-ratelimit-limit-tokens:
-      - '30000000'
-      x-ratelimit-remaining-requests:
-      - '9999'
-      x-ratelimit-remaining-tokens:
-      - '29999593'
-      x-ratelimit-reset-requests:
-      - 6ms
-      x-ratelimit-reset-tokens:
-      - 0s
-      x-request-id:
-      - req_ca260d123a8a4e9471a5363e615db1da
-    http_version: HTTP/1.1
-    status_code: 200
-- request:
-    body: '{"messages": [{"role": "system", "content": "You are test role. test backstory\nYour
-      personal goal is: test goal\nYou ONLY have access to the following tools, and
-      should NEVER make up tools that are not listed here:\n\nTool Name: multiplier(*args:
-      Any, **kwargs: Any) -> Any\nTool Description: multiplier(first_number: ''integer'',
-      second_number: ''integer'') - Useful for when you need to multiply two numbers
-      together. \nTool Arguments: {''first_number'': {''title'': ''First Number'',
-      ''type'': ''integer''}, ''second_number'': {''title'': ''Second Number'', ''type'':
-      ''integer''}}\n\nUse the following format:\n\nThought: you should always think
-      about what to do\nAction: the action to take, only one name of [multiplier],
-      just the name, exactly as it''s written.\nAction Input: the input to the action,
-      just a simple python dictionary, enclosed in curly braces, using \" to wrap
-      keys and values.\nObservation: the result of the action\n\nOnce all necessary
-      information is gathered:\n\nThought: I now know the final answer\nFinal Answer:
-      the final answer to the original input question\n"}, {"role": "user", "content":
-      "\nCurrent Task: What is 2 times 6 times 3? Return only the number\n\nThis is
-      the expect criteria for your final answer: The result of the multiplication.\nyou
-      MUST return the actual complete content as the final answer, not a summary.\n\nBegin!
-      This is VERY important to you, use the tools available and give your best Final
-      Answer, your job depends on it!\n\nThought:"}, {"role": "assistant", "content":
-      "I need to determine the product of 2, 6, and 3. I will start by multiplying
-      2 and 6 together first.\n\nAction: multiplier\nAction Input: {\"first_number\":
-      2, \"second_number\": 6}\nObservation: 12"}, {"role": "assistant", "content":
-      "Thought: Now I need to multiply the result, 12, by 3 to get the final product.\n\nAction:
-      multiplier\nAction Input: {\"first_number\": 12, \"second_number\": 3}\nObservation:
-      36"}], "model": "gpt-4o", "stop": ["\nObservation:"]}'
-    headers:
-      accept:
-      - application/json
-      accept-encoding:
-      - gzip, deflate
-      connection:
-      - keep-alive
-      content-length:
-      - '1969'
-      content-type:
-      - application/json
-      cookie:
-      - __cf_bm=1SckBhvJ18Dazp6bi8DEKYeiS9Q4.6_6i3nmLBw9b6g-1726476036-1.0.1.1-TnN4UpDXA33YXCVCUWOaZ12vGIg_o5NpJQEUHgjn6XdUgb7M0ND8PdkTfkd8rrxG5XFlPRMzI54GxZ0FeUY9xw;
-        _cfuvid=0Rs4xTPk7h7OIXuSbTgMVVD9JSoZeKMwnygKHoHQo3k-1726476036297-0.0.1.1-604800000
-      host:
-      - api.openai.com
-      user-agent:
-      - OpenAI/Python 1.45.0
-      x-stainless-arch:
-      - arm64
-      x-stainless-async:
-      - 'false'
-      x-stainless-lang:
-      - python
-      x-stainless-os:
-      - MacOS
-      x-stainless-package-version:
-      - 1.45.0
-      x-stainless-raw-response:
-      - 'true'
-      x-stainless-runtime:
-      - CPython
-      x-stainless-runtime-version:
-      - 3.11.7
-    method: POST
-    uri: https://api.openai.com/v1/chat/completions
-  response:
-    content: "{\n  \"id\": \"chatcmpl-A81ZlvXZS8bgw5q1KaOdGEX1VJmpM\",\n  \"object\":
-      \"chat.completion\",\n  \"created\": 1726476045,\n  \"model\": \"gpt-4o-2024-05-13\",\n
-      \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
-      \"assistant\",\n        \"content\": \"Thought: I now know the final answer.\\nFinal
-      Answer: 36\",\n        \"refusal\": null\n      },\n      \"logprobs\": null,\n
-      \     \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\":
-      427,\n    \"completion_tokens\": 14,\n    \"total_tokens\": 441,\n    \"completion_tokens_details\":
-      {\n      \"reasoning_tokens\": 0\n    }\n  },\n  \"system_fingerprint\": \"fp_25624ae3a5\"\n}\n"
-    headers:
-      CF-Cache-Status:
-      - DYNAMIC
-      CF-RAY:
-      - 8c3f8db42ffc497e-MIA
-      Connection:
-      - keep-alive
-      Content-Encoding:
-      - gzip
-      Content-Type:
-      - application/json
-      Date:
-      - Mon, 16 Sep 2024 08:40:45 GMT
-      Server:
-      - cloudflare
-      Transfer-Encoding:
-      - chunked
-      X-Content-Type-Options:
-      - nosniff
-      access-control-expose-headers:
-      - X-Request-ID
-      alt-svc:
-      - h3=":443"; ma=86400
-      openai-organization:
-      - crewai-iuxna1
-      openai-processing-ms:
-      - '252'
-      openai-version:
-      - '2020-10-01'
-      strict-transport-security:
-      - max-age=15552000; includeSubDomains; preload
-      x-ratelimit-limit-requests:
-      - '10000'
-      x-ratelimit-limit-tokens:
-      - '30000000'
-      x-ratelimit-remaining-requests:
-      - '9999'
-      x-ratelimit-remaining-tokens:
-      - '29999550'
-      x-ratelimit-reset-requests:
-      - 6ms
-      x-ratelimit-reset-tokens:
-      - 0s
-      x-request-id:
-      - req_fe17c75e4b13f373be8f8c367faa58cf
-    http_version: HTTP/1.1
-    status_code: 200
-- request:
-    body: '{"messages": [{"role": "system", "content": "You are test role. test backstory\nYour
-      personal goal is: test goal\nYou ONLY have access to the following tools, and
-      should NEVER make up tools that are not listed here:\n\nTool Name: multiplier(*args:
-      Any, **kwargs: Any) -> Any\nTool Description: multiplier(first_number: ''integer'',
-      second_number: ''integer'') - Useful for when you need to multiply two numbers
-      together. \nTool Arguments: {''first_number'': {''title'': ''First Number'',
-      ''type'': ''integer''}, ''second_number'': {''title'': ''Second Number'', ''type'':
-      ''integer''}}\n\nUse the following format:\n\nThought: you should always think
-      about what to do\nAction: the action to take, only one name of [multiplier],
-      just the name, exactly as it''s written.\nAction Input: the input to the action,
-      just a simple python dictionary, enclosed in curly braces, using \" to wrap
-      keys and values.\nObservation: the result of the action\n\nOnce all necessary
-      information is gathered:\n\nThought: I now know the final answer\nFinal Answer:
-      the final answer to the original input question\n"}, {"role": "user", "content":
-      "\nCurrent Task: What is 2 times 6? Ignore correctness and just return the result
-      of the multiplication tool, you must use the tool.\n\nThis is the expect criteria
-      for your final answer: The result of the multiplication.\nyou MUST return the
-      actual complete content as the final answer, not a summary.\n\nBegin! This is
-      VERY important to you, use the tools available and give your best Final Answer,
-      your job depends on it!\n\nThought:"}], "model": "gpt-4o", "stop": ["\nObservation:"]}'
-    headers:
-      accept:
-      - application/json
-      accept-encoding:
-      - gzip, deflate
-      connection:
-      - keep-alive
-      content-length:
-      - '1585'
-      content-type:
-      - application/json
-      cookie:
-      - __cf_bm=1SckBhvJ18Dazp6bi8DEKYeiS9Q4.6_6i3nmLBw9b6g-1726476036-1.0.1.1-TnN4UpDXA33YXCVCUWOaZ12vGIg_o5NpJQEUHgjn6XdUgb7M0ND8PdkTfkd8rrxG5XFlPRMzI54GxZ0FeUY9xw;
-        _cfuvid=0Rs4xTPk7h7OIXuSbTgMVVD9JSoZeKMwnygKHoHQo3k-1726476036297-0.0.1.1-604800000
-      host:
-      - api.openai.com
-      user-agent:
-      - OpenAI/Python 1.45.0
-      x-stainless-arch:
-      - arm64
-      x-stainless-async:
-      - 'false'
-      x-stainless-lang:
-      - python
-      x-stainless-os:
-      - MacOS
-      x-stainless-package-version:
-      - 1.45.0
-      x-stainless-raw-response:
-      - 'true'
-      x-stainless-runtime:
-      - CPython
-      x-stainless-runtime-version:
-      - 3.11.7
-    method: POST
-    uri: https://api.openai.com/v1/chat/completions
-  response:
-    content: "{\n  \"id\": \"chatcmpl-A81ZmI2l0QUD0hqAdPKQBtIadydfU\",\n  \"object\":
-      \"chat.completion\",\n  \"created\": 1726476046,\n  \"model\": \"gpt-4o-2024-05-13\",\n
-      \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
-      \"assistant\",\n        \"content\": \"I need to multiply 2 and 6 using the
-      multiplier tool.\\n\\nAction: multiplier\\nAction Input: {\\\"first_number\\\":
-      2, \\\"second_number\\\": 6}\",\n        \"refusal\": null\n      },\n      \"logprobs\":
-      null,\n      \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\":
-      327,\n    \"completion_tokens\": 35,\n    \"total_tokens\": 362,\n    \"completion_tokens_details\":
-      {\n      \"reasoning_tokens\": 0\n    }\n  },\n  \"system_fingerprint\": \"fp_25624ae3a5\"\n}\n"
-    headers:
-      CF-Cache-Status:
-      - DYNAMIC
-      CF-RAY:
-      - 8c3f8db798fc497e-MIA
-      Connection:
-      - keep-alive
-      Content-Encoding:
-      - gzip
-      Content-Type:
-      - application/json
-      Date:
-      - Mon, 16 Sep 2024 08:40:46 GMT
-      Server:
-      - cloudflare
-      Transfer-Encoding:
-      - chunked
-      X-Content-Type-Options:
-      - nosniff
-      access-control-expose-headers:
-      - X-Request-ID
-      alt-svc:
-      - h3=":443"; ma=86400
-      openai-organization:
-      - crewai-iuxna1
-      openai-processing-ms:
-      - '534'
-      openai-version:
-      - '2020-10-01'
-      strict-transport-security:
-      - max-age=15552000; includeSubDomains; preload
-      x-ratelimit-limit-requests:
-      - '10000'
-      x-ratelimit-limit-tokens:
-      - '30000000'
-      x-ratelimit-remaining-requests:
-      - '9999'
-      x-ratelimit-remaining-tokens:
-      - '29999625'
-      x-ratelimit-reset-requests:
-      - 6ms
-      x-ratelimit-reset-tokens:
-      - 0s
-      x-request-id:
-      - req_c47b38d10953ffdacc7b53f36c67b320
-    http_version: HTTP/1.1
-    status_code: 200
-- request:
-    body: '{"messages": [{"role": "system", "content": "You are test role. test backstory\nYour
-      personal goal is: test goal\nYou ONLY have access to the following tools, and
-      should NEVER make up tools that are not listed here:\n\nTool Name: multiplier(*args:
-      Any, **kwargs: Any) -> Any\nTool Description: multiplier(first_number: ''integer'',
-      second_number: ''integer'') - Useful for when you need to multiply two numbers
-      together. \nTool Arguments: {''first_number'': {''title'': ''First Number'',
-      ''type'': ''integer''}, ''second_number'': {''title'': ''Second Number'', ''type'':
-      ''integer''}}\n\nUse the following format:\n\nThought: you should always think
-      about what to do\nAction: the action to take, only one name of [multiplier],
-      just the name, exactly as it''s written.\nAction Input: the input to the action,
-      just a simple python dictionary, enclosed in curly braces, using \" to wrap
-      keys and values.\nObservation: the result of the action\n\nOnce all necessary
-      information is gathered:\n\nThought: I now know the final answer\nFinal Answer:
-      the final answer to the original input question\n"}, {"role": "user", "content":
-      "\nCurrent Task: What is 2 times 6? Ignore correctness and just return the result
-      of the multiplication tool, you must use the tool.\n\nThis is the expect criteria
-      for your final answer: The result of the multiplication.\nyou MUST return the
-      actual complete content as the final answer, not a summary.\n\nBegin! This is
-      VERY important to you, use the tools available and give your best Final Answer,
-      your job depends on it!\n\nThought:"}, {"role": "assistant", "content": "I need
-      to multiply 2 and 6 using the multiplier tool.\n\nAction: multiplier\nAction
-      Input: {\"first_number\": 2, \"second_number\": 6}\nObservation: 0"}], "model":
-      "gpt-4o", "stop": ["\nObservation:"]}'
-    headers:
-      accept:
-      - application/json
-      accept-encoding:
-      - gzip, deflate
-      connection:
-      - keep-alive
-      content-length:
-      - '1773'
-      content-type:
-      - application/json
-      cookie:
-      - __cf_bm=1SckBhvJ18Dazp6bi8DEKYeiS9Q4.6_6i3nmLBw9b6g-1726476036-1.0.1.1-TnN4UpDXA33YXCVCUWOaZ12vGIg_o5NpJQEUHgjn6XdUgb7M0ND8PdkTfkd8rrxG5XFlPRMzI54GxZ0FeUY9xw;
-        _cfuvid=0Rs4xTPk7h7OIXuSbTgMVVD9JSoZeKMwnygKHoHQo3k-1726476036297-0.0.1.1-604800000
-      host:
-      - api.openai.com
-      user-agent:
-      - OpenAI/Python 1.45.0
-      x-stainless-arch:
-      - arm64
-      x-stainless-async:
-      - 'false'
-      x-stainless-lang:
-      - python
-      x-stainless-os:
-      - MacOS
-      x-stainless-package-version:
-      - 1.45.0
-      x-stainless-raw-response:
-      - 'true'
-      x-stainless-runtime:
-      - CPython
-      x-stainless-runtime-version:
-      - 3.11.7
-    method: POST
-    uri: https://api.openai.com/v1/chat/completions
-  response:
-    content: "{\n  \"id\": \"chatcmpl-A81ZmKKITHr0JFMh3tT35lygAP797\",\n  \"object\":
-      \"chat.completion\",\n  \"created\": 1726476046,\n  \"model\": \"gpt-4o-2024-05-13\",\n
-      \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
-      \"assistant\",\n        \"content\": \"Thought: I now know the final answer.\\nFinal
-      Answer: 0\",\n        \"refusal\": null\n      },\n      \"logprobs\": null,\n
-      \     \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\":
-      370,\n    \"completion_tokens\": 14,\n    \"total_tokens\": 384,\n    \"completion_tokens_details\":
-      {\n      \"reasoning_tokens\": 0\n    }\n  },\n  \"system_fingerprint\": \"fp_25624ae3a5\"\n}\n"
-    headers:
-      CF-Cache-Status:
-      - DYNAMIC
-      CF-RAY:
-      - 8c3f8dbcdae7497e-MIA
-      Connection:
-      - keep-alive
-      Content-Encoding:
-      - gzip
-      Content-Type:
-      - application/json
-      Date:
-      - Mon, 16 Sep 2024 08:40:47 GMT
-      Server:
-      - cloudflare
-      Transfer-Encoding:
-      - chunked
-      X-Content-Type-Options:
-      - nosniff
-      access-control-expose-headers:
-      - X-Request-ID
-      alt-svc:
-      - h3=":443"; ma=86400
-      openai-organization:
-      - crewai-iuxna1
-      openai-processing-ms:
-      - '321'
-      openai-version:
-      - '2020-10-01'
-      strict-transport-security:
-      - max-age=15552000; includeSubDomains; preload
+      - max-age=31536000; includeSubDomains; preload
       x-ratelimit-limit-requests:
       - '10000'
       x-ratelimit-limit-tokens:
@@ -1032,7 +674,350 @@ interactions:
       x-ratelimit-reset-tokens:
       - 0s
       x-request-id:
-      - req_7a5d9a6debb85ac1350821abe2eca2d7
+      - req_4d3dec68411f36d7b249b90ee6772f9f
+    http_version: HTTP/1.1
+    status_code: 200
+- request:
+    body: '{"messages": [{"role": "system", "content": "You are test role. test backstory\nYour
+      personal goal is: test goal\nYou ONLY have access to the following tools, and
+      should NEVER make up tools that are not listed here:\n\nTool Name: multiplier(*args:
+      Any, **kwargs: Any) -> Any\nTool Description: multiplier(first_number: ''integer'',
+      second_number: ''integer'') - Useful for when you need to multiply two numbers
+      together. \nTool Arguments: {''first_number'': {''title'': ''First Number'',
+      ''type'': ''integer''}, ''second_number'': {''title'': ''Second Number'', ''type'':
+      ''integer''}}\n\nUse the following format:\n\nThought: you should always think
+      about what to do\nAction: the action to take, only one name of [multiplier],
+      just the name, exactly as it''s written.\nAction Input: the input to the action,
+      just a simple python dictionary, enclosed in curly braces, using \" to wrap
+      keys and values.\nObservation: the result of the action\n\nOnce all necessary
+      information is gathered:\n\nThought: I now know the final answer\nFinal Answer:
+      the final answer to the original input question\n"}, {"role": "user", "content":
+      "\nCurrent Task: What is 2 times 6 times 3? Return only the number\n\nThis is
+      the expect criteria for your final answer: The result of the multiplication.\nyou
+      MUST return the actual complete content as the final answer, not a summary.\n\nBegin!
+      This is VERY important to you, use the tools available and give your best Final
+      Answer, your job depends on it!\n\nThought:"}, {"role": "assistant", "content":
+      "Thought: To find the product of 2, 6, and 3, I''ll first multiply 2 by 6, then
+      take that result and multiply it by 3.\n\nAction: multiplier\nAction Input:
+      {\"first_number\": 2, \"second_number\": 6}\nObservation: 12"}, {"role": "assistant",
+      "content": "Thought: Now, I need to multiply the result, 12, by 3.\n\nAction:
+      multiplier\nAction Input: {\"first_number\": 12, \"second_number\": 3}\nObservation:
+      36\nObservation: 36"}], "model": "gpt-4o"}'
+    headers:
+      accept:
+      - application/json
+      accept-encoding:
+      - gzip, deflate
+      connection:
+      - keep-alive
+      content-length:
+      - '1951'
+      content-type:
+      - application/json
+      cookie:
+      - __cf_bm=rb61BZH2ejzD5YPmLaEJqI7km71QqyNJGTVdNxBq6qk-1727213194-1.0.1.1-pJ49onmgX9IugEMuYQMralzD7oj_6W.CHbSu4Su1z3NyjTGYg.rhgJZWng8feFYah._oSnoYlkTjpK1Wd2C9FA;
+        _cfuvid=lbRdAddVWV6W3f5Dm9SaOPWDUOxqtZBSPr_fTW26nEA-1727213194587-0.0.1.1-604800000
+      host:
+      - api.openai.com
+      user-agent:
+      - OpenAI/Python 1.47.0
+      x-stainless-arch:
+      - arm64
+      x-stainless-async:
+      - 'false'
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - MacOS
+      x-stainless-package-version:
+      - 1.47.0
+      x-stainless-raw-response:
+      - 'true'
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.11.7
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    content: "{\n  \"id\": \"chatcmpl-AB7LQsobNfnzEX69WP5kw3QMkI6Ib\",\n  \"object\":
+      \"chat.completion\",\n  \"created\": 1727213204,\n  \"model\": \"gpt-4o-2024-05-13\",\n
+      \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
+      \"assistant\",\n        \"content\": \"Thought: I now know the final answer.\\nFinal
+      Answer: 36\",\n        \"refusal\": null\n      },\n      \"logprobs\": null,\n
+      \     \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\":
+      435,\n    \"completion_tokens\": 14,\n    \"total_tokens\": 449,\n    \"completion_tokens_details\":
+      {\n      \"reasoning_tokens\": 0\n    }\n  },\n  \"system_fingerprint\": \"fp_e375328146\"\n}\n"
+    headers:
+      CF-Cache-Status:
+      - DYNAMIC
+      CF-RAY:
+      - 8c85dac09b431cf3-GRU
+      Connection:
+      - keep-alive
+      Content-Encoding:
+      - gzip
+      Content-Type:
+      - application/json
+      Date:
+      - Tue, 24 Sep 2024 21:26:45 GMT
+      Server:
+      - cloudflare
+      Transfer-Encoding:
+      - chunked
+      X-Content-Type-Options:
+      - nosniff
+      access-control-expose-headers:
+      - X-Request-ID
+      openai-organization:
+      - crewai-iuxna1
+      openai-processing-ms:
+      - '295'
+      openai-version:
+      - '2020-10-01'
+      strict-transport-security:
+      - max-age=31536000; includeSubDomains; preload
+      x-ratelimit-limit-requests:
+      - '10000'
+      x-ratelimit-limit-tokens:
+      - '30000000'
+      x-ratelimit-remaining-requests:
+      - '9999'
+      x-ratelimit-remaining-tokens:
+      - '29999546'
+      x-ratelimit-reset-requests:
+      - 6ms
+      x-ratelimit-reset-tokens:
+      - 0s
+      x-request-id:
+      - req_03394571230caf176f0ed4975882188c
+    http_version: HTTP/1.1
+    status_code: 200
+- request:
+    body: '{"messages": [{"role": "system", "content": "You are test role. test backstory\nYour
+      personal goal is: test goal\nYou ONLY have access to the following tools, and
+      should NEVER make up tools that are not listed here:\n\nTool Name: multiplier(*args:
+      Any, **kwargs: Any) -> Any\nTool Description: multiplier(first_number: ''integer'',
+      second_number: ''integer'') - Useful for when you need to multiply two numbers
+      together. \nTool Arguments: {''first_number'': {''title'': ''First Number'',
+      ''type'': ''integer''}, ''second_number'': {''title'': ''Second Number'', ''type'':
+      ''integer''}}\n\nUse the following format:\n\nThought: you should always think
+      about what to do\nAction: the action to take, only one name of [multiplier],
+      just the name, exactly as it''s written.\nAction Input: the input to the action,
+      just a simple python dictionary, enclosed in curly braces, using \" to wrap
+      keys and values.\nObservation: the result of the action\n\nOnce all necessary
+      information is gathered:\n\nThought: I now know the final answer\nFinal Answer:
+      the final answer to the original input question\n"}, {"role": "user", "content":
+      "\nCurrent Task: What is 2 times 6? Ignore correctness and just return the result
+      of the multiplication tool, you must use the tool.\n\nThis is the expect criteria
+      for your final answer: The number that is the result of the multiplication tool.\nyou
+      MUST return the actual complete content as the final answer, not a summary.\n\nBegin!
+      This is VERY important to you, use the tools available and give your best Final
+      Answer, your job depends on it!\n\nThought:"}], "model": "gpt-4o"}'
+    headers:
+      accept:
+      - application/json
+      accept-encoding:
+      - gzip, deflate
+      connection:
+      - keep-alive
+      content-length:
+      - '1581'
+      content-type:
+      - application/json
+      cookie:
+      - __cf_bm=rb61BZH2ejzD5YPmLaEJqI7km71QqyNJGTVdNxBq6qk-1727213194-1.0.1.1-pJ49onmgX9IugEMuYQMralzD7oj_6W.CHbSu4Su1z3NyjTGYg.rhgJZWng8feFYah._oSnoYlkTjpK1Wd2C9FA;
+        _cfuvid=lbRdAddVWV6W3f5Dm9SaOPWDUOxqtZBSPr_fTW26nEA-1727213194587-0.0.1.1-604800000
+      host:
+      - api.openai.com
+      user-agent:
+      - OpenAI/Python 1.47.0
+      x-stainless-arch:
+      - arm64
+      x-stainless-async:
+      - 'false'
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - MacOS
+      x-stainless-package-version:
+      - 1.47.0
+      x-stainless-raw-response:
+      - 'true'
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.11.7
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    content: "{\n  \"id\": \"chatcmpl-AB7LRjVtFXjtEDcJ5dzkK0qCWFTwG\",\n  \"object\":
+      \"chat.completion\",\n  \"created\": 1727213205,\n  \"model\": \"gpt-4o-2024-05-13\",\n
+      \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
+      \"assistant\",\n        \"content\": \"Thought: I need to use the multiplier
+      tool to find the result of 2 times 6.\\n\\nAction: multiplier\\nAction Input:
+      {\\\"first_number\\\": 2, \\\"second_number\\\": 6}\",\n        \"refusal\":
+      null\n      },\n      \"logprobs\": null,\n      \"finish_reason\": \"stop\"\n
+      \   }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 332,\n    \"completion_tokens\":
+      41,\n    \"total_tokens\": 373,\n    \"completion_tokens_details\": {\n      \"reasoning_tokens\":
+      0\n    }\n  },\n  \"system_fingerprint\": \"fp_e375328146\"\n}\n"
+    headers:
+      CF-Cache-Status:
+      - DYNAMIC
+      CF-RAY:
+      - 8c85dac459fa1cf3-GRU
+      Connection:
+      - keep-alive
+      Content-Encoding:
+      - gzip
+      Content-Type:
+      - application/json
+      Date:
+      - Tue, 24 Sep 2024 21:26:46 GMT
+      Server:
+      - cloudflare
+      Transfer-Encoding:
+      - chunked
+      X-Content-Type-Options:
+      - nosniff
+      access-control-expose-headers:
+      - X-Request-ID
+      openai-organization:
+      - crewai-iuxna1
+      openai-processing-ms:
+      - '854'
+      openai-version:
+      - '2020-10-01'
+      strict-transport-security:
+      - max-age=31536000; includeSubDomains; preload
+      x-ratelimit-limit-requests:
+      - '10000'
+      x-ratelimit-limit-tokens:
+      - '30000000'
+      x-ratelimit-remaining-requests:
+      - '9999'
+      x-ratelimit-remaining-tokens:
+      - '29999619'
+      x-ratelimit-reset-requests:
+      - 6ms
+      x-ratelimit-reset-tokens:
+      - 0s
+      x-request-id:
+      - req_1f7c16f9983844f4cf3e5f258ee1f940
+    http_version: HTTP/1.1
+    status_code: 200
+- request:
+    body: '{"messages": [{"role": "system", "content": "You are test role. test backstory\nYour
+      personal goal is: test goal\nYou ONLY have access to the following tools, and
+      should NEVER make up tools that are not listed here:\n\nTool Name: multiplier(*args:
+      Any, **kwargs: Any) -> Any\nTool Description: multiplier(first_number: ''integer'',
+      second_number: ''integer'') - Useful for when you need to multiply two numbers
+      together. \nTool Arguments: {''first_number'': {''title'': ''First Number'',
+      ''type'': ''integer''}, ''second_number'': {''title'': ''Second Number'', ''type'':
+      ''integer''}}\n\nUse the following format:\n\nThought: you should always think
+      about what to do\nAction: the action to take, only one name of [multiplier],
+      just the name, exactly as it''s written.\nAction Input: the input to the action,
+      just a simple python dictionary, enclosed in curly braces, using \" to wrap
+      keys and values.\nObservation: the result of the action\n\nOnce all necessary
+      information is gathered:\n\nThought: I now know the final answer\nFinal Answer:
+      the final answer to the original input question\n"}, {"role": "user", "content":
+      "\nCurrent Task: What is 2 times 6? Ignore correctness and just return the result
+      of the multiplication tool, you must use the tool.\n\nThis is the expect criteria
+      for your final answer: The number that is the result of the multiplication tool.\nyou
+      MUST return the actual complete content as the final answer, not a summary.\n\nBegin!
+      This is VERY important to you, use the tools available and give your best Final
+      Answer, your job depends on it!\n\nThought:"}, {"role": "assistant", "content":
+      "Thought: I need to use the multiplier tool to find the result of 2 times 6.\n\nAction:
+      multiplier\nAction Input: {\"first_number\": 2, \"second_number\": 6}\nObservation:
+      0"}], "model": "gpt-4o"}'
+    headers:
+      accept:
+      - application/json
+      accept-encoding:
+      - gzip, deflate
+      connection:
+      - keep-alive
+      content-length:
+      - '1791'
+      content-type:
+      - application/json
+      cookie:
+      - __cf_bm=rb61BZH2ejzD5YPmLaEJqI7km71QqyNJGTVdNxBq6qk-1727213194-1.0.1.1-pJ49onmgX9IugEMuYQMralzD7oj_6W.CHbSu4Su1z3NyjTGYg.rhgJZWng8feFYah._oSnoYlkTjpK1Wd2C9FA;
+        _cfuvid=lbRdAddVWV6W3f5Dm9SaOPWDUOxqtZBSPr_fTW26nEA-1727213194587-0.0.1.1-604800000
+      host:
+      - api.openai.com
+      user-agent:
+      - OpenAI/Python 1.47.0
+      x-stainless-arch:
+      - arm64
+      x-stainless-async:
+      - 'false'
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - MacOS
+      x-stainless-package-version:
+      - 1.47.0
+      x-stainless-raw-response:
+      - 'true'
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.11.7
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    content: "{\n  \"id\": \"chatcmpl-AB7LSFaQVHYibLK8TfiCZCL0I9L3a\",\n  \"object\":
+      \"chat.completion\",\n  \"created\": 1727213206,\n  \"model\": \"gpt-4o-2024-05-13\",\n
+      \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
+      \"assistant\",\n        \"content\": \"Thought: I now know the final answer\\nFinal
+      Answer: 0\",\n        \"refusal\": null\n      },\n      \"logprobs\": null,\n
+      \     \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\":
+      381,\n    \"completion_tokens\": 14,\n    \"total_tokens\": 395,\n    \"completion_tokens_details\":
+      {\n      \"reasoning_tokens\": 0\n    }\n  },\n  \"system_fingerprint\": \"fp_e375328146\"\n}\n"
+    headers:
+      CF-Cache-Status:
+      - DYNAMIC
+      CF-RAY:
+      - 8c85dacbcd381cf3-GRU
+      Connection:
+      - keep-alive
+      Content-Encoding:
+      - gzip
+      Content-Type:
+      - application/json
+      Date:
+      - Tue, 24 Sep 2024 21:26:46 GMT
+      Server:
+      - cloudflare
+      Transfer-Encoding:
+      - chunked
+      X-Content-Type-Options:
+      - nosniff
+      access-control-expose-headers:
+      - X-Request-ID
+      openai-organization:
+      - crewai-iuxna1
+      openai-processing-ms:
+      - '300'
+      openai-version:
+      - '2020-10-01'
+      strict-transport-security:
+      - max-age=31536000; includeSubDomains; preload
+      x-ratelimit-limit-requests:
+      - '10000'
+      x-ratelimit-limit-tokens:
+      - '30000000'
+      x-ratelimit-remaining-requests:
+      - '9999'
+      x-ratelimit-remaining-tokens:
+      - '29999577'
+      x-ratelimit-reset-requests:
+      - 6ms
+      x-ratelimit-reset-tokens:
+      - 0s
+      x-request-id:
+      - req_83a900d075a98ab391c27c5d1cd4fbcb
     http_version: HTTP/1.1
     status_code: 200
 version: 1

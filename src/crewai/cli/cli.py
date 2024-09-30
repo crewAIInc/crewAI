@@ -12,6 +12,7 @@ from crewai.memory.storage.kickoff_task_outputs_storage import (
 
 from .authentication.main import AuthenticationCommand
 from .deploy.main import DeployCommand
+from .tools.main import ToolCommand
 from .evaluate_crew import evaluate_crew
 from .install_crew import install_crew
 from .replay_from_task import replay_task_command
@@ -204,6 +205,12 @@ def deploy():
     pass
 
 
+@crewai.group()
+def tool():
+    """Tool Repository related commands."""
+    pass
+
+
 @deploy.command(name="create")
 @click.option("-y", "--yes", is_flag=True, help="Skip the confirmation prompt")
 def deploy_create(yes: bool):
@@ -249,6 +256,21 @@ def deploy_remove(uuid: Optional[str]):
     """Remove a deployment."""
     deploy_cmd = DeployCommand()
     deploy_cmd.remove_crew(uuid=uuid)
+
+
+@tool.command(name="install")
+@click.argument("handle")
+def tool_install(handle: str):
+    tool_cmd = ToolCommand()
+    tool_cmd.install(handle)
+
+
+@tool.command(name="publish")
+@click.option("--public", "is_public", flag_value=True, default=False)
+@click.option("--private", "is_public", flag_value=False)
+def tool_publish(is_public: bool):
+    tool_cmd = ToolCommand()
+    tool_cmd.publish(is_public)
 
 
 if __name__ == "__main__":

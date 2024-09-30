@@ -2,7 +2,8 @@ import warnings
 
 from crewai.agent import Agent
 from crewai.crew import Crew
-from crewai.flow import Flow
+from crewai.flow.flow import Flow
+from crewai.llm import LLM
 from crewai.pipeline import Pipeline
 from crewai.process import Process
 from crewai.routers import Router
@@ -15,4 +16,4 @@ warnings.filterwarnings(
     module="pydantic.main",
 )
 
-__all__ = ["Agent", "Crew", "Process", "Task", "Pipeline", "Router", "Flow"]
+__all__ = ["Agent", "Crew", "Process", "Task", "Pipeline", "Router", "LLM", "Flow"]

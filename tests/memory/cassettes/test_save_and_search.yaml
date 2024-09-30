@@ -18,7 +18,7 @@ interactions:
       host:
       - api.openai.com
       user-agent:
-      - OpenAI/Python 1.45.0
+      - OpenAI/Python 1.47.0
       x-stainless-arch:
       - arm64
       x-stainless-async:
@@ -28,7 +28,7 @@ interactions:
       x-stainless-os:
       - MacOS
       x-stainless-package-version:
-      - 1.45.0
+      - 1.47.0
       x-stainless-runtime:
       - CPython
       x-stainless-runtime-version:
@@ -44,7 +44,7 @@ interactions:
       CF-Cache-Status:
       - DYNAMIC
       CF-RAY:
-      - 8c3f9db39c91a4d6-MIA
+      - 8c7d0d952df8a533-MIA
       Connection:
       - keep-alive
       Content-Encoding:
@@ -52,14 +52,14 @@ interactions:
       Content-Type:
       - application/json
       Date:
-      - Mon, 16 Sep 2024 08:51:41 GMT
+      - Mon, 23 Sep 2024 19:48:35 GMT
       Server:
       - cloudflare
       Set-Cookie:
-      - __cf_bm=gluOOM6WgPGOOcIKM4VbgeIAZ3T91csgF7tMxCZXN78-1726476701-1.0.1.1-dPc.YQb6UcrmJ_4lw3we8Lzhtu610370H4wQFgoDyoPp97Jsow6JtajcSib6gUZ4LtNwGhsEUOuhIyo_MDwYzw;
-        path=/; expires=Mon, 16-Sep-24 09:21:41 GMT; domain=.api.openai.com; HttpOnly;
+      - __cf_bm=fCNrGtPzpUFtfoUMG2M7ss3WN9l7UWSHySlztYzxTug-1727120915-1.0.1.1-qw_aPQTh6.36xWyc5KuutqbYcTnlLJNPLVPbhmpVJi3BlkOJSv2ZFFB8ZaTHzSU5OUeNvdkT8Zf52isf39ig_g;
+        path=/; expires=Mon, 23-Sep-24 20:18:35 GMT; domain=.api.openai.com; HttpOnly;
         Secure; SameSite=None
-      - _cfuvid=CgKAUG6Chx0hByPpxR0uJBFEdNcsM8QV6CEMxRK0.7Y-1726476701462-0.0.1.1-604800000;
+      - _cfuvid=iDcOeEoxyAXVk7Sd7cdqMnYCstioELtzVAcYdG7ahuA-1727120915182-0.0.1.1-604800000;
         path=/; domain=.api.openai.com; HttpOnly; Secure; SameSite=None
       Transfer-Encoding:
       - chunked
@@ -69,14 +69,12 @@ interactions:
       - '*'
       access-control-expose-headers:
       - X-Request-ID
-      alt-svc:
-      - h3=":443"; ma=86400
       openai-model:
       - text-embedding-ada-002
       openai-organization:
       - crewai-iuxna1
       openai-processing-ms:
-      - '20'
+      - '19'
       openai-version:
       - '2020-10-01'
       strict-transport-security:
@@ -88,13 +86,13 @@ interactions:
       x-ratelimit-remaining-requests:
       - '9999'
       x-ratelimit-remaining-tokens:
-      - '9999946'
+      - '9999947'
       x-ratelimit-reset-requests:
       - 6ms
       x-ratelimit-reset-tokens:
       - 0s
       x-request-id:
-      - req_88807f90da266b68db1cf45658a41af5
+      - req_8ec4409ad3f853ceb951750c74bc1516
     http_version: HTTP/1.1
     status_code: 200
 - request:
@@ -112,12 +110,12 @@ interactions:
       content-type:
       - application/json
       cookie:
-      - __cf_bm=gluOOM6WgPGOOcIKM4VbgeIAZ3T91csgF7tMxCZXN78-1726476701-1.0.1.1-dPc.YQb6UcrmJ_4lw3we8Lzhtu610370H4wQFgoDyoPp97Jsow6JtajcSib6gUZ4LtNwGhsEUOuhIyo_MDwYzw;
-        _cfuvid=CgKAUG6Chx0hByPpxR0uJBFEdNcsM8QV6CEMxRK0.7Y-1726476701462-0.0.1.1-604800000
+      - __cf_bm=fCNrGtPzpUFtfoUMG2M7ss3WN9l7UWSHySlztYzxTug-1727120915-1.0.1.1-qw_aPQTh6.36xWyc5KuutqbYcTnlLJNPLVPbhmpVJi3BlkOJSv2ZFFB8ZaTHzSU5OUeNvdkT8Zf52isf39ig_g;
+        _cfuvid=iDcOeEoxyAXVk7Sd7cdqMnYCstioELtzVAcYdG7ahuA-1727120915182-0.0.1.1-604800000
       host:
       - api.openai.com
       user-agent:
-      - OpenAI/Python 1.45.0
+      - OpenAI/Python 1.47.0
       x-stainless-arch:
       - arm64
       x-stainless-async:
@@ -127,7 +125,7 @@ interactions:
       x-stainless-os:
       - MacOS
       x-stainless-package-version:
-      - 1.45.0
+      - 1.47.0
       x-stainless-runtime:
       - CPython
       x-stainless-runtime-version:
@@ -143,7 +141,7 @@ interactions:
       CF-Cache-Status:
       - DYNAMIC
       CF-RAY:
-      - 8c3f9db9df6da4d6-MIA
+      - 8c7d0d9a1df7a533-MIA
       Connection:
       - keep-alive
       Content-Encoding:
@@ -151,7 +149,7 @@ interactions:
       Content-Type:
       - application/json
       Date:
-      - Mon, 16 Sep 2024 08:51:41 GMT
+      - Mon, 23 Sep 2024 19:48:35 GMT
       Server:
       - cloudflare
       Transfer-Encoding:
@@ -162,8 +160,6 @@ interactions:
       - '*'
       access-control-expose-headers:
       - X-Request-ID
-      alt-svc:
-      - h3=":443"; ma=86400
       openai-model:
       - text-embedding-ada-002
       openai-organization:
@@ -187,7 +183,7 @@ interactions:
       x-ratelimit-reset-tokens:
       - 0s
       x-request-id:
-      - req_e58c3f72ed7bfd386afb5474012e500e
+      - req_5916e70901482ad417bdb6d701dee598
     http_version: HTTP/1.1
     status_code: 200
 version: 1

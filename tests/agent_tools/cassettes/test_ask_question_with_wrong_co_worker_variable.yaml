@@ -12,7 +12,7 @@ interactions:
       shared.\nyou MUST return the actual complete content as the final answer, not
       a summary.\n\nThis is the context you''re working with:\nI heard you LOVE them\n\nBegin!
       This is VERY important to you, use the tools available and give your best Final
-      Answer, your job depends on it!\n\nThought:"}], "model": "gpt-4o", "stop": ["\nObservation:"]}'
+      Answer, your job depends on it!\n\nThought:"}], "model": "gpt-4o"}'
     headers:
       accept:
       - application/json
@@ -21,16 +21,16 @@ interactions:
       connection:
       - keep-alive
       content-length:
-      - '1049'
+      - '1021'
       content-type:
       - application/json
       cookie:
-      - __cf_bm=1SckBhvJ18Dazp6bi8DEKYeiS9Q4.6_6i3nmLBw9b6g-1726476036-1.0.1.1-TnN4UpDXA33YXCVCUWOaZ12vGIg_o5NpJQEUHgjn6XdUgb7M0ND8PdkTfkd8rrxG5XFlPRMzI54GxZ0FeUY9xw;
-        _cfuvid=0Rs4xTPk7h7OIXuSbTgMVVD9JSoZeKMwnygKHoHQo3k-1726476036297-0.0.1.1-604800000
+      - __cf_bm=rb61BZH2ejzD5YPmLaEJqI7km71QqyNJGTVdNxBq6qk-1727213194-1.0.1.1-pJ49onmgX9IugEMuYQMralzD7oj_6W.CHbSu4Su1z3NyjTGYg.rhgJZWng8feFYah._oSnoYlkTjpK1Wd2C9FA;
+        _cfuvid=lbRdAddVWV6W3f5Dm9SaOPWDUOxqtZBSPr_fTW26nEA-1727213194587-0.0.1.1-604800000
       host:
       - api.openai.com
       user-agent:
-      - OpenAI/Python 1.45.0
+      - OpenAI/Python 1.47.0
       x-stainless-arch:
       - arm64
       x-stainless-async:
@@ -40,7 +40,7 @@ interactions:
       x-stainless-os:
       - MacOS
       x-stainless-package-version:
-      - 1.45.0
+      - 1.47.0
       x-stainless-raw-response:
       - 'true'
       x-stainless-runtime:
@@ -50,27 +50,27 @@ interactions:
     method: POST
     uri: https://api.openai.com/v1/chat/completions
   response:
-    content: "{\n  \"id\": \"chatcmpl-A81dkIBLB3iUbp5yVV0UtIcXQEK7d\",\n  \"object\":
-      \"chat.completion\",\n  \"created\": 1726476292,\n  \"model\": \"gpt-4o-2024-05-13\",\n
+    content: "{\n  \"id\": \"chatcmpl-AB7Wq7edXMCGJR1zDd2QoySLdo8mM\",\n  \"object\":
+      \"chat.completion\",\n  \"created\": 1727213912,\n  \"model\": \"gpt-4o-2024-05-13\",\n
       \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
       \"assistant\",\n        \"content\": \"Thought: I now can give a great answer\\nFinal
-      Answer: I do not hate AI agents; in fact, I appreciate them for their immense
-      potential and the numerous benefits they bring to various fields. My passion
-      for AI agents stems from their ability to streamline processes, enhance decision-making,
-      and provide innovative solutions to complex problems. They significantly contribute
-      to advancements in healthcare, finance, education, and many other sectors, making
-      tasks more efficient and freeing up human capacities for more creative and strategic
-      endeavors. So, to answer your question, I love AI agents because of the positive
-      impact they have on our world and their capability to drive technological progress.\",\n
-      \       \"refusal\": null\n      },\n      \"logprobs\": null,\n      \"finish_reason\":
-      \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 199,\n    \"completion_tokens\":
-      127,\n    \"total_tokens\": 326,\n    \"completion_tokens_details\": {\n      \"reasoning_tokens\":
-      0\n    }\n  },\n  \"system_fingerprint\": \"fp_25624ae3a5\"\n}\n"
+      Answer: I don't hate AI agents; on the contrary, I find them fascinating and
+      incredibly useful. Considering the rapid advancements in AI technology, these
+      agents have the potential to revolutionize various industries by automating
+      tasks, improving efficiency, and providing insights that were previously unattainable.
+      My expertise in researching and analyzing AI and AI agents has allowed me to
+      appreciate the intricate design and the vast possibilities they offer. Therefore,
+      it's more accurate to say that I love AI agents for their potential to drive
+      innovation and improve our daily lives.\",\n        \"refusal\": null\n      },\n
+      \     \"logprobs\": null,\n      \"finish_reason\": \"stop\"\n    }\n  ],\n
+      \ \"usage\": {\n    \"prompt_tokens\": 199,\n    \"completion_tokens\": 116,\n
+      \   \"total_tokens\": 315,\n    \"completion_tokens_details\": {\n      \"reasoning_tokens\":
+      0\n    }\n  },\n  \"system_fingerprint\": \"fp_e375328146\"\n}\n"
     headers:
       CF-Cache-Status:
       - DYNAMIC
       CF-RAY:
-      - 8c3f93b95d3e2233-MIA
+      - 8c85ec05f8651cf3-GRU
       Connection:
       - keep-alive
       Content-Encoding:
@@ -78,7 +78,7 @@ interactions:
       Content-Type:
       - application/json
       Date:
-      - Mon, 16 Sep 2024 08:44:53 GMT
+      - Tue, 24 Sep 2024 21:38:33 GMT
       Server:
       - cloudflare
       Transfer-Encoding:
@@ -87,16 +87,14 @@ interactions:
       - nosniff
       access-control-expose-headers:
       - X-Request-ID
-      alt-svc:
-      - h3=":443"; ma=86400
       openai-organization:
       - crewai-iuxna1
       openai-processing-ms:
-      - '1189'
+      - '1739'
       openai-version:
       - '2020-10-01'
       strict-transport-security:
-      - max-age=15552000; includeSubDomains; preload
+      - max-age=31536000; includeSubDomains; preload
       x-ratelimit-limit-requests:
       - '10000'
       x-ratelimit-limit-tokens:
@@ -110,7 +108,7 @@ interactions:
       x-ratelimit-reset-tokens:
       - 0s
       x-request-id:
-      - req_920f3c16f8de451a0d9a615430347aa7
+      - req_d9e1e9458d5539061397a618345c27d4
     http_version: HTTP/1.1
     status_code: 200
 version: 1

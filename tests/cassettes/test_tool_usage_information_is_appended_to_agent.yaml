@@ -16,7 +16,7 @@ interactions:
       for your final answer: The greeting.\nyou MUST return the actual complete content
       as the final answer, not a summary.\n\nBegin! This is VERY important to you,
       use the tools available and give your best Final Answer, your job depends on
-      it!\n\nThought:"}], "model": "gpt-4o", "stop": ["\nObservation:"]}'
+      it!\n\nThought:"}], "model": "gpt-4o"}'
     headers:
       accept:
       - application/json
@@ -25,16 +25,16 @@ interactions:
       connection:
       - keep-alive
       content-length:
-      - '1326'
+      - '1298'
       content-type:
       - application/json
       cookie:
-      - __cf_bm=1SckBhvJ18Dazp6bi8DEKYeiS9Q4.6_6i3nmLBw9b6g-1726476036-1.0.1.1-TnN4UpDXA33YXCVCUWOaZ12vGIg_o5NpJQEUHgjn6XdUgb7M0ND8PdkTfkd8rrxG5XFlPRMzI54GxZ0FeUY9xw;
-        _cfuvid=0Rs4xTPk7h7OIXuSbTgMVVD9JSoZeKMwnygKHoHQo3k-1726476036297-0.0.1.1-604800000
+      - __cf_bm=rb61BZH2ejzD5YPmLaEJqI7km71QqyNJGTVdNxBq6qk-1727213194-1.0.1.1-pJ49onmgX9IugEMuYQMralzD7oj_6W.CHbSu4Su1z3NyjTGYg.rhgJZWng8feFYah._oSnoYlkTjpK1Wd2C9FA;
+        _cfuvid=lbRdAddVWV6W3f5Dm9SaOPWDUOxqtZBSPr_fTW26nEA-1727213194587-0.0.1.1-604800000
       host:
       - api.openai.com
       user-agent:
-      - OpenAI/Python 1.45.0
+      - OpenAI/Python 1.47.0
       x-stainless-arch:
       - arm64
       x-stainless-async:
@@ -44,7 +44,7 @@ interactions:
       x-stainless-os:
       - MacOS
       x-stainless-package-version:
-      - 1.45.0
+      - 1.47.0
       x-stainless-raw-response:
       - 'true'
       x-stainless-runtime:
@@ -54,20 +54,20 @@ interactions:
     method: POST
     uri: https://api.openai.com/v1/chat/completions
   response:
-    content: "{\n  \"id\": \"chatcmpl-A81dUZqNO0SIaJAGNH1cymbNA9XKJ\",\n  \"object\":
-      \"chat.completion\",\n  \"created\": 1726476276,\n  \"model\": \"gpt-4o-2024-05-13\",\n
+    content: "{\n  \"id\": \"chatcmpl-AB7WLDvEd81QWPJNqps9qjopfsxQp\",\n  \"object\":
+      \"chat.completion\",\n  \"created\": 1727213881,\n  \"model\": \"gpt-4o-2024-05-13\",\n
       \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
-      \"assistant\",\n        \"content\": \"Thought: I should decide the appropriate
-      greeting to use.\\nAction: Decide Greetings\\nAction Input: {}\",\n        \"refusal\":
-      null\n      },\n      \"logprobs\": null,\n      \"finish_reason\": \"stop\"\n
-      \   }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 253,\n    \"completion_tokens\":
-      20,\n    \"total_tokens\": 273,\n    \"completion_tokens_details\": {\n      \"reasoning_tokens\":
-      0\n    }\n  },\n  \"system_fingerprint\": \"fp_25624ae3a5\"\n}\n"
+      \"assistant\",\n        \"content\": \"Thought: I should use the Decide Greetings
+      tool to determine the most appropriate greeting to use.\\n\\nAction: Decide
+      Greetings\\nAction Input: {}\",\n        \"refusal\": null\n      },\n      \"logprobs\":
+      null,\n      \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\":
+      253,\n    \"completion_tokens\": 27,\n    \"total_tokens\": 280,\n    \"completion_tokens_details\":
+      {\n      \"reasoning_tokens\": 0\n    }\n  },\n  \"system_fingerprint\": \"fp_3537616b13\"\n}\n"
     headers:
       CF-Cache-Status:
       - DYNAMIC
       CF-RAY:
-      - 8c3f93573b602233-MIA
+      - 8c85eb46abfa1cf3-GRU
       Connection:
       - keep-alive
       Content-Encoding:
@@ -75,7 +75,7 @@ interactions:
       Content-Type:
       - application/json
       Date:
-      - Mon, 16 Sep 2024 08:44:36 GMT
+      - Tue, 24 Sep 2024 21:38:02 GMT
       Server:
       - cloudflare
       Transfer-Encoding:
@@ -84,16 +84,14 @@ interactions:
       - nosniff
       access-control-expose-headers:
       - X-Request-ID
-      alt-svc:
-      - h3=":443"; ma=86400
       openai-organization:
       - crewai-iuxna1
       openai-processing-ms:
-      - '321'
+      - '531'
       openai-version:
       - '2020-10-01'
       strict-transport-security:
-      - max-age=15552000; includeSubDomains; preload
+      - max-age=31536000; includeSubDomains; preload
       x-ratelimit-limit-requests:
       - '10000'
       x-ratelimit-limit-tokens:
@@ -107,7 +105,7 @@ interactions:
       x-ratelimit-reset-tokens:
       - 0s
       x-request-id:
-      - req_9b631a8d7de10125a56f914f0d4d867c
+      - req_53fb4ae61db03e576965c20053120b4e
     http_version: HTTP/1.1
     status_code: 200
 - request:
@@ -127,9 +125,9 @@ interactions:
       for your final answer: The greeting.\nyou MUST return the actual complete content
       as the final answer, not a summary.\n\nBegin! This is VERY important to you,
       use the tools available and give your best Final Answer, your job depends on
-      it!\n\nThought:"}, {"role": "assistant", "content": "Thought: I should decide
-      the appropriate greeting to use.\nAction: Decide Greetings\nAction Input: {}\nObservation:
-      Howdy!"}], "model": "gpt-4o", "stop": ["\nObservation:"]}'
+      it!\n\nThought:"}, {"role": "assistant", "content": "Thought: I should use the
+      Decide Greetings tool to determine the most appropriate greeting to use.\n\nAction:
+      Decide Greetings\nAction Input: {}\nObservation: Howdy!"}], "model": "gpt-4o"}'
     headers:
       accept:
       - application/json
@@ -138,16 +136,16 @@ interactions:
       connection:
       - keep-alive
       content-length:
-      - '1486'
+      - '1501'
       content-type:
       - application/json
       cookie:
-      - __cf_bm=1SckBhvJ18Dazp6bi8DEKYeiS9Q4.6_6i3nmLBw9b6g-1726476036-1.0.1.1-TnN4UpDXA33YXCVCUWOaZ12vGIg_o5NpJQEUHgjn6XdUgb7M0ND8PdkTfkd8rrxG5XFlPRMzI54GxZ0FeUY9xw;
-        _cfuvid=0Rs4xTPk7h7OIXuSbTgMVVD9JSoZeKMwnygKHoHQo3k-1726476036297-0.0.1.1-604800000
+      - __cf_bm=rb61BZH2ejzD5YPmLaEJqI7km71QqyNJGTVdNxBq6qk-1727213194-1.0.1.1-pJ49onmgX9IugEMuYQMralzD7oj_6W.CHbSu4Su1z3NyjTGYg.rhgJZWng8feFYah._oSnoYlkTjpK1Wd2C9FA;
+        _cfuvid=lbRdAddVWV6W3f5Dm9SaOPWDUOxqtZBSPr_fTW26nEA-1727213194587-0.0.1.1-604800000
       host:
       - api.openai.com
       user-agent:
-      - OpenAI/Python 1.45.0
+      - OpenAI/Python 1.47.0
       x-stainless-arch:
       - arm64
       x-stainless-async:
@@ -157,7 +155,7 @@ interactions:
       x-stainless-os:
       - MacOS
       x-stainless-package-version:
-      - 1.45.0
+      - 1.47.0
       x-stainless-raw-response:
       - 'true'
       x-stainless-runtime:
@@ -167,19 +165,20 @@ interactions:
     method: POST
     uri: https://api.openai.com/v1/chat/completions
   response:
-    content: "{\n  \"id\": \"chatcmpl-A81dVaXfznVt20XYg4EMmnwLdj7fh\",\n  \"object\":
-      \"chat.completion\",\n  \"created\": 1726476277,\n  \"model\": \"gpt-4o-2024-05-13\",\n
+    content: "{\n  \"id\": \"chatcmpl-AB7WMl6yHxaqiMEbmERJeO2wKy4ml\",\n  \"object\":
+      \"chat.completion\",\n  \"created\": 1727213882,\n  \"model\": \"gpt-4o-2024-05-13\",\n
       \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
-      \"assistant\",\n        \"content\": \"Thought: I now know the final answer.\\nFinal
-      Answer: Howdy!\",\n        \"refusal\": null\n      },\n      \"logprobs\":
-      null,\n      \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\":
-      282,\n    \"completion_tokens\": 15,\n    \"total_tokens\": 297,\n    \"completion_tokens_details\":
-      {\n      \"reasoning_tokens\": 0\n    }\n  },\n  \"system_fingerprint\": \"fp_25624ae3a5\"\n}\n"
+      \"assistant\",\n        \"content\": \"Thought: I have determined the appropriate
+      greeting to use.\\n\\nFinal Answer: Howdy!\",\n        \"refusal\": null\n      },\n
+      \     \"logprobs\": null,\n      \"finish_reason\": \"stop\"\n    }\n  ],\n
+      \ \"usage\": {\n    \"prompt_tokens\": 289,\n    \"completion_tokens\": 17,\n
+      \   \"total_tokens\": 306,\n    \"completion_tokens_details\": {\n      \"reasoning_tokens\":
+      0\n    }\n  },\n  \"system_fingerprint\": \"fp_3537616b13\"\n}\n"
     headers:
       CF-Cache-Status:
       - DYNAMIC
       CF-RAY:
-      - 8c3f935b0c842233-MIA
+      - 8c85eb4bbb911cf3-GRU
       Connection:
       - keep-alive
       Content-Encoding:
@@ -187,7 +186,7 @@ interactions:
       Content-Type:
       - application/json
       Date:
-      - Mon, 16 Sep 2024 08:44:37 GMT
+      - Tue, 24 Sep 2024 21:38:02 GMT
       Server:
       - cloudflare
       Transfer-Encoding:
@@ -196,8 +195,6 @@ interactions:
       - nosniff
       access-control-expose-headers:
       - X-Request-ID
-      alt-svc:
-      - h3=":443"; ma=86400
       openai-organization:
       - crewai-iuxna1
       openai-processing-ms:
@@ -205,7 +202,7 @@ interactions:
       openai-version:
       - '2020-10-01'
       strict-transport-security:
-      - max-age=15552000; includeSubDomains; preload
+      - max-age=31536000; includeSubDomains; preload
       x-ratelimit-limit-requests:
       - '10000'
       x-ratelimit-limit-tokens:
@@ -213,13 +210,13 @@ interactions:
       x-ratelimit-remaining-requests:
       - '9999'
       x-ratelimit-remaining-tokens:
-      - '29999658'
+      - '29999647'
       x-ratelimit-reset-requests:
       - 6ms
       x-ratelimit-reset-tokens:
       - 0s
       x-request-id:
-      - req_9911d2a2144da29ca7c93c4ea1b505e7
+      - req_626d7e6b718a76d6146b3c15085d9b17
     http_version: HTTP/1.1
     status_code: 200
 version: 1

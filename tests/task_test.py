@@ -266,7 +266,7 @@ def test_output_pydantic_hierarchical():
     )
     result = crew.kickoff()
     assert isinstance(result.pydantic, ScoreOutput)
-    assert result.to_dict() == {"score": 5}
+    assert result.to_dict() == {"score": 4}
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
@@ -321,7 +321,7 @@ def test_output_json_hierarchical():
         manager_llm="gpt-4o",
     )
     result = crew.kickoff()
-    assert '{"score": 4}' == result.json
+    assert result.json == '{"score": 4}'
     assert result.to_dict() == {"score": 4}
 
 
@@ -404,8 +404,8 @@ def test_output_json_dict_hierarchical():
         manager_llm="gpt-4o",
     )
     result = crew.kickoff()
-    assert {"score": 5} == result.json_dict
-    assert result.to_dict() == {"score": 5}
+    assert {"score": 4} == result.json_dict
+    assert result.to_dict() == {"score": 4}
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
@@ -443,7 +443,7 @@ def test_output_pydantic_to_another_task():
     assert isinstance(
         pydantic_result, ScoreOutput
     ), "Expected pydantic result to be of type ScoreOutput"
-    assert 3 == pydantic_result.score
+    assert pydantic_result.score == 5
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
@@ -685,7 +685,7 @@ def test_increment_tool_errors():
     with patch.object(Task, "increment_tools_errors") as increment_tools_errors:
         increment_tools_errors.return_value = None
         crew.kickoff()
-        assert len(increment_tools_errors.mock_calls) == 9
+        assert len(increment_tools_errors.mock_calls) == 12
 
 
 def test_task_definition_based_on_dict():

@@ -4,8 +4,9 @@ import asyncio
 import inspect
 from typing import Any, Callable, Dict, Generic, List, Set, Type, TypeVar, Union
 
-from crewai.flow.flow_visualizer import visualize_flow
 from pydantic import BaseModel
+
+from crewai.flow.flow_visualizer import visualize_flow
 
 T = TypeVar("T", bound=Union[BaseModel, Dict[str, Any]])
 
@@ -134,11 +135,6 @@ class FlowMeta(type):
         setattr(cls, "_listeners", listeners)
         setattr(cls, "_routers", routers)
         setattr(cls, "_router_paths", router_paths)
-
-        print("Start methods:", start_methods)
-        print("Listeners:", listeners)
-        print("Routers:", routers)
-        print("Router paths:", router_paths)
 
         return cls
 

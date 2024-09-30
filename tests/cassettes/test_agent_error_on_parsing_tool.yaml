@@ -16,7 +16,7 @@ interactions:
       for your final answer: The final answer\nyou MUST return the actual complete
       content as the final answer, not a summary.\n\nBegin! This is VERY important
       to you, use the tools available and give your best Final Answer, your job depends
-      on it!\n\nThought:"}], "model": "gpt-4o", "stop": ["\nObservation:"]}'
+      on it!\n\nThought:"}], "model": "gpt-4o"}'
     headers:
       accept:
       - application/json
@@ -25,16 +25,16 @@ interactions:
       connection:
       - keep-alive
       content-length:
-      - '1353'
+      - '1325'
       content-type:
       - application/json
       cookie:
-      - __cf_bm=1SckBhvJ18Dazp6bi8DEKYeiS9Q4.6_6i3nmLBw9b6g-1726476036-1.0.1.1-TnN4UpDXA33YXCVCUWOaZ12vGIg_o5NpJQEUHgjn6XdUgb7M0ND8PdkTfkd8rrxG5XFlPRMzI54GxZ0FeUY9xw;
-        _cfuvid=0Rs4xTPk7h7OIXuSbTgMVVD9JSoZeKMwnygKHoHQo3k-1726476036297-0.0.1.1-604800000
+      - _cfuvid=ePJSDFdHag2D8lj21_ijAMWjoA6xfnPNxN4uekvC728-1727226247743-0.0.1.1-604800000;
+        __cf_bm=3giyBOIM0GNudFELtsBWYXwLrpLBTNLsh81wfXgu2tg-1727226247-1.0.1.1-ugUDz0c5EhmfVpyGtcdedlIWeDGuy2q0tXQTKVpv83HZhvxgBcS7SBL1wS4rapPM38yhfEcfwA79ARt3HQEzKA
       host:
       - api.openai.com
       user-agent:
-      - OpenAI/Python 1.45.0
+      - OpenAI/Python 1.47.0
       x-stainless-arch:
       - arm64
       x-stainless-async:
@@ -44,7 +44,7 @@ interactions:
       x-stainless-os:
       - MacOS
       x-stainless-package-version:
-      - 1.45.0
+      - 1.47.0
       x-stainless-raw-response:
       - 'true'
       x-stainless-runtime:
@@ -54,20 +54,20 @@ interactions:
     method: POST
     uri: https://api.openai.com/v1/chat/completions
   response:
-    content: "{\n  \"id\": \"chatcmpl-A81dBo5r2nWAvfAeKvkQePo1xr4b7\",\n  \"object\":
-      \"chat.completion\",\n  \"created\": 1726476257,\n  \"model\": \"gpt-4o-2024-05-13\",\n
+    content: "{\n  \"id\": \"chatcmpl-ABAtOWmVjvzQ9X58tKAUcOF4gmXwx\",\n  \"object\":
+      \"chat.completion\",\n  \"created\": 1727226842,\n  \"model\": \"gpt-4o-2024-05-13\",\n
       \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
-      \"assistant\",\n        \"content\": \"Thought: I should use the get_final_answer
-      tool to obtain The final answer.\\nAction: get_final_answer\\nAction Input:
+      \"assistant\",\n        \"content\": \"Thought: I need to use the get_final_answer
+      tool to determine the final answer.\\nAction: get_final_answer\\nAction Input:
       {}\",\n        \"refusal\": null\n      },\n      \"logprobs\": null,\n      \"finish_reason\":
       \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 274,\n    \"completion_tokens\":
-      26,\n    \"total_tokens\": 300,\n    \"completion_tokens_details\": {\n      \"reasoning_tokens\":
-      0\n    }\n  },\n  \"system_fingerprint\": \"fp_25624ae3a5\"\n}\n"
+      27,\n    \"total_tokens\": 301,\n    \"completion_tokens_details\": {\n      \"reasoning_tokens\":
+      0\n    }\n  },\n  \"system_fingerprint\": \"fp_e375328146\"\n}\n"
     headers:
       CF-Cache-Status:
       - DYNAMIC
       CF-RAY:
-      - 8c3f92e12a1b2233-MIA
+      - 8c8727b3492f31e6-MIA
       Connection:
       - keep-alive
       Content-Encoding:
@@ -75,7 +75,7 @@ interactions:
       Content-Type:
       - application/json
       Date:
-      - Mon, 16 Sep 2024 08:44:17 GMT
+      - Wed, 25 Sep 2024 01:14:03 GMT
       Server:
       - cloudflare
       Transfer-Encoding:
@@ -84,16 +84,14 @@ interactions:
       - nosniff
       access-control-expose-headers:
       - X-Request-ID
-      alt-svc:
-      - h3=":443"; ma=86400
       openai-organization:
       - crewai-iuxna1
       openai-processing-ms:
-      - '364'
+      - '348'
       openai-version:
       - '2020-10-01'
       strict-transport-security:
-      - max-age=15552000; includeSubDomains; preload
+      - max-age=31536000; includeSubDomains; preload
       x-ratelimit-limit-requests:
       - '10000'
       x-ratelimit-limit-tokens:
@@ -107,7 +105,7 @@ interactions:
       x-ratelimit-reset-tokens:
       - 0s
       x-request-id:
-      - req_5c29cd8664e9e690925d94ebc473d603
+      - req_be929caac49706f487950548bdcdd46e
     http_version: HTTP/1.1
     status_code: 200
 - request:
@@ -127,8 +125,8 @@ interactions:
       for your final answer: The final answer\nyou MUST return the actual complete
       content as the final answer, not a summary.\n\nBegin! This is VERY important
       to you, use the tools available and give your best Final Answer, your job depends
-      on it!\n\nThought:"}, {"role": "assistant", "content": "Thought: I should use
-      the get_final_answer tool to obtain The final answer.\nAction: get_final_answer\nAction
+      on it!\n\nThought:"}, {"role": "user", "content": "Thought: I need to use the
+      get_final_answer tool to determine the final answer.\nAction: get_final_answer\nAction
       Input: {}\nObservation: I encountered an error: Error on parsing tool.\nMoving
       on then. I MUST either use a tool (use one at time) OR give my best final answer
       not both at the same time. To Use the following format:\n\nThought: you should
@@ -139,8 +137,7 @@ interactions:
       Answer: Your final answer must be the great and the most complete as possible,
       it must be outcome described\n\n \nNow it''s time you MUST give your absolute
       best final answer. You''ll ignore all previous instructions, stop using any
-      tools, and just return your absolute BEST Final answer."}], "model": "gpt-4o",
-      "stop": ["\nObservation:"]}'
+      tools, and just return your absolute BEST Final answer."}], "model": "gpt-4o"}'
     headers:
       accept:
       - application/json
@@ -149,16 +146,16 @@ interactions:
       connection:
       - keep-alive
       content-length:
-      - '2349'
+      - '2320'
       content-type:
       - application/json
       cookie:
-      - __cf_bm=1SckBhvJ18Dazp6bi8DEKYeiS9Q4.6_6i3nmLBw9b6g-1726476036-1.0.1.1-TnN4UpDXA33YXCVCUWOaZ12vGIg_o5NpJQEUHgjn6XdUgb7M0ND8PdkTfkd8rrxG5XFlPRMzI54GxZ0FeUY9xw;
-        _cfuvid=0Rs4xTPk7h7OIXuSbTgMVVD9JSoZeKMwnygKHoHQo3k-1726476036297-0.0.1.1-604800000
+      - _cfuvid=ePJSDFdHag2D8lj21_ijAMWjoA6xfnPNxN4uekvC728-1727226247743-0.0.1.1-604800000;
+        __cf_bm=3giyBOIM0GNudFELtsBWYXwLrpLBTNLsh81wfXgu2tg-1727226247-1.0.1.1-ugUDz0c5EhmfVpyGtcdedlIWeDGuy2q0tXQTKVpv83HZhvxgBcS7SBL1wS4rapPM38yhfEcfwA79ARt3HQEzKA
       host:
       - api.openai.com
       user-agent:
-      - OpenAI/Python 1.45.0
+      - OpenAI/Python 1.47.0
       x-stainless-arch:
       - arm64
       x-stainless-async:
@@ -168,7 +165,7 @@ interactions:
       x-stainless-os:
       - MacOS
       x-stainless-package-version:
-      - 1.45.0
+      - 1.47.0
       x-stainless-raw-response:
       - 'true'
       x-stainless-runtime:
@@ -178,19 +175,19 @@ interactions:
     method: POST
     uri: https://api.openai.com/v1/chat/completions
   response:
-    content: "{\n  \"id\": \"chatcmpl-A81dCt0gksdnPkvgVhu5410k09MYV\",\n  \"object\":
-      \"chat.completion\",\n  \"created\": 1726476258,\n  \"model\": \"gpt-4o-2024-05-13\",\n
+    content: "{\n  \"id\": \"chatcmpl-ABAtPaaeRfdNsZ3k06CfAmrEW8IJu\",\n  \"object\":
+      \"chat.completion\",\n  \"created\": 1727226843,\n  \"model\": \"gpt-4o-2024-05-13\",\n
       \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
       \"assistant\",\n        \"content\": \"Final Answer: The final answer\",\n        \"refusal\":
       null\n      },\n      \"logprobs\": null,\n      \"finish_reason\": \"stop\"\n
-      \   }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 482,\n    \"completion_tokens\":
-      6,\n    \"total_tokens\": 488,\n    \"completion_tokens_details\": {\n      \"reasoning_tokens\":
-      0\n    }\n  },\n  \"system_fingerprint\": \"fp_25624ae3a5\"\n}\n"
+      \   }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 483,\n    \"completion_tokens\":
+      6,\n    \"total_tokens\": 489,\n    \"completion_tokens_details\": {\n      \"reasoning_tokens\":
+      0\n    }\n  },\n  \"system_fingerprint\": \"fp_e375328146\"\n}\n"
     headers:
       CF-Cache-Status:
       - DYNAMIC
       CF-RAY:
-      - 8c3f92e53b2a2233-MIA
+      - 8c8727b9da1f31e6-MIA
       Connection:
       - keep-alive
       Content-Encoding:
@@ -198,7 +195,7 @@ interactions:
       Content-Type:
       - application/json
       Date:
-      - Mon, 16 Sep 2024 08:44:18 GMT
+      - Wed, 25 Sep 2024 01:14:03 GMT
       Server:
       - cloudflare
       Transfer-Encoding:
@@ -212,11 +209,11 @@ interactions:
       openai-organization:
       - crewai-iuxna1
       openai-processing-ms:
-      - '226'
+      - '188'
       openai-version:
       - '2020-10-01'
       strict-transport-security:
-      - max-age=15552000; includeSubDomains; preload
+      - max-age=31536000; includeSubDomains; preload
       x-ratelimit-limit-requests:
       - '10000'
       x-ratelimit-limit-tokens:
@@ -224,13 +221,13 @@ interactions:
       x-ratelimit-remaining-requests:
       - '9999'
       x-ratelimit-remaining-tokens:
-      - '29999446'
+      - '29999445'
       x-ratelimit-reset-requests:
       - 6ms
       x-ratelimit-reset-tokens:
       - 1ms
       x-request-id:
-      - req_fc90b97faad1b9af36997b5e74a427b1
+      - req_d8e32538689fe064627468bad802d9a8
     http_version: HTTP/1.1
     status_code: 200
 version: 1

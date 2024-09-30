@@ -5,6 +5,6 @@
 # __all__ = ["Pipeline", "PipelineKickoffResult", "PipelineOutput"]
 
 
-from crewai.flow import Flow
+from crewai.flow.flow import Flow
 
 __all__ = ["Flow"]

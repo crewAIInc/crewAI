@@ -44,7 +44,7 @@ class TestCrewEvaluator:
             == "Evaluator agent for crew evaluation with precise capabilities to evaluate the performance of the agents in the crew based on the tasks they have performed"
         )
         assert agent.verbose is False
-        assert agent.llm == "gpt-4o-mini"
+        assert agent.llm.model == "gpt-4o-mini"
 
     def test_evaluation_task(self, crew_planner):
         evaluator_agent = Agent(

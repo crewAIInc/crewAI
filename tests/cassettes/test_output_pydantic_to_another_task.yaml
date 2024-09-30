@@ -1,65 +1,5 @@
 interactions:
 - request:
-    body: !!binary |
-      CowNCiQKIgoMc2VydmljZS5uYW1lEhIKEGNyZXdBSS10ZWxlbWV0cnkS4wwKEgoQY3Jld2FpLnRl
-      bGVtZXRyeRKcAQoQVJ9dBZwEZQm9CGJ30K1bWBIIsxI2Sv/pqeYqClRvb2wgVXNhZ2UwATkAW5SR
-      bq31F0Gge6aRbq31F0oaCg5jcmV3YWlfdmVyc2lvbhIICgYwLjU2LjNKKAoJdG9vbF9uYW1lEhsK
-      GURlbGVnYXRlIHdvcmsgdG8gY293b3JrZXJKDgoIYXR0ZW1wdHMSAhgBegIYAYUBAAEAABKcCQoQ
-      EaOGmH1tr9EmLtPwRXEiExIINe3VNmgYz6gqDENyZXcgQ3JlYXRlZDABOXAzDvJurfUXQUCIFvJu
-      rfUXShoKDmNyZXdhaV92ZXJzaW9uEggKBjAuNTYuM0oaCg5weXRob25fdmVyc2lvbhIICgYzLjEx
-      LjdKLgoIY3Jld19rZXkSIgogZDQyNjA4MzNhYjBjMjBiYjQ0OTIyYzc5OWFhOTZiNGFKMQoHY3Jl
-      d19pZBImCiQxYjRjYjA0ZS01OTY3LTRlYWYtOTQ2Yi0zMTc2Yzg3MzQ3NzFKHAoMY3Jld19wcm9j
-      ZXNzEgwKCnNlcXVlbnRpYWxKEQoLY3Jld19tZW1vcnkSAhAAShoKFGNyZXdfbnVtYmVyX29mX3Rh
-      c2tzEgIYAkobChVjcmV3X251bWJlcl9vZl9hZ2VudHMSAhgBSuUCCgtjcmV3X2FnZW50cxLVAgrS
-      Alt7ImtleSI6ICI5MmU3ZWIxOTE2NjRjOTM1Nzg1ZWQ3ZDQyNDBhMjk0ZCIsICJpZCI6ICJmMDRk
-      NWE3Ny0xZjJjLTRhNzUtODFmMy02YmQxYmVkMmM1MGUiLCAicm9sZSI6ICJTY29yZXIiLCAidmVy
-      Ym9zZT8iOiB0cnVlLCAibWF4X2l0ZXIiOiAxNSwgIm1heF9ycG0iOiBudWxsLCAiZnVuY3Rpb25f
-      Y2FsbGluZ19sbG0iOiAiZ3B0LTMuNS10dXJiby0wMTI1IiwgImxsbSI6ICJncHQtNC0wMTI1LXBy
-      ZXZpZXciLCAiZGVsZWdhdGlvbl9lbmFibGVkPyI6IGZhbHNlLCAiYWxsb3dfY29kZV9leGVjdXRp
-      b24/IjogZmFsc2UsICJtYXhfcmV0cnlfbGltaXQiOiAyLCAidG9vbHNfbmFtZXMiOiBbXX1dSuQD
-      CgpjcmV3X3Rhc2tzEtUDCtIDW3sia2V5IjogIjI3ZWYzOGNjOTlkYTRhOGRlZDcwZWQ0MDZlNDRh
-      Yjg2IiwgImlkIjogIjNhMDUxNjJiLTJmZmEtNDY5OC05YzRiLWEyMzgyM2Y0MjMzMyIsICJhc3lu
-      Y19leGVjdXRpb24/IjogZmFsc2UsICJodW1hbl9pbnB1dD8iOiBmYWxzZSwgImFnZW50X3JvbGUi
-      OiAiU2NvcmVyIiwgImFnZW50X2tleSI6ICI5MmU3ZWIxOTE2NjRjOTM1Nzg1ZWQ3ZDQyNDBhMjk0
-      ZCIsICJ0b29sc19uYW1lcyI6IFtdfSwgeyJrZXkiOiAiNjA5ZGVlMzkxMDg4Y2QxYzg3YjhmYTY2
-      YWE2N2FkYmUiLCAiaWQiOiAiNzY1MGRlN2UtYzE2MC00YjIyLWEwZTAtMmZmMTBhYmMzMmZkIiwg
-      ImFzeW5jX2V4ZWN1dGlvbj8iOiBmYWxzZSwgImh1bWFuX2lucHV0PyI6IGZhbHNlLCAiYWdlbnRf
-      cm9sZSI6ICJTY29yZXIiLCAiYWdlbnRfa2V5IjogIjkyZTdlYjE5MTY2NGM5MzU3ODVlZDdkNDI0
-      MGEyOTRkIiwgInRvb2xzX25hbWVzIjogW119XXoCGAGFAQABAAASjgIKEH0rDiMuBxt9T40y6fTt
-      NAISCCS0ewjbeoOdKgxUYXNrIENyZWF0ZWQwATnQej7ybq31F0EgPj/ybq31F0ouCghjcmV3X2tl
-      eRIiCiBkNDI2MDgzM2FiMGMyMGJiNDQ5MjJjNzk5YWE5NmI0YUoxCgdjcmV3X2lkEiYKJDFiNGNi
-      MDRlLTU5NjctNGVhZi05NDZiLTMxNzZjODczNDc3MUouCgh0YXNrX2tleRIiCiAyN2VmMzhjYzk5
-      ZGE0YThkZWQ3MGVkNDA2ZTQ0YWI4NkoxCgd0YXNrX2lkEiYKJDNhMDUxNjJiLTJmZmEtNDY5OC05
-      YzRiLWEyMzgyM2Y0MjMzM3oCGAGFAQABAAA=
-    headers:
-      Accept:
-      - '*/*'
-      Accept-Encoding:
-      - gzip, deflate
-      Connection:
-      - keep-alive
-      Content-Length:
-      - '1679'
-      Content-Type:
-      - application/x-protobuf
-      User-Agent:
-      - OTel-OTLP-Exporter-Python/1.27.0
-    method: POST
-    uri: https://telemetry.crewai.com:4319/v1/traces
-  response:
-    body:
-      string: "\n\0"
-    headers:
-      Content-Length:
-      - '2'
-      Content-Type:
-      - application/x-protobuf
-      Date:
-      - Mon, 16 Sep 2024 08:52:07 GMT
-    status:
-      code: 200
-      message: OK
-- request:
     body: '{"messages": [{"role": "system", "content": "You are Scorer. You''re an
       expert scorer, specialized in scoring titles.\nYour personal goal is: Score
       the title\nTo give my best complete final answer to the task use the exact following
@@ -71,7 +11,7 @@ interactions:
       for your final answer: The score of the title.\nyou MUST return the actual complete
       content as the final answer, not a summary.\n\nBegin! This is VERY important
       to you, use the tools available and give your best Final Answer, your job depends
-      on it!\n\nThought:"}], "model": "gpt-4-0125-preview", "stop": ["\nObservation:"]}'
+      on it!\n\nThought:"}], "model": "gpt-4-0125-preview"}'
     headers:
       accept:
       - application/json
@@ -80,16 +20,16 @@ interactions:
       connection:
       - keep-alive
       content-length:
-      - '955'
+      - '927'
       content-type:
       - application/json
       cookie:
-      - __cf_bm=1SckBhvJ18Dazp6bi8DEKYeiS9Q4.6_6i3nmLBw9b6g-1726476036-1.0.1.1-TnN4UpDXA33YXCVCUWOaZ12vGIg_o5NpJQEUHgjn6XdUgb7M0ND8PdkTfkd8rrxG5XFlPRMzI54GxZ0FeUY9xw;
-        _cfuvid=0Rs4xTPk7h7OIXuSbTgMVVD9JSoZeKMwnygKHoHQo3k-1726476036297-0.0.1.1-604800000
+      - __cf_bm=9.8sBYBkvBR8R1K_bVF7xgU..80XKlEIg3N2OBbTSCU-1727214102-1.0.1.1-.qiTLXbPamYUMSuyNsOEB9jhGu.jOifujOrx9E2JZvStbIZ9RTIiE44xKKNfLPxQkOi6qAT3h6htK8lPDGV_5g;
+        _cfuvid=lbRdAddVWV6W3f5Dm9SaOPWDUOxqtZBSPr_fTW26nEA-1727213194587-0.0.1.1-604800000
       host:
       - api.openai.com
       user-agent:
-      - OpenAI/Python 1.45.0
+      - OpenAI/Python 1.47.0
       x-stainless-arch:
       - arm64
       x-stainless-async:
@@ -99,7 +39,7 @@ interactions:
       x-stainless-os:
       - MacOS
       x-stainless-package-version:
-      - 1.45.0
+      - 1.47.0
       x-stainless-raw-response:
       - 'true'
       x-stainless-runtime:
@@ -109,33 +49,19 @@ interactions:
     method: POST
     uri: https://api.openai.com/v1/chat/completions
   response:
-    content: "{\n  \"id\": \"chatcmpl-A81kiLRccds52ippgDvaSq0qCmBkZ\",\n  \"object\":
-      \"chat.completion\",\n  \"created\": 1726476724,\n  \"model\": \"gpt-4-0125-preview\",\n
+    content: "{\n  \"id\": \"chatcmpl-AB7gEbfUEcEY8uxRqngZ1AHO3Kh8G\",\n  \"object\":
+      \"chat.completion\",\n  \"created\": 1727214494,\n  \"model\": \"gpt-4-0125-preview\",\n
       \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
-      \"assistant\",\n        \"content\": \"Thought: To evaluate the title \\\"The
-      impact of AI in the future of work,\\\" I will consider its relevance, originality,
-      and the broad interest it may appeal to among readers focused on technology,
-      work, and future studies. Given the current global focus on AI's role in transforming
-      job markets, industries, and individual careers, as well as its potential to
-      foster innovation or create challenges in the workforce, this title is timely
-      and significant. It promises an exploration of a critical and wide-ranging topic
-      that affects various sectors. Therefore, these considerations will inform my
-      scoring within the given range of 1 to 5, where 1 represents a title with very
-      low appeal or relevance, and 5 indicates a title of highest interest and relevance.\\n\\nFinal
-      Answer: Given its timely significance, broad appeal, and the increasing global
-      discourse on the subject, I score the title \\\"The impact of AI in the future
-      of work\\\" a 4. This score reflects its strong relevance and potential to engage
-      a wide audience interested in the future of technology and work, despite being
-      somewhat broad and potentially covering well-trodden ground.\",\n        \"refusal\":
-      null\n      },\n      \"logprobs\": null,\n      \"finish_reason\": \"stop\"\n
-      \   }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 187,\n    \"completion_tokens\":
-      222,\n    \"total_tokens\": 409,\n    \"completion_tokens_details\": {\n      \"reasoning_tokens\":
-      0\n    }\n  },\n  \"system_fingerprint\": null\n}\n"
+      \"assistant\",\n        \"content\": \"Thought: I now can give a great answer\\nFinal
+      Answer: 4\",\n        \"refusal\": null\n      },\n      \"logprobs\": null,\n
+      \     \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\":
+      187,\n    \"completion_tokens\": 15,\n    \"total_tokens\": 202,\n    \"completion_tokens_details\":
+      {\n      \"reasoning_tokens\": 0\n    }\n  },\n  \"system_fingerprint\": null\n}\n"
     headers:
       CF-Cache-Status:
       - DYNAMIC
       CF-RAY:
-      - 8c3f9e47c9d32233-MIA
+      - 8c85fa3b6b9e1cf3-GRU
       Connection:
       - keep-alive
       Content-Encoding:
@@ -143,7 +69,7 @@ interactions:
       Content-Type:
       - application/json
       Date:
-      - Mon, 16 Sep 2024 08:52:11 GMT
+      - Tue, 24 Sep 2024 21:48:14 GMT
       Server:
       - cloudflare
       Transfer-Encoding:
@@ -152,16 +78,14 @@ interactions:
       - nosniff
       access-control-expose-headers:
       - X-Request-ID
-      alt-svc:
-      - h3=":443"; ma=86400
       openai-organization:
       - crewai-iuxna1
       openai-processing-ms:
-      - '6495'
+      - '730'
       openai-version:
       - '2020-10-01'
       strict-transport-security:
-      - max-age=15552000; includeSubDomains; preload
+      - max-age=31536000; includeSubDomains; preload
       x-ratelimit-limit-requests:
       - '10000'
       x-ratelimit-limit-tokens:
@@ -175,22 +99,18 @@ interactions:
       x-ratelimit-reset-tokens:
       - 6ms
       x-request-id:
-      - req_e02e030e46fd7251bd227eefbbe907ff
+      - req_7229ec6efc9642277f866a4769b8428c
     http_version: HTTP/1.1
     status_code: 200
 - request:
-    body: '{"messages": [{"role": "user", "content": "Given its timely significance,
-      broad appeal, and the increasing global discourse on the subject, I score the
-      title \"The impact of AI in the future of work\" a 4. This score reflects its
-      strong relevance and potential to engage a wide audience interested in the future
-      of technology and work, despite being somewhat broad and potentially covering
-      well-trodden ground."}, {"role": "system", "content": "I''m gonna convert this
-      raw text into valid JSON."}], "model": "gpt-3.5-turbo-0125", "tool_choice":
-      {"type": "function", "function": {"name": "ScoreOutput"}}, "tools": [{"type":
-      "function", "function": {"name": "ScoreOutput", "description": "Correctly extracted
-      `ScoreOutput` with all the required parameters with correct types", "parameters":
-      {"properties": {"score": {"title": "Score", "type": "integer"}}, "required":
-      ["score"], "type": "object"}}}]}'
+    body: '{"messages": [{"role": "user", "content": "4"}, {"role": "system", "content":
+      "I''m gonna convert this raw text into valid JSON.\n\nThe json should have the
+      following structure, with the following keys:\n{\n    score: int\n}"}], "model":
+      "gpt-3.5-turbo-0125", "tool_choice": {"type": "function", "function": {"name":
+      "ScoreOutput"}}, "tools": [{"type": "function", "function": {"name": "ScoreOutput",
+      "description": "Correctly extracted `ScoreOutput` with all the required parameters
+      with correct types", "parameters": {"properties": {"score": {"title": "Score",
+      "type": "integer"}}, "required": ["score"], "type": "object"}}}]}'
     headers:
       accept:
       - application/json
@@ -199,16 +119,16 @@ interactions:
       connection:
       - keep-alive
       content-length:
-      - '897'
+      - '627'
       content-type:
       - application/json
       cookie:
-      - __cf_bm=04EJuO0mh2HU6FxLd2CpOc6Z6MMpyxhMCz_t6onOpaY-1726476704-1.0.1.1-BHP4W7X58z8ba4ns2wYBcPx53or5JKBDisMn8i7dQluTmjuN201bym7OqEkZrmUlhr0n3oODNJf0SS5BVipRKg;
-        _cfuvid=JBsdqQQtLEVtIStEIeDR0TRIr0GMGhWKAyum6suoH.4-1726476704561-0.0.1.1-604800000
+      - __cf_bm=9.8sBYBkvBR8R1K_bVF7xgU..80XKlEIg3N2OBbTSCU-1727214102-1.0.1.1-.qiTLXbPamYUMSuyNsOEB9jhGu.jOifujOrx9E2JZvStbIZ9RTIiE44xKKNfLPxQkOi6qAT3h6htK8lPDGV_5g;
+        _cfuvid=lbRdAddVWV6W3f5Dm9SaOPWDUOxqtZBSPr_fTW26nEA-1727213194587-0.0.1.1-604800000
       host:
       - api.openai.com
       user-agent:
-      - OpenAI/Python 1.45.0
+      - OpenAI/Python 1.47.0
       x-stainless-arch:
       - arm64
       x-stainless-async:
@@ -218,7 +138,7 @@ interactions:
       x-stainless-os:
       - MacOS
       x-stainless-package-version:
-      - 1.45.0
+      - 1.47.0
       x-stainless-raw-response:
       - 'true'
       x-stainless-runtime:
@@ -228,22 +148,22 @@ interactions:
     method: POST
     uri: https://api.openai.com/v1/chat/completions
   response:
-    content: "{\n  \"id\": \"chatcmpl-A81kpxkhhVGXIbhaeY7t02K8oVP6f\",\n  \"object\":
-      \"chat.completion\",\n  \"created\": 1726476731,\n  \"model\": \"gpt-3.5-turbo-0125\",\n
+    content: "{\n  \"id\": \"chatcmpl-AB7gF9MWuZGxknKnrtesloXhXendq\",\n  \"object\":
+      \"chat.completion\",\n  \"created\": 1727214495,\n  \"model\": \"gpt-3.5-turbo-0125\",\n
       \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
       \"assistant\",\n        \"content\": null,\n        \"tool_calls\": [\n          {\n
-      \           \"id\": \"call_qos4dKPZTXQkZVUT9NSyTfEK\",\n            \"type\":
+      \           \"id\": \"call_vIxfdg9Ebnr1Z3TthsEcVXby\",\n            \"type\":
       \"function\",\n            \"function\": {\n              \"name\": \"ScoreOutput\",\n
       \             \"arguments\": \"{\\\"score\\\":4}\"\n            }\n          }\n
       \       ],\n        \"refusal\": null\n      },\n      \"logprobs\": null,\n
       \     \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\":
-      153,\n    \"completion_tokens\": 5,\n    \"total_tokens\": 158,\n    \"completion_tokens_details\":
+      103,\n    \"completion_tokens\": 5,\n    \"total_tokens\": 108,\n    \"completion_tokens_details\":
       {\n      \"reasoning_tokens\": 0\n    }\n  },\n  \"system_fingerprint\": null\n}\n"
     headers:
       CF-Cache-Status:
       - DYNAMIC
       CF-RAY:
-      - 8c3f9e744a6d3708-MIA
+      - 8c85fa41bc891cf3-GRU
       Connection:
       - keep-alive
       Content-Encoding:
@@ -251,7 +171,7 @@ interactions:
       Content-Type:
       - application/json
       Date:
-      - Mon, 16 Sep 2024 08:52:12 GMT
+      - Tue, 24 Sep 2024 21:48:15 GMT
       Server:
       - cloudflare
       Transfer-Encoding:
@@ -260,16 +180,14 @@ interactions:
       - nosniff
       access-control-expose-headers:
       - X-Request-ID
-      alt-svc:
-      - h3=":443"; ma=86400
       openai-organization:
       - crewai-iuxna1
       openai-processing-ms:
-      - '151'
+      - '253'
       openai-version:
       - '2020-10-01'
       strict-transport-security:
-      - max-age=15552000; includeSubDomains; preload
+      - max-age=31536000; includeSubDomains; preload
       x-ratelimit-limit-requests:
       - '10000'
       x-ratelimit-limit-tokens:
@@ -277,28 +195,166 @@ interactions:
       x-ratelimit-remaining-requests:
       - '9999'
       x-ratelimit-remaining-tokens:
-      - '49999877'
+      - '49999946'
       x-ratelimit-reset-requests:
       - 6ms
       x-ratelimit-reset-tokens:
       - 0s
       x-request-id:
-      - req_4d8488fab7ea9df83c78c45ddcdf5009
+      - req_fe42bae7f8f0d8830aa96ac82a70bb78
+    http_version: HTTP/1.1
+    status_code: 200
+- request:
+    body: '{"messages": [{"role": "system", "content": "You are Scorer. You''re an
+      expert scorer, specialized in scoring titles.\nYour personal goal is: Score
+      the title\nTo give my best complete final answer to the task use the exact following
+      format:\n\nThought: I now can give a great answer\nFinal Answer: Your final
+      answer must be the great and the most complete as possible, it must be outcome
+      described.\n\nI MUST use these formats, my job depends on it!"}, {"role": "user",
+      "content": "\nCurrent Task: Given the score the title ''The impact of AI in
+      the future of work'' got, give me an integer score between 1-5 for the following
+      title: ''Return of the Jedi'', you MUST give it a score, use your best judgment\n\nThis
+      is the expect criteria for your final answer: The score of the title.\nyou MUST
+      return the actual complete content as the final answer, not a summary.\n\nThis
+      is the context you''re working with:\n4\n\nBegin! This is VERY important to
+      you, use the tools available and give your best Final Answer, your job depends
+      on it!\n\nThought:"}], "model": "gpt-4-0125-preview"}'
+    headers:
+      accept:
+      - application/json
+      accept-encoding:
+      - gzip, deflate
+      connection:
+      - keep-alive
+      content-length:
+      - '1076'
+      content-type:
+      - application/json
+      cookie:
+      - __cf_bm=9.8sBYBkvBR8R1K_bVF7xgU..80XKlEIg3N2OBbTSCU-1727214102-1.0.1.1-.qiTLXbPamYUMSuyNsOEB9jhGu.jOifujOrx9E2JZvStbIZ9RTIiE44xKKNfLPxQkOi6qAT3h6htK8lPDGV_5g;
+        _cfuvid=lbRdAddVWV6W3f5Dm9SaOPWDUOxqtZBSPr_fTW26nEA-1727213194587-0.0.1.1-604800000
+      host:
+      - api.openai.com
+      user-agent:
+      - OpenAI/Python 1.47.0
+      x-stainless-arch:
+      - arm64
+      x-stainless-async:
+      - 'false'
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - MacOS
+      x-stainless-package-version:
+      - 1.47.0
+      x-stainless-raw-response:
+      - 'true'
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.11.7
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    content: "{\n  \"id\": \"chatcmpl-AB7gFkgb0JsYMhXR8qaHnXKOQfP7B\",\n  \"object\":
+      \"chat.completion\",\n  \"created\": 1727214495,\n  \"model\": \"gpt-4-0125-preview\",\n
+      \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
+      \"assistant\",\n        \"content\": \"Thought: I now can give a great answer\\n\\nFinal
+      Answer: 5\",\n        \"refusal\": null\n      },\n      \"logprobs\": null,\n
+      \     \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\":
+      223,\n    \"completion_tokens\": 15,\n    \"total_tokens\": 238,\n    \"completion_tokens_details\":
+      {\n      \"reasoning_tokens\": 0\n    }\n  },\n  \"system_fingerprint\": null\n}\n"
+    headers:
+      CF-Cache-Status:
+      - DYNAMIC
+      CF-RAY:
+      - 8c85fa461a4d1cf3-GRU
+      Connection:
+      - keep-alive
+      Content-Encoding:
+      - gzip
+      Content-Type:
+      - application/json
+      Date:
+      - Tue, 24 Sep 2024 21:48:16 GMT
+      Server:
+      - cloudflare
+      Transfer-Encoding:
+      - chunked
+      X-Content-Type-Options:
+      - nosniff
+      access-control-expose-headers:
+      - X-Request-ID
+      openai-organization:
+      - crewai-iuxna1
+      openai-processing-ms:
+      - '799'
+      openai-version:
+      - '2020-10-01'
+      strict-transport-security:
+      - max-age=31536000; includeSubDomains; preload
+      x-ratelimit-limit-requests:
+      - '10000'
+      x-ratelimit-limit-tokens:
+      - '2000000'
+      x-ratelimit-remaining-requests:
+      - '9999'
+      x-ratelimit-remaining-tokens:
+      - '1999744'
+      x-ratelimit-reset-requests:
+      - 6ms
+      x-ratelimit-reset-tokens:
+      - 7ms
+      x-request-id:
+      - req_7ea6637f8e14c2b260cce6e3e3004cbb
     http_version: HTTP/1.1
     status_code: 200
 - request:
     body: !!binary |
-      CuEECiQKIgoMc2VydmljZS5uYW1lEhIKEGNyZXdBSS10ZWxlbWV0cnkSuAQKEgoQY3Jld2FpLnRl
-      bGVtZXRyeRKQAgoQyLQ9fzTjmZL8hKvsj0decRIIaC58A3TJ6FgqDlRhc2sgRXhlY3V0aW9uMAE5
-      oHw/8m6t9RdBYLJrxHCt9RdKLgoIY3Jld19rZXkSIgogZDQyNjA4MzNhYjBjMjBiYjQ0OTIyYzc5
-      OWFhOTZiNGFKMQoHY3Jld19pZBImCiQxYjRjYjA0ZS01OTY3LTRlYWYtOTQ2Yi0zMTc2Yzg3MzQ3
-      NzFKLgoIdGFza19rZXkSIgogMjdlZjM4Y2M5OWRhNGE4ZGVkNzBlZDQwNmU0NGFiODZKMQoHdGFz
-      a19pZBImCiQzYTA1MTYyYi0yZmZhLTQ2OTgtOWM0Yi1hMjM4MjNmNDIzMzN6AhgBhQEAAQAAEo4C
-      ChANcx2XI5DZGZlonlO8Bf/8Egg7hLSE5/417SoMVGFzayBDcmVhdGVkMAE5MPi0xHCt9RdBgK+3
-      xHCt9RdKLgoIY3Jld19rZXkSIgogZDQyNjA4MzNhYjBjMjBiYjQ0OTIyYzc5OWFhOTZiNGFKMQoH
-      Y3Jld19pZBImCiQxYjRjYjA0ZS01OTY3LTRlYWYtOTQ2Yi0zMTc2Yzg3MzQ3NzFKLgoIdGFza19r
-      ZXkSIgogNjA5ZGVlMzkxMDg4Y2QxYzg3YjhmYTY2YWE2N2FkYmVKMQoHdGFza19pZBImCiQ3NjUw
-      ZGU3ZS1jMTYwLTRiMjItYTBlMC0yZmYxMGFiYzMyZmR6AhgBhQEAAQAA
+      CsITCiQKIgoMc2VydmljZS5uYW1lEhIKEGNyZXdBSS10ZWxlbWV0cnkSmRMKEgoQY3Jld2FpLnRl
+      bGVtZXRyeRKbAQoQNiHDtik0VJXUvY2TAXlq5xIIVN7ytJgQOTQqClRvb2wgVXNhZ2UwATkgE44P
+      bkz4F0GgvJEPbkz4F0oaCg5jcmV3YWlfdmVyc2lvbhIICgYwLjYxLjBKJwoJdG9vbF9uYW1lEhoK
+      GEFzayBxdWVzdGlvbiB0byBjb3dvcmtlckoOCghhdHRlbXB0cxICGAF6AhgBhQEAAQAAEpACChB9
+      D1jc9xslW6yx+1EBiZyOEgg07DmIaDWZkCoOVGFzayBFeGVjdXRpb24wATnAXgcVbUz4F0H4h/Rb
+      bkz4F0ouCghjcmV3X2tleRIiCiA1ZTZlZmZlNjgwYTVkOTdkYzM4NzNiMTQ4MjVjY2ZhM0oxCgdj
+      cmV3X2lkEiYKJDFjZWJhZTk5LWYwNmQtNDEzYS05N2ExLWRlZWU1NjU3ZWFjNkouCgh0YXNrX2tl
+      eRIiCiAyN2VmMzhjYzk5ZGE0YThkZWQ3MGVkNDA2ZTQ0YWI4NkoxCgd0YXNrX2lkEiYKJDU1MjQ5
+      M2IwLWFmNDctNGVmMC04M2NjLWIwYmRjMzUxZWY2N3oCGAGFAQABAAASnAkKEIX+S/hQ6K5kLLu+
+      55qXcH8SCOxCl7XWayIeKgxDcmV3IENyZWF0ZWQwATkQYspcbkz4F0G4Ls5cbkz4F0oaCg5jcmV3
+      YWlfdmVyc2lvbhIICgYwLjYxLjBKGgoOcHl0aG9uX3ZlcnNpb24SCAoGMy4xMS43Si4KCGNyZXdf
+      a2V5EiIKIGQ0MjYwODMzYWIwYzIwYmI0NDkyMmM3OTlhYTk2YjRhSjEKB2NyZXdfaWQSJgokMjE2
+      YmRkZDYtYzVhOS00NDk2LWFlYzctYjNlMDBhNzQ5NDVjShwKDGNyZXdfcHJvY2VzcxIMCgpzZXF1
+      ZW50aWFsShEKC2NyZXdfbWVtb3J5EgIQAEoaChRjcmV3X251bWJlcl9vZl90YXNrcxICGAJKGwoV
+      Y3Jld19udW1iZXJfb2ZfYWdlbnRzEgIYAUrlAgoLY3Jld19hZ2VudHMS1QIK0gJbeyJrZXkiOiAi
+      OTJlN2ViMTkxNjY0YzkzNTc4NWVkN2Q0MjQwYTI5NGQiLCAiaWQiOiAiMDUzYWJkMGUtNzc0Ny00
+      Mzc5LTg5ZWUtMTc1YjkwYWRjOGFjIiwgInJvbGUiOiAiU2NvcmVyIiwgInZlcmJvc2U/IjogdHJ1
+      ZSwgIm1heF9pdGVyIjogMTUsICJtYXhfcnBtIjogbnVsbCwgImZ1bmN0aW9uX2NhbGxpbmdfbGxt
+      IjogImdwdC0zLjUtdHVyYm8tMDEyNSIsICJsbG0iOiAiZ3B0LTQtMDEyNS1wcmV2aWV3IiwgImRl
+      bGVnYXRpb25fZW5hYmxlZD8iOiBmYWxzZSwgImFsbG93X2NvZGVfZXhlY3V0aW9uPyI6IGZhbHNl
+      LCAibWF4X3JldHJ5X2xpbWl0IjogMiwgInRvb2xzX25hbWVzIjogW119XUrkAwoKY3Jld190YXNr
+      cxLVAwrSA1t7ImtleSI6ICIyN2VmMzhjYzk5ZGE0YThkZWQ3MGVkNDA2ZTQ0YWI4NiIsICJpZCI6
+      ICIxMTgyYzllZi02NzU3LTQ0ZTktOTA4Yi1jZmE2ZWIzODYxNWEiLCAiYXN5bmNfZXhlY3V0aW9u
+      PyI6IGZhbHNlLCAiaHVtYW5faW5wdXQ/IjogZmFsc2UsICJhZ2VudF9yb2xlIjogIlNjb3JlciIs
+      ICJhZ2VudF9rZXkiOiAiOTJlN2ViMTkxNjY0YzkzNTc4NWVkN2Q0MjQwYTI5NGQiLCAidG9vbHNf
+      bmFtZXMiOiBbXX0sIHsia2V5IjogIjYwOWRlZTM5MTA4OGNkMWM4N2I4ZmE2NmFhNjdhZGJlIiwg
+      ImlkIjogImJkZDhiZWYxLWZhNTYtNGQwYy1hYjQ0LTdiMjE0YzY2ODhiNSIsICJhc3luY19leGVj
+      dXRpb24/IjogZmFsc2UsICJodW1hbl9pbnB1dD8iOiBmYWxzZSwgImFnZW50X3JvbGUiOiAiU2Nv
+      cmVyIiwgImFnZW50X2tleSI6ICI5MmU3ZWIxOTE2NjRjOTM1Nzg1ZWQ3ZDQyNDBhMjk0ZCIsICJ0
+      b29sc19uYW1lcyI6IFtdfV16AhgBhQEAAQAAEo4CChCtIlcpdDnI8/HhoLC7gN6iEgje2a5QieRJ
+      MSoMVGFzayBDcmVhdGVkMAE58GXmXG5M+BdBKC3nXG5M+BdKLgoIY3Jld19rZXkSIgogZDQyNjA4
+      MzNhYjBjMjBiYjQ0OTIyYzc5OWFhOTZiNGFKMQoHY3Jld19pZBImCiQyMTZiZGRkNi1jNWE5LTQ0
+      OTYtYWVjNy1iM2UwMGE3NDk0NWNKLgoIdGFza19rZXkSIgogMjdlZjM4Y2M5OWRhNGE4ZGVkNzBl
+      ZDQwNmU0NGFiODZKMQoHdGFza19pZBImCiQxMTgyYzllZi02NzU3LTQ0ZTktOTA4Yi1jZmE2ZWIz
+      ODYxNWF6AhgBhQEAAQAAEpACChCBZ3BQ5YuuLU2Wn6fiGtU/Egh7U3eIthSUQioOVGFzayBFeGVj
+      dXRpb24wATlIe+dcbkz4F0HwIavCbkz4F0ouCghjcmV3X2tleRIiCiBkNDI2MDgzM2FiMGMyMGJi
+      NDQ5MjJjNzk5YWE5NmI0YUoxCgdjcmV3X2lkEiYKJDIxNmJkZGQ2LWM1YTktNDQ5Ni1hZWM3LWIz
+      ZTAwYTc0OTQ1Y0ouCgh0YXNrX2tleRIiCiAyN2VmMzhjYzk5ZGE0YThkZWQ3MGVkNDA2ZTQ0YWI4
+      NkoxCgd0YXNrX2lkEiYKJDExODJjOWVmLTY3NTctNDRlOS05MDhiLWNmYTZlYjM4NjE1YXoCGAGF
+      AQABAAASjgIKEOXCP/jH0lAyFChYhl/yRVASCMIALtbkZaYqKgxUYXNrIENyZWF0ZWQwATl4b8vC
+      bkz4F0E4x8zCbkz4F0ouCghjcmV3X2tleRIiCiBkNDI2MDgzM2FiMGMyMGJiNDQ5MjJjNzk5YWE5
+      NmI0YUoxCgdjcmV3X2lkEiYKJDIxNmJkZGQ2LWM1YTktNDQ5Ni1hZWM3LWIzZTAwYTc0OTQ1Y0ou
+      Cgh0YXNrX2tleRIiCiA2MDlkZWUzOTEwODhjZDFjODdiOGZhNjZhYTY3YWRiZUoxCgd0YXNrX2lk
+      EiYKJGJkZDhiZWYxLWZhNTYtNGQwYy1hYjQ0LTdiMjE0YzY2ODhiNXoCGAGFAQABAAA=
     headers:
       Accept:
       - '*/*'
@@ -307,7 +363,7 @@ interactions:
       Connection:
       - keep-alive
       Content-Length:
-      - '612'
+      - '2501'
       Content-Type:
       - application/x-protobuf
       User-Agent:
@@ -323,30 +379,19 @@ interactions:
       Content-Type:
       - application/x-protobuf
       Date:
-      - Mon, 16 Sep 2024 08:52:12 GMT
+      - Tue, 24 Sep 2024 21:48:17 GMT
     status:
       code: 200
       message: OK
 - request:
-    body: '{"messages": [{"role": "system", "content": "You are Scorer. You''re an
-      expert scorer, specialized in scoring titles.\nYour personal goal is: Score
-      the title\nTo give my best complete final answer to the task use the exact following
-      format:\n\nThought: I now can give a great answer\nFinal Answer: Your final
-      answer must be the great and the most complete as possible, it must be outcome
-      described.\n\nI MUST use these formats, my job depends on it!"}, {"role": "user",
-      "content": "\nCurrent Task: Given the score the title ''The impact of AI in
-      the future of work'' got, give me an integer score between 1-5 for the following
-      title: ''Return of the Jedi'', you MUST give it a score, use your best judgment\n\nThis
-      is the expect criteria for your final answer: The score of the title.\nyou MUST
-      return the actual complete content as the final answer, not a summary.\n\nThis
-      is the context you''re working with:\nGiven its timely significance, broad appeal,
-      and the increasing global discourse on the subject, I score the title \"The
-      impact of AI in the future of work\" a 4. This score reflects its strong relevance
-      and potential to engage a wide audience interested in the future of technology
-      and work, despite being somewhat broad and potentially covering well-trodden
-      ground.\n\nBegin! This is VERY important to you, use the tools available and
-      give your best Final Answer, your job depends on it!\n\nThought:"}], "model":
-      "gpt-4-0125-preview", "stop": ["\nObservation:"]}'
+    body: '{"messages": [{"role": "user", "content": "5"}, {"role": "system", "content":
+      "I''m gonna convert this raw text into valid JSON.\n\nThe json should have the
+      following structure, with the following keys:\n{\n    score: int\n}"}], "model":
+      "gpt-3.5-turbo-0125", "tool_choice": {"type": "function", "function": {"name":
+      "ScoreOutput"}}, "tools": [{"type": "function", "function": {"name": "ScoreOutput",
+      "description": "Correctly extracted `ScoreOutput` with all the required parameters
+      with correct types", "parameters": {"properties": {"score": {"title": "Score",
+      "type": "integer"}}, "required": ["score"], "type": "object"}}}]}'
     headers:
       accept:
       - application/json
@@ -355,16 +400,16 @@ interactions:
       connection:
       - keep-alive
       content-length:
-      - '1470'
+      - '627'
       content-type:
       - application/json
       cookie:
-      - __cf_bm=1SckBhvJ18Dazp6bi8DEKYeiS9Q4.6_6i3nmLBw9b6g-1726476036-1.0.1.1-TnN4UpDXA33YXCVCUWOaZ12vGIg_o5NpJQEUHgjn6XdUgb7M0ND8PdkTfkd8rrxG5XFlPRMzI54GxZ0FeUY9xw;
-        _cfuvid=0Rs4xTPk7h7OIXuSbTgMVVD9JSoZeKMwnygKHoHQo3k-1726476036297-0.0.1.1-604800000
+      - __cf_bm=9.8sBYBkvBR8R1K_bVF7xgU..80XKlEIg3N2OBbTSCU-1727214102-1.0.1.1-.qiTLXbPamYUMSuyNsOEB9jhGu.jOifujOrx9E2JZvStbIZ9RTIiE44xKKNfLPxQkOi6qAT3h6htK8lPDGV_5g;
+        _cfuvid=lbRdAddVWV6W3f5Dm9SaOPWDUOxqtZBSPr_fTW26nEA-1727213194587-0.0.1.1-604800000
       host:
       - api.openai.com
       user-agent:
-      - OpenAI/Python 1.45.0
+      - OpenAI/Python 1.47.0
       x-stainless-arch:
       - arm64
       x-stainless-async:
@@ -374,7 +419,7 @@ interactions:
       x-stainless-os:
       - MacOS
       x-stainless-package-version:
-      - 1.45.0
+      - 1.47.0
       x-stainless-raw-response:
       - 'true'
       x-stainless-runtime:
@@ -384,146 +429,22 @@ interactions:
     method: POST
     uri: https://api.openai.com/v1/chat/completions
   response:
-    content: "{\n  \"id\": \"chatcmpl-A81kq3KaGNpIAhVqjGE1jhO08zJll\",\n  \"object\":
-      \"chat.completion\",\n  \"created\": 1726476732,\n  \"model\": \"gpt-4-0125-preview\",\n
-      \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
-      \"assistant\",\n        \"content\": \"Thought: I now can give a great answer\\n\\nFinal
-      Answer: Given that \\\"Return of the Jedi\\\" is a title with significant cultural
-      impact, high recognition, and appeal across multiple generations, yet the scoring
-      criteria here seems more aligned with relevance, newsworthiness, and potential
-      for broad discourse, it presents a challenge. \\\"Return of the Jedi,\\\" while
-      iconic in the realm of entertainment, may not directly align with the criteria
-      applied to \\\"The impact of AI in the future of work.\\\" However, considering
-      its cultural significance, nostalgia, and the breadth of analysis it can inspire
-      among different demographics, I am inclined to give it a score that acknowledges
-      its enduring importance and potential for discourse in its domain. Therefore,
-      the score of the title \\\"Return of the Jedi\\\" is 3. This reflects its strong
-      cultural impact and appeal, while acknowledging that its relevance is more niche
-      compared to topics of broad current affairs or technological impact.\",\n        \"refusal\":
-      null\n      },\n      \"logprobs\": null,\n      \"finish_reason\": \"stop\"\n
-      \   }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 292,\n    \"completion_tokens\":
-      185,\n    \"total_tokens\": 477,\n    \"completion_tokens_details\": {\n      \"reasoning_tokens\":
-      0\n    }\n  },\n  \"system_fingerprint\": null\n}\n"
-    headers:
-      CF-Cache-Status:
-      - DYNAMIC
-      CF-RAY:
-      - 8c3f9e78b8362233-MIA
-      Connection:
-      - keep-alive
-      Content-Encoding:
-      - gzip
-      Content-Type:
-      - application/json
-      Date:
-      - Mon, 16 Sep 2024 08:52:16 GMT
-      Server:
-      - cloudflare
-      Transfer-Encoding:
-      - chunked
-      X-Content-Type-Options:
-      - nosniff
-      access-control-expose-headers:
-      - X-Request-ID
-      alt-svc:
-      - h3=":443"; ma=86400
-      openai-organization:
-      - crewai-iuxna1
-      openai-processing-ms:
-      - '4530'
-      openai-version:
-      - '2020-10-01'
-      strict-transport-security:
-      - max-age=15552000; includeSubDomains; preload
-      x-ratelimit-limit-requests:
-      - '10000'
-      x-ratelimit-limit-tokens:
-      - '2000000'
-      x-ratelimit-remaining-requests:
-      - '9999'
-      x-ratelimit-remaining-tokens:
-      - '1999653'
-      x-ratelimit-reset-requests:
-      - 6ms
-      x-ratelimit-reset-tokens:
-      - 10ms
-      x-request-id:
-      - req_e72592ccfe7786565c85a145247cab18
-    http_version: HTTP/1.1
-    status_code: 200
-- request:
-    body: '{"messages": [{"role": "user", "content": "Given that \"Return of the Jedi\"
-      is a title with significant cultural impact, high recognition, and appeal across
-      multiple generations, yet the scoring criteria here seems more aligned with
-      relevance, newsworthiness, and potential for broad discourse, it presents a
-      challenge. \"Return of the Jedi,\" while iconic in the realm of entertainment,
-      may not directly align with the criteria applied to \"The impact of AI in the
-      future of work.\" However, considering its cultural significance, nostalgia,
-      and the breadth of analysis it can inspire among different demographics, I am
-      inclined to give it a score that acknowledges its enduring importance and potential
-      for discourse in its domain. Therefore, the score of the title \"Return of the
-      Jedi\" is 3. This reflects its strong cultural impact and appeal, while acknowledging
-      that its relevance is more niche compared to topics of broad current affairs
-      or technological impact."}, {"role": "system", "content": "I''m gonna convert
-      this raw text into valid JSON."}], "model": "gpt-3.5-turbo-0125", "tool_choice":
-      {"type": "function", "function": {"name": "ScoreOutput"}}, "tools": [{"type":
-      "function", "function": {"name": "ScoreOutput", "description": "Correctly extracted
-      `ScoreOutput` with all the required parameters with correct types", "parameters":
-      {"properties": {"score": {"title": "Score", "type": "integer"}}, "required":
-      ["score"], "type": "object"}}}]}'
-    headers:
-      accept:
-      - application/json
-      accept-encoding:
-      - gzip, deflate
-      connection:
-      - keep-alive
-      content-length:
-      - '1459'
-      content-type:
-      - application/json
-      cookie:
-      - __cf_bm=04EJuO0mh2HU6FxLd2CpOc6Z6MMpyxhMCz_t6onOpaY-1726476704-1.0.1.1-BHP4W7X58z8ba4ns2wYBcPx53or5JKBDisMn8i7dQluTmjuN201bym7OqEkZrmUlhr0n3oODNJf0SS5BVipRKg;
-        _cfuvid=JBsdqQQtLEVtIStEIeDR0TRIr0GMGhWKAyum6suoH.4-1726476704561-0.0.1.1-604800000
-      host:
-      - api.openai.com
-      user-agent:
-      - OpenAI/Python 1.45.0
-      x-stainless-arch:
-      - arm64
-      x-stainless-async:
-      - 'false'
-      x-stainless-lang:
-      - python
-      x-stainless-os:
-      - MacOS
-      x-stainless-package-version:
-      - 1.45.0
-      x-stainless-raw-response:
-      - 'true'
-      x-stainless-runtime:
-      - CPython
-      x-stainless-runtime-version:
-      - 3.11.7
-    method: POST
-    uri: https://api.openai.com/v1/chat/completions
-  response:
-    content: "{\n  \"id\": \"chatcmpl-A81kvyOP7857BBzshHVza46XlbY5k\",\n  \"object\":
-      \"chat.completion\",\n  \"created\": 1726476737,\n  \"model\": \"gpt-3.5-turbo-0125\",\n
+    content: "{\n  \"id\": \"chatcmpl-AB7gHtXxJaZ5NZiXZzc0HUAObflqc\",\n  \"object\":
+      \"chat.completion\",\n  \"created\": 1727214497,\n  \"model\": \"gpt-3.5-turbo-0125\",\n
       \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
       \"assistant\",\n        \"content\": null,\n        \"tool_calls\": [\n          {\n
-      \           \"id\": \"call_BXw0bst4K50tc9HTaQehU0pd\",\n            \"type\":
+      \           \"id\": \"call_hFpl2Plo4DudP1t3SGHby2vo\",\n            \"type\":
       \"function\",\n            \"function\": {\n              \"name\": \"ScoreOutput\",\n
-      \             \"arguments\": \"{\\\"score\\\":3}\"\n            }\n          }\n
+      \             \"arguments\": \"{\\\"score\\\":5}\"\n            }\n          }\n
       \       ],\n        \"refusal\": null\n      },\n      \"logprobs\": null,\n
       \     \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\":
-      254,\n    \"completion_tokens\": 5,\n    \"total_tokens\": 259,\n    \"completion_tokens_details\":
+      103,\n    \"completion_tokens\": 5,\n    \"total_tokens\": 108,\n    \"completion_tokens_details\":
       {\n      \"reasoning_tokens\": 0\n    }\n  },\n  \"system_fingerprint\": null\n}\n"
     headers:
       CF-Cache-Status:
       - DYNAMIC
       CF-RAY:
-      - 8c3f9e96eaf63708-MIA
+      - 8c85fa4cebc21cf3-GRU
       Connection:
       - keep-alive
       Content-Encoding:
@@ -531,7 +452,7 @@ interactions:
       Content-Type:
       - application/json
       Date:
-      - Mon, 16 Sep 2024 08:52:17 GMT
+      - Tue, 24 Sep 2024 21:48:17 GMT
       Server:
       - cloudflare
       Transfer-Encoding:
@@ -540,16 +461,14 @@ interactions:
       - nosniff
       access-control-expose-headers:
       - X-Request-ID
-      alt-svc:
-      - h3=":443"; ma=86400
       openai-organization:
       - crewai-iuxna1
       openai-processing-ms:
-      - '162'
+      - '196'
       openai-version:
       - '2020-10-01'
       strict-transport-security:
-      - max-age=15552000; includeSubDomains; preload
+      - max-age=31536000; includeSubDomains; preload
       x-ratelimit-limit-requests:
       - '10000'
       x-ratelimit-limit-tokens:
@@ -557,13 +476,13 @@ interactions:
       x-ratelimit-remaining-requests:
       - '9999'
       x-ratelimit-remaining-tokens:
-      - '49999738'
+      - '49999947'
       x-ratelimit-reset-requests:
       - 6ms
       x-ratelimit-reset-tokens:
       - 0s
       x-request-id:
-      - req_4abb4498bb8413c7337cc80888076598
+      - req_deaa35bcd479744c6ce7363ae1b27d9e
     http_version: HTTP/1.1
     status_code: 200
 version: 1

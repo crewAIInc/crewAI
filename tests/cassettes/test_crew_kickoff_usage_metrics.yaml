@@ -10,7 +10,7 @@ interactions:
       criteria for your final answer: 1 bullet point about dog that''s under 15 words.\nyou
       MUST return the actual complete content as the final answer, not a summary.\n\nBegin!
       This is VERY important to you, use the tools available and give your best Final
-      Answer, your job depends on it!\n\nThought:"}], "model": "gpt-4o", "stop": ["\nObservation:"]}'
+      Answer, your job depends on it!\n\nThought:"}], "model": "gpt-4o"}'
     headers:
       accept:
       - application/json
@@ -19,16 +19,16 @@ interactions:
       connection:
       - keep-alive
       content-length:
-      - '897'
+      - '869'
       content-type:
       - application/json
       cookie:
-      - __cf_bm=1SckBhvJ18Dazp6bi8DEKYeiS9Q4.6_6i3nmLBw9b6g-1726476036-1.0.1.1-TnN4UpDXA33YXCVCUWOaZ12vGIg_o5NpJQEUHgjn6XdUgb7M0ND8PdkTfkd8rrxG5XFlPRMzI54GxZ0FeUY9xw;
-        _cfuvid=0Rs4xTPk7h7OIXuSbTgMVVD9JSoZeKMwnygKHoHQo3k-1726476036297-0.0.1.1-604800000
+      - __cf_bm=9.8sBYBkvBR8R1K_bVF7xgU..80XKlEIg3N2OBbTSCU-1727214102-1.0.1.1-.qiTLXbPamYUMSuyNsOEB9jhGu.jOifujOrx9E2JZvStbIZ9RTIiE44xKKNfLPxQkOi6qAT3h6htK8lPDGV_5g;
+        _cfuvid=lbRdAddVWV6W3f5Dm9SaOPWDUOxqtZBSPr_fTW26nEA-1727213194587-0.0.1.1-604800000
       host:
       - api.openai.com
       user-agent:
-      - OpenAI/Python 1.45.0
+      - OpenAI/Python 1.47.0
       x-stainless-arch:
       - arm64
       x-stainless-async:
@@ -38,7 +38,7 @@ interactions:
       x-stainless-os:
       - MacOS
       x-stainless-package-version:
-      - 1.45.0
+      - 1.47.0
       x-stainless-raw-response:
       - 'true'
       x-stainless-runtime:
@@ -48,20 +48,20 @@ interactions:
     method: POST
     uri: https://api.openai.com/v1/chat/completions
   response:
-    content: "{\n  \"id\": \"chatcmpl-A81hHah5CYxJZSmr9wGaGaakN0QTS\",\n  \"object\":
-      \"chat.completion\",\n  \"created\": 1726476511,\n  \"model\": \"gpt-4o-2024-05-13\",\n
+    content: "{\n  \"id\": \"chatcmpl-AB7auGDrAVE0iXSBBhySZp3xE8gvP\",\n  \"object\":
+      \"chat.completion\",\n  \"created\": 1727214164,\n  \"model\": \"gpt-4o-2024-05-13\",\n
       \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
-      \"assistant\",\n        \"content\": \"Thought: I now can give a great answer\\nFinal
-      Answer: Dogs are unmatched in loyalty and provide immense emotional support.\",\n
-      \       \"refusal\": null\n      },\n      \"logprobs\": null,\n      \"finish_reason\":
-      \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 175,\n    \"completion_tokens\":
-      24,\n    \"total_tokens\": 199,\n    \"completion_tokens_details\": {\n      \"reasoning_tokens\":
-      0\n    }\n  },\n  \"system_fingerprint\": \"fp_25624ae3a5\"\n}\n"
+      \"assistant\",\n        \"content\": \"I now can give a great answer\\nFinal
+      Answer: Dogs are unparalleled in loyalty and companionship to humans.\",\n        \"refusal\":
+      null\n      },\n      \"logprobs\": null,\n      \"finish_reason\": \"stop\"\n
+      \   }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 175,\n    \"completion_tokens\":
+      21,\n    \"total_tokens\": 196,\n    \"completion_tokens_details\": {\n      \"reasoning_tokens\":
+      0\n    }\n  },\n  \"system_fingerprint\": \"fp_e375328146\"\n}\n"
     headers:
       CF-Cache-Status:
       - DYNAMIC
       CF-RAY:
-      - 8c3f9915be642233-MIA
+      - 8c85f22ddda01cf3-GRU
       Connection:
       - keep-alive
       Content-Encoding:
@@ -69,7 +69,7 @@ interactions:
       Content-Type:
       - application/json
       Date:
-      - Mon, 16 Sep 2024 08:48:32 GMT
+      - Tue, 24 Sep 2024 21:42:44 GMT
       Server:
       - cloudflare
       Transfer-Encoding:
@@ -78,16 +78,14 @@ interactions:
       - nosniff
       access-control-expose-headers:
       - X-Request-ID
-      alt-svc:
-      - h3=":443"; ma=86400
       openai-organization:
       - crewai-iuxna1
       openai-processing-ms:
-      - '351'
+      - '349'
       openai-version:
       - '2020-10-01'
       strict-transport-security:
-      - max-age=15552000; includeSubDomains; preload
+      - max-age=31536000; includeSubDomains; preload
       x-ratelimit-limit-requests:
       - '10000'
       x-ratelimit-limit-tokens:
@@ -101,111 +99,9 @@ interactions:
       x-ratelimit-reset-tokens:
       - 0s
       x-request-id:
-      - req_3c02cd956e509f1aa5bc336cfd801dae
+      - req_4c8cd76fdfba7b65e5ce85397b33c22b
     http_version: HTTP/1.1
     status_code: 200
-- request:
-    body: !!binary |
-      Ct0fCiQKIgoMc2VydmljZS5uYW1lEhIKEGNyZXdBSS10ZWxlbWV0cnkStB8KEgoQY3Jld2FpLnRl
-      bGVtZXRyeRKNAQoQgWSGXmL3n5/Nn4d4Q7JN+RIInW6DEJHNsMEqClRvb2wgVXNhZ2UwATnQvRtp
-      PK31F0EAGyBpPK31F0oaCg5jcmV3YWlfdmVyc2lvbhIICgYwLjU2LjNKGQoJdG9vbF9uYW1lEgwK
-      Cm11bHRpcGxpZXJKDgoIYXR0ZW1wdHMSAhgBegIYAYUBAAEAABKQAgoQiu+PNlF/SMRiJpVG+2xK
-      SBII8uD64nP0WbQqDlRhc2sgRXhlY3V0aW9uMAE58OX6Nzyt9RdBWCTUijyt9RdKLgoIY3Jld19r
-      ZXkSIgogNDczZTRkYmQyOTk4NzcxMjBlYjc1YzI1ZGE2MjIzNzVKMQoHY3Jld19pZBImCiQwZjBh
-      MmU3MS0zZDlmLTRiMGQtYmNiNS1hOWU5Nzk1NmJkZGJKLgoIdGFza19rZXkSIgogMDhjZGU5MDkz
-      OTE2OTk0NTczMzAyYzcxMTdhOTZjZDVKMQoHdGFza19pZBImCiQ1ZTc4NDk5MC0yMzU2LTRjOGEt
-      YTIwNy0yYjAwMTM2MjExYzR6AhgBhQEAAQAAEo4CChCawjsuVvrIM7SlKNN1ZaGdEgiZGTmWt8+g
-      hCoMVGFzayBDcmVhdGVkMAE54Lj9ijyt9RdBiJH/ijyt9RdKLgoIY3Jld19rZXkSIgogNDczZTRk
-      YmQyOTk4NzcxMjBlYjc1YzI1ZGE2MjIzNzVKMQoHY3Jld19pZBImCiQwZjBhMmU3MS0zZDlmLTRi
-      MGQtYmNiNS1hOWU5Nzk1NmJkZGJKLgoIdGFza19rZXkSIgogODBhYTc1Njk5ZjRhZDYyOTFkYmUx
-      MGU0ZDY2OTgwMjlKMQoHdGFza19pZBImCiRjMzE3N2Y2Ny1kN2EwLTQzMmEtYmYwNi01YzUwODIy
-      MDM0NWN6AhgBhQEAAQAAEo0BChBOg3h2xztdZNBjM0wgppknEgjlIq0fArZITioKVG9vbCBVc2Fn
-      ZTABOdhIk9s8rfUXQTDJl9s8rfUXShoKDmNyZXdhaV92ZXJzaW9uEggKBjAuNTYuM0oZCgl0b29s
-      X25hbWUSDAoKbXVsdGlwbGllckoOCghhdHRlbXB0cxICGAF6AhgBhQEAAQAAEpACChD0rqot9Hwi
-      rq9jMsaPYc4KEgjeYeGjXaz7bSoOVGFzayBFeGVjdXRpb24wATn4JQCLPK31F0FgHK77PK31F0ou
-      CghjcmV3X2tleRIiCiA0NzNlNGRiZDI5OTg3NzEyMGViNzVjMjVkYTYyMjM3NUoxCgdjcmV3X2lk
-      EiYKJDBmMGEyZTcxLTNkOWYtNGIwZC1iY2I1LWE5ZTk3OTU2YmRkYkouCgh0YXNrX2tleRIiCiA4
-      MGFhNzU2OTlmNGFkNjI5MWRiZTEwZTRkNjY5ODAyOUoxCgd0YXNrX2lkEiYKJGMzMTc3ZjY3LWQ3
-      YTAtNDMyYS1iZjA2LTVjNTA4MjIwMzQ1Y3oCGAGFAQABAAASyAcKEAsR/ZE/PKBQNhQNIXciFdQS
-      CEoa3Oa3/27LKgxDcmV3IENyZWF0ZWQwATkYFxP9PK31F0FYHhf9PK31F0oaCg5jcmV3YWlfdmVy
-      c2lvbhIICgYwLjU2LjNKGgoOcHl0aG9uX3ZlcnNpb24SCAoGMy4xMS43Si4KCGNyZXdfa2V5EiIK
-      IDQwNTNkYThiNDliNDA2YzMyM2M2Njk1NjAxNGExZDk4SjEKB2NyZXdfaWQSJgokZTlhZTllM2Ut
-      NTQzYi00NzdkLWFiZDUtMzQ3M2NhMjFhNTMyShwKDGNyZXdfcHJvY2VzcxIMCgpzZXF1ZW50aWFs
-      ShEKC2NyZXdfbWVtb3J5EgIQAEoaChRjcmV3X251bWJlcl9vZl90YXNrcxICGAFKGwoVY3Jld19u
-      dW1iZXJfb2ZfYWdlbnRzEgIYAUrYAgoLY3Jld19hZ2VudHMSyAIKxQJbeyJrZXkiOiAiZDZjNTdk
-      MDMwMzJkNjk5NzRmNjY5MWY1NWE4ZTM1ZTMiLCAiaWQiOiAiNDAxMjA1NWUtOTQ3My00MmUxLTk4
-      OTUtMGNkYjcyMDViYmFhIiwgInJvbGUiOiAiVmVyeSBoZWxwZnVsIGFzc2lzdGFudCIsICJ2ZXJi
-      b3NlPyI6IHRydWUsICJtYXhfaXRlciI6IDIsICJtYXhfcnBtIjogbnVsbCwgImZ1bmN0aW9uX2Nh
-      bGxpbmdfbGxtIjogbnVsbCwgImxsbSI6ICJncHQtNG8iLCAiZGVsZWdhdGlvbl9lbmFibGVkPyI6
-      IGZhbHNlLCAiYWxsb3dfY29kZV9leGVjdXRpb24/IjogZmFsc2UsICJtYXhfcmV0cnlfbGltaXQi
-      OiAyLCAidG9vbHNfbmFtZXMiOiBbXX1dSp0CCgpjcmV3X3Rhc2tzEo4CCosCW3sia2V5IjogIjJh
-      YjM3NzY0NTdhZGFhOGUxZjE2NTAzOWMwMWY3MTQ0IiwgImlkIjogImJiNTVhNzc2LWQ2ZjktNDhj
-      Yi1iYzU5LWU0M2MyNDAyZGVkMyIsICJhc3luY19leGVjdXRpb24/IjogZmFsc2UsICJodW1hbl9p
-      bnB1dD8iOiBmYWxzZSwgImFnZW50X3JvbGUiOiAiVmVyeSBoZWxwZnVsIGFzc2lzdGFudCIsICJh
-      Z2VudF9rZXkiOiAiZDZjNTdkMDMwMzJkNjk5NzRmNjY5MWY1NWE4ZTM1ZTMiLCAidG9vbHNfbmFt
-      ZXMiOiBbImdldF9maW5hbF9hbnN3ZXIiXX1degIYAYUBAAEAABKOAgoQmkKhqxeg6ew6fAzBhHnR
-      fRIIi4NwL78KfmsqDFRhc2sgQ3JlYXRlZDABOXhBM/08rfUXQfj8M/08rfUXSi4KCGNyZXdfa2V5
-      EiIKIDQwNTNkYThiNDliNDA2YzMyM2M2Njk1NjAxNGExZDk4SjEKB2NyZXdfaWQSJgokZTlhZTll
-      M2UtNTQzYi00NzdkLWFiZDUtMzQ3M2NhMjFhNTMySi4KCHRhc2tfa2V5EiIKIDJhYjM3NzY0NTdh
-      ZGFhOGUxZjE2NTAzOWMwMWY3MTQ0SjEKB3Rhc2tfaWQSJgokYmI1NWE3NzYtZDZmOS00OGNiLWJj
-      NTktZTQzYzI0MDJkZWQzegIYAYUBAAEAABKTAQoQYJFKsdYYZImLkpIjAXQ3HRII615w3onhD2wq
-      ClRvb2wgVXNhZ2UwATlogIo/Pa31F0F4GI0/Pa31F0oaCg5jcmV3YWlfdmVyc2lvbhIICgYwLjU2
-      LjNKHwoJdG9vbF9uYW1lEhIKEGdldF9maW5hbF9hbnN3ZXJKDgoIYXR0ZW1wdHMSAhgBegIYAYUB
-      AAEAABKQAgoQW/sVzX2QVLLjBANpMK88yBIIN67lUYn+5lUqDlRhc2sgRXhlY3V0aW9uMAE5oF40
-      /Tyt9RdBOH77ZD2t9RdKLgoIY3Jld19rZXkSIgogNDA1M2RhOGI0OWI0MDZjMzIzYzY2OTU2MDE0
-      YTFkOThKMQoHY3Jld19pZBImCiRlOWFlOWUzZS01NDNiLTQ3N2QtYWJkNS0zNDczY2EyMWE1MzJK
-      LgoIdGFza19rZXkSIgogMmFiMzc3NjQ1N2FkYWE4ZTFmMTY1MDM5YzAxZjcxNDRKMQoHdGFza19p
-      ZBImCiRiYjU1YTc3Ni1kNmY5LTQ4Y2ItYmM1OS1lNDNjMjQwMmRlZDN6AhgBhQEAAQAAErAHChDc
-      0lRIYRljfS8nHPDzCO7oEgiynSjQTwWAtyoMQ3JldyBDcmVhdGVkMAE5EJk+Zj2t9RdBmI5DZj2t
-      9RdKGgoOY3Jld2FpX3ZlcnNpb24SCAoGMC41Ni4zShoKDnB5dGhvbl92ZXJzaW9uEggKBjMuMTEu
-      N0ouCghjcmV3X2tleRIiCiBlZTY3NDVkN2M4YWU4MmUwMGRmOTRkZTBmN2Y4NzExOEoxCgdjcmV3
-      X2lkEiYKJDJiZTdjY2Y4LTJiYWItNGIxNS05ZGY3LWNlYjU0OWU3MTIxMUocCgxjcmV3X3Byb2Nl
-      c3MSDAoKc2VxdWVudGlhbEoRCgtjcmV3X21lbW9yeRICEABKGgoUY3Jld19udW1iZXJfb2ZfdGFz
-      a3MSAhgBShsKFWNyZXdfbnVtYmVyX29mX2FnZW50cxICGAFK1gIKC2NyZXdfYWdlbnRzEsYCCsMC
-      W3sia2V5IjogImYzMzg2ZjZkOGRhNzVhYTQxNmE2ZTMxMDA1M2Y3Njk4IiwgImlkIjogImUwMTcw
-      MDAzLWY0MzEtNDZjYy05YzRkLWVmMGFmMTE1NGRiOCIsICJyb2xlIjogInt0b3BpY30gUmVzZWFy
-      Y2hlciIsICJ2ZXJib3NlPyI6IGZhbHNlLCAibWF4X2l0ZXIiOiAxNSwgIm1heF9ycG0iOiBudWxs
-      LCAiZnVuY3Rpb25fY2FsbGluZ19sbG0iOiBudWxsLCAibGxtIjogImdwdC00byIsICJkZWxlZ2F0
-      aW9uX2VuYWJsZWQ/IjogZmFsc2UsICJhbGxvd19jb2RlX2V4ZWN1dGlvbj8iOiBmYWxzZSwgIm1h
-      eF9yZXRyeV9saW1pdCI6IDIsICJ0b29sc19uYW1lcyI6IFtdfV1KhwIKCmNyZXdfdGFza3MS+AEK
-      9QFbeyJrZXkiOiAiMDZhNzMyMjBmNDE0OGE0YmJkNWJhY2IwZDBiNDRmY2UiLCAiaWQiOiAiMDcz
-      MTc2N2YtNDJjNC00ODAxLWEyY2EtNmI3NjM5Yzk1NWYzIiwgImFzeW5jX2V4ZWN1dGlvbj8iOiBm
-      YWxzZSwgImh1bWFuX2lucHV0PyI6IGZhbHNlLCAiYWdlbnRfcm9sZSI6ICJ7dG9waWN9IFJlc2Vh
-      cmNoZXIiLCAiYWdlbnRfa2V5IjogImYzMzg2ZjZkOGRhNzVhYTQxNmE2ZTMxMDA1M2Y3Njk4Iiwg
-      InRvb2xzX25hbWVzIjogW119XXoCGAGFAQABAAASjgIKEFbcYABaOHf2imgWgX2IeusSCAGB3fL7
-      V+9kKgxUYXNrIENyZWF0ZWQwATmwF2tmPa31F0H4BWxmPa31F0ouCghjcmV3X2tleRIiCiBkMGZl
-      ZTY5MzIzOTU4ODZmMjAzZjQ0NmI3MmMxYjAwYUoxCgdjcmV3X2lkEiYKJDJiZTdjY2Y4LTJiYWIt
-      NGIxNS05ZGY3LWNlYjU0OWU3MTIxMUouCgh0YXNrX2tleRIiCiAwNmE3MzIyMGY0MTQ4YTRiYmQ1
-      YmFjYjBkMGI0NGZjZUoxCgd0YXNrX2lkEiYKJDA3MzE3NjdmLTQyYzQtNDgwMS1hMmNhLTZiNzYz
-      OWM5NTVmM3oCGAGFAQABAAA=
-    headers:
-      Accept:
-      - '*/*'
-      Accept-Encoding:
-      - gzip, deflate
-      Connection:
-      - keep-alive
-      Content-Length:
-      - '4064'
-      Content-Type:
-      - application/x-protobuf
-      User-Agent:
-      - OTel-OTLP-Exporter-Python/1.27.0
-    method: POST
-    uri: https://telemetry.crewai.com:4319/v1/traces
-  response:
-    body:
-      string: "\n\0"
-    headers:
-      Content-Length:
-      - '2'
-      Content-Type:
-      - application/x-protobuf
-      Date:
-      - Mon, 16 Sep 2024 08:48:32 GMT
-    status:
-      code: 200
-      message: OK
 - request:
     body: '{"messages": [{"role": "system", "content": "You are cat Researcher. You
       have a lot of experience with cat.\nYour personal goal is: Express hot takes
@@ -217,7 +113,7 @@ interactions:
       criteria for your final answer: 1 bullet point about cat that''s under 15 words.\nyou
       MUST return the actual complete content as the final answer, not a summary.\n\nBegin!
       This is VERY important to you, use the tools available and give your best Final
-      Answer, your job depends on it!\n\nThought:"}], "model": "gpt-4o", "stop": ["\nObservation:"]}'
+      Answer, your job depends on it!\n\nThought:"}], "model": "gpt-4o"}'
     headers:
       accept:
       - application/json
@@ -226,16 +122,16 @@ interactions:
       connection:
       - keep-alive
       content-length:
-      - '897'
+      - '869'
       content-type:
       - application/json
       cookie:
-      - __cf_bm=1SckBhvJ18Dazp6bi8DEKYeiS9Q4.6_6i3nmLBw9b6g-1726476036-1.0.1.1-TnN4UpDXA33YXCVCUWOaZ12vGIg_o5NpJQEUHgjn6XdUgb7M0ND8PdkTfkd8rrxG5XFlPRMzI54GxZ0FeUY9xw;
-        _cfuvid=0Rs4xTPk7h7OIXuSbTgMVVD9JSoZeKMwnygKHoHQo3k-1726476036297-0.0.1.1-604800000
+      - __cf_bm=9.8sBYBkvBR8R1K_bVF7xgU..80XKlEIg3N2OBbTSCU-1727214102-1.0.1.1-.qiTLXbPamYUMSuyNsOEB9jhGu.jOifujOrx9E2JZvStbIZ9RTIiE44xKKNfLPxQkOi6qAT3h6htK8lPDGV_5g;
+        _cfuvid=lbRdAddVWV6W3f5Dm9SaOPWDUOxqtZBSPr_fTW26nEA-1727213194587-0.0.1.1-604800000
       host:
       - api.openai.com
       user-agent:
-      - OpenAI/Python 1.45.0
+      - OpenAI/Python 1.47.0
       x-stainless-arch:
       - arm64
       x-stainless-async:
@@ -245,7 +141,7 @@ interactions:
       x-stainless-os:
       - MacOS
       x-stainless-package-version:
-      - 1.45.0
+      - 1.47.0
       x-stainless-raw-response:
       - 'true'
       x-stainless-runtime:
@@ -255,20 +151,20 @@ interactions:
     method: POST
     uri: https://api.openai.com/v1/chat/completions
   response:
-    content: "{\n  \"id\": \"chatcmpl-A81hIJY8BU91laAYgbqJNRaI7sszj\",\n  \"object\":
-      \"chat.completion\",\n  \"created\": 1726476512,\n  \"model\": \"gpt-4o-2024-05-13\",\n
+    content: "{\n  \"id\": \"chatcmpl-AB7auNbAqjT3rgBX92rhxBLuhaLBj\",\n  \"object\":
+      \"chat.completion\",\n  \"created\": 1727214164,\n  \"model\": \"gpt-4o-2024-05-13\",\n
       \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
       \"assistant\",\n        \"content\": \"Thought: I now can give a great answer\\nFinal
-      Answer: Cats communicate primarily through body language and vocalizations unique
-      to each individual.\",\n        \"refusal\": null\n      },\n      \"logprobs\":
+      Answer: Cats are highly independent, agile, and intuitive creatures beloved
+      by millions worldwide.\",\n        \"refusal\": null\n      },\n      \"logprobs\":
       null,\n      \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\":
-      175,\n    \"completion_tokens\": 27,\n    \"total_tokens\": 202,\n    \"completion_tokens_details\":
-      {\n      \"reasoning_tokens\": 0\n    }\n  },\n  \"system_fingerprint\": \"fp_25624ae3a5\"\n}\n"
+      175,\n    \"completion_tokens\": 28,\n    \"total_tokens\": 203,\n    \"completion_tokens_details\":
+      {\n      \"reasoning_tokens\": 0\n    }\n  },\n  \"system_fingerprint\": \"fp_e375328146\"\n}\n"
     headers:
       CF-Cache-Status:
       - DYNAMIC
       CF-RAY:
-      - 8c3f991a5fa02233-MIA
+      - 8c85f2321c1c1cf3-GRU
       Connection:
       - keep-alive
       Content-Encoding:
@@ -276,7 +172,7 @@ interactions:
       Content-Type:
       - application/json
       Date:
-      - Mon, 16 Sep 2024 08:48:33 GMT
+      - Tue, 24 Sep 2024 21:42:45 GMT
       Server:
       - cloudflare
       Transfer-Encoding:
@@ -285,16 +181,14 @@ interactions:
       - nosniff
       access-control-expose-headers:
       - X-Request-ID
-      alt-svc:
-      - h3=":443"; ma=86400
       openai-organization:
       - crewai-iuxna1
       openai-processing-ms:
-      - '385'
+      - '430'
       openai-version:
       - '2020-10-01'
       strict-transport-security:
-      - max-age=15552000; includeSubDomains; preload
+      - max-age=31536000; includeSubDomains; preload
       x-ratelimit-limit-requests:
       - '10000'
       x-ratelimit-limit-tokens:
@@ -308,7 +202,7 @@ interactions:
       x-ratelimit-reset-tokens:
       - 0s
       x-request-id:
-      - req_2a5e5bc06c18ad64812819bdeb030a5f
+      - req_ace859b7d9e83d9fa7753ce23bb03716
     http_version: HTTP/1.1
     status_code: 200
 - request:
@@ -323,7 +217,7 @@ interactions:
       under 15 words.\nyou MUST return the actual complete content as the final answer,
       not a summary.\n\nBegin! This is VERY important to you, use the tools available
       and give your best Final Answer, your job depends on it!\n\nThought:"}], "model":
-      "gpt-4o", "stop": ["\nObservation:"]}'
+      "gpt-4o"}'
     headers:
       accept:
       - application/json
@@ -332,16 +226,16 @@ interactions:
       connection:
       - keep-alive
       content-length:
-      - '907'
+      - '879'
       content-type:
       - application/json
       cookie:
-      - __cf_bm=1SckBhvJ18Dazp6bi8DEKYeiS9Q4.6_6i3nmLBw9b6g-1726476036-1.0.1.1-TnN4UpDXA33YXCVCUWOaZ12vGIg_o5NpJQEUHgjn6XdUgb7M0ND8PdkTfkd8rrxG5XFlPRMzI54GxZ0FeUY9xw;
-        _cfuvid=0Rs4xTPk7h7OIXuSbTgMVVD9JSoZeKMwnygKHoHQo3k-1726476036297-0.0.1.1-604800000
+      - __cf_bm=9.8sBYBkvBR8R1K_bVF7xgU..80XKlEIg3N2OBbTSCU-1727214102-1.0.1.1-.qiTLXbPamYUMSuyNsOEB9jhGu.jOifujOrx9E2JZvStbIZ9RTIiE44xKKNfLPxQkOi6qAT3h6htK8lPDGV_5g;
+        _cfuvid=lbRdAddVWV6W3f5Dm9SaOPWDUOxqtZBSPr_fTW26nEA-1727213194587-0.0.1.1-604800000
       host:
       - api.openai.com
       user-agent:
-      - OpenAI/Python 1.45.0
+      - OpenAI/Python 1.47.0
       x-stainless-arch:
       - arm64
       x-stainless-async:
@@ -351,7 +245,7 @@ interactions:
       x-stainless-os:
       - MacOS
       x-stainless-package-version:
-      - 1.45.0
+      - 1.47.0
       x-stainless-raw-response:
       - 'true'
       x-stainless-runtime:
@@ -361,20 +255,20 @@ interactions:
     method: POST
     uri: https://api.openai.com/v1/chat/completions
   response:
-    content: "{\n  \"id\": \"chatcmpl-A81hJ1Eobhtk6UQ0SMVhWiY6ntyTE\",\n  \"object\":
-      \"chat.completion\",\n  \"created\": 1726476513,\n  \"model\": \"gpt-4o-2024-05-13\",\n
+    content: "{\n  \"id\": \"chatcmpl-AB7avZ0yqY18ukQS7SnLkZydsx72b\",\n  \"object\":
+      \"chat.completion\",\n  \"created\": 1727214165,\n  \"model\": \"gpt-4o-2024-05-13\",\n
       \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
-      \"assistant\",\n        \"content\": \"I now can give a great answer\\nFinal
-      Answer: Apples are rich in fiber and antioxidants, contributing to numerous
-      health benefits.\",\n        \"refusal\": null\n      },\n      \"logprobs\":
-      null,\n      \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\":
-      175,\n    \"completion_tokens\": 25,\n    \"total_tokens\": 200,\n    \"completion_tokens_details\":
-      {\n      \"reasoning_tokens\": 0\n    }\n  },\n  \"system_fingerprint\": \"fp_25624ae3a5\"\n}\n"
+      \"assistant\",\n        \"content\": \"I now can give a great answer.\\n\\nFinal
+      Answer: Apples are incredibly versatile, nutritious, and a staple in diets globally.\",\n
+      \       \"refusal\": null\n      },\n      \"logprobs\": null,\n      \"finish_reason\":
+      \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 175,\n    \"completion_tokens\":
+      25,\n    \"total_tokens\": 200,\n    \"completion_tokens_details\": {\n      \"reasoning_tokens\":
+      0\n    }\n  },\n  \"system_fingerprint\": \"fp_a5d11b2ef2\"\n}\n"
     headers:
       CF-Cache-Status:
       - DYNAMIC
       CF-RAY:
-      - 8c3f991f48ae2233-MIA
+      - 8c85f2369a761cf3-GRU
       Connection:
       - keep-alive
       Content-Encoding:
@@ -382,7 +276,7 @@ interactions:
       Content-Type:
       - application/json
       Date:
-      - Mon, 16 Sep 2024 08:48:33 GMT
+      - Tue, 24 Sep 2024 21:42:46 GMT
       Server:
       - cloudflare
       Transfer-Encoding:
@@ -391,16 +285,14 @@ interactions:
       - nosniff
       access-control-expose-headers:
       - X-Request-ID
-      alt-svc:
-      - h3=":443"; ma=86400
       openai-organization:
       - crewai-iuxna1
       openai-processing-ms:
-      - '411'
+      - '389'
       openai-version:
       - '2020-10-01'
       strict-transport-security:
-      - max-age=15552000; includeSubDomains; preload
+      - max-age=31536000; includeSubDomains; preload
       x-ratelimit-limit-requests:
       - '10000'
       x-ratelimit-limit-tokens:
@@ -414,7 +306,7 @@ interactions:
       x-ratelimit-reset-tokens:
       - 0s
       x-request-id:
-      - req_6eaa8e2c5a8ddf081d8bf37adfc143b5
+      - req_0167388f0a7a7f1a1026409834ceb914
     http_version: HTTP/1.1
     status_code: 200
 version: 1

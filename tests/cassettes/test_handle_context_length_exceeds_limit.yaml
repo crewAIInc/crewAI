@@ -10,7 +10,7 @@ interactions:
       is the expect criteria for your final answer: The final answer\nyou MUST return
       the actual complete content as the final answer, not a summary.\n\nBegin! This
       is VERY important to you, use the tools available and give your best Final Answer,
-      your job depends on it!\n\nThought:"}], "model": "gpt-4o", "stop": ["\nObservation:"]}'
+      your job depends on it!\n\nThought:"}], "model": "gpt-4o"}'
     headers:
       accept:
       - application/json
@@ -19,15 +19,16 @@ interactions:
       connection:
       - keep-alive
       content-length:
-      - '884'
+      - '856'
       content-type:
       - application/json
       cookie:
-      - _cfuvid=0Rs4xTPk7h7OIXuSbTgMVVD9JSoZeKMwnygKHoHQo3k-1726476036297-0.0.1.1-604800000
+      - __cf_bm=rb61BZH2ejzD5YPmLaEJqI7km71QqyNJGTVdNxBq6qk-1727213194-1.0.1.1-pJ49onmgX9IugEMuYQMralzD7oj_6W.CHbSu4Su1z3NyjTGYg.rhgJZWng8feFYah._oSnoYlkTjpK1Wd2C9FA;
+        _cfuvid=lbRdAddVWV6W3f5Dm9SaOPWDUOxqtZBSPr_fTW26nEA-1727213194587-0.0.1.1-604800000
       host:
       - api.openai.com
       user-agent:
-      - OpenAI/Python 1.45.0
+      - OpenAI/Python 1.47.0
       x-stainless-arch:
       - arm64
       x-stainless-async:
@@ -37,7 +38,7 @@ interactions:
       x-stainless-os:
       - MacOS
       x-stainless-package-version:
-      - 1.45.0
+      - 1.47.0
       x-stainless-raw-response:
       - 'true'
       x-stainless-runtime:
@@ -47,19 +48,19 @@ interactions:
     method: POST
     uri: https://api.openai.com/v1/chat/completions
   response:
-    content: "{\n  \"id\": \"chatcmpl-A824mxqYVyrqbpWBwwzsrHe4puiVy\",\n  \"object\":
-      \"chat.completion\",\n  \"created\": 1726477968,\n  \"model\": \"gpt-4o-2024-05-13\",\n
+    content: "{\n  \"id\": \"chatcmpl-AB7WPggHVKFB2p4IuEQWhjk9dzncW\",\n  \"object\":
+      \"chat.completion\",\n  \"created\": 1727213885,\n  \"model\": \"gpt-4o-2024-05-13\",\n
       \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
       \"assistant\",\n        \"content\": \"I now can give a great answer\\nFinal
       Answer: The final answer is 42.\",\n        \"refusal\": null\n      },\n      \"logprobs\":
       null,\n      \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\":
       175,\n    \"completion_tokens\": 18,\n    \"total_tokens\": 193,\n    \"completion_tokens_details\":
-      {\n      \"reasoning_tokens\": 0\n    }\n  },\n  \"system_fingerprint\": \"fp_25624ae3a5\"\n}\n"
+      {\n      \"reasoning_tokens\": 0\n    }\n  },\n  \"system_fingerprint\": \"fp_e375328146\"\n}\n"
     headers:
       CF-Cache-Status:
       - DYNAMIC
       CF-RAY:
-      - 8c3fbca42cc1dab5-MIA
+      - 8c85eb5ab8ed1cf3-GRU
       Connection:
       - keep-alive
       Content-Encoding:
@@ -67,29 +68,23 @@ interactions:
       Content-Type:
       - application/json
       Date:
-      - Mon, 16 Sep 2024 09:12:48 GMT
+      - Tue, 24 Sep 2024 21:38:05 GMT
       Server:
       - cloudflare
-      Set-Cookie:
-      - __cf_bm=RMvuhMDiBolorpQCGgUkLshn_UfX6nT6Om_uP.PeWN4-1726477968-1.0.1.1-ZPA3_T2RJtkxCDTT_fpoi3IySCOIFpdmCAq7Ny6r.YgPO2mm0654TL3n2tcWPGf1apxYxMKIyOYTj5OH.SgQEg;
-        path=/; expires=Mon, 16-Sep-24 09:42:48 GMT; domain=.api.openai.com; HttpOnly;
-        Secure; SameSite=None
       Transfer-Encoding:
       - chunked
       X-Content-Type-Options:
       - nosniff
       access-control-expose-headers:
       - X-Request-ID
-      alt-svc:
-      - h3=":443"; ma=86400
       openai-organization:
       - crewai-iuxna1
       openai-processing-ms:
-      - '255'
+      - '268'
       openai-version:
       - '2020-10-01'
       strict-transport-security:
-      - max-age=15552000; includeSubDomains; preload
+      - max-age=31536000; includeSubDomains; preload
       x-ratelimit-limit-requests:
       - '10000'
       x-ratelimit-limit-tokens:
@@ -103,7 +98,7 @@ interactions:
       x-ratelimit-reset-tokens:
       - 0s
       x-request-id:
-      - req_91cbeb266b1673d5e6652139ca74a52d
+      - req_e6deb4865f79c2ab9faa705d44ec710a
     http_version: HTTP/1.1
     status_code: 200
 version: 1

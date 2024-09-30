@@ -9,7 +9,7 @@ interactions:
       the expect criteria for your final answer: Your greeting.\nyou MUST return the
       actual complete content as the final answer, not a summary.\n\nBegin! This is
       VERY important to you, use the tools available and give your best Final Answer,
-      your job depends on it!\n\nThought:"}], "model": "gpt-4o", "stop": ["\nObservation:"]}'
+      your job depends on it!\n\nThought:"}], "model": "gpt-4o"}'
     headers:
       accept:
       - application/json
@@ -18,16 +18,16 @@ interactions:
       connection:
       - keep-alive
       content-length:
-      - '800'
+      - '772'
       content-type:
       - application/json
       cookie:
-      - __cf_bm=1SckBhvJ18Dazp6bi8DEKYeiS9Q4.6_6i3nmLBw9b6g-1726476036-1.0.1.1-TnN4UpDXA33YXCVCUWOaZ12vGIg_o5NpJQEUHgjn6XdUgb7M0ND8PdkTfkd8rrxG5XFlPRMzI54GxZ0FeUY9xw;
-        _cfuvid=0Rs4xTPk7h7OIXuSbTgMVVD9JSoZeKMwnygKHoHQo3k-1726476036297-0.0.1.1-604800000
+      - __cf_bm=rb61BZH2ejzD5YPmLaEJqI7km71QqyNJGTVdNxBq6qk-1727213194-1.0.1.1-pJ49onmgX9IugEMuYQMralzD7oj_6W.CHbSu4Su1z3NyjTGYg.rhgJZWng8feFYah._oSnoYlkTjpK1Wd2C9FA;
+        _cfuvid=lbRdAddVWV6W3f5Dm9SaOPWDUOxqtZBSPr_fTW26nEA-1727213194587-0.0.1.1-604800000
       host:
       - api.openai.com
       user-agent:
-      - OpenAI/Python 1.45.0
+      - OpenAI/Python 1.47.0
       x-stainless-arch:
       - arm64
       x-stainless-async:
@@ -37,7 +37,7 @@ interactions:
       x-stainless-os:
       - MacOS
       x-stainless-package-version:
-      - 1.45.0
+      - 1.47.0
       x-stainless-raw-response:
       - 'true'
       x-stainless-runtime:
@@ -47,19 +47,19 @@ interactions:
     method: POST
     uri: https://api.openai.com/v1/chat/completions
   response:
-    content: "{\n  \"id\": \"chatcmpl-A81d9I2kkDCI1O0n104A0xnX9Tftv\",\n  \"object\":
-      \"chat.completion\",\n  \"created\": 1726476255,\n  \"model\": \"gpt-4o-2024-05-13\",\n
+    content: "{\n  \"id\": \"chatcmpl-AB7O2DR8lqTcngpTRMomIOR3MQjlP\",\n  \"object\":
+      \"chat.completion\",\n  \"created\": 1727213366,\n  \"model\": \"gpt-4o-2024-05-13\",\n
       \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
-      \"assistant\",\n        \"content\": \"I now can give a great answer\\nFinal
+      \"assistant\",\n        \"content\": \"Thought: I now can give a great answer\\nFinal
       Answer: Hi!\",\n        \"refusal\": null\n      },\n      \"logprobs\": null,\n
       \     \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\":
-      154,\n    \"completion_tokens\": 13,\n    \"total_tokens\": 167,\n    \"completion_tokens_details\":
-      {\n      \"reasoning_tokens\": 0\n    }\n  },\n  \"system_fingerprint\": \"fp_25624ae3a5\"\n}\n"
+      154,\n    \"completion_tokens\": 15,\n    \"total_tokens\": 169,\n    \"completion_tokens_details\":
+      {\n      \"reasoning_tokens\": 0\n    }\n  },\n  \"system_fingerprint\": \"fp_e375328146\"\n}\n"
     headers:
       CF-Cache-Status:
       - DYNAMIC
       CF-RAY:
-      - 8c3f92d5af742233-MIA
+      - 8c85deb4e95c1cf3-GRU
       Connection:
       - keep-alive
       Content-Encoding:
@@ -67,7 +67,7 @@ interactions:
       Content-Type:
       - application/json
       Date:
-      - Mon, 16 Sep 2024 08:44:16 GMT
+      - Tue, 24 Sep 2024 21:29:27 GMT
       Server:
       - cloudflare
       Transfer-Encoding:
@@ -76,16 +76,14 @@ interactions:
       - nosniff
       access-control-expose-headers:
       - X-Request-ID
-      alt-svc:
-      - h3=":443"; ma=86400
       openai-organization:
       - crewai-iuxna1
       openai-processing-ms:
-      - '296'
+      - '441'
       openai-version:
       - '2020-10-01'
       strict-transport-security:
-      - max-age=15552000; includeSubDomains; preload
+      - max-age=31536000; includeSubDomains; preload
       x-ratelimit-limit-requests:
       - '10000'
       x-ratelimit-limit-tokens:
@@ -99,7 +97,7 @@ interactions:
       x-ratelimit-reset-tokens:
       - 0s
       x-request-id:
-      - req_064b50a4e87bfa0bdaf3120777c2c02d
+      - req_4243014b2ee70b9aabb42677ece6032c
     http_version: HTTP/1.1
     status_code: 200
 - request:
@@ -121,7 +119,7 @@ interactions:
       answer\nyou MUST return the actual complete content as the final answer, not
       a summary.\n\nThis is the context you''re working with:\nHi!\n\nBegin! This
       is VERY important to you, use the tools available and give your best Final Answer,
-      your job depends on it!\n\nThought:"}], "model": "gpt-4o", "stop": ["\nObservation:"]}'
+      your job depends on it!\n\nThought:"}], "model": "gpt-4o"}'
     headers:
       accept:
       - application/json
@@ -130,16 +128,16 @@ interactions:
       connection:
       - keep-alive
       content-length:
-      - '1531'
+      - '1503'
       content-type:
       - application/json
       cookie:
-      - __cf_bm=1SckBhvJ18Dazp6bi8DEKYeiS9Q4.6_6i3nmLBw9b6g-1726476036-1.0.1.1-TnN4UpDXA33YXCVCUWOaZ12vGIg_o5NpJQEUHgjn6XdUgb7M0ND8PdkTfkd8rrxG5XFlPRMzI54GxZ0FeUY9xw;
-        _cfuvid=0Rs4xTPk7h7OIXuSbTgMVVD9JSoZeKMwnygKHoHQo3k-1726476036297-0.0.1.1-604800000
+      - __cf_bm=rb61BZH2ejzD5YPmLaEJqI7km71QqyNJGTVdNxBq6qk-1727213194-1.0.1.1-pJ49onmgX9IugEMuYQMralzD7oj_6W.CHbSu4Su1z3NyjTGYg.rhgJZWng8feFYah._oSnoYlkTjpK1Wd2C9FA;
+        _cfuvid=lbRdAddVWV6W3f5Dm9SaOPWDUOxqtZBSPr_fTW26nEA-1727213194587-0.0.1.1-604800000
       host:
       - api.openai.com
       user-agent:
-      - OpenAI/Python 1.45.0
+      - OpenAI/Python 1.47.0
       x-stainless-arch:
       - arm64
       x-stainless-async:
@@ -149,7 +147,7 @@ interactions:
       x-stainless-os:
       - MacOS
       x-stainless-package-version:
-      - 1.45.0
+      - 1.47.0
       x-stainless-raw-response:
       - 'true'
       x-stainless-runtime:
@@ -159,22 +157,21 @@ interactions:
     method: POST
     uri: https://api.openai.com/v1/chat/completions
   response:
-    content: "{\n  \"id\": \"chatcmpl-A81dAez0qdGuhBKCz4DaoxMZPe9pC\",\n  \"object\":
-      \"chat.completion\",\n  \"created\": 1726476256,\n  \"model\": \"gpt-4o-2024-05-13\",\n
+    content: "{\n  \"id\": \"chatcmpl-AB7O3atu0mC9020bT00tXGnRvVM9z\",\n  \"object\":
+      \"chat.completion\",\n  \"created\": 1727213367,\n  \"model\": \"gpt-4o-2024-05-13\",\n
       \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
-      \"assistant\",\n        \"content\": \"Thought: My task is to never give the
-      final answer directly unless instructed otherwise. Instead, I need to use the
-      `get_final_answer` tool non-stop. Let's proceed as instructed.\\n\\nAction:
-      get_final_answer\\nAction Input: {}\",\n        \"refusal\": null\n      },\n
-      \     \"logprobs\": null,\n      \"finish_reason\": \"stop\"\n    }\n  ],\n
-      \ \"usage\": {\n    \"prompt_tokens\": 314,\n    \"completion_tokens\": 47,\n
-      \   \"total_tokens\": 361,\n    \"completion_tokens_details\": {\n      \"reasoning_tokens\":
-      0\n    }\n  },\n  \"system_fingerprint\": \"fp_25624ae3a5\"\n}\n"
+      \"assistant\",\n        \"content\": \"Thought: I need to use the `get_final_answer`
+      tool non-stop, without giving a final answer unless explicitly told otherwise.
+      I will continue this until necessary.\\n\\nAction: get_final_answer\\nAction
+      Input: {}\",\n        \"refusal\": null\n      },\n      \"logprobs\": null,\n
+      \     \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\":
+      314,\n    \"completion_tokens\": 43,\n    \"total_tokens\": 357,\n    \"completion_tokens_details\":
+      {\n      \"reasoning_tokens\": 0\n    }\n  },\n  \"system_fingerprint\": \"fp_3537616b13\"\n}\n"
     headers:
       CF-Cache-Status:
       - DYNAMIC
       CF-RAY:
-      - 8c3f92d958672233-MIA
+      - 8c85deb97fc81cf3-GRU
       Connection:
       - keep-alive
       Content-Encoding:
@@ -182,7 +179,7 @@ interactions:
       Content-Type:
       - application/json
       Date:
-      - Mon, 16 Sep 2024 08:44:16 GMT
+      - Tue, 24 Sep 2024 21:29:28 GMT
       Server:
       - cloudflare
       Transfer-Encoding:
@@ -191,16 +188,14 @@ interactions:
       - nosniff
       access-control-expose-headers:
       - X-Request-ID
-      alt-svc:
-      - h3=":443"; ma=86400
       openai-organization:
       - crewai-iuxna1
       openai-processing-ms:
-      - '529'
+      - '1384'
       openai-version:
       - '2020-10-01'
       strict-transport-security:
-      - max-age=15552000; includeSubDomains; preload
+      - max-age=31536000; includeSubDomains; preload
       x-ratelimit-limit-requests:
       - '10000'
       x-ratelimit-limit-tokens:
@@ -214,7 +209,7 @@ interactions:
       x-ratelimit-reset-tokens:
       - 0s
       x-request-id:
-      - req_41d6fcdf484db8aa0a3a781fc6554d48
+      - req_298d5f7666fc3164008a49aba8fc818d
     http_version: HTTP/1.1
     status_code: 200
 - request:
@@ -237,12 +232,12 @@ interactions:
       a summary.\n\nThis is the context you''re working with:\nHi!\n\nBegin! This
       is VERY important to you, use the tools available and give your best Final Answer,
       your job depends on it!\n\nThought:"}, {"role": "assistant", "content": "Thought:
-      My task is to never give the final answer directly unless instructed otherwise.
-      Instead, I need to use the `get_final_answer` tool non-stop. Let''s proceed
-      as instructed.\n\nAction: get_final_answer\nAction Input: {}\nObservation: 42\nNow
-      it''s time you MUST give your absolute best final answer. You''ll ignore all
-      previous instructions, stop using any tools, and just return your absolute BEST
-      Final answer."}], "model": "gpt-4o", "stop": ["\nObservation:"]}'
+      I need to use the `get_final_answer` tool non-stop, without giving a final answer
+      unless explicitly told otherwise. I will continue this until necessary.\n\nAction:
+      get_final_answer\nAction Input: {}\nObservation: 42\nNow it''s time you MUST
+      give your absolute best final answer. You''ll ignore all previous instructions,
+      stop using any tools, and just return your absolute BEST Final answer."}], "model":
+      "gpt-4o"}'
     headers:
       accept:
       - application/json
@@ -251,16 +246,16 @@ interactions:
       connection:
       - keep-alive
       content-length:
-      - '1984'
+      - '1940'
       content-type:
       - application/json
       cookie:
-      - __cf_bm=1SckBhvJ18Dazp6bi8DEKYeiS9Q4.6_6i3nmLBw9b6g-1726476036-1.0.1.1-TnN4UpDXA33YXCVCUWOaZ12vGIg_o5NpJQEUHgjn6XdUgb7M0ND8PdkTfkd8rrxG5XFlPRMzI54GxZ0FeUY9xw;
-        _cfuvid=0Rs4xTPk7h7OIXuSbTgMVVD9JSoZeKMwnygKHoHQo3k-1726476036297-0.0.1.1-604800000
+      - __cf_bm=rb61BZH2ejzD5YPmLaEJqI7km71QqyNJGTVdNxBq6qk-1727213194-1.0.1.1-pJ49onmgX9IugEMuYQMralzD7oj_6W.CHbSu4Su1z3NyjTGYg.rhgJZWng8feFYah._oSnoYlkTjpK1Wd2C9FA;
+        _cfuvid=lbRdAddVWV6W3f5Dm9SaOPWDUOxqtZBSPr_fTW26nEA-1727213194587-0.0.1.1-604800000
       host:
       - api.openai.com
       user-agent:
-      - OpenAI/Python 1.45.0
+      - OpenAI/Python 1.47.0
       x-stainless-arch:
       - arm64
       x-stainless-async:
@@ -270,7 +265,7 @@ interactions:
       x-stainless-os:
       - MacOS
       x-stainless-package-version:
-      - 1.45.0
+      - 1.47.0
       x-stainless-raw-response:
       - 'true'
       x-stainless-runtime:
@@ -280,19 +275,19 @@ interactions:
     method: POST
     uri: https://api.openai.com/v1/chat/completions
   response:
-    content: "{\n  \"id\": \"chatcmpl-A81dBkzOe5oPW5R3ve2ZFdMdlMz2v\",\n  \"object\":
-      \"chat.completion\",\n  \"created\": 1726476257,\n  \"model\": \"gpt-4o-2024-05-13\",\n
+    content: "{\n  \"id\": \"chatcmpl-AB7O5g38Q7AaWaUCm4FUWmpYYPzrD\",\n  \"object\":
+      \"chat.completion\",\n  \"created\": 1727213369,\n  \"model\": \"gpt-4o-2024-05-13\",\n
       \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
-      \"assistant\",\n        \"content\": \"Final Answer: 42\",\n        \"refusal\":
-      null\n      },\n      \"logprobs\": null,\n      \"finish_reason\": \"stop\"\n
-      \   }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 402,\n    \"completion_tokens\":
-      5,\n    \"total_tokens\": 407,\n    \"completion_tokens_details\": {\n      \"reasoning_tokens\":
-      0\n    }\n  },\n  \"system_fingerprint\": \"fp_25624ae3a5\"\n}\n"
+      \"assistant\",\n        \"content\": \"I now know the final answer.\\nFinal
+      Answer: 42\",\n        \"refusal\": null\n      },\n      \"logprobs\": null,\n
+      \     \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\":
+      398,\n    \"completion_tokens\": 12,\n    \"total_tokens\": 410,\n    \"completion_tokens_details\":
+      {\n      \"reasoning_tokens\": 0\n    }\n  },\n  \"system_fingerprint\": \"fp_3537616b13\"\n}\n"
     headers:
       CF-Cache-Status:
       - DYNAMIC
       CF-RAY:
-      - 8c3f92de69812233-MIA
+      - 8c85dec3ee4c1cf3-GRU
       Connection:
       - keep-alive
       Content-Encoding:
@@ -300,7 +295,7 @@ interactions:
       Content-Type:
       - application/json
       Date:
-      - Mon, 16 Sep 2024 08:44:17 GMT
+      - Tue, 24 Sep 2024 21:29:29 GMT
       Server:
       - cloudflare
       Transfer-Encoding:
@@ -309,16 +304,14 @@ interactions:
       - nosniff
       access-control-expose-headers:
       - X-Request-ID
-      alt-svc:
-      - h3=":443"; ma=86400
       openai-organization:
       - crewai-iuxna1
       openai-processing-ms:
-      - '151'
+      - '493'
       openai-version:
       - '2020-10-01'
       strict-transport-security:
-      - max-age=15552000; includeSubDomains; preload
+      - max-age=31536000; includeSubDomains; preload
       x-ratelimit-limit-requests:
       - '10000'
       x-ratelimit-limit-tokens:
@@ -326,13 +319,13 @@ interactions:
       x-ratelimit-remaining-requests:
       - '9999'
       x-ratelimit-remaining-tokens:
-      - '29999535'
+      - '29999539'
       x-ratelimit-reset-requests:
       - 6ms
       x-ratelimit-reset-tokens:
       - 0s
       x-request-id:
-      - req_7668b51273dbf29213efec5180462021
+      - req_4cdf64282e6e639e6ad6fd7b74cea3f9
     http_version: HTTP/1.1
     status_code: 200
 version: 1
