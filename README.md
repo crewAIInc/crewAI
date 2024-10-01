@@ -65,12 +65,6 @@ pip install 'crewai[tools]'
 ```
 The command above installs the basic package and also adds extra components which require more dependencies to function.
 
-Lock the dependencies and install them by using the CLI command:
-
-```shell
-crewai install
-```
-
 ### 2. Setting Up Your Crew with the YAML Configuration
 
 To create a new CrewAI project, run the following CLI (Command Line Interface) command:
@@ -246,6 +240,13 @@ Before running your crew, make sure you have the following keys set as environme
 
 - An [OpenAI API key](https://platform.openai.com/account/api-keys) (or other LLM API key): `OPENAI_API_KEY=sk-...`
 - A [Serper.dev](https://serper.dev/) API key: `SERPER_API_KEY=YOUR_KEY_HERE`
+
+Lock the dependencies and install them by using the CLI command but first, navigate to your project directory:
+
+```shell
+cd my_project
+crewai install
+```
 
 To run your crew, execute the following command in the root of your project:
 
