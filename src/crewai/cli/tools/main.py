@@ -1,4 +1,5 @@
 import base64
+from pathlib import Path
 import click
 import os
 import subprocess
@@ -9,6 +10,8 @@ from crewai.cli.utils import (
     get_project_name,
     get_project_description,
     get_project_version,
+    tree_copy,
+    tree_find_and_replace,
 )
 from rich.console import Console
 
@@ -23,6 +26,37 @@ class ToolCommand(BaseCommand, PlusAPIMixin):
     def __init__(self):
         BaseCommand.__init__(self)
         PlusAPIMixin.__init__(self, telemetry=self._telemetry)
+
+    def create(self, handle: str):
+        self._ensure_not_in_project()
+
+        folder_name = handle.replace(" ", "_").replace("-", "_").lower()
+        class_name = handle.replace("_", " ").replace("-", " ").title().replace(" ", "")
+
+        project_root = Path(folder_name)
+        if project_root.exists():
+            click.secho(f"Folder {folder_name} already exists.", fg="red")
+            raise SystemExit
+        else:
+            os.makedirs(project_root)
+
+        click.secho(f"Creating custom tool {folder_name}...", fg="green", bold=True)
+
+        template_dir = Path(__file__).parent.parent / "templates" / "tool"
+        tree_copy(template_dir, project_root)
+        tree_find_and_replace(project_root, "{{folder_name}}", folder_name)
+        tree_find_and_replace(project_root, "{{class_name}}", class_name)
+
+        old_directory = os.getcwd()
+        os.chdir(project_root)
+        try:
+            self.login()
+            subprocess.run(["git", "init"], check=True)
+            console.print(
+                f"[green]Created custom tool [bold]{folder_name}[/bold]. Run [bold]cd {project_root}[/bold] to start working.[/green]"
+            )
+        finally:
+            os.chdir(old_directory)
 
     def publish(self, is_public: bool):
         project_name = get_project_name(require=True)
@@ -167,4 +201,17 @@ class ToolCommand(BaseCommand, PlusAPIMixin):
 
         if add_package_result.stderr:
             click.echo(add_package_result.stderr, err=True)
+            raise SystemExit
+
+    def _ensure_not_in_project(self):
+        if os.path.isfile("./pyproject.toml"):
+            console.print(
+                "[bold red]Oops! It looks like you're inside a project.[/bold red]"
+            )
+            console.print(
+                "You can't create a new tool while inside an existing project."
+            )
+            console.print(
+                "[bold yellow]Tip:[/bold yellow] Navigate to a different directory and try again."
+            )
             raise SystemExit
