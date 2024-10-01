@@ -4,7 +4,6 @@ import click
 import os
 import subprocess
 import tempfile
-import contextlib
 
 from crewai.cli.command import BaseCommand, PlusAPIMixin
 from crewai.cli.utils import (
@@ -48,9 +47,16 @@ class ToolCommand(BaseCommand, PlusAPIMixin):
         tree_find_and_replace(project_root, "{{folder_name}}", folder_name)
         tree_find_and_replace(project_root, "{{class_name}}", class_name)
 
-        with contextlib.chdir(project_root):
+        old_directory = os.getcwd()
+        os.chdir(project_root)
+        try:
             self.login()
             subprocess.run(["git", "init"], check=True)
+            console.print(
+                f"[green]Created custom tool [bold]{folder_name}[/bold]. Run [bold]cd {project_root}[/bold] to start working.[/green]"
+            )
+        finally:
+            os.chdir(old_directory)
 
     def publish(self, is_public: bool):
         project_name = get_project_name(require=True)
