@@ -103,10 +103,12 @@ def convert_to_model(
         return handle_partial_json(
             result, model, bool(output_json), agent, converter_cls
         )
+
     except ValidationError:
         return handle_partial_json(
             result, model, bool(output_json), agent, converter_cls
         )
+
     except Exception as e:
         Printer().print(
             content=f"Unexpected error during model conversion: {type(e).__name__}: {e}. Returning original result.",
