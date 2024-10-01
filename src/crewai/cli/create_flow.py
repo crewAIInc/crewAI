@@ -38,7 +38,7 @@ def create_flow(name):
     ]
 
     def process_file(src_file, dst_file):
-        if src_file.suffix in ['.pyc', '.pyo', '.pyd']:
+        if src_file.suffix in [".pyc", ".pyo", ".pyd"]:
             return
 
         try:
@@ -47,7 +47,6 @@ def create_flow(name):
         except Exception as e:
             click.secho(f"Error processing file {src_file}: {e}", fg="red")
             return
-            content = file.read()
 
         content = content.replace("{{name}}", name)
         content = content.replace("{{flow_name}}", class_name)
