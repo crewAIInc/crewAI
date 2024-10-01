@@ -19,29 +19,38 @@ class TestToolCommand(unittest.TestCase):
             finally:
                 os.chdir(original_dir)
 
-    @patch('crewai.cli.tools.main.subprocess.run')
+    @patch("crewai.cli.tools.main.subprocess.run")
     def test_create_success(self, mock_subprocess):
         with self.in_temp_dir():
             tool_command = ToolCommand()
 
-            with patch.object(tool_command, 'login') as mock_login, \
-                 patch('sys.stdout', new=StringIO()) as fake_out:
-                tool_command.create('test-tool')
+            with patch.object(tool_command, "login") as mock_login, patch(
+                "sys.stdout", new=StringIO()
+            ) as fake_out:
+                tool_command.create("test-tool")
                 output = fake_out.getvalue()
 
-            self.assertTrue(os.path.isdir('test_tool'))
+            self.assertTrue(os.path.isdir("test_tool"))
 
-            self.assertTrue(os.path.isfile(os.path.join('test_tool', 'README.md')))
-            self.assertTrue(os.path.isfile(os.path.join('test_tool', 'pyproject.toml')))
-            self.assertTrue(os.path.isfile(os.path.join('test_tool', 'src', 'test_tool', '__init__.py')))
-            self.assertTrue(os.path.isfile(os.path.join('test_tool', 'src', 'test_tool', 'tool.py')))
+            self.assertTrue(os.path.isfile(os.path.join("test_tool", "README.md")))
+            self.assertTrue(os.path.isfile(os.path.join("test_tool", "pyproject.toml")))
+            self.assertTrue(
+                os.path.isfile(
+                    os.path.join("test_tool", "src", "test_tool", "__init__.py")
+                )
+            )
+            self.assertTrue(
+                os.path.isfile(os.path.join("test_tool", "src", "test_tool", "tool.py"))
+            )
 
-            with open(os.path.join('test_tool', 'src', 'test_tool', 'tool.py'), 'r') as f:
+            with open(
+                os.path.join("test_tool", "src", "test_tool", "tool.py"), "r"
+            ) as f:
                 content = f.read()
-                self.assertIn('class TestTool', content)
+                self.assertIn("class TestTool", content)
 
             mock_login.assert_called_once()
-            mock_subprocess.assert_called_once_with(['git', 'init'], check=True)
+            mock_subprocess.assert_called_once_with(["git", "init"], check=True)
 
             self.assertIn("Creating custom tool test_tool...", output)
 

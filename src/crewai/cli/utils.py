@@ -201,6 +201,7 @@ def get_auth_token() -> str:
         raise Exception()
     return access_token
 
+
 def tree_copy(source, destination):
     """Copies the entire directory structure from the source to the destination."""
     for item in os.listdir(source):
@@ -211,6 +212,7 @@ def tree_copy(source, destination):
         else:
             shutil.copy2(source_item, destination_item)
 
+
 def tree_find_and_replace(directory, find, replace):
     """Recursively searches through a directory, replacing a target string in
     both file contents and filenames with a specified replacement string.
@@ -219,9 +221,9 @@ def tree_find_and_replace(directory, find, replace):
         for filename in files:
             filepath = os.path.join(path, filename)
 
-            with open(filepath, 'r') as file:
+            with open(filepath, "r") as file:
                 contents = file.read()
-            with open(filepath, 'w') as file:
+            with open(filepath, "w") as file:
                 file.write(contents.replace(find, replace))
 
             if find in filename:

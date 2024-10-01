@@ -266,6 +266,7 @@ def tool_create(handle: str):
     tool_cmd = ToolCommand()
     tool_cmd.create(handle)
 
+
 @tool.command(name="install")
 @click.argument("handle")
 def tool_install(handle: str):

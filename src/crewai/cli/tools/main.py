@@ -52,7 +52,6 @@ class ToolCommand(BaseCommand, PlusAPIMixin):
             self.login()
             subprocess.run(["git", "init"], check=True)
 
-
     def publish(self, is_public: bool):
         project_name = get_project_name(require=True)
         assert isinstance(project_name, str)
@@ -200,7 +199,13 @@ class ToolCommand(BaseCommand, PlusAPIMixin):
 
     def _ensure_not_in_project(self):
         if os.path.isfile("./pyproject.toml"):
-            console.print(f"[bold red]Oops! It looks like you're inside a project.[/bold red]")
-            console.print("You can't create a new tool while inside an existing project.")
-            console.print("[bold yellow]Tip:[/bold yellow] Navigate to a different directory and try again.")
+            console.print(
+                "[bold red]Oops! It looks like you're inside a project.[/bold red]"
+            )
+            console.print(
+                "You can't create a new tool while inside an existing project."
+            )
+            console.print(
+                "[bold yellow]Tip:[/bold yellow] Navigate to a different directory and try again."
+            )
             raise SystemExit
