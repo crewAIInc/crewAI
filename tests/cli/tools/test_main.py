@@ -208,10 +208,7 @@ class TestToolCommand(unittest.TestCase):
                     "url": "https://example.com/repo",
                 }
             ],
-            "credential": {
-                "username": "user",
-                "password": "pass"
-            },
+            "credential": {"username": "user", "password": "pass"},
         }
         mock_login.return_value = mock_login_response
 
@@ -234,7 +231,7 @@ class TestToolCommand(unittest.TestCase):
                 "https://example.com/repo",
             ],
             text=True,
-            check=True
+            check=True,
         )
         mock_subprocess_run.assert_any_call(
             [

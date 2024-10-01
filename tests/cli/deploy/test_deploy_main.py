@@ -209,4 +209,5 @@ class TestDeployCommand(unittest.TestCase):
 
     def test_get_crewai_version(self):
         from crewai.cli.utils import get_crewai_version
+
         assert type(get_crewai_version()) is str

@@ -112,15 +112,20 @@ class ToolCommand(BaseCommand, PlusAPIMixin):
 
         if login_response.status_code != 200:
             console.print(
-                "Failed to authenticate to the tool repository. Make sure you have the access to tools.", style="bold red"
+                "Failed to authenticate to the tool repository. Make sure you have the access to tools.",
+                style="bold red",
             )
             raise SystemExit
 
         login_response_json = login_response.json()
         for repository in login_response_json["repositories"]:
-            self._add_repository_to_poetry(repository, login_response_json["credential"])
+            self._add_repository_to_poetry(
+                repository, login_response_json["credential"]
+            )
 
-        console.print(f"Succesfully authenticated to the tool repository.", style="bold green")
+        console.print(
+            "Succesfully authenticated to the tool repository.", style="bold green"
+        )
 
     def _add_repository_to_poetry(self, repository, credentials):
         repository_handle = f"crewai-{repository['handle']}"
