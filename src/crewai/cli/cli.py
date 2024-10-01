@@ -12,12 +12,14 @@ from crewai.memory.storage.kickoff_task_outputs_storage import (
 
 from .authentication.main import AuthenticationCommand
 from .deploy.main import DeployCommand
-from .tools.main import ToolCommand
 from .evaluate_crew import evaluate_crew
 from .install_crew import install_crew
+from .plot_flow import plot_flow
 from .replay_from_task import replay_task_command
 from .reset_memories_command import reset_memories_command
 from .run_crew import run_crew
+from .run_flow import run_flow
+from .tools.main import ToolCommand
 from .train_crew import train_crew
 
 
@@ -271,6 +273,26 @@ def tool_install(handle: str):
 def tool_publish(is_public: bool):
     tool_cmd = ToolCommand()
     tool_cmd.publish(is_public)
+
+
+@crewai.group()
+def flow():
+    """Flow related commands."""
+    pass
+
+
+@flow.command(name="run")
+def flow_run():
+    """Run the Flow."""
+    click.echo("Running the Flow")
+    run_flow()
+
+
+@flow.command(name="plot")
+def flow_plot():
+    """Plot the Flow."""
+    click.echo("Plotting the Flow")
+    plot_flow()
 
 
 if __name__ == "__main__":

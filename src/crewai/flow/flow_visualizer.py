@@ -15,13 +15,13 @@ from crewai.flow.visualization_utils import (
 )
 
 
-class FlowVisualizer:
+class FlowPlot:
     def __init__(self, flow):
         self.flow = flow
         self.colors = COLORS
         self.node_styles = NODE_STYLES
 
-    def visualize(self, filename):
+    def plot(self, filename):
         net = Network(
             directed=True,
             height="750px",
@@ -61,6 +61,8 @@ class FlowVisualizer:
             f.write(final_html_content)
         print(f"Graph saved as {filename}.html")
 
+        self._cleanup_pyvis_lib()
+
     def _generate_final_html(self, network_html):
         # Extract just the body content from the generated HTML
         current_dir = os.path.dirname(__file__)
@@ -80,7 +82,18 @@ class FlowVisualizer:
         )
         return final_html_content
 
+    def _cleanup_pyvis_lib(self):
+        # Clean up the generated lib folder
+        lib_folder = os.path.join(os.getcwd(), "lib")
+        try:
+            if os.path.exists(lib_folder) and os.path.isdir(lib_folder):
+                import shutil
 
-def visualize_flow(flow, filename="flow_graph"):
-    visualizer = FlowVisualizer(flow)
-    visualizer.visualize(filename)
+                shutil.rmtree(lib_folder)
+        except Exception as e:
+            print(f"Error cleaning up {lib_folder}: {e}")
+
+
+def plot_flow(flow, filename="flow_graph"):
+    visualizer = FlowPlot(flow)
+    visualizer.plot(filename)

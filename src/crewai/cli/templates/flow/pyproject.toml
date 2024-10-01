@@ -11,7 +11,8 @@ asyncio = "*"
 
 [tool.poetry.scripts]
 {{folder_name}} = "{{folder_name}}.main:main"
-run_crew = "{{folder_name}}.main:main"
+run_flow = "{{folder_name}}.main:main"
+plot_flow = "{{folder_name}}.main:plot"
 
 [build-system]
 requires = ["poetry-core"]
