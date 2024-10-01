@@ -127,8 +127,6 @@ researcher:
     You're a seasoned researcher with a knack for uncovering the latest
     developments in {topic}. Known for your ability to find the most relevant
     information and present it in a clear and concise manner.
-  tools:
-    - SerperDevTool # This is a tool that allows the agent to search the web for information
       
 reporting_analyst:
   role: >
