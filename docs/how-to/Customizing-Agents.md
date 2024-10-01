@@ -20,7 +20,6 @@ Crafting an efficient CrewAI team hinges on the ability to dynamically tailor yo
 - **System Template** *(Optional)*: `system_template` defines the system format for the agent.
 - **Prompt Template** *(Optional)*: `prompt_template` defines the prompt format for the agent.
 - **Response Template** *(Optional)*: `response_template` defines the response format for the agent.
-- **Use Stop Words** *(Optional)*: `use_stop_words` attribute controls whether the agent will use stop words during task execution. This is now supported to aid o1 models.
 - **Use System Prompt** *(Optional)*: `use_system_prompt` controls whether the agent will use a system prompt for task execution. Agents can now operate without system prompts.
 - **Respect Context Window**: `respect_context_window` renames the sliding context window attribute and enables it by default to maintain context size.
 - **Max Retry Limit**: `max_retry_limit` defines the maximum number of retries for an agent to execute a task when an error occurs.

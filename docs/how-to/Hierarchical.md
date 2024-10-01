@@ -46,7 +46,6 @@ researcher = Agent(
     verbose=False,
     # tools=[]  # This can be optionally specified; defaults to an empty list
     use_system_prompt=True,  # Enable or disable system prompts for this agent
-    use_stop_words=True,  # Enable or disable stop words for this agent
     max_rpm=30,  # Limit on the number of requests per minute
     max_iter=5  # Maximum number of iterations for a final answer
 )
@@ -58,7 +57,6 @@ writer = Agent(
     verbose=False,
     # tools=[]  # Optionally specify tools; defaults to an empty list
     use_system_prompt=True,  # Enable or disable system prompts for this agent
-    use_stop_words=True,  # Enable or disable stop words for this agent
     max_rpm=30,  # Limit on the number of requests per minute
     max_iter=5  # Maximum number of iterations for a final answer
 )

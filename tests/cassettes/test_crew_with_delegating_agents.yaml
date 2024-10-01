@@ -1,68 +1,5 @@
 interactions:
 - request:
-    body: !!binary |
-      Cq8OCiQKIgoMc2VydmljZS5uYW1lEhIKEGNyZXdBSS10ZWxlbWV0cnkShg4KEgoQY3Jld2FpLnRl
-      bGVtZXRyeRKQAgoQIYkXntfDCbRTz4En6O4TnRIIHNFb/UkLQ58qDlRhc2sgRXhlY3V0aW9uMAE5
-      cAfKz6H29xdBINzO2rL29xdKLgoIY3Jld19rZXkSIgogZTNmZGEwZjMxMTBmZTgwYjE4OTQ3YzAx
-      NDcxNDMwYTRKMQoHY3Jld19pZBImCiRkY2Q1ZDZlNS02MmU3LTRiMTYtYmI0NC0xZGM5NWYzNDQ3
-      NjVKLgoIdGFza19rZXkSIgogNWZhNjVjMDZhOWUzMWYyYzY5NTQzMjY2OGFjZDYyZGRKMQoHdGFz
-      a19pZBImCiRiNmNmOWJkZC00YTIyLTRiZDktOTJlZi0yZTU1MzRlZDhjOTR6AhgBhQEAAQAAEssJ
-      ChAYcgEDGW1IoWIO5+SMa9xlEgiaUlguJJwJNSoMQ3JldyBDcmVhdGVkMAE5SAs+3bL29xdBcOxI
-      3bL29xdKGgoOY3Jld2FpX3ZlcnNpb24SCAoGMC42MS4wShoKDnB5dGhvbl92ZXJzaW9uEggKBjMu
-      MTEuN0ouCghjcmV3X2tleRIiCiBlNjQ5NTczYTI2ZTU4NzkwY2FjMjFhMzdjZDQ0NDM3YUoxCgdj
-      cmV3X2lkEiYKJDY4YzUwMDVjLTFiOTAtNGJhNi05YWMyLWU5YTkwMjAxNjE3OUocCgxjcmV3X3By
-      b2Nlc3MSDAoKc2VxdWVudGlhbEoRCgtjcmV3X21lbW9yeRICEABKGgoUY3Jld19udW1iZXJfb2Zf
-      dGFza3MSAhgBShsKFWNyZXdfbnVtYmVyX29mX2FnZW50cxICGAJKgAUKC2NyZXdfYWdlbnRzEvAE
-      Cu0EW3sia2V5IjogIjMyODIxN2I2YzI5NTliZGZjNDdjYWQwMGU4NDg5MGQwIiwgImlkIjogIjhl
-      NjJkZmVlLTAyMmYtNDgxZS1iMjgwLWZiOGQ0MGJhMTQxNiIsICJyb2xlIjogIkNFTyIsICJ2ZXJi
-      b3NlPyI6IGZhbHNlLCAibWF4X2l0ZXIiOiAxNSwgIm1heF9ycG0iOiBudWxsLCAiZnVuY3Rpb25f
-      Y2FsbGluZ19sbG0iOiAiIiwgImxsbSI6ICJncHQtNG8iLCAiZGVsZWdhdGlvbl9lbmFibGVkPyI6
-      IHRydWUsICJhbGxvd19jb2RlX2V4ZWN1dGlvbj8iOiBmYWxzZSwgIm1heF9yZXRyeV9saW1pdCI6
-      IDIsICJ0b29sc19uYW1lcyI6IFtdfSwgeyJrZXkiOiAiOWE1MDE1ZWY0ODk1ZGM2Mjc4ZDU0ODE4
-      YmE0NDZhZjciLCAiaWQiOiAiMWZjZTdjMzQtYzg0OC00NzkxLThhNTgtNTc4YTAwMGZiNGI1Iiwg
-      InJvbGUiOiAiU2VuaW9yIFdyaXRlciIsICJ2ZXJib3NlPyI6IGZhbHNlLCAibWF4X2l0ZXIiOiAx
-      NSwgIm1heF9ycG0iOiBudWxsLCAiZnVuY3Rpb25fY2FsbGluZ19sbG0iOiAiIiwgImxsbSI6ICJn
-      cHQtNG8iLCAiZGVsZWdhdGlvbl9lbmFibGVkPyI6IGZhbHNlLCAiYWxsb3dfY29kZV9leGVjdXRp
-      b24/IjogZmFsc2UsICJtYXhfcmV0cnlfbGltaXQiOiAyLCAidG9vbHNfbmFtZXMiOiBbXX1dSvgB
-      CgpjcmV3X3Rhc2tzEukBCuYBW3sia2V5IjogIjBiOWQ2NWRiNmI3YWVkZmIzOThjNTllMmE5Zjcx
-      ZWM1IiwgImlkIjogIjAxNTBmMDMwLWU1YjItNDNiMi05ZjRiLTNmMjE0YmUyNzkwYiIsICJhc3lu
-      Y19leGVjdXRpb24/IjogZmFsc2UsICJodW1hbl9pbnB1dD8iOiBmYWxzZSwgImFnZW50X3JvbGUi
-      OiAiQ0VPIiwgImFnZW50X2tleSI6ICIzMjgyMTdiNmMyOTU5YmRmYzQ3Y2FkMDBlODQ4OTBkMCIs
-      ICJ0b29sc19uYW1lcyI6IFtdfV16AhgBhQEAAQAAEo4CChDKM7V7vaGnfNmR/Lo8EoFyEgjYKCP1
-      8frmaSoMVGFzayBDcmVhdGVkMAE5kE/v4LL29xdB8Dnw4LL29xdKLgoIY3Jld19rZXkSIgogZTY0
-      OTU3M2EyNmU1ODc5MGNhYzIxYTM3Y2Q0NDQzN2FKMQoHY3Jld19pZBImCiQ2OGM1MDA1Yy0xYjkw
-      LTRiYTYtOWFjMi1lOWE5MDIwMTYxNzlKLgoIdGFza19rZXkSIgogMGI5ZDY1ZGI2YjdhZWRmYjM5
-      OGM1OWUyYTlmNzFlYzVKMQoHdGFza19pZBImCiQwMTUwZjAzMC1lNWIyLTQzYjItOWY0Yi0zZjIx
-      NGJlMjc5MGJ6AhgBhQEAAQAA
-    headers:
-      Accept:
-      - '*/*'
-      Accept-Encoding:
-      - gzip, deflate
-      Connection:
-      - keep-alive
-      Content-Length:
-      - '1842'
-      Content-Type:
-      - application/x-protobuf
-      User-Agent:
-      - OTel-OTLP-Exporter-Python/1.27.0
-    method: POST
-    uri: https://telemetry.crewai.com:4319/v1/traces
-  response:
-    body:
-      string: "\n\0"
-    headers:
-      Content-Length:
-      - '2'
-      Content-Type:
-      - application/x-protobuf
-      Date:
-      - Mon, 23 Sep 2024 19:37:13 GMT
-    status:
-      code: 200
-      message: OK
-- request:
     body: '{"messages": [{"role": "system", "content": "You are CEO. You''re an long
       time CEO of a content creation agency with a Senior Writer on the team. You''re
       now working on a new project and want to make sure the content produced is amazing.\nYour
@@ -111,8 +48,8 @@ interactions:
       content-type:
       - application/json
       cookie:
-      - __cf_bm=4rzJDR3F8S3Dp4B_qwylZU0mdm_WUwmv8vNHHp3IplM-1727119501-1.0.1.1-qobO_Sf88yG1qtXFnLgykvyc9YXR_fm1J7ZpXIhvtynVnsz67Uwcf4122PgHs4GMrlvZMaL6z_UVcVYSYUJOKQ;
-        _cfuvid=9K_ipT1uTVyDTneB1W5OZHPxCh36aOsDZCBnsQTONqQ-1727119501207-0.0.1.1-604800000
+      - __cf_bm=9.8sBYBkvBR8R1K_bVF7xgU..80XKlEIg3N2OBbTSCU-1727214102-1.0.1.1-.qiTLXbPamYUMSuyNsOEB9jhGu.jOifujOrx9E2JZvStbIZ9RTIiE44xKKNfLPxQkOi6qAT3h6htK8lPDGV_5g;
+        _cfuvid=lbRdAddVWV6W3f5Dm9SaOPWDUOxqtZBSPr_fTW26nEA-1727213194587-0.0.1.1-604800000
       host:
       - api.openai.com
       user-agent:
@@ -136,29 +73,29 @@ interactions:
     method: POST
     uri: https://api.openai.com/v1/chat/completions
   response:
-    content: "{\n  \"id\": \"chatcmpl-AAj9rrGk7wkWLr0Ag4yevjFcbIe2I\",\n  \"object\":
-      \"chat.completion\",\n  \"created\": 1727120231,\n  \"model\": \"gpt-4o-2024-05-13\",\n
+    content: "{\n  \"id\": \"chatcmpl-AB7ZvxqgeOayGTQWwR61ASlZp0s74\",\n  \"object\":
+      \"chat.completion\",\n  \"created\": 1727214103,\n  \"model\": \"gpt-4o-2024-05-13\",\n
       \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
-      \"assistant\",\n        \"content\": \"Thought: The current task is to produce
-      an amazing 1-paragraph draft of an article about AI Agents. To ensure the final
-      content is of high quality, I will delegate the task to the Senior Writer along
-      with all necessary context to execute it properly.\\n\\nAction: Delegate work
-      to coworker\\nAction Input: \\n{\\n  \\\"coworker\\\": \\\"Senior Writer\\\",\\n
-      \ \\\"task\\\": \\\"Produce an amazing 1-paragraph draft of an article about
-      AI Agents\\\",\\n  \\\"context\\\": \\\"We need to create an engaging and informative
-      paragraph about AI Agents. This paragraph should highlight what AI Agents are,
-      their significance, and potential applications. It should capture the reader's
-      attention and be suitable for a wide audience ranging from tech enthusiasts
-      to business professionals.\\\"\\n}\",\n        \"refusal\": null\n      },\n
-      \     \"logprobs\": null,\n      \"finish_reason\": \"stop\"\n    }\n  ],\n
-      \ \"usage\": {\n    \"prompt_tokens\": 608,\n    \"completion_tokens\": 151,\n
-      \   \"total_tokens\": 759,\n    \"completion_tokens_details\": {\n      \"reasoning_tokens\":
+      \"assistant\",\n        \"content\": \"Thought: To ensure the content is amazing,
+      I'll delegate the task of producing a one-paragraph draft of an article about
+      AI Agents to the Senior Writer with all necessary context.\\n\\nAction: Delegate
+      work to coworker\\nAction Input: \\n{\\n    \\\"coworker\\\": \\\"Senior Writer\\\",
+      \\n    \\\"task\\\": \\\"Produce a one paragraph draft of an article about AI
+      Agents\\\", \\n    \\\"context\\\": \\\"We need an amazing one-paragraph draft
+      as the beginning of a 4-paragraph article about AI Agents. This is for a high-stakes
+      project that critically impacts our company. The paragraph should highlight
+      what AI Agents are, their significance, and how they are transforming various
+      industries. The tone should be professional yet engaging. Make sure the content
+      is original, insightful, and thoroughly researched.\\\"\\n}\",\n        \"refusal\":
+      null\n      },\n      \"logprobs\": null,\n      \"finish_reason\": \"stop\"\n
+      \   }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 608,\n    \"completion_tokens\":
+      160,\n    \"total_tokens\": 768,\n    \"completion_tokens_details\": {\n      \"reasoning_tokens\":
       0\n    }\n  },\n  \"system_fingerprint\": \"fp_e375328146\"\n}\n"
     headers:
       CF-Cache-Status:
       - DYNAMIC
       CF-RAY:
-      - 8c7cfce14ebea4c7-MIA
+      - 8c85f0b038a71cf3-GRU
       Connection:
       - keep-alive
       Content-Encoding:
@@ -166,7 +103,7 @@ interactions:
       Content-Type:
       - application/json
       Date:
-      - Mon, 23 Sep 2024 19:37:14 GMT
+      - Tue, 24 Sep 2024 21:41:45 GMT
       Server:
       - cloudflare
       Transfer-Encoding:
@@ -178,11 +115,11 @@ interactions:
       openai-organization:
       - crewai-iuxna1
       openai-processing-ms:
-      - '3570'
+      - '1826'
       openai-version:
       - '2020-10-01'
       strict-transport-security:
-      - max-age=15552000; includeSubDomains; preload
+      - max-age=31536000; includeSubDomains; preload
       x-ratelimit-limit-requests:
       - '10000'
       x-ratelimit-limit-tokens:
@@ -190,15 +127,78 @@ interactions:
       x-ratelimit-remaining-requests:
       - '9999'
       x-ratelimit-remaining-tokens:
-      - '29999324'
+      - '29999325'
       x-ratelimit-reset-requests:
       - 6ms
       x-ratelimit-reset-tokens:
       - 1ms
       x-request-id:
-      - req_1b00a3292453d05f85591bc9f1419f18
+      - req_79054638deeb01da76c5bba273bffc28
     http_version: HTTP/1.1
     status_code: 200
+- request:
+    body: !!binary |
+      Cq8OCiQKIgoMc2VydmljZS5uYW1lEhIKEGNyZXdBSS10ZWxlbWV0cnkShg4KEgoQY3Jld2FpLnRl
+      bGVtZXRyeRKQAgoQg15EMIBbDpydrcK3GAUYfBII5VYz5B10kmgqDlRhc2sgRXhlY3V0aW9uMAE5
+      aGIpYwtM+BdBIO6VVRNM+BdKLgoIY3Jld19rZXkSIgogZTNmZGEwZjMxMTBmZTgwYjE4OTQ3YzAx
+      NDcxNDMwYTRKMQoHY3Jld19pZBImCiRjNzM1NzdhYi0xYThhLTQzMGYtYjYyZi01MTBlYWMyMWI3
+      MThKLgoIdGFza19rZXkSIgogNWZhNjVjMDZhOWUzMWYyYzY5NTQzMjY2OGFjZDYyZGRKMQoHdGFz
+      a19pZBImCiQ3MjAzMjYyMC0yMzJmLTQ5ZTMtOGMyNy0xYzBlOWJhNjFiZDB6AhgBhQEAAQAAEssJ
+      ChB+du4H1wHcku5blhLQBtuoEgiXVguc5KA1RyoMQ3JldyBDcmVhdGVkMAE54IJsVxNM+BdBcCN4
+      VxNM+BdKGgoOY3Jld2FpX3ZlcnNpb24SCAoGMC42MS4wShoKDnB5dGhvbl92ZXJzaW9uEggKBjMu
+      MTEuN0ouCghjcmV3X2tleRIiCiBlNjQ5NTczYTI2ZTU4NzkwY2FjMjFhMzdjZDQ0NDM3YUoxCgdj
+      cmV3X2lkEiYKJDI4ZTY0YmQ3LWNlYWMtNDYxOS04MmM3LTIzNmRkNTQxOGM4N0ocCgxjcmV3X3By
+      b2Nlc3MSDAoKc2VxdWVudGlhbEoRCgtjcmV3X21lbW9yeRICEABKGgoUY3Jld19udW1iZXJfb2Zf
+      dGFza3MSAhgBShsKFWNyZXdfbnVtYmVyX29mX2FnZW50cxICGAJKgAUKC2NyZXdfYWdlbnRzEvAE
+      Cu0EW3sia2V5IjogIjMyODIxN2I2YzI5NTliZGZjNDdjYWQwMGU4NDg5MGQwIiwgImlkIjogIjQ1
+      NjMxMmU3LThkMmMtNDcyMi1iNWNkLTlhMGRhMzg5MmM3OCIsICJyb2xlIjogIkNFTyIsICJ2ZXJi
+      b3NlPyI6IGZhbHNlLCAibWF4X2l0ZXIiOiAxNSwgIm1heF9ycG0iOiBudWxsLCAiZnVuY3Rpb25f
+      Y2FsbGluZ19sbG0iOiAiIiwgImxsbSI6ICJncHQtNG8iLCAiZGVsZWdhdGlvbl9lbmFibGVkPyI6
+      IHRydWUsICJhbGxvd19jb2RlX2V4ZWN1dGlvbj8iOiBmYWxzZSwgIm1heF9yZXRyeV9saW1pdCI6
+      IDIsICJ0b29sc19uYW1lcyI6IFtdfSwgeyJrZXkiOiAiOWE1MDE1ZWY0ODk1ZGM2Mjc4ZDU0ODE4
+      YmE0NDZhZjciLCAiaWQiOiAiMTM0MDg5MjAtNzVjOC00MTk3LWIwNmQtY2I4MmNkZjhkZDhhIiwg
+      InJvbGUiOiAiU2VuaW9yIFdyaXRlciIsICJ2ZXJib3NlPyI6IGZhbHNlLCAibWF4X2l0ZXIiOiAx
+      NSwgIm1heF9ycG0iOiBudWxsLCAiZnVuY3Rpb25fY2FsbGluZ19sbG0iOiAiIiwgImxsbSI6ICJn
+      cHQtNG8iLCAiZGVsZWdhdGlvbl9lbmFibGVkPyI6IGZhbHNlLCAiYWxsb3dfY29kZV9leGVjdXRp
+      b24/IjogZmFsc2UsICJtYXhfcmV0cnlfbGltaXQiOiAyLCAidG9vbHNfbmFtZXMiOiBbXX1dSvgB
+      CgpjcmV3X3Rhc2tzEukBCuYBW3sia2V5IjogIjBiOWQ2NWRiNmI3YWVkZmIzOThjNTllMmE5Zjcx
+      ZWM1IiwgImlkIjogImQ0YjVhZmE2LTczNTEtNDUxMy04NzY2LTIzOGNjYTk5ZjRlZiIsICJhc3lu
+      Y19leGVjdXRpb24/IjogZmFsc2UsICJodW1hbl9pbnB1dD8iOiBmYWxzZSwgImFnZW50X3JvbGUi
+      OiAiQ0VPIiwgImFnZW50X2tleSI6ICIzMjgyMTdiNmMyOTU5YmRmYzQ3Y2FkMDBlODQ4OTBkMCIs
+      ICJ0b29sc19uYW1lcyI6IFtdfV16AhgBhQEAAQAAEo4CChCLEGLGYlBkv0YucoYjY1NeEghRpGin
+      zpZUiSoMVGFzayBDcmVhdGVkMAE5KCA2WBNM+BdBaLw2WBNM+BdKLgoIY3Jld19rZXkSIgogZTY0
+      OTU3M2EyNmU1ODc5MGNhYzIxYTM3Y2Q0NDQzN2FKMQoHY3Jld19pZBImCiQyOGU2NGJkNy1jZWFj
+      LTQ2MTktODJjNy0yMzZkZDU0MThjODdKLgoIdGFza19rZXkSIgogMGI5ZDY1ZGI2YjdhZWRmYjM5
+      OGM1OWUyYTlmNzFlYzVKMQoHdGFza19pZBImCiRkNGI1YWZhNi03MzUxLTQ1MTMtODc2Ni0yMzhj
+      Y2E5OWY0ZWZ6AhgBhQEAAQAA
+    headers:
+      Accept:
+      - '*/*'
+      Accept-Encoding:
+      - gzip, deflate
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '1842'
+      Content-Type:
+      - application/x-protobuf
+      User-Agent:
+      - OTel-OTLP-Exporter-Python/1.27.0
+    method: POST
+    uri: https://telemetry.crewai.com:4319/v1/traces
+  response:
+    body:
+      string: "\n\0"
+    headers:
+      Content-Length:
+      - '2'
+      Content-Type:
+      - application/x-protobuf
+      Date:
+      - Tue, 24 Sep 2024 21:41:46 GMT
+    status:
+      code: 200
+      message: OK
 - request:
     body: '{"messages": [{"role": "system", "content": "You are Senior Writer. You''re
       a senior writer, specialized in technology, software engineering, AI and startups.
@@ -208,16 +208,18 @@ interactions:
       I now can give a great answer\nFinal Answer: Your final answer must be the great
       and the most complete as possible, it must be outcome described.\n\nI MUST use
       these formats, my job depends on it!"}, {"role": "user", "content": "\nCurrent
-      Task: Produce an amazing 1-paragraph draft of an article about AI Agents\n\nThis
-      is the expect criteria for your final answer: Your best answer to your coworker
+      Task: Produce a one paragraph draft of an article about AI Agents\n\nThis is
+      the expect criteria for your final answer: Your best answer to your coworker
       asking you this, accounting for the context shared.\nyou MUST return the actual
       complete content as the final answer, not a summary.\n\nThis is the context
-      you''re working with:\nWe need to create an engaging and informative paragraph
-      about AI Agents. This paragraph should highlight what AI Agents are, their significance,
-      and potential applications. It should capture the reader''s attention and be
-      suitable for a wide audience ranging from tech enthusiasts to business professionals.\n\nBegin!
-      This is VERY important to you, use the tools available and give your best Final
-      Answer, your job depends on it!\n\nThought:"}], "model": "gpt-4o"}'
+      you''re working with:\nWe need an amazing one-paragraph draft as the beginning
+      of a 4-paragraph article about AI Agents. This is for a high-stakes project
+      that critically impacts our company. The paragraph should highlight what AI
+      Agents are, their significance, and how they are transforming various industries.
+      The tone should be professional yet engaging. Make sure the content is original,
+      insightful, and thoroughly researched.\n\nBegin! This is VERY important to you,
+      use the tools available and give your best Final Answer, your job depends on
+      it!\n\nThought:"}], "model": "gpt-4o"}'
     headers:
       accept:
       - application/json
@@ -226,12 +228,12 @@ interactions:
       connection:
       - keep-alive
       content-length:
-      - '1449'
+      - '1545'
       content-type:
       - application/json
       cookie:
-      - __cf_bm=4rzJDR3F8S3Dp4B_qwylZU0mdm_WUwmv8vNHHp3IplM-1727119501-1.0.1.1-qobO_Sf88yG1qtXFnLgykvyc9YXR_fm1J7ZpXIhvtynVnsz67Uwcf4122PgHs4GMrlvZMaL6z_UVcVYSYUJOKQ;
-        _cfuvid=9K_ipT1uTVyDTneB1W5OZHPxCh36aOsDZCBnsQTONqQ-1727119501207-0.0.1.1-604800000
+      - __cf_bm=9.8sBYBkvBR8R1K_bVF7xgU..80XKlEIg3N2OBbTSCU-1727214102-1.0.1.1-.qiTLXbPamYUMSuyNsOEB9jhGu.jOifujOrx9E2JZvStbIZ9RTIiE44xKKNfLPxQkOi6qAT3h6htK8lPDGV_5g;
+        _cfuvid=lbRdAddVWV6W3f5Dm9SaOPWDUOxqtZBSPr_fTW26nEA-1727213194587-0.0.1.1-604800000
       host:
       - api.openai.com
       user-agent:
@@ -255,30 +257,31 @@ interactions:
     method: POST
     uri: https://api.openai.com/v1/chat/completions
   response:
-    content: "{\n  \"id\": \"chatcmpl-AAj9v0kYdLKr4qnoGVQaQLowtHVr2\",\n  \"object\":
-      \"chat.completion\",\n  \"created\": 1727120235,\n  \"model\": \"gpt-4o-2024-05-13\",\n
+    content: "{\n  \"id\": \"chatcmpl-AB7ZxDYcPlSiBZsftdRs2cWbUJllW\",\n  \"object\":
+      \"chat.completion\",\n  \"created\": 1727214105,\n  \"model\": \"gpt-4o-2024-05-13\",\n
       \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
-      \"assistant\",\n        \"content\": \"I now can give a great answer\\n\\nFinal
-      Answer: AI Agents, often referred to as autonomous agents, are sophisticated
-      software programs capable of performing tasks and making decisions independently.
-      By leveraging advanced algorithms and vast datasets, these agents can analyze
-      complex information and execute actions with minimal human intervention. The
-      significance of AI Agents lies in their ability to optimize operations, provide
-      personalized recommendations, and enhance decision-making processes across various
-      industries. From managing customer service inquiries through chatbots to optimizing
-      supply chain logistics and even assisting in medical diagnostics, the potential
-      applications of AI Agents are vast and transformative. As they continue to evolve,
-      AI Agents hold the promise of revolutionizing the way we interact with technology
-      and drive efficiency in both personal and professional realms.\",\n        \"refusal\":
+      \"assistant\",\n        \"content\": \"I now can give a great answer  \\nFinal
+      Answer: Artificial Intelligence (AI) Agents are sophisticated computer programs
+      designed to perform tasks that typically require human intelligence, such as
+      decision making, problem-solving, and learning. These agents operate autonomously,
+      utilizing vast amounts of data, advanced algorithms, and machine learning techniques
+      to analyze their environment, adapt to new information, and improve their performance
+      over time. The significance of AI Agents lies in their transformative potential
+      across various industries. In healthcare, they assist in diagnosing diseases
+      with greater accuracy; in finance, they predict market trends and manage risks;
+      in customer service, they provide personalized and efficient responses. As these
+      AI-powered entities continue to evolve, they are not only enhancing operational
+      efficiencies but also driving innovation and creating new opportunities for
+      growth and development in every sector they penetrate.\",\n        \"refusal\":
       null\n      },\n      \"logprobs\": null,\n      \"finish_reason\": \"stop\"\n
-      \   }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 274,\n    \"completion_tokens\":
-      143,\n    \"total_tokens\": 417,\n    \"completion_tokens_details\": {\n      \"reasoning_tokens\":
+      \   }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 297,\n    \"completion_tokens\":
+      160,\n    \"total_tokens\": 457,\n    \"completion_tokens_details\": {\n      \"reasoning_tokens\":
       0\n    }\n  },\n  \"system_fingerprint\": \"fp_e375328146\"\n}\n"
     headers:
       CF-Cache-Status:
       - DYNAMIC
       CF-RAY:
-      - 8c7cfcfc79d2a4c7-MIA
+      - 8c85f0c0cf961cf3-GRU
       Connection:
       - keep-alive
       Content-Encoding:
@@ -286,7 +289,7 @@ interactions:
       Content-Type:
       - application/json
       Date:
-      - Mon, 23 Sep 2024 19:37:17 GMT
+      - Tue, 24 Sep 2024 21:41:48 GMT
       Server:
       - cloudflare
       Transfer-Encoding:
@@ -298,11 +301,11 @@ interactions:
       openai-organization:
       - crewai-iuxna1
       openai-processing-ms:
-      - '1917'
+      - '2468'
       openai-version:
       - '2020-10-01'
       strict-transport-security:
-      - max-age=15552000; includeSubDomains; preload
+      - max-age=31536000; includeSubDomains; preload
       x-ratelimit-limit-requests:
       - '10000'
       x-ratelimit-limit-tokens:
@@ -310,20 +313,20 @@ interactions:
       x-ratelimit-remaining-requests:
       - '9999'
       x-ratelimit-remaining-tokens:
-      - '29999649'
+      - '29999625'
       x-ratelimit-reset-requests:
       - 6ms
       x-ratelimit-reset-tokens:
       - 0s
       x-request-id:
-      - req_dcefc3a98e7bf22495411b7e272cbe95
+      - req_66c8801b42ac865249246d98225c1492
     http_version: HTTP/1.1
     status_code: 200
 - request:
     body: !!binary |
       CtwBCiQKIgoMc2VydmljZS5uYW1lEhIKEGNyZXdBSS10ZWxlbWV0cnkSswEKEgoQY3Jld2FpLnRl
-      bGVtZXRyeRKcAQoQelvlFm3YL2LRxNTTHzXtuhIIAZcjLxHkPakqClRvb2wgVXNhZ2UwATmAa9Rr
-      tPb3F0F479prtPb3F0oaCg5jcmV3YWlfdmVyc2lvbhIICgYwLjYxLjBKKAoJdG9vbF9uYW1lEhsK
+      bGVtZXRyeRKcAQoQROg/k5NCUGdgfvfLrFlQDxIIlfh6oMbmqu0qClRvb2wgVXNhZ2UwATlws+Wj
+      FEz4F0EwBeijFEz4F0oaCg5jcmV3YWlfdmVyc2lvbhIICgYwLjYxLjBKKAoJdG9vbF9uYW1lEhsK
       GURlbGVnYXRlIHdvcmsgdG8gY293b3JrZXJKDgoIYXR0ZW1wdHMSAhgBegIYAYUBAAEAAA==
     headers:
       Accept:
@@ -349,7 +352,7 @@ interactions:
       Content-Type:
       - application/x-protobuf
       Date:
-      - Mon, 23 Sep 2024 19:37:18 GMT
+      - Tue, 24 Sep 2024 21:41:51 GMT
     status:
       code: 200
       message: OK
@@ -389,27 +392,29 @@ interactions:
       article about AI.\nyou MUST return the actual complete content as the final
       answer, not a summary.\n\nBegin! This is VERY important to you, use the tools
       available and give your best Final Answer, your job depends on it!\n\nThought:"},
-      {"role": "user", "content": "Thought: The current task is to produce an amazing
-      1-paragraph draft of an article about AI Agents. To ensure the final content
-      is of high quality, I will delegate the task to the Senior Writer along with
-      all necessary context to execute it properly.\n\nAction: Delegate work to coworker\nAction
-      Input: \n{\n  \"coworker\": \"Senior Writer\",\n  \"task\": \"Produce an amazing
-      1-paragraph draft of an article about AI Agents\",\n  \"context\": \"We need
-      to create an engaging and informative paragraph about AI Agents. This paragraph
-      should highlight what AI Agents are, their significance, and potential applications.
-      It should capture the reader''s attention and be suitable for a wide audience
-      ranging from tech enthusiasts to business professionals.\"\n}\nObservation:
-      AI Agents, often referred to as autonomous agents, are sophisticated software
-      programs capable of performing tasks and making decisions independently. By
-      leveraging advanced algorithms and vast datasets, these agents can analyze complex
-      information and execute actions with minimal human intervention. The significance
-      of AI Agents lies in their ability to optimize operations, provide personalized
-      recommendations, and enhance decision-making processes across various industries.
-      From managing customer service inquiries through chatbots to optimizing supply
-      chain logistics and even assisting in medical diagnostics, the potential applications
-      of AI Agents are vast and transformative. As they continue to evolve, AI Agents
-      hold the promise of revolutionizing the way we interact with technology and
-      drive efficiency in both personal and professional realms."}], "model": "gpt-4o"}'
+      {"role": "assistant", "content": "Thought: To ensure the content is amazing,
+      I''ll delegate the task of producing a one-paragraph draft of an article about
+      AI Agents to the Senior Writer with all necessary context.\n\nAction: Delegate
+      work to coworker\nAction Input: \n{\n    \"coworker\": \"Senior Writer\", \n    \"task\":
+      \"Produce a one paragraph draft of an article about AI Agents\", \n    \"context\":
+      \"We need an amazing one-paragraph draft as the beginning of a 4-paragraph article
+      about AI Agents. This is for a high-stakes project that critically impacts our
+      company. The paragraph should highlight what AI Agents are, their significance,
+      and how they are transforming various industries. The tone should be professional
+      yet engaging. Make sure the content is original, insightful, and thoroughly
+      researched.\"\n}\nObservation: Artificial Intelligence (AI) Agents are sophisticated
+      computer programs designed to perform tasks that typically require human intelligence,
+      such as decision making, problem-solving, and learning. These agents operate
+      autonomously, utilizing vast amounts of data, advanced algorithms, and machine
+      learning techniques to analyze their environment, adapt to new information,
+      and improve their performance over time. The significance of AI Agents lies
+      in their transformative potential across various industries. In healthcare,
+      they assist in diagnosing diseases with greater accuracy; in finance, they predict
+      market trends and manage risks; in customer service, they provide personalized
+      and efficient responses. As these AI-powered entities continue to evolve, they
+      are not only enhancing operational efficiencies but also driving innovation
+      and creating new opportunities for growth and development in every sector they
+      penetrate."}], "model": "gpt-4o"}'
     headers:
       accept:
       - application/json
@@ -418,12 +423,12 @@ interactions:
       connection:
       - keep-alive
       content-length:
-      - '4427'
+      - '4536'
       content-type:
       - application/json
       cookie:
-      - __cf_bm=4rzJDR3F8S3Dp4B_qwylZU0mdm_WUwmv8vNHHp3IplM-1727119501-1.0.1.1-qobO_Sf88yG1qtXFnLgykvyc9YXR_fm1J7ZpXIhvtynVnsz67Uwcf4122PgHs4GMrlvZMaL6z_UVcVYSYUJOKQ;
-        _cfuvid=9K_ipT1uTVyDTneB1W5OZHPxCh36aOsDZCBnsQTONqQ-1727119501207-0.0.1.1-604800000
+      - __cf_bm=9.8sBYBkvBR8R1K_bVF7xgU..80XKlEIg3N2OBbTSCU-1727214102-1.0.1.1-.qiTLXbPamYUMSuyNsOEB9jhGu.jOifujOrx9E2JZvStbIZ9RTIiE44xKKNfLPxQkOi6qAT3h6htK8lPDGV_5g;
+        _cfuvid=lbRdAddVWV6W3f5Dm9SaOPWDUOxqtZBSPr_fTW26nEA-1727213194587-0.0.1.1-604800000
       host:
       - api.openai.com
       user-agent:
@@ -447,83 +452,75 @@ interactions:
     method: POST
     uri: https://api.openai.com/v1/chat/completions
   response:
-    content: "{\n  \"id\": \"chatcmpl-AAj9x1geWAeY4KliGQqnVYcgOryO6\",\n  \"object\":
-      \"chat.completion\",\n  \"created\": 1727120237,\n  \"model\": \"gpt-4o-2024-05-13\",\n
+    content: "{\n  \"id\": \"chatcmpl-AB7a1PO3pMNybn76wXDFc5HE7ZRsL\",\n  \"object\":
+      \"chat.completion\",\n  \"created\": 1727214109,\n  \"model\": \"gpt-4o-2024-05-13\",\n
       \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
-      \"assistant\",\n        \"content\": \"Thought: The Senior Writer has produced
-      a high-quality draft for the 1-paragraph that captures the essence of AI Agents.
-      I now need to compile this paragraph with additional content to form a complete
-      4-paragraph article about AI, ensuring contextual flow and cohesion.\\n\\nAction:
-      Extend the current draft into a full 4-paragraph article about AI, ensuring
-      each paragraph transitions smoothly and adds depth to the reader's understanding
-      of AI Agents.\\n\\nObservation: \\n1. **Introduction**\\nAI Agents, often referred
-      to as autonomous agents, are sophisticated software programs capable of performing
-      tasks and making decisions independently. By leveraging advanced algorithms
-      and vast datasets, these agents can analyze complex information and execute
-      actions with minimal human intervention. The significance of AI Agents lies
-      in their ability to optimize operations, provide personalized recommendations,
-      and enhance decision-making processes across various industries.\\n\\n2. **Applications
-      and Impact**\\nFrom managing customer service inquiries through chatbots to
-      optimizing supply chain logistics and even assisting in medical diagnostics,
-      the potential applications of AI Agents are vast and transformative. In the
-      financial sector, for instance, AI Agents can predict market trends and provide
-      investment advice, while in healthcare, they can analyze patient data to support
-      early diagnosis and treatment plans. The integration of AI Agents in various
-      fields not only improves efficiency but also opens up new opportunities for
-      innovation and growth.\\n\\n3. **Challenges and Ethical Considerations**\\nDespite
-      their numerous advantages, the deployment of AI Agents is not without challenges.
-      Issues such as data privacy, algorithmic biases, and the potential for job displacement
-      raise significant ethical and societal questions. Ensuring that AI Agents operate
-      transparently and fairly requires robust regulatory frameworks and continuous
-      monitoring. Additionally, as AI Agents increasingly participate in decision-making
-      processes, it is crucial to maintain a balance between automation and human
-      oversight to prevent unintended consequences.\\n\\n4. **Future Prospects**\\nAs
-      technology advances, the capabilities of AI Agents are expected to grow exponentially.
-      Future developments may include more sophisticated natural language processing,
-      enhanced emotional intelligence, and greater adaptability to diverse environments.
-      These advancements could enable AI Agents to perform more complex tasks, such
-      as creative problem-solving and strategic planning. Ultimately, the evolution
-      of AI Agents will have a profound impact on various aspects of our lives, driving
-      progress and innovation while reshaping the future of work and human interaction
-      with technology.\\n\\nThought: I now know the final answer.\\n\\nFinal Answer:
-      \\n1. **Introduction**\\nAI Agents, often referred to as autonomous agents,
-      are sophisticated software programs capable of performing tasks and making decisions
-      independently. By leveraging advanced algorithms and vast datasets, these agents
-      can analyze complex information and execute actions with minimal human intervention.
-      The significance of AI Agents lies in their ability to optimize operations,
-      provide personalized recommendations, and enhance decision-making processes
-      across various industries.\\n\\n2. **Applications and Impact**\\nFrom managing
-      customer service inquiries through chatbots to optimizing supply chain logistics
-      and even assisting in medical diagnostics, the potential applications of AI
-      Agents are vast and transformative. In the financial sector, for instance, AI
-      Agents can predict market trends and provide investment advice, while in healthcare,
-      they can analyze patient data to support early diagnosis and treatment plans.
-      The integration of AI Agents in various fields not only improves efficiency
-      but also opens up new opportunities for innovation and growth.\\n\\n3. **Challenges
-      and Ethical Considerations**\\nDespite their numerous advantages, the deployment
-      of AI Agents is not without challenges. Issues such as data privacy, algorithmic
-      biases, and the potential for job displacement raise significant ethical and
-      societal questions. Ensuring that AI Agents operate transparently and fairly
-      requires robust regulatory frameworks and continuous monitoring. Additionally,
-      as AI Agents increasingly participate in decision-making processes, it is crucial
-      to maintain a balance between automation and human oversight to prevent unintended
-      consequences.\\n\\n4. **Future Prospects**\\nAs technology advances, the capabilities
-      of AI Agents are expected to grow exponentially. Future developments may include
-      more sophisticated natural language processing, enhanced emotional intelligence,
-      and greater adaptability to diverse environments. These advancements could enable
-      AI Agents to perform more complex tasks, such as creative problem-solving and
-      strategic planning. Ultimately, the evolution of AI Agents will have a profound
-      impact on various aspects of our lives, driving progress and innovation while
-      reshaping the future of work and human interaction with technology.\",\n        \"refusal\":
-      null\n      },\n      \"logprobs\": null,\n      \"finish_reason\": \"stop\"\n
-      \   }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 897,\n    \"completion_tokens\":
-      837,\n    \"total_tokens\": 1734,\n    \"completion_tokens_details\": {\n      \"reasoning_tokens\":
+      \"assistant\",\n        \"content\": \"Thought: The paragraph provided by the
+      Senior Writer is well-detailed and engaging. I will now structure the 4-paragraph
+      article around this draft, adding an introduction, expanding on the specific
+      applications in various industries, and concluding with the potential future
+      impact of AI Agents.\\n\\nFinal Answer:\\n\\nArtificial Intelligence (AI) Agents
+      are sophisticated computer programs designed to perform tasks that typically
+      require human intelligence, such as decision making, problem-solving, and learning.
+      These agents operate autonomously, utilizing vast amounts of data, advanced
+      algorithms, and machine learning techniques to analyze their environment, adapt
+      to new information, and improve their performance over time.\\n\\nThe significance
+      of AI Agents lies in their transformative potential across various industries.
+      In healthcare, for example, they assist in diagnosing diseases with greater
+      accuracy and speed than human practitioners, offering personalized treatment
+      plans by analyzing patient data. In finance, AI Agents predict market trends,
+      manage risks, and even execute trades, contributing to more stable and profitable
+      financial systems. Customer service sectors benefit significantly from AI Agents,
+      as they provide personalized and efficient responses, often resolving issues
+      faster than traditional methods.\\n\\nMoreover, AI Agents are also making substantial
+      contributions in fields like education and manufacturing. In education, they
+      offer tailored learning experiences by assessing individual student needs and
+      adjusting teaching methods accordingly. They help educators identify students
+      who might need additional support and provide resources to enhance learning
+      outcomes. In manufacturing, AI Agents optimize production lines, predict equipment
+      failures, and improve supply chain management, thus boosting productivity and
+      reducing downtime.\\n\\nAs these AI-powered entities continue to evolve, they
+      are not only enhancing operational efficiencies but also driving innovation
+      and creating new opportunities for growth and development in every sector they
+      penetrate. The future of AI Agents looks promising, with the potential to revolutionize
+      the way we live and work, making processes more efficient, decisions more data-driven,
+      and solutions more innovative than ever before.\\n\\nThis is now a well-rounded,
+      four-paragraph article that comprehensively covers the topic of AI Agents.\\n\\nFinal
+      Answer: This is the complete content as specified:\\nArtificial Intelligence
+      (AI) Agents are sophisticated computer programs designed to perform tasks that
+      typically require human intelligence, such as decision making, problem-solving,
+      and learning. These agents operate autonomously, utilizing vast amounts of data,
+      advanced algorithms, and machine learning techniques to analyze their environment,
+      adapt to new information, and improve their performance over time.\\n\\nThe
+      significance of AI Agents lies in their transformative potential across various
+      industries. In healthcare, for example, they assist in diagnosing diseases with
+      greater accuracy and speed than human practitioners, offering personalized treatment
+      plans by analyzing patient data. In finance, AI Agents predict market trends,
+      manage risks, and even execute trades, contributing to more stable and profitable
+      financial systems. Customer service sectors benefit significantly from AI Agents,
+      as they provide personalized and efficient responses, often resolving issues
+      faster than traditional methods.\\n\\nMoreover, AI Agents are also making substantial
+      contributions in fields like education and manufacturing. In education, they
+      offer tailored learning experiences by assessing individual student needs and
+      adjusting teaching methods accordingly. They help educators identify students
+      who might need additional support and provide resources to enhance learning
+      outcomes. In manufacturing, AI Agents optimize production lines, predict equipment
+      failures, and improve supply chain management, thus boosting productivity and
+      reducing downtime.\\n\\nAs these AI-powered entities continue to evolve, they
+      are not only enhancing operational efficiencies but also driving innovation
+      and creating new opportunities for growth and development in every sector they
+      penetrate. The future of AI Agents looks promising, with the potential to revolutionize
+      the way we live and work, making processes more efficient, decisions more data-driven,
+      and solutions more innovative than ever before.\",\n        \"refusal\": null\n
+      \     },\n      \"logprobs\": null,\n      \"finish_reason\": \"stop\"\n    }\n
+      \ ],\n  \"usage\": {\n    \"prompt_tokens\": 923,\n    \"completion_tokens\":
+      715,\n    \"total_tokens\": 1638,\n    \"completion_tokens_details\": {\n      \"reasoning_tokens\":
       0\n    }\n  },\n  \"system_fingerprint\": \"fp_e375328146\"\n}\n"
     headers:
       CF-Cache-Status:
       - DYNAMIC
       CF-RAY:
-      - 8c7cfd0ab802a4c7-MIA
+      - 8c85f0d2f90c1cf3-GRU
       Connection:
       - keep-alive
       Content-Encoding:
@@ -531,7 +528,7 @@ interactions:
       Content-Type:
       - application/json
       Date:
-      - Mon, 23 Sep 2024 19:37:28 GMT
+      - Tue, 24 Sep 2024 21:41:58 GMT
       Server:
       - cloudflare
       Transfer-Encoding:
@@ -543,11 +540,11 @@ interactions:
       openai-organization:
       - crewai-iuxna1
       openai-processing-ms:
-      - '10676'
+      - '8591'
       openai-version:
       - '2020-10-01'
       strict-transport-security:
-      - max-age=15552000; includeSubDomains; preload
+      - max-age=31536000; includeSubDomains; preload
       x-ratelimit-limit-requests:
       - '10000'
       x-ratelimit-limit-tokens:
@@ -555,13 +552,13 @@ interactions:
       x-ratelimit-remaining-requests:
       - '9999'
       x-ratelimit-remaining-tokens:
-      - '29998921'
+      - '29998895'
       x-ratelimit-reset-requests:
       - 6ms
       x-ratelimit-reset-tokens:
       - 2ms
       x-request-id:
-      - req_a0fca7e34e4f579d7a6d666ba90d4799
+      - req_2b51b5cff02148d29b04284b40ca6081
     http_version: HTTP/1.1
     status_code: 200
 version: 1

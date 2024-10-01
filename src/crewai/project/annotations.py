@@ -1,6 +1,7 @@
 from functools import wraps
 
 from crewai.project.utils import memoize
+from crewai import Crew
 
 
 def task(func):
@@ -72,7 +73,7 @@ def pipeline(func):
     return memoize(func)
 
 
-def crew(func):
+def crew(func) -> "Crew":
     def wrapper(self, *args, **kwargs):
         instantiated_tasks = []
         instantiated_agents = []

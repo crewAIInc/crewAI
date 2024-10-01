@@ -34,7 +34,6 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
         max_iter: int,
         tools: List[Any],
         tools_names: str,
-        use_stop_words: bool,
         stop_words: List[str],
         tools_description: str,
         tools_handler: ToolsHandler,
@@ -60,7 +59,7 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
         self.tools_handler = tools_handler
         self.original_tools = original_tools
         self.step_callback = step_callback
-        self.use_stop_words = use_stop_words
+        self.use_stop_words = self.llm.supports_stop_words()
         self.tools_description = tools_description
         self.function_calling_llm = function_calling_llm
         self.respect_context_window = respect_context_window
@@ -68,8 +67,13 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
         self.ask_for_human_input = False
         self.messages: List[Dict[str, str]] = []
         self.iterations = 0
+        self.log_error_after = 3
         self.have_forced_answer = False
         self.name_to_tool_map = {tool.name: tool for tool in self.tools}
+        if self.llm.stop:
+            self.llm.stop = list(set(self.llm.stop + self.stop))
+        else:
+            self.llm.stop = self.stop
 
     def invoke(self, inputs: Dict[str, str]) -> Dict[str, Any]:
         if "system" in self.prompt:
@@ -96,6 +100,9 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
             self.ask_for_human_input = False
             self.messages.append(self._format_msg(f"Feedback: {human_feedback}"))
             formatted_answer = self._invoke_loop()
+
+            if self.crew and self.crew._train:
+                self._handle_crew_training_output(formatted_answer)
 
         return {"output": formatted_answer.output}
 
@@ -125,7 +132,6 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
                         action_result = self._use_tool(formatted_answer)
                         formatted_answer.text += f"\nObservation: {action_result}"
                         formatted_answer.result = action_result
-                        print("formatted_answer", formatted_answer)
                         self._show_logs(formatted_answer)
 
                         if self.step_callback:
@@ -147,8 +153,14 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
                         self.messages.append(
                             self._format_msg(formatted_answer.text, role="user")
                         )
+
         except OutputParserException as e:
             self.messages.append({"role": "user", "content": e.error})
+            if self.iterations > self.log_error_after:
+                self._printer.print(
+                    content=f"Error parsing LLM output, agent will retry: {e.error}",
+                    color="red",
+                )
             return self._invoke_loop(formatted_answer)
 
         except Exception as e:
@@ -167,8 +179,9 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
         if self.agent.verbose or (
             hasattr(self, "crew") and getattr(self.crew, "verbose", False)
         ):
+            agent_role = self.agent.role.split("\n")[0]
             self._printer.print(
-                content=f"\033[1m\033[95m# Agent:\033[00m \033[1m\033[92m{self.agent.role}\033[00m"
+                content=f"\033[1m\033[95m# Agent:\033[00m \033[1m\033[92m{agent_role}\033[00m"
             )
             self._printer.print(
                 content=f"\033[95m## Task:\033[00m \033[92m{self.task.description}\033[00m"
@@ -178,6 +191,7 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
         if self.agent.verbose or (
             hasattr(self, "crew") and getattr(self.crew, "verbose", False)
         ):
+            agent_role = self.agent.role.split("\n")[0]
             if isinstance(formatted_answer, AgentAction):
                 thought = re.sub(r"\n+", "\n", formatted_answer.thought)
                 formatted_json = json.dumps(
@@ -186,7 +200,7 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
                     ensure_ascii=False,
                 )
                 self._printer.print(
-                    content=f"\n\n\033[1m\033[95m# Agent:\033[00m \033[1m\033[92m{self.agent.role}\033[00m"
+                    content=f"\n\n\033[1m\033[95m# Agent:\033[00m \033[1m\033[92m{agent_role}\033[00m"
                 )
                 if thought and thought != "":
                     self._printer.print(
@@ -203,10 +217,10 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
                 )
             elif isinstance(formatted_answer, AgentFinish):
                 self._printer.print(
-                    content=f"\n\n\033[1m\033[95m# Agent:\033[00m \033[1m\033[92m{self.agent.role}\033[00m"
+                    content=f"\n\n\033[1m\033[95m# Agent:\033[00m \033[1m\033[92m{agent_role}\033[00m"
                 )
                 self._printer.print(
-                    content=f"\033[95m## Final Answer:\033[00m \033[92m\n{formatted_answer.output}\033[00m"
+                    content=f"\033[95m## Final Answer:\033[00m \033[92m\n{formatted_answer.output}\033[00m\n\n"
                 )
 
     def _use_tool(self, agent_action: AgentAction) -> Any:
@@ -241,21 +255,21 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
 
     def _summarize_messages(self) -> None:
         messages_groups = []
-
         for message in self.messages:
             content = message["content"]
-            for i in range(0, len(content), 5000):
-                messages_groups.append(content[i : i + 5000])
+            cut_size = self.llm.get_context_window_size()
+            for i in range(0, len(content), cut_size):
+                messages_groups.append(content[i : i + cut_size])
 
         summarized_contents = []
         for group in messages_groups:
             summary = self.llm.call(
                 [
                     self._format_msg(
-                        self._i18n.slices("summarizer_system_message"), role="system"
+                        self._i18n.slice("summarizer_system_message"), role="system"
                     ),
                     self._format_msg(
-                        self._i18n.errors("sumamrize_instruction").format(group=group),
+                        self._i18n.slice("sumamrize_instruction").format(group=group),
                     ),
                 ],
                 callbacks=self.callbacks,
@@ -266,7 +280,7 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
 
         self.messages = [
             self._format_msg(
-                self._i18n.errors("summary").format(merged_summary=merged_summary)
+                self._i18n.slice("summary").format(merged_summary=merged_summary)
             )
         ]
 
@@ -293,24 +307,16 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
     ) -> None:
         """Function to handle the process of the training data."""
         agent_id = str(self.agent.id)
-
         if (
             CrewTrainingHandler(TRAINING_DATA_FILE).load()
             and not self.ask_for_human_input
         ):
             training_data = CrewTrainingHandler(TRAINING_DATA_FILE).load()
             if training_data.get(agent_id):
-                if self.crew is not None and hasattr(self.crew, "_train_iteration"):
-                    training_data[agent_id][self.crew._train_iteration][
-                        "improved_output"
-                    ] = result.output
-                    CrewTrainingHandler(TRAINING_DATA_FILE).save(training_data)
-                else:
-                    self._logger.log(
-                        "error",
-                        "Invalid crew or missing _train_iteration attribute.",
-                        color="red",
-                    )
+                training_data[agent_id][self.crew._train_iteration][
+                    "improved_output"
+                ] = result.output
+                CrewTrainingHandler(TRAINING_DATA_FILE).save(training_data)
 
         if self.ask_for_human_input and human_feedback is not None:
             training_data = {

@@ -74,10 +74,6 @@ class Agent(BaseAgent):
         default=None,
         description="Callback to be executed after each step of the agent execution.",
     )
-    use_stop_words: bool = Field(
-        default=True,
-        description="Use stop words for the agent.",
-    )
     use_system_prompt: Optional[bool] = Field(
         default=True,
         description="Use system prompt for the agent.",
@@ -108,7 +104,7 @@ class Agent(BaseAgent):
         description="Keep messages under the context window size by summarizing content.",
     )
     max_iter: int = Field(
-        default=15,
+        default=20,
         description="Maximum number of iterations for an agent to execute a task before giving it's best answer",
     )
     max_retry_limit: int = Field(
@@ -132,7 +128,9 @@ class Agent(BaseAgent):
             model_name = os.environ.get("OPENAI_MODEL_NAME", "gpt-4o-mini")
             llm_params = {"model": model_name}
 
-            api_base = os.environ.get("OPENAI_API_BASE")
+            api_base = os.environ.get("OPENAI_API_BASE") or os.environ.get(
+                "OPENAI_BASE_URL"
+            )
             if api_base:
                 llm_params["base_url"] = api_base
 
@@ -291,7 +289,6 @@ class Agent(BaseAgent):
             stop_words=stop_words,
             max_iter=self.max_iter,
             tools_handler=self.tools_handler,
-            use_stop_words=self.use_stop_words,
             tools_names=self.__tools_names(parsed_tools),
             tools_description=self._render_text_description_and_args(parsed_tools),
             step_callback=self.step_callback,
@@ -349,8 +346,9 @@ class Agent(BaseAgent):
                 human_feedbacks = [
                     i["human_feedback"] for i in data.get(agent_id, {}).values()
                 ]
-                task_prompt += "You MUST follow these feedbacks: \n " + "\n - ".join(
-                    human_feedbacks
+                task_prompt += (
+                    "\n\nYou MUST follow these instructions: \n "
+                    + "\n - ".join(human_feedbacks)
                 )
 
         return task_prompt
@@ -359,8 +357,9 @@ class Agent(BaseAgent):
         """Use trained data for the agent task prompt to improve output."""
         if data := CrewTrainingHandler(TRAINED_AGENTS_DATA_FILE).load():
             if trained_data_output := data.get(self.role):
-                task_prompt += "You MUST follow these feedbacks: \n " + "\n - ".join(
-                    trained_data_output["suggestions"]
+                task_prompt += (
+                    "\n\nYou MUST follow these instructions: \n - "
+                    + "\n - ".join(trained_data_output["suggestions"])
                 )
         return task_prompt
 

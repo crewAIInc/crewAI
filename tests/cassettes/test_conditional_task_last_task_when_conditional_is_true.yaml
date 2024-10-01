@@ -25,8 +25,8 @@ interactions:
       content-type:
       - application/json
       cookie:
-      - __cf_bm=iOyeV6o_mR0USNA.hPdpKPtAzYgMoprpObRHvn0tmcc-1727120402-1.0.1.1-yMOSz4qncmM1wdtrwFfBQNfITkLs2w_sxijeM44F7aSIrclbkQ2G_18su02eVMVPMW2O55B1rty8BiY_WAoayg;
-        _cfuvid=9K_ipT1uTVyDTneB1W5OZHPxCh36aOsDZCBnsQTONqQ-1727119501207-0.0.1.1-604800000
+      - __cf_bm=9.8sBYBkvBR8R1K_bVF7xgU..80XKlEIg3N2OBbTSCU-1727214102-1.0.1.1-.qiTLXbPamYUMSuyNsOEB9jhGu.jOifujOrx9E2JZvStbIZ9RTIiE44xKKNfLPxQkOi6qAT3h6htK8lPDGV_5g;
+        _cfuvid=lbRdAddVWV6W3f5Dm9SaOPWDUOxqtZBSPr_fTW26nEA-1727213194587-0.0.1.1-604800000
       host:
       - api.openai.com
       user-agent:
@@ -50,8 +50,8 @@ interactions:
     method: POST
     uri: https://api.openai.com/v1/chat/completions
   response:
-    content: "{\n  \"id\": \"chatcmpl-AAjHWAFSThfca1uuGMZ3CWVyFNryH\",\n  \"object\":
-      \"chat.completion\",\n  \"created\": 1727120706,\n  \"model\": \"gpt-4o-2024-05-13\",\n
+    content: "{\n  \"id\": \"chatcmpl-AB7dQjw9Trcoq3INqpA9pSKnZm2HD\",\n  \"object\":
+      \"chat.completion\",\n  \"created\": 1727214320,\n  \"model\": \"gpt-4o-2024-05-13\",\n
       \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
       \"assistant\",\n        \"content\": \"Thought: I now can give a great answer\\nFinal
       Answer: Hi\",\n        \"refusal\": null\n      },\n      \"logprobs\": null,\n
@@ -62,7 +62,7 @@ interactions:
       CF-Cache-Status:
       - DYNAMIC
       CF-RAY:
-      - 8c7d087efa17a4c7-MIA
+      - 8c85f5fcafc71cf3-GRU
       Connection:
       - keep-alive
       Content-Encoding:
@@ -70,7 +70,7 @@ interactions:
       Content-Type:
       - application/json
       Date:
-      - Mon, 23 Sep 2024 19:45:06 GMT
+      - Tue, 24 Sep 2024 21:45:20 GMT
       Server:
       - cloudflare
       Transfer-Encoding:
@@ -82,11 +82,11 @@ interactions:
       openai-organization:
       - crewai-iuxna1
       openai-processing-ms:
-      - '308'
+      - '277'
       openai-version:
       - '2020-10-01'
       strict-transport-security:
-      - max-age=15552000; includeSubDomains; preload
+      - max-age=31536000; includeSubDomains; preload
       x-ratelimit-limit-requests:
       - '10000'
       x-ratelimit-limit-tokens:
@@ -94,108 +94,108 @@ interactions:
       x-ratelimit-remaining-requests:
       - '9999'
       x-ratelimit-remaining-tokens:
-      - '29999763'
+      - '29999762'
       x-ratelimit-reset-requests:
       - 6ms
       x-ratelimit-reset-tokens:
       - 0s
       x-request-id:
-      - req_e7d508b3b89cbf3aa95bb99cbdfe14e9
+      - req_89b0582bafe362d56e5b66ac798a326d
     http_version: HTTP/1.1
     status_code: 200
 - request:
     body: !!binary |
       CrkoCiQKIgoMc2VydmljZS5uYW1lEhIKEGNyZXdBSS10ZWxlbWV0cnkSkCgKEgoQY3Jld2FpLnRl
-      bGVtZXRyeRKLCQoQCBkR6GDdQnQg0irW4NlM2hIIEOjM6ZiBCI0qDENyZXcgQ3JlYXRlZDABOViU
-      mwkh9/cXQVAqnwkh9/cXShoKDmNyZXdhaV92ZXJzaW9uEggKBjAuNjEuMEoaCg5weXRob25fdmVy
+      bGVtZXRyeRKLCQoQgPsGC22P3/pjWphtjitiGRIIwhGFYDTCfdEqDENyZXcgQ3JlYXRlZDABOdD3
+      Ii1FTPgXQejbJi1FTPgXShoKDmNyZXdhaV92ZXJzaW9uEggKBjAuNjEuMEoaCg5weXRob25fdmVy
       c2lvbhIICgYzLjExLjdKLgoIY3Jld19rZXkSIgogODBjNzk4ZjYyMjhmMzJhNzQ4M2Y3MmFmZTM2
-      NmVkY2FKMQoHY3Jld19pZBImCiQwNDVhYjM5OS1iYmQ0LTRmZjctOTVkOS1jYjc2ZDgwNmVmYTdK
+      NmVkY2FKMQoHY3Jld19pZBImCiQ4OGJmNjMxNy0xYTA1LTQ1NWEtOTVlMi1jZDRiYzIxNGJmNTNK
       HAoMY3Jld19wcm9jZXNzEgwKCnNlcXVlbnRpYWxKEQoLY3Jld19tZW1vcnkSAhAAShoKFGNyZXdf
       bnVtYmVyX29mX3Rhc2tzEgIYAkobChVjcmV3X251bWJlcl9vZl9hZ2VudHMSAhgBSswCCgtjcmV3
       X2FnZW50cxK8Agq5Alt7ImtleSI6ICIzN2Q3MTNkM2RjZmFlMWRlNTNiNGUyZGFjNzU1M2ZkNyIs
-      ICJpZCI6ICI0MWJlOGRlNi0yMTdmLTQzNzItOGJmNS1lZGFkNDNiMmM0NzkiLCAicm9sZSI6ICJ0
+      ICJpZCI6ICI1Y2IwMGY1NS0wZDQ2LTQ5MTMtYWRjZi0xOTQxOTdlMGNhZWMiLCAicm9sZSI6ICJ0
       ZXN0X2FnZW50IiwgInZlcmJvc2U/IjogZmFsc2UsICJtYXhfaXRlciI6IDE1LCAibWF4X3JwbSI6
       IG51bGwsICJmdW5jdGlvbl9jYWxsaW5nX2xsbSI6ICIiLCAibGxtIjogImdwdC00byIsICJkZWxl
       Z2F0aW9uX2VuYWJsZWQ/IjogZmFsc2UsICJhbGxvd19jb2RlX2V4ZWN1dGlvbj8iOiBmYWxzZSwg
       Im1heF9yZXRyeV9saW1pdCI6IDIsICJ0b29sc19uYW1lcyI6IFtdfV1K7AMKCmNyZXdfdGFza3MS
       3QMK2gNbeyJrZXkiOiAiY2M0YTQyYzE4NmVlMWEyZTY2YjAyOGVjNWI3MmJkNGUiLCAiaWQiOiAi
-      ZGI1NzY1MTYtOTkyZC00OTQyLTg5NjktZTU1Y2UxNzVlZTRhIiwgImFzeW5jX2V4ZWN1dGlvbj8i
+      ODlhZWUzMTUtZDU2Ni00NzdjLWIwYzItMTc1Yjk0NGMyNzg2IiwgImFzeW5jX2V4ZWN1dGlvbj8i
       OiBmYWxzZSwgImh1bWFuX2lucHV0PyI6IGZhbHNlLCAiYWdlbnRfcm9sZSI6ICJ0ZXN0X2FnZW50
       IiwgImFnZW50X2tleSI6ICIzN2Q3MTNkM2RjZmFlMWRlNTNiNGUyZGFjNzU1M2ZkNyIsICJ0b29s
       c19uYW1lcyI6IFtdfSwgeyJrZXkiOiAiNzRlNmIyNDQ5YzQ1NzRhY2JjMmJmNDk3MjczYTVjYzEi
-      LCAiaWQiOiAiMGZlOWIwYzUtOWRiOC00N2RiLTk5MTgtMThjOWEzY2EwNDRmIiwgImFzeW5jX2V4
+      LCAiaWQiOiAiYzAzZWM3ZGQtNGEzYy00NWU0LWIxMTctYWYyMjg5MWNjMmMzIiwgImFzeW5jX2V4
       ZWN1dGlvbj8iOiBmYWxzZSwgImh1bWFuX2lucHV0PyI6IGZhbHNlLCAiYWdlbnRfcm9sZSI6ICJ0
       ZXN0X2FnZW50IiwgImFnZW50X2tleSI6ICIzN2Q3MTNkM2RjZmFlMWRlNTNiNGUyZGFjNzU1M2Zk
-      NyIsICJ0b29sc19uYW1lcyI6IFtdfV16AhgBhQEAAQAAEo4CChA8EYA50hfm4kpzuOoy+AubEggq
-      Kc7FdvH5kSoMVGFzayBDcmVhdGVkMAE5cKvVCSH39xdB4D/WCSH39xdKLgoIY3Jld19rZXkSIgog
-      ODBjNzk4ZjYyMjhmMzJhNzQ4M2Y3MmFmZTM2NmVkY2FKMQoHY3Jld19pZBImCiQwNDVhYjM5OS1i
-      YmQ0LTRmZjctOTVkOS1jYjc2ZDgwNmVmYTdKLgoIdGFza19rZXkSIgogY2M0YTQyYzE4NmVlMWEy
-      ZTY2YjAyOGVjNWI3MmJkNGVKMQoHdGFza19pZBImCiRkYjU3NjUxNi05OTJkLTQ5NDItODk2OS1l
-      NTVjZTE3NWVlNGF6AhgBhQEAAQAAEpACChBiJ2qB1XZwY89sB2dNhBKVEgjlT2OPDZ6nmCoOVGFz
-      ayBFeGVjdXRpb24wATlIgtYJIff3F0EAgL8pIff3F0ouCghjcmV3X2tleRIiCiA4MGM3OThmNjIy
-      OGYzMmE3NDgzZjcyYWZlMzY2ZWRjYUoxCgdjcmV3X2lkEiYKJDA0NWFiMzk5LWJiZDQtNGZmNy05
-      NWQ5LWNiNzZkODA2ZWZhN0ouCgh0YXNrX2tleRIiCiBjYzRhNDJjMTg2ZWUxYTJlNjZiMDI4ZWM1
-      YjcyYmQ0ZUoxCgd0YXNrX2lkEiYKJGRiNTc2NTE2LTk5MmQtNDk0Mi04OTY5LWU1NWNlMTc1ZWU0
-      YXoCGAGFAQABAAASjgIKEHHSP5CjCFlZOH0ve7xa0hQSCIJMPfB9x79hKgxUYXNrIENyZWF0ZWQw
-      ATmQ9PspIff3F0EYef4pIff3F0ouCghjcmV3X2tleRIiCiA4MGM3OThmNjIyOGYzMmE3NDgzZjcy
-      YWZlMzY2ZWRjYUoxCgdjcmV3X2lkEiYKJDA0NWFiMzk5LWJiZDQtNGZmNy05NWQ5LWNiNzZkODA2
-      ZWZhN0ouCgh0YXNrX2tleRIiCiA3NGU2YjI0NDljNDU3NGFjYmMyYmY0OTcyNzNhNWNjMUoxCgd0
-      YXNrX2lkEiYKJDBmZTliMGM1LTlkYjgtNDdkYi05OTE4LTE4YzlhM2NhMDQ0ZnoCGAGFAQABAAAS
-      kAIKEDd+uHrZoL4u9DfFCvyEk6sSCAqqjgM4um+rKg5UYXNrIEV4ZWN1dGlvbjABOThE/ykh9/cX
-      QUiqQ1Eh9/cXSi4KCGNyZXdfa2V5EiIKIDgwYzc5OGY2MjI4ZjMyYTc0ODNmNzJhZmUzNjZlZGNh
-      SjEKB2NyZXdfaWQSJgokMDQ1YWIzOTktYmJkNC00ZmY3LTk1ZDktY2I3NmQ4MDZlZmE3Si4KCHRh
+      NyIsICJ0b29sc19uYW1lcyI6IFtdfV16AhgBhQEAAQAAEo4CChCSMMuVZnaoWT4ViN7VmHITEgjY
+      C7LEo3HzZSoMVGFzayBDcmVhdGVkMAE5IFpILUVM+BdBmEBJLUVM+BdKLgoIY3Jld19rZXkSIgog
+      ODBjNzk4ZjYyMjhmMzJhNzQ4M2Y3MmFmZTM2NmVkY2FKMQoHY3Jld19pZBImCiQ4OGJmNjMxNy0x
+      YTA1LTQ1NWEtOTVlMi1jZDRiYzIxNGJmNTNKLgoIdGFza19rZXkSIgogY2M0YTQyYzE4NmVlMWEy
+      ZTY2YjAyOGVjNWI3MmJkNGVKMQoHdGFza19pZBImCiQ4OWFlZTMxNS1kNTY2LTQ3N2MtYjBjMi0x
+      NzViOTQ0YzI3ODZ6AhgBhQEAAQAAEpACChA+UDH2WWXWfjxulXMOdgypEghYB+m186G/hSoOVGFz
+      ayBFeGVjdXRpb24wATlYnkktRUz4F0FYnmVSRUz4F0ouCghjcmV3X2tleRIiCiA4MGM3OThmNjIy
+      OGYzMmE3NDgzZjcyYWZlMzY2ZWRjYUoxCgdjcmV3X2lkEiYKJDg4YmY2MzE3LTFhMDUtNDU1YS05
+      NWUyLWNkNGJjMjE0YmY1M0ouCgh0YXNrX2tleRIiCiBjYzRhNDJjMTg2ZWUxYTJlNjZiMDI4ZWM1
+      YjcyYmQ0ZUoxCgd0YXNrX2lkEiYKJDg5YWVlMzE1LWQ1NjYtNDc3Yy1iMGMyLTE3NWI5NDRjMjc4
+      NnoCGAGFAQABAAASjgIKEP/7h6qPWBtgUpRfNVFFXDUSCOcCW3PZKwLOKgxUYXNrIENyZWF0ZWQw
+      ATl4YZFSRUz4F0GArZJSRUz4F0ouCghjcmV3X2tleRIiCiA4MGM3OThmNjIyOGYzMmE3NDgzZjcy
+      YWZlMzY2ZWRjYUoxCgdjcmV3X2lkEiYKJDg4YmY2MzE3LTFhMDUtNDU1YS05NWUyLWNkNGJjMjE0
+      YmY1M0ouCgh0YXNrX2tleRIiCiA3NGU2YjI0NDljNDU3NGFjYmMyYmY0OTcyNzNhNWNjMUoxCgd0
+      YXNrX2lkEiYKJGMwM2VjN2RkLTRhM2MtNDVlNC1iMTE3LWFmMjI4OTFjYzJjM3oCGAGFAQABAAAS
+      kAIKEIrCAITJeHCwYqIAnGG7kjMSCAHTb9cmTfTpKg5UYXNrIEV4ZWN1dGlvbjABOYAqk1JFTPgX
+      QTBqS31FTPgXSi4KCGNyZXdfa2V5EiIKIDgwYzc5OGY2MjI4ZjMyYTc0ODNmNzJhZmUzNjZlZGNh
+      SjEKB2NyZXdfaWQSJgokODhiZjYzMTctMWEwNS00NTVhLTk1ZTItY2Q0YmMyMTRiZjUzSi4KCHRh
       c2tfa2V5EiIKIDc0ZTZiMjQ0OWM0NTc0YWNiYzJiZjQ5NzI3M2E1Y2MxSjEKB3Rhc2tfaWQSJgok
-      MGZlOWIwYzUtOWRiOC00N2RiLTk5MTgtMThjOWEzY2EwNDRmegIYAYUBAAEAABKOAgoQY2vHQ+bd
-      7ur2mcCzdsVNRhIIpl2z1cwsw74qDFRhc2sgQ3JlYXRlZDABOVgGzVEh9/cXQXD2zlEh9/cXSi4K
+      YzAzZWM3ZGQtNGEzYy00NWU0LWIxMTctYWYyMjg5MWNjMmMzegIYAYUBAAEAABKOAgoQWrBLehoI
+      upRbnmWK/S7cRhIIwpiK9MmTFpoqDFRhc2sgQ3JlYXRlZDABOThVcX1FTPgXQdhecn1FTPgXSi4K
       CGNyZXdfa2V5EiIKIDgwYzc5OGY2MjI4ZjMyYTc0ODNmNzJhZmUzNjZlZGNhSjEKB2NyZXdfaWQS
-      JgokMDQ1YWIzOTktYmJkNC00ZmY3LTk1ZDktY2I3NmQ4MDZlZmE3Si4KCHRhc2tfa2V5EiIKIDc0
-      ZTZiMjQ0OWM0NTc0YWNiYzJiZjQ5NzI3M2E1Y2MxSjEKB3Rhc2tfaWQSJgokMGZlOWIwYzUtOWRi
-      OC00N2RiLTk5MTgtMThjOWEzY2EwNDRmegIYAYUBAAEAABKQAgoQvJi4GaHEVsLkcnNr3OTMCxII
-      NYaKi8utL3gqDlRhc2sgRXhlY3V0aW9uMAE5UB/QUSH39xdBEIcOeCH39xdKLgoIY3Jld19rZXkS
-      IgogODBjNzk4ZjYyMjhmMzJhNzQ4M2Y3MmFmZTM2NmVkY2FKMQoHY3Jld19pZBImCiQwNDVhYjM5
-      OS1iYmQ0LTRmZjctOTVkOS1jYjc2ZDgwNmVmYTdKLgoIdGFza19rZXkSIgogNzRlNmIyNDQ5YzQ1
-      NzRhY2JjMmJmNDk3MjczYTVjYzFKMQoHdGFza19pZBImCiQwZmU5YjBjNS05ZGI4LTQ3ZGItOTkx
-      OC0xOGM5YTNjYTA0NGZ6AhgBhQEAAQAAEsoLChAk5wiRhM9ExAiqkil+Oj1YEgjiV8gFVyoqWSoM
-      Q3JldyBDcmVhdGVkMAE5QGFqqCH39xdBYItwqCH39xdKGgoOY3Jld2FpX3ZlcnNpb24SCAoGMC42
+      JgokODhiZjYzMTctMWEwNS00NTVhLTk1ZTItY2Q0YmMyMTRiZjUzSi4KCHRhc2tfa2V5EiIKIDc0
+      ZTZiMjQ0OWM0NTc0YWNiYzJiZjQ5NzI3M2E1Y2MxSjEKB3Rhc2tfaWQSJgokYzAzZWM3ZGQtNGEz
+      Yy00NWU0LWIxMTctYWYyMjg5MWNjMmMzegIYAYUBAAEAABKQAgoQuWo/5meFJtpJifoLcAPQERII
+      m2b6GymamwsqDlRhc2sgRXhlY3V0aW9uMAE5UMhyfUVM+BdByH6Ro0VM+BdKLgoIY3Jld19rZXkS
+      IgogODBjNzk4ZjYyMjhmMzJhNzQ4M2Y3MmFmZTM2NmVkY2FKMQoHY3Jld19pZBImCiQ4OGJmNjMx
+      Ny0xYTA1LTQ1NWEtOTVlMi1jZDRiYzIxNGJmNTNKLgoIdGFza19rZXkSIgogNzRlNmIyNDQ5YzQ1
+      NzRhY2JjMmJmNDk3MjczYTVjYzFKMQoHdGFza19pZBImCiRjMDNlYzdkZC00YTNjLTQ1ZTQtYjEx
+      Ny1hZjIyODkxY2MyYzN6AhgBhQEAAQAAEsoLChAonPfCOBLkZDfi+LpP8sOLEghyatbK74Hq0SoM
+      Q3JldyBDcmVhdGVkMAE5KOrE4EVM+BdB4N3I4EVM+BdKGgoOY3Jld2FpX3ZlcnNpb24SCAoGMC42
       MS4wShoKDnB5dGhvbl92ZXJzaW9uEggKBjMuMTEuN0ouCghjcmV3X2tleRIiCiBhYzdlNzQ1OTA3
-      MmM3ZWMwNmRlYWY5ZDMyZWNlYzE1YUoxCgdjcmV3X2lkEiYKJGVlNTM1N2I5LTBmOGMtNGYzMi04
-      NDc1LTBiNmJmNzMwNGVlN0ocCgxjcmV3X3Byb2Nlc3MSDAoKc2VxdWVudGlhbEoRCgtjcmV3X21l
+      MmM3ZWMwNmRlYWY5ZDMyZWNlYzE1YUoxCgdjcmV3X2lkEiYKJDFiZWJhZDFkLWU3OWEtNDgyMC1h
+      ZGYzLWQzYzI3YzkzMGIwZEocCgxjcmV3X3Byb2Nlc3MSDAoKc2VxdWVudGlhbEoRCgtjcmV3X21l
       bW9yeRICEABKGgoUY3Jld19udW1iZXJfb2ZfdGFza3MSAhgCShsKFWNyZXdfbnVtYmVyX29mX2Fn
       ZW50cxICGAJKiAUKC2NyZXdfYWdlbnRzEvgECvUEW3sia2V5IjogIjhiZDIxMzliNTk3NTE4MTUw
-      NmU0MWZkOWM0NTYzZDc1IiwgImlkIjogImQwZWU3Y2UxLTU0M2MtNDBkNi04NjA1LTJiNDMwYzk5
-      Y2RlOSIsICJyb2xlIjogIlJlc2VhcmNoZXIiLCAidmVyYm9zZT8iOiBmYWxzZSwgIm1heF9pdGVy
+      NmU0MWZkOWM0NTYzZDc1IiwgImlkIjogIjY0OTA3NDBiLTE4ZDctNDY4ZS1hNzQ4LWNkODMyODk2
+      ZTdmNyIsICJyb2xlIjogIlJlc2VhcmNoZXIiLCAidmVyYm9zZT8iOiBmYWxzZSwgIm1heF9pdGVy
       IjogMTUsICJtYXhfcnBtIjogbnVsbCwgImZ1bmN0aW9uX2NhbGxpbmdfbGxtIjogIiIsICJsbG0i
       OiAiZ3B0LTRvIiwgImRlbGVnYXRpb25fZW5hYmxlZD8iOiBmYWxzZSwgImFsbG93X2NvZGVfZXhl
       Y3V0aW9uPyI6IGZhbHNlLCAibWF4X3JldHJ5X2xpbWl0IjogMiwgInRvb2xzX25hbWVzIjogW119
-      LCB7ImtleSI6ICI5YTUwMTVlZjQ4OTVkYzYyNzhkNTQ4MThiYTQ0NmFmNyIsICJpZCI6ICIxZmNl
-      N2MzNC1jODQ4LTQ3OTEtOGE1OC01NzhhMDAwZmI0YjUiLCAicm9sZSI6ICJTZW5pb3IgV3JpdGVy
+      LCB7ImtleSI6ICI5YTUwMTVlZjQ4OTVkYzYyNzhkNTQ4MThiYTQ0NmFmNyIsICJpZCI6ICIxMzQw
+      ODkyMC03NWM4LTQxOTctYjA2ZC1jYjgyY2RmOGRkOGEiLCAicm9sZSI6ICJTZW5pb3IgV3JpdGVy
       IiwgInZlcmJvc2U/IjogZmFsc2UsICJtYXhfaXRlciI6IDE1LCAibWF4X3JwbSI6IG51bGwsICJm
       dW5jdGlvbl9jYWxsaW5nX2xsbSI6ICIiLCAibGxtIjogImdwdC00byIsICJkZWxlZ2F0aW9uX2Vu
       YWJsZWQ/IjogZmFsc2UsICJhbGxvd19jb2RlX2V4ZWN1dGlvbj8iOiBmYWxzZSwgIm1heF9yZXRy
       eV9saW1pdCI6IDIsICJ0b29sc19uYW1lcyI6IFtdfV1K7wMKCmNyZXdfdGFza3MS4AMK3QNbeyJr
-      ZXkiOiAiYTgwNjE3MTcyZmZjYjkwZjg5N2MxYThjMzJjMzEwMmEiLCAiaWQiOiAiM2RhNGViNmUt
-      MzVhOC00MzUwLThlODAtMTdlZWRiNzAxMWYwIiwgImFzeW5jX2V4ZWN1dGlvbj8iOiBmYWxzZSwg
+      ZXkiOiAiYTgwNjE3MTcyZmZjYjkwZjg5N2MxYThjMzJjMzEwMmEiLCAiaWQiOiAiNDM0ZjBmNjMt
+      ZGFmZS00MTYyLTljMDEtNTdiM2NjMzBmOTA0IiwgImFzeW5jX2V4ZWN1dGlvbj8iOiBmYWxzZSwg
       Imh1bWFuX2lucHV0PyI6IGZhbHNlLCAiYWdlbnRfcm9sZSI6ICJSZXNlYXJjaGVyIiwgImFnZW50
       X2tleSI6ICI4YmQyMTM5YjU5NzUxODE1MDZlNDFmZDljNDU2M2Q3NSIsICJ0b29sc19uYW1lcyI6
       IFtdfSwgeyJrZXkiOiAiNWZhNjVjMDZhOWUzMWYyYzY5NTQzMjY2OGFjZDYyZGQiLCAiaWQiOiAi
-      YzBjMTcwZjgtNzg1Yi00ZDY5LTkzYWQtNzUzYjY2ZTBlYTJmIiwgImFzeW5jX2V4ZWN1dGlvbj8i
+      MTVkYTBkM2UtZWVmNS00NDdiLWJmY2YtYjU4ODEyNWVlOGVmIiwgImFzeW5jX2V4ZWN1dGlvbj8i
       OiBmYWxzZSwgImh1bWFuX2lucHV0PyI6IGZhbHNlLCAiYWdlbnRfcm9sZSI6ICJTZW5pb3IgV3Jp
       dGVyIiwgImFnZW50X2tleSI6ICI5YTUwMTVlZjQ4OTVkYzYyNzhkNTQ4MThiYTQ0NmFmNyIsICJ0
-      b29sc19uYW1lcyI6IFtdfV16AhgBhQEAAQAAEo4CChAxQa/CKBMfAN1MnL//KineEgjtSSV9knkA
-      ZyoMVGFzayBDcmVhdGVkMAE5iDaEqCH39xdBEMeEqCH39xdKLgoIY3Jld19rZXkSIgogYWM3ZTc0
-      NTkwNzJjN2VjMDZkZWFmOWQzMmVjZWMxNWFKMQoHY3Jld19pZBImCiRlZTUzNTdiOS0wZjhjLTRm
-      MzItODQ3NS0wYjZiZjczMDRlZTdKLgoIdGFza19rZXkSIgogYTgwNjE3MTcyZmZjYjkwZjg5N2Mx
-      YThjMzJjMzEwMmFKMQoHdGFza19pZBImCiQzZGE0ZWI2ZS0zNWE4LTQzNTAtOGU4MC0xN2VlZGI3
-      MDExZjB6AhgBhQEAAQAAEpACChAsWyg/hutASsnPx9bUVMj5EghVe/GPpYre2ioOVGFzayBFeGVj
-      dXRpb24wATnY+YSoIff3F0HQ0QTRIff3F0ouCghjcmV3X2tleRIiCiBhYzdlNzQ1OTA3MmM3ZWMw
-      NmRlYWY5ZDMyZWNlYzE1YUoxCgdjcmV3X2lkEiYKJGVlNTM1N2I5LTBmOGMtNGYzMi04NDc1LTBi
-      NmJmNzMwNGVlN0ouCgh0YXNrX2tleRIiCiBhODA2MTcxNzJmZmNiOTBmODk3YzFhOGMzMmMzMTAy
-      YUoxCgd0YXNrX2lkEiYKJDNkYTRlYjZlLTM1YTgtNDM1MC04ZTgwLTE3ZWVkYjcwMTFmMHoCGAGF
-      AQABAAASjgIKECOjR3MiwBXdybk2vuQivzkSCLL0f8RvBZXZKgxUYXNrIENyZWF0ZWQwATkwTybS
-      Iff3F0G4XCfSIff3F0ouCghjcmV3X2tleRIiCiBhYzdlNzQ1OTA3MmM3ZWMwNmRlYWY5ZDMyZWNl
-      YzE1YUoxCgdjcmV3X2lkEiYKJGVlNTM1N2I5LTBmOGMtNGYzMi04NDc1LTBiNmJmNzMwNGVlN0ou
+      b29sc19uYW1lcyI6IFtdfV16AhgBhQEAAQAAEo4CChBy3nKEgbCUtLNs1vmaPOdOEghEIQKre/W8
+      zyoMVGFzayBDcmVhdGVkMAE5YHTk4EVM+BdBmDvl4EVM+BdKLgoIY3Jld19rZXkSIgogYWM3ZTc0
+      NTkwNzJjN2VjMDZkZWFmOWQzMmVjZWMxNWFKMQoHY3Jld19pZBImCiQxYmViYWQxZC1lNzlhLTQ4
+      MjAtYWRmMy1kM2MyN2M5MzBiMGRKLgoIdGFza19rZXkSIgogYTgwNjE3MTcyZmZjYjkwZjg5N2Mx
+      YThjMzJjMzEwMmFKMQoHdGFza19pZBImCiQ0MzRmMGY2My1kYWZlLTQxNjItOWMwMS01N2IzY2Mz
+      MGY5MDR6AhgBhQEAAQAAEpACChBu4bPTX3cxWpsHyxpCKMgUEghQG0yT8h733CoOVGFzayBFeGVj
+      dXRpb24wATm4ieXgRUz4F0Fwu1oERkz4F0ouCghjcmV3X2tleRIiCiBhYzdlNzQ1OTA3MmM3ZWMw
+      NmRlYWY5ZDMyZWNlYzE1YUoxCgdjcmV3X2lkEiYKJDFiZWJhZDFkLWU3OWEtNDgyMC1hZGYzLWQz
+      YzI3YzkzMGIwZEouCgh0YXNrX2tleRIiCiBhODA2MTcxNzJmZmNiOTBmODk3YzFhOGMzMmMzMTAy
+      YUoxCgd0YXNrX2lkEiYKJDQzNGYwZjYzLWRhZmUtNDE2Mi05YzAxLTU3YjNjYzMwZjkwNHoCGAGF
+      AQABAAASjgIKEN7aAPohlz9OdE1yMIhOCjMSCCXznAwrtvnTKgxUYXNrIENyZWF0ZWQwATmAvXUE
+      Rkz4F0F44nYERkz4F0ouCghjcmV3X2tleRIiCiBhYzdlNzQ1OTA3MmM3ZWMwNmRlYWY5ZDMyZWNl
+      YzE1YUoxCgdjcmV3X2lkEiYKJDFiZWJhZDFkLWU3OWEtNDgyMC1hZGYzLWQzYzI3YzkzMGIwZEou
       Cgh0YXNrX2tleRIiCiA1ZmE2NWMwNmE5ZTMxZjJjNjk1NDMyNjY4YWNkNjJkZEoxCgd0YXNrX2lk
-      EiYKJGMwYzE3MGY4LTc4NWItNGQ2OS05M2FkLTc1M2I2NmUwZWEyZnoCGAGFAQABAAA=
+      EiYKJDE1ZGEwZDNlLWVlZjUtNDQ3Yi1iZmNmLWI1ODgxMjVlZThlZnoCGAGFAQABAAA=
     headers:
       Accept:
       - '*/*'
@@ -220,7 +220,7 @@ interactions:
       Content-Type:
       - application/x-protobuf
       Date:
-      - Mon, 23 Sep 2024 19:45:08 GMT
+      - Tue, 24 Sep 2024 21:45:21 GMT
     status:
       code: 200
       message: OK
@@ -254,8 +254,8 @@ interactions:
       content-type:
       - application/json
       cookie:
-      - __cf_bm=iOyeV6o_mR0USNA.hPdpKPtAzYgMoprpObRHvn0tmcc-1727120402-1.0.1.1-yMOSz4qncmM1wdtrwFfBQNfITkLs2w_sxijeM44F7aSIrclbkQ2G_18su02eVMVPMW2O55B1rty8BiY_WAoayg;
-        _cfuvid=9K_ipT1uTVyDTneB1W5OZHPxCh36aOsDZCBnsQTONqQ-1727119501207-0.0.1.1-604800000
+      - __cf_bm=9.8sBYBkvBR8R1K_bVF7xgU..80XKlEIg3N2OBbTSCU-1727214102-1.0.1.1-.qiTLXbPamYUMSuyNsOEB9jhGu.jOifujOrx9E2JZvStbIZ9RTIiE44xKKNfLPxQkOi6qAT3h6htK8lPDGV_5g;
+        _cfuvid=lbRdAddVWV6W3f5Dm9SaOPWDUOxqtZBSPr_fTW26nEA-1727213194587-0.0.1.1-604800000
       host:
       - api.openai.com
       user-agent:
@@ -279,57 +279,60 @@ interactions:
     method: POST
     uri: https://api.openai.com/v1/chat/completions
   response:
-    content: "{\n  \"id\": \"chatcmpl-AAjHXZhaUalt8q1189K1rpydiSxfx\",\n  \"object\":
-      \"chat.completion\",\n  \"created\": 1727120707,\n  \"model\": \"gpt-4o-2024-05-13\",\n
+    content: "{\n  \"id\": \"chatcmpl-AB7dQJlrFqWelQoDtfHKf2Rr6f23p\",\n  \"object\":
+      \"chat.completion\",\n  \"created\": 1727214320,\n  \"model\": \"gpt-4o-2024-05-13\",\n
       \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
       \"assistant\",\n        \"content\": \"Thought: I now can give a great answer\\nFinal
-      Answer: \\n\\n1. **The Role of AI Agents in Revolutionizing Customer Service**
-      \ \\nArtificial intelligence agents are becoming indispensable in transforming
-      customer service across industries. These AI agents, equipped with natural language
-      processing and machine learning capabilities, manage customer inquiries, provide
-      instant support, and even predict customer needs with remarkable accuracy. A
-      deep dive into this topic can reveal compelling statistics, real-world case
-      studies, and insights from industry leaders on how AI is enhancing customer
-      experience and driving business growth.\\n\\n2. **AI in Healthcare: The Future
-      of Diagnosis and Patient Care**  \\nAI is making groundbreaking strides in the
-      healthcare sector, from early diagnosis to personalized treatment plans. By
-      leveraging AI-driven tools, healthcare professionals can analyze vast amounts
-      of data to detect diseases earlier and with greater precision. Articles on this
-      will showcase how AI algorithms are being used to read medical scans, track
-      patient progress in real-time, and even predict patient outcomes, greatly improving
-      the quality of care while reducing costs.\\n\\n3. **The Intersection of AI and
-      Cybersecurity: A Double-Edged Sword**  \\nArtificial intelligence is playing
-      a critical role in modern cybersecurity, offering new ways to detect and counteract
-      threats swiftly. However, this same technology can be exploited by cybercriminals
-      to create more sophisticated attacks. An article focusing on this dual aspect
-      can explore current advancements in AI-driven cybersecurity measures, the evolving
-      threat landscape, and the ethical considerations that come into play. Interviews
-      with cybersecurity experts would add depth and credibility to the discussion.\\n\\n4.
-      **AI and the Future of Autonomous Vehicles: Are We There Yet?**  \\nThe development
-      of autonomous vehicles propelled by AI promises to revolutionize transportation.
-      Exploring this topic can uncover the significant technological advancements
-      made so far, the challenges that still lie ahead, and the potential societal
-      impacts of widespread adoption. From self-driving cars to drones, the article
-      can dive into the integration of AI within various types of autonomous vehicles,
-      the hurdles of regulatory approval, and the future vision as seen by key players
-      in the industry.\\n\\n5. **AI-Driven Personalization and the Future of Marketing**
-      \ \\nIn the era of big data, AI is redefining how marketers reach and engage
-      with consumers. By analyzing consumer behavior, preferences, and trends, AI
-      enables hyper-personalized marketing that can significantly enhance customer
-      loyalty and conversion rates. A detailed article on this subject would discuss
-      the technologies enabling AI-driven marketing, successful case studies, and
-      the potential for AI to anticipate market shifts, thus providing businesses
-      with a competitive edge.\\n\\nThese highlighted paragraphs reflect the depth
-      and potential impact of articles on each listed idea, paving the way for engaging
-      and informative content.\",\n        \"refusal\": null\n      },\n      \"logprobs\":
-      null,\n      \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\":
-      253,\n    \"completion_tokens\": 531,\n    \"total_tokens\": 784,\n    \"completion_tokens_details\":
-      {\n      \"reasoning_tokens\": 0\n    }\n  },\n  \"system_fingerprint\": \"fp_e375328146\"\n}\n"
+      Answer: \\nHi\\n\\nHere are five interesting ideas for articles focused on AI
+      and AI agents, each accompanied by a compelling paragraph to showcase the potential
+      impact and depth of each topic:\\n\\n1. **The Future of AI-Powered Personal
+      Assistants**:\\nImagine a personal assistant that doesn\u2019t just respond
+      to commands but anticipates your needs, schedules your appointments, and even
+      handles your grocery shopping\u2014all while continuously learning and adapting
+      to your preferences. This article will delve into how AI-powered personal assistants
+      are evolving from simple task managers to indispensable life companions. We'll
+      explore the cutting-edge technologies behind these advancements, the ethical
+      implications, and what this means for future human-computer interactions.\\n\\n2.
+      **AI in Healthcare: Revolutionizing Patient Care**:\\nArtificial Intelligence
+      is set to redefine the healthcare landscape, offering unprecedented opportunities
+      for personalized medicine, early diagnosis, and more effective treatments. In
+      this article, we will examine the various AI-driven innovations currently being
+      used in healthcare, from machine learning algorithms that analyze medical images
+      to predictive models that can forecast disease outbreaks. We'll also discuss
+      the challenges and ethical considerations, such as data privacy and the potential
+      for AI-driven diagnostic errors.\\n\\n3. **Autonomous AI Agents: The Dawn of
+      Self-Sufficient Systems**:\\nAutonomous AI agents are no longer a concept confined
+      to science fiction. These self-sufficient systems can make decisions, learn
+      from their environment, and perform complex tasks without human intervention.
+      This article will explore the current state of autonomous AI agents, their applications
+      across various industries such as finance, logistics, and customer service,
+      and the potential risks and benefits. We'll also delve into the regulatory landscape
+      and how governments and organizations are preparing for an autonomous future.\\n\\n4.
+      **AI and Creativity: Machines as Artistic Geniuses**:\\nCan machines create
+      art? With AI algorithms now capable of composing music, painting, and writing,
+      the answer appears to be yes. This article will explore the fascinating intersection
+      of AI and creativity, showcasing examples of AI-generated art and delving into
+      the technology that makes it possible. We'll discuss the implications for artists,
+      the definition of creativity, and whether AI can ever truly be considered an
+      artist in its own right.\\n\\n5. **The Ethics of AI: Navigating a New Frontier**:\\nAs
+      AI continues to permeate various aspects of our lives, the ethical considerations
+      become increasingly complex. This article will tackle the pressing ethical dilemmas
+      surrounding AI, such as bias in AI systems, the impact on employment, and the
+      potential for misuse in areas such as surveillance and autonomous weapons. We'll
+      feature insights from leading ethicists and technologists, and propose frameworks
+      for ensuring that AI is developed and deployed in ways that benefit humanity
+      as a whole.\\n\\nThese topics not only capture the cutting-edge nature of AI
+      research but also resonate deeply with the ethical, practical, and philosophical
+      questions that are emerging as AI continues to advance.\",\n        \"refusal\":
+      null\n      },\n      \"logprobs\": null,\n      \"finish_reason\": \"stop\"\n
+      \   }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 253,\n    \"completion_tokens\":
+      579,\n    \"total_tokens\": 832,\n    \"completion_tokens_details\": {\n      \"reasoning_tokens\":
+      0\n    }\n  },\n  \"system_fingerprint\": \"fp_e375328146\"\n}\n"
     headers:
       CF-Cache-Status:
       - DYNAMIC
       CF-RAY:
-      - 8c7d0883689da4c7-MIA
+      - 8c85f6006cdb1cf3-GRU
       Connection:
       - keep-alive
       Content-Encoding:
@@ -337,7 +340,7 @@ interactions:
       Content-Type:
       - application/json
       Date:
-      - Mon, 23 Sep 2024 19:45:14 GMT
+      - Tue, 24 Sep 2024 21:45:30 GMT
       Server:
       - cloudflare
       Transfer-Encoding:
@@ -349,11 +352,11 @@ interactions:
       openai-organization:
       - crewai-iuxna1
       openai-processing-ms:
-      - '7184'
+      - '9514'
       openai-version:
       - '2020-10-01'
       strict-transport-security:
-      - max-age=15552000; includeSubDomains; preload
+      - max-age=31536000; includeSubDomains; preload
       x-ratelimit-limit-requests:
       - '10000'
       x-ratelimit-limit-tokens:
@@ -367,7 +370,7 @@ interactions:
       x-ratelimit-reset-tokens:
       - 0s
       x-request-id:
-      - req_0236fc0c3ec3b94a8f829f7115661d19
+      - req_4c5225ebc806609c80a972533b374863
     http_version: HTTP/1.1
     status_code: 200
 version: 1

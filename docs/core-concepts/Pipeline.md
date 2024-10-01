@@ -248,7 +248,7 @@ main_pipeline = Pipeline(stages=[classification_crew, email_router])
 
 inputs = [{"email": "..."}, {"email": "..."}]  # List of email data
 
-main_pipeline.kickoff(inputs=inputs=inputs)
+main_pipeline.kickoff(inputs=inputs)
 ```
 
 In this example, the router decides between an urgent pipeline and a normal pipeline based on the urgency score of the email. If the urgency score is greater than 7, it routes to the urgent pipeline; otherwise, it uses the normal pipeline. If the input doesn't include an urgency score, it defaults to just the classification crew.

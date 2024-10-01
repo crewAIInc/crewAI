@@ -36,7 +36,6 @@ description: What are crewAI Agents and how to use them.
 | **Response Template** *(optional)*     | `response_template`  | Specifies the response format for the agent. Default is `None`.                                                                                                                                                                  |
 | **Allow Code Execution** *(optional)*     | `allow_code_execution`  | Enable code execution for the agent. Default is `False`.                                                                                                                                                                  |
 | **Max Retry Limit** *(optional)*     | `max_retry_limit`  | Maximum number of retries for an agent to execute a task when an error occurs. Default is `2`.
-| **Use Stop Words** *(optional)*     | `use_stop_words`  | Adds the ability to not use stop words (to support o1 models). Default is `True`.                                                                                                                                                                  |
 | **Use System Prompt** *(optional)*     | `use_system_prompt`  | Adds the ability to not use system prompt (to support o1 models). Default is `True`.                                                                                                                                                                  |
 | **Respect Context Window** *(optional)*     | `respect_context_window`  | Summary strategy to avoid overflowing the context window. Default is `True`.                                                                                                                                                                  |
 
@@ -79,7 +78,6 @@ agent = Agent(
   callbacks=[callback1, callback2],  # Optional
   allow_code_execution=True,  # Optional
   max_retry_limit=2,  # Optional
-  use_stop_words=True,  # Optional
   use_system_prompt=True,  # Optional
   respect_context_window=True,  # Optional
 )

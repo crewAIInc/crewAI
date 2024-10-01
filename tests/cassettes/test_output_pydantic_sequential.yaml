@@ -24,8 +24,8 @@ interactions:
       content-type:
       - application/json
       cookie:
-      - __cf_bm=iOyeV6o_mR0USNA.hPdpKPtAzYgMoprpObRHvn0tmcc-1727120402-1.0.1.1-yMOSz4qncmM1wdtrwFfBQNfITkLs2w_sxijeM44F7aSIrclbkQ2G_18su02eVMVPMW2O55B1rty8BiY_WAoayg;
-        _cfuvid=9K_ipT1uTVyDTneB1W5OZHPxCh36aOsDZCBnsQTONqQ-1727119501207-0.0.1.1-604800000
+      - __cf_bm=9.8sBYBkvBR8R1K_bVF7xgU..80XKlEIg3N2OBbTSCU-1727214102-1.0.1.1-.qiTLXbPamYUMSuyNsOEB9jhGu.jOifujOrx9E2JZvStbIZ9RTIiE44xKKNfLPxQkOi6qAT3h6htK8lPDGV_5g;
+        _cfuvid=lbRdAddVWV6W3f5Dm9SaOPWDUOxqtZBSPr_fTW26nEA-1727213194587-0.0.1.1-604800000
       host:
       - api.openai.com
       user-agent:
@@ -49,8 +49,8 @@ interactions:
     method: POST
     uri: https://api.openai.com/v1/chat/completions
   response:
-    content: "{\n  \"id\": \"chatcmpl-AAjKw2lqqTFdFOssKnDjpuaFaT8Rn\",\n  \"object\":
-      \"chat.completion\",\n  \"created\": 1727120918,\n  \"model\": \"gpt-4o-2024-05-13\",\n
+    content: "{\n  \"id\": \"chatcmpl-AB7frQCjT9BcDGcDj4QyiHzmwbFSt\",\n  \"object\":
+      \"chat.completion\",\n  \"created\": 1727214471,\n  \"model\": \"gpt-4o-2024-05-13\",\n
       \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
       \"assistant\",\n        \"content\": \"I now can give a great answer\\nFinal
       Answer: 4\",\n        \"refusal\": null\n      },\n      \"logprobs\": null,\n
@@ -61,7 +61,7 @@ interactions:
       CF-Cache-Status:
       - DYNAMIC
       CF-RAY:
-      - 8c7d0da8ab29a4c7-MIA
+      - 8c85f9af4ef31cf3-GRU
       Connection:
       - keep-alive
       Content-Encoding:
@@ -69,7 +69,7 @@ interactions:
       Content-Type:
       - application/json
       Date:
-      - Mon, 23 Sep 2024 19:48:38 GMT
+      - Tue, 24 Sep 2024 21:47:52 GMT
       Server:
       - cloudflare
       Transfer-Encoding:
@@ -81,11 +81,11 @@ interactions:
       openai-organization:
       - crewai-iuxna1
       openai-processing-ms:
-      - '197'
+      - '170'
       openai-version:
       - '2020-10-01'
       strict-transport-security:
-      - max-age=15552000; includeSubDomains; preload
+      - max-age=31536000; includeSubDomains; preload
       x-ratelimit-limit-requests:
       - '10000'
       x-ratelimit-limit-tokens:
@@ -99,92 +99,9 @@ interactions:
       x-ratelimit-reset-tokens:
       - 0s
       x-request-id:
-      - req_f83db2c54677d8eb1d00e6ae31af343b
+      - req_c024216dd5260be75d28056c46183b74
     http_version: HTTP/1.1
     status_code: 200
-- request:
-    body: !!binary |
-      Cr0XCiQKIgoMc2VydmljZS5uYW1lEhIKEGNyZXdBSS10ZWxlbWV0cnkSlBcKEgoQY3Jld2FpLnRl
-      bGVtZXRyeRKQAgoQdEs2/qsp8iQhajrn9qpirBIIuO+ePzkLIhUqDlRhc2sgRXhlY3V0aW9uMAE5
-      2GLZgDH39xdBuETO+VH39xdKLgoIY3Jld19rZXkSIgogZTNmZGEwZjMxMTBmZTgwYjE4OTQ3YzAx
-      NDcxNDMwYTRKMQoHY3Jld19pZBImCiRjNTUyN2RiYi1lMjY4LTRmZTMtODAzNi05ZDFkYjU2YmQx
-      MmNKLgoIdGFza19rZXkSIgogNWZhNjVjMDZhOWUzMWYyYzY5NTQzMjY2OGFjZDYyZGRKMQoHdGFz
-      a19pZBImCiQ1Y2VjMzM0Ny1mMzY1LTQ5N2MtOGY4OC1kYjhkMzY4ZDg1YWR6AhgBhQEAAQAAEpwH
-      ChArmEcHqMQEoGvuFoeLsNa1EggDFp6w064JWSoMQ3JldyBDcmVhdGVkMAE5KJh/wFL39xdBiPmB
-      wFL39xdKGgoOY3Jld2FpX3ZlcnNpb24SCAoGMC42MS4wShoKDnB5dGhvbl92ZXJzaW9uEggKBjMu
-      MTEuN0ouCghjcmV3X2tleRIiCiBlYjRmODJlMDlmM2FhYmQ4MDZmM2QxNTgwMzM2MmU5YUoxCgdj
-      cmV3X2lkEiYKJDE3ZjRmMTcwLWVlNzctNDMxMS04ZjUwLWE1OGYyYzYxNDQwMUocCgxjcmV3X3By
-      b2Nlc3MSDAoKc2VxdWVudGlhbEoRCgtjcmV3X21lbW9yeRICEABKGgoUY3Jld19udW1iZXJfb2Zf
-      dGFza3MSAhgBShsKFWNyZXdfbnVtYmVyX29mX2FnZW50cxICGAFKywIKC2NyZXdfYWdlbnRzErsC
-      CrgCW3sia2V5IjogIjY3OGQ4ODI0ZDIwODAwM2M1ZWQxYTdjY2VlZjE5MDlkIiwgImlkIjogIjZh
-      NDVmYWE2LWUxMmMtNGQ3Ni1hNWQ1LWFjMzc2MzkxOTNlMiIsICJyb2xlIjogIlRlc3QgUm9sZSIs
-      ICJ2ZXJib3NlPyI6IGZhbHNlLCAibWF4X2l0ZXIiOiAxNSwgIm1heF9ycG0iOiBudWxsLCAiZnVu
-      Y3Rpb25fY2FsbGluZ19sbG0iOiAiIiwgImxsbSI6ICJncHQtNG8iLCAiZGVsZWdhdGlvbl9lbmFi
-      bGVkPyI6IGZhbHNlLCAiYWxsb3dfY29kZV9leGVjdXRpb24/IjogZmFsc2UsICJtYXhfcmV0cnlf
-      bGltaXQiOiAyLCAidG9vbHNfbmFtZXMiOiBbXX1dSv4BCgpjcmV3X3Rhc2tzEu8BCuwBW3sia2V5
-      IjogImU3ZWI4MjZhMTE0ZjhiMTQxOWM5NWRhNTc3NDEyOTliIiwgImlkIjogImNkN2NkYzExLTk2
-      MTItNDViZC1iNzk2LWU1MTdiN2Y1YjBmMyIsICJhc3luY19leGVjdXRpb24/IjogZmFsc2UsICJo
-      dW1hbl9pbnB1dD8iOiBmYWxzZSwgImFnZW50X3JvbGUiOiAiVGVzdCBSb2xlIiwgImFnZW50X2tl
-      eSI6ICI2NzhkODgyNGQyMDgwMDNjNWVkMWE3Y2NlZWYxOTA5ZCIsICJ0b29sc19uYW1lcyI6IFtd
-      fV16AhgBhQEAAQAAEo4CChALYCTI11rfHdAkt6vorWZ3EggBBmDNuR7QRSoMVGFzayBDcmVhdGVk
-      MAE5+D+PwFL39xdBGI6PwFL39xdKLgoIY3Jld19rZXkSIgogZWI0ZjgyZTA5ZjNhYWJkODA2ZjNk
-      MTU4MDMzNjJlOWFKMQoHY3Jld19pZBImCiQxN2Y0ZjE3MC1lZTc3LTQzMTEtOGY1MC1hNThmMmM2
-      MTQ0MDFKLgoIdGFza19rZXkSIgogZTdlYjgyNmExMTRmOGIxNDE5Yzk1ZGE1Nzc0MTI5OWJKMQoH
-      dGFza19pZBImCiRjZDdjZGMxMS05NjEyLTQ1YmQtYjc5Ni1lNTE3YjdmNWIwZjN6AhgBhQEAAQAA
-      EpACChAz5/V8Bo8cBYFgkpPmKPK1EggY6kzQKMnEcCoOVGFzayBFeGVjdXRpb24wATkotY/AUvf3
-      F0FYbSHiUvf3F0ouCghjcmV3X2tleRIiCiBlYjRmODJlMDlmM2FhYmQ4MDZmM2QxNTgwMzM2MmU5
-      YUoxCgdjcmV3X2lkEiYKJDE3ZjRmMTcwLWVlNzctNDMxMS04ZjUwLWE1OGYyYzYxNDQwMUouCgh0
-      YXNrX2tleRIiCiBlN2ViODI2YTExNGY4YjE0MTljOTVkYTU3NzQxMjk5YkoxCgd0YXNrX2lkEiYK
-      JGNkN2NkYzExLTk2MTItNDViZC1iNzk2LWU1MTdiN2Y1YjBmM3oCGAGFAQABAAASlgcKEAeCGvHo
-      2fUueUVxRMUDx5kSCAQYzlGm7pVKKgxDcmV3IENyZWF0ZWQwATkYQ/zkUvf3F0Ggx/7kUvf3F0oa
-      Cg5jcmV3YWlfdmVyc2lvbhIICgYwLjYxLjBKGgoOcHl0aG9uX3ZlcnNpb24SCAoGMy4xMS43Si4K
-      CGNyZXdfa2V5EiIKIDVlNmVmZmU2ODBhNWQ5N2RjMzg3M2IxNDgyNWNjZmEzSjEKB2NyZXdfaWQS
-      JgokMmRhZWZlM2UtOGQyZC00ZjlkLWJlMjYtMzM1MDA5NDBjMzJmShwKDGNyZXdfcHJvY2VzcxIM
-      CgpzZXF1ZW50aWFsShEKC2NyZXdfbWVtb3J5EgIQAEoaChRjcmV3X251bWJlcl9vZl90YXNrcxIC
-      GAFKGwoVY3Jld19udW1iZXJfb2ZfYWdlbnRzEgIYAUrIAgoLY3Jld19hZ2VudHMSuAIKtQJbeyJr
-      ZXkiOiAiOTJlN2ViMTkxNjY0YzkzNTc4NWVkN2Q0MjQwYTI5NGQiLCAiaWQiOiAiOGJmYWRiM2It
-      NTU4Mi00NzY4LWE4NDQtYjlhNDczYmM2MTQzIiwgInJvbGUiOiAiU2NvcmVyIiwgInZlcmJvc2U/
-      IjogZmFsc2UsICJtYXhfaXRlciI6IDE1LCAibWF4X3JwbSI6IG51bGwsICJmdW5jdGlvbl9jYWxs
-      aW5nX2xsbSI6ICIiLCAibGxtIjogImdwdC00byIsICJkZWxlZ2F0aW9uX2VuYWJsZWQ/IjogZmFs
-      c2UsICJhbGxvd19jb2RlX2V4ZWN1dGlvbj8iOiBmYWxzZSwgIm1heF9yZXRyeV9saW1pdCI6IDIs
-      ICJ0b29sc19uYW1lcyI6IFtdfV1K+wEKCmNyZXdfdGFza3MS7AEK6QFbeyJrZXkiOiAiMjdlZjM4
-      Y2M5OWRhNGE4ZGVkNzBlZDQwNmU0NGFiODYiLCAiaWQiOiAiYTM1MTE5N2ItNmI2Zi00Y2NhLTg3
-      ZGMtMzdkOTEzZDM2NGEyIiwgImFzeW5jX2V4ZWN1dGlvbj8iOiBmYWxzZSwgImh1bWFuX2lucHV0
-      PyI6IGZhbHNlLCAiYWdlbnRfcm9sZSI6ICJTY29yZXIiLCAiYWdlbnRfa2V5IjogIjkyZTdlYjE5
-      MTY2NGM5MzU3ODVlZDdkNDI0MGEyOTRkIiwgInRvb2xzX25hbWVzIjogW119XXoCGAGFAQABAAAS
-      jgIKEIt6VsL7Vn/7oveJCFrYA90SCIgNxkIppBU8KgxUYXNrIENyZWF0ZWQwATnIig7lUvf3F0FA
-      9A7lUvf3F0ouCghjcmV3X2tleRIiCiA1ZTZlZmZlNjgwYTVkOTdkYzM4NzNiMTQ4MjVjY2ZhM0ox
-      CgdjcmV3X2lkEiYKJDJkYWVmZTNlLThkMmQtNGY5ZC1iZTI2LTMzNTAwOTQwYzMyZkouCgh0YXNr
-      X2tleRIiCiAyN2VmMzhjYzk5ZGE0YThkZWQ3MGVkNDA2ZTQ0YWI4NkoxCgd0YXNrX2lkEiYKJGEz
-      NTExOTdiLTZiNmYtNGNjYS04N2RjLTM3ZDkxM2QzNjRhMnoCGAGFAQABAAA=
-    headers:
-      Accept:
-      - '*/*'
-      Accept-Encoding:
-      - gzip, deflate
-      Connection:
-      - keep-alive
-      Content-Length:
-      - '3008'
-      Content-Type:
-      - application/x-protobuf
-      User-Agent:
-      - OTel-OTLP-Exporter-Python/1.27.0
-    method: POST
-    uri: https://telemetry.crewai.com:4319/v1/traces
-  response:
-    body:
-      string: "\n\0"
-    headers:
-      Content-Length:
-      - '2'
-      Content-Type:
-      - application/x-protobuf
-      Date:
-      - Mon, 23 Sep 2024 19:48:38 GMT
-    status:
-      code: 200
-      message: OK
 - request:
     body: '{"messages": [{"role": "user", "content": "4"}, {"role": "system", "content":
       "I''m gonna convert this raw text into valid JSON.\n\nThe json should have the
@@ -206,8 +123,8 @@ interactions:
       content-type:
       - application/json
       cookie:
-      - __cf_bm=iOyeV6o_mR0USNA.hPdpKPtAzYgMoprpObRHvn0tmcc-1727120402-1.0.1.1-yMOSz4qncmM1wdtrwFfBQNfITkLs2w_sxijeM44F7aSIrclbkQ2G_18su02eVMVPMW2O55B1rty8BiY_WAoayg;
-        _cfuvid=9K_ipT1uTVyDTneB1W5OZHPxCh36aOsDZCBnsQTONqQ-1727119501207-0.0.1.1-604800000
+      - __cf_bm=9.8sBYBkvBR8R1K_bVF7xgU..80XKlEIg3N2OBbTSCU-1727214102-1.0.1.1-.qiTLXbPamYUMSuyNsOEB9jhGu.jOifujOrx9E2JZvStbIZ9RTIiE44xKKNfLPxQkOi6qAT3h6htK8lPDGV_5g;
+        _cfuvid=lbRdAddVWV6W3f5Dm9SaOPWDUOxqtZBSPr_fTW26nEA-1727213194587-0.0.1.1-604800000
       host:
       - api.openai.com
       user-agent:
@@ -231,22 +148,22 @@ interactions:
     method: POST
     uri: https://api.openai.com/v1/chat/completions
   response:
-    content: "{\n  \"id\": \"chatcmpl-AAjKwPY4Rlgj0OQKHuTU50ODHYRYB\",\n  \"object\":
-      \"chat.completion\",\n  \"created\": 1727120918,\n  \"model\": \"gpt-4o-2024-05-13\",\n
+    content: "{\n  \"id\": \"chatcmpl-AB7fsjohZBgZL7M0zgaX4R7BxjHuT\",\n  \"object\":
+      \"chat.completion\",\n  \"created\": 1727214472,\n  \"model\": \"gpt-4o-2024-05-13\",\n
       \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
       \"assistant\",\n        \"content\": null,\n        \"tool_calls\": [\n          {\n
-      \           \"id\": \"call_Z9UCwqwPwZcPJkgZNb6bXFzp\",\n            \"type\":
+      \           \"id\": \"call_MzP98lapLUxbi46aCd9gP0Mf\",\n            \"type\":
       \"function\",\n            \"function\": {\n              \"name\": \"ScoreOutput\",\n
       \             \"arguments\": \"{\\\"score\\\":4}\"\n            }\n          }\n
       \       ],\n        \"refusal\": null\n      },\n      \"logprobs\": null,\n
       \     \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\":
       100,\n    \"completion_tokens\": 5,\n    \"total_tokens\": 105,\n    \"completion_tokens_details\":
-      {\n      \"reasoning_tokens\": 0\n    }\n  },\n  \"system_fingerprint\": \"fp_52a7f40b0b\"\n}\n"
+      {\n      \"reasoning_tokens\": 0\n    }\n  },\n  \"system_fingerprint\": \"fp_e375328146\"\n}\n"
     headers:
       CF-Cache-Status:
       - DYNAMIC
       CF-RAY:
-      - 8c7d0dac89aaa4c7-MIA
+      - 8c85f9b2fc671cf3-GRU
       Connection:
       - keep-alive
       Content-Encoding:
@@ -254,7 +171,7 @@ interactions:
       Content-Type:
       - application/json
       Date:
-      - Mon, 23 Sep 2024 19:48:38 GMT
+      - Tue, 24 Sep 2024 21:47:52 GMT
       Server:
       - cloudflare
       Transfer-Encoding:
@@ -266,11 +183,11 @@ interactions:
       openai-organization:
       - crewai-iuxna1
       openai-processing-ms:
-      - '139'
+      - '163'
       openai-version:
       - '2020-10-01'
       strict-transport-security:
-      - max-age=15552000; includeSubDomains; preload
+      - max-age=31536000; includeSubDomains; preload
       x-ratelimit-limit-requests:
       - '10000'
       x-ratelimit-limit-tokens:
@@ -284,7 +201,7 @@ interactions:
       x-ratelimit-reset-tokens:
       - 0s
       x-request-id:
-      - req_e8e6149fd60f2b389f0f8d9db1f2aa75
+      - req_d24b98d762df8198d3d365639be80fe4
     http_version: HTTP/1.1
     status_code: 200
 version: 1

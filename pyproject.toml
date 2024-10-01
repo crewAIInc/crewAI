@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "crewai"
-version = "0.63.0"
+version = "0.66.0"
 description = "Cutting-edge framework for orchestrating role-playing, autonomous AI agents. By fostering collaborative intelligence, CrewAI empowers agents to work together seamlessly, tackling complex tasks."
 authors = ["Joao Moura <joao@crewai.com>"]
 readme = "README.md"
@@ -32,6 +32,7 @@ json-repair = "^0.25.2"
 auth0-python = "^4.7.1"
 poetry = "^1.8.3"
 litellm = "^1.44.22"
+pyvis = "^0.3.2"
 
 [tool.poetry.extras]
 tools = ["crewai-tools"]

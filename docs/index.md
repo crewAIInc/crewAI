@@ -58,6 +58,11 @@ Cutting-edge framework for orchestrating role-playing, autonomous AI agents. By 
                     LLMs
                 </a>
             </li>
+            <!-- <li>
+                <a href="./core-concepts/Flows">
+                    Flows
+                </a>
+            </li> -->
             <li>
                 <a href="./core-concepts/Pipeline">
                     Pipeline
@@ -85,7 +90,7 @@ Cutting-edge framework for orchestrating role-playing, autonomous AI agents. By 
             </li>
         </ul>
     </div>
-    <div style="width:30%">
+    <div style="width:25%">
         <h2>How-To Guides</h2>
         <ul>
             <li>
@@ -160,7 +165,7 @@ Cutting-edge framework for orchestrating role-playing, autonomous AI agents. By 
             </li>
         </ul>
     </div>
-    <div style="width:30%">
+    <!-- <div style="width:25%">
         <h2>Examples</h2>
         <ul>
             <li>
@@ -198,6 +203,26 @@ Cutting-edge framework for orchestrating role-playing, autonomous AI agents. By 
                     Landing Page Generator
                 </a>
             </li>
+            <li>
+                <a target='_blank' href="https://github.com/crewAIInc/crewAI-examples/tree/main/email_auto_responder_flow">
+                    Email Auto Responder Flow
+                </a>
+            </li>
+            <li>
+                <a target='_blank' href="https://github.com/crewAIInc/crewAI-examples/tree/main/lead-score-flow">
+                    Lead Score Flow
+                </a>
+            </li>
+            <li>
+                <a target='_blank' href="https://github.com/crewAIInc/crewAI-examples/tree/main/write_a_book_with_flows">
+                    Write a Book Flow
+                </a>
+            </li>
+            <li>
+                <a target='_blank' href="https://github.com/crewAIInc/crewAI-examples/tree/main/meeting_assistant_flow">
+                    Meeting Assistant Flow
+                </a>
+            </li>
         </ul>
-    </div>
+    </div> -->
 </div>
