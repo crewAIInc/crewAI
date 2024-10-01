@@ -260,6 +260,13 @@ def deploy_remove(uuid: Optional[str]):
     deploy_cmd.remove_crew(uuid=uuid)
 
 
+@tool.command(name="create")
+@click.argument("handle")
+def tool_create(handle: str):
+    tool_cmd = ToolCommand()
+    tool_cmd.create(handle)
+
+
 @tool.command(name="install")
 @click.argument("handle")
 def tool_install(handle: str):
