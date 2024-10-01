@@ -264,6 +264,7 @@ def deploy_remove(uuid: Optional[str]):
 @click.argument("handle")
 def tool_install(handle: str):
     tool_cmd = ToolCommand()
+    tool_cmd.login()
     tool_cmd.install(handle)
 
 
@@ -272,6 +273,7 @@ def tool_install(handle: str):
 @click.option("--private", "is_public", flag_value=False)
 def tool_publish(is_public: bool):
     tool_cmd = ToolCommand()
+    tool_cmd.login()
     tool_cmd.publish(is_public)
 
 
