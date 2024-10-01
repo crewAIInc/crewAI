@@ -64,7 +64,6 @@ def listen(condition):
 
 
 def router(method, paths=None):
-def router(method, paths=None):
     def decorator(func):
         func.__is_router__ = True
         func.__router_for__ = method.__name__
