@@ -64,7 +64,7 @@ class PlusAPIMixin:
             )
             details = (
                 json_response.get("error")
-                or json_response.get("error")
+                or json_response.get("message")
                 or response.content
             )
             console.print(f"Details:\n{details}")
