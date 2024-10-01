@@ -1,5 +1,7 @@
 # flow.py
 
+# flow.py
+
 import asyncio
 import inspect
 from typing import Any, Callable, Dict, Generic, List, Set, Type, TypeVar, Union
@@ -61,6 +63,7 @@ def listen(condition):
     return decorator
 
 
+def router(method, paths=None):
 def router(method, paths=None):
     def decorator(func):
         func.__is_router__ = True
