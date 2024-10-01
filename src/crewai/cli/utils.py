@@ -1,3 +1,5 @@
+import os
+import shutil
 import click
 import re
 import subprocess
@@ -198,3 +200,38 @@ def get_auth_token() -> str:
     if not access_token:
         raise Exception()
     return access_token
+
+def tree_copy(source, destination):
+    """Copies the entire directory structure from the source to the destination."""
+    for item in os.listdir(source):
+        source_item = os.path.join(source, item)
+        destination_item = os.path.join(destination, item)
+        if os.path.isdir(source_item):
+            shutil.copytree(source_item, destination_item)
+        else:
+            shutil.copy2(source_item, destination_item)
+
+def tree_find_and_replace(directory, find, replace):
+    """Recursively searches through a directory, replacing a target string in
+    both file contents and filenames with a specified replacement string.
+    """
+    for path, dirs, files in os.walk(os.path.abspath(directory), topdown=False):
+        for filename in files:
+            filepath = os.path.join(path, filename)
+
+            with open(filepath, 'r') as file:
+                contents = file.read()
+            with open(filepath, 'w') as file:
+                file.write(contents.replace(find, replace))
+
+            if find in filename:
+                new_filename = filename.replace(find, replace)
+                new_filepath = os.path.join(path, new_filename)
+                os.rename(filepath, new_filepath)
+
+        for dirname in dirs:
+            if find in dirname:
+                new_dirname = dirname.replace(find, replace)
+                new_dirpath = os.path.join(path, new_dirname)
+                old_dirpath = os.path.join(path, dirname)
+                os.rename(old_dirpath, new_dirpath)
