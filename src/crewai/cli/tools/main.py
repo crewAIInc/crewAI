@@ -64,23 +64,8 @@ class ToolCommand(BaseCommand, PlusAPIMixin):
             description=project_description,
             encoded_file=f"data:application/x-gzip;base64,{encoded_tarball}",
         )
-        if publish_response.status_code == 422:
-            console.print(
-                "[bold red]Failed to publish tool. Please fix the following errors:[/bold red]"
-            )
-            for field, messages in publish_response.json().items():
-                for message in messages:
-                    console.print(
-                        f"* [bold red]{field.capitalize()}[/bold red] {message}"
-                    )
 
-            raise SystemExit
-        elif publish_response.status_code != 200:
-            self._handle_plus_api_error(publish_response.json())
-            console.print(
-                "Failed to publish tool. Please try again later.", style="bold red"
-            )
-            raise SystemExit
+        self._validate_response(publish_response)
 
         published_handle = publish_response.json()["handle"]
         console.print(

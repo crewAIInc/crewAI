@@ -154,7 +154,7 @@ class TestToolCommand(unittest.TestCase):
             output = fake_out.getvalue()
 
         mock_publish.assert_called_once()
-        self.assertIn("Failed to publish tool", output)
+        self.assertIn("Failed to complete operation", output)
         self.assertIn("Name is already taken", output)
 
     @patch("crewai.cli.tools.main.get_project_name", return_value="sample-tool")
@@ -182,9 +182,11 @@ class TestToolCommand(unittest.TestCase):
         mock_get_project_version,
         mock_get_project_name,
     ):
-        mock_publish_response = MagicMock()
-        mock_publish_response.status_code = 500
-        mock_publish.return_value = mock_publish_response
+        mock_response = MagicMock()
+        mock_response.status_code = 500
+        mock_response.json.return_value = {"error": "Internal Server Error"}
+        mock_response.ok = False
+        mock_publish.return_value = mock_response
 
         tool_command = ToolCommand()
 
@@ -194,7 +196,7 @@ class TestToolCommand(unittest.TestCase):
             output = fake_out.getvalue()
 
         mock_publish.assert_called_once()
-        self.assertIn("Failed to publish tool", output)
+        self.assertIn("Request to Enterprise API failed", output)
 
     @patch("crewai.cli.plus_api.PlusAPI.login_to_tool_repository")
     @patch("crewai.cli.tools.main.subprocess.run")

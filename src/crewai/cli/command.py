@@ -1,4 +1,5 @@
-from typing import Dict, Any
+import requests
+from requests.exceptions import JSONDecodeError
 from rich.console import Console
 from crewai.cli.plus_api import PlusAPI
 from crewai.cli.utils import get_auth_token
@@ -27,14 +28,44 @@ class PlusAPIMixin:
             console.print("Run 'crewai signup' to sign up/login.", style="bold green")
             raise SystemExit
 
-    def _handle_plus_api_error(self, json_response: Dict[str, Any]) -> None:
+    def _validate_response(self, response: requests.Response) -> None:
         """
         Handle and display error messages from API responses.
 
         Args:
-            json_response (Dict[str, Any]): The JSON response containing error information.
+            response (requests.Response): The response from the Plus API
         """
-        error = json_response.get("error", "Unknown error")
-        message = json_response.get("message", "No message provided")
-        console.print(f"Error: {error}", style="bold red")
-        console.print(f"Message: {message}", style="bold red")
+        try:
+            json_response = response.json()
+        except (JSONDecodeError, ValueError):
+            console.print(
+                "Failed to parse response from Enterprise API failed. Details:",
+                style="bold red",
+            )
+            console.print(f"Status Code: {response.status_code}")
+            console.print(f"Response:\n{response.content}")
+            raise SystemExit
+
+        if response.status_code == 422:
+            console.print(
+                "Failed to complete operation. Please fix the following errors:",
+                style="bold red",
+            )
+            for field, messages in json_response.items():
+                for message in messages:
+                    console.print(
+                        f"* [bold red]{field.capitalize()}[/bold red] {message}"
+                    )
+            raise SystemExit
+
+        if not response.ok:
+            console.print(
+                "Request to Enterprise API failed. Details:", style="bold red"
+            )
+            details = (
+                json_response.get("error")
+                or json_response.get("error")
+                or response.content
+            )
+            console.print(f"Details:\n{details}")
+            raise SystemExit
