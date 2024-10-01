@@ -67,5 +67,5 @@ class PlusAPIMixin:
                 or json_response.get("message")
                 or response.content
             )
-            console.print(f"Details:\n{details}")
+            console.print(f"{details}")
             raise SystemExit
