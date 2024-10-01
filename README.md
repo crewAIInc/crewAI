@@ -1,10 +1,10 @@
 <div align="center">
 
-![Logo of crewAI, two people rowing on a boat](./docs/crewai_logo.png)
+![Logo of CrewAI, two people rowing on a boat](./docs/crewai_logo.png)
 
-# **crewAI**
+# **CrewAI**
 
-🤖 **crewAI**: Cutting-edge framework for orchestrating role-playing, autonomous AI agents. By fostering collaborative intelligence, CrewAI empowers agents to work together seamlessly, tackling complex tasks.
+🤖 **CrewAI**: Cutting-edge framework for orchestrating role-playing, autonomous AI agents. By fostering collaborative intelligence, CrewAI empowers agents to work together seamlessly, tackling complex tasks.
 
 <h3>
 
@@ -48,11 +48,13 @@ To get started with CrewAI, follow these simple steps:
 pip install crewai
 ```
 
-If you want to install the 'crewai' package along with its optional features that include additional tools for agents, you can do so by using the following command: pip install 'crewai[tools]'. This command installs the basic package and also adds extra components which require more dependencies to function."
+If you want to install the 'crewai' package along with its optional features that include additional tools for agents, you can do so by using the following command:
 
 ```shell
 pip install 'crewai[tools]'
 ```
+
+This command installs the basic package and also adds extra components which require more dependencies to function.
 
 ### 2. Setting Up Your Crew
 
@@ -131,13 +133,13 @@ In addition to the sequential process, you can use the hierarchical process, whi
 - **Processes Driven**: Currently only supports `sequential` task execution and `hierarchical` processes, but more complex processes like consensual and autonomous are being worked on.
 - **Save output as file**: Save the output of individual tasks as a file, so you can use it later.
 - **Parse output as Pydantic or Json**: Parse the output of individual tasks as a Pydantic model or as a Json if you want to.
-- **Works with Open Source Models**: Run your crew using Open AI or open source models refer to the [Connect crewAI to LLMs](https://docs.crewai.com/how-to/LLM-Connections/) page for details on configuring your agents' connections to models, even ones running locally!
+- **Works with Open Source Models**: Run your crew using Open AI or open source models refer to the [Connect CrewAI to LLMs](https://docs.crewai.com/how-to/LLM-Connections/) page for details on configuring your agents' connections to models, even ones running locally!
 
 ![CrewAI Mind Map](./docs/crewAI-mindmap.png "CrewAI Mind Map")
 
 ## Examples
 
-You can test different real life examples of AI crews in the [crewAI-examples repo](https://github.com/crewAIInc/crewAI-examples?tab=readme-ov-file):
+You can test different real life examples of AI crews in the [CrewAI-examples repo](https://github.com/crewAIInc/crewAI-examples?tab=readme-ov-file):
 
 - [Landing Page Generator](https://github.com/crewAIInc/crewAI-examples/tree/main/landing_page_generator)
 - [Having Human input on the execution](https://docs.crewai.com/how-to/Human-Input-on-Execution)
@@ -168,9 +170,9 @@ You can test different real life examples of AI crews in the [crewAI-examples re
 
 ## Connecting Your Crew to a Model
 
-crewAI supports using various LLMs through a variety of connection options. By default your agents will use the OpenAI API when querying the model. However, there are several other ways to allow your agents to connect to models. For example, you can configure your agents to use a local model via the Ollama tool.
+CrewAI supports using various LLMs through a variety of connection options. By default your agents will use the OpenAI API when querying the model. However, there are several other ways to allow your agents to connect to models. For example, you can configure your agents to use a local model via the Ollama tool.
 
-Please refer to the [Connect crewAI to LLMs](https://docs.crewai.com/how-to/LLM-Connections/) page for details on configuring you agents' connections to models.
+Please refer to the [Connect CrewAI to LLMs](https://docs.crewai.com/how-to/LLM-Connections/) page for details on configuring you agents' connections to models.
 
 ## How CrewAI Compares
 
@@ -241,7 +243,7 @@ It's pivotal to understand that **NO data is collected** concerning prompts, tas
 
 Data collected includes:
 
-- Version of crewAI
+- Version of CrewAI
   - So we can understand how many users are using the latest version
 - Version of Python
   - So we can decide on what versions to better support
@@ -266,7 +268,7 @@ Users can opt-in to Further Telemetry, sharing the complete telemetry data by se
 
 ## License
 
-CrewAI is released under the MIT License.
+CrewAI is released under the [MIT License](https://github.com/crewAIInc/crewAI/blob/main/LICENSE).
 
 ## Frequently Asked Questions (FAQ)
 
@@ -299,7 +301,7 @@ A: Yes, CrewAI is open-source and welcomes contributions from the community.
 A: CrewAI uses anonymous telemetry to collect usage data for improvement purposes. No sensitive data (like prompts, task descriptions, or API calls) is collected. Users can opt-in to share more detailed data by setting `share_crew=True` on their Crews.
 
 ### Q: Where can I find examples of CrewAI in action?
-A: You can find various real-life examples in the [crewAI-examples repository](https://github.com/crewAIInc/crewAI-examples), including trip planners, stock analysis tools, and more.
+A: You can find various real-life examples in the [CrewAI-examples repository](https://github.com/crewAIInc/crewAI-examples), including trip planners, stock analysis tools, and more.
 
 ### Q: How can I contribute to CrewAI?
 A: Contributions are welcome! You can fork the repository, create a new branch for your feature, add your improvement, and send a pull request. Check the Contribution section in the README for more details.
