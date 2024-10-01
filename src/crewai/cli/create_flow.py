@@ -47,7 +47,6 @@ def create_flow(name):
         except Exception as e:
             click.secho(f"Error processing file {src_file}: {e}", fg="red")
             return
-            content = file.read()
 
         content = content.replace("{{name}}", name)
         content = content.replace("{{flow_name}}", class_name)
