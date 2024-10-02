@@ -152,6 +152,7 @@ class Flow(Generic[T], metaclass=FlowMeta):
         class _FlowGeneric(cls):
             _initial_state_T: Type[T] = item
 
+        _FlowGeneric.__name__ = f"{cls.__name__}[{item.__name__}]"
         return _FlowGeneric
 
     def __init__(self) -> None:
