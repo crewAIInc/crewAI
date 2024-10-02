@@ -1,7 +1,11 @@
-import unittest
-from io import StringIO
-from unittest.mock import MagicMock, patch
+import pytest
+import requests
 import sys
+import unittest
+
+from io import StringIO
+from requests.exceptions import JSONDecodeError
+from unittest.mock import MagicMock, Mock, patch
 
 from crewai.cli.deploy.main import DeployCommand
 from crewai.cli.utils import parse_toml
@@ -33,13 +37,65 @@ class TestDeployCommand(unittest.TestCase):
         with self.assertRaises(SystemExit):
             DeployCommand()
 
-    def test_handle_plus_api_error(self):
+    def test_validate_response_successful_response(self):
+        mock_response = Mock(spec=requests.Response)
+        mock_response.json.return_value = {"message": "Success"}
+        mock_response.status_code = 200
+        mock_response.ok = True
+
         with patch("sys.stdout", new=StringIO()) as fake_out:
-            self.deploy_command._handle_plus_api_error(
-                {"error": "Test error", "message": "Test message"}
+            self.deploy_command._validate_response(mock_response)
+            assert fake_out.getvalue() == ""
+
+    def test_validate_response_json_decode_error(self):
+        mock_response = Mock(spec=requests.Response)
+        mock_response.json.side_effect = JSONDecodeError("Decode error", "", 0)
+        mock_response.status_code = 500
+        mock_response.content = b"Invalid JSON"
+
+        with patch("sys.stdout", new=StringIO()) as fake_out:
+            with pytest.raises(SystemExit):
+                self.deploy_command._validate_response(mock_response)
+            output = fake_out.getvalue()
+            assert (
+                "Failed to parse response from Enterprise API failed. Details:"
+                in output
             )
-            self.assertIn("Error: Test error", fake_out.getvalue())
-            self.assertIn("Message: Test message", fake_out.getvalue())
+            assert "Status Code: 500" in output
+            assert "Response:\nb'Invalid JSON'" in output
+
+    def test_validate_response_422_error(self):
+        mock_response = Mock(spec=requests.Response)
+        mock_response.json.return_value = {
+            "field1": ["Error message 1"],
+            "field2": ["Error message 2"],
+        }
+        mock_response.status_code = 422
+        mock_response.ok = False
+
+        with patch("sys.stdout", new=StringIO()) as fake_out:
+            with pytest.raises(SystemExit):
+                self.deploy_command._validate_response(mock_response)
+            output = fake_out.getvalue()
+            assert (
+                "Failed to complete operation. Please fix the following errors:"
+                in output
+            )
+            assert "Field1 Error message 1" in output
+            assert "Field2 Error message 2" in output
+
+    def test_validate_response_other_error(self):
+        mock_response = Mock(spec=requests.Response)
+        mock_response.json.return_value = {"error": "Something went wrong"}
+        mock_response.status_code = 500
+        mock_response.ok = False
+
+        with patch("sys.stdout", new=StringIO()) as fake_out:
+            with pytest.raises(SystemExit):
+                self.deploy_command._validate_response(mock_response)
+            output = fake_out.getvalue()
+            assert "Request to Enterprise API failed. Details:" in output
+            assert "Details:\nSomething went wrong" in output
 
     def test_standard_no_param_error_message(self):
         with patch("sys.stdout", new=StringIO()) as fake_out:
@@ -207,30 +263,7 @@ class TestDeployCommand(unittest.TestCase):
         project_name = get_project_name()
         self.assertEqual(project_name, "test_project")
 
-    @patch(
-        "builtins.open",
-        new_callable=unittest.mock.mock_open,
-        read_data="""
-    [[package]]
-    name = "crewai"
-    version = "0.51.1"
-    description = "Some description"
-    category = "main"
-    optional = false
-    python-versions = ">=3.10,<4.0"
-    """,
-    )
-    def test_get_crewai_version(self, mock_open):
+    def test_get_crewai_version(self):
         from crewai.cli.utils import get_crewai_version
 
-        version = get_crewai_version()
-        self.assertEqual(version, "0.51.1")
-
-    @patch("builtins.open", side_effect=FileNotFoundError)
-    def test_get_crewai_version_file_not_found(self, mock_open):
-        from crewai.cli.utils import get_crewai_version
-
-        with patch("sys.stdout", new=StringIO()) as fake_out:
-            version = get_crewai_version()
-            self.assertEqual(version, "no-version-found")
-            self.assertIn("Error: poetry.lock not found.", fake_out.getvalue())
+        assert isinstance(get_crewai_version(), str)

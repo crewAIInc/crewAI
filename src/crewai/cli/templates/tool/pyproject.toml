@@ -1,0 +1,14 @@
+[tool.poetry]
+name = "{{folder_name}}"
+version = "0.1.0"
+description = "Power up your crews with {{folder_name}}"
+authors = ["Your Name <you@example.com>"]
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = ">=3.10,<=3.13"
+crewai = { extras = ["tools"], version = ">=0.64.0,<1.0.0" }
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
