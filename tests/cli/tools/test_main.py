@@ -129,8 +129,10 @@ class TestToolCommand(unittest.TestCase):
         read_data=b"sample tarball content",
     )
     @patch("crewai.cli.plus_api.PlusAPI.publish_tool")
+    @patch("crewai.cli.tools.main.git.Repository.is_synced", return_value=True)
     def test_publish_success(
         self,
+        mock_is_synced,
         mock_publish,
         mock_open,
         mock_listdir,
@@ -147,16 +149,16 @@ class TestToolCommand(unittest.TestCase):
         tool_command = ToolCommand()
         tool_command.publish(is_public=True)
 
-        mock_get_project_name.assert_called_once_with(require=True)
-        mock_get_project_version.assert_called_once_with(require=True)
-        mock_get_project_description.assert_called_once_with(require=False)
-        mock_subprocess_run.assert_called_once_with(
+        mock_get_project_name.assert_called_with(require=True)
+        mock_get_project_version.assert_called_with(require=True)
+        mock_get_project_description.assert_called_with(require=False)
+        mock_subprocess_run.assert_called_with(
             ["poetry", "build", "-f", "sdist", "--output", unittest.mock.ANY],
             check=True,
             capture_output=False,
         )
-        mock_open.assert_called_once_with(unittest.mock.ANY, "rb")
-        mock_publish.assert_called_once_with(
+        mock_open.assert_called_with(unittest.mock.ANY, "rb")
+        mock_publish.assert_called_with(
             handle="sample-tool",
             is_public=True,
             version="1.0.0",

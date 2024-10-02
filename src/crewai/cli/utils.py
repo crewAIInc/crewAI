@@ -1,8 +1,6 @@
 import os
 import shutil
 import click
-import re
-import subprocess
 import sys
 import importlib.metadata
 
@@ -59,38 +57,6 @@ def parse_toml(content):
         return tomllib.loads(content)
     else:
         return simple_toml_parser(content)
-
-
-def get_git_remote_url() -> str | None:
-    """Get the Git repository's remote URL."""
-    try:
-        # Run the git remote -v command
-        result = subprocess.run(
-            ["git", "remote", "-v"], capture_output=True, text=True, check=True
-        )
-
-        # Get the output
-        output = result.stdout
-
-        # Parse the output to find the origin URL
-        matches = re.findall(r"origin\s+(.*?)\s+\(fetch\)", output)
-
-        if matches:
-            return matches[0]  # Return the first match (origin URL)
-        else:
-            console.print("No origin remote found.", style="bold red")
-
-    except subprocess.CalledProcessError as e:
-        console.print(
-            f"Error running trying to fetch the Git Repository: {e}", style="bold red"
-        )
-    except FileNotFoundError:
-        console.print(
-            "Git command not found. Make sure Git is installed and in your PATH.",
-            style="bold red",
-        )
-
-    return None
 
 
 def get_project_name(
