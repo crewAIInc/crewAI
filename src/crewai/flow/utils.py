@@ -1,3 +1,48 @@
+import ast
+import inspect
+import textwrap
+
+
+def get_possible_return_constants(function):
+    try:
+        source = inspect.getsource(function)
+    except OSError:
+        # Can't get source code
+        return None
+    except Exception as e:
+        print(f"Error retrieving source code for function {function.__name__}: {e}")
+        return None
+
+    try:
+        # Remove leading indentation
+        source = textwrap.dedent(source)
+        # Parse the source code into an AST
+        code_ast = ast.parse(source)
+    except IndentationError as e:
+        print(f"IndentationError while parsing source code of {function.__name__}: {e}")
+        print(f"Source code:\n{source}")
+        return None
+    except SyntaxError as e:
+        print(f"SyntaxError while parsing source code of {function.__name__}: {e}")
+        print(f"Source code:\n{source}")
+        return None
+    except Exception as e:
+        print(f"Unexpected error while parsing source code of {function.__name__}: {e}")
+        print(f"Source code:\n{source}")
+        return None
+
+    return_values = []
+
+    class ReturnVisitor(ast.NodeVisitor):
+        def visit_Return(self, node):
+            # Check if the return value is a constant (Python 3.8+)
+            if isinstance(node.value, ast.Constant):
+                return_values.append(node.value.value)
+
+    ReturnVisitor().visit(code_ast)
+    return return_values
+
+
 def calculate_node_levels(flow):
     levels = {}
     queue = []
