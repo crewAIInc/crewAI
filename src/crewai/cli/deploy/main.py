@@ -2,12 +2,9 @@ from typing import Any, Dict, List, Optional
 
 from rich.console import Console
 
+from crewai.cli import git
 from crewai.cli.command import BaseCommand, PlusAPIMixin
-from crewai.cli.utils import (
-    fetch_and_json_env_file,
-    get_git_remote_url,
-    get_project_name,
-)
+from crewai.cli.utils import fetch_and_json_env_file, get_project_name
 
 console = Console()
 
@@ -91,7 +88,11 @@ class DeployCommand(BaseCommand, PlusAPIMixin):
         )
         console.print("Creating deployment...", style="bold blue")
         env_vars = fetch_and_json_env_file()
-        remote_repo_url = get_git_remote_url()
+
+        try:
+            remote_repo_url = git.Repository().origin_url()
+        except ValueError:
+            remote_repo_url = None
 
         if remote_repo_url is None:
             console.print("No remote repository URL found.", style="bold red")
