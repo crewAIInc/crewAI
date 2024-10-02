@@ -73,7 +73,7 @@ def test_agent_creation():
 
 def test_agent_default_values():
     agent = Agent(role="test role", goal="test goal", backstory="test backstory")
-    assert agent.llm.model == "gpt-4o"
+    assert agent.llm.model == "gpt-4o-mini"
     assert agent.allow_delegation is False
 
 
@@ -206,7 +206,7 @@ def test_logging_tool_usage():
         verbose=True,
     )
 
-    assert agent.llm.model == "gpt-4o"
+    assert agent.llm.model == "gpt-4o-mini"
     assert agent.tools_handler.last_used_tool == {}
     task = Task(
         description="What is 3 times 4?",
