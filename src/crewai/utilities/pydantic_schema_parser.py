@@ -1,4 +1,4 @@
-from typing import Type, get_args, get_origin
+from typing import Type, get_args, get_origin, Union
 
 from pydantic import BaseModel
 
@@ -36,7 +36,14 @@ class PydanticSchemaParser(BaseModel):
                 return f"List[\n{nested_schema}\n{' ' * 4 * depth}]"
             else:
                 return f"List[{list_item_type.__name__}]"
-        elif issubclass(field_type, BaseModel):
+        elif get_origin(field_type) is Union:
+            union_args = get_args(field_type)
+            if type(None) in union_args:
+                non_none_type = next(arg for arg in union_args if arg is not type(None))
+                return f"Optional[{self._get_field_type(field.__class__(annotation=non_none_type), depth)}]"
+            else:
+                return f"Union[{', '.join(arg.__name__ for arg in union_args)}]"
+        elif isinstance(field_type, type) and issubclass(field_type, BaseModel):
             return self._get_model_schema(field_type, depth)
         else:
-            return field_type.__name__
+            return getattr(field_type, "__name__", str(field_type))

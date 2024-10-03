@@ -12,9 +12,11 @@ from crewai.llm import LLM
 from crewai.agents.parser import CrewAgentParser, OutputParserException
 from crewai.tools.tool_calling import InstructorToolCalling
 from crewai.tools.tool_usage import ToolUsage
+from crewai.tools.tool_usage_events import ToolUsageFinished
 from crewai.utilities import RPMController
 from crewai_tools import tool
 from crewai.agents.parser import AgentAction
+from crewai.utilities.events import Emitter
 
 
 def test_agent_llm_creation_with_env_vars():
@@ -71,7 +73,7 @@ def test_agent_creation():
 
 def test_agent_default_values():
     agent = Agent(role="test role", goal="test goal", backstory="test backstory")
-    assert agent.llm.model == "gpt-4o"
+    assert agent.llm.model == "gpt-4o-mini"
     assert agent.allow_delegation is False
 
 
@@ -178,8 +180,15 @@ def test_agent_execution_with_tools():
         agent=agent,
         expected_output="The result of the multiplication.",
     )
-    output = agent.execute_task(task)
-    assert output == "The result of the multiplication is 12."
+    with patch.object(Emitter, "emit") as emit:
+        output = agent.execute_task(task)
+        assert output == "The result of the multiplication is 12."
+        assert emit.call_count == 1
+        args, _ = emit.call_args
+        assert isinstance(args[1], ToolUsageFinished)
+        assert not args[1].from_cache
+        assert args[1].tool_name == "multiplier"
+        assert args[1].tool_args == {"first_number": 3, "second_number": 4}
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
@@ -197,7 +206,7 @@ def test_logging_tool_usage():
         verbose=True,
     )
 
-    assert agent.llm.model == "gpt-4o"
+    assert agent.llm.model == "gpt-4o-mini"
     assert agent.tools_handler.last_used_tool == {}
     task = Task(
         description="What is 3 times 4?",
@@ -267,7 +276,7 @@ def test_cache_hitting():
         "multiplier-{'first_number': 12, 'second_number': 3}": 36,
     }
 
-    with patch.object(CacheHandler, "read") as read:
+    with patch.object(CacheHandler, "read") as read, patch.object(Emitter, "emit") as emit:
         read.return_value = "0"
         task = Task(
             description="What is 2 times 6? Ignore correctness and just return the result of the multiplication tool, you must use the tool.",
@@ -279,6 +288,10 @@ def test_cache_hitting():
         read.assert_called_with(
             tool="multiplier", input={"first_number": 2, "second_number": 6}
         )
+        assert emit.call_count == 1
+        args, _ = emit.call_args
+        assert isinstance(args[1], ToolUsageFinished)
+        assert args[1].from_cache
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
@@ -1205,7 +1218,9 @@ def test_agent_with_custom_stop_words():
     )
 
     assert isinstance(agent.llm, LLM)
-    assert agent.llm.stop == stop_words + ["\nObservation:"]
+    assert set(agent.llm.stop) == set(stop_words + ["\nObservation:"])
+    assert all(word in agent.llm.stop for word in stop_words)
+    assert "\nObservation:" in agent.llm.stop
 
 
 def test_agent_with_callbacks():
@@ -1368,7 +1383,8 @@ def test_agent_with_all_llm_attributes():
     assert agent.llm.temperature == 0.7
     assert agent.llm.top_p == 0.9
     assert agent.llm.n == 1
-    assert agent.llm.stop == ["STOP", "END", "\nObservation:"]
+    assert set(agent.llm.stop) == set(["STOP", "END", "\nObservation:"])
+    assert all(word in agent.llm.stop for word in ["STOP", "END", "\nObservation:"])
     assert agent.llm.max_tokens == 100
     assert agent.llm.presence_penalty == 0.1
     assert agent.llm.frequency_penalty == 0.1

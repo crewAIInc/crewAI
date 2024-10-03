@@ -1,7 +1,8 @@
+import os
+import shutil
 import click
-import re
-import subprocess
 import sys
+import importlib.metadata
 
 from crewai.cli.authentication.utils import TokenManager
 from functools import reduce
@@ -56,38 +57,6 @@ def parse_toml(content):
         return tomllib.loads(content)
     else:
         return simple_toml_parser(content)
-
-
-def get_git_remote_url() -> str | None:
-    """Get the Git repository's remote URL."""
-    try:
-        # Run the git remote -v command
-        result = subprocess.run(
-            ["git", "remote", "-v"], capture_output=True, text=True, check=True
-        )
-
-        # Get the output
-        output = result.stdout
-
-        # Parse the output to find the origin URL
-        matches = re.findall(r"origin\s+(.*?)\s+\(fetch\)", output)
-
-        if matches:
-            return matches[0]  # Return the first match (origin URL)
-        else:
-            console.print("No origin remote found.", style="bold red")
-
-    except subprocess.CalledProcessError as e:
-        console.print(
-            f"Error running trying to fetch the Git Repository: {e}", style="bold red"
-        )
-    except FileNotFoundError:
-        console.print(
-            "Git command not found. Make sure Git is installed and in your PATH.",
-            style="bold red",
-        )
-
-    return None
 
 
 def get_project_name(
@@ -162,29 +131,9 @@ def _get_nested_value(data: Dict[str, Any], keys: List[str]) -> Any:
     return reduce(dict.__getitem__, keys, data)
 
 
-def get_crewai_version(poetry_lock_path: str = "poetry.lock") -> str:
-    """Get the version number of crewai from the poetry.lock file."""
-    try:
-        with open(poetry_lock_path, "r") as f:
-            lock_content = f.read()
-
-        match = re.search(
-            r'\[\[package\]\]\s*name\s*=\s*"crewai"\s*version\s*=\s*"([^"]+)"',
-            lock_content,
-            re.DOTALL,
-        )
-        if match:
-            return match.group(1)
-        else:
-            print("crewai package not found in poetry.lock")
-            return "no-version-found"
-
-    except FileNotFoundError:
-        print(f"Error: {poetry_lock_path} not found.")
-    except Exception as e:
-        print(f"Error reading the poetry.lock file: {e}")
-
-    return "no-version-found"
+def get_crewai_version() -> str:
+    """Get the version number of CrewAI running the CLI"""
+    return importlib.metadata.version("crewai")
 
 
 def fetch_and_json_env_file(env_file_path: str = ".env") -> dict:
@@ -217,3 +166,40 @@ def get_auth_token() -> str:
     if not access_token:
         raise Exception()
     return access_token
+
+
+def tree_copy(source, destination):
+    """Copies the entire directory structure from the source to the destination."""
+    for item in os.listdir(source):
+        source_item = os.path.join(source, item)
+        destination_item = os.path.join(destination, item)
+        if os.path.isdir(source_item):
+            shutil.copytree(source_item, destination_item)
+        else:
+            shutil.copy2(source_item, destination_item)
+
+
+def tree_find_and_replace(directory, find, replace):
+    """Recursively searches through a directory, replacing a target string in
+    both file contents and filenames with a specified replacement string.
+    """
+    for path, dirs, files in os.walk(os.path.abspath(directory), topdown=False):
+        for filename in files:
+            filepath = os.path.join(path, filename)
+
+            with open(filepath, "r") as file:
+                contents = file.read()
+            with open(filepath, "w") as file:
+                file.write(contents.replace(find, replace))
+
+            if find in filename:
+                new_filename = filename.replace(find, replace)
+                new_filepath = os.path.join(path, new_filename)
+                os.rename(filepath, new_filepath)
+
+        for dirname in dirs:
+            if find in dirname:
+                new_dirname = dirname.replace(find, replace)
+                new_dirpath = os.path.join(path, new_dirname)
+                old_dirpath = os.path.join(path, dirname)
+                os.rename(old_dirpath, new_dirpath)

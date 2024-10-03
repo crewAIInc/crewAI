@@ -22,8 +22,7 @@ class PoemFlow(Flow[PoemState]):
     def generate_poem(self):
         print("Generating poem")
         print(f"State before poem: {self.state}")
-        poem_crew = PoemCrew().crew()
-        result = poem_crew.kickoff(inputs={"sentence_count": self.state.sentence_count})
+        result = PoemCrew().crew().kickoff(inputs={"sentence_count": self.state.sentence_count})
         
         print("Poem generated", result.raw)
         self.state.poem = result.raw
@@ -38,16 +37,28 @@ class PoemFlow(Flow[PoemState]):
             f.write(self.state.poem)
         print(f"State after save_poem: {self.state}")
 
-async def run():
+async def run_flow():
     """
     Run the flow.
     """
     poem_flow = PoemFlow()
     await poem_flow.kickoff()
 
+async def plot_flow():
+    """
+    Plot the flow.
+    """
+    poem_flow = PoemFlow()
+    poem_flow.plot()
+
 
 def main():
-    asyncio.run(run())
+    asyncio.run(run_flow())
+
+
+def plot():
+    asyncio.run(plot_flow())
+
 
 
 if __name__ == "__main__":
