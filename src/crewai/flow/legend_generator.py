@@ -31,7 +31,7 @@ def generate_legend_items_html(legend_items):
             style = "dashed" if item["dashed"] else "solid"
             legend_items_html += f"""
             <div class="legend-item">
-            <div class="legend-color-box" style="background-color: {item['color']}; border: 2px {style} {item['border']};"></div>
+            <div class="legend-color-box" style="background-color: {item['color']}; border: 2px {style} {item['border']}; border-radius: 5px;"></div>
             <div>{item['label']}</div>
             </div>
             """
@@ -39,14 +39,14 @@ def generate_legend_items_html(legend_items):
             style = "dashed" if item["dashed"] else "solid"
             legend_items_html += f"""
             <div class="legend-item">
-            <div class="legend-{style}" style="border-bottom: 2px {style} {item['color']};"></div>
+            <div class="legend-{style}" style="border-bottom: 2px {style} {item['color']}; border-radius: 5px;"></div>
             <div>{item['label']}</div>
             </div>
             """
         else:
             legend_items_html += f"""
             <div class="legend-item">
-            <div class="legend-color-box" style="background-color: {item['color']};"></div>
+            <div class="legend-color-box" style="background-color: {item['color']}; border-radius: 5px;"></div>
             <div>{item['label']}</div>
             </div>
             """
