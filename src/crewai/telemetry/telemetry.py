@@ -586,23 +586,25 @@ class Telemetry:
             except Exception:
                 pass
 
-    def flow_plotting_span(self, flow_name: str):
+    def flow_plotting_span(self, flow_name: str, node_names: list[str]):
         if self.ready:
             try:
                 tracer = trace.get_tracer("crewai.telemetry")
                 span = tracer.start_span("Flow Plotting")
                 self._add_attribute(span, "flow_name", flow_name)
+                self._add_attribute(span, "node_names", json.dumps(node_names))
                 span.set_status(Status(StatusCode.OK))
                 span.end()
             except Exception:
                 pass
 
-    def flow_execution_span(self, flow_name: str):
+    def flow_execution_span(self, flow_name: str, node_names: list[str]):
         if self.ready:
             try:
                 tracer = trace.get_tracer("crewai.telemetry")
                 span = tracer.start_span("Flow Execution")
                 self._add_attribute(span, "flow_name", flow_name)
+                self._add_attribute(span, "node_names", json.dumps(node_names))
                 span.set_status(Status(StatusCode.OK))
                 span.end()
             except Exception:

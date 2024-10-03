@@ -193,7 +193,9 @@ class Flow(Generic[T], metaclass=FlowMeta):
         if not self._start_methods:
             raise ValueError("No start method defined")
 
-        self._telemetry.flow_execution_span(self.__class__.__name__)
+        self._telemetry.flow_execution_span(
+            self.__class__.__name__, list(self._methods.keys())
+        )
 
         # Create tasks for all start methods
         tasks = [
@@ -276,6 +278,8 @@ class Flow(Generic[T], metaclass=FlowMeta):
             traceback.print_exc()
 
     def plot(self, filename: str = "crewai_flow"):
-        self._telemetry.flow_plotting_span(self.__class__.__name__)
+        self._telemetry.flow_plotting_span(
+            self.__class__.__name__, list(self._methods.keys())
+        )
 
         plot_flow(self, filename)
