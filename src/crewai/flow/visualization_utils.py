@@ -1,8 +1,5 @@
 import ast
-import base64
-import html
 import inspect
-import os
 
 from .utils import (
     build_ancestor_dict,
