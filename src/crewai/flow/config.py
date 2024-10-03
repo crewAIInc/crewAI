@@ -2,6 +2,7 @@ DARK_GRAY = "#333333"
 CREWAI_ORANGE = "#FF5A50"
 GRAY = "#666666"
 WHITE = "#FFFFFF"
+BLACK = "#000000"
 
 COLORS = {
     "bg": WHITE,
@@ -16,31 +17,43 @@ COLORS = {
 
 NODE_STYLES = {
     "start": {
-        "color": COLORS["start"],
+        "color": CREWAI_ORANGE,
         "shape": "box",
-        "font": {"color": COLORS["text"]},
+        "font": {"color": WHITE},
         "margin": {"top": 10, "bottom": 8, "left": 10, "right": 10},
     },
     "method": {
-        "color": COLORS["method"],
+        "color": DARK_GRAY,
         "shape": "box",
-        "font": {"color": COLORS["text"]},
+        "font": {"color": WHITE},
         "margin": {"top": 10, "bottom": 8, "left": 10, "right": 10},
     },
     "router": {
         "color": {
-            "background": COLORS["router"],
-            "border": COLORS["router_border"],
+            "background": DARK_GRAY,
+            "border": CREWAI_ORANGE,
             "highlight": {
-                "border": COLORS["router_border"],
-                "background": COLORS["router"],
+                "border": CREWAI_ORANGE,
+                "background": DARK_GRAY,
             },
         },
         "shape": "box",
-        "font": {"color": COLORS["text"]},
+        "font": {"color": WHITE},
         "borderWidth": 3,
         "borderWidthSelected": 4,
         "shapeProperties": {"borderDashes": [5, 5]},
+        "margin": {"top": 10, "bottom": 8, "left": 10, "right": 10},
+    },
+    "crew": {
+        "color": {
+            "background": WHITE,
+            "border": CREWAI_ORANGE,
+        },
+        "shape": "box",
+        "font": {"color": BLACK},
+        "borderWidth": 3,
+        "borderWidthSelected": 4,
+        "shapeProperties": {"borderDashes": False},
         "margin": {"top": 10, "bottom": 8, "left": 10, "right": 10},
     },
 }

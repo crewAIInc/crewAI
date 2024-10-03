@@ -47,18 +47,13 @@ def add_nodes_to_network(net, flow, node_positions, node_styles):
             node_style = node_styles["start"]
         elif hasattr(method, "__is_router__"):
             node_style = node_styles["router"]
+        elif method_calls_crew(method):
+            node_style = node_styles["crew"]
         else:
             node_style = node_styles["method"]
 
         node_style = node_style.copy()
         label = human_friendly_label(method_name)
-
-        # Check if the method uses a crew
-        uses_crew = method_calls_crew(method)
-
-        # Create HTML label with the emoji (if applicable) and text
-        emoji = "🚣 " if uses_crew else ""
-        label = emoji + label
 
         node_style.update(
             {
