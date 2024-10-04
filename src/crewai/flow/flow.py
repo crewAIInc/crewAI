@@ -7,6 +7,7 @@ from typing import Any, Callable, Dict, Generic, List, Set, Type, TypeVar, Union
 from pydantic import BaseModel
 
 from crewai.flow.flow_visualizer import plot_flow
+from crewai.flow.utils import get_possible_return_constants
 from crewai.telemetry import Telemetry
 
 T = TypeVar("T", bound=Union[BaseModel, Dict[str, Any]])
@@ -62,12 +63,10 @@ def listen(condition):
     return decorator
 
 
-def router(method, paths=None):
+def router(method):
     def decorator(func):
         func.__is_router__ = True
         func.__router_for__ = method.__name__
-        if paths:
-            func.__router_paths__ = paths
         return func
 
     return decorator
@@ -123,10 +122,11 @@ class FlowMeta(type):
                 listeners[attr_name] = (condition_type, methods)
             elif hasattr(attr_value, "__is_router__"):
                 routers[attr_value.__router_for__] = attr_name
-                if hasattr(attr_value, "__router_paths__"):
-                    router_paths[attr_name] = attr_value.__router_paths__
+                possible_returns = get_possible_return_constants(attr_value)
+                if possible_returns:
+                    router_paths[attr_name] = possible_returns
 
-                # **Register router as a listener to its triggering method**
+                # Register router as a listener to its triggering method
                 trigger_method_name = attr_value.__router_for__
                 methods = [trigger_method_name]
                 condition_type = "OR"
