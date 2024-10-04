@@ -2,6 +2,8 @@ from pathlib import Path
 
 import click
 
+from crewai.telemetry import Telemetry
+
 
 def create_flow(name):
     """Create a new flow."""
@@ -14,6 +16,10 @@ def create_flow(name):
     if project_root.exists():
         click.secho(f"Error: Folder {folder_name} already exists.", fg="red")
         return
+
+    # Initialize telemetry
+    telemetry = Telemetry()
+    telemetry.flow_creation_span(class_name)
 
     # Create directory structure
     (project_root / "src" / folder_name).mkdir(parents=True)
