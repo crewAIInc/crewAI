@@ -1,8 +1,5 @@
 from typing import Any, Optional, Type
 
-import instructor
-from litellm import completion
-
 
 class InternalInstructor:
     """Class that wraps an agent llm with instructor."""
@@ -27,6 +24,10 @@ class InternalInstructor:
         """Set instructor."""
         if self.agent and not self.llm:
             self.llm = self.agent.function_calling_llm or self.agent.llm
+
+        # Lazy import
+        import instructor
+        from litellm import completion
 
         self._client = instructor.from_litellm(
             completion,
