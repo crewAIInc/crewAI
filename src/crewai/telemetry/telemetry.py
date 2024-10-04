@@ -21,9 +21,7 @@ with suppress_warnings():
 
 
 from opentelemetry import trace  # noqa: E402
-from opentelemetry.exporter.otlp.proto.http.trace_exporter import (
-    OTLPSpanExporter,  # noqa: E402
-)
+from opentelemetry.exporter.otlp.proto.http.trace_exporter import OTLPSpanExporter  # noqa: E402
 from opentelemetry.sdk.resources import SERVICE_NAME, Resource  # noqa: E402
 from opentelemetry.sdk.trace import TracerProvider  # noqa: E402
 from opentelemetry.sdk.trace.export import BatchSpanProcessor  # noqa: E402
