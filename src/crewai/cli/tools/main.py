@@ -59,8 +59,8 @@ class ToolCommand(BaseCommand, PlusAPIMixin):
         finally:
             os.chdir(old_directory)
 
-    def publish(self, is_public: bool):
-        if not git.Repository().is_synced():
+    def publish(self, is_public: bool, force: bool = False):
+        if not git.Repository().is_synced() and not force:
             console.print(
                 "[bold red]Failed to publish tool.[/bold red]\n"
                 "Local changes need to be resolved before publishing. Please do the following:\n"
