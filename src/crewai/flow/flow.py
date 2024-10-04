@@ -8,6 +8,7 @@ from pydantic import BaseModel
 
 from crewai.flow.flow_visualizer import plot_flow
 from crewai.flow.utils import get_possible_return_constants
+from crewai.telemetry import Telemetry
 
 T = TypeVar("T", bound=Union[BaseModel, Dict[str, Any]])
 
@@ -140,6 +141,8 @@ class FlowMeta(type):
 
 
 class Flow(Generic[T], metaclass=FlowMeta):
+    _telemetry = Telemetry()
+
     _start_methods: List[str] = []
     _listeners: Dict[str, tuple[str, List[str]]] = {}
     _routers: Dict[str, str] = {}
@@ -158,6 +161,8 @@ class Flow(Generic[T], metaclass=FlowMeta):
         self._completed_methods: Set[str] = set()
         self._pending_and_listeners: Dict[str, Set[str]] = {}
         self._method_outputs: List[Any] = []  # List to store all method outputs
+
+        self._telemetry.flow_creation_span(self.__class__.__name__)
 
         for method_name in dir(self):
             if callable(getattr(self, method_name)) and not method_name.startswith(
@@ -187,6 +192,10 @@ class Flow(Generic[T], metaclass=FlowMeta):
     async def kickoff(self) -> Any:
         if not self._start_methods:
             raise ValueError("No start method defined")
+
+        self._telemetry.flow_execution_span(
+            self.__class__.__name__, list(self._methods.keys())
+        )
 
         # Create tasks for all start methods
         tasks = [
@@ -269,4 +278,8 @@ class Flow(Generic[T], metaclass=FlowMeta):
             traceback.print_exc()
 
     def plot(self, filename: str = "crewai_flow"):
+        self._telemetry.flow_plotting_span(
+            self.__class__.__name__, list(self._methods.keys())
+        )
+
         plot_flow(self, filename)

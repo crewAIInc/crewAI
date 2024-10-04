@@ -6,6 +6,7 @@ import subprocess
 import tempfile
 
 from crewai.cli.command import BaseCommand, PlusAPIMixin
+from crewai.cli import git
 from crewai.cli.utils import (
     get_project_name,
     get_project_description,
@@ -58,7 +59,18 @@ class ToolCommand(BaseCommand, PlusAPIMixin):
         finally:
             os.chdir(old_directory)
 
-    def publish(self, is_public: bool):
+    def publish(self, is_public: bool, force: bool = False):
+        if not git.Repository().is_synced() and not force:
+            console.print(
+                "[bold red]Failed to publish tool.[/bold red]\n"
+                "Local changes need to be resolved before publishing. Please do the following:\n"
+                "* [bold]Commit[/bold] your changes.\n"
+                "* [bold]Push[/bold] to sync with the remote.\n"
+                "* [bold]Pull[/bold] the latest changes from the remote.\n"
+                "\nOnce your repository is up-to-date, retry publishing the tool."
+            )
+            raise SystemExit()
+
         project_name = get_project_name(require=True)
         assert isinstance(project_name, str)
 

@@ -208,7 +208,7 @@ my_crew = Crew(
 
 ### Resetting Memory
 ```sh
-crewai reset_memories [OPTIONS]
+crewai reset-memories [OPTIONS]
 ```
 
 #### Resetting Memory Options
