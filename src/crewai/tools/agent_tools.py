@@ -1,4 +1,3 @@
-from langchain.tools import StructuredTool
 from crewai.agents.agent_builder.utilities.base_agent_tool import BaseAgentTools
 
 
@@ -6,6 +5,8 @@ class AgentTools(BaseAgentTools):
     """Default tools around agent delegation"""
 
     def tools(self):
+        from langchain.tools import StructuredTool
+
         coworkers = ", ".join([f"{agent.role}" for agent in self.agents])
         tools = [
             StructuredTool.from_function(

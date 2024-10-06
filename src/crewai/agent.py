@@ -1,18 +1,19 @@
 import os
 from inspect import signature
 from typing import Any, List, Optional, Union
+
 from pydantic import Field, InstanceOf, PrivateAttr, model_validator
 
 from crewai.agents import CacheHandler
-from crewai.utilities import Converter, Prompts
-from crewai.tools.agent_tools import AgentTools
-from crewai.agents.crew_agent_executor import CrewAgentExecutor
 from crewai.agents.agent_builder.base_agent import BaseAgent
-from crewai.memory.contextual.contextual_memory import ContextualMemory
-from crewai.utilities.constants import TRAINED_AGENTS_DATA_FILE, TRAINING_DATA_FILE
-from crewai.utilities.training_handler import CrewTrainingHandler
-from crewai.utilities.token_counter_callback import TokenCalcHandler
+from crewai.agents.crew_agent_executor import CrewAgentExecutor
 from crewai.llm import LLM
+from crewai.memory.contextual.contextual_memory import ContextualMemory
+from crewai.tools.agent_tools import AgentTools
+from crewai.utilities import Converter, Prompts
+from crewai.utilities.constants import TRAINED_AGENTS_DATA_FILE, TRAINING_DATA_FILE
+from crewai.utilities.token_counter_callback import TokenCalcHandler
+from crewai.utilities.training_handler import CrewTrainingHandler
 
 
 def mock_agent_ops_provider():
@@ -292,9 +293,9 @@ class Agent(BaseAgent):
             step_callback=self.step_callback,
             function_calling_llm=self.function_calling_llm,
             respect_context_window=self.respect_context_window,
-            request_within_rpm_limit=self._rpm_controller.check_or_wait
-            if self._rpm_controller
-            else None,
+            request_within_rpm_limit=(
+                self._rpm_controller.check_or_wait if self._rpm_controller else None
+            ),
             callbacks=[TokenCalcHandler(self._token_process)],
         )
 
