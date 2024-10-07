@@ -95,7 +95,7 @@ class RAGStorage(Storage):
         self,
         query: str,
         limit: int = 3,
-        filter: Optional[dict] = None,
+        filters: Optional[dict] = None,
         score_threshold: float = 0.35,
     ) -> List[Any]:
         if not hasattr(self, "app"):
@@ -105,8 +105,8 @@ class RAGStorage(Storage):
         with suppress_logging():
             try:
                 results = (
-                    self.app.search(query, limit, where=filter)
-                    if filter
+                    self.app.search(query, limit, where=filters)
+                    if filters
                     else self.app.search(query, limit)
                 )
             except InvalidDimensionException:
