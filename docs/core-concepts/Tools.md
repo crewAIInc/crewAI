@@ -39,10 +39,6 @@ from crewai_tools import (
     WebsiteSearchTool
 )
 
-# Set up API keys
-os.environ["SERPER_API_KEY"] = "Your Key" # serper.dev API key
-os.environ["OPENAI_API_KEY"] = "Your Key"
-
 # Instantiate tools
 docs_tool = DirectoryReadTool(directory='./blog-posts')
 file_tool = FileReadTool()
