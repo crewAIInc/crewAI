@@ -209,7 +209,7 @@ extra:
     provider: google
     property: G-N3Q505TMQ6
   social:
-    - icon: fontawesome/brands/twitter
+    - icon: fontawesome/brands/x-twitter
       link: https://x.com/crewAIInc
     - icon: fontawesome/brands/github
       link: https://github.com/crewAIInc/crewAI
