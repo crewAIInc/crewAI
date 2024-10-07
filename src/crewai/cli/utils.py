@@ -1,13 +1,14 @@
+import importlib.metadata
 import os
 import shutil
-import click
 import sys
-import importlib.metadata
+from functools import reduce
+from typing import Any, Dict, List
+
+import click
+from rich.console import Console
 
 from crewai.cli.authentication.utils import TokenManager
-from functools import reduce
-from rich.console import Console
-from typing import Any, Dict, List
 
 if sys.version_info >= (3, 11):
     import tomllib

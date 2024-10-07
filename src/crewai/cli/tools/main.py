@@ -1,20 +1,21 @@
 import base64
-from pathlib import Path
-import click
 import os
 import subprocess
 import tempfile
+from pathlib import Path
 
-from crewai.cli.command import BaseCommand, PlusAPIMixin
+import click
+from rich.console import Console
+
 from crewai.cli import git
+from crewai.cli.command import BaseCommand, PlusAPIMixin
 from crewai.cli.utils import (
-    get_project_name,
     get_project_description,
+    get_project_name,
     get_project_version,
     tree_copy,
     tree_find_and_replace,
 )
-from rich.console import Console
 
 console = Console()
 
@@ -82,7 +83,7 @@ class ToolCommand(BaseCommand, PlusAPIMixin):
 
         with tempfile.TemporaryDirectory() as temp_build_dir:
             subprocess.run(
-                ["poetry", "build", "-f", "sdist", "--output", temp_build_dir],
+                ["uv", "build", "-f", "sdist", "--output", temp_build_dir],
                 check=True,
                 capture_output=False,
             )
@@ -162,7 +163,7 @@ class ToolCommand(BaseCommand, PlusAPIMixin):
         repository_handle = f"crewai-{repository['handle']}"
 
         add_repository_command = [
-            "poetry",
+            "uv",
             "source",
             "add",
             "--priority=explicit",
@@ -178,7 +179,7 @@ class ToolCommand(BaseCommand, PlusAPIMixin):
             raise SystemExit
 
         add_repository_credentials_command = [
-            "poetry",
+            "uv",
             "config",
             f"http-basic.{repository_handle}",
             credentials["username"],
@@ -201,7 +202,7 @@ class ToolCommand(BaseCommand, PlusAPIMixin):
         pypi_index_handle = f"crewai-{repository_handle}"
 
         add_package_command = [
-            "poetry",
+            "uv",
             "add",
             "--source",
             pypi_index_handle,

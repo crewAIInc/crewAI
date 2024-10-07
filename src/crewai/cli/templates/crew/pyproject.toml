@@ -1,15 +1,14 @@
-[tool.poetry]
+[project]
 name = "{{folder_name}}"
 version = "0.1.0"
 description = "{{name}} using crewAI"
-authors = ["Your Name <you@example.com>"]
+authors = [{ name = "Your Name", email = "you@example.com" }]
+requires-python = ">=3.10,<=3.13"
+dependencies = [
+    "crewai[tools]>=0.67.1,<1.0.0"
+]
 
-[tool.poetry.dependencies]
-python = ">=3.10,<=3.13"
-crewai = { extras = ["tools"], version = ">=0.67.1,<1.0.0" }
-
-
-[tool.poetry.scripts]
+[project.scripts]
 {{folder_name}} = "{{folder_name}}.main:run"
 run_crew = "{{folder_name}}.main:run"
 train = "{{folder_name}}.main:train"
@@ -17,5 +16,5 @@ replay = "{{folder_name}}.main:replay"
 test = "{{folder_name}}.main:test"
 
 [build-system]
-requires = ["poetry-core"]
-build-backend = "poetry.core.masonry.api"
+requires = ["hatchling"]
+build-backend = "hatchling.build"
