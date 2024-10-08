@@ -98,7 +98,8 @@ def crew(func) -> Callable[..., "Crew"]:
 
         # Sort tasks by their registration order
         sorted_task_names = sorted(
-            tasks, key=lambda name: task.registration_order.index(name)
+            tasks,
+            key=lambda name: task.registration_order.index(name),  # type: ignore
         )
 
         # Instantiate tasks in the order they were defined
