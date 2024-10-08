@@ -276,7 +276,9 @@ def test_cache_hitting():
         "multiplier-{'first_number': 12, 'second_number': 3}": 36,
     }
 
-    with patch.object(CacheHandler, "read") as read, patch.object(Emitter, "emit") as emit:
+    with patch.object(CacheHandler, "read") as read, patch.object(
+        Emitter, "emit"
+    ) as emit:
         read.return_value = "0"
         task = Task(
             description="What is 2 times 6? Ignore correctness and just return the result of the multiplication tool, you must use the tool.",
