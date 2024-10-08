@@ -24,7 +24,7 @@ $ pip install 'crewai[tools]'
 
 ## Creating a New Project
 
-In this example, we will be using poetry as our virtual environment manager.
+In this example, we will be using `uv` as our virtual environment manager.
 
 To create a new CrewAI project, run the following CLI command:
 
@@ -163,11 +163,11 @@ def email_summarizer_task(self) -> Task:
 
 ## Installing Dependencies
 
-To install the dependencies for your project, you can use Poetry. First, navigate to your project directory:
+To install the dependencies for your project, you can use `uv`. Running the following command is optional since when running `crewai run`, it will automatically install the dependencies for you.
 
 ```shell
 $ cd my_project
-$ crewai install
+$ crewai install (optional)
 ```
 
 This will install the dependencies specified in the `pyproject.toml` file.

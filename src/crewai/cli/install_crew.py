@@ -5,7 +5,7 @@ import click
 
 def install_crew() -> None:
     """
-    Install the crew by running the Poetry command to lock and install.
+    Install the crew by running the UV command to lock and install.
     """
     try:
         subprocess.run(["uv", "sync"], check=True, capture_output=False, text=True)

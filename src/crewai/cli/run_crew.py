@@ -5,7 +5,7 @@ import click
 
 def run_crew() -> None:
     """
-    Run the crew by running a command in the Poetry environment.
+    Run the crew by running a command in the UV environment.
     """
     command = ["uv", "run", "run_crew"]
 
