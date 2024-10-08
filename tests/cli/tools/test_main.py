@@ -1,13 +1,15 @@
+import os
 import tempfile
 import unittest
 import unittest.mock
-import os
 from contextlib import contextmanager
+from io import StringIO
+from unittest.mock import MagicMock, patch
 
 from pytest import raises
+
 from crewai.cli.tools.main import ToolCommand
-from io import StringIO
-from unittest.mock import patch, MagicMock
+
 
 @contextmanager
 def in_temp_dir():
@@ -18,6 +20,7 @@ def in_temp_dir():
             yield temp_dir
         finally:
             os.chdir(original_dir)
+
 
 @patch("crewai.cli.tools.main.subprocess.run")
 def test_create_success(mock_subprocess):
@@ -38,9 +41,7 @@ def test_create_success(mock_subprocess):
         )
         assert os.path.isfile(os.path.join("test_tool", "src", "test_tool", "tool.py"))
 
-        with open(
-            os.path.join("test_tool", "src", "test_tool", "tool.py"), "r"
-        ) as f:
+        with open(os.path.join("test_tool", "src", "test_tool", "tool.py"), "r") as f:
             content = f.read()
             assert "class TestTool" in content
 
@@ -48,6 +49,7 @@ def test_create_success(mock_subprocess):
         mock_subprocess.assert_called_once_with(["git", "init"], check=True)
 
         assert "Creating custom tool test_tool..." in output
+
 
 @patch("crewai.cli.tools.main.subprocess.run")
 @patch("crewai.cli.plus_api.PlusAPI.get_tool")
@@ -69,13 +71,14 @@ def test_install_success(mock_get, mock_subprocess_run):
 
     mock_get.assert_called_once_with("sample-tool")
     mock_subprocess_run.assert_any_call(
-        ["poetry", "add", "--source", "crewai-sample-repo", "sample-tool"],
+        ["uv", "add", "--source", "crewai-sample-repo", "sample-tool"],
         capture_output=False,
         text=True,
         check=True,
     )
 
     assert "Succesfully installed sample-tool" in output
+
 
 @patch("crewai.cli.plus_api.PlusAPI.get_tool")
 def test_install_tool_not_found(mock_get):
@@ -95,6 +98,7 @@ def test_install_tool_not_found(mock_get):
     mock_get.assert_called_once_with("non-existent-tool")
     assert "No tool found with this name" in output
 
+
 @patch("crewai.cli.plus_api.PlusAPI.get_tool")
 def test_install_api_error(mock_get):
     mock_get_response = MagicMock()
@@ -113,14 +117,15 @@ def test_install_api_error(mock_get):
     mock_get.assert_called_once_with("error-tool")
     assert "Failed to get tool details" in output
 
+
 @patch("crewai.cli.tools.main.git.Repository.is_synced", return_value=False)
 def test_publish_when_not_in_sync(mock_is_synced):
-    with patch("sys.stdout", new=StringIO()) as fake_out, \
-         raises(SystemExit):
+    with patch("sys.stdout", new=StringIO()) as fake_out, raises(SystemExit):
         tool_command = ToolCommand()
         tool_command.publish(is_public=True)
 
     assert "Local changes need to be resolved before publishing" in fake_out.getvalue()
+
 
 @patch("crewai.cli.tools.main.get_project_name", return_value="sample-tool")
 @patch("crewai.cli.tools.main.get_project_version", return_value="1.0.0")
@@ -156,7 +161,7 @@ def test_publish_when_not_in_sync_and_force(
     mock_get_project_version.assert_called_with(require=True)
     mock_get_project_description.assert_called_with(require=False)
     mock_subprocess_run.assert_called_with(
-        ["poetry", "build", "-f", "sdist", "--output", unittest.mock.ANY],
+        ["uv", "build", "-f", "sdist", "--output", unittest.mock.ANY],
         check=True,
         capture_output=False,
     )
@@ -168,6 +173,7 @@ def test_publish_when_not_in_sync_and_force(
         description="A sample tool",
         encoded_file=unittest.mock.ANY,
     )
+
 
 @patch("crewai.cli.tools.main.get_project_name", return_value="sample-tool")
 @patch("crewai.cli.tools.main.get_project_version", return_value="1.0.0")
@@ -203,7 +209,7 @@ def test_publish_success(
     mock_get_project_version.assert_called_with(require=True)
     mock_get_project_description.assert_called_with(require=False)
     mock_subprocess_run.assert_called_with(
-        ["poetry", "build", "-f", "sdist", "--output", unittest.mock.ANY],
+        ["uv", "build", "-f", "sdist", "--output", unittest.mock.ANY],
         check=True,
         capture_output=False,
     )
@@ -215,6 +221,7 @@ def test_publish_success(
         description="A sample tool",
         encoded_file=unittest.mock.ANY,
     )
+
 
 @patch("crewai.cli.tools.main.get_project_name", return_value="sample-tool")
 @patch("crewai.cli.tools.main.get_project_version", return_value="1.0.0")
@@ -254,6 +261,7 @@ def test_publish_failure(
     assert "Failed to complete operation" in output
     assert "Name is already taken" in output
 
+
 @patch("crewai.cli.tools.main.get_project_name", return_value="sample-tool")
 @patch("crewai.cli.tools.main.get_project_version", return_value="1.0.0")
 @patch("crewai.cli.tools.main.get_project_description", return_value="A sample tool")
@@ -292,6 +300,7 @@ def test_publish_api_error(
     mock_publish.assert_called_once()
     assert "Request to Enterprise API failed" in output
 
+
 @patch("crewai.cli.plus_api.PlusAPI.login_to_tool_repository")
 @patch("crewai.cli.tools.main.subprocess.run")
 def test_login_success(mock_subprocess_run, mock_login):
@@ -319,7 +328,7 @@ def test_login_success(mock_subprocess_run, mock_login):
     mock_login.assert_called_once()
     mock_subprocess_run.assert_any_call(
         [
-            "poetry",
+            "uv",
             "source",
             "add",
             "--priority=explicit",
@@ -331,7 +340,7 @@ def test_login_success(mock_subprocess_run, mock_login):
     )
     mock_subprocess_run.assert_any_call(
         [
-            "poetry",
+            "uv",
             "config",
             "http-basic.crewai-tools",
             "user",

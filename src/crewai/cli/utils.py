@@ -56,17 +56,14 @@ def simple_toml_parser(content):
 def parse_toml(content):
     if sys.version_info >= (3, 11):
         return tomllib.loads(content)
-    else:
-        return simple_toml_parser(content)
+    return simple_toml_parser(content)
 
 
 def get_project_name(
     pyproject_path: str = "pyproject.toml", require: bool = False
 ) -> str | None:
     """Get the project name from the pyproject.toml file."""
-    return _get_project_attribute(
-        pyproject_path, ["tool", "poetry", "name"], require=require
-    )
+    return _get_project_attribute(pyproject_path, ["project", "name"], require=require)
 
 
 def get_project_version(
@@ -74,7 +71,7 @@ def get_project_version(
 ) -> str | None:
     """Get the project version from the pyproject.toml file."""
     return _get_project_attribute(
-        pyproject_path, ["tool", "poetry", "version"], require=require
+        pyproject_path, ["project", "version"], require=require
     )
 
 
@@ -83,7 +80,7 @@ def get_project_description(
 ) -> str | None:
     """Get the project description from the pyproject.toml file."""
     return _get_project_attribute(
-        pyproject_path, ["tool", "poetry", "description"], require=require
+        pyproject_path, ["project", "description"], require=require
     )
 
 
@@ -98,8 +95,7 @@ def _get_project_attribute(
             pyproject_content = parse_toml(f.read())
 
         dependencies = (
-            _get_nested_value(pyproject_content, ["tool", "poetry", "dependencies"])
-            or {}
+            _get_nested_value(pyproject_content, ["project", "dependencies"]) or {}
         )
         if "crewai" not in dependencies:
             raise Exception("crewai is not in the dependencies.")

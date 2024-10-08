@@ -1,11 +1,11 @@
-import pytest
-import requests
 import sys
 import unittest
-
 from io import StringIO
-from requests.exceptions import JSONDecodeError
 from unittest.mock import MagicMock, Mock, patch
+
+import pytest
+import requests
+from requests.exceptions import JSONDecodeError
 
 from crewai.cli.deploy.main import DeployCommand
 from crewai.cli.utils import parse_toml

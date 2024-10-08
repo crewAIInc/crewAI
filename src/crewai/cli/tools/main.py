@@ -93,7 +93,7 @@ class ToolCommand(BaseCommand, PlusAPIMixin):
             )
             if not tarball_filename:
                 console.print(
-                    "Project build failed. Please ensure that the command `poetry build -f sdist` completes successfully.",
+                    "Project build failed. Please ensure that the command `uv build -f sdist` completes successfully.",
                     style="bold red",
                 )
                 raise SystemExit
@@ -151,15 +151,13 @@ class ToolCommand(BaseCommand, PlusAPIMixin):
 
         login_response_json = login_response.json()
         for repository in login_response_json["repositories"]:
-            self._add_repository_to_poetry(
-                repository, login_response_json["credential"]
-            )
+            self._add_repository_to_uv(repository, login_response_json["credential"])
 
         console.print(
             "Succesfully authenticated to the tool repository.", style="bold green"
         )
 
-    def _add_repository_to_poetry(self, repository, credentials):
+    def _add_repository_to_uv(self, repository, credentials):
         repository_handle = f"crewai-{repository['handle']}"
 
         add_repository_command = [
