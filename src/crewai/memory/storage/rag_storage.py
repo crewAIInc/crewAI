@@ -5,13 +5,12 @@ import os
 import shutil
 from typing import Any, Dict, List, Optional
 
+from crewai.memory.storage.interface import Storage
+from crewai.utilities.paths import db_storage_path
 from embedchain import App
 from embedchain.llm.base import BaseLlm
 from embedchain.models.data_type import DataType
 from embedchain.vectordb.chroma import InvalidDimensionException
-
-from crewai.memory.storage.interface import Storage
-from crewai.utilities.paths import db_storage_path
 
 
 @contextlib.contextmanager

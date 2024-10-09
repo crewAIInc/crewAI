@@ -1,18 +1,19 @@
 import os
 from inspect import signature
 from typing import Any, List, Optional, Union
+
 from pydantic import Field, InstanceOf, PrivateAttr, model_validator
 
 from crewai.agents import CacheHandler
-from crewai.utilities import Converter, Prompts
-from crewai.tools.agent_tools import AgentTools
-from crewai.agents.crew_agent_executor import CrewAgentExecutor
 from crewai.agents.agent_builder.base_agent import BaseAgent
-from crewai.memory.contextual.contextual_memory import ContextualMemory
-from crewai.utilities.constants import TRAINED_AGENTS_DATA_FILE, TRAINING_DATA_FILE
-from crewai.utilities.training_handler import CrewTrainingHandler
-from crewai.utilities.token_counter_callback import TokenCalcHandler
+from crewai.agents.crew_agent_executor import CrewAgentExecutor
 from crewai.llm import LLM
+from crewai.memory.contextual.contextual_memory import ContextualMemory
+from crewai.tools.agent_tools import AgentTools
+from crewai.utilities import Converter, Prompts
+from crewai.utilities.constants import TRAINED_AGENTS_DATA_FILE, TRAINING_DATA_FILE
+from crewai.utilities.token_counter_callback import TokenCalcHandler
+from crewai.utilities.training_handler import CrewTrainingHandler
 
 
 def mock_agent_ops_provider():
@@ -207,11 +208,11 @@ class Agent(BaseAgent):
 
         if self.crew and self.crew.memory:
             contextual_memory = ContextualMemory(
-                self.crew.memory_provider,
                 self.crew._short_term_memory,
                 self.crew._long_term_memory,
                 self.crew._entity_memory,
                 self.crew._user_memory,
+                self.crew.memory_provider,
             )
             memory = contextual_memory.build_context_for_task(task, context)
             if memory.strip() != "":

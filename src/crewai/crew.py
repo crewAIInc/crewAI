@@ -210,6 +210,14 @@ class Crew(BaseModel):
         # TODO: Improve typing
         return json.loads(v) if isinstance(v, Json) else v  # type: ignore
 
+    @field_validator("memory_provider", mode="before")
+    @classmethod
+    def validate_memory_provider(cls, v: Optional[str]) -> Optional[str]:
+        """Ensure memory provider is either None or 'mem0'."""
+        if v not in (None, "mem0"):
+            raise ValueError("Memory provider must be either None or 'mem0'.")
+        return v
+
     @model_validator(mode="after")
     def set_private_attrs(self) -> "Crew":
         """Set private attributes."""
@@ -247,12 +255,18 @@ class Crew(BaseModel):
                     embedder_config=self.embedder,
                 )
             )
-            self._entity_memory = EntityMemory(
-                memory_provider=self.memory_provider,
-                crew=self,
-                embedder_config=self.embedder,
+            self._entity_memory = (
+                self.entity_memory
+                if self.entity_memory
+                else EntityMemory(
+                    memory_provider=self.memory_provider,
+                    crew=self,
+                    embedder_config=self.embedder,
+                )
             )
-            self._user_memory = UserMemory(crew=self)
+            self._user_memory = (
+                UserMemory(crew=self) if self.memory_provider == "mem0" else None
+            )
         return self
 
     @model_validator(mode="after")
@@ -905,6 +919,7 @@ class Crew(BaseModel):
             "_short_term_memory",
             "_long_term_memory",
             "_entity_memory",
+            "_user_memory",
             "_telemetry",
             "agents",
             "tasks",

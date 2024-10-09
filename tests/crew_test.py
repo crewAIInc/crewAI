@@ -23,6 +23,7 @@ from crewai.types.usage_metrics import UsageMetrics
 from crewai.utilities import Logger
 from crewai.utilities.rpm_controller import RPMController
 from crewai.utilities.task_output_storage_handler import TaskOutputStorageHandler
+from pydantic_core import ValidationError
 
 ceo = Agent(
     role="CEO",
@@ -171,6 +172,57 @@ def test_context_no_future_tasks():
         match="Task 'Task 1' has a context dependency on a future task 'Task 4', which is not allowed.",
     ):
         Crew(tasks=[task1, task2, task3, task4], agents=[researcher, writer])
+
+
+def test_memory_provider_validation():
+    # Create mock agents
+    agent1 = Agent(
+        role="Researcher",
+        goal="Conduct research on AI",
+        backstory="An experienced AI researcher",
+        allow_delegation=False,
+    )
+    agent2 = Agent(
+        role="Writer",
+        goal="Write articles on AI",
+        backstory="A seasoned writer with a focus on technology",
+        allow_delegation=False,
+    )
+
+    # Create mock tasks
+    task1 = Task(
+        description="Research the latest trends in AI",
+        expected_output="A report on AI trends",
+        agent=agent1,
+    )
+    task2 = Task(
+        description="Write an article based on the research",
+        expected_output="An article on AI trends",
+        agent=agent2,
+    )
+
+    # Test with valid memory provider values
+    try:
+        crew_with_none = Crew(
+            agents=[agent1, agent2], tasks=[task1, task2], memory_provider=None
+        )
+        crew_with_mem0 = Crew(
+            agents=[agent1, agent2], tasks=[task1, task2], memory_provider="mem0"
+        )
+    except ValidationError:
+        pytest.fail(
+            "Unexpected ValidationError raised for valid memory provider values"
+        )
+
+    # Test with an invalid memory provider value
+    with pytest.raises(ValidationError) as excinfo:
+        Crew(
+            agents=[agent1, agent2],
+            tasks=[task1, task2],
+            memory_provider="invalid_provider",
+        )
+
+    assert "Memory provider must be either None or 'mem0'." in str(excinfo.value)
 
 
 def test_crew_config_with_wrong_keys():
@@ -497,6 +549,7 @@ def test_cache_hitting_between_agents():
 @pytest.mark.vcr(filter_headers=["authorization"])
 def test_api_calls_throttling(capsys):
     from unittest.mock import patch
+
     from crewai_tools import tool
 
     @tool
@@ -1105,6 +1158,7 @@ def test_dont_set_agents_step_callback_if_already_set():
 @pytest.mark.vcr(filter_headers=["authorization"])
 def test_crew_function_calling_llm():
     from unittest.mock import patch
+
     from crewai_tools import tool
 
     llm = "gpt-4o"

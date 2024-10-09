@@ -1,8 +1,8 @@
 import os
 from typing import Any, Dict, List, Optional
 
-from mem0 import MemoryClient
 from crewai.memory.storage.interface import Storage
+from mem0 import MemoryClient
 
 
 class Mem0Storage(Storage):
@@ -17,6 +17,9 @@ class Mem0Storage(Storage):
             and not os.getenv("OPENAI_BASE_URL") == "https://api.openai.com/v1"
         ):
             os.environ["OPENAI_API_KEY"] = "fake"
+
+        if not os.getenv("MEM0_API_KEY"):
+            raise EnvironmentError("MEM0_API_KEY is not set.")
 
         agents = crew.agents if crew else []
         agents = [agent.role for agent in agents]
@@ -39,4 +42,4 @@ class Mem0Storage(Storage):
         if filters:
             params["filters"] = filters
         results = self.memory.search(**params)
-        return [r for r in results if r["score"] >= score_threshold]
+        return [r for r in results if float(r["score"]) >= score_threshold]

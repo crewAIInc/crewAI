@@ -32,6 +32,12 @@ class UserMemory(Memory):
         filters: dict = {},
         score_threshold: float = 0.35,
     ):
-        return super().search(
-            query=query, limit=limit, filters=filters, score_threshold=score_threshold
+        print("SEARCHING USER MEMORY", query, limit, filters, score_threshold)
+        result = super().search(
+            query=query,
+            limit=limit,
+            filters=filters,
+            score_threshold=score_threshold,
         )
+        print("USER MEMORY SEARCH RESULT:", result)
+        return result

@@ -6,17 +6,17 @@ from crewai.memory import EntityMemory, LongTermMemory, ShortTermMemory, UserMem
 class ContextualMemory:
     def __init__(
         self,
-        memory_provider: str,
         stm: ShortTermMemory,
         ltm: LongTermMemory,
         em: EntityMemory,
         um: UserMemory,
+        memory_provider: Optional[str] = None,  # Default value added
     ):
-        self.memory_provider = memory_provider
         self.stm = stm
         self.ltm = ltm
         self.em = em
         self.um = um
+        self.memory_provider = memory_provider
 
     def build_context_for_task(self, task, context) -> str:
         """
