@@ -902,6 +902,15 @@ class Crew(BaseModel):
         cloned_agents = [agent.copy() for agent in self.agents]
         cloned_tasks = [task.copy(cloned_agents) for task in self.tasks]
 
+        for cloned_task in cloned_tasks:
+            cloned_task.context = [
+                next(
+                    (reference for reference in cloned_tasks if reference.key == context_task.key),
+                    None
+                )
+                for context_task in cloned_task.context
+            ] if cloned_task.context else None
+
         copied_data = self.model_dump(exclude=exclude)
         copied_data = {k: v for k, v in copied_data.items() if v is not None}
 
