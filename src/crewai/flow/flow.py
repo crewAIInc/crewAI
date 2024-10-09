@@ -149,7 +149,7 @@ class Flow(Generic[T], metaclass=FlowMeta):
     _router_paths: Dict[str, List[str]] = {}
     initial_state: Union[Type[T], T, None] = None
 
-    def __class_getitem__(cls, item: Type[T]) -> Type["Flow"]:
+    def __class_getitem__(cls: Type["Flow"], item: Type[T]) -> Type["Flow"]:
         class _FlowGeneric(cls):
             _initial_state_T: Type[T] = item
 

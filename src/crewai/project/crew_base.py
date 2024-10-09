@@ -10,8 +10,8 @@ load_dotenv()
 T = TypeVar("T", bound=Type[Any])
 
 
-def CrewBase(cls: T) -> T:
-    class WrappedClass(cls):
+def CrewBase(cls: Type[T]) -> Type[T]:
+    class WrappedClass(cls):  # Use cls as a base class
         is_crew_class: bool = True  # type: ignore
 
         # Get the directory of the class being decorated
