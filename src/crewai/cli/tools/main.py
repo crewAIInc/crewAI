@@ -162,9 +162,7 @@ class ToolCommand(BaseCommand, PlusAPIMixin):
 
         add_repository_command = [
             "uv",
-            "source",
             "add",
-            "--priority=explicit",
             repository_handle,
             repository["url"],
         ]
@@ -202,7 +200,6 @@ class ToolCommand(BaseCommand, PlusAPIMixin):
         add_package_command = [
             "uv",
             "add",
-            "--source",
             pypi_index_handle,
             tool_handle,
         ]
