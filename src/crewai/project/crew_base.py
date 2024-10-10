@@ -1,16 +1,16 @@
 import inspect
 from pathlib import Path
-from typing import Any, Callable, Dict, Type, TypeVar
+from typing import Any, Callable, Dict, TypeVar
 
 import yaml
 from dotenv import load_dotenv
 
 load_dotenv()
 
-T = TypeVar("T", bound=Type[Any])
+T = TypeVar("T", bound=type)
 
 
-def CrewBase(cls: Type[T]) -> Type[T]:
+def CrewBase(cls: T) -> T:
     class WrappedClass(cls):  # type: ignore
         is_crew_class: bool = True  # type: ignore
 
