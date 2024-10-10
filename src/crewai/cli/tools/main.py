@@ -1,5 +1,6 @@
 import base64
 import os
+import platform
 import subprocess
 import tempfile
 from pathlib import Path
@@ -24,6 +25,8 @@ class ToolCommand(BaseCommand, PlusAPIMixin):
     """
     A class to handle tool repository related operations for CrewAI projects.
     """
+
+    BASE_URL = "https://app.crewai.com/pypi/"
 
     def __init__(self):
         BaseCommand.__init__(self)
@@ -150,57 +153,39 @@ class ToolCommand(BaseCommand, PlusAPIMixin):
             raise SystemExit
 
         login_response_json = login_response.json()
-        for repository in login_response_json["repositories"]:
-            self._add_repository_to_uv(repository, login_response_json["credential"])
+        self._set_netrc_credentials(login_response_json["credentials"])
 
         console.print(
-            "Succesfully authenticated to the tool repository.", style="bold green"
+            "Successfully authenticated to the tool repository.", style="bold green"
         )
 
-    def _add_repository_to_uv(self, repository, credentials):
-        repository_handle = f"crewai-{repository['handle']}"
+    def _set_netrc_credentials(self, credentials):
+        # Create .netrc or _netrc file
+        netrc_filename = "_netrc" if platform.system() == "Windows" else ".netrc"
+        netrc_path = Path.home() / netrc_filename
 
-        add_repository_command = [
-            "uv",
-            "add",
-            repository_handle,
-            repository["url"],
-        ]
-        add_repository_result = subprocess.run(
-            add_repository_command, text=True, check=True
-        )
+        netrc_content = f"""machine app.crewai.com
+login {credentials['username']}
+password {credentials['password']}
+"""
 
-        if add_repository_result.stderr:
-            click.echo(add_repository_result.stderr, err=True)
-            raise SystemExit
+        with open(netrc_path, "a") as netrc_file:
+            netrc_file.write(netrc_content)
 
-        add_repository_credentials_command = [
-            "uv",
-            "config",
-            f"http-basic.{repository_handle}",
-            credentials["username"],
-            credentials["password"],
-        ]
-        add_repository_credentials_result = subprocess.run(
-            add_repository_credentials_command,
-            capture_output=False,
-            text=True,
-            check=True,
-        )
-
-        if add_repository_credentials_result.stderr:
-            click.echo(add_repository_credentials_result.stderr, err=True)
-            raise SystemExit
+        # Set appropriate permissions for Unix-like systems
+        if platform.system() != "Windows":
+            os.chmod(netrc_path, 0o600)
+        console.print(f"Added credentials to {netrc_filename}", style="bold green")
 
     def _add_package(self, tool_details):
         tool_handle = tool_details["handle"]
         repository_handle = tool_details["repository"]["handle"]
-        pypi_index_handle = f"crewai-{repository_handle}"
 
         add_package_command = [
             "uv",
             "add",
-            pypi_index_handle,
+            "--extra-index-url",
+            self.BASE_URL + repository_handle,
             tool_handle,
         ]
         add_package_result = subprocess.run(
