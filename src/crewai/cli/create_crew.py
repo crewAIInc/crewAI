@@ -21,6 +21,7 @@ def create_crew(name, parent_folder=None):
         bold=True,
     )
 
+    # Create necessary directories
     if not folder_path.exists():
         folder_path.mkdir(parents=True)
         (folder_path / "tests").mkdir(exist_ok=True)
@@ -28,14 +29,47 @@ def create_crew(name, parent_folder=None):
             (folder_path / "src" / folder_name).mkdir(parents=True)
             (folder_path / "src" / folder_name / "tools").mkdir(parents=True)
             (folder_path / "src" / folder_name / "config").mkdir(parents=True)
-            with open(folder_path / ".env", "w") as file:
-                file.write("OPENAI_API_KEY=YOUR_API_KEY")
     else:
         click.secho(
-            f"\tFolder {folder_name} already exists. Please choose a different name.",
-            fg="red",
+            f"\tFolder {folder_name} already exists. Updating .env file...",
+            fg="yellow",
         )
-        return
+
+    # Path to the .env file
+    env_file_path = folder_path / ".env"
+
+    # Load existing environment variables if .env exists
+    env_vars = {}
+    if env_file_path.exists():
+        with open(env_file_path, "r") as file:
+            for line in file:
+                key_value = line.strip().split('=', 1)
+                if len(key_value) == 2:
+                    env_vars[key_value[0]] = key_value[1]
+
+    # Prompt for keys/variables/LLM settings only if not already set
+    if 'OPENAI_API_KEY' not in env_vars:
+        if click.confirm("Do you want to enter your OPENAI_API_KEY?", default=True):
+            env_vars['OPENAI_API_KEY'] = click.prompt("Enter your OPENAI_API_KEY", type=str)
+
+    if 'ANTHROPIC_API_KEY' not in env_vars:
+        if click.confirm("Do you want to enter your ANTHROPIC_API_KEY?", default=False):
+            env_vars['ANTHROPIC_API_KEY'] = click.prompt("Enter your ANTHROPIC_API_KEY", type=str)
+
+    if 'GEMINI_API_KEY' not in env_vars:
+        if click.confirm("Do you want to specify your GEMINI_API_KEY?", default=True):
+            env_vars['GEMINI_API_KEY'] = click.prompt("Enter your GEMINI_API_KEY", type=str)
+
+    # Loop to add other environment variables
+    while click.confirm("Do you want to specify another environment variable?", default=False):
+        var_name = click.prompt("Enter the variable name", type=str)
+        var_value = click.prompt(f"Enter the value for {var_name}", type=str)
+        env_vars[var_name] = var_value
+
+    # Write the environment variables to .env file
+    with open(env_file_path, "w") as file:
+        for key, value in env_vars.items():
+            file.write(f"{key}={value}\n")
 
     package_dir = Path(__file__).parent
     templates_dir = package_dir / "templates" / "crew"
