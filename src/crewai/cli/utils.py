@@ -95,9 +95,9 @@ def _get_project_attribute(
             pyproject_content = parse_toml(f.read())
 
         dependencies = (
-            _get_nested_value(pyproject_content, ["project", "dependencies"]) or {}
+            _get_nested_value(pyproject_content, ["project", "dependencies"]) or []
         )
-        if "crewai" not in dependencies:
+        if not any(True for dep in dependencies if "crewai" in dep):
             raise Exception("crewai is not in the dependencies.")
 
         attribute = _get_nested_value(pyproject_content, keys)
