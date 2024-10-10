@@ -83,7 +83,7 @@ class ToolCommand(BaseCommand, PlusAPIMixin):
 
         with tempfile.TemporaryDirectory() as temp_build_dir:
             subprocess.run(
-                ["uv", "build", "-f", "sdist", "--output", temp_build_dir],
+                ["uv", "build", "--sdist", "--out-dir", temp_build_dir],
                 check=True,
                 capture_output=False,
             )
@@ -93,7 +93,7 @@ class ToolCommand(BaseCommand, PlusAPIMixin):
             )
             if not tarball_filename:
                 console.print(
-                    "Project build failed. Please ensure that the command `uv build -f sdist` completes successfully.",
+                    "Project build failed. Please ensure that the command `uv build --sdist` completes successfully.",
                     style="bold red",
                 )
                 raise SystemExit

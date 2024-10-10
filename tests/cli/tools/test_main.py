@@ -161,7 +161,7 @@ def test_publish_when_not_in_sync_and_force(
     mock_get_project_version.assert_called_with(require=True)
     mock_get_project_description.assert_called_with(require=False)
     mock_subprocess_run.assert_called_with(
-        ["uv", "build", "-f", "sdist", "--output", unittest.mock.ANY],
+        ["uv", "build", "--sdist", "--out-dir", unittest.mock.ANY],
         check=True,
         capture_output=False,
     )
