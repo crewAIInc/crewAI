@@ -150,7 +150,7 @@ class Flow(Generic[T], metaclass=FlowMeta):
     initial_state: Union[Type[T], T, None] = None
 
     def __class_getitem__(cls, item: Type[T]) -> Type["Flow"]:
-        class _FlowGeneric(cls):
+        class _FlowGeneric(cls):  # type: ignore # Variable "cls" is not valid as a type
             _initial_state_T: Type[T] = item
 
         _FlowGeneric.__name__ = f"{cls.__name__}[{item.__name__}]"

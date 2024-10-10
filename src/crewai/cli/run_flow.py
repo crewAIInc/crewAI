@@ -5,9 +5,9 @@ import click
 
 def run_flow() -> None:
     """
-    Run the flow by running a command in the Poetry environment.
+    Run the flow by running a command in the UV environment.
     """
-    command = ["poetry", "run", "run_flow"]
+    command = ["uv", "run", "run_flow"]
 
     try:
         result = subprocess.run(command, capture_output=False, text=True, check=True)

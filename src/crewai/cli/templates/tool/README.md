@@ -6,13 +6,13 @@ custom tools to power up your crews.
 ## Installing
 
 Ensure you have Python >=3.10 <=3.13 installed on your system. This project
-uses [Poetry](https://python-poetry.org/) for dependency management and package
+uses [UV](https://docs.astral.sh/uv/) for dependency management and package
 handling, offering a seamless setup and execution experience.
 
-First, if you haven't already, install Poetry:
+First, if you haven't already, install `uv`:
 
 ```bash
-pip install poetry
+pip install uv
 ```
 
 Next, navigate to your project directory and install the dependencies with:

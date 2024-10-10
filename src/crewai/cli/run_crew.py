@@ -5,9 +5,9 @@ import click
 
 def run_crew() -> None:
     """
-    Run the crew by running a command in the Poetry environment.
+    Run the crew by running a command in the UV environment.
     """
-    command = ["poetry", "run", "run_crew"]
+    command = ["uv", "run", "run_crew"]
 
     try:
         result = subprocess.run(command, capture_output=False, text=True, check=True)

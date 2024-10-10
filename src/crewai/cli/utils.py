@@ -1,13 +1,14 @@
+import importlib.metadata
 import os
 import shutil
-import click
 import sys
-import importlib.metadata
+from functools import reduce
+from typing import Any, Dict, List
+
+import click
+from rich.console import Console
 
 from crewai.cli.authentication.utils import TokenManager
-from functools import reduce
-from rich.console import Console
-from typing import Any, Dict, List
 
 if sys.version_info >= (3, 11):
     import tomllib
@@ -55,17 +56,14 @@ def simple_toml_parser(content):
 def parse_toml(content):
     if sys.version_info >= (3, 11):
         return tomllib.loads(content)
-    else:
-        return simple_toml_parser(content)
+    return simple_toml_parser(content)
 
 
 def get_project_name(
     pyproject_path: str = "pyproject.toml", require: bool = False
 ) -> str | None:
     """Get the project name from the pyproject.toml file."""
-    return _get_project_attribute(
-        pyproject_path, ["tool", "poetry", "name"], require=require
-    )
+    return _get_project_attribute(pyproject_path, ["project", "name"], require=require)
 
 
 def get_project_version(
@@ -73,7 +71,7 @@ def get_project_version(
 ) -> str | None:
     """Get the project version from the pyproject.toml file."""
     return _get_project_attribute(
-        pyproject_path, ["tool", "poetry", "version"], require=require
+        pyproject_path, ["project", "version"], require=require
     )
 
 
@@ -82,7 +80,7 @@ def get_project_description(
 ) -> str | None:
     """Get the project description from the pyproject.toml file."""
     return _get_project_attribute(
-        pyproject_path, ["tool", "poetry", "description"], require=require
+        pyproject_path, ["project", "description"], require=require
     )
 
 
@@ -97,10 +95,9 @@ def _get_project_attribute(
             pyproject_content = parse_toml(f.read())
 
         dependencies = (
-            _get_nested_value(pyproject_content, ["tool", "poetry", "dependencies"])
-            or {}
+            _get_nested_value(pyproject_content, ["project", "dependencies"]) or []
         )
-        if "crewai" not in dependencies:
+        if not any(True for dep in dependencies if "crewai" in dep):
             raise Exception("crewai is not in the dependencies.")
 
         attribute = _get_nested_value(pyproject_content, keys)

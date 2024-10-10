@@ -18,12 +18,12 @@ from crewai.cli import evaluate_crew
 def test_crew_success(mock_subprocess_run, n_iterations, model):
     """Test the crew function for successful execution."""
     mock_subprocess_run.return_value = subprocess.CompletedProcess(
-        args=f"poetry run test {n_iterations} {model}", returncode=0
+        args=f"uv run test {n_iterations} {model}", returncode=0
     )
     result = evaluate_crew.evaluate_crew(n_iterations, model)
 
     mock_subprocess_run.assert_called_once_with(
-        ["poetry", "run", "test", str(n_iterations), model],
+        ["uv", "run", "test", str(n_iterations), model],
         capture_output=False,
         text=True,
         check=True,
@@ -55,14 +55,14 @@ def test_test_crew_called_process_error(mock_subprocess_run, click):
     n_iterations = 5
     mock_subprocess_run.side_effect = subprocess.CalledProcessError(
         returncode=1,
-        cmd=["poetry", "run", "test", str(n_iterations), "gpt-4o"],
+        cmd=["uv", "run", "test", str(n_iterations), "gpt-4o"],
         output="Error",
         stderr="Some error occurred",
     )
     evaluate_crew.evaluate_crew(n_iterations, "gpt-4o")
 
     mock_subprocess_run.assert_called_once_with(
-        ["poetry", "run", "test", "5", "gpt-4o"],
+        ["uv", "run", "test", "5", "gpt-4o"],
         capture_output=False,
         text=True,
         check=True,
@@ -70,7 +70,7 @@ def test_test_crew_called_process_error(mock_subprocess_run, click):
     click.echo.assert_has_calls(
         [
             mock.call.echo(
-                "An error occurred while testing the crew: Command '['poetry', 'run', 'test', '5', 'gpt-4o']' returned non-zero exit status 1.",
+                "An error occurred while testing the crew: Command '['uv', 'run', 'test', '5', 'gpt-4o']' returned non-zero exit status 1.",
                 err=True,
             ),
             mock.call.echo("Error", err=True),
@@ -87,7 +87,7 @@ def test_test_crew_unexpected_exception(mock_subprocess_run, click):
     evaluate_crew.evaluate_crew(n_iterations, "gpt-4o")
 
     mock_subprocess_run.assert_called_once_with(
-        ["poetry", "run", "test", "5", "gpt-4o"],
+        ["uv", "run", "test", "5", "gpt-4o"],
         capture_output=False,
         text=True,
         check=True,

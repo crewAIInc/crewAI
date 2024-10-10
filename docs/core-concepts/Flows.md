@@ -543,16 +543,16 @@ In this example, the `PoemFlow` class defines a flow that generates a sentence c
 
 ### Running the Flow
 
-Before running the flow, make sure to install the dependencies by running:
+(Optional) Before running the flow, you can install the dependencies by running:
 
 ```bash
-poetry install
+crewai install
 ```
 
 Once all of the dependencies are installed, you need to activate the virtual environment by running:
 
 ```bash
-poetry shell
+source .venv/bin/activate
 ```
 
 After activating the virtual environment, you can run the flow by executing one of the following commands:
@@ -564,7 +564,7 @@ crewai flow run
 or
 
 ```bash
-poetry run run_flow
+uv run run_flow
 ```
 
 The flow will execute, and you should see the output in the console.
