@@ -11,7 +11,7 @@ T = TypeVar("T", bound=Type[Any])
 
 
 def CrewBase(cls: Type[T]) -> Type[T]:
-    class WrappedClass(cls):  # Use cls as a base class
+    class WrappedClass(cls):  # type: ignore
         is_crew_class: bool = True  # type: ignore
 
         # Get the directory of the class being decorated

@@ -312,32 +312,19 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
         training_handler = CrewTrainingHandler(TRAINING_DATA_FILE)
         training_data = training_handler.load()
 
-        # Check if training data exists and human input is not requested
+        # Check if training data exists, human input is not requested, and self.crew is valid
         if training_data and not self.ask_for_human_input:
-            if agent_id in training_data:
-                training_data[agent_id][self.crew._train_iteration][
-                    "improved_output"
-                ] = result.output
-                training_handler.save(training_data)
-
-        # Handle human feedback if requested
-        if self.ask_for_human_input and human_feedback is not None:
-            training_data = {
-                "initial_output": result.output,
-                "human_feedback": human_feedback,
-                "agent": agent_id,
-                "agent_role": self.agent.role,
-            }
-
-            # Ensure crew and _train_iteration are valid
             if self.crew is not None and hasattr(self.crew, "_train_iteration"):
                 train_iteration = self.crew._train_iteration
-                if isinstance(train_iteration, int):
-                    training_handler.append(train_iteration, agent_id, training_data)
+                if agent_id in training_data and isinstance(train_iteration, int):
+                    training_data[agent_id][train_iteration][
+                        "improved_output"
+                    ] = result.output
+                    training_handler.save(training_data)
                 else:
                     self._logger.log(
                         "error",
-                        "Invalid train iteration type. Expected int.",
+                        "Invalid train iteration type or agent_id not in training data.",
                         color="red",
                     )
             else:
