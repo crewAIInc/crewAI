@@ -153,7 +153,7 @@ class ToolCommand(BaseCommand, PlusAPIMixin):
             raise SystemExit
 
         login_response_json = login_response.json()
-        self._set_netrc_credentials(login_response_json["credentials"])
+        self._set_netrc_credentials(login_response_json["credential"])
 
         console.print(
             "Successfully authenticated to the tool repository.", style="bold green"

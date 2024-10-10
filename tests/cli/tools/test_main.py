@@ -4,6 +4,7 @@ import unittest
 import unittest.mock
 from contextlib import contextmanager
 from io import StringIO
+from unittest import mock
 from unittest.mock import MagicMock, patch
 
 from pytest import raises
@@ -69,9 +70,9 @@ def test_install_success(mock_get, mock_subprocess_run):
         tool_command.install("sample-tool")
         output = fake_out.getvalue()
 
-    mock_get.assert_called_once_with("sample-tool")
+    mock_get.assert_has_calls([mock.call("sample-tool"), mock.call().json()])
     mock_subprocess_run.assert_any_call(
-        ["uv", "add", "--source", "crewai-sample-repo", "sample-tool"],
+        ["uv", "add", "crewai-sample-repo", "sample-tool"],
         capture_output=False,
         text=True,
         check=True,
@@ -209,7 +210,7 @@ def test_publish_success(
     mock_get_project_version.assert_called_with(require=True)
     mock_get_project_description.assert_called_with(require=False)
     mock_subprocess_run.assert_called_with(
-        ["uv", "build", "-f", "sdist", "--output", unittest.mock.ANY],
+        ["uv", "build", "--sdist", "--out-dir", unittest.mock.ANY],
         check=True,
         capture_output=False,
     )
@@ -319,6 +320,7 @@ def test_login_success(mock_subprocess_run, mock_login):
 
     mock_subprocess_run.return_value = MagicMock(stderr=None)
 
+    breakpoint()
     tool_command = ToolCommand()
 
     with patch("sys.stdout", new=StringIO()) as fake_out:
