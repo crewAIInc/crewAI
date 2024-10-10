@@ -233,7 +233,32 @@ Follow the steps below to get crewing! 🚣‍♂️
   </Step>
 </Steps>
 
+<Tip>
 In addition to the [sequential process](../how-to/sequential-process), you can use the [hierarchical process](../how-to/hierarchical-process),
 which automatically assigns a manager to the defined crew to properly coordinate the planning and execution of tasks through delegation and validation of results. 
-
 You can learn more about the core concepts [here](/concepts).
+</Tip>
+
+### Replay Tasks from Latest Crew Kickoff
+
+CrewAI now includes a replay feature that allows you to list the tasks from the last run and replay from a specific one. To use this feature, run:
+
+```shell
+crewai replay <task_id>
+```
+
+Replace `<task_id>` with the ID of the task you want to replay.
+
+### Reset Crew Memory
+
+If you need to reset the memory of your crew before running it again, you can do so by calling the reset memory feature:
+
+```shell
+crewai reset-memory
+```
+
+This will clear the crew's memory, allowing for a fresh start.
+
+## Deploying Your Project
+
+The easiest way to deploy your crew is through [CrewAI Enterprise](https://www.crewai.com/crewaiplus), where you can deploy your crew in a few clicks.
