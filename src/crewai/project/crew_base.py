@@ -1,6 +1,6 @@
 import inspect
 from pathlib import Path
-from typing import Any, Callable, Dict, TypeVar
+from typing import Any, Callable, Dict, TypeVar, cast
 
 import yaml
 from dotenv import load_dotenv
@@ -180,4 +180,4 @@ def CrewBase(cls: T) -> T:
                     callback_functions[callback]() for callback in callbacks
                 ]
 
-    return WrappedClass
+    return cast(T, WrappedClass)
