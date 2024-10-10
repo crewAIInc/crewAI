@@ -320,7 +320,6 @@ def test_login_success(mock_subprocess_run, mock_login):
 
     mock_subprocess_run.return_value = MagicMock(stderr=None)
 
-    breakpoint()
     tool_command = ToolCommand()
 
     with patch("sys.stdout", new=StringIO()) as fake_out:
