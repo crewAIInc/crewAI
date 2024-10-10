@@ -72,7 +72,13 @@ def test_install_success(mock_get, mock_subprocess_run):
 
     mock_get.assert_has_calls([mock.call("sample-tool"), mock.call().json()])
     mock_subprocess_run.assert_any_call(
-        ["uv", "add", "crewai-sample-repo", "sample-tool"],
+        [
+            "uv",
+            "add",
+            "--extra-index-url",
+            "https://app.crewai.com/pypi/sample-repo",
+            "sample-tool",
+        ],
         capture_output=False,
         text=True,
         check=True,
@@ -300,55 +306,3 @@ def test_publish_api_error(
 
     mock_publish.assert_called_once()
     assert "Request to Enterprise API failed" in output
-
-
-@patch("crewai.cli.plus_api.PlusAPI.login_to_tool_repository")
-@patch("crewai.cli.tools.main.subprocess.run")
-def test_login_success(mock_subprocess_run, mock_login):
-    mock_login_response = MagicMock()
-    mock_login_response.status_code = 200
-    mock_login_response.json.return_value = {
-        "repositories": [
-            {
-                "handle": "tools",
-                "url": "https://example.com/repo",
-            }
-        ],
-        "credential": {"username": "user", "password": "pass"},
-    }
-    mock_login.return_value = mock_login_response
-
-    mock_subprocess_run.return_value = MagicMock(stderr=None)
-
-    tool_command = ToolCommand()
-
-    with patch("sys.stdout", new=StringIO()) as fake_out:
-        tool_command.login()
-        output = fake_out.getvalue()
-
-    mock_login.assert_called_once()
-    mock_subprocess_run.assert_any_call(
-        [
-            "uv",
-            "source",
-            "add",
-            "--priority=explicit",
-            "crewai-tools",
-            "https://example.com/repo",
-        ],
-        text=True,
-        check=True,
-    )
-    mock_subprocess_run.assert_any_call(
-        [
-            "uv",
-            "config",
-            "http-basic.crewai-tools",
-            "user",
-            "pass",
-        ],
-        capture_output=False,
-        text=True,
-        check=True,
-    )
-    assert "Succesfully authenticated to the tool repository" in output
