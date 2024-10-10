@@ -5,7 +5,7 @@
     "dark": "crew_only_logo.png",
     "light": "crew_only_logo.png"
   },
-  "favicon": "/favicon.svg",
+  "favicon": "favicon.svg",
   "colors": {
     "primary": "#EB6658",
     "light": "#F3A78B",
@@ -28,7 +28,7 @@
     "thumbsRating": true
   },
   "topbarCtaButton": {
-    "name": "GitHub",
+    "type": "github",
     "url": "https://github.com/crewAIInc/crewAI"
   },
   "primaryTab": {
