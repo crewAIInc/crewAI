@@ -2,6 +2,7 @@ import asyncio
 import json
 import os
 import uuid
+import warnings
 from concurrent.futures import Future
 from hashlib import md5
 from typing import TYPE_CHECKING, Any, Dict, List, Optional, Tuple, Union
@@ -56,6 +57,8 @@ if os.environ.get("AGENTOPS_API_KEY"):
 
 if TYPE_CHECKING:
     from crewai.pipeline.pipeline import Pipeline
+
+warnings.filterwarnings("ignore", category=SyntaxWarning, module="pysbd")
 
 
 class Crew(BaseModel):
