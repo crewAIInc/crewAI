@@ -2,12 +2,9 @@ from typing import Any, Dict, List, Optional
 
 from rich.console import Console
 
+from crewai.cli import git
 from crewai.cli.command import BaseCommand, PlusAPIMixin
-from crewai.cli.utils import (
-    fetch_and_json_env_file,
-    get_git_remote_url,
-    get_project_name,
-)
+from crewai.cli.utils import fetch_and_json_env_file, get_project_name
 
 console = Console()
 
@@ -79,11 +76,8 @@ class DeployCommand(BaseCommand, PlusAPIMixin):
             self._standard_no_param_error_message()
             return
 
-        json_response = response.json()
-        if response.status_code == 200:
-            self._display_deployment_info(json_response)
-        else:
-            self._handle_plus_api_error(json_response)
+        self._validate_response(response)
+        self._display_deployment_info(response.json())
 
     def create_crew(self, confirm: bool = False) -> None:
         """
@@ -94,7 +88,11 @@ class DeployCommand(BaseCommand, PlusAPIMixin):
         )
         console.print("Creating deployment...", style="bold blue")
         env_vars = fetch_and_json_env_file()
-        remote_repo_url = get_git_remote_url()
+
+        try:
+            remote_repo_url = git.Repository().origin_url()
+        except ValueError:
+            remote_repo_url = None
 
         if remote_repo_url is None:
             console.print("No remote repository URL found.", style="bold red")
@@ -106,12 +104,10 @@ class DeployCommand(BaseCommand, PlusAPIMixin):
 
         self._confirm_input(env_vars, remote_repo_url, confirm)
         payload = self._create_payload(env_vars, remote_repo_url)
-
         response = self.plus_api_client.create_crew(payload)
-        if response.status_code == 201:
-            self._display_creation_success(response.json())
-        else:
-            self._handle_plus_api_error(response.json())
+
+        self._validate_response(response)
+        self._display_creation_success(response.json())
 
     def _confirm_input(
         self, env_vars: Dict[str, str], remote_repo_url: str, confirm: bool
@@ -218,11 +214,8 @@ class DeployCommand(BaseCommand, PlusAPIMixin):
             self._standard_no_param_error_message()
             return
 
-        json_response = response.json()
-        if response.status_code == 200:
-            self._display_crew_status(json_response)
-        else:
-            self._handle_plus_api_error(json_response)
+        self._validate_response(response)
+        self._display_crew_status(response.json())
 
     def _display_crew_status(self, status_data: Dict[str, str]) -> None:
         """
@@ -253,10 +246,8 @@ class DeployCommand(BaseCommand, PlusAPIMixin):
             self._standard_no_param_error_message()
             return
 
-        if response.status_code == 200:
-            self._display_logs(response.json())
-        else:
-            self._handle_plus_api_error(response.json())
+        self._validate_response(response)
+        self._display_logs(response.json())
 
     def remove_crew(self, uuid: Optional[str]) -> None:
         """

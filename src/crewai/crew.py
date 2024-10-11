@@ -796,7 +796,7 @@ class Crew(BaseModel):
 
     def _log_task_start(self, task: Task, role: str = "None"):
         if self.output_log_file:
-            self._file_handler.log(agent=role, task=task.description, status="started")
+            self._file_handler.log(task_name=task.name, task=task.description, agent=role, status="started")
 
     def _update_manager_tools(self, task: Task):
         if self.manager_agent:
@@ -818,7 +818,7 @@ class Crew(BaseModel):
     def _process_task_result(self, task: Task, output: TaskOutput) -> None:
         role = task.agent.role if task.agent is not None else "None"
         if self.output_log_file:
-            self._file_handler.log(agent=role, task=output, status="completed")
+            self._file_handler.log(task_name=task.name, task=task.description, agent=role, status="completed", output=output.raw)
 
     def _create_crew_output(self, task_outputs: List[TaskOutput]) -> CrewOutput:
         if len(task_outputs) != 1:
@@ -926,7 +926,22 @@ class Crew(BaseModel):
         }
 
         cloned_agents = [agent.copy() for agent in self.agents]
-        cloned_tasks = [task.copy(cloned_agents) for task in self.tasks]
+
+        task_mapping = {}
+
+        cloned_tasks = []
+        for task in self.tasks:
+            cloned_task = task.copy(cloned_agents, task_mapping)
+            cloned_tasks.append(cloned_task)
+            task_mapping[task.key] = cloned_task
+
+        for cloned_task, original_task in zip(cloned_tasks, self.tasks):
+            if original_task.context:
+                cloned_context = [
+                    task_mapping[context_task.key]
+                    for context_task in original_task.context
+                ]
+                cloned_task.context = cloned_context
 
         copied_data = self.model_dump(exclude=exclude)
         copied_data = {k: v for k, v in copied_data.items() if v is not None}

@@ -1,5 +1,7 @@
 import ast
+import datetime
 import os
+import time
 from difflib import SequenceMatcher
 from textwrap import dedent
 from typing import Any, List, Union
@@ -8,7 +10,10 @@ from crewai.agents.tools_handler import ToolsHandler
 from crewai.task import Task
 from crewai.telemetry import Telemetry
 from crewai.tools.tool_calling import InstructorToolCalling, ToolCalling
+from crewai.tools.tool_usage_events import ToolUsageError, ToolUsageFinished
 from crewai.utilities import I18N, Converter, ConverterError, Printer
+import crewai.utilities.events as events
+
 
 agentops = None
 if os.environ.get("AGENTOPS_API_KEY"):
@@ -126,12 +131,16 @@ class ToolUsage:
             except Exception:
                 self.task.increment_tools_errors()
 
-        result = None  # type: ignore # Incompatible types in assignment (expression has type "None", variable has type "str")
+        started_at = time.time()
+        from_cache = False
 
+        result = None  # type: ignore # Incompatible types in assignment (expression has type "None", variable has type "str")
+        # check if cache is available
         if self.tools_handler.cache:
             result = self.tools_handler.cache.read(  # type: ignore # Incompatible types in assignment (expression has type "str | None", variable has type "str")
                 tool=calling.tool_name, input=calling.arguments
             )
+            from_cache = result is not None
 
         original_tool = next(
             (ot for ot in self.original_tools if ot.name == tool.name), None
@@ -163,6 +172,7 @@ class ToolUsage:
                 else:
                     result = tool.invoke(input={})
             except Exception as e:
+                self.on_tool_error(tool=tool, tool_calling=calling, e=e)
                 self._run_attempts += 1
                 if self._run_attempts > self._max_parsing_attempts:
                     self._telemetry.tool_usage_error(llm=self.function_calling_llm)
@@ -213,6 +223,13 @@ class ToolUsage:
             "tool_name": tool.name,
             "tool_args": calling.arguments,
         }
+
+        self.on_tool_use_finished(
+            tool=tool,
+            tool_calling=calling,
+            from_cache=from_cache,
+            started_at=started_at,
+        )
 
         if (
             hasattr(original_tool, "result_as_answer")
@@ -431,3 +448,34 @@ class ToolUsage:
             # Reconstruct the JSON string
             new_json_string = "{" + ", ".join(formatted_entries) + "}"
             return new_json_string
+
+    def on_tool_error(self, tool: Any, tool_calling: ToolCalling, e: Exception) -> None:
+        event_data = self._prepare_event_data(tool, tool_calling)
+        events.emit(
+            source=self, event=ToolUsageError(**{**event_data, "error": str(e)})
+        )
+
+    def on_tool_use_finished(
+        self, tool: Any, tool_calling: ToolCalling, from_cache: bool, started_at: float
+    ) -> None:
+        finished_at = time.time()
+        event_data = self._prepare_event_data(tool, tool_calling)
+        event_data.update(
+            {
+                "started_at": datetime.datetime.fromtimestamp(started_at),
+                "finished_at": datetime.datetime.fromtimestamp(finished_at),
+                "from_cache": from_cache,
+            }
+        )
+        events.emit(source=self, event=ToolUsageFinished(**event_data))
+
+    def _prepare_event_data(self, tool: Any, tool_calling: ToolCalling) -> dict:
+        return {
+            "agent_key": self.agent.key,
+            "agent_role": (self.agent._original_role or self.agent.role),
+            "run_attempts": self._run_attempts,
+            "delegations": self.task.delegations,
+            "tool_name": tool.name,
+            "tool_args": tool_calling.arguments,
+            "tool_class": tool.__class__.__name__,
+        }

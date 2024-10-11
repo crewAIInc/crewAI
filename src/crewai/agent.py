@@ -295,9 +295,9 @@ class Agent(BaseAgent):
             step_callback=self.step_callback,
             function_calling_llm=self.function_calling_llm,
             respect_context_window=self.respect_context_window,
-            request_within_rpm_limit=self._rpm_controller.check_or_wait
-            if self._rpm_controller
-            else None,
+            request_within_rpm_limit=(
+                self._rpm_controller.check_or_wait if self._rpm_controller else None
+            ),
             callbacks=[TokenCalcHandler(self._token_process)],
         )
 
