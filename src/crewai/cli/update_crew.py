@@ -70,6 +70,20 @@ def migrate_pyproject(input_file, output_file):
         new_pyproject["project"]["scripts"] = poetry["scripts"]
     elif "scripts" in pyproject.get("project", {}):
         new_pyproject["project"]["scripts"] = pyproject["project"]["scripts"]
+    else:
+        new_pyproject["project"]["scripts"] = {}
+
+    if (
+        "run_crew" not in new_pyproject["project"]["scripts"]
+        and len(new_pyproject["project"]["scripts"]) > 0
+    ):
+        # Extract the module name from any existing script
+        existing_scripts = new_pyproject["project"]["scripts"]
+        module_name = next(
+            (value.split(".")[0] for value in existing_scripts.values() if "." in value)
+        )
+
+        new_pyproject["project"]["scripts"]["run_crew"] = f"{module_name}.main:run"
 
     # Migrate optional dependencies
     if "extras" in poetry:
