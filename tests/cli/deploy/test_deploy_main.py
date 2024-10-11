@@ -1,11 +1,11 @@
-import pytest
-import requests
 import sys
 import unittest
-
 from io import StringIO
-from requests.exceptions import JSONDecodeError
 from unittest.mock import MagicMock, Mock, patch
+
+import pytest
+import requests
+from requests.exceptions import JSONDecodeError
 
 from crewai.cli.deploy.main import DeployCommand
 from crewai.cli.utils import parse_toml
@@ -228,13 +228,11 @@ class TestDeployCommand(unittest.TestCase):
         "builtins.open",
         new_callable=unittest.mock.mock_open,
         read_data="""
-    [tool.poetry]
+    [project]
     name = "test_project"
     version = "0.1.0"
-
-    [tool.poetry.dependencies]
-    python = "^3.10"
-    crewai = { extras = ["tools"], version = ">=0.51.0,<1.0.0" }
+    requires-python = ">=3.10,<=3.13"
+    dependencies = ["crewai"]
     """,
     )
     def test_get_project_name_python_310(self, mock_open):
@@ -248,13 +246,11 @@ class TestDeployCommand(unittest.TestCase):
         "builtins.open",
         new_callable=unittest.mock.mock_open,
         read_data="""
-    [tool.poetry]
+    [project]
     name = "test_project"
     version = "0.1.0"
-
-    [tool.poetry.dependencies]
-    python = "^3.11"
-    crewai = { extras = ["tools"], version = ">=0.51.0,<1.0.0" }
+    requires-python = ">=3.10,<=3.13"
+    dependencies = ["crewai"]
     """,
     )
     def test_get_project_name_python_311_plus(self, mock_open):

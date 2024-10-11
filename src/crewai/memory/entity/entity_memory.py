@@ -15,7 +15,10 @@ class EntityMemory(Memory):
             storage
             if storage
             else RAGStorage(
-                type="entities", allow_reset=False, embedder_config=embedder_config, crew=crew
+                type="entities",
+                allow_reset=False,
+                embedder_config=embedder_config,
+                crew=crew,
             )
         )
         super().__init__(storage)
