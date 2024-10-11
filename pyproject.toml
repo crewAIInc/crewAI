@@ -28,6 +28,7 @@ dependencies = [
     "litellm>=1.44.22",
     "pyvis>=0.3.2",
     "uv>=0.4.18",
+    "tomli-w>=1.1.0",
 ]
 
 [project.urls]

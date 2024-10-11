@@ -21,6 +21,7 @@ from .run_crew import run_crew
 from .run_flow import run_flow
 from .tools.main import ToolCommand
 from .train_crew import train_crew
+from .update_crew import update_crew
 
 
 @click.group()
@@ -186,6 +187,12 @@ def run():
     """Run the Crew."""
     click.echo("Running the Crew")
     run_crew()
+
+
+@crewai.command()
+def update():
+    """Update the pyproject.toml of the Crew project to use uv."""
+    update_crew()
 
 
 @crewai.command()
