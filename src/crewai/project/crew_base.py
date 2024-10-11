@@ -1,13 +1,13 @@
 import inspect
 from pathlib import Path
-from typing import Any, Callable, Dict, Type, TypeVar, cast
+from typing import Any, Callable, Dict, TypeVar, cast
 
 import yaml
 from dotenv import load_dotenv
 
 load_dotenv()
 
-T = TypeVar("T", bound=Type[Any])
+T = TypeVar("T", bound=type)
 
 
 def CrewBase(cls: T) -> T:
