@@ -201,6 +201,8 @@ class Agent(BaseAgent):
 
         task_prompt = task.prompt()
 
+        print("context for task", context)
+
         if context:
             task_prompt = self.i18n.slice("task_with_context").format(
                 task=task_prompt, context=context

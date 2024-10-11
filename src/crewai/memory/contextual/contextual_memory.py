@@ -82,8 +82,11 @@ class ContextualMemory:
         """
         Fetches relevant user memory information from User Memory related to the task's description and expected_output,
         """
+        print("query", query)
         um_results = self.um.search(query)
+        print("um_results", um_results)
         formatted_results = "\n".join(
             [f"- {result['memory']}" for result in um_results]
         )
+        print(f"User memories/preferences:\n{formatted_results}")
         return f"User memories/preferences:\n{formatted_results}" if um_results else ""
