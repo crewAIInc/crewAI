@@ -6,18 +6,18 @@ icon: database
 
 ## Introduction to Memory Systems in CrewAI
 
-The crewAI framework introduces a sophisticated memory system designed to significantly enhance the capabilities of AI agents. 
-This system comprises `short-term memory`, `long-term memory`, `entity memory`, and `contextual memory`, each serving a unique purpose in aiding agents to remember, 
+The crewAI framework introduces a sophisticated memory system designed to significantly enhance the capabilities of AI agents.
+This system comprises `short-term memory`, `long-term memory`, `entity memory`, and `contextual memory`, each serving a unique purpose in aiding agents to remember,
 reason, and learn from past interactions.
 
 ## Memory System Components
 
-| Component            | Description                                                                                                             |
-| :------------------- | :---------------------------------------------------------------------------------------------------------------------- |
-| **Short-Term Memory**| Temporarily stores recent interactions and outcomes using `RAG`, enabling agents to recall and utilize information relevant to their current context during the current executions.|
-| **Long-Term Memory** | Preserves valuable insights and learnings from past executions, allowing agents to build and refine their knowledge over time. |
-| **Entity Memory**    | Captures and organizes information about entities (people, places, concepts) encountered during tasks, facilitating deeper understanding and relationship mapping. Uses `RAG` for storing entity information. |
-| **Contextual Memory**| Maintains the context of interactions by combining `ShortTermMemory`, `LongTermMemory`, and `EntityMemory`, aiding in the coherence and relevance of agent responses over a sequence of tasks or a conversation. |
+| Component             | Description                                                                                                                                                                                                      |
+| :-------------------- | :--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Short-Term Memory** | Temporarily stores recent interactions and outcomes using `RAG`, enabling agents to recall and utilize information relevant to their current context during the current executions.                              |
+| **Long-Term Memory**  | Preserves valuable insights and learnings from past executions, allowing agents to build and refine their knowledge over time.                                                                                   |
+| **Entity Memory**     | Captures and organizes information about entities (people, places, concepts) encountered during tasks, facilitating deeper understanding and relationship mapping. Uses `RAG` for storing entity information.    |
+| **Contextual Memory** | Maintains the context of interactions by combining `ShortTermMemory`, `LongTermMemory`, and `EntityMemory`, aiding in the coherence and relevance of agent responses over a sequence of tasks or a conversation. |
 
 ## How Memory Systems Empower Agents
 
@@ -30,8 +30,8 @@ reason, and learn from past interactions.
 ## Implementing Memory in Your Crew
 
 When configuring a crew, you can enable and customize each memory component to suit the crew's objectives and the nature of tasks it will perform.
-By default, the memory system is disabled, and you can ensure it is active by setting `memory=True` in the crew configuration. 
-The memory will use OpenAI embeddings by default, but you can change it by setting `embedder` to a different model. 
+By default, the memory system is disabled, and you can ensure it is active by setting `memory=True` in the crew configuration.
+The memory will use OpenAI embeddings by default, but you can change it by setting `embedder` to a different model.
 It's also possible to initialize the memory instance with your own instance.
 
 The 'embedder' only applies to **Short-Term Memory** which uses Chroma for RAG using the EmbedChain package.
@@ -92,10 +92,10 @@ my_crew = Crew(
 )
 ```
 
-
 ## Additional Embedding Providers
 
 ### Using OpenAI embeddings (already default)
+
 ```python Code
 from crewai import Crew, Agent, Task, Process
 
@@ -223,14 +223,13 @@ crewai reset-memories [OPTIONS]
 
 #### Resetting Memory Options
 
-| Option             | Description                      | Type           | Default |
-| :----------------- | :------------------------------- | :------------- | :------ |
-| `-l`, `--long`     | Reset LONG TERM memory.          | Flag (boolean) | False   |
-| `-s`, `--short`    | Reset SHORT TERM memory.         | Flag (boolean) | False   |
-| `-e`, `--entities` | Reset ENTITIES memory.           | Flag (boolean) | False   |
+| Option                    | Description                        | Type           | Default |
+| :------------------------ | :--------------------------------- | :------------- | :------ |
+| `-l`, `--long`            | Reset LONG TERM memory.            | Flag (boolean) | False   |
+| `-s`, `--short`           | Reset SHORT TERM memory.           | Flag (boolean) | False   |
+| `-e`, `--entities`        | Reset ENTITIES memory.             | Flag (boolean) | False   |
 | `-k`, `--kickoff-outputs` | Reset LATEST KICKOFF TASK OUTPUTS. | Flag (boolean) | False   |
-| `-a`, `--all`      | Reset ALL memories.              | Flag (boolean) | False   |
-
+| `-a`, `--all`             | Reset ALL memories.                | Flag (boolean) | False   |
 
 ## Benefits of Using CrewAI's Memory System
 
@@ -240,5 +239,5 @@ crewai reset-memories [OPTIONS]
 
 ## Conclusion
 
-Integrating CrewAI's memory system into your projects is straightforward. By leveraging the provided memory components and configurations, 
+Integrating CrewAI's memory system into your projects is straightforward. By leveraging the provided memory components and configurations,
 you can quickly empower your agents with the ability to remember, reason, and learn from their interactions, unlocking new levels of intelligence and capability.

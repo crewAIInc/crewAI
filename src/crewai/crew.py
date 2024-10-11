@@ -27,6 +27,7 @@ from crewai.llm import LLM
 from crewai.memory.entity.entity_memory import EntityMemory
 from crewai.memory.long_term.long_term_memory import LongTermMemory
 from crewai.memory.short_term.short_term_memory import ShortTermMemory
+from crewai.memory.user.user_memory import UserMemory
 from crewai.process import Process
 from crewai.task import Task
 from crewai.tasks.conditional_task import ConditionalTask
@@ -94,6 +95,7 @@ class Crew(BaseModel):
     _short_term_memory: Optional[InstanceOf[ShortTermMemory]] = PrivateAttr()
     _long_term_memory: Optional[InstanceOf[LongTermMemory]] = PrivateAttr()
     _entity_memory: Optional[InstanceOf[EntityMemory]] = PrivateAttr()
+    _user_memory: Optional[InstanceOf[UserMemory]] = PrivateAttr()
     _train: Optional[bool] = PrivateAttr(default=False)
     _train_iteration: Optional[int] = PrivateAttr()
     _inputs: Optional[Dict[str, Any]] = PrivateAttr(default=None)
@@ -113,6 +115,10 @@ class Crew(BaseModel):
     memory: bool = Field(
         default=False,
         description="Whether the crew should use memory to store memories of it's execution",
+    )
+    memory_provider: Optional[str] = Field(
+        default=None,
+        description="The memory provider to be used for the crew.",
     )
     short_term_memory: Optional[InstanceOf[ShortTermMemory]] = Field(
         default=None,
@@ -207,6 +213,14 @@ class Crew(BaseModel):
         # TODO: Improve typing
         return json.loads(v) if isinstance(v, Json) else v  # type: ignore
 
+    @field_validator("memory_provider", mode="before")
+    @classmethod
+    def validate_memory_provider(cls, v: Optional[str]) -> Optional[str]:
+        """Ensure memory provider is either None or 'mem0'."""
+        if v not in (None, "mem0"):
+            raise ValueError("Memory provider must be either None or 'mem0'.")
+        return v
+
     @model_validator(mode="after")
     def set_private_attrs(self) -> "Crew":
         """Set private attributes."""
@@ -238,12 +252,23 @@ class Crew(BaseModel):
             self._short_term_memory = (
                 self.short_term_memory
                 if self.short_term_memory
-                else ShortTermMemory(crew=self, embedder_config=self.embedder)
+                else ShortTermMemory(
+                    memory_provider=self.memory_provider,
+                    crew=self,
+                    embedder_config=self.embedder,
+                )
             )
             self._entity_memory = (
                 self.entity_memory
                 if self.entity_memory
-                else EntityMemory(crew=self, embedder_config=self.embedder)
+                else EntityMemory(
+                    memory_provider=self.memory_provider,
+                    crew=self,
+                    embedder_config=self.embedder,
+                )
+            )
+            self._user_memory = (
+                UserMemory(crew=self) if self.memory_provider == "mem0" else None
             )
         return self
 
@@ -897,6 +922,7 @@ class Crew(BaseModel):
             "_short_term_memory",
             "_long_term_memory",
             "_entity_memory",
+            "_user_memory",
             "_telemetry",
             "agents",
             "tasks",

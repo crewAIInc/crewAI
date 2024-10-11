@@ -1,4 +1,4 @@
-from typing import Any, Dict
+from typing import Any, Dict, List
 
 from crewai.memory.long_term.long_term_memory_item import LongTermMemoryItem
 from crewai.memory.memory import Memory
@@ -18,18 +18,25 @@ class LongTermMemory(Memory):
         storage = storage if storage else LTMSQLiteStorage()
         super().__init__(storage)
 
-    def save(self, item: LongTermMemoryItem) -> None:  # type: ignore # BUG?: Signature of "save" incompatible with supertype "Memory"
-        metadata = item.metadata
-        metadata.update({"agent": item.agent, "expected_output": item.expected_output})
+    def save(self, item: LongTermMemoryItem) -> None:
+        metadata = item.metadata.copy()  # Create a copy to avoid modifying the original
+        metadata.update(
+            {
+                "agent": item.agent,
+                "expected_output": item.expected_output,
+                "quality": item.quality,  # Add quality to metadata
+            }
+        )
         self.storage.save(  # type: ignore # BUG?: Unexpected keyword argument "task_description","score","datetime" for "save" of "Storage"
             task_description=item.task,
-            score=metadata["quality"],
+            score=item.quality,
             metadata=metadata,
             datetime=item.datetime,
         )
 
-    def search(self, task: str, latest_n: int = 3) -> Dict[str, Any]:
-        return self.storage.load(task, latest_n)  # type: ignore # BUG?: "Storage" has no attribute "load"
+    def search(self, task: str, latest_n: int = 3) -> List[Dict[str, Any]]:
+        results = self.storage.load(task, latest_n)
+        return results
 
     def reset(self) -> None:
         self.storage.reset()
