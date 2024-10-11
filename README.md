@@ -329,46 +329,6 @@ CrewAI is open-source and we welcome contributions. If you're looking to contrib
 crewai install
 ```
 
-### Virtual Env
-
-```bash
-uv venv
-source .venv/bin/activate  # On Unix or MacOS
-.venv\Scripts\activate.bat  # On Windows
-```
-
-### Pre-commit hooks
-
-```bash
-pre-commit install
-```
-
-### Running Tests
-
-```bash
-pytest
-```
-
-### Running static type checks
-
-```bash
-uv pip install mypy
-mypy .
-```
-
-### Packaging
-
-```bash
-uv pip install build
-python -m build
-```
-
-### Installing Locally
-
-```bash
-pip install dist/*.whl
-```
-
 ## Telemetry
 
 CrewAI uses anonymous telemetry to collect usage data with the main purpose of helping us improve the library by focusing our efforts on the most used features, integrations and tools.
