@@ -44,15 +44,9 @@ To get started with CrewAI, follow these simple steps:
 
 ### 1. Installation
 
-Ensure you have Python >=3.10 <=3.13 installed on your system. CrewAI uses [Poetry](https://python-poetry.org/) for dependency management and package handling, offering a seamless setup and execution experience.
+Ensure you have Python >=3.10 <=3.13 installed on your system.
 
-First, if you haven't already, install Poetry:
-
-```bash
-pip install poetry
-```
-
-Then, install CrewAI:
+Install CrewAI:
 
 ```shell
 pip install crewai
@@ -332,14 +326,15 @@ CrewAI is open-source and we welcome contributions. If you're looking to contrib
 ### Installing Dependencies
 
 ```bash
-poetry lock
-poetry install
+crewai install
 ```
 
 ### Virtual Env
 
 ```bash
-poetry shell
+uv venv
+source .venv/bin/activate  # On Unix or MacOS
+.venv\Scripts\activate.bat  # On Windows
 ```
 
 ### Pre-commit hooks
@@ -351,25 +346,27 @@ pre-commit install
 ### Running Tests
 
 ```bash
-poetry run pytest
+pytest
 ```
 
 ### Running static type checks
 
 ```bash
-poetry run mypy
+uv pip install mypy
+mypy .
 ```
 
 ### Packaging
 
 ```bash
-poetry build
+uv pip install build
+python -m build
 ```
 
 ### Installing Locally
 
 ```bash
-pip install dist/*.tar.gz
+pip install dist/*.whl
 ```
 
 ## Telemetry

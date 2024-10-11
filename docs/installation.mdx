@@ -4,8 +4,6 @@ description:
 icon: wrench
 ---
 
-## Install CrewAI
-
 This guide will walk you through the installation process for CrewAI and its dependencies. 
 CrewAI is a flexible and powerful AI framework that enables you to create and manage AI agents, tools, and tasks efficiently. 
 Let's get started! 🚀
@@ -15,17 +13,8 @@ Let's get started! 🚀
 </Tip>
 
 <Steps>
-    <Step title="Install Poetry">   
-    First, if you haven't already, install [Poetry](https://python-poetry.org/). 
-    CrewAI uses Poetry for dependency management and package handling, offering a seamless setup and execution experience.
-    <CodeGroup>
-    ```shell Terminal
-    pip install poetry
-    ```
-    </CodeGroup>
-    </Step>
     <Step title="Install CrewAI">
-    Then, install the main CrewAI package:
+    Install the main CrewAI package with the following command:
     <CodeGroup>
     ```shell Terminal
     pip install crewai
@@ -45,15 +34,27 @@ Let's get started! 🚀
     </CodeGroup>
     </Step>
     <Step title="Upgrade CrewAI">
-    To upgrade CrewAI and CrewAI Tools to the latest version, run the following command:
+    To upgrade CrewAI and CrewAI Tools to the latest version, run the following command
     <CodeGroup>
     ```shell Terminal
     pip install --upgrade crewai crewai-tools
     ```
     </CodeGroup>
+    <Note>
+    1. If you're using an older version of CrewAI, you may receive a warning about using `Poetry` for dependency management. 
+      ![Error from older versions](./images/crewai-run-poetry-error.png)
+
+    2. In this case, you'll need to run the command below to update your project. 
+    This command will migrate your project to use [UV](https://github.com/astral-sh/uv) and update the necessary files.
+      ```shell Terminal
+      crewai update
+      ```
+    3. After running the command above, you should see the following output:
+      ![Successfully migrated to UV](./images/crewai-update.png)
+    </Note>
     </Step>
     <Step title="Verify the installation">
-    To verify that `crewai` and `crewai-tools` are installed correctly, run the following command:
+    To verify that `crewai` and `crewai-tools` are installed correctly, run the following command
     <CodeGroup>
     ```shell Terminal
     pip freeze | grep crewai
