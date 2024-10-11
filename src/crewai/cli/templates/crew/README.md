@@ -4,17 +4,17 @@ Welcome to the {{crew_name}} Crew project, powered by [crewAI](https://crewai.co
 
 ## Installation
 
-Ensure you have Python >=3.10 <=3.13 installed on your system. This project uses [Poetry](https://python-poetry.org/) for dependency management and package handling, offering a seamless setup and execution experience.
+Ensure you have Python >=3.10 <=3.13 installed on your system. This project uses [UV](https://docs.astral.sh/uv/) for dependency management and package handling, offering a seamless setup and execution experience.
 
-First, if you haven't already, install Poetry:
+First, if you haven't already, install uv:
 
 ```bash
-pip install poetry
+pip install uv
 ```
 
 Next, navigate to your project directory and install the dependencies:
 
-1. First lock the dependencies and install them by using the CLI command:
+(Optional) Lock the dependencies and install them by using the CLI command:
 ```bash
 crewai install
 ```
