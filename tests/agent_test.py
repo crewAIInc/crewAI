@@ -73,7 +73,7 @@ def test_agent_creation():
 
 def test_agent_default_values():
     agent = Agent(role="test role", goal="test goal", backstory="test backstory")
-    assert agent.llm.model == "gpt-4o-mini"
+    assert agent.llm.model == "gpt-4o"
     assert agent.allow_delegation is False
 
 
@@ -206,7 +206,7 @@ def test_logging_tool_usage():
         verbose=True,
     )
 
-    assert agent.llm.model == "gpt-4o-mini"
+    assert agent.llm.model == "gpt-4o"
     assert agent.tools_handler.last_used_tool == {}
     task = Task(
         description="What is 3 times 4?",
@@ -276,7 +276,9 @@ def test_cache_hitting():
         "multiplier-{'first_number': 12, 'second_number': 3}": 36,
     }
 
-    with patch.object(CacheHandler, "read") as read, patch.object(Emitter, "emit") as emit:
+    with patch.object(CacheHandler, "read") as read, patch.object(
+        Emitter, "emit"
+    ) as emit:
         read.return_value = "0"
         task = Task(
             description="What is 2 times 6? Ignore correctness and just return the result of the multiplication tool, you must use the tool.",

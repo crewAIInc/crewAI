@@ -774,7 +774,7 @@ class Crew(BaseModel):
 
     def _log_task_start(self, task: Task, role: str = "None"):
         if self.output_log_file:
-            self._file_handler.log(agent=role, task=task.description, status="started")
+            self._file_handler.log(task_name=task.name, task=task.description, agent=role, status="started")
 
     def _update_manager_tools(self, task: Task):
         if self.manager_agent:
@@ -796,7 +796,7 @@ class Crew(BaseModel):
     def _process_task_result(self, task: Task, output: TaskOutput) -> None:
         role = task.agent.role if task.agent is not None else "None"
         if self.output_log_file:
-            self._file_handler.log(agent=role, task=output, status="completed")
+            self._file_handler.log(task_name=task.name, task=task.description, agent=role, status="completed", output=output.raw)
 
     def _create_crew_output(self, task_outputs: List[TaskOutput]) -> CrewOutput:
         if len(task_outputs) != 1:
