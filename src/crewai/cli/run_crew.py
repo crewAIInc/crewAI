@@ -9,7 +9,9 @@ def run_crew() -> None:
     """
     command = ["uv", "run", "run_crew"]
     try:
-        subprocess.run(command, capture_output=True, text=True, check=True)
+        subprocess.run(
+            command, capture_output=False, text=True, check=True, stderr=subprocess.PIPE
+        )
 
     except subprocess.CalledProcessError as e:
         click.echo(f"An error occurred while running the crew: {e}", err=True)
