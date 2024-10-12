@@ -3,7 +3,13 @@ import re
 from typing import Any, Dict, List, Union
 
 from crewai.agents.agent_builder.base_agent_executor_mixin import CrewAgentExecutorMixin
-from crewai.agents.parser import CrewAgentParser
+from crewai.agents.parser import (
+    FINAL_ANSWER_AND_PARSABLE_ACTION_ERROR_MESSAGE,
+    AgentAction,
+    AgentFinish,
+    CrewAgentParser,
+    OutputParserException,
+)
 from crewai.agents.tools_handler import ToolsHandler
 from crewai.tools.tool_usage import ToolUsage, ToolUsageErrorException
 from crewai.utilities import I18N, Printer
@@ -13,12 +19,6 @@ from crewai.utilities.exceptions.context_window_exceeding_exception import (
 )
 from crewai.utilities.logger import Logger
 from crewai.utilities.training_handler import CrewTrainingHandler
-from crewai.agents.parser import (
-    AgentAction,
-    AgentFinish,
-    OutputParserException,
-    FINAL_ANSWER_AND_PARSABLE_ACTION_ERROR_MESSAGE,
-)
 
 
 class CrewAgentExecutor(CrewAgentExecutorMixin):
@@ -307,34 +307,24 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
     ) -> None:
         """Function to handle the process of the training data."""
         agent_id = str(self.agent.id)
-        if (
-            CrewTrainingHandler(TRAINING_DATA_FILE).load()
-            and not self.ask_for_human_input
-        ):
-            training_data = CrewTrainingHandler(TRAINING_DATA_FILE).load()
-            if training_data.get(agent_id):
-                training_data[agent_id][self.crew._train_iteration][
-                    "improved_output"
-                ] = result.output
-                CrewTrainingHandler(TRAINING_DATA_FILE).save(training_data)
 
-        if self.ask_for_human_input and human_feedback is not None:
-            training_data = {
-                "initial_output": result.output,
-                "human_feedback": human_feedback,
-                "agent": agent_id,
-                "agent_role": self.agent.role,
-            }
+        # Load training data
+        training_handler = CrewTrainingHandler(TRAINING_DATA_FILE)
+        training_data = training_handler.load()
+
+        # Check if training data exists, human input is not requested, and self.crew is valid
+        if training_data and not self.ask_for_human_input:
             if self.crew is not None and hasattr(self.crew, "_train_iteration"):
                 train_iteration = self.crew._train_iteration
-                if isinstance(train_iteration, int):
-                    CrewTrainingHandler(TRAINING_DATA_FILE).append(
-                        train_iteration, agent_id, training_data
-                    )
+                if agent_id in training_data and isinstance(train_iteration, int):
+                    training_data[agent_id][train_iteration][
+                        "improved_output"
+                    ] = result.output
+                    training_handler.save(training_data)
                 else:
                     self._logger.log(
                         "error",
-                        "Invalid train iteration type. Expected int.",
+                        "Invalid train iteration type or agent_id not in training data.",
                         color="red",
                     )
             else:
