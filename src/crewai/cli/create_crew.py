@@ -194,7 +194,7 @@ def create_crew(name, parent_folder=None):
         while True:
             try:
                 selected_index = click.prompt(
-                    "Enter the number of your choice", type=int, default=1
+                    "Enter the number of your choice", type=int
                 ) - 1
                 if 0 <= selected_index < len(PROVIDERS) + 1:
                     selected_provider = (PROVIDERS + ['other'])[selected_index]
@@ -259,7 +259,7 @@ def create_crew(name, parent_folder=None):
         while True:
             try:
                 selected_model_index = click.prompt(
-                    "Enter the number of your choice", type=int, default=1
+                    "Enter the number of your choice", type=int
                 ) - 1
                 if 0 <= selected_model_index < len(available_models):
                     model = available_models[selected_model_index]
