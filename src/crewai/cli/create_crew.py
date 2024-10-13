@@ -69,11 +69,12 @@ def select_choice(prompt_message, choices):
     except click.exceptions.Abort:
         click.secho("Operation aborted by the user.", fg="red")
         return None
-    if 0 <= selected_index < len(choices):
-        return choices[selected_index]
-    else:
+
+    if not (0 <= selected_index < len(choices)):
         click.secho("Invalid selection.", fg="red")
         return None
+
+    return choices[selected_index]
 
 def select_provider(provider, all_providers, PROVIDERS):
     if provider and provider.lower() not in all_providers and provider.lower() != 'other':
