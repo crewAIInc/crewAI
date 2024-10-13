@@ -76,32 +76,31 @@ def select_choice(prompt_message, choices):
 
     return choices[selected_index]
 
-def select_provider(provider, all_providers, PROVIDERS):
-    if provider and provider.lower() not in all_providers and provider.lower() != 'other':
+def select_provider(provider, all_providers, predefined_providers):
+    provider = provider.lower() if provider else None
+
+    # Early return if the provided provider is invalid
+    if provider and provider not in all_providers and provider != 'other':
         click.secho(f"Invalid provider: {provider}", fg="red")
         return None
 
+    # If no provider is given, prompt the user
     if not provider:
-        options = PROVIDERS + ['other']
-        selected_provider = select_choice("Select a provider to set up:", options)
-        if not selected_provider:
+        options = predefined_providers + ['other']
+        provider = select_choice("Select a provider to set up:", options)
+        if not provider:
             return None
-        if selected_provider.lower() == 'other':
-            if not all_providers:
-                click.secho("No additional providers available.", fg="yellow")
-                return None
-            selected_provider = select_choice("Select a provider from the full list:", all_providers)
-            if not selected_provider:
-                return None
-    else:
-        selected_provider = provider.lower()
-        if selected_provider == 'other':
-            if not all_providers:
-                click.secho("No additional providers available.", fg="yellow")
-                return None
-            selected_provider = select_choice("Select a provider from the full list:", all_providers)
-            if not selected_provider:
-                return None
+
+    # Handle 'other' option
+    if provider == 'other':
+        if not all_providers:
+            click.secho("No additional providers available.", fg="yellow")
+            return None
+        provider = select_choice("Select a provider from the full list:", all_providers)
+        if not provider:
+            return None
+
+    return provider.lower()
 
     return selected_provider.lower()
 
