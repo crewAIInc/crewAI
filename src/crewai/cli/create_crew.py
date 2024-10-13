@@ -79,19 +79,16 @@ def select_choice(prompt_message, choices):
 def select_provider(provider, all_providers, predefined_providers):
     provider = provider.lower() if provider else None
 
-    # Early return if the provided provider is invalid
     if provider and provider not in all_providers and provider != 'other':
         click.secho(f"Invalid provider: {provider}", fg="red")
         return None
 
-    # If no provider is given, prompt the user
     if not provider:
         options = predefined_providers + ['other']
         provider = select_choice("Select a provider to set up:", options)
         if not provider:
             return None
 
-    # Handle 'other' option
     if provider == 'other':
         if not all_providers:
             click.secho("No additional providers available.", fg="yellow")
@@ -101,8 +98,6 @@ def select_provider(provider, all_providers, predefined_providers):
             return None
 
     return provider.lower()
-
-    return selected_provider.lower()
 
 def select_model(provider, predefined_providers, MODELS, provider_models):
     provider = provider.lower()
