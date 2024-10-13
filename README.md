@@ -44,9 +44,9 @@ To get started with CrewAI, follow these simple steps:
 
 ### 1. Installation
 
-Ensure you have Python >=3.10 <=3.13 installed on your system.
+Ensure you have Python >=3.10 <=3.13 installed on your system. CrewAI uses [UV](https://docs.astral.sh/uv/) for dependency management and package handling, offering a seamless setup and execution experience.
 
-Install CrewAI:
+First, install CrewAI:
 
 ```shell
 pip install crewai
@@ -237,7 +237,7 @@ Lock the dependencies and install them by using the CLI command but first, navig
 
 ```shell
 cd my_project
-crewai install
+crewai install (Optional)
 ```
 
 To run your crew, execute the following command in the root of your project:

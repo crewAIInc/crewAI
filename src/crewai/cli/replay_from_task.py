@@ -1,4 +1,5 @@
 import subprocess
+
 import click
 
 
@@ -9,7 +10,7 @@ def replay_task_command(task_id: str) -> None:
     Args:
       task_id (str): The ID of the task to replay from.
     """
-    command = ["poetry", "run", "replay", task_id]
+    command = ["uv", "run", "replay", task_id]
 
     try:
         result = subprocess.run(command, capture_output=False, text=True, check=True)

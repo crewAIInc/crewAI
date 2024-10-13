@@ -1,17 +1,17 @@
 import inspect
 from pathlib import Path
-from typing import Any, Callable, Dict, Type, TypeVar
+from typing import Any, Callable, Dict, TypeVar, cast
 
 import yaml
 from dotenv import load_dotenv
 
 load_dotenv()
 
-T = TypeVar("T", bound=Type[Any])
+T = TypeVar("T", bound=type)
 
 
 def CrewBase(cls: T) -> T:
-    class WrappedClass(cls):
+    class WrappedClass(cls):  # type: ignore
         is_crew_class: bool = True  # type: ignore
 
         # Get the directory of the class being decorated
@@ -180,4 +180,4 @@ def CrewBase(cls: T) -> T:
                     callback_functions[callback]() for callback in callbacks
                 ]
 
-    return WrappedClass
+    return cast(T, WrappedClass)
