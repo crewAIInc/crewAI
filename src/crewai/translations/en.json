@@ -20,7 +20,8 @@
     "getting_input": "This is the agent's final answer: {final_answer}\n\n",
     "summarizer_system_message": "You are a helpful assistant that summarizes text.",
     "sumamrize_instruction": "Summarize the following text, make sure to include all the important information: {group}",
-    "summary": "This is a summary of our conversation so far:\n{merged_summary}"
+    "summary": "This is a summary of our conversation so far:\n{merged_summary}",
+    "manager_request": "Your best answer to your coworker asking you this, accounting for the context shared."
   },
   "errors": {
     "force_final_answer_error": "You can't keep going, this was the best you could do.\n {formatted_answer.text}",

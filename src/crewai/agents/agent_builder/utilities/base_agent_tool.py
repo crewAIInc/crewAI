@@ -81,6 +81,7 @@ class BaseAgentTools(BaseModel, ABC):
         task_with_assigned_agent = Task(  # type: ignore # Incompatible types in assignment (expression has type "Task", variable has type "str")
             description=task,
             agent=agent,
-            expected_output="Your best answer to your coworker asking you this, accounting for the context shared.",
+            expected_output=agent.i18n.slice("manager_request"),
+            i18n=agent.i18n,
         )
         return agent.execute_task(task_with_assigned_agent, context)
