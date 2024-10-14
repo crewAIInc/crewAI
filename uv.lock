@@ -604,7 +604,6 @@ name = "crewai"
 version = "0.70.1"
 source = { editable = "." }
 dependencies = [
-    { name = "agentops" },
     { name = "appdirs" },
     { name = "auth0-python" },
     { name = "chromadb" },
@@ -657,7 +656,6 @@ dev = [
 
 [package.metadata]
 requires-dist = [
-    { name = "agentops", specifier = ">=0.3.0" },
     { name = "agentops", marker = "extra == 'agentops'", specifier = ">=0.3.0" },
     { name = "appdirs", specifier = ">=1.4.4" },
     { name = "auth0-python", specifier = ">=4.7.1" },
