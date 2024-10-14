@@ -89,7 +89,7 @@ class RAGStorage(BaseRAGStorage):
             result = {
                 "id": response["ids"][0][i],
                 "metadata": response["metadatas"][0][i],
-                "document": response["documents"][0][i],
+                "context": response["documents"][0][i],
                 "score": response["distances"][0][i],
             }
             if result["score"] >= score_threshold:

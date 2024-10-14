@@ -42,5 +42,5 @@ def test_save_and_search(short_term_memory):
     )
 
     find = short_term_memory.search("test value", score_threshold=0.01)[0]
-    assert find["document"] == memory.data, "Data value mismatch."
+    assert find["context"] == memory.data, "Data value mismatch."
     assert find["metadata"]["agent"] == "test_agent", "Agent value mismatch."

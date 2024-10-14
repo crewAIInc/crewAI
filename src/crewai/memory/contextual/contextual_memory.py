@@ -34,7 +34,7 @@ class ContextualMemory:
         # TODO: remove this print
         print("stm_results", stm_results)
         formatted_results = "\n".join(
-            [f"- {result['document']}" for result in stm_results]
+            [f"- {result['context']}" for result in stm_results]
         )
         print("formatted_results stm", formatted_results)
 
@@ -66,7 +66,7 @@ class ContextualMemory:
         """
         em_results = self.em.search(query)
         formatted_results = "\n".join(
-            [f"- {result['document']}" for result in em_results]  # type: ignore #  Invalid index type "str" for "str"; expected type "SupportsIndex | slice"
+            [f"- {result['context']}" for result in em_results]  # type: ignore #  Invalid index type "str" for "str"; expected type "SupportsIndex | slice"
         )
         # TODO: remove this print
         print("formatted_results entity", formatted_results)
