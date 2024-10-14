@@ -103,7 +103,8 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
 
             if self.crew and self.crew._train:
                 self._handle_crew_training_output(formatted_answer)
-
+        self._create_short_term_memory(formatted_answer)
+        self._create_long_term_memory(formatted_answer)
         return {"output": formatted_answer.output}
 
     def _invoke_loop(self, formatted_answer=None):

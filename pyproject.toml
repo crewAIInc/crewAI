@@ -22,13 +22,14 @@ dependencies = [
     "appdirs>=1.4.4",
     "jsonref>=1.1.0",
     "agentops>=0.3.0",
-    "embedchain>=0.1.114",
     "json-repair>=0.25.2",
     "auth0-python>=4.7.1",
     "litellm>=1.44.22",
     "pyvis>=0.3.2",
     "uv>=0.4.18",
     "tomli-w>=1.1.0",
+    "weaviate-client>=4.8.1",
+    "chromadb>=0.4.24",
 ]
 
 [project.urls]
