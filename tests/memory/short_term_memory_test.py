@@ -63,7 +63,7 @@ def short_term_memory_with_provider():
         agent=agent,
     )
     return ShortTermMemory(
-        crew=Crew(agents=[agent], tasks=[task]), memory_provider="mem0"
+        crew=Crew(agents=[agent], tasks=[task]), memory_config={"provider": "mem0"}
     )
 
 
@@ -85,5 +85,5 @@ def test_save_and_search_with_provider(short_term_memory_with_provider):
     assert find["memory"] in memory.data, "Data value mismatch."
     assert find["metadata"]["agent"] == "test_agent_provider", "Agent value mismatch."
     assert (
-        short_term_memory_with_provider.memory_provider == "mem0"
+        short_term_memory_with_provider.memory_config["provider"] == "mem0"
     ), "Memory provider mismatch."

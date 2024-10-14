@@ -22,6 +22,7 @@ class UserMemory(Memory):
         metadata: Optional[Dict[str, Any]] = None,
         agent: Optional[str] = None,
     ) -> None:
+        # TODO: Change this function since we want to take care of the case where we save memories for the usr
         data = f"Remember the details about the user: {value}"
         super().save(data, metadata)
 
@@ -32,6 +33,9 @@ class UserMemory(Memory):
         filters: dict = {},
         score_threshold: float = 0.35,
     ):
-        return super().search(
-            query=query, limit=limit, filters=filters, score_threshold=score_threshold
+        results = super().search(
+            query=query,
+            limit=limit,
+            score_threshold=score_threshold,
         )
+        return results

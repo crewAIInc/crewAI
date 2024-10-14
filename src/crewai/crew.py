@@ -72,6 +72,7 @@ class Crew(BaseModel):
         manager_llm: The language model that will run manager agent.
         manager_agent: Custom agent that will be used as manager.
         memory: Whether the crew should use memory to store memories of it's execution.
+        memory_config: Configuration for the memory to be used for the crew.
         cache: Whether the crew should use a cache to store the results of the tools execution.
         function_calling_llm: The language model that will run the tool calling for all the agents.
         process: The process flow that the crew will follow (e.g., sequential, hierarchical).
@@ -116,9 +117,9 @@ class Crew(BaseModel):
         default=False,
         description="Whether the crew should use memory to store memories of it's execution",
     )
-    memory_provider: Optional[str] = Field(
+    memory_config: Optional[Dict[str, Any]] = Field(
         default=None,
-        description="The memory provider to be used for the crew.",
+        description="Configuration for the memory to be used for the crew.",
     )
     short_term_memory: Optional[InstanceOf[ShortTermMemory]] = Field(
         default=None,
@@ -131,6 +132,10 @@ class Crew(BaseModel):
     entity_memory: Optional[InstanceOf[EntityMemory]] = Field(
         default=None,
         description="An Instance of the EntityMemory to be used by the Crew",
+    )
+    user_memory: Optional[InstanceOf[UserMemory]] = Field(
+        default=None,
+        description="An instance of the UserMemory to be used by the Crew to store/fetch memories of a specific user.",
     )
     embedder: Optional[dict] = Field(
         default={"provider": "openai"},
@@ -245,17 +250,19 @@ class Crew(BaseModel):
                 self.short_term_memory
                 if self.short_term_memory
                 else ShortTermMemory(
-                    memory_provider=self.memory_provider,
+                    memory_provider=self.memory_config["provider"],
                     crew=self,
                     embedder_config=self.embedder,
                 )
             )
             self._entity_memory = EntityMemory(
-                memory_provider=self.memory_provider,
+                memory_provider=self.memory_config["provider"],
                 crew=self,
                 embedder_config=self.embedder,
             )
-            self._user_memory = UserMemory(crew=self)
+            self._user_memory = (
+                self.user_memory if self.user_memory else UserMemory(crew=self)
+            )
         return self
 
     @model_validator(mode="after")

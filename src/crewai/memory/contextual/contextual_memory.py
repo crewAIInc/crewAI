@@ -33,7 +33,7 @@ class ContextualMemory:
         context.append(self._fetch_stm_context(query))
         context.append(self._fetch_entity_context(query))
         if self.memory_provider == "mem0":
-            context.append(self._fetch_user_memories(query))
+            context.append(self._fetch_user_context(query))
         return "\n".join(filter(None, context))
 
     def _fetch_stm_context(self, query) -> str:
@@ -78,12 +78,19 @@ class ContextualMemory:
         )
         return f"Entities:\n{formatted_results}" if em_results else ""
 
-    def _fetch_user_memories(self, query) -> str:
+    def _fetch_user_context(self, query: str) -> str:
         """
-        Fetches relevant user memory information from User Memory related to the task's description and expected_output,
+        Fetches and formats relevant user information from User Memory.
+        Args:
+            query (str): The search query to find relevant user memories.
+        Returns:
+            str: Formatted user memories as bullet points, or an empty string if none found.
         """
-        um_results = self.um.search(query)
-        formatted_results = "\n".join(
-            [f"- {result['memory']}" for result in um_results]
+        user_memories = self.um.search(query)
+        if not user_memories:
+            return ""
+
+        formatted_memories = "\n".join(
+            f"- {result['memory']}" for result in user_memories
         )
-        return f"User memories/preferences:\n{formatted_results}" if um_results else ""
+        return f"User memories/preferences:\n{formatted_memories}"
