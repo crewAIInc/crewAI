@@ -26,7 +26,7 @@ def short_term_memory():
     return ShortTermMemory(crew=Crew(agents=[agent], tasks=[task]))
 
 
-@pytest.mark.vcr(filter_headers=["authorization"])
+# @pytest.mark.vcr(filter_headers=["authorization"])
 def test_save_and_search(short_term_memory):
     memory = ShortTermMemoryItem(
         data="""test value test value test value test value test value test value
@@ -42,5 +42,5 @@ def test_save_and_search(short_term_memory):
     )
 
     find = short_term_memory.search("test value", score_threshold=0.01)[0]
-    assert find["context"] == memory.data, "Data value mismatch."
+    assert find["document"] == memory.data, "Data value mismatch."
     assert find["metadata"]["agent"] == "test_agent", "Agent value mismatch."
