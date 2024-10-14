@@ -21,6 +21,7 @@ from .run_crew import run_crew
 from .run_flow import run_flow
 from .tools.main import ToolCommand
 from .train_crew import train_crew
+from .update_crew import update_crew
 
 
 @click.group()
@@ -189,6 +190,12 @@ def run():
 
 
 @crewai.command()
+def update():
+    """Update the pyproject.toml of the Crew project to use uv."""
+    update_crew()
+
+
+@crewai.command()
 def signup():
     """Sign Up/Login to CrewAI+."""
     AuthenticationCommand().signup()
@@ -260,19 +267,35 @@ def deploy_remove(uuid: Optional[str]):
     deploy_cmd.remove_crew(uuid=uuid)
 
 
+@tool.command(name="create")
+@click.argument("handle")
+def tool_create(handle: str):
+    tool_cmd = ToolCommand()
+    tool_cmd.create(handle)
+
+
 @tool.command(name="install")
 @click.argument("handle")
 def tool_install(handle: str):
     tool_cmd = ToolCommand()
+    tool_cmd.login()
     tool_cmd.install(handle)
 
 
 @tool.command(name="publish")
+@click.option(
+    "--force",
+    is_flag=True,
+    show_default=True,
+    default=False,
+    help="Bypasses Git remote validations",
+)
 @click.option("--public", "is_public", flag_value=True, default=False)
 @click.option("--private", "is_public", flag_value=False)
-def tool_publish(is_public: bool):
+def tool_publish(is_public: bool, force: bool):
     tool_cmd = ToolCommand()
-    tool_cmd.publish(is_public)
+    tool_cmd.login()
+    tool_cmd.publish(is_public, force)
 
 
 @crewai.group()

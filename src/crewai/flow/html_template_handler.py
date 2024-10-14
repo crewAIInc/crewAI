@@ -1,5 +1,4 @@
 import base64
-import os
 import re
 
 
@@ -48,7 +47,7 @@ class HTMLTemplateHandler:
                 """
         return legend_items_html
 
-    def generate_final_html(self, network_body, legend_items_html, title="Flow Graph"):
+    def generate_final_html(self, network_body, legend_items_html, title="Flow Plot"):
         html_template = self.read_template()
         logo_svg_base64 = self.encode_logo()
 

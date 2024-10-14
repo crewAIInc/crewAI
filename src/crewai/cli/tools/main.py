@@ -1,16 +1,22 @@
 import base64
-import click
 import os
+import platform
 import subprocess
 import tempfile
+from pathlib import Path
 
+import click
+from rich.console import Console
+
+from crewai.cli import git
 from crewai.cli.command import BaseCommand, PlusAPIMixin
 from crewai.cli.utils import (
-    get_project_name,
     get_project_description,
+    get_project_name,
     get_project_version,
+    tree_copy,
+    tree_find_and_replace,
 )
-from rich.console import Console
 
 console = Console()
 
@@ -20,11 +26,55 @@ class ToolCommand(BaseCommand, PlusAPIMixin):
     A class to handle tool repository related operations for CrewAI projects.
     """
 
+    BASE_URL = "https://app.crewai.com/pypi/"
+
     def __init__(self):
         BaseCommand.__init__(self)
         PlusAPIMixin.__init__(self, telemetry=self._telemetry)
 
-    def publish(self, is_public: bool):
+    def create(self, handle: str):
+        self._ensure_not_in_project()
+
+        folder_name = handle.replace(" ", "_").replace("-", "_").lower()
+        class_name = handle.replace("_", " ").replace("-", " ").title().replace(" ", "")
+
+        project_root = Path(folder_name)
+        if project_root.exists():
+            click.secho(f"Folder {folder_name} already exists.", fg="red")
+            raise SystemExit
+        else:
+            os.makedirs(project_root)
+
+        click.secho(f"Creating custom tool {folder_name}...", fg="green", bold=True)
+
+        template_dir = Path(__file__).parent.parent / "templates" / "tool"
+        tree_copy(template_dir, project_root)
+        tree_find_and_replace(project_root, "{{folder_name}}", folder_name)
+        tree_find_and_replace(project_root, "{{class_name}}", class_name)
+
+        old_directory = os.getcwd()
+        os.chdir(project_root)
+        try:
+            self.login()
+            subprocess.run(["git", "init"], check=True)
+            console.print(
+                f"[green]Created custom tool [bold]{folder_name}[/bold]. Run [bold]cd {project_root}[/bold] to start working.[/green]"
+            )
+        finally:
+            os.chdir(old_directory)
+
+    def publish(self, is_public: bool, force: bool = False):
+        if not git.Repository().is_synced() and not force:
+            console.print(
+                "[bold red]Failed to publish tool.[/bold red]\n"
+                "Local changes need to be resolved before publishing. Please do the following:\n"
+                "* [bold]Commit[/bold] your changes.\n"
+                "* [bold]Push[/bold] to sync with the remote.\n"
+                "* [bold]Pull[/bold] the latest changes from the remote.\n"
+                "\nOnce your repository is up-to-date, retry publishing the tool."
+            )
+            raise SystemExit()
+
         project_name = get_project_name(require=True)
         assert isinstance(project_name, str)
 
@@ -36,7 +86,7 @@ class ToolCommand(BaseCommand, PlusAPIMixin):
 
         with tempfile.TemporaryDirectory() as temp_build_dir:
             subprocess.run(
-                ["poetry", "build", "-f", "sdist", "--output", temp_build_dir],
+                ["uv", "build", "--sdist", "--out-dir", temp_build_dir],
                 check=True,
                 capture_output=False,
             )
@@ -46,7 +96,7 @@ class ToolCommand(BaseCommand, PlusAPIMixin):
             )
             if not tarball_filename:
                 console.print(
-                    "Project build failed. Please ensure that the command `poetry build -f sdist` completes successfully.",
+                    "Project build failed. Please ensure that the command `uv build --sdist` completes successfully.",
                     style="bold red",
                 )
                 raise SystemExit
@@ -64,23 +114,8 @@ class ToolCommand(BaseCommand, PlusAPIMixin):
             description=project_description,
             encoded_file=f"data:application/x-gzip;base64,{encoded_tarball}",
         )
-        if publish_response.status_code == 422:
-            console.print(
-                "[bold red]Failed to publish tool. Please fix the following errors:[/bold red]"
-            )
-            for field, messages in publish_response.json().items():
-                for message in messages:
-                    console.print(
-                        f"* [bold red]{field.capitalize()}[/bold red] {message}"
-                    )
 
-            raise SystemExit
-        elif publish_response.status_code != 200:
-            self._handle_plus_api_error(publish_response.json())
-            console.print(
-                "Failed to publish tool. Please try again later.", style="bold red"
-            )
-            raise SystemExit
+        self._validate_response(publish_response)
 
         published_handle = publish_response.json()["handle"]
         console.print(
@@ -103,60 +138,54 @@ class ToolCommand(BaseCommand, PlusAPIMixin):
             )
             raise SystemExit
 
-        self._add_repository_to_poetry(get_response.json())
         self._add_package(get_response.json())
 
         console.print(f"Succesfully installed {handle}", style="bold green")
 
-    def _add_repository_to_poetry(self, tool_details):
-        repository_handle = f"crewai-{tool_details['repository']['handle']}"
-        repository_url = tool_details["repository"]["url"]
-        repository_credentials = tool_details["repository"]["credentials"]
+    def login(self):
+        login_response = self.plus_api_client.login_to_tool_repository()
 
-        add_repository_command = [
-            "poetry",
-            "source",
-            "add",
-            "--priority=explicit",
-            repository_handle,
-            repository_url,
-        ]
-        add_repository_result = subprocess.run(
-            add_repository_command, text=True, check=True
-        )
-
-        if add_repository_result.stderr:
-            click.echo(add_repository_result.stderr, err=True)
+        if login_response.status_code != 200:
+            console.print(
+                "Failed to authenticate to the tool repository. Make sure you have the access to tools.",
+                style="bold red",
+            )
             raise SystemExit
 
-        add_repository_credentials_command = [
-            "poetry",
-            "config",
-            f"http-basic.{repository_handle}",
-            repository_credentials,
-            '""',
-        ]
-        add_repository_credentials_result = subprocess.run(
-            add_repository_credentials_command,
-            capture_output=False,
-            text=True,
-            check=True,
+        login_response_json = login_response.json()
+        self._set_netrc_credentials(login_response_json["credential"])
+
+        console.print(
+            "Successfully authenticated to the tool repository.", style="bold green"
         )
 
-        if add_repository_credentials_result.stderr:
-            click.echo(add_repository_credentials_result.stderr, err=True)
-            raise SystemExit
+    def _set_netrc_credentials(self, credentials):
+        # Create .netrc or _netrc file
+        netrc_filename = "_netrc" if platform.system() == "Windows" else ".netrc"
+        netrc_path = Path.home() / netrc_filename
+
+        netrc_content = f"""machine app.crewai.com
+login {credentials['username']}
+password {credentials['password']}
+"""
+
+        with open(netrc_path, "a") as netrc_file:
+            netrc_file.write(netrc_content)
+
+        # Set appropriate permissions for Unix-like systems
+        if platform.system() != "Windows":
+            os.chmod(netrc_path, 0o600)
+        console.print(f"Added credentials to {netrc_filename}", style="bold green")
 
     def _add_package(self, tool_details):
         tool_handle = tool_details["handle"]
         repository_handle = tool_details["repository"]["handle"]
-        pypi_index_handle = f"crewai-{repository_handle}"
 
         add_package_command = [
-            "poetry",
+            "uv",
             "add",
-            "--source",
-            pypi_index_handle,
+            "--extra-index-url",
+            self.BASE_URL + repository_handle,
             tool_handle,
         ]
         add_package_result = subprocess.run(
@@ -165,4 +194,17 @@ class ToolCommand(BaseCommand, PlusAPIMixin):
 
         if add_package_result.stderr:
             click.echo(add_package_result.stderr, err=True)
+            raise SystemExit
+
+    def _ensure_not_in_project(self):
+        if os.path.isfile("./pyproject.toml"):
+            console.print(
+                "[bold red]Oops! It looks like you're inside a project.[/bold red]"
+            )
+            console.print(
+                "You can't create a new tool while inside an existing project."
+            )
+            console.print(
+                "[bold yellow]Tip:[/bold yellow] Navigate to a different directory and try again."
+            )
             raise SystemExit

@@ -30,6 +30,22 @@ class FlowPlot:
             layout=None,
         )
 
+        # Set options to disable physics
+        net.set_options(
+            """
+            var options = {
+                "nodes": {
+                    "font": {
+                        "multi": "html"
+                    }
+                },
+                "physics": {
+                    "enabled": false
+                }
+            }
+        """
+        )
+
         # Calculate levels for nodes
         node_levels = calculate_node_levels(self.flow)
 
@@ -42,24 +58,13 @@ class FlowPlot:
         # Add edges to the network
         add_edges(net, self.flow, node_positions, self.colors)
 
-        # Set options to disable physics
-        net.set_options(
-            """
-            var options = {
-                "physics": {
-                    "enabled": false
-                }
-            }
-            """
-        )
-
         network_html = net.generate_html()
         final_html_content = self._generate_final_html(network_html)
 
         # Save the final HTML content to the file
         with open(f"{filename}.html", "w", encoding="utf-8") as f:
             f.write(final_html_content)
-        print(f"Graph saved as {filename}.html")
+        print(f"Plot saved as {filename}.html")
 
         self._cleanup_pyvis_lib()
 
@@ -94,6 +99,6 @@ class FlowPlot:
             print(f"Error cleaning up {lib_folder}: {e}")
 
 
-def plot_flow(flow, filename="flow_graph"):
+def plot_flow(flow, filename="flow_plot"):
     visualizer = FlowPlot(flow)
     visualizer.plot(filename)

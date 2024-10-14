@@ -1,9 +1,76 @@
+import ast
+import inspect
+
 from .utils import (
     build_ancestor_dict,
     build_parent_children_dict,
     get_child_index,
     is_ancestor,
 )
+
+
+def method_calls_crew(method):
+    """Check if the method calls `.crew()`."""
+    try:
+        source = inspect.getsource(method)
+        source = inspect.cleandoc(source)
+        tree = ast.parse(source)
+    except Exception as e:
+        print(f"Could not parse method {method.__name__}: {e}")
+        return False
+
+    class CrewCallVisitor(ast.NodeVisitor):
+        def __init__(self):
+            self.found = False
+
+        def visit_Call(self, node):
+            if isinstance(node.func, ast.Attribute):
+                if node.func.attr == "crew":
+                    self.found = True
+            self.generic_visit(node)
+
+    visitor = CrewCallVisitor()
+    visitor.visit(tree)
+    return visitor.found
+
+
+def add_nodes_to_network(net, flow, node_positions, node_styles):
+    def human_friendly_label(method_name):
+        return method_name.replace("_", " ").title()
+
+    for method_name, (x, y) in node_positions.items():
+        method = flow._methods.get(method_name)
+        if hasattr(method, "__is_start_method__"):
+            node_style = node_styles["start"]
+        elif hasattr(method, "__is_router__"):
+            node_style = node_styles["router"]
+        elif method_calls_crew(method):
+            node_style = node_styles["crew"]
+        else:
+            node_style = node_styles["method"]
+
+        node_style = node_style.copy()
+        label = human_friendly_label(method_name)
+
+        node_style.update(
+            {
+                "label": label,
+                "shape": "box",
+                "font": {
+                    "multi": "html",
+                    "color": node_style.get("font", {}).get("color", "#FFFFFF"),
+                },
+            }
+        )
+
+        net.add_node(
+            method_name,
+            x=x,
+            y=y,
+            fixed=True,
+            physics=False,
+            **node_style,
+        )
 
 
 def compute_positions(flow, node_levels, y_spacing=150, x_spacing=150):
@@ -109,24 +176,3 @@ def add_edges(net, flow, node_positions, colors):
                         "smooth": edge_smooth,
                     }
                     net.add_edge(router_method_name, listener_name, **edge_style)
-
-
-def add_nodes_to_network(net, flow, node_positions, node_styles):
-    for method_name, (x, y) in node_positions.items():
-        method = flow._methods.get(method_name)
-        if hasattr(method, "__is_start_method__"):
-            node_style = node_styles["start"]
-        elif hasattr(method, "__is_router__"):
-            node_style = node_styles["router"]
-        else:
-            node_style = node_styles["method"]
-
-        net.add_node(
-            method_name,
-            label=method_name,
-            x=x,
-            y=y,
-            fixed=True,
-            physics=False,
-            **node_style,
-        )

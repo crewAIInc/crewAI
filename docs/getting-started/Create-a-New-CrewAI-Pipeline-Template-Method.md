@@ -35,7 +35,7 @@ These commands will create a new project folder with the following structure:
 ```
 <project_name>/
 ├── README.md
-├── poetry.lock
+├── uv.lock
 ├── pyproject.toml
 ├── src/
 │   └── <project_name>/
@@ -139,11 +139,11 @@ The main annotation you'll use for pipelines is `@PipelineBase`. This annotation
 
 ## Installing Dependencies
 
-To install the dependencies for your project, use Poetry:
+To install the dependencies for your project, use `uv` the install command is optional because when running `crewai run`, it will automatically install the dependencies for you:
 
 ```shell
 $ cd <project_name>
-$ crewai install
+$ crewai install (optional)
 ```
 
 ## Running Your Pipeline Project
