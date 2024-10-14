@@ -26,7 +26,7 @@ def short_term_memory():
     return ShortTermMemory(crew=Crew(agents=[agent], tasks=[task]))
 
 
-# @pytest.mark.vcr(filter_headers=["authorization"])
+@pytest.mark.vcr(filter_headers=["authorization"])
 def test_save_and_search(short_term_memory):
     memory = ShortTermMemoryItem(
         data="""test value test value test value test value test value test value

@@ -126,7 +126,7 @@ class Crew(BaseModel):
         default=None,
         description="An Instance of the EntityMemory to be used by the Crew",
     )
-    embedder: Optional[dict] = Field(
+    embedder: Optional[Any] = Field(
         default=None,
         description="Configuration for the embedder to be used for the crew.",
     )

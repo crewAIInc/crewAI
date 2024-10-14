@@ -7,6 +7,7 @@ import uuid
 from typing import Any, Dict, List, Optional
 from crewai.memory.storage.base_rag_storage import BaseRAGStorage
 from crewai.utilities.paths import db_storage_path
+from chromadb.api import ClientAPI
 
 
 @contextlib.contextmanager
@@ -30,6 +31,8 @@ class RAGStorage(BaseRAGStorage):
     search efficiency.
     """
 
+    app: ClientAPI | None = None
+
     def __init__(self, type, allow_reset=True, embedder_config=None, crew=None):
         super().__init__(type, allow_reset, embedder_config, crew)
         agents = crew.agents if crew else []
@@ -40,7 +43,6 @@ class RAGStorage(BaseRAGStorage):
         self.type = type
         self.embedder_config = embedder_config or self._create_embedding_function()
         self.allow_reset = allow_reset
-        self.app: Any = None
         self._initialize_app()
 
     def _initialize_app(self):
@@ -97,21 +99,22 @@ class RAGStorage(BaseRAGStorage):
 
         return results
 
-    def _generate_embedding(self, text: str, metadata: Dict[str, Any]) -> Any:
+    def _generate_embedding(self, text: str, metadata: Dict[str, Any]) -> None:
         if not hasattr(self, "app") or not hasattr(self, "collection"):
             self._initialize_app()
 
         self.collection.add(
             documents=[text],
             metadatas=[metadata],
-            ids=[str(uuid.uuid4())],  # Generate a unique ID for each entry
+            ids=[str(uuid.uuid4())],
         )
 
     def reset(self) -> None:
         try:
             shutil.rmtree(f"{db_storage_path()}/{self.type}")
             if hasattr(self, "app"):
-                self.app.reset()
+                if hasattr(self.app, "ClientAPI"):
+                    self.app.reset()
         except Exception as e:
             raise Exception(
                 f"An error occurred while resetting the {self.type} memory: {e}"

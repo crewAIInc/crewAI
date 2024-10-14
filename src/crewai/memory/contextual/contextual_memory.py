@@ -31,13 +31,9 @@ class ContextualMemory:
         formatted as bullet points.
         """
         stm_results = self.stm.search(query)
-        # TODO: remove this print
-        print("stm_results", stm_results)
         formatted_results = "\n".join(
             [f"- {result['context']}" for result in stm_results]
         )
-        print("formatted_results stm", formatted_results)
-
         return f"Recent Insights:\n{formatted_results}" if stm_results else ""
 
     def _fetch_ltm_context(self, task) -> Optional[str]:
@@ -68,6 +64,4 @@ class ContextualMemory:
         formatted_results = "\n".join(
             [f"- {result['context']}" for result in em_results]  # type: ignore #  Invalid index type "str" for "str"; expected type "SupportsIndex | slice"
         )
-        # TODO: remove this print
-        print("formatted_results entity", formatted_results)
         return f"Entities:\n{formatted_results}" if em_results else ""

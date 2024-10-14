@@ -7,11 +7,13 @@ class BaseRAGStorage(ABC):
     Base class for RAG-based Storage implementations.
     """
 
+    app: Any | None = None
+
     def __init__(
         self,
         type: str,
         allow_reset: bool = True,
-        embedder_config: Optional[Dict[str, Any]] = None,
+        embedder_config: Optional[Any] = None,
         crew: Any = None,
     ):
         self.type = type
