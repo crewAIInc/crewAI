@@ -4,7 +4,7 @@ from typing import Any, Dict, List, Optional
 
 class BaseRAGStorage(ABC):
     """
-    Base class for RAG-based storage implementations.
+    Base class for RAG-based Storage implementations.
     """
 
     def __init__(
@@ -54,7 +54,9 @@ class BaseRAGStorage(ABC):
         pass
 
     @abstractmethod
-    def _generate_embedding(self, text: str, metadata: Dict[str, Any]) -> Any:
+    def _generate_embedding(
+        self, text: str, metadata: Optional[Dict[str, Any]] = None
+    ) -> Any:
         """Generate an embedding for the given text and metadata."""
         pass
 
@@ -68,5 +70,5 @@ class BaseRAGStorage(ABC):
         pass
 
     def initialize_client(self):
-        """Initialize the client of the storage."""
+        """Initialize the client of the storage. This should setup the app and the db collection"""
         pass

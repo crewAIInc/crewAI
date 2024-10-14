@@ -6,7 +6,6 @@ import shutil
 import uuid
 from typing import Any, Dict, List, Optional
 from crewai.memory.storage.base_rag_storage import BaseRAGStorage
-
 from crewai.utilities.paths import db_storage_path
 
 
@@ -33,66 +32,32 @@ class RAGStorage(BaseRAGStorage):
 
     def __init__(self, type, allow_reset=True, embedder_config=None, crew=None):
         super().__init__(type, allow_reset, embedder_config, crew)
-        # TODO: figuiring out OPENAI_API_KEY DEFAULTS
+        agents = crew.agents if crew else []
+        agents = [self._sanitize_role(agent.role) for agent in agents]
+        agents = "_".join(agents)
+        self.agents = agents
 
-        # if (
-        #     not os.getenv("OPENAI_API_KEY")
-        #     and not os.getenv("OPENAI_BASE_URL") == "https://api.openai.com/v1"
-        # ):
-        #     os.environ["OPENAI_API_KEY"] = "fake"
-
-        # agents = crew.agents if crew else []
-        # agents = [self._sanitize_role(agent.role) for agent in agents]
-        # agents = "_".join(agents)
-        # self.agents = agents
-
-        # config = {
-        #     "app": {
-        #         "config": {"name": type, "collect_metrics": False, "log_level": "ERROR"}
-        #     },
-        #     "chunker": {
-        #         "chunk_size": 5000,
-        #         "chunk_overlap": 100,
-        #         "length_function": "len",
-        #         "min_chunk_size": 150,
-        #     },
-        #     "vectordb": {
-        #         "provider": "chroma",
-        #         "config": {
-        #             "collection_name": type,
-        #             "dir": f"{db_storage_path()}/{type}/{agents}",
-        #             "allow_reset": allow_reset,
-        #         },
-        #     },
-        # }
-
-        # if embedder_config:
-        #     config["embedder"] = embedder_config
-        # self.type = type
-        # self.config = config
+        self.type = type
+        self.embedder_config = embedder_config or self._create_embedding_function()
         self.allow_reset = allow_reset
-        self.app: Any = None  # Initialize app attribute
-        self._initialize_app()  # Call _initialize_app in the constructor
+        self.app: Any = None
+        self._initialize_app()
 
     def _initialize_app(self):
         import chromadb
-        from chromadb.utils.embedding_functions import OpenAIEmbeddingFunction
-        from chromadb.errors import InvalidCollectionException
 
         chroma_client = chromadb.PersistentClient(
             path=f"{db_storage_path()}/{self.type}/{self.agents}"
         )
         self.app = chroma_client
 
-        openai_ef = OpenAIEmbeddingFunction(
-            api_key=os.getenv("OPENAI_API_KEY"), model_name="text-embedding-3-small"
-        )
-
         try:
-            self.collection = self.app.get_collection(name=self.type)
-        except InvalidCollectionException:
+            self.collection = self.app.get_collection(
+                name=self.type, embedding_function=self.embedder_config
+            )
+        except Exception:
             self.collection = self.app.create_collection(
-                name=self.type, embedding_function=openai_ef
+                name=self.type, embedding_function=self.embedder_config
             )
 
     def _sanitize_role(self, role: str) -> str:
@@ -151,3 +116,10 @@ class RAGStorage(BaseRAGStorage):
             raise Exception(
                 f"An error occurred while resetting the {self.type} memory: {e}"
             )
+
+    def _create_embedding_function(self):
+        import chromadb.utils.embedding_functions as embedding_functions
+
+        return embedding_functions.OpenAIEmbeddingFunction(
+            api_key=os.getenv("OPENAI_API_KEY"), model_name="text-embedding-3-small"
+        )

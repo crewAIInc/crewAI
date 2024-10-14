@@ -127,7 +127,7 @@ class Crew(BaseModel):
         description="An Instance of the EntityMemory to be used by the Crew",
     )
     embedder: Optional[dict] = Field(
-        default={"provider": "openai"},
+        default=None,
         description="Configuration for the embedder to be used for the crew.",
     )
     usage_metrics: Optional[UsageMetrics] = Field(
@@ -774,7 +774,9 @@ class Crew(BaseModel):
 
     def _log_task_start(self, task: Task, role: str = "None"):
         if self.output_log_file:
-            self._file_handler.log(task_name=task.name, task=task.description, agent=role, status="started")
+            self._file_handler.log(
+                task_name=task.name, task=task.description, agent=role, status="started"
+            )
 
     def _update_manager_tools(self, task: Task):
         if self.manager_agent:
@@ -796,7 +798,13 @@ class Crew(BaseModel):
     def _process_task_result(self, task: Task, output: TaskOutput) -> None:
         role = task.agent.role if task.agent is not None else "None"
         if self.output_log_file:
-            self._file_handler.log(task_name=task.name, task=task.description, agent=role, status="completed", output=output.raw)
+            self._file_handler.log(
+                task_name=task.name,
+                task=task.description,
+                agent=role,
+                status="completed",
+                output=output.raw,
+            )
 
     def _create_crew_output(self, task_outputs: List[TaskOutput]) -> CrewOutput:
         if len(task_outputs) != 1:
