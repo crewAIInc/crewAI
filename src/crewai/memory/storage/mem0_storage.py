@@ -96,6 +96,7 @@ class Mem0Storage(Storage):
         return None
 
     def _get_agent_name(self):
-        if self.memory_type == "entity":
-            return self._sanitize_role(self.memory_config.get("role"))
-        return self.crew.name or "crew"
+        agents = self.crew.agents if self.crew else []
+        agents = [self._sanitize_role(agent.role) for agent in agents]
+        agents = "_".join(agents)
+        return agents

@@ -6,13 +6,12 @@ from crewai.memory import EntityMemory, LongTermMemory, ShortTermMemory, UserMem
 class ContextualMemory:
     def __init__(
         self,
-        memory_provider: str,
         stm: ShortTermMemory,
         ltm: LongTermMemory,
         em: EntityMemory,
         um: UserMemory,
     ):
-        self.memory_provider = memory_provider
+        self.memory_provider = stm.memory_provider
         self.stm = stm
         self.ltm = ltm
         self.em = em

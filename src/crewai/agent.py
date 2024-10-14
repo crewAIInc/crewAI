@@ -208,7 +208,6 @@ class Agent(BaseAgent):
 
         if self.crew and self.crew.memory:
             contextual_memory = ContextualMemory(
-                self.crew.memory_config["provider"],
                 self.crew._short_term_memory,
                 self.crew._long_term_memory,
                 self.crew._entity_memory,

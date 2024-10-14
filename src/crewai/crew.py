@@ -250,13 +250,11 @@ class Crew(BaseModel):
                 self.short_term_memory
                 if self.short_term_memory
                 else ShortTermMemory(
-                    memory_provider=self.memory_config["provider"],
                     crew=self,
                     embedder_config=self.embedder,
                 )
             )
             self._entity_memory = EntityMemory(
-                memory_provider=self.memory_config["provider"],
                 crew=self,
                 embedder_config=self.embedder,
             )
