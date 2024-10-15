@@ -12,7 +12,7 @@ class EntityMemory(Memory):
     """
 
     def __init__(self, crew=None, embedder_config=None, storage=None):
-        self.memory_provider = crew.memory_config["provider"]
+        self.memory_provider = crew.memory_config.get("provider")
         if self.memory_provider == "mem0":
             storage = Mem0Storage(
                 type="entities",
