@@ -258,9 +258,12 @@ class Crew(BaseModel):
                 crew=self,
                 embedder_config=self.embedder,
             )
-            self._user_memory = (
-                self.user_memory if self.user_memory else UserMemory(crew=self)
-            )
+            if hasattr(self, "memory_config") and self.memory_config is not None:
+                self._user_memory = (
+                    self.user_memory if self.user_memory else UserMemory(crew=self)
+                )
+            else:
+                self._user_memory = None
         return self
 
     @model_validator(mode="after")

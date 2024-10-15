@@ -92,7 +92,10 @@ class Mem0Storage(Storage):
 
     def _get_user_id(self):
         if self.memory_type == "user":
-            return self.memory_config.get("config", {}).get("user_id")
+            if hasattr(self, "memory_config") and self.memory_config is not None:
+                return self.memory_config.get("config", {}).get("user_id")
+            else:
+                return None
         return None
 
     def _get_agent_name(self):

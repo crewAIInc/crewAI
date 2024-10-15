@@ -15,7 +15,11 @@ class ShortTermMemory(Memory):
     """
 
     def __init__(self, crew=None, embedder_config=None, storage=None):
-        self.memory_provider = crew.memory_config.get("provider")
+        if hasattr(crew, "memory_config") and crew.memory_config is not None:
+            self.memory_provider = crew.memory_config.get("provider")
+        else:
+            self.memory_provider = None
+
         if self.memory_provider == "mem0":
             storage = Mem0Storage(type="short_term", crew=crew)
         else:
