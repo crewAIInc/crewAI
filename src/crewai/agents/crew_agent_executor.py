@@ -19,6 +19,7 @@ from crewai.utilities.exceptions.context_window_exceeding_exception import (
 )
 from crewai.utilities.logger import Logger
 from crewai.utilities.training_handler import CrewTrainingHandler
+from crewai.agents.agent_builder.base_agent import BaseAgent
 
 
 class CrewAgentExecutor(CrewAgentExecutorMixin):
@@ -29,7 +30,7 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
         llm: Any,
         task: Any,
         crew: Any,
-        agent: Any,
+        agent: BaseAgent,
         prompt: dict[str, str],
         max_iter: int,
         tools: List[Any],
