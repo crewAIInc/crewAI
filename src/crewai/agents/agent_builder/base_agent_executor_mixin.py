@@ -31,7 +31,6 @@ class CrewAgentExecutorMixin:
 
     def _create_short_term_memory(self, output) -> None:
         """Create and save a short-term memory item if conditions are met."""
-        print("calling _create_short_term_memory", output.text)
         if (
             self.crew
             and self.agent
