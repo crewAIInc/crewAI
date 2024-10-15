@@ -96,13 +96,14 @@ Please ensure your code adheres to our coding standards and includes appropriate
 **Installing Dependencies:**
 
 ```bash
-poetry install
+uv sync
 ```
 
 **Activating Virtual Environment:**
 
 ```bash
-poetry shell
+uv venv
+source .venv/bin/activate
 ```
 
 **Setting Up Pre-commit Hooks:**
@@ -114,19 +115,19 @@ pre-commit install
 **Running Tests:**
 
 ```bash
-poetry run pytest
+uv run pytest
 ```
 
 **Static Type Checking:**
 
 ```bash
-poetry run pyright
+uv run pyright
 ```
 
 **Packaging:**
 
 ```bash
-poetry build
+uv build
 ```
 
 **Local Installation:**
