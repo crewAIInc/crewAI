@@ -99,22 +99,21 @@ class RAGStorage(BaseRAGStorage):
 
         return results
 
-    def _generate_embedding(self, text: str, metadata: Dict[str, Any]) -> None:
+    def _generate_embedding(self, text: str, metadata: Dict[str, Any]) -> None:  # type: ignore
         if not hasattr(self, "app") or not hasattr(self, "collection"):
             self._initialize_app()
 
         self.collection.add(
             documents=[text],
-            metadatas=[metadata],
+            metadatas=[metadata or {}],
             ids=[str(uuid.uuid4())],
         )
 
     def reset(self) -> None:
         try:
             shutil.rmtree(f"{db_storage_path()}/{self.type}")
-            if hasattr(self, "app"):
-                if hasattr(self.app, "ClientAPI"):
-                    self.app.reset()
+            if self.app:
+                self.app.reset()
         except Exception as e:
             raise Exception(
                 f"An error occurred while resetting the {self.type} memory: {e}"
