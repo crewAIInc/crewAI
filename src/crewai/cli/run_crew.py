@@ -2,6 +2,9 @@ import subprocess
 
 import click
 import tomllib
+from packaging import version
+
+from crewai.cli.utils import get_crewai_version
 
 
 def run_crew() -> None:
@@ -9,6 +12,22 @@ def run_crew() -> None:
     Run the crew by running a command in the UV environment.
     """
     command = ["uv", "run", "run_crew"]
+    crewai_version = get_crewai_version()
+    min_required_version = "0.71.0"
+
+    with open("pyproject.toml", "rb") as f:
+        data = tomllib.load(f)
+
+    if data.get("tool", {}).get("poetry") and (
+        version.parse(crewai_version) < version.parse(min_required_version)
+    ):
+        click.secho(
+            f"You are running an older version of crewAI ({crewai_version}) that uses poetry pyproject.toml. "
+            f"Please run `crewai update` to update your pyproject.toml to use uv.",
+            fg="red",
+        )
+        print()
+
     try:
         subprocess.run(command, capture_output=False, text=True, check=True)
 
