@@ -1,8 +1,10 @@
 import warnings
+
 from crewai.agent import Agent
 from crewai.crew import Crew
 from crewai.flow.flow import Flow
 from crewai.llm import LLM
+from crewai.logging.event_logger import EventLogger
 from crewai.pipeline import Pipeline
 from crewai.process import Process
 from crewai.routers import Router

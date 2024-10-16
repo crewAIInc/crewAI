@@ -922,6 +922,9 @@ class Crew(BaseModel):
         serialized_data["agents"] = serialized_agents
         serialized_data["tasks"] = serialized_tasks
 
+        # Include the UUID as a string
+        serialized_data["id"] = str(self.id)
+
         return serialized_data
 
     # TODO: Come back and use the new _serialize method

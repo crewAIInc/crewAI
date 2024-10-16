@@ -215,7 +215,6 @@ class BaseAgent(ABC, BaseModel):
     def serialize(self) -> Dict[str, Any]:
         """Serialize the BaseAgent into a dictionary excluding complex objects."""
 
-        # Define attributes to exclude from serialization
         exclude = {
             "_logger",
             "_rpm_controller",
@@ -229,8 +228,8 @@ class BaseAgent(ABC, BaseModel):
             # Add any other complex attributes that should be excluded
         }
 
-        # Use model_dump or similar to get a dictionary representation
         serialized_data = self.model_dump(exclude=exclude)
+        serialized_data = {k: v for k, v in serialized_data.items() if v is not None}
 
         # Add any additional serialization logic if needed
         serialized_data["role"] = self.role
@@ -239,6 +238,9 @@ class BaseAgent(ABC, BaseModel):
         serialized_data["tools"] = (
             [str(tool) for tool in self.tools] if self.tools else None
         )
+
+        # Include the UUID as a string
+        serialized_data["id"] = str(self.id)
 
         return serialized_data
 

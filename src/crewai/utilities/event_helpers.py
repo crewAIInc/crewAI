@@ -1,14 +1,16 @@
 # event_helpers.py
 
 from datetime import datetime
-from typing import Any, Dict, Optional
+from typing import TYPE_CHECKING, Any, Dict, Optional
 
-from crewai.crew import Crew
 from crewai.utilities.event_emitter import CrewEvents, emit
+
+if TYPE_CHECKING:
+    from crewai.crew import Crew
 
 
 def emit_crew_start(
-    crew: Crew,
+    crew: "Crew",  # Use a forward reference
     inputs: Optional[Dict[str, Any]] = None,
 ) -> None:
     serialized_crew = crew.serialize()
