@@ -92,16 +92,20 @@ class TestPlusAPI(unittest.TestCase):
         )
         self.assertEqual(response, mock_response)
 
-    @patch("crewai.cli.plus_api.requests.request")
-    def test_make_request(self, mock_request):
+    @patch("crewai.cli.plus_api.requests.Session")
+    def test_make_request(self, mock_session):
         mock_response = MagicMock()
-        mock_request.return_value = mock_response
+
+        mock_session_instance = mock_session.return_value
+        mock_session_instance.request.return_value = mock_response
 
         response = self.api._make_request("GET", "test_endpoint")
 
-        mock_request.assert_called_once_with(
+        mock_session.assert_called_once()
+        mock_session_instance.request.assert_called_once_with(
             "GET", f"{self.api.base_url}/test_endpoint", headers=self.api.headers
         )
+        mock_session_instance.trust_env = False
         self.assertEqual(response, mock_response)
 
     @patch("crewai.cli.plus_api.PlusAPI._make_request")
