@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, date
 import json
 from uuid import UUID
 from pydantic import BaseModel
@@ -11,8 +11,9 @@ class CrewJSONEncoder(json.JSONEncoder):
         elif isinstance(obj, UUID):
             return str(obj)
 
-        elif isinstance(obj, datetime):
+        elif isinstance(obj, datetime) or isinstance(obj, date):
             return obj.isoformat()
+
         return super().default(obj)
 
     def _handle_pydantic_model(self, obj):

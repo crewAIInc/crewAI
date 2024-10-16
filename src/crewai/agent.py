@@ -1,17 +1,13 @@
 import os
 from inspect import signature
-from typing import Any, List, Optional, Tuple
+from typing import Any, List, Optional, Union
 
-from langchain.agents.agent import RunnableAgent
-from langchain.agents.tools import BaseTool
-from langchain.agents.tools import tool as LangChainTool
-from langchain_core.agents import AgentAction
-from langchain_core.callbacks import BaseCallbackHandler
-from langchain_openai import ChatOpenAI
 from pydantic import Field, InstanceOf, PrivateAttr, model_validator
 
-from crewai.agents import CacheHandler, CrewAgentExecutor, CrewAgentParser
+from crewai.agents import CacheHandler
 from crewai.agents.agent_builder.base_agent import BaseAgent
+from crewai.agents.crew_agent_executor import CrewAgentExecutor
+from crewai.llm import LLM
 from crewai.memory.contextual.contextual_memory import ContextualMemory
 from crewai.tools.agent_tools import AgentTools
 from crewai.utilities import Converter, Prompts
@@ -34,7 +30,6 @@ agentops = None
 
 if os.environ.get("AGENTOPS_API_KEY"):
     try:
-        import agentops  # type: ignore # Name "agentops" already defined on line 21
         from agentops import track_agent
     except ImportError:
         track_agent = mock_agent_ops_provider()
@@ -64,7 +59,6 @@ class Agent(BaseAgent):
             allow_delegation: Whether the agent is allowed to delegate tasks to other agents.
             tools: Tools at agents disposal
             step_callback: Callback to be executed after each step of the agent execution.
-            callbacks: A list of callback functions from the langchain library that are triggered during the agent's execution process
     """
 
     _times_executed: int = PrivateAttr(default=0)
@@ -81,17 +75,15 @@ class Agent(BaseAgent):
         default=None,
         description="Callback to be executed after each step of the agent execution.",
     )
-    llm: Any = Field(
-        default_factory=lambda: ChatOpenAI(
-            model=os.environ.get("OPENAI_MODEL_NAME", "gpt-4o")
-        ),
-        description="Language model that will run the agent.",
+    use_system_prompt: Optional[bool] = Field(
+        default=True,
+        description="Use system prompt for the agent.",
+    )
+    llm: Union[str, InstanceOf[LLM], Any] = Field(
+        description="Language model that will run the agent.", default=None
     )
     function_calling_llm: Optional[Any] = Field(
         description="Language model that will run the agent.", default=None
-    )
-    callbacks: Optional[List[InstanceOf[BaseCallbackHandler]]] = Field(
-        default=None, description="Callback to be executed"
     )
     system_template: Optional[str] = Field(
         default=None, description="System format for the agent."
@@ -108,6 +100,14 @@ class Agent(BaseAgent):
     allow_code_execution: Optional[bool] = Field(
         default=False, description="Enable code execution for the agent."
     )
+    respect_context_window: bool = Field(
+        default=True,
+        description="Keep messages under the context window size by summarizing content.",
+    )
+    max_iter: int = Field(
+        default=20,
+        description="Maximum number of iterations for an agent to execute a task before giving it's best answer",
+    )
     max_retry_limit: int = Field(
         default=2,
         description="Maximum number of retries for an agent to execute a task when an error occurs.",
@@ -117,36 +117,63 @@ class Agent(BaseAgent):
     def post_init_setup(self):
         self.agent_ops_agent_name = self.role
 
-        # Different llms store the model name in different attributes
-        model_name = getattr(self.llm, "model_name", None) or getattr(
-            self.llm, "deployment_name", None
-        )
+        # Handle different cases for self.llm
+        if isinstance(self.llm, str):
+            # If it's a string, create an LLM instance
+            self.llm = LLM(model=self.llm)
+        elif isinstance(self.llm, LLM):
+            # If it's already an LLM instance, keep it as is
+            pass
+        elif self.llm is None:
+            # If it's None, use environment variables or default
+            model_name = os.environ.get("OPENAI_MODEL_NAME", "gpt-4o-mini")
+            llm_params = {"model": model_name}
 
-        if model_name:
-            self._setup_llm_callbacks(model_name)
+            api_base = os.environ.get("OPENAI_API_BASE") or os.environ.get(
+                "OPENAI_BASE_URL"
+            )
+            if api_base:
+                llm_params["base_url"] = api_base
+
+            api_key = os.environ.get("OPENAI_API_KEY")
+            if api_key:
+                llm_params["api_key"] = api_key
+
+            self.llm = LLM(**llm_params)
+        else:
+            # For any other type, attempt to extract relevant attributes
+            llm_params = {
+                "model": getattr(self.llm, "model_name", None)
+                or getattr(self.llm, "deployment_name", None)
+                or str(self.llm),
+                "temperature": getattr(self.llm, "temperature", None),
+                "max_tokens": getattr(self.llm, "max_tokens", None),
+                "logprobs": getattr(self.llm, "logprobs", None),
+                "timeout": getattr(self.llm, "timeout", None),
+                "max_retries": getattr(self.llm, "max_retries", None),
+                "api_key": getattr(self.llm, "api_key", None),
+                "base_url": getattr(self.llm, "base_url", None),
+                "organization": getattr(self.llm, "organization", None),
+            }
+            # Remove None values to avoid passing unnecessary parameters
+            llm_params = {k: v for k, v in llm_params.items() if v is not None}
+            self.llm = LLM(**llm_params)
+
+        # Similar handling for function_calling_llm
+        if self.function_calling_llm:
+            if isinstance(self.function_calling_llm, str):
+                self.function_calling_llm = LLM(model=self.function_calling_llm)
+            elif not isinstance(self.function_calling_llm, LLM):
+                self.function_calling_llm = LLM(
+                    model=getattr(self.function_calling_llm, "model_name", None)
+                    or getattr(self.function_calling_llm, "deployment_name", None)
+                    or str(self.function_calling_llm)
+                )
 
         if not self.agent_executor:
             self._setup_agent_executor()
 
         return self
-
-    def _setup_llm_callbacks(self, model_name: str):
-        token_handler = TokenCalcHandler(model_name, self._token_process)
-
-        if not isinstance(self.llm.callbacks, list):
-            self.llm.callbacks = []
-
-        if not any(
-            isinstance(handler, TokenCalcHandler) for handler in self.llm.callbacks
-        ):
-            self.llm.callbacks.append(token_handler)
-
-        if agentops and not any(
-            isinstance(handler, agentops.LangchainCallbackHandler)
-            for handler in self.llm.callbacks
-        ):
-            agentops.stop_instrumenting()
-            self.llm.callbacks.append(agentops.LangchainCallbackHandler())
 
     def _setup_agent_executor(self):
         if not self.cache_handler:
@@ -190,15 +217,7 @@ class Agent(BaseAgent):
                 task_prompt += self.i18n.slice("memory").format(memory=memory)
 
         tools = tools or self.tools or []
-        parsed_tools = self._parse_tools(tools)
-        self.create_agent_executor(tools=tools)
-        self.agent_executor.tools = parsed_tools
-        self.agent_executor.task = task
-
-        self.agent_executor.tools_description = self._render_text_description_and_args(
-            parsed_tools
-        )
-        self.agent_executor.tools_names = self.__tools_names(parsed_tools)
+        self.create_agent_executor(tools=tools, task=task)
 
         if self.crew and self.crew._train:
             task_prompt = self._training_handler(task_prompt=task_prompt)
@@ -211,6 +230,7 @@ class Agent(BaseAgent):
                     "input": task_prompt,
                     "tool_names": self.agent_executor.tools_names,
                     "tools": self.agent_executor.tools_description,
+                    "ask_for_human_input": task.human_input,
                 }
             )["output"]
         except Exception as e:
@@ -231,72 +251,24 @@ class Agent(BaseAgent):
 
         return result
 
-    def format_log_to_str(
-        self,
-        intermediate_steps: List[Tuple[AgentAction, str]],
-        observation_prefix: str = "Observation: ",
-        llm_prefix: str = "",
-    ) -> str:
-        """Construct the scratchpad that lets the agent continue its thought process."""
-        thoughts = ""
-        for action, observation in intermediate_steps:
-            thoughts += action.log
-            thoughts += f"\n{observation_prefix}{observation}\n{llm_prefix}"
-        return thoughts
-
-    def create_agent_executor(self, tools=None) -> None:
+    def create_agent_executor(self, tools=None, task=None) -> None:
         """Create an agent executor for the agent.
 
         Returns:
             An instance of the CrewAgentExecutor class.
         """
         tools = tools or self.tools or []
-
-        agent_args = {
-            "input": lambda x: x["input"],
-            "tools": lambda x: x["tools"],
-            "tool_names": lambda x: x["tool_names"],
-            "agent_scratchpad": lambda x: self.format_log_to_str(
-                x["intermediate_steps"]
-            ),
-        }
-
-        executor_args = {
-            "llm": self.llm,
-            "i18n": self.i18n,
-            "crew": self.crew,
-            "crew_agent": self,
-            "tools": self._parse_tools(tools),
-            "verbose": self.verbose,
-            "original_tools": tools,
-            "handle_parsing_errors": True,
-            "max_iterations": self.max_iter,
-            "max_execution_time": self.max_execution_time,
-            "step_callback": self.step_callback,
-            "tools_handler": self.tools_handler,
-            "function_calling_llm": self.function_calling_llm,
-            "callbacks": self.callbacks,
-            "max_tokens": self.max_tokens,
-        }
-
-        if self._rpm_controller:
-            executor_args["request_within_rpm_limit"] = (
-                self._rpm_controller.check_or_wait
-            )
+        parsed_tools = self._parse_tools(tools)
 
         prompt = Prompts(
-            i18n=self.i18n,
+            agent=self,
             tools=tools,
+            i18n=self.i18n,
+            use_system_prompt=self.use_system_prompt,
             system_template=self.system_template,
             prompt_template=self.prompt_template,
             response_template=self.response_template,
         ).task_execution()
-
-        execution_prompt = prompt.partial(
-            goal=self.goal,
-            role=self.role,
-            backstory=self.backstory,
-        )
 
         stop_words = [self.i18n.slice("observation")]
 
@@ -305,11 +277,26 @@ class Agent(BaseAgent):
                 self.response_template.split("{{ .Response }}")[1].strip()
             )
 
-        bind = self.llm.bind(stop=stop_words)
-
-        inner_agent = agent_args | execution_prompt | bind | CrewAgentParser(agent=self)
         self.agent_executor = CrewAgentExecutor(
-            agent=RunnableAgent(runnable=inner_agent), **executor_args
+            llm=self.llm,
+            task=task,
+            agent=self,
+            crew=self.crew,
+            tools=parsed_tools,
+            prompt=prompt,
+            original_tools=tools,
+            stop_words=stop_words,
+            max_iter=self.max_iter,
+            tools_handler=self.tools_handler,
+            tools_names=self.__tools_names(parsed_tools),
+            tools_description=self._render_text_description_and_args(parsed_tools),
+            step_callback=self.step_callback,
+            function_calling_llm=self.function_calling_llm,
+            respect_context_window=self.respect_context_window,
+            request_within_rpm_limit=(
+                self._rpm_controller.check_or_wait if self._rpm_controller else None
+            ),
+            callbacks=[TokenCalcHandler(self._token_process)],
         )
 
     def get_delegation_tools(self, agents: List[BaseAgent]):
@@ -330,7 +317,7 @@ class Agent(BaseAgent):
     def get_output_converter(self, llm, text, model, instructions):
         return Converter(llm=llm, text=text, model=model, instructions=instructions)
 
-    def _parse_tools(self, tools: List[Any]) -> List[LangChainTool]:  # type: ignore # Function "langchain_core.tools.tool" is not valid as a type
+    def _parse_tools(self, tools: List[Any]) -> List[Any]:  # type: ignore
         """Parse tools to be used for the task."""
         tools_list = []
         try:
@@ -358,8 +345,9 @@ class Agent(BaseAgent):
                 human_feedbacks = [
                     i["human_feedback"] for i in data.get(agent_id, {}).values()
                 ]
-                task_prompt += "You MUST follow these feedbacks: \n " + "\n - ".join(
-                    human_feedbacks
+                task_prompt += (
+                    "\n\nYou MUST follow these instructions: \n "
+                    + "\n - ".join(human_feedbacks)
                 )
 
         return task_prompt
@@ -368,12 +356,13 @@ class Agent(BaseAgent):
         """Use trained data for the agent task prompt to improve output."""
         if data := CrewTrainingHandler(TRAINED_AGENTS_DATA_FILE).load():
             if trained_data_output := data.get(self.role):
-                task_prompt += "You MUST follow these feedbacks: \n " + "\n - ".join(
-                    trained_data_output["suggestions"]
+                task_prompt += (
+                    "\n\nYou MUST follow these instructions: \n - "
+                    + "\n - ".join(trained_data_output["suggestions"])
                 )
         return task_prompt
 
-    def _render_text_description(self, tools: List[BaseTool]) -> str:
+    def _render_text_description(self, tools: List[Any]) -> str:
         """Render the tool name and description in plain text.
 
         Output will be in the format of:
@@ -392,7 +381,7 @@ class Agent(BaseAgent):
 
         return description
 
-    def _render_text_description_and_args(self, tools: List[BaseTool]) -> str:
+    def _render_text_description_and_args(self, tools: List[Any]) -> str:
         """Render the tool name, description, and args in plain text.
 
         Output will be in the format of:

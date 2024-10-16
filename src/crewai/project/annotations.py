@@ -1,11 +1,12 @@
 from functools import wraps
+from typing import Callable
 
+from crewai import Crew
 from crewai.project.utils import memoize
 
 
 def task(func):
-    if not hasattr(task, "registration_order"):
-        task.registration_order = []
+    func.is_task = True
 
     @wraps(func)
     def wrapper(*args, **kwargs):
@@ -13,9 +14,6 @@ def task(func):
         if not result.name:
             result.name = func.__name__
         return result
-
-    setattr(wrapper, "is_task", True)
-    task.registration_order.append(func.__name__)
 
     return memoize(wrapper)
 
@@ -72,50 +70,45 @@ def pipeline(func):
     return memoize(func)
 
 
-def crew(func):
-    def wrapper(self, *args, **kwargs):
+def crew(func) -> Callable[..., Crew]:
+    def wrapper(self, *args, **kwargs) -> Crew:
         instantiated_tasks = []
         instantiated_agents = []
-
         agent_roles = set()
-        all_functions = {
-            name: getattr(self, name)
-            for name in dir(self)
-            if callable(getattr(self, name))
-        }
-        tasks = {
-            name: func
-            for name, func in all_functions.items()
-            if hasattr(func, "is_task")
-        }
-        agents = {
-            name: func
-            for name, func in all_functions.items()
-            if hasattr(func, "is_agent")
-        }
 
-        # Sort tasks by their registration order
-        sorted_task_names = sorted(
-            tasks, key=lambda name: task.registration_order.index(name)
-        )
+        # Collect methods from crew in order
+        all_functions = [
+            (name, getattr(self, name))
+            for name, attr in self.__class__.__dict__.items()
+            if callable(attr)
+        ]
+        tasks = [
+            (name, method)
+            for name, method in all_functions
+            if hasattr(method, "is_task")
+        ]
 
-        # Instantiate tasks in the order they were defined
-        for task_name in sorted_task_names:
-            task_instance = tasks[task_name]()
+        agents = [
+            (name, method)
+            for name, method in all_functions
+            if hasattr(method, "is_agent")
+        ]
+
+        # Instantiate tasks in order
+        for task_name, task_method in tasks:
+            task_instance = task_method()
             instantiated_tasks.append(task_instance)
             agent_instance = getattr(task_instance, "agent", None)
-            if agent_instance is not None:
-                agent_instance = task_instance.agent
-                if agent_instance.role not in agent_roles:
-                    instantiated_agents.append(agent_instance)
-                    agent_roles.add(agent_instance.role)
+            if agent_instance and agent_instance.role not in agent_roles:
+                instantiated_agents.append(agent_instance)
+                agent_roles.add(agent_instance.role)
 
-        # Instantiate any additional agents not already included by tasks
-        for agent_name in agents:
-            temp_agent_instance = agents[agent_name]()
-            if temp_agent_instance.role not in agent_roles:
-                instantiated_agents.append(temp_agent_instance)
-                agent_roles.add(temp_agent_instance.role)
+        # Instantiate agents not included by tasks
+        for agent_name, agent_method in agents:
+            agent_instance = agent_method()
+            if agent_instance.role not in agent_roles:
+                instantiated_agents.append(agent_instance)
+                agent_roles.add(agent_instance.role)
 
         self.agents = instantiated_agents
         self.tasks = instantiated_tasks

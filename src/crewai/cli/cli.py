@@ -4,6 +4,7 @@ import click
 import pkg_resources
 
 from crewai.cli.create_crew import create_crew
+from crewai.cli.create_flow import create_flow
 from crewai.cli.create_pipeline import create_pipeline
 from crewai.memory.storage.kickoff_task_outputs_storage import (
     KickoffTaskOutputsSQLiteStorage,
@@ -13,10 +14,14 @@ from .authentication.main import AuthenticationCommand
 from .deploy.main import DeployCommand
 from .evaluate_crew import evaluate_crew
 from .install_crew import install_crew
+from .plot_flow import plot_flow
 from .replay_from_task import replay_task_command
 from .reset_memories_command import reset_memories_command
 from .run_crew import run_crew
+from .run_flow import run_flow
+from .tools.main import ToolCommand
 from .train_crew import train_crew
+from .update_crew import update_crew
 
 
 @click.group()
@@ -25,19 +30,20 @@ def crewai():
 
 
 @crewai.command()
-@click.argument("type", type=click.Choice(["crew", "pipeline"]))
+@click.argument("type", type=click.Choice(["crew", "pipeline", "flow"]))
 @click.argument("name")
-@click.option(
-    "--router", is_flag=True, help="Create a pipeline with router functionality"
-)
-def create(type, name, router):
-    """Create a new crew or pipeline."""
+def create(type, name):
+    """Create a new crew, pipeline, or flow."""
     if type == "crew":
         create_crew(name)
     elif type == "pipeline":
-        create_pipeline(name, router)
+        create_pipeline(name)
+    elif type == "flow":
+        create_flow(name)
     else:
-        click.secho("Error: Invalid type. Must be 'crew' or 'pipeline'.", fg="red")
+        click.secho(
+            "Error: Invalid type. Must be 'crew', 'pipeline', or 'flow'.", fg="red"
+        )
 
 
 @crewai.command()
@@ -184,6 +190,12 @@ def run():
 
 
 @crewai.command()
+def update():
+    """Update the pyproject.toml of the Crew project to use uv."""
+    update_crew()
+
+
+@crewai.command()
 def signup():
     """Sign Up/Login to CrewAI+."""
     AuthenticationCommand().signup()
@@ -199,6 +211,12 @@ def login():
 @crewai.group()
 def deploy():
     """Deploy the Crew CLI group."""
+    pass
+
+
+@crewai.group()
+def tool():
+    """Tool Repository related commands."""
     pass
 
 
@@ -247,6 +265,57 @@ def deploy_remove(uuid: Optional[str]):
     """Remove a deployment."""
     deploy_cmd = DeployCommand()
     deploy_cmd.remove_crew(uuid=uuid)
+
+
+@tool.command(name="create")
+@click.argument("handle")
+def tool_create(handle: str):
+    tool_cmd = ToolCommand()
+    tool_cmd.create(handle)
+
+
+@tool.command(name="install")
+@click.argument("handle")
+def tool_install(handle: str):
+    tool_cmd = ToolCommand()
+    tool_cmd.login()
+    tool_cmd.install(handle)
+
+
+@tool.command(name="publish")
+@click.option(
+    "--force",
+    is_flag=True,
+    show_default=True,
+    default=False,
+    help="Bypasses Git remote validations",
+)
+@click.option("--public", "is_public", flag_value=True, default=False)
+@click.option("--private", "is_public", flag_value=False)
+def tool_publish(is_public: bool, force: bool):
+    tool_cmd = ToolCommand()
+    tool_cmd.login()
+    tool_cmd.publish(is_public, force)
+
+
+@crewai.group()
+def flow():
+    """Flow related commands."""
+    pass
+
+
+@flow.command(name="run")
+def flow_run():
+    """Run the Flow."""
+    click.echo("Running the Flow")
+    run_flow()
+
+
+@flow.command(name="plot")
+def flow_plot():
+    """Plot the Flow."""
+    click.echo("Plotting the Flow")
+    plot_flow()
 
 
 if __name__ == "__main__":

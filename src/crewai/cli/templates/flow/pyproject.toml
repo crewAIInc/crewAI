@@ -1,0 +1,19 @@
+[project]
+name = "{{folder_name}}"
+version = "0.1.0"
+description = "{{name}} using crewAI"
+authors = [{ name = "Your Name", email = "you@example.com" }]
+requires-python = ">=3.10,<=3.13"
+dependencies = [
+    "crewai[tools]>=0.67.1,<1.0.0",
+    "asyncio"
+]
+
+[project.scripts]
+{{folder_name}} = "{{folder_name}}.main:main"
+run_flow = "{{folder_name}}.main:main"
+plot_flow = "{{folder_name}}.main:plot"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
