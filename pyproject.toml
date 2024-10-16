@@ -29,6 +29,7 @@ dependencies = [
     "pyvis>=0.3.2",
     "uv>=0.4.18",
     "tomli-w>=1.1.0",
+    "blinker>=1.8.2",
 ]
 
 [project.urls]

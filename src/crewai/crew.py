@@ -40,6 +40,7 @@ from crewai.utilities.constants import (
 )
 from crewai.utilities.evaluators.crew_evaluator_handler import CrewEvaluator
 from crewai.utilities.evaluators.task_evaluator import TaskEvaluator
+from crewai.utilities.event_helpers import emit_crew_start
 from crewai.utilities.formatter import (
     aggregate_raw_outputs_from_task_outputs,
     aggregate_raw_outputs_from_tasks,
@@ -457,6 +458,7 @@ class Crew(BaseModel):
         inputs: Optional[Dict[str, Any]] = None,
     ) -> CrewOutput:
         """Starts the crew to work on its assigned tasks."""
+        emit_crew_start(self)
         self._execution_span = self._telemetry.crew_execution_span(self, inputs)
         self._task_output_handler.reset()
         self._logging_color = "bold_purple"
@@ -774,7 +776,9 @@ class Crew(BaseModel):
 
     def _log_task_start(self, task: Task, role: str = "None"):
         if self.output_log_file:
-            self._file_handler.log(task_name=task.name, task=task.description, agent=role, status="started")
+            self._file_handler.log(
+                task_name=task.name, task=task.description, agent=role, status="started"
+            )
 
     def _update_manager_tools(self, task: Task):
         if self.manager_agent:
@@ -796,7 +800,13 @@ class Crew(BaseModel):
     def _process_task_result(self, task: Task, output: TaskOutput) -> None:
         role = task.agent.role if task.agent is not None else "None"
         if self.output_log_file:
-            self._file_handler.log(task_name=task.name, task=task.description, agent=role, status="completed", output=output.raw)
+            self._file_handler.log(
+                task_name=task.name,
+                task=task.description,
+                agent=role,
+                status="completed",
+                output=output.raw,
+            )
 
     def _create_crew_output(self, task_outputs: List[TaskOutput]) -> CrewOutput:
         if len(task_outputs) != 1:
@@ -884,6 +894,37 @@ class Crew(BaseModel):
         result = self._execute_tasks(self.tasks, start_index, True)
         return result
 
+    def serialize(self) -> Dict[str, Any]:
+        """Serialize the Crew into a dictionary excluding complex objects."""
+
+        exclude = {
+            "_rpm_controller",
+            "_logger",
+            "_execution_span",
+            "_file_handler",
+            "_cache_handler",
+            "_short_term_memory",
+            "_long_term_memory",
+            "_entity_memory",
+            "_telemetry",
+            "agents",
+            "tasks",
+        }
+
+        # Serialize agents and tasks to a simpler form if needed
+        serialized_agents = [agent.serialize() for agent in self.agents]
+        serialized_tasks = [task.serialize() for task in self.tasks]
+
+        serialized_data = self.model_dump(exclude=exclude)
+        serialized_data = {k: v for k, v in serialized_data.items() if v is not None}
+
+        # Add serialized agents and tasks
+        serialized_data["agents"] = serialized_agents
+        serialized_data["tasks"] = serialized_tasks
+
+        return serialized_data
+
+    # TODO: Come back and use the new _serialize method
     def copy(self):
         """Create a deep copy of the Crew."""
 

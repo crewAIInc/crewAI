@@ -212,6 +212,36 @@ class BaseAgent(ABC, BaseModel):
         """Get the converter class for the agent to create json/pydantic outputs."""
         pass
 
+    def serialize(self) -> Dict[str, Any]:
+        """Serialize the BaseAgent into a dictionary excluding complex objects."""
+
+        # Define attributes to exclude from serialization
+        exclude = {
+            "_logger",
+            "_rpm_controller",
+            "_request_within_rpm_limit",
+            "_token_process",
+            "agent_executor",
+            "cache_handler",
+            "tools_handler",
+            "llm",
+            "crew",
+            # Add any other complex attributes that should be excluded
+        }
+
+        # Use model_dump or similar to get a dictionary representation
+        serialized_data = self.model_dump(exclude=exclude)
+
+        # Add any additional serialization logic if needed
+        serialized_data["role"] = self.role
+        serialized_data["goal"] = self.goal
+        serialized_data["backstory"] = self.backstory
+        serialized_data["tools"] = (
+            [str(tool) for tool in self.tools] if self.tools else None
+        )
+
+        return serialized_data
+
     def copy(self: T) -> T:  # type: ignore # Signature of "copy" incompatible with supertype "BaseModel"
         """Create a deep copy of the Agent."""
         exclude = {

@@ -317,6 +317,35 @@ class Task(BaseModel):
             self.processed_by_agents.add(agent_name)
         self.delegations += 1
 
+    def serialize(self) -> Dict[str, Any]:
+        """Serialize the Task into a dictionary excluding complex objects."""
+
+        # Define attributes to exclude from serialization
+        exclude = {
+            "_telemetry",
+            "_execution_span",
+            "_thread",
+            "_execution_time",
+            "agent",
+            "context",
+            "tools",
+            "output",
+        }
+
+        # Use model_dump or similar to get a dictionary representation
+        serialized_data = self.model_dump(exclude=exclude)
+
+        # Add any additional serialization logic if needed
+        serialized_data["id"] = str(self.id)
+        serialized_data["name"] = self.name
+        serialized_data["description"] = self.description
+        serialized_data["expected_output"] = self.expected_output
+        serialized_data["output_file"] = self.output_file
+        serialized_data["human_input"] = self.human_input
+        serialized_data["processed_by_agents"] = list(self.processed_by_agents)
+
+        return serialized_data
+
     def copy(
         self, agents: List["BaseAgent"], task_mapping: Dict[str, "Task"]
     ) -> "Task":
