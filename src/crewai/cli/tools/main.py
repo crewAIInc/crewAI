@@ -4,6 +4,8 @@ import platform
 import subprocess
 import tempfile
 from pathlib import Path
+from netrc import netrc
+import stat
 
 import click
 from rich.console import Console
@@ -147,7 +149,7 @@ class ToolCommand(BaseCommand, PlusAPIMixin):
 
         if login_response.status_code != 200:
             console.print(
-                "Failed to authenticate to the tool repository. Make sure you have the access to tools.",
+                "Authentication failed. Verify access to the tool repository, or try `crewai login`. ",
                 style="bold red",
             )
             raise SystemExit
@@ -159,23 +161,19 @@ class ToolCommand(BaseCommand, PlusAPIMixin):
             "Successfully authenticated to the tool repository.", style="bold green"
         )
 
-    def _set_netrc_credentials(self, credentials):
-        # Create .netrc or _netrc file
-        netrc_filename = "_netrc" if platform.system() == "Windows" else ".netrc"
-        netrc_path = Path.home() / netrc_filename
+    def _set_netrc_credentials(self, credentials, netrc_path=None):
+        if not netrc_path:
+            netrc_filename = "_netrc" if platform.system() == "Windows" else ".netrc"
+            netrc_path = Path.home() / netrc_filename
+            netrc_path.touch(mode=stat.S_IRUSR | stat.S_IWUSR, exist_ok=True)
 
-        netrc_content = f"""machine app.crewai.com
-login {credentials['username']}
-password {credentials['password']}
-"""
+        netrc_instance = netrc(file=netrc_path)
+        netrc_instance.hosts["app.crewai.com"] = (credentials["username"], "", credentials["password"])
 
-        with open(netrc_path, "a") as netrc_file:
-            netrc_file.write(netrc_content)
+        with open(netrc_path, 'w') as file:
+            file.write(str(netrc_instance))
 
-        # Set appropriate permissions for Unix-like systems
-        if platform.system() != "Windows":
-            os.chmod(netrc_path, 0o600)
-        console.print(f"Added credentials to {netrc_filename}", style="bold green")
+        console.print(f"Added credentials to {netrc_path}", style="bold green")
 
     def _add_package(self, tool_details):
         tool_handle = tool_details["handle"]
