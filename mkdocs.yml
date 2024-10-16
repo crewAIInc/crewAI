@@ -78,14 +78,14 @@ theme:
 
   palette:
     - scheme: default
-      primary: red
-      accent: red
+      primary: deep orange
+      accent: deep orange
       toggle:
         icon: material/brightness-7
         name: Switch to dark mode
     - scheme: slate
-      primary: red
-      accent: red
+      primary: deep orange
+      accent: deep orange
       toggle:
         icon: material/brightness-4
         name: Switch to light mode
@@ -162,7 +162,7 @@ nav:
     - Directory RAG Search: 'tools/DirectorySearchTool.md'
     - Directory Read: 'tools/DirectoryReadTool.md'
     - Docx Rag Search: 'tools/DOCXSearchTool.md'
-    - EXA Serch Web Loader: 'tools/EXASearchTool.md'
+    - EXA Search Web Loader: 'tools/EXASearchTool.md'
     - File Read: 'tools/FileReadTool.md'
     - File Write: 'tools/FileWriteTool.md'
     - Firecrawl Crawl Website Tool: 'tools/FirecrawlCrawlWebsiteTool.md'
@@ -209,7 +209,7 @@ extra:
     provider: google
     property: G-N3Q505TMQ6
   social:
-    - icon: fontawesome/brands/twitter
-      link: https://twitter.com/joaomdmoura
+    - icon: fontawesome/brands/x-twitter
+      link: https://x.com/crewAIInc
     - icon: fontawesome/brands/github
-      link: https://github.com/joaomdmoura/crewAI
+      link: https://github.com/crewAIInc/crewAI

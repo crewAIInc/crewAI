@@ -1,4 +1,3 @@
-from langchain.tools import StructuredTool
 from pydantic import BaseModel, Field
 
 from crewai.agents.cache import CacheHandler
@@ -14,6 +13,8 @@ class CacheTools(BaseModel):
     )
 
     def tool(self):
+        from langchain.tools import StructuredTool
+
         return StructuredTool.from_function(
             func=self.hit_cache,
             name=self.name,

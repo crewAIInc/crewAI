@@ -1,7 +1,6 @@
 from unittest.mock import patch
 
 import pytest
-from langchain_openai import ChatOpenAI
 
 from crewai.agent import Agent
 from crewai.task import Task
@@ -44,7 +43,7 @@ class TestCrewPlanner:
                 agent=Agent(role="Agent 1", goal="Goal 1", backstory="Backstory 1"),
             )
         ]
-        planning_agent_llm = ChatOpenAI(model="gpt-3.5-turbo")
+        planning_agent_llm = "gpt-3.5-turbo"
         return CrewPlanner(tasks, planning_agent_llm)
 
     def test_handle_crew_planning(self, crew_planner):
@@ -62,7 +61,7 @@ class TestCrewPlanner:
                 ),
             )
             result = crew_planner._handle_crew_planning()
-            assert crew_planner.planning_agent_llm.model_name == "gpt-4o-mini"
+            assert crew_planner.planning_agent_llm == "gpt-4o-mini"
             assert isinstance(result, PlannerTaskPydanticOutput)
             assert len(result.list_of_plans_per_task) == len(crew_planner.tasks)
             execute.assert_called_once()
@@ -106,10 +105,7 @@ class TestCrewPlanner:
             )
             result = crew_planner_different_llm._handle_crew_planning()
 
-            assert (
-                crew_planner_different_llm.planning_agent_llm.model_name
-                == "gpt-3.5-turbo"
-            )
+            assert crew_planner_different_llm.planning_agent_llm == "gpt-3.5-turbo"
             assert isinstance(result, PlannerTaskPydanticOutput)
             assert len(result.list_of_plans_per_task) == len(
                 crew_planner_different_llm.tasks

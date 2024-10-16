@@ -6,7 +6,7 @@ import uuid
 from concurrent.futures import Future
 from copy import copy
 from hashlib import md5
-from typing import Any, Dict, List, Optional, Tuple, Type, Union
+from typing import Any, Dict, List, Optional, Set, Tuple, Type, Union
 
 from opentelemetry.trace import Span
 from pydantic import (
@@ -108,6 +108,7 @@ class Task(BaseModel):
         description="A converter class used to export structured output",
         default=None,
     )
+    processed_by_agents: Set[str] = Field(default_factory=set)
 
     _telemetry: Telemetry = PrivateAttr(default_factory=Telemetry)
     _execution_span: Optional[Span] = PrivateAttr(default=None)
@@ -241,6 +242,8 @@ class Task(BaseModel):
         self.prompt_context = context
         tools = tools or self.tools or []
 
+        self.processed_by_agents.add(agent.role)
+
         result = agent.execute_task(
             task=self,
             context=context,
@@ -273,9 +276,7 @@ class Task(BaseModel):
             content = (
                 json_output
                 if json_output
-                else pydantic_output.model_dump_json()
-                if pydantic_output
-                else result
+                else pydantic_output.model_dump_json() if pydantic_output else result
             )
             self._save_file(content)
 
@@ -310,11 +311,15 @@ class Task(BaseModel):
         """Increment the tools errors counter."""
         self.tools_errors += 1
 
-    def increment_delegations(self) -> None:
+    def increment_delegations(self, agent_name: Optional[str]) -> None:
         """Increment the delegations counter."""
+        if agent_name:
+            self.processed_by_agents.add(agent_name)
         self.delegations += 1
 
-    def copy(self, agents: List["BaseAgent"]) -> "Task":
+    def copy(
+        self, agents: List["BaseAgent"], task_mapping: Dict[str, "Task"]
+    ) -> "Task":
         """Create a deep copy of the Task."""
         exclude = {
             "id",
@@ -327,7 +332,9 @@ class Task(BaseModel):
         copied_data = {k: v for k, v in copied_data.items() if v is not None}
 
         cloned_context = (
-            [task.copy(agents) for task in self.context] if self.context else None
+            [task_mapping[context_task.key] for context_task in self.context]
+            if self.context
+            else None
         )
 
         def get_agent_by_role(role: str) -> Union["BaseAgent", None]:

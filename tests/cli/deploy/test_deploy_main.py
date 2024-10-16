@@ -1,44 +1,101 @@
+import sys
 import unittest
 from io import StringIO
-from unittest.mock import MagicMock, patch
-import sys
+from unittest.mock import MagicMock, Mock, patch
+
+import pytest
+import requests
+from requests.exceptions import JSONDecodeError
 
 from crewai.cli.deploy.main import DeployCommand
-from crewai.cli.deploy.utils import parse_toml
+from crewai.cli.utils import parse_toml
+
 
 class TestDeployCommand(unittest.TestCase):
-    @patch("crewai.cli.deploy.main.get_auth_token")
+    @patch("crewai.cli.command.get_auth_token")
     @patch("crewai.cli.deploy.main.get_project_name")
-    @patch("crewai.cli.deploy.main.CrewAPI")
-    def setUp(self, mock_crew_api, mock_get_project_name, mock_get_auth_token):
+    @patch("crewai.cli.command.PlusAPI")
+    def setUp(self, mock_plus_api, mock_get_project_name, mock_get_auth_token):
         self.mock_get_auth_token = mock_get_auth_token
         self.mock_get_project_name = mock_get_project_name
-        self.mock_crew_api = mock_crew_api
+        self.mock_plus_api = mock_plus_api
 
         self.mock_get_auth_token.return_value = "test_token"
         self.mock_get_project_name.return_value = "test_project"
 
         self.deploy_command = DeployCommand()
-        self.mock_client = self.deploy_command.client
+        self.mock_client = self.deploy_command.plus_api_client
 
     def test_init_success(self):
         self.assertEqual(self.deploy_command.project_name, "test_project")
-        self.mock_crew_api.assert_called_once_with(api_key="test_token")
+        self.mock_plus_api.assert_called_once_with(api_key="test_token")
 
-    @patch("crewai.cli.deploy.main.get_auth_token")
+    @patch("crewai.cli.command.get_auth_token")
     def test_init_failure(self, mock_get_auth_token):
         mock_get_auth_token.side_effect = Exception("Auth failed")
 
         with self.assertRaises(SystemExit):
             DeployCommand()
 
-    def test_handle_error(self):
+    def test_validate_response_successful_response(self):
+        mock_response = Mock(spec=requests.Response)
+        mock_response.json.return_value = {"message": "Success"}
+        mock_response.status_code = 200
+        mock_response.ok = True
+
         with patch("sys.stdout", new=StringIO()) as fake_out:
-            self.deploy_command._handle_error(
-                {"error": "Test error", "message": "Test message"}
+            self.deploy_command._validate_response(mock_response)
+            assert fake_out.getvalue() == ""
+
+    def test_validate_response_json_decode_error(self):
+        mock_response = Mock(spec=requests.Response)
+        mock_response.json.side_effect = JSONDecodeError("Decode error", "", 0)
+        mock_response.status_code = 500
+        mock_response.content = b"Invalid JSON"
+
+        with patch("sys.stdout", new=StringIO()) as fake_out:
+            with pytest.raises(SystemExit):
+                self.deploy_command._validate_response(mock_response)
+            output = fake_out.getvalue()
+            assert (
+                "Failed to parse response from Enterprise API failed. Details:"
+                in output
             )
-            self.assertIn("Error: Test error", fake_out.getvalue())
-            self.assertIn("Message: Test message", fake_out.getvalue())
+            assert "Status Code: 500" in output
+            assert "Response:\nb'Invalid JSON'" in output
+
+    def test_validate_response_422_error(self):
+        mock_response = Mock(spec=requests.Response)
+        mock_response.json.return_value = {
+            "field1": ["Error message 1"],
+            "field2": ["Error message 2"],
+        }
+        mock_response.status_code = 422
+        mock_response.ok = False
+
+        with patch("sys.stdout", new=StringIO()) as fake_out:
+            with pytest.raises(SystemExit):
+                self.deploy_command._validate_response(mock_response)
+            output = fake_out.getvalue()
+            assert (
+                "Failed to complete operation. Please fix the following errors:"
+                in output
+            )
+            assert "Field1 Error message 1" in output
+            assert "Field2 Error message 2" in output
+
+    def test_validate_response_other_error(self):
+        mock_response = Mock(spec=requests.Response)
+        mock_response.json.return_value = {"error": "Something went wrong"}
+        mock_response.status_code = 500
+        mock_response.ok = False
+
+        with patch("sys.stdout", new=StringIO()) as fake_out:
+            with pytest.raises(SystemExit):
+                self.deploy_command._validate_response(mock_response)
+            output = fake_out.getvalue()
+            assert "Request to Enterprise API failed. Details:" in output
+            assert "Details:\nSomething went wrong" in output
 
     def test_standard_no_param_error_message(self):
         with patch("sys.stdout", new=StringIO()) as fake_out:
@@ -86,11 +143,11 @@ class TestDeployCommand(unittest.TestCase):
         mock_display.assert_called_once_with({"uuid": "test-uuid"})
 
     @patch("crewai.cli.deploy.main.fetch_and_json_env_file")
-    @patch("crewai.cli.deploy.main.get_git_remote_url")
+    @patch("crewai.cli.deploy.main.git.Repository.origin_url")
     @patch("builtins.input")
-    def test_create_crew(self, mock_input, mock_get_git_remote_url, mock_fetch_env):
+    def test_create_crew(self, mock_input, mock_git_origin_url, mock_fetch_env):
         mock_fetch_env.return_value = {"ENV_VAR": "value"}
-        mock_get_git_remote_url.return_value = "https://github.com/test/repo.git"
+        mock_git_origin_url.return_value = "https://github.com/test/repo.git"
         mock_input.return_value = ""
 
         mock_response = MagicMock()
@@ -121,7 +178,7 @@ class TestDeployCommand(unittest.TestCase):
         mock_response = MagicMock()
         mock_response.status_code = 200
         mock_response.json.return_value = {"name": "TestCrew", "status": "active"}
-        self.mock_client.status_by_name.return_value = mock_response
+        self.mock_client.crew_status_by_name.return_value = mock_response
 
         with patch("sys.stdout", new=StringIO()) as fake_out:
             self.deploy_command.get_crew_status()
@@ -135,7 +192,7 @@ class TestDeployCommand(unittest.TestCase):
             {"timestamp": "2023-01-01", "level": "INFO", "message": "Log1"},
             {"timestamp": "2023-01-02", "level": "ERROR", "message": "Log2"},
         ]
-        self.mock_client.logs_by_name.return_value = mock_response
+        self.mock_client.crew_by_name.return_value = mock_response
 
         with patch("sys.stdout", new=StringIO()) as fake_out:
             self.deploy_command.get_crew_logs(None)
@@ -145,7 +202,7 @@ class TestDeployCommand(unittest.TestCase):
     def test_remove_crew(self):
         mock_response = MagicMock()
         mock_response.status_code = 204
-        self.mock_client.delete_by_name.return_value = mock_response
+        self.mock_client.delete_crew_by_name.return_value = mock_response
 
         with patch("sys.stdout", new=StringIO()) as fake_out:
             self.deploy_command.remove_crew(None)
@@ -165,55 +222,44 @@ class TestDeployCommand(unittest.TestCase):
         crewai = { extras = ["tools"], version = ">=0.51.0,<1.0.0" }
         """
         parsed = parse_toml(toml_content)
-        self.assertEqual(parsed['tool']['poetry']['name'], 'test_project')
+        self.assertEqual(parsed["tool"]["poetry"]["name"], "test_project")
 
-    @patch('builtins.open', new_callable=unittest.mock.mock_open, read_data="""
-    [tool.poetry]
+    @patch(
+        "builtins.open",
+        new_callable=unittest.mock.mock_open,
+        read_data="""
+    [project]
     name = "test_project"
     version = "0.1.0"
-
-    [tool.poetry.dependencies]
-    python = "^3.10"
-    crewai = { extras = ["tools"], version = ">=0.51.0,<1.0.0" }
-    """)
+    requires-python = ">=3.10,<=3.13"
+    dependencies = ["crewai"]
+    """,
+    )
     def test_get_project_name_python_310(self, mock_open):
-        from crewai.cli.deploy.utils import get_project_name
+        from crewai.cli.utils import get_project_name
+
         project_name = get_project_name()
-        self.assertEqual(project_name, 'test_project')
+        self.assertEqual(project_name, "test_project")
 
     @unittest.skipIf(sys.version_info < (3, 11), "Requires Python 3.11+")
-    @patch('builtins.open', new_callable=unittest.mock.mock_open, read_data="""
-    [tool.poetry]
+    @patch(
+        "builtins.open",
+        new_callable=unittest.mock.mock_open,
+        read_data="""
+    [project]
     name = "test_project"
     version = "0.1.0"
-
-    [tool.poetry.dependencies]
-    python = "^3.11"
-    crewai = { extras = ["tools"], version = ">=0.51.0,<1.0.0" }
-    """)
+    requires-python = ">=3.10,<=3.13"
+    dependencies = ["crewai"]
+    """,
+    )
     def test_get_project_name_python_311_plus(self, mock_open):
-        from crewai.cli.deploy.utils import get_project_name
+        from crewai.cli.utils import get_project_name
+
         project_name = get_project_name()
-        self.assertEqual(project_name, 'test_project')
+        self.assertEqual(project_name, "test_project")
 
-    @patch('builtins.open', new_callable=unittest.mock.mock_open, read_data="""
-    [[package]]
-    name = "crewai"
-    version = "0.51.1"
-    description = "Some description"
-    category = "main"
-    optional = false
-    python-versions = ">=3.10,<4.0"
-    """)
-    def test_get_crewai_version(self, mock_open):
-        from crewai.cli.deploy.utils import get_crewai_version
-        version = get_crewai_version()
-        self.assertEqual(version, '0.51.1')
+    def test_get_crewai_version(self):
+        from crewai.cli.utils import get_crewai_version
 
-    @patch('builtins.open', side_effect=FileNotFoundError)
-    def test_get_crewai_version_file_not_found(self, mock_open):
-        from crewai.cli.deploy.utils import get_crewai_version
-        with patch('sys.stdout', new=StringIO()) as fake_out:
-            version = get_crewai_version()
-            self.assertEqual(version, 'no-version-found')
-            self.assertIn("Error: poetry.lock not found.", fake_out.getvalue())
+        assert isinstance(get_crewai_version(), str)

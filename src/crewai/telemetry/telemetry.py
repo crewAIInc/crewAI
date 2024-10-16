@@ -4,15 +4,28 @@ import asyncio
 import json
 import os
 import platform
+import warnings
+from contextlib import contextmanager
 from typing import TYPE_CHECKING, Any, Optional
 
-import pkg_resources
-from opentelemetry import trace
-from opentelemetry.exporter.otlp.proto.http.trace_exporter import OTLPSpanExporter
-from opentelemetry.sdk.resources import SERVICE_NAME, Resource
-from opentelemetry.sdk.trace import TracerProvider
-from opentelemetry.sdk.trace.export import BatchSpanProcessor
-from opentelemetry.trace import Span, Status, StatusCode
+
+@contextmanager
+def suppress_warnings():
+    with warnings.catch_warnings():
+        warnings.filterwarnings("ignore")
+        yield
+
+
+with suppress_warnings():
+    import pkg_resources
+
+
+from opentelemetry import trace  # noqa: E402
+from opentelemetry.exporter.otlp.proto.http.trace_exporter import OTLPSpanExporter  # noqa: E402
+from opentelemetry.sdk.resources import SERVICE_NAME, Resource  # noqa: E402
+from opentelemetry.sdk.trace import TracerProvider  # noqa: E402
+from opentelemetry.sdk.trace.export import BatchSpanProcessor  # noqa: E402
+from opentelemetry.trace import Span, Status, StatusCode  # noqa: E402
 
 if TYPE_CHECKING:
     from crewai.crew import Crew
@@ -40,7 +53,8 @@ class Telemetry:
             self.resource = Resource(
                 attributes={SERVICE_NAME: "crewAI-telemetry"},
             )
-            self.provider = TracerProvider(resource=self.resource)
+            with suppress_warnings():
+                self.provider = TracerProvider(resource=self.resource)
 
             processor = BatchSpanProcessor(
                 OTLPSpanExporter(
@@ -62,8 +76,9 @@ class Telemetry:
     def set_tracer(self):
         if self.ready and not self.trace_set:
             try:
-                trace.set_tracer_provider(self.provider)
-                self.trace_set = True
+                with suppress_warnings():
+                    trace.set_tracer_provider(self.provider)
+                    self.trace_set = True
             except Exception:
                 self.ready = False
                 self.trace_set = False
@@ -102,14 +117,12 @@ class Telemetry:
                                     "max_iter": agent.max_iter,
                                     "max_rpm": agent.max_rpm,
                                     "i18n": agent.i18n.prompt_file,
-                                    "function_calling_llm": json.dumps(
-                                        self._safe_llm_attributes(
-                                            agent.function_calling_llm
-                                        )
+                                    "function_calling_llm": (
+                                        agent.function_calling_llm.model
+                                        if agent.function_calling_llm
+                                        else ""
                                     ),
-                                    "llm": json.dumps(
-                                        self._safe_llm_attributes(agent.llm)
-                                    ),
+                                    "llm": agent.llm.model,
                                     "delegation_enabled?": agent.allow_delegation,
                                     "allow_code_execution?": agent.allow_code_execution,
                                     "max_retry_limit": agent.max_retry_limit,
@@ -134,9 +147,9 @@ class Telemetry:
                                     "expected_output": task.expected_output,
                                     "async_execution?": task.async_execution,
                                     "human_input?": task.human_input,
-                                    "agent_role": task.agent.role
-                                    if task.agent
-                                    else "None",
+                                    "agent_role": (
+                                        task.agent.role if task.agent else "None"
+                                    ),
                                     "agent_key": task.agent.key if task.agent else None,
                                     "context": (
                                         [task.description for task in task.context]
@@ -173,14 +186,12 @@ class Telemetry:
                                     "verbose?": agent.verbose,
                                     "max_iter": agent.max_iter,
                                     "max_rpm": agent.max_rpm,
-                                    "function_calling_llm": json.dumps(
-                                        self._safe_llm_attributes(
-                                            agent.function_calling_llm
-                                        )
+                                    "function_calling_llm": (
+                                        agent.function_calling_llm.model
+                                        if agent.function_calling_llm
+                                        else ""
                                     ),
-                                    "llm": json.dumps(
-                                        self._safe_llm_attributes(agent.llm)
-                                    ),
+                                    "llm": agent.llm.model,
                                     "delegation_enabled?": agent.allow_delegation,
                                     "allow_code_execution?": agent.allow_code_execution,
                                     "max_retry_limit": agent.max_retry_limit,
@@ -203,9 +214,9 @@ class Telemetry:
                                     "id": str(task.id),
                                     "async_execution?": task.async_execution,
                                     "human_input?": task.human_input,
-                                    "agent_role": task.agent.role
-                                    if task.agent
-                                    else "None",
+                                    "agent_role": (
+                                        task.agent.role if task.agent else "None"
+                                    ),
                                     "agent_key": task.agent.key if task.agent else None,
                                     "tools_names": [
                                         tool.name.casefold()
@@ -294,9 +305,7 @@ class Telemetry:
                 self._add_attribute(span, "tool_name", tool_name)
                 self._add_attribute(span, "attempts", attempts)
                 if llm:
-                    self._add_attribute(
-                        span, "llm", json.dumps(self._safe_llm_attributes(llm))
-                    )
+                    self._add_attribute(span, "llm", llm.model)
                 span.set_status(Status(StatusCode.OK))
                 span.end()
             except Exception:
@@ -316,9 +325,7 @@ class Telemetry:
                 self._add_attribute(span, "tool_name", tool_name)
                 self._add_attribute(span, "attempts", attempts)
                 if llm:
-                    self._add_attribute(
-                        span, "llm", json.dumps(self._safe_llm_attributes(llm))
-                    )
+                    self._add_attribute(span, "llm", llm.model)
                 span.set_status(Status(StatusCode.OK))
                 span.end()
             except Exception:
@@ -336,9 +343,7 @@ class Telemetry:
                     pkg_resources.get_distribution("crewai").version,
                 )
                 if llm:
-                    self._add_attribute(
-                        span, "llm", json.dumps(self._safe_llm_attributes(llm))
-                    )
+                    self._add_attribute(span, "llm", llm.model)
                 span.set_status(Status(StatusCode.OK))
                 span.end()
             except Exception:
@@ -491,7 +496,7 @@ class Telemetry:
                                 "max_iter": agent.max_iter,
                                 "max_rpm": agent.max_rpm,
                                 "i18n": agent.i18n.prompt_file,
-                                "llm": json.dumps(self._safe_llm_attributes(agent.llm)),
+                                "llm": agent.llm.model,
                                 "delegation_enabled?": agent.allow_delegation,
                                 "tools_names": [
                                     tool.name.casefold() for tool in agent.tools or []
@@ -568,10 +573,37 @@ class Telemetry:
         except Exception:
             pass
 
-    def _safe_llm_attributes(self, llm):
-        attributes = ["name", "model_name", "model", "top_k", "temperature"]
-        if llm:
-            safe_attributes = {k: v for k, v in vars(llm).items() if k in attributes}
-            safe_attributes["class"] = llm.__class__.__name__
-            return safe_attributes
-        return {}
+    def flow_creation_span(self, flow_name: str):
+        if self.ready:
+            try:
+                tracer = trace.get_tracer("crewai.telemetry")
+                span = tracer.start_span("Flow Creation")
+                self._add_attribute(span, "flow_name", flow_name)
+                span.set_status(Status(StatusCode.OK))
+                span.end()
+            except Exception:
+                pass
+
+    def flow_plotting_span(self, flow_name: str, node_names: list[str]):
+        if self.ready:
+            try:
+                tracer = trace.get_tracer("crewai.telemetry")
+                span = tracer.start_span("Flow Plotting")
+                self._add_attribute(span, "flow_name", flow_name)
+                self._add_attribute(span, "node_names", json.dumps(node_names))
+                span.set_status(Status(StatusCode.OK))
+                span.end()
+            except Exception:
+                pass
+
+    def flow_execution_span(self, flow_name: str, node_names: list[str]):
+        if self.ready:
+            try:
+                tracer = trace.get_tracer("crewai.telemetry")
+                span = tracer.start_span("Flow Execution")
+                self._add_attribute(span, "flow_name", flow_name)
+                self._add_attribute(span, "node_names", json.dumps(node_names))
+                span.set_status(Status(StatusCode.OK))
+                span.end()
+            except Exception:
+                pass

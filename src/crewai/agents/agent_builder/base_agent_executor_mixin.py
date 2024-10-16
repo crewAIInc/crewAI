@@ -6,6 +6,7 @@ from crewai.memory.long_term.long_term_memory_item import LongTermMemoryItem
 from crewai.utilities.converter import ConverterError
 from crewai.utilities.evaluators.task_evaluator import TaskEvaluator
 from crewai.utilities import I18N
+from crewai.utilities.printer import Printer
 
 
 if TYPE_CHECKING:
@@ -19,15 +20,14 @@ class CrewAgentExecutorMixin:
     crew_agent: Optional["BaseAgent"]
     task: Optional["Task"]
     iterations: int
-    force_answer_max_iterations: int
     have_forced_answer: bool
+    max_iter: int
     _i18n: I18N
+    _printer: Printer = Printer()
 
     def _should_force_answer(self) -> bool:
         """Determine if a forced answer is required based on iteration count."""
-        return (
-            self.iterations == self.force_answer_max_iterations
-        ) and not self.have_forced_answer
+        return (self.iterations >= self.max_iter) and not self.have_forced_answer
 
     def _create_short_term_memory(self, output) -> None:
         """Create and save a short-term memory item if conditions are met."""
@@ -102,6 +102,12 @@ class CrewAgentExecutorMixin:
 
     def _ask_human_input(self, final_answer: dict) -> str:
         """Prompt human input for final decision making."""
-        return input(
-            self._i18n.slice("getting_input").format(final_answer=final_answer)
+        self._printer.print(
+            content=f"\033[1m\033[95m ## Final Result:\033[00m \033[92m{final_answer}\033[00m"
         )
+
+        self._printer.print(
+            content="\n\n=====\n## Please provide feedback on the Final Result and the Agent's actions:",
+            color="bold_yellow",
+        )
+        return input()
