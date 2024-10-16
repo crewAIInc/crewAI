@@ -59,7 +59,7 @@ class ToolUsage:
         agent: Any,
         action: Any,
     ) -> None:
-        self._i18n: I18N = I18N()
+        self._i18n: I18N = agent.i18n
         self._printer: Printer = Printer()
         self._telemetry: Telemetry = Telemetry()
         self._run_attempts: int = 1
