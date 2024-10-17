@@ -40,7 +40,11 @@ from crewai.utilities.constants import (
 )
 from crewai.utilities.evaluators.crew_evaluator_handler import CrewEvaluator
 from crewai.utilities.evaluators.task_evaluator import TaskEvaluator
-from crewai.utilities.event_helpers import emit_crew_start
+from crewai.utilities.event_helpers import (
+    emit_crew_start,
+    emit_task_finish,
+    emit_task_start,
+)
 from crewai.utilities.formatter import (
     aggregate_raw_outputs_from_task_outputs,
     aggregate_raw_outputs_from_tasks,
@@ -87,9 +91,9 @@ class Crew(BaseModel):
     """
 
     __hash__ = object.__hash__  # type: ignore
-    _execution_span: Any = PrivateAttr()
     _rpm_controller: RPMController = PrivateAttr()
     _logger: Logger = PrivateAttr()
+    # TODO: MAKE THIS ALSO USE EVENT EMITTER
     _file_handler: FileHandler = PrivateAttr()
     _cache_handler: InstanceOf[CacheHandler] = PrivateAttr(default=CacheHandler())
     _short_term_memory: Optional[InstanceOf[ShortTermMemory]] = PrivateAttr()
@@ -101,6 +105,7 @@ class Crew(BaseModel):
     _logging_color: str = PrivateAttr(
         default="bold_purple",
     )
+    # TODO: Figure out how to make this reference event emitter.
     _task_output_handler: TaskOutputStorageHandler = PrivateAttr(
         default_factory=TaskOutputStorageHandler
     )
@@ -458,8 +463,7 @@ class Crew(BaseModel):
         inputs: Optional[Dict[str, Any]] = None,
     ) -> CrewOutput:
         """Starts the crew to work on its assigned tasks."""
-        emit_crew_start(self)
-        self._execution_span = self._telemetry.crew_execution_span(self, inputs)
+        emit_crew_start(self, inputs)
         self._task_output_handler.reset()
         self._logging_color = "bold_purple"
 
@@ -505,6 +509,8 @@ class Crew(BaseModel):
         self.usage_metrics = UsageMetrics()
         for metric in metrics:
             self.usage_metrics.add_usage_metrics(metric)
+
+        # TODO: ADD CREW FINISH EVENT
 
         return result
 
@@ -669,7 +675,9 @@ class Crew(BaseModel):
                 )
 
             self._prepare_agent_tools(task)
-            self._log_task_start(task, agent_to_use.role)
+            emit_task_start(task, agent_to_use.role)
+            # TODO: ADD ELSEWHERE
+            # self._log_task_start(task, agent_to_use.role)
 
             if isinstance(task, ConditionalTask):
                 skipped_task_output = self._handle_conditional_task(
@@ -700,8 +708,17 @@ class Crew(BaseModel):
                     tools=agent_to_use.tools,
                 )
                 task_outputs = [task_output]
-                self._process_task_result(task, task_output)
-                self._store_execution_log(task, task_output, task_index, was_replayed)
+
+                emit_task_finish(
+                    task,
+                    self._inputs if self._inputs else {},
+                    task_output,
+                    task_index,
+                    was_replayed,
+                )
+                # TODO: ADD ELSEWHERE
+                # self._process_task_result(task, task_output)
+                # self._store_execution_log(task, task_output, task_index, was_replayed)
 
         if futures:
             task_outputs = self._process_async_tasks(futures, was_replayed)

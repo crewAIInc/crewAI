@@ -6,7 +6,7 @@ import os
 import platform
 import warnings
 from contextlib import contextmanager
-from typing import TYPE_CHECKING, Any, Optional
+from typing import TYPE_CHECKING, Any, Dict, Optional
 
 
 @contextmanager
@@ -21,11 +21,15 @@ with suppress_warnings():
 
 
 from opentelemetry import trace  # noqa: E402
-from opentelemetry.exporter.otlp.proto.http.trace_exporter import OTLPSpanExporter  # noqa: E402
+from opentelemetry.exporter.otlp.proto.http.trace_exporter import (
+    OTLPSpanExporter,  # noqa: E402
+)
 from opentelemetry.sdk.resources import SERVICE_NAME, Resource  # noqa: E402
 from opentelemetry.sdk.trace import TracerProvider  # noqa: E402
 from opentelemetry.sdk.trace.export import BatchSpanProcessor  # noqa: E402
 from opentelemetry.trace import Span, Status, StatusCode  # noqa: E402
+
+from crewai.utilities.event_emitter import CrewEvents, crew_events
 
 if TYPE_CHECKING:
     from crewai.crew import Crew
@@ -83,87 +87,37 @@ class Telemetry:
                 self.ready = False
                 self.trace_set = False
 
-    def crew_creation(self, crew: Crew, inputs: dict[str, Any] | None):
+    def crew_creation(
+        self, crew_data: Dict[str, Any], inputs: Optional[Dict[str, Any]] = None
+    ):
         """Records the creation of a crew."""
         if self.ready:
             try:
                 tracer = trace.get_tracer("crewai.telemetry")
                 span = tracer.start_span("Crew Created")
+
+                # Accessing data from the serialized crew dictionary
                 self._add_attribute(
-                    span,
-                    "crewai_version",
-                    pkg_resources.get_distribution("crewai").version,
+                    span, "crewai_version", crew_data.get("crewai_version")
                 )
                 self._add_attribute(span, "python_version", platform.python_version())
-                self._add_attribute(span, "crew_key", crew.key)
-                self._add_attribute(span, "crew_id", str(crew.id))
-                self._add_attribute(span, "crew_process", crew.process)
-                self._add_attribute(span, "crew_memory", crew.memory)
-                self._add_attribute(span, "crew_number_of_tasks", len(crew.tasks))
-                self._add_attribute(span, "crew_number_of_agents", len(crew.agents))
-                if crew.share_crew:
+                self._add_attribute(span, "crew_key", crew_data.get("key"))
+                self._add_attribute(span, "crew_id", crew_data.get("id"))
+                self._add_attribute(span, "crew_process", crew_data.get("process"))
+                self._add_attribute(span, "crew_memory", crew_data.get("memory"))
+                self._add_attribute(
+                    span, "crew_number_of_tasks", len(crew_data.get("tasks", []))
+                )
+                self._add_attribute(
+                    span, "crew_number_of_agents", len(crew_data.get("agents", []))
+                )
+
+                if crew_data.get("share_crew"):
                     self._add_attribute(
-                        span,
-                        "crew_agents",
-                        json.dumps(
-                            [
-                                {
-                                    "key": agent.key,
-                                    "id": str(agent.id),
-                                    "role": agent.role,
-                                    "goal": agent.goal,
-                                    "backstory": agent.backstory,
-                                    "verbose?": agent.verbose,
-                                    "max_iter": agent.max_iter,
-                                    "max_rpm": agent.max_rpm,
-                                    "i18n": agent.i18n.prompt_file,
-                                    "function_calling_llm": (
-                                        agent.function_calling_llm.model
-                                        if agent.function_calling_llm
-                                        else ""
-                                    ),
-                                    "llm": agent.llm.model,
-                                    "delegation_enabled?": agent.allow_delegation,
-                                    "allow_code_execution?": agent.allow_code_execution,
-                                    "max_retry_limit": agent.max_retry_limit,
-                                    "tools_names": [
-                                        tool.name.casefold()
-                                        for tool in agent.tools or []
-                                    ],
-                                }
-                                for agent in crew.agents
-                            ]
-                        ),
+                        span, "crew_agents", json.dumps(crew_data.get("agents", []))
                     )
                     self._add_attribute(
-                        span,
-                        "crew_tasks",
-                        json.dumps(
-                            [
-                                {
-                                    "key": task.key,
-                                    "id": str(task.id),
-                                    "description": task.description,
-                                    "expected_output": task.expected_output,
-                                    "async_execution?": task.async_execution,
-                                    "human_input?": task.human_input,
-                                    "agent_role": (
-                                        task.agent.role if task.agent else "None"
-                                    ),
-                                    "agent_key": task.agent.key if task.agent else None,
-                                    "context": (
-                                        [task.description for task in task.context]
-                                        if task.context
-                                        else None
-                                    ),
-                                    "tools_names": [
-                                        tool.name.casefold()
-                                        for tool in task.tools or []
-                                    ],
-                                }
-                                for task in crew.tasks
-                            ]
-                        ),
+                        span, "crew_tasks", json.dumps(crew_data.get("tasks", []))
                     )
                     self._add_attribute(span, "platform", platform.platform())
                     self._add_attribute(span, "platform_release", platform.release())
@@ -174,59 +128,10 @@ class Telemetry:
                         span, "crew_inputs", json.dumps(inputs) if inputs else None
                     )
                 else:
-                    self._add_attribute(
-                        span,
-                        "crew_agents",
-                        json.dumps(
-                            [
-                                {
-                                    "key": agent.key,
-                                    "id": str(agent.id),
-                                    "role": agent.role,
-                                    "verbose?": agent.verbose,
-                                    "max_iter": agent.max_iter,
-                                    "max_rpm": agent.max_rpm,
-                                    "function_calling_llm": (
-                                        agent.function_calling_llm.model
-                                        if agent.function_calling_llm
-                                        else ""
-                                    ),
-                                    "llm": agent.llm.model,
-                                    "delegation_enabled?": agent.allow_delegation,
-                                    "allow_code_execution?": agent.allow_code_execution,
-                                    "max_retry_limit": agent.max_retry_limit,
-                                    "tools_names": [
-                                        tool.name.casefold()
-                                        for tool in agent.tools or []
-                                    ],
-                                }
-                                for agent in crew.agents
-                            ]
-                        ),
-                    )
-                    self._add_attribute(
-                        span,
-                        "crew_tasks",
-                        json.dumps(
-                            [
-                                {
-                                    "key": task.key,
-                                    "id": str(task.id),
-                                    "async_execution?": task.async_execution,
-                                    "human_input?": task.human_input,
-                                    "agent_role": (
-                                        task.agent.role if task.agent else "None"
-                                    ),
-                                    "agent_key": task.agent.key if task.agent else None,
-                                    "tools_names": [
-                                        tool.name.casefold()
-                                        for tool in task.tools or []
-                                    ],
-                                }
-                                for task in crew.tasks
-                            ]
-                        ),
-                    )
+                    # Handle the case where share_crew is False
+                    # You might want to add limited data here
+                    pass
+
                 span.set_status(Status(StatusCode.OK))
                 span.end()
             except Exception:
@@ -461,77 +366,39 @@ class Telemetry:
             except Exception:
                 pass
 
-    def crew_execution_span(self, crew: Crew, inputs: dict[str, Any] | None):
+    def crew_execution_span(
+        self, crew_data: Dict[str, Any], inputs: Optional[Dict[str, Any]] = None
+    ):
         """Records the complete execution of a crew.
         This is only collected if the user has opted-in to share the crew.
         """
-        self.crew_creation(crew, inputs)
-
-        if (self.ready) and (crew.share_crew):
+        if self.ready and crew_data.get("share_crew"):
             try:
                 tracer = trace.get_tracer("crewai.telemetry")
                 span = tracer.start_span("Crew Execution")
+
                 self._add_attribute(
                     span,
                     "crewai_version",
                     pkg_resources.get_distribution("crewai").version,
                 )
-                self._add_attribute(span, "crew_key", crew.key)
-                self._add_attribute(span, "crew_id", str(crew.id))
+                self._add_attribute(span, "crew_key", crew_data.get("key"))
+                self._add_attribute(span, "crew_id", crew_data.get("id"))
                 self._add_attribute(
                     span, "crew_inputs", json.dumps(inputs) if inputs else None
                 )
                 self._add_attribute(
                     span,
                     "crew_agents",
-                    json.dumps(
-                        [
-                            {
-                                "key": agent.key,
-                                "id": str(agent.id),
-                                "role": agent.role,
-                                "goal": agent.goal,
-                                "backstory": agent.backstory,
-                                "verbose?": agent.verbose,
-                                "max_iter": agent.max_iter,
-                                "max_rpm": agent.max_rpm,
-                                "i18n": agent.i18n.prompt_file,
-                                "llm": agent.llm.model,
-                                "delegation_enabled?": agent.allow_delegation,
-                                "tools_names": [
-                                    tool.name.casefold() for tool in agent.tools or []
-                                ],
-                            }
-                            for agent in crew.agents
-                        ]
-                    ),
+                    json.dumps(crew_data.get("agents", [])),
                 )
                 self._add_attribute(
                     span,
                     "crew_tasks",
-                    json.dumps(
-                        [
-                            {
-                                "id": str(task.id),
-                                "description": task.description,
-                                "expected_output": task.expected_output,
-                                "async_execution?": task.async_execution,
-                                "human_input?": task.human_input,
-                                "agent_role": task.agent.role if task.agent else "None",
-                                "agent_key": task.agent.key if task.agent else None,
-                                "context": (
-                                    [task.description for task in task.context]
-                                    if task.context
-                                    else None
-                                ),
-                                "tools_names": [
-                                    tool.name.casefold() for tool in task.tools or []
-                                ],
-                            }
-                            for task in crew.tasks
-                        ]
-                    ),
+                    json.dumps(crew_data.get("tasks", [])),
                 )
+                span.set_status(Status(StatusCode.OK))
+                span.end()
                 return span
             except Exception:
                 pass
@@ -607,3 +474,9 @@ class Telemetry:
                 span.end()
             except Exception:
                 pass
+
+
+telemetry = Telemetry()
+
+
+crew_events.on(CrewEvents.CREW_START, telemetry.crew_execution_span)
