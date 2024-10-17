@@ -211,6 +211,7 @@ class Agent(BaseAgent):
                 self.crew._short_term_memory,
                 self.crew._long_term_memory,
                 self.crew._entity_memory,
+                self.crew._user_memory,
             )
             memory = contextual_memory.build_context_for_task(task, context)
             if memory.strip() != "":

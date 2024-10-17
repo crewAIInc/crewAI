@@ -18,6 +18,7 @@ reason, and learn from past interactions.
 | **Long-Term Memory** | Preserves valuable insights and learnings from past executions, allowing agents to build and refine their knowledge over time. |
 | **Entity Memory**    | Captures and organizes information about entities (people, places, concepts) encountered during tasks, facilitating deeper understanding and relationship mapping. Uses `RAG` for storing entity information. |
 | **Contextual Memory**| Maintains the context of interactions by combining `ShortTermMemory`, `LongTermMemory`, and `EntityMemory`, aiding in the coherence and relevance of agent responses over a sequence of tasks or a conversation. |
+| **User Memory**      | Stores user-specific information and preferences, enhancing personalization and user experience. |
 
 ## How Memory Systems Empower Agents
 
@@ -89,6 +90,47 @@ my_crew = Crew(
         ),
     ),
     verbose=True,
+)
+```
+
+## Integrating Mem0 for Enhanced User Memory
+
+[Mem0](https://mem0.ai/) is a self-improving memory layer for LLM applications, enabling personalized AI experiences. 
+
+To include user-specific memory you can get your API key [here](https://app.mem0.ai/dashboard/api-keys) and refer the [docs](https://docs.mem0.ai/platform/quickstart#4-1-create-memories) for adding user preferences.
+
+
+```python Code
+import os
+from crewai import Crew, Process
+from mem0 import MemoryClient
+
+# Set environment variables for Mem0
+os.environ["MEM0_API_KEY"] = "m0-xx"
+
+# Step 1: Record preferences based on past conversation or user input
+client = MemoryClient()
+messages = [
+    {"role": "user", "content": "Hi there! I'm planning a vacation and could use some advice."},
+    {"role": "assistant", "content": "Hello! I'd be happy to help with your vacation planning. What kind of destination do you prefer?"},
+    {"role": "user", "content": "I am more of a beach person than a mountain person."},
+    {"role": "assistant", "content": "That's interesting. Do you like hotels or Airbnb?"},
+    {"role": "user", "content": "I like Airbnb more."},
+]
+client.add(messages, user_id="john")
+
+# Step 2: Create a Crew with User Memory
+
+crew = Crew(
+    agents=[...],
+    tasks=[...],
+    verbose=True,
+    process=Process.sequential,
+    memory=True,
+    memory_config={
+        "provider": "mem0",
+        "config": {"user_id": "john"},
+    },
 )
 ```
 
