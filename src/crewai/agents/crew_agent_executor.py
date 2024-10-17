@@ -153,7 +153,7 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
                                 )
                                 self.have_forced_answer = True
                         self.messages.append(
-                            self._format_msg(formatted_answer.text, role="user")
+                            self._format_msg(formatted_answer.text, role="assistant")
                         )
 
         except OutputParserException as e:
