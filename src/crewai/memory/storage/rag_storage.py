@@ -83,21 +83,25 @@ class RAGStorage(BaseRAGStorage):
         if not hasattr(self, "app"):
             self._initialize_app()
 
-        with suppress_logging():
-            response = self.collection.query(query_texts=query, n_results=limit)
+        try:
+            with suppress_logging():
+                response = self.collection.query(query_texts=query, n_results=limit)
 
-        results = []
-        for i in range(len(response["ids"][0])):
-            result = {
-                "id": response["ids"][0][i],
-                "metadata": response["metadatas"][0][i],
-                "context": response["documents"][0][i],
-                "score": response["distances"][0][i],
-            }
-            if result["score"] >= score_threshold:
-                results.append(result)
+            results = []
+            for i in range(len(response["ids"][0])):
+                result = {
+                    "id": response["ids"][0][i],
+                    "metadata": response["metadatas"][0][i],
+                    "context": response["documents"][0][i],
+                    "score": response["distances"][0][i],
+                }
+                if result["score"] >= score_threshold:
+                    results.append(result)
 
-        return results
+            return results
+        except Exception as e:
+            logging.error(f"Error during {self.type} search: {str(e)}")
+            return []
 
     def _generate_embedding(self, text: str, metadata: Dict[str, Any]) -> None:  # type: ignore
         if not hasattr(self, "app") or not hasattr(self, "collection"):
