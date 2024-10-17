@@ -31,7 +31,9 @@ class ContextualMemory:
         formatted as bullet points.
         """
         stm_results = self.stm.search(query)
-        formatted_results = "\n".join([f"- {result}" for result in stm_results])
+        formatted_results = "\n".join(
+            [f"- {result['context']}" for result in stm_results]
+        )
         return f"Recent Insights:\n{formatted_results}" if stm_results else ""
 
     def _fetch_ltm_context(self, task) -> Optional[str]:
