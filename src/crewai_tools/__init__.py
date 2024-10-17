@@ -33,6 +33,7 @@ from .tools import (
     SerplyScholarSearchTool,
     SerplyWebpageToMarkdownTool,
     SerplyWebSearchTool,
+    SpiderTool,
     TXTSearchTool,
     VisionTool,
     WebsiteSearchTool,
