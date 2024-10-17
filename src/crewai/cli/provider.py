@@ -3,7 +3,7 @@ import time
 import requests
 from collections import defaultdict
 import click
-from pathlib import Path  # Add this import
+from pathlib import Path 
 from crewai.cli.constants import PROVIDERS, MODELS, JSON_URL
 
 def select_choice(prompt_message, choices):
@@ -170,7 +170,7 @@ def get_provider_data():
     cache_dir = Path.home() / '.crewai'
     cache_dir.mkdir(exist_ok=True)
     cache_file = cache_dir / 'provider_cache.json'
-    cache_expiry = 24 * 3600  # Cache expiry time in seconds
+    cache_expiry = 24 * 3600 
 
     data = load_provider_data(cache_file, cache_expiry)
     if not data:
