@@ -41,6 +41,7 @@ from crewai.utilities.constants import (
 from crewai.utilities.evaluators.crew_evaluator_handler import CrewEvaluator
 from crewai.utilities.evaluators.task_evaluator import TaskEvaluator
 from crewai.utilities.event_helpers import (
+    emit_crew_finish,
     emit_crew_start,
     emit_task_finish,
     emit_task_start,
@@ -510,7 +511,7 @@ class Crew(BaseModel):
         for metric in metrics:
             self.usage_metrics.add_usage_metrics(metric)
 
-        # TODO: ADD CREW FINISH EVENT
+        emit_crew_finish(self, result)
 
         return result
 
@@ -852,10 +853,19 @@ class Crew(BaseModel):
         for future_task, future, task_index in futures:
             task_output = future.result()
             task_outputs.append(task_output)
-            self._process_task_result(future_task, task_output)
-            self._store_execution_log(
-                future_task, task_output, task_index, was_replayed
+            emit_task_finish(
+                future_task,
+                self._inputs if self._inputs else {},
+                task_output,
+                task_index,
+                was_replayed,
             )
+
+            # TODO: ADD ELSEWHERE
+            # self._process_task_result(future_task, task_output)
+            # self._store_execution_log(
+            #     future_task, task_output, task_index, was_replayed
+            # )
         return task_outputs
 
     def _find_task_index(
@@ -1040,6 +1050,7 @@ class Crew(BaseModel):
         inputs: Optional[Dict[str, Any]] = None,
     ) -> None:
         """Test and evaluate the Crew with the given inputs for n iterations concurrently using concurrent.futures."""
+        # TODO: Event Emit test execution start
         self._test_execution_span = self._telemetry.test_execution_span(
             self,
             n_iterations,
@@ -1053,6 +1064,7 @@ class Crew(BaseModel):
             self.kickoff(inputs=inputs)
 
         evaluator.print_crew_evaluation_result()
+        # TODO:
 
     def __rshift__(self, other: "Crew") -> "Pipeline":
         """

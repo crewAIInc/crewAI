@@ -7,6 +7,7 @@ from crewai.utilities.event_emitter import CrewEvents, emit
 
 if TYPE_CHECKING:
     from crewai.crew import Crew
+    from crewai.crews.crew_output import CrewOutput
     from crewai.task import Task
     from crewai.tasks.task_output import TaskOutput
 
@@ -25,15 +26,16 @@ def emit_crew_start(
     )
 
 
-def emit_crew_finish(crew_id: str, name: str, result: Any, duration: float) -> None:
+def emit_crew_finish(crew: "Crew", result: "CrewOutput") -> None:
+    serialized_crew = crew.serialize()
+    serialized_result = result.serialize()
+    print("emit crew finish")
+
     emit(
         CrewEvents.CREW_FINISH,
         {
-            "crew_id": crew_id,
-            "name": name,
-            "finish_time": datetime.now().isoformat(),
-            "result": result,
-            "duration": duration,
+            **serialized_crew,
+            "result": serialized_result,
         },
     )
 
@@ -56,7 +58,7 @@ def emit_crew_failure(
 
 
 def emit_task_start(
-    task: Task,
+    task: "Task",
     agent_role: str = "None",
 ) -> None:
     serialized_task = task.serialize()
@@ -70,9 +72,9 @@ def emit_task_start(
 
 
 def emit_task_finish(
-    task: Task,
+    task: "Task",
     inputs: Dict[str, Any],
-    output: TaskOutput,
+    output: "TaskOutput",
     task_index: int,
     was_replayed: bool = False,
 ) -> None:

@@ -56,6 +56,21 @@ class TaskOutput(BaseModel):
             output_dict.update(self.pydantic.model_dump())
         return output_dict
 
+    def serialize(self) -> Dict[str, Any]:
+        """Serialize the TaskOutput into a dictionary excluding complex objects."""
+        serialized_data = {
+            "description": self.description,
+            "name": self.name,
+            "expected_output": self.expected_output,
+            "summary": self.summary,
+            "raw": self.raw,
+            "pydantic": self.pydantic.model_dump() if self.pydantic else None,
+            "json_dict": self.json_dict,
+            "agent": self.agent,
+            "output_format": self.output_format.value,
+        }
+        return {k: v for k, v in serialized_data.items() if v is not None}
+
     def __str__(self) -> str:
         if self.pydantic:
             return str(self.pydantic)

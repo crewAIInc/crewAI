@@ -41,6 +41,19 @@ class CrewOutput(BaseModel):
             output_dict.update(self.pydantic.model_dump())
         return output_dict
 
+    def serialize(self) -> Dict[str, Any]:
+        """Serialize the CrewOutput into a dictionary excluding complex objects."""
+        serialized_data = {
+            "raw": self.raw,
+            "pydantic": self.pydantic.model_dump() if self.pydantic else None,
+            "json_dict": self.json_dict,
+            "tasks_output": [
+                task_output.serialize() for task_output in self.tasks_output
+            ],
+            "token_usage": self.token_usage.model_dump(),
+        }
+        return {k: v for k, v in serialized_data.items() if v is not None}
+
     def __getitem__(self, key):
         if self.pydantic and hasattr(self.pydantic, key):
             return getattr(self.pydantic, key)
