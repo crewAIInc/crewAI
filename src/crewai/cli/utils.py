@@ -2,9 +2,6 @@ import importlib.metadata
 import os
 import shutil
 import sys
-
-from crewai.cli.authentication.utils import TokenManager
-from crewai.cli.constants import ENV_VARS
 from functools import reduce
 from typing import Any, Dict, List
 
@@ -12,6 +9,7 @@ import click
 from rich.console import Console
 
 from crewai.cli.authentication.utils import TokenManager
+from crewai.cli.constants import ENV_VARS
 
 if sys.version_info >= (3, 11):
     import tomllib
@@ -208,10 +206,10 @@ def tree_find_and_replace(directory, find, replace):
 def load_env_vars(folder_path):
     """
     Loads environment variables from a .env file in the specified folder path.
-    
+
     Args:
     - folder_path (Path): The path to the folder containing the .env file.
-    
+
     Returns:
     - dict: A dictionary of environment variables.
     """
@@ -220,27 +218,33 @@ def load_env_vars(folder_path):
     if env_file_path.exists():
         with open(env_file_path, "r") as file:
             for line in file:
-                key, _, value = line.strip().partition('=')
+                key, _, value = line.strip().partition("=")
                 if key and value:
                     env_vars[key] = value
     return env_vars
 
+
 def update_env_vars(env_vars, provider, model):
     """
     Updates environment variables with the API key for the selected provider and model.
-    
+
     Args:
     - env_vars (dict): Environment variables dictionary.
     - provider (str): Selected provider.
     - model (str): Selected model.
-    
+
     Returns:
     - None
     """
-    api_key_var = ENV_VARS.get(provider, [click.prompt(
-        f"Enter the environment variable name for your {provider.capitalize()} API key",
-        type=str
-    )])[0]
+    api_key_var = ENV_VARS.get(
+        provider,
+        [
+            click.prompt(
+                f"Enter the environment variable name for your {provider.capitalize()} API key",
+                type=str,
+            )
+        ],
+    )[0]
 
     if api_key_var not in env_vars:
         try:
@@ -253,14 +257,15 @@ def update_env_vars(env_vars, provider, model):
     else:
         click.secho(f"API key already exists for {provider.capitalize()}.", fg="yellow")
 
-    env_vars['MODEL'] = model
+    env_vars["MODEL"] = model
     click.secho(f"Selected model: {model}", fg="green")
     return env_vars
+
 
 def write_env_file(folder_path, env_vars):
     """
     Writes environment variables to a .env file in the specified folder.
-    
+
     Args:
     - folder_path (Path): The path to the folder where the .env file will be written.
     - env_vars (dict): A dictionary of environment variables to write.
