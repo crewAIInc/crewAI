@@ -71,7 +71,10 @@ class RAGStorage(BaseRAGStorage):
     def save(self, value: Any, metadata: Dict[str, Any]) -> None:
         if not hasattr(self, "app") or not hasattr(self, "collection"):
             self._initialize_app()
-        self._generate_embedding(value, metadata)
+        try:
+            self._generate_embedding(value, metadata)
+        except Exception as e:
+            logging.error(f"Error during {self.type} save: {str(e)}")
 
     def search(
         self,
