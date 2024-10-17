@@ -1,0 +1,35 @@
+name: Package and Release CrewAI Docs
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  create-docs-package:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Create Docs Tarball
+      run: tar -czvf docs.tar.gz docs/
+
+    - name: Generate Release Notes
+      run: |
+        echo "This release contains the latest documentation package for the CrewAI Docs." > release_notes.md
+        echo "" >> release_notes.md
+        echo "Last updated: $(date +'%Y-%m-%d %H:%M:%S %Z')" >> release_notes.md
+        echo "" >> release_notes.md
+        echo "Commit: ${{ github.sha }}" >> release_notes.md
+
+    - name: Update Latest Release
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      run: |
+        gh release delete latest --yes || true
+        gh release create latest docs.tar.gz \
+          --title "Latest Documentation Package" \
+          --notes-file release_notes.md \
+          --latest
