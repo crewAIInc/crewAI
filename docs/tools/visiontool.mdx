@@ -8,13 +8,13 @@ icon: eye
 
 ## Description
 
-This tool is used to extract text from images. When passed to the agent it will extract the text from the image and then use it to generate a response, report or any other output. 
+This tool is used to extract text from images. When passed to the agent it will extract the text from the image and then use it to generate a response, report or any other output.
 The URL or the PATH of the image should be passed to the Agent.
-
 
 ## Installation
 
 Install the crewai_tools package
+
 ```shell
 pip install 'crewai[tools]'
 ```
@@ -44,7 +44,6 @@ def researcher(self) -> Agent:
 
 The VisionTool requires the following arguments:
 
-| Argument       | Type     | Description                                                                                                                         |
-|:---------------|:---------|:-------------------------------------------------------------------------------------------------------------------------------------|
-| **image_path** | `string` | **Mandatory**. The path to the image file from which text needs to be extracted.                                                |
-
+| Argument           | Type     | Description                                                                      |
+| :----------------- | :------- | :------------------------------------------------------------------------------- |
+| **image_path_url** | `string` | **Mandatory**. The path to the image file from which text needs to be extracted. |
