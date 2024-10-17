@@ -44,15 +44,9 @@ To get started with CrewAI, follow these simple steps:
 
 ### 1. Installation
 
-Ensure you have Python >=3.10 <=3.13 installed on your system. CrewAI uses [Poetry](https://python-poetry.org/) for dependency management and package handling, offering a seamless setup and execution experience.
+Ensure you have Python >=3.10 <=3.13 installed on your system. CrewAI uses [UV](https://docs.astral.sh/uv/) for dependency management and package handling, offering a seamless setup and execution experience.
 
-First, if you haven't already, install Poetry:
-
-```bash
-pip install poetry
-```
-
-Then, install CrewAI:
+First, install CrewAI:
 
 ```shell
 pip install crewai
@@ -243,7 +237,7 @@ Lock the dependencies and install them by using the CLI command but first, navig
 
 ```shell
 cd my_project
-crewai install
+crewai install (Optional)
 ```
 
 To run your crew, execute the following command in the root of your project:
@@ -256,6 +250,12 @@ or
 
 ```bash
 python src/my_project/main.py
+```
+
+If an error happens due to the usage of poetry, please run the following command to update your crewai package:
+
+```bash
+crewai update
 ```
 
 You should see the output in the console and the `report.md` file should be created in the root of your project with the full final report.
@@ -332,14 +332,14 @@ CrewAI is open-source and we welcome contributions. If you're looking to contrib
 ### Installing Dependencies
 
 ```bash
-poetry lock
-poetry install
+uv lock
+uv sync
 ```
 
 ### Virtual Env
 
 ```bash
-poetry shell
+uv venv
 ```
 
 ### Pre-commit hooks
@@ -351,19 +351,19 @@ pre-commit install
 ### Running Tests
 
 ```bash
-poetry run pytest
+uvx pytest
 ```
 
 ### Running static type checks
 
 ```bash
-poetry run mypy
+uvx mypy
 ```
 
 ### Packaging
 
 ```bash
-poetry build
+uv build
 ```
 
 ### Installing Locally

@@ -1,20 +1,24 @@
 import base64
-from pathlib import Path
-import click
 import os
+import platform
 import subprocess
 import tempfile
+from pathlib import Path
+from netrc import netrc
+import stat
 
-from crewai.cli.command import BaseCommand, PlusAPIMixin
+import click
+from rich.console import Console
+
 from crewai.cli import git
+from crewai.cli.command import BaseCommand, PlusAPIMixin
 from crewai.cli.utils import (
-    get_project_name,
     get_project_description,
+    get_project_name,
     get_project_version,
     tree_copy,
     tree_find_and_replace,
 )
-from rich.console import Console
 
 console = Console()
 
@@ -23,6 +27,8 @@ class ToolCommand(BaseCommand, PlusAPIMixin):
     """
     A class to handle tool repository related operations for CrewAI projects.
     """
+
+    BASE_URL = "https://app.crewai.com/pypi/"
 
     def __init__(self):
         BaseCommand.__init__(self)
@@ -82,7 +88,7 @@ class ToolCommand(BaseCommand, PlusAPIMixin):
 
         with tempfile.TemporaryDirectory() as temp_build_dir:
             subprocess.run(
-                ["poetry", "build", "-f", "sdist", "--output", temp_build_dir],
+                ["uv", "build", "--sdist", "--out-dir", temp_build_dir],
                 check=True,
                 capture_output=False,
             )
@@ -92,7 +98,7 @@ class ToolCommand(BaseCommand, PlusAPIMixin):
             )
             if not tarball_filename:
                 console.print(
-                    "Project build failed. Please ensure that the command `poetry build -f sdist` completes successfully.",
+                    "Project build failed. Please ensure that the command `uv build --sdist` completes successfully.",
                     style="bold red",
                 )
                 raise SystemExit
@@ -143,68 +149,41 @@ class ToolCommand(BaseCommand, PlusAPIMixin):
 
         if login_response.status_code != 200:
             console.print(
-                "Failed to authenticate to the tool repository. Make sure you have the access to tools.",
+                "Authentication failed. Verify access to the tool repository, or try `crewai login`. ",
                 style="bold red",
             )
             raise SystemExit
 
         login_response_json = login_response.json()
-        for repository in login_response_json["repositories"]:
-            self._add_repository_to_poetry(
-                repository, login_response_json["credential"]
-            )
+        self._set_netrc_credentials(login_response_json["credential"])
 
         console.print(
-            "Succesfully authenticated to the tool repository.", style="bold green"
+            "Successfully authenticated to the tool repository.", style="bold green"
         )
 
-    def _add_repository_to_poetry(self, repository, credentials):
-        repository_handle = f"crewai-{repository['handle']}"
+    def _set_netrc_credentials(self, credentials, netrc_path=None):
+        if not netrc_path:
+            netrc_filename = "_netrc" if platform.system() == "Windows" else ".netrc"
+            netrc_path = Path.home() / netrc_filename
+            netrc_path.touch(mode=stat.S_IRUSR | stat.S_IWUSR, exist_ok=True)
 
-        add_repository_command = [
-            "poetry",
-            "source",
-            "add",
-            "--priority=explicit",
-            repository_handle,
-            repository["url"],
-        ]
-        add_repository_result = subprocess.run(
-            add_repository_command, text=True, check=True
-        )
+        netrc_instance = netrc(file=netrc_path)
+        netrc_instance.hosts["app.crewai.com"] = (credentials["username"], "", credentials["password"])
 
-        if add_repository_result.stderr:
-            click.echo(add_repository_result.stderr, err=True)
-            raise SystemExit
+        with open(netrc_path, 'w') as file:
+            file.write(str(netrc_instance))
 
-        add_repository_credentials_command = [
-            "poetry",
-            "config",
-            f"http-basic.{repository_handle}",
-            credentials["username"],
-            credentials["password"],
-        ]
-        add_repository_credentials_result = subprocess.run(
-            add_repository_credentials_command,
-            capture_output=False,
-            text=True,
-            check=True,
-        )
-
-        if add_repository_credentials_result.stderr:
-            click.echo(add_repository_credentials_result.stderr, err=True)
-            raise SystemExit
+        console.print(f"Added credentials to {netrc_path}", style="bold green")
 
     def _add_package(self, tool_details):
         tool_handle = tool_details["handle"]
         repository_handle = tool_details["repository"]["handle"]
-        pypi_index_handle = f"crewai-{repository_handle}"
 
         add_package_command = [
-            "poetry",
+            "uv",
             "add",
-            "--source",
-            pypi_index_handle,
+            "--extra-index-url",
+            self.BASE_URL + repository_handle,
             tool_handle,
         ]
         add_package_result = subprocess.run(

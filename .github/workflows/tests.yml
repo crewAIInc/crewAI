@@ -9,24 +9,24 @@ env:
   OPENAI_API_KEY: fake-api-key
 
 jobs:
-  deploy:
+  tests:
     runs-on: ubuntu-latest
     timeout-minutes: 15
-
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Setup Python
-        uses: actions/setup-python@v4
+      - name: Install uv
+        uses: astral-sh/setup-uv@v3
         with:
-          python-version: "3.11.9"
+          enable-cache: true
 
-      - name: Install Requirements
-        run: |
-          set -e
-          pip install poetry
-          poetry install
+
+      - name: Set up Python
+        run: uv python install 3.11.9
+
+      - name: Install the project
+        run: uv sync --dev
 
       - name: Run tests
-        run: poetry run pytest
+        run: uv run pytest tests

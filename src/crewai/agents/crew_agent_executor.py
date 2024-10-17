@@ -151,7 +151,7 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
                                 )
                                 self.have_forced_answer = True
                         self.messages.append(
-                            self._format_msg(formatted_answer.text, role="user")
+                            self._format_msg(formatted_answer.text, role="assistant")
                         )
 
         except OutputParserException as e:
@@ -317,14 +317,40 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
             if self.crew is not None and hasattr(self.crew, "_train_iteration"):
                 train_iteration = self.crew._train_iteration
                 if agent_id in training_data and isinstance(train_iteration, int):
-                    training_data[agent_id][train_iteration][
-                        "improved_output"
-                    ] = result.output
+                    training_data[agent_id][train_iteration]["improved_output"] = (
+                        result.output
+                    )
                     training_handler.save(training_data)
                 else:
                     self._logger.log(
                         "error",
                         "Invalid train iteration type or agent_id not in training data.",
+                        color="red",
+                    )
+            else:
+                self._logger.log(
+                    "error",
+                    "Crew is None or does not have _train_iteration attribute.",
+                    color="red",
+                )
+
+        if self.ask_for_human_input and human_feedback is not None:
+            training_data = {
+                "initial_output": result.output,
+                "human_feedback": human_feedback,
+                "agent": agent_id,
+                "agent_role": self.agent.role,
+            }
+            if self.crew is not None and hasattr(self.crew, "_train_iteration"):
+                train_iteration = self.crew._train_iteration
+                if isinstance(train_iteration, int):
+                    CrewTrainingHandler(TRAINING_DATA_FILE).append(
+                        train_iteration, agent_id, training_data
+                    )
+                else:
+                    self._logger.log(
+                        "error",
+                        "Invalid train iteration type. Expected int.",
                         color="red",
                     )
             else:

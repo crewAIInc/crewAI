@@ -572,16 +572,16 @@ In this example, the `PoemFlow` class defines a flow that generates a sentence c
 
 ### Running the Flow
 
-Before running the flow, make sure to install the dependencies by running:
+(Optional) Before running the flow, you can install the dependencies by running:
 
 ```bash
-poetry install
+crewai install
 ```
 
 Once all of the dependencies are installed, you need to activate the virtual environment by running:
 
 ```bash
-poetry shell
+source .venv/bin/activate
 ```
 
 After activating the virtual environment, you can run the flow by executing one of the following commands:
@@ -593,7 +593,7 @@ crewai flow run
 or
 
 ```bash
-poetry run run_flow
+uv run run_flow
 ```
 
 The flow will execute, and you should see the output in the console.
@@ -654,3 +654,16 @@ If you're interested in exploring additional examples of flows, we have a variet
 4. **Meeting Assistant Flow**: This flow demonstrates how to broadcast one event to trigger multiple follow-up actions. For instance, after a meeting is completed, the flow can update a Trello board, send a Slack message, and save the results. It's a great example of handling multiple outcomes from a single event, making it ideal for comprehensive task management and notification systems. [View Example](https://github.com/crewAIInc/crewAI-examples/tree/main/meeting_assistant_flow)
 
 By exploring these examples, you can gain insights into how to leverage CrewAI Flows for various use cases, from automating repetitive tasks to managing complex, multi-step processes with dynamic decision-making and human feedback.
+
+Also, check out our YouTube video on how to use flows in CrewAI below!
+
+<iframe 
+    width="560" 
+    height="315" 
+    src="https://www.youtube.com/embed/MTb5my6VOT8" 
+    title="YouTube video player" 
+    frameborder="0" 
+    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" 
+    referrerpolicy="strict-origin-when-cross-origin" 
+    allowfullscreen
+></iframe>    
