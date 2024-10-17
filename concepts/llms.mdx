@@ -1,0 +1,158 @@
+---
+title: LLMs
+description: Learn how to configure and optimize LLMs for your CrewAI projects.
+icon: microchip-ai
+---
+
+# Large Language Models (LLMs) in CrewAI
+
+Large Language Models (LLMs) are the backbone of intelligent agents in the CrewAI framework. This guide will help you understand, configure, and optimize LLM usage for your CrewAI projects.
+
+## Key Concepts
+
+- **LLM**: Large Language Model, the AI powering agent intelligence
+- **Agent**: A CrewAI entity that uses an LLM to perform tasks
+- **Provider**: A service that offers LLM capabilities (e.g., OpenAI, Anthropic, Ollama, [more providers](https://docs.litellm.ai/docs/providers))
+
+## Configuring LLMs for Agents
+
+CrewAI offers flexible options for setting up LLMs:
+
+### 1. Default Configuration
+
+By default, CrewAI uses the `gpt-4o-mini` model. It uses environment variables if no LLM is specified:
+- `OPENAI_MODEL_NAME` (defaults to "gpt-4o-mini" if not set)
+- `OPENAI_API_BASE`
+- `OPENAI_API_KEY`
+
+### 2. String Identifier
+
+```python Code
+agent = Agent(llm="gpt-4o", ...)
+```
+
+### 3. LLM Instance
+
+List of [more providers](https://docs.litellm.ai/docs/providers).
+
+```python Code
+from crewai import LLM
+
+llm = LLM(model="gpt-4", temperature=0.7)
+agent = Agent(llm=llm, ...)
+```
+
+### 4. Custom LLM Objects
+
+Pass a custom LLM implementation or object from another library.
+
+## Connecting to OpenAI-Compatible LLMs
+
+You can connect to OpenAI-compatible LLMs using either environment variables or by setting specific attributes on the LLM class:
+
+1. Using environment variables:
+
+```python Code
+import os
+
+os.environ["OPENAI_API_KEY"] = "your-api-key"
+os.environ["OPENAI_API_BASE"] = "https://api.your-provider.com/v1"
+```
+
+2. Using LLM class attributes:
+
+```python Code
+llm = LLM(
+    model="custom-model-name",
+    api_key="your-api-key",
+    base_url="https://api.your-provider.com/v1"
+)
+agent = Agent(llm=llm, ...)
+```
+
+## LLM Configuration Options
+
+When configuring an LLM for your agent, you have access to a wide range of parameters:
+
+| Parameter         | Type            | Description                                                                                      |
+|:------------------|:---------------:|:-------------------------------------------------------------------------------------------------|
+| **model**            | `str`             | Name of the model to use (e.g., "gpt-4", "gpt-3.5-turbo", "ollama/llama3.1"). For more options, visit the providers documentation. |
+| **timeout**          | `float, int`      | Maximum time (in seconds) to wait for a response.                                                |
+| **temperature**      | `float`           | Controls randomness in output (0.0 to 1.0).                                                      |
+| **top_p**            | `float`           | Controls diversity of output (0.0 to 1.0).                                                       |
+| **n**                | `int`             | Number of completions to generate.                                                               |
+| **stop**             | `str, List[str]`  | Sequence(s) where generation should stop.                                                        |
+| **max_tokens**       | `int`             | Maximum number of tokens to generate.                                                            |
+| **presence_penalty** | `float`           | Penalizes new tokens based on their presence in prior text.                                      |
+| **frequency_penalty**| `float`           | Penalizes new tokens based on their frequency in prior text.                                     |
+| **logit_bias**       | `Dict[int, float]`| Modifies likelihood of specified tokens appearing.                                              |
+| **response_format**  | `Dict[str, Any]`  | Specifies the format of the response (e.g., JSON object).                                        |
+| **seed**             | `int`             | Sets a random seed for deterministic results.                                                    |
+| **logprobs**         | `bool`            | Returns log probabilities of output tokens if enabled.                                           |
+| **top_logprobs**     | `int`             | Number of most likely tokens for which to return log probabilities.                              |
+| **base_url**         | `str`             | The base URL for the API endpoint.                                                               |
+| **api_version**      | `str`             | Version of the API to use.                                                                       |
+| **api_key**          | `str`             | Your API key for authentication.                                                                 |
+
+
+Example:
+
+```python Code
+llm = LLM(
+    model="gpt-4",
+    temperature=0.8,
+    max_tokens=150,
+    top_p=0.9,
+    frequency_penalty=0.1,
+    presence_penalty=0.1,
+    stop=["END"],
+    seed=42,
+    base_url="https://api.openai.com/v1",
+    api_key="your-api-key-here"
+)
+agent = Agent(llm=llm, ...)
+```
+## Using Ollama (Local LLMs)
+
+crewAI supports using Ollama for running open-source models locally:
+
+1. Install Ollama: [ollama.ai](https://ollama.ai/)
+2. Run a model: `ollama run llama2`
+3. Configure agent:
+
+```python Code
+agent = Agent(
+    llm=LLM(model="ollama/llama3.1", base_url="http://localhost:11434"),
+    ...
+)
+```
+
+## Changing the Base API URL
+
+You can change the base API URL for any LLM provider by setting the `base_url` parameter:
+
+```python Code
+llm = LLM(
+    model="custom-model-name",
+    base_url="https://api.your-provider.com/v1",
+    api_key="your-api-key"
+)
+agent = Agent(llm=llm, ...)
+```
+
+This is particularly useful when working with OpenAI-compatible APIs or when you need to specify a different endpoint for your chosen provider.
+
+## Best Practices
+
+1. **Choose the right model**: Balance capability and cost.
+2. **Optimize prompts**: Clear, concise instructions improve output.
+3. **Manage tokens**: Monitor and limit token usage for efficiency.
+4. **Use appropriate temperature**: Lower for factual tasks, higher for creative ones.
+5. **Implement error handling**: Gracefully manage API errors and rate limits.
+
+## Troubleshooting
+
+- **API Errors**: Check your API key, network connection, and rate limits.
+- **Unexpected Outputs**: Refine your prompts and adjust temperature or top_p.
+- **Performance Issues**: Consider using a more powerful model or optimizing your queries.
+- **Timeout Errors**: Increase the `timeout` parameter or optimize your input.
