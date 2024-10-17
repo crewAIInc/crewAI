@@ -17,7 +17,7 @@ if TYPE_CHECKING:
 
 class CrewAgentExecutorMixin:
     crew: Optional["Crew"]
-    crew_agent: Optional["BaseAgent"]
+    agent: Optional["BaseAgent"]
     task: Optional["Task"]
     iterations: int
     have_forced_answer: bool
@@ -33,9 +33,9 @@ class CrewAgentExecutorMixin:
         """Create and save a short-term memory item if conditions are met."""
         if (
             self.crew
-            and self.crew_agent
+            and self.agent
             and self.task
-            and "Action: Delegate work to coworker" not in output.log
+            and "Action: Delegate work to coworker" not in output.text
         ):
             try:
                 if (
@@ -43,11 +43,11 @@ class CrewAgentExecutorMixin:
                     and self.crew._short_term_memory
                 ):
                     self.crew._short_term_memory.save(
-                        value=output.log,
+                        value=output.text,
                         metadata={
                             "observation": self.task.description,
                         },
-                        agent=self.crew_agent.role,
+                        agent=self.agent.role,
                     )
             except Exception as e:
                 print(f"Failed to add to short term memory: {e}")
@@ -61,18 +61,18 @@ class CrewAgentExecutorMixin:
             and self.crew._long_term_memory
             and self.crew._entity_memory
             and self.task
-            and self.crew_agent
+            and self.agent
         ):
             try:
-                ltm_agent = TaskEvaluator(self.crew_agent)
-                evaluation = ltm_agent.evaluate(self.task, output.log)
+                ltm_agent = TaskEvaluator(self.agent)
+                evaluation = ltm_agent.evaluate(self.task, output.text)
 
                 if isinstance(evaluation, ConverterError):
                     return
 
                 long_term_memory = LongTermMemoryItem(
                     task=self.task.description,
-                    agent=self.crew_agent.role,
+                    agent=self.agent.role,
                     quality=evaluation.quality,
                     datetime=str(time.time()),
                     expected_output=self.task.expected_output,
