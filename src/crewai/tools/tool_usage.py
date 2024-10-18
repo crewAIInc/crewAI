@@ -6,14 +6,13 @@ from difflib import SequenceMatcher
 from textwrap import dedent
 from typing import Any, List, Union
 
+import crewai.utilities.events as events
 from crewai.agents.tools_handler import ToolsHandler
 from crewai.task import Task
 from crewai.telemetry import Telemetry
 from crewai.tools.tool_calling import InstructorToolCalling, ToolCalling
 from crewai.tools.tool_usage_events import ToolUsageError, ToolUsageFinished
 from crewai.utilities import I18N, Converter, ConverterError, Printer
-import crewai.utilities.events as events
-
 
 agentops = None
 if os.environ.get("AGENTOPS_API_KEY"):
@@ -300,8 +299,11 @@ class ToolUsage:
         descriptions = []
         for tool in self.tools:
             args = {
-                k: {k2: v2 for k2, v2 in v.items() if k2 in ["description", "type"]}
-                for k, v in tool.args.items()
+                name: {
+                    "description": field.description,
+                    "type": field.annotation.__name__,
+                }
+                for name, field in tool.args_schema.model_fields.items()
             }
             descriptions.append(
                 "\n".join(
