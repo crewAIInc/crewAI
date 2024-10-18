@@ -94,7 +94,13 @@ def create_crew(name, parent_folder=None):
             type=str
         )
 
-    env_vars = {api_key_var: "YOUR_API_KEY_HERE"}
+    api_key_value = click.prompt(
+        f"Enter your {provider.capitalize()} API key",
+        type=str,
+        hide_input=True
+    )
+
+    env_vars = {api_key_var: api_key_value}
     write_env_file(folder_path, env_vars)
 
     env_vars['MODEL'] = model
