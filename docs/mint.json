@@ -66,18 +66,17 @@
       "pages": [
         "concepts/agents",
         "concepts/tasks",
-        "concepts/tools",
-        "concepts/processes",
         "concepts/crews",
+        "concepts/flows",
+        "concepts/llms",
+        "concepts/processes",
         "concepts/collaboration",
-        "concepts/pipeline",
         "concepts/training",
         "concepts/memory",
         "concepts/planning",
         "concepts/testing",
-        "concepts/flows",
         "concepts/cli",
-        "concepts/llms",
+        "concepts/tools",
         "concepts/langchain-tools",
         "concepts/llamaindex-tools"
       ]

@@ -8,7 +8,7 @@ class Storage:
         pass
 
     def search(
-        self, query: str, limit: int, filters: Dict, score_threshold: float
+        self, key: str, query: str, limit: int, filters: Dict, score_threshold: float
     ) -> Dict[str, Any]:  # type: ignore
         return {}
 
