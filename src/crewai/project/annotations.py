@@ -76,22 +76,24 @@ def crew(func) -> Callable[..., Crew]:
         instantiated_agents = []
         agent_roles = set()
 
-        # Collect methods from crew in order
+        # Collect methods from crew instance (not class)
         all_functions = [
             (name, getattr(self, name))
-            for name, attr in self.__class__.__dict__.items()
-            if callable(attr)
+            for name in dir(self)
+            if callable(getattr(self, name)) and not name.startswith("__")
         ]
+
+        # Filter tasks and agents
         tasks = [
             (name, method)
             for name, method in all_functions
-            if hasattr(method, "is_task")
+            if hasattr(method, "is_task") and method.is_task
         ]
 
         agents = [
             (name, method)
             for name, method in all_functions
-            if hasattr(method, "is_agent")
+            if hasattr(method, "is_agent") and method.is_agent
         ]
 
         # Instantiate tasks in order
