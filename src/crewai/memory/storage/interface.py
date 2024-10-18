@@ -1,4 +1,4 @@
-from typing import Any, Dict, List
+from typing import Any, Dict
 
 
 class Storage:
@@ -7,8 +7,10 @@ class Storage:
     def save(self, value: Any, metadata: Dict[str, Any]) -> None:
         pass
 
-    def search(self, key: str) -> List[Dict[str, Any]]:  # type: ignore
-        pass
+    def search(
+        self, key: str, query: str, limit: int, filters: Dict, score_threshold: float
+    ) -> Dict[str, Any]:  # type: ignore
+        return {}
 
     def reset(self) -> None:
         pass

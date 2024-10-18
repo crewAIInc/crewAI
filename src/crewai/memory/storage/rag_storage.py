@@ -18,9 +18,11 @@ def suppress_logging(
     logger = logging.getLogger(logger_name)
     original_level = logger.getEffectiveLevel()
     logger.setLevel(level)
-    with contextlib.redirect_stdout(io.StringIO()), contextlib.redirect_stderr(
-        io.StringIO()
-    ), contextlib.suppress(UserWarning):
+    with (
+        contextlib.redirect_stdout(io.StringIO()),
+        contextlib.redirect_stderr(io.StringIO()),
+        contextlib.suppress(UserWarning),
+    ):
         yield
     logger.setLevel(original_level)
 
@@ -80,7 +82,7 @@ class RAGStorage(BaseRAGStorage):
         self,
         query: str,
         limit: int = 3,
-        filter: Optional[dict] = None,
+        filters: Optional[dict] = None,
         score_threshold: float = 0.35,
     ) -> List[Any]:
         if not hasattr(self, "app"):
