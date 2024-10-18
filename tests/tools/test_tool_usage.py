@@ -126,8 +126,6 @@ def test_tool_usage_render():
 
     rendered = tool_usage._render()
 
-    print("RENDERED:", rendered)
-
     # Updated checks to match the actual output
     assert "Tool Name: random number generator" in rendered
     assert (
