@@ -298,19 +298,19 @@ class ToolUsage:
         """Render the tool name and description in plain text."""
         descriptions = []
         for tool in self.tools:
-            args_description = ", ".join(
-                [
-                    f"{name}: {field.description}"
-                    for name, field in tool.args_schema.model_fields.items()
-                ]
-            )
-            print("ARGS DESCRIPTION:", args_description)
+            args = {
+                name: {
+                    "description": field.description,
+                    "type": field.annotation.__name__,
+                }
+                for name, field in tool.args_schema.model_fields.items()
+            }
             descriptions.append(
                 "\n".join(
                     [
                         f"Tool Name: {tool.name.lower()}",
                         f"Tool Description: {tool.description}",
-                        f"Tool Arguments: {args_description}",
+                        f"Tool Arguments: {args}",
                     ]
                 )
             )
