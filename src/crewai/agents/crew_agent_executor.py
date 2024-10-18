@@ -2,6 +2,7 @@ import json
 import re
 from typing import Any, Dict, List, Union
 
+from crewai.agents.agent_builder.base_agent import BaseAgent
 from crewai.agents.agent_builder.base_agent_executor_mixin import CrewAgentExecutorMixin
 from crewai.agents.parser import (
     FINAL_ANSWER_AND_PARSABLE_ACTION_ERROR_MESSAGE,
@@ -19,7 +20,6 @@ from crewai.utilities.exceptions.context_window_exceeding_exception import (
 )
 from crewai.utilities.logger import Logger
 from crewai.utilities.training_handler import CrewTrainingHandler
-from crewai.agents.agent_builder.base_agent import BaseAgent
 
 
 class CrewAgentExecutor(CrewAgentExecutorMixin):
@@ -323,9 +323,9 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
             if self.crew is not None and hasattr(self.crew, "_train_iteration"):
                 train_iteration = self.crew._train_iteration
                 if agent_id in training_data and isinstance(train_iteration, int):
-                    training_data[agent_id][train_iteration]["improved_output"] = (
-                        result.output
-                    )
+                    training_data[agent_id][train_iteration][
+                        "improved_output"
+                    ] = result.output
                     training_handler.save(training_data)
                 else:
                     self._logger.log(
