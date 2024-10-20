@@ -1,16 +1,17 @@
 import os
-from typing import Any, Type
+from typing import Any, Optional, Type
 from pydantic import BaseModel
-from crewai_tools import BaseTool
+from ..base_tool import BaseTool
 from distutils.util import strtobool
+
 
 class FileWriterToolInput(BaseModel):
     filename: str
     content: str
-    directory: str = "./"
+    directory: Optional[str] = "./"
     overwrite: str = "False"
     
-class FileWriterTool2(BaseTool):
+class FileWriterTool(BaseTool):
     name: str = "File Writer Tool"
     description: str = (
         "A tool to write content to a specified file. Accepts filename, content, and optionally a directory path and overwrite flag as input."
