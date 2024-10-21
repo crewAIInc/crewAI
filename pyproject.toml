@@ -25,7 +25,7 @@ dependencies = [
     "auth0-python>=4.7.1",
     "litellm>=1.44.22",
     "pyvis>=0.3.2",
-    "uv>=0.4.18",
+    "uv>=0.4.25",
     "tomli-w>=1.1.0",
     "chromadb>=0.4.24",
 ]
