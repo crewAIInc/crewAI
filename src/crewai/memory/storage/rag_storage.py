@@ -109,7 +109,9 @@ class RAGStorage(BaseRAGStorage):
                     api_key=config.get("api_key"),
                 )
             else:
-                raise Exception(f"Unsupported embedding provider: {provider}")
+                raise Exception(
+                    f"Unsupported embedding provider: {provider}"
+                )  # TODO: here are the supported providers: [openai, ...]
         else:
             validate_embedding_function(self.embedder_config)  # type: ignore # used for validating embedder_config if defined a embedding function/class
             self.embedder_config = self.embedder_config
@@ -195,7 +197,6 @@ class RAGStorage(BaseRAGStorage):
                 self.app.reset()
         except Exception as e:
             if "attempt to write a readonly database" in str(e):
-                print("ignoring error")
                 # Ignore this specific error
                 pass
             else:
