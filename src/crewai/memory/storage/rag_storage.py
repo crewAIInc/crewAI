@@ -109,7 +109,7 @@ class RAGStorage(BaseRAGStorage):
                     api_key=config.get("api_key"),
                 )
             else:
-                self.embedder_config = self._create_default_embedding_function()
+                raise Exception(f"Unsupported embedding provider: {provider}")
         else:
             validate_embedding_function(self.embedder_config)  # type: ignore # used for validating embedder_config if defined a embedding function/class
             self.embedder_config = self.embedder_config
