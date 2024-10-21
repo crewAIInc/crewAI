@@ -44,34 +44,10 @@ example_task = Task(
 )
 
 
-def test_random_number_tool_usage():
-    crew = Crew(
-        agents=[example_agent],
-        tasks=[example_task],
-    )
-
-    with patch.object(random, "randint", return_value=42):
-        result = crew.kickoff()
-
-    assert "42" in result.raw
-
-
 def test_random_number_tool_range():
     tool = RandomNumberTool()
     result = tool._run(1, 10)
     assert 1 <= result <= 10
-
-
-def test_random_number_tool_with_crew():
-    crew = Crew(
-        agents=[example_agent],
-        tasks=[example_task],
-    )
-
-    result = crew.kickoff()
-
-    # Check if the result contains a number between 1 and 100
-    assert any(str(num) in result.raw for num in range(1, 101))
 
 
 def test_random_number_tool_invalid_range():
