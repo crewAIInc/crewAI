@@ -10,8 +10,8 @@ dependencies = [
 ]
 
 [project.scripts]
-{{folder_name}} = "{{folder_name}}.main:main"
-run_flow = "{{folder_name}}.main:main"
+{{folder_name}} = "{{folder_name}}.main:kickoff"
+run_flow = "{{folder_name}}.main:kickoff"
 plot_flow = "{{folder_name}}.main:plot"
 
 [build-system]

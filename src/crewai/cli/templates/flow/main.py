@@ -37,29 +37,14 @@ class PoemFlow(Flow[PoemState]):
             f.write(self.state.poem)
         print(f"State after save_poem: {self.state}")
 
-async def run_flow():
-    """
-    Run the flow.
-    """
+async def kickoff():
     poem_flow = PoemFlow()
     await poem_flow.kickoff()
 
-async def plot_flow():
-    """
-    Plot the flow.
-    """
+def plot():
     poem_flow = PoemFlow()
     poem_flow.plot()
 
 
-def main():
-    asyncio.run(run_flow())
-
-
-def plot():
-    asyncio.run(plot_flow())
-
-
-
 if __name__ == "__main__":
-    main()
+    asyncio.run(kickoff())
