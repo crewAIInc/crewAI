@@ -32,10 +32,10 @@ def reset_memories_command(long, short, entity, kickoff_outputs, all) -> None:
                 click.echo("Long term memory has been reset.")
 
             if short:
-                ShortTermMemory().reset()
+                ShortTermMemory(allow_reset=True).reset()
                 click.echo("Short term memory has been reset.")
             if entity:
-                EntityMemory().reset()
+                EntityMemory(allow_reset=True).reset()
                 click.echo("Entity memory has been reset.")
             if kickoff_outputs:
                 TaskOutputStorageHandler().reset()
