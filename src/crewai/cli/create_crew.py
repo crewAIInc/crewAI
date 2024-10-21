@@ -1,8 +1,9 @@
 from pathlib import Path
 import click
-from crewai.cli.utils import copy_template,load_env_vars, write_env_file
-from crewai.cli.provider import get_provider_data,  select_provider, select_model, PROVIDERS
+from crewai.cli.utils import copy_template, load_env_vars, write_env_file
+from crewai.cli.provider import get_provider_data, select_provider, PROVIDERS
 from crewai.cli.constants import ENV_VARS
+
 
 def create_folder_structure(name, parent_folder=None):
     folder_name = name.replace(" ", "_").replace("-", "_").lower()
@@ -35,7 +36,6 @@ def create_folder_structure(name, parent_folder=None):
     return folder_path, folder_name, class_name
 
 
-
 def copy_template_files(folder_path, name, class_name, parent_folder):
     package_dir = Path(__file__).parent
     templates_dir = package_dir / "templates" / "crew"
@@ -54,7 +54,9 @@ def copy_template_files(folder_path, name, class_name, parent_folder):
         dst_file = folder_path / file_name
         copy_template(src_file, dst_file, name, class_name, folder_path.name)
 
-    src_folder = folder_path / "src" / folder_path.name if not parent_folder else folder_path
+    src_folder = (
+        folder_path / "src" / folder_path.name if not parent_folder else folder_path
+    )
 
     for file_name in src_template_files:
         src_file = templates_dir / file_name
@@ -81,24 +83,24 @@ def create_crew(name, parent_folder=None):
         return
     provider = selected_provider
 
-    selected_model = select_model(provider, provider_models)
-    if not selected_model:
-        return
-    model = selected_model
+    # selected_model = select_model(provider, provider_models)
+    # if not selected_model:
+    #     return
+    # model = selected_model
 
     if provider in PROVIDERS:
         api_key_var = ENV_VARS[provider][0]
     else:
         api_key_var = click.prompt(
             f"Enter the environment variable name for your {provider.capitalize()} API key",
-            type=str
+            type=str,
         )
 
     env_vars = {api_key_var: "YOUR_API_KEY_HERE"}
     write_env_file(folder_path, env_vars)
 
-    env_vars['MODEL'] = model
-    click.secho(f"Selected model: {model}", fg="green")
+    # env_vars['MODEL'] = model
+    # click.secho(f"Selected model: {model}", fg="green")
 
     package_dir = Path(__file__).parent
     templates_dir = package_dir / "templates" / "crew"
