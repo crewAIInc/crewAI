@@ -10,9 +10,9 @@ dependencies = [
 ]
 
 [project.scripts]
-flows_kickoff_cli = "flows_kickoff_cli.main:main"
-kickoff = "flows_kickoff_cli.main:main"
-plot = "flows_kickoff_cli.main:plot"
+{{folder_name}} = "{{folder_name}}.main:main"
+kickoff = "{{folder_name}}.main:main"
+plot = "{{folder_name}}.main:plot"
 
 [build-system]
 requires = ["hatchling"]
