@@ -28,8 +28,6 @@ class ToolCommand(BaseCommand, PlusAPIMixin):
     A class to handle tool repository related operations for CrewAI projects.
     """
 
-    BASE_URL = "https://app.crewai.com/pypi/"
-
     def __init__(self):
         BaseCommand.__init__(self)
         PlusAPIMixin.__init__(self, telemetry=self._telemetry)
@@ -178,12 +176,14 @@ class ToolCommand(BaseCommand, PlusAPIMixin):
     def _add_package(self, tool_details):
         tool_handle = tool_details["handle"]
         repository_handle = tool_details["repository"]["handle"]
+        repository_url = tool_details["repository"]["url"]
+        index = f"{repository_handle}={repository_url}"
 
         add_package_command = [
             "uv",
             "add",
-            "--extra-index-url",
-            self.BASE_URL + repository_handle,
+            "--index",
+            index,
             tool_handle,
         ]
         add_package_result = subprocess.run(
