@@ -72,7 +72,6 @@ class RAGStorage(BaseRAGStorage):
                     model_name=model_name,
                 )
             elif provider == "ollama":
-                print("using this ollama")
                 from openai import OpenAI
 
                 class OllamaEmbeddingFunction(EmbeddingFunction):
