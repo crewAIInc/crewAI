@@ -14,11 +14,11 @@ from .authentication.main import AuthenticationCommand
 from .deploy.main import DeployCommand
 from .evaluate_crew import evaluate_crew
 from .install_crew import install_crew
+from .kickoff_flow import kickoff_flow
 from .plot_flow import plot_flow
 from .replay_from_task import replay_task_command
 from .reset_memories_command import reset_memories_command
 from .run_crew import run_crew
-from .run_flow import run_flow
 from .tools.main import ToolCommand
 from .train_crew import train_crew
 from .update_crew import update_crew
@@ -304,11 +304,11 @@ def flow():
     pass
 
 
-@flow.command(name="run")
+@flow.command(name="kickoff")
 def flow_run():
-    """Run the Flow."""
+    """Kickoff the Flow."""
     click.echo("Running the Flow")
-    run_flow()
+    kickoff_flow()
 
 
 @flow.command(name="plot")

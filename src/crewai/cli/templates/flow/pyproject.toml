@@ -11,8 +11,8 @@ dependencies = [
 
 [project.scripts]
 {{folder_name}} = "{{folder_name}}.main:kickoff"
-run_flow = "{{folder_name}}.main:kickoff"
-plot_flow = "{{folder_name}}.main:plot"
+kickoff = "{{folder_name}}.main:kickoff"
+plot = "{{folder_name}}.main:plot"
 
 [build-system]
 requires = ["hatchling"]

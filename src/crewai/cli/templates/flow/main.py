@@ -21,21 +21,16 @@ class PoemFlow(Flow[PoemState]):
     @listen(generate_sentence_count)
     def generate_poem(self):
         print("Generating poem")
-        print(f"State before poem: {self.state}")
         result = PoemCrew().crew().kickoff(inputs={"sentence_count": self.state.sentence_count})
         
         print("Poem generated", result.raw)
         self.state.poem = result.raw
         
-        print(f"State after generate_poem: {self.state}")
-
     @listen(generate_poem)
     def save_poem(self):
         print("Saving poem")
-        print(f"State before save_poem: {self.state}")
         with open("poem.txt", "w") as f:
             f.write(self.state.poem)
-        print(f"State after save_poem: {self.state}")
 
 async def kickoff():
     poem_flow = PoemFlow()
