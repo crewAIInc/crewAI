@@ -46,7 +46,7 @@ class RAGStorage(BaseRAGStorage):
         self.allow_reset = allow_reset
         self._initialize_app()
 
-    def set_embedder_config(self):
+    def _set_embedder_config(self):
         if self.embedder_config is None:
             self.embedder_config = self._create_default_embedding_function()
         if isinstance(self.embedder_config, dict):
@@ -117,7 +117,7 @@ class RAGStorage(BaseRAGStorage):
     def _initialize_app(self):
         import chromadb
 
-        self.set_embedder_config()
+        self._set_embedder_config()
         chroma_client = chromadb.PersistentClient(
             path=f"{db_storage_path()}/{self.type}/{self.agents}",
             settings=chromadb.Settings(allow_reset=self.allow_reset),
