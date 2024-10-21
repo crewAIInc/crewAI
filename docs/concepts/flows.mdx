@@ -562,13 +562,18 @@ async def kickoff():
     poem_flow = PoemFlow()
     await poem_flow.kickoff()
 
+
 def plot():
     poem_flow = PoemFlow()
     poem_flow.plot()
 
 
-if __name__ == "__main__":
+def main():
     asyncio.run(kickoff())
+
+
+if __name__ == "__main__":
+    main()
 ```
 
 In this example, the `PoemFlow` class defines a flow that generates a sentence count, uses the `PoemCrew` to generate a poem, and then saves the poem to a file. The flow is kicked off by calling the `kickoff()` method.
@@ -669,4 +674,4 @@ Also, check out our YouTube video on how to use flows in CrewAI below!
   allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
   referrerpolicy="strict-origin-when-cross-origin"
   allowfullscreen
-></iframe>{" "}
+></iframe>

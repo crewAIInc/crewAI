@@ -36,10 +36,15 @@ async def kickoff():
     poem_flow = PoemFlow()
     await poem_flow.kickoff()
 
+
 def plot():
     poem_flow = PoemFlow()
     poem_flow.plot()
 
 
-if __name__ == "__main__":
+def main():
     asyncio.run(kickoff())
+
+
+if __name__ == "__main__":
+    main()
