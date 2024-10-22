@@ -190,7 +190,10 @@ class Flow(Generic[T], metaclass=FlowMeta):
         """Returns the list of all outputs from executed methods."""
         return self._method_outputs
 
-    async def kickoff(self) -> Any:
+    def kickoff(self) -> Any:
+        return asyncio.run(self.kickoff_async())
+
+    async def kickoff_async(self) -> Any:
         if not self._start_methods:
             raise ValueError("No start method defined")
 
