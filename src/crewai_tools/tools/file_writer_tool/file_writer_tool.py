@@ -6,10 +6,10 @@ from distutils.util import strtobool
 
 
 class FileWriterToolInput(BaseModel):
-    filename: str
-    content: str
+    filename: str 
     directory: Optional[str] = "./"
     overwrite: str = "False"
+    content: str
     
 class FileWriterTool(BaseTool):
     name: str = "File Writer Tool"
