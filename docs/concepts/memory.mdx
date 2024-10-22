@@ -164,7 +164,8 @@ my_crew = Crew(
     embedder={
         "provider": "google",
         "config": {
-            api_key="YOUR_API_KEY"
+            "api_key": "<YOUR_API_KEY>",
+            "model_name": "<model_name>"
         }
     }
 )
@@ -227,6 +228,25 @@ my_crew = Crew(
         "config": {
             "api_key": "YOUR_API_KEY",
             "model_name": "<model_name>"
+        }
+    }
+)
+```
+### Using HuggingFace embeddings
+
+```python Code
+from crewai import Crew, Agent, Task, Process
+
+my_crew = Crew(
+    agents=[...],
+    tasks=[...],
+    process=Process.sequential,
+    memory=True,
+    verbose=True,
+    embedder={
+        "provider": "huggingface",
+        "config": {
+            "api_url": "<api_url>",
         }
     }
 )

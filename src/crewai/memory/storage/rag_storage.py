@@ -109,21 +109,26 @@ class RAGStorage(BaseRAGStorage):
                     model_name=model_name,
                     api_key=config.get("api_key"),
                 )
+            elif provider == "huggingface":
+                self.embedder_config = embedding_functions.HuggingFaceEmbeddingServer(
+                    url=config.get("api_url"),
+                )
             else:
                 raise Exception(
-                    f"Unsupported embedding provider: {provider}"
-                )  # TODO: here are the supported providers: [openai, ...]
+                    f"Unsupported embedding provider: {provider}, supported providers: [openai, azure, ollama, vertexai, google, cohere, huggingface]"
+                )
         else:
             validate_embedding_function(self.embedder_config)  # type: ignore # used for validating embedder_config if defined a embedding function/class
             self.embedder_config = self.embedder_config
 
     def _initialize_app(self):
         import chromadb
+        from chromadb.config import Settings
 
         self._set_embedder_config()
         chroma_client = chromadb.PersistentClient(
             path=f"{db_storage_path()}/{self.type}/{self.agents}",
-            settings=chromadb.Settings(allow_reset=self.allow_reset),
+            settings=Settings(allow_reset=self.allow_reset),
         )
 
         self.app = chroma_client
