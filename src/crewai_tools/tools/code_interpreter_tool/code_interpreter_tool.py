@@ -29,6 +29,7 @@ class CodeInterpreterTool(BaseTool):
     default_image_tag: str = "code-interpreter:latest"
     code: Optional[str] = None
     user_dockerfile_path: Optional[str] = None
+    unsafe_mode: bool = False
 
     @staticmethod
     def _get_installed_package_path():
@@ -66,7 +67,11 @@ class CodeInterpreterTool(BaseTool):
     def _run(self, **kwargs) -> str:
         code = kwargs.get("code", self.code)
         libraries_used = kwargs.get("libraries_used", [])
-        return self.run_code_in_docker(code, libraries_used)
+
+        if self.unsafe_mode:
+            return self.run_code_unsafe(code, libraries_used)
+        else:
+            return self.run_code_in_docker(code, libraries_used)
 
     def _install_libraries(
         self, container: docker.models.containers.Container, libraries: List[str]
@@ -113,3 +118,19 @@ class CodeInterpreterTool(BaseTool):
         if exec_result.exit_code != 0:
             return f"Something went wrong while running the code: \n{exec_result.output.decode('utf-8')}"
         return exec_result.output.decode("utf-8")
+
+    def run_code_unsafe(self, code: str, libraries_used: List[str]) -> str:
+        """
+        Run the code directly on the host machine (unsafe mode).
+        """
+        # Install libraries on the host machine
+        for library in libraries_used:
+            os.system(f"pip install {library}")
+
+        # Execute the code
+        try:
+            exec_locals = {}
+            exec(code, {}, exec_locals)
+            return exec_locals.get("result", "No result variable found.")
+        except Exception as e:
+            return f"An error occurred: {str(e)}"
