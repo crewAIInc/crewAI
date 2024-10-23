@@ -118,7 +118,7 @@ Alternatively, you can directly pass the OpenAIEmbeddingFunction to the embedder
 Example:
 ```python Code
 from crewai import Crew, Agent, Task, Process
-from chromadb.utils.embedding_functions.openai_embedding_function import OpenAIEmbeddingFunction
+from chromadb.utils.embedding_functions import OpenAIEmbeddingFunction
 
 my_crew = Crew(
     agents=[...],
@@ -174,6 +174,7 @@ my_crew = Crew(
 ### Using Azure OpenAI embeddings
 
 ```python Code
+from chromadb.utils.embedding_functions import OpenAIEmbeddingFunction
 from crewai import Crew, Agent, Task, Process
 
 my_crew = Crew(
@@ -182,7 +183,7 @@ my_crew = Crew(
     process=Process.sequential,
     memory=True,
     verbose=True,
-    embedder=embedding_functions.OpenAIEmbeddingFunction(
+    embedder=OpenAIEmbeddingFunction(
         api_key="YOUR_API_KEY",
         api_base="YOUR_API_BASE_PATH",
         api_type="azure",
@@ -195,6 +196,7 @@ my_crew = Crew(
 ### Using Vertex AI embeddings
 
 ```python Code
+from chromadb.utils.embedding_functions import GoogleVertexEmbeddingFunction
 from crewai import Crew, Agent, Task, Process
 
 my_crew = Crew(
@@ -203,7 +205,7 @@ my_crew = Crew(
     process=Process.sequential,
     memory=True,
     verbose=True,
-    embedder=embedding_functions.GoogleVertexEmbeddingFunction(
+    embedder=GoogleVertexEmbeddingFunction(
         project_id="YOUR_PROJECT_ID",
         region="YOUR_REGION",
         api_key="YOUR_API_KEY",
