@@ -62,6 +62,8 @@ os.environ["OPENAI_API_BASE"] = "https://api.your-provider.com/v1"
 2. Using LLM class attributes:
 
 ```python Code
+from crewai import LLM
+
 llm = LLM(
     model="custom-model-name",
     api_key="your-api-key",
@@ -95,9 +97,11 @@ When configuring an LLM for your agent, you have access to a wide range of param
 | **api_key**          | `str`             | Your API key for authentication.                                                                 |
 
 
-Example:
+## OpenAI Example Configuration
 
 ```python Code
+from crewai import LLM
+
 llm = LLM(
     model="gpt-4",
     temperature=0.8,
@@ -112,15 +116,31 @@ llm = LLM(
 )
 agent = Agent(llm=llm, ...)
 ```
+
+## Cerebras Example Configuration
+
+```python Code
+from crewai import LLM
+
+llm = LLM(
+    model="cerebras/llama-3.1-70b",
+    base_url="https://api.cerebras.ai/v1",
+    api_key="your-api-key-here"
+)
+agent = Agent(llm=llm, ...) 
+```
+
 ## Using Ollama (Local LLMs)
 
-crewAI supports using Ollama for running open-source models locally:
+CrewAI supports using Ollama for running open-source models locally:
 
 1. Install Ollama: [ollama.ai](https://ollama.ai/)
 2. Run a model: `ollama run llama2`
 3. Configure agent:
 
 ```python Code
+from crewai import LLM
+
 agent = Agent(
     llm=LLM(model="ollama/llama3.1", base_url="http://localhost:11434"),
     ...
@@ -132,6 +152,8 @@ agent = Agent(
 You can change the base API URL for any LLM provider by setting the `base_url` parameter:
 
 ```python Code
+from crewai import LLM
+
 llm = LLM(
     model="custom-model-name",
     base_url="https://api.your-provider.com/v1",

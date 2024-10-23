@@ -76,27 +76,13 @@ def crew(func) -> Callable[..., Crew]:
         instantiated_agents = []
         agent_roles = set()
 
-        # Collect methods from crew in order
-        all_functions = [
-            (name, getattr(self, name))
-            for name, attr in self.__class__.__dict__.items()
-            if callable(attr)
-        ]
-        tasks = [
-            (name, method)
-            for name, method in all_functions
-            if hasattr(method, "is_task")
-        ]
-
-        agents = [
-            (name, method)
-            for name, method in all_functions
-            if hasattr(method, "is_agent")
-        ]
+        # Use the preserved task and agent information
+        tasks = self._original_tasks.items()
+        agents = self._original_agents.items()
 
         # Instantiate tasks in order
         for task_name, task_method in tasks:
-            task_instance = task_method()
+            task_instance = task_method(self)
             instantiated_tasks.append(task_instance)
             agent_instance = getattr(task_instance, "agent", None)
             if agent_instance and agent_instance.role not in agent_roles:
@@ -105,7 +91,7 @@ def crew(func) -> Callable[..., Crew]:
 
         # Instantiate agents not included by tasks
         for agent_name, agent_method in agents:
-            agent_instance = agent_method()
+            agent_instance = agent_method(self)
             if agent_instance.role not in agent_roles:
                 instantiated_agents.append(agent_instance)
                 agent_roles.add(agent_instance.role)

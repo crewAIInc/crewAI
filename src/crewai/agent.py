@@ -394,7 +394,7 @@ class Agent(BaseAgent):
         """
         tool_strings = []
         for tool in tools:
-            args_schema = str(tool.args)
+            args_schema = str(tool.model_fields)
             if hasattr(tool, "func") and tool.func:
                 sig = signature(tool.func)
                 description = (

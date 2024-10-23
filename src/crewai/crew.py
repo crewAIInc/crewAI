@@ -126,8 +126,8 @@ class Crew(BaseModel):
         default=None,
         description="An Instance of the EntityMemory to be used by the Crew",
     )
-    embedder: Optional[dict] = Field(
-        default={"provider": "openai"},
+    embedder: Optional[Any] = Field(
+        default=None,
         description="Configuration for the embedder to be used for the crew.",
     )
     usage_metrics: Optional[UsageMetrics] = Field(
@@ -435,15 +435,16 @@ class Crew(BaseModel):
         self, n_iterations: int, filename: str, inputs: Optional[Dict[str, Any]] = {}
     ) -> None:
         """Trains the crew for a given number of iterations."""
-        self._setup_for_training(filename)
+        train_crew = self.copy()
+        train_crew._setup_for_training(filename)
 
         for n_iteration in range(n_iterations):
-            self._train_iteration = n_iteration
-            self.kickoff(inputs=inputs)
+            train_crew._train_iteration = n_iteration
+            train_crew.kickoff(inputs=inputs)
 
         training_data = CrewTrainingHandler(TRAINING_DATA_FILE).load()
 
-        for agent in self.agents:
+        for agent in train_crew.agents:
             result = TaskEvaluator(agent).evaluate_training_data(
                 training_data=training_data, agent_id=str(agent.id)
             )
@@ -774,7 +775,9 @@ class Crew(BaseModel):
 
     def _log_task_start(self, task: Task, role: str = "None"):
         if self.output_log_file:
-            self._file_handler.log(task_name=task.name, task=task.description, agent=role, status="started")
+            self._file_handler.log(
+                task_name=task.name, task=task.description, agent=role, status="started"
+            )
 
     def _update_manager_tools(self, task: Task):
         if self.manager_agent:
@@ -796,7 +799,13 @@ class Crew(BaseModel):
     def _process_task_result(self, task: Task, output: TaskOutput) -> None:
         role = task.agent.role if task.agent is not None else "None"
         if self.output_log_file:
-            self._file_handler.log(task_name=task.name, task=task.description, agent=role, status="completed", output=output.raw)
+            self._file_handler.log(
+                task_name=task.name,
+                task=task.description,
+                agent=role,
+                status="completed",
+                output=output.raw,
+            )
 
     def _create_crew_output(self, task_outputs: List[TaskOutput]) -> CrewOutput:
         if len(task_outputs) != 1:
@@ -979,17 +988,19 @@ class Crew(BaseModel):
         inputs: Optional[Dict[str, Any]] = None,
     ) -> None:
         """Test and evaluate the Crew with the given inputs for n iterations concurrently using concurrent.futures."""
-        self._test_execution_span = self._telemetry.test_execution_span(
-            self,
+        test_crew = self.copy()
+
+        self._test_execution_span = test_crew._telemetry.test_execution_span(
+            test_crew,
             n_iterations,
             inputs,
             openai_model_name,  # type: ignore[arg-type]
         )  # type: ignore[arg-type]
-        evaluator = CrewEvaluator(self, openai_model_name)  # type: ignore[arg-type]
+        evaluator = CrewEvaluator(test_crew, openai_model_name)  # type: ignore[arg-type]
 
         for i in range(1, n_iterations + 1):
             evaluator.set_iteration(i)
-            self.kickoff(inputs=inputs)
+            test_crew.kickoff(inputs=inputs)
 
         evaluator.print_crew_evaluation_result()
 

@@ -1,14 +1,16 @@
-from pathlib import Path
-import click
-from crewai.cli.utils import copy_template, load_env_vars, write_env_file
-from crewai.cli.provider import (
-    get_provider_data,
-    select_provider,
-    select_model,
-    PROVIDERS,
-)
-from crewai.cli.constants import ENV_VARS
 import sys
+from pathlib import Path
+
+import click
+
+from crewai.cli.constants import ENV_VARS
+from crewai.cli.provider import (
+    PROVIDERS,
+    get_provider_data,
+    select_model,
+    select_provider,
+)
+from crewai.cli.utils import copy_template, load_env_vars, write_env_file
 
 
 def create_folder_structure(name, parent_folder=None):

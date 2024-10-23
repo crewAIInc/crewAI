@@ -2,6 +2,7 @@ import json
 import re
 from typing import Any, Dict, List, Union
 
+from crewai.agents.agent_builder.base_agent import BaseAgent
 from crewai.agents.agent_builder.base_agent_executor_mixin import CrewAgentExecutorMixin
 from crewai.agents.parser import (
     FINAL_ANSWER_AND_PARSABLE_ACTION_ERROR_MESSAGE,
@@ -29,7 +30,7 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
         llm: Any,
         task: Any,
         crew: Any,
-        agent: Any,
+        agent: BaseAgent,
         prompt: dict[str, str],
         max_iter: int,
         tools: List[Any],
@@ -103,7 +104,8 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
 
             if self.crew and self.crew._train:
                 self._handle_crew_training_output(formatted_answer)
-
+        self._create_short_term_memory(formatted_answer)
+        self._create_long_term_memory(formatted_answer)
         return {"output": formatted_answer.output}
 
     def _invoke_loop(self, formatted_answer=None):
@@ -176,6 +178,8 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
         return formatted_answer
 
     def _show_start_logs(self):
+        if self.agent is None:
+            raise ValueError("Agent cannot be None")
         if self.agent.verbose or (
             hasattr(self, "crew") and getattr(self.crew, "verbose", False)
         ):
@@ -188,6 +192,8 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
             )
 
     def _show_logs(self, formatted_answer: Union[AgentAction, AgentFinish]):
+        if self.agent is None:
+            raise ValueError("Agent cannot be None")
         if self.agent.verbose or (
             hasattr(self, "crew") and getattr(self.crew, "verbose", False)
         ):
@@ -306,7 +312,7 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
         self, result: AgentFinish, human_feedback: str | None = None
     ) -> None:
         """Function to handle the process of the training data."""
-        agent_id = str(self.agent.id)
+        agent_id = str(self.agent.id)  # type: ignore
 
         # Load training data
         training_handler = CrewTrainingHandler(TRAINING_DATA_FILE)
@@ -317,9 +323,9 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
             if self.crew is not None and hasattr(self.crew, "_train_iteration"):
                 train_iteration = self.crew._train_iteration
                 if agent_id in training_data and isinstance(train_iteration, int):
-                    training_data[agent_id][train_iteration]["improved_output"] = (
-                        result.output
-                    )
+                    training_data[agent_id][train_iteration][
+                        "improved_output"
+                    ] = result.output
                     training_handler.save(training_data)
                 else:
                     self._logger.log(
@@ -339,7 +345,7 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
                 "initial_output": result.output,
                 "human_feedback": human_feedback,
                 "agent": agent_id,
-                "agent_role": self.agent.role,
+                "agent_role": self.agent.role,  # type: ignore
             }
             if self.crew is not None and hasattr(self.crew, "_train_iteration"):
                 train_iteration = self.crew._train_iteration
