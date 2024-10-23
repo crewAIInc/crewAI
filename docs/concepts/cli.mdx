@@ -6,7 +6,7 @@ icon: terminal
 
 # CrewAI CLI Documentation
 
-The CrewAI CLI provides a set of commands to interact with CrewAI, allowing you to create, train, run, and manage crews and pipelines.
+The CrewAI CLI provides a set of commands to interact with CrewAI, allowing you to create, train, run, and manage crews & flows.
 
 ## Installation
 
@@ -146,3 +146,34 @@ crewai run
 Make sure to run these commands from the directory where your CrewAI project is set up. 
 Some commands may require additional configuration or setup within your project structure.
 </Note>
+
+
+### 9. API Keys
+
+When running ```crewai create crew``` command, the CLI will first show you the top 5 most common LLM providers and ask you to select one.
+
+Once you've selected an LLM provider, you will be prompted for API keys.
+
+#### Initial API key providers
+
+The CLI will initially prompt for API keys for the following services:
+
+* OpenAI
+* Groq
+* Anthropic
+* Google Gemini
+
+When you select a provider, the CLI will prompt you to enter your API key.
+
+#### Other Options
+
+If you select option 6, you will be able to select from a list of LiteLLM supported providers.
+
+When you select a provider, the CLI will prompt you to enter the Key name and the API key.
+
+See the following link for each provider's key name:
+
+* [LiteLLM Providers](https://docs.litellm.ai/docs/providers)
+
+
+
