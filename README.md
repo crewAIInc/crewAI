@@ -351,7 +351,7 @@ pre-commit install
 ### Running Tests
 
 ```bash
-uvx pytest
+uv run pytest .
 ```
 
 ### Running static type checks
