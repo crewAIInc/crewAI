@@ -435,15 +435,16 @@ class Crew(BaseModel):
         self, n_iterations: int, filename: str, inputs: Optional[Dict[str, Any]] = {}
     ) -> None:
         """Trains the crew for a given number of iterations."""
-        self._setup_for_training(filename)
+        train_crew = self.copy()
+        train_crew._setup_for_training(filename)
 
         for n_iteration in range(n_iterations):
-            self._train_iteration = n_iteration
-            self.kickoff(inputs=inputs)
+            train_crew._train_iteration = n_iteration
+            train_crew.kickoff(inputs=inputs)
 
         training_data = CrewTrainingHandler(TRAINING_DATA_FILE).load()
 
-        for agent in self.agents:
+        for agent in train_crew.agents:
             result = TaskEvaluator(agent).evaluate_training_data(
                 training_data=training_data, agent_id=str(agent.id)
             )
@@ -987,17 +988,19 @@ class Crew(BaseModel):
         inputs: Optional[Dict[str, Any]] = None,
     ) -> None:
         """Test and evaluate the Crew with the given inputs for n iterations concurrently using concurrent.futures."""
-        self._test_execution_span = self._telemetry.test_execution_span(
-            self,
+        test_crew = self.copy()
+
+        self._test_execution_span = test_crew._telemetry.test_execution_span(
+            test_crew,
             n_iterations,
             inputs,
             openai_model_name,  # type: ignore[arg-type]
         )  # type: ignore[arg-type]
-        evaluator = CrewEvaluator(self, openai_model_name)  # type: ignore[arg-type]
+        evaluator = CrewEvaluator(test_crew, openai_model_name)  # type: ignore[arg-type]
 
         for i in range(1, n_iterations + 1):
             evaluator.set_iteration(i)
-            self.kickoff(inputs=inputs)
+            test_crew.kickoff(inputs=inputs)
 
         evaluator.print_crew_evaluation_result()
 
