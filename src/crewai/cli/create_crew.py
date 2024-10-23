@@ -70,18 +70,19 @@ def copy_template_files(folder_path, name, class_name, parent_folder):
             copy_template(src_file, dst_file, name, class_name, folder_path.name)
 
 
-def create_crew(name, parent_folder=None):
+def create_crew(name, provider=None, parent_folder=None):
     folder_path, folder_name, class_name = create_folder_structure(name, parent_folder)
     env_vars = load_env_vars(folder_path)
 
-    provider_models = get_provider_data()
-    if not provider_models:
-        return
+    if not provider:
+        provider_models = get_provider_data()
+        if not provider_models:
+            return
 
-    selected_provider = select_provider(provider_models)
-    if not selected_provider:
-        return
-    provider = selected_provider
+        selected_provider = select_provider(provider_models)
+        if not selected_provider:
+            return
+        provider = selected_provider
 
     # selected_model = select_model(provider, provider_models)
     # if not selected_model:
