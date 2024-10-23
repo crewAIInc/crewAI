@@ -32,10 +32,11 @@ def crewai():
 @crewai.command()
 @click.argument("type", type=click.Choice(["crew", "pipeline", "flow"]))
 @click.argument("name")
-def create(type, name):
+@click.option("--provider", type=str, help="The provider to use for the crew")
+def create(type, name, provider):
     """Create a new crew, pipeline, or flow."""
     if type == "crew":
-        create_crew(name)
+        create_crew(name, provider)
     elif type == "pipeline":
         create_pipeline(name)
     elif type == "flow":
