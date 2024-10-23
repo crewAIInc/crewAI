@@ -81,12 +81,10 @@ def copy_template_files(folder_path, name, class_name, parent_folder):
             copy_template(src_file, dst_file, name, class_name, folder_path.name)
 
 
-def create_crew(
-    name, provider=None, skip_provider_validation=False, parent_folder=None
-):
+def create_crew(name, provider=None, skip_provider=False, parent_folder=None):
     folder_path, folder_name, class_name = create_folder_structure(name, parent_folder)
     env_vars = load_env_vars(folder_path)
-    if not skip_provider_validation:
+    if not skip_provider:
         if not provider:
             provider_models = get_provider_data()
             if not provider_models:
@@ -155,7 +153,9 @@ def create_crew(
             write_env_file(folder_path, env_vars)
             click.secho("API key saved to .env file", fg="green")
         else:
-            click.secho("No API key provided. Skipping .env file creation.", fg="yellow")
+            click.secho(
+                "No API key provided. Skipping .env file creation.", fg="yellow"
+            )
 
         env_vars["MODEL"] = selected_model
         click.secho(f"Selected model: {selected_model}", fg="green")
