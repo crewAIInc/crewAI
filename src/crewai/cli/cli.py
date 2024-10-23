@@ -32,12 +32,12 @@ def crewai():
 @crewai.command()
 @click.argument("type", type=click.Choice(["crew", "pipeline", "flow"]))
 @click.argument("name")
-@click.option("--skip-provider", is_flag=True, help="Skip provider validation")
 @click.option("--provider", type=str, help="The provider to use for the crew")
-def create(type, name, provider, skip_provider_validation=False):
+@click.option("--skip_provider", is_flag=True, help="Skip provider validation")
+def create(type, name, provider, skip_provider=False):
     """Create a new crew, pipeline, or flow."""
     if type == "crew":
-        create_crew(name, provider, skip_provider_validation)
+        create_crew(name, provider, skip_provider)
     elif type == "pipeline":
         create_pipeline(name)
     elif type == "flow":
