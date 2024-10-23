@@ -419,7 +419,7 @@ class Agent(BaseAgent):
 
         return "\n".join(tool_strings)
 
-    def _validate_docker_installation(self):
+    def _validate_docker_installation(self) -> None:
         """Check if Docker is installed and running."""
         if not shutil.which("docker"):
             raise RuntimeError(
