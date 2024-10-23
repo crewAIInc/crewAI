@@ -31,16 +31,17 @@ Think of an agent as a member of a team, with specific skills and a particular j
 | **Max RPM** *(optional)*   | `max_rpm`  | Max RPM is the maximum number of requests per minute the agent can perform to avoid rate limits. It's optional and can be left unspecified, with a default value of `None`.                                                                               |
 | **Max Execution Time** *(optional)*   | `max_execution_time`  | Max Execution Time is the maximum execution time for an agent to execute a task. It's optional and can be left unspecified, with a default value of `None`, meaning no max execution time.                                                                     |
 | **Verbose** *(optional)*   | `verbose`  | Setting this to `True` configures the internal logger to provide detailed execution logs, aiding in debugging and monitoring. Default is `False`.                                                                                              |
-| **Allow Delegation** *(optional)* | `allow_delegation`  | Agents can delegate tasks or questions to one another, ensuring that each task is handled by the most suitable agent. Default is `False`.
+| **Allow Delegation** *(optional)* | `allow_delegation`  | Agents can delegate tasks or questions to one another, ensuring that each task is handled by the most suitable agent. Default is `False`.                                                                                                      |
 | **Step Callback** *(optional)* | `step_callback`  | A function that is called after each step of the agent. This can be used to log the agent's actions or to perform other operations. It will overwrite the crew `step_callback`.                                                               |
 | **Cache** *(optional)*     | `cache`  | Indicates if the agent should use a cache for tool usage. Default is `True`.                                                                                                                                                                  |
 | **System Template** *(optional)*     | `system_template`  | Specifies the system format for the agent. Default is `None`.                                                                                                                                                                  |
 | **Prompt Template** *(optional)*     | `prompt_template`  | Specifies the prompt format for the agent. Default is `None`.                                                                                                                                                                  |
 | **Response Template** *(optional)*     | `response_template`  | Specifies the response format for the agent. Default is `None`.                                                                                                                                                                  |
 | **Allow Code Execution** *(optional)*     | `allow_code_execution`  | Enable code execution for the agent. Default is `False`.                                                                                                                                                                  |
-| **Max Retry Limit** *(optional)*     | `max_retry_limit`  | Maximum number of retries for an agent to execute a task when an error occurs. Default is `2`.
+| **Max Retry Limit** *(optional)*     | `max_retry_limit`  | Maximum number of retries for an agent to execute a task when an error occurs. Default is `2`.                                                                                                                                                                  |
 | **Use System Prompt** *(optional)*     | `use_system_prompt`  | Adds the ability to not use system prompt (to support o1 models). Default is `True`.                                                                                                                                                                  |
 | **Respect Context Window** *(optional)*     | `respect_context_window`  | Summary strategy to avoid overflowing the context window. Default is `True`.                                                                                                                                                                  |
+| **Code Execution Mode** *(optional)* | `code_execution_mode` | Determines the mode for code execution: 'safe' (using Docker) or 'unsafe' (direct execution on the host machine). Default is `safe`.                                                                                                          |
 
 ## Creating an agent
 
@@ -83,6 +84,7 @@ agent = Agent(
   max_retry_limit=2,  # Optional
   use_system_prompt=True,  # Optional
   respect_context_window=True,  # Optional
+  code_execution_mode='safe',  # Optional, defaults to 'safe'
 )
 ```
 
@@ -156,4 +158,4 @@ crew = my_crew.kickoff(inputs={"input": "Mark Twain"})
 ## Conclusion
 
 Agents are the building blocks of the CrewAI framework. By understanding how to define and interact with agents, 
-you can create sophisticated AI systems that leverage the power of collaborative intelligence.
+you can create sophisticated AI systems that leverage the power of collaborative intelligence. The `code_execution_mode` attribute provides flexibility in how agents execute code, allowing for both secure and direct execution options.
