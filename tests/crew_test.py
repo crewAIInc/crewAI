@@ -1727,10 +1727,13 @@ def test_manager_agent_with_tools_raises_exception():
         crew.kickoff()
 
 
+@patch("crewai.crew.Crew.kickoff")
 @patch("crewai.crew.CrewTrainingHandler")
 @patch("crewai.crew.TaskEvaluator")
 @patch("crewai.crew.Crew.copy")
-def test_crew_train_success(copy_mock, task_evaluator, crew_training_handler):
+def test_crew_train_success(
+    copy_mock, task_evaluator, crew_training_handler, kickoff_mock
+):
     task = Task(
         description="Come up with a list of 5 interesting ideas to explore for an article, then write one amazing paragraph highlight for each idea that showcases how good an article about this topic could be. Return the list of ideas with their paragraph and your notes.",
         expected_output="5 bullet points with a paragraph for each idea.",
@@ -1743,15 +1746,14 @@ def test_crew_train_success(copy_mock, task_evaluator, crew_training_handler):
     )
 
     # Create a mock for the copied crew
-    copied_crew = mock.Mock()
-    copy_mock.return_value = copied_crew
+    copy_mock.return_value = crew
 
     crew.train(
         n_iterations=2, inputs={"topic": "AI"}, filename="trained_agents_data.pkl"
     )
 
     # Ensure kickoff is called on the copied crew
-    copied_crew.kickoff.assert_has_calls(
+    kickoff_mock.assert_has_calls(
         [mock.call(inputs={"topic": "AI"}), mock.call(inputs={"topic": "AI"})]
     )
 
@@ -2504,7 +2506,8 @@ def test_conditional_should_execute():
 
 @mock.patch("crewai.crew.CrewEvaluator")
 @mock.patch("crewai.crew.Crew.copy")
-def test_crew_testing_function(copy_mock, crew_evaluator):
+@mock.patch("crewai.crew.Crew.kickoff")
+def test_crew_testing_function(kickoff_mock, copy_mock, crew_evaluator):
     task = Task(
         description="Come up with a list of 5 interesting ideas to explore for an article, then write one amazing paragraph highlight for each idea that showcases how good an article about this topic could be. Return the list of ideas with their paragraph and your notes.",
         expected_output="5 bullet points with a paragraph for each idea.",
@@ -2517,14 +2520,13 @@ def test_crew_testing_function(copy_mock, crew_evaluator):
     )
 
     # Create a mock for the copied crew
-    copied_crew = mock.Mock()
-    copy_mock.return_value = copied_crew
+    copy_mock.return_value = crew
 
     n_iterations = 2
     crew.test(n_iterations, openai_model_name="gpt-4o-mini", inputs={"topic": "AI"})
 
     # Ensure kickoff is called on the copied crew
-    copied_crew.kickoff.assert_has_calls(
+    kickoff_mock.assert_has_calls(
         [mock.call(inputs={"topic": "AI"}), mock.call(inputs={"topic": "AI"})]
     )
 
