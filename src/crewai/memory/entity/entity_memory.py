@@ -20,7 +20,7 @@ class EntityMemory(Memory):
         if self.memory_provider == "mem0":
             storage = Mem0Storage(
                 type="entities",
-                crew=crew,
+                crew=crew
             )
         else:
             storage = (

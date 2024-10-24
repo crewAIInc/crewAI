@@ -42,7 +42,7 @@ class ContextualMemory:
         """
         stm_results = self.stm.search(query)
         formatted_results = "\n".join(
-            [f"- {result['context']}" for result in stm_results]
+            [f"- {result['memory'] if self.memory_provider == 'mem0' else result['context']}" for result in stm_results]
         )
         return f"Recent Insights:\n{formatted_results}" if stm_results else ""
 
