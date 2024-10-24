@@ -79,6 +79,7 @@ class BaseAgentTools(BaseModel, ABC):
 
         agent = agent[0]
         task_with_assigned_agent = Task(  # type: ignore # Incompatible types in assignment (expression has type "Task", variable has type "str")
+            name=task,
             description=task,
             agent=agent,
             expected_output=agent.i18n.slice("manager_request"),

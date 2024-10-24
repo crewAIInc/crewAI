@@ -696,7 +696,7 @@ class Crew(BaseModel):
                 task_output = task.execute_sync(
                     agent=agent_to_use,
                     context=context,
-                    tools=agent_to_use.tools,
+                    tools=union_of_lists(agent_to_use.tools or [], task.tools or []),
                 )
                 task_outputs = [task_output]
                 self._process_task_result(task, task_output)
@@ -1018,3 +1018,11 @@ class Crew(BaseModel):
 
     def __repr__(self):
         return f"Crew(id={self.id}, process={self.process}, number_of_agents={len(self.agents)}, number_of_tasks={len(self.tasks)})"
+
+
+def union_of_lists(list1: list, list2: list) -> list:
+    op = list1[:]
+    for x in list2:
+        if x not in op:
+            op.append(x)
+    return op
