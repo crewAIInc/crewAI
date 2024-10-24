@@ -7,7 +7,7 @@ def plot_flow() -> None:
     """
     Plot the flow by running a command in the UV environment.
     """
-    command = ["uv", "run", "plot_flow"]
+    command = ["uv", "run", "plot"]
 
     try:
         result = subprocess.run(command, capture_output=False, text=True, check=True)
