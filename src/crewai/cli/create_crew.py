@@ -81,77 +81,84 @@ def copy_template_files(folder_path, name, class_name, parent_folder):
             copy_template(src_file, dst_file, name, class_name, folder_path.name)
 
 
-def create_crew(name, parent_folder=None):
+def create_crew(name, provider=None, skip_provider=False, parent_folder=None):
     folder_path, folder_name, class_name = create_folder_structure(name, parent_folder)
     env_vars = load_env_vars(folder_path)
+    if not skip_provider:
+        if not provider:
+            provider_models = get_provider_data()
+            if not provider_models:
+                return
 
-    existing_provider = None
-    for provider, env_keys in ENV_VARS.items():
-        if any(key in env_vars for key in env_keys):
-            existing_provider = provider
-            break
+        existing_provider = None
+        for provider, env_keys in ENV_VARS.items():
+            if any(key in env_vars for key in env_keys):
+                existing_provider = provider
+                break
 
-    if existing_provider:
-        if not click.confirm(
-            f"Found existing environment variable configuration for {existing_provider.capitalize()}. Do you want to override it?"
-        ):
-            click.secho("Keeping existing provider configuration.", fg="yellow")
+        if existing_provider:
+            if not click.confirm(
+                f"Found existing environment variable configuration for {existing_provider.capitalize()}. Do you want to override it?"
+            ):
+                click.secho("Keeping existing provider configuration.", fg="yellow")
+                return
+
+        provider_models = get_provider_data()
+        if not provider_models:
             return
 
-    provider_models = get_provider_data()
-    if not provider_models:
-        return
+        while True:
+            selected_provider = select_provider(provider_models)
+            if selected_provider is None:  # User typed 'q'
+                click.secho("Exiting...", fg="yellow")
+                sys.exit(0)
+            if selected_provider:  # Valid selection
+                break
+            click.secho(
+                "No provider selected. Please try again or press 'q' to exit.", fg="red"
+            )
 
-    while True:
-        selected_provider = select_provider(provider_models)
-        if selected_provider is None:  # User typed 'q'
-            click.secho("Exiting...", fg="yellow")
-            sys.exit(0)
-        if selected_provider:  # Valid selection
-            break
-        click.secho(
-            "No provider selected. Please try again or press 'q' to exit.", fg="red"
-        )
+        while True:
+            selected_model = select_model(selected_provider, provider_models)
+            if selected_model is None:  # User typed 'q'
+                click.secho("Exiting...", fg="yellow")
+                sys.exit(0)
+            if selected_model:  # Valid selection
+                break
+            click.secho(
+                "No model selected. Please try again or press 'q' to exit.", fg="red"
+            )
 
-    while True:
-        selected_model = select_model(selected_provider, provider_models)
-        if selected_model is None:  # User typed 'q'
-            click.secho("Exiting...", fg="yellow")
-            sys.exit(0)
-        if selected_model:  # Valid selection
-            break
-        click.secho(
-            "No model selected. Please try again or press 'q' to exit.", fg="red"
-        )
+        if selected_provider in PROVIDERS:
+            api_key_var = ENV_VARS[selected_provider][0]
+        else:
+            api_key_var = click.prompt(
+                f"Enter the environment variable name for your {selected_provider.capitalize()} API key",
+                type=str,
+                default="",
+            )
 
-    if selected_provider in PROVIDERS:
-        api_key_var = ENV_VARS[selected_provider][0]
-    else:
-        api_key_var = click.prompt(
-            f"Enter the environment variable name for your {selected_provider.capitalize()} API key",
-            type=str,
-            default="",
-        )
-
-    api_key_value = ""
-    click.echo(
-        f"Enter your {selected_provider.capitalize()} API key (press Enter to skip): ",
-        nl=False,
-    )
-    try:
-        api_key_value = input()
-    except (KeyboardInterrupt, EOFError):
         api_key_value = ""
+        click.echo(
+            f"Enter your {selected_provider.capitalize()} API key (press Enter to skip): ",
+            nl=False,
+        )
+        try:
+            api_key_value = input()
+        except (KeyboardInterrupt, EOFError):
+            api_key_value = ""
 
-    if api_key_value.strip():
-        env_vars = {api_key_var: api_key_value}
-        write_env_file(folder_path, env_vars)
-        click.secho("API key saved to .env file", fg="green")
-    else:
-        click.secho("No API key provided. Skipping .env file creation.", fg="yellow")
+        if api_key_value.strip():
+            env_vars = {api_key_var: api_key_value}
+            write_env_file(folder_path, env_vars)
+            click.secho("API key saved to .env file", fg="green")
+        else:
+            click.secho(
+                "No API key provided. Skipping .env file creation.", fg="yellow"
+            )
 
-    env_vars["MODEL"] = selected_model
-    click.secho(f"Selected model: {selected_model}", fg="green")
+        env_vars["MODEL"] = selected_model
+        click.secho(f"Selected model: {selected_model}", fg="green")
 
     package_dir = Path(__file__).parent
     templates_dir = package_dir / "templates" / "crew"
