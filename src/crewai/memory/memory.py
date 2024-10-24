@@ -1,4 +1,4 @@
-from typing import Any, Dict, Optional, List
+from typing import Any, Dict, Optional
 
 from crewai.memory.storage.rag_storage import RAGStorage
 
@@ -23,5 +23,13 @@ class Memory:
 
         self.storage.save(value, metadata)
 
-    def search(self, query: str) -> List[Dict[str, Any]]:
-        return self.storage.search(query)
+    def search(
+        self,
+        query: str,
+        limit: int = 3,
+        filters: dict = {},
+        score_threshold: float = 0.35,
+    ) -> Dict[str, Any]:
+        return self.storage.search(
+            query=query, limit=limit, filters=filters, score_threshold=score_threshold
+        )
