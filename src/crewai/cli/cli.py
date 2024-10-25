@@ -178,10 +178,14 @@ def test(n_iterations: int, model: str):
     evaluate_crew(n_iterations, model)
 
 
-@crewai.command()
-def install():
+@crewai.command(context_settings=dict(
+    ignore_unknown_options=True,
+    allow_extra_args=True,
+))
+@click.pass_context
+def install(context):
     """Install the Crew."""
-    install_crew()
+    install_crew(context.args)
 
 
 @crewai.command()
