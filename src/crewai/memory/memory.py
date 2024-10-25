@@ -1,4 +1,4 @@
-from typing import Any, Dict, Optional
+from typing import Any, Dict, Optional, List
 
 from crewai.memory.storage.rag_storage import RAGStorage
 
@@ -29,7 +29,7 @@ class Memory:
         limit: int = 3,
         filters: dict = {},
         score_threshold: float = 0.35,
-    ) -> Dict[str, Any]:
+    ) -> List[Any]:
         return self.storage.search(
             query=query, limit=limit, filters=filters, score_threshold=score_threshold
         )
