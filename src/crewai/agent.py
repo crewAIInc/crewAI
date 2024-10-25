@@ -392,6 +392,16 @@ class Agent(BaseAgent):
         return description
 
     def _render_text_description_and_args(self, tools: List[Any]) -> str:
+        """Render the tool name, description, and args in plain text.
+
+            Output will be in the format of:
+
+            .. code-block:: markdown
+
+            search: This tool is used for search, args: {"query": {"type": "string"}}
+            calculator: This tool is used for math, \
+            args: {"expression": {"type": "string"}}
+        """
         tool_strings = []
         for tool in tools:
             args_schema = {
