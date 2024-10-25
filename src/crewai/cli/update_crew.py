@@ -2,7 +2,8 @@ import os
 import shutil
 
 import tomli_w
-import tomllib
+
+from crewai.cli.utils import read_toml
 
 
 def update_crew() -> None:
@@ -20,8 +21,7 @@ def migrate_pyproject(input_file, output_file):
     """
 
     # Read the input pyproject.toml
-    with open(input_file, "rb") as f:
-        pyproject = tomllib.load(f)
+    pyproject_data = read_toml()
 
     # Initialize the new project structure
     new_pyproject = {
@@ -30,8 +30,8 @@ def migrate_pyproject(input_file, output_file):
     }
 
     # Migrate project metadata
-    if "tool" in pyproject and "poetry" in pyproject["tool"]:
-        poetry = pyproject["tool"]["poetry"]
+    if "tool" in pyproject_data and "poetry" in pyproject_data["tool"]:
+        poetry = pyproject_data["tool"]["poetry"]
         new_pyproject["project"]["name"] = poetry.get("name")
         new_pyproject["project"]["version"] = poetry.get("version")
         new_pyproject["project"]["description"] = poetry.get("description")
@@ -45,7 +45,7 @@ def migrate_pyproject(input_file, output_file):
         new_pyproject["project"]["requires-python"] = poetry.get("python")
     else:
         # If it's already in the new format, just copy the project section
-        new_pyproject["project"] = pyproject.get("project", {})
+        new_pyproject["project"] = pyproject_data.get("project", {})
 
     # Migrate or copy dependencies
     if "dependencies" in new_pyproject["project"]:
@@ -69,8 +69,8 @@ def migrate_pyproject(input_file, output_file):
     # Migrate or copy scripts
     if "scripts" in poetry:
         new_pyproject["project"]["scripts"] = poetry["scripts"]
-    elif "scripts" in pyproject.get("project", {}):
-        new_pyproject["project"]["scripts"] = pyproject["project"]["scripts"]
+    elif "scripts" in pyproject_data.get("project", {}):
+        new_pyproject["project"]["scripts"] = pyproject_data["project"]["scripts"]
     else:
         new_pyproject["project"]["scripts"] = {}
 
