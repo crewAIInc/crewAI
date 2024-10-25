@@ -6,6 +6,7 @@ from functools import reduce
 from typing import Any, Dict, List
 
 import click
+import tomli
 from rich.console import Console
 
 from crewai.cli.authentication.utils import TokenManager
@@ -52,6 +53,13 @@ def simple_toml_parser(content):
             value = value.strip().strip('"')
             current_section[key] = value
     return result
+
+
+def read_toml(file_path: str = "pyproject.toml"):
+    """Read the content of a TOML file and return it as a dictionary."""
+    with open(file_path, "rb") as f:
+        toml_dict = tomli.load(f)
+    return toml_dict
 
 
 def parse_toml(content):

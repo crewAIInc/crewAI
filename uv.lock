@@ -625,6 +625,7 @@ dependencies = [
     { name = "python-dotenv" },
     { name = "pyvis" },
     { name = "regex" },
+    { name = "tomli" },
     { name = "tomli-w" },
     { name = "uv" },
 ]
@@ -679,6 +680,7 @@ requires-dist = [
     { name = "python-dotenv", specifier = ">=1.0.0" },
     { name = "pyvis", specifier = ">=0.3.2" },
     { name = "regex", specifier = ">=2024.9.11" },
+    { name = "tomli", specifier = ">=2.0.2" },
     { name = "tomli-w", specifier = ">=1.1.0" },
     { name = "uv", specifier = ">=0.4.25" },
 ]
