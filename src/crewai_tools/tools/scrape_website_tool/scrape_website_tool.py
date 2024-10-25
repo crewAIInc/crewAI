@@ -69,5 +69,6 @@ class ScrapeWebsiteTool(BaseTool):
         parsed = BeautifulSoup(page.text, "html.parser")
 
         text = parsed.get_text(" ")
-        text = re.sub('\s+', ' ', text)
+        text = re.sub('[ \t]+', ' ', text)
+        text = re.sub('\\s+\n\\s+', '\n', text)
         return text
