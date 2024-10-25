@@ -406,8 +406,6 @@ class Agent(BaseAgent):
             )
             tool_strings.append(f"{description}\nTool Arguments: {args_schema}")
 
-        print("TOOL STRINGS:", "\n".join(tool_strings))
-
         return "\n".join(tool_strings)
 
     def _validate_docker_installation(self) -> None:
