@@ -13,7 +13,7 @@ from crewai.agents.parser import AgentAction, CrewAgentParser, OutputParserExcep
 from crewai.llm import LLM
 from crewai.tools.tool_calling import InstructorToolCalling
 from crewai.tools.tool_usage import ToolUsage
-from crewai.tools.base_tool import tool
+from crewai.tools import tool
 from crewai.tools.tool_usage_events import ToolUsageFinished
 from crewai.utilities import RPMController
 from crewai.utilities.events import Emitter
@@ -605,7 +605,7 @@ def test_agent_respect_the_max_rpm_set(capsys):
 def test_agent_respect_the_max_rpm_set_over_crew_rpm(capsys):
     from unittest.mock import patch
 
-    from crewai.tools.base_tool import tool
+    from crewai.tools import tool
 
     @tool
     def get_final_answer() -> float:
@@ -643,7 +643,7 @@ def test_agent_respect_the_max_rpm_set_over_crew_rpm(capsys):
 def test_agent_without_max_rpm_respet_crew_rpm(capsys):
     from unittest.mock import patch
 
-    from crewai.tools.base_tool import tool
+    from crewai.tools import tool
 
     @tool
     def get_final_answer() -> float:
@@ -697,7 +697,7 @@ def test_agent_without_max_rpm_respet_crew_rpm(capsys):
 def test_agent_error_on_parsing_tool(capsys):
     from unittest.mock import patch
 
-    from crewai.tools.base_tool import tool
+    from crewai.tools import tool
 
     @tool
     def get_final_answer() -> float:
@@ -740,7 +740,7 @@ def test_agent_error_on_parsing_tool(capsys):
 def test_agent_remembers_output_format_after_using_tools_too_many_times():
     from unittest.mock import patch
 
-    from crewai.tools.base_tool import tool
+    from crewai.tools import tool
 
     @tool
     def get_final_answer() -> float:

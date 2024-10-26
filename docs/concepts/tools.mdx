@@ -164,7 +164,7 @@ class MyCustomTool(BaseTool):
 ### Utilizing the `tool` Decorator
 
 ```python Code
-from crewai.tools.base_tool import tool
+from crewai.tools import tool
 @tool("Name of my tool")
 def my_tool(question: str) -> str:
     """Clear description for what this tool is useful for, your agent will need this information to use it."""
@@ -181,7 +181,7 @@ def my_tool(question: str) -> str:
 </Tip>
 
 ```python Code
-from crewai.tools.base_tool import tool
+from crewai.tools import tool
 
 @tool
 def multiplication_tool(first_number: int, second_number: int) -> str:

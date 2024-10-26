@@ -33,7 +33,7 @@ Alternatively, you can use the tool decorator `@tool`. This approach allows you 
 offering a concise and efficient way to create specialized tools tailored to your needs.
 
 ```python Code
-from crewai.tools.base_tool import tool
+from crewai.tools import tool
 
 @tool("Tool Name")
 def my_simple_tool(question: str) -> str:
