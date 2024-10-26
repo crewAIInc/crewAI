@@ -10,7 +10,7 @@ import crewai.utilities.events as events
 from crewai.agents.tools_handler import ToolsHandler
 from crewai.task import Task
 from crewai.telemetry import Telemetry
-from crewai.tools.base_tool import BaseTool
+from crewai.tools import BaseTool
 from crewai.tools.tool_calling import InstructorToolCalling, ToolCalling
 from crewai.tools.tool_usage_events import ToolUsageError, ToolUsageFinished
 from crewai.utilities import I18N, Converter, ConverterError, Printer

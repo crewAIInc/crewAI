@@ -900,7 +900,7 @@ def test_agent_count_formatting_error():
 
 @pytest.mark.vcr(filter_headers=["authorization"])
 def test_tool_result_as_answer_is_the_final_answer_for_the_agent():
-    from crewai.tools.base_tool import BaseTool
+    from crewai.tools import BaseTool
 
     class MyCustomTool(BaseTool):
         name: str = "Get Greetings"
@@ -930,7 +930,7 @@ def test_tool_result_as_answer_is_the_final_answer_for_the_agent():
 
 @pytest.mark.vcr(filter_headers=["authorization"])
 def test_tool_usage_information_is_appended_to_agent():
-    from crewai.tools.base_tool import BaseTool
+    from crewai.tools import BaseTool
 
     class MyCustomTool(BaseTool):
         name: str = "Decide Greetings"

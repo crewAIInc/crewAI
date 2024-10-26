@@ -1,4 +1,4 @@
-from crewai.tools.base_tool import BaseTool
+from crewai.tools import BaseTool
 
 
 class {{class_name}}(BaseTool):

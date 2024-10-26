@@ -11,7 +11,7 @@ from crewai.agents.crew_agent_executor import CrewAgentExecutor
 from crewai.llm import LLM
 from crewai.memory.contextual.contextual_memory import ContextualMemory
 from crewai.tools.agent_tools import AgentTools
-from crewai.tools.base_tool import BaseTool
+from crewai.tools import BaseTool
 from crewai.utilities import Converter, Prompts
 from crewai.utilities.constants import TRAINED_AGENTS_DATA_FILE, TRAINING_DATA_FILE
 from crewai.utilities.token_counter_callback import TokenCalcHandler
@@ -335,7 +335,7 @@ class Agent(BaseAgent):
         tools_list = []
         try:
             # tentatively try to import from crewai_tools import BaseTool as CrewAITool
-            from crewai.tools.base_tool import BaseTool as CrewAITool
+            from crewai.tools import BaseTool as CrewAITool
 
             for tool in tools:
                 if isinstance(tool, CrewAITool):

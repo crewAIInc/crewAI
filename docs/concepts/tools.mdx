@@ -5,6 +5,7 @@ icon: screwdriver-wrench
 ---
 
 ## Introduction
+
 CrewAI tools empower agents with capabilities ranging from web searching and data analysis to collaboration and delegating tasks among coworkers.
 This documentation outlines how to create, integrate, and leverage these tools within the CrewAI framework, including a new focus on collaboration tools.
 
@@ -148,7 +149,7 @@ There are two main ways for one to create a CrewAI tool:
 ### Subclassing `BaseTool`
 
 ```python Code
-from crewai.tools.base_tool import BaseTool
+from crewai.tools import BaseTool
 
 
 class MyCustomTool(BaseTool):
