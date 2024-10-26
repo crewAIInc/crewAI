@@ -456,7 +456,7 @@ def test_crew_verbose_output(capsys):
 def test_cache_hitting_between_agents():
     from unittest.mock import call, patch
 
-    from crewai_tools import tool
+    from crewai.tools.base_tool import tool
 
     @tool
     def multiplier(first_number: int, second_number: int) -> float:
@@ -499,7 +499,7 @@ def test_cache_hitting_between_agents():
 def test_api_calls_throttling(capsys):
     from unittest.mock import patch
 
-    from crewai_tools import tool
+    from crewai.tools.base_tool import tool
 
     @tool
     def get_final_answer() -> float:
@@ -1111,7 +1111,7 @@ def test_dont_set_agents_step_callback_if_already_set():
 def test_crew_function_calling_llm():
     from unittest.mock import patch
 
-    from crewai_tools import tool
+    from crewai.tools.base_tool import tool
 
     llm = "gpt-4o"
 
@@ -1146,7 +1146,7 @@ def test_crew_function_calling_llm():
 
 @pytest.mark.vcr(filter_headers=["authorization"])
 def test_task_with_no_arguments():
-    from crewai_tools import tool
+    from crewai.tools.base_tool import tool
 
     @tool
     def return_data() -> str:
@@ -1494,7 +1494,7 @@ def test_task_callback_on_crew():
 def test_tools_with_custom_caching():
     from unittest.mock import patch
 
-    from crewai_tools import tool
+    from crewai.tools.base_tool import tool
 
     @tool
     def multiplcation_tool(first_number: int, second_number: int) -> int:
@@ -1696,7 +1696,7 @@ def test_manager_agent_in_agents_raises_exception():
 
 
 def test_manager_agent_with_tools_raises_exception():
-    from crewai_tools import tool
+    from crewai.tools.base_tool import tool
 
     @tool
     def testing_tool(first_number: int, second_number: int) -> int:
