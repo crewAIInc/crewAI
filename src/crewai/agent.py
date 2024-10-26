@@ -1,7 +1,6 @@
 import os
 import shutil
 import subprocess
-from inspect import signature
 from typing import Any, List, Literal, Optional, Union
 
 from pydantic import Field, InstanceOf, PrivateAttr, model_validator
@@ -397,26 +396,26 @@ class Agent(BaseAgent):
     def _render_text_description_and_args(self, tools: List[Any]) -> str:
         """Render the tool name, description, and args in plain text.
 
-        Output will be in the format of:
+            Output will be in the format of:
 
-        .. code-block:: markdown
+            .. code-block:: markdown
 
             search: This tool is used for search, args: {"query": {"type": "string"}}
             calculator: This tool is used for math, \
-    args: {"expression": {"type": "string"}}
+            args: {"expression": {"type": "string"}}
         """
         tool_strings = []
         for tool in tools:
-            args_schema = str(tool.model_fields)
-            if hasattr(tool, "func") and tool.func:
-                sig = signature(tool.func)
-                description = (
-                    f"Tool Name: {tool.name}{sig}\nTool Description: {tool.description}"
-                )
-            else:
-                description = (
-                    f"Tool Name: {tool.name}\nTool Description: {tool.description}"
-                )
+            args_schema = {
+                name: {
+                    "description": field.description,
+                    "type": field.annotation.__name__,
+                }
+                for name, field in tool.args_schema.model_fields.items()
+            }
+            description = (
+                f"Tool Name: {tool.name}\nTool Description: {tool.description}"
+            )
             tool_strings.append(f"{description}\nTool Arguments: {args_schema}")
 
         return "\n".join(tool_strings)
