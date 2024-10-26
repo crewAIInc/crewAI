@@ -30,7 +30,6 @@ class UserMemory(Memory):
         self,
         query: str,
         limit: int = 3,
-        filters: dict = {},
         score_threshold: float = 0.35,
     ):
         results = super().search(

@@ -1,5 +1,5 @@
 import os
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List
 
 from mem0 import MemoryClient
 from crewai.memory.storage.interface import Storage
@@ -65,7 +65,6 @@ class Mem0Storage(Storage):
         self,
         query: str,
         limit: int = 3,
-        filters: Optional[dict] = None,
         score_threshold: float = 0.35,
     ) -> List[Any]:
         params = {"query": query, "limit": limit}

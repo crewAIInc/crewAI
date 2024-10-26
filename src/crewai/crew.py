@@ -254,9 +254,10 @@ class Crew(BaseModel):
                     embedder_config=self.embedder,
                 )
             )
-            self._entity_memory = EntityMemory(
-                crew=self,
-                embedder_config=self.embedder,
+            self._entity_memory = (
+                self.entity_memory
+                if self.entity_memory
+                else EntityMemory(crew=self, embedder_config=self.embedder)
             )
             if hasattr(self, "memory_config") and self.memory_config is not None:
                 self._user_memory = (

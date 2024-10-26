@@ -27,9 +27,8 @@ class Memory:
         self,
         query: str,
         limit: int = 3,
-        filters: dict = {},
         score_threshold: float = 0.35,
     ) -> List[Any]:
         return self.storage.search(
-            query=query, limit=limit, filters=filters, score_threshold=score_threshold
+            query=query, limit=limit, score_threshold=score_threshold
         )

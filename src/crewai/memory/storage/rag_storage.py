@@ -162,7 +162,7 @@ class RAGStorage(BaseRAGStorage):
         self,
         query: str,
         limit: int = 3,
-        filters: Optional[dict] = None,
+        filter: Optional[dict] = None,
         score_threshold: float = 0.35,
     ) -> List[Any]:
         if not hasattr(self, "app"):

@@ -48,11 +48,10 @@ class ShortTermMemory(Memory):
         self,
         query: str,
         limit: int = 3,
-        filters: dict = {},
         score_threshold: float = 0.35,
     ):
         return self.storage.search(
-            query=query, limit=limit, filters=filters, score_threshold=score_threshold
+            query=query, limit=limit, score_threshold=score_threshold
         )  # type: ignore # BUG? The reference is to the parent class, but the parent class does not have this parameters
 
     def reset(self) -> None:

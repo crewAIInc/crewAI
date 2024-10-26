@@ -1,4 +1,4 @@
-from typing import Optional
+from typing import Optional, Dict, Any
 
 from crewai.memory import EntityMemory, LongTermMemory, ShortTermMemory, UserMemory
 
@@ -6,12 +6,16 @@ from crewai.memory import EntityMemory, LongTermMemory, ShortTermMemory, UserMem
 class ContextualMemory:
     def __init__(
         self,
+        memory_config: Optional[Dict[str, Any]],
         stm: ShortTermMemory,
         ltm: LongTermMemory,
         em: EntityMemory,
         um: UserMemory,
     ):
-        self.memory_provider = stm.memory_provider
+        if memory_config is not None:
+            self.memory_provider = memory_config.get("provider")
+        else:
+            self.memory_provider = None
         self.stm = stm
         self.ltm = ltm
         self.em = em
@@ -42,7 +46,10 @@ class ContextualMemory:
         """
         stm_results = self.stm.search(query)
         formatted_results = "\n".join(
-            [f"- {result['memory'] if self.memory_provider == 'mem0' else result['context']}" for result in stm_results]
+            [
+                f"- {result['memory'] if self.memory_provider == 'mem0' else result['context']}"
+                for result in stm_results
+            ]
         )
         return f"Recent Insights:\n{formatted_results}" if stm_results else ""
 
