@@ -138,7 +138,7 @@ class Crew(BaseModel):
         description="An instance of the UserMemory to be used by the Crew to store/fetch memories of a specific user.",
     )
     embedder: Optional[dict] = Field(
-        default={"provider": "openai"},
+        default=None,
         description="Configuration for the embedder to be used for the crew.",
     )
     usage_metrics: Optional[UsageMetrics] = Field(
