@@ -1309,8 +1309,9 @@ def test_hierarchical_crew_creation_tasks_with_agents():
 
     assert crew.manager_agent is not None
     assert crew.manager_agent.tools is not None
-    assert crew.manager_agent.tools[0].description.startswith(
-        "Delegate a specific task to one of the following coworkers: Senior Writer"
+    assert (
+        "Delegate a specific task to one of the following coworkers: Senior Writer\n"
+        in crew.manager_agent.tools[0].description
     )
 
 
@@ -1337,8 +1338,9 @@ def test_hierarchical_crew_creation_tasks_with_async_execution():
     crew.kickoff()
     assert crew.manager_agent is not None
     assert crew.manager_agent.tools is not None
-    assert crew.manager_agent.tools[0].description.startswith(
+    assert (
         "Delegate a specific task to one of the following coworkers: Senior Writer\n"
+        in crew.manager_agent.tools[0].description
     )
 
 
@@ -1370,8 +1372,9 @@ def test_hierarchical_crew_creation_tasks_with_sync_last():
     crew.kickoff()
     assert crew.manager_agent is not None
     assert crew.manager_agent.tools is not None
-    assert crew.manager_agent.tools[0].description.startswith(
+    assert (
         "Delegate a specific task to one of the following coworkers: Senior Writer, Researcher, CEO\n"
+        in crew.manager_agent.tools[0].description
     )
 
 
