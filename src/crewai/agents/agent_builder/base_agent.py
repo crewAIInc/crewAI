@@ -1,7 +1,7 @@
 import uuid
 from abc import ABC, abstractmethod
 from copy import copy as shallow_copy
-from hashlib import md5
+from hashlib import sha256
 from typing import Any, Dict, List, Optional, TypeVar
 
 from pydantic import (
@@ -181,7 +181,7 @@ class BaseAgent(ABC, BaseModel):
             self._original_goal or self.goal,
             self._original_backstory or self.backstory,
         ]
-        return md5("|".join(source).encode(), usedforsecurity=False).hexdigest()
+        return sha256("|".join(source).encode()).hexdigest()
 
     @abstractmethod
     def execute_task(

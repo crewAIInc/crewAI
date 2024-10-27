@@ -4,7 +4,7 @@ import os
 import uuid
 import warnings
 from concurrent.futures import Future
-from hashlib import md5
+from hashlib import sha256
 from typing import TYPE_CHECKING, Any, Dict, List, Optional, Tuple, Union
 
 from pydantic import (
@@ -388,7 +388,7 @@ class Crew(BaseModel):
         source = [agent.key for agent in self.agents] + [
             task.key for task in self.tasks
         ]
-        return md5("|".join(source).encode(), usedforsecurity=False).hexdigest()
+        return sha256("|".join(source).encode()).hexdigest()
 
     def _setup_from_config(self):
         assert self.config is not None, "Config should not be None."

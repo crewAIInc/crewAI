@@ -1,6 +1,6 @@
 """Test Agent creation and execution basic functionality."""
 
-import hashlib
+from hashlib import sha256
 import json
 from concurrent.futures import Future
 from unittest import mock
@@ -2328,7 +2328,7 @@ def test_key():
         process=Process.sequential,
         tasks=tasks,
     )
-    hash = hashlib.md5(
+    hash = sha256(
         f"{researcher.key}|{writer.key}|{tasks[0].key}|{tasks[1].key}".encode()
     ).hexdigest()
 
@@ -2368,7 +2368,7 @@ def test_key_with_interpolated_inputs():
         process=Process.sequential,
         tasks=tasks,
     )
-    hash = hashlib.md5(
+    hash = sha256(
         f"{researcher.key}|{writer.key}|{tasks[0].key}|{tasks[1].key}".encode()
     ).hexdigest()
 

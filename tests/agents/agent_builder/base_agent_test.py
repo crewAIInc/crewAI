@@ -1,4 +1,4 @@
-import hashlib
+from hashlib import sha256
 from typing import Any, List, Optional
 
 from crewai.agents.agent_builder.base_agent import BaseAgent
@@ -32,5 +32,5 @@ def test_key():
         goal="test goal",
         backstory="test backstory",
     )
-    hash = hashlib.md5("test role|test goal|test backstory".encode()).hexdigest()
+    hash = sha256("test role|test goal|test backstory".encode()).hexdigest()
     assert agent.key == hash

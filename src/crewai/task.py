@@ -5,7 +5,7 @@ import threading
 import uuid
 from concurrent.futures import Future
 from copy import copy
-from hashlib import md5
+from hashlib import sha256
 from typing import Any, Dict, List, Optional, Set, Tuple, Type, Union
 
 from opentelemetry.trace import Span
@@ -196,7 +196,7 @@ class Task(BaseModel):
         expected_output = self._original_expected_output or self.expected_output
         source = [description, expected_output]
 
-        return md5("|".join(source).encode(), usedforsecurity=False).hexdigest()
+        return sha256("|".join(source).encode()).hexdigest()
 
     def execute_async(
         self,

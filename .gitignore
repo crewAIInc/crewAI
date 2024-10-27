@@ -17,3 +17,4 @@ rc-tests/*
 temp/*
 .vscode/*
 crew_tasks_output.json
+.dccache

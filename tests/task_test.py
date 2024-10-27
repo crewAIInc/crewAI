@@ -1,6 +1,6 @@
 """Test Agent creation and execution basic functionality."""
 
-import hashlib
+from hashlib import sha256  
 import json
 import os
 from unittest.mock import MagicMock, patch
@@ -819,7 +819,7 @@ def test_key():
         description=original_description,
         expected_output=original_expected_output,
     )
-    hash = hashlib.md5(
+    hash = sha256(
         f"{original_description}|{original_expected_output}".encode()
     ).hexdigest()
 
