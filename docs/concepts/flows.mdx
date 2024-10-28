@@ -599,9 +599,110 @@ The generated plot will display nodes representing the tasks in your flow, with 
 
 By visualizing your flows, you can gain a clearer understanding of the workflow's structure, making it easier to debug, optimize, and communicate your AI processes to others.
 
-### Conclusion
 
-Plotting your flows is a powerful feature of CrewAI that enhances your ability to design and manage complex AI workflows. Whether you choose to use the `plot()` method or the command line, generating plots will provide you with a visual representation of your workflows, aiding in both development and presentation.
+## Advanced
+
+In this section, we explore more complex use cases of CrewAI Flows, starting with a self-evaluation loop. This pattern is crucial for developing AI systems that can iteratively improve their outputs through feedback.
+
+### 1) Self-Evaluation Loop
+
+The self-evaluation loop is a powerful pattern that allows AI workflows to automatically assess and refine their outputs. This example demonstrates how to set up a flow that generates content, evaluates it, and iterates based on feedback until the desired quality is achieved.
+
+#### Overview
+
+The self-evaluation loop involves two main Crews:
+
+1. **ShakespeareanXPostCrew**: Generates a Shakespearean-style post on a given topic.
+2. **XPostReviewCrew**: Evaluates the generated post, providing feedback on its validity and quality.
+
+The process iterates until the post meets the criteria or a maximum retry limit is reached. This approach ensures high-quality outputs through iterative refinement.
+
+#### Importance
+
+This pattern is essential for building robust AI systems that can adapt and improve over time. By automating the evaluation and feedback loop, developers can ensure that their AI workflows produce reliable and high-quality results.
+
+#### Main Code Highlights
+
+Below is the `main.py` file for the self-evaluation loop flow:
+
+```python
+from typing import Optional
+from crewai.flow.flow import Flow, listen, router, start
+from pydantic import BaseModel
+from self_evaluation_loop_flow.crews.shakespeare_crew.shakespeare_crew import (
+    ShakespeareanXPostCrew,
+)
+from self_evaluation_loop_flow.crews.x_post_review_crew.x_post_review_crew import (
+    XPostReviewCrew,
+)
+
+class ShakespeareXPostFlowState(BaseModel):
+    x_post: str = ""
+    feedback: Optional[str] = None
+    valid: bool = False
+    retry_count: int = 0
+
+class ShakespeareXPostFlow(Flow[ShakespeareXPostFlowState]):
+
+    @start("retry")
+    def generate_shakespeare_x_post(self):
+        print("Generating Shakespearean X post")
+        topic = "Flying cars"
+        result = (
+            ShakespeareanXPostCrew()
+            .crew()
+            .kickoff(inputs={"topic": topic, "feedback": self.state.feedback})
+        )
+        print("X post generated", result.raw)
+        self.state.x_post = result.raw
+
+    @router(generate_shakespeare_x_post)
+    def evaluate_x_post(self):
+        if self.state.retry_count > 3:
+            return "max_retry_exceeded"
+        result = XPostReviewCrew().crew().kickoff(inputs={"x_post": self.state.x_post})
+        self.state.valid = result["valid"]
+        self.state.feedback = result["feedback"]
+        print("valid", self.state.valid)
+        print("feedback", self.state.feedback)
+        self.state.retry_count += 1
+        if self.state.valid:
+            return "complete"
+        return "retry"
+
+    @listen("complete")
+    def save_result(self):
+        print("X post is valid")
+        print("X post:", self.state.x_post)
+        with open("x_post.txt", "w") as file:
+            file.write(self.state.x_post)
+
+    @listen("max_retry_exceeded")
+    def max_retry_exceeded_exit(self):
+        print("Max retry count exceeded")
+        print("X post:", self.state.x_post)
+        print("Feedback:", self.state.feedback)
+
+def kickoff():
+    shakespeare_flow = ShakespeareXPostFlow()
+    shakespeare_flow.kickoff()
+
+def plot():
+    shakespeare_flow = ShakespeareXPostFlow()
+    shakespeare_flow.plot()
+
+if __name__ == "__main__":
+    kickoff()
+```
+
+#### Code Highlights
+
+- **Retry Mechanism**: The flow uses a retry mechanism to regenerate the post if it doesn't meet the criteria, up to a maximum of three retries.
+- **Feedback Loop**: Feedback from the `XPostReviewCrew` is used to refine the post iteratively.
+- **State Management**: The flow maintains state using a Pydantic model, ensuring type safety and clarity.
+
+For a complete example and further details, please refer to the [Self Evaluation Loop Flow repository](https://github.com/crewAIInc/crewAI-examples/tree/main/self_evaluation_loop_flow).
+
 
 ## Next Steps
 
