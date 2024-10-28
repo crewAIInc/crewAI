@@ -153,7 +153,13 @@ class LLM:
                 params = {k: v for k, v in params.items() if v is not None}
 
                 response = litellm.completion(**params)
-                return response["choices"][0]["message"]["content"]
+                if params.get("stream", False):
+                    content = ""
+                    for chunk in response:
+                        content += chunk.choices[0].delta.content or ""
+                    return content
+                else:
+                    return response["choices"][0]["message"]["content"]
             except Exception as e:
                 if not LLMContextLengthExceededException(
                     str(e)
