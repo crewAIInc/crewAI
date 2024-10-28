@@ -50,11 +50,11 @@ class BaseAgent(ABC, BaseModel):
 
 
     Methods:
-        execute_task(task: Any, context: Optional[str] = None, tools: Optional[List[Any]] = None) -> str:
+        execute_task(task: Any, context: Optional[str] = None, tools: Optional[List[BaseTool]] = None) -> str:
             Abstract method to execute a task.
         create_agent_executor(tools=None) -> None:
             Abstract method to create an agent executor.
-        _parse_tools(tools: List[Any]) -> List[Any]:
+        _parse_tools(tools: List[BaseTool]) -> List[Any]:
             Abstract method to parse tools.
         get_delegation_tools(agents: List["BaseAgent"]):
             Abstract method to set the agents task tools for handling delegation and question asking to other agents in crew.

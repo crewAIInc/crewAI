@@ -2,6 +2,7 @@ import hashlib
 from typing import Any, List, Optional
 
 from crewai.agents.agent_builder.base_agent import BaseAgent
+from crewai.tools.base_tool import BaseTool
 from pydantic import BaseModel
 
 
@@ -10,13 +11,13 @@ class TestAgent(BaseAgent):
         self,
         task: Any,
         context: Optional[str] = None,
-        tools: Optional[List[Any]] = None,
+        tools: Optional[List[BaseTool]] = None,
     ) -> str:
         return ""
 
     def create_agent_executor(self, tools=None) -> None: ...
 
-    def _parse_tools(self, tools: List[Any]) -> List[Any]:
+    def _parse_tools(self, tools: List[BaseTool]) -> List[BaseTool]:
         return []
 
     def get_delegation_tools(self, agents: List["BaseAgent"]): ...
