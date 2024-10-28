@@ -560,6 +560,40 @@ uv run kickoff
 
 The flow will execute, and you should see the output in the console.
 
+
+### Adding Additional Crews Using the CLI
+
+Once you have created your initial flow, you can easily add additional crews to your project using the CLI. This allows you to expand your flow's capabilities by integrating new crews without starting from scratch.
+
+To add a new crew to your existing flow, use the following command:
+
+```bash
+crewai flow add-crew <crew_name>
+```
+
+This command will create a new directory for your crew within the `crews` folder of your flow project. It will include the necessary configuration files and a crew definition file, similar to the initial setup.
+
+#### Folder Structure
+
+After adding a new crew, your folder structure will look like this:
+
+name_of_flow/
+├── crews/
+│   ├── poem_crew/
+│   │   ├── config/
+│   │   │   ├── agents.yaml
+│   │   │   └── tasks.yaml
+│   │   └── poem_crew.py
+│   └── name_of_crew/
+│       ├── config/
+│       │   ├── agents.yaml
+│       │   └── tasks.yaml
+│       └── name_of_crew.py
+
+You can then customize the `agents.yaml` and `tasks.yaml` files to define the agents and tasks for your new crew. The `name_of_crew.py` file will contain the crew's logic, which you can modify to suit your needs.
+
+By using the CLI to add additional crews, you can efficiently build complex AI workflows that leverage multiple crews working together.
+
 ## Plot Flows
 
 Visualizing your AI workflows can provide valuable insights into the structure and execution paths of your flows. CrewAI offers a powerful visualization tool that allows you to generate interactive plots of your flows, making it easier to understand and optimize your AI workflows.

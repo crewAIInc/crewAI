@@ -1,7 +1,9 @@
+from pathlib import Path
 from unittest import mock
 
 import pytest
 from click.testing import CliRunner
+
 from crewai.cli.cli import (
     deploy_create,
     deploy_list,
@@ -9,6 +11,7 @@ from crewai.cli.cli import (
     deploy_push,
     deploy_remove,
     deply_status,
+    flow_add_crew,
     reset_memories,
     signup,
     test,
@@ -277,3 +280,51 @@ def test_deploy_remove_no_uuid(command, runner):
 
     assert result.exit_code == 0
     mock_deploy.remove_crew.assert_called_once_with(uuid=None)
+
+
+@mock.patch("crewai.cli.add_crew_to_flow.create_crew")
+def test_add_crew_to_flow(create_crew_mock, runner):
+    # Simulate being in the root of a flow project
+    with mock.patch("pathlib.Path.cwd") as mock_cwd:
+        mock_cwd.return_value = Path("/path/to/flow_project")
+        with mock.patch("pathlib.Path.exists") as mock_exists:
+
+            def exists_side_effect(self):
+                if self == Path("/path/to/flow_project/pyproject.toml"):
+                    return True
+                if self == Path("/path/to/flow_project/src/flow_project/crews"):
+                    return True
+                return False
+
+            mock_exists.side_effect = exists_side_effect
+
+            result = runner.invoke(flow_add_crew, ["new_crew"])
+
+            create_crew_mock.assert_called_once_with(
+                "new_crew",
+                parent_folder=Path("/path/to/flow_project/src/flow_project/crews"),
+            )
+            assert result.exit_code == 0
+            assert (
+                "Crew new_crew added to the current flow successfully!"
+                in result.exception
+            )
+
+
+def test_add_crew_to_flow_not_in_root(runner):
+    # Simulate not being in the root of a flow project
+    with mock.patch("pathlib.Path.exists", autospec=True) as mock_exists:
+        # Mock Path.exists to return False when checking for pyproject.toml
+        def exists_side_effect(self):
+            if self.name == "pyproject.toml":
+                return False  # Simulate that pyproject.toml does not exist
+            return True  # All other paths exist
+
+        mock_exists.side_effect = exists_side_effect
+
+        result = runner.invoke(flow_add_crew, ["new_crew"])
+
+        assert result.exit_code != 0
+        assert "This command must be run from the root of a flow project." in str(
+            result.output
+        )
