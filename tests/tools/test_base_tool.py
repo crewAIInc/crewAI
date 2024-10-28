@@ -1,6 +1,5 @@
 from typing import Callable
 from crewai.tools import BaseTool, tool
-from textwrap import dedent
 
 
 def test_creating_a_tool_using_annotation():
@@ -92,7 +91,7 @@ def test_setting_cache_function():
 
     my_tool = MyCustomTool()
     # Assert all the right attributes were defined
-    assert my_tool.cache_function() == False
+    assert not my_tool.cache_function()
 
 
 def test_default_cache_function_is_true():
@@ -107,5 +106,4 @@ def test_default_cache_function_is_true():
 
     my_tool = MyCustomTool()
     # Assert all the right attributes were defined
-    assert my_tool.cache_function() == True
-
+    assert my_tool.cache_function()

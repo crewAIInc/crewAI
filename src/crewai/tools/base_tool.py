@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from typing import Any, Callable, Optional, Type, get_args, get_origin
+from typing import Any, Callable, Type, get_args, get_origin
 
 from langchain_core.tools import StructuredTool
 from pydantic import BaseModel, ConfigDict, Field, validator
@@ -100,6 +100,9 @@ class BaseTool(BaseModel, ABC):
 
     @staticmethod
     def _get_arg_annotations(annotation: type[Any] | None) -> str:
+        if annotation is None:
+            return "None"
+
         origin = get_origin(annotation)
         args = get_args(annotation)
 
