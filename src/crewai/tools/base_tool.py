@@ -72,6 +72,17 @@ class BaseTool(BaseModel, ABC):
             func=self._run,
         )
 
+    @classmethod
+    def from_langchain(cls, tool: StructuredTool) -> "BaseTool":
+        if cls == Tool:
+            return cls(
+                name=tool.name,
+                description=tool.description,
+                args_schema=tool.args_schema,
+                func=tool.func,
+            )
+        raise NotImplementedError(f"from_langchain not implemented for {cls.__name__}")
+
     def _set_args_schema(self):
         if self.args_schema is None:
             class_name = f"{self.__class__.__name__}Schema"
