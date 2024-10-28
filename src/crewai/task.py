@@ -7,6 +7,10 @@ from concurrent.futures import Future
 from copy import copy
 from hashlib import md5
 from typing import Any, Dict, List, Optional, Set, Tuple, Type, Union
+from dataclasses import dataclass, field
+from functools import cached_property
+import asyncio
+from concurrent.futures import ThreadPoolExecutor
 
 from opentelemetry.trace import Span
 from pydantic import (
@@ -27,6 +31,12 @@ from crewai.utilities.config import process_config
 from crewai.utilities.converter import Converter, convert_to_model
 from crewai.utilities.i18n import I18N
 
+
+@dataclass
+class TaskResult:
+    output: Any
+    execution_time: float
+    error: Optional[Exception] = None
 
 class Task(BaseModel):
     """Class that represents a task to be executed.
@@ -406,3 +416,4 @@ class Task(BaseModel):
 
     def __repr__(self):
         return f"Task(description={self.description}, expected_output={self.expected_output})"
+

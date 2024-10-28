@@ -1,4 +1,4 @@
-from enum import Enum
+from enum import Enum, auto
 
 
 class Process(str, Enum):
@@ -8,4 +8,7 @@ class Process(str, Enum):
 
     sequential = "sequential"
     hierarchical = "hierarchical"
+    parallel = "parallel"  # Yeni eklenen process tipi
+    hybrid = "hybrid"      # Yeni eklenen process tipi
     # TODO: consensual = 'consensual'
+

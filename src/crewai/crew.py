@@ -6,6 +6,7 @@ import warnings
 from concurrent.futures import Future
 from hashlib import md5
 from typing import TYPE_CHECKING, Any, Dict, List, Optional, Tuple, Union
+from functools import cached_property
 
 from pydantic import (
     UUID4,
@@ -1018,3 +1019,4 @@ class Crew(BaseModel):
 
     def __repr__(self):
         return f"Crew(id={self.id}, process={self.process}, number_of_agents={len(self.agents)}, number_of_tasks={len(self.tasks)})"
+
