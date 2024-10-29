@@ -2,7 +2,7 @@ from pathlib import Path
 
 import click
 
-from .create_crew import copy_template
+from crewai.cli.utils import copy_template
 
 
 def add_crew_to_flow(crew_name: str) -> None:
@@ -25,10 +25,8 @@ def add_crew_to_flow(crew_name: str) -> None:
     # Create the crew within the flow's crews directory
     create_embedded_crew(crew_name, parent_folder=crews_folder)
 
-    click.secho(
+    click.echo(
         f"Crew {crew_name} added to the current flow successfully!",
-        fg="green",
-        bold=True,
     )
 
 

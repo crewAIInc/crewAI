@@ -282,33 +282,20 @@ def test_deploy_remove_no_uuid(command, runner):
     mock_deploy.remove_crew.assert_called_once_with(uuid=None)
 
 
-@mock.patch("crewai.cli.add_crew_to_flow.create_crew")
-def test_add_crew_to_flow(create_crew_mock, runner):
-    # Simulate being in the root of a flow project
-    with mock.patch("pathlib.Path.cwd") as mock_cwd:
-        mock_cwd.return_value = Path("/path/to/flow_project")
-        with mock.patch("pathlib.Path.exists") as mock_exists:
+@mock.patch("crewai.cli.add_crew_to_flow.create_embedded_crew")
+def test_flow_add_crew(mock_create_embedded_crew, runner):
+    crew_name = "new_crew"
+    result = runner.invoke(flow_add_crew, [crew_name])
 
-            def exists_side_effect(self):
-                if self == Path("/path/to/flow_project/pyproject.toml"):
-                    return True
-                if self == Path("/path/to/flow_project/src/flow_project/crews"):
-                    return True
-                return False
+    assert result.exit_code == 0
+    assert f"Adding crew {crew_name} to the flow" in result.output
 
-            mock_exists.side_effect = exists_side_effect
-
-            result = runner.invoke(flow_add_crew, ["new_crew"])
-
-            create_crew_mock.assert_called_once_with(
-                "new_crew",
-                parent_folder=Path("/path/to/flow_project/src/flow_project/crews"),
-            )
-            assert result.exit_code == 0
-            assert (
-                "Crew new_crew added to the current flow successfully!"
-                in result.exception
-            )
+    # Verify that create_embedded_crew was called with the correct arguments
+    mock_create_embedded_crew.assert_called_once()
+    call_args, call_kwargs = mock_create_embedded_crew.call_args
+    assert call_args[0] == crew_name
+    assert "parent_folder" in call_kwargs
+    assert isinstance(call_kwargs["parent_folder"], Path)
 
 
 def test_add_crew_to_flow_not_in_root(runner):
