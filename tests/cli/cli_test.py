@@ -287,7 +287,10 @@ def test_flow_add_crew(mock_create_embedded_crew, runner):
     crew_name = "new_crew"
     result = runner.invoke(flow_add_crew, [crew_name])
 
-    assert result.exit_code == 0
+    # Log the output for debugging
+    print(result.output)
+
+    assert result.exit_code == 0, f"Command failed with output: {result.output}"
     assert f"Adding crew {crew_name} to the flow" in result.output
 
     # Verify that create_embedded_crew was called with the correct arguments
