@@ -75,7 +75,9 @@ class BaseTool(BaseModel, ABC):
     @classmethod
     def from_langchain(cls, tool: StructuredTool) -> "BaseTool":
         if cls == Tool:
-            return cls(
+            if tool.func is None:
+                raise ValueError("StructuredTool must have a callable 'func'")
+            return Tool(
                 name=tool.name,
                 description=tool.description,
                 args_schema=tool.args_schema,
