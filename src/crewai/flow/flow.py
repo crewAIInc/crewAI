@@ -137,11 +137,6 @@ class FlowMeta(type):
         setattr(cls, "_routers", routers)
         setattr(cls, "_router_paths", router_paths)
 
-        print("_start_methods", start_methods)
-        print("_listeners", listeners)
-        print("_routers", routers)
-        print("_router_paths", router_paths)
-
         return cls
 
 
@@ -175,7 +170,6 @@ class Flow(Generic[T], metaclass=FlowMeta):
             if callable(getattr(self, method_name)) and not method_name.startswith(
                 "__"
             ):
-                print("Method", method_name)
                 self._methods[method_name] = getattr(self, method_name)
 
     def _create_initial_state(self) -> T:
