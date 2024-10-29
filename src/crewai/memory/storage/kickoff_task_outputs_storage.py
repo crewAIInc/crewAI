@@ -70,7 +70,7 @@ class KickoffTaskOutputsSQLiteStorage:
                         task.expected_output,
                         json.dumps(output, cls=CrewJSONEncoder),
                         task_index,
-                        json.dumps(inputs),
+                        json.dumps(inputs, cls=CrewJSONEncoder),
                         was_replayed,
                     ),
                 )
