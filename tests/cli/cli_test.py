@@ -283,7 +283,8 @@ def test_deploy_remove_no_uuid(command, runner):
 
 
 @mock.patch("crewai.cli.add_crew_to_flow.create_embedded_crew")
-def test_flow_add_crew(mock_create_embedded_crew, runner):
+@mock.patch("pathlib.Path.exists", return_value=True)  # Mock the existence check
+def test_flow_add_crew(mock_path_exists, mock_create_embedded_crew, runner):
     crew_name = "new_crew"
     result = runner.invoke(flow_add_crew, [crew_name])
 
