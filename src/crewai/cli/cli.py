@@ -3,6 +3,7 @@ from typing import Optional
 import click
 import pkg_resources
 
+from crewai.cli.add_crew_to_flow import add_crew_to_flow
 from crewai.cli.create_crew import create_crew
 from crewai.cli.create_flow import create_flow
 from crewai.cli.create_pipeline import create_pipeline
@@ -178,10 +179,12 @@ def test(n_iterations: int, model: str):
     evaluate_crew(n_iterations, model)
 
 
-@crewai.command(context_settings=dict(
-    ignore_unknown_options=True,
-    allow_extra_args=True,
-))
+@crewai.command(
+    context_settings=dict(
+        ignore_unknown_options=True,
+        allow_extra_args=True,
+    )
+)
 @click.pass_context
 def install(context):
     """Install the Crew."""
@@ -322,6 +325,14 @@ def flow_plot():
     """Plot the Flow."""
     click.echo("Plotting the Flow")
     plot_flow()
+
+
+@flow.command(name="add-crew")
+@click.argument("crew_name")
+def flow_add_crew(crew_name):
+    """Add a crew to an existing flow."""
+    click.echo(f"Adding crew {crew_name} to the flow")
+    add_crew_to_flow(crew_name)
 
 
 if __name__ == "__main__":
