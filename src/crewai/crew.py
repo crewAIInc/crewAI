@@ -749,29 +749,33 @@ class Crew(BaseModel):
 
     def _add_delegation_tools(self, task: Task):
         agents_for_delegation = [agent for agent in self.agents if agent != task.agent]
-        if len(self.agents) > 1 and len(agents_for_delegation) > 0 and task.agent:
-            delegation_tools = task.agent.get_delegation_tools(agents_for_delegation)
+        if not (len(self.agents) > 1 and agents_for_delegation and task.agent):
+            return
 
-            # Add tools if they are not already in task.tools
-            for new_tool in delegation_tools:
-                # Find the index of the tool with the same name
-                existing_tool_index = next(
+        delegation_tools = task.agent.get_delegation_tools(agents_for_delegation)
+
+        def add_or_update_tools(tool_list: List, new_tools: List) -> List:
+            if not tool_list:
+                tool_list = []
+
+            for new_tool in new_tools:
+                existing_idx = next(
                     (
-                        index
-                        for index, tool in enumerate(task.tools or [])
+                        i
+                        for i, tool in enumerate(tool_list)
                         if tool.name == new_tool.name
                     ),
                     None,
                 )
-                if not task.tools:
-                    task.tools = []
-
-                if existing_tool_index is not None:
-                    # Replace the existing tool
-                    task.tools[existing_tool_index] = new_tool
+                if existing_idx is not None:
+                    tool_list[existing_idx] = new_tool
                 else:
-                    # Add the new tool
-                    task.tools.append(new_tool)
+                    tool_list.append(new_tool)
+            return tool_list
+
+        # Update both agent's tools and task's tools
+        task.agent.tools = add_or_update_tools(task.agent.tools, delegation_tools)
+        task.tools = add_or_update_tools(task.tools, delegation_tools)
 
     def _log_task_start(self, task: Task, role: str = "None"):
         if self.output_log_file:
