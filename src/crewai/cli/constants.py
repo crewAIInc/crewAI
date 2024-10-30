@@ -37,10 +37,57 @@ ENV_VARS = {
             "key_name": "WATSONX_TOKEN",
         },
     ],
+    "ollama": [
+        {
+            "default": True,
+            "API_BASE": "http://localhost:11434",
+        }
+    ],
+    "bedrock": [
+        {
+            "prompt": "Enter your AWS Access Key ID (press Enter to skip)",
+            "key_name": "AWS_ACCESS_KEY_ID",
+        },
+        {
+            "prompt": "Enter your AWS Secret Access Key (press Enter to skip)",
+            "key_name": "AWS_SECRET_ACCESS_KEY",
+        },
+        {
+            "prompt": "Enter your AWS Region Name (press Enter to skip)",
+            "key_name": "AWS_REGION_NAME",
+        },
+    ],
+    "azure": [
+        {
+            "prompt": "Enter your Azure deployment name (must start with 'azure/')",
+            "key_name": "model",
+        },
+        {
+            "prompt": "Enter your AZURE API key (press Enter to skip)",
+            "key_name": "AZURE_API_KEY",
+        },
+        {
+            "prompt": "Enter your AZURE API base URL (press Enter to skip)",
+            "key_name": "AZURE_API_BASE",
+        },
+        {
+            "prompt": "Enter your AZURE API version (press Enter to skip)",
+            "key_name": "AZURE_API_VERSION",
+        },
+    ],
 }
 
 
-PROVIDERS = ["openai", "anthropic", "gemini", "groq", "ollama", "watson"]
+PROVIDERS = [
+    "openai",
+    "anthropic",
+    "gemini",
+    "groq",
+    "ollama",
+    "watson",
+    "bedrock",
+    "azure",
+]
 
 MODELS = {
     "openai": ["gpt-4", "gpt-4o", "gpt-4o-mini", "o1-mini", "o1-preview"],
@@ -51,17 +98,17 @@ MODELS = {
         "claude-3-haiku-20240307",
     ],
     "gemini": [
-        "gemini-1.5-flash",
-        "gemini-1.5-pro",
-        "gemini-gemma-2-9b-it",
-        "gemini-gemma-2-27b-it",
+        "gemini/gemini-1.5-flash",
+        "gemini/gemini-1.5-pro",
+        "gemini/gemini-gemma-2-9b-it",
+        "gemini/gemini-gemma-2-27b-it",
     ],
     "groq": [
-        "llama-3.1-8b-instant",
-        "llama-3.1-70b-versatile",
-        "llama-3.1-405b-reasoning",
-        "gemma2-9b-it",
-        "gemma-7b-it",
+        "groq/llama-3.1-8b-instant",
+        "groq/llama-3.1-70b-versatile",
+        "groq/llama-3.1-405b-reasoning",
+        "groq/gemma2-9b-it",
+        "groq/gemma-7b-it",
     ],
     "ollama": ["ollama/llama3.1", "ollama/mixtral"],
     "watson": [
@@ -80,6 +127,30 @@ MODELS = {
         "watsonx/ibm/granite-13b-instruct-v2",
         "watsonx/elyza/elyza-japanese-llama-2-7b-instruct",
         "watsonx/ibm-mistralai/mixtral-8x7b-instruct-v01-q",
+    ],
+    "bedrock": [
+        "bedrock/anthropic.claude-3-5-sonnet-20240620-v1:0",
+        "bedrock/anthropic.claude-3-sonnet-20240229-v1:0",
+        "bedrock/anthropic.claude-3-haiku-20240307-v1:0",
+        "bedrock/anthropic.claude-3-opus-20240229-v1:0",
+        "bedrock/anthropic.claude-v2:1",
+        "bedrock/anthropic.claude-v2",
+        "bedrock/anthropic.claude-instant-v1",
+        "bedrock/meta.llama3-1-405b-instruct-v1:0",
+        "bedrock/meta.llama3-1-70b-instruct-v1:0",
+        "bedrock/meta.llama3-1-8b-instruct-v1:0",
+        "bedrock/meta.llama3-70b-instruct-v1:0",
+        "bedrock/meta.llama3-8b-instruct-v1:0",
+        "bedrock/amazon.titan-text-lite-v1",
+        "bedrock/amazon.titan-text-express-v1",
+        "bedrock/cohere.command-text-v14",
+        "bedrock/ai21.j2-mid-v1",
+        "bedrock/ai21.j2-ultra-v1",
+        "bedrock/ai21.jamba-instruct-v1:0",
+        "bedrock/meta.llama2-13b-chat-v1",
+        "bedrock/meta.llama2-70b-chat-v1",
+        "bedrock/mistral.mistral-7b-instruct-v0:2",
+        "bedrock/mistral.mixtral-8x7b-instruct-v0:1",
     ],
 }
 
