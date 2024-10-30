@@ -123,9 +123,6 @@ class Agent(BaseAgent):
     def post_init_setup(self):
         self.agent_ops_agent_name = self.role
 
-        print("IN POST INIT SETUP")
-        print("self.llm:", self.llm)
-
         # Handle different cases for self.llm
         if isinstance(self.llm, str):
             # If it's a string, create an LLM instance
@@ -134,7 +131,6 @@ class Agent(BaseAgent):
             # If it's already an LLM instance, keep it as is
             pass
         elif self.llm is None:
-            print("No LLM provided")
             # Determine the model name from environment variables or use default
             model_name = (
                 os.environ.get("OPENAI_MODEL_NAME")
@@ -162,6 +158,18 @@ class Agent(BaseAgent):
                                 if "API_KEY" in env_var["key_name"]
                                 else env_var["key_name"]
                             )
+                            # Map key names containing "API_BASE" to "api_base"
+                            key_name = (
+                                "api_base"
+                                if "API_BASE" in env_var["key_name"]
+                                else key_name
+                            )
+                            # Map key names containing "API_VERSION" to "api_version"
+                            key_name = (
+                                "api_version"
+                                if "API_VERSION" in env_var["key_name"]
+                                else key_name
+                            )
                             llm_params[key_name] = env_value
                     # Check for default values if the environment variable is not set
                     elif env_var.get("default", False):
@@ -171,10 +179,8 @@ class Agent(BaseAgent):
                                 if key in os.environ:
                                     llm_params[key] = value
 
-            print("LLM PARAMS:", llm_params)
             self.llm = LLM(**llm_params)
         else:
-            print("IN ELSE")
             # For any other type, attempt to extract relevant attributes
             llm_params = {
                 "model": getattr(self.llm, "model_name", None)
