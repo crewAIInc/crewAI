@@ -5,7 +5,6 @@ import click
 
 from crewai.cli.constants import ENV_VARS
 from crewai.cli.provider import (
-    PROVIDERS,
     get_provider_data,
     select_model,
     select_provider,
@@ -92,7 +91,7 @@ def create_crew(name, provider=None, skip_provider=False, parent_folder=None):
 
         existing_provider = None
         for provider, env_keys in ENV_VARS.items():
-            if any(key in env_vars for key in env_keys):
+            if any(details["key_name"] in env_vars for details in env_keys):
                 existing_provider = provider
                 break
 
@@ -129,35 +128,28 @@ def create_crew(name, provider=None, skip_provider=False, parent_folder=None):
                 "No model selected. Please try again or press 'q' to exit.", fg="red"
             )
 
-        if selected_provider in PROVIDERS:
-            api_key_var = ENV_VARS[selected_provider][0]
-        else:
-            api_key_var = click.prompt(
-                f"Enter the environment variable name for your {selected_provider.capitalize()} API key",
-                type=str,
-                default="",
-            )
+        # Check if the selected provider requires API keys
+        if selected_provider in ENV_VARS:
+            provider_env_vars = ENV_VARS[selected_provider]
+            for details in provider_env_vars:
+                prompt = details["prompt"]
+                key_name = details["key_name"]
+                api_key_value = click.prompt(prompt, default="", show_default=False)
 
-        api_key_value = ""
-        click.echo(
-            f"Enter your {selected_provider.capitalize()} API key (press Enter to skip): ",
-            nl=False,
-        )
-        try:
-            api_key_value = input()
-        except (KeyboardInterrupt, EOFError):
-            api_key_value = ""
+                if api_key_value.strip():
+                    env_vars[key_name] = api_key_value
 
-        if api_key_value.strip():
-            env_vars = {api_key_var: api_key_value}
+        # Save the selected model to env_vars
+        env_vars["MODEL"] = selected_model
+
+        if env_vars:
             write_env_file(folder_path, env_vars)
-            click.secho("API key saved to .env file", fg="green")
+            click.secho("API keys and model saved to .env file", fg="green")
         else:
             click.secho(
-                "No API key provided. Skipping .env file creation.", fg="yellow"
+                "No API keys provided. Skipping .env file creation.", fg="yellow"
             )
 
-        env_vars["MODEL"] = selected_model
         click.secho(f"Selected model: {selected_model}", fg="green")
 
     package_dir = Path(__file__).parent

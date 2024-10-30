@@ -122,6 +122,9 @@ class Agent(BaseAgent):
     def post_init_setup(self):
         self.agent_ops_agent_name = self.role
 
+        print("IN POST INIT SETUP")
+        print("self.llm:", self.llm)
+
         # Handle different cases for self.llm
         if isinstance(self.llm, str):
             # If it's a string, create an LLM instance
@@ -130,6 +133,7 @@ class Agent(BaseAgent):
             # If it's already an LLM instance, keep it as is
             pass
         elif self.llm is None:
+            print("No LLM provided")
             # If it's None, use environment variables or default
             model_name = os.environ.get("OPENAI_MODEL_NAME", "gpt-4o-mini")
             llm_params = {"model": model_name}
@@ -146,6 +150,7 @@ class Agent(BaseAgent):
 
             self.llm = LLM(**llm_params)
         else:
+            print("IN ELSE")
             # For any other type, attempt to extract relevant attributes
             llm_params = {
                 "model": getattr(self.llm, "model_name", None)
