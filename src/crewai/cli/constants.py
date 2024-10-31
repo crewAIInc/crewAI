@@ -75,6 +75,16 @@ ENV_VARS = {
             "key_name": "AZURE_API_VERSION",
         },
     ],
+    "cerebras": [
+        {
+            "prompt": "Enter your Cerebras model name (must start with 'cerebras/')",
+            "key_name": "model",
+        },
+        {
+            "prompt": "Enter your Cerebras API version (press Enter to skip)",
+            "key_name": "CEREBRAS_API_KEY",
+        },
+    ],
 }
 
 
@@ -87,6 +97,7 @@ PROVIDERS = [
     "watson",
     "bedrock",
     "azure",
+    "cerebras",
 ]
 
 MODELS = {
