@@ -82,6 +82,7 @@ def test_install_success(mock_get, mock_subprocess_run):
         capture_output=False,
         text=True,
         check=True,
+        env=unittest.mock.ANY
     )
 
     assert "Succesfully installed sample-tool" in output
