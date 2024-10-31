@@ -29,12 +29,12 @@ ENV_VARS = {
             "key_name": "WATSONX_URL",
         },
         {
-            "prompt": "Enter your WATSONX API key (press Enter to skip)",
+            "prompt": "Enter your WATSONX API Key (press Enter to skip)",
             "key_name": "WATSONX_APIKEY",
         },
         {
-            "prompt": "Enter your WATSONX token (press Enter to skip)",
-            "key_name": "WATSONX_TOKEN",
+            "prompt": "Enter your WATSONX Project Id (press Enter to skip)",
+            "key_name": "WATSONX_PROJECT_ID",
         },
     ],
     "ollama": [
