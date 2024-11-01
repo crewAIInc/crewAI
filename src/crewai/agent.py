@@ -10,7 +10,8 @@ from crewai.agents.agent_builder.base_agent import BaseAgent
 from crewai.agents.crew_agent_executor import CrewAgentExecutor
 from crewai.llm import LLM
 from crewai.memory.contextual.contextual_memory import ContextualMemory
-from crewai.tools.agent_tools import AgentTools
+from crewai.tools.agent_tools.agent_tools import AgentTools
+from crewai.tools import BaseTool
 from crewai.utilities import Converter, Prompts
 from crewai.utilities.constants import TRAINED_AGENTS_DATA_FILE, TRAINING_DATA_FILE
 from crewai.utilities.token_counter_callback import TokenCalcHandler
@@ -192,7 +193,7 @@ class Agent(BaseAgent):
         self,
         task: Any,
         context: Optional[str] = None,
-        tools: Optional[List[Any]] = None,
+        tools: Optional[List[BaseTool]] = None,
     ) -> str:
         """Execute a task with the agent.
 
@@ -259,7 +260,9 @@ class Agent(BaseAgent):
 
         return result
 
-    def create_agent_executor(self, tools=None, task=None) -> None:
+    def create_agent_executor(
+        self, tools: Optional[List[BaseTool]] = None, task=None
+    ) -> None:
         """Create an agent executor for the agent.
 
         Returns:
@@ -332,7 +335,7 @@ class Agent(BaseAgent):
         tools_list = []
         try:
             # tentatively try to import from crewai_tools import BaseTool as CrewAITool
-            from crewai_tools import BaseTool as CrewAITool
+            from crewai.tools import BaseTool as CrewAITool
 
             for tool in tools:
                 if isinstance(tool, CrewAITool):
@@ -391,7 +394,7 @@ class Agent(BaseAgent):
 
         return description
 
-    def _render_text_description_and_args(self, tools: List[Any]) -> str:
+    def _render_text_description_and_args(self, tools: List[BaseTool]) -> str:
         """Render the tool name, description, and args in plain text.
 
             Output will be in the format of:
@@ -404,17 +407,7 @@ class Agent(BaseAgent):
         """
         tool_strings = []
         for tool in tools:
-            args_schema = {
-                name: {
-                    "description": field.description,
-                    "type": field.annotation.__name__,
-                }
-                for name, field in tool.args_schema.model_fields.items()
-            }
-            description = (
-                f"Tool Name: {tool.name}\nTool Description: {tool.description}"
-            )
-            tool_strings.append(f"{description}\nTool Arguments: {args_schema}")
+            tool_strings.append(tool.description)
 
         return "\n".join(tool_strings)
 

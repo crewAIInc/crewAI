@@ -3,11 +3,11 @@ import random
 from unittest.mock import MagicMock
 
 import pytest
-from crewai_tools import BaseTool
 from pydantic import BaseModel, Field
 
 from crewai import Agent, Task
 from crewai.tools.tool_usage import ToolUsage
+from crewai.tools import BaseTool
 
 
 class RandomNumberToolInput(BaseModel):
@@ -103,11 +103,7 @@ def test_tool_usage_render():
     rendered = tool_usage._render()
 
     # Updated checks to match the actual output
-    assert "Tool Name: random number generator" in rendered
-    assert (
-        "Random Number Generator(min_value: 'integer', max_value: 'integer') - Generates a random number within a specified range min_value: 'The minimum value of the range (inclusive)', max_value: 'The maximum value of the range (inclusive)'"
-        in rendered
-    )
+    assert "Tool Name: Random Number Generator" in rendered
     assert "Tool Arguments:" in rendered
     assert (
         "'min_value': {'description': 'The minimum value of the range (inclusive)', 'type': 'int'}"
@@ -115,5 +111,13 @@ def test_tool_usage_render():
     )
     assert (
         "'max_value': {'description': 'The maximum value of the range (inclusive)', 'type': 'int'}"
+        in rendered
+    )
+    assert (
+        "Tool Description: Generates a random number within a specified range"
+        in rendered
+    )
+    assert (
+        "Tool Name: Random Number Generator\nTool Arguments: {'min_value': {'description': 'The minimum value of the range (inclusive)', 'type': 'int'}, 'max_value': {'description': 'The maximum value of the range (inclusive)', 'type': 'int'}}\nTool Description: Generates a random number within a specified range"
         in rendered
     )

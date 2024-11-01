@@ -21,7 +21,7 @@ with suppress_warnings():
 
 
 from opentelemetry import trace  # noqa: E402
-from opentelemetry.exporter.otlp.proto.http.trace_exporter import OTLPSpanExporter  # noqa: E402
+from opentelemetry.exporter.otlp.proto.http.trace_exporter import OTLPSpanExporter # noqa: E402
 from opentelemetry.sdk.resources import SERVICE_NAME, Resource  # noqa: E402
 from opentelemetry.sdk.trace import TracerProvider  # noqa: E402
 from opentelemetry.sdk.trace.export import BatchSpanProcessor  # noqa: E402
@@ -48,6 +48,10 @@ class Telemetry:
     def __init__(self):
         self.ready = False
         self.trace_set = False
+
+        if os.getenv("OTEL_SDK_DISABLED", "false").lower() == "true":
+            return
+
         try:
             telemetry_endpoint = "https://telemetry.crewai.com:4319"
             self.resource = Resource(
