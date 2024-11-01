@@ -128,7 +128,7 @@ class RAGStorage(BaseRAGStorage):
                     ) from e
 
                 class WatsonEmbeddingFunction(EmbeddingFunction):
-                    def __call__(self, input: Documents) -> watson_models.Embeddings:
+                    def __call__(self, input: Documents) -> Embeddings:
                         if isinstance(input, str):
                             input = [input]
 
@@ -147,12 +147,8 @@ class RAGStorage(BaseRAGStorage):
                         )
 
                         try:
-                            print("Embedding input:", input)
                             embeddings = embedding.embed_documents(input)
-                            print("Embedding output:", embeddings)
-                            casted = cast(Embeddings, embeddings)
-                            print("Casted:", casted)
-                            return casted
+                            return cast(Embeddings, embeddings)
 
                         except Exception as e:
                             print("Error during Watson embedding:", e)
