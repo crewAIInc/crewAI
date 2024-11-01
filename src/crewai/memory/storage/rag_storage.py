@@ -116,8 +116,6 @@ class RAGStorage(BaseRAGStorage):
                     url=config.get("api_url"),
                 )
             elif provider == "watson":
-
-                # https://ibm.github.io/watsonx-ai-python-sdk/fm_embeddings.html
                 try:
                     import ibm_watsonx_ai.foundation_models as watson_models
                     from ibm_watsonx_ai import Credentials
