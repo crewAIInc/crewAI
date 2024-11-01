@@ -18,6 +18,7 @@ from pydantic_core import PydanticCustomError
 from crewai.agents.agent_builder.utilities.base_token_process import TokenProcess
 from crewai.agents.cache.cache_handler import CacheHandler
 from crewai.agents.tools_handler import ToolsHandler
+from crewai.tools import BaseTool
 from crewai.utilities import I18N, Logger, RPMController
 from crewai.utilities.config import process_config
 
@@ -49,11 +50,11 @@ class BaseAgent(ABC, BaseModel):
 
 
     Methods:
-        execute_task(task: Any, context: Optional[str] = None, tools: Optional[List[Any]] = None) -> str:
+        execute_task(task: Any, context: Optional[str] = None, tools: Optional[List[BaseTool]] = None) -> str:
             Abstract method to execute a task.
         create_agent_executor(tools=None) -> None:
             Abstract method to create an agent executor.
-        _parse_tools(tools: List[Any]) -> List[Any]:
+        _parse_tools(tools: List[BaseTool]) -> List[Any]:
             Abstract method to parse tools.
         get_delegation_tools(agents: List["BaseAgent"]):
             Abstract method to set the agents task tools for handling delegation and question asking to other agents in crew.
@@ -105,7 +106,7 @@ class BaseAgent(ABC, BaseModel):
         default=False,
         description="Enable agent to delegate and ask questions among each other.",
     )
-    tools: Optional[List[Any]] = Field(
+    tools: Optional[List[BaseTool]] = Field(
         default_factory=list, description="Tools at agents' disposal"
     )
     max_iter: Optional[int] = Field(
@@ -188,7 +189,7 @@ class BaseAgent(ABC, BaseModel):
         self,
         task: Any,
         context: Optional[str] = None,
-        tools: Optional[List[Any]] = None,
+        tools: Optional[List[BaseTool]] = None,
     ) -> str:
         pass
 
@@ -197,11 +198,11 @@ class BaseAgent(ABC, BaseModel):
         pass
 
     @abstractmethod
-    def _parse_tools(self, tools: List[Any]) -> List[Any]:
+    def _parse_tools(self, tools: List[BaseTool]) -> List[BaseTool]:
         pass
 
     @abstractmethod
-    def get_delegation_tools(self, agents: List["BaseAgent"]) -> List[Any]:
+    def get_delegation_tools(self, agents: List["BaseAgent"]) -> List[BaseTool]:
         """Set the task tools that init BaseAgenTools class."""
         pass
 

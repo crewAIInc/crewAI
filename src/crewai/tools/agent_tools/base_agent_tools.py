@@ -1,22 +1,19 @@
-from abc import ABC, abstractmethod
-from typing import List, Optional, Union
+from typing import Optional, Union
+from pydantic import Field
 
-from pydantic import BaseModel, Field
-
+from crewai.tools.base_tool import BaseTool
 from crewai.agents.agent_builder.base_agent import BaseAgent
 from crewai.task import Task
 from crewai.utilities import I18N
 
 
-class BaseAgentTools(BaseModel, ABC):
-    """Default tools around agent delegation"""
+class BaseAgentTool(BaseTool):
+    """Base class for agent-related tools"""
 
-    agents: List[BaseAgent] = Field(description="List of agents in this crew.")
-    i18n: I18N = Field(default=I18N(), description="Internationalization settings.")
-
-    @abstractmethod
-    def tools(self):
-        pass
+    agents: list[BaseAgent] = Field(description="List of available agents")
+    i18n: I18N = Field(
+        default_factory=I18N, description="Internationalization settings"
+    )
 
     def _get_coworker(self, coworker: Optional[str], **kwargs) -> Optional[str]:
         coworker = coworker or kwargs.get("co_worker") or kwargs.get("coworker")
@@ -24,27 +21,11 @@ class BaseAgentTools(BaseModel, ABC):
             is_list = coworker.startswith("[") and coworker.endswith("]")
             if is_list:
                 coworker = coworker[1:-1].split(",")[0]
-
         return coworker
-
-    def delegate_work(
-        self, task: str, context: str, coworker: Optional[str] = None, **kwargs
-    ):
-        """Useful to delegate a specific task to a coworker passing all necessary context and names."""
-        coworker = self._get_coworker(coworker, **kwargs)
-        return self._execute(coworker, task, context)
-
-    def ask_question(
-        self, question: str, context: str, coworker: Optional[str] = None, **kwargs
-    ):
-        """Useful to ask a question, opinion or take from a coworker passing all necessary context and names."""
-        coworker = self._get_coworker(coworker, **kwargs)
-        return self._execute(coworker, question, context)
 
     def _execute(
         self, agent_name: Union[str, None], task: str, context: Union[str, None]
-    ):
-        """Execute the command."""
+    ) -> str:
         try:
             if agent_name is None:
                 agent_name = ""
@@ -57,7 +38,6 @@ class BaseAgentTools(BaseModel, ABC):
             # when it should look like this:
             # {"task": "....", "coworker": "...."}
             agent_name = agent_name.casefold().replace('"', "").replace("\n", "")
-
             agent = [  # type: ignore # Incompatible types in assignment (expression has type "list[BaseAgent]", variable has type "str | None")
                 available_agent
                 for available_agent in self.agents
