@@ -131,7 +131,6 @@ These are examples of how to configure LLMs for your agent.
 
     llm = LLM(
         model="cerebras/llama-3.1-70b",
-        base_url="https://api.cerebras.ai/v1",
         api_key="your-api-key-here"
     )
     agent = Agent(llm=llm, ...) 
@@ -166,7 +165,6 @@ These are examples of how to configure LLMs for your agent.
 
     llm = LLM(
         model="groq/llama3-8b-8192", 
-        base_url="https://api.groq.com/openai/v1", 
         api_key="your-api-key-here"
     )
     agent = Agent(llm=llm, ...)
@@ -180,21 +178,19 @@ These are examples of how to configure LLMs for your agent.
 
     llm = LLM(
         model="anthropic/claude-3-5-sonnet-20241022",
-        base_url="https://api.anthropic.com/v1",
         api_key="your-api-key-here"
     )
     agent = Agent(llm=llm, ...)
     ```
     </Accordion>
 
-    <Accordion title="Fireworks">
+    <Accordion title="Fireworks AI">
 
     ```python Code
     from crewai import LLM
 
     llm = LLM(
-        model="fireworks/meta-llama-3.1-8b-instruct",
-        base_url="https://api.fireworks.ai/inference/v1",
+        model="fireworks_ai/accounts/fireworks/models/llama-v3-70b-instruct",  
         api_key="your-api-key-here"
     )
     agent = Agent(llm=llm, ...)
@@ -207,8 +203,7 @@ These are examples of how to configure LLMs for your agent.
     from crewai import LLM
 
     llm = LLM(
-        model="gemini/gemini-1.5-flash",
-        base_url="https://api.gemini.google.com/v1",
+        model="gemini/gemini-1.5-pro-002",
         api_key="your-api-key-here"
     )
     agent = Agent(llm=llm, ...)
@@ -240,6 +235,20 @@ These are examples of how to configure LLMs for your agent.
         api_key="your-api-key-here"
     )
     agent = Agent(llm=llm, ...)
+    ```
+    </Accordion>
+
+    <Accordion title="Hugging Face">
+
+    ```python Code
+    from crewai import LLM
+
+    llm = LLM(
+        model="huggingface/meta-llama/Meta-Llama-3.1-8B-Instruct",
+        api_key="your-api-key-here",
+        base_url="your_api_endpoint"
+    )
+    agent = Agent(llm=llm, ...) 
     ```
     </Accordion>
 </AccordionGroup>
