@@ -5,13 +5,14 @@ icon: screwdriver-wrench
 ---
 
 ## Introduction
-CrewAI tools empower agents with capabilities ranging from web searching and data analysis to collaboration and delegating tasks among coworkers. 
+
+CrewAI tools empower agents with capabilities ranging from web searching and data analysis to collaboration and delegating tasks among coworkers.
 This documentation outlines how to create, integrate, and leverage these tools within the CrewAI framework, including a new focus on collaboration tools.
 
 ## What is a Tool?
 
-A tool in CrewAI is a skill or function that agents can utilize to perform various actions. 
-This includes tools from the [CrewAI Toolkit](https://github.com/joaomdmoura/crewai-tools) and [LangChain Tools](https://python.langchain.com/docs/integrations/tools), 
+A tool in CrewAI is a skill or function that agents can utilize to perform various actions.
+This includes tools from the [CrewAI Toolkit](https://github.com/joaomdmoura/crewai-tools) and [LangChain Tools](https://python.langchain.com/docs/integrations/tools),
 enabling everything from simple searches to complex interactions and effective teamwork among agents.
 
 ## Key Characteristics of Tools
@@ -103,57 +104,53 @@ crew.kickoff()
 
 Here is a list of the available tools and their descriptions:
 
-| Tool                        | Description                                                                                   |
-| :-------------------------- | :-------------------------------------------------------------------------------------------- |
-| **BrowserbaseLoadTool**     | A tool for interacting with and extracting data from web browsers.                            |
-| **CodeDocsSearchTool**      | A RAG tool optimized for searching through code documentation and related technical documents. |
-| **CodeInterpreterTool**     | A tool for interpreting python code.                                                          |
-| **ComposioTool**            | Enables use of Composio tools.                                                                |
-| **CSVSearchTool**           | A RAG tool designed for searching within CSV files, tailored to handle structured data.       |
-| **DALL-E Tool**             | A tool for generating images using the DALL-E API.                                            |
-| **DirectorySearchTool**     | A RAG tool for searching within directories, useful for navigating through file systems.      |
-| **DOCXSearchTool**          | A RAG tool aimed at searching within DOCX documents, ideal for processing Word files.         |
-| **DirectoryReadTool**       | Facilitates reading and processing of directory structures and their contents.                |
-| **EXASearchTool**           | A tool designed for performing exhaustive searches across various data sources.               |
-| **FileReadTool**            | Enables reading and extracting data from files, supporting various file formats.              |
-| **FirecrawlSearchTool**     | A tool to search webpages using Firecrawl and return the results.                             |
-| **FirecrawlCrawlWebsiteTool** | A tool for crawling webpages using Firecrawl.                                               |
-| **FirecrawlScrapeWebsiteTool** | A tool for scraping webpages URL using Firecrawl and returning its contents.              |
-| **GithubSearchTool**        | A RAG tool for searching within GitHub repositories, useful for code and documentation search.|
-| **SerperDevTool**           | A specialized tool for development purposes, with specific functionalities under development. |
-| **TXTSearchTool**           | A RAG tool focused on searching within text (.txt) files, suitable for unstructured data.     |
-| **JSONSearchTool**          | A RAG tool designed for searching within JSON files, catering to structured data handling.     |
-| **LlamaIndexTool**          | Enables the use of LlamaIndex tools.                                                          |
-| **MDXSearchTool**           | A RAG tool tailored for searching within Markdown (MDX) files, useful for documentation.      |
-| **PDFSearchTool**           | A RAG tool aimed at searching within PDF documents, ideal for processing scanned documents.    |
-| **PGSearchTool**            | A RAG tool optimized for searching within PostgreSQL databases, suitable for database queries. |
-| **Vision Tool**             | A tool for generating images using the DALL-E API.                                            |
-| **RagTool**                 | A general-purpose RAG tool capable of handling various data sources and types.                |
-| **ScrapeElementFromWebsiteTool** | Enables scraping specific elements from websites, useful for targeted data extraction.   |
-| **ScrapeWebsiteTool**       | Facilitates scraping entire websites, ideal for comprehensive data collection.                |
-| **WebsiteSearchTool**       | A RAG tool for searching website content, optimized for web data extraction.                  |
-| **XMLSearchTool**           | A RAG tool designed for searching within XML files, suitable for structured data formats.     |
-| **YoutubeChannelSearchTool**| A RAG tool for searching within YouTube channels, useful for video content analysis.          |
-| **YoutubeVideoSearchTool**  | A RAG tool aimed at searching within YouTube videos, ideal for video data extraction.         |
+| Tool                             | Description                                                                                    |
+| :------------------------------- | :--------------------------------------------------------------------------------------------- |
+| **BrowserbaseLoadTool**          | A tool for interacting with and extracting data from web browsers.                             |
+| **CodeDocsSearchTool**           | A RAG tool optimized for searching through code documentation and related technical documents. |
+| **CodeInterpreterTool**          | A tool for interpreting python code.                                                           |
+| **ComposioTool**                 | Enables use of Composio tools.                                                                 |
+| **CSVSearchTool**                | A RAG tool designed for searching within CSV files, tailored to handle structured data.        |
+| **DALL-E Tool**                  | A tool for generating images using the DALL-E API.                                             |
+| **DirectorySearchTool**          | A RAG tool for searching within directories, useful for navigating through file systems.       |
+| **DOCXSearchTool**               | A RAG tool aimed at searching within DOCX documents, ideal for processing Word files.          |
+| **DirectoryReadTool**            | Facilitates reading and processing of directory structures and their contents.                 |
+| **EXASearchTool**                | A tool designed for performing exhaustive searches across various data sources.                |
+| **FileReadTool**                 | Enables reading and extracting data from files, supporting various file formats.               |
+| **FirecrawlSearchTool**          | A tool to search webpages using Firecrawl and return the results.                              |
+| **FirecrawlCrawlWebsiteTool**    | A tool for crawling webpages using Firecrawl.                                                  |
+| **FirecrawlScrapeWebsiteTool**   | A tool for scraping webpages URL using Firecrawl and returning its contents.                   |
+| **GithubSearchTool**             | A RAG tool for searching within GitHub repositories, useful for code and documentation search. |
+| **SerperDevTool**                | A specialized tool for development purposes, with specific functionalities under development.  |
+| **TXTSearchTool**                | A RAG tool focused on searching within text (.txt) files, suitable for unstructured data.      |
+| **JSONSearchTool**               | A RAG tool designed for searching within JSON files, catering to structured data handling.     |
+| **LlamaIndexTool**               | Enables the use of LlamaIndex tools.                                                           |
+| **MDXSearchTool**                | A RAG tool tailored for searching within Markdown (MDX) files, useful for documentation.       |
+| **PDFSearchTool**                | A RAG tool aimed at searching within PDF documents, ideal for processing scanned documents.    |
+| **PGSearchTool**                 | A RAG tool optimized for searching within PostgreSQL databases, suitable for database queries. |
+| **Vision Tool**                  | A tool for generating images using the DALL-E API.                                             |
+| **RagTool**                      | A general-purpose RAG tool capable of handling various data sources and types.                 |
+| **ScrapeElementFromWebsiteTool** | Enables scraping specific elements from websites, useful for targeted data extraction.         |
+| **ScrapeWebsiteTool**            | Facilitates scraping entire websites, ideal for comprehensive data collection.                 |
+| **WebsiteSearchTool**            | A RAG tool for searching website content, optimized for web data extraction.                   |
+| **XMLSearchTool**                | A RAG tool designed for searching within XML files, suitable for structured data formats.      |
+| **YoutubeChannelSearchTool**     | A RAG tool for searching within YouTube channels, useful for video content analysis.           |
+| **YoutubeVideoSearchTool**       | A RAG tool aimed at searching within YouTube videos, ideal for video data extraction.          |
 
 ## Creating your own Tools
 
 <Tip>
-  Developers can craft `custom tools` tailored for their agent’s needs or utilize pre-built options.
+  Developers can craft `custom tools` tailored for their agent’s needs or
+  utilize pre-built options.
 </Tip>
 
-To create your own CrewAI tools you will need to install our extra tools package:
-
-```bash
-pip install 'crewai[tools]'
-```
-
-Once you do that there are two main ways for one to create a CrewAI tool:
+There are two main ways for one to create a CrewAI tool:
 
 ### Subclassing `BaseTool`
 
 ```python Code
-from crewai_tools import BaseTool
+from crewai.tools import BaseTool
+
 
 class MyCustomTool(BaseTool):
     name: str = "Name of my tool"
@@ -167,7 +164,7 @@ class MyCustomTool(BaseTool):
 ### Utilizing the `tool` Decorator
 
 ```python Code
-from crewai_tools import tool
+from crewai.tools import tool
 @tool("Name of my tool")
 def my_tool(question: str) -> str:
     """Clear description for what this tool is useful for, your agent will need this information to use it."""
@@ -178,11 +175,13 @@ def my_tool(question: str) -> str:
 ### Custom Caching Mechanism
 
 <Tip>
-  Tools can optionally implement a `cache_function` to fine-tune caching behavior. This function determines when to cache results based on specific conditions, offering granular control over caching logic.
+  Tools can optionally implement a `cache_function` to fine-tune caching
+  behavior. This function determines when to cache results based on specific
+  conditions, offering granular control over caching logic.
 </Tip>
 
 ```python Code
-from crewai_tools import tool
+from crewai.tools import tool
 
 @tool
 def multiplication_tool(first_number: int, second_number: int) -> str:
@@ -208,6 +207,6 @@ writer1 = Agent(
 
 ## Conclusion
 
-Tools are pivotal in extending the capabilities of CrewAI agents, enabling them to undertake a broad spectrum of tasks and collaborate effectively. 
-When building solutions with CrewAI, leverage both custom and existing tools to empower your agents and enhance the AI ecosystem. Consider utilizing error handling, 
+Tools are pivotal in extending the capabilities of CrewAI agents, enabling them to undertake a broad spectrum of tasks and collaborate effectively.
+When building solutions with CrewAI, leverage both custom and existing tools to empower your agents and enhance the AI ecosystem. Consider utilizing error handling,
 caching mechanisms, and the flexibility of tool arguments to optimize your agents' performance and capabilities.

@@ -1,7 +1,9 @@
+from pathlib import Path
 from unittest import mock
 
 import pytest
 from click.testing import CliRunner
+
 from crewai.cli.cli import (
     deploy_create,
     deploy_list,
@@ -9,6 +11,7 @@ from crewai.cli.cli import (
     deploy_push,
     deploy_remove,
     deply_status,
+    flow_add_crew,
     reset_memories,
     signup,
     test,
@@ -277,3 +280,42 @@ def test_deploy_remove_no_uuid(command, runner):
 
     assert result.exit_code == 0
     mock_deploy.remove_crew.assert_called_once_with(uuid=None)
+
+
+@mock.patch("crewai.cli.add_crew_to_flow.create_embedded_crew")
+@mock.patch("pathlib.Path.exists", return_value=True)  # Mock the existence check
+def test_flow_add_crew(mock_path_exists, mock_create_embedded_crew, runner):
+    crew_name = "new_crew"
+    result = runner.invoke(flow_add_crew, [crew_name])
+
+    # Log the output for debugging
+    print(result.output)
+
+    assert result.exit_code == 0, f"Command failed with output: {result.output}"
+    assert f"Adding crew {crew_name} to the flow" in result.output
+
+    # Verify that create_embedded_crew was called with the correct arguments
+    mock_create_embedded_crew.assert_called_once()
+    call_args, call_kwargs = mock_create_embedded_crew.call_args
+    assert call_args[0] == crew_name
+    assert "parent_folder" in call_kwargs
+    assert isinstance(call_kwargs["parent_folder"], Path)
+
+
+def test_add_crew_to_flow_not_in_root(runner):
+    # Simulate not being in the root of a flow project
+    with mock.patch("pathlib.Path.exists", autospec=True) as mock_exists:
+        # Mock Path.exists to return False when checking for pyproject.toml
+        def exists_side_effect(self):
+            if self.name == "pyproject.toml":
+                return False  # Simulate that pyproject.toml does not exist
+            return True  # All other paths exist
+
+        mock_exists.side_effect = exists_side_effect
+
+        result = runner.invoke(flow_add_crew, ["new_crew"])
+
+        assert result.exit_code != 0
+        assert "This command must be run from the root of a flow project." in str(
+            result.output
+        )
