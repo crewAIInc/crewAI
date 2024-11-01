@@ -1,4 +1,5 @@
-from crewai_tools import BaseTool
+from crewai.tools import BaseTool
+
 
 class {{class_name}}(BaseTool):
     name: str = "Name of my tool"

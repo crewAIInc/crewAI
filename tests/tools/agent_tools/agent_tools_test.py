@@ -3,7 +3,7 @@
 import pytest
 
 from crewai.agent import Agent
-from crewai.tools.agent_tools import AgentTools
+from crewai.tools.agent_tools.agent_tools import AgentTools
 
 researcher = Agent(
     role="researcher",
@@ -11,12 +11,14 @@ researcher = Agent(
     backstory="You're an expert researcher, specialized in technology",
     allow_delegation=False,
 )
-tools = AgentTools(agents=[researcher])
+tools = AgentTools(agents=[researcher]).tools()
+delegate_tool = tools[0]
+ask_tool = tools[1]
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
 def test_delegate_work():
-    result = tools.delegate_work(
+    result = delegate_tool.run(
         coworker="researcher",
         task="share your take on AI Agents",
         context="I heard you hate them",
@@ -30,8 +32,8 @@ def test_delegate_work():
 
 @pytest.mark.vcr(filter_headers=["authorization"])
 def test_delegate_work_with_wrong_co_worker_variable():
-    result = tools.delegate_work(
-        co_worker="researcher",
+    result = delegate_tool.run(
+        coworker="researcher",
         task="share your take on AI Agents",
         context="I heard you hate them",
     )
@@ -44,7 +46,7 @@ def test_delegate_work_with_wrong_co_worker_variable():
 
 @pytest.mark.vcr(filter_headers=["authorization"])
 def test_ask_question():
-    result = tools.ask_question(
+    result = ask_tool.run(
         coworker="researcher",
         question="do you hate AI Agents?",
         context="I heard you LOVE them",
@@ -58,8 +60,8 @@ def test_ask_question():
 
 @pytest.mark.vcr(filter_headers=["authorization"])
 def test_ask_question_with_wrong_co_worker_variable():
-    result = tools.ask_question(
-        co_worker="researcher",
+    result = ask_tool.run(
+        coworker="researcher",
         question="do you hate AI Agents?",
         context="I heard you LOVE them",
     )
@@ -72,8 +74,8 @@ def test_ask_question_with_wrong_co_worker_variable():
 
 @pytest.mark.vcr(filter_headers=["authorization"])
 def test_delegate_work_withwith_coworker_as_array():
-    result = tools.delegate_work(
-        co_worker="[researcher]",
+    result = delegate_tool.run(
+        coworker="[researcher]",
         task="share your take on AI Agents",
         context="I heard you hate them",
     )
@@ -86,8 +88,8 @@ def test_delegate_work_withwith_coworker_as_array():
 
 @pytest.mark.vcr(filter_headers=["authorization"])
 def test_ask_question_with_coworker_as_array():
-    result = tools.ask_question(
-        co_worker="[researcher]",
+    result = ask_tool.run(
+        coworker="[researcher]",
         question="do you hate AI Agents?",
         context="I heard you LOVE them",
     )
@@ -99,7 +101,7 @@ def test_ask_question_with_coworker_as_array():
 
 
 def test_delegate_work_to_wrong_agent():
-    result = tools.ask_question(
+    result = ask_tool.run(
         coworker="writer",
         question="share your take on AI Agents",
         context="I heard you hate them",
@@ -112,7 +114,7 @@ def test_delegate_work_to_wrong_agent():
 
 
 def test_ask_question_to_wrong_agent():
-    result = tools.ask_question(
+    result = ask_tool.run(
         coworker="writer",
         question="do you hate AI Agents?",
         context="I heard you LOVE them",

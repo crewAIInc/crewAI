@@ -2,13 +2,14 @@ from datetime import datetime, date
 import json
 from uuid import UUID
 from pydantic import BaseModel
+from decimal import Decimal
 
 
 class CrewJSONEncoder(json.JSONEncoder):
     def default(self, obj):
         if isinstance(obj, BaseModel):
             return self._handle_pydantic_model(obj)
-        elif isinstance(obj, UUID):
+        elif isinstance(obj, UUID) or isinstance(obj, Decimal):
             return str(obj)
 
         elif isinstance(obj, datetime) or isinstance(obj, date):

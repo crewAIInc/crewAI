@@ -572,18 +572,20 @@ This command will create a new directory for your crew within the `crews` folder
 
 After adding a new crew, your folder structure will look like this:
 
-name_of_flow/
-├── crews/
-│   ├── poem_crew/
-│   │   ├── config/
-│   │   │   ├── agents.yaml
-│   │   │   └── tasks.yaml
-│   │   └── poem_crew.py
-│   └── name_of_crew/
-│       ├── config/
-│       │   ├── agents.yaml
-│       │   └── tasks.yaml
-│       └── name_of_crew.py
+| Directory/File         | Description                                                        |
+| :--------------------- | :----------------------------------------------------------------- |
+| `name_of_flow/`        | Root directory for the flow.                                       |
+| ├── `crews/`           | Contains directories for specific crews.                           |
+| │   ├── `poem_crew/`   | Directory for the "poem_crew" with its configurations and scripts. |
+| │   │   ├── `config/`  | Configuration files directory for the "poem_crew".                 |
+| │   │   │  ├── `agents.yaml` | YAML file defining the agents for "poem_crew".                     |
+| │   │   │  └── `tasks.yaml`  | YAML file defining the tasks for "poem_crew".                      |
+| │   │   └── `poem_crew.py`    | Script for "poem_crew" functionality.                              |
+| └── `name_of_crew/`       | Directory for the new crew.                                          |
+|     ├── `config/`         | Configuration files directory for the new crew.                     |
+|     │   ├── `agents.yaml` | YAML file defining the agents for the new crew.                     |
+|     │   └── `tasks.yaml`  | YAML file defining the tasks for the new crew.                      |
+|     └── `name_of_crew.py` | Script for the new crew functionality.                              |
 
 You can then customize the `agents.yaml` and `tasks.yaml` files to define the agents and tasks for your new crew. The `name_of_crew.py` file will contain the crew's logic, which you can modify to suit your needs.
 
