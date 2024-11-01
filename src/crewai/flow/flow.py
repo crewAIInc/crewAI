@@ -217,12 +217,20 @@ class Flow(Generic[T], metaclass=FlowMeta):
         if isinstance(self._state, BaseModel):
             # Structured state management
             try:
-                M = self._state.__class__
+                # Define a function to create the dynamic class
+                def create_model_with_extra_forbid(
+                    base_model: Type[BaseModel],
+                ) -> Type[BaseModel]:
+                    class ModelWithExtraForbid(base_model):  # type: ignore
+                        model_config = base_model.model_config.copy()
+                        model_config["extra"] = "forbid"
 
-                # Dynamically create a new model class with 'extra' set to 'forbid'
-                class ModelWithExtraForbid(M):
-                    model_config = M.model_config.copy()
-                    model_config["extra"] = "forbid"
+                    return ModelWithExtraForbid
+
+                # Create the dynamic class
+                ModelWithExtraForbid = create_model_with_extra_forbid(
+                    self._state.__class__
+                )
 
                 # Create a new instance using the combined state and inputs
                 self._state = cast(
