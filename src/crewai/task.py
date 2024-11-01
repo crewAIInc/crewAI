@@ -20,6 +20,7 @@ from pydantic import (
 from pydantic_core import PydanticCustomError
 
 from crewai.agents.agent_builder.base_agent import BaseAgent
+from crewai.tools.base_tool import BaseTool
 from crewai.tasks.output_format import OutputFormat
 from crewai.tasks.task_output import TaskOutput
 from crewai.telemetry.telemetry import Telemetry
@@ -91,7 +92,7 @@ class Task(BaseModel):
     output: Optional[TaskOutput] = Field(
         description="Task output, it's final result after being executed", default=None
     )
-    tools: Optional[List[Any]] = Field(
+    tools: Optional[List[BaseTool]] = Field(
         default_factory=list,
         description="Tools the agent is limited to use for this task.",
     )
@@ -185,7 +186,7 @@ class Task(BaseModel):
         self,
         agent: Optional[BaseAgent] = None,
         context: Optional[str] = None,
-        tools: Optional[List[Any]] = None,
+        tools: Optional[List[BaseTool]] = None,
     ) -> TaskOutput:
         """Execute the task synchronously."""
         return self._execute_core(agent, context, tools)
@@ -202,7 +203,7 @@ class Task(BaseModel):
         self,
         agent: BaseAgent | None = None,
         context: Optional[str] = None,
-        tools: Optional[List[Any]] = None,
+        tools: Optional[List[BaseTool]] = None,
     ) -> Future[TaskOutput]:
         """Execute the task asynchronously."""
         future: Future[TaskOutput] = Future()

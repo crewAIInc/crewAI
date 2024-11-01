@@ -5,7 +5,6 @@ from unittest import mock
 from unittest.mock import patch
 
 import pytest
-from crewai_tools import tool
 
 from crewai import Agent, Crew, Task
 from crewai.agents.cache import CacheHandler
@@ -14,6 +13,7 @@ from crewai.agents.parser import AgentAction, CrewAgentParser, OutputParserExcep
 from crewai.llm import LLM
 from crewai.tools.tool_calling import InstructorToolCalling
 from crewai.tools.tool_usage import ToolUsage
+from crewai.tools import tool
 from crewai.tools.tool_usage_events import ToolUsageFinished
 from crewai.utilities import RPMController
 from crewai.utilities.events import Emitter
@@ -277,9 +277,10 @@ def test_cache_hitting():
         "multiplier-{'first_number': 12, 'second_number': 3}": 36,
     }
 
-    with patch.object(CacheHandler, "read") as read, patch.object(
-        Emitter, "emit"
-    ) as emit:
+    with (
+        patch.object(CacheHandler, "read") as read,
+        patch.object(Emitter, "emit") as emit,
+    ):
         read.return_value = "0"
         task = Task(
             description="What is 2 times 6? Ignore correctness and just return the result of the multiplication tool, you must use the tool.",
@@ -604,7 +605,7 @@ def test_agent_respect_the_max_rpm_set(capsys):
 def test_agent_respect_the_max_rpm_set_over_crew_rpm(capsys):
     from unittest.mock import patch
 
-    from crewai_tools import tool
+    from crewai.tools import tool
 
     @tool
     def get_final_answer() -> float:
@@ -642,7 +643,7 @@ def test_agent_respect_the_max_rpm_set_over_crew_rpm(capsys):
 def test_agent_without_max_rpm_respet_crew_rpm(capsys):
     from unittest.mock import patch
 
-    from crewai_tools import tool
+    from crewai.tools import tool
 
     @tool
     def get_final_answer() -> float:
@@ -696,7 +697,7 @@ def test_agent_without_max_rpm_respet_crew_rpm(capsys):
 def test_agent_error_on_parsing_tool(capsys):
     from unittest.mock import patch
 
-    from crewai_tools import tool
+    from crewai.tools import tool
 
     @tool
     def get_final_answer() -> float:
@@ -739,7 +740,7 @@ def test_agent_error_on_parsing_tool(capsys):
 def test_agent_remembers_output_format_after_using_tools_too_many_times():
     from unittest.mock import patch
 
-    from crewai_tools import tool
+    from crewai.tools import tool
 
     @tool
     def get_final_answer() -> float:
@@ -863,11 +864,16 @@ def test_agent_function_calling_llm():
 
     from crewai.tools.tool_usage import ToolUsage
 
-    with patch.object(
-        instructor, "from_litellm", wraps=instructor.from_litellm
-    ) as mock_from_litellm, patch.object(
-        ToolUsage, "_original_tool_calling", side_effect=Exception("Forced exception")
-    ) as mock_original_tool_calling:
+    with (
+        patch.object(
+            instructor, "from_litellm", wraps=instructor.from_litellm
+        ) as mock_from_litellm,
+        patch.object(
+            ToolUsage,
+            "_original_tool_calling",
+            side_effect=Exception("Forced exception"),
+        ) as mock_original_tool_calling,
+    ):
         crew.kickoff()
         mock_from_litellm.assert_called()
         mock_original_tool_calling.assert_called()
@@ -894,7 +900,7 @@ def test_agent_count_formatting_error():
 
 @pytest.mark.vcr(filter_headers=["authorization"])
 def test_tool_result_as_answer_is_the_final_answer_for_the_agent():
-    from crewai_tools import BaseTool
+    from crewai.tools import BaseTool
 
     class MyCustomTool(BaseTool):
         name: str = "Get Greetings"
@@ -924,7 +930,7 @@ def test_tool_result_as_answer_is_the_final_answer_for_the_agent():
 
 @pytest.mark.vcr(filter_headers=["authorization"])
 def test_tool_usage_information_is_appended_to_agent():
-    from crewai_tools import BaseTool
+    from crewai.tools import BaseTool
 
     class MyCustomTool(BaseTool):
         name: str = "Decide Greetings"
