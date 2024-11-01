@@ -1,6 +1,7 @@
 from typing import Type
-from crewai_tools import BaseTool
+from crewai.tools import BaseTool
 from pydantic import BaseModel, Field
+
 
 class MyCustomToolInput(BaseModel):
     """Input schema for MyCustomTool."""
