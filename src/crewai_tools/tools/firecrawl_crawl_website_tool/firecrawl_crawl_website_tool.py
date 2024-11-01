@@ -1,8 +1,12 @@
-from typing import Any, Dict, List, Optional, Type
+from typing import TYPE_CHECKING, Any, Dict, Optional, Type
 
 from pydantic import BaseModel, Field
 
 from crewai_tools.tools.base_tool import BaseTool
+
+# Type checking import
+if TYPE_CHECKING:
+    from firecrawl import FirecrawlApp
 
 
 class FirecrawlCrawlWebsiteToolSchema(BaseModel):
@@ -20,7 +24,7 @@ class FirecrawlCrawlWebsiteTool(BaseTool):
     description: str = "Crawl webpages using Firecrawl and return the contents"
     args_schema: Type[BaseModel] = FirecrawlCrawlWebsiteToolSchema
     api_key: Optional[str] = None
-    firecrawl: Optional[Any] = None
+    firecrawl: Optional["FirecrawlApp"] = None
 
     def __init__(self, api_key: Optional[str] = None, **kwargs):
         super().__init__(**kwargs)
