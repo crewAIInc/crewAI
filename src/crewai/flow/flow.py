@@ -216,7 +216,10 @@ class Flow(Generic[T], metaclass=FlowMeta):
         if isinstance(self._state, BaseModel):
             # Structured state management
             try:
-                self._state = self._state.model_copy(update=inputs)
+                # Create a new instance with updated values to ensure validation
+                self._state = self._state.__class__(
+                    **{**self._state.model_dump(), **inputs}
+                )
             except ValidationError as e:
                 raise ValueError(f"Invalid inputs for structured state: {e}") from e
         elif isinstance(self._state, dict):
