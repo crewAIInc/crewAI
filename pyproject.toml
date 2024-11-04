@@ -29,6 +29,7 @@ dependencies = [
     "tomli-w>=1.1.0",
     "chromadb>=0.4.24",
     "tomli>=2.0.2",
+    "fastembed>=0.4.1",
 ]
 
 [project.urls]

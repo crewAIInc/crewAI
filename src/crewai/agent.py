@@ -8,6 +8,7 @@ from pydantic import Field, InstanceOf, PrivateAttr, model_validator
 from crewai.agents import CacheHandler
 from crewai.agents.agent_builder.base_agent import BaseAgent
 from crewai.agents.crew_agent_executor import CrewAgentExecutor
+from crewai.knowledge import StringKnowledgeBase
 from crewai.llm import LLM
 from crewai.memory.contextual.contextual_memory import ContextualMemory
 from crewai.tools.agent_tools.agent_tools import AgentTools
@@ -51,6 +52,7 @@ class Agent(BaseAgent):
             role: The role of the agent.
             goal: The objective of the agent.
             backstory: The backstory of the agent.
+            knowledge: The knowledge base of the agent.
             config: Dict representation of agent configuration.
             llm: The language model that will run the agent.
             function_calling_llm: The language model that will handle the tool calling for this agent, it overrides the crew function_calling_llm.
@@ -83,6 +85,10 @@ class Agent(BaseAgent):
     )
     llm: Union[str, InstanceOf[LLM], Any] = Field(
         description="Language model that will run the agent.", default=None
+    )
+    knowledge: Optional[str] = Field(
+        default=None,
+        description="Knowledge base for the agent.",
     )
     function_calling_llm: Optional[Any] = Field(
         description="Language model that will run the agent.", default=None
@@ -181,6 +187,8 @@ class Agent(BaseAgent):
 
         if self.allow_code_execution:
             self._validate_docker_installation()
+
+        self.knowledge = StringKnowledgeBase(content=self.knowledge)
 
         return self
 
