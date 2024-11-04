@@ -117,6 +117,15 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
                         callbacks=self.callbacks,
                     )
 
+                    if answer is None or answer == "":
+                        self._printer.print(
+                            content="Received None or empty response from LLM call.",
+                            color="red",
+                        )
+                        raise ValueError(
+                            "Invalid response from LLM call - None or empty."
+                        )
+
                     if not self.use_stop_words:
                         try:
                             self._format_answer(answer)
