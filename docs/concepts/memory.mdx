@@ -296,6 +296,31 @@ my_crew = Crew(
 )
 ```
 
+### Using Watson embeddings
+
+```python Code
+from crewai import Crew, Agent, Task, Process
+
+# Note: Ensure you have installed and imported `ibm_watsonx_ai` for Watson embeddings to work.
+
+my_crew = Crew(
+    agents=[...],
+    tasks=[...],
+    process=Process.sequential,
+    memory=True,
+    verbose=True,
+    embedder={
+        "provider": "watson",
+        "config": {
+            "model": "<model_name>",
+            "api_url": "<api_url>",
+            "api_key": "<YOUR_API_KEY>",
+            "project_id": "<YOUR_PROJECT_ID>",
+        }
+    }
+)
+```
+
 ### Resetting Memory
 
 ```shell
