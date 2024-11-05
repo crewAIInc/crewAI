@@ -8,6 +8,7 @@ from pydantic import Field, InstanceOf, PrivateAttr, model_validator
 from crewai.agents import CacheHandler
 from crewai.agents.agent_builder.base_agent import BaseAgent
 from crewai.agents.crew_agent_executor import CrewAgentExecutor
+from crewai.cli.constants import ENV_VARS
 from crewai.llm import LLM
 from crewai.memory.contextual.contextual_memory import ContextualMemory
 from crewai.tools.agent_tools.agent_tools import AgentTools
@@ -131,8 +132,12 @@ class Agent(BaseAgent):
             # If it's already an LLM instance, keep it as is
             pass
         elif self.llm is None:
-            # If it's None, use environment variables or default
-            model_name = os.environ.get("OPENAI_MODEL_NAME", "gpt-4o-mini")
+            # Determine the model name from environment variables or use default
+            model_name = (
+                os.environ.get("OPENAI_MODEL_NAME")
+                or os.environ.get("MODEL")
+                or "gpt-4o-mini"
+            )
             llm_params = {"model": model_name}
 
             api_base = os.environ.get("OPENAI_API_BASE") or os.environ.get(
@@ -141,9 +146,39 @@ class Agent(BaseAgent):
             if api_base:
                 llm_params["base_url"] = api_base
 
-            api_key = os.environ.get("OPENAI_API_KEY")
-            if api_key:
-                llm_params["api_key"] = api_key
+            # Iterate over all environment variables to find matching API keys or use defaults
+            for provider, env_vars in ENV_VARS.items():
+                for env_var in env_vars:
+                    # Check if the environment variable is set
+                    if "key_name" in env_var:
+                        env_value = os.environ.get(env_var["key_name"])
+                        if env_value:
+                            # Map key names containing "API_KEY" to "api_key"
+                            key_name = (
+                                "api_key"
+                                if "API_KEY" in env_var["key_name"]
+                                else env_var["key_name"]
+                            )
+                            # Map key names containing "API_BASE" to "api_base"
+                            key_name = (
+                                "api_base"
+                                if "API_BASE" in env_var["key_name"]
+                                else key_name
+                            )
+                            # Map key names containing "API_VERSION" to "api_version"
+                            key_name = (
+                                "api_version"
+                                if "API_VERSION" in env_var["key_name"]
+                                else key_name
+                            )
+                            llm_params[key_name] = env_value
+                    # Check for default values if the environment variable is not set
+                    elif env_var.get("default", False):
+                        for key, value in env_var.items():
+                            if key not in ["prompt", "key_name", "default"]:
+                                # Only add default if the key is already set in os.environ
+                                if key in os.environ:
+                                    llm_params[key] = value
 
             self.llm = LLM(**llm_params)
         else:
