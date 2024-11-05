@@ -8,8 +8,11 @@ from crewai.project import CrewBase, agent, crew, task
 # from crewai_tools import SerperDevTool
 
 @CrewBase
-class {{crew_name}}Crew():
+class {{crew_name}}():
 	"""{{crew_name}} crew"""
+
+	agents_config = 'config/agents.yaml'
+	tasks_config = 'config/tasks.yaml'
 
 	@agent
 	def researcher(self) -> Agent:
