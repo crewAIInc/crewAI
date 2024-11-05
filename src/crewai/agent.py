@@ -8,11 +8,12 @@ from pydantic import Field, InstanceOf, PrivateAttr, model_validator
 from crewai.agents import CacheHandler
 from crewai.agents.agent_builder.base_agent import BaseAgent
 from crewai.agents.crew_agent_executor import CrewAgentExecutor
-from crewai.knowledge import StringKnowledgeBase
+
+# from crewai.knowledge import StringKnowledgeBase
 from crewai.llm import LLM
 from crewai.memory.contextual.contextual_memory import ContextualMemory
-from crewai.tools.agent_tools.agent_tools import AgentTools
 from crewai.tools import BaseTool
+from crewai.tools.agent_tools.agent_tools import AgentTools
 from crewai.utilities import Converter, Prompts
 from crewai.utilities.constants import TRAINED_AGENTS_DATA_FILE, TRAINING_DATA_FILE
 from crewai.utilities.token_counter_callback import TokenCalcHandler
@@ -188,7 +189,7 @@ class Agent(BaseAgent):
         if self.allow_code_execution:
             self._validate_docker_installation()
 
-        self.knowledge = StringKnowledgeBase(content=self.knowledge)
+        # self.knowledge = StringKnowledgeBase(content=self.knowledge)
 
         return self
 

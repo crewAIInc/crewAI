@@ -1,23 +1,23 @@
-from typing import List, Any, Optional, Dict
 from abc import ABC, abstractmethod
+from typing import Any, Dict, List
+
 import numpy as np
-from .embeddings import Embeddings
+
+from crewai.knowledge.embedder.base_embedder import BaseEmbedder
 
 
-class BaseKnowledgeBase(ABC):
+class BaseKnowledgeSource(ABC):
     """Abstract base class for knowledge bases"""
 
     def __init__(
         self,
         chunk_size: int = 1000,
         chunk_overlap: int = 200,
-        embeddings_class: Optional[Embeddings] = None,
     ):
         self.chunk_size = chunk_size
         self.chunk_overlap = chunk_overlap
         self.chunks: List[str] = []
         self.chunk_embeddings: Dict[int, np.ndarray] = {}
-        self.embeddings_class = embeddings_class or Embeddings()
 
     @abstractmethod
     def query(self, query: str) -> str:
@@ -29,18 +29,13 @@ class BaseKnowledgeBase(ABC):
         """Process and store content in the knowledge base"""
         pass
 
-    def reset(self) -> None:
-        """Reset the knowledge base"""
-        self.chunks = []
-        self.chunk_embeddings = {}
-
-    def _embed_chunks(self, new_chunks: List[str]) -> None:
+    def embed(self, embedder: BaseEmbedder, new_chunks: List[str]) -> None:
         """Embed chunks and store them"""
         if not new_chunks:
             return
 
         # Get embeddings for new chunks
-        embeddings = self.embeddings_class.embed_texts(new_chunks)
+        embeddings = embedder.embed_texts(new_chunks)
 
         # Store embeddings with their corresponding chunks
         start_idx = len(self.chunks)
@@ -92,13 +87,15 @@ class BaseKnowledgeBase(ABC):
 
         return chunks
 
-    def _find_similar_chunks(self, query: str, top_k: int = 3) -> List[str]:
+    def _find_similar_chunks(
+        self, embedder: BaseEmbedder, query: str, top_k: int = 3
+    ) -> List[str]:
         """Find the most similar chunks to a query using embeddings"""
         if not self.chunks:
             return []
 
         # Get query embedding
-        query_embedding = self.embeddings_class.embed_text(query)
+        query_embedding = embedder.embed_text(query)
 
         # Calculate similarities with all chunks
         similarities = []

@@ -1,9 +1,12 @@
-from typing import List, Optional, Union
 from pathlib import Path
+from typing import List, Optional, Union
+
 import numpy as np
 
+from .base_embedder import BaseEmbedder
+
 try:
-    from fastembed_gpu import TextEmbedding
+    from fastembed_gpu import TextEmbedding  # type: ignore
 
     FASTEMBED_AVAILABLE = True
 except ImportError:
@@ -15,7 +18,7 @@ except ImportError:
         FASTEMBED_AVAILABLE = False
 
 
-class Embeddings:
+class FastEmbed(BaseEmbedder):
     """
     A wrapper class for text embedding models using FastEmbed
     """
@@ -43,6 +46,20 @@ class Embeddings:
             model_name=model_name,
             cache_dir=str(cache_dir) if cache_dir else None,
         )
+
+    def embed_chunks(self, chunks: List[str]) -> np.ndarray:
+        """
+        Generate embeddings for a list of text chunks
+
+        Args:
+            chunks: List of text chunks to embed
+
+        Returns:
+            Array of embeddings
+        """
+        # FastEmbed returns a generator, convert to list then numpy array
+        embeddings = list(self.model.embed(chunks))
+        return np.array(embeddings)
 
     def embed_texts(self, texts: List[str]) -> np.ndarray:
         """
