@@ -1,4 +1,4 @@
-from itertools import wraps
+from functools import wraps
 
 def memoize(func):
     cache = {}
