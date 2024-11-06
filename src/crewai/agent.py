@@ -1,6 +1,4 @@
 import os
-import shutil
-import subprocess
 from typing import Any, List, Literal, Optional, Union
 
 from pydantic import Field, InstanceOf, PrivateAttr, model_validator
@@ -124,92 +122,8 @@ class Agent(BaseAgent):
     def post_init_setup(self):
         self.agent_ops_agent_name = self.role
 
-        # Handle different cases for self.llm
-        if isinstance(self.llm, str):
-            # If it's a string, create an LLM instance
-            self.llm = LLM(model=self.llm)
-        elif isinstance(self.llm, LLM):
-            # If it's already an LLM instance, keep it as is
-            pass
-        elif self.llm is None:
-            # Determine the model name from environment variables or use default
-            model_name = (
-                os.environ.get("OPENAI_MODEL_NAME")
-                or os.environ.get("MODEL")
-                or "gpt-4o-mini"
-            )
-            llm_params = {"model": model_name}
-
-            api_base = os.environ.get("OPENAI_API_BASE") or os.environ.get(
-                "OPENAI_BASE_URL"
-            )
-            if api_base:
-                llm_params["base_url"] = api_base
-
-            # Iterate over all environment variables to find matching API keys or use defaults
-            for provider, env_vars in ENV_VARS.items():
-                for env_var in env_vars:
-                    # Check if the environment variable is set
-                    if "key_name" in env_var:
-                        env_value = os.environ.get(env_var["key_name"])
-                        if env_value:
-                            # Map key names containing "API_KEY" to "api_key"
-                            key_name = (
-                                "api_key"
-                                if "API_KEY" in env_var["key_name"]
-                                else env_var["key_name"]
-                            )
-                            # Map key names containing "API_BASE" to "api_base"
-                            key_name = (
-                                "api_base"
-                                if "API_BASE" in env_var["key_name"]
-                                else key_name
-                            )
-                            # Map key names containing "API_VERSION" to "api_version"
-                            key_name = (
-                                "api_version"
-                                if "API_VERSION" in env_var["key_name"]
-                                else key_name
-                            )
-                            llm_params[key_name] = env_value
-                    # Check for default values if the environment variable is not set
-                    elif env_var.get("default", False):
-                        for key, value in env_var.items():
-                            if key not in ["prompt", "key_name", "default"]:
-                                # Only add default if the key is already set in os.environ
-                                if key in os.environ:
-                                    llm_params[key] = value
-
-            self.llm = LLM(**llm_params)
-        else:
-            # For any other type, attempt to extract relevant attributes
-            llm_params = {
-                "model": getattr(self.llm, "model_name", None)
-                or getattr(self.llm, "deployment_name", None)
-                or str(self.llm),
-                "temperature": getattr(self.llm, "temperature", None),
-                "max_tokens": getattr(self.llm, "max_tokens", None),
-                "logprobs": getattr(self.llm, "logprobs", None),
-                "timeout": getattr(self.llm, "timeout", None),
-                "max_retries": getattr(self.llm, "max_retries", None),
-                "api_key": getattr(self.llm, "api_key", None),
-                "base_url": getattr(self.llm, "base_url", None),
-                "organization": getattr(self.llm, "organization", None),
-            }
-            # Remove None values to avoid passing unnecessary parameters
-            llm_params = {k: v for k, v in llm_params.items() if v is not None}
-            self.llm = LLM(**llm_params)
-
-        # Similar handling for function_calling_llm
-        if self.function_calling_llm:
-            if isinstance(self.function_calling_llm, str):
-                self.function_calling_llm = LLM(model=self.function_calling_llm)
-            elif not isinstance(self.function_calling_llm, LLM):
-                self.function_calling_llm = LLM(
-                    model=getattr(self.function_calling_llm, "model_name", None)
-                    or getattr(self.function_calling_llm, "deployment_name", None)
-                    or str(self.function_calling_llm)
-                )
+        self.llm = self._initialize_llm(self.llm)
+        self.function_calling_llm = self._initialize_llm(self.function_calling_llm)
 
         if not self.agent_executor:
             self._setup_agent_executor()
@@ -218,6 +132,76 @@ class Agent(BaseAgent):
             self._validate_docker_installation()
 
         return self
+
+    def _initialize_llm(self, llm):
+        if isinstance(llm, str):
+            return LLM(model=llm)
+        elif isinstance(llm, LLM):
+            return llm
+        elif llm is None:
+            return self._initialize_llm_from_env()
+        else:
+            return self._initialize_llm_from_attributes(llm)
+
+    def _initialize_llm_from_env(self):
+        model_name = (
+            os.environ.get("OPENAI_MODEL_NAME")
+            or os.environ.get("MODEL")
+            or "gpt-4o-mini"
+        )
+        llm_params = {"model": model_name}
+
+        api_base = os.environ.get("OPENAI_API_BASE") or os.environ.get(
+            "OPENAI_BASE_URL"
+        )
+        if api_base:
+            llm_params["base_url"] = api_base
+
+        for provider, env_vars in ENV_VARS.items():
+            for env_var in env_vars:
+                if "key_name" in env_var:
+                    env_value = os.environ.get(env_var["key_name"])
+                    if env_value:
+                        key_name = (
+                            "api_key"
+                            if "API_KEY" in env_var["key_name"]
+                            else env_var["key_name"]
+                        )
+                        key_name = (
+                            "api_base"
+                            if "API_BASE" in env_var["key_name"]
+                            else key_name
+                        )
+                        key_name = (
+                            "api_version"
+                            if "API_VERSION" in env_var["key_name"]
+                            else key_name
+                        )
+                        llm_params[key_name] = env_value
+                elif env_var.get("default", False):
+                    for key, value in env_var.items():
+                        if key not in ["prompt", "key_name", "default"]:
+                            if key in os.environ:
+                                llm_params[key] = value
+
+        return LLM(**llm_params)
+
+    def _initialize_llm_from_attributes(self, llm):
+        llm_params = {
+            "model": getattr(llm, "model_name", None)
+            or getattr(llm, "deployment_name", None)
+            or str(llm),
+            "temperature": getattr(llm, "temperature", None),
+            "max_tokens": getattr(llm, "max_tokens", None),
+            "logprobs": getattr(llm, "logprobs", None),
+            "timeout": getattr(llm, "timeout", None),
+            "max_retries": getattr(llm, "max_retries", None),
+            "api_key": getattr(llm, "api_key", None),
+            "base_url": getattr(llm, "base_url", None),
+            "organization": getattr(llm, "organization", None),
+        }
+        llm_params = {k: v for k, v in llm_params.items() if v is not None}
+        return LLM(**llm_params)
 
     def _setup_agent_executor(self):
         if not self.cache_handler:
@@ -286,9 +270,6 @@ class Agent(BaseAgent):
         if self.max_rpm and self._rpm_controller:
             self._rpm_controller.stop_rpm_counter()
 
-        # If there was any tool in self.tools_results that had result_as_answer
-        # set to True, return the results of the last tool that had
-        # result_as_answer set to True
         for tool_result in self.tools_results:  # type: ignore # Item "None" of "list[Any] | None" has no attribute "__iter__" (not iterable)
             if tool_result.get("result_as_answer", False):
                 result = tool_result["result"]
@@ -354,7 +335,6 @@ class Agent(BaseAgent):
         try:
             from crewai_tools import CodeInterpreterTool
 
-            # Set the unsafe_mode based on the code_execution_mode attribute
             unsafe_mode = self.code_execution_mode == "unsafe"
             return [CodeInterpreterTool(unsafe_mode=unsafe_mode)]
         except ModuleNotFoundError:
@@ -369,7 +349,6 @@ class Agent(BaseAgent):
         """Parse tools to be used for the task."""
         tools_list = []
         try:
-            # tentatively try to import from crewai_tools import BaseTool as CrewAITool
             from crewai.tools import BaseTool as CrewAITool
 
             for tool in tools:
