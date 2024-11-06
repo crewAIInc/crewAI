@@ -1,6 +1,6 @@
 """Test Knowledge creation and querying functionality."""
 
-import os
+from pathlib import Path
 
 from crewai.knowledge.knowledge import Knowledge
 from crewai.knowledge.source.pdf_knowledge_source import PDFKnowledgeSource
@@ -141,11 +141,11 @@ def test_multiple_2k_character_strings():
 def test_single_short_file(tmpdir):
     # Create a single short text file
     content = "Brandon's favorite sport is basketball."
-    file_path = tmpdir.join("short_file.txt")
+    file_path = Path(tmpdir.join("short_file.txt"))
     with open(file_path, "w") as f:
         f.write(content)
 
-    file_source = TextFileKnowledgeSource(file_path=str(file_path))
+    file_source = TextFileKnowledgeSource(file_path=file_path)
     knowledge_base = Knowledge(sources=[file_source])
 
     # Perform a query
@@ -180,11 +180,11 @@ def test_single_2k_character_file(tmpdir):
         "Brandon's favorite sport is basketball, and he often plays with his friends on weekends. "
         "He is also a fan of the Golden State Warriors and enjoys watching their games. "
     ) * 2  # Repeat to ensure it's 2k characters
-    file_path = tmpdir.join("long_file.txt")
+    file_path = Path(tmpdir.join("long_file.txt"))
     with open(file_path, "w") as f:
         f.write(content)
 
-    file_source = TextFileKnowledgeSource(file_path=str(file_path))
+    file_source = TextFileKnowledgeSource(file_path=file_path)
     knowledge_base = Knowledge(sources=[file_source])
 
     # Perform a query
@@ -204,10 +204,10 @@ def test_multiple_short_files(tmpdir):
     ]
     file_paths = []
     for i, content in enumerate(contents):
-        file_path = tmpdir.join(f"file_{i}.txt")
+        file_path = Path(tmpdir.join(f"file_{i}.txt"))
         with open(file_path, "w") as f:
             f.write(content)
-        file_paths.append(str(file_path))
+        file_paths.append(file_path)
 
     file_sources = [TextFileKnowledgeSource(file_path=path) for path in file_paths]
     knowledge_base = Knowledge(sources=file_sources)
@@ -272,10 +272,10 @@ def test_multiple_2k_character_files(tmpdir):
     ]
     file_paths = []
     for i, content in enumerate(contents):
-        file_path = tmpdir.join(f"long_file_{i}.txt")
+        file_path = Path(tmpdir.join(f"long_file_{i}.txt"))
         with open(file_path, "w") as f:
             f.write(content)
-        file_paths.append(str(file_path))
+        file_paths.append(file_path)
 
     file_sources = [TextFileKnowledgeSource(file_path=path) for path in file_paths]
     knowledge_base = Knowledge(sources=file_sources)
@@ -307,10 +307,10 @@ def test_hybrid_string_and_files(tmpdir):
     ]
     file_paths = []
     for i, content in enumerate(file_contents):
-        file_path = tmpdir.join(f"file_{i}.txt")
+        file_path = Path(tmpdir.join(f"file_{i}.txt"))
         with open(file_path, "w") as f:
             f.write(content)
-        file_paths.append(str(file_path))
+        file_paths.append(file_path)
 
     file_sources = [TextFileKnowledgeSource(file_path=path) for path in file_paths]
 
@@ -327,9 +327,9 @@ def test_hybrid_string_and_files(tmpdir):
 
 def test_pdf_knowledge_source():
     # Get the directory of the current file
-    current_dir = os.path.dirname(__file__)
+    current_dir = Path(__file__).parent
     # Construct the path to the PDF file
-    pdf_path = os.path.join(current_dir, "crewai_quickstart.pdf")
+    pdf_path = current_dir / "crewai_quickstart.pdf"
 
     # Create a PDFKnowledgeSource
     pdf_source = PDFKnowledgeSource(file_path=pdf_path)

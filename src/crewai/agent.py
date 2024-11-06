@@ -8,8 +8,8 @@ from pydantic import Field, InstanceOf, PrivateAttr, model_validator
 from crewai.agents import CacheHandler
 from crewai.agents.agent_builder.base_agent import BaseAgent
 from crewai.agents.crew_agent_executor import CrewAgentExecutor
-
-# from crewai.knowledge import StringKnowledgeBase
+from crewai.knowledge.knowledge import Knowledge
+from crewai.knowledge.source.base_knowledge_source import BaseKnowledgeSource
 from crewai.llm import LLM
 from crewai.memory.contextual.contextual_memory import ContextualMemory
 from crewai.tools import BaseTool
@@ -87,9 +87,9 @@ class Agent(BaseAgent):
     llm: Union[str, InstanceOf[LLM], Any] = Field(
         description="Language model that will run the agent.", default=None
     )
-    knowledge: Optional[str] = Field(
+    knowledge_sources: Optional[List[BaseKnowledgeSource]] = Field(
         default=None,
-        description="Knowledge base for the agent.",
+        description="Knowledge sources for the agent.",
     )
     function_calling_llm: Optional[Any] = Field(
         description="Language model that will run the agent.", default=None
@@ -125,6 +125,8 @@ class Agent(BaseAgent):
         default="safe",
         description="Mode for code execution: 'safe' (using Docker) or 'unsafe' (direct execution).",
     )
+    # TODO: We need to add in knowledge config (score, top_k, etc)
+    _knowledge: Optional[Knowledge] = PrivateAttr(default=None)
 
     @model_validator(mode="after")
     def post_init_setup(self):
@@ -189,7 +191,11 @@ class Agent(BaseAgent):
         if self.allow_code_execution:
             self._validate_docker_installation()
 
-        # self.knowledge = StringKnowledgeBase(content=self.knowledge)
+        # Initialize the Knowledge object if knowledge_sources are provided
+        if self.knowledge_sources:
+            self._knowledge = Knowledge(sources=self.knowledge_sources)
+        else:
+            self._knowledge = None
 
         return self
 
@@ -233,6 +239,16 @@ class Agent(BaseAgent):
             memory = contextual_memory.build_context_for_task(task, context)
             if memory.strip() != "":
                 task_prompt += self.i18n.slice("memory").format(memory=memory)
+
+        # Integrate the knowledge base
+        if self._knowledge:
+            # Query the knowledge base for relevant information
+            knowledge_snippets = self._knowledge.query(query=task.prompt())
+            print("knowledge_snippets", knowledge_snippets)
+            if knowledge_snippets:
+                formatted_knowledge = "\n".join(knowledge_snippets)
+                print("formatted_knowledge", formatted_knowledge)
+                task_prompt += f"\n\nAdditional Information:\n{formatted_knowledge}"
 
         tools = tools or self.tools or []
         self.create_agent_executor(tools=tools, task=task)

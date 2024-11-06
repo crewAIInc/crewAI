@@ -1,30 +1,15 @@
-from pathlib import Path
 from typing import List
 
 from crewai.knowledge.embedder.base_embedder import BaseEmbedder
-from crewai.knowledge.source.base_knowledge_source import BaseKnowledgeSource
+from crewai.knowledge.source.base_file_knowledge_source import BaseFileKnowledgeSource
 
 
-class TextFileKnowledgeSource(BaseKnowledgeSource):
+class TextFileKnowledgeSource(BaseFileKnowledgeSource):
     """A knowledge source that stores and queries text file content using embeddings."""
-
-    def __init__(
-        self,
-        file_path: str,
-        chunk_size: int = 1000,
-        chunk_overlap: int = 200,
-    ):
-        super().__init__(chunk_size, chunk_overlap)
-        self.file_path = Path(file_path)
-        self.content = self.load_content()
 
     def load_content(self) -> str:
         """Load and preprocess text file content."""
-        if not self.file_path.exists():
-            raise FileNotFoundError(f"File not found: {self.file_path}")
-        if not self.file_path.is_file():
-            raise ValueError(f"Path is not a file: {self.file_path}")
-
+        super().load_content()  # Validate the file path
         with self.file_path.open("r", encoding="utf-8") as f:
             return f.read()
 

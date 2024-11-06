@@ -10,10 +10,11 @@ from crewai import Agent, Crew, Task
 from crewai.agents.cache import CacheHandler
 from crewai.agents.crew_agent_executor import CrewAgentExecutor
 from crewai.agents.parser import AgentAction, CrewAgentParser, OutputParserException
+from crewai.knowledge.source.string_knowledge_source import StringKnowledgeSource
 from crewai.llm import LLM
+from crewai.tools import tool
 from crewai.tools.tool_calling import InstructorToolCalling
 from crewai.tools.tool_usage import ToolUsage
-from crewai.tools import tool
 from crewai.tools.tool_usage_events import ToolUsageFinished
 from crewai.utilities import RPMController
 from crewai.utilities.events import Emitter
@@ -1574,3 +1575,32 @@ def test_agent_execute_task_with_ollama():
     result = agent.execute_task(task)
     assert len(result.split(".")) == 2
     assert "AI" in result or "artificial intelligence" in result.lower()
+
+
+# @pytest.mark.vcr(filter_headers=["authorization"])
+def test_agent_with_knowledge_sources():
+    # Create a knowledge source with some content
+    content = "Brandon's favorite color is blue and he likes Mexican food."
+    string_source = StringKnowledgeSource(content=content)
+
+    # Create an agent with the knowledge source
+    agent = Agent(
+        role="Information Agent",
+        goal="Provide information based on knowledge sources",
+        backstory="You have access to specific knowledge sources.",
+        llm=LLM(model="gpt-3.5-turbo"),
+        knowledge_sources=[string_source],
+    )
+
+    # Create a task that requires the agent to use the knowledge
+    task = Task(
+        description="What is Brandon's favorite color?",
+        expected_output="Brandon's favorite color.",
+        agent=agent,
+    )
+
+    # Execute the task
+    result = agent.execute_task(task)
+
+    # Assert that the agent provides the correct information
+    assert "blue" in result.lower()

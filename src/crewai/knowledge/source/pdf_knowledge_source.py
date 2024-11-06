@@ -1,22 +1,23 @@
-from pathlib import Path
 from typing import List
 
 from crewai.knowledge.embedder.base_embedder import BaseEmbedder
-from crewai.knowledge.source.base_knowledge_source import BaseKnowledgeSource
+from crewai.knowledge.source.base_file_knowledge_source import BaseFileKnowledgeSource
 
 
-class PDFKnowledgeSource(BaseKnowledgeSource):
+class PDFKnowledgeSource(BaseFileKnowledgeSource):
     """A knowledge source that stores and queries PDF file content using embeddings."""
 
-    def __init__(
-        self,
-        file_path: str,
-        chunk_size: int = 1000,
-        chunk_overlap: int = 200,
-    ):
-        super().__init__(chunk_size, chunk_overlap)
-        self.file_path = Path(file_path)
-        self.content = self.load_content()
+    def load_content(self) -> str:
+        """Load and preprocess PDF file content."""
+        super().load_content()  # Validate the file path
+        pdfplumber = self._import_pdfplumber()
+        text = ""
+        with pdfplumber.open(self.file_path) as pdf:
+            for page in pdf.pages:
+                page_text = page.extract_text()
+                if page_text:
+                    text += page_text + "\n"
+        return text
 
     def _import_pdfplumber(self):
         """Dynamically import pdfplumber."""
@@ -28,22 +29,6 @@ class PDFKnowledgeSource(BaseKnowledgeSource):
             raise ImportError(
                 "pdfplumber is not installed. Please install it with: pip install pdfplumber"
             )
-
-    def load_content(self) -> str:
-        """Load and preprocess PDF file content."""
-        if not self.file_path.exists():
-            raise FileNotFoundError(f"File not found: {self.file_path}")
-        if not self.file_path.is_file():
-            raise ValueError(f"Path is not a file: {self.file_path}")
-
-        pdfplumber = self._import_pdfplumber()
-        text = ""
-        with pdfplumber.open(self.file_path) as pdf:
-            for page in pdf.pages:
-                page_text = page.extract_text()
-                if page_text:
-                    text += page_text + "\n"
-        return text
 
     def add(self, embedder: BaseEmbedder) -> None:
         """

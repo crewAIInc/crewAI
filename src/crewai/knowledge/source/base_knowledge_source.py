@@ -2,22 +2,20 @@ from abc import ABC, abstractmethod
 from typing import List
 
 import numpy as np
+from pydantic import BaseModel, ConfigDict, Field
 
 from crewai.knowledge.embedder.base_embedder import BaseEmbedder
 
 
-class BaseKnowledgeSource(ABC):
+class BaseKnowledgeSource(BaseModel, ABC):
     """Abstract base class for knowledge sources."""
 
-    def __init__(
-        self,
-        chunk_size: int = 1000,
-        chunk_overlap: int = 200,
-    ):
-        self.chunk_size = chunk_size
-        self.chunk_overlap = chunk_overlap
-        self.chunks: List[str] = []
-        self.chunk_embeddings: List[np.ndarray] = []
+    chunk_size: int = 1000
+    chunk_overlap: int = 200
+    chunks: List[str] = Field(default_factory=list)
+    chunk_embeddings: List[np.ndarray] = Field(default_factory=list)
+
+    model_config = ConfigDict(arbitrary_types_allowed=True)
 
     @abstractmethod
     def load_content(self):
