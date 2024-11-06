@@ -1577,7 +1577,7 @@ def test_agent_execute_task_with_ollama():
     assert "AI" in result or "artificial intelligence" in result.lower()
 
 
-# @pytest.mark.vcr(filter_headers=["authorization"])
+@pytest.mark.vcr(filter_headers=["authorization"])
 def test_agent_with_knowledge_sources():
     # Create a knowledge source with some content
     content = "Brandon's favorite color is blue and he likes Mexican food."

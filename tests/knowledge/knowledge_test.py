@@ -3,6 +3,9 @@
 from pathlib import Path
 
 from crewai.knowledge.knowledge import Knowledge
+from crewai.knowledge.source.csv_knowledge_source import CSVKnowledgeSource
+from crewai.knowledge.source.excel_knowledge_source import ExcelKnowledgeSource
+from crewai.knowledge.source.json_knowledge_source import JSONKnowledgeSource
 from crewai.knowledge.source.pdf_knowledge_source import PDFKnowledgeSource
 from crewai.knowledge.source.string_knowledge_source import StringKnowledgeSource
 from crewai.knowledge.source.text_file_knowledge_source import TextFileKnowledgeSource
@@ -345,3 +348,86 @@ def test_pdf_knowledge_source():
         "crewai create crew latest-ai-development" in result.lower()
         for result in results
     )
+
+
+def test_csv_knowledge_source(tmpdir):
+    """Test CSVKnowledgeSource with a simple CSV file."""
+
+    # Create a CSV file with sample data
+    csv_content = [
+        ["Name", "Age", "City"],
+        ["Brandon", "30", "New York"],
+        ["Alice", "25", "Los Angeles"],
+        ["Bob", "35", "Chicago"],
+    ]
+    csv_path = Path(tmpdir.join("data.csv"))
+    with open(csv_path, "w", encoding="utf-8") as f:
+        for row in csv_content:
+            f.write(",".join(row) + "\n")
+
+    # Create a CSVKnowledgeSource
+    csv_source = CSVKnowledgeSource(file_path=csv_path)
+    knowledge_base = Knowledge(sources=[csv_source])
+
+    # Perform a query
+    query = "How old is Brandon?"
+    results = knowledge_base.query(query)
+
+    # Assert that the correct information is retrieved
+    assert any("30" in result for result in results)
+
+
+def test_json_knowledge_source(tmpdir):
+    """Test JSONKnowledgeSource with a simple JSON file."""
+
+    # Create a JSON file with sample data
+    json_data = {
+        "people": [
+            {"name": "Brandon", "age": 30, "city": "New York"},
+            {"name": "Alice", "age": 25, "city": "Los Angeles"},
+            {"name": "Bob", "age": 35, "city": "Chicago"},
+        ]
+    }
+    json_path = Path(tmpdir.join("data.json"))
+    with open(json_path, "w", encoding="utf-8") as f:
+        import json
+
+        json.dump(json_data, f)
+
+    # Create a JSONKnowledgeSource
+    json_source = JSONKnowledgeSource(file_path=json_path)
+    knowledge_base = Knowledge(sources=[json_source])
+
+    # Perform a query
+    query = "Where does Brandon live?"
+    results = knowledge_base.query(query)
+
+    # Assert that the correct information is retrieved
+    assert any("New York" in result for result in results)
+
+
+def test_excel_knowledge_source(tmpdir):
+    """Test ExcelKnowledgeSource with a simple Excel file."""
+
+    # Create an Excel file with sample data
+    import pandas as pd
+
+    excel_data = {
+        "Name": ["Brandon", "Alice", "Bob"],
+        "Age": [30, 25, 35],
+        "City": ["New York", "Los Angeles", "Chicago"],
+    }
+    df = pd.DataFrame(excel_data)
+    excel_path = Path(tmpdir.join("data.xlsx"))
+    df.to_excel(excel_path, index=False)
+
+    # Create an ExcelKnowledgeSource
+    excel_source = ExcelKnowledgeSource(file_path=excel_path)
+    knowledge_base = Knowledge(sources=[excel_source])
+
+    # Perform a query
+    query = "What is Brandon's age?"
+    results = knowledge_base.query(query)
+
+    # Assert that the correct information is retrieved
+    assert any("30" in result for result in results)

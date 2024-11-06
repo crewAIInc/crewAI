@@ -637,8 +637,11 @@ agentops = [
 fastembed = [
     { name = "fastembed" },
 ]
-network = [
-    { name = "pdfplumber" },
+openpyxl = [
+    { name = "openpyxl" },
+]
+pandas = [
+    { name = "pandas" },
 ]
 pdfplumber = [
     { name = "pdfplumber" },
@@ -683,10 +686,11 @@ requires-dist = [
     { name = "langchain", specifier = ">=0.2.16" },
     { name = "litellm", specifier = ">=1.44.22" },
     { name = "openai", specifier = ">=1.13.3" },
+    { name = "openpyxl", marker = "extra == 'openpyxl'", specifier = ">=3.1.5" },
     { name = "opentelemetry-api", specifier = ">=1.22.0" },
     { name = "opentelemetry-exporter-otlp-proto-http", specifier = ">=1.22.0" },
     { name = "opentelemetry-sdk", specifier = ">=1.22.0" },
-    { name = "pdfplumber", marker = "extra == 'network'", specifier = ">=0.11.4" },
+    { name = "pandas", marker = "extra == 'pandas'", specifier = ">=2.2.3" },
     { name = "pdfplumber", marker = "extra == 'pdfplumber'", specifier = ">=0.11.4" },
     { name = "pydantic", specifier = ">=2.4.2" },
     { name = "python-dotenv", specifier = ">=1.0.0" },
@@ -929,6 +933,15 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/5d/6a/955b5a72fa6727db203c4d46ae0e30ac47f4f50389f663cd5ea157b0d819/embedchain-0.1.123.tar.gz", hash = "sha256:aecaf81c21de05b5cdb649b6cde95ef68ffa759c69c54f6ff2eaa667f2ad0580", size = 124797 }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/a7/51/0c78d26da4afbe68370306669556b274f1021cac02f3155d8da2be407763/embedchain-0.1.123-py3-none-any.whl", hash = "sha256:1210e993b6364d7c702b6bd44b053fc244dd77f2a65ea4b90b62709114ea6c25", size = 210909 },
+]
+
+[[package]]
+name = "et-xmlfile"
+version = "2.0.0"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/d3/38/af70d7ab1ae9d4da450eeec1fa3918940a5fafb9055e934af8d6eb0c2313/et_xmlfile-2.0.0.tar.gz", hash = "sha256:dab3f4764309081ce75662649be815c4c9081e88f0837825f90fd28317d4da54", size = 17234 }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/c1/8b/5fe2cc11fee489817272089c4203e679c63b570a5aaeb18d852ae3cbba6a/et_xmlfile-2.0.0-py3-none-any.whl", hash = "sha256:7a91720bc756843502c3b7504c77b8fe44217c85c537d85037f0f536151b2caa", size = 18059 },
 ]
 
 [[package]]
@@ -2669,6 +2682,18 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/80/ac/54c76352d493866637756b7c0ecec44f0b5bafb8fe753d98472cf6cfe4ce/openai-1.52.1.tar.gz", hash = "sha256:383b96c7e937cbec23cad5bf5718085381e4313ca33c5c5896b54f8e1b19d144", size = 310069 }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/ad/31/28a83e124e9f9dd04c83b5aeb6f8b1770f45addde4dd3d34d9a9091590ad/openai-1.52.1-py3-none-any.whl", hash = "sha256:f23e83df5ba04ee0e82c8562571e8cb596cd88f9a84ab783e6c6259e5ffbfb4a", size = 386945 },
+]
+
+[[package]]
+name = "openpyxl"
+version = "3.1.5"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "et-xmlfile" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/3d/f9/88d94a75de065ea32619465d2f77b29a0469500e99012523b91cc4141cd1/openpyxl-3.1.5.tar.gz", hash = "sha256:cf0e3cf56142039133628b5acffe8ef0c12bc902d2aadd3e0fe5878dc08d1050", size = 186464 }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/c0/da/977ded879c29cbd04de313843e76868e6e13408a94ed6b987245dc7c8506/openpyxl-3.1.5-py2.py3-none-any.whl", hash = "sha256:5282c12b107bffeef825f4617dc029afaf41d0ea60823bbb665ef3079dc79de2", size = 250910 },
 ]
 
 [[package]]
