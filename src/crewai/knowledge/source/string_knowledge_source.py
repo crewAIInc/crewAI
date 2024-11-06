@@ -1,9 +1,11 @@
+from typing import List
+
 from crewai.knowledge.embedder.base_embedder import BaseEmbedder
 from crewai.knowledge.source.base_knowledge_source import BaseKnowledgeSource
 
 
 class StringKnowledgeSource(BaseKnowledgeSource):
-    """A knowledge base that stores and queries plain text content using embeddings"""
+    """A knowledge source that stores and queries plain text content using embeddings."""
 
     def __init__(
         self,
@@ -15,25 +17,29 @@ class StringKnowledgeSource(BaseKnowledgeSource):
             chunk_size,
             chunk_overlap,
         )
+        self.content = content
+        self.load_content()
+
+    def load_content(self):
+        """Load and preprocess string content."""
+        if not isinstance(self.content, str):
+            raise ValueError("StringKnowledgeSource only accepts string content")
 
     def add(self, embedder: BaseEmbedder) -> None:
-        """Add text content to the knowledge base, chunk it, and compute embeddings"""
-        if not isinstance(self.content, str):
-            raise ValueError("StringKnowledgeBase only accepts string content")
-
-        # Create chunks from the text
-        new_chunks = self._chunk_text(content)
-
-        # Add chunks to the knowledge base
+        """
+        Add string content to the knowledge source, chunk it, compute embeddings,
+        and save the embeddings.
+        """
+        new_chunks = self._chunk_text(self.content)
         self.chunks.extend(new_chunks)
+        # Compute embeddings for the new chunks
+        new_embeddings = embedder.embed_chunks(new_chunks)
+        # Save the embeddings
+        self.chunk_embeddings.extend(new_embeddings)
 
-        # Compute and store embeddings for the new chunks
-        embedder.embed_chunks(new_chunks)
-
-    def query(self, embedder: BaseEmbedder, query: str, top_k: int = 3) -> str:
-        """
-        Query the knowledge base using semantic search
-        Returns the most relevant chunk based on embedding similarity
-        """
-        similar_chunks = self._find_similar_chunks(embedder, query, top_k=top_k)
-        return similar_chunks[0] if similar_chunks else ""
+    def _chunk_text(self, text: str) -> List[str]:
+        """Utility method to split text into chunks."""
+        return [
+            text[i : i + self.chunk_size]
+            for i in range(0, len(text), self.chunk_size - self.chunk_overlap)
+        ]

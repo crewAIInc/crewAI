@@ -5,8 +5,8 @@ from crewai.knowledge.embedder.base_embedder import BaseEmbedder
 from crewai.knowledge.source.base_knowledge_source import BaseKnowledgeSource
 
 
-class TextFileKnowledgeSource(BaseKnowledgeSource):
-    """A knowledge source that stores and queries text file content using embeddings."""
+class PDFKnowledgeSource(BaseKnowledgeSource):
+    """A knowledge source that stores and queries PDF file content using embeddings."""
 
     def __init__(
         self,
@@ -18,19 +18,36 @@ class TextFileKnowledgeSource(BaseKnowledgeSource):
         self.file_path = Path(file_path)
         self.content = self.load_content()
 
+    def _import_pdfplumber(self):
+        """Dynamically import pdfplumber."""
+        try:
+            import pdfplumber
+
+            return pdfplumber
+        except ImportError:
+            raise ImportError(
+                "pdfplumber is not installed. Please install it with: pip install pdfplumber"
+            )
+
     def load_content(self) -> str:
-        """Load and preprocess text file content."""
+        """Load and preprocess PDF file content."""
         if not self.file_path.exists():
             raise FileNotFoundError(f"File not found: {self.file_path}")
         if not self.file_path.is_file():
             raise ValueError(f"Path is not a file: {self.file_path}")
 
-        with self.file_path.open("r", encoding="utf-8") as f:
-            return f.read()
+        pdfplumber = self._import_pdfplumber()
+        text = ""
+        with pdfplumber.open(self.file_path) as pdf:
+            for page in pdf.pages:
+                page_text = page.extract_text()
+                if page_text:
+                    text += page_text + "\n"
+        return text
 
     def add(self, embedder: BaseEmbedder) -> None:
         """
-        Add text file content to the knowledge source, chunk it, compute embeddings,
+        Add PDF file content to the knowledge source, chunk it, compute embeddings,
         and save the embeddings.
         """
         new_chunks = self._chunk_text(self.content)
