@@ -126,7 +126,7 @@ class Agent(BaseAgent):
         default="safe",
         description="Mode for code execution: 'safe' (using Docker) or 'unsafe' (direct execution).",
     )
-    # TODO: We need to add in knowledge config (score, top_k, etc)
+    # TODO: Lorenze add knowledge_embedder. Support direct class or config dict.
     _knowledge: Optional[Knowledge] = PrivateAttr(default=None)
 
     @model_validator(mode="after")
@@ -279,10 +279,8 @@ class Agent(BaseAgent):
         if self._knowledge:
             # Query the knowledge base for relevant information
             knowledge_snippets = self._knowledge.query(query=task.prompt())
-            print("knowledge_snippets", knowledge_snippets)
             if knowledge_snippets:
                 formatted_knowledge = "\n".join(knowledge_snippets)
-                print("formatted_knowledge", formatted_knowledge)
                 task_prompt += f"\n\nAdditional Information:\n{formatted_knowledge}"
 
         tools = tools or self.tools or []
