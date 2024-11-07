@@ -109,8 +109,8 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
         return {"output": formatted_answer.output}
 
     def _invoke_loop(self, formatted_answer=None):
-        try:
-            while not isinstance(formatted_answer, AgentFinish):
+        while not isinstance(formatted_answer, AgentFinish):
+            try:
                 if not self.request_within_rpm_limit or self.request_within_rpm_limit():
                     answer = self.llm.call(
                         self.messages,
@@ -165,25 +165,22 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
                             self._format_msg(formatted_answer.text, role="assistant")
                         )
 
-        except OutputParserException as e:
-            self.messages.append({"role": "user", "content": e.error})
-            if self.iterations > self.log_error_after:
-                self._printer.print(
-                    content=f"Error parsing LLM output, agent will retry: {e.error}",
-                    color="red",
-                )
-            return self._invoke_loop(formatted_answer)
+            except OutputParserException as e:
+                self.messages.append({"role": "user", "content": e.error})
+                if self.iterations > self.log_error_after:
+                    self._printer.print(
+                        content=f"Error parsing LLM output, agent will retry: {e.error}",
+                        color="red",
+                    )
+            except Exception as e:
+                if LLMContextLengthExceededException(str(e))._is_context_limit_error(
+                    str(e)
+                ):
+                    self._handle_context_length()
+                else:
+                    raise e
 
-        except Exception as e:
-            if LLMContextLengthExceededException(str(e))._is_context_limit_error(
-                str(e)
-            ):
-                self._handle_context_length()
-                return self._invoke_loop(formatted_answer)
-            else:
-                raise e
-
-        self._show_logs(formatted_answer)
+            self._show_logs(formatted_answer)
         return formatted_answer
 
     def _show_start_logs(self):

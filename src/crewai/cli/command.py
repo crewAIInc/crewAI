@@ -46,7 +46,27 @@ class PlusAPIMixin:
             console.print(f"Response:\n{response.content}")
             raise SystemExit
 
-        if response.status_code == 422:
+        if response.status_code == 400:
+            console.print(
+                "Bad Request: The server could not understand the request due to invalid syntax.",
+                style="bold red",
+            )
+        elif response.status_code == 401:
+            console.print(
+                "Unauthorized: Access is denied due to invalid credentials.",
+                style="bold red",
+            )
+        elif response.status_code == 403:
+            console.print(
+                "Forbidden: You do not have permission to access this resource.",
+                style="bold red",
+            )
+        elif response.status_code == 404:
+            console.print(
+                "Not Found: The requested resource could not be found.",
+                style="bold red",
+            )
+        elif response.status_code == 422:
             console.print(
                 "Failed to complete operation. Please fix the following errors:",
                 style="bold red",
@@ -56,9 +76,12 @@ class PlusAPIMixin:
                     console.print(
                         f"* [bold red]{field.capitalize()}[/bold red] {message}"
                     )
-            raise SystemExit
-
-        if not response.ok:
+        elif response.status_code == 500:
+            console.print(
+                "Internal Server Error: The server encountered an error and could not complete your request.",
+                style="bold red",
+            )
+        else:
             console.print(
                 "Request to Enterprise API failed. Details:", style="bold red"
             )
@@ -68,4 +91,4 @@ class PlusAPIMixin:
                 or response.content
             )
             console.print(f"{details}")
-            raise SystemExit
+        raise SystemExit
