@@ -445,13 +445,14 @@ class Crew(BaseModel):
         training_data = CrewTrainingHandler(TRAINING_DATA_FILE).load()
 
         for agent in train_crew.agents:
-            result = TaskEvaluator(agent).evaluate_training_data(
-                training_data=training_data, agent_id=str(agent.id)
-            )
+            if training_data.get(str(agent.id)):
+                result = TaskEvaluator(agent).evaluate_training_data(
+                    training_data=training_data, agent_id=str(agent.id)
+                )
 
-            CrewTrainingHandler(filename).save_trained_data(
-                agent_id=str(agent.role), trained_data=result.model_dump()
-            )
+                CrewTrainingHandler(filename).save_trained_data(
+                    agent_id=str(agent.role), trained_data=result.model_dump()
+                )
 
     def kickoff(
         self,
