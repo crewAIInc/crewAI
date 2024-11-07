@@ -1,11 +1,11 @@
+import shutil
 import sys
 from pathlib import Path
 
 import click
 
-from crewai.cli.constants import ENV_VARS
+from crewai.cli.constants import ENV_VARS, MODELS
 from crewai.cli.provider import (
-    PROVIDERS,
     get_provider_data,
     select_model,
     select_provider,
@@ -29,20 +29,20 @@ def create_folder_structure(name, parent_folder=None):
             click.secho("Operation cancelled.", fg="yellow")
             sys.exit(0)
         click.secho(f"Overriding folder {folder_name}...", fg="green", bold=True)
-    else:
-        click.secho(
-            f"Creating {'crew' if parent_folder else 'folder'} {folder_name}...",
-            fg="green",
-            bold=True,
-        )
+        shutil.rmtree(folder_path)  # Delete the existing folder and its contents
 
-    if not folder_path.exists():
-        folder_path.mkdir(parents=True)
-        (folder_path / "tests").mkdir(exist_ok=True)
-        if not parent_folder:
-            (folder_path / "src" / folder_name).mkdir(parents=True)
-            (folder_path / "src" / folder_name / "tools").mkdir(parents=True)
-            (folder_path / "src" / folder_name / "config").mkdir(parents=True)
+    click.secho(
+        f"Creating {'crew' if parent_folder else 'folder'} {folder_name}...",
+        fg="green",
+        bold=True,
+    )
+
+    folder_path.mkdir(parents=True)
+    (folder_path / "tests").mkdir(exist_ok=True)
+    if not parent_folder:
+        (folder_path / "src" / folder_name).mkdir(parents=True)
+        (folder_path / "src" / folder_name / "tools").mkdir(parents=True)
+        (folder_path / "src" / folder_name / "config").mkdir(parents=True)
 
     return folder_path, folder_name, class_name
 
@@ -92,7 +92,10 @@ def create_crew(name, provider=None, skip_provider=False, parent_folder=None):
 
         existing_provider = None
         for provider, env_keys in ENV_VARS.items():
-            if any(key in env_vars for key in env_keys):
+            if any(
+                "key_name" in details and details["key_name"] in env_vars
+                for details in env_keys
+            ):
                 existing_provider = provider
                 break
 
@@ -118,47 +121,48 @@ def create_crew(name, provider=None, skip_provider=False, parent_folder=None):
                 "No provider selected. Please try again or press 'q' to exit.", fg="red"
             )
 
-        while True:
-            selected_model = select_model(selected_provider, provider_models)
-            if selected_model is None:  # User typed 'q'
-                click.secho("Exiting...", fg="yellow")
-                sys.exit(0)
-            if selected_model:  # Valid selection
-                break
-            click.secho(
-                "No model selected. Please try again or press 'q' to exit.", fg="red"
-            )
+        # Check if the selected provider has predefined models
+        if selected_provider in MODELS and MODELS[selected_provider]:
+            while True:
+                selected_model = select_model(selected_provider, provider_models)
+                if selected_model is None:  # User typed 'q'
+                    click.secho("Exiting...", fg="yellow")
+                    sys.exit(0)
+                if selected_model:  # Valid selection
+                    break
+                click.secho(
+                    "No model selected. Please try again or press 'q' to exit.",
+                    fg="red",
+                )
+            env_vars["MODEL"] = selected_model
 
-        if selected_provider in PROVIDERS:
-            api_key_var = ENV_VARS[selected_provider][0]
-        else:
-            api_key_var = click.prompt(
-                f"Enter the environment variable name for your {selected_provider.capitalize()} API key",
-                type=str,
-                default="",
-            )
+        # Check if the selected provider requires API keys
+        if selected_provider in ENV_VARS:
+            provider_env_vars = ENV_VARS[selected_provider]
+            for details in provider_env_vars:
+                if details.get("default", False):
+                    # Automatically add default key-value pairs
+                    for key, value in details.items():
+                        if key not in ["prompt", "key_name", "default"]:
+                            env_vars[key] = value
+                elif "key_name" in details:
+                    # Prompt for non-default key-value pairs
+                    prompt = details["prompt"]
+                    key_name = details["key_name"]
+                    api_key_value = click.prompt(prompt, default="", show_default=False)
 
-        api_key_value = ""
-        click.echo(
-            f"Enter your {selected_provider.capitalize()} API key (press Enter to skip): ",
-            nl=False,
-        )
-        try:
-            api_key_value = input()
-        except (KeyboardInterrupt, EOFError):
-            api_key_value = ""
+                    if api_key_value.strip():
+                        env_vars[key_name] = api_key_value
 
-        if api_key_value.strip():
-            env_vars = {api_key_var: api_key_value}
+        if env_vars:
             write_env_file(folder_path, env_vars)
-            click.secho("API key saved to .env file", fg="green")
+            click.secho("API keys and model saved to .env file", fg="green")
         else:
             click.secho(
-                "No API key provided. Skipping .env file creation.", fg="yellow"
+                "No API keys provided. Skipping .env file creation.", fg="yellow"
             )
 
-        env_vars["MODEL"] = selected_model
-        click.secho(f"Selected model: {selected_model}", fg="green")
+        click.secho(f"Selected model: {env_vars.get('MODEL', 'N/A')}", fg="green")
 
     package_dir = Path(__file__).parent
     templates_dir = package_dir / "templates" / "crew"

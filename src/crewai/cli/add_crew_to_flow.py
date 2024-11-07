@@ -54,7 +54,7 @@ def create_embedded_crew(crew_name: str, parent_folder: Path) -> None:
 
     templates_dir = Path(__file__).parent / "templates" / "crew"
     config_template_files = ["agents.yaml", "tasks.yaml"]
-    crew_template_file = f"{folder_name}_crew.py"  # Updated file name
+    crew_template_file = f"{folder_name}.py"  # Updated file name
 
     for file_name in config_template_files:
         src_file = templates_dir / "config" / file_name
