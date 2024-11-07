@@ -2,7 +2,6 @@ from typing import Any, Dict, Optional
 from crewai.memory.memory import Memory
 from crewai.memory.short_term.short_term_memory_item import ShortTermMemoryItem
 from crewai.memory.storage.rag_storage import RAGStorage
-from crewai.memory.storage.mem0_storage import Mem0Storage
 
 
 class ShortTermMemory(Memory):
@@ -21,6 +20,12 @@ class ShortTermMemory(Memory):
             self.memory_provider = None
 
         if self.memory_provider == "mem0":
+            try:
+                from crewai.memory.storage.mem0_storage import Mem0Storage
+            except ImportError:
+                raise ImportError(
+                    "Mem0 is not installed. Please install it with `pip install mem0ai`."
+                )
             storage = Mem0Storage(type="short_term", crew=crew)
         else:
             storage = (

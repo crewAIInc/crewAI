@@ -1,7 +1,6 @@
 from typing import Any, Dict, Optional
 
 from crewai.memory.memory import Memory
-from crewai.memory.storage.mem0_storage import Mem0Storage
 
 
 class UserMemory(Memory):
@@ -13,6 +12,12 @@ class UserMemory(Memory):
     """
 
     def __init__(self, crew=None):
+        try:
+            from crewai.memory.storage.mem0_storage import Mem0Storage
+        except ImportError:
+            raise ImportError(
+                "Mem0 is not installed. Please install it with `pip install mem0ai`."
+            )
         storage = Mem0Storage(type="user", crew=crew)
         super().__init__(storage)
 

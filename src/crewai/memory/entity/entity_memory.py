@@ -1,7 +1,6 @@
 from crewai.memory.entity.entity_memory_item import EntityMemoryItem
 from crewai.memory.memory import Memory
 from crewai.memory.storage.rag_storage import RAGStorage
-from crewai.memory.storage.mem0_storage import Mem0Storage
 
 
 class EntityMemory(Memory):
@@ -18,10 +17,13 @@ class EntityMemory(Memory):
             self.memory_provider = None
 
         if self.memory_provider == "mem0":
-            storage = Mem0Storage(
-                type="entities",
-                crew=crew
-            )
+            try:
+                from crewai.memory.storage.mem0_storage import Mem0Storage
+            except ImportError:
+                raise ImportError(
+                    "Mem0 is not installed. Please install it with `pip install mem0ai`."
+                )
+            storage = Mem0Storage(type="entities", crew=crew)
         else:
             storage = (
                 storage
