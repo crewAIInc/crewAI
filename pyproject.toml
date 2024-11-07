@@ -39,7 +39,7 @@ Repository = "https://github.com/crewAIInc/crewAI"
 [project.optional-dependencies]
 tools = ["crewai-tools>=0.13.4"]
 agentops = ["agentops>=0.3.0"]
-mem0 = ["mem0ai>=0.1.24"]
+mem0 = ["mem0ai>=0.1.29"]
 
 [tool.uv]
 dev-dependencies = [
