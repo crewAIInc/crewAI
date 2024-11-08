@@ -3,6 +3,7 @@ from typing import Optional
 import click
 import pkg_resources
 
+from crewai.cli.add_crew_to_flow import add_crew_to_flow
 from crewai.cli.create_crew import create_crew
 from crewai.cli.create_flow import create_flow
 from crewai.cli.create_pipeline import create_pipeline
@@ -14,11 +15,11 @@ from .authentication.main import AuthenticationCommand
 from .deploy.main import DeployCommand
 from .evaluate_crew import evaluate_crew
 from .install_crew import install_crew
+from .kickoff_flow import kickoff_flow
 from .plot_flow import plot_flow
 from .replay_from_task import replay_task_command
 from .reset_memories_command import reset_memories_command
 from .run_crew import run_crew
-from .run_flow import run_flow
 from .tools.main import ToolCommand
 from .train_crew import train_crew
 from .update_crew import update_crew
@@ -32,10 +33,12 @@ def crewai():
 @crewai.command()
 @click.argument("type", type=click.Choice(["crew", "pipeline", "flow"]))
 @click.argument("name")
-def create(type, name):
+@click.option("--provider", type=str, help="The provider to use for the crew")
+@click.option("--skip_provider", is_flag=True, help="Skip provider validation")
+def create(type, name, provider, skip_provider=False):
     """Create a new crew, pipeline, or flow."""
     if type == "crew":
-        create_crew(name)
+        create_crew(name, provider, skip_provider)
     elif type == "pipeline":
         create_pipeline(name)
     elif type == "flow":
@@ -176,10 +179,16 @@ def test(n_iterations: int, model: str):
     evaluate_crew(n_iterations, model)
 
 
-@crewai.command()
-def install():
+@crewai.command(
+    context_settings=dict(
+        ignore_unknown_options=True,
+        allow_extra_args=True,
+    )
+)
+@click.pass_context
+def install(context):
     """Install the Crew."""
-    install_crew()
+    install_crew(context.args)
 
 
 @crewai.command()
@@ -304,11 +313,11 @@ def flow():
     pass
 
 
-@flow.command(name="run")
+@flow.command(name="kickoff")
 def flow_run():
-    """Run the Flow."""
+    """Kickoff the Flow."""
     click.echo("Running the Flow")
-    run_flow()
+    kickoff_flow()
 
 
 @flow.command(name="plot")
@@ -316,6 +325,14 @@ def flow_plot():
     """Plot the Flow."""
     click.echo("Plotting the Flow")
     plot_flow()
+
+
+@flow.command(name="add-crew")
+@click.argument("crew_name")
+def flow_add_crew(crew_name):
+    """Add a crew to an existing flow."""
+    click.echo(f"Adding crew {crew_name} to the flow")
+    add_crew_to_flow(crew_name)
 
 
 if __name__ == "__main__":

@@ -252,6 +252,12 @@ or
 python src/my_project/main.py
 ```
 
+If an error happens due to the usage of poetry, please run the following command to update your crewai package:
+
+```bash
+crewai update
+```
+
 You should see the output in the console and the `report.md` file should be created in the root of your project with the full final report.
 
 In addition to the sequential process, you can use the hierarchical process, which automatically assigns a manager to the defined crew to properly coordinate the planning and execution of tasks through delegation and validation of results. [See more about the processes here](https://docs.crewai.com/core-concepts/Processes/).
@@ -345,7 +351,7 @@ pre-commit install
 ### Running Tests
 
 ```bash
-uvx pytest
+uv run pytest .
 ```
 
 ### Running static type checks

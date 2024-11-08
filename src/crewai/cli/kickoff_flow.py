@@ -3,11 +3,11 @@ import subprocess
 import click
 
 
-def run_flow() -> None:
+def kickoff_flow() -> None:
     """
-    Run the flow by running a command in the UV environment.
+    Kickoff the flow by running a command in the UV environment.
     """
-    command = ["uv", "run", "run_flow"]
+    command = ["uv", "run", "kickoff"]
 
     try:
         result = subprocess.run(command, capture_output=False, text=True, check=True)

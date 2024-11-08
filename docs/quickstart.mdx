@@ -26,6 +26,7 @@ Follow the steps below to get crewing! 🚣‍♂️
   <Step title="Modify your `agents.yaml` file">  
   <Tip>
   You can also modify the agents as needed to fit your use case or copy and paste as is to your project.
+  Any variable interpolated in your `agents.yaml` and `tasks.yaml` files like `{topic}` will be replaced by the value of the variable in the `main.py` file.
   </Tip>
     ```yaml agents.yaml
     # src/latest_ai_development/config/agents.yaml
@@ -124,7 +125,7 @@ Follow the steps below to get crewing! 🚣‍♂️
     ```
   </Step>
   <Step title="Feel free to pass custom inputs to your crew"> 
-  For example, you can pass the `topic` input to your crew to customize the research and reporting to medical llms or any other topic.
+  For example, you can pass the `topic` input to your crew to customize the research and reporting.
     ```python main.py
     #!/usr/bin/env python
     # src/latest_ai_development/main.py
@@ -233,6 +234,74 @@ Follow the steps below to get crewing! 🚣‍♂️
   </Step>
 </Steps>
 
+### Note on Consistency in Naming
+
+The names you use in your YAML files (`agents.yaml` and `tasks.yaml`) should match the method names in your Python code.
+For example, you can reference the agent for specific tasks from `tasks.yaml` file. 
+This naming consistency allows CrewAI to automatically link your configurations with your code; otherwise, your task won't recognize the reference properly.
+
+#### Example References
+
+<Tip>
+  Note how we use the same name for the agent in the `agents.yaml` (`email_summarizer`) file as the method name in the `crew.py` (`email_summarizer`) file.
+</Tip>  
+
+```yaml agents.yaml
+email_summarizer:
+    role: >
+      Email Summarizer
+    goal: >
+      Summarize emails into a concise and clear summary
+    backstory: >
+      You will create a 5 bullet point summary of the report
+    llm: mixtal_llm
+```
+
+<Tip>
+  Note how we use the same name for the agent in the `tasks.yaml` (`email_summarizer_task`) file as the method name in the `crew.py` (`email_summarizer_task`) file.
+</Tip>
+
+```yaml tasks.yaml
+email_summarizer_task:
+    description: >
+      Summarize the email into a 5 bullet point summary
+    expected_output: >
+      A 5 bullet point summary of the email
+    agent: email_summarizer
+    context:
+      - reporting_task
+      - research_task
+```
+
+Use the annotations to properly reference the agent and task in the `crew.py` file.
+
+### Annotations include:
+
+* `@agent`
+* `@task`
+* `@crew`
+* `@tool`
+* `@callback`
+* `@output_json`
+* `@output_pydantic`
+* `@cache_handler`
+
+```python crew.py
+# ...
+@agent
+def email_summarizer(self) -> Agent:
+    return Agent(
+        config=self.agents_config["email_summarizer"],
+    )
+
+@task
+def email_summarizer_task(self) -> Task:
+    return Task(
+        config=self.tasks_config["email_summarizer_task"],
+    )
+# ...
+```
+
 <Tip>
 In addition to the [sequential process](../how-to/sequential-process), you can use the [hierarchical process](../how-to/hierarchical-process),
 which automatically assigns a manager to the defined crew to properly coordinate the planning and execution of tasks through delegation and validation of results. 
@@ -241,7 +310,7 @@ You can learn more about the core concepts [here](/concepts).
 
 ### Replay Tasks from Latest Crew Kickoff
 
-CrewAI now includes a replay feature that allows you to list the tasks from the last run and replay from a specific one. To use this feature, run:
+CrewAI now includes a replay feature that allows you to list the tasks from the last run and replay from a specific one. To use this feature, run.
 
 ```shell
 crewai replay <task_id>
@@ -261,4 +330,4 @@ This will clear the crew's memory, allowing for a fresh start.
 
 ## Deploying Your Project
 
-The easiest way to deploy your crew is through [CrewAI Enterprise](https://www.crewai.com/crewaiplus), where you can deploy your crew in a few clicks.
+The easiest way to deploy your crew is through [CrewAI Enterprise](http://app.crewai.com/), where you can deploy your crew in a few clicks.

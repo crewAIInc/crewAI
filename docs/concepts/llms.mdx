@@ -25,50 +25,55 @@ By default, CrewAI uses the `gpt-4o-mini` model. It uses environment variables i
 - `OPENAI_API_BASE`
 - `OPENAI_API_KEY`
 
-### 2. String Identifier
-
-```python Code
-agent = Agent(llm="gpt-4o", ...)
-```
-
-### 3. LLM Instance
-
-List of [more providers](https://docs.litellm.ai/docs/providers).
-
-```python Code
-from crewai import LLM
-
-llm = LLM(model="gpt-4", temperature=0.7)
-agent = Agent(llm=llm, ...)
-```
-
-### 4. Custom LLM Objects
+### 2. Custom LLM Objects
 
 Pass a custom LLM implementation or object from another library.
+
+See below for examples.
+
+<Tabs>
+    <Tab title="String Identifier">
+    ```python Code
+    agent = Agent(llm="gpt-4o", ...)
+    ```
+    </Tab>
+
+    <Tab title="LLM Instance">
+    ```python Code
+    from crewai import LLM
+
+    llm = LLM(model="gpt-4", temperature=0.7)
+    agent = Agent(llm=llm, ...)
+    ```
+    </Tab>
+</Tabs>
 
 ## Connecting to OpenAI-Compatible LLMs
 
 You can connect to OpenAI-compatible LLMs using either environment variables or by setting specific attributes on the LLM class:
 
-1. Using environment variables:
+<Tabs>
+    <Tab title="Using Environment Variables">
+    ```python Code
+    import os
 
-```python Code
-import os
+    os.environ["OPENAI_API_KEY"] = "your-api-key"
+    os.environ["OPENAI_API_BASE"] = "https://api.your-provider.com/v1"
+    ```
+    </Tab>
+    <Tab title="Using LLM Class Attributes">
+    ```python Code
+    from crewai import LLM
 
-os.environ["OPENAI_API_KEY"] = "your-api-key"
-os.environ["OPENAI_API_BASE"] = "https://api.your-provider.com/v1"
-```
-
-2. Using LLM class attributes:
-
-```python Code
-llm = LLM(
-    model="custom-model-name",
-    api_key="your-api-key",
-    base_url="https://api.your-provider.com/v1"
-)
-agent = Agent(llm=llm, ...)
-```
+    llm = LLM(
+        model="custom-model-name",
+        api_key="your-api-key",
+        base_url="https://api.your-provider.com/v1"
+    )
+    agent = Agent(llm=llm, ...)
+    ```
+    </Tab>
+</Tabs>
 
 ## LLM Configuration Options
 
@@ -95,43 +100,165 @@ When configuring an LLM for your agent, you have access to a wide range of param
 | **api_key**          | `str`             | Your API key for authentication.                                                                 |
 
 
-Example:
+These are examples of how to configure LLMs for your agent.
 
-```python Code
-llm = LLM(
-    model="gpt-4",
-    temperature=0.8,
-    max_tokens=150,
-    top_p=0.9,
-    frequency_penalty=0.1,
-    presence_penalty=0.1,
-    stop=["END"],
-    seed=42,
-    base_url="https://api.openai.com/v1",
-    api_key="your-api-key-here"
-)
-agent = Agent(llm=llm, ...)
-```
-## Using Ollama (Local LLMs)
+<AccordionGroup>    
+    <Accordion title="OpenAI">
 
-crewAI supports using Ollama for running open-source models locally:
+    ```python Code
+    from crewai import LLM
 
-1. Install Ollama: [ollama.ai](https://ollama.ai/)
-2. Run a model: `ollama run llama2`
-3. Configure agent:
+    llm = LLM(
+        model="gpt-4",
+        temperature=0.8,
+        max_tokens=150,
+        top_p=0.9,
+        frequency_penalty=0.1,
+        presence_penalty=0.1,
+        stop=["END"],
+        seed=42,
+        base_url="https://api.openai.com/v1",
+        api_key="your-api-key-here"
+    )
+    agent = Agent(llm=llm, ...)
+    ```
+    </Accordion>
 
-```python Code
-agent = Agent(
-    llm=LLM(model="ollama/llama3.1", base_url="http://localhost:11434"),
-    ...
-)
-```
+    <Accordion title="Cerebras">
+
+    ```python Code
+    from crewai import LLM
+
+    llm = LLM(
+        model="cerebras/llama-3.1-70b",
+        api_key="your-api-key-here"
+    )
+    agent = Agent(llm=llm, ...) 
+    ```
+    </Accordion>
+ 
+    <Accordion title="Ollama (Local LLMs)">
+
+    CrewAI supports using Ollama for running open-source models locally:
+
+    1. Install Ollama: [ollama.ai](https://ollama.ai/)
+    2. Run a model: `ollama run llama2`
+    3. Configure agent:
+
+    ```python Code
+    from crewai import LLM
+
+    agent = Agent(
+        llm=LLM(
+            model="ollama/llama3.1", 
+            base_url="http://localhost:11434"
+        ),
+        ...
+    )
+    ```
+    </Accordion>
+
+    <Accordion title="Groq">
+
+    ```python Code
+    from crewai import LLM
+
+    llm = LLM(
+        model="groq/llama3-8b-8192", 
+        api_key="your-api-key-here"
+    )
+    agent = Agent(llm=llm, ...)
+    ```
+    </Accordion>
+
+    <Accordion title="Anthropic">
+
+    ```python Code
+    from crewai import LLM
+
+    llm = LLM(
+        model="anthropic/claude-3-5-sonnet-20241022",
+        api_key="your-api-key-here"
+    )
+    agent = Agent(llm=llm, ...)
+    ```
+    </Accordion>
+
+    <Accordion title="Fireworks AI">
+    ```python Code
+    from crewai import LLM
+
+    llm = LLM(
+        model="fireworks_ai/accounts/fireworks/models/llama-v3-70b-instruct",  
+        api_key="your-api-key-here"
+    )
+    agent = Agent(llm=llm, ...)
+    ```
+    </Accordion>
+
+    <Accordion title="Gemini">
+
+    ```python Code
+    from crewai import LLM
+
+    llm = LLM(
+        model="gemini/gemini-1.5-pro-002",
+        api_key="your-api-key-here"
+    )
+    agent = Agent(llm=llm, ...)
+    ```
+    </Accordion>
+
+    <Accordion title="Perplexity AI (pplx-api)">
+
+    ```python Code
+    from crewai import LLM
+
+    llm = LLM(
+        model="perplexity/mistral-7b-instruct",
+        base_url="https://api.perplexity.ai/v1",
+        api_key="your-api-key-here"
+    )
+    agent = Agent(llm=llm, ...)
+    ```
+    </Accordion>
+
+    <Accordion title="IBM watsonx.ai">
+
+    ```python Code
+    from crewai import LLM
+
+    llm = LLM(
+        model="watsonx/ibm/granite-13b-chat-v2",
+        base_url="https://api.watsonx.ai/v1",
+        api_key="your-api-key-here"
+    )
+    agent = Agent(llm=llm, ...)
+    ```
+    </Accordion>
+
+    <Accordion title="Hugging Face">
+
+    ```python Code
+    from crewai import LLM
+
+    llm = LLM(
+        model="huggingface/meta-llama/Meta-Llama-3.1-8B-Instruct",
+        api_key="your-api-key-here",
+        base_url="your_api_endpoint"
+    )
+    agent = Agent(llm=llm, ...) 
+    ```
+    </Accordion>
+</AccordionGroup>
 
 ## Changing the Base API URL
 
 You can change the base API URL for any LLM provider by setting the `base_url` parameter:
 
 ```python Code
+from crewai import LLM
+
 llm = LLM(
     model="custom-model-name",
     base_url="https://api.your-provider.com/v1",

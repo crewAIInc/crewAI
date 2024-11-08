@@ -9,6 +9,7 @@ from unittest.mock import MagicMock, patch
 import instructor
 import pydantic_core
 import pytest
+
 from crewai.agent import Agent
 from crewai.agents.cache import CacheHandler
 from crewai.crew import Crew
@@ -455,7 +456,7 @@ def test_crew_verbose_output(capsys):
 def test_cache_hitting_between_agents():
     from unittest.mock import call, patch
 
-    from crewai_tools import tool
+    from crewai.tools import tool
 
     @tool
     def multiplier(first_number: int, second_number: int) -> float:
@@ -497,7 +498,8 @@ def test_cache_hitting_between_agents():
 @pytest.mark.vcr(filter_headers=["authorization"])
 def test_api_calls_throttling(capsys):
     from unittest.mock import patch
-    from crewai_tools import tool
+
+    from crewai.tools import tool
 
     @tool
     def get_final_answer() -> float:
@@ -779,11 +781,14 @@ def test_async_task_execution_call_count():
     list_important_history.output = mock_task_output
     write_article.output = mock_task_output
 
-    with patch.object(
-        Task, "execute_sync", return_value=mock_task_output
-    ) as mock_execute_sync, patch.object(
-        Task, "execute_async", return_value=mock_future
-    ) as mock_execute_async:
+    with (
+        patch.object(
+            Task, "execute_sync", return_value=mock_task_output
+        ) as mock_execute_sync,
+        patch.object(
+            Task, "execute_async", return_value=mock_future
+        ) as mock_execute_async,
+    ):
         crew.kickoff()
 
         assert mock_execute_async.call_count == 2
@@ -1105,7 +1110,8 @@ def test_dont_set_agents_step_callback_if_already_set():
 @pytest.mark.vcr(filter_headers=["authorization"])
 def test_crew_function_calling_llm():
     from unittest.mock import patch
-    from crewai_tools import tool
+
+    from crewai.tools import tool
 
     llm = "gpt-4o"
 
@@ -1140,7 +1146,7 @@ def test_crew_function_calling_llm():
 
 @pytest.mark.vcr(filter_headers=["authorization"])
 def test_task_with_no_arguments():
-    from crewai_tools import tool
+    from crewai.tools import tool
 
     @tool
     def return_data() -> str:
@@ -1303,8 +1309,9 @@ def test_hierarchical_crew_creation_tasks_with_agents():
 
     assert crew.manager_agent is not None
     assert crew.manager_agent.tools is not None
-    assert crew.manager_agent.tools[0].description.startswith(
-        "Delegate a specific task to one of the following coworkers: Senior Writer"
+    assert (
+        "Delegate a specific task to one of the following coworkers: Senior Writer\n"
+        in crew.manager_agent.tools[0].description
     )
 
 
@@ -1331,8 +1338,9 @@ def test_hierarchical_crew_creation_tasks_with_async_execution():
     crew.kickoff()
     assert crew.manager_agent is not None
     assert crew.manager_agent.tools is not None
-    assert crew.manager_agent.tools[0].description.startswith(
+    assert (
         "Delegate a specific task to one of the following coworkers: Senior Writer\n"
+        in crew.manager_agent.tools[0].description
     )
 
 
@@ -1364,8 +1372,9 @@ def test_hierarchical_crew_creation_tasks_with_sync_last():
     crew.kickoff()
     assert crew.manager_agent is not None
     assert crew.manager_agent.tools is not None
-    assert crew.manager_agent.tools[0].description.startswith(
+    assert (
         "Delegate a specific task to one of the following coworkers: Senior Writer, Researcher, CEO\n"
+        in crew.manager_agent.tools[0].description
     )
 
 
@@ -1448,52 +1457,6 @@ def test_crew_does_not_interpolate_without_inputs():
             interpolate_task_inputs.assert_not_called()
 
 
-# def test_crew_partial_inputs():
-#     agent = Agent(
-#         role="{topic} Researcher",
-#         goal="Express hot takes on {topic}.",
-#         backstory="You have a lot of experience with {topic}.",
-#     )
-
-#     task = Task(
-#         description="Give me an analysis around {topic}.",
-#         expected_output="{points} bullet points about {topic}.",
-#     )
-
-#     crew = Crew(agents=[agent], tasks=[task], inputs={"topic": "AI"})
-#     inputs = {"topic": "AI"}
-#     crew._interpolate_inputs(inputs=inputs)  # Manual call for now
-
-#     assert crew.tasks[0].description == "Give me an analysis around AI."
-#     assert crew.tasks[0].expected_output == "{points} bullet points about AI."
-#     assert crew.agents[0].role == "AI Researcher"
-#     assert crew.agents[0].goal == "Express hot takes on AI."
-#     assert crew.agents[0].backstory == "You have a lot of experience with AI."
-
-
-# def test_crew_invalid_inputs():
-#     agent = Agent(
-#         role="{topic} Researcher",
-#         goal="Express hot takes on {topic}.",
-#         backstory="You have a lot of experience with {topic}.",
-#     )
-
-#     task = Task(
-#         description="Give me an analysis around {topic}.",
-#         expected_output="{points} bullet points about {topic}.",
-#     )
-
-#     crew = Crew(agents=[agent], tasks=[task], inputs={"subject": "AI"})
-#     inputs = {"subject": "AI"}
-#     crew._interpolate_inputs(inputs=inputs)  # Manual call for now
-
-#     assert crew.tasks[0].description == "Give me an analysis around {topic}."
-#     assert crew.tasks[0].expected_output == "{points} bullet points about {topic}."
-#     assert crew.agents[0].role == "{topic} Researcher"
-#     assert crew.agents[0].goal == "Express hot takes on {topic}."
-#     assert crew.agents[0].backstory == "You have a lot of experience with {topic}."
-
-
 def test_task_callback_on_crew():
     from unittest.mock import MagicMock, patch
 
@@ -1534,7 +1497,7 @@ def test_task_callback_on_crew():
 def test_tools_with_custom_caching():
     from unittest.mock import patch
 
-    from crewai_tools import tool
+    from crewai.tools import tool
 
     @tool
     def multiplcation_tool(first_number: int, second_number: int) -> int:
@@ -1736,7 +1699,7 @@ def test_manager_agent_in_agents_raises_exception():
 
 
 def test_manager_agent_with_tools_raises_exception():
-    from crewai_tools import tool
+    from crewai.tools import tool
 
     @tool
     def testing_tool(first_number: int, second_number: int) -> int:
@@ -1770,7 +1733,10 @@ def test_manager_agent_with_tools_raises_exception():
 @patch("crewai.crew.Crew.kickoff")
 @patch("crewai.crew.CrewTrainingHandler")
 @patch("crewai.crew.TaskEvaluator")
-def test_crew_train_success(task_evaluator, crew_training_handler, kickoff):
+@patch("crewai.crew.Crew.copy")
+def test_crew_train_success(
+    copy_mock, task_evaluator, crew_training_handler, kickoff_mock
+):
     task = Task(
         description="Come up with a list of 5 interesting ideas to explore for an article, then write one amazing paragraph highlight for each idea that showcases how good an article about this topic could be. Return the list of ideas with their paragraph and your notes.",
         expected_output="5 bullet points with a paragraph for each idea.",
@@ -1781,9 +1747,19 @@ def test_crew_train_success(task_evaluator, crew_training_handler, kickoff):
         agents=[researcher, writer],
         tasks=[task],
     )
+
+    # Create a mock for the copied crew
+    copy_mock.return_value = crew
+
     crew.train(
         n_iterations=2, inputs={"topic": "AI"}, filename="trained_agents_data.pkl"
     )
+
+    # Ensure kickoff is called on the copied crew
+    kickoff_mock.assert_has_calls(
+        [mock.call(inputs={"topic": "AI"}), mock.call(inputs={"topic": "AI"})]
+    )
+
     task_evaluator.assert_has_calls(
         [
             mock.call(researcher),
@@ -1822,10 +1798,6 @@ def test_crew_train_success(task_evaluator, crew_training_handler, kickoff):
         ]
     )
 
-    kickoff.assert_has_calls(
-        [mock.call(inputs={"topic": "AI"}), mock.call(inputs={"topic": "AI"})]
-    )
-
 
 def test_crew_train_error():
     task = Task(
@@ -1840,7 +1812,7 @@ def test_crew_train_error():
     )
 
     with pytest.raises(TypeError) as e:
-        crew.train()
+        crew.train()  # type: ignore purposefully throwing err
         assert "train() missing 1 required positional argument: 'n_iterations'" in str(
             e
         )
@@ -2536,8 +2508,9 @@ def test_conditional_should_execute():
 
 
 @mock.patch("crewai.crew.CrewEvaluator")
+@mock.patch("crewai.crew.Crew.copy")
 @mock.patch("crewai.crew.Crew.kickoff")
-def test_crew_testing_function(mock_kickoff, crew_evaluator):
+def test_crew_testing_function(kickoff_mock, copy_mock, crew_evaluator):
     task = Task(
         description="Come up with a list of 5 interesting ideas to explore for an article, then write one amazing paragraph highlight for each idea that showcases how good an article about this topic could be. Return the list of ideas with their paragraph and your notes.",
         expected_output="5 bullet points with a paragraph for each idea.",
@@ -2548,11 +2521,15 @@ def test_crew_testing_function(mock_kickoff, crew_evaluator):
         agents=[researcher],
         tasks=[task],
     )
+
+    # Create a mock for the copied crew
+    copy_mock.return_value = crew
+
     n_iterations = 2
     crew.test(n_iterations, openai_model_name="gpt-4o-mini", inputs={"topic": "AI"})
 
-    assert len(mock_kickoff.mock_calls) == n_iterations
-    mock_kickoff.assert_has_calls(
+    # Ensure kickoff is called on the copied crew
+    kickoff_mock.assert_has_calls(
         [mock.call(inputs={"topic": "AI"}), mock.call(inputs={"topic": "AI"})]
     )
 

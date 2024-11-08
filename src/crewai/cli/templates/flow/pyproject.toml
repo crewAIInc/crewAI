@@ -5,14 +5,12 @@ description = "{{name}} using crewAI"
 authors = [{ name = "Your Name", email = "you@example.com" }]
 requires-python = ">=3.10,<=3.13"
 dependencies = [
-    "crewai[tools]>=0.67.1,<1.0.0",
-    "asyncio"
+    "crewai[tools]>=0.76.9,<1.0.0",
 ]
 
 [project.scripts]
-{{folder_name}} = "{{folder_name}}.main:main"
-run_flow = "{{folder_name}}.main:main"
-plot_flow = "{{folder_name}}.main:plot"
+kickoff = "{{folder_name}}.main:kickoff"
+plot = "{{folder_name}}.main:plot"
 
 [build-system]
 requires = ["hatchling"]

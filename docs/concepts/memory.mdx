@@ -34,7 +34,7 @@ By default, the memory system is disabled, and you can ensure it is active by se
 The memory will use OpenAI embeddings by default, but you can change it by setting `embedder` to a different model. 
 It's also possible to initialize the memory instance with your own instance.
 
-The 'embedder' only applies to **Short-Term Memory** which uses Chroma for RAG using the EmbedChain package.
+The 'embedder' only applies to **Short-Term Memory** which uses Chroma for RAG.
 The **Long-Term Memory** uses SQLite3 to store task results. Currently, there is no way to override these storage implementations.
 The data storage files are saved into a platform-specific location found using the appdirs package,
 and the name of the project can be overridden using the **CREWAI_STORAGE_DIR** environment variable.
@@ -113,6 +113,42 @@ my_crew = Crew(
     }
 )
 ```
+Alternatively, you can directly pass the OpenAIEmbeddingFunction to the embedder parameter.
+
+Example:
+```python Code
+from crewai import Crew, Agent, Task, Process
+from chromadb.utils.embedding_functions import OpenAIEmbeddingFunction
+
+my_crew = Crew(
+    agents=[...],
+    tasks=[...],
+    process=Process.sequential,
+    memory=True,
+    verbose=True,
+    embedder=OpenAIEmbeddingFunction(api_key=os.getenv("OPENAI_API_KEY"), model_name="text-embedding-3-small"),
+)
+```
+
+### Using Ollama embeddings
+
+```python Code
+from crewai import Crew, Agent, Task, Process
+
+my_crew = Crew(
+    agents=[...],
+    tasks=[...],
+    process=Process.sequential,
+    memory=True,
+    verbose=True,
+    embedder={
+        "provider": "ollama",
+        "config": {
+            "model": "mxbai-embed-large"
+        }
+    }
+)
+```
 
 ### Using Google AI embeddings
 
@@ -128,9 +164,8 @@ my_crew = Crew(
     embedder={
         "provider": "google",
         "config": {
-            "model": 'models/embedding-001',
-            "task_type": "retrieval_document",
-            "title": "Embeddings for Embedchain"
+            "api_key": "<YOUR_API_KEY>",
+            "model_name": "<model_name>"
         }
     }
 )
@@ -139,6 +174,7 @@ my_crew = Crew(
 ### Using Azure OpenAI embeddings
 
 ```python Code
+from chromadb.utils.embedding_functions import OpenAIEmbeddingFunction
 from crewai import Crew, Agent, Task, Process
 
 my_crew = Crew(
@@ -147,36 +183,20 @@ my_crew = Crew(
     process=Process.sequential,
     memory=True,
     verbose=True,
-    embedder={
-        "provider": "azure_openai",
-        "config": {
-            "model": 'text-embedding-ada-002',
-            "deployment_name": "your_embedding_model_deployment_name"
-        }
-    }
-)
-```
-
-### Using GPT4ALL embeddings
-
-```python Code
-from crewai import Crew, Agent, Task, Process
-
-my_crew = Crew(
-    agents=[...],
-    tasks=[...],
-    process=Process.sequential,
-    memory=True,
-    verbose=True,
-    embedder={
-        "provider": "gpt4all"
-    }
+    embedder=OpenAIEmbeddingFunction(
+        api_key="YOUR_API_KEY",
+        api_base="YOUR_API_BASE_PATH",
+        api_type="azure",
+        api_version="YOUR_API_VERSION",
+        model_name="text-embedding-3-small"
+    )
 )
 ```
 
 ### Using Vertex AI embeddings
 
 ```python Code
+from chromadb.utils.embedding_functions import GoogleVertexEmbeddingFunction
 from crewai import Crew, Agent, Task, Process
 
 my_crew = Crew(
@@ -185,12 +205,12 @@ my_crew = Crew(
     process=Process.sequential,
     memory=True,
     verbose=True,
-    embedder={
-        "provider": "vertexai",
-        "config": {
-            "model": 'textembedding-gecko'
-        }
-    }
+    embedder=GoogleVertexEmbeddingFunction(
+        project_id="YOUR_PROJECT_ID",
+        region="YOUR_REGION",
+        api_key="YOUR_API_KEY",
+        model_name="textembedding-gecko"
+    )
 )
 ```
 
@@ -208,8 +228,52 @@ my_crew = Crew(
     embedder={
         "provider": "cohere",
         "config": {
-            "model": "embed-english-v3.0",
-            "vector_dimension": 1024
+            "api_key": "YOUR_API_KEY",
+            "model_name": "<model_name>"
+        }
+    }
+)
+```
+### Using HuggingFace embeddings
+
+```python Code
+from crewai import Crew, Agent, Task, Process
+
+my_crew = Crew(
+    agents=[...],
+    tasks=[...],
+    process=Process.sequential,
+    memory=True,
+    verbose=True,
+    embedder={
+        "provider": "huggingface",
+        "config": {
+            "api_url": "<api_url>",
+        }
+    }
+)
+```
+
+### Using Watson embeddings
+
+```python Code
+from crewai import Crew, Agent, Task, Process
+
+# Note: Ensure you have installed and imported `ibm_watsonx_ai` for Watson embeddings to work.
+
+my_crew = Crew(
+    agents=[...],
+    tasks=[...],
+    process=Process.sequential,
+    memory=True,
+    verbose=True,
+    embedder={
+        "provider": "watson",
+        "config": {
+            "model": "<model_name>",
+            "api_url": "<api_url>",
+            "api_key": "<YOUR_API_KEY>",
+            "project_id": "<YOUR_PROJECT_ID>",
         }
     }
 )

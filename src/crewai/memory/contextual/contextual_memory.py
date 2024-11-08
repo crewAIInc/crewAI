@@ -31,7 +31,10 @@ class ContextualMemory:
         formatted as bullet points.
         """
         stm_results = self.stm.search(query)
-        formatted_results = "\n".join([f"- {result}" for result in stm_results])
+        formatted_results = "\n".join(
+            [f"- {result['context']}" for result in stm_results]
+        )
+        print("formatted_results stm", formatted_results)
         return f"Recent Insights:\n{formatted_results}" if stm_results else ""
 
     def _fetch_ltm_context(self, task) -> Optional[str]:
@@ -51,6 +54,8 @@ class ContextualMemory:
         formatted_results = list(dict.fromkeys(formatted_results))
         formatted_results = "\n".join([f"- {result}" for result in formatted_results])  # type: ignore # Incompatible types in assignment (expression has type "str", variable has type "list[str]")
 
+        print("formatted_results ltm", formatted_results)
+
         return f"Historical Data:\n{formatted_results}" if ltm_results else ""
 
     def _fetch_entity_context(self, query) -> str:
@@ -62,4 +67,5 @@ class ContextualMemory:
         formatted_results = "\n".join(
             [f"- {result['context']}" for result in em_results]  # type: ignore #  Invalid index type "str" for "str"; expected type "SupportsIndex | slice"
         )
+        print("formatted_results em", formatted_results)
         return f"Entities:\n{formatted_results}" if em_results else ""

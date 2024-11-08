@@ -5,7 +5,7 @@ description = "{{name}} using crewAI"
 authors = ["Your Name <you@example.com>"]
 requires-python = ">=3.10,<=3.13"
 dependencies = [
-    "crewai[tools]>=0.67.1,<1.0.0"
+    "crewai[tools]>=0.76.9,<1.0.0"
 ]
 
 [project.scripts]
