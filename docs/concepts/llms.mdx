@@ -25,7 +25,100 @@ By default, CrewAI uses the `gpt-4o-mini` model. It uses environment variables i
 - `OPENAI_API_BASE`
 - `OPENAI_API_KEY`
 
-### 2. Custom LLM Objects
+### 2. Updating YAML files
+
+You can update the `agents.yml` file to refer to the LLM you want to use:
+
+```yaml Code
+researcher:
+    role: Research Specialist
+    goal: Conduct comprehensive research and analysis to gather relevant information,
+        synthesize findings, and produce well-documented insights.
+    backstory: A dedicated research professional with years of experience in academic
+        investigation, literature review, and data analysis, known for thorough and
+        methodical approaches to complex research questions.
+    verbose: true
+    llm: openai/gpt-4o
+    # llm: azure/gpt-4o-mini
+    # llm: gemini/gemini-pro
+    # llm: anthropic/claude-3-5-sonnet-20240620
+    # llm: bedrock/anthropic.claude-3-sonnet-20240229-v1:0
+    # llm: mistral/mistral-large-latest
+    # llm: ollama/llama3:70b
+    # llm: groq/llama-3.2-90b-vision-preview
+    # llm: watsonx/meta-llama/llama-3-1-70b-instruct
+    # ...
+```
+
+Keep in mind that you will need to set certain ENV vars depending on the model you are
+using to account for the credentials or set a custom LLM object like described below.
+Here are some of the required ENV vars for some of the LLM integrations:
+
+<AccordionGroup>
+    <Accordion title="OpenAI">
+    ```python Code
+    OPENAI_API_KEY=<your-api-key>
+    OPENAI_API_BASE=<optional-custom-base-url>
+    OPENAI_MODEL_NAME=<openai-model-name>
+    OPENAI_ORGANIZATION=<your-org-id>       # OPTIONAL
+    OPENAI_API_BASE=<openaiai-api-base>     # OPTIONAL
+    ```
+    </Accordion>
+
+    <Accordion title="Anthropic">
+    ```python Code
+    ANTHROPIC_API_KEY=<your-api-key>
+    ```
+    </Accordion>
+
+    <Accordion title="Google">
+    ```python Code
+    GEMINI_API_KEY=<your-api-key>
+    ```
+    </Accordion>
+
+    <Accordion title="Azure">
+    ```python Code
+    AZURE_API_KEY=<your-api-key>                    # "my-azure-api-key"
+    AZURE_API_BASE=<your-resource-url>              # "https://example-endpoint.openai.azure.com"
+    AZURE_API_VERSION=<api-version>                 # "2023-05-15"
+    AZURE_AD_TOKEN=<your-azure-ad-token>            # Optional
+    AZURE_API_TYPE=<your-azure-api-type>            # Optional
+    ```
+    </Accordion>
+
+    <Accordion title="AWS Bedrock">
+    ```python Code
+    AWS_ACCESS_KEY_ID=<your-access-key>
+    AWS_SECRET_ACCESS_KEY=<your-secret-key>
+    AWS_DEFAULT_REGION=<your-region>
+    ```
+    </Accordion>
+
+    <Accordion title="Mistral">
+    ```python Code
+    MISTRAL_API_KEY=<your-api-key>
+    ```
+    </Accordion>
+
+    <Accordion title="Groq">
+    ```python Code
+    GROQ_API_KEY=<your-api-key>
+    ```
+    </Accordion>
+
+    <Accordion title="IBM watsonx.ai">
+    ```python Code
+    WATSONX_URL=<your-url>                          # (required) Base URL of your WatsonX instance
+    WATSONX_APIKEY=<your-apikey>                    # (required) IBM cloud API key
+    WATSONX_TOKEN=<your-token>                      # (required) IAM auth token (alternative to APIKEY)
+    WATSONX_PROJECT_ID=<your-project-id>            # (optional) Project ID of your WatsonX instance
+    WATSONX_DEPLOYMENT_SPACE_ID=<your-space-id>     # (optional) ID of deployment space for deployed models
+    ```
+    </Accordion>
+</AccordionGroup>
+
+### 3. Custom LLM Objects
 
 Pass a custom LLM implementation or object from another library.
 
@@ -102,7 +195,7 @@ When configuring an LLM for your agent, you have access to a wide range of param
 
 These are examples of how to configure LLMs for your agent.
 
-<AccordionGroup>    
+<AccordionGroup>
     <Accordion title="OpenAI">
 
     ```python Code
@@ -133,10 +226,10 @@ These are examples of how to configure LLMs for your agent.
         model="cerebras/llama-3.1-70b",
         api_key="your-api-key-here"
     )
-    agent = Agent(llm=llm, ...) 
+    agent = Agent(llm=llm, ...)
     ```
     </Accordion>
- 
+
     <Accordion title="Ollama (Local LLMs)">
 
     CrewAI supports using Ollama for running open-source models locally:
@@ -150,7 +243,7 @@ These are examples of how to configure LLMs for your agent.
 
     agent = Agent(
         llm=LLM(
-            model="ollama/llama3.1", 
+            model="ollama/llama3.1",
             base_url="http://localhost:11434"
         ),
         ...
@@ -164,7 +257,7 @@ These are examples of how to configure LLMs for your agent.
     from crewai import LLM
 
     llm = LLM(
-        model="groq/llama3-8b-8192", 
+        model="groq/llama3-8b-8192",
         api_key="your-api-key-here"
     )
     agent = Agent(llm=llm, ...)
@@ -189,7 +282,7 @@ These are examples of how to configure LLMs for your agent.
     from crewai import LLM
 
     llm = LLM(
-        model="fireworks_ai/accounts/fireworks/models/llama-v3-70b-instruct",  
+        model="fireworks_ai/accounts/fireworks/models/llama-v3-70b-instruct",
         api_key="your-api-key-here"
     )
     agent = Agent(llm=llm, ...)
@@ -224,6 +317,29 @@ These are examples of how to configure LLMs for your agent.
     </Accordion>
 
     <Accordion title="IBM watsonx.ai">
+    You can use IBM Watson by seeting the following ENV vars:
+
+    ```python Code
+    WATSONX_URL=<your-url>
+    WATSONX_APIKEY=<your-apikey>
+    WATSONX_PROJECT_ID=<your-project-id>
+    ```
+
+    You can then define your agents llms by updating the `agents.yml`
+
+    ```yaml Code
+    researcher:
+        role: Research Specialist
+        goal: Conduct comprehensive research and analysis to gather relevant information,
+            synthesize findings, and produce well-documented insights.
+        backstory: A dedicated research professional with years of experience in academic
+            investigation, literature review, and data analysis, known for thorough and
+            methodical approaches to complex research questions.
+        verbose: true
+        llm: watsonx/meta-llama/llama-3-1-70b-instruct
+    ```
+
+    You can also set up agents more dynamically as a base level LLM instance, like bellow:
 
     ```python Code
     from crewai import LLM
@@ -247,7 +363,7 @@ These are examples of how to configure LLMs for your agent.
         api_key="your-api-key-here",
         base_url="your_api_endpoint"
     )
-    agent = Agent(llm=llm, ...) 
+    agent = Agent(llm=llm, ...)
     ```
     </Accordion>
 </AccordionGroup>
