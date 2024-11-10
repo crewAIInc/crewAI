@@ -5,6 +5,6 @@ description = "Power up your crews with {{folder_name}}"
 readme = "README.md"
 requires-python = ">=3.10,<=3.13"
 dependencies = [
-    "crewai[tools]>=0.76.9"
+    "crewai[tools]>=0.79.0"
 ]
 
