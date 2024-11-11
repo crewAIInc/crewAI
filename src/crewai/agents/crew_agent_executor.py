@@ -332,9 +332,9 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
             if self.crew is not None and hasattr(self.crew, "_train_iteration"):
                 train_iteration = self.crew._train_iteration
                 if agent_id in training_data and isinstance(train_iteration, int):
-                    training_data[agent_id][train_iteration][
-                        "improved_output"
-                    ] = result.output
+                    training_data[agent_id][train_iteration]["improved_output"] = (
+                        result.output
+                    )
                     training_handler.save(training_data)
                 else:
                     self._logger.log(
@@ -385,4 +385,5 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
         return CrewAgentParser(agent=self.agent).parse(answer)
 
     def _format_msg(self, prompt: str, role: str = "user") -> Dict[str, str]:
+        prompt = prompt.rstrip()
         return {"role": role, "content": prompt}
