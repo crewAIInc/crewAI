@@ -604,7 +604,7 @@ wheels = [
 
 [[package]]
 name = "crewai"
-version = "0.79.1"
+version = "0.79.2"
 source = { editable = "." }
 dependencies = [
     { name = "appdirs" },
