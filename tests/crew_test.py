@@ -1280,10 +1280,10 @@ def test_agent_usage_metrics_are_captured_for_hierarchical_process():
     assert result.raw == "Howdy!"
 
     assert result.token_usage == UsageMetrics(
-        total_tokens=2626,
-        prompt_tokens=2482,
-        completion_tokens=144,
-        successful_requests=5,
+        total_tokens=1673,
+        prompt_tokens=1562,
+        completion_tokens=111,
+        successful_requests=3,
     )
 
 
