@@ -24,7 +24,6 @@ def run_crew() -> None:
             f"Please run `crewai update` to update your pyproject.toml to use uv.",
             fg="red",
         )
-        print()
 
     try:
         subprocess.run(command, capture_output=False, text=True, check=True)
