@@ -1,7 +1,7 @@
 from copy import deepcopy
 from typing import Any, Callable, Dict, Tuple
 
-from pydantic import BaseModel, Field, PrivateAttr
+from pydantic import BaseModel, ConfigDict, Field, PrivateAttr
 
 
 class Route(BaseModel):
@@ -10,15 +10,13 @@ class Route(BaseModel):
 
 
 class Router(BaseModel):
+    model_config = ConfigDict(arbitrary_types_allowed=True)
     routes: Dict[str, Route] = Field(
         default_factory=dict,
         description="Dictionary of route names to (condition, pipeline) tuples",
     )
     default: Any = Field(..., description="Default pipeline if no conditions are met")
     _route_types: Dict[str, type] = PrivateAttr(default_factory=dict)
-
-    class Config:
-        arbitrary_types_allowed = True
 
     def __init__(self, routes: Dict[str, Route], default: Any, **data):
         super().__init__(routes=routes, default=default, **data)
