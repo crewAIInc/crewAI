@@ -41,7 +41,8 @@ ENV_VARS = {
         {
             "default": True,
             "API_BASE": "http://localhost:11434",
-            "key_name": "model",
+            "prompt": "Enter your Ollama model name (must start with 'ollama/')",
+            "key_name": "MODEL",
         }
     ],
     "bedrock": [
