@@ -162,9 +162,6 @@ class Agent(BaseAgent):
                         # Check if the environment variable is set
                         if "key_name" in env_var:
                             env_value = os.environ.get(env_var["key_name"])
-                            print(
-                                f"Checking env var {env_var['key_name']}: {env_value}"
-                            )
                             if env_value:
                                 # Map key names containing "API_KEY" to "api_key"
                                 key_name = (
@@ -184,7 +181,6 @@ class Agent(BaseAgent):
                                     if "API_VERSION" in env_var["key_name"]
                                     else key_name
                                 )
-                                print(f"Mapped key name: {key_name}")
                                 llm_params[key_name] = env_value
                         # Check for default values if the environment variable is not set
                         elif env_var.get("default", False):
@@ -192,7 +188,6 @@ class Agent(BaseAgent):
                                 if key not in ["prompt", "key_name", "default"]:
                                     # Only add default if the key is already set in os.environ
                                     if key in os.environ:
-                                        print(f"Using default value for {key}: {value}")
                                         llm_params[key] = value
 
             self.llm = LLM(**llm_params)
