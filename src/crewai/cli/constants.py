@@ -41,6 +41,7 @@ ENV_VARS = {
         {
             "default": True,
             "API_BASE": "http://localhost:11434",
+            "key_name": "model",
         }
     ],
     "bedrock": [
