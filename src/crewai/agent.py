@@ -157,10 +157,10 @@ class Agent(BaseAgent):
             for provider, env_vars in ENV_VARS.items():
                 if provider == set_provider:
                     for env_var in env_vars:
-                        if env_var["key_name"] in unnacepted_attributes:
-                            continue
                         # Check if the environment variable is set
                         if "key_name" in env_var:
+                            if env_var["key_name"] in unnacepted_attributes:
+                                continue
                             env_value = os.environ.get(env_var["key_name"])
                             if env_value:
                                 # Map key names containing "API_KEY" to "api_key"
