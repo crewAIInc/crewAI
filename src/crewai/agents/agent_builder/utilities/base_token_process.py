@@ -18,7 +18,6 @@ class TokenProcess:
 
     def sum_cached_prompt_tokens(self, tokens: int):
         self.cached_prompt_tokens = self.cached_prompt_tokens + tokens
-        self.total_tokens = self.total_tokens + tokens
 
     def sum_successful_requests(self, requests: int):
         self.successful_requests = self.successful_requests + requests
