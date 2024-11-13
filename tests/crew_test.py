@@ -564,6 +564,7 @@ def test_crew_kickoff_usage_metrics():
         assert result.token_usage.prompt_tokens > 0
         assert result.token_usage.completion_tokens > 0
         assert result.token_usage.successful_requests > 0
+        assert result.token_usage.cached_prompt_tokens == 0
 
 
 def test_agents_rpm_is_never_set_if_crew_max_RPM_is_not_set():
@@ -1284,6 +1285,7 @@ def test_agent_usage_metrics_are_captured_for_hierarchical_process():
         prompt_tokens=1562,
         completion_tokens=111,
         successful_requests=3,
+        cached_prompt_tokens=0
     )
 
 
