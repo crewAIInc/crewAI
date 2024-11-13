@@ -145,25 +145,26 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
                         formatted_answer.result = action_result
                         self._show_logs(formatted_answer)
 
-                        if self.step_callback:
-                            self.step_callback(formatted_answer)
+                    if self.step_callback:
+                        self.step_callback(formatted_answer)
 
-                        if self._should_force_answer():
-                            if self.have_forced_answer:
-                                return AgentFinish(
-                                    output=self._i18n.errors(
-                                        "force_final_answer_error"
-                                    ).format(formatted_answer.text),
-                                    text=formatted_answer.text,
-                                )
-                            else:
-                                formatted_answer.text += (
-                                    f'\n{self._i18n.errors("force_final_answer")}'
-                                )
-                                self.have_forced_answer = True
-                        self.messages.append(
-                            self._format_msg(formatted_answer.text, role="assistant")
-                        )
+                    if self._should_force_answer():
+                        if self.have_forced_answer:
+                            return AgentFinish(
+                                thought="",
+                                output=self._i18n.errors(
+                                    "force_final_answer_error"
+                                ).format(formatted_answer.text),
+                                text=formatted_answer.text,
+                            )
+                        else:
+                            formatted_answer.text += (
+                                f'\n{self._i18n.errors("force_final_answer")}'
+                            )
+                            self.have_forced_answer = True
+                    self.messages.append(
+                        self._format_msg(formatted_answer.text, role="assistant")
+                    )
 
         except OutputParserException as e:
             self.messages.append({"role": "user", "content": e.error})
