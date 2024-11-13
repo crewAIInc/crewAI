@@ -151,6 +151,7 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
                     if self._should_force_answer():
                         if self.have_forced_answer:
                             return AgentFinish(
+                                thought="",
                                 output=self._i18n.errors(
                                     "force_final_answer_error"
                                 ).format(formatted_answer.text),
