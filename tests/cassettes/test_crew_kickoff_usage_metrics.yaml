@@ -10,7 +10,8 @@ interactions:
       criteria for your final answer: 1 bullet point about dog that''s under 15 words.\nyou
       MUST return the actual complete content as the final answer, not a summary.\n\nBegin!
       This is VERY important to you, use the tools available and give your best Final
-      Answer, your job depends on it!\n\nThought:"}], "model": "gpt-4o"}'
+      Answer, your job depends on it!\n\nThought:"}], "model": "gpt-4o-mini", "stop":
+      ["\nObservation:"], "stream": false}'
     headers:
       accept:
       - application/json
@@ -19,49 +20,50 @@ interactions:
       connection:
       - keep-alive
       content-length:
-      - '869'
+      - '919'
       content-type:
       - application/json
-      cookie:
-      - __cf_bm=9.8sBYBkvBR8R1K_bVF7xgU..80XKlEIg3N2OBbTSCU-1727214102-1.0.1.1-.qiTLXbPamYUMSuyNsOEB9jhGu.jOifujOrx9E2JZvStbIZ9RTIiE44xKKNfLPxQkOi6qAT3h6htK8lPDGV_5g;
-        _cfuvid=lbRdAddVWV6W3f5Dm9SaOPWDUOxqtZBSPr_fTW26nEA-1727213194587-0.0.1.1-604800000
       host:
       - api.openai.com
       user-agent:
-      - OpenAI/Python 1.47.0
+      - OpenAI/Python 1.52.1
       x-stainless-arch:
-      - arm64
+      - x64
       x-stainless-async:
       - 'false'
       x-stainless-lang:
       - python
       x-stainless-os:
-      - MacOS
+      - Linux
       x-stainless-package-version:
-      - 1.47.0
+      - 1.52.1
       x-stainless-raw-response:
       - 'true'
+      x-stainless-retry-count:
+      - '0'
       x-stainless-runtime:
       - CPython
       x-stainless-runtime-version:
-      - 3.11.7
+      - 3.11.9
     method: POST
     uri: https://api.openai.com/v1/chat/completions
   response:
-    content: "{\n  \"id\": \"chatcmpl-AB7auGDrAVE0iXSBBhySZp3xE8gvP\",\n  \"object\":
-      \"chat.completion\",\n  \"created\": 1727214164,\n  \"model\": \"gpt-4o-2024-05-13\",\n
-      \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
-      \"assistant\",\n        \"content\": \"I now can give a great answer\\nFinal
-      Answer: Dogs are unparalleled in loyalty and companionship to humans.\",\n        \"refusal\":
-      null\n      },\n      \"logprobs\": null,\n      \"finish_reason\": \"stop\"\n
-      \   }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 175,\n    \"completion_tokens\":
-      21,\n    \"total_tokens\": 196,\n    \"completion_tokens_details\": {\n      \"reasoning_tokens\":
-      0\n    }\n  },\n  \"system_fingerprint\": \"fp_e375328146\"\n}\n"
+    body:
+      string: !!binary |
+        H4sIAAAAAAAAA4xSy27bMBC86ysWPEuB7ciV7VuAIkUObQ+59QFhTa0kttQuS9Jx08D/XkhyLAVJ
+        gV4EaGdnMLPDpwRAmUrtQOkWo+6czW7u41q2t3+cvCvuPvxafSG+58XHTzXlxWeV9gzZ/yAdn1lX
+        WjpnKRrhEdaeMFKvuiyul3m+uV7lA9BJRbanNS5muWSdYZOtFqs8WxTZcnNmt2I0BbWDrwkAwNPw
+        7X1yRb/VDhbp86SjELAhtbssASgvtp8oDMGEiBxVOoFaOBIP1u+A5QgaGRrzQIDQ9LYBORzJA3zj
+        W8No4Wb438F7aQKgJ7DyiBb6zMhGOKRA3CJrww10xBEttIQ2toBcgTyQR2vhSNZmezLcXM39eKoP
+        Afub8MHa8/x0CWilcV724Yxf5rVhE9rSEwbhPkyI4tSAnhKA78MhDy9uo5yXzsUyyk/iMHSzHvXU
+        1N+Ejo0BqCgR7Yy13aZv6JUVRTQ2zKpQGnVL1USdesNDZWQGJLPUr928pT0mN9z8j/wEaE0uUlU6
+        T5XRLxNPa5765/2vtcuVB8MqPIZIXVkbbsg7b8bHVbuyXm9xs8xXRa2SU/IXAAD//wMAq2ZCBWoD
+        AAA=
     headers:
       CF-Cache-Status:
       - DYNAMIC
       CF-RAY:
-      - 8c85f22ddda01cf3-GRU
+      - 8e19bf36db158761-GRU
       Connection:
       - keep-alive
       Content-Encoding:
@@ -69,19 +71,27 @@ interactions:
       Content-Type:
       - application/json
       Date:
-      - Tue, 24 Sep 2024 21:42:44 GMT
+      - Tue, 12 Nov 2024 21:52:04 GMT
       Server:
       - cloudflare
+      Set-Cookie:
+      - __cf_bm=MkvcnvacGpTyn.y0OkFRoFXuAwg4oxjMhViZJTt9mw0-1731448324-1.0.1.1-oekkH_B0xOoPnIFw15LpqFCkZ2cu7VBTJVLDGylan4I67NjX.tlPvOiX9kvtP5Acewi28IE2IwlwtrZWzCH3vw;
+        path=/; expires=Tue, 12-Nov-24 22:22:04 GMT; domain=.api.openai.com; HttpOnly;
+        Secure; SameSite=None
+      - _cfuvid=4.17346mfw5npZfYNbCx3Vj1VAVPy.tH0Jm2gkTteJ8-1731448324998-0.0.1.1-604800000;
+        path=/; domain=.api.openai.com; HttpOnly; Secure; SameSite=None
       Transfer-Encoding:
       - chunked
       X-Content-Type-Options:
       - nosniff
       access-control-expose-headers:
       - X-Request-ID
+      alt-svc:
+      - h3=":443"; ma=86400
       openai-organization:
-      - crewai-iuxna1
+      - user-tqfegqsiobpvvjmn0giaipdq
       openai-processing-ms:
-      - '349'
+      - '601'
       openai-version:
       - '2020-10-01'
       strict-transport-security:
@@ -89,19 +99,20 @@ interactions:
       x-ratelimit-limit-requests:
       - '10000'
       x-ratelimit-limit-tokens:
-      - '30000000'
+      - '200000'
       x-ratelimit-remaining-requests:
       - '9999'
       x-ratelimit-remaining-tokens:
-      - '29999792'
+      - '199793'
       x-ratelimit-reset-requests:
-      - 6ms
+      - 8.64s
       x-ratelimit-reset-tokens:
-      - 0s
+      - 62ms
       x-request-id:
-      - req_4c8cd76fdfba7b65e5ce85397b33c22b
-    http_version: HTTP/1.1
-    status_code: 200
+      - req_77fb166b4e272bfd45c37c08d2b93b0c
+    status:
+      code: 200
+      message: OK
 - request:
     body: '{"messages": [{"role": "system", "content": "You are cat Researcher. You
       have a lot of experience with cat.\nYour personal goal is: Express hot takes
@@ -113,7 +124,8 @@ interactions:
       criteria for your final answer: 1 bullet point about cat that''s under 15 words.\nyou
       MUST return the actual complete content as the final answer, not a summary.\n\nBegin!
       This is VERY important to you, use the tools available and give your best Final
-      Answer, your job depends on it!\n\nThought:"}], "model": "gpt-4o"}'
+      Answer, your job depends on it!\n\nThought:"}], "model": "gpt-4o-mini", "stop":
+      ["\nObservation:"], "stream": false}'
     headers:
       accept:
       - application/json
@@ -122,49 +134,53 @@ interactions:
       connection:
       - keep-alive
       content-length:
-      - '869'
+      - '919'
       content-type:
       - application/json
       cookie:
-      - __cf_bm=9.8sBYBkvBR8R1K_bVF7xgU..80XKlEIg3N2OBbTSCU-1727214102-1.0.1.1-.qiTLXbPamYUMSuyNsOEB9jhGu.jOifujOrx9E2JZvStbIZ9RTIiE44xKKNfLPxQkOi6qAT3h6htK8lPDGV_5g;
-        _cfuvid=lbRdAddVWV6W3f5Dm9SaOPWDUOxqtZBSPr_fTW26nEA-1727213194587-0.0.1.1-604800000
+      - __cf_bm=MkvcnvacGpTyn.y0OkFRoFXuAwg4oxjMhViZJTt9mw0-1731448324-1.0.1.1-oekkH_B0xOoPnIFw15LpqFCkZ2cu7VBTJVLDGylan4I67NjX.tlPvOiX9kvtP5Acewi28IE2IwlwtrZWzCH3vw;
+        _cfuvid=4.17346mfw5npZfYNbCx3Vj1VAVPy.tH0Jm2gkTteJ8-1731448324998-0.0.1.1-604800000
       host:
       - api.openai.com
       user-agent:
-      - OpenAI/Python 1.47.0
+      - OpenAI/Python 1.52.1
       x-stainless-arch:
-      - arm64
+      - x64
       x-stainless-async:
       - 'false'
       x-stainless-lang:
       - python
       x-stainless-os:
-      - MacOS
+      - Linux
       x-stainless-package-version:
-      - 1.47.0
+      - 1.52.1
       x-stainless-raw-response:
       - 'true'
+      x-stainless-retry-count:
+      - '0'
       x-stainless-runtime:
       - CPython
       x-stainless-runtime-version:
-      - 3.11.7
+      - 3.11.9
     method: POST
     uri: https://api.openai.com/v1/chat/completions
   response:
-    content: "{\n  \"id\": \"chatcmpl-AB7auNbAqjT3rgBX92rhxBLuhaLBj\",\n  \"object\":
-      \"chat.completion\",\n  \"created\": 1727214164,\n  \"model\": \"gpt-4o-2024-05-13\",\n
-      \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
-      \"assistant\",\n        \"content\": \"Thought: I now can give a great answer\\nFinal
-      Answer: Cats are highly independent, agile, and intuitive creatures beloved
-      by millions worldwide.\",\n        \"refusal\": null\n      },\n      \"logprobs\":
-      null,\n      \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\":
-      175,\n    \"completion_tokens\": 28,\n    \"total_tokens\": 203,\n    \"completion_tokens_details\":
-      {\n      \"reasoning_tokens\": 0\n    }\n  },\n  \"system_fingerprint\": \"fp_e375328146\"\n}\n"
+    body:
+      string: !!binary |
+        H4sIAAAAAAAAA4xSy27bMBC86ysWPFuB7MhN6ltQIGmBnlL00BcEmlxJ21JLhlzFLQL/eyH5IRlt
+        gV4EaGZnMLPLlwxAkVUbUKbVYrrg8rsPsg4P+Orxs9XvPz0U8eP966dS6sdo3wa1GBR++x2NnFRX
+        xnfBoZDnA20iasHBdXlzvSzL2+vVeiQ6b9ENsiZIXvq8I6Z8VazKvLjJl7dHdevJYFIb+JIBALyM
+        3yEnW/ypNlAsTkiHKekG1eY8BKCidwOidEqURLOoxUQaz4I8Rn8H7HdgNENDzwgamiE2aE47jABf
+        +Z5YO7gb/zfwRksCHRGGGAHZIg/D1GmXFiBtpGfiBjyDtEgR/I5BMHYJNFvomZ56hIAxedaOhDBd
+        zYNFrPukh+Vw79wR35+bOt+E6LfpyJ/xmphSW0XUyfPQKokPamT3GcC3caP9xZJUiL4LUon/gZzG
+        I60Pfmo65MSuTqR40W6GF8c7XPpVFkWTS7ObKKNNi3aSTgfUvSU/I7JZ6z/T/M370Jy4+R/7iTAG
+        g6CtQkRL5rLxNBZxeOf/GjtveQys0q8k2FU1cYMxRDq8sjpUxVYXdrkq66XK9tlvAAAA//8DAIjK
+        KzJzAwAA
     headers:
       CF-Cache-Status:
       - DYNAMIC
       CF-RAY:
-      - 8c85f2321c1c1cf3-GRU
+      - 8e19bf3fae118761-GRU
       Connection:
       - keep-alive
       Content-Encoding:
@@ -172,7 +188,7 @@ interactions:
       Content-Type:
       - application/json
       Date:
-      - Tue, 24 Sep 2024 21:42:45 GMT
+      - Tue, 12 Nov 2024 21:52:05 GMT
       Server:
       - cloudflare
       Transfer-Encoding:
@@ -181,10 +197,12 @@ interactions:
       - nosniff
       access-control-expose-headers:
       - X-Request-ID
+      alt-svc:
+      - h3=":443"; ma=86400
       openai-organization:
-      - crewai-iuxna1
+      - user-tqfegqsiobpvvjmn0giaipdq
       openai-processing-ms:
-      - '430'
+      - '464'
       openai-version:
       - '2020-10-01'
       strict-transport-security:
@@ -192,19 +210,20 @@ interactions:
       x-ratelimit-limit-requests:
       - '10000'
       x-ratelimit-limit-tokens:
-      - '30000000'
+      - '200000'
       x-ratelimit-remaining-requests:
-      - '9999'
+      - '9998'
       x-ratelimit-remaining-tokens:
-      - '29999792'
+      - '199792'
       x-ratelimit-reset-requests:
-      - 6ms
+      - 16.369s
       x-ratelimit-reset-tokens:
-      - 0s
+      - 62ms
       x-request-id:
-      - req_ace859b7d9e83d9fa7753ce23bb03716
-    http_version: HTTP/1.1
-    status_code: 200
+      - req_91706b23d0ef23458ba63ec18304cd28
+    status:
+      code: 200
+      message: OK
 - request:
     body: '{"messages": [{"role": "system", "content": "You are apple Researcher.
       You have a lot of experience with apple.\nYour personal goal is: Express hot
@@ -217,7 +236,7 @@ interactions:
       under 15 words.\nyou MUST return the actual complete content as the final answer,
       not a summary.\n\nBegin! This is VERY important to you, use the tools available
       and give your best Final Answer, your job depends on it!\n\nThought:"}], "model":
-      "gpt-4o"}'
+      "gpt-4o-mini", "stop": ["\nObservation:"], "stream": false}'
     headers:
       accept:
       - application/json
@@ -226,49 +245,53 @@ interactions:
       connection:
       - keep-alive
       content-length:
-      - '879'
+      - '929'
       content-type:
       - application/json
       cookie:
-      - __cf_bm=9.8sBYBkvBR8R1K_bVF7xgU..80XKlEIg3N2OBbTSCU-1727214102-1.0.1.1-.qiTLXbPamYUMSuyNsOEB9jhGu.jOifujOrx9E2JZvStbIZ9RTIiE44xKKNfLPxQkOi6qAT3h6htK8lPDGV_5g;
-        _cfuvid=lbRdAddVWV6W3f5Dm9SaOPWDUOxqtZBSPr_fTW26nEA-1727213194587-0.0.1.1-604800000
+      - __cf_bm=MkvcnvacGpTyn.y0OkFRoFXuAwg4oxjMhViZJTt9mw0-1731448324-1.0.1.1-oekkH_B0xOoPnIFw15LpqFCkZ2cu7VBTJVLDGylan4I67NjX.tlPvOiX9kvtP5Acewi28IE2IwlwtrZWzCH3vw;
+        _cfuvid=4.17346mfw5npZfYNbCx3Vj1VAVPy.tH0Jm2gkTteJ8-1731448324998-0.0.1.1-604800000
       host:
       - api.openai.com
       user-agent:
-      - OpenAI/Python 1.47.0
+      - OpenAI/Python 1.52.1
       x-stainless-arch:
-      - arm64
+      - x64
       x-stainless-async:
       - 'false'
       x-stainless-lang:
       - python
       x-stainless-os:
-      - MacOS
+      - Linux
       x-stainless-package-version:
-      - 1.47.0
+      - 1.52.1
       x-stainless-raw-response:
       - 'true'
+      x-stainless-retry-count:
+      - '0'
       x-stainless-runtime:
       - CPython
       x-stainless-runtime-version:
-      - 3.11.7
+      - 3.11.9
     method: POST
     uri: https://api.openai.com/v1/chat/completions
   response:
-    content: "{\n  \"id\": \"chatcmpl-AB7avZ0yqY18ukQS7SnLkZydsx72b\",\n  \"object\":
-      \"chat.completion\",\n  \"created\": 1727214165,\n  \"model\": \"gpt-4o-2024-05-13\",\n
-      \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
-      \"assistant\",\n        \"content\": \"I now can give a great answer.\\n\\nFinal
-      Answer: Apples are incredibly versatile, nutritious, and a staple in diets globally.\",\n
-      \       \"refusal\": null\n      },\n      \"logprobs\": null,\n      \"finish_reason\":
-      \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 175,\n    \"completion_tokens\":
-      25,\n    \"total_tokens\": 200,\n    \"completion_tokens_details\": {\n      \"reasoning_tokens\":
-      0\n    }\n  },\n  \"system_fingerprint\": \"fp_a5d11b2ef2\"\n}\n"
+    body:
+      string: !!binary |
+        H4sIAAAAAAAAA4xSPW/bMBDd9SsOXLpIgeTITarNS4t26JJubSHQ5IliSh1ZHv0RBP7vhSTHctAU
+        6CJQ7909vHd3zxmAsFo0IFQvkxqCKzYPaf1b2/hhW+8PR9N9Kh9W5Zdhjebr4zeRjx1++4gqvXTd
+        KD8Eh8l6mmkVUSYcVau726qu729X7ydi8Brd2GZCKmpfDJZssSpXdVHeFdX9ubv3ViGLBr5nAADP
+        03f0SRqPooEyf0EGZJYGRXMpAhDRuxERktlykpREvpDKU0KarH8G8gdQksDYPYIEM9oGSXzACPCD
+        PlqSDjbTfwObEBy+Y0Dl+YkTDmApoYkyIUMvoz7IiDmw79L8kqSBMe7HMMAoB4fM7ikHpF6SsmRg
+        xxgBjwGjRVJ4c+00YrdjOU6Lds6d8dMluvMmRL/lM3/BO0uW+zaiZE9jTE4+iIk9ZQA/pxHvXk1N
+        hOiHkNrkfyHxtLX1rCeWzS7svEsAkXyS7govq/wNvVZjktbx1ZKEkqpHvbQuG5U7bf0VkV2l/tvN
+        W9pzckvmf+QXQikMCXUbImqrXideyiKOh/+vssuUJ8NiPpO2s2Qwhmjns+tCW25lqatV3VUiO2V/
+        AAAA//8DAPtpFJCEAwAA
     headers:
       CF-Cache-Status:
       - DYNAMIC
       CF-RAY:
-      - 8c85f2369a761cf3-GRU
+      - 8e19bf447ba48761-GRU
       Connection:
       - keep-alive
       Content-Encoding:
@@ -276,7 +299,7 @@ interactions:
       Content-Type:
       - application/json
       Date:
-      - Tue, 24 Sep 2024 21:42:46 GMT
+      - Tue, 12 Nov 2024 21:52:06 GMT
       Server:
       - cloudflare
       Transfer-Encoding:
@@ -285,10 +308,12 @@ interactions:
       - nosniff
       access-control-expose-headers:
       - X-Request-ID
+      alt-svc:
+      - h3=":443"; ma=86400
       openai-organization:
-      - crewai-iuxna1
+      - user-tqfegqsiobpvvjmn0giaipdq
       openai-processing-ms:
-      - '389'
+      - '655'
       openai-version:
       - '2020-10-01'
       strict-transport-security:
@@ -296,17 +321,18 @@ interactions:
       x-ratelimit-limit-requests:
       - '10000'
       x-ratelimit-limit-tokens:
-      - '30000000'
+      - '200000'
       x-ratelimit-remaining-requests:
-      - '9999'
+      - '9997'
       x-ratelimit-remaining-tokens:
-      - '29999791'
+      - '199791'
       x-ratelimit-reset-requests:
-      - 6ms
+      - 24.239s
       x-ratelimit-reset-tokens:
-      - 0s
+      - 62ms
       x-request-id:
-      - req_0167388f0a7a7f1a1026409834ceb914
-    http_version: HTTP/1.1
-    status_code: 200
+      - req_a228208b0e965ecee334a6947d6c9e7c
+    status:
+      code: 200
+      message: OK
 version: 1
