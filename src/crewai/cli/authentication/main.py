@@ -34,7 +34,9 @@ class AuthenticationCommand:
             "scope": "openid",
             "audience": AUTH0_AUDIENCE,
         }
-        response = requests.post(url=self.DEVICE_CODE_URL, data=device_code_payload)
+        response = requests.post(
+            url=self.DEVICE_CODE_URL, data=device_code_payload, timeout=20
+        )
         response.raise_for_status()
         return response.json()
 
@@ -54,7 +56,7 @@ class AuthenticationCommand:
 
         attempts = 0
         while True and attempts < 5:
-            response = requests.post(self.TOKEN_URL, data=token_payload)
+            response = requests.post(self.TOKEN_URL, data=token_payload, timeout=30)
             token_data = response.json()
 
             if response.status_code == 200:
