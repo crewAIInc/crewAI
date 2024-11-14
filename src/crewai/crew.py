@@ -27,6 +27,7 @@ from crewai.llm import LLM
 from crewai.memory.entity.entity_memory import EntityMemory
 from crewai.memory.long_term.long_term_memory import LongTermMemory
 from crewai.memory.short_term.short_term_memory import ShortTermMemory
+from crewai.memory.user.user_memory import UserMemory
 from crewai.process import Process
 from crewai.task import Task
 from crewai.tasks.conditional_task import ConditionalTask
@@ -71,6 +72,7 @@ class Crew(BaseModel):
         manager_llm: The language model that will run manager agent.
         manager_agent: Custom agent that will be used as manager.
         memory: Whether the crew should use memory to store memories of it's execution.
+        memory_config: Configuration for the memory to be used for the crew.
         cache: Whether the crew should use a cache to store the results of the tools execution.
         function_calling_llm: The language model that will run the tool calling for all the agents.
         process: The process flow that the crew will follow (e.g., sequential, hierarchical).
@@ -94,6 +96,7 @@ class Crew(BaseModel):
     _short_term_memory: Optional[InstanceOf[ShortTermMemory]] = PrivateAttr()
     _long_term_memory: Optional[InstanceOf[LongTermMemory]] = PrivateAttr()
     _entity_memory: Optional[InstanceOf[EntityMemory]] = PrivateAttr()
+    _user_memory: Optional[InstanceOf[UserMemory]] = PrivateAttr()
     _train: Optional[bool] = PrivateAttr(default=False)
     _train_iteration: Optional[int] = PrivateAttr()
     _inputs: Optional[Dict[str, Any]] = PrivateAttr(default=None)
@@ -114,6 +117,10 @@ class Crew(BaseModel):
         default=False,
         description="Whether the crew should use memory to store memories of it's execution",
     )
+    memory_config: Optional[Dict[str, Any]] = Field(
+        default=None,
+        description="Configuration for the memory to be used for the crew.",
+    )
     short_term_memory: Optional[InstanceOf[ShortTermMemory]] = Field(
         default=None,
         description="An Instance of the ShortTermMemory to be used by the Crew",
@@ -126,7 +133,11 @@ class Crew(BaseModel):
         default=None,
         description="An Instance of the EntityMemory to be used by the Crew",
     )
-    embedder: Optional[Any] = Field(
+    user_memory: Optional[InstanceOf[UserMemory]] = Field(
+        default=None,
+        description="An instance of the UserMemory to be used by the Crew to store/fetch memories of a specific user.",
+    )
+    embedder: Optional[dict] = Field(
         default=None,
         description="Configuration for the embedder to be used for the crew.",
     )
@@ -238,13 +249,22 @@ class Crew(BaseModel):
             self._short_term_memory = (
                 self.short_term_memory
                 if self.short_term_memory
-                else ShortTermMemory(crew=self, embedder_config=self.embedder)
+                else ShortTermMemory(
+                    crew=self,
+                    embedder_config=self.embedder,
+                )
             )
             self._entity_memory = (
                 self.entity_memory
                 if self.entity_memory
                 else EntityMemory(crew=self, embedder_config=self.embedder)
             )
+            if hasattr(self, "memory_config") and self.memory_config is not None:
+                self._user_memory = (
+                    self.user_memory if self.user_memory else UserMemory(crew=self)
+                )
+            else:
+                self._user_memory = None
         return self
 
     @model_validator(mode="after")
