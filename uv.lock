@@ -670,7 +670,7 @@ requires-dist = [
     { name = "agentops", marker = "extra == 'agentops'", specifier = ">=0.3.0" },
     { name = "appdirs", specifier = ">=1.4.4" },
     { name = "auth0-python", specifier = ">=4.7.1" },
-    { name = "chromadb", specifier = "==0.5.18" },
+    { name = "chromadb", specifier = ">=0.5.18" },
     { name = "click", specifier = ">=8.1.7" },
     { name = "crewai-tools", specifier = ">=0.14.0" },
     { name = "crewai-tools", marker = "extra == 'tools'", specifier = ">=0.14.0" },

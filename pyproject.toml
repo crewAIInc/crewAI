@@ -28,7 +28,7 @@ dependencies = [
     "uv>=0.4.25",
     "tomli-w>=1.1.0",
     "tomli>=2.0.2",
-    "chromadb==0.5.18",
+    "chromadb>=0.5.18",
 ]
 
 [project.urls]
