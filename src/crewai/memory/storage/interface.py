@@ -7,8 +7,10 @@ class Storage:
     def save(self, value: Any, metadata: Dict[str, Any]) -> None:
         pass
 
-    def search(self, key: str) -> List[Dict[str, Any]]:  # type: ignore
-        pass
+    def search(
+        self, query: str, limit: int, score_threshold: float
+    ) -> Dict[str, Any] | List[Any]:
+        return {}
 
     def reset(self) -> None:
         pass
