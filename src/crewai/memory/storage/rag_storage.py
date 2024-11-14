@@ -51,8 +51,6 @@ class RAGStorage(BaseRAGStorage):
         self._initialize_app()
 
     def _set_embedder_config(self):
-        import chromadb.utils.embedding_functions as embedding_functions
-
         if self.embedder_config is None:
             self.embedder_config = self._create_default_embedding_function()
 
