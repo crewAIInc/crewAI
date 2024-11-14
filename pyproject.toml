@@ -27,8 +27,8 @@ dependencies = [
     "pyvis>=0.3.2",
     "uv>=0.4.25",
     "tomli-w>=1.1.0",
-    "chromadb>=0.4.24",
     "tomli>=2.0.2",
+    "chromadb==0.5.18",
 ]
 
 [project.urls]

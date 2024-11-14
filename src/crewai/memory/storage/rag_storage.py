@@ -61,12 +61,20 @@ class RAGStorage(BaseRAGStorage):
             config = self.embedder_config.get("config", {})
             model_name = config.get("model")
             if provider == "openai":
-                self.embedder_config = embedding_functions.OpenAIEmbeddingFunction(
+                from chromadb.utils.embedding_functions.openai_embedding_function import (
+                    OpenAIEmbeddingFunction,
+                )
+
+                self.embedder_config = OpenAIEmbeddingFunction(
                     api_key=config.get("api_key") or os.getenv("OPENAI_API_KEY"),
                     model_name=model_name,
                 )
             elif provider == "azure":
-                self.embedder_config = embedding_functions.OpenAIEmbeddingFunction(
+                from chromadb.utils.embedding_functions.openai_embedding_function import (
+                    OpenAIEmbeddingFunction,
+                )
+
+                self.embedder_config = OpenAIEmbeddingFunction(
                     api_key=config.get("api_key"),
                     api_base=config.get("api_base"),
                     api_type=config.get("api_type", "azure"),
@@ -74,45 +82,55 @@ class RAGStorage(BaseRAGStorage):
                     model_name=model_name,
                 )
             elif provider == "ollama":
-                from openai import OpenAI
+                from chromadb.utils.embedding_functions.ollama_embedding_function import (
+                    OllamaEmbeddingFunction,
+                )
 
-                class OllamaEmbeddingFunction(EmbeddingFunction):
-                    def __call__(self, input: Documents) -> Embeddings:
-                        client = OpenAI(
-                            base_url="http://localhost:11434/v1",
-                            api_key=config.get("api_key", "ollama"),
-                        )
-                        try:
-                            response = client.embeddings.create(
-                                input=input, model=model_name
-                            )
-                            embeddings = [item.embedding for item in response.data]
-                            return cast(Embeddings, embeddings)
-                        except Exception as e:
-                            raise e
-
-                self.embedder_config = OllamaEmbeddingFunction()
+                self.embedder_config = OllamaEmbeddingFunction(
+                    url=config.get("url", "http://localhost:11434/api/embeddings"),
+                    model_name=model_name,
+                )
             elif provider == "vertexai":
-                self.embedder_config = (
-                    embedding_functions.GoogleVertexEmbeddingFunction(
-                        model_name=model_name,
-                        api_key=config.get("api_key"),
-                    )
+                from chromadb.utils.embedding_functions.google_embedding_function import (
+                    GoogleVertexEmbeddingFunction,
                 )
-            elif provider == "google":
-                self.embedder_config = (
-                    embedding_functions.GoogleGenerativeAiEmbeddingFunction(
-                        model_name=model_name,
-                        api_key=config.get("api_key"),
-                    )
-                )
-            elif provider == "cohere":
-                self.embedder_config = embedding_functions.CohereEmbeddingFunction(
+
+                self.embedder_config = GoogleVertexEmbeddingFunction(
                     model_name=model_name,
                     api_key=config.get("api_key"),
                 )
+            elif provider == "google":
+                from chromadb.utils.embedding_functions.google_embedding_function import (
+                    GoogleGenerativeAiEmbeddingFunction,
+                )
+
+                self.embedder_config = GoogleGenerativeAiEmbeddingFunction(
+                    model_name=model_name,
+                    api_key=config.get("api_key"),
+                )
+            elif provider == "cohere":
+                from chromadb.utils.embedding_functions.cohere_embedding_function import (
+                    CohereEmbeddingFunction,
+                )
+
+                self.embedder_config = CohereEmbeddingFunction(
+                    model_name=model_name,
+                    api_key=config.get("api_key"),
+                )
+            elif provider == "bedrock":
+                from chromadb.utils.embedding_functions.amazon_bedrock_embedding_function import (
+                    AmazonBedrockEmbeddingFunction,
+                )
+
+                self.embedder_config = AmazonBedrockEmbeddingFunction(
+                    session=config.get("session"),
+                )
             elif provider == "huggingface":
-                self.embedder_config = embedding_functions.HuggingFaceEmbeddingServer(
+                from chromadb.utils.embedding_functions.huggingface_embedding_function import (
+                    HuggingFaceEmbeddingServer,
+                )
+
+                self.embedder_config = HuggingFaceEmbeddingServer(
                     url=config.get("api_url"),
                 )
             elif provider == "watson":
@@ -253,8 +271,10 @@ class RAGStorage(BaseRAGStorage):
                 )
 
     def _create_default_embedding_function(self):
-        import chromadb.utils.embedding_functions as embedding_functions
+        from chromadb.utils.embedding_functions.openai_embedding_function import (
+            OpenAIEmbeddingFunction,
+        )
 
-        return embedding_functions.OpenAIEmbeddingFunction(
+        return OpenAIEmbeddingFunction(
             api_key=os.getenv("OPENAI_API_KEY"), model_name="text-embedding-3-small"
         )
