@@ -19,5 +19,5 @@ jobs:
         run: pip install bandit
 
       - name: Run Bandit
-        run: bandit -c pyproject.toml -r src/ -lll
+        run: bandit -c pyproject.toml -r src/ -ll
 

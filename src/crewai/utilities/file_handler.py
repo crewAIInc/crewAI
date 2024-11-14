@@ -16,7 +16,11 @@ class FileHandler:
 
     def log(self, **kwargs):
         now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-        message = f"{now}: " + ", ".join([f"{key}=\"{value}\"" for key, value in kwargs.items()]) + "\n"
+        message = (
+            f"{now}: "
+            + ", ".join([f'{key}="{value}"' for key, value in kwargs.items()])
+            + "\n"
+        )
         with open(self._path, "a", encoding="utf-8") as file:
             file.write(message + "\n")
 
@@ -63,7 +67,7 @@ class PickleHandler:
 
         with open(self.file_path, "rb") as file:
             try:
-                return pickle.load(file)
+                return pickle.load(file)  # nosec
             except EOFError:
                 return {}  # Return an empty dictionary if the file is empty or corrupted
             except Exception:
