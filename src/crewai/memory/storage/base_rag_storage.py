@@ -55,12 +55,12 @@ class BaseRAGStorage(ABC):
         """Reset the storage."""
         pass
 
-    # @abstractmethod
-    # def _generate_embedding(
-    #     self, text: str, metadata: Optional[Dict[str, Any]] = None
-    # ) -> Any:
-    #     """Generate an embedding for the given text and metadata."""
-    #     pass
+    @abstractmethod
+    def _generate_embedding(
+        self, text: str, metadata: Optional[Dict[str, Any]] = None
+    ) -> Any:
+        """Generate an embedding for the given text and metadata."""
+        pass
 
     @abstractmethod
     def _initialize_app(self):
