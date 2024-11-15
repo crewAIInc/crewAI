@@ -157,7 +157,7 @@ class Agent(BaseAgent):
             for provider, env_vars in ENV_VARS.items():
                 if provider == set_provider:
                     for env_var in env_vars:
-                        if env_var["key_name"] in unnacepted_attributes:
+                        if "key_name" in env_var and env_var["key_name"] in unnacepted_attributes:
                             continue
                         # Check if the environment variable is set
                         if "key_name" in env_var:
