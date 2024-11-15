@@ -1,4 +1,4 @@
-from typing import List, Optional
+from typing import List, Optional, Dict, Any
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -23,44 +23,17 @@ class Knowledge(BaseModel):
             source.add(self.embedder)
 
     def query(
-        self, query: str, top_k: int = 3, preference: Optional[str] = None
-    ) -> List[str]:
+        self, query: List[str], limit: int = 3, preference: Optional[str] = None
+    ) -> List[Dict[str, Any]]:
         """
         Query across all knowledge sources to find the most relevant information.
         Returns the top_k most relevant chunks.
         """
-        # if not self.sources:
-        #     return []
 
         results = self.storage.search(
-            [query],
-            top_k,
+            query,
+            limit,
             filter={"preference": preference} if preference else None,
             score_threshold=0.35,
         )
         return results
-
-        # Collect all chunks and embeddings from all sources
-        # all_chunks = []
-        # all_embeddings = []
-
-        # for source in self.sources:
-        #     all_chunks.extend(source.chunks)
-        #     all_embeddings.extend(source.get_embeddings())
-
-        # # Embed the query
-        # query_embedding = self.embedder.embed_text(query)
-
-        # # Calculate similarities
-        # similarities = []
-        # for idx, embedding in enumerate(all_embeddings):
-        #     similarity = query_embedding.dot(embedding)
-        #     similarities.append((similarity, idx))
-
-        # # Sort by similarity
-        # similarities.sort(reverse=True, key=lambda x: x[0])
-
-        # # Get top_k results
-        # top_chunks = [all_chunks[idx] for _, idx in similarities[:top_k]]
-
-        # return top_chunks

@@ -1,14 +1,12 @@
-from crewai.memory.storage.base_rag_storage import BaseRAGStorage
-from crewai.utilities.paths import db_storage_path
-from typing import Optional, List
-
-import chromadb
-import numpy as np
-from typing import Dict, Any
 import uuid
 import contextlib
 import io
 import logging
+import chromadb
+
+from crewai.utilities.paths import db_storage_path
+from typing import Optional, List
+from typing import Dict, Any
 
 
 @contextlib.contextmanager
@@ -28,7 +26,7 @@ def suppress_logging(
     logger.setLevel(original_level)
 
 
-class KnowledgeStorage(BaseRAGStorage):
+class KnowledgeStorage:
     """
     Extends Storage to handle embeddings for memory entries, improving
     search efficiency.
@@ -41,9 +39,6 @@ class KnowledgeStorage(BaseRAGStorage):
             embedder_config or self._create_default_embedding_function()
         )
         self._initialize_app()
-
-    def _sanitize_role(self, role: str) -> str:
-        return role.replace(" ", "_")
 
     def search(
         self,
@@ -94,12 +89,16 @@ class KnowledgeStorage(BaseRAGStorage):
         if self.app:
             self.app.reset()
 
-    def save(self, documents: List[str], metadata: Dict[str, Any]):
+    def save(
+        self, documents: List[str], metadata: Dict[str, Any] | List[Dict[str, Any]]
+    ):
         if self.collection:
+            metadatas = [metadata] if isinstance(metadata, dict) else metadata
+
             self.collection.add(
                 documents=documents,
-                metadatas=metadata,
-                ids=[str(uuid.uuid4())],
+                metadatas=metadatas,
+                ids=[str(uuid.uuid4()) for _ in range(len(documents))],
             )
         else:
             raise Exception("Collection not initialized")

@@ -27,6 +27,8 @@ from crewai.llm import LLM
 from crewai.memory.entity.entity_memory import EntityMemory
 from crewai.memory.long_term.long_term_memory import LongTermMemory
 from crewai.memory.short_term.short_term_memory import ShortTermMemory
+from crewai.knowledge.knowledge import Knowledge
+from crewai.knowledge.source.base_knowledge_source import BaseKnowledgeSource
 from crewai.memory.user.user_memory import UserMemory
 from crewai.process import Process
 from crewai.task import Task
@@ -193,6 +195,13 @@ class Crew(BaseModel):
         default=[],
         description="List of execution logs for tasks",
     )
+    knowledge_sources: Optional[List[BaseKnowledgeSource]] = Field(
+        default=None,
+        description="Knowledge sources for the agent.",
+    )
+    knowledge: Optional[Knowledge] = Field(
+        default=None, description="Knowledge Source for the crew."
+    )
 
     @field_validator("id", mode="before")
     @classmethod
@@ -265,6 +274,13 @@ class Crew(BaseModel):
                 )
             else:
                 self._user_memory = None
+        return self
+
+    @model_validator(mode="after")
+    def create_crew_knowledge(self) -> "Crew":
+        self.knowledge = Knowledge(
+            sources=self.knowledge_sources or [], embedder_config=self.embedder
+        )
         return self
 
     @model_validator(mode="after")

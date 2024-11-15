@@ -1,7 +1,7 @@
 import os
 import shutil
 import subprocess
-from typing import Any, List, Literal, Optional, Union
+from typing import Any, List, Literal, Optional, Union, Dict, Any
 
 from pydantic import Field, InstanceOf, PrivateAttr, model_validator
 
@@ -10,7 +10,6 @@ from crewai.agents.agent_builder.base_agent import BaseAgent
 from crewai.agents.crew_agent_executor import CrewAgentExecutor
 from crewai.cli.constants import ENV_VARS
 from crewai.knowledge.knowledge import Knowledge
-from crewai.knowledge.source.base_knowledge_source import BaseKnowledgeSource
 from crewai.llm import LLM
 from crewai.memory.contextual.contextual_memory import ContextualMemory
 from crewai.tools import BaseTool
@@ -87,10 +86,6 @@ class Agent(BaseAgent):
     )
     llm: Union[str, InstanceOf[LLM], Any] = Field(
         description="Language model that will run the agent.", default=None
-    )
-    knowledge_sources: Optional[List[BaseKnowledgeSource]] = Field(
-        default=None,
-        description="Knowledge sources for the agent.",
     )
     function_calling_llm: Optional[Any] = Field(
         description="Language model that will run the agent.", default=None
@@ -237,8 +232,8 @@ class Agent(BaseAgent):
             self._validate_docker_installation()
 
         # Initialize the Knowledge object if knowledge_sources are provided
-        if self.knowledge_sources:
-            self._knowledge = Knowledge(sources=self.knowledge_sources)
+        if self.crew and self.crew.knowledge:
+            self._knowledge = self.crew.knowledge
         else:
             self._knowledge = None
 
@@ -288,12 +283,19 @@ class Agent(BaseAgent):
                 task_prompt += self.i18n.slice("memory").format(memory=memory)
 
         # Integrate the knowledge base
-        if self._knowledge:
-            # Query the knowledge base for relevant information
-            knowledge_snippets = self._knowledge.query(query=task.prompt())
+        if self.crew and self.crew.knowledge:
+            knowledge_snippets: List[Dict[str, Any]] = self.crew.knowledge.query(
+                [task.prompt()]
+            )
             if knowledge_snippets:
-                formatted_knowledge = "\n".join(knowledge_snippets)
-                task_prompt += f"\n\nAdditional Information:\n{formatted_knowledge}"
+                valid_snippets = [
+                    result["context"]
+                    for result in knowledge_snippets
+                    if result and result.get("context")
+                ]
+                if valid_snippets:
+                    formatted_knowledge = "\n".join(valid_snippets)
+                    task_prompt += f"\n\nAdditional Information:\n{formatted_knowledge}"
 
         tools = tools or self.tools or []
         self.create_agent_executor(tools=tools, task=task)

@@ -1,4 +1,5 @@
-from typing import List
+from typing import List, Dict
+from pathlib import Path
 
 from crewai.knowledge.embedder.base_embedder import BaseEmbedder
 from crewai.knowledge.source.base_file_knowledge_source import BaseFileKnowledgeSource
@@ -7,17 +8,23 @@ from crewai.knowledge.source.base_file_knowledge_source import BaseFileKnowledge
 class PDFKnowledgeSource(BaseFileKnowledgeSource):
     """A knowledge source that stores and queries PDF file content using embeddings."""
 
-    def load_content(self) -> str:
+    def load_content(self) -> Dict[Path, str]:
         """Load and preprocess PDF file content."""
-        super().load_content()  # Validate the file path
+        super().load_content()  # Validate the file paths
         pdfplumber = self._import_pdfplumber()
-        text = ""
-        with pdfplumber.open(self.file_path) as pdf:
-            for page in pdf.pages:
-                page_text = page.extract_text()
-                if page_text:
-                    text += page_text + "\n"
-        return text
+
+        paths = [self.file_path] if isinstance(self.file_path, Path) else self.file_path
+        content = {}
+
+        for path in paths:
+            text = ""
+            with pdfplumber.open(path) as pdf:
+                for page in pdf.pages:
+                    page_text = page.extract_text()
+                    if page_text:
+                        text += page_text + "\n"
+            content[path] = text
+        return content
 
     def _import_pdfplumber(self):
         """Dynamically import pdfplumber."""
@@ -35,13 +42,14 @@ class PDFKnowledgeSource(BaseFileKnowledgeSource):
         Add PDF file content to the knowledge source, chunk it, compute embeddings,
         and save the embeddings.
         """
-        new_chunks = self._chunk_text(self.content)
-        self.chunks.extend(new_chunks)
-        # Compute embeddings for the new chunks
-        new_embeddings = embedder.embed_chunks(new_chunks)
-        # Save the embeddings
-        self.chunk_embeddings.extend(new_embeddings)
-        self._save_documents(metadata=self.metadata)
+        for _, text in self.content.items():
+            new_chunks = self._chunk_text(text)
+            self.chunks.extend(new_chunks)
+            # Compute embeddings for the new chunks
+            new_embeddings = embedder.embed_chunks(new_chunks)
+            # Save the embeddings
+            self.chunk_embeddings.extend(new_embeddings)
+        self.save_documents(metadata=self.metadata)
 
     def _chunk_text(self, text: str) -> List[str]:
         """Utility method to split text into chunks."""

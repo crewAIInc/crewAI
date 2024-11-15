@@ -12,7 +12,7 @@ from typing import Dict, Any
 class BaseKnowledgeSource(BaseModel, ABC):
     """Abstract base class for knowledge sources."""
 
-    chunk_size: int = 1000
+    chunk_size: int = 4000
     chunk_overlap: int = 200
     chunks: List[str] = Field(default_factory=list)
     chunk_embeddings: List[np.ndarray] = Field(default_factory=list)
@@ -42,7 +42,7 @@ class BaseKnowledgeSource(BaseModel, ABC):
             for i in range(0, len(text), self.chunk_size - self.chunk_overlap)
         ]
 
-    def _save_documents(self, metadata: Dict[str, Any]):
+    def save_documents(self, metadata: Dict[str, Any]):
         """
         Save the documents to the storage.
         This method should be called after the chunks and embeddings are generated.

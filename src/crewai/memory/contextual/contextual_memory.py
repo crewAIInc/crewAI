@@ -102,11 +102,3 @@ class ContextualMemory:
             f"- {result['memory']}" for result in user_memories
         )
         return f"User memories/preferences:\n{formatted_memories}"
-
-    # TODO: set this up
-    # def _fetch_knowledge_context(self, query: str) -> str:
-    #     """
-    #     Fetches relevant knowledge from Knowledge Storage.
-    #     """
-    #     knowledge_results = self.knowledge.query(query)
-    #     return "\n".join([result["context"] for result in knowledge_results])

@@ -41,7 +41,7 @@ class JSONKnowledgeSource(BaseFileKnowledgeSource):
         new_embeddings = embedder.embed_chunks(new_chunks)
         # Save the embeddings
         self.chunk_embeddings.extend(new_embeddings)
-        self._save_documents(metadata=self.metadata)
+        self.save_documents(metadata=self.metadata)
 
     def _chunk_text(self, text: str) -> List[str]:
         """Utility method to split text into chunks."""
