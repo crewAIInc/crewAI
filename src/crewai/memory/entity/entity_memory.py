@@ -30,7 +30,7 @@ class EntityMemory(Memory):
                 if storage
                 else RAGStorage(
                     type="entities",
-                    allow_reset=False,
+                    allow_reset=True,
                     embedder_config=embedder_config,
                     crew=crew,
                 )
