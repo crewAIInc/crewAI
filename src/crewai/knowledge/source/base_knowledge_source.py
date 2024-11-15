@@ -1,10 +1,12 @@
 from abc import ABC, abstractmethod
-from typing import List
+from typing import List, Optional
 
 import numpy as np
 from pydantic import BaseModel, ConfigDict, Field
 
 from crewai.knowledge.embedder.base_embedder import BaseEmbedder
+from crewai.knowledge.storage.knowledge_storage import KnowledgeStorage
+from typing import Dict, Any
 
 
 class BaseKnowledgeSource(BaseModel, ABC):
@@ -16,6 +18,8 @@ class BaseKnowledgeSource(BaseModel, ABC):
     chunk_embeddings: List[np.ndarray] = Field(default_factory=list)
 
     model_config = ConfigDict(arbitrary_types_allowed=True)
+    storage: KnowledgeStorage = Field(default_factory=KnowledgeStorage)
+    metadata: Dict[str, Any] = Field(default_factory=dict)
 
     @abstractmethod
     def load_content(self):
@@ -37,3 +41,10 @@ class BaseKnowledgeSource(BaseModel, ABC):
             text[i : i + self.chunk_size]
             for i in range(0, len(text), self.chunk_size - self.chunk_overlap)
         ]
+
+    def _save_documents(self, metadata: Dict[str, Any]):
+        """
+        Save the documents to the storage.
+        This method should be called after the chunks and embeddings are generated.
+        """
+        self.storage.save(self.chunks, metadata)

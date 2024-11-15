@@ -39,7 +39,7 @@ class FastEmbed(BaseEmbedder):
         if not FASTEMBED_AVAILABLE:
             raise ImportError(
                 "FastEmbed is not installed. Please install it with: "
-                "pip install fastembed or pip install fastembed-gpu for GPU support"
+                "uv pip install fastembed or uv pip install fastembed-gpu for GPU support"
             )
 
         self.model = TextEmbedding(
