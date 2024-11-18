@@ -1,6 +1,5 @@
 from typing import List
 
-from crewai.knowledge.embedder.base_embedder import BaseEmbedder
 from crewai.knowledge.source.base_file_knowledge_source import BaseFileKnowledgeSource
 
 
