@@ -16,7 +16,7 @@ warnings.filterwarnings(
     category=UserWarning,
     module="pydantic.main",
 )
-__version__ = "0.79.4"
+__version__ = "0.80.0"
 __all__ = [
     "Agent",
     "Crew",
