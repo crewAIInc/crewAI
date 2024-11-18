@@ -9,7 +9,12 @@ from crewai.knowledge.storage.knowledge_storage import KnowledgeStorage
 
 
 def reset_memories_command(
-    long, short, entity, kickoff_outputs, all, knowledge
+    long,
+    short,
+    entity,
+    knowledge,
+    kickoff_outputs,
+    all,
 ) -> None:
     """
     Reset the crew memories.
