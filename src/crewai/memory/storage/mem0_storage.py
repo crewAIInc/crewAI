@@ -29,7 +29,10 @@ class Mem0Storage(Storage):
         mem0_api_key = self.memory_config.get("config", {}).get("api_key") or os.getenv(
             "MEM0_API_KEY"
         )
-        self.memory = MemoryClient(api_key=mem0_api_key)
+        mem0_host = self.memory_config.get("config", {}).get("host") or os.getenv(
+            "MEM0_HOST", None
+        )
+        self.memory = MemoryClient(api_key=mem0_api_key, host=mem0_host)
 
     def _sanitize_role(self, role: str) -> str:
         """
