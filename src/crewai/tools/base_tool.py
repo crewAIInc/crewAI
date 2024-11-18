@@ -70,6 +70,7 @@ class BaseTool(BaseModel, ABC):
             description=self.description,
             args_schema=self.args_schema,
             func=self._run,
+            return_direct=self.result_as_answer,
         )
 
     @classmethod

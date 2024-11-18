@@ -1,5 +1,6 @@
 import json
 import re
+from difflib import SequenceMatcher
 from typing import Any, Dict, List, Union
 
 from crewai.agents.agent_builder.base_agent import BaseAgent
@@ -138,12 +139,19 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
 
                     self.iterations += 1
                     formatted_answer = self._format_answer(answer)
-
+                    is_tool_call = False
                     if isinstance(formatted_answer, AgentAction):
                         action_result = self._use_tool(formatted_answer)
-                        formatted_answer.text += f"\nObservation: {action_result}"
+                        tool = self._select_tool(formatted_answer.tool)
+                        if tool.return_direct:
+                            formatted_answer = AgentFinish(
+                                thought="",
+                                output=action_result,
+                                text=formatted_answer.text + f"\nObservation: {action_result}",
+                            )
+                        else:
+                            is_tool_call = True
                         formatted_answer.result = action_result
-                        self._show_logs(formatted_answer)
 
                     if self.step_callback:
                         self.step_callback(formatted_answer)
@@ -165,6 +173,15 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
                     self.messages.append(
                         self._format_msg(formatted_answer.text, role="assistant")
                     )
+                    if is_tool_call:
+                        self.messages.append({
+                            "role": "tool",
+                            "content": (
+                                f"Action: {formatted_answer.tool}\n"
+                                f"Action Input: {formatted_answer.tool_input}\n"
+                                f"Observation: {formatted_answer.result}"
+                            )
+                        })
 
         except OutputParserException as e:
             self.messages.append({"role": "user", "content": e.error})
@@ -238,6 +255,24 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
                 self._printer.print(
                     content=f"\033[95m## Final Answer:\033[00m \033[92m\n{formatted_answer.output}\033[00m\n\n"
                 )
+
+    def _select_tool(self, tool_name: str) -> Any:
+        order_tools = sorted(
+            self.tools,
+            key=lambda tool: SequenceMatcher(
+                None, tool.name.lower().strip(), tool_name.lower().strip()
+            ).ratio(),
+            reverse=True,
+        )
+        for tool in order_tools:
+            if (
+                tool.name.lower().strip() == tool_name.lower().strip()
+                or SequenceMatcher(
+                    None, tool.name.lower().strip(), tool_name.lower().strip()
+                ).ratio()
+                > 0.85
+            ):
+                return tool
 
     def _use_tool(self, agent_action: AgentAction) -> Any:
         tool_usage = ToolUsage(
