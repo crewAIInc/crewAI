@@ -5,6 +5,16 @@ from crewai import Crew
 from crewai.project.utils import memoize
 
 
+def before_crew(func):
+    func.is_before_crew = True
+    return func
+
+
+def after_crew(func):
+    func.is_after_crew = True
+    return func
+
+
 def task(func):
     func.is_task = True
 
