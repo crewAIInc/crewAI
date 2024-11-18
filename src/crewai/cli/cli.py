@@ -136,7 +136,7 @@ def log_tasks_outputs() -> None:
 @click.option("-l", "--long", is_flag=True, help="Reset LONG TERM memory")
 @click.option("-s", "--short", is_flag=True, help="Reset SHORT TERM memory")
 @click.option("-e", "--entities", is_flag=True, help="Reset ENTITIES memory")
-@click.option("-kn", "--knowledge", is_flag=True, help="Reset KNOWLEDGE")
+@click.option("-kn", "--knowledge", is_flag=True, help="Reset KNOWLEDGE storage")
 @click.option(
     "-k",
     "--kickoff-outputs",
@@ -149,7 +149,7 @@ def reset_memories(long, short, entities, knowledge, kickoff_outputs, all):
     Reset the crew memories (long, short, entity, latest_crew_kickoff_ouputs). This will delete all the data saved.
     """
     try:
-        if not all and not (long or short or entities or kickoff_outputs):
+        if not all and not (long or short or entities or knowledge or kickoff_outputs):
             click.echo(
                 "Please specify at least one memory type to reset using the appropriate flags."
             )
