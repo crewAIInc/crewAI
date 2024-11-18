@@ -121,7 +121,6 @@ class Agent(BaseAgent):
         default="safe",
         description="Mode for code execution: 'safe' (using Docker) or 'unsafe' (direct execution).",
     )
-    # TODO: Lorenze add knowledge_embedder. Support direct class or config dict.
     _knowledge: Optional[Knowledge] = PrivateAttr(default=None)
 
     @model_validator(mode="after")

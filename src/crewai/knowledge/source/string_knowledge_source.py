@@ -1,8 +1,7 @@
-from typing import List, Dict, Any
+from typing import List
 
 from pydantic import Field
 
-from crewai.knowledge.embedder.base_embedder import BaseEmbedder
 from crewai.knowledge.source.base_knowledge_source import BaseKnowledgeSource
 
 
@@ -20,14 +19,10 @@ class StringKnowledgeSource(BaseKnowledgeSource):
         if not isinstance(self.content, str):
             raise ValueError("StringKnowledgeSource only accepts string content")
 
-    def add(self, embedder: BaseEmbedder) -> None:
+    def add(self) -> None:
         """Add string content to the knowledge source, chunk it, compute embeddings, and save them."""
         new_chunks = self._chunk_text(self.content)
         self.chunks.extend(new_chunks)
-        # Compute embeddings for the new chunks
-        new_embeddings = embedder.embed_chunks(new_chunks)
-        # Save the embeddings
-        self.chunk_embeddings.extend(new_embeddings)
         self.save_documents(metadata=self.metadata)
 
     def _chunk_text(self, text: str) -> List[str]:

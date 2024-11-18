@@ -7,6 +7,8 @@ import chromadb
 from crewai.utilities.paths import db_storage_path
 from typing import Optional, List
 from typing import Dict, Any
+from crewai.utilities import EmbeddingConfigurator
+from crewai.knowledge.storage.base_knowledge_storage import BaseKnowledgeStorage
 
 
 @contextlib.contextmanager
@@ -26,7 +28,7 @@ def suppress_logging(
     logger.setLevel(original_level)
 
 
-class KnowledgeStorage:
+class KnowledgeStorage(BaseKnowledgeStorage):
     """
     Extends Storage to handle embeddings for memory entries, improving
     search efficiency.
@@ -35,10 +37,7 @@ class KnowledgeStorage:
     collection: Optional[chromadb.Collection] = None
 
     def __init__(self, embedder_config=None):
-        self.embedder_config = (
-            embedder_config or self._create_default_embedding_function()
-        )
-        self._initialize_app()
+        self._initialize_app(embedder_config or {})
 
     def search(
         self,
@@ -54,7 +53,6 @@ class KnowledgeStorage:
                     n_results=limit,
                     where=filter,
                 )
-                print("Fetched", fetched)
                 results = []
                 for i in range(len(fetched["ids"][0])):
                     result = {
@@ -69,9 +67,11 @@ class KnowledgeStorage:
             else:
                 raise Exception("Collection not initialized")
 
-    def _initialize_app(self):
+    def _initialize_app(self, embedder_config: Optional[Dict[str, Any]] = None):
         import chromadb
         from chromadb.config import Settings
+
+        self._set_embedder_config(embedder_config)
 
         chroma_client = chromadb.PersistentClient(
             path=f"{db_storage_path()}/knowledge",
@@ -107,3 +107,18 @@ class KnowledgeStorage:
         from crewai.knowledge.embedder.fastembed import FastEmbed
 
         return FastEmbed().embed_texts
+
+    def _set_embedder_config(
+        self, embedder_config: Optional[Dict[str, Any]] = None
+    ) -> None:
+        """Set the embedding configuration for the knowledge storage.
+
+        Args:
+            embedder_config (Optional[Dict[str, Any]]): Configuration dictionary for the embedder.
+                If None or empty, defaults to the default embedding function.
+        """
+        self.embedder_config = (
+            EmbeddingConfigurator().configure_embedder(embedder_config)
+            if embedder_config
+            else self._create_default_embedding_function()
+        )

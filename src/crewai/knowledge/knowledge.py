@@ -15,12 +15,13 @@ class Knowledge(BaseModel):
     model_config = ConfigDict(arbitrary_types_allowed=True)
     agents: List[str] = Field(default_factory=list)
     storage: KnowledgeStorage = Field(default_factory=KnowledgeStorage)
+    embedder_config: Optional[Dict[str, Any]] = Field(default_factory=None)
 
     def __init__(self, **data):
         super().__init__(**data)
-        # Call add on all sources during initialization
-        for source in self.sources:
-            source.add(self.embedder)
+        embedder_config = data.get("embedder_config", None)
+        if embedder_config:
+            self.storage = KnowledgeStorage(embedder_config=embedder_config)
 
     def query(
         self, query: List[str], limit: int = 3, preference: Optional[str] = None
