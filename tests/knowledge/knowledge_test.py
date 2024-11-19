@@ -1,9 +1,8 @@
 """Test Knowledge creation and querying functionality."""
 
 from pathlib import Path
-from unittest.mock import Mock, patch
+from unittest.mock import patch
 
-from crewai.knowledge.knowledge import Knowledge
 from crewai.knowledge.source.csv_knowledge_source import CSVKnowledgeSource
 from crewai.knowledge.source.excel_knowledge_source import ExcelKnowledgeSource
 from crewai.knowledge.source.json_knowledge_source import JSONKnowledgeSource
