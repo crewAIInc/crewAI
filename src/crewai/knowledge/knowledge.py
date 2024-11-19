@@ -27,8 +27,10 @@ class Knowledge(BaseModel):
             for source in self.sources:
                 source.add()
         except Exception as e:
-            Logger.log(
-                "warning", f"Failed to add some sources during initialization: {e}"
+            Logger(verbose=True).log(
+                "warning",
+                f"Failed to init knowledge: {e}",
+                color="red",
             )
 
     def query(
