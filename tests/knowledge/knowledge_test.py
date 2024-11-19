@@ -21,6 +21,7 @@ def reset_knowledge_storage():
     yield
 
 
+@pytest.mark.vcr(filter_headers=["authorization"])
 def test_single_short_string():
     logging.basicConfig(level=logging.INFO)
 
@@ -39,6 +40,7 @@ def test_single_short_string():
     assert any("blue" in result["context"].lower() for result in results)
 
 
+@pytest.mark.vcr(filter_headers=["authorization"])
 def test_single_2k_character_string():
     # Create a 2k character string with various facts about Brandon
     content = (
@@ -76,6 +78,7 @@ def test_single_2k_character_string():
     assert any("inception" in result["context"].lower() for result in results)
 
 
+@pytest.mark.vcr(filter_headers=["authorization"])
 def test_multiple_short_strings():
     # Create multiple short string sources
     contents = [
@@ -97,6 +100,7 @@ def test_multiple_short_strings():
     assert any("max" in result["context"].lower() for result in results)
 
 
+@pytest.mark.vcr(filter_headers=["authorization"])
 def test_multiple_2k_character_strings():
     # Create multiple 2k character strings with various facts about Brandon
     contents = [
@@ -167,6 +171,7 @@ def test_multiple_2k_character_strings():
     )
 
 
+@pytest.mark.vcr(filter_headers=["authorization"])
 def test_single_short_file(tmpdir):
     # Create a single short text file
     content = "Brandon's favorite sport is basketball."
@@ -187,6 +192,7 @@ def test_single_short_file(tmpdir):
     assert any("basketball" in result["context"].lower() for result in results)
 
 
+@pytest.mark.vcr(filter_headers=["authorization"])
 def test_single_2k_character_file(tmpdir):
     # Create a single 2k character text file with various facts about Brandon
     content = (
@@ -228,6 +234,7 @@ def test_single_2k_character_file(tmpdir):
     assert any("inception" in result["context"].lower() for result in results)
 
 
+@pytest.mark.vcr(filter_headers=["authorization"])
 def test_multiple_short_files(tmpdir):
     # Create multiple short text files
     contents = [
@@ -264,6 +271,7 @@ def test_multiple_short_files(tmpdir):
     assert any("new york" in result["context"].lower() for result in results)
 
 
+@pytest.mark.vcr(filter_headers=["authorization"])
 def test_multiple_2k_character_files(tmpdir):
     # Create multiple 2k character text files with various facts about Brandon
     contents = [
@@ -338,6 +346,7 @@ def test_multiple_2k_character_files(tmpdir):
     )
 
 
+@pytest.mark.vcr(filter_headers=["authorization"])
 def test_hybrid_string_and_files(tmpdir):
     # Create string sources
     string_contents = [
@@ -377,6 +386,7 @@ def test_hybrid_string_and_files(tmpdir):
     assert any("the alchemist" in result["context"].lower() for result in results)
 
 
+@pytest.mark.vcr(filter_headers=["authorization"])
 def test_pdf_knowledge_source():
     # Get the directory of the current file
     current_dir = Path(__file__).parent
@@ -400,6 +410,7 @@ def test_pdf_knowledge_source():
     )
 
 
+@pytest.mark.vcr(filter_headers=["authorization"])
 def test_csv_knowledge_source(tmpdir):
     """Test CSVKnowledgeSource with a simple CSV file."""
 
@@ -429,6 +440,7 @@ def test_csv_knowledge_source(tmpdir):
     assert any("30" in result["context"] for result in results)
 
 
+@pytest.mark.vcr(filter_headers=["authorization"])
 def test_json_knowledge_source(tmpdir):
     """Test JSONKnowledgeSource with a simple JSON file."""
 
@@ -460,6 +472,7 @@ def test_json_knowledge_source(tmpdir):
     assert any("los angeles" in result["context"].lower() for result in results)
 
 
+@pytest.mark.vcr(filter_headers=["authorization"])
 def test_excel_knowledge_source(tmpdir):
     """Test ExcelKnowledgeSource with a simple Excel file."""
 

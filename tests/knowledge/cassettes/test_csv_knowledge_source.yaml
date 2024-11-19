@@ -1,0 +1,552 @@
+interactions:
+- request:
+    body: null
+    headers:
+      Accept:
+      - '*/*'
+      Accept-Encoding:
+      - gzip, deflate
+      Connection:
+      - keep-alive
+      X-Amzn-Trace-Id:
+      - 8104ab58-1d4d-428d-96a3-4bdb7b1851d2
+      user-agent:
+      - unknown/None; hf_hub/0.26.1; python/3.12.5
+    method: GET
+    uri: https://huggingface.co/api/models/qdrant/bge-small-en-v1.5-onnx-q/revision/main
+  response:
+    body:
+      string: Temporary Redirect. Redirecting to /api/models/Qdrant/bge-small-en-v1.5-onnx-Q/revision/main
+    headers:
+      Access-Control-Allow-Origin:
+      - https://huggingface.co
+      Access-Control-Expose-Headers:
+      - X-Repo-Commit,X-Request-Id,X-Error-Code,X-Error-Message,X-Total-Count,ETag,Link,Accept-Ranges,Content-Range
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '92'
+      Content-Type:
+      - text/plain; charset=utf-8
+      Date:
+      - Tue, 19 Nov 2024 18:09:09 GMT
+      Location:
+      - /api/models/Qdrant/bge-small-en-v1.5-onnx-Q/revision/main
+      Referrer-Policy:
+      - strict-origin-when-cross-origin
+      Vary:
+      - Origin, Accept
+      Via:
+      - 1.1 7256fedee68a59a508800e0dda035348.cloudfront.net (CloudFront)
+      X-Amz-Cf-Id:
+      - uhpF7_DJ5YkkiBewD2pltWRFI1or5vxCO840w6utbHJkBDtJaP2MPQ==
+      X-Amz-Cf-Pop:
+      - SFO5-P2
+      X-Cache:
+      - Miss from cloudfront
+      X-Powered-By:
+      - huggingface-moon
+      X-Request-Id:
+      - Root=1-673cd445-6f65cedb658501d876330116;8104ab58-1d4d-428d-96a3-4bdb7b1851d2
+      cross-origin-opener-policy:
+      - same-origin
+    status:
+      code: 307
+      message: Temporary Redirect
+- request:
+    body: null
+    headers:
+      Accept:
+      - '*/*'
+      Accept-Encoding:
+      - gzip, deflate
+      Connection:
+      - keep-alive
+      X-Amzn-Trace-Id:
+      - 8104ab58-1d4d-428d-96a3-4bdb7b1851d2
+      user-agent:
+      - unknown/None; hf_hub/0.26.1; python/3.12.5
+    method: GET
+    uri: https://huggingface.co/api/models/Qdrant/bge-small-en-v1.5-onnx-Q/revision/main
+  response:
+    body:
+      string: '{"_id":"65a4ce6d9f0a34c17376fa20","id":"Qdrant/bge-small-en-v1.5-onnx-Q","modelId":"Qdrant/bge-small-en-v1.5-onnx-Q","author":"Qdrant","sha":"52398278842ec682c6f32300af41344b1c0b0bb2","lastModified":"2024-07-15T12:50:23.000Z","private":false,"disabled":false,"gated":false,"pipeline_tag":"sentence-similarity","tags":["transformers","onnx","bert","feature-extraction","sentence-similarity","license:apache-2.0","text-embeddings-inference","endpoints_compatible","region:us"],"downloads":140576,"library_name":"transformers","mask_token":"[MASK]","widgetData":[{"source_sentence":"That
+        is a happy person","sentences":["That is a happy dog","That is a very happy
+        person","Today is a sunny day"]}],"likes":0,"model-index":null,"config":{"architectures":["BertModel"],"model_type":"bert","tokenizer_config":{"cls_token":"[CLS]","mask_token":"[MASK]","pad_token":"[PAD]","sep_token":"[SEP]","unk_token":"[UNK]"}},"cardData":{"license":"apache-2.0","pipeline_tag":"sentence-similarity"},"transformersInfo":{"auto_model":"AutoModel","pipeline_tag":"feature-extraction","processor":"AutoTokenizer"},"siblings":[{"rfilename":".gitattributes"},{"rfilename":"README.md"},{"rfilename":"config.json"},{"rfilename":"model_optimized.onnx"},{"rfilename":"ort_config.json"},{"rfilename":"special_tokens_map.json"},{"rfilename":"tokenizer.json"},{"rfilename":"tokenizer_config.json"},{"rfilename":"vocab.txt"}],"spaces":[],"createdAt":"2024-01-15T06:19:25.000Z"}'
+    headers:
+      Access-Control-Allow-Origin:
+      - https://huggingface.co
+      Access-Control-Expose-Headers:
+      - X-Repo-Commit,X-Request-Id,X-Error-Code,X-Error-Message,X-Total-Count,ETag,Link,Accept-Ranges,Content-Range
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '1444'
+      Content-Type:
+      - application/json; charset=utf-8
+      Date:
+      - Tue, 19 Nov 2024 18:09:10 GMT
+      ETag:
+      - W/"5a4-bIIb6odbE0/AlB0z5u50f7bg2gI"
+      Referrer-Policy:
+      - strict-origin-when-cross-origin
+      Vary:
+      - Origin
+      Via:
+      - 1.1 87e907bf938f21f1b962d1401b077d14.cloudfront.net (CloudFront)
+      X-Amz-Cf-Id:
+      - ghmNfNU8RXVua1Be-lWGAbBfHu-WUQqIvj4ZhBE9cdnXaWaM7isGaw==
+      X-Amz-Cf-Pop:
+      - SFO5-P2
+      X-Cache:
+      - Miss from cloudfront
+      X-Powered-By:
+      - huggingface-moon
+      X-Request-Id:
+      - Root=1-673cd446-4e94df7568ce58353b1e0a4d;8104ab58-1d4d-428d-96a3-4bdb7b1851d2
+      cross-origin-opener-policy:
+      - same-origin
+    status:
+      code: 200
+      message: OK
+- request:
+    body: null
+    headers:
+      Accept:
+      - '*/*'
+      Accept-Encoding:
+      - gzip, deflate
+      Connection:
+      - keep-alive
+      X-Amzn-Trace-Id:
+      - 9f08f02f-bb3e-40c6-b744-2157b3eb79e0
+      user-agent:
+      - unknown/None; hf_hub/0.26.1; python/3.12.5
+    method: GET
+    uri: https://huggingface.co/api/models/qdrant/bge-small-en-v1.5-onnx-q/revision/main
+  response:
+    body:
+      string: Temporary Redirect. Redirecting to /api/models/Qdrant/bge-small-en-v1.5-onnx-Q/revision/main
+    headers:
+      Access-Control-Allow-Origin:
+      - https://huggingface.co
+      Access-Control-Expose-Headers:
+      - X-Repo-Commit,X-Request-Id,X-Error-Code,X-Error-Message,X-Total-Count,ETag,Link,Accept-Ranges,Content-Range
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '92'
+      Content-Type:
+      - text/plain; charset=utf-8
+      Date:
+      - Tue, 19 Nov 2024 18:09:10 GMT
+      Location:
+      - /api/models/Qdrant/bge-small-en-v1.5-onnx-Q/revision/main
+      Referrer-Policy:
+      - strict-origin-when-cross-origin
+      Vary:
+      - Origin, Accept
+      Via:
+      - 1.1 3dde68f1f52282c9e1ee336d97233b0a.cloudfront.net (CloudFront)
+      X-Amz-Cf-Id:
+      - peqydqSTxUyyp4AlWAz0d0vzgYALV6FLtSkM_9gINyVEpkAoZJkRxQ==
+      X-Amz-Cf-Pop:
+      - SFO5-P2
+      X-Cache:
+      - Miss from cloudfront
+      X-Powered-By:
+      - huggingface-moon
+      X-Request-Id:
+      - Root=1-673cd446-31e75bdd5248873e380fd8d7;9f08f02f-bb3e-40c6-b744-2157b3eb79e0
+      cross-origin-opener-policy:
+      - same-origin
+    status:
+      code: 307
+      message: Temporary Redirect
+- request:
+    body: null
+    headers:
+      Accept:
+      - '*/*'
+      Accept-Encoding:
+      - gzip, deflate
+      Connection:
+      - keep-alive
+      X-Amzn-Trace-Id:
+      - 9f08f02f-bb3e-40c6-b744-2157b3eb79e0
+      user-agent:
+      - unknown/None; hf_hub/0.26.1; python/3.12.5
+    method: GET
+    uri: https://huggingface.co/api/models/Qdrant/bge-small-en-v1.5-onnx-Q/revision/main
+  response:
+    body:
+      string: '{"_id":"65a4ce6d9f0a34c17376fa20","id":"Qdrant/bge-small-en-v1.5-onnx-Q","modelId":"Qdrant/bge-small-en-v1.5-onnx-Q","author":"Qdrant","sha":"52398278842ec682c6f32300af41344b1c0b0bb2","lastModified":"2024-07-15T12:50:23.000Z","private":false,"disabled":false,"gated":false,"pipeline_tag":"sentence-similarity","tags":["transformers","onnx","bert","feature-extraction","sentence-similarity","license:apache-2.0","text-embeddings-inference","endpoints_compatible","region:us"],"downloads":140576,"library_name":"transformers","mask_token":"[MASK]","widgetData":[{"source_sentence":"That
+        is a happy person","sentences":["That is a happy dog","That is a very happy
+        person","Today is a sunny day"]}],"likes":0,"model-index":null,"config":{"architectures":["BertModel"],"model_type":"bert","tokenizer_config":{"cls_token":"[CLS]","mask_token":"[MASK]","pad_token":"[PAD]","sep_token":"[SEP]","unk_token":"[UNK]"}},"cardData":{"license":"apache-2.0","pipeline_tag":"sentence-similarity"},"transformersInfo":{"auto_model":"AutoModel","pipeline_tag":"feature-extraction","processor":"AutoTokenizer"},"siblings":[{"rfilename":".gitattributes"},{"rfilename":"README.md"},{"rfilename":"config.json"},{"rfilename":"model_optimized.onnx"},{"rfilename":"ort_config.json"},{"rfilename":"special_tokens_map.json"},{"rfilename":"tokenizer.json"},{"rfilename":"tokenizer_config.json"},{"rfilename":"vocab.txt"}],"spaces":[],"createdAt":"2024-01-15T06:19:25.000Z"}'
+    headers:
+      Access-Control-Allow-Origin:
+      - https://huggingface.co
+      Access-Control-Expose-Headers:
+      - X-Repo-Commit,X-Request-Id,X-Error-Code,X-Error-Message,X-Total-Count,ETag,Link,Accept-Ranges,Content-Range
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '1444'
+      Content-Type:
+      - application/json; charset=utf-8
+      Date:
+      - Tue, 19 Nov 2024 18:09:10 GMT
+      ETag:
+      - W/"5a4-bIIb6odbE0/AlB0z5u50f7bg2gI"
+      Referrer-Policy:
+      - strict-origin-when-cross-origin
+      Vary:
+      - Origin
+      Via:
+      - 1.1 6c90b631453c435bd0022caa657b67e8.cloudfront.net (CloudFront)
+      X-Amz-Cf-Id:
+      - wdOEeOVrcuOLxK0x8Lf4l-o6813z49zXlfjw4Cdeg9CVJOSE2N3YlQ==
+      X-Amz-Cf-Pop:
+      - SFO5-P2
+      X-Cache:
+      - Miss from cloudfront
+      X-Powered-By:
+      - huggingface-moon
+      X-Request-Id:
+      - Root=1-673cd446-1aed042f7e1fa7df60bdff2e;9f08f02f-bb3e-40c6-b744-2157b3eb79e0
+      cross-origin-opener-policy:
+      - same-origin
+    status:
+      code: 200
+      message: OK
+- request:
+    body: null
+    headers:
+      Accept:
+      - '*/*'
+      Accept-Encoding:
+      - gzip, deflate
+      Connection:
+      - keep-alive
+      X-Amzn-Trace-Id:
+      - 8ca2e26d-3bca-4ac5-910f-ff4b74501998
+      user-agent:
+      - unknown/None; hf_hub/0.26.1; python/3.12.5
+    method: GET
+    uri: https://huggingface.co/api/models/qdrant/bge-small-en-v1.5-onnx-q/revision/main
+  response:
+    body:
+      string: Temporary Redirect. Redirecting to /api/models/Qdrant/bge-small-en-v1.5-onnx-Q/revision/main
+    headers:
+      Access-Control-Allow-Origin:
+      - https://huggingface.co
+      Access-Control-Expose-Headers:
+      - X-Repo-Commit,X-Request-Id,X-Error-Code,X-Error-Message,X-Total-Count,ETag,Link,Accept-Ranges,Content-Range
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '92'
+      Content-Type:
+      - text/plain; charset=utf-8
+      Date:
+      - Tue, 19 Nov 2024 18:09:10 GMT
+      Location:
+      - /api/models/Qdrant/bge-small-en-v1.5-onnx-Q/revision/main
+      Referrer-Policy:
+      - strict-origin-when-cross-origin
+      Vary:
+      - Origin, Accept
+      Via:
+      - 1.1 332ef4544bd8b531e8f11abaa4197c08.cloudfront.net (CloudFront)
+      X-Amz-Cf-Id:
+      - KbVwqOIqy-ud1mLJs4L-ITyf4xD4ovCQeLsMlkNkYFg7WGDTkJyShg==
+      X-Amz-Cf-Pop:
+      - SFO5-P2
+      X-Cache:
+      - Miss from cloudfront
+      X-Powered-By:
+      - huggingface-moon
+      X-Request-Id:
+      - Root=1-673cd446-75e12544584081cd62a8655a;8ca2e26d-3bca-4ac5-910f-ff4b74501998
+      cross-origin-opener-policy:
+      - same-origin
+    status:
+      code: 307
+      message: Temporary Redirect
+- request:
+    body: null
+    headers:
+      Accept:
+      - '*/*'
+      Accept-Encoding:
+      - gzip, deflate
+      Connection:
+      - keep-alive
+      X-Amzn-Trace-Id:
+      - 8ca2e26d-3bca-4ac5-910f-ff4b74501998
+      user-agent:
+      - unknown/None; hf_hub/0.26.1; python/3.12.5
+    method: GET
+    uri: https://huggingface.co/api/models/Qdrant/bge-small-en-v1.5-onnx-Q/revision/main
+  response:
+    body:
+      string: '{"_id":"65a4ce6d9f0a34c17376fa20","id":"Qdrant/bge-small-en-v1.5-onnx-Q","modelId":"Qdrant/bge-small-en-v1.5-onnx-Q","author":"Qdrant","sha":"52398278842ec682c6f32300af41344b1c0b0bb2","lastModified":"2024-07-15T12:50:23.000Z","private":false,"disabled":false,"gated":false,"pipeline_tag":"sentence-similarity","tags":["transformers","onnx","bert","feature-extraction","sentence-similarity","license:apache-2.0","text-embeddings-inference","endpoints_compatible","region:us"],"downloads":140576,"library_name":"transformers","mask_token":"[MASK]","widgetData":[{"source_sentence":"That
+        is a happy person","sentences":["That is a happy dog","That is a very happy
+        person","Today is a sunny day"]}],"likes":0,"model-index":null,"config":{"architectures":["BertModel"],"model_type":"bert","tokenizer_config":{"cls_token":"[CLS]","mask_token":"[MASK]","pad_token":"[PAD]","sep_token":"[SEP]","unk_token":"[UNK]"}},"cardData":{"license":"apache-2.0","pipeline_tag":"sentence-similarity"},"transformersInfo":{"auto_model":"AutoModel","pipeline_tag":"feature-extraction","processor":"AutoTokenizer"},"siblings":[{"rfilename":".gitattributes"},{"rfilename":"README.md"},{"rfilename":"config.json"},{"rfilename":"model_optimized.onnx"},{"rfilename":"ort_config.json"},{"rfilename":"special_tokens_map.json"},{"rfilename":"tokenizer.json"},{"rfilename":"tokenizer_config.json"},{"rfilename":"vocab.txt"}],"spaces":[],"createdAt":"2024-01-15T06:19:25.000Z"}'
+    headers:
+      Access-Control-Allow-Origin:
+      - https://huggingface.co
+      Access-Control-Expose-Headers:
+      - X-Repo-Commit,X-Request-Id,X-Error-Code,X-Error-Message,X-Total-Count,ETag,Link,Accept-Ranges,Content-Range
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '1444'
+      Content-Type:
+      - application/json; charset=utf-8
+      Date:
+      - Tue, 19 Nov 2024 18:09:10 GMT
+      ETag:
+      - W/"5a4-bIIb6odbE0/AlB0z5u50f7bg2gI"
+      Referrer-Policy:
+      - strict-origin-when-cross-origin
+      Vary:
+      - Origin
+      Via:
+      - 1.1 40b967aa4aa18637c4b91214147f3cb4.cloudfront.net (CloudFront)
+      X-Amz-Cf-Id:
+      - 6iOEu6PH1kYRBTwV2eLkJpAzt2ViM08L4X-fDsYZXftFgqal4fgeHQ==
+      X-Amz-Cf-Pop:
+      - SFO5-P2
+      X-Cache:
+      - Miss from cloudfront
+      X-Powered-By:
+      - huggingface-moon
+      X-Request-Id:
+      - Root=1-673cd446-0f20660f7f490fda4adc7cee;8ca2e26d-3bca-4ac5-910f-ff4b74501998
+      cross-origin-opener-policy:
+      - same-origin
+    status:
+      code: 200
+      message: OK
+- request:
+    body: null
+    headers:
+      Accept:
+      - '*/*'
+      Accept-Encoding:
+      - gzip, deflate
+      Connection:
+      - keep-alive
+      X-Amzn-Trace-Id:
+      - 9a834e0b-1fd1-48db-8dfd-ea8c066aa7a5
+      user-agent:
+      - unknown/None; hf_hub/0.26.1; python/3.12.5
+    method: GET
+    uri: https://huggingface.co/api/models/qdrant/bge-small-en-v1.5-onnx-q/revision/main
+  response:
+    body:
+      string: Temporary Redirect. Redirecting to /api/models/Qdrant/bge-small-en-v1.5-onnx-Q/revision/main
+    headers:
+      Access-Control-Allow-Origin:
+      - https://huggingface.co
+      Access-Control-Expose-Headers:
+      - X-Repo-Commit,X-Request-Id,X-Error-Code,X-Error-Message,X-Total-Count,ETag,Link,Accept-Ranges,Content-Range
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '92'
+      Content-Type:
+      - text/plain; charset=utf-8
+      Date:
+      - Tue, 19 Nov 2024 18:09:10 GMT
+      Location:
+      - /api/models/Qdrant/bge-small-en-v1.5-onnx-Q/revision/main
+      Referrer-Policy:
+      - strict-origin-when-cross-origin
+      Vary:
+      - Origin, Accept
+      Via:
+      - 1.1 4a628119373a320de50f1e6bc0e5f87a.cloudfront.net (CloudFront)
+      X-Amz-Cf-Id:
+      - 3KAqD0k_LPsFs9R-qgwrpZkhWQjDwCVpaPzH0gkbZ4THPxFo-uXQKw==
+      X-Amz-Cf-Pop:
+      - SFO5-P2
+      X-Cache:
+      - Miss from cloudfront
+      X-Powered-By:
+      - huggingface-moon
+      X-Request-Id:
+      - Root=1-673cd446-18a8a34d668342617f1768cd;9a834e0b-1fd1-48db-8dfd-ea8c066aa7a5
+      cross-origin-opener-policy:
+      - same-origin
+    status:
+      code: 307
+      message: Temporary Redirect
+- request:
+    body: null
+    headers:
+      Accept:
+      - '*/*'
+      Accept-Encoding:
+      - gzip, deflate
+      Connection:
+      - keep-alive
+      X-Amzn-Trace-Id:
+      - 9a834e0b-1fd1-48db-8dfd-ea8c066aa7a5
+      user-agent:
+      - unknown/None; hf_hub/0.26.1; python/3.12.5
+    method: GET
+    uri: https://huggingface.co/api/models/Qdrant/bge-small-en-v1.5-onnx-Q/revision/main
+  response:
+    body:
+      string: '{"_id":"65a4ce6d9f0a34c17376fa20","id":"Qdrant/bge-small-en-v1.5-onnx-Q","modelId":"Qdrant/bge-small-en-v1.5-onnx-Q","author":"Qdrant","sha":"52398278842ec682c6f32300af41344b1c0b0bb2","lastModified":"2024-07-15T12:50:23.000Z","private":false,"disabled":false,"gated":false,"pipeline_tag":"sentence-similarity","tags":["transformers","onnx","bert","feature-extraction","sentence-similarity","license:apache-2.0","text-embeddings-inference","endpoints_compatible","region:us"],"downloads":140576,"library_name":"transformers","mask_token":"[MASK]","widgetData":[{"source_sentence":"That
+        is a happy person","sentences":["That is a happy dog","That is a very happy
+        person","Today is a sunny day"]}],"likes":0,"model-index":null,"config":{"architectures":["BertModel"],"model_type":"bert","tokenizer_config":{"cls_token":"[CLS]","mask_token":"[MASK]","pad_token":"[PAD]","sep_token":"[SEP]","unk_token":"[UNK]"}},"cardData":{"license":"apache-2.0","pipeline_tag":"sentence-similarity"},"transformersInfo":{"auto_model":"AutoModel","pipeline_tag":"feature-extraction","processor":"AutoTokenizer"},"siblings":[{"rfilename":".gitattributes"},{"rfilename":"README.md"},{"rfilename":"config.json"},{"rfilename":"model_optimized.onnx"},{"rfilename":"ort_config.json"},{"rfilename":"special_tokens_map.json"},{"rfilename":"tokenizer.json"},{"rfilename":"tokenizer_config.json"},{"rfilename":"vocab.txt"}],"spaces":[],"createdAt":"2024-01-15T06:19:25.000Z"}'
+    headers:
+      Access-Control-Allow-Origin:
+      - https://huggingface.co
+      Access-Control-Expose-Headers:
+      - X-Repo-Commit,X-Request-Id,X-Error-Code,X-Error-Message,X-Total-Count,ETag,Link,Accept-Ranges,Content-Range
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '1444'
+      Content-Type:
+      - application/json; charset=utf-8
+      Date:
+      - Tue, 19 Nov 2024 18:09:11 GMT
+      ETag:
+      - W/"5a4-bIIb6odbE0/AlB0z5u50f7bg2gI"
+      Referrer-Policy:
+      - strict-origin-when-cross-origin
+      Vary:
+      - Origin
+      Via:
+      - 1.1 332ef4544bd8b531e8f11abaa4197c08.cloudfront.net (CloudFront)
+      X-Amz-Cf-Id:
+      - H1A3CpFjdJhz837p-fCgl5dF_4ZS9tHF-9qI17tjXkVT-slvOH_CfQ==
+      X-Amz-Cf-Pop:
+      - SFO5-P2
+      X-Cache:
+      - Miss from cloudfront
+      X-Powered-By:
+      - huggingface-moon
+      X-Request-Id:
+      - Root=1-673cd447-76f048267d4822386f84c18e;9a834e0b-1fd1-48db-8dfd-ea8c066aa7a5
+      cross-origin-opener-policy:
+      - same-origin
+    status:
+      code: 200
+      message: OK
+- request:
+    body: null
+    headers:
+      Accept:
+      - '*/*'
+      Accept-Encoding:
+      - gzip, deflate
+      Connection:
+      - keep-alive
+      X-Amzn-Trace-Id:
+      - fc63b337-fe96-466c-a90d-fc1ca1fcdbe6
+      user-agent:
+      - unknown/None; hf_hub/0.26.1; python/3.12.5
+    method: GET
+    uri: https://huggingface.co/api/models/qdrant/bge-small-en-v1.5-onnx-q/revision/main
+  response:
+    body:
+      string: Temporary Redirect. Redirecting to /api/models/Qdrant/bge-small-en-v1.5-onnx-Q/revision/main
+    headers:
+      Access-Control-Allow-Origin:
+      - https://huggingface.co
+      Access-Control-Expose-Headers:
+      - X-Repo-Commit,X-Request-Id,X-Error-Code,X-Error-Message,X-Total-Count,ETag,Link,Accept-Ranges,Content-Range
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '92'
+      Content-Type:
+      - text/plain; charset=utf-8
+      Date:
+      - Tue, 19 Nov 2024 18:09:11 GMT
+      Location:
+      - /api/models/Qdrant/bge-small-en-v1.5-onnx-Q/revision/main
+      Referrer-Policy:
+      - strict-origin-when-cross-origin
+      Vary:
+      - Origin, Accept
+      Via:
+      - 1.1 d32136caad5f6a80e6bec65185c2a290.cloudfront.net (CloudFront)
+      X-Amz-Cf-Id:
+      - aBWL_vbxQ-pX9xDSttNfo4EGhz2_NTk-fBKgZojjb1PMe25EG4oXxw==
+      X-Amz-Cf-Pop:
+      - SFO5-P2
+      X-Cache:
+      - Miss from cloudfront
+      X-Powered-By:
+      - huggingface-moon
+      X-Request-Id:
+      - Root=1-673cd447-4e15778c4d41d5144b098bc6;fc63b337-fe96-466c-a90d-fc1ca1fcdbe6
+      cross-origin-opener-policy:
+      - same-origin
+    status:
+      code: 307
+      message: Temporary Redirect
+- request:
+    body: null
+    headers:
+      Accept:
+      - '*/*'
+      Accept-Encoding:
+      - gzip, deflate
+      Connection:
+      - keep-alive
+      X-Amzn-Trace-Id:
+      - fc63b337-fe96-466c-a90d-fc1ca1fcdbe6
+      user-agent:
+      - unknown/None; hf_hub/0.26.1; python/3.12.5
+    method: GET
+    uri: https://huggingface.co/api/models/Qdrant/bge-small-en-v1.5-onnx-Q/revision/main
+  response:
+    body:
+      string: '{"_id":"65a4ce6d9f0a34c17376fa20","id":"Qdrant/bge-small-en-v1.5-onnx-Q","modelId":"Qdrant/bge-small-en-v1.5-onnx-Q","author":"Qdrant","sha":"52398278842ec682c6f32300af41344b1c0b0bb2","lastModified":"2024-07-15T12:50:23.000Z","private":false,"disabled":false,"gated":false,"pipeline_tag":"sentence-similarity","tags":["transformers","onnx","bert","feature-extraction","sentence-similarity","license:apache-2.0","text-embeddings-inference","endpoints_compatible","region:us"],"downloads":140576,"library_name":"transformers","mask_token":"[MASK]","widgetData":[{"source_sentence":"That
+        is a happy person","sentences":["That is a happy dog","That is a very happy
+        person","Today is a sunny day"]}],"likes":0,"model-index":null,"config":{"architectures":["BertModel"],"model_type":"bert","tokenizer_config":{"cls_token":"[CLS]","mask_token":"[MASK]","pad_token":"[PAD]","sep_token":"[SEP]","unk_token":"[UNK]"}},"cardData":{"license":"apache-2.0","pipeline_tag":"sentence-similarity"},"transformersInfo":{"auto_model":"AutoModel","pipeline_tag":"feature-extraction","processor":"AutoTokenizer"},"siblings":[{"rfilename":".gitattributes"},{"rfilename":"README.md"},{"rfilename":"config.json"},{"rfilename":"model_optimized.onnx"},{"rfilename":"ort_config.json"},{"rfilename":"special_tokens_map.json"},{"rfilename":"tokenizer.json"},{"rfilename":"tokenizer_config.json"},{"rfilename":"vocab.txt"}],"spaces":[],"createdAt":"2024-01-15T06:19:25.000Z"}'
+    headers:
+      Access-Control-Allow-Origin:
+      - https://huggingface.co
+      Access-Control-Expose-Headers:
+      - X-Repo-Commit,X-Request-Id,X-Error-Code,X-Error-Message,X-Total-Count,ETag,Link,Accept-Ranges,Content-Range
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '1444'
+      Content-Type:
+      - application/json; charset=utf-8
+      Date:
+      - Tue, 19 Nov 2024 18:09:11 GMT
+      ETag:
+      - W/"5a4-bIIb6odbE0/AlB0z5u50f7bg2gI"
+      Referrer-Policy:
+      - strict-origin-when-cross-origin
+      Vary:
+      - Origin
+      Via:
+      - 1.1 b04d82bf2bc15ab146955a862be263f0.cloudfront.net (CloudFront)
+      X-Amz-Cf-Id:
+      - zi61OVBwlSEMnsQ30qZhZFOn3gXdUosyq9GvarVlyWNoiSzH-Lz4cg==
+      X-Amz-Cf-Pop:
+      - SFO5-P2
+      X-Cache:
+      - Miss from cloudfront
+      X-Powered-By:
+      - huggingface-moon
+      X-Request-Id:
+      - Root=1-673cd447-17a95fd82eead85356b49a01;fc63b337-fe96-466c-a90d-fc1ca1fcdbe6
+      cross-origin-opener-policy:
+      - same-origin
+    status:
+      code: 200
+      message: OK
+version: 1
