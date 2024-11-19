@@ -9,6 +9,8 @@ from .annotations import (
     pipeline,
     task,
     tool,
+    before_crew,
+    after_crew,
 )
 from .crew_base import CrewBase
 from .pipeline_base import PipelineBase
@@ -26,4 +28,6 @@ __all__ = [
     "llm",
     "cache_handler",
     "pipeline",
+    "before_crew",
+    "after_crew",
 ]
