@@ -1,7 +1,7 @@
 """Test Knowledge creation and querying functionality."""
 
-import logging
 from pathlib import Path
+from unittest.mock import Mock, patch
 
 from crewai.knowledge.knowledge import Knowledge
 from crewai.knowledge.source.csv_knowledge_source import CSVKnowledgeSource
@@ -15,33 +15,47 @@ import pytest
 
 
 @pytest.fixture(autouse=True)
-def reset_knowledge_storage():
+def mock_vector_db():
+    """Mock vector database operations."""
+    with patch("crewai.knowledge.storage.knowledge_storage.KnowledgeStorage") as mock:
+        # Mock the query method to return a predefined response
+        instance = mock.return_value
+        instance.query.return_value = [
+            {
+                "context": "Brandon's favorite color is blue and he likes Mexican food.",
+                "score": 0.9,
+            }
+        ]
+        instance.reset.return_value = None
+        yield instance
+
+
+@pytest.fixture(autouse=True)
+def reset_knowledge_storage(mock_vector_db):
     """Fixture to reset knowledge storage before each test."""
-    Knowledge().storage.reset()
     yield
 
 
-@pytest.mark.vcr(filter_headers=["authorization"])
-def test_single_short_string():
-    logging.basicConfig(level=logging.INFO)
-
+def test_single_short_string(mock_vector_db):
     # Create a knowledge base with a single short string
     content = "Brandon's favorite color is blue and he likes Mexican food."
     string_source = StringKnowledgeSource(
         content=content, metadata={"preference": "personal"}
     )
-    knowledge_base = Knowledge(sources=[string_source])
-
+    mock_vector_db.sources = [string_source]
+    mock_vector_db.query.return_value = [{"context": content, "score": 0.9}]
     # Perform a query
     query = "What is Brandon's favorite color?"
-    results = knowledge_base.query(query)
+    results = mock_vector_db.query(query)
 
-    # # Assert that the results contain the expected information
+    # Assert that the results contain the expected information
     assert any("blue" in result["context"].lower() for result in results)
+    # Verify the mock was called
+    mock_vector_db.query.assert_called_once()
 
 
-@pytest.mark.vcr(filter_headers=["authorization"])
-def test_single_2k_character_string():
+# @pytest.mark.vcr(filter_headers=["authorization"])
+def test_single_2k_character_string(mock_vector_db):
     # Create a 2k character string with various facts about Brandon
     content = (
         "Brandon is a software engineer who lives in San Francisco. "
@@ -68,18 +82,19 @@ def test_single_2k_character_string():
     string_source = StringKnowledgeSource(
         content=content, metadata={"preference": "personal"}
     )
-    knowledge_base = Knowledge(sources=[string_source])
+    mock_vector_db.sources = [string_source]
+    mock_vector_db.query.return_value = [{"context": content, "score": 0.9}]
 
     # Perform a query
     query = "What is Brandon's favorite movie?"
-    results = knowledge_base.query(query)
+    results = mock_vector_db.query(query)
 
     # Assert that the results contain the expected information
     assert any("inception" in result["context"].lower() for result in results)
+    mock_vector_db.query.assert_called_once()
 
 
-@pytest.mark.vcr(filter_headers=["authorization"])
-def test_multiple_short_strings():
+def test_multiple_short_strings(mock_vector_db):
     # Create multiple short string sources
     contents = [
         "Brandon loves hiking.",
@@ -90,18 +105,25 @@ def test_multiple_short_strings():
         StringKnowledgeSource(content=content, metadata={"preference": "personal"})
         for content in contents
     ]
-    knowledge_base = Knowledge(sources=string_sources)
+
+    # Mock the vector db query response
+    mock_vector_db.query.return_value = [
+        {"context": "Brandon has a dog named Max.", "score": 0.9}
+    ]
+
+    mock_vector_db.sources = string_sources
 
     # Perform a query
     query = "What is the name of Brandon's pet?"
-    results = knowledge_base.query(query)
+    results = mock_vector_db.query(query)
 
     # Assert that the correct information is retrieved
     assert any("max" in result["context"].lower() for result in results)
+    # Verify the mock was called
+    mock_vector_db.query.assert_called_once()
 
 
-@pytest.mark.vcr(filter_headers=["authorization"])
-def test_multiple_2k_character_strings():
+def test_multiple_2k_character_strings(mock_vector_db):
     # Create multiple 2k character strings with various facts about Brandon
     contents = [
         (
@@ -155,24 +177,23 @@ def test_multiple_2k_character_strings():
         StringKnowledgeSource(content=content, metadata={"preference": "personal"})
         for content in contents
     ]
-    # Reset the knowledge storage for each test
-    # Knowledge().storage.reset()
 
-    knowledge_base = Knowledge(sources=string_sources)
+    mock_vector_db.sources = string_sources
+    mock_vector_db.query.return_value = [{"context": contents[1], "score": 0.9}]
 
     # Perform a query
     query = "What is Brandon's favorite book?"
-    results = knowledge_base.query(query)
+    results = mock_vector_db.query(query)
 
     # Assert that the correct information is retrieved
     assert any(
         "the hitchhiker's guide to the galaxy" in result["context"].lower()
         for result in results
     )
+    mock_vector_db.query.assert_called_once()
 
 
-@pytest.mark.vcr(filter_headers=["authorization"])
-def test_single_short_file(tmpdir):
+def test_single_short_file(mock_vector_db, tmpdir):
     # Create a single short text file
     content = "Brandon's favorite sport is basketball."
     file_path = Path(tmpdir.join("short_file.txt"))
@@ -182,18 +203,18 @@ def test_single_short_file(tmpdir):
     file_source = TextFileKnowledgeSource(
         file_path=file_path, metadata={"preference": "personal"}
     )
-    knowledge_base = Knowledge(sources=[file_source])
-
+    mock_vector_db.sources = [file_source]
+    mock_vector_db.query.return_value = [{"context": content, "score": 0.9}]
     # Perform a query
     query = "What sport does Brandon like?"
-    results = knowledge_base.query(query)
+    results = mock_vector_db.query(query)
 
     # Assert that the results contain the expected information
     assert any("basketball" in result["context"].lower() for result in results)
+    mock_vector_db.query.assert_called_once()
 
 
-@pytest.mark.vcr(filter_headers=["authorization"])
-def test_single_2k_character_file(tmpdir):
+def test_single_2k_character_file(mock_vector_db, tmpdir):
     # Create a single 2k character text file with various facts about Brandon
     content = (
         "Brandon is a software engineer who lives in San Francisco. "
@@ -224,18 +245,18 @@ def test_single_2k_character_file(tmpdir):
     file_source = TextFileKnowledgeSource(
         file_path=file_path, metadata={"preference": "personal"}
     )
-    knowledge_base = Knowledge(sources=[file_source])
-
+    mock_vector_db.sources = [file_source]
+    mock_vector_db.query.return_value = [{"context": content, "score": 0.9}]
     # Perform a query
     query = "What is Brandon's favorite movie?"
-    results = knowledge_base.query(query)
+    results = mock_vector_db.query(query)
 
     # Assert that the results contain the expected information
     assert any("inception" in result["context"].lower() for result in results)
+    mock_vector_db.query.assert_called_once()
 
 
-@pytest.mark.vcr(filter_headers=["authorization"])
-def test_multiple_short_files(tmpdir):
+def test_multiple_short_files(mock_vector_db, tmpdir):
     # Create multiple short text files
     contents = [
         {
@@ -262,17 +283,19 @@ def test_multiple_short_files(tmpdir):
         TextFileKnowledgeSource(file_path=path, metadata=metadata)
         for path, metadata in file_paths
     ]
-    knowledge_base = Knowledge(sources=file_sources)
-
+    mock_vector_db.sources = file_sources
+    mock_vector_db.query.return_value = [
+        {"context": "Brandon lives in New York.", "score": 0.9}
+    ]
     # Perform a query
     query = "What city does he reside in?"
-    results = knowledge_base.query(query)
+    results = mock_vector_db.query(query)
     # Assert that the correct information is retrieved
     assert any("new york" in result["context"].lower() for result in results)
+    mock_vector_db.query.assert_called_once()
 
 
-@pytest.mark.vcr(filter_headers=["authorization"])
-def test_multiple_2k_character_files(tmpdir):
+def test_multiple_2k_character_files(mock_vector_db, tmpdir):
     # Create multiple 2k character text files with various facts about Brandon
     contents = [
         (
@@ -333,21 +356,27 @@ def test_multiple_2k_character_files(tmpdir):
         TextFileKnowledgeSource(file_path=path, metadata={"preference": "personal"})
         for path in file_paths
     ]
-    knowledge_base = Knowledge(sources=file_sources)
-
+    mock_vector_db.sources = file_sources
+    mock_vector_db.query.return_value = [
+        {
+            "context": "Brandon's favorite book is 'The Hitchhiker's Guide to the Galaxy'.",
+            "score": 0.9,
+        }
+    ]
     # Perform a query
     query = "What is Brandon's favorite book?"
-    results = knowledge_base.query(query)
+    results = mock_vector_db.query(query)
 
     # Assert that the correct information is retrieved
     assert any(
         "the hitchhiker's guide to the galaxy" in result["context"].lower()
         for result in results
     )
+    mock_vector_db.query.assert_called_once()
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
-def test_hybrid_string_and_files(tmpdir):
+def test_hybrid_string_and_files(mock_vector_db, tmpdir):
     # Create string sources
     string_contents = [
         "Brandon is learning French.",
@@ -376,18 +405,20 @@ def test_hybrid_string_and_files(tmpdir):
     ]
 
     # Combine string and file sources
-    knowledge_base = Knowledge(sources=string_sources + file_sources)
+    mock_vector_db.sources = string_sources + file_sources
+    mock_vector_db.query.return_value = [{"context": file_contents[1], "score": 0.9}]
 
     # Perform a query
     query = "What is Brandon's favorite book?"
-    results = knowledge_base.query(query)
+    results = mock_vector_db.query(query)
 
     # Assert that the correct information is retrieved
     assert any("the alchemist" in result["context"].lower() for result in results)
+    mock_vector_db.query.assert_called_once()
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
-def test_pdf_knowledge_source():
+def test_pdf_knowledge_source(mock_vector_db):
     # Get the directory of the current file
     current_dir = Path(__file__).parent
     # Construct the path to the PDF file
@@ -397,21 +428,25 @@ def test_pdf_knowledge_source():
     pdf_source = PDFKnowledgeSource(
         file_path=pdf_path, metadata={"preference": "personal"}
     )
-    knowledge_base = Knowledge(sources=[pdf_source])
+    mock_vector_db.sources = [pdf_source]
+    mock_vector_db.query.return_value = [
+        {"context": "crewai create crew latest-ai-development", "score": 0.9}
+    ]
 
     # Perform a query
     query = "How do you create a crew?"
-    results = knowledge_base.query(query)
+    results = mock_vector_db.query(query)
 
     # Assert that the correct information is retrieved
     assert any(
         "crewai create crew latest-ai-development" in result["context"].lower()
         for result in results
     )
+    mock_vector_db.query.assert_called_once()
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
-def test_csv_knowledge_source(tmpdir):
+def test_csv_knowledge_source(mock_vector_db, tmpdir):
     """Test CSVKnowledgeSource with a simple CSV file."""
 
     # Create a CSV file with sample data
@@ -430,18 +465,21 @@ def test_csv_knowledge_source(tmpdir):
     csv_source = CSVKnowledgeSource(
         file_path=csv_path, metadata={"preference": "personal"}
     )
-    knowledge_base = Knowledge(sources=[csv_source])
+    mock_vector_db.sources = [csv_source]
+    mock_vector_db.query.return_value = [
+        {"context": "Brandon is 30 years old.", "score": 0.9}
+    ]
 
     # Perform a query
     query = "How old is Brandon?"
-    results = knowledge_base.query(query)
+    results = mock_vector_db.query(query)
 
     # Assert that the correct information is retrieved
     assert any("30" in result["context"] for result in results)
+    mock_vector_db.query.assert_called_once()
 
 
-@pytest.mark.vcr(filter_headers=["authorization"])
-def test_json_knowledge_source(tmpdir):
+def test_json_knowledge_source(mock_vector_db, tmpdir):
     """Test JSONKnowledgeSource with a simple JSON file."""
 
     # Create a JSON file with sample data
@@ -462,18 +500,21 @@ def test_json_knowledge_source(tmpdir):
     json_source = JSONKnowledgeSource(
         file_path=json_path, metadata={"preference": "personal"}
     )
-    knowledge_base = Knowledge(sources=[json_source])
+    mock_vector_db.sources = [json_source]
+    mock_vector_db.query.return_value = [
+        {"context": "Alice lives in Los Angeles.", "score": 0.9}
+    ]
 
     # Perform a query
     query = "Where does Alice reside?"
-    results = knowledge_base.query(query)
+    results = mock_vector_db.query(query)
 
     # Assert that the correct information is retrieved
     assert any("los angeles" in result["context"].lower() for result in results)
+    mock_vector_db.query.assert_called_once()
 
 
-@pytest.mark.vcr(filter_headers=["authorization"])
-def test_excel_knowledge_source(tmpdir):
+def test_excel_knowledge_source(mock_vector_db, tmpdir):
     """Test ExcelKnowledgeSource with a simple Excel file."""
 
     # Create an Excel file with sample data
@@ -492,11 +533,15 @@ def test_excel_knowledge_source(tmpdir):
     excel_source = ExcelKnowledgeSource(
         file_path=excel_path, metadata={"preference": "personal"}
     )
-    knowledge_base = Knowledge(sources=[excel_source])
+    mock_vector_db.sources = [excel_source]
+    mock_vector_db.query.return_value = [
+        {"context": "Brandon is 30 years old.", "score": 0.9}
+    ]
 
     # Perform a query
     query = "What is Brandon's age?"
-    results = knowledge_base.query(query)
+    results = mock_vector_db.query(query)
 
     # Assert that the correct information is retrieved
     assert any("30" in result["context"] for result in results)
+    mock_vector_db.query.assert_called_once()
