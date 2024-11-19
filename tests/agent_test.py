@@ -18,6 +18,7 @@ from crewai.tools.tool_usage import ToolUsage
 from crewai.tools.tool_usage_events import ToolUsageFinished
 from crewai.utilities import RPMController
 from crewai.utilities.events import Emitter
+from crewai.knowledge.knowledge import Knowledge
 
 
 def test_agent_llm_creation_with_env_vars():
@@ -1577,19 +1578,28 @@ def test_agent_execute_task_with_ollama():
     assert "AI" in result or "artificial intelligence" in result.lower()
 
 
+@pytest.fixture(autouse=True)
+def reset_knowledge_storage():
+    """Fixture to reset knowledge storage before each test."""
+    Knowledge().storage.reset()
+    yield
+
+
 @pytest.mark.vcr(filter_headers=["authorization"])
 def test_agent_with_knowledge_sources():
     # Create a knowledge source with some content
     content = "Brandon's favorite color is blue and he likes Mexican food."
-    string_source = StringKnowledgeSource(content=content)
+    string_source = StringKnowledgeSource(
+        content=content, metadata={"preference": "personal"}
+    )
+    Knowledge(sources=[string_source])
 
     # Create an agent with the knowledge source
     agent = Agent(
         role="Information Agent",
         goal="Provide information based on knowledge sources",
         backstory="You have access to specific knowledge sources.",
-        llm=LLM(model="gpt-3.5-turbo"),
-        knowledge_sources=[string_source],
+        llm=LLM(model="gpt-4o-mini"),
     )
 
     # Create a task that requires the agent to use the knowledge

@@ -3,7 +3,7 @@ import contextlib
 import io
 import logging
 import chromadb
-
+import os
 from crewai.utilities.paths import db_storage_path
 from typing import Optional, List
 from typing import Dict, Any
@@ -104,9 +104,13 @@ class KnowledgeStorage(BaseKnowledgeStorage):
             raise Exception("Collection not initialized")
 
     def _create_default_embedding_function(self):
-        from crewai.knowledge.embedder.fastembed import FastEmbed
+        from chromadb.utils.embedding_functions.openai_embedding_function import (
+            OpenAIEmbeddingFunction,
+        )
 
-        return FastEmbed().embed_texts
+        return OpenAIEmbeddingFunction(
+            api_key=os.getenv("OPENAI_API_KEY"), model_name="text-embedding-3-small"
+        )
 
     def _set_embedder_config(
         self, embedder_config: Optional[Dict[str, Any]] = None
