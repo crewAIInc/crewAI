@@ -13,11 +13,11 @@ class JSONKnowledgeSource(BaseFileKnowledgeSource):
         super().load_content()  # Validate the file path
         paths = [self.file_path] if isinstance(self.file_path, Path) else self.file_path
 
-        content = {}
+        content: Dict[Path, str] = {}
         for path in paths:
             with open(path, "r", encoding="utf-8") as json_file:
                 data = json.load(json_file)
-            content = self._json_to_text(data)
+            content[path] = self._json_to_text(data)
         return content
 
     def _json_to_text(self, data: Any, level: int = 0) -> str:

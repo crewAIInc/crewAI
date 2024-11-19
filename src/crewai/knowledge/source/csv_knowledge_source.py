@@ -11,15 +11,18 @@ class CSVKnowledgeSource(BaseFileKnowledgeSource):
     def load_content(self) -> Dict[Path, str]:
         """Load and preprocess CSV file content."""
         super().load_content()  # Validate the file path
-        file_path_str = (
-            str(self.file_path) if isinstance(self.file_path, Path) else self.file_path
+
+        file_path = (
+            self.file_path[0] if isinstance(self.file_path, list) else self.file_path
         )
-        with open(file_path_str, "r", encoding="utf-8") as csvfile:
+        file_path = Path(file_path) if isinstance(file_path, str) else file_path
+
+        with open(file_path, "r", encoding="utf-8") as csvfile:
             reader = csv.reader(csvfile)
             content = ""
             for row in reader:
                 content += " ".join(row) + "\n"
-        return {self.file_path: content}
+        return {file_path: content}
 
     def add(self) -> None:
         """

@@ -10,9 +10,15 @@ class ExcelKnowledgeSource(BaseFileKnowledgeSource):
         """Load and preprocess Excel file content."""
         super().load_content()  # Validate the file path
         pd = self._import_dependencies()
-        df = pd.read_excel(self.file_path)
+
+        if isinstance(self.file_path, list):
+            file_path = self.file_path[0]
+        else:
+            file_path = self.file_path
+
+        df = pd.read_excel(file_path)
         content = df.to_csv(index=False)
-        return {self.file_path: content}
+        return {file_path: content}
 
     def _import_dependencies(self):
         """Dynamically import dependencies."""
