@@ -1,0 +1,449 @@
+interactions:
+- request:
+    body: !!binary |
+      CuMOCiQKIgoMc2VydmljZS5uYW1lEhIKEGNyZXdBSS10ZWxlbWV0cnkSug4KEgoQY3Jld2FpLnRl
+      bGVtZXRyeRKSDAoQK+dPhrB8w3HKFlxX60XzYRIIk5aB+A8oCWQqDENyZXcgQ3JlYXRlZDABObix
+      K+HWrwgYQcBiMeHWrwgYShoKDmNyZXdhaV92ZXJzaW9uEggKBjAuODAuMEoaCg5weXRob25fdmVy
+      c2lvbhIICgYzLjExLjdKLgoIY3Jld19rZXkSIgogZjM0NmE5YWQ2ZDczMDYzZTA2NzdiMTdjZTlj
+      NTAxNzdKMQoHY3Jld19pZBImCiQ3NjRjZWM1YS04NzkxLTRmN2MtOWY0MC1hNTMzMzJmOTk3YzBK
+      HAoMY3Jld19wcm9jZXNzEgwKCnNlcXVlbnRpYWxKEQoLY3Jld19tZW1vcnkSAhAAShoKFGNyZXdf
+      bnVtYmVyX29mX3Rhc2tzEgIYAkobChVjcmV3X251bWJlcl9vZl9hZ2VudHMSAhgCSqwFCgtjcmV3
+      X2FnZW50cxKcBQqZBVt7ImtleSI6ICI3M2MzNDljOTNjMTYzYjVkNGRmOThhNjRmYWMxYzQzMCIs
+      ICJpZCI6ICJjZDgwYjlhNy1hN2QzLTQzNTQtYjUyOC1jMzAyODA0MjA3YzgiLCAicm9sZSI6ICJ7
+      dG9waWN9IFNlbmlvciBEYXRhIFJlc2VhcmNoZXJcbiIsICJ2ZXJib3NlPyI6IGZhbHNlLCAibWF4
+      X2l0ZXIiOiAyMCwgIm1heF9ycG0iOiBudWxsLCAiZnVuY3Rpb25fY2FsbGluZ19sbG0iOiAiIiwg
+      ImxsbSI6ICJncHQtNG8iLCAiZGVsZWdhdGlvbl9lbmFibGVkPyI6IGZhbHNlLCAiYWxsb3dfY29k
+      ZV9leGVjdXRpb24/IjogZmFsc2UsICJtYXhfcmV0cnlfbGltaXQiOiAyLCAidG9vbHNfbmFtZXMi
+      OiBbXX0sIHsia2V5IjogImJiMDY4Mzc3YzE2NDFiZTZkN2Q5N2E1MTY1OWRiNjEzIiwgImlkIjog
+      ImJmZjc3YmUyLWU4MjQtNGEyOS1hZTFlLTQyMWFjMzc2MjY2YyIsICJyb2xlIjogInt0b3BpY30g
+      UmVwb3J0aW5nIEFuYWx5c3RcbiIsICJ2ZXJib3NlPyI6IGZhbHNlLCAibWF4X2l0ZXIiOiAyMCwg
+      Im1heF9ycG0iOiBudWxsLCAiZnVuY3Rpb25fY2FsbGluZ19sbG0iOiAiIiwgImxsbSI6ICJncHQt
+      NG8iLCAiZGVsZWdhdGlvbl9lbmFibGVkPyI6IGZhbHNlLCAiYWxsb3dfY29kZV9leGVjdXRpb24/
+      IjogZmFsc2UsICJtYXhfcmV0cnlfbGltaXQiOiAyLCAidG9vbHNfbmFtZXMiOiBbXX1dSpMECgpj
+      cmV3X3Rhc2tzEoQECoEEW3sia2V5IjogIjZhZmM0YjM5NjI1OWZiYjc2ODFmNTZjNzc1NWNjOTM3
+      IiwgImlkIjogIjRmNTFlYzM2LTVlMDctNGU4Ni1iYzIxLWU1MTQ0Mzg2YmIyYSIsICJhc3luY19l
+      eGVjdXRpb24/IjogZmFsc2UsICJodW1hbl9pbnB1dD8iOiBmYWxzZSwgImFnZW50X3JvbGUiOiAi
+      e3RvcGljfSBTZW5pb3IgRGF0YSBSZXNlYXJjaGVyXG4iLCAiYWdlbnRfa2V5IjogIjczYzM0OWM5
+      M2MxNjNiNWQ0ZGY5OGE2NGZhYzFjNDMwIiwgInRvb2xzX25hbWVzIjogW119LCB7ImtleSI6ICJi
+      MTdiMTg4ZGJmMTRmOTNhOThlNWI5NWFhZDM2NzU3NyIsICJpZCI6ICIwMGJmZDY5ZC03OWZiLTRj
+      MjctYTM0Yi02NzBkZWJlMzU0NWYiLCAiYXN5bmNfZXhlY3V0aW9uPyI6IGZhbHNlLCAiaHVtYW5f
+      aW5wdXQ/IjogZmFsc2UsICJhZ2VudF9yb2xlIjogInt0b3BpY30gUmVwb3J0aW5nIEFuYWx5c3Rc
+      biIsICJhZ2VudF9rZXkiOiAiYmIwNjgzNzdjMTY0MWJlNmQ3ZDk3YTUxNjU5ZGI2MTMiLCAidG9v
+      bHNfbmFtZXMiOiBbXX1degIYAYUBAAEAABKOAgoQsN5cQC9ZzBr2B0OKBR2WCxII3ULL7Wk965Yq
+      DFRhc2sgQ3JlYXRlZDABOWB9ROHWrwgYQfg0ReHWrwgYSi4KCGNyZXdfa2V5EiIKIGYzNDZhOWFk
+      NmQ3MzA2M2UwNjc3YjE3Y2U5YzUwMTc3SjEKB2NyZXdfaWQSJgokNzY0Y2VjNWEtODc5MS00Zjdj
+      LTlmNDAtYTUzMzMyZjk5N2MwSi4KCHRhc2tfa2V5EiIKIDZhZmM0YjM5NjI1OWZiYjc2ODFmNTZj
+      Nzc1NWNjOTM3SjEKB3Rhc2tfaWQSJgokNGY1MWVjMzYtNWUwNy00ZTg2LWJjMjEtZTUxNDQzODZi
+      YjJhegIYAYUBAAEAAA==
+    headers:
+      Accept:
+      - '*/*'
+      Accept-Encoding:
+      - gzip, deflate
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '1894'
+      Content-Type:
+      - application/x-protobuf
+      User-Agent:
+      - OTel-OTLP-Exporter-Python/1.27.0
+    method: POST
+    uri: https://telemetry.crewai.com:4319/v1/traces
+  response:
+    body:
+      string: "\n\0"
+    headers:
+      Content-Length:
+      - '2'
+      Content-Type:
+      - application/x-protobuf
+      Date:
+      - Sun, 17 Nov 2024 07:09:57 GMT
+    status:
+      code: 200
+      message: OK
+- request:
+    body: '{"messages": [{"role": "system", "content": "You are LLMs Senior Data Researcher\n.
+      You''re a seasoned researcher with a knack for uncovering the latest developments
+      in LLMs. Known for your ability to find the most relevant information and present
+      it in a clear and concise manner.\n\nYour personal goal is: Uncover cutting-edge
+      developments in LLMs\n\nTo give my best complete final answer to the task use
+      the exact following format:\n\nThought: I now can give a great answer\nFinal
+      Answer: Your final answer must be the great and the most complete as possible,
+      it must be outcome described.\n\nI MUST use these formats, my job depends on
+      it!"}, {"role": "user", "content": "\nCurrent Task: Conduct a thorough research
+      about LLMs Make sure you find any interesting and relevant information given
+      the current year is 2024.\n\n\nThis is the expect criteria for your final answer:
+      A list with 10 bullet points of the most relevant information about LLMs\n\nyou
+      MUST return the actual complete content as the final answer, not a summary.\n\nBegin!
+      This is VERY important to you, use the tools available and give your best Final
+      Answer, your job depends on it!\n\nThought:"}], "model": "gpt-4o", "stop": ["\nObservation:"],
+      "stream": false}'
+    headers:
+      accept:
+      - application/json
+      accept-encoding:
+      - gzip, deflate
+      connection:
+      - keep-alive
+      content-length:
+      - '1235'
+      content-type:
+      - application/json
+      cookie:
+      - __cf_bm=08pKRcLhS1PDw0mYfL2jz19ac6M.T31GoiMuI5DlX6w-1731827382-1.0.1.1-UfOLu3AaIUuXP1sGzdV6oggJ1q7iMTC46t08FDhYVrKcW5YmD4CbifudOJiSgx8h0JLTwZdgk.aG05S0eAO_PQ;
+        _cfuvid=74kaPOoAcp8YRSA0XocQ1FFNksu9V0_KiWdQfo7wQuQ-1731827382509-0.0.1.1-604800000
+      host:
+      - api.openai.com
+      user-agent:
+      - OpenAI/Python 1.52.1
+      x-stainless-arch:
+      - arm64
+      x-stainless-async:
+      - 'false'
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - MacOS
+      x-stainless-package-version:
+      - 1.52.1
+      x-stainless-raw-response:
+      - 'true'
+      x-stainless-retry-count:
+      - '0'
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.11.7
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    body:
+      string: !!binary |
+        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
+        AhiZyAcAAP//AwCidyXxtw8AAA==
+    headers:
+      CF-Cache-Status:
+      - DYNAMIC
+      CF-RAY:
+      - 8e3de5de7b6c6217-GRU
+      Connection:
+      - keep-alive
+      Content-Encoding:
+      - gzip
+      Content-Type:
+      - application/json
+      Date:
+      - Sun, 17 Nov 2024 07:10:00 GMT
+      Server:
+      - cloudflare
+      Transfer-Encoding:
+      - chunked
+      X-Content-Type-Options:
+      - nosniff
+      access-control-expose-headers:
+      - X-Request-ID
+      alt-svc:
+      - h3=":443"; ma=86400
+      openai-organization:
+      - crewai-iuxna1
+      openai-processing-ms:
+      - '6026'
+      openai-version:
+      - '2020-10-01'
+      strict-transport-security:
+      - max-age=31536000; includeSubDomains; preload
+      x-ratelimit-limit-requests:
+      - '10000'
+      x-ratelimit-limit-tokens:
+      - '30000000'
+      x-ratelimit-remaining-requests:
+      - '9999'
+      x-ratelimit-remaining-tokens:
+      - '29999713'
+      x-ratelimit-reset-requests:
+      - 6ms
+      x-ratelimit-reset-tokens:
+      - 0s
+      x-request-id:
+      - req_553f04a622d026a28dd3c5da55568fcd
+    status:
+      code: 200
+      message: OK
+- request:
+    body: !!binary |
+      Cs4CCiQKIgoMc2VydmljZS5uYW1lEhIKEGNyZXdBSS10ZWxlbWV0cnkSpQIKEgoQY3Jld2FpLnRl
+      bGVtZXRyeRKOAgoQIn+FuHJydyMnR3y/Qfb8GBII2zXFs4gynEgqDFRhc2sgQ3JlYXRlZDABOShs
+      9ljYrwgYQQiP+FjYrwgYSi4KCGNyZXdfa2V5EiIKIGYzNDZhOWFkNmQ3MzA2M2UwNjc3YjE3Y2U5
+      YzUwMTc3SjEKB2NyZXdfaWQSJgokNzY0Y2VjNWEtODc5MS00ZjdjLTlmNDAtYTUzMzMyZjk5N2Mw
+      Si4KCHRhc2tfa2V5EiIKIGIxN2IxODhkYmYxNGY5M2E5OGU1Yjk1YWFkMzY3NTc3SjEKB3Rhc2tf
+      aWQSJgokMDBiZmQ2OWQtNzlmYi00YzI3LWEzNGItNjcwZGViZTM1NDVmegIYAYUBAAEAAA==
+    headers:
+      Accept:
+      - '*/*'
+      Accept-Encoding:
+      - gzip, deflate
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '337'
+      Content-Type:
+      - application/x-protobuf
+      User-Agent:
+      - OTel-OTLP-Exporter-Python/1.27.0
+    method: POST
+    uri: https://telemetry.crewai.com:4319/v1/traces
+  response:
+    body:
+      string: "\n\0"
+    headers:
+      Content-Length:
+      - '2'
+      Content-Type:
+      - application/x-protobuf
+      Date:
+      - Sun, 17 Nov 2024 07:10:01 GMT
+    status:
+      code: 200
+      message: OK
+- request:
+    body: '{"messages": [{"role": "system", "content": "You are LLMs Reporting Analyst\n.
+      You''re a meticulous analyst with a keen eye for detail. You''re known for your
+      ability to turn complex data into clear and concise reports, making it easy
+      for others to understand and act on the information you provide.\nYour personal
+      goal is: Create detailed reports based on LLMs data analysis and research findings\n\nTo
+      give my best complete final answer to the task use the exact following format:\n\nThought:
+      I now can give a great answer\nFinal Answer: Your final answer must be the great
+      and the most complete as possible, it must be outcome described.\n\nI MUST use
+      these formats, my job depends on it!"}, {"role": "user", "content": "\nCurrent
+      Task: Review the context you got and expand each topic into a full section for
+      a report. Make sure the report is detailed and contains any and all relevant
+      information.\n\n\nThis is the expect criteria for your final answer: A fully
+      fledge reports with the mains topics, each with a full section of information.
+      Formatted as markdown without ''```''\n\nyou MUST return the actual complete
+      content as the final answer, not a summary.\n\nThis is the context you''re working
+      with:\n1. **OpenAI''s GPT-4 Released**: OpenAI released GPT-4, which further
+      improves contextual understanding and generation capabilities. It offers increased
+      accuracy, creativity, and coherence in responses compared to its predecessors,
+      making it an essential tool for businesses, educators, and developers.\n\n2.
+      **Google''s Gemini Model**: In 2024, Google launched the Gemini model, focusing
+      on merging language understanding with multimodal capabilities. This model can
+      process text, audio, and images simultaneously, enhancing its applications in
+      fields like voice assistants and image captioning.\n\n3. **Anthropic''s Claude**:
+      Claude, by Anthropic, is designed to prioritize safety and ethical considerations
+      in LLM usage. It''s built to minimize harmful outputs and biases prevalent in
+      earlier language models, demonstrating a shift towards responsible AI deployment.\n\n4.
+      **Meta''s Open Pre-trained Transformer (OPT) 3.0**: Meta has introduced OPT
+      3.0, boasting efficient training approaches that lower computational costs while
+      maintaining high performance. The model excels in translation tasks and has
+      become a popular choice for academic research due to its open-access policy.\n\n5.
+      **Language Model Distillation Advances**: Recent advances in model distillation
+      techniques have allowed developers to deploy smaller, more efficient language
+      models on edge devices without notably compromising performance, expanding the
+      accessibility and application of LLMs in mobile and IoT devices.\n\n6. **Fine-Tuning
+      with Limited Data**: Methods for fine-tuning LLMs with limited data have improved,
+      enabling customization for niche applications without the need for vast datasets.
+      This development has opened doors to using LLMs in specialized industries, like
+      legal and medical sectors.\n\n7. **Ethical and Transparent AI Use**: 2024 has
+      seen a significant emphasis on ethical AI, with organizations establishing standardized
+      frameworks for LLM transparency and accountability. More companies are adopting
+      practices like AI model cards to disclose model capabilities, limitations, and
+      data sources.\n\n8. **The Rise of Prompt Engineering**: As models become more
+      advanced, prompt engineering has emerged as a crucial technique for optimizing
+      model outputs. This involves designing specific input prompts that guide LLMs
+      to yield desired results, thus enhancing usability in content creation and customer
+      service.\n\n9. **Integration with Augmented Reality**: Language models in 2024
+      are increasingly being integrated with AR technologies to provide real-time
+      language translation, virtual assistants in immersive environments, and interactive
+      educational tools, enriching the user''s experience with contextualized AI assistance.\n\n10.
+      **Regulatory Developments**: Governments worldwide are progressing towards formalizing
+      regulations around LLM usage, focusing on data privacy, security, and ethical
+      concerns. These developments aim to safeguard users while encouraging innovation
+      in AI technology.\n\nThese points reflect the cutting-edge advancements and
+      trends in the field of large language models (LLMs) as of 2024, highlighting
+      their growing influence and the increasing focus on ethical and practical deployment.\n\nBegin!
+      This is VERY important to you, use the tools available and give your best Final
+      Answer, your job depends on it!\n\nThought:"}], "model": "gpt-4o", "stop": ["\nObservation:"],
+      "stream": false}'
+    headers:
+      accept:
+      - application/json
+      accept-encoding:
+      - gzip, deflate
+      connection:
+      - keep-alive
+      content-length:
+      - '4624'
+      content-type:
+      - application/json
+      cookie:
+      - __cf_bm=08pKRcLhS1PDw0mYfL2jz19ac6M.T31GoiMuI5DlX6w-1731827382-1.0.1.1-UfOLu3AaIUuXP1sGzdV6oggJ1q7iMTC46t08FDhYVrKcW5YmD4CbifudOJiSgx8h0JLTwZdgk.aG05S0eAO_PQ;
+        _cfuvid=74kaPOoAcp8YRSA0XocQ1FFNksu9V0_KiWdQfo7wQuQ-1731827382509-0.0.1.1-604800000
+      host:
+      - api.openai.com
+      user-agent:
+      - OpenAI/Python 1.52.1
+      x-stainless-arch:
+      - arm64
+      x-stainless-async:
+      - 'false'
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - MacOS
+      x-stainless-package-version:
+      - 1.52.1
+      x-stainless-raw-response:
+      - 'true'
+      x-stainless-retry-count:
+      - '0'
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.11.7
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    body:
+      string: !!binary |
+        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
+        AAAA//8DAMIhqlTfHQAA
+    headers:
+      CF-Cache-Status:
+      - DYNAMIC
+      CF-RAY:
+      - 8e3de605dca06217-GRU
+      Connection:
+      - keep-alive
+      Content-Encoding:
+      - gzip
+      Content-Type:
+      - application/json
+      Date:
+      - Sun, 17 Nov 2024 07:10:10 GMT
+      Server:
+      - cloudflare
+      Transfer-Encoding:
+      - chunked
+      X-Content-Type-Options:
+      - nosniff
+      access-control-expose-headers:
+      - X-Request-ID
+      alt-svc:
+      - h3=":443"; ma=86400
+      openai-organization:
+      - crewai-iuxna1
+      openai-processing-ms:
+      - '9951'
+      openai-version:
+      - '2020-10-01'
+      strict-transport-security:
+      - max-age=31536000; includeSubDomains; preload
+      x-ratelimit-limit-requests:
+      - '10000'
+      x-ratelimit-limit-tokens:
+      - '30000000'
+      x-ratelimit-remaining-requests:
+      - '9999'
+      x-ratelimit-remaining-tokens:
+      - '29998873'
+      x-ratelimit-reset-requests:
+      - 6ms
+      x-ratelimit-reset-tokens:
+      - 2ms
+      x-request-id:
+      - req_52a4f98f9c08fbaa1724634d237f3245
+    status:
+      code: 200
+      message: OK
+version: 1
