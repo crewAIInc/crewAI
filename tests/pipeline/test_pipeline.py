@@ -67,6 +67,7 @@ def mock_crew_factory():
         crew.process = Process.sequential
         crew.config = None
         crew.cache = True
+        crew.embedder = None
 
         # Add non-empty agents and tasks
         mock_agent = MagicMock(spec=Agent)
