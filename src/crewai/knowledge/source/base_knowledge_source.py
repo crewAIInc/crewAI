@@ -1,11 +1,10 @@
 from abc import ABC, abstractmethod
-from typing import List
+from typing import List, Dict, Any
 
 import numpy as np
 from pydantic import BaseModel, ConfigDict, Field
 
 from crewai.knowledge.storage.knowledge_storage import KnowledgeStorage
-from typing import Dict, Any
 
 
 class BaseKnowledgeSource(BaseModel, ABC):

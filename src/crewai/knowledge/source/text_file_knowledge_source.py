@@ -1,4 +1,5 @@
-from typing import List
+from typing import Dict, List
+from pathlib import Path
 
 from crewai.knowledge.source.base_file_knowledge_source import BaseFileKnowledgeSource
 
@@ -6,11 +7,11 @@ from crewai.knowledge.source.base_file_knowledge_source import BaseFileKnowledge
 class TextFileKnowledgeSource(BaseFileKnowledgeSource):
     """A knowledge source that stores and queries text file content using embeddings."""
 
-    def load_content(self) -> str:
+    def load_content(self) -> Dict[Path, str]:
         """Load and preprocess text file content."""
-        super().load_content()  # Validate the file path
+        super().load_content()
         with self.file_path.open("r", encoding="utf-8") as f:
-            return f.read()
+            return f.read()  # type: ignore
 
     def add(self) -> None:
         """

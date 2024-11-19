@@ -30,7 +30,7 @@ class Knowledge(BaseModel):
             Logger(verbose=True).log(
                 "warning",
                 f"Failed to init knowledge: {e}",
-                color="red",
+                color="yellow",
             )
 
     def query(
