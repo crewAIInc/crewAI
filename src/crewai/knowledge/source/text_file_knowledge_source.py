@@ -10,16 +10,21 @@ class TextFileKnowledgeSource(BaseFileKnowledgeSource):
     def load_content(self) -> Dict[Path, str]:
         """Load and preprocess text file content."""
         super().load_content()
-        with self.file_path.open("r", encoding="utf-8") as f:
-            return f.read()  # type: ignore
+        paths = [self.file_path] if isinstance(self.file_path, Path) else self.file_path
+        content = {}
+        for path in paths:
+            with path.open("r", encoding="utf-8") as f:
+                content[path] = f.read()  # type: ignore
+        return content
 
     def add(self) -> None:
         """
         Add text file content to the knowledge source, chunk it, compute embeddings,
         and save the embeddings.
         """
-        new_chunks = self._chunk_text(self.content)
-        self.chunks.extend(new_chunks)
+        for _, text in self.content.items():
+            new_chunks = self._chunk_text(text)
+            self.chunks.extend(new_chunks)
         self.save_documents(metadata=self.metadata)
 
     def _chunk_text(self, text: str) -> List[str]:
