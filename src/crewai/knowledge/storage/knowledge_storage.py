@@ -54,14 +54,14 @@ class KnowledgeStorage(BaseKnowledgeStorage):
                     where=filter,
                 )
                 results = []
-                for i in range(len(fetched["ids"][0])):
+                for i in range(len(fetched["ids"][0])):  # type: ignore
                     result = {
-                        "id": fetched["ids"][0][i],
-                        "metadata": fetched["metadatas"][0][i],
-                        "context": fetched["documents"][0][i],
-                        "score": fetched["distances"][0][i],
+                        "id": fetched["ids"][0][i],  # type: ignore
+                        "metadata": fetched["metadatas"][0][i],  # type: ignore
+                        "context": fetched["documents"][0][i],  # type: ignore
+                        "score": fetched["distances"][0][i],  # type: ignore
                     }
-                    if result["score"] >= score_threshold:
+                    if result["score"] >= score_threshold:  # type: ignore
                         results.append(result)
                 return results
             else:

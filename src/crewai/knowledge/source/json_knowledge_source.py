@@ -1,5 +1,6 @@
 import json
-from typing import Any, List
+from typing import Any, Dict, List
+from pathlib import Path
 
 from crewai.knowledge.source.base_file_knowledge_source import BaseFileKnowledgeSource
 
@@ -7,11 +8,15 @@ from crewai.knowledge.source.base_file_knowledge_source import BaseFileKnowledge
 class JSONKnowledgeSource(BaseFileKnowledgeSource):
     """A knowledge source that stores and queries JSON file content using embeddings."""
 
-    def load_content(self) -> str:
+    def load_content(self) -> Dict[Path, str]:
         """Load and preprocess JSON file content."""
         super().load_content()  # Validate the file path
-        with open(self.file_path, "r", encoding="utf-8") as json_file:
-            data = json.load(json_file)
+        paths = [self.file_path] if isinstance(self.file_path, Path) else self.file_path
+
+        content = {}
+        for path in paths:
+            with open(path, "r", encoding="utf-8") as json_file:
+                data = json.load(json_file)
             content = self._json_to_text(data)
         return content
 
@@ -34,7 +39,10 @@ class JSONKnowledgeSource(BaseFileKnowledgeSource):
         Add JSON file content to the knowledge source, chunk it, compute embeddings,
         and save the embeddings.
         """
-        new_chunks = self._chunk_text(self.content)
+        content_str = (
+            str(self.content) if isinstance(self.content, dict) else self.content
+        )
+        new_chunks = self._chunk_text(content_str)
         self.chunks.extend(new_chunks)
         self.save_documents(metadata=self.metadata)
 

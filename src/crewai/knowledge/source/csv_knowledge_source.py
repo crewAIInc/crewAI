@@ -1,5 +1,6 @@
 import csv
-from typing import List
+from typing import Dict, List
+from pathlib import Path
 
 from crewai.knowledge.source.base_file_knowledge_source import BaseFileKnowledgeSource
 
@@ -7,22 +8,28 @@ from crewai.knowledge.source.base_file_knowledge_source import BaseFileKnowledge
 class CSVKnowledgeSource(BaseFileKnowledgeSource):
     """A knowledge source that stores and queries CSV file content using embeddings."""
 
-    def load_content(self) -> str:
+    def load_content(self) -> Dict[Path, str]:
         """Load and preprocess CSV file content."""
         super().load_content()  # Validate the file path
-        with open(self.file_path, "r", encoding="utf-8") as csvfile:
+        file_path_str = (
+            str(self.file_path) if isinstance(self.file_path, Path) else self.file_path
+        )
+        with open(file_path_str, "r", encoding="utf-8") as csvfile:
             reader = csv.reader(csvfile)
             content = ""
             for row in reader:
                 content += " ".join(row) + "\n"
-        return content
+        return {self.file_path: content}
 
     def add(self) -> None:
         """
         Add CSV file content to the knowledge source, chunk it, compute embeddings,
         and save the embeddings.
         """
-        new_chunks = self._chunk_text(self.content)
+        content_str = (
+            str(self.content) if isinstance(self.content, dict) else self.content
+        )
+        new_chunks = self._chunk_text(content_str)
         self.chunks.extend(new_chunks)
         self.save_documents(metadata=self.metadata)
 

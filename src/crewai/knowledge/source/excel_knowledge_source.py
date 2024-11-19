@@ -1,18 +1,18 @@
-from typing import List
-
+from typing import Dict, List
+from pathlib import Path
 from crewai.knowledge.source.base_file_knowledge_source import BaseFileKnowledgeSource
 
 
 class ExcelKnowledgeSource(BaseFileKnowledgeSource):
     """A knowledge source that stores and queries Excel file content using embeddings."""
 
-    def load_content(self) -> str:
+    def load_content(self) -> Dict[Path, str]:
         """Load and preprocess Excel file content."""
         super().load_content()  # Validate the file path
         pd = self._import_dependencies()
         df = pd.read_excel(self.file_path)
         content = df.to_csv(index=False)
-        return content
+        return {self.file_path: content}
 
     def _import_dependencies(self):
         """Dynamically import dependencies."""
@@ -32,7 +32,13 @@ class ExcelKnowledgeSource(BaseFileKnowledgeSource):
         Add Excel file content to the knowledge source, chunk it, compute embeddings,
         and save the embeddings.
         """
-        new_chunks = self._chunk_text(self.content)
+        # Convert dictionary values to a single string if content is a dictionary
+        if isinstance(self.content, dict):
+            content_str = "\n".join(str(value) for value in self.content.values())
+        else:
+            content_str = str(self.content)
+
+        new_chunks = self._chunk_text(content_str)
         self.chunks.extend(new_chunks)
         self.save_documents(metadata=self.metadata)
 
