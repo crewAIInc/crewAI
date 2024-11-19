@@ -11,10 +11,11 @@ from crewai.agents.crew_agent_executor import CrewAgentExecutor
 from crewai.cli.constants import ENV_VARS
 from crewai.llm import LLM
 from crewai.memory.contextual.contextual_memory import ContextualMemory
-from crewai.tools.agent_tools.agent_tools import AgentTools
 from crewai.tools import BaseTool
+from crewai.tools.agent_tools.agent_tools import AgentTools
 from crewai.utilities import Converter, Prompts
-from crewai.utilities.constants import TRAINED_AGENTS_DATA_FILE, TRAINING_DATA_FILE
+from crewai.utilities.constants import (TRAINED_AGENTS_DATA_FILE,
+                                        TRAINING_DATA_FILE)
 from crewai.utilities.token_counter_callback import TokenCalcHandler
 from crewai.utilities.training_handler import CrewTrainingHandler
 
@@ -123,7 +124,7 @@ class Agent(BaseAgent):
     @model_validator(mode="after")
     def post_init_setup(self):
         self.agent_ops_agent_name = self.role
-        unnacepted_attributes = [
+        unaccepted_attributes = [
             "AWS_ACCESS_KEY_ID",
             "AWS_SECRET_ACCESS_KEY",
             "AWS_REGION_NAME",
@@ -157,7 +158,7 @@ class Agent(BaseAgent):
             for provider, env_vars in ENV_VARS.items():
                 if provider == set_provider:
                     for env_var in env_vars:
-                        if env_var["key_name"] in unnacepted_attributes:
+                        if env_var["key_name"] in unaccepted_attributes:
                             continue
                         # Check if the environment variable is set
                         if "key_name" in env_var:
