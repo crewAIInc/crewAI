@@ -1,7 +1,6 @@
 from typing import List, Dict
 from pathlib import Path
 
-from crewai.knowledge.embedder.base_embedder import BaseEmbedder
 from crewai.knowledge.source.base_file_knowledge_source import BaseFileKnowledgeSource
 
 
@@ -37,7 +36,7 @@ class PDFKnowledgeSource(BaseFileKnowledgeSource):
                 "pdfplumber is not installed. Please install it with: pip install pdfplumber"
             )
 
-    def add(self, embedder: BaseEmbedder) -> None:
+    def add(self) -> None:
         """
         Add PDF file content to the knowledge source, chunk it, compute embeddings,
         and save the embeddings.
@@ -45,10 +44,6 @@ class PDFKnowledgeSource(BaseFileKnowledgeSource):
         for _, text in self.content.items():
             new_chunks = self._chunk_text(text)
             self.chunks.extend(new_chunks)
-            # Compute embeddings for the new chunks
-            new_embeddings = embedder.embed_chunks(new_chunks)
-            # Save the embeddings
-            self.chunk_embeddings.extend(new_embeddings)
         self.save_documents(metadata=self.metadata)
 
     def _chunk_text(self, text: str) -> List[str]:

@@ -1,27 +1,35 @@
-from typing import List, Optional, Dict, Any
+import os
 
+from typing import List, Optional, Dict, Any
 from pydantic import BaseModel, ConfigDict, Field
 
-from crewai.knowledge.embedder.base_embedder import BaseEmbedder
-from crewai.knowledge.embedder.fastembed import FastEmbed
 from crewai.knowledge.source.base_knowledge_source import BaseKnowledgeSource
 from crewai.knowledge.storage.knowledge_storage import KnowledgeStorage
+from crewai.utilities.logger import Logger
+
+os.environ["TOKENIZERS_PARALLELISM"] = "false"  # removes logging from fastembed
 
 
 class Knowledge(BaseModel):
     sources: List[BaseKnowledgeSource] = Field(default_factory=list)
-    embedder: BaseEmbedder = Field(default_factory=FastEmbed)
-
     model_config = ConfigDict(arbitrary_types_allowed=True)
-    agents: List[str] = Field(default_factory=list)
     storage: KnowledgeStorage = Field(default_factory=KnowledgeStorage)
-    embedder_config: Optional[Dict[str, Any]] = Field(default_factory=None)
+    embedder_config: Optional[Dict[str, Any]] = None
 
-    def __init__(self, **data):
+    def __init__(self, embedder_config: Optional[Dict[str, Any]] = None, **data):
         super().__init__(**data)
-        embedder_config = data.get("embedder_config", None)
         if embedder_config:
             self.storage = KnowledgeStorage(embedder_config=embedder_config)
+        else:
+            self.storage = KnowledgeStorage()
+
+        try:
+            for source in self.sources:
+                source.add()
+        except Exception as e:
+            Logger.log(
+                "warning", f"Failed to add some sources during initialization: {e}"
+            )
 
     def query(
         self, query: List[str], limit: int = 3, preference: Optional[str] = None

@@ -36,7 +36,7 @@ class KnowledgeStorage(BaseKnowledgeStorage):
 
     collection: Optional[chromadb.Collection] = None
 
-    def __init__(self, embedder_config=None):
+    def __init__(self, embedder_config: Optional[Dict[str, Any]] = None):
         self._initialize_app(embedder_config or {})
 
     def search(

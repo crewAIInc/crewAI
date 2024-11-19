@@ -1,7 +1,6 @@
 import csv
 from typing import List
 
-from crewai.knowledge.embedder.base_embedder import BaseEmbedder
 from crewai.knowledge.source.base_file_knowledge_source import BaseFileKnowledgeSource
 
 
@@ -18,17 +17,13 @@ class CSVKnowledgeSource(BaseFileKnowledgeSource):
                 content += " ".join(row) + "\n"
         return content
 
-    def add(self, embedder: BaseEmbedder) -> None:
+    def add(self) -> None:
         """
         Add CSV file content to the knowledge source, chunk it, compute embeddings,
         and save the embeddings.
         """
         new_chunks = self._chunk_text(self.content)
         self.chunks.extend(new_chunks)
-        # Compute embeddings for the new chunks
-        new_embeddings = embedder.embed_chunks(new_chunks)
-        # Save the embeddings
-        self.chunk_embeddings.extend(new_embeddings)
         self.save_documents(metadata=self.metadata)
 
     def _chunk_text(self, text: str) -> List[str]:

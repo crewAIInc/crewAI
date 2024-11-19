@@ -4,7 +4,6 @@ from typing import List
 import numpy as np
 from pydantic import BaseModel, ConfigDict, Field
 
-from crewai.knowledge.embedder.base_embedder import BaseEmbedder
 from crewai.knowledge.storage.knowledge_storage import KnowledgeStorage
 from typing import Dict, Any
 
@@ -27,7 +26,7 @@ class BaseKnowledgeSource(BaseModel, ABC):
         pass
 
     @abstractmethod
-    def add(self, embedder: BaseEmbedder) -> None:
+    def add(self) -> None:
         """Process content, chunk it, compute embeddings, and save them."""
         pass
 

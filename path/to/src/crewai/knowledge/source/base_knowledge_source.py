@@ -1,8 +1,6 @@
 from abc import ABC, abstractmethod
 from typing import List
 
-from crewai.knowledge.embedder.base_embedder import BaseEmbedder
-
 
 class BaseKnowledgeSource(ABC):
     """Abstract base class for different types of knowledge sources."""
@@ -22,11 +20,11 @@ class BaseKnowledgeSource(ABC):
         pass
 
     @abstractmethod
-    def add(self, embedder: BaseEmbedder) -> None:
+    def add(self) -> None:
         """Add content to the knowledge base, chunk it, and compute embeddings."""
         pass
 
     @abstractmethod
-    def query(self, embedder: BaseEmbedder, query: str, top_k: int = 3) -> str:
+    def query(self, query: str, top_k: int = 3) -> str:
         """Query the knowledge base using semantic search."""
         pass
