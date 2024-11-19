@@ -308,8 +308,8 @@ These are examples of how to configure LLMs for your agent.
     from crewai import LLM
 
     llm = LLM(
-        model="perplexity/mistral-7b-instruct",
-        base_url="https://api.perplexity.ai/v1",
+        model="llama-3.1-sonar-large-128k-online",
+        base_url="https://api.perplexity.ai/",
         api_key="your-api-key-here"
     )
     agent = Agent(llm=llm, ...)
