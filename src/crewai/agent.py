@@ -121,7 +121,6 @@ class Agent(BaseAgent):
         default="safe",
         description="Mode for code execution: 'safe' (using Docker) or 'unsafe' (direct execution).",
     )
-    _knowledge: Optional[Knowledge] = PrivateAttr(default=None)
 
     @model_validator(mode="after")
     def post_init_setup(self):
@@ -230,12 +229,6 @@ class Agent(BaseAgent):
         if self.allow_code_execution:
             self._validate_docker_installation()
 
-        # Initialize the Knowledge object if knowledge_sources are provided
-        if self.crew and self.crew.knowledge_store:
-            self._knowledge = self.crew.knowledge_store
-        else:
-            self._knowledge = None
-
         return self
 
     def _setup_agent_executor(self):
@@ -282,19 +275,16 @@ class Agent(BaseAgent):
                 task_prompt += self.i18n.slice("memory").format(memory=memory)
 
         # Integrate the knowledge base
-        if self.crew and self.crew.knowledge_store:
-            knowledge_snippets: List[Dict[str, Any]] = self.crew.knowledge_store.query(
-                [task.prompt()]
-            )
-            if knowledge_snippets:
-                valid_snippets = [
-                    result["context"]
-                    for result in knowledge_snippets
-                    if result and result.get("context")
-                ]
-                if valid_snippets:
-                    formatted_knowledge = "\n".join(valid_snippets)
-                    task_prompt += f"\n\nAdditional Information:\n{formatted_knowledge}"
+        if self.crew and self.crew.knowledge:
+            knowledge_snippets = self.crew.knowledge.query([task.prompt()])
+            valid_snippets = [
+                result["context"] 
+                for result in knowledge_snippets 
+                if result and result.get("context")
+            ]
+            if valid_snippets:
+                formatted_knowledge = "\n".join(valid_snippets)
+                task_prompt += f"\n\nAdditional Information:\n{formatted_knowledge}"
 
         tools = tools or self.tools or []
         self.create_agent_executor(tools=tools, task=task)

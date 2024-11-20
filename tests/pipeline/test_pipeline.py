@@ -38,6 +38,7 @@ def mock_crew_factory():
 
         crew = MockCrew()
         crew.name = name
+        crew.knowledge = None
 
         task_output = TaskOutput(
             description="Test task", raw="Task output", agent="Test Agent"

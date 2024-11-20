@@ -195,18 +195,10 @@ class Crew(BaseModel):
         default=[],
         description="List of execution logs for tasks",
     )
-    knowledge_sources: Optional[List[BaseKnowledgeSource]] = Field(
-        default=None,
-        description="Knowledge sources for the agent.",
+    knowledge: Optional[Dict[str, Any]] = Field(
+        default=None, description="Knowledge for the crew. Add knowledge sources to the knowledge object."
     )
-    knowledge_store: Optional[Knowledge] = Field(
-        default=None, description="Knowledge Source for the crew."
-    )
-    knowledge: Optional[bool] = Field(
-        default=False,
-        description="Whether the crew should use knowledge to store memories of it's execution",
-    )
-    
+
 
     @field_validator("id", mode="before")
     @classmethod
@@ -284,9 +276,7 @@ class Crew(BaseModel):
     @model_validator(mode="after")
     def create_crew_knowledge(self) -> "Crew":
         if self.knowledge:
-            self.knowledge_store = Knowledge(
-                sources=self.knowledge_sources or [], embedder_config=self.embedder
-            )
+            self.knowledge = Knowledge(**self.knowledge)
         return self
 
     @model_validator(mode="after")

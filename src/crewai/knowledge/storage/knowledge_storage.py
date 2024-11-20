@@ -9,6 +9,7 @@ from typing import Optional, List
 from typing import Dict, Any
 from crewai.utilities import EmbeddingConfigurator
 from crewai.knowledge.storage.base_knowledge_storage import BaseKnowledgeStorage
+import hashlib
 
 
 @contextlib.contextmanager
@@ -95,10 +96,14 @@ class KnowledgeStorage(BaseKnowledgeStorage):
         if self.collection:
             metadatas = [metadata] if isinstance(metadata, dict) else metadata
 
-            self.collection.add(
+            ids = [
+                hashlib.sha256(doc.encode("utf-8")).hexdigest() for doc in documents
+            ]
+
+            self.collection.upsert(
                 documents=documents,
                 metadatas=metadatas,
-                ids=[str(uuid.uuid4()) for _ in range(len(documents))],
+                ids=ids,
             )
         else:
             raise Exception("Collection not initialized")

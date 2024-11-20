@@ -18,10 +18,7 @@ class Knowledge(BaseModel):
 
     def __init__(self, embedder_config: Optional[Dict[str, Any]] = None, **data):
         super().__init__(**data)
-        if embedder_config:
-            self.storage = KnowledgeStorage(embedder_config=embedder_config)
-        else:
-            self.storage = KnowledgeStorage()
+        self.storage = KnowledgeStorage(embedder_config=embedder_config or None)
 
         try:
             for source in self.sources:

@@ -14,9 +14,8 @@ class BaseFileKnowledgeSource(BaseKnowledgeSource):
     file_path: Union[Path, List[Path]] = Field(...)
     content: Dict[Path, str] = Field(init=False, default_factory=dict)
     storage: KnowledgeStorage = Field(default_factory=KnowledgeStorage)
-    metadata: Dict[str, Any] = Field(default_factory=dict)
 
-    def model_post_init(self, context):
+    def model_post_init(self, _):
         """Post-initialization method to load content."""
         self.content = self.load_content()
 

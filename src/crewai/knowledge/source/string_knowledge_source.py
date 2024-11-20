@@ -10,7 +10,7 @@ class StringKnowledgeSource(BaseKnowledgeSource):
 
     content: str = Field(...)
 
-    def model_post_init(self, context):
+    def model_post_init(self, _):
         """Post-initialization method to validate content."""
         self.load_content()
 
