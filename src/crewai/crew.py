@@ -27,6 +27,7 @@ from crewai.llm import LLM
 from crewai.memory.entity.entity_memory import EntityMemory
 from crewai.memory.long_term.long_term_memory import LongTermMemory
 from crewai.memory.short_term.short_term_memory import ShortTermMemory
+from crewai.knowledge.knowledge import Knowledge
 from crewai.memory.user.user_memory import UserMemory
 from crewai.process import Process
 from crewai.task import Task
@@ -201,6 +202,10 @@ class Crew(BaseModel):
         default=[],
         description="List of execution logs for tasks",
     )
+    knowledge: Optional[Dict[str, Any]] = Field(
+        default=None, description="Knowledge for the crew. Add knowledge sources to the knowledge object."
+    )
+
 
     @field_validator("id", mode="before")
     @classmethod
@@ -273,6 +278,15 @@ class Crew(BaseModel):
                 )
             else:
                 self._user_memory = None
+        return self
+
+    @model_validator(mode="after")
+    def create_crew_knowledge(self) -> "Crew":
+        if self.knowledge:
+            try:
+                self.knowledge = Knowledge(**self.knowledge) if isinstance(self.knowledge, dict) else self.knowledge
+            except (TypeError, ValueError) as e:
+                raise ValueError(f"Invalid knowledge configuration: {str(e)}")
         return self
 
     @model_validator(mode="after")

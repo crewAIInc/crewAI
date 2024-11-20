@@ -136,6 +136,7 @@ def log_tasks_outputs() -> None:
 @click.option("-l", "--long", is_flag=True, help="Reset LONG TERM memory")
 @click.option("-s", "--short", is_flag=True, help="Reset SHORT TERM memory")
 @click.option("-e", "--entities", is_flag=True, help="Reset ENTITIES memory")
+@click.option("-kn", "--knowledge", is_flag=True, help="Reset KNOWLEDGE storage")
 @click.option(
     "-k",
     "--kickoff-outputs",
@@ -143,17 +144,24 @@ def log_tasks_outputs() -> None:
     help="Reset LATEST KICKOFF TASK OUTPUTS",
 )
 @click.option("-a", "--all", is_flag=True, help="Reset ALL memories")
-def reset_memories(long, short, entities, kickoff_outputs, all):
+def reset_memories(
+    long: bool,
+    short: bool,
+    entities: bool,
+    knowledge: bool,
+    kickoff_outputs: bool,
+    all: bool,
+) -> None:
     """
     Reset the crew memories (long, short, entity, latest_crew_kickoff_ouputs). This will delete all the data saved.
     """
     try:
-        if not all and not (long or short or entities or kickoff_outputs):
+        if not all and not (long or short or entities or knowledge or kickoff_outputs):
             click.echo(
                 "Please specify at least one memory type to reset using the appropriate flags."
             )
             return
-        reset_memories_command(long, short, entities, kickoff_outputs, all)
+        reset_memories_command(long, short, entities, knowledge, kickoff_outputs, all)
     except Exception as e:
         click.echo(f"An error occurred while resetting memories: {e}", err=True)
 
