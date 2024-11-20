@@ -87,3 +87,23 @@ crew = Crew(
 
 result = crew.kickoff(inputs={"question": "What city does John live in and how old is he?"})
 ```
+
+## Embedder Configuration
+
+You can also configure the embedder for the knowledge store. This is useful if you want to use a different embedder for the knowledge store than the one used for the agents.
+
+```python
+...
+string_source = StringKnowledgeSource(
+    content="Users name is John. He is 30 years old and lives in San Francisco.",
+    metadata={"preference": "personal"}
+)
+crew = Crew(
+    ...
+    knowledge={
+        "sources": [string_source],
+        "metadata": {"preference": "personal"},
+        "embedder_config": {"provider": "openai", "config": {"model": "text-embedding-3-small"}},
+    },
+)
+```
