@@ -100,6 +100,7 @@ PROVIDERS = [
     "cerebras",
 ]
 
+
 MODELS = {
     "openai": ["gpt-4", "gpt-4o", "gpt-4o-mini", "o1-mini", "o1-preview"],
     "anthropic": [
@@ -164,5 +165,46 @@ MODELS = {
         "bedrock/mistral.mixtral-8x7b-instruct-v0:1",
     ],
 }
+
+
+def get_env_vars(provider: str = None) -> dict:
+    """
+    Get environment variables configuration for specified provider or all providers.
+    
+    Args:
+        provider (str, optional): The provider name to get env vars for. Defaults to None.
+    
+    Returns:
+        dict: Environment variables configuration
+    """
+    if provider and provider in ENV_VARS:
+        return ENV_VARS[provider]
+    return ENV_VARS
+
+
+def get_providers() -> list:
+    """
+    Get list of all supported providers.
+    
+    Returns:
+        list: List of provider names
+    """
+    return PROVIDERS
+
+
+def get_models(provider: str = None) -> dict:
+    """
+    Get available models for specified provider or all providers.
+    
+    Args:
+        provider (str, optional): The provider name to get models for. Defaults to None.
+    
+    Returns:
+        dict: Available models configuration
+    """
+    if provider and provider in MODELS:
+        return MODELS[provider]
+    return MODELS
+
 
 JSON_URL = "https://raw.githubusercontent.com/BerriAI/litellm/main/model_prices_and_context_window.json"
