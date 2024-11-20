@@ -16,7 +16,7 @@ Additionally, we have specific tools for generate knowledge sources for strings,
 Here's a simple example of how to use the Knowledge class:
 
 ```python
-from crewai import Agent, Task, Crew, Knowledge, Process, LLM
+from crewai import Agent, Task, Crew, Process, LLM
 from crewai.knowledge.source.string_knowledge_source import StringKnowledgeSource
 
 # Create a knowledge source
@@ -25,8 +25,7 @@ string_source = StringKnowledgeSource(
     content=content, metadata={"preference": "personal"}
 )
 
-# Create a knowledge store with a list of sources and metadata
-knowledge = Knowledge(sources=[string_source], metadata={"preference": "personal"})
+
 llm = LLM(model="gpt-4o-mini", temperature=0)
   # Create an agent with the knowledge store
 agent = Agent(
@@ -48,7 +47,7 @@ crew = Crew(
     tasks=[task],
     verbose=True,
     process=Process.sequential,
-    knowledge=True, # Enable knowledge
+    knowledge={"sources": [string_source], "metadata": {"preference": "personal"}}, # Enable knowledge by adding the sources here
 )
 
 result = crew.kickoff(inputs={"question": "What city does John live in and how old is he?"})
@@ -60,7 +59,6 @@ If you had sources from previous runs, you no longer need to declare the knowled
 
 ```python
 from crewai import Agent, Task, Crew, Process, LLM
-from crewai.knowledge.source.string_knowledge_source import StringKnowledgeSource
 
 # Create a knowledge store with a list of sources and metadata
 llm = LLM(model="gpt-4o-mini", temperature=0)
@@ -84,7 +82,7 @@ crew = Crew(
     tasks=[task],
     verbose=True,
     process=Process.sequential,
-    knowledge=True, # Enable knowledge
+    knowledge={"sources": [string_source], "metadata": {"preference": "personal"}}, # Enable knowledge by adding the sources here
 )
 
 result = crew.kickoff(inputs={"question": "What city does John live in and how old is he?"})
