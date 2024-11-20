@@ -20,7 +20,7 @@ class BaseKnowledgeSource(BaseModel, ABC):
     metadata: Dict[str, Any] = Field(default_factory=dict)
 
     @abstractmethod
-    def load_content(self):
+    def load_content(self) -> Dict[Any, str]:
         """Load and preprocess content from the source."""
         pass
 

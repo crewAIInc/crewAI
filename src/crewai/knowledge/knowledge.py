@@ -6,7 +6,7 @@ from pydantic import BaseModel, ConfigDict, Field
 from crewai.knowledge.source.base_knowledge_source import BaseKnowledgeSource
 from crewai.knowledge.storage.knowledge_storage import KnowledgeStorage
 from crewai.utilities.logger import Logger
-
+from crewai.utilities.constants import DEFAULT_SCORE_THRESHOLD
 os.environ["TOKENIZERS_PARALLELISM"] = "false"  # removes logging from fastembed
 
 
@@ -42,6 +42,6 @@ class Knowledge(BaseModel):
             query,
             limit,
             filter={"preference": preference} if preference else None,
-            score_threshold=0.35,
+            score_threshold=DEFAULT_SCORE_THRESHOLD,
         )
         return results
