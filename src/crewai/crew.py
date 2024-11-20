@@ -486,8 +486,8 @@ class Crew(BaseModel):
         self,
         inputs: Optional[Dict[str, Any]] = None,
     ) -> CrewOutput:
-        for callback in self.before_kickoff_callbacks:
-            inputs = callback(inputs)
+        for before_callback in self.before_kickoff_callbacks:
+            inputs = before_callback(inputs)
 
         """Starts the crew to work on its assigned tasks."""
         self._execution_span = self._telemetry.crew_execution_span(self, inputs)
@@ -531,8 +531,8 @@ class Crew(BaseModel):
                 f"The process '{self.process}' is not implemented yet."
             )
 
-        for callback in self.after_kickoff_callbacks:
-            result = callback(result)
+        for after_callback in self.after_kickoff_callbacks:
+            result = after_callback(result)
 
         metrics += [agent._token_process.get_summary() for agent in self.agents]
 
