@@ -18,7 +18,6 @@ from crewai.tools.tool_usage import ToolUsage
 from crewai.tools.tool_usage_events import ToolUsageFinished
 from crewai.utilities import RPMController
 from crewai.utilities.events import Emitter
-from crewai.knowledge.knowledge import Knowledge
 
 
 def test_agent_llm_creation_with_env_vars():
