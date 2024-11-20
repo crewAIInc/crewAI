@@ -144,7 +144,14 @@ def log_tasks_outputs() -> None:
     help="Reset LATEST KICKOFF TASK OUTPUTS",
 )
 @click.option("-a", "--all", is_flag=True, help="Reset ALL memories")
-def reset_memories(long, short, entities, knowledge, kickoff_outputs, all):
+def reset_memories(
+    long: bool,
+    short: bool,
+    entities: bool,
+    knowledge: bool,
+    kickoff_outputs: bool,
+    all: bool,
+) -> None:
     """
     Reset the crew memories (long, short, entity, latest_crew_kickoff_ouputs). This will delete all the data saved.
     """
