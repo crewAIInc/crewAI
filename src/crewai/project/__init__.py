@@ -1,5 +1,7 @@
 from .annotations import (
+    after_kickoff,
     agent,
+    before_kickoff,
     cache_handler,
     callback,
     crew,
@@ -9,8 +11,6 @@ from .annotations import (
     pipeline,
     task,
     tool,
-    before_crew,
-    after_crew,
 )
 from .crew_base import CrewBase
 from .pipeline_base import PipelineBase
@@ -28,6 +28,6 @@ __all__ = [
     "llm",
     "cache_handler",
     "pipeline",
-    "before_crew",
-    "after_crew",
+    "before_kickoff",
+    "after_kickoff",
 ]
