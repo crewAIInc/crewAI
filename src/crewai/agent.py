@@ -1,7 +1,7 @@
 import os
 import shutil
 import subprocess
-from typing import Any, List, Literal, Optional, Union, Dict
+from typing import Any, List, Literal, Optional, Union
 
 from pydantic import Field, InstanceOf, PrivateAttr, model_validator
 
@@ -9,7 +9,6 @@ from crewai.agents import CacheHandler
 from crewai.agents.agent_builder.base_agent import BaseAgent
 from crewai.agents.crew_agent_executor import CrewAgentExecutor
 from crewai.cli.constants import ENV_VARS
-from crewai.knowledge.knowledge import Knowledge
 from crewai.llm import LLM
 from crewai.memory.contextual.contextual_memory import ContextualMemory
 from crewai.tools import BaseTool

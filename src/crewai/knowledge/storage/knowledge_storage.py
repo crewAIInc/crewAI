@@ -1,4 +1,3 @@
-import uuid
 import contextlib
 import io
 import logging
