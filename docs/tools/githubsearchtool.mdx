@@ -34,6 +34,7 @@ from crewai_tools import GithubSearchTool
 # Initialize the tool for semantic searches within a specific GitHub repository
 tool = GithubSearchTool(
 	github_repo='https://github.com/example/repo',
+	gh_token='your_github_personal_access_token',
 	content_types=['code', 'issue'] # Options: code, repo, pr, issue
 )
 
@@ -41,6 +42,7 @@ tool = GithubSearchTool(
 
 # Initialize the tool for semantic searches within a specific GitHub repository, so the agent can search any repository if it learns about during its execution
 tool = GithubSearchTool(
+	gh_token='your_github_personal_access_token',
 	content_types=['code', 'issue'] # Options: code, repo, pr, issue
 )
 ```
@@ -48,6 +50,7 @@ tool = GithubSearchTool(
 ## Arguments
 
 - `github_repo` : The URL of the GitHub repository where the search will be conducted. This is a mandatory field and specifies the target repository for your search.
+- `gh_token` : Your GitHub Personal Access Token (PAT) required for authentication. You can create one in your GitHub account settings under Developer Settings > Personal Access Tokens.
 - `content_types` : Specifies the types of content to include in your search. You must provide a list of content types from the following options: `code` for searching within the code, 
 `repo` for searching within the repository's general information, `pr` for searching within pull requests, and `issue` for searching within issues. 
 This field is mandatory and allows tailoring the search to specific content types within the GitHub repository.
@@ -78,4 +81,3 @@ tool = GithubSearchTool(
         ),
     )
 )
-```
