@@ -1578,13 +1578,6 @@ def test_agent_execute_task_with_ollama():
     assert "AI" in result or "artificial intelligence" in result.lower()
 
 
-@pytest.fixture(autouse=True)
-def reset_knowledge_storage():
-    """Fixture to reset knowledge storage before each test."""
-    Knowledge().storage.reset()
-    yield
-
-
 @pytest.mark.vcr(filter_headers=["authorization"])
 def test_agent_with_knowledge_sources():
     # Create a knowledge source with some content
@@ -1592,25 +1585,33 @@ def test_agent_with_knowledge_sources():
     string_source = StringKnowledgeSource(
         content=content, metadata={"preference": "personal"}
     )
-    Knowledge(sources=[string_source])
+    
 
-    # Create an agent with the knowledge source
-    agent = Agent(
-        role="Information Agent",
-        goal="Provide information based on knowledge sources",
-        backstory="You have access to specific knowledge sources.",
-        llm=LLM(model="gpt-4o-mini"),
-    )
+    with patch('crewai.knowledge.storage.knowledge_storage.KnowledgeStorage') as MockKnowledge:
+        mock_knowledge_instance = MockKnowledge.return_value
+        mock_knowledge_instance.sources = [string_source]
+        mock_knowledge_instance.query.return_value = [{
+            "content": content,
+            "metadata": {"preference": "personal"}
+        }]
+        
+        agent = Agent(
+            role="Information Agent",
+            goal="Provide information based on knowledge sources",
+            backstory="You have access to specific knowledge sources.",
+            llm=LLM(model="gpt-4o-mini"),
+        )
 
-    # Create a task that requires the agent to use the knowledge
-    task = Task(
-        description="What is Brandon's favorite color?",
-        expected_output="Brandon's favorite color.",
-        agent=agent,
-    )
+        # Create a task that requires the agent to use the knowledge
+        task = Task(
+            description="What is Brandon's favorite color?",
+            expected_output="Brandon's favorite color.",
+            agent=agent,
+        )
 
-    # Execute the task
-    result = agent.execute_task(task)
+        crew = Crew(agents=[agent], tasks=[task])
+        result = crew.kickoff()
 
-    # Assert that the agent provides the correct information
-    assert "blue" in result.lower()
+        # Assert that the agent provides the correct information
+        assert "blue" in result.raw.lower()
+

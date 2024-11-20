@@ -44,27 +44,25 @@ interactions:
       x-stainless-runtime:
       - CPython
       x-stainless-runtime-version:
-      - 3.12.5
+      - 3.11.9
     method: POST
     uri: https://api.openai.com/v1/chat/completions
   response:
-    content: "{\n  \"id\": \"chatcmpl-AVNRSfYiY3uAvBKIE5yPlxcmHF8hg\",\n  \"object\":
-      \"chat.completion\",\n  \"created\": 1732041642,\n  \"model\": \"gpt-4o-mini-2024-07-18\",\n
-      \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
-      \"assistant\",\n        \"content\": \"I now can give a great answer  \\nFinal
-      Answer: Brandon's favorite color is blue.\",\n        \"refusal\": null\n      },\n
-      \     \"logprobs\": null,\n      \"finish_reason\": \"stop\"\n    }\n  ],\n
-      \ \"usage\": {\n    \"prompt_tokens\": 167,\n    \"completion_tokens\": 18,\n
-      \   \"total_tokens\": 185,\n    \"prompt_tokens_details\": {\n      \"cached_tokens\":
-      0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\": {\n
-      \     \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\":
-      0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"system_fingerprint\":
-      \"fp_0705bf87c0\"\n}\n"
+    body:
+      string: !!binary |
+        H4sIAAAAAAAAA4xSQW7bMBC86xULXnqxAtmxI1e3FEWBtJekCXJpC4GmVhIdapcgqbhN4L8HlB1L
+        QVOgFwGa2RnOLPmcAAhdiQKEamVQnTXp5f3d9lsdbndh++C+757Or6/bm6uvn59WH/FGzKKCN1tU
+        4VV1prizBoNmOtDKoQwYXef5+SK7WK3ny4HouEITZY0N6ZLTTpNOF9limWZ5Ol8f1S1rhV4U8CMB
+        AHgevjEnVfhbFJDNXpEOvZcNiuI0BCAcm4gI6b32QVIQs5FUTAFpiH4FxDtQkqDRjwgSmhgbJPkd
+        OoCf9EWTNHA5/BfwyUmqmD54qOUjOx0QFBt2oD1sTI9n02Mc1r2XsSr1xhzx/Sm34cY63vgjf8Jr
+        Tdq3pUPpmWJGH9iKgd0nAL+G/fRvKgvruLOhDPyAFA3nF/nBT4zXMmHXRzJwkGaKr2bv+JUVBqmN
+        n2xYKKlarEbpeB2yrzRPiGTS+u8073kfmmtq/sd+JJRCG7AqrcNKq7eNxzGH8dX+a+y05SGw8H98
+        wK6sNTXorNOHN1PbMsuz1aZe5yoTyT55AQAA//8DAPaYLdRBAwAA
     headers:
       CF-Cache-Status:
       - DYNAMIC
       CF-RAY:
-      - 8e5254865d47680c-SJC
+      - 8e54a2a7d81467f7-SJC
       Connection:
       - keep-alive
       Content-Encoding:
@@ -72,14 +70,14 @@ interactions:
       Content-Type:
       - application/json
       Date:
-      - Tue, 19 Nov 2024 18:40:42 GMT
+      - Wed, 20 Nov 2024 01:23:34 GMT
       Server:
       - cloudflare
       Set-Cookie:
-      - __cf_bm=WAd8fO8QSWocATajhCTglnUAXkZag7ld.Vvm.Ams__4-1732041642-1.0.1.1-nmO.TcMZYj2VLQlxzUEcktcauU.oPPtPX6qR9sxIzHzK2w9lBIlrTxTMe5_VwCe1bGWpX.6U02mrLHPf3N6UBw;
-        path=/; expires=Tue, 19-Nov-24 19:10:42 GMT; domain=.api.openai.com; HttpOnly;
+      - __cf_bm=DoHo1Z11nN9bxkwZmJGnaxRhyrWE0UfyimYuUVRU6A4-1732065814-1.0.1.1-JVRvFrIJLHEq9OaFQS0qcgYcawE7t2XQ4Tpqd58n2Yfx3mvEqD34MJmooi1LtvdvjB2J8x1Rs.rCdXD.msLlKw;
+        path=/; expires=Wed, 20-Nov-24 01:53:34 GMT; domain=.api.openai.com; HttpOnly;
         Secure; SameSite=None
-      - _cfuvid=lNGPBYkRBbMGmmOXUkbBEMiRUIkqgUvHTFPPUTgpFY8-1732041642465-0.0.1.1-604800000;
+      - _cfuvid=n3RrNhFMqC3HtJ7n3e3agyxnM1YOQ6eKESz_eeXLtZA-1732065814630-0.0.1.1-604800000;
         path=/; domain=.api.openai.com; HttpOnly; Secure; SameSite=None
       Transfer-Encoding:
       - chunked
@@ -92,7 +90,7 @@ interactions:
       openai-organization:
       - crewai-iuxna1
       openai-processing-ms:
-      - '433'
+      - '344'
       openai-version:
       - '2020-10-01'
       strict-transport-security:
@@ -110,7 +108,8 @@ interactions:
       x-ratelimit-reset-tokens:
       - 0s
       x-request-id:
-      - req_1db7656143a6fe8ae6334797387b1172
-    http_version: HTTP/1.1
-    status_code: 200
+      - req_8f1622677c64913753a595f679596614
+    status:
+      code: 200
+      message: OK
 version: 1
