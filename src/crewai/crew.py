@@ -199,9 +199,14 @@ class Crew(BaseModel):
         default=None,
         description="Knowledge sources for the agent.",
     )
-    knowledge: Optional[Knowledge] = Field(
+    knowledge_store: Optional[Knowledge] = Field(
         default=None, description="Knowledge Source for the crew."
     )
+    knowledge: Optional[bool] = Field(
+        default=False,
+        description="Whether the crew should use knowledge to store memories of it's execution",
+    )
+    
 
     @field_validator("id", mode="before")
     @classmethod
@@ -278,9 +283,10 @@ class Crew(BaseModel):
 
     @model_validator(mode="after")
     def create_crew_knowledge(self) -> "Crew":
-        self.knowledge = Knowledge(
-            sources=self.knowledge_sources or [], embedder_config=self.embedder
-        )
+        if self.knowledge:
+            self.knowledge_store = Knowledge(
+                sources=self.knowledge_sources or [], embedder_config=self.embedder
+            )
         return self
 
     @model_validator(mode="after")

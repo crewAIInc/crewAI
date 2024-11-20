@@ -416,7 +416,6 @@ def test_hybrid_string_and_files(mock_vector_db, tmpdir):
     mock_vector_db.query.assert_called_once()
 
 
-@pytest.mark.vcr(filter_headers=["authorization"])
 def test_pdf_knowledge_source(mock_vector_db):
     # Get the directory of the current file
     current_dir = Path(__file__).parent

@@ -231,8 +231,8 @@ class Agent(BaseAgent):
             self._validate_docker_installation()
 
         # Initialize the Knowledge object if knowledge_sources are provided
-        if self.crew and self.crew.knowledge:
-            self._knowledge = self.crew.knowledge
+        if self.crew and self.crew.knowledge_store:
+            self._knowledge = self.crew.knowledge_store
         else:
             self._knowledge = None
 
@@ -282,8 +282,8 @@ class Agent(BaseAgent):
                 task_prompt += self.i18n.slice("memory").format(memory=memory)
 
         # Integrate the knowledge base
-        if self.crew and self.crew.knowledge:
-            knowledge_snippets: List[Dict[str, Any]] = self.crew.knowledge.query(
+        if self.crew and self.crew.knowledge_store and self._knowledge:
+            knowledge_snippets: List[Dict[str, Any]] = self.crew.knowledge_store.query(
                 [task.prompt()]
             )
             if knowledge_snippets:
