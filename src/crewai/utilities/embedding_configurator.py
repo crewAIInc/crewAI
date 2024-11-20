@@ -33,7 +33,6 @@ class EmbeddingConfigurator:
         if isinstance(provider, EmbeddingFunction):
             try:
                 validate_embedding_function(provider)
-                print("Valid custom embedding function", provider, config)
                 return provider
             except Exception as e:
                 raise ValueError(f"Invalid custom embedding function: {str(e)}")
