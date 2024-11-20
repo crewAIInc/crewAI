@@ -282,7 +282,7 @@ class Agent(BaseAgent):
                 task_prompt += self.i18n.slice("memory").format(memory=memory)
 
         # Integrate the knowledge base
-        if self.crew and self.crew.knowledge_store and self._knowledge:
+        if self.crew and self.crew.knowledge_store:
             knowledge_snippets: List[Dict[str, Any]] = self.crew.knowledge_store.query(
                 [task.prompt()]
             )
