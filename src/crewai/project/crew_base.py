@@ -43,8 +43,8 @@ def CrewBase(cls: T) -> T:
                     for attr in [
                         "is_task",
                         "is_agent",
-                        "is_before_crew",
-                        "is_after_crew",
+                        "is_before_kickoff",
+                        "is_after_kickoff",
                         "is_kickoff",
                     ]
                 )
@@ -57,11 +57,11 @@ def CrewBase(cls: T) -> T:
             self._original_agents = self._filter_functions(
                 self._original_functions, "is_agent"
             )
-            self._before_crew = self._filter_functions(
-                self._original_functions, "is_before_crew"
+            self._before_kickoff = self._filter_functions(
+                self._original_functions, "is_before_kickoff"
             )
-            self._after_crew = self._filter_functions(
-                self._original_functions, "is_after_crew"
+            self._after_kickoff = self._filter_functions(
+                self._original_functions, "is_after_kickoff"
             )
             self._kickoff = self._filter_functions(
                 self._original_functions, "is_kickoff"
@@ -212,26 +212,5 @@ def CrewBase(cls: T) -> T:
                 self.tasks_config[task_name]["callbacks"] = [
                     callback_functions[callback]() for callback in callbacks
                 ]
-
-        def kickoff(self, inputs=None):
-            # Execute before_crew functions and allow them to modify inputs
-            for _, func in self._before_crew.items():
-                modified_inputs = func(self, inputs)
-                if modified_inputs is not None:
-                    inputs = modified_inputs
-
-            # Get the crew instance
-            crew_instance = self.crew()
-
-            # Execute the crew's tasks
-            result = crew_instance.kickoff(inputs=inputs)
-
-            # Execute after_crew functions and allow them to modify the output
-            for _, func in self._after_crew.items():
-                modified_result = func(self, result)
-                if modified_result is not None:
-                    result = modified_result
-
-            return result
 
     return cast(T, WrappedClass)
