@@ -1,3 +1,5 @@
+from typing import Dict, List, Optional
+
 ENV_VARS = {
     "openai": [
         {
@@ -167,7 +169,7 @@ MODELS = {
 }
 
 
-def get_env_vars(provider: str = None) -> dict:
+def get_env_vars(provider: Optional[str] = None) -> Dict[str, List[str]]:
     """
     Get environment variables configuration for specified provider or all providers.
     
@@ -177,9 +179,12 @@ def get_env_vars(provider: str = None) -> dict:
     Returns:
         dict: Environment variables configuration
     """
-    if provider and provider in ENV_VARS:
-        return ENV_VARS[provider]
-    return ENV_VARS
+    if provider is not None and not isinstance(provider,str):
+        raise TypeError("Provider must be a string or None")
+    if provider and provider not in ENV_VARS:
+        raise ValueError(f"Unknown provider: {provider}")
+    
+    return ENV_VARS[provider] if provider else ENV_VARS
 
 
 def get_providers() -> list:
@@ -192,7 +197,7 @@ def get_providers() -> list:
     return PROVIDERS
 
 
-def get_models(provider: str = None) -> dict:
+def get_models(provider: Optional[str] = None) -> Dict[str, List[str]]:
     """
     Get available models for specified provider or all providers.
     
@@ -203,8 +208,15 @@ def get_models(provider: str = None) -> dict:
         dict: Available models configuration
     """
     if provider and provider in MODELS:
-        return MODELS[provider]
+        return {provider: MODELS[provider]}
     return MODELS
 
 
 JSON_URL = "https://raw.githubusercontent.com/BerriAI/litellm/main/model_prices_and_context_window.json"
+
+# Tests
+def test_get_env_vars():
+    assert get_env_vars() is not None
+    assert isinstance(get_env_vars("openai"), list)
+    with pytest.raises(ValueError):
+        get_env_vars("invalid_provider")
