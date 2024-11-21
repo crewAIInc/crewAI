@@ -11,8 +11,8 @@ from crewai.agents.crew_agent_executor import CrewAgentExecutor
 from crewai.cli.constants import ENV_VARS
 from crewai.llm import LLM
 from crewai.memory.contextual.contextual_memory import ContextualMemory
-from crewai.tools.agent_tools.agent_tools import AgentTools
 from crewai.tools import BaseTool
+from crewai.tools.agent_tools.agent_tools import AgentTools
 from crewai.utilities import Converter, Prompts
 from crewai.utilities.constants import TRAINED_AGENTS_DATA_FILE, TRAINING_DATA_FILE
 from crewai.utilities.token_counter_callback import TokenCalcHandler
@@ -52,6 +52,7 @@ class Agent(BaseAgent):
             role: The role of the agent.
             goal: The objective of the agent.
             backstory: The backstory of the agent.
+            knowledge: The knowledge base of the agent.
             config: Dict representation of agent configuration.
             llm: The language model that will run the agent.
             function_calling_llm: The language model that will handle the tool calling for this agent, it overrides the crew function_calling_llm.
@@ -271,6 +272,18 @@ class Agent(BaseAgent):
             memory = contextual_memory.build_context_for_task(task, context)
             if memory.strip() != "":
                 task_prompt += self.i18n.slice("memory").format(memory=memory)
+
+        # Integrate the knowledge base
+        if self.crew and self.crew.knowledge:
+            knowledge_snippets = self.crew.knowledge.query([task.prompt()])
+            valid_snippets = [
+                result["context"] 
+                for result in knowledge_snippets 
+                if result and result.get("context")
+            ]
+            if valid_snippets:
+                formatted_knowledge = "\n".join(valid_snippets)
+                task_prompt += f"\n\nAdditional Information:\n{formatted_knowledge}"
 
         tools = tools or self.tools or []
         self.create_agent_executor(tools=tools, task=task)

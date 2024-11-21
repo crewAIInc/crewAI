@@ -27,6 +27,7 @@ from crewai.llm import LLM
 from crewai.memory.entity.entity_memory import EntityMemory
 from crewai.memory.long_term.long_term_memory import LongTermMemory
 from crewai.memory.short_term.short_term_memory import ShortTermMemory
+from crewai.knowledge.knowledge import Knowledge
 from crewai.memory.user.user_memory import UserMemory
 from crewai.process import Process
 from crewai.task import Task
@@ -201,6 +202,10 @@ class Crew(BaseModel):
         default=[],
         description="List of execution logs for tasks",
     )
+    knowledge: Optional[Dict[str, Any]] = Field(
+        default=None, description="Knowledge for the crew. Add knowledge sources to the knowledge object."
+    )
+
 
     @field_validator("id", mode="before")
     @classmethod
@@ -273,6 +278,15 @@ class Crew(BaseModel):
                 )
             else:
                 self._user_memory = None
+        return self
+
+    @model_validator(mode="after")
+    def create_crew_knowledge(self) -> "Crew":
+        if self.knowledge:
+            try:
+                self.knowledge = Knowledge(**self.knowledge) if isinstance(self.knowledge, dict) else self.knowledge
+            except (TypeError, ValueError) as e:
+                raise ValueError(f"Invalid knowledge configuration: {str(e)}")
         return self
 
     @model_validator(mode="after")
@@ -486,8 +500,8 @@ class Crew(BaseModel):
         self,
         inputs: Optional[Dict[str, Any]] = None,
     ) -> CrewOutput:
-        for callback in self.before_kickoff_callbacks:
-            inputs = callback(inputs)
+        for before_callback in self.before_kickoff_callbacks:
+            inputs = before_callback(inputs)
 
         """Starts the crew to work on its assigned tasks."""
         self._execution_span = self._telemetry.crew_execution_span(self, inputs)
@@ -531,8 +545,8 @@ class Crew(BaseModel):
                 f"The process '{self.process}' is not implemented yet."
             )
 
-        for callback in self.after_kickoff_callbacks:
-            result = callback(result)
+        for after_callback in self.after_kickoff_callbacks:
+            result = after_callback(result)
 
         metrics += [agent._token_process.get_summary() for agent in self.agents]
 
