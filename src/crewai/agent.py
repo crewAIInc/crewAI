@@ -158,28 +158,23 @@ class Agent(BaseAgent):
             for provider, env_vars in ENV_VARS.items():
                 if provider == set_provider:
                     for env_var in env_vars:
-                        if env_var["key_name"] in unnacepted_attributes:
-                            continue
                         # Check if the environment variable is set
-                        if "key_name" in env_var:
-                            env_value = os.environ.get(env_var["key_name"])
+                        key_name = env_var.get("key_name")
+                        if key_name and key_name not in unnacepted_attributes:
+                            env_value = os.environ.get(key_name)
                             if env_value:
                                 # Map key names containing "API_KEY" to "api_key"
                                 key_name = (
-                                    "api_key"
-                                    if "API_KEY" in env_var["key_name"]
-                                    else env_var["key_name"]
+                                    "api_key" if "API_KEY" in key_name else key_name
                                 )
                                 # Map key names containing "API_BASE" to "api_base"
                                 key_name = (
-                                    "api_base"
-                                    if "API_BASE" in env_var["key_name"]
-                                    else key_name
+                                    "api_base" if "API_BASE" in key_name else key_name
                                 )
                                 # Map key names containing "API_VERSION" to "api_version"
                                 key_name = (
                                     "api_version"
-                                    if "API_VERSION" in env_var["key_name"]
+                                    if "API_VERSION" in key_name
                                     else key_name
                                 )
                                 llm_params[key_name] = env_value
@@ -277,8 +272,8 @@ class Agent(BaseAgent):
         if self.crew and self.crew.knowledge:
             knowledge_snippets = self.crew.knowledge.query([task.prompt()])
             valid_snippets = [
-                result["context"] 
-                for result in knowledge_snippets 
+                result["context"]
+                for result in knowledge_snippets
                 if result and result.get("context")
             ]
             if valid_snippets:
