@@ -20,10 +20,10 @@ from pydantic import (
 from pydantic_core import PydanticCustomError
 
 from crewai.agents.agent_builder.base_agent import BaseAgent
-from crewai.tools.base_tool import BaseTool
 from crewai.tasks.output_format import OutputFormat
 from crewai.tasks.task_output import TaskOutput
 from crewai.telemetry.telemetry import Telemetry
+from crewai.tools.base_tool import BaseTool
 from crewai.utilities.config import process_config
 from crewai.utilities.converter import Converter, convert_to_model
 from crewai.utilities.i18n import I18N
@@ -208,7 +208,9 @@ class Task(BaseModel):
         """Execute the task asynchronously."""
         future: Future[TaskOutput] = Future()
         threading.Thread(
-            target=self._execute_task_async, args=(agent, context, tools, future)
+            daemon=True,
+            target=self._execute_task_async,
+            args=(agent, context, tools, future),
         ).start()
         return future
 
@@ -277,7 +279,9 @@ class Task(BaseModel):
             content = (
                 json_output
                 if json_output
-                else pydantic_output.model_dump_json() if pydantic_output else result
+                else pydantic_output.model_dump_json()
+                if pydantic_output
+                else result
             )
             self._save_file(content)
 
