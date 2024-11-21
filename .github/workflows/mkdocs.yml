@@ -25,7 +25,7 @@ jobs:
         run: echo "::set-output name=hash::$(sha256sum requirements-doc.txt | awk '{print $1}')"
 
       - name: Setup cache
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         with:
           key: mkdocs-material-${{ steps.req-hash.outputs.hash }}
           path: .cache
