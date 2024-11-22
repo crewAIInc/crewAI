@@ -142,6 +142,13 @@ def test_validate_model_json_output():
     assert output == {"name": "Bob", "age": 40}
 
 
+def test_validate_model_remove_code_block_markers():
+    result = '```json {"name": "Charlie", "age": 35}```'
+    output = validate_model(result, SimpleModel, True, None)
+    assert isinstance(output, dict)
+    assert output == {"name": "Charlie", "age": 35}
+
+
 # Tests for handle_partial_json
 def test_handle_partial_json_with_valid_partial():
     result = 'Some text {"name": "Charlie", "age": 35} more text'
