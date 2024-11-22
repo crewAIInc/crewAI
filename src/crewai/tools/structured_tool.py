@@ -151,6 +151,11 @@ class CrewStructuredTool:
             if param_name in ("self", "cls"):
                 continue
 
+            # Skip **kwargs parameters
+            if param.kind == inspect.Parameter.VAR_KEYWORD:
+                continue
+
+            # Only validate required parameters without defaults
             if param.default == inspect.Parameter.empty:
                 if param_name not in schema_fields:
                     raise ValueError(
