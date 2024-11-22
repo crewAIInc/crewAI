@@ -277,8 +277,8 @@ class Agent(BaseAgent):
         if self.crew and self.crew.knowledge:
             knowledge_snippets = self.crew.knowledge.query([task.prompt()])
             valid_snippets = [
-                result["context"] 
-                for result in knowledge_snippets 
+                result["context"]
+                for result in knowledge_snippets
                 if result and result.get("context")
             ]
             if valid_snippets:
@@ -399,7 +399,7 @@ class Agent(BaseAgent):
 
             for tool in tools:
                 if isinstance(tool, CrewAITool):
-                    tools_list.append(tool.to_langchain())
+                    tools_list.append(tool.to_structured_tool())
                 else:
                     tools_list.append(tool)
         except ModuleNotFoundError:
