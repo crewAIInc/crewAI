@@ -126,6 +126,14 @@ def test_convert_to_model_with_multiple_special_characters():
     )
 
 
+def test_convert_to_model_remove_code_block_markers():
+    result = '```json {"name": "Charlie", "age": 35}```'
+    output = convert_to_model(result, SimpleModel, None, None)
+    assert isinstance(output, SimpleModel)
+    assert output.age == 35
+    assert output.name == "Charlie"
+
+
 # Tests for validate_model
 def test_validate_model_pydantic_output():
     result = '{"name": "Alice", "age": 25}'
@@ -140,13 +148,6 @@ def test_validate_model_json_output():
     output = validate_model(result, SimpleModel, True)
     assert isinstance(output, dict)
     assert output == {"name": "Bob", "age": 40}
-
-
-def test_validate_model_remove_code_block_markers():
-    result = '```json {"name": "Charlie", "age": 35}```'
-    output = validate_model(result, SimpleModel, True, None)
-    assert isinstance(output, dict)
-    assert output == {"name": "Charlie", "age": 35}
 
 
 # Tests for handle_partial_json
