@@ -163,16 +163,6 @@ class CrewStructuredTool:
                         f"not found in args_schema"
                     )
 
-                field = schema_fields[param_name]
-                if field.default == ... and field.default_factory is None:
-                    # Parameter is required in both function and schema
-                    continue
-
-                raise ValueError(
-                    f"Function parameter '{param_name}' is required but has a "
-                    f"default value in the schema"
-                )
-
     def _parse_args(self, raw_args: Union[str, dict]) -> dict:
         """Parse and validate the input arguments against the schema.
 
