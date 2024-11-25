@@ -302,7 +302,7 @@ def test_generate_model_description_list_field():
         items: List[int]
 
     description = generate_model_description(ModelWithListField)
-    expected_description = '{\n  "items": list[int]\n}'
+    expected_description = '{\n  "items": List[int]\n}'
     assert description == expected_description
 
 
@@ -311,5 +311,5 @@ def test_generate_model_description_dict_field():
         attributes: Dict[str, int]
 
     description = generate_model_description(ModelWithDictField)
-    expected_description = '{\n  "attributes": dict[str, int]\n}'
+    expected_description = '{\n  "attributes": Dict[str, int]\n}'
     assert description == expected_description

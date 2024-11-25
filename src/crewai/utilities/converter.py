@@ -224,14 +224,14 @@ def generate_model_description(model: Type[BaseModel]) -> str:
         if origin is Union and type(None) in args:
             non_none_args = [arg for arg in args if arg is not type(None)]
             return f"Optional[{describe_field(non_none_args[0])}]"
-        elif issubclass(field_type, BaseModel):
-            return generate_model_description(field_type)
-        elif origin in (list, List):
+        elif origin is list:
             return f"List[{describe_field(args[0])}]"
-        elif origin in (dict, Dict):
+        elif origin is dict:
             key_type = describe_field(args[0])
             value_type = describe_field(args[1])
             return f"Dict[{key_type}, {value_type}]"
+        elif isinstance(field_type, type) and issubclass(field_type, BaseModel):
+            return generate_model_description(field_type)
         else:
             return field_type.__name__
 
