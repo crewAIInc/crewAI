@@ -8,7 +8,7 @@ icon: rocket
 
 Let's create a simple crew that will help us `research` and `report` on the `latest AI developments` for a given topic or subject.
 
-Before we proceed, make sure you have `crewai` and `crewai-tools` installed. 
+Before we proceed, make sure you have `crewai` and `crewai-tools` installed.
 If you haven't installed them yet, you can do so by following the [installation guide](/installation).
 
 Follow the steps below to get crewing! 🚣‍♂️
@@ -23,7 +23,7 @@ Follow the steps below to get crewing! 🚣‍♂️
       ```
     </CodeGroup>
   </Step>
-  <Step title="Modify your `agents.yaml` file">  
+  <Step title="Modify your `agents.yaml` file">
   <Tip>
   You can also modify the agents as needed to fit your use case or copy and paste as is to your project.
   Any variable interpolated in your `agents.yaml` and `tasks.yaml` files like `{topic}` will be replaced by the value of the variable in the `main.py` file.
@@ -39,7 +39,7 @@ Follow the steps below to get crewing! 🚣‍♂️
         You're a seasoned researcher with a knack for uncovering the latest
         developments in {topic}. Known for your ability to find the most relevant
         information and present it in a clear and concise manner.
-          
+
     reporting_analyst:
       role: >
         {topic} Reporting Analyst
@@ -51,7 +51,7 @@ Follow the steps below to get crewing! 🚣‍♂️
         it easy for others to understand and act on the information you provide.
     ```
   </Step>
-  <Step title="Modify your `tasks.yaml` file">  
+  <Step title="Modify your `tasks.yaml` file">
     ```yaml tasks.yaml
     # src/latest_ai_development/config/tasks.yaml
     research_task:
@@ -73,8 +73,8 @@ Follow the steps below to get crewing! 🚣‍♂️
       agent: reporting_analyst
       output_file: report.md
     ```
-  </Step>   
-  <Step title="Modify your `crew.py` file">  
+  </Step>
+  <Step title="Modify your `crew.py` file">
     ```python crew.py
     # src/latest_ai_development/crew.py
     from crewai import Agent, Crew, Process, Task
@@ -121,10 +121,34 @@ Follow the steps below to get crewing! 🚣‍♂️
           tasks=self.tasks, # Automatically created by the @task decorator
           process=Process.sequential,
           verbose=True,
-        ) 
+        )
     ```
   </Step>
-  <Step title="Feel free to pass custom inputs to your crew"> 
+  <Step title="[Optional] Add before and after crew functions">
+    ```python crew.py
+    # src/latest_ai_development/crew.py
+    from crewai import Agent, Crew, Process, Task
+    from crewai.project import CrewBase, agent, crew, task, before_kickoff, after_kickoff
+    from crewai_tools import SerperDevTool
+
+    @CrewBase
+    class LatestAiDevelopmentCrew():
+      """LatestAiDevelopment crew"""
+
+      @before_kickoff
+      def before_kickoff_function(self, inputs):
+        print(f"Before kickoff function with inputs: {inputs}")
+        return inputs # You can return the inputs or modify them as needed
+
+      @after_kickoff
+      def after_kickoff_function(self, result):
+        print(f"After kickoff function with result: {result}")
+        return result # You can return the result or modify it as needed
+
+      # ... remaining code
+    ```
+  </Step>
+  <Step title="Feel free to pass custom inputs to your crew">
   For example, you can pass the `topic` input to your crew to customize the research and reporting.
     ```python main.py
     #!/usr/bin/env python
@@ -237,14 +261,14 @@ Follow the steps below to get crewing! 🚣‍♂️
 ### Note on Consistency in Naming
 
 The names you use in your YAML files (`agents.yaml` and `tasks.yaml`) should match the method names in your Python code.
-For example, you can reference the agent for specific tasks from `tasks.yaml` file. 
+For example, you can reference the agent for specific tasks from `tasks.yaml` file.
 This naming consistency allows CrewAI to automatically link your configurations with your code; otherwise, your task won't recognize the reference properly.
 
 #### Example References
 
 <Tip>
   Note how we use the same name for the agent in the `agents.yaml` (`email_summarizer`) file as the method name in the `crew.py` (`email_summarizer`) file.
-</Tip>  
+</Tip>
 
 ```yaml agents.yaml
 email_summarizer:
@@ -281,6 +305,8 @@ Use the annotations to properly reference the agent and task in the `crew.py` fi
 * `@task`
 * `@crew`
 * `@tool`
+* `@before_kickoff`
+* `@after_kickoff`
 * `@callback`
 * `@output_json`
 * `@output_pydantic`
@@ -304,7 +330,7 @@ def email_summarizer_task(self) -> Task:
 
 <Tip>
 In addition to the [sequential process](../how-to/sequential-process), you can use the [hierarchical process](../how-to/hierarchical-process),
-which automatically assigns a manager to the defined crew to properly coordinate the planning and execution of tasks through delegation and validation of results. 
+which automatically assigns a manager to the defined crew to properly coordinate the planning and execution of tasks through delegation and validation of results.
 You can learn more about the core concepts [here](/concepts).
 </Tip>
 

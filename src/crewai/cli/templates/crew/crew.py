@@ -1,5 +1,5 @@
 from crewai import Agent, Crew, Process, Task
-from crewai.project import CrewBase, agent, crew, task
+from crewai.project import CrewBase, agent, crew, task, before_kickoff, after_kickoff
 
 # Uncomment the following line to use an example of a custom tool
 # from {{folder_name}}.tools.custom_tool import MyCustomTool
@@ -13,6 +13,18 @@ class {{crew_name}}():
 
 	agents_config = 'config/agents.yaml'
 	tasks_config = 'config/tasks.yaml'
+
+	@before_kickoff # Optional hook to be executed before the crew starts
+	def pull_data_example(self, inputs):
+		# Example of pulling data from an external API, dynamically changing the inputs
+		inputs['extra_data'] = "This is extra data"
+		return inputs
+
+	@after_kickoff # Optional hook to be executed after the crew has finished
+	def log_results(self, output):
+		# Example of logging results, dynamically changing the output
+		print(f"Results: {output}")
+		return output
 
 	@agent
 	def researcher(self) -> Agent:
