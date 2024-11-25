@@ -39,7 +39,6 @@ class InternalInstructor:
         return model.model_dump_json(indent=2)
 
     def to_pydantic(self):
-        print("INSTRUCTIONS: ", self.instructions)
         messages = [{"role": "user", "content": self.content}]
         if self.instructions:
             messages.append({"role": "system", "content": self.instructions})

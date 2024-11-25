@@ -97,7 +97,6 @@ def convert_to_model(
     if model is None:
         return result
     try:
-        # Sanitize the result by removing any markdown code block markers added by the LLM.
         escaped_result = json.dumps(json.loads(result, strict=False))
         return validate_model(escaped_result, model, bool(output_json))
     except json.JSONDecodeError:
