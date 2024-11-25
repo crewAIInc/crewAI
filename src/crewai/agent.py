@@ -259,8 +259,6 @@ class Agent(BaseAgent):
 
         task_prompt = task.prompt()
 
-        print("TASK PROMPT: ", task_prompt)
-
         # If the task requires output in JSON or Pydantic format,
         # append specific instructions to the task prompt to ensure
         # that the final answer does not include any code block markers
@@ -274,7 +272,6 @@ class Agent(BaseAgent):
             task_prompt += "\n" + self.i18n.slice("formatted_task_instructions").format(
                 output_format=schema
             )
-            print("Updated task prompt: ", task_prompt)
 
         if context:
             task_prompt = self.i18n.slice("task_with_context").format(

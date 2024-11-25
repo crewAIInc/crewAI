@@ -247,8 +247,6 @@ class Task(BaseModel):
 
         self.processed_by_agents.add(agent.role)
 
-        print("CONTEXT:", context)
-
         result = agent.execute_task(
             task=self,
             context=context,
