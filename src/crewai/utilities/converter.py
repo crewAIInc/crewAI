@@ -1,6 +1,6 @@
 import json
 import re
-from typing import Any, Dict, List, Optional, Type, Union, get_args, get_origin
+from typing import Any, Optional, Type, Union, get_args, get_origin
 
 from pydantic import BaseModel, ValidationError
 
