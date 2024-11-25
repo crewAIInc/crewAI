@@ -619,7 +619,6 @@ dependencies = [
     { name = "instructor" },
     { name = "json-repair" },
     { name = "jsonref" },
-    { name = "langchain" },
     { name = "litellm" },
     { name = "openai" },
     { name = "opentelemetry-api" },
@@ -641,6 +640,9 @@ agentops = [
 fastembed = [
     { name = "fastembed" },
 ]
+mem0 = [
+    { name = "mem0ai" },
+]
 openpyxl = [
     { name = "openpyxl" },
 ]
@@ -649,9 +651,6 @@ pandas = [
 ]
 pdfplumber = [
     { name = "pdfplumber" },
-]
-mem0 = [
-    { name = "mem0ai" },
 ]
 tools = [
     { name = "crewai-tools" },
@@ -690,7 +689,6 @@ requires-dist = [
     { name = "instructor", specifier = ">=1.3.3" },
     { name = "json-repair", specifier = ">=0.25.2" },
     { name = "jsonref", specifier = ">=1.1.0" },
-    { name = "langchain", specifier = ">=0.2.16" },
     { name = "litellm", specifier = ">=1.44.22" },
     { name = "mem0ai", marker = "extra == 'mem0'", specifier = ">=0.1.29" },
     { name = "openai", specifier = ">=1.13.3" },
@@ -951,7 +949,6 @@ sdist = { url = "https://files.pythonhosted.org/packages/d3/38/af70d7ab1ae9d4da4
 wheels = [
     { url = "https://files.pythonhosted.org/packages/c1/8b/5fe2cc11fee489817272089c4203e679c63b570a5aaeb18d852ae3cbba6a/et_xmlfile-2.0.0-py3-none-any.whl", hash = "sha256:7a91720bc756843502c3b7504c77b8fe44217c85c537d85037f0f536151b2caa", size = 18059 },
 ]
-
 
 [[package]]
 name = "exceptiongroup"

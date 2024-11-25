@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import inspect
 import textwrap
-from typing import Any, Callable, Optional, Union
+from typing import Any, Callable, Optional, Union, get_type_hints
 
 from pydantic import BaseModel, Field, create_model
 
@@ -118,7 +118,7 @@ class CrewStructuredTool:
         sig = inspect.signature(func)
 
         # Get type hints
-        type_hints = inspect.get_type_hints(func)
+        type_hints = get_type_hints(func)
 
         # Create field definitions
         fields = {}
