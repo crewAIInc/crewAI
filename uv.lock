@@ -608,7 +608,7 @@ wheels = [
 
 [[package]]
 name = "crewai"
-version = "0.80.0"
+version = "0.83.0"
 source = { editable = "." }
 dependencies = [
     { name = "appdirs" },
@@ -621,9 +621,11 @@ dependencies = [
     { name = "jsonref" },
     { name = "litellm" },
     { name = "openai" },
+    { name = "openpyxl" },
     { name = "opentelemetry-api" },
     { name = "opentelemetry-exporter-otlp-proto-http" },
     { name = "opentelemetry-sdk" },
+    { name = "pdfplumber" },
     { name = "pydantic" },
     { name = "python-dotenv" },
     { name = "pyvis" },
@@ -692,11 +694,13 @@ requires-dist = [
     { name = "litellm", specifier = ">=1.44.22" },
     { name = "mem0ai", marker = "extra == 'mem0'", specifier = ">=0.1.29" },
     { name = "openai", specifier = ">=1.13.3" },
+    { name = "openpyxl", specifier = ">=3.1.5" },
     { name = "openpyxl", marker = "extra == 'openpyxl'", specifier = ">=3.1.5" },
     { name = "opentelemetry-api", specifier = ">=1.22.0" },
     { name = "opentelemetry-exporter-otlp-proto-http", specifier = ">=1.22.0" },
     { name = "opentelemetry-sdk", specifier = ">=1.22.0" },
     { name = "pandas", marker = "extra == 'pandas'", specifier = ">=2.2.3" },
+    { name = "pdfplumber", specifier = ">=0.11.4" },
     { name = "pdfplumber", marker = "extra == 'pdfplumber'", specifier = ">=0.11.4" },
     { name = "pydantic", specifier = ">=2.4.2" },
     { name = "python-dotenv", specifier = ">=1.0.0" },
