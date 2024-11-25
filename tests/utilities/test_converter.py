@@ -273,7 +273,6 @@ def test_create_converter_fails_without_agent_or_converter_cls():
         )
 
 
-# Tests for generate_model_description
 def test_generate_model_description_simple_model():
     description = generate_model_description(SimpleModel)
     expected_description = '{\n  "name": str,\n  "age": int\n}'
@@ -283,7 +282,7 @@ def test_generate_model_description_simple_model():
 def test_generate_model_description_nested_model():
     description = generate_model_description(NestedModel)
     expected_description = (
-        '{\n  "id": int,\n  "data": {\n    "name": str,\n    "age": int\n  }\n}'
+        '{\n  "id": int,\n  "data": {\n  "name": str,\n  "age": int\n}\n}'
     )
     assert description == expected_description
 
@@ -303,7 +302,7 @@ def test_generate_model_description_list_field():
         items: List[int]
 
     description = generate_model_description(ModelWithListField)
-    expected_description = '{\n  "items": List[int]\n}'
+    expected_description = '{\n  "items": list[int]\n}'
     assert description == expected_description
 
 
@@ -312,5 +311,5 @@ def test_generate_model_description_dict_field():
         attributes: Dict[str, int]
 
     description = generate_model_description(ModelWithDictField)
-    expected_description = '{\n  "attributes": Dict[str, int]\n}'
+    expected_description = '{\n  "attributes": dict[str, int]\n}'
     assert description == expected_description
