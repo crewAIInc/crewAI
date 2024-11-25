@@ -12,7 +12,7 @@ from crewai.utilities.logger import Logger
 class CrewStructuredTool:
     """A structured tool that can operate on any number of inputs.
 
-    This tool replaces LangChain's StructuredTool with a custom implementation
+    This tool intends to replace StructuredTool with a custom implementation
     that integrates better with CrewAI's ecosystem.
     """
 
