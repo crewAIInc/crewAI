@@ -152,7 +152,10 @@ class CrewStructuredTool:
                 continue
 
             # Skip **kwargs parameters
-            if param.kind == inspect.Parameter.VAR_KEYWORD:
+            if param.kind in (
+                inspect.Parameter.VAR_KEYWORD,
+                inspect.Parameter.VAR_POSITIONAL,
+            ):
                 continue
 
             # Only validate required parameters without defaults
@@ -214,22 +217,17 @@ class CrewStructuredTool:
                 None, lambda: self.func(**parsed_args, **kwargs)
             )
 
+    def _run(self, *args, **kwargs) -> Any:
+        """Legacy method for compatibility."""
+        # Convert args/kwargs to our expected format
+        input_dict = dict(zip(self.args_schema.model_fields.keys(), args))
+        input_dict.update(kwargs)
+        return self.invoke(input_dict)
+
     def invoke(
-        self,
-        input: Union[str, dict],
-        config: Optional[dict] = None,
-        **kwargs: Any,
+        self, input: Union[str, dict], config: Optional[dict] = None, **kwargs: Any
     ) -> Any:
-        """Synchronously invoke the tool.
-
-        Args:
-            input: The input arguments
-            config: Optional configuration
-            **kwargs: Additional keyword arguments
-
-        Returns:
-            The result of the tool execution
-        """
+        """Main method for tool execution."""
         parsed_args = self._parse_args(input)
         return self.func(**parsed_args, **kwargs)
 
