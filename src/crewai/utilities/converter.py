@@ -1,6 +1,6 @@
 import json
 import re
-from typing import Any, Optional, Type, Union
+from typing import Any, Dict, List, Optional, Type, Union, get_args, get_origin
 
 from pydantic import BaseModel, ValidationError
 
@@ -24,6 +24,8 @@ class Converter(OutputConverter):
         """Convert text to pydantic."""
         try:
             if self.llm.supports_function_calling():
+                print("SUPPORTS FUNCTION CALLING")
+                print("INSTRUCTIONS:", self._create_instructor().to_pydantic())
                 return self._create_instructor().to_pydantic()
             else:
                 return self.llm.call(
@@ -60,7 +62,17 @@ class Converter(OutputConverter):
 
     def _create_instructor(self):
         """Create an instructor."""
+        import time  # Import the time module
+
+        start_time = time.time()  # Record the start time
         from crewai.utilities import InternalInstructor
+
+        end_time = time.time()  # Record the end time
+
+        # Log the time taken for the import
+        print(
+            f"Time taken to import InternalInstructor: {end_time - start_time:.6f} seconds"
+        )
 
         inst = InternalInstructor(
             llm=self.llm,
@@ -93,13 +105,18 @@ def convert_to_model(
     agent: Any,
     converter_cls: Optional[Type[Converter]] = None,
 ) -> Union[dict, BaseModel, str]:
+    print("RESULT TO CONVERT:", result)
     model = output_pydantic or output_json
     if model is None:
         return result
     try:
+        # Sanitize the result by removing any markdown code block markers added by the LLM.
         escaped_result = json.dumps(json.loads(result, strict=False))
+        print("ESCAPED RESULT:", escaped_result)
         return validate_model(escaped_result, model, bool(output_json))
-    except json.JSONDecodeError:
+    except json.JSONDecodeError as e:
+        print("JSON DECODE ERROR")
+        print(f"JSON DECODE ERROR: {e.msg} at line {e.lineno}, column {e.colno}")
         return handle_partial_json(
             result, model, bool(output_json), agent, converter_cls
         )
@@ -120,7 +137,9 @@ def convert_to_model(
 def validate_model(
     result: str, model: Type[BaseModel], is_json_output: bool
 ) -> Union[dict, BaseModel]:
+    print("Validating model")
     exported_result = model.model_validate_json(result)
+    print("EXPORTED RESULT:", exported_result)
     if is_json_output:
         return exported_result.model_dump()
     return exported_result
@@ -187,7 +206,7 @@ def convert_with_instructions(
 
 
 def get_conversion_instructions(model: Type[BaseModel], llm: Any) -> str:
-    instructions = "I'm gonna convert this raw text into valid JSON."
+    instructions = "Convert this raw text into valid JSON."
     if llm.supports_function_calling():
         model_schema = PydanticSchemaParser(model=model).get_schema()
         instructions = f"{instructions}\n\nThe json should have the following structure, with the following keys:\n{model_schema}"
@@ -214,3 +233,33 @@ def create_converter(
         raise Exception("No output converter found or set.")
 
     return converter
+
+
+def generate_model_description(model: Type[BaseModel]) -> str:
+    def describe_field(field_type):
+        origin = get_origin(field_type)
+        args = get_args(field_type)
+
+        if origin is Union and type(None) in args:
+            # Handle Optional types
+            non_none_args = [arg for arg in args if arg is not type(None)]
+            return f"Optional[{describe_field(non_none_args[0])}]"
+        elif issubclass(field_type, BaseModel):
+            # Handle nested Pydantic models
+            return generate_model_description(field_type)
+        elif origin in (list, List):
+            # Handle list types
+            return f"List[{describe_field(args[0])}]"
+        elif origin in (dict, Dict):
+            # Handle dict types
+            key_type = describe_field(args[0])
+            value_type = describe_field(args[1])
+            return f"Dict[{key_type}, {value_type}]"
+        else:
+            return field_type.__name__
+
+    fields = model.__annotations__
+    field_descriptions = [
+        f'"{name}": {describe_field(type_)}' for name, type_ in fields.items()
+    ]
+    return "{\n  " + ",\n  ".join(field_descriptions) + "\n}"

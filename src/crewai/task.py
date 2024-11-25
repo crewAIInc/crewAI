@@ -247,6 +247,8 @@ class Task(BaseModel):
 
         self.processed_by_agents.add(agent.role)
 
+        print("CONTEXT:", context)
+
         result = agent.execute_task(
             task=self,
             context=context,
@@ -279,9 +281,7 @@ class Task(BaseModel):
             content = (
                 json_output
                 if json_output
-                else pydantic_output.model_dump_json()
-                if pydantic_output
-                else result
+                else pydantic_output.model_dump_json() if pydantic_output else result
             )
             self._save_file(content)
 
