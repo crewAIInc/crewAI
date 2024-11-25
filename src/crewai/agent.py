@@ -1,7 +1,7 @@
 import os
 import shutil
 import subprocess
-from typing import Any, List, Literal, Optional, Union
+from typing import Any, List, Literal, Optional, Union, Dict
 
 from pydantic import Field, InstanceOf, PrivateAttr, model_validator
 
@@ -10,6 +10,7 @@ from crewai.agents.agent_builder.base_agent import BaseAgent
 from crewai.agents.crew_agent_executor import CrewAgentExecutor
 from crewai.cli.constants import ENV_VARS
 from crewai.llm import LLM
+from crewai.knowledge.knowledge import Knowledge
 from crewai.memory.contextual.contextual_memory import ContextualMemory
 from crewai.tools import BaseTool
 from crewai.tools.agent_tools.agent_tools import AgentTools
@@ -120,9 +121,14 @@ class Agent(BaseAgent):
         default="safe",
         description="Mode for code execution: 'safe' (using Docker) or 'unsafe' (direct execution).",
     )
+    knowledge: Optional[Dict[str, Any]] = Field(
+        default=None,
+        description="Knowledge for the agent. Add knowledge sources to the knowledge object.",
+    )
 
     @model_validator(mode="after")
     def post_init_setup(self):
+        self._set_knowledge()
         self.agent_ops_agent_name = self.role
         unnacepted_attributes = [
             "AWS_ACCESS_KEY_ID",
@@ -235,6 +241,28 @@ class Agent(BaseAgent):
             self.cache_handler = CacheHandler()
         self.set_cache_handler(self.cache_handler)
 
+    def _set_knowledge(self):
+        try:
+            if self.knowledge:
+                knowledge_agent_name = f"{self.role.replace(' ', '_')}"
+                if isinstance(self.knowledge, dict):
+                    knowledge_data = self.knowledge.copy()
+                    knowledge_data["store_dir"] = knowledge_agent_name
+                    self.knowledge = Knowledge(**knowledge_data)
+                    self.knowledge.storage.initialize_knowledge_storage()
+                    try:
+                        for source in self.knowledge.sources:
+                            source.storage = self.knowledge.storage
+                            source.add()
+                    except Exception as e:
+                        self._logger.log(
+                            "warning",
+                            f"Failed to init knowledge: {knowledge_agent_name} {e}",
+                            color="yellow",
+                        )
+        except (TypeError, ValueError) as e:
+            raise ValueError(f"Invalid Knowledge Configuration: {str(e)}")
+
     def execute_task(
         self,
         task: Any,
@@ -273,17 +301,20 @@ class Agent(BaseAgent):
             if memory.strip() != "":
                 task_prompt += self.i18n.slice("memory").format(memory=memory)
 
-        # Integrate the knowledge base
+        if self.knowledge and isinstance(self.knowledge, Knowledge):
+            agent_knowledge_snippets = self.knowledge.query([task.prompt()])
+            agent_knowledge_context = self._extract_knowledge_context(
+                agent_knowledge_snippets
+            )
+            if agent_knowledge_context:
+                task_prompt += agent_knowledge_context
+
         if self.crew and self.crew.knowledge:
             knowledge_snippets = self.crew.knowledge.query([task.prompt()])
-            valid_snippets = [
-                result["context"] 
-                for result in knowledge_snippets 
-                if result and result.get("context")
-            ]
-            if valid_snippets:
-                formatted_knowledge = "\n".join(valid_snippets)
-                task_prompt += f"\n\nAdditional Information:\n{formatted_knowledge}"
+
+            crew_knowledge_context = self._extract_knowledge_context(knowledge_snippets)
+            if crew_knowledge_context:
+                task_prompt += crew_knowledge_context
 
         tools = tools or self.tools or []
         self.create_agent_executor(tools=tools, task=task)
@@ -489,6 +520,18 @@ class Agent(BaseAgent):
             raise RuntimeError(
                 f"Docker is not running. Please start Docker to use code execution with agent: {self.role}"
             )
+
+    def _extract_knowledge_context(
+        self, knowledge_snippets: List[Dict[str, Any]]
+    ) -> str:
+        """Extract knowledge from the task prompt."""
+        valid_snippets = [
+            result["context"]
+            for result in knowledge_snippets
+            if result and result.get("context")
+        ]
+        snippet = "\n".join(valid_snippets)
+        return f"Additional Information: {snippet}" if valid_snippets else ""
 
     @staticmethod
     def __tools_names(tools) -> str:

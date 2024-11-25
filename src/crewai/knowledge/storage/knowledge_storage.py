@@ -4,11 +4,11 @@ import logging
 import chromadb
 import os
 from crewai.utilities.paths import db_storage_path
-from typing import Optional, List
-from typing import Dict, Any
+from typing import Optional, List, Dict, Any
 from crewai.utilities import EmbeddingConfigurator
 from crewai.knowledge.storage.base_knowledge_storage import BaseKnowledgeStorage
 import hashlib
+from chromadb.config import Settings
 
 
 @contextlib.contextmanager
@@ -35,9 +35,16 @@ class KnowledgeStorage(BaseKnowledgeStorage):
     """
 
     collection: Optional[chromadb.Collection] = None
+    store_dir: Optional[str] = "knowledge"
+    app: Optional[chromadb.PersistentClient] = None
 
-    def __init__(self, embedder_config: Optional[Dict[str, Any]] = None):
-        self._initialize_app(embedder_config or {})
+    def __init__(
+        self,
+        embedder_config: Optional[Dict[str, Any]] = None,
+        store_dir: Optional[str] = None,
+    ):
+        self.embedder_config = embedder_config
+        self.store_dir = store_dir
 
     def search(
         self,
@@ -67,26 +74,32 @@ class KnowledgeStorage(BaseKnowledgeStorage):
             else:
                 raise Exception("Collection not initialized")
 
-    def _initialize_app(self, embedder_config: Optional[Dict[str, Any]] = None):
-        import chromadb
-        from chromadb.config import Settings
-
-        self._set_embedder_config(embedder_config)
-
+    def initialize_knowledge_storage(self):
+        base_path = os.path.join(db_storage_path(), "knowledge")
         chroma_client = chromadb.PersistentClient(
-            path=f"{db_storage_path()}/knowledge",
+            path=base_path,
             settings=Settings(allow_reset=True),
         )
 
         self.app = chroma_client
 
         try:
-            self.collection = self.app.get_or_create_collection(name="knowledge")
+            collection_name = (
+                f"knowledge_{self.store_dir}" if self.store_dir else "knowledge"
+            )
+            self.collection = self.app.get_or_create_collection(name=collection_name)
         except Exception:
             raise Exception("Failed to create or get collection")
 
     def reset(self):
         if self.app:
+            self.app.reset()
+        else:
+            base_path = os.path.join(db_storage_path(), "knowledge")
+            self.app = chromadb.PersistentClient(
+                path=base_path,
+                settings=Settings(allow_reset=True),
+            )
             self.app.reset()
 
     def save(
@@ -95,9 +108,7 @@ class KnowledgeStorage(BaseKnowledgeStorage):
         if self.collection:
             metadatas = [metadata] if isinstance(metadata, dict) else metadata
 
-            ids = [
-                hashlib.sha256(doc.encode("utf-8")).hexdigest() for doc in documents
-            ]
+            ids = [hashlib.sha256(doc.encode("utf-8")).hexdigest() for doc in documents]
 
             self.collection.upsert(
                 documents=documents,

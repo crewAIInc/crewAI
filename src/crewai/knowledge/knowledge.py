@@ -7,6 +7,7 @@ from crewai.knowledge.source.base_knowledge_source import BaseKnowledgeSource
 from crewai.knowledge.storage.knowledge_storage import KnowledgeStorage
 from crewai.utilities.logger import Logger
 from crewai.utilities.constants import DEFAULT_SCORE_THRESHOLD
+
 os.environ["TOKENIZERS_PARALLELISM"] = "false"  # removes logging from fastembed
 
 
@@ -18,23 +19,26 @@ class Knowledge(BaseModel):
         storage: KnowledgeStorage = Field(default_factory=KnowledgeStorage)
         embedder_config: Optional[Dict[str, Any]] = None
     """
+
     sources: List[BaseKnowledgeSource] = Field(default_factory=list)
     model_config = ConfigDict(arbitrary_types_allowed=True)
     storage: KnowledgeStorage = Field(default_factory=KnowledgeStorage)
     embedder_config: Optional[Dict[str, Any]] = None
+    store_dir: Optional[str] = None
 
-    def __init__(self, embedder_config: Optional[Dict[str, Any]] = None, **data):
+    def __init__(
+        self,
+        store_dir: str,
+        embedder_config: Optional[Dict[str, Any]] = None,
+        storage: Optional[KnowledgeStorage] = None,
+        **data,
+    ):
         super().__init__(**data)
-        self.storage = KnowledgeStorage(embedder_config=embedder_config or None)
-
-        try:
-            for source in self.sources:
-                source.add()
-        except Exception as e:
-            Logger(verbose=True).log(
-                "warning",
-                f"Failed to init knowledge: {e}",
-                color="yellow",
+        if storage:
+            self.storage = storage
+        else:
+            self.storage = KnowledgeStorage(
+                embedder_config=embedder_config, store_dir=store_dir
             )
 
     def query(

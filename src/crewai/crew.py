@@ -203,9 +203,9 @@ class Crew(BaseModel):
         description="List of execution logs for tasks",
     )
     knowledge: Optional[Dict[str, Any]] = Field(
-        default=None, description="Knowledge for the crew. Add knowledge sources to the knowledge object."
+        default=None,
+        description="Knowledge for the crew. Add knowledge sources to the knowledge object.",
     )
-
 
     @field_validator("id", mode="before")
     @classmethod
@@ -282,11 +282,23 @@ class Crew(BaseModel):
 
     @model_validator(mode="after")
     def create_crew_knowledge(self) -> "Crew":
+        """Create the knowledge for the crew."""
         if self.knowledge:
             try:
-                self.knowledge = Knowledge(**self.knowledge) if isinstance(self.knowledge, dict) else self.knowledge
-            except (TypeError, ValueError) as e:
-                raise ValueError(f"Invalid knowledge configuration: {str(e)}")
+                self.knowledge = (
+                    Knowledge(**self.knowledge, store_dir="crew")
+                    if isinstance(self.knowledge, dict)
+                    else self.knowledge
+                )
+                self.knowledge.storage.initialize_knowledge_storage()
+
+                for source in self.knowledge.sources:
+                    source.storage = self.knowledge.storage
+                    source.add()
+            except Exception as e:
+                self._logger.log(
+                    "warning", f"Failed to init knowledge: {e}", color="yellow"
+                )
         return self
 
     @model_validator(mode="after")
