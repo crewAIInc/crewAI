@@ -1,6 +1,6 @@
 import json
 import re
-from typing import Any, Optional, Type, Union
+from typing import Any, Optional, Type, Union, get_args, get_origin
 
 from pydantic import BaseModel, ValidationError
 
@@ -214,3 +214,38 @@ def create_converter(
         raise Exception("No output converter found or set.")
 
     return converter
+
+
+def generate_model_description(model: Type[BaseModel]) -> str:
+    """
+    Generate a string description of a Pydantic model's fields and their types.
+
+    This function takes a Pydantic model class and returns a string that describes
+    the model's fields and their respective types. The description includes handling
+    of complex types such as `Optional`, `List`, and `Dict`, as well as nested Pydantic
+    models.
+    """
+
+    def describe_field(field_type):
+        origin = get_origin(field_type)
+        args = get_args(field_type)
+
+        if origin is Union and type(None) in args:
+            non_none_args = [arg for arg in args if arg is not type(None)]
+            return f"Optional[{describe_field(non_none_args[0])}]"
+        elif origin is list:
+            return f"List[{describe_field(args[0])}]"
+        elif origin is dict:
+            key_type = describe_field(args[0])
+            value_type = describe_field(args[1])
+            return f"Dict[{key_type}, {value_type}]"
+        elif isinstance(field_type, type) and issubclass(field_type, BaseModel):
+            return generate_model_description(field_type)
+        else:
+            return field_type.__name__
+
+    fields = model.__annotations__
+    field_descriptions = [
+        f'"{name}": {describe_field(type_)}' for name, type_ in fields.items()
+    ]
+    return "{\n  " + ",\n  ".join(field_descriptions) + "\n}"
