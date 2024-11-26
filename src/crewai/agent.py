@@ -265,7 +265,9 @@ class Agent(BaseAgent):
         if task.output_json or task.output_pydantic:
             # Generate the schema based on the output format
             if task.output_json:
-                schema = json.dumps(task.output_json, indent=2)
+                # schema = json.dumps(task.output_json, indent=2)
+                schema = generate_model_description(task.output_json)
+
             elif task.output_pydantic:
                 schema = generate_model_description(task.output_pydantic)
 
