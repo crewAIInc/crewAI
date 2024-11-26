@@ -81,6 +81,8 @@ def pipeline(func):
 
 
 def crew(func) -> Callable[..., Crew]:
+
+    @wraps(func)
     def wrapper(self, *args, **kwargs) -> Crew:
         instantiated_tasks = []
         instantiated_agents = []
