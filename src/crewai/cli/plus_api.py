@@ -1,7 +1,7 @@
 from typing import Optional
 import requests
 from os import getenv
-from crewai.cli.utils import get_crewai_version
+from crewai.cli.version import get_crewai_version
 from urllib.parse import urljoin
 
 
