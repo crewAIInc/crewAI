@@ -18,7 +18,8 @@ from crewai.tools import BaseTool
 from pydantic import Field
 from langchain_community.utilities import GoogleSerperAPIWrapper
 
-# Setup API keys
+# Set up your SERPER_API_KEY key in an .env file, eg:
+# SERPER_API_KEY=<your api key>
 load_dotenv()
 
 search = GoogleSerperAPIWrapper()
