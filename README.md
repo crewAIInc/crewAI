@@ -121,7 +121,7 @@ researcher:
     You're a seasoned researcher with a knack for uncovering the latest
     developments in {topic}. Known for your ability to find the most relevant
     information and present it in a clear and concise manner.
-      
+
 reporting_analyst:
   role: >
     {topic} Reporting Analyst
@@ -205,7 +205,7 @@ class LatestAiDevelopmentCrew():
 			tasks=self.tasks, # Automatically created by the @task decorator
 			process=Process.sequential,
 			verbose=True,
-		) 
+		)
 ```
 
 **main.py**
@@ -357,7 +357,7 @@ uv run pytest .
 ### Running static type checks
 
 ```bash
-uvx mypy
+uvx mypy src
 ```
 
 ### Packaging
