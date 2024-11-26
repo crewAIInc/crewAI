@@ -23,11 +23,12 @@ class Knowledge(BaseModel):
     model_config = ConfigDict(arbitrary_types_allowed=True)
     storage: KnowledgeStorage = Field(default_factory=KnowledgeStorage)
     embedder_config: Optional[Dict[str, Any]] = None
-    store_dir: Optional[str] = None
+    collection_name: Optional[str] = None
 
     def __init__(
         self,
-        store_dir: str,
+        collection_name: str,
+        sources: List[BaseKnowledgeSource],
         embedder_config: Optional[Dict[str, Any]] = None,
         storage: Optional[KnowledgeStorage] = None,
         **data,
@@ -37,8 +38,13 @@ class Knowledge(BaseModel):
             self.storage = storage
         else:
             self.storage = KnowledgeStorage(
-                embedder_config=embedder_config, store_dir=store_dir
+                embedder_config=embedder_config, collection_name=collection_name
             )
+        self.sources = sources
+        self.storage.initialize_knowledge_storage()
+        for source in sources:
+            source.storage = self.storage
+            source.add()
 
     def query(
         self, query: List[str], limit: int = 3, preference: Optional[str] = None
@@ -55,3 +61,20 @@ class Knowledge(BaseModel):
             score_threshold=DEFAULT_SCORE_THRESHOLD,
         )
         return results
+
+    def extract_knowledge_context(
+        self, knowledge_snippets: List[Dict[str, Any]]
+    ) -> str:
+        """Extract knowledge from the task prompt."""
+        valid_snippets = [
+            result["context"]
+            for result in knowledge_snippets
+            if result and result.get("context")
+        ]
+        snippet = "\n".join(valid_snippets)
+        return f"Additional Information: {snippet}" if valid_snippets else ""
+
+    def _add_sources(self):
+        for source in self.sources:
+            source.storage = self.storage
+            source.add()

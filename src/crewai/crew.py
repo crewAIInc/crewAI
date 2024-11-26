@@ -28,6 +28,7 @@ from crewai.memory.entity.entity_memory import EntityMemory
 from crewai.memory.long_term.long_term_memory import LongTermMemory
 from crewai.memory.short_term.short_term_memory import ShortTermMemory
 from crewai.knowledge.knowledge import Knowledge
+from crewai.knowledge.source.base_knowledge_source import BaseKnowledgeSource
 from crewai.memory.user.user_memory import UserMemory
 from crewai.process import Process
 from crewai.task import Task
@@ -202,7 +203,7 @@ class Crew(BaseModel):
         default=[],
         description="List of execution logs for tasks",
     )
-    knowledge: Optional[Dict[str, Any]] = Field(
+    knowledge: Optional[Union[List[BaseKnowledgeSource], Knowledge]] = Field(
         default=None,
         description="Knowledge for the crew. Add knowledge sources to the knowledge object.",
     )
@@ -285,16 +286,15 @@ class Crew(BaseModel):
         """Create the knowledge for the crew."""
         if self.knowledge:
             try:
-                self.knowledge = (
-                    Knowledge(**self.knowledge, store_dir="crew")
-                    if isinstance(self.knowledge, dict)
-                    else self.knowledge
-                )
-                self.knowledge.storage.initialize_knowledge_storage()
+                if isinstance(self.knowledge, list) and all(
+                    isinstance(k, BaseKnowledgeSource) for k in self.knowledge
+                ):
+                    self.knowledge = Knowledge(
+                        sources=self.knowledge,
+                        embedder_config=self.embedder,
+                        collection_name="crew",
+                    )
 
-                for source in self.knowledge.sources:
-                    source.storage = self.knowledge.storage
-                    source.add()
             except Exception as e:
                 self._logger.log(
                     "warning", f"Failed to init knowledge: {e}", color="yellow"

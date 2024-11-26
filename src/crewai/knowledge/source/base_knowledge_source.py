@@ -18,7 +18,7 @@ class BaseKnowledgeSource(BaseModel, ABC):
     model_config = ConfigDict(arbitrary_types_allowed=True)
     storage: KnowledgeStorage = Field(default_factory=KnowledgeStorage)
     metadata: Dict[str, Any] = Field(default_factory=dict)
-    store_dir: Optional[str] = Field(default=None)
+    collection_name: Optional[str] = Field(default=None)
 
     @abstractmethod
     def load_content(self) -> Dict[Any, str]:

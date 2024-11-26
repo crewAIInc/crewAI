@@ -35,16 +35,16 @@ class KnowledgeStorage(BaseKnowledgeStorage):
     """
 
     collection: Optional[chromadb.Collection] = None
-    store_dir: Optional[str] = "knowledge"
+    collection_name: Optional[str] = "knowledge"
     app: Optional[chromadb.PersistentClient] = None
 
     def __init__(
         self,
         embedder_config: Optional[Dict[str, Any]] = None,
-        store_dir: Optional[str] = None,
+        collection_name: Optional[str] = None,
     ):
         self.embedder_config = embedder_config
-        self.store_dir = store_dir
+        self.collection_name = collection_name
 
     def search(
         self,
@@ -85,9 +85,16 @@ class KnowledgeStorage(BaseKnowledgeStorage):
 
         try:
             collection_name = (
-                f"knowledge_{self.store_dir}" if self.store_dir else "knowledge"
+                f"knowledge_{self.collection_name}"
+                if self.collection_name
+                else "knowledge"
             )
-            self.collection = self.app.get_or_create_collection(name=collection_name)
+            if self.app:
+                self.collection = self.app.get_or_create_collection(
+                    name=collection_name
+                )
+            else:
+                raise Exception("Vector Database Client not initialized")
         except Exception:
             raise Exception("Failed to create or get collection")
 

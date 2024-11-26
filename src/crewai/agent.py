@@ -11,6 +11,7 @@ from crewai.agents.crew_agent_executor import CrewAgentExecutor
 from crewai.cli.constants import ENV_VARS
 from crewai.llm import LLM
 from crewai.knowledge.knowledge import Knowledge
+from crewai.knowledge.source.base_knowledge_source import BaseKnowledgeSource
 from crewai.memory.contextual.contextual_memory import ContextualMemory
 from crewai.tools import BaseTool
 from crewai.tools.agent_tools.agent_tools import AgentTools
@@ -121,9 +122,13 @@ class Agent(BaseAgent):
         default="safe",
         description="Mode for code execution: 'safe' (using Docker) or 'unsafe' (direct execution).",
     )
-    knowledge: Optional[Dict[str, Any]] = Field(
+    knowledge: Optional[Union[List[BaseKnowledgeSource], Knowledge]] = Field(
         default=None,
         description="Knowledge for the agent. Add knowledge sources to the knowledge object.",
+    )
+    embedder_config: Optional[Dict[str, Any]] = Field(
+        default=None,
+        description="Embedder configuration for the agent.",
     )
 
     @model_validator(mode="after")
@@ -245,21 +250,15 @@ class Agent(BaseAgent):
         try:
             if self.knowledge:
                 knowledge_agent_name = f"{self.role.replace(' ', '_')}"
-                if isinstance(self.knowledge, dict):
-                    knowledge_data = self.knowledge.copy()
-                    knowledge_data["store_dir"] = knowledge_agent_name
-                    self.knowledge = Knowledge(**knowledge_data)
-                    self.knowledge.storage.initialize_knowledge_storage()
-                    try:
-                        for source in self.knowledge.sources:
-                            source.storage = self.knowledge.storage
-                            source.add()
-                    except Exception as e:
-                        self._logger.log(
-                            "warning",
-                            f"Failed to init knowledge: {knowledge_agent_name} {e}",
-                            color="yellow",
-                        )
+                print("knowledge_agent_name", knowledge_agent_name)
+                if isinstance(self.knowledge, list) and all(
+                    isinstance(k, BaseKnowledgeSource) for k in self.knowledge
+                ):
+                    self.knowledge = Knowledge(
+                        sources=self.knowledge,
+                        embedder_config=self.embedder_config,
+                        collection_name=knowledge_agent_name,
+                    )
         except (TypeError, ValueError) as e:
             raise ValueError(f"Invalid Knowledge Configuration: {str(e)}")
 
@@ -303,7 +302,7 @@ class Agent(BaseAgent):
 
         if self.knowledge and isinstance(self.knowledge, Knowledge):
             agent_knowledge_snippets = self.knowledge.query([task.prompt()])
-            agent_knowledge_context = self._extract_knowledge_context(
+            agent_knowledge_context = self.knowledge.extract_knowledge_context(
                 agent_knowledge_snippets
             )
             if agent_knowledge_context:
@@ -312,7 +311,9 @@ class Agent(BaseAgent):
         if self.crew and self.crew.knowledge:
             knowledge_snippets = self.crew.knowledge.query([task.prompt()])
 
-            crew_knowledge_context = self._extract_knowledge_context(knowledge_snippets)
+            crew_knowledge_context = self.crew.knowledge.extract_knowledge_context(
+                knowledge_snippets
+            )
             if crew_knowledge_context:
                 task_prompt += crew_knowledge_context
 
