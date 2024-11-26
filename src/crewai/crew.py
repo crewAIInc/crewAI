@@ -23,11 +23,11 @@ from crewai.agent import Agent
 from crewai.agents.agent_builder.base_agent import BaseAgent
 from crewai.agents.cache import CacheHandler
 from crewai.crews.crew_output import CrewOutput
+from crewai.knowledge.knowledge import Knowledge
 from crewai.llm import LLM
 from crewai.memory.entity.entity_memory import EntityMemory
 from crewai.memory.long_term.long_term_memory import LongTermMemory
 from crewai.memory.short_term.short_term_memory import ShortTermMemory
-from crewai.knowledge.knowledge import Knowledge
 from crewai.memory.user.user_memory import UserMemory
 from crewai.process import Process
 from crewai.task import Task
@@ -55,8 +55,6 @@ if os.environ.get("AGENTOPS_API_KEY"):
     except ImportError:
         pass
 
-if TYPE_CHECKING:
-    from crewai.pipeline.pipeline import Pipeline
 
 warnings.filterwarnings("ignore", category=SyntaxWarning, module="pysbd")
 
@@ -203,9 +201,9 @@ class Crew(BaseModel):
         description="List of execution logs for tasks",
     )
     knowledge: Optional[Dict[str, Any]] = Field(
-        default=None, description="Knowledge for the crew. Add knowledge sources to the knowledge object."
+        default=None,
+        description="Knowledge for the crew. Add knowledge sources to the knowledge object.",
     )
-
 
     @field_validator("id", mode="before")
     @classmethod
@@ -284,7 +282,11 @@ class Crew(BaseModel):
     def create_crew_knowledge(self) -> "Crew":
         if self.knowledge:
             try:
-                self.knowledge = Knowledge(**self.knowledge) if isinstance(self.knowledge, dict) else self.knowledge
+                self.knowledge = (
+                    Knowledge(**self.knowledge)
+                    if isinstance(self.knowledge, dict)
+                    else self.knowledge
+                )
             except (TypeError, ValueError) as e:
                 raise ValueError(f"Invalid knowledge configuration: {str(e)}")
         return self
@@ -1052,18 +1054,6 @@ class Crew(BaseModel):
             test_crew.kickoff(inputs=inputs)
 
         evaluator.print_crew_evaluation_result()
-
-    def __rshift__(self, other: "Crew") -> "Pipeline":
-        """
-        Implements the >> operator to add another Crew to an existing Pipeline.
-        """
-        from crewai.pipeline.pipeline import Pipeline
-
-        if not isinstance(other, Crew):
-            raise TypeError(
-                f"Unsupported operand type for >>: '{type(self).__name__}' and '{type(other).__name__}'"
-            )
-        return Pipeline(stages=[self, other])
 
     def __repr__(self):
         return f"Crew(id={self.id}, process={self.process}, number_of_agents={len(self.agents)}, number_of_tasks={len(self.tasks)})"

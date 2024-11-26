@@ -8,12 +8,10 @@ from .annotations import (
     llm,
     output_json,
     output_pydantic,
-    pipeline,
     task,
     tool,
 )
 from .crew_base import CrewBase
-from .pipeline_base import PipelineBase
 
 __all__ = [
     "agent",
@@ -24,10 +22,8 @@ __all__ = [
     "tool",
     "callback",
     "CrewBase",
-    "PipelineBase",
     "llm",
     "cache_handler",
-    "pipeline",
     "before_kickoff",
     "after_kickoff",
 ]
