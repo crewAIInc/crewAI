@@ -217,6 +217,15 @@ def create_converter(
 
 
 def generate_model_description(model: Type[BaseModel]) -> str:
+    """
+    Generate a string description of a Pydantic model's fields and their types.
+
+    This function takes a Pydantic model class and returns a string that describes
+    the model's fields and their respective types. The description includes handling
+    of complex types such as `Optional`, `List`, and `Dict`, as well as nested Pydantic
+    models.
+    """
+
     def describe_field(field_type):
         origin = get_origin(field_type)
         args = get_args(field_type)
