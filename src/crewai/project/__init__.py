@@ -1,5 +1,7 @@
 from .annotations import (
+    after_kickoff,
     agent,
+    before_kickoff,
     cache_handler,
     callback,
     crew,
@@ -26,4 +28,6 @@ __all__ = [
     "llm",
     "cache_handler",
     "pipeline",
+    "before_kickoff",
+    "after_kickoff",
 ]

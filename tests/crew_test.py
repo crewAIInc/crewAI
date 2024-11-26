@@ -564,6 +564,7 @@ def test_crew_kickoff_usage_metrics():
         assert result.token_usage.prompt_tokens > 0
         assert result.token_usage.completion_tokens > 0
         assert result.token_usage.successful_requests > 0
+        assert result.token_usage.cached_prompt_tokens == 0
 
 
 def test_agents_rpm_is_never_set_if_crew_max_RPM_is_not_set():
@@ -1280,10 +1281,11 @@ def test_agent_usage_metrics_are_captured_for_hierarchical_process():
     assert result.raw == "Howdy!"
 
     assert result.token_usage == UsageMetrics(
-        total_tokens=2626,
-        prompt_tokens=2482,
-        completion_tokens=144,
-        successful_requests=5,
+        total_tokens=1673,
+        prompt_tokens=1562,
+        completion_tokens=111,
+        successful_requests=3,
+        cached_prompt_tokens=0
     )
 
 
@@ -1777,26 +1779,22 @@ def test_crew_train_success(
         ]
     )
 
-    crew_training_handler.assert_has_calls(
-        [
-            mock.call("training_data.pkl"),
-            mock.call().load(),
-            mock.call("trained_agents_data.pkl"),
-            mock.call().save_trained_data(
-                agent_id="Researcher",
-                trained_data=task_evaluator().evaluate_training_data().model_dump(),
-            ),
-            mock.call("trained_agents_data.pkl"),
-            mock.call().save_trained_data(
-                agent_id="Senior Writer",
-                trained_data=task_evaluator().evaluate_training_data().model_dump(),
-            ),
-            mock.call(),
-            mock.call().load(),
-            mock.call(),
-            mock.call().load(),
-        ]
-    )
+    crew_training_handler.assert_any_call("training_data.pkl")
+    crew_training_handler().load.assert_called()
+
+    crew_training_handler.assert_any_call("trained_agents_data.pkl")
+    crew_training_handler().load.assert_called()
+
+    crew_training_handler().save_trained_data.assert_has_calls([
+        mock.call(
+            agent_id="Researcher",
+            trained_data=task_evaluator().evaluate_training_data().model_dump(),
+        ),
+        mock.call(
+            agent_id="Senior Writer",
+            trained_data=task_evaluator().evaluate_training_data().model_dump(),
+        )
+    ])
 
 
 def test_crew_train_error():

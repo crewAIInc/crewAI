@@ -1,7 +1,9 @@
 import warnings
+
 from crewai.agent import Agent
 from crewai.crew import Crew
 from crewai.flow.flow import Flow
+from crewai.knowledge.knowledge import Knowledge
 from crewai.llm import LLM
 from crewai.pipeline import Pipeline
 from crewai.process import Process
@@ -14,5 +16,15 @@ warnings.filterwarnings(
     category=UserWarning,
     module="pydantic.main",
 )
-__version__ = "0.79.0"
-__all__ = ["Agent", "Crew", "Process", "Task", "Pipeline", "Router", "LLM", "Flow"]
+__version__ = "0.83.0"
+__all__ = [
+    "Agent",
+    "Crew",
+    "Process",
+    "Task",
+    "Pipeline",
+    "Router",
+    "LLM",
+    "Flow",
+    "Knowledge",
+]

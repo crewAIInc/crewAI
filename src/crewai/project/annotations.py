@@ -5,6 +5,16 @@ from crewai import Crew
 from crewai.project.utils import memoize
 
 
+def before_kickoff(func):
+    func.is_before_kickoff = True
+    return func
+
+
+def after_kickoff(func):
+    func.is_after_kickoff = True
+    return func
+
+
 def task(func):
     func.is_task = True
 
@@ -99,6 +109,19 @@ def crew(func) -> Callable[..., Crew]:
         self.agents = instantiated_agents
         self.tasks = instantiated_tasks
 
-        return func(self, *args, **kwargs)
+        crew = func(self, *args, **kwargs)
 
-    return wrapper
+        def callback_wrapper(callback, instance):
+            def wrapper(*args, **kwargs):
+                return callback(instance, *args, **kwargs)
+
+            return wrapper
+
+        for _, callback in self._before_kickoff.items():
+            crew.before_kickoff_callbacks.append(callback_wrapper(callback, self))
+        for _, callback in self._after_kickoff.items():
+            crew.after_kickoff_callbacks.append(callback_wrapper(callback, self))
+
+        return crew
+
+    return memoize(wrapper)

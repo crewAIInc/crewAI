@@ -1,6 +1,6 @@
 [project]
 name = "crewai"
-version = "0.79.0"
+version = "0.83.0"
 description = "Cutting-edge framework for orchestrating role-playing, autonomous AI agents. By fostering collaborative intelligence, CrewAI empowers agents to work together seamlessly, tackling complex tasks."
 readme = "README.md"
 requires-python = ">=3.10,<=3.13"
@@ -16,7 +16,7 @@ dependencies = [
     "opentelemetry-exporter-otlp-proto-http>=1.22.0",
     "instructor>=1.3.3",
     "regex>=2024.9.11",
-    "crewai-tools>=0.13.4",
+    "crewai-tools>=0.14.0",
     "click>=8.1.7",
     "python-dotenv>=1.0.0",
     "appdirs>=1.4.4",
@@ -27,8 +27,10 @@ dependencies = [
     "pyvis>=0.3.2",
     "uv>=0.4.25",
     "tomli-w>=1.1.0",
-    "chromadb>=0.4.24",
     "tomli>=2.0.2",
+    "chromadb>=0.5.18",
+    "pdfplumber>=0.11.4",
+    "openpyxl>=3.1.5",
 ]
 
 [project.urls]
@@ -37,8 +39,19 @@ Documentation = "https://docs.crewai.com"
 Repository = "https://github.com/crewAIInc/crewAI"
 
 [project.optional-dependencies]
-tools = ["crewai-tools>=0.13.4"]
+tools = ["crewai-tools>=0.14.0"]
 agentops = ["agentops>=0.3.0"]
+fastembed = ["fastembed>=0.4.1"]
+pdfplumber = [
+    "pdfplumber>=0.11.4",
+]
+pandas = [
+    "pandas>=2.2.3",
+]
+openpyxl = [
+    "openpyxl>=3.1.5",
+]
+mem0 = ["mem0ai>=0.1.29"]
 
 [tool.uv]
 dev-dependencies = [
@@ -52,7 +65,7 @@ dev-dependencies = [
     "mkdocs-material-extensions>=1.3.1",
     "pillow>=10.2.0",
     "cairosvg>=2.7.1",
-    "crewai-tools>=0.13.4",
+    "crewai-tools>=0.14.0",
     "pytest>=8.0.0",
     "pytest-vcr>=1.0.2",
     "python-dotenv>=1.0.0",

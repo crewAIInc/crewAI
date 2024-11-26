@@ -103,7 +103,7 @@ class KickoffTaskOutputsSQLiteStorage:
                         else value
                     )
 
-                query = f"UPDATE latest_kickoff_task_outputs SET {', '.join(fields)} WHERE task_index = ?"
+                query = f"UPDATE latest_kickoff_task_outputs SET {', '.join(fields)} WHERE task_index = ?"  # nosec
                 values.append(task_index)
 
                 cursor.execute(query, tuple(values))

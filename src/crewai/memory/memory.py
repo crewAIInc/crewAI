@@ -23,5 +23,12 @@ class Memory:
 
         self.storage.save(value, metadata)
 
-    def search(self, query: str) -> List[Dict[str, Any]]:
-        return self.storage.search(query)
+    def search(
+        self,
+        query: str,
+        limit: int = 3,
+        score_threshold: float = 0.35,
+    ) -> List[Any]:
+        return self.storage.search(
+            query=query, limit=limit, score_threshold=score_threshold
+        )
