@@ -1,6 +1,6 @@
-import io
 import logging
 import sys
+import threading
 import warnings
 from contextlib import contextmanager
 from typing import Any, Dict, List, Optional, Union
@@ -13,16 +13,25 @@ from crewai.utilities.exceptions.context_window_exceeding_exception import (
 )
 
 
-class FilteredStream(io.StringIO):
-    def write(self, s):
-        if (
-            "Give Feedback / Get Help: https://github.com/BerriAI/litellm/issues/new"
-            in s
-            or "LiteLLM.Info: If you need to debug this error, use `litellm.set_verbose=True`"
-            in s
-        ):
-            return
-        super().write(s)
+class FilteredStream:
+    def __init__(self, original_stream):
+        self._original_stream = original_stream
+        self._lock = threading.Lock()
+
+    def write(self, s) -> int:
+        with self._lock:
+            if (
+                "Give Feedback / Get Help: https://github.com/BerriAI/litellm/issues/new"
+                in s
+                or "LiteLLM.Info: If you need to debug this error, use `litellm.set_verbose=True`"
+                in s
+            ):
+                return 0
+            return self._original_stream.write(s)
+
+    def flush(self):
+        with self._lock:
+            return self._original_stream.flush()
 
 
 LLM_CONTEXT_WINDOW_SIZES = {
@@ -60,8 +69,8 @@ def suppress_warnings():
         # Redirect stdout and stderr
         old_stdout = sys.stdout
         old_stderr = sys.stderr
-        sys.stdout = FilteredStream()
-        sys.stderr = FilteredStream()
+        sys.stdout = FilteredStream(old_stdout)
+        sys.stderr = FilteredStream(old_stderr)
 
         try:
             yield

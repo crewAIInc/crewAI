@@ -1,6 +1,6 @@
 [project]
 name = "crewai"
-version = "0.80.0"
+version = "0.83.0"
 description = "Cutting-edge framework for orchestrating role-playing, autonomous AI agents. By fostering collaborative intelligence, CrewAI empowers agents to work together seamlessly, tackling complex tasks."
 readme = "README.md"
 requires-python = ">=3.10,<=3.13"
@@ -29,6 +29,8 @@ dependencies = [
     "tomli-w>=1.1.0",
     "tomli>=2.0.2",
     "chromadb>=0.5.18",
+    "pdfplumber>=0.11.4",
+    "openpyxl>=3.1.5",
 ]
 
 [project.urls]

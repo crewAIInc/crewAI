@@ -608,7 +608,7 @@ wheels = [
 
 [[package]]
 name = "crewai"
-version = "0.80.0"
+version = "0.83.0"
 source = { editable = "." }
 dependencies = [
     { name = "appdirs" },
@@ -622,9 +622,11 @@ dependencies = [
     { name = "langchain" },
     { name = "litellm" },
     { name = "openai" },
+    { name = "openpyxl" },
     { name = "opentelemetry-api" },
     { name = "opentelemetry-exporter-otlp-proto-http" },
     { name = "opentelemetry-sdk" },
+    { name = "pdfplumber" },
     { name = "pydantic" },
     { name = "python-dotenv" },
     { name = "pyvis" },
@@ -641,6 +643,9 @@ agentops = [
 fastembed = [
     { name = "fastembed" },
 ]
+mem0 = [
+    { name = "mem0ai" },
+]
 openpyxl = [
     { name = "openpyxl" },
 ]
@@ -649,9 +654,6 @@ pandas = [
 ]
 pdfplumber = [
     { name = "pdfplumber" },
-]
-mem0 = [
-    { name = "mem0ai" },
 ]
 tools = [
     { name = "crewai-tools" },
@@ -694,11 +696,13 @@ requires-dist = [
     { name = "litellm", specifier = ">=1.44.22" },
     { name = "mem0ai", marker = "extra == 'mem0'", specifier = ">=0.1.29" },
     { name = "openai", specifier = ">=1.13.3" },
+    { name = "openpyxl", specifier = ">=3.1.5" },
     { name = "openpyxl", marker = "extra == 'openpyxl'", specifier = ">=3.1.5" },
     { name = "opentelemetry-api", specifier = ">=1.22.0" },
     { name = "opentelemetry-exporter-otlp-proto-http", specifier = ">=1.22.0" },
     { name = "opentelemetry-sdk", specifier = ">=1.22.0" },
     { name = "pandas", marker = "extra == 'pandas'", specifier = ">=2.2.3" },
+    { name = "pdfplumber", specifier = ">=0.11.4" },
     { name = "pdfplumber", marker = "extra == 'pdfplumber'", specifier = ">=0.11.4" },
     { name = "pydantic", specifier = ">=2.4.2" },
     { name = "python-dotenv", specifier = ">=1.0.0" },
@@ -951,7 +955,6 @@ sdist = { url = "https://files.pythonhosted.org/packages/d3/38/af70d7ab1ae9d4da4
 wheels = [
     { url = "https://files.pythonhosted.org/packages/c1/8b/5fe2cc11fee489817272089c4203e679c63b570a5aaeb18d852ae3cbba6a/et_xmlfile-2.0.0-py3-none-any.whl", hash = "sha256:7a91720bc756843502c3b7504c77b8fe44217c85c537d85037f0f536151b2caa", size = 18059 },
 ]
-
 
 [[package]]
 name = "exceptiongroup"
