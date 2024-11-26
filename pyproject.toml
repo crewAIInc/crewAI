@@ -9,7 +9,6 @@ authors = [
 ]
 dependencies = [
     "pydantic>=2.4.2",
-    "langchain>=0.2.16",
     "openai>=1.13.3",
     "opentelemetry-api>=1.22.0",
     "opentelemetry-sdk>=1.22.0",
