@@ -1,4 +1,3 @@
-import importlib.metadata
 import os
 import shutil
 import sys
@@ -9,7 +8,6 @@ import click
 import tomli
 from rich.console import Console
 
-from crewai.cli.authentication.utils import TokenManager
 from crewai.cli.constants import ENV_VARS
 
 if sys.version_info >= (3, 11):
@@ -137,11 +135,6 @@ def _get_nested_value(data: Dict[str, Any], keys: List[str]) -> Any:
     return reduce(dict.__getitem__, keys, data)
 
 
-def get_crewai_version() -> str:
-    """Get the version number of CrewAI running the CLI"""
-    return importlib.metadata.version("crewai")
-
-
 def fetch_and_json_env_file(env_file_path: str = ".env") -> dict:
     """Fetch the environment variables from a .env file and return them as a dictionary."""
     try:
@@ -164,14 +157,6 @@ def fetch_and_json_env_file(env_file_path: str = ".env") -> dict:
         print(f"Error reading the .env file: {e}")
 
     return {}
-
-
-def get_auth_token() -> str:
-    """Get the authentication token."""
-    access_token = TokenManager().get_token()
-    if not access_token:
-        raise Exception()
-    return access_token
 
 
 def tree_copy(source, destination):
