@@ -260,6 +260,6 @@ class TestDeployCommand(unittest.TestCase):
         self.assertEqual(project_name, "test_project")
 
     def test_get_crewai_version(self):
-        from crewai.cli.utils import get_crewai_version
+        from crewai.cli.version import get_crewai_version
 
         assert isinstance(get_crewai_version(), str)

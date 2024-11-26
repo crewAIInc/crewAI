@@ -10,10 +10,11 @@ from crewai import Agent, Crew, Task
 from crewai.agents.cache import CacheHandler
 from crewai.agents.crew_agent_executor import CrewAgentExecutor
 from crewai.agents.parser import AgentAction, CrewAgentParser, OutputParserException
+from crewai.knowledge.source.string_knowledge_source import StringKnowledgeSource
 from crewai.llm import LLM
+from crewai.tools import tool
 from crewai.tools.tool_calling import InstructorToolCalling
 from crewai.tools.tool_usage import ToolUsage
-from crewai.tools import tool
 from crewai.tools.tool_usage_events import ToolUsageFinished
 from crewai.utilities import RPMController
 from crewai.utilities.events import Emitter
@@ -1574,3 +1575,42 @@ def test_agent_execute_task_with_ollama():
     result = agent.execute_task(task)
     assert len(result.split(".")) == 2
     assert "AI" in result or "artificial intelligence" in result.lower()
+
+
+@pytest.mark.vcr(filter_headers=["authorization"])
+def test_agent_with_knowledge_sources():
+    # Create a knowledge source with some content
+    content = "Brandon's favorite color is blue and he likes Mexican food."
+    string_source = StringKnowledgeSource(
+        content=content, metadata={"preference": "personal"}
+    )
+    
+
+    with patch('crewai.knowledge.storage.knowledge_storage.KnowledgeStorage') as MockKnowledge:
+        mock_knowledge_instance = MockKnowledge.return_value
+        mock_knowledge_instance.sources = [string_source]
+        mock_knowledge_instance.query.return_value = [{
+            "content": content,
+            "metadata": {"preference": "personal"}
+        }]
+        
+        agent = Agent(
+            role="Information Agent",
+            goal="Provide information based on knowledge sources",
+            backstory="You have access to specific knowledge sources.",
+            llm=LLM(model="gpt-4o-mini"),
+        )
+
+        # Create a task that requires the agent to use the knowledge
+        task = Task(
+            description="What is Brandon's favorite color?",
+            expected_output="Brandon's favorite color.",
+            agent=agent,
+        )
+
+        crew = Crew(agents=[agent], tasks=[task])
+        result = crew.kickoff()
+
+        # Assert that the agent provides the correct information
+        assert "blue" in result.raw.lower()
+
