@@ -57,6 +57,24 @@ crew = Crew(
 result = crew.kickoff(inputs={"question": "What city does John live in and how old is he?"})
 ```
 
+## Appending Knowledge Sources To Individual Agents
+Sometimes you may want to append knowledge sources to an individual agent. You can do this by setting the `knowledge` parameter in the `Agent` class.
+
+```python
+agent = Agent(
+    ...
+    knowledge={
+        "sources": [
+            StringKnowledgeSource(
+                content="Users name is John. He is 30 years old and lives in San Francisco.",
+                metadata={"preference": "personal"},
+            )
+        ],
+        "metadata": {"preference": "personal"},
+    },
+)
+```
+
 
 ## Embedder Configuration
 
