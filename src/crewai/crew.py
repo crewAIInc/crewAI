@@ -5,7 +5,7 @@ import uuid
 import warnings
 from concurrent.futures import Future
 from hashlib import md5
-from typing import TYPE_CHECKING, Any, Callable, Dict, List, Optional, Tuple, Union
+from typing import Any, Callable, Dict, List, Optional, Tuple, Union
 
 from pydantic import (
     UUID4,
