@@ -100,7 +100,7 @@ You can now start developing your crew by editing the files in the `src/my_proje
 
 #### Example of a simple crew with a sequential process:
 
-Instatiate your crew:
+Instantiate your crew:
 
 ```shell
 crewai create crew latest-ai-development
@@ -399,7 +399,7 @@ Data collected includes:
 - Roles of agents in a crew
   - Understand high level use cases so we can build better tools, integrations and examples about it
 - Tools names available
-  - Understand out of the publically available tools, which ones are being used the most so we can improve them
+  - Understand out of the publicly available tools, which ones are being used the most so we can improve them
 
 Users can opt-in to Further Telemetry, sharing the complete telemetry data by setting the `share_crew` attribute to `True` on their Crews. Enabling `share_crew` results in the collection of detailed crew and task execution data, including `goal`, `backstory`, `context`, and `output` of tasks. This enables a deeper insight into usage patterns while respecting the user's choice to share.
 

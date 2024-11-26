@@ -1,0 +1,79 @@
+---
+title: Knowledge
+description: Understand what knowledge is in CrewAI and how to effectively use it.
+icon: book
+---
+
+# Using Knowledge in CrewAI
+
+## Introduction
+
+Knowledge in CrewAI serves as a foundational component for enriching AI agents with contextual and relevant information. It enables agents to access and utilize structured data sources during their execution processes, making them more intelligent and responsive.
+
+The Knowledge class in CrewAI provides a powerful way to manage and query knowledge sources for your AI agents. This guide will show you how to implement knowledge management in your CrewAI projects.
+
+## What is Knowledge?
+
+The `Knowledge` class in CrewAI manages various sources that store information, which can be queried and retrieved by AI agents. This modular approach allows you to integrate diverse data formats such as text, PDFs, spreadsheets, and more into your AI workflows.
+
+Additionally, we have specific tools for generate knowledge sources for strings, text files, PDF's, and Spreadsheets. You can expand on any source type by extending the `KnowledgeSource` class.
+
+## Basic Implementation
+
+Here's a simple example of how to use the Knowledge class:
+
+```python
+from crewai import Agent, Task, Crew, Process, LLM
+from crewai.knowledge.source.string_knowledge_source import StringKnowledgeSource
+
+# Create a knowledge source
+content = "Users name is John. He is 30 years old and lives in San Francisco."
+string_source = StringKnowledgeSource(
+    content=content, metadata={"preference": "personal"}
+)
+
+# Create an agent with the knowledge store
+agent = Agent(
+    role="About User",
+    goal="You know everything about the user.",
+    backstory="""You are a master at understanding people and their preferences.""",
+    verbose=True
+)
+
+task = Task(
+    description="Answer the following questions about the user: {question}",
+    expected_output="An answer to the question.",
+    agent=agent,
+)
+
+crew = Crew(
+    agents=[agent],
+    tasks=[task],
+    verbose=True,
+    process=Process.sequential,
+    knowledge={"sources": [string_source], "metadata": {"preference": "personal"}}, # Enable knowledge by adding the sources here. You can also add more sources to the sources list.
+)
+
+result = crew.kickoff(inputs={"question": "What city does John live in and how old is he?"})
+```
+
+
+## Embedder Configuration
+
+You can also configure the embedder for the knowledge store. This is useful if you want to use a different embedder for the knowledge store than the one used for the agents.
+
+```python
+...
+string_source = StringKnowledgeSource(
+    content="Users name is John. He is 30 years old and lives in San Francisco.",
+    metadata={"preference": "personal"}
+)
+crew = Crew(
+    ...
+    knowledge={
+        "sources": [string_source],
+        "metadata": {"preference": "personal"},
+        "embedder_config": {"provider": "openai", "config": {"model": "text-embedding-3-small"}},
+    },
+)
+```

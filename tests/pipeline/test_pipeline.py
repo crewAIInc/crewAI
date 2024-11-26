@@ -38,6 +38,7 @@ def mock_crew_factory():
 
         crew = MockCrew()
         crew.name = name
+        crew.knowledge = None
 
         task_output = TaskOutput(
             description="Test task", raw="Task output", agent="Test Agent"
@@ -67,6 +68,7 @@ def mock_crew_factory():
         crew.process = Process.sequential
         crew.config = None
         crew.cache = True
+        crew.embedder = None
 
         # Add non-empty agents and tasks
         mock_agent = MagicMock(spec=Agent)

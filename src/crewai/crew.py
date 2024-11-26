@@ -5,7 +5,7 @@ import uuid
 import warnings
 from concurrent.futures import Future
 from hashlib import md5
-from typing import TYPE_CHECKING, Any, Dict, List, Optional, Tuple, Union
+from typing import TYPE_CHECKING, Any, Callable, Dict, List, Optional, Tuple, Union
 
 from pydantic import (
     UUID4,
@@ -27,6 +27,7 @@ from crewai.llm import LLM
 from crewai.memory.entity.entity_memory import EntityMemory
 from crewai.memory.long_term.long_term_memory import LongTermMemory
 from crewai.memory.short_term.short_term_memory import ShortTermMemory
+from crewai.knowledge.knowledge import Knowledge
 from crewai.memory.user.user_memory import UserMemory
 from crewai.process import Process
 from crewai.task import Task
@@ -36,9 +37,7 @@ from crewai.telemetry import Telemetry
 from crewai.tools.agent_tools.agent_tools import AgentTools
 from crewai.types.usage_metrics import UsageMetrics
 from crewai.utilities import I18N, FileHandler, Logger, RPMController
-from crewai.utilities.constants import (
-    TRAINING_DATA_FILE,
-)
+from crewai.utilities.constants import TRAINING_DATA_FILE
 from crewai.utilities.evaluators.crew_evaluator_handler import CrewEvaluator
 from crewai.utilities.evaluators.task_evaluator import TaskEvaluator
 from crewai.utilities.formatter import (
@@ -165,6 +164,16 @@ class Crew(BaseModel):
         default=None,
         description="Callback to be executed after each task for all agents execution.",
     )
+    before_kickoff_callbacks: List[
+        Callable[[Optional[Dict[str, Any]]], Optional[Dict[str, Any]]]
+    ] = Field(
+        default_factory=list,
+        description="List of callbacks to be executed before crew kickoff. It may be used to adjust inputs before the crew is executed.",
+    )
+    after_kickoff_callbacks: List[Callable[[CrewOutput], CrewOutput]] = Field(
+        default_factory=list,
+        description="List of callbacks to be executed after crew kickoff. It may be used to adjust the output of the crew.",
+    )
     max_rpm: Optional[int] = Field(
         default=None,
         description="Maximum number of requests per minute for the crew execution to be respected.",
@@ -193,6 +202,10 @@ class Crew(BaseModel):
         default=[],
         description="List of execution logs for tasks",
     )
+    knowledge: Optional[Dict[str, Any]] = Field(
+        default=None, description="Knowledge for the crew. Add knowledge sources to the knowledge object."
+    )
+
 
     @field_validator("id", mode="before")
     @classmethod
@@ -265,6 +278,15 @@ class Crew(BaseModel):
                 )
             else:
                 self._user_memory = None
+        return self
+
+    @model_validator(mode="after")
+    def create_crew_knowledge(self) -> "Crew":
+        if self.knowledge:
+            try:
+                self.knowledge = Knowledge(**self.knowledge) if isinstance(self.knowledge, dict) else self.knowledge
+            except (TypeError, ValueError) as e:
+                raise ValueError(f"Invalid knowledge configuration: {str(e)}")
         return self
 
     @model_validator(mode="after")
@@ -478,6 +500,9 @@ class Crew(BaseModel):
         self,
         inputs: Optional[Dict[str, Any]] = None,
     ) -> CrewOutput:
+        for before_callback in self.before_kickoff_callbacks:
+            inputs = before_callback(inputs)
+
         """Starts the crew to work on its assigned tasks."""
         self._execution_span = self._telemetry.crew_execution_span(self, inputs)
         self._task_output_handler.reset()
@@ -519,6 +544,9 @@ class Crew(BaseModel):
             raise NotImplementedError(
                 f"The process '{self.process}' is not implemented yet."
             )
+
+        for after_callback in self.after_kickoff_callbacks:
+            result = after_callback(result)
 
         metrics += [agent._token_process.get_summary() for agent in self.agents]
 
