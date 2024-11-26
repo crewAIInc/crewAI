@@ -444,7 +444,7 @@ class Agent(BaseAgent):
 
             for tool in tools:
                 if isinstance(tool, CrewAITool):
-                    tools_list.append(tool.to_langchain())
+                    tools_list.append(tool.to_structured_tool())
                 else:
                     tools_list.append(tool)
         except ModuleNotFoundError:

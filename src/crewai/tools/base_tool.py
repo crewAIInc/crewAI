@@ -1,9 +1,10 @@
 from abc import ABC, abstractmethod
 from typing import Any, Callable, Type, get_args, get_origin
 
-from langchain_core.tools import StructuredTool
 from pydantic import BaseModel, ConfigDict, Field, validator
 from pydantic import BaseModel as PydanticBaseModel
+
+from crewai.tools.structured_tool import CrewStructuredTool
 
 
 class BaseTool(BaseModel, ABC):
@@ -63,9 +64,10 @@ class BaseTool(BaseModel, ABC):
     ) -> Any:
         """Here goes the actual implementation of the tool."""
 
-    def to_langchain(self) -> StructuredTool:
+    def to_structured_tool(self) -> CrewStructuredTool:
+        """Convert this tool to a CrewStructuredTool instance."""
         self._set_args_schema()
-        return StructuredTool(
+        return CrewStructuredTool(
             name=self.name,
             description=self.description,
             args_schema=self.args_schema,
@@ -73,10 +75,10 @@ class BaseTool(BaseModel, ABC):
         )
 
     @classmethod
-    def from_langchain(cls, tool: StructuredTool) -> "BaseTool":
+    def from_langchain(cls, tool: CrewStructuredTool) -> "BaseTool":
         if cls == Tool:
             if tool.func is None:
-                raise ValueError("StructuredTool must have a callable 'func'")
+                raise ValueError("CrewStructuredTool must have a callable 'func'")
             return Tool(
                 name=tool.name,
                 description=tool.description,
@@ -142,9 +144,9 @@ class Tool(BaseTool):
 
 
 def to_langchain(
-    tools: list[BaseTool | StructuredTool],
-) -> list[StructuredTool]:
-    return [t.to_langchain() if isinstance(t, BaseTool) else t for t in tools]
+    tools: list[BaseTool | CrewStructuredTool],
+) -> list[CrewStructuredTool]:
+    return [t.to_structured_tool() if isinstance(t, BaseTool) else t for t in tools]
 
 
 def tool(*args):
