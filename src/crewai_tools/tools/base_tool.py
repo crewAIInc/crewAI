@@ -1,11 +1,10 @@
-from abc import ABC, abstractmethod
-from typing import Any, Callable, Optional, Type
+from typing import Any, Callable
 
-from langchain_core.tools import StructuredTool
-from pydantic import BaseModel, ConfigDict, Field, validator
 from pydantic import BaseModel as PydanticBaseModel
 
 from crewai.tools.base_tool import BaseTool
+from crewai.tools.structured_tool import CrewStructuredTool
+
 
 class Tool(BaseTool):
     func: Callable
@@ -16,9 +15,9 @@ class Tool(BaseTool):
 
 
 def to_langchain(
-    tools: list[BaseTool | StructuredTool],
-) -> list[StructuredTool]:
-    return [t.to_langchain() if isinstance(t, BaseTool) else t for t in tools]
+    tools: list[BaseTool | CrewStructuredTool],
+) -> list[CrewStructuredTool]:
+    return [t.to_structured_tool() if isinstance(t, BaseTool) else t for t in tools]
 
 
 def tool(*args):
