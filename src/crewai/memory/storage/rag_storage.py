@@ -1,4 +1,5 @@
 import contextlib
+import hashlib
 import io
 import logging
 import os
@@ -43,6 +44,7 @@ class RAGStorage(BaseRAGStorage):
         agents = [self._sanitize_role(agent.role) for agent in agents]
         agents = "_".join(agents)
         self.agents = agents
+        self.storage_file_name = self._build_file_name(agents)
 
         self.type = type
 
@@ -59,7 +61,7 @@ class RAGStorage(BaseRAGStorage):
 
         self._set_embedder_config()
         chroma_client = chromadb.PersistentClient(
-            path=f"{db_storage_path()}/{self.type}/{self.agents}",
+            path=f"{db_storage_path()}/{self.type}/{self.storage_file_name}",
             settings=Settings(allow_reset=self.allow_reset),
         )
 
@@ -79,6 +81,14 @@ class RAGStorage(BaseRAGStorage):
         Sanitizes agent roles to ensure valid directory names.
         """
         return role.replace("\n", "").replace(" ", "_").replace("/", "_")
+
+    def _build_file_name(self, string: str) -> str:
+        """
+        Generates a 32-character fixed length string to avoid file names
+        from growing too long and hitting the OS limit.
+        """
+        hash_obj = hashlib.md5(string.encode('utf-8'))
+        return hash_obj.hexdigest()[:32]
 
     def save(self, value: Any, metadata: Dict[str, Any]) -> None:
         if not hasattr(self, "app") or not hasattr(self, "collection"):
