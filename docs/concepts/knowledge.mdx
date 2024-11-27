@@ -51,7 +51,7 @@ crew = Crew(
     tasks=[task],
     verbose=True,
     process=Process.sequential,
-    knowledge={"sources": [string_source], "metadata": {"preference": "personal"}}, # Enable knowledge by adding the sources here. You can also add more sources to the sources list.
+    knowledge_sources=[string_source], # Enable knowledge by adding the sources here. You can also add more sources to the sources list.
 )
 
 result = crew.kickoff(inputs={"question": "What city does John live in and how old is he?"})
@@ -63,18 +63,29 @@ Sometimes you may want to append knowledge sources to an individual agent. You c
 ```python
 agent = Agent(
     ...
-    knowledge={
-        "sources": [
-            StringKnowledgeSource(
-                content="Users name is John. He is 30 years old and lives in San Francisco.",
-                metadata={"preference": "personal"},
-            )
-        ],
-        "metadata": {"preference": "personal"},
-    },
+    knowledge_sources=[
+        StringKnowledgeSource(
+            content="Users name is John. He is 30 years old and lives in San Francisco.",
+            metadata={"preference": "personal"},
+        )
+    ],
 )
 ```
 
+## Agent Level Knowledge Sources
+
+You can also append knowledge sources to an individual agent by setting the `knowledge_sources` parameter in the `Agent` class.
+
+```python
+string_source = StringKnowledgeSource(
+    content="Users name is John. He is 30 years old and lives in San Francisco.",
+    metadata={"preference": "personal"},
+)
+agent = Agent(
+    ...
+    knowledge_sources=[string_source],
+)
+```
 
 ## Embedder Configuration
 
@@ -88,10 +99,7 @@ string_source = StringKnowledgeSource(
 )
 crew = Crew(
     ...
-    knowledge={
-        "sources": [string_source],
-        "metadata": {"preference": "personal"},
-        "embedder_config": {"provider": "openai", "config": {"model": "text-embedding-3-small"}},
-    },
+    knowledge_sources=[string_source],
+    embedder_config={"provider": "ollama", "config": {"model": "nomic-embed-text:latest"}},
 )
 ```

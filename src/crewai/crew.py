@@ -203,9 +203,12 @@ class Crew(BaseModel):
         default=[],
         description="List of execution logs for tasks",
     )
-    knowledge: Optional[Union[List[BaseKnowledgeSource], Knowledge]] = Field(
+    knowledge_sources: Optional[List[BaseKnowledgeSource]] = Field(
         default=None,
-        description="Knowledge for the crew. Add knowledge sources to the knowledge object.",
+        description="Knowledge sources for the crew. Add knowledge sources to the knowledge object.",
+    )
+    _knowledge: Optional[Knowledge] = PrivateAttr(
+        default=None,
     )
 
     @field_validator("id", mode="before")
@@ -284,13 +287,13 @@ class Crew(BaseModel):
     @model_validator(mode="after")
     def create_crew_knowledge(self) -> "Crew":
         """Create the knowledge for the crew."""
-        if self.knowledge:
+        if self.knowledge_sources:
             try:
-                if isinstance(self.knowledge, list) and all(
-                    isinstance(k, BaseKnowledgeSource) for k in self.knowledge
+                if isinstance(self.knowledge_sources, list) and all(
+                    isinstance(k, BaseKnowledgeSource) for k in self.knowledge_sources
                 ):
-                    self.knowledge = Knowledge(
-                        sources=self.knowledge,
+                    self._knowledge = Knowledge(
+                        sources=self.knowledge_sources,
                         embedder_config=self.embedder,
                         collection_name="crew",
                     )
@@ -953,6 +956,11 @@ class Crew(BaseModel):
         self._logging_color = "bold_blue"
         result = self._execute_tasks(self.tasks, start_index, True)
         return result
+
+    def query_knowledge(self, query: List[str]) -> Union[List[Dict[str, Any]], None]:
+        if self._knowledge:
+            return self._knowledge.query(query)
+        return None
 
     def copy(self):
         """Create a deep copy of the Crew."""

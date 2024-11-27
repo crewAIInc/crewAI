@@ -3,12 +3,16 @@ import io
 import logging
 import chromadb
 import os
+
+import chromadb.errors
 from crewai.utilities.paths import db_storage_path
-from typing import Optional, List, Dict, Any
+from typing import Optional, List, Dict, Any, Union
 from crewai.utilities import EmbeddingConfigurator
 from crewai.knowledge.storage.base_knowledge_storage import BaseKnowledgeStorage
 import hashlib
 from chromadb.config import Settings
+from chromadb.api import ClientAPI
+from crewai.utilities.logger import Logger
 
 
 @contextlib.contextmanager
@@ -36,15 +40,15 @@ class KnowledgeStorage(BaseKnowledgeStorage):
 
     collection: Optional[chromadb.Collection] = None
     collection_name: Optional[str] = "knowledge"
-    app: Optional[chromadb.PersistentClient] = None
+    app: Optional[ClientAPI] = None
 
     def __init__(
         self,
         embedder_config: Optional[Dict[str, Any]] = None,
         collection_name: Optional[str] = None,
     ):
-        self.embedder_config = embedder_config
         self.collection_name = collection_name
+        self._set_embedder_config(embedder_config)
 
     def search(
         self,
@@ -91,7 +95,7 @@ class KnowledgeStorage(BaseKnowledgeStorage):
             )
             if self.app:
                 self.collection = self.app.get_or_create_collection(
-                    name=collection_name
+                    name=collection_name, embedding_function=self.embedder_config
                 )
             else:
                 raise Exception("Vector Database Client not initialized")
@@ -110,18 +114,39 @@ class KnowledgeStorage(BaseKnowledgeStorage):
             self.app.reset()
 
     def save(
-        self, documents: List[str], metadata: Dict[str, Any] | List[Dict[str, Any]]
+        self,
+        documents: List[str],
+        metadata: Union[Dict[str, Any], List[Dict[str, Any]]],
     ):
         if self.collection:
-            metadatas = [metadata] if isinstance(metadata, dict) else metadata
+            try:
+                metadatas = [metadata] if isinstance(metadata, dict) else metadata
 
-            ids = [hashlib.sha256(doc.encode("utf-8")).hexdigest() for doc in documents]
+                ids = [
+                    hashlib.sha256(doc.encode("utf-8")).hexdigest() for doc in documents
+                ]
 
-            self.collection.upsert(
-                documents=documents,
-                metadatas=metadatas,
-                ids=ids,
-            )
+                self.collection.upsert(
+                    documents=documents,
+                    metadatas=metadatas,
+                    ids=ids,
+                )
+            except chromadb.errors.InvalidDimensionException as e:
+                Logger(verbose=True).log(
+                    "error",
+                    "Embedding dimension mismatch. This usually happens when mixing different embedding models. Try resetting the collection using `crewai reset-memories -a`",
+                    "red",
+                )
+                raise ValueError(
+                    "Embedding dimension mismatch. Make sure you're using the same embedding model "
+                    "across all operations with this collection."
+                    "Try resetting the collection using `crewai reset-memories -a`"
+                ) from e
+            except Exception as e:
+                Logger(verbose=True).log(
+                    "error", f"Failed to upsert documents: {e}", "red"
+                )
+                raise
         else:
             raise Exception("Collection not initialized")
 

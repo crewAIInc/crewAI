@@ -21,6 +21,7 @@ from crewai.utilities.constants import TRAINED_AGENTS_DATA_FILE, TRAINING_DATA_F
 from crewai.utilities.converter import generate_model_description
 from crewai.utilities.token_counter_callback import TokenCalcHandler
 from crewai.utilities.training_handler import CrewTrainingHandler
+from crewai.knowledge.utils.knowledge_utils import extract_knowledge_context
 
 
 def mock_agent_ops_provider():
@@ -124,13 +125,16 @@ class Agent(BaseAgent):
         default="safe",
         description="Mode for code execution: 'safe' (using Docker) or 'unsafe' (direct execution).",
     )
-    knowledge: Optional[Union[List[BaseKnowledgeSource], Knowledge]] = Field(
-        default=None,
-        description="Knowledge for the agent. Add knowledge sources to the knowledge object.",
-    )
     embedder_config: Optional[Dict[str, Any]] = Field(
         default=None,
         description="Embedder configuration for the agent.",
+    )
+    knowledge_sources: Optional[List[BaseKnowledgeSource]] = Field(
+        default=None,
+        description="Knowledge sources for the agent. Add knowledge sources to the knowledge object.",
+    )
+    _knowledge: Optional[Knowledge] = PrivateAttr(
+        default=None,
     )
 
     @model_validator(mode="after")
@@ -245,14 +249,13 @@ class Agent(BaseAgent):
 
     def _set_knowledge(self):
         try:
-            if self.knowledge:
+            if self.knowledge_sources:
                 knowledge_agent_name = f"{self.role.replace(' ', '_')}"
-                print("knowledge_agent_name", knowledge_agent_name)
-                if isinstance(self.knowledge, list) and all(
-                    isinstance(k, BaseKnowledgeSource) for k in self.knowledge
+                if isinstance(self.knowledge_sources, list) and all(
+                    isinstance(k, BaseKnowledgeSource) for k in self.knowledge_sources
                 ):
-                    self.knowledge = Knowledge(
-                        sources=self.knowledge,
+                    self._knowledge = Knowledge(
+                        sources=self.knowledge_sources,
                         embedder_config=self.embedder_config,
                         collection_name=knowledge_agent_name,
                     )
@@ -313,22 +316,21 @@ class Agent(BaseAgent):
             if memory.strip() != "":
                 task_prompt += self.i18n.slice("memory").format(memory=memory)
 
-        if self.knowledge and isinstance(self.knowledge, Knowledge):
-            agent_knowledge_snippets = self.knowledge.query([task.prompt()])
-            agent_knowledge_context = self.knowledge.extract_knowledge_context(
-                agent_knowledge_snippets
-            )
-            if agent_knowledge_context:
-                task_prompt += agent_knowledge_context
+        if self._knowledge:
+            agent_knowledge_snippets = self._knowledge.query([task.prompt()])
+            if agent_knowledge_snippets:
+                agent_knowledge_context = extract_knowledge_context(
+                    agent_knowledge_snippets
+                )
+                if agent_knowledge_context:
+                    task_prompt += agent_knowledge_context
 
-        if self.crew and self.crew.knowledge:
-            knowledge_snippets = self.crew.knowledge.query([task.prompt()])
-
-            crew_knowledge_context = self.crew.knowledge.extract_knowledge_context(
-                knowledge_snippets
-            )
-            if crew_knowledge_context:
-                task_prompt += crew_knowledge_context
+        if self.crew:
+            knowledge_snippets = self.crew.query_knowledge([task.prompt()])
+            if knowledge_snippets:
+                crew_knowledge_context = extract_knowledge_context(knowledge_snippets)
+                if crew_knowledge_context:
+                    task_prompt += crew_knowledge_context
 
         tools = tools or self.tools or []
         self.create_agent_executor(tools=tools, task=task)

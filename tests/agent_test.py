@@ -3,7 +3,6 @@
 import os
 from unittest import mock
 from unittest.mock import patch
-
 import pytest
 
 from crewai import Agent, Crew, Task
@@ -11,7 +10,6 @@ from crewai.knowledge.source.base_knowledge_source import BaseKnowledgeSource
 from crewai.agents.cache import CacheHandler
 from crewai.agents.crew_agent_executor import CrewAgentExecutor
 from crewai.agents.parser import AgentAction, CrewAgentParser, OutputParserException
-from crewai.knowledge.knowledge import Knowledge
 from crewai.llm import LLM
 from crewai.tools import tool
 from crewai.tools.tool_calling import InstructorToolCalling
@@ -1627,10 +1625,9 @@ def test_agent_with_knowledge_sources_context():
         goal="Provide information based on knowledge sources",
         backstory="You have access to specific knowledge sources.",
         llm=LLM(model="gpt-4o-mini"),
-        knowledge=[string_source],
+        knowledge_sources=[string_source],
     )
-    # Test that agent is properly initialized with knowledge sources
-    assert isinstance(agent.knowledge, Knowledge)
-    assert len(agent.knowledge.sources) == 1
-    assert isinstance(agent.knowledge.sources[0], BaseKnowledgeSource)
-    assert agent.knowledge.sources[0].metadata == {"preference": "personal"}
+    assert isinstance(agent.knowledge_sources, list)
+    assert len(agent.knowledge_sources) == 1
+    assert isinstance(agent.knowledge_sources[0], BaseKnowledgeSource)
+    assert agent.knowledge_sources[0].metadata == {"preference": "personal"}

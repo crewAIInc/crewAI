@@ -62,18 +62,6 @@ class Knowledge(BaseModel):
         )
         return results
 
-    def extract_knowledge_context(
-        self, knowledge_snippets: List[Dict[str, Any]]
-    ) -> str:
-        """Extract knowledge from the task prompt."""
-        valid_snippets = [
-            result["context"]
-            for result in knowledge_snippets
-            if result and result.get("context")
-        ]
-        snippet = "\n".join(valid_snippets)
-        return f"Additional Information: {snippet}" if valid_snippets else ""
-
     def _add_sources(self):
         for source in self.sources:
             source.storage = self.storage
