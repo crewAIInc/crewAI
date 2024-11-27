@@ -6,7 +6,6 @@ from unittest.mock import patch
 import pytest
 
 from crewai import Agent, Crew, Task
-from crewai.knowledge.source.base_knowledge_source import BaseKnowledgeSource
 from crewai.agents.cache import CacheHandler
 from crewai.agents.crew_agent_executor import CrewAgentExecutor
 from crewai.agents.parser import AgentAction, CrewAgentParser, OutputParserException
