@@ -1624,7 +1624,6 @@ def test_agent_with_knowledge_sources_context():
         role="Information Agent",
         goal="Provide information based on knowledge sources",
         backstory="You have access to specific knowledge sources.",
-        llm=LLM(model="gpt-4o-mini"),
         knowledge_sources=[string_source],
     )
     assert isinstance(agent.knowledge_sources, list)
