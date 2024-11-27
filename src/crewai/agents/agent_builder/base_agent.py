@@ -138,7 +138,14 @@ class BaseAgent(ABC, BaseModel):
 
     @field_validator("tools")
     @classmethod
-    def validate_tools(cls, tools):
+    def validate_tools(cls, tools: List[Any]) -> List[BaseTool]:
+        """Validate and process the tools provided to the agent.
+
+        This method ensures that each tool is either an instance of BaseTool
+        or an object with 'name', 'func', and 'description' attributes. If the
+        tool meets these criteria, it is processed and added to the list of
+        tools. Otherwise, a ValueError is raised.
+        """
         processed_tools = []
         for tool in tools:
             if isinstance(tool, BaseTool):
