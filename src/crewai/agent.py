@@ -68,6 +68,7 @@ class Agent(BaseAgent):
             allow_delegation: Whether the agent is allowed to delegate tasks to other agents.
             tools: Tools at agents disposal
             step_callback: Callback to be executed after each step of the agent execution.
+            knowledge_sources: Knowledge sources for the agent.
     """
 
     _times_executed: int = PrivateAttr(default=0)
@@ -131,7 +132,7 @@ class Agent(BaseAgent):
     )
     knowledge_sources: Optional[List[BaseKnowledgeSource]] = Field(
         default=None,
-        description="Knowledge sources for the agent. Add knowledge sources to the knowledge object.",
+        description="Knowledge sources for the agent.",
     )
     _knowledge: Optional[Knowledge] = PrivateAttr(
         default=None,
