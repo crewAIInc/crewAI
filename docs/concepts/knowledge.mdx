@@ -51,7 +51,7 @@ crew = Crew(
     tasks=[task],
     verbose=True,
     process=Process.sequential,
-    knowledge_sources=[string_source], # Enable knowledge by adding the sources here. You can also add more sources to the sources list.
+    knowledge_sources=[string_source], # Enable knowledge by adding the sources here.
 )
 
 result = crew.kickoff(inputs={"question": "What city does John live in and how old is he?"})
