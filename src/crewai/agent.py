@@ -538,18 +538,6 @@ class Agent(BaseAgent):
                 f"Docker is not running. Please start Docker to use code execution with agent: {self.role}"
             )
 
-    def _extract_knowledge_context(
-        self, knowledge_snippets: List[Dict[str, Any]]
-    ) -> str:
-        """Extract knowledge from the task prompt."""
-        valid_snippets = [
-            result["context"]
-            for result in knowledge_snippets
-            if result and result.get("context")
-        ]
-        snippet = "\n".join(valid_snippets)
-        return f"Additional Information: {snippet}" if valid_snippets else ""
-
     @staticmethod
     def __tools_names(tools) -> str:
         return ", ".join([t.name for t in tools])
