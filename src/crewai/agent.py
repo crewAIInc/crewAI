@@ -126,7 +126,7 @@ class Agent(BaseAgent):
     @model_validator(mode="after")
     def post_init_setup(self):
         self.agent_ops_agent_name = self.role
-        unnacepted_attributes = [
+        unaccepted_attributes = [
             "AWS_ACCESS_KEY_ID",
             "AWS_SECRET_ACCESS_KEY",
             "AWS_REGION_NAME",
@@ -162,7 +162,7 @@ class Agent(BaseAgent):
                     for env_var in env_vars:
                         # Check if the environment variable is set
                         key_name = env_var.get("key_name")
-                        if key_name and key_name not in unnacepted_attributes:
+                        if key_name and key_name not in unaccepted_attributes:
                             env_value = os.environ.get(key_name)
                             if env_value:
                                 # Map key names containing "API_KEY" to "api_key"
@@ -412,7 +412,7 @@ class Agent(BaseAgent):
 
             for tool in tools:
                 if isinstance(tool, CrewAITool):
-                    tools_list.append(tool.to_langchain())
+                    tools_list.append(tool.to_structured_tool())
                 else:
                     tools_list.append(tool)
         except ModuleNotFoundError:
