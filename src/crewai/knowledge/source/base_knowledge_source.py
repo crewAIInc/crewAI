@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Optional
 
 import numpy as np
 from pydantic import BaseModel, ConfigDict, Field
@@ -18,6 +18,7 @@ class BaseKnowledgeSource(BaseModel, ABC):
     model_config = ConfigDict(arbitrary_types_allowed=True)
     storage: KnowledgeStorage = Field(default_factory=KnowledgeStorage)
     metadata: Dict[str, Any] = Field(default_factory=dict)
+    collection_name: Optional[str] = Field(default=None)
 
     @abstractmethod
     def load_content(self) -> Dict[Any, str]:
