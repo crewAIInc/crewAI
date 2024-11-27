@@ -1,7 +1,8 @@
 from abc import ABC, abstractmethod
+from inspect import signature
 from typing import Any, Callable, Type, get_args, get_origin
 
-from pydantic import BaseModel, ConfigDict, Field, validator
+from pydantic import BaseModel, ConfigDict, Field, create_model, validator
 from pydantic import BaseModel as PydanticBaseModel
 
 from crewai.tools.structured_tool import CrewStructuredTool
@@ -136,11 +137,49 @@ class BaseTool(BaseModel, ABC):
 
 
 class Tool(BaseTool):
-    func: Callable
     """The function that will be executed when the tool is called."""
+
+    func: Callable
 
     def _run(self, *args: Any, **kwargs: Any) -> Any:
         return self.func(*args, **kwargs)
+
+    @classmethod
+    def from_langchain(cls, tool: Any) -> "Tool":
+        if not hasattr(tool, "func") or not callable(tool.func):
+            raise ValueError("The provided tool must have a callable 'func' attribute.")
+
+        args_schema = getattr(tool, "args_schema", None)
+
+        if args_schema is None:
+            # Infer args_schema from the function signature if not provided
+            func_signature = signature(tool.func)
+            annotations = func_signature.parameters
+            args_fields = {}
+            for name, param in annotations.items():
+                if name != "self":
+                    param_annotation = (
+                        param.annotation if param.annotation != param.empty else Any
+                    )
+                    field_info = Field(
+                        default=...,
+                        description="",
+                    )
+                    args_fields[name] = (param_annotation, field_info)
+            if args_fields:
+                args_schema = create_model(f"{tool.name}Input", **args_fields)
+            else:
+                # Create a default schema with no fields if no parameters are found
+                args_schema = create_model(
+                    f"{tool.name}Input", __base__=PydanticBaseModel
+                )
+
+        return cls(
+            name=getattr(tool, "name", "Unnamed Tool"),
+            description=getattr(tool, "description", ""),
+            func=tool.func,
+            args_schema=args_schema,
+        )
 
 
 def to_langchain(
