@@ -1,6 +1,6 @@
 import requests
 from typing import Type, Optional
-from crewai_tools import BaseTool
+from ..base_tool import BaseTool
 from pydantic import BaseModel, Field
 
 
