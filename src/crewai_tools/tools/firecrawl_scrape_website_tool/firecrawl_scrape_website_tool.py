@@ -24,7 +24,11 @@ class FirecrawlScrapeWebsiteToolSchema(BaseModel):
 
 
 class FirecrawlScrapeWebsiteTool(BaseTool):
-    model_config = ConfigDict(arbitrary_types_allowed=True)
+    model_config = ConfigDict(
+        arbitrary_types_allowed=True,
+        validate_assignment=True,
+        frozen=False
+    )
     name: str = "Firecrawl web scrape tool"
     description: str = "Scrape webpages url using Firecrawl and return the contents"
     args_schema: Type[BaseModel] = FirecrawlScrapeWebsiteToolSchema
@@ -62,6 +66,7 @@ class FirecrawlScrapeWebsiteTool(BaseTool):
             "timeout": timeout,
         }
         return self.firecrawl.scrape_url(url, options)
+
 
 try:
     from firecrawl import FirecrawlApp
