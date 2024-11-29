@@ -65,8 +65,10 @@ class FirecrawlScrapeWebsiteTool(BaseTool):
 
 try:
     from firecrawl import FirecrawlApp
+    # Must rebuild model after class is defined
     FirecrawlScrapeWebsiteTool.model_rebuild()
 except ImportError:
-    raise ImportError(
-        "`firecrawl` package not found, please run `pip install firecrawl-py`"
-    )
+    """
+    When this tool is not used, then exception can be ignored.
+    """
+    pass
