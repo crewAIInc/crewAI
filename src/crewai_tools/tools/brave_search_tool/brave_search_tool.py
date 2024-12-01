@@ -25,6 +25,18 @@ class BraveSearchToolSchema(BaseModel):
 
 
 class BraveSearchTool(BaseTool):
+    """
+    BraveSearchTool - A tool for performing web searches using the Brave Search API.
+
+    This module provides functionality to search the internet using Brave's Search API,
+    supporting customizable result counts and country-specific searches.
+
+    Dependencies:
+        - requests
+        - pydantic
+        - python-dotenv (for API key management)
+    """
+
     name: str = "Search the internet"
     description: str = (
         "A tool that can be used to search the internet with a search_query."
@@ -35,48 +47,64 @@ class BraveSearchTool(BaseTool):
     n_results: int = 10
     save_file: bool = False
 
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        if "BRAVE_API_KEY" not in os.environ:
+            raise ValueError(
+                "BRAVE_API_KEY environment variable is required for BraveSearchTool"
+            )
+
     def _run(
         self,
         **kwargs: Any,
     ) -> Any:
-        search_query = kwargs.get("search_query") or kwargs.get("query")
-        save_file = kwargs.get("save_file", self.save_file)
-        n_results = kwargs.get("n_results", self.n_results)
+        try:
+            search_query = kwargs.get("search_query") or kwargs.get("query")
+            if not search_query:
+                raise ValueError("Search query is required")
 
-        payload = {"q": search_query, "count": n_results}
+            save_file = kwargs.get("save_file", self.save_file)
+            n_results = kwargs.get("n_results", self.n_results)
 
-        if self.country != "":
-            payload["country"] = self.country
+            payload = {"q": search_query, "count": n_results}
 
-        headers = {
-            "X-Subscription-Token": os.environ["BRAVE_API_KEY"],
-            "Accept": "application/json",
-        }
+            if self.country != "":
+                payload["country"] = self.country
 
-        response = requests.get(self.search_url, headers=headers, params=payload)
-        results = response.json()
+            headers = {
+                "X-Subscription-Token": os.environ["BRAVE_API_KEY"],
+                "Accept": "application/json",
+            }
 
-        if "web" in results:
-            results = results["web"]["results"]
-            string = []
-            for result in results:
-                try:
-                    string.append(
-                        "\n".join(
-                            [
-                                f"Title: {result['title']}",
-                                f"Link: {result['url']}",
-                                f"Snippet: {result['description']}",
-                                "---",
-                            ]
+            response = requests.get(self.search_url, headers=headers, params=payload)
+            response.raise_for_status()  # Handle non-200 responses
+            results = response.json()
+
+            if "web" in results:
+                results = results["web"]["results"]
+                string = []
+                for result in results:
+                    try:
+                        string.append(
+                            "\n".join(
+                                [
+                                    f"Title: {result['title']}",
+                                    f"Link: {result['url']}",
+                                    f"Snippet: {result['description']}",
+                                    "---",
+                                ]
+                            )
                         )
-                    )
-                except KeyError:
-                    continue
+                    except KeyError:
+                        continue
 
             content = "\n".join(string)
-            if save_file:
-                _save_results_to_file(content)
+        except requests.RequestException as e:
+            return f"Error performing search: {str(e)}"
+        except KeyError as e:
+            return f"Error parsing search results: {str(e)}"
+        if save_file:
+            _save_results_to_file(content)
             return f"\nSearch results: {content}\n"
         else:
-            return results
+            return content
