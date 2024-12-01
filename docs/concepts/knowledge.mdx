@@ -6,100 +6,205 @@ icon: book
 
 # Using Knowledge in CrewAI
 
-## Introduction
-
-Knowledge in CrewAI serves as a foundational component for enriching AI agents with contextual and relevant information. It enables agents to access and utilize structured data sources during their execution processes, making them more intelligent and responsive.
-
-The Knowledge class in CrewAI provides a powerful way to manage and query knowledge sources for your AI agents. This guide will show you how to implement knowledge management in your CrewAI projects.
-
 ## What is Knowledge?
 
-The `Knowledge` class in CrewAI manages various sources that store information, which can be queried and retrieved by AI agents. This modular approach allows you to integrate diverse data formats such as text, PDFs, spreadsheets, and more into your AI workflows.
+Knowledge in CrewAI is a powerful system that allows AI agents to access and utilize external information sources during their tasks. Think of it as giving your agents a reference library they can consult while working.
 
-Additionally, we have specific tools for generate knowledge sources for strings, text files, PDF's, and Spreadsheets. You can expand on any source type by extending the `KnowledgeSource` class.
+<Info>
+  Key benefits of using Knowledge:
+  - Enhance agents with domain-specific information
+  - Support decisions with real-world data
+  - Maintain context across conversations
+  - Ground responses in factual information
+</Info>
 
-## Basic Implementation
+## Supported Knowledge Sources
 
-Here's a simple example of how to use the Knowledge class:
+CrewAI supports various types of knowledge sources out of the box:
+
+<CardGroup cols={2}>
+  <Card title="Text Sources" icon="text">
+    - Raw strings
+    - Text files (.txt)
+    - PDF documents
+  </Card>
+  <Card title="Structured Data" icon="table">
+    - CSV files
+    - Excel spreadsheets
+    - JSON documents
+  </Card>
+</CardGroup>
+
+## Quick Start
+
+Here's a simple example using string-based knowledge:
 
 ```python
-from crewai import Agent, Task, Crew, Process, LLM
-from crewai.knowledge.source.string_knowledge_source import StringKnowledgeSource
+from crewai import Agent, Task, Crew
+from crewai.knowledge import StringKnowledgeSource
 
-# Create a knowledge source
-content = "Users name is John. He is 30 years old and lives in San Francisco."
-string_source = StringKnowledgeSource(
-    content=content, metadata={"preference": "personal"}
+# 1. Create a knowledge source
+product_info = StringKnowledgeSource(
+    content="""Our product X1000 has the following features:
+    - 10-hour battery life
+    - Water-resistant
+    - Available in black and silver
+    Price: $299.99""",
+    metadata={"category": "product"}
 )
 
-# Create an agent with the knowledge store
-agent = Agent(
-    role="About User",
-    goal="You know everything about the user.",
-    backstory="""You are a master at understanding people and their preferences.""",
-    verbose=True
+# 2. Create an agent with knowledge
+sales_agent = Agent(
+    role="Sales Representative",
+    goal="Accurately answer customer questions about products",
+    backstory="Expert in product features and customer service",
+    knowledge_sources=[product_info]  # Attach knowledge to agent
 )
 
-task = Task(
-    description="Answer the following questions about the user: {question}",
-    expected_output="An answer to the question.",
-    agent=agent,
+# 3. Create a task
+answer_task = Task(
+    description="Answer: What colors is the X1000 available in and how much does it cost?",
+    agent=sales_agent
 )
 
+# 4. Create and run the crew
+crew = Crew(
+    agents=[sales_agent],
+    tasks=[answer_task]
+)
+
+result = crew.kickoff()
+```
+
+## Knowledge Configuration
+
+### Collection Names
+
+Knowledge sources are organized into collections for better management:
+
+```python
+# Create knowledge sources with specific collections
+tech_specs = StringKnowledgeSource(
+    content="Technical specifications...",
+    collection_name="product_tech_specs"
+)
+
+pricing_info = StringKnowledgeSource(
+    content="Pricing information...",
+    collection_name="product_pricing"
+)
+```
+
+### Metadata and Filtering
+
+Add metadata to organize and filter knowledge:
+
+```python
+knowledge_source = StringKnowledgeSource(
+    content="Product details...",
+    metadata={
+        "category": "electronics",
+        "product_line": "premium",
+        "last_updated": "2024-03"
+    }
+)
+```
+
+### Chunking Configuration
+
+Control how your content is split for processing:
+
+```python
+knowledge_source = PDFKnowledgeSource(
+    file_path="product_manual.pdf",
+    chunk_size=2000,     # Characters per chunk
+    chunk_overlap=200    # Overlap between chunks
+)
+```
+
+## Advanced Usage
+
+### Custom Knowledge Sources
+
+Create your own knowledge source by extending the base class:
+
+```python
+from crewai.knowledge.source import BaseKnowledgeSource
+
+class APIKnowledgeSource(BaseKnowledgeSource):
+    def __init__(self, api_endpoint: str, **kwargs):
+        super().__init__(**kwargs)
+        self.api_endpoint = api_endpoint
+    
+    def load_content(self):
+        # Implement API data fetching
+        response = requests.get(self.api_endpoint)
+        return response.json()
+    
+    def add(self):
+        content = self.load_content()
+        # Process and store content
+        self.save_documents({"source": "api"})
+```
+
+### Embedder Configuration
+
+Customize the embedding process:
+
+```python
 crew = Crew(
     agents=[agent],
     tasks=[task],
-    verbose=True,
-    process=Process.sequential,
-    knowledge_sources=[string_source], # Enable knowledge by adding the sources here.
-)
-
-result = crew.kickoff(inputs={"question": "What city does John live in and how old is he?"})
-```
-
-## Appending Knowledge Sources To Individual Agents
-Sometimes you may want to append knowledge sources to an individual agent. You can do this by setting the `knowledge` parameter in the `Agent` class.
-
-```python
-agent = Agent(
-    ...
-    knowledge_sources=[
-        StringKnowledgeSource(
-            content="Users name is John. He is 30 years old and lives in San Francisco.",
-            metadata={"preference": "personal"},
-        )
-    ],
+    knowledge_sources=[source],
+    embedder_config={
+        "model": "BAAI/bge-small-en-v1.5",
+        "normalize": True,
+        "max_length": 512
+    }
 )
 ```
 
-## Agent Level Knowledge Sources
+## Best Practices
 
-You can also append knowledge sources to an individual agent by setting the `knowledge_sources` parameter in the `Agent` class.
+<AccordionGroup>
+  <Accordion title="Content Organization">
+    - Use meaningful collection names
+    - Add detailed metadata for filtering
+    - Keep chunk sizes appropriate for your content
+    - Consider content overlap for context preservation
+  </Accordion>
+  
+  <Accordion title="Performance Tips">
+    - Use smaller chunk sizes for precise retrieval
+    - Implement metadata filtering for faster searches
+    - Choose appropriate embedding models for your use case
+    - Cache frequently accessed knowledge
+  </Accordion>
+  
+  <Accordion title="Error Handling">
+    - Validate knowledge source content
+    - Handle missing or corrupted files
+    - Monitor embedding generation
+    - Implement fallback options
+  </Accordion>
+</AccordionGroup>
 
-```python
-string_source = StringKnowledgeSource(
-    content="Users name is John. He is 30 years old and lives in San Francisco.",
-    metadata={"preference": "personal"},
-)
-agent = Agent(
-    ...
-    knowledge_sources=[string_source],
-)
-```
+## Common Issues and Solutions
 
-## Embedder Configuration
-
-You can also configure the embedder for the knowledge store. This is useful if you want to use a different embedder for the knowledge store than the one used for the agents.
-
-```python
-...
-string_source = StringKnowledgeSource(
-    content="Users name is John. He is 30 years old and lives in San Francisco.",
-    metadata={"preference": "personal"}
-)
-crew = Crew(
-    ...
-    knowledge_sources=[string_source],
-    embedder_config={"provider": "ollama", "config": {"model": "nomic-embed-text:latest"}},
-)
-```
+<AccordionGroup>
+  <Accordion title="Content Not Found">
+    If agents can't find relevant information:
+    - Check chunk sizes
+    - Verify knowledge source loading
+    - Review metadata filters
+    - Test with simpler queries first
+  </Accordion>
+  
+  <Accordion title="Performance Issues">
+    If knowledge retrieval is slow:
+    - Reduce chunk sizes
+    - Optimize metadata filtering
+    - Consider using a lighter embedding model
+    - Cache frequently accessed content
+  </Accordion>
+</AccordionGroup>
