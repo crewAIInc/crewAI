@@ -1,5 +1,6 @@
 import datetime
 import os
+from functools import lru_cache
 from typing import Any, Optional, Type
 
 import requests
@@ -54,6 +55,7 @@ class BraveSearchTool(BaseTool):
                 "BRAVE_API_KEY environment variable is required for BraveSearchTool"
             )
 
+    @lru_cache(maxsize=100)
     def _run(
         self,
         **kwargs: Any,
