@@ -26,6 +26,7 @@ from .update_crew import update_crew
 
 
 @click.group()
+@click.version_option(pkg_resources.get_distribution("crewai").version)
 def crewai():
     """Top-level command group for crewai."""
 
