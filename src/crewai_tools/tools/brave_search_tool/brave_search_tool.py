@@ -38,7 +38,7 @@ class BraveSearchTool(BaseTool):
         - python-dotenv (for API key management)
     """
 
-    name: str = "Search the internet"
+    name: str = "Brave Web Search the internet"
     description: str = (
         "A tool that can be used to search the internet with a search_query."
     )
