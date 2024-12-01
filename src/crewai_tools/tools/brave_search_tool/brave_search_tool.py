@@ -1,7 +1,7 @@
 import datetime
 import os
-from functools import lru_cache
-from typing import Any, Optional, Type
+import time
+from typing import Any, ClassVar, Optional, Type
 
 import requests
 from pydantic import BaseModel, Field
@@ -47,6 +47,8 @@ class BraveSearchTool(BaseTool):
     country: Optional[str] = ""
     n_results: int = 10
     save_file: bool = False
+    _last_request_time: ClassVar[float] = 0
+    _min_request_interval: ClassVar[float] = 1.0  # seconds
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -55,11 +57,16 @@ class BraveSearchTool(BaseTool):
                 "BRAVE_API_KEY environment variable is required for BraveSearchTool"
             )
 
-    @lru_cache(maxsize=100)
     def _run(
         self,
         **kwargs: Any,
     ) -> Any:
+        current_time = time.time()
+        if (current_time - self._last_request_time) < self._min_request_interval:
+            time.sleep(
+                self._min_request_interval - (current_time - self._last_request_time)
+            )
+        BraveSearchTool._last_request_time = time.time()
         try:
             search_query = kwargs.get("search_query") or kwargs.get("query")
             if not search_query:

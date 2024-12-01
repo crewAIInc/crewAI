@@ -40,8 +40,8 @@ def test_brave_tool():
     tool = BraveSearchTool(
         n_results=2,
     )
-
-    print(tool.run(search_query="ChatGPT"))
+    x = tool.run(search_query="ChatGPT")
+    print(x)
 
 
 if __name__ == "__main__":
