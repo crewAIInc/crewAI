@@ -44,7 +44,7 @@ class RAGStorage(BaseRAGStorage):
         agents = [self._sanitize_role(agent.role) for agent in agents]
         agents = "_".join(agents)
         self.agents = agents
-        self.storage_file_name = self._build_file_name(agents)
+        self.storage_file_name = self._build_storage_file_name(type, agents)
 
         self.type = type
 
@@ -82,13 +82,16 @@ class RAGStorage(BaseRAGStorage):
         """
         return role.replace("\n", "").replace(" ", "_").replace("/", "_")
 
-    def _build_file_name(self, string: str) -> str:
+    def _build_storage_file_name(self, type: str, file_name: str) -> str:
         """
-        Generates a 32-character fixed length string to avoid file names
-        from growing too long and hitting the OS limit.
+        Ensures file name does not exceed max allowed by OS
         """
-        hash_obj = hashlib.md5(string.encode('utf-8'))
-        return hash_obj.hexdigest()[:32]
+        base_path = db_storage_path()
+        # Returns platform-dependent max length of a file name
+        # in the specified directory.
+        max_filename_length = os.pathconf(f"{base_path}/{type}", 'PC_NAME_MAX')
+        # Trim if necessary
+        return file_name[:max_filename_length]
 
     def save(self, value: Any, metadata: Dict[str, Any]) -> None:
         if not hasattr(self, "app") or not hasattr(self, "collection"):
