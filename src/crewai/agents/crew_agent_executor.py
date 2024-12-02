@@ -101,7 +101,6 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
 
         self.ask_for_human_input = bool(inputs.get("ask_for_human_input", False))
         formatted_answer = self._invoke_loop()
-        print("FORMATTED ANSWER: ", formatted_answer)
 
         if self.ask_for_human_input:
             human_feedback = self._ask_human_input(formatted_answer.output)
@@ -122,9 +121,7 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
     def _invoke_loop(self, formatted_answer=None):
         try:
             while not isinstance(formatted_answer, AgentFinish):
-                print("STARTING LOOP")
                 if not self.request_within_rpm_limit or self.request_within_rpm_limit():
-                    print("MESSAGES: ", self.messages)
                     answer = self.llm.call(
                         self.messages,
                         callbacks=self.callbacks,
@@ -159,7 +156,6 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
                         formatted_answer.text += f"\nObservation: {tool_result.result}"
                         formatted_answer.result = tool_result.result
                         if tool_result.result_as_answer:
-                            print("RESULT AS ANSWER: ", tool_result.result)
                             return AgentFinish(
                                 thought="",
                                 output=tool_result.result,
@@ -187,7 +183,6 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
                     self.messages.append(
                         self._format_msg(formatted_answer.text, role="assistant")
                     )
-                    print("FORMATTED ANSWER in invoke_loop: ", formatted_answer)
 
         except OutputParserException as e:
             self.messages.append({"role": "user", "content": e.error})
