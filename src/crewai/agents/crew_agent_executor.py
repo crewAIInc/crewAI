@@ -1,5 +1,6 @@
 import json
 import re
+from dataclasses import dataclass
 from typing import Any, Dict, List, Union
 
 from crewai.agents.agent_builder.base_agent import BaseAgent
@@ -12,6 +13,7 @@ from crewai.agents.parser import (
     OutputParserException,
 )
 from crewai.agents.tools_handler import ToolsHandler
+from crewai.tools.base_tool import BaseTool
 from crewai.tools.tool_usage import ToolUsage, ToolUsageErrorException
 from crewai.utilities import I18N, Printer
 from crewai.utilities.constants import TRAINING_DATA_FILE
@@ -20,6 +22,12 @@ from crewai.utilities.exceptions.context_window_exceeding_exception import (
 )
 from crewai.utilities.logger import Logger
 from crewai.utilities.training_handler import CrewTrainingHandler
+
+
+@dataclass
+class ToolResult:
+    result: Any
+    result_as_answer: bool
 
 
 class CrewAgentExecutor(CrewAgentExecutorMixin):
@@ -33,7 +41,7 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
         agent: BaseAgent,
         prompt: dict[str, str],
         max_iter: int,
-        tools: List[Any],
+        tools: List[BaseTool],
         tools_names: str,
         stop_words: List[str],
         tools_description: str,
@@ -70,7 +78,9 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
         self.iterations = 0
         self.log_error_after = 3
         self.have_forced_answer = False
-        self.name_to_tool_map = {tool.name: tool for tool in self.tools}
+        self.tool_name_to_tool_map: Dict[str, BaseTool] = {
+            tool.name: tool for tool in self.tools
+        }
         if self.llm.stop:
             self.llm.stop = list(set(self.llm.stop + self.stop))
         else:
@@ -91,6 +101,7 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
 
         self.ask_for_human_input = bool(inputs.get("ask_for_human_input", False))
         formatted_answer = self._invoke_loop()
+        print("FORMATTED ANSWER: ", formatted_answer)
 
         if self.ask_for_human_input:
             human_feedback = self._ask_human_input(formatted_answer.output)
@@ -111,7 +122,9 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
     def _invoke_loop(self, formatted_answer=None):
         try:
             while not isinstance(formatted_answer, AgentFinish):
+                print("STARTING LOOP")
                 if not self.request_within_rpm_limit or self.request_within_rpm_limit():
+                    print("MESSAGES: ", self.messages)
                     answer = self.llm.call(
                         self.messages,
                         callbacks=self.callbacks,
@@ -140,9 +153,18 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
                     formatted_answer = self._format_answer(answer)
 
                     if isinstance(formatted_answer, AgentAction):
-                        action_result = self._use_tool(formatted_answer)
-                        formatted_answer.text += f"\nObservation: {action_result}"
-                        formatted_answer.result = action_result
+                        tool_result = self._execute_tool_and_check_finality(
+                            formatted_answer
+                        )
+                        formatted_answer.text += f"\nObservation: {tool_result.result}"
+                        formatted_answer.result = tool_result.result
+                        if tool_result.result_as_answer:
+                            print("RESULT AS ANSWER: ", tool_result.result)
+                            return AgentFinish(
+                                thought="",
+                                output=tool_result.result,
+                                text=formatted_answer.text,
+                            )
                         self._show_logs(formatted_answer)
 
                     if self.step_callback:
@@ -165,6 +187,7 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
                     self.messages.append(
                         self._format_msg(formatted_answer.text, role="assistant")
                     )
+                    print("FORMATTED ANSWER in invoke_loop: ", formatted_answer)
 
         except OutputParserException as e:
             self.messages.append({"role": "user", "content": e.error})
@@ -239,7 +262,7 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
                     content=f"\033[95m## Final Answer:\033[00m \033[92m\n{formatted_answer.output}\033[00m\n\n"
                 )
 
-    def _use_tool(self, agent_action: AgentAction) -> Any:
+    def _execute_tool_and_check_finality(self, agent_action: AgentAction) -> ToolResult:
         tool_usage = ToolUsage(
             tools_handler=self.tools_handler,
             tools=self.tools,
@@ -255,19 +278,25 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
 
         if isinstance(tool_calling, ToolUsageErrorException):
             tool_result = tool_calling.message
+            return ToolResult(result=tool_result, result_as_answer=False)
         else:
             if tool_calling.tool_name.casefold().strip() in [
-                name.casefold().strip() for name in self.name_to_tool_map
+                name.casefold().strip() for name in self.tool_name_to_tool_map
             ] or tool_calling.tool_name.casefold().replace("_", " ") in [
-                name.casefold().strip() for name in self.name_to_tool_map
+                name.casefold().strip() for name in self.tool_name_to_tool_map
             ]:
                 tool_result = tool_usage.use(tool_calling, agent_action.text)
+                tool = self.tool_name_to_tool_map.get(tool_calling.tool_name)
+                if tool:
+                    return ToolResult(
+                        result=tool_result, result_as_answer=tool.result_as_answer
+                    )
             else:
                 tool_result = self._i18n.errors("wrong_tool_name").format(
                     tool=tool_calling.tool_name,
                     tools=", ".join([tool.name.casefold() for tool in self.tools]),
                 )
-        return tool_result
+        return ToolResult(result=tool_result, result_as_answer=False)
 
     def _summarize_messages(self) -> None:
         messages_groups = []
@@ -333,9 +362,9 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
             if self.crew is not None and hasattr(self.crew, "_train_iteration"):
                 train_iteration = self.crew._train_iteration
                 if agent_id in training_data and isinstance(train_iteration, int):
-                    training_data[agent_id][train_iteration]["improved_output"] = (
-                        result.output
-                    )
+                    training_data[agent_id][train_iteration][
+                        "improved_output"
+                    ] = result.output
                     training_handler.save(training_data)
                 else:
                     self._logger.log(
