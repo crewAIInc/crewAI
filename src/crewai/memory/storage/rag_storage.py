@@ -60,7 +60,7 @@ class RAGStorage(BaseRAGStorage):
 
         self._set_embedder_config()
         chroma_client = chromadb.PersistentClient(
-            path=f"{db_storage_path()}/{self.type}/{self.storage_file_name}",
+            path=self.storage_file_name,
             settings=Settings(allow_reset=self.allow_reset),
         )
 
@@ -85,12 +85,13 @@ class RAGStorage(BaseRAGStorage):
         """
         Ensures file name does not exceed max allowed by OS
         """
-        base_path = db_storage_path()
-        # Returns platform-dependent max length of a file name
+        base_path = f"{db_storage_path()}/{type}"
+        # Returns platform-dependent max length for a file name
         # in the specified directory.
-        max_filename_length = os.pathconf(f"{base_path}/{type}", 'PC_NAME_MAX')
+        max_length = os.pathconf(base_path, 'PC_NAME_MAX')
         # Trim if necessary
-        return file_name[:max_filename_length]
+        safe_file_name = file_name[:max_length]
+        return f"{base_path}/{safe_file_name}"
 
     def save(self, value: Any, metadata: Dict[str, Any]) -> None:
         if not hasattr(self, "app") or not hasattr(self, "collection"):
