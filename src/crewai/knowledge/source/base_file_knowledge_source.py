@@ -1,17 +1,20 @@
 from pathlib import Path
-from typing import Union, List
+from typing import Union, List, Dict, Any
 
 from pydantic import Field
 
 from crewai.knowledge.source.base_knowledge_source import BaseKnowledgeSource
-from typing import Dict, Any
+from crewai.utilities.logger import Logger
 from crewai.knowledge.storage.knowledge_storage import KnowledgeStorage
 
 
 class BaseFileKnowledgeSource(BaseKnowledgeSource):
     """Base class for knowledge sources that load content from files."""
 
-    file_path: Union[Path, List[Path]] = Field(...)
+    _logger: Logger = Logger(verbose=True)
+    file_path: Union[Path, List[Path], str, List[str]] = Field(
+        ..., description="The path to the file"
+    )
     content: Dict[Path, str] = Field(init=False, default_factory=dict)
     storage: KnowledgeStorage = Field(default_factory=KnowledgeStorage)
 
@@ -20,13 +23,34 @@ class BaseFileKnowledgeSource(BaseKnowledgeSource):
         self.content = self.load_content()
 
     def load_content(self) -> Dict[Path, str]:
-        """Load and preprocess file content. Should be overridden by subclasses."""
+        """Load and preprocess file content. Should be overridden by subclasses. We want to assume that the file path is relative to the project root in the knowledge directory."""
+
+        if isinstance(self.file_path, str):
+            self.file_path = self.convert_to_path(self.file_path)
+        elif isinstance(self.file_path, list):
+            processed_paths = []
+            for path in self.file_path:
+                processed_paths.append(self.convert_to_path(path))
+            self.file_path = processed_paths
+
         paths = [self.file_path] if isinstance(self.file_path, Path) else self.file_path
+        if not isinstance(paths, list):
+            raise ValueError("file_path must be a Path or a list of Paths")
 
         for path in paths:
             if not path.exists():
+                self._logger.log(
+                    "error",
+                    f"File not found: {path}. Try adding sources to the knowledge directory.",
+                    color="red",
+                )
                 raise FileNotFoundError(f"File not found: {path}")
             if not path.is_file():
+                self._logger.log(
+                    "error",
+                    f"Path is not a file: {path}",
+                    color="red",
+                )
                 raise ValueError(f"Path is not a file: {path}")
         return {}
 
@@ -34,3 +58,7 @@ class BaseFileKnowledgeSource(BaseKnowledgeSource):
         """Save the documents to the storage."""
         chunk_metadatas = [metadata.copy() for _ in self.chunks]
         self.storage.save(self.chunks, chunk_metadatas)
+
+    def convert_to_path(self, path: Union[Path, str]) -> Path:
+        """Convert a path to a Path object."""
+        return Path("knowledge/" + path) if isinstance(path, str) else path
