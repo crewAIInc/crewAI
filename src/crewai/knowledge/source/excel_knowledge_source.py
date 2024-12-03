@@ -8,17 +8,15 @@ class ExcelKnowledgeSource(BaseFileKnowledgeSource):
 
     def load_content(self) -> Dict[Path, str]:
         """Load and preprocess Excel file content."""
-        super().load_content()  # Validate the file path
         pd = self._import_dependencies()
 
-        if isinstance(self.file_path, list):
-            file_path = self.file_path[0]
-        else:
-            file_path = self.file_path
-
-        df = pd.read_excel(file_path)
-        content = df.to_csv(index=False)
-        return {file_path: content}
+        content_dict = {}
+        for file_path in self.safe_file_paths:
+            file_path = self.convert_to_path(file_path)
+            df = pd.read_excel(file_path)
+            content = df.to_csv(index=False)
+            content_dict[file_path] = content
+        return content_dict
 
     def _import_dependencies(self):
         """Dynamically import dependencies."""

@@ -156,11 +156,32 @@ crew = Crew(
     agents=[agent],
     tasks=[task],
     knowledge_sources=[source],
-    embedder_config={
-        "model": "BAAI/bge-small-en-v1.5",
-        "normalize": True,
-        "max_length": 512
+    embedder={
+        "provider": "ollama",
+        "config": {"model": "nomic-embed-text:latest"},
     }
+)
+```
+
+### Referencing Sources
+
+You can reference knowledge sources by their collection name or metadata.
+
+* Add a directory to your crew project called `knowledge`:
+* File paths in knowledge can be referenced relative to the `knowledge` directory.
+
+Example:
+A file inside the `knowledge` directory called `example.txt` can be referenced as `example.txt`.
+
+```python
+source = TextFileKnowledgeSource(
+    file_path="example.txt", # or /example.txt
+    collection_name="example"
+)
+crew = Crew(
+    agents=[agent],
+    tasks=[task],
+    knowledge_sources=[source],
 )
 ```
 
