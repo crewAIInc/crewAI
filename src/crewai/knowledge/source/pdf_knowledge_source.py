@@ -9,7 +9,6 @@ class PDFKnowledgeSource(BaseFileKnowledgeSource):
 
     def load_content(self) -> Dict[Path, str]:
         """Load and preprocess PDF file content."""
-        super().load_content()  # Validate the file paths
         pdfplumber = self._import_pdfplumber()
 
         paths = [self.file_path] if isinstance(self.file_path, Path) else self.file_path

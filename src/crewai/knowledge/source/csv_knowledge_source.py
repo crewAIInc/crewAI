@@ -10,7 +10,6 @@ class CSVKnowledgeSource(BaseFileKnowledgeSource):
 
     def load_content(self) -> Dict[Path, str]:
         """Load and preprocess CSV file content."""
-        super().load_content()  # Validate the file path
 
         file_path = (
             self.file_path[0] if isinstance(self.file_path, list) else self.file_path

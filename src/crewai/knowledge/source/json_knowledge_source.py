@@ -10,7 +10,6 @@ class JSONKnowledgeSource(BaseFileKnowledgeSource):
 
     def load_content(self) -> Dict[Path, str]:
         """Load and preprocess JSON file content."""
-        super().load_content()  # Validate the file path
         paths = [self.file_path] if isinstance(self.file_path, Path) else self.file_path
 
         content: Dict[Path, str] = {}
