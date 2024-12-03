@@ -4,12 +4,13 @@ import logging
 import os
 import shutil
 import uuid
-
 from typing import Any, Dict, List, Optional
+
 from chromadb.api import ClientAPI
+
 from crewai.memory.storage.base_rag_storage import BaseRAGStorage
-from crewai.utilities.paths import db_storage_path
 from crewai.utilities import EmbeddingConfigurator
+from crewai.utilities.paths import db_storage_path
 
 
 @contextlib.contextmanager
@@ -43,6 +44,7 @@ class RAGStorage(BaseRAGStorage):
         agents = [self._sanitize_role(agent.role) for agent in agents]
         agents = "_".join(agents)
         self.agents = agents
+        self.storage_file_name = self._build_storage_file_name(type, agents)
 
         self.type = type
 
@@ -59,7 +61,7 @@ class RAGStorage(BaseRAGStorage):
 
         self._set_embedder_config()
         chroma_client = chromadb.PersistentClient(
-            path=f"{db_storage_path()}/{self.type}/{self.agents}",
+            path=self.storage_file_name,
             settings=Settings(allow_reset=self.allow_reset),
         )
 
@@ -79,6 +81,29 @@ class RAGStorage(BaseRAGStorage):
         Sanitizes agent roles to ensure valid directory names.
         """
         return role.replace("\n", "").replace(" ", "_").replace("/", "_")
+
+    def _build_storage_file_name(self, type: str, file_name: str) -> str:
+        """
+        Ensures file name does not exceed max allowed by OS
+        """
+        base_path = f"{db_storage_path()}/{type}"
+
+        try:
+            # Returns platform-dependent max length for a file name
+            max_length = os.pathconf(base_path, "PC_NAME_MAX")
+        except (OSError, AttributeError) as e:
+            logging.error(f"Error accessing path configuration: {e}")
+            # Fallback to a reasonable default if necessary
+            max_length = 255
+
+        # Trim if necessary
+        if len(file_name) > max_length:
+            logging.warning(
+                f"Trimming file name from {len(file_name)} to {max_length} characters."
+            )
+            file_name = file_name[:max_length]
+
+        return f"{base_path}/{file_name}"
 
     def save(self, value: Any, metadata: Dict[str, Any]) -> None:
         if not hasattr(self, "app") or not hasattr(self, "collection"):

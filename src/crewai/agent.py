@@ -181,7 +181,7 @@ class Agent(BaseAgent):
                         if key_name and key_name not in unaccepted_attributes:
                             env_value = os.environ.get(key_name)
                             if env_value:
-                                param_name = env_value.lower()
+                                param_name = key_name.lower()
                                 # Map key names containing "API_KEY" to "api_key"
                                 if "api_key" in param_name:
                                     param_name = "api_key"
