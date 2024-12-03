@@ -10,7 +10,7 @@ class EntityMemory(Memory):
     Inherits from the Memory class.
     """
 
-    def __init__(self, crew=None, embedder_config=None, storage=None):
+    def __init__(self, crew=None, embedder_config=None, storage=None, path=None):
         if hasattr(crew, "memory_config") and crew.memory_config is not None:
             self.memory_provider = crew.memory_config.get("provider")
         else:
@@ -33,6 +33,7 @@ class EntityMemory(Memory):
                     allow_reset=True,
                     embedder_config=embedder_config,
                     crew=crew,
+                    path=path,
                 )
             )
         super().__init__(storage)
