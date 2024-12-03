@@ -9,12 +9,11 @@ class TextFileKnowledgeSource(BaseFileKnowledgeSource):
 
     def load_content(self) -> Dict[Path, str]:
         """Load and preprocess text file content."""
-        super().load_content()
-        paths = [self.file_path] if isinstance(self.file_path, Path) else self.file_path
         content = {}
-        for path in paths:
-            with path.open("r", encoding="utf-8") as f:
-                content[path] = f.read()  # type: ignore
+        for path in self.safe_file_paths:
+            path = self.convert_to_path(path)
+            with open(path, "r", encoding="utf-8") as f:
+                content[path] = f.read()
         return content
 
     def add(self) -> None:
