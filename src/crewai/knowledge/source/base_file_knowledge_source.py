@@ -2,7 +2,7 @@ from abc import ABC, abstractmethod
 from pathlib import Path
 from typing import Union, List, Dict, Any
 
-from pydantic import Field, PrivateAttr
+from pydantic import Field
 
 from crewai.knowledge.source.base_knowledge_source import BaseKnowledgeSource
 from crewai.utilities.logger import Logger
@@ -19,11 +19,11 @@ class BaseFileKnowledgeSource(BaseKnowledgeSource, ABC):
     )
     content: Dict[Path, str] = Field(init=False, default_factory=dict)
     storage: KnowledgeStorage = Field(default_factory=KnowledgeStorage)
-    _safe_file_paths: List[Path] = PrivateAttr(default_factory=list)
+    safe_file_paths: List[Path] = Field(default_factory=list)
 
     def model_post_init(self, _):
         """Post-initialization method to load content."""
-        self._safe_file_paths = self._process_file_paths()
+        self.safe_file_paths = self._process_file_paths()
         self.validate_paths()
         self.content = self.load_content()
 
@@ -34,21 +34,7 @@ class BaseFileKnowledgeSource(BaseKnowledgeSource, ABC):
 
     def validate_paths(self):
         """Validate the paths."""
-        if isinstance(self.file_path, str):
-            self.file_path = self.convert_to_path(self.file_path)
-        elif isinstance(self.file_path, list):
-            processed_paths = []
-            for path in self.file_path:
-                processed_paths.append(self.convert_to_path(path))
-            self.file_path = processed_paths
-
-        paths = [self.file_path] if isinstance(self.file_path, Path) else self.file_path
-        if not isinstance(paths, list):
-            raise ValueError("file_path must be a Path or a list of Paths")
-
-        paths = [Path(path) if isinstance(path, str) else path for path in paths]
-
-        for path in paths:
+        for path in self.safe_file_paths:
             if not path.exists():
                 self._logger.log(
                     "error",

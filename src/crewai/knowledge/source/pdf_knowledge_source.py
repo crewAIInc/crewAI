@@ -11,10 +11,9 @@ class PDFKnowledgeSource(BaseFileKnowledgeSource):
         """Load and preprocess PDF file content."""
         pdfplumber = self._import_pdfplumber()
 
-        paths = [self.file_path] if isinstance(self.file_path, Path) else self.file_path
         content = {}
 
-        for path in paths:
+        for path in self.safe_file_paths:
             text = ""
             path = self.convert_to_path(path)
             with pdfplumber.open(path) as pdf:
