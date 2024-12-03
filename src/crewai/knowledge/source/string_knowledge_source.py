@@ -1,4 +1,4 @@
-from typing import List
+from typing import List, Optional
 
 from pydantic import Field
 
@@ -9,6 +9,7 @@ class StringKnowledgeSource(BaseKnowledgeSource):
     """A knowledge source that stores and queries plain text content using embeddings."""
 
     content: str = Field(...)
+    collection_name: Optional[str] = Field(default=None)
 
     def model_post_init(self, _):
         """Post-initialization method to validate content."""

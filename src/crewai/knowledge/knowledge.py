@@ -5,8 +5,8 @@ from pydantic import BaseModel, ConfigDict, Field
 
 from crewai.knowledge.source.base_knowledge_source import BaseKnowledgeSource
 from crewai.knowledge.storage.knowledge_storage import KnowledgeStorage
-from crewai.utilities.logger import Logger
 from crewai.utilities.constants import DEFAULT_SCORE_THRESHOLD
+
 os.environ["TOKENIZERS_PARALLELISM"] = "false"  # removes logging from fastembed
 
 
@@ -18,24 +18,33 @@ class Knowledge(BaseModel):
         storage: KnowledgeStorage = Field(default_factory=KnowledgeStorage)
         embedder_config: Optional[Dict[str, Any]] = None
     """
+
     sources: List[BaseKnowledgeSource] = Field(default_factory=list)
     model_config = ConfigDict(arbitrary_types_allowed=True)
     storage: KnowledgeStorage = Field(default_factory=KnowledgeStorage)
     embedder_config: Optional[Dict[str, Any]] = None
+    collection_name: Optional[str] = None
 
-    def __init__(self, embedder_config: Optional[Dict[str, Any]] = None, **data):
+    def __init__(
+        self,
+        collection_name: str,
+        sources: List[BaseKnowledgeSource],
+        embedder_config: Optional[Dict[str, Any]] = None,
+        storage: Optional[KnowledgeStorage] = None,
+        **data,
+    ):
         super().__init__(**data)
-        self.storage = KnowledgeStorage(embedder_config=embedder_config or None)
-
-        try:
-            for source in self.sources:
-                source.add()
-        except Exception as e:
-            Logger(verbose=True).log(
-                "warning",
-                f"Failed to init knowledge: {e}",
-                color="yellow",
+        if storage:
+            self.storage = storage
+        else:
+            self.storage = KnowledgeStorage(
+                embedder_config=embedder_config, collection_name=collection_name
             )
+        self.sources = sources
+        self.storage.initialize_knowledge_storage()
+        for source in sources:
+            source.storage = self.storage
+            source.add()
 
     def query(
         self, query: List[str], limit: int = 3, preference: Optional[str] = None
@@ -52,3 +61,8 @@ class Knowledge(BaseModel):
             score_threshold=DEFAULT_SCORE_THRESHOLD,
         )
         return results
+
+    def _add_sources(self):
+        for source in self.sources:
+            source.storage = self.storage
+            source.add()
