@@ -24,6 +24,7 @@ from crewai.agents.agent_builder.base_agent import BaseAgent
 from crewai.agents.cache import CacheHandler
 from crewai.crews.crew_output import CrewOutput
 from crewai.knowledge.knowledge import Knowledge
+from crewai.knowledge.source.base_knowledge_source import BaseKnowledgeSource
 from crewai.llm import LLM
 from crewai.memory.entity.entity_memory import EntityMemory
 from crewai.memory.long_term.long_term_memory import LongTermMemory
@@ -200,9 +201,12 @@ class Crew(BaseModel):
         default=[],
         description="List of execution logs for tasks",
     )
-    knowledge: Optional[Dict[str, Any]] = Field(
+    knowledge_sources: Optional[List[BaseKnowledgeSource]] = Field(
         default=None,
-        description="Knowledge for the crew. Add knowledge sources to the knowledge object.",
+        description="Knowledge sources for the crew. Add knowledge sources to the knowledge object.",
+    )
+    _knowledge: Optional[Knowledge] = PrivateAttr(
+        default=None,
     )
 
     @field_validator("id", mode="before")
@@ -280,15 +284,22 @@ class Crew(BaseModel):
 
     @model_validator(mode="after")
     def create_crew_knowledge(self) -> "Crew":
-        if self.knowledge:
+        """Create the knowledge for the crew."""
+        if self.knowledge_sources:
             try:
-                self.knowledge = (
-                    Knowledge(**self.knowledge)
-                    if isinstance(self.knowledge, dict)
-                    else self.knowledge
+                if isinstance(self.knowledge_sources, list) and all(
+                    isinstance(k, BaseKnowledgeSource) for k in self.knowledge_sources
+                ):
+                    self._knowledge = Knowledge(
+                        sources=self.knowledge_sources,
+                        embedder_config=self.embedder,
+                        collection_name="crew",
+                    )
+
+            except Exception as e:
+                self._logger.log(
+                    "warning", f"Failed to init knowledge: {e}", color="yellow"
                 )
-            except (TypeError, ValueError) as e:
-                raise ValueError(f"Invalid knowledge configuration: {str(e)}")
         return self
 
     @model_validator(mode="after")
@@ -943,6 +954,11 @@ class Crew(BaseModel):
         self._logging_color = "bold_blue"
         result = self._execute_tasks(self.tasks, start_index, True)
         return result
+
+    def query_knowledge(self, query: List[str]) -> Union[List[Dict[str, Any]], None]:
+        if self._knowledge:
+            return self._knowledge.query(query)
+        return None
 
     def copy(self):
         """Create a deep copy of the Crew."""

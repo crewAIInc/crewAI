@@ -1,6 +1,6 @@
 [project]
 name = "crewai"
-version = "0.83.0"
+version = "0.85.0"
 description = "Cutting-edge framework for orchestrating role-playing, autonomous AI agents. By fostering collaborative intelligence, CrewAI empowers agents to work together seamlessly, tackling complex tasks."
 readme = "README.md"
 requires-python = ">=3.10,<=3.13"
@@ -9,7 +9,6 @@ authors = [
 ]
 dependencies = [
     "pydantic>=2.4.2",
-    "langchain>=0.2.16",
     "openai>=1.13.3",
     "opentelemetry-api>=1.22.0",
     "opentelemetry-sdk>=1.22.0",
