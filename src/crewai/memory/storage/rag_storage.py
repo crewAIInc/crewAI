@@ -38,7 +38,9 @@ class RAGStorage(BaseRAGStorage):
 
     app: ClientAPI | None = None
 
-    def __init__(self, type, allow_reset=True, embedder_config=None, crew=None):
+    def __init__(
+        self, type, allow_reset=True, embedder_config=None, crew=None, path=None
+    ):
         super().__init__(type, allow_reset, embedder_config, crew)
         agents = crew.agents if crew else []
         agents = [self._sanitize_role(agent.role) for agent in agents]
@@ -49,6 +51,7 @@ class RAGStorage(BaseRAGStorage):
         self.type = type
 
         self.allow_reset = allow_reset
+        self.path = path
         self._initialize_app()
 
     def _set_embedder_config(self):
@@ -61,7 +64,7 @@ class RAGStorage(BaseRAGStorage):
 
         self._set_embedder_config()
         chroma_client = chromadb.PersistentClient(
-            path=self.storage_file_name,
+            path=self.path if self.path else self.storage_file_name,
             settings=Settings(allow_reset=self.allow_reset),
         )
 
