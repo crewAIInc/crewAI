@@ -15,6 +15,7 @@ class JSONKnowledgeSource(BaseFileKnowledgeSource):
 
         content: Dict[Path, str] = {}
         for path in paths:
+            path = self.convert_to_path(path)
             with open(path, "r", encoding="utf-8") as json_file:
                 data = json.load(json_file)
             content[path] = self._json_to_text(data)

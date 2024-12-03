@@ -12,9 +12,9 @@ class ExcelKnowledgeSource(BaseFileKnowledgeSource):
         pd = self._import_dependencies()
 
         if isinstance(self.file_path, list):
-            file_path = self.file_path[0]
+            file_path = self.convert_to_path(self.file_path[0])
         else:
-            file_path = self.file_path
+            file_path = self.convert_to_path(self.file_path)
 
         df = pd.read_excel(file_path)
         content = df.to_csv(index=False)

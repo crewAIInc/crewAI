@@ -37,6 +37,9 @@ class BaseFileKnowledgeSource(BaseKnowledgeSource):
         if not isinstance(paths, list):
             raise ValueError("file_path must be a Path or a list of Paths")
 
+        # Ensure all paths are Path objects
+        paths = [Path(path) if isinstance(path, str) else path for path in paths]
+
         for path in paths:
             if not path.exists():
                 self._logger.log(
