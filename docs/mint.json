@@ -99,7 +99,8 @@
         "how-to/replay-tasks-from-latest-crew-kickoff",
         "how-to/conditional-tasks",
         "how-to/agentops-observability",
-        "how-to/langtrace-observability"
+        "how-to/langtrace-observability",
+        "how-to/openlit-observability"
       ]
     },
     {
