@@ -2,7 +2,7 @@ from abc import ABC, abstractmethod
 from pathlib import Path
 from typing import Union, List, Dict, Any
 
-from pydantic import Field
+from pydantic import Field, PrivateAttr
 
 from crewai.knowledge.source.base_knowledge_source import BaseKnowledgeSource
 from crewai.utilities.logger import Logger
@@ -19,9 +19,11 @@ class BaseFileKnowledgeSource(BaseKnowledgeSource, ABC):
     )
     content: Dict[Path, str] = Field(init=False, default_factory=dict)
     storage: KnowledgeStorage = Field(default_factory=KnowledgeStorage)
+    _safe_file_paths: List[Path] = PrivateAttr(default_factory=list)
 
     def model_post_init(self, _):
         """Post-initialization method to load content."""
+        self._safe_file_paths = self._process_file_paths()
         self.validate_paths()
         self.content = self.load_content()
 
@@ -50,7 +52,7 @@ class BaseFileKnowledgeSource(BaseKnowledgeSource, ABC):
             if not path.exists():
                 self._logger.log(
                     "error",
-                    f"File not found: {path}. Try adding sources to the knowledge directory.",
+                    f"File not found: {path}. Try adding sources to the knowledge directory. If its inside the knowledge directory, use the relative path.",
                     color="red",
                 )
                 raise FileNotFoundError(f"File not found: {path}")
@@ -69,3 +71,16 @@ class BaseFileKnowledgeSource(BaseKnowledgeSource, ABC):
     def convert_to_path(self, path: Union[Path, str]) -> Path:
         """Convert a path to a Path object."""
         return Path(KNOWLEDGE_DIRECTORY + "/" + path) if isinstance(path, str) else path
+
+    def _process_file_paths(self) -> List[Path]:
+        """Convert file_path to a list of Path objects."""
+        paths = (
+            [self.file_path]
+            if isinstance(self.file_path, (str, Path))
+            else self.file_path
+        )
+
+        if not isinstance(paths, list):
+            raise ValueError("file_path must be a Path, str, or a list of these types")
+
+        return [self.convert_to_path(path) for path in paths]
