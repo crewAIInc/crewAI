@@ -72,5 +72,5 @@ class {{crew_name}}():
 			process=Process.sequential,
 			verbose=True,
 			# process=Process.hierarchical, # In case you wanna use that instead https://docs.crewai.com/how-to/Hierarchical/
-			# knowledge_sources=sources, # In the case you want to add knowledge sources``
+			# knowledge_sources=sources, # In the case you want to add knowledge sources
 		)
