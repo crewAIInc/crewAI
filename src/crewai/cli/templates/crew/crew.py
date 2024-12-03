@@ -1,8 +1,9 @@
 from crewai import Agent, Crew, Process, Task
 from crewai.project import CrewBase, agent, crew, task, before_kickoff, after_kickoff
-from crewai.knowledge.source.text_file_knowledge_source import TextFileKnowledgeSource
 # Uncomment the following line to use an example of a custom tool
 # from {{folder_name}}.tools.custom_tool import MyCustomTool
+# Uncomment the following line to use an example of a knowledge source
+# from crewai.knowledge.source.text_file_knowledge_source import TextFileKnowledgeSource
 
 # Check our tools documentations for more information on how to use them
 # from crewai_tools import SerperDevTool
