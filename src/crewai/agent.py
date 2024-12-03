@@ -181,21 +181,17 @@ class Agent(BaseAgent):
                         if key_name and key_name not in unaccepted_attributes:
                             env_value = os.environ.get(key_name)
                             if env_value:
+                                param_name = env_var.lower()
                                 # Map key names containing "API_KEY" to "api_key"
-                                key_name = (
-                                    "api_key" if "API_KEY" in key_name else key_name
-                                )
+                                if "api_key" in param_name:
+                                    param_name = "api_key"
                                 # Map key names containing "API_BASE" to "api_base"
-                                key_name = (
-                                    "api_base" if "API_BASE" in key_name else key_name
-                                )
+                                elif "api_base" in param_name:
+                                    param_name = "api_base"
                                 # Map key names containing "API_VERSION" to "api_version"
-                                key_name = (
-                                    "api_version"
-                                    if "API_VERSION" in key_name
-                                    else key_name
-                                )
-                                llm_params[key_name] = env_value
+                                elif "api_version" in param_name:
+                                    param_name = "api_version"
+                                llm_params[param_name] = env_value
                         # Check for default values if the environment variable is not set
                         elif env_var.get("default", False):
                             for key, value in env_var.items():
