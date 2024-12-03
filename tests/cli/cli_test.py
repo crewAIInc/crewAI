@@ -131,6 +131,13 @@ def test_reset_no_memory_flags(runner):
     )
 
 
+def test_version_flag(runner):
+    result = runner.invoke(version)
+
+    assert result.exit_code == 0
+    assert "crewai version:" in result.output
+
+
 def test_version_command(runner):
     result = runner.invoke(version)
 
