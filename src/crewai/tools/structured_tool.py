@@ -22,6 +22,7 @@ class CrewStructuredTool:
         description: str,
         args_schema: type[BaseModel],
         func: Callable[..., Any],
+        result_as_answer: bool = False,
     ) -> None:
         """Initialize the structured tool.
 
@@ -30,12 +31,14 @@ class CrewStructuredTool:
             description: A description of what the tool does
             args_schema: The pydantic model for the tool's arguments
             func: The function to run when the tool is called
+            result_as_answer: Whether to return the output directly
         """
         self.name = name
         self.description = description
         self.args_schema = args_schema
         self.func = func
         self._logger = Logger()
+        self.result_as_answer = result_as_answer
 
         # Validate the function signature matches the schema
         self._validate_function_signature()
@@ -98,6 +101,7 @@ class CrewStructuredTool:
             description=description,
             args_schema=schema,
             func=func,
+            result_as_answer=return_direct,
         )
 
     @staticmethod
