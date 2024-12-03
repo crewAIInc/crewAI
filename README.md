@@ -13,7 +13,7 @@ In the realm of CrewAI agents, tools are pivotal for enhancing functionality. Th
 
 <h3>
 
-[Homepage](https://www.crewai.io/) | [Documentation](https://docs.crewai.com/) | [Chat with Docs](https://chatg.pt/DWjSBZn) | [Examples](https://github.com/crewAIInc/crewAI-examples) | [Discord](https://discord.com/invite/X4JWnZnxPb)
+[Homepage](https://www.crewai.io/) | [Documentation](https://docs.crewai.com/) | [Chat with Docs](https://chatg.pt/DWjSBZn) | [Examples](https://github.com/crewAIInc/crewAI-examples) | [Discord](https://discord.com/invite/X4JWnZnxPb) | [Discourse](https://community.crewai.com/)
 
 </h3>
 
@@ -140,6 +140,4 @@ Thank you for your interest in enhancing the capabilities of AI agents through a
 
 ## Contact
 
-For questions or support, please join our [Discord community](https://discord.com/invite/X4JWnZnxPb) or open an issue in this repository.
-
-
+For questions or support, please join our [Discord community](https://discord.com/invite/X4JWnZnxPb), [Discourse](https://community.crewai.com/) or open an issue in this repository.
