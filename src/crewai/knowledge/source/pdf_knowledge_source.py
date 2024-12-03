@@ -16,6 +16,7 @@ class PDFKnowledgeSource(BaseFileKnowledgeSource):
 
         for path in paths:
             text = ""
+            path = self.convert_to_path(path)
             with pdfplumber.open(path) as pdf:
                 for page in pdf.pages:
                     page_text = page.extract_text()
