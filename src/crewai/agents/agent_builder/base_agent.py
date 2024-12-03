@@ -19,6 +19,7 @@ from crewai.agents.agent_builder.utilities.base_token_process import TokenProces
 from crewai.agents.cache.cache_handler import CacheHandler
 from crewai.agents.tools_handler import ToolsHandler
 from crewai.tools import BaseTool
+from crewai.tools.base_tool import Tool
 from crewai.utilities import I18N, Logger, RPMController
 from crewai.utilities.config import process_config
 
@@ -106,7 +107,7 @@ class BaseAgent(ABC, BaseModel):
         default=False,
         description="Enable agent to delegate and ask questions among each other.",
     )
-    tools: Optional[List[BaseTool]] = Field(
+    tools: Optional[List[Any]] = Field(
         default_factory=list, description="Tools at agents' disposal"
     )
     max_iter: Optional[int] = Field(
@@ -134,6 +135,35 @@ class BaseAgent(ABC, BaseModel):
     @classmethod
     def process_model_config(cls, values):
         return process_config(values, cls)
+
+    @field_validator("tools")
+    @classmethod
+    def validate_tools(cls, tools: List[Any]) -> List[BaseTool]:
+        """Validate and process the tools provided to the agent.
+
+        This method ensures that each tool is either an instance of BaseTool
+        or an object with 'name', 'func', and 'description' attributes. If the
+        tool meets these criteria, it is processed and added to the list of
+        tools. Otherwise, a ValueError is raised.
+        """
+        processed_tools = []
+        for tool in tools:
+            if isinstance(tool, BaseTool):
+                processed_tools.append(tool)
+            elif (
+                hasattr(tool, "name")
+                and hasattr(tool, "func")
+                and hasattr(tool, "description")
+            ):
+                # Tool has the required attributes, create a Tool instance
+                processed_tools.append(Tool.from_langchain(tool))
+            else:
+                raise ValueError(
+                    f"Invalid tool type: {type(tool)}. "
+                    "Tool must be an instance of BaseTool or "
+                    "an object with 'name', 'func', and 'description' attributes."
+                )
+        return processed_tools
 
     @model_validator(mode="after")
     def validate_and_set_attributes(self):
