@@ -1,0 +1,487 @@
+interactions:
+- request:
+    body: !!binary |
+      CusOCiQKIgoMc2VydmljZS5uYW1lEhIKEGNyZXdBSS10ZWxlbWV0cnkSwg4KEgoQY3Jld2FpLnRl
+      bGVtZXRyeRKaDAoQJ2RtlOW3xhPcNjmbKwSJaxIIMUF8zJjQkvQqDENyZXcgQ3JlYXRlZDABOThF
+      x7PrrgkYQWiczLPrrgkYShoKDmNyZXdhaV92ZXJzaW9uEggKBjAuODAuMEoaCg5weXRob25fdmVy
+      c2lvbhIICgYzLjEyLjdKLgoIY3Jld19rZXkSIgogMWYxMjhiZGI3YmFhNGI2NzcxNGYxZGFlZGMy
+      ZjNhYjZKMQoHY3Jld19pZBImCiQzNGJiYzZjYS03MmRiLTQwMzktODQzMy01NTFmOWNmNDM0YTdK
+      HAoMY3Jld19wcm9jZXNzEgwKCnNlcXVlbnRpYWxKEQoLY3Jld19tZW1vcnkSAhAAShoKFGNyZXdf
+      bnVtYmVyX29mX3Rhc2tzEgIYAkobChVjcmV3X251bWJlcl9vZl9hZ2VudHMSAhgCSrQFCgtjcmV3
+      X2FnZW50cxKkBQqhBVt7ImtleSI6ICI3M2MzNDljOTNjMTYzYjVkNGRmOThhNjRmYWMxYzQzMCIs
+      ICJpZCI6ICI4MjJkOGM2OC01NzlkLTQ4ZWUtOTBhMi1hNjJiNDgzY2JhNGUiLCAicm9sZSI6ICJ7
+      dG9waWN9IFNlbmlvciBEYXRhIFJlc2VhcmNoZXJcbiIsICJ2ZXJib3NlPyI6IHRydWUsICJtYXhf
+      aXRlciI6IDIwLCAibWF4X3JwbSI6IG51bGwsICJmdW5jdGlvbl9jYWxsaW5nX2xsbSI6ICIiLCAi
+      bGxtIjogImdwdC00by1taW5pIiwgImRlbGVnYXRpb25fZW5hYmxlZD8iOiBmYWxzZSwgImFsbG93
+      X2NvZGVfZXhlY3V0aW9uPyI6IGZhbHNlLCAibWF4X3JldHJ5X2xpbWl0IjogMiwgInRvb2xzX25h
+      bWVzIjogW119LCB7ImtleSI6ICIxMDRmZTA2NTllMTBiNDI2Y2Y4OGYwMjRmYjU3MTU1MyIsICJp
+      ZCI6ICI0YTY4NDQwZi0xMjRkLTQ3YmEtYWEzNy1hZTZmMTI2NzlkMmIiLCAicm9sZSI6ICJ7dG9w
+      aWN9IFJlcG9ydGluZyBBbmFseXN0XG4iLCAidmVyYm9zZT8iOiB0cnVlLCAibWF4X2l0ZXIiOiAy
+      MCwgIm1heF9ycG0iOiBudWxsLCAiZnVuY3Rpb25fY2FsbGluZ19sbG0iOiAiIiwgImxsbSI6ICJn
+      cHQtNG8tbWluaSIsICJkZWxlZ2F0aW9uX2VuYWJsZWQ/IjogZmFsc2UsICJhbGxvd19jb2RlX2V4
+      ZWN1dGlvbj8iOiBmYWxzZSwgIm1heF9yZXRyeV9saW1pdCI6IDIsICJ0b29sc19uYW1lcyI6IFtd
+      fV1KkwQKCmNyZXdfdGFza3MShAQKgQRbeyJrZXkiOiAiNmFmYzRiMzk2MjU5ZmJiNzY4MWY1NmM3
+      NzU1Y2M5MzciLCAiaWQiOiAiODE2YzI1ZDgtNDg3NC00MmMxLWJmNzEtODc2OTcxZDNmYmExIiwg
+      ImFzeW5jX2V4ZWN1dGlvbj8iOiBmYWxzZSwgImh1bWFuX2lucHV0PyI6IGZhbHNlLCAiYWdlbnRf
+      cm9sZSI6ICJ7dG9waWN9IFNlbmlvciBEYXRhIFJlc2VhcmNoZXJcbiIsICJhZ2VudF9rZXkiOiAi
+      NzNjMzQ5YzkzYzE2M2I1ZDRkZjk4YTY0ZmFjMWM0MzAiLCAidG9vbHNfbmFtZXMiOiBbXX0sIHsi
+      a2V5IjogImIxN2IxODhkYmYxNGY5M2E5OGU1Yjk1YWFkMzY3NTc3IiwgImlkIjogIjM4YzU1NTI5
+      LTc2ODAtNDc5OS1iODdiLTFmMDY2NjE5MGU2NyIsICJhc3luY19leGVjdXRpb24/IjogZmFsc2Us
+      ICJodW1hbl9pbnB1dD8iOiBmYWxzZSwgImFnZW50X3JvbGUiOiAie3RvcGljfSBSZXBvcnRpbmcg
+      QW5hbHlzdFxuIiwgImFnZW50X2tleSI6ICIxMDRmZTA2NTllMTBiNDI2Y2Y4OGYwMjRmYjU3MTU1
+      MyIsICJ0b29sc19uYW1lcyI6IFtdfV16AhgBhQEAAQAAEo4CChCo3E4xT/U6O20NrD4/Zkt6EggD
+      /w74tbrrOCoMVGFzayBDcmVhdGVkMAE5SPTas+uuCRhB6IDbs+uuCRhKLgoIY3Jld19rZXkSIgog
+      MWYxMjhiZGI3YmFhNGI2NzcxNGYxZGFlZGMyZjNhYjZKMQoHY3Jld19pZBImCiQzNGJiYzZjYS03
+      MmRiLTQwMzktODQzMy01NTFmOWNmNDM0YTdKLgoIdGFza19rZXkSIgogNmFmYzRiMzk2MjU5ZmJi
+      NzY4MWY1NmM3NzU1Y2M5MzdKMQoHdGFza19pZBImCiQ4MTZjMjVkOC00ODc0LTQyYzEtYmY3MS04
+      NzY5NzFkM2ZiYTF6AhgBhQEAAQAA
+    headers:
+      Accept:
+      - '*/*'
+      Accept-Encoding:
+      - gzip, deflate
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '1902'
+      Content-Type:
+      - application/x-protobuf
+      User-Agent:
+      - OTel-OTLP-Exporter-Python/1.27.0
+    method: POST
+    uri: https://telemetry.crewai.com:4319/v1/traces
+  response:
+    body:
+      string: "\n\0"
+    headers:
+      Content-Length:
+      - '2'
+      Content-Type:
+      - application/x-protobuf
+      Date:
+      - Wed, 20 Nov 2024 13:04:24 GMT
+    status:
+      code: 200
+      message: OK
+- request:
+    body: '{"messages": [{"role": "system", "content": "You are Bicycles Senior Data
+      Researcher\n. You''re a seasoned researcher with a knack for uncovering the
+      latest developments in Bicycles. Known for your ability to find the most relevant
+      information and present it in a clear and concise manner.\n\nYour personal goal
+      is: Uncover cutting-edge developments in Bicycles\n\nTo give my best complete
+      final answer to the task use the exact following format:\n\nThought: I now can
+      give a great answer\nFinal Answer: Your final answer must be the great and the
+      most complete as possible, it must be outcome described.\n\nI MUST use these
+      formats, my job depends on it!"}, {"role": "user", "content": "\nCurrent Task:
+      Conduct a thorough research about Bicycles Make sure you find any interesting
+      and relevant information given the current year is 2024.\n\n\nThis is the expect
+      criteria for your final answer: A list with 10 bullet points of the most relevant
+      information about Bicycles\n\nyou MUST return the actual complete content as
+      the final answer, not a summary.\n\nBegin! This is VERY important to you, use
+      the tools available and give your best Final Answer, your job depends on it!\n\nThought:"}],
+      "model": "gpt-4o-mini", "stop": ["\nObservation:"], "stream": false}'
+    headers:
+      accept:
+      - application/json
+      accept-encoding:
+      - gzip, deflate
+      connection:
+      - keep-alive
+      content-length:
+      - '1260'
+      content-type:
+      - application/json
+      cookie:
+      - __cf_bm=CkK4UvBd9ukXvn50uJwGambJcz5zERAJfeXJ9xge6H4-1732107842-1.0.1.1-IOK2yVL3RlD75MgmnKzIEyE38HNknwn6I8BBJ1wjGz4jCTd0YWIBPnvUm9gB8D_zLlUA9G7p_wbrfyc4mO_Bmg;
+        _cfuvid=MmeN9oHWrBLThkEJdaSFHBfWe95JvA8iFnnt7CC92tk-1732107842102-0.0.1.1-604800000
+      host:
+      - api.openai.com
+      user-agent:
+      - OpenAI/Python 1.52.1
+      x-stainless-arch:
+      - x64
+      x-stainless-async:
+      - 'false'
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - MacOS
+      x-stainless-package-version:
+      - 1.52.1
+      x-stainless-raw-response:
+      - 'true'
+      x-stainless-retry-count:
+      - '0'
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.12.7
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    content: "{\n  \"id\": \"chatcmpl-AVefTnyhy126z54bX4Wq0TjWFUGJI\",\n  \"object\":
+      \"chat.completion\",\n  \"created\": 1732107859,\n  \"model\": \"gpt-4o-mini-2024-07-18\",\n
+      \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
+      \"assistant\",\n        \"content\": \"I now can give a great answer.  \\nFinal
+      Answer: \\n\\n1. **E-Bike Boom**: Electric bikes (e-bikes) have seen a significant
+      rise in popularity, with industry reports indicating a projected growth of 60%
+      in sales compared to previous years. Many cities are paving bike lanes specifically
+      designed for e-bikes to accommodate this surge.\\n\\n2. **Sustainability in
+      Manufacturing**: Bicycle manufacturers are increasingly adopting sustainable
+      practices, such as using recycled materials for frames and parts, and implementing
+      environmentally friendly production processes. This shift is driven by consumer
+      demand for greener products.\\n\\n3. **Smart Bicycles**: The integration of
+      technology in bicycles has progressed with smart bikes featuring built-in GPS,
+      automated gear shifting, and performance analytics. These innovations enhance
+      the cycling experience and cater to data-driven enthusiasts.\\n\\n4. **Bike
+      Sharing Programs**: Urban areas are continuing to expand bike-sharing programs,
+      with some cities introducing electric bike options and introducing smartphone
+      apps to streamline the renting process, increasing accessibility and convenience
+      for riders.\\n\\n5. **Safety Innovations**: Advances in safety technology such
+      as smart helmets that incorporate lights and indicators, anti-collision systems
+      using sensor technology, and built-in communication systems to connect with
+      smartphones are on the rise, aimed at reducing accidents.\\n\\n6. **Adventure
+      Cycling Trends**: There is a growing popularity in adventure and gravel cycling,
+      with more cyclists seeking off-road experiences. This has prompted manufacturers
+      to develop dedicated bikes that cater to rugged terrains, with features such
+      as wider tires and durable frames.\\n\\n7. **Customization and Personalization**:
+      The market for customizable bicycles is expanding. Consumers are now able to
+      choose colors, styles, and features that suit their personal preferences, leading
+      to a more personalized cycling experience.\\n\\n8. **Communities and Events**:
+      Cycling communities are thriving globally, with an increase in events such as
+      group rides, competitive races, and festivals celebrating biking culture. This
+      fosters social engagement and promotes cycling as a lifestyle.\\n\\n9. **Cargo
+      Bikes for Urban Living**: The rise of cargo bikes, particularly in urban environments,
+      allows for efficient transportation of goods, making them an appealing choice
+      for small businesses and families. This trend is encouraged by city planners
+      promoting cycling as an alternative to car deliveries.\\n\\n10. **Regulatory
+      Changes**: Governments around the world are increasingly implementing policies
+      to support cycling infrastructure, such as funding for bike lanes, subsidies
+      for bicycle purchases, and stricter emissions standards for motor vehicles,
+      making cycling a more attractive option for commuting.\\n\\nEach of these points
+      represents the latest developments in the bicycle industry as we move through
+      2024, highlighting advancements in technology, trends in user preferences, and
+      a broader societal shift towards sustainability and health.\",\n        \"refusal\":
+      null\n      },\n      \"logprobs\": null,\n      \"finish_reason\": \"stop\"\n
+      \   }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 237,\n    \"completion_tokens\":
+      539,\n    \"total_tokens\": 776,\n    \"prompt_tokens_details\": {\n      \"cached_tokens\":
+      0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\": {\n
+      \     \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\":
+      0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"system_fingerprint\":
+      \"fp_0705bf87c0\"\n}\n"
+    headers:
+      CF-Cache-Status:
+      - DYNAMIC
+      CF-RAY:
+      - 8e58a5276a096225-GRU
+      Connection:
+      - keep-alive
+      Content-Encoding:
+      - gzip
+      Content-Type:
+      - application/json
+      Date:
+      - Wed, 20 Nov 2024 13:04:26 GMT
+      Server:
+      - cloudflare
+      Transfer-Encoding:
+      - chunked
+      X-Content-Type-Options:
+      - nosniff
+      access-control-expose-headers:
+      - X-Request-ID
+      alt-svc:
+      - h3=":443"; ma=86400
+      openai-organization:
+      - crewai-iuxna1
+      openai-processing-ms:
+      - '7355'
+      openai-version:
+      - '2020-10-01'
+      strict-transport-security:
+      - max-age=31536000; includeSubDomains; preload
+      x-ratelimit-limit-requests:
+      - '30000'
+      x-ratelimit-limit-tokens:
+      - '150000000'
+      x-ratelimit-remaining-requests:
+      - '29999'
+      x-ratelimit-remaining-tokens:
+      - '149999708'
+      x-ratelimit-reset-requests:
+      - 2ms
+      x-ratelimit-reset-tokens:
+      - 0s
+      x-request-id:
+      - req_5536f2a242886d3949f0cdc1628b2996
+    http_version: HTTP/1.1
+    status_code: 200
+- request:
+    body: !!binary |
+      Cs4CCiQKIgoMc2VydmljZS5uYW1lEhIKEGNyZXdBSS10ZWxlbWV0cnkSpQIKEgoQY3Jld2FpLnRl
+      bGVtZXRyeRKOAgoQpBIRwGH/fJtGJT1cIWsC5BIIM3YyJZEYUUgqDFRhc2sgQ3JlYXRlZDABOYgb
+      lILtrgkYQZBnlYLtrgkYSi4KCGNyZXdfa2V5EiIKIDFmMTI4YmRiN2JhYTRiNjc3MTRmMWRhZWRj
+      MmYzYWI2SjEKB2NyZXdfaWQSJgokMzRiYmM2Y2EtNzJkYi00MDM5LTg0MzMtNTUxZjljZjQzNGE3
+      Si4KCHRhc2tfa2V5EiIKIGIxN2IxODhkYmYxNGY5M2E5OGU1Yjk1YWFkMzY3NTc3SjEKB3Rhc2tf
+      aWQSJgokMzhjNTU1MjktNzY4MC00Nzk5LWI4N2ItMWYwNjY2MTkwZTY3egIYAYUBAAEAAA==
+    headers:
+      Accept:
+      - '*/*'
+      Accept-Encoding:
+      - gzip, deflate
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '337'
+      Content-Type:
+      - application/x-protobuf
+      User-Agent:
+      - OTel-OTLP-Exporter-Python/1.27.0
+    method: POST
+    uri: https://telemetry.crewai.com:4319/v1/traces
+  response:
+    body:
+      string: "\n\0"
+    headers:
+      Content-Length:
+      - '2'
+      Content-Type:
+      - application/x-protobuf
+      Date:
+      - Wed, 20 Nov 2024 13:04:29 GMT
+    status:
+      code: 200
+      message: OK
+- request:
+    body: '{"messages": [{"role": "system", "content": "You are Bicycles Reporting
+      Analyst\n. You''re a meticulous analyst with a keen eye for detail. You''re
+      known for your ability to turn complex data into clear and concise reports,
+      making it easy for others to understand and act on the information you provide.\n\nYour
+      personal goal is: Create detailed reports based on Bicycles data analysis and
+      research findings\n\nTo give my best complete final answer to the task use the
+      exact following format:\n\nThought: I now can give a great answer\nFinal Answer:
+      Your final answer must be the great and the most complete as possible, it must
+      be outcome described.\n\nI MUST use these formats, my job depends on it!"},
+      {"role": "user", "content": "\nCurrent Task: Review the context you got and
+      expand each topic into a full section for a report. Make sure the report is
+      detailed and contains any and all relevant information.\n\n\nThis is the expect
+      criteria for your final answer: A fully fledge reports with the mains topics,
+      each with a full section of information. Formatted as markdown without ''```''\n\nyou
+      MUST return the actual complete content as the final answer, not a summary.\n\nThis
+      is the context you''re working with:\n1. **E-Bike Boom**: Electric bikes (e-bikes)
+      have seen a significant rise in popularity, with industry reports indicating
+      a projected growth of 60% in sales compared to previous years. Many cities are
+      paving bike lanes specifically designed for e-bikes to accommodate this surge.\n\n2.
+      **Sustainability in Manufacturing**: Bicycle manufacturers are increasingly
+      adopting sustainable practices, such as using recycled materials for frames
+      and parts, and implementing environmentally friendly production processes. This
+      shift is driven by consumer demand for greener products.\n\n3. **Smart Bicycles**:
+      The integration of technology in bicycles has progressed with smart bikes featuring
+      built-in GPS, automated gear shifting, and performance analytics. These innovations
+      enhance the cycling experience and cater to data-driven enthusiasts.\n\n4. **Bike
+      Sharing Programs**: Urban areas are continuing to expand bike-sharing programs,
+      with some cities introducing electric bike options and introducing smartphone
+      apps to streamline the renting process, increasing accessibility and convenience
+      for riders.\n\n5. **Safety Innovations**: Advances in safety technology such
+      as smart helmets that incorporate lights and indicators, anti-collision systems
+      using sensor technology, and built-in communication systems to connect with
+      smartphones are on the rise, aimed at reducing accidents.\n\n6. **Adventure
+      Cycling Trends**: There is a growing popularity in adventure and gravel cycling,
+      with more cyclists seeking off-road experiences. This has prompted manufacturers
+      to develop dedicated bikes that cater to rugged terrains, with features such
+      as wider tires and durable frames.\n\n7. **Customization and Personalization**:
+      The market for customizable bicycles is expanding. Consumers are now able to
+      choose colors, styles, and features that suit their personal preferences, leading
+      to a more personalized cycling experience.\n\n8. **Communities and Events**:
+      Cycling communities are thriving globally, with an increase in events such as
+      group rides, competitive races, and festivals celebrating biking culture. This
+      fosters social engagement and promotes cycling as a lifestyle.\n\n9. **Cargo
+      Bikes for Urban Living**: The rise of cargo bikes, particularly in urban environments,
+      allows for efficient transportation of goods, making them an appealing choice
+      for small businesses and families. This trend is encouraged by city planners
+      promoting cycling as an alternative to car deliveries.\n\n10. **Regulatory Changes**:
+      Governments around the world are increasingly implementing policies to support
+      cycling infrastructure, such as funding for bike lanes, subsidies for bicycle
+      purchases, and stricter emissions standards for motor vehicles, making cycling
+      a more attractive option for commuting.\n\nEach of these points represents the
+      latest developments in the bicycle industry as we move through 2024, highlighting
+      advancements in technology, trends in user preferences, and a broader societal
+      shift towards sustainability and health.\n\nBegin! This is VERY important to
+      you, use the tools available and give your best Final Answer, your job depends
+      on it!\n\nThought:"}], "model": "gpt-4o-mini", "stop": ["\nObservation:"], "stream":
+      false}'
+    headers:
+      accept:
+      - application/json
+      accept-encoding:
+      - gzip, deflate
+      connection:
+      - keep-alive
+      content-length:
+      - '4457'
+      content-type:
+      - application/json
+      cookie:
+      - __cf_bm=CkK4UvBd9ukXvn50uJwGambJcz5zERAJfeXJ9xge6H4-1732107842-1.0.1.1-IOK2yVL3RlD75MgmnKzIEyE38HNknwn6I8BBJ1wjGz4jCTd0YWIBPnvUm9gB8D_zLlUA9G7p_wbrfyc4mO_Bmg;
+        _cfuvid=MmeN9oHWrBLThkEJdaSFHBfWe95JvA8iFnnt7CC92tk-1732107842102-0.0.1.1-604800000
+      host:
+      - api.openai.com
+      user-agent:
+      - OpenAI/Python 1.52.1
+      x-stainless-arch:
+      - x64
+      x-stainless-async:
+      - 'false'
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - MacOS
+      x-stainless-package-version:
+      - 1.52.1
+      x-stainless-raw-response:
+      - 'true'
+      x-stainless-retry-count:
+      - '0'
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.12.7
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    content: "{\n  \"id\": \"chatcmpl-AVefbpMLcvelEguI3pyXOpfbaXLGG\",\n  \"object\":
+      \"chat.completion\",\n  \"created\": 1732107867,\n  \"model\": \"gpt-4o-mini-2024-07-18\",\n
+      \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
+      \"assistant\",\n        \"content\": \"I now can give a great answer  \\nFinal
+      Answer: \\n\\n# Comprehensive Report on the Latest Developments in the Bicycle
+      Industry (2024)\\n\\n## 1. E-Bike Boom\\nThe popularity of electric bikes (e-bikes)
+      has surged dramatically in recent years, with industry reports indicating a
+      projected growth of 60% in sales compared to previous years. This growth can
+      be attributed to increasing urbanization, the rising need for more sustainable
+      modes of transport, and technological advancements that have made e-bikes more
+      accessible and desirable. Cities worldwide are responding to this boom by developing
+      dedicated bike lanes specifically designed for e-bikes, which not only promotes
+      safety but also encourages more individuals to consider cycling as a primary
+      mode of transportation.\\n\\n## 2. Sustainability in Manufacturing\\nIn line
+      with global trends towards sustainability, bicycle manufacturers are increasingly
+      adopting eco-friendlier practices. They are utilizing recycled materials for
+      frames and components and implementing environmentally friendly production processes.
+      This shift is not just a response to regulatory pressures but also driven by
+      consumer demand for greener products. Companies that prioritize sustainability
+      are seeing a competitive edge in an increasingly eco-conscious market, as consumers
+      are more likely to align their purchases with their values regarding environmental
+      responsibility.\\n\\n## 3. Smart Bicycles\\nThe integration of technology in
+      bicycles has advanced significantly, resulting in the emergence of smart bikes.
+      These bicycles often feature built-in GPS for navigation, automated gear shifting
+      for smoother rides, and performance analytics that allow users to track their
+      cycling metrics. Such innovations enhance the overall cycling experience and
+      cater to performance-focused cyclists who seek data to optimize their rides.
+      By merging cycling with technology, manufacturers are not only attracting tech
+      enthusiasts but also making cycling more mainstream.\\n\\n## 4. Bike Sharing
+      Programs\\nBike-sharing programs are rapidly expanding, particularly in urban
+      areas. Many cities have started introducing electric bike options within these
+      programs to meet the growing demand. The introduction of smartphone apps has
+      streamlined the renting process, increasing accessibility and convenience for
+      users. This trend not only promotes a healthier lifestyle but also reduces traffic
+      congestion and environmental impact in densely populated areas, making cycling
+      a more viable option for commuting.\\n\\n## 5. Safety Innovations\\nRecent advancements
+      in safety technology are working towards making cycling safer. Innovations such
+      as smart helmets equipped with lights and turn indicators, anti-collision systems
+      utilizing sensor technology, and integrated communication systems linking bicycles
+      with smartphones are increasingly gaining traction. These developments aim to
+      minimize accidents and enhance the overall sense of security for cyclists, thereby
+      encouraging more people to take up cycling as a daily activity.\\n\\n## 6. Adventure
+      Cycling Trends\\nAdventure and gravel cycling are witnessing a renaissance,
+      with many cyclists seeking off-road experiences that enable a connection with
+      nature. This trend has led manufacturers to innovate by developing dedicated
+      bikes suited for rugged terrains, characterized by features like wider tires
+      and durable frames. As consumers become more adventurous in their hobbies, manufacturers
+      are recognizing the need to cater to this niche market, fostering the growth
+      of adventure cycling as a distinct segment in the industry.\\n\\n## 7. Customization
+      and Personalization\\nThe demand for customizable bicycles is on the rise, allowing
+      consumers to choose various aspects of their bikes, including colors, styles,
+      and features. This trend towards personalization is enhancing the cycling experience,
+      as riders can tailor their bicycles to their preferences. The flourishing market
+      for custom bikes reflects a broader societal shift towards individuality and
+      self-expression, as consumers are no longer content with one-size-fits-all solutions.\\n\\n##
+      8. Communities and Events\\nCycling communities are thriving worldwide, reflected
+      in an increase in events such as group rides, competitive races, and festivals
+      celebrating biking culture. These gatherings not only foster a sense of camaraderie
+      among cyclists but also promote cycling as a lifestyle choice to the wider community.
+      The growth of these events is instrumental in building a culture around cycling,
+      driving advocacy for cycling infrastructure and safety, and ultimately increasing
+      the number of people who cycle.\\n\\n## 9. Cargo Bikes for Urban Living\\nThe
+      rise of cargo bikes, especially in urban settings, represents an innovative
+      solution for transporting goods efficiently while reducing reliance on motor
+      vehicles. Such bikes serve as an appealing alternative for small businesses
+      and families alike, allowing for easy deliveries and shopping. City planners
+      are increasingly promoting cargo bikes within urban transport strategies, recognizing
+      them as a sustainable option that aligns with broader goals for reducing carbon
+      footprints and enhancing urban mobility.\\n\\n## 10. Regulatory Changes\\nGovernments
+      around the globe are progressively enacting regulations to support and grow
+      cycling infrastructure. Initiatives include funding for bike lanes, subsidies
+      for bicycle purchases, and stricter emissions standards for cars. These regulatory
+      changes are making cycling a more attractive option for commuting and are an
+      acknowledgment of the role that cycling plays in reducing pollution and traffic
+      congestion. Such policies are instrumental in fostering a cycling-friendly environment
+      and encouraging more people to adopt biking as a daily mode of transportation.\\n\\nThis
+      report highlights the most significant developments in the bicycle industry
+      as we advance through 2024, showcasing the technological breakthroughs, shifts
+      in user preferences, and an overarching movement toward sustainability and health.
+      These trends are indicative of a vibrant cycling culture that continues to evolve
+      to meet the needs of modern society.\",\n        \"refusal\": null\n      },\n
+      \     \"logprobs\": null,\n      \"finish_reason\": \"stop\"\n    }\n  ],\n
+      \ \"usage\": {\n    \"prompt_tokens\": 790,\n    \"completion_tokens\": 1022,\n
+      \   \"total_tokens\": 1812,\n    \"prompt_tokens_details\": {\n      \"cached_tokens\":
+      0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\": {\n
+      \     \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\":
+      0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"system_fingerprint\":
+      \"fp_0705bf87c0\"\n}\n"
+    headers:
+      CF-Cache-Status:
+      - DYNAMIC
+      CF-RAY:
+      - 8e58a5580add6225-GRU
+      Connection:
+      - keep-alive
+      Content-Encoding:
+      - gzip
+      Content-Type:
+      - application/json
+      Date:
+      - Wed, 20 Nov 2024 13:04:46 GMT
+      Server:
+      - cloudflare
+      Transfer-Encoding:
+      - chunked
+      X-Content-Type-Options:
+      - nosniff
+      access-control-expose-headers:
+      - X-Request-ID
+      alt-svc:
+      - h3=":443"; ma=86400
+      openai-organization:
+      - crewai-iuxna1
+      openai-processing-ms:
+      - '18921'
+      openai-version:
+      - '2020-10-01'
+      strict-transport-security:
+      - max-age=31536000; includeSubDomains; preload
+      x-ratelimit-limit-requests:
+      - '30000'
+      x-ratelimit-limit-tokens:
+      - '150000000'
+      x-ratelimit-remaining-requests:
+      - '29999'
+      x-ratelimit-remaining-tokens:
+      - '149998916'
+      x-ratelimit-reset-requests:
+      - 2ms
+      x-ratelimit-reset-tokens:
+      - 0s
+      x-request-id:
+      - req_32b801874a2fed46b91251052364ec47
+    http_version: HTTP/1.1
+    status_code: 200
+version: 1

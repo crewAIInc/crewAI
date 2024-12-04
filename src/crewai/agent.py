@@ -1,7 +1,7 @@
 import os
 import shutil
 import subprocess
-from typing import Any, List, Literal, Optional, Union
+from typing import Any, Dict, List, Literal, Optional, Union
 
 from pydantic import Field, InstanceOf, PrivateAttr, model_validator
 
@@ -9,12 +9,17 @@ from crewai.agents import CacheHandler
 from crewai.agents.agent_builder.base_agent import BaseAgent
 from crewai.agents.crew_agent_executor import CrewAgentExecutor
 from crewai.cli.constants import ENV_VARS
+from crewai.knowledge.knowledge import Knowledge
+from crewai.knowledge.source.base_knowledge_source import BaseKnowledgeSource
+from crewai.knowledge.utils.knowledge_utils import extract_knowledge_context
 from crewai.llm import LLM
 from crewai.memory.contextual.contextual_memory import ContextualMemory
-from crewai.tools.agent_tools.agent_tools import AgentTools
+from crewai.task import Task
 from crewai.tools import BaseTool
+from crewai.tools.agent_tools.agent_tools import AgentTools
 from crewai.utilities import Converter, Prompts
 from crewai.utilities.constants import TRAINED_AGENTS_DATA_FILE, TRAINING_DATA_FILE
+from crewai.utilities.converter import generate_model_description
 from crewai.utilities.token_counter_callback import TokenCalcHandler
 from crewai.utilities.training_handler import CrewTrainingHandler
 
@@ -52,6 +57,7 @@ class Agent(BaseAgent):
             role: The role of the agent.
             goal: The objective of the agent.
             backstory: The backstory of the agent.
+            knowledge: The knowledge base of the agent.
             config: Dict representation of agent configuration.
             llm: The language model that will run the agent.
             function_calling_llm: The language model that will handle the tool calling for this agent, it overrides the crew function_calling_llm.
@@ -62,6 +68,7 @@ class Agent(BaseAgent):
             allow_delegation: Whether the agent is allowed to delegate tasks to other agents.
             tools: Tools at agents disposal
             step_callback: Callback to be executed after each step of the agent execution.
+            knowledge_sources: Knowledge sources for the agent.
     """
 
     _times_executed: int = PrivateAttr(default=0)
@@ -119,11 +126,23 @@ class Agent(BaseAgent):
         default="safe",
         description="Mode for code execution: 'safe' (using Docker) or 'unsafe' (direct execution).",
     )
+    embedder_config: Optional[Dict[str, Any]] = Field(
+        default=None,
+        description="Embedder configuration for the agent.",
+    )
+    knowledge_sources: Optional[List[BaseKnowledgeSource]] = Field(
+        default=None,
+        description="Knowledge sources for the agent.",
+    )
+    _knowledge: Optional[Knowledge] = PrivateAttr(
+        default=None,
+    )
 
     @model_validator(mode="after")
     def post_init_setup(self):
+        self._set_knowledge()
         self.agent_ops_agent_name = self.role
-        unnacepted_attributes = [
+        unaccepted_attributes = [
             "AWS_ACCESS_KEY_ID",
             "AWS_SECRET_ACCESS_KEY",
             "AWS_REGION_NAME",
@@ -157,28 +176,23 @@ class Agent(BaseAgent):
             for provider, env_vars in ENV_VARS.items():
                 if provider == set_provider:
                     for env_var in env_vars:
-                        if env_var["key_name"] in unnacepted_attributes:
-                            continue
                         # Check if the environment variable is set
-                        if "key_name" in env_var:
-                            env_value = os.environ.get(env_var["key_name"])
+                        key_name = env_var.get("key_name")
+                        if key_name and key_name not in unaccepted_attributes:
+                            env_value = os.environ.get(key_name)
                             if env_value:
                                 # Map key names containing "API_KEY" to "api_key"
                                 key_name = (
-                                    "api_key"
-                                    if "API_KEY" in env_var["key_name"]
-                                    else env_var["key_name"]
+                                    "api_key" if "API_KEY" in key_name else key_name
                                 )
                                 # Map key names containing "API_BASE" to "api_base"
                                 key_name = (
-                                    "api_base"
-                                    if "API_BASE" in env_var["key_name"]
-                                    else key_name
+                                    "api_base" if "API_BASE" in key_name else key_name
                                 )
                                 # Map key names containing "API_VERSION" to "api_version"
                                 key_name = (
                                     "api_version"
-                                    if "API_VERSION" in env_var["key_name"]
+                                    if "API_VERSION" in key_name
                                     else key_name
                                 )
                                 llm_params[key_name] = env_value
@@ -234,9 +248,24 @@ class Agent(BaseAgent):
             self.cache_handler = CacheHandler()
         self.set_cache_handler(self.cache_handler)
 
+    def _set_knowledge(self):
+        try:
+            if self.knowledge_sources:
+                knowledge_agent_name = f"{self.role.replace(' ', '_')}"
+                if isinstance(self.knowledge_sources, list) and all(
+                    isinstance(k, BaseKnowledgeSource) for k in self.knowledge_sources
+                ):
+                    self._knowledge = Knowledge(
+                        sources=self.knowledge_sources,
+                        embedder_config=self.embedder_config,
+                        collection_name=knowledge_agent_name,
+                    )
+        except (TypeError, ValueError) as e:
+            raise ValueError(f"Invalid Knowledge Configuration: {str(e)}")
+
     def execute_task(
         self,
-        task: Any,
+        task: Task,
         context: Optional[str] = None,
         tools: Optional[List[BaseTool]] = None,
     ) -> str:
@@ -255,6 +284,22 @@ class Agent(BaseAgent):
 
         task_prompt = task.prompt()
 
+        # If the task requires output in JSON or Pydantic format,
+        # append specific instructions to the task prompt to ensure
+        # that the final answer does not include any code block markers
+        if task.output_json or task.output_pydantic:
+            # Generate the schema based on the output format
+            if task.output_json:
+                # schema = json.dumps(task.output_json, indent=2)
+                schema = generate_model_description(task.output_json)
+
+            elif task.output_pydantic:
+                schema = generate_model_description(task.output_pydantic)
+
+            task_prompt += "\n" + self.i18n.slice("formatted_task_instructions").format(
+                output_format=schema
+            )
+
         if context:
             task_prompt = self.i18n.slice("task_with_context").format(
                 task=task_prompt, context=context
@@ -271,6 +316,22 @@ class Agent(BaseAgent):
             memory = contextual_memory.build_context_for_task(task, context)
             if memory.strip() != "":
                 task_prompt += self.i18n.slice("memory").format(memory=memory)
+
+        if self._knowledge:
+            agent_knowledge_snippets = self._knowledge.query([task.prompt()])
+            if agent_knowledge_snippets:
+                agent_knowledge_context = extract_knowledge_context(
+                    agent_knowledge_snippets
+                )
+                if agent_knowledge_context:
+                    task_prompt += agent_knowledge_context
+
+        if self.crew:
+            knowledge_snippets = self.crew.query_knowledge([task.prompt()])
+            if knowledge_snippets:
+                crew_knowledge_context = extract_knowledge_context(knowledge_snippets)
+                if crew_knowledge_context:
+                    task_prompt += crew_knowledge_context
 
         tools = tools or self.tools or []
         self.create_agent_executor(tools=tools, task=task)
@@ -386,7 +447,7 @@ class Agent(BaseAgent):
 
             for tool in tools:
                 if isinstance(tool, CrewAITool):
-                    tools_list.append(tool.to_langchain())
+                    tools_list.append(tool.to_structured_tool())
                 else:
                     tools_list.append(tool)
         except ModuleNotFoundError:

@@ -1,0 +1,231 @@
+---
+title: Knowledge
+description: Understand what knowledge is in CrewAI and how to effectively use it.
+icon: book
+---
+
+# Using Knowledge in CrewAI
+
+## What is Knowledge?
+
+Knowledge in CrewAI is a powerful system that allows AI agents to access and utilize external information sources during their tasks. Think of it as giving your agents a reference library they can consult while working.
+
+<Info>
+  Key benefits of using Knowledge:
+  - Enhance agents with domain-specific information
+  - Support decisions with real-world data
+  - Maintain context across conversations
+  - Ground responses in factual information
+</Info>
+
+## Supported Knowledge Sources
+
+CrewAI supports various types of knowledge sources out of the box:
+
+<CardGroup cols={2}>
+  <Card title="Text Sources" icon="text">
+    - Raw strings
+    - Text files (.txt)
+    - PDF documents
+  </Card>
+  <Card title="Structured Data" icon="table">
+    - CSV files
+    - Excel spreadsheets
+    - JSON documents
+  </Card>
+</CardGroup>
+
+## Quick Start
+
+Here's a simple example using string-based knowledge:
+
+```python
+from crewai import Agent, Task, Crew
+from crewai.knowledge import StringKnowledgeSource
+
+# 1. Create a knowledge source
+product_info = StringKnowledgeSource(
+    content="""Our product X1000 has the following features:
+    - 10-hour battery life
+    - Water-resistant
+    - Available in black and silver
+    Price: $299.99""",
+    metadata={"category": "product"}
+)
+
+# 2. Create an agent with knowledge
+sales_agent = Agent(
+    role="Sales Representative",
+    goal="Accurately answer customer questions about products",
+    backstory="Expert in product features and customer service",
+    knowledge_sources=[product_info]  # Attach knowledge to agent
+)
+
+# 3. Create a task
+answer_task = Task(
+    description="Answer: What colors is the X1000 available in and how much does it cost?",
+    agent=sales_agent
+)
+
+# 4. Create and run the crew
+crew = Crew(
+    agents=[sales_agent],
+    tasks=[answer_task]
+)
+
+result = crew.kickoff()
+```
+
+## Knowledge Configuration
+
+### Collection Names
+
+Knowledge sources are organized into collections for better management:
+
+```python
+# Create knowledge sources with specific collections
+tech_specs = StringKnowledgeSource(
+    content="Technical specifications...",
+    collection_name="product_tech_specs"
+)
+
+pricing_info = StringKnowledgeSource(
+    content="Pricing information...",
+    collection_name="product_pricing"
+)
+```
+
+### Metadata and Filtering
+
+Add metadata to organize and filter knowledge:
+
+```python
+knowledge_source = StringKnowledgeSource(
+    content="Product details...",
+    metadata={
+        "category": "electronics",
+        "product_line": "premium",
+        "last_updated": "2024-03"
+    }
+)
+```
+
+### Chunking Configuration
+
+Control how your content is split for processing:
+
+```python
+knowledge_source = PDFKnowledgeSource(
+    file_path="product_manual.pdf",
+    chunk_size=2000,     # Characters per chunk
+    chunk_overlap=200    # Overlap between chunks
+)
+```
+
+## Advanced Usage
+
+### Custom Knowledge Sources
+
+Create your own knowledge source by extending the base class:
+
+```python
+from crewai.knowledge.source import BaseKnowledgeSource
+
+class APIKnowledgeSource(BaseKnowledgeSource):
+    def __init__(self, api_endpoint: str, **kwargs):
+        super().__init__(**kwargs)
+        self.api_endpoint = api_endpoint
+    
+    def load_content(self):
+        # Implement API data fetching
+        response = requests.get(self.api_endpoint)
+        return response.json()
+    
+    def add(self):
+        content = self.load_content()
+        # Process and store content
+        self.save_documents({"source": "api"})
+```
+
+### Embedder Configuration
+
+Customize the embedding process:
+
+```python
+crew = Crew(
+    agents=[agent],
+    tasks=[task],
+    knowledge_sources=[source],
+    embedder={
+        "provider": "ollama",
+        "config": {"model": "nomic-embed-text:latest"},
+    }
+)
+```
+
+### Referencing Sources
+
+You can reference knowledge sources by their collection name or metadata.
+
+* Add a directory to your crew project called `knowledge`:
+* File paths in knowledge can be referenced relative to the `knowledge` directory.
+
+Example:
+A file inside the `knowledge` directory called `example.txt` can be referenced as `example.txt`.
+
+```python
+source = TextFileKnowledgeSource(
+    file_path="example.txt", # or /example.txt
+    collection_name="example"
+)
+crew = Crew(
+    agents=[agent],
+    tasks=[task],
+    knowledge_sources=[source],
+)
+```
+
+## Best Practices
+
+<AccordionGroup>
+  <Accordion title="Content Organization">
+    - Use meaningful collection names
+    - Add detailed metadata for filtering
+    - Keep chunk sizes appropriate for your content
+    - Consider content overlap for context preservation
+  </Accordion>
+  
+  <Accordion title="Performance Tips">
+    - Use smaller chunk sizes for precise retrieval
+    - Implement metadata filtering for faster searches
+    - Choose appropriate embedding models for your use case
+    - Cache frequently accessed knowledge
+  </Accordion>
+  
+  <Accordion title="Error Handling">
+    - Validate knowledge source content
+    - Handle missing or corrupted files
+    - Monitor embedding generation
+    - Implement fallback options
+  </Accordion>
+</AccordionGroup>
+
+## Common Issues and Solutions
+
+<AccordionGroup>
+  <Accordion title="Content Not Found">
+    If agents can't find relevant information:
+    - Check chunk sizes
+    - Verify knowledge source loading
+    - Review metadata filters
+    - Test with simpler queries first
+  </Accordion>
+  
+  <Accordion title="Performance Issues">
+    If knowledge retrieval is slow:
+    - Reduce chunk sizes
+    - Optimize metadata filtering
+    - Consider using a lighter embedding model
+    - Cache frequently accessed content
+  </Accordion>
+</AccordionGroup>
