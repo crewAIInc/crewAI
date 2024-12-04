@@ -1,8 +1,9 @@
 from crewai import Agent, Crew, Process, Task
 from crewai.project import CrewBase, agent, crew, task, before_kickoff, after_kickoff
-
 # Uncomment the following line to use an example of a custom tool
 # from {{folder_name}}.tools.custom_tool import MyCustomTool
+# Uncomment the following line to use an example of a knowledge source
+# from crewai.knowledge.source.text_file_knowledge_source import TextFileKnowledgeSource
 
 # Check our tools documentations for more information on how to use them
 # from crewai_tools import SerperDevTool
@@ -57,10 +58,20 @@ class {{crew_name}}():
 	@crew
 	def crew(self) -> Crew:
 		"""Creates the {{crew_name}} crew"""
+		# You can add knowledge sources here
+		# knowledge_path = "user_preference.txt"
+		# sources = [
+		# 	TextFileKnowledgeSource(
+		# 		file_path="knowledge/user_preference.txt",
+		# 		metadata={"preference": "personal"}
+		# 	),
+		# ]
+
 		return Crew(
 			agents=self.agents, # Automatically created by the @agent decorator
 			tasks=self.tasks, # Automatically created by the @task decorator
 			process=Process.sequential,
 			verbose=True,
 			# process=Process.hierarchical, # In case you wanna use that instead https://docs.crewai.com/how-to/Hierarchical/
+			# knowledge_sources=sources, # In the case you want to add knowledge sources
 		)
