@@ -99,7 +99,7 @@ class CrewAgentExecutorMixin:
                 print(f"Failed to add to long term memory: {e}")
                 pass
 
-    def _ask_human_input(self, final_answer: dict) -> str:
+    def _ask_human_input(self, final_answer: str) -> str:
         """Prompt human input for final decision making."""
         self._printer.print(
             content=f"\033[1m\033[95m ## Final Result:\033[00m \033[92m{final_answer}\033[00m"
