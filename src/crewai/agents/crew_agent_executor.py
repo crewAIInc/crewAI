@@ -410,6 +410,7 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
         """
         while self.ask_for_human_input:
             human_feedback = self._ask_human_input(formatted_answer.output)
+            print("Human feedback: ", human_feedback)
 
             if self.crew and self.crew._train:
                 self._handle_crew_training_output(formatted_answer, human_feedback)
@@ -472,5 +473,6 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
                     color="red",
                 )
                 self.ask_for_human_input = False
+        print("FINAL ANSWER: ", formatted_answer)
 
         return formatted_answer
