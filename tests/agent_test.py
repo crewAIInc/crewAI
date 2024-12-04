@@ -984,7 +984,7 @@ def test_agent_definition_based_on_dict():
 
 
 # test for human input
-# @pytest.mark.vcr(filter_headers=["authorization"])
+@pytest.mark.vcr(filter_headers=["authorization"])
 def test_agent_human_input():
     # Agent configuration
     config = {
