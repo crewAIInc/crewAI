@@ -87,33 +87,24 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
             self.llm.stop = self.stop
 
     def invoke(self, inputs: Dict[str, str]) -> Dict[str, Any]:
-        print("Invoke method called with inputs:", inputs)
-
         if "system" in self.prompt:
             system_prompt = self._format_prompt(self.prompt.get("system", ""), inputs)
             user_prompt = self._format_prompt(self.prompt.get("user", ""), inputs)
-            print("System prompt:", system_prompt)
-            print("User prompt:", user_prompt)
 
             self.messages.append(self._format_msg(system_prompt, role="system"))
             self.messages.append(self._format_msg(user_prompt))
         else:
             user_prompt = self._format_prompt(self.prompt.get("prompt", ""), inputs)
-            print("User prompt:", user_prompt)
             self.messages.append(self._format_msg(user_prompt))
 
         self._show_start_logs()
 
         self.ask_for_human_input = bool(inputs.get("ask_for_human_input", False))
-        print("Initial ask_for_human_input:", self.ask_for_human_input)
 
         formatted_answer = self._invoke_loop()
-        print("Initial formatted answer:", formatted_answer)
 
         while self.ask_for_human_input:
-            print("Entering feedback loop")
             human_feedback = self._ask_human_input(formatted_answer.output)
-            print("Human feedback received:", human_feedback)
 
             if self.crew and self.crew._train:
                 self._handle_crew_training_output(formatted_answer, human_feedback)
@@ -122,10 +113,6 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
             additional_changes_requested_prompt = self._i18n.slice(
                 "human_feedback_classification"
             ).format(feedback=human_feedback)
-            print(
-                "Additional changes prompt for LLM:",
-                additional_changes_requested_prompt,
-            )
 
             additional_changes_requested_response = (
                 self.llm.call(
@@ -139,27 +126,19 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
                 .strip()
                 .lower()
             )
-            print(
-                "Additional changes response from LLM:",
-                additional_changes_requested_response,
-            )
 
             if additional_changes_requested_response == "false":
-                print("Human is satisfied, exiting loop")
                 self.ask_for_human_input = False
             else:
-                print("Human wants changes, continuing loop")
                 self.ask_for_human_input = True
                 self.messages.append(self._format_msg(f"Feedback: {human_feedback}"))
                 formatted_answer = self._invoke_loop()
-                print("Updated formatted answer:", formatted_answer)
 
             if self.crew and self.crew._train:
                 self._handle_crew_training_output(formatted_answer)
 
         self._create_short_term_memory(formatted_answer)
         self._create_long_term_memory(formatted_answer)
-        print("Final output:", formatted_answer.output)
         return {"output": formatted_answer.output}
 
     def _invoke_loop(self, formatted_answer=None):
