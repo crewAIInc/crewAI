@@ -10,6 +10,7 @@ from chromadb.api import ClientAPI
 
 from crewai.memory.storage.base_rag_storage import BaseRAGStorage
 from crewai.utilities import EmbeddingConfigurator
+from crewai.utilities.constants import MAX_FILE_NAME_LENGTH
 from crewai.utilities.paths import db_storage_path
 
 
@@ -91,20 +92,11 @@ class RAGStorage(BaseRAGStorage):
         """
         base_path = f"{db_storage_path()}/{type}"
 
-        try:
-            # Returns platform-dependent max length for a file name
-            max_length = os.pathconf(base_path, "PC_NAME_MAX")
-        except (OSError, AttributeError) as e:
-            logging.error(f"Error accessing path configuration: {e}")
-            # Fallback to a reasonable default if necessary
-            max_length = 255
-
-        # Trim if necessary
-        if len(file_name) > max_length:
+        if len(file_name) > MAX_FILE_NAME_LENGTH:
             logging.warning(
-                f"Trimming file name from {len(file_name)} to {max_length} characters."
+                f"Trimming file name from {len(file_name)} to {MAX_FILE_NAME_LENGTH} characters."
             )
-            file_name = file_name[:max_length]
+            file_name = file_name[:MAX_FILE_NAME_LENGTH]
 
         return f"{base_path}/{file_name}"
 
