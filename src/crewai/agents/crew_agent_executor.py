@@ -16,7 +16,7 @@ from crewai.agents.tools_handler import ToolsHandler
 from crewai.tools.base_tool import BaseTool
 from crewai.tools.tool_usage import ToolUsage, ToolUsageErrorException
 from crewai.utilities import I18N, Printer
-from crewai.utilities.constants import TRAINING_DATA_FILE
+from crewai.utilities.constants import MAX_LLM_RETRY, TRAINING_DATA_FILE
 from crewai.utilities.exceptions.context_window_exceeding_exception import (
     LLMContextLengthExceededException,
 )
@@ -100,7 +100,6 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
         self._show_start_logs()
 
         self.ask_for_human_input = bool(inputs.get("ask_for_human_input", False))
-
         formatted_answer = self._invoke_loop()
 
         while self.ask_for_human_input:
@@ -110,32 +109,68 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
                 self._handle_crew_training_output(formatted_answer, human_feedback)
 
             # Make an LLM call to verify if additional changes are requested based on human feedback
-            additional_changes_requested_prompt = self._i18n.slice(
+            additional_changes_prompt = self._i18n.slice(
                 "human_feedback_classification"
             ).format(feedback=human_feedback)
 
-            additional_changes_requested_response = (
-                self.llm.call(
-                    [
-                        self._format_msg(
-                            additional_changes_requested_prompt, role="system"
-                        )
-                    ],
-                    callbacks=self.callbacks,
-                )
-                .strip()
-                .lower()
-            )
+            retry_count = 0
+            llm_call_successful = False
+            additional_changes_response = None
 
-            if additional_changes_requested_response == "false":
+            while retry_count < MAX_LLM_RETRY and not llm_call_successful:
+                try:
+                    additional_changes_response = (
+                        self.llm.call(
+                            [
+                                self._format_msg(
+                                    additional_changes_prompt, role="system"
+                                )
+                            ],
+                            callbacks=self.callbacks,
+                        )
+                        .strip()
+                        .lower()
+                    )
+                    llm_call_successful = True
+                except Exception as e:
+                    retry_count += 1
+                    # Log the error and retry
+                    self._logger.log(
+                        "error",
+                        f"Error during LLM call: {e}. Retrying... ({retry_count}/{max_retries})",
+                        color="red",
+                    )
+
+            if not llm_call_successful:
+                # After max retries, log error and move on
+                self._logger.log(
+                    "error",
+                    "Error processing feedback after multiple attempts.",
+                    color="red",
+                )
                 self.ask_for_human_input = False
-            else:
+                break  # Exit the feedback loop
+
+            # Handle unexpected responses
+            if additional_changes_response == "false":
+                self.ask_for_human_input = False
+            elif additional_changes_response == "true":
                 self.ask_for_human_input = True
+                # Add human feedback to messages
                 self.messages.append(self._format_msg(f"Feedback: {human_feedback}"))
+                # Invoke the loop again with updated messages
                 formatted_answer = self._invoke_loop()
 
-            if self.crew and self.crew._train:
-                self._handle_crew_training_output(formatted_answer)
+                if self.crew and self.crew._train:
+                    self._handle_crew_training_output(formatted_answer)
+            else:
+                # Unexpected response
+                self._logger.log(
+                    "error",
+                    f"Unexpected response from LLM: '{additional_changes_response}'. Assuming no additional changes requested.",
+                    color="red",
+                )
+                self.ask_for_human_input = False
 
         self._create_short_term_memory(formatted_answer)
         self._create_long_term_memory(formatted_answer)
