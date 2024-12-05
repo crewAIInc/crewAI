@@ -1,4 +1,5 @@
 from .tools import (
+    BraveSearchTool,
     BrowserbaseLoadTool,
     CodeDocsSearchTool,
     CodeInterpreterTool,
@@ -19,6 +20,7 @@ from .tools import (
     LlamaIndexTool,
     MDXSearchTool,
     MultiOnTool,
+    MySQLSearchTool,
     NL2SQLTool,
     PDFSearchTool,
     PGSearchTool,
@@ -40,6 +42,5 @@ from .tools import (
     XMLSearchTool,
     YoutubeChannelSearchTool,
     YoutubeVideoSearchTool,
-    MySQLSearchTool
 )
 from .tools.base_tool import BaseTool, Tool, tool
