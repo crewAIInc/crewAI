@@ -1,6 +1,6 @@
 import os
+from typing import Any, Dict, List, Optional
 
-from typing import List, Optional, Dict, Any
 from pydantic import BaseModel, ConfigDict, Field
 
 from crewai.knowledge.source.base_knowledge_source import BaseKnowledgeSource
@@ -46,9 +46,7 @@ class Knowledge(BaseModel):
             source.storage = self.storage
             source.add()
 
-    def query(
-        self, query: List[str], limit: int = 3, preference: Optional[str] = None
-    ) -> List[Dict[str, Any]]:
+    def query(self, query: List[str], limit: int = 3) -> List[Dict[str, Any]]:
         """
         Query across all knowledge sources to find the most relevant information.
         Returns the top_k most relevant chunks.
@@ -57,8 +55,6 @@ class Knowledge(BaseModel):
         results = self.storage.search(
             query,
             limit,
-            filter={"preference": preference} if preference else None,
-            score_threshold=DEFAULT_SCORE_THRESHOLD,
         )
         return results
 
