@@ -1,13 +1,11 @@
 import time
 from typing import Any, Optional, Type
 
-from bs4 import BeautifulSoup
+from crewai.tools import BaseTool
 from pydantic import BaseModel, Field
 from selenium import webdriver
 from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.common.by import By
-
-from ..base_tool import BaseTool
 
 
 class FixedSeleniumScrapingToolSchema(BaseModel):
