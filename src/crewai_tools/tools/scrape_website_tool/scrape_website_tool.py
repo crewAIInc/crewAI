@@ -1,4 +1,5 @@
 import os
+import re
 from typing import Any, Optional, Type
 
 import requests
@@ -67,7 +68,7 @@ class ScrapeWebsiteTool(BaseTool):
         page.encoding = page.apparent_encoding
         parsed = BeautifulSoup(page.text, "html.parser")
 
-        text = parsed.get_text()
-        text = "\n".join([i for i in text.split("\n") if i.strip() != ""])
-        text = " ".join([i for i in text.split(" ") if i.strip() != ""])
+        text = parsed.get_text(" ")
+        text = re.sub('[ \t]+', ' ', text)
+        text = re.sub('\\s+\n\\s+', '\n', text)
         return text
