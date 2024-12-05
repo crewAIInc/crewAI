@@ -48,7 +48,6 @@ from crewai.knowledge.source.string_knowledge_source import StringKnowledgeSourc
 content = "Users name is John. He is 30 years old and lives in San Francisco."
 string_source = StringKnowledgeSource(
     content=content, 
-    metadata={"preference": "personal"}
 )
 
 # Create an LLM with a temperature of 0 to ensure deterministic outputs
@@ -74,27 +73,13 @@ crew = Crew(
     tasks=[task],
     verbose=True,
     process=Process.sequential,
-    knowledge={
-      "sources": [string_source], 
-      "metadata": {"preference": "personal"}
-    }, # Enable knowledge by adding the sources here. You can also add more sources to the sources list.
+    knowledge_sources=[string_source], # Enable knowledge by adding the sources here. You can also add more sources to the sources list.
 )
 
 result = crew.kickoff(inputs={"question": "What city does John live in and how old is he?"})
 ```
 
 ## Knowledge Configuration
-
-### Metadata and Filtering
-
-Knowledge sources support metadata for better organization and filtering. Metadata is used to filter the knowledge sources when querying the knowledge store.
-
-```python Code
-knowledge_source = StringKnowledgeSource(
-    content="Users name is John. He is 30 years old and lives in San Francisco.",
-    metadata={"preference": "personal"} # Metadata is used to filter the knowledge sources
-)
-```
 
 ### Chunking Configuration
 
@@ -116,20 +101,27 @@ You can also configure the embedder for the knowledge store. This is useful if y
 ...
 string_source = StringKnowledgeSource(
     content="Users name is John. He is 30 years old and lives in San Francisco.",
-    metadata={"preference": "personal"}
 )
 crew = Crew(
     ...
-    knowledge={
-        "sources": [string_source],
-        "metadata": {"preference": "personal"},
-        "embedder_config": {
-          "provider": "openai", # Default embedder provider; can be "ollama", "gemini", e.t.c.
-          "config": {"model": "text-embedding-3-small"} # Default embedder model; can be "mxbai-embed-large", "nomic-embed-tex", e.t.c.
-        },
+    knowledge_sources=[string_source],
+    embedder={
+        "provider": "openai",
+        "config": {"model": "text-embedding-3-small"},
     },
 )
 ```
+
+## Clearing Knowledge
+
+If you need to clear the knowledge stored in CrewAI, you can use the `crewai reset-memories` command with the `--knowledge` option.
+
+```bash Command
+crewai reset-memories --knowledge
+```
+
+This is useful when you've updated your knowledge sources and want to ensure that the agents are using the most recent information.
+
 
 ## Custom Knowledge Sources
 
@@ -174,12 +166,12 @@ class SpaceNewsKnowledgeSource(BaseKnowledgeSource):
         formatted = "Space News Articles:\n\n"
         for article in articles:
             formatted += f"""
-Title: {article['title']}
-Published: {article['published_at']}
-Summary: {article['summary']}
-News Site: {article['news_site']}
-URL: {article['url']}
--------------------"""
+                Title: {article['title']}
+                Published: {article['published_at']}
+                Summary: {article['summary']}
+                News Site: {article['news_site']}
+                URL: {article['url']}
+                -------------------"""
         return formatted
 
     def add(self) -> None:
@@ -189,17 +181,12 @@ URL: {article['url']}
             chunks = self._chunk_text(text)
             self.chunks.extend(chunks)
         
-        self.save_documents(metadata={
-            "source": "space_news_api",
-            "timestamp": datetime.now().isoformat(),
-            "article_count": self.limit
-        })
+        self._save_documents()
 
 # Create knowledge source
 recent_news = SpaceNewsKnowledgeSource(
     api_endpoint="https://api.spaceflightnewsapi.net/v4/articles",
     limit=10,
-    metadata={"category": "recent_news", "source": "spaceflight_news"}
 )
 
 # Create specialized agent
@@ -265,7 +252,7 @@ The latest developments in space exploration, based on recent space news article
    - Implements three key methods:
      - `load_content()`: Fetches articles from the API
      - `_format_articles()`: Structures the articles into readable text
-     - `add()`: Processes and stores the content with metadata
+     - `add()`: Processes and stores the content
 
 2. **Agent Configuration**:
    - Specialized role as a Space News Analyst
@@ -299,14 +286,12 @@ You can customize the API query by modifying the endpoint URL:
 recent_news = SpaceNewsKnowledgeSource(
     api_endpoint="https://api.spaceflightnewsapi.net/v4/articles",
     limit=20,  # Increase the number of articles
-    metadata={"category": "recent_news"}
 )
 
 # Add search parameters
 recent_news = SpaceNewsKnowledgeSource(
     api_endpoint="https://api.spaceflightnewsapi.net/v4/articles?search=NASA", # Search for NASA news
     limit=10,
-    metadata={"category": "nasa_news"}
 )
 ```
 
@@ -314,14 +299,12 @@ recent_news = SpaceNewsKnowledgeSource(
 
 <AccordionGroup>
   <Accordion title="Content Organization">
-    - Use descriptive metadata for better filtering
     - Keep chunk sizes appropriate for your content type
     - Consider content overlap for context preservation
     - Organize related information into separate knowledge sources
   </Accordion>
   
   <Accordion title="Performance Tips">
-    - Use metadata filtering to narrow search scope
     - Adjust chunk sizes based on content complexity
     - Configure appropriate embedding models
     - Consider using local embedding providers for faster processing
