@@ -17,6 +17,7 @@ class BaseKnowledgeSource(BaseModel, ABC):
 
     model_config = ConfigDict(arbitrary_types_allowed=True)
     storage: KnowledgeStorage = Field(default_factory=KnowledgeStorage)
+    metadata: Dict[str, Any] = Field(default_factory=dict)  # Currently unused
     collection_name: Optional[str] = Field(default=None)
 
     @abstractmethod
