@@ -3,16 +3,15 @@ from typing import TYPE_CHECKING, Optional
 
 from crewai.memory.entity.entity_memory_item import EntityMemoryItem
 from crewai.memory.long_term.long_term_memory_item import LongTermMemoryItem
+from crewai.utilities import I18N
 from crewai.utilities.converter import ConverterError
 from crewai.utilities.evaluators.task_evaluator import TaskEvaluator
-from crewai.utilities import I18N
 from crewai.utilities.printer import Printer
 
-
 if TYPE_CHECKING:
+    from crewai.agents.agent_builder.base_agent import BaseAgent
     from crewai.crew import Crew
     from crewai.task import Task
-    from crewai.agents.agent_builder.base_agent import BaseAgent
 
 
 class CrewAgentExecutorMixin:
@@ -100,14 +99,19 @@ class CrewAgentExecutorMixin:
                 print(f"Failed to add to long term memory: {e}")
                 pass
 
-    def _ask_human_input(self, final_answer: dict) -> str:
+    def _ask_human_input(self, final_answer: str) -> str:
         """Prompt human input for final decision making."""
         self._printer.print(
             content=f"\033[1m\033[95m ## Final Result:\033[00m \033[92m{final_answer}\033[00m"
         )
 
         self._printer.print(
-            content="\n\n=====\n## Please provide feedback on the Final Result and the Agent's actions:",
+            content=(
+                "\n\n=====\n"
+                "## Please provide feedback on the Final Result and the Agent's actions. "
+                "Respond with 'looks good' or a similar phrase when you're satisfied.\n"
+                "=====\n"
+            ),
             color="bold_yellow",
         )
         return input()
