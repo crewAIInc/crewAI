@@ -48,7 +48,6 @@ from crewai.knowledge.source.string_knowledge_source import StringKnowledgeSourc
 content = "Users name is John. He is 30 years old and lives in San Francisco."
 string_source = StringKnowledgeSource(
     content=content, 
-    metadata={"preference": "personal"}
 )
 
 # Create an LLM with a temperature of 0 to ensure deterministic outputs
@@ -76,7 +75,6 @@ crew = Crew(
     process=Process.sequential,
     knowledge={
       "sources": [string_source], 
-      "metadata": {"preference": "personal"}
     }, # Enable knowledge by adding the sources here. You can also add more sources to the sources list.
 )
 
@@ -84,17 +82,6 @@ result = crew.kickoff(inputs={"question": "What city does John live in and how o
 ```
 
 ## Knowledge Configuration
-
-### Metadata and Filtering
-
-Knowledge sources support metadata for better organization and filtering. Metadata is used to filter the knowledge sources when querying the knowledge store.
-
-```python Code
-knowledge_source = StringKnowledgeSource(
-    content="Users name is John. He is 30 years old and lives in San Francisco.",
-    metadata={"preference": "personal"} # Metadata is used to filter the knowledge sources
-)
-```
 
 ### Chunking Configuration
 
@@ -116,13 +103,11 @@ You can also configure the embedder for the knowledge store. This is useful if y
 ...
 string_source = StringKnowledgeSource(
     content="Users name is John. He is 30 years old and lives in San Francisco.",
-    metadata={"preference": "personal"}
 )
 crew = Crew(
     ...
     knowledge={
         "sources": [string_source],
-        "metadata": {"preference": "personal"},
         "embedder_config": {
           "provider": "openai", # Default embedder provider; can be "ollama", "gemini", e.t.c.
           "config": {"model": "text-embedding-3-small"} # Default embedder model; can be "mxbai-embed-large", "nomic-embed-tex", e.t.c.
