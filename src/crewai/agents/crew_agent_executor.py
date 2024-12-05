@@ -473,6 +473,5 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
                     color="red",
                 )
                 self.ask_for_human_input = False
-        print("FINAL ANSWER: ", formatted_answer)
 
         return formatted_answer
