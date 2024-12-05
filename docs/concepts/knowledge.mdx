@@ -1,6 +1,6 @@
 ---
 title: Knowledge
-description: Understand what knowledge is in CrewAI and how to effectively use it.
+description: What is knowledge in CrewAI and how to use it.
 icon: book
 ---
 
@@ -8,7 +8,8 @@ icon: book
 
 ## What is Knowledge?
 
-Knowledge in CrewAI is a powerful system that allows AI agents to access and utilize external information sources during their tasks. Think of it as giving your agents a reference library they can consult while working.
+Knowledge in CrewAI is a powerful system that allows AI agents to access and utilize external information sources during their tasks. 
+Think of it as giving your agents a reference library they can consult while working. 
 
 <Info>
   Key benefits of using Knowledge:
@@ -37,151 +38,275 @@ CrewAI supports various types of knowledge sources out of the box:
 
 ## Quick Start
 
-Here's a simple example using string-based knowledge:
+Here's an example using string-based knowledge:
 
-```python
-from crewai import Agent, Task, Crew
-from crewai.knowledge import StringKnowledgeSource
+```python Code
+from crewai import Agent, Task, Crew, Process, LLM
+from crewai.knowledge.source.string_knowledge_source import StringKnowledgeSource
 
-# 1. Create a knowledge source
-product_info = StringKnowledgeSource(
-    content="""Our product X1000 has the following features:
-    - 10-hour battery life
-    - Water-resistant
-    - Available in black and silver
-    Price: $299.99""",
-    metadata={"category": "product"}
+# Create a knowledge source
+content = "Users name is John. He is 30 years old and lives in San Francisco."
+string_source = StringKnowledgeSource(
+    content=content, 
+    metadata={"preference": "personal"}
 )
 
-# 2. Create an agent with knowledge
-sales_agent = Agent(
-    role="Sales Representative",
-    goal="Accurately answer customer questions about products",
-    backstory="Expert in product features and customer service",
-    knowledge_sources=[product_info]  # Attach knowledge to agent
+# Create an LLM with a temperature of 0 to ensure deterministic outputs
+llm = LLM(model="gpt-4o-mini", temperature=0)
+
+# Create an agent with the knowledge store
+agent = Agent(
+    role="About User",
+    goal="You know everything about the user.",
+    backstory="""You are a master at understanding people and their preferences.""",
+    verbose=True,
+    allow_delegation=False,
+    llm=llm,
+)
+task = Task(
+    description="Answer the following questions about the user: {question}",
+    expected_output="An answer to the question.",
+    agent=agent,
 )
 
-# 3. Create a task
-answer_task = Task(
-    description="Answer: What colors is the X1000 available in and how much does it cost?",
-    agent=sales_agent
-)
-
-# 4. Create and run the crew
 crew = Crew(
-    agents=[sales_agent],
-    tasks=[answer_task]
+    agents=[agent],
+    tasks=[task],
+    verbose=True,
+    process=Process.sequential,
+    knowledge={
+      "sources": [string_source], 
+      "metadata": {"preference": "personal"}
+    }, # Enable knowledge by adding the sources here. You can also add more sources to the sources list.
 )
 
-result = crew.kickoff()
+result = crew.kickoff(inputs={"question": "What city does John live in and how old is he?"})
 ```
 
 ## Knowledge Configuration
 
-### Collection Names
-
-Knowledge sources are organized into collections for better management:
-
-```python
-# Create knowledge sources with specific collections
-tech_specs = StringKnowledgeSource(
-    content="Technical specifications...",
-    collection_name="product_tech_specs"
-)
-
-pricing_info = StringKnowledgeSource(
-    content="Pricing information...",
-    collection_name="product_pricing"
-)
-```
-
 ### Metadata and Filtering
 
-Add metadata to organize and filter knowledge:
+Knowledge sources support metadata for better organization and filtering. Metadata is used to filter the knowledge sources when querying the knowledge store.
 
-```python
+```python Code
 knowledge_source = StringKnowledgeSource(
-    content="Product details...",
-    metadata={
-        "category": "electronics",
-        "product_line": "premium",
-        "last_updated": "2024-03"
-    }
+    content="Users name is John. He is 30 years old and lives in San Francisco.",
+    metadata={"preference": "personal"} # Metadata is used to filter the knowledge sources
 )
 ```
 
 ### Chunking Configuration
 
-Control how your content is split for processing:
+Control how content is split for processing by setting the chunk size and overlap.
 
-```python
-knowledge_source = PDFKnowledgeSource(
-    file_path="product_manual.pdf",
-    chunk_size=2000,     # Characters per chunk
-    chunk_overlap=200    # Overlap between chunks
+```python Code
+knowledge_source = StringKnowledgeSource(
+    content="Long content...",
+    chunk_size=4000,     # Characters per chunk (default)
+    chunk_overlap=200    # Overlap between chunks (default)
 )
 ```
 
-## Advanced Usage
+## Embedder Configuration
 
-### Custom Knowledge Sources
+You can also configure the embedder for the knowledge store. This is useful if you want to use a different embedder for the knowledge store than the one used for the agents.
 
-Create your own knowledge source by extending the base class:
+```python Code
+...
+string_source = StringKnowledgeSource(
+    content="Users name is John. He is 30 years old and lives in San Francisco.",
+    metadata={"preference": "personal"}
+)
+crew = Crew(
+    ...
+    knowledge={
+        "sources": [string_source],
+        "metadata": {"preference": "personal"},
+        "embedder_config": {
+          "provider": "openai", # Default embedder provider; can be "ollama", "gemini", e.t.c.
+          "config": {"model": "text-embedding-3-small"} # Default embedder model; can be "mxbai-embed-large", "nomic-embed-tex", e.t.c.
+        },
+    },
+)
+```
 
-```python
-from crewai.knowledge.source import BaseKnowledgeSource
+## Custom Knowledge Sources
 
-class APIKnowledgeSource(BaseKnowledgeSource):
-    def __init__(self, api_endpoint: str, **kwargs):
-        super().__init__(**kwargs)
-        self.api_endpoint = api_endpoint
+CrewAI allows you to create custom knowledge sources for any type of data by extending the `BaseKnowledgeSource` class. Let's create a practical example that fetches and processes space news articles.
+
+#### Space News Knowledge Source Example
+
+<CodeGroup>
+
+```python Code
+from crewai import Agent, Task, Crew, Process, LLM
+from crewai.knowledge.source.base_knowledge_source import BaseKnowledgeSource
+import requests
+from datetime import datetime
+from typing import Dict, Any
+from pydantic import BaseModel, Field
+
+class SpaceNewsKnowledgeSource(BaseKnowledgeSource):
+    """Knowledge source that fetches data from Space News API."""
     
-    def load_content(self):
-        # Implement API data fetching
-        response = requests.get(self.api_endpoint)
-        return response.json()
+    api_endpoint: str = Field(description="API endpoint URL")
+    limit: int = Field(default=10, description="Number of articles to fetch")
     
-    def add(self):
+    def load_content(self) -> Dict[Any, str]:
+        """Fetch and format space news articles."""
+        try:
+            response = requests.get(
+                f"{self.api_endpoint}?limit={self.limit}"
+            )
+            response.raise_for_status()
+            
+            data = response.json()
+            articles = data.get('results', [])
+            
+            formatted_data = self._format_articles(articles)
+            return {self.api_endpoint: formatted_data}
+        except Exception as e:
+            raise ValueError(f"Failed to fetch space news: {str(e)}")
+    
+    def _format_articles(self, articles: list) -> str:
+        """Format articles into readable text."""
+        formatted = "Space News Articles:\n\n"
+        for article in articles:
+            formatted += f"""
+Title: {article['title']}
+Published: {article['published_at']}
+Summary: {article['summary']}
+News Site: {article['news_site']}
+URL: {article['url']}
+-------------------"""
+        return formatted
+
+    def add(self) -> None:
+        """Process and store the articles."""
         content = self.load_content()
-        # Process and store content
-        self.save_documents({"source": "api"})
-```
+        for _, text in content.items():
+            chunks = self._chunk_text(text)
+            self.chunks.extend(chunks)
+        
+        self.save_documents(metadata={
+            "source": "space_news_api",
+            "timestamp": datetime.now().isoformat(),
+            "article_count": self.limit
+        })
 
-### Embedder Configuration
+# Create knowledge source
+recent_news = SpaceNewsKnowledgeSource(
+    api_endpoint="https://api.spaceflightnewsapi.net/v4/articles",
+    limit=10,
+    metadata={"category": "recent_news", "source": "spaceflight_news"}
+)
 
-Customize the embedding process:
+# Create specialized agent
+space_analyst = Agent(
+    role="Space News Analyst",
+    goal="Answer questions about space news accurately and comprehensively",
+    backstory="""You are a space industry analyst with expertise in space exploration, 
+    satellite technology, and space industry trends. You excel at answering questions
+    about space news and providing detailed, accurate information.""",
+    knowledge_sources=[recent_news],
+    llm=LLM(model="gpt-4", temperature=0.0)
+)
 
-```python
+# Create task that handles user questions
+analysis_task = Task(
+    description="Answer this question about space news: {user_question}",
+    expected_output="A detailed answer based on the recent space news articles",
+    agent=space_analyst
+)
+
+# Create and run the crew
 crew = Crew(
-    agents=[agent],
-    tasks=[task],
-    knowledge_sources=[source],
-    embedder={
-        "provider": "ollama",
-        "config": {"model": "nomic-embed-text:latest"},
-    }
+    agents=[space_analyst],
+    tasks=[analysis_task],
+    verbose=True,
+    process=Process.sequential
+)
+
+# Example usage
+result = crew.kickoff(
+    inputs={"user_question": "What are the latest developments in space exploration?"}
 )
 ```
+```output Output
+# Agent: Space News Analyst
+## Task: Answer this question about space news: What are the latest developments in space exploration?
 
-### Referencing Sources
 
-You can reference knowledge sources by their collection name or metadata.
+# Agent: Space News Analyst
+## Final Answer: 
+The latest developments in space exploration, based on recent space news articles, include the following:
 
-* Add a directory to your crew project called `knowledge`:
-* File paths in knowledge can be referenced relative to the `knowledge` directory.
+1. SpaceX has received the final regulatory approvals to proceed with the second integrated Starship/Super Heavy launch, scheduled for as soon as the morning of Nov. 17, 2023. This is a significant step in SpaceX's ambitious plans for space exploration and colonization. [Source: SpaceNews](https://spacenews.com/starship-cleared-for-nov-17-launch/)
 
-Example:
-A file inside the `knowledge` directory called `example.txt` can be referenced as `example.txt`.
+2. SpaceX has also informed the US Federal Communications Commission (FCC) that it plans to begin launching its first next-generation Starlink Gen2 satellites. This represents a major upgrade to the Starlink satellite internet service, which aims to provide high-speed internet access worldwide. [Source: Teslarati](https://www.teslarati.com/spacex-first-starlink-gen2-satellite-launch-2022/)
 
+3. AI startup Synthetaic has raised $15 million in Series B funding. The company uses artificial intelligence to analyze data from space and air sensors, which could have significant applications in space exploration and satellite technology. [Source: SpaceNews](https://spacenews.com/ai-startup-synthetaic-raises-15-million-in-series-b-funding/)
+
+4. The Space Force has formally established a unit within the U.S. Indo-Pacific Command, marking a permanent presence in the Indo-Pacific region. This could have significant implications for space security and geopolitics. [Source: SpaceNews](https://spacenews.com/space-force-establishes-permanent-presence-in-indo-pacific-region/)
+
+5. Slingshot Aerospace, a space tracking and data analytics company, is expanding its network of ground-based optical telescopes to increase coverage of low Earth orbit. This could improve our ability to track and analyze objects in low Earth orbit, including satellites and space debris. [Source: SpaceNews](https://spacenews.com/slingshots-space-tracking-network-to-extend-coverage-of-low-earth-orbit/)
+
+6. The National Natural Science Foundation of China has outlined a five-year project for researchers to study the assembly of ultra-large spacecraft. This could lead to significant advancements in spacecraft technology and space exploration capabilities. [Source: SpaceNews](https://spacenews.com/china-researching-challenges-of-kilometer-scale-ultra-large-spacecraft/)
+
+7. The Center for AEroSpace Autonomy Research (CAESAR) at Stanford University is focusing on spacecraft autonomy. The center held a kickoff event on May 22, 2024, to highlight the industry, academia, and government collaboration it seeks to foster. This could lead to significant advancements in autonomous spacecraft technology. [Source: SpaceNews](https://spacenews.com/stanford-center-focuses-on-spacecraft-autonomy/)
+``` 
+</CodeGroup>
+#### Key Components Explained
+
+1. **Custom Knowledge Source (`SpaceNewsKnowledgeSource`)**:
+   - Extends `BaseKnowledgeSource` for integration with CrewAI
+   - Configurable API endpoint and article limit
+   - Implements three key methods:
+     - `load_content()`: Fetches articles from the API
+     - `_format_articles()`: Structures the articles into readable text
+     - `add()`: Processes and stores the content with metadata
+
+2. **Agent Configuration**:
+   - Specialized role as a Space News Analyst
+   - Uses the knowledge source to access space news
+
+3. **Task Setup**:
+   - Takes a user question as input through `{user_question}`
+   - Designed to provide detailed answers based on the knowledge source
+
+4. **Crew Orchestration**:
+   - Manages the workflow between agent and task
+   - Handles input/output through the kickoff method
+
+This example demonstrates how to:
+- Create a custom knowledge source that fetches real-time data
+- Process and format external data for AI consumption
+- Use the knowledge source to answer specific user questions
+- Integrate everything seamlessly with CrewAI's agent system
+
+#### About the Spaceflight News API
+
+The example uses the [Spaceflight News API](https://api.spaceflightnewsapi.net/v4/documentation), which:
+- Provides free access to space-related news articles
+- Requires no authentication
+- Returns structured data about space news
+- Supports pagination and filtering
+
+You can customize the API query by modifying the endpoint URL:
 ```python
-source = TextFileKnowledgeSource(
-    file_path="example.txt", # or /example.txt
-    collection_name="example"
+# Fetch more articles
+recent_news = SpaceNewsKnowledgeSource(
+    api_endpoint="https://api.spaceflightnewsapi.net/v4/articles",
+    limit=20,  # Increase the number of articles
+    metadata={"category": "recent_news"}
 )
-crew = Crew(
-    agents=[agent],
-    tasks=[task],
-    knowledge_sources=[source],
+
+# Add search parameters
+recent_news = SpaceNewsKnowledgeSource(
+    api_endpoint="https://api.spaceflightnewsapi.net/v4/articles?search=NASA", # Search for NASA news
+    limit=10,
+    metadata={"category": "nasa_news"}
 )
 ```
 
@@ -189,43 +314,16 @@ crew = Crew(
 
 <AccordionGroup>
   <Accordion title="Content Organization">
-    - Use meaningful collection names
-    - Add detailed metadata for filtering
-    - Keep chunk sizes appropriate for your content
+    - Use descriptive metadata for better filtering
+    - Keep chunk sizes appropriate for your content type
     - Consider content overlap for context preservation
+    - Organize related information into separate knowledge sources
   </Accordion>
   
   <Accordion title="Performance Tips">
-    - Use smaller chunk sizes for precise retrieval
-    - Implement metadata filtering for faster searches
-    - Choose appropriate embedding models for your use case
-    - Cache frequently accessed knowledge
-  </Accordion>
-  
-  <Accordion title="Error Handling">
-    - Validate knowledge source content
-    - Handle missing or corrupted files
-    - Monitor embedding generation
-    - Implement fallback options
-  </Accordion>
-</AccordionGroup>
-
-## Common Issues and Solutions
-
-<AccordionGroup>
-  <Accordion title="Content Not Found">
-    If agents can't find relevant information:
-    - Check chunk sizes
-    - Verify knowledge source loading
-    - Review metadata filters
-    - Test with simpler queries first
-  </Accordion>
-  
-  <Accordion title="Performance Issues">
-    If knowledge retrieval is slow:
-    - Reduce chunk sizes
-    - Optimize metadata filtering
-    - Consider using a lighter embedding model
-    - Cache frequently accessed content
+    - Use metadata filtering to narrow search scope
+    - Adjust chunk sizes based on content complexity
+    - Configure appropriate embedding models
+    - Consider using local embedding providers for faster processing
   </Accordion>
 </AccordionGroup>
