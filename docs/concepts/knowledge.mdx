@@ -159,12 +159,12 @@ class SpaceNewsKnowledgeSource(BaseKnowledgeSource):
         formatted = "Space News Articles:\n\n"
         for article in articles:
             formatted += f"""
-Title: {article['title']}
-Published: {article['published_at']}
-Summary: {article['summary']}
-News Site: {article['news_site']}
-URL: {article['url']}
--------------------"""
+                Title: {article['title']}
+                Published: {article['published_at']}
+                Summary: {article['summary']}
+                News Site: {article['news_site']}
+                URL: {article['url']}
+                -------------------"""
         return formatted
 
     def add(self) -> None:
@@ -174,17 +174,12 @@ URL: {article['url']}
             chunks = self._chunk_text(text)
             self.chunks.extend(chunks)
         
-        self.save_documents(metadata={
-            "source": "space_news_api",
-            "timestamp": datetime.now().isoformat(),
-            "article_count": self.limit
-        })
+        self.save_documents()
 
 # Create knowledge source
 recent_news = SpaceNewsKnowledgeSource(
     api_endpoint="https://api.spaceflightnewsapi.net/v4/articles",
     limit=10,
-    metadata={"category": "recent_news", "source": "spaceflight_news"}
 )
 
 # Create specialized agent
@@ -250,7 +245,7 @@ The latest developments in space exploration, based on recent space news article
    - Implements three key methods:
      - `load_content()`: Fetches articles from the API
      - `_format_articles()`: Structures the articles into readable text
-     - `add()`: Processes and stores the content with metadata
+     - `add()`: Processes and stores the content
 
 2. **Agent Configuration**:
    - Specialized role as a Space News Analyst
@@ -284,14 +279,12 @@ You can customize the API query by modifying the endpoint URL:
 recent_news = SpaceNewsKnowledgeSource(
     api_endpoint="https://api.spaceflightnewsapi.net/v4/articles",
     limit=20,  # Increase the number of articles
-    metadata={"category": "recent_news"}
 )
 
 # Add search parameters
 recent_news = SpaceNewsKnowledgeSource(
     api_endpoint="https://api.spaceflightnewsapi.net/v4/articles?search=NASA", # Search for NASA news
     limit=10,
-    metadata={"category": "nasa_news"}
 )
 ```
 
@@ -299,14 +292,12 @@ recent_news = SpaceNewsKnowledgeSource(
 
 <AccordionGroup>
   <Accordion title="Content Organization">
-    - Use descriptive metadata for better filtering
     - Keep chunk sizes appropriate for your content type
     - Consider content overlap for context preservation
     - Organize related information into separate knowledge sources
   </Accordion>
   
   <Accordion title="Performance Tips">
-    - Use metadata filtering to narrow search scope
     - Adjust chunk sizes based on content complexity
     - Configure appropriate embedding models
     - Consider using local embedding providers for faster processing
