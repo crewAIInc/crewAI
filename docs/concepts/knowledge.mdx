@@ -174,7 +174,7 @@ class SpaceNewsKnowledgeSource(BaseKnowledgeSource):
             chunks = self._chunk_text(text)
             self.chunks.extend(chunks)
         
-        self.save_documents()
+        self._save_documents()
 
 # Create knowledge source
 recent_news = SpaceNewsKnowledgeSource(

@@ -49,7 +49,7 @@ class BaseFileKnowledgeSource(BaseKnowledgeSource, ABC):
                     color="red",
                 )
 
-    def save_documents(self):
+    def _save_documents(self):
         """Save the documents to the storage."""
         self.storage.save(self.chunks)
 

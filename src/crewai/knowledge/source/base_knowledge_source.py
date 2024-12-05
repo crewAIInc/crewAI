@@ -41,7 +41,7 @@ class BaseKnowledgeSource(BaseModel, ABC):
             for i in range(0, len(text), self.chunk_size - self.chunk_overlap)
         ]
 
-    def save_documents(self):
+    def _save_documents(self):
         """
         Save the documents to the storage.
         This method should be called after the chunks and embeddings are generated.
