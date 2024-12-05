@@ -73,9 +73,7 @@ crew = Crew(
     tasks=[task],
     verbose=True,
     process=Process.sequential,
-    knowledge={
-      "sources": [string_source], 
-    }, # Enable knowledge by adding the sources here. You can also add more sources to the sources list.
+    knowledge_sources=[string_source], # Enable knowledge by adding the sources here. You can also add more sources to the sources list.
 )
 
 result = crew.kickoff(inputs={"question": "What city does John live in and how old is he?"})
@@ -106,15 +104,24 @@ string_source = StringKnowledgeSource(
 )
 crew = Crew(
     ...
-    knowledge={
-        "sources": [string_source],
-        "embedder_config": {
-          "provider": "openai", # Default embedder provider; can be "ollama", "gemini", e.t.c.
-          "config": {"model": "text-embedding-3-small"} # Default embedder model; can be "mxbai-embed-large", "nomic-embed-tex", e.t.c.
-        },
+    knowledge_sources=[string_source],
+    embedder={
+        "provider": "openai",
+        "config": {"model": "text-embedding-3-small"},
     },
 )
 ```
+
+## Clearing Knowledge
+
+If you need to clear the knowledge stored in CrewAI, you can use the `crewai reset-memories` command with the `--knowledge` option.
+
+```bash Command
+crewai reset-memories --knowledge
+```
+
+This is useful when you've updated your knowledge sources and want to ensure that the agents are using the most recent information.
+
 
 ## Custom Knowledge Sources
 
