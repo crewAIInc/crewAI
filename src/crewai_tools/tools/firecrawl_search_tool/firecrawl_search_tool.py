@@ -1,8 +1,7 @@
 from typing import TYPE_CHECKING, Any, Dict, Optional, Type
 
+from crewai.tools import BaseTool
 from pydantic import BaseModel, Field
-
-from crewai_tools.tools.base_tool import BaseTool
 
 # Type checking import
 if TYPE_CHECKING:

@@ -1,9 +1,7 @@
-import os
 from typing import Type
 
+from crewai.tools import BaseTool
 from pydantic import BaseModel, Field
-
-from crewai_tools.tools.base_tool import BaseTool
 
 
 class EXABaseToolToolSchema(BaseModel):

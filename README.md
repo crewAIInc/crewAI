@@ -51,7 +51,7 @@ There are three ways to create tools for crewAI agents:
 ### Subclassing `BaseTool`
 
 ```python
-from crewai_tools import BaseTool
+from crewai.tools import BaseTool
 
 class MyCustomTool(BaseTool):
     name: str = "Name of my tool"
@@ -70,7 +70,7 @@ Define a new class inheriting from `BaseTool`, specifying `name`, `description`,
 For a simpler approach, create a `Tool` object directly with the required attributes and a functional logic.
 
 ```python
-from crewai_tools import tool
+from crewai.tools import BaseTool
 @tool("Name of my tool")
 def my_tool(question: str) -> str:
     """Clear description for what this tool is useful for, you agent will need this information to use it."""

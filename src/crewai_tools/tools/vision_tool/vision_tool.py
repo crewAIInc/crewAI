@@ -2,10 +2,9 @@ import base64
 from typing import Type
 
 import requests
+from crewai.tools import BaseTool
 from openai import OpenAI
 from pydantic import BaseModel
-
-from crewai_tools.tools.base_tool import BaseTool
 
 
 class ImagePromptSchema(BaseModel):

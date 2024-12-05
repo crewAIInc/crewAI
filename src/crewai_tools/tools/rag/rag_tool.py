@@ -1,9 +1,8 @@
 from abc import ABC, abstractmethod
 from typing import Any
 
+from crewai.tools import BaseTool
 from pydantic import BaseModel, Field, model_validator
-
-from crewai_tools.tools.base_tool import BaseTool
 
 
 class Adapter(BaseModel, ABC):
