@@ -15,7 +15,6 @@ dependencies = [
     "opentelemetry-exporter-otlp-proto-http>=1.22.0",
     "instructor>=1.3.3",
     "regex>=2024.9.11",
-    "crewai-tools>=0.14.0",
     "click>=8.1.7",
     "python-dotenv>=1.0.0",
     "appdirs>=1.4.4",
