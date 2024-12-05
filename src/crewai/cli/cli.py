@@ -25,6 +25,7 @@ from .update_crew import update_crew
 
 
 @click.group()
+@click.version_option(pkg_resources.get_distribution("crewai").version)
 def crewai():
     """Top-level command group for crewai."""
 
@@ -50,7 +51,10 @@ def create(type, name, provider, skip_provider=False):
 )
 def version(tools):
     """Show the installed version of crewai."""
-    crewai_version = pkg_resources.get_distribution("crewai").version
+    try:
+        crewai_version = pkg_resources.get_distribution("crewai").version
+    except Exception:
+        crewai_version = "unknown version"
     click.echo(f"crewai version: {crewai_version}")
 
     if tools:
