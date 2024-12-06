@@ -1,4 +1,5 @@
 import logging
+import os
 import sys
 import threading
 import warnings
@@ -128,6 +129,7 @@ class LLM:
         litellm.drop_params = True
         litellm.set_verbose = False
         self.set_callbacks(callbacks)
+        self.set_env_callbacks()
 
     def call(self, messages: List[Dict[str, str]], callbacks: List[Any] = []) -> str:
         with suppress_warnings():
@@ -202,3 +204,39 @@ class LLM:
                 litellm._async_success_callback.remove(callback)
 
         litellm.callbacks = callbacks
+
+    def set_env_callbacks(self):
+        """
+        Sets the success and failure callbacks for the LiteLLM library from environment variables.
+
+        This method reads the `LITELLM_SUCCESS_CALLBACKS` and `LITELLM_FAILURE_CALLBACKS`
+        environment variables, which should contain comma-separated lists of callback names.
+        It then assigns these lists to `litellm.success_callback` and `litellm.failure_callback`,
+        respectively.
+
+        If the environment variables are not set or are empty, the corresponding callback lists
+        will be set to empty lists.
+
+        Example:
+            LITELLM_SUCCESS_CALLBACKS="langfuse,langsmith"
+            LITELLM_FAILURE_CALLBACKS="langfuse"
+
+        This will set `litellm.success_callback` to ["langfuse", "langsmith"] and
+        `litellm.failure_callback` to ["langfuse"].
+        """
+        success_callbacks_str = os.environ.get("LITELLM_SUCCESS_CALLBACKS", "")
+        success_callbacks = []
+        if success_callbacks_str:
+            success_callbacks = [
+                callback.strip() for callback in success_callbacks_str.split(",")
+            ]
+
+        failure_callbacks_str = os.environ.get("LITELLM_FAILURE_CALLBACKS", "")
+        failure_callbacks = []
+        if failure_callbacks_str:
+            failure_callbacks = [
+                callback.strip() for callback in failure_callbacks_str.split(",")
+            ]
+
+        litellm.success_callback = success_callbacks
+        litellm.failure_callback = failure_callbacks
