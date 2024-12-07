@@ -37,7 +37,7 @@ class UserMemory(Memory):
         limit: int = 3,
         score_threshold: float = 0.35,
     ):
-        results = super().search(
+        results = self.storage.search(
             query=query,
             limit=limit,
             score_threshold=score_threshold,
