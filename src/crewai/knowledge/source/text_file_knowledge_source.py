@@ -1,5 +1,5 @@
-from typing import Dict, List
 from pathlib import Path
+from typing import Dict, List
 
 from crewai.knowledge.source.base_file_knowledge_source import BaseFileKnowledgeSource
 
@@ -24,7 +24,7 @@ class TextFileKnowledgeSource(BaseFileKnowledgeSource):
         for _, text in self.content.items():
             new_chunks = self._chunk_text(text)
             self.chunks.extend(new_chunks)
-        self.save_documents(metadata=self.metadata)
+        self._save_documents()
 
     def _chunk_text(self, text: str) -> List[str]:
         """Utility method to split text into chunks."""
