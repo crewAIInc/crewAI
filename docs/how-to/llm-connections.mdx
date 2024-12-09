@@ -126,10 +126,10 @@ You can connect to OpenAI-compatible LLMs using either environment variables or 
     </Tab>
     <Tab title="Using LLM Class Attributes">
         <CodeGroup>
-        ```python Code
-        llm = LLM(
-            model="custom-model-name",
-            api_key="your-api-key",
+            ```python Code
+            llm = LLM(
+                model="custom-model-name",
+                api_key="your-api-key",
                 base_url="https://api.your-provider.com/v1"
             )
             agent = Agent(llm=llm, ...)
