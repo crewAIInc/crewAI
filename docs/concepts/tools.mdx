@@ -180,7 +180,7 @@ The `StructuredTool` class wraps functions as tools, providing flexibility and v
 Using `StructuredTool.from_function`, you can wrap a function that interacts with an external API or system, providing a structured interface. This enables robust validation and consistent execution, making it easier to integrate complex functionalities into your applications as demonstrated in the following example:
 
 ```python
-from langchain.tools.base import StructuredTool
+from crewai.tools.structured_tool import CrewStructuredTool
 from pydantic import BaseModel
 
 # Define the schema for the tool's input using Pydantic
@@ -196,18 +196,18 @@ def tool_wrapper(*args, **kwargs):
 
 # Create and return the structured tool
 def create_structured_tool():
-    return StructuredTool.from_function(
-        func=tool_wrapper,
+    return CrewStructuredTool.from_function(
         name='Wrapper API',
         description="A tool to wrap API calls with structured input.",
-        args_schema=APICallInput
+        args_schema=APICallInput,
+        func=tool_wrapper,
     )
 
 # Example usage
 structured_tool = create_structured_tool()
 
 # Execute the tool with structured input
-result = structured_tool.run({
+result = structured_tool._run(**{
     "endpoint": "https://example.com/api",
     "parameters": {"key1": "value1", "key2": "value2"}
 })
