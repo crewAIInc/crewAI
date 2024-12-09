@@ -96,6 +96,7 @@ class LLM:
         stop: Optional[Union[str, List[str]]] = None,
         max_completion_tokens: Optional[int] = None,
         max_tokens: Optional[int] = None,
+        context_window_size: Optional[int] = None,
         presence_penalty: Optional[float] = None,
         frequency_penalty: Optional[float] = None,
         logit_bias: Optional[Dict[int, float]] = None,
