@@ -1,9 +1,10 @@
 import json
-import regex
 from typing import Any, Type
 
-from crewai.agents.parser import OutputParserException
+import regex
 from pydantic import BaseModel, ValidationError
+
+from crewai.agents.parser import OutputParserException
 
 
 class CrewPydanticOutputParser:

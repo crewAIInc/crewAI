@@ -2,6 +2,7 @@ import unittest
 from unittest.mock import MagicMock, patch
 
 import requests
+
 from crewai.cli.authentication.main import AuthenticationCommand
 
 
@@ -47,7 +48,9 @@ class TestAuthenticationCommand(unittest.TestCase):
     @patch("crewai.cli.authentication.main.requests.post")
     @patch("crewai.cli.authentication.main.validate_token")
     @patch("crewai.cli.authentication.main.console.print")
-    def test_poll_for_token_success(self, mock_print, mock_validate_token, mock_post, mock_tool):
+    def test_poll_for_token_success(
+        self, mock_print, mock_validate_token, mock_post, mock_tool
+    ):
         mock_response = MagicMock()
         mock_response.status_code = 200
         mock_response.json.return_value = {
@@ -62,7 +65,9 @@ class TestAuthenticationCommand(unittest.TestCase):
         self.auth_command._poll_for_token({"device_code": "123456"})
 
         mock_validate_token.assert_called_once_with("TOKEN")
-        mock_print.assert_called_once_with("\n[bold green]Welcome to CrewAI Enterprise![/bold green]\n")
+        mock_print.assert_called_once_with(
+            "\n[bold green]Welcome to CrewAI Enterprise![/bold green]\n"
+        )
 
     @patch("crewai.cli.authentication.main.requests.post")
     @patch("crewai.cli.authentication.main.console.print")

@@ -1,4 +1,4 @@
-from typing import Optional, Dict, Any
+from typing import Any, Dict, Optional
 
 from crewai.memory import EntityMemory, LongTermMemory, ShortTermMemory, UserMemory
 

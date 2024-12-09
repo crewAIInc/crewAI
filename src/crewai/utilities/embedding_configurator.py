@@ -1,6 +1,7 @@
 import os
 from typing import Any, Dict, cast
-from chromadb import EmbeddingFunction, Documents, Embeddings
+
+from chromadb import Documents, EmbeddingFunction, Embeddings
 from chromadb.api.types import validate_embedding_function
 
 

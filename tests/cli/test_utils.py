@@ -1,7 +1,9 @@
-import pytest
+import os
 import shutil
 import tempfile
-import os
+
+import pytest
+
 from crewai.cli import utils
 
 

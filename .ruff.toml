@@ -1,0 +1,9 @@
+exclude = [
+    "templates",
+    "__init__.py",
+]
+
+[lint]
+select = [
+    "I", # isort rules
+]

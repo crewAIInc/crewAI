@@ -1,6 +1,7 @@
 import os
 import unittest
 from unittest.mock import MagicMock, patch
+
 from crewai.cli.plus_api import PlusAPI
 
 

@@ -1,4 +1,5 @@
 from typing import Any, Dict, Optional
+
 from crewai.memory.memory import Memory
 from crewai.memory.short_term.short_term_memory_item import ShortTermMemoryItem
 from crewai.memory.storage.rag_storage import RAGStorage
@@ -32,7 +33,10 @@ class ShortTermMemory(Memory):
                 storage
                 if storage
                 else RAGStorage(
-                    type="short_term", embedder_config=embedder_config, crew=crew, path=path
+                    type="short_term",
+                    embedder_config=embedder_config,
+                    crew=crew,
+                    path=path,
                 )
             )
         super().__init__(storage)

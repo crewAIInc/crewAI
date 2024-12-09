@@ -1,8 +1,9 @@
-from datetime import datetime, date
 import json
-from uuid import UUID
-from pydantic import BaseModel
+from datetime import date, datetime
 from decimal import Decimal
+from uuid import UUID
+
+from pydantic import BaseModel
 
 
 class CrewJSONEncoder(json.JSONEncoder):
