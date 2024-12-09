@@ -115,9 +115,9 @@ class KnowledgeStorage(BaseKnowledgeStorage):
             )
 
         self.app.reset()
+        shutil.rmtree(base_path)
         self.app = None
         self.collection = None
-        shutil.rmtree(base_path)
 
     def save(
         self,
