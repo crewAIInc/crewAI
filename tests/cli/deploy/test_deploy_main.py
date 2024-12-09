@@ -224,10 +224,6 @@ class TestDeployCommand(unittest.TestCase):
         parsed = parse_toml(toml_content)
         self.assertEqual(parsed["tool"]["poetry"]["name"], "test_project")
 
-    @unittest.skipIf(
-        not (sys.version_info.major == 3 and sys.version_info.minor == 10),
-        "Requires Python 3.10",
-    )
     @patch(
         "builtins.open",
         new_callable=unittest.mock.mock_open,
