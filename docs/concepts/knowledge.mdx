@@ -12,9 +12,11 @@ Knowledge in CrewAI is a powerful system that allows AI agents to access and uti
 Think of it as giving your agents a reference library they can consult while working.
 
 <Info>
-  Key benefits of using Knowledge: - Enhance agents with domain-specific
-  information - Support decisions with real-world data - Maintain context across
-  conversations - Ground responses in factual information
+  Key benefits of using Knowledge:
+  - Enhance agents with domain-specific information
+  - Support decisions with real-world data
+  - Maintain context across conversations
+  - Ground responses in factual information
 </Info>
 
 ## Supported Knowledge Sources
@@ -23,10 +25,14 @@ CrewAI supports various types of knowledge sources out of the box:
 
 <CardGroup cols={2}>
   <Card title="Text Sources" icon="text">
-    - Raw strings - Text files (.txt) - PDF documents
+    - Raw strings
+    - Text files (.txt)
+    - PDF documents
   </Card>
   <Card title="Structured Data" icon="table">
-    - CSV files - Excel spreadsheets - JSON documents
+    - CSV files
+    - Excel spreadsheets
+    - JSON documents
   </Card>
 </CardGroup>
 
@@ -300,14 +306,14 @@ recent_news = SpaceNewsKnowledgeSource(
 
 <AccordionGroup>
   <Accordion title="Content Organization">
-    - Keep chunk sizes appropriate for your content type - Consider content
-    overlap for context preservation - Organize related information into
-    separate knowledge sources
+    - Keep chunk sizes appropriate for your content type
+    - Consider content overlap for context preservation
+    - Organize related information into separate knowledge sources
   </Accordion>
 
   <Accordion title="Performance Tips">
-    - Adjust chunk sizes based on content complexity - Configure appropriate
-    embedding models - Consider using local embedding providers for faster
-    processing
+    - Adjust chunk sizes based on content complexity 
+    - Configure appropriate embedding models
+    - Consider using local embedding providers for faster processing
   </Accordion>
 </AccordionGroup>
