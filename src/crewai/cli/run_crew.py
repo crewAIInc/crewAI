@@ -3,7 +3,8 @@ import subprocess
 import click
 from packaging import version
 
-from crewai.cli.utils import get_crewai_version, read_toml
+from crewai.cli.utils import read_toml
+from crewai.cli.version import get_crewai_version
 
 
 def run_crew() -> None:
@@ -24,7 +25,6 @@ def run_crew() -> None:
             f"Please run `crewai update` to update your pyproject.toml to use uv.",
             fg="red",
         )
-        print()
 
     try:
         subprocess.run(command, capture_output=False, text=True, check=True)

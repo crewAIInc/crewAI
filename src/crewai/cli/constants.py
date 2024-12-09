@@ -123,21 +123,14 @@ MODELS = {
     ],
     "ollama": ["ollama/llama3.1", "ollama/mixtral"],
     "watson": [
-        "watsonx/google/flan-t5-xxl",
-        "watsonx/google/flan-ul2",
-        "watsonx/bigscience/mt0-xxl",
-        "watsonx/eleutherai/gpt-neox-20b",
-        "watsonx/ibm/mpt-7b-instruct2",
-        "watsonx/bigcode/starcoder",
-        "watsonx/meta-llama/llama-2-70b-chat",
-        "watsonx/meta-llama/llama-2-13b-chat",
-        "watsonx/ibm/granite-13b-instruct-v1",
-        "watsonx/ibm/granite-13b-chat-v1",
-        "watsonx/google/flan-t5-xl",
-        "watsonx/ibm/granite-13b-chat-v2",
-        "watsonx/ibm/granite-13b-instruct-v2",
-        "watsonx/elyza/elyza-japanese-llama-2-7b-instruct",
-        "watsonx/ibm-mistralai/mixtral-8x7b-instruct-v01-q",
+        "watsonx/meta-llama/llama-3-1-70b-instruct",
+        "watsonx/meta-llama/llama-3-1-8b-instruct",
+        "watsonx/meta-llama/llama-3-2-11b-vision-instruct",
+        "watsonx/meta-llama/llama-3-2-1b-instruct",
+        "watsonx/meta-llama/llama-3-2-90b-vision-instruct",
+        "watsonx/meta-llama/llama-3-405b-instruct",
+        "watsonx/mistral/mistral-large",
+        "watsonx/ibm/granite-3-8b-instruct",
     ],
     "bedrock": [
         "bedrock/anthropic.claude-3-5-sonnet-20240620-v1:0",
@@ -166,3 +159,6 @@ MODELS = {
 }
 
 JSON_URL = "https://raw.githubusercontent.com/BerriAI/litellm/main/model_prices_and_context_window.json"
+
+
+LITELLM_PARAMS = ["api_key", "api_base", "api_version"]

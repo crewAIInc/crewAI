@@ -6,7 +6,6 @@ import pkg_resources
 from crewai.cli.add_crew_to_flow import add_crew_to_flow
 from crewai.cli.create_crew import create_crew
 from crewai.cli.create_flow import create_flow
-from crewai.cli.create_pipeline import create_pipeline
 from crewai.memory.storage.kickoff_task_outputs_storage import (
     KickoffTaskOutputsSQLiteStorage,
 )
@@ -26,27 +25,24 @@ from .update_crew import update_crew
 
 
 @click.group()
+@click.version_option(pkg_resources.get_distribution("crewai").version)
 def crewai():
     """Top-level command group for crewai."""
 
 
 @crewai.command()
-@click.argument("type", type=click.Choice(["crew", "pipeline", "flow"]))
+@click.argument("type", type=click.Choice(["crew", "flow"]))
 @click.argument("name")
 @click.option("--provider", type=str, help="The provider to use for the crew")
 @click.option("--skip_provider", is_flag=True, help="Skip provider validation")
 def create(type, name, provider, skip_provider=False):
-    """Create a new crew, pipeline, or flow."""
+    """Create a new crew, or flow."""
     if type == "crew":
         create_crew(name, provider, skip_provider)
-    elif type == "pipeline":
-        create_pipeline(name)
     elif type == "flow":
         create_flow(name)
     else:
-        click.secho(
-            "Error: Invalid type. Must be 'crew', 'pipeline', or 'flow'.", fg="red"
-        )
+        click.secho("Error: Invalid type. Must be 'crew' or 'flow'.", fg="red")
 
 
 @crewai.command()
@@ -55,7 +51,10 @@ def create(type, name, provider, skip_provider=False):
 )
 def version(tools):
     """Show the installed version of crewai."""
-    crewai_version = pkg_resources.get_distribution("crewai").version
+    try:
+        crewai_version = pkg_resources.get_distribution("crewai").version
+    except Exception:
+        crewai_version = "unknown version"
     click.echo(f"crewai version: {crewai_version}")
 
     if tools:
@@ -136,6 +135,7 @@ def log_tasks_outputs() -> None:
 @click.option("-l", "--long", is_flag=True, help="Reset LONG TERM memory")
 @click.option("-s", "--short", is_flag=True, help="Reset SHORT TERM memory")
 @click.option("-e", "--entities", is_flag=True, help="Reset ENTITIES memory")
+@click.option("-kn", "--knowledge", is_flag=True, help="Reset KNOWLEDGE storage")
 @click.option(
     "-k",
     "--kickoff-outputs",
@@ -143,17 +143,24 @@ def log_tasks_outputs() -> None:
     help="Reset LATEST KICKOFF TASK OUTPUTS",
 )
 @click.option("-a", "--all", is_flag=True, help="Reset ALL memories")
-def reset_memories(long, short, entities, kickoff_outputs, all):
+def reset_memories(
+    long: bool,
+    short: bool,
+    entities: bool,
+    knowledge: bool,
+    kickoff_outputs: bool,
+    all: bool,
+) -> None:
     """
     Reset the crew memories (long, short, entity, latest_crew_kickoff_ouputs). This will delete all the data saved.
     """
     try:
-        if not all and not (long or short or entities or kickoff_outputs):
+        if not all and not (long or short or entities or knowledge or kickoff_outputs):
             click.echo(
                 "Please specify at least one memory type to reset using the appropriate flags."
             )
             return
-        reset_memories_command(long, short, entities, kickoff_outputs, all)
+        reset_memories_command(long, short, entities, knowledge, kickoff_outputs, all)
     except Exception as e:
         click.echo(f"An error occurred while resetting memories: {e}", err=True)
 

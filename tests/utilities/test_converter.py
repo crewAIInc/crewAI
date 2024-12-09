@@ -1,7 +1,10 @@
 import json
+from typing import Dict, List, Optional
 from unittest.mock import MagicMock, Mock, patch
 
 import pytest
+from pydantic import BaseModel
+
 from crewai.llm import LLM
 from crewai.utilities.converter import (
     Converter,
@@ -9,12 +12,11 @@ from crewai.utilities.converter import (
     convert_to_model,
     convert_with_instructions,
     create_converter,
+    generate_model_description,
     get_conversion_instructions,
     handle_partial_json,
     validate_model,
 )
-from pydantic import BaseModel
-
 from crewai.utilities.pydantic_schema_parser import PydanticSchemaParser
 
 
@@ -269,3 +271,45 @@ def test_create_converter_fails_without_agent_or_converter_cls():
         create_converter(
             llm=Mock(), text="Sample", model=SimpleModel, instructions="Convert"
         )
+
+
+def test_generate_model_description_simple_model():
+    description = generate_model_description(SimpleModel)
+    expected_description = '{\n  "name": str,\n  "age": int\n}'
+    assert description == expected_description
+
+
+def test_generate_model_description_nested_model():
+    description = generate_model_description(NestedModel)
+    expected_description = (
+        '{\n  "id": int,\n  "data": {\n  "name": str,\n  "age": int\n}\n}'
+    )
+    assert description == expected_description
+
+
+def test_generate_model_description_optional_field():
+    class ModelWithOptionalField(BaseModel):
+        name: Optional[str]
+        age: int
+
+    description = generate_model_description(ModelWithOptionalField)
+    expected_description = '{\n  "name": Optional[str],\n  "age": int\n}'
+    assert description == expected_description
+
+
+def test_generate_model_description_list_field():
+    class ModelWithListField(BaseModel):
+        items: List[int]
+
+    description = generate_model_description(ModelWithListField)
+    expected_description = '{\n  "items": List[int]\n}'
+    assert description == expected_description
+
+
+def test_generate_model_description_dict_field():
+    class ModelWithDictField(BaseModel):
+        attributes: Dict[str, int]
+
+    description = generate_model_description(ModelWithDictField)
+    expected_description = '{\n  "attributes": Dict[str, int]\n}'
+    assert description == expected_description
