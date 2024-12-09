@@ -61,7 +61,7 @@ Preloading the Weaviate database with documents:
 from crewai_tools import WeaviateVectorSearchTool
 
 # Use before hooks to generate the documents and add them to the Weaviate database. Follow the weaviate docs: https://weaviate.io/developers/wcs/connect
-test_docs = client.collections.get("test_collection_name")
+test_docs = client.collections.get("example_collections")
 
 
 docs_to_load = os.listdir("knowledge")
