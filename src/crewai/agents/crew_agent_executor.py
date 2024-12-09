@@ -299,7 +299,7 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
                         self._i18n.slice("summarizer_system_message"), role="system"
                     ),
                     self._format_msg(
-                        self._i18n.slice("sumamrize_instruction").format(group=group),
+                        self._i18n.slice("summarize_instruction").format(group=group),
                     ),
                 ],
                 callbacks=self.callbacks,
