@@ -1,13 +1,13 @@
 from abc import ABC, abstractmethod
 from pathlib import Path
-from typing import Union, List, Dict, Any
+from typing import Dict, List, Union
 
 from pydantic import Field
 
 from crewai.knowledge.source.base_knowledge_source import BaseKnowledgeSource
-from crewai.utilities.logger import Logger
 from crewai.knowledge.storage.knowledge_storage import KnowledgeStorage
 from crewai.utilities.constants import KNOWLEDGE_DIRECTORY
+from crewai.utilities.logger import Logger
 
 
 class BaseFileKnowledgeSource(BaseKnowledgeSource, ABC):
@@ -49,10 +49,9 @@ class BaseFileKnowledgeSource(BaseKnowledgeSource, ABC):
                     color="red",
                 )
 
-    def save_documents(self, metadata: Dict[str, Any]):
+    def _save_documents(self):
         """Save the documents to the storage."""
-        chunk_metadatas = [metadata.copy() for _ in self.chunks]
-        self.storage.save(self.chunks, chunk_metadatas)
+        self.storage.save(self.chunks)
 
     def convert_to_path(self, path: Union[Path, str]) -> Path:
         """Convert a path to a Path object."""

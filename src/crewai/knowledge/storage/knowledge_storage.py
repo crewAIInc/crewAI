@@ -1,18 +1,22 @@
 import contextlib
+import hashlib
 import io
 import logging
-import chromadb
 import os
+import shutil
+from typing import Any, Dict, List, Optional, Union, cast
 
+import chromadb
 import chromadb.errors
-from crewai.utilities.paths import db_storage_path
-from typing import Optional, List, Dict, Any, Union
-from crewai.utilities import EmbeddingConfigurator
-from crewai.knowledge.storage.base_knowledge_storage import BaseKnowledgeStorage
-import hashlib
-from chromadb.config import Settings
 from chromadb.api import ClientAPI
+from chromadb.api.types import OneOrMany
+from chromadb.config import Settings
+
+from crewai.knowledge.storage.base_knowledge_storage import BaseKnowledgeStorage
+from crewai.utilities import EmbeddingConfigurator
 from crewai.utilities.logger import Logger
+from crewai.utilities.paths import db_storage_path
+from crewai.utilities.constants import KNOWLEDGE_DIRECTORY
 
 
 @contextlib.contextmanager
@@ -103,24 +107,31 @@ class KnowledgeStorage(BaseKnowledgeStorage):
             raise Exception("Failed to create or get collection")
 
     def reset(self):
-        if self.app:
-            self.app.reset()
-        else:
-            base_path = os.path.join(db_storage_path(), "knowledge")
+        base_path = os.path.join(db_storage_path(), KNOWLEDGE_DIRECTORY)
+        if not self.app:
             self.app = chromadb.PersistentClient(
                 path=base_path,
                 settings=Settings(allow_reset=True),
             )
-            self.app.reset()
+
+        self.app.reset()
+        shutil.rmtree(base_path)
+        self.app = None
+        self.collection = None
 
     def save(
         self,
         documents: List[str],
-        metadata: Union[Dict[str, Any], List[Dict[str, Any]]],
+        metadata: Optional[Union[Dict[str, Any], List[Dict[str, Any]]]] = None,
     ):
         if self.collection:
             try:
-                metadatas = [metadata] if isinstance(metadata, dict) else metadata
+                if metadata is None:
+                    metadatas: Optional[OneOrMany[chromadb.Metadata]] = None
+                elif isinstance(metadata, list):
+                    metadatas = [cast(chromadb.Metadata, m) for m in metadata]
+                else:
+                    metadatas = cast(chromadb.Metadata, metadata)
 
                 ids = [
                     hashlib.sha256(doc.encode("utf-8")).hexdigest() for doc in documents
