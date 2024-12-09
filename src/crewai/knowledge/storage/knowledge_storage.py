@@ -16,6 +16,7 @@ from crewai.knowledge.storage.base_knowledge_storage import BaseKnowledgeStorage
 from crewai.utilities import EmbeddingConfigurator
 from crewai.utilities.logger import Logger
 from crewai.utilities.paths import db_storage_path
+from crewai.utilities.constants import KNOWLEDGE_DIRECTORY
 
 
 @contextlib.contextmanager
@@ -106,7 +107,7 @@ class KnowledgeStorage(BaseKnowledgeStorage):
             raise Exception("Failed to create or get collection")
 
     def reset(self):
-        base_path = os.path.join(db_storage_path(), "knowledge")
+        base_path = os.path.join(db_storage_path(), KNOWLEDGE_DIRECTORY)
         if not self.app:
             self.app = chromadb.PersistentClient(
                 path=base_path,
@@ -116,7 +117,7 @@ class KnowledgeStorage(BaseKnowledgeStorage):
         self.app.reset()
         self.app = None
         self.collection = None
-        self._remove_knowledge_storage_folders()
+        shutil.rmtree(base_path)
 
     def save(
         self,
@@ -183,7 +184,3 @@ class KnowledgeStorage(BaseKnowledgeStorage):
             if embedder_config
             else self._create_default_embedding_function()
         )
-
-    def _remove_knowledge_storage_folders(self):
-        base_path = os.path.join(db_storage_path(), "knowledge")
-        shutil.rmtree(base_path)
