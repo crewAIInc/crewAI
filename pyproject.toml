@@ -54,7 +54,7 @@ mem0 = ["mem0ai>=0.1.29"]
 
 [tool.uv]
 dev-dependencies = [
-    "ruff>=0.4.10",
+    "ruff>=0.8.2",
     "mypy>=1.10.0",
     "pre-commit>=3.6.0",
     "mkdocs>=1.4.3",
