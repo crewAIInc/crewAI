@@ -131,7 +131,7 @@ class LLM:
         self.api_version = api_version
         self.api_key = api_key
         self.callbacks = callbacks
-        self.context_window_size = None
+        self.context_window_size = 0
         self.kwargs = kwargs
 
         litellm.drop_params = True
@@ -199,7 +199,7 @@ class LLM:
 
     def get_context_window_size(self) -> int:
         # Only using 75% of the context window size to avoid cutting the message in the middle
-        if self.context_window_size is not None:
+        if self.context_window_size != 0:
             return self.context_window_size
 
         self.context_window_size = int(
