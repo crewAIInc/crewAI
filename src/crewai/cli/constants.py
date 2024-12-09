@@ -159,3 +159,6 @@ MODELS = {
 }
 
 JSON_URL = "https://raw.githubusercontent.com/BerriAI/litellm/main/model_prices_and_context_window.json"
+
+
+LITELLM_PARAMS = ["api_key", "api_base", "api_version"]

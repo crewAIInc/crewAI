@@ -1,5 +1,5 @@
-from typing import Dict, List
 from pathlib import Path
+from typing import Dict, List
 
 from crewai.knowledge.source.base_file_knowledge_source import BaseFileKnowledgeSource
 
@@ -9,12 +9,11 @@ class TextFileKnowledgeSource(BaseFileKnowledgeSource):
 
     def load_content(self) -> Dict[Path, str]:
         """Load and preprocess text file content."""
-        super().load_content()
-        paths = [self.file_path] if isinstance(self.file_path, Path) else self.file_path
         content = {}
-        for path in paths:
-            with path.open("r", encoding="utf-8") as f:
-                content[path] = f.read()  # type: ignore
+        for path in self.safe_file_paths:
+            path = self.convert_to_path(path)
+            with open(path, "r", encoding="utf-8") as f:
+                content[path] = f.read()
         return content
 
     def add(self) -> None:
@@ -25,7 +24,7 @@ class TextFileKnowledgeSource(BaseFileKnowledgeSource):
         for _, text in self.content.items():
             new_chunks = self._chunk_text(text)
             self.chunks.extend(new_chunks)
-        self.save_documents(metadata=self.metadata)
+        self._save_documents()
 
     def _chunk_text(self, text: str) -> List[str]:
         """Utility method to split text into chunks."""

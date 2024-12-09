@@ -1,5 +1,5 @@
-from typing import List, Dict
 from pathlib import Path
+from typing import Dict, List
 
 from crewai.knowledge.source.base_file_knowledge_source import BaseFileKnowledgeSource
 
@@ -9,14 +9,13 @@ class PDFKnowledgeSource(BaseFileKnowledgeSource):
 
     def load_content(self) -> Dict[Path, str]:
         """Load and preprocess PDF file content."""
-        super().load_content()  # Validate the file paths
         pdfplumber = self._import_pdfplumber()
 
-        paths = [self.file_path] if isinstance(self.file_path, Path) else self.file_path
         content = {}
 
-        for path in paths:
+        for path in self.safe_file_paths:
             text = ""
+            path = self.convert_to_path(path)
             with pdfplumber.open(path) as pdf:
                 for page in pdf.pages:
                     page_text = page.extract_text()
@@ -44,7 +43,7 @@ class PDFKnowledgeSource(BaseFileKnowledgeSource):
         for _, text in self.content.items():
             new_chunks = self._chunk_text(text)
             self.chunks.extend(new_chunks)
-        self.save_documents(metadata=self.metadata)
+        self._save_documents()
 
     def _chunk_text(self, text: str) -> List[str]:
         """Utility method to split text into chunks."""
