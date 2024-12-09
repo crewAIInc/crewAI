@@ -3,6 +3,7 @@ import hashlib
 import io
 import logging
 import os
+import shutil
 from typing import Any, Dict, List, Optional, Union, cast
 
 import chromadb
@@ -105,15 +106,17 @@ class KnowledgeStorage(BaseKnowledgeStorage):
             raise Exception("Failed to create or get collection")
 
     def reset(self):
-        if self.app:
-            self.app.reset()
-        else:
-            base_path = os.path.join(db_storage_path(), "knowledge")
+        base_path = os.path.join(db_storage_path(), "knowledge")
+        if not self.app:
             self.app = chromadb.PersistentClient(
                 path=base_path,
                 settings=Settings(allow_reset=True),
             )
-            self.app.reset()
+
+        self.app.reset()
+        self.app = None
+        self.collection = None
+        self._remove_knowledge_storage_folders()
 
     def save(
         self,
@@ -180,3 +183,7 @@ class KnowledgeStorage(BaseKnowledgeStorage):
             if embedder_config
             else self._create_default_embedding_function()
         )
+
+    def _remove_knowledge_storage_folders(self):
+        base_path = os.path.join(db_storage_path(), "knowledge")
+        shutil.rmtree(base_path)
