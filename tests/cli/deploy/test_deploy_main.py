@@ -224,21 +224,26 @@ class TestDeployCommand(unittest.TestCase):
         parsed = parse_toml(toml_content)
         self.assertEqual(parsed["tool"]["poetry"]["name"], "test_project")
 
+    @unittest.skipIf(
+        not (sys.version_info.major == 3 and sys.version_info.minor == 10),
+        "Requires Python 3.10",
+    )
     @patch(
         "builtins.open",
         new_callable=unittest.mock.mock_open,
         read_data="""
-    [project]
-    name = "test_project"
-    version = "0.1.0"
-    requires-python = ">=3.10,<=3.12"
-    dependencies = ["crewai"]
-    """,
+        [project]
+        name = "test_project"
+        version = "0.1.0"
+        requires-python = ">=3.10,<=3.12"
+        dependencies = ["crewai"]
+        """,
     )
     def test_get_project_name_python_310(self, mock_open):
         from crewai.cli.utils import get_project_name
 
         project_name = get_project_name()
+        print("project_name", project_name)
         self.assertEqual(project_name, "test_project")
 
     @unittest.skipIf(sys.version_info < (3, 11), "Requires Python 3.11+")
