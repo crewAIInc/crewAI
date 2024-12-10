@@ -167,8 +167,6 @@ class Flow(Generic[T], metaclass=FlowMeta):
     _routers: Dict[str, str] = {}
     _router_paths: Dict[str, List[str]] = {}
     initial_state: Union[Type[T], T, None] = None
-
-    # Define a single event emitter signal
     event_emitter = Signal("event_emitter")
 
     def __class_getitem__(cls: Type["Flow"], item: Type[T]) -> Type["Flow"]:
@@ -264,7 +262,6 @@ class Flow(Generic[T], metaclass=FlowMeta):
         Returns:
             The final output from the flow execution.
         """
-        # Emit flow_started event
         self.event_emitter.send(
             self,
             event=FlowStartedEvent(
@@ -306,7 +303,6 @@ class Flow(Generic[T], metaclass=FlowMeta):
         # Determine the final output (from the last executed method)
         final_output = self._method_outputs[-1] if self._method_outputs else None
 
-        # Emit flow_finished event
         self.event_emitter.send(
             self,
             event=FlowFinishedEvent(
@@ -380,7 +376,6 @@ class Flow(Generic[T], metaclass=FlowMeta):
         try:
             method = self._methods[listener_name]
 
-            # Emit method_execution_started event
             self.event_emitter.send(
                 self,
                 event=MethodExecutionStartedEvent(
@@ -405,7 +400,6 @@ class Flow(Generic[T], metaclass=FlowMeta):
                 # If listener does not expect parameters, call without arguments
                 listener_result = await self._execute_method(listener_name, method)
 
-            # Emit method_execution_finished event
             self.event_emitter.send(
                 self,
                 event=MethodExecutionFinishedEvent(

@@ -87,20 +87,15 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
             self.llm.stop = self.stop
 
     def invoke(self, inputs: Dict[str, str]) -> Dict[str, Any]:
-        print("prompt: ", self.prompt)
-        print("inputs: ", inputs)
         if "system" in self.prompt:
             system_prompt = self._format_prompt(self.prompt.get("system", ""), inputs)
-            print("system_prompt: ", system_prompt)
             user_prompt = self._format_prompt(self.prompt.get("user", ""), inputs)
-            print("user_prompt: ", user_prompt)
             self.messages.append(self._format_msg(system_prompt, role="system"))
             self.messages.append(self._format_msg(user_prompt))
         else:
             user_prompt = self._format_prompt(self.prompt.get("prompt", ""), inputs)
             self.messages.append(self._format_msg(user_prompt))
 
-        print("total messages at invoke: ", len(self.messages))
         self._show_start_logs()
 
         self.ask_for_human_input = bool(inputs.get("ask_for_human_input", False))
@@ -417,12 +412,7 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
             AgentFinish: The final output after incorporating human feedback.
         """
         while self.ask_for_human_input:
-            print("Messages at human feedback:")
-            for idx, message in enumerate(self.messages, start=1):
-                print(f"Message {idx}: {message}")
-            print("Total messages at human feedback: ", len(self.messages))
             human_feedback = self._ask_human_input(formatted_answer.output)
-            print("Human feedback: ", human_feedback)
 
             if self.crew and self.crew._train:
                 self._handle_crew_training_output(formatted_answer, human_feedback)
@@ -473,9 +463,6 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
                 self.ask_for_human_input = True
                 # Add human feedback to messages
                 self.messages.append(self._format_msg(f"Feedback: {human_feedback}"))
-                print("Messages after human feedback:")
-                for idx, message in enumerate(self.messages, start=1):
-                    print(f"Message {idx}: {message}")
                 # Invoke the loop again with updated messages
                 formatted_answer = self._invoke_loop()
 
