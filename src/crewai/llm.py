@@ -43,6 +43,10 @@ LLM_CONTEXT_WINDOW_SIZES = {
     "gpt-4-turbo": 128000,
     "o1-preview": 128000,
     "o1-mini": 128000,
+    # gemini
+    "gemini-1.5-pro": 2097152,
+    "gemini-1.5-flash": 1048576,
+    "gemini-1.5-flash-8b": 1048576,
     # deepseek
     "deepseek-chat": 128000,
     # groq
@@ -60,6 +64,9 @@ LLM_CONTEXT_WINDOW_SIZES = {
     "llama3-8b-8192": 8192,
     "mixtral-8x7b-32768": 32768,
 }
+
+DEFAULT_CONTEXT_WINDOW_SIZE = 8192
+CONTEXT_WINDOW_USAGE_RATIO = 0.75
 
 
 @contextmanager
@@ -124,6 +131,7 @@ class LLM:
         self.api_version = api_version
         self.api_key = api_key
         self.callbacks = callbacks
+        self.context_window_size = 0
         self.kwargs = kwargs
 
         litellm.drop_params = True
@@ -191,7 +199,16 @@ class LLM:
 
     def get_context_window_size(self) -> int:
         # Only using 75% of the context window size to avoid cutting the message in the middle
-        return int(LLM_CONTEXT_WINDOW_SIZES.get(self.model, 8192) * 0.75)
+        if self.context_window_size != 0:
+            return self.context_window_size
+
+        self.context_window_size = int(
+            DEFAULT_CONTEXT_WINDOW_SIZE * CONTEXT_WINDOW_USAGE_RATIO
+        )
+        for key, value in LLM_CONTEXT_WINDOW_SIZES.items():
+            if self.model.startswith(key):
+                self.context_window_size = int(value * CONTEXT_WINDOW_USAGE_RATIO)
+        return self.context_window_size
 
     def set_callbacks(self, callbacks: List[Any]):
         callback_types = [type(callback) for callback in callbacks]
