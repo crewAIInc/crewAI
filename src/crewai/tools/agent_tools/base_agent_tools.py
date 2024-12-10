@@ -45,14 +45,14 @@ class BaseAgentTool(BaseTool):
                 if available_agent.role.casefold().replace("\n", "") == agent_name
             ]
         except Exception as _:
-            return self.i18n.errors("agent_tool_unexsiting_coworker").format(
+            return self.i18n.errors("agent_tool_unexisting_coworker").format(
                 coworkers="\n".join(
                     [f"- {agent.role.casefold()}" for agent in self.agents]
                 )
             )
 
         if not agent:
-            return self.i18n.errors("agent_tool_unexsiting_coworker").format(
+            return self.i18n.errors("agent_tool_unexisting_coworker").format(
                 coworkers="\n".join(
                     [f"- {agent.role.casefold()}" for agent in self.agents]
                 )
