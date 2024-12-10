@@ -38,7 +38,7 @@ class BaseFileKnowledgeSource(BaseKnowledgeSource, ABC):
             if not path.exists():
                 self._logger.log(
                     "error",
-                    f"File not found: {path}. Try adding sources to the knowledge directory. If its inside the knowledge directory, use the relative path.",
+                    f"File not found: {path}. Try adding sources to the knowledge directory. If it's inside the knowledge directory, use the relative path.",
                     color="red",
                 )
                 raise FileNotFoundError(f"File not found: {path}")
