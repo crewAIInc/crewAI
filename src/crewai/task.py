@@ -280,6 +280,11 @@ class Task(BaseModel):
                 context = f"Previous attempt failed validation: {guardrail_result.error}\nPlease try again."
                 return self._execute_core(agent, context, tools)
 
+            # Ensure result is not None before assignment
+            if guardrail_result.result is None:
+                raise Exception(
+                    f"Task guardrail returned None as result. This is not allowed."
+                )
             result = guardrail_result.result
 
         pydantic_output, json_output = self._export_output(result)
