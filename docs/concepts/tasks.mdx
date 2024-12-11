@@ -608,6 +608,123 @@ While creating and executing tasks, certain validation mechanisms are in place t
 
 These validations help in maintaining the consistency and reliability of task executions within the crewAI framework.
 
+## Task Guardrails
+
+Task guardrails provide a powerful way to validate, transform, or filter task outputs before they are passed to the next task. Guardrails are optional functions that execute before the next task starts, allowing you to ensure that task outputs meet specific requirements or formats.
+
+### Basic Usage
+
+```python Code
+from typing import Tuple, Union
+from crewai import Task
+
+def validate_json_output(result: str) -> Tuple[bool, Union[dict, str]]:
+    """Validate that the output is valid JSON."""
+    try:
+        json_data = json.loads(result)
+        return (True, json_data)
+    except json.JSONDecodeError:
+        return (False, "Output must be valid JSON")
+
+task = Task(
+    description="Generate JSON data",
+    expected_output="Valid JSON object",
+    guardrail=validate_json_output
+)
+```
+
+### How Guardrails Work
+
+1. **Optional Attribute**: Guardrails are an optional attribute at the task level, allowing you to add validation only where needed.
+2. **Execution Timing**: The guardrail function is executed before the next task starts, ensuring valid data flow between tasks.
+3. **Return Format**: Guardrails must return a tuple of `(success, data)`:
+   - If `success` is `True`, `data` is the validated/transformed result
+   - If `success` is `False`, `data` is the error message
+4. **Result Routing**:
+   - On success (`True`), the result is automatically passed to the next task
+   - On failure (`False`), the error is sent back to the agent to generate a new answer
+
+### Common Use Cases
+
+#### Data Format Validation
+```python Code
+def validate_email_format(result: str) -> Tuple[bool, Union[str, str]]:
+    """Ensure the output contains a valid email address."""
+    import re
+    email_pattern = r'^[\w\.-]+@[\w\.-]+\.\w+$'
+    if re.match(email_pattern, result.strip()):
+        return (True, result.strip())
+    return (False, "Output must be a valid email address")
+```
+
+#### Content Filtering
+```python Code
+def filter_sensitive_info(result: str) -> Tuple[bool, Union[str, str]]:
+    """Remove or validate sensitive information."""
+    sensitive_patterns = ['SSN:', 'password:', 'secret:']
+    for pattern in sensitive_patterns:
+        if pattern.lower() in result.lower():
+            return (False, f"Output contains sensitive information ({pattern})")
+    return (True, result)
+```
+
+#### Data Transformation
+```python Code
+def normalize_phone_number(result: str) -> Tuple[bool, Union[str, str]]:
+    """Ensure phone numbers are in a consistent format."""
+    import re
+    digits = re.sub(r'\D', '', result)
+    if len(digits) == 10:
+        formatted = f"({digits[:3]}) {digits[3:6]}-{digits[6:]}"
+        return (True, formatted)
+    return (False, "Output must be a 10-digit phone number")
+```
+
+### Advanced Features
+
+#### Chaining Multiple Validations
+```python Code
+def chain_validations(*validators):
+    """Chain multiple validators together."""
+    def combined_validator(result):
+        for validator in validators:
+            success, data = validator(result)
+            if not success:
+                return (False, data)
+            result = data
+        return (True, result)
+    return combined_validator
+
+# Usage
+task = Task(
+    description="Get user contact info",
+    expected_output="Email and phone",
+    guardrail=chain_validations(
+        validate_email_format,
+        filter_sensitive_info
+    )
+)
+```
+
+#### Custom Retry Logic
+```python Code
+task = Task(
+    description="Generate data",
+    expected_output="Valid data",
+    guardrail=validate_data,
+    max_retries=5  # Override default retry limit
+)
+```
+
+#### Async Guardrails
+```python Code
+async def validate_with_external_service(result: str) -> Tuple[bool, Union[str, str]]:
+    """Validate data using an external service."""
+    # Example async validation
+    validation_result = await external_service.validate(result)
+    return (True, result) if validation_result.is_valid else (False, validation_result.error)
+```
+
 ## Creating Directories when Saving Files
 
 You can now specify if a task should create directories when saving its output to a file. This is particularly useful for organizing outputs and ensuring that file paths are correctly structured.
