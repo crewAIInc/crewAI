@@ -85,7 +85,7 @@ def test_install_success(mock_get, mock_subprocess_run):
         env=unittest.mock.ANY
     )
 
-    assert "Succesfully installed sample-tool" in output
+    assert "Successfully installed sample-tool" in output
 
 
 @patch("crewai.cli.plus_api.PlusAPI.get_tool")
