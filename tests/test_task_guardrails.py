@@ -3,7 +3,6 @@
 import pytest
 from unittest.mock import Mock
 
-from crewai.agents.agent_builder.base_agent import BaseAgent
 from crewai.task import Task
 from crewai.tasks.task_output import TaskOutput
 
