@@ -263,8 +263,146 @@ analysis_task = Task(
 )
 ```
 
+## Task Guardrails
+
+Task guardrails provide a way to validate and transform task outputs before they are passed to the next task. This feature helps ensure data quality and provides feedback to agents when their output doesn't meet specific criteria.
+
+### Using Task Guardrails
+
+To add a guardrail to a task, provide a validation function through the `guardrail` parameter:
+
+```python Code
+from typing import Tuple, Union, Dict, Any
+
+def validate_blog_content(result: str) -> Tuple[bool, Union[Dict[str, Any], str]]:
+    """Validate blog content meets requirements."""
+    try:
+        # Check word count
+        word_count = len(result.split())
+        if word_count > 200:
+            return (False, {
+                "error": "Blog content exceeds 200 words",
+                "code": "WORD_COUNT_ERROR",
+                "context": {"word_count": word_count}
+            })
+
+        # Additional validation logic here
+        return (True, result.strip())
+    except Exception as e:
+        return (False, {
+            "error": "Unexpected error during validation",
+            "code": "SYSTEM_ERROR"
+        })
+
+blog_task = Task(
+    description="Write a blog post about AI",
+    expected_output="A blog post under 200 words",
+    agent=blog_agent,
+    guardrail=validate_blog_content  # Add the guardrail function
+)
+```
+
+### Guardrail Function Requirements
+
+1. **Function Signature**:
+   - Must accept exactly one parameter (the task output)
+   - Should return a tuple of `(bool, Any)`
+   - Type hints are recommended but optional
+
+2. **Return Values**:
+   - Success: Return `(True, validated_result)`
+   - Failure: Return `(False, error_details)`
+
+### Error Handling Best Practices
+
+1. **Structured Error Responses**:
+```python Code
+def validate_with_context(result: str) -> Tuple[bool, Union[Dict[str, Any], str]]:
+    try:
+        # Main validation logic
+        validated_data = perform_validation(result)
+        return (True, validated_data)
+    except ValidationError as e:
+        return (False, {
+            "error": str(e),
+            "code": "VALIDATION_ERROR",
+            "context": {"input": result}
+        })
+    except Exception as e:
+        return (False, {
+            "error": "Unexpected error",
+            "code": "SYSTEM_ERROR"
+        })
+```
+
+2. **Error Categories**:
+   - Use specific error codes
+   - Include relevant context
+   - Provide actionable feedback
+
+3. **Validation Chain**:
+```python Code
+from typing import Any, Dict, List, Tuple, Union
+
+def complex_validation(result: str) -> Tuple[bool, Union[str, Dict[str, Any]]]:
+    """Chain multiple validation steps."""
+    # Step 1: Basic validation
+    if not result:
+        return (False, {"error": "Empty result", "code": "EMPTY_INPUT"})
+
+    # Step 2: Content validation
+    try:
+        validated = validate_content(result)
+        if not validated:
+            return (False, {"error": "Invalid content", "code": "CONTENT_ERROR"})
+
+        # Step 3: Format validation
+        formatted = format_output(validated)
+        return (True, formatted)
+    except Exception as e:
+        return (False, {
+            "error": str(e),
+            "code": "VALIDATION_ERROR",
+            "context": {"step": "content_validation"}
+        })
+```
+
+### Handling Guardrail Results
+
+When a guardrail returns `(False, error)`:
+1. The error is sent back to the agent
+2. The agent attempts to fix the issue
+3. The process repeats until:
+   - The guardrail returns `(True, result)`
+   - Maximum retries are reached
+
+Example with retry handling:
+```python Code
+from typing import Optional, Tuple, Union
+
+def validate_json_output(result: str) -> Tuple[bool, Union[Dict[str, Any], str]]:
+    """Validate and parse JSON output."""
+    try:
+        # Try to parse as JSON
+        data = json.loads(result)
+        return (True, data)
+    except json.JSONDecodeError as e:
+        return (False, {
+            "error": "Invalid JSON format",
+            "code": "JSON_ERROR",
+            "context": {"line": e.lineno, "column": e.colno}
+        })
+
+task = Task(
+    description="Generate a JSON report",
+    expected_output="A valid JSON object",
+    agent=analyst,
+    guardrail=validate_json_output,
+    max_retries=3  # Limit retry attempts
+)
+```
+
 ## Getting Structured Consistent Outputs from Tasks
-When you need to ensure that a task outputs a structured and consistent format, you can use the `output_pydantic` or `output_json` properties on a task. These properties allow you to define the expected output structure, making it easier to parse and utilize the results in your application. 
 
 <Note>
 It's also important to note that the output of the final task of a crew becomes the final output of the actual crew itself.
