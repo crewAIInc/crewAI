@@ -1,4 +1,5 @@
 import datetime
+import inspect
 import json
 import threading
 import uuid
@@ -123,6 +124,22 @@ class Task(BaseModel):
         default=0,
         description="Current number of retries"
     )
+
+    @field_validator("guardrail")
+    @classmethod
+    def validate_guardrail_function(cls, v: Optional[Callable]) -> Optional[Callable]:
+        """Validate that the guardrail function has the correct signature."""
+        if v is not None:
+            sig = inspect.signature(v)
+            if len(sig.parameters) != 1:
+                raise ValueError("Guardrail function must accept exactly one parameter")
+
+            # Check return annotation if present, but don't require it
+            return_annotation = sig.return_annotation
+            if return_annotation != inspect.Signature.empty:
+                if not (return_annotation == Tuple[bool, Any] or str(return_annotation) == 'Tuple[bool, Any]'):
+                    raise ValueError("If return type is annotated, it must be Tuple[bool, Any]")
+        return v
 
     _telemetry: Telemetry = PrivateAttr(default_factory=Telemetry)
     _execution_span: Optional[Span] = PrivateAttr(default=None)
