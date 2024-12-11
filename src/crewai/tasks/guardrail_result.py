@@ -6,7 +6,7 @@ the way task guardrails return their validation results.
 """
 
 from typing import Any, Optional, Tuple, Union
-from pydantic import BaseModel
+from pydantic import BaseModel, field_validator
 
 
 class GuardrailResult(BaseModel):
@@ -24,6 +24,17 @@ class GuardrailResult(BaseModel):
     success: bool
     result: Optional[Any] = None
     error: Optional[str] = None
+
+    @field_validator("result", "error")
+    @classmethod
+    def validate_result_error_exclusivity(cls, v: Any, info) -> Any:
+        values = info.data
+        if "success" in values:
+            if values["success"] and v and "error" in values and values["error"]:
+                raise ValueError("Cannot have both result and error when success is True")
+            if not values["success"] and v and "result" in values and values["result"]:
+                raise ValueError("Cannot have both result and error when success is False")
+        return v
 
     @classmethod
     def from_tuple(cls, result: Tuple[bool, Union[Any, str]]) -> "GuardrailResult":
