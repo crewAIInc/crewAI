@@ -1,5 +1,6 @@
 from litellm.integrations.custom_logger import CustomLogger
 from litellm.types.utils import Usage
+
 from crewai.agents.agent_builder.utilities.base_token_process import TokenProcess
 
 
@@ -11,7 +12,7 @@ class TokenCalcHandler(CustomLogger):
         if self.token_cost_process is None:
             return
 
-        usage : Usage = response_obj["usage"]
+        usage: Usage = response_obj["usage"]
         self.token_cost_process.sum_successful_requests(1)
         self.token_cost_process.sum_prompt_tokens(usage.prompt_tokens)
         self.token_cost_process.sum_completion_tokens(usage.completion_tokens)

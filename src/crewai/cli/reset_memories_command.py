@@ -1,11 +1,12 @@
 import subprocess
+
 import click
 
+from crewai.knowledge.storage.knowledge_storage import KnowledgeStorage
 from crewai.memory.entity.entity_memory import EntityMemory
 from crewai.memory.long_term.long_term_memory import LongTermMemory
 from crewai.memory.short_term.short_term_memory import ShortTermMemory
 from crewai.utilities.task_output_storage_handler import TaskOutputStorageHandler
-from crewai.knowledge.storage.knowledge_storage import KnowledgeStorage
 
 
 def reset_memories_command(
