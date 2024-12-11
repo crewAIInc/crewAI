@@ -283,7 +283,7 @@ class Task(BaseModel):
             # Ensure result is not None before assignment
             if guardrail_result.result is None:
                 raise Exception(
-                    f"Task guardrail returned None as result. This is not allowed."
+                    "Task guardrail returned None as result. This is not allowed."
                 )
             result = guardrail_result.result
 
