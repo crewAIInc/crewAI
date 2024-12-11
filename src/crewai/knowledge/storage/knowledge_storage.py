@@ -14,9 +14,9 @@ from chromadb.config import Settings
 
 from crewai.knowledge.storage.base_knowledge_storage import BaseKnowledgeStorage
 from crewai.utilities import EmbeddingConfigurator
+from crewai.utilities.constants import KNOWLEDGE_DIRECTORY
 from crewai.utilities.logger import Logger
 from crewai.utilities.paths import db_storage_path
-from crewai.utilities.constants import KNOWLEDGE_DIRECTORY
 
 
 @contextlib.contextmanager
