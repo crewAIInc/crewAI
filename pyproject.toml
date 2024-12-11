@@ -29,6 +29,7 @@ dependencies = [
     "chromadb>=0.5.18",
     "pdfplumber>=0.11.4",
     "openpyxl>=3.1.5",
+    "blinker>=1.9.0",
 ]
 
 [project.urls]
