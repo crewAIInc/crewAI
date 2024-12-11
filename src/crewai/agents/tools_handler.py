@@ -1,6 +1,6 @@
 from typing import Any, Optional, Union
 
-from ..tools.cache_tools import CacheTools
+from ..tools.cache_tools.cache_tools import CacheTools
 from ..tools.tool_calling import InstructorToolCalling, ToolCalling
 from .cache.cache_handler import CacheHandler
 

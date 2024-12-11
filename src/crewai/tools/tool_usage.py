@@ -6,14 +6,14 @@ from difflib import SequenceMatcher
 from textwrap import dedent
 from typing import Any, List, Union
 
+import crewai.utilities.events as events
 from crewai.agents.tools_handler import ToolsHandler
 from crewai.task import Task
 from crewai.telemetry import Telemetry
+from crewai.tools import BaseTool
 from crewai.tools.tool_calling import InstructorToolCalling, ToolCalling
 from crewai.tools.tool_usage_events import ToolUsageError, ToolUsageFinished
 from crewai.utilities import I18N, Converter, ConverterError, Printer
-import crewai.utilities.events as events
-
 
 agentops = None
 if os.environ.get("AGENTOPS_API_KEY"):
@@ -50,7 +50,7 @@ class ToolUsage:
     def __init__(
         self,
         tools_handler: ToolsHandler,
-        tools: List[Any],
+        tools: List[BaseTool],
         original_tools: List[Any],
         tools_description: str,
         tools_names: str,
@@ -299,19 +299,7 @@ class ToolUsage:
         """Render the tool name and description in plain text."""
         descriptions = []
         for tool in self.tools:
-            args = {
-                k: {k2: v2 for k2, v2 in v.items() if k2 in ["description", "type"]}
-                for k, v in tool.args.items()
-            }
-            descriptions.append(
-                "\n".join(
-                    [
-                        f"Tool Name: {tool.name.lower()}",
-                        f"Tool Description: {tool.description}",
-                        f"Tool Arguments: {args}",
-                    ]
-                )
-            )
+            descriptions.append(tool.description)
         return "\n--\n".join(descriptions)
 
     def _function_calling(self, tool_string: str):

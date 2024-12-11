@@ -1,17 +1,15 @@
 import base64
 import os
-import platform
 import subprocess
 import tempfile
 from pathlib import Path
-from netrc import netrc
-import stat
 
 import click
 from rich.console import Console
 
 from crewai.cli import git
 from crewai.cli.command import BaseCommand, PlusAPIMixin
+from crewai.cli.config import Settings
 from crewai.cli.utils import (
     get_project_description,
     get_project_name,
@@ -27,8 +25,6 @@ class ToolCommand(BaseCommand, PlusAPIMixin):
     """
     A class to handle tool repository related operations for CrewAI projects.
     """
-
-    BASE_URL = "https://app.crewai.com/pypi/"
 
     def __init__(self):
         BaseCommand.__init__(self)
@@ -121,7 +117,7 @@ class ToolCommand(BaseCommand, PlusAPIMixin):
 
         published_handle = publish_response.json()["handle"]
         console.print(
-            f"Succesfully published {published_handle} ({project_version}).\nInstall it in other projects with crewai tool install {published_handle}",
+            f"Successfully published {published_handle} ({project_version}).\nInstall it in other projects with crewai tool install {published_handle}",
             style="bold green",
         )
 
@@ -142,7 +138,7 @@ class ToolCommand(BaseCommand, PlusAPIMixin):
 
         self._add_package(get_response.json())
 
-        console.print(f"Succesfully installed {handle}", style="bold green")
+        console.print(f"Successfully installed {handle}", style="bold green")
 
     def login(self):
         login_response = self.plus_api_client.login_to_tool_repository()
@@ -155,39 +151,35 @@ class ToolCommand(BaseCommand, PlusAPIMixin):
             raise SystemExit
 
         login_response_json = login_response.json()
-        self._set_netrc_credentials(login_response_json["credential"])
+
+        settings = Settings()
+        settings.tool_repository_username = login_response_json["credential"]["username"]
+        settings.tool_repository_password = login_response_json["credential"]["password"]
+        settings.dump()
 
         console.print(
             "Successfully authenticated to the tool repository.", style="bold green"
         )
 
-    def _set_netrc_credentials(self, credentials, netrc_path=None):
-        if not netrc_path:
-            netrc_filename = "_netrc" if platform.system() == "Windows" else ".netrc"
-            netrc_path = Path.home() / netrc_filename
-            netrc_path.touch(mode=stat.S_IRUSR | stat.S_IWUSR, exist_ok=True)
-
-        netrc_instance = netrc(file=netrc_path)
-        netrc_instance.hosts["app.crewai.com"] = (credentials["username"], "", credentials["password"])
-
-        with open(netrc_path, 'w') as file:
-            file.write(str(netrc_instance))
-
-        console.print(f"Added credentials to {netrc_path}", style="bold green")
-
     def _add_package(self, tool_details):
         tool_handle = tool_details["handle"]
         repository_handle = tool_details["repository"]["handle"]
+        repository_url = tool_details["repository"]["url"]
+        index = f"{repository_handle}={repository_url}"
 
         add_package_command = [
             "uv",
             "add",
-            "--extra-index-url",
-            self.BASE_URL + repository_handle,
+            "--index",
+            index,
             tool_handle,
         ]
         add_package_result = subprocess.run(
-            add_package_command, capture_output=False, text=True, check=True
+            add_package_command,
+            capture_output=False,
+            env=self._build_env_with_credentials(repository_handle),
+            text=True,
+            check=True
         )
 
         if add_package_result.stderr:
@@ -206,3 +198,13 @@ class ToolCommand(BaseCommand, PlusAPIMixin):
                 "[bold yellow]Tip:[/bold yellow] Navigate to a different directory and try again."
             )
             raise SystemExit
+
+    def _build_env_with_credentials(self, repository_handle: str):
+        repository_handle = repository_handle.upper().replace("-", "_")
+        settings = Settings()
+
+        env = os.environ.copy()
+        env[f"UV_INDEX_{repository_handle}_USERNAME"] = str(settings.tool_repository_username or "")
+        env[f"UV_INDEX_{repository_handle}_PASSWORD"] = str(settings.tool_repository_password or "")
+
+        return env

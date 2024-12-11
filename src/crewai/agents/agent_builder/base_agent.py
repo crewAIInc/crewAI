@@ -18,6 +18,8 @@ from pydantic_core import PydanticCustomError
 from crewai.agents.agent_builder.utilities.base_token_process import TokenProcess
 from crewai.agents.cache.cache_handler import CacheHandler
 from crewai.agents.tools_handler import ToolsHandler
+from crewai.tools import BaseTool
+from crewai.tools.base_tool import Tool
 from crewai.utilities import I18N, Logger, RPMController
 from crewai.utilities.config import process_config
 
@@ -49,11 +51,11 @@ class BaseAgent(ABC, BaseModel):
 
 
     Methods:
-        execute_task(task: Any, context: Optional[str] = None, tools: Optional[List[Any]] = None) -> str:
+        execute_task(task: Any, context: Optional[str] = None, tools: Optional[List[BaseTool]] = None) -> str:
             Abstract method to execute a task.
         create_agent_executor(tools=None) -> None:
             Abstract method to create an agent executor.
-        _parse_tools(tools: List[Any]) -> List[Any]:
+        _parse_tools(tools: List[BaseTool]) -> List[Any]:
             Abstract method to parse tools.
         get_delegation_tools(agents: List["BaseAgent"]):
             Abstract method to set the agents task tools for handling delegation and question asking to other agents in crew.
@@ -134,6 +136,35 @@ class BaseAgent(ABC, BaseModel):
     def process_model_config(cls, values):
         return process_config(values, cls)
 
+    @field_validator("tools")
+    @classmethod
+    def validate_tools(cls, tools: List[Any]) -> List[BaseTool]:
+        """Validate and process the tools provided to the agent.
+
+        This method ensures that each tool is either an instance of BaseTool
+        or an object with 'name', 'func', and 'description' attributes. If the
+        tool meets these criteria, it is processed and added to the list of
+        tools. Otherwise, a ValueError is raised.
+        """
+        processed_tools = []
+        for tool in tools:
+            if isinstance(tool, BaseTool):
+                processed_tools.append(tool)
+            elif (
+                hasattr(tool, "name")
+                and hasattr(tool, "func")
+                and hasattr(tool, "description")
+            ):
+                # Tool has the required attributes, create a Tool instance
+                processed_tools.append(Tool.from_langchain(tool))
+            else:
+                raise ValueError(
+                    f"Invalid tool type: {type(tool)}. "
+                    "Tool must be an instance of BaseTool or "
+                    "an object with 'name', 'func', and 'description' attributes."
+                )
+        return processed_tools
+
     @model_validator(mode="after")
     def validate_and_set_attributes(self):
         # Validate required fields
@@ -188,7 +219,7 @@ class BaseAgent(ABC, BaseModel):
         self,
         task: Any,
         context: Optional[str] = None,
-        tools: Optional[List[Any]] = None,
+        tools: Optional[List[BaseTool]] = None,
     ) -> str:
         pass
 
@@ -197,11 +228,11 @@ class BaseAgent(ABC, BaseModel):
         pass
 
     @abstractmethod
-    def _parse_tools(self, tools: List[Any]) -> List[Any]:
+    def _parse_tools(self, tools: List[BaseTool]) -> List[BaseTool]:
         pass
 
     @abstractmethod
-    def get_delegation_tools(self, agents: List["BaseAgent"]) -> List[Any]:
+    def get_delegation_tools(self, agents: List["BaseAgent"]) -> List[BaseTool]:
         """Set the task tools that init BaseAgenTools class."""
         pass
 

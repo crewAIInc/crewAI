@@ -228,17 +228,18 @@ class TestDeployCommand(unittest.TestCase):
         "builtins.open",
         new_callable=unittest.mock.mock_open,
         read_data="""
-    [project]
-    name = "test_project"
-    version = "0.1.0"
-    requires-python = ">=3.10,<=3.13"
-    dependencies = ["crewai"]
-    """,
+        [project]
+        name = "test_project"
+        version = "0.1.0"
+        requires-python = ">=3.10,<=3.12"
+        dependencies = ["crewai"]
+        """,
     )
     def test_get_project_name_python_310(self, mock_open):
         from crewai.cli.utils import get_project_name
 
         project_name = get_project_name()
+        print("project_name", project_name)
         self.assertEqual(project_name, "test_project")
 
     @unittest.skipIf(sys.version_info < (3, 11), "Requires Python 3.11+")
@@ -249,7 +250,7 @@ class TestDeployCommand(unittest.TestCase):
     [project]
     name = "test_project"
     version = "0.1.0"
-    requires-python = ">=3.10,<=3.13"
+    requires-python = ">=3.10,<=3.12"
     dependencies = ["crewai"]
     """,
     )
@@ -260,6 +261,6 @@ class TestDeployCommand(unittest.TestCase):
         self.assertEqual(project_name, "test_project")
 
     def test_get_crewai_version(self):
-        from crewai.cli.utils import get_crewai_version
+        from crewai.cli.version import get_crewai_version
 
         assert isinstance(get_crewai_version(), str)

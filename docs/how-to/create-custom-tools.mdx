@@ -6,28 +6,27 @@ icon: hammer
 
 ## Creating and Utilizing Tools in CrewAI
 
-This guide provides detailed instructions on creating custom tools for the CrewAI framework and how to efficiently manage and utilize these tools, 
-incorporating the latest functionalities such as tool delegation, error handling, and dynamic tool calling. It also highlights the importance of collaboration tools, 
+This guide provides detailed instructions on creating custom tools for the CrewAI framework and how to efficiently manage and utilize these tools,
+incorporating the latest functionalities such as tool delegation, error handling, and dynamic tool calling. It also highlights the importance of collaboration tools,
 enabling agents to perform a wide range of actions.
-
-### Prerequisites
-
-Before creating your own tools, ensure you have the crewAI extra tools package installed:
-
-```bash
-pip install 'crewai[tools]'
-```
 
 ### Subclassing `BaseTool`
 
-To create a personalized tool, inherit from `BaseTool` and define the necessary attributes and the `_run` method.
+To create a personalized tool, inherit from `BaseTool` and define the necessary attributes, including the `args_schema` for input validation, and the `_run` method.
 
 ```python Code
-from crewai_tools import BaseTool
+from typing import Type
+from crewai.tools import BaseTool
+from pydantic import BaseModel, Field
+
+class MyToolInput(BaseModel):
+    """Input schema for MyCustomTool."""
+    argument: str = Field(..., description="Description of the argument.")
 
 class MyCustomTool(BaseTool):
     name: str = "Name of my tool"
     description: str = "What this tool does. It's vital for effective utilization."
+    args_schema: Type[BaseModel] = MyToolInput
 
     def _run(self, argument: str) -> str:
         # Your tool's logic here
@@ -40,7 +39,7 @@ Alternatively, you can use the tool decorator `@tool`. This approach allows you 
 offering a concise and efficient way to create specialized tools tailored to your needs.
 
 ```python Code
-from crewai_tools import tool
+from crewai.tools import tool
 
 @tool("Tool Name")
 def my_simple_tool(question: str) -> str:
@@ -66,5 +65,5 @@ def my_cache_strategy(arguments: dict, result: str) -> bool:
 cached_tool.cache_function = my_cache_strategy
 ```
 
-By adhering to these guidelines and incorporating new functionalities and collaboration tools into your tool creation and management processes, 
+By adhering to these guidelines and incorporating new functionalities and collaboration tools into your tool creation and management processes,
 you can leverage the full capabilities of the CrewAI framework, enhancing both the development experience and the efficiency of your AI agents.

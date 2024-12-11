@@ -6,16 +6,17 @@ import os
 from unittest.mock import MagicMock, patch
 
 import pytest
+from pydantic import BaseModel
+from pydantic_core import ValidationError
+
 from crewai import Agent, Crew, Process, Task
 from crewai.tasks.conditional_task import ConditionalTask
 from crewai.tasks.task_output import TaskOutput
 from crewai.utilities.converter import Converter
-from pydantic import BaseModel
-from pydantic_core import ValidationError
 
 
 def test_task_tool_reflect_agent_tools():
-    from crewai_tools import tool
+    from crewai.tools import tool
 
     @tool
     def fake_tool() -> None:
@@ -39,7 +40,7 @@ def test_task_tool_reflect_agent_tools():
 
 
 def test_task_tool_takes_precedence_over_agent_tools():
-    from crewai_tools import tool
+    from crewai.tools import tool
 
     @tool
     def fake_tool() -> None:
@@ -656,7 +657,7 @@ def test_increment_delegations_for_sequential_process():
 
 @pytest.mark.vcr(filter_headers=["authorization"])
 def test_increment_tool_errors():
-    from crewai_tools import tool
+    from crewai.tools import tool
 
     @tool
     def scoring_examples() -> None:

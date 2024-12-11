@@ -44,7 +44,7 @@ To get started with CrewAI, follow these simple steps:
 
 ### 1. Installation
 
-Ensure you have Python >=3.10 <=3.13 installed on your system. CrewAI uses [UV](https://docs.astral.sh/uv/) for dependency management and package handling, offering a seamless setup and execution experience.
+Ensure you have Python >=3.10 <=3.12 installed on your system. CrewAI uses [UV](https://docs.astral.sh/uv/) for dependency management and package handling, offering a seamless setup and execution experience.
 
 First, install CrewAI:
 
@@ -100,7 +100,7 @@ You can now start developing your crew by editing the files in the `src/my_proje
 
 #### Example of a simple crew with a sequential process:
 
-Instatiate your crew:
+Instantiate your crew:
 
 ```shell
 crewai create crew latest-ai-development
@@ -121,7 +121,7 @@ researcher:
     You're a seasoned researcher with a knack for uncovering the latest
     developments in {topic}. Known for your ability to find the most relevant
     information and present it in a clear and concise manner.
-      
+
 reporting_analyst:
   role: >
     {topic} Reporting Analyst
@@ -205,7 +205,7 @@ class LatestAiDevelopmentCrew():
 			tasks=self.tasks, # Automatically created by the @task decorator
 			process=Process.sequential,
 			verbose=True,
-		) 
+		)
 ```
 
 **main.py**
@@ -351,13 +351,13 @@ pre-commit install
 ### Running Tests
 
 ```bash
-uvx pytest
+uv run pytest .
 ```
 
 ### Running static type checks
 
 ```bash
-uvx mypy
+uvx mypy src
 ```
 
 ### Packaging
@@ -376,7 +376,7 @@ pip install dist/*.tar.gz
 
 CrewAI uses anonymous telemetry to collect usage data with the main purpose of helping us improve the library by focusing our efforts on the most used features, integrations and tools.
 
-It's pivotal to understand that **NO data is collected** concerning prompts, task descriptions, agents' backstories or goals, usage of tools, API calls, responses, any data processed by the agents, or secrets and environment variables, with the exception of the conditions mentioned. When the `share_crew` feature is enabled, detailed data including task descriptions, agents' backstories or goals, and other specific attributes are collected to provide deeper insights while respecting user privacy. We don't offer a way to disable it now, but we will in the future.
+It's pivotal to understand that **NO data is collected** concerning prompts, task descriptions, agents' backstories or goals, usage of tools, API calls, responses, any data processed by the agents, or secrets and environment variables, with the exception of the conditions mentioned. When the `share_crew` feature is enabled, detailed data including task descriptions, agents' backstories or goals, and other specific attributes are collected to provide deeper insights while respecting user privacy. Users can disable telemetry by setting the environment variable OTEL_SDK_DISABLED to true.
 
 Data collected includes:
 
@@ -399,7 +399,7 @@ Data collected includes:
 - Roles of agents in a crew
   - Understand high level use cases so we can build better tools, integrations and examples about it
 - Tools names available
-  - Understand out of the publically available tools, which ones are being used the most so we can improve them
+  - Understand out of the publicly available tools, which ones are being used the most so we can improve them
 
 Users can opt-in to Further Telemetry, sharing the complete telemetry data by setting the `share_crew` attribute to `True` on their Crews. Enabling `share_crew` results in the collection of detailed crew and task execution data, including `goal`, `backstory`, `context`, and `output` of tasks. This enables a deeper insight into usage patterns while respecting the user's choice to share.
 

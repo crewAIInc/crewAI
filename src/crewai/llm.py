@@ -1,7 +1,11 @@
+import logging
+import os
+import sys
+import threading
+import warnings
 from contextlib import contextmanager
 from typing import Any, Dict, List, Optional, Union
-import logging
-import warnings
+
 import litellm
 from litellm import get_supported_openai_params
 
@@ -9,20 +13,26 @@ from crewai.utilities.exceptions.context_window_exceeding_exception import (
     LLMContextLengthExceededException,
 )
 
-import sys
-import io
 
+class FilteredStream:
+    def __init__(self, original_stream):
+        self._original_stream = original_stream
+        self._lock = threading.Lock()
 
-class FilteredStream(io.StringIO):
-    def write(self, s):
-        if (
-            "Give Feedback / Get Help: https://github.com/BerriAI/litellm/issues/new"
-            in s
-            or "LiteLLM.Info: If you need to debug this error, use `litellm.set_verbose=True`"
-            in s
-        ):
-            return
-        super().write(s)
+    def write(self, s) -> int:
+        with self._lock:
+            if (
+                "Give Feedback / Get Help: https://github.com/BerriAI/litellm/issues/new"
+                in s
+                or "LiteLLM.Info: If you need to debug this error, use `litellm.set_verbose=True`"
+                in s
+            ):
+                return 0
+            return self._original_stream.write(s)
+
+    def flush(self):
+        with self._lock:
+            return self._original_stream.flush()
 
 
 LLM_CONTEXT_WINDOW_SIZES = {
@@ -33,6 +43,10 @@ LLM_CONTEXT_WINDOW_SIZES = {
     "gpt-4-turbo": 128000,
     "o1-preview": 128000,
     "o1-mini": 128000,
+    # gemini
+    "gemini-1.5-pro": 2097152,
+    "gemini-1.5-flash": 1048576,
+    "gemini-1.5-flash-8b": 1048576,
     # deepseek
     "deepseek-chat": 128000,
     # groq
@@ -51,6 +65,9 @@ LLM_CONTEXT_WINDOW_SIZES = {
     "mixtral-8x7b-32768": 32768,
 }
 
+DEFAULT_CONTEXT_WINDOW_SIZE = 8192
+CONTEXT_WINDOW_USAGE_RATIO = 0.75
+
 
 @contextmanager
 def suppress_warnings():
@@ -60,8 +77,8 @@ def suppress_warnings():
         # Redirect stdout and stderr
         old_stdout = sys.stdout
         old_stderr = sys.stderr
-        sys.stdout = FilteredStream()
-        sys.stderr = FilteredStream()
+        sys.stdout = FilteredStream(old_stdout)
+        sys.stderr = FilteredStream(old_stderr)
 
         try:
             yield
@@ -114,16 +131,18 @@ class LLM:
         self.api_version = api_version
         self.api_key = api_key
         self.callbacks = callbacks
+        self.context_window_size = 0
         self.kwargs = kwargs
 
         litellm.drop_params = True
         litellm.set_verbose = False
-        litellm.callbacks = callbacks
+        self.set_callbacks(callbacks)
+        self.set_env_callbacks()
 
     def call(self, messages: List[Dict[str, str]], callbacks: List[Any] = []) -> str:
         with suppress_warnings():
             if callbacks and len(callbacks) > 0:
-                litellm.callbacks = callbacks
+                self.set_callbacks(callbacks)
 
             try:
                 params = {
@@ -180,4 +199,61 @@ class LLM:
 
     def get_context_window_size(self) -> int:
         # Only using 75% of the context window size to avoid cutting the message in the middle
-        return int(LLM_CONTEXT_WINDOW_SIZES.get(self.model, 8192) * 0.75)
+        if self.context_window_size != 0:
+            return self.context_window_size
+
+        self.context_window_size = int(
+            DEFAULT_CONTEXT_WINDOW_SIZE * CONTEXT_WINDOW_USAGE_RATIO
+        )
+        for key, value in LLM_CONTEXT_WINDOW_SIZES.items():
+            if self.model.startswith(key):
+                self.context_window_size = int(value * CONTEXT_WINDOW_USAGE_RATIO)
+        return self.context_window_size
+
+    def set_callbacks(self, callbacks: List[Any]):
+        callback_types = [type(callback) for callback in callbacks]
+        for callback in litellm.success_callback[:]:
+            if type(callback) in callback_types:
+                litellm.success_callback.remove(callback)
+
+        for callback in litellm._async_success_callback[:]:
+            if type(callback) in callback_types:
+                litellm._async_success_callback.remove(callback)
+
+        litellm.callbacks = callbacks
+
+    def set_env_callbacks(self):
+        """
+        Sets the success and failure callbacks for the LiteLLM library from environment variables.
+
+        This method reads the `LITELLM_SUCCESS_CALLBACKS` and `LITELLM_FAILURE_CALLBACKS`
+        environment variables, which should contain comma-separated lists of callback names.
+        It then assigns these lists to `litellm.success_callback` and `litellm.failure_callback`,
+        respectively.
+
+        If the environment variables are not set or are empty, the corresponding callback lists
+        will be set to empty lists.
+
+        Example:
+            LITELLM_SUCCESS_CALLBACKS="langfuse,langsmith"
+            LITELLM_FAILURE_CALLBACKS="langfuse"
+
+        This will set `litellm.success_callback` to ["langfuse", "langsmith"] and
+        `litellm.failure_callback` to ["langfuse"].
+        """
+        success_callbacks_str = os.environ.get("LITELLM_SUCCESS_CALLBACKS", "")
+        success_callbacks = []
+        if success_callbacks_str:
+            success_callbacks = [
+                callback.strip() for callback in success_callbacks_str.split(",")
+            ]
+
+        failure_callbacks_str = os.environ.get("LITELLM_FAILURE_CALLBACKS", "")
+        failure_callbacks = []
+        if failure_callbacks_str:
+            failure_callbacks = [
+                callback.strip() for callback in failure_callbacks_str.split(",")
+            ]
+
+        litellm.success_callback = success_callbacks
+        litellm.failure_callback = failure_callbacks

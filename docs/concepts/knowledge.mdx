@@ -1,0 +1,319 @@
+---
+title: Knowledge
+description: What is knowledge in CrewAI and how to use it.
+icon: book
+---
+
+# Using Knowledge in CrewAI
+
+## What is Knowledge?
+
+Knowledge in CrewAI is a powerful system that allows AI agents to access and utilize external information sources during their tasks.
+Think of it as giving your agents a reference library they can consult while working.
+
+<Info>
+  Key benefits of using Knowledge:
+  - Enhance agents with domain-specific information
+  - Support decisions with real-world data
+  - Maintain context across conversations
+  - Ground responses in factual information
+</Info>
+
+## Supported Knowledge Sources
+
+CrewAI supports various types of knowledge sources out of the box:
+
+<CardGroup cols={2}>
+  <Card title="Text Sources" icon="text">
+    - Raw strings
+    - Text files (.txt)
+    - PDF documents
+  </Card>
+  <Card title="Structured Data" icon="table">
+    - CSV files
+    - Excel spreadsheets
+    - JSON documents
+  </Card>
+</CardGroup>
+
+## Quick Start
+
+Here's an example using string-based knowledge:
+
+```python Code
+from crewai import Agent, Task, Crew, Process, LLM
+from crewai.knowledge.source.string_knowledge_source import StringKnowledgeSource
+
+# Create a knowledge source
+content = "Users name is John. He is 30 years old and lives in San Francisco."
+string_source = StringKnowledgeSource(
+    content=content,
+)
+
+# Create an LLM with a temperature of 0 to ensure deterministic outputs
+llm = LLM(model="gpt-4o-mini", temperature=0)
+
+# Create an agent with the knowledge store
+agent = Agent(
+    role="About User",
+    goal="You know everything about the user.",
+    backstory="""You are a master at understanding people and their preferences.""",
+    verbose=True,
+    allow_delegation=False,
+    llm=llm,
+)
+task = Task(
+    description="Answer the following questions about the user: {question}",
+    expected_output="An answer to the question.",
+    agent=agent,
+)
+
+crew = Crew(
+    agents=[agent],
+    tasks=[task],
+    verbose=True,
+    process=Process.sequential,
+    knowledge_sources=[string_source], # Enable knowledge by adding the sources here. You can also add more sources to the sources list.
+)
+
+result = crew.kickoff(inputs={"question": "What city does John live in and how old is he?"})
+```
+
+## Knowledge Configuration
+
+### Chunking Configuration
+
+Control how content is split for processing by setting the chunk size and overlap.
+
+```python Code
+knowledge_source = StringKnowledgeSource(
+    content="Long content...",
+    chunk_size=4000,     # Characters per chunk (default)
+    chunk_overlap=200    # Overlap between chunks (default)
+)
+```
+
+## Embedder Configuration
+
+You can also configure the embedder for the knowledge store. This is useful if you want to use a different embedder for the knowledge store than the one used for the agents.
+
+```python Code
+...
+string_source = StringKnowledgeSource(
+    content="Users name is John. He is 30 years old and lives in San Francisco.",
+)
+crew = Crew(
+    ...
+    knowledge_sources=[string_source],
+    embedder={
+        "provider": "openai",
+        "config": {"model": "text-embedding-3-small"},
+    },
+)
+```
+
+## Clearing Knowledge
+
+If you need to clear the knowledge stored in CrewAI, you can use the `crewai reset-memories` command with the `--knowledge` option.
+
+```bash Command
+crewai reset-memories --knowledge
+```
+
+This is useful when you've updated your knowledge sources and want to ensure that the agents are using the most recent information.
+
+## Custom Knowledge Sources
+
+CrewAI allows you to create custom knowledge sources for any type of data by extending the `BaseKnowledgeSource` class. Let's create a practical example that fetches and processes space news articles.
+
+#### Space News Knowledge Source Example
+
+<CodeGroup>
+
+```python Code
+from crewai import Agent, Task, Crew, Process, LLM
+from crewai.knowledge.source.base_knowledge_source import BaseKnowledgeSource
+import requests
+from datetime import datetime
+from typing import Dict, Any
+from pydantic import BaseModel, Field
+
+class SpaceNewsKnowledgeSource(BaseKnowledgeSource):
+    """Knowledge source that fetches data from Space News API."""
+
+    api_endpoint: str = Field(description="API endpoint URL")
+    limit: int = Field(default=10, description="Number of articles to fetch")
+
+    def load_content(self) -> Dict[Any, str]:
+        """Fetch and format space news articles."""
+        try:
+            response = requests.get(
+                f"{self.api_endpoint}?limit={self.limit}"
+            )
+            response.raise_for_status()
+
+            data = response.json()
+            articles = data.get('results', [])
+
+            formatted_data = self._format_articles(articles)
+            return {self.api_endpoint: formatted_data}
+        except Exception as e:
+            raise ValueError(f"Failed to fetch space news: {str(e)}")
+
+    def _format_articles(self, articles: list) -> str:
+        """Format articles into readable text."""
+        formatted = "Space News Articles:\n\n"
+        for article in articles:
+            formatted += f"""
+                Title: {article['title']}
+                Published: {article['published_at']}
+                Summary: {article['summary']}
+                News Site: {article['news_site']}
+                URL: {article['url']}
+                -------------------"""
+        return formatted
+
+    def add(self) -> None:
+        """Process and store the articles."""
+        content = self.load_content()
+        for _, text in content.items():
+            chunks = self._chunk_text(text)
+            self.chunks.extend(chunks)
+
+        self._save_documents()
+
+# Create knowledge source
+recent_news = SpaceNewsKnowledgeSource(
+    api_endpoint="https://api.spaceflightnewsapi.net/v4/articles",
+    limit=10,
+)
+
+# Create specialized agent
+space_analyst = Agent(
+    role="Space News Analyst",
+    goal="Answer questions about space news accurately and comprehensively",
+    backstory="""You are a space industry analyst with expertise in space exploration,
+    satellite technology, and space industry trends. You excel at answering questions
+    about space news and providing detailed, accurate information.""",
+    knowledge_sources=[recent_news],
+    llm=LLM(model="gpt-4", temperature=0.0)
+)
+
+# Create task that handles user questions
+analysis_task = Task(
+    description="Answer this question about space news: {user_question}",
+    expected_output="A detailed answer based on the recent space news articles",
+    agent=space_analyst
+)
+
+# Create and run the crew
+crew = Crew(
+    agents=[space_analyst],
+    tasks=[analysis_task],
+    verbose=True,
+    process=Process.sequential
+)
+
+# Example usage
+result = crew.kickoff(
+    inputs={"user_question": "What are the latest developments in space exploration?"}
+)
+```
+
+```output Output
+# Agent: Space News Analyst
+## Task: Answer this question about space news: What are the latest developments in space exploration?
+
+
+# Agent: Space News Analyst
+## Final Answer:
+The latest developments in space exploration, based on recent space news articles, include the following:
+
+1. SpaceX has received the final regulatory approvals to proceed with the second integrated Starship/Super Heavy launch, scheduled for as soon as the morning of Nov. 17, 2023. This is a significant step in SpaceX's ambitious plans for space exploration and colonization. [Source: SpaceNews](https://spacenews.com/starship-cleared-for-nov-17-launch/)
+
+2. SpaceX has also informed the US Federal Communications Commission (FCC) that it plans to begin launching its first next-generation Starlink Gen2 satellites. This represents a major upgrade to the Starlink satellite internet service, which aims to provide high-speed internet access worldwide. [Source: Teslarati](https://www.teslarati.com/spacex-first-starlink-gen2-satellite-launch-2022/)
+
+3. AI startup Synthetaic has raised $15 million in Series B funding. The company uses artificial intelligence to analyze data from space and air sensors, which could have significant applications in space exploration and satellite technology. [Source: SpaceNews](https://spacenews.com/ai-startup-synthetaic-raises-15-million-in-series-b-funding/)
+
+4. The Space Force has formally established a unit within the U.S. Indo-Pacific Command, marking a permanent presence in the Indo-Pacific region. This could have significant implications for space security and geopolitics. [Source: SpaceNews](https://spacenews.com/space-force-establishes-permanent-presence-in-indo-pacific-region/)
+
+5. Slingshot Aerospace, a space tracking and data analytics company, is expanding its network of ground-based optical telescopes to increase coverage of low Earth orbit. This could improve our ability to track and analyze objects in low Earth orbit, including satellites and space debris. [Source: SpaceNews](https://spacenews.com/slingshots-space-tracking-network-to-extend-coverage-of-low-earth-orbit/)
+
+6. The National Natural Science Foundation of China has outlined a five-year project for researchers to study the assembly of ultra-large spacecraft. This could lead to significant advancements in spacecraft technology and space exploration capabilities. [Source: SpaceNews](https://spacenews.com/china-researching-challenges-of-kilometer-scale-ultra-large-spacecraft/)
+
+7. The Center for AEroSpace Autonomy Research (CAESAR) at Stanford University is focusing on spacecraft autonomy. The center held a kickoff event on May 22, 2024, to highlight the industry, academia, and government collaboration it seeks to foster. This could lead to significant advancements in autonomous spacecraft technology. [Source: SpaceNews](https://spacenews.com/stanford-center-focuses-on-spacecraft-autonomy/)
+```
+
+</CodeGroup>
+#### Key Components Explained
+
+1. **Custom Knowledge Source (`SpaceNewsKnowledgeSource`)**:
+
+   - Extends `BaseKnowledgeSource` for integration with CrewAI
+   - Configurable API endpoint and article limit
+   - Implements three key methods:
+     - `load_content()`: Fetches articles from the API
+     - `_format_articles()`: Structures the articles into readable text
+     - `add()`: Processes and stores the content
+
+2. **Agent Configuration**:
+
+   - Specialized role as a Space News Analyst
+   - Uses the knowledge source to access space news
+
+3. **Task Setup**:
+
+   - Takes a user question as input through `{user_question}`
+   - Designed to provide detailed answers based on the knowledge source
+
+4. **Crew Orchestration**:
+   - Manages the workflow between agent and task
+   - Handles input/output through the kickoff method
+
+This example demonstrates how to:
+
+- Create a custom knowledge source that fetches real-time data
+- Process and format external data for AI consumption
+- Use the knowledge source to answer specific user questions
+- Integrate everything seamlessly with CrewAI's agent system
+
+#### About the Spaceflight News API
+
+The example uses the [Spaceflight News API](https://api.spaceflightnewsapi.net/v4/docs/), which:
+
+- Provides free access to space-related news articles
+- Requires no authentication
+- Returns structured data about space news
+- Supports pagination and filtering
+
+You can customize the API query by modifying the endpoint URL:
+
+```python
+# Fetch more articles
+recent_news = SpaceNewsKnowledgeSource(
+    api_endpoint="https://api.spaceflightnewsapi.net/v4/articles",
+    limit=20,  # Increase the number of articles
+)
+
+# Add search parameters
+recent_news = SpaceNewsKnowledgeSource(
+    api_endpoint="https://api.spaceflightnewsapi.net/v4/articles?search=NASA", # Search for NASA news
+    limit=10,
+)
+```
+
+## Best Practices
+
+<AccordionGroup>
+  <Accordion title="Content Organization">
+    - Keep chunk sizes appropriate for your content type
+    - Consider content overlap for context preservation
+    - Organize related information into separate knowledge sources
+  </Accordion>
+
+  <Accordion title="Performance Tips">
+    - Adjust chunk sizes based on content complexity 
+    - Configure appropriate embedding models
+    - Consider using local embedding providers for faster processing
+  </Accordion>
+</AccordionGroup>

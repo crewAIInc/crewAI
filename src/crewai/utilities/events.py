@@ -1,7 +1,7 @@
-from typing import Any, Callable, Generic, List, Dict, Type, TypeVar
 from functools import wraps
-from pydantic import BaseModel
+from typing import Any, Callable, Dict, Generic, List, Type, TypeVar
 
+from pydantic import BaseModel
 
 T = TypeVar("T")
 EVT = TypeVar("EVT", bound=BaseModel)

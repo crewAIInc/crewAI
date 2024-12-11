@@ -2,6 +2,7 @@ import unittest
 from unittest.mock import MagicMock, patch
 
 import requests
+
 from crewai.cli.authentication.main import AuthenticationCommand
 
 
@@ -43,10 +44,13 @@ class TestAuthenticationCommand(unittest.TestCase):
         mock_print.assert_any_call("2. Enter the following code: ", "ABCDEF")
         mock_open.assert_called_once_with("https://example.com")
 
+    @patch("crewai.cli.authentication.main.ToolCommand")
     @patch("crewai.cli.authentication.main.requests.post")
     @patch("crewai.cli.authentication.main.validate_token")
     @patch("crewai.cli.authentication.main.console.print")
-    def test_poll_for_token_success(self, mock_print, mock_validate_token, mock_post):
+    def test_poll_for_token_success(
+        self, mock_print, mock_validate_token, mock_post, mock_tool
+    ):
         mock_response = MagicMock()
         mock_response.status_code = 200
         mock_response.json.return_value = {
@@ -55,10 +59,15 @@ class TestAuthenticationCommand(unittest.TestCase):
         }
         mock_post.return_value = mock_response
 
+        mock_instance = mock_tool.return_value
+        mock_instance.login.return_value = None
+
         self.auth_command._poll_for_token({"device_code": "123456"})
 
         mock_validate_token.assert_called_once_with("TOKEN")
-        mock_print.assert_called_once_with("\nWelcome to CrewAI+ !!", style="green")
+        mock_print.assert_called_once_with(
+            "\n[bold green]Welcome to CrewAI Enterprise![/bold green]\n"
+        )
 
     @patch("crewai.cli.authentication.main.requests.post")
     @patch("crewai.cli.authentication.main.console.print")

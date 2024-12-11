@@ -1,17 +1,25 @@
 import os
-from inspect import signature
-from typing import Any, List, Optional, Union
+import shutil
+import subprocess
+from typing import Any, Dict, List, Literal, Optional, Union
 
 from pydantic import Field, InstanceOf, PrivateAttr, model_validator
 
 from crewai.agents import CacheHandler
 from crewai.agents.agent_builder.base_agent import BaseAgent
 from crewai.agents.crew_agent_executor import CrewAgentExecutor
+from crewai.cli.constants import ENV_VARS, LITELLM_PARAMS
+from crewai.knowledge.knowledge import Knowledge
+from crewai.knowledge.source.base_knowledge_source import BaseKnowledgeSource
+from crewai.knowledge.utils.knowledge_utils import extract_knowledge_context
 from crewai.llm import LLM
 from crewai.memory.contextual.contextual_memory import ContextualMemory
-from crewai.tools.agent_tools import AgentTools
+from crewai.task import Task
+from crewai.tools import BaseTool
+from crewai.tools.agent_tools.agent_tools import AgentTools
 from crewai.utilities import Converter, Prompts
 from crewai.utilities.constants import TRAINED_AGENTS_DATA_FILE, TRAINING_DATA_FILE
+from crewai.utilities.converter import generate_model_description
 from crewai.utilities.token_counter_callback import TokenCalcHandler
 from crewai.utilities.training_handler import CrewTrainingHandler
 
@@ -49,6 +57,7 @@ class Agent(BaseAgent):
             role: The role of the agent.
             goal: The objective of the agent.
             backstory: The backstory of the agent.
+            knowledge: The knowledge base of the agent.
             config: Dict representation of agent configuration.
             llm: The language model that will run the agent.
             function_calling_llm: The language model that will handle the tool calling for this agent, it overrides the crew function_calling_llm.
@@ -59,6 +68,7 @@ class Agent(BaseAgent):
             allow_delegation: Whether the agent is allowed to delegate tasks to other agents.
             tools: Tools at agents disposal
             step_callback: Callback to be executed after each step of the agent execution.
+            knowledge_sources: Knowledge sources for the agent.
     """
 
     _times_executed: int = PrivateAttr(default=0)
@@ -112,10 +122,31 @@ class Agent(BaseAgent):
         default=2,
         description="Maximum number of retries for an agent to execute a task when an error occurs.",
     )
+    code_execution_mode: Literal["safe", "unsafe"] = Field(
+        default="safe",
+        description="Mode for code execution: 'safe' (using Docker) or 'unsafe' (direct execution).",
+    )
+    embedder_config: Optional[Dict[str, Any]] = Field(
+        default=None,
+        description="Embedder configuration for the agent.",
+    )
+    knowledge_sources: Optional[List[BaseKnowledgeSource]] = Field(
+        default=None,
+        description="Knowledge sources for the agent.",
+    )
+    _knowledge: Optional[Knowledge] = PrivateAttr(
+        default=None,
+    )
 
     @model_validator(mode="after")
     def post_init_setup(self):
+        self._set_knowledge()
         self.agent_ops_agent_name = self.role
+        unaccepted_attributes = [
+            "AWS_ACCESS_KEY_ID",
+            "AWS_SECRET_ACCESS_KEY",
+            "AWS_REGION_NAME",
+        ]
 
         # Handle different cases for self.llm
         if isinstance(self.llm, str):
@@ -125,8 +156,12 @@ class Agent(BaseAgent):
             # If it's already an LLM instance, keep it as is
             pass
         elif self.llm is None:
-            # If it's None, use environment variables or default
-            model_name = os.environ.get("OPENAI_MODEL_NAME", "gpt-4o-mini")
+            # Determine the model name from environment variables or use default
+            model_name = (
+                os.environ.get("OPENAI_MODEL_NAME")
+                or os.environ.get("MODEL")
+                or "gpt-4o-mini"
+            )
             llm_params = {"model": model_name}
 
             api_base = os.environ.get("OPENAI_API_BASE") or os.environ.get(
@@ -135,9 +170,30 @@ class Agent(BaseAgent):
             if api_base:
                 llm_params["base_url"] = api_base
 
-            api_key = os.environ.get("OPENAI_API_KEY")
-            if api_key:
-                llm_params["api_key"] = api_key
+            set_provider = model_name.split("/")[0] if "/" in model_name else "openai"
+
+            # Iterate over all environment variables to find matching API keys or use defaults
+            for provider, env_vars in ENV_VARS.items():
+                if provider == set_provider:
+                    for env_var in env_vars:
+                        # Check if the environment variable is set
+                        key_name = env_var.get("key_name")
+                        if key_name and key_name not in unaccepted_attributes:
+                            env_value = os.environ.get(key_name)
+                            if env_value:
+                                key_name = key_name.lower()
+                                for pattern in LITELLM_PARAMS:
+                                    if pattern in key_name:
+                                        key_name = pattern
+                                        break
+                                llm_params[key_name] = env_value
+                        # Check for default values if the environment variable is not set
+                        elif env_var.get("default", False):
+                            for key, value in env_var.items():
+                                if key not in ["prompt", "key_name", "default"]:
+                                    # Only add default if the key is already set in os.environ
+                                    if key in os.environ:
+                                        llm_params[key] = value
 
             self.llm = LLM(**llm_params)
         else:
@@ -173,6 +229,9 @@ class Agent(BaseAgent):
         if not self.agent_executor:
             self._setup_agent_executor()
 
+        if self.allow_code_execution:
+            self._validate_docker_installation()
+
         return self
 
     def _setup_agent_executor(self):
@@ -180,11 +239,26 @@ class Agent(BaseAgent):
             self.cache_handler = CacheHandler()
         self.set_cache_handler(self.cache_handler)
 
+    def _set_knowledge(self):
+        try:
+            if self.knowledge_sources:
+                knowledge_agent_name = f"{self.role.replace(' ', '_')}"
+                if isinstance(self.knowledge_sources, list) and all(
+                    isinstance(k, BaseKnowledgeSource) for k in self.knowledge_sources
+                ):
+                    self._knowledge = Knowledge(
+                        sources=self.knowledge_sources,
+                        embedder_config=self.embedder_config,
+                        collection_name=knowledge_agent_name,
+                    )
+        except (TypeError, ValueError) as e:
+            raise ValueError(f"Invalid Knowledge Configuration: {str(e)}")
+
     def execute_task(
         self,
-        task: Any,
+        task: Task,
         context: Optional[str] = None,
-        tools: Optional[List[Any]] = None,
+        tools: Optional[List[BaseTool]] = None,
     ) -> str:
         """Execute a task with the agent.
 
@@ -201,6 +275,22 @@ class Agent(BaseAgent):
 
         task_prompt = task.prompt()
 
+        # If the task requires output in JSON or Pydantic format,
+        # append specific instructions to the task prompt to ensure
+        # that the final answer does not include any code block markers
+        if task.output_json or task.output_pydantic:
+            # Generate the schema based on the output format
+            if task.output_json:
+                # schema = json.dumps(task.output_json, indent=2)
+                schema = generate_model_description(task.output_json)
+
+            elif task.output_pydantic:
+                schema = generate_model_description(task.output_pydantic)
+
+            task_prompt += "\n" + self.i18n.slice("formatted_task_instructions").format(
+                output_format=schema
+            )
+
         if context:
             task_prompt = self.i18n.slice("task_with_context").format(
                 task=task_prompt, context=context
@@ -208,13 +298,31 @@ class Agent(BaseAgent):
 
         if self.crew and self.crew.memory:
             contextual_memory = ContextualMemory(
+                self.crew.memory_config,
                 self.crew._short_term_memory,
                 self.crew._long_term_memory,
                 self.crew._entity_memory,
+                self.crew._user_memory,
             )
             memory = contextual_memory.build_context_for_task(task, context)
             if memory.strip() != "":
                 task_prompt += self.i18n.slice("memory").format(memory=memory)
+
+        if self._knowledge:
+            agent_knowledge_snippets = self._knowledge.query([task.prompt()])
+            if agent_knowledge_snippets:
+                agent_knowledge_context = extract_knowledge_context(
+                    agent_knowledge_snippets
+                )
+                if agent_knowledge_context:
+                    task_prompt += agent_knowledge_context
+
+        if self.crew:
+            knowledge_snippets = self.crew.query_knowledge([task.prompt()])
+            if knowledge_snippets:
+                crew_knowledge_context = extract_knowledge_context(knowledge_snippets)
+                if crew_knowledge_context:
+                    task_prompt += crew_knowledge_context
 
         tools = tools or self.tools or []
         self.create_agent_executor(tools=tools, task=task)
@@ -251,7 +359,9 @@ class Agent(BaseAgent):
 
         return result
 
-    def create_agent_executor(self, tools=None, task=None) -> None:
+    def create_agent_executor(
+        self, tools: Optional[List[BaseTool]] = None, task=None
+    ) -> None:
         """Create an agent executor for the agent.
 
         Returns:
@@ -308,7 +418,9 @@ class Agent(BaseAgent):
         try:
             from crewai_tools import CodeInterpreterTool
 
-            return [CodeInterpreterTool()]
+            # Set the unsafe_mode based on the code_execution_mode attribute
+            unsafe_mode = self.code_execution_mode == "unsafe"
+            return [CodeInterpreterTool(unsafe_mode=unsafe_mode)]
         except ModuleNotFoundError:
             self._logger.log(
                 "info", "Coding tools not available. Install crewai_tools. "
@@ -322,11 +434,11 @@ class Agent(BaseAgent):
         tools_list = []
         try:
             # tentatively try to import from crewai_tools import BaseTool as CrewAITool
-            from crewai_tools import BaseTool as CrewAITool
+            from crewai.tools import BaseTool as CrewAITool
 
             for tool in tools:
                 if isinstance(tool, CrewAITool):
-                    tools_list.append(tool.to_langchain())
+                    tools_list.append(tool.to_structured_tool())
                 else:
                     tools_list.append(tool)
         except ModuleNotFoundError:
@@ -381,32 +493,41 @@ class Agent(BaseAgent):
 
         return description
 
-    def _render_text_description_and_args(self, tools: List[Any]) -> str:
+    def _render_text_description_and_args(self, tools: List[BaseTool]) -> str:
         """Render the tool name, description, and args in plain text.
 
-        Output will be in the format of:
+            Output will be in the format of:
 
-        .. code-block:: markdown
+            .. code-block:: markdown
 
             search: This tool is used for search, args: {"query": {"type": "string"}}
             calculator: This tool is used for math, \
-    args: {"expression": {"type": "string"}}
+            args: {"expression": {"type": "string"}}
         """
         tool_strings = []
         for tool in tools:
-            args_schema = str(tool.args)
-            if hasattr(tool, "func") and tool.func:
-                sig = signature(tool.func)
-                description = (
-                    f"Tool Name: {tool.name}{sig}\nTool Description: {tool.description}"
-                )
-            else:
-                description = (
-                    f"Tool Name: {tool.name}\nTool Description: {tool.description}"
-                )
-            tool_strings.append(f"{description}\nTool Arguments: {args_schema}")
+            tool_strings.append(tool.description)
 
         return "\n".join(tool_strings)
+
+    def _validate_docker_installation(self) -> None:
+        """Check if Docker is installed and running."""
+        if not shutil.which("docker"):
+            raise RuntimeError(
+                f"Docker is not installed. Please install Docker to use code execution with agent: {self.role}"
+            )
+
+        try:
+            subprocess.run(
+                ["docker", "info"],
+                check=True,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+            )
+        except subprocess.CalledProcessError:
+            raise RuntimeError(
+                f"Docker is not running. Please start Docker to use code execution with agent: {self.role}"
+            )
 
     @staticmethod
     def __tools_names(tools) -> str:

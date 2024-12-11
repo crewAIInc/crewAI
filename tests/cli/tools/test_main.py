@@ -75,16 +75,17 @@ def test_install_success(mock_get, mock_subprocess_run):
         [
             "uv",
             "add",
-            "--extra-index-url",
-            "https://app.crewai.com/pypi/sample-repo",
+            "--index",
+            "sample-repo=https://example.com/repo",
             "sample-tool",
         ],
         capture_output=False,
         text=True,
         check=True,
+        env=unittest.mock.ANY
     )
 
-    assert "Succesfully installed sample-tool" in output
+    assert "Successfully installed sample-tool" in output
 
 
 @patch("crewai.cli.plus_api.PlusAPI.get_tool")

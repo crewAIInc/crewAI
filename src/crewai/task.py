@@ -1,11 +1,11 @@
 import datetime
 import json
-import os
 import threading
 import uuid
 from concurrent.futures import Future
 from copy import copy
 from hashlib import md5
+from pathlib import Path
 from typing import Any, Dict, List, Optional, Set, Tuple, Type, Union
 
 from opentelemetry.trace import Span
@@ -23,6 +23,7 @@ from crewai.agents.agent_builder.base_agent import BaseAgent
 from crewai.tasks.output_format import OutputFormat
 from crewai.tasks.task_output import TaskOutput
 from crewai.telemetry.telemetry import Telemetry
+from crewai.tools.base_tool import BaseTool
 from crewai.utilities.config import process_config
 from crewai.utilities.converter import Converter, convert_to_model
 from crewai.utilities.i18n import I18N
@@ -91,7 +92,7 @@ class Task(BaseModel):
     output: Optional[TaskOutput] = Field(
         description="Task output, it's final result after being executed", default=None
     )
-    tools: Optional[List[Any]] = Field(
+    tools: Optional[List[BaseTool]] = Field(
         default_factory=list,
         description="Tools the agent is limited to use for this task.",
     )
@@ -185,7 +186,7 @@ class Task(BaseModel):
         self,
         agent: Optional[BaseAgent] = None,
         context: Optional[str] = None,
-        tools: Optional[List[Any]] = None,
+        tools: Optional[List[BaseTool]] = None,
     ) -> TaskOutput:
         """Execute the task synchronously."""
         return self._execute_core(agent, context, tools)
@@ -202,12 +203,14 @@ class Task(BaseModel):
         self,
         agent: BaseAgent | None = None,
         context: Optional[str] = None,
-        tools: Optional[List[Any]] = None,
+        tools: Optional[List[BaseTool]] = None,
     ) -> Future[TaskOutput]:
         """Execute the task asynchronously."""
         future: Future[TaskOutput] = Future()
         threading.Thread(
-            target=self._execute_task_async, args=(agent, context, tools, future)
+            daemon=True,
+            target=self._execute_task_async,
+            args=(agent, context, tools, future),
         ).start()
         return future
 
@@ -390,12 +393,13 @@ class Task(BaseModel):
         if self.output_file is None:
             raise ValueError("output_file is not set.")
 
-        directory = os.path.dirname(self.output_file)  # type: ignore # Value of type variable "AnyOrLiteralStr" of "dirname" cannot be "str | None"
+        resolved_path = Path(self.output_file).expanduser().resolve()
+        directory = resolved_path.parent
 
-        if directory and not os.path.exists(directory):
-            os.makedirs(directory)
+        if not directory.exists():
+            directory.mkdir(parents=True, exist_ok=True)
 
-        with open(self.output_file, "w", encoding="utf-8") as file:
+        with resolved_path.open("w", encoding="utf-8") as file:
             if isinstance(result, dict):
                 import json
 

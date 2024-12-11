@@ -23,10 +23,10 @@ jobs:
 
 
       - name: Set up Python
-        run: uv python install 3.11.9
+        run: uv python install 3.12.8
 
       - name: Install the project
-        run: uv sync --dev
+        run: uv sync --dev --all-extras
 
       - name: Run tests
-        run: uv run pytest tests
+        run: uv run pytest tests -vv
