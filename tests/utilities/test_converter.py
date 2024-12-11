@@ -1,19 +1,23 @@
 import json
+from typing import Dict, List, Optional
 from unittest.mock import MagicMock, Mock, patch
 
 import pytest
+from pydantic import BaseModel
+
+from crewai.llm import LLM
 from crewai.utilities.converter import (
     Converter,
     ConverterError,
     convert_to_model,
     convert_with_instructions,
     create_converter,
+    generate_model_description,
     get_conversion_instructions,
     handle_partial_json,
-    is_gpt,
     validate_model,
 )
-from pydantic import BaseModel
+from crewai.utilities.pydantic_schema_parser import PydanticSchemaParser
 
 
 # Sample Pydantic models for testing
@@ -197,14 +201,20 @@ def test_convert_with_instructions_failure(
 def test_get_conversion_instructions_gpt():
     mock_llm = Mock()
     mock_llm.openai_api_base = None
-    with patch("crewai.utilities.converter.is_gpt", return_value=True):
+    with patch.object(LLM, "supports_function_calling") as supports_function_calling:
+        supports_function_calling.return_value = True
         instructions = get_conversion_instructions(SimpleModel, mock_llm)
-        assert instructions == "I'm gonna convert this raw text into valid JSON."
+        model_schema = PydanticSchemaParser(model=SimpleModel).get_schema()
+        assert (
+            instructions
+            == f"I'm gonna convert this raw text into valid JSON.\n\nThe json should have the following structure, with the following keys:\n{model_schema}"
+        )
 
 
 def test_get_conversion_instructions_non_gpt():
     mock_llm = Mock()
-    with patch("crewai.utilities.converter.is_gpt", return_value=False):
+    with patch.object(LLM, "supports_function_calling") as supports_function_calling:
+        supports_function_calling.return_value = False
         with patch("crewai.utilities.converter.PydanticSchemaParser") as mock_parser:
             mock_parser.return_value.get_schema.return_value = "Sample schema"
             instructions = get_conversion_instructions(SimpleModel, mock_llm)
@@ -212,17 +222,14 @@ def test_get_conversion_instructions_non_gpt():
 
 
 # Tests for is_gpt
-def test_is_gpt_true():
-    from langchain_openai import ChatOpenAI
-
-    mock_llm = Mock(spec=ChatOpenAI)
-    mock_llm.openai_api_base = None
-    assert is_gpt(mock_llm) is True
+def test_supports_function_calling_true():
+    llm = LLM(model="gpt-4o")
+    assert llm.supports_function_calling() is True
 
 
-def test_is_gpt_false():
-    mock_llm = Mock()
-    assert is_gpt(mock_llm) is False
+def test_supports_function_calling_false():
+    llm = LLM(model="non-existent-model")
+    assert llm.supports_function_calling() is False
 
 
 class CustomConverter(Converter):
@@ -264,3 +271,45 @@ def test_create_converter_fails_without_agent_or_converter_cls():
         create_converter(
             llm=Mock(), text="Sample", model=SimpleModel, instructions="Convert"
         )
+
+
+def test_generate_model_description_simple_model():
+    description = generate_model_description(SimpleModel)
+    expected_description = '{\n  "name": str,\n  "age": int\n}'
+    assert description == expected_description
+
+
+def test_generate_model_description_nested_model():
+    description = generate_model_description(NestedModel)
+    expected_description = (
+        '{\n  "id": int,\n  "data": {\n  "name": str,\n  "age": int\n}\n}'
+    )
+    assert description == expected_description
+
+
+def test_generate_model_description_optional_field():
+    class ModelWithOptionalField(BaseModel):
+        name: Optional[str]
+        age: int
+
+    description = generate_model_description(ModelWithOptionalField)
+    expected_description = '{\n  "name": Optional[str],\n  "age": int\n}'
+    assert description == expected_description
+
+
+def test_generate_model_description_list_field():
+    class ModelWithListField(BaseModel):
+        items: List[int]
+
+    description = generate_model_description(ModelWithListField)
+    expected_description = '{\n  "items": List[int]\n}'
+    assert description == expected_description
+
+
+def test_generate_model_description_dict_field():
+    class ModelWithDictField(BaseModel):
+        attributes: Dict[str, int]
+
+    description = generate_model_description(ModelWithDictField)
+    expected_description = '{\n  "attributes": Dict[str, int]\n}'
+    assert description == expected_description

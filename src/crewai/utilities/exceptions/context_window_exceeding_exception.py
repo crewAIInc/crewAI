@@ -1,5 +1,6 @@
 class LLMContextLengthExceededException(Exception):
     CONTEXT_LIMIT_ERRORS = [
+        "expected a string with maximum length",
         "maximum context length",
         "context length exceeded",
         "context_length_exceeded",

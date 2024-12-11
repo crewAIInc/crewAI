@@ -5,9 +5,17 @@ from crewai.memory.entity.entity_memory import EntityMemory
 from crewai.memory.long_term.long_term_memory import LongTermMemory
 from crewai.memory.short_term.short_term_memory import ShortTermMemory
 from crewai.utilities.task_output_storage_handler import TaskOutputStorageHandler
+from crewai.knowledge.storage.knowledge_storage import KnowledgeStorage
 
 
-def reset_memories_command(long, short, entity, kickoff_outputs, all) -> None:
+def reset_memories_command(
+    long,
+    short,
+    entity,
+    knowledge,
+    kickoff_outputs,
+    all,
+) -> None:
     """
     Reset the crew memories.
 
@@ -17,6 +25,7 @@ def reset_memories_command(long, short, entity, kickoff_outputs, all) -> None:
       entity (bool): Whether to reset the entity memory.
       kickoff_outputs (bool): Whether to reset the latest kickoff task outputs.
       all (bool): Whether to reset all memories.
+      knowledge (bool): Whether to reset the knowledge.
     """
 
     try:
@@ -25,6 +34,7 @@ def reset_memories_command(long, short, entity, kickoff_outputs, all) -> None:
             EntityMemory().reset()
             LongTermMemory().reset()
             TaskOutputStorageHandler().reset()
+            KnowledgeStorage().reset()
             click.echo("All memories have been reset.")
         else:
             if long:
@@ -40,6 +50,9 @@ def reset_memories_command(long, short, entity, kickoff_outputs, all) -> None:
             if kickoff_outputs:
                 TaskOutputStorageHandler().reset()
                 click.echo("Latest Kickoff outputs stored has been reset.")
+            if knowledge:
+                KnowledgeStorage().reset()
+                click.echo("Knowledge has been reset.")
 
     except subprocess.CalledProcessError as e:
         click.echo(f"An error occurred while resetting the memories: {e}", err=True)

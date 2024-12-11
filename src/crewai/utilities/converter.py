@@ -1,9 +1,7 @@
 import json
 import re
-from typing import Any, Optional, Type, Union
+from typing import Any, Optional, Type, Union, get_args, get_origin
 
-from langchain.schema import HumanMessage, SystemMessage
-from langchain_openai import ChatOpenAI
 from pydantic import BaseModel, ValidationError
 
 from crewai.agents.agent_builder.utilities.base_output_converter import OutputConverter
@@ -25,10 +23,15 @@ class Converter(OutputConverter):
     def to_pydantic(self, current_attempt=1):
         """Convert text to pydantic."""
         try:
-            if self.is_gpt:
+            if self.llm.supports_function_calling():
                 return self._create_instructor().to_pydantic()
             else:
-                return self._create_chain().invoke({})
+                return self.llm.call(
+                    [
+                        {"role": "system", "content": self.instructions},
+                        {"role": "user", "content": self.text},
+                    ]
+                )
         except Exception as e:
             if current_attempt < self.max_attempts:
                 return self.to_pydantic(current_attempt + 1)
@@ -39,10 +42,17 @@ class Converter(OutputConverter):
     def to_json(self, current_attempt=1):
         """Convert text to json."""
         try:
-            if self.is_gpt:
+            if self.llm.supports_function_calling():
                 return self._create_instructor().to_json()
             else:
-                return json.dumps(self._create_chain().invoke({}).model_dump())
+                return json.dumps(
+                    self.llm.call(
+                        [
+                            {"role": "system", "content": self.instructions},
+                            {"role": "user", "content": self.text},
+                        ]
+                    )
+                )
         except Exception as e:
             if current_attempt < self.max_attempts:
                 return self.to_json(current_attempt + 1)
@@ -50,33 +60,30 @@ class Converter(OutputConverter):
 
     def _create_instructor(self):
         """Create an instructor."""
-        from crewai.utilities import Instructor
+        from crewai.utilities import InternalInstructor
 
-        inst = Instructor(
+        inst = InternalInstructor(
             llm=self.llm,
-            max_attempts=self.max_attempts,
             model=self.model,
             content=self.text,
             instructions=self.instructions,
         )
         return inst
 
-    def _create_chain(self):
+    def _convert_with_instructions(self):
         """Create a chain."""
         from crewai.utilities.crew_pydantic_output_parser import (
             CrewPydanticOutputParser,
         )
 
         parser = CrewPydanticOutputParser(pydantic_object=self.model)
-        new_prompt = SystemMessage(content=self.instructions) + HumanMessage(
-            content=self.text
+        result = self.llm.call(
+            [
+                {"role": "system", "content": self.instructions},
+                {"role": "user", "content": self.text},
+            ]
         )
-        return new_prompt | self.llm | parser
-
-    @property
-    def is_gpt(self) -> bool:
-        """Return if llm provided is of gpt from openai."""
-        return isinstance(self.llm, ChatOpenAI) and self.llm.openai_api_base is None
+        return parser.parse_result(result)
 
 
 def convert_to_model(
@@ -89,26 +96,19 @@ def convert_to_model(
     model = output_pydantic or output_json
     if model is None:
         return result
-
     try:
         escaped_result = json.dumps(json.loads(result, strict=False))
         return validate_model(escaped_result, model, bool(output_json))
-    except json.JSONDecodeError as e:
-        Printer().print(
-            content=f"Error parsing JSON: {e}. Attempting to handle partial JSON.",
-            color="yellow",
-        )
+    except json.JSONDecodeError:
         return handle_partial_json(
             result, model, bool(output_json), agent, converter_cls
         )
-    except ValidationError as e:
-        Printer().print(
-            content=f"Pydantic validation error: {e}. Attempting to handle partial JSON.",
-            color="yellow",
-        )
+
+    except ValidationError:
         return handle_partial_json(
             result, model, bool(output_json), agent, converter_cls
         )
+
     except Exception as e:
         Printer().print(
             content=f"Unexpected error during model conversion: {type(e).__name__}: {e}. Returning original result.",
@@ -140,16 +140,10 @@ def handle_partial_json(
             if is_json_output:
                 return exported_result.model_dump()
             return exported_result
-        except json.JSONDecodeError as e:
-            Printer().print(
-                content=f"Error parsing JSON: {e}. The extracted JSON-like string is not valid JSON. Attempting alternative conversion method.",
-                color="yellow",
-            )
-        except ValidationError as e:
-            Printer().print(
-                content=f"Pydantic validation error: {e}. The JSON structure doesn't match the expected model. Attempting alternative conversion method.",
-                color="yellow",
-            )
+        except json.JSONDecodeError:
+            pass
+        except ValidationError:
+            pass
         except Exception as e:
             Printer().print(
                 content=f"Unexpected error during partial JSON handling: {type(e).__name__}: {e}. Attempting alternative conversion method.",
@@ -170,7 +164,6 @@ def convert_with_instructions(
 ) -> Union[dict, BaseModel, str]:
     llm = agent.function_calling_llm or agent.llm
     instructions = get_conversion_instructions(model, llm)
-
     converter = create_converter(
         agent=agent,
         converter_cls=converter_cls,
@@ -195,16 +188,10 @@ def convert_with_instructions(
 
 def get_conversion_instructions(model: Type[BaseModel], llm: Any) -> str:
     instructions = "I'm gonna convert this raw text into valid JSON."
-    if not is_gpt(llm):
+    if llm.supports_function_calling():
         model_schema = PydanticSchemaParser(model=model).get_schema()
         instructions = f"{instructions}\n\nThe json should have the following structure, with the following keys:\n{model_schema}"
     return instructions
-
-
-def is_gpt(llm: Any) -> bool:
-    from langchain_openai import ChatOpenAI
-
-    return isinstance(llm, ChatOpenAI) and llm.openai_api_base is None
 
 
 def create_converter(
@@ -227,3 +214,38 @@ def create_converter(
         raise Exception("No output converter found or set.")
 
     return converter
+
+
+def generate_model_description(model: Type[BaseModel]) -> str:
+    """
+    Generate a string description of a Pydantic model's fields and their types.
+
+    This function takes a Pydantic model class and returns a string that describes
+    the model's fields and their respective types. The description includes handling
+    of complex types such as `Optional`, `List`, and `Dict`, as well as nested Pydantic
+    models.
+    """
+
+    def describe_field(field_type):
+        origin = get_origin(field_type)
+        args = get_args(field_type)
+
+        if origin is Union and type(None) in args:
+            non_none_args = [arg for arg in args if arg is not type(None)]
+            return f"Optional[{describe_field(non_none_args[0])}]"
+        elif origin is list:
+            return f"List[{describe_field(args[0])}]"
+        elif origin is dict:
+            key_type = describe_field(args[0])
+            value_type = describe_field(args[1])
+            return f"Dict[{key_type}, {value_type}]"
+        elif isinstance(field_type, type) and issubclass(field_type, BaseModel):
+            return generate_model_description(field_type)
+        else:
+            return field_type.__name__
+
+    fields = model.__annotations__
+    field_descriptions = [
+        f'"{name}": {describe_field(type_)}' for name, type_ in fields.items()
+    ]
+    return "{\n  " + ",\n  ".join(field_descriptions) + "\n}"

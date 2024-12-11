@@ -1,12 +1,12 @@
 import datetime
 import json
-import os
+from pathlib import Path
 import threading
 import uuid
 from concurrent.futures import Future
 from copy import copy
 from hashlib import md5
-from typing import Any, Dict, List, Optional, Tuple, Type, Union
+from typing import Any, Dict, List, Optional, Set, Tuple, Type, Union
 
 from opentelemetry.trace import Span
 from pydantic import (
@@ -23,6 +23,7 @@ from crewai.agents.agent_builder.base_agent import BaseAgent
 from crewai.tasks.output_format import OutputFormat
 from crewai.tasks.task_output import TaskOutput
 from crewai.telemetry.telemetry import Telemetry
+from crewai.tools.base_tool import BaseTool
 from crewai.utilities.config import process_config
 from crewai.utilities.converter import Converter, convert_to_model
 from crewai.utilities.i18n import I18N
@@ -91,7 +92,7 @@ class Task(BaseModel):
     output: Optional[TaskOutput] = Field(
         description="Task output, it's final result after being executed", default=None
     )
-    tools: Optional[List[Any]] = Field(
+    tools: Optional[List[BaseTool]] = Field(
         default_factory=list,
         description="Tools the agent is limited to use for this task.",
     )
@@ -108,6 +109,7 @@ class Task(BaseModel):
         description="A converter class used to export structured output",
         default=None,
     )
+    processed_by_agents: Set[str] = Field(default_factory=set)
 
     _telemetry: Telemetry = PrivateAttr(default_factory=Telemetry)
     _execution_span: Optional[Span] = PrivateAttr(default=None)
@@ -184,7 +186,7 @@ class Task(BaseModel):
         self,
         agent: Optional[BaseAgent] = None,
         context: Optional[str] = None,
-        tools: Optional[List[Any]] = None,
+        tools: Optional[List[BaseTool]] = None,
     ) -> TaskOutput:
         """Execute the task synchronously."""
         return self._execute_core(agent, context, tools)
@@ -201,12 +203,14 @@ class Task(BaseModel):
         self,
         agent: BaseAgent | None = None,
         context: Optional[str] = None,
-        tools: Optional[List[Any]] = None,
+        tools: Optional[List[BaseTool]] = None,
     ) -> Future[TaskOutput]:
         """Execute the task asynchronously."""
         future: Future[TaskOutput] = Future()
         threading.Thread(
-            target=self._execute_task_async, args=(agent, context, tools, future)
+            daemon=True,
+            target=self._execute_task_async,
+            args=(agent, context, tools, future),
         ).start()
         return future
 
@@ -240,6 +244,8 @@ class Task(BaseModel):
 
         self.prompt_context = context
         tools = tools or self.tools or []
+
+        self.processed_by_agents.add(agent.role)
 
         result = agent.execute_task(
             task=self,
@@ -308,11 +314,15 @@ class Task(BaseModel):
         """Increment the tools errors counter."""
         self.tools_errors += 1
 
-    def increment_delegations(self) -> None:
+    def increment_delegations(self, agent_name: Optional[str]) -> None:
         """Increment the delegations counter."""
+        if agent_name:
+            self.processed_by_agents.add(agent_name)
         self.delegations += 1
 
-    def copy(self, agents: List["BaseAgent"]) -> "Task":
+    def copy(
+        self, agents: List["BaseAgent"], task_mapping: Dict[str, "Task"]
+    ) -> "Task":
         """Create a deep copy of the Task."""
         exclude = {
             "id",
@@ -325,7 +335,9 @@ class Task(BaseModel):
         copied_data = {k: v for k, v in copied_data.items() if v is not None}
 
         cloned_context = (
-            [task.copy(agents) for task in self.context] if self.context else None
+            [task_mapping[context_task.key] for context_task in self.context]
+            if self.context
+            else None
         )
 
         def get_agent_by_role(role: str) -> Union["BaseAgent", None]:
@@ -381,12 +393,13 @@ class Task(BaseModel):
         if self.output_file is None:
             raise ValueError("output_file is not set.")
 
-        directory = os.path.dirname(self.output_file)  # type: ignore # Value of type variable "AnyOrLiteralStr" of "dirname" cannot be "str | None"
+        resolved_path = Path(self.output_file).expanduser().resolve()
+        directory = resolved_path.parent
 
-        if directory and not os.path.exists(directory):
-            os.makedirs(directory)
+        if not directory.exists():
+            directory.mkdir(parents=True, exist_ok=True)
 
-        with open(self.output_file, "w", encoding="utf-8") as file:
+        with resolved_path.open("w", encoding="utf-8") as file:
             if isinstance(result, dict):
                 import json
 

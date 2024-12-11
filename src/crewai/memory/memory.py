@@ -1,6 +1,6 @@
-from typing import Any, Dict, Optional
+from typing import Any, Dict, Optional, List
 
-from crewai.memory.storage.interface import Storage
+from crewai.memory.storage.rag_storage import RAGStorage
 
 
 class Memory:
@@ -8,7 +8,7 @@ class Memory:
     Base class for memory, now supporting agent tags and generic metadata.
     """
 
-    def __init__(self, storage: Storage):
+    def __init__(self, storage: RAGStorage):
         self.storage = storage
 
     def save(
@@ -21,7 +21,14 @@ class Memory:
         if agent:
             metadata["agent"] = agent
 
-        self.storage.save(value, metadata)  # type: ignore # Maybe BUG? Should be self.storage.save(key, value, metadata)
+        self.storage.save(value, metadata)
 
-    def search(self, query: str) -> Dict[str, Any]:
-        return self.storage.search(query)
+    def search(
+        self,
+        query: str,
+        limit: int = 3,
+        score_threshold: float = 0.35,
+    ) -> List[Any]:
+        return self.storage.search(
+            query=query, limit=limit, score_threshold=score_threshold
+        )

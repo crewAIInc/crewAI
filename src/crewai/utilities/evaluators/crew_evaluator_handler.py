@@ -1,14 +1,13 @@
 from collections import defaultdict
 
-from langchain_openai import ChatOpenAI
-from pydantic import BaseModel, Field
-from rich.console import Console
-from rich.table import Table
-
 from crewai.agent import Agent
 from crewai.task import Task
 from crewai.tasks.task_output import TaskOutput
 from crewai.telemetry import Telemetry
+from pydantic import BaseModel, Field
+from rich.box import HEAVY_EDGE
+from rich.console import Console
+from rich.table import Table
 
 
 class TaskEvaluationPydanticOutput(BaseModel):
@@ -51,7 +50,7 @@ class CrewEvaluator:
             ),
             backstory="Evaluator agent for crew evaluation with precise capabilities to evaluate the performance of the agents in the crew based on the tasks they have performed",
             verbose=False,
-            llm=ChatOpenAI(model=self.openai_model_name),
+            llm=self.openai_model_name,
         )
 
     def _evaluation_task(
@@ -77,50 +76,72 @@ class CrewEvaluator:
     def print_crew_evaluation_result(self) -> None:
         """
         Prints the evaluation result of the crew in a table.
-        A Crew with 2 tasks using the command crewai test -n 2
+        A Crew with 2 tasks using the command crewai test -n 3
         will output the following table:
 
-                        Task Scores
+                        Tasks Scores
                     (1-10 Higher is better)
-            ┏━━━━━━━━━━━━┳━━━━━━━┳━━━━━━━┳━━━━━━━━━━━━┓
-            ┃ Tasks/Crew ┃ Run 1 ┃ Run 2 ┃ Avg. Total ┃
-            ┡━━━━━━━━━━━━╇━━━━━━━╇━━━━━━━╇━━━━━━━━━━━━┩
-            │ Task 1     │ 10.0  │ 9.0   │ 9.5        │
-            │ Task 2     │ 9.0   │ 9.0   │ 9.0        │
-            │ Crew       │ 9.5   │ 9.0   │ 9.2        │
-            └────────────┴───────┴───────┴────────────┘
+        ┏━━━━━━━━━━━━━━━━━━━━┳━━━━━━━┳━━━━━━━┳━━━━━━━┳━━━━━━━━━━━━┳━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
+        ┃ Tasks/Crew/Agents  ┃ Run 1 ┃ Run 2 ┃ Run 3 ┃ Avg. Total ┃ Agents                       ┃
+        ┡━━━━━━━━━━━━━━━━━━━━╇━━━━━━━╇━━━━━━━╇━━━━━━━╇━━━━━━━━━━━━╇━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┩
+        │ Task 1             │ 9.0   │ 10.0  │ 9.0   │ 9.3        │ - AI LLMs Senior Researcher  │
+        │                    │       │       │       │            │ - AI LLMs Reporting Analyst  │
+        │                    │       │       │       │            │                              │
+        │ Task 2             │ 9.0   │ 9.0   │ 9.0   │ 9.0        │ - AI LLMs Senior Researcher  │
+        │                    │       │       │       │            │ - AI LLMs Reporting Analyst  │
+        │                    │       │       │       │            │                              │
+        │ Crew               │ 9.0   │ 9.5   │ 9.0   │ 9.2        │                              │
+        │ Execution Time (s) │ 42    │ 79    │ 52    │ 57         │                              │
+        └────────────────────┴───────┴───────┴───────┴────────────┴──────────────────────────────┘
         """
         task_averages = [
             sum(scores) / len(scores) for scores in zip(*self.tasks_scores.values())
         ]
         crew_average = sum(task_averages) / len(task_averages)
 
-        # Create a table
-        table = Table(title="Tasks Scores \n (1-10 Higher is better)")
+        table = Table(title="Tasks Scores \n (1-10 Higher is better)", box=HEAVY_EDGE)
 
-        # Add columns for the table
-        table.add_column("Tasks/Crew")
+        table.add_column("Tasks/Crew/Agents", style="cyan")
         for run in range(1, len(self.tasks_scores) + 1):
-            table.add_column(f"Run {run}")
-        table.add_column("Avg. Total")
+            table.add_column(f"Run {run}", justify="center")
+        table.add_column("Avg. Total", justify="center")
+        table.add_column("Agents", style="green")
 
-        # Add rows for each task
-        for task_index in range(len(task_averages)):
+        for task_index, task in enumerate(self.crew.tasks):
             task_scores = [
                 self.tasks_scores[run][task_index]
                 for run in range(1, len(self.tasks_scores) + 1)
             ]
             avg_score = task_averages[task_index]
+            agents = list(task.processed_by_agents)
+
+            # Add the task row with the first agent
             table.add_row(
-                f"Task {task_index + 1}", *map(str, task_scores), f"{avg_score:.1f}"
+                f"Task {task_index + 1}",
+                *[f"{score:.1f}" for score in task_scores],
+                f"{avg_score:.1f}",
+                f"- {agents[0]}" if agents else "",
             )
 
-        # Add a row for the crew average
+            # Add rows for additional agents
+            for agent in agents[1:]:
+                table.add_row("", "", "", "", "", f"- {agent}")
+
+            # Add a blank separator row if it's not the last task
+            if task_index < len(self.crew.tasks) - 1:
+                table.add_row("", "", "", "", "", "")
+
+        # Add Crew and Execution Time rows
         crew_scores = [
             sum(self.tasks_scores[run]) / len(self.tasks_scores[run])
             for run in range(1, len(self.tasks_scores) + 1)
         ]
-        table.add_row("Crew", *map(str, crew_scores), f"{crew_average:.1f}")
+        table.add_row(
+            "Crew",
+            *[f"{score:.2f}" for score in crew_scores],
+            f"{crew_average:.1f}",
+            "",
+        )
 
         run_exec_times = [
             int(sum(tasks_exec_times))
@@ -128,11 +149,9 @@ class CrewEvaluator:
         ]
         execution_time_avg = int(sum(run_exec_times) / len(run_exec_times))
         table.add_row(
-            "Execution Time (s)",
-            *map(str, run_exec_times),
-            f"{execution_time_avg}",
+            "Execution Time (s)", *map(str, run_exec_times), f"{execution_time_avg}", ""
         )
-        # Display the table in the terminal
+
         console = Console()
         console.print(table)
 
