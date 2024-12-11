@@ -144,7 +144,7 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
                             formatted_answer
                         )
                         if self.step_callback:
-                          self.step_callback(tool_result)
+                            self.step_callback(tool_result)
 
                         formatted_answer.text += f"\nObservation: {tool_result.result}"
                         formatted_answer.result = tool_result.result
@@ -413,7 +413,6 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
         """
         while self.ask_for_human_input:
             human_feedback = self._ask_human_input(formatted_answer.output)
-            print("Human feedback: ", human_feedback)
 
             if self.crew and self.crew._train:
                 self._handle_crew_training_output(formatted_answer, human_feedback)
