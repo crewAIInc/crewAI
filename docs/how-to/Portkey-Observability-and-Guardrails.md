@@ -132,7 +132,7 @@ azure_llm = LLM(
 ### 2. Caching
 Improve response times and reduce costs with two powerful caching modes:
 - **Simple Cache**: Perfect for exact matches
-- **Semantic Cache**: Uses embedding-based matching for similar queries
+- **Semantic Cache**: Matches responses for requests that are semantically similar
 [Learn more about Caching](https://portkey.ai/docs/product/ai-gateway/cache-simple-and-semantic)
 
 ```py
