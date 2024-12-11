@@ -6,7 +6,7 @@ import uuid
 from concurrent.futures import Future
 from copy import copy
 from hashlib import md5
-from typing import Any, Dict, List, Optional, Set, Tuple, Type, Union
+from typing import Any, Callable, Dict, List, Optional, Set, Tuple, Type, Union
 
 from opentelemetry.trace import Span
 from pydantic import (
@@ -22,6 +22,7 @@ from pydantic_core import PydanticCustomError
 from crewai.agents.agent_builder.base_agent import BaseAgent
 from crewai.tasks.output_format import OutputFormat
 from crewai.tasks.task_output import TaskOutput
+from crewai.tasks.guardrail_result import GuardrailResult
 from crewai.telemetry.telemetry import Telemetry
 from crewai.tools.base_tool import BaseTool
 from crewai.utilities.config import process_config
@@ -110,6 +111,18 @@ class Task(BaseModel):
         default=None,
     )
     processed_by_agents: Set[str] = Field(default_factory=set)
+    guardrail: Optional[Callable[[Any], Tuple[bool, Any]]] = Field(
+        default=None,
+        description="Function to validate task output before proceeding to next task"
+    )
+    max_retries: int = Field(
+        default=3,
+        description="Maximum number of retries when guardrail fails"
+    )
+    retry_count: int = Field(
+        default=0,
+        description="Current number of retries"
+    )
 
     _telemetry: Telemetry = PrivateAttr(default_factory=Telemetry)
     _execution_span: Optional[Span] = PrivateAttr(default=None)
@@ -252,6 +265,22 @@ class Task(BaseModel):
             context=context,
             tools=tools,
         )
+
+        # Add guardrail validation
+        if self.guardrail:
+            guardrail_result = GuardrailResult.from_tuple(self.guardrail(result))
+            if not guardrail_result.success:
+                if self.retry_count >= self.max_retries:
+                    raise Exception(
+                        f"Task failed guardrail validation after {self.max_retries} retries. "
+                        f"Last error: {guardrail_result.error}"
+                    )
+
+                self.retry_count += 1
+                context = f"Previous attempt failed validation: {guardrail_result.error}\nPlease try again."
+                return self._execute_core(agent, context, tools)
+
+            result = guardrail_result.result
 
         pydantic_output, json_output = self._export_output(result)
 
