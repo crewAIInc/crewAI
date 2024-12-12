@@ -479,7 +479,7 @@ wheels = [
 
 [[package]]
 name = "chromadb"
-version = "0.5.18"
+version = "0.5.23"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "bcrypt" },
@@ -511,9 +511,9 @@ dependencies = [
     { name = "typing-extensions" },
     { name = "uvicorn", extra = ["standard"] },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/15/95/d1a3f14c864e37d009606b82bd837090902b5e5a8e892fcab07eeaec0438/chromadb-0.5.18.tar.gz", hash = "sha256:cfbb3e5aeeb1dd532b47d80ed9185e8a9886c09af41c8e6123edf94395d76aec", size = 33620708 }
+sdist = { url = "https://files.pythonhosted.org/packages/42/64/28daa773f784bcd18de944fe26ed301de844d6ee17188e26a9d6b4baf122/chromadb-0.5.23.tar.gz", hash = "sha256:360a12b9795c5a33cb1f839d14410ccbde662ef1accd36153b0ae22312edabd1", size = 33700455 }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/82/85/4d2f8b9202153105ad4514ae09e9fe6f3b353a45e44e0ef7eca03dd8b9dc/chromadb-0.5.18-py3-none-any.whl", hash = "sha256:9dd3827b5e04b4ff0a5ea0df28a78bac88a09f45be37fcd7fe20f879b57c43cf", size = 615499 },
+    { url = "https://files.pythonhosted.org/packages/92/8c/a9eb95a28e6c35a0122417976a9d435eeaceb53f596a8973e33b3dd4cfac/chromadb-0.5.23-py3-none-any.whl", hash = "sha256:ffe5bdd7276d12cb682df0d38a13aa37573e6a3678e71889ac45f539ae05ad7e", size = 628347 },
 ]
 
 [[package]]
@@ -648,9 +648,9 @@ requires-dist = [
     { name = "appdirs", specifier = ">=1.4.4" },
     { name = "auth0-python", specifier = ">=4.7.1" },
     { name = "blinker", specifier = ">=1.9.0" },
-    { name = "chromadb", specifier = ">=0.5.18" },
+    { name = "chromadb", specifier = ">=0.5.23" },
     { name = "click", specifier = ">=8.1.7" },
-    { name = "crewai-tools", marker = "extra == 'tools'", specifier = ">=0.14.0" },
+    { name = "crewai-tools", marker = "extra == 'tools'", specifier = ">=0.17.0" },
     { name = "fastembed", marker = "extra == 'fastembed'", specifier = ">=0.4.1" },
     { name = "instructor", specifier = ">=1.3.3" },
     { name = "json-repair", specifier = ">=0.25.2" },
@@ -678,7 +678,7 @@ requires-dist = [
 [package.metadata.requires-dev]
 dev = [
     { name = "cairosvg", specifier = ">=2.7.1" },
-    { name = "crewai-tools", specifier = ">=0.14.0" },
+    { name = "crewai-tools", specifier = ">=0.17.0" },
     { name = "mkdocs", specifier = ">=1.4.3" },
     { name = "mkdocs-material", specifier = ">=9.5.7" },
     { name = "mkdocs-material-extensions", specifier = ">=1.3.1" },
