@@ -6,7 +6,7 @@ icon: list-check
 
 ## Overview of a Task
 
-In the CrewAI framework, a `Task` is a specific assignment completed by an `Agent`. 
+In the CrewAI framework, a `Task` is a specific assignment completed by an `Agent`.
 
 Tasks provide all necessary details for execution, such as a description, the agent responsible, required tools, and more, facilitating a wide range of action complexities.
 
@@ -265,7 +265,9 @@ analysis_task = Task(
 
 ## Task Guardrails
 
-Task guardrails provide a way to validate and transform task outputs before they are passed to the next task. This feature helps ensure data quality and provides feedback to agents when their output doesn't meet specific criteria.
+Task guardrails provide a way to validate and transform task outputs before they
+are passed to the next task. This feature helps ensure data quality and provides
+efeedback to agents when their output doesn't meet specific criteria.
 
 ### Using Task Guardrails
 
@@ -854,15 +856,6 @@ task = Task(
 )
 ```
 
-#### Async Guardrails
-```python Code
-async def validate_with_external_service(result: str) -> Tuple[bool, Union[str, str]]:
-    """Validate data using an external service."""
-    # Example async validation
-    validation_result = await external_service.validate(result)
-    return (True, result) if validation_result.is_valid else (False, validation_result.error)
-```
-
 ## Creating Directories when Saving Files
 
 You can now specify if a task should create directories when saving its output to a file. This is particularly useful for organizing outputs and ensuring that file paths are correctly structured.
@@ -884,7 +877,7 @@ save_output_task = Task(
 
 ## Conclusion
 
-Tasks are the driving force behind the actions of agents in CrewAI. 
-By properly defining tasks and their outcomes, you set the stage for your AI agents to work effectively, either independently or as a collaborative unit. 
-Equipping tasks with appropriate tools, understanding the execution process, and following robust validation practices are crucial for maximizing CrewAI's potential, 
+Tasks are the driving force behind the actions of agents in CrewAI.
+By properly defining tasks and their outcomes, you set the stage for your AI agents to work effectively, either independently or as a collaborative unit.
+Equipping tasks with appropriate tools, understanding the execution process, and following robust validation practices are crucial for maximizing CrewAI's potential,
 ensuring agents are effectively prepared for their assignments and that tasks are executed as intended.
