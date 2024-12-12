@@ -14,6 +14,7 @@
 
 [![GitHub Repo stars](https://img.shields.io/github/stars/joaomdmoura/crewAI)](https://github.com/crewAIInc/crewAI)
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](https://opensource.org/licenses/MIT)
+[![Gurubase](https://img.shields.io/badge/Gurubase-Ask%20CrewAI%20Guru-006BFF)](https://gurubase.io/g/crewai)
 
 </div>
 
