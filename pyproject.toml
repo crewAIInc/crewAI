@@ -1,0 +1,22 @@
+[build-system]
+requires = ["setuptools>=45", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "email-processor"
+version = "0.1.0"
+description = "CrewAI-powered email processing system"
+readme = "docs/README.md"
+requires-python = ">=3.10,<=3.13"
+license = {text = "MIT"}
+dependencies = [
+    "crewai>=0.86.0",  # Updated to latest version with Flow support
+    "crewai-tools>=0.1.0",
+    "google-api-python-client>=2.0.0",
+    "google-auth>=2.0.0",
+    "google-auth-oauthlib>=0.4.6",
+    "python-dotenv>=0.19.0",
+]
+
+[tool.setuptools]
+package-dir = {"" = "src"}
