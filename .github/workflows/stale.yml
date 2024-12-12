@@ -1,5 +1,10 @@
 name: Mark stale issues and pull requests
 
+permissions:
+  contents: write
+  issues: write
+  pull-requests: write
+
 on:
   schedule:
     - cron: '10 12 * * *'
@@ -8,9 +13,6 @@ on:
 jobs:
   stale:
     runs-on: ubuntu-latest
-    permissions:
-      issues: write
-      pull-requests: write
     steps:
     - uses: actions/stale@v9
       with:
