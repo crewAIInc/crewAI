@@ -177,6 +177,19 @@ class KnowledgeStorage(BaseKnowledgeStorage):
         except Exception as e:
             Logger(verbose=True).log("error", f"Failed to upsert documents: {e}", "red")
             raise
+
+    def _create_default_embedding_function(self):
+        from chromadb.utils.embedding_functions.openai_embedding_function import (
+            OpenAIEmbeddingFunction,
+        )
+
+        return OpenAIEmbeddingFunction(
+            api_key=os.getenv("OPENAI_API_KEY"), model_name="text-embedding-3-small"
+        )
+
+    def _set_embedder_config(
+        self, embedder_config: Optional[Dict[str, Any]] = None
+    ) -> None:
         """Set the embedding configuration for the knowledge storage.
 
         Args:
