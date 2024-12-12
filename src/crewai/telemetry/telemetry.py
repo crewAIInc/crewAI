@@ -6,6 +6,7 @@ import os
 import platform
 import warnings
 from contextlib import contextmanager
+from importlib.metadata import version
 from typing import TYPE_CHECKING, Any, Optional
 
 
@@ -14,10 +15,6 @@ def suppress_warnings():
     with warnings.catch_warnings():
         warnings.filterwarnings("ignore")
         yield
-
-
-with suppress_warnings():
-    import pkg_resources
 
 
 from opentelemetry import trace  # noqa: E402
@@ -106,7 +103,7 @@ class Telemetry:
             self._add_attribute(
                 span,
                 "crewai_version",
-                pkg_resources.get_distribution("crewai").version,
+                version("crewai"),
             )
             self._add_attribute(span, "python_version", platform.python_version())
             self._add_attribute(span, "crew_key", crew.key)
@@ -308,7 +305,7 @@ class Telemetry:
             self._add_attribute(
                 span,
                 "crewai_version",
-                pkg_resources.get_distribution("crewai").version,
+                version("crewai"),
             )
             self._add_attribute(span, "tool_name", tool_name)
             self._add_attribute(span, "attempts", attempts)
@@ -328,7 +325,7 @@ class Telemetry:
             self._add_attribute(
                 span,
                 "crewai_version",
-                pkg_resources.get_distribution("crewai").version,
+                version("crewai"),
             )
             self._add_attribute(span, "tool_name", tool_name)
             self._add_attribute(span, "attempts", attempts)
@@ -348,7 +345,7 @@ class Telemetry:
             self._add_attribute(
                 span,
                 "crewai_version",
-                pkg_resources.get_distribution("crewai").version,
+                version("crewai"),
             )
             if llm:
                 self._add_attribute(span, "llm", llm.model)
@@ -367,7 +364,7 @@ class Telemetry:
             self._add_attribute(
                 span,
                 "crewai_version",
-                pkg_resources.get_distribution("crewai").version,
+                version("crewai"),
             )
             self._add_attribute(span, "crew_key", crew.key)
             self._add_attribute(span, "crew_id", str(crew.id))
@@ -393,7 +390,7 @@ class Telemetry:
             self._add_attribute(
                 span,
                 "crewai_version",
-                pkg_resources.get_distribution("crewai").version,
+                version("crewai"),
             )
             self._add_attribute(span, "crew_key", crew.key)
             self._add_attribute(span, "crew_id", str(crew.id))
@@ -474,7 +471,7 @@ class Telemetry:
             self._add_attribute(
                 span,
                 "crewai_version",
-                pkg_resources.get_distribution("crewai").version,
+                version("crewai"),
             )
             self._add_attribute(span, "crew_key", crew.key)
             self._add_attribute(span, "crew_id", str(crew.id))
@@ -543,7 +540,7 @@ class Telemetry:
             self._add_attribute(
                 crew._execution_span,
                 "crewai_version",
-                pkg_resources.get_distribution("crewai").version,
+                version("crewai"),
             )
             self._add_attribute(
                 crew._execution_span, "crew_output", final_string_output
