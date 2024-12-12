@@ -153,7 +153,6 @@ class RAGStorage(BaseRAGStorage):
             shutil.rmtree(f"{db_storage_path()}/{self.type}")
             if self.app:
                 self.app.reset()
-
         except Exception as e:
             if "attempt to write a readonly database" in str(e):
                 # Ignore this specific error
