@@ -150,14 +150,10 @@ class RAGStorage(BaseRAGStorage):
 
     def reset(self) -> None:
         try:
-            # First reset ChromaDB's internal state
+            shutil.rmtree(f"{db_storage_path()}/{self.type}")
             if self.app:
                 self.app.reset()
-            
-            # Then remove the directory
-            storage_path = f"{db_storage_path()}/{self.type}"
-            if os.path.exists(storage_path):
-                shutil.rmtree(storage_path)
+
         except Exception as e:
             if "attempt to write a readonly database" in str(e):
                 # Ignore this specific error
