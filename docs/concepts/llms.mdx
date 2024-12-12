@@ -43,6 +43,78 @@ Here's a detailed breakdown of supported models and their capabilities:
       1 token ≈ 4 characters in English. For example, 8,192 tokens ≈ 32,768 characters or about 6,000 words.
     </Note>
   </Tab>
+  <Tab title="Nvidia NIM">
+    | Model | Context Window | Best For |
+    |-------|---------------|-----------|
+    | nvidia/mistral-nemo-minitron-8b-8k-instruct | 8,192 tokens | State-of-the-art small language model delivering superior accuracy for chatbot, virtual assistants, and content generation. |
+    | nvidia/nemotron-4-mini-hindi-4b-instruct| 4,096 tokens | A bilingual Hindi-English SLM for on-device inference, tailored specifically for Hindi Language. |
+    | "nvidia/llama-3.1-nemotron-70b-instruct | 128k tokens | Llama-3.1-Nemotron-70B-Instruct is a large language model customized by NVIDIA in order to improve the helpfulness of LLM generated responses. |
+    | nvidia/llama3-chatqa-1.5-8b | 128k tokens | Advanced LLM to generate high-quality, context-aware responses for chatbots and search engines. |
+    | nvidia/llama3-chatqa-1.5-70b | 128k tokens | Advanced LLM to generate high-quality, context-aware responses for chatbots and search engines. |
+    | nvidia/vila | 128k tokens | Multi-modal vision-language model that understands text/img/video and creates informative responses |
+    | nvidia/neva-22| 4,096 tokens | Multi-modal vision-language model that understands text/images and generates informative responses |
+    | nvidia/nemotron-mini-4b-instruct | 8,192 tokens | General-purpose tasks |
+    | nvidia/usdcode-llama3-70b-instruct | 128k tokens | State-of-the-art LLM that answers OpenUSD knowledge queries and generates USD-Python code. |
+    | nvidia/nemotron-4-340b-instruct | 4,096 tokens | Creates diverse synthetic data that mimics the characteristics of real-world data. |
+    | meta/codellama-70b | 100k tokens | LLM capable of generating code from natural language and vice versa. |
+    | meta/llama2-70b | 4,096 tokens | Cutting-edge large language AI model capable of generating text and code in response to prompts. |
+    | meta/llama3-8b-instruct | 8,192 tokens | Advanced state-of-the-art LLM with language understanding, superior reasoning, and text generation. |
+    | meta/llama3-70b-instruct | 8,192 tokens | Powers complex conversations with superior contextual understanding, reasoning and text generation. |
+    | meta/llama-3.1-8b-instruct | 128k tokens | Advanced state-of-the-art model with language understanding, superior reasoning, and text generation. |
+    | meta/llama-3.1-70b-instruct | 128k tokens | Powers complex conversations with superior contextual understanding, reasoning and text generation. |
+    | meta/llama-3.1-405b-instruct | 128k tokens | Advanced LLM for synthetic data generation, distillation, and inference for chatbots, coding, and domain-specific tasks. |
+    | meta/llama-3.2-1b-instruct | 128k tokens | Advanced state-of-the-art small language model with language understanding, superior reasoning, and text generation. |
+    | meta/llama-3.2-3b-instruct | 128k tokens | Advanced state-of-the-art small language model with language understanding, superior reasoning, and text generation. |
+    | meta/llama-3.2-11b-vision-instruct | 128k tokens | Advanced state-of-the-art small language model with language understanding, superior reasoning, and text generation. |
+    | meta/llama-3.2-90b-vision-instruct | 128k tokens | Advanced state-of-the-art small language model with language understanding, superior reasoning, and text generation. |
+    | meta/llama-3.1-70b-instruct | 128k tokens | Powers complex conversations with superior contextual understanding, reasoning and text generation. |
+    | google/gemma-7b | 8,192 tokens | Cutting-edge text generation model text understanding, transformation, and code generation. |
+    | google/gemma-2b | 8,192 tokens | Cutting-edge text generation model text understanding, transformation, and code generation. |
+    | google/codegemma-7b | 8,192 tokens | Cutting-edge model built on Google's Gemma-7B specialized for code generation and code completion. |
+    | google/codegemma-1.1-7b | 8,192 tokens | Advanced programming model for code generation, completion, reasoning, and instruction following. |
+    | google/recurrentgemma-2b | 8,192 tokens | Novel recurrent architecture based language model for faster inference when generating long sequences. |
+    | google/gemma-2-9b-it | 8,192 tokens | Cutting-edge text generation model text understanding, transformation, and code generation. |
+    | google/gemma-2-27b-it | 8,192 tokens | Cutting-edge text generation model text understanding, transformation, and code generation. |
+    | google/gemma-2-2b-it | 8,192 tokens | Cutting-edge text generation model text understanding, transformation, and code generation. |
+    | google/deplot | 512 tokens | One-shot visual language understanding model that translates images of plots into tables. |
+    | google/paligemma | 8,192 tokens | Vision language model adept at comprehending text and visual inputs to produce informative responses. |
+    | mistralai/mistral-7b-instruct-v0.2 | 32k tokens | This LLM follows instructions, completes requests, and generates creative text. |
+    | mistralai/mixtral-8x7b-instruct-v0.1 | 8,192 tokens | An MOE LLM that follows instructions, completes requests, and generates creative text. |
+    | mistralai/mistral-large | 4,096 tokens | Creates diverse synthetic data that mimics the characteristics of real-world data. |
+    | mistralai/mixtral-8x22b-instruct-v0.1 | 8,192 tokens | Creates diverse synthetic data that mimics the characteristics of real-world data. |
+    | mistralai/mistral-7b-instruct-v0.3 | 32k tokens | This LLM follows instructions, completes requests, and generates creative text. |
+    | nv-mistralai/mistral-nemo-12b-instruct | 128k tokens | Most advanced language model for reasoning, code, multilingual tasks; runs on a single GPU. |
+    | mistralai/mamba-codestral-7b-v0.1 | 256k tokens | Model for writing and interacting with code across a wide range of programming languages and tasks. |
+    | microsoft/phi-3-mini-128k-instruct | 128K tokens | Lightweight, state-of-the-art open LLM with strong math and logical reasoning skills. |
+    | microsoft/phi-3-mini-4k-instruct | 4,096 tokens | Lightweight, state-of-the-art open LLM with strong math and logical reasoning skills. |
+    | microsoft/phi-3-small-8k-instruct | 8,192 tokens | Lightweight, state-of-the-art open LLM with strong math and logical reasoning skills. |
+    | microsoft/phi-3-small-128k-instruct | 128K tokens | Lightweight, state-of-the-art open LLM with strong math and logical reasoning skills. |
+    | microsoft/phi-3-medium-4k-instruct | 4,096 tokens | Lightweight, state-of-the-art open LLM with strong math and logical reasoning skills. |
+    | microsoft/phi-3-medium-128k-instruct | 128K tokens | Lightweight, state-of-the-art open LLM with strong math and logical reasoning skills. |
+    | microsoft/phi-3.5-mini-instruct | 128K tokens | Lightweight multilingual LLM powering AI applications in latency bound, memory/compute constrained environments |
+    | microsoft/phi-3.5-moe-instruct | 128K tokens | Advanced LLM based on Mixture of Experts architecure to deliver compute efficient content generation |
+    | microsoft/kosmos-2 | 1,024 tokens | Groundbreaking multimodal model designed to understand and reason about visual elements in images. |
+    | microsoft/phi-3-vision-128k-instruct | 128k tokens | Cutting-edge open multimodal model exceling in high-quality reasoning from images. |
+    | microsoft/phi-3.5-vision-instruct | 128k tokens | Cutting-edge open multimodal model exceling in high-quality reasoning from images. |
+    | databricks/dbrx-instruct | 12k tokens | A general-purpose LLM with state-of-the-art performance in language understanding, coding, and RAG. |
+    | snowflake/arctic | 1,024 tokens | Delivers high efficiency inference for enterprise applications focused on SQL generation and coding. |
+    | aisingapore/sea-lion-7b-instruct | 4,096 tokens | LLM to represent and serve the linguistic and cultural diversity of Southeast Asia |
+    | ibm/granite-8b-code-instruct | 4,096 tokens | Software programming LLM for code generation, completion, explanation, and multi-turn conversion. |
+    | ibm/granite-34b-code-instruct | 8,192 tokens | Software programming LLM for code generation, completion, explanation, and multi-turn conversion. |
+    | ibm/granite-3.0-8b-instruct | 4,096 tokens | Advanced Small Language Model supporting RAG, summarization, classification, code, and agentic AI |
+    | ibm/granite-3.0-3b-a800m-instruct | 4,096 tokens | Highly efficient Mixture of Experts model for RAG, summarization, entity extraction, and classification |
+    | mediatek/breeze-7b-instruct | 4,096 tokens | Creates diverse synthetic data that mimics the characteristics of real-world data. |
+    | upstage/solar-10.7b-instruct | 4,096 tokens | Excels in NLP tasks, particularly in instruction-following, reasoning, and mathematics. |
+    | writer/palmyra-med-70b-32k | 32k tokens | Leading LLM for accurate, contextually relevant responses in the medical domain. |
+    | writer/palmyra-med-70b | 32k tokens | Leading LLM for accurate, contextually relevant responses in the medical domain. |
+    | writer/palmyra-fin-70b-32k | 32k tokens | Specialized LLM for financial analysis, reporting, and data processing |
+    | 01-ai/yi-large | 32k tokens | Powerful model trained on English and Chinese for diverse tasks including chatbot and creative writing. |
+    | deepseek-ai/deepseek-coder-6.7b-instruct | 2k tokens | Powerful coding model offering advanced capabilities in code generation, completion, and infilling |
+    | rakuten/rakutenai-7b-instruct | 1,024 tokens | Advanced state-of-the-art LLM with language understanding, superior reasoning, and text generation. |
+    | rakuten/rakutenai-7b-chat | 1,024 tokens | Advanced state-of-the-art LLM with language understanding, superior reasoning, and text generation. |
+    | baichuan-inc/baichuan2-13b-chat | 4,096 tokens | Support Chinese and English chat, coding, math, instruction following, solving quizzes |
+
+  </Tab>
   <Tab title="Groq">
     | Model | Context Window | Best For |
     |-------|---------------|-----------|
@@ -412,6 +484,20 @@ Learn how to get the most out of your LLM configuration:
     ```
   </Accordion>
 
+  <Accordion title="Nvidia NIM">
+    ```python Code
+    NVIDIA_API_KEY=<your-api-key>
+    ```
+
+    Example usage:
+    ```python Code
+    llm = LLM(
+        model="nvidia_nim/meta/llama3-70b-instruct",
+        temperature=0.7
+    )
+    ```
+  </Accordion>
+
   <Accordion title="Groq">
     ```python Code
     GROQ_API_KEY=<your-api-key>
@@ -498,20 +584,6 @@ Learn how to get the most out of your LLM configuration:
     llm = LLM(
         model="huggingface/meta-llama/Meta-Llama-3.1-8B-Instruct",
         base_url="your_api_endpoint"
-    )
-    ```
-  </Accordion>
-
-  <Accordion title="Nvidia NIM">
-    ```python Code
-    NVIDIA_API_KEY=<your-api-key>
-    ```
-
-    Example usage:
-    ```python Code
-    llm = LLM(
-        model="nvidia_nim/meta/llama3-70b-instruct",
-        temperature=0.7
     )
     ```
   </Accordion>
