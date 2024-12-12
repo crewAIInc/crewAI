@@ -1,11 +1,11 @@
 import datetime
 import json
-import os
 import threading
 import uuid
 from concurrent.futures import Future
 from copy import copy
 from hashlib import md5
+from pathlib import Path
 from typing import Any, Dict, List, Optional, Set, Tuple, Type, Union
 
 from opentelemetry.trace import Span
@@ -393,12 +393,13 @@ class Task(BaseModel):
         if self.output_file is None:
             raise ValueError("output_file is not set.")
 
-        directory = os.path.dirname(self.output_file)  # type: ignore # Value of type variable "AnyOrLiteralStr" of "dirname" cannot be "str | None"
+        resolved_path = Path(self.output_file).expanduser().resolve()
+        directory = resolved_path.parent
 
-        if directory and not os.path.exists(directory):
-            os.makedirs(directory)
+        if not directory.exists():
+            directory.mkdir(parents=True, exist_ok=True)
 
-        with open(self.output_file, "w", encoding="utf-8") as file:
+        with resolved_path.open("w", encoding="utf-8") as file:
             if isinstance(result, dict):
                 import json
 
