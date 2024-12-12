@@ -21,9 +21,9 @@ from pydantic import (
 from pydantic_core import PydanticCustomError
 
 from crewai.agents.agent_builder.base_agent import BaseAgent
+from crewai.tasks.guardrail_result import GuardrailResult
 from crewai.tasks.output_format import OutputFormat
 from crewai.tasks.task_output import TaskOutput
-from crewai.tasks.guardrail_result import GuardrailResult
 from crewai.telemetry.telemetry import Telemetry
 from crewai.tools.base_tool import BaseTool
 from crewai.utilities.config import process_config
