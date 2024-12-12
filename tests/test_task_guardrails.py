@@ -26,8 +26,8 @@ def test_task_without_guardrail():
 
 def test_task_with_successful_guardrail():
     """Test that successful guardrail validation passes transformed result."""
-    def guardrail(result):
-        return (True, result.upper())
+    def guardrail(result: TaskOutput):
+        return (True, result.raw.upper())
 
     agent = Mock()
     agent.role = "test_agent"
@@ -47,7 +47,7 @@ def test_task_with_successful_guardrail():
 
 def test_task_with_failing_guardrail():
     """Test that failing guardrail triggers retry with error context."""
-    def guardrail(result):
+    def guardrail(result: TaskOutput):
         return (False, "Invalid format")
 
     agent = Mock()
@@ -76,7 +76,7 @@ def test_task_with_failing_guardrail():
 
 def test_task_with_guardrail_retries():
     """Test that guardrail respects max_retries configuration."""
-    def guardrail(result):
+    def guardrail(result: TaskOutput):
         return (False, "Invalid format")
 
     agent = Mock()
@@ -101,7 +101,7 @@ def test_task_with_guardrail_retries():
 
 def test_guardrail_error_in_context():
     """Test that guardrail error is passed in context for retry."""
-    def guardrail(result):
+    def guardrail(result: TaskOutput):
         return (False, "Expected JSON, got string")
 
     agent = Mock()
