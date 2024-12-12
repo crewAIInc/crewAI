@@ -37,3 +37,6 @@ ENV/
 .coverage
 htmlcov/
 .pytest_cache/
+
+# Package Management
+uv.lock
