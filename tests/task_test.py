@@ -655,7 +655,7 @@ def test_increment_delegations_for_sequential_process():
         increment_delegations.assert_called_once()
 
 
-# @pytest.mark.vcr(filter_headers=["authorization"])
+@pytest.mark.vcr(filter_headers=["authorization"])
 def test_increment_tool_errors():
     from crewai.tools import tool
 
