@@ -5,9 +5,10 @@ from typing import Any, Dict
 import requests
 from rich.console import Console
 
+from crewai.cli.tools.main import ToolCommand
+
 from .constants import AUTH0_AUDIENCE, AUTH0_CLIENT_ID, AUTH0_DOMAIN
 from .utils import TokenManager, validate_token
-from crewai.cli.tools.main import ToolCommand
 
 console = Console()
 
@@ -79,7 +80,9 @@ class AuthenticationCommand:
                         style="yellow",
                     )
 
-                console.print("\n[bold green]Welcome to CrewAI Enterprise![/bold green]\n")
+                console.print(
+                    "\n[bold green]Welcome to CrewAI Enterprise![/bold green]\n"
+                )
                 return
 
             if token_data["error"] not in ("authorization_pending", "slow_down"):

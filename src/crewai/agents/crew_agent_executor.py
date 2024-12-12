@@ -143,6 +143,9 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
                         tool_result = self._execute_tool_and_check_finality(
                             formatted_answer
                         )
+                        if self.step_callback:
+                            self.step_callback(tool_result)
+
                         formatted_answer.text += f"\nObservation: {tool_result.result}"
                         formatted_answer.result = tool_result.result
                         if tool_result.result_as_answer:
@@ -299,7 +302,7 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
                         self._i18n.slice("summarizer_system_message"), role="system"
                     ),
                     self._format_msg(
-                        self._i18n.slice("sumamrize_instruction").format(group=group),
+                        self._i18n.slice("summarize_instruction").format(group=group),
                     ),
                 ],
                 callbacks=self.callbacks,
@@ -410,7 +413,6 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
         """
         while self.ask_for_human_input:
             human_feedback = self._ask_human_input(formatted_answer.output)
-            print("Human feedback: ", human_feedback)
 
             if self.crew and self.crew._train:
                 self._handle_crew_training_output(formatted_answer, human_feedback)

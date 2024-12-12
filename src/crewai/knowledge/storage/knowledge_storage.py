@@ -3,6 +3,7 @@ import hashlib
 import io
 import logging
 import os
+import shutil
 from typing import Any, Dict, List, Optional, Union, cast
 
 import chromadb
@@ -13,6 +14,7 @@ from chromadb.config import Settings
 
 from crewai.knowledge.storage.base_knowledge_storage import BaseKnowledgeStorage
 from crewai.utilities import EmbeddingConfigurator
+from crewai.utilities.constants import KNOWLEDGE_DIRECTORY
 from crewai.utilities.logger import Logger
 from crewai.utilities.paths import db_storage_path
 
@@ -105,15 +107,17 @@ class KnowledgeStorage(BaseKnowledgeStorage):
             raise Exception("Failed to create or get collection")
 
     def reset(self):
-        if self.app:
-            self.app.reset()
-        else:
-            base_path = os.path.join(db_storage_path(), "knowledge")
+        base_path = os.path.join(db_storage_path(), KNOWLEDGE_DIRECTORY)
+        if not self.app:
             self.app = chromadb.PersistentClient(
                 path=base_path,
                 settings=Settings(allow_reset=True),
             )
-            self.app.reset()
+
+        self.app.reset()
+        shutil.rmtree(base_path)
+        self.app = None
+        self.collection = None
 
     def save(
         self,
