@@ -133,6 +133,10 @@ class KnowledgeStorage(BaseKnowledgeStorage):
                 else:
                     metadatas = cast(chromadb.Metadata, metadata)
 
+                print("DOCUMENTS", documents)
+                for doc, idx in enumerate(documents):
+                    print(f"DOC: {idx}", doc)
+
                 ids = [
                     hashlib.sha256(doc.encode("utf-8")).hexdigest() for doc in documents
                 ]
