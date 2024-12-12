@@ -32,7 +32,7 @@ interactions:
       x-stainless-runtime:
       - CPython
       x-stainless-runtime-version:
-      - 3.12.7
+      - 3.11.10
     method: POST
     uri: https://api.openai.com/v1/embeddings
   response:
@@ -44,7 +44,7 @@ interactions:
       CF-Cache-Status:
       - DYNAMIC
       CF-RAY:
-      - 8ef6057bdcd7bfd3-ATL
+      - 8f0ec4a9fc4a7be2-ATL
       Connection:
       - keep-alive
       Content-Encoding:
@@ -52,14 +52,14 @@ interactions:
       Content-Type:
       - application/json
       Date:
-      - Mon, 09 Dec 2024 15:27:49 GMT
+      - Thu, 12 Dec 2024 15:32:38 GMT
       Server:
       - cloudflare
       Set-Cookie:
-      - __cf_bm=8GroDcKAoJ7BLt3eKlj95nxrccQS_3gYY.QoZZckntY-1733758069-1.0.1.1-Zrpoz29IKedHOWj71llAd7SzRXy8dGiKUQ..i4vYYcUe1.oK5RO9qVVzVI47zm3S8.VPN4A6PF7ZlLg7G6Yjcg;
-        path=/; expires=Mon, 09-Dec-24 15:57:49 GMT; domain=.api.openai.com; HttpOnly;
+      - __cf_bm=JQ4bsbrPrXcsrRqBfF9OpkEFvHxDLYUVrOcJitW8he0-1734017558-1.0.1.1-UtDeCuV.l6Yo67ns9.WTo_GANksVIb2bkS16yHp7bzFTr9aggY_ktYxoruslSGvclmkHvZ83nhA7aTxNEWBClw;
+        path=/; expires=Thu, 12-Dec-24 16:02:38 GMT; domain=.api.openai.com; HttpOnly;
         Secure; SameSite=None
-      - _cfuvid=QTA_O.rwmV3WI.7e_GFGvGOPyVJVTelst5DAqPSRrGY-1733758069264-0.0.1.1-604800000;
+      - _cfuvid=raW1PjGMf_mlMvwC_NU5hu.FUoYv1c8LglyJIgUIMQE-1734017558229-0.0.1.1-604800000;
         path=/; domain=.api.openai.com; HttpOnly; Secure; SameSite=None
       Transfer-Encoding:
       - chunked
@@ -76,7 +76,7 @@ interactions:
       openai-organization:
       - crewai-iuxna1
       openai-processing-ms:
-      - '67'
+      - '45'
       openai-version:
       - '2020-10-01'
       strict-transport-security:
@@ -94,7 +94,7 @@ interactions:
       x-ratelimit-reset-tokens:
       - 0s
       x-request-id:
-      - req_d5a98eafd945cee248a750aedb92e236
+      - req_ebb94dbb100f87a00dd07c4ee550be9d
     http_version: HTTP/1.1
     status_code: 200
 - request:
@@ -114,8 +114,8 @@ interactions:
       content-type:
       - application/json
       cookie:
-      - __cf_bm=8GroDcKAoJ7BLt3eKlj95nxrccQS_3gYY.QoZZckntY-1733758069-1.0.1.1-Zrpoz29IKedHOWj71llAd7SzRXy8dGiKUQ..i4vYYcUe1.oK5RO9qVVzVI47zm3S8.VPN4A6PF7ZlLg7G6Yjcg;
-        _cfuvid=QTA_O.rwmV3WI.7e_GFGvGOPyVJVTelst5DAqPSRrGY-1733758069264-0.0.1.1-604800000
+      - __cf_bm=JQ4bsbrPrXcsrRqBfF9OpkEFvHxDLYUVrOcJitW8he0-1734017558-1.0.1.1-UtDeCuV.l6Yo67ns9.WTo_GANksVIb2bkS16yHp7bzFTr9aggY_ktYxoruslSGvclmkHvZ83nhA7aTxNEWBClw;
+        _cfuvid=raW1PjGMf_mlMvwC_NU5hu.FUoYv1c8LglyJIgUIMQE-1734017558229-0.0.1.1-604800000
       host:
       - api.openai.com
       user-agent:
@@ -135,7 +135,7 @@ interactions:
       x-stainless-runtime:
       - CPython
       x-stainless-runtime-version:
-      - 3.12.7
+      - 3.11.10
     method: POST
     uri: https://api.openai.com/v1/embeddings
   response:
@@ -147,7 +147,7 @@ interactions:
       CF-Cache-Status:
       - DYNAMIC
       CF-RAY:
-      - 8ef6057d3f36bfd3-ATL
+      - 8f0ec4ab4e447be2-ATL
       Connection:
       - keep-alive
       Content-Encoding:
@@ -155,7 +155,7 @@ interactions:
       Content-Type:
       - application/json
       Date:
-      - Mon, 09 Dec 2024 15:27:49 GMT
+      - Thu, 12 Dec 2024 15:32:38 GMT
       Server:
       - cloudflare
       Transfer-Encoding:
@@ -173,7 +173,7 @@ interactions:
       openai-organization:
       - crewai-iuxna1
       openai-processing-ms:
-      - '61'
+      - '168'
       openai-version:
       - '2020-10-01'
       strict-transport-security:
@@ -191,7 +191,7 @@ interactions:
       x-ratelimit-reset-tokens:
       - 0s
       x-request-id:
-      - req_e04f610aec3f283b8cd3814f355d7e1e
+      - req_3e2d999e19fbb1877b73737cb8fa8df2
     http_version: HTTP/1.1
     status_code: 200
 - request:
@@ -240,12 +240,12 @@ interactions:
       x-stainless-runtime:
       - CPython
       x-stainless-runtime-version:
-      - 3.12.7
+      - 3.11.10
     method: POST
     uri: https://api.openai.com/v1/chat/completions
   response:
-    content: "{\n  \"id\": \"chatcmpl-AcZxlMl1NVS9CSBbHyPfKd8WzD3aO\",\n  \"object\":
-      \"chat.completion\",\n  \"created\": 1733758069,\n  \"model\": \"gpt-4o-mini-2024-07-18\",\n
+    content: "{\n  \"id\": \"chatcmpl-AdfT58qGUp4bCqzNchvmmtB8Li9kl\",\n  \"object\":
+      \"chat.completion\",\n  \"created\": 1734017559,\n  \"model\": \"gpt-4o-mini-2024-07-18\",\n
       \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
       \"assistant\",\n        \"content\": \"I now can give a great answer  \\nFinal
       Answer: Brandon's favorite color is blue.\",\n        \"refusal\": null\n      },\n
@@ -260,7 +260,7 @@ interactions:
       CF-Cache-Status:
       - DYNAMIC
       CF-RAY:
-      - 8ef6057f58f44545-ATL
+      - 8f0ec4aea965bf7c-ATL
       Connection:
       - keep-alive
       Content-Encoding:
@@ -268,14 +268,14 @@ interactions:
       Content-Type:
       - application/json
       Date:
-      - Mon, 09 Dec 2024 15:27:50 GMT
+      - Thu, 12 Dec 2024 15:32:39 GMT
       Server:
       - cloudflare
       Set-Cookie:
-      - __cf_bm=Tbb3jwYn90Lyu5Cb4B6P5CRP7SGlnaITfwqgkXtIros-1733758070-1.0.1.1-iv0IFw7ll2tuAlnm_26nMAYrhHx7wpXV_Qxf61_aMWCPfoJqrXYnPg0JP2c8Zyu0CnLHhZMpxf0PYol3JxksyA;
-        path=/; expires=Mon, 09-Dec-24 15:57:50 GMT; domain=.api.openai.com; HttpOnly;
+      - __cf_bm=ZAZww48jCq1_tEj5gjxNByWq.0Lux_FOsWxnUIKug_o-1734017559-1.0.1.1-H_bzV6HfUKZMQNtdNss4AqrIQ7n0IeYRSHkf6Y43RXwTMa4oBc6eiRLSa8pErxvVp_aKeh0jTv6y1YbzitDvQA;
+        path=/; expires=Thu, 12-Dec-24 16:02:39 GMT; domain=.api.openai.com; HttpOnly;
         Secure; SameSite=None
-      - _cfuvid=94o.ob_TXxoqcAde4yRla5YmHu6Im7.5KIIE71spBtQ-1733758070047-0.0.1.1-604800000;
+      - _cfuvid=Ky2g52QURhQ27fAvP.PBLXc.R2WshSfTWdPYHUKsLAY-1734017559507-0.0.1.1-604800000;
         path=/; domain=.api.openai.com; HttpOnly; Secure; SameSite=None
       Transfer-Encoding:
       - chunked
@@ -288,7 +288,7 @@ interactions:
       openai-organization:
       - crewai-iuxna1
       openai-processing-ms:
-      - '325'
+      - '598'
       openai-version:
       - '2020-10-01'
       strict-transport-security:
@@ -306,7 +306,7 @@ interactions:
       x-ratelimit-reset-tokens:
       - 0s
       x-request-id:
-      - req_ff5bc8c30db25d467584dad8eb2fd984
+      - req_04328657f2d5cd75525f92f83c0d6e59
     http_version: HTTP/1.1
     status_code: 200
 version: 1
