@@ -22,6 +22,7 @@ from .tools import (
     MultiOnTool,
     MySQLSearchTool,
     NL2SQLTool,
+    PatronusEvalTool,
     PDFSearchTool,
     PGSearchTool,
     RagTool,
