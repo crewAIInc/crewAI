@@ -10,13 +10,6 @@ if TYPE_CHECKING:
 
 class FirecrawlCrawlWebsiteToolSchema(BaseModel):
     url: str = Field(description="Website URL")
-    crawler_options: Optional[Dict[str, Any]] = Field(
-        default=None, description="Options for crawling"
-    )
-    page_options: Optional[Dict[str, Any]] = Field(
-        default=None, description="Options for page"
-    )
-
 
 class FirecrawlCrawlWebsiteTool(BaseTool):
     model_config = ConfigDict(
