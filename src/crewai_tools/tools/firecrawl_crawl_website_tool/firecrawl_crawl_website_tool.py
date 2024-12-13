@@ -28,6 +28,17 @@ class FirecrawlCrawlWebsiteTool(BaseTool):
     idempotency_key: Optional[str] = None
 
     def __init__(self, api_key: Optional[str] = None, **kwargs):
+        """Initialize FirecrawlCrawlWebsiteTool.
+
+        Args:
+            api_key (Optional[str]): Firecrawl API key. If not provided, will check FIRECRAWL_API_KEY env var.
+            url (Optional[str]): Base URL to crawl. Can be overridden by the _run method.
+            firecrawl_app (Optional[FirecrawlApp]): Previously created FirecrawlApp instance.
+            params (Optional[Dict[str, Any]]): Additional parameters to pass to the FirecrawlApp.
+            poll_interval (Optional[int]): Poll interval for the FirecrawlApp.
+            idempotency_key (Optional[str]): Idempotency key for the FirecrawlApp.
+            **kwargs: Additional arguments passed to BaseTool.
+        """
         super().__init__(**kwargs)
         try:
             from firecrawl import FirecrawlApp  # type: ignore
