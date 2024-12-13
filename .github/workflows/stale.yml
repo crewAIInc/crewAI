@@ -1,5 +1,10 @@
 name: Mark stale issues and pull requests
 
+permissions:
+  contents: write
+  issues: write
+  pull-requests: write
+
 on:
   schedule:
     - cron: '10 12 * * *'
@@ -8,9 +13,6 @@ on:
 jobs:
   stale:
     runs-on: ubuntu-latest
-    permissions:
-      issues: write
-      pull-requests: write
     steps:
     - uses: actions/stale@v9
       with:
@@ -24,3 +26,4 @@ jobs:
         stale-pr-message: 'This PR is stale because it has been open for 45 days with no activity.'
         days-before-pr-stale: 45
         days-before-pr-close: -1
+        operations-per-run: 1200

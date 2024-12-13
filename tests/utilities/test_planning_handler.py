@@ -1,12 +1,15 @@
 from unittest.mock import patch
 
 import pytest
-from langchain_openai import ChatOpenAI
 
 from crewai.agent import Agent
 from crewai.task import Task
 from crewai.tasks.task_output import TaskOutput
-from crewai.utilities.planning_handler import CrewPlanner, PlannerTaskPydanticOutput
+from crewai.utilities.planning_handler import (
+    CrewPlanner,
+    PlannerTaskPydanticOutput,
+    PlanPerTask,
+)
 
 
 class TestCrewPlanner:
@@ -40,20 +43,25 @@ class TestCrewPlanner:
                 agent=Agent(role="Agent 1", goal="Goal 1", backstory="Backstory 1"),
             )
         ]
-        planning_agent_llm = ChatOpenAI(model="gpt-3.5-turbo")
+        planning_agent_llm = "gpt-3.5-turbo"
         return CrewPlanner(tasks, planning_agent_llm)
 
     def test_handle_crew_planning(self, crew_planner):
+        list_of_plans_per_task = [
+            PlanPerTask(task="Task1", plan="Plan 1"),
+            PlanPerTask(task="Task2", plan="Plan 2"),
+            PlanPerTask(task="Task3", plan="Plan 3"),
+        ]
         with patch.object(Task, "execute_sync") as execute:
             execute.return_value = TaskOutput(
                 description="Description",
                 agent="agent",
                 pydantic=PlannerTaskPydanticOutput(
-                    list_of_plans_per_task=["Plan 1", "Plan 2", "Plan 3"]
+                    list_of_plans_per_task=list_of_plans_per_task
                 ),
             )
             result = crew_planner._handle_crew_planning()
-            assert crew_planner.planning_agent_llm.model_name == "gpt-4o-mini"
+            assert crew_planner.planning_agent_llm == "gpt-4o-mini"
             assert isinstance(result, PlannerTaskPydanticOutput)
             assert len(result.list_of_plans_per_task) == len(crew_planner.tasks)
             execute.assert_called_once()
@@ -91,14 +99,13 @@ class TestCrewPlanner:
             execute.return_value = TaskOutput(
                 description="Description",
                 agent="agent",
-                pydantic=PlannerTaskPydanticOutput(list_of_plans_per_task=["Plan 1"]),
+                pydantic=PlannerTaskPydanticOutput(
+                    list_of_plans_per_task=[PlanPerTask(task="Task1", plan="Plan 1")]
+                ),
             )
             result = crew_planner_different_llm._handle_crew_planning()
 
-            assert (
-                crew_planner_different_llm.planning_agent_llm.model_name
-                == "gpt-3.5-turbo"
-            )
+            assert crew_planner_different_llm.planning_agent_llm == "gpt-3.5-turbo"
             assert isinstance(result, PlannerTaskPydanticOutput)
             assert len(result.list_of_plans_per_task) == len(
                 crew_planner_different_llm.tasks

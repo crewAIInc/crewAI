@@ -2,6 +2,7 @@
 .pytest_cache
 __pycache__
 dist/
+lib/
 .env
 assets/*
 .idea
@@ -16,3 +17,7 @@ rc-tests/*
 temp/*
 .vscode/*
 crew_tasks_output.json
+.codesight
+.mypy_cache
+.ruff_cache
+.venv

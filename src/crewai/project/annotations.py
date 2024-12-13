@@ -1,17 +1,31 @@
+from functools import wraps
+from typing import Callable
+
+from crewai import Crew
 from crewai.project.utils import memoize
 
 
+def before_kickoff(func):
+    func.is_before_kickoff = True
+    return func
+
+
+def after_kickoff(func):
+    func.is_after_kickoff = True
+    return func
+
+
 def task(func):
-    if not hasattr(task, "registration_order"):
-        task.registration_order = []
-
     func.is_task = True
-    wrapped_func = memoize(func)
 
-    # Append the function name to the registration order list
-    task.registration_order.append(func.__name__)
+    @wraps(func)
+    def wrapper(*args, **kwargs):
+        result = func(*args, **kwargs)
+        if not result.name:
+            result.name = func.__name__
+        return result
 
-    return wrapped_func
+    return memoize(wrapper)
 
 
 def agent(func):
@@ -51,68 +65,50 @@ def cache_handler(func):
     return memoize(func)
 
 
-def stage(func):
-    func.is_stage = True
-    return memoize(func)
+def crew(func) -> Callable[..., Crew]:
 
-
-def router(func):
-    func.is_router = True
-    return memoize(func)
-
-
-def pipeline(func):
-    func.is_pipeline = True
-    return memoize(func)
-
-
-def crew(func):
-    def wrapper(self, *args, **kwargs):
+    @wraps(func)
+    def wrapper(self, *args, **kwargs) -> Crew:
         instantiated_tasks = []
         instantiated_agents = []
-
         agent_roles = set()
-        all_functions = {
-            name: getattr(self, name)
-            for name in dir(self)
-            if callable(getattr(self, name))
-        }
-        tasks = {
-            name: func
-            for name, func in all_functions.items()
-            if hasattr(func, "is_task")
-        }
-        agents = {
-            name: func
-            for name, func in all_functions.items()
-            if hasattr(func, "is_agent")
-        }
 
-        # Sort tasks by their registration order
-        sorted_task_names = sorted(
-            tasks, key=lambda name: task.registration_order.index(name)
-        )
+        # Use the preserved task and agent information
+        tasks = self._original_tasks.items()
+        agents = self._original_agents.items()
 
-        # Instantiate tasks in the order they were defined
-        for task_name in sorted_task_names:
-            task_instance = tasks[task_name]()
+        # Instantiate tasks in order
+        for task_name, task_method in tasks:
+            task_instance = task_method(self)
             instantiated_tasks.append(task_instance)
-            if hasattr(task_instance, "agent"):
-                agent_instance = task_instance.agent
-                if agent_instance.role not in agent_roles:
-                    instantiated_agents.append(agent_instance)
-                    agent_roles.add(agent_instance.role)
+            agent_instance = getattr(task_instance, "agent", None)
+            if agent_instance and agent_instance.role not in agent_roles:
+                instantiated_agents.append(agent_instance)
+                agent_roles.add(agent_instance.role)
 
-        # Instantiate any additional agents not already included by tasks
-        for agent_name in agents:
-            temp_agent_instance = agents[agent_name]()
-            if temp_agent_instance.role not in agent_roles:
-                instantiated_agents.append(temp_agent_instance)
-                agent_roles.add(temp_agent_instance.role)
+        # Instantiate agents not included by tasks
+        for agent_name, agent_method in agents:
+            agent_instance = agent_method(self)
+            if agent_instance.role not in agent_roles:
+                instantiated_agents.append(agent_instance)
+                agent_roles.add(agent_instance.role)
 
         self.agents = instantiated_agents
         self.tasks = instantiated_tasks
 
-        return func(self, *args, **kwargs)
+        crew = func(self, *args, **kwargs)
 
-    return wrapper
+        def callback_wrapper(callback, instance):
+            def wrapper(*args, **kwargs):
+                return callback(instance, *args, **kwargs)
+
+            return wrapper
+
+        for _, callback in self._before_kickoff.items():
+            crew.before_kickoff_callbacks.append(callback_wrapper(callback, self))
+        for _, callback in self._after_kickoff.items():
+            crew.after_kickoff_callbacks.append(callback_wrapper(callback, self))
+
+        return crew
+
+    return memoize(wrapper)

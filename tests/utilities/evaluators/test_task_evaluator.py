@@ -25,6 +25,7 @@ def test_evaluate_training_data(converter_mock):
     }
     agent_id = "agent_id"
     original_agent = MagicMock()
+    original_agent.llm.supports_function_calling.return_value = False
     function_return_value = TrainingTaskEvaluation(
         suggestions=[
             "The initial output was already good, having a detailed explanation. However, the improved output "
@@ -49,11 +50,12 @@ def test_evaluate_training_data(converter_mock):
                 text="Assess the quality of the training data based on the llm output, human feedback , and llm "
                 "output improved result.\n\nInitial Output:\nInitial output 1\n\nHuman Feedback:\nHuman feedback "
                 "1\n\nImproved Output:\nImproved output 1\n\nInitial Output:\nInitial output 2\n\nHuman "
-                "Feedback:\nHuman feedback 2\n\nImproved Output:\nImproved output 2\n\nPlease provide:\n- "
-                "Based on the Human Feedbacks and the comparison between Initial Outputs and Improved outputs "
-                "provide action items based on human_feedback for future tasks\n- A score from 0 to 10 evaluating "
-                "on completion, quality, and overall performance from the improved output to the initial output "
-                "based on the human feedback\n",
+                "Feedback:\nHuman feedback 2\n\nImproved Output:\nImproved output 2\n\nPlease provide:\n- Provide "
+                "a list of clear, actionable instructions derived from the Human Feedbacks to enhance the Agent's "
+                "performance. Analyze the differences between Initial Outputs and Improved Outputs to generate specific "
+                "action items for future tasks. Ensure all key and specificpoints from the human feedback are "
+                "incorporated into these instructions.\n- A score from 0 to 10 evaluating on completion, quality, and "
+                "overall performance from the improved output to the initial output based on the human feedback\n",
                 model=TrainingTaskEvaluation,
                 instructions="I'm gonna convert this raw text into valid JSON.\n\nThe json should have the "
                 "following structure, with the following keys:\n{\n    suggestions: List[str],\n    quality: float,\n    final_summary: str\n}",

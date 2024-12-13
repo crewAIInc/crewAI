@@ -5,12 +5,12 @@ import click
 
 def train_crew(n_iterations: int, filename: str) -> None:
     """
-    Train the crew by running a command in the Poetry environment.
+    Train the crew by running a command in the UV environment.
 
     Args:
         n_iterations (int): The number of iterations to train the crew.
     """
-    command = ["poetry", "run", "train", str(n_iterations), filename]
+    command = ["uv", "run", "train", str(n_iterations), filename]
 
     try:
         if n_iterations <= 0:

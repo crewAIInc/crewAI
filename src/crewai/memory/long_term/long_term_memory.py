@@ -1,4 +1,4 @@
-from typing import Any, Dict
+from typing import Any, Dict, List
 
 from crewai.memory.long_term.long_term_memory_item import LongTermMemoryItem
 from crewai.memory.memory import Memory
@@ -14,8 +14,9 @@ class LongTermMemory(Memory):
     LongTermMemoryItem instances.
     """
 
-    def __init__(self):
-        storage = LTMSQLiteStorage()
+    def __init__(self, storage=None, path=None):
+        if not storage:
+            storage = LTMSQLiteStorage(db_path=path) if path else LTMSQLiteStorage()
         super().__init__(storage)
 
     def save(self, item: LongTermMemoryItem) -> None:  # type: ignore # BUG?: Signature of "save" incompatible with supertype "Memory"
@@ -28,7 +29,7 @@ class LongTermMemory(Memory):
             datetime=item.datetime,
         )
 
-    def search(self, task: str, latest_n: int = 3) -> Dict[str, Any]:
+    def search(self, task: str, latest_n: int = 3) -> List[Dict[str, Any]]:  # type: ignore # signature of "search" incompatible with supertype "Memory"
         return self.storage.load(task, latest_n)  # type: ignore # BUG?: "Storage" has no attribute "load"
 
     def reset(self) -> None:

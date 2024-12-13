@@ -83,7 +83,7 @@ class LTMSQLiteStorage:
                     WHERE task_description = ?
                     ORDER BY datetime DESC, score ASC
                     LIMIT {latest_n}
-                """,
+                """,  # nosec
                     (task_description,),
                 )
                 rows = cursor.fetchall()

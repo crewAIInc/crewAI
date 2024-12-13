@@ -1,14 +1,24 @@
 from typing import Any, List, Optional
 
-from langchain_openai import ChatOpenAI
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 from crewai.agent import Agent
 from crewai.task import Task
 
 
+class PlanPerTask(BaseModel):
+    task: str = Field(..., description="The task for which the plan is created")
+    plan: str = Field(
+        ...,
+        description="The step by step plan on how the agents can execute their tasks using the available tools with mastery",
+    )
+
+
 class PlannerTaskPydanticOutput(BaseModel):
-    list_of_plans_per_task: List[str]
+    list_of_plans_per_task: List[PlanPerTask] = Field(
+        ...,
+        description="Step by step plan on how the agents can execute their tasks using the available tools with mastery",
+    )
 
 
 class CrewPlanner:
@@ -16,7 +26,7 @@ class CrewPlanner:
         self.tasks = tasks
 
         if planning_agent_llm is None:
-            self.planning_agent_llm = ChatOpenAI(model="gpt-4o-mini")
+            self.planning_agent_llm = "gpt-4o-mini"
         else:
             self.planning_agent_llm = planning_agent_llm
 
