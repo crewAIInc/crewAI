@@ -19,7 +19,7 @@ class Mem0Storage(Storage):
 
         self.memory_type = type
         self.crew = crew
-        self.memory_config = crew.memory_config
+        self.memory_config = crew.memory_config if crew else None
 
         # User ID is required for user memory type "user" since it's used as a unique identifier for the user.
         user_id = self._get_user_id()
@@ -27,9 +27,10 @@ class Mem0Storage(Storage):
             raise ValueError("User ID is required for user memory type")
 
         # API key in memory config overrides the environment variable
-        mem0_api_key = self.memory_config.get("config", {}).get("api_key") or os.getenv(
-            "MEM0_API_KEY"
-        )
+        if self.memory_config and self.memory_config.get("config"):
+            mem0_api_key = self.memory_config.get("config").get("api_key")
+        else:
+            mem0_api_key = os.getenv("MEM0_API_KEY")
         self.memory = MemoryClient(api_key=mem0_api_key)
 
     def _sanitize_role(self, role: str) -> str:
