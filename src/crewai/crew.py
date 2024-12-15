@@ -1,6 +1,5 @@
 import asyncio
 import json
-import os
 import uuid
 import warnings
 from concurrent.futures import Future
@@ -49,12 +48,10 @@ from crewai.utilities.planning_handler import CrewPlanner
 from crewai.utilities.task_output_storage_handler import TaskOutputStorageHandler
 from crewai.utilities.training_handler import CrewTrainingHandler
 
-agentops = None
-if os.environ.get("AGENTOPS_API_KEY"):
-    try:
-        import agentops  # type: ignore
-    except ImportError:
-        pass
+try:
+    import agentops  # type: ignore
+except ImportError:
+    agentops = None
 
 
 warnings.filterwarnings("ignore", category=SyntaxWarning, module="pysbd")
@@ -1032,6 +1029,7 @@ class Crew(BaseModel):
             agentops.end_session(
                 end_state="Success",
                 end_state_reason="Finished Execution",
+                is_auto_end=True,
             )
         self._telemetry.end_crew(self, final_string_output)
 

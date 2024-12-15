@@ -1,5 +1,6 @@
 from functools import wraps
 
+
 def memoize(func):
     cache = {}
 
