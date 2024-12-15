@@ -38,3 +38,16 @@ Agent(
     tools=[CodeInterpreterTool(user_dockerfile_path="<Dockerfile_path>")],
 )
 ```
+
+If it is difficult to connect to docker daemon automatically (especially for macOS users), you can do this to setup docker host manually
+
+```python 
+from crewai_tools import CodeInterpreterTool
+
+Agent(
+    ...
+    tools=[CodeInterpreterTool(user_docker_base_url="<Docker Host Base Url>",
+        user_dockerfile_path="<Dockerfile_path>")],
+)
+
+```
