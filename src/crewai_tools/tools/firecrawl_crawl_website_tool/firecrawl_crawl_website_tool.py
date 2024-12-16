@@ -1,8 +1,7 @@
 from typing import TYPE_CHECKING, Any, Dict, Optional, Type
 
-from pydantic import BaseModel, Field
-
-from crewai_tools.tools.base_tool import BaseTool
+from crewai.tools import BaseTool
+from pydantic import BaseModel, ConfigDict, Field
 
 # Type checking import
 if TYPE_CHECKING:
@@ -20,6 +19,9 @@ class FirecrawlCrawlWebsiteToolSchema(BaseModel):
 
 
 class FirecrawlCrawlWebsiteTool(BaseTool):
+    model_config = ConfigDict(
+        arbitrary_types_allowed=True, validate_assignment=True, frozen=False
+    )
     name: str = "Firecrawl web crawl tool"
     description: str = "Crawl webpages using Firecrawl and return the contents"
     args_schema: Type[BaseModel] = FirecrawlCrawlWebsiteToolSchema
@@ -50,3 +52,15 @@ class FirecrawlCrawlWebsiteTool(BaseTool):
 
         options = {"crawlerOptions": crawler_options, "pageOptions": page_options}
         return self.firecrawl.crawl_url(url, options)
+
+
+try:
+    from firecrawl import FirecrawlApp
+
+    # Must rebuild model after class is defined
+    FirecrawlCrawlWebsiteTool.model_rebuild()
+except ImportError:
+    """
+    When this tool is not used, then exception can be ignored.
+    """
+    pass

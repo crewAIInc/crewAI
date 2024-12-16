@@ -13,7 +13,7 @@ In the realm of CrewAI agents, tools are pivotal for enhancing functionality. Th
 
 <h3>
 
-[Homepage](https://www.crewai.io/) | [Documentation](https://docs.crewai.com/) | [Chat with Docs](https://chatg.pt/DWjSBZn) | [Examples](https://github.com/crewAIInc/crewAI-examples) | [Discord](https://discord.com/invite/X4JWnZnxPb)
+[Homepage](https://www.crewai.io/) | [Documentation](https://docs.crewai.com/) | [Chat with Docs](https://chatg.pt/DWjSBZn) | [Examples](https://github.com/crewAIInc/crewAI-examples) | [Discord](https://discord.com/invite/X4JWnZnxPb) | [Discourse](https://community.crewai.com/)
 
 </h3>
 
@@ -51,7 +51,7 @@ There are three ways to create tools for crewAI agents:
 ### Subclassing `BaseTool`
 
 ```python
-from crewai_tools import BaseTool
+from crewai.tools import BaseTool
 
 class MyCustomTool(BaseTool):
     name: str = "Name of my tool"
@@ -70,7 +70,7 @@ Define a new class inheriting from `BaseTool`, specifying `name`, `description`,
 For a simpler approach, create a `Tool` object directly with the required attributes and a functional logic.
 
 ```python
-from crewai_tools import tool
+from crewai.tools import BaseTool
 @tool("Name of my tool")
 def my_tool(question: str) -> str:
     """Clear description for what this tool is useful for, you agent will need this information to use it."""
@@ -140,6 +140,4 @@ Thank you for your interest in enhancing the capabilities of AI agents through a
 
 ## Contact
 
-For questions or support, please join our [Discord community](https://discord.com/invite/X4JWnZnxPb) or open an issue in this repository.
-
-
+For questions or support, please join our [Discord community](https://discord.com/invite/X4JWnZnxPb), [Discourse](https://community.crewai.com/) or open an issue in this repository.

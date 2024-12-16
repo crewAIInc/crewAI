@@ -5,15 +5,14 @@ import logging
 from typing import Any, Type
 
 import requests
+from crewai.tools import BaseTool
 from pydantic import BaseModel, Field
 
-from crewai.tools import BaseTool
 
 logging.basicConfig(
     level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
 )
 logger = logging.getLogger(__name__)
-
 
 def _save_results_to_file(content: str) -> None:
     """Saves the search results to a file."""
