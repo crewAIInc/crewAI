@@ -47,6 +47,49 @@ Think of an agent as a specialized team member with specific skills, expertise, 
 | **Knowledge Sources** _(optional)_      | `knowledge_sources`      | `Optional[List[BaseKnowledgeSource]]` | Knowledge sources available to the agent.                                                                     |
 | **Use System Prompt** _(optional)_      | `use_system_prompt`      | `Optional[bool]`              | Whether to use system prompt (for o1 model support). Default is True.                                                 |
 
+
+## Running an Agent Independently
+
+Agents in CrewAI can execute tasks independently without needing to set up a full crew. Here's how you can run an agent independently:
+
+```python
+# Create an agent
+researcher_agent = Agent(
+    role="Research Expert",
+    goal="Provide accurate and detailed information on a given topic.",
+    backstory="An experienced researcher who has been working for many years.",
+    llm="gpt-4",
+    verbose=True
+)
+
+# Create a task
+research_task = Task(
+    description="Research the latest trends in AI for autonomous vehicles.",
+    expected_output="A detailed report on the topic.",
+)
+
+# Execute the task with the agent
+output = researcher_agent.execute_task(task=research_task)
+
+print("Task Output:", output)
+```
+
+### Key Parameters for Independent Execution
+
+| Parameter         | Description                                                                                 |
+| ------------------| ------------------------------------------------------------------------------------------- |
+| `task`            | The task to execute, including its description and expected output.                         |
+| `context` _(optional)_ | Additional context or background information that the agent can use during execution.   |
+| `tools` _(optional)_   | Tools available to the agent during task execution, which can override the default tools.|
+
+### Agent Task Execution Implementation
+
+Internally, the `execute_task` method processes the task as follows:
+- Combines the task prompt with any additional context or knowledge snippets.
+- Uses tools if provided, or defaults to the agent's tools.
+- Executes the task using the specified language model.
+- Handles retries, memory, and other configurations as specified in the agent attributes.
+
 ## Creating Agents
 
 There are two ways to create agents in CrewAI: using **YAML configuration (recommended)** or defining them **directly in code**.
