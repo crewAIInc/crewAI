@@ -1,14 +1,15 @@
 from pathlib import Path
-from typing import List, Union, Iterator
-from pydantic import Field
+from typing import Iterator, List, Union
 from urllib.parse import urlparse
+
+from docling.datamodel.base_models import InputFormat
+from docling.document_converter import DocumentConverter
+from docling_core.transforms.chunker.hierarchical_chunker import HierarchicalChunker
+from docling_core.types.doc.document import DoclingDocument
+from pydantic import Field
 
 from crewai.knowledge.source.base_file_knowledge_source import BaseFileKnowledgeSource
 from crewai.utilities.constants import KNOWLEDGE_DIRECTORY
-from docling_core.transforms.chunker.hierarchical_chunker import HierarchicalChunker
-from docling.document_converter import DocumentConverter
-from docling_core.types.doc.document import DoclingDocument
-from docling.datamodel.base_models import InputFormat
 
 
 class DoclingSource(BaseFileKnowledgeSource):
