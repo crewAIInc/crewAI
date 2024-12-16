@@ -120,7 +120,7 @@ You can connect to OpenAI-compatible LLMs using either environment variables or 
 
         os.environ["OPENAI_API_KEY"] = "your-api-key"
         os.environ["OPENAI_API_BASE"] = "https://api.your-provider.com/v1"
-        os.environ["OPENAI_MODEL_NAME"] = "your-model-name"
+        os.environ["OPENAI_MODEL_NAME"] = "openai/your-model-name"
         ```
         </CodeGroup>
     </Tab>
@@ -128,7 +128,7 @@ You can connect to OpenAI-compatible LLMs using either environment variables or 
         <CodeGroup>
             ```python Code
             llm = LLM(
-                model="custom-model-name",
+                model="openai/custom-model-name",
                 api_key="your-api-key",
                 base_url="https://api.your-provider.com/v1"
             )
