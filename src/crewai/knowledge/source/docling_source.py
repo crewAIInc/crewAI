@@ -21,7 +21,7 @@ class DoclingSource(BaseFileKnowledgeSource):
     document_converter: DocumentConverter = Field(default_factory=DocumentConverter)
     safe_file_paths: List[Union[Path, str]] = Field(default_factory=list)
     content: List[DoclingDocument] | None = Field(default=None)
-    chunks: List[str] = Field(default_factory=List)
+    chunks: List[str] = Field(default_factory=list)
 
     def model_post_init(self, _) -> None:
         self.safe_file_paths = self._process_file_paths()
