@@ -14,7 +14,7 @@ class BaseFileKnowledgeSource(BaseKnowledgeSource, ABC):
     """Base class for knowledge sources that load content from files."""
 
     _logger: Logger = Logger(verbose=True)
-    file_path: Union[Path, List[Path], str, List[str]] = Field(
+    file_paths: Union[Path, List[Path], str, List[str]] = Field(
         ..., description="The path to the file"
     )
     content: Dict[Path, str] = Field(init=False, default_factory=dict)
@@ -60,9 +60,9 @@ class BaseFileKnowledgeSource(BaseKnowledgeSource, ABC):
     def _process_file_paths(self) -> List[Path]:
         """Convert file_path to a list of Path objects."""
         paths = (
-            [self.file_path]
-            if isinstance(self.file_path, (str, Path))
-            else self.file_path
+            [self.file_paths]
+            if isinstance(self.file_paths, (str, Path))
+            else self.file_paths
         )
 
         if not isinstance(paths, list):
