@@ -627,6 +627,82 @@ save_output_task = Task(
 #...
 ```
 
+
+## Running a Task Independently
+
+To execute a task independently, you need an agent to perform it. CrewAI supports both synchronous and asynchronous execution of tasks.
+
+### Synchronous Execution
+
+You can execute a task synchronously using the `execute_sync` method. This method ensures the task is completed before moving on to other operations.
+
+```python
+# Create a task
+research_task = Task(
+    description="Research the latest trends in AI for autonomous vehicles.",
+    expected_output="A detailed report on the topic.",
+    agent=researcher_agent,  # Assign the agent to the task
+)
+
+# Execute the task synchronously
+output = research_task.execute_sync()
+
+print("Task Output:", output.raw)  # Access the raw output
+```
+
+### Asynchronous Execution
+
+For tasks that are time-consuming or can run in parallel with other operations, you can use the `execute_async` method. This allows you to execute the task asynchronously and retrieve the result later.
+
+```python
+from concurrent.futures import Future
+
+# Create a task
+research_task = Task(
+    description="Research the latest trends in AI for autonomous vehicles.",
+    expected_output="A detailed report on the topic.",
+    agent=researcher_agent,  # Assign the agent to the task
+)
+
+# Execute the task asynchronously
+future_output: Future = research_task.execute_async()
+
+# Perform other operations...
+
+# Retrieve the result
+output = future_output.result()
+
+print("Task Output:", output.raw)  # Access the raw output
+```
+
+### Key Methods for Execution
+
+The following methods are available for task execution:
+
+| Method              | Description                                                                 |
+| --------------------| --------------------------------------------------------------------------- |
+| `execute_sync`      | Executes the task synchronously and returns a `TaskOutput` object.          |
+| `execute_async`     | Executes the task asynchronously, returning a `Future[TaskOutput]` object.  |
+
+#### Example of Context and Tool Overrides
+
+Both `execute_sync` and `execute_async` support overriding the `agent`, `context`, and `tools` at runtime, allowing you to adapt task execution dynamically:
+
+```python
+# Execute task with overridden agent, context, and tools
+custom_context = "Research related to AI applications in healthcare."
+custom_tools = [custom_search_tool]
+
+output = research_task.execute_sync(
+    agent=custom_agent,
+    context=custom_context,
+    tools=custom_tools
+)
+
+print("Task Output with Custom Context:", output.raw)
+```
+
+
 ## Conclusion
 
 Tasks are the driving force behind the actions of agents in CrewAI. 
