@@ -21,6 +21,7 @@ class DoclingSource(BaseFileKnowledgeSource):
     document_converter: DocumentConverter = Field(default_factory=DocumentConverter)
     safe_file_paths: List[Union[Path, str]] = Field(default_factory=list)
     content: List[DoclingDocument] | None = Field(default=None)
+    chunks: List[str] = Field(default_factory=List)
 
     def model_post_init(self, _) -> None:
         self.safe_file_paths = self._process_file_paths()
@@ -61,7 +62,7 @@ class DoclingSource(BaseFileKnowledgeSource):
         for chunk in chunker.chunk(doc):
             yield chunk.text
 
-    def _process_file_paths(self) -> List[Path | str]:
+    def _process_file_paths(self) -> list[Path | str]:
         processed_paths = []
         for path in self.file_paths:
             if path.startswith("http"):
