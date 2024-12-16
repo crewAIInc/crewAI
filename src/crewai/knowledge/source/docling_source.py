@@ -39,11 +39,12 @@ class DoclingSource(BaseFileKnowledgeSource):
         )
         self.content = self.load_content()
 
-    def load_content(self):
+    def load_content(self) -> List[DoclingDocument] | None:
         try:
-            self.content = self.convert_source_to_docling_documents()
+            return self.convert_source_to_docling_documents()
         except Exception as e:
             self._logger.log("error", f"Error loading content: {e}")
+            return None
 
     def add(self) -> None:
         if self.content is None:
@@ -76,7 +77,7 @@ class DoclingSource(BaseFileKnowledgeSource):
                     except Exception as e:
                         raise ValueError(f"Invalid URL: {path}. Error: {str(e)}")
             else:
-                local_path = Path(KNOWLEDGE_DIRECTORY).joinpath(path)
+                local_path = Path(KNOWLEDGE_DIRECTORY + "/" + path)
                 if local_path.exists():
                     processed_paths.append(local_path)
                 else:
