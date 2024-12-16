@@ -419,9 +419,10 @@ class ToolUsage:
                 elif value.lower() in [
                     "true",
                     "false",
-                    "null",
                 ]:  # Check for boolean and null values
-                    value = value.lower()
+                    value = value.lower().capitalize()
+                elif value.lower() == "null":
+                    value = "None"
                 else:
                     # Assume the value is a string and needs quotes
                     value = '"' + value.replace('"', '\\"') + '"'
