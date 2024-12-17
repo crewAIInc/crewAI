@@ -564,3 +564,14 @@ def test_docling_source(mock_vector_db):
     results = mock_vector_db.query(query)
     assert any("reward hacking" in result["context"].lower() for result in results)
     mock_vector_db.query.assert_called_once()
+
+
+def test_multiple_docling_sources():
+    urls = [
+        "https://lilianweng.github.io/posts/2024-11-28-reward-hacking/",
+        "https://lilianweng.github.io/posts/2024-07-07-hallucination/",
+    ]
+    docling_source = DoclingSource(file_paths=urls)
+
+    assert docling_source.file_paths == urls
+    assert docling_source.content is not None
