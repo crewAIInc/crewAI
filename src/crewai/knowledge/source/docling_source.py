@@ -1,5 +1,5 @@
 from pathlib import Path
-from typing import Iterator, List, Union, Dict
+from typing import Iterator, List, Union
 from urllib.parse import urlparse
 
 from docling.datamodel.base_models import InputFormat
@@ -8,9 +8,8 @@ from docling_core.transforms.chunker.hierarchical_chunker import HierarchicalChu
 from docling_core.types.doc.document import DoclingDocument
 from pydantic import Field
 
-
-from crewai.utilities.constants import KNOWLEDGE_DIRECTORY
 from crewai.knowledge.source.base_knowledge_source import BaseKnowledgeSource
+from crewai.utilities.constants import KNOWLEDGE_DIRECTORY
 from crewai.utilities.logger import Logger
 
 
