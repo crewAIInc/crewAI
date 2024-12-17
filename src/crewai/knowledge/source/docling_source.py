@@ -4,6 +4,7 @@ from urllib.parse import urlparse
 
 from docling.datamodel.base_models import InputFormat
 from docling.document_converter import DocumentConverter
+from docling.exceptions import ConversionError
 from docling_core.transforms.chunker.hierarchical_chunker import HierarchicalChunker
 from docling_core.types.doc.document import DoclingDocument
 from pydantic import Field
@@ -15,28 +16,18 @@ from crewai.utilities.logger import Logger
 
 class DoclingSource(BaseKnowledgeSource):
     """Utility package for converting documents to markdown or json
-    This will auto support PDF, DOCX, and TXT, XLSX, files without any additional dependencies.
+    This will auto support PDF, DOCX, and TXT, XLSX, Images, and HTML files without any additional dependencies.
     """
 
     _logger: Logger = Logger(verbose=True)
 
     file_path: Optional[List[Union[Path, str]]] = Field(default=None)
     file_paths: List[Union[Path, str]] = Field(default_factory=list)
-    document_converter: DocumentConverter = Field(default_factory=DocumentConverter)
     chunks: List[str] = Field(default_factory=list)
     safe_file_paths: List[Union[Path, str]] = Field(default_factory=list)
     content: List[DoclingDocument] = Field(default_factory=list)
-
-    def model_post_init(self, _) -> None:
-        if self.file_path:
-            self._logger.log(
-                "warning",
-                "The 'file_path' attribute is deprecated and will be removed in a future version. Please use 'file_paths' instead.",
-                color="yellow",
-            )
-            self.file_paths = self.file_path
-        self.safe_file_paths = self._process_file_paths()
-        self.document_converter = DocumentConverter(
+    document_converter: DocumentConverter = Field(
+        default_factory=lambda: DocumentConverter(
             allowed_formats=[
                 InputFormat.MD,
                 InputFormat.ASCIIDOC,
@@ -48,33 +39,51 @@ class DoclingSource(BaseKnowledgeSource):
                 InputFormat.PPTX,
             ]
         )
+    )
+
+    def model_post_init(self, _) -> None:
+        if self.file_path:
+            self._logger.log(
+                "warning",
+                "The 'file_path' attribute is deprecated and will be removed in a future version. Please use 'file_paths' instead.",
+                color="yellow",
+            )
+            self.file_paths = self.file_path
+        self.safe_file_paths = self.validate_content()
         self.content = self.load_content()
 
-    def load_content(self) -> List[DoclingDocument]:  # type: ignore
+    def load_content(self) -> List[DoclingDocument]:
         try:
             return self.convert_source_to_docling_documents()
+        except ConversionError as e:
+            self._logger.log(
+                "error",
+                f"Error loading content: {e}. Supported formats: {self.document_converter.allowed_formats}",
+                "red",
+            )
+            raise e
         except Exception as e:
             self._logger.log("error", f"Error loading content: {e}")
-            return []
+            raise e
 
     def add(self) -> None:
         if self.content is None:
             return
         for doc in self.content:
-            new_chunks = self._chunk_text(doc)
-            self.chunks.extend(new_chunks)
+            new_chunks_iterable = self._chunk_doc(doc)
+            self.chunks.extend(list(new_chunks_iterable))
         self._save_documents()
 
     def convert_source_to_docling_documents(self) -> List[DoclingDocument]:
         conv_results_iter = self.document_converter.convert_all(self.safe_file_paths)
         return [result.document for result in conv_results_iter]
 
-    def _chunk_text(self, doc: DoclingDocument) -> Iterator[str]:  # type: ignore[override]
+    def _chunk_doc(self, doc: DoclingDocument) -> Iterator[str]:
         chunker = HierarchicalChunker()
         for chunk in chunker.chunk(doc):
             yield chunk.text
 
-    def _process_file_paths(self) -> List[Union[Path, str]]:
+    def validate_content(self) -> List[Union[Path, str]]:
         processed_paths: List[Union[Path, str]] = []
         for path in self.file_paths:
             if isinstance(path, str):

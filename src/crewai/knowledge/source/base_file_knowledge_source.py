@@ -28,7 +28,7 @@ class BaseFileKnowledgeSource(BaseKnowledgeSource, ABC):
     def model_post_init(self, _):
         """Post-initialization method to load content."""
         self.safe_file_paths = self._process_file_paths()
-        self.validate_paths()
+        self.validate_content()
         self.content = self.load_content()
 
     @abstractmethod
@@ -36,7 +36,7 @@ class BaseFileKnowledgeSource(BaseKnowledgeSource, ABC):
         """Load and preprocess file content. Should be overridden by subclasses. Assume that the file path is relative to the project root in the knowledge directory."""
         pass
 
-    def validate_paths(self):
+    def validate_content(self):
         """Validate the paths."""
         for path in self.safe_file_paths:
             if not path.exists():
