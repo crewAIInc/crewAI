@@ -100,13 +100,13 @@ class SpiderTool(BaseTool):
         params = {}
         url = website_url or self.website_url
 
-        if not self._validate_url(url):
-            raise ValueError("Invalid URL format")
-
         if not url:
             raise ValueError(
                 "Website URL must be provided either during initialization or execution"
             )
+
+        if not self._validate_url(url):
+            raise ValueError("Invalid URL format")
 
         if mode not in ["scrape", "crawl"]:
             raise ValueError("Mode must be either 'scrape' or 'crawl'")
