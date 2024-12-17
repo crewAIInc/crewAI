@@ -1,5 +1,5 @@
 from pathlib import Path
-from typing import Iterator, List, Union
+from typing import Iterator, List, Optional, Union
 from urllib.parse import urlparse
 
 from docling.datamodel.base_models import InputFormat
@@ -20,8 +20,8 @@ class DoclingSource(BaseKnowledgeSource):
 
     _logger: Logger = Logger(verbose=True)
 
-    file_path: List[str] = Field(default=None)
-    file_paths: List[str] = Field(default_factory=list)
+    file_path: Optional[List[Union[Path, str]]] = Field(default=None)
+    file_paths: List[Union[Path, str]] = Field(default_factory=list)
     document_converter: DocumentConverter = Field(default_factory=DocumentConverter)
     chunks: List[str] = Field(default_factory=list)
     safe_file_paths: List[Union[Path, str]] = Field(default_factory=list)

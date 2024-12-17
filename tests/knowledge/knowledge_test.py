@@ -1,6 +1,7 @@
 """Test Knowledge creation and querying functionality."""
 
 from pathlib import Path
+from typing import List, Union
 from unittest.mock import patch
 
 import pytest
@@ -567,7 +568,7 @@ def test_docling_source(mock_vector_db):
 
 
 def test_multiple_docling_sources():
-    urls = [
+    urls: List[Union[Path, str]] = [
         "https://lilianweng.github.io/posts/2024-11-28-reward-hacking/",
         "https://lilianweng.github.io/posts/2024-07-07-hallucination/",
     ]
@@ -580,6 +581,6 @@ def test_multiple_docling_sources():
 def test_docling_source_with_local_file():
     current_dir = Path(__file__).parent
     pdf_path = current_dir / "crewai_quickstart.pdf"
-    docling_source = DoclingSource(file_paths=[str(pdf_path.name)])
-    assert docling_source.file_paths == [str(pdf_path.name)]
+    docling_source = DoclingSource(file_paths=[pdf_path])
+    assert docling_source.file_paths == [pdf_path]
     assert docling_source.content is not None
