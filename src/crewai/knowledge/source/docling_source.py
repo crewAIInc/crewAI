@@ -25,7 +25,7 @@ class DoclingSource(BaseKnowledgeSource):
     file_paths: List[str] = Field(default_factory=list)
     document_converter: DocumentConverter = Field(default_factory=DocumentConverter)
     chunks: List[str] = Field(default_factory=list)
-    safe_file_paths: List[str] = Field(default_factory=list)
+    safe_file_paths: List[Union[Path, str]] = Field(default_factory=list)
     content: List[DoclingDocument] = Field(default_factory=list)
 
     def model_post_init(self, _) -> None:
@@ -75,8 +75,8 @@ class DoclingSource(BaseKnowledgeSource):
         for chunk in chunker.chunk(doc):
             yield chunk.text
 
-    def _process_file_paths(self) -> List[str]:
-        processed_paths = []
+    def _process_file_paths(self) -> List[Union[Path, str]]:
+        processed_paths: List[Union[Path, str]] = []
         for path in self.file_paths:
             if isinstance(path, str):
                 if path.startswith(("http://", "https://")):
@@ -90,7 +90,7 @@ class DoclingSource(BaseKnowledgeSource):
                 else:
                     local_path = Path(KNOWLEDGE_DIRECTORY + "/" + path)
                     if local_path.exists():
-                        processed_paths.append(local_path.name)
+                        processed_paths.append(local_path)
                     else:
                         raise FileNotFoundError(f"File not found: {local_path}")
             else:

@@ -575,3 +575,11 @@ def test_multiple_docling_sources():
 
     assert docling_source.file_paths == urls
     assert docling_source.content is not None
+
+
+def test_docling_source_with_local_file():
+    current_dir = Path(__file__).parent
+    pdf_path = current_dir / "crewai_quickstart.pdf"
+    docling_source = DoclingSource(file_paths=[str(pdf_path.name)])
+    assert docling_source.file_paths == [str(pdf_path.name)]
+    assert docling_source.content is not None
