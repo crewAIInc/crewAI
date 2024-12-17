@@ -14,6 +14,10 @@ class BaseFileKnowledgeSource(BaseKnowledgeSource, ABC):
     """Base class for knowledge sources that load content from files."""
 
     _logger: Logger = Logger(verbose=True)
+    file_path: Union[Path, List[Path], str, List[str]] = Field(
+        default=None,
+        description="[Deprecated] The path to the file. Use file_paths instead.",
+    )
     file_paths: Union[Path, List[Path], str, List[str]] = Field(
         ..., description="The path to the file"
     )
@@ -59,13 +63,29 @@ class BaseFileKnowledgeSource(BaseKnowledgeSource, ABC):
 
     def _process_file_paths(self) -> List[Path]:
         """Convert file_path to a list of Path objects."""
-        paths = (
-            [self.file_paths]
-            if isinstance(self.file_paths, (str, Path))
-            else self.file_paths
-        )
+
+        # Check if old file_path is being used
+        if hasattr(self, "file_path") and self.file_path is not None:
+            self._logger.log(
+                "warning",
+                "The 'file_path' attribute is deprecated and will be removed in a future version. Please use 'file_paths' instead.",
+                color="yellow",
+            )
+            paths = (
+                [self.file_path]
+                if isinstance(self.file_path, (str, Path))
+                else self.file_path
+            )
+        else:
+            paths = (
+                [self.file_paths]
+                if isinstance(self.file_paths, (str, Path))
+                else self.file_paths
+            )
 
         if not isinstance(paths, list):
-            raise ValueError("file_path must be a Path, str, or a list of these types")
+            raise ValueError(
+                "file_path/file_paths must be a Path, str, or a list of these types"
+            )
 
         return [self.convert_to_path(path) for path in paths]
