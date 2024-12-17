@@ -43,4 +43,6 @@ from .tools import (
     YoutubeChannelSearchTool,
     YoutubeVideoSearchTool,
     WeaviateVectorSearchTool,
+    SerpApiGoogleSearchTool,
+    SerpApiGoogleShoppingTool,
 )
