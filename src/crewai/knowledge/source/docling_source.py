@@ -1,5 +1,5 @@
 from pathlib import Path
-from typing import Iterator, List, Union
+from typing import Iterator, List, Union, Dict
 from urllib.parse import urlparse
 
 from docling.datamodel.base_models import InputFormat
@@ -8,22 +8,25 @@ from docling_core.transforms.chunker.hierarchical_chunker import HierarchicalChu
 from docling_core.types.doc.document import DoclingDocument
 from pydantic import Field
 
-from crewai.knowledge.source.base_file_knowledge_source import BaseFileKnowledgeSource
+
 from crewai.utilities.constants import KNOWLEDGE_DIRECTORY
+from crewai.knowledge.source.base_knowledge_source import BaseKnowledgeSource
+from crewai.utilities.logger import Logger
 
 
-class DoclingSource(BaseFileKnowledgeSource):
+class DoclingSource(BaseKnowledgeSource):
     """Utility package for converting documents to markdown or json
     This will auto support PDF, DOCX, and TXT, XLSX, files without any additional dependencies.
     """
 
+    _logger: Logger = Logger(verbose=True)
+
+    file_path: List[str] = Field(default=None)
     file_paths: List[str] = Field(default_factory=list)
     document_converter: DocumentConverter = Field(default_factory=DocumentConverter)
     chunks: List[str] = Field(default_factory=list)
-    # We are accepting string urls and validating them if they are valid urls
-    # Overiding content to be a list of DoclingDocuments
-    safe_file_paths: List[Union[Path, str]] = Field(default_factory=list)  # type: ignore[assignment]
-    content: List[DoclingDocument] | None = Field(default=None)  # type: ignore[assignment]
+    safe_file_paths: List[str] = Field(default_factory=list)
+    content: List[DoclingDocument] = Field(default_factory=list)
 
     def model_post_init(self, _) -> None:
         if self.file_path:
@@ -32,7 +35,7 @@ class DoclingSource(BaseFileKnowledgeSource):
                 "The 'file_path' attribute is deprecated and will be removed in a future version. Please use 'file_paths' instead.",
                 color="yellow",
             )
-            self.file_paths = self.file_path  # type: ignore[assignment]
+            self.file_paths = self.file_path
         self.safe_file_paths = self._process_file_paths()
         self.document_converter = DocumentConverter(
             allowed_formats=[
@@ -48,12 +51,12 @@ class DoclingSource(BaseFileKnowledgeSource):
         )
         self.content = self.load_content()
 
-    def load_content(self) -> List[DoclingDocument] | None:  # type: ignore[assignment]
+    def load_content(self) -> List[DoclingDocument]:  # type: ignore
         try:
             return self.convert_source_to_docling_documents()
         except Exception as e:
             self._logger.log("error", f"Error loading content: {e}")
-            return None
+            return []
 
     def add(self) -> None:
         if self.content is None:
@@ -67,12 +70,12 @@ class DoclingSource(BaseFileKnowledgeSource):
         conv_results_iter = self.document_converter.convert_all(self.safe_file_paths)
         return [result.document for result in conv_results_iter]
 
-    def _chunk_text(self, doc: DoclingDocument) -> Iterator[str]:  # type: ignore[assignment]
+    def _chunk_text(self, doc: DoclingDocument) -> Iterator[str]:  # type: ignore[override]
         chunker = HierarchicalChunker()
         for chunk in chunker.chunk(doc):
             yield chunk.text
 
-    def _process_file_paths(self) -> list[Path | str]:  # type: ignore[assignment]
+    def _process_file_paths(self) -> List[str]:
         processed_paths = []
         for path in self.file_paths:
             if isinstance(path, str):
@@ -87,7 +90,7 @@ class DoclingSource(BaseFileKnowledgeSource):
                 else:
                     local_path = Path(KNOWLEDGE_DIRECTORY + "/" + path)
                     if local_path.exists():
-                        processed_paths.append(local_path)
+                        processed_paths.append(local_path.name)
                     else:
                         raise FileNotFoundError(f"File not found: {local_path}")
             else:
