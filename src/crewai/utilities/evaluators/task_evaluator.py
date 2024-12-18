@@ -1,4 +1,3 @@
-import os
 from typing import List
 
 from pydantic import BaseModel, Field
@@ -6,26 +5,16 @@ from pydantic import BaseModel, Field
 from crewai.utilities import Converter
 from crewai.utilities.pydantic_schema_parser import PydanticSchemaParser
 
+agentops = None
+try:
+    from agentops import track_agent  # type: ignore
+except ImportError:
 
-def mock_agent_ops_provider():
-    def track_agent(*args, **kwargs):
+    def track_agent(name):
         def noop(f):
             return f
 
         return noop
-
-    return track_agent
-
-
-agentops = None
-
-if os.environ.get("AGENTOPS_API_KEY"):
-    try:
-        from agentops import track_agent
-    except ImportError:
-        track_agent = mock_agent_ops_provider()
-else:
-    track_agent = mock_agent_ops_provider()
 
 
 class Entity(BaseModel):

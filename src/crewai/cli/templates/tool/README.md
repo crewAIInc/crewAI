@@ -5,7 +5,7 @@ custom tools to power up your crews.
 
 ## Installing
 
-Ensure you have Python >=3.10 <=3.13 installed on your system. This project
+Ensure you have Python >=3.10 <3.13 installed on your system. This project
 uses [UV](https://docs.astral.sh/uv/) for dependency management and package
 handling, offering a seamless setup and execution experience.
 

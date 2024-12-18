@@ -1,4 +1,4 @@
-from typing import Type, get_args, get_origin, Union
+from typing import Type, Union, get_args, get_origin
 
 from pydantic import BaseModel
 

@@ -4,12 +4,14 @@ import logging
 import os
 import shutil
 import uuid
-
 from typing import Any, Dict, List, Optional
+
 from chromadb.api import ClientAPI
+
 from crewai.memory.storage.base_rag_storage import BaseRAGStorage
-from crewai.utilities.paths import db_storage_path
 from crewai.utilities import EmbeddingConfigurator
+from crewai.utilities.constants import MAX_FILE_NAME_LENGTH
+from crewai.utilities.paths import db_storage_path
 
 
 @contextlib.contextmanager
@@ -37,12 +39,15 @@ class RAGStorage(BaseRAGStorage):
 
     app: ClientAPI | None = None
 
-    def __init__(self, type, allow_reset=True, embedder_config=None, crew=None, path=None):
+    def __init__(
+        self, type, allow_reset=True, embedder_config=None, crew=None, path=None
+    ):
         super().__init__(type, allow_reset, embedder_config, crew)
         agents = crew.agents if crew else []
         agents = [self._sanitize_role(agent.role) for agent in agents]
         agents = "_".join(agents)
         self.agents = agents
+        self.storage_file_name = self._build_storage_file_name(type, agents)
 
         self.type = type
 
@@ -60,7 +65,7 @@ class RAGStorage(BaseRAGStorage):
 
         self._set_embedder_config()
         chroma_client = chromadb.PersistentClient(
-            path=self.path if self.path else f"{db_storage_path()}/{self.type}/{self.agents}",
+            path=self.path if self.path else self.storage_file_name,
             settings=Settings(allow_reset=self.allow_reset),
         )
 
@@ -80,6 +85,20 @@ class RAGStorage(BaseRAGStorage):
         Sanitizes agent roles to ensure valid directory names.
         """
         return role.replace("\n", "").replace(" ", "_").replace("/", "_")
+
+    def _build_storage_file_name(self, type: str, file_name: str) -> str:
+        """
+        Ensures file name does not exceed max allowed by OS
+        """
+        base_path = f"{db_storage_path()}/{type}"
+
+        if len(file_name) > MAX_FILE_NAME_LENGTH:
+            logging.warning(
+                f"Trimming file name from {len(file_name)} to {MAX_FILE_NAME_LENGTH} characters."
+            )
+            file_name = file_name[:MAX_FILE_NAME_LENGTH]
+
+        return f"{base_path}/{file_name}"
 
     def save(self, value: Any, metadata: Dict[str, Any]) -> None:
         if not hasattr(self, "app") or not hasattr(self, "collection"):
@@ -131,9 +150,11 @@ class RAGStorage(BaseRAGStorage):
 
     def reset(self) -> None:
         try:
-            shutil.rmtree(f"{db_storage_path()}/{self.type}")
             if self.app:
                 self.app.reset()
+                shutil.rmtree(f"{db_storage_path()}/{self.type}")
+                self.app = None
+                self.collection = None
         except Exception as e:
             if "attempt to write a readonly database" in str(e):
                 # Ignore this specific error

@@ -33,26 +33,6 @@ def copy_template(src, dst, name, class_name, folder_name):
     click.secho(f"  - Created {dst}", fg="green")
 
 
-# Drop the simple_toml_parser when we move to python3.11
-def simple_toml_parser(content):
-    result = {}
-    current_section = result
-    for line in content.split("\n"):
-        line = line.strip()
-        if line.startswith("[") and line.endswith("]"):
-            # New section
-            section = line[1:-1].split(".")
-            current_section = result
-            for key in section:
-                current_section = current_section.setdefault(key, {})
-        elif "=" in line:
-            key, value = line.split("=", 1)
-            key = key.strip()
-            value = value.strip().strip('"')
-            current_section[key] = value
-    return result
-
-
 def read_toml(file_path: str = "pyproject.toml"):
     """Read the content of a TOML file and return it as a dictionary."""
     with open(file_path, "rb") as f:
@@ -63,7 +43,7 @@ def read_toml(file_path: str = "pyproject.toml"):
 def parse_toml(content):
     if sys.version_info >= (3, 11):
         return tomllib.loads(content)
-    return simple_toml_parser(content)
+    return tomli.loads(content)
 
 
 def get_project_name(

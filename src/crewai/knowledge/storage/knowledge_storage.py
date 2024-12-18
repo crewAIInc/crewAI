@@ -1,18 +1,22 @@
 import contextlib
+import hashlib
 import io
 import logging
-import chromadb
 import os
+import shutil
+from typing import Any, Dict, List, Optional, Union, cast
 
+import chromadb
 import chromadb.errors
-from crewai.utilities.paths import db_storage_path
-from typing import Optional, List, Dict, Any, Union
-from crewai.utilities import EmbeddingConfigurator
-from crewai.knowledge.storage.base_knowledge_storage import BaseKnowledgeStorage
-import hashlib
-from chromadb.config import Settings
 from chromadb.api import ClientAPI
+from chromadb.api.types import OneOrMany
+from chromadb.config import Settings
+
+from crewai.knowledge.storage.base_knowledge_storage import BaseKnowledgeStorage
+from crewai.utilities import EmbeddingConfigurator
+from crewai.utilities.constants import KNOWLEDGE_DIRECTORY
 from crewai.utilities.logger import Logger
+from crewai.utilities.paths import db_storage_path
 
 
 @contextlib.contextmanager
@@ -103,52 +107,76 @@ class KnowledgeStorage(BaseKnowledgeStorage):
             raise Exception("Failed to create or get collection")
 
     def reset(self):
-        if self.app:
-            self.app.reset()
-        else:
-            base_path = os.path.join(db_storage_path(), "knowledge")
+        base_path = os.path.join(db_storage_path(), KNOWLEDGE_DIRECTORY)
+        if not self.app:
             self.app = chromadb.PersistentClient(
                 path=base_path,
                 settings=Settings(allow_reset=True),
             )
-            self.app.reset()
+
+        self.app.reset()
+        shutil.rmtree(base_path)
+        self.app = None
+        self.collection = None
 
     def save(
         self,
         documents: List[str],
-        metadata: Union[Dict[str, Any], List[Dict[str, Any]]],
+        metadata: Optional[Union[Dict[str, Any], List[Dict[str, Any]]]] = None,
     ):
-        if self.collection:
-            try:
-                metadatas = [metadata] if isinstance(metadata, dict) else metadata
-
-                ids = [
-                    hashlib.sha256(doc.encode("utf-8")).hexdigest() for doc in documents
-                ]
-
-                self.collection.upsert(
-                    documents=documents,
-                    metadatas=metadatas,
-                    ids=ids,
-                )
-            except chromadb.errors.InvalidDimensionException as e:
-                Logger(verbose=True).log(
-                    "error",
-                    "Embedding dimension mismatch. This usually happens when mixing different embedding models. Try resetting the collection using `crewai reset-memories -a`",
-                    "red",
-                )
-                raise ValueError(
-                    "Embedding dimension mismatch. Make sure you're using the same embedding model "
-                    "across all operations with this collection."
-                    "Try resetting the collection using `crewai reset-memories -a`"
-                ) from e
-            except Exception as e:
-                Logger(verbose=True).log(
-                    "error", f"Failed to upsert documents: {e}", "red"
-                )
-                raise
-        else:
+        if not self.collection:
             raise Exception("Collection not initialized")
+
+        try:
+            # Create a dictionary to store unique documents
+            unique_docs = {}
+
+            # Generate IDs and create a mapping of id -> (document, metadata)
+            for idx, doc in enumerate(documents):
+                doc_id = hashlib.sha256(doc.encode("utf-8")).hexdigest()
+                doc_metadata = None
+                if metadata is not None:
+                    if isinstance(metadata, list):
+                        doc_metadata = metadata[idx]
+                    else:
+                        doc_metadata = metadata
+                unique_docs[doc_id] = (doc, doc_metadata)
+
+            # Prepare filtered lists for ChromaDB
+            filtered_docs = []
+            filtered_metadata = []
+            filtered_ids = []
+
+            # Build the filtered lists
+            for doc_id, (doc, meta) in unique_docs.items():
+                filtered_docs.append(doc)
+                filtered_metadata.append(meta)
+                filtered_ids.append(doc_id)
+
+            # If we have no metadata at all, set it to None
+            final_metadata: Optional[OneOrMany[chromadb.Metadata]] = (
+                None if all(m is None for m in filtered_metadata) else filtered_metadata
+            )
+
+            self.collection.upsert(
+                documents=filtered_docs,
+                metadatas=final_metadata,
+                ids=filtered_ids,
+            )
+        except chromadb.errors.InvalidDimensionException as e:
+            Logger(verbose=True).log(
+                "error",
+                "Embedding dimension mismatch. This usually happens when mixing different embedding models. Try resetting the collection using `crewai reset-memories -a`",
+                "red",
+            )
+            raise ValueError(
+                "Embedding dimension mismatch. Make sure you're using the same embedding model "
+                "across all operations with this collection."
+                "Try resetting the collection using `crewai reset-memories -a`"
+            ) from e
+        except Exception as e:
+            Logger(verbose=True).log("error", f"Failed to upsert documents: {e}", "red")
+            raise
 
     def _create_default_embedding_function(self):
         from chromadb.utils.embedding_functions.openai_embedding_function import (

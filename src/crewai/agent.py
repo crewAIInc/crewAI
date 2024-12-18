@@ -8,7 +8,7 @@ from pydantic import Field, InstanceOf, PrivateAttr, model_validator
 from crewai.agents import CacheHandler
 from crewai.agents.agent_builder.base_agent import BaseAgent
 from crewai.agents.crew_agent_executor import CrewAgentExecutor
-from crewai.cli.constants import ENV_VARS
+from crewai.cli.constants import ENV_VARS, LITELLM_PARAMS
 from crewai.knowledge.knowledge import Knowledge
 from crewai.knowledge.source.base_knowledge_source import BaseKnowledgeSource
 from crewai.knowledge.utils.knowledge_utils import extract_knowledge_context
@@ -23,26 +23,18 @@ from crewai.utilities.converter import generate_model_description
 from crewai.utilities.token_counter_callback import TokenCalcHandler
 from crewai.utilities.training_handler import CrewTrainingHandler
 
+agentops = None
 
-def mock_agent_ops_provider():
-    def track_agent(*args, **kwargs):
+try:
+    import agentops  # type: ignore # Name "agentops" is already defined
+    from agentops import track_agent  # type: ignore
+except ImportError:
+
+    def track_agent():
         def noop(f):
             return f
 
         return noop
-
-    return track_agent
-
-
-agentops = None
-
-if os.environ.get("AGENTOPS_API_KEY"):
-    try:
-        from agentops import track_agent
-    except ImportError:
-        track_agent = mock_agent_ops_provider()
-else:
-    track_agent = mock_agent_ops_provider()
 
 
 @track_agent()
@@ -181,20 +173,11 @@ class Agent(BaseAgent):
                         if key_name and key_name not in unaccepted_attributes:
                             env_value = os.environ.get(key_name)
                             if env_value:
-                                # Map key names containing "API_KEY" to "api_key"
-                                key_name = (
-                                    "api_key" if "API_KEY" in key_name else key_name
-                                )
-                                # Map key names containing "API_BASE" to "api_base"
-                                key_name = (
-                                    "api_base" if "API_BASE" in key_name else key_name
-                                )
-                                # Map key names containing "API_VERSION" to "api_version"
-                                key_name = (
-                                    "api_version"
-                                    if "API_VERSION" in key_name
-                                    else key_name
-                                )
+                                key_name = key_name.lower()
+                                for pattern in LITELLM_PARAMS:
+                                    if pattern in key_name:
+                                        key_name = pattern
+                                        break
                                 llm_params[key_name] = env_value
                         # Check for default values if the environment variable is not set
                         elif env_var.get("default", False):

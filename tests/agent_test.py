@@ -3,19 +3,20 @@
 import os
 from unittest import mock
 from unittest.mock import patch
+
 import pytest
 
 from crewai import Agent, Crew, Task
 from crewai.agents.cache import CacheHandler
 from crewai.agents.crew_agent_executor import CrewAgentExecutor
 from crewai.agents.parser import AgentAction, CrewAgentParser, OutputParserException
+from crewai.knowledge.source.string_knowledge_source import StringKnowledgeSource
 from crewai.llm import LLM
 from crewai.tools import tool
 from crewai.tools.tool_calling import InstructorToolCalling
 from crewai.tools.tool_usage import ToolUsage
 from crewai.tools.tool_usage_events import ToolUsageFinished
 from crewai.utilities import RPMController
-from crewai.knowledge.source.string_knowledge_source import StringKnowledgeSource
 from crewai.utilities.events import Emitter
 
 
@@ -985,8 +986,7 @@ def test_agent_definition_based_on_dict():
 # test for human input
 @pytest.mark.vcr(filter_headers=["authorization"])
 def test_agent_human_input():
-    from unittest.mock import patch
-
+    # Agent configuration
     config = {
         "role": "test role",
         "goal": "test goal",
@@ -995,6 +995,7 @@ def test_agent_human_input():
 
     agent = Agent(**config)
 
+    # Task configuration with human input enabled
     task = Task(
         agent=agent,
         description="Say the word: Hi",
@@ -1002,11 +1003,26 @@ def test_agent_human_input():
         human_input=True,
     )
 
-    with patch.object(CrewAgentExecutor, "_ask_human_input") as mock_human_input:
-        mock_human_input.return_value = "Don't say hi, say Hello instead!"
+    # Side effect function for _ask_human_input to simulate multiple feedback iterations
+    feedback_responses = iter(
+        [
+            "Don't say hi, say Hello instead!",  # First feedback
+            "looks good",  # Second feedback to exit loop
+        ]
+    )
+
+    def ask_human_input_side_effect(*args, **kwargs):
+        return next(feedback_responses)
+
+    with patch.object(
+        CrewAgentExecutor, "_ask_human_input", side_effect=ask_human_input_side_effect
+    ) as mock_human_input:
+        # Execute the task
         output = agent.execute_task(task)
-        mock_human_input.assert_called_once()
-        assert output == "Hello"
+
+        # Assertions to ensure the agent behaves correctly
+        assert mock_human_input.call_count == 2  # Should have asked for feedback twice
+        assert output.strip().lower() == "hello"  # Final output should be 'Hello'
 
 
 def test_interpolate_inputs():
@@ -1579,19 +1595,15 @@ def test_agent_execute_task_with_ollama():
 @pytest.mark.vcr(filter_headers=["authorization"])
 def test_agent_with_knowledge_sources():
     # Create a knowledge source with some content
-    content = "Brandon's favorite color is blue and he likes Mexican food."
-    string_source = StringKnowledgeSource(
-        content=content, metadata={"preference": "personal"}
-    )
+    content = "Brandon's favorite color is red and he likes Mexican food."
+    string_source = StringKnowledgeSource(content=content)
 
     with patch(
         "crewai.knowledge.storage.knowledge_storage.KnowledgeStorage"
     ) as MockKnowledge:
         mock_knowledge_instance = MockKnowledge.return_value
         mock_knowledge_instance.sources = [string_source]
-        mock_knowledge_instance.query.return_value = [
-            {"content": content, "metadata": {"preference": "personal"}}
-        ]
+        mock_knowledge_instance.query.return_value = [{"content": content}]
 
         agent = Agent(
             role="Information Agent",
@@ -1612,4 +1624,4 @@ def test_agent_with_knowledge_sources():
         result = crew.kickoff()
 
         # Assert that the agent provides the correct information
-        assert "blue" in result.raw.lower()
+        assert "red" in result.raw.lower()

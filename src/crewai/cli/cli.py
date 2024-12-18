@@ -1,7 +1,7 @@
+from importlib.metadata import version as get_version
 from typing import Optional
 
 import click
-import pkg_resources
 
 from crewai.cli.add_crew_to_flow import add_crew_to_flow
 from crewai.cli.create_crew import create_crew
@@ -25,6 +25,7 @@ from .update_crew import update_crew
 
 
 @click.group()
+@click.version_option(get_version("crewai"))
 def crewai():
     """Top-level command group for crewai."""
 
@@ -50,14 +51,17 @@ def create(type, name, provider, skip_provider=False):
 )
 def version(tools):
     """Show the installed version of crewai."""
-    crewai_version = pkg_resources.get_distribution("crewai").version
+    try:
+        crewai_version = get_version("crewai")
+    except Exception:
+        crewai_version = "unknown version"
     click.echo(f"crewai version: {crewai_version}")
 
     if tools:
         try:
-            tools_version = pkg_resources.get_distribution("crewai-tools").version
+            tools_version = get_version("crewai")
             click.echo(f"crewai tools version: {tools_version}")
-        except pkg_resources.DistributionNotFound:
+        except Exception:
             click.echo("crewai tools not installed")
 
 

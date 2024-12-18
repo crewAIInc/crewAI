@@ -24,7 +24,7 @@ class StringKnowledgeSource(BaseKnowledgeSource):
         """Add string content to the knowledge source, chunk it, compute embeddings, and save them."""
         new_chunks = self._chunk_text(self.content)
         self.chunks.extend(new_chunks)
-        self.save_documents(metadata=self.metadata)
+        self._save_documents()
 
     def _chunk_text(self, text: str) -> List[str]:
         """Utility method to split text into chunks."""
