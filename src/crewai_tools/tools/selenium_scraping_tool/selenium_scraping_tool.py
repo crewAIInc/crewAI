@@ -11,8 +11,6 @@ from selenium.webdriver.common.by import By
 class FixedSeleniumScrapingToolSchema(BaseModel):
     """Input for SeleniumScrapingTool."""
 
-    pass
-
 
 class SeleniumScrapingToolSchema(FixedSeleniumScrapingToolSchema):
     """Input for SeleniumScrapingTool."""
@@ -33,6 +31,7 @@ class SeleniumScrapingTool(BaseTool):
     cookie: Optional[dict] = None
     wait_time: Optional[int] = 3
     css_element: Optional[str] = None
+    return_html: Optional[bool] = False
 
     def __init__(
         self,
@@ -63,17 +62,45 @@ class SeleniumScrapingTool(BaseTool):
     ) -> Any:
         website_url = kwargs.get("website_url", self.website_url)
         css_element = kwargs.get("css_element", self.css_element)
+        return_html = kwargs.get("return_html", self.return_html)
         driver = self._create_driver(website_url, self.cookie, self.wait_time)
 
-        content = []
-        if css_element is None or css_element.strip() == "":
-            body_text = driver.find_element(By.TAG_NAME, "body").text
-            content.append(body_text)
-        else:
-            for element in driver.find_elements(By.CSS_SELECTOR, css_element):
-                content.append(element.text)
+        content = self._get_content(driver, css_element, return_html)
         driver.close()
+
         return "\n".join(content)
+
+    def _get_content(self, driver, css_element, return_html):
+        content = []
+
+        if self._is_css_element_empty(css_element):
+            content.append(self._get_body_content(driver, return_html))
+        else:
+            content.extend(self._get_elements_content(driver, css_element, return_html))
+
+        return content
+
+    def _is_css_element_empty(self, css_element):
+        return css_element is None or css_element.strip() == ""
+
+    def _get_body_content(self, driver, return_html):
+        body_element = driver.find_element(By.TAG_NAME, "body")
+
+        return (
+            body_element.get_attribute("outerHTML")
+            if return_html
+            else body_element.text
+        )
+
+    def _get_elements_content(self, driver, css_element, return_html):
+        elements_content = []
+
+        for element in driver.find_elements(By.CSS_SELECTOR, css_element):
+            elements_content.append(
+                element.get_attribute("outerHTML") if return_html else element.text
+            )
+
+        return elements_content
 
     def _create_driver(self, url, cookie, wait_time):
         options = Options()
