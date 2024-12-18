@@ -308,7 +308,18 @@ class Task(BaseModel):
 
         if inputs:
             self.description = self._original_description.format(**inputs)
-            self.expected_output = self._original_expected_output.format(**inputs)
+            self.expected_output = self.interpolate_only(
+                input_string=self._original_expected_output, inputs=inputs
+            )
+
+    def interpolate_only(self, input_string: str, inputs: Dict[str, Any]) -> str:
+        """Interpolate placeholders (e.g., {key}) in a string while leaving JSON untouched."""
+        escaped_string = input_string.replace("{", "{{").replace("}", "}}")
+
+        for key in inputs.keys():
+            escaped_string = escaped_string.replace(f"{{{{{key}}}}}", f"{{{key}}}")
+
+        return escaped_string.format(**inputs)
 
     def increment_tools_errors(self) -> None:
         """Increment the tools errors counter."""
