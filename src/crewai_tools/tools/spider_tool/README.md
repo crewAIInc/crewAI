@@ -20,13 +20,43 @@ from crewai_tools import SpiderTool
 spider_tool = SpiderTool(api_key='YOUR_API_KEY')
 
 # Initialize the tool with the website URL, so the agent can only scrape the content of the specified website
-spider_tool = SpiderTool(website_url='https://www.example.com')
+spider_tool = SpiderTool(website_url='https://spider.cloud')
 
 # Pass in custom parameters, see below for more details
 spider_tool = SpiderTool(
-    website_url='https://www.example.com',
+    website_url='https://spider.cloud',
     custom_params={"depth": 2, "anti_bot": True, "proxy_enabled": True}
 )
+
+# Advanced usage using css query selector to extract content
+css_extraction_map = {
+    "/": [ # pass in path (main index in this case)
+        {
+            "name": "headers", # give it a name for this element
+            "selectors": [
+                "h1"
+            ]
+        }
+    ]
+}
+
+spider_tool = SpiderTool(
+    website_url='https://spider.cloud',
+    custom_params={"anti_bot": True, "proxy_enabled": True, "metadata": True, "css_extraction_map": css_extraction_map}
+)
+
+### Response (extracted text will be in the metadata)
+"css_extracted": {
+    "headers": [
+        "The Web Crawler for AI Agents and LLMs!"
+    ]
+}
+```
+## Agent setup
+```yaml
+researcher:
+  role: >
+    You're a researcher that is tasked with researching a website and it's content (use crawl mode). The website is to crawl is: {website_url}.
 ```
 
 ## Arguments
