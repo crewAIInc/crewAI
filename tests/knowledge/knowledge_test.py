@@ -7,7 +7,7 @@ from unittest.mock import patch
 import pytest
 
 from crewai.knowledge.source.csv_knowledge_source import CSVKnowledgeSource
-from crewai.knowledge.source.docling_source import DoclingSource
+from crewai.knowledge.source.crew_docling_source import CrewDoclingSource
 from crewai.knowledge.source.excel_knowledge_source import ExcelKnowledgeSource
 from crewai.knowledge.source.json_knowledge_source import JSONKnowledgeSource
 from crewai.knowledge.source.pdf_knowledge_source import PDFKnowledgeSource
@@ -548,7 +548,7 @@ def test_excel_knowledge_source(mock_vector_db, tmpdir):
 
 
 def test_docling_source(mock_vector_db):
-    docling_source = DoclingSource(
+    docling_source = CrewDoclingSource(
         file_paths=[
             "https://lilianweng.github.io/posts/2024-11-28-reward-hacking/",
         ],
@@ -572,7 +572,7 @@ def test_multiple_docling_sources():
         "https://lilianweng.github.io/posts/2024-11-28-reward-hacking/",
         "https://lilianweng.github.io/posts/2024-07-07-hallucination/",
     ]
-    docling_source = DoclingSource(file_paths=urls)
+    docling_source = CrewDoclingSource(file_paths=urls)
 
     assert docling_source.file_paths == urls
     assert docling_source.content is not None
@@ -581,6 +581,6 @@ def test_multiple_docling_sources():
 def test_docling_source_with_local_file():
     current_dir = Path(__file__).parent
     pdf_path = current_dir / "crewai_quickstart.pdf"
-    docling_source = DoclingSource(file_paths=[pdf_path])
+    docling_source = CrewDoclingSource(file_paths=[pdf_path])
     assert docling_source.file_paths == [pdf_path]
     assert docling_source.content is not None
