@@ -10,7 +10,7 @@ class ContextualMemory:
         stm: ShortTermMemory,
         ltm: LongTermMemory,
         em: EntityMemory,
-        um: UserMemory,
+        um: Optional[UserMemory],
     ):
         if memory_config is not None:
             self.memory_provider = memory_config.get("provider")
@@ -94,6 +94,8 @@ class ContextualMemory:
         Returns:
             str: Formatted user memories as bullet points, or an empty string if none found.
         """
+        if not self.um:
+            return ""
         user_memories = self.um.search(query)
         if not user_memories:
             return ""

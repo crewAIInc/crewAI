@@ -13,10 +13,12 @@ class KickoffTaskOutputsSQLiteStorage:
     An updated SQLite storage class for kickoff task outputs storage.
     """
 
-    def __init__(
-        self, db_path: str = f"{db_storage_path()}/latest_kickoff_task_outputs.db"
-    ) -> None:
-        self.db_path = db_path
+    def __init__(self, db_path: Optional[str] = None) -> None:
+        self.db_path = (
+            db_path
+            if db_path
+            else f"{db_storage_path()}/latest_kickoff_task_outputs.db"
+        )
         self._printer: Printer = Printer()
         self._initialize_db()
 

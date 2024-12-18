@@ -1,5 +1,8 @@
 from abc import ABC, abstractmethod
+from pathlib import Path
 from typing import Any, Dict, List, Optional
+
+from crewai.utilities.paths import db_storage_path
 
 
 class BaseRAGStorage(ABC):
@@ -12,11 +15,13 @@ class BaseRAGStorage(ABC):
     def __init__(
         self,
         type: str,
+        storage_path: Optional[Path] = None,
         allow_reset: bool = True,
         embedder_config: Optional[Any] = None,
         crew: Any = None,
     ):
         self.type = type
+        self.storage_path = storage_path if storage_path else db_storage_path()
         self.allow_reset = allow_reset
         self.embedder_config = embedder_config
         self.crew = crew

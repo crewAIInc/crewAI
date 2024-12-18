@@ -289,14 +289,7 @@ class Agent(BaseAgent):
             )
 
         if self.crew and self.crew.memory:
-            contextual_memory = ContextualMemory(
-                self.crew.memory_config,
-                self.crew._short_term_memory,
-                self.crew._long_term_memory,
-                self.crew._entity_memory,
-                self.crew._user_memory,
-            )
-            memory = contextual_memory.build_context_for_task(task, context)
+            memory = self.crew.contextual_memory.build_context_for_task(task, context)
             if memory.strip() != "":
                 task_prompt += self.i18n.slice("memory").format(memory=memory)
 
