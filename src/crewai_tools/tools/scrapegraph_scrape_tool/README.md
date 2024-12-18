@@ -40,4 +40,4 @@ tool = ScrapegraphScrapeTool(
 - `api_key`: Your Scrapegraph API key (required, can be set via SCRAPEGRAPH_API_KEY environment variable)
 
 ## Environment Variables
-- `SCRAPEGRAPH_API_KEY`: Your Scrapegraph API key
+- `SCRAPEGRAPH_API_KEY`: Your Scrapegraph API key, you can buy it [here](https://scrapegraphai.com)
