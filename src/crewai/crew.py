@@ -101,13 +101,14 @@ class Crew(BaseModel):
     _task_output_handler: TaskOutputStorageHandler = PrivateAttr(
         default_factory=TaskOutputStorageHandler
     )
-
+    
     name: Optional[str] = Field(default=None)
     cache: bool = Field(default=True)
     tasks: List[Task] = Field(default_factory=list)
     agents: List[BaseAgent] = Field(default_factory=list)
     process: Process = Field(default=Process.sequential)
     verbose: bool = Field(default=False)
+    logs: ClassVar[Dict[int, List[TaskOutput]]] = {}
     memory: bool = Field(
         default=False,
         description="Whether the crew should use memory to store memories of it's execution",
@@ -760,7 +761,7 @@ class Crew(BaseModel):
                 task_outputs = [task_output]
                 self._process_task_result(task, task_output)
                 self._store_execution_log(task, task_output, task_index, was_replayed)
-
+                self.logs[task_index] = task_outputs
         if futures:
             task_outputs = self._process_async_tasks(futures, was_replayed)
 
