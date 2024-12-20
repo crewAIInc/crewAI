@@ -15,3 +15,6 @@ plot = "{{folder_name}}.main:plot"
 [build-system]
 requires = ["hatchling"]
 build-backend = "hatchling.build"
+
+[tool.crewai]
+type = "flow"
