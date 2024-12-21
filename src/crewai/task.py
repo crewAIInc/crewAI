@@ -1,4 +1,5 @@
 import datetime
+import inspect
 import json
 import threading
 import uuid
@@ -6,7 +7,7 @@ from concurrent.futures import Future
 from copy import copy
 from hashlib import md5
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Set, Tuple, Type, Union
+from typing import Any, Callable, Dict, List, Optional, Set, Tuple, Type, Union
 
 from opentelemetry.trace import Span
 from pydantic import (
@@ -20,6 +21,7 @@ from pydantic import (
 from pydantic_core import PydanticCustomError
 
 from crewai.agents.agent_builder.base_agent import BaseAgent
+from crewai.tasks.guardrail_result import GuardrailResult
 from crewai.tasks.output_format import OutputFormat
 from crewai.tasks.task_output import TaskOutput
 from crewai.telemetry.telemetry import Telemetry
@@ -110,6 +112,34 @@ class Task(BaseModel):
         default=None,
     )
     processed_by_agents: Set[str] = Field(default_factory=set)
+    guardrail: Optional[Callable[[TaskOutput], Tuple[bool, Any]]] = Field(
+        default=None,
+        description="Function to validate task output before proceeding to next task"
+    )
+    max_retries: int = Field(
+        default=3,
+        description="Maximum number of retries when guardrail fails"
+    )
+    retry_count: int = Field(
+        default=0,
+        description="Current number of retries"
+    )
+
+    @field_validator("guardrail")
+    @classmethod
+    def validate_guardrail_function(cls, v: Optional[Callable]) -> Optional[Callable]:
+        """Validate that the guardrail function has the correct signature."""
+        if v is not None:
+            sig = inspect.signature(v)
+            if len(sig.parameters) != 1:
+                raise ValueError("Guardrail function must accept exactly one parameter")
+
+            # Check return annotation if present, but don't require it
+            return_annotation = sig.return_annotation
+            if return_annotation != inspect.Signature.empty:
+                if not (return_annotation == Tuple[bool, Any] or str(return_annotation) == 'Tuple[bool, Any]'):
+                    raise ValueError("If return type is annotated, it must be Tuple[bool, Any]")
+        return v
 
     _telemetry: Telemetry = PrivateAttr(default_factory=Telemetry)
     _execution_span: Optional[Span] = PrivateAttr(default=None)
@@ -254,7 +284,6 @@ class Task(BaseModel):
         )
 
         pydantic_output, json_output = self._export_output(result)
-
         task_output = TaskOutput(
             name=self.name,
             description=self.description,
@@ -265,6 +294,29 @@ class Task(BaseModel):
             agent=agent.role,
             output_format=self._get_output_format(),
         )
+
+        if self.guardrail:
+            guardrail_result = GuardrailResult.from_tuple(self.guardrail(task_output))
+            if not guardrail_result.success:
+                if self.retry_count >= self.max_retries:
+                    raise Exception(
+                        f"Task failed guardrail validation after {self.max_retries} retries. "
+                        f"Last error: {guardrail_result.error}"
+                    )
+
+                self.retry_count += 1
+                context = f"Previous attempt failed validation: {guardrail_result.error}\nPlease try again."
+                return self._execute_core(agent, context, tools)
+
+            if guardrail_result.result is None:
+                raise Exception(
+                    "Task guardrail returned None as result. This is not allowed."
+                )
+            task_output.raw = guardrail_result.result
+            pydantic_output, json_output = self._export_output(guardrail_result.result)
+            task_output.pydantic = pydantic_output
+            task_output.json_dict = json_output
+
         self.output = task_output
 
         self._set_end_execution_time(start_time)
