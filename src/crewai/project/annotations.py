@@ -66,7 +66,6 @@ def cache_handler(func):
 
 
 def crew(func) -> Callable[..., Crew]:
-
     @wraps(func)
     def wrapper(self, *args, **kwargs) -> Crew:
         instantiated_tasks = []

@@ -25,6 +25,7 @@ from crewai.crews.crew_output import CrewOutput
 from crewai.knowledge.knowledge import Knowledge
 from crewai.knowledge.source.base_knowledge_source import BaseKnowledgeSource
 from crewai.llm import LLM
+from crewai.memory.contextual.contextual_memory import ContextualMemory
 from crewai.memory.entity.entity_memory import EntityMemory
 from crewai.memory.long_term.long_term_memory import LongTermMemory
 from crewai.memory.short_term.short_term_memory import ShortTermMemory
@@ -277,6 +278,13 @@ class Crew(BaseModel):
                 )
             else:
                 self._user_memory = None
+            self.contextual_memory = ContextualMemory(
+                memory_config=self.memory_config,
+                stm=self._short_term_memory,
+                ltm=self._long_term_memory,
+                em=self._entity_memory,
+                um=self._user_memory,
+            )
         return self
 
     @model_validator(mode="after")
