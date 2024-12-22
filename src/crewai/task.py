@@ -4,11 +4,10 @@ import logging
 import threading
 import uuid
 from concurrent.futures import Future
-from typing import ClassVar
 from copy import copy
 from hashlib import md5
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Set, Tuple, Type, Union
+from typing import Any, ClassVar, Dict, List, Optional, Set, Tuple, Type, Union
 
 from opentelemetry.trace import Span
 from pydantic import (
