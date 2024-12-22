@@ -128,7 +128,28 @@ class Task(BaseModel):
     @field_validator("guardrail")
     @classmethod
     def validate_guardrail_function(cls, v: Optional[Callable]) -> Optional[Callable]:
-        """Validate that the guardrail function has the correct signature."""
+        """Validate that the guardrail function has the correct signature and behavior.
+        
+        While type hints provide static checking, this validator ensures runtime safety by:
+        1. Verifying the function accepts exactly one parameter (the TaskOutput)
+        2. Checking return type annotations match Tuple[bool, Any] if present
+        3. Providing clear, immediate error messages for debugging
+        
+        This runtime validation is crucial because:
+        - Type hints are optional and can be ignored at runtime
+        - Function signatures need immediate validation before task execution
+        - Clear error messages help users debug guardrail implementation issues
+        
+        Args:
+            v: The guardrail function to validate
+            
+        Returns:
+            The validated guardrail function
+            
+        Raises:
+            ValueError: If the function signature is invalid or return annotation
+                       doesn't match Tuple[bool, Any]
+        """
         if v is not None:
             sig = inspect.signature(v)
             if len(sig.parameters) != 1:
