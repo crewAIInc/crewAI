@@ -1,6 +1,5 @@
 import ast
 import datetime
-import os
 import time
 from difflib import SequenceMatcher
 from textwrap import dedent
@@ -15,12 +14,10 @@ from crewai.tools.tool_calling import InstructorToolCalling, ToolCalling
 from crewai.tools.tool_usage_events import ToolUsageError, ToolUsageFinished
 from crewai.utilities import I18N, Converter, ConverterError, Printer
 
-agentops = None
-if os.environ.get("AGENTOPS_API_KEY"):
-    try:
-        import agentops  # type: ignore
-    except ImportError:
-        pass
+try:
+    import agentops  # type: ignore
+except ImportError:
+    agentops = None
 
 OPENAI_BIGGER_MODELS = ["gpt-4", "gpt-4o", "o1-preview", "o1-mini"]
 
@@ -422,9 +419,10 @@ class ToolUsage:
                 elif value.lower() in [
                     "true",
                     "false",
-                    "null",
                 ]:  # Check for boolean and null values
-                    value = value.lower()
+                    value = value.lower().capitalize()
+                elif value.lower() == "null":
+                    value = "None"
                 else:
                     # Assume the value is a string and needs quotes
                     value = '"' + value.replace('"', '\\"') + '"'
