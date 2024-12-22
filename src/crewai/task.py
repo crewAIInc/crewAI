@@ -7,13 +7,32 @@ from concurrent.futures import Future
 from copy import copy
 from hashlib import md5
 from pathlib import Path
-from typing import Any, Callable, ClassVar, Dict, List, Optional, Set, Tuple, Type, Union
+from typing import (
+    Any,
+    Callable,
+    ClassVar,
+    Dict,
+    List,
+    Optional,
+    Set,
+    Tuple,
+    Type,
+    Union,
+)
 
 from opentelemetry.trace import Span
-from pydantic import UUID4, BaseModel, Field, PrivateAttr, field_validator, model_validator
+from pydantic import (
+    UUID4,
+    BaseModel,
+    Field,
+    PrivateAttr,
+    field_validator,
+    model_validator,
+)
 from pydantic_core import PydanticCustomError
 
 from crewai.agents.agent_builder.base_agent import BaseAgent
+from crewai.tasks.guardrail_result import GuardrailResult
 from crewai.tasks.output_format import OutputFormat
 from crewai.tasks.task_output import TaskOutput
 from crewai.telemetry.telemetry import Telemetry
