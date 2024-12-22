@@ -736,6 +736,48 @@ def test_interpolate_inputs():
     assert task.expected_output == "Bullet point list of 5 interesting ideas about ML."
 
 
+def test_interpolate_only():
+    """Test the interpolate_only method for various scenarios including JSON structure preservation."""
+    task = Task(
+        description="Unused in this test",
+        expected_output="Unused in this test"
+    )
+    
+    # Test JSON structure preservation
+    json_string = '{"info": "Look at {placeholder}", "nested": {"val": "{nestedVal}"}}'
+    result = task.interpolate_only(
+        input_string=json_string,
+        inputs={"placeholder": "the data", "nestedVal": "something else"}
+    )
+    assert '"info": "Look at the data"' in result
+    assert '"val": "something else"' in result
+    assert "{placeholder}" not in result
+    assert "{nestedVal}" not in result
+    
+    # Test normal string interpolation
+    normal_string = "Hello {name}, welcome to {place}!"
+    result = task.interpolate_only(
+        input_string=normal_string,
+        inputs={"name": "John", "place": "CrewAI"}
+    )
+    assert result == "Hello John, welcome to CrewAI!"
+    
+    # Test empty string
+    result = task.interpolate_only(
+        input_string="",
+        inputs={"unused": "value"}
+    )
+    assert result == ""
+    
+    # Test string with no placeholders
+    no_placeholders = "Hello, this is a test"
+    result = task.interpolate_only(
+        input_string=no_placeholders,
+        inputs={"unused": "value"}
+    )
+    assert result == no_placeholders
+
+
 def test_task_output_str_with_pydantic():
     from crewai.tasks.output_format import OutputFormat
 
