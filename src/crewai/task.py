@@ -305,17 +305,25 @@ class Task(BaseModel):
                     )
 
                 self.retry_count += 1
-                context = f"Previous attempt failed validation: {guardrail_result.error}\nPlease try again."
+                context = (
+                    f"### Previous attempt failed validation: {guardrail_result.error}\n\n\n"
+                    f"### Previous result:\n{task_output.raw}\n\n\n"
+                    "Try again, making sure to address the validation error."
+                )
                 return self._execute_core(agent, context, tools)
 
             if guardrail_result.result is None:
                 raise Exception(
                     "Task guardrail returned None as result. This is not allowed."
                 )
-            task_output.raw = guardrail_result.result
-            pydantic_output, json_output = self._export_output(guardrail_result.result)
-            task_output.pydantic = pydantic_output
-            task_output.json_dict = json_output
+
+            if isinstance(guardrail_result.result, str):
+                task_output.raw = guardrail_result.result
+                pydantic_output, json_output = self._export_output(guardrail_result.result)
+                task_output.pydantic = pydantic_output
+                task_output.json_dict = json_output
+            elif isinstance(guardrail_result.result, TaskOutput):
+                task_output = guardrail_result.result
 
         self.output = task_output
 
