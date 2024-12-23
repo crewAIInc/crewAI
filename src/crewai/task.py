@@ -1,13 +1,25 @@
 import datetime
 import inspect
 import json
+import logging
 import threading
 import uuid
 from concurrent.futures import Future
 from copy import copy
 from hashlib import md5
 from pathlib import Path
-from typing import Any, Callable, Dict, List, Optional, Set, Tuple, Type, Union
+from typing import (
+    Any,
+    Callable,
+    ClassVar,
+    Dict,
+    List,
+    Optional,
+    Set,
+    Tuple,
+    Type,
+    Union,
+)
 
 from opentelemetry.trace import Span
 from pydantic import (
@@ -51,6 +63,7 @@ class Task(BaseModel):
     """
 
     __hash__ = object.__hash__  # type: ignore
+    logger: ClassVar[logging.Logger] = logging.getLogger(__name__)
     used_tools: int = 0
     tools_errors: int = 0
     delegations: int = 0
@@ -389,7 +402,18 @@ class Task(BaseModel):
 
         if inputs:
             self.description = self._original_description.format(**inputs)
-            self.expected_output = self._original_expected_output.format(**inputs)
+            self.expected_output = self.interpolate_only(
+                input_string=self._original_expected_output, inputs=inputs
+            )
+
+    def interpolate_only(self, input_string: str, inputs: Dict[str, Any]) -> str:
+        """Interpolate placeholders (e.g., {key}) in a string while leaving JSON untouched."""
+        escaped_string = input_string.replace("{", "{{").replace("}", "}}")
+
+        for key in inputs.keys():
+            escaped_string = escaped_string.replace(f"{{{{{key}}}}}", f"{{{key}}}")
+
+        return escaped_string.format(**inputs)
 
     def increment_tools_errors(self) -> None:
         """Increment the tools errors counter."""
@@ -471,22 +495,33 @@ class Task(BaseModel):
         return OutputFormat.RAW
 
     def _save_file(self, result: Any) -> None:
+        """Save task output to a file.
+        
+        Args:
+            result: The result to save to the file. Can be a dict or any stringifiable object.
+            
+        Raises:
+            ValueError: If output_file is not set
+            RuntimeError: If there is an error writing to the file
+        """
         if self.output_file is None:
             raise ValueError("output_file is not set.")
 
-        resolved_path = Path(self.output_file).expanduser().resolve()
-        directory = resolved_path.parent
+        try:
+            resolved_path = Path(self.output_file).expanduser().resolve()
+            directory = resolved_path.parent
 
-        if not directory.exists():
-            directory.mkdir(parents=True, exist_ok=True)
+            if not directory.exists():
+                directory.mkdir(parents=True, exist_ok=True)
 
-        with resolved_path.open("w", encoding="utf-8") as file:
-            if isinstance(result, dict):
-                import json
-
-                json.dump(result, file, ensure_ascii=False, indent=2)
-            else:
-                file.write(str(result))
+            with resolved_path.open("w", encoding="utf-8") as file:
+                if isinstance(result, dict):
+                    import json
+                    json.dump(result, file, ensure_ascii=False, indent=2)
+                else:
+                    file.write(str(result))
+        except (OSError, IOError) as e:
+            raise RuntimeError(f"Failed to save output file: {e}")
         return None
 
     def __repr__(self):
