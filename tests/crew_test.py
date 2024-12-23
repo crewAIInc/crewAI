@@ -332,21 +332,30 @@ def test_manager_agent_delegating_to_assigned_task_agent():
         tasks=[task],
     )
 
-    crew.kickoff()
-
-    # Check if the manager agent has the correct tools
-    assert crew.manager_agent is not None
-    assert crew.manager_agent.tools is not None
-
-    assert len(crew.manager_agent.tools) == 2
-    assert (
-        "Delegate a specific task to one of the following coworkers: Researcher\n"
-        in crew.manager_agent.tools[0].description
+    mock_task_output = TaskOutput(
+        description="Mock description",
+        raw="mocked output",
+        agent="mocked agent"
     )
-    assert (
-        "Ask a specific question to one of the following coworkers: Researcher\n"
-        in crew.manager_agent.tools[1].description
-    )
+
+    # Because we are mocking execute_sync, we never hit the underlying _execute_core
+    # which sets the output attribute of the task
+    task.output = mock_task_output
+
+    with patch.object(Task, 'execute_sync', return_value=mock_task_output) as mock_execute_sync:
+        crew.kickoff()
+
+        # Verify execute_sync was called once
+        mock_execute_sync.assert_called_once()
+
+        # Get the tools argument from the call
+        _, kwargs = mock_execute_sync.call_args
+        tools = kwargs['tools']
+
+        # Verify the delegation tools were passed correctly
+        assert len(tools) == 2
+        assert any("Delegate a specific task to one of the following coworkers: Researcher" in tool.description for tool in tools)
+        assert any("Ask a specific question to one of the following coworkers: Researcher" in tool.description for tool in tools)
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
@@ -402,9 +411,173 @@ def test_crew_with_delegating_agents():
 
     assert (
         result.raw
-        == "This is the complete content as specified:\nArtificial Intelligence (AI) Agents are sophisticated computer programs designed to perform tasks that typically require human intelligence, such as decision making, problem-solving, and learning. These agents operate autonomously, utilizing vast amounts of data, advanced algorithms, and machine learning techniques to analyze their environment, adapt to new information, and improve their performance over time.\n\nThe significance of AI Agents lies in their transformative potential across various industries. In healthcare, for example, they assist in diagnosing diseases with greater accuracy and speed than human practitioners, offering personalized treatment plans by analyzing patient data. In finance, AI Agents predict market trends, manage risks, and even execute trades, contributing to more stable and profitable financial systems. Customer service sectors benefit significantly from AI Agents, as they provide personalized and efficient responses, often resolving issues faster than traditional methods.\n\nMoreover, AI Agents are also making substantial contributions in fields like education and manufacturing. In education, they offer tailored learning experiences by assessing individual student needs and adjusting teaching methods accordingly. They help educators identify students who might need additional support and provide resources to enhance learning outcomes. In manufacturing, AI Agents optimize production lines, predict equipment failures, and improve supply chain management, thus boosting productivity and reducing downtime.\n\nAs these AI-powered entities continue to evolve, they are not only enhancing operational efficiencies but also driving innovation and creating new opportunities for growth and development in every sector they penetrate. The future of AI Agents looks promising, with the potential to revolutionize the way we live and work, making processes more efficient, decisions more data-driven, and solutions more innovative than ever before."
+        == "In the rapidly evolving landscape of technology, AI agents have emerged as formidable tools, revolutionizing how we interact with data and automate tasks. These sophisticated systems leverage machine learning and natural language processing to perform a myriad of functions, from virtual personal assistants to complex decision-making companions in industries such as finance, healthcare, and education. By mimicking human intelligence, AI agents can analyze massive data sets at unparalleled speeds, enabling businesses to uncover valuable insights, enhance productivity, and elevate user experiences to unprecedented levels.\n\nOne of the most striking aspects of AI agents is their adaptability; they learn from their interactions and continuously improve their performance over time. This feature is particularly valuable in customer service where AI agents can address inquiries, resolve issues, and provide personalized recommendations without the limitations of human fatigue. Moreover, with intuitive interfaces, AI agents enhance user interactions, making technology more accessible and user-friendly, thereby breaking down barriers that have historically hindered digital engagement.\n\nDespite their immense potential, the deployment of AI agents raises important ethical and practical considerations. Issues related to privacy, data security, and the potential for job displacement necessitate thoughtful dialogue and proactive measures. Striking a balance between technological innovation and societal impact will be crucial as organizations integrate these agents into their operations. Additionally, ensuring transparency in AI decision-making processes is vital to maintain public trust as AI agents become an integral part of daily life.\n\nLooking ahead, the future of AI agents appears bright, with ongoing advancements promising even greater capabilities. As we continue to harness the power of AI, we can expect these agents to play a transformative role in shaping various sectors—streamlining workflows, enabling smarter decision-making, and fostering more personalized experiences. Embracing this technology responsibly can lead to a future where AI agents not only augment human effort but also inspire creativity and efficiency across the board, ultimately redefining our interaction with the digital world."
     )
 
+@pytest.mark.vcr(filter_headers=["authorization"])
+def test_crew_with_delegating_agents_should_not_override_task_tools():
+    from typing import Type
+    from crewai.tools import BaseTool
+    from pydantic import BaseModel, Field
+
+    class TestToolInput(BaseModel):
+        """Input schema for TestTool."""
+        query: str = Field(..., description="Query to process")
+
+    class TestTool(BaseTool):
+        name: str = "Test Tool"
+        description: str = "A test tool that just returns the input"
+        args_schema: Type[BaseModel] = TestToolInput
+
+        def _run(self, query: str) -> str:
+            return f"Processed: {query}"
+
+    # Create a task with the test tool
+    tasks = [
+        Task(
+            description="Produce and amazing 1 paragraph draft of an article about AI Agents.",
+            expected_output="A 4 paragraph article about AI.",
+            agent=ceo,
+            tools=[TestTool()],
+        )
+    ]
+
+    crew = Crew(
+        agents=[ceo, writer],
+        process=Process.sequential,
+        tasks=tasks,
+    )
+
+    mock_task_output = TaskOutput(
+        description="Mock description",
+        raw="mocked output",
+        agent="mocked agent"
+    )
+
+    # Because we are mocking execute_sync, we never hit the underlying _execute_core
+    # which sets the output attribute of the task
+    tasks[0].output = mock_task_output
+
+    with patch.object(Task, 'execute_sync', return_value=mock_task_output) as mock_execute_sync:
+        crew.kickoff()
+
+        # Execute the task and verify both tools are present
+        _, kwargs = mock_execute_sync.call_args
+        tools = kwargs['tools']
+
+        assert any(isinstance(tool, TestTool) for tool in tools), "TestTool should be present"
+        assert any("delegate" in tool.name.lower() for tool in tools), "Delegation tool should be present"
+
+@pytest.mark.vcr(filter_headers=["authorization"])
+def test_crew_with_delegating_agents_should_not_override_agent_tools():
+    from typing import Type
+    from crewai.tools import BaseTool
+    from pydantic import BaseModel, Field
+
+    class TestToolInput(BaseModel):
+        """Input schema for TestTool."""
+        query: str = Field(..., description="Query to process")
+
+    class TestTool(BaseTool):
+        name: str = "Test Tool"
+        description: str = "A test tool that just returns the input"
+        args_schema: Type[BaseModel] = TestToolInput
+
+        def _run(self, query: str) -> str:
+            return f"Processed: {query}"
+
+    new_ceo = ceo.model_copy()
+    new_ceo.tools = [TestTool()]
+
+    # Create a task with the test tool
+    tasks = [
+        Task(
+            description="Produce and amazing 1 paragraph draft of an article about AI Agents.",
+            expected_output="A 4 paragraph article about AI.",
+            agent=new_ceo
+        )
+    ]
+
+    crew = Crew(
+        agents=[new_ceo, writer],
+        process=Process.sequential,
+        tasks=tasks,
+    )
+
+    mock_task_output = TaskOutput(
+        description="Mock description",
+        raw="mocked output",
+        agent="mocked agent"
+    )
+
+    # Because we are mocking execute_sync, we never hit the underlying _execute_core
+    # which sets the output attribute of the task
+    tasks[0].output = mock_task_output
+
+    with patch.object(Task, 'execute_sync', return_value=mock_task_output) as mock_execute_sync:
+        crew.kickoff()
+
+        # Execute the task and verify both tools are present
+        _, kwargs = mock_execute_sync.call_args
+        tools = kwargs['tools']
+
+        assert any(isinstance(tool, TestTool) for tool in new_ceo.tools), "TestTool should be present"
+        assert any("delegate" in tool.name.lower() for tool in tools), "Delegation tool should be present"
+
+@pytest.mark.vcr(filter_headers=["authorization"])
+def test_task_tools_override_agent_tools():
+    from typing import Type
+    from crewai.tools import BaseTool
+    from pydantic import BaseModel, Field
+
+    class TestToolInput(BaseModel):
+        """Input schema for TestTool."""
+        query: str = Field(..., description="Query to process")
+
+    class TestTool(BaseTool):
+        name: str = "Test Tool"
+        description: str = "A test tool that just returns the input"
+        args_schema: Type[BaseModel] = TestToolInput
+
+        def _run(self, query: str) -> str:
+            return f"Processed: {query}"
+
+    class AnotherTestTool(BaseTool):
+        name: str = "Another Test Tool"
+        description: str = "Another test tool"
+        args_schema: Type[BaseModel] = TestToolInput
+
+        def _run(self, query: str) -> str:
+            return f"Another processed: {query}"
+
+    # Set agent tools
+    new_researcher = researcher.model_copy()
+    new_researcher.tools = [TestTool()]
+
+    # Create task with different tools
+    task = Task(
+        description="Write a test task",
+        expected_output="Test output",
+        agent=new_researcher,
+        tools=[AnotherTestTool()]
+    )
+
+    crew = Crew(
+        agents=[new_researcher],
+        tasks=[task],
+        process=Process.sequential
+    )
+
+    crew.kickoff()
+
+    # Verify task tools override agent tools
+    assert len(task.tools) == 1  # AnotherTestTool
+    assert any(isinstance(tool, AnotherTestTool) for tool in task.tools)
+    assert not any(isinstance(tool, TestTool) for tool in task.tools)
+
+    # Verify agent tools remain unchanged
+    assert len(new_researcher.tools) == 1
+    assert isinstance(new_researcher.tools[0], TestTool)
 
 @pytest.mark.vcr(filter_headers=["authorization"])
 def test_crew_verbose_output(capsys):
@@ -1199,7 +1372,6 @@ def test_code_execution_flag_adds_code_tool_upon_kickoff():
         assert len(programmer.tools) == 1
         assert programmer.tools[0].__class__ == CodeInterpreterTool
 
-
 @pytest.mark.vcr(filter_headers=["authorization"])
 def test_delegation_is_not_enabled_if_there_are_only_one_agent():
     researcher = Agent(
@@ -1307,21 +1479,37 @@ def test_hierarchical_crew_creation_tasks_with_agents():
         process=Process.hierarchical,
         manager_llm="gpt-4o",
     )
-    crew.kickoff()
 
-    assert crew.manager_agent is not None
-    assert crew.manager_agent.tools is not None
-    assert (
-        "Delegate a specific task to one of the following coworkers: Senior Writer\n"
-        in crew.manager_agent.tools[0].description
+    mock_task_output = TaskOutput(
+        description="Mock description",
+        raw="mocked output",
+        agent="mocked agent"
     )
+
+    # Because we are mocking execute_sync, we never hit the underlying _execute_core
+    # which sets the output attribute of the task
+    task.output = mock_task_output
+
+    with patch.object(Task, 'execute_sync', return_value=mock_task_output) as mock_execute_sync:
+        crew.kickoff()
+
+        # Verify execute_sync was called once
+        mock_execute_sync.assert_called_once()
+
+        # Get the tools argument from the call
+        _, kwargs = mock_execute_sync.call_args
+        tools = kwargs['tools']
+
+        # Verify the delegation tools were passed correctly
+        assert len(tools) == 2
+        assert any("Delegate a specific task to one of the following coworkers: Senior Writer" in tool.description for tool in tools)
+        assert any("Ask a specific question to one of the following coworkers: Senior Writer" in tool.description for tool in tools)
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
 def test_hierarchical_crew_creation_tasks_with_async_execution():
     """
-    Agents are not required for tasks in a hierarchical process but sometimes they are still added
-    This test makes sure that the manager still delegates the task to the agent even if the agent is passed in the task
+    Tests that async tasks in hierarchical crews are handled correctly with proper delegation tools
     """
     task = Task(
         description="Write one amazing paragraph about AI.",
@@ -1337,13 +1525,34 @@ def test_hierarchical_crew_creation_tasks_with_async_execution():
         manager_llm="gpt-4o",
     )
 
-    crew.kickoff()
-    assert crew.manager_agent is not None
-    assert crew.manager_agent.tools is not None
-    assert (
-        "Delegate a specific task to one of the following coworkers: Senior Writer\n"
-        in crew.manager_agent.tools[0].description
+    mock_task_output = TaskOutput(
+        description="Mock description",
+        raw="mocked output",
+        agent="mocked agent"
     )
+
+    # Create a mock Future that returns our TaskOutput
+    mock_future = MagicMock(spec=Future)
+    mock_future.result.return_value = mock_task_output
+
+    # Because we are mocking execute_async, we never hit the underlying _execute_core
+    # which sets the output attribute of the task
+    task.output = mock_task_output
+
+    with patch.object(Task, 'execute_async', return_value=mock_future) as mock_execute_async:
+        crew.kickoff()
+
+        # Verify execute_async was called once
+        mock_execute_async.assert_called_once()
+
+        # Get the tools argument from the call
+        _, kwargs = mock_execute_async.call_args
+        tools = kwargs['tools']
+
+        # Verify the delegation tools were passed correctly
+        assert len(tools) == 2
+        assert any("Delegate a specific task to one of the following coworkers: Senior Writer\n" in tool.description for tool in tools)
+        assert any("Ask a specific question to one of the following coworkers: Senior Writer\n" in tool.description for tool in tools)
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])

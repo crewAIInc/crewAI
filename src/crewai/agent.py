@@ -114,6 +114,10 @@ class Agent(BaseAgent):
         default=2,
         description="Maximum number of retries for an agent to execute a task when an error occurs.",
     )
+    multimodal: bool = Field(
+        default=False,
+        description="Whether the agent is multimodal.",
+    )
     code_execution_mode: Literal["safe", "unsafe"] = Field(
         default="safe",
         description="Mode for code execution: 'safe' (using Docker) or 'unsafe' (direct execution).",

@@ -35,6 +35,7 @@ from crewai.tasks.conditional_task import ConditionalTask
 from crewai.tasks.task_output import TaskOutput
 from crewai.telemetry import Telemetry
 from crewai.tools.agent_tools.agent_tools import AgentTools
+from crewai.tools.base_tool import Tool
 from crewai.types.usage_metrics import UsageMetrics
 from crewai.utilities import I18N, FileHandler, Logger, RPMController
 from crewai.utilities.constants import TRAINING_DATA_FILE
@@ -672,7 +673,6 @@ class Crew(BaseModel):
                 )
                 manager.tools = []
                 raise Exception("Manager agent should not have tools")
-            manager.tools = self.manager_agent.get_delegation_tools(self.agents)
         else:
             self.manager_llm = (
                 getattr(self.manager_llm, "model_name", None)
@@ -726,7 +726,9 @@ class Crew(BaseModel):
                     f"No agent available for task: {task.description}. Ensure that either the task has an assigned agent or a manager agent is provided."
                 )
 
-            self._prepare_agent_tools(task)
+
+            tools_for_task = agent_to_use.tools or task.tools or []
+            tools_for_task = self._prepare_tools(task, tools_for_task)
             self._log_task_start(task, agent_to_use.role)
 
             if isinstance(task, ConditionalTask):
@@ -743,7 +745,7 @@ class Crew(BaseModel):
                 future = task.execute_async(
                     agent=agent_to_use,
                     context=context,
-                    tools=agent_to_use.tools,
+                    tools=tools_for_task,
                 )
                 futures.append((task, future, task_index))
             else:
@@ -755,7 +757,7 @@ class Crew(BaseModel):
                 task_output = task.execute_sync(
                     agent=agent_to_use,
                     context=context,
-                    tools=agent_to_use.tools,
+                    tools=tools_for_task,
                 )
                 task_outputs = [task_output]
                 self._process_task_result(task, task_output)
@@ -792,45 +794,37 @@ class Crew(BaseModel):
             return skipped_task_output
         return None
 
-    def _prepare_agent_tools(self, task: Task):
+    def _prepare_tools(self, task: Task, tools: List[Tool]):
         if self.process == Process.hierarchical:
             if self.manager_agent:
-                self._update_manager_tools(task)
+                tools = self._update_manager_tools(task, tools)
             else:
                 raise ValueError("Manager agent is required for hierarchical process.")
+
         elif task.agent and task.agent.allow_delegation:
-            self._add_delegation_tools(task)
+            tools = self._add_delegation_tools(task, tools)
+
+        if task.agent and task.agent.multimodal:
+            tools = self._add_multimodal_tools(task, tools)
+
+        return tools
 
     def _get_agent_to_use(self, task: Task) -> Optional[BaseAgent]:
         if self.process == Process.hierarchical:
             return self.manager_agent
         return task.agent
 
-    def _add_delegation_tools(self, task: Task):
+    def _add_multimodal_tools(self, task: Task, tools: List[Tool]):
+        tools.extend(task.agent.get_multimodal_tools())
+        return tools
+
+    def _add_delegation_tools(self, task: Task, tools: List[Tool]):
         agents_for_delegation = [agent for agent in self.agents if agent != task.agent]
         if len(self.agents) > 1 and len(agents_for_delegation) > 0 and task.agent:
-            delegation_tools = task.agent.get_delegation_tools(agents_for_delegation)
-
-            # Add tools if they are not already in task.tools
-            for new_tool in delegation_tools:
-                # Find the index of the tool with the same name
-                existing_tool_index = next(
-                    (
-                        index
-                        for index, tool in enumerate(task.tools or [])
-                        if tool.name == new_tool.name
-                    ),
-                    None,
-                )
-                if not task.tools:
-                    task.tools = []
-
-                if existing_tool_index is not None:
-                    # Replace the existing tool
-                    task.tools[existing_tool_index] = new_tool
-                else:
-                    # Add the new tool
-                    task.tools.append(new_tool)
+            if not tools:
+                tools = []
+            tools = self._inject_delegation_tools(tools, task.agent, agents_for_delegation)
+        return tools
 
     def _log_task_start(self, task: Task, role: str = "None"):
         if self.output_log_file:
@@ -838,14 +832,27 @@ class Crew(BaseModel):
                 task_name=task.name, task=task.description, agent=role, status="started"
             )
 
-    def _update_manager_tools(self, task: Task):
+    def _update_manager_tools(self, task: Task, tools: List[Tool]):
         if self.manager_agent:
             if task.agent:
-                self.manager_agent.tools = task.agent.get_delegation_tools([task.agent])
+                tools = self._inject_delegation_tools(tools, task.agent, [task.agent])
             else:
-                self.manager_agent.tools = self.manager_agent.get_delegation_tools(
-                    self.agents
-                )
+                tools = self._inject_delegation_tools(tools, self.manager_agent, self.agents)
+        # self.manager_agent.tools = tools
+        return tools
+
+    def _inject_delegation_tools(self, tools: List[Tool], task_agent: BaseAgent, agents: List[BaseAgent]):
+        delegation_tools = task_agent.get_delegation_tools(agents)
+        # Create mapping of tool names to new delegation tools
+        delegation_tool_map = {tool.name: tool for tool in delegation_tools}
+
+        # Remove any existing tools that will be replaced
+        tools = [tool for tool in tools if tool.name not in delegation_tool_map]
+
+        # Add all delegation tools
+        tools.extend(delegation_tools)
+
+        return tools
 
     def _get_context(self, task: Task, task_outputs: List[TaskOutput]):
         context = (
