@@ -94,6 +94,7 @@ def add_edges(net, flow, node_positions, colors):
     ancestors = build_ancestor_dict(flow)
     parent_children = build_parent_children_dict(flow)
 
+    # Edges for normal listeners
     for method_name in flow._listeners:
         condition_type, trigger_methods = flow._listeners[method_name]
         is_and_condition = condition_type == "AND"
@@ -137,11 +138,21 @@ def add_edges(net, flow, node_positions, colors):
 
                 net.add_edge(trigger, method_name, **edge_style)
             else:
-                # Print a warning if a node does not exist.
-                print(
-                    f"Warning: No node found for '{trigger}' or '{method_name}'. Skipping edge."
+                # Nodes not found in node_positions. Check if it's a known router outcome and a known method.
+                is_router_edge = any(
+                    trigger in paths for paths in flow._router_paths.values()
                 )
+                # Check if method_name is a known method
+                method_known = method_name in flow._methods
 
+                # If it's a known router edge and the method is known, don't warn.
+                # This means the path is legitimate, just not reflected as nodes here.
+                if not (is_router_edge and method_known):
+                    print(
+                        f"Warning: No node found for '{trigger}' or '{method_name}'. Skipping edge."
+                    )
+
+    # Edges for router return paths
     for router_method_name, paths in flow._router_paths.items():
         for path in paths:
             for listener_name, (
@@ -189,7 +200,9 @@ def add_edges(net, flow, node_positions, colors):
                         }
                         net.add_edge(router_method_name, listener_name, **edge_style)
                     else:
-                        # Print a warning if a node does not exist.
-                        print(
-                            f"Warning: No node found for '{router_method_name}' or '{listener_name}'. Skipping edge."
-                        )
+                        # Same check here: known router edge and known method?
+                        method_known = listener_name in flow._methods
+                        if not method_known:
+                            print(
+                                f"Warning: No node found for '{router_method_name}' or '{listener_name}'. Skipping edge."
+                            )
