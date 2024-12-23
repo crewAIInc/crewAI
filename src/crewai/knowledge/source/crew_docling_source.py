@@ -50,11 +50,11 @@ class CrewDoclingSource(BaseKnowledgeSource):
             )
             self.file_paths = self.file_path
         self.safe_file_paths = self.validate_content()
-        self.content = self.load_content()
+        self.content = self._load_content()
 
-    def load_content(self) -> List[DoclingDocument]:
+    def _load_content(self) -> List[DoclingDocument]:
         try:
-            return self.convert_source_to_docling_documents()
+            return self._convert_source_to_docling_documents()
         except ConversionError as e:
             self._logger.log(
                 "error",
@@ -74,7 +74,7 @@ class CrewDoclingSource(BaseKnowledgeSource):
             self.chunks.extend(list(new_chunks_iterable))
         self._save_documents()
 
-    def convert_source_to_docling_documents(self) -> List[DoclingDocument]:
+    def _convert_source_to_docling_documents(self) -> List[DoclingDocument]:
         conv_results_iter = self.document_converter.convert_all(self.safe_file_paths)
         return [result.document for result in conv_results_iter]
 

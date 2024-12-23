@@ -86,15 +86,13 @@ class BaseFileKnowledgeSource(BaseKnowledgeSource, ABC):
         else:
             if self.file_paths is None:
                 raise ValueError("Your source must be provided with a file_paths: []")
-            paths = (
-                [self.file_paths]
-                if isinstance(self.file_paths, (str, Path))
-                else self.file_paths
-            )
-
-        if not isinstance(paths, list):
-            raise ValueError(
-                "file_path/file_paths must be a Path, str, or a list of these types"
-            )
+            elif isinstance(self.file_paths, list) and len(self.file_paths) == 0:
+                raise ValueError("Empty file_paths are not allowed")
+            else:
+                paths = (
+                    [self.file_paths]
+                    if isinstance(self.file_paths, (str, Path))
+                    else self.file_paths
+                )
 
         return [self.convert_to_path(path) for path in paths]
