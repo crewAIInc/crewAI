@@ -21,7 +21,7 @@ class BaseKnowledgeSource(BaseModel, ABC):
     collection_name: Optional[str] = Field(default=None)
 
     @abstractmethod
-    def load_content(self) -> Dict[Any, str]:
+    def validate_content(self) -> Any:
         """Load and preprocess content from the source."""
         pass
 
