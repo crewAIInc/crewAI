@@ -71,24 +71,29 @@ class BaseFileKnowledgeSource(BaseKnowledgeSource, ABC):
     def _process_file_paths(self) -> List[Path]:
         """Convert file_path to a list of Path objects."""
 
-        paths = None
         if hasattr(self, "file_path") and self.file_path is not None:
             self._logger.log(
                 "warning",
                 "The 'file_path' attribute is deprecated and will be removed in a future version. Please use 'file_paths' instead.",
                 color="yellow",
             )
-            paths = self.file_path
-        else:
-            if self.file_paths is None:
-                raise ValueError("Your source must be provided with a file_paths: []")
-            paths = self.file_paths
+            self.file_paths = self.file_path
 
-        if isinstance(paths, (str, Path)):
-            paths = [paths]
-        elif not isinstance(paths, list):
+        if self.file_paths is None:
+            raise ValueError("Your source must be provided with a file_paths: []")
+
+        # Convert single path to list
+        path_list: List[Union[Path, str]] = (
+            [self.file_paths]
+            if isinstance(self.file_paths, (str, Path))
+            else list(self.file_paths)
+            if isinstance(self.file_paths, list)
+            else []
+        )
+
+        if not path_list:
             raise ValueError(
                 "file_path/file_paths must be a Path, str, or a list of these types"
             )
 
-        return [self.convert_to_path(path) for path in paths]
+        return [self.convert_to_path(path) for path in path_list]
