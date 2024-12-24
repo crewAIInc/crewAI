@@ -1,10 +1,11 @@
 import asyncio
 import json
+import re
 import uuid
 import warnings
 from concurrent.futures import Future
 from hashlib import md5
-from typing import Any, Callable, Dict, List, Optional, Tuple, Union
+from typing import Any, Callable, Dict, List, Optional, Set, Tuple, Union
 
 from pydantic import (
     UUID4,
@@ -201,6 +202,10 @@ class Crew(BaseModel):
     knowledge_sources: Optional[List[BaseKnowledgeSource]] = Field(
         default=None,
         description="Knowledge sources for the crew. Add knowledge sources to the knowledge object.",
+    )
+    chat_llm: Optional[Any] = Field(
+        default=None,
+        description="LLM used to handle chatting with the crew.",
     )
     _knowledge: Optional[Knowledge] = PrivateAttr(
         default=None,
@@ -956,6 +961,31 @@ class Crew(BaseModel):
         if self._knowledge:
             return self._knowledge.query(query)
         return None
+
+    def fetch_inputs(self) -> Set[str]:
+        """
+        Gathers placeholders (e.g., {something}) referenced in tasks or agents.
+        Scans each task's 'description' + 'expected_output', and each agent's
+        'role', 'goal', and 'backstory'.
+
+        Returns a set of all discovered placeholder names.
+        """
+        placeholder_pattern = re.compile(r"\{(.+?)\}")
+        required_inputs: Set[str] = set()
+
+        # Scan tasks for inputs
+        for task in self.tasks:
+            # description and expected_output might contain e.g. {topic}, {user_name}, etc.
+            text = f"{task.description or ''} {task.expected_output or ''}"
+            required_inputs.update(placeholder_pattern.findall(text))
+
+        # Scan agents for inputs
+        for agent in self.agents:
+            # role, goal, backstory might have placeholders like {role_detail}, etc.
+            text = f"{agent.role or ''} {agent.goal or ''} {agent.backstory or ''}"
+            required_inputs.update(placeholder_pattern.findall(text))
+
+        return required_inputs
 
     def copy(self):
         """Create a deep copy of the Crew."""

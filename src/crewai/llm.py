@@ -140,6 +140,65 @@ class LLM:
         self.set_callbacks(callbacks)
         self.set_env_callbacks()
 
+    def to_dict(self) -> dict:
+        """
+        Return a dict of all relevant parameters for serialization.
+        """
+        return {
+            "model": self.model,
+            "timeout": self.timeout,
+            "temperature": self.temperature,
+            "top_p": self.top_p,
+            "n": self.n,
+            "stop": self.stop,
+            "max_completion_tokens": self.max_completion_tokens,
+            "max_tokens": self.max_tokens,
+            "presence_penalty": self.presence_penalty,
+            "frequency_penalty": self.frequency_penalty,
+            "logit_bias": self.logit_bias,
+            "response_format": self.response_format,
+            "seed": self.seed,
+            "logprobs": self.logprobs,
+            "top_logprobs": self.top_logprobs,
+            "base_url": self.base_url,
+            "api_version": self.api_version,
+            "api_key": self.api_key,
+            "callbacks": self.callbacks,
+            "kwargs": self.kwargs,
+        }
+
+    @classmethod
+    def from_dict(cls, data: dict) -> "LLM":
+        """
+        Create an LLM instance from a dict.
+        We assume the dict has all relevant keys that match what's in the constructor.
+        """
+        # We can pop off fields we know, then pass the rest into **kwargs
+        # so that any leftover keys still get passed into the LLM constructor.
+        known_fields = {}
+        known_fields["model"] = data.pop("model", None)
+        known_fields["timeout"] = data.pop("timeout", None)
+        known_fields["temperature"] = data.pop("temperature", None)
+        known_fields["top_p"] = data.pop("top_p", None)
+        known_fields["n"] = data.pop("n", None)
+        known_fields["stop"] = data.pop("stop", None)
+        known_fields["max_completion_tokens"] = data.pop("max_completion_tokens", None)
+        known_fields["max_tokens"] = data.pop("max_tokens", None)
+        known_fields["presence_penalty"] = data.pop("presence_penalty", None)
+        known_fields["frequency_penalty"] = data.pop("frequency_penalty", None)
+        known_fields["logit_bias"] = data.pop("logit_bias", None)
+        known_fields["response_format"] = data.pop("response_format", None)
+        known_fields["seed"] = data.pop("seed", None)
+        known_fields["logprobs"] = data.pop("logprobs", None)
+        known_fields["top_logprobs"] = data.pop("top_logprobs", None)
+        known_fields["base_url"] = data.pop("base_url", None)
+        known_fields["api_version"] = data.pop("api_version", None)
+        known_fields["api_key"] = data.pop("api_key", None)
+        known_fields["callbacks"] = data.pop("callbacks", None)
+
+        # leftover keys go into kwargs:
+        return cls(**known_fields, **data)
+
     def call(self, messages: List[Dict[str, str]], callbacks: List[Any] = []) -> str:
         with suppress_warnings():
             if callbacks and len(callbacks) > 0:

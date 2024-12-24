@@ -2583,3 +2583,26 @@ def test_hierarchical_verbose_false_manager_agent():
 
     assert crew.manager_agent is not None
     assert not crew.manager_agent.verbose
+
+
+def test_fetch_inputs():
+    agent = Agent(
+        role="{role_detail} Researcher",
+        goal="Research on {topic}.",
+        backstory="Expert in {field}.",
+    )
+
+    task = Task(
+        description="Analyze the data on {topic}.",
+        expected_output="Summary of {topic} analysis.",
+        agent=agent,
+    )
+
+    crew = Crew(agents=[agent], tasks=[task])
+
+    expected_placeholders = {"role_detail", "topic", "field"}
+    actual_placeholders = crew.fetch_inputs()
+
+    assert (
+        actual_placeholders == expected_placeholders
+    ), f"Expected {expected_placeholders}, but got {actual_placeholders}"
