@@ -79,7 +79,7 @@ class CodeInterpreterTool(BaseTool):
         Install missing libraries in the Docker container
         """
         for library in libraries:
-            container.exec_run(f"pip install {library}")
+            container.exec_run(["pip", "install", library])
 
     def _init_docker_container(self) -> docker.models.containers.Container:
         container_name = "code-interpreter"
@@ -108,8 +108,7 @@ class CodeInterpreterTool(BaseTool):
         container = self._init_docker_container()
         self._install_libraries(container, libraries_used)
 
-        cmd_to_run = f'python3 -c "{code}"'
-        exec_result = container.exec_run(cmd_to_run)
+        exec_result = container.exec_run(["python3", "-c", code])
 
         container.stop()
         container.remove()
