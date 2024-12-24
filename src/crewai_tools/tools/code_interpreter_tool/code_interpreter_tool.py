@@ -2,7 +2,9 @@ import importlib.util
 import os
 from typing import List, Optional, Type
 
-import docker
+from docker import from_env as docker_from_env
+from docker.models.containers import Container
+from docker.errors import ImageNotFound, NotFound
 from crewai.tools import BaseTool
 from pydantic import BaseModel, Field
 
@@ -39,12 +41,12 @@ class CodeInterpreterTool(BaseTool):
         """
         Verify if the Docker image is available. Optionally use a user-provided Dockerfile.
         """
-        client = docker.from_env()
+        client = docker_from_env()
 
         try:
             client.images.get(self.default_image_tag)
 
-        except docker.errors.ImageNotFound:
+        except ImageNotFound:
             if self.user_dockerfile_path and os.path.exists(self.user_dockerfile_path):
                 dockerfile_path = self.user_dockerfile_path
             else:
@@ -73,7 +75,7 @@ class CodeInterpreterTool(BaseTool):
             return self.run_code_in_docker(code, libraries_used)
 
     def _install_libraries(
-        self, container: docker.models.containers.Container, libraries: List[str]
+        self, container: Container, libraries: List[str]
     ) -> None:
         """
         Install missing libraries in the Docker container
@@ -81,9 +83,9 @@ class CodeInterpreterTool(BaseTool):
         for library in libraries:
             container.exec_run(["pip", "install", library])
 
-    def _init_docker_container(self) -> docker.models.containers.Container:
+    def _init_docker_container(self) -> Container:
         container_name = "code-interpreter"
-        client = docker.from_env()
+        client = docker_from_env()
         current_path = os.getcwd()
 
         # Check if the container is already running
@@ -91,7 +93,7 @@ class CodeInterpreterTool(BaseTool):
             existing_container = client.containers.get(container_name)
             existing_container.stop()
             existing_container.remove()
-        except docker.errors.NotFound:
+        except NotFound:
             pass  # Container does not exist, no need to remove
 
         return client.containers.run(
