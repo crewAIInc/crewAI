@@ -10,6 +10,7 @@ from crewai import (
 from crewai.cli.add_crew_to_flow import add_crew_to_flow
 from crewai.cli.create_crew import create_crew
 from crewai.cli.create_flow import create_flow
+from crewai.cli.crew_chat import run_chat
 from crewai.cli.fetch_chat_llm import fetch_chat_llm
 from crewai.memory.storage.kickoff_task_outputs_storage import (
     KickoffTaskOutputsSQLiteStorage,
@@ -18,7 +19,6 @@ from crewai.memory.storage.kickoff_task_outputs_storage import (
 from .authentication.main import AuthenticationCommand
 from .deploy.main import DeployCommand
 from .evaluate_crew import evaluate_crew
-from .fetch_crew_inputs import fetch_crew_inputs
 from .install_crew import install_crew
 from .kickoff_flow import kickoff_flow
 from .plot_flow import plot_flow
@@ -351,123 +351,10 @@ def flow_add_crew(crew_name):
 @crewai.command()
 def chat():
     """
-    Start a conversation with the Crew, collecting user-supplied inputs
-    only if needed. This is a demo of a 'chat' flow.
+    Start a conversation with the Crew, collecting user-supplied inputs,
+    and using the Chat LLM to generate responses.
     """
-    click.secho("Welcome to CrewAI Chat!", fg="green")
-
-    # --------------------------------------------------------------------------
-    # 1) Attempt to fetch Crew inputs
-    # --------------------------------------------------------------------------
-    click.secho("Gathering crew inputs via `fetch_crew_inputs()`...", fg="cyan")
-    try:
-        crew_inputs = fetch_crew_inputs()
-    except Exception as e:
-        # If an error occurs, we print it and halt.
-        click.secho(f"Error fetching crew inputs: {e}", fg="red")
-        return
-
-    # If crew_inputs is empty, that's fine. We'll proceed anyway.
-    click.secho(
-        f"Found placeholders (possibly empty): {sorted(list(crew_inputs))}", fg="yellow"
-    )
-
-    # --------------------------------------------------------------------------
-    # 2) Retrieve the Chat LLM
-    # --------------------------------------------------------------------------
-    click.secho("Fetching the Chat LLM...", fg="cyan")
-    try:
-        chat_llm = fetch_chat_llm()
-    except Exception as e:
-        click.secho(f"Failed to retrieve Chat LLM: {e}", fg="red")
-        return
-
-    if not chat_llm:
-        click.secho("No valid Chat LLM returned. Exiting.", fg="red")
-        return
-
-    # --------------------------------------------------------------------------
-    # 3) Simple chat loop (demo)
-    # --------------------------------------------------------------------------
-    click.secho(
-        "\nEntering interactive chat loop. Type 'exit' or Ctrl+C to quit.\n", fg="cyan"
-    )
-
-    while True:
-        try:
-            user_input = click.prompt("You", type=str)
-            if user_input.strip().lower() in ["exit", "quit"]:
-                click.echo("Exiting chat. Goodbye!")
-                break
-
-            # For demonstration, we'll call the LLM directly on the user input:
-            response = chat_llm.generate(user_input)
-            click.secho(f"\nAI: {response}\n", fg="green")
-
-        except (KeyboardInterrupt, EOFError):
-            click.echo("\nExiting chat. Goodbye!")
-            break
-        except Exception as e:
-            click.secho(f"Error occurred while generating chat response: {e}", fg="red")
-            break
-
-
-def load_crew_and_find_inputs(file_path: str) -> Tuple[Optional[Crew], set]:
-    """
-    Attempt to load a Crew from the provided file path or default location.
-    Then gather placeholders from tasks. Returns (crew, set_of_placeholders).
-    """
-    crew = None
-    placeholders_found = set()
-
-    # 1) If file_path is not provided, attempt to detect the default crew config.
-    if not file_path:
-        # This is naive detection logic.
-        # A real implementation might search typical locations like ./
-        # or src/<project_name>/config/ for a crew configuration.
-        default_candidate = "crew.yaml"
-        if os.path.exists(default_candidate):
-            file_path = default_candidate
-
-    # 2) Try to load the crew from file if file_path exists
-    if file_path and os.path.isfile(file_path):
-        # Pseudocode for loading a crew from file—may vary depending on how the user’s config is stored
-        try:
-            # For demonstration, we do something like:
-            #   with open(file_path, "r") as f:
-            #       content = f.read()
-            #   crew_data = parse_yaml_crew(content)
-            #   crew = Crew(**crew_data)
-            # Placeholder logic below:
-            crew = Crew(name="ExampleCrew")
-        except Exception as e:
-            click.secho(f"Error loading Crew from {file_path}: {e}", fg="red")
-            raise e
-
-    if crew:
-        # 3) Inspect crew tasks for placeholders
-        # For each Task, we gather placeholders used in description/expected_output
-        for task in crew.tasks:
-            placeholders_in_desc = extract_placeholders(task.description)
-            placeholders_in_out = extract_placeholders(task.expected_output)
-            placeholders_found.update(placeholders_in_desc)
-            placeholders_found.update(placeholders_in_out)
-
-    return crew, placeholders_found
-
-
-def extract_placeholders(text: str) -> set:
-    """
-    Given a string, find all placeholders of the form {something} that might be used for input interpolation.
-    This is a naive example—actual logic might do advanced parsing to avoid curly braces used in JSON.
-    """
-    import re
-
-    if not text:
-        return set()
-    pattern = r"\{([a-zA-Z0-9_]+)\}"
-    matches = re.findall(pattern, text)
-    return set(matches)
+    run_chat()
 
 
 if __name__ == "__main__":

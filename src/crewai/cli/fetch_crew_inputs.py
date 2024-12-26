@@ -6,23 +6,26 @@ from packaging import version
 
 from crewai.cli.utils import read_toml
 from crewai.cli.version import get_crewai_version
+from crewai.types.crew_chat import ChatInputs
 
 
-def fetch_crew_inputs() -> set[str]:
+def fetch_crew_inputs() -> ChatInputs:
     """
-    Fetch placeholders/inputs for the crew by running 'uv run fetch_inputs'.
-    This captures stdout (which is now expected to be JSON),
-    parses it into a Python list/set, and returns it.
-    """
-    command = ["uv", "run", "fetch_inputs"]
-    placeholders = set()
+    Fetch the crew's ChatInputs (a structure containing crew_description and input fields)
+    by running "uv run fetch_chat_inputs", which prints JSON representing a ChatInputs object.
 
+    This function will parse that JSON and return a ChatInputs instance.
+    If the output is empty or invalid, an empty ChatInputs object is returned.
+    """
+
+    command = ["uv", "run", "fetch_chat_inputs"]
     crewai_version = get_crewai_version()
-    min_required_version = "0.87.0"  # TODO: Update to latest version when cut
+    min_required_version = "0.87.0"
 
     pyproject_data = read_toml()
+    crew_name = pyproject_data.get("project", {}).get("name", None)
 
-    # Check for old poetry-based setups
+    # If you're on an older poetry-based setup and version < min_required_version
     if pyproject_data.get("tool", {}).get("poetry") and (
         version.parse(crewai_version) < version.parse(min_required_version)
     ):
@@ -34,17 +37,25 @@ def fetch_crew_inputs() -> set[str]:
 
     try:
         result = subprocess.run(command, capture_output=True, text=True, check=True)
-        # The entire stdout should now be a JSON array of placeholders (e.g. ["topic","username",...])
         stdout_str = result.stdout.strip()
-        if stdout_str:
-            try:
-                placeholders_list = json.loads(stdout_str)
-                if isinstance(placeholders_list, list):
-                    placeholders = set(placeholders_list)
-            except json.JSONDecodeError:
-                click.echo("Unable to parse JSON from `fetch_inputs` output.", err=True)
+
+        if not stdout_str:
+            return ChatInputs(crew_name=crew_name)
+
+        try:
+            raw_data = json.loads(stdout_str)
+            chat_inputs = ChatInputs(**raw_data)
+            if crew_name:
+                chat_inputs.crew_name = crew_name
+            return chat_inputs
+        except json.JSONDecodeError as e:
+            click.echo(
+                f"Unable to parse JSON from `fetch_chat_inputs` output: {e}", err=True
+            )
+            return ChatInputs(crew_name=crew_name)
+
     except subprocess.CalledProcessError as e:
-        click.echo(f"An error occurred while fetching inputs: {e}", err=True)
+        click.echo(f"An error occurred while fetching chat inputs: {e}", err=True)
         click.echo(e.output, err=True, nl=True)
 
         if pyproject_data.get("tool", {}).get("poetry"):
@@ -53,8 +64,7 @@ def fetch_crew_inputs() -> set[str]:
                 "Please run `crewai update` to update your pyproject.toml to use uv.",
                 fg="yellow",
             )
-
     except Exception as e:
         click.echo(f"An unexpected error occurred: {e}", err=True)
 
-    return placeholders
+    return ChatInputs(crew_name=crew_name)

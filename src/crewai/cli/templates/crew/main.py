@@ -15,12 +15,30 @@ warnings.filterwarnings("ignore", category=SyntaxWarning, module="pysbd")
 
 def run():
     """
-    Run the crew.
+    Run the crew, allowing CLI overrides for required inputs.
+    Usage example:
+        uv run run_crew -- --topic="New Topic" --some_other_field="Value"
     """
+    # Default inputs
     inputs = {
         'topic': 'AI LLMs'
+        # Add any other default fields here
     }
-    {{crew_name}}().crew().kickoff(inputs=inputs)
+
+    # 1) Gather overrides from sys.argv
+    #    sys.argv might look like: ['run_crew', '--topic=NewTopic']
+    #    But be aware that if you're calling "uv run run_crew", sys.argv might have
+    #    additional items. So we typically skip the first 1 or 2 items to get only overrides.
+    overrides = parse_cli_overrides(sys.argv[1:])
+
+    # 2) Merge the overrides into defaults
+    inputs.update(overrides)
+
+    # 3) Kick off the crew with final inputs
+    try:
+        {{crew_name}}().crew().kickoff(inputs=inputs)
+    except Exception as e:
+        raise Exception(f"An error occurred while running the crew: {e}")
 
 
 def train():
@@ -107,3 +125,44 @@ def fetch_chat_llm():
             print(json.dumps({}))
     except Exception as e:
         raise Exception(f"An error occurred while fetching chat LLM: {e}")
+
+# TODO: Talk to Joao about making using LLM calls to analyze the crew
+# and generate all of this information automatically
+def fetch_chat_inputs():
+    """
+    Command that fetches the 'chat_inputs' property from the Crew,
+    and prints it as JSON to stdout.
+    """
+    try:
+        crew = {{crew_name}}().crew()
+        raw_chat_inputs = getattr(crew, "chat_inputs", None)
+
+        if raw_chat_inputs:
+            # Convert to dictionary to print JSON
+            print(json.dumps(raw_chat_inputs.model_dump()))
+        else:
+            # If crew.chat_inputs is None or empty, print an empty JSON
+            print(json.dumps({}))
+    except Exception as e:
+        raise Exception(f"An error occurred while fetching chat inputs: {e}")
+    
+    
+def parse_cli_overrides(args_list) -> dict:
+    """
+    Parse arguments in the form of --key=value from a list of CLI arguments.
+    Return them as a dict. For example:
+    ['--topic=AI LLMs', '--username=John'] => {'topic': 'AI LLMs', 'username': 'John'}
+    """
+    overrides = {}
+    for arg in args_list:
+        if arg.startswith("--"):
+            # remove the leading --
+            trimmed = arg[2:]
+            if "=" in trimmed:
+                key, val = trimmed.split("=", 1)
+                overrides[key] = val
+            else:
+                # If someone passed something like --topic (no =),
+                # either handle differently or ignore
+                pass
+    return overrides
