@@ -17,11 +17,9 @@ patronus_eval_tool = PatronusPredifinedCriteriaEvalTool(
 # Test the PatronusLocalEvaluatorTool where agent uses the local evaluator
 client = Client()
 
-
 @client.register_local_evaluator("local_evaluator_name")
 def my_evaluator(**kwargs):
     return EvaluationResult(pass_="PASS", score=0.5, explanation="Explanation test")
-
 
 patronus_eval_tool = PatronusLocalEvaluatorTool(
     evaluator="local_evaluator_name", evaluated_model_gold_answer="test"

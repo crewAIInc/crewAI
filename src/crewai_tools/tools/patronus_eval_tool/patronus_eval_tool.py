@@ -198,7 +198,7 @@ class PatronusLocalEvaluatorTool(BaseTool):
             self.description = f"This tool calls the Patronus Evaluation API that takes an additional argument in addition to the following new argument:\n evaluators={evaluator}, evaluated_model_gold_answer={evaluated_model_gold_answer}"
             self._generate_description()
             print(
-                f"Updating judge criteria, project name, experiment name, and output file, gold_answer to: {self.evaluator}, {self.evaluated_model_gold_answer}"
+                f"Updating judge evaluator, gold_answer to: {self.evaluator}, {self.evaluated_model_gold_answer}"
             )
 
     def _run(
