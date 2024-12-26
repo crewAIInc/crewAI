@@ -2952,3 +2952,51 @@ def test_task_tools_preserve_code_execution_tools():
 
         # Verify the total number of tools (TestTool + CodeInterpreter + 2 delegation tools)
         assert len(used_tools) == 4, "Should have TestTool, CodeInterpreter, and 2 delegation tools"
+
+@pytest.mark.vcr(filter_headers=["authorization"])
+def test_multimodal_flag_adds_multimodal_tools():
+    """
+    Test that an agent with multimodal=True automatically has multimodal tools added to the task execution.
+    """
+    from crewai.tools.agent_tools.add_image_tool import AddImageTool
+
+    # Create an agent that supports multimodal
+    multimodal_agent = Agent(
+        role="Multimodal Analyst",
+        goal="Handle multiple media types (text, images, etc.).",
+        backstory="You're an agent specialized in analyzing text, images, and other media.",
+        allow_delegation=False,
+        multimodal=True,  # crucial for adding the multimodal tool
+    )
+
+    # Create a dummy task
+    task = Task(
+        description="Describe what's in this image and generate relevant metadata.",
+        expected_output="An image description plus any relevant metadata.",
+        agent=multimodal_agent,
+    )
+
+    # Define a crew with the multimodal agent
+    crew = Crew(agents=[multimodal_agent], tasks=[task], process=Process.sequential)
+
+    mock_task_output = TaskOutput(
+        description="Mock description",
+        raw="mocked output",
+        agent="mocked agent"
+    )
+
+    # Mock execute_sync to verify the tools passed at runtime
+    with patch.object(Task, "execute_sync", return_value=mock_task_output) as mock_execute_sync:
+        crew.kickoff()
+
+        # Get the tools that were actually used in execution
+        _, kwargs = mock_execute_sync.call_args
+        used_tools = kwargs["tools"]
+
+        # Check that the multimodal tool was added
+        assert any(isinstance(tool, AddImageTool) for tool in used_tools), (
+            "AddImageTool should be present when agent is multimodal"
+        )
+
+        # Verify we have exactly one tool (just the AddImageTool)
+        assert len(used_tools) == 1, "Should only have the AddImageTool"

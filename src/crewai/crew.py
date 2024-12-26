@@ -726,13 +726,11 @@ class Crew(BaseModel):
 
             # Determine which tools to use - task tools take precedence over agent tools
             tools_for_task = task.tools if task.tools else agent_to_use.tools or []
-            # Add delegation tools if agent allows delegation
-            if agent_to_use.allow_delegation:
-                tools_for_task = self._prepare_tools(task, tools_for_task)
-
-            # Add code execution tools if agent allows code execution
-            if agent_to_use.allow_code_execution:
-                tools_for_task += agent_to_use.get_code_execution_tools()
+            tools_for_task = self._prepare_tools(
+                agent_to_use,
+                task,
+                tools_for_task
+            )
 
             self._log_task_start(task, agent_to_use.role)
 
@@ -799,18 +797,24 @@ class Crew(BaseModel):
             return skipped_task_output
         return None
 
-    def _prepare_tools(self, task: Task, tools: List[Tool]):
-        if self.process == Process.hierarchical:
-            if self.manager_agent:
-                tools = self._update_manager_tools(task, tools)
-            else:
-                raise ValueError("Manager agent is required for hierarchical process.")
+    def _prepare_tools(self, agent: BaseAgent, task: Task, tools: List[Tool]):
+        # Add delegation tools if agent allows delegation
+        if agent.allow_delegation:
+            if self.process == Process.hierarchical:
+                if self.manager_agent:
+                    tools = self._update_manager_tools(task, tools)
+                else:
+                    raise ValueError("Manager agent is required for hierarchical process.")
 
-        elif task.agent and task.agent.allow_delegation:
-            tools = self._add_delegation_tools(task, tools)
+            elif agent and agent.allow_delegation:
+                tools = self._add_delegation_tools(task, tools)
 
-        if task.agent and task.agent.multimodal:
-            tools = self._add_multimodal_tools(task, tools)
+        # Add code execution tools if agent allows code execution
+        if agent.allow_code_execution:
+            tools = self._add_code_execution_tools(agent, tools)
+
+        if agent and agent.multimodal:
+            tools = self._add_multimodal_tools(agent, tools)
 
         return tools
 
@@ -819,9 +823,33 @@ class Crew(BaseModel):
             return self.manager_agent
         return task.agent
 
-    def _add_multimodal_tools(self, task: Task, tools: List[Tool]):
-        tools.extend(task.agent.get_multimodal_tools())
+    def _merge_tools(self, existing_tools: List[Tool], new_tools: List[Tool]) -> List[Tool]:
+        """Merge new tools into existing tools list, avoiding duplicates by tool name."""
+        if not new_tools:
+            return existing_tools
+
+        # Create mapping of tool names to new tools
+        new_tool_map = {tool.name: tool for tool in new_tools}
+
+        # Remove any existing tools that will be replaced
+        tools = [tool for tool in existing_tools if tool.name not in new_tool_map]
+
+        # Add all new tools
+        tools.extend(new_tools)
+
         return tools
+
+    def _inject_delegation_tools(self, tools: List[Tool], task_agent: BaseAgent, agents: List[BaseAgent]):
+        delegation_tools = task_agent.get_delegation_tools(agents)
+        return self._merge_tools(tools, delegation_tools)
+
+    def _add_multimodal_tools(self, agent: BaseAgent, tools: List[Tool]):
+        multimodal_tools = agent.get_multimodal_tools()
+        return self._merge_tools(tools, multimodal_tools)
+
+    def _add_code_execution_tools(self, agent: BaseAgent, tools: List[Tool]):
+        code_tools = agent.get_code_execution_tools()
+        return self._merge_tools(tools, code_tools)
 
     def _add_delegation_tools(self, task: Task, tools: List[Tool]):
         agents_for_delegation = [agent for agent in self.agents if agent != task.agent]
@@ -844,19 +872,6 @@ class Crew(BaseModel):
             else:
                 tools = self._inject_delegation_tools(tools, self.manager_agent, self.agents)
         # self.manager_agent.tools = tools
-        return tools
-
-    def _inject_delegation_tools(self, tools: List[Tool], task_agent: BaseAgent, agents: List[BaseAgent]):
-        delegation_tools = task_agent.get_delegation_tools(agents)
-        # Create mapping of tool names to new delegation tools
-        delegation_tool_map = {tool.name: tool for tool in delegation_tools}
-
-        # Remove any existing tools that will be replaced
-        tools = [tool for tool in tools if tool.name not in delegation_tool_map]
-
-        # Add all delegation tools
-        tools.extend(delegation_tools)
-
         return tools
 
     def _get_context(self, task: Task, task_outputs: List[TaskOutput]):

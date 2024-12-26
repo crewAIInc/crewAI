@@ -410,6 +410,10 @@ class Agent(BaseAgent):
         tools = agent_tools.tools()
         return tools
 
+    def get_multimodal_tools(self):
+        from crewai.tools.agent_tools.add_image_tool import AddImageTool
+        return [AddImageTool()]
+
     def get_code_execution_tools(self):
         try:
             from crewai_tools import CodeInterpreterTool
