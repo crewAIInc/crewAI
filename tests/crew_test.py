@@ -580,6 +580,80 @@ def test_task_tools_override_agent_tools():
     assert isinstance(new_researcher.tools[0], TestTool)
 
 @pytest.mark.vcr(filter_headers=["authorization"])
+def test_task_tools_override_agent_tools_with_allow_delegation():
+    """
+    Test that task tools override agent tools while preserving delegation tools when allow_delegation=True
+    """
+    from typing import Type
+    from crewai.tools import BaseTool
+    from pydantic import BaseModel, Field
+
+    class TestToolInput(BaseModel):
+        query: str = Field(..., description="Query to process")
+
+    class TestTool(BaseTool):
+        name: str = "Test Tool"
+        description: str = "A test tool that just returns the input"
+        args_schema: Type[BaseModel] = TestToolInput
+
+        def _run(self, query: str) -> str:
+            return f"Processed: {query}"
+
+    class AnotherTestTool(BaseTool):
+        name: str = "Another Test Tool"
+        description: str = "Another test tool"
+        args_schema: Type[BaseModel] = TestToolInput
+
+        def _run(self, query: str) -> str:
+            return f"Another processed: {query}"
+
+    # Set up agents with tools and allow_delegation
+    researcher_with_delegation = researcher.model_copy()
+    researcher_with_delegation.allow_delegation = True
+    researcher_with_delegation.tools = [TestTool()]
+
+    writer_for_delegation = writer.model_copy()
+
+    # Create a task with different tools
+    task = Task(
+        description="Write a test task",
+        expected_output="Test output",
+        agent=researcher_with_delegation,
+        tools=[AnotherTestTool()],
+    )
+
+    crew = Crew(
+        agents=[researcher_with_delegation, writer_for_delegation],
+        tasks=[task],
+        process=Process.sequential,
+    )
+
+    mock_task_output = TaskOutput(
+        description="Mock description",
+        raw="mocked output",
+        agent="mocked agent"
+    )
+
+    # We mock execute_sync to verify which tools get used at runtime
+    with patch.object(Task, "execute_sync", return_value=mock_task_output) as mock_execute_sync:
+        crew.kickoff()
+
+        # Inspect the call kwargs to verify the actual tools passed to execution
+        _, kwargs = mock_execute_sync.call_args
+        used_tools = kwargs["tools"]
+
+        # Confirm AnotherTestTool is present but TestTool is not
+        assert any(isinstance(tool, AnotherTestTool) for tool in used_tools), "AnotherTestTool should be present"
+        assert not any(isinstance(tool, TestTool) for tool in used_tools), "TestTool should not be present among used tools"
+
+        # Confirm delegation tool(s) are present
+        assert any("delegate" in tool.name.lower() for tool in used_tools), "Delegation tool should be present"
+
+    # Finally, make sure the agent's original tools remain unchanged
+    assert len(researcher_with_delegation.tools) == 1
+    assert isinstance(researcher_with_delegation.tools[0], TestTool)
+
+@pytest.mark.vcr(filter_headers=["authorization"])
 def test_crew_verbose_output(capsys):
     tasks = [
         Task(
@@ -1366,11 +1440,22 @@ def test_code_execution_flag_adds_code_tool_upon_kickoff():
 
     crew = Crew(agents=[programmer], tasks=[task])
 
-    with patch.object(Agent, "execute_task") as executor:
-        executor.return_value = "ok"
+    mock_task_output = TaskOutput(
+        description="Mock description",
+        raw="mocked output",
+        agent="mocked agent"
+    )
+
+    with patch.object(Task, "execute_sync", return_value=mock_task_output) as mock_execute_sync:
         crew.kickoff()
-        assert len(programmer.tools) == 1
-        assert programmer.tools[0].__class__ == CodeInterpreterTool
+
+        # Get the tools that were actually used in execution
+        _, kwargs = mock_execute_sync.call_args
+        used_tools = kwargs["tools"]
+
+        # Verify that exactly one tool was used and it was a CodeInterpreterTool
+        assert len(used_tools) == 1, "Should have exactly one tool"
+        assert isinstance(used_tools[0], CodeInterpreterTool), "Tool should be CodeInterpreterTool"
 
 @pytest.mark.vcr(filter_headers=["authorization"])
 def test_delegation_is_not_enabled_if_there_are_only_one_agent():
@@ -2792,3 +2877,78 @@ def test_hierarchical_verbose_false_manager_agent():
 
     assert crew.manager_agent is not None
     assert not crew.manager_agent.verbose
+
+
+def test_task_tools_preserve_code_execution_tools():
+    """
+    Test that task tools don't override code execution tools when allow_code_execution=True
+    """
+    from typing import Type
+    from crewai.tools import BaseTool
+    from crewai_tools import CodeInterpreterTool
+    from pydantic import BaseModel, Field
+
+    class TestToolInput(BaseModel):
+        """Input schema for TestTool."""
+        query: str = Field(..., description="Query to process")
+
+    class TestTool(BaseTool):
+        name: str = "Test Tool"
+        description: str = "A test tool that just returns the input"
+        args_schema: Type[BaseModel] = TestToolInput
+
+        def _run(self, query: str) -> str:
+            return f"Processed: {query}"
+
+    # Create a programmer agent with code execution enabled
+    programmer = Agent(
+        role="Programmer",
+        goal="Write code to solve problems.",
+        backstory="You're a programmer who loves to solve problems with code.",
+        allow_delegation=True,
+        allow_code_execution=True,
+    )
+
+    # Create a code reviewer agent
+    reviewer = Agent(
+        role="Code Reviewer",
+        goal="Review code for bugs and improvements",
+        backstory="You're an experienced code reviewer who ensures code quality and best practices.",
+        allow_delegation=True,
+        allow_code_execution=True,
+    )
+
+    # Create a task with its own tools
+    task = Task(
+        description="Write a program to calculate fibonacci numbers.",
+        expected_output="A working fibonacci calculator.",
+        agent=programmer,
+        tools=[TestTool()]
+    )
+
+    crew = Crew(
+        agents=[programmer, reviewer],
+        tasks=[task],
+        process=Process.sequential,
+    )
+
+    mock_task_output = TaskOutput(
+        description="Mock description",
+        raw="mocked output",
+        agent="mocked agent"
+    )
+
+    with patch.object(Task, "execute_sync", return_value=mock_task_output) as mock_execute_sync:
+        crew.kickoff()
+
+        # Get the tools that were actually used in execution
+        _, kwargs = mock_execute_sync.call_args
+        used_tools = kwargs["tools"]
+
+        # Verify all expected tools are present
+        assert any(isinstance(tool, TestTool) for tool in used_tools), "Task's TestTool should be present"
+        assert any(isinstance(tool, CodeInterpreterTool) for tool in used_tools), "CodeInterpreterTool should be present"
+        assert any("delegate" in tool.name.lower() for tool in used_tools), "Delegation tool should be present"
+
+        # Verify the total number of tools (TestTool + CodeInterpreter + 2 delegation tools)
+        assert len(used_tools) == 4, "Should have TestTool, CodeInterpreter, and 2 delegation tools"

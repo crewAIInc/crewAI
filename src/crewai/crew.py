@@ -534,9 +534,6 @@ class Crew(BaseModel):
             if not agent.function_calling_llm:  # type: ignore # "BaseAgent" has no attribute "function_calling_llm"
                 agent.function_calling_llm = self.function_calling_llm  # type: ignore # "BaseAgent" has no attribute "function_calling_llm"
 
-            if agent.allow_code_execution:  # type: ignore # BaseAgent" has no attribute "allow_code_execution"
-                agent.tools += agent.get_code_execution_tools()  # type: ignore # "BaseAgent" has no attribute "get_code_execution_tools"; maybe "get_delegation_tools"?
-
             if not agent.step_callback:  # type: ignore # "BaseAgent" has no attribute "step_callback"
                 agent.step_callback = self.step_callback  # type: ignore # "BaseAgent" has no attribute "step_callback"
 
@@ -684,6 +681,7 @@ class Crew(BaseModel):
                 goal=i18n.retrieve("hierarchical_manager_agent", "goal"),
                 backstory=i18n.retrieve("hierarchical_manager_agent", "backstory"),
                 tools=AgentTools(agents=self.agents).tools(),
+                allow_delegation=True,
                 llm=self.manager_llm,
                 verbose=self.verbose,
             )
@@ -726,9 +724,16 @@ class Crew(BaseModel):
                     f"No agent available for task: {task.description}. Ensure that either the task has an assigned agent or a manager agent is provided."
                 )
 
+            # Determine which tools to use - task tools take precedence over agent tools
+            tools_for_task = task.tools if task.tools else agent_to_use.tools or []
+            # Add delegation tools if agent allows delegation
+            if agent_to_use.allow_delegation:
+                tools_for_task = self._prepare_tools(task, tools_for_task)
 
-            tools_for_task = agent_to_use.tools or task.tools or []
-            tools_for_task = self._prepare_tools(task, tools_for_task)
+            # Add code execution tools if agent allows code execution
+            if agent_to_use.allow_code_execution:
+                tools_for_task += agent_to_use.get_code_execution_tools()
+
             self._log_task_start(task, agent_to_use.role)
 
             if isinstance(task, ConditionalTask):
