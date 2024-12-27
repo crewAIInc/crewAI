@@ -20,7 +20,7 @@ class Knowledge(BaseModel):
 
     sources: List[BaseKnowledgeSource] = Field(default_factory=list)
     model_config = ConfigDict(arbitrary_types_allowed=True)
-    storage: KnowledgeStorage = Field(default_factory=KnowledgeStorage)
+    storage: KnowledgeStorage = Field(default=None)
     embedder_config: Optional[Dict[str, Any]] = None
     collection_name: Optional[str] = None
 
