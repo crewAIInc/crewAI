@@ -725,7 +725,7 @@ class Crew(BaseModel):
                 )
 
             # Determine which tools to use - task tools take precedence over agent tools
-            tools_for_task = task.tools if task.tools else agent_to_use.tools or []
+            tools_for_task = task.tools or agent_to_use.tools or []
             tools_for_task = self._prepare_tools(
                 agent_to_use,
                 task,
@@ -871,7 +871,6 @@ class Crew(BaseModel):
                 tools = self._inject_delegation_tools(tools, task.agent, [task.agent])
             else:
                 tools = self._inject_delegation_tools(tools, self.manager_agent, self.agents)
-        # self.manager_agent.tools = tools
         return tools
 
     def _get_context(self, task: Task, task_outputs: List[TaskOutput]):
