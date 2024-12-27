@@ -10,6 +10,7 @@ from crewai.agents.tools_handler import ToolsHandler
 from crewai.task import Task
 from crewai.telemetry import Telemetry
 from crewai.tools import BaseTool
+from crewai.tools.structured_tool import CrewStructuredTool
 from crewai.tools.tool_calling import InstructorToolCalling, ToolCalling
 from crewai.tools.tool_usage_events import ToolUsageError, ToolUsageFinished
 from crewai.utilities import I18N, Converter, ConverterError, Printer
@@ -18,8 +19,7 @@ try:
     import agentops  # type: ignore
 except ImportError:
     agentops = None
-
-OPENAI_BIGGER_MODELS = ["gpt-4", "gpt-4o", "o1-preview", "o1-mini"]
+OPENAI_BIGGER_MODELS = ["gpt-4", "gpt-4o", "o1-preview", "o1-mini", "o1", "o3", "o3-mini"]
 
 
 class ToolUsageErrorException(Exception):
@@ -103,6 +103,19 @@ class ToolUsage:
             if self.agent.verbose:
                 self._printer.print(content=f"\n\n{error}\n", color="red")
             return error
+
+        if isinstance(tool, CrewStructuredTool) and tool.name == self._i18n.tools("add_image")["name"]:  # type: ignore
+            try:
+                result = self._use(tool_string=tool_string, tool=tool, calling=calling)
+                return result
+
+            except Exception as e:
+                error = getattr(e, "message", str(e))
+                self.task.increment_tools_errors()
+                if self.agent.verbose:
+                    self._printer.print(content=f"\n\n{error}\n", color="red")
+                return error
+
         return f"{self._use(tool_string=tool_string, tool=tool, calling=calling)}"  # type: ignore # BUG?: "_use" of "ToolUsage" does not return a value (it only ever returns None)
 
     def _use(
