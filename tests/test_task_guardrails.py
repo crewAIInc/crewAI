@@ -1,9 +1,12 @@
 """Tests for task guardrails functionality."""
 
+from unittest.mock import Mock
+
 import pytest
+
 from crewai.task import Task
 from crewai.tasks.task_output import TaskOutput
-from unittest.mock import Mock
+
 
 def test_task_without_guardrail():
     """Test that tasks work normally without guardrails (backward compatibility)."""

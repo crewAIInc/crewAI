@@ -1,6 +1,9 @@
 from typing import Optional
+
 from pydantic import BaseModel, Field
+
 from crewai.tools.agent_tools.base_agent_tools import BaseAgentTool
+
 
 class DelegateWorkToolSchema(BaseModel):
     task: str = Field(..., description="The task to delegate")
