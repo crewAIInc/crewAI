@@ -17,32 +17,25 @@ from crewai.memory.contextual.contextual_memory import ContextualMemory
 from crewai.task import Task
 from crewai.tools import BaseTool
 from crewai.tools.agent_tools.agent_tools import AgentTools
+from crewai.tools.base_tool import Tool
 from crewai.utilities import Converter, Prompts
 from crewai.utilities.constants import TRAINED_AGENTS_DATA_FILE, TRAINING_DATA_FILE
 from crewai.utilities.converter import generate_model_description
 from crewai.utilities.token_counter_callback import TokenCalcHandler
 from crewai.utilities.training_handler import CrewTrainingHandler
 
+agentops = None
 
-def mock_agent_ops_provider():
-    def track_agent(*args, **kwargs):
+try:
+    import agentops  # type: ignore # Name "agentops" is already defined
+    from agentops import track_agent  # type: ignore
+except ImportError:
+
+    def track_agent():
         def noop(f):
             return f
 
         return noop
-
-    return track_agent
-
-
-agentops = None
-
-if os.environ.get("AGENTOPS_API_KEY"):
-    try:
-        from agentops import track_agent
-    except ImportError:
-        track_agent = mock_agent_ops_provider()
-else:
-    track_agent = mock_agent_ops_provider()
 
 
 @track_agent()
@@ -121,6 +114,10 @@ class Agent(BaseAgent):
     max_retry_limit: int = Field(
         default=2,
         description="Maximum number of retries for an agent to execute a task when an error occurs.",
+    )
+    multimodal: bool = Field(
+        default=False,
+        description="Whether the agent is multimodal.",
     )
     code_execution_mode: Literal["safe", "unsafe"] = Field(
         default="safe",
@@ -413,6 +410,10 @@ class Agent(BaseAgent):
         agent_tools = AgentTools(agents=agents)
         tools = agent_tools.tools()
         return tools
+
+    def get_multimodal_tools(self) -> List[Tool]:
+        from crewai.tools.agent_tools.add_image_tool import AddImageTool
+        return [AddImageTool()]
 
     def get_code_execution_tools(self):
         try:

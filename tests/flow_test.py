@@ -3,6 +3,7 @@
 import asyncio
 
 import pytest
+
 from crewai.flow.flow import Flow, and_, listen, or_, router, start
 
 
@@ -262,3 +263,62 @@ def test_flow_with_custom_state():
     flow = StateFlow()
     flow.kickoff()
     assert flow.counter == 2
+
+
+def test_router_with_multiple_conditions():
+    """Test a router that triggers when any of multiple steps complete (OR condition),
+    and another router that triggers only after all specified steps complete (AND condition).
+    """
+
+    execution_order = []
+
+    class ComplexRouterFlow(Flow):
+        @start()
+        def step_a(self):
+            execution_order.append("step_a")
+
+        @start()
+        def step_b(self):
+            execution_order.append("step_b")
+
+        @router(or_("step_a", "step_b"))
+        def router_or(self):
+            execution_order.append("router_or")
+            return "next_step_or"
+
+        @listen("next_step_or")
+        def handle_next_step_or_event(self):
+            execution_order.append("handle_next_step_or_event")
+
+        @listen(handle_next_step_or_event)
+        def branch_2_step(self):
+            execution_order.append("branch_2_step")
+
+        @router(and_(handle_next_step_or_event, branch_2_step))
+        def router_and(self):
+            execution_order.append("router_and")
+            return "final_step"
+
+        @listen("final_step")
+        def log_final_step(self):
+            execution_order.append("log_final_step")
+
+    flow = ComplexRouterFlow()
+    flow.kickoff()
+
+    assert "step_a" in execution_order
+    assert "step_b" in execution_order
+    assert "router_or" in execution_order
+    assert "handle_next_step_or_event" in execution_order
+    assert "branch_2_step" in execution_order
+    assert "router_and" in execution_order
+    assert "log_final_step" in execution_order
+
+    # Check that the AND router triggered after both relevant steps:
+    assert execution_order.index("router_and") > execution_order.index(
+        "handle_next_step_or_event"
+    )
+    assert execution_order.index("router_and") > execution_order.index("branch_2_step")
+
+    # final_step should run after router_and
+    assert execution_order.index("log_final_step") > execution_order.index("router_and")

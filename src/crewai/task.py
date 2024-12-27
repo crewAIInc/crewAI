@@ -1,12 +1,25 @@
 import datetime
+import inspect
 import json
-from pathlib import Path
+import logging
 import threading
 import uuid
 from concurrent.futures import Future
 from copy import copy
 from hashlib import md5
-from typing import Any, Dict, List, Optional, Set, Tuple, Type, Union
+from pathlib import Path
+from typing import (
+    Any,
+    Callable,
+    ClassVar,
+    Dict,
+    List,
+    Optional,
+    Set,
+    Tuple,
+    Type,
+    Union,
+)
 
 from opentelemetry.trace import Span
 from pydantic import (
@@ -20,6 +33,7 @@ from pydantic import (
 from pydantic_core import PydanticCustomError
 
 from crewai.agents.agent_builder.base_agent import BaseAgent
+from crewai.tasks.guardrail_result import GuardrailResult
 from crewai.tasks.output_format import OutputFormat
 from crewai.tasks.task_output import TaskOutput
 from crewai.telemetry.telemetry import Telemetry
@@ -49,6 +63,7 @@ class Task(BaseModel):
     """
 
     __hash__ = object.__hash__  # type: ignore
+    logger: ClassVar[logging.Logger] = logging.getLogger(__name__)
     used_tools: int = 0
     tools_errors: int = 0
     delegations: int = 0
@@ -110,6 +125,55 @@ class Task(BaseModel):
         default=None,
     )
     processed_by_agents: Set[str] = Field(default_factory=set)
+    guardrail: Optional[Callable[[TaskOutput], Tuple[bool, Any]]] = Field(
+        default=None,
+        description="Function to validate task output before proceeding to next task"
+    )
+    max_retries: int = Field(
+        default=3,
+        description="Maximum number of retries when guardrail fails"
+    )
+    retry_count: int = Field(
+        default=0,
+        description="Current number of retries"
+    )
+
+    @field_validator("guardrail")
+    @classmethod
+    def validate_guardrail_function(cls, v: Optional[Callable]) -> Optional[Callable]:
+        """Validate that the guardrail function has the correct signature and behavior.
+        
+        While type hints provide static checking, this validator ensures runtime safety by:
+        1. Verifying the function accepts exactly one parameter (the TaskOutput)
+        2. Checking return type annotations match Tuple[bool, Any] if present
+        3. Providing clear, immediate error messages for debugging
+        
+        This runtime validation is crucial because:
+        - Type hints are optional and can be ignored at runtime
+        - Function signatures need immediate validation before task execution
+        - Clear error messages help users debug guardrail implementation issues
+        
+        Args:
+            v: The guardrail function to validate
+            
+        Returns:
+            The validated guardrail function
+            
+        Raises:
+            ValueError: If the function signature is invalid or return annotation
+                       doesn't match Tuple[bool, Any]
+        """
+        if v is not None:
+            sig = inspect.signature(v)
+            if len(sig.parameters) != 1:
+                raise ValueError("Guardrail function must accept exactly one parameter")
+
+            # Check return annotation if present, but don't require it
+            return_annotation = sig.return_annotation
+            if return_annotation != inspect.Signature.empty:
+                if not (return_annotation == Tuple[bool, Any] or str(return_annotation) == 'Tuple[bool, Any]'):
+                    raise ValueError("If return type is annotated, it must be Tuple[bool, Any]")
+        return v
 
     _telemetry: Telemetry = PrivateAttr(default_factory=Telemetry)
     _execution_span: Optional[Span] = PrivateAttr(default=None)
@@ -254,7 +318,6 @@ class Task(BaseModel):
         )
 
         pydantic_output, json_output = self._export_output(result)
-
         task_output = TaskOutput(
             name=self.name,
             description=self.description,
@@ -265,6 +328,37 @@ class Task(BaseModel):
             agent=agent.role,
             output_format=self._get_output_format(),
         )
+
+        if self.guardrail:
+            guardrail_result = GuardrailResult.from_tuple(self.guardrail(task_output))
+            if not guardrail_result.success:
+                if self.retry_count >= self.max_retries:
+                    raise Exception(
+                        f"Task failed guardrail validation after {self.max_retries} retries. "
+                        f"Last error: {guardrail_result.error}"
+                    )
+
+                self.retry_count += 1
+                context = (
+                    f"### Previous attempt failed validation: {guardrail_result.error}\n\n\n"
+                    f"### Previous result:\n{task_output.raw}\n\n\n"
+                    "Try again, making sure to address the validation error."
+                )
+                return self._execute_core(agent, context, tools)
+
+            if guardrail_result.result is None:
+                raise Exception(
+                    "Task guardrail returned None as result. This is not allowed."
+                )
+
+            if isinstance(guardrail_result.result, str):
+                task_output.raw = guardrail_result.result
+                pydantic_output, json_output = self._export_output(guardrail_result.result)
+                task_output.pydantic = pydantic_output
+                task_output.json_dict = json_output
+            elif isinstance(guardrail_result.result, TaskOutput):
+                task_output = guardrail_result.result
+
         self.output = task_output
 
         self._set_end_execution_time(start_time)
@@ -308,7 +402,18 @@ class Task(BaseModel):
 
         if inputs:
             self.description = self._original_description.format(**inputs)
-            self.expected_output = self._original_expected_output.format(**inputs)
+            self.expected_output = self.interpolate_only(
+                input_string=self._original_expected_output, inputs=inputs
+            )
+
+    def interpolate_only(self, input_string: str, inputs: Dict[str, Any]) -> str:
+        """Interpolate placeholders (e.g., {key}) in a string while leaving JSON untouched."""
+        escaped_string = input_string.replace("{", "{{").replace("}", "}}")
+
+        for key in inputs.keys():
+            escaped_string = escaped_string.replace(f"{{{{{key}}}}}", f"{{{key}}}")
+
+        return escaped_string.format(**inputs)
 
     def increment_tools_errors(self) -> None:
         """Increment the tools errors counter."""
@@ -390,22 +495,33 @@ class Task(BaseModel):
         return OutputFormat.RAW
 
     def _save_file(self, result: Any) -> None:
+        """Save task output to a file.
+        
+        Args:
+            result: The result to save to the file. Can be a dict or any stringifiable object.
+            
+        Raises:
+            ValueError: If output_file is not set
+            RuntimeError: If there is an error writing to the file
+        """
         if self.output_file is None:
             raise ValueError("output_file is not set.")
 
-        resolved_path = Path(self.output_file).expanduser().resolve()
-        directory = resolved_path.parent
+        try:
+            resolved_path = Path(self.output_file).expanduser().resolve()
+            directory = resolved_path.parent
 
-        if not directory.exists():
-            directory.mkdir(parents=True, exist_ok=True)
+            if not directory.exists():
+                directory.mkdir(parents=True, exist_ok=True)
 
-        with resolved_path.open("w", encoding="utf-8") as file:
-            if isinstance(result, dict):
-                import json
-
-                json.dump(result, file, ensure_ascii=False, indent=2)
-            else:
-                file.write(str(result))
+            with resolved_path.open("w", encoding="utf-8") as file:
+                if isinstance(result, dict):
+                    import json
+                    json.dump(result, file, ensure_ascii=False, indent=2)
+                else:
+                    file.write(str(result))
+        except (OSError, IOError) as e:
+            raise RuntimeError(f"Failed to save output file: {e}")
         return None
 
     def __repr__(self):
