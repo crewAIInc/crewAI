@@ -1,14 +1,13 @@
 from collections import defaultdict
 
-from pydantic import BaseModel, Field
-from rich.box import HEAVY_EDGE
-from rich.console import Console
-from rich.table import Table
-
 from crewai.agent import Agent
 from crewai.task import Task
 from crewai.tasks.task_output import TaskOutput
 from crewai.telemetry import Telemetry
+from pydantic import BaseModel, Field
+from rich.box import HEAVY_EDGE
+from rich.console import Console
+from rich.table import Table
 
 
 class TaskEvaluationPydanticOutput(BaseModel):

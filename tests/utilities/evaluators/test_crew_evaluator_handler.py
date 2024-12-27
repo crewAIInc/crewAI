@@ -1,7 +1,6 @@
 from unittest import mock
 
 import pytest
-
 from crewai.agent import Agent
 from crewai.crew import Crew
 from crewai.task import Task

@@ -1,7 +1,6 @@
 from unittest.mock import patch
 
 import pytest
-
 from crewai.agent import Agent
 from crewai.crew import Crew
 from crewai.memory.short_term.short_term_memory import ShortTermMemory

@@ -1,5 +1,4 @@
 import pytest
-
 from crewai.memory.long_term.long_term_memory import LongTermMemory
 from crewai.memory.long_term.long_term_memory_item import LongTermMemoryItem
 

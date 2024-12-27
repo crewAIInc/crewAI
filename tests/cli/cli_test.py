@@ -3,7 +3,6 @@ from unittest import mock
 
 import pytest
 from click.testing import CliRunner
-
 from crewai.cli.cli import (
     deploy_create,
     deploy_list,

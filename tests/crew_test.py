@@ -9,7 +9,6 @@ from unittest.mock import MagicMock, patch
 import instructor
 import pydantic_core
 import pytest
-
 from crewai.agent import Agent
 from crewai.agents.cache import CacheHandler
 from crewai.crew import Crew
@@ -417,6 +416,7 @@ def test_crew_with_delegating_agents():
 @pytest.mark.vcr(filter_headers=["authorization"])
 def test_crew_with_delegating_agents_should_not_override_task_tools():
     from typing import Type
+
     from crewai.tools import BaseTool
     from pydantic import BaseModel, Field
 
@@ -471,6 +471,7 @@ def test_crew_with_delegating_agents_should_not_override_task_tools():
 @pytest.mark.vcr(filter_headers=["authorization"])
 def test_crew_with_delegating_agents_should_not_override_agent_tools():
     from typing import Type
+
     from crewai.tools import BaseTool
     from pydantic import BaseModel, Field
 
@@ -527,6 +528,7 @@ def test_crew_with_delegating_agents_should_not_override_agent_tools():
 @pytest.mark.vcr(filter_headers=["authorization"])
 def test_task_tools_override_agent_tools():
     from typing import Type
+
     from crewai.tools import BaseTool
     from pydantic import BaseModel, Field
 
@@ -585,6 +587,7 @@ def test_task_tools_override_agent_tools_with_allow_delegation():
     Test that task tools override agent tools while preserving delegation tools when allow_delegation=True
     """
     from typing import Type
+
     from crewai.tools import BaseTool
     from pydantic import BaseModel, Field
 
@@ -2884,6 +2887,7 @@ def test_task_tools_preserve_code_execution_tools():
     Test that task tools don't override code execution tools when allow_code_execution=True
     """
     from typing import Type
+
     from crewai.tools import BaseTool
     from crewai_tools import CodeInterpreterTool
     from pydantic import BaseModel, Field

@@ -1,5 +1,4 @@
 import pytest
-
 from crewai.agents.crew_agent_executor import (
     AgentAction,
     AgentFinish,

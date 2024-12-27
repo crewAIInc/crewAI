@@ -1,9 +1,8 @@
 from typing import List
 
-from pydantic import BaseModel, Field
-
 from crewai.utilities import Converter
 from crewai.utilities.pydantic_schema_parser import PydanticSchemaParser
+from pydantic import BaseModel, Field
 
 agentops = None
 try:

@@ -3,7 +3,6 @@
 import asyncio
 
 import pytest
-
 from crewai.flow.flow import Flow, and_, listen, or_, router, start
 
 

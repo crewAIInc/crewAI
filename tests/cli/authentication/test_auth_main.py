@@ -2,7 +2,6 @@ import unittest
 from unittest.mock import MagicMock, patch
 
 import requests
-
 from crewai.cli.authentication.main import AuthenticationCommand
 
 

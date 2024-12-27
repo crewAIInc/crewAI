@@ -1,5 +1,4 @@
 import pytest
-
 from crewai.cli.git import Repository
 
 

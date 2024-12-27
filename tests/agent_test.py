@@ -5,7 +5,6 @@ from unittest import mock
 from unittest.mock import patch
 
 import pytest
-
 from crewai import Agent, Crew, Task
 from crewai.agents.cache import CacheHandler
 from crewai.agents.crew_agent_executor import CrewAgentExecutor
@@ -116,9 +115,8 @@ def test_custom_llm_temperature_preservation():
 
 @pytest.mark.vcr(filter_headers=["authorization"])
 def test_agent_execute_task():
-    from langchain_openai import ChatOpenAI
-
     from crewai import Task
+    from langchain_openai import ChatOpenAI
 
     agent = Agent(
         role="Math Tutor",
@@ -862,7 +860,6 @@ def test_agent_function_calling_llm():
     from unittest.mock import patch
 
     import instructor
-
     from crewai.tools.tool_usage import ToolUsage
 
     with (

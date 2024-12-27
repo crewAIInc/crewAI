@@ -1,10 +1,9 @@
 import hashlib
 from typing import Any, List, Optional
 
-from pydantic import BaseModel
-
 from crewai.agents.agent_builder.base_agent import BaseAgent
 from crewai.tools.base_tool import BaseTool
+from pydantic import BaseModel
 
 
 class TestAgent(BaseAgent):

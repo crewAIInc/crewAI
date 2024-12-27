@@ -1,8 +1,7 @@
 from typing import Optional
 
-from pydantic import BaseModel, Field
-
 from crewai.tools.agent_tools.base_agent_tools import BaseAgentTool
+from pydantic import BaseModel, Field
 
 
 class AskQuestionToolSchema(BaseModel):

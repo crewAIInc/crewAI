@@ -3,9 +3,8 @@ import unittest
 from datetime import datetime, timedelta
 from unittest.mock import MagicMock, patch
 
-from cryptography.fernet import Fernet
-
 from crewai.cli.authentication.utils import TokenManager, validate_token
+from cryptography.fernet import Fernet
 
 
 class TestValidateToken(unittest.TestCase):

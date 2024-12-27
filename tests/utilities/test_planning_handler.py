@@ -1,7 +1,6 @@
 from unittest.mock import patch
 
 import pytest
-
 from crewai.agent import Agent
 from crewai.task import Task
 from crewai.tasks.task_output import TaskOutput
