@@ -20,10 +20,9 @@ class AddImageTool(BaseTool):
     def _run(
         self,
         image_url: str,
-        action: str = None,
+        action: str = "Please provide a detailed description of this image, including all visual elements, context, and any notable details you can observe.",
         **kwargs,
     ) -> dict:
-        action = action or "Please provide a detailed description of this image, including all visual elements, context, and any notable details you can observe."
         content = [
             {"type": "text", "text": action},
             {
