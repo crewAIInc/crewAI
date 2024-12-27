@@ -16,7 +16,7 @@ class BaseKnowledgeSource(BaseModel, ABC):
     chunk_embeddings: List[np.ndarray] = Field(default_factory=list)
 
     model_config = ConfigDict(arbitrary_types_allowed=True)
-    storage: KnowledgeStorage = Field(default_factory=KnowledgeStorage)
+    storage: Optional[KnowledgeStorage] = Field(default=None)
     metadata: Dict[str, Any] = Field(default_factory=dict)  # Currently unused
     collection_name: Optional[str] = Field(default=None)
 

@@ -22,7 +22,7 @@ class BaseFileKnowledgeSource(BaseKnowledgeSource, ABC):
         default_factory=list, description="The path to the file"
     )
     content: Dict[Path, str] = Field(init=False, default_factory=dict)
-    storage: KnowledgeStorage = Field(default_factory=KnowledgeStorage)
+    storage: Optional[KnowledgeStorage] = Field(default=None)
     safe_file_paths: List[Path] = Field(default_factory=list)
 
     @field_validator("file_path", "file_paths", mode="before")
