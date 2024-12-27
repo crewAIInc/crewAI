@@ -53,10 +53,11 @@ class Knowledge(BaseModel):
         Raises:
             ValueError: If no storage is configured for querying.
         """
-        if self.storage is None:
+        storage = self.storage
+        if storage is None:
             raise ValueError("No storage found to perform query.")
-            
-        results = self.storage.search(
+        # Assign to local variable to help mypy with type narrowing
+        results = storage.search(
             query,
             limit,
         )
