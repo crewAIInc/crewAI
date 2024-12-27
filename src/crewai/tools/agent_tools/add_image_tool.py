@@ -1,7 +1,7 @@
-from typing import Optional
-from pydantic import BaseModel, Field
 from crewai.tools.base_tool import BaseTool
 from crewai.utilities import I18N
+from pydantic import BaseModel, Field
+from typing import Optional
 
 i18n = I18N()
 

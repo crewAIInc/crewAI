@@ -1,26 +1,25 @@
 import ast
 import datetime
-import time
 from difflib import SequenceMatcher
+import time
 from textwrap import dedent
 from typing import Any, List, Union
 
-from crewai.tools.structured_tool import CrewStructuredTool
-import crewai.utilities.events as events
 from crewai.agents.tools_handler import ToolsHandler
 from crewai.task import Task
 from crewai.telemetry import Telemetry
 from crewai.tools import BaseTool
+from crewai.tools.structured_tool import CrewStructuredTool
 from crewai.tools.tool_calling import InstructorToolCalling, ToolCalling
 from crewai.tools.tool_usage_events import ToolUsageError, ToolUsageFinished
-from crewai.utilities import I18N, Converter, ConverterError, Printer
+from crewai.utilities import Converter, ConverterError, I18N, Printer
+import crewai.utilities.events as events
 
 try:
     import agentops  # type: ignore
 except ImportError:
     agentops = None
-
-OPENAI_BIGGER_MODELS = ["gpt-4", "gpt-4o", "o1-preview", "o1-mini"]
+OPENAI_BIGGER_MODELS = ["gpt-4", "gpt-4o", "o1-preview", "o1-mini", "o1", "o3", "o3-mini"]
 
 
 class ToolUsageErrorException(Exception):
