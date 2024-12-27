@@ -2,6 +2,7 @@ import subprocess
 from unittest import mock
 
 import pytest
+
 from crewai.cli import evaluate_crew
 
 

@@ -3,10 +3,11 @@ import random
 from unittest.mock import MagicMock
 
 import pytest
+from pydantic import BaseModel, Field
+
 from crewai import Agent, Task
 from crewai.tools import BaseTool
 from crewai.tools.tool_usage import ToolUsage
-from pydantic import BaseModel, Field
 
 
 class RandomNumberToolInput(BaseModel):

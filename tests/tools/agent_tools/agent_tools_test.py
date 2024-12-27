@@ -1,6 +1,7 @@
 """Test Agent creation and execution basic functionality."""
 
 import pytest
+
 from crewai.agent import Agent
 from crewai.tools.agent_tools.agent_tools import AgentTools
 

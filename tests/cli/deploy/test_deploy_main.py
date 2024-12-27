@@ -5,9 +5,10 @@ from unittest.mock import MagicMock, Mock, patch
 
 import pytest
 import requests
+from requests.exceptions import JSONDecodeError
+
 from crewai.cli.deploy.main import DeployCommand
 from crewai.cli.utils import parse_toml
-from requests.exceptions import JSONDecodeError
 
 
 class TestDeployCommand(unittest.TestCase):

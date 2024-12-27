@@ -1,8 +1,9 @@
 from typing import Optional
 
 import pytest
-from crewai.tools.structured_tool import CrewStructuredTool
 from pydantic import BaseModel, Field
+
+from crewai.tools.structured_tool import CrewStructuredTool
 
 
 # Test fixtures
