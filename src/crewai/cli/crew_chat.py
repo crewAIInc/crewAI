@@ -1,3 +1,6 @@
+import json
+from typing import Any, Dict, List
+
 import click
 
 from crewai.cli.fetch_chat_llm import fetch_chat_llm
@@ -62,9 +65,13 @@ def run_chat():
         click.secho("No valid Chat LLM returned. Exiting.", fg="red")
         return
 
-    # 5) Prepare available_functions for the callback dictionary
+    # Create a wrapper function that captures 'messages' from the enclosing scope
+    def run_crew_tool_with_messages(**kwargs):
+        return run_crew_tool(messages, **kwargs)
+
+    # 5) Prepare available_functions with the wrapper function
     available_functions = {
-        crew_inputs.crew_name: run_crew_tool,  # The LLM can call run_crew_tool using the crew's name
+        crew_inputs.crew_name: run_crew_tool_with_messages,
     }
 
     click.secho(
@@ -134,11 +141,12 @@ def generate_crew_tool_schema(crew_inputs: ChatInputs) -> dict:
     }
 
 
-def run_crew_tool(**kwargs) -> str:
+def run_crew_tool(messages: List[Dict[str, str]], **kwargs: Any) -> str:
     """
     Subprocess-based function that:
       1) Calls 'uv run run_crew' (which in turn calls your crew's 'run()' in main.py)
       2) Passes the LLM-provided kwargs as CLI overrides (e.g. --key=value).
+      3) Also takes in messages from the main chat loop and passes them to the command.
     """
     import subprocess
 
@@ -149,9 +157,13 @@ def run_crew_tool(**kwargs) -> str:
         val_str = str(value)
         command.append(f"--{key}={val_str}")
 
+    # Serialize messages to JSON and add to command
+    messages_json = json.dumps(messages)
+    command.append(f"--crew_chat_messages={messages_json}")
+
     try:
         # Capture stdout so we can return it to the LLM
-        result = subprocess.run(command, capture_output=True, text=True, check=True)
+        result = subprocess.run(command, text=True, check=True)
         stdout_str = result.stdout.strip()
         return stdout_str if stdout_str else "No output from run_crew command."
     except subprocess.CalledProcessError as e:

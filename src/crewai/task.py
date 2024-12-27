@@ -127,38 +127,34 @@ class Task(BaseModel):
     processed_by_agents: Set[str] = Field(default_factory=set)
     guardrail: Optional[Callable[[TaskOutput], Tuple[bool, Any]]] = Field(
         default=None,
-        description="Function to validate task output before proceeding to next task"
+        description="Function to validate task output before proceeding to next task",
     )
     max_retries: int = Field(
-        default=3,
-        description="Maximum number of retries when guardrail fails"
+        default=3, description="Maximum number of retries when guardrail fails"
     )
-    retry_count: int = Field(
-        default=0,
-        description="Current number of retries"
-    )
+    retry_count: int = Field(default=0, description="Current number of retries")
 
     @field_validator("guardrail")
     @classmethod
     def validate_guardrail_function(cls, v: Optional[Callable]) -> Optional[Callable]:
         """Validate that the guardrail function has the correct signature and behavior.
-        
+
         While type hints provide static checking, this validator ensures runtime safety by:
         1. Verifying the function accepts exactly one parameter (the TaskOutput)
         2. Checking return type annotations match Tuple[bool, Any] if present
         3. Providing clear, immediate error messages for debugging
-        
+
         This runtime validation is crucial because:
         - Type hints are optional and can be ignored at runtime
         - Function signatures need immediate validation before task execution
         - Clear error messages help users debug guardrail implementation issues
-        
+
         Args:
             v: The guardrail function to validate
-            
+
         Returns:
             The validated guardrail function
-            
+
         Raises:
             ValueError: If the function signature is invalid or return annotation
                        doesn't match Tuple[bool, Any]
@@ -171,8 +167,13 @@ class Task(BaseModel):
             # Check return annotation if present, but don't require it
             return_annotation = sig.return_annotation
             if return_annotation != inspect.Signature.empty:
-                if not (return_annotation == Tuple[bool, Any] or str(return_annotation) == 'Tuple[bool, Any]'):
-                    raise ValueError("If return type is annotated, it must be Tuple[bool, Any]")
+                if not (
+                    return_annotation == Tuple[bool, Any]
+                    or str(return_annotation) == "Tuple[bool, Any]"
+                ):
+                    raise ValueError(
+                        "If return type is annotated, it must be Tuple[bool, Any]"
+                    )
         return v
 
     _telemetry: Telemetry = PrivateAttr(default_factory=Telemetry)
@@ -353,7 +354,9 @@ class Task(BaseModel):
 
             if isinstance(guardrail_result.result, str):
                 task_output.raw = guardrail_result.result
-                pydantic_output, json_output = self._export_output(guardrail_result.result)
+                pydantic_output, json_output = self._export_output(
+                    guardrail_result.result
+                )
                 task_output.pydantic = pydantic_output
                 task_output.json_dict = json_output
             elif isinstance(guardrail_result.result, TaskOutput):
@@ -393,7 +396,9 @@ class Task(BaseModel):
         tasks_slices = [self.description, output]
         return "\n".join(tasks_slices)
 
-    def interpolate_inputs(self, inputs: Dict[str, Any]) -> None:
+    def interpolate_inputs_and_add_conversation_history(
+        self, inputs: Dict[str, Any]
+    ) -> None:
         """Interpolate inputs into the task description and expected output."""
         if self._original_description is None:
             self._original_description = self.description
@@ -405,6 +410,36 @@ class Task(BaseModel):
             self.expected_output = self.interpolate_only(
                 input_string=self._original_expected_output, inputs=inputs
             )
+
+        if "crew_chat_messages" in inputs and inputs["crew_chat_messages"]:
+            # Fetch the conversation history instruction using self.i18n.slice
+            conversation_instruction = self.i18n.slice(
+                "conversation_history_instruction"
+            )
+            print("crew_chat_messages:", inputs["crew_chat_messages"])
+            try:
+                crew_chat_messages = json.loads(inputs["crew_chat_messages"])
+                print("crew_chat_messages successfully parsed as a list")
+            except json.JSONDecodeError:
+                print("Failed to parse crew_chat_messages as JSON")
+                crew_chat_messages = []
+
+            # Debug print to check the input
+            print("crew_chat_messages input:", inputs["crew_chat_messages"])
+
+            conversation_history = "\n".join(
+                f"{msg['role'].capitalize()}: {msg['content']}"
+                for msg in crew_chat_messages
+                if isinstance(msg, dict) and "role" in msg and "content" in msg
+            )
+
+            print("conversation_history:", conversation_history)
+            # Add the instruction and conversation history to the description
+            self.description += (
+                f"\n\n{conversation_instruction}\n\n{conversation_history}"
+            )
+
+            print("UPDATED DESCRIPTION:", self.description)
 
     def interpolate_only(self, input_string: str, inputs: Dict[str, Any]) -> str:
         """Interpolate placeholders (e.g., {key}) in a string while leaving JSON untouched."""
@@ -496,10 +531,10 @@ class Task(BaseModel):
 
     def _save_file(self, result: Any) -> None:
         """Save task output to a file.
-        
+
         Args:
             result: The result to save to the file. Can be a dict or any stringifiable object.
-            
+
         Raises:
             ValueError: If output_file is not set
             RuntimeError: If there is an error writing to the file
@@ -517,6 +552,7 @@ class Task(BaseModel):
             with resolved_path.open("w", encoding="utf-8") as file:
                 if isinstance(result, dict):
                     import json
+
                     json.dump(result, file, ensure_ascii=False, indent=2)
                 else:
                     file.write(str(result))

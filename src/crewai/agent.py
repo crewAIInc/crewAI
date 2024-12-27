@@ -188,6 +188,8 @@ class Agent(BaseAgent):
 
         task_prompt = task.prompt()
 
+        print("task_prompt:", task_prompt)
+
         # If the task requires output in JSON or Pydantic format,
         # append specific instructions to the task prompt to ensure
         # that the final answer does not include any code block markers
