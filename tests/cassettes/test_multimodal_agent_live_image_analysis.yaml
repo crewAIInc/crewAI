@@ -1,0 +1,481 @@
+interactions:
+- request:
+    body: '{"messages": [{"role": "system", "content": "You are Image Analyst. You''re
+      an expert at visual analysis, trained to notice and describe details in images.\nYour
+      personal goal is: Analyze images with high attention to detail\nYou ONLY have
+      access to the following tools, and should NEVER make up tools that are not listed
+      here:\n\nTool Name: Add image to content\nTool Arguments: {''image_url'': {''description'':
+      ''The URL or path of the image to add'', ''type'': ''str''}, ''action'': {''description'':
+      ''Optional context or question about the image'', ''type'': ''str''}}\nTool
+      Description: See image to understand it''s content, you can optionally ask a
+      question about the image\n\nUse the following format:\n\nThought: you should
+      always think about what to do\nAction: the action to take, only one name of
+      [Add image to content], just the name, exactly as it''s written.\nAction Input:
+      the input to the action, just a simple python dictionary, enclosed in curly
+      braces, using \" to wrap keys and values.\nObservation: the result of the action\n\nOnce
+      all necessary information is gathered:\n\nThought: I now know the final answer\nFinal
+      Answer: the final answer to the original input question"}, {"role": "user",
+      "content": "\nCurrent Task: \n        Analyze the provided image and describe
+      what you see in detail.\n        Focus on main elements, colors, composition,
+      and any notable details.\n        Image: https://media.istockphoto.com/id/946087016/photo/aerial-view-of-lower-manhattan-new-york.jpg?s=612x612&w=0&k=20&c=viLiMRznQ8v5LzKTt_LvtfPFUVl1oiyiemVdSlm29_k=\n        \n\nThis
+      is the expect criteria for your final answer: A comprehensive description of
+      the image contents.\nyou MUST return the actual complete content as the final
+      answer, not a summary.\n\nBegin! This is VERY important to you, use the tools
+      available and give your best Final Answer, your job depends on it!\n\nThought:"}],
+      "model": "gpt-4o", "stop": ["\nObservation:"], "stream": false}'
+    headers:
+      accept:
+      - application/json
+      accept-encoding:
+      - gzip, deflate
+      connection:
+      - keep-alive
+      content-length:
+      - '1948'
+      content-type:
+      - application/json
+      host:
+      - api.openai.com
+      user-agent:
+      - OpenAI/Python 1.52.1
+      x-stainless-arch:
+      - arm64
+      x-stainless-async:
+      - 'false'
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - MacOS
+      x-stainless-package-version:
+      - 1.52.1
+      x-stainless-raw-response:
+      - 'true'
+      x-stainless-retry-count:
+      - '0'
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.11.7
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    content: "{\n  \"id\": \"chatcmpl-AiuIfzzcje5KdvKIG5CkFeORroiKk\",\n  \"object\":
+      \"chat.completion\",\n  \"created\": 1735266213,\n  \"model\": \"gpt-4o-2024-08-06\",\n
+      \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
+      \"assistant\",\n        \"content\": \"Action: Add image to content\\nAction
+      Input: {\\\"image_url\\\": \\\"https://media.istockphoto.com/id/946087016/photo/aerial-view-of-lower-manhattan-new-york.jpg?s=612x612&w=0&k=20&c=viLiMRznQ8v5LzKTt_LvtfPFUVl1oiyiemVdSlm29_k=\\\",
+      \\\"action\\\": \\\"Analyze the provided image and describe what you see in
+      detail.\\\"}\",\n        \"refusal\": null\n      },\n      \"logprobs\": null,\n
+      \     \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\":
+      417,\n    \"completion_tokens\": 103,\n    \"total_tokens\": 520,\n    \"prompt_tokens_details\":
+      {\n      \"cached_tokens\": 0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\":
+      {\n      \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\":
+      0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"system_fingerprint\":
+      \"fp_5f20662549\"\n}\n"
+    headers:
+      CF-Cache-Status:
+      - DYNAMIC
+      CF-RAY:
+      - 8f85d96b280df217-GRU
+      Connection:
+      - keep-alive
+      Content-Encoding:
+      - gzip
+      Content-Type:
+      - application/json
+      Date:
+      - Fri, 27 Dec 2024 02:23:35 GMT
+      Server:
+      - cloudflare
+      Set-Cookie:
+      - __cf_bm=kJ1pw1xjCMSxjHSS8iJC5z_j2PZxl.i387KCpj9xNZU-1735266215-1.0.1.1-Ybg0wVTsrBlpVZmtQyA1ullY8m3v2Ix0N_SYlhr9z7zKfbLeqGZEVL37YSY.dvIiLVY3XPZzMtG8Xwo6UucW6A;
+        path=/; expires=Fri, 27-Dec-24 02:53:35 GMT; domain=.api.openai.com; HttpOnly;
+        Secure; SameSite=None
+      - _cfuvid=v_wJZ5m7qCjrnRfks0gT2GAk9yR14BdIDAQiQR7xxI8-1735266215000-0.0.1.1-604800000;
+        path=/; domain=.api.openai.com; HttpOnly; Secure; SameSite=None
+      Transfer-Encoding:
+      - chunked
+      X-Content-Type-Options:
+      - nosniff
+      access-control-expose-headers:
+      - X-Request-ID
+      alt-svc:
+      - h3=":443"; ma=86400
+      openai-organization:
+      - crewai-iuxna1
+      openai-processing-ms:
+      - '1212'
+      openai-version:
+      - '2020-10-01'
+      strict-transport-security:
+      - max-age=31536000; includeSubDomains; preload
+      x-ratelimit-limit-requests:
+      - '10000'
+      x-ratelimit-limit-tokens:
+      - '30000000'
+      x-ratelimit-remaining-requests:
+      - '9999'
+      x-ratelimit-remaining-tokens:
+      - '29999539'
+      x-ratelimit-reset-requests:
+      - 6ms
+      x-ratelimit-reset-tokens:
+      - 0s
+      x-request-id:
+      - req_663a2b18099a18361d6b02befc175289
+    http_version: HTTP/1.1
+    status_code: 200
+- request:
+    body: !!binary |
+      Co4LCiQKIgoMc2VydmljZS5uYW1lEhIKEGNyZXdBSS10ZWxlbWV0cnkS5QoKEgoQY3Jld2FpLnRl
+      bGVtZXRyeRKjBwoQHmzzumMNXHOgpJ4zCIxJSxII72WnLlLfRyYqDENyZXcgQ3JlYXRlZDABOQjB
+      gFxt5xQYQYhMiVxt5xQYShoKDmNyZXdhaV92ZXJzaW9uEggKBjAuODYuMEoaCg5weXRob25fdmVy
+      c2lvbhIICgYzLjExLjdKLgoIY3Jld19rZXkSIgogZTM5NTY3YjUwNTI5MDljYTMzNDA5ODRiODM4
+      OTgwZWFKMQoHY3Jld19pZBImCiQ4MDA0YTA1NC0zYjNkLTQ4OGEtYTlkNC1kZWQzMDVhMDIxY2FK
+      HAoMY3Jld19wcm9jZXNzEgwKCnNlcXVlbnRpYWxKEQoLY3Jld19tZW1vcnkSAhAAShoKFGNyZXdf
+      bnVtYmVyX29mX3Rhc2tzEgIYAUobChVjcmV3X251bWJlcl9vZl9hZ2VudHMSAhgBSs4CCgtjcmV3
+      X2FnZW50cxK+Agq7Alt7ImtleSI6ICI5ZGM4Y2NlMDMwNDY4MTk2MDQxYjRjMzgwYjYxN2NiMCIs
+      ICJpZCI6ICJjNTZhZGI2Mi1lMGIwLTQzYzAtYmQ4OC0xYzEwYTNhNmU5NDQiLCAicm9sZSI6ICJJ
+      bWFnZSBBbmFseXN0IiwgInZlcmJvc2U/IjogdHJ1ZSwgIm1heF9pdGVyIjogMjAsICJtYXhfcnBt
+      IjogbnVsbCwgImZ1bmN0aW9uX2NhbGxpbmdfbGxtIjogIiIsICJsbG0iOiAiZ3B0LTRvIiwgImRl
+      bGVnYXRpb25fZW5hYmxlZD8iOiBmYWxzZSwgImFsbG93X2NvZGVfZXhlY3V0aW9uPyI6IGZhbHNl
+      LCAibWF4X3JldHJ5X2xpbWl0IjogMiwgInRvb2xzX25hbWVzIjogW119XUqCAgoKY3Jld190YXNr
+      cxLzAQrwAVt7ImtleSI6ICJhOWE3NmNhNjk1N2QwYmZmYTY5ZWFiMjBiNjY0ODIyYiIsICJpZCI6
+      ICJhNzFiZDllNC0wNzdkLTRmMTQtODg0MS03MGMwZWM4MGZkMmMiLCAiYXN5bmNfZXhlY3V0aW9u
+      PyI6IGZhbHNlLCAiaHVtYW5faW5wdXQ/IjogZmFsc2UsICJhZ2VudF9yb2xlIjogIkltYWdlIEFu
+      YWx5c3QiLCAiYWdlbnRfa2V5IjogIjlkYzhjY2UwMzA0NjgxOTYwNDFiNGMzODBiNjE3Y2IwIiwg
+      InRvb2xzX25hbWVzIjogW119XXoCGAGFAQABAAASjgIKEOZ5pMdq9ep85DrP1Vv8Y8MSCE7ahOkm
+      2IDHKgxUYXNrIENyZWF0ZWQwATlIg85cbecUGEGQ9M5cbecUGEouCghjcmV3X2tleRIiCiBlMzk1
+      NjdiNTA1MjkwOWNhMzM0MDk4NGI4Mzg5ODBlYUoxCgdjcmV3X2lkEiYKJDgwMDRhMDU0LTNiM2Qt
+      NDg4YS1hOWQ0LWRlZDMwNWEwMjFjYUouCgh0YXNrX2tleRIiCiBhOWE3NmNhNjk1N2QwYmZmYTY5
+      ZWFiMjBiNjY0ODIyYkoxCgd0YXNrX2lkEiYKJGE3MWJkOWU0LTA3N2QtNGYxNC04ODQxLTcwYzBl
+      YzgwZmQyY3oCGAGFAQABAAASlwEKECyaQQK8JkKLh6S2mWHTeDgSCPWCpr7v9CQZKgpUb29sIFVz
+      YWdlMAE5MLyst23nFBhBOJy/t23nFBhKGgoOY3Jld2FpX3ZlcnNpb24SCAoGMC44Ni4wSiMKCXRv
+      b2xfbmFtZRIWChRBZGQgaW1hZ2UgdG8gY29udGVudEoOCghhdHRlbXB0cxICGAF6AhgBhQEAAQAA
+    headers:
+      Accept:
+      - '*/*'
+      Accept-Encoding:
+      - gzip, deflate
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '1425'
+      Content-Type:
+      - application/x-protobuf
+      User-Agent:
+      - OTel-OTLP-Exporter-Python/1.27.0
+    method: POST
+    uri: https://telemetry.crewai.com:4319/v1/traces
+  response:
+    body:
+      string: "\n\0"
+    headers:
+      Content-Length:
+      - '2'
+      Content-Type:
+      - application/x-protobuf
+      Date:
+      - Fri, 27 Dec 2024 02:23:39 GMT
+    status:
+      code: 200
+      message: OK
+- request:
+    body: '{"messages": [{"role": "system", "content": "You are Image Analyst. You''re
+      an expert at visual analysis, trained to notice and describe details in images.\nYour
+      personal goal is: Analyze images with high attention to detail\nYou ONLY have
+      access to the following tools, and should NEVER make up tools that are not listed
+      here:\n\nTool Name: Add image to content\nTool Arguments: {''image_url'': {''description'':
+      ''The URL or path of the image to add'', ''type'': ''str''}, ''action'': {''description'':
+      ''Optional context or question about the image'', ''type'': ''str''}}\nTool
+      Description: See image to understand it''s content, you can optionally ask a
+      question about the image\n\nUse the following format:\n\nThought: you should
+      always think about what to do\nAction: the action to take, only one name of
+      [Add image to content], just the name, exactly as it''s written.\nAction Input:
+      the input to the action, just a simple python dictionary, enclosed in curly
+      braces, using \" to wrap keys and values.\nObservation: the result of the action\n\nOnce
+      all necessary information is gathered:\n\nThought: I now know the final answer\nFinal
+      Answer: the final answer to the original input question"}, {"role": "user",
+      "content": "\nCurrent Task: \n        Analyze the provided image and describe
+      what you see in detail.\n        Focus on main elements, colors, composition,
+      and any notable details.\n        Image: https://media.istockphoto.com/id/946087016/photo/aerial-view-of-lower-manhattan-new-york.jpg?s=612x612&w=0&k=20&c=viLiMRznQ8v5LzKTt_LvtfPFUVl1oiyiemVdSlm29_k=\n        \n\nThis
+      is the expect criteria for your final answer: A comprehensive description of
+      the image contents.\nyou MUST return the actual complete content as the final
+      answer, not a summary.\n\nBegin! This is VERY important to you, use the tools
+      available and give your best Final Answer, your job depends on it!\n\nThought:"},
+      {"role": "user", "content": [{"type": "text", "text": "Analyze the provided
+      image and describe what you see in detail."}, {"type": "image_url", "image_url":
+      {"url": "https://media.istockphoto.com/id/946087016/photo/aerial-view-of-lower-manhattan-new-york.jpg?s=612x612&w=0&k=20&c=viLiMRznQ8v5LzKTt_LvtfPFUVl1oiyiemVdSlm29_k="}}]}],
+      "model": "gpt-4o", "stop": ["\nObservation:"], "stream": false}'
+    headers:
+      accept:
+      - application/json
+      accept-encoding:
+      - gzip, deflate
+      connection:
+      - keep-alive
+      content-length:
+      - '2279'
+      content-type:
+      - application/json
+      cookie:
+      - __cf_bm=kJ1pw1xjCMSxjHSS8iJC5z_j2PZxl.i387KCpj9xNZU-1735266215-1.0.1.1-Ybg0wVTsrBlpVZmtQyA1ullY8m3v2Ix0N_SYlhr9z7zKfbLeqGZEVL37YSY.dvIiLVY3XPZzMtG8Xwo6UucW6A;
+        _cfuvid=v_wJZ5m7qCjrnRfks0gT2GAk9yR14BdIDAQiQR7xxI8-1735266215000-0.0.1.1-604800000
+      host:
+      - api.openai.com
+      user-agent:
+      - OpenAI/Python 1.52.1
+      x-stainless-arch:
+      - arm64
+      x-stainless-async:
+      - 'false'
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - MacOS
+      x-stainless-package-version:
+      - 1.52.1
+      x-stainless-raw-response:
+      - 'true'
+      x-stainless-retry-count:
+      - '0'
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.11.7
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    content: "{\n  \"id\": \"chatcmpl-AiuIiqT33ROFMdw1gNmqH9jiw6PfF\",\n  \"object\":
+      \"chat.completion\",\n  \"created\": 1735266216,\n  \"model\": \"gpt-4o-2024-08-06\",\n
+      \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
+      \"assistant\",\n        \"content\": \"The image is an aerial view of Lower
+      Manhattan in New York City. \\n\\nMain Elements:\\n- The One World Trade Center
+      tower stands prominently, distinguishable by its sleek, tapering structure reaching
+      into the sky, surrounded by other skyscrapers.\\n- Skyscrapers in varying heights
+      and architectural styles, fill the densely packed urban landscape.\\n- A waterfront
+      is visible at the edges, with docks and piers extending into the water.\\n\\nColors:\\n-
+      The buildings exhibit a mix of colors, predominantly grays, whites, and browns,
+      against the blues of the sky and water.\\n- There's a section of greenery visible,
+      likely a park or recreational space, offering a contrast with its vibrant green
+      hues.\\n\\nComposition:\\n- The angle of the photograph showcases the expanse
+      of the city, highlighting the density and scale of the buildings.\\n- Water
+      borders the city on two prominent sides, creating a natural boundary and enhancing
+      the island's urban island feel.\\n\\nNotable Details:\\n- The image captures
+      the iconic layout of Manhattan, with the surrounding Hudson River and New York
+      Harbor visible in the background.\\n- Beyond Lower Manhattan, more of the cityscape
+      stretches into the distance, illustrating the vastness of New York City.\\n-
+      The day appears clear and sunny, with shadows casting from the buildings, indicating
+      time in the morning or late afternoon.\\n\\nOverall, the image is a striking
+      depiction of the dynamic and bustling environment of New York's Lower Manhattan,
+      encapsulating its urban character and proximity to the water.\",\n        \"refusal\":
+      null\n      },\n      \"logprobs\": null,\n      \"finish_reason\": \"stop\"\n
+      \   }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 858,\n    \"completion_tokens\":
+      295,\n    \"total_tokens\": 1153,\n    \"prompt_tokens_details\": {\n      \"cached_tokens\":
+      0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\": {\n
+      \     \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\":
+      0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"system_fingerprint\":
+      \"fp_5f20662549\"\n}\n"
+    headers:
+      CF-Cache-Status:
+      - DYNAMIC
+      CF-RAY:
+      - 8f85d9741d0cf217-GRU
+      Connection:
+      - keep-alive
+      Content-Encoding:
+      - gzip
+      Content-Type:
+      - application/json
+      Date:
+      - Fri, 27 Dec 2024 02:23:40 GMT
+      Server:
+      - cloudflare
+      Transfer-Encoding:
+      - chunked
+      X-Content-Type-Options:
+      - nosniff
+      access-control-expose-headers:
+      - X-Request-ID
+      alt-svc:
+      - h3=":443"; ma=86400
+      openai-organization:
+      - crewai-iuxna1
+      openai-processing-ms:
+      - '5136'
+      openai-version:
+      - '2020-10-01'
+      strict-transport-security:
+      - max-age=31536000; includeSubDomains; preload
+      x-ratelimit-limit-input-images:
+      - '50000'
+      x-ratelimit-limit-requests:
+      - '10000'
+      x-ratelimit-limit-tokens:
+      - '30000000'
+      x-ratelimit-remaining-input-images:
+      - '49999'
+      x-ratelimit-remaining-requests:
+      - '9999'
+      x-ratelimit-remaining-tokens:
+      - '29998756'
+      x-ratelimit-reset-input-images:
+      - 1ms
+      x-ratelimit-reset-requests:
+      - 6ms
+      x-ratelimit-reset-tokens:
+      - 2ms
+      x-request-id:
+      - req_57a7430712d4ff4a81f600ffb94d3b6e
+    http_version: HTTP/1.1
+    status_code: 200
+- request:
+    body: '{"messages": [{"role": "system", "content": "You are Image Analyst. You''re
+      an expert at visual analysis, trained to notice and describe details in images.\nYour
+      personal goal is: Analyze images with high attention to detail\nYou ONLY have
+      access to the following tools, and should NEVER make up tools that are not listed
+      here:\n\nTool Name: Add image to content\nTool Arguments: {''image_url'': {''description'':
+      ''The URL or path of the image to add'', ''type'': ''str''}, ''action'': {''description'':
+      ''Optional context or question about the image'', ''type'': ''str''}}\nTool
+      Description: See image to understand it''s content, you can optionally ask a
+      question about the image\n\nUse the following format:\n\nThought: you should
+      always think about what to do\nAction: the action to take, only one name of
+      [Add image to content], just the name, exactly as it''s written.\nAction Input:
+      the input to the action, just a simple python dictionary, enclosed in curly
+      braces, using \" to wrap keys and values.\nObservation: the result of the action\n\nOnce
+      all necessary information is gathered:\n\nThought: I now know the final answer\nFinal
+      Answer: the final answer to the original input question"}, {"role": "user",
+      "content": "\nCurrent Task: \n        Analyze the provided image and describe
+      what you see in detail.\n        Focus on main elements, colors, composition,
+      and any notable details.\n        Image: https://media.istockphoto.com/id/946087016/photo/aerial-view-of-lower-manhattan-new-york.jpg?s=612x612&w=0&k=20&c=viLiMRznQ8v5LzKTt_LvtfPFUVl1oiyiemVdSlm29_k=\n        \n\nThis
+      is the expect criteria for your final answer: A comprehensive description of
+      the image contents.\nyou MUST return the actual complete content as the final
+      answer, not a summary.\n\nBegin! This is VERY important to you, use the tools
+      available and give your best Final Answer, your job depends on it!\n\nThought:"},
+      {"role": "user", "content": [{"type": "text", "text": "Analyze the provided
+      image and describe what you see in detail."}, {"type": "image_url", "image_url":
+      {"url": "https://media.istockphoto.com/id/946087016/photo/aerial-view-of-lower-manhattan-new-york.jpg?s=612x612&w=0&k=20&c=viLiMRznQ8v5LzKTt_LvtfPFUVl1oiyiemVdSlm29_k="}}]},
+      {"role": "user", "content": "I did it wrong. Invalid Format: I missed the ''Action:''
+      after ''Thought:''. I will do right next, and don''t use a tool I have already
+      used.\n\nIf you don''t need to use any more tools, you must give your best complete
+      final answer, make sure it satisfies the expected criteria, use the EXACT format
+      below:\n\nThought: I now can give a great answer\nFinal Answer: my best complete
+      final answer to the task.\n\n"}], "model": "gpt-4o", "stop": ["\nObservation:"],
+      "stream": false}'
+    headers:
+      accept:
+      - application/json
+      accept-encoding:
+      - gzip, deflate
+      connection:
+      - keep-alive
+      content-length:
+      - '2717'
+      content-type:
+      - application/json
+      cookie:
+      - __cf_bm=kJ1pw1xjCMSxjHSS8iJC5z_j2PZxl.i387KCpj9xNZU-1735266215-1.0.1.1-Ybg0wVTsrBlpVZmtQyA1ullY8m3v2Ix0N_SYlhr9z7zKfbLeqGZEVL37YSY.dvIiLVY3XPZzMtG8Xwo6UucW6A;
+        _cfuvid=v_wJZ5m7qCjrnRfks0gT2GAk9yR14BdIDAQiQR7xxI8-1735266215000-0.0.1.1-604800000
+      host:
+      - api.openai.com
+      user-agent:
+      - OpenAI/Python 1.52.1
+      x-stainless-arch:
+      - arm64
+      x-stainless-async:
+      - 'false'
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - MacOS
+      x-stainless-package-version:
+      - 1.52.1
+      x-stainless-raw-response:
+      - 'true'
+      x-stainless-retry-count:
+      - '0'
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.11.7
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    content: "{\n  \"id\": \"chatcmpl-AiuInuYNldaQVo6B1EsEquT1VFMN7\",\n  \"object\":
+      \"chat.completion\",\n  \"created\": 1735266221,\n  \"model\": \"gpt-4o-2024-08-06\",\n
+      \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
+      \"assistant\",\n        \"content\": \"Thought: I now can give a great answer\\nFinal
+      Answer: The image is an aerial view of Lower Manhattan in New York City. The
+      photograph prominently features the cluster of skyscrapers that characterizes
+      the area, with One World Trade Center standing out as a particularly tall and
+      iconic structure. The buildings vary in color, with shades of glassy blue, grey,
+      and natural stone dominating the skyline. In the bottom part of the image, there
+      is a green space, likely Battery Park, providing a stark contrast to the dense
+      urban environment, with trees and pathways visible. The water surrounding Manhattan
+      is a deep blue, and several piers jut into the harbor. The Hudson River is visible
+      on the left, and the East River can be seen on the right, framing the island.
+      The overall composition captures the bustling and vibrant nature of New York\u2019s
+      financial hub, with bright sunlight illuminating the buildings, casting sharp
+      shadows and enhancing the depth of the cityscape. The sky is clear, suggesting
+      a sunny day with good visibility.\",\n        \"refusal\": null\n      },\n
+      \     \"logprobs\": null,\n      \"finish_reason\": \"stop\"\n    }\n  ],\n
+      \ \"usage\": {\n    \"prompt_tokens\": 952,\n    \"completion_tokens\": 203,\n
+      \   \"total_tokens\": 1155,\n    \"prompt_tokens_details\": {\n      \"cached_tokens\":
+      0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\": {\n
+      \     \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\":
+      0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"system_fingerprint\":
+      \"fp_5f20662549\"\n}\n"
+    headers:
+      CF-Cache-Status:
+      - DYNAMIC
+      CF-RAY:
+      - 8f85d995ad1ef217-GRU
+      Connection:
+      - keep-alive
+      Content-Encoding:
+      - gzip
+      Content-Type:
+      - application/json
+      Date:
+      - Fri, 27 Dec 2024 02:23:43 GMT
+      Server:
+      - cloudflare
+      Transfer-Encoding:
+      - chunked
+      X-Content-Type-Options:
+      - nosniff
+      access-control-expose-headers:
+      - X-Request-ID
+      alt-svc:
+      - h3=":443"; ma=86400
+      openai-organization:
+      - crewai-iuxna1
+      openai-processing-ms:
+      - '3108'
+      openai-version:
+      - '2020-10-01'
+      strict-transport-security:
+      - max-age=31536000; includeSubDomains; preload
+      x-ratelimit-limit-input-images:
+      - '50000'
+      x-ratelimit-limit-requests:
+      - '10000'
+      x-ratelimit-limit-tokens:
+      - '30000000'
+      x-ratelimit-remaining-input-images:
+      - '49999'
+      x-ratelimit-remaining-requests:
+      - '9999'
+      x-ratelimit-remaining-tokens:
+      - '29998656'
+      x-ratelimit-reset-input-images:
+      - 1ms
+      x-ratelimit-reset-requests:
+      - 6ms
+      x-ratelimit-reset-tokens:
+      - 2ms
+      x-request-id:
+      - req_45f0e3d457a18f973a59074d16f137b6
+    http_version: HTTP/1.1
+    status_code: 200
+version: 1

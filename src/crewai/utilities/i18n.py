@@ -1,6 +1,6 @@
 import json
 import os
-from typing import Dict, Optional
+from typing import Dict, Optional, Union
 
 from pydantic import BaseModel, Field, PrivateAttr, model_validator
 
@@ -41,8 +41,8 @@ class I18N(BaseModel):
     def errors(self, error: str) -> str:
         return self.retrieve("errors", error)
 
-    def tools(self, error: str) -> str:
-        return self.retrieve("tools", error)
+    def tools(self, tool: str) -> Union[str, Dict[str, str]]:
+        return self.retrieve("tools", tool)
 
     def retrieve(self, kind, key) -> str:
         try:
