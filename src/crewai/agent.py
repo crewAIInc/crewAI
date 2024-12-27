@@ -136,10 +136,8 @@ class Agent(BaseAgent):
         self._set_knowledge()
         self.agent_ops_agent_name = self.role
 
-        self.llm = create_llm(self.llm, default_model="gpt-4o-mini")
-        self.function_calling_llm = create_llm(
-            self.function_calling_llm, default_model="gpt-4o-mini"
-        )
+        self.llm = create_llm(self.llm)
+        self.function_calling_llm = create_llm(self.function_calling_llm)
 
         if not self.agent_executor:
             self._setup_agent_executor()

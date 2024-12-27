@@ -1,7 +1,3 @@
-import json
-import subprocess
-from typing import cast
-
 import click
 
 from crewai.cli.fetch_chat_llm import fetch_chat_llm
@@ -20,18 +16,13 @@ def run_chat():
     # 1) Fetch CrewInputs
     click.secho("Gathering crew inputs via `fetch_crew_inputs()`...", fg="cyan")
     try:
-        crew_inputs: ChatInputs = fetch_crew_inputs()
+        crew_inputs = fetch_crew_inputs()
+        click.echo(f"CrewInputs: {crew_inputs}")
+        if not crew_inputs:
+            click.secho("Error: Failed to fetch crew inputs. Exiting.", fg="red")
+            return
     except Exception as e:
         click.secho(f"Error fetching crew inputs: {e}", fg="red")
-        return
-
-    # Check for mandatory fields
-    if not crew_inputs.crew_name:
-        click.secho("Error: Crew name is missing. Exiting.", fg="red")
-        return
-
-    if not crew_inputs.crew_description:
-        click.secho("Error: Crew description is missing. Exiting.", fg="red")
         return
 
     # 2) Generate a tool schema from the crew inputs
@@ -85,7 +76,7 @@ def run_chat():
     # 6) Main chat loop
     while True:
         try:
-            user_input = click.prompt("You: ", type=str)
+            user_input = click.prompt("You", type=str)
             if user_input.strip().lower() in ["exit", "quit"]:
                 click.echo("Exiting chat. Goodbye!")
                 break

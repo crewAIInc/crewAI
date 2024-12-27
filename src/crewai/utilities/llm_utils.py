@@ -3,7 +3,7 @@ from typing import Any, Dict, Optional, Union
 
 from packaging import version
 
-from crewai.cli.constants import ENV_VARS, LITELLM_PARAMS
+from crewai.cli.constants import DEFAULT_LLM_MODEL, ENV_VARS, LITELLM_PARAMS
 from crewai.cli.utils import read_toml
 from crewai.cli.version import get_crewai_version
 from crewai.llm import LLM
@@ -11,7 +11,6 @@ from crewai.llm import LLM
 
 def create_llm(
     llm_value: Union[str, LLM, Any, None] = None,
-    default_model: str = "gpt-4o-mini",
 ) -> Optional[LLM]:
     """
     Creates or returns an LLM instance based on the given llm_value.
@@ -45,7 +44,7 @@ def create_llm(
 
     # 3) If llm_value is None, parse environment variables or use default
     if llm_value is None:
-        return _llm_via_environment_or_fallback(default_model)
+        return _llm_via_environment_or_fallback()
 
     # 4) Otherwise, attempt to extract relevant attributes from an unknown object (like a config)
     #    e.g. follow the approach used in agent.py
@@ -104,17 +103,17 @@ def create_chat_llm(default_model: str = "gpt-4") -> Optional[LLM]:
         )
 
     # After checks, simply call create_llm with None (meaning "use env or fallback"):
-    return create_llm(None, default_model=default_model)
+    return create_llm(None)
 
 
-def _llm_via_environment_or_fallback(
-    default_model: str = "gpt-4o-mini",
-) -> Optional[LLM]:
+def _llm_via_environment_or_fallback() -> Optional[LLM]:
     """
     Helper function: if llm_value is None, we load environment variables or fallback default model.
     """
     model_name = (
-        os.environ.get("OPENAI_MODEL_NAME") or os.environ.get("MODEL") or default_model
+        os.environ.get("OPENAI_MODEL_NAME")
+        or os.environ.get("MODEL")
+        or DEFAULT_LLM_MODEL
     )
     llm_params = {"model": model_name}
 

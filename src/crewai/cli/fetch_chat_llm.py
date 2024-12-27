@@ -42,29 +42,39 @@ def fetch_chat_llm() -> LLM:
     llm_instance = None
 
     try:
-        # 1) Run the subprocess
         result = subprocess.run(command, capture_output=True, text=True, check=True)
-        stdout_str = result.stdout.strip()
+        stdout_lines = result.stdout.strip().splitlines()
 
-        # 2) Attempt to parse stdout as JSON
-        if stdout_str:
-            try:
-                llm_data = json.loads(stdout_str)
-                llm_instance = LLM.from_dict(llm_data)
-            except json.JSONDecodeError as e:
-                raise RuntimeError(
-                    f"Unable to parse JSON from `fetch_chat_llm` output: {e}"
-                ) from e
+        # Find the line that contains the JSON data
+        json_line = next(
+            (
+                line
+                for line in stdout_lines
+                if line.startswith("{") and line.endswith("}")
+            ),
+            None,
+        )
+
+        if not json_line:
+            raise RuntimeError(
+                "No valid JSON output received from `fetch_chat_llm` command."
+            )
+
+        try:
+            llm_data = json.loads(json_line)
+            llm_instance = LLM.from_dict(llm_data)
+        except json.JSONDecodeError as e:
+            raise RuntimeError(
+                f"Unable to parse JSON from `fetch_chat_llm` output: {e}\nOutput: {repr(json_line)}"
+            ) from e
 
     except subprocess.CalledProcessError as e:
-        # Subprocess error means the script failed
         raise RuntimeError(f"An error occurred while fetching chat LLM: {e}") from e
     except Exception as e:
         raise RuntimeError(
             f"An unexpected error occurred while fetching chat LLM: {e}"
         ) from e
 
-    # Verify that we have a valid LLM
     if not llm_instance:
         raise RuntimeError("Failed to create a valid LLM from `fetch_chat_llm` output.")
 

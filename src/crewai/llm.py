@@ -7,12 +7,16 @@ import warnings
 from contextlib import contextmanager
 from typing import Any, Dict, List, Optional, Union
 
+# Load environment variables from .env file
 import litellm
-from litellm import ModelResponse, get_supported_openai_params
+from dotenv import load_dotenv
+from litellm import get_supported_openai_params
 
 from crewai.utilities.exceptions.context_window_exceeding_exception import (
     LLMContextLengthExceededException,
 )
+
+load_dotenv()
 
 
 class FilteredStream:
@@ -111,7 +115,6 @@ class LLM:
         api_version: Optional[str] = None,
         api_key: Optional[str] = None,
         callbacks: List[Any] = [],
-        **kwargs,
     ):
         self.model = model
         self.timeout = timeout
@@ -133,11 +136,9 @@ class LLM:
         self.api_key = api_key
         self.callbacks = callbacks
         self.context_window_size = 0
-        self.kwargs = kwargs
 
         # For safety, we disable passing init params to next calls
         litellm.drop_params = True
-        litellm.set_verbose = False
 
         self.set_callbacks(callbacks)
         self.set_env_callbacks()
@@ -166,7 +167,6 @@ class LLM:
             "api_version": self.api_version,
             "api_key": self.api_key,
             "callbacks": self.callbacks,
-            "kwargs": self.kwargs,
         }
 
     @classmethod
@@ -248,11 +248,12 @@ class LLM:
                     "api_key": self.api_key,
                     "stream": False,
                     "tools": tools,  # pass the tool schema
-                    **self.kwargs,
                 }
 
                 # remove None values
                 params = {k: v for k, v in params.items() if v is not None}
+
+                print(f"Params: {params}")
 
                 response = litellm.completion(**params)
                 response_message = response.choices[0].message
@@ -283,7 +284,7 @@ class LLM:
                         messages.append(
                             {
                                 "tool_call_id": tool_call.id,
-                                "role": "tool",
+                                "role": "function",
                                 "name": function_name,
                                 "content": str(result),
                             }

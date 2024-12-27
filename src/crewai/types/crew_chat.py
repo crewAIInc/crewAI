@@ -13,8 +13,11 @@ class ChatInputField(BaseModel):
         }
     """
 
-    name: str
-    description: Optional[str] = None
+    name: str = Field(..., description="The name of the input field")
+    description: str = Field(
+        ...,
+        description="A short description of the input field",
+    )
 
 
 class ChatInputs(BaseModel):
@@ -31,6 +34,11 @@ class ChatInputs(BaseModel):
         }
     """
 
-    crew_name: Optional[str] = Field(default="Crew")
-    crew_description: Optional[str] = None
-    inputs: List[ChatInputField] = Field(default_factory=list)
+    crew_name: str = Field(..., description="The name of the crew")
+    crew_description: str = Field(
+        ...,
+        description="A description of the crew's purpose",
+    )
+    inputs: List[ChatInputField] = Field(
+        default_factory=list, description="A list of input fields for the crew"
+    )
