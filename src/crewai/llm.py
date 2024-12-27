@@ -64,6 +64,8 @@ LLM_CONTEXT_WINDOW_SIZES = {
     "llama3-70b-8192": 8192,
     "llama3-8b-8192": 8192,
     "mixtral-8x7b-32768": 32768,
+    "llama-3.3-70b-versatile": 128000,
+    "llama-3.3-70b-instruct": 128000,
 }
 
 DEFAULT_CONTEXT_WINDOW_SIZE = 8192
