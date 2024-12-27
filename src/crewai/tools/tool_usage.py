@@ -5,6 +5,7 @@ from difflib import SequenceMatcher
 from textwrap import dedent
 from typing import Any, List, Union
 
+from crewai.tools.structured_tool import CrewStructuredTool
 import crewai.utilities.events as events
 from crewai.agents.tools_handler import ToolsHandler
 from crewai.task import Task
@@ -103,6 +104,19 @@ class ToolUsage:
             if self.agent.verbose:
                 self._printer.print(content=f"\n\n{error}\n", color="red")
             return error
+
+        if isinstance(tool, CrewStructuredTool) and tool.name == 'Add image to content':
+            try:
+                result = self._use(tool_string=tool_string, tool=tool, calling=calling)
+                return result
+
+            except Exception as e:
+                error = getattr(e, "message", str(e))
+                self.task.increment_tools_errors()
+                if self.agent.verbose:
+                    self._printer.print(content=f"\n\n{error}\n", color="red")
+                return error
+
         return f"{self._use(tool_string=tool_string, tool=tool, calling=calling)}"  # type: ignore # BUG?: "_use" of "ToolUsage" does not return a value (it only ever returns None)
 
     def _use(

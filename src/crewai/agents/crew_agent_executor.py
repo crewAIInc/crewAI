@@ -144,9 +144,13 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
                             formatted_answer
                         )
 
+                        # Directly append the result to the messages if the
+                        # tool is "Add image to content" in case of multimodal
+                        # agents
                         if formatted_answer.tool == "Add image to content":
                             self.messages.append(tool_result.result)
                             continue
+
                         else:
                             if self.step_callback:
                                 self.step_callback(tool_result)

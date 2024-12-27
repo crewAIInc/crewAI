@@ -3000,3 +3000,119 @@ def test_multimodal_flag_adds_multimodal_tools():
 
         # Verify we have exactly one tool (just the AddImageTool)
         assert len(used_tools) == 1, "Should only have the AddImageTool"
+
+@pytest.mark.vcr(filter_headers=["authorization"])
+def test_multimodal_agent_image_tool_handling():
+    """
+    Test that multimodal agents properly handle image tools in the CrewAgentExecutor
+    """
+    # Create a multimodal agent
+    multimodal_agent = Agent(
+        role="Image Analyst",
+        goal="Analyze images and provide descriptions",
+        backstory="You're an expert at analyzing and describing images.",
+        allow_delegation=False,
+        multimodal=True,
+    )
+
+    # Create a task that involves image analysis
+    task = Task(
+        description="Analyze this image and describe what you see.",
+        expected_output="A detailed description of the image.",
+        agent=multimodal_agent,
+    )
+
+    crew = Crew(agents=[multimodal_agent], tasks=[task])
+
+    # Mock the image tool response
+    mock_image_tool_result = {
+        "role": "user",
+        "content": [
+            {"type": "text", "text": "Please analyze this image"},
+            {
+                "type": "image_url",
+                "image_url": {
+                    "url": "https://example.com/test-image.jpg",
+                },
+            },
+        ],
+    }
+
+    # Create a mock task output for the final result
+    mock_task_output = TaskOutput(
+        description="Mock description",
+        raw="A detailed analysis of the image",
+        agent="Image Analyst"
+    )
+
+    with patch.object(Task, 'execute_sync') as mock_execute_sync:
+        # Set up the mock to return our task output
+        mock_execute_sync.return_value = mock_task_output
+
+        # Execute the crew
+        crew.kickoff()
+
+        # Get the tools that were passed to execute_sync
+        _, kwargs = mock_execute_sync.call_args
+        tools = kwargs['tools']
+
+        # Verify the AddImageTool is present and properly configured
+        image_tools = [tool for tool in tools if tool.name == "Add image to content"]
+        assert len(image_tools) == 1, "Should have exactly one AddImageTool"
+
+        # Test the tool's execution
+        image_tool = image_tools[0]
+        result = image_tool._run(
+            image_url="https://example.com/test-image.jpg",
+            action="Please analyze this image"
+        )
+
+        # Verify the tool returns the expected format
+        assert result == mock_image_tool_result
+        assert result["role"] == "user"
+        assert len(result["content"]) == 2
+        assert result["content"][0]["type"] == "text"
+        assert result["content"][1]["type"] == "image_url"
+
+@pytest.mark.vcr(filter_headers=["authorization"])
+def test_multimodal_agent_live_image_analysis():
+    """
+    Test that multimodal agents can analyze images through a real API call
+    """
+    # Create a multimodal agent
+    image_analyst = Agent(
+        role="Image Analyst",
+        goal="Analyze images with high attention to detail",
+        backstory="You're an expert at visual analysis, trained to notice and describe details in images.",
+        allow_delegation=False,
+        multimodal=True,
+        verbose=True,
+        llm="gpt-4o"
+    )
+
+    # Create a task for image analysis
+    analyze_image = Task(
+        description="""
+        Analyze the provided image and describe what you see in detail.
+        Focus on main elements, colors, composition, and any notable details.
+        Image: {image_url}
+        """,
+        expected_output="A comprehensive description of the image contents.",
+        agent=image_analyst
+    )
+
+    # Create and run the crew
+    crew = Crew(
+        agents=[image_analyst],
+        tasks=[analyze_image]
+    )
+
+    # Execute with an image URL
+    result = crew.kickoff(inputs={
+        "image_url": "https://media.istockphoto.com/id/946087016/photo/aerial-view-of-lower-manhattan-new-york.jpg?s=612x612&w=0&k=20&c=viLiMRznQ8v5LzKTt_LvtfPFUVl1oiyiemVdSlm29_k="
+    })
+
+    # Verify we got a meaningful response
+    assert isinstance(result.raw, str)
+    assert len(result.raw) > 100  # Expecting a detailed analysis
+    assert "error" not in result.raw.lower()  # No error messages in response

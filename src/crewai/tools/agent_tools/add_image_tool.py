@@ -4,31 +4,37 @@ from crewai.tools.base_tool import BaseTool
 
 class AddImageToolSchema(BaseModel):
     image_url: str = Field(..., description="The URL or path of the image to add")
-    action: str = Field(..., description="The context or purpose of why this image is being added and how it should be used")
+    action: str = Field(
+        default="Please provide a detailed description of this image, including all visual elements, context, and any notable details you can observe.",
+        description="Optional context or question about the image"
+    )
 
 
 class AddImageTool(BaseTool):
     """Tool for adding images to the content"""
 
     name: str = "Add image to content"
-    description: str = "See image to understand it's content"
+    description: str = "See image to understand it's content, you can optionally ask a question about the image"
     args_schema: type[BaseModel] = AddImageToolSchema
 
     def _run(
         self,
         image_url: str,
-        action: str,
+        action: str = None,
         **kwargs,
     ) -> dict:
+        action = action or "Please provide a detailed description of this image, including all visual elements, context, and any notable details you can observe."
+        content = [
+            {"type": "text", "text": action},
+            {
+                "type": "image_url",
+                "image_url": {
+                    "url": image_url,
+                },
+            }
+        ]
+
         return {
             "role": "user",
-            "content": [
-                {"type": "text", "text": action},
-                {
-                    "type": "image_url",
-                    "image_url": {
-                        "url": image_url,
-                    },
-                },
-            ],
+            "content": content
         }
