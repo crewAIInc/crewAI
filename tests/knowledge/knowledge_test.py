@@ -5,7 +5,6 @@ from typing import List, Union
 from unittest.mock import patch
 
 import pytest
-
 from crewai.knowledge.source.crew_docling_source import CrewDoclingSource
 from crewai.knowledge.source.csv_knowledge_source import CSVKnowledgeSource
 from crewai.knowledge.source.excel_knowledge_source import ExcelKnowledgeSource

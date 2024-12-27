@@ -3,7 +3,6 @@
 from unittest.mock import Mock
 
 import pytest
-
 from crewai.task import Task
 from crewai.tasks.task_output import TaskOutput
 
