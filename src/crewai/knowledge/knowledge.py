@@ -49,8 +49,13 @@ class Knowledge(BaseModel):
         """
         Query across all knowledge sources to find the most relevant information.
         Returns the top_k most relevant chunks.
-        """
 
+        Raises:
+            ValueError: If no storage is configured for querying.
+        """
+        if self.storage is None:
+            raise ValueError("No storage found to perform query.")
+            
         results = self.storage.search(
             query,
             limit,
