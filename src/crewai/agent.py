@@ -17,6 +17,7 @@ from crewai.memory.contextual.contextual_memory import ContextualMemory
 from crewai.task import Task
 from crewai.tools import BaseTool
 from crewai.tools.agent_tools.agent_tools import AgentTools
+from crewai.tools.base_tool import Tool
 from crewai.utilities import Converter, Prompts
 from crewai.utilities.constants import TRAINED_AGENTS_DATA_FILE, TRAINING_DATA_FILE
 from crewai.utilities.converter import generate_model_description
@@ -410,7 +411,7 @@ class Agent(BaseAgent):
         tools = agent_tools.tools()
         return tools
 
-    def get_multimodal_tools(self):
+    def get_multimodal_tools(self) -> List[Tool]:
         from crewai.tools.agent_tools.add_image_tool import AddImageTool
         return [AddImageTool()]
 
