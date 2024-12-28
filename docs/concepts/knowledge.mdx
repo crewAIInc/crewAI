@@ -171,6 +171,58 @@ crewai reset-memories --knowledge
 
 This is useful when you've updated your knowledge sources and want to ensure that the agents are using the most recent information.
 
+## Agent-Specific Knowledge
+
+While knowledge can be provided at the crew level using `crew.knowledge_sources`, individual agents can also have their own knowledge sources using the `knowledge_sources` parameter:
+
+```python Code
+from crewai import Agent, Task, Crew
+from crewai.knowledge.source.string_knowledge_source import StringKnowledgeSource
+
+# Create agent-specific knowledge about a product
+product_specs = StringKnowledgeSource(
+    content="""The XPS 13 laptop features:
+    - 13.4-inch 4K display
+    - Intel Core i7 processor
+    - 16GB RAM
+    - 512GB SSD storage
+    - 12-hour battery life""",
+    metadata={"category": "product_specs"}
+)
+
+# Create a support agent with product knowledge
+support_agent = Agent(
+    role="Technical Support Specialist",
+    goal="Provide accurate product information and support.",
+    backstory="You are an expert on our laptop products and specifications.",
+    knowledge_sources=[product_specs]  # Agent-specific knowledge
+)
+
+# Create a task that requires product knowledge
+support_task = Task(
+    description="Answer this customer question: {question}",
+    agent=support_agent
+)
+
+# Create and run the crew
+crew = Crew(
+    agents=[support_agent],
+    tasks=[support_task]
+)
+
+# Get answer about the laptop's specifications
+result = crew.kickoff(
+    inputs={"question": "What is the storage capacity of the XPS 13?"}
+)
+```
+
+<Info>
+  Benefits of agent-specific knowledge:
+  - Give agents specialized information for their roles
+  - Maintain separation of concerns between agents
+  - Combine with crew-level knowledge for layered information access
+</Info>
+
 ## Custom Knowledge Sources
 
 CrewAI allows you to create custom knowledge sources for any type of data by extending the `BaseKnowledgeSource` class. Let's create a practical example that fetches and processes space news articles.
