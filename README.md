@@ -42,6 +42,12 @@ CrewAI is a standalone framework, built from the ground up without dependencies 
 
 ## Getting Started
 
+### Learning Resources
+
+Learn CrewAI through our comprehensive courses:
+- [Multi AI Agent Systems with CrewAI](https://www.deeplearning.ai/short-courses/multi-ai-agent-systems-with-crewai/) - Master the fundamentals of multi-agent systems
+- [Practical Multi AI Agents and Advanced Use Cases](https://www.deeplearning.ai/short-courses/practical-multi-ai-agents-and-advanced-use-cases-with-crewai/) - Deep dive into advanced implementations
+
 ### Understanding Flows and Crews
 
 CrewAI offers two powerful, complementary approaches that work seamlessly together to build sophisticated AI applications:
@@ -292,15 +298,14 @@ In addition to the sequential process, you can use the hierarchical process, whi
 
 **Note**: CrewAI is a standalone framework built from the ground up, without dependencies on Langchain or other agent frameworks.
 
-- **Deep Customization**: Build sophisticated agents with customizable roles, goals, tools, and behaviors for precise control over your AI workflows.
+- **Deep Customization**: Build sophisticated agents with full control over the system - from overriding inner prompts to accessing low-level APIs. Customize roles, goals, tools, and behaviors while maintaining clean abstractions.
 - **Autonomous Inter-Agent Delegation**: Agents can autonomously delegate tasks and inquire amongst themselves, enabling complex problem-solving in real-world scenarios.
 - **Flexible Task Management**: Define and customize tasks with granular control, from simple operations to complex multi-step processes.
-- **Production-Grade Architecture**: Support for both high-level abstractions and low-level customization, with robust error handling and secure state management.
-- **Enterprise Security**: End-to-end security features for agent interactions, data handling, and state management in production environments.
-- **Predictable Results**: Ensure consistent, accurate outputs through structured validation and precise execution control.
-- **Model Flexibility**: Run your crew using OpenAI or open source models with secure, production-ready integrations. See [Connect CrewAI to LLMs](https://docs.crewai.com/how-to/LLM-Connections/) for detailed configuration options.
+- **Production-Grade Architecture**: Support for both high-level abstractions and low-level customization, with robust error handling and state management.
+- **Predictable Results**: Ensure consistent, accurate outputs through programmatic guardrails, agent training capabilities, and flow-based execution control. See our [documentation on guardrails](https://docs.crewai.com/how-to/guardrails/) for implementation details.
+- **Model Flexibility**: Run your crew using OpenAI or open source models with production-ready integrations. See [Connect CrewAI to LLMs](https://docs.crewai.com/how-to/LLM-Connections/) for detailed configuration options.
 - **Event-Driven Flows**: Build complex, real-world workflows with precise control over execution paths, state management, and conditional logic.
-- **Process Orchestration**: Support for `sequential` and `hierarchical` processes, with advanced patterns for handling sophisticated business logic.
+- **Process Orchestration**: Achieve any workflow pattern through flows - from simple sequential and hierarchical processes to complex, custom orchestration patterns with conditional branching and parallel execution.
 
 ![CrewAI Mind Map](./docs/crewAI-mindmap.png "CrewAI Mind Map")
 
@@ -437,7 +442,7 @@ Please refer to the [Connect CrewAI to LLMs](https://docs.crewai.com/how-to/LLM-
 
 **CrewAI's Advantage**: CrewAI combines autonomous agent intelligence with precise workflow control through its unique Crews and Flows architecture. The framework excels at both high-level orchestration and low-level customization, enabling complex, production-grade systems with granular control.
 
-- **LangGraph**: CrewAI offers significant advantages over LangGraph in execution control and state management ([see comparison](https://github.com/crewAIInc/crewAI-examples/tree/main/Notebooks/CrewAI%20Flows%20%26%20Langgraph/QA%20Agent)). Our framework reduces boilerplate by 60% while providing enhanced agent autonomy and precise workflow control ([detailed analysis](https://github.com/crewAIInc/crewAI-examples/blob/main/Notebooks/CrewAI%20Flows%20%26%20Langgraph/Coding%20Assistant/coding_assistant_eval.ipynb)).
+- **LangGraph**: CrewAI demonstrates significant performance advantages over LangGraph, executing 5.76x faster in QA tasks ([see comparison](https://github.com/crewAIInc/crewAI-examples/tree/main/Notebooks/CrewAI%20Flows%20%26%20Langgraph/QA%20Agent)) while achieving higher evaluation scores with faster completion times in coding tasks ([detailed analysis](https://github.com/crewAIInc/crewAI-examples/blob/main/Notebooks/CrewAI%20Flows%20%26%20Langgraph/Coding%20Assistant/coding_assistant_eval.ipynb)).
 
 - **Autogen**: While Autogen excels at creating conversational agents capable of working together, it lacks an inherent concept of process. In Autogen, orchestrating agents' interactions requires additional programming, which can become complex and cumbersome as the scale of tasks grows.
 
