@@ -31,6 +31,7 @@ from .rag.rag_tool import RagTool
 from .scrape_element_from_website.scrape_element_from_website import (
     ScrapeElementFromWebsiteTool,
 )
+from .scrapegraph_scrape_tool.scrapegraph_scrape_tool import ScrapeGraphScrapeTool, ScrapegraphScrapeToolSchema
 from .scrape_website_tool.scrape_website_tool import ScrapeWebsiteTool
 from .scrapfly_scrape_website_tool.scrapfly_scrape_website_tool import (
     ScrapflyScrapeWebsiteTool,
