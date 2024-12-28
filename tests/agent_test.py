@@ -1595,19 +1595,15 @@ def test_agent_execute_task_with_ollama():
 @pytest.mark.vcr(filter_headers=["authorization"])
 def test_agent_with_knowledge_sources():
     # Create a knowledge source with some content
-    content = "Brandon's favorite color is blue and he likes Mexican food."
-    string_source = StringKnowledgeSource(
-        content=content, metadata={"preference": "personal"}
-    )
+    content = "Brandon's favorite color is red and he likes Mexican food."
+    string_source = StringKnowledgeSource(content=content)
 
     with patch(
         "crewai.knowledge.storage.knowledge_storage.KnowledgeStorage"
     ) as MockKnowledge:
         mock_knowledge_instance = MockKnowledge.return_value
         mock_knowledge_instance.sources = [string_source]
-        mock_knowledge_instance.query.return_value = [
-            {"content": content, "metadata": {"preference": "personal"}}
-        ]
+        mock_knowledge_instance.query.return_value = [{"content": content}]
 
         agent = Agent(
             role="Information Agent",
@@ -1628,4 +1624,4 @@ def test_agent_with_knowledge_sources():
         result = crew.kickoff()
 
         # Assert that the agent provides the correct information
-        assert "blue" in result.raw.lower()
+        assert "red" in result.raw.lower()

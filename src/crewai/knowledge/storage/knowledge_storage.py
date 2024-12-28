@@ -124,42 +124,59 @@ class KnowledgeStorage(BaseKnowledgeStorage):
         documents: List[str],
         metadata: Optional[Union[Dict[str, Any], List[Dict[str, Any]]]] = None,
     ):
-        if self.collection:
-            try:
-                if metadata is None:
-                    metadatas: Optional[OneOrMany[chromadb.Metadata]] = None
-                elif isinstance(metadata, list):
-                    metadatas = [cast(chromadb.Metadata, m) for m in metadata]
-                else:
-                    metadatas = cast(chromadb.Metadata, metadata)
-
-                ids = [
-                    hashlib.sha256(doc.encode("utf-8")).hexdigest() for doc in documents
-                ]
-
-                self.collection.upsert(
-                    documents=documents,
-                    metadatas=metadatas,
-                    ids=ids,
-                )
-            except chromadb.errors.InvalidDimensionException as e:
-                Logger(verbose=True).log(
-                    "error",
-                    "Embedding dimension mismatch. This usually happens when mixing different embedding models. Try resetting the collection using `crewai reset-memories -a`",
-                    "red",
-                )
-                raise ValueError(
-                    "Embedding dimension mismatch. Make sure you're using the same embedding model "
-                    "across all operations with this collection."
-                    "Try resetting the collection using `crewai reset-memories -a`"
-                ) from e
-            except Exception as e:
-                Logger(verbose=True).log(
-                    "error", f"Failed to upsert documents: {e}", "red"
-                )
-                raise
-        else:
+        if not self.collection:
             raise Exception("Collection not initialized")
+
+        try:
+            # Create a dictionary to store unique documents
+            unique_docs = {}
+
+            # Generate IDs and create a mapping of id -> (document, metadata)
+            for idx, doc in enumerate(documents):
+                doc_id = hashlib.sha256(doc.encode("utf-8")).hexdigest()
+                doc_metadata = None
+                if metadata is not None:
+                    if isinstance(metadata, list):
+                        doc_metadata = metadata[idx]
+                    else:
+                        doc_metadata = metadata
+                unique_docs[doc_id] = (doc, doc_metadata)
+
+            # Prepare filtered lists for ChromaDB
+            filtered_docs = []
+            filtered_metadata = []
+            filtered_ids = []
+
+            # Build the filtered lists
+            for doc_id, (doc, meta) in unique_docs.items():
+                filtered_docs.append(doc)
+                filtered_metadata.append(meta)
+                filtered_ids.append(doc_id)
+
+            # If we have no metadata at all, set it to None
+            final_metadata: Optional[OneOrMany[chromadb.Metadata]] = (
+                None if all(m is None for m in filtered_metadata) else filtered_metadata
+            )
+
+            self.collection.upsert(
+                documents=filtered_docs,
+                metadatas=final_metadata,
+                ids=filtered_ids,
+            )
+        except chromadb.errors.InvalidDimensionException as e:
+            Logger(verbose=True).log(
+                "error",
+                "Embedding dimension mismatch. This usually happens when mixing different embedding models. Try resetting the collection using `crewai reset-memories -a`",
+                "red",
+            )
+            raise ValueError(
+                "Embedding dimension mismatch. Make sure you're using the same embedding model "
+                "across all operations with this collection."
+                "Try resetting the collection using `crewai reset-memories -a`"
+            ) from e
+        except Exception as e:
+            Logger(verbose=True).log("error", f"Failed to upsert documents: {e}", "red")
+            raise
 
     def _create_default_embedding_function(self):
         from chromadb.utils.embedding_functions.openai_embedding_function import (
