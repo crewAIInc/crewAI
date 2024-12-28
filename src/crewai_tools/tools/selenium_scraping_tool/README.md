@@ -24,6 +24,16 @@ tool = SeleniumScrapingTool(website_url='https://example.com', css_element='.mai
 
 # Example 4: Scrape using optional parameters for customized scraping
 tool = SeleniumScrapingTool(website_url='https://example.com', css_element='.main-content', cookie={'name': 'user', 'value': 'John Doe'})
+
+# Example 5: Scrape content in HTML format
+tool = SeleniumScrapingTool(website_url='https://example.com', return_html=True)
+result = tool._run()
+# Returns HTML content like: ['<div class="content">Hello World</div>', '<div class="footer">Copyright 2024</div>']
+
+# Example 6: Scrape content in text format (default)
+tool = SeleniumScrapingTool(website_url='https://example.com', return_html=False)
+result = tool._run()
+# Returns text content like: ['Hello World', 'Copyright 2024']
 ```
 
 ## Arguments
