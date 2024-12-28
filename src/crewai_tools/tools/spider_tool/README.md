@@ -1,81 +1,87 @@
 # SpiderTool
 
 ## Description
-
-[Spider](https://spider.cloud/?ref=crewai) is the [fastest](https://github.com/spider-rs/spider/blob/main/benches/BENCHMARKS.md#benchmark-results) open source scraper and crawler that returns LLM-ready data. It converts any website into pure HTML, markdown, metadata or text while enabling you to crawl with custom actions using AI.
+[Spider](https://spider.cloud/?ref=crewai) is a high-performance web scraping and crawling tool that delivers optimized markdown for LLMs and AI agents. It intelligently switches between HTTP requests and JavaScript rendering based on page requirements. Perfect for both single-page scraping and website crawling—making it ideal for content extraction and data collection.
 
 ## Installation
-
-To use the Spider API you need to download the [Spider SDK](https://pypi.org/project/spider-client/) and the crewai[tools] SDK too:
+To use the Spider API you need to download the [Spider SDK](https://pypi.org/project/spider-client/) and the crewai[tools] SDK, too:
 
 ```python
 pip install spider-client 'crewai[tools]'
 ```
 
 ## Example
-
-This example shows you how you can use the Spider tool to enable your agent to scrape and crawl websites. The data returned from the Spider API is already LLM-ready, so no need to do any cleaning there.
+This example shows you how you can use the Spider tool to enable your agent to scrape and crawl websites. The data returned from the Spider API is LLM-ready.
 
 ```python
 from crewai_tools import SpiderTool
 
-def main():
-    spider_tool = SpiderTool()
-    
-    searcher = Agent(
-        role="Web Research Expert",
-        goal="Find related information from specific URL's",
-        backstory="An expert web researcher that uses the web extremely well",
-        tools=[spider_tool],
-        verbose=True,
-    )
+# To enable scraping any website it finds during its execution
+spider_tool = SpiderTool(api_key='YOUR_API_KEY')
 
-    return_metadata = Task(
-        description="Scrape https://spider.cloud with a limit of 1 and enable metadata",
-        expected_output="Metadata and 10 word summary of spider.cloud",
-        agent=searcher
-    )
+# Initialize the tool with the website URL, so the agent can only scrape the content of the specified website
+spider_tool = SpiderTool(website_url='https://spider.cloud')
 
-    crew = Crew(
-        agents=[searcher],
-        tasks=[
-            return_metadata, 
-        ],
-        verbose=2
-    )
-    
-    crew.kickoff()
+# Pass in custom parameters, see below for more details
+spider_tool = SpiderTool(
+    website_url='https://spider.cloud',
+    custom_params={"depth": 2, "anti_bot": True, "proxy_enabled": True}
+)
 
-if __name__ == "__main__":
-    main()
+# Advanced usage using css query selector to extract content
+css_extraction_map = {
+    "/": [ # pass in path (main index in this case)
+        {
+            "name": "headers", # give it a name for this element
+            "selectors": [
+                "h1"
+            ]
+        }
+    ]
+}
+
+spider_tool = SpiderTool(
+    website_url='https://spider.cloud',
+    custom_params={"anti_bot": True, "proxy_enabled": True, "metadata": True, "css_extraction_map": css_extraction_map}
+)
+
+### Response (extracted text will be in the metadata)
+"css_extracted": {
+    "headers": [
+        "The Web Crawler for AI Agents and LLMs!"
+    ]
+}
+```
+## Agent setup
+```yaml
+researcher:
+  role: >
+    You're a researcher that is tasked with researching a website and it's content (use crawl mode). The website is to crawl is: {website_url}.
 ```
 
 ## Arguments
 
 - `api_key` (string, optional): Specifies Spider API key. If not specified, it looks for `SPIDER_API_KEY` in environment variables.
-- `params` (object, optional): Optional parameters for the request. Defaults to `{"return_format": "markdown"}` to return the website's content in a format that fits LLMs better.
+- `website_url` (string): The website URL. Will be used as a fallback if passed when the tool is initialized.
+- `log_failures` (bool): Log scrape failures or fail silently. Defaults to `true`.
+- `custom_params` (object, optional): Optional parameters for the request.
+    - `return_format` (string): The return format of the website's content. Defaults to `markdown`.
     - `request` (string): The request type to perform. Possible values are `http`, `chrome`, and `smart`. Use `smart` to perform an HTTP request by default until JavaScript rendering is needed for the HTML.
     - `limit` (int): The maximum number of pages allowed to crawl per website. Remove the value or set it to `0` to crawl all pages.
     - `depth` (int): The crawl limit for maximum depth. If `0`, no limit will be applied.
-    - `cache` (bool): Use HTTP caching for the crawl to speed up repeated runs. Default is `true`.
-    - `budget` (object): Object that has paths with a counter for limiting the amount of pages example `{"*":1}` for only crawling the root page.
     - `locale` (string): The locale to use for request, example `en-US`.
     - `cookies` (string): Add HTTP cookies to use for request.
     - `stealth` (bool): Use stealth mode for headless chrome request to help prevent being blocked. The default is `true` on chrome.
     - `headers` (object): Forward HTTP headers to use for all request. The object is expected to be a map of key value pairs.
-    - `metadata` (bool): Boolean to store metadata about the pages and content found. This could help improve AI interopt. Defaults to `false` unless you have the website already stored with the configuration enabled.
-    - `viewport` (object): Configure the viewport for chrome. Defaults to `800x600`.
-    - `encoding` (string): The type of encoding to use like `UTF-8`, `SHIFT_JIS`, or etc.
+    - `metadata` (bool): Boolean to store metadata about the pages and content found. Defaults to `false`.
     - `subdomains` (bool): Allow subdomains to be included. Default is `false`.
     - `user_agent` (string): Add a custom HTTP user agent to the request. By default this is set to a random agent.
-    - `store_data` (bool): Boolean to determine if storage should be used. If set this takes precedence over `storageless`. Defaults to `false`.
-    - `gpt_config` (object): Use AI to generate actions to perform during the crawl. You can pass an array for the `"prompt"` to chain steps.
-    - `fingerprint` (bool): Use advanced fingerprint for chrome.
-    - `storageless` (bool): Boolean to prevent storing any type of data for the request including storage and AI vectors embedding. Defaults to `false` unless you have the website already stored.
-    - `readability` (bool): Use [readability](https://github.com/mozilla/readability) to pre-process the content for reading. This may drastically improve the content for LLM usage.
-    `return_format` (string): The format to return the data in. Possible values are `markdown`, `raw`, `text`, and `html2text`. Use `raw` to return the default format of the page like HTML etc.
     - `proxy_enabled` (bool): Enable high performance premium proxies for the request to prevent being blocked at the network level.
-    - `query_selector` (string): The CSS query selector to use when extracting content from the markup.
-    - `full_resources` (bool): Crawl and download all the resources for a website.
+    - `css_extraction_map` (object): Use CSS or XPath selectors to scrape contents from the web page. Set the paths and the extraction object map to perform extractions per path or page.
     - `request_timeout` (int): The timeout to use for request. Timeouts can be from `5-60`. The default is `30` seconds.
-    - `run_in_background` (bool): Run the request in the background. Useful if storing data and wanting to trigger crawls to the dashboard. This has no effect if storageless is set.
+    - `return_headers` (bool): Return the HTTP response headers with the results. Defaults to `false`.
+    - `filter_output_main_only` (bool): Filter the nav, aside, and footer from the output.
+    - `headers` (object): Forward HTTP headers to use for all request. The object is expected to be a map of key value pairs.
+
+Learn other parameters that can be used: [https://spider.cloud/docs/api](https://spider.cloud/docs/api)
+
