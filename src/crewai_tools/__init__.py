@@ -17,6 +17,7 @@ from .tools import (
     FirecrawlSearchTool,
     GithubSearchTool,
     JSONSearchTool,
+    LinkupSearchTool,
     LlamaIndexTool,
     MDXSearchTool,
     MultiOnTool,
