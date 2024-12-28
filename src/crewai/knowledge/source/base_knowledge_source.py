@@ -46,4 +46,7 @@ class BaseKnowledgeSource(BaseModel, ABC):
         Save the documents to the storage.
         This method should be called after the chunks and embeddings are generated.
         """
-        self.storage.save(self.chunks)
+        if self.storage:
+            self.storage.save(self.chunks)
+        else:
+            raise ValueError("No storage found to save documents.")

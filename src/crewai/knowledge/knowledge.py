@@ -14,7 +14,7 @@ class Knowledge(BaseModel):
     Knowledge is a collection of sources and setup for the vector store to save and query relevant context.
     Args:
         sources: List[BaseKnowledgeSource] = Field(default_factory=list)
-        storage: KnowledgeStorage = Field(default_factory=KnowledgeStorage)
+        storage: Optional[KnowledgeStorage] = Field(default=None)
         embedder_config: Optional[Dict[str, Any]] = None
     """
 

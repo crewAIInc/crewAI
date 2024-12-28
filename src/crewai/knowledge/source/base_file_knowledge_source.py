@@ -62,7 +62,10 @@ class BaseFileKnowledgeSource(BaseKnowledgeSource, ABC):
 
     def _save_documents(self):
         """Save the documents to the storage."""
-        self.storage.save(self.chunks)
+        if self.storage:
+            self.storage.save(self.chunks)
+        else:
+            raise ValueError("No storage found to save documents.")
 
     def convert_to_path(self, path: Union[Path, str]) -> Path:
         """Convert a path to a Path object."""
