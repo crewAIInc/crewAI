@@ -14,13 +14,13 @@ class Knowledge(BaseModel):
     Knowledge is a collection of sources and setup for the vector store to save and query relevant context.
     Args:
         sources: List[BaseKnowledgeSource] = Field(default_factory=list)
-        storage: KnowledgeStorage = Field(default_factory=KnowledgeStorage)
+        storage: Optional[KnowledgeStorage] = Field(default=None)
         embedder_config: Optional[Dict[str, Any]] = None
     """
 
     sources: List[BaseKnowledgeSource] = Field(default_factory=list)
     model_config = ConfigDict(arbitrary_types_allowed=True)
-    storage: KnowledgeStorage = Field(default_factory=KnowledgeStorage)
+    storage: Optional[KnowledgeStorage] = Field(default=None)
     embedder_config: Optional[Dict[str, Any]] = None
     collection_name: Optional[str] = None
 
@@ -49,8 +49,13 @@ class Knowledge(BaseModel):
         """
         Query across all knowledge sources to find the most relevant information.
         Returns the top_k most relevant chunks.
+        
+        Raises:
+            ValueError: If storage is not initialized.
         """
-
+        if self.storage is None:
+            raise ValueError("Storage is not initialized.")
+            
         results = self.storage.search(
             query,
             limit,

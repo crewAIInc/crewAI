@@ -29,7 +29,7 @@ Large Language Models (LLMs) are the core intelligence behind CrewAI agents. The
 
 ## Available Models and Their Capabilities
 
-Here's a detailed breakdown of supported models and their capabilities, you can compare performance at [lmarena.ai](https://lmarena.ai/):
+Here's a detailed breakdown of supported models and their capabilities, you can compare performance at [lmarena.ai](https://lmarena.ai/?leaderboard) and [artificialanalysis.ai](https://artificialanalysis.ai/):
 
 <Tabs>
   <Tab title="OpenAI">
@@ -121,12 +121,18 @@ Here's a detailed breakdown of supported models and their capabilities, you can 
   <Tab title="Gemini">
     | Model | Context Window | Best For |
     |-------|---------------|-----------|
-    | Gemini 1.5 Flash | 1M tokens | Balanced multimodal model, good for most tasks |
-    | Gemini 1.5 Flash 8B | 1M tokens | Fastest, most cost-efficient, good for high-frequency tasks |
-    | Gemini 1.5 Pro | 2M tokens | Best performing, wide variety of reasoning tasks including logical reasoning, coding, and creative collaboration |
+    | gemini-2.0-flash-exp | 1M tokens | Higher quality at faster speed, multimodal model, good for most tasks |
+    | gemini-1.5-flash | 1M tokens | Balanced multimodal model, good for most tasks |
+    | gemini-1.5-flash-8B | 1M tokens | Fastest, most cost-efficient, good for high-frequency tasks |
+    | gemini-1.5-pro | 2M tokens | Best performing, wide variety of reasoning tasks including logical reasoning, coding, and creative collaboration |
 
     <Tip>
       Google's Gemini models are all multimodal, supporting audio, images, video and text, supporting context caching, json schema, function calling, etc.
+
+      These models are available via API_KEY from 
+      [The Gemini API](https://ai.google.dev/gemini-api/docs) and also from 
+      [Google Cloud Vertex](https://cloud.google.com/vertex-ai/generative-ai/docs/migrate/migrate-google-ai) as part of the
+      [Model Garden](https://cloud.google.com/vertex-ai/generative-ai/docs/model-garden/explore-models).
     </Tip>
   </Tab>
   <Tab title="Groq">
@@ -135,7 +141,6 @@ Here's a detailed breakdown of supported models and their capabilities, you can 
     | Llama 3.1 70B/8B | 131,072 tokens | High-performance, large context tasks |
     | Llama 3.2 Series | 8,192 tokens | General-purpose tasks |
     | Mixtral 8x7B | 32,768 tokens | Balanced performance and context |
-    | Gemma Series | 8,192 tokens | Efficient, smaller-scale tasks |
 
     <Tip>
       Groq is known for its fast inference speeds, making it suitable for real-time applications.
@@ -146,7 +151,7 @@ Here's a detailed breakdown of supported models and their capabilities, you can 
     |----------|---------------|--------------|
     | Deepseek Chat | 128,000 tokens | Specialized in technical discussions |
     | Claude 3 | Up to 200K tokens | Strong reasoning, code understanding |
-    | Gemini | Varies by model | Multimodal capabilities |
+    | Gemma Series | 8,192 tokens | Efficient, smaller-scale tasks |
 
     <Info>
       Provider selection should consider factors like:

@@ -94,12 +94,14 @@ def add_edges(net, flow, node_positions, colors):
     ancestors = build_ancestor_dict(flow)
     parent_children = build_parent_children_dict(flow)
 
+    # Edges for normal listeners
     for method_name in flow._listeners:
         condition_type, trigger_methods = flow._listeners[method_name]
         is_and_condition = condition_type == "AND"
 
         for trigger in trigger_methods:
-            if trigger in flow._methods or trigger in flow._routers.values():
+            # Check if nodes exist before adding edges
+            if trigger in node_positions and method_name in node_positions:
                 is_router_edge = any(
                     trigger in paths for paths in flow._router_paths.values()
                 )
@@ -135,7 +137,22 @@ def add_edges(net, flow, node_positions, colors):
                 }
 
                 net.add_edge(trigger, method_name, **edge_style)
+            else:
+                # Nodes not found in node_positions. Check if it's a known router outcome and a known method.
+                is_router_edge = any(
+                    trigger in paths for paths in flow._router_paths.values()
+                )
+                # Check if method_name is a known method
+                method_known = method_name in flow._methods
 
+                # If it's a known router edge and the method is known, don't warn.
+                # This means the path is legitimate, just not reflected as nodes here.
+                if not (is_router_edge and method_known):
+                    print(
+                        f"Warning: No node found for '{trigger}' or '{method_name}'. Skipping edge."
+                    )
+
+    # Edges for router return paths
     for router_method_name, paths in flow._router_paths.items():
         for path in paths:
             for listener_name, (
@@ -143,36 +160,49 @@ def add_edges(net, flow, node_positions, colors):
                 trigger_methods,
             ) in flow._listeners.items():
                 if path in trigger_methods:
-                    is_cycle_edge = is_ancestor(trigger, method_name, ancestors)
-                    parent_has_multiple_children = (
-                        len(parent_children.get(router_method_name, [])) > 1
-                    )
-                    needs_curvature = is_cycle_edge or parent_has_multiple_children
+                    if (
+                        router_method_name in node_positions
+                        and listener_name in node_positions
+                    ):
+                        is_cycle_edge = is_ancestor(
+                            router_method_name, listener_name, ancestors
+                        )
+                        parent_has_multiple_children = (
+                            len(parent_children.get(router_method_name, [])) > 1
+                        )
+                        needs_curvature = is_cycle_edge or parent_has_multiple_children
 
-                    if needs_curvature:
-                        source_pos = node_positions.get(router_method_name)
-                        target_pos = node_positions.get(listener_name)
+                        if needs_curvature:
+                            source_pos = node_positions.get(router_method_name)
+                            target_pos = node_positions.get(listener_name)
 
-                        if source_pos and target_pos:
-                            dx = target_pos[0] - source_pos[0]
-                            smooth_type = "curvedCCW" if dx <= 0 else "curvedCW"
-                            index = get_child_index(
-                                router_method_name, listener_name, parent_children
-                            )
-                            edge_smooth = {
-                                "type": smooth_type,
-                                "roundness": 0.2 + (0.1 * index),
-                            }
+                            if source_pos and target_pos:
+                                dx = target_pos[0] - source_pos[0]
+                                smooth_type = "curvedCCW" if dx <= 0 else "curvedCW"
+                                index = get_child_index(
+                                    router_method_name, listener_name, parent_children
+                                )
+                                edge_smooth = {
+                                    "type": smooth_type,
+                                    "roundness": 0.2 + (0.1 * index),
+                                }
+                            else:
+                                edge_smooth = {"type": "cubicBezier"}
                         else:
-                            edge_smooth = {"type": "cubicBezier"}
-                    else:
-                        edge_smooth = False
+                            edge_smooth = False
 
-                    edge_style = {
-                        "color": colors["router_edge"],
-                        "width": 2,
-                        "arrows": "to",
-                        "dashes": True,
-                        "smooth": edge_smooth,
-                    }
-                    net.add_edge(router_method_name, listener_name, **edge_style)
+                        edge_style = {
+                            "color": colors["router_edge"],
+                            "width": 2,
+                            "arrows": "to",
+                            "dashes": True,
+                            "smooth": edge_smooth,
+                        }
+                        net.add_edge(router_method_name, listener_name, **edge_style)
+                    else:
+                        # Same check here: known router edge and known method?
+                        method_known = listener_name in flow._methods
+                        if not method_known:
+                            print(
+                                f"Warning: No node found for '{router_method_name}' or '{listener_name}'. Skipping edge."
+                            )

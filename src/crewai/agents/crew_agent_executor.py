@@ -143,10 +143,20 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
                         tool_result = self._execute_tool_and_check_finality(
                             formatted_answer
                         )
-                        if self.step_callback:
-                            self.step_callback(tool_result)
 
-                        formatted_answer.text += f"\nObservation: {tool_result.result}"
+                        # Directly append the result to the messages if the
+                        # tool is "Add image to content" in case of multimodal
+                        # agents
+                        if formatted_answer.tool == self._i18n.tools("add_image")["name"]:
+                            self.messages.append(tool_result.result)
+                            continue
+
+                        else:
+                            if self.step_callback:
+                                self.step_callback(tool_result)
+
+                            formatted_answer.text += f"\nObservation: {tool_result.result}"
+
                         formatted_answer.result = tool_result.result
                         if tool_result.result_as_answer:
                             return AgentFinish(

@@ -44,6 +44,7 @@ LLM_CONTEXT_WINDOW_SIZES = {
     "o1-preview": 128000,
     "o1-mini": 128000,
     # gemini
+    "gemini-2.0-flash": 1048576,
     "gemini-1.5-pro": 2097152,
     "gemini-1.5-flash": 1048576,
     "gemini-1.5-flash-8b": 1048576,
@@ -63,6 +64,8 @@ LLM_CONTEXT_WINDOW_SIZES = {
     "llama3-70b-8192": 8192,
     "llama3-8b-8192": 8192,
     "mixtral-8x7b-32768": 32768,
+    "llama-3.3-70b-versatile": 128000,
+    "llama-3.3-70b-instruct": 128000,
 }
 
 DEFAULT_CONTEXT_WINDOW_SIZE = 8192
