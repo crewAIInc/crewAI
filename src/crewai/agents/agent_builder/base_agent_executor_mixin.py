@@ -26,7 +26,7 @@ class CrewAgentExecutorMixin:
 
     def _should_force_answer(self) -> bool:
         """Determine if a forced answer is required based on iteration count."""
-        return (self.iterations >= self.max_iter) and not self.have_forced_answer
+        return self.iterations >= self.max_iter
 
     def _create_short_term_memory(self, output) -> None:
         """Create and save a short-term memory item if conditions are met."""
