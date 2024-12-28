@@ -23,11 +23,11 @@ To install the JSONSearchTool, use the following pip command:
 pip install 'crewai[tools]'
 ```
 
-## Usage Examples
+## Example
 
 Here are updated examples on how to utilize the JSONSearchTool effectively for searching within JSON files. These examples take into account the current implementation and usage patterns identified in the codebase.
 
-```python Code
+```python
 from crewai.json_tools import JSONSearchTool  # Updated import path
 
 # General JSON content search
@@ -47,7 +47,7 @@ tool = JSONSearchTool(json_path='./path/to/your/file.json')
 
 The JSONSearchTool supports extensive customization through a configuration dictionary. This allows users to select different models for embeddings and summarization based on their requirements.
 
-```python Code
+```python
 tool = JSONSearchTool(
     config={
         "llm": {

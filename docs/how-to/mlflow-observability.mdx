@@ -1,0 +1,196 @@
+---
+title: Agent Monitoring with MLFlow
+description: How to monitor and track CrewAI Agents using MLFlow for experiment tracking and model registry.
+icon: chart-line
+---
+
+# Introduction
+
+MLFlow is an open-source platform for managing the end-to-end machine learning lifecycle. When integrated with CrewAI, it provides powerful capabilities for tracking agent performance, logging metrics, and managing experiments. This guide demonstrates how to implement precise monitoring and tracking of your CrewAI agents using MLFlow.
+
+## MLFlow Integration
+
+MLFlow offers comprehensive experiment tracking and model registry capabilities that complement CrewAI's agent-based workflows:
+
+- **Experiment Tracking**: Monitor agent performance metrics and execution patterns
+- **Metric Logging**: Track costs, latency, and success rates
+- **Artifact Management**: Store and version agent configurations and outputs
+- **Model Registry**: Maintain different versions of agent configurations
+
+### Features
+
+- **Real-time Monitoring**: Track agent performance as tasks are executed
+- **Metric Collection**: Gather detailed statistics on agent operations
+- **Experiment Organization**: Group related agent runs for comparison
+- **Resource Tracking**: Monitor computational and token usage
+- **Custom Metrics**: Define and track domain-specific performance indicators
+
+## Getting Started
+
+<Steps>
+   <Step title="Install Dependencies">
+      Install MLFlow alongside CrewAI:
+      ```bash
+      pip install mlflow crewai
+      ```
+   </Step>
+   <Step title="Configure MLFlow">
+      Set up MLFlow tracking in your environment:
+      ```python
+      import mlflow
+      from crewai import Agent, Task, Crew
+      
+      # Configure MLFlow tracking
+      mlflow.set_tracking_uri("http://localhost:5000")
+      mlflow.set_experiment("crewai-agents")
+      ```
+   </Step>
+   <Step title="Create Tracking Callbacks">
+      Implement MLFlow callbacks for monitoring:
+      ```python
+      class MLFlowCallback:
+          def __init__(self):
+              self.start_time = time.time()
+              
+          def on_step(self, agent, task, step_number, step_input, step_output):
+              mlflow.log_metrics({
+                  "step_number": step_number,
+                  "step_duration": time.time() - self.start_time,
+                  "output_length": len(step_output)
+              })
+              
+          def on_task(self, agent, task, output):
+              mlflow.log_metrics({
+                  "task_duration": time.time() - self.start_time,
+                  "final_output_length": len(output)
+              })
+              mlflow.log_param("task_description", task.description)
+      ```
+   </Step>
+   <Step title="Integrate with CrewAI">
+      Apply MLFlow tracking to your CrewAI agents:
+      ```python
+      # Create MLFlow callback
+      mlflow_callback = MLFlowCallback()
+      
+      # Create agent with tracking
+      researcher = Agent(
+          role='Researcher',
+          goal='Conduct market analysis',
+          backstory='Expert market researcher with deep analytical skills',
+          step_callback=mlflow_callback.on_step
+      )
+      
+      # Create crew with tracking
+      crew = Crew(
+          agents=[researcher],
+          tasks=[...],
+          task_callback=mlflow_callback.on_task
+      )
+      
+      # Execute with MLFlow tracking
+      with mlflow.start_run():
+          result = crew.kickoff()
+      ```
+   </Step>
+</Steps>
+
+## Advanced Usage
+
+### Custom Metric Tracking
+
+Track specific metrics relevant to your use case:
+
+```python
+class CustomMLFlowCallback:
+    def __init__(self):
+        self.metrics = {}
+        
+    def on_step(self, agent, task, step_number, step_input, step_output):
+        # Track custom metrics
+        self.metrics[f"agent_{agent.role}_steps"] = step_number
+        
+        # Log tool usage
+        if hasattr(task, 'tools'):
+            for tool in task.tools:
+                mlflow.log_param(f"tool_used_{step_number}", tool.name)
+        
+        # Track token usage
+        mlflow.log_metric(
+            f"step_{step_number}_tokens",
+            len(step_output)
+        )
+```
+
+### Experiment Organization
+
+Group related experiments for better analysis:
+
+```python
+def run_agent_experiment(agent_config, task_config):
+    with mlflow.start_run(
+        run_name=f"agent_experiment_{agent_config['role']}"
+    ) as run:
+        # Log configuration
+        mlflow.log_params(agent_config)
+        mlflow.log_params(task_config)
+        
+        # Create and run agent
+        agent = Agent(**agent_config)
+        task = Task(**task_config)
+        
+        # Execute and log results
+        result = agent.execute(task)
+        mlflow.log_metric("execution_time", task.execution_time)
+        
+        return result
+```
+
+## Best Practices
+
+1. **Structured Logging**
+   - Use consistent metric names across experiments
+   - Group related metrics using common prefixes
+   - Include timestamps for temporal analysis
+
+2. **Resource Monitoring**
+   - Track token usage per agent and task
+   - Monitor execution time for performance optimization
+   - Log tool usage patterns and success rates
+
+3. **Experiment Organization**
+   - Use meaningful experiment names
+   - Group related runs under the same experiment
+   - Tag runs with relevant metadata
+
+4. **Performance Optimization**
+   - Monitor agent efficiency metrics
+   - Track resource utilization
+   - Identify bottlenecks in task execution
+
+## Viewing Results
+
+Access your MLFlow dashboard to analyze agent performance:
+
+1. Start the MLFlow UI:
+   ```bash
+   mlflow ui --port 5000
+   ```
+
+2. Open your browser and navigate to `http://localhost:5000`
+
+3. View experiment results including:
+   - Agent performance metrics
+   - Task execution times
+   - Resource utilization
+   - Custom metrics and parameters
+
+## Security Considerations
+
+- Ensure sensitive data is properly sanitized before logging
+- Use appropriate access controls for MLFlow server
+- Monitor and audit logged information regularly
+
+## Conclusion
+
+MLFlow integration provides comprehensive monitoring and experimentation capabilities for CrewAI agents. By following these guidelines and best practices, you can effectively track, analyze, and optimize your agent-based workflows while maintaining security and efficiency.

@@ -29,7 +29,9 @@ pip install 'crewai[tools]'
 Here are two examples demonstrating how to use the XMLSearchTool. 
 The first example shows searching within a specific XML file, while the second example illustrates initiating a search without predefining an XML path, providing flexibility in search scope.
 
-```python Code
+Note: The tool uses RAG (Retrieval-Augmented Generation) to perform semantic search within XML content, so results will include relevant context from the XML file based on the search query.
+
+```python
 from crewai_tools import XMLSearchTool
 
 # Allow agents to search within any XML file's content 
@@ -47,12 +49,15 @@ tool = XMLSearchTool(xml='path/to/your/xmlfile.xml')
 
 - `xml`: This is the path to the XML file you wish to search. 
 It is an optional parameter during the tool's initialization but must be provided either at initialization or as part of the `run` method's arguments to execute a search.
+- `search_query`: The query string to search for within the XML content. This is a required parameter when running the search.
+
+The tool inherits from `RagTool` which provides advanced RAG (Retrieval-Augmented Generation) capabilities for semantic search within XML content.
 
 ## Custom model and embeddings
 
 By default, the tool uses OpenAI for both embeddings and summarization. To customize the model, you can use a config dictionary as follows:
 
-```python Code  
+```python
 tool = XMLSearchTool(
     config=dict(
         llm=dict(

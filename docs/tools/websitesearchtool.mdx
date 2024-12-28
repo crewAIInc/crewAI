@@ -27,11 +27,11 @@ pip install 'crewai[tools]'
 
 This command installs the necessary dependencies to ensure that once the tool is fully integrated, users can start using it immediately.
 
-## Example Usage
+## Example
 
 Below are examples of how the WebsiteSearchTool could be utilized in different scenarios. Please note, these examples are illustrative and represent planned functionality:
 
-```python Code
+```python
 from crewai_tools import WebsiteSearchTool
 
 # Example of initiating tool that agents can use 
@@ -52,7 +52,7 @@ tool = WebsiteSearchTool(website='https://example.com')
 By default, the tool uses OpenAI for both embeddings and summarization. To customize the model, you can use a config dictionary as follows:
 
 
-```python Code
+```python
 tool = WebsiteSearchTool(
     config=dict(
         llm=dict(

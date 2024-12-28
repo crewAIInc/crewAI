@@ -27,7 +27,7 @@ The following example demonstrates how to initialize the tool and execute a gith
 
 1. Initialize Composio tools
 
-```python Code
+```python
 from composio import App
 from crewai_tools import ComposioTool
 from crewai import Agent, Task
@@ -38,19 +38,19 @@ tools = [ComposioTool.from_action(action=Action.GITHUB_ACTIVITY_STAR_REPO_FOR_AU
 
 If you don't know what action you want to use, use `from_app` and `tags` filter to get relevant actions
 
-```python Code
+```python
 tools = ComposioTool.from_app(App.GITHUB, tags=["important"])
 ```
 
 or use `use_case` to search relevant actions
 
-```python Code
+```python
 tools = ComposioTool.from_app(App.GITHUB, use_case="Star a github repository")
 ```
 
 2. Define agent
 
-```python Code
+```python
 crewai_agent = Agent(
     role="Github Agent",
     goal="You take action on Github using Github APIs",
@@ -65,7 +65,7 @@ crewai_agent = Agent(
 
 3. Execute task
 
-```python Code
+```python
 task = Task(
     description="Star a repo ComposioHQ/composio on GitHub",
     agent=crewai_agent,

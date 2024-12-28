@@ -22,11 +22,13 @@ Before using the MDX Search Tool, ensure the `crewai_tools` package is installed
 pip install 'crewai[tools]'
 ```
 
-## Usage Example
+## Example
 
-To use the MDX Search Tool, you must first set up the necessary environment variables. Then, integrate the tool into your crewAI project to begin your market research. Below is a basic example of how to do this:
+To use the MDX Search Tool, you must first set up the necessary environment variables for your chosen LLM and embeddings providers (e.g., OpenAI API key if using the default configuration). Then, integrate the tool into your crewAI project as shown in the examples below.
 
-```python Code
+The tool will perform semantic search using RAG technology to find and extract relevant content from your MDX files based on the search query:
+
+```python
 from crewai_tools import MDXSearchTool
 
 # Initialize the tool to search any MDX content it learns about during execution
@@ -40,13 +42,16 @@ tool = MDXSearchTool(mdx='path/to/your/document.mdx')
 
 ## Parameters
 
-- mdx: **Optional**. Specifies the MDX file path for the search. It can be provided during initialization.
+- `mdx`: **Optional**. Specifies the MDX file path for the search. It can be provided during initialization or when running the search.
+- `search_query`: **Required**. The query string to search for within the MDX content.
+
+The tool inherits from `RagTool` which provides advanced RAG (Retrieval-Augmented Generation) capabilities for semantic search within MDX content.
 
 ## Customization of Model and Embeddings
 
 The tool defaults to using OpenAI for embeddings and summarization. For customization, utilize a configuration dictionary as shown below:
 
-```python Code
+```python
 tool = MDXSearchTool(
     config=dict(
         llm=dict(

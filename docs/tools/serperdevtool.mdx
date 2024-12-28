@@ -27,7 +27,7 @@ pip install 'crewai[tools]'
 
 The following example demonstrates how to initialize the tool and execute a search with a given query:
 
-```python Code
+```python
 from crewai_tools import SerperDevTool
 
 # Initialize the tool for internet searching capabilities
@@ -44,22 +44,27 @@ To effectively use the `SerperDevTool`, follow these steps:
 
 ## Parameters
 
-The `SerperDevTool` comes with several parameters that will be passed to the API :
+The `SerperDevTool` comes with several parameters that can be configured:
 
-- **search_url**: The URL endpoint for the search API. (Default is `https://google.serper.dev/search`)
+- **base_url**: The base URL for the Serper API. Default is `https://google.serper.dev`.
+- **n_results**: Number of search results to return. Default is `10`.
+- **save_file**: Boolean flag to save search results to a file. Default is `False`.
+- **search_type**: Type of search to perform. Can be either `search` (default) or `news`.
 
+Additional parameters that can be passed during search:
 - **country**: Optional. Specify the country for the search results.
 - **location**: Optional. Specify the location for the search results.
 - **locale**: Optional. Specify the locale for the search results.
-- **n_results**: Number of search results to return. Default is `10`.
 
-The values for `country`, `location`, `locale` and `search_url` can be found on the [Serper Playground](https://serper.dev/playground).
+The values for `country`, `location`, and `locale` can be found on the [Serper Playground](https://serper.dev/playground).
+
+Note: The tool requires the `SERPER_API_KEY` environment variable to be set with your Serper API key.
 
 ## Example with Parameters
 
 Here is an example demonstrating how to use the tool with additional parameters:
 
-```python Code
+```python
 from crewai_tools import SerperDevTool
 
 tool = SerperDevTool(
@@ -71,18 +76,29 @@ print(tool.run(search_query="ChatGPT"))
 
 # Using Tool: Search the internet
 
-# Search results: Title: Role of chat gpt in public health
-# Link: https://link.springer.com/article/10.1007/s10439-023-03172-7
-# Snippet: … ChatGPT in public health. In this overview, we will examine the potential uses of ChatGPT in
-# ---
-# Title: Potential use of chat gpt in global warming
-# Link: https://link.springer.com/article/10.1007/s10439-023-03171-8
-# Snippet: … as ChatGPT, have the potential to play a critical role in advancing our understanding of climate
-# ---
+# Search results:
+{
+  "searchParameters": {
+    "q": "ChatGPT",
+    "type": "search"
+  },
+  "organic": [
+    {
+      "title": "Role of chat gpt in public health",
+      "link": "https://link.springer.com/article/10.1007/s10439-023-03172-7",
+      "snippet": "ChatGPT in public health. In this overview, we will examine the potential uses of ChatGPT in"
+    },
+    {
+      "title": "Potential use of chat gpt in global warming",
+      "link": "https://link.springer.com/article/10.1007/s10439-023-03171-8",
+      "snippet": "as ChatGPT, have the potential to play a critical role in advancing our understanding of climate"
+    }
+  ]
+}
 
 ```
 
-```python Code
+```python
 from crewai_tools import SerperDevTool
 
 tool = SerperDevTool(

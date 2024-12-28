@@ -35,10 +35,41 @@ By default, the memory system is disabled, and you can ensure it is active by se
 The memory will use OpenAI embeddings by default, but you can change it by setting `embedder` to a different model. 
 It's also possible to initialize the memory instance with your own instance.
 
-The 'embedder' only applies to **Short-Term Memory** which uses Chroma for RAG.
-The **Long-Term Memory** uses SQLite3 to store task results. Currently, there is no way to override these storage implementations.
-The data storage files are saved into a platform-specific location found using the appdirs package,
-and the name of the project can be overridden using the **CREWAI_STORAGE_DIR** environment variable.
+Each memory type uses different storage implementations:
+
+- **Short-Term Memory**: Uses Chroma for RAG (Retrieval-Augmented Generation) with configurable embeddings
+- **Long-Term Memory**: Uses SQLite3 for persistent storage of task results and metadata
+- **Entity Memory**: Uses either RAG storage (default) or Mem0 for entity information
+- **User Memory**: Available through Mem0 integration for personalized experiences
+
+The data storage files are saved in a platform-specific location using the appdirs package.
+You can override the storage location using the **CREWAI_STORAGE_DIR** environment variable.
+
+### Storage Implementation Details
+
+#### Short-Term Memory
+- Default: ChromaDB with RAG
+- Configurable embeddings (OpenAI, Ollama, Google AI, etc.)
+- Supports custom embedding functions
+- Optional Mem0 integration for enhanced capabilities
+
+#### Long-Term Memory
+- SQLite3 storage with structured schema
+- Stores task descriptions, metadata, timestamps, and quality scores
+- Supports querying by task description with configurable limits
+- Includes error handling and reset capabilities
+
+#### Entity Memory
+- Default: RAG storage with ChromaDB
+- Optional Mem0 integration
+- Structured entity storage (name, type, description)
+- Supports metadata and relationship mapping
+
+#### User Memory
+- Requires Mem0 integration
+- Stores user preferences and interaction history
+- Supports personalized context building
+- Configurable through memory_config
 
 ### Example: Configuring Memory for a Crew
 
@@ -93,11 +124,41 @@ my_crew = Crew(
 )
 ```
 
-## Integrating Mem0 for Enhanced User Memory
+## Integrating Mem0 Provider
 
-[Mem0](https://mem0.ai/) is a self-improving memory layer for LLM applications, enabling personalized AI experiences. 
+[Mem0](https://mem0.ai/) is a self-improving memory layer for LLM applications that can enhance all memory types in CrewAI. It provides advanced features for storing and retrieving contextual information.
 
-To include user-specific memory you can get your API key [here](https://app.mem0.ai/dashboard/api-keys) and refer the [docs](https://docs.mem0.ai/platform/quickstart#4-1-create-memories) for adding user preferences.
+### Configuration
+
+To use Mem0, you'll need:
+1. An API key from [Mem0 Dashboard](https://app.mem0.ai/dashboard/api-keys)
+2. The `mem0ai` package installed: `pip install mem0ai`
+
+You can configure Mem0 in two ways:
+
+1. **Environment Variable**:
+```bash
+export MEM0_API_KEY="your-api-key"
+```
+
+2. **Memory Config**:
+```python
+memory_config = {
+    "provider": "mem0",
+    "config": {
+        "api_key": "your-api-key",
+        "user_id": "user123"  # Required for user memory
+    }
+}
+```
+
+### Memory Type Support
+
+Mem0 can be used with all memory types:
+- **Short-Term Memory**: Enhanced context retention
+- **Long-Term Memory**: Improved task history storage
+- **Entity Memory**: Better entity relationship tracking
+- **User Memory**: Personalized user preferences and history
 
 
 ```python Code
@@ -135,9 +196,118 @@ crew = Crew(
 ```
 
 
-## Additional Embedding Providers
+## Memory Interface Details
 
-### Using OpenAI embeddings (already default)
+When implementing custom memory storage, be aware of these interface requirements:
+
+### Base Memory Class
+```python
+class Memory:
+    def save(
+        self,
+        value: Any,
+        metadata: Optional[Dict[str, Any]] = None,
+        agent: Optional[str] = None,
+    ) -> None:
+        """Save data to memory with optional metadata and agent information."""
+        pass
+
+    def search(
+        self,
+        query: str,
+        limit: int = 3,
+        score_threshold: float = 0.35,
+    ) -> List[Any]:
+        """Search memory with configurable limit and relevance threshold."""
+        pass
+```
+
+### Memory Type Specifics
+
+1. **LongTermMemory**:
+   ```python
+   class LongTermMemoryItem:
+       task: str                      # Task description
+       expected_output: str           # Expected task output
+       metadata: Dict[str, Any]       # Additional metadata
+       agent: Optional[str] = None    # Associated agent
+       datetime: str                  # Timestamp
+       quality: float                 # Task quality score (0-1)
+   ```
+   - Saves task results with quality scores and timestamps
+   - Search returns historical task data ordered by date
+   - Note: Implementation has type hint differences from base Memory class
+
+2. **EntityMemory**:
+   ```python
+   class EntityMemoryItem:
+       name: str                      # Entity name
+       type: str                      # Entity type
+       description: str               # Entity description
+       metadata: Dict[str, Any]       # Additional metadata
+       agent: Optional[str] = None    # Associated agent
+   ```
+   - Saves entity information with type and description
+   - Search supports entity relationship queries
+   - Note: Implementation has type hint differences from base Memory class
+
+3. **ShortTermMemory**:
+   ```python
+   class ShortTermMemoryItem:
+       data: Any                      # Memory content
+       metadata: Dict[str, Any]       # Additional metadata
+       agent: Optional[str] = None    # Associated agent
+   ```
+   - Saves recent interactions with metadata
+   - Search supports semantic similarity
+   - Follows base Memory class interface exactly
+
+### Error Handling and Reset
+
+Each memory type includes error handling and reset capabilities:
+
+```python
+# Reset short-term memory
+try:
+    crew.short_term_memory.reset()
+except Exception as e:
+    print(f"Error resetting short-term memory: {e}")
+
+# Reset entity memory
+try:
+    crew.entity_memory.reset()
+except Exception as e:
+    print(f"Error resetting entity memory: {e}")
+
+# Reset long-term memory
+try:
+    crew.long_term_memory.reset()
+except Exception as e:
+    print(f"Error resetting long-term memory: {e}")
+```
+
+Common error scenarios:
+- Database connection issues
+- File permission errors
+- Storage initialization failures
+- Embedding generation errors
+
+### Implementation Notes
+
+1. **Type Hint Considerations**:
+   - LongTermMemory.save() expects LongTermMemoryItem
+   - EntityMemory.save() expects EntityMemoryItem
+   - ShortTermMemory.save() follows base Memory interface
+
+2. **Storage Reset Behavior**:
+   - Short-term: Clears ChromaDB collection
+   - Long-term: Truncates SQLite table
+   - Entity: Clears entity storage
+   - Mem0: Provider-specific reset
+
+## Embedding Providers
+
+CrewAI supports multiple embedding providers for RAG-based memory types:
 ```python Code
 from crewai import Crew, Agent, Task, Process
 
