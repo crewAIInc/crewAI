@@ -1,4 +1,5 @@
 from typing import Any, Dict, Optional
+from crewai.task import Task
 
 from crewai.memory import EntityMemory, LongTermMemory, ShortTermMemory, UserMemory
 
@@ -21,7 +22,7 @@ class ContextualMemory:
         self.em = em
         self.um = um
 
-    def build_context_for_task(self, task, context) -> str:
+    def build_context_for_task(self, task: Task, context: str) -> str:
         """
         Automatically builds a minimal, highly relevant set of contextual information
         for a given task.
@@ -39,7 +40,7 @@ class ContextualMemory:
             context.append(self._fetch_user_context(query))
         return "\n".join(filter(None, context))
 
-    def _fetch_stm_context(self, query) -> str:
+    def _fetch_stm_context(self, query: str) -> str:
         """
         Fetches recent relevant insights from STM related to the task's description and expected_output,
         formatted as bullet points.
@@ -53,7 +54,7 @@ class ContextualMemory:
         )
         return f"Recent Insights:\n{formatted_results}" if stm_results else ""
 
-    def _fetch_ltm_context(self, task) -> Optional[str]:
+    def _fetch_ltm_context(self, task: str) -> Optional[str]:
         """
         Fetches historical data or insights from LTM that are relevant to the task's description and expected_output,
         formatted as bullet points.
@@ -72,7 +73,7 @@ class ContextualMemory:
 
         return f"Historical Data:\n{formatted_results}" if ltm_results else ""
 
-    def _fetch_entity_context(self, query) -> str:
+    def _fetch_entity_context(self, query: str) -> str:
         """
         Fetches relevant entity information from Entity Memory related to the task's description and expected_output,
         formatted as bullet points.

@@ -1,5 +1,7 @@
 import json
+import os
 import sqlite3
+from pathlib import Path
 from typing import Any, Dict, List, Optional
 
 from crewai.task import Task
@@ -13,12 +15,30 @@ class KickoffTaskOutputsSQLiteStorage:
     An updated SQLite storage class for kickoff task outputs storage.
     """
 
-    def __init__(self, db_path: Optional[str] = None) -> None:
-        self.db_path = (
-            db_path
-            if db_path
-            else f"{db_storage_path()}/latest_kickoff_task_outputs.db"
+    def __init__(self, storage_path: Optional[Path] = None) -> None:
+        """Initialize kickoff task outputs storage.
+        
+        Args:
+            storage_path: Optional custom path for storage location
+            
+        Raises:
+            PermissionError: If storage path is not writable
+            OSError: If storage path cannot be created
+        """
+        self.storage_path = (
+            storage_path
+            if storage_path
+            else Path(f"{db_storage_path()}/latest_kickoff_task_outputs.db")
         )
+        
+        # Validate storage path
+        try:
+            self.storage_path.parent.mkdir(parents=True, exist_ok=True)
+            if not os.access(self.storage_path.parent, os.W_OK):
+                raise PermissionError(f"No write permission for storage path: {self.storage_path}")
+        except OSError as e:
+            raise OSError(f"Failed to initialize storage path: {str(e)}")
+            
         self._printer: Printer = Printer()
         self._initialize_db()
 
@@ -27,7 +47,7 @@ class KickoffTaskOutputsSQLiteStorage:
         Initializes the SQLite database and creates LTM table
         """
         try:
-            with sqlite3.connect(self.db_path) as conn:
+            with sqlite3.connect(str(self.storage_path)) as conn:
                 cursor = conn.cursor()
                 cursor.execute(
                     """
@@ -57,9 +77,21 @@ class KickoffTaskOutputsSQLiteStorage:
         task_index: int,
         was_replayed: bool = False,
         inputs: Dict[str, Any] = {},
-    ):
+    ) -> None:
+        """Add a task output to storage.
+        
+        Args:
+            task: The task whose output is being stored
+            output: The output data from the task
+            task_index: Index of this task in the sequence
+            was_replayed: Whether this was from a replay
+            inputs: Optional input data that led to this output
+            
+        Raises:
+            sqlite3.Error: If there is an error saving to database
+        """
         try:
-            with sqlite3.connect(self.db_path) as conn:
+            with sqlite3.connect(str(self.storage_path)) as conn:
                 cursor = conn.cursor()
                 cursor.execute(
                     """
@@ -92,7 +124,7 @@ class KickoffTaskOutputsSQLiteStorage:
         Updates an existing row in the latest_kickoff_task_outputs table based on task_index.
         """
         try:
-            with sqlite3.connect(self.db_path) as conn:
+            with sqlite3.connect(str(self.storage_path)) as conn:
                 cursor = conn.cursor()
 
                 fields = []
@@ -121,7 +153,7 @@ class KickoffTaskOutputsSQLiteStorage:
 
     def load(self) -> Optional[List[Dict[str, Any]]]:
         try:
-            with sqlite3.connect(self.db_path) as conn:
+            with sqlite3.connect(str(self.storage_path)) as conn:
                 cursor = conn.cursor()
                 cursor.execute("""
                 SELECT *
@@ -157,7 +189,7 @@ class KickoffTaskOutputsSQLiteStorage:
         Deletes all rows from the latest_kickoff_task_outputs table.
         """
         try:
-            with sqlite3.connect(self.db_path) as conn:
+            with sqlite3.connect(str(self.storage_path)) as conn:
                 cursor = conn.cursor()
                 cursor.execute("DELETE FROM latest_kickoff_task_outputs")
                 conn.commit()
