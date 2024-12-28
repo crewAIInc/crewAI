@@ -5,7 +5,7 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional, Union
 
 from crewai.utilities import Printer
-from crewai.utilities.paths import db_storage_path
+from crewai.utilities.paths import get_default_storage_path
 
 
 class LTMSQLiteStorage:
@@ -23,7 +23,7 @@ class LTMSQLiteStorage:
             PermissionError: If storage path is not writable
             OSError: If storage path cannot be created
         """
-        self.storage_path = storage_path if storage_path else Path(f"{db_storage_path()}/latest_long_term_memories.db")
+        self.storage_path = storage_path if storage_path else get_default_storage_path('ltm')
         
         # Validate storage path
         try:

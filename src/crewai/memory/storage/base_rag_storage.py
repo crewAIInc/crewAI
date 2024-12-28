@@ -5,7 +5,7 @@ from typing import Any, Dict, List, Optional, TypeVar
 from abc import ABC, abstractmethod
 from pathlib import Path
 
-from crewai.utilities.paths import db_storage_path
+from crewai.utilities.paths import get_default_storage_path
 
 
 class BaseRAGStorage(ABC):
@@ -37,7 +37,7 @@ class BaseRAGStorage(ABC):
             OSError: If storage path cannot be created
         """
         self.type = type
-        self.storage_path = storage_path if storage_path else db_storage_path()
+        self.storage_path = storage_path if storage_path else get_default_storage_path('rag')
         
         # Validate storage path
         try:

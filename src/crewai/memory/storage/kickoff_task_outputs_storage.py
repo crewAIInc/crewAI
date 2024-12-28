@@ -7,7 +7,7 @@ from typing import Any, Dict, List, Optional
 from crewai.task import Task
 from crewai.utilities import Printer
 from crewai.utilities.crew_json_encoder import CrewJSONEncoder
-from crewai.utilities.paths import db_storage_path
+from crewai.utilities.paths import get_default_storage_path
 
 
 class KickoffTaskOutputsSQLiteStorage:
@@ -25,11 +25,7 @@ class KickoffTaskOutputsSQLiteStorage:
             PermissionError: If storage path is not writable
             OSError: If storage path cannot be created
         """
-        self.storage_path = (
-            storage_path
-            if storage_path
-            else Path(f"{db_storage_path()}/latest_kickoff_task_outputs.db")
-        )
+        self.storage_path = storage_path if storage_path else get_default_storage_path('kickoff')
         
         # Validate storage path
         try:

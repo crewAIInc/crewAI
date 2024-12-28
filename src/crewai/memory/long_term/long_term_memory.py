@@ -15,8 +15,17 @@ class LongTermMemory(Memory):
     """
 
     def __init__(self, storage=None, path=None):
+        """Initialize long term memory.
+
+        Args:
+            storage: Optional custom storage instance
+            path: Optional custom path for storage location
+
+        Note:
+            If both storage and path are provided, storage takes precedence
+        """
         if not storage:
-            storage = LTMSQLiteStorage(db_path=path) if path else LTMSQLiteStorage()
+            storage = LTMSQLiteStorage(storage_path=path) if path else LTMSQLiteStorage()
         super().__init__(storage)
 
     def save(self, item: LongTermMemoryItem) -> None:  # type: ignore # BUG?: Signature of "save" incompatible with supertype "Memory"
