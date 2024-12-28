@@ -49,8 +49,13 @@ class Knowledge(BaseModel):
         """
         Query across all knowledge sources to find the most relevant information.
         Returns the top_k most relevant chunks.
+        
+        Raises:
+            ValueError: If storage is not initialized.
         """
-
+        if self.storage is None:
+            raise ValueError("Storage is not initialized.")
+            
         results = self.storage.search(
             query,
             limit,
