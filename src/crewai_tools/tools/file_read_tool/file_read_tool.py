@@ -4,13 +4,7 @@ from crewai.tools import BaseTool
 from pydantic import BaseModel, Field
 
 
-class FixedFileReadToolSchema(BaseModel):
-    """Input for FileReadTool."""
-
-    pass
-
-
-class FileReadToolSchema(FixedFileReadToolSchema):
+class FileReadToolSchema(BaseModel):
     """Input for FileReadTool."""
 
     file_path: str = Field(..., description="Mandatory file full path to read the file")
@@ -33,9 +27,16 @@ class FileReadTool(BaseTool):
         self,
         **kwargs: Any,
     ) -> Any:
+        file_path = kwargs.get("file_path", self.file_path)
+        if file_path is None:
+            return "Error: No file path provided. Please provide a file path either in the constructor or as an argument."
+        
         try:
-            file_path = kwargs.get("file_path", self.file_path)
             with open(file_path, "r") as file:
                 return file.read()
+        except FileNotFoundError:
+            return f"Error: File not found at path: {file_path}"
+        except PermissionError:
+            return f"Error: Permission denied when trying to read file: {file_path}"
         except Exception as e:
-            return f"Fail to read the file {file_path}. Error: {e}"
+            return f"Error: Failed to read file {file_path}. {str(e)}"
