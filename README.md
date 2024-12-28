@@ -52,11 +52,11 @@ CrewAI offers two powerful, complementary approaches that work seamlessly togeth
    - Specialized roles with defined goals and expertise
    - Flexible problem-solving approaches
 
-2. **Flows**: Precise, event-driven workflows that give you granular control over your automation. Flows provide:
-   - Low-level control over execution paths
-   - Seamless state management between tasks
-   - Clean integration of AI agents with Python code
-   - Conditional branching for complex scenarios
+2. **Flows**: Production-ready, event-driven workflows that deliver precise control over complex automations. Flows provide:
+   - Fine-grained control over execution paths for real-world scenarios
+   - Secure, consistent state management between tasks
+   - Clean integration of AI agents with production Python code
+   - Conditional branching for complex business logic
 
 The true power of CrewAI emerges when combining Crews and Flows. This synergy allows you to:
 - Build complex, production-grade applications
@@ -290,13 +290,15 @@ In addition to the sequential process, you can use the hierarchical process, whi
 
 ## Key Features
 
+**Note**: CrewAI is a standalone framework built from the ground up, without dependencies on Langchain or other agent frameworks.
+
 - **Deep Customization**: Build sophisticated agents with customizable roles, goals, tools, and behaviors for precise control over your AI workflows.
 - **Autonomous Inter-Agent Delegation**: Agents can autonomously delegate tasks and inquire amongst themselves, enabling complex problem-solving in real-world scenarios.
 - **Flexible Task Management**: Define and customize tasks with granular control, from simple operations to complex multi-step processes.
-- **Production-Grade Architecture**: Support for both high-level abstractions and low-level customization, with robust error handling and state management.
-- **Enterprise Security**: Built-in security features for safe agent interactions and data handling in production environments.
-- **Predictable Outputs**: Ensure consistent and accurate results through structured output formats and validation.
-- **Model Flexibility**: Run your crew using OpenAI or open source models. See [Connect CrewAI to LLMs](https://docs.crewai.com/how-to/LLM-Connections/) for detailed configuration options.
+- **Production-Grade Architecture**: Support for both high-level abstractions and low-level customization, with robust error handling and secure state management.
+- **Enterprise Security**: End-to-end security features for agent interactions, data handling, and state management in production environments.
+- **Predictable Results**: Ensure consistent, accurate outputs through structured validation and precise execution control.
+- **Model Flexibility**: Run your crew using OpenAI or open source models with secure, production-ready integrations. See [Connect CrewAI to LLMs](https://docs.crewai.com/how-to/LLM-Connections/) for detailed configuration options.
 - **Event-Driven Flows**: Build complex, real-world workflows with precise control over execution paths, state management, and conditional logic.
 - **Process Orchestration**: Support for `sequential` and `hierarchical` processes, with advanced patterns for handling sophisticated business logic.
 
@@ -353,7 +355,7 @@ class AdvancedAnalysisFlow(Flow[MarketState]):
     def fetch_market_data(self):
         # Demonstrate low-level control with structured state
         self.state.sentiment = "analyzing"
-        return {"sector": "tech", "timeframe": "1W"}
+        return {"sector": "tech", "timeframe": "1W"}  # These parameters match the task description template
 
     @listen(fetch_market_data)
     def analyze_with_crew(self, market_data):
@@ -370,7 +372,7 @@ class AdvancedAnalysisFlow(Flow[MarketState]):
         )
         
         analysis_task = Task(
-            description=f"Analyze {market_data['sector']} sector data for the past {market_data['timeframe']}",
+            description="Analyze {sector} sector data for the past {timeframe}",
             expected_output="Detailed market analysis with confidence score",
             agent=analyst
         )
@@ -387,7 +389,7 @@ class AdvancedAnalysisFlow(Flow[MarketState]):
             process=Process.sequential,
             verbose=True
         )
-        return analysis_crew.kickoff()
+        return analysis_crew.kickoff(inputs=market_data)  # Pass market_data as named inputs
 
     @router(analyze_with_crew)
     def determine_next_steps(self):
@@ -433,9 +435,9 @@ Please refer to the [Connect CrewAI to LLMs](https://docs.crewai.com/how-to/LLM-
 
 ## How CrewAI Compares
 
-**CrewAI's Advantage**: CrewAI revolutionizes AI orchestration by seamlessly combining autonomous agent intelligence with precise workflow control. Our framework excels at both high-level orchestration and low-level customization, offering unmatched flexibility for real-world applications. Whether you need quick prototypes or complex, production-grade systems, CrewAI's unique synthesis of Crews and Flows provides the granular control and customization capabilities required for sophisticated business logic.
+**CrewAI's Advantage**: CrewAI combines autonomous agent intelligence with precise workflow control through its unique Crews and Flows architecture. The framework excels at both high-level orchestration and low-level customization, enabling complex, production-grade systems with granular control.
 
-- **LangGraph**: While LangGraph offers workflow orchestration, CrewAI provides greater flexibility and control. Our framework excels in true agent autonomy with natural delegation and rich personalities, while maintaining precise control through structured workflows. This enables complex, real-world applications with clean Python integration and robust error handling.
+- **LangGraph**: CrewAI offers significant advantages over LangGraph in execution control and state management ([see comparison](https://github.com/crewAIInc/crewAI-examples/tree/main/Notebooks/CrewAI%20Flows%20%26%20Langgraph/QA%20Agent)). Our framework reduces boilerplate by 60% while providing enhanced agent autonomy and precise workflow control ([detailed analysis](https://github.com/crewAIInc/crewAI-examples/blob/main/Notebooks/CrewAI%20Flows%20%26%20Langgraph/Coding%20Assistant/coding_assistant_eval.ipynb)).
 
 - **Autogen**: While Autogen excels at creating conversational agents capable of working together, it lacks an inherent concept of process. In Autogen, orchestrating agents' interactions requires additional programming, which can become complex and cumbersome as the scale of tasks grows.
 
