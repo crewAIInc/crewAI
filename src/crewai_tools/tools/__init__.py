@@ -52,3 +52,5 @@ from .youtube_channel_search_tool.youtube_channel_search_tool import (
 )
 from .youtube_video_search_tool.youtube_video_search_tool import YoutubeVideoSearchTool
 from .weaviate_tool.vector_search import WeaviateVectorSearchTool
+from .serpapi_tool.serpapi_google_search_tool import SerpApiGoogleSearchTool
+from .serpapi_tool.serpapi_google_shopping_tool import SerpApiGoogleShoppingTool
