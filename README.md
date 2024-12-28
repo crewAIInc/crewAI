@@ -40,6 +40,36 @@ CrewAI is designed to enable AI agents to assume roles, share goals, and operate
 
 ## Getting Started
 
+### Understanding Flows and Crews
+
+CrewAI offers two powerful approaches to building AI applications:
+
+1. **Crews**: Teams of AI agents working together to accomplish complex tasks through role-based collaboration.
+2. **Flows**: Event-driven workflows that orchestrate both AI agents and regular Python code, perfect for building automated processes.
+
+Flows allow you to create structured workflows where you can:
+- Connect multiple steps using event-driven decorators
+- Manage state between different tasks
+- Integrate both AI agents and regular Python operations
+- Implement conditional branching based on task results
+
+Here's a simple example of a Flow:
+
+```python
+from crewai.flow.flow import Flow, listen, start
+
+class DemoFlow(Flow):
+    @start()
+    def first_task(self):
+        return "Hello from first task"
+
+    @listen(first_task)
+    def second_task(self, data):
+        return f"Received data: {data}"
+```
+
+### Getting Started with Installation
+
 To get started with CrewAI, follow these simple steps:
 
 ### 1. Installation
@@ -271,6 +301,7 @@ In addition to the sequential process, you can use the hierarchical process, whi
 - **Save output as file**: Save the output of individual tasks as a file, so you can use it later.
 - **Parse output as Pydantic or Json**: Parse the output of individual tasks as a Pydantic model or as a Json if you want to.
 - **Works with Open Source Models**: Run your crew using Open AI or open source models refer to the [Connect CrewAI to LLMs](https://docs.crewai.com/how-to/LLM-Connections/) page for details on configuring your agents' connections to models, even ones running locally!
+- **Event-Driven Flows**: Build powerful workflows that connect multiple Crews and tasks seamlessly. Flows provide structured orchestration with event-driven logic, state management between tasks, and conditional execution paths for complex automation scenarios.
 
 ![CrewAI Mind Map](./docs/crewAI-mindmap.png "CrewAI Mind Map")
 
@@ -304,6 +335,51 @@ You can test different real life examples of AI crews in the [CrewAI-examples re
 [Check out code for this example](https://github.com/crewAIInc/crewAI-examples/tree/main/stock_analysis) or watch a video below:
 
 [![Stock Analysis](https://img.youtube.com/vi/e0Uj4yWdaAg/maxresdefault.jpg)](https://www.youtube.com/watch?v=e0Uj4yWdaAg "Stock Analysis")
+
+### Using Crews and Flows Together
+
+CrewAI's power truly shines when combining Crews with Flows to create sophisticated automation pipelines. Here's how you can orchestrate multiple Crews within a Flow:
+
+```python
+from crewai.flow.flow import Flow, listen, start
+from crewai import Crew, Agent, Task
+
+class AnalysisFlow(Flow):
+    @start()
+    def fetch_data(self):
+        # Regular Python code for data operations
+        return {"data": "market_data"}
+
+    @listen(fetch_data)
+    def analyze_market(self, data):
+        # Create and execute a Crew for market analysis
+        analyst = Agent(
+            role="Market Analyst",
+            goal="Analyze market data and identify trends"
+        )
+        analysis_task = Task(
+            description="Analyze the provided market data",
+            agent=analyst
+        )
+        analysis_crew = Crew(
+            agents=[analyst],
+            tasks=[analysis_task]
+        )
+        return analysis_crew.kickoff()
+
+    @listen(analyze_market)
+    def make_decisions(self, analysis):
+        # Conditional execution based on analysis results
+        if "bullish" in analysis.lower():
+            return self.handle_bullish_market()
+        return self.handle_bearish_market()
+```
+
+This example demonstrates how to:
+1. Use Python code for basic data operations
+2. Create and execute Crews as steps in your workflow
+3. Use Flow decorators to manage the sequence of operations
+4. Implement conditional branching based on Crew results
 
 ## Connecting Your Crew to a Model
 
@@ -439,6 +515,9 @@ A: CrewAI uses anonymous telemetry to collect usage data for improvement purpose
 
 ### Q: Where can I find examples of CrewAI in action?
 A: You can find various real-life examples in the [CrewAI-examples repository](https://github.com/crewAIInc/crewAI-examples), including trip planners, stock analysis tools, and more.
+
+### Q: What is the difference between Crews and Flows?
+A: Crews and Flows serve different but complementary purposes in CrewAI. Crews are teams of AI agents working together to accomplish specific tasks through role-based collaboration. Flows, on the other hand, are event-driven workflows that can orchestrate both Crews and regular Python code, allowing you to build complex automation pipelines with state management and conditional execution paths.
 
 ### Q: How can I contribute to CrewAI?
 A: Contributions are welcome! You can fork the repository, create a new branch for your feature, add your improvement, and send a pull request. Check the Contribution section in the README for more details.
