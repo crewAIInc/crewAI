@@ -179,6 +179,7 @@ class Task(BaseModel):
     _execution_span: Optional[Span] = PrivateAttr(default=None)
     _original_description: Optional[str] = PrivateAttr(default=None)
     _original_expected_output: Optional[str] = PrivateAttr(default=None)
+    _original_output_file: Optional[str] = PrivateAttr(default=None)
     _thread: Optional[threading.Thread] = PrivateAttr(default=None)
     _execution_time: Optional[float] = PrivateAttr(default=None)
 
@@ -213,8 +214,46 @@ class Task(BaseModel):
 
     @field_validator("output_file")
     @classmethod
-    def output_file_validation(cls, value: str) -> str:
-        """Validate the output file path by removing the / from the beginning of the path."""
+    def output_file_validation(cls, value: Optional[str]) -> Optional[str]:
+        """Validate the output file path.
+        
+        Args:
+            value: The output file path to validate. Can be None or a string.
+                  If the path contains template variables (e.g. {var}), leading slashes are preserved.
+                  For regular paths, leading slashes are stripped.
+        
+        Returns:
+            The validated and potentially modified path, or None if no path was provided.
+            
+        Raises:
+            ValueError: If the path contains invalid characters, path traversal attempts,
+                      or other security concerns.
+        """
+        if value is None:
+            return None
+
+        # Basic security checks
+        if ".." in value:
+            raise ValueError("Path traversal attempts are not allowed in output_file paths")
+        
+        # Check for shell expansion first
+        if value.startswith('~') or value.startswith('$'):
+            raise ValueError("Shell expansion characters are not allowed in output_file paths")
+            
+        # Then check other shell special characters
+        if any(char in value for char in ['|', '>', '<', '&', ';']):
+            raise ValueError("Shell special characters are not allowed in output_file paths")
+
+        # Don't strip leading slash if it's a template path with variables
+        if "{" in value or "}" in value: 
+            # Validate template variable format
+            template_vars = [part.split("}")[0] for part in value.split("{")[1:]]
+            for var in template_vars:
+                if not var.isidentifier():
+                    raise ValueError(f"Invalid template variable name: {var}")
+            return value
+
+        # Strip leading slash for regular paths
         if value.startswith("/"):
             return value[1:]
         return value
@@ -393,27 +432,89 @@ class Task(BaseModel):
         tasks_slices = [self.description, output]
         return "\n".join(tasks_slices)
 
-    def interpolate_inputs(self, inputs: Dict[str, Any]) -> None:
-        """Interpolate inputs into the task description and expected output."""
+    def interpolate_inputs(self, inputs: Dict[str, Union[str, int, float]]) -> None:
+        """Interpolate inputs into the task description, expected output, and output file path.
+        
+        Args:
+            inputs: Dictionary mapping template variables to their values.
+                   Supported value types are strings, integers, and floats.
+        
+        Raises:
+            ValueError: If a required template variable is missing from inputs.
+        """
         if self._original_description is None:
             self._original_description = self.description
         if self._original_expected_output is None:
             self._original_expected_output = self.expected_output
+        if self.output_file is not None and self._original_output_file is None:
+            self._original_output_file = self.output_file
 
-        if inputs:
+        if not inputs:
+            return
+
+        try:
             self.description = self._original_description.format(**inputs)
+        except KeyError as e:
+            raise ValueError(f"Missing required template variable '{e.args[0]}' in description") from e
+        except ValueError as e:
+            raise ValueError(f"Error interpolating description: {str(e)}") from e
+
+        try:
             self.expected_output = self.interpolate_only(
                 input_string=self._original_expected_output, inputs=inputs
             )
+        except (KeyError, ValueError) as e:
+            raise ValueError(f"Error interpolating expected_output: {str(e)}") from e
 
-    def interpolate_only(self, input_string: str, inputs: Dict[str, Any]) -> str:
-        """Interpolate placeholders (e.g., {key}) in a string while leaving JSON untouched."""
-        escaped_string = input_string.replace("{", "{{").replace("}", "}}")
+        if self.output_file is not None:
+            try:
+                self.output_file = self.interpolate_only(
+                    input_string=self._original_output_file, inputs=inputs
+                )
+            except (KeyError, ValueError) as e:
+                raise ValueError(f"Error interpolating output_file path: {str(e)}") from e
 
-        for key in inputs.keys():
-            escaped_string = escaped_string.replace(f"{{{{{key}}}}}", f"{{{key}}}")
+    def interpolate_only(self, input_string: Optional[str], inputs: Dict[str, Union[str, int, float]]) -> str:
+        """Interpolate placeholders (e.g., {key}) in a string while leaving JSON untouched.
+        
+        Args:
+            input_string: The string containing template variables to interpolate.
+                         Can be None or empty, in which case an empty string is returned.
+            inputs: Dictionary mapping template variables to their values.
+                   Supported value types are strings, integers, and floats.
+                   If input_string is empty or has no placeholders, inputs can be empty.
+        
+        Returns:
+            The interpolated string with all template variables replaced with their values.
+            Empty string if input_string is None or empty.
+            
+        Raises:
+            ValueError: If a required template variable is missing from inputs.
+            KeyError: If a template variable is not found in the inputs dictionary.
+        """
+        if input_string is None or not input_string:
+            return ""
+        if "{" not in input_string and "}" not in input_string:
+            return input_string
+        if not inputs:
+            raise ValueError("Inputs dictionary cannot be empty when interpolating variables")
 
-        return escaped_string.format(**inputs)
+        try:
+            # Validate input types
+            for key, value in inputs.items():
+                if not isinstance(value, (str, int, float)):
+                    raise ValueError(f"Value for key '{key}' must be a string, integer, or float, got {type(value).__name__}")
+
+            escaped_string = input_string.replace("{", "{{").replace("}", "}}")
+
+            for key in inputs.keys():
+                escaped_string = escaped_string.replace(f"{{{{{key}}}}}", f"{{{key}}}")
+
+            return escaped_string.format(**inputs)
+        except KeyError as e:
+            raise KeyError(f"Template variable '{e.args[0]}' not found in inputs dictionary") from e
+        except ValueError as e:
+            raise ValueError(f"Error during string interpolation: {str(e)}") from e
 
     def increment_tools_errors(self) -> None:
         """Increment the tools errors counter."""
