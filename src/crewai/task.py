@@ -431,8 +431,6 @@ class Task(BaseModel):
         tasks_slices = [self.description, output]
         return "\n".join(tasks_slices)
 
-    _original_output_file: Optional[str] = None
-
     def interpolate_inputs(self, inputs: Dict[str, Union[str, int, float]]) -> None:
         """Interpolate inputs into the task description, expected output, and output file path.
         
@@ -475,23 +473,27 @@ class Task(BaseModel):
             except (KeyError, ValueError) as e:
                 raise ValueError(f"Error interpolating output_file path: {str(e)}") from e
 
-    def interpolate_only(self, input_string: str, inputs: Dict[str, Union[str, int, float]]) -> str:
+    def interpolate_only(self, input_string: Optional[str], inputs: Dict[str, Union[str, int, float]]) -> str:
         """Interpolate placeholders (e.g., {key}) in a string while leaving JSON untouched.
         
         Args:
             input_string: The string containing template variables to interpolate.
+                         Can be None, in which case an empty string is returned.
             inputs: Dictionary mapping template variables to their values.
                    Supported value types are strings, integers, and floats.
         
         Returns:
             The interpolated string with all template variables replaced with their values.
+            Empty string if input_string is None.
             
         Raises:
             ValueError: If a required template variable is missing from inputs.
             KeyError: If a template variable is not found in the inputs dictionary.
         """
+        if input_string is None:
+            return ""
         if not input_string:
-            raise ValueError("Input string cannot be empty")
+            raise ValueError("Input string cannot be empty when provided")
         if not inputs:
             raise ValueError("Inputs dictionary cannot be empty")
 
