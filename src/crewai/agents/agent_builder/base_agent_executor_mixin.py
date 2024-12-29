@@ -26,16 +26,7 @@ class CrewAgentExecutorMixin:
 
 
     def _should_force_answer(self) -> bool:
-        """Determine if a forced answer is required based on iteration count.
-
-        This method checks if the maximum iterations have been reached.
-        The state of forced answers (have_forced_answer) is managed by
-        the executor's _invoke_loop method.
-
-        Returns:
-            bool: True if iterations >= max_iter, indicating a forced
-                 answer should be triggered
-        """
+        """Determine if a forced answer is required based on iteration count."""
         return self.iterations >= self.max_iter
 
     def _create_short_term_memory(self, output) -> None:
