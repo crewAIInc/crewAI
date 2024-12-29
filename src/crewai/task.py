@@ -213,8 +213,14 @@ class Task(BaseModel):
 
     @field_validator("output_file")
     @classmethod
-    def output_file_validation(cls, value: str) -> str:
-        """Validate the output file path by removing the / from the beginning of the path."""
+    def output_file_validation(cls, value: Optional[str]) -> Optional[str]:
+        """Validate the output file path."""
+        if value is None:
+            return None
+        # Don't strip leading slash if it's a template path with variables
+        if "{" in value or "}" in value:
+            return value
+        # Strip leading slash for regular paths
         if value.startswith("/"):
             return value[1:]
         return value
@@ -394,17 +400,23 @@ class Task(BaseModel):
         return "\n".join(tasks_slices)
 
     def interpolate_inputs(self, inputs: Dict[str, Any]) -> None:
-        """Interpolate inputs into the task description and expected output."""
+        """Interpolate inputs into the task description, expected output, and output file path."""
         if self._original_description is None:
             self._original_description = self.description
         if self._original_expected_output is None:
             self._original_expected_output = self.expected_output
+        if self.output_file is not None and not hasattr(self, "_original_output_file"):
+            self._original_output_file = self.output_file
 
         if inputs:
             self.description = self._original_description.format(**inputs)
             self.expected_output = self.interpolate_only(
                 input_string=self._original_expected_output, inputs=inputs
             )
+            if self.output_file is not None:
+                self.output_file = self.interpolate_only(
+                    input_string=self._original_output_file, inputs=inputs
+                )
 
     def interpolate_only(self, input_string: str, inputs: Dict[str, Any]) -> str:
         """Interpolate placeholders (e.g., {key}) in a string while leaving JSON untouched."""
