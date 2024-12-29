@@ -719,21 +719,24 @@ def test_interpolate_inputs():
     task = Task(
         description="Give me a list of 5 interesting ideas about {topic} to explore for an article, what makes them unique and interesting.",
         expected_output="Bullet point list of 5 interesting ideas about {topic}.",
+        output_file="/tmp/{topic}/output_{date}.txt"
     )
 
-    task.interpolate_inputs(inputs={"topic": "AI"})
+    task.interpolate_inputs(inputs={"topic": "AI", "date": "2024"})
     assert (
         task.description
         == "Give me a list of 5 interesting ideas about AI to explore for an article, what makes them unique and interesting."
     )
     assert task.expected_output == "Bullet point list of 5 interesting ideas about AI."
+    assert task.output_file == "/tmp/AI/output_2024.txt"
 
-    task.interpolate_inputs(inputs={"topic": "ML"})
+    task.interpolate_inputs(inputs={"topic": "ML", "date": "2025"})
     assert (
         task.description
         == "Give me a list of 5 interesting ideas about ML to explore for an article, what makes them unique and interesting."
     )
     assert task.expected_output == "Bullet point list of 5 interesting ideas about ML."
+    assert task.output_file == "/tmp/ML/output_2025.txt"
 
 
 def test_interpolate_only():
@@ -872,3 +875,61 @@ def test_key():
     assert (
         task.key == hash
     ), "The key should be the hash of the non-interpolated description."
+
+
+def test_output_file_validation():
+    """Test output file path validation."""
+    # Valid paths
+    assert Task(
+        description="Test task",
+        expected_output="Test output",
+        output_file="output.txt"
+    ).output_file == "output.txt"
+    assert Task(
+        description="Test task",
+        expected_output="Test output",
+        output_file="/tmp/output.txt"
+    ).output_file == "tmp/output.txt"
+    assert Task(
+        description="Test task",
+        expected_output="Test output",
+        output_file="{dir}/output_{date}.txt"
+    ).output_file == "{dir}/output_{date}.txt"
+    
+    # Invalid paths
+    with pytest.raises(ValueError, match="Path traversal"):
+        Task(
+            description="Test task",
+            expected_output="Test output",
+            output_file="../output.txt"
+        )
+    with pytest.raises(ValueError, match="Path traversal"):
+        Task(
+            description="Test task",
+            expected_output="Test output",
+            output_file="folder/../output.txt"
+        )
+    with pytest.raises(ValueError, match="Shell special characters"):
+        Task(
+            description="Test task",
+            expected_output="Test output",
+            output_file="output.txt | rm -rf /"
+        )
+    with pytest.raises(ValueError, match="Shell expansion"):
+        Task(
+            description="Test task",
+            expected_output="Test output",
+            output_file="~/output.txt"
+        )
+    with pytest.raises(ValueError, match="Shell expansion"):
+        Task(
+            description="Test task",
+            expected_output="Test output",
+            output_file="$HOME/output.txt"
+        )
+    with pytest.raises(ValueError, match="Invalid template variable"):
+        Task(
+            description="Test task",
+            expected_output="Test output",
+            output_file="{invalid-name}/output.txt"
+        )
