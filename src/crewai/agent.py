@@ -322,7 +322,13 @@ class Agent(BaseAgent):
                     task_prompt += crew_knowledge_context
 
         tools = tools or self.tools or []
-        self.create_agent_executor(tools=tools, task=task)
+        
+        # Only create a new executor if it doesn't exist or if tools/task changed
+        if (not hasattr(self, 'agent_executor') or 
+            self.agent_executor is None or
+            tools != self.agent_executor.original_tools or
+            task != self.agent_executor.task):
+            self.create_agent_executor(tools=tools, task=task)
 
         if self.crew and self.crew._train:
             task_prompt = self._training_handler(task_prompt=task_prompt)

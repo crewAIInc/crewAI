@@ -75,9 +75,11 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
         self.request_within_rpm_limit = request_within_rpm_limit
         self.ask_for_human_input = False
         self.messages: List[Dict[str, str]] = []
+        # Initialize state tracking variables
         self.iterations = 0
         self.log_error_after = 3
-        self.have_forced_answer = False
+        self.have_forced_answer = False  # Track if we've hit max iterations
+        self._logger = self._printer  # Use printer for logging
         self.tool_name_to_tool_map: Dict[str, BaseTool] = {
             tool.name: tool for tool in self.tools
         }
@@ -169,18 +171,33 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
                     if self.step_callback:
                         self.step_callback(formatted_answer)
 
-                    if self._should_force_answer():
-                        # have_forced_answer is now set in _should_force_answer
-                        if self.have_forced_answer:
-                            return AgentFinish(
-                                thought="",
-                                output=self._i18n.errors(
-                                    "force_final_answer_error"
-                                ).format(formatted_answer.text),
-                                text=formatted_answer.text,
-                            )
+                    # Check if we should force an answer and update state
+                    should_force = self._should_force_answer()
+                    self._printer.print(
+                        content=f"Current state - iterations: {self.iterations}, max_iter: {self.max_iter}, have_forced_answer: {self.have_forced_answer}",
+                        color="yellow"
+                    )
+                    
+                    if should_force:
+                        # Set have_forced_answer to True as soon as we hit max iterations
+                        self.have_forced_answer = True
+                        self._printer.print(
+                            content=f"Max iterations reached. Set have_forced_answer=True",
+                            color="yellow"
+                        )
+                        
+                        # Return final answer with warning
                         formatted_answer.text += (
                             f'\n{self._i18n.errors("force_final_answer")}'
+                        )
+                        self._printer.print(
+                            content="Forcing final answer",
+                            color="yellow"
+                        )
+                        return AgentFinish(
+                            thought="",
+                            output=formatted_answer.text,
+                            text=formatted_answer.text,
                         )
                     self.messages.append(
                         self._format_msg(formatted_answer.text, role="assistant")
