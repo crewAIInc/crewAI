@@ -466,6 +466,8 @@ def test_agent_custom_max_iterations():
             tools=[get_final_answer],
         )
         assert private_mock.call_count == 2
+        # Verify that have_forced_answer was set to True after max iterations
+        assert agent.agent_executor.have_forced_answer == True, "have_forced_answer should be True after max iterations"
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
@@ -566,6 +568,8 @@ def test_agent_moved_on_after_max_iterations():
         tools=[get_final_answer],
     )
     assert output == "The final answer is 42."
+    # Verify that have_forced_answer was set to True after max iterations
+    assert agent.agent_executor.have_forced_answer == True, "have_forced_answer should be True after max iterations"
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
