@@ -79,7 +79,6 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
         self.iterations = 0
         self.log_error_after = 3
         self.have_forced_answer = False  # Track if we've hit max iterations
-        self._logger = self._printer  # Use printer for logging
         self.tool_name_to_tool_map: Dict[str, BaseTool] = {
             tool.name: tool for tool in self.tools
         }
@@ -113,60 +112,67 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
     def _invoke_loop(self, formatted_answer=None):
         try:
             while not isinstance(formatted_answer, AgentFinish):
-                if not self.request_within_rpm_limit or self.request_within_rpm_limit():
-                    answer = self.llm.call(
-                        self.messages,
-                        callbacks=self.callbacks,
+                if self.request_within_rpm_limit and not self.request_within_rpm_limit():
+                    self._printer.print(
+                        content="Max RPM reached, waiting for next minute to start.",
+                        color="yellow"
+                    )
+                    return self._invoke_loop(formatted_answer)
+                
+                answer = self.llm.call(
+                    self.messages,
+                    callbacks=self.callbacks,
+                )
+
+                if answer is None or answer == "":
+                    self._printer.print(
+                        content="Received None or empty response from LLM call.",
+                        color="red",
+                    )
+                    raise ValueError(
+                        "Invalid response from LLM call - None or empty."
                     )
 
-                    if answer is None or answer == "":
-                        self._printer.print(
-                            content="Received None or empty response from LLM call.",
-                            color="red",
+                if not self.use_stop_words:
+                    try:
+                        self._format_answer(answer)
+                    except OutputParserException as e:
+                        if (
+                            FINAL_ANSWER_AND_PARSABLE_ACTION_ERROR_MESSAGE
+                            in e.error
+                        ):
+                            answer = answer.split("Observation:")[0].strip()
+
+                self.iterations += 1
+                formatted_answer = self._format_answer(answer)
+
+                if isinstance(formatted_answer, AgentAction):
+                    tool_result = self._execute_tool_and_check_finality(
+                        formatted_answer
+                    )
+
+                    # Directly append the result to the messages if the
+                    # tool is "Add image to content" in case of multimodal
+                    # agents
+                    if formatted_answer.tool == self._i18n.tools("add_image")["name"]:
+                        self.messages.append(tool_result.result)
+                        continue
+
+                    else:
+                        if self.step_callback:
+                            self.step_callback(tool_result)
+
+                        formatted_answer.text += f"\nObservation: {tool_result.result}"
+
+                    formatted_answer.result = tool_result.result
+                    if tool_result.result_as_answer:
+                        # For tool results marked as final answers, return just the result
+                        return AgentFinish(
+                            thought="",
+                            output=str(tool_result.result),
+                            text=str(tool_result.result),
                         )
-                        raise ValueError(
-                            "Invalid response from LLM call - None or empty."
-                        )
-
-                    if not self.use_stop_words:
-                        try:
-                            self._format_answer(answer)
-                        except OutputParserException as e:
-                            if (
-                                FINAL_ANSWER_AND_PARSABLE_ACTION_ERROR_MESSAGE
-                                in e.error
-                            ):
-                                answer = answer.split("Observation:")[0].strip()
-
-                    self.iterations += 1
-                    formatted_answer = self._format_answer(answer)
-
-                    if isinstance(formatted_answer, AgentAction):
-                        tool_result = self._execute_tool_and_check_finality(
-                            formatted_answer
-                        )
-
-                        # Directly append the result to the messages if the
-                        # tool is "Add image to content" in case of multimodal
-                        # agents
-                        if formatted_answer.tool == self._i18n.tools("add_image")["name"]:
-                            self.messages.append(tool_result.result)
-                            continue
-
-                        else:
-                            if self.step_callback:
-                                self.step_callback(tool_result)
-
-                            formatted_answer.text += f"\nObservation: {tool_result.result}"
-
-                        formatted_answer.result = tool_result.result
-                        if tool_result.result_as_answer:
-                            return AgentFinish(
-                                thought="",
-                                output=tool_result.result,
-                                text=formatted_answer.text,
-                            )
-                        self._show_logs(formatted_answer)
+                    self._show_logs(formatted_answer)
 
                     if self.step_callback:
                         self.step_callback(formatted_answer)
@@ -174,20 +180,35 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
                     # Check if we should force an answer and update state
                     should_force = self._should_force_answer()
                     if should_force:
-                        # Set have_forced_answer to True as soon as we hit max iterations
                         self.have_forced_answer = True
-                        # Return final answer with warning
-                        formatted_answer.text += (
-                            f'\n{self._i18n.errors("force_final_answer")}'
-                        )
-                        self._printer.print(
-                            content="Forcing final answer",
-                            color="yellow"
-                        )
+                        # Extract the final answer from the last tool result or observation
+                        if isinstance(formatted_answer, AgentAction):
+                            result = str(formatted_answer.result).strip()
+                        else:
+                            # Try to extract from Final Answer or Observation
+                            parts = formatted_answer.text.split("Final Answer:")
+                            if len(parts) > 1:
+                                result = parts[-1].strip()
+                            else:
+                                parts = formatted_answer.text.split("Observation:")
+                                if len(parts) > 1:
+                                    result = parts[-1].strip()
+                                else:
+                                    result = formatted_answer.text.strip()
+                        
+                        # Clean up the result and ensure proper format
+                        result = result.split("\n")[0].strip()
+                        if result.isdigit() or (result.replace(".", "").isdigit() and result.count(".") <= 1):
+                            final_answer = f"The final answer is {result}"
+                        elif not result.startswith("The final answer is"):
+                            final_answer = f"The final answer is {result}"
+                        else:
+                            final_answer = result
+                        
                         return AgentFinish(
                             thought="",
-                            output=formatted_answer.text,
-                            text=formatted_answer.text,
+                            output=final_answer,
+                            text=final_answer,
                         )
                     self.messages.append(
                         self._format_msg(formatted_answer.text, role="assistant")
