@@ -236,12 +236,13 @@ class Task(BaseModel):
         if ".." in value:
             raise ValueError("Path traversal attempts are not allowed in output_file paths")
         
-        if any(char in value for char in ['|', '>', '<', '&', ';', '$']):
-            raise ValueError("Shell special characters are not allowed in output_file paths")
-
-        # Check for absolute paths that might bypass restrictions
+        # Check for shell expansion first
         if value.startswith('~') or value.startswith('$'):
             raise ValueError("Shell expansion characters are not allowed in output_file paths")
+            
+        # Then check other shell special characters
+        if any(char in value for char in ['|', '>', '<', '&', ';']):
+            raise ValueError("Shell special characters are not allowed in output_file paths")
 
         # Don't strip leading slash if it's a template path with variables
         if "{" in value or "}" in value: 
@@ -478,24 +479,25 @@ class Task(BaseModel):
         
         Args:
             input_string: The string containing template variables to interpolate.
-                         Can be None, in which case an empty string is returned.
+                         Can be None or empty, in which case an empty string is returned.
             inputs: Dictionary mapping template variables to their values.
                    Supported value types are strings, integers, and floats.
+                   If input_string is empty or has no placeholders, inputs can be empty.
         
         Returns:
             The interpolated string with all template variables replaced with their values.
-            Empty string if input_string is None.
+            Empty string if input_string is None or empty.
             
         Raises:
             ValueError: If a required template variable is missing from inputs.
             KeyError: If a template variable is not found in the inputs dictionary.
         """
-        if input_string is None:
+        if input_string is None or not input_string:
             return ""
-        if not input_string:
-            raise ValueError("Input string cannot be empty when provided")
+        if "{" not in input_string and "}" not in input_string:
+            return input_string
         if not inputs:
-            raise ValueError("Inputs dictionary cannot be empty")
+            raise ValueError("Inputs dictionary cannot be empty when interpolating variables")
 
         try:
             # Validate input types
