@@ -875,3 +875,25 @@ def test_key():
     assert (
         task.key == hash
     ), "The key should be the hash of the non-interpolated description."
+
+
+def test_output_file_validation():
+    """Test output file path validation."""
+    # Valid paths
+    assert Task(output_file="output.txt").output_file == "output.txt"
+    assert Task(output_file="/tmp/output.txt").output_file == "tmp/output.txt"
+    assert Task(output_file="{dir}/output_{date}.txt").output_file == "{dir}/output_{date}.txt"
+    
+    # Invalid paths
+    with pytest.raises(ValueError, match="Path traversal"):
+        Task(output_file="../output.txt")
+    with pytest.raises(ValueError, match="Path traversal"):
+        Task(output_file="folder/../output.txt")
+    with pytest.raises(ValueError, match="Shell special characters"):
+        Task(output_file="output.txt | rm -rf /")
+    with pytest.raises(ValueError, match="Shell expansion"):
+        Task(output_file="~/output.txt")
+    with pytest.raises(ValueError, match="Shell expansion"):
+        Task(output_file="$HOME/output.txt")
+    with pytest.raises(ValueError, match="Invalid template variable"):
+        Task(output_file="{invalid-name}/output.txt")
