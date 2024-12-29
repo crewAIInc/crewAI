@@ -179,6 +179,7 @@ class Task(BaseModel):
     _execution_span: Optional[Span] = PrivateAttr(default=None)
     _original_description: Optional[str] = PrivateAttr(default=None)
     _original_expected_output: Optional[str] = PrivateAttr(default=None)
+    _original_output_file: Optional[str] = PrivateAttr(default=None)
     _thread: Optional[threading.Thread] = PrivateAttr(default=None)
     _execution_time: Optional[float] = PrivateAttr(default=None)
 
