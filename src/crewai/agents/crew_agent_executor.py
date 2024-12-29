@@ -170,6 +170,7 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
                         self.step_callback(formatted_answer)
 
                     if self._should_force_answer():
+                        # have_forced_answer is now set in _should_force_answer
                         if self.have_forced_answer:
                             return AgentFinish(
                                 thought="",
@@ -178,11 +179,9 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
                                 ).format(formatted_answer.text),
                                 text=formatted_answer.text,
                             )
-                        else:
-                            formatted_answer.text += (
-                                f'\n{self._i18n.errors("force_final_answer")}'
-                            )
-                            self.have_forced_answer = True
+                        formatted_answer.text += (
+                            f'\n{self._i18n.errors("force_final_answer")}'
+                        )
                     self.messages.append(
                         self._format_msg(formatted_answer.text, role="assistant")
                     )
