@@ -127,10 +127,6 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
                         "Invalid response from LLM call - None or empty."
                     )
 
-                # Remember output format before parsing
-                if hasattr(self.task, 'output_format'):
-                    self._remember_format()
-
                 if not self.use_stop_words:
                     try:
                         self._format_answer(answer)
@@ -192,7 +188,9 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
                     )
 
         except OutputParserException as e:
-            error_msg = "Error on parsing tool." if "Error parsing tool usage" in str(e) else e.error
+            error_msg = e.error
+            if "Error parsing tool usage" in str(e):
+                error_msg = "Error on parsing tool."
             self.messages.append({"role": "user", "content": error_msg})
             if self.iterations > self.log_error_after:
                 self._printer.print(

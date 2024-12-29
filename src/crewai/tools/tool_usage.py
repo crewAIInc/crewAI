@@ -145,6 +145,10 @@ class ToolUsage:
         from_cache = False
 
         result = None  # type: ignore # Incompatible types in assignment (expression has type "None", variable has type "str")
+        
+        # Remember output format if needed
+        self._remember_format()
+        
         # check if cache is available
         if self.tools_handler.cache:
             result = self.tools_handler.cache.read(  # type: ignore # Incompatible types in assignment (expression has type "str | None", variable has type "str")
@@ -259,14 +263,20 @@ class ToolUsage:
         return result
 
     def _should_remember_format(self) -> bool:
-        return self.task.used_tools % self._remember_format_after_usages == 0
+        """Check if we should remember the output format based on usage count."""
+        return self.task.used_tools >= self._remember_format_after_usages
 
-    def _remember_format(self, result: str) -> None:
-        result = str(result)
-        result += "\n\n" + self._i18n.slice("tools").format(
-            tools=self.tools_description, tool_names=self.tools_names
-        )
-        return result  # type: ignore # No return value expected
+    def _remember_format(self, result: str = None) -> str:
+        """Remember the output format for the task and optionally format the result."""
+        if hasattr(self.task, 'output_format') and self._should_remember_format():
+            self.task.output_format = True
+        
+        if result is not None:
+            result = str(result)
+            result += "\n\n" + self._i18n.slice("tools").format(
+                tools=self.tools_description, tool_names=self.tools_names
+            )
+        return result if result is not None else ""
 
     def _check_tool_repeated_usage(
         self, calling: Union[ToolCalling, InstructorToolCalling]
