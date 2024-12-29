@@ -1,0 +1,282 @@
+---
+title: RagTool
+description: Base class for Retrieval-Augmented Generation (RAG) tools with flexible adapter support
+icon: database
+---
+
+## RagTool
+
+The RagTool serves as the base class for all Retrieval-Augmented Generation (RAG) tools in the CrewAI ecosystem. It provides a flexible adapter-based architecture for implementing knowledge base functionality with semantic search capabilities.
+
+## Installation
+
+```bash
+pip install 'crewai[tools]'
+```
+
+## Usage Example
+
+```python
+from crewai import Agent
+from crewai_tools import RagTool
+from crewai_tools.adapters import EmbedchainAdapter
+from embedchain import App
+
+# Create custom adapter
+class CustomAdapter(RagTool.Adapter):
+    def query(self, question: str) -> str:
+        # Implement custom query logic
+        return "Answer based on knowledge base"
+
+    def add(self, *args, **kwargs) -> None:
+        # Implement custom add logic
+        pass
+
+# Method 1: Use default EmbedchainAdapter
+rag_tool = RagTool(
+    name="Custom Knowledge Base",
+    description="Specialized knowledge base for domain data",
+    summarize=True
+)
+
+# Method 2: Use custom adapter
+custom_tool = RagTool(
+    name="Custom Knowledge Base",
+    adapter=CustomAdapter(),
+    summarize=False
+)
+
+# Create an agent with the tool
+researcher = Agent(
+    role='Knowledge Base Researcher',
+    goal='Search and analyze knowledge base content',
+    backstory='Expert at finding relevant information in specialized datasets.',
+    tools=[rag_tool],
+    verbose=True
+)
+```
+
+## Adapter Interface
+
+```python
+class Adapter(BaseModel, ABC):
+    @abstractmethod
+    def query(self, question: str) -> str:
+        """
+        Query the knowledge base with a question.
+        
+        Args:
+            question (str): Query to search in knowledge base
+            
+        Returns:
+            str: Answer based on knowledge base content
+        """
+        
+    @abstractmethod
+    def add(self, *args: Any, **kwargs: Any) -> None:
+        """
+        Add content to the knowledge base.
+        
+        Args:
+            *args: Variable length argument list
+            **kwargs: Arbitrary keyword arguments
+        """
+```
+
+## Function Signature
+
+```python
+def __init__(
+    self,
+    name: str = "Knowledge base",
+    description: str = "A knowledge base that can be used to answer questions.",
+    summarize: bool = False,
+    adapter: Optional[Adapter] = None,
+    config: Optional[dict[str, Any]] = None,
+    **kwargs
+):
+    """
+    Initialize the RAG tool.
+
+    Args:
+        name (str): Tool name
+        description (str): Tool description
+        summarize (bool): Enable answer summarization
+        adapter (Optional[Adapter]): Custom adapter implementation
+        config (Optional[dict]): Configuration for default adapter
+        **kwargs: Additional arguments for base tool
+    """
+
+def _run(
+    self,
+    query: str,
+    **kwargs: Any
+) -> str:
+    """
+    Execute query against knowledge base.
+
+    Args:
+        query (str): Question to ask
+        **kwargs: Additional arguments
+
+    Returns:
+        str: Answer from knowledge base
+    """
+```
+
+## Best Practices
+
+1. Adapter Implementation:
+   - Define clear interfaces
+   - Handle edge cases
+   - Implement error handling
+   - Document behavior
+
+2. Knowledge Base Management:
+   - Organize content logically
+   - Update content regularly
+   - Monitor performance
+   - Handle large datasets
+
+3. Query Optimization:
+   - Structure queries clearly
+   - Consider context
+   - Handle ambiguity
+   - Validate inputs
+
+4. Error Handling:
+   - Handle missing data
+   - Manage timeouts
+   - Provide clear messages
+   - Log issues
+
+## Integration Example
+
+```python
+from crewai import Agent, Task, Crew
+from crewai_tools import RagTool
+from embedchain import App
+
+# Initialize tool with custom configuration
+rag_tool = RagTool(
+    name="Technical Documentation KB",
+    description="Knowledge base for technical documentation",
+    summarize=True,
+    config={
+        "collection_name": "tech_docs",
+        "chunking": {
+            "chunk_size": 500,
+            "chunk_overlap": 50
+        }
+    }
+)
+
+# Add content to knowledge base
+rag_tool.add(
+    "Technical documentation content here...",
+    data_type="text"
+)
+
+# Create agent
+researcher = Agent(
+    role='Documentation Expert',
+    goal='Extract technical information from documentation',
+    backstory='Expert at analyzing technical documentation.',
+    tools=[rag_tool]
+)
+
+# Define task
+research_task = Task(
+    description="""Find all mentions of API endpoints 
+    and their authentication requirements.""",
+    agent=researcher
+)
+
+# Create crew
+crew = Crew(
+    agents=[researcher],
+    tasks=[research_task]
+)
+
+# Execute
+result = crew.kickoff()
+```
+
+## Advanced Usage
+
+### Custom Adapter Implementation
+```python
+from typing import Any
+from pydantic import BaseModel
+from abc import ABC, abstractmethod
+
+class SpecializedAdapter(RagTool.Adapter):
+    def __init__(self, config: dict):
+        self.config = config
+        self.knowledge_base = {}
+
+    def query(self, question: str) -> str:
+        # Implement specialized query logic
+        return self._process_query(question)
+
+    def add(self, content: str, **kwargs: Any) -> None:
+        # Implement specialized content addition
+        self._process_content(content, **kwargs)
+
+# Use custom adapter
+specialized_tool = RagTool(
+    name="Specialized KB",
+    adapter=SpecializedAdapter(config={"mode": "advanced"})
+)
+```
+
+### Configuration Management
+```python
+# Configure default EmbedchainAdapter
+config = {
+    "collection_name": "custom_collection",
+    "embedding": {
+        "model": "sentence-transformers/all-mpnet-base-v2",
+        "dimensions": 768
+    },
+    "chunking": {
+        "chunk_size": 1000,
+        "chunk_overlap": 100
+    }
+}
+
+tool = RagTool(config=config)
+```
+
+### Error Handling Example
+```python
+try:
+    rag_tool = RagTool()
+    
+    # Add content
+    rag_tool.add(
+        "Documentation content...",
+        data_type="text"
+    )
+    
+    # Query content
+    result = rag_tool.run(
+        query="What are the system requirements?"
+    )
+    print(result)
+except Exception as e:
+    print(f"Error using knowledge base: {str(e)}")
+```
+
+## Notes
+
+- Base class for RAG tools
+- Flexible adapter pattern
+- Default EmbedchainAdapter
+- Custom adapter support
+- Content management
+- Query processing
+- Error handling
+- Configuration options
+- Performance optimization
+- Memory management

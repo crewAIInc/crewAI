@@ -1,0 +1,207 @@
+---
+title: CSVSearchTool
+description: A tool for semantic search within CSV files using RAG capabilities
+icon: table
+---
+
+## CSVSearchTool
+
+The CSVSearchTool enables semantic search capabilities for CSV files using Retrieval-Augmented Generation (RAG). It can process CSV files either specified during initialization or at runtime, making it flexible for various use cases.
+
+## Installation
+
+```bash
+pip install 'crewai[tools]'
+```
+
+## Usage Example
+
+```python
+from crewai import Agent
+from crewai_tools import CSVSearchTool
+
+# Method 1: Initialize with specific CSV file
+csv_tool = CSVSearchTool(csv="path/to/data.csv")
+
+# Method 2: Initialize without CSV (specify at runtime)
+flexible_csv_tool = CSVSearchTool()
+
+# Create an agent with the tool
+data_analyst = Agent(
+    role='Data Analyst',
+    goal='Search and analyze CSV data semantically',
+    backstory='Expert at analyzing and extracting insights from CSV data.',
+    tools=[csv_tool],
+    verbose=True
+)
+```
+
+## Input Schema
+
+### Fixed CSV Schema (when CSV path provided during initialization)
+```python
+class FixedCSVSearchToolSchema(BaseModel):
+    search_query: str = Field(
+        description="Mandatory search query you want to use to search the CSV's content"
+    )
+```
+
+### Flexible CSV Schema (when CSV path provided at runtime)
+```python
+class CSVSearchToolSchema(FixedCSVSearchToolSchema):
+    csv: str = Field(
+        description="Mandatory csv path you want to search"
+    )
+```
+
+## Function Signature
+
+```python
+def __init__(
+    self,
+    csv: Optional[str] = None,
+    **kwargs
+):
+    """
+    Initialize the CSV search tool.
+
+    Args:
+        csv (Optional[str]): Path to CSV file (optional)
+        **kwargs: Additional arguments for RAG tool configuration
+    """
+
+def _run(
+    self,
+    search_query: str,
+    **kwargs: Any
+) -> str:
+    """
+    Execute semantic search on CSV content.
+
+    Args:
+        search_query (str): Query to search in the CSV
+        **kwargs: Additional arguments including csv path if not initialized
+
+    Returns:
+        str: Relevant content from the CSV matching the query
+    """
+```
+
+## Best Practices
+
+1. CSV File Handling:
+   - Ensure CSV files are properly formatted
+   - Use absolute paths for reliability
+   - Verify file permissions before processing
+
+2. Search Optimization:
+   - Use specific, focused search queries
+   - Consider column names and data structure
+   - Test with sample queries first
+
+3. Performance Considerations:
+   - Pre-initialize with CSV for repeated searches
+   - Handle large CSV files appropriately
+   - Monitor memory usage with big datasets
+
+4. Error Handling:
+   - Verify CSV file existence
+   - Handle malformed CSV data
+   - Manage file access permissions
+
+## Integration Example
+
+```python
+from crewai import Agent, Task, Crew
+from crewai_tools import CSVSearchTool
+
+# Initialize tool with specific CSV
+csv_tool = CSVSearchTool(csv="/path/to/sales_data.csv")
+
+# Create agent
+analyst = Agent(
+    role='Data Analyst',
+    goal='Extract insights from sales data',
+    backstory='Expert at analyzing sales data and trends.',
+    tools=[csv_tool]
+)
+
+# Define task
+analysis_task = Task(
+    description="""Find all sales records from the CSV 
+    that relate to product returns in Q4 2023.""",
+    agent=analyst
+)
+
+# The tool will use:
+# {
+#   "search_query": "product returns Q4 2023"
+# }
+
+# Create crew
+crew = Crew(
+    agents=[analyst],
+    tasks=[analysis_task]
+)
+
+# Execute
+result = crew.kickoff()
+```
+
+## Advanced Usage
+
+### Dynamic CSV Selection
+```python
+# Initialize without CSV
+flexible_tool = CSVSearchTool()
+
+# Search different CSVs
+result1 = flexible_tool.run(
+    search_query="revenue 2023",
+    csv="/path/to/finance.csv"
+)
+
+result2 = flexible_tool.run(
+    search_query="customer feedback",
+    csv="/path/to/surveys.csv"
+)
+```
+
+### Multiple CSV Analysis
+```python
+# Create tools for different CSVs
+sales_tool = CSVSearchTool(csv="/path/to/sales.csv")
+inventory_tool = CSVSearchTool(csv="/path/to/inventory.csv")
+
+# Create agent with multiple tools
+analyst = Agent(
+    role='Business Analyst',
+    goal='Cross-reference sales and inventory data',
+    tools=[sales_tool, inventory_tool]
+)
+```
+
+### Error Handling Example
+```python
+try:
+    csv_tool = CSVSearchTool(csv="/path/to/data.csv")
+    result = csv_tool.run(
+        search_query="important metrics"
+    )
+    print(result)
+except Exception as e:
+    print(f"Error processing CSV: {str(e)}")
+```
+
+## Notes
+
+- Inherits from RagTool for semantic search
+- Supports dynamic CSV file specification
+- Uses embedchain for data processing
+- Maintains search context across queries
+- Thread-safe operations
+- Efficient semantic search capabilities
+- Supports various CSV formats
+- Handles large datasets effectively
+- Preserves CSV structure in search
+- Enables natural language queries

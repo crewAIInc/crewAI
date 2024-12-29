@@ -1,0 +1,233 @@
+---
+title: GithubSearchTool
+description: A tool for semantic search within GitHub repositories using RAG capabilities
+icon: github
+---
+
+## GithubSearchTool
+
+The GithubSearchTool enables semantic search capabilities for GitHub repositories using Retrieval-Augmented Generation (RAG). It processes various content types including code, repository information, pull requests, and issues, allowing natural language queries across repository content.
+
+## Installation
+
+```bash
+pip install 'crewai[tools]'
+```
+
+## Usage Example
+
+```python
+from crewai import Agent
+from crewai_tools import GithubSearchTool
+
+# Method 1: Initialize with specific repository
+github_tool = GithubSearchTool(
+    github_repo="owner/repo",
+    gh_token="your_github_token",
+    content_types=["code", "pr", "issue"]
+)
+
+# Method 2: Initialize without repository (specify at runtime)
+flexible_github_tool = GithubSearchTool(
+    gh_token="your_github_token",
+    content_types=["code", "repo"]
+)
+
+# Create an agent with the tool
+researcher = Agent(
+    role='GitHub Researcher',
+    goal='Search and analyze repository contents',
+    backstory='Expert at finding relevant information in GitHub repositories.',
+    tools=[github_tool],
+    verbose=True
+)
+```
+
+## Input Schema
+
+### Fixed Repository Schema (when repo provided during initialization)
+```python
+class FixedGithubSearchToolSchema(BaseModel):
+    search_query: str = Field(
+        description="Mandatory search query you want to use to search the github repo's content"
+    )
+```
+
+### Flexible Repository Schema (when repo provided at runtime)
+```python
+class GithubSearchToolSchema(FixedGithubSearchToolSchema):
+    github_repo: str = Field(
+        description="Mandatory github you want to search"
+    )
+    content_types: List[str] = Field(
+        description="Mandatory content types you want to be included search, options: [code, repo, pr, issue]"
+    )
+```
+
+## Function Signature
+
+```python
+def __init__(
+    self,
+    github_repo: Optional[str] = None,
+    gh_token: str,
+    content_types: List[str],
+    **kwargs
+):
+    """
+    Initialize the GitHub search tool.
+
+    Args:
+        github_repo (Optional[str]): Repository to search (optional)
+        gh_token (str): GitHub authentication token
+        content_types (List[str]): Content types to search
+        **kwargs: Additional arguments for RAG tool configuration
+    """
+
+def _run(
+    self,
+    search_query: str,
+    **kwargs: Any
+) -> str:
+    """
+    Execute semantic search on repository contents.
+
+    Args:
+        search_query (str): Query to search in the repository
+        **kwargs: Additional arguments including github_repo and content_types if not initialized
+
+    Returns:
+        str: Relevant content from the repository matching the query
+    """
+```
+
+## Best Practices
+
+1. Authentication:
+   - Secure token management
+   - Use environment variables
+   - Handle token expiration
+
+2. Search Optimization:
+   - Target specific content types
+   - Use focused queries
+   - Consider rate limits
+
+3. Performance Considerations:
+   - Pre-initialize for repeated searches
+   - Handle large repositories
+   - Monitor API usage
+
+4. Error Handling:
+   - Verify repository access
+   - Handle API limits
+   - Manage authentication errors
+
+## Integration Example
+
+```python
+from crewai import Agent, Task, Crew
+from crewai_tools import GithubSearchTool
+
+# Initialize tool with specific repository
+github_tool = GithubSearchTool(
+    github_repo="owner/repo",
+    gh_token="your_github_token",
+    content_types=["code", "pr", "issue"]
+)
+
+# Create agent
+researcher = Agent(
+    role='GitHub Researcher',
+    goal='Extract insights from repository content',
+    backstory='Expert at analyzing GitHub repositories.',
+    tools=[github_tool]
+)
+
+# Define task
+research_task = Task(
+    description="""Find all implementations of 
+    machine learning algorithms in the codebase.""",
+    agent=researcher
+)
+
+# The tool will use:
+# {
+#   "search_query": "machine learning implementation"
+# }
+
+# Create crew
+crew = Crew(
+    agents=[researcher],
+    tasks=[research_task]
+)
+
+# Execute
+result = crew.kickoff()
+```
+
+## Advanced Usage
+
+### Dynamic Repository Selection
+```python
+# Initialize without repository
+flexible_tool = GithubSearchTool(
+    gh_token="your_github_token",
+    content_types=["code", "repo"]
+)
+
+# Search different repositories
+backend_results = flexible_tool.run(
+    search_query="authentication implementation",
+    github_repo="owner/backend-repo"
+)
+
+frontend_results = flexible_tool.run(
+    search_query="component architecture",
+    github_repo="owner/frontend-repo"
+)
+```
+
+### Multiple Content Type Analysis
+```python
+# Create tool with multiple content types
+multi_tool = GithubSearchTool(
+    github_repo="owner/repo",
+    gh_token="your_github_token",
+    content_types=["code", "pr", "issue", "repo"]
+)
+
+# Search across all content types
+results = multi_tool.run(
+    search_query="feature implementation status"
+)
+```
+
+### Error Handling Example
+```python
+try:
+    github_tool = GithubSearchTool(
+        gh_token="your_github_token",
+        content_types=["code"]
+    )
+    results = github_tool.run(
+        search_query="api endpoints",
+        github_repo="owner/repo"
+    )
+    print(results)
+except Exception as e:
+    print(f"Error searching repository: {str(e)}")
+```
+
+## Notes
+
+- Inherits from RagTool
+- Uses GithubLoader
+- Requires authentication
+- Supports multiple content types
+- Dynamic repository specification
+- Efficient content retrieval
+- Thread-safe operations
+- Maintains search context
+- Handles API rate limits
+- Memory-efficient processing

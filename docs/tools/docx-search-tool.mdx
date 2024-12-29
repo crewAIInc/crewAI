@@ -1,0 +1,224 @@
+---
+title: DOCXSearchTool
+description: A tool for semantic search within DOCX documents using RAG capabilities
+icon: file-text
+---
+
+## DOCXSearchTool
+
+The DOCXSearchTool enables semantic search capabilities for Microsoft Word (DOCX) documents using Retrieval-Augmented Generation (RAG). It supports both fixed and dynamic document selection modes.
+
+## Installation
+
+```bash
+pip install 'crewai[tools]'
+```
+
+## Usage Example
+
+```python
+from crewai import Agent
+from crewai_tools import DOCXSearchTool
+
+# Method 1: Fixed document (specified at initialization)
+fixed_tool = DOCXSearchTool(
+    docx="path/to/document.docx"
+)
+
+# Method 2: Dynamic document (specified at runtime)
+dynamic_tool = DOCXSearchTool()
+
+# Create an agent with the tool
+researcher = Agent(
+    role='Document Researcher',
+    goal='Search and analyze document contents',
+    backstory='Expert at finding relevant information in documents.',
+    tools=[fixed_tool],  # or [dynamic_tool]
+    verbose=True
+)
+```
+
+## Input Schema
+
+### Fixed Document Mode
+```python
+class FixedDOCXSearchToolSchema(BaseModel):
+    search_query: str = Field(
+        description="Mandatory search query you want to use to search the DOCX's content"
+    )
+```
+
+### Dynamic Document Mode
+```python
+class DOCXSearchToolSchema(BaseModel):
+    docx: str = Field(
+        description="Mandatory docx path you want to search"
+    )
+    search_query: str = Field(
+        description="Mandatory search query you want to use to search the DOCX's content"
+    )
+```
+
+## Function Signature
+
+```python
+def __init__(
+    self,
+    docx: Optional[str] = None,
+    **kwargs
+):
+    """
+    Initialize the DOCX search tool.
+
+    Args:
+        docx (Optional[str]): Path to DOCX file (optional for dynamic mode)
+        **kwargs: Additional arguments for RAG tool configuration
+    """
+
+def _run(
+    self,
+    search_query: str,
+    docx: Optional[str] = None,
+    **kwargs: Any
+) -> str:
+    """
+    Execute semantic search on document contents.
+
+    Args:
+        search_query (str): Query to search in the document
+        docx (Optional[str]): Document path (required for dynamic mode)
+        **kwargs: Additional arguments
+
+    Returns:
+        str: Relevant content from the document matching the query
+    """
+```
+
+## Best Practices
+
+1. Document Handling:
+   - Use absolute file paths
+   - Verify file existence
+   - Handle large documents
+   - Monitor memory usage
+
+2. Query Optimization:
+   - Structure queries clearly
+   - Consider document size
+   - Handle formatting
+   - Monitor performance
+
+3. Error Handling:
+   - Check file access
+   - Validate file format
+   - Handle corrupted files
+   - Log issues
+
+4. Mode Selection:
+   - Choose fixed mode for static documents
+   - Use dynamic mode for runtime selection
+   - Consider memory implications
+   - Manage document lifecycle
+
+## Integration Example
+
+```python
+from crewai import Agent, Task, Crew
+from crewai_tools import DOCXSearchTool
+
+# Initialize tool
+docx_tool = DOCXSearchTool(
+    docx="reports/annual_report_2023.docx"
+)
+
+# Create agent
+researcher = Agent(
+    role='Document Analyst',
+    goal='Extract insights from annual report',
+    backstory='Expert at analyzing business documents.',
+    tools=[docx_tool]
+)
+
+# Define task
+analysis_task = Task(
+    description="""Find all mentions of revenue growth 
+    and market expansion.""",
+    agent=researcher
+)
+
+# Create crew
+crew = Crew(
+    agents=[researcher],
+    tasks=[analysis_task]
+)
+
+# Execute
+result = crew.kickoff()
+```
+
+## Advanced Usage
+
+### Multiple Document Analysis
+```python
+# Create tools for different documents
+report_tool = DOCXSearchTool(
+    docx="reports/annual_report.docx"
+)
+
+policy_tool = DOCXSearchTool(
+    docx="policies/compliance.docx"
+)
+
+# Create agent with multiple tools
+analyst = Agent(
+    role='Document Analyst',
+    goal='Cross-reference reports and policies',
+    tools=[report_tool, policy_tool]
+)
+```
+
+### Dynamic Document Loading
+```python
+# Initialize dynamic tool
+dynamic_tool = DOCXSearchTool()
+
+# Use with different documents
+result1 = dynamic_tool.run(
+    docx="document1.docx",
+    search_query="project timeline"
+)
+
+result2 = dynamic_tool.run(
+    docx="document2.docx",
+    search_query="budget allocation"
+)
+```
+
+### Error Handling Example
+```python
+try:
+    docx_tool = DOCXSearchTool(
+        docx="reports/quarterly_report.docx"
+    )
+    results = docx_tool.run(
+        search_query="Q3 performance metrics"
+    )
+    print(results)
+except FileNotFoundError as e:
+    print(f"Document not found: {str(e)}")
+except Exception as e: 
+    print(f"Error processing document: {str(e)}")
+```
+
+## Notes
+
+- Inherits from RagTool
+- Supports fixed/dynamic modes
+- Document path validation
+- Memory management
+- Performance optimization
+- Error handling
+- Search capabilities
+- Content extraction
+- Format handling
+- Security features

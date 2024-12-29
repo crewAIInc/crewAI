@@ -1,0 +1,217 @@
+---
+title: Directory Read Tool
+description: A tool for recursively listing directory contents
+---
+
+# Directory Read Tool
+
+The Directory Read Tool provides functionality to recursively list all files within a directory. It supports both fixed and dynamic directory path modes, allowing you to specify the directory at initialization or runtime.
+
+## Installation
+
+```bash
+pip install 'crewai[tools]'
+```
+
+## Usage
+
+You can use the Directory Read Tool in two ways:
+
+### 1. Fixed Directory Path
+
+Initialize the tool with a specific directory path:
+
+```python
+from crewai import Agent
+from crewai_tools import DirectoryReadTool
+
+# Initialize with a fixed directory
+tool = DirectoryReadTool(directory="/path/to/your/directory")
+
+# Create an agent with the tool
+agent = Agent(
+    role='File System Analyst',
+    goal='Analyze directory contents',
+    backstory='I help analyze and organize file systems',
+    tools=[tool]
+)
+
+# Use in a task
+task = Task(
+    description="List all files in the project directory",
+    agent=agent
+)
+```
+
+### 2. Dynamic Directory Path
+
+Initialize the tool without a specific directory path to provide it at runtime:
+
+```python
+from crewai import Agent
+from crewai_tools import DirectoryReadTool
+
+# Initialize without a fixed directory
+tool = DirectoryReadTool()
+
+# Create an agent with the tool
+agent = Agent(
+    role='File System Explorer',
+    goal='Explore different directories',
+    backstory='I analyze various directory structures',
+    tools=[tool]
+)
+
+# Use in a task with dynamic directory path
+task = Task(
+    description="List all files in the specified directory",
+    agent=agent,
+    context={
+        "directory": "/path/to/explore"
+    }
+)
+```
+
+## Input Schema
+
+### Fixed Directory Mode
+```python
+class FixedDirectoryReadToolSchema(BaseModel):
+    pass  # No additional parameters needed when directory is fixed
+```
+
+### Dynamic Directory Mode
+```python
+class DirectoryReadToolSchema(BaseModel):
+    directory: str  # The path to the directory to list contents
+```
+
+## Function Signatures
+
+```python
+def __init__(self, directory: Optional[str] = None, **kwargs):
+    """
+    Initialize the Directory Read Tool.
+    
+    Args:
+        directory (Optional[str]): Path to the directory (optional)
+        **kwargs: Additional arguments passed to BaseTool
+    """
+
+def _run(
+    self,
+    **kwargs: Any,
+) -> str:
+    """
+    Execute the directory listing.
+    
+    Args:
+        **kwargs: Arguments including 'directory' for dynamic mode
+    
+    Returns:
+        str: A formatted string containing all file paths in the directory
+    """
+```
+
+## Best Practices
+
+1. **Path Handling**:
+   - Use absolute paths to avoid path resolution issues
+   - Handle trailing slashes appropriately
+   - Verify directory existence before listing
+
+2. **Performance Considerations**:
+   - Be mindful of directory size when listing large directories
+   - Consider implementing pagination for large directories
+   - Handle symlinks appropriately
+
+3. **Error Handling**:
+   - Handle directory not found errors gracefully
+   - Manage permission issues appropriately
+   - Validate input parameters before processing
+
+## Example Integration
+
+Here's a complete example showing how to integrate the Directory Read Tool with CrewAI:
+
+```python
+from crewai import Agent, Task, Crew
+from crewai_tools import DirectoryReadTool
+
+# Initialize the tool
+dir_tool = DirectoryReadTool()
+
+# Create an agent with the tool
+file_analyst = Agent(
+    role='File System Analyst',
+    goal='Analyze and report on directory structures',
+    backstory='I am an expert at analyzing file system organization',
+    tools=[dir_tool]
+)
+
+# Create tasks
+analysis_task = Task(
+    description="""
+    Analyze the project directory structure:
+    1. List all files recursively
+    2. Identify key file types
+    3. Report on directory organization
+    
+    Provide a comprehensive analysis of the findings.
+    """,
+    agent=file_analyst,
+    context={
+        "directory": "/path/to/project"
+    }
+)
+
+# Create and run the crew
+crew = Crew(
+    agents=[file_analyst],
+    tasks=[analysis_task]
+)
+
+result = crew.kickoff()
+```
+
+## Error Handling
+
+The tool handles various error scenarios:
+
+1. **Directory Not Found**:
+   ```python
+   try:
+       tool = DirectoryReadTool(directory="/nonexistent/path")
+   except FileNotFoundError:
+       print("Directory not found. Please verify the path.")
+   ```
+
+2. **Permission Issues**:
+   ```python
+   try:
+       tool = DirectoryReadTool(directory="/restricted/path")
+   except PermissionError:
+       print("Insufficient permissions to access the directory.")
+   ```
+
+3. **Invalid Path**:
+   ```python
+   try:
+       result = tool._run(directory="invalid/path")
+   except ValueError:
+       print("Invalid directory path provided.")
+   ```
+
+## Output Format
+
+The tool returns a formatted string containing all file paths in the directory:
+
+```
+File paths:
+- /path/to/directory/file1.txt
+- /path/to/directory/subdirectory/file2.txt
+- /path/to/directory/subdirectory/file3.py
+```
+
+
+Each file path is listed on a new line with a hyphen prefix, making it easy to parse and read the output.

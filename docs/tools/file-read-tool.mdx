@@ -1,0 +1,193 @@
+---
+title: FileReadTool
+description: A tool for reading file contents with flexible path specification
+icon: file-text
+---
+
+## FileReadTool
+
+The FileReadTool provides functionality to read file contents with support for both fixed and dynamic file path specification. It includes comprehensive error handling for common file operations and maintains clear descriptions of its configured state.
+
+## Installation
+
+```bash
+pip install 'crewai[tools]'
+```
+
+## Usage Example
+
+```python
+from crewai import Agent
+from crewai_tools import FileReadTool
+
+# Method 1: Initialize with specific file
+reader = FileReadTool(file_path="/path/to/data.txt")
+
+# Method 2: Initialize without file (specify at runtime)
+flexible_reader = FileReadTool()
+
+# Create an agent with the tool
+file_processor = Agent(
+    role='File Processor',
+    goal='Read and process file contents',
+    backstory='Expert at handling file operations and content processing.',
+    tools=[reader],
+    verbose=True
+)
+```
+
+## Input Schema
+
+```python
+class FileReadToolSchema(BaseModel):
+    file_path: str = Field(
+        description="Mandatory file full path to read the file"
+    )
+```
+
+## Function Signature
+
+```python
+def __init__(
+    self,
+    file_path: Optional[str] = None,
+    **kwargs: Any
+) -> None:
+    """
+    Initialize the file read tool.
+
+    Args:
+        file_path (Optional[str]): Path to file to read (optional)
+        **kwargs: Additional arguments passed to BaseTool
+    """
+
+def _run(
+    self,
+    **kwargs: Any
+) -> str:
+    """
+    Read and return file contents.
+
+    Args:
+        file_path (str, optional): Override default file path
+        **kwargs: Additional arguments
+
+    Returns:
+        str: File contents or error message
+    """
+```
+
+## Best Practices
+
+1. File Path Management:
+   - Use absolute paths for reliability
+   - Verify file existence before operations
+   - Handle path resolution properly
+
+2. Error Handling:
+   - Check for file existence
+   - Handle permission issues
+   - Manage encoding errors
+   - Process file access failures
+
+3. Performance Considerations:
+   - Close files after reading
+   - Handle large files appropriately
+   - Consider memory constraints
+
+4. Security Practices:
+   - Validate file paths
+   - Check file permissions
+   - Avoid path traversal issues
+
+## Integration Example
+
+```python
+from crewai import Agent, Task, Crew
+from crewai_tools import FileReadTool
+
+# Initialize tool with specific file
+reader = FileReadTool(file_path="/path/to/config.txt")
+
+# Create agent
+processor = Agent(
+    role='File Processor',
+    goal='Process configuration files',
+    backstory='Expert at reading and analyzing configuration files.',
+    tools=[reader]
+)
+
+# Define task
+read_task = Task(
+    description="""Read and analyze the contents of 
+    the configuration file.""",
+    agent=processor
+)
+
+# The tool will use the default file path
+
+# Create crew
+crew = Crew(
+    agents=[processor],
+    tasks=[read_task]
+)
+
+# Execute
+result = crew.kickoff()
+```
+
+## Advanced Usage
+
+### Dynamic File Selection
+```python
+# Initialize without file path
+flexible_reader = FileReadTool()
+
+# Read different files
+config_content = flexible_reader.run(
+    file_path="/path/to/config.txt"
+)
+
+log_content = flexible_reader.run(
+    file_path="/path/to/logs.txt"
+)
+```
+
+### Multiple File Processing
+```python
+# Create tools for different files
+config_reader = FileReadTool(file_path="/path/to/config.txt")
+log_reader = FileReadTool(file_path="/path/to/logs.txt")
+
+# Create agent with multiple tools
+processor = Agent(
+    role='File Analyst',
+    goal='Analyze multiple file types',
+    tools=[config_reader, log_reader]
+)
+```
+
+### Error Handling Example
+```python
+try:
+    reader = FileReadTool()
+    content = reader.run(
+        file_path="/path/to/file.txt"
+    )
+    print(content)
+except Exception as e:
+    print(f"Error reading file: {str(e)}")
+```
+
+## Notes
+
+- Inherits from BaseTool
+- Supports fixed or dynamic file paths
+- Comprehensive error handling
+- Thread-safe operations
+- Clear error messages
+- Flexible path specification
+- Maintains tool description
+- Handles common file errors
+- Supports various file types
+- Memory-efficient operations

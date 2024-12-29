@@ -1,0 +1,141 @@
+---
+title: FileWriterTool
+description: A tool for writing content to files with support for various file formats.
+icon: file-pen
+---
+
+## FileWriterTool
+
+The FileWriterTool provides agents with the capability to write content to files, supporting various file formats and ensuring proper file handling.
+
+## Installation
+
+```bash
+pip install 'crewai[tools]'
+```
+
+## Usage Example
+
+```python
+from crewai import Agent
+from crewai_tools import FileWriterTool
+
+# Initialize the tool
+file_writer = FileWriterTool()
+
+# Create an agent with the tool
+writer_agent = Agent(
+    role='Content Writer',
+    goal='Write and save content to files',
+    backstory='Expert at creating and managing file content.',
+    tools=[file_writer],
+    verbose=True
+)
+
+# Use in a task
+task = Task(
+    description='Write a report and save it to report.txt',
+    agent=writer_agent
+)
+```
+
+## Tool Attributes
+
+| Attribute | Type | Description |
+| :-------- | :--- | :---------- |
+| name | str | "File Writer Tool" |
+| description | str | "A tool that writes content to a file." |
+
+## Input Schema
+
+```python
+class FileWriterToolInput(BaseModel):
+    filename: str       # Name of the file to write
+    directory: str = "./"  # Optional directory path, defaults to current directory
+    overwrite: str = "False"  # Whether to overwrite existing file ("True"/"False")
+    content: str       # Content to write to the file
+```
+
+## Function Signature
+
+```python
+def _run(self, **kwargs: Any) -> str:
+    """
+    Write content to a file with specified parameters.
+
+    Args:
+        filename (str): Name of the file to write
+        content (str): Content to write to the file
+        directory (str, optional): Directory path. Defaults to "./".
+        overwrite (str, optional): Whether to overwrite existing file. Defaults to "False".
+
+    Returns:
+        str: Success message with filepath or error message
+    """
+```
+
+## Error Handling
+
+The tool includes error handling for common file operations:
+- FileExistsError: When file exists and overwrite is not allowed
+- KeyError: When required parameters are missing
+- Directory Creation: Automatically creates directories if they don't exist
+- General Exceptions: Catches and reports any other file operation errors
+
+## Best Practices
+
+1. Always provide absolute file paths
+2. Ensure proper file permissions
+3. Handle potential errors in your agent prompts
+4. Verify file contents after writing
+
+## Integration Example
+
+```python
+from crewai import Agent, Task, Crew
+from crewai_tools import FileWriterTool
+
+# Initialize tool
+file_writer = FileWriterTool()
+
+# Create agent
+writer = Agent(
+    role='Technical Writer',
+    goal='Create and save technical documentation',
+    backstory='Expert technical writer with experience in documentation.',
+    tools=[file_writer]
+)
+
+# Define task
+writing_task = Task(
+    description="""Write a technical guide about Python best practices and save it
+    to the docs directory. The file should be named 'python_guide.md'.
+    Include sections on code style, documentation, and testing.
+    If a file already exists, overwrite it.""",
+    agent=writer
+)
+
+# The agent can use the tool with these parameters:
+# {
+#   "filename": "python_guide.md",
+#   "directory": "docs",
+#   "overwrite": "True",
+#   "content": "# Python Best Practices\n\n## Code Style\n..."
+# }
+
+# Create crew
+crew = Crew(
+    agents=[writer],
+    tasks=[writing_task]
+)
+
+# Execute
+result = crew.kickoff()
+```
+
+## Notes
+
+- The tool automatically creates directories in the file path if they don't exist
+- Supports various file formats (txt, md, json, etc.)
+- Returns descriptive error messages for better debugging
+- Thread-safe file operations

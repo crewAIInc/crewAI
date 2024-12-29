@@ -1,0 +1,184 @@
+---
+title: LinkupSearchTool
+description: A search tool powered by Linkup API for retrieving contextual information
+icon: search
+---
+
+## LinkupSearchTool
+
+The LinkupSearchTool provides search capabilities using the Linkup API. It allows for customizable search depth and output formatting, returning structured results with contextual information.
+
+## Installation
+
+```bash
+pip install 'crewai[tools]'
+pip install linkup  # Required dependency
+```
+
+## Usage Example
+
+```python
+from crewai import Agent
+from crewai_tools import LinkupSearchTool
+
+# Initialize the tool with your API key
+search_tool = LinkupSearchTool(api_key="your-linkup-api-key")
+
+# Create an agent with the tool
+researcher = Agent(
+    role='Information Researcher',
+    goal='Find relevant contextual information',
+    backstory='Expert at retrieving and analyzing contextual data.',
+    tools=[search_tool],
+    verbose=True
+)
+```
+
+## Function Signature
+
+```python
+def __init__(self, api_key: str):
+    """
+    Initialize the Linkup search tool.
+
+    Args:
+        api_key (str): Linkup API key for authentication
+    """
+
+def _run(
+    self,
+    query: str,
+    depth: str = "standard",
+    output_type: str = "searchResults"
+) -> dict:
+    """
+    Perform a search using the Linkup API.
+
+    Args:
+        query (str): The search query
+        depth (str): Search depth ("standard" by default)
+        output_type (str): Desired result type ("searchResults" by default)
+
+    Returns:
+        dict: {
+            "success": bool,
+            "results": List[Dict] | None,
+            "error": str | None
+        }
+        
+        On success, results contains list of:
+        {
+            "name": str,
+            "url": str,
+            "content": str
+        }
+    """
+```
+
+## Best Practices
+
+1. Always provide a valid API key
+2. Use specific, focused search queries
+3. Choose appropriate search depth based on needs
+4. Handle potential API errors in agent prompts
+5. Process structured results effectively
+
+## Integration Example
+
+```python
+from crewai import Agent, Task, Crew
+from crewai_tools import LinkupSearchTool
+
+# Initialize tool with API key
+search_tool = LinkupSearchTool(api_key="your-linkup-api-key")
+
+# Create agent
+researcher = Agent(
+    role='Context Researcher',
+    goal='Find detailed contextual information about topics',
+    backstory='Expert at discovering and analyzing contextual data.',
+    tools=[search_tool]
+)
+
+# Define task
+research_task = Task(
+    description="""Research the latest developments in quantum computing,
+    focusing on recent breakthroughs and applications. Use standard depth
+    for comprehensive results.""",
+    agent=researcher
+)
+
+# The tool will use:
+# query: "quantum computing recent breakthroughs applications"
+# depth: "standard"
+# output_type: "searchResults"
+
+# Create crew
+crew = Crew(
+    agents=[researcher],
+    tasks=[research_task]
+)
+
+# Execute
+result = crew.kickoff()
+```
+
+## Advanced Usage
+
+### Search Depth Options
+```python
+# Quick surface-level search
+results = search_tool._run(
+    query="quantum computing",
+    depth="basic"
+)
+
+# Standard comprehensive search
+results = search_tool._run(
+    query="quantum computing",
+    depth="standard"
+)
+
+# Deep detailed search
+results = search_tool._run(
+    query="quantum computing",
+    depth="deep"
+)
+```
+
+### Output Type Options
+```python
+# Default search results
+results = search_tool._run(
+    query="quantum computing",
+    output_type="searchResults"
+)
+
+# Custom output format
+results = search_tool._run(
+    query="quantum computing",
+    output_type="customFormat"
+)
+```
+
+### Error Handling
+```python
+results = search_tool._run(query="quantum computing")
+if results["success"]:
+    for result in results["results"]:
+        print(f"Name: {result['name']}")
+        print(f"URL: {result['url']}")
+        print(f"Content: {result['content']}")
+else:
+    print(f"Error: {results['error']}")
+```
+
+## Notes
+
+- Requires valid Linkup API key
+- Returns structured search results
+- Supports multiple search depths
+- Configurable output formats
+- Built-in error handling
+- Thread-safe operations
+- Efficient for contextual searches

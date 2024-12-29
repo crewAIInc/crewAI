@@ -1,0 +1,192 @@
+---
+title: LlamaIndexTool
+description: A wrapper tool for integrating LlamaIndex tools and query engines with CrewAI
+icon: link
+---
+
+## LlamaIndexTool
+
+The LlamaIndexTool serves as a bridge between CrewAI and LlamaIndex, allowing you to use LlamaIndex tools and query engines within your CrewAI agents. It supports both direct tool wrapping and query engine integration.
+
+## Installation
+
+```bash
+pip install 'crewai[tools]'
+pip install llama-index  # Required for LlamaIndex integration
+```
+
+## Usage Examples
+
+### Using with LlamaIndex Tools
+
+```python
+from crewai import Agent
+from crewai_tools import LlamaIndexTool
+from llama_index.core.tools import BaseTool as LlamaBaseTool
+from pydantic import BaseModel, Field
+
+# Create a LlamaIndex tool
+class CustomLlamaSchema(BaseModel):
+    query: str = Field(..., description="Query to process")
+
+class CustomLlamaTool(LlamaBaseTool):
+    name = "Custom Llama Tool"
+    description = "A custom LlamaIndex tool"
+    
+    def __call__(self, query: str) -> str:
+        return f"Processed: {query}"
+
+# Wrap the LlamaIndex tool
+llama_tool = CustomLlamaTool()
+wrapped_tool = LlamaIndexTool.from_tool(llama_tool)
+
+# Create an agent with the tool
+agent = Agent(
+    role='LlamaIndex Integration Agent',
+    goal='Process queries using LlamaIndex tools',
+    backstory='Specialist in integrating LlamaIndex capabilities.',
+    tools=[wrapped_tool]
+)
+```
+
+### Using with Query Engines
+
+```python
+from crewai import Agent
+from crewai_tools import LlamaIndexTool
+from llama_index.core import VectorStoreIndex, Document
+
+# Create a query engine
+documents = [Document(text="Sample document content")]
+index = VectorStoreIndex.from_documents(documents)
+query_engine = index.as_query_engine()
+
+# Create the tool
+query_tool = LlamaIndexTool.from_query_engine(
+    query_engine,
+    name="Document Search",
+    description="Search through indexed documents"
+)
+
+# Create an agent with the tool
+agent = Agent(
+    role='Document Researcher',
+    goal='Find relevant information in documents',
+    backstory='Expert at searching through document collections.',
+    tools=[query_tool]
+)
+```
+
+## Tool Creation Methods
+
+### From LlamaIndex Tool
+
+```python
+@classmethod
+def from_tool(cls, tool: Any, **kwargs: Any) -> "LlamaIndexTool":
+    """
+    Create a CrewAI tool from a LlamaIndex tool.
+
+    Args:
+        tool (LlamaBaseTool): A LlamaIndex tool to wrap
+        **kwargs: Additional arguments for tool creation
+
+    Returns:
+        LlamaIndexTool: A CrewAI-compatible tool wrapper
+
+    Raises:
+        ValueError: If tool is not a LlamaBaseTool or lacks fn_schema
+    """
+```
+
+### From Query Engine
+
+```python
+@classmethod
+def from_query_engine(
+    cls,
+    query_engine: Any,
+    name: Optional[str] = None,
+    description: Optional[str] = None,
+    return_direct: bool = False,
+    **kwargs: Any
+) -> "LlamaIndexTool":
+    """
+    Create a CrewAI tool from a LlamaIndex query engine.
+
+    Args:
+        query_engine (BaseQueryEngine): The query engine to wrap
+        name (Optional[str]): Custom name for the tool
+        description (Optional[str]): Custom description
+        return_direct (bool): Whether to return query engine response directly
+        **kwargs: Additional arguments for tool creation
+
+    Returns:
+        LlamaIndexTool: A CrewAI-compatible tool wrapper
+
+    Raises:
+        ValueError: If query_engine is not a BaseQueryEngine
+    """
+```
+
+## Integration Example
+
+```python
+from crewai import Agent, Task, Crew
+from crewai_tools import LlamaIndexTool
+from llama_index.core import VectorStoreIndex, Document
+from llama_index.core.tools import QueryEngineTool
+
+# Create documents and index
+documents = [
+    Document(text="AI is a technology that simulates human intelligence."),
+    Document(text="Machine learning is a subset of AI.")
+]
+index = VectorStoreIndex.from_documents(documents)
+query_engine = index.as_query_engine()
+
+# Create the tool
+search_tool = LlamaIndexTool.from_query_engine(
+    query_engine,
+    name="AI Knowledge Base",
+    description="Search through AI-related documents"
+)
+
+# Create agent
+researcher = Agent(
+    role='AI Researcher',
+    goal='Research AI concepts',
+    backstory='Expert at finding and explaining AI concepts.',
+    tools=[search_tool]
+)
+
+# Define task
+research_task = Task(
+    description="""Find and explain what AI is and its relationship  
+    with machine learning.""",
+    agent=researcher
+)
+
+# The agent will use:
+# {
+#   "query": "What is AI and how does it relate to machine learning?"
+# }
+
+# Create crew
+crew = Crew(
+    agents=[researcher],
+    tasks=[research_task]
+)
+
+# Execute
+result = crew.kickoff()
+```
+
+## Notes
+
+- Automatically adapts LlamaIndex tool schemas for CrewAI compatibility
+- Renames 'input' parameter to 'query' for better integration
+- Supports both direct tool wrapping and query engine integration
+- Handles schema validation and error resolution
+- Thread-safe operations
+- Compatible with all LlamaIndex tool types and query engines

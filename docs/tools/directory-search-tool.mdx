@@ -1,0 +1,214 @@
+---
+title: DirectorySearchTool
+description: A tool for semantic search within directory contents using RAG capabilities
+icon: folder-search
+---
+
+## DirectorySearchTool
+
+The DirectorySearchTool enables semantic search capabilities for directory contents using Retrieval-Augmented Generation (RAG). It processes files recursively within a directory and allows searching through their contents using natural language queries.
+
+## Installation
+
+```bash
+pip install 'crewai[tools]'
+```
+
+## Usage Example
+
+```python
+from crewai import Agent
+from crewai_tools import DirectorySearchTool
+
+# Method 1: Initialize with specific directory
+dir_tool = DirectorySearchTool(directory="/path/to/documents")
+
+# Method 2: Initialize without directory (specify at runtime)
+flexible_dir_tool = DirectorySearchTool()
+
+# Create an agent with the tool
+researcher = Agent(
+    role='Directory Researcher',
+    goal='Search and analyze directory contents',
+    backstory='Expert at finding relevant information in document collections.',
+    tools=[dir_tool],
+    verbose=True
+)
+```
+
+## Input Schema
+
+### Fixed Directory Schema (when path provided during initialization)
+```python
+class FixedDirectorySearchToolSchema(BaseModel):
+    search_query: str = Field(
+        description="Mandatory search query you want to use to search the directory's content"
+    )
+```
+
+### Flexible Directory Schema (when path provided at runtime)
+```python
+class DirectorySearchToolSchema(FixedDirectorySearchToolSchema):
+    directory: str = Field(
+        description="Mandatory directory you want to search"
+    )
+```
+
+## Function Signature
+
+```python
+def __init__(
+    self,
+    directory: Optional[str] = None,
+    **kwargs
+):
+    """
+    Initialize the directory search tool.
+
+    Args:
+        directory (Optional[str]): Path to directory (optional)
+        **kwargs: Additional arguments for RAG tool configuration
+    """
+
+def _run(
+    self,
+    search_query: str,
+    **kwargs: Any
+) -> str:
+    """
+    Execute semantic search on directory contents.
+
+    Args:
+        search_query (str): Query to search in the directory
+        **kwargs: Additional arguments including directory if not initialized
+
+    Returns:
+        str: Relevant content from the directory matching the query
+    """
+```
+
+## Best Practices
+
+1. Directory Management:
+   - Use absolute paths
+   - Verify directory existence
+   - Handle permissions properly
+
+2. Search Optimization:
+   - Use specific queries
+   - Consider file types
+   - Test with sample queries
+
+3. Performance Considerations:
+   - Pre-initialize for repeated searches
+   - Handle large directories
+   - Monitor processing time
+
+4. Error Handling:
+   - Verify directory access
+   - Handle missing files
+   - Manage permissions
+
+## Integration Example
+
+```python
+from crewai import Agent, Task, Crew
+from crewai_tools import DirectorySearchTool
+
+# Initialize tool with specific directory
+dir_tool = DirectorySearchTool(
+    directory="/path/to/documents"
+)
+
+# Create agent
+researcher = Agent(
+    role='Directory Researcher',
+    goal='Extract insights from document collections',
+    backstory='Expert at analyzing document collections.',
+    tools=[dir_tool]
+)
+
+# Define task
+research_task = Task(
+    description="""Find all mentions of machine learning 
+    applications from the directory contents.""",
+    agent=researcher
+)
+
+# The tool will use:
+# {
+#   "search_query": "machine learning applications"
+# }
+
+# Create crew
+crew = Crew(
+    agents=[researcher],
+    tasks=[research_task]
+)
+
+# Execute
+result = crew.kickoff()
+```
+
+## Advanced Usage
+
+### Dynamic Directory Selection
+```python
+# Initialize without directory path
+flexible_tool = DirectorySearchTool()
+
+# Search different directories
+docs_results = flexible_tool.run(
+    search_query="technical specifications",
+    directory="/path/to/docs"
+)
+
+reports_results = flexible_tool.run(
+    search_query="financial metrics",
+    directory="/path/to/reports"
+)
+```
+
+### Multiple Directory Analysis
+```python
+# Create tools for different directories
+docs_tool = DirectorySearchTool(
+    directory="/path/to/docs"
+)
+reports_tool = DirectorySearchTool(
+    directory="/path/to/reports"
+)
+
+# Create agent with multiple tools
+analyst = Agent(
+    role='Content Analyst',
+    goal='Cross-reference multiple document collections',
+    tools=[docs_tool, reports_tool]
+)
+```
+
+### Error Handling Example
+```python
+try:
+    dir_tool = DirectorySearchTool()
+    results = dir_tool.run(
+        search_query="key concepts",
+        directory="/path/to/documents"
+    )
+    print(results)
+except Exception as e:
+    print(f"Error processing directory: {str(e)}")
+```
+
+## Notes
+
+- Inherits from RagTool
+- Uses DirectoryLoader
+- Supports recursive search
+- Dynamic directory specification
+- Efficient content retrieval
+- Thread-safe operations
+- Maintains search context
+- Processes multiple file types
+- Handles nested directories
+- Memory-efficient processing

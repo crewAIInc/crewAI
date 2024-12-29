@@ -1,0 +1,209 @@
+---
+title: MDX Search Tool
+description: A tool for semantic searching within MDX files using RAG capabilities
+---
+
+# MDX Search Tool
+
+The MDX Search Tool enables semantic searching within MDX (Markdown with JSX) files using Retrieval-Augmented Generation (RAG) capabilities. It supports both fixed and dynamic file path modes, allowing you to specify the MDX file at initialization or runtime.
+
+## Installation
+
+```bash
+pip install 'crewai[tools]'
+```
+
+## Usage
+
+You can use the MDX Search Tool in two ways:
+
+### 1. Fixed MDX File Path
+
+Initialize the tool with a specific MDX file path:
+
+```python
+from crewai import Agent
+from crewai_tools import MDXSearchTool
+
+# Initialize with a fixed MDX file
+tool = MDXSearchTool(mdx="/path/to/your/document.mdx")
+
+# Create an agent with the tool
+agent = Agent(
+    role='Technical Writer',
+    goal='Search through MDX documentation',
+    backstory='I help find relevant information in MDX documentation',
+    tools=[tool]
+)
+
+# Use in a task
+task = Task(
+    description="Find information about API endpoints in the documentation",
+    agent=agent
+)
+```
+
+### 2. Dynamic MDX File Path
+
+Initialize the tool without a specific file path to provide it at runtime:
+
+```python
+from crewai import Agent
+from crewai_tools import MDXSearchTool
+
+# Initialize without a fixed MDX file
+tool = MDXSearchTool()
+
+# Create an agent with the tool
+agent = Agent(
+    role='Documentation Analyst',
+    goal='Search through various MDX files',
+    backstory='I analyze different MDX documentation files',
+    tools=[tool]
+)
+
+# Use in a task with dynamic file path
+task = Task(
+    description="Search for 'authentication' in the API documentation",
+    agent=agent,
+    context={
+        "mdx": "/path/to/api-docs.mdx",
+        "search_query": "authentication"
+    }
+)
+```
+
+## Input Schema
+
+### Fixed MDX File Mode
+```python
+class FixedMDXSearchToolSchema(BaseModel):
+    search_query: str  # The search query to find content in the MDX file
+```
+
+### Dynamic MDX File Mode
+```python
+class MDXSearchToolSchema(BaseModel):
+    search_query: str  # The search query to find content in the MDX file
+    mdx: str  # The path to the MDX file to search
+```
+
+## Function Signatures
+
+```python
+def __init__(self, mdx: Optional[str] = None, **kwargs):
+    """
+    Initialize the MDX Search Tool.
+    
+    Args:
+        mdx (Optional[str]): Path to the MDX file (optional)
+        **kwargs: Additional arguments passed to RagTool
+    """
+
+def _run(
+    self,
+    search_query: str,
+    **kwargs: Any,
+) -> str:
+    """
+    Execute the search on the MDX file.
+    
+    Args:
+        search_query (str): The query to search for
+        **kwargs: Additional arguments including 'mdx' for dynamic mode
+    
+    Returns:
+        str: The search results from the MDX content
+    """
+```
+
+## Best Practices
+
+1. **File Path Handling**:
+   - Use absolute paths to avoid path resolution issues
+   - Verify file existence before searching
+   - Handle file permissions appropriately
+
+2. **Query Optimization**:
+   - Use specific, focused search queries
+   - Consider context when formulating queries
+   - Break down complex searches into smaller queries
+
+3. **Error Handling**:
+   - Handle file not found errors gracefully
+   - Manage permission issues appropriately
+   - Validate input parameters before processing
+
+## Example Integration
+
+Here's a complete example showing how to integrate the MDX Search Tool with CrewAI:
+
+```python
+from crewai import Agent, Task, Crew
+from crewai_tools import MDXSearchTool
+
+# Initialize the tool
+mdx_tool = MDXSearchTool()
+
+# Create an agent with the tool
+researcher = Agent(
+    role='Documentation Researcher',
+    goal='Find and analyze information in MDX documentation',
+    backstory='I am an expert at finding relevant information in documentation',
+    tools=[mdx_tool]
+)
+
+# Create tasks
+search_task = Task(
+    description="""
+    Search through the API documentation for information about authentication methods.
+    Look for:
+    1. Authentication endpoints
+    2. Security best practices
+    3. Token handling
+    
+    Provide a comprehensive summary of the findings.
+    """,
+    agent=researcher,
+    context={
+        "mdx": "/path/to/api-docs.mdx",
+        "search_query": "authentication security tokens"
+    }
+)
+
+# Create and run the crew
+crew = Crew(
+    agents=[researcher],
+    tasks=[search_task]
+)
+
+result = crew.kickoff()
+```
+
+## Error Handling
+
+The tool handles various error scenarios:
+
+1. **File Not Found**:
+   ```python
+   try:
+       tool = MDXSearchTool(mdx="/path/to/nonexistent.mdx")
+   except FileNotFoundError:
+       print("MDX file not found. Please verify the file path.")
+   ```
+
+2. **Permission Issues**:
+   ```python
+   try: 
+       tool = MDXSearchTool(mdx="/restricted/docs.mdx")
+   except PermissionError:
+       print("Insufficient permissions to access the MDX file.")
+   ```
+
+3. **Invalid Content**:
+   ```python
+   try:
+       result = tool._run(search_query="query", mdx="/path/to/invalid.mdx")
+   except ValueError:
+       print("Invalid MDX content or format.")
+   ```

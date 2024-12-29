@@ -1,0 +1,213 @@
+---
+title: SerplyWebSearchTool
+description: A Google search tool powered by Serply API with configurable search parameters
+icon: search
+---
+
+## SerplyWebSearchTool
+
+The SerplyWebSearchTool provides Google search capabilities using the Serply API. It allows for customizable search parameters including language, result limits, device type, and proxy location for region-specific results.
+
+## Installation
+
+```bash
+pip install 'crewai[tools]'
+```
+
+## Usage Example
+
+```python
+from crewai import Agent
+from crewai_tools import SerplyWebSearchTool
+
+# Set environment variable
+# export SERPLY_API_KEY='your-api-key'
+
+# Basic initialization
+search_tool = SerplyWebSearchTool()
+
+# Advanced initialization with custom parameters
+search_tool = SerplyWebSearchTool(
+    hl="fr",              # French language results
+    limit=20,             # Return 20 results
+    device_type="mobile", # Mobile search results
+    proxy_location="FR"   # Search from France
+)
+
+# Create an agent with the tool
+researcher = Agent(
+    role='Web Researcher',
+    goal='Find relevant information online',
+    backstory='Expert at web research and information gathering.',
+    tools=[search_tool],
+    verbose=True
+)
+```
+
+## Input Schema
+
+```python
+class SerplyWebSearchToolSchema(BaseModel):
+    search_query: str = Field(
+        description="Mandatory search query for Google search"
+    )
+```
+
+## Function Signature
+
+```python
+def __init__(
+    self,
+    hl: str = "us",
+    limit: int = 10,
+    device_type: str = "desktop",
+    proxy_location: str = "US",
+    **kwargs
+):
+    """
+    Initialize the Google search tool.
+
+    Args:
+        hl (str): Host language code for results (default: "us")
+            Reference: https://developers.google.com/custom-search/docs/xml_results?hl=en#wsInterfaceLanguages
+        limit (int): Maximum number of results [10-100] (default: 10)
+        device_type (str): "desktop" or "mobile" results (default: "desktop")
+        proxy_location (str): Region for local results (default: "US")
+            Options: US, CA, IE, GB, FR, DE, SE, IN, JP, KR, SG, AU, BR
+        **kwargs: Additional arguments for tool creation
+    """
+
+def _run(
+    self,
+    **kwargs: Any
+) -> str:
+    """
+    Perform Google search using Serply API.
+
+    Args:
+        search_query (str): Search query
+
+    Returns:
+        str: Formatted string containing search results:
+            - Title
+            - Link
+            - Description
+    """
+```
+
+## Best Practices
+
+1. Set up API authentication:
+   ```bash
+   export SERPLY_API_KEY='your-serply-api-key'
+   ```
+
+2. Configure search parameters appropriately:
+   - Use relevant language codes
+   - Set reasonable result limits
+   - Choose appropriate device type
+   - Select relevant proxy location
+
+3. Handle potential API errors
+4. Process structured results effectively
+5. Consider rate limits and quotas
+
+## Integration Example
+
+```python
+from crewai import Agent, Task, Crew
+from crewai_tools import SerplyWebSearchTool
+
+# Initialize tool with custom configuration
+search_tool = SerplyWebSearchTool(
+    hl="en",              # English results
+    limit=15,             # 15 results
+    device_type="desktop",
+    proxy_location="US"
+)
+
+# Create agent
+researcher = Agent(
+    role='Web Researcher',
+    goal='Research emerging technology trends',
+    backstory='Expert at finding and analyzing tech trends.',
+    tools=[search_tool]
+)
+
+# Define task
+research_task = Task(
+    description="""Research the latest developments in artificial 
+    intelligence and machine learning, focusing on practical 
+    applications in business.""",
+    agent=researcher
+)
+
+# The tool will use:
+# {
+#   "search_query": "latest AI ML developments business applications"
+# }
+
+# Create crew
+crew = Crew(
+    agents=[researcher],
+    tasks=[research_task]
+)
+
+# Execute
+result = crew.kickoff()
+```
+
+## Advanced Usage
+
+### Language and Region Configuration
+```python
+# French search from France
+fr_search = SerplyWebSearchTool(
+    hl="fr",
+    proxy_location="FR"
+)
+
+# Japanese search from Japan
+jp_search = SerplyWebSearchTool(
+    hl="ja",
+    proxy_location="JP"
+)
+```
+
+### Device-Specific Results
+```python
+# Mobile results
+mobile_search = SerplyWebSearchTool(
+    device_type="mobile",
+    limit=20
+)
+
+# Desktop results
+desktop_search = SerplyWebSearchTool(
+    device_type="desktop",
+    limit=20
+)
+```
+
+### Error Handling
+```python
+try:
+    results = search_tool._run(
+        search_query="artificial intelligence trends"
+    )
+    print(results)
+except Exception as e:
+    print(f"Search error: {str(e)}")
+```
+
+## Notes
+
+
+- Requires valid Serply API key
+- Supports multiple languages and regions
+- Configurable result limits (10-100)
+- Device-specific search results
+- Thread-safe operations
+- Efficient search capabilities
+- Handles API rate limiting automatically
+- Returns structured search results

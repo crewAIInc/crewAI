@@ -1,0 +1,209 @@
+---
+title: SerplyScholarSearchTool
+description: A scholarly literature search tool powered by Serply API with configurable search parameters
+icon: book
+---
+
+## SerplyScholarSearchTool
+
+The SerplyScholarSearchTool provides scholarly literature search capabilities using the Serply API. It allows for customizable search parameters including language and proxy location for region-specific academic results.
+
+## Installation
+
+```bash
+pip install 'crewai[tools]'
+```
+
+## Usage Example
+
+```python
+from crewai import Agent
+from crewai_tools import SerplyScholarSearchTool
+
+# Set environment variable
+# export SERPLY_API_KEY='your-api-key'
+
+# Basic initialization
+scholar_tool = SerplyScholarSearchTool()
+
+# Advanced initialization with custom parameters
+scholar_tool = SerplyScholarSearchTool(
+    hl="fr",             # French language results
+    proxy_location="FR"  # Search from France
+)
+
+# Create an agent with the tool
+academic_researcher = Agent(
+    role='Academic Researcher',
+    goal='Find relevant scholarly literature',
+    backstory='Expert at academic research and literature review.',
+    tools=[scholar_tool],
+    verbose=True
+)
+```
+
+## Input Schema
+
+```python
+class SerplyScholarSearchToolSchema(BaseModel):
+    search_query: str = Field(
+        description="Mandatory search query for fetching scholarly literature"
+    )
+```
+
+## Function Signature
+
+```python
+def __init__(
+    self,
+    hl: str = "us",
+    proxy_location: Optional[str] = "US",
+    **kwargs
+):
+    """
+    Initialize the scholar search tool.
+
+    Args:
+        hl (str): Host language code for results (default: "us")
+            Reference: https://developers.google.com/custom-search/docs/xml_results?hl=en#wsInterfaceLanguages
+        proxy_location (str): Region for local results (default: "US")
+            Options: US, CA, IE, GB, FR, DE, SE, IN, JP, KR, SG, AU, BR
+        **kwargs: Additional arguments for tool creation
+    """
+
+def _run(
+    self,
+    **kwargs: Any
+) -> str:
+    """
+    Perform scholarly literature search using Serply API.
+
+    Args:
+        search_query (str): Academic search query
+
+    Returns:
+        str: Formatted string containing scholarly results:
+            - Title
+            - Link
+            - Description
+            - Citation
+            - Authors
+    """
+```
+
+## Best Practices
+
+1. Set up API authentication:
+   ```bash
+   export SERPLY_API_KEY='your-serply-api-key'
+   ```
+
+2. Configure search parameters appropriately:
+   - Use relevant language codes
+   - Select appropriate proxy location
+   - Provide specific academic search terms
+
+3. Handle potential API errors
+4. Process structured results effectively
+5. Consider rate limits and quotas
+
+## Integration Example
+
+```python
+from crewai import Agent, Task, Crew
+from crewai_tools import SerplyScholarSearchTool
+
+# Initialize tool with custom configuration
+scholar_tool = SerplyScholarSearchTool(
+    hl="en",             # English results
+    proxy_location="US"  # US academic sources
+)
+
+# Create agent
+researcher = Agent(
+    role='Academic Researcher',
+    goal='Research recent academic publications',
+    backstory='Expert at analyzing academic literature and research trends.',
+    tools=[scholar_tool]
+)
+
+# Define task
+research_task = Task(
+    description="""Research recent academic publications on 
+    machine learning applications in healthcare, focusing on 
+    peer-reviewed articles from the last two years.""",
+    agent=researcher
+)
+
+# The tool will use:
+# {
+#   "search_query": "machine learning healthcare applications"
+# }
+
+# Create crew
+crew = Crew(
+    agents=[researcher],
+    tasks=[research_task]
+)
+
+# Execute
+result = crew.kickoff()
+```
+
+## Advanced Usage
+
+### Language and Region Configuration
+```python
+# French academic sources
+fr_scholar = SerplyScholarSearchTool(
+    hl="fr",
+    proxy_location="FR"
+)
+
+# German academic sources
+de_scholar = SerplyScholarSearchTool(
+    hl="de",
+    proxy_location="DE"
+)
+```
+
+### Result Processing
+```python
+try:
+    results = scholar_tool._run(
+        search_query="machine learning healthcare applications"
+    )
+    print(results)
+except Exception as e:
+    print(f"Scholar search error: {str(e)}")
+```
+
+### Citation Analysis
+```python
+# Extract and analyze citations
+def analyze_citations(results):
+    citations = []
+    for result in results.split("---"):
+        if "Cite:" in result:
+            citation = result.split("Cite:")[1].split("\n")[0].strip()
+            citations.append(citation)
+    return citations
+
+results = scholar_tool._run(
+    search_query="artificial intelligence ethics"
+)
+citations = analyze_citations(results)
+```
+
+## Notes
+
+- Requires valid Serply API key
+- Supports multiple languages and regions
+- Returns structured academic article data
+- Includes citation information
+- Lists all authors of publications
+- Thread-safe operations
+- Efficient scholarly search capabilities
+- Handles API rate limiting automatically
+- Supports both direct and document links
+- Provides comprehensive article metadata

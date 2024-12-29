@@ -1,0 +1,229 @@
+---
+title: SerpApi Google Search Tool
+description: A tool for performing Google searches using the SerpApi service
+---
+
+# SerpApi Google Search Tool
+
+The SerpApi Google Search Tool enables performing Google searches using the SerpApi service. It provides location-aware search capabilities with comprehensive result filtering.
+
+## Installation
+
+```bash
+pip install 'crewai[tools]'
+pip install serpapi
+```
+
+## Prerequisites
+
+You need a SerpApi API key to use this tool. You can get one from [SerpApi's website](https://serpapi.com/manage-api-key).
+
+Set your API key as an environment variable:
+```bash
+export SERPAPI_API_KEY="your_api_key_here"
+```
+
+## Usage
+
+Here's how to use the SerpApi Google Search Tool:
+
+```python
+from crewai import Agent
+from crewai_tools import SerpApiGoogleSearchTool
+
+# Initialize the tool
+search_tool = SerpApiGoogleSearchTool()
+
+# Create an agent with the tool
+search_agent = Agent(
+    role='Web Researcher',
+    goal='Find accurate information online',
+    backstory='I help research and analyze online information',
+    tools=[search_tool]
+)
+
+# Use in a task
+task = Task(
+    description="Research recent AI developments",
+    agent=search_agent,
+    context={
+        "search_query": "latest artificial intelligence breakthroughs 2024",
+        "location": "United States"  # Optional
+    }
+)
+```
+
+## Input Schema
+
+```python
+class SerpApiGoogleSearchToolSchema(BaseModel):
+    search_query: str  # The search query for Google Search
+    location: Optional[str] = None  # Optional location for localized results
+```
+
+## Function Signatures
+
+### Base Tool Initialization
+```python
+def __init__(self, **kwargs):
+    """
+    Initialize the SerpApi tool with API credentials.
+    
+    Raises:
+        ImportError: If serpapi package is not installed
+        ValueError: If SERPAPI_API_KEY environment variable is not set
+    """
+```
+
+### Search Execution
+```python
+def _run(
+    self,
+    **kwargs: Any,
+) -> dict:
+    """
+    Execute the Google search.
+    
+    Args:
+        search_query (str): The search query
+        location (Optional[str]): Optional location for results
+    
+    Returns:
+        dict: Filtered search results from Google
+        
+    Raises:
+        HTTPError: If the API request fails
+    """
+```
+
+## Best Practices
+
+1. **API Key Management**:
+   - Store the API key securely in environment variables
+   - Never hardcode the API key in your code
+   - Verify API key validity before making requests
+
+2. **Search Optimization**:
+   - Use specific, targeted search queries
+   - Include relevant keywords and time frames
+   - Leverage location parameter for regional results
+
+3. **Error Handling**:
+   - Handle API rate limits gracefully
+   - Implement retry logic for failed requests
+   - Validate input parameters before making requests
+
+## Example Integration
+
+Here's a complete example showing how to integrate the SerpApi Google Search Tool with CrewAI:
+
+```python
+from crewai import Agent, Task, Crew
+from crewai_tools import SerpApiGoogleSearchTool
+
+# Initialize the tool
+search_tool = SerpApiGoogleSearchTool()
+
+# Create an agent with the tool
+researcher = Agent(
+    role='Research Analyst',
+    goal='Find and analyze current information',
+    backstory="""I am an expert at finding and analyzing 
+    information from various online sources.""",
+    tools=[search_tool]
+)
+
+# Create tasks
+research_task = Task(
+    description="""
+    Research the following topic:
+    1. Latest developments in quantum computing
+    2. Focus on practical applications
+    3. Include major company announcements
+    
+    Provide a comprehensive analysis of the findings.
+    """,
+    agent=researcher,
+    context={
+        "search_query": "quantum computing breakthroughs applications companies",
+        "location": "United States"
+    }
+)
+
+# Create and run the crew
+crew = Crew(
+    agents=[researcher],
+    tasks=[research_task]
+)
+
+result = crew.kickoff()
+```
+
+## Error Handling
+
+The tool handles various error scenarios:
+
+1. **Missing API Key**:
+   ```python
+   try:
+       tool = SerpApiGoogleSearchTool()
+   except ValueError as e:
+       print("API key not found. Set SERPAPI_API_KEY environment variable.")
+   ```
+
+2. **API Request Errors**:
+   ```python
+   try:
+       results = tool._run(
+           search_query="quantum computing",
+           location="United States"
+       )
+   except HTTPError as e:
+       print(f"API request failed: {str(e)}")
+   ```
+
+3. **Invalid Parameters**:
+   ```python
+   try:
+       results = tool._run(
+           search_query="",  # Empty query
+           location="Invalid Location"
+       )
+   except ValueError as e:
+       print("Invalid search parameters provided.")
+   ```
+
+## Response Format
+
+The tool returns a filtered dictionary containing Google search results. Example response structure:
+
+```python
+{
+    "organic_results": [
+        {
+            "title": "Page Title",
+            "link": "https://...",
+            "snippet": "Page description or excerpt...",
+            "position": 1
+        }
+        # Additional results...
+    ],
+    "knowledge_graph": {
+        "title": "Topic Title",
+        "description": "Topic description...",
+        "source": {
+            "name": "Source Name",
+            "link": "https://..."
+        }
+    },
+    "related_questions": [
+        {
+            "question": "Related question?",
+            "answer": "Answer to related question..."
+        }
+        # Additional related questions...
+    ]
+}
+```
+
+The response is automatically filtered to remove metadata and unnecessary fields, focusing on the most relevant search information. Fields like search metadata, parameters, and pagination are omitted for clarity.

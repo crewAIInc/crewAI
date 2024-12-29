@@ -1,0 +1,216 @@
+---
+title: YoutubeVideoSearchTool
+description: A tool for semantic search within YouTube video content using RAG capabilities
+icon: video
+---
+
+## YoutubeVideoSearchTool
+
+The YoutubeVideoSearchTool enables semantic search capabilities for YouTube video content using Retrieval-Augmented Generation (RAG). It processes video content and allows searching through transcripts and metadata using natural language queries.
+
+## Installation
+
+```bash
+pip install 'crewai[tools]'
+```
+
+## Usage Example
+
+```python
+from crewai import Agent
+from crewai_tools import YoutubeVideoSearchTool
+
+# Method 1: Initialize with specific video
+video_tool = YoutubeVideoSearchTool(
+    youtube_video_url="https://www.youtube.com/watch?v=example"
+)
+
+# Method 2: Initialize without video (specify at runtime)
+flexible_video_tool = YoutubeVideoSearchTool()
+
+# Create an agent with the tool
+researcher = Agent(
+    role='Video Researcher',
+    goal='Search and analyze video content',
+    backstory='Expert at finding relevant information in videos.',
+    tools=[video_tool],
+    verbose=True
+)
+```
+
+## Input Schema
+
+### Fixed Video Schema (when URL provided during initialization)
+```python
+class FixedYoutubeVideoSearchToolSchema(BaseModel):
+    search_query: str = Field(
+        description="Mandatory search query you want to use to search the Youtube Video content"
+    )
+```
+
+### Flexible Video Schema (when URL provided at runtime)
+```python
+class YoutubeVideoSearchToolSchema(FixedYoutubeVideoSearchToolSchema):
+    youtube_video_url: str = Field(
+        description="Mandatory youtube_video_url path you want to search"
+    )
+```
+
+## Function Signature
+
+```python
+def __init__(
+    self,
+    youtube_video_url: Optional[str] = None,
+    **kwargs
+):
+    """
+    Initialize the YouTube video search tool.
+
+    Args:
+        youtube_video_url (Optional[str]): URL of YouTube video (optional)
+        **kwargs: Additional arguments for RAG tool configuration
+    """
+
+def _run(
+    self,
+    search_query: str,
+    **kwargs: Any
+) -> str:
+    """
+    Execute semantic search on video content.
+
+    Args:
+        search_query (str): Query to search in the video
+        **kwargs: Additional arguments including youtube_video_url if not initialized
+
+    Returns:
+        str: Relevant content from the video matching the query
+    """
+```
+
+## Best Practices
+
+1. Video URL Management:
+   - Use complete YouTube URLs
+   - Verify video accessibility
+   - Handle region restrictions
+
+2. Search Optimization:
+   - Use specific, focused queries
+   - Consider video context
+   - Test with sample queries first
+
+3. Performance Considerations:
+   - Pre-initialize for repeated searches
+   - Handle long videos appropriately
+   - Monitor processing time
+
+4. Error Handling:
+   - Verify video availability
+   - Handle unavailable videos
+   - Manage API limitations
+
+## Integration Example
+
+```python
+from crewai import Agent, Task, Crew
+from crewai_tools import YoutubeVideoSearchTool
+
+# Initialize tool with specific video
+video_tool = YoutubeVideoSearchTool(
+    youtube_video_url="https://www.youtube.com/watch?v=example"
+)
+
+# Create agent
+researcher = Agent(
+    role='Video Researcher',
+    goal='Extract insights from video content',
+    backstory='Expert at analyzing video content.',
+    tools=[video_tool]
+)
+
+# Define task
+research_task = Task(
+    description="""Find all mentions of machine learning 
+    applications from the video content.""",
+    agent=researcher
+)
+
+# The tool will use:
+# {
+#   "search_query": "machine learning applications"
+# }
+
+# Create crew
+crew = Crew(
+    agents=[researcher],
+    tasks=[research_task]
+)
+
+# Execute
+result = crew.kickoff()
+```
+
+## Advanced Usage
+
+### Dynamic Video Selection
+```python
+# Initialize without video URL
+flexible_tool = YoutubeVideoSearchTool()
+
+# Search different videos
+tech_results = flexible_tool.run(
+    search_query="quantum computing",
+    youtube_video_url="https://youtube.com/watch?v=tech123"
+)
+
+science_results = flexible_tool.run(
+    search_query="particle physics",
+    youtube_video_url="https://youtube.com/watch?v=science456"
+)
+```
+
+### Multiple Video Analysis
+```python
+# Create tools for different videos
+tech_tool = YoutubeVideoSearchTool(
+    youtube_video_url="https://youtube.com/watch?v=tech123"
+)
+science_tool = YoutubeVideoSearchTool(
+    youtube_video_url="https://youtube.com/watch?v=science456"
+)
+
+# Create agent with multiple tools
+analyst = Agent(
+    role='Content Analyst',
+    goal='Cross-reference multiple videos',
+    tools=[tech_tool, science_tool]
+)
+```
+
+### Error Handling Example
+```python
+try:
+    video_tool = YoutubeVideoSearchTool()
+    results = video_tool.run(
+        search_query="key concepts",
+        youtube_video_url="https://youtube.com/watch?v=example"
+    )
+    print(results)
+except Exception as e:
+    print(f"Error processing video: {str(e)}")
+```
+
+## Notes
+
+- Inherits from RagTool
+- Uses embedchain for processing
+- Supports semantic search
+- Dynamic video specification
+- Efficient content retrieval
+- Thread-safe operations
+- Maintains search context
+- Handles video transcripts
+- Processes video metadata
+- Memory-efficient processing

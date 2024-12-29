@@ -1,0 +1,184 @@
+---
+title: SerplyJobSearchTool
+description: A tool for searching US job postings using the Serply API
+icon: briefcase
+---
+
+## SerplyJobSearchTool
+
+The SerplyJobSearchTool provides job search capabilities using the Serply API. It allows for searching job postings in the US market, returning structured information about positions, employers, locations, and remote work status.
+
+## Installation
+
+```bash
+pip install 'crewai[tools]'
+```
+
+## Usage Example
+
+```python
+from crewai import Agent
+from crewai_tools import SerplyJobSearchTool
+
+# Set environment variable
+# export SERPLY_API_KEY='your-api-key'
+
+# Initialize the tool
+search_tool = SerplyJobSearchTool()
+
+# Create an agent with the tool
+job_researcher = Agent(
+    role='Job Market Researcher',
+    goal='Find relevant job opportunities',
+    backstory='Expert at analyzing job market trends and opportunities.',
+    tools=[search_tool],
+    verbose=True
+)
+```
+
+## Input Schema
+
+```python
+class SerplyJobSearchToolSchema(BaseModel):
+    search_query: str = Field(
+        description="Mandatory search query for fetching job postings"
+    )
+```
+
+## Function Signature
+
+```python
+def __init__(self, **kwargs):
+    """
+    Initialize the job search tool.
+
+    Args:
+        **kwargs: Additional arguments for RagTool initialization
+    
+    Note:
+        Requires SERPLY_API_KEY environment variable
+    """
+
+def _run(
+    self,
+    **kwargs: Any
+) -> str:
+    """
+    Perform job search using Serply API.
+
+    Args:
+        search_query (str): Job search query
+        **kwargs: Additional search parameters
+
+    Returns:
+        str: Formatted string containing job listings with details:
+            - Position
+            - Employer
+            - Location
+            - Link
+            - Highlights
+            - Remote/Hybrid status
+    """
+```
+
+## Best Practices
+
+1. Set up API authentication:
+   ```bash
+   export SERPLY_API_KEY='your-serply-api-key'
+   ```
+
+2. Use specific search queries
+3. Handle potential API errors
+4. Process structured results effectively
+5. Consider rate limits and quotas
+
+## Integration Example
+
+```python
+from crewai import Agent, Task, Crew
+from crewai_tools import SerplyJobSearchTool
+
+# Initialize tool
+job_search = SerplyJobSearchTool()
+
+# Create agent
+recruiter = Agent(
+    role='Technical Recruiter',
+    goal='Find relevant job opportunities in tech',
+    backstory='Expert at identifying promising tech positions.',
+    tools=[job_search]
+)
+
+# Define task
+search_task = Task(
+    description="""Search for senior software engineer positions 
+    with remote work options in the US. Focus on positions 
+    requiring Python expertise.""",
+    agent=recruiter
+)
+
+# The tool will use:
+# {
+#   "search_query": "senior software engineer python remote"
+# }
+
+# Create crew
+crew = Crew(
+    agents=[recruiter],
+    tasks=[search_task]
+)
+
+# Execute
+result = crew.kickoff()
+```
+
+## Advanced Usage
+
+### Handling Search Results
+```python
+# Example of processing structured results
+results = search_tool._run(
+    search_query="machine learning engineer"
+)
+
+# Results format:
+"""
+Search results:
+Position: Senior Machine Learning Engineer
+Employer: TechCorp Inc
+Location: San Francisco, CA
+Link: https://example.com/job/123
+Highlights: Python, TensorFlow, 5+ years experience
+Is Remote: True
+Is Hybrid: False
+---
+Position: ML Engineer
+...
+"""
+```
+
+### Error Handling
+```python
+try:
+    results = search_tool._run(
+        search_query="data scientist"
+    )
+    if not results:
+        print("No jobs found")
+    else:
+        print(results)
+except Exception as e:
+    print(f"Job search error: {str(e)}")
+```
+
+## Notes
+
+- Requires valid Serply API key
+- Currently supports US job market only
+- Returns structured job information
+- Includes remote/hybrid status
+- Thread-safe operations
+- Efficient job search capabilities
+- Handles API rate limiting automatically
+- Provides detailed job highlights

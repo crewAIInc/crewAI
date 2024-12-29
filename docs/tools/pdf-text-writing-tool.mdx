@@ -1,0 +1,234 @@
+---
+title: PDFTextWritingTool
+description: A tool for adding text to specific positions in PDF documents with custom font support
+icon: file-pdf
+---
+
+## PDFTextWritingTool
+
+The PDFTextWritingTool allows you to add text to specific positions in PDF documents with support for custom fonts, colors, and positioning. It's particularly useful for adding annotations, watermarks, or any text overlay to existing PDFs.
+
+## Installation
+
+```bash
+pip install 'crewai[tools]'
+```
+
+## Usage Example
+
+```python
+from crewai import Agent
+from crewai_tools import PDFTextWritingTool
+
+# Basic initialization
+pdf_tool = PDFTextWritingTool()
+
+# Create an agent with the tool
+document_processor = Agent(
+    role='Document Processor',
+    goal='Add text annotations to PDF documents',
+    backstory='Expert at PDF document processing and text manipulation.',
+    tools=[pdf_tool],
+    verbose=True
+)
+```
+
+## Input Schema
+
+```python
+class PDFTextWritingToolSchema(BaseModel):
+    pdf_path: str = Field(
+        description="Path to the PDF file to modify"
+    )
+    text: str = Field(
+        description="Text to add to the PDF"
+    )
+    position: tuple = Field(
+        description="Tuple of (x, y) coordinates for text placement"
+    )
+    font_size: int = Field(
+        default=12,
+        description="Font size of the text"
+    )
+    font_color: str = Field(
+        default="0 0 0 rg",
+        description="RGB color code for the text"
+    )
+    font_name: Optional[str] = Field(
+        default="F1",
+        description="Font name for standard fonts"
+    )
+    font_file: Optional[str] = Field(
+        default=None,
+        description="Path to a .ttf font file for custom font usage"
+    )
+    page_number: int = Field(
+        default=0,
+        description="Page number to add text to"
+    )
+```
+
+## Function Signature
+
+```python
+def run(
+    self,
+    pdf_path: str,
+    text: str,
+    position: tuple,
+    font_size: int,
+    font_color: str,
+    font_name: str = "F1",
+    font_file: Optional[str] = None,
+    page_number: int = 0,
+    **kwargs
+) -> str:
+    """
+    Add text to a specific position in a PDF document.
+
+    Args:
+        pdf_path (str): Path to the PDF file to modify
+        text (str): Text to add to the PDF
+        position (tuple): (x, y) coordinates for text placement
+        font_size (int): Font size of the text
+        font_color (str): RGB color code for the text (e.g., "0 0 0 rg" for black)
+        font_name (str, optional): Font name for standard fonts (default: "F1")
+        font_file (str, optional): Path to a .ttf font file for custom font
+        page_number (int, optional): Page number to add text to (default: 0)
+
+    Returns:
+        str: Success message with output file path
+    """
+```
+
+## Best Practices
+
+1. File Handling:
+   - Ensure PDF files exist before processing
+   - Use absolute paths for reliability
+   - Handle file permissions appropriately
+
+2. Text Positioning:
+   - Use appropriate coordinates based on PDF dimensions
+   - Consider page orientation and margins
+   - Test positioning with small changes first
+
+3. Font Usage:
+   - Verify custom font files exist
+   - Use standard fonts when possible
+   - Test font rendering before production use
+
+4. Error Handling:
+   - Check page numbers are valid
+   - Verify font file accessibility
+   - Handle file writing permissions
+
+## Integration Example
+
+```python
+from crewai import Agent, Task, Crew
+from crewai_tools import PDFTextWritingTool
+
+# Initialize tool
+pdf_tool = PDFTextWritingTool()
+
+# Create agent
+document_processor = Agent(
+    role='Document Processor',
+    goal='Process and annotate PDF documents',
+    backstory='Expert at PDF manipulation and text placement.',
+    tools=[pdf_tool]
+)
+
+# Define task
+annotation_task = Task(
+    description="""Add a watermark saying 'CONFIDENTIAL' to 
+    the center of the first page of the document at 
+    '/path/to/document.pdf'.""",
+    agent=document_processor
+)
+
+# The tool will use:
+# {
+#   "pdf_path": "/path/to/document.pdf",
+#   "text": "CONFIDENTIAL",
+#   "position": (300, 400),
+#   "font_size": 24,
+#   "font_color": "1 0 0 rg",  # Red color
+#   "page_number": 0
+# }
+
+# Create crew
+crew = Crew(
+    agents=[document_processor],
+    tasks=[annotation_task]
+)
+
+# Execute
+result = crew.kickoff()
+```
+
+## Advanced Usage
+
+### Custom Font Example
+```python
+# Using a custom font
+result = pdf_tool.run(
+    pdf_path="/path/to/input.pdf",
+    text="Custom Font Text",
+    position=(100, 500),
+    font_size=16,
+    font_color="0 0 1 rg",  # Blue color
+    font_file="/path/to/custom_font.ttf",
+    page_number=0
+)
+```
+
+### Multiple Text Elements
+```python
+# Add multiple text elements
+positions = [(100, 700), (100, 650), (100, 600)]
+texts = ["Header", "Subheader", "Body Text"]
+font_sizes = [18, 14, 12]
+
+for text, position, size in zip(texts, positions, font_sizes):
+    pdf_tool.run(
+        pdf_path="/path/to/input.pdf",
+        text=text,
+        position=position,
+        font_size=size,
+        font_color="0 0 0 rg"  # Black color
+    )
+```
+
+### Color Text Example
+```python
+# Add colored text
+colors = {
+    "red": "1 0 0 rg",
+    "green": "0 1 0 rg",
+    "blue": "0 0 1 rg"
+}
+
+for y_pos, (color_name, color_code) in enumerate(colors.items()):
+    pdf_tool.run(
+        pdf_path="/path/to/input.pdf",
+        text=f"This text is {color_name}",
+        position=(100, 700 - y_pos * 50),
+        font_size=14,
+        font_color=color_code
+    )
+```
+
+## Notes
+
+- Supports custom TrueType fonts (.ttf)
+- Allows RGB color specifications
+- Handles multi-page PDFs
+- Preserves original PDF content
+- Supports text positioning with x,y coordinates
+- Maintains PDF structure and metadata
+- Creates new output file for safety
+- Thread-safe operations
+- Efficient PDF manipulation
+- Supports various text attributes

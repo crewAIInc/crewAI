@@ -1,0 +1,222 @@
+---
+title: BraveSearchTool
+description: A tool for performing web searches using the Brave Search API
+icon: search
+---
+
+## BraveSearchTool
+
+The BraveSearchTool enables web searches using the Brave Search API, providing customizable result counts, country-specific searches, and rate-limited operations. It formats search results with titles, URLs, and snippets for easy consumption.
+
+## Installation
+
+```bash
+pip install 'crewai[tools]'
+```
+
+## Authentication
+
+Set up your Brave Search API key:
+```bash
+export BRAVE_API_KEY='your-brave-api-key'
+```
+
+## Usage Example
+
+```python
+from crewai import Agent
+from crewai_tools import BraveSearchTool
+
+# Basic initialization
+search_tool = BraveSearchTool()
+
+# Advanced initialization with custom parameters
+search_tool = BraveSearchTool(
+    country="US",        # Country-specific search
+    n_results=5,         # Number of results to return
+    save_file=True       # Save results to file
+)
+
+# Create an agent with the tool
+researcher = Agent(
+    role='Web Researcher',
+    goal='Search and analyze web content',
+    backstory='Expert at finding relevant information online.',
+    tools=[search_tool],
+    verbose=True
+)
+```
+
+## Input Schema
+
+```python
+class BraveSearchToolSchema(BaseModel):
+    search_query: str = Field(
+        description="Mandatory search query you want to use to search the internet"
+    )
+```
+
+## Function Signature
+
+```python
+def __init__(
+    self,
+    country: Optional[str] = "",
+    n_results: int = 10,
+    save_file: bool = False,
+    *args,
+    **kwargs
+):
+    """
+    Initialize the Brave search tool.
+
+    Args:
+        country (Optional[str]): Country code for region-specific search
+        n_results (int): Number of results to return (default: 10)
+        save_file (bool): Whether to save results to file (default: False)
+    """
+
+def _run(
+    self,
+    **kwargs: Any
+) -> str:
+    """
+    Execute web search using Brave Search API.
+
+    Args:
+        search_query (str): Query to search
+        save_file (bool, optional): Override save_file setting
+        n_results (int, optional): Override n_results setting
+
+    Returns:
+        str: Formatted search results with titles, URLs, and snippets
+    """
+```
+
+## Best Practices
+
+1. API Authentication:
+   - Securely store BRAVE_API_KEY
+   - Keep API key confidential
+   - Handle authentication errors
+
+2. Rate Limiting:
+   - Tool automatically handles rate limiting
+   - Minimum 1-second interval between requests
+   - Consider implementing additional rate limits
+
+3. Search Optimization:
+   - Use specific search queries
+   - Adjust result count based on needs
+   - Consider regional search requirements
+
+4. Error Handling:
+   - Handle API request failures
+   - Manage parsing errors
+   - Monitor rate limit errors
+
+## Integration Example
+
+```python
+from crewai import Agent, Task, Crew
+from crewai_tools import BraveSearchTool
+
+# Initialize tool with custom configuration
+search_tool = BraveSearchTool(
+    country="GB",    # UK-specific search
+    n_results=3,     # Limit to 3 results
+    save_file=True   # Save results to file
+)
+
+# Create agent
+researcher = Agent(
+    role='Web Researcher',
+    goal='Research latest AI developments',
+    backstory='Expert at finding and analyzing tech news.',
+    tools=[search_tool]
+)
+
+# Define task
+research_task = Task(
+    description="""Find the latest news about artificial 
+    intelligence developments in quantum computing.""",
+    agent=researcher
+)
+
+# The tool will use:
+# {
+#   "search_query": "latest quantum computing AI developments"
+# }
+
+# Create crew
+crew = Crew(
+    agents=[researcher],
+    tasks=[research_task]
+)
+
+# Execute
+result = crew.kickoff()
+```
+
+## Advanced Usage
+
+### Country-Specific Search
+```python
+# Initialize tools for different regions
+us_search = BraveSearchTool(country="US")
+uk_search = BraveSearchTool(country="GB")
+jp_search = BraveSearchTool(country="JP")
+
+# Compare results across regions
+us_results = us_search.run(
+    search_query="local news"
+)
+uk_results = uk_search.run(
+    search_query="local news"
+)
+jp_results = jp_search.run(
+    search_query="local news"
+)
+```
+
+### Result Management
+```python
+# Save results to file
+archival_search = BraveSearchTool(
+    save_file=True,
+    n_results=20
+)
+
+# Search and save
+results = archival_search.run(
+    search_query="historical events 2023"
+)
+# Results saved to search_results_YYYY-MM-DD_HH-MM-SS.txt
+```
+
+### Error Handling Example
+```python
+try:
+    search_tool = BraveSearchTool()
+    results = search_tool.run(
+        search_query="important topic"
+    )
+    print(results)
+except ValueError as e: # API key missing
+    print(f"Authentication error: {str(e)}")
+except Exception as e:
+    print(f"Search error: {str(e)}")
+```
+
+## Notes
+
+- Requires Brave Search API key
+- Implements automatic rate limiting
+- Supports country-specific searches
+- Customizable result count
+- Optional file saving feature
+- Thread-safe operations
+- Efficient result formatting
+- Handles API errors gracefully
+- Supports parallel searches
+- Maintains search context

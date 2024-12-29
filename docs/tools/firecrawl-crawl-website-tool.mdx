@@ -1,0 +1,181 @@
+---
+title: FirecrawlCrawlWebsiteTool
+description: A web crawling tool powered by Firecrawl API for comprehensive website content extraction
+icon: spider-web
+---
+
+## FirecrawlCrawlWebsiteTool
+
+The FirecrawlCrawlWebsiteTool provides website crawling capabilities using the Firecrawl API. It allows for customizable crawling with options for polling intervals, idempotency, and URL parameters.
+
+## Installation
+
+```bash
+pip install 'crewai[tools]'
+pip install firecrawl-py  # Required dependency
+```
+
+## Usage Example
+
+```python
+from crewai import Agent
+from crewai_tools import FirecrawlCrawlWebsiteTool
+
+# Method 1: Using environment variable
+# export FIRECRAWL_API_KEY='your-api-key'
+crawler = FirecrawlCrawlWebsiteTool()
+
+# Method 2: Providing API key directly
+crawler = FirecrawlCrawlWebsiteTool(
+    api_key="your-firecrawl-api-key"
+)
+
+# Method 3: With custom configuration
+crawler = FirecrawlCrawlWebsiteTool(
+    api_key="your-firecrawl-api-key",
+    url="https://example.com",  # Base URL
+    poll_interval=5,            # Custom polling interval
+    idempotency_key="unique-key"
+)
+
+# Create an agent with the tool
+researcher = Agent(
+    role='Web Crawler',
+    goal='Extract and analyze website content',
+    backstory='Expert at crawling and analyzing web content.',
+    tools=[crawler],
+    verbose=True
+)
+```
+
+## Input Schema
+
+```python
+class FirecrawlCrawlWebsiteToolSchema(BaseModel):
+    url: str = Field(description="Website URL")
+```
+
+## Function Signature
+
+```python
+def __init__(
+    self,
+    api_key: Optional[str] = None,
+    url: Optional[str] = None,
+    params: Optional[Dict[str, Any]] = None,
+    poll_interval: Optional[int] = 2,
+    idempotency_key: Optional[str] = None,
+    **kwargs
+):
+    """
+    Initialize the website crawling tool.
+
+    Args:
+        api_key (Optional[str]): Firecrawl API key. If not provided, checks FIRECRAWL_API_KEY env var
+        url (Optional[str]): Base URL to crawl. Can be overridden in _run
+        params (Optional[Dict[str, Any]]): Additional parameters for FirecrawlApp
+        poll_interval (Optional[int]): Poll interval for FirecrawlApp
+        idempotency_key (Optional[str]): Idempotency key for FirecrawlApp
+        **kwargs: Additional arguments for tool creation
+    """
+
+def _run(self, url: str) -> Any:
+    """
+    Crawl a website using Firecrawl.
+
+    Args:
+        url (str): Website URL to crawl (overrides constructor URL if provided)
+
+    Returns:
+        Any: Crawled website content from Firecrawl API
+    """
+```
+
+## Best Practices
+
+1. Set up API authentication:
+   - Use environment variable: `export FIRECRAWL_API_KEY='your-api-key'`
+   - Or provide directly in constructor
+2. Configure crawling parameters:
+   - Set appropriate poll intervals
+   - Use idempotency keys for retry safety
+   - Customize URL parameters as needed
+3. Handle rate limits and quotas
+4. Consider website robots.txt policies
+5. Handle potential crawling errors in agent prompts
+
+## Integration Example
+
+```python
+from crewai import Agent, Task, Crew
+from crewai_tools import FirecrawlCrawlWebsiteTool
+
+# Initialize crawler with configuration
+crawler = FirecrawlCrawlWebsiteTool(
+    api_key="your-firecrawl-api-key",
+    poll_interval=5,
+    params={
+        "max_depth": 3,
+        "follow_links": True
+    }
+)
+
+# Create agent
+web_analyst = Agent(
+    role='Web Content Analyst',
+    goal='Extract and analyze website content comprehensively',
+    backstory='Expert at web crawling and content analysis.',
+    tools=[crawler]
+)
+
+# Define task
+crawl_task = Task(
+    description="""Crawl the documentation website at docs.example.com 
+    and extract all API-related content.""",
+    agent=web_analyst
+)
+
+# The agent will use:
+# {
+#   "url": "https://docs.example.com"
+# }
+
+# Create crew
+crew = Crew(
+    agents=[web_analyst],
+    tasks=[crawl_task]
+)
+
+# Execute
+result = crew.kickoff()
+```
+
+## Configuration Options
+
+### URL Parameters
+```python
+params = {
+    "max_depth": 3,           # Maximum crawl depth
+    "follow_links": True,     # Follow internal links
+    "exclude_patterns": [],   # URL patterns to exclude
+    "include_patterns": []    # URL patterns to include
+}
+```
+
+### Polling Configuration
+```python
+crawler = FirecrawlCrawlWebsiteTool(
+    poll_interval=5,  # Poll every 5 seconds
+    idempotency_key="unique-key-123"  # For retry safety
+)
+```
+
+## Notes
+
+- Requires valid Firecrawl API key
+- Supports both environment variable and direct API key configuration
+- Configurable polling intervals for crawl status
+- Idempotency support for safe retries
+- Thread-safe operations
+- Customizable crawling parameters
+- Respects robots.txt by default

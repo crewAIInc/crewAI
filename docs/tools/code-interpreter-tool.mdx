@@ -1,0 +1,224 @@
+---
+title: CodeInterpreterTool
+description: A tool for secure Python code execution in isolated Docker environments
+icon: code
+---
+
+## CodeInterpreterTool
+
+The CodeInterpreterTool provides secure Python code execution capabilities using Docker containers. It supports dynamic library installation and offers both safe (Docker-based) and unsafe (direct) execution modes.
+
+## Installation
+
+```bash
+pip install 'crewai[tools]'
+```
+
+## Usage Example
+
+```python
+from crewai import Agent
+from crewai_tools import CodeInterpreterTool
+
+# Initialize the tool
+code_tool = CodeInterpreterTool()
+
+# Create an agent with the tool
+programmer = Agent(
+    role='Code Executor',
+    goal='Execute and analyze Python code',
+    backstory='Expert at writing and executing Python code.',
+    tools=[code_tool],
+    verbose=True
+)
+```
+
+## Input Schema
+
+```python
+class CodeInterpreterSchema(BaseModel):
+    code: str = Field(
+        description="Python3 code used to be interpreted in the Docker container. ALWAYS PRINT the final result and the output of the code"
+    )
+    libraries_used: List[str] = Field(
+        description="List of libraries used in the code with proper installing names separated by commas. Example: numpy,pandas,beautifulsoup4"
+    )
+```
+
+## Function Signature
+
+```python
+def __init__(
+    self,
+    code: Optional[str] = None,
+    user_dockerfile_path: Optional[str] = None,
+    user_docker_base_url: Optional[str] = None,
+    unsafe_mode: bool = False,
+    **kwargs
+):
+    """
+    Initialize the code interpreter tool.
+
+    Args:
+        code (Optional[str]): Default code to execute
+        user_dockerfile_path (Optional[str]): Custom Dockerfile path
+        user_docker_base_url (Optional[str]): Custom Docker daemon URL
+        unsafe_mode (bool): Enable direct code execution
+        **kwargs: Additional arguments for base tool
+    """
+
+def _run(
+    self,
+    code: str,
+    libraries_used: List[str],
+    **kwargs: Any
+) -> str:
+    """
+    Execute Python code in Docker container or directly.
+
+    Args:
+        code (str): Python code to execute
+        libraries_used (List[str]): Required libraries
+        **kwargs: Additional arguments
+
+    Returns:
+        str: Execution output or error message
+    """
+```
+
+## Best Practices
+
+1. Security Considerations:
+   - Use Docker mode by default
+   - Validate input code
+   - Control library access
+   - Monitor execution time
+
+2. Docker Configuration:
+   - Use custom Dockerfile when needed
+   - Handle container lifecycle
+   - Manage resource limits
+   - Clean up after execution
+
+3. Library Management:
+   - Specify exact versions
+   - Use trusted packages
+   - Handle dependencies
+   - Verify installations
+
+4. Error Handling:
+   - Catch execution errors
+   - Handle timeouts
+   - Manage Docker errors
+   - Provide clear messages
+
+## Integration Example
+
+```python
+from crewai import Agent, Task, Crew
+from crewai_tools import CodeInterpreterTool
+
+# Initialize tool
+code_tool = CodeInterpreterTool()
+
+# Create agent
+programmer = Agent(
+    role='Code Executor',
+    goal='Execute data analysis code',
+    backstory='Expert Python programmer specializing in data analysis.',
+    tools=[code_tool]
+)
+
+# Define task
+analysis_task = Task(
+    description="""Analyze the dataset using pandas and 
+    create a summary visualization with matplotlib.""",
+    agent=programmer
+)
+
+# The tool will use:
+# {
+#   "code": """
+#   import pandas as pd
+#   import matplotlib.pyplot as plt
+#   
+#   # Load and analyze data
+#   df = pd.read_csv('data.csv')
+#   summary = df.describe()
+#   
+#   # Create visualization
+#   plt.figure(figsize=(10, 6))
+#   df['column'].hist()
+#   plt.savefig('output.png')
+#   
+#   print(summary)
+#   """,
+#   "libraries_used": "pandas,matplotlib"
+# }
+
+# Create crew
+crew = Crew(
+    agents=[programmer],
+    tasks=[analysis_task]
+)
+
+# Execute
+result = crew.kickoff()
+```
+
+## Advanced Usage
+
+### Custom Docker Configuration
+```python
+# Use custom Dockerfile
+tool = CodeInterpreterTool(
+    user_dockerfile_path="/path/to/Dockerfile"
+)
+
+# Use custom Docker daemon
+tool = CodeInterpreterTool(
+    user_docker_base_url="tcp://remote-docker:2375"
+)
+```
+
+### Direct Execution Mode
+```python
+# Enable unsafe mode (not recommended)
+tool = CodeInterpreterTool(unsafe_mode=True)
+
+# Execute code directly
+result = tool.run(
+    code="print('Hello, World!')",
+    libraries_used=[]
+)
+```
+
+### Error Handling Example
+```python
+try:
+    code_tool = CodeInterpreterTool()
+    result = code_tool.run(
+        code="""
+        import numpy as np
+        arr = np.array([1, 2, 3])
+        print(f"Array mean: {arr.mean()}")
+        """,
+        libraries_used=["numpy"]
+    )
+    print(result)
+except Exception as e:
+    print(f"Error executing code: {str(e)}")
+```
+
+## Notes
+
+- Inherits from BaseTool
+- Docker-based isolation
+- Dynamic library installation
+- Secure code execution
+- Custom Docker support
+- Comprehensive error handling
+- Resource management
+- Container cleanup
+- Library dependency handling
+- Execution output capture

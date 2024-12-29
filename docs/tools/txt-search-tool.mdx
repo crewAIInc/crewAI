@@ -1,0 +1,158 @@
+---
+title: TXTSearchTool
+description: A semantic search tool for text files using RAG capabilities
+icon: magnifying-glass-document
+---
+
+## TXTSearchTool
+
+The TXTSearchTool is a specialized Retrieval-Augmented Generation (RAG) tool that enables semantic search within text files. It inherits from the base RagTool class and provides both fixed and dynamic text file searching capabilities.
+
+## Installation
+
+```bash
+pip install 'crewai[tools]'
+```
+
+## Usage Example
+
+```python
+from crewai import Agent
+from crewai_tools import TXTSearchTool
+
+# Method 1: Dynamic file path
+txt_search = TXTSearchTool()
+
+# Method 2: Fixed file path
+fixed_txt_search = TXTSearchTool(txt="path/to/fixed/document.txt")
+
+# Create an agent with the tool
+researcher = Agent(
+    role='Research Assistant',
+    goal='Search through text documents semantically',
+    backstory='Expert at finding relevant information in documents using semantic search.',
+    tools=[txt_search],
+    verbose=True
+)
+```
+
+## Input Schema
+
+The tool supports two input schemas depending on initialization:
+
+### Dynamic File Path Schema
+```python
+class TXTSearchToolSchema(BaseModel):
+    search_query: str  # The semantic search query
+    txt: str          # Path to the text file to search
+```
+
+### Fixed File Path Schema
+```python
+class FixedTXTSearchToolSchema(BaseModel):
+    search_query: str  # The semantic search query
+```
+
+## Function Signature
+
+```python
+def __init__(self, txt: Optional[str] = None, **kwargs):
+    """
+    Initialize the TXT search tool.
+
+    Args:
+        txt (Optional[str]): Fixed path to a text file. If provided, the tool will only search this file.
+        **kwargs: Additional arguments passed to the parent RagTool
+    """
+
+def _run(self, search_query: str, **kwargs: Any) -> Any:
+    """
+    Perform semantic search on the text file.
+
+    Args:
+        search_query (str): The semantic search query
+        **kwargs: Additional arguments (including 'txt' for dynamic file path)
+
+    Returns:
+        str: Relevant text passages based on semantic search
+    """
+```
+
+## Best Practices
+
+1. Choose initialization method based on use case:
+   - Use fixed file path when repeatedly searching the same document
+   - Use dynamic file path when searching different documents
+2. Write clear, semantic search queries
+3. Handle potential file access errors in agent prompts
+4. Consider memory usage for large text files
+
+## Integration Example
+
+```python
+from crewai import Agent, Task, Crew
+from crewai_tools import TXTSearchTool
+
+# Example 1: Fixed document search
+documentation_search = TXTSearchTool(txt="api_documentation.txt")
+
+# Example 2: Dynamic document search
+flexible_search = TXTSearchTool()
+
+# Create agents
+doc_analyst = Agent(
+    role='Documentation Analyst',
+    goal='Find relevant API documentation sections',
+    backstory='Expert at analyzing technical documentation.',
+    tools=[documentation_search]
+)
+
+file_analyst = Agent(
+    role='File Analyst',
+    goal='Search through various text files',
+    backstory='Specialist in finding information across multiple documents.',
+    tools=[flexible_search]
+)
+
+# Define tasks
+fixed_search_task = Task(
+    description="""Find all API endpoints related to user authentication 
+    in the documentation.""",
+    agent=doc_analyst
+)
+
+# The agent will use:
+# {
+#   "search_query": "user authentication API endpoints"
+# }
+
+dynamic_search_task = Task(
+    description="""Search through the logs.txt file for any database 
+    connection errors.""",
+    agent=file_analyst
+)
+
+# The agent will use:
+# {
+#   "search_query": "database connection errors",
+#   "txt": "logs.txt"
+# }
+
+# Create crew
+crew = Crew(
+    agents=[doc_analyst, file_analyst],
+    tasks=[fixed_search_task, dynamic_search_task]
+)
+
+# Execute
+result = crew.kickoff()
+```
+
+## Notes
+
+- Inherits from RagTool for semantic search capabilities
+- Supports both fixed and dynamic text file paths
+- Uses embeddings for semantic search
+- Optimized for text file analysis
+- Thread-safe operations
+- Automatically handles file loading and embedding

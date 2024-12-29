@@ -1,0 +1,224 @@
+---
+title: JSONSearchTool
+description: A tool for semantic search within JSON files using RAG capabilities
+icon: braces
+---
+
+## JSONSearchTool
+
+The JSONSearchTool enables semantic search capabilities for JSON files using Retrieval-Augmented Generation (RAG). It supports both fixed and dynamic file path modes, allowing flexible usage patterns.
+
+## Installation
+
+```bash
+pip install 'crewai[tools]'
+```
+
+## Usage Example
+
+```python
+from crewai import Agent
+from crewai_tools import JSONSearchTool
+
+# Method 1: Fixed path (specified at initialization)
+fixed_tool = JSONSearchTool(
+    json_path="path/to/data.json"
+)
+
+# Method 2: Dynamic path (specified at runtime)
+dynamic_tool = JSONSearchTool()
+
+# Create an agent with the tool
+researcher = Agent(
+    role='JSON Data Researcher',
+    goal='Search and analyze JSON data',
+    backstory='Expert at finding relevant information in JSON files.',
+    tools=[fixed_tool],  # or [dynamic_tool]
+    verbose=True
+)
+```
+
+## Input Schema
+
+### Fixed Path Mode
+```python
+class FixedJSONSearchToolSchema(BaseModel):
+    search_query: str = Field(
+        description="Mandatory search query you want to use to search the JSON's content"
+    )
+```
+
+### Dynamic Path Mode
+```python
+class JSONSearchToolSchema(BaseModel):
+    json_path: str = Field(
+        description="Mandatory json path you want to search"
+    )
+    search_query: str = Field(
+        description="Mandatory search query you want to use to search the JSON's content"
+    )
+```
+
+## Function Signature
+
+```python
+def __init__(
+    self,
+    json_path: Optional[str] = None,
+    **kwargs
+):
+    """
+    Initialize the JSON search tool.
+
+    Args:
+        json_path (Optional[str]): Path to JSON file (optional for dynamic mode)
+        **kwargs: Additional arguments for RAG tool configuration
+    """
+
+def _run(
+    self,
+    search_query: str,
+    **kwargs: Any
+) -> str:
+    """
+    Execute semantic search on JSON contents.
+
+    Args:
+        search_query (str): Query to search in the JSON
+        **kwargs: Additional arguments
+
+    Returns:
+        str: Relevant content from the JSON matching the query
+    """
+```
+
+## Best Practices
+
+1. File Handling:
+   - Use absolute file paths
+   - Verify file existence
+   - Handle large JSON files
+   - Monitor memory usage
+
+2. Query Optimization:
+   - Structure queries clearly
+   - Consider JSON structure
+   - Handle nested data
+   - Monitor performance
+
+3. Error Handling:
+   - Check file access
+   - Validate JSON format
+   - Handle malformed JSON
+   - Log issues
+
+4. Mode Selection:
+   - Choose fixed mode for static files
+   - Use dynamic mode for runtime selection
+   - Consider caching
+   - Manage file lifecycle
+
+## Integration Example
+
+```python
+from crewai import Agent, Task, Crew
+from crewai_tools import JSONSearchTool
+
+# Initialize tool
+json_tool = JSONSearchTool(
+    json_path="data/config.json"
+)
+
+# Create agent
+researcher = Agent(
+    role='JSON Data Analyst',
+    goal='Extract insights from JSON configuration',
+    backstory='Expert at analyzing JSON data structures.',
+    tools=[json_tool]
+)
+
+# Define task
+analysis_task = Task(
+    description="""Find all configuration settings 
+    related to security.""",
+    agent=researcher
+)
+
+# Create crew
+crew = Crew(
+    agents=[researcher],
+    tasks=[analysis_task]
+)
+
+# Execute
+result = crew.kickoff()
+```
+
+## Advanced Usage
+
+### Multiple File Analysis
+```python
+# Create tools for different JSON files
+config_tool = JSONSearchTool(
+    json_path="config/settings.json"
+)
+
+data_tool = JSONSearchTool(
+    json_path="data/records.json"
+)
+
+# Create agent with multiple tools
+analyst = Agent(
+    role='JSON Data Analyst',
+    goal='Cross-reference configuration and data',
+    tools=[config_tool, data_tool]
+)
+```
+
+### Dynamic File Loading
+```python
+# Initialize dynamic tool
+dynamic_tool = JSONSearchTool()
+
+# Use with different JSON files
+result1 = dynamic_tool.run(
+    json_path="file1.json",
+    search_query="security settings"
+)
+
+result2 = dynamic_tool.run(
+    json_path="file2.json",
+    search_query="user preferences"
+)
+```
+
+### Error Handling Example
+```python
+try:
+    json_tool = JSONSearchTool(
+        json_path="config/settings.json"
+    )
+    results = json_tool.run(
+        search_query="encryption settings"
+    )
+    print(results)
+except FileNotFoundError as e:
+    print(f"JSON file not found: {str(e)}")
+except ValueError as e:
+    print(f"Invalid JSON format: {str(e)}")
+except Exception as e:
+    print(f"Error processing JSON: {str(e)}")
+```
+
+## Notes
+
+- Inherits from RagTool
+- Supports fixed/dynamic modes
+- JSON path validation
+- Memory management
+- Performance optimization
+- Error handling
+- Search capabilities
+- Content extraction
+- Format validation
+- Security features

@@ -1,0 +1,220 @@
+---
+title: JinaScrapeWebsiteTool
+description: A tool for scraping website content using Jina.ai's reader service with markdown output
+icon: globe
+---
+
+## JinaScrapeWebsiteTool
+
+The JinaScrapeWebsiteTool provides website content scraping capabilities using Jina.ai's reader service. It converts web content into clean markdown format and supports both fixed and dynamic URL modes with optional authentication.
+
+## Installation
+
+```bash
+pip install 'crewai[tools]'
+```
+
+## Usage Example
+
+```python
+from crewai import Agent
+from crewai_tools import JinaScrapeWebsiteTool
+
+# Method 1: Fixed URL (specified at initialization)
+fixed_tool = JinaScrapeWebsiteTool(
+    website_url="https://example.com",
+    api_key="your-jina-api-key"  # Optional
+)
+
+# Method 2: Dynamic URL (specified at runtime)
+dynamic_tool = JinaScrapeWebsiteTool(
+    api_key="your-jina-api-key"  # Optional
+)
+
+# Create an agent with the tool
+researcher = Agent(
+    role='Web Content Researcher',
+    goal='Extract and analyze website content',
+    backstory='Expert at gathering and processing web information.',
+    tools=[fixed_tool],  # or [dynamic_tool]
+    verbose=True
+)
+```
+
+## Input Schema
+
+```python
+class JinaScrapeWebsiteToolInput(BaseModel):
+    website_url: str = Field(
+        description="Mandatory website url to read the file"
+    )
+```
+
+## Function Signature
+
+```python
+def __init__(
+    self,
+    website_url: Optional[str] = None,
+    api_key: Optional[str] = None,
+    custom_headers: Optional[dict] = None,
+    **kwargs
+):
+    """
+    Initialize the website scraping tool.
+
+    Args:
+        website_url (Optional[str]): URL to scrape (optional for dynamic mode)
+        api_key (Optional[str]): Jina.ai API key for authentication
+        custom_headers (Optional[dict]): Custom HTTP headers
+        **kwargs: Additional arguments for base tool
+    """
+
+def _run(
+    self,
+    website_url: Optional[str] = None
+) -> str:
+    """
+    Execute website scraping.
+
+    Args:
+        website_url (Optional[str]): URL to scrape (required for dynamic mode)
+
+    Returns:
+        str: Markdown-formatted website content
+    """
+```
+
+## Best Practices
+
+1. URL Handling:
+   - Use complete URLs
+   - Validate URL format
+   - Handle redirects
+   - Monitor timeouts
+
+2. Authentication:
+   - Secure API key storage
+   - Use environment variables
+   - Manage headers properly
+   - Handle auth errors
+
+3. Content Processing:
+   - Handle large pages
+   - Process markdown output
+   - Manage encoding
+   - Handle errors
+
+4. Mode Selection:
+   - Choose fixed mode for static sites
+   - Use dynamic mode for variable URLs
+   - Consider caching
+   - Manage timeouts
+
+## Integration Example
+
+```python
+from crewai import Agent, Task, Crew
+from crewai_tools import JinaScrapeWebsiteTool
+import os
+
+# Initialize tool with API key
+scraper_tool = JinaScrapeWebsiteTool(
+    api_key=os.getenv('JINA_API_KEY'),
+    custom_headers={
+        'User-Agent': 'CrewAI Bot 1.0'
+    }
+)
+
+# Create agent
+researcher = Agent(
+    role='Web Content Analyst',
+    goal='Extract and analyze website content',
+    backstory='Expert at processing web information.',
+    tools=[scraper_tool]
+)
+
+# Define task
+analysis_task = Task(
+    description="""Analyze the content of 
+    https://example.com/blog for key insights.""",
+    agent=researcher
+)
+
+# Create crew
+crew = Crew(
+    agents=[researcher],
+    tasks=[analysis_task]
+)
+
+# Execute
+result = crew.kickoff()
+```
+
+## Advanced Usage
+
+### Multiple Site Analysis
+```python
+# Initialize tool
+scraper = JinaScrapeWebsiteTool(
+    api_key=os.getenv('JINA_API_KEY')
+)
+
+# Analyze multiple sites
+results = []
+sites = [
+    "https://site1.com",
+    "https://site2.com",
+    "https://site3.com"
+]
+
+for site in sites:
+    content = scraper.run(
+        website_url=site
+    )
+    results.append(content)
+```
+
+### Custom Headers Configuration
+```python
+# Initialize with custom headers
+tool = JinaScrapeWebsiteTool(
+    custom_headers={
+        'User-Agent': 'Custom Bot 1.0',
+        'Accept-Language': 'en-US,en;q=0.9',
+        'Accept': 'text/html,application/xhtml+xml'
+    }
+)
+
+# Use the tool
+content = tool.run(
+    website_url="https://example.com"
+)
+```
+
+### Error Handling Example
+```python
+try: 
+    scraper = JinaScrapeWebsiteTool()
+    content = scraper.run(
+        website_url="https://example.com"
+    )
+    print(content)
+except requests.exceptions.RequestException as e:
+    print(f"Error accessing website: {str(e)}")
+except Exception as e:
+    print(f"Error processing content: {str(e)}")
+```
+
+## Notes
+
+- Uses Jina.ai reader service
+- Markdown output format
+- API key authentication
+- Custom headers support
+- Error handling
+- Timeout management
+- Content processing
+- URL validation
+- Redirect handling
+- Response formatting

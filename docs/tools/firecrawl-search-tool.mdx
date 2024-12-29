@@ -1,0 +1,154 @@
+---
+title: FirecrawlSearchTool
+description: A web search tool powered by Firecrawl API for comprehensive web search capabilities
+icon: magnifying-glass-chart
+---
+
+## FirecrawlSearchTool
+
+The FirecrawlSearchTool provides web search capabilities using the Firecrawl API. It allows for customizable search queries with options for result formatting and search parameters.
+
+## Installation
+
+```bash
+pip install 'crewai[tools]'
+pip install firecrawl-py  # Required dependency
+```
+
+## Usage Example
+
+```python
+from crewai import Agent
+from crewai_tools import FirecrawlSearchTool
+
+# Initialize the tool with your API key
+search_tool = FirecrawlSearchTool(api_key="your-firecrawl-api-key")
+
+# Create an agent with the tool
+researcher = Agent(
+    role='Web Researcher',
+    goal='Find relevant information across the web',
+    backstory='Expert at web research and information gathering.',
+    tools=[search_tool],
+    verbose=True
+)
+```
+
+## Input Schema
+
+```python
+class FirecrawlSearchToolSchema(BaseModel):
+    query: str = Field(description="Search query")
+    page_options: Optional[Dict[str, Any]] = Field(
+        default=None, 
+        description="Options for result formatting"
+    )
+    search_options: Optional[Dict[str, Any]] = Field(
+        default=None, 
+        description="Options for searching"
+    )
+```
+
+## Function Signature
+
+```python
+def __init__(self, api_key: Optional[str] = None, **kwargs):
+    """
+    Initialize the Firecrawl search tool.
+
+    Args:
+        api_key (Optional[str]): Firecrawl API key
+        **kwargs: Additional arguments for tool creation
+    """
+
+def _run(
+    self,
+    query: str,
+    page_options: Optional[Dict[str, Any]] = None,
+    result_options: Optional[Dict[str, Any]] = None,
+) -> Any:
+    """
+    Perform a web search using Firecrawl.
+
+    Args:
+        query (str): Search query string
+        page_options (Optional[Dict[str, Any]]): Options for result formatting
+        result_options (Optional[Dict[str, Any]]): Options for search results
+
+    Returns:
+        Any: Search results from Firecrawl API
+    """
+```
+
+## Best Practices
+
+1. Always provide a valid API key
+2. Use specific, focused search queries
+3. Customize page and result options for better results
+4. Handle potential API errors in agent prompts
+5. Consider rate limits and usage quotas
+
+## Integration Example
+
+```python
+from crewai import Agent, Task, Crew
+from crewai_tools import FirecrawlSearchTool
+
+# Initialize tool with API key
+search_tool = FirecrawlSearchTool(api_key="your-firecrawl-api-key")
+
+# Create agent
+researcher = Agent(
+    role='Market Researcher',
+    goal='Research market trends and competitor analysis',
+    backstory='Expert market analyst with deep research skills.',
+    tools=[search_tool]
+)
+
+# Define task
+research_task = Task(
+    description="""Research the latest developments in electric vehicles,
+    focusing on market leaders and emerging technologies. Format the results
+    in a structured way.""",
+    agent=researcher
+)
+
+# The agent will use:
+# {
+#   "query": "electric vehicle market leaders emerging technologies",
+#   "page_options": {
+#     "format": "structured",
+#     "maxLength": 1000
+#   },
+#   "result_options": {
+#     "limit": 5,
+#     "sortBy": "relevance"
+#   }
+# }
+
+# Create crew
+crew = Crew(
+    agents=[researcher],
+    tasks=[research_task]
+)
+
+# Execute
+result = crew.kickoff()
+```
+
+## Error Handling
+
+The tool includes error handling for:
+- Missing API key
+- Missing firecrawl-py package
+- API request failures
+- Invalid options parameters
+
+## Notes
+
+- Requires valid Firecrawl API key
+- Supports customizable search parameters
+- Provides structured web search results
+- Thread-safe operations
+- Efficient for large-scale web searches
+- Handles rate limiting automatically

@@ -1,0 +1,217 @@
+---
+title: MySQLSearchTool
+description: A tool for semantic search within MySQL database tables using RAG capabilities
+icon: database
+---
+
+## MySQLSearchTool
+
+The MySQLSearchTool enables semantic search capabilities for MySQL database tables using Retrieval-Augmented Generation (RAG). It processes table contents and allows natural language queries to search through the data.
+
+## Installation
+
+```bash
+pip install 'crewai[tools]'
+```
+
+## Usage Example
+
+```python
+from crewai import Agent
+from crewai_tools import MySQLSearchTool
+
+# Initialize the tool
+mysql_tool = MySQLSearchTool(
+    table_name="users",
+    db_uri="mysql://user:pass@localhost:3306/database"
+)
+
+# Create an agent with the tool
+researcher = Agent(
+    role='Database Researcher',
+    goal='Search and analyze database contents',
+    backstory='Expert at finding relevant information in databases.',
+    tools=[mysql_tool],
+    verbose=True
+)
+```
+
+## Input Schema
+
+```python
+class MySQLSearchToolSchema(BaseModel):
+    search_query: str = Field(
+        description="Mandatory semantic search query you want to use to search the database's content"
+    )
+```
+
+## Function Signature
+
+```python
+def __init__(
+    self,
+    table_name: str,
+    db_uri: str,
+    **kwargs
+):
+    """
+    Initialize the MySQL search tool.
+
+    Args:
+        table_name (str): Name of the table to search
+        db_uri (str): Database connection URI
+        **kwargs: Additional arguments for RAG tool configuration
+    """
+
+def _run(
+    self,
+    search_query: str,
+    **kwargs: Any
+) -> str:
+    """
+    Execute semantic search on table contents.
+
+    Args:
+        search_query (str): Query to search in the table
+        **kwargs: Additional arguments
+
+    Returns:
+        str: Relevant content from the table matching the query
+    """
+```
+
+## Best Practices
+
+1. Database Connection:
+   - Use secure connection URIs
+   - Handle authentication properly
+   - Manage connection lifecycle
+   - Monitor timeouts
+
+2. Query Optimization:
+   - Structure queries clearly
+   - Consider table size
+   - Handle large datasets
+   - Monitor performance
+
+3. Security Considerations:
+   - Protect credentials
+   - Use environment variables
+   - Limit table access
+   - Validate inputs
+
+4. Error Handling:
+   - Handle connection errors
+   - Manage query timeouts
+   - Provide clear messages
+   - Log issues
+
+## Integration Example
+
+```python
+from crewai import Agent, Task, Crew
+from crewai_tools import MySQLSearchTool
+
+# Initialize tool
+mysql_tool = MySQLSearchTool(
+    table_name="customers",
+    db_uri="mysql://user:pass@localhost:3306/crm"
+)
+
+# Create agent
+researcher = Agent(
+    role='Database Analyst',
+    goal='Extract customer insights from database',
+    backstory='Expert at analyzing customer data.',
+    tools=[mysql_tool]
+)
+
+# Define task
+analysis_task = Task(
+    description="""Find all premium customers 
+    with recent purchases.""",
+    agent=researcher
+)
+
+# The tool will use:
+# {
+#   "search_query": "premium customers recent purchases"
+# }
+
+# Create crew
+crew = Crew(
+    agents=[researcher],
+    tasks=[analysis_task]
+)
+
+# Execute
+result = crew.kickoff()
+```
+
+## Advanced Usage
+
+### Multiple Table Analysis
+```python
+# Create tools for different tables
+customers_tool = MySQLSearchTool(
+    table_name="customers",
+    db_uri="mysql://user:pass@localhost:3306/crm"
+)
+
+orders_tool = MySQLSearchTool(
+    table_name="orders",
+    db_uri="mysql://user:pass@localhost:3306/crm"
+)
+
+# Create agent with multiple tools
+analyst = Agent(
+    role='Data Analyst',
+    goal='Cross-reference customer and order data',
+    tools=[customers_tool, orders_tool]
+)
+```
+
+### Secure Connection Configuration
+```python
+import os
+
+# Use environment variables for credentials
+db_uri = (
+    f"mysql://{os.getenv('DB_USER')}:{os.getenv('DB_PASS')}"
+    f"@{os.getenv('DB_HOST')}:{os.getenv('DB_PORT')}"
+    f"/{os.getenv('DB_NAME')}"
+)
+
+tool = MySQLSearchTool(
+    table_name="sensitive_data",
+    db_uri=db_uri
+)
+```
+
+### Error Handling Example
+```python
+try:
+    mysql_tool = MySQLSearchTool(
+        table_name="users",
+        db_uri="mysql://user:pass@localhost:3306/app"
+    )
+    results = mysql_tool.run(
+        search_query="active users in California"
+    )
+    print(results)
+except Exception as e:
+    print(f"Error querying database: {str(e)}")
+```
+
+## Notes
+
+- Inherits from RagTool
+- Uses MySQLLoader
+- Requires database URI
+- Table-specific search
+- Semantic query support
+- Connection management
+- Error handling
+- Performance optimization
+- Security features
+- Memory efficiency

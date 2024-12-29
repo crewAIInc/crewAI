@@ -1,0 +1,208 @@
+---
+title: PDFSearchTool
+description: A tool for semantic search within PDF documents using RAG capabilities
+icon: file-search
+---
+
+## PDFSearchTool
+
+The PDFSearchTool enables semantic search capabilities for PDF documents using Retrieval-Augmented Generation (RAG). It leverages embedchain's PDFEmbedchainAdapter for efficient PDF processing and supports both fixed and dynamic PDF path specification.
+
+## Installation
+
+```bash
+pip install 'crewai[tools]'
+```
+
+## Usage Example
+
+```python
+from crewai import Agent
+from crewai_tools import PDFSearchTool
+
+# Method 1: Initialize with specific PDF
+pdf_tool = PDFSearchTool(pdf="/path/to/document.pdf")
+
+# Method 2: Initialize without PDF (specify at runtime)
+flexible_pdf_tool = PDFSearchTool()
+
+# Create an agent with the tool
+researcher = Agent(
+    role='PDF Researcher',
+    goal='Search and analyze PDF documents',
+    backstory='Expert at finding relevant information in PDFs.',
+    tools=[pdf_tool],
+    verbose=True
+)
+```
+
+## Input Schema
+
+### Fixed PDF Schema (when PDF path provided during initialization)
+```python
+class FixedPDFSearchToolSchema(BaseModel):
+    query: str = Field(
+        description="Mandatory query you want to use to search the PDF's content"
+    )
+```
+
+### Flexible PDF Schema (when PDF path provided at runtime)
+```python
+class PDFSearchToolSchema(FixedPDFSearchToolSchema):
+    pdf: str = Field(
+        description="Mandatory pdf path you want to search"
+    )
+```
+
+## Function Signature
+
+```python
+def __init__(
+    self,
+    pdf: Optional[str] = None,
+    **kwargs
+):
+    """
+    Initialize the PDF search tool.
+
+    Args:
+        pdf (Optional[str]): Path to PDF file (optional)
+        **kwargs: Additional arguments for RAG tool configuration
+    """
+
+def _run(
+    self,
+    query: str,
+    **kwargs: Any
+) -> str:
+    """
+    Execute semantic search on PDF content.
+
+    Args:
+        query (str): Search query for the PDF
+        **kwargs: Additional arguments including pdf path if not initialized
+
+    Returns:
+        str: Relevant content from the PDF matching the query
+    """
+```
+
+## Best Practices
+
+1. PDF File Handling:
+   - Use absolute paths for reliability
+   - Verify PDF file existence
+   - Handle large PDFs appropriately
+
+2. Search Optimization:
+   - Use specific, focused queries
+   - Consider document structure
+   - Test with sample queries first
+
+3. Performance Considerations:
+   - Pre-initialize with PDF for repeated searches
+   - Handle large documents efficiently
+   - Monitor memory usage
+
+4. Error Handling:
+   - Verify PDF file existence
+   - Handle malformed PDFs
+   - Manage file access permissions
+
+## Integration Example
+
+```python
+from crewai import Agent, Task, Crew
+from crewai_tools import PDFSearchTool
+
+# Initialize tool with specific PDF
+pdf_tool = PDFSearchTool(pdf="/path/to/research.pdf")
+
+# Create agent
+researcher = Agent(
+    role='PDF Researcher',
+    goal='Extract insights from research papers',
+    backstory='Expert at analyzing research documents.',
+    tools=[pdf_tool]
+)
+
+# Define task
+research_task = Task(
+    description="""Find all mentions of machine learning 
+    applications in healthcare from the PDF.""",
+    agent=researcher
+)
+
+# The tool will use:
+# {
+#   "query": "machine learning applications healthcare"
+# }
+
+# Create crew
+crew = Crew(
+    agents=[researcher],
+    tasks=[research_task]
+)
+
+# Execute
+result = crew.kickoff()
+```
+
+## Advanced Usage
+
+### Dynamic PDF Selection
+```python
+# Initialize without PDF
+flexible_tool = PDFSearchTool()
+
+# Search different PDFs
+research_results = flexible_tool.run(
+    query="quantum computing",
+    pdf="/path/to/research.pdf"
+)
+
+report_results = flexible_tool.run(
+    query="financial metrics",
+    pdf="/path/to/report.pdf"
+)
+```
+
+### Multiple PDF Analysis
+```python
+# Create tools for different PDFs
+research_tool = PDFSearchTool(pdf="/path/to/research.pdf")
+report_tool = PDFSearchTool(pdf="/path/to/report.pdf")
+
+# Create agent with multiple tools
+analyst = Agent(
+    role='Document Analyst',
+    goal='Cross-reference multiple documents',
+    tools=[research_tool, report_tool]
+)
+```
+
+### Error Handling Example
+```python
+try:
+    pdf_tool = PDFSearchTool()
+    results = pdf_tool.run(
+        query="important findings",
+        pdf="/path/to/document.pdf"
+    )
+    print(results)
+except Exception as e:
+    print(f"Error processing PDF: {str(e)}")
+```
+
+## Notes
+
+- Inherits from RagTool
+- Uses PDFEmbedchainAdapter
+- Supports semantic search
+- Dynamic PDF specification
+- Efficient content retrieval
+- Thread-safe operations
+- Maintains search context
+- Handles large documents
+- Supports various PDF formats
+- Memory-efficient processing

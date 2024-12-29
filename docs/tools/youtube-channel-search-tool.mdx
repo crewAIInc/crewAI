@@ -1,0 +1,159 @@
+---
+title: YoutubeChannelSearchTool
+description: A semantic search tool for YouTube channel content using RAG capabilities
+icon: youtube
+---
+
+## YoutubeChannelSearchTool
+
+The YoutubeChannelSearchTool is a specialized Retrieval-Augmented Generation (RAG) tool that enables semantic search within YouTube channel content. It inherits from the base RagTool class and provides both fixed and dynamic YouTube channel searching capabilities.
+
+## Installation
+
+```bash
+pip install 'crewai[tools]'
+```
+
+## Usage Example
+
+```python
+from crewai import Agent
+from crewai_tools import YoutubeChannelSearchTool
+
+# Method 1: Dynamic channel handle
+youtube_search = YoutubeChannelSearchTool()
+
+# Method 2: Fixed channel handle
+fixed_channel_search = YoutubeChannelSearchTool(youtube_channel_handle="@example_channel")
+
+# Create an agent with the tool
+researcher = Agent(
+    role='Content Researcher',
+    goal='Search through YouTube channel content semantically',
+    backstory='Expert at finding relevant information in YouTube content.',
+    tools=[youtube_search],
+    verbose=True
+)
+```
+
+## Input Schema
+
+The tool supports two input schemas depending on initialization:
+
+### Dynamic Channel Schema
+```python
+class YoutubeChannelSearchToolSchema(BaseModel):
+    search_query: str           # The semantic search query
+    youtube_channel_handle: str # YouTube channel handle (with or without @)
+```
+
+### Fixed Channel Schema
+```python
+class FixedYoutubeChannelSearchToolSchema(BaseModel):
+    search_query: str  # The semantic search query
+```
+
+## Function Signature
+
+```python
+def __init__(self, youtube_channel_handle: Optional[str] = None, **kwargs):
+    """
+    Initialize the YouTube channel search tool.
+
+    Args:
+        youtube_channel_handle (Optional[str]): Fixed channel handle. If provided, 
+            the tool will only search this channel.
+        **kwargs: Additional arguments passed to the parent RagTool
+    """
+
+def _run(self, search_query: str, **kwargs: Any) -> Any:
+    """
+    Perform semantic search on the YouTube channel content.
+
+    Args:
+        search_query (str): The semantic search query
+        **kwargs: Additional arguments (including 'youtube_channel_handle' for dynamic mode)
+
+    Returns:
+        str: Relevant content from the YouTube channel based on semantic search
+    """
+```
+
+## Best Practices
+
+1. Choose initialization method based on use case:
+   - Use fixed channel handle when repeatedly searching the same channel
+   - Use dynamic handle when searching different channels
+2. Write clear, semantic search queries
+3. Channel handles can be provided with or without '@' prefix
+4. Consider content availability and channel size
+
+## Integration Example
+
+```python
+from crewai import Agent, Task, Crew
+from crewai_tools import YoutubeChannelSearchTool
+
+# Example 1: Fixed channel search
+tech_channel_search = YoutubeChannelSearchTool(youtube_channel_handle="@TechChannel")
+
+# Example 2: Dynamic channel search
+flexible_search = YoutubeChannelSearchTool()
+
+# Create agents
+tech_analyst = Agent(
+    role='Tech Content Analyst',
+    goal='Find relevant tech tutorials and explanations',
+    backstory='Expert at analyzing technical YouTube content.',
+    tools=[tech_channel_search]
+)
+
+content_researcher = Agent(
+    role='Content Researcher',
+    goal='Search across multiple YouTube channels',
+    backstory='Specialist in finding information across various channels.',
+    tools=[flexible_search]
+)
+
+# Define tasks
+fixed_search_task = Task(
+    description="""Find all tutorials related to machine learning 
+    basics in the channel.""",
+    agent=tech_analyst
+)
+
+# The agent will use:
+# {
+#   "search_query": "machine learning basics tutorial"
+# }
+
+dynamic_search_task = Task(
+    description="""Search through the @AIResearch channel for 
+    content about neural networks.""",
+    agent=content_researcher
+)
+
+# The agent will use:
+# {
+#   "search_query": "neural networks explanation",
+#   "youtube_channel_handle": "@AIResearch"
+# }
+
+# Create crew
+crew = Crew(
+    agents=[tech_analyst, content_researcher],
+    tasks=[fixed_search_task, dynamic_search_task]
+)
+
+# Execute
+result = crew.kickoff()
+```
+
+## Notes
+
+- Inherits from RagTool for semantic search capabilities
+- Supports both fixed and dynamic YouTube channel handles
+- Automatically adds '@' prefix to channel handles if missing
+- Uses embeddings for semantic search
+- Thread-safe operations
+- Automatically handles YouTube content loading and embedding

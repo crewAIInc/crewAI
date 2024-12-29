@@ -1,0 +1,164 @@
+---
+title: CodeDocsSearchTool
+description: A semantic search tool for code documentation websites using RAG capabilities
+icon: book-open
+---
+
+## CodeDocsSearchTool
+
+The CodeDocsSearchTool is a specialized Retrieval-Augmented Generation (RAG) tool that enables semantic search within code documentation websites. It inherits from the base RagTool class and provides both fixed and dynamic documentation URL searching capabilities.
+
+## Installation
+
+```bash
+pip install 'crewai[tools]'
+```
+
+## Usage Example
+
+```python
+from crewai import Agent
+from crewai_tools import CodeDocsSearchTool
+
+# Method 1: Dynamic documentation URL
+docs_search = CodeDocsSearchTool()
+
+# Method 2: Fixed documentation URL
+fixed_docs_search = CodeDocsSearchTool(
+    docs_url="https://docs.example.com"
+)
+
+# Create an agent with the tool
+researcher = Agent(
+    role='Documentation Researcher',
+    goal='Search through code documentation semantically',
+    backstory='Expert at finding relevant information in technical documentation.',
+    tools=[docs_search],
+    verbose=True
+)
+```
+
+## Input Schema
+
+The tool supports two input schemas depending on initialization:
+
+### Dynamic URL Schema
+```python
+class CodeDocsSearchToolSchema(BaseModel):
+    search_query: str  # The semantic search query
+    docs_url: str     # URL of the documentation site to search
+```
+
+### Fixed URL Schema
+```python
+class FixedCodeDocsSearchToolSchema(BaseModel):
+    search_query: str  # The semantic search query
+```
+
+## Function Signature
+
+```python
+def __init__(self, docs_url: Optional[str] = None, **kwargs):
+    """
+    Initialize the documentation search tool.
+
+    Args:
+        docs_url (Optional[str]): Fixed URL to a documentation site. If provided, 
+            the tool will only search this documentation.
+        **kwargs: Additional arguments passed to the parent RagTool
+    """
+
+def _run(self, search_query: str, **kwargs: Any) -> Any:
+    """
+    Perform semantic search on the documentation site.
+
+    Args:
+        search_query (str): The semantic search query
+        **kwargs: Additional arguments (including 'docs_url' for dynamic mode)
+
+    Returns:
+        str: Relevant documentation passages based on semantic search
+    """
+```
+
+## Best Practices
+
+1. Choose initialization method based on use case:
+   - Use fixed URL when repeatedly searching the same documentation
+   - Use dynamic URL when searching different documentation sites
+2. Write clear, semantic search queries
+3. Ensure documentation sites are accessible
+4. Consider documentation structure and size
+5. Handle potential URL access errors in agent prompts
+
+## Integration Example
+
+```python
+from crewai import Agent, Task, Crew
+from crewai_tools import CodeDocsSearchTool
+
+# Example 1: Fixed documentation search
+api_docs_search = CodeDocsSearchTool(
+    docs_url="https://api.example.com/docs"
+)
+
+# Example 2: Dynamic documentation search
+flexible_docs_search = CodeDocsSearchTool()
+
+# Create agents
+api_analyst = Agent(
+    role='API Documentation Analyst',
+    goal='Find relevant API endpoints and usage examples',
+    backstory='Expert at analyzing API documentation.',
+    tools=[api_docs_search]
+)
+
+docs_researcher = Agent(
+    role='Documentation Researcher',
+    goal='Search through various documentation sites',
+    backstory='Specialist in finding information across multiple docs.',
+    tools=[flexible_docs_search]
+)
+
+# Define tasks
+fixed_search_task = Task(
+    description="""Find all authentication-related endpoints 
+    in the API documentation.""",
+    agent=api_analyst
+)
+
+# The agent will use:
+# {
+#   "search_query": "authentication endpoints and methods"
+# }
+
+dynamic_search_task = Task(
+    description="""Search through the Python documentation at 
+    docs.python.org for information about async/await.""",
+    agent=docs_researcher
+)
+
+# The agent will use:
+# {
+#   "search_query": "async await syntax and usage",
+#   "docs_url": "https://docs.python.org"
+# }
+
+# Create crew
+crew = Crew(
+    agents=[api_analyst, docs_researcher],
+    tasks=[fixed_search_task, dynamic_search_task]
+)
+
+# Execute
+result = crew.kickoff()
+```
+
+## Notes
+
+- Inherits from RagTool for semantic search capabilities
+- Supports both fixed and dynamic documentation URLs
+- Uses embeddings for semantic search
+- Thread-safe operations
+- Automatically handles documentation loading and embedding
+- Optimized for technical documentation search

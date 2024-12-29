@@ -1,0 +1,201 @@
+---
+title: SerplyWebpageToMarkdownTool
+description: A tool for converting web pages to markdown format using Serply API
+icon: markdown
+---
+
+## SerplyWebpageToMarkdownTool
+
+The SerplyWebpageToMarkdownTool converts web pages to markdown format using the Serply API, making it easier for LLMs to process and understand web content. It supports configurable proxy locations for region-specific access.
+
+## Installation
+
+```bash
+pip install 'crewai[tools]'
+```
+
+## Usage Example
+
+```python
+from crewai import Agent
+from crewai_tools import SerplyWebpageToMarkdownTool
+
+# Set environment variable
+# export SERPLY_API_KEY='your-api-key'
+
+# Basic initialization
+markdown_tool = SerplyWebpageToMarkdownTool()
+
+# Advanced initialization with custom parameters
+markdown_tool = SerplyWebpageToMarkdownTool(
+    proxy_location="FR"  # Access from France
+)
+
+# Create an agent with the tool
+web_processor = Agent(
+    role='Web Content Processor',
+    goal='Convert web content to markdown format',
+    backstory='Expert at processing and formatting web content.',
+    tools=[markdown_tool],
+    verbose=True
+)
+```
+
+## Input Schema
+
+```python
+class SerplyWebpageToMarkdownToolSchema(BaseModel):
+    url: str = Field(
+        description="Mandatory URL of the webpage to convert to markdown"
+    )
+```
+
+## Function Signature
+
+```python
+def __init__(
+    self,
+    proxy_location: Optional[str] = "US",
+    **kwargs
+):
+    """
+    Initialize the webpage to markdown conversion tool.
+
+    Args:
+        proxy_location (str): Region for accessing the webpage (default: "US")
+            Options: US, CA, IE, GB, FR, DE, SE, IN, JP, KR, SG, AU, BR
+        **kwargs: Additional arguments for tool creation
+    """
+
+def _run(
+    self,
+    **kwargs: Any
+) -> str:
+    """
+    Convert webpage to markdown using Serply API.
+
+    Args:
+        url (str): URL of the webpage to convert
+
+    Returns:
+        str: Markdown formatted content of the webpage
+    """
+```
+
+## Best Practices
+
+1. Set up API authentication:
+   ```bash
+   export SERPLY_API_KEY='your-serply-api-key'
+   ```
+
+2. Configure proxy location appropriately:
+   - Select relevant region for access
+   - Consider content accessibility
+   - Handle region-specific content
+
+3. Handle potential API errors
+4. Process markdown output effectively
+5. Consider rate limits and quotas
+
+## Integration Example
+
+```python
+from crewai import Agent, Task, Crew
+from crewai_tools import SerplyWebpageToMarkdownTool
+
+# Initialize tool with custom configuration
+markdown_tool = SerplyWebpageToMarkdownTool(
+    proxy_location="US"  # US access point
+)
+
+# Create agent
+processor = Agent(
+    role='Content Processor',
+    goal='Convert web content to structured markdown',
+    backstory='Expert at processing web content into structured formats.',
+    tools=[markdown_tool]
+)
+
+# Define task
+conversion_task = Task(
+    description="""Convert the documentation page at 
+    https://example.com/docs into markdown format for 
+    further processing.""",
+    agent=processor
+)
+
+# The tool will use:
+# {
+#   "url": "https://example.com/docs"
+# }
+
+# Create crew
+crew = Crew(
+    agents=[processor],
+    tasks=[conversion_task]
+)
+
+# Execute
+result = crew.kickoff()
+```
+
+## Advanced Usage
+
+### Regional Access Configuration
+```python
+# European access points
+fr_processor = SerplyWebpageToMarkdownTool(
+    proxy_location="FR"
+)
+
+de_processor = SerplyWebpageToMarkdownTool(
+    proxy_location="DE"
+)
+```
+
+### Error Handling
+```python
+try:
+    markdown_content = markdown_tool._run(
+        url="https://example.com/page"
+    )
+    print(markdown_content)
+except Exception as e:
+    print(f"Conversion error: {str(e)}")
+```
+
+### Content Processing
+```python
+# Process multiple pages
+urls = [
+    "https://example.com/page1",
+    "https://example.com/page2",
+    "https://example.com/page3"
+]
+
+markdown_contents = []
+for url in urls:
+    try:
+        content = markdown_tool._run(url=url)
+        markdown_contents.append(content)
+    except Exception as e:
+        print(f"Error processing {url}: {str(e)}")
+        continue
+
+# Combine contents
+combined_markdown = "\n\n---\n\n".join(markdown_contents)
+```
+
+## Notes
+
+- Requires valid Serply API key
+- Supports multiple proxy locations
+- Returns markdown-formatted content
+- Simplifies web content for LLM processing
+- Thread-safe operations
+- Efficient content conversion
+- Handles API rate limiting automatically
+- Preserves content structure in markdown
+- Supports various webpage formats
+- Makes web content more accessible to AI agents

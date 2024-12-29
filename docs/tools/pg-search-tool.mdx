@@ -1,0 +1,181 @@
+---
+title: PGSearchTool
+description: A RAG-based semantic search tool for PostgreSQL database content
+icon: database-search
+---
+
+## PGSearchTool
+
+The PGSearchTool provides semantic search capabilities for PostgreSQL database content using RAG (Retrieval-Augmented Generation). It allows for natural language queries over database table content by leveraging embeddings and semantic search.
+
+## Installation
+
+```bash
+pip install 'crewai[tools]'
+pip install embedchain  # Required dependency
+```
+
+## Usage Example
+
+```python
+from crewai import Agent
+from crewai_tools import PGSearchTool
+
+# Initialize the tool with database configuration
+search_tool = PGSearchTool(
+    db_uri="postgresql://user:password@localhost:5432/dbname",
+    table_name="your_table"
+)
+
+# Create an agent with the tool
+researcher = Agent(
+    role='Database Researcher',
+    goal='Find relevant information in database content',
+    backstory='Expert at searching and analyzing database content.',
+    tools=[search_tool],
+    verbose=True
+)
+```
+
+## Input Schema
+
+```python
+class PGSearchToolSchema(BaseModel):
+    search_query: str = Field(
+        description="Mandatory semantic search query for searching the database's content"
+    )
+```
+
+## Function Signature
+
+```python
+def __init__(self, table_name: str, **kwargs):
+    """
+    Initialize the PostgreSQL search tool.
+
+    Args:
+        table_name (str): Name of the table to search
+        db_uri (str): PostgreSQL database URI (required in kwargs)
+        **kwargs: Additional arguments for RagTool initialization
+    """
+
+def _run(
+    self,
+    search_query: str,
+    **kwargs: Any
+) -> Any:
+    """
+    Perform semantic search on database content.
+
+    Args:
+        search_query (str): Semantic search query
+        **kwargs: Additional search parameters
+
+    Returns:
+        Any: Relevant database content based on semantic search
+    """
+```
+
+## Best Practices
+
+1. Secure database credentials:
+   ```python
+   # Use environment variables for sensitive data
+   import os
+   
+   db_uri = (
+       f"postgresql://{os.getenv('DB_USER')}:{os.getenv('DB_PASS')}"
+       f"@{os.getenv('DB_HOST')}:{os.getenv('DB_PORT')}/{os.getenv('DB_NAME')}"
+   )
+   ```
+
+2. Optimize table selection
+3. Use specific semantic queries
+4. Handle database connection errors
+5. Consider table size and query performance
+
+## Integration Example
+
+```python
+from crewai import Agent, Task, Crew
+from crewai_tools import PGSearchTool
+
+# Initialize tool with database configuration
+db_search = PGSearchTool(
+    db_uri="postgresql://user:password@localhost:5432/dbname",
+    table_name="customer_feedback"
+)
+
+# Create agent
+analyst = Agent(
+    role='Database Analyst',
+    goal='Analyze customer feedback data',
+    backstory='Expert at finding insights in customer feedback.',
+    tools=[db_search]
+)
+
+# Define task
+analysis_task = Task(
+    description="""Find all customer feedback related to product usability
+    and ease of use. Focus on common patterns and issues.""",
+    agent=analyst
+)
+
+# The tool will use:
+# {
+#   "search_query": "product usability feedback ease of use issues"
+# }
+
+# Create crew
+crew = Crew(
+    agents=[analyst],
+    tasks=[analysis_task]
+)
+
+# Execute
+result = crew.kickoff()
+```
+
+## Advanced Usage
+
+### Multiple Table Search
+```python
+# Create tools for different tables
+customer_search = PGSearchTool(
+    db_uri="postgresql://user:password@localhost:5432/dbname",
+    table_name="customers"
+)
+
+orders_search = PGSearchTool(
+    db_uri="postgresql://user:password@localhost:5432/dbname",
+    table_name="orders"
+)
+
+# Use both tools in an agent
+analyst = Agent(
+    role='Multi-table Analyst',
+    goal='Analyze customer and order data',
+    tools=[customer_search, orders_search]
+)
+```
+
+### Error Handling
+```python
+try:
+    results = search_tool._run(
+        search_query="customer satisfaction ratings"
+    )
+    # Process results
+except Exception as e:
+    print(f"Database search error: {str(e)}")
+```
+
+## Notes
+
+- Inherits from RagTool for semantic search
+- Uses embedchain's PostgresLoader
+- Requires valid PostgreSQL connection
+- Supports semantic natural language queries
+- Thread-safe operations
+- Efficient for large tables
+- Handles connection pooling automatically

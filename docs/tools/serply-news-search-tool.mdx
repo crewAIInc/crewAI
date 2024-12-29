@@ -1,0 +1,209 @@
+---
+title: SerplyNewsSearchTool
+description: A news article search tool powered by Serply API with configurable search parameters
+icon: newspaper
+---
+
+## SerplyNewsSearchTool
+
+The SerplyNewsSearchTool provides news article search capabilities using the Serply API. It allows for customizable search parameters including result limits and proxy location for region-specific news results.
+
+## Installation
+
+```bash
+pip install 'crewai[tools]'
+```
+
+## Usage Example
+
+```python
+from crewai import Agent
+from crewai_tools import SerplyNewsSearchTool
+
+# Set environment variable
+# export SERPLY_API_KEY='your-api-key'
+
+# Basic initialization
+news_tool = SerplyNewsSearchTool()
+
+# Advanced initialization with custom parameters
+news_tool = SerplyNewsSearchTool(
+    limit=20,             # Return 20 results
+    proxy_location="FR"   # Search from France
+)
+
+# Create an agent with the tool
+news_researcher = Agent(
+    role='News Researcher',
+    goal='Find relevant news articles',
+    backstory='Expert at news research and information gathering.',
+    tools=[news_tool],
+    verbose=True
+)
+```
+
+## Input Schema
+
+```python
+class SerplyNewsSearchToolSchema(BaseModel):
+    search_query: str = Field(
+        description="Mandatory search query for fetching news articles"
+    )
+```
+
+## Function Signature
+
+```python
+def __init__(
+    self,
+    limit: Optional[int] = 10,
+    proxy_location: Optional[str] = "US",
+    **kwargs
+):
+    """
+    Initialize the news search tool.
+
+    Args:
+        limit (int): Maximum number of results [10-100] (default: 10)
+        proxy_location (str): Region for local news results (default: "US")
+            Options: US, CA, IE, GB, FR, DE, SE, IN, JP, KR, SG, AU, BR
+        **kwargs: Additional arguments for tool creation
+    """
+
+def _run(
+    self,
+    **kwargs: Any
+) -> str:
+    """
+    Perform news search using Serply API.
+
+    Args:
+        search_query (str): News search query
+
+    Returns:
+        str: Formatted string containing news results:
+            - Title
+            - Link
+            - Source
+            - Published Date
+    """
+```
+
+## Best Practices
+
+1. Set up API authentication:
+   ```bash
+   export SERPLY_API_KEY='your-serply-api-key'
+   ```
+
+2. Configure search parameters appropriately:
+   - Set reasonable result limits
+   - Select relevant proxy location for regional news
+   - Consider time sensitivity of news content
+
+3. Handle potential API errors
+4. Process structured results effectively
+5. Consider rate limits and quotas
+
+## Integration Example
+
+```python
+from crewai import Agent, Task, Crew
+from crewai_tools import SerplyNewsSearchTool
+
+# Initialize tool with custom configuration
+news_tool = SerplyNewsSearchTool(
+    limit=15,             # 15 results
+    proxy_location="US"   # US news sources
+)
+
+# Create agent
+news_analyst = Agent(
+    role='News Analyst',
+    goal='Research breaking news and developments',
+    backstory='Expert at analyzing news trends and developments.',
+    tools=[news_tool]
+)
+
+# Define task
+news_task = Task(
+    description="""Research the latest developments in renewable 
+    energy technology and investments, focusing on major 
+    announcements and industry trends.""",
+    agent=news_analyst
+)
+
+# The tool will use:
+# {
+#   "search_query": "renewable energy technology investments news"
+# }
+
+# Create crew
+crew = Crew(
+    agents=[news_analyst],
+    tasks=[news_task]
+)
+
+# Execute
+result = crew.kickoff()
+```
+
+## Advanced Usage
+
+### Regional News Configuration
+```python
+# French news sources
+fr_news = SerplyNewsSearchTool(
+    proxy_location="FR",
+    limit=20
+)
+
+# Japanese news sources
+jp_news = SerplyNewsSearchTool(
+    proxy_location="JP",
+    limit=20
+)
+```
+
+### Result Processing
+```python
+# Get news results
+try:
+    results = news_tool._run(
+        search_query="renewable energy investments"
+    )
+    print(results)
+except Exception as e:
+    print(f"News search error: {str(e)}")
+```
+
+### Multiple Region Search
+```python
+# Search across multiple regions
+regions = ["US", "GB", "DE"]
+all_results = []
+
+for region in regions:
+    regional_tool = SerplyNewsSearchTool(
+        proxy_location=region,
+        limit=5
+    )
+    results = regional_tool._run(
+        search_query="global tech innovations"
+    )
+    all_results.append(f"Results from {region}:\n{results}")
+
+combined_results = "\n\n".join(all_results)
+```
+
+## Notes
+
+- Requires valid Serply API key
+- Supports multiple regions for news sources
+- Configurable result limits (10-100)
+- Returns structured news article data
+- Thread-safe operations
+- Efficient news search capabilities
+- Handles API rate limiting automatically
+- Includes source attribution and publication dates
+- Follows redirects for final article URLs
