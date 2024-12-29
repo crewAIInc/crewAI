@@ -1184,6 +1184,53 @@ def test_kickoff_for_each_error_handling():
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
+def test_kickoff_for_each_output_file_interpolation(tmp_path):
+    """Test that output_file paths are correctly interpolated when using kickoff_for_each."""
+    # Create test directories
+    output_dir = tmp_path / "output_files"
+    output_dir.mkdir()
+
+    agent = Agent(
+        role="TestAgent",
+        goal="Validate output_file interpolation with kickoff_for_each",
+        backstory="Testing interpolation logic",
+        allow_code_execution=False,
+    )
+
+    task = Task(
+        description="Create a brief summary for the ID: {id_var}",
+        expected_output="Should write a file with the ID included in the path",
+        agent=agent,
+        output_file=str(output_dir / "summary_{id_var}.md")
+    )
+
+    crew = Crew(agents=[agent], tasks=[task], verbose=True)
+
+    inputs = [
+        {"id_var": "alpha"},
+        {"id_var": "beta"},
+    ]
+
+    # Use kickoff_for_each
+    results = crew.kickoff_for_each(inputs=inputs)
+    
+    # Verify each iteration's output_file was properly interpolated
+    for input_data, result in zip(inputs, results):
+        expected_path = output_dir / f"summary_{input_data['id_var']}.md"
+        assert expected_path.exists(), f"Expected output file {expected_path} was not created"
+        
+        # Verify the output file was created with the correct name
+        assert expected_path.exists(), (
+            f"Expected output file {expected_path} was not created"
+        )
+        
+        # Verify file contains some content
+        assert expected_path.stat().st_size > 0, (
+            f"Output file {expected_path} is empty"
+        )
+
+
+@pytest.mark.vcr(filter_headers=["authorization"])
 @pytest.mark.asyncio
 async def test_kickoff_async_basic_functionality_and_output():
     """Tests the basic functionality and output of kickoff_async."""
