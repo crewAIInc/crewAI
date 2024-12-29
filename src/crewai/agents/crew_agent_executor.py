@@ -173,19 +173,9 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
 
                     # Check if we should force an answer and update state
                     should_force = self._should_force_answer()
-                    self._printer.print(
-                        content=f"Current state - iterations: {self.iterations}, max_iter: {self.max_iter}, have_forced_answer: {self.have_forced_answer}",
-                        color="yellow"
-                    )
-                    
                     if should_force:
                         # Set have_forced_answer to True as soon as we hit max iterations
                         self.have_forced_answer = True
-                        self._printer.print(
-                            content=f"Max iterations reached. Set have_forced_answer=True",
-                            color="yellow"
-                        )
-                        
                         # Return final answer with warning
                         formatted_answer.text += (
                             f'\n{self._i18n.errors("force_final_answer")}'

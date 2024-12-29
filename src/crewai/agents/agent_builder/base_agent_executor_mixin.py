@@ -23,7 +23,7 @@ class CrewAgentExecutorMixin:
     max_iter: int
     _i18n: I18N
     _printer: Printer = Printer()
-    _logger = Printer()
+
 
     def _should_force_answer(self) -> bool:
         """Determine if a forced answer is required based on iteration count.
@@ -36,12 +36,7 @@ class CrewAgentExecutorMixin:
             bool: True if iterations >= max_iter, indicating a forced
                  answer should be triggered
         """
-        should_force = self.iterations >= self.max_iter
-        if should_force:
-            self._logger.debug(
-                f"Max iterations ({self.max_iter}) reached."
-            )
-        return should_force
+        return self.iterations >= self.max_iter
 
     def _create_short_term_memory(self, output) -> None:
         """Create and save a short-term memory item if conditions are met."""
