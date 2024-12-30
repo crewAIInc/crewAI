@@ -20,6 +20,17 @@ CrewAI supports two process types that determine how tasks are assigned to agent
 
 - **Consensual Process** (Planned): Aiming for collaborative decision-making among agents on task execution, this process type introduces a democratic approach to task management within CrewAI. It is planned for future development and is not currently implemented in the codebase.
 
+### Process Type Comparison
+
+| Aspect | Static/Assigned Process | Dynamic/Unassigned Process |
+|--------|------------------------|---------------------------|
+| Agent Assignment | Pre-assigned by developer | Automatic based on agent capabilities |
+| Task Order | Sequential (defined order) | Sequential (defined order) |
+| Manager Required | No | Yes (manager_llm or manager_agent) |
+| Use Case | Fixed workflows with known agent assignments | Dynamic workflows needing flexible assignment |
+| Configuration | Simpler setup, explicit control | Requires manager configuration |
+| Task-Agent Mapping | One-to-one, defined at creation | Determined during execution |
+
 ## The Role of Processes in Teamwork
 Processes enable individual agents to operate as a cohesive unit, streamlining their efforts to achieve common objectives with efficiency and coherence.
 
@@ -27,27 +38,64 @@ Processes enable individual agents to operate as a cohesive unit, streamlining t
 To assign a process to a crew, specify the process type upon crew creation to set the execution strategy. For a hierarchical process, ensure to define `manager_llm` or `manager_agent` for the manager agent.
 
 ```python
-from crewai import Crew
+from crewai import Crew, Agent, Task
 from crewai.process import Process
 from langchain_openai import ChatOpenAI
 
-# Example: Creating a crew with a Static/Assigned process
-# Each task must have an agent pre-assigned
-crew = Crew(
-    agents=my_agents,
-    tasks=my_tasks,
-    process=Process.sequential  # Note: The enum value remains 'sequential' for backward compatibility
+# Define agents with specific roles and expertise
+researcher = Agent(
+    role="Researcher",
+    goal="Conduct thorough market analysis",
+    backstory="Expert in data analysis and market research"
 )
 
-# Example: Creating a crew with a Dynamic/Unassigned process
-# Tasks will be automatically assigned to suitable agents
-crew = Crew(
-    agents=my_agents,
-    tasks=my_tasks,
-    process=Process.hierarchical,  # Note: The enum value remains 'hierarchical' for backward compatibility
-    manager_llm=ChatOpenAI(model="gpt-4")
-    # or
-    # manager_agent=my_manager_agent
+writer = Agent(
+    role="Writer",
+    goal="Create comprehensive reports",
+    backstory="Technical writer with expertise in market analysis"
+)
+
+# Example 1: Static/Assigned Process
+# Tasks must be explicitly assigned to agents
+research_task = Task(
+    description="Research emerging market trends",
+    agent=researcher  # Explicit agent assignment required
+)
+
+writing_task = Task(
+    description="Create market analysis report",
+    agent=writer,  # Explicit agent assignment required
+    context="Use research findings to create a detailed report"
+)
+
+# Create crew with Static/Assigned process
+static_crew = Crew(
+    agents=[researcher, writer],
+    tasks=[research_task, writing_task],
+    process=Process.sequential  # Note: Using old enum value for backward compatibility
+)
+
+# Example 2: Dynamic/Unassigned Process
+# Tasks without pre-assigned agents
+dynamic_research_task = Task(
+    description="Research emerging market trends",
+    required_skills=["market analysis", "data interpretation"]  # Help manager select agent
+)
+
+dynamic_writing_task = Task(
+    description="Create market analysis report",
+    context="Use research findings to create a detailed report",
+    required_skills=["technical writing", "data visualization"]
+)
+
+# Create crew with Dynamic/Unassigned process
+dynamic_crew = Crew(
+    agents=[researcher, writer],
+    tasks=[dynamic_research_task, dynamic_writing_task],
+    process=Process.hierarchical,  # Note: Using old enum value for backward compatibility
+    manager_llm=ChatOpenAI(model="gpt-4")  # Manager will assign tasks to suitable agents
+    # Alternative: Use custom manager agent
+    # manager_agent=custom_manager_agent
 )
 ```
 **Note:** Ensure `my_agents` and `my_tasks` are defined prior to creating a `Crew` object, and for the hierarchical process, either `manager_llm` or `manager_agent` is also required.
@@ -66,9 +114,71 @@ This process type enables automatic agent selection through a manager component.
 - Delegating tasks automatically
 - Reviewing outputs and assessing task completion
 
-## Process Class: Detailed Overview
+## Choosing the Right Process
 
-The `Process` class is implemented as an enumeration (`Enum`), ensuring type safety and restricting process values to the defined types (`sequential`, `hierarchical`). The consensual process is planned for future inclusion, emphasizing our commitment to continuous development and innovation.
+When deciding between Static/Assigned and Dynamic/Unassigned processes, consider these technical factors:
+
+### Static/Assigned Process
+Consider this process when:
+- Your workflow has predefined task-agent mappings
+- You need deterministic agent assignments for auditing or compliance
+- You want to minimize runtime overhead (no manager required)
+- You have specific agents optimized for particular tasks
+- You need fine-grained control over task execution
+
+### Dynamic/Unassigned Process
+Consider this process when:
+- Your agent pool has overlapping capabilities
+- Task requirements are determined at runtime
+- You need failover capabilities between agents
+- You have a manager (LLM or agent) to handle assignment logic
+- You want to scale agent pools without modifying task definitions
+
+### Technical Considerations
+- **Performance**: Static/Assigned processes have lower overhead as they skip the agent selection phase
+- **Scalability**: Dynamic/Unassigned processes better handle changes in agent availability
+- **Maintenance**: Static assignments require updating task definitions when agent roles change
+- **Error Handling**: Dynamic processes can potentially reassign tasks on agent failures
+
+## Technical Implementation Details
+
+### Process Class
+The `Process` class is implemented as an enumeration (`Enum`), ensuring type safety and restricting process values to the defined types:
+```python
+class Process(Enum):
+    sequential = "sequential"     # Static/Assigned process
+    hierarchical = "hierarchical" # Dynamic/Unassigned process
+```
+
+### Default Configuration
+- The default process type is `Process.sequential` (Static/Assigned)
+- When using `Process.hierarchical`, a manager (either `manager_llm` or `manager_agent`) must be provided
+
+### Version Compatibility
+- Since v1.0.0: Original process types (`sequential`, `hierarchical`)
+- Current version maintains the same enum values for backward compatibility
+- Future versions will continue supporting these values while using new terminology in documentation
+
+### Error Handling
+Common error scenarios and their solutions:
+```python
+# Error: Missing manager in Dynamic/Unassigned process
+crew = Crew(
+    agents=[agent1, agent2],
+    tasks=[task1, task2],
+    process=Process.hierarchical
+    # Error: ValueError: Manager (manager_llm or manager_agent) is required for hierarchical process
+)
+
+# Error: Missing agent assignment in Static/Assigned process
+task = Task(description="Task without agent")  # Missing agent assignment
+crew = Crew(
+    agents=[agent1, agent2],
+    tasks=[task],
+    process=Process.sequential
+    # Error: ValueError: Agent assignment required for all tasks in sequential process
+)
+```
 
 ## Conclusion
 
