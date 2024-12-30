@@ -1,4 +1,7 @@
-"""Test knowledge integration in planning process."""
+"""
+Tests for verifying the integration of knowledge sources in the planning process.
+This module ensures that agent knowledge is properly included during task planning.
+"""
 
 from unittest.mock import patch
 
@@ -12,7 +15,12 @@ from crewai.utilities.planning_handler import CrewPlanner
 
 @pytest.fixture
 def mock_knowledge_source():
-    """Create a mock knowledge source with test content."""
+    """
+    Create a mock knowledge source with test content.
+    Returns:
+        StringKnowledgeSource:
+            A knowledge source containing AI-related test content
+    """
     content = """
     Important context about AI:
     1. AI systems use machine learning algorithms
@@ -54,15 +62,23 @@ def test_knowledge_included_in_planning(mock_chroma):
     task_summary = planner._create_tasks_summary()
 
     # Verify that knowledge is included in planning
-    assert "AI systems require careful training" in task_summary
-    assert '"agent_knowledge"' in task_summary
+    assert "AI systems require careful training" in task_summary, \
+        "Knowledge content should be present in task summary"
+    assert '"agent_knowledge"' in task_summary, \
+        "agent_knowledge field should be present in task summary"
 
     # Verify that knowledge is properly formatted
-    assert isinstance(task.agent.knowledge_sources, list)
-    assert len(task.agent.knowledge_sources) > 0
-    assert task.agent.knowledge_sources[0].content in task_summary
+    assert isinstance(task.agent.knowledge_sources, list), \
+        "Knowledge sources should be stored in a list"
+    assert len(task.agent.knowledge_sources) > 0, \
+        "At least one knowledge source should be present"
+    assert task.agent.knowledge_sources[0].content in task_summary, \
+        "Knowledge source content should be included in task summary"
 
     # Verify that other expected components are still present
-    assert task.description in task_summary
-    assert task.expected_output in task_summary
-    assert agent.role in task_summary
+    assert task.description in task_summary, \
+        "Task description should be present in task summary"
+    assert task.expected_output in task_summary, \
+        "Expected output should be present in task summary"
+    assert agent.role in task_summary, \
+        "Agent role should be present in task summary"

@@ -1,9 +1,12 @@
+import logging
 from typing import Any, List, Optional
 
 from pydantic import BaseModel, Field
 
 from crewai.agent import Agent
 from crewai.task import Task
+
+logger = logging.getLogger(__name__)
 
 
 class PlanPerTask(BaseModel):
@@ -68,10 +71,28 @@ class CrewPlanner:
             output_pydantic=PlannerTaskPydanticOutput,
         )
 
+    def _get_agent_knowledge(self, task: Task) -> List[str]:
+        """
+        Safely retrieve knowledge source content from the task's agent.
+        
+        Args:
+            task: The task containing an agent with potential knowledge sources
+            
+        Returns:
+            List[str]: A list of knowledge source strings
+        """
+        try:
+            if task.agent and task.agent.knowledge_sources:
+                return [source.content for source in task.agent.knowledge_sources]
+        except AttributeError:
+            logger.warning("Error accessing agent knowledge sources")
+        return []
+
     def _create_tasks_summary(self) -> str:
         """Creates a summary of all tasks."""
         tasks_summary = []
         for idx, task in enumerate(self.tasks):
+            knowledge_list = self._get_agent_knowledge(task)
             tasks_summary.append(
                 f"""
                 Task Number {idx + 1} - {task.description}
@@ -81,7 +102,7 @@ class CrewPlanner:
                 "agent_goal": {task.agent.goal if task.agent else "None"}
                 "task_tools": {task.tools}
                 "agent_tools": {task.agent.tools if task.agent else "None"}
-                "agent_knowledge": "{str([source.content for source in task.agent.knowledge_sources] if task.agent and task.agent.knowledge_sources else 'None')}"
+                "agent_knowledge": "{str(knowledge_list) if knowledge_list else 'None'}"
                 """
             )
         return " ".join(tasks_summary)
