@@ -43,7 +43,7 @@ writer = Agent(
     role="Senior Writer",
     goal="Write the best content about AI and AI agents.",
     backstory="You're a senior writer, specialized in technology, software engineering, AI and startups. You work as a freelancer and are now working on writing content for a new customer.",
-    allow_delegation=False,
+    allow_delegation=True,
 )
 
 

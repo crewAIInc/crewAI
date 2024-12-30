@@ -798,6 +798,16 @@ class Crew(BaseModel):
         return None
 
     def _prepare_tools(self, agent: BaseAgent, task: Task, tools: List[Tool]) -> List[Tool]:
+        """Prepare tools for an agent, including delegation tools if allowed.
+        
+        Args:
+            agent: Agent that will receive the tools
+            task: Task being executed
+            tools: List of existing tools
+            
+        Returns:
+            List of tools with delegation and other tools added
+        """
         # Add delegation tools if agent allows delegation
         if agent.allow_delegation:
             if self.process == Process.hierarchical:
@@ -805,15 +815,14 @@ class Crew(BaseModel):
                     # For hierarchical process, handle both manager and regular agent tools
                     if agent == self.manager_agent:
                         # Manager can delegate to all regular agents
-                        tools = self._inject_delegation_tools(tools, agent, [a for a in self.agents if a != agent])
+                        tools = self._inject_delegation_tools(tools, agent, [a for a in self.agents if a != agent], task=task)
+                    elif task and task.async_execution and task.agent:
+                        # For async tasks in hierarchical mode, only allow delegation to the task's assigned agent
+                        tools = self._inject_delegation_tools(tools, agent, [task.agent], task=task)
                     else:
-                        # For async tasks, maintain original delegation behavior
-                        if task and task.async_execution:
-                            tools = self._add_delegation_tools(task, tools)
-                        else:
-                            # Regular agents can delegate to manager and other agents
-                            delegation_agents = [self.manager_agent] + [a for a in self.agents if a != agent]
-                            tools = self._inject_delegation_tools(tools, agent, delegation_agents)
+                        # Regular agents can delegate to manager and other agents
+                        delegation_agents = [self.manager_agent] + [a for a in self.agents if a != agent]
+                        tools = self._inject_delegation_tools(tools, agent, delegation_agents, task=task)
                 else:
                     raise ValueError("Manager agent is required for hierarchical process.")
             else:
@@ -849,8 +858,19 @@ class Crew(BaseModel):
 
         return tools
 
-    def _inject_delegation_tools(self, tools: List[Tool], task_agent: BaseAgent, agents: List[BaseAgent]):
-        delegation_tools = task_agent.get_delegation_tools(agents)
+    def _inject_delegation_tools(self, tools: List[Tool], task_agent: BaseAgent, agents: List[BaseAgent], task=None):
+        """Inject delegation tools for the given agent.
+        
+        Args:
+            tools: List of existing tools
+            task_agent: Agent that will receive the delegation tools
+            agents: List of agents that can be delegated to
+            task: Optional task context for delegation
+            
+        Returns:
+            List of tools with delegation tools added
+        """
+        delegation_tools = task_agent.get_delegation_tools(agents, task=task)
         return self._merge_tools(tools, delegation_tools)
 
     def _add_multimodal_tools(self, agent: BaseAgent, tools: List[Tool]):
@@ -887,9 +907,9 @@ class Crew(BaseModel):
     def _update_manager_tools(self, task: Task, tools: List[Tool]):
         if self.manager_agent:
             if task.agent:
-                # For async tasks, maintain original delegation behavior
-                if task.async_execution:
-                    tools = self._add_delegation_tools(task, tools)
+                # In hierarchical mode with async execution, only allow delegation to the task's assigned agent
+                if task.async_execution and self.process == Process.hierarchical:
+                    tools = self._inject_delegation_tools(tools, task.agent, [task.agent] if task.agent else [])
                 else:
                     # In hierarchical mode, allow bidirectional delegation
                     if self.process == Process.hierarchical:
@@ -900,10 +920,10 @@ class Crew(BaseModel):
                         else:
                             # For manager, allow delegation to all agents
                             tools = self._inject_delegation_tools(tools, task.agent, [a for a in self.agents if a != task.agent])
-                    else: 
-                        tools = self._inject_delegation_tools(tools, task.agent, self.agents)
+                    else:
+                        tools = self._inject_delegation_tools(tools, task.agent, self.agents, task=task)
             else:
-                tools = self._inject_delegation_tools(tools, self.manager_agent, self.agents)
+                tools = self._inject_delegation_tools(tools, self.manager_agent, self.agents, task=task)
         return tools
 
     def _get_context(self, task: Task, task_outputs: List[TaskOutput]):

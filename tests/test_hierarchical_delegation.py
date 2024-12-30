@@ -1,6 +1,6 @@
+import pytest
 from unittest.mock import MagicMock
 
-import pytest
 from langchain_core.language_models.base import BaseLanguageModel
 
 from crewai import Agent, Crew, Process, Task

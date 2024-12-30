@@ -232,7 +232,7 @@ class BaseAgent(ABC, BaseModel):
         pass
 
     @abstractmethod
-    def get_delegation_tools(self, agents: List["BaseAgent"]) -> List[BaseTool]:
+    def get_delegation_tools(self, agents: List["BaseAgent"], task=None) -> List[BaseTool]:
         """Set the task tools that init BaseAgenTools class."""
         pass
 
