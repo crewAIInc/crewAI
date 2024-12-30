@@ -1,8 +1,10 @@
-import pytest
 from unittest.mock import MagicMock
 
-from crewai import Agent, Crew, Process, Task
+import pytest
 from langchain_core.language_models.base import BaseLanguageModel
+
+from crewai import Agent, Crew, Process, Task
+
 
 def test_hierarchical_delegation_tool_availability():
     """Test that all agents are available for delegation in hierarchical mode."""
