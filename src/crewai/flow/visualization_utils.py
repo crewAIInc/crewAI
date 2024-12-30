@@ -10,7 +10,7 @@ from .utils import (
 
 
 def method_calls_crew(method):
-    """Check if the method calls `.crew()`."""
+    """Check if the method contains a .crew() call."""
     try:
         source = inspect.getsource(method)
         source = inspect.cleandoc(source)
@@ -20,6 +20,7 @@ def method_calls_crew(method):
         return False
 
     class CrewCallVisitor(ast.NodeVisitor):
+        """AST visitor to detect .crew() method calls."""
         def __init__(self):
             self.found = False
 
@@ -35,6 +36,7 @@ def method_calls_crew(method):
 
 
 def add_nodes_to_network(net, flow, node_positions, node_styles):
+    """Add nodes to the network visualization with appropriate styling."""
     def human_friendly_label(method_name):
         return method_name.replace("_", " ").title()
 
@@ -74,6 +76,7 @@ def add_nodes_to_network(net, flow, node_positions, node_styles):
 
 
 def compute_positions(flow, node_levels, y_spacing=150, x_spacing=150):
+    """Calculate x,y coordinates for each node in the flow diagram."""
     level_nodes = {}
     node_positions = {}
 
@@ -91,6 +94,7 @@ def compute_positions(flow, node_levels, y_spacing=150, x_spacing=150):
 
 
 def add_edges(net, flow, node_positions, colors):
+    """Add edges between nodes with appropriate styling and routing."""
     ancestors = build_ancestor_dict(flow)
     parent_children = build_parent_children_dict(flow)
 

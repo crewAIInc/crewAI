@@ -1,3 +1,9 @@
+"""Utility functions for flow execution and visualization.
+
+Provides helper functions for analyzing flow structure, calculating
+node positions, and extracting return values from methods.
+"""
+
 import ast
 import inspect
 import textwrap
