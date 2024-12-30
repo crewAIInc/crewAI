@@ -21,17 +21,22 @@ class BaseAgentTool(BaseTool):
 
     def sanitize_agent_name(self, name: str) -> str:
         """
-        Sanitize agent role name by trimming whitespace and setting to lowercase.
-        Removes quotes and newlines for consistent matching.
+        Sanitize agent role name by normalizing whitespace and setting to lowercase.
+        Converts all whitespace (including newlines) to single spaces and removes quotes.
 
         Args:
             name (str): The agent role name to sanitize
 
         Returns:
-            str: The sanitized agent role name, with whitespace trimmed,
-                 converted to lowercase, and quotes/newlines removed
+            str: The sanitized agent role name, with whitespace normalized,
+                 converted to lowercase, and quotes removed
         """
-        return name.strip().casefold().replace('"', "").replace("\n", "")
+        if not name:
+            return ""
+        # Normalize all whitespace (including newlines) to single spaces
+        normalized = " ".join(name.split())
+        # Remove quotes and convert to lowercase
+        return normalized.replace('"', "").casefold()
 
     def _get_coworker(self, coworker: Optional[str], **kwargs) -> Optional[str]:
         coworker = coworker or kwargs.get("co_worker") or kwargs.get("coworker")
