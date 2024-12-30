@@ -21,8 +21,13 @@ def mock_knowledge_source():
     """
     return StringKnowledgeSource(content=content)
 
-def test_knowledge_included_in_planning():
+@patch('crewai.knowledge.storage.knowledge_storage.chromadb')
+def test_knowledge_included_in_planning(mock_chroma):
     """Test that verifies knowledge sources are properly included in planning."""
+    # Mock ChromaDB collection
+    mock_collection = mock_chroma.return_value.get_or_create_collection.return_value
+    mock_collection.add.return_value = None
+    
     # Create an agent with knowledge
     agent = Agent(
         role="AI Researcher",

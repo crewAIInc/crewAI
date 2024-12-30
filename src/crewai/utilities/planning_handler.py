@@ -81,7 +81,7 @@ class CrewPlanner:
                 "agent_goal": {task.agent.goal if task.agent else "None"}
                 "task_tools": {task.tools}
                 "agent_tools": {task.agent.tools if task.agent else "None"}
-                "agent_knowledge": {[source.content for source in task.agent.knowledge_sources] if task.agent and task.agent.knowledge_sources else "None"}
+                "agent_knowledge": "{str([source.content for source in task.agent.knowledge_sources] if task.agent and task.agent.knowledge_sources else 'None')}"
                 """
             )
         return " ".join(tasks_summary)
