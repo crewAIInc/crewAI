@@ -1,12 +1,14 @@
 """Test knowledge integration in planning process."""
 
-import pytest
 from unittest.mock import patch
 
+import pytest
+
 from crewai.agent import Agent
+from crewai.knowledge.source.string_knowledge_source import StringKnowledgeSource
 from crewai.task import Task
 from crewai.utilities.planning_handler import CrewPlanner
-from crewai.knowledge.source.string_knowledge_source import StringKnowledgeSource
+
 
 @pytest.fixture
 def mock_knowledge_source():
