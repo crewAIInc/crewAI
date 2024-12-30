@@ -85,20 +85,12 @@ First, install CrewAI:
 ```shell
 pip install crewai
 ```
+If you want to install the 'crewai' package along with its optional features that include additional tools for agents, you can do so by using the following command:
 
-> **Note**: While pre-built wheels are available for most common platforms and Python versions, some environments might require building `tiktoken` from source. In such cases:
-> 1. Install the [Rust compiler](https://rustup.rs/) following your platform's instructions below
-> 2. Windows users also need [Microsoft Visual C++ Build Tools](https://visualstudio.microsoft.com/visual-cpp-build-tools/)
-> 3. For troubleshooting, refer to the [tiktoken guide](https://github.com/openai/tiktoken#troubleshooting)
->
-> **Platform-Specific Rust Installation:**
-> - **Windows**: 
->   1. Download and run [rustup-init.exe](https://rustup.rs/)
->   2. Install Visual C++ Build Tools (select "Desktop development with C++")
-> - **Linux**: Run `curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh`
-> - **macOS**: Use `brew install rust` or install via [rustup](https://rustup.rs/)
->
-> After installing Rust, you may need to restart your terminal for the changes to take effect.
+```shell
+pip install 'crewai[tools]'
+```
+The command above installs the basic package and also adds extra components which require more dependencies to function.
 
 ### Troubleshooting Dependencies
 
@@ -115,22 +107,6 @@ If you encounter issues during installation or usage, here are some common solut
    - For Windows: Verify Visual C++ Build Tools are installed
    - Try upgrading pip: `pip install --upgrade pip`
    - If issues persist, use a pre-built wheel: `pip install tiktoken --prefer-binary`
-
-3. **Version Conflicts**
-   - If you see dependency conflicts with tiktoken, try installing specific extras:
-     ```bash
-     pip install 'crewai[tools,embeddings]'  # For full functionality
-     pip install crewai  # For core features only
-     ```
-
-For additional help, check the [tiktoken troubleshooting guide](https://github.com/openai/tiktoken#troubleshooting).
-
-If you want to install the 'crewai' package along with its optional features that include additional tools for agents, you can do so by using the following command:
-
-```shell
-pip install 'crewai[tools]'
-```
-The command above installs the basic package and also adds extra components which require more dependencies to function.
 
 ### 2. Setting Up Your Crew with the YAML Configuration
 
