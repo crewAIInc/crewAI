@@ -86,6 +86,8 @@ First, install CrewAI:
 pip install crewai
 ```
 
+> **Note**: While pre-built wheels are available for most common platforms and Python versions, some environments might require building `tiktoken` from source. In such cases, you'll need the [Rust compiler](https://rustup.rs/) installed on your system.
+
 If you want to install the 'crewai' package along with its optional features that include additional tools for agents, you can do so by using the following command:
 
 ```shell
