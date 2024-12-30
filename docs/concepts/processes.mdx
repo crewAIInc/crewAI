@@ -10,11 +10,15 @@ icon: bars-staggered
   These processes ensure tasks are distributed and executed efficiently, in alignment with a predefined strategy.
 </Tip>
 
-## Process Implementations
+## Process Types
 
-- **Sequential**: Executes tasks sequentially, ensuring tasks are completed in an orderly progression.
-- **Hierarchical**: Organizes tasks in a managerial hierarchy, where tasks are delegated and executed based on a structured chain of command. A manager language model (`manager_llm`) or a custom manager agent (`manager_agent`) must be specified in the crew to enable the hierarchical process, facilitating the creation and management of tasks by the manager.
-- **Consensual Process (Planned)**: Aiming for collaborative decision-making among agents on task execution, this process type introduces a democratic approach to task management within CrewAI. It is planned for future development and is not currently implemented in the codebase.
+CrewAI supports two process types that determine how tasks are assigned to agents:
+
+- **Static/Assigned Process** (formerly "Sequential"): In this process, each task must be pre-assigned to a specific agent. While the name "Sequential" was previously used, it's important to note that tasks are always executed in the order they are defined, regardless of the process type chosen. The key characteristic of this process is that it requires explicit agent assignments for each task.
+
+- **Dynamic/Unassigned Process** (formerly "Hierarchical"): In this process, you do not have to assign agents to tasks explicitly. Instead, the crew will assess available agents and automatically select the most suitable one for each task based on their roles and expertise. This requires specifying either a manager language model (`manager_llm`) or a custom manager agent (`manager_agent`) to handle the agent selection and task delegation.
+
+- **Consensual Process** (Planned): Aiming for collaborative decision-making among agents on task execution, this process type introduces a democratic approach to task management within CrewAI. It is planned for future development and is not currently implemented in the codebase.
 
 ## The Role of Processes in Teamwork
 Processes enable individual agents to operate as a cohesive unit, streamlining their efforts to achieve common objectives with efficiency and coherence.
@@ -27,19 +31,20 @@ from crewai import Crew
 from crewai.process import Process
 from langchain_openai import ChatOpenAI
 
-# Example: Creating a crew with a sequential process
+# Example: Creating a crew with a Static/Assigned process
+# Each task must have an agent pre-assigned
 crew = Crew(
     agents=my_agents,
     tasks=my_tasks,
-    process=Process.sequential
+    process=Process.sequential  # Note: The enum value remains 'sequential' for backward compatibility
 )
 
-# Example: Creating a crew with a hierarchical process
-# Ensure to provide a manager_llm or manager_agent
+# Example: Creating a crew with a Dynamic/Unassigned process
+# Tasks will be automatically assigned to suitable agents
 crew = Crew(
     agents=my_agents,
     tasks=my_tasks,
-    process=Process.hierarchical,
+    process=Process.hierarchical,  # Note: The enum value remains 'hierarchical' for backward compatibility
     manager_llm=ChatOpenAI(model="gpt-4")
     # or
     # manager_agent=my_manager_agent
@@ -47,15 +52,19 @@ crew = Crew(
 ```
 **Note:** Ensure `my_agents` and `my_tasks` are defined prior to creating a `Crew` object, and for the hierarchical process, either `manager_llm` or `manager_agent` is also required.
 
-## Sequential Process
+## Static/Assigned Process
 
-This method mirrors dynamic team workflows, progressing through tasks in a thoughtful and systematic manner. Task execution follows the predefined order in the task list, with the output of one task serving as context for the next.
+This process type requires explicit agent assignments for each task. Tasks are executed in their defined order, with the output of one task serving as context for the next. This approach provides direct control over which agent handles each specific task.
 
 To customize task context, utilize the `context` parameter in the `Task` class to specify outputs that should be used as context for subsequent tasks.
 
-## Hierarchical Process
+## Dynamic/Unassigned Process
 
-Emulates a corporate hierarchy, CrewAI allows specifying a custom manager agent or automatically creates one, requiring the specification of a manager language model (`manager_llm`). This agent oversees task execution, including planning, delegation, and validation. Tasks are not pre-assigned; the manager allocates tasks to agents based on their capabilities, reviews outputs, and assesses task completion.
+This process type enables automatic agent selection through a manager component. You must specify either a custom manager agent or a manager language model (`manager_llm`). The manager oversees task execution by:
+- Analyzing task requirements
+- Selecting the most suitable agent based on roles and expertise
+- Delegating tasks automatically
+- Reviewing outputs and assessing task completion
 
 ## Process Class: Detailed Overview
 

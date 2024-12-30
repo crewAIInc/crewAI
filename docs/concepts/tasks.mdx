@@ -12,20 +12,8 @@ Tasks provide all necessary details for execution, such as a description, the ag
 
 Tasks within CrewAI can be collaborative, requiring multiple agents to work together. This is managed through the task properties and orchestrated by the Crew's process, enhancing teamwork and efficiency.
 
-### Task Execution Flow
-
-Tasks can be executed in two ways:
-- **Sequential**: Tasks are executed in the order they are defined
-- **Hierarchical**: Tasks are assigned to agents based on their roles and expertise
-
-The execution flow is defined when creating the crew:
-```python Code
-crew = Crew(
-    agents=[agent1, agent2],
-    tasks=[task1, task2],
-    process=Process.sequential  # or Process.hierarchical
-)
-```
+### Task Execution
+Tasks are always executed in the order they are defined. For information about how tasks are assigned to agents and the different process types available (Static/Assigned vs Dynamic/Unassigned), please refer to the [Processes](/concepts/processes) section.
 
 ## Task Attributes
 
