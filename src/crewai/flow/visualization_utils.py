@@ -2,7 +2,7 @@ import ast
 import inspect
 import os
 from pathlib import Path
-from typing import Any, Callable, Dict, Optional, Tuple, cast
+from typing import Any, Callable, Dict, List, Optional, Set, Tuple, cast
 
 from pyvis.network import Network
 
@@ -205,8 +205,8 @@ def compute_positions(flow: Flow[Any], node_levels: Dict[str, int],
         Positions are calculated to maintain clear hierarchical structure while
         ensuring optimal spacing and readability of the flow diagram.
     """
-    level_nodes = {}
-    node_positions = {}
+    level_nodes: Dict[int, List[str]] = {}
+    node_positions: Dict[str, Tuple[float, float]] = {}
 
     for method_name, level in node_levels.items():
         level_nodes.setdefault(level, []).append(method_name)
@@ -306,9 +306,9 @@ def add_edges(net: Network, flow: Flow[Any],
                     else:
                         edge_smooth = {"type": "cubicBezier"}
                 else:
-                    edge_smooth = False
+                    edge_smooth: Dict[str, Any] = {"type": "straight"}
 
-                edge_style = {
+                edge_style: Dict[str, Any] = {
                     "color": edge_color,
                     "width": 2,
                     "arrows": "to",
@@ -369,9 +369,9 @@ def add_edges(net: Network, flow: Flow[Any],
                             else:
                                 edge_smooth = {"type": "cubicBezier"}
                         else:
-                            edge_smooth = False
+                            edge_smooth: Dict[str, Any] = {"type": "straight"}
 
-                        edge_style = {
+                        edge_style: Dict[str, Any] = {
                             "color": colors["router_edge"],
                             "width": 2,
                             "arrows": "to",
