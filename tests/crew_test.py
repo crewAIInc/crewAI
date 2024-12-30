@@ -392,6 +392,71 @@ def test_manager_agent_delegating_to_all_agents():
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
+def test_manager_agent_delegates_with_varied_role_cases():
+    """
+    Test that the manager agent can delegate to agents regardless of case or whitespace variations in role names.
+    This test verifies the fix for issue #1503 where role matching was too strict.
+    """
+    # Create agents with varied case and whitespace in roles
+    researcher_spaced = Agent(
+        role=" Researcher ",  # Extra spaces
+        goal="Research with spaces in role",
+        backstory="A researcher with spaces in role name",
+        allow_delegation=False,
+    )
+    
+    writer_caps = Agent(
+        role="SENIOR WRITER",  # All caps
+        goal="Write with caps in role",
+        backstory="A writer with caps in role name",
+        allow_delegation=False,
+    )
+
+    task = Task(
+        description="Research and write about AI. The researcher should do the research, and the writer should write it up.",
+        expected_output="A well-researched article about AI.",
+        agent=researcher_spaced,  # Assign to researcher with spaces
+    )
+
+    crew = Crew(
+        agents=[researcher_spaced, writer_caps],
+        process=Process.hierarchical,
+        manager_llm="gpt-4o",
+        tasks=[task],
+    )
+
+    mock_task_output = TaskOutput(
+        description="Mock description",
+        raw="mocked output",
+        agent="mocked agent"
+    )
+    task.output = mock_task_output
+
+    with patch.object(Task, 'execute_sync', return_value=mock_task_output) as mock_execute_sync:
+        crew.kickoff()
+
+        # Verify execute_sync was called once
+        mock_execute_sync.assert_called_once()
+
+        # Get the tools argument from the call
+        _, kwargs = mock_execute_sync.call_args
+        tools = kwargs['tools']
+
+        # Verify the delegation tools were passed correctly and can handle case/whitespace variations
+        assert len(tools) == 2
+        
+        # Check delegation tool descriptions (should work despite case/whitespace differences)
+        delegation_tool = tools[0]
+        question_tool = tools[1]
+        
+        assert "Delegate a specific task to one of the following coworkers:" in delegation_tool.description
+        assert " Researcher " in delegation_tool.description or "SENIOR WRITER" in delegation_tool.description
+        
+        assert "Ask a specific question to one of the following coworkers:" in question_tool.description
+        assert " Researcher " in question_tool.description or "SENIOR WRITER" in question_tool.description
+
+
+@pytest.mark.vcr(filter_headers=["authorization"])
 def test_crew_with_delegating_agents():
     tasks = [
         Task(
