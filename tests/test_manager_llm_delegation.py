@@ -1,7 +1,8 @@
+from unittest.mock import MagicMock
+
 import pytest
 from crewai import Agent, Task
 from crewai.tools.agent_tools.base_agent_tools import BaseAgentTool
-from unittest.mock import MagicMock
 
 class TestAgentTool(BaseAgentTool):
     """Concrete implementation of BaseAgentTool for testing."""
