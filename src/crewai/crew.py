@@ -802,11 +802,21 @@ class Crew(BaseModel):
         if agent.allow_delegation:
             if self.process == Process.hierarchical:
                 if self.manager_agent:
-                    tools = self._update_manager_tools(task, tools)
+                    # For hierarchical process, handle both manager and regular agent tools
+                    if agent == self.manager_agent:
+                        # Manager can delegate to all regular agents
+                        tools = self._inject_delegation_tools(tools, agent, [a for a in self.agents if a != agent])
+                    else:
+                        # For async tasks, maintain original delegation behavior
+                        if task and task.async_execution:
+                            tools = self._add_delegation_tools(task, tools)
+                        else:
+                            # Regular agents can delegate to manager and other agents
+                            delegation_agents = [self.manager_agent] + [a for a in self.agents if a != agent]
+                            tools = self._inject_delegation_tools(tools, agent, delegation_agents)
                 else:
                     raise ValueError("Manager agent is required for hierarchical process.")
-
-            elif agent and agent.allow_delegation:
+            else:
                 tools = self._add_delegation_tools(task, tools)
 
         # Add code execution tools if agent allows code execution
@@ -852,8 +862,17 @@ class Crew(BaseModel):
         return self._merge_tools(tools, code_tools)
 
     def _add_delegation_tools(self, task: Task, tools: List[Tool]):
-        agents_for_delegation = [agent for agent in self.agents if agent != task.agent]
-        if len(self.agents) > 1 and len(agents_for_delegation) > 0 and task.agent:
+        agents_for_delegation = []
+        if self.process == Process.hierarchical and self.manager_agent:
+            # In hierarchical mode, allow delegation to manager if the task agent isn't the manager
+            if task.agent != self.manager_agent:
+                agents_for_delegation = [self.manager_agent]
+            # Also include regular agents for delegation
+            agents_for_delegation.extend([agent for agent in self.agents if agent != task.agent])
+        else:
+            agents_for_delegation = [agent for agent in self.agents if agent != task.agent]
+        
+        if len(agents_for_delegation) > 0 and task.agent:
             if not tools:
                 tools = []
             tools = self._inject_delegation_tools(tools, task.agent, agents_for_delegation)
@@ -868,7 +887,21 @@ class Crew(BaseModel):
     def _update_manager_tools(self, task: Task, tools: List[Tool]):
         if self.manager_agent:
             if task.agent:
-                tools = self._inject_delegation_tools(tools, task.agent, [task.agent])
+                # For async tasks, maintain original delegation behavior
+                if task.async_execution:
+                    tools = self._add_delegation_tools(task, tools)
+                else:
+                    # In hierarchical mode, allow bidirectional delegation
+                    if self.process == Process.hierarchical:
+                        # For non-manager agents, allow delegation to manager and other agents
+                        if task.agent != self.manager_agent:
+                            delegation_agents = [self.manager_agent] + self.agents
+                            tools = self._inject_delegation_tools(tools, task.agent, [a for a in delegation_agents if a != task.agent])
+                        else:
+                            # For manager, allow delegation to all agents
+                            tools = self._inject_delegation_tools(tools, task.agent, [a for a in self.agents if a != task.agent])
+                    else: 
+                        tools = self._inject_delegation_tools(tools, task.agent, self.agents)
             else:
                 tools = self._inject_delegation_tools(tools, self.manager_agent, self.agents)
         return tools
