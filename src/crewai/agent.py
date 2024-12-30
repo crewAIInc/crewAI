@@ -406,8 +406,17 @@ class Agent(BaseAgent):
             callbacks=[TokenCalcHandler(self._token_process)],
         )
 
-    def get_delegation_tools(self, agents: List[BaseAgent]):
-        agent_tools = AgentTools(agents=agents)
+    def get_delegation_tools(self, agents: List[BaseAgent], task: Optional[Task] = None) -> List[BaseTool]:
+        """Get the delegation tools for this agent.
+        
+        Args:
+            agents: List of agents that can be delegated to
+            task: Optional task context for delegation
+            
+        Returns:
+            List of delegation tools
+        """
+        agent_tools = AgentTools(agents=agents, task=task, i18n=self.i18n)
         tools = agent_tools.tools()
         return tools
 
