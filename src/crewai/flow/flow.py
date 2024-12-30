@@ -17,13 +17,13 @@ from typing import (
 from blinker import Signal
 from pydantic import BaseModel, ValidationError
 
+from crewai.flow.core_flow_utils import get_possible_return_constants
 from crewai.flow.flow_events import (
     FlowFinishedEvent,
     FlowStartedEvent,
     MethodExecutionFinishedEvent,
     MethodExecutionStartedEvent,
 )
-from crewai.flow.core_flow_utils import get_possible_return_constants
 from crewai.telemetry import Telemetry
 
 T = TypeVar("T", bound=Union[BaseModel, Dict[str, Any]])

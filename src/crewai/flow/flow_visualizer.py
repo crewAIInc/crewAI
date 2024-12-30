@@ -5,12 +5,11 @@ from pathlib import Path
 
 from pyvis.network import Network
 
-from crewai.flow.path_utils import safe_path_join, validate_file_path
-
 from crewai.flow.config import COLORS, NODE_STYLES
+from crewai.flow.flow_visual_utils import calculate_node_levels
 from crewai.flow.html_template_handler import HTMLTemplateHandler
 from crewai.flow.legend_generator import generate_legend_items_html, get_legend_items
-from crewai.flow.flow_visual_utils import calculate_node_levels
+from crewai.flow.path_utils import safe_path_join, validate_file_path
 from crewai.flow.visualization_utils import (
     add_edges,
     add_nodes_to_network,

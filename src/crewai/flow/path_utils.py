@@ -8,7 +8,7 @@ interface for path operations.
 
 import os
 from pathlib import Path
-from typing import Union, List, Optional
+from typing import List, Optional, Union
 
 
 def safe_path_join(base_dir: Union[str, Path], filename: str) -> str:
