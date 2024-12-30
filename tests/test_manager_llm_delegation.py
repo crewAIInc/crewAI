@@ -5,6 +5,7 @@ import pytest
 from crewai import Agent, Task
 from crewai.tools.agent_tools.base_agent_tools import BaseAgentTool
 
+
 class TestAgentTool(BaseAgentTool):
     """Concrete implementation of BaseAgentTool for testing."""
     def _run(self, *args, **kwargs):
