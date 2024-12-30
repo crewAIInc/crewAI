@@ -31,6 +31,7 @@ T = TypeVar("T", bound=Union[BaseModel, Dict[str, Any]])
 
 
 def start(condition=None):
+    """Marks a method as a flow starting point, optionally triggered by other methods."""
     def decorator(func):
         func.__is_start_method__ = True
         if condition is not None:
@@ -57,6 +58,7 @@ def start(condition=None):
 
 
 def listen(condition):
+    """Marks a method to execute when specified conditions/methods complete."""
     def decorator(func):
         if isinstance(condition, str):
             func.__trigger_methods__ = [condition]
@@ -81,9 +83,9 @@ def listen(condition):
 
 
 def router(condition):
+    """Marks a method as a router to direct flow based on its return value."""
     def decorator(func):
         func.__is_router__ = True
-        # Handle conditions like listen/start
         if isinstance(condition, str):
             func.__trigger_methods__ = [condition]
             func.__condition_type__ = "OR"
@@ -107,6 +109,7 @@ def router(condition):
 
 
 def or_(*conditions):
+    """Combines multiple conditions with OR logic for flow control."""
     methods = []
     for condition in conditions:
         if isinstance(condition, dict) and "methods" in condition:
@@ -121,6 +124,7 @@ def or_(*conditions):
 
 
 def and_(*conditions):
+    """Combines multiple conditions with AND logic for flow control."""
     methods = []
     for condition in conditions:
         if isinstance(condition, dict) and "methods" in condition:
