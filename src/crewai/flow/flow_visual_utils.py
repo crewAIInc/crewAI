@@ -136,8 +136,8 @@ def build_ancestor_dict(flow: Flow[Any]) -> Dict[str, Set[str]]:
         dict[str, set[str]]: Dictionary mapping each method name to a set
             of its ancestor method names
     """
-    ancestors = {node: set() for node in flow._methods}
-    visited = set()
+    ancestors: Dict[str, Set[str]] = {node: set() for node in flow._methods}
+    visited: Set[str] = set()
     for node in flow._methods:
         if node not in visited:
             dfs_ancestors(node, ancestors, visited, flow)
