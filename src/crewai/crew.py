@@ -866,11 +866,21 @@ class Crew(BaseModel):
             )
 
     def _update_manager_tools(self, task: Task, tools: List[Tool]):
+        """Update manager tools to enable delegation to all available agents.
+        
+        In hierarchical mode, the manager should always have access to delegate to any agent,
+        regardless of whether a specific agent is assigned to the task.
+        
+        Args:
+            task: The current task being executed
+            tools: List of existing tools
+            
+        Returns:
+            Updated list of tools including delegation capabilities
+        """
         if self.manager_agent:
-            if task.agent:
-                tools = self._inject_delegation_tools(tools, task.agent, [task.agent])
-            else:
-                tools = self._inject_delegation_tools(tools, self.manager_agent, self.agents)
+            # Always provide access to all agents for delegation
+            tools = self._inject_delegation_tools(tools, task.agent or self.manager_agent, self.agents)
         return tools
 
     def _get_context(self, task: Task, task_outputs: List[TaskOutput]):
