@@ -100,9 +100,13 @@ class TestCrewPlanner:
         # Knowledge field should not be present when empty
         assert '"agent_knowledge"' not in tasks_summary
 
-    def test_create_tasks_summary_with_knowledge_and_tools(self):
+    @patch('crewai.knowledge.storage.knowledge_storage.chromadb')
+    def test_create_tasks_summary_with_knowledge_and_tools(self, mock_chroma):
         """Test task summary generation with both knowledge and tools present."""
-        # Create mock tools
+        # Mock ChromaDB collection
+        mock_collection = mock_chroma.return_value.get_or_create_collection.return_value
+        mock_collection.add.return_value = None
+
         # Create mock tools with proper string descriptions and structured tool support
         class MockTool(BaseTool):
             name: str
@@ -149,9 +153,6 @@ class TestCrewPlanner:
         # Create planner with the new task
         planner = CrewPlanner([task], None)
         tasks_summary = planner._create_tasks_summary()
-        
-        # Print task summary for debugging
-        print("\nTask Summary:", tasks_summary)
         
         # Verify task summary content
         assert isinstance(tasks_summary, str)
