@@ -2,8 +2,11 @@ import ast
 import inspect
 import os
 from pathlib import Path
-from typing import Dict, Optional, Tuple
+from typing import Any, Callable, Dict, Optional, Tuple, cast
 
+from pyvis.network import Network
+
+from crewai.flow.flow import Flow
 from .core_flow_utils import is_ancestor
 from .flow_visual_utils import (
     build_ancestor_dict,
@@ -13,7 +16,7 @@ from .flow_visual_utils import (
 from .path_utils import safe_path_join, validate_file_path
 
 
-def method_calls_crew(method: callable) -> bool:
+def method_calls_crew(method: Callable[..., Any]) -> bool:
     """Check if the method contains a .crew() call in its implementation.
     
     Analyzes the method's source code using AST to detect if it makes any
@@ -65,7 +68,7 @@ def method_calls_crew(method: callable) -> bool:
     return visitor.found
 
 
-def add_nodes_to_network(net: object, flow: object, 
+def add_nodes_to_network(net: Network, flow: Flow[Any], 
                      node_positions: Dict[str, Tuple[float, float]], 
                      node_styles: Dict[str, dict],
                      output_dir: Optional[str] = None) -> None:
@@ -169,8 +172,8 @@ def add_nodes_to_network(net: object, flow: object,
         )
 
 
-def compute_positions(flow: object, node_levels: dict[str, int], 
-                   y_spacing: float = 150, x_spacing: float = 150) -> dict[str, tuple[float, float]]:
+def compute_positions(flow: Flow[Any], node_levels: Dict[str, int], 
+                   y_spacing: float = 150, x_spacing: float = 150) -> Dict[str, Tuple[float, float]]:
     if not hasattr(flow, '_methods'):
         raise ValueError("Invalid flow object: missing '_methods' attribute")
     if not isinstance(node_levels, dict):
@@ -218,7 +221,7 @@ def compute_positions(flow: object, node_levels: dict[str, int],
     return node_positions
 
 
-def add_edges(net: object, flow: object, 
+def add_edges(net: Network, flow: Flow[Any], 
             node_positions: Dict[str, Tuple[float, float]], 
             colors: Dict[str, str],
             asset_dir: Optional[str] = None) -> None:
