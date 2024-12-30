@@ -11,8 +11,8 @@ from crewai.tasks.task_output import TaskOutput
 from crewai.tools.base_tool import BaseTool
 from crewai.utilities.planning_handler import (
     CrewPlanner,
-    PlanPerTask,
     PlannerTaskPydanticOutput,
+    PlanPerTask,
 )
 
 
