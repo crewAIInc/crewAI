@@ -353,14 +353,14 @@ def add_edges(net: Network, flow: Flow[Any],
                         else:
                             edge_config = {"type": "straight"}
 
-                        edge_props: Dict[str, Any] = {
+                        router_edge_props: Dict[str, Any] = {
                             "color": colors["router_edge"],
                             "width": 2,
                             "arrows": "to",
                             "dashes": True,
                             "smooth": edge_config,
                         }
-                        net.add_edge(router_method_name, listener_name, **edge_props)
+                        net.add_edge(router_method_name, listener_name, **router_edge_props)
                     else:
                         # Same check here: known router edge and known method?
                         method_known = listener_name in flow._methods
