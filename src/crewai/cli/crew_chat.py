@@ -1,11 +1,16 @@
 import json
-from typing import Any, Dict, List
+import sys
+from pathlib import Path
+from typing import Any, Dict, List, Tuple
 
 import click
+import tomli
 
 from crewai.cli.fetch_chat_llm import fetch_chat_llm
 from crewai.cli.fetch_crew_inputs import fetch_crew_inputs
-from crewai.types.crew_chat import ChatInputs
+from crewai.crew import Crew
+from crewai.types.crew_chat import ChatInputField, ChatInputs
+from crewai.utilities.llm_utils import create_llm
 
 
 def run_chat():
@@ -15,27 +20,27 @@ def run_chat():
     Exits if crew_name or crew_description are missing.
     """
     click.secho("Welcome to CrewAI Chat with Function-Calling!", fg="green")
-
-    # 1) Fetch CrewInputs
-    click.secho("Gathering crew inputs via `fetch_crew_inputs()`...", fg="cyan")
-    try:
-        crew_inputs = fetch_crew_inputs()
-        click.echo(f"CrewInputs: {crew_inputs}")
-        if not crew_inputs:
-            click.secho("Error: Failed to fetch crew inputs. Exiting.", fg="red")
-            return
-    except Exception as e:
-        click.secho(f"Error fetching crew inputs: {e}", fg="red")
-        return
+    # TODO: Build the crew then get the inputs and schema.
+    # 1) Build the crew
+    crew, crew_name = generate_crew()
+    # TODO: GENERATE DESCRIPTION AUTOMATICALLY
+    crew_chat_inputs = ChatInputs(
+        crew_name=crew_name,
+        crew_description="Crew to research and report on a topic",
+        inputs=[
+            ChatInputField(name="topic", description="Topic to research"),
+        ],
+    )
+    print("crew_inputs:", crew_chat_inputs)
 
     # 2) Generate a tool schema from the crew inputs
-    crew_tool_schema = generate_crew_tool_schema(crew_inputs)
+    crew_tool_schema = generate_crew_tool_schema(crew_chat_inputs)
 
     # 3) Build initial system message
     required_fields_str = (
         ", ".join(
             f"{field.name} (desc: {field.description or 'n/a'})"
-            for field in crew_inputs.inputs
+            for field in crew_chat_inputs.inputs
         )
         or "(No required fields detected)"
     )
@@ -52,8 +57,8 @@ def run_chat():
         "If a user asks a question outside the crew's scope, provide a brief answer and remind them of the crew's purpose. "
         "After calling the tool, be prepared to take user feedback and make adjustments as needed. "
         "If you are ever unsure about a user's request or need clarification, ask the user for more information."
-        f"\nCrew Name: {crew_inputs.crew_name}"
-        f"\nCrew Description: {crew_inputs.crew_description}"
+        f"\nCrew Name: {crew_chat_inputs.crew_name}"
+        f"\nCrew Description: {crew_chat_inputs.crew_description}"
     )
 
     messages = [
@@ -63,7 +68,8 @@ def run_chat():
     # 4) Retrieve ChatLLM
     click.secho("\nFetching the Chat LLM...", fg="cyan")
     try:
-        chat_llm = fetch_chat_llm()
+        chat_llm = create_llm(crew.chat_llm)
+
     except Exception as e:
         click.secho(f"Failed to retrieve Chat LLM: {e}", fg="red")
         return
@@ -77,7 +83,7 @@ def run_chat():
 
     # 5) Prepare available_functions with the wrapper function
     available_functions = {
-        crew_inputs.crew_name: run_crew_tool_with_messages,
+        crew_chat_inputs.crew_name: run_crew_tool_with_messages,
     }
 
     click.secho(
@@ -200,3 +206,52 @@ def run_crew_tool(messages: List[Dict[str, str]], **kwargs: Any) -> str:
         )
     except Exception as e:
         return f"Unexpected error running crew: {e}"
+
+
+def generate_crew() -> Tuple[Crew, str]:
+    """
+    Generates the crew by importing the crew class from the user's project.
+    """
+    # Get the current working directory
+    cwd = Path.cwd()
+
+    # Path to the pyproject.toml file
+    pyproject_path = cwd / "pyproject.toml"
+    if not pyproject_path.exists():
+        raise FileNotFoundError("pyproject.toml not found in the current directory.")
+
+    # Load the pyproject.toml file using 'tomli'
+    with pyproject_path.open("rb") as f:
+        pyproject_data = tomli.load(f)
+
+    # Get the project name from the 'project' section
+    project_name = pyproject_data["project"]["name"]
+    folder_name = project_name
+
+    # Derive the crew class name from the project name
+    # E.g., if project_name is 'my_project', crew_class_name is 'MyProject'
+    crew_class_name = project_name.replace("_", " ").title().replace(" ", "")
+
+    # Add the 'src' directory to sys.path
+    src_path = cwd / "src"
+    if str(src_path) not in sys.path:
+        sys.path.insert(0, str(src_path))
+
+    # Import the crew module
+    crew_module_name = f"{folder_name}.crew"
+    try:
+        crew_module = __import__(crew_module_name, fromlist=[crew_class_name])
+    except ImportError as e:
+        raise ImportError(f"Failed to import crew module {crew_module_name}: {e}")
+
+    # Get the crew class from the module
+    try:
+        crew_class = getattr(crew_module, crew_class_name)
+    except AttributeError:
+        raise AttributeError(
+            f"Crew class {crew_class_name} not found in module {crew_module_name}"
+        )
+
+    # Instantiate the crew
+    crew_instance = crew_class().crew()
+    return crew_instance, crew_class_name
