@@ -92,7 +92,8 @@ class TestCrewPlanner:
         tasks_summary = crew_planner._create_tasks_summary()
         assert isinstance(tasks_summary, str)
         assert tasks_summary.startswith("\n                Task Number 1 - Task 1")
-        assert tasks_summary.endswith('"agent_tools": []\n                ')
+        assert '"agent_tools": []' in tasks_summary
+        assert '"agent_knowledge": "None"' in tasks_summary
 
     def test_handle_crew_planning_different_llm(self, crew_planner_different_llm):
         with patch.object(Task, "execute_sync") as execute:
