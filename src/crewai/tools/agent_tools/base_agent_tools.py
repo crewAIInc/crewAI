@@ -38,11 +38,11 @@ class BaseAgentTool(BaseTool):
             # {"task": "....", "coworker": "....
             # when it should look like this:
             # {"task": "....", "coworker": "...."}
-            agent_name = agent_name.casefold().replace('"', "").replace("\n", "")
+            agent_name = agent_name.strip().casefold().replace('"', "").replace("\n", "")
             agent = [  # type: ignore # Incompatible types in assignment (expression has type "list[BaseAgent]", variable has type "str | None")
                 available_agent
                 for available_agent in self.agents
-                if available_agent.role.casefold().replace("\n", "") == agent_name
+                if available_agent.role.strip().casefold().replace("\n", "") == agent_name
             ]
         except Exception as _:
             return self.i18n.errors("agent_tool_unexisting_coworker").format(
