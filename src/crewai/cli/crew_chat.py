@@ -154,6 +154,8 @@ def run_crew_tool(messages: List[Dict[str, str]], **kwargs: Any) -> str:
       2) Passes the LLM-provided kwargs as CLI overrides (e.g. --key=value).
       3) Also takes in messages from the main chat loop and passes them to the command.
     """
+    import json
+    import re
     import subprocess
 
     command = ["uv", "run", "run_crew"]
@@ -169,9 +171,28 @@ def run_crew_tool(messages: List[Dict[str, str]], **kwargs: Any) -> str:
 
     try:
         # Capture stdout so we can return it to the LLM
-        result = subprocess.run(command, text=True, check=True)
+        print(f"Command: {command}")
+        result = subprocess.run(command, text=True, capture_output=True, check=True)
+        print(f"Result: {result}")
         stdout_str = result.stdout.strip()
-        return stdout_str if stdout_str else "No output from run_crew command."
+        print(f"Stdout: {stdout_str}")
+
+        # Remove ANSI escape sequences
+        ansi_escape = re.compile(r"\x1B\[[0-?]*[ -/]*[@-~]")
+        stdout_clean = ansi_escape.sub("", stdout_str)
+
+        # Find the last occurrence of '## Final Answer:'
+        final_answer_index = stdout_clean.rfind("## Final Answer:")
+        if final_answer_index != -1:
+            # Extract everything after '## Final Answer:'
+            final_output = stdout_clean[
+                final_answer_index + len("## Final Answer:") :
+            ].strip()
+            print(f"Final output: {final_output}")
+            return final_output
+        else:
+            # If '## Final Answer:' is not found, return the cleaned stdout
+            return stdout_clean if stdout_clean else "No output from run_crew command."
     except subprocess.CalledProcessError as e:
         return (
             f"Error: Command failed with exit code {e.returncode}\n"

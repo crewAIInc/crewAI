@@ -439,8 +439,6 @@ class Task(BaseModel):
                 f"\n\n{conversation_instruction}\n\n{conversation_history}"
             )
 
-            print("UPDATED DESCRIPTION:", self.description)
-
     def interpolate_only(self, input_string: str, inputs: Dict[str, Any]) -> str:
         """Interpolate placeholders (e.g., {key}) in a string while leaving JSON untouched."""
         escaped_string = input_string.replace("{", "{{").replace("}", "}}")
