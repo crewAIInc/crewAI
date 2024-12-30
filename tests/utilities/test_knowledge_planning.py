@@ -61,11 +61,11 @@ def test_knowledge_included_in_planning(mock_chroma):
     # Get the task summary
     task_summary = planner._create_tasks_summary()
 
-    # Verify that knowledge is included in planning
+    # Verify that knowledge is included in planning when present
     assert "AI systems require careful training" in task_summary, \
-        "Knowledge content should be present in task summary"
+        "Knowledge content should be present in task summary when knowledge exists"
     assert '"agent_knowledge"' in task_summary, \
-        "agent_knowledge field should be present in task summary"
+        "agent_knowledge field should be present in task summary when knowledge exists"
 
     # Verify that knowledge is properly formatted
     assert isinstance(task.agent.knowledge_sources, list), \

@@ -93,16 +93,17 @@ class CrewPlanner:
         tasks_summary = []
         for idx, task in enumerate(self.tasks):
             knowledge_list = self._get_agent_knowledge(task)
-            tasks_summary.append(
-                f"""
+            task_summary = f"""
                 Task Number {idx + 1} - {task.description}
                 "task_description": {task.description}
                 "task_expected_output": {task.expected_output}
                 "agent": {task.agent.role if task.agent else "None"}
                 "agent_goal": {task.agent.goal if task.agent else "None"}
                 "task_tools": {task.tools}
-                "agent_tools": {task.agent.tools if task.agent else "None"}
-                "agent_knowledge": "{str(knowledge_list) if knowledge_list else 'None'}"
-                """
-            )
+                "agent_tools": {"agent has no tools" if not task.agent or not task.agent.tools else task.agent.tools}"""
+            
+            if knowledge_list:
+                task_summary += f'\n                "agent_knowledge": "{str(knowledge_list)}"'
+            
+            tasks_summary.append(task_summary)
         return " ".join(tasks_summary)
