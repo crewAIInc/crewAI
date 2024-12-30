@@ -4,9 +4,9 @@ import os
 from pathlib import Path
 from typing import Any, Callable, Dict, List, Optional, Set, Tuple, cast
 
+from crewai.flow.flow import Flow
 from pyvis.network import Network
 
-from crewai.flow.flow import Flow
 from .core_flow_utils import is_ancestor
 from .flow_visual_utils import (
     build_ancestor_dict,
@@ -16,7 +16,7 @@ from .flow_visual_utils import (
 from .path_utils import safe_path_join, validate_file_path
 
 
-def method_calls_crew(method: Callable[..., Any]) -> bool:
+def method_calls_crew(method: Optional[Callable[..., Any]]) -> bool:
     """Check if the method contains a .crew() call in its implementation.
     
     Analyzes the method's source code using AST to detect if it makes any
@@ -24,14 +24,18 @@ def method_calls_crew(method: Callable[..., Any]) -> bool:
     flow execution.
     
     Args:
-        method: The method to analyze for crew calls
+        method: The method to analyze for crew calls, can be None
         
     Returns:
         bool: True if the method contains a .crew() call, False otherwise
         
     Raises:
-        Exception: If method source code cannot be parsed
+        TypeError: If input is not None and not a callable method
+        ValueError: If method source code cannot be parsed
+        RuntimeError: If unexpected error occurs during parsing
     """
+    if method is None:
+        return False
     if not callable(method):
         raise TypeError("Input must be a callable method")
         
@@ -174,17 +178,6 @@ def add_nodes_to_network(net: Network, flow: Flow[Any],
 
 def compute_positions(flow: Flow[Any], node_levels: Dict[str, int], 
                    y_spacing: float = 150, x_spacing: float = 150) -> Dict[str, Tuple[float, float]]:
-    if not hasattr(flow, '_methods'):
-        raise ValueError("Invalid flow object: missing '_methods' attribute")
-    if not isinstance(node_levels, dict):
-        raise TypeError("node_levels must be a dictionary")
-    if not isinstance(y_spacing, (int, float)) or y_spacing <= 0:
-        raise ValueError("y_spacing must be a positive number")
-    if not isinstance(x_spacing, (int, float)) or x_spacing <= 0:
-        raise ValueError("x_spacing must be a positive number")
-        
-    if not node_levels:
-        raise ValueError("node_levels dictionary cannot be empty")
     """Calculate precise x,y coordinates for each node in the flow diagram.
     
     Computes optimal node positions with fine-grained control over spacing
@@ -205,6 +198,17 @@ def compute_positions(flow: Flow[Any], node_levels: Dict[str, int],
         Positions are calculated to maintain clear hierarchical structure while
         ensuring optimal spacing and readability of the flow diagram.
     """
+    if not hasattr(flow, '_methods'):
+        raise ValueError("Invalid flow object: missing '_methods' attribute")
+    if not isinstance(node_levels, dict):
+        raise TypeError("node_levels must be a dictionary")
+    if not isinstance(y_spacing, (int, float)) or y_spacing <= 0:
+        raise ValueError("y_spacing must be a positive number")
+    if not isinstance(x_spacing, (int, float)) or x_spacing <= 0:
+        raise ValueError("x_spacing must be a positive number")
+        
+    if not node_levels:
+        raise ValueError("node_levels dictionary cannot be empty")
     level_nodes: Dict[int, List[str]] = {}
     node_positions: Dict[str, Tuple[float, float]] = {}
 
@@ -249,28 +253,6 @@ def add_edges(net: Network, flow: Flow[Any],
             os.makedirs(asset_dir, exist_ok=True)
         except (ValueError, OSError) as e:
             raise OSError(f"Failed to create or validate asset directory: {e}")
-    """Add edges between nodes with precise styling and intelligent routing.
-    
-    Creates and styles edges in the visualization with fine-grained control over
-    appearance, routing, and curvature. Handles both normal method connections
-    and router paths with specialized styling.
-    
-    Args:
-        net: The network visualization object to add edges to
-        flow: Flow object containing method relationships and router paths
-        node_positions: Dictionary mapping method names to (x,y) coordinates
-        colors: Dictionary mapping edge types to their colors
-        
-    Returns:
-        None
-        
-    Note:
-        Implements sophisticated edge routing with:
-        - Automatic curve direction based on node positions
-        - Dynamic curvature adjustment for multiple edges
-        - Distinct styling for router paths and AND conditions
-        - Cycle detection and appropriate visualization
-    """
     ancestors = build_ancestor_dict(flow)
     parent_children = build_parent_children_dict(flow)
 
@@ -299,24 +281,24 @@ def add_edges(net: Network, flow: Flow[Any],
                         dx = target_pos[0] - source_pos[0]
                         smooth_type = "curvedCCW" if dx <= 0 else "curvedCW"
                         index = get_child_index(trigger, method_name, parent_children)
-                        edge_smooth = {
+                        edge_config = {
                             "type": smooth_type,
                             "roundness": 0.2 + (0.1 * index),
                         }
                     else:
-                        edge_smooth = {"type": "cubicBezier"}
+                        edge_config = {"type": "cubicBezier"}
                 else:
-                    edge_smooth: Dict[str, Any] = {"type": "straight"}
+                    edge_config = {"type": "straight"}
 
-                edge_style: Dict[str, Any] = {
+                edge_props: Dict[str, Any] = {
                     "color": edge_color,
                     "width": 2,
                     "arrows": "to",
                     "dashes": True if is_router_edge or is_and_condition else False,
-                    "smooth": edge_smooth,
+                    "smooth": edge_config,
                 }
 
-                net.add_edge(trigger, method_name, **edge_style)
+                net.add_edge(trigger, method_name, **edge_props)
             else:
                 # Nodes not found in node_positions. Check if it's a known router outcome and a known method.
                 is_router_edge = any(
@@ -362,23 +344,23 @@ def add_edges(net: Network, flow: Flow[Any],
                                 index = get_child_index(
                                     router_method_name, listener_name, parent_children
                                 )
-                                edge_smooth = {
+                                edge_config = {
                                     "type": smooth_type,
                                     "roundness": 0.2 + (0.1 * index),
                                 }
                             else:
-                                edge_smooth = {"type": "cubicBezier"}
+                                edge_config = {"type": "cubicBezier"}
                         else:
-                            edge_smooth: Dict[str, Any] = {"type": "straight"}
+                            edge_config = {"type": "straight"}
 
-                        edge_style: Dict[str, Any] = {
+                        edge_props: Dict[str, Any] = {
                             "color": colors["router_edge"],
                             "width": 2,
                             "arrows": "to",
                             "dashes": True,
-                            "smooth": edge_smooth,
+                            "smooth": edge_config,
                         }
-                        net.add_edge(router_method_name, listener_name, **edge_style)
+                        net.add_edge(router_method_name, listener_name, **edge_props)
                     else:
                         # Same check here: known router edge and known method?
                         method_known = listener_name in flow._methods

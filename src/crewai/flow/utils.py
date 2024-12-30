@@ -10,7 +10,7 @@ New code should import from the appropriate new modules directly.
 
 from typing import Any, Dict, List, Optional, Set
 
-from .core_flow_utils import get_possible_return_constants
+from .core_flow_utils import get_possible_return_constants, is_ancestor
 from .flow_visual_utils import (
     build_ancestor_dict,
     build_parent_children_dict,
@@ -18,7 +18,6 @@ from .flow_visual_utils import (
     count_outgoing_edges,
     dfs_ancestors,
     get_child_index,
-    is_ancestor,
 )
 
 # Re-export all functions for backwards compatibility
