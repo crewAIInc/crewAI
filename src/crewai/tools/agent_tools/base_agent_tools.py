@@ -1,3 +1,4 @@
+import logging
 from typing import Optional, Union
 
 from pydantic import Field
@@ -6,7 +7,6 @@ from crewai.agents.agent_builder.base_agent import BaseAgent
 from crewai.task import Task
 from crewai.tools.base_tool import BaseTool
 from crewai.utilities import I18N
-import logging
 
 logger = logging.getLogger(__name__)
 
