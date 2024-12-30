@@ -85,13 +85,28 @@ First, install CrewAI:
 ```shell
 pip install crewai
 ```
-
 If you want to install the 'crewai' package along with its optional features that include additional tools for agents, you can do so by using the following command:
 
 ```shell
 pip install 'crewai[tools]'
 ```
 The command above installs the basic package and also adds extra components which require more dependencies to function.
+
+### Troubleshooting Dependencies
+
+If you encounter issues during installation or usage, here are some common solutions:
+
+#### Common Issues
+
+1. **ModuleNotFoundError: No module named 'tiktoken'**
+   - Install tiktoken explicitly: `pip install 'crewai[embeddings]'`
+   - If using embedchain or other tools: `pip install 'crewai[tools]'`
+
+2. **Failed building wheel for tiktoken**
+   - Ensure Rust compiler is installed (see installation steps above)
+   - For Windows: Verify Visual C++ Build Tools are installed
+   - Try upgrading pip: `pip install --upgrade pip`
+   - If issues persist, use a pre-built wheel: `pip install tiktoken --prefer-binary`
 
 ### 2. Setting Up Your Crew with the YAML Configuration
 
