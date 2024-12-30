@@ -1,13 +1,16 @@
 # flow_visualizer.py
 
 import os
+from pathlib import Path
 
 from pyvis.network import Network
+
+from crewai.flow.path_utils import safe_path_join, validate_file_path
 
 from crewai.flow.config import COLORS, NODE_STYLES
 from crewai.flow.html_template_handler import HTMLTemplateHandler
 from crewai.flow.legend_generator import generate_legend_items_html, get_legend_items
-from crewai.flow.utils import calculate_node_levels
+from crewai.flow.flow_visual_utils import calculate_node_levels
 from crewai.flow.visualization_utils import (
     add_edges,
     add_nodes_to_network,
@@ -19,7 +22,21 @@ class FlowPlot:
     """Handles the creation and rendering of flow visualization diagrams."""
 
     def __init__(self, flow):
-        """Initialize flow plot with flow instance and styling configuration."""
+        """Initialize flow plot with flow instance and styling configuration.
+        
+        Args:
+            flow: A Flow instance with required attributes for visualization
+            
+        Raises:
+            ValueError: If flow object is invalid or missing required attributes
+        """
+        if not hasattr(flow, '_methods'):
+            raise ValueError("Invalid flow object: Missing '_methods' attribute")
+        if not hasattr(flow, '_start_methods'):
+            raise ValueError("Invalid flow object: Missing '_start_methods' attribute")
+        if not hasattr(flow, '_listeners'):
+            raise ValueError("Invalid flow object: Missing '_listeners' attribute")
+            
         self.flow = flow
         self.colors = COLORS
         self.node_styles = NODE_STYLES
@@ -58,9 +75,16 @@ class FlowPlot:
         network_html = net.generate_html()
         final_html_content = self._generate_final_html(network_html)
 
-        with open(f"{filename}.html", "w", encoding="utf-8") as f:
-            f.write(final_html_content)
-        print(f"Plot saved as {filename}.html")
+        try:
+            # Ensure the output path is safe
+            output_dir = os.getcwd()
+            output_path = safe_path_join(output_dir, f"{filename}.html")
+            
+            with open(output_path, "w", encoding="utf-8") as f:
+                f.write(final_html_content)
+            print(f"Plot saved as {output_path}")
+        except (IOError, ValueError) as e:
+            raise IOError(f"Failed to save flow visualization: {str(e)}")
 
         self._cleanup_pyvis_lib()
 

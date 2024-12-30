@@ -1,26 +1,56 @@
 import ast
 import inspect
+import os
+from pathlib import Path
+from typing import Dict, Optional, Tuple
 
-from .utils import (
+from .core_flow_utils import is_ancestor
+from .flow_visual_utils import (
     build_ancestor_dict,
     build_parent_children_dict,
     get_child_index,
-    is_ancestor,
 )
+from .path_utils import safe_path_join, validate_file_path
 
 
-def method_calls_crew(method):
-    """Check if the method contains a .crew() call."""
+def method_calls_crew(method: callable) -> bool:
+    """Check if the method contains a .crew() call in its implementation.
+    
+    Analyzes the method's source code using AST to detect if it makes any
+    calls to the .crew() method, which indicates crew involvement in the
+    flow execution.
+    
+    Args:
+        method: The method to analyze for crew calls
+        
+    Returns:
+        bool: True if the method contains a .crew() call, False otherwise
+        
+    Raises:
+        Exception: If method source code cannot be parsed
+    """
+    if not callable(method):
+        raise TypeError("Input must be a callable method")
+        
     try:
         source = inspect.getsource(method)
         source = inspect.cleandoc(source)
         tree = ast.parse(source)
+    except (TypeError, ValueError, OSError) as e:
+        raise ValueError(f"Could not parse method {getattr(method, '__name__', str(method))}: {e}")
     except Exception as e:
-        print(f"Could not parse method {method.__name__}: {e}")
-        return False
+        raise RuntimeError(f"Unexpected error parsing method: {e}")
 
     class CrewCallVisitor(ast.NodeVisitor):
-        """AST visitor to detect .crew() method calls."""
+        """AST visitor to detect .crew() method calls in source code.
+        
+        A specialized AST visitor that analyzes Python source code to precisely
+        identify calls to the .crew() method, enabling accurate detection of
+        crew involvement in flow methods.
+        
+        Attributes:
+            found (bool): Indicates whether a .crew() call was found
+        """
         def __init__(self):
             self.found = False
 
@@ -35,9 +65,64 @@ def method_calls_crew(method):
     return visitor.found
 
 
-def add_nodes_to_network(net, flow, node_positions, node_styles):
-    """Add nodes to the network visualization with appropriate styling."""
-    def human_friendly_label(method_name):
+def add_nodes_to_network(net: object, flow: object, 
+                     node_positions: Dict[str, Tuple[float, float]], 
+                     node_styles: Dict[str, dict],
+                     output_dir: Optional[str] = None) -> None:
+    """Add nodes to the network visualization with precise styling and positioning.
+    
+    Creates and styles nodes in the visualization network based on their type
+    (start, router, crew, or regular method) with fine-grained control over
+    appearance and positioning.
+    
+    Args:
+        net: The network visualization object to add nodes to
+        flow: Flow object containing method definitions and relationships
+        node_positions: Dictionary mapping method names to (x,y) coordinates
+        node_styles: Dictionary mapping node types to their visual styles
+        output_dir: Optional directory path for saving visualization assets
+        
+    Returns:
+        None
+        
+    Raises:
+        ValueError: If flow object is invalid or required styles are missing
+        TypeError: If input arguments have incorrect types
+        OSError: If output directory operations fail
+        
+    Note:
+        Node styles are applied with precise control over shape, font, color,
+        and positioning to ensure accurate visual representation of the flow.
+        If output_dir is provided, it will be validated and created if needed.
+    """
+    if not hasattr(flow, '_methods'):
+        raise ValueError("Invalid flow object: missing '_methods' attribute")
+    if not isinstance(node_positions, dict):
+        raise TypeError("node_positions must be a dictionary")
+    if not isinstance(node_styles, dict):
+        raise TypeError("node_styles must be a dictionary")
+    
+    required_styles = {'start', 'router', 'crew', 'method'}
+    missing_styles = required_styles - set(node_styles.keys())
+    if missing_styles:
+        raise ValueError(f"Missing required node styles: {missing_styles}")
+        
+    # Validate and create output directory if specified
+    if output_dir:
+        try:
+            output_dir = validate_file_path(output_dir, must_exist=False)
+            os.makedirs(output_dir, exist_ok=True)
+        except (ValueError, OSError) as e:
+            raise OSError(f"Failed to create or validate output directory: {e}")
+    def human_friendly_label(method_name: str) -> str: 
+        """Convert method name to human-readable format.
+        
+        Args:
+            method_name: Original method name with underscores
+            
+        Returns:
+            str: Formatted method name with spaces and title case
+        """
         return method_name.replace("_", " ").title()
 
     for method_name, (x, y) in node_positions.items():
@@ -53,6 +138,15 @@ def add_nodes_to_network(net, flow, node_positions, node_styles):
 
         node_style = node_style.copy()
         label = human_friendly_label(method_name)
+
+        # Handle file-based assets if output directory is provided
+        if output_dir and node_style.get("image"):
+            try:
+                image_path = node_style["image"]
+                safe_image_path = safe_path_join(output_dir, Path(image_path).name)
+                node_style["image"] = str(safe_image_path)
+            except (ValueError, OSError) as e:
+                raise OSError(f"Failed to process node image path: {e}")
 
         node_style.update(
             {
@@ -75,8 +169,39 @@ def add_nodes_to_network(net, flow, node_positions, node_styles):
         )
 
 
-def compute_positions(flow, node_levels, y_spacing=150, x_spacing=150):
-    """Calculate x,y coordinates for each node in the flow diagram."""
+def compute_positions(flow: object, node_levels: dict[str, int], 
+                   y_spacing: float = 150, x_spacing: float = 150) -> dict[str, tuple[float, float]]:
+    if not hasattr(flow, '_methods'):
+        raise ValueError("Invalid flow object: missing '_methods' attribute")
+    if not isinstance(node_levels, dict):
+        raise TypeError("node_levels must be a dictionary")
+    if not isinstance(y_spacing, (int, float)) or y_spacing <= 0:
+        raise ValueError("y_spacing must be a positive number")
+    if not isinstance(x_spacing, (int, float)) or x_spacing <= 0:
+        raise ValueError("x_spacing must be a positive number")
+        
+    if not node_levels:
+        raise ValueError("node_levels dictionary cannot be empty")
+    """Calculate precise x,y coordinates for each node in the flow diagram.
+    
+    Computes optimal node positions with fine-grained control over spacing
+    and alignment, ensuring clear visualization of flow hierarchy and
+    relationships.
+    
+    Args:
+        flow: Flow object containing method definitions
+        node_levels: Dictionary mapping method names to their hierarchy levels
+        y_spacing: Vertical spacing between hierarchy levels (default: 150)
+        x_spacing: Horizontal spacing between nodes at same level (default: 150)
+        
+    Returns:
+        dict[str, tuple[float, float]]: Dictionary mapping method names to
+            their calculated (x,y) coordinates in the visualization
+            
+    Note:
+        Positions are calculated to maintain clear hierarchical structure while
+        ensuring optimal spacing and readability of the flow diagram.
+    """
     level_nodes = {}
     node_positions = {}
 
@@ -93,8 +218,56 @@ def compute_positions(flow, node_levels, y_spacing=150, x_spacing=150):
     return node_positions
 
 
-def add_edges(net, flow, node_positions, colors):
-    """Add edges between nodes with appropriate styling and routing."""
+def add_edges(net: object, flow: object, 
+            node_positions: Dict[str, Tuple[float, float]], 
+            colors: Dict[str, str],
+            asset_dir: Optional[str] = None) -> None:
+    if not hasattr(flow, '_methods'):
+        raise ValueError("Invalid flow object: missing '_methods' attribute")
+    if not hasattr(flow, '_listeners'):
+        raise ValueError("Invalid flow object: missing '_listeners' attribute")
+    if not hasattr(flow, '_router_paths'):
+        raise ValueError("Invalid flow object: missing '_router_paths' attribute")
+        
+    if not isinstance(node_positions, dict):
+        raise TypeError("node_positions must be a dictionary")
+    if not isinstance(colors, dict):
+        raise TypeError("colors must be a dictionary")
+        
+    required_colors = {'edge', 'router_edge'}
+    missing_colors = required_colors - set(colors.keys())
+    if missing_colors:
+        raise ValueError(f"Missing required edge colors: {missing_colors}")
+        
+    # Validate asset directory if provided
+    if asset_dir:
+        try:
+            asset_dir = validate_file_path(asset_dir, must_exist=False)
+            os.makedirs(asset_dir, exist_ok=True)
+        except (ValueError, OSError) as e:
+            raise OSError(f"Failed to create or validate asset directory: {e}")
+    """Add edges between nodes with precise styling and intelligent routing.
+    
+    Creates and styles edges in the visualization with fine-grained control over
+    appearance, routing, and curvature. Handles both normal method connections
+    and router paths with specialized styling.
+    
+    Args:
+        net: The network visualization object to add edges to
+        flow: Flow object containing method relationships and router paths
+        node_positions: Dictionary mapping method names to (x,y) coordinates
+        colors: Dictionary mapping edge types to their colors
+        
+    Returns:
+        None
+        
+    Note:
+        Implements sophisticated edge routing with:
+        - Automatic curve direction based on node positions
+        - Dynamic curvature adjustment for multiple edges
+        - Distinct styling for router paths and AND conditions
+        - Cycle detection and appropriate visualization
+    """
     ancestors = build_ancestor_dict(flow)
     parent_children = build_parent_children_dict(flow)
 
