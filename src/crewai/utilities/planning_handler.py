@@ -1,3 +1,4 @@
+import json
 import logging
 from typing import Any, List, Optional
 
@@ -100,10 +101,10 @@ class CrewPlanner:
                 "agent": {task.agent.role if task.agent else "None"}
                 "agent_goal": {task.agent.goal if task.agent else "None"}
                 "task_tools": {task.tools}
-                "agent_tools": "agent has no tools" if not task.agent or not task.agent.tools else str(task.agent.tools)"""
-            
-            if knowledge_list and str(knowledge_list) != "None":
-                task_summary += f'\n                "agent_knowledge": "{str(knowledge_list)}"'
+                "agent_tools": %s%s""" % (
+                    f"[{', '.join(str(tool) for tool in task.agent.tools)}]" if task.agent and task.agent.tools else '"agent has no tools"',
+                    f',\n                "agent_knowledge": "[\\"{knowledge_list[0]}\\"]"' if knowledge_list and str(knowledge_list) != "None" else ""
+                )
             
             tasks_summary.append(task_summary)
         return " ".join(tasks_summary)
