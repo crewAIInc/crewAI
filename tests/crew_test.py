@@ -1942,6 +1942,90 @@ def test_crew_log_file_output(tmp_path):
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
+def test_crew_output_file_end_to_end(tmp_path):
+    """Test output file functionality in a full crew context."""
+    # Create an agent
+    agent = Agent(
+        role="Researcher",
+        goal="Analyze AI topics",
+        backstory="You have extensive AI research experience.",
+        allow_delegation=False,
+    )
+
+    # Create a task with dynamic output file path
+    dynamic_path = tmp_path / "output_{topic}.txt"
+    task = Task(
+        description="Explain the advantages of {topic}.",
+        expected_output="A summary of the main advantages, bullet points recommended.",
+        agent=agent,
+        output_file=str(dynamic_path),
+    )
+
+    # Create and run the crew
+    crew = Crew(
+        agents=[agent],
+        tasks=[task],
+        process=Process.sequential,
+    )
+    crew.kickoff(inputs={"topic": "AI"})
+
+    # Verify file creation and cleanup
+    expected_file = tmp_path / "output_AI.txt"
+    assert expected_file.exists(), f"Output file {expected_file} was not created"
+
+
+@pytest.mark.vcr(filter_headers=["authorization"])
+def test_crew_output_file_validation_failures():
+    """Test output file validation failures in a crew context."""
+    agent = Agent(
+        role="Researcher",
+        goal="Analyze data",
+        backstory="You analyze data files.",
+        allow_delegation=False,
+    )
+
+    # Test path traversal
+    with pytest.raises(ValueError, match="Path traversal"):
+        task = Task(
+            description="Analyze data",
+            expected_output="Analysis results",
+            agent=agent,
+            output_file="../output.txt"
+        )
+        Crew(agents=[agent], tasks=[task]).kickoff()
+
+    # Test shell special characters
+    with pytest.raises(ValueError, match="Shell special characters"):
+        task = Task(
+            description="Analyze data",
+            expected_output="Analysis results",
+            agent=agent,
+            output_file="output.txt | rm -rf /"
+        )
+        Crew(agents=[agent], tasks=[task]).kickoff()
+
+    # Test shell expansion
+    with pytest.raises(ValueError, match="Shell expansion"):
+        task = Task(
+            description="Analyze data",
+            expected_output="Analysis results",
+            agent=agent,
+            output_file="~/output.txt"
+        )
+        Crew(agents=[agent], tasks=[task]).kickoff()
+
+    # Test invalid template variable
+    with pytest.raises(ValueError, match="Invalid template variable"):
+        task = Task(
+            description="Analyze data",
+            expected_output="Analysis results",
+            agent=agent,
+            output_file="{invalid-name}/output.txt"
+        )
+        Crew(agents=[agent], tasks=[task]).kickoff()
+
+
+@pytest.mark.vcr(filter_headers=["authorization"])
 def test_manager_agent():
     from unittest.mock import patch
 
