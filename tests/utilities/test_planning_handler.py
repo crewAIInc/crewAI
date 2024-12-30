@@ -1,18 +1,18 @@
 from typing import Optional
-from unittest.mock import patch, MagicMock
+from unittest.mock import MagicMock, patch
 
 import pytest
 from pydantic import BaseModel
 
 from crewai.agent import Agent
+from crewai.knowledge.source.string_knowledge_source import StringKnowledgeSource
 from crewai.task import Task
 from crewai.tasks.task_output import TaskOutput
-from crewai.knowledge.source.string_knowledge_source import StringKnowledgeSource
 from crewai.tools.base_tool import BaseTool
 from crewai.utilities.planning_handler import (
     CrewPlanner,
-    PlannerTaskPydanticOutput,
     PlanPerTask,
+    PlannerTaskPydanticOutput,
 )
 
 
