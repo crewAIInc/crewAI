@@ -100,7 +100,7 @@ class CrewPlanner:
                 "agent": {task.agent.role if task.agent else "None"}
                 "agent_goal": {task.agent.goal if task.agent else "None"}
                 "task_tools": {task.tools}
-                "agent_tools": {"agent has no tools" if not task.agent or not task.agent.tools else task.agent.tools}"""
+                "agent_tools": {'"agent has no tools"' if not task.agent or not task.agent.tools else task.agent.tools}"""
             
             if knowledge_list:
                 task_summary += f'\n                "agent_knowledge": "{str(knowledge_list)}"'
