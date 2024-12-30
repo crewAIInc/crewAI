@@ -19,8 +19,8 @@ def mock_knowledge_source():
     """
     return StringKnowledgeSource(content=content)
 
-def test_knowledge_not_in_planning():
-    """Test that demonstrates knowledge sources are not included in planning."""
+def test_knowledge_included_in_planning():
+    """Test that verifies knowledge sources are properly included in planning."""
     # Create an agent with knowledge
     agent = Agent(
         role="AI Researcher",
@@ -46,11 +46,16 @@ def test_knowledge_not_in_planning():
     # Get the task summary
     task_summary = planner._create_tasks_summary()
 
-    # Verify that knowledge is not included
-    assert "AI systems require careful training" not in task_summary
-    assert '"agent_knowledge"' not in task_summary
+    # Verify that knowledge is included in planning
+    assert "AI systems require careful training" in task_summary
+    assert '"agent_knowledge"' in task_summary
 
-    # Verify that other expected components are present
+    # Verify that knowledge is properly formatted
+    assert isinstance(task.agent.knowledge_sources, list)
+    assert len(task.agent.knowledge_sources) > 0
+    assert task.agent.knowledge_sources[0].content in task_summary
+
+    # Verify that other expected components are still present
     assert task.description in task_summary
     assert task.expected_output in task_summary
     assert agent.role in task_summary
