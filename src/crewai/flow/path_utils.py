@@ -5,10 +5,9 @@ This module provides utilities for secure path handling to prevent directory
 traversal attacks and ensure paths remain within allowed boundaries.
 """
 
+import os
 from pathlib import Path
 from typing import List, Union
-
-import os
 
 
 def safe_path_join(*parts: str, root: Union[str, Path, None] = None) -> str:

@@ -182,6 +182,7 @@ def add_edges(
     node_positions: Dict[str, Tuple[float, float]],
     colors: Dict[str, str]
 ) -> None:
+    edge_smooth: Dict[str, Union[str, float]]
     """
     Add edges to the network visualization with appropriate styling.
 
@@ -237,7 +238,7 @@ def add_edges(
                     else:
                         edge_smooth = {"type": "cubicBezier"}
                 else:
-                    edge_smooth: Dict[str, Union[str, float]] = {"type": "continuous"}
+                    edge_smooth = {"type": "continuous"}
 
                 edge_style = {
                     "color": edge_color,
@@ -300,7 +301,7 @@ def add_edges(
                             else:
                                 edge_smooth = {"type": "cubicBezier"}
                         else:
-                            edge_smooth: Dict[str, Union[str, float]] = {"type": "continuous"}
+                            edge_smooth = {"type": "continuous"}
 
                         edge_style = {
                             "color": colors["router_edge"],
