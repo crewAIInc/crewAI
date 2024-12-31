@@ -1,5 +1,23 @@
+"""
+Utilities for creating visual representations of flow structures.
+
+This module provides functions for generating network visualizations of flows,
+including node placement, edge creation, and visual styling. It handles the
+conversion of flow structures into visual network graphs with appropriate
+styling and layout.
+
+Example
+-------
+>>> flow = Flow()
+>>> net = Network(directed=True)
+>>> node_positions = compute_positions(flow, node_levels)
+>>> add_nodes_to_network(net, flow, node_positions, node_styles)
+>>> add_edges(net, flow, node_positions, colors)
+"""
+
 import ast
 import inspect
+from typing import Any, Dict, List, Optional, Tuple, Union
 
 from .utils import (
     build_ancestor_dict,
@@ -9,8 +27,25 @@ from .utils import (
 )
 
 
-def method_calls_crew(method):
-    """Check if the method calls `.crew()`."""
+def method_calls_crew(method: Any) -> bool:
+    """
+    Check if the method contains a call to `.crew()`.
+
+    Parameters
+    ----------
+    method : Any
+        The method to analyze for crew() calls.
+
+    Returns
+    -------
+    bool
+        True if the method calls .crew(), False otherwise.
+
+    Notes
+    -----
+    Uses AST analysis to detect method calls, specifically looking for
+    attribute access of 'crew'.
+    """
     try:
         source = inspect.getsource(method)
         source = inspect.cleandoc(source)
@@ -34,7 +69,34 @@ def method_calls_crew(method):
     return visitor.found
 
 
-def add_nodes_to_network(net, flow, node_positions, node_styles):
+def add_nodes_to_network(
+    net: Any,
+    flow: Any,
+    node_positions: Dict[str, Tuple[float, float]],
+    node_styles: Dict[str, Dict[str, Any]]
+) -> None:
+    """
+    Add nodes to the network visualization with appropriate styling.
+
+    Parameters
+    ----------
+    net : Any
+        The pyvis Network instance to add nodes to.
+    flow : Any
+        The flow instance containing method information.
+    node_positions : Dict[str, Tuple[float, float]]
+        Dictionary mapping node names to their (x, y) positions.
+    node_styles : Dict[str, Dict[str, Any]]
+        Dictionary containing style configurations for different node types.
+
+    Notes
+    -----
+    Node types include:
+    - Start methods
+    - Router methods
+    - Crew methods
+    - Regular methods
+    """
     def human_friendly_label(method_name):
         return method_name.replace("_", " ").title()
 
@@ -73,9 +135,33 @@ def add_nodes_to_network(net, flow, node_positions, node_styles):
         )
 
 
-def compute_positions(flow, node_levels, y_spacing=150, x_spacing=150):
-    level_nodes = {}
-    node_positions = {}
+def compute_positions(
+    flow: Any,
+    node_levels: Dict[str, int],
+    y_spacing: float = 150,
+    x_spacing: float = 150
+) -> Dict[str, Tuple[float, float]]:
+    """
+    Compute the (x, y) positions for each node in the flow graph.
+
+    Parameters
+    ----------
+    flow : Any
+        The flow instance to compute positions for.
+    node_levels : Dict[str, int]
+        Dictionary mapping node names to their hierarchical levels.
+    y_spacing : float, optional
+        Vertical spacing between levels, by default 150.
+    x_spacing : float, optional
+        Horizontal spacing between nodes, by default 150.
+
+    Returns
+    -------
+    Dict[str, Tuple[float, float]]
+        Dictionary mapping node names to their (x, y) coordinates.
+    """
+    level_nodes: Dict[int, List[str]] = {}
+    node_positions: Dict[str, Tuple[float, float]] = {}
 
     for method_name, level in node_levels.items():
         level_nodes.setdefault(level, []).append(method_name)
@@ -90,7 +176,33 @@ def compute_positions(flow, node_levels, y_spacing=150, x_spacing=150):
     return node_positions
 
 
-def add_edges(net, flow, node_positions, colors):
+def add_edges(
+    net: Any,
+    flow: Any,
+    node_positions: Dict[str, Tuple[float, float]],
+    colors: Dict[str, str]
+) -> None:
+    edge_smooth: Dict[str, Union[str, float]] = {"type": "continuous"}  # Default value
+    """
+    Add edges to the network visualization with appropriate styling.
+
+    Parameters
+    ----------
+    net : Any
+        The pyvis Network instance to add edges to.
+    flow : Any
+        The flow instance containing edge information.
+    node_positions : Dict[str, Tuple[float, float]]
+        Dictionary mapping node names to their positions.
+    colors : Dict[str, str]
+        Dictionary mapping edge types to their colors.
+
+    Notes
+    -----
+    - Handles both normal listener edges and router edges
+    - Applies appropriate styling (color, dashes) based on edge type
+    - Adds curvature to edges when needed (cycles or multiple children)
+    """
     ancestors = build_ancestor_dict(flow)
     parent_children = build_parent_children_dict(flow)
 
@@ -126,7 +238,7 @@ def add_edges(net, flow, node_positions, colors):
                     else:
                         edge_smooth = {"type": "cubicBezier"}
                 else:
-                    edge_smooth = False
+                    edge_smooth.update({"type": "continuous"})
 
                 edge_style = {
                     "color": edge_color,
@@ -189,7 +301,7 @@ def add_edges(net, flow, node_positions, colors):
                             else:
                                 edge_smooth = {"type": "cubicBezier"}
                         else:
-                            edge_smooth = False
+                            edge_smooth.update({"type": "continuous"})
 
                         edge_style = {
                             "color": colors["router_edge"],
