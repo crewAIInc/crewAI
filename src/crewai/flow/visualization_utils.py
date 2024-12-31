@@ -160,8 +160,8 @@ def compute_positions(
     Dict[str, Tuple[float, float]]
         Dictionary mapping node names to their (x, y) coordinates.
     """
-    level_nodes = {}
-    node_positions = {}
+    level_nodes: Dict[int, List[str]] = {}
+    node_positions: Dict[str, Tuple[float, float]] = {}
 
     for method_name, level in node_levels.items():
         level_nodes.setdefault(level, []).append(method_name)
@@ -237,7 +237,7 @@ def add_edges(
                     else:
                         edge_smooth = {"type": "cubicBezier"}
                 else:
-                    edge_smooth = False
+                    edge_smooth: Dict[str, Union[str, float]] = {"type": "continuous"}
 
                 edge_style = {
                     "color": edge_color,

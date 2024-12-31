@@ -120,7 +120,7 @@ def calculate_node_levels(flow: Any) -> Dict[str, int]:
     levels = {}
     queue = []
     visited = set()
-    pending_and_listeners = {}
+    pending_and_listeners: Dict[str, Set[str]] = {}
 
     # Make all start methods at level 0
     for method_name, method in flow._methods.items():
@@ -218,8 +218,8 @@ def build_ancestor_dict(flow: Any) -> Dict[str, Set[str]]:
     Dict[str, Set[str]]
         Dictionary mapping each node to a set of its ancestor nodes.
     """
-    ancestors = {node: set() for node in flow._methods}
-    visited = set()
+    ancestors: Dict[str, Set[str]] = {node: set() for node in flow._methods}
+    visited: Set[str] = set()
     for node in flow._methods:
         if node not in visited:
             dfs_ancestors(node, ancestors, visited, flow)
