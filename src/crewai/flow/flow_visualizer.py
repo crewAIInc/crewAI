@@ -18,6 +18,8 @@ from crewai.flow.visualization_utils import (
 
 
 class FlowPlot:
+    """Handles the creation and rendering of flow visualization diagrams."""
+
     def __init__(self, flow):
         """
         Initialize FlowPlot with a flow object.
