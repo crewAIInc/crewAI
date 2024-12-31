@@ -8,7 +8,6 @@ from crewai.memory.storage.kickoff_task_outputs_storage import (
 )
 from crewai.task import Task
 
-
 """Handles storage and retrieval of task execution outputs."""
 
 class ExecutionLog(BaseModel):

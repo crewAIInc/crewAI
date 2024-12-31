@@ -4,7 +4,6 @@ from typing import Callable
 from crewai import Crew
 from crewai.project.utils import memoize
 
-
 """Decorators for defining crew components and their behaviors."""
 
 

@@ -5,7 +5,6 @@ from pydantic import BaseModel, Field
 from crewai.agent import Agent
 from crewai.task import Task
 
-
 """Handles planning and coordination of crew tasks."""
 
 class PlanPerTask(BaseModel):

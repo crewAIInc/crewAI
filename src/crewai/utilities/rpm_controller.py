@@ -6,7 +6,6 @@ from pydantic import BaseModel, Field, PrivateAttr, model_validator
 
 from crewai.utilities.logger import Logger
 
-
 """Controls request rate limiting for API calls."""
 
 class RPMController(BaseModel):

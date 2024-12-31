@@ -3,7 +3,6 @@ from pathlib import Path
 
 import appdirs
 
-
 """Path management utilities for CrewAI storage and configuration."""
 
 def db_storage_path():
