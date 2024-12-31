@@ -5,7 +5,7 @@ Flow graphs and calculating layout information. These utilities are separated
 from general-purpose utilities to maintain a clean dependency structure.
 """
 
-from typing import Any, Dict, List, Set, TYPE_CHECKING
+from typing import TYPE_CHECKING, Any, Dict, List, Set
 
 if TYPE_CHECKING:
     from crewai.flow.flow import Flow

@@ -4,8 +4,9 @@ import os
 from pathlib import Path
 from typing import Any, Callable, Dict, List, Optional, Set, Tuple, cast
 
-from crewai.flow.flow import Flow
 from pyvis.network import Network
+
+from crewai.flow.flow import Flow
 
 from .core_flow_utils import is_ancestor
 from .flow_visual_utils import (
