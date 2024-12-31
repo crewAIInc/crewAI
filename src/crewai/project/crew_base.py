@@ -9,8 +9,10 @@ load_dotenv()
 
 T = TypeVar("T", bound=type)
 
+"""Base decorator for creating crew classes with configuration and function management."""
 
 def CrewBase(cls: T) -> T:
+    """Wraps a class with crew functionality and configuration management."""
     class WrappedClass(cls):  # type: ignore
         is_crew_class: bool = True  # type: ignore
 
