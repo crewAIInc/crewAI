@@ -1,11 +1,32 @@
 import base64
 import re
+from pathlib import Path
+
+from crewai.flow.path_utils import safe_path_join, validate_path_exists
 
 
 class HTMLTemplateHandler:
     def __init__(self, template_path, logo_path):
-        self.template_path = template_path
-        self.logo_path = logo_path
+        """
+        Initialize HTMLTemplateHandler with validated template and logo paths.
+
+        Parameters
+        ----------
+        template_path : str
+            Path to the HTML template file.
+        logo_path : str
+            Path to the logo image file.
+
+        Raises
+        ------
+        ValueError
+            If template or logo paths are invalid or files don't exist.
+        """
+        try:
+            self.template_path = validate_path_exists(template_path, "file")
+            self.logo_path = validate_path_exists(logo_path, "file")
+        except ValueError as e:
+            raise ValueError(f"Invalid template or logo path: {e}")
 
     def read_template(self):
         with open(self.template_path, "r", encoding="utf-8") as f:
