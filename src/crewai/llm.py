@@ -96,7 +96,7 @@ def suppress_warnings():
 class LLM:
     def __init__(
         self,
-        model: str,
+        model: Union[str, 'LLM'],
         timeout: Optional[Union[float, int]] = None,
         temperature: Optional[float] = None,
         top_p: Optional[float] = None,
@@ -117,27 +117,51 @@ class LLM:
         callbacks: List[Any] = [],
         **kwargs,
     ):
-        self.model = model
-        self.timeout = timeout
-        self.temperature = temperature
-        self.top_p = top_p
-        self.n = n
-        self.stop = stop
-        self.max_completion_tokens = max_completion_tokens
-        self.max_tokens = max_tokens
-        self.presence_penalty = presence_penalty
-        self.frequency_penalty = frequency_penalty
-        self.logit_bias = logit_bias
-        self.response_format = response_format
-        self.seed = seed
-        self.logprobs = logprobs
-        self.top_logprobs = top_logprobs
-        self.base_url = base_url
-        self.api_version = api_version
-        self.api_key = api_key
-        self.callbacks = callbacks
-        self.context_window_size = 0
-        self.kwargs = kwargs
+        # If model is an LLM instance, copy its configuration
+        if isinstance(model, LLM):
+            self.model = model.model
+            self.timeout = model.timeout
+            self.temperature = model.temperature
+            self.top_p = model.top_p
+            self.n = model.n
+            self.stop = model.stop
+            self.max_completion_tokens = model.max_completion_tokens
+            self.max_tokens = model.max_tokens
+            self.presence_penalty = model.presence_penalty
+            self.frequency_penalty = model.frequency_penalty
+            self.logit_bias = model.logit_bias
+            self.response_format = model.response_format
+            self.seed = model.seed
+            self.logprobs = model.logprobs
+            self.top_logprobs = model.top_logprobs
+            self.base_url = model.base_url
+            self.api_version = model.api_version
+            self.api_key = model.api_key
+            self.callbacks = model.callbacks
+            self.context_window_size = model.context_window_size
+            self.kwargs = model.kwargs
+        else:
+            self.model = model
+            self.timeout = timeout
+            self.temperature = temperature
+            self.top_p = top_p
+            self.n = n
+            self.stop = stop
+            self.max_completion_tokens = max_completion_tokens
+            self.max_tokens = max_tokens
+            self.presence_penalty = presence_penalty
+            self.frequency_penalty = frequency_penalty
+            self.logit_bias = logit_bias
+            self.response_format = response_format
+            self.seed = seed
+            self.logprobs = logprobs
+            self.top_logprobs = top_logprobs
+            self.base_url = base_url
+            self.api_version = api_version
+            self.api_key = api_key
+            self.callbacks = callbacks
+            self.context_window_size = 0
+            self.kwargs = kwargs
 
         litellm.drop_params = True
 
@@ -150,9 +174,38 @@ class LLM:
                 self.set_callbacks(callbacks)
 
             try:
+                # Ensure model is a string and set default
+                model_name = "gpt-4"  # Default model
+                
+                # Extract model name from self.model
+                current = self.model
+                while current is not None:
+                    if isinstance(current, str):
+                        model_name = current
+                        break
+                    elif isinstance(current, LLM):
+                        current = current.model
+                    elif hasattr(current, "model"):
+                        current = getattr(current, "model")
+                    else:
+                        break
+
+                # Set parameters for litellm
+                # Build base params dict with required fields
                 params = {
-                    "model": self.model,
+                    "model": model_name,
+                    "custom_llm_provider": "openai",
                     "messages": messages,
+                    "stream": False  # Always set stream to False
+                }
+                
+                # Add API configuration
+                api_key = self.api_key or os.getenv("OPENAI_API_KEY")
+                if api_key:
+                    params["api_key"] = api_key
+                
+                # Define optional parameters
+                optional_params = {
                     "timeout": self.timeout,
                     "temperature": self.temperature,
                     "top_p": self.top_p,
@@ -166,12 +219,20 @@ class LLM:
                     "seed": self.seed,
                     "logprobs": self.logprobs,
                     "top_logprobs": self.top_logprobs,
-                    "api_base": self.base_url,
-                    "api_version": self.api_version,
-                    "api_key": self.api_key,
-                    "stream": False,
-                    **self.kwargs,
                 }
+                
+                # Add API endpoint configuration if available
+                if self.base_url:
+                    optional_params["api_base"] = self.base_url
+                if self.api_version:
+                    optional_params["api_version"] = self.api_version
+                
+                # Update params with non-None optional parameters
+                params.update({k: v for k, v in optional_params.items() if v is not None})
+                
+                # Add any additional kwargs
+                if self.kwargs:
+                    params.update(self.kwargs)
 
                 # Remove None values to avoid passing unnecessary parameters
                 params = {k: v for k, v in params.items() if v is not None}
@@ -195,6 +256,10 @@ class LLM:
             return False
 
     def supports_stop_words(self) -> bool:
+        """Check if the LLM supports stop words.
+        Returns False if the LLM is not properly initialized."""
+        if not hasattr(self, 'model') or self.model is None:
+            return False
         try:
             params = get_supported_openai_params(model=self.model)
             return "stop" in params

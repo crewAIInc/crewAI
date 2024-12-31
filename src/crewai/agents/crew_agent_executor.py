@@ -68,7 +68,7 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
         self.tools_handler = tools_handler
         self.original_tools = original_tools
         self.step_callback = step_callback
-        self.use_stop_words = self.llm.supports_stop_words()
+        self.use_stop_words = self.llm.supports_stop_words() if self.llm else False
         self.tools_description = tools_description
         self.function_calling_llm = function_calling_llm
         self.respect_context_window = respect_context_window

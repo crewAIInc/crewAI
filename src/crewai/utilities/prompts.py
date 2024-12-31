@@ -63,16 +63,32 @@ class Prompts(BaseModel):
                 for component in components
                 if component != "task"
             ]
-            system = system_template.replace("{{ .System }}", "".join(prompt_parts))
-            prompt = prompt_template.replace(
-                "{{ .Prompt }}", "".join(self.i18n.slice("task"))
-            )
-            response = response_template.split("{{ .Response }}")[0]
-            prompt = f"{system}\n{prompt}\n{response}"
+            system = ""
+            if system_template:
+                system = system_template.replace("{{ .System }}", "".join(prompt_parts))
+            
+            prompt_text = ""
+            if prompt_template:
+                prompt_text = prompt_template.replace(
+                    "{{ .Prompt }}", "".join(self.i18n.slice("task"))
+                )
+            
+            response = ""
+            if response_template:
+                response = response_template.split("{{ .Response }}")[0]
+            
+            parts = [p for p in [system, prompt_text, response] if p]
+            prompt = "\n".join(parts) if parts else ""
 
+        # Get agent attributes with default values
+        goal = str(getattr(self.agent, 'goal', '') or '')
+        role = str(getattr(self.agent, 'role', '') or '')
+        backstory = str(getattr(self.agent, 'backstory', '') or '')
+        
+        # Replace placeholders with agent attributes
         prompt = (
-            prompt.replace("{goal}", self.agent.goal)
-            .replace("{role}", self.agent.role)
-            .replace("{backstory}", self.agent.backstory)
+            prompt.replace("{goal}", goal)
+            .replace("{role}", role)
+            .replace("{backstory}", backstory)
         )
         return prompt

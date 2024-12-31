@@ -23,6 +23,9 @@ from crewai.utilities.constants import TRAINED_AGENTS_DATA_FILE, TRAINING_DATA_F
 from crewai.utilities.converter import generate_model_description
 from crewai.utilities.token_counter_callback import TokenCalcHandler
 from crewai.utilities.training_handler import CrewTrainingHandler
+from crewai.utilities.logger import Logger
+from crewai.utilities.rpm_controller import RPMController
+from crewai.utilities.token_process import TokenProcess
 
 agentops = None
 
@@ -45,24 +48,111 @@ class Agent(BaseAgent):
     Each agent has a role, a goal, a backstory, and an optional language model (llm).
     The agent can also have memory, can operate in verbose mode, and can delegate tasks to other agents.
 
-    Attributes:
-            agent_executor: An instance of the CrewAgentExecutor class.
-            role: The role of the agent.
-            goal: The objective of the agent.
-            backstory: The backstory of the agent.
-            knowledge: The knowledge base of the agent.
-            config: Dict representation of agent configuration.
-            llm: The language model that will run the agent.
-            function_calling_llm: The language model that will handle the tool calling for this agent, it overrides the crew function_calling_llm.
-            max_iter: Maximum number of iterations for an agent to execute a task.
-            memory: Whether the agent should have memory or not.
-            max_rpm: Maximum number of requests per minute for the agent execution to be respected.
-            verbose: Whether the agent execution should be in verbose mode.
-            allow_delegation: Whether the agent is allowed to delegate tasks to other agents.
-            tools: Tools at agents disposal
-            step_callback: Callback to be executed after each step of the agent execution.
-            knowledge_sources: Knowledge sources for the agent.
+    Args:
+        role (Optional[str]): The role of the agent
+        goal (Optional[str]): The objective of the agent
+        backstory (Optional[str]): The backstory of the agent
+        allow_delegation (bool): Whether the agent can delegate tasks
+        config (Optional[Dict[str, Any]]): Configuration for the agent
+        verbose (bool): Whether to enable verbose output
+        max_rpm (Optional[int]): Maximum requests per minute
+        tools (Optional[List[Any]]): Tools available to the agent
+        llm (Optional[Union[str, Any]]): Language model to use
+        function_calling_llm (Optional[Any]): Language model for tool calling
+        max_iter (Optional[int]): Maximum iterations for task execution
+        memory (bool): Whether the agent should have memory
+        step_callback (Optional[Any]): Callback after each execution step
+        knowledge_sources (Optional[List[BaseKnowledgeSource]]): Knowledge sources
     """
+    
+    model_config = {
+        "arbitrary_types_allowed": True,
+        "extra": "allow",
+    }
+
+    def __init__(
+        self,
+        role: Optional[str] = None,
+        goal: Optional[str] = None,
+        backstory: Optional[str] = None,
+        allow_delegation: bool = False,
+        config: Optional[Dict[str, Any]] = None,
+        verbose: bool = False,
+        max_rpm: Optional[int] = None,
+        tools: Optional[List[Any]] = None,
+        llm: Optional[Union[str, LLM, Any]] = None,
+        function_calling_llm: Optional[Any] = None,
+        max_iter: Optional[int] = None,
+        memory: bool = True,
+        step_callback: Optional[Any] = None,
+        knowledge_sources: Optional[List[BaseKnowledgeSource]] = None,
+        **kwargs
+    ) -> None:
+        """Initialize an Agent with the given parameters."""
+        # Process tools before passing to parent
+        processed_tools = []
+        if tools:
+            from crewai.tools import BaseTool
+            for tool in tools:
+                if isinstance(tool, BaseTool):
+                    processed_tools.append(tool)
+                elif callable(tool):
+                    # Convert function to BaseTool
+                    processed_tools.append(Tool.from_function(tool))
+                else:
+                    raise ValueError(f"Tool {tool} must be either a BaseTool instance or a callable")
+
+        # Process LLM before passing to parent
+        processed_llm = None
+        if isinstance(llm, str):
+            processed_llm = LLM(model=llm)
+        elif isinstance(llm, LLM):
+            processed_llm = llm
+        elif llm is not None and hasattr(llm, 'model') and hasattr(llm, 'temperature'):
+            # Handle ChatOpenAI and similar objects
+            model_name = getattr(llm, 'model', None)
+            if model_name is not None:
+                if not isinstance(model_name, str):
+                    model_name = str(model_name)
+                processed_llm = LLM(
+                    model=model_name,
+                    temperature=getattr(llm, 'temperature', None),
+                    api_key=getattr(llm, 'api_key', None),
+                    base_url=getattr(llm, 'base_url', None)
+                )
+        # If no valid LLM configuration found, leave as None for post_init_setup
+
+        # Initialize all fields in a dict
+        init_dict = {
+            "role": role,
+            "goal": goal,
+            "backstory": backstory,
+            "allow_delegation": allow_delegation,
+            "config": config,
+            "verbose": verbose,
+            "max_rpm": max_rpm,
+            "tools": processed_tools,
+            "llm": processed_llm,
+            "max_iter": max_iter if max_iter is not None else 25,
+            "function_calling_llm": function_calling_llm,
+            "step_callback": step_callback,
+            "knowledge_sources": knowledge_sources,
+            **kwargs
+        }
+
+        # Initialize base model with all fields
+        super().__init__(**init_dict)
+        
+        # Store original values for interpolation
+        self._original_role = role
+        self._original_goal = goal
+        self._original_backstory = backstory
+        
+        # Initialize private attributes
+        self._logger = Logger(verbose=self.verbose)
+        if self.max_rpm:
+            self._rpm_controller = RPMController(max_rpm=self.max_rpm, logger=self._logger)
+        self._token_process = TokenProcess()
 
     _times_executed: int = PrivateAttr(default=0)
     max_execution_time: Optional[int] = Field(
@@ -138,21 +228,15 @@ class Agent(BaseAgent):
     @model_validator(mode="after")
     def post_init_setup(self):
         self._set_knowledge()
-        self.agent_ops_agent_name = self.role
+        self.agent_ops_agent_name = self.role or "agent"
         unaccepted_attributes = [
             "AWS_ACCESS_KEY_ID",
             "AWS_SECRET_ACCESS_KEY",
             "AWS_REGION_NAME",
         ]
 
-        # Handle different cases for self.llm
-        if isinstance(self.llm, str):
-            # If it's a string, create an LLM instance
-            self.llm = LLM(model=self.llm)
-        elif isinstance(self.llm, LLM):
-            # If it's already an LLM instance, keep it as is
-            pass
-        elif self.llm is None:
+        # Handle LLM initialization if not already done
+        if self.llm is None:
             # Determine the model name from environment variables or use default
             model_name = (
                 os.environ.get("OPENAI_MODEL_NAME")
@@ -301,7 +385,7 @@ class Agent(BaseAgent):
     def _set_knowledge(self):
         try:
             if self.knowledge_sources:
-                knowledge_agent_name = f"{self.role.replace(' ', '_')}"
+                knowledge_agent_name = f"{(self.role or 'agent').replace(' ', '_')}"
                 if isinstance(self.knowledge_sources, list) and all(
                     isinstance(k, BaseKnowledgeSource) for k in self.knowledge_sources
                 ):
