@@ -55,6 +55,7 @@ def method_calls_crew(method: Any) -> bool:
         return False
 
     class CrewCallVisitor(ast.NodeVisitor):
+        """AST visitor to detect .crew() method calls."""
         def __init__(self):
             self.found = False
 

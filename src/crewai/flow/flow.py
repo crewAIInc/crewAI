@@ -95,7 +95,6 @@ def start(condition: Optional[Union[str, dict, Callable]] = None) -> Callable:
 
     return decorator
 
-
 def listen(condition: Union[str, dict, Callable]) -> Callable:
     """
     Creates a listener that executes when specified conditions are met.
@@ -198,7 +197,6 @@ def router(condition: Union[str, dict, Callable]) -> Callable:
     """
     def decorator(func):
         func.__is_router__ = True
-        # Handle conditions like listen/start
         if isinstance(condition, str):
             func.__trigger_methods__ = [condition]
             func.__condition_type__ = "OR"
@@ -219,7 +217,6 @@ def router(condition: Union[str, dict, Callable]) -> Callable:
         return func
 
     return decorator
-
 
 def or_(*conditions: Union[str, dict, Callable]) -> dict:
     """
