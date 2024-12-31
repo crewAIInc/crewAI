@@ -1445,34 +1445,31 @@ def test_llm_call_with_all_attributes():
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
-def test_agent_with_ollama_gemma():
+def test_agent_with_ollama_llama3():
     agent = Agent(
         role="test role",
         goal="test goal",
         backstory="test backstory",
-        llm=LLM(
-            model="ollama/gemma2:latest",
-            base_url="http://localhost:8080",
-        ),
+        llm=LLM(model="ollama/llama3.2:3b", base_url="http://localhost:11434"),
     )
 
     assert isinstance(agent.llm, LLM)
-    assert agent.llm.model == "ollama/gemma2:latest"
-    assert agent.llm.base_url == "http://localhost:8080"
+    assert agent.llm.model == "ollama/llama3.2:3b"
+    assert agent.llm.base_url == "http://localhost:11434"
 
     task = "Respond in 20 words. Who are you?"
     response = agent.llm.call([{"role": "user", "content": task}])
 
     assert response
     assert len(response.split()) <= 25  # Allow a little flexibility in word count
-    assert "Gemma" in response or "AI" in response or "language model" in response
+    assert "Llama3" in response or "AI" in response or "language model" in response
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
-def test_llm_call_with_ollama_gemma():
+def test_llm_call_with_ollama_llama3():
     llm = LLM(
-        model="ollama/gemma2:latest",
-        base_url="http://localhost:8080",
+        model="ollama/llama3.2:3b",
+        base_url="http://localhost:11434",
         temperature=0.7,
         max_tokens=30,
     )
@@ -1482,7 +1479,7 @@ def test_llm_call_with_ollama_gemma():
 
     assert response
     assert len(response.split()) <= 25  # Allow a little flexibility in word count
-    assert "Gemma" in response or "AI" in response or "language model" in response
+    assert "Llama3" in response or "AI" in response or "language model" in response
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
@@ -1578,7 +1575,7 @@ def test_agent_execute_task_with_ollama():
         role="test role",
         goal="test goal",
         backstory="test backstory",
-        llm=LLM(model="ollama/gemma2:latest", base_url="http://localhost:8080"),
+        llm=LLM(model="ollama/llama3.2:3b", base_url="http://localhost:11434"),
     )
 
     task = Task(
