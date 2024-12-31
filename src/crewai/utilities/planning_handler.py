@@ -1,9 +1,13 @@
+import json
+import logging
 from typing import Any, List, Optional
 
 from pydantic import BaseModel, Field
 
 from crewai.agent import Agent
 from crewai.task import Task
+
+logger = logging.getLogger(__name__)
 
 
 class PlanPerTask(BaseModel):
@@ -68,19 +72,39 @@ class CrewPlanner:
             output_pydantic=PlannerTaskPydanticOutput,
         )
 
+    def _get_agent_knowledge(self, task: Task) -> List[str]:
+        """
+        Safely retrieve knowledge source content from the task's agent.
+        
+        Args:
+            task: The task containing an agent with potential knowledge sources
+            
+        Returns:
+            List[str]: A list of knowledge source strings
+        """
+        try:
+            if task.agent and task.agent.knowledge_sources:
+                return [source.content for source in task.agent.knowledge_sources]
+        except AttributeError:
+            logger.warning("Error accessing agent knowledge sources")
+        return []
+
     def _create_tasks_summary(self) -> str:
         """Creates a summary of all tasks."""
         tasks_summary = []
         for idx, task in enumerate(self.tasks):
-            tasks_summary.append(
-                f"""
+            knowledge_list = self._get_agent_knowledge(task)
+            task_summary = f"""
                 Task Number {idx + 1} - {task.description}
                 "task_description": {task.description}
                 "task_expected_output": {task.expected_output}
                 "agent": {task.agent.role if task.agent else "None"}
                 "agent_goal": {task.agent.goal if task.agent else "None"}
                 "task_tools": {task.tools}
-                "agent_tools": {task.agent.tools if task.agent else "None"}
-                """
-            )
+                "agent_tools": %s%s""" % (
+                    f"[{', '.join(str(tool) for tool in task.agent.tools)}]" if task.agent and task.agent.tools else '"agent has no tools"',
+                    f',\n                "agent_knowledge": "[\\"{knowledge_list[0]}\\"]"' if knowledge_list and str(knowledge_list) != "None" else ""
+                )
+            
+            tasks_summary.append(task_summary)
         return " ".join(tasks_summary)
