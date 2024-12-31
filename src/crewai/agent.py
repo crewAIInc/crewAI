@@ -157,8 +157,7 @@ class Agent(BaseAgent):
             "AWS_REGION_NAME",
         ]
         
-        # Initialize LLM parameters with proper typing
-        from typing import Any, Dict, List, Union, Optional
+        # Initialize LLM parameters
         llm_params: Dict[str, Any] = {}
 
         # Handle different cases for self.llm
