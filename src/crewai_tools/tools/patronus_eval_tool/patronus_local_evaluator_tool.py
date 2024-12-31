@@ -1,24 +1,20 @@
-import os
-import json
-import requests
-import warnings
-from typing import Any, List, Dict, Optional, Type
+from typing import Any, Type
 from crewai.tools import BaseTool
 from pydantic import BaseModel, Field
 from patronus import Client
 
 
 class FixedLocalEvaluatorToolSchema(BaseModel):
-    evaluated_model_input: Dict = Field(
+    evaluated_model_input: str = Field(
         ..., description="The agent's task description in simple text"
     )
-    evaluated_model_output: Dict = Field(
+    evaluated_model_output: str = Field(
         ..., description="The agent's output of the task"
     )
-    evaluated_model_retrieved_context: Dict = Field(
+    evaluated_model_retrieved_context: str = Field(
         ..., description="The agent's context"
     )
-    evaluated_model_gold_answer: Dict = Field(
+    evaluated_model_gold_answer: str = Field(
         ..., description="The agent's gold answer only if available"
     )
     evaluator: str = Field(..., description="The registered local evaluator")
@@ -37,9 +33,9 @@ class PatronusLocalEvaluatorTool(BaseTool):
     class Config:
         arbitrary_types_allowed = True
 
-    def __init__(self, evaluator: str, evaluated_model_gold_answer: str, **kwargs: Any):
+    def __init__(self, patronus_client: Client, evaluator: str, evaluated_model_gold_answer: str, **kwargs: Any):
         super().__init__(**kwargs)
-        self.client = Client()
+        self.client = patronus_client #Client()
         if evaluator:
             self.evaluator = evaluator
             self.evaluated_model_gold_answer = evaluated_model_gold_answer
@@ -58,8 +54,12 @@ class PatronusLocalEvaluatorTool(BaseTool):
         evaluated_model_retrieved_context = kwargs.get(
             "evaluated_model_retrieved_context"
         )
-        evaluated_model_gold_answer = self.evaluated_model_gold_answer
+        evaluated_model_gold_answer = kwargs.get("evaluated_model_gold_answer")
+        # evaluated_model_gold_answer = self.evaluated_model_gold_answer
         evaluator = self.evaluator
+
+        print(kwargs)
+        print(self.evaluator)
 
         result = self.client.evaluate(
             evaluator=evaluator,
@@ -83,7 +83,7 @@ class PatronusLocalEvaluatorTool(BaseTool):
                 if isinstance(evaluated_model_gold_answer, str)
                 else evaluated_model_gold_answer.get("description")
             ),
-            tags={},
+            tags={}, # Optional metadata, supports arbitrary kv pairs
         )
         output = f"Evaluation result: {result.pass_}, Explanation: {result.explanation}"
         return output

@@ -2,11 +2,8 @@ import os
 import json
 import requests
 import warnings
-from typing import Any, List, Dict, Optional, Type
+from typing import Any, List, Dict, Optional
 from crewai.tools import BaseTool
-from pydantic import BaseModel, Field
-from patronus import Client
-
 
 
 class PatronusEvalTool(BaseTool):

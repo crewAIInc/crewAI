@@ -1,11 +1,9 @@
 import os
 import json
 import requests
-import warnings
-from typing import Any, List, Dict, Optional, Type
+from typing import Any, List, Dict, Type
 from crewai.tools import BaseTool
 from pydantic import BaseModel, Field
-from patronus import Client
 
 
 class FixedBaseToolSchema(BaseModel):

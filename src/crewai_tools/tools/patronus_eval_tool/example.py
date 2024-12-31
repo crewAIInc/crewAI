@@ -17,7 +17,7 @@ client = Client()
 
 # Example of an evaluator that returns a random pass/fail result
 @client.register_local_evaluator("random_evaluator")
-def my_evaluator(**kwargs):
+def random_evaluator(**kwargs):
     score = random.random()
     return EvaluationResult(
       score_raw=score,
@@ -35,7 +35,7 @@ def my_evaluator(**kwargs):
 
 # 3. Uses PatronusLocalEvaluatorTool: agent uses user defined evaluator
 patronus_eval_tool = PatronusLocalEvaluatorTool(
-    evaluator="random_evaluator", evaluated_model_gold_answer="example label"
+    patronus_client=client, evaluator="random_evaluator", evaluated_model_gold_answer="example label"
 )
 
 # Create a new agent

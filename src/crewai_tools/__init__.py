@@ -23,6 +23,8 @@ from .tools import (
     MySQLSearchTool,
     NL2SQLTool,
     PatronusEvalTool,
+    PatronusLocalEvaluatorTool,
+    PatronusPredefinedCriteriaEvalTool,
     PDFSearchTool,
     PGSearchTool,
     RagTool,
