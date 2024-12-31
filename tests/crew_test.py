@@ -642,9 +642,10 @@ def test_task_tools_override_agent_tools():
     crew.kickoff()
 
     # Verify task tools override agent tools
-    assert len(task.tools) == 1  # AnotherTestTool
-    assert any(isinstance(tool, AnotherTestTool) for tool in task.tools)
-    assert not any(isinstance(tool, TestTool) for tool in task.tools)
+    tools = task.tools or []
+    assert len(tools) == 1  # AnotherTestTool
+    assert any(isinstance(tool, AnotherTestTool) for tool in tools)
+    assert not any(isinstance(tool, TestTool) for tool in tools)
 
     # Verify agent tools remain unchanged
     assert len(new_researcher.tools) == 1
