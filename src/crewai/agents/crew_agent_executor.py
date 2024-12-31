@@ -147,7 +147,8 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
                         # Directly append the result to the messages if the
                         # tool is "Add image to content" in case of multimodal
                         # agents
-                        if formatted_answer.tool == self._i18n.tools("add_image")["name"]:
+                        add_image_tool_name = self._i18n.tools("add_image")
+                        if add_image_tool_name and formatted_answer.tool == add_image_tool_name:
                             self.messages.append(tool_result.result)
                             continue
 
@@ -214,13 +215,14 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
         if self.agent.verbose or (
             hasattr(self, "crew") and getattr(self.crew, "verbose", False)
         ):
-            agent_role = self.agent.role.split("\n")[0]
+            agent_role = self.agent.role.split("\n")[0] if self.agent and self.agent.role else ""
             self._printer.print(
                 content=f"\033[1m\033[95m# Agent:\033[00m \033[1m\033[92m{agent_role}\033[00m"
             )
-            self._printer.print(
-                content=f"\033[95m## Task:\033[00m \033[92m{self.task.description}\033[00m"
-            )
+            if self.task and self.task.description:
+                self._printer.print(
+                    content=f"\033[95m## Task:\033[00m \033[92m{self.task.description}\033[00m"
+                )
 
     def _show_logs(self, formatted_answer: Union[AgentAction, AgentFinish]):
         if self.agent is None:
@@ -228,7 +230,7 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
         if self.agent.verbose or (
             hasattr(self, "crew") and getattr(self.crew, "verbose", False)
         ):
-            agent_role = self.agent.role.split("\n")[0]
+            agent_role = self.agent.role.split("\n")[0] if self.agent and self.agent.role else ""
             if isinstance(formatted_answer, AgentAction):
                 thought = re.sub(r"\n+", "\n", formatted_answer.thought)
                 formatted_json = json.dumps(

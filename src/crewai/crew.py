@@ -6,6 +6,8 @@ from concurrent.futures import Future
 from hashlib import md5
 from typing import Any, Callable, Dict, List, Optional, Tuple, Union
 
+from crewai.tools.base_tool import BaseTool
+
 from pydantic import (
     UUID4,
     BaseModel,
@@ -728,7 +730,7 @@ class Crew(BaseModel):
             tools_for_task = task.tools or agent_to_use.tools or []
             tools_for_task = self._prepare_tools(agent_to_use, task, tools_for_task)
 
-            self._log_task_start(task, agent_to_use.role)
+            self._log_task_start(task, agent_to_use.role if agent_to_use and agent_to_use.role else "")
 
             if isinstance(task, ConditionalTask):
                 skipped_task_output = self._handle_conditional_task(
@@ -794,8 +796,8 @@ class Crew(BaseModel):
         return None
 
     def _prepare_tools(
-        self, agent: BaseAgent, task: Task, tools: List[Tool]
-    ) -> List[Tool]:
+        self, agent: BaseAgent, task: Task, tools: List[Union[Tool, BaseTool]]
+    ) -> List[Union[Tool, BaseTool]]:
         # Add delegation tools if agent allows delegation
         if agent.allow_delegation:
             if self.process == Process.hierarchical:
@@ -824,8 +826,8 @@ class Crew(BaseModel):
         return task.agent
 
     def _merge_tools(
-        self, existing_tools: List[Tool], new_tools: List[Tool]
-    ) -> List[Tool]:
+        self, existing_tools: List[Union[Tool, BaseTool]], new_tools: List[Union[Tool, BaseTool]]
+    ) -> List[Union[Tool, BaseTool]]:
         """Merge new tools into existing tools list, avoiding duplicates by tool name."""
         if not new_tools:
             return existing_tools

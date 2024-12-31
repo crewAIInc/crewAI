@@ -152,7 +152,7 @@ class Agent(BaseAgent):
         self._logger = Logger(verbose=self.verbose)
         if self.max_rpm:
             self._rpm_controller = RPMController(max_rpm=self.max_rpm, logger=self._logger)
-        self._token_process = TokenProcess()
+        self._token_process = TokenProcess()  # type: ignore # Known type mismatch between utilities and agent_builder
 
     _times_executed: int = PrivateAttr(default=0)
     max_execution_time: Optional[int] = Field(

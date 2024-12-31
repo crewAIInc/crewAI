@@ -269,7 +269,9 @@ class Task(BaseModel):
     @model_validator(mode="after")
     def check_tools(self):
         """Check if the tools are set."""
-        if not self.tools and self.agent and self.agent.tools:
+        if self.agent and self.agent.tools:
+            if self.tools is None:
+                self.tools = []
             self.tools.extend(self.agent.tools)
         return self
 
@@ -348,7 +350,8 @@ class Task(BaseModel):
         self.prompt_context = context
         tools = tools or self.tools or []
 
-        self.processed_by_agents.add(agent.role)
+        if agent and agent.role:
+            self.processed_by_agents.add(agent.role)
 
         result = agent.execute_task(
             task=self,

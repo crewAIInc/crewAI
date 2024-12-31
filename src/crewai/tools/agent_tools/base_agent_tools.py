@@ -19,13 +19,13 @@ class BaseAgentTool(BaseTool):
         default_factory=I18N, description="Internationalization settings"
     )
 
-    def sanitize_agent_name(self, name: str) -> str:
+    def sanitize_agent_name(self, name: Optional[str]) -> str:
         """
         Sanitize agent role name by normalizing whitespace and setting to lowercase.
         Converts all whitespace (including newlines) to single spaces and removes quotes.
 
         Args:
-            name (str): The agent role name to sanitize
+            name (Optional[str]): The agent role name to sanitize
 
         Returns:
             str: The sanitized agent role name, with whitespace normalized,

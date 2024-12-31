@@ -82,16 +82,17 @@ class CrewAgentExecutorMixin:
                 )
                 self.crew._long_term_memory.save(long_term_memory)
 
-                for entity in evaluation.entities:
-                    entity_memory = EntityMemoryItem(
-                        name=entity.name,
-                        type=entity.type,
-                        description=entity.description,
-                        relationships="\n".join(
-                            [f"- {r}" for r in entity.relationships]
-                        ),
-                    )
-                    self.crew._entity_memory.save(entity_memory)
+                if hasattr(evaluation, 'entities') and evaluation.entities:
+                    for entity in evaluation.entities:
+                        entity_memory = EntityMemoryItem(
+                            name=entity.name,
+                            type=entity.type,
+                            description=entity.description,
+                            relationships="\n".join(
+                                [f"- {r}" for r in entity.relationships]
+                            ),
+                        )
+                        self.crew._entity_memory.save(entity_memory)
             except AttributeError as e:
                 print(f"Missing attributes for long term memory: {e}")
                 pass
