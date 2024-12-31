@@ -35,7 +35,7 @@ class PatronusLocalEvaluatorTool(BaseTool):
 
     def __init__(self, patronus_client: Client, evaluator: str, evaluated_model_gold_answer: str, **kwargs: Any):
         super().__init__(**kwargs)
-        self.client = patronus_client #Client()
+        self.client = patronus_client
         if evaluator:
             self.evaluator = evaluator
             self.evaluated_model_gold_answer = evaluated_model_gold_answer
@@ -54,12 +54,8 @@ class PatronusLocalEvaluatorTool(BaseTool):
         evaluated_model_retrieved_context = kwargs.get(
             "evaluated_model_retrieved_context"
         )
-        evaluated_model_gold_answer = kwargs.get("evaluated_model_gold_answer")
-        # evaluated_model_gold_answer = self.evaluated_model_gold_answer
+        evaluated_model_gold_answer = self.evaluated_model_gold_answer
         evaluator = self.evaluator
-
-        print(kwargs)
-        print(self.evaluator)
 
         result = self.client.evaluate(
             evaluator=evaluator,
