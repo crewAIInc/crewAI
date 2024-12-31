@@ -300,7 +300,7 @@ def add_edges(
                             else:
                                 edge_smooth = {"type": "cubicBezier"}
                         else:
-                            edge_smooth = False
+                            edge_smooth: Dict[str, Union[str, float]] = {"type": "continuous"}
 
                         edge_style = {
                             "color": colors["router_edge"],

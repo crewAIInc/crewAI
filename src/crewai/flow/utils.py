@@ -117,9 +117,9 @@ def calculate_node_levels(flow: Any) -> Dict[str, int]:
     - Handles both OR and AND conditions for listeners
     - Processes router paths separately
     """
-    levels = {}
-    queue = []
-    visited = set()
+    levels: Dict[str, int] = {}
+    queue: List[str] = []
+    visited: Set[str] = set()
     pending_and_listeners: Dict[str, Set[str]] = {}
 
     # Make all start methods at level 0
@@ -315,7 +315,7 @@ def build_parent_children_dict(flow: Any) -> Dict[str, List[str]]:
     - Maps router methods to their paths and listeners
     - Children lists are sorted for consistent ordering
     """
-    parent_children = {}
+    parent_children: Dict[str, List[str]] = {}
 
     # Map listeners to their trigger methods
     for listener_name, (_, trigger_methods) in flow._listeners.items():
