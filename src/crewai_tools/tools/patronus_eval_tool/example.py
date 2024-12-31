@@ -1,30 +1,42 @@
 from crewai import Agent, Crew, Task
 from patronus_eval_tool import (
     PatronusEvalTool,
-    PatronusPredifinedCriteriaEvalTool,
+)
+from patronus_local_evaluator_tool import (
     PatronusLocalEvaluatorTool,
 )
-from patronus import Client, EvaluationResult
-
-# Test the PatronusEvalTool where agent can pick the best evaluator and criteria
-patronus_eval_tool = PatronusEvalTool()
-
-# Test the PatronusPredifinedCriteriaEvalTool where agent uses the defined evaluator and criteria
-patronus_eval_tool = PatronusPredifinedCriteriaEvalTool(
-    evaluators=[{"evaluator": "judge", "criteria": "contains-code"}]
+from patronus_predefined_criteria_eval_tool import (
+    PatronusPredefinedCriteriaEvalTool,
 )
+from patronus import Client, EvaluationResult
+import random
+
 
 # Test the PatronusLocalEvaluatorTool where agent uses the local evaluator
 client = Client()
 
-@client.register_local_evaluator("local_evaluator_name")
+# Example of an evaluator that returns a random pass/fail result
+@client.register_local_evaluator("random_evaluator")
 def my_evaluator(**kwargs):
-    return EvaluationResult(pass_="PASS", score=0.5, explanation="Explanation test")
+    score = random.random()
+    return EvaluationResult(
+      score_raw=score,
+      pass_=score >= 0.5,
+      explanation="example explanation" # Optional justification for LLM judges
+    )
 
+# 1. Uses PatronusEvalTool: agent can pick the best evaluator and criteria
+# patronus_eval_tool = PatronusEvalTool()
+
+# 2. Uses PatronusPredefinedCriteriaEvalTool: agent uses the defined evaluator and criteria
+# patronus_eval_tool = PatronusPredefinedCriteriaEvalTool(
+#     evaluators=[{"evaluator": "judge", "criteria": "contains-code"}]
+# )
+
+# 3. Uses PatronusLocalEvaluatorTool: agent uses user defined evaluator
 patronus_eval_tool = PatronusLocalEvaluatorTool(
-    evaluator="local_evaluator_name", evaluated_model_gold_answer="test"
+    evaluator="random_evaluator", evaluated_model_gold_answer="example label"
 )
-
 
 # Create a new agent
 coding_agent = Agent(
