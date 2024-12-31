@@ -1,3 +1,4 @@
+import warnings
 from typing import Any, Optional, Type
 
 
@@ -25,9 +26,10 @@ class InternalInstructor:
         if self.agent and not self.llm:
             self.llm = self.agent.function_calling_llm or self.agent.llm
 
-        # Lazy import
-        import instructor
-        from litellm import completion
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore", UserWarning)
+            import instructor
+            from litellm import completion
 
         self._client = instructor.from_litellm(
             completion,

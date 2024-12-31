@@ -727,11 +727,7 @@ class Crew(BaseModel):
 
             # Determine which tools to use - task tools take precedence over agent tools
             tools_for_task = task.tools or agent_to_use.tools or []
-            tools_for_task = self._prepare_tools(
-                agent_to_use,
-                task,
-                tools_for_task
-            )
+            tools_for_task = self._prepare_tools(agent_to_use, task, tools_for_task)
 
             self._log_task_start(task, agent_to_use.role)
 
@@ -798,14 +794,18 @@ class Crew(BaseModel):
             return skipped_task_output
         return None
 
-    def _prepare_tools(self, agent: BaseAgent, task: Task, tools: List[Tool]) -> List[Tool]:
+    def _prepare_tools(
+        self, agent: BaseAgent, task: Task, tools: List[Tool]
+    ) -> List[Tool]:
         # Add delegation tools if agent allows delegation
         if agent.allow_delegation:
             if self.process == Process.hierarchical:
                 if self.manager_agent:
                     tools = self._update_manager_tools(task, tools)
                 else:
-                    raise ValueError("Manager agent is required for hierarchical process.")
+                    raise ValueError(
+                        "Manager agent is required for hierarchical process."
+                    )
 
             elif agent and agent.allow_delegation:
                 tools = self._add_delegation_tools(task, tools)
@@ -824,7 +824,9 @@ class Crew(BaseModel):
             return self.manager_agent
         return task.agent
 
-    def _merge_tools(self, existing_tools: List[Tool], new_tools: List[Tool]) -> List[Tool]:
+    def _merge_tools(
+        self, existing_tools: List[Tool], new_tools: List[Tool]
+    ) -> List[Tool]:
         """Merge new tools into existing tools list, avoiding duplicates by tool name."""
         if not new_tools:
             return existing_tools
@@ -840,7 +842,9 @@ class Crew(BaseModel):
 
         return tools
 
-    def _inject_delegation_tools(self, tools: List[Tool], task_agent: BaseAgent, agents: List[BaseAgent]):
+    def _inject_delegation_tools(
+        self, tools: List[Tool], task_agent: BaseAgent, agents: List[BaseAgent]
+    ):
         delegation_tools = task_agent.get_delegation_tools(agents)
         return self._merge_tools(tools, delegation_tools)
 
@@ -857,7 +861,9 @@ class Crew(BaseModel):
         if len(self.agents) > 1 and len(agents_for_delegation) > 0 and task.agent:
             if not tools:
                 tools = []
-            tools = self._inject_delegation_tools(tools, task.agent, agents_for_delegation)
+            tools = self._inject_delegation_tools(
+                tools, task.agent, agents_for_delegation
+            )
         return tools
 
     def _log_task_start(self, task: Task, role: str = "None"):
@@ -871,7 +877,9 @@ class Crew(BaseModel):
             if task.agent:
                 tools = self._inject_delegation_tools(tools, task.agent, [task.agent])
             else:
-                tools = self._inject_delegation_tools(tools, self.manager_agent, self.agents)
+                tools = self._inject_delegation_tools(
+                    tools, self.manager_agent, self.agents
+                )
         return tools
 
     def _get_context(self, task: Task, task_outputs: List[TaskOutput]):

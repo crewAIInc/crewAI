@@ -6,8 +6,10 @@ import warnings
 from contextlib import contextmanager
 from typing import Any, Dict, List, Optional, Union
 
-import litellm
-from litellm import get_supported_openai_params
+with warnings.catch_warnings():
+    warnings.simplefilter("ignore", UserWarning)
+    import litellm
+    from litellm import get_supported_openai_params
 
 from crewai.utilities.exceptions.context_window_exceeding_exception import (
     LLMContextLengthExceededException,
@@ -138,7 +140,7 @@ class LLM:
         self.kwargs = kwargs
 
         litellm.drop_params = True
-        litellm.set_verbose = False
+
         self.set_callbacks(callbacks)
         self.set_env_callbacks()
 
