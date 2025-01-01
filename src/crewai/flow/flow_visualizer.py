@@ -106,7 +106,12 @@ class FlowPlot:
 
             # Add nodes to the network
             try:
-                add_nodes_to_network(net, self.flow, node_positions, self.node_styles)
+                add_nodes_to_network(
+                    net,
+                    flow=self.flow,
+                    pos=node_positions,
+                    node_styles=self.node_styles
+                )
             except Exception as e:
                 raise RuntimeError(f"Failed to add nodes to network: {str(e)}")
 

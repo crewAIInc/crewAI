@@ -1,5 +1,5 @@
 import json
-from typing import Any, Dict, Optional
+from typing import Any, Callable, Dict, Optional, Union
 
 from pydantic import BaseModel, Field
 
@@ -23,14 +23,25 @@ class CrewOutput(BaseModel):
     )
     token_usage: UsageMetrics = Field(description="Processed token summary", default={})
 
-    @property
-    def json(self) -> Optional[str]:
+    def json(
+        self,
+        *,
+        include: Union[set[str], None] = None,
+        exclude: Union[set[str], None] = None,
+        by_alias: bool = False,
+        exclude_unset: bool = False,
+        exclude_defaults: bool = False,
+        exclude_none: bool = False,
+        encoder: Optional[Callable[[Any], Any]] = None,
+        models_as_dict: bool = True,
+        **dumps_kwargs: Any,
+    ) -> str:
         if self.tasks_output[-1].output_format != OutputFormat.JSON:
             raise ValueError(
                 "No JSON output found in the final task. Please make sure to set the output_json property in the final task in your crew."
             )
 
-        return json.dumps(self.json_dict)
+        return json.dumps(self.json_dict, default=encoder, **dumps_kwargs)
 
     def to_dict(self) -> Dict[str, Any]:
         """Convert json_output and pydantic_output to a dictionary."""

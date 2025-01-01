@@ -142,7 +142,12 @@ class CrewStructuredTool:
 
         # Create model
         schema_name = f"{name.title()}Schema"
-        return create_model(schema_name, **fields)
+        return create_model(
+            schema_name,
+            __base__=BaseModel,
+            __config__=None,
+            **{k: v for k, v in fields.items()}
+        )
 
     def _validate_function_signature(self) -> None:
         """Validate that the function signature matches the args schema."""
@@ -170,7 +175,7 @@ class CrewStructuredTool:
                         f"not found in args_schema"
                     )
 
-    def _parse_args(self, raw_args: Union[str, dict]) -> dict:
+    def _parse_args(self, raw_args: Union[str, dict[str, Any]]) -> dict[str, Any]:
         """Parse and validate the input arguments against the schema.
 
         Args:
@@ -178,6 +183,9 @@ class CrewStructuredTool:
 
         Returns:
             The validated arguments as a dictionary
+
+        Raises:
+            ValueError: If the arguments cannot be parsed or fail validation
         """
         if isinstance(raw_args, str):
             try:
@@ -195,8 +203,8 @@ class CrewStructuredTool:
 
     async def ainvoke(
         self,
-        input: Union[str, dict],
-        config: Optional[dict] = None,
+        input: Union[str, dict[str, Any]],
+        config: Optional[dict[str, Any]] = None,
         **kwargs: Any,
     ) -> Any:
         """Asynchronously invoke the tool.
@@ -229,7 +237,10 @@ class CrewStructuredTool:
         return self.invoke(input_dict)
 
     def invoke(
-        self, input: Union[str, dict], config: Optional[dict] = None, **kwargs: Any
+        self,
+        input: Union[str, dict[str, Any]],
+        config: Optional[dict[str, Any]] = None,
+        **kwargs: Any
     ) -> Any:
         """Main method for tool execution."""
         parsed_args = self._parse_args(input)

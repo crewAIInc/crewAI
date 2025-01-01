@@ -1,5 +1,5 @@
 import json
-from typing import Any, Dict, Optional
+from typing import Any, Callable, Dict, Optional, Union
 
 from pydantic import BaseModel, Field, model_validator
 
@@ -34,8 +34,19 @@ class TaskOutput(BaseModel):
         self.summary = f"{excerpt}..."
         return self
 
-    @property
-    def json(self) -> Optional[str]:
+    def json(
+        self,
+        *,
+        include: Union[set[str], None] = None,
+        exclude: Union[set[str], None] = None,
+        by_alias: bool = False,
+        exclude_unset: bool = False,
+        exclude_defaults: bool = False,
+        exclude_none: bool = False,
+        encoder: Optional[Callable[[Any], Any]] = None,
+        models_as_dict: bool = True,
+        **dumps_kwargs: Any,
+    ) -> str:
         if self.output_format != OutputFormat.JSON:
             raise ValueError(
                 """
@@ -45,7 +56,7 @@ class TaskOutput(BaseModel):
                 """
             )
 
-        return json.dumps(self.json_dict)
+        return json.dumps(self.json_dict, default=encoder, **dumps_kwargs)
 
     def to_dict(self) -> Dict[str, Any]:
         """Convert json_output and pydantic_output to a dictionary."""

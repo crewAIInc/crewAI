@@ -5,6 +5,7 @@ from pathlib import Path
 
 import click
 import requests
+from typing import Any
 
 from crewai.cli.constants import JSON_URL, MODELS, PROVIDERS
 
@@ -192,7 +193,7 @@ def download_data(response):
     data_chunks = []
     with click.progressbar(
         length=total_size, label="Downloading", show_pos=True
-    ) as progress_bar:
+    ) as progress_bar:  # type: Any
         for chunk in response.iter_content(block_size):
             if chunk:
                 data_chunks.append(chunk)
