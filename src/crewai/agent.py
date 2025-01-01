@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import os
 import shutil
 import subprocess
@@ -21,11 +23,11 @@ from crewai.tools.base_tool import Tool
 from crewai.utilities import Converter, Prompts
 from crewai.utilities.constants import TRAINED_AGENTS_DATA_FILE, TRAINING_DATA_FILE
 from crewai.utilities.converter import generate_model_description
-from crewai.utilities.token_counter_callback import TokenCalcHandler
-from crewai.utilities.training_handler import CrewTrainingHandler
 from crewai.utilities.logger import Logger
 from crewai.utilities.rpm_controller import RPMController
-from crewai.utilities.token_process import TokenProcess
+from crewai.agents.agent_builder.utilities.base_token_process import TokenProcess
+from crewai.utilities.token_counter_callback import TokenCalcHandler
+from crewai.utilities.training_handler import CrewTrainingHandler
 
 agentops = None
 
@@ -132,7 +134,6 @@ class Agent(BaseAgent):
             "verbose": verbose,
             "max_rpm": max_rpm,
             "tools": processed_tools,
-            "llm": processed_llm,
             "max_iter": max_iter if max_iter is not None else 25,
             "function_calling_llm": function_calling_llm,
             "step_callback": step_callback,
@@ -148,11 +149,14 @@ class Agent(BaseAgent):
         self._original_goal = goal
         self._original_backstory = backstory
         
+        # Set LLM after base initialization to ensure proper model handling
+        self.llm = processed_llm
+        
         # Initialize private attributes
         self._logger = Logger(verbose=self.verbose)
         if self.max_rpm:
             self._rpm_controller = RPMController(max_rpm=self.max_rpm, logger=self._logger)
-        self._token_process = TokenProcess()  # type: ignore # Known type mismatch between utilities and agent_builder
+        self._token_process = TokenProcess()
 
     _times_executed: int = PrivateAttr(default=0)
     max_execution_time: Optional[int] = Field(
@@ -530,6 +534,32 @@ class Agent(BaseAgent):
                 self.response_template.split("{{ .Response }}")[1].strip()
             )
 
+        # Ensure LLM is initialized with proper error handling
+        try:
+            if not self.llm:
+                self.llm = LLM(model="gpt-4")
+                if hasattr(self, '_logger'):
+                    self._logger.debug("Initialized default LLM with gpt-4 model")
+        except Exception as e:
+            if hasattr(self, '_logger'):
+                self._logger.error(f"Failed to initialize LLM: {str(e)}")
+            raise
+
+        # Create token callback with proper error handling
+        try:
+            token_callback = None
+            if hasattr(self, '_token_process'):
+                token_callback = TokenCalcHandler(self._token_process)
+        except Exception as e:
+            if hasattr(self, '_logger'):
+                self._logger.warning(f"Failed to create token callback: {str(e)}")
+            token_callback = None
+
+        # Initialize callbacks list
+        executor_callbacks = []
+        if token_callback:
+            executor_callbacks.append(token_callback)
+
         self.agent_executor = CrewAgentExecutor(
             llm=self.llm,
             task=task,
@@ -547,9 +577,9 @@ class Agent(BaseAgent):
             function_calling_llm=self.function_calling_llm,
             respect_context_window=self.respect_context_window,
             request_within_rpm_limit=(
-                self._rpm_controller.check_or_wait if self._rpm_controller else None
+                self._rpm_controller.check_or_wait if (hasattr(self, '_rpm_controller') and self._rpm_controller is not None) else None
             ),
-            callbacks=[TokenCalcHandler(self._token_process)],
+            callbacks=executor_callbacks,
         )
 
     def get_delegation_tools(self, agents: List[BaseAgent]):

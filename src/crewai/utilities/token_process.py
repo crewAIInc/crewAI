@@ -1,44 +1,63 @@
 """Token processing utility for tracking and managing token usage."""
+from __future__ import annotations
+
+from typing import Any, Dict, List, Optional, Union
 
 from crewai.types.usage_metrics import UsageMetrics
+
 
 class TokenProcess:
     """Handles token processing and tracking for agents."""
     
     def __init__(self):
         """Initialize the token processor."""
-        self._token_count = 0
-        self._last_tokens = 0
+        self._total_tokens = 0
+        self._prompt_tokens = 0
+        self._completion_tokens = 0
+        self._cached_prompt_tokens = 0
+        self._successful_requests = 0
     
-    def update_token_count(self, count: int) -> None:
-        """Update the token count.
+    def sum_prompt_tokens(self, count: int) -> None:
+        """Add to prompt token count.
         
         Args:
-            count (int): Number of tokens to add to the count
+            count (int): Number of prompt tokens to add
         """
-        self._token_count += count
-        self._last_tokens = count
+        self._prompt_tokens += count
+        self._total_tokens += count
     
-    def get_token_count(self) -> int:
-        """Get the total token count.
+    def sum_completion_tokens(self, count: int) -> None:
+        """Add to completion token count.
         
-        Returns:
-            int: Total number of tokens processed
+        Args:
+            count (int): Number of completion tokens to add
         """
-        return self._token_count
+        self._completion_tokens += count
+        self._total_tokens += count
     
-    def get_last_tokens(self) -> int:
-        """Get the number of tokens from the last update.
+    def sum_cached_prompt_tokens(self, count: int) -> None:
+        """Add to cached prompt token count.
         
-        Returns:
-            int: Number of tokens from last update
+        Args:
+            count (int): Number of cached prompt tokens to add
         """
-        return self._last_tokens
+        self._cached_prompt_tokens += count
+    
+    def sum_successful_requests(self, count: int) -> None:
+        """Add to successful requests count.
+        
+        Args:
+            count (int): Number of successful requests to add
+        """
+        self._successful_requests += count
     
     def reset(self) -> None:
-        """Reset the token counts to zero."""
-        self._token_count = 0
-        self._last_tokens = 0
+        """Reset all token counts to zero."""
+        self._total_tokens = 0
+        self._prompt_tokens = 0
+        self._completion_tokens = 0
+        self._cached_prompt_tokens = 0
+        self._successful_requests = 0
         
     def get_summary(self) -> UsageMetrics:
         """Get a summary of token usage.
@@ -47,9 +66,9 @@ class TokenProcess:
             UsageMetrics: Object containing token usage metrics
         """
         return UsageMetrics(
-            total_tokens=self._token_count,
-            prompt_tokens=0,  # These will be set by the LLM handler
-            cached_prompt_tokens=0,
-            completion_tokens=self._last_tokens,
-            successful_requests=1 if self._token_count > 0 else 0
+            total_tokens=self._total_tokens,
+            prompt_tokens=self._prompt_tokens,
+            cached_prompt_tokens=self._cached_prompt_tokens,
+            completion_tokens=self._completion_tokens,
+            successful_requests=self._successful_requests
         )
