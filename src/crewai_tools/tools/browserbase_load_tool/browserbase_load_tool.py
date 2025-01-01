@@ -1,5 +1,5 @@
-from typing import Any, Optional, Type
 import os
+from typing import Any, Optional, Type
 from pydantic import BaseModel, Field
 
 from crewai_tools.tools.base_tool import BaseTool
@@ -32,6 +32,8 @@ class BrowserbaseLoadTool(BaseTool):
         **kwargs,
     ):
         super().__init__(**kwargs)
+        if not self.api_key:
+            raise EnvironmentError("BROWSERBASE_API_KEY environment variable is required for initialization")
         try:
             from browserbase import Browserbase  # type: ignore
         except ImportError:
