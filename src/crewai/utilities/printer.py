@@ -1,7 +1,11 @@
+"""Utility for colored console output."""
+
 from typing import Optional
 
 
 class Printer:
+    """Handles colored console output formatting."""
+
     def print(self, content: str, color: Optional[str] = None):
         if color == "purple":
             self._print_purple(content)

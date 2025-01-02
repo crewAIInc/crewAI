@@ -7,10 +7,11 @@ from pydantic import BaseModel, Field
 from crewai.agent import Agent
 from crewai.task import Task
 
+"""Handles planning and coordination of crew tasks."""
 logger = logging.getLogger(__name__)
 
-
 class PlanPerTask(BaseModel):
+    """Represents a plan for a specific task."""
     task: str = Field(..., description="The task for which the plan is created")
     plan: str = Field(
         ...,
@@ -19,6 +20,7 @@ class PlanPerTask(BaseModel):
 
 
 class PlannerTaskPydanticOutput(BaseModel):
+    """Output format for task planning results."""
     list_of_plans_per_task: List[PlanPerTask] = Field(
         ...,
         description="Step by step plan on how the agents can execute their tasks using the available tools with mastery",
@@ -26,6 +28,7 @@ class PlannerTaskPydanticOutput(BaseModel):
 
 
 class CrewPlanner:
+    """Plans and coordinates the execution of crew tasks."""
     def __init__(self, tasks: List[Task], planning_agent_llm: Optional[Any] = None):
         self.tasks = tasks
 
