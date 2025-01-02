@@ -1,5 +1,5 @@
 import secrets
-from typing import Dict, Optional, Text, Type
+from typing import Any, Dict, List, Optional, Text, Type
 
 from crewai.tools import BaseTool
 from openai import OpenAI
@@ -23,13 +23,13 @@ class AIMindTool(BaseTool):
     )
     args_schema: Type[BaseModel] = AIMindInputSchema
     api_key: Optional[str] = None
-    datasources: Optional[Dict] = None
+    datasources: Optional[List[Dict[str, Any]]] = None
     mind_name: Optional[Text] = None
 
     def __init__(self, api_key: Optional[Text] = None, **kwargs):
-        super().__init__(**kwargs)
+        super().__init__(api_key=api_key, **kwargs)
         try:
-            from minds_sdk import Client  # type: ignore
+            from minds.client import Client  # type: ignore
             from minds.datasources import DatabaseConfig  # type: ignore
         except ImportError:
             raise ImportError(
@@ -41,15 +41,14 @@ class AIMindTool(BaseTool):
         # Convert the datasources to DatabaseConfig objects.
         datasources = []
         for datasource in self.datasources:
-            if datasource["type"] == "database":
-                config = DatabaseConfig(
-                    name=datasource["name"],
-                    engine=datasource["engine"],
-                    description=datasource["description"],
-                    connection_data=datasource["connection_data"],
-                    tables=datasource["tables"],
-                )
-                datasources.append(config)
+            config = DatabaseConfig(
+                name=f"cai_ds_{secrets.token_hex(5)}",
+                engine=datasource["engine"],
+                description=datasource["description"],
+                connection_data=datasource["connection_data"],
+                tables=datasource["tables"],
+            )
+            datasources.append(config)
 
         # Generate a random name for the Mind.
         name = f"cai_mind_{secrets.token_hex(5)}"
@@ -68,7 +67,7 @@ class AIMindTool(BaseTool):
         # The Minds API is OpenAI compatible and therefore, the OpenAI client can be used.
         openai_client = OpenAI(base_url="https://mdb.ai/", api_key=self.api_key)
 
-        completion = openai_client.create(
+        completion = openai_client.chat.completions.create(
             model=self.mind_name,
             messages=[{"role": "user", "content": query}],
             stream=False,
