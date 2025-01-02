@@ -940,6 +940,7 @@ def test_sequential_async_task_execution_completion():
     )
 
 
+@pytest.mark.timeout(60)
 @pytest.mark.vcr(filter_headers=["authorization"])
 def test_single_task_with_async_execution():
     researcher_agent = Agent(
@@ -968,6 +969,7 @@ def test_single_task_with_async_execution():
     )
 
 
+@pytest.mark.timeout(60)
 @pytest.mark.vcr(filter_headers=["authorization"])
 def test_three_task_with_async_execution():
     researcher_agent = Agent(
@@ -1013,7 +1015,7 @@ def test_three_task_with_async_execution():
     )
 
 
-@pytest.mark.vcr(filter_headers=["authorization"])
+@pytest.mark.timeout(60)
 @pytest.mark.asyncio
 async def test_crew_async_kickoff():
     inputs = [
@@ -1061,7 +1063,7 @@ async def test_crew_async_kickoff():
             assert result[0].token_usage.successful_requests > 0  # type: ignore
 
 
-@pytest.mark.vcr(filter_headers=["authorization"])
+@pytest.mark.timeout(60)
 def test_async_task_execution_call_count():
     from unittest.mock import MagicMock, patch
 
@@ -1117,7 +1119,7 @@ def test_async_task_execution_call_count():
         assert mock_execute_sync.call_count == 1
 
 
-@pytest.mark.vcr(filter_headers=["authorization"])
+@pytest.mark.timeout(60)
 def test_kickoff_for_each_single_input():
     """Tests if kickoff_for_each works with a single input."""
 
@@ -1141,7 +1143,7 @@ def test_kickoff_for_each_single_input():
     assert len(results) == 1
 
 
-@pytest.mark.vcr(filter_headers=["authorization"])
+@pytest.mark.timeout(60)
 def test_kickoff_for_each_multiple_inputs():
     """Tests if kickoff_for_each works with multiple inputs."""
 
@@ -1169,7 +1171,7 @@ def test_kickoff_for_each_multiple_inputs():
     assert len(results) == len(inputs)
 
 
-@pytest.mark.vcr(filter_headers=["authorization"])
+@pytest.mark.timeout(60)
 def test_kickoff_for_each_empty_input():
     """Tests if kickoff_for_each handles an empty input list."""
     agent = Agent(
@@ -1189,7 +1191,7 @@ def test_kickoff_for_each_empty_input():
     assert results == []
 
 
-@pytest.mark.vcr(filter_headers=["authorization"])
+@pytest.mark.timeout(60)
 def test_kickoff_for_each_invalid_input():
     """Tests if kickoff_for_each raises TypeError for invalid input types."""
 
@@ -1212,7 +1214,7 @@ def test_kickoff_for_each_invalid_input():
         crew.kickoff_for_each("invalid input")
 
 
-@pytest.mark.vcr(filter_headers=["authorization"])
+@pytest.mark.timeout(60)
 def test_kickoff_for_each_error_handling():
     """Tests error handling in kickoff_for_each when kickoff raises an error."""
     from unittest.mock import patch
@@ -1249,7 +1251,7 @@ def test_kickoff_for_each_error_handling():
             crew.kickoff_for_each(inputs=inputs)
 
 
-@pytest.mark.vcr(filter_headers=["authorization"])
+@pytest.mark.timeout(60)
 @pytest.mark.asyncio
 async def test_kickoff_async_basic_functionality_and_output():
     """Tests the basic functionality and output of kickoff_async."""
@@ -1284,7 +1286,7 @@ async def test_kickoff_async_basic_functionality_and_output():
         mock_kickoff.assert_called_once_with(inputs)
 
 
-@pytest.mark.vcr(filter_headers=["authorization"])
+@pytest.mark.timeout(60)
 @pytest.mark.asyncio
 async def test_async_kickoff_for_each_async_basic_functionality_and_output():
     """Tests the basic functionality and output of kickoff_for_each_async."""
@@ -1331,7 +1333,7 @@ async def test_async_kickoff_for_each_async_basic_functionality_and_output():
             mock_kickoff_async.assert_any_call(inputs=input_data)
 
 
-@pytest.mark.vcr(filter_headers=["authorization"])
+@pytest.mark.timeout(60)
 @pytest.mark.asyncio
 async def test_async_kickoff_for_each_async_empty_input():
     """Tests if akickoff_for_each_async handles an empty input list."""
@@ -1361,6 +1363,7 @@ async def test_async_kickoff_for_each_async_empty_input():
     assert results == [], "Result should be an empty list when input is empty"
 
 
+@pytest.mark.timeout(60)
 def test_set_agents_step_callback():
     from unittest.mock import patch
 
