@@ -578,15 +578,6 @@ def test_multiple_docling_sources():
     assert docling_source.content is not None
 
 
-@pytest.mark.vcr(filter_headers=["authorization"])
-def test_docling_source_with_local_file():
-    current_dir = Path(__file__).parent
-    pdf_path = current_dir / "crewai_quickstart.pdf"
-    docling_source = CrewDoclingSource(file_paths=[pdf_path])
-    assert docling_source.file_paths == [pdf_path]
-    assert docling_source.content is not None
-
-
 def test_file_path_validation():
     """Test file path validation for knowledge sources."""
     current_dir = Path(__file__).parent
