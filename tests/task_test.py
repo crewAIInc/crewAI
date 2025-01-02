@@ -216,6 +216,7 @@ def test_multiple_output_type_error():
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
+@pytest.mark.timeout(60)
 def test_output_pydantic_sequential():
     class ScoreOutput(BaseModel):
         score: int
@@ -241,6 +242,7 @@ def test_output_pydantic_sequential():
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
+@pytest.mark.timeout(60)
 def test_output_pydantic_hierarchical():
     class ScoreOutput(BaseModel):
         score: int
@@ -271,6 +273,7 @@ def test_output_pydantic_hierarchical():
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
+@pytest.mark.timeout(60)
 def test_output_json_sequential():
     class ScoreOutput(BaseModel):
         score: int
@@ -297,6 +300,7 @@ def test_output_json_sequential():
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
+@pytest.mark.timeout(60)
 def test_output_json_hierarchical():
     class ScoreOutput(BaseModel):
         score: int
@@ -327,6 +331,7 @@ def test_output_json_hierarchical():
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
+@pytest.mark.timeout(60)
 def test_json_property_without_output_json():
     class ScoreOutput(BaseModel):
         score: int
@@ -355,6 +360,7 @@ def test_json_property_without_output_json():
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
+@pytest.mark.timeout(60)
 def test_output_json_dict_sequential():
     class ScoreOutput(BaseModel):
         score: int
@@ -380,6 +386,7 @@ def test_output_json_dict_sequential():
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
+@pytest.mark.timeout(60)
 def test_output_json_dict_hierarchical():
     class ScoreOutput(BaseModel):
         score: int
@@ -410,6 +417,7 @@ def test_output_json_dict_hierarchical():
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
+@pytest.mark.timeout(60)
 def test_output_pydantic_to_another_task():
     class ScoreOutput(BaseModel):
         score: int
@@ -448,6 +456,7 @@ def test_output_pydantic_to_another_task():
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
+@pytest.mark.timeout(60)
 def test_output_json_to_another_task():
     class ScoreOutput(BaseModel):
         score: int
@@ -479,6 +488,7 @@ def test_output_json_to_another_task():
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
+@pytest.mark.timeout(60)
 def test_save_task_output():
     scorer = Agent(
         role="Scorer",
@@ -503,6 +513,7 @@ def test_save_task_output():
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
+@pytest.mark.timeout(60)
 def test_save_task_json_output():
     class ScoreOutput(BaseModel):
         score: int
@@ -533,6 +544,7 @@ def test_save_task_json_output():
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
+@pytest.mark.timeout(60)
 def test_save_task_pydantic_output():
     class ScoreOutput(BaseModel):
         score: int
@@ -563,6 +575,7 @@ def test_save_task_pydantic_output():
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
+@pytest.mark.timeout(60)
 def test_custom_converter_cls():
     class ScoreOutput(BaseModel):
         score: int
@@ -595,6 +608,7 @@ def test_custom_converter_cls():
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
+@pytest.mark.timeout(60)
 def test_increment_delegations_for_hierarchical_process():
     scorer = Agent(
         role="Scorer",
@@ -622,6 +636,7 @@ def test_increment_delegations_for_hierarchical_process():
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
+@pytest.mark.timeout(60)
 def test_increment_delegations_for_sequential_process():
     manager = Agent(
         role="Manager",
@@ -656,6 +671,7 @@ def test_increment_delegations_for_sequential_process():
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
+@pytest.mark.timeout(60)
 def test_increment_tool_errors():
     from crewai.tools import tool
 
@@ -689,6 +705,7 @@ def test_increment_tool_errors():
         assert len(increment_tools_errors.mock_calls) > 0
 
 
+@pytest.mark.timeout(60)
 def test_task_definition_based_on_dict():
     config = {
         "description": "Give me an integer score between 1-5 for the following title: 'The impact of AI in the future of work', check examples to based your evaluation.",
@@ -702,6 +719,7 @@ def test_task_definition_based_on_dict():
     assert task.agent is None
 
 
+@pytest.mark.timeout(60)
 def test_conditional_task_definition_based_on_dict():
     config = {
         "description": "Give me an integer score between 1-5 for the following title: 'The impact of AI in the future of work', check examples to based your evaluation.",
@@ -715,11 +733,12 @@ def test_conditional_task_definition_based_on_dict():
     assert task.agent is None
 
 
+@pytest.mark.timeout(60)
 def test_interpolate_inputs():
     task = Task(
         description="Give me a list of 5 interesting ideas about {topic} to explore for an article, what makes them unique and interesting.",
         expected_output="Bullet point list of 5 interesting ideas about {topic}.",
-        output_file="/tmp/{topic}/output_{date}.txt"
+        output_file="/tmp/{topic}/output_{date}.txt",
     )
 
     task.interpolate_inputs(inputs={"topic": "AI", "date": "2024"})
@@ -739,48 +758,44 @@ def test_interpolate_inputs():
     assert task.output_file == "/tmp/ML/output_2025.txt"
 
 
+@pytest.mark.timeout(60)
 def test_interpolate_only():
     """Test the interpolate_only method for various scenarios including JSON structure preservation."""
     task = Task(
-        description="Unused in this test",
-        expected_output="Unused in this test"
+        description="Unused in this test", expected_output="Unused in this test"
     )
-    
+
     # Test JSON structure preservation
     json_string = '{"info": "Look at {placeholder}", "nested": {"val": "{nestedVal}"}}'
     result = task.interpolate_only(
         input_string=json_string,
-        inputs={"placeholder": "the data", "nestedVal": "something else"}
+        inputs={"placeholder": "the data", "nestedVal": "something else"},
     )
     assert '"info": "Look at the data"' in result
     assert '"val": "something else"' in result
     assert "{placeholder}" not in result
     assert "{nestedVal}" not in result
-    
+
     # Test normal string interpolation
     normal_string = "Hello {name}, welcome to {place}!"
     result = task.interpolate_only(
-        input_string=normal_string,
-        inputs={"name": "John", "place": "CrewAI"}
+        input_string=normal_string, inputs={"name": "John", "place": "CrewAI"}
     )
     assert result == "Hello John, welcome to CrewAI!"
-    
+
     # Test empty string
-    result = task.interpolate_only(
-        input_string="",
-        inputs={"unused": "value"}
-    )
+    result = task.interpolate_only(input_string="", inputs={"unused": "value"})
     assert result == ""
-    
+
     # Test string with no placeholders
     no_placeholders = "Hello, this is a test"
     result = task.interpolate_only(
-        input_string=no_placeholders,
-        inputs={"unused": "value"}
+        input_string=no_placeholders, inputs={"unused": "value"}
     )
     assert result == no_placeholders
 
 
+@pytest.mark.timeout(60)
 def test_task_output_str_with_pydantic():
     from crewai.tasks.output_format import OutputFormat
 
@@ -798,6 +813,7 @@ def test_task_output_str_with_pydantic():
     assert str(task_output) == str(score_output)
 
 
+@pytest.mark.timeout(60)
 def test_task_output_str_with_json_dict():
     from crewai.tasks.output_format import OutputFormat
 
@@ -812,6 +828,7 @@ def test_task_output_str_with_json_dict():
     assert str(task_output) == str(json_dict)
 
 
+@pytest.mark.timeout(60)
 def test_task_output_str_with_raw():
     from crewai.tasks.output_format import OutputFormat
 
@@ -826,6 +843,7 @@ def test_task_output_str_with_raw():
     assert str(task_output) == raw_output
 
 
+@pytest.mark.timeout(60)
 def test_task_output_str_with_pydantic_and_json_dict():
     from crewai.tasks.output_format import OutputFormat
 
@@ -846,6 +864,7 @@ def test_task_output_str_with_pydantic_and_json_dict():
     assert str(task_output) == str(score_output)
 
 
+@pytest.mark.timeout(60)
 def test_task_output_str_with_none():
     from crewai.tasks.output_format import OutputFormat
 
@@ -858,6 +877,7 @@ def test_task_output_str_with_none():
     assert str(task_output) == ""
 
 
+@pytest.mark.timeout(60)
 def test_key():
     original_description = "Give me a list of 5 interesting ideas about {topic} to explore for an article, what makes them unique and interesting."
     original_expected_output = "Bullet point list of 5 interesting ideas about {topic}."
@@ -877,59 +897,69 @@ def test_key():
     ), "The key should be the hash of the non-interpolated description."
 
 
+@pytest.mark.timeout(60)
 def test_output_file_validation():
     """Test output file path validation."""
     # Valid paths
-    assert Task(
-        description="Test task",
-        expected_output="Test output",
-        output_file="output.txt"
-    ).output_file == "output.txt"
-    assert Task(
-        description="Test task",
-        expected_output="Test output",
-        output_file="/tmp/output.txt"
-    ).output_file == "tmp/output.txt"
-    assert Task(
-        description="Test task",
-        expected_output="Test output",
-        output_file="{dir}/output_{date}.txt"
-    ).output_file == "{dir}/output_{date}.txt"
-    
+    assert (
+        Task(
+            description="Test task",
+            expected_output="Test output",
+            output_file="output.txt",
+        ).output_file
+        == "output.txt"
+    )
+    assert (
+        Task(
+            description="Test task",
+            expected_output="Test output",
+            output_file="/tmp/output.txt",
+        ).output_file
+        == "tmp/output.txt"
+    )
+    assert (
+        Task(
+            description="Test task",
+            expected_output="Test output",
+            output_file="{dir}/output_{date}.txt",
+        ).output_file
+        == "{dir}/output_{date}.txt"
+    )
+
     # Invalid paths
     with pytest.raises(ValueError, match="Path traversal"):
         Task(
             description="Test task",
             expected_output="Test output",
-            output_file="../output.txt"
+            output_file="../output.txt",
         )
     with pytest.raises(ValueError, match="Path traversal"):
         Task(
             description="Test task",
             expected_output="Test output",
-            output_file="folder/../output.txt"
+            output_file="folder/../output.txt",
         )
     with pytest.raises(ValueError, match="Shell special characters"):
         Task(
             description="Test task",
             expected_output="Test output",
-            output_file="output.txt | rm -rf /"
+            output_file="output.txt | rm -rf /",
         )
     with pytest.raises(ValueError, match="Shell expansion"):
         Task(
             description="Test task",
             expected_output="Test output",
-            output_file="~/output.txt"
+            output_file="~/output.txt",
         )
     with pytest.raises(ValueError, match="Shell expansion"):
         Task(
             description="Test task",
             expected_output="Test output",
-            output_file="$HOME/output.txt"
+            output_file="$HOME/output.txt",
         )
     with pytest.raises(ValueError, match="Invalid template variable"):
         Task(
             description="Test task",
             expected_output="Test output",
-            output_file="{invalid-name}/output.txt"
+            output_file="{invalid-name}/output.txt",
         )
