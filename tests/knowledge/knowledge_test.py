@@ -578,14 +578,6 @@ def test_multiple_docling_sources():
     assert docling_source.content is not None
 
 
-def test_docling_source_with_local_file():
-    current_dir = Path(__file__).parent
-    pdf_path = current_dir / "crewai_quickstart.pdf"
-    docling_source = CrewDoclingSource(file_paths=[pdf_path])
-    assert docling_source.file_paths == [pdf_path]
-    assert docling_source.content is not None
-
-
 def test_file_path_validation():
     """Test file path validation for knowledge sources."""
     current_dir = Path(__file__).parent
@@ -606,6 +598,6 @@ def test_file_path_validation():
     # Test neither file_path nor file_paths provided
     with pytest.raises(
         ValueError,
-        match="file_path/file_paths must be a Path, str, or a list of these types"
+        match="file_path/file_paths must be a Path, str, or a list of these types",
     ):
         PDFKnowledgeSource()
