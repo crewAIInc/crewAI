@@ -59,3 +59,19 @@ class AIMindTool(BaseTool):
         )
 
         self.mind_name = mind.name
+
+    def _run(
+        self,
+        query: Text
+    ):
+        # Run the query on the AI-Mind.
+        # The Minds API is OpenAI compatible and therefore, the OpenAI client can be used.
+        openai_client = OpenAI(base_url="https://mdb.ai/", api_key=self.api_key)
+
+        completion = openai_client.create(
+            model=self.mind_name,
+            messages=[{"role": "user", "content": query}],
+            stream=False,
+        )
+
+        return completion.choices[0].message.content
