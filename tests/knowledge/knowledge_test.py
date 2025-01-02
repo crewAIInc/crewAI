@@ -6,9 +6,6 @@ from unittest.mock import patch
 
 import pytest
 
-# Attempt to import the module and skip the test if it's not available
-docling = pytest.importorskip("docling")
-
 from crewai.knowledge.source.crew_docling_source import CrewDoclingSource
 from crewai.knowledge.source.csv_knowledge_source import CSVKnowledgeSource
 from crewai.knowledge.source.excel_knowledge_source import ExcelKnowledgeSource
@@ -581,7 +578,7 @@ def test_multiple_docling_sources():
     assert docling_source.content is not None
 
 
-@pytest.mark.vcr(record_mode="new_episodes", filter_headers=["authorization"])
+@pytest.mark.vcr(filter_headers=["authorization"])
 def test_docling_source_with_local_file():
     current_dir = Path(__file__).parent
     pdf_path = current_dir / "crewai_quickstart.pdf"
