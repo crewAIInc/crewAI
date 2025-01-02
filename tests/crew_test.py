@@ -1051,6 +1051,7 @@ def test_three_task_with_async_execution():
 
 
 @pytest.mark.asyncio
+@pytest.mark.vcr(filter_headers=["authorization"])
 async def test_crew_async_kickoff():
     inputs = [
         {"topic": "dog"},
@@ -1098,6 +1099,7 @@ async def test_crew_async_kickoff():
 
 
 @pytest.mark.asyncio
+@pytest.mark.vcr(filter_headers=["authorization"])
 async def test_async_task_execution_call_count():
     from unittest.mock import MagicMock, patch
 
@@ -1153,6 +1155,7 @@ async def test_async_task_execution_call_count():
         assert mock_execute_sync.call_count == 1
 
 
+@pytest.mark.vcr(filter_headers=["authorization"])
 def test_kickoff_for_each_single_input():
     """Tests if kickoff_for_each works with a single input."""
 
@@ -1176,6 +1179,7 @@ def test_kickoff_for_each_single_input():
     assert len(results) == 1
 
 
+@pytest.mark.vcr(filter_headers=["authorization"])
 def test_kickoff_for_each_multiple_inputs():
     """Tests if kickoff_for_each works with multiple inputs."""
 
@@ -1203,6 +1207,7 @@ def test_kickoff_for_each_multiple_inputs():
     assert len(results) == len(inputs)
 
 
+@pytest.mark.vcr(filter_headers=["authorization"])
 def test_kickoff_for_each_empty_input():
     """Tests if kickoff_for_each handles an empty input list."""
     agent = Agent(
