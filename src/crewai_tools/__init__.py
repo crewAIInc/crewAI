@@ -1,4 +1,5 @@
 from .tools import (
+    AIMindTool,
     BraveSearchTool,
     BrowserbaseLoadTool,
     CodeDocsSearchTool,

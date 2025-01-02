@@ -26,7 +26,7 @@ class AIMindTool(BaseTool):
     datasources: Optional[Dict] = None
     mind_name: Optional[Text] = None
 
-    def __init__(self, api_key: Optional[str] = None, **kwargs):
+    def __init__(self, api_key: Optional[Text] = None, **kwargs):
         super().__init__(**kwargs)
         try:
             from minds_sdk import Client  # type: ignore
