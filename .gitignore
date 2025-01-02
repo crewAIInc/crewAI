@@ -21,3 +21,4 @@ crew_tasks_output.json
 .mypy_cache
 .ruff_cache
 .venv
+tests/knowledge/cassettes/test_docling_source_with_local_file.yaml
