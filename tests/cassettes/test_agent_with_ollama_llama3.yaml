@@ -14,20 +14,20 @@ interactions:
       host:
       - localhost:11434
       user-agent:
-      - litellm/1.56.4
+      - litellm/1.56.6
     method: POST
     uri: http://localhost:11434/api/generate
   response:
-    content: '{"model":"llama3.2:3b","created_at":"2024-12-31T16:57:54.063894Z","response":"I''m
-      an AI designed to provide information and assist with inquiries, while maintaining
-      a neutral and respectful tone always.","done":true,"done_reason":"stop","context":[128006,9125,128007,271,38766,1303,33025,2696,25,6790,220,2366,18,271,128009,128006,882,128007,271,14711,2724,512,66454,304,220,508,4339,13,10699,527,499,1980,128009,128006,78191,128007,271,40,2846,459,15592,6319,311,3493,2038,323,7945,449,44983,11,1418,20958,264,21277,323,49150,16630,2744,13],"total_duration":651386042,"load_duration":41061917,"prompt_eval_count":38,"prompt_eval_duration":204000000,"eval_count":23,"eval_duration":405000000}'
+    content: '{"model":"llama3.2:3b","created_at":"2025-01-02T19:54:44.918072Z","response":"I
+      am an AI designed to provide information, answer questions, and assist with
+      tasks in a neutral and informative manner.","done":true,"done_reason":"stop","context":[128006,9125,128007,271,38766,1303,33025,2696,25,6790,220,2366,18,271,128009,128006,882,128007,271,14711,2724,512,66454,304,220,508,4339,13,10699,527,499,1980,128009,128006,78191,128007,271,40,1097,459,15592,6319,311,3493,2038,11,4320,4860,11,323,7945,449,9256,304,264,21277,323,39319,11827,13],"total_duration":2612659500,"load_duration":845829750,"prompt_eval_count":38,"prompt_eval_duration":1344000000,"eval_count":24,"eval_duration":421000000}'
     headers:
       Content-Length:
-      - '692'
+      - '691'
       Content-Type:
       - application/json; charset=utf-8
       Date:
-      - Tue, 31 Dec 2024 16:57:54 GMT
+      - Thu, 02 Jan 2025 19:54:45 GMT
     http_version: HTTP/1.1
     status_code: 200
 - request:
@@ -46,7 +46,7 @@ interactions:
       host:
       - localhost:11434
       user-agent:
-      - litellm/1.56.4
+      - litellm/1.56.6
     method: POST
     uri: http://localhost:11434/api/show
   response:
@@ -440,7 +440,7 @@ interactions:
       Content-Type:
       - application/json; charset=utf-8
       Date:
-      - Tue, 31 Dec 2024 16:57:54 GMT
+      - Thu, 02 Jan 2025 19:54:45 GMT
       Transfer-Encoding:
       - chunked
     http_version: HTTP/1.1
@@ -461,7 +461,7 @@ interactions:
       host:
       - localhost:11434
       user-agent:
-      - litellm/1.56.4
+      - litellm/1.56.6
     method: POST
     uri: http://localhost:11434/api/show
   response:
@@ -855,7 +855,7 @@ interactions:
       Content-Type:
       - application/json; charset=utf-8
       Date:
-      - Tue, 31 Dec 2024 16:57:54 GMT
+      - Thu, 02 Jan 2025 19:54:45 GMT
       Transfer-Encoding:
       - chunked
     http_version: HTTP/1.1
