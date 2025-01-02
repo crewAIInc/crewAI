@@ -48,6 +48,8 @@ aimind_tool = AIMindTool(
         }
     ]
 )
+
+aimind_tool.run("How many 3 bedroom houses were sold in 2008?")
 ```
 
 The `datasources` parameter is a list of dictionaries, each containing the following keys:
