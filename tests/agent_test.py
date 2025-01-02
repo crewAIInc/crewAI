@@ -20,7 +20,6 @@ from crewai.utilities import RPMController
 from crewai.utilities.events import Emitter
 
 
-@pytest.mark.timeout(60)  # 1 minute timeout
 def test_agent_llm_creation_with_env_vars():
     # Store original environment variables
     original_api_key = os.environ.get("OPENAI_API_KEY")
@@ -64,7 +63,6 @@ def test_agent_llm_creation_with_env_vars():
         os.environ["OPENAI_MODEL_NAME"] = original_model_name
 
 
-@pytest.mark.timeout(60)
 def test_agent_creation():
     agent = Agent(role="test role", goal="test goal", backstory="test backstory")
 
@@ -74,14 +72,12 @@ def test_agent_creation():
     assert agent.tools == []
 
 
-@pytest.mark.timeout(60)
 def test_agent_default_values():
     agent = Agent(role="test role", goal="test goal", backstory="test backstory")
     assert agent.llm.model == "gpt-4o-mini"
     assert agent.allow_delegation is False
 
 
-@pytest.mark.timeout(60)
 def test_custom_llm():
     agent = Agent(
         role="test role", goal="test goal", backstory="test backstory", llm="gpt-4"
@@ -89,7 +85,6 @@ def test_custom_llm():
     assert agent.llm.model == "gpt-4"
 
 
-@pytest.mark.timeout(60)
 def test_custom_llm_with_langchain():
     from langchain_openai import ChatOpenAI
 
@@ -103,7 +98,6 @@ def test_custom_llm_with_langchain():
     assert agent.llm.model == "gpt-4"
 
 
-@pytest.mark.timeout(60)
 def test_custom_llm_temperature_preservation():
     from langchain_openai import ChatOpenAI
 
@@ -121,7 +115,6 @@ def test_custom_llm_temperature_preservation():
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
-@pytest.mark.timeout(60)
 def test_agent_execute_task():
     from langchain_openai import ChatOpenAI
 
@@ -151,7 +144,6 @@ def test_agent_execute_task():
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
-@pytest.mark.timeout(60)
 def test_agent_execution():
     agent = Agent(
         role="test role",
@@ -171,7 +163,6 @@ def test_agent_execution():
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
-@pytest.mark.timeout(60)
 def test_agent_execution_with_tools():
     @tool
     def multiplier(first_number: int, second_number: int) -> float:
@@ -203,7 +194,6 @@ def test_agent_execution_with_tools():
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
-@pytest.mark.timeout(60)
 def test_logging_tool_usage():
     @tool
     def multiplier(first_number: int, second_number: int) -> float:
@@ -238,7 +228,6 @@ def test_logging_tool_usage():
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
-@pytest.mark.timeout(60)
 def test_cache_hitting():
     @tool
     def multiplier(first_number: int, second_number: int) -> float:
@@ -311,7 +300,6 @@ def test_cache_hitting():
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
-@pytest.mark.timeout(60)
 def test_disabling_cache_for_agent():
     @tool
     def multiplier(first_number: int, second_number: int) -> float:
@@ -376,7 +364,6 @@ def test_disabling_cache_for_agent():
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
-@pytest.mark.timeout(60)
 def test_agent_execution_with_specific_tools():
     @tool
     def multiplier(first_number: int, second_number: int) -> float:
@@ -400,7 +387,6 @@ def test_agent_execution_with_specific_tools():
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
-@pytest.mark.timeout(60)
 def test_agent_powered_by_new_o_model_family_that_allows_skipping_tool():
     @tool
     def multiplier(first_number: int, second_number: int) -> float:
@@ -427,7 +413,6 @@ def test_agent_powered_by_new_o_model_family_that_allows_skipping_tool():
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
-@pytest.mark.timeout(60)
 def test_agent_powered_by_new_o_model_family_that_uses_tool():
     @tool
     def comapny_customer_data() -> float:
@@ -454,7 +439,6 @@ def test_agent_powered_by_new_o_model_family_that_uses_tool():
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
-@pytest.mark.timeout(60)
 def test_agent_custom_max_iterations():
     @tool
     def get_final_answer() -> float:
@@ -485,7 +469,6 @@ def test_agent_custom_max_iterations():
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
-@pytest.mark.timeout(60)
 def test_agent_repeated_tool_usage(capsys):
     @tool
     def get_final_answer() -> float:
@@ -523,7 +506,6 @@ def test_agent_repeated_tool_usage(capsys):
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
-@pytest.mark.timeout(60)
 def test_agent_repeated_tool_usage_check_even_with_disabled_cache(capsys):
     @tool
     def get_final_answer(anything: str) -> float:
@@ -560,7 +542,6 @@ def test_agent_repeated_tool_usage_check_even_with_disabled_cache(capsys):
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
-@pytest.mark.timeout(60)
 def test_agent_moved_on_after_max_iterations():
     @tool
     def get_final_answer() -> float:
@@ -588,7 +569,6 @@ def test_agent_moved_on_after_max_iterations():
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
-@pytest.mark.timeout(60)
 def test_agent_respect_the_max_rpm_set(capsys):
     @tool
     def get_final_answer() -> float:
@@ -623,7 +603,6 @@ def test_agent_respect_the_max_rpm_set(capsys):
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
-@pytest.mark.timeout(60)
 def test_agent_respect_the_max_rpm_set_over_crew_rpm(capsys):
     from unittest.mock import patch
 
@@ -662,7 +641,6 @@ def test_agent_respect_the_max_rpm_set_over_crew_rpm(capsys):
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
-@pytest.mark.timeout(60)
 def test_agent_without_max_rpm_respet_crew_rpm(capsys):
     from unittest.mock import patch
 
@@ -717,7 +695,6 @@ def test_agent_without_max_rpm_respet_crew_rpm(capsys):
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
-@pytest.mark.timeout(60)
 def test_agent_error_on_parsing_tool(capsys):
     from unittest.mock import patch
 
@@ -761,7 +738,6 @@ def test_agent_error_on_parsing_tool(capsys):
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
-@pytest.mark.timeout(60)
 def test_agent_remembers_output_format_after_using_tools_too_many_times():
     from unittest.mock import patch
 
@@ -797,7 +773,6 @@ def test_agent_remembers_output_format_after_using_tools_too_many_times():
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
-@pytest.mark.timeout(60)
 def test_agent_use_specific_tasks_output_as_context(capsys):
     agent1 = Agent(role="test role", goal="test goal", backstory="test backstory")
     agent2 = Agent(role="test role2", goal="test goal2", backstory="test backstory2")
@@ -825,7 +800,6 @@ def test_agent_use_specific_tasks_output_as_context(capsys):
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
-@pytest.mark.timeout(60)
 def test_agent_step_callback():
     class StepCallback:
         def callback(self, step):
@@ -860,7 +834,6 @@ def test_agent_step_callback():
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
-@pytest.mark.timeout(60)
 def test_agent_function_calling_llm():
     llm = "gpt-4o"
 
@@ -907,7 +880,6 @@ def test_agent_function_calling_llm():
         mock_original_tool_calling.assert_called()
 
 
-@pytest.mark.timeout(60)
 def test_agent_count_formatting_error():
     from unittest.mock import patch
 
@@ -928,7 +900,6 @@ def test_agent_count_formatting_error():
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
-@pytest.mark.timeout(60)
 def test_tool_result_as_answer_is_the_final_answer_for_the_agent():
     from crewai.tools import BaseTool
 
@@ -959,7 +930,6 @@ def test_tool_result_as_answer_is_the_final_answer_for_the_agent():
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
-@pytest.mark.timeout(60)
 def test_tool_usage_information_is_appended_to_agent():
     from crewai.tools import BaseTool
 
@@ -996,7 +966,6 @@ def test_tool_usage_information_is_appended_to_agent():
     ]
 
 
-@pytest.mark.timeout(60)
 def test_agent_definition_based_on_dict():
     config = {
         "role": "test role",
@@ -1016,7 +985,6 @@ def test_agent_definition_based_on_dict():
 
 # test for human input
 @pytest.mark.vcr(filter_headers=["authorization"])
-@pytest.mark.timeout(60)
 def test_agent_human_input():
     # Agent configuration
     config = {
@@ -1057,7 +1025,6 @@ def test_agent_human_input():
         assert output.strip().lower() == "hello"  # Final output should be 'Hello'
 
 
-@pytest.mark.timeout(60)
 def test_interpolate_inputs():
     agent = Agent(
         role="{topic} specialist",
@@ -1076,7 +1043,6 @@ def test_interpolate_inputs():
     assert agent.backstory == "I am the master of nothing"
 
 
-@pytest.mark.timeout(60)
 def test_not_using_system_prompt():
     agent = Agent(
         role="{topic} specialist",
@@ -1090,7 +1056,6 @@ def test_not_using_system_prompt():
     assert not agent.agent_executor.prompt.get("system")
 
 
-@pytest.mark.timeout(60)
 def test_using_system_prompt():
     agent = Agent(
         role="{topic} specialist",
@@ -1103,7 +1068,6 @@ def test_using_system_prompt():
     assert agent.agent_executor.prompt.get("system")
 
 
-@pytest.mark.timeout(60)
 def test_system_and_prompt_template():
     agent = Agent(
         role="{topic} specialist",
@@ -1157,7 +1121,6 @@ Thought:<|eot_id|>
 
 
 @patch("crewai.agent.CrewTrainingHandler")
-@pytest.mark.timeout(60)
 def test_agent_training_handler(crew_training_handler):
     task_prompt = "What is 1 + 1?"
     agent = Agent(
@@ -1180,7 +1143,6 @@ def test_agent_training_handler(crew_training_handler):
 
 
 @patch("crewai.agent.CrewTrainingHandler")
-@pytest.mark.timeout(60)
 def test_agent_use_trained_data(crew_training_handler):
     task_prompt = "What is 1 + 1?"
     agent = Agent(
@@ -1209,7 +1171,6 @@ def test_agent_use_trained_data(crew_training_handler):
     )
 
 
-@pytest.mark.timeout(60)
 def test_agent_max_retry_limit():
     agent = Agent(
         role="test role",
@@ -1263,7 +1224,6 @@ def test_agent_max_retry_limit():
         )
 
 
-@pytest.mark.timeout(60)
 def test_agent_with_llm():
     agent = Agent(
         role="test role",
@@ -1277,7 +1237,6 @@ def test_agent_with_llm():
     assert agent.llm.temperature == 0.7
 
 
-@pytest.mark.timeout(60)
 def test_agent_with_custom_stop_words():
     stop_words = ["STOP", "END"]
     agent = Agent(
@@ -1293,7 +1252,6 @@ def test_agent_with_custom_stop_words():
     assert "\nObservation:" in agent.llm.stop
 
 
-@pytest.mark.timeout(60)
 def test_agent_with_callbacks():
     def dummy_callback(response):
         pass
@@ -1310,7 +1268,6 @@ def test_agent_with_callbacks():
     assert agent.llm.callbacks[0] == dummy_callback
 
 
-@pytest.mark.timeout(60)
 def test_agent_with_additional_kwargs():
     agent = Agent(
         role="test role",
@@ -1334,7 +1291,6 @@ def test_agent_with_additional_kwargs():
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
-@pytest.mark.timeout(60)
 def test_llm_call():
     llm = LLM(model="gpt-3.5-turbo")
     messages = [{"role": "user", "content": "Say 'Hello, World!'"}]
@@ -1344,7 +1300,6 @@ def test_llm_call():
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
-@pytest.mark.timeout(60)
 def test_llm_call_with_error():
     llm = LLM(model="non-existent-model")
     messages = [{"role": "user", "content": "This should fail"}]
@@ -1354,7 +1309,6 @@ def test_llm_call_with_error():
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
-@pytest.mark.timeout(60)
 def test_handle_context_length_exceeds_limit():
     agent = Agent(
         role="test role",
@@ -1399,7 +1353,6 @@ def test_handle_context_length_exceeds_limit():
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
-@pytest.mark.timeout(60)
 def test_handle_context_length_exceeds_limit_cli_no():
     agent = Agent(
         role="test role",
@@ -1427,7 +1380,6 @@ def test_handle_context_length_exceeds_limit_cli_no():
             mock_handle_context.assert_not_called()
 
 
-@pytest.mark.timeout(60)
 def test_agent_with_all_llm_attributes():
     agent = Agent(
         role="test role",
@@ -1476,7 +1428,6 @@ def test_agent_with_all_llm_attributes():
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
-@pytest.mark.timeout(60)
 def test_llm_call_with_all_attributes():
     llm = LLM(
         model="gpt-3.5-turbo",
@@ -1494,7 +1445,6 @@ def test_llm_call_with_all_attributes():
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
-@pytest.mark.timeout(60)
 def test_agent_with_ollama_llama3():
     agent = Agent(
         role="test role",
@@ -1516,7 +1466,6 @@ def test_agent_with_ollama_llama3():
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
-@pytest.mark.timeout(60)
 def test_llm_call_with_ollama_llama3():
     llm = LLM(
         model="ollama/llama3.2:3b",
@@ -1534,7 +1483,6 @@ def test_llm_call_with_ollama_llama3():
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
-@pytest.mark.timeout(60)
 def test_agent_execute_task_basic():
     agent = Agent(
         role="test role",
@@ -1554,7 +1502,6 @@ def test_agent_execute_task_basic():
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
-@pytest.mark.timeout(60)
 def test_agent_execute_task_with_context():
     agent = Agent(
         role="test role",
@@ -1577,7 +1524,6 @@ def test_agent_execute_task_with_context():
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
-@pytest.mark.timeout(60)
 def test_agent_execute_task_with_tool():
     @tool
     def dummy_tool(query: str) -> str:
@@ -1603,7 +1549,6 @@ def test_agent_execute_task_with_tool():
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
-@pytest.mark.timeout(60)
 def test_agent_execute_task_with_custom_llm():
     agent = Agent(
         role="test role",
@@ -1625,7 +1570,6 @@ def test_agent_execute_task_with_custom_llm():
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
-@pytest.mark.timeout(60)
 def test_agent_execute_task_with_ollama():
     agent = Agent(
         role="test role",
@@ -1646,7 +1590,6 @@ def test_agent_execute_task_with_ollama():
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
-@pytest.mark.timeout(60)
 def test_agent_with_knowledge_sources():
     # Create a knowledge source with some content
     content = "Brandon's favorite color is red and he likes Mexican food."

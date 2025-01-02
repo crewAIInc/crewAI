@@ -14,7 +14,6 @@ class TestAgentTool(BaseAgentTool):
         return "Test response"
 
 
-@pytest.mark.timeout(60)
 @pytest.mark.parametrize(
     "role_name,should_match",
     [

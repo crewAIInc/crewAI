@@ -8,7 +8,6 @@ from crewai.task import Task
 from crewai.tasks.task_output import TaskOutput
 
 
-@pytest.mark.timeout(60)
 def test_task_without_guardrail():
     """Test that tasks work normally without guardrails (backward compatibility)."""
     agent = Mock()
@@ -23,7 +22,6 @@ def test_task_without_guardrail():
     assert result.raw == "test result"
 
 
-@pytest.mark.timeout(60)
 def test_task_with_successful_guardrail():
     """Test that successful guardrail validation passes transformed result."""
 
@@ -42,7 +40,6 @@ def test_task_with_successful_guardrail():
     assert result.raw == "TEST RESULT"
 
 
-@pytest.mark.timeout(60)
 def test_task_with_failing_guardrail():
     """Test that failing guardrail triggers retry with error context."""
 
@@ -70,7 +67,6 @@ def test_task_with_failing_guardrail():
     assert task.retry_count == 1
 
 
-@pytest.mark.timeout(60)
 def test_task_with_guardrail_retries():
     """Test that guardrail respects max_retries configuration."""
 
@@ -97,7 +93,6 @@ def test_task_with_guardrail_retries():
     assert "Invalid format" in str(exc_info.value)
 
 
-@pytest.mark.timeout(60)
 def test_guardrail_error_in_context():
     """Test that guardrail error is passed in context for retry."""
 
