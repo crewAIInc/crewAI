@@ -7,7 +7,6 @@ from io import StringIO
 from unittest import mock
 from unittest.mock import MagicMock, patch
 
-import pytest
 from pytest import raises
 
 from crewai.cli.tools.main import ToolCommand

@@ -3,7 +3,6 @@ import unittest
 from datetime import datetime, timedelta
 from unittest.mock import MagicMock, patch
 
-import pytest
 from cryptography.fernet import Fernet
 
 from crewai.cli.authentication.utils import TokenManager, validate_token
