@@ -907,6 +907,7 @@ def test_agents_rpm_is_never_set_if_crew_max_RPM_is_not_set():
     assert agent._rpm_controller is None
 
 
+@pytest.mark.timeout(60)
 @pytest.mark.vcr(filter_headers=["authorization"])
 def test_sequential_async_task_execution_completion():
     list_ideas = Task(
