@@ -1474,7 +1474,7 @@ def test_llm_call_with_ollama_llama3():
         max_tokens=30,
     )
     messages = [
-        {"role": "user", "content": "Respond in 20 words. Which model are you??"}
+        {"role": "user", "content": "Respond in 20 words. Which model are you?"}
     ]
 
     response = llm.call(messages)
