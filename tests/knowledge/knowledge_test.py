@@ -376,7 +376,7 @@ def test_multiple_2k_character_files(mock_vector_db, tmpdir):
     mock_vector_db.query.assert_called_once()
 
 
-@pytest.mark.vcr(record_mode="new_episodes", filter_headers=["authorization"])
+@pytest.mark.vcr(filter_headers=["authorization"])
 def test_hybrid_string_and_files(mock_vector_db, tmpdir):
     # Create string sources
     string_contents = [
@@ -445,7 +445,7 @@ def test_pdf_knowledge_source(mock_vector_db):
     mock_vector_db.query.assert_called_once()
 
 
-@pytest.mark.vcr(record_mode="new_episodes", filter_headers=["authorization"])
+@pytest.mark.vcr(filter_headers=["authorization"])
 def test_csv_knowledge_source(mock_vector_db, tmpdir):
     """Test CSVKnowledgeSource with a simple CSV file."""
 
