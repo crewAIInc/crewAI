@@ -40,10 +40,14 @@ CrewAI supports various types of knowledge sources out of the box:
 | :--------------------------- | :---------------------------------- | :------- | :---------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `sources`                  | **List[BaseKnowledgeSource]**        | Yes      | List of knowledge sources that provide content to be stored and queried. Can include PDF, CSV, Excel, JSON, text files, or string content.           |
 | `collection_name`          | **str**                              | No       | Name of the collection where the knowledge will be stored. Used to identify different sets of knowledge. Defaults to "knowledge" if not provided.     |
-| `embedder_config`          | **Optional[Dict[str, Any]]**         | No       | Configuration for the embedding model used to convert content into vector representations. Supports various providers like OpenAI, Google, etc.        |
 | `storage`                  | **Optional[KnowledgeStorage]**       | No       | Custom storage configuration for managing how the knowledge is stored and retrieved. If not provided, a default storage will be created.              |
 
 ## Quickstart Example
+
+<Tip>
+For file-Based Knowledge Sources, make sure to place your files in a `knowledge` directory at the root of your project. 
+Also, use relative paths from the `knowledge` directory when creating the source.
+</Tip>
 
 Here's an example using string-based knowledge:
 
@@ -247,13 +251,15 @@ The chunking configuration helps in:
 You can also configure the embedder for the knowledge store. 
 This is useful if you want to use a different embedder for the knowledge store than the one used for the agents.
 The `embedder` parameter supports various embedding model providers that include:
-- azure
-- ollama
-- vertexai
-- cohere
-- bedrock
-- huggingface
-- watson
+- `openai`: OpenAI's embedding models
+- `google`: Google's text embedding models
+- `azure`: Azure OpenAI embeddings
+- `ollama`: Local embeddings with Ollama
+- `vertexai`: Google Cloud VertexAI embeddings
+- `cohere`: Cohere's embedding models
+- `bedrock`: AWS Bedrock embeddings
+- `huggingface`: Hugging Face models
+- `watson`: IBM Watson embeddings
 
 Here's an example of how to configure the embedder for the knowledge store using Google's `text-embedding-004` model:
 <CodeGroup>
