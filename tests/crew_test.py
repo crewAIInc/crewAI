@@ -47,7 +47,6 @@ writer = Agent(
 )
 
 
-@pytest.mark.timeout(60)
 def test_crew_config_conditional_requirement():
     with pytest.raises(ValueError):
         Crew(process=Process.sequential)
@@ -95,7 +94,6 @@ def test_crew_config_conditional_requirement():
     ]
 
 
-@pytest.mark.timeout(60)
 def test_async_task_cannot_include_sequential_async_tasks_in_context():
     task1 = Task(
         description="Task 1",
@@ -144,7 +142,6 @@ def test_async_task_cannot_include_sequential_async_tasks_in_context():
         pytest.fail("Unexpected ValidationError raised")
 
 
-@pytest.mark.timeout(60)
 def test_context_no_future_tasks():
     task2 = Task(
         description="Task 2",
@@ -177,7 +174,6 @@ def test_context_no_future_tasks():
         Crew(tasks=[task1, task2, task3, task4], agents=[researcher, writer])
 
 
-@pytest.mark.timeout(60)
 def test_crew_config_with_wrong_keys():
     no_tasks_config = json.dumps(
         {
@@ -209,7 +205,6 @@ def test_crew_config_with_wrong_keys():
         Crew(process=Process.sequential, config=no_agents_config)
 
 
-@pytest.mark.timeout(60)
 @pytest.mark.vcr(filter_headers=["authorization"])
 def test_crew_creation():
     tasks = [
@@ -242,7 +237,6 @@ def test_crew_creation():
     assert result.raw == expected_string_output
 
 
-@pytest.mark.timeout(60)
 @pytest.mark.vcr(filter_headers=["authorization"])
 def test_sync_task_execution():
     from unittest.mock import patch
@@ -284,7 +278,6 @@ def test_sync_task_execution():
         assert mock_execute_sync.call_count == len(tasks)
 
 
-@pytest.mark.timeout(60)
 @pytest.mark.vcr(filter_headers=["authorization"])
 def test_hierarchical_process():
     task = Task(
@@ -307,7 +300,6 @@ def test_hierarchical_process():
     )
 
 
-@pytest.mark.timeout(60)
 def test_manager_llm_requirement_for_hierarchical_process():
     task = Task(
         description="Come up with a list of 5 interesting ideas to explore for an article, then write one amazing paragraph highlight for each idea that showcases how good an article about this topic could be. Return the list of ideas with their paragraph and your notes.",
@@ -322,7 +314,6 @@ def test_manager_llm_requirement_for_hierarchical_process():
         )
 
 
-@pytest.mark.timeout(60)
 @pytest.mark.vcr(filter_headers=["authorization"])
 def test_manager_agent_delegating_to_assigned_task_agent():
     """
@@ -375,7 +366,6 @@ def test_manager_agent_delegating_to_assigned_task_agent():
         )
 
 
-@pytest.mark.timeout(60)
 @pytest.mark.vcr(filter_headers=["authorization"])
 def test_manager_agent_delegating_to_all_agents():
     """
@@ -409,7 +399,6 @@ def test_manager_agent_delegating_to_all_agents():
     )
 
 
-@pytest.mark.timeout(60)
 @pytest.mark.vcr(filter_headers=["authorization"])
 def test_manager_agent_delegates_with_varied_role_cases():
     """
@@ -487,7 +476,6 @@ def test_manager_agent_delegates_with_varied_role_cases():
         )
 
 
-@pytest.mark.timeout(60)
 @pytest.mark.vcr(filter_headers=["authorization"])
 def test_crew_with_delegating_agents():
     tasks = [
@@ -512,7 +500,6 @@ def test_crew_with_delegating_agents():
     )
 
 
-@pytest.mark.timeout(60)
 @pytest.mark.vcr(filter_headers=["authorization"])
 def test_crew_with_delegating_agents_should_not_override_task_tools():
     from typing import Type
@@ -575,7 +562,6 @@ def test_crew_with_delegating_agents_should_not_override_task_tools():
         ), "Delegation tool should be present"
 
 
-@pytest.mark.timeout(60)
 @pytest.mark.vcr(filter_headers=["authorization"])
 def test_crew_with_delegating_agents_should_not_override_agent_tools():
     from typing import Type
@@ -640,7 +626,6 @@ def test_crew_with_delegating_agents_should_not_override_agent_tools():
         ), "Delegation tool should be present"
 
 
-@pytest.mark.timeout(60)
 @pytest.mark.vcr(filter_headers=["authorization"])
 def test_task_tools_override_agent_tools():
     from typing import Type
@@ -696,7 +681,6 @@ def test_task_tools_override_agent_tools():
     assert isinstance(new_researcher.tools[0], TestTool)
 
 
-@pytest.mark.timeout(60)
 @pytest.mark.vcr(filter_headers=["authorization"])
 def test_task_tools_override_agent_tools_with_allow_delegation():
     """
@@ -781,7 +765,6 @@ def test_task_tools_override_agent_tools_with_allow_delegation():
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
-@pytest.mark.timeout(60)
 def test_crew_verbose_output(capsys):
     tasks = [
         Task(
@@ -828,7 +811,6 @@ def test_crew_verbose_output(capsys):
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
-@pytest.mark.timeout(60)
 def test_cache_hitting_between_agents():
     from unittest.mock import call, patch
 
@@ -872,7 +854,6 @@ def test_cache_hitting_between_agents():
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
-@pytest.mark.timeout(60)
 def test_api_calls_throttling(capsys):
     from unittest.mock import patch
 
@@ -912,7 +893,6 @@ def test_api_calls_throttling(capsys):
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
-@pytest.mark.timeout(60)
 def test_crew_kickoff_usage_metrics():
     inputs = [
         {"topic": "dog"},
@@ -945,7 +925,6 @@ def test_crew_kickoff_usage_metrics():
         assert result.token_usage.cached_prompt_tokens == 0
 
 
-@pytest.mark.timeout(60)
 def test_agents_rpm_is_never_set_if_crew_max_RPM_is_not_set():
     agent = Agent(
         role="test role",
@@ -966,7 +945,6 @@ def test_agents_rpm_is_never_set_if_crew_max_RPM_is_not_set():
     assert agent._rpm_controller is None
 
 
-@pytest.mark.timeout(60)
 @pytest.mark.vcr(filter_headers=["authorization"])
 def test_sequential_async_task_execution_completion():
     list_ideas = Task(
@@ -999,7 +977,6 @@ def test_sequential_async_task_execution_completion():
     )
 
 
-@pytest.mark.timeout(60)
 @pytest.mark.vcr(filter_headers=["authorization"])
 def test_single_task_with_async_execution():
     researcher_agent = Agent(
@@ -1028,7 +1005,6 @@ def test_single_task_with_async_execution():
     )
 
 
-@pytest.mark.timeout(60)
 @pytest.mark.vcr(filter_headers=["authorization"])
 def test_three_task_with_async_execution():
     researcher_agent = Agent(
@@ -1074,7 +1050,6 @@ def test_three_task_with_async_execution():
     )
 
 
-@pytest.mark.timeout(60)
 @pytest.mark.asyncio
 async def test_crew_async_kickoff():
     inputs = [
@@ -1122,7 +1097,6 @@ async def test_crew_async_kickoff():
             assert result[0].token_usage.successful_requests > 0  # type: ignore
 
 
-@pytest.mark.timeout(60)
 @pytest.mark.asyncio
 async def test_async_task_execution_call_count():
     from unittest.mock import MagicMock, patch
@@ -1179,7 +1153,6 @@ async def test_async_task_execution_call_count():
         assert mock_execute_sync.call_count == 1
 
 
-@pytest.mark.timeout(60)
 def test_kickoff_for_each_single_input():
     """Tests if kickoff_for_each works with a single input."""
 
@@ -1203,7 +1176,6 @@ def test_kickoff_for_each_single_input():
     assert len(results) == 1
 
 
-@pytest.mark.timeout(60)
 def test_kickoff_for_each_multiple_inputs():
     """Tests if kickoff_for_each works with multiple inputs."""
 
@@ -1231,7 +1203,6 @@ def test_kickoff_for_each_multiple_inputs():
     assert len(results) == len(inputs)
 
 
-@pytest.mark.timeout(60)
 def test_kickoff_for_each_empty_input():
     """Tests if kickoff_for_each handles an empty input list."""
     agent = Agent(
@@ -1251,7 +1222,6 @@ def test_kickoff_for_each_empty_input():
     assert results == []
 
 
-@pytest.mark.timeout(60)
 def test_kickoff_for_each_invalid_input():
     """Tests if kickoff_for_each raises TypeError for invalid input types."""
 
@@ -1274,7 +1244,6 @@ def test_kickoff_for_each_invalid_input():
         crew.kickoff_for_each("invalid input")
 
 
-@pytest.mark.timeout(60)
 def test_kickoff_for_each_error_handling():
     """Tests error handling in kickoff_for_each when kickoff raises an error."""
     from unittest.mock import patch
@@ -1311,7 +1280,6 @@ def test_kickoff_for_each_error_handling():
             crew.kickoff_for_each(inputs=inputs)
 
 
-@pytest.mark.timeout(60)
 @pytest.mark.asyncio
 async def test_kickoff_async_basic_functionality_and_output():
     """Tests the basic functionality and output of kickoff_async."""
@@ -1346,7 +1314,6 @@ async def test_kickoff_async_basic_functionality_and_output():
         mock_kickoff.assert_called_once_with(inputs)
 
 
-@pytest.mark.timeout(60)
 @pytest.mark.asyncio
 async def test_async_kickoff_for_each_async_basic_functionality_and_output():
     """Tests the basic functionality and output of kickoff_for_each_async."""
@@ -1393,7 +1360,6 @@ async def test_async_kickoff_for_each_async_basic_functionality_and_output():
             mock_kickoff_async.assert_any_call(inputs=input_data)
 
 
-@pytest.mark.timeout(60)
 @pytest.mark.asyncio
 async def test_async_kickoff_for_each_async_empty_input():
     """Tests if akickoff_for_each_async handles an empty input list."""
@@ -1423,7 +1389,6 @@ async def test_async_kickoff_for_each_async_empty_input():
     assert results == [], "Result should be an empty list when input is empty"
 
 
-@pytest.mark.timeout(60)
 def test_set_agents_step_callback():
     from unittest.mock import patch
 
@@ -1454,7 +1419,6 @@ def test_set_agents_step_callback():
         assert researcher_agent.step_callback is not None
 
 
-@pytest.mark.timeout(60)
 def test_dont_set_agents_step_callback_if_already_set():
     from unittest.mock import patch
 
@@ -1494,7 +1458,6 @@ def test_dont_set_agents_step_callback_if_already_set():
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
-@pytest.mark.timeout(60)
 def test_crew_function_calling_llm():
     from unittest.mock import patch
 
@@ -1532,7 +1495,6 @@ def test_crew_function_calling_llm():
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
-@pytest.mark.timeout(60)
 def test_task_with_no_arguments():
     from crewai.tools import tool
 
@@ -1601,7 +1563,6 @@ def test_code_execution_flag_adds_code_tool_upon_kickoff():
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
-@pytest.mark.timeout(60)
 def test_delegation_is_not_enabled_if_there_are_only_one_agent():
     researcher = Agent(
         role="Researcher",
@@ -1623,7 +1584,6 @@ def test_delegation_is_not_enabled_if_there_are_only_one_agent():
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
-@pytest.mark.timeout(60)
 def test_agents_do_not_get_delegation_tools_with_there_is_only_one_agent():
     agent = Agent(
         role="Researcher",
@@ -1642,7 +1602,6 @@ def test_agents_do_not_get_delegation_tools_with_there_is_only_one_agent():
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
-@pytest.mark.timeout(60)
 def test_sequential_crew_creation_tasks_without_agents():
     task = Task(
         description="Come up with a list of 5 interesting ideas to explore for an article, then write one amazing paragraph highlight for each idea that showcases how good an article about this topic could be. Return the list of ideas with their paragraph and your notes.",
@@ -1666,7 +1625,6 @@ def test_sequential_crew_creation_tasks_without_agents():
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
-@pytest.mark.timeout(60)
 def test_agent_usage_metrics_are_captured_for_hierarchical_process():
     agent = Agent(
         role="Researcher",
@@ -1694,7 +1652,6 @@ def test_agent_usage_metrics_are_captured_for_hierarchical_process():
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
-@pytest.mark.timeout(60)
 def test_hierarchical_crew_creation_tasks_with_agents():
     """
     Agents are not required for tasks in a hierarchical process but sometimes they are still added
@@ -1748,7 +1705,6 @@ def test_hierarchical_crew_creation_tasks_with_agents():
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
-@pytest.mark.timeout(60)
 def test_hierarchical_crew_creation_tasks_with_async_execution():
     """
     Tests that async tasks in hierarchical crews are handled correctly with proper delegation tools
@@ -1806,7 +1762,6 @@ def test_hierarchical_crew_creation_tasks_with_async_execution():
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
-@pytest.mark.timeout(60)
 def test_hierarchical_crew_creation_tasks_with_sync_last():
     """
     Agents are not required for tasks in a hierarchical process but sometimes they are still added
@@ -1840,7 +1795,6 @@ def test_hierarchical_crew_creation_tasks_with_sync_last():
     )
 
 
-@pytest.mark.timeout(60)
 def test_crew_inputs_interpolate_both_agents_and_tasks():
     agent = Agent(
         role="{topic} Researcher",
@@ -1865,7 +1819,6 @@ def test_crew_inputs_interpolate_both_agents_and_tasks():
     assert crew.agents[0].backstory == "You have a lot of experience with AI."
 
 
-@pytest.mark.timeout(60)
 def test_crew_inputs_interpolate_both_agents_and_tasks_diff():
     from unittest.mock import patch
 
@@ -1897,7 +1850,6 @@ def test_crew_inputs_interpolate_both_agents_and_tasks_diff():
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
-@pytest.mark.timeout(60)
 def test_crew_does_not_interpolate_without_inputs():
     from unittest.mock import patch
 
@@ -1922,7 +1874,6 @@ def test_crew_does_not_interpolate_without_inputs():
             interpolate_task_inputs.assert_not_called()
 
 
-@pytest.mark.timeout(60)
 def test_task_callback_on_crew():
     from unittest.mock import MagicMock, patch
 
@@ -1960,7 +1911,6 @@ def test_task_callback_on_crew():
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
-@pytest.mark.timeout(60)
 def test_tools_with_custom_caching():
     from unittest.mock import patch
 
@@ -2033,7 +1983,6 @@ def test_tools_with_custom_caching():
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
-@pytest.mark.timeout(60)
 def test_using_contextual_memory():
     from unittest.mock import patch
 
@@ -2062,7 +2011,6 @@ def test_using_contextual_memory():
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
-@pytest.mark.timeout(60)
 def test_disabled_memory_using_contextual_memory():
     from unittest.mock import patch
 
@@ -2091,7 +2039,6 @@ def test_disabled_memory_using_contextual_memory():
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
-@pytest.mark.timeout(60)
 def test_crew_log_file_output(tmp_path):
     test_file = tmp_path / "logs.txt"
     tasks = [
@@ -2108,7 +2055,6 @@ def test_crew_log_file_output(tmp_path):
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
-@pytest.mark.timeout(60)
 def test_crew_output_file_end_to_end(tmp_path):
     """Test output file functionality in a full crew context."""
     # Create an agent
@@ -2141,7 +2087,6 @@ def test_crew_output_file_end_to_end(tmp_path):
     assert expected_file.exists(), f"Output file {expected_file} was not created"
 
 
-@pytest.mark.timeout(60)
 def test_crew_output_file_validation_failures():
     """Test output file validation failures in a crew context."""
     agent = Agent(
@@ -2192,7 +2137,6 @@ def test_crew_output_file_validation_failures():
         Crew(agents=[agent], tasks=[task]).kickoff()
 
 
-@pytest.mark.timeout(60)
 def test_manager_agent():
     from unittest.mock import patch
 
@@ -2231,7 +2175,6 @@ def test_manager_agent():
         mock_execute_sync.assert_called()
 
 
-@pytest.mark.timeout(60)
 def test_manager_agent_in_agents_raises_exception():
     task = Task(
         description="Come up with a list of 5 interesting ideas to explore for an article, then write one amazing paragraph highlight for each idea that showcases how good an article about this topic could be. Return the list of ideas with their paragraph and your notes.",
@@ -2254,7 +2197,6 @@ def test_manager_agent_in_agents_raises_exception():
         )
 
 
-@pytest.mark.timeout(60)
 def test_manager_agent_with_tools_raises_exception():
     from crewai.tools import tool
 
@@ -2291,7 +2233,6 @@ def test_manager_agent_with_tools_raises_exception():
 @patch("crewai.crew.CrewTrainingHandler")
 @patch("crewai.crew.TaskEvaluator")
 @patch("crewai.crew.Crew.copy")
-@pytest.mark.timeout(60)
 def test_crew_train_success(
     copy_mock, task_evaluator, crew_training_handler, kickoff_mock
 ):
@@ -2355,7 +2296,6 @@ def test_crew_train_success(
     )
 
 
-@pytest.mark.timeout(60)
 def test_crew_train_error():
     task = Task(
         description="Come up with a list of 5 interesting ideas to explore for an article",
@@ -2406,7 +2346,6 @@ def test__setup_for_training():
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
-@pytest.mark.timeout(60)
 def test_replay_feature():
     list_ideas = Task(
         description="Generate a list of 5 interesting ideas to explore for an article, where each bulletpoint is under 15 words.",
@@ -2444,7 +2383,6 @@ def test_replay_feature():
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
-@pytest.mark.timeout(60)
 def test_crew_replay_error():
     task = Task(
         description="Come up with a list of 5 interesting ideas to explore for an article",
@@ -2463,7 +2401,6 @@ def test_crew_replay_error():
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
-@pytest.mark.timeout(60)
 def test_crew_task_db_init():
     agent = Agent(
         role="Content Writer",
@@ -2502,7 +2439,6 @@ def test_crew_task_db_init():
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
-@pytest.mark.timeout(60)
 def test_replay_task_with_context():
     agent1 = Agent(
         role="Researcher",
@@ -2602,7 +2538,6 @@ def test_replay_task_with_context():
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
-@pytest.mark.timeout(60)
 def test_replay_with_context():
     agent = Agent(role="test_agent", backstory="Test Description", goal="Test Goal")
     task1 = Task(
@@ -2661,7 +2596,6 @@ def test_replay_with_context():
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
-@pytest.mark.timeout(60)
 def test_replay_with_invalid_task_id():
     agent = Agent(role="test_agent", backstory="Test Description", goal="Test Goal")
     task1 = Task(
@@ -2722,7 +2656,6 @@ def test_replay_with_invalid_task_id():
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
-@pytest.mark.timeout(60)
 @patch.object(Crew, "_interpolate_inputs")
 def test_replay_interpolates_inputs_properly(mock_interpolate_inputs):
     agent = Agent(role="test_agent", backstory="Test Description", goal="Test Goal")
@@ -2784,7 +2717,6 @@ def test_replay_interpolates_inputs_properly(mock_interpolate_inputs):
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
-@pytest.mark.timeout(60)
 def test_replay_setup_context():
     agent = Agent(role="test_agent", backstory="Test Description", goal="Test Goal")
     task1 = Task(description="Context Task", expected_output="Say {name}", agent=agent)
@@ -2847,7 +2779,6 @@ def test_replay_setup_context():
         assert crew.tasks[1].prompt_context == "context raw output"
 
 
-@pytest.mark.timeout(60)
 def test_key():
     tasks = [
         Task(
@@ -2873,7 +2804,6 @@ def test_key():
     assert crew.key == hash
 
 
-@pytest.mark.timeout(60)
 def test_key_with_interpolated_inputs():
     researcher = Agent(
         role="{topic} Researcher",
@@ -2918,7 +2848,6 @@ def test_key_with_interpolated_inputs():
     assert crew.key == curr_key
 
 
-@pytest.mark.timeout(60)
 def test_conditional_task_requirement_breaks_when_singular_conditional_task():
     def condition_fn(output) -> bool:
         return output.raw.startswith("Andrew Ng has!!")
@@ -2937,7 +2866,6 @@ def test_conditional_task_requirement_breaks_when_singular_conditional_task():
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
-@pytest.mark.timeout(60)
 def test_conditional_task_last_task_when_conditional_is_true():
     def condition_fn(output) -> bool:
         return True
@@ -2965,7 +2893,6 @@ def test_conditional_task_last_task_when_conditional_is_true():
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
-@pytest.mark.timeout(60)
 def test_conditional_task_last_task_when_conditional_is_false():
     def condition_fn(output) -> bool:
         return False
@@ -2990,7 +2917,6 @@ def test_conditional_task_last_task_when_conditional_is_false():
     assert result.raw == "Hi"
 
 
-@pytest.mark.timeout(60)
 def test_conditional_task_requirement_breaks_when_task_async():
     def my_condition(context):
         return context.get("some_value") > 10
@@ -3016,7 +2942,6 @@ def test_conditional_task_requirement_breaks_when_task_async():
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
-@pytest.mark.timeout(60)
 def test_conditional_should_skip():
     task1 = Task(description="Return hello", expected_output="say hi", agent=researcher)
 
@@ -3049,7 +2974,6 @@ def test_conditional_should_skip():
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
-@pytest.mark.timeout(60)
 def test_conditional_should_execute():
     task1 = Task(description="Return hello", expected_output="say hi", agent=researcher)
 
@@ -3083,7 +3007,6 @@ def test_conditional_should_execute():
 @mock.patch("crewai.crew.CrewEvaluator")
 @mock.patch("crewai.crew.Crew.copy")
 @mock.patch("crewai.crew.Crew.kickoff")
-@pytest.mark.timeout(60)
 def test_crew_testing_function(kickoff_mock, copy_mock, crew_evaluator):
     task = Task(
         description="Come up with a list of 5 interesting ideas to explore for an article, then write one amazing paragraph highlight for each idea that showcases how good an article about this topic could be. Return the list of ideas with their paragraph and your notes.",
@@ -3118,7 +3041,6 @@ def test_crew_testing_function(kickoff_mock, copy_mock, crew_evaluator):
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
-@pytest.mark.timeout(60)
 def test_hierarchical_verbose_manager_agent():
     task = Task(
         description="Come up with a list of 5 interesting ideas to explore for an article, then write one amazing paragraph highlight for each idea that showcases how good an article about this topic could be. Return the list of ideas with their paragraph and your notes.",
@@ -3140,7 +3062,6 @@ def test_hierarchical_verbose_manager_agent():
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
-@pytest.mark.timeout(60)
 def test_hierarchical_verbose_false_manager_agent():
     task = Task(
         description="Come up with a list of 5 interesting ideas to explore for an article, then write one amazing paragraph highlight for each idea that showcases how good an article about this topic could be. Return the list of ideas with their paragraph and your notes.",

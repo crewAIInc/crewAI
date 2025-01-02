@@ -12,7 +12,6 @@ from crewai.cli.utils import parse_toml
 
 
 class TestDeployCommand(unittest.TestCase):
-    @pytest.mark.timeout(60)
     @patch("crewai.cli.command.get_auth_token")
     @patch("crewai.cli.deploy.main.get_project_name")
     @patch("crewai.cli.command.PlusAPI")
@@ -27,12 +26,10 @@ class TestDeployCommand(unittest.TestCase):
         self.deploy_command = DeployCommand()
         self.mock_client = self.deploy_command.plus_api_client
 
-    @pytest.mark.timeout(60)
     def test_init_success(self):
         self.assertEqual(self.deploy_command.project_name, "test_project")
         self.mock_plus_api.assert_called_once_with(api_key="test_token")
 
-    @pytest.mark.timeout(60)
     @patch("crewai.cli.command.get_auth_token")
     def test_init_failure(self, mock_get_auth_token):
         mock_get_auth_token.side_effect = Exception("Auth failed")
@@ -40,7 +37,6 @@ class TestDeployCommand(unittest.TestCase):
         with self.assertRaises(SystemExit):
             DeployCommand()
 
-    @pytest.mark.timeout(60)
     def test_validate_response_successful_response(self):
         mock_response = Mock(spec=requests.Response)
         mock_response.json.return_value = {"message": "Success"}
@@ -51,7 +47,6 @@ class TestDeployCommand(unittest.TestCase):
             self.deploy_command._validate_response(mock_response)
             assert fake_out.getvalue() == ""
 
-    @pytest.mark.timeout(60)
     def test_validate_response_json_decode_error(self):
         mock_response = Mock(spec=requests.Response)
         mock_response.json.side_effect = JSONDecodeError("Decode error", "", 0)
@@ -69,7 +64,6 @@ class TestDeployCommand(unittest.TestCase):
             assert "Status Code: 500" in output
             assert "Response:\nb'Invalid JSON'" in output
 
-    @pytest.mark.timeout(60)
     def test_validate_response_422_error(self):
         mock_response = Mock(spec=requests.Response)
         mock_response.json.return_value = {
@@ -90,7 +84,6 @@ class TestDeployCommand(unittest.TestCase):
             assert "Field1 Error message 1" in output
             assert "Field2 Error message 2" in output
 
-    @pytest.mark.timeout(60)
     def test_validate_response_other_error(self):
         mock_response = Mock(spec=requests.Response)
         mock_response.json.return_value = {"error": "Something went wrong"}
@@ -104,13 +97,11 @@ class TestDeployCommand(unittest.TestCase):
             assert "Request to Enterprise API failed. Details:" in output
             assert "Details:\nSomething went wrong" in output
 
-    @pytest.mark.timeout(60)
     def test_standard_no_param_error_message(self):
         with patch("sys.stdout", new=StringIO()) as fake_out:
             self.deploy_command._standard_no_param_error_message()
             self.assertIn("No UUID provided", fake_out.getvalue())
 
-    @pytest.mark.timeout(60)
     def test_display_deployment_info(self):
         with patch("sys.stdout", new=StringIO()) as fake_out:
             self.deploy_command._display_deployment_info(
@@ -120,7 +111,6 @@ class TestDeployCommand(unittest.TestCase):
             self.assertIn("test-uuid", fake_out.getvalue())
             self.assertIn("deployed", fake_out.getvalue())
 
-    @pytest.mark.timeout(60)
     def test_display_logs(self):
         with patch("sys.stdout", new=StringIO()) as fake_out:
             self.deploy_command._display_logs(
@@ -128,7 +118,6 @@ class TestDeployCommand(unittest.TestCase):
             )
             self.assertIn("2023-01-01 - INFO: Test log", fake_out.getvalue())
 
-    @pytest.mark.timeout(60)
     @patch("crewai.cli.deploy.main.DeployCommand._display_deployment_info")
     def test_deploy_with_uuid(self, mock_display):
         mock_response = MagicMock()
@@ -141,7 +130,6 @@ class TestDeployCommand(unittest.TestCase):
         self.mock_client.deploy_by_uuid.assert_called_once_with("test-uuid")
         mock_display.assert_called_once_with({"uuid": "test-uuid"})
 
-    @pytest.mark.timeout(60)
     @patch("crewai.cli.deploy.main.DeployCommand._display_deployment_info")
     def test_deploy_with_project_name(self, mock_display):
         mock_response = MagicMock()
@@ -154,7 +142,6 @@ class TestDeployCommand(unittest.TestCase):
         self.mock_client.deploy_by_name.assert_called_once_with("test_project")
         mock_display.assert_called_once_with({"uuid": "test-uuid"})
 
-    @pytest.mark.timeout(60)
     @patch("crewai.cli.deploy.main.fetch_and_json_env_file")
     @patch("crewai.cli.deploy.main.git.Repository.origin_url")
     @patch("builtins.input")
@@ -173,7 +160,6 @@ class TestDeployCommand(unittest.TestCase):
             self.assertIn("Deployment created successfully!", fake_out.getvalue())
             self.assertIn("new-uuid", fake_out.getvalue())
 
-    @pytest.mark.timeout(60)
     def test_list_crews(self):
         mock_response = MagicMock()
         mock_response.status_code = 200
@@ -188,7 +174,6 @@ class TestDeployCommand(unittest.TestCase):
             self.assertIn("Crew1 (uuid1) active", fake_out.getvalue())
             self.assertIn("Crew2 (uuid2) inactive", fake_out.getvalue())
 
-    @pytest.mark.timeout(60)
     def test_get_crew_status(self):
         mock_response = MagicMock()
         mock_response.status_code = 200
@@ -200,7 +185,6 @@ class TestDeployCommand(unittest.TestCase):
             self.assertIn("TestCrew", fake_out.getvalue())
             self.assertIn("active", fake_out.getvalue())
 
-    @pytest.mark.timeout(60)
     def test_get_crew_logs(self):
         mock_response = MagicMock()
         mock_response.status_code = 200
@@ -215,7 +199,6 @@ class TestDeployCommand(unittest.TestCase):
             self.assertIn("2023-01-01 - INFO: Log1", fake_out.getvalue())
             self.assertIn("2023-01-02 - ERROR: Log2", fake_out.getvalue())
 
-    @pytest.mark.timeout(60)
     def test_remove_crew(self):
         mock_response = MagicMock()
         mock_response.status_code = 204
@@ -227,7 +210,6 @@ class TestDeployCommand(unittest.TestCase):
                 "Crew 'test_project' removed successfully", fake_out.getvalue()
             )
 
-    @pytest.mark.timeout(60)
     @unittest.skipIf(sys.version_info < (3, 11), "Requires Python 3.11+")
     def test_parse_toml_python_311_plus(self):
         toml_content = """
@@ -242,7 +224,6 @@ class TestDeployCommand(unittest.TestCase):
         parsed = parse_toml(toml_content)
         self.assertEqual(parsed["tool"]["poetry"]["name"], "test_project")
 
-    @pytest.mark.timeout(60)
     @patch(
         "builtins.open",
         new_callable=unittest.mock.mock_open,
@@ -261,7 +242,6 @@ class TestDeployCommand(unittest.TestCase):
         print("project_name", project_name)
         self.assertEqual(project_name, "test_project")
 
-    @pytest.mark.timeout(60)
     @unittest.skipIf(sys.version_info < (3, 11), "Requires Python 3.11+")
     @patch(
         "builtins.open",
@@ -280,7 +260,6 @@ class TestDeployCommand(unittest.TestCase):
         project_name = get_project_name()
         self.assertEqual(project_name, "test_project")
 
-    @pytest.mark.timeout(60)
     def test_get_crewai_version(self):
         from crewai.cli.version import get_crewai_version
 

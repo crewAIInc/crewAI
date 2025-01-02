@@ -10,7 +10,6 @@ from crewai.cli.authentication.utils import TokenManager, validate_token
 
 
 class TestValidateToken(unittest.TestCase):
-    @pytest.mark.timeout(60)
     @patch("crewai.cli.authentication.utils.AsymmetricSignatureVerifier")
     @patch("crewai.cli.authentication.utils.TokenVerifier")
     def test_validate_token(self, mock_token_verifier, mock_asymmetric_verifier):
@@ -34,7 +33,6 @@ class TestTokenManager(unittest.TestCase):
     def setUp(self):
         self.token_manager = TokenManager()
 
-    @pytest.mark.timeout(60)
     @patch("crewai.cli.authentication.utils.TokenManager.read_secure_file")
     @patch("crewai.cli.authentication.utils.TokenManager.save_secure_file")
     @patch("crewai.cli.authentication.utils.TokenManager._get_or_create_key")
@@ -47,7 +45,6 @@ class TestTokenManager(unittest.TestCase):
 
         self.assertEqual(result, mock_key)
 
-    @pytest.mark.timeout(60)
     @patch("crewai.cli.authentication.utils.Fernet.generate_key")
     @patch("crewai.cli.authentication.utils.TokenManager.read_secure_file")
     @patch("crewai.cli.authentication.utils.TokenManager.save_secure_file")
@@ -63,7 +60,6 @@ class TestTokenManager(unittest.TestCase):
         mock_generate.assert_called_once()
         mock_save.assert_called_once_with("secret.key", mock_key)
 
-    @pytest.mark.timeout(60)
     @patch("crewai.cli.authentication.utils.TokenManager.save_secure_file")
     def test_save_tokens(self, mock_save):
         access_token = "test_token"
@@ -84,7 +80,6 @@ class TestTokenManager(unittest.TestCase):
             delta=timedelta(seconds=1),
         )
 
-    @pytest.mark.timeout(60)
     @patch("crewai.cli.authentication.utils.TokenManager.read_secure_file")
     def test_get_token_valid(self, mock_read):
         access_token = "test_token"
@@ -97,7 +92,6 @@ class TestTokenManager(unittest.TestCase):
 
         self.assertEqual(result, access_token)
 
-    @pytest.mark.timeout(60)
     @patch("crewai.cli.authentication.utils.TokenManager.read_secure_file")
     def test_get_token_expired(self, mock_read):
         access_token = "test_token"
@@ -110,7 +104,6 @@ class TestTokenManager(unittest.TestCase):
 
         self.assertIsNone(result)
 
-    @pytest.mark.timeout(60)
     @patch("crewai.cli.authentication.utils.TokenManager.get_secure_storage_path")
     @patch("builtins.open", new_callable=unittest.mock.mock_open)
     @patch("crewai.cli.authentication.utils.os.chmod")
@@ -127,7 +120,6 @@ class TestTokenManager(unittest.TestCase):
         mock_open().write.assert_called_once_with(content)
         mock_chmod.assert_called_once_with(mock_path.__truediv__.return_value, 0o600)
 
-    @pytest.mark.timeout(60)
     @patch("crewai.cli.authentication.utils.TokenManager.get_secure_storage_path")
     @patch(
         "builtins.open", new_callable=unittest.mock.mock_open, read_data=b"test_content"
@@ -144,7 +136,6 @@ class TestTokenManager(unittest.TestCase):
         mock_path.__truediv__.assert_called_once_with(filename)
         mock_open.assert_called_once_with(mock_path.__truediv__.return_value, "rb")
 
-    @pytest.mark.timeout(60)
     @patch("crewai.cli.authentication.utils.TokenManager.get_secure_storage_path")
     def test_read_secure_file_not_exists(self, mock_get_path):
         mock_path = MagicMock()

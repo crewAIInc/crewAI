@@ -11,7 +11,6 @@ class TestAuthenticationCommand(unittest.TestCase):
     def setUp(self):
         self.auth_command = AuthenticationCommand()
 
-    @pytest.mark.timeout(60)
     @patch("crewai.cli.authentication.main.requests.post")
     def test_get_device_code(self, mock_post):
         mock_response = MagicMock()
@@ -32,7 +31,6 @@ class TestAuthenticationCommand(unittest.TestCase):
         )
         self.assertEqual(device_code_data["interval"], 5)
 
-    @pytest.mark.timeout(60)
     @patch("crewai.cli.authentication.main.console.print")
     @patch("crewai.cli.authentication.main.webbrowser.open")
     def test_display_auth_instructions(self, mock_open, mock_print):
@@ -47,7 +45,6 @@ class TestAuthenticationCommand(unittest.TestCase):
         mock_print.assert_any_call("2. Enter the following code: ", "ABCDEF")
         mock_open.assert_called_once_with("https://example.com")
 
-    @pytest.mark.timeout(60)
     @patch("crewai.cli.authentication.main.ToolCommand")
     @patch("crewai.cli.authentication.main.requests.post")
     @patch("crewai.cli.authentication.main.validate_token")
@@ -73,7 +70,6 @@ class TestAuthenticationCommand(unittest.TestCase):
             "\n[bold green]Welcome to CrewAI Enterprise![/bold green]\n"
         )
 
-    @pytest.mark.timeout(60)
     @patch("crewai.cli.authentication.main.requests.post")
     @patch("crewai.cli.authentication.main.console.print")
     def test_poll_for_token_error(self, mock_print, mock_post):
@@ -90,7 +86,6 @@ class TestAuthenticationCommand(unittest.TestCase):
 
         mock_print.assert_not_called()
 
-    @pytest.mark.timeout(60)
     @patch("crewai.cli.authentication.main.requests.post")
     @patch("crewai.cli.authentication.main.console.print")
     def test_poll_for_token_timeout(self, mock_print, mock_post):

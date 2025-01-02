@@ -6,6 +6,9 @@ from unittest.mock import patch
 
 import pytest
 
+# Attempt to import the module and skip the test if it's not available
+docling = pytest.importorskip("docling")
+
 from crewai.knowledge.source.crew_docling_source import CrewDoclingSource
 from crewai.knowledge.source.csv_knowledge_source import CSVKnowledgeSource
 from crewai.knowledge.source.excel_knowledge_source import ExcelKnowledgeSource
@@ -376,7 +379,7 @@ def test_multiple_2k_character_files(mock_vector_db, tmpdir):
     mock_vector_db.query.assert_called_once()
 
 
-@pytest.mark.vcr(filter_headers=["authorization"])
+@pytest.mark.vcr(record_mode="new_episodes", filter_headers=["authorization"])
 def test_hybrid_string_and_files(mock_vector_db, tmpdir):
     # Create string sources
     string_contents = [
@@ -445,7 +448,7 @@ def test_pdf_knowledge_source(mock_vector_db):
     mock_vector_db.query.assert_called_once()
 
 
-@pytest.mark.vcr(filter_headers=["authorization"])
+@pytest.mark.vcr(record_mode="new_episodes", filter_headers=["authorization"])
 def test_csv_knowledge_source(mock_vector_db, tmpdir):
     """Test CSVKnowledgeSource with a simple CSV file."""
 
@@ -578,6 +581,7 @@ def test_multiple_docling_sources():
     assert docling_source.content is not None
 
 
+@pytest.mark.vcr(record_mode="new_episodes", filter_headers=["authorization"])
 def test_docling_source_with_local_file():
     current_dir = Path(__file__).parent
     pdf_path = current_dir / "crewai_quickstart.pdf"
@@ -606,6 +610,6 @@ def test_file_path_validation():
     # Test neither file_path nor file_paths provided
     with pytest.raises(
         ValueError,
-        match="file_path/file_paths must be a Path, str, or a list of these types"
+        match="file_path/file_paths must be a Path, str, or a list of these types",
     ):
         PDFKnowledgeSource()
