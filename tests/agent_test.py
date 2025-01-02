@@ -1457,7 +1457,7 @@ def test_agent_with_ollama_llama3():
     assert agent.llm.model == "ollama/llama3.2:3b"
     assert agent.llm.base_url == "http://localhost:11434"
 
-    task = "Respond in 20 words. Who are you?"
+    task = "Respond in 20 words. Which model are you?"
     response = agent.llm.call([{"role": "user", "content": task}])
 
     assert response
@@ -1473,7 +1473,9 @@ def test_llm_call_with_ollama_llama3():
         temperature=0.7,
         max_tokens=30,
     )
-    messages = [{"role": "user", "content": "Respond in 20 words. Who are you?"}]
+    messages = [
+        {"role": "user", "content": "Respond in 20 words. Which model are you?"}
+    ]
 
     response = llm.call(messages)
 
