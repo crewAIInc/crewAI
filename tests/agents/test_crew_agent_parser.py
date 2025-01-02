@@ -15,6 +15,7 @@ def parser():
     return p
 
 
+@pytest.mark.timeout(60)
 def test_valid_action_parsing_special_characters(parser):
     text = "Thought: Let's find the temperature\nAction: search\nAction Input: what's the temperature in SF?"
     result = parser.parse(text)
@@ -23,6 +24,7 @@ def test_valid_action_parsing_special_characters(parser):
     assert result.tool_input == "what's the temperature in SF?"
 
 
+@pytest.mark.timeout(60)
 def test_valid_action_parsing_with_json_tool_input(parser):
     text = """
     Thought: Let's find the information
@@ -36,6 +38,7 @@ def test_valid_action_parsing_with_json_tool_input(parser):
     assert result.tool_input == expected_tool_input
 
 
+@pytest.mark.timeout(60)
 def test_valid_action_parsing_with_quotes(parser):
     text = 'Thought: Let\'s find the temperature\nAction: search\nAction Input: "temperature in SF"'
     result = parser.parse(text)
@@ -44,6 +47,7 @@ def test_valid_action_parsing_with_quotes(parser):
     assert result.tool_input == "temperature in SF"
 
 
+@pytest.mark.timeout(60)
 def test_valid_action_parsing_with_curly_braces(parser):
     text = "Thought: Let's find the temperature\nAction: search\nAction Input: {temperature in SF}"
     result = parser.parse(text)
@@ -52,6 +56,7 @@ def test_valid_action_parsing_with_curly_braces(parser):
     assert result.tool_input == "{temperature in SF}"
 
 
+@pytest.mark.timeout(60)
 def test_valid_action_parsing_with_angle_brackets(parser):
     text = "Thought: Let's find the temperature\nAction: search\nAction Input: <temperature in SF>"
     result = parser.parse(text)
@@ -60,6 +65,7 @@ def test_valid_action_parsing_with_angle_brackets(parser):
     assert result.tool_input == "<temperature in SF>"
 
 
+@pytest.mark.timeout(60)
 def test_valid_action_parsing_with_parentheses(parser):
     text = "Thought: Let's find the temperature\nAction: search\nAction Input: (temperature in SF)"
     result = parser.parse(text)
@@ -68,6 +74,7 @@ def test_valid_action_parsing_with_parentheses(parser):
     assert result.tool_input == "(temperature in SF)"
 
 
+@pytest.mark.timeout(60)
 def test_valid_action_parsing_with_mixed_brackets(parser):
     text = "Thought: Let's find the temperature\nAction: search\nAction Input: [temperature in {SF}]"
     result = parser.parse(text)
@@ -76,6 +83,7 @@ def test_valid_action_parsing_with_mixed_brackets(parser):
     assert result.tool_input == "[temperature in {SF}]"
 
 
+@pytest.mark.timeout(60)
 def test_valid_action_parsing_with_nested_quotes(parser):
     text = "Thought: Let's find the temperature\nAction: search\nAction Input: \"what's the temperature in 'SF'?\""
     result = parser.parse(text)
@@ -84,6 +92,7 @@ def test_valid_action_parsing_with_nested_quotes(parser):
     assert result.tool_input == "what's the temperature in 'SF'?"
 
 
+@pytest.mark.timeout(60)
 def test_valid_action_parsing_with_incomplete_json(parser):
     text = 'Thought: Let\'s find the temperature\nAction: search\nAction Input: {"query": "temperature in SF"'
     result = parser.parse(text)
@@ -92,6 +101,7 @@ def test_valid_action_parsing_with_incomplete_json(parser):
     assert result.tool_input == '{"query": "temperature in SF"}'
 
 
+@pytest.mark.timeout(60)
 def test_valid_action_parsing_with_special_characters(parser):
     text = "Thought: Let's find the temperature\nAction: search\nAction Input: what is the temperature in SF? @$%^&*"
     result = parser.parse(text)
@@ -100,6 +110,7 @@ def test_valid_action_parsing_with_special_characters(parser):
     assert result.tool_input == "what is the temperature in SF? @$%^&*"
 
 
+@pytest.mark.timeout(60)
 def test_valid_action_parsing_with_combination(parser):
     text = 'Thought: Let\'s find the temperature\nAction: search\nAction Input: "[what is the temperature in SF?]"'
     result = parser.parse(text)
@@ -108,6 +119,7 @@ def test_valid_action_parsing_with_combination(parser):
     assert result.tool_input == "[what is the temperature in SF?]"
 
 
+@pytest.mark.timeout(60)
 def test_valid_action_parsing_with_mixed_quotes(parser):
     text = "Thought: Let's find the temperature\nAction: search\nAction Input: \"what's the temperature in SF?\""
     result = parser.parse(text)
@@ -116,6 +128,7 @@ def test_valid_action_parsing_with_mixed_quotes(parser):
     assert result.tool_input == "what's the temperature in SF?"
 
 
+@pytest.mark.timeout(60)
 def test_valid_action_parsing_with_newlines(parser):
     text = "Thought: Let's find the temperature\nAction: search\nAction Input: what is\nthe temperature in SF?"
     result = parser.parse(text)
@@ -124,6 +137,7 @@ def test_valid_action_parsing_with_newlines(parser):
     assert result.tool_input == "what is\nthe temperature in SF?"
 
 
+@pytest.mark.timeout(60)
 def test_valid_action_parsing_with_escaped_characters(parser):
     text = "Thought: Let's find the temperature\nAction: search\nAction Input: what is the temperature in SF? \\n"
     result = parser.parse(text)
@@ -132,6 +146,7 @@ def test_valid_action_parsing_with_escaped_characters(parser):
     assert result.tool_input == "what is the temperature in SF? \\n"
 
 
+@pytest.mark.timeout(60)
 def test_valid_action_parsing_with_json_string(parser):
     text = 'Thought: Let\'s find the temperature\nAction: search\nAction Input: {"query": "temperature in SF"}'
     result = parser.parse(text)
@@ -140,6 +155,7 @@ def test_valid_action_parsing_with_json_string(parser):
     assert result.tool_input == '{"query": "temperature in SF"}'
 
 
+@pytest.mark.timeout(60)
 def test_valid_action_parsing_with_unbalanced_quotes(parser):
     text = "Thought: Let's find the temperature\nAction: search\nAction Input: \"what is the temperature in SF?"
     result = parser.parse(text)
@@ -148,60 +164,70 @@ def test_valid_action_parsing_with_unbalanced_quotes(parser):
     assert result.tool_input == "what is the temperature in SF?"
 
 
+@pytest.mark.timeout(60)
 def test_clean_action_no_formatting(parser):
     action = "Ask question to senior researcher"
     cleaned_action = parser._clean_action(action)
     assert cleaned_action == "Ask question to senior researcher"
 
 
+@pytest.mark.timeout(60)
 def test_clean_action_with_leading_asterisks(parser):
     action = "** Ask question to senior researcher"
     cleaned_action = parser._clean_action(action)
     assert cleaned_action == "Ask question to senior researcher"
 
 
+@pytest.mark.timeout(60)
 def test_clean_action_with_trailing_asterisks(parser):
     action = "Ask question to senior researcher **"
     cleaned_action = parser._clean_action(action)
     assert cleaned_action == "Ask question to senior researcher"
 
 
+@pytest.mark.timeout(60)
 def test_clean_action_with_leading_and_trailing_asterisks(parser):
     action = "** Ask question to senior researcher **"
     cleaned_action = parser._clean_action(action)
     assert cleaned_action == "Ask question to senior researcher"
 
 
+@pytest.mark.timeout(60)
 def test_clean_action_with_multiple_leading_asterisks(parser):
     action = "**** Ask question to senior researcher"
     cleaned_action = parser._clean_action(action)
     assert cleaned_action == "Ask question to senior researcher"
 
 
+@pytest.mark.timeout(60)
 def test_clean_action_with_multiple_trailing_asterisks(parser):
     action = "Ask question to senior researcher ****"
     cleaned_action = parser._clean_action(action)
     assert cleaned_action == "Ask question to senior researcher"
 
 
+@pytest.mark.timeout(60)
 def test_clean_action_with_spaces_and_asterisks(parser):
     action = "  **  Ask question to senior researcher  **  "
     cleaned_action = parser._clean_action(action)
     assert cleaned_action == "Ask question to senior researcher"
 
 
+@pytest.mark.timeout(60)
 def test_clean_action_with_only_asterisks(parser):
     action = "****"
     cleaned_action = parser._clean_action(action)
     assert cleaned_action == ""
 
 
+@pytest.mark.timeout(60)
 def test_clean_action_with_empty_string(parser):
     action = ""
     cleaned_action = parser._clean_action(action)
     assert cleaned_action == ""
 
 
+@pytest.mark.timeout(60)
 def test_valid_final_answer_parsing(parser):
     text = (
         "Thought: I found the information\nFinal Answer: The temperature is 100 degrees"
@@ -211,6 +237,7 @@ def test_valid_final_answer_parsing(parser):
     assert result.output == "The temperature is 100 degrees"
 
 
+@pytest.mark.timeout(60)
 def test_missing_action_error(parser):
     text = "Thought: Let's find the temperature\nAction Input: what is the temperature in SF?"
     with pytest.raises(OutputParserException) as exc_info:
@@ -220,6 +247,7 @@ def test_missing_action_error(parser):
     )
 
 
+@pytest.mark.timeout(60)
 def test_missing_action_input_error(parser):
     text = "Thought: Let's find the temperature\nAction: search"
     with pytest.raises(OutputParserException) as exc_info:
@@ -227,6 +255,7 @@ def test_missing_action_input_error(parser):
     assert "I missed the 'Action Input:' after 'Action:'." in str(exc_info.value)
 
 
+@pytest.mark.timeout(60)
 def test_action_and_final_answer_error(parser):
     text = "Thought: I found the information\nAction: search\nAction Input: what is the temperature in SF?\nFinal Answer: The temperature is 100 degrees"
     with pytest.raises(OutputParserException) as exc_info:
@@ -234,6 +263,7 @@ def test_action_and_final_answer_error(parser):
     assert "both perform Action and give a Final Answer" in str(exc_info.value)
 
 
+@pytest.mark.timeout(60)
 def test_safe_repair_json(parser):
     invalid_json = '{"task": "Research XAI", "context": "Explainable AI", "coworker": Senior Researcher'
     expected_repaired_json = '{"task": "Research XAI", "context": "Explainable AI", "coworker": "Senior Researcher"}'
@@ -241,12 +271,14 @@ def test_safe_repair_json(parser):
     assert result == expected_repaired_json
 
 
+@pytest.mark.timeout(60)
 def test_safe_repair_json_unrepairable(parser):
     invalid_json = "{invalid_json"
     result = parser._safe_repair_json(invalid_json)
     assert result == invalid_json  # Should return the original if unrepairable
 
 
+@pytest.mark.timeout(60)
 def test_safe_repair_json_missing_quotes(parser):
     invalid_json = (
         '{task: "Research XAI", context: "Explainable AI", coworker: Senior Researcher}'
@@ -256,6 +288,7 @@ def test_safe_repair_json_missing_quotes(parser):
     assert result == expected_repaired_json
 
 
+@pytest.mark.timeout(60)
 def test_safe_repair_json_unclosed_brackets(parser):
     invalid_json = '{"task": "Research XAI", "context": "Explainable AI", "coworker": "Senior Researcher"'
     expected_repaired_json = '{"task": "Research XAI", "context": "Explainable AI", "coworker": "Senior Researcher"}'
@@ -263,6 +296,7 @@ def test_safe_repair_json_unclosed_brackets(parser):
     assert result == expected_repaired_json
 
 
+@pytest.mark.timeout(60)
 def test_safe_repair_json_extra_commas(parser):
     invalid_json = '{"task": "Research XAI", "context": "Explainable AI", "coworker": "Senior Researcher",}'
     expected_repaired_json = '{"task": "Research XAI", "context": "Explainable AI", "coworker": "Senior Researcher"}'
@@ -270,6 +304,7 @@ def test_safe_repair_json_extra_commas(parser):
     assert result == expected_repaired_json
 
 
+@pytest.mark.timeout(60)
 def test_safe_repair_json_trailing_commas(parser):
     invalid_json = '{"task": "Research XAI", "context": "Explainable AI", "coworker": "Senior Researcher",}'
     expected_repaired_json = '{"task": "Research XAI", "context": "Explainable AI", "coworker": "Senior Researcher"}'
@@ -277,6 +312,7 @@ def test_safe_repair_json_trailing_commas(parser):
     assert result == expected_repaired_json
 
 
+@pytest.mark.timeout(60)
 def test_safe_repair_json_single_quotes(parser):
     invalid_json = "{'task': 'Research XAI', 'context': 'Explainable AI', 'coworker': 'Senior Researcher'}"
     expected_repaired_json = '{"task": "Research XAI", "context": "Explainable AI", "coworker": "Senior Researcher"}'
@@ -284,6 +320,7 @@ def test_safe_repair_json_single_quotes(parser):
     assert result == expected_repaired_json
 
 
+@pytest.mark.timeout(60)
 def test_safe_repair_json_mixed_quotes(parser):
     invalid_json = "{'task': \"Research XAI\", 'context': \"Explainable AI\", 'coworker': 'Senior Researcher'}"
     expected_repaired_json = '{"task": "Research XAI", "context": "Explainable AI", "coworker": "Senior Researcher"}'
@@ -291,6 +328,7 @@ def test_safe_repair_json_mixed_quotes(parser):
     assert result == expected_repaired_json
 
 
+@pytest.mark.timeout(60)
 def test_safe_repair_json_unescaped_characters(parser):
     invalid_json = '{"task": "Research XAI", "context": "Explainable AI", "coworker": "Senior Researcher\n"}'
     expected_repaired_json = '{"task": "Research XAI", "context": "Explainable AI", "coworker": "Senior Researcher"}'
@@ -298,6 +336,7 @@ def test_safe_repair_json_unescaped_characters(parser):
     assert result == expected_repaired_json
 
 
+@pytest.mark.timeout(60)
 def test_safe_repair_json_missing_colon(parser):
     invalid_json = '{"task" "Research XAI", "context": "Explainable AI", "coworker": "Senior Researcher"}'
     expected_repaired_json = '{"task": "Research XAI", "context": "Explainable AI", "coworker": "Senior Researcher"}'
@@ -305,6 +344,7 @@ def test_safe_repair_json_missing_colon(parser):
     assert result == expected_repaired_json
 
 
+@pytest.mark.timeout(60)
 def test_safe_repair_json_missing_comma(parser):
     invalid_json = '{"task": "Research XAI" "context": "Explainable AI", "coworker": "Senior Researcher"}'
     expected_repaired_json = '{"task": "Research XAI", "context": "Explainable AI", "coworker": "Senior Researcher"}'
@@ -312,6 +352,7 @@ def test_safe_repair_json_missing_comma(parser):
     assert result == expected_repaired_json
 
 
+@pytest.mark.timeout(60)
 def test_safe_repair_json_unexpected_trailing_characters(parser):
     invalid_json = '{"task": "Research XAI", "context": "Explainable AI", "coworker": "Senior Researcher"} random text'
     expected_repaired_json = '{"task": "Research XAI", "context": "Explainable AI", "coworker": "Senior Researcher"}'
@@ -319,6 +360,7 @@ def test_safe_repair_json_unexpected_trailing_characters(parser):
     assert result == expected_repaired_json
 
 
+@pytest.mark.timeout(60)
 def test_safe_repair_json_special_characters_key(parser):
     invalid_json = '{"task!@#": "Research XAI", "context$%^": "Explainable AI", "coworker&*()": "Senior Researcher"}'
     expected_repaired_json = '{"task!@#": "Research XAI", "context$%^": "Explainable AI", "coworker&*()": "Senior Researcher"}'
@@ -326,6 +368,7 @@ def test_safe_repair_json_special_characters_key(parser):
     assert result == expected_repaired_json
 
 
+@pytest.mark.timeout(60)
 def test_parsing_with_whitespace(parser):
     text = " Thought: Let's find the temperature \n Action: search \n Action Input: what is the temperature in SF? "
     result = parser.parse(text)
@@ -334,6 +377,7 @@ def test_parsing_with_whitespace(parser):
     assert result.tool_input == "what is the temperature in SF?"
 
 
+@pytest.mark.timeout(60)
 def test_parsing_with_special_characters(parser):
     text = 'Thought: Let\'s find the temperature\nAction: search\nAction Input: "what is the temperature in SF?"'
     result = parser.parse(text)
@@ -342,6 +386,7 @@ def test_parsing_with_special_characters(parser):
     assert result.tool_input == "what is the temperature in SF?"
 
 
+@pytest.mark.timeout(60)
 def test_integration_valid_and_invalid(parser):
     text = """
     Thought: Let's find the temperature

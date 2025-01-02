@@ -7,6 +7,7 @@ from io import StringIO
 from unittest import mock
 from unittest.mock import MagicMock, patch
 
+import pytest
 from pytest import raises
 
 from crewai.cli.tools.main import ToolCommand
@@ -23,14 +24,16 @@ def in_temp_dir():
             os.chdir(original_dir)
 
 
+@pytest.mark.timeout(60)
 @patch("crewai.cli.tools.main.subprocess.run")
 def test_create_success(mock_subprocess):
     with in_temp_dir():
         tool_command = ToolCommand()
 
-        with patch.object(tool_command, "login") as mock_login, patch(
-            "sys.stdout", new=StringIO()
-        ) as fake_out:
+        with (
+            patch.object(tool_command, "login") as mock_login,
+            patch("sys.stdout", new=StringIO()) as fake_out,
+        ):
             tool_command.create("test-tool")
             output = fake_out.getvalue()
 
@@ -52,6 +55,7 @@ def test_create_success(mock_subprocess):
         assert "Creating custom tool test_tool..." in output
 
 
+@pytest.mark.timeout(60)
 @patch("crewai.cli.tools.main.subprocess.run")
 @patch("crewai.cli.plus_api.PlusAPI.get_tool")
 def test_install_success(mock_get, mock_subprocess_run):
@@ -82,12 +86,13 @@ def test_install_success(mock_get, mock_subprocess_run):
         capture_output=False,
         text=True,
         check=True,
-        env=unittest.mock.ANY
+        env=unittest.mock.ANY,
     )
 
     assert "Successfully installed sample-tool" in output
 
 
+@pytest.mark.timeout(60)
 @patch("crewai.cli.plus_api.PlusAPI.get_tool")
 def test_install_tool_not_found(mock_get):
     mock_get_response = MagicMock()
@@ -107,6 +112,7 @@ def test_install_tool_not_found(mock_get):
     assert "No tool found with this name" in output
 
 
+@pytest.mark.timeout(60)
 @patch("crewai.cli.plus_api.PlusAPI.get_tool")
 def test_install_api_error(mock_get):
     mock_get_response = MagicMock()
@@ -126,6 +132,7 @@ def test_install_api_error(mock_get):
     assert "Failed to get tool details" in output
 
 
+@pytest.mark.timeout(60)
 @patch("crewai.cli.tools.main.git.Repository.is_synced", return_value=False)
 def test_publish_when_not_in_sync(mock_is_synced):
     with patch("sys.stdout", new=StringIO()) as fake_out, raises(SystemExit):
@@ -135,6 +142,7 @@ def test_publish_when_not_in_sync(mock_is_synced):
     assert "Local changes need to be resolved before publishing" in fake_out.getvalue()
 
 
+@pytest.mark.timeout(60)
 @patch("crewai.cli.tools.main.get_project_name", return_value="sample-tool")
 @patch("crewai.cli.tools.main.get_project_version", return_value="1.0.0")
 @patch("crewai.cli.tools.main.get_project_description", return_value="A sample tool")
@@ -183,6 +191,7 @@ def test_publish_when_not_in_sync_and_force(
     )
 
 
+@pytest.mark.timeout(60)
 @patch("crewai.cli.tools.main.get_project_name", return_value="sample-tool")
 @patch("crewai.cli.tools.main.get_project_version", return_value="1.0.0")
 @patch("crewai.cli.tools.main.get_project_description", return_value="A sample tool")
@@ -231,6 +240,7 @@ def test_publish_success(
     )
 
 
+@pytest.mark.timeout(60)
 @patch("crewai.cli.tools.main.get_project_name", return_value="sample-tool")
 @patch("crewai.cli.tools.main.get_project_version", return_value="1.0.0")
 @patch("crewai.cli.tools.main.get_project_description", return_value="A sample tool")
@@ -270,6 +280,7 @@ def test_publish_failure(
     assert "Name is already taken" in output
 
 
+@pytest.mark.timeout(60)
 @patch("crewai.cli.tools.main.get_project_name", return_value="sample-tool")
 @patch("crewai.cli.tools.main.get_project_version", return_value="1.0.0")
 @patch("crewai.cli.tools.main.get_project_description", return_value="A sample tool")
