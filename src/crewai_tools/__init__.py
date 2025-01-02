@@ -27,8 +27,8 @@ from .tools import (
     PGSearchTool,
     RagTool,
     ScrapeElementFromWebsiteTool,
-    ScrapeGraphScrapeTool, 
-    ScrapegraphScrapeToolSchema
+    ScrapegraphScrapeTool,
+    ScrapegraphScrapeToolSchema,
     ScrapeWebsiteTool,
     ScrapflyScrapeWebsiteTool,
     SeleniumScrapingTool,

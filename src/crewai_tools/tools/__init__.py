@@ -20,7 +20,7 @@ from .firecrawl_scrape_website_tool.firecrawl_scrape_website_tool import (
 from .firecrawl_search_tool.firecrawl_search_tool import FirecrawlSearchTool
 from .github_search_tool.github_search_tool import GithubSearchTool
 from .json_search_tool.json_search_tool import JSONSearchTool
-from .linkup_search_tool.linkup_search_tool import LinkupSearchTool
+from .linkup.linkup_search_tool import LinkupSearchTool
 from .llamaindex_tool.llamaindex_tool import LlamaIndexTool
 from .mdx_seach_tool.mdx_search_tool import MDXSearchTool
 from .multion_tool.multion_tool import MultiOnTool
@@ -32,7 +32,7 @@ from .rag.rag_tool import RagTool
 from .scrape_element_from_website.scrape_element_from_website import (
     ScrapeElementFromWebsiteTool,
 )
-from .scrapegraph_scrape_tool.scrapegraph_scrape_tool import ScrapeGraphScrapeTool, ScrapegraphScrapeToolSchema
+from .scrapegraph_scrape_tool.scrapegraph_scrape_tool import ScrapegraphScrapeTool, ScrapegraphScrapeToolSchema
 from .scrape_website_tool.scrape_website_tool import ScrapeWebsiteTool
 from .scrapfly_scrape_website_tool.scrapfly_scrape_website_tool import (
     ScrapflyScrapeWebsiteTool,
