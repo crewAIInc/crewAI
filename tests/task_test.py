@@ -719,7 +719,7 @@ def test_interpolate_inputs():
     task = Task(
         description="Give me a list of 5 interesting ideas about {topic} to explore for an article, what makes them unique and interesting.",
         expected_output="Bullet point list of 5 interesting ideas about {topic}.",
-        output_file="/tmp/{topic}/output_{date}.txt"
+        output_file="/tmp/{topic}/output_{date}.txt",
     )
 
     task.interpolate_inputs(inputs={"topic": "AI", "date": "2024"})
@@ -742,41 +742,35 @@ def test_interpolate_inputs():
 def test_interpolate_only():
     """Test the interpolate_only method for various scenarios including JSON structure preservation."""
     task = Task(
-        description="Unused in this test",
-        expected_output="Unused in this test"
+        description="Unused in this test", expected_output="Unused in this test"
     )
-    
+
     # Test JSON structure preservation
     json_string = '{"info": "Look at {placeholder}", "nested": {"val": "{nestedVal}"}}'
     result = task.interpolate_only(
         input_string=json_string,
-        inputs={"placeholder": "the data", "nestedVal": "something else"}
+        inputs={"placeholder": "the data", "nestedVal": "something else"},
     )
     assert '"info": "Look at the data"' in result
     assert '"val": "something else"' in result
     assert "{placeholder}" not in result
     assert "{nestedVal}" not in result
-    
+
     # Test normal string interpolation
     normal_string = "Hello {name}, welcome to {place}!"
     result = task.interpolate_only(
-        input_string=normal_string,
-        inputs={"name": "John", "place": "CrewAI"}
+        input_string=normal_string, inputs={"name": "John", "place": "CrewAI"}
     )
     assert result == "Hello John, welcome to CrewAI!"
-    
+
     # Test empty string
-    result = task.interpolate_only(
-        input_string="",
-        inputs={"unused": "value"}
-    )
+    result = task.interpolate_only(input_string="", inputs={"unused": "value"})
     assert result == ""
-    
+
     # Test string with no placeholders
     no_placeholders = "Hello, this is a test"
     result = task.interpolate_only(
-        input_string=no_placeholders,
-        inputs={"unused": "value"}
+        input_string=no_placeholders, inputs={"unused": "value"}
     )
     assert result == no_placeholders
 
@@ -880,56 +874,65 @@ def test_key():
 def test_output_file_validation():
     """Test output file path validation."""
     # Valid paths
-    assert Task(
-        description="Test task",
-        expected_output="Test output",
-        output_file="output.txt"
-    ).output_file == "output.txt"
-    assert Task(
-        description="Test task",
-        expected_output="Test output",
-        output_file="/tmp/output.txt"
-    ).output_file == "tmp/output.txt"
-    assert Task(
-        description="Test task",
-        expected_output="Test output",
-        output_file="{dir}/output_{date}.txt"
-    ).output_file == "{dir}/output_{date}.txt"
-    
+    assert (
+        Task(
+            description="Test task",
+            expected_output="Test output",
+            output_file="output.txt",
+        ).output_file
+        == "output.txt"
+    )
+    assert (
+        Task(
+            description="Test task",
+            expected_output="Test output",
+            output_file="/tmp/output.txt",
+        ).output_file
+        == "tmp/output.txt"
+    )
+    assert (
+        Task(
+            description="Test task",
+            expected_output="Test output",
+            output_file="{dir}/output_{date}.txt",
+        ).output_file
+        == "{dir}/output_{date}.txt"
+    )
+
     # Invalid paths
     with pytest.raises(ValueError, match="Path traversal"):
         Task(
             description="Test task",
             expected_output="Test output",
-            output_file="../output.txt"
+            output_file="../output.txt",
         )
     with pytest.raises(ValueError, match="Path traversal"):
         Task(
             description="Test task",
             expected_output="Test output",
-            output_file="folder/../output.txt"
+            output_file="folder/../output.txt",
         )
     with pytest.raises(ValueError, match="Shell special characters"):
         Task(
             description="Test task",
             expected_output="Test output",
-            output_file="output.txt | rm -rf /"
+            output_file="output.txt | rm -rf /",
         )
     with pytest.raises(ValueError, match="Shell expansion"):
         Task(
             description="Test task",
             expected_output="Test output",
-            output_file="~/output.txt"
+            output_file="~/output.txt",
         )
     with pytest.raises(ValueError, match="Shell expansion"):
         Task(
             description="Test task",
             expected_output="Test output",
-            output_file="$HOME/output.txt"
+            output_file="$HOME/output.txt",
         )
     with pytest.raises(ValueError, match="Invalid template variable"):
         Task(
             description="Test task",
             expected_output="Test output",
-            output_file="{invalid-name}/output.txt"
+            output_file="{invalid-name}/output.txt",
         )
