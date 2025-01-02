@@ -333,16 +333,16 @@ def test_manager_agent_delegating_to_assigned_task_agent():
     )
 
     mock_task_output = TaskOutput(
-        description="Mock description",
-        raw="mocked output",
-        agent="mocked agent"
+        description="Mock description", raw="mocked output", agent="mocked agent"
     )
 
     # Because we are mocking execute_sync, we never hit the underlying _execute_core
     # which sets the output attribute of the task
     task.output = mock_task_output
 
-    with patch.object(Task, 'execute_sync', return_value=mock_task_output) as mock_execute_sync:
+    with patch.object(
+        Task, "execute_sync", return_value=mock_task_output
+    ) as mock_execute_sync:
         crew.kickoff()
 
         # Verify execute_sync was called once
@@ -350,12 +350,20 @@ def test_manager_agent_delegating_to_assigned_task_agent():
 
         # Get the tools argument from the call
         _, kwargs = mock_execute_sync.call_args
-        tools = kwargs['tools']
+        tools = kwargs["tools"]
 
         # Verify the delegation tools were passed correctly
         assert len(tools) == 2
-        assert any("Delegate a specific task to one of the following coworkers: Researcher" in tool.description for tool in tools)
-        assert any("Ask a specific question to one of the following coworkers: Researcher" in tool.description for tool in tools)
+        assert any(
+            "Delegate a specific task to one of the following coworkers: Researcher"
+            in tool.description
+            for tool in tools
+        )
+        assert any(
+            "Ask a specific question to one of the following coworkers: Researcher"
+            in tool.description
+            for tool in tools
+        )
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
@@ -404,7 +412,7 @@ def test_manager_agent_delegates_with_varied_role_cases():
         backstory="A researcher with spaces in role name",
         allow_delegation=False,
     )
-    
+
     writer_caps = Agent(
         role="SENIOR WRITER",  # All caps
         goal="Write with caps in role",
@@ -426,13 +434,13 @@ def test_manager_agent_delegates_with_varied_role_cases():
     )
 
     mock_task_output = TaskOutput(
-        description="Mock description",
-        raw="mocked output",
-        agent="mocked agent"
+        description="Mock description", raw="mocked output", agent="mocked agent"
     )
     task.output = mock_task_output
 
-    with patch.object(Task, 'execute_sync', return_value=mock_task_output) as mock_execute_sync:
+    with patch.object(
+        Task, "execute_sync", return_value=mock_task_output
+    ) as mock_execute_sync:
         crew.kickoff()
 
         # Verify execute_sync was called once
@@ -440,20 +448,32 @@ def test_manager_agent_delegates_with_varied_role_cases():
 
         # Get the tools argument from the call
         _, kwargs = mock_execute_sync.call_args
-        tools = kwargs['tools']
+        tools = kwargs["tools"]
 
         # Verify the delegation tools were passed correctly and can handle case/whitespace variations
         assert len(tools) == 2
-        
+
         # Check delegation tool descriptions (should work despite case/whitespace differences)
         delegation_tool = tools[0]
         question_tool = tools[1]
-        
-        assert "Delegate a specific task to one of the following coworkers:" in delegation_tool.description
-        assert " Researcher " in delegation_tool.description or "SENIOR WRITER" in delegation_tool.description
-        
-        assert "Ask a specific question to one of the following coworkers:" in question_tool.description
-        assert " Researcher " in question_tool.description or "SENIOR WRITER" in question_tool.description
+
+        assert (
+            "Delegate a specific task to one of the following coworkers:"
+            in delegation_tool.description
+        )
+        assert (
+            " Researcher " in delegation_tool.description
+            or "SENIOR WRITER" in delegation_tool.description
+        )
+
+        assert (
+            "Ask a specific question to one of the following coworkers:"
+            in question_tool.description
+        )
+        assert (
+            " Researcher " in question_tool.description
+            or "SENIOR WRITER" in question_tool.description
+        )
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
@@ -479,6 +499,7 @@ def test_crew_with_delegating_agents():
         == "In the rapidly evolving landscape of technology, AI agents have emerged as formidable tools, revolutionizing how we interact with data and automate tasks. These sophisticated systems leverage machine learning and natural language processing to perform a myriad of functions, from virtual personal assistants to complex decision-making companions in industries such as finance, healthcare, and education. By mimicking human intelligence, AI agents can analyze massive data sets at unparalleled speeds, enabling businesses to uncover valuable insights, enhance productivity, and elevate user experiences to unprecedented levels.\n\nOne of the most striking aspects of AI agents is their adaptability; they learn from their interactions and continuously improve their performance over time. This feature is particularly valuable in customer service where AI agents can address inquiries, resolve issues, and provide personalized recommendations without the limitations of human fatigue. Moreover, with intuitive interfaces, AI agents enhance user interactions, making technology more accessible and user-friendly, thereby breaking down barriers that have historically hindered digital engagement.\n\nDespite their immense potential, the deployment of AI agents raises important ethical and practical considerations. Issues related to privacy, data security, and the potential for job displacement necessitate thoughtful dialogue and proactive measures. Striking a balance between technological innovation and societal impact will be crucial as organizations integrate these agents into their operations. Additionally, ensuring transparency in AI decision-making processes is vital to maintain public trust as AI agents become an integral part of daily life.\n\nLooking ahead, the future of AI agents appears bright, with ongoing advancements promising even greater capabilities. As we continue to harness the power of AI, we can expect these agents to play a transformative role in shaping various sectors—streamlining workflows, enabling smarter decision-making, and fostering more personalized experiences. Embracing this technology responsibly can lead to a future where AI agents not only augment human effort but also inspire creativity and efficiency across the board, ultimately redefining our interaction with the digital world."
     )
 
+
 @pytest.mark.vcr(filter_headers=["authorization"])
 def test_crew_with_delegating_agents_should_not_override_task_tools():
     from typing import Type
@@ -489,6 +510,7 @@ def test_crew_with_delegating_agents_should_not_override_task_tools():
 
     class TestToolInput(BaseModel):
         """Input schema for TestTool."""
+
         query: str = Field(..., description="Query to process")
 
     class TestTool(BaseTool):
@@ -516,24 +538,29 @@ def test_crew_with_delegating_agents_should_not_override_task_tools():
     )
 
     mock_task_output = TaskOutput(
-        description="Mock description",
-        raw="mocked output",
-        agent="mocked agent"
+        description="Mock description", raw="mocked output", agent="mocked agent"
     )
 
     # Because we are mocking execute_sync, we never hit the underlying _execute_core
     # which sets the output attribute of the task
     tasks[0].output = mock_task_output
 
-    with patch.object(Task, 'execute_sync', return_value=mock_task_output) as mock_execute_sync:
+    with patch.object(
+        Task, "execute_sync", return_value=mock_task_output
+    ) as mock_execute_sync:
         crew.kickoff()
 
         # Execute the task and verify both tools are present
         _, kwargs = mock_execute_sync.call_args
-        tools = kwargs['tools']
+        tools = kwargs["tools"]
 
-        assert any(isinstance(tool, TestTool) for tool in tools), "TestTool should be present"
-        assert any("delegate" in tool.name.lower() for tool in tools), "Delegation tool should be present"
+        assert any(
+            isinstance(tool, TestTool) for tool in tools
+        ), "TestTool should be present"
+        assert any(
+            "delegate" in tool.name.lower() for tool in tools
+        ), "Delegation tool should be present"
+
 
 @pytest.mark.vcr(filter_headers=["authorization"])
 def test_crew_with_delegating_agents_should_not_override_agent_tools():
@@ -545,6 +572,7 @@ def test_crew_with_delegating_agents_should_not_override_agent_tools():
 
     class TestToolInput(BaseModel):
         """Input schema for TestTool."""
+
         query: str = Field(..., description="Query to process")
 
     class TestTool(BaseTool):
@@ -563,7 +591,7 @@ def test_crew_with_delegating_agents_should_not_override_agent_tools():
         Task(
             description="Produce and amazing 1 paragraph draft of an article about AI Agents.",
             expected_output="A 4 paragraph article about AI.",
-            agent=new_ceo
+            agent=new_ceo,
         )
     ]
 
@@ -574,24 +602,29 @@ def test_crew_with_delegating_agents_should_not_override_agent_tools():
     )
 
     mock_task_output = TaskOutput(
-        description="Mock description",
-        raw="mocked output",
-        agent="mocked agent"
+        description="Mock description", raw="mocked output", agent="mocked agent"
     )
 
     # Because we are mocking execute_sync, we never hit the underlying _execute_core
     # which sets the output attribute of the task
     tasks[0].output = mock_task_output
 
-    with patch.object(Task, 'execute_sync', return_value=mock_task_output) as mock_execute_sync:
+    with patch.object(
+        Task, "execute_sync", return_value=mock_task_output
+    ) as mock_execute_sync:
         crew.kickoff()
 
         # Execute the task and verify both tools are present
         _, kwargs = mock_execute_sync.call_args
-        tools = kwargs['tools']
+        tools = kwargs["tools"]
 
-        assert any(isinstance(tool, TestTool) for tool in new_ceo.tools), "TestTool should be present"
-        assert any("delegate" in tool.name.lower() for tool in tools), "Delegation tool should be present"
+        assert any(
+            isinstance(tool, TestTool) for tool in new_ceo.tools
+        ), "TestTool should be present"
+        assert any(
+            "delegate" in tool.name.lower() for tool in tools
+        ), "Delegation tool should be present"
+
 
 @pytest.mark.vcr(filter_headers=["authorization"])
 def test_task_tools_override_agent_tools():
@@ -603,6 +636,7 @@ def test_task_tools_override_agent_tools():
 
     class TestToolInput(BaseModel):
         """Input schema for TestTool."""
+
         query: str = Field(..., description="Query to process")
 
     class TestTool(BaseTool):
@@ -630,14 +664,10 @@ def test_task_tools_override_agent_tools():
         description="Write a test task",
         expected_output="Test output",
         agent=new_researcher,
-        tools=[AnotherTestTool()]
+        tools=[AnotherTestTool()],
     )
 
-    crew = Crew(
-        agents=[new_researcher],
-        tasks=[task],
-        process=Process.sequential
-    )
+    crew = Crew(agents=[new_researcher], tasks=[task], process=Process.sequential)
 
     crew.kickoff()
 
@@ -649,6 +679,7 @@ def test_task_tools_override_agent_tools():
     # Verify agent tools remain unchanged
     assert len(new_researcher.tools) == 1
     assert isinstance(new_researcher.tools[0], TestTool)
+
 
 @pytest.mark.vcr(filter_headers=["authorization"])
 def test_task_tools_override_agent_tools_with_allow_delegation():
@@ -702,13 +733,13 @@ def test_task_tools_override_agent_tools_with_allow_delegation():
     )
 
     mock_task_output = TaskOutput(
-        description="Mock description",
-        raw="mocked output",
-        agent="mocked agent"
+        description="Mock description", raw="mocked output", agent="mocked agent"
     )
 
     # We mock execute_sync to verify which tools get used at runtime
-    with patch.object(Task, "execute_sync", return_value=mock_task_output) as mock_execute_sync:
+    with patch.object(
+        Task, "execute_sync", return_value=mock_task_output
+    ) as mock_execute_sync:
         crew.kickoff()
 
         # Inspect the call kwargs to verify the actual tools passed to execution
@@ -716,15 +747,22 @@ def test_task_tools_override_agent_tools_with_allow_delegation():
         used_tools = kwargs["tools"]
 
         # Confirm AnotherTestTool is present but TestTool is not
-        assert any(isinstance(tool, AnotherTestTool) for tool in used_tools), "AnotherTestTool should be present"
-        assert not any(isinstance(tool, TestTool) for tool in used_tools), "TestTool should not be present among used tools"
+        assert any(
+            isinstance(tool, AnotherTestTool) for tool in used_tools
+        ), "AnotherTestTool should be present"
+        assert not any(
+            isinstance(tool, TestTool) for tool in used_tools
+        ), "TestTool should not be present among used tools"
 
         # Confirm delegation tool(s) are present
-        assert any("delegate" in tool.name.lower() for tool in used_tools), "Delegation tool should be present"
+        assert any(
+            "delegate" in tool.name.lower() for tool in used_tools
+        ), "Delegation tool should be present"
 
     # Finally, make sure the agent's original tools remain unchanged
     assert len(researcher_with_delegation.tools) == 1
     assert isinstance(researcher_with_delegation.tools[0], TestTool)
+
 
 @pytest.mark.vcr(filter_headers=["authorization"])
 def test_crew_verbose_output(capsys):
@@ -1012,8 +1050,8 @@ def test_three_task_with_async_execution():
     )
 
 
-@pytest.mark.vcr(filter_headers=["authorization"])
 @pytest.mark.asyncio
+@pytest.mark.vcr(filter_headers=["authorization"])
 async def test_crew_async_kickoff():
     inputs = [
         {"topic": "dog"},
@@ -1060,8 +1098,9 @@ async def test_crew_async_kickoff():
             assert result[0].token_usage.successful_requests > 0  # type: ignore
 
 
+@pytest.mark.asyncio
 @pytest.mark.vcr(filter_headers=["authorization"])
-def test_async_task_execution_call_count():
+async def test_async_task_execution_call_count():
     from unittest.mock import MagicMock, patch
 
     list_ideas = Task(
@@ -1188,7 +1227,6 @@ def test_kickoff_for_each_empty_input():
     assert results == []
 
 
-@pytest.mark.vcr(filter_headers=["authorization"])
 def test_kickoff_for_each_invalid_input():
     """Tests if kickoff_for_each raises TypeError for invalid input types."""
 
@@ -1211,7 +1249,6 @@ def test_kickoff_for_each_invalid_input():
         crew.kickoff_for_each("invalid input")
 
 
-@pytest.mark.vcr(filter_headers=["authorization"])
 def test_kickoff_for_each_error_handling():
     """Tests error handling in kickoff_for_each when kickoff raises an error."""
     from unittest.mock import patch
@@ -1248,7 +1285,6 @@ def test_kickoff_for_each_error_handling():
             crew.kickoff_for_each(inputs=inputs)
 
 
-@pytest.mark.vcr(filter_headers=["authorization"])
 @pytest.mark.asyncio
 async def test_kickoff_async_basic_functionality_and_output():
     """Tests the basic functionality and output of kickoff_async."""
@@ -1283,7 +1319,6 @@ async def test_kickoff_async_basic_functionality_and_output():
         mock_kickoff.assert_called_once_with(inputs)
 
 
-@pytest.mark.vcr(filter_headers=["authorization"])
 @pytest.mark.asyncio
 async def test_async_kickoff_for_each_async_basic_functionality_and_output():
     """Tests the basic functionality and output of kickoff_for_each_async."""
@@ -1330,7 +1365,6 @@ async def test_async_kickoff_for_each_async_basic_functionality_and_output():
             mock_kickoff_async.assert_any_call(inputs=input_data)
 
 
-@pytest.mark.vcr(filter_headers=["authorization"])
 @pytest.mark.asyncio
 async def test_async_kickoff_for_each_async_empty_input():
     """Tests if akickoff_for_each_async handles an empty input list."""
@@ -1514,12 +1548,12 @@ def test_code_execution_flag_adds_code_tool_upon_kickoff():
     crew = Crew(agents=[programmer], tasks=[task])
 
     mock_task_output = TaskOutput(
-        description="Mock description",
-        raw="mocked output",
-        agent="mocked agent"
+        description="Mock description", raw="mocked output", agent="mocked agent"
     )
 
-    with patch.object(Task, "execute_sync", return_value=mock_task_output) as mock_execute_sync:
+    with patch.object(
+        Task, "execute_sync", return_value=mock_task_output
+    ) as mock_execute_sync:
         crew.kickoff()
 
         # Get the tools that were actually used in execution
@@ -1528,7 +1562,10 @@ def test_code_execution_flag_adds_code_tool_upon_kickoff():
 
         # Verify that exactly one tool was used and it was a CodeInterpreterTool
         assert len(used_tools) == 1, "Should have exactly one tool"
-        assert isinstance(used_tools[0], CodeInterpreterTool), "Tool should be CodeInterpreterTool"
+        assert isinstance(
+            used_tools[0], CodeInterpreterTool
+        ), "Tool should be CodeInterpreterTool"
+
 
 @pytest.mark.vcr(filter_headers=["authorization"])
 def test_delegation_is_not_enabled_if_there_are_only_one_agent():
@@ -1639,16 +1676,16 @@ def test_hierarchical_crew_creation_tasks_with_agents():
     )
 
     mock_task_output = TaskOutput(
-        description="Mock description",
-        raw="mocked output",
-        agent="mocked agent"
+        description="Mock description", raw="mocked output", agent="mocked agent"
     )
 
     # Because we are mocking execute_sync, we never hit the underlying _execute_core
     # which sets the output attribute of the task
     task.output = mock_task_output
 
-    with patch.object(Task, 'execute_sync', return_value=mock_task_output) as mock_execute_sync:
+    with patch.object(
+        Task, "execute_sync", return_value=mock_task_output
+    ) as mock_execute_sync:
         crew.kickoff()
 
         # Verify execute_sync was called once
@@ -1656,12 +1693,20 @@ def test_hierarchical_crew_creation_tasks_with_agents():
 
         # Get the tools argument from the call
         _, kwargs = mock_execute_sync.call_args
-        tools = kwargs['tools']
+        tools = kwargs["tools"]
 
         # Verify the delegation tools were passed correctly
         assert len(tools) == 2
-        assert any("Delegate a specific task to one of the following coworkers: Senior Writer" in tool.description for tool in tools)
-        assert any("Ask a specific question to one of the following coworkers: Senior Writer" in tool.description for tool in tools)
+        assert any(
+            "Delegate a specific task to one of the following coworkers: Senior Writer"
+            in tool.description
+            for tool in tools
+        )
+        assert any(
+            "Ask a specific question to one of the following coworkers: Senior Writer"
+            in tool.description
+            for tool in tools
+        )
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
@@ -1684,9 +1729,7 @@ def test_hierarchical_crew_creation_tasks_with_async_execution():
     )
 
     mock_task_output = TaskOutput(
-        description="Mock description",
-        raw="mocked output",
-        agent="mocked agent"
+        description="Mock description", raw="mocked output", agent="mocked agent"
     )
 
     # Create a mock Future that returns our TaskOutput
@@ -1697,7 +1740,9 @@ def test_hierarchical_crew_creation_tasks_with_async_execution():
     # which sets the output attribute of the task
     task.output = mock_task_output
 
-    with patch.object(Task, 'execute_async', return_value=mock_future) as mock_execute_async:
+    with patch.object(
+        Task, "execute_async", return_value=mock_future
+    ) as mock_execute_async:
         crew.kickoff()
 
         # Verify execute_async was called once
@@ -1705,12 +1750,20 @@ def test_hierarchical_crew_creation_tasks_with_async_execution():
 
         # Get the tools argument from the call
         _, kwargs = mock_execute_async.call_args
-        tools = kwargs['tools']
+        tools = kwargs["tools"]
 
         # Verify the delegation tools were passed correctly
         assert len(tools) == 2
-        assert any("Delegate a specific task to one of the following coworkers: Senior Writer\n" in tool.description for tool in tools)
-        assert any("Ask a specific question to one of the following coworkers: Senior Writer\n" in tool.description for tool in tools)
+        assert any(
+            "Delegate a specific task to one of the following coworkers: Senior Writer\n"
+            in tool.description
+            for tool in tools
+        )
+        assert any(
+            "Ask a specific question to one of the following coworkers: Senior Writer\n"
+            in tool.description
+            for tool in tools
+        )
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
@@ -2039,7 +2092,6 @@ def test_crew_output_file_end_to_end(tmp_path):
     assert expected_file.exists(), f"Output file {expected_file} was not created"
 
 
-@pytest.mark.vcr(filter_headers=["authorization"])
 def test_crew_output_file_validation_failures():
     """Test output file validation failures in a crew context."""
     agent = Agent(
@@ -2055,7 +2107,7 @@ def test_crew_output_file_validation_failures():
             description="Analyze data",
             expected_output="Analysis results",
             agent=agent,
-            output_file="../output.txt"
+            output_file="../output.txt",
         )
         Crew(agents=[agent], tasks=[task]).kickoff()
 
@@ -2065,7 +2117,7 @@ def test_crew_output_file_validation_failures():
             description="Analyze data",
             expected_output="Analysis results",
             agent=agent,
-            output_file="output.txt | rm -rf /"
+            output_file="output.txt | rm -rf /",
         )
         Crew(agents=[agent], tasks=[task]).kickoff()
 
@@ -2075,7 +2127,7 @@ def test_crew_output_file_validation_failures():
             description="Analyze data",
             expected_output="Analysis results",
             agent=agent,
-            output_file="~/output.txt"
+            output_file="~/output.txt",
         )
         Crew(agents=[agent], tasks=[task]).kickoff()
 
@@ -2085,12 +2137,11 @@ def test_crew_output_file_validation_failures():
             description="Analyze data",
             expected_output="Analysis results",
             agent=agent,
-            output_file="{invalid-name}/output.txt"
+            output_file="{invalid-name}/output.txt",
         )
         Crew(agents=[agent], tasks=[task]).kickoff()
 
 
-@pytest.mark.vcr(filter_headers=["authorization"])
 def test_manager_agent():
     from unittest.mock import patch
 
@@ -3049,6 +3100,7 @@ def test_task_tools_preserve_code_execution_tools():
 
     class TestToolInput(BaseModel):
         """Input schema for TestTool."""
+
         query: str = Field(..., description="Query to process")
 
     class TestTool(BaseTool):
@@ -3082,7 +3134,7 @@ def test_task_tools_preserve_code_execution_tools():
         description="Write a program to calculate fibonacci numbers.",
         expected_output="A working fibonacci calculator.",
         agent=programmer,
-        tools=[TestTool()]
+        tools=[TestTool()],
     )
 
     crew = Crew(
@@ -3092,12 +3144,12 @@ def test_task_tools_preserve_code_execution_tools():
     )
 
     mock_task_output = TaskOutput(
-        description="Mock description",
-        raw="mocked output",
-        agent="mocked agent"
+        description="Mock description", raw="mocked output", agent="mocked agent"
     )
 
-    with patch.object(Task, "execute_sync", return_value=mock_task_output) as mock_execute_sync:
+    with patch.object(
+        Task, "execute_sync", return_value=mock_task_output
+    ) as mock_execute_sync:
         crew.kickoff()
 
         # Get the tools that were actually used in execution
@@ -3105,12 +3157,21 @@ def test_task_tools_preserve_code_execution_tools():
         used_tools = kwargs["tools"]
 
         # Verify all expected tools are present
-        assert any(isinstance(tool, TestTool) for tool in used_tools), "Task's TestTool should be present"
-        assert any(isinstance(tool, CodeInterpreterTool) for tool in used_tools), "CodeInterpreterTool should be present"
-        assert any("delegate" in tool.name.lower() for tool in used_tools), "Delegation tool should be present"
+        assert any(
+            isinstance(tool, TestTool) for tool in used_tools
+        ), "Task's TestTool should be present"
+        assert any(
+            isinstance(tool, CodeInterpreterTool) for tool in used_tools
+        ), "CodeInterpreterTool should be present"
+        assert any(
+            "delegate" in tool.name.lower() for tool in used_tools
+        ), "Delegation tool should be present"
 
         # Verify the total number of tools (TestTool + CodeInterpreter + 2 delegation tools)
-        assert len(used_tools) == 4, "Should have TestTool, CodeInterpreter, and 2 delegation tools"
+        assert (
+            len(used_tools) == 4
+        ), "Should have TestTool, CodeInterpreter, and 2 delegation tools"
+
 
 @pytest.mark.vcr(filter_headers=["authorization"])
 def test_multimodal_flag_adds_multimodal_tools():
@@ -3139,13 +3200,13 @@ def test_multimodal_flag_adds_multimodal_tools():
     crew = Crew(agents=[multimodal_agent], tasks=[task], process=Process.sequential)
 
     mock_task_output = TaskOutput(
-        description="Mock description",
-        raw="mocked output",
-        agent="mocked agent"
+        description="Mock description", raw="mocked output", agent="mocked agent"
     )
 
     # Mock execute_sync to verify the tools passed at runtime
-    with patch.object(Task, "execute_sync", return_value=mock_task_output) as mock_execute_sync:
+    with patch.object(
+        Task, "execute_sync", return_value=mock_task_output
+    ) as mock_execute_sync:
         crew.kickoff()
 
         # Get the tools that were actually used in execution
@@ -3153,12 +3214,13 @@ def test_multimodal_flag_adds_multimodal_tools():
         used_tools = kwargs["tools"]
 
         # Check that the multimodal tool was added
-        assert any(isinstance(tool, AddImageTool) for tool in used_tools), (
-            "AddImageTool should be present when agent is multimodal"
-        )
+        assert any(
+            isinstance(tool, AddImageTool) for tool in used_tools
+        ), "AddImageTool should be present when agent is multimodal"
 
         # Verify we have exactly one tool (just the AddImageTool)
         assert len(used_tools) == 1, "Should only have the AddImageTool"
+
 
 @pytest.mark.vcr(filter_headers=["authorization"])
 def test_multimodal_agent_image_tool_handling():
@@ -3201,10 +3263,10 @@ def test_multimodal_agent_image_tool_handling():
     mock_task_output = TaskOutput(
         description="Mock description",
         raw="A detailed analysis of the image",
-        agent="Image Analyst"
+        agent="Image Analyst",
     )
 
-    with patch.object(Task, 'execute_sync') as mock_execute_sync:
+    with patch.object(Task, "execute_sync") as mock_execute_sync:
         # Set up the mock to return our task output
         mock_execute_sync.return_value = mock_task_output
 
@@ -3213,7 +3275,7 @@ def test_multimodal_agent_image_tool_handling():
 
         # Get the tools that were passed to execute_sync
         _, kwargs = mock_execute_sync.call_args
-        tools = kwargs['tools']
+        tools = kwargs["tools"]
 
         # Verify the AddImageTool is present and properly configured
         image_tools = [tool for tool in tools if tool.name == "Add image to content"]
@@ -3223,7 +3285,7 @@ def test_multimodal_agent_image_tool_handling():
         image_tool = image_tools[0]
         result = image_tool._run(
             image_url="https://example.com/test-image.jpg",
-            action="Please analyze this image"
+            action="Please analyze this image",
         )
 
         # Verify the tool returns the expected format
@@ -3232,6 +3294,7 @@ def test_multimodal_agent_image_tool_handling():
         assert len(result["content"]) == 2
         assert result["content"][0]["type"] == "text"
         assert result["content"][1]["type"] == "image_url"
+
 
 @pytest.mark.vcr(filter_headers=["authorization"])
 def test_multimodal_agent_live_image_analysis():
@@ -3246,7 +3309,7 @@ def test_multimodal_agent_live_image_analysis():
         allow_delegation=False,
         multimodal=True,
         verbose=True,
-        llm="gpt-4o"
+        llm="gpt-4o",
     )
 
     # Create a task for image analysis
@@ -3257,19 +3320,18 @@ def test_multimodal_agent_live_image_analysis():
         Image: {image_url}
         """,
         expected_output="A comprehensive description of the image contents.",
-        agent=image_analyst
+        agent=image_analyst,
     )
 
     # Create and run the crew
-    crew = Crew(
-        agents=[image_analyst],
-        tasks=[analyze_image]
-    )
+    crew = Crew(agents=[image_analyst], tasks=[analyze_image])
 
     # Execute with an image URL
-    result = crew.kickoff(inputs={
-        "image_url": "https://media.istockphoto.com/id/946087016/photo/aerial-view-of-lower-manhattan-new-york.jpg?s=612x612&w=0&k=20&c=viLiMRznQ8v5LzKTt_LvtfPFUVl1oiyiemVdSlm29_k="
-    })
+    result = crew.kickoff(
+        inputs={
+            "image_url": "https://media.istockphoto.com/id/946087016/photo/aerial-view-of-lower-manhattan-new-york.jpg?s=612x612&w=0&k=20&c=viLiMRznQ8v5LzKTt_LvtfPFUVl1oiyiemVdSlm29_k="
+        }
+    )
 
     # Verify we got a meaningful response
     assert isinstance(result.raw, str)
