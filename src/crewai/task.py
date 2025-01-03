@@ -2,14 +2,12 @@ import datetime
 import inspect
 import json
 import logging
-import sys
 import threading
 import uuid
 from concurrent.futures import Future
 from copy import copy
 from hashlib import md5
 from pathlib import Path
-from string import Formatter
 from typing import (
     Any,
     Callable,

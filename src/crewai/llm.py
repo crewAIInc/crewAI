@@ -12,7 +12,6 @@ from dotenv import load_dotenv
 with warnings.catch_warnings():
     warnings.simplefilter("ignore", UserWarning)
     import litellm
-    from litellm import get_supported_openai_params
     from litellm import Choices, get_supported_openai_params
     from litellm.types.utils import ModelResponse
 
