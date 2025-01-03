@@ -449,9 +449,11 @@ class Task(BaseModel):
         tasks_slices = [self.description, output]
         return "\n".join(tasks_slices)
 
-    def interpolate_inputs(self, inputs: Dict[str, Union[str, int, float]]) -> None:
-        """Interpolate inputs into the task description, expected output, and output file path.
 
+    def interpolate_inputs_and_add_conversation_history(self, inputs: Dict[str, Union[str, int, float]]) -> None:
+        """Interpolate inputs into the task description, expected output, and output file path.
+           Add conversation history if present.
+        
         Args:
             inputs: Dictionary mapping template variables to their values.
                    Supported value types are strings, integers, and floats.
@@ -491,9 +493,33 @@ class Task(BaseModel):
                     input_string=self._original_output_file, inputs=inputs
                 )
             except (KeyError, ValueError) as e:
-                raise ValueError(
-                    f"Error interpolating output_file path: {str(e)}"
-                ) from e
+                raise ValueError(f"Error interpolating output_file path: {str(e)}") from e
+                
+        if "crew_chat_messages" in inputs and inputs["crew_chat_messages"]:
+            # Fetch the conversation history instruction using self.i18n.slice
+            conversation_instruction = self.i18n.slice(
+                "conversation_history_instruction"
+            )
+            print("crew_chat_messages:", inputs["crew_chat_messages"])
+
+            # Ensure that inputs["crew_chat_messages"] is a string
+            crew_chat_messages_json = str(inputs["crew_chat_messages"])
+
+            try:
+                crew_chat_messages = json.loads(crew_chat_messages_json)
+            except json.JSONDecodeError as e:
+                print("An error occurred while parsing crew chat messages:", e)
+                raise
+
+            # Process the messages to build conversation history
+            conversation_history = "\n".join(
+                f"{msg['role'].capitalize()}: {msg['content']}"
+                for msg in crew_chat_messages
+                if isinstance(msg, dict) and "role" in msg and "content" in msg
+            )
+
+            # Add the instruction and conversation history to the description
+            self.description += f"\n\n{conversation_instruction}\n\n{conversation_history}"
 
     def interpolate_only(
         self, input_string: Optional[str], inputs: Dict[str, Union[str, int, float]]
