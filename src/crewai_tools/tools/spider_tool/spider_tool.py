@@ -90,7 +90,7 @@ class SpiderTool(BaseTool):
             self.spider = Spider(api_key=api_key)
         except ImportError:
             raise ImportError(
-                "`spider-client` package not found, please run `pip install spider-client`"
+                "`spider-client` package not found, please run `uv add spider-client`"
             )
         except Exception as e:
             raise RuntimeError(f"Failed to initialize Spider client: {str(e)}")

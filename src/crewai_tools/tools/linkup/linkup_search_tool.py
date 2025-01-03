@@ -1,4 +1,9 @@
-from linkup import LinkupClient
+try:
+    from linkup import LinkupClient
+    LINKUP_AVAILABLE = True
+except ImportError:
+    LINKUP_AVAILABLE = False
+
 from pydantic import PrivateAttr
 
 class LinkupSearchTool:
@@ -10,6 +15,11 @@ class LinkupSearchTool:
         """
         Initialize the tool with an API key.
         """
+        if not LINKUP_AVAILABLE:
+            raise ImportError(
+                "The 'linkup' package is required to use the LinkupSearchTool. "
+                "Please install it with: uv add linkup"
+            )
         self._client = LinkupClient(api_key=api_key)
 
     def _run(self, query: str, depth: str = "standard", output_type: str = "searchResults") -> dict:
