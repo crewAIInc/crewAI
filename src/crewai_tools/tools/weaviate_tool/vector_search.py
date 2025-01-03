@@ -40,9 +40,7 @@ class WeaviateVectorSearchTool(BaseTool):
     generative_model: Optional[str] = None
     collection_name: Optional[str] = None
     limit: Optional[int] = Field(default=3)
-    headers: Optional[dict] = Field(
-        default={"X-OpenAI-Api-Key": os.environ["OPENAI_API_KEY"]}
-    )
+    headers: Optional[dict] = None
     weaviate_cluster_url: str = Field(
         ...,
         description="The URL of the Weaviate cluster",
@@ -55,6 +53,12 @@ class WeaviateVectorSearchTool(BaseTool):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         if WEAVIATE_AVAILABLE:
+            openai_api_key = os.environ.get("OPENAI_API_KEY")
+            if not openai_api_key:
+                raise ValueError(
+                    "OPENAI_API_KEY environment variable is required for WeaviateVectorSearchTool and it is mandatory to use the tool."
+                )
+            self.headers = {"X-OpenAI-Api-Key": openai_api_key}
             self.vectorizer = self.vectorizer or Configure.Vectorizer.text2vec_openai(
                 model="nomic-embed-text",
             )
