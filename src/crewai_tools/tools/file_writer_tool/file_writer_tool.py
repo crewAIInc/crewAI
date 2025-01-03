@@ -1,16 +1,18 @@
 import os
-from typing import Any, Optional, Type
-from pydantic import BaseModel
-from ..base_tool import BaseTool
 from distutils.util import strtobool
+from typing import Any, Optional, Type
+
+from crewai.tools import BaseTool
+from pydantic import BaseModel
 
 
 class FileWriterToolInput(BaseModel):
-    filename: str 
+    filename: str
     directory: Optional[str] = "./"
     overwrite: str = "False"
     content: str
-    
+
+
 class FileWriterTool(BaseTool):
     name: str = "File Writer Tool"
     description: str = (
@@ -26,7 +28,7 @@ class FileWriterTool(BaseTool):
 
             # Construct the full path
             filepath = os.path.join(kwargs.get("directory") or "", kwargs["filename"])
-            
+
             # Convert overwrite to boolean
             kwargs["overwrite"] = bool(strtobool(kwargs["overwrite"]))
 

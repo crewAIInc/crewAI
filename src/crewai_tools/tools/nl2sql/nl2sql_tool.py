@@ -1,17 +1,17 @@
-from typing import Any, Union
+from typing import Any, Type, Union
 
-from ..base_tool import BaseTool
+from crewai.tools import BaseTool
 from pydantic import BaseModel, Field
 from sqlalchemy import create_engine, text
 from sqlalchemy.orm import sessionmaker
 
-from typing import Type, Any
 
 class NL2SQLToolInput(BaseModel):
     sql_query: str = Field(
         title="SQL Query",
         description="The SQL query to execute.",
     )
+
 
 class NL2SQLTool(BaseTool):
     name: str = "NL2SQLTool"

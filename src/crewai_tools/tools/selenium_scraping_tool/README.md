@@ -24,6 +24,16 @@ tool = SeleniumScrapingTool(website_url='https://example.com', css_element='.mai
 
 # Example 4: Scrape using optional parameters for customized scraping
 tool = SeleniumScrapingTool(website_url='https://example.com', css_element='.main-content', cookie={'name': 'user', 'value': 'John Doe'})
+
+# Example 5: Scrape content in HTML format
+tool = SeleniumScrapingTool(website_url='https://example.com', return_html=True)
+result = tool._run()
+# Returns HTML content like: ['<div class="content">Hello World</div>', '<div class="footer">Copyright 2024</div>']
+
+# Example 6: Scrape content in text format (default)
+tool = SeleniumScrapingTool(website_url='https://example.com', return_html=False)
+result = tool._run()
+# Returns text content like: ['Hello World', 'Copyright 2024']
 ```
 
 ## Arguments
@@ -31,3 +41,4 @@ tool = SeleniumScrapingTool(website_url='https://example.com', css_element='.mai
 - `css_element`: Mandatory. The CSS selector for a specific element to scrape from the website.
 - `cookie`: Optional. A dictionary containing cookie information. This parameter allows the tool to simulate a session with cookie information, providing access to content that may be restricted to logged-in users.
 - `wait_time`: Optional. The number of seconds the tool waits after loading the website and after setting a cookie, before scraping the content. This allows for dynamic content to load properly.
+- `return_html`: Optional. If True, the tool returns HTML content. If False, the tool returns text content.

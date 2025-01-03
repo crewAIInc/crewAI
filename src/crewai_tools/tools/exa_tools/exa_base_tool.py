@@ -1,9 +1,7 @@
-import os
 from typing import Type
 
+from crewai.tools import BaseTool
 from pydantic import BaseModel, Field
-
-from crewai_tools.tools.base_tool import BaseTool
 
 
 class EXABaseToolToolSchema(BaseModel):
@@ -28,10 +26,10 @@ class EXABaseTool(BaseTool):
     }
 
     def _parse_results(self, results):
-        stirng = []
+        string = []
         for result in results:
             try:
-                stirng.append(
+                string.append(
                     "\n".join(
                         [
                             f"Title: {result['title']}",
@@ -43,7 +41,7 @@ class EXABaseTool(BaseTool):
                     )
                 )
             except KeyError:
-                next
+                continue
 
-        content = "\n".join(stirng)
+        content = "\n".join(string)
         return f"\nSearch results: {content}\n"

@@ -1,8 +1,8 @@
+import os
 from typing import Any, Optional, Type
-
 from pydantic import BaseModel, Field
 
-from crewai_tools.tools.base_tool import BaseTool
+from crewai.tools import BaseTool
 
 
 class BrowserbaseLoadToolSchema(BaseModel):
@@ -15,8 +15,8 @@ class BrowserbaseLoadTool(BaseTool):
         "Load webpages url in a headless browser using Browserbase and return the contents"
     )
     args_schema: Type[BaseModel] = BrowserbaseLoadToolSchema
-    api_key: Optional[str] = None
-    project_id: Optional[str] = None
+    api_key: Optional[str] = os.getenv('BROWSERBASE_API_KEY')
+    project_id: Optional[str] = os.getenv('BROWSERBASE_PROJECT_ID')
     text_content: Optional[bool] = False
     session_id: Optional[str] = None
     proxy: Optional[bool] = None
@@ -32,6 +32,8 @@ class BrowserbaseLoadTool(BaseTool):
         **kwargs,
     ):
         super().__init__(**kwargs)
+        if not self.api_key:
+            raise EnvironmentError("BROWSERBASE_API_KEY environment variable is required for initialization")
         try:
             from browserbase import Browserbase  # type: ignore
         except ImportError:
@@ -39,7 +41,7 @@ class BrowserbaseLoadTool(BaseTool):
                 "`browserbase` package not found, please run `pip install browserbase`"
             )
 
-        self.browserbase = Browserbase(api_key, project_id)
+        self.browserbase = Browserbase(api_key=self.api_key)
         self.text_content = text_content
         self.session_id = session_id
         self.proxy = proxy

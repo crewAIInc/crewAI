@@ -1,11 +1,9 @@
 import base64
 from typing import Type, Optional
 from pathlib import Path
-
 from crewai.tools import BaseTool
 from openai import OpenAI
 from pydantic import BaseModel, validator
-
 
 class ImagePromptSchema(BaseModel):
     """Input for Vision Tool."""

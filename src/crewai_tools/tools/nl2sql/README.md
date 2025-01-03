@@ -2,9 +2,9 @@
 
 ## Description
 
-This tool is used to convert natural language to SQL queries. When passsed to the agent it will generate queries and then use them to interact with the database.
+This tool is used to convert natural language to SQL queries. When passed to the agent it will generate queries and then use them to interact with the database.
 
-This enables multiple workflows like having an Agent to access the database fetch information based on the goal and then use the information to generate a response, report or any other output. Along with that proivdes the ability for the Agent to update the database based on its goal.
+This enables multiple workflows like having an Agent to access the database fetch information based on the goal and then use the information to generate a response, report or any other output. Along with that provides the ability for the Agent to update the database based on its goal.
 
 **Attention**: Make sure that the Agent has access to a Read-Replica or that is okay for the Agent to run insert/update queries on the database.
 
@@ -22,7 +22,6 @@ pip install 'crewai[tools]'
 ## Usage
 
 In order to use the NL2SQLTool, you need to pass the database URI to the tool. The URI should be in the format `dialect+driver://username:password@host:port/database`.
-
 
 ```python
 from crewai_tools import NL2SQLTool
@@ -43,7 +42,7 @@ def researcher(self) -> Agent:
 
 The primary task goal was:
 
-"Retrieve the average, maximum, and minimum monthly revenue for each city, but only include cities that have more than one user. Also, count the number of user in each city and sort the results by the average monthly revenue in descending order"
+"Retrieve the average, maximum, and minimum monthly revenue for each city, but only include cities that have more than one user. Also, count the number of users in each city and sort the results by the average monthly revenue in descending order"
 
 So the Agent tried to get information from the DB, the first one is wrong so the Agent tries again and gets the correct information and passes to the next agent.
 
