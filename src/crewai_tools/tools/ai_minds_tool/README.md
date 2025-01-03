@@ -6,6 +6,8 @@
 
 This is accomplished by selecting the most relevant data for an answer using parametric search, understanding the meaning and providing responses within the correct context through semantic search, and finally, delivering precise answers by analyzing data and using machine learning (ML) models.
 
+The `AIMindTool` can be used to query data sources in natural language by simply configuring their connection parameters.
+
 ## Installation
 
 1. Install the `crewai[tools]` package:
@@ -55,9 +57,9 @@ aimind_tool.run("How many 3 bedroom houses were sold in 2008?")
 The `datasources` parameter is a list of dictionaries, each containing the following keys:
 
 - `description`: A description of the data contained in the datasource.
-- `engine`: The engine (or type) of the datasource.
-- `connection_data`: A dictionary containing the connection parameters for the datasource.
-- `tables`: A list of tables that the data source will use.
+- `engine`: The engine (or type) of the datasource. Find a list of supported engines in the link below.
+- `connection_data`: A dictionary containing the connection parameters for the datasource. Find a list of connection parameters for each engine in the link below.
+- `tables`: A list of tables that the data source will use. This is optional and can be omitted if all tables in the data source are to be used.
 
 A list of supported data sources and their connection parameters can be found [here](https://docs.mdb.ai/docs/data_sources).
 
