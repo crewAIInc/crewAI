@@ -21,3 +21,4 @@ crew_tasks_output.json
 .mypy_cache
 .ruff_cache
 .venv
+agentops.log

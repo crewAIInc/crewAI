@@ -136,6 +136,13 @@ class Task(BaseModel):
     )
     retry_count: int = Field(default=0, description="Current number of retries")
 
+    start_time: Optional[datetime.datetime] = Field(
+        default=None, description="Start time of the task execution"
+    )
+    end_time: Optional[datetime.datetime] = Field(
+        default=None, description="End time of the task execution"
+    )
+
     @field_validator("guardrail")
     @classmethod
     def validate_guardrail_function(cls, v: Optional[Callable]) -> Optional[Callable]:
@@ -184,7 +191,6 @@ class Task(BaseModel):
     _original_expected_output: Optional[str] = PrivateAttr(default=None)
     _original_output_file: Optional[str] = PrivateAttr(default=None)
     _thread: Optional[threading.Thread] = PrivateAttr(default=None)
-    _execution_time: Optional[float] = PrivateAttr(default=None)
 
     @model_validator(mode="before")
     @classmethod
@@ -209,25 +215,19 @@ class Task(BaseModel):
                 "may_not_set_field", "This field is not to be set by the user.", {}
             )
 
-    def _set_start_execution_time(self) -> float:
-        return datetime.datetime.now().timestamp()
-
-    def _set_end_execution_time(self, start_time: float) -> None:
-        self._execution_time = datetime.datetime.now().timestamp() - start_time
-
     @field_validator("output_file")
     @classmethod
     def output_file_validation(cls, value: Optional[str]) -> Optional[str]:
         """Validate the output file path.
-        
+
         Args:
             value: The output file path to validate. Can be None or a string.
                   If the path contains template variables (e.g. {var}), leading slashes are preserved.
                   For regular paths, leading slashes are stripped.
-        
+
         Returns:
             The validated and potentially modified path, or None if no path was provided.
-            
+
         Raises:
             ValueError: If the path contains invalid characters, path traversal attempts,
                       or other security concerns.
@@ -237,18 +237,24 @@ class Task(BaseModel):
 
         # Basic security checks
         if ".." in value:
-            raise ValueError("Path traversal attempts are not allowed in output_file paths")
-        
+            raise ValueError(
+                "Path traversal attempts are not allowed in output_file paths"
+            )
+
         # Check for shell expansion first
-        if value.startswith('~') or value.startswith('$'):
-            raise ValueError("Shell expansion characters are not allowed in output_file paths")
-            
+        if value.startswith("~") or value.startswith("$"):
+            raise ValueError(
+                "Shell expansion characters are not allowed in output_file paths"
+            )
+
         # Then check other shell special characters
-        if any(char in value for char in ['|', '>', '<', '&', ';']):
-            raise ValueError("Shell special characters are not allowed in output_file paths")
+        if any(char in value for char in ["|", ">", "<", "&", ";"]):
+            raise ValueError(
+                "Shell special characters are not allowed in output_file paths"
+            )
 
         # Don't strip leading slash if it's a template path with variables
-        if "{" in value or "}" in value: 
+        if "{" in value or "}" in value:
             # Validate template variable format
             template_vars = [part.split("}")[0] for part in value.split("{")[1:]]
             for var in template_vars:
@@ -305,6 +311,12 @@ class Task(BaseModel):
 
         return md5("|".join(source).encode(), usedforsecurity=False).hexdigest()
 
+    @property
+    def execution_duration(self) -> float | None:
+        if not self.start_time or not self.end_time:
+            return None
+        return (self.end_time - self.start_time).total_seconds()
+
     def execute_async(
         self,
         agent: BaseAgent | None = None,
@@ -345,7 +357,7 @@ class Task(BaseModel):
                 f"The task '{self.description}' has no agent assigned, therefore it can't be executed directly and should be executed in a Crew using a specific process that support that, like hierarchical."
             )
 
-        start_time = self._set_start_execution_time()
+        self.start_time = datetime.datetime.now()
         self._execution_span = self._telemetry.task_started(crew=agent.crew, task=self)
 
         self.prompt_context = context
@@ -404,8 +416,8 @@ class Task(BaseModel):
                 task_output = guardrail_result.result
 
         self.output = task_output
+        self.end_time = datetime.datetime.now()
 
-        self._set_end_execution_time(start_time)
         if self.callback:
             self.callback(self.output)
 
@@ -417,7 +429,9 @@ class Task(BaseModel):
             content = (
                 json_output
                 if json_output
-                else pydantic_output.model_dump_json() if pydantic_output else result
+                else pydantic_output.model_dump_json()
+                if pydantic_output
+                else result
             )
             self._save_file(content)
 
@@ -445,7 +459,7 @@ class Task(BaseModel):
         Args:
             inputs: Dictionary mapping template variables to their values.
                    Supported value types are strings, integers, and floats.
-        
+
         Raises:
             ValueError: If a required template variable is missing from inputs.
         """
@@ -462,7 +476,9 @@ class Task(BaseModel):
         try:
             self.description = self._original_description.format(**inputs)
         except KeyError as e:
-            raise ValueError(f"Missing required template variable '{e.args[0]}' in description") from e
+            raise ValueError(
+                f"Missing required template variable '{e.args[0]}' in description"
+            ) from e
         except ValueError as e:
             raise ValueError(f"Error interpolating description: {str(e)}") from e
 
