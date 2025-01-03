@@ -1,12 +1,20 @@
+from typing import Any, Type, Optional
 import os
 import json
-import weaviate
-from pydantic import BaseModel, Field
-from typing import Type, Optional
-from crewai.tools import BaseTool
+try:
+    import weaviate
+    from weaviate.classes.config import Configure, Vectorizers
+    from weaviate.classes.init import Auth
+    WEAVIATE_AVAILABLE = True
+except ImportError:
+    WEAVIATE_AVAILABLE = False
+    weaviate = Any  # type placeholder
+    Configure = Any
+    Vectorizers = Any
+    Auth = Any
 
-from weaviate.classes.config import Configure, Vectorizers
-from weaviate.classes.init import Auth
+from pydantic import BaseModel, Field
+from crewai.tools import BaseTool
 
 
 class WeaviateToolSchema(BaseModel):
@@ -51,14 +59,11 @@ class WeaviateVectorSearchTool(BaseTool):
     )
 
     def _run(self, query: str) -> str:
-        """Search the Weaviate database
-
-        Args:
-            query (str): The query to search retrieve relevant information from the Weaviate database. Pass only the query as a string, not the question.
-
-        Returns:
-            str: The result of the search query
-        """
+        if not WEAVIATE_AVAILABLE:
+            raise ImportError(
+                "The 'weaviate-client' package is required to use the WeaviateVectorSearchTool. "
+                "Please install it with: uv add weaviate-client"
+            )
 
         if not self.weaviate_cluster_url or not self.weaviate_api_key:
             raise ValueError("WEAVIATE_URL or WEAVIATE_API_KEY is not set")

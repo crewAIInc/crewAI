@@ -1,15 +1,18 @@
+from typing import Any
+
 try:
     from linkup import LinkupClient
     LINKUP_AVAILABLE = True
 except ImportError:
     LINKUP_AVAILABLE = False
+    LinkupClient = Any  # type placeholder when package is not available
 
 from pydantic import PrivateAttr
 
 class LinkupSearchTool:
     name: str = "Linkup Search Tool"
     description: str = "Performs an API call to Linkup to retrieve contextual information."
-    _client: LinkupClient = PrivateAttr()
+    _client: LinkupClient = PrivateAttr() # type: ignore
 
     def __init__(self, api_key: str):
         """
