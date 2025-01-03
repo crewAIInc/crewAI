@@ -502,8 +502,11 @@ class Task(BaseModel):
             )
             print("crew_chat_messages:", inputs["crew_chat_messages"])
 
+            # Ensure that inputs["crew_chat_messages"] is a string
+            crew_chat_messages_json = str(inputs["crew_chat_messages"])
+
             try:
-                crew_chat_messages = json.loads(inputs["crew_chat_messages"])
+                crew_chat_messages = json.loads(crew_chat_messages_json)
             except json.JSONDecodeError as e:
                 print("An error occurred while parsing crew chat messages:", e)
                 raise
