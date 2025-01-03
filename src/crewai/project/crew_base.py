@@ -218,5 +218,5 @@ def CrewBase(cls: T) -> T:
     # Include base class (qual)name in the wrapper class (qual)name.
     WrappedClass.__name__ = CrewBase.__name__ + "(" + cls.__name__ + ")"
     WrappedClass.__qualname__ = CrewBase.__qualname__ + "(" + cls.__name__ + ")"
-  
+
     return cast(T, WrappedClass)

@@ -2,11 +2,16 @@ from pathlib import Path
 from typing import Iterator, List, Optional, Union
 from urllib.parse import urlparse
 
-from docling.datamodel.base_models import InputFormat
-from docling.document_converter import DocumentConverter
-from docling.exceptions import ConversionError
-from docling_core.transforms.chunker.hierarchical_chunker import HierarchicalChunker
-from docling_core.types.doc.document import DoclingDocument
+try:
+    from docling.datamodel.base_models import InputFormat
+    from docling.document_converter import DocumentConverter
+    from docling.exceptions import ConversionError
+    from docling_core.transforms.chunker.hierarchical_chunker import HierarchicalChunker
+    from docling_core.types.doc.document import DoclingDocument
+    DOCLING_AVAILABLE = True
+except ImportError:
+    DOCLING_AVAILABLE = False
+
 from pydantic import Field
 
 from crewai.knowledge.source.base_knowledge_source import BaseKnowledgeSource
@@ -18,6 +23,14 @@ class CrewDoclingSource(BaseKnowledgeSource):
     """Default Source class for converting documents to markdown or json
     This will auto support PDF, DOCX, and TXT, XLSX, Images, and HTML files without any additional dependencies and follows the docling package as the source of truth.
     """
+
+    def __init__(self, *args, **kwargs):
+        if not DOCLING_AVAILABLE:
+            raise ImportError(
+                "The docling package is required to use CrewDoclingSource. "
+                "Please install it using: uv add docling"
+            )
+        super().__init__(*args, **kwargs)
 
     _logger: Logger = Logger(verbose=True)
 

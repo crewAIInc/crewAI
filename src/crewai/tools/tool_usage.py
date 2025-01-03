@@ -169,7 +169,7 @@ class ToolUsage:
 
                 if calling.arguments:
                     try:
-                        acceptable_args = tool.args_schema.schema()["properties"].keys()  # type: ignore # Item "None" of "type[BaseModel] | None" has no attribute "schema"
+                        acceptable_args = tool.args_schema.model_json_schema()["properties"].keys()  # type: ignore
                         arguments = {
                             k: v
                             for k, v in calling.arguments.items()
