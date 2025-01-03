@@ -6,9 +6,10 @@ from pydantic import BaseModel, ValidationError
 
 from crewai.agents.parser import OutputParserException
 
+"""Parser for converting text outputs into Pydantic models."""
 
 class CrewPydanticOutputParser:
-    """Parses the text into pydantic models"""
+    """Parses text outputs into specified Pydantic models."""
 
     pydantic_object: Type[BaseModel]
 

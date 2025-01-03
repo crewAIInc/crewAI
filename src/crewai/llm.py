@@ -7,11 +7,15 @@ import warnings
 from contextlib import contextmanager
 from typing import Any, Dict, List, Optional, Union, cast
 
-# Load environment variables from .env file
-import litellm
 from dotenv import load_dotenv
-from litellm import Choices, get_supported_openai_params
-from litellm.types.utils import ModelResponse
+
+with warnings.catch_warnings():
+    warnings.simplefilter("ignore", UserWarning)
+    import litellm
+    from litellm import get_supported_openai_params
+    from litellm import Choices, get_supported_openai_params
+    from litellm.types.utils import ModelResponse
+
 
 from crewai.utilities.exceptions.context_window_exceeding_exception import (
     LLMContextLengthExceededException,
@@ -71,6 +75,8 @@ LLM_CONTEXT_WINDOW_SIZES = {
     "llama3-70b-8192": 8192,
     "llama3-8b-8192": 8192,
     "mixtral-8x7b-32768": 32768,
+    "llama-3.3-70b-versatile": 128000,
+    "llama-3.3-70b-instruct": 128000,
 }
 
 DEFAULT_CONTEXT_WINDOW_SIZE = 8192

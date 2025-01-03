@@ -22,13 +22,14 @@ class BaseFileKnowledgeSource(BaseKnowledgeSource, ABC):
         default_factory=list, description="The path to the file"
     )
     content: Dict[Path, str] = Field(init=False, default_factory=dict)
-    storage: KnowledgeStorage = Field(default_factory=KnowledgeStorage)
+    storage: Optional[KnowledgeStorage] = Field(default=None)
     safe_file_paths: List[Path] = Field(default_factory=list)
 
     @field_validator("file_path", "file_paths", mode="before")
-    def validate_file_path(cls, v, values):
+    def validate_file_path(cls, v, info):
         """Validate that at least one of file_path or file_paths is provided."""
-        if v is None and ("file_path" not in values or values.get("file_path") is None):
+        # Single check if both are None, O(1) instead of nested conditions
+        if v is None and info.data.get("file_path" if info.field_name == "file_paths" else "file_paths") is None:
             raise ValueError("Either file_path or file_paths must be provided")
         return v
 
@@ -62,7 +63,10 @@ class BaseFileKnowledgeSource(BaseKnowledgeSource, ABC):
 
     def _save_documents(self):
         """Save the documents to the storage."""
-        self.storage.save(self.chunks)
+        if self.storage:
+            self.storage.save(self.chunks)
+        else:
+            raise ValueError("No storage found to save documents.")
 
     def convert_to_path(self, path: Union[Path, str]) -> Path:
         """Convert a path to a Path object."""
@@ -71,28 +75,29 @@ class BaseFileKnowledgeSource(BaseKnowledgeSource, ABC):
     def _process_file_paths(self) -> List[Path]:
         """Convert file_path to a list of Path objects."""
 
-        # Check if old file_path is being used
         if hasattr(self, "file_path") and self.file_path is not None:
             self._logger.log(
                 "warning",
                 "The 'file_path' attribute is deprecated and will be removed in a future version. Please use 'file_paths' instead.",
                 color="yellow",
             )
-            paths = (
-                [self.file_path]
-                if isinstance(self.file_path, (str, Path))
-                else self.file_path
-            )
-        else:
-            if self.file_paths is None:
-                raise ValueError("Your source must be provided with a file_paths: []")
-            elif isinstance(self.file_paths, list) and len(self.file_paths) == 0:
-                raise ValueError("Empty file_paths are not allowed")
-            else:
-                paths = (
-                    [self.file_paths]
-                    if isinstance(self.file_paths, (str, Path))
-                    else self.file_paths
-                )
+            self.file_paths = self.file_path
 
-        return [self.convert_to_path(path) for path in paths]
+        if self.file_paths is None:
+            raise ValueError("Your source must be provided with a file_paths: []")
+
+        # Convert single path to list
+        path_list: List[Union[Path, str]] = (
+            [self.file_paths]
+            if isinstance(self.file_paths, (str, Path))
+            else list(self.file_paths)
+            if isinstance(self.file_paths, list)
+            else []
+        )
+
+        if not path_list:
+            raise ValueError(
+                "file_path/file_paths must be a Path, str, or a list of these types"
+            )
+
+        return [self.convert_to_path(path) for path in path_list]
