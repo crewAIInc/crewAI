@@ -34,7 +34,11 @@ class AIMindTool(BaseTool):
     mind_name: Optional[Text] = None
 
     def __init__(self, api_key: Optional[Text] = None, **kwargs):
-        super().__init__(api_key=api_key, **kwargs)
+        super().__init__(**kwargs)
+        self.api_key = api_key or os.getenv("MINDS_API_KEY")
+        if not self.api_key:
+            raise ValueError("API key must be provided either through constructor or MINDS_API_KEY environment variable")
+
         try:
             from minds.client import Client  # type: ignore
             from minds.datasources import DatabaseConfig  # type: ignore
@@ -42,12 +46,6 @@ class AIMindTool(BaseTool):
             raise ImportError(
                 "`minds_sdk` package not found, please run `pip install minds-sdk`"
             )
-
-        if os.getenv("MINDS_API_KEY"):
-            self.api_key = os.getenv("MINDS_API_KEY")
-
-        if self.api_key is None:
-            raise ValueError("A Minds API key is required to use the AIMind Tool.")       
 
         minds_client = Client(api_key=self.api_key)
 
