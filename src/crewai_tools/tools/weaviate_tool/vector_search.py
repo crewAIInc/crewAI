@@ -36,7 +36,6 @@ class WeaviateVectorSearchTool(BaseTool):
     description: str = "A tool to search the Weaviate database for relevant information on internal documents."
     args_schema: Type[BaseModel] = WeaviateToolSchema
     query: Optional[str] = None
-
     vectorizer: Optional[Vectorizers] = None
     generative_model: Optional[str] = None
     collection_name: Optional[str] = None
