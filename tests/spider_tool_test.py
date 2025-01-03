@@ -3,7 +3,7 @@ from crewai import Agent, Task, Crew
 
 def test_spider_tool():
     spider_tool = SpiderTool()
-    
+
     searcher = Agent(
         role="Web Research Expert",
         goal="Find related information from specific URL's",
@@ -12,7 +12,7 @@ def test_spider_tool():
         verbose=True,
         cache=False
     )
-    
+
     choose_between_scrape_crawl = Task(
         description="Scrape the page of spider.cloud and return a summary of how fast it is",
         expected_output="spider.cloud is a fast scraping and crawling tool",
@@ -34,13 +34,13 @@ def test_spider_tool():
     crew = Crew(
         agents=[searcher],
         tasks=[
-            choose_between_scrape_crawl, 
-            return_metadata, 
+            choose_between_scrape_crawl,
+            return_metadata,
             css_selector
         ],
-        verbose=2
+        verbose=True
     )
-    
+
     crew.kickoff()
 
 if __name__ == "__main__":
