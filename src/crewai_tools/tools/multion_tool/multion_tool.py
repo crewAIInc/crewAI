@@ -26,7 +26,7 @@ class MultiOnTool(BaseTool):
     ):
         super().__init__(**kwargs)
         try:
-            from multion.client import MultiOn
+            from multion.client import MultiOn  # type: ignore
         except ImportError:
             raise ImportError(
                 "`multion` package not found, please run `pip install multion`"
