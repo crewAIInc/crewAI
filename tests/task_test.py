@@ -936,3 +936,29 @@ def test_output_file_validation():
             expected_output="Test output",
             output_file="{invalid-name}/output.txt",
         )
+
+
+@pytest.mark.vcr(filter_headers=["authorization"])
+def test_task_execution_times():
+    researcher = Agent(
+        role="Researcher",
+        goal="Make the best research and analysis on content about AI and AI agents",
+        backstory="You're an expert researcher, specialized in technology, software engineering, AI and startups. You work as a freelancer and is now working on doing research and analysis for a new customer.",
+        allow_delegation=False,
+    )
+
+    task = Task(
+        description="Give me a list of 5 interesting ideas to explore for na article, what makes them unique and interesting.",
+        expected_output="Bullet point list of 5 interesting ideas.",
+        agent=researcher,
+    )
+
+    assert task.start_time is None
+    assert task.end_time is None
+    assert task.execution_duration is None
+
+    task.execute_sync(agent=researcher)
+
+    assert task.start_time is not None
+    assert task.end_time is not None
+    assert task.execution_duration == (task.end_time - task.start_time).total_seconds()
