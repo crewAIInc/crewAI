@@ -1,3 +1,4 @@
+import os
 import secrets
 from typing import Any, Dict, List, Optional, Text, Type
 
@@ -36,7 +37,13 @@ class AIMindTool(BaseTool):
                 "`minds_sdk` package not found, please run `pip install minds-sdk`"
             )
 
-        minds_client = Client(api_key=api_key)
+        if os.getenv("MINDS_API_KEY"):
+            self.api_key = os.getenv("MINDS_API_KEY")
+
+        if self.api_key is None:
+            raise ValueError("A Minds API key is required to use the AIMind Tool.")       
+
+        minds_client = Client(api_key=self.api_key)
 
         # Convert the datasources to DatabaseConfig objects.
         datasources = []
