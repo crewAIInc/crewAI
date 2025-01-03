@@ -182,11 +182,14 @@ def _llm_via_environment_or_fallback() -> Optional[LLM]:
                     # Map environment variable names to recognized parameters
                     param_key = _normalize_key_name(key_name.lower())
                     llm_params[param_key] = env_value
-            elif env_var.get("default", False):
-                for key, value in env_var.items():
-                    if key not in ["prompt", "key_name", "default"]:
-                        if key in os.environ:
-                            llm_params[key] = os.environ[key]
+            elif isinstance(env_var, dict):
+                if env_var.get("default", False):
+                    for key, value in env_var.items():
+                        if key not in ["prompt", "key_name", "default"]:
+                            if key in os.environ:
+                                llm_params[key] = os.environ[key]
+            else:
+                print(f"Expected env_var to be a dictionary, but got {type(env_var)}")
 
     # Remove None values
     llm_params = {k: v for k, v in llm_params.items() if v is not None}

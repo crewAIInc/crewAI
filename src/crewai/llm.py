@@ -115,7 +115,7 @@ class LLM:
         logit_bias: Optional[Dict[int, float]] = None,
         response_format: Optional[Dict[str, Any]] = None,
         seed: Optional[int] = None,
-        logprobs: Optional[bool] = None,
+        logprobs: Optional[int] = None,
         top_logprobs: Optional[int] = None,
         base_url: Optional[str] = None,
         api_version: Optional[str] = None,
