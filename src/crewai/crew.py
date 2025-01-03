@@ -36,8 +36,8 @@ from crewai.tasks.conditional_task import ConditionalTask
 from crewai.tasks.task_output import TaskOutput
 from crewai.telemetry import Telemetry
 from crewai.tools.agent_tools.agent_tools import AgentTools
-from crewai.types.crew_chat import ChatInputs
 from crewai.tools.base_tool import Tool
+from crewai.types.crew_chat import ChatInputs
 from crewai.types.usage_metrics import UsageMetrics
 from crewai.utilities import I18N, FileHandler, Logger, RPMController
 from crewai.utilities.constants import TRAINING_DATA_FILE

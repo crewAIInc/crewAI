@@ -4,9 +4,6 @@ from typing import Optional, Tuple
 
 import click
 
-from crewai import (
-    Crew,  # We'll assume a direct import of the Crew class or import from .somewhere
-)
 from crewai.cli.add_crew_to_flow import add_crew_to_flow
 from crewai.cli.create_crew import create_crew
 from crewai.cli.create_flow import create_flow
@@ -354,6 +351,7 @@ def chat():
     Start a conversation with the Crew, collecting user-supplied inputs,
     and using the Chat LLM to generate responses.
     """
+    click.echo("Starting a conversation with the Crew")
     run_chat()
 
 

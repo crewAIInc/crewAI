@@ -2,12 +2,14 @@ import datetime
 import inspect
 import json
 import logging
+import sys
 import threading
 import uuid
 from concurrent.futures import Future
 from copy import copy
 from hashlib import md5
 from pathlib import Path
+from string import Formatter
 from typing import (
     Any,
     Callable,
@@ -485,42 +487,39 @@ class Task(BaseModel):
                 "conversation_history_instruction"
             )
             print("crew_chat_messages:", inputs["crew_chat_messages"])
+
             try:
                 crew_chat_messages = json.loads(inputs["crew_chat_messages"])
-                print("crew_chat_messages successfully parsed as a list")
-            except json.JSONDecodeError:
-                print("Failed to parse crew_chat_messages as JSON")
-                crew_chat_messages = []
+            except json.JSONDecodeError as e:
+                print("An error occurred while parsing crew chat messages:", e)
+                raise
 
-            # Debug print to check the input
-            print("crew_chat_messages input:", inputs["crew_chat_messages"])
-
+            # Process the messages to build conversation history
             conversation_history = "\n".join(
                 f"{msg['role'].capitalize()}: {msg['content']}"
                 for msg in crew_chat_messages
                 if isinstance(msg, dict) and "role" in msg and "content" in msg
             )
 
-            print("conversation_history:", conversation_history)
             # Add the instruction and conversation history to the description
-            self.description += (
-                f"\n\n{conversation_instruction}\n\n{conversation_history}"
-            )
+            self.description += f"\n\n{conversation_instruction}\n\n{conversation_history}"
 
-    def interpolate_only(self, input_string: Optional[str], inputs: Dict[str, Union[str, int, float]]) -> str:
+    def interpolate_only(
+        self, input_string: Optional[str], inputs: Dict[str, Union[str, int, float]]
+    ) -> str:
         """Interpolate placeholders (e.g., {key}) in a string while leaving JSON untouched.
-        
+
         Args:
             input_string: The string containing template variables to interpolate.
                          Can be None or empty, in which case an empty string is returned.
             inputs: Dictionary mapping template variables to their values.
                    Supported value types are strings, integers, and floats.
                    If input_string is empty or has no placeholders, inputs can be empty.
-        
+
         Returns:
             The interpolated string with all template variables replaced with their values.
             Empty string if input_string is None or empty.
-            
+
         Raises:
             ValueError: If a required template variable is missing from inputs.
             KeyError: If a template variable is not found in the inputs dictionary.
@@ -530,13 +529,17 @@ class Task(BaseModel):
         if "{" not in input_string and "}" not in input_string:
             return input_string
         if not inputs:
-            raise ValueError("Inputs dictionary cannot be empty when interpolating variables")
+            raise ValueError(
+                "Inputs dictionary cannot be empty when interpolating variables"
+            )
 
         try:
             # Validate input types
             for key, value in inputs.items():
                 if not isinstance(value, (str, int, float)):
-                    raise ValueError(f"Value for key '{key}' must be a string, integer, or float, got {type(value).__name__}")
+                    raise ValueError(
+                        f"Value for key '{key}' must be a string, integer, or float, got {type(value).__name__}"
+                    )
 
             escaped_string = input_string.replace("{", "{{").replace("}", "}}")
 
@@ -545,9 +548,11 @@ class Task(BaseModel):
 
             return escaped_string.format(**inputs)
         except KeyError as e:
-            raise KeyError(f"Template variable '{e.args[0]}' not found in inputs dictionary") from e
+            raise KeyError(
+                f"Template variable '{e.args[0]}' not found in inputs dictionary"
+            ) from e
         except ValueError as e:
-            raise ValueError(f"Error during string interpolation: {str(e)}") from edssfasf
+            raise ValueError(f"Error during string interpolation: {str(e)}") from e
 
     def increment_tools_errors(self) -> None:
         """Increment the tools errors counter."""
