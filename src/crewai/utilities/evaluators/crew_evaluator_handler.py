@@ -180,12 +180,12 @@ class CrewEvaluator:
             self._test_result_span = self._telemetry.individual_test_result_span(
                 self.crew,
                 evaluation_result.pydantic.quality,
-                current_task._execution_time,
+                current_task.execution_duration,
                 self.openai_model_name,
             )
             self.tasks_scores[self.iteration].append(evaluation_result.pydantic.quality)
             self.run_execution_times[self.iteration].append(
-                current_task._execution_time
+                current_task.execution_duration
             )
         else:
             raise ValueError("Evaluation result is not in the expected format")
