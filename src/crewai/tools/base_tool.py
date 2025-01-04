@@ -1,11 +1,22 @@
+import warnings
 from abc import ABC, abstractmethod
 from inspect import signature
 from typing import Any, Callable, Type, get_args, get_origin
 
-from pydantic import BaseModel, ConfigDict, Field, create_model, validator
+from pydantic import (
+    BaseModel,
+    ConfigDict,
+    Field,
+    PydanticDeprecatedSince20,
+    create_model,
+    validator,
+)
 from pydantic import BaseModel as PydanticBaseModel
 
 from crewai.tools.structured_tool import CrewStructuredTool
+
+# Ignore all "PydanticDeprecatedSince20" warnings globally
+warnings.filterwarnings("ignore", category=PydanticDeprecatedSince20)
 
 
 class BaseTool(BaseModel, ABC):

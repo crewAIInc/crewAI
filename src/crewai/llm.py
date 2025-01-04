@@ -4,6 +4,7 @@ import sys
 import threading
 import warnings
 from contextlib import contextmanager
+from importlib import resources
 from typing import Any, Dict, List, Optional, Union
 
 with warnings.catch_warnings():
@@ -78,6 +79,7 @@ CONTEXT_WINDOW_USAGE_RATIO = 0.75
 def suppress_warnings():
     with warnings.catch_warnings():
         warnings.filterwarnings("ignore")
+        warnings.filterwarnings("ignore", message="open_text is deprecated*", category=DeprecationWarning)
 
         # Redirect stdout and stderr
         old_stdout = sys.stdout
@@ -216,16 +218,17 @@ class LLM:
         return self.context_window_size
 
     def set_callbacks(self, callbacks: List[Any]):
-        callback_types = [type(callback) for callback in callbacks]
-        for callback in litellm.success_callback[:]:
-            if type(callback) in callback_types:
-                litellm.success_callback.remove(callback)
+        with suppress_warnings():
+            callback_types = [type(callback) for callback in callbacks]
+            for callback in litellm.success_callback[:]:
+                if type(callback) in callback_types:
+                    litellm.success_callback.remove(callback)
 
-        for callback in litellm._async_success_callback[:]:
-            if type(callback) in callback_types:
-                litellm._async_success_callback.remove(callback)
+            for callback in litellm._async_success_callback[:]:
+                if type(callback) in callback_types:
+                    litellm._async_success_callback.remove(callback)
 
-        litellm.callbacks = callbacks
+            litellm.callbacks = callbacks
 
     def set_env_callbacks(self):
         """
@@ -246,19 +249,20 @@ class LLM:
         This will set `litellm.success_callback` to ["langfuse", "langsmith"] and
         `litellm.failure_callback` to ["langfuse"].
         """
-        success_callbacks_str = os.environ.get("LITELLM_SUCCESS_CALLBACKS", "")
-        success_callbacks = []
-        if success_callbacks_str:
-            success_callbacks = [
-                callback.strip() for callback in success_callbacks_str.split(",")
-            ]
+        with suppress_warnings():
+            success_callbacks_str = os.environ.get("LITELLM_SUCCESS_CALLBACKS", "")
+            success_callbacks = []
+            if success_callbacks_str:
+                success_callbacks = [
+                    callback.strip() for callback in success_callbacks_str.split(",")
+                ]
 
-        failure_callbacks_str = os.environ.get("LITELLM_FAILURE_CALLBACKS", "")
-        failure_callbacks = []
-        if failure_callbacks_str:
-            failure_callbacks = [
-                callback.strip() for callback in failure_callbacks_str.split(",")
-            ]
+            failure_callbacks_str = os.environ.get("LITELLM_FAILURE_CALLBACKS", "")
+            failure_callbacks = []
+            if failure_callbacks_str:
+                failure_callbacks = [
+                    callback.strip() for callback in failure_callbacks_str.split(",")
+                ]
 
-        litellm.success_callback = success_callbacks
-        litellm.failure_callback = failure_callbacks
+            litellm.success_callback = success_callbacks
+            litellm.failure_callback = failure_callbacks

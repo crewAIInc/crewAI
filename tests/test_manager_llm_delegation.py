@@ -6,7 +6,7 @@ from crewai import Agent, Task
 from crewai.tools.agent_tools.base_agent_tools import BaseAgentTool
 
 
-class TestAgentTool(BaseAgentTool):
+class InternalAgentTool(BaseAgentTool):
     """Concrete implementation of BaseAgentTool for testing."""
 
     def _run(self, *args, **kwargs):
@@ -39,7 +39,7 @@ def test_agent_tool_role_matching(role_name, should_match):
     )
 
     # Create test agent tool
-    agent_tool = TestAgentTool(
+    agent_tool = InternalAgentTool(
         name="test_tool", description="Test tool", agents=[test_agent]
     )
 
