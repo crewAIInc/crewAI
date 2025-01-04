@@ -41,6 +41,7 @@ from crewai.tools.base_tool import BaseTool
 from crewai.utilities.config import process_config
 from crewai.utilities.converter import Converter, convert_to_model
 from crewai.utilities.i18n import I18N
+from crewai.utilities.printer import Printer
 
 
 class Task(BaseModel):
@@ -393,6 +394,11 @@ class Task(BaseModel):
                 context = self.i18n.errors("validation_error").format(
                     guardrail_result_error=guardrail_result.error,
                     task_output=task_output.raw
+                )
+                printer = Printer()
+                printer.print(
+                    content=f"Guardrail blocked, retrying, due to:{guardrail_result.error}\n",
+                    color="yellow",
                 )
                 return self._execute_core(agent, context, tools)
 

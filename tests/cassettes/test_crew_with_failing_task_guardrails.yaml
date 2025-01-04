@@ -1,0 +1,988 @@
+interactions:
+- request:
+    body: !!binary |
+      CpotCiQKIgoMc2VydmljZS5uYW1lEhIKEGNyZXdBSS10ZWxlbWV0cnkS8SwKEgoQY3Jld2FpLnRl
+      bGVtZXRyeRLrCQoQmqG4kmRspGSV9KSDE2WH2hIInKDQhtLNgqEqDENyZXcgQ3JlYXRlZDABOeCb
+      nCGokxcYQYDspiGokxcYShoKDmNyZXdhaV92ZXJzaW9uEggKBjAuOTUuMEoaCg5weXRob25fdmVy
+      c2lvbhIICgYzLjExLjdKLgoIY3Jld19rZXkSIgogY2FhMWFlYjNkZDQzNjM4NjU2OGE1YzNmZTIx
+      MDFhZjVKMQoHY3Jld19pZBImCiQxOWRmM2Y3MS1kYzk0LTQ0ZjYtYmY0Zi0zNjBjZjY2YjJiYWZK
+      HAoMY3Jld19wcm9jZXNzEgwKCnNlcXVlbnRpYWxKEQoLY3Jld19tZW1vcnkSAhAAShoKFGNyZXdf
+      bnVtYmVyX29mX3Rhc2tzEgIYAUobChVjcmV3X251bWJlcl9vZl9hZ2VudHMSAhgCSo4FCgtjcmV3
+      X2FnZW50cxL+BAr7BFt7ImtleSI6ICI5N2Y0MTdmM2UxZTMxY2YwYzEwOWY3NTI5YWM4ZjZiYyIs
+      ICJpZCI6ICJjMzIyZGMzMS0zZDNlLTRlOTctYjgwNi02MDU3ZTZjNGQxZmUiLCAicm9sZSI6ICJQ
+      cm9ncmFtbWVyIiwgInZlcmJvc2U/IjogZmFsc2UsICJtYXhfaXRlciI6IDIwLCAibWF4X3JwbSI6
+      IG51bGwsICJmdW5jdGlvbl9jYWxsaW5nX2xsbSI6ICIiLCAibGxtIjogImdwdC00by1taW5pIiwg
+      ImRlbGVnYXRpb25fZW5hYmxlZD8iOiB0cnVlLCAiYWxsb3dfY29kZV9leGVjdXRpb24/IjogdHJ1
+      ZSwgIm1heF9yZXRyeV9saW1pdCI6IDIsICJ0b29sc19uYW1lcyI6IFtdfSwgeyJrZXkiOiAiOTJh
+      MjRiMGJjY2ZiMGRjMGU0MzlkN2Q1OWJhOWY2ZjMiLCAiaWQiOiAiYzMzMGJlNDAtYWQxMS00YjM2
+      LWEwYTYtY2E4NWY5ZWFjYzZhIiwgInJvbGUiOiAiQ29kZSBSZXZpZXdlciIsICJ2ZXJib3NlPyI6
+      IGZhbHNlLCAibWF4X2l0ZXIiOiAyMCwgIm1heF9ycG0iOiBudWxsLCAiZnVuY3Rpb25fY2FsbGlu
+      Z19sbG0iOiAiIiwgImxsbSI6ICJncHQtNG8tbWluaSIsICJkZWxlZ2F0aW9uX2VuYWJsZWQ/Ijog
+      dHJ1ZSwgImFsbG93X2NvZGVfZXhlY3V0aW9uPyI6IHRydWUsICJtYXhfcmV0cnlfbGltaXQiOiAy
+      LCAidG9vbHNfbmFtZXMiOiBbXX1dSooCCgpjcmV3X3Rhc2tzEvsBCvgBW3sia2V5IjogIjc5YWEy
+      N2RmNzRlNjI3OWUzNGE4ODg4MTc0ODFjNDBmIiwgImlkIjogIjEyYmNjNTAwLWExNzgtNGQyZS05
+      NmQ4LWNkN2UwZmYzNzRhMCIsICJhc3luY19leGVjdXRpb24/IjogZmFsc2UsICJodW1hbl9pbnB1
+      dD8iOiBmYWxzZSwgImFnZW50X3JvbGUiOiAiUHJvZ3JhbW1lciIsICJhZ2VudF9rZXkiOiAiOTdm
+      NDE3ZjNlMWUzMWNmMGMxMDlmNzUyOWFjOGY2YmMiLCAidG9vbHNfbmFtZXMiOiBbInRlc3QgdG9v
+      bCJdfV16AhgBhQEAAQAAErMHChCxSjXt2/kv7CqAN8F+6ZMMEghR4jnKP0dHjSoMQ3JldyBDcmVh
+      dGVkMAE5iBNAIqiTFxhBiGZHIqiTFxhKGgoOY3Jld2FpX3ZlcnNpb24SCAoGMC45NS4wShoKDnB5
+      dGhvbl92ZXJzaW9uEggKBjMuMTEuN0ouCghjcmV3X2tleRIiCiA3NzNhODc2YjU3OTJkYjY5NTU5
+      ZmU4MmMzYWQyMzU5ZkoxCgdjcmV3X2lkEiYKJDk2YjRkMmFlLTQ3ZDUtNDA0MS1hNjJhLTAyMmMy
+      ZDUzZGZkZkocCgxjcmV3X3Byb2Nlc3MSDAoKc2VxdWVudGlhbEoRCgtjcmV3X21lbW9yeRICEABK
+      GgoUY3Jld19udW1iZXJfb2ZfdGFza3MSAhgBShsKFWNyZXdfbnVtYmVyX29mX2FnZW50cxICGAFK
+      2QIKC2NyZXdfYWdlbnRzEskCCsYCW3sia2V5IjogIjA3N2M3YTg2N2UyMGQwYTY4Yjk3NGU0NzYw
+      NzEwOWYzIiwgImlkIjogIjVhOTJiYzM4LWFlNGEtNGViZC1iNTM2LTFkZGVjZDBkODBhYyIsICJy
+      b2xlIjogIk11bHRpbW9kYWwgQW5hbHlzdCIsICJ2ZXJib3NlPyI6IGZhbHNlLCAibWF4X2l0ZXIi
+      OiAyMCwgIm1heF9ycG0iOiBudWxsLCAiZnVuY3Rpb25fY2FsbGluZ19sbG0iOiAiIiwgImxsbSI6
+      ICJncHQtNG8tbWluaSIsICJkZWxlZ2F0aW9uX2VuYWJsZWQ/IjogZmFsc2UsICJhbGxvd19jb2Rl
+      X2V4ZWN1dGlvbj8iOiBmYWxzZSwgIm1heF9yZXRyeV9saW1pdCI6IDIsICJ0b29sc19uYW1lcyI6
+      IFtdfV1KhwIKCmNyZXdfdGFza3MS+AEK9QFbeyJrZXkiOiAiYzc1M2M2ODA2MzU5NDM2YTU4OTZm
+      ZWMwOWJhYTEyNWUiLCAiaWQiOiAiNmRhZTcyNzktMDhjNS00OGNiLWI5OWItYmUyYjAwMzhkYzgz
+      IiwgImFzeW5jX2V4ZWN1dGlvbj8iOiBmYWxzZSwgImh1bWFuX2lucHV0PyI6IGZhbHNlLCAiYWdl
+      bnRfcm9sZSI6ICJNdWx0aW1vZGFsIEFuYWx5c3QiLCAiYWdlbnRfa2V5IjogIjA3N2M3YTg2N2Uy
+      MGQwYTY4Yjk3NGU0NzYwNzEwOWYzIiwgInRvb2xzX25hbWVzIjogW119XXoCGAGFAQABAAASqQcK
+      EIW4ljcZA7v+rs1zMkO4T0wSCIcyNxRlQUYoKgxDcmV3IENyZWF0ZWQwATngxKQiqJMXGEHIIasi
+      qJMXGEoaCg5jcmV3YWlfdmVyc2lvbhIICgYwLjk1LjBKGgoOcHl0aG9uX3ZlcnNpb24SCAoGMy4x
+      MS43Si4KCGNyZXdfa2V5EiIKIGNkNGRhNjRlNmRjM2I5ZWJkY2EyNDQ0YzFkNzMwMjgxSjEKB2Ny
+      ZXdfaWQSJgokMDY0ZDJmMmYtYWEzMy00MmU4LTgyYjAtMjc1YzM4MzY0MjU0ShwKDGNyZXdfcHJv
+      Y2VzcxIMCgpzZXF1ZW50aWFsShEKC2NyZXdfbWVtb3J5EgIQAEoaChRjcmV3X251bWJlcl9vZl90
+      YXNrcxICGAFKGwoVY3Jld19udW1iZXJfb2ZfYWdlbnRzEgIYAUrUAgoLY3Jld19hZ2VudHMSxAIK
+      wQJbeyJrZXkiOiAiZDg1MTA2NGI5YjQ4NDE4YWMyNWY4ZDM3YzdlMzJiYjYiLCAiaWQiOiAiY2M4
+      OWQ4YTAtYjk5Yy00MDNkLTg1ODYtNjgzZDA1MGVjMjlhIiwgInJvbGUiOiAiSW1hZ2UgQW5hbHlz
+      dCIsICJ2ZXJib3NlPyI6IGZhbHNlLCAibWF4X2l0ZXIiOiAyMCwgIm1heF9ycG0iOiBudWxsLCAi
+      ZnVuY3Rpb25fY2FsbGluZ19sbG0iOiAiIiwgImxsbSI6ICJncHQtNG8tbWluaSIsICJkZWxlZ2F0
+      aW9uX2VuYWJsZWQ/IjogZmFsc2UsICJhbGxvd19jb2RlX2V4ZWN1dGlvbj8iOiBmYWxzZSwgIm1h
+      eF9yZXRyeV9saW1pdCI6IDIsICJ0b29sc19uYW1lcyI6IFtdfV1KggIKCmNyZXdfdGFza3MS8wEK
+      8AFbeyJrZXkiOiAiZWU4NzI5Njk0MTBjOTRjMzM0ZjljZmZhMGE0MTVmZWMiLCAiaWQiOiAiNDY3
+      ZmVlNDktZDkzMi00Nzg1LWI1M2QtYTdkNWQxOTk3NzNmIiwgImFzeW5jX2V4ZWN1dGlvbj8iOiBm
+      YWxzZSwgImh1bWFuX2lucHV0PyI6IGZhbHNlLCAiYWdlbnRfcm9sZSI6ICJJbWFnZSBBbmFseXN0
+      IiwgImFnZW50X2tleSI6ICJkODUxMDY0YjliNDg0MThhYzI1ZjhkMzdjN2UzMmJiNiIsICJ0b29s
+      c19uYW1lcyI6IFtdfV16AhgBhQEAAQAAEqMHChD9ptX+M+ebjYJvJRIgLS+sEgi86MlIS3PYaCoM
+      Q3JldyBDcmVhdGVkMAE5MGUTI6iTFxhBqKoZI6iTFxhKGgoOY3Jld2FpX3ZlcnNpb24SCAoGMC45
+      NS4wShoKDnB5dGhvbl92ZXJzaW9uEggKBjMuMTEuN0ouCghjcmV3X2tleRIiCiBlMzk1NjdiNTA1
+      MjkwOWNhMzM0MDk4NGI4Mzg5ODBlYUoxCgdjcmV3X2lkEiYKJGQwM2I0NDRiLTBmMjAtNGY5Ni1i
+      MjA0LWQ3YzQ4MzYyNGM0YkocCgxjcmV3X3Byb2Nlc3MSDAoKc2VxdWVudGlhbEoRCgtjcmV3X21l
+      bW9yeRICEABKGgoUY3Jld19udW1iZXJfb2ZfdGFza3MSAhgBShsKFWNyZXdfbnVtYmVyX29mX2Fn
+      ZW50cxICGAFKzgIKC2NyZXdfYWdlbnRzEr4CCrsCW3sia2V5IjogIjlkYzhjY2UwMzA0NjgxOTYw
+      NDFiNGMzODBiNjE3Y2IwIiwgImlkIjogImM4Mjc0MmM1LWIzZjQtNDJkMC1iYjNmLTRkZWM4Y2Q4
+      MDNmNCIsICJyb2xlIjogIkltYWdlIEFuYWx5c3QiLCAidmVyYm9zZT8iOiB0cnVlLCAibWF4X2l0
+      ZXIiOiAyMCwgIm1heF9ycG0iOiBudWxsLCAiZnVuY3Rpb25fY2FsbGluZ19sbG0iOiAiIiwgImxs
+      bSI6ICJncHQtNG8iLCAiZGVsZWdhdGlvbl9lbmFibGVkPyI6IGZhbHNlLCAiYWxsb3dfY29kZV9l
+      eGVjdXRpb24/IjogZmFsc2UsICJtYXhfcmV0cnlfbGltaXQiOiAyLCAidG9vbHNfbmFtZXMiOiBb
+      XX1dSoICCgpjcmV3X3Rhc2tzEvMBCvABW3sia2V5IjogImE5YTc2Y2E2OTU3ZDBiZmZhNjllYWIy
+      MGI2NjQ4MjJiIiwgImlkIjogImU4ZDFmNWM0LWJhNDEtNGQyNy1iMGZmLWU3MmNiNDA0MWJhMyIs
+      ICJhc3luY19leGVjdXRpb24/IjogZmFsc2UsICJodW1hbl9pbnB1dD8iOiBmYWxzZSwgImFnZW50
+      X3JvbGUiOiAiSW1hZ2UgQW5hbHlzdCIsICJhZ2VudF9rZXkiOiAiOWRjOGNjZTAzMDQ2ODE5NjA0
+      MWI0YzM4MGI2MTdjYjAiLCAidG9vbHNfbmFtZXMiOiBbXX1degIYAYUBAAEAABKOAgoQEQqgiftV
+      3giK4F9VtKBNSBIIVzb/bxKe7icqDFRhc2sgQ3JlYXRlZDABOejyJyOokxcYQdhIKCOokxcYSi4K
+      CGNyZXdfa2V5EiIKIGUzOTU2N2I1MDUyOTA5Y2EzMzQwOTg0YjgzODk4MGVhSjEKB2NyZXdfaWQS
+      JgokZDAzYjQ0NGItMGYyMC00Zjk2LWIyMDQtZDdjNDgzNjI0YzRiSi4KCHRhc2tfa2V5EiIKIGE5
+      YTc2Y2E2OTU3ZDBiZmZhNjllYWIyMGI2NjQ4MjJiSjEKB3Rhc2tfaWQSJgokZThkMWY1YzQtYmE0
+      MS00ZDI3LWIwZmYtZTcyY2I0MDQxYmEzegIYAYUBAAEAABKXAQoQg/ksOtq7LbOO50GnDSOHQBII
+      YX08fxOToKwqClRvb2wgVXNhZ2UwATlI/lskqJMXGEEAY2IkqJMXGEoaCg5jcmV3YWlfdmVyc2lv
+      bhIICgYwLjk1LjBKIwoJdG9vbF9uYW1lEhYKFEFkZCBpbWFnZSB0byBjb250ZW50Sg4KCGF0dGVt
+      cHRzEgIYAXoCGAGFAQABAAASqAcKEEmW3y/PMPhkfMJ/43EA4SASCHMJp4PEDhFLKgxDcmV3IENy
+      ZWF0ZWQwATkAuLYlqJMXGEHAaL4lqJMXGEoaCg5jcmV3YWlfdmVyc2lvbhIICgYwLjk1LjBKGgoO
+      cHl0aG9uX3ZlcnNpb24SCAoGMy4xMS43Si4KCGNyZXdfa2V5EiIKIDAwYjk0NmJlNDQzNzE0YjNh
+      NDdjMjAxMDFlYjAyZDY2SjEKB2NyZXdfaWQSJgokNzJkZTEwZTQtNDkwZC00NDYwLTk1NzMtMmU5
+      ZmM5YTMwMWE1ShwKDGNyZXdfcHJvY2VzcxIMCgpzZXF1ZW50aWFsShEKC2NyZXdfbWVtb3J5EgIQ
+      AEoaChRjcmV3X251bWJlcl9vZl90YXNrcxICGAFKGwoVY3Jld19udW1iZXJfb2ZfYWdlbnRzEgIY
+      AUrTAgoLY3Jld19hZ2VudHMSwwIKwAJbeyJrZXkiOiAiNGI4YTdiODQwZjk0YmY3ODE4YjVkNTNm
+      Njg5MjdmZDUiLCAiaWQiOiAiN2IyMGMyODMtNGFiNy00MjFlLTgzM2QtOWE5N2UzNjFjM2Q2Iiwg
+      InJvbGUiOiAiUmVwb3J0IFdyaXRlciIsICJ2ZXJib3NlPyI6IHRydWUsICJtYXhfaXRlciI6IDIw
+      LCAibWF4X3JwbSI6IG51bGwsICJmdW5jdGlvbl9jYWxsaW5nX2xsbSI6ICIiLCAibGxtIjogImdw
+      dC00by1taW5pIiwgImRlbGVnYXRpb25fZW5hYmxlZD8iOiBmYWxzZSwgImFsbG93X2NvZGVfZXhl
+      Y3V0aW9uPyI6IGZhbHNlLCAibWF4X3JldHJ5X2xpbWl0IjogMiwgInRvb2xzX25hbWVzIjogW119
+      XUqCAgoKY3Jld190YXNrcxLzAQrwAVt7ImtleSI6ICJiNzEzYzgyZmViOTJjOWY1YzU4YjQwYTk3
+      NTU2YjdhYyIsICJpZCI6ICJhZjFhOTYxOC05MjRhLTRlNzktYjZlYi01OGRhMTM2OTU5YzUiLCAi
+      YXN5bmNfZXhlY3V0aW9uPyI6IGZhbHNlLCAiaHVtYW5faW5wdXQ/IjogZmFsc2UsICJhZ2VudF9y
+      b2xlIjogIlJlcG9ydCBXcml0ZXIiLCAiYWdlbnRfa2V5IjogIjRiOGE3Yjg0MGY5NGJmNzgxOGI1
+      ZDUzZjY4OTI3ZmQ1IiwgInRvb2xzX25hbWVzIjogW119XXoCGAGFAQABAAASjgIKEIWRa5ZrcXnJ
+      3rJdzzJ56j8SCKr45vrXkeyTKgxUYXNrIENyZWF0ZWQwATn488glqJMXGEHoScklqJMXGEouCghj
+      cmV3X2tleRIiCiAwMGI5NDZiZTQ0MzcxNGIzYTQ3YzIwMTAxZWIwMmQ2NkoxCgdjcmV3X2lkEiYK
+      JDcyZGUxMGU0LTQ5MGQtNDQ2MC05NTczLTJlOWZjOWEzMDFhNUouCgh0YXNrX2tleRIiCiBiNzEz
+      YzgyZmViOTJjOWY1YzU4YjQwYTk3NTU2YjdhY0oxCgd0YXNrX2lkEiYKJGFmMWE5NjE4LTkyNGEt
+      NGU3OS1iNmViLTU4ZGExMzY5NTljNXoCGAGFAQABAAA=
+    headers:
+      Accept:
+      - '*/*'
+      Accept-Encoding:
+      - gzip, deflate
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '5789'
+      Content-Type:
+      - application/x-protobuf
+      User-Agent:
+      - OTel-OTLP-Exporter-Python/1.27.0
+    method: POST
+    uri: https://telemetry.crewai.com:4319/v1/traces
+  response:
+    body:
+      string: "\n\0"
+    headers:
+      Content-Length:
+      - '2'
+      Content-Type:
+      - application/x-protobuf
+      Date:
+      - Sat, 04 Jan 2025 19:22:17 GMT
+    status:
+      code: 200
+      message: OK
+- request:
+    body: '{"messages": [{"role": "system", "content": "You are Report Writer. You''re
+      an expert at writing structured reports.\nYour personal goal is: Create properly
+      formatted reports\nTo give my best complete final answer to the task use the
+      exact following format:\n\nThought: I now can give a great answer\nFinal Answer:
+      Your final answer must be the great and the most complete as possible, it must
+      be outcome described.\n\nI MUST use these formats, my job depends on it!"},
+      {"role": "user", "content": "\nCurrent Task: Write a report about AI with exactly
+      3 key points.\n\nThis is the expect criteria for your final answer: A properly
+      formatted report\nyou MUST return the actual complete content as the final answer,
+      not a summary.\n\nBegin! This is VERY important to you, use the tools available
+      and give your best Final Answer, your job depends on it!\n\nThought:"}], "model":
+      "gpt-4o-mini", "stop": ["\nObservation:"], "stream": false}'
+    headers:
+      accept:
+      - application/json
+      accept-encoding:
+      - gzip, deflate
+      connection:
+      - keep-alive
+      content-length:
+      - '934'
+      content-type:
+      - application/json
+      cookie:
+      - _cfuvid=v_wJZ5m7qCjrnRfks0gT2GAk9yR14BdIDAQiQR7xxI8-1735266215000-0.0.1.1-604800000
+      host:
+      - api.openai.com
+      user-agent:
+      - OpenAI/Python 1.52.1
+      x-stainless-arch:
+      - arm64
+      x-stainless-async:
+      - 'false'
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - MacOS
+      x-stainless-package-version:
+      - 1.52.1
+      x-stainless-raw-response:
+      - 'true'
+      x-stainless-retry-count:
+      - '0'
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.11.7
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    content: "{\n  \"id\": \"chatcmpl-Am40qBAFJtuaFsOlTsBHFCoYUvLhN\",\n  \"object\":
+      \"chat.completion\",\n  \"created\": 1736018532,\n  \"model\": \"gpt-4o-mini-2024-07-18\",\n
+      \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
+      \"assistant\",\n        \"content\": \"I now can give a great answer.  \\nFinal
+      Answer: \\n\\n# Report on Artificial Intelligence (AI)\\n\\n## Introduction\\nArtificial
+      Intelligence (AI) is a rapidly evolving technology that simulates human intelligence
+      processes by machines, particularly computer systems. AI has a profound impact
+      on various sectors, enhancing efficiency, improving decision-making, and leading
+      to groundbreaking innovations. This report highlights three key points regarding
+      the significance and implications of AI technology.\\n\\n## Key Point 1: Transformative
+      Potential in Various Industries\\nAI's transformative potential is evident across
+      multiple industries, including healthcare, finance, transportation, and agriculture.
+      In healthcare, AI algorithms can analyze complex medical data, leading to improved
+      diagnostics, personalized medicine, and predictive analytics, thereby enhancing
+      patient outcomes. The financial sector employs AI for risk management, fraud
+      detection, and automated trading, which increases operational efficiency and
+      minimizes human error. In transportation, AI is integral to the development
+      of autonomous vehicles and smart traffic systems, optimizing routes and reducing
+      congestion. Furthermore, agriculture benefits from AI applications through precision
+      farming, which maximizes yield while minimizing environmental impact.\\n\\n##
+      Key Point 2: Ethical Considerations and Challenges\\nAs AI technologies become
+      more pervasive, ethical considerations arise regarding their implementation
+      and use. Concerns include data privacy, algorithmic bias, and the displacement
+      of jobs due to automation. Ensuring that AI systems are transparent, fair, and
+      accountable is crucial in addressing these issues. Organizations must develop
+      comprehensive guidelines and regulatory frameworks to mitigate bias in AI algorithms
+      and protect user data. Moreover, addressing the social implications of AI, such
+      as potential job displacement, is essential, necessitating investment in workforce
+      retraining and education to prepare for an AI-driven economy.\\n\\n## Key Point
+      3: Future Directions and Developments\\nLooking ahead, the future of AI promises
+      continued advancements and integration into everyday life. Emerging trends include
+      the development of explainable AI (XAI), enhancing interpretability and understanding
+      of AI decision-making processes. Advances in natural language processing (NLP)
+      will facilitate better human-computer interactions, allowing for more intuitive
+      applications. Additionally, as AI technology becomes increasingly sophisticated,
+      its role in addressing global challenges, such as climate change and healthcare
+      disparities, is expected to expand. Stakeholders must collaborate to ensure
+      that these developments align with ethical standards and societal needs, fostering
+      a responsible AI future.\\n\\n## Conclusion\\nArtificial Intelligence stands
+      at the forefront of technological innovation, with the potential to revolutionize
+      industries and address complex global challenges. However, it is imperative
+      to navigate the ethical considerations and challenges it poses. By fostering
+      responsible AI development, we can harness its transformative power while ensuring
+      equitability and transparency for future generations.\",\n        \"refusal\":
+      null\n      },\n      \"logprobs\": null,\n      \"finish_reason\": \"stop\"\n
+      \   }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 170,\n    \"completion_tokens\":
+      524,\n    \"total_tokens\": 694,\n    \"prompt_tokens_details\": {\n      \"cached_tokens\":
+      0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\": {\n
+      \     \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\":
+      0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"system_fingerprint\":
+      \"fp_0aa8d3e20b\"\n}\n"
+    headers:
+      CF-Cache-Status:
+      - DYNAMIC
+      CF-RAY:
+      - 8fcd9890790e0133-GRU
+      Connection:
+      - keep-alive
+      Content-Encoding:
+      - gzip
+      Content-Type:
+      - application/json
+      Date:
+      - Sat, 04 Jan 2025 19:22:19 GMT
+      Server:
+      - cloudflare
+      Set-Cookie:
+      - __cf_bm=pumYGlf1gsbVoFNTM1vh9Okj41SgxP3y65T5YWWPU1U-1736018539-1.0.1.1-wmaotkWMviN4lKh6M3P04A8p61Ehm.rTehDpsJhxYhNBNU5.kznMCa3cNXePaEbsKkk4PU2QcWjHj2C7yDrjkw;
+        path=/; expires=Sat, 04-Jan-25 19:52:19 GMT; domain=.api.openai.com; HttpOnly;
+        Secure; SameSite=None
+      - _cfuvid=SlnUP7AT9jJlQiN.Fm1c7MDyo78_hBRAz8PoabvHVSU-1736018539826-0.0.1.1-604800000;
+        path=/; domain=.api.openai.com; HttpOnly; Secure; SameSite=None
+      Transfer-Encoding:
+      - chunked
+      X-Content-Type-Options:
+      - nosniff
+      access-control-expose-headers:
+      - X-Request-ID
+      alt-svc:
+      - h3=":443"; ma=86400
+      openai-organization:
+      - crewai-iuxna1
+      openai-processing-ms:
+      - '7717'
+      openai-version:
+      - '2020-10-01'
+      strict-transport-security:
+      - max-age=31536000; includeSubDomains; preload
+      x-ratelimit-limit-requests:
+      - '30000'
+      x-ratelimit-limit-tokens:
+      - '150000000'
+      x-ratelimit-remaining-requests:
+      - '29999'
+      x-ratelimit-remaining-tokens:
+      - '149999790'
+      x-ratelimit-reset-requests:
+      - 2ms
+      x-ratelimit-reset-tokens:
+      - 0s
+      x-request-id:
+      - req_08d237d56b0168a0f4512417380485db
+    http_version: HTTP/1.1
+    status_code: 200
+- request:
+    body: !!binary |
+      Cs4CCiQKIgoMc2VydmljZS5uYW1lEhIKEGNyZXdBSS10ZWxlbWV0cnkSpQIKEgoQY3Jld2FpLnRl
+      bGVtZXRyeRKOAgoQw9qUJPsh6jiJZX4qW3ry4hIIT7E0SNH7Ub4qDFRhc2sgQ3JlYXRlZDABOQBO
+      BAmqkxcYQQgdBQmqkxcYSi4KCGNyZXdfa2V5EiIKIDAwYjk0NmJlNDQzNzE0YjNhNDdjMjAxMDFl
+      YjAyZDY2SjEKB2NyZXdfaWQSJgokNzJkZTEwZTQtNDkwZC00NDYwLTk1NzMtMmU5ZmM5YTMwMWE1
+      Si4KCHRhc2tfa2V5EiIKIGI3MTNjODJmZWI5MmM5ZjVjNThiNDBhOTc1NTZiN2FjSjEKB3Rhc2tf
+      aWQSJgokYWYxYTk2MTgtOTI0YS00ZTc5LWI2ZWItNThkYTEzNjk1OWM1egIYAYUBAAEAAA==
+    headers:
+      Accept:
+      - '*/*'
+      Accept-Encoding:
+      - gzip, deflate
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '337'
+      Content-Type:
+      - application/x-protobuf
+      User-Agent:
+      - OTel-OTLP-Exporter-Python/1.27.0
+    method: POST
+    uri: https://telemetry.crewai.com:4319/v1/traces
+  response:
+    body:
+      string: "\n\0"
+    headers:
+      Content-Length:
+      - '2'
+      Content-Type:
+      - application/x-protobuf
+      Date:
+      - Sat, 04 Jan 2025 19:22:22 GMT
+    status:
+      code: 200
+      message: OK
+- request:
+    body: '{"messages": [{"role": "system", "content": "You are Report Writer. You''re
+      an expert at writing structured reports.\nYour personal goal is: Create properly
+      formatted reports\nTo give my best complete final answer to the task use the
+      exact following format:\n\nThought: I now can give a great answer\nFinal Answer:
+      Your final answer must be the great and the most complete as possible, it must
+      be outcome described.\n\nI MUST use these formats, my job depends on it!"},
+      {"role": "user", "content": "\nCurrent Task: Write a report about AI with exactly
+      3 key points.\n\nThis is the expect criteria for your final answer: A properly
+      formatted report\nyou MUST return the actual complete content as the final answer,
+      not a summary.\n\nThis is the context you''re working with:\n### Previous attempt
+      failed validation: Output must start with ''REPORT:'' no formatting, just the
+      word REPORT\n\n\n### Previous result:\n# Report on Artificial Intelligence (AI)\n\n##
+      Introduction\nArtificial Intelligence (AI) is a rapidly evolving technology
+      that simulates human intelligence processes by machines, particularly computer
+      systems. AI has a profound impact on various sectors, enhancing efficiency,
+      improving decision-making, and leading to groundbreaking innovations. This report
+      highlights three key points regarding the significance and implications of AI
+      technology.\n\n## Key Point 1: Transformative Potential in Various Industries\nAI''s
+      transformative potential is evident across multiple industries, including healthcare,
+      finance, transportation, and agriculture. In healthcare, AI algorithms can analyze
+      complex medical data, leading to improved diagnostics, personalized medicine,
+      and predictive analytics, thereby enhancing patient outcomes. The financial
+      sector employs AI for risk management, fraud detection, and automated trading,
+      which increases operational efficiency and minimizes human error. In transportation,
+      AI is integral to the development of autonomous vehicles and smart traffic systems,
+      optimizing routes and reducing congestion. Furthermore, agriculture benefits
+      from AI applications through precision farming, which maximizes yield while
+      minimizing environmental impact.\n\n## Key Point 2: Ethical Considerations and
+      Challenges\nAs AI technologies become more pervasive, ethical considerations
+      arise regarding their implementation and use. Concerns include data privacy,
+      algorithmic bias, and the displacement of jobs due to automation. Ensuring that
+      AI systems are transparent, fair, and accountable is crucial in addressing these
+      issues. Organizations must develop comprehensive guidelines and regulatory frameworks
+      to mitigate bias in AI algorithms and protect user data. Moreover, addressing
+      the social implications of AI, such as potential job displacement, is essential,
+      necessitating investment in workforce retraining and education to prepare for
+      an AI-driven economy.\n\n## Key Point 3: Future Directions and Developments\nLooking
+      ahead, the future of AI promises continued advancements and integration into
+      everyday life. Emerging trends include the development of explainable AI (XAI),
+      enhancing interpretability and understanding of AI decision-making processes.
+      Advances in natural language processing (NLP) will facilitate better human-computer
+      interactions, allowing for more intuitive applications. Additionally, as AI
+      technology becomes increasingly sophisticated, its role in addressing global
+      challenges, such as climate change and healthcare disparities, is expected to
+      expand. Stakeholders must collaborate to ensure that these developments align
+      with ethical standards and societal needs, fostering a responsible AI future.\n\n##
+      Conclusion\nArtificial Intelligence stands at the forefront of technological
+      innovation, with the potential to revolutionize industries and address complex
+      global challenges. However, it is imperative to navigate the ethical considerations
+      and challenges it poses. By fostering responsible AI development, we can harness
+      its transformative power while ensuring equitability and transparency for future
+      generations.\n\n\nTry again, making sure to address the validation error.\n\nBegin!
+      This is VERY important to you, use the tools available and give your best Final
+      Answer, your job depends on it!\n\nThought:"}], "model": "gpt-4o-mini", "stop":
+      ["\nObservation:"], "stream": false}'
+    headers:
+      accept:
+      - application/json
+      accept-encoding:
+      - gzip, deflate
+      connection:
+      - keep-alive
+      content-length:
+      - '4351'
+      content-type:
+      - application/json
+      cookie:
+      - _cfuvid=SlnUP7AT9jJlQiN.Fm1c7MDyo78_hBRAz8PoabvHVSU-1736018539826-0.0.1.1-604800000;
+        __cf_bm=pumYGlf1gsbVoFNTM1vh9Okj41SgxP3y65T5YWWPU1U-1736018539-1.0.1.1-wmaotkWMviN4lKh6M3P04A8p61Ehm.rTehDpsJhxYhNBNU5.kznMCa3cNXePaEbsKkk4PU2QcWjHj2C7yDrjkw
+      host:
+      - api.openai.com
+      user-agent:
+      - OpenAI/Python 1.52.1
+      x-stainless-arch:
+      - arm64
+      x-stainless-async:
+      - 'false'
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - MacOS
+      x-stainless-package-version:
+      - 1.52.1
+      x-stainless-raw-response:
+      - 'true'
+      x-stainless-retry-count:
+      - '0'
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.11.7
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    content: "{\n  \"id\": \"chatcmpl-Am40yJsMPHsTOmn9Obwyx2caqoJ1R\",\n  \"object\":
+      \"chat.completion\",\n  \"created\": 1736018540,\n  \"model\": \"gpt-4o-mini-2024-07-18\",\n
+      \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
+      \"assistant\",\n        \"content\": \"I now can give a great answer  \\nFinal
+      Answer:  \\nREPORT:  \\n\\n# Report on Artificial Intelligence (AI)\\n\\n##
+      Introduction\\nArtificial Intelligence (AI) is a rapidly evolving technology
+      that simulates human intelligence processes by machines, particularly computer
+      systems. AI has a profound impact on various sectors, enhancing efficiency,
+      improving decision-making, and leading to groundbreaking innovations. This report
+      highlights three key points regarding the significance and implications of AI
+      technology.\\n\\n## Key Point 1: Transformative Potential in Various Industries\\nAI's
+      transformative potential is evident across multiple industries, including healthcare,
+      finance, transportation, and agriculture. In healthcare, AI algorithms can analyze
+      complex medical data, leading to improved diagnostics, personalized medicine,
+      and predictive analytics, thereby enhancing patient outcomes. The financial
+      sector employs AI for risk management, fraud detection, and automated trading,
+      which increases operational efficiency and minimizes human error. In transportation,
+      AI is integral to the development of autonomous vehicles and smart traffic systems,
+      optimizing routes and reducing congestion. Furthermore, agriculture benefits
+      from AI applications through precision farming, which maximizes yield while
+      minimizing environmental impact.\\n\\n## Key Point 2: Ethical Considerations
+      and Challenges\\nAs AI technologies become more pervasive, ethical considerations
+      arise regarding their implementation and use. Concerns include data privacy,
+      algorithmic bias, and the displacement of jobs due to automation. Ensuring that
+      AI systems are transparent, fair, and accountable is crucial in addressing these
+      issues. Organizations must develop comprehensive guidelines and regulatory frameworks
+      to mitigate bias in AI algorithms and protect user data. Moreover, addressing
+      the social implications of AI, such as potential job displacement, is essential,
+      necessitating investment in workforce retraining and education to prepare for
+      an AI-driven economy.\\n\\n## Key Point 3: Future Directions and Developments\\nLooking
+      ahead, the future of AI promises continued advancements and integration into
+      everyday life. Emerging trends include the development of explainable AI (XAI),
+      enhancing interpretability and understanding of AI decision-making processes.
+      Advances in natural language processing (NLP) will facilitate better human-computer
+      interactions, allowing for more intuitive applications. Additionally, as AI
+      technology becomes increasingly sophisticated, its role in addressing global
+      challenges, such as climate change and healthcare disparities, is expected to
+      expand. Stakeholders must collaborate to ensure that these developments align
+      with ethical standards and societal needs, fostering a responsible AI future.\\n\\n##
+      Conclusion\\nArtificial Intelligence stands at the forefront of technological
+      innovation, with the potential to revolutionize industries and address complex
+      global challenges. However, it is imperative to navigate the ethical considerations
+      and challenges it poses. By fostering responsible AI development, we can harness
+      its transformative power while ensuring equitability and transparency for future
+      generations.\",\n        \"refusal\": null\n      },\n      \"logprobs\": null,\n
+      \     \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\":
+      725,\n    \"completion_tokens\": 526,\n    \"total_tokens\": 1251,\n    \"prompt_tokens_details\":
+      {\n      \"cached_tokens\": 0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\":
+      {\n      \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\":
+      0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"system_fingerprint\":
+      \"fp_0aa8d3e20b\"\n}\n"
+    headers:
+      CF-Cache-Status:
+      - DYNAMIC
+      CF-RAY:
+      - 8fcd98c269880133-GRU
+      Connection:
+      - keep-alive
+      Content-Encoding:
+      - gzip
+      Content-Type:
+      - application/json
+      Date:
+      - Sat, 04 Jan 2025 19:22:28 GMT
+      Server:
+      - cloudflare
+      Transfer-Encoding:
+      - chunked
+      X-Content-Type-Options:
+      - nosniff
+      access-control-expose-headers:
+      - X-Request-ID
+      alt-svc:
+      - h3=":443"; ma=86400
+      openai-organization:
+      - crewai-iuxna1
+      openai-processing-ms:
+      - '8620'
+      openai-version:
+      - '2020-10-01'
+      strict-transport-security:
+      - max-age=31536000; includeSubDomains; preload
+      x-ratelimit-limit-requests:
+      - '30000'
+      x-ratelimit-limit-tokens:
+      - '150000000'
+      x-ratelimit-remaining-requests:
+      - '29999'
+      x-ratelimit-remaining-tokens:
+      - '149998942'
+      x-ratelimit-reset-requests:
+      - 2ms
+      x-ratelimit-reset-tokens:
+      - 0s
+      x-request-id:
+      - req_de480c9e17954e77dece1b2fe013a0d0
+    http_version: HTTP/1.1
+    status_code: 200
+- request:
+    body: !!binary |
+      Cs4CCiQKIgoMc2VydmljZS5uYW1lEhIKEGNyZXdBSS10ZWxlbWV0cnkSpQIKEgoQY3Jld2FpLnRl
+      bGVtZXRyeRKOAgoQCwIBgw9XNdGpuGOOIANe2hIIriM3k2t+0NQqDFRhc2sgQ3JlYXRlZDABOcjF
+      ABuskxcYQfBlARuskxcYSi4KCGNyZXdfa2V5EiIKIDAwYjk0NmJlNDQzNzE0YjNhNDdjMjAxMDFl
+      YjAyZDY2SjEKB2NyZXdfaWQSJgokNzJkZTEwZTQtNDkwZC00NDYwLTk1NzMtMmU5ZmM5YTMwMWE1
+      Si4KCHRhc2tfa2V5EiIKIGI3MTNjODJmZWI5MmM5ZjVjNThiNDBhOTc1NTZiN2FjSjEKB3Rhc2tf
+      aWQSJgokYWYxYTk2MTgtOTI0YS00ZTc5LWI2ZWItNThkYTEzNjk1OWM1egIYAYUBAAEAAA==
+    headers:
+      Accept:
+      - '*/*'
+      Accept-Encoding:
+      - gzip, deflate
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '337'
+      Content-Type:
+      - application/x-protobuf
+      User-Agent:
+      - OTel-OTLP-Exporter-Python/1.27.0
+    method: POST
+    uri: https://telemetry.crewai.com:4319/v1/traces
+  response:
+    body:
+      string: "\n\0"
+    headers:
+      Content-Length:
+      - '2'
+      Content-Type:
+      - application/x-protobuf
+      Date:
+      - Sat, 04 Jan 2025 19:22:32 GMT
+    status:
+      code: 200
+      message: OK
+- request:
+    body: '{"messages": [{"role": "system", "content": "You are Report Writer. You''re
+      an expert at writing structured reports.\nYour personal goal is: Create properly
+      formatted reports\nTo give my best complete final answer to the task use the
+      exact following format:\n\nThought: I now can give a great answer\nFinal Answer:
+      Your final answer must be the great and the most complete as possible, it must
+      be outcome described.\n\nI MUST use these formats, my job depends on it!"},
+      {"role": "user", "content": "\nCurrent Task: Write a report about AI with exactly
+      3 key points.\n\nThis is the expect criteria for your final answer: A properly
+      formatted report\nyou MUST return the actual complete content as the final answer,
+      not a summary.\n\nThis is the context you''re working with:\n### Previous attempt
+      failed validation: Output must end with ''END REPORT'' no formatting, just the
+      word END REPORT\n\n\n### Previous result:\nREPORT:  \n\n# Report on Artificial
+      Intelligence (AI)\n\n## Introduction\nArtificial Intelligence (AI) is a rapidly
+      evolving technology that simulates human intelligence processes by machines,
+      particularly computer systems. AI has a profound impact on various sectors,
+      enhancing efficiency, improving decision-making, and leading to groundbreaking
+      innovations. This report highlights three key points regarding the significance
+      and implications of AI technology.\n\n## Key Point 1: Transformative Potential
+      in Various Industries\nAI''s transformative potential is evident across multiple
+      industries, including healthcare, finance, transportation, and agriculture.
+      In healthcare, AI algorithms can analyze complex medical data, leading to improved
+      diagnostics, personalized medicine, and predictive analytics, thereby enhancing
+      patient outcomes. The financial sector employs AI for risk management, fraud
+      detection, and automated trading, which increases operational efficiency and
+      minimizes human error. In transportation, AI is integral to the development
+      of autonomous vehicles and smart traffic systems, optimizing routes and reducing
+      congestion. Furthermore, agriculture benefits from AI applications through precision
+      farming, which maximizes yield while minimizing environmental impact.\n\n##
+      Key Point 2: Ethical Considerations and Challenges\nAs AI technologies become
+      more pervasive, ethical considerations arise regarding their implementation
+      and use. Concerns include data privacy, algorithmic bias, and the displacement
+      of jobs due to automation. Ensuring that AI systems are transparent, fair, and
+      accountable is crucial in addressing these issues. Organizations must develop
+      comprehensive guidelines and regulatory frameworks to mitigate bias in AI algorithms
+      and protect user data. Moreover, addressing the social implications of AI, such
+      as potential job displacement, is essential, necessitating investment in workforce
+      retraining and education to prepare for an AI-driven economy.\n\n## Key Point
+      3: Future Directions and Developments\nLooking ahead, the future of AI promises
+      continued advancements and integration into everyday life. Emerging trends include
+      the development of explainable AI (XAI), enhancing interpretability and understanding
+      of AI decision-making processes. Advances in natural language processing (NLP)
+      will facilitate better human-computer interactions, allowing for more intuitive
+      applications. Additionally, as AI technology becomes increasingly sophisticated,
+      its role in addressing global challenges, such as climate change and healthcare
+      disparities, is expected to expand. Stakeholders must collaborate to ensure
+      that these developments align with ethical standards and societal needs, fostering
+      a responsible AI future.\n\n## Conclusion\nArtificial Intelligence stands at
+      the forefront of technological innovation, with the potential to revolutionize
+      industries and address complex global challenges. However, it is imperative
+      to navigate the ethical considerations and challenges it poses. By fostering
+      responsible AI development, we can harness its transformative power while ensuring
+      equitability and transparency for future generations.\n\n\nTry again, making
+      sure to address the validation error.\n\nBegin! This is VERY important to you,
+      use the tools available and give your best Final Answer, your job depends on
+      it!\n\nThought:"}], "model": "gpt-4o-mini", "stop": ["\nObservation:"], "stream":
+      false}'
+    headers:
+      accept:
+      - application/json
+      accept-encoding:
+      - gzip, deflate
+      connection:
+      - keep-alive
+      content-length:
+      - '4369'
+      content-type:
+      - application/json
+      cookie:
+      - _cfuvid=SlnUP7AT9jJlQiN.Fm1c7MDyo78_hBRAz8PoabvHVSU-1736018539826-0.0.1.1-604800000;
+        __cf_bm=pumYGlf1gsbVoFNTM1vh9Okj41SgxP3y65T5YWWPU1U-1736018539-1.0.1.1-wmaotkWMviN4lKh6M3P04A8p61Ehm.rTehDpsJhxYhNBNU5.kznMCa3cNXePaEbsKkk4PU2QcWjHj2C7yDrjkw
+      host:
+      - api.openai.com
+      user-agent:
+      - OpenAI/Python 1.52.1
+      x-stainless-arch:
+      - arm64
+      x-stainless-async:
+      - 'false'
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - MacOS
+      x-stainless-package-version:
+      - 1.52.1
+      x-stainless-raw-response:
+      - 'true'
+      x-stainless-retry-count:
+      - '0'
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.11.7
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    content: "{\n  \"id\": \"chatcmpl-Am4176wzYnk3HmSTkkakM4yl6xVYS\",\n  \"object\":
+      \"chat.completion\",\n  \"created\": 1736018549,\n  \"model\": \"gpt-4o-mini-2024-07-18\",\n
+      \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
+      \"assistant\",\n        \"content\": \"I now can give a great answer  \\nFinal
+      Answer:  \\n\\n# Report on Artificial Intelligence (AI)\\n\\n## Introduction\\nArtificial
+      Intelligence (AI) is a revolutionary technology designed to simulate human intelligence
+      processes, enabling machines to perform tasks that typically require human cognition.
+      Its rapid development has brought forth significant changes across various sectors,
+      improving operational efficiencies, enhancing decision-making, and fostering
+      innovation. This report outlines three key points regarding the impact and implications
+      of AI technology.\\n\\n## Key Point 1: Transformative Potential in Various Industries\\nAI's
+      transformative potential is observable across numerous sectors including healthcare,
+      finance, transportation, and agriculture. In the healthcare sector, AI algorithms
+      are increasingly used to analyze vast amounts of medical data, which sharpens
+      diagnostics, facilitates personalized treatment plans, and enhances predictive
+      analytics, thus leading to better patient care. In finance, AI contributes to
+      risk assessment, fraud detection, and automated trading, heightening efficiency
+      and reducing the risk of human error. The transportation industry leverages
+      AI technologies for developments in autonomous vehicles and smart transportation
+      systems that optimize routes and alleviate traffic congestion. Furthermore,
+      agriculture benefits from AI by applying precision farming techniques that optimize
+      yield and mitigate environmental effects.\\n\\n## Key Point 2: Ethical Considerations
+      and Challenges\\nWith the increasing deployment of AI technologies, numerous
+      ethical considerations surface, particularly relating to privacy, algorithmic
+      fairness, and the displacement of jobs. Addressing issues such as data security,
+      bias in AI algorithms, and the societal impact of automation is paramount. Organizations
+      are encouraged to develop stringent guidelines and regulatory measures aimed
+      at minimizing bias and ensuring that AI systems uphold values of transparency
+      and accountability. Additionally, the implications of job displacement necessitate
+      strategies for workforce retraining and educational reforms to adequately prepare
+      the workforce for an economy increasingly shaped by AI technologies.\\n\\n##
+      Key Point 3: Future Directions and Developments\\nThe future of AI is poised
+      for remarkable advancements, with trends indicating a growing integration into
+      daily life and widespread applications. The emergence of explainable AI (XAI)
+      aims to enhance the transparency and interpretability of AI decision-making
+      processes, fostering trust and understanding among users. Improvements in natural
+      language processing (NLP) are likely to lead to more seamless and intuitive
+      human-computer interactions. Furthermore, AI's potential to address global challenges,
+      including climate change and disparities in healthcare access, is becoming increasingly
+      significant. Collaborative efforts among stakeholders will be vital to ensuring
+      that AI advancements are ethical and responsive to societal needs, paving the
+      way for a responsible and equitable AI landscape.\\n\\n## Conclusion\\nAI technology
+      is at the forefront of innovation, with the capacity to transform industries
+      and tackle pressing global issues. As we navigate through the complexities and
+      ethical challenges posed by AI, it is crucial to prioritize responsible development
+      and implementation. By harnessing AI's transformative capabilities with a focus
+      on equity and transparency, we can pave the way for a promising future that
+      benefits all.\\n\\nEND REPORT\",\n        \"refusal\": null\n      },\n      \"logprobs\":
+      null,\n      \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\":
+      730,\n    \"completion_tokens\": 571,\n    \"total_tokens\": 1301,\n    \"prompt_tokens_details\":
+      {\n      \"cached_tokens\": 0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\":
+      {\n      \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\":
+      0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"system_fingerprint\":
+      \"fp_0aa8d3e20b\"\n}\n"
+    headers:
+      CF-Cache-Status:
+      - DYNAMIC
+      CF-RAY:
+      - 8fcd98f9fc060133-GRU
+      Connection:
+      - keep-alive
+      Content-Encoding:
+      - gzip
+      Content-Type:
+      - application/json
+      Date:
+      - Sat, 04 Jan 2025 19:22:36 GMT
+      Server:
+      - cloudflare
+      Transfer-Encoding:
+      - chunked
+      X-Content-Type-Options:
+      - nosniff
+      access-control-expose-headers:
+      - X-Request-ID
+      alt-svc:
+      - h3=":443"; ma=86400
+      openai-organization:
+      - crewai-iuxna1
+      openai-processing-ms:
+      - '7203'
+      openai-version:
+      - '2020-10-01'
+      strict-transport-security:
+      - max-age=31536000; includeSubDomains; preload
+      x-ratelimit-limit-requests:
+      - '30000'
+      x-ratelimit-limit-tokens:
+      - '150000000'
+      x-ratelimit-remaining-requests:
+      - '29999'
+      x-ratelimit-remaining-tokens:
+      - '149998937'
+      x-ratelimit-reset-requests:
+      - 2ms
+      x-ratelimit-reset-tokens:
+      - 0s
+      x-request-id:
+      - req_cab0502e7d8a8564e56d8f741cf451ec
+    http_version: HTTP/1.1
+    status_code: 200
+- request:
+    body: !!binary |
+      Cs4CCiQKIgoMc2VydmljZS5uYW1lEhIKEGNyZXdBSS10ZWxlbWV0cnkSpQIKEgoQY3Jld2FpLnRl
+      bGVtZXRyeRKOAgoQO/xpq2/yF233Vf8OitYSiBIIdyOEucIqtF8qDFRhc2sgQ3JlYXRlZDABOXDe
+      ZdqtkxcYQUDaZ9qtkxcYSi4KCGNyZXdfa2V5EiIKIDAwYjk0NmJlNDQzNzE0YjNhNDdjMjAxMDFl
+      YjAyZDY2SjEKB2NyZXdfaWQSJgokNzJkZTEwZTQtNDkwZC00NDYwLTk1NzMtMmU5ZmM5YTMwMWE1
+      Si4KCHRhc2tfa2V5EiIKIGI3MTNjODJmZWI5MmM5ZjVjNThiNDBhOTc1NTZiN2FjSjEKB3Rhc2tf
+      aWQSJgokYWYxYTk2MTgtOTI0YS00ZTc5LWI2ZWItNThkYTEzNjk1OWM1egIYAYUBAAEAAA==
+    headers:
+      Accept:
+      - '*/*'
+      Accept-Encoding:
+      - gzip, deflate
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '337'
+      Content-Type:
+      - application/x-protobuf
+      User-Agent:
+      - OTel-OTLP-Exporter-Python/1.27.0
+    method: POST
+    uri: https://telemetry.crewai.com:4319/v1/traces
+  response:
+    body:
+      string: "\n\0"
+    headers:
+      Content-Length:
+      - '2'
+      Content-Type:
+      - application/x-protobuf
+      Date:
+      - Sat, 04 Jan 2025 19:22:37 GMT
+    status:
+      code: 200
+      message: OK
+- request:
+    body: '{"messages": [{"role": "system", "content": "You are Report Writer. You''re
+      an expert at writing structured reports.\nYour personal goal is: Create properly
+      formatted reports\nTo give my best complete final answer to the task use the
+      exact following format:\n\nThought: I now can give a great answer\nFinal Answer:
+      Your final answer must be the great and the most complete as possible, it must
+      be outcome described.\n\nI MUST use these formats, my job depends on it!"},
+      {"role": "user", "content": "\nCurrent Task: Write a report about AI with exactly
+      3 key points.\n\nThis is the expect criteria for your final answer: A properly
+      formatted report\nyou MUST return the actual complete content as the final answer,
+      not a summary.\n\nThis is the context you''re working with:\n### Previous attempt
+      failed validation: Output must start with ''REPORT:'' no formatting, just the
+      word REPORT\n\n\n### Previous result:\n# Report on Artificial Intelligence (AI)\n\n##
+      Introduction\nArtificial Intelligence (AI) is a revolutionary technology designed
+      to simulate human intelligence processes, enabling machines to perform tasks
+      that typically require human cognition. Its rapid development has brought forth
+      significant changes across various sectors, improving operational efficiencies,
+      enhancing decision-making, and fostering innovation. This report outlines three
+      key points regarding the impact and implications of AI technology.\n\n## Key
+      Point 1: Transformative Potential in Various Industries\nAI''s transformative
+      potential is observable across numerous sectors including healthcare, finance,
+      transportation, and agriculture. In the healthcare sector, AI algorithms are
+      increasingly used to analyze vast amounts of medical data, which sharpens diagnostics,
+      facilitates personalized treatment plans, and enhances predictive analytics,
+      thus leading to better patient care. In finance, AI contributes to risk assessment,
+      fraud detection, and automated trading, heightening efficiency and reducing
+      the risk of human error. The transportation industry leverages AI technologies
+      for developments in autonomous vehicles and smart transportation systems that
+      optimize routes and alleviate traffic congestion. Furthermore, agriculture benefits
+      from AI by applying precision farming techniques that optimize yield and mitigate
+      environmental effects.\n\n## Key Point 2: Ethical Considerations and Challenges\nWith
+      the increasing deployment of AI technologies, numerous ethical considerations
+      surface, particularly relating to privacy, algorithmic fairness, and the displacement
+      of jobs. Addressing issues such as data security, bias in AI algorithms, and
+      the societal impact of automation is paramount. Organizations are encouraged
+      to develop stringent guidelines and regulatory measures aimed at minimizing
+      bias and ensuring that AI systems uphold values of transparency and accountability.
+      Additionally, the implications of job displacement necessitate strategies for
+      workforce retraining and educational reforms to adequately prepare the workforce
+      for an economy increasingly shaped by AI technologies.\n\n## Key Point 3: Future
+      Directions and Developments\nThe future of AI is poised for remarkable advancements,
+      with trends indicating a growing integration into daily life and widespread
+      applications. The emergence of explainable AI (XAI) aims to enhance the transparency
+      and interpretability of AI decision-making processes, fostering trust and understanding
+      among users. Improvements in natural language processing (NLP) are likely to
+      lead to more seamless and intuitive human-computer interactions. Furthermore,
+      AI''s potential to address global challenges, including climate change and disparities
+      in healthcare access, is becoming increasingly significant. Collaborative efforts
+      among stakeholders will be vital to ensuring that AI advancements are ethical
+      and responsive to societal needs, paving the way for a responsible and equitable
+      AI landscape.\n\n## Conclusion\nAI technology is at the forefront of innovation,
+      with the capacity to transform industries and tackle pressing global issues.
+      As we navigate through the complexities and ethical challenges posed by AI,
+      it is crucial to prioritize responsible development and implementation. By harnessing
+      AI''s transformative capabilities with a focus on equity and transparency, we
+      can pave the way for a promising future that benefits all.\n\nEND REPORT\n\n\nTry
+      again, making sure to address the validation error.\n\nBegin! This is VERY important
+      to you, use the tools available and give your best Final Answer, your job depends
+      on it!\n\nThought:"}], "model": "gpt-4o-mini", "stop": ["\nObservation:"], "stream":
+      false}'
+    headers:
+      accept:
+      - application/json
+      accept-encoding:
+      - gzip, deflate
+      connection:
+      - keep-alive
+      content-length:
+      - '4669'
+      content-type:
+      - application/json
+      cookie:
+      - _cfuvid=SlnUP7AT9jJlQiN.Fm1c7MDyo78_hBRAz8PoabvHVSU-1736018539826-0.0.1.1-604800000;
+        __cf_bm=pumYGlf1gsbVoFNTM1vh9Okj41SgxP3y65T5YWWPU1U-1736018539-1.0.1.1-wmaotkWMviN4lKh6M3P04A8p61Ehm.rTehDpsJhxYhNBNU5.kznMCa3cNXePaEbsKkk4PU2QcWjHj2C7yDrjkw
+      host:
+      - api.openai.com
+      user-agent:
+      - OpenAI/Python 1.52.1
+      x-stainless-arch:
+      - arm64
+      x-stainless-async:
+      - 'false'
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - MacOS
+      x-stainless-package-version:
+      - 1.52.1
+      x-stainless-raw-response:
+      - 'true'
+      x-stainless-retry-count:
+      - '0'
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.11.7
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    content: "{\n  \"id\": \"chatcmpl-Am41EaJaKZSumZe8ph2I32d6QNbTP\",\n  \"object\":
+      \"chat.completion\",\n  \"created\": 1736018556,\n  \"model\": \"gpt-4o-mini-2024-07-18\",\n
+      \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
+      \"assistant\",\n        \"content\": \"I now can give a great answer  \\nFinal
+      Answer: \\n\\nREPORT: \\n\\n# Report on Artificial Intelligence (AI)\\n\\n##
+      Introduction\\nArtificial Intelligence (AI) is a revolutionary technology designed
+      to simulate human intelligence processes, enabling machines to perform tasks
+      that typically require human cognition. Its rapid development has brought forth
+      significant changes across various sectors, improving operational efficiencies,
+      enhancing decision-making, and fostering innovation. This report outlines three
+      key points regarding the impact and implications of AI technology.\\n\\n## Key
+      Point 1: Transformative Potential in Various Industries\\nAI's transformative
+      potential is observable across numerous sectors including healthcare, finance,
+      transportation, and agriculture. In the healthcare sector, AI algorithms are
+      increasingly used to analyze vast amounts of medical data, which sharpens diagnostics,
+      facilitates personalized treatment plans, and enhances predictive analytics,
+      thus leading to better patient care. In finance, AI contributes to risk assessment,
+      fraud detection, and automated trading, heightening efficiency and reducing
+      the risk of human error. The transportation industry leverages AI technologies
+      for developments in autonomous vehicles and smart transportation systems that
+      optimize routes and alleviate traffic congestion. Furthermore, agriculture benefits
+      from AI by applying precision farming techniques that optimize yield and mitigate
+      environmental effects.\\n\\n## Key Point 2: Ethical Considerations and Challenges\\nWith
+      the increasing deployment of AI technologies, numerous ethical considerations
+      surface, particularly relating to privacy, algorithmic fairness, and the displacement
+      of jobs. Addressing issues such as data security, bias in AI algorithms, and
+      the societal impact of automation is paramount. Organizations are encouraged
+      to develop stringent guidelines and regulatory measures aimed at minimizing
+      bias and ensuring that AI systems uphold values of transparency and accountability.
+      Additionally, the implications of job displacement necessitate strategies for
+      workforce retraining and educational reforms to adequately prepare the workforce
+      for an economy increasingly shaped by AI technologies.\\n\\n## Key Point 3:
+      Future Directions and Developments\\nThe future of AI is poised for remarkable
+      advancements, with trends indicating a growing integration into daily life and
+      widespread applications. The emergence of explainable AI (XAI) aims to enhance
+      the transparency and interpretability of AI decision-making processes, fostering
+      trust and understanding among users. Improvements in natural language processing
+      (NLP) are likely to lead to more seamless and intuitive human-computer interactions.
+      Furthermore, AI's potential to address global challenges, including climate
+      change and disparities in healthcare access, is becoming increasingly significant.
+      Collaborative efforts among stakeholders will be vital to ensuring that AI advancements
+      are ethical and responsive to societal needs, paving the way for a responsible
+      and equitable AI landscape.\\n\\n## Conclusion\\nAI technology is at the forefront
+      of innovation, with the capacity to transform industries and tackle pressing
+      global issues. As we navigate through the complexities and ethical challenges
+      posed by AI, it is crucial to prioritize responsible development and implementation.
+      By harnessing AI's transformative capabilities with a focus on equity and transparency,
+      we can pave the way for a promising future that benefits all.\\n\\nEND REPORT\",\n
+      \       \"refusal\": null\n      },\n      \"logprobs\": null,\n      \"finish_reason\":
+      \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 774,\n    \"completion_tokens\":
+      574,\n    \"total_tokens\": 1348,\n    \"prompt_tokens_details\": {\n      \"cached_tokens\":
+      0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\": {\n
+      \     \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\":
+      0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"system_fingerprint\":
+      \"fp_0aa8d3e20b\"\n}\n"
+    headers:
+      CF-Cache-Status:
+      - DYNAMIC
+      CF-RAY:
+      - 8fcd9928eaa40133-GRU
+      Connection:
+      - keep-alive
+      Content-Encoding:
+      - gzip
+      Content-Type:
+      - application/json
+      Date:
+      - Sat, 04 Jan 2025 19:22:46 GMT
+      Server:
+      - cloudflare
+      Transfer-Encoding:
+      - chunked
+      X-Content-Type-Options:
+      - nosniff
+      access-control-expose-headers:
+      - X-Request-ID
+      alt-svc:
+      - h3=":443"; ma=86400
+      openai-organization:
+      - crewai-iuxna1
+      openai-processing-ms:
+      - '9767'
+      openai-version:
+      - '2020-10-01'
+      strict-transport-security:
+      - max-age=31536000; includeSubDomains; preload
+      x-ratelimit-limit-requests:
+      - '30000'
+      x-ratelimit-limit-tokens:
+      - '150000000'
+      x-ratelimit-remaining-requests:
+      - '29999'
+      x-ratelimit-remaining-tokens:
+      - '149998862'
+      x-ratelimit-reset-requests:
+      - 2ms
+      x-ratelimit-reset-tokens:
+      - 0s
+      x-request-id:
+      - req_d3d0e47180363d07d988cb5ab639597c
+    http_version: HTTP/1.1
+    status_code: 200
+version: 1
