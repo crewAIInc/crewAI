@@ -133,7 +133,6 @@ class Task(BaseModel):
         default=3, description="Maximum number of retries when guardrail fails"
     )
     retry_count: int = Field(default=0, description="Current number of retries")
-
     start_time: Optional[datetime.datetime] = Field(
         default=None, description="Start time of the task execution"
     )
@@ -391,10 +390,9 @@ class Task(BaseModel):
                     )
 
                 self.retry_count += 1
-                context = (
-                    f"### Previous attempt failed validation: {guardrail_result.error}\n\n\n"
-                    f"### Previous result:\n{task_output.raw}\n\n\n"
-                    "Try again, making sure to address the validation error."
+                context = self.i18n.errors("validation_error").format(
+                    guardrail_result_error=guardrail_result.error,
+                    task_output=task_output.raw
                 )
                 return self._execute_core(agent, context, tools)
 
