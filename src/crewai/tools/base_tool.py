@@ -7,6 +7,12 @@ from pydantic import BaseModel as PydanticBaseModel
 
 from crewai.tools.structured_tool import CrewStructuredTool
 
+import warnings
+from pydantic import PydanticDeprecatedSince20
+
+# Ignore all "PydanticDeprecatedSince20" warnings globally
+warnings.filterwarnings("ignore", category=PydanticDeprecatedSince20)
+
 
 class BaseTool(BaseModel, ABC):
     class _ArgsSchemaPlaceholder(PydanticBaseModel):
