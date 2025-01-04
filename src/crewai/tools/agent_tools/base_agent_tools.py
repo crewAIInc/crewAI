@@ -1,5 +1,5 @@
 import logging
-from typing import Optional, Union
+from typing import Optional
 
 from pydantic import Field
 
@@ -54,12 +54,12 @@ class BaseAgentTool(BaseTool):
     ) -> str:
         """
         Execute delegation to an agent with case-insensitive and whitespace-tolerant matching.
-        
+
         Args:
             agent_name: Name/role of the agent to delegate to (case-insensitive)
             task: The specific question or task to delegate
             context: Optional additional context for the task execution
-            
+
         Returns:
             str: The execution result from the delegated agent or an error message
                  if the agent cannot be found
