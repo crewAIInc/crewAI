@@ -4,8 +4,8 @@ import sys
 import threading
 import warnings
 from contextlib import contextmanager
-from typing import Any, Dict, List, Optional, Union
 from importlib import resources
+from typing import Any, Dict, List, Optional, Union
 
 with warnings.catch_warnings():
     warnings.simplefilter("ignore", UserWarning)
