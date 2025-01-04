@@ -3337,3 +3337,110 @@ def test_multimodal_agent_live_image_analysis():
     assert isinstance(result.raw, str)
     assert len(result.raw) > 100  # Expecting a detailed analysis
     assert "error" not in result.raw.lower()  # No error messages in response
+
+
+@pytest.mark.vcr(filter_headers=["authorization"])
+def test_crew_with_failing_task_guardrails():
+    """Test that crew properly handles failing guardrails and retries with validation feedback."""
+
+    def strict_format_guardrail(result: TaskOutput):
+        """Validates that the output follows a strict format:
+        - Must start with 'REPORT:'
+        - Must end with 'END REPORT'
+        """
+        content = result.raw.strip()
+
+        if not ('REPORT:' in content or '**REPORT:**' in content):
+            return (False, "Output must start with 'REPORT:' no formatting, just the word REPORT")
+
+        if not ('END REPORT' in content or '**END REPORT**' in content):
+            return (False, "Output must end with 'END REPORT' no formatting, just the word END REPORT")
+
+        return (True, content)
+
+    researcher = Agent(
+        role="Report Writer",
+        goal="Create properly formatted reports",
+        backstory="You're an expert at writing structured reports.",
+    )
+
+    task = Task(
+        description="""Write a report about AI with exactly 3 key points.""",
+        expected_output="A properly formatted report",
+        agent=researcher,
+        guardrail=strict_format_guardrail,
+        max_retries=3
+    )
+
+    crew = Crew(
+        agents=[researcher],
+        tasks=[task],
+    )
+
+    result = crew.kickoff()
+
+    # Verify the final output meets all format requirements
+    content = result.raw.strip()
+    assert content.startswith('REPORT:'), "Output should start with 'REPORT:'"
+    assert content.endswith('END REPORT'), "Output should end with 'END REPORT'"
+
+    # Verify task output
+    task_output = result.tasks_output[0]
+    assert isinstance(task_output, TaskOutput)
+    assert task_output.raw == result.raw
+
+
+@pytest.mark.vcr(filter_headers=["authorization"])
+def test_crew_guardrail_feedback_in_context():
+    """Test that guardrail feedback is properly appended to task context for retries."""
+
+    def format_guardrail(result: TaskOutput):
+        """Validates that the output contains a specific keyword."""
+        if "IMPORTANT" not in result.raw:
+            return (False, "Output must contain the keyword 'IMPORTANT'")
+        return (True, result.raw)
+
+    # Create execution contexts list to track contexts
+    execution_contexts = []
+
+    researcher = Agent(
+        role="Writer",
+        goal="Write content with specific keywords",
+        backstory="You're an expert at following specific writing requirements.",
+        allow_delegation=False
+    )
+
+    task = Task(
+        description="Write a short response.",
+        expected_output="A response containing the keyword 'IMPORTANT'",
+        agent=researcher,
+        guardrail=format_guardrail,
+        max_retries=2
+    )
+
+    crew = Crew(agents=[researcher], tasks=[task])
+
+    with patch.object(Agent, "execute_task") as mock_execute_task:
+        # Define side_effect to capture context and return different responses
+        def side_effect(task, context=None, tools=None):
+            execution_contexts.append(context if context else "")
+            if len(execution_contexts) == 1:
+                return "This is a test response"
+            return "This is an IMPORTANT test response"
+
+        mock_execute_task.side_effect = side_effect
+
+        result = crew.kickoff()
+
+    # Verify that we had multiple executions
+    assert len(execution_contexts) > 1, "Task should have been executed multiple times"
+
+    # Verify that the second execution included the guardrail feedback
+    assert "Output must contain the keyword 'IMPORTANT'" in execution_contexts[1], \
+        "Guardrail feedback should be included in retry context"
+
+    # Verify final output meets guardrail requirements
+    assert "IMPORTANT" in result.raw, "Final output should contain required keyword"
+
+    # Verify task retry count
+    assert task.retry_count == 1, "Task should have been retried once"
