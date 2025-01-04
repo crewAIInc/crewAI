@@ -216,7 +216,12 @@ excel_source = ExcelKnowledgeSource(
     file_paths=["spreadsheet.xlsx"]
 )
 
-# Create knowledge with Excel source
+# Create crew with Excel knowledge source on agents or crew level
+agent = Agent(
+    ...
+    knowledge_sources=[excel_source]
+)
+
 crew = Crew(
     ...
     knowledge_sources=[excel_source]
@@ -232,7 +237,12 @@ json_source = JSONKnowledgeSource(
     file_paths=["data.json"]
 )
 
-# Create knowledge with JSON source
+# Create crew with JSON knowledge source on agents or crew level
+agent = Agent(
+    ...
+    knowledge_sources=[json_source]
+)
+
 crew = Crew(
     ...
     knowledge_sources=[json_source]
