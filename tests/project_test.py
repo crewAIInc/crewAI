@@ -27,7 +27,7 @@ class SimpleCrew:
 
 
 @CrewBase
-class TestCrew:
+class InternalCrew:
     agents_config = "config/agents.yaml"
     tasks_config = "config/tasks.yaml"
 
@@ -84,7 +84,7 @@ def test_task_memoization():
 
 
 def test_crew_memoization():
-    crew = TestCrew()
+    crew = InternalCrew()
     first_call_result = crew.crew()
     second_call_result = crew.crew()
 
@@ -107,7 +107,7 @@ def test_task_name():
 
 @pytest.mark.vcr(filter_headers=["authorization"])
 def test_before_kickoff_modification():
-    crew = TestCrew()
+    crew = InternalCrew()
     inputs = {"topic": "LLMs"}
     result = crew.crew().kickoff(inputs=inputs)
     assert "bicycles" in result.raw, "Before kickoff function did not modify inputs"
@@ -115,7 +115,7 @@ def test_before_kickoff_modification():
 
 @pytest.mark.vcr(filter_headers=["authorization"])
 def test_after_kickoff_modification():
-    crew = TestCrew()
+    crew = InternalCrew()
     # Assuming the crew execution returns a dict
     result = crew.crew().kickoff({"topic": "LLMs"})
 
@@ -126,7 +126,7 @@ def test_after_kickoff_modification():
 
 @pytest.mark.vcr(filter_headers=["authorization"])
 def test_before_kickoff_with_none_input():
-    crew = TestCrew()
+    crew = InternalCrew()
     crew.crew().kickoff(None)
     # Test should pass without raising exceptions
 

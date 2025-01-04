@@ -16,7 +16,7 @@ from crewai.utilities.planning_handler import (
 )
 
 
-class TestCrewPlanner:
+class InternalCrewPlanner:
     @pytest.fixture
     def crew_planner(self):
         tasks = [
@@ -115,13 +115,13 @@ class TestCrewPlanner:
             def __init__(self, name: str, description: str):
                 tool_data = {"name": name, "description": description}
                 super().__init__(**tool_data)
-            
+
             def __str__(self):
                 return self.name
-            
+
             def __repr__(self):
                 return self.name
-            
+
             def to_structured_tool(self):
                 return self
 
@@ -149,11 +149,11 @@ class TestCrewPlanner:
                 ]
             )
         )
-        
+
         # Create planner with the new task
         planner = CrewPlanner([task], None)
         tasks_summary = planner._create_tasks_summary()
-        
+
         # Verify task summary content
         assert isinstance(tasks_summary, str)
         assert task.description in tasks_summary

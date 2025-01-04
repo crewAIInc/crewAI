@@ -31,10 +31,10 @@ class InternalInstructor:
             import instructor
             from litellm import completion
 
-        self._client = instructor.from_litellm(
-            completion,
-            mode=instructor.Mode.TOOLS,
-        )
+            self._client = instructor.from_litellm(
+                completion,
+                mode=instructor.Mode.TOOLS,
+            )
 
     def to_json(self):
         model = self.to_pydantic()
