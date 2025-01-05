@@ -19,7 +19,15 @@ try:
     import agentops  # type: ignore
 except ImportError:
     agentops = None
-OPENAI_BIGGER_MODELS = ["gpt-4", "gpt-4o", "o1-preview", "o1-mini", "o1", "o3", "o3-mini"]
+OPENAI_BIGGER_MODELS = [
+    "gpt-4",
+    "gpt-4o",
+    "o1-preview",
+    "o1-mini",
+    "o1",
+    "o3",
+    "o3-mini",
+]
 
 
 class ToolUsageErrorException(Exception):
@@ -104,7 +112,10 @@ class ToolUsage:
                 self._printer.print(content=f"\n\n{error}\n", color="red")
             return error
 
-        if isinstance(tool, CrewStructuredTool) and tool.name == self._i18n.tools("add_image")["name"]:  # type: ignore
+        if (
+            isinstance(tool, CrewStructuredTool)
+            and tool.name == self._i18n.tools("add_image")["name"]
+        ):  # type: ignore
             try:
                 result = self._use(tool_string=tool_string, tool=tool, calling=calling)
                 return result
@@ -169,7 +180,7 @@ class ToolUsage:
 
                 if calling.arguments:
                     try:
-                        acceptable_args = tool.args_schema.schema()["properties"].keys()  # type: ignore # Item "None" of "type[BaseModel] | None" has no attribute "schema"
+                        acceptable_args = tool.args_schema.model_json_schema()["properties"].keys()  # type: ignore # Item "None" of "type[BaseModel] | None" has no attribute "schema"
                         arguments = {
                             k: v
                             for k, v in calling.arguments.items()
