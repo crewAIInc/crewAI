@@ -1,0 +1,36 @@
+interactions:
+- request:
+    body: '{"model": "llama3.2:3b", "prompt": "### User:\nRespond in 20 words. Which
+      model are you??\n\n", "options": {"num_predict": 30, "temperature": 0.7}, "stream":
+      false}'
+    headers:
+      Accept:
+      - '*/*'
+      Accept-Encoding:
+      - gzip, deflate
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '164'
+      Content-Type:
+      - application/json
+      User-Agent:
+      - python-requests/2.32.3
+    method: POST
+    uri: http://localhost:11434/api/generate
+  response:
+    body:
+      string: '{"model":"llama3.2:3b","created_at":"2025-01-02T20:24:24.812595Z","response":"I''m
+        an AI, specifically a large language model, designed to understand and respond
+        to user queries with accuracy.","done":true,"done_reason":"stop","context":[128006,9125,128007,271,38766,1303,33025,2696,25,6790,220,2366,18,271,128009,128006,882,128007,271,14711,2724,512,66454,304,220,508,4339,13,16299,1646,527,499,71291,128009,128006,78191,128007,271,40,2846,459,15592,11,11951,264,3544,4221,1646,11,6319,311,3619,323,6013,311,1217,20126,449,13708,13],"total_duration":827817584,"load_duration":41560542,"prompt_eval_count":39,"prompt_eval_duration":384000000,"eval_count":23,"eval_duration":400000000}'
+    headers:
+      Content-Length:
+      - '683'
+      Content-Type:
+      - application/json; charset=utf-8
+      Date:
+      - Thu, 02 Jan 2025 20:24:24 GMT
+    status:
+      code: 200
+      message: OK
+version: 1
