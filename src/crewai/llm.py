@@ -5,7 +5,6 @@ import sys
 import threading
 import warnings
 from contextlib import contextmanager
-from importlib import resources
 from typing import Any, Dict, List, Optional, Union, cast
 
 from dotenv import load_dotenv
@@ -178,35 +177,6 @@ class LLM:
             "api_key": self.api_key,
             "callbacks": self.callbacks,
         }
-
-    @classmethod
-    def from_dict(cls, data: dict) -> "LLM":
-        """
-        Create an LLM instance from a dict.
-        We assume the dict has all relevant keys that match what's in the constructor.
-        """
-        known_fields = {}
-        known_fields["model"] = data.pop("model", None)
-        known_fields["timeout"] = data.pop("timeout", None)
-        known_fields["temperature"] = data.pop("temperature", None)
-        known_fields["top_p"] = data.pop("top_p", None)
-        known_fields["n"] = data.pop("n", None)
-        known_fields["stop"] = data.pop("stop", None)
-        known_fields["max_completion_tokens"] = data.pop("max_completion_tokens", None)
-        known_fields["max_tokens"] = data.pop("max_tokens", None)
-        known_fields["presence_penalty"] = data.pop("presence_penalty", None)
-        known_fields["frequency_penalty"] = data.pop("frequency_penalty", None)
-        known_fields["logit_bias"] = data.pop("logit_bias", None)
-        known_fields["response_format"] = data.pop("response_format", None)
-        known_fields["seed"] = data.pop("seed", None)
-        known_fields["logprobs"] = data.pop("logprobs", None)
-        known_fields["top_logprobs"] = data.pop("top_logprobs", None)
-        known_fields["base_url"] = data.pop("base_url", None)
-        known_fields["api_version"] = data.pop("api_version", None)
-        known_fields["api_key"] = data.pop("api_key", None)
-        known_fields["callbacks"] = data.pop("callbacks", None)
-
-        return cls(**known_fields, **data)
 
     def call(
         self,

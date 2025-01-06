@@ -8,7 +8,6 @@ from crewai.cli.add_crew_to_flow import add_crew_to_flow
 from crewai.cli.create_crew import create_crew
 from crewai.cli.create_flow import create_flow
 from crewai.cli.crew_chat import run_chat
-from crewai.cli.fetch_chat_llm import fetch_chat_llm
 from crewai.memory.storage.kickoff_task_outputs_storage import (
     KickoffTaskOutputsSQLiteStorage,
 )
