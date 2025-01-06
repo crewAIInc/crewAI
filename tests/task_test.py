@@ -722,7 +722,9 @@ def test_interpolate_inputs():
         output_file="/tmp/{topic}/output_{date}.txt",
     )
 
-    task.interpolate_inputs(inputs={"topic": "AI", "date": "2024"})
+    task.interpolate_inputs_and_add_conversation_history(
+        inputs={"topic": "AI", "date": "2024"}
+    )
     assert (
         task.description
         == "Give me a list of 5 interesting ideas about AI to explore for an article, what makes them unique and interesting."
@@ -730,7 +732,9 @@ def test_interpolate_inputs():
     assert task.expected_output == "Bullet point list of 5 interesting ideas about AI."
     assert task.output_file == "/tmp/AI/output_2024.txt"
 
-    task.interpolate_inputs(inputs={"topic": "ML", "date": "2025"})
+    task.interpolate_inputs_and_add_conversation_history(
+        inputs={"topic": "ML", "date": "2025"}
+    )
     assert (
         task.description
         == "Give me a list of 5 interesting ideas about ML to explore for an article, what makes them unique and interesting."
@@ -865,7 +869,7 @@ def test_key():
 
     assert task.key == hash, "The key should be the hash of the description."
 
-    task.interpolate_inputs(inputs={"topic": "AI"})
+    task.interpolate_inputs_and_add_conversation_history(inputs={"topic": "AI"})
     assert (
         task.key == hash
     ), "The key should be the hash of the non-interpolated description."
