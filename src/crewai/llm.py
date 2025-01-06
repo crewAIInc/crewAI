@@ -151,32 +151,6 @@ class LLM:
         self.set_callbacks(callbacks)
         self.set_env_callbacks()
 
-    def to_dict(self) -> dict:
-        """
-        Return a dict of all relevant parameters for serialization.
-        """
-        return {
-            "model": self.model,
-            "timeout": self.timeout,
-            "temperature": self.temperature,
-            "top_p": self.top_p,
-            "n": self.n,
-            "stop": self.stop,
-            "max_completion_tokens": self.max_completion_tokens,
-            "max_tokens": self.max_tokens,
-            "presence_penalty": self.presence_penalty,
-            "frequency_penalty": self.frequency_penalty,
-            "logit_bias": self.logit_bias,
-            "response_format": self.response_format,
-            "seed": self.seed,
-            "logprobs": self.logprobs,
-            "top_logprobs": self.top_logprobs,
-            "base_url": self.base_url,
-            "api_version": self.api_version,
-            "api_key": self.api_key,
-            "callbacks": self.callbacks,
-        }
-
     def call(
         self,
         messages: List[Dict[str, str]],

@@ -74,35 +74,6 @@ def create_llm(
         return None
 
 
-def create_chat_llm() -> Optional[LLM]:
-    """
-    Creates a Chat LLM with additional checks, such as verifying crewAI version
-    or reading from pyproject.toml. Then calls `create_llm(None, default_model)`.
-
-    Args:
-        default_model (str): Fallback model if not set in environment.
-
-    Returns:
-        An instance of LLM or None if instantiation fails.
-    """
-    print("[create_chat_llm] Checking environment and version info...")
-
-    crewai_version = get_crewai_version()
-    min_required_version = "0.87.0"  # Update to latest if needed
-
-    pyproject_data = read_toml()
-    if pyproject_data.get("tool", {}).get("poetry") and (
-        version.parse(crewai_version) < version.parse(min_required_version)
-    ):
-        print(
-            f"You are running an older version of crewAI ({crewai_version}) that uses poetry.\n"
-            "Please run `crewai update` to switch to uv-based builds."
-        )
-
-    # After checks, simply call create_llm with None (meaning "use env or fallback"):
-    return create_llm(None)
-
-
 def _llm_via_environment_or_fallback() -> Optional[LLM]:
     """
     Helper function: if llm_value is None, we load environment variables or fallback default model.
