@@ -397,7 +397,7 @@ class Task(BaseModel):
                 )
                 printer = Printer()
                 printer.print(
-                    content=f"Guardrail blocked, retrying, due to:{guardrail_result.error}\n",
+                    content=f"Guardrail blocked, retrying, due to: {guardrail_result.error}\n",
                     color="yellow",
                 )
                 return self._execute_core(agent, context, tools)
