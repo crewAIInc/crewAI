@@ -1,4 +1,3 @@
-import json
 import logging
 from typing import Any, List, Optional
 
@@ -78,10 +77,10 @@ class CrewPlanner:
     def _get_agent_knowledge(self, task: Task) -> List[str]:
         """
         Safely retrieve knowledge source content from the task's agent.
-        
+
         Args:
             task: The task containing an agent with potential knowledge sources
-            
+
         Returns:
             List[str]: A list of knowledge source strings
         """
@@ -108,6 +107,6 @@ class CrewPlanner:
                     f"[{', '.join(str(tool) for tool in task.agent.tools)}]" if task.agent and task.agent.tools else '"agent has no tools"',
                     f',\n                "agent_knowledge": "[\\"{knowledge_list[0]}\\"]"' if knowledge_list and str(knowledge_list) != "None" else ""
                 )
-            
+
             tasks_summary.append(task_summary)
         return " ".join(tasks_summary)

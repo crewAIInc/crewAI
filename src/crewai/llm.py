@@ -5,6 +5,7 @@ import sys
 import threading
 import warnings
 from contextlib import contextmanager
+from importlib import resources
 from typing import Any, Dict, List, Optional, Union, cast
 
 from dotenv import load_dotenv
@@ -86,6 +87,9 @@ CONTEXT_WINDOW_USAGE_RATIO = 0.75
 def suppress_warnings():
     with warnings.catch_warnings():
         warnings.filterwarnings("ignore")
+        warnings.filterwarnings(
+            "ignore", message="open_text is deprecated*", category=DeprecationWarning
+        )
 
         # Redirect stdout and stderr
         old_stdout = sys.stdout
@@ -349,16 +353,17 @@ class LLM:
         Attempt to keep a single set of callbacks in litellm by removing old
         duplicates and adding new ones.
         """
-        callback_types = [type(callback) for callback in callbacks]
-        for callback in litellm.success_callback[:]:
-            if type(callback) in callback_types:
-                litellm.success_callback.remove(callback)
+        with suppress_warnings():
+            callback_types = [type(callback) for callback in callbacks]
+            for callback in litellm.success_callback[:]:
+                if type(callback) in callback_types:
+                    litellm.success_callback.remove(callback)
 
-        for callback in litellm._async_success_callback[:]:
-            if type(callback) in callback_types:
-                litellm._async_success_callback.remove(callback)
+            for callback in litellm._async_success_callback[:]:
+                if type(callback) in callback_types:
+                    litellm._async_success_callback.remove(callback)
 
-        litellm.callbacks = callbacks
+            litellm.callbacks = callbacks
 
     def set_env_callbacks(self):
         """
@@ -378,5 +383,5 @@ class LLM:
                 cb.strip() for cb in failure_callbacks_str.split(",") if cb.strip()
             ]
 
-        litellm.success_callback = success_callbacks
-        litellm.failure_callback = failure_callbacks
+            litellm.success_callback = success_callbacks
+            litellm.failure_callback = failure_callbacks

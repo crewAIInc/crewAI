@@ -146,81 +146,106 @@ Here are examples of how to use different types of knowledge sources:
 
 ### Text File Knowledge Source
 ```python
-from crewai.knowledge.source import CrewDoclingSource
+from crewai.knowledge.source.crew_docling_source import CrewDoclingSource
 
 # Create a text file knowledge source
 text_source = CrewDoclingSource(
     file_paths=["document.txt", "another.txt"]
 )
 
-# Create knowledge with text file source
-knowledge = Knowledge(
-    collection_name="text_knowledge",
-    sources=[text_source]
+# Create crew with text file source on agents or crew level
+agent = Agent(
+    ...
+    knowledge_sources=[text_source]
+)
+
+crew = Crew(
+    ...
+    knowledge_sources=[text_source]
 )
 ```
 
 ### PDF Knowledge Source
 ```python
-from crewai.knowledge.source import PDFKnowledgeSource
+from crewai.knowledge.source.pdf_knowledge_source import PDFKnowledgeSource
 
 # Create a PDF knowledge source
 pdf_source = PDFKnowledgeSource(
     file_paths=["document.pdf", "another.pdf"]
 )
 
-# Create knowledge with PDF source
-knowledge = Knowledge(
-    collection_name="pdf_knowledge",
-    sources=[pdf_source]
+# Create crew with PDF knowledge source on agents or crew level
+agent = Agent(
+    ...
+    knowledge_sources=[pdf_source]
+)
+
+crew = Crew(
+    ...
+    knowledge_sources=[pdf_source]
 )
 ```
 
 ### CSV Knowledge Source
 ```python
-from crewai.knowledge.source import CSVKnowledgeSource
+from crewai.knowledge.source.csv_knowledge_source import CSVKnowledgeSource
 
 # Create a CSV knowledge source
 csv_source = CSVKnowledgeSource(
     file_paths=["data.csv"]
 )
 
-# Create knowledge with CSV source
-knowledge = Knowledge(
-    collection_name="csv_knowledge",
-    sources=[csv_source]
+# Create crew with CSV knowledge source or on agent level
+agent = Agent(
+    ...
+    knowledge_sources=[csv_source]
+)
+
+crew = Crew(
+    ...
+    knowledge_sources=[csv_source]
 )
 ```
 
 ### Excel Knowledge Source
 ```python
-from crewai.knowledge.source import ExcelKnowledgeSource
+from crewai.knowledge.source.excel_knowledge_source import ExcelKnowledgeSource
 
 # Create an Excel knowledge source
 excel_source = ExcelKnowledgeSource(
     file_paths=["spreadsheet.xlsx"]
 )
 
-# Create knowledge with Excel source
-knowledge = Knowledge(
-    collection_name="excel_knowledge",
-    sources=[excel_source]
+# Create crew with Excel knowledge source on agents or crew level
+agent = Agent(
+    ...
+    knowledge_sources=[excel_source]
+)
+
+crew = Crew(
+    ...
+    knowledge_sources=[excel_source]
 )
 ```
 
 ### JSON Knowledge Source
 ```python
-from crewai.knowledge.source import JSONKnowledgeSource
+from crewai.knowledge.source.json_knowledge_source import JSONKnowledgeSource
 
 # Create a JSON knowledge source
 json_source = JSONKnowledgeSource(
     file_paths=["data.json"]
 )
 
-# Create knowledge with JSON source
-knowledge = Knowledge(
-    collection_name="json_knowledge",
-    sources=[json_source]
+# Create crew with JSON knowledge source on agents or crew level
+agent = Agent(
+    ...
+    knowledge_sources=[json_source]
+)
+
+crew = Crew(
+    ...
+    knowledge_sources=[json_source]
 )
 ```
 
@@ -232,7 +257,7 @@ Knowledge sources automatically chunk content for better processing.
 You can configure chunking behavior in your knowledge sources:
 
 ```python
-from crewai.knowledge.source import StringKnowledgeSource
+from crewai.knowledge.source.string_knowledge_source import StringKnowledgeSource
 
 source = StringKnowledgeSource(
     content="Your content here",

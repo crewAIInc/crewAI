@@ -41,6 +41,7 @@ from crewai.tools.base_tool import BaseTool
 from crewai.utilities.config import process_config
 from crewai.utilities.converter import Converter, convert_to_model
 from crewai.utilities.i18n import I18N
+from crewai.utilities.printer import Printer
 
 
 class Task(BaseModel):
@@ -133,7 +134,6 @@ class Task(BaseModel):
         default=3, description="Maximum number of retries when guardrail fails"
     )
     retry_count: int = Field(default=0, description="Current number of retries")
-
     start_time: Optional[datetime.datetime] = Field(
         default=None, description="Start time of the task execution"
     )
@@ -391,10 +391,14 @@ class Task(BaseModel):
                     )
 
                 self.retry_count += 1
-                context = (
-                    f"### Previous attempt failed validation: {guardrail_result.error}\n\n\n"
-                    f"### Previous result:\n{task_output.raw}\n\n\n"
-                    "Try again, making sure to address the validation error."
+                context = self.i18n.errors("validation_error").format(
+                    guardrail_result_error=guardrail_result.error,
+                    task_output=task_output.raw
+                )
+                printer = Printer()
+                printer.print(
+                    content=f"Guardrail blocked, retrying, due to: {guardrail_result.error}\n",
+                    color="yellow",
                 )
                 return self._execute_core(agent, context, tools)
 
