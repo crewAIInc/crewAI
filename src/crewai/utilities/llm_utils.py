@@ -68,10 +68,7 @@ def create_llm(
             api_key=api_key,
             base_url=base_url,
         )
-        print(
-            "LLM created with extracted parameters; "
-            f"model='{model}'"
-        )
+        print("LLM created with extracted parameters; " f"model='{model}'")
         return created_llm
     except Exception as e:
         print(f"Error instantiating LLM from unknown object type: {e}")
@@ -186,8 +183,7 @@ def _llm_via_environment_or_fallback() -> Optional[LLM]:
                 if env_var.get("default", False):
                     for key, value in env_var.items():
                         if key not in ["prompt", "key_name", "default"]:
-                            if key in os.environ:
-                                llm_params[key] = os.environ[key]
+                            llm_params[key.lower()] = value
             else:
                 print(f"Expected env_var to be a dictionary, but got {type(env_var)}")
 
@@ -200,7 +196,9 @@ def _llm_via_environment_or_fallback() -> Optional[LLM]:
         print(f"LLM created with model='{model_name}'")
         return new_llm
     except Exception as e:
-        print(f"Error instantiating LLM from environment/fallback: {type(e).__name__}: {e}")
+        print(
+            f"Error instantiating LLM from environment/fallback: {type(e).__name__}: {e}"
+        )
         return None
 
 
