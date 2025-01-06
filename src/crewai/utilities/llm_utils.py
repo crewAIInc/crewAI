@@ -171,21 +171,25 @@ def _llm_via_environment_or_fallback() -> Optional[LLM]:
     set_provider = model_name.split("/")[0] if "/" in model_name else "openai"
 
     if set_provider in ENV_VARS:
-        for env_var in ENV_VARS[set_provider]:
-            key_name = env_var.get("key_name")
-            if key_name and key_name not in UNACCEPTED_ATTRIBUTES:
-                env_value = os.environ.get(key_name)
-                if env_value:
-                    # Map environment variable names to recognized parameters
-                    param_key = _normalize_key_name(key_name.lower())
-                    llm_params[param_key] = env_value
-            elif isinstance(env_var, dict):
-                if env_var.get("default", False):
-                    for key, value in env_var.items():
-                        if key not in ["prompt", "key_name", "default"]:
-                            llm_params[key.lower()] = value
-            else:
-                print(f"Expected env_var to be a dictionary, but got {type(env_var)}")
+        env_vars_for_provider = ENV_VARS[set_provider]
+        if isinstance(env_vars_for_provider, (list, tuple)):
+            for env_var in env_vars_for_provider:
+                key_name = env_var.get("key_name")
+                if key_name and key_name not in UNACCEPTED_ATTRIBUTES:
+                    env_value = os.environ.get(key_name)
+                    if env_value:
+                        # Map environment variable names to recognized parameters
+                        param_key = _normalize_key_name(key_name.lower())
+                        llm_params[param_key] = env_value
+                elif isinstance(env_var, dict):
+                    if env_var.get("default", False):
+                        for key, value in env_var.items():
+                            if key not in ["prompt", "key_name", "default"]:
+                                llm_params[key.lower()] = value
+                else:
+                    print(
+                        f"Expected env_var to be a dictionary, but got {type(env_var)}"
+                    )
 
     # Remove None values
     llm_params = {k: v for k, v in llm_params.items() if v is not None}

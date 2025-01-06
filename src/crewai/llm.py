@@ -231,7 +231,7 @@ class LLM:
         :return: Final text response from the LLM or the tool result
         """
         with suppress_warnings():
-            if callbacks:
+            if callbacks and len(callbacks) > 0:
                 self.set_callbacks(callbacks)
 
             try:
@@ -259,7 +259,6 @@ class LLM:
                     "tools": tools,  # pass the tool schema
                 }
 
-                # Remove None values
                 params = {k: v for k, v in params.items() if v is not None}
 
                 response = litellm.completion(**params)
@@ -289,8 +288,6 @@ class LLM:
                     try:
                         # Call the actual tool function
                         result = fn(**function_args)
-
-                        print(f"Result from function '{function_name}': {result}")
 
                         # Return the result directly
                         return result
@@ -368,20 +365,36 @@ class LLM:
     def set_env_callbacks(self):
         """
         Sets the success and failure callbacks for the LiteLLM library from environment variables.
+
+        This method reads the `LITELLM_SUCCESS_CALLBACKS` and `LITELLM_FAILURE_CALLBACKS`
+        environment variables, which should contain comma-separated lists of callback names.
+        It then assigns these lists to `litellm.success_callback` and `litellm.failure_callback`,
+        respectively.
+
+        If the environment variables are not set or are empty, the corresponding callback lists
+        will be set to empty lists.
+
+        Example:
+            LITELLM_SUCCESS_CALLBACKS="langfuse,langsmith"
+            LITELLM_FAILURE_CALLBACKS="langfuse"
+
+        This will set `litellm.success_callback` to ["langfuse", "langsmith"] and
+        `litellm.failure_callback` to ["langfuse"].
         """
-        success_callbacks_str = os.environ.get("LITELLM_SUCCESS_CALLBACKS", "")
-        success_callbacks = []
-        if success_callbacks_str:
-            success_callbacks = [
-                cb.strip() for cb in success_callbacks_str.split(",") if cb.strip()
-            ]
+        with suppress_warnings():
+            success_callbacks_str = os.environ.get("LITELLM_SUCCESS_CALLBACKS", "")
+            success_callbacks = []
+            if success_callbacks_str:
+                success_callbacks = [
+                    cb.strip() for cb in success_callbacks_str.split(",") if cb.strip()
+                ]
 
-        failure_callbacks_str = os.environ.get("LITELLM_FAILURE_CALLBACKS", "")
-        failure_callbacks = []
-        if failure_callbacks_str:
-            failure_callbacks = [
-                cb.strip() for cb in failure_callbacks_str.split(",") if cb.strip()
-            ]
+            failure_callbacks_str = os.environ.get("LITELLM_FAILURE_CALLBACKS", "")
+            failure_callbacks = []
+            if failure_callbacks_str:
+                failure_callbacks = [
+                    cb.strip() for cb in failure_callbacks_str.split(",") if cb.strip()
+                ]
 
-            litellm.success_callback = success_callbacks
-            litellm.failure_callback = failure_callbacks
+                litellm.success_callback = success_callbacks
+                litellm.failure_callback = failure_callbacks
