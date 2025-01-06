@@ -27,9 +27,17 @@ def run_chat():
     crew_tool_schema = generate_crew_tool_schema(crew_chat_inputs)
     system_message = build_system_message(crew_chat_inputs)
 
+    # Call the LLM to generate the introductory message
+    introductory_message = chat_llm.call(
+        messages=[{"role": "system", "content": system_message}]
+    )
+    click.secho(f"\nAssistant: {introductory_message}\n", fg="green")
+
     messages = [
         {"role": "system", "content": system_message},
+        {"role": "assistant", "content": introductory_message},
     ]
+
     available_functions = {
         crew_chat_inputs.crew_name: create_tool_function(crew, messages),
     }
@@ -77,6 +85,8 @@ def build_system_message(crew_chat_inputs: ChatInputs) -> str:
         "If a user asks a question outside the crew's scope, provide a brief answer and remind them of the crew's purpose. "
         "After calling the tool, be prepared to take user feedback and make adjustments as needed. "
         "If you are ever unsure about a user's request or need clarification, ask the user for more information."
+        "Before doing anything else, introduce yourself with a friendly message like: 'Hey! I'm here to help you with [crew's purpose]. Could you please provide me with [inputs] so we can get started?' "
+        "For example: 'Hey! I'm here to help you with uncovering and reporting cutting-edge developments through thorough research and detailed analysis. Could you please provide me with a topic you're interested in? This will help us generate a comprehensive research report and detailed analysis.'"
         f"\nCrew Name: {crew_chat_inputs.crew_name}"
         f"\nCrew Description: {crew_chat_inputs.crew_description}"
     )

@@ -209,10 +209,6 @@ class Crew(BaseModel):
         default=None,
         description="LLM used to handle chatting with the crew.",
     )
-    chat_inputs: Optional[ChatInputs] = Field(
-        default=None,
-        description="Holds descriptions of the crew as well as named inputs for chat usage.",
-    )
     _knowledge: Optional[Knowledge] = PrivateAttr(
         default=None,
     )

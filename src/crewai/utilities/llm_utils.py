@@ -34,7 +34,6 @@ def create_llm(
     if isinstance(llm_value, str):
         try:
             created_llm = LLM(model=llm_value)
-            print(f"LLM created with model='{llm_value}'")
             return created_llm
         except Exception as e:
             print(f"Failed to instantiate LLM with model='{llm_value}': {e}")
@@ -197,7 +196,6 @@ def _llm_via_environment_or_fallback() -> Optional[LLM]:
     # Try creating the LLM
     try:
         new_llm = LLM(**llm_params)
-        print(f"LLM created with model='{model_name}'")
         return new_llm
     except Exception as e:
         print(

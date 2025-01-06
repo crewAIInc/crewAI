@@ -146,7 +146,6 @@ class LLM:
         self.callbacks = callbacks
         self.context_window_size = 0
 
-        # For safety, we disable passing init params to next calls
         litellm.drop_params = True
 
         self.set_callbacks(callbacks)
@@ -247,40 +246,36 @@ class LLM:
                 function_name = tool_call.function.name
 
                 if function_name in available_functions:
-                    # Parse arguments
                     try:
                         function_args = json.loads(tool_call.function.arguments)
                     except json.JSONDecodeError as e:
                         logging.warning(f"Failed to parse function arguments: {e}")
-                        return text_response  # Fallback to text response
+                        return text_response
 
                     fn = available_functions[function_name]
                     try:
                         # Call the actual tool function
                         result = fn(**function_args)
 
-                        # Return the result directly
                         return result
 
                     except Exception as e:
                         logging.error(
                             f"Error executing function '{function_name}': {e}"
                         )
-                        return text_response  # Fallback to text response
+                        return text_response
 
                 else:
                     logging.warning(
                         f"Tool call requested unknown function '{function_name}'"
                     )
-                    return text_response  # Fallback to text response
+                    return text_response
 
             except Exception as e:
-                # Check if context length was exceeded, otherwise log
                 if not LLMContextLengthExceededException(
                     str(e)
                 )._is_context_limit_error(str(e)):
                     logging.error(f"LiteLLM call failed: {str(e)}")
-                # Re-raise the exception
                 raise
 
     def supports_function_calling(self) -> bool:

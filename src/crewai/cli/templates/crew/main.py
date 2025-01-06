@@ -1,10 +1,8 @@
 #!/usr/bin/env python
 import sys
-import json
 import warnings
 
 from {{folder_name}}.crew import {{crew_name}}
-from crewai.utilities.llm_utils import create_llm
 
 warnings.filterwarnings("ignore", category=SyntaxWarning, module="pysbd")
 
@@ -15,13 +13,10 @@ warnings.filterwarnings("ignore", category=SyntaxWarning, module="pysbd")
 
 def run():
     """
-    Run the crew, allowing CLI overrides for required inputs.
-    Usage example:
-        uv run run_crew -- --topic="New Topic" --some_other_field="Value"
+    Run the crew.
     """
     inputs = {
         'topic': 'AI LLMs'
-        # Add any other default fields here
     }
     
     try:
