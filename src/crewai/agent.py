@@ -193,8 +193,6 @@ class Agent(BaseAgent):
 
         task_prompt = task.prompt()
 
-        print("task_prompt:", task_prompt)
-
         # If the task requires output in JSON or Pydantic format,
         # append specific instructions to the task prompt to ensure
         # that the final answer does not include any code block markers
@@ -336,6 +334,7 @@ class Agent(BaseAgent):
 
     def get_multimodal_tools(self) -> List[Tool]:
         from crewai.tools.agent_tools.add_image_tool import AddImageTool
+
         return [AddImageTool()]
 
     def get_code_execution_tools(self):
