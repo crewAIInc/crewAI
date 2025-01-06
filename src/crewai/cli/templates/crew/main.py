@@ -18,7 +18,11 @@ def run():
     inputs = {
         'topic': 'AI LLMs'
     }
-    {{crew_name}}().crew().kickoff(inputs=inputs)
+    
+    try:
+        {{crew_name}}().crew().kickoff(inputs=inputs)
+    except Exception as e:
+        raise Exception(f"An error occurred while running the crew: {e}")
 
 
 def train():
@@ -55,4 +59,4 @@ def test():
         {{crew_name}}().crew().test(n_iterations=int(sys.argv[1]), openai_model_name=sys.argv[2], inputs=inputs)
 
     except Exception as e:
-        raise Exception(f"An error occurred while replaying the crew: {e}")
+        raise Exception(f"An error occurred while testing the crew: {e}")
