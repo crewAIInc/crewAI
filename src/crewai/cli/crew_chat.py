@@ -2,12 +2,13 @@ import json
 import re
 import sys
 from pathlib import Path
-from typing import Any, Dict, List, Set, Tuple
+from typing import Any, Dict, List, Optional, Set, Tuple
 
 import click
 import tomli
 
 from crewai.crew import Crew
+from crewai.llm import LLM
 from crewai.types.crew_chat import ChatInputField, ChatInputs
 from crewai.utilities.llm_utils import create_llm
 
@@ -51,7 +52,7 @@ def run_chat():
     chat_loop(chat_llm, messages, crew_tool_schema, available_functions)
 
 
-def initialize_chat_llm(crew: Crew) -> Any:
+def initialize_chat_llm(crew: Crew) -> Optional[LLM]:
     """Initializes the chat LLM and handles exceptions."""
     try:
         return create_llm(crew.chat_llm)
