@@ -1846,7 +1846,9 @@ def test_crew_inputs_interpolate_both_agents_and_tasks_diff():
             Agent, "interpolate_inputs", wraps=agent.interpolate_inputs
         ) as interpolate_agent_inputs:
             with patch.object(
-                Task, "interpolate_inputs", wraps=task.interpolate_inputs
+                Task,
+                "interpolate_inputs_and_add_conversation_history",
+                wraps=task.interpolate_inputs_and_add_conversation_history,
             ) as interpolate_task_inputs:
                 execute.return_value = "ok"
                 crew.kickoff(inputs={"topic": "AI", "points": 5})
@@ -1873,7 +1875,9 @@ def test_crew_does_not_interpolate_without_inputs():
     crew = Crew(agents=[agent], tasks=[task])
 
     with patch.object(Agent, "interpolate_inputs") as interpolate_agent_inputs:
-        with patch.object(Task, "interpolate_inputs") as interpolate_task_inputs:
+        with patch.object(
+            Task, "interpolate_inputs_and_add_conversation_history"
+        ) as interpolate_task_inputs:
             crew.kickoff()
             interpolate_agent_inputs.assert_not_called()
             interpolate_task_inputs.assert_not_called()
@@ -3087,6 +3091,29 @@ def test_hierarchical_verbose_false_manager_agent():
     assert not crew.manager_agent.verbose
 
 
+def test_fetch_inputs():
+    agent = Agent(
+        role="{role_detail} Researcher",
+        goal="Research on {topic}.",
+        backstory="Expert in {field}.",
+    )
+
+    task = Task(
+        description="Analyze the data on {topic}.",
+        expected_output="Summary of {topic} analysis.",
+        agent=agent,
+    )
+
+    crew = Crew(agents=[agent], tasks=[task])
+
+    expected_placeholders = {"role_detail", "topic", "field"}
+    actual_placeholders = crew.fetch_inputs()
+
+    assert (
+        actual_placeholders == expected_placeholders
+    ), f"Expected {expected_placeholders}, but got {actual_placeholders}"
+
+
 def test_task_tools_preserve_code_execution_tools():
     """
     Test that task tools don't override code execution tools when allow_code_execution=True
@@ -3350,11 +3377,17 @@ def test_crew_with_failing_task_guardrails():
         """
         content = result.raw.strip()
 
-        if not ('REPORT:' in content or '**REPORT:**' in content):
-            return (False, "Output must start with 'REPORT:' no formatting, just the word REPORT")
+        if not ("REPORT:" in content or "**REPORT:**" in content):
+            return (
+                False,
+                "Output must start with 'REPORT:' no formatting, just the word REPORT",
+            )
 
-        if not ('END REPORT' in content or '**END REPORT**' in content):
-            return (False, "Output must end with 'END REPORT' no formatting, just the word END REPORT")
+        if not ("END REPORT" in content or "**END REPORT**" in content):
+            return (
+                False,
+                "Output must end with 'END REPORT' no formatting, just the word END REPORT",
+            )
 
         return (True, content)
 
@@ -3369,7 +3402,7 @@ def test_crew_with_failing_task_guardrails():
         expected_output="A properly formatted report",
         agent=researcher,
         guardrail=strict_format_guardrail,
-        max_retries=3
+        max_retries=3,
     )
 
     crew = Crew(
@@ -3381,8 +3414,8 @@ def test_crew_with_failing_task_guardrails():
 
     # Verify the final output meets all format requirements
     content = result.raw.strip()
-    assert content.startswith('REPORT:'), "Output should start with 'REPORT:'"
-    assert content.endswith('END REPORT'), "Output should end with 'END REPORT'"
+    assert content.startswith("REPORT:"), "Output should start with 'REPORT:'"
+    assert content.endswith("END REPORT"), "Output should end with 'END REPORT'"
 
     # Verify task output
     task_output = result.tasks_output[0]
@@ -3407,7 +3440,7 @@ def test_crew_guardrail_feedback_in_context():
         role="Writer",
         goal="Write content with specific keywords",
         backstory="You're an expert at following specific writing requirements.",
-        allow_delegation=False
+        allow_delegation=False,
     )
 
     task = Task(
@@ -3415,7 +3448,7 @@ def test_crew_guardrail_feedback_in_context():
         expected_output="A response containing the keyword 'IMPORTANT'",
         agent=researcher,
         guardrail=format_guardrail,
-        max_retries=2
+        max_retries=2,
     )
 
     crew = Crew(agents=[researcher], tasks=[task])
@@ -3436,8 +3469,9 @@ def test_crew_guardrail_feedback_in_context():
     assert len(execution_contexts) > 1, "Task should have been executed multiple times"
 
     # Verify that the second execution included the guardrail feedback
-    assert "Output must contain the keyword 'IMPORTANT'" in execution_contexts[1], \
-        "Guardrail feedback should be included in retry context"
+    assert (
+        "Output must contain the keyword 'IMPORTANT'" in execution_contexts[1]
+    ), "Guardrail feedback should be included in retry context"
 
     # Verify final output meets guardrail requirements
     assert "IMPORTANT" in result.raw, "Final output should contain required keyword"
