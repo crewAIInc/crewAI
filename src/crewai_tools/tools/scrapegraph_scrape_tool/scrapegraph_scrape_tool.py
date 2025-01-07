@@ -60,16 +60,19 @@ class ScrapegraphScrapeTool(BaseTool):
     website_url: Optional[str] = None
     user_prompt: Optional[str] = None
     api_key: Optional[str] = None
+    enable_logging: bool = False
 
     def __init__(
         self,
         website_url: Optional[str] = None,
         user_prompt: Optional[str] = None,
         api_key: Optional[str] = None,
+        enable_logging: bool = False,
         **kwargs,
     ):
         super().__init__(**kwargs)
         self.api_key = api_key or os.getenv("SCRAPEGRAPH_API_KEY")
+        self.enable_logging = enable_logging
         
         if not self.api_key:
             raise ValueError("Scrapegraph API key is required")
@@ -83,8 +86,9 @@ class ScrapegraphScrapeTool(BaseTool):
         if user_prompt is not None:
             self.user_prompt = user_prompt
 
-        # Configure logging
-        sgai_logger.set_logging(level="INFO")
+        # Configure logging only if enabled
+        if self.enable_logging:
+            sgai_logger.set_logging(level="INFO")
 
     @staticmethod
     def _validate_url(url: str) -> None:
@@ -95,22 +99,6 @@ class ScrapegraphScrapeTool(BaseTool):
                 raise ValueError
         except Exception:
             raise ValueError("Invalid URL format. URL must include scheme (http/https) and domain")
-
-    def _handle_api_response(self, response: dict) -> str:
-        """Handle and validate API response"""
-        if not response:
-            raise RuntimeError("Empty response from Scrapegraph API")
-        
-        if "error" in response:
-            error_msg = response.get("error", {}).get("message", "Unknown error")
-            if "rate limit" in error_msg.lower():
-                raise RateLimitError(f"Rate limit exceeded: {error_msg}")
-            raise RuntimeError(f"API error: {error_msg}")
-            
-        if "result" not in response:
-            raise RuntimeError("Invalid response format from Scrapegraph API")
-            
-        return response["result"]
 
     def _run(
         self,
@@ -135,8 +123,7 @@ class ScrapegraphScrapeTool(BaseTool):
                 user_prompt=user_prompt,
             )
 
-            # Handle and validate the response
-            return self._handle_api_response(response)
+            return response
 
         except RateLimitError:
             raise  # Re-raise rate limit errors
