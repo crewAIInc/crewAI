@@ -2,6 +2,8 @@
 import sys
 import warnings
 
+from datetime import datetime
+
 from {{folder_name}}.crew import {{crew_name}}
 
 warnings.filterwarnings("ignore", category=SyntaxWarning, module="pysbd")
@@ -16,7 +18,8 @@ def run():
     Run the crew.
     """
     inputs = {
-        'topic': 'AI LLMs'
+        'topic': 'AI LLMs',
+        'current_year': str(datetime.now().year)
     }
     
     try:
