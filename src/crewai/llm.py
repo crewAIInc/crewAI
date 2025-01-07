@@ -76,6 +76,18 @@ LLM_CONTEXT_WINDOW_SIZES = {
     "mixtral-8x7b-32768": 32768,
     "llama-3.3-70b-versatile": 128000,
     "llama-3.3-70b-instruct": 128000,
+    #sambanova
+    "Meta-Llama-3.3-70B-Instruct": 131072,
+    "QwQ-32B-Preview": 8192,
+    "Qwen2.5-72B-Instruct": 8192,
+    "Qwen2.5-Coder-32B-Instruct": 8192,
+    "Meta-Llama-3.1-405B-Instruct": 8192,
+    "Meta-Llama-3.1-70B-Instruct": 131072,
+    "Meta-Llama-3.1-8B-Instruct": 131072,
+    "Llama-3.2-90B-Vision-Instruct": 16384,
+    "Llama-3.2-11B-Vision-Instruct": 16384,
+    "Meta-Llama-3.2-3B-Instruct": 4096,
+    "Meta-Llama-3.2-1B-Instruct": 16384,
 }
 
 DEFAULT_CONTEXT_WINDOW_SIZE = 8192
