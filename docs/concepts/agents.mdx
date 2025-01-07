@@ -101,6 +101,8 @@ from crewai_tools import SerperDevTool
 class LatestAiDevelopmentCrew():
   """LatestAiDevelopment crew"""
 
+  agents_config = "<PATH_of_YAML_FILE>"
+
   @agent
   def researcher(self) -> Agent:
     return Agent(
