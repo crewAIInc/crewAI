@@ -85,6 +85,12 @@ ENV_VARS = {
             "key_name": "CEREBRAS_API_KEY",
         },
     ],
+    "sambanova": [
+        {
+            "prompt": "Enter your SambaNovaCloud API key (press Enter to skip)",
+            "key_name": "SAMBANOVA_API_KEY",
+        }
+    ],
 }
 
 
@@ -98,6 +104,7 @@ PROVIDERS = [
     "bedrock",
     "azure",
     "cerebras",
+    "sambanova",
 ]
 
 MODELS = {
@@ -155,6 +162,19 @@ MODELS = {
         "bedrock/meta.llama2-70b-chat-v1",
         "bedrock/mistral.mistral-7b-instruct-v0:2",
         "bedrock/mistral.mixtral-8x7b-instruct-v0:1",
+    ],
+    "sambanova": [
+        "sambanova/Meta-Llama-3.3-70B-Instruct",
+        "sambanova/QwQ-32B-Preview",
+        "sambanova/Qwen2.5-72B-Instruct",
+        "sambanova/Qwen2.5-Coder-32B-Instruct",
+        "sambanova/Meta-Llama-3.1-405B-Instruct",
+        "sambanova/Meta-Llama-3.1-70B-Instruct",
+        "sambanova/Meta-Llama-3.1-8B-Instruct",
+        "sambanova/Llama-3.2-90B-Vision-Instruct",
+        "sambanova/Llama-3.2-11B-Vision-Instruct",
+        "sambanova/Meta-Llama-3.2-3B-Instruct",
+        "sambanova/Meta-Llama-3.2-1B-Instruct",
     ],
 }
 
