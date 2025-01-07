@@ -134,6 +134,23 @@ crew = Crew(
 )
 ```
 
+## Memory Configuration Options
+If you want to access a specific organization and project, you can set the `org_id` and `project_id` parameters in the memory configuration.
+
+```python Code
+from crewai import Crew
+
+crew = Crew(
+    agents=[...],
+    tasks=[...],
+    verbose=True,
+    memory=True,
+    memory_config={
+        "provider": "mem0",
+        "config": {"user_id": "john", "org_id": "my_org_id", "project_id": "my_project_id"},
+    },
+)
+```
 
 ## Additional Embedding Providers
 
