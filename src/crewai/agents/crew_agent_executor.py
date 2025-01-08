@@ -130,7 +130,6 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
                         try:
                             self._format_answer(answer)
                         except OutputParserException as e:
-                            print("ERROR ATTEMPTING TO PARSE ANSWER: ", answer)
                             if (
                                 FINAL_ANSWER_AND_PARSABLE_ACTION_ERROR_MESSAGE
                                 in e.error
