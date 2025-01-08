@@ -153,7 +153,6 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
 
     def _has_reached_max_iterations(self) -> bool:
         """Check if the maximum number of iterations has been reached."""
-        print(f"iterations: {self.iterations}, max_iter: {self.max_iter}")
         return self.iterations >= self.max_iter
 
     def _enforce_rpm_limit(self) -> None:
