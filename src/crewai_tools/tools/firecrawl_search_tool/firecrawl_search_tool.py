@@ -1,7 +1,7 @@
 from typing import TYPE_CHECKING, Any, Dict, Optional, Type
 
 from crewai.tools import BaseTool
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field, PrivateAttr
 
 # Type checking import
 if TYPE_CHECKING:
@@ -30,11 +30,14 @@ class FirecrawlSearchToolSchema(BaseModel):
 
 
 class FirecrawlSearchTool(BaseTool):
+    model_config = ConfigDict(
+        arbitrary_types_allowed=True, validate_assignment=True, frozen=False
+    )
     name: str = "Firecrawl web search tool"
     description: str = "Search webpages using Firecrawl and return the results"
     args_schema: Type[BaseModel] = FirecrawlSearchToolSchema
     api_key: Optional[str] = None
-    firecrawl: Optional["FirecrawlApp"] = None
+    _firecrawl: Optional["FirecrawlApp"] = PrivateAttr(None)
 
     def __init__(self, api_key: Optional[str] = None, **kwargs):
         super().__init__(**kwargs)
@@ -44,8 +47,7 @@ class FirecrawlSearchTool(BaseTool):
             raise ImportError(
                 "`firecrawl` package not found, please run `pip install firecrawl-py`"
             )
-
-        self.firecrawl = FirecrawlApp(api_key=api_key)
+        self._firecrawl = FirecrawlApp(api_key=api_key)
 
     def _run(
         self,
@@ -62,7 +64,6 @@ class FirecrawlSearchTool(BaseTool):
             scrape_options = {}
 
         options = {
-            "query": query,
             "limit": limit,
             "tbs": tbs,
             "lang": lang,
@@ -71,4 +72,14 @@ class FirecrawlSearchTool(BaseTool):
             "timeout": timeout,
             "scrapeOptions": scrape_options,
         }
-        return self.firecrawl.search(**options)
+        return self._firecrawl.search(query, options)
+
+
+try:
+    from firecrawl import FirecrawlApp
+
+    # Rebuild the model after class is defined
+    FirecrawlSearchTool.model_rebuild()
+except ImportError:
+    # Exception can be ignored if the tool is not used
+    pass
