@@ -194,10 +194,12 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
         self, formatted_answer: AgentAction, tool_result: ToolResult
     ) -> Union[AgentAction, AgentFinish]:
         """Handle the AgentAction, execute tools, and process the results."""
-        # Directly append the result to the messages if the
-        # tool is "Add image to content" in case of multimodal
-        # agents
-        if formatted_answer.tool == self._i18n.tools("add_image")["name"]:
+        add_image_tool = self._i18n.tools("add_image")
+        if (
+            isinstance(add_image_tool, dict)
+            and formatted_answer.tool.casefold().strip()
+            == add_image_tool.get("name", "").casefold().strip()
+        ):
             self.messages.append(tool_result.result)
             return formatted_answer  # Continue the loop
 
@@ -233,7 +235,7 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
         formatted_answer = AgentAction(
             text=e.error,
             tool="",
-            tool_input={},
+            tool_input="",
             thought="",
         )
 
