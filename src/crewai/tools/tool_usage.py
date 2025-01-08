@@ -396,25 +396,28 @@ class ToolUsage:
             return self._tool_calling(tool_string)
 
     def _validate_tool_input(self, tool_input: str) -> Dict[str, Any]:
-        print("tool_input:", tool_input)
         try:
-            # Try to parse with json.loads directly
+            # Replace 'None' strings with null in the JSON string for proper parsing
+            tool_input = tool_input.replace('"None"', "null")
+
             arguments = json.loads(tool_input)
-            return arguments
         except json.JSONDecodeError:
             # Fix common issues in the tool_input string
 
             # Replace single quotes with double quotes
             tool_input = tool_input.replace("'", '"')
+            # Replace 'None' strings with null
+            tool_input = tool_input.replace('"None"', "null")
 
             # Use json_repair to fix common JSON issues
             repaired_input = repair_json(tool_input)
             try:
                 arguments = json.loads(repaired_input)
-                return arguments
             except json.JSONDecodeError as e:
                 # If all else fails, raise an error
                 raise Exception(f"Invalid tool input JSON: {e}")
+
+        return arguments
 
     def on_tool_error(self, tool: Any, tool_calling: ToolCalling, e: Exception) -> None:
         event_data = self._prepare_event_data(tool, tool_calling)
