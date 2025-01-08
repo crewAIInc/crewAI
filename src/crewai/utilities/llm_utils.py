@@ -67,7 +67,6 @@ def create_llm(
             api_key=api_key,
             base_url=base_url,
         )
-        print("LLM created with extracted parameters; " f"model='{model}'")
         return created_llm
     except Exception as e:
         print(f"Error instantiating LLM from unknown object type: {e}")

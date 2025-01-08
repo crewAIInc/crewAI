@@ -305,6 +305,9 @@ class Agent(BaseAgent):
                 self.response_template.split("{{ .Response }}")[1].strip()
             )
 
+        print("self.max_rpm:", self.max_rpm)
+        print("self._rpm_controller:", self._rpm_controller)
+
         self.agent_executor = CrewAgentExecutor(
             llm=self.llm,
             task=task,

@@ -8,8 +8,10 @@ from crewai.utilities.logger import Logger
 
 """Controls request rate limiting for API calls."""
 
+
 class RPMController(BaseModel):
     """Manages requests per minute limiting."""
+
     max_rpm: Optional[int] = Field(default=None)
     logger: Logger = Field(default_factory=lambda: Logger(verbose=False))
     _current_rpm: int = PrivateAttr(default=0)
@@ -30,6 +32,9 @@ class RPMController(BaseModel):
             return True
 
         def _check_and_increment():
+            print(
+                f"self.max_rpm: {self.max_rpm}, self._current_rpm: {self._current_rpm}"
+            )
             if self.max_rpm is not None and self._current_rpm < self.max_rpm:
                 self._current_rpm += 1
                 return True

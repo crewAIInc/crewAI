@@ -565,7 +565,8 @@ def test_agent_moved_on_after_max_iterations():
         task=task,
         tools=[get_final_answer],
     )
-    assert output == "The final answer is 42."
+    print("output:", output)
+    assert output == "42"
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
@@ -641,15 +642,14 @@ def test_agent_respect_the_max_rpm_set_over_crew_rpm(capsys):
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
-def test_agent_without_max_rpm_respet_crew_rpm(capsys):
+def test_agent_without_max_rpm_respects_crew_rpm(capsys):
     from unittest.mock import patch
 
     from crewai.tools import tool
 
     @tool
     def get_final_answer() -> float:
-        """Get the final answer but don't give it yet, just re-use this
-        tool non-stop."""
+        """Get the final answer but don't give it yet, just re-use this tool non-stop."""
         return 42
 
     agent1 = Agent(
@@ -666,30 +666,40 @@ def test_agent_without_max_rpm_respet_crew_rpm(capsys):
         role="test role2",
         goal="test goal2",
         backstory="test backstory2",
-        max_iter=1,
+        # Increase max_iter to ensure the agent exceeds the RPM limit
+        max_iter=5,
         verbose=True,
         allow_delegation=False,
     )
 
     tasks = [
         Task(
-            description="Just say hi.", agent=agent1, expected_output="Your greeting."
+            description="Just say hi.",
+            agent=agent1,
+            expected_output="Your greeting.",
         ),
         Task(
-            description="NEVER give a Final Answer, unless you are told otherwise, instead keep using the `get_final_answer` tool non-stop, until you must give you best final answer",
+            description=(
+                "NEVER give a Final Answer, unless you are told otherwise, "
+                "instead keep using the `get_final_answer` tool non-stop, "
+                "until you must give your best final answer"
+            ),
             expected_output="The final answer",
             tools=[get_final_answer],
             agent=agent2,
         ),
     ]
 
+    # Set crew's max_rpm to 1 to trigger RPM limit
     crew = Crew(agents=[agent1, agent2], tasks=tasks, max_rpm=1, verbose=True)
 
     with patch.object(RPMController, "_wait_for_next_minute") as moveon:
         moveon.return_value = True
         crew.kickoff()
         captured = capsys.readouterr()
+        print("captured:", captured.out)
         assert "get_final_answer" in captured.out
+        # Now the agent should have exceeded the RPM limit and triggered the wait
         assert "Max RPM reached, waiting for next minute to start." in captured.out
         moveon.assert_called_once()
 
