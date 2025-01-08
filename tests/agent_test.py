@@ -565,7 +565,6 @@ def test_agent_moved_on_after_max_iterations():
         task=task,
         tools=[get_final_answer],
     )
-    print("output:", output)
     assert output == "42"
 
 
@@ -575,7 +574,6 @@ def test_agent_respect_the_max_rpm_set(capsys):
     def get_final_answer() -> float:
         """Get the final answer but don't give it yet, just re-use this
         tool non-stop."""
-        return 42
 
     agent = Agent(
         role="test role",
@@ -666,7 +664,6 @@ def test_agent_without_max_rpm_respects_crew_rpm(capsys):
         role="test role2",
         goal="test goal2",
         backstory="test backstory2",
-        # Increase max_iter to ensure the agent exceeds the RPM limit
         max_iter=5,
         verbose=True,
         allow_delegation=False,
@@ -697,9 +694,7 @@ def test_agent_without_max_rpm_respects_crew_rpm(capsys):
         moveon.return_value = True
         crew.kickoff()
         captured = capsys.readouterr()
-        print("captured:", captured.out)
         assert "get_final_answer" in captured.out
-        # Now the agent should have exceeded the RPM limit and triggered the wait
         assert "Max RPM reached, waiting for next minute to start." in captured.out
         moveon.assert_called_once()
 

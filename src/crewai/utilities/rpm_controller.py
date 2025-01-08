@@ -32,9 +32,6 @@ class RPMController(BaseModel):
             return True
 
         def _check_and_increment():
-            print(
-                f"self.max_rpm: {self.max_rpm}, self._current_rpm: {self._current_rpm}"
-            )
             if self.max_rpm is not None and self._current_rpm < self.max_rpm:
                 self._current_rpm += 1
                 return True
