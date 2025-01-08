@@ -130,6 +130,7 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
                         try:
                             self._format_answer(answer)
                         except OutputParserException as e:
+                            print("ERROR ATTEMPTING TO PARSE ANSWER: ", answer)
                             if (
                                 FINAL_ANSWER_AND_PARSABLE_ACTION_ERROR_MESSAGE
                                 in e.error
@@ -147,7 +148,10 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
                         # Directly append the result to the messages if the
                         # tool is "Add image to content" in case of multimodal
                         # agents
-                        if formatted_answer.tool == self._i18n.tools("add_image")["name"]:
+                        if (
+                            formatted_answer.tool
+                            == self._i18n.tools("add_image")["name"]
+                        ):
                             self.messages.append(tool_result.result)
                             continue
 
@@ -155,7 +159,9 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
                             if self.step_callback:
                                 self.step_callback(tool_result)
 
-                            formatted_answer.text += f"\nObservation: {tool_result.result}"
+                            formatted_answer.text += (
+                                f"\nObservation: {tool_result.result}"
+                            )
 
                         formatted_answer.result = tool_result.result
                         if tool_result.result_as_answer:
@@ -272,7 +278,7 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
             agent=self.agent,
             action=agent_action,
         )
-        tool_calling = tool_usage.parse(agent_action.text)
+        tool_calling = tool_usage.parse_tool_calling(agent_action.text)
 
         if isinstance(tool_calling, ToolUsageErrorException):
             tool_result = tool_calling.message
