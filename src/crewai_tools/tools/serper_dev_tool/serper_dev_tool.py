@@ -35,7 +35,7 @@ class SerperDevToolSchema(BaseModel):
 
 
 class SerperDevTool(BaseTool):
-    name: str = "Search the internet"
+    name: str = "Search the internet with Serper"
     description: str = (
         "A tool that can be used to search the internet with a search_query. "
         "Supports different search types: 'search' (default), 'news'"

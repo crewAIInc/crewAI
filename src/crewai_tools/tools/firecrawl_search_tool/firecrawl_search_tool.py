@@ -10,11 +10,22 @@ if TYPE_CHECKING:
 
 class FirecrawlSearchToolSchema(BaseModel):
     query: str = Field(description="Search query")
-    page_options: Optional[Dict[str, Any]] = Field(
-        default=None, description="Options for result formatting"
+    limit: Optional[int] = Field(
+        default=5, description="Maximum number of results to return"
     )
-    search_options: Optional[Dict[str, Any]] = Field(
-        default=None, description="Options for searching"
+    tbs: Optional[str] = Field(default=None, description="Time-based search parameter")
+    lang: Optional[str] = Field(
+        default="en", description="Language code for search results"
+    )
+    country: Optional[str] = Field(
+        default="us", description="Country code for search results"
+    )
+    location: Optional[str] = Field(
+        default=None, description="Location parameter for search results"
+    )
+    timeout: Optional[int] = Field(default=60000, description="Timeout in milliseconds")
+    scrape_options: Optional[Dict[str, Any]] = Field(
+        default=None, description="Options for scraping search results"
     )
 
 
@@ -39,13 +50,25 @@ class FirecrawlSearchTool(BaseTool):
     def _run(
         self,
         query: str,
-        page_options: Optional[Dict[str, Any]] = None,
-        result_options: Optional[Dict[str, Any]] = None,
+        limit: Optional[int] = 5,
+        tbs: Optional[str] = None,
+        lang: Optional[str] = "en",
+        country: Optional[str] = "us",
+        location: Optional[str] = None,
+        timeout: Optional[int] = 60000,
+        scrape_options: Optional[Dict[str, Any]] = None,
     ):
-        if page_options is None:
-            page_options = {}
-        if result_options is None:
-            result_options = {}
+        if scrape_options is None:
+            scrape_options = {}
 
-        options = {"pageOptions": page_options, "resultOptions": result_options}
-        return self.firecrawl.search(query, **options)
+        options = {
+            "query": query,
+            "limit": limit,
+            "tbs": tbs,
+            "lang": lang,
+            "country": country,
+            "location": location,
+            "timeout": timeout,
+            "scrapeOptions": scrape_options,
+        }
+        return self.firecrawl.search(**options)
