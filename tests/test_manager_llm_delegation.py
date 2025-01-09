@@ -17,16 +17,17 @@ class InternalAgentTool(BaseAgentTool):
     "role_name,should_match",
     [
         ("Futel Official Infopoint", True),  # exact match
-        # ('  "Futel Official Infopoint"  ', True),  # extra quotes and spaces
-        # ("Futel Official Infopoint\n", True),  # trailing newline
-        # ('"Futel Official Infopoint"', True),  # embedded quotes
-        # (" FUTEL\nOFFICIAL   INFOPOINT ", True),  # multiple whitespace and newline
+        ('  "Futel Official Infopoint"  ', True),  # extra quotes and spaces
+        ("Futel Official Infopoint\n", True),  # trailing newline
+        ('"Futel Official Infopoint"', True),  # embedded quotes
+        (" FUTEL\nOFFICIAL   INFOPOINT ", True),  # multiple whitespace and newline
         ("futel official infopoint", True),  # lowercase
         ("FUTEL OFFICIAL INFOPOINT", True),  # uppercase
         ("Non Existent Agent", False),  # non-existent agent
         (None, False),  # None agent name
     ],
 )
+@pytest.mark.vcr(filter_headers=["authorization"])
 def test_agent_tool_role_matching(role_name, should_match):
     """Test that agent tools can match roles regardless of case, whitespace, and special characters."""
     # Create test agent
@@ -44,7 +45,6 @@ def test_agent_tool_role_matching(role_name, should_match):
 
     # Test role matching
     result = agent_tool._execute(agent_name=role_name, task="Test task", context=None)
-    print("TEST RESULT: ", result)
 
     if should_match:
         assert (
