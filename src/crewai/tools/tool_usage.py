@@ -1,6 +1,7 @@
 import ast
 import datetime
 import json
+import re
 import time
 from difflib import SequenceMatcher
 from textwrap import dedent
@@ -408,15 +409,21 @@ class ToolUsage:
 
     def _validate_tool_input(self, tool_input: str) -> Dict[str, Any]:
         try:
-            # Replace 'None' strings with null in the JSON string for proper parsing
-            tool_input = tool_input.replace('"None"', "null")
+            # Convert single quotes to double quotes for JSON compatibility
+            tool_input = tool_input.replace("'", '"')
+
+            # Replace Python literals with JSON equivalents using word boundaries
+            replacements = {
+                r"\bNone\b": "null",
+                r"\bTrue\b": "true",
+                r"\bFalse\b": "false",
+            }
+            for pattern, replacement in replacements.items():
+                tool_input = re.sub(pattern, replacement, tool_input)
 
             arguments = json.loads(tool_input)
         except json.JSONDecodeError:
-            # Fix common issues in the tool_input string
-            tool_input = tool_input.replace("'", '"')
-            tool_input = tool_input.replace('"None"', "null")
-
+            # Attempt to repair JSON string
             repaired_input = repair_json(tool_input)
             try:
                 arguments = json.loads(repaired_input)
