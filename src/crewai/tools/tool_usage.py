@@ -348,8 +348,7 @@ class ToolUsage:
         tool = self._select_tool(tool_name)
         try:
             arguments = self._validate_tool_input(self.action.tool_input)
-            print("Arguments:", arguments)
-            print("Arguments type:", type(arguments))
+
         except Exception:
             if raise_error:
                 raise

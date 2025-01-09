@@ -86,7 +86,7 @@ class Agent(BaseAgent):
     llm: Union[str, InstanceOf[LLM], Any] = Field(
         description="Language model that will run the agent.", default=None
     )
-    function_calling_llm: Optional[Any] = Field(
+    function_calling_llm: Optional[Union[str, InstanceOf[LLM], Any]] = Field(
         description="Language model that will run the agent.", default=None
     )
     system_template: Optional[str] = Field(
