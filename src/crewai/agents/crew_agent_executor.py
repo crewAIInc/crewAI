@@ -1,7 +1,7 @@
 import json
 import re
 from dataclasses import dataclass
-from typing import Any, Dict, List, Union
+from typing import Any, Callable, Dict, List, Optional, Union
 
 from crewai.agents.agent_builder.base_agent import BaseAgent
 from crewai.agents.agent_builder.base_agent_executor_mixin import CrewAgentExecutorMixin
@@ -50,7 +50,7 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
         original_tools: List[Any] = [],
         function_calling_llm: Any = None,
         respect_context_window: bool = False,
-        request_within_rpm_limit: Any = None,
+        request_within_rpm_limit: Optional[Callable[[], bool]] = None,
         callbacks: List[Any] = [],
     ):
         self._i18n: I18N = I18N()
@@ -77,7 +77,6 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
         self.messages: List[Dict[str, str]] = []
         self.iterations = 0
         self.log_error_after = 3
-        self.have_forced_answer = False
         self.tool_name_to_tool_map: Dict[str, BaseTool] = {
             tool.name: tool for tool in self.tools
         }
@@ -108,105 +107,150 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
         self._create_long_term_memory(formatted_answer)
         return {"output": formatted_answer.output}
 
-    def _invoke_loop(self, formatted_answer=None):
-        try:
-            while not isinstance(formatted_answer, AgentFinish):
-                if not self.request_within_rpm_limit or self.request_within_rpm_limit():
-                    answer = self.llm.call(
-                        self.messages,
-                        callbacks=self.callbacks,
+    def _invoke_loop(self):
+        """
+        Main loop to invoke the agent's thought process until it reaches a conclusion
+        or the maximum number of iterations is reached.
+        """
+        formatted_answer = None
+        while not isinstance(formatted_answer, AgentFinish):
+            try:
+                if self._has_reached_max_iterations():
+                    formatted_answer = self._handle_max_iterations_exceeded(
+                        formatted_answer
+                    )
+                    break
+
+                self._enforce_rpm_limit()
+
+                answer = self._get_llm_response()
+
+                formatted_answer = self._process_llm_response(answer)
+
+                if isinstance(formatted_answer, AgentAction):
+                    tool_result = self._execute_tool_and_check_finality(
+                        formatted_answer
+                    )
+                    formatted_answer = self._handle_agent_action(
+                        formatted_answer, tool_result
                     )
 
-                    if answer is None or answer == "":
-                        self._printer.print(
-                            content="Received None or empty response from LLM call.",
-                            color="red",
-                        )
-                        raise ValueError(
-                            "Invalid response from LLM call - None or empty."
-                        )
+                self._invoke_step_callback(formatted_answer)
+                self._append_message(formatted_answer.text, role="assistant")
 
-                    if not self.use_stop_words:
-                        try:
-                            self._format_answer(answer)
-                        except OutputParserException as e:
-                            if (
-                                FINAL_ANSWER_AND_PARSABLE_ACTION_ERROR_MESSAGE
-                                in e.error
-                            ):
-                                answer = answer.split("Observation:")[0].strip()
+            except OutputParserException as e:
+                formatted_answer = self._handle_output_parser_exception(e)
 
-                    self.iterations += 1
-                    formatted_answer = self._format_answer(answer)
-
-                    if isinstance(formatted_answer, AgentAction):
-                        tool_result = self._execute_tool_and_check_finality(
-                            formatted_answer
-                        )
-
-                        # Directly append the result to the messages if the
-                        # tool is "Add image to content" in case of multimodal
-                        # agents
-                        if formatted_answer.tool == self._i18n.tools("add_image")["name"]:
-                            self.messages.append(tool_result.result)
-                            continue
-
-                        else:
-                            if self.step_callback:
-                                self.step_callback(tool_result)
-
-                            formatted_answer.text += f"\nObservation: {tool_result.result}"
-
-                        formatted_answer.result = tool_result.result
-                        if tool_result.result_as_answer:
-                            return AgentFinish(
-                                thought="",
-                                output=tool_result.result,
-                                text=formatted_answer.text,
-                            )
-                        self._show_logs(formatted_answer)
-
-                    if self.step_callback:
-                        self.step_callback(formatted_answer)
-
-                    if self._should_force_answer():
-                        if self.have_forced_answer:
-                            return AgentFinish(
-                                thought="",
-                                output=self._i18n.errors(
-                                    "force_final_answer_error"
-                                ).format(formatted_answer.text),
-                                text=formatted_answer.text,
-                            )
-                        else:
-                            formatted_answer.text += (
-                                f'\n{self._i18n.errors("force_final_answer")}'
-                            )
-                            self.have_forced_answer = True
-                    self.messages.append(
-                        self._format_msg(formatted_answer.text, role="assistant")
-                    )
-
-        except OutputParserException as e:
-            self.messages.append({"role": "user", "content": e.error})
-            if self.iterations > self.log_error_after:
-                self._printer.print(
-                    content=f"Error parsing LLM output, agent will retry: {e.error}",
-                    color="red",
-                )
-            return self._invoke_loop(formatted_answer)
-
-        except Exception as e:
-            if LLMContextLengthExceededException(str(e))._is_context_limit_error(
-                str(e)
-            ):
-                self._handle_context_length()
-                return self._invoke_loop(formatted_answer)
-            else:
-                raise e
+            except Exception as e:
+                if self._is_context_length_exceeded(e):
+                    self._handle_context_length()
+                    continue
+                else:
+                    raise e
 
         self._show_logs(formatted_answer)
         return formatted_answer
+
+    def _has_reached_max_iterations(self) -> bool:
+        """Check if the maximum number of iterations has been reached."""
+        return self.iterations >= self.max_iter
+
+    def _enforce_rpm_limit(self) -> None:
+        """Enforce the requests per minute (RPM) limit if applicable."""
+        if self.request_within_rpm_limit:
+            self.request_within_rpm_limit()
+
+    def _get_llm_response(self) -> str:
+        """Call the LLM and return the response, handling any invalid responses."""
+        answer = self.llm.call(
+            self.messages,
+            callbacks=self.callbacks,
+        )
+
+        if not answer:
+            self._printer.print(
+                content="Received None or empty response from LLM call.",
+                color="red",
+            )
+            raise ValueError("Invalid response from LLM call - None or empty.")
+
+        return answer
+
+    def _process_llm_response(self, answer: str) -> Union[AgentAction, AgentFinish]:
+        """Process the LLM response and format it into an AgentAction or AgentFinish."""
+        if not self.use_stop_words:
+            try:
+                # Preliminary parsing to check for errors.
+                self._format_answer(answer)
+            except OutputParserException as e:
+                if FINAL_ANSWER_AND_PARSABLE_ACTION_ERROR_MESSAGE in e.error:
+                    answer = answer.split("Observation:")[0].strip()
+
+        self.iterations += 1
+        return self._format_answer(answer)
+
+    def _handle_agent_action(
+        self, formatted_answer: AgentAction, tool_result: ToolResult
+    ) -> Union[AgentAction, AgentFinish]:
+        """Handle the AgentAction, execute tools, and process the results."""
+        add_image_tool = self._i18n.tools("add_image")
+        if (
+            isinstance(add_image_tool, dict)
+            and formatted_answer.tool.casefold().strip()
+            == add_image_tool.get("name", "").casefold().strip()
+        ):
+            self.messages.append(tool_result.result)
+            return formatted_answer  # Continue the loop
+
+        if self.step_callback:
+            self.step_callback(tool_result)
+
+        formatted_answer.text += f"\nObservation: {tool_result.result}"
+        formatted_answer.result = tool_result.result
+
+        if tool_result.result_as_answer:
+            return AgentFinish(
+                thought="",
+                output=tool_result.result,
+                text=formatted_answer.text,
+            )
+
+        self._show_logs(formatted_answer)
+        return formatted_answer
+
+    def _invoke_step_callback(self, formatted_answer) -> None:
+        """Invoke the step callback if it exists."""
+        if self.step_callback:
+            self.step_callback(formatted_answer)
+
+    def _append_message(self, text: str, role: str = "assistant") -> None:
+        """Append a message to the message list with the given role."""
+        self.messages.append(self._format_msg(text, role=role))
+
+    def _handle_output_parser_exception(self, e: OutputParserException) -> AgentAction:
+        """Handle OutputParserException by updating messages and formatted_answer."""
+        self.messages.append({"role": "user", "content": e.error})
+
+        formatted_answer = AgentAction(
+            text=e.error,
+            tool="",
+            tool_input="",
+            thought="",
+        )
+
+        if self.iterations > self.log_error_after:
+            self._printer.print(
+                content=f"Error parsing LLM output, agent will retry: {e.error}",
+                color="red",
+            )
+
+        return formatted_answer
+
+    def _is_context_length_exceeded(self, exception: Exception) -> bool:
+        """Check if the exception is due to context length exceeding."""
+        return LLMContextLengthExceededException(
+            str(exception)
+        )._is_context_limit_error(str(exception))
 
     def _show_start_logs(self):
         if self.agent is None:
@@ -486,4 +530,46 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
                 )
                 self.ask_for_human_input = False
 
+        return formatted_answer
+
+    def _handle_max_iterations_exceeded(self, formatted_answer):
+        """
+        Handles the case when the maximum number of iterations is exceeded.
+        Performs one more LLM call to get the final answer.
+
+        Parameters:
+            formatted_answer: The last formatted answer from the agent.
+
+        Returns:
+            The final formatted answer after exceeding max iterations.
+        """
+        self._printer.print(
+            content="Maximum iterations reached. Requesting final answer.",
+            color="yellow",
+        )
+
+        if formatted_answer and hasattr(formatted_answer, "text"):
+            assistant_message = (
+                formatted_answer.text + f'\n{self._i18n.errors("force_final_answer")}'
+            )
+        else:
+            assistant_message = self._i18n.errors("force_final_answer")
+
+        self.messages.append(self._format_msg(assistant_message, role="assistant"))
+
+        # Perform one more LLM call to get the final answer
+        answer = self.llm.call(
+            self.messages,
+            callbacks=self.callbacks,
+        )
+
+        if answer is None or answer == "":
+            self._printer.print(
+                content="Received None or empty response from LLM call.",
+                color="red",
+            )
+            raise ValueError("Invalid response from LLM call - None or empty.")
+
+        formatted_answer = self._format_answer(answer)
+        # Return the formatted answer, regardless of its type
         return formatted_answer
