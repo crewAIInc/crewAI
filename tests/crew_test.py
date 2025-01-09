@@ -1464,7 +1464,6 @@ def test_dont_set_agents_step_callback_if_already_set():
 
 @pytest.mark.vcr(filter_headers=["authorization"])
 def test_crew_function_calling_llm():
-    from unittest.mock import patch
 
     from crewai import LLM
     from crewai.tools import tool
