@@ -11,7 +11,7 @@ interactions:
       for the context shared.\nyou MUST return the actual complete content as the
       final answer, not a summary.\n\nBegin! This is VERY important to you, use the
       tools available and give your best Final Answer, your job depends on it!\n\nThought:"}],
-      "model": "gpt-4o-mini", "stop": ["\nObservation:"], "stream": false}'
+      "model": "gpt-4o", "stop": ["\nObservation:"], "stream": false}'
     headers:
       accept:
       - application/json
@@ -20,12 +20,12 @@ interactions:
       connection:
       - keep-alive
       content-length:
-      - '944'
+      - '939'
       content-type:
       - application/json
       cookie:
-      - __cf_bm=5dd0oBCK2P2.O5qlqIo22vvel5R5pen3nwS9BCZP4_c-1736458340-1.0.1.1-8eJQU1qGqGwpzRm.1rQZixj41dZWZvs8r7QMIe6sWtUy_7GmKSKiQk1vgfMf3AGLX0NvnGNLQ6ISiD9q2BIrng;
-        _cfuvid=6yGBUhGAml.hdCRd2VZ1Uf2F3iGzkSnwHYTM4XkxraE-1736458340460-0.0.1.1-604800000
+      - __cf_bm=cwWdOaPJjFMNJaLtJfa8Kjqavswg5bzVRFzBX4gneGw-1736458417-1.0.1.1-bvf2HshgcMtgn7GdxqwySFDAIacGccDFfEXniBFTTDmbGMCiIIwf6t2DiwWnBldmUHixwc5kDO9gYs08g.feBA;
+        _cfuvid=WMw7PSqkYqQOieguBRs0uNkwNU92A.ZKbgDbCAcV3EQ-1736458417825-0.0.1.1-604800000
       host:
       - api.openai.com
       user-agent:
@@ -51,46 +51,27 @@ interactions:
     method: POST
     uri: https://api.openai.com/v1/chat/completions
   response:
-    content: "{\n  \"id\": \"chatcmpl-AnuQWRP26cII4nGqyIjdERFv4P2e8\",\n  \"object\":
-      \"chat.completion\",\n  \"created\": 1736458340,\n  \"model\": \"gpt-4o-mini-2024-07-18\",\n
+    content: "{\n  \"id\": \"chatcmpl-AnuRlxiTxduAVoXHHY58Fvfbll5IS\",\n  \"object\":
+      \"chat.completion\",\n  \"created\": 1736458417,\n  \"model\": \"gpt-4o-2024-08-06\",\n
       \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
       \"assistant\",\n        \"content\": \"I now can give a great answer  \\nFinal
-      Answer: Futel Football Club, often referred to simply as Futel FC, is a professional
-      football club based in Futel, a vibrant community that brings together fans,
-      players, and staff in the pursuit of football excellence. Established in [insert
-      founding year], the club has a rich history that reflects the evolution of football
-      in the region.\\n\\nThe club's home ground is [insert stadium name], a modern
-      venue that can hold up to [insert capacity] fans. It serves as a fortress for
-      the team, where countless memorable matches have taken place. Futel FC competes
-      in [insert league name], showcasing their talents against some of the top teams
-      in the league each season.\\n\\nFutel FC is known for its commitment to developing
-      young talent through its youth academy programs, which aim to provide a pathway
-      for local players to reach professional level. The club also emphasizes community
-      engagement, participating in various outreach programs and initiatives that
-      promote the sport at grassroots levels.\\n\\nIn terms of achievements, Futel
-      FC has won [insert number] league titles, [insert number] domestic cups, and
-      [insert any notable achievements]. The team's colors are [insert colors], and
-      the fans, known as [insert fan base name], are renowned for their passionate
-      support, creating an electric atmosphere during matches.\\n\\nCoached by [insert
-      coach's name], the team plays an exciting brand of football that combines skill,
-      strategy, and teamwork, making every match an exhilarating experience for players
-      and fans alike. With a focus on both on-field success and off-field community
-      involvement, Futel FC stands as a proud symbol of regional pride and unity.
-      \\n\\nAs we look forward to the upcoming season, the club aims to build on its
-      past successes, strengthen its squad, and aim for both domestic and international
-      honors. Join us in supporting Futel FC as we continue this incredible journey
-      together!\",\n        \"refusal\": null\n      },\n      \"logprobs\": null,\n
-      \     \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\":
-      177,\n    \"completion_tokens\": 378,\n    \"total_tokens\": 555,\n    \"prompt_tokens_details\":
-      {\n      \"cached_tokens\": 0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\":
-      {\n      \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\":
+      Answer: This is a test task, and the context or question from the coworker is
+      not specified. Therefore, my best effort would be to affirm my readiness to
+      answer accurately and in detail any question about Futel Football Club based
+      on the context described. If provided with specific information or questions,
+      I will ensure to respond comprehensively as required by my job directives.\",\n
+      \       \"refusal\": null\n      },\n      \"logprobs\": null,\n      \"finish_reason\":
+      \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 177,\n    \"completion_tokens\":
+      82,\n    \"total_tokens\": 259,\n    \"prompt_tokens_details\": {\n      \"cached_tokens\":
+      0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\": {\n
+      \     \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\":
       0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"system_fingerprint\":
-      \"fp_f2cd28694a\"\n}\n"
+      \"fp_703d4ff298\"\n}\n"
     headers:
       CF-Cache-Status:
       - DYNAMIC
       CF-RAY:
-      - 8ff78a14eb6cb08e-ATL
+      - 8ff78bf7bd6cc002-ATL
       Connection:
       - keep-alive
       Content-Encoding:
@@ -98,7 +79,7 @@ interactions:
       Content-Type:
       - application/json
       Date:
-      - Thu, 09 Jan 2025 21:32:26 GMT
+      - Thu, 09 Jan 2025 21:33:40 GMT
       Server:
       - cloudflare
       Transfer-Encoding:
@@ -112,25 +93,25 @@ interactions:
       openai-organization:
       - crewai-iuxna1
       openai-processing-ms:
-      - '5924'
+      - '2263'
       openai-version:
       - '2020-10-01'
       strict-transport-security:
       - max-age=31536000; includeSubDomains; preload
       x-ratelimit-limit-requests:
-      - '30000'
+      - '10000'
       x-ratelimit-limit-tokens:
-      - '150000000'
+      - '30000000'
       x-ratelimit-remaining-requests:
-      - '29999'
+      - '9999'
       x-ratelimit-remaining-tokens:
-      - '149999786'
+      - '29999786'
       x-ratelimit-reset-requests:
-      - 2ms
+      - 6ms
       x-ratelimit-reset-tokens:
       - 0s
       x-request-id:
-      - req_d3f55c2ce4a2a7cfd316dfdebb2e5bae
+      - req_7c1a31da73cd103e9f410f908e59187f
     http_version: HTTP/1.1
     status_code: 200
 version: 1

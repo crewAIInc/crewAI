@@ -11,7 +11,7 @@ interactions:
       for the context shared.\nyou MUST return the actual complete content as the
       final answer, not a summary.\n\nBegin! This is VERY important to you, use the
       tools available and give your best Final Answer, your job depends on it!\n\nThought:"}],
-      "model": "gpt-4o-mini", "stop": ["\nObservation:"], "stream": false}'
+      "model": "gpt-4o", "stop": ["\nObservation:"], "stream": false}'
     headers:
       accept:
       - application/json
@@ -20,12 +20,12 @@ interactions:
       connection:
       - keep-alive
       content-length:
-      - '944'
+      - '939'
       content-type:
       - application/json
       cookie:
-      - __cf_bm=5dd0oBCK2P2.O5qlqIo22vvel5R5pen3nwS9BCZP4_c-1736458340-1.0.1.1-8eJQU1qGqGwpzRm.1rQZixj41dZWZvs8r7QMIe6sWtUy_7GmKSKiQk1vgfMf3AGLX0NvnGNLQ6ISiD9q2BIrng;
-        _cfuvid=6yGBUhGAml.hdCRd2VZ1Uf2F3iGzkSnwHYTM4XkxraE-1736458340460-0.0.1.1-604800000
+      - __cf_bm=cwWdOaPJjFMNJaLtJfa8Kjqavswg5bzVRFzBX4gneGw-1736458417-1.0.1.1-bvf2HshgcMtgn7GdxqwySFDAIacGccDFfEXniBFTTDmbGMCiIIwf6t2DiwWnBldmUHixwc5kDO9gYs08g.feBA;
+        _cfuvid=WMw7PSqkYqQOieguBRs0uNkwNU92A.ZKbgDbCAcV3EQ-1736458417825-0.0.1.1-604800000
       host:
       - api.openai.com
       user-agent:
@@ -51,31 +51,24 @@ interactions:
     method: POST
     uri: https://api.openai.com/v1/chat/completions
   response:
-    content: "{\n  \"id\": \"chatcmpl-AnuQeOQf4VFmsW2l7dI9LxGQNc5UQ\",\n  \"object\":
-      \"chat.completion\",\n  \"created\": 1736458348,\n  \"model\": \"gpt-4o-mini-2024-07-18\",\n
+    content: "{\n  \"id\": \"chatcmpl-AnuRqgg7eiHnDi2DOqdk99fiqOboz\",\n  \"object\":
+      \"chat.completion\",\n  \"created\": 1736458422,\n  \"model\": \"gpt-4o-2024-08-06\",\n
       \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
       \"assistant\",\n        \"content\": \"I now can give a great answer  \\nFinal
-      Answer: Futel Football Club is a professional football club based in Futel,
-      known for its rich history, competitive spirit, and dedicated fan base. The
-      club competes in the top tier of its national league system, and has a reputation
-      for developing young talents through its youth academy. With a focus on teamwork
-      and sportsmanship, Futel FC has built a culture that embraces hard work and
-      resilience. The club also engages actively with the community, hosting events
-      and activities that promote the sport and foster a sense of belonging among
-      fans. For the latest updates on matches, player signings, and club events, fans
-      can check the official website or follow Futel FC on their social media platforms.\",\n
-      \       \"refusal\": null\n      },\n      \"logprobs\": null,\n      \"finish_reason\":
-      \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 177,\n    \"completion_tokens\":
-      147,\n    \"total_tokens\": 324,\n    \"prompt_tokens_details\": {\n      \"cached_tokens\":
-      0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\": {\n
-      \     \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\":
+      Answer: Your best answer to your coworker asking you this, accounting for the
+      context shared. You MUST return the actual complete content as the final answer,
+      not a summary.\",\n        \"refusal\": null\n      },\n      \"logprobs\":
+      null,\n      \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\":
+      177,\n    \"completion_tokens\": 44,\n    \"total_tokens\": 221,\n    \"prompt_tokens_details\":
+      {\n      \"cached_tokens\": 0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\":
+      {\n      \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\":
       0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"system_fingerprint\":
-      \"fp_f2cd28694a\"\n}\n"
+      \"fp_703d4ff298\"\n}\n"
     headers:
       CF-Cache-Status:
       - DYNAMIC
       CF-RAY:
-      - 8ff78a44cbfdb08e-ATL
+      - 8ff78c164ad2c002-ATL
       Connection:
       - keep-alive
       Content-Encoding:
@@ -83,7 +76,7 @@ interactions:
       Content-Type:
       - application/json
       Date:
-      - Thu, 09 Jan 2025 21:32:30 GMT
+      - Thu, 09 Jan 2025 21:33:43 GMT
       Server:
       - cloudflare
       Transfer-Encoding:
@@ -97,25 +90,25 @@ interactions:
       openai-organization:
       - crewai-iuxna1
       openai-processing-ms:
-      - '2621'
+      - '899'
       openai-version:
       - '2020-10-01'
       strict-transport-security:
       - max-age=31536000; includeSubDomains; preload
       x-ratelimit-limit-requests:
-      - '30000'
+      - '10000'
       x-ratelimit-limit-tokens:
-      - '150000000'
+      - '30000000'
       x-ratelimit-remaining-requests:
-      - '29999'
+      - '9999'
       x-ratelimit-remaining-tokens:
-      - '149999786'
+      - '29999786'
       x-ratelimit-reset-requests:
-      - 2ms
+      - 6ms
       x-ratelimit-reset-tokens:
       - 0s
       x-request-id:
-      - req_0a6756b28d2a3ac48c548c83cebcb25d
+      - req_9f5226208edb90a27987aaf7e0ca03d3
     http_version: HTTP/1.1
     status_code: 200
 version: 1
