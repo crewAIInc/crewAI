@@ -11,7 +11,7 @@ interactions:
       for the context shared.\nyou MUST return the actual complete content as the
       final answer, not a summary.\n\nBegin! This is VERY important to you, use the
       tools available and give your best Final Answer, your job depends on it!\n\nThought:"}],
-      "model": "gpt-4o", "stop": ["\nObservation:"], "stream": false}'
+      "model": "gpt-4o-mini", "stop": ["\nObservation:"], "stream": false}'
     headers:
       accept:
       - application/json
@@ -20,12 +20,12 @@ interactions:
       connection:
       - keep-alive
       content-length:
-      - '939'
+      - '944'
       content-type:
       - application/json
       cookie:
-      - __cf_bm=PayAEPcVMbXBjhxhnXnOiohFbX24Zmpq3CYdIymCQK4-1736457335-1.0.1.1-FZG4EX90pRlyTvEavWmg2mz_rgrfv92rWJSspC1e9DdGZmSt3LHpavV7oMwK_HWozerDkzns46Czafjkk1qAqQ;
-        _cfuvid=FnUqyyJsek9lGXDNKiSxP8UqVYwVhxUqfiw5tO38VNI-1736457335028-0.0.1.1-604800000
+      - __cf_bm=Jg0G7BoRPBX4M8hcoS68IF61914mtIKq.6mPgNOyCOc-1736457863-1.0.1.1-DcdeXCNEQAhe07yALccPhte0Lq4lgwiYki9DLtjftCaRatWdS1vVRBW.8sdUK58qxA0xViYhMKEAxkKAsggewA;
+        _cfuvid=Mzb0AcDjRhz_fanW9l7lmZY9o0ikr25.Gb1MupvtUuU-1736457863531-0.0.1.1-604800000
       host:
       - api.openai.com
       user-agent:
@@ -51,25 +51,29 @@ interactions:
     method: POST
     uri: https://api.openai.com/v1/chat/completions
   response:
-    content: "{\n  \"id\": \"chatcmpl-AnuAPADYARn6GIgkkQyuyciAju6N6\",\n  \"object\":
-      \"chat.completion\",\n  \"created\": 1736457341,\n  \"model\": \"gpt-4o-2024-08-06\",\n
+    content: "{\n  \"id\": \"chatcmpl-AnuJ164hlSKBxhJLbcBXn8KKeZVM7\",\n  \"object\":
+      \"chat.completion\",\n  \"created\": 1736457875,\n  \"model\": \"gpt-4o-mini-2024-07-18\",\n
       \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
-      \"assistant\",\n        \"content\": \"I now can give a great answer\\nFinal
-      Answer: Thank you for evaluating my task performance. I'm committed to providing
-      detailed and complete responses in accordance with your direct instructions
-      and expectations. If there's any other way I can further assist, please let
-      me know.\",\n        \"refusal\": null\n      },\n      \"logprobs\": null,\n
-      \     \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\":
-      177,\n    \"completion_tokens\": 51,\n    \"total_tokens\": 228,\n    \"prompt_tokens_details\":
-      {\n      \"cached_tokens\": 0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\":
-      {\n      \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\":
+      \"assistant\",\n        \"content\": \"I now can give a great answer  \\nFinal
+      Answer: As a Futel Official Infopoint representative, I'm here to provide you
+      with comprehensive information about Futel Football Club. If you have inquiries
+      regarding our team\u2019s performance, player statistics, match schedules, or
+      club history, please feel free to ask. I can also help with details such as
+      our training facilities, ticketing processes for upcoming matches, and any community
+      outreach programs we may be involved in. Your questions are important, and I'm
+      committed to delivering the most accurate and thorough information possible.\",\n
+      \       \"refusal\": null\n      },\n      \"logprobs\": null,\n      \"finish_reason\":
+      \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 177,\n    \"completion_tokens\":
+      109,\n    \"total_tokens\": 286,\n    \"prompt_tokens_details\": {\n      \"cached_tokens\":
+      0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\": {\n
+      \     \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\":
       0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"system_fingerprint\":
-      \"fp_703d4ff298\"\n}\n"
+      \"fp_f2cd28694a\"\n}\n"
     headers:
       CF-Cache-Status:
       - DYNAMIC
       CF-RAY:
-      - 8ff771ae9dd57bcc-ATL
+      - 8ff77eb6b8ffbfb6-ATL
       Connection:
       - keep-alive
       Content-Encoding:
@@ -77,7 +81,7 @@ interactions:
       Content-Type:
       - application/json
       Date:
-      - Thu, 09 Jan 2025 21:15:43 GMT
+      - Thu, 09 Jan 2025 21:24:36 GMT
       Server:
       - cloudflare
       Transfer-Encoding:
@@ -91,25 +95,25 @@ interactions:
       openai-organization:
       - crewai-iuxna1
       openai-processing-ms:
-      - '1754'
+      - '1718'
       openai-version:
       - '2020-10-01'
       strict-transport-security:
       - max-age=31536000; includeSubDomains; preload
       x-ratelimit-limit-requests:
-      - '10000'
+      - '30000'
       x-ratelimit-limit-tokens:
-      - '30000000'
+      - '150000000'
       x-ratelimit-remaining-requests:
-      - '9999'
+      - '29999'
       x-ratelimit-remaining-tokens:
-      - '29999786'
+      - '149999786'
       x-ratelimit-reset-requests:
-      - 6ms
+      - 2ms
       x-ratelimit-reset-tokens:
       - 0s
       x-request-id:
-      - req_4c2c3dd4a9fd3a15a5b0a5eed2f45ef1
+      - req_8cbe3c35a86d61c2148d9fbecfc519a4
     http_version: HTTP/1.1
     status_code: 200
 version: 1

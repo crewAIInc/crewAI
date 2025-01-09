@@ -36,6 +36,7 @@ def test_agent_tool_role_matching(role_name, should_match):
         goal="Answer questions about Futel",
         backstory="Futel Football Club info",
         allow_delegation=False,
+        llm="gpt-4o-mini",
     )
 
     # Create test agent tool

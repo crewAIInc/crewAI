@@ -11,7 +11,7 @@ interactions:
       for the context shared.\nyou MUST return the actual complete content as the
       final answer, not a summary.\n\nBegin! This is VERY important to you, use the
       tools available and give your best Final Answer, your job depends on it!\n\nThought:"}],
-      "model": "gpt-4o", "stop": ["\nObservation:"], "stream": false}'
+      "model": "gpt-4o-mini", "stop": ["\nObservation:"], "stream": false}'
     headers:
       accept:
       - application/json
@@ -20,12 +20,12 @@ interactions:
       connection:
       - keep-alive
       content-length:
-      - '939'
+      - '944'
       content-type:
       - application/json
       cookie:
-      - __cf_bm=PayAEPcVMbXBjhxhnXnOiohFbX24Zmpq3CYdIymCQK4-1736457335-1.0.1.1-FZG4EX90pRlyTvEavWmg2mz_rgrfv92rWJSspC1e9DdGZmSt3LHpavV7oMwK_HWozerDkzns46Czafjkk1qAqQ;
-        _cfuvid=FnUqyyJsek9lGXDNKiSxP8UqVYwVhxUqfiw5tO38VNI-1736457335028-0.0.1.1-604800000
+      - __cf_bm=Jg0G7BoRPBX4M8hcoS68IF61914mtIKq.6mPgNOyCOc-1736457863-1.0.1.1-DcdeXCNEQAhe07yALccPhte0Lq4lgwiYki9DLtjftCaRatWdS1vVRBW.8sdUK58qxA0xViYhMKEAxkKAsggewA;
+        _cfuvid=Mzb0AcDjRhz_fanW9l7lmZY9o0ikr25.Gb1MupvtUuU-1736457863531-0.0.1.1-604800000
       host:
       - api.openai.com
       user-agent:
@@ -51,29 +51,41 @@ interactions:
     method: POST
     uri: https://api.openai.com/v1/chat/completions
   response:
-    content: "{\n  \"id\": \"chatcmpl-AnuAJX0JApdkr5cr5HRQLNSoWs6Dj\",\n  \"object\":
-      \"chat.completion\",\n  \"created\": 1736457335,\n  \"model\": \"gpt-4o-2024-08-06\",\n
+    content: "{\n  \"id\": \"chatcmpl-AnuIpSDtrmEL7zuRDN3MJq6xUMrMx\",\n  \"object\":
+      \"chat.completion\",\n  \"created\": 1736457863,\n  \"model\": \"gpt-4o-mini-2024-07-18\",\n
       \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
       \"assistant\",\n        \"content\": \"I now can give a great answer  \\nFinal
-      Answer: When your coworker asks about the current status or details involving
-      the Futel Football Club, it's crucial to provide a comprehensive answer. It
-      is essential to them about the particular aspect of the club they are inquiring
-      about, such as recent matches, player information, upcoming events, or club
-      history, and then deliver detailed information relevant to that query. Always
-      strive to be as precise and informative as possible, while maintaining an engaging
-      and helpful demeanor to support their understanding and knowledge of the Futel
-      Football Club.\",\n        \"refusal\": null\n      },\n      \"logprobs\":
-      null,\n      \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\":
-      177,\n    \"completion_tokens\": 111,\n    \"total_tokens\": 288,\n    \"prompt_tokens_details\":
-      {\n      \"cached_tokens\": 0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\":
-      {\n      \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\":
+      Answer: Futel Football Club (FFC) is a professional football club based in Futel,
+      known for its committed fanbase and rich history in the local football scene.
+      Established in [Year of Establishment], the team has made significant strides
+      in recent years, participating in various leagues and competitions. The club's
+      home matches are held at [Stadium Name], which boasts a capacity of [Capacity
+      Number] and provides a vibrant atmosphere for supporters. \\n\\nFFC's colors
+      are [Team Colors], and the club's mascot, [Mascot Name], embodies the spirit
+      of the team. The coaching staff, led by [Head Coach Name], focuses on developing
+      both individual skill and team cohesion to enhance performance on the pitch.\\n\\nFutel
+      FC also places a strong emphasis on youth development, with a dedicated academy
+      that nurtures young talent and prepares them for professional football. Community
+      engagement is a priority, as the club regularly participates in charitable events
+      and promotes inclusivity in sports.\\n\\nIn terms of recent achievements, the
+      team has achieved [List of Major Achievements], and currently aims to qualify
+      for [Upcoming Tournament/League]. The club's fan engagement efforts, including
+      social media promotions and matchday events, help maintain a robust follower
+      connection both locally and internationally. \\n\\nFor further information or
+      inquiries about the team, fans can visit the official website at [Website Link],
+      where they can find schedules, news updates, and ticket purchasing options.\",\n
+      \       \"refusal\": null\n      },\n      \"logprobs\": null,\n      \"finish_reason\":
+      \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 177,\n    \"completion_tokens\":
+      292,\n    \"total_tokens\": 469,\n    \"prompt_tokens_details\": {\n      \"cached_tokens\":
+      0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\": {\n
+      \     \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\":
       0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"system_fingerprint\":
-      \"fp_703d4ff298\"\n}\n"
+      \"fp_f2cd28694a\"\n}\n"
     headers:
       CF-Cache-Status:
       - DYNAMIC
       CF-RAY:
-      - 8ff7718889367bcc-ATL
+      - 8ff77e6f7edbbfb6-ATL
       Connection:
       - keep-alive
       Content-Encoding:
@@ -81,7 +93,7 @@ interactions:
       Content-Type:
       - application/json
       Date:
-      - Thu, 09 Jan 2025 21:15:38 GMT
+      - Thu, 09 Jan 2025 21:24:28 GMT
       Server:
       - cloudflare
       Transfer-Encoding:
@@ -95,25 +107,25 @@ interactions:
       openai-organization:
       - crewai-iuxna1
       openai-processing-ms:
-      - '3003'
+      - '5185'
       openai-version:
       - '2020-10-01'
       strict-transport-security:
       - max-age=31536000; includeSubDomains; preload
       x-ratelimit-limit-requests:
-      - '10000'
+      - '30000'
       x-ratelimit-limit-tokens:
-      - '30000000'
+      - '150000000'
       x-ratelimit-remaining-requests:
-      - '9999'
+      - '29999'
       x-ratelimit-remaining-tokens:
-      - '29999786'
+      - '149999786'
       x-ratelimit-reset-requests:
-      - 6ms
+      - 2ms
       x-ratelimit-reset-tokens:
       - 0s
       x-request-id:
-      - req_3503475199cb974c296141f7d37bbf46
+      - req_a5d2111d19d2239dc81e3395abb7955c
     http_version: HTTP/1.1
     status_code: 200
 version: 1
