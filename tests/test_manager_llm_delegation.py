@@ -16,15 +16,15 @@ class InternalAgentTool(BaseAgentTool):
 @pytest.mark.parametrize(
     "role_name,should_match",
     [
-        # ("Futel Official Infopoint", True),  # exact match
+        ("Futel Official Infopoint", True),  # exact match
         # ('  "Futel Official Infopoint"  ', True),  # extra quotes and spaces
         # ("Futel Official Infopoint\n", True),  # trailing newline
         # ('"Futel Official Infopoint"', True),  # embedded quotes
         # (" FUTEL\nOFFICIAL   INFOPOINT ", True),  # multiple whitespace and newline
-        # ("futel official infopoint", True),  # lowercase
-        # ("FUTEL OFFICIAL INFOPOINT", True),  # uppercase
+        ("futel official infopoint", True),  # lowercase
+        ("FUTEL OFFICIAL INFOPOINT", True),  # uppercase
         ("Non Existent Agent", False),  # non-existent agent
-        # (None, False),  # None agent name
+        (None, False),  # None agent name
     ],
 )
 def test_agent_tool_role_matching(role_name, should_match):
