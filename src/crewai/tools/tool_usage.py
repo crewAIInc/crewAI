@@ -409,9 +409,15 @@ class ToolUsage:
 
     def _validate_tool_input(self, tool_input: str) -> Dict[str, Any]:
         try:
-            # Replace 'None', 'True', 'False' with their JSON equivalents
-            tool_input = tool_input.replace('"None"', "null")
-            tool_input = tool_input.replace("True", "true").replace("False", "false")
+            # Replace Python literals with JSON equivalents
+            replacements = {
+                r"'": '"',
+                r"None": "null",
+                r"True": "true",
+                r"False": "false",
+            }
+            for pattern, replacement in replacements.items():
+                tool_input = re.sub(pattern, replacement, tool_input)
 
             arguments = json.loads(tool_input)
         except json.JSONDecodeError:
