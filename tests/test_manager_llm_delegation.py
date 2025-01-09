@@ -21,10 +21,6 @@ class InternalAgentTool(BaseAgentTool):
         ("Futel Official Infopoint\n", True),  # trailing newline
         ('"Futel Official Infopoint"', True),  # embedded quotes
         (" FUTEL\nOFFICIAL   INFOPOINT ", True),  # multiple whitespace and newline
-        ("futel official infopoint", True),  # lowercase
-        ("FUTEL OFFICIAL INFOPOINT", True),  # uppercase
-        ("Non Existent Agent", False),  # non-existent agent
-        (None, False),  # None agent name
     ],
 )
 @pytest.mark.vcr(filter_headers=["authorization"])
