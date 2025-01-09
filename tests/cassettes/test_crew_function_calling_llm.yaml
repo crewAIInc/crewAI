@@ -7,16 +7,16 @@ interactions:
       a greeting.\n\nIMPORTANT: Use the following format in your response:\n\n```\nThought:
       you should always think about what to do\nAction: the action to take, only one
       name of [look_up_greeting], just the name, exactly as it''s written.\nAction
-      Input: the input to the action, just a simple python dictionary, enclosed in
-      curly braces, using \" to wrap keys and values.\nObservation: the result of
-      the action\n```\n\nOnce all necessary information is gathered:\n\nThought: I
-      now know the final answer\nFinal Answer: the final answer to the original input
-      question"}, {"role": "user", "content": "\nCurrent Task: Look up the greeting
-      and say it.\n\nThis is the expect criteria for your final answer: A greeting.\nyou
-      MUST return the actual complete content as the final answer, not a summary.\n\nBegin!
-      This is VERY important to you, use the tools available and give your best Final
-      Answer, your job depends on it!\n\nThought:"}], "model": "gpt-4o-mini", "stop":
-      ["\nObservation:"], "stream": false}'
+      Input: the input to the action, just a simple JSON object, enclosed in curly
+      braces, using \" to wrap keys and values.\nObservation: the result of the action\n```\n\nOnce
+      all necessary information is gathered, return the following format:\n\n```\nThought:
+      I now know the final answer\nFinal Answer: the final answer to the original
+      input question\n```"}, {"role": "user", "content": "\nCurrent Task: Look up
+      the greeting and say it.\n\nThis is the expect criteria for your final answer:
+      A greeting.\nyou MUST return the actual complete content as the final answer,
+      not a summary.\n\nBegin! This is VERY important to you, use the tools available
+      and give your best Final Answer, your job depends on it!\n\nThought:"}], "model":
+      "gpt-4o-mini", "stop": ["\nObservation:"], "stream": false}'
     headers:
       accept:
       - application/json
@@ -25,7 +25,7 @@ interactions:
       connection:
       - keep-alive
       content-length:
-      - '1314'
+      - '1347'
       content-type:
       - application/json
       host:
@@ -53,23 +53,23 @@ interactions:
     method: POST
     uri: https://api.openai.com/v1/chat/completions
   response:
-    content: "{\n  \"id\": \"chatcmpl-AnpDd8jXjsoSLGSz6Sq6hZnrFDiPN\",\n  \"object\":
-      \"chat.completion\",\n  \"created\": 1736438321,\n  \"model\": \"gpt-4o-mini-2024-07-18\",\n
+    content: "{\n  \"id\": \"chatcmpl-AnsSJl1P6VZgWhm1B4PiHgzsl9NLL\",\n  \"object\":
+      \"chat.completion\",\n  \"created\": 1736450763,\n  \"model\": \"gpt-4o-mini-2024-07-18\",\n
       \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
-      \"assistant\",\n        \"content\": \"you should always think about what to
-      do  \\nAction: look_up_greeting  \\nAction Input: {}  \",\n        \"refusal\":
+      \"assistant\",\n        \"content\": \"I need to look up a greeting to fulfill
+      the task.\\n\\nAction: look_up_greeting\\nAction Input: {}\",\n        \"refusal\":
       null\n      },\n      \"logprobs\": null,\n      \"finish_reason\": \"stop\"\n
-      \   }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 257,\n    \"completion_tokens\":
-      21,\n    \"total_tokens\": 278,\n    \"prompt_tokens_details\": {\n      \"cached_tokens\":
+      \   }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 266,\n    \"completion_tokens\":
+      23,\n    \"total_tokens\": 289,\n    \"prompt_tokens_details\": {\n      \"cached_tokens\":
       0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\": {\n
       \     \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\":
       0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"system_fingerprint\":
-      \"fp_01aeff40ea\"\n}\n"
+      \"fp_f2cd28694a\"\n}\n"
     headers:
       CF-Cache-Status:
       - DYNAMIC
       CF-RAY:
-      - 8ff5a1532f13455a-ATL
+      - 8ff6d117cf41bf8e-ATL
       Connection:
       - keep-alive
       Content-Encoding:
@@ -77,14 +77,14 @@ interactions:
       Content-Type:
       - application/json
       Date:
-      - Thu, 09 Jan 2025 15:58:41 GMT
+      - Thu, 09 Jan 2025 19:26:04 GMT
       Server:
       - cloudflare
       Set-Cookie:
-      - __cf_bm=T.hcriLOjWL83HaKDnS2Tm.5dSjJzeWgVHOI5eMiCGM-1736438321-1.0.1.1-xNHwVem_hSBthmB11.2LpcrlKx14aUXaEEtYTKukrP3YyiT8X5g6vFte.x1JNLDsYDx1dWsU8in8qnCKZnub9A;
-        path=/; expires=Thu, 09-Jan-25 16:28:41 GMT; domain=.api.openai.com; HttpOnly;
+      - __cf_bm=28kBtf6u6VOKoCJXrEeDJF8b477n6wU4l4aLCyuhoB4-1736450764-1.0.1.1-E58mL8GeVt3QS2hw9WBzja7bHi9Woe9wK0q.bD1LUANCAO9BaGxBHi9L2KNgHWKVG3Ry1FqDYtqQA4Xi8qmQCQ;
+        path=/; expires=Thu, 09-Jan-25 19:56:04 GMT; domain=.api.openai.com; HttpOnly;
         Secure; SameSite=None
-      - _cfuvid=eDPesWng7.DYeInt3L_NY4oVQvsx3FxfCkZWZdsNir0-1736438321743-0.0.1.1-604800000;
+      - _cfuvid=LFiHkCkQ_CCUuZH7SxNFJ6rRb4aifBj.OlQXaNkVkUg-1736450764158-0.0.1.1-604800000;
         path=/; domain=.api.openai.com; HttpOnly; Secure; SameSite=None
       Transfer-Encoding:
       - chunked
@@ -97,7 +97,7 @@ interactions:
       openai-organization:
       - crewai-iuxna1
       openai-processing-ms:
-      - '526'
+      - '612'
       openai-version:
       - '2020-10-01'
       strict-transport-security:
@@ -109,13 +109,13 @@ interactions:
       x-ratelimit-remaining-requests:
       - '29999'
       x-ratelimit-remaining-tokens:
-      - '149999697'
+      - '149999689'
       x-ratelimit-reset-requests:
       - 2ms
       x-ratelimit-reset-tokens:
       - 0s
       x-request-id:
-      - req_33d8563825915166cd36e22f7c92ee35
+      - req_59288de1eb8dd37fe376614bf19985d1
     http_version: HTTP/1.1
     status_code: 200
 - request:
@@ -126,18 +126,18 @@ interactions:
       a greeting.\n\nIMPORTANT: Use the following format in your response:\n\n```\nThought:
       you should always think about what to do\nAction: the action to take, only one
       name of [look_up_greeting], just the name, exactly as it''s written.\nAction
-      Input: the input to the action, just a simple python dictionary, enclosed in
-      curly braces, using \" to wrap keys and values.\nObservation: the result of
-      the action\n```\n\nOnce all necessary information is gathered:\n\nThought: I
-      now know the final answer\nFinal Answer: the final answer to the original input
-      question"}, {"role": "user", "content": "\nCurrent Task: Look up the greeting
-      and say it.\n\nThis is the expect criteria for your final answer: A greeting.\nyou
-      MUST return the actual complete content as the final answer, not a summary.\n\nBegin!
-      This is VERY important to you, use the tools available and give your best Final
-      Answer, your job depends on it!\n\nThought:"}, {"role": "assistant", "content":
-      "you should always think about what to do  \nAction: look_up_greeting  \nAction
-      Input: {}  \nObservation: Howdy!"}], "model": "gpt-4o-mini", "stop": ["\nObservation:"],
-      "stream": false}'
+      Input: the input to the action, just a simple JSON object, enclosed in curly
+      braces, using \" to wrap keys and values.\nObservation: the result of the action\n```\n\nOnce
+      all necessary information is gathered, return the following format:\n\n```\nThought:
+      I now know the final answer\nFinal Answer: the final answer to the original
+      input question\n```"}, {"role": "user", "content": "\nCurrent Task: Look up
+      the greeting and say it.\n\nThis is the expect criteria for your final answer:
+      A greeting.\nyou MUST return the actual complete content as the final answer,
+      not a summary.\n\nBegin! This is VERY important to you, use the tools available
+      and give your best Final Answer, your job depends on it!\n\nThought:"}, {"role":
+      "assistant", "content": "I need to look up a greeting to fulfill the task.\n\nAction:
+      look_up_greeting\nAction Input: {}\nObservation: Howdy!"}], "model": "gpt-4o-mini",
+      "stop": ["\nObservation:"], "stream": false}'
     headers:
       accept:
       - application/json
@@ -146,12 +146,12 @@ interactions:
       connection:
       - keep-alive
       content-length:
-      - '1463'
+      - '1501'
       content-type:
       - application/json
       cookie:
-      - __cf_bm=T.hcriLOjWL83HaKDnS2Tm.5dSjJzeWgVHOI5eMiCGM-1736438321-1.0.1.1-xNHwVem_hSBthmB11.2LpcrlKx14aUXaEEtYTKukrP3YyiT8X5g6vFte.x1JNLDsYDx1dWsU8in8qnCKZnub9A;
-        _cfuvid=eDPesWng7.DYeInt3L_NY4oVQvsx3FxfCkZWZdsNir0-1736438321743-0.0.1.1-604800000
+      - __cf_bm=28kBtf6u6VOKoCJXrEeDJF8b477n6wU4l4aLCyuhoB4-1736450764-1.0.1.1-E58mL8GeVt3QS2hw9WBzja7bHi9Woe9wK0q.bD1LUANCAO9BaGxBHi9L2KNgHWKVG3Ry1FqDYtqQA4Xi8qmQCQ;
+        _cfuvid=LFiHkCkQ_CCUuZH7SxNFJ6rRb4aifBj.OlQXaNkVkUg-1736450764158-0.0.1.1-604800000
       host:
       - api.openai.com
       user-agent:
@@ -177,13 +177,13 @@ interactions:
     method: POST
     uri: https://api.openai.com/v1/chat/completions
   response:
-    content: "{\n  \"id\": \"chatcmpl-AnpDe7vYcbSrzP9Nq0YODSeNFLrW5\",\n  \"object\":
-      \"chat.completion\",\n  \"created\": 1736438322,\n  \"model\": \"gpt-4o-mini-2024-07-18\",\n
+    content: "{\n  \"id\": \"chatcmpl-AnsSKvXMJzmmX05GCywciRNUDC1wj\",\n  \"object\":
+      \"chat.completion\",\n  \"created\": 1736450764,\n  \"model\": \"gpt-4o-mini-2024-07-18\",\n
       \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
-      \"assistant\",\n        \"content\": \"Thought: I now know the final answer
-      \ \\nFinal Answer: Howdy!\",\n        \"refusal\": null\n      },\n      \"logprobs\":
+      \"assistant\",\n        \"content\": \"Thought: I now know the final answer\\nFinal
+      Answer: Howdy!\",\n        \"refusal\": null\n      },\n      \"logprobs\":
       null,\n      \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\":
-      287,\n    \"completion_tokens\": 15,\n    \"total_tokens\": 302,\n    \"prompt_tokens_details\":
+      298,\n    \"completion_tokens\": 15,\n    \"total_tokens\": 313,\n    \"prompt_tokens_details\":
       {\n      \"cached_tokens\": 0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\":
       {\n      \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\":
       0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"system_fingerprint\":
@@ -192,7 +192,7 @@ interactions:
       CF-Cache-Status:
       - DYNAMIC
       CF-RAY:
-      - 8ff5a1584e77455a-ATL
+      - 8ff6d11dcad4bf8e-ATL
       Connection:
       - keep-alive
       Content-Encoding:
@@ -200,7 +200,7 @@ interactions:
       Content-Type:
       - application/json
       Date:
-      - Thu, 09 Jan 2025 15:58:42 GMT
+      - Thu, 09 Jan 2025 19:26:05 GMT
       Server:
       - cloudflare
       Transfer-Encoding:
@@ -214,7 +214,7 @@ interactions:
       openai-organization:
       - crewai-iuxna1
       openai-processing-ms:
-      - '482'
+      - '545'
       openai-version:
       - '2020-10-01'
       strict-transport-security:
@@ -226,13 +226,13 @@ interactions:
       x-ratelimit-remaining-requests:
       - '29999'
       x-ratelimit-remaining-tokens:
-      - '149999669'
+      - '149999661'
       x-ratelimit-reset-requests:
       - 2ms
       x-ratelimit-reset-tokens:
       - 0s
       x-request-id:
-      - req_71c37e7b5324ad4bc0f4226e929d2087
+      - req_d132a9ac787eccf9f91aa58643acff50
     http_version: HTTP/1.1
     status_code: 200
 version: 1
