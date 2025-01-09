@@ -24,8 +24,8 @@ interactions:
       content-type:
       - application/json
       cookie:
-      - __cf_bm=Jg0G7BoRPBX4M8hcoS68IF61914mtIKq.6mPgNOyCOc-1736457863-1.0.1.1-DcdeXCNEQAhe07yALccPhte0Lq4lgwiYki9DLtjftCaRatWdS1vVRBW.8sdUK58qxA0xViYhMKEAxkKAsggewA;
-        _cfuvid=Mzb0AcDjRhz_fanW9l7lmZY9o0ikr25.Gb1MupvtUuU-1736457863531-0.0.1.1-604800000
+      - __cf_bm=5dd0oBCK2P2.O5qlqIo22vvel5R5pen3nwS9BCZP4_c-1736458340-1.0.1.1-8eJQU1qGqGwpzRm.1rQZixj41dZWZvs8r7QMIe6sWtUy_7GmKSKiQk1vgfMf3AGLX0NvnGNLQ6ISiD9q2BIrng;
+        _cfuvid=6yGBUhGAml.hdCRd2VZ1Uf2F3iGzkSnwHYTM4XkxraE-1736458340460-0.0.1.1-604800000
       host:
       - api.openai.com
       user-agent:
@@ -51,20 +51,25 @@ interactions:
     method: POST
     uri: https://api.openai.com/v1/chat/completions
   response:
-    content: "{\n  \"id\": \"chatcmpl-AnuJ164hlSKBxhJLbcBXn8KKeZVM7\",\n  \"object\":
-      \"chat.completion\",\n  \"created\": 1736457875,\n  \"model\": \"gpt-4o-mini-2024-07-18\",\n
+    content: "{\n  \"id\": \"chatcmpl-AnuQhOmrnrLHNKM8RhJD55kp8srMH\",\n  \"object\":
+      \"chat.completion\",\n  \"created\": 1736458351,\n  \"model\": \"gpt-4o-mini-2024-07-18\",\n
       \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
       \"assistant\",\n        \"content\": \"I now can give a great answer  \\nFinal
-      Answer: As a Futel Official Infopoint representative, I'm here to provide you
-      with comprehensive information about Futel Football Club. If you have inquiries
-      regarding our team\u2019s performance, player statistics, match schedules, or
-      club history, please feel free to ask. I can also help with details such as
-      our training facilities, ticketing processes for upcoming matches, and any community
-      outreach programs we may be involved in. Your questions are important, and I'm
-      committed to delivering the most accurate and thorough information possible.\",\n
-      \       \"refusal\": null\n      },\n      \"logprobs\": null,\n      \"finish_reason\":
-      \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 177,\n    \"completion_tokens\":
-      109,\n    \"total_tokens\": 286,\n    \"prompt_tokens_details\": {\n      \"cached_tokens\":
+      Answer: Futel Football Club is a professional football club based in Futel,
+      known for its rich history and enthusiastic fanbase. Founded in [insert founding
+      year], the club has grown significantly, competing in various national leagues
+      and tournaments. The team's colors are [insert team colors], and they play their
+      home games at [insert stadium name], which is known for its vibrant atmosphere
+      and loyal supporters. The club has achieved notable successes, including [insert
+      major achievements such as league titles, cup wins, or notable match results],
+      enhancing its reputation in the footballing community. The club also emphasizes
+      youth development, contributing to the growth of football in the region through
+      its academy programs. For more specific details such as the current squad, fixtures,
+      and player statistics, you can visit the official website or follow their social
+      media channels for the latest updates.\",\n        \"refusal\": null\n      },\n
+      \     \"logprobs\": null,\n      \"finish_reason\": \"stop\"\n    }\n  ],\n
+      \ \"usage\": {\n    \"prompt_tokens\": 177,\n    \"completion_tokens\": 176,\n
+      \   \"total_tokens\": 353,\n    \"prompt_tokens_details\": {\n      \"cached_tokens\":
       0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\": {\n
       \     \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\":
       0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"system_fingerprint\":
@@ -73,7 +78,7 @@ interactions:
       CF-Cache-Status:
       - DYNAMIC
       CF-RAY:
-      - 8ff77eb6b8ffbfb6-ATL
+      - 8ff78a56082cb08e-ATL
       Connection:
       - keep-alive
       Content-Encoding:
@@ -81,7 +86,7 @@ interactions:
       Content-Type:
       - application/json
       Date:
-      - Thu, 09 Jan 2025 21:24:36 GMT
+      - Thu, 09 Jan 2025 21:32:34 GMT
       Server:
       - cloudflare
       Transfer-Encoding:
@@ -95,7 +100,7 @@ interactions:
       openai-organization:
       - crewai-iuxna1
       openai-processing-ms:
-      - '1718'
+      - '2919'
       openai-version:
       - '2020-10-01'
       strict-transport-security:
@@ -113,7 +118,7 @@ interactions:
       x-ratelimit-reset-tokens:
       - 0s
       x-request-id:
-      - req_8cbe3c35a86d61c2148d9fbecfc519a4
+      - req_39a86c2d7ca6bd505734484da15bdc5d
     http_version: HTTP/1.1
     status_code: 200
 version: 1

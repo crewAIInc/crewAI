@@ -24,8 +24,8 @@ interactions:
       content-type:
       - application/json
       cookie:
-      - __cf_bm=Jg0G7BoRPBX4M8hcoS68IF61914mtIKq.6mPgNOyCOc-1736457863-1.0.1.1-DcdeXCNEQAhe07yALccPhte0Lq4lgwiYki9DLtjftCaRatWdS1vVRBW.8sdUK58qxA0xViYhMKEAxkKAsggewA;
-        _cfuvid=Mzb0AcDjRhz_fanW9l7lmZY9o0ikr25.Gb1MupvtUuU-1736457863531-0.0.1.1-604800000
+      - __cf_bm=5dd0oBCK2P2.O5qlqIo22vvel5R5pen3nwS9BCZP4_c-1736458340-1.0.1.1-8eJQU1qGqGwpzRm.1rQZixj41dZWZvs8r7QMIe6sWtUy_7GmKSKiQk1vgfMf3AGLX0NvnGNLQ6ISiD9q2BIrng;
+        _cfuvid=6yGBUhGAml.hdCRd2VZ1Uf2F3iGzkSnwHYTM4XkxraE-1736458340460-0.0.1.1-604800000
       host:
       - api.openai.com
       user-agent:
@@ -51,17 +51,22 @@ interactions:
     method: POST
     uri: https://api.openai.com/v1/chat/completions
   response:
-    content: "{\n  \"id\": \"chatcmpl-AnuIz94aaKJ9WaDwUCnRHhjhXI7tb\",\n  \"object\":
-      \"chat.completion\",\n  \"created\": 1736457873,\n  \"model\": \"gpt-4o-mini-2024-07-18\",\n
+    content: "{\n  \"id\": \"chatcmpl-AnuQeOQf4VFmsW2l7dI9LxGQNc5UQ\",\n  \"object\":
+      \"chat.completion\",\n  \"created\": 1736458348,\n  \"model\": \"gpt-4o-mini-2024-07-18\",\n
       \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
       \"assistant\",\n        \"content\": \"I now can give a great answer  \\nFinal
-      Answer: Thank you for your message. How may I assist you regarding Futel Football
-      Club today? Whether you need information about player stats, match schedules,
-      team history, or upcoming events, I'm here to help. Please specify your inquiry
-      so I can provide the most accurate and thorough response.\",\n        \"refusal\":
-      null\n      },\n      \"logprobs\": null,\n      \"finish_reason\": \"stop\"\n
-      \   }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 177,\n    \"completion_tokens\":
-      67,\n    \"total_tokens\": 244,\n    \"prompt_tokens_details\": {\n      \"cached_tokens\":
+      Answer: Futel Football Club is a professional football club based in Futel,
+      known for its rich history, competitive spirit, and dedicated fan base. The
+      club competes in the top tier of its national league system, and has a reputation
+      for developing young talents through its youth academy. With a focus on teamwork
+      and sportsmanship, Futel FC has built a culture that embraces hard work and
+      resilience. The club also engages actively with the community, hosting events
+      and activities that promote the sport and foster a sense of belonging among
+      fans. For the latest updates on matches, player signings, and club events, fans
+      can check the official website or follow Futel FC on their social media platforms.\",\n
+      \       \"refusal\": null\n      },\n      \"logprobs\": null,\n      \"finish_reason\":
+      \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 177,\n    \"completion_tokens\":
+      147,\n    \"total_tokens\": 324,\n    \"prompt_tokens_details\": {\n      \"cached_tokens\":
       0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\": {\n
       \     \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\":
       0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"system_fingerprint\":
@@ -70,7 +75,7 @@ interactions:
       CF-Cache-Status:
       - DYNAMIC
       CF-RAY:
-      - 8ff77eae19b5bfb6-ATL
+      - 8ff78a44cbfdb08e-ATL
       Connection:
       - keep-alive
       Content-Encoding:
@@ -78,7 +83,7 @@ interactions:
       Content-Type:
       - application/json
       Date:
-      - Thu, 09 Jan 2025 21:24:34 GMT
+      - Thu, 09 Jan 2025 21:32:30 GMT
       Server:
       - cloudflare
       Transfer-Encoding:
@@ -92,7 +97,7 @@ interactions:
       openai-organization:
       - crewai-iuxna1
       openai-processing-ms:
-      - '1144'
+      - '2621'
       openai-version:
       - '2020-10-01'
       strict-transport-security:
@@ -110,7 +115,7 @@ interactions:
       x-ratelimit-reset-tokens:
       - 0s
       x-request-id:
-      - req_281529b8942406847721dc78731db6a4
+      - req_0a6756b28d2a3ac48c548c83cebcb25d
     http_version: HTTP/1.1
     status_code: 200
 version: 1

@@ -24,8 +24,8 @@ interactions:
       content-type:
       - application/json
       cookie:
-      - __cf_bm=Jg0G7BoRPBX4M8hcoS68IF61914mtIKq.6mPgNOyCOc-1736457863-1.0.1.1-DcdeXCNEQAhe07yALccPhte0Lq4lgwiYki9DLtjftCaRatWdS1vVRBW.8sdUK58qxA0xViYhMKEAxkKAsggewA;
-        _cfuvid=Mzb0AcDjRhz_fanW9l7lmZY9o0ikr25.Gb1MupvtUuU-1736457863531-0.0.1.1-604800000
+      - __cf_bm=5dd0oBCK2P2.O5qlqIo22vvel5R5pen3nwS9BCZP4_c-1736458340-1.0.1.1-8eJQU1qGqGwpzRm.1rQZixj41dZWZvs8r7QMIe6sWtUy_7GmKSKiQk1vgfMf3AGLX0NvnGNLQ6ISiD9q2BIrng;
+        _cfuvid=6yGBUhGAml.hdCRd2VZ1Uf2F3iGzkSnwHYTM4XkxraE-1736458340460-0.0.1.1-604800000
       host:
       - api.openai.com
       user-agent:
@@ -51,40 +51,27 @@ interactions:
     method: POST
     uri: https://api.openai.com/v1/chat/completions
   response:
-    content: "{\n  \"id\": \"chatcmpl-AnuIvuNJQ3ntNli788vO7ebeQEe9r\",\n  \"object\":
-      \"chat.completion\",\n  \"created\": 1736457869,\n  \"model\": \"gpt-4o-mini-2024-07-18\",\n
+    content: "{\n  \"id\": \"chatcmpl-AnuQcbGihb1t18Q4iVMY5wvBGGNpj\",\n  \"object\":
+      \"chat.completion\",\n  \"created\": 1736458346,\n  \"model\": \"gpt-4o-mini-2024-07-18\",\n
       \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
       \"assistant\",\n        \"content\": \"I now can give a great answer  \\nFinal
-      Answer: Futel Football Club, known for its strong commitment to developing youth
-      talent and promoting community engagement, enjoys a growing reputation in regional
-      leagues. Established in [insert year], the club operates with a clear mission
-      to foster sporting excellence whilst maintaining a family-friendly environment.
-      The club\u2019s facilities include a modern training ground, well-maintained
-      pitches, and a fan-friendly stadium that regularly hosts matches drawing enthusiastic
-      crowds. \\n\\nFutel FC fields various teams across different age groups, promoting
-      not just competitive play but also teamwork and personal growth among young
-      athletes. The club\u2019s coaching staff is comprised of qualified professionals
-      who focus on not only the technical and tactical development of players but
-      also their psychological and social skills.\\n\\nBeyond the pitch, Futel Football
-      Club actively participates in community outreach programs, partnering with local
-      schools and organizations to encourage healthy lifestyles and the joy of playing
-      football. The club hosts events such as open training sessions, school visits,
-      and charity matches aimed at giving back to the community that supports them.\\n\\nWith
-      a vision for sustainable growth and continuous improvement, Futel FC is striving
-      to leave a lasting impact in the world of football, aiming for success on and
-      off the pitch. Their mission is to not only win games but to also inspire the
-      next generation of footballers.\",\n        \"refusal\": null\n      },\n      \"logprobs\":
-      null,\n      \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\":
-      177,\n    \"completion_tokens\": 260,\n    \"total_tokens\": 437,\n    \"prompt_tokens_details\":
-      {\n      \"cached_tokens\": 0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\":
-      {\n      \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\":
+      Answer: I understand the importance of providing a comprehensive response. Please
+      specify what information you need about Futel Football Club, including team
+      performance, player statistics, match schedules, history, or any recent news
+      updates. This will ensure that I can give you the most detailed and pertinent
+      information to meet your inquiry.\",\n        \"refusal\": null\n      },\n
+      \     \"logprobs\": null,\n      \"finish_reason\": \"stop\"\n    }\n  ],\n
+      \ \"usage\": {\n    \"prompt_tokens\": 177,\n    \"completion_tokens\": 70,\n
+      \   \"total_tokens\": 247,\n    \"prompt_tokens_details\": {\n      \"cached_tokens\":
+      0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\": {\n
+      \     \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\":
       0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"system_fingerprint\":
       \"fp_f2cd28694a\"\n}\n"
     headers:
       CF-Cache-Status:
       - DYNAMIC
       CF-RAY:
-      - 8ff77e909a34bfb6-ATL
+      - 8ff78a3aaad6b08e-ATL
       Connection:
       - keep-alive
       Content-Encoding:
@@ -92,7 +79,7 @@ interactions:
       Content-Type:
       - application/json
       Date:
-      - Thu, 09 Jan 2025 21:24:33 GMT
+      - Thu, 09 Jan 2025 21:32:28 GMT
       Server:
       - cloudflare
       Transfer-Encoding:
@@ -106,7 +93,7 @@ interactions:
       openai-organization:
       - crewai-iuxna1
       openai-processing-ms:
-      - '4585'
+      - '1442'
       openai-version:
       - '2020-10-01'
       strict-transport-security:
@@ -124,7 +111,7 @@ interactions:
       x-ratelimit-reset-tokens:
       - 0s
       x-request-id:
-      - req_e4c8f59f855a707f13781c49e5342a39
+      - req_e3f75b25b6479b4504840cb3f0d71f06
     http_version: HTTP/1.1
     status_code: 200
 version: 1

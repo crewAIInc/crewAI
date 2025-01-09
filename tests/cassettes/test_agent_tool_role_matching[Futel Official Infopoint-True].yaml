@@ -48,37 +48,34 @@ interactions:
     method: POST
     uri: https://api.openai.com/v1/chat/completions
   response:
-    content: "{\n  \"id\": \"chatcmpl-AnuImOrKAxPy2UnH2hquf7ruYtDcE\",\n  \"object\":
-      \"chat.completion\",\n  \"created\": 1736457860,\n  \"model\": \"gpt-4o-mini-2024-07-18\",\n
+    content: "{\n  \"id\": \"chatcmpl-AnuQT8rraJWET0TlcYMFgNVnEDUw2\",\n  \"object\":
+      \"chat.completion\",\n  \"created\": 1736458337,\n  \"model\": \"gpt-4o-mini-2024-07-18\",\n
       \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
       \"assistant\",\n        \"content\": \"I now can give a great answer  \\nFinal
-      Answer: Futel Football Club, often referred to simply as Futel, is a professional
-      football club based in [Insert City/Country], established in [Insert Year].
-      The club competes in [Insert League Name] and has a rich history that includes
-      [Insert Notable Achievements, such as championships, cup wins, etc.]. The team's
-      colors are [Insert Team Colors], and they play their home matches at [Insert
-      Stadium Name], which has a capacity of [Insert Capacity].  \\n\\nFutel is well-known
-      for its strong youth academy, which has produced several notable players who
-      have gone on to excel in both domestic and international competitions. In addition
-      to the men's team, Futel also supports a women's team and various youth programs,
-      promoting football at all levels within the community.  \\n\\nFans of Futel
-      are known for their dedicated support, creating a vibrant atmosphere during
-      matches, especially in key rivalries, such as against [Insert Rival Team]. The
-      club is committed to community engagement, often participating in local initiatives
-      and charity events. With a goal to continue developing high-caliber talent and
-      competing at the highest levels, Futel Football Club looks towards a promising
-      future.\",\n        \"refusal\": null\n      },\n      \"logprobs\": null,\n
-      \     \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\":
-      177,\n    \"completion_tokens\": 243,\n    \"total_tokens\": 420,\n    \"prompt_tokens_details\":
-      {\n      \"cached_tokens\": 0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\":
-      {\n      \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\":
+      Answer: Futel Football Club, often referred to as Futel, is a professional football
+      club that has a rich history and a dedicated fan base. We play in the competitive
+      leagues and are known for our commitment to developing young talent and upholding
+      high standards both on and off the pitch. Our facilities are state-of-the-art,
+      providing our players with the best training environment possible. Additionally,
+      our community outreach programs aim to connect with fans and foster a positive
+      relationship with the local area. Our fan engagement initiatives are designed
+      to keep supporters involved, whether through match-day experiences or interactive
+      club events. As we continue our pursuit of success on the field, we prioritize
+      teamwork, sportsmanship, and the spirit of the game in all our endeavors. For
+      more information about our fixtures, ticketing, and membership options, visit
+      our official website. Thank you for your interest in Futel Football Club!\",\n
+      \       \"refusal\": null\n      },\n      \"logprobs\": null,\n      \"finish_reason\":
+      \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 177,\n    \"completion_tokens\":
+      186,\n    \"total_tokens\": 363,\n    \"prompt_tokens_details\": {\n      \"cached_tokens\":
+      0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\": {\n
+      \     \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\":
       0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"system_fingerprint\":
       \"fp_f2cd28694a\"\n}\n"
     headers:
       CF-Cache-Status:
       - DYNAMIC
       CF-RAY:
-      - 8ff77e597819bfb6-ATL
+      - 8ff789fed842b08e-ATL
       Connection:
       - keep-alive
       Content-Encoding:
@@ -86,14 +83,14 @@ interactions:
       Content-Type:
       - application/json
       Date:
-      - Thu, 09 Jan 2025 21:24:23 GMT
+      - Thu, 09 Jan 2025 21:32:20 GMT
       Server:
       - cloudflare
       Set-Cookie:
-      - __cf_bm=Jg0G7BoRPBX4M8hcoS68IF61914mtIKq.6mPgNOyCOc-1736457863-1.0.1.1-DcdeXCNEQAhe07yALccPhte0Lq4lgwiYki9DLtjftCaRatWdS1vVRBW.8sdUK58qxA0xViYhMKEAxkKAsggewA;
-        path=/; expires=Thu, 09-Jan-25 21:54:23 GMT; domain=.api.openai.com; HttpOnly;
+      - __cf_bm=5dd0oBCK2P2.O5qlqIo22vvel5R5pen3nwS9BCZP4_c-1736458340-1.0.1.1-8eJQU1qGqGwpzRm.1rQZixj41dZWZvs8r7QMIe6sWtUy_7GmKSKiQk1vgfMf3AGLX0NvnGNLQ6ISiD9q2BIrng;
+        path=/; expires=Thu, 09-Jan-25 22:02:20 GMT; domain=.api.openai.com; HttpOnly;
         Secure; SameSite=None
-      - _cfuvid=Mzb0AcDjRhz_fanW9l7lmZY9o0ikr25.Gb1MupvtUuU-1736457863531-0.0.1.1-604800000;
+      - _cfuvid=6yGBUhGAml.hdCRd2VZ1Uf2F3iGzkSnwHYTM4XkxraE-1736458340460-0.0.1.1-604800000;
         path=/; domain=.api.openai.com; HttpOnly; Secure; SameSite=None
       Transfer-Encoding:
       - chunked
@@ -106,7 +103,7 @@ interactions:
       openai-organization:
       - crewai-iuxna1
       openai-processing-ms:
-      - '3398'
+      - '3277'
       openai-version:
       - '2020-10-01'
       strict-transport-security:
@@ -124,7 +121,7 @@ interactions:
       x-ratelimit-reset-tokens:
       - 0s
       x-request-id:
-      - req_e2438df0a2e3a39eb64f28f805e49bf0
+      - req_0643366f91f87be4f98d0dbccf8eeed6
     http_version: HTTP/1.1
     status_code: 200
 version: 1
