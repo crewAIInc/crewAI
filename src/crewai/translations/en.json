@@ -27,7 +27,7 @@
     "conversation_history_instruction": "You are a member of a crew collaborating to achieve a common goal. Your task is a specific action that contributes to this larger objective. For additional context, please review the conversation history between you and the user that led to the initiation of this crew. Use any relevant information or feedback from the conversation to inform your task execution and ensure your response aligns with both the immediate task and the crew's overall goals."
   },
   "errors": {
-    "force_final_answer_error": "You can't keep going, this was the best you could do.\n {formatted_answer.text}",
+    "force_final_answer_error": "You can't keep going, here is the best final answer you generated:\n\n {formatted_answer}",
     "force_final_answer": "Now it's time you MUST give your absolute best final answer. You'll ignore all previous instructions, stop using any tools, and just return your absolute BEST Final answer.",
     "agent_tool_unexisting_coworker": "\nError executing tool. coworker mentioned not found, it must be one of the following options:\n{coworkers}\n",
     "task_repeated_usage": "I tried reusing the same input, I must stop using this action input. I'll try something else instead.\n\n",
