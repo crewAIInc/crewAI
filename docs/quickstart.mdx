@@ -78,6 +78,56 @@ Follow the steps below to get crewing! 🚣‍♂️
     ```python crew.py
     # src/latest_ai_development/crew.py
     from crewai import Agent, Crew, Process, Task
+    from crewai.project import CrewBase, agent, crew, task
+    from crewai_tools import SerperDevTool
+
+    @CrewBase
+    class LatestAiDevelopmentCrew():
+      """LatestAiDevelopment crew"""
+
+      @agent
+      def researcher(self) -> Agent:
+        return Agent(
+          config=self.agents_config['researcher'],
+          verbose=True,
+          tools=[SerperDevTool()]
+        )
+
+      @agent
+      def reporting_analyst(self) -> Agent:
+        return Agent(
+          config=self.agents_config['reporting_analyst'],
+          verbose=True
+        )
+
+      @task
+      def research_task(self) -> Task:
+        return Task(
+          config=self.tasks_config['research_task'],
+        )
+
+      @task
+      def reporting_task(self) -> Task:
+        return Task(
+          config=self.tasks_config['reporting_task'],
+          output_file='output/report.md' # This is the file that will be contain the final report.
+        )
+
+      @crew
+      def crew(self) -> Crew:
+        """Creates the LatestAiDevelopment crew"""
+        return Crew(
+          agents=self.agents, # Automatically created by the @agent decorator
+          tasks=self.tasks, # Automatically created by the @task decorator
+          process=Process.sequential,
+          verbose=True,
+        )
+    ```
+  </Step>
+  <Step title="[Optional] Add before and after crew functions">
+    ```python crew.py
+    # src/latest_ai_development/crew.py
+    from crewai import Agent, Crew, Process, Task
     from crewai.project import CrewBase, agent, crew, task, before_kickoff, after_kickoff
     from crewai_tools import SerperDevTool
 
@@ -94,16 +144,6 @@ Follow the steps below to get crewing! 🚣‍♂️
       def after_kickoff_function(self, result):
         print(f"After kickoff function with result: {result}")
         return result # You can return the result or modify it as needed
-
-      @callback
-      def log_progress(self, task: Task, output: str):
-        """Log task completion progress."""
-        print(f"\n{'='*50}")
-        print(f"Task Completed: {task.description}")
-        print(f"Agent: {task.agent.role}")
-        print(f"Output Length: {len(output)} characters")
-        print(f"Completed at: {datetime.now().isoformat()}")
-        print(f"{'='*50}\n")
 
       # ... remaining code
     ```
