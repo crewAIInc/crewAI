@@ -68,12 +68,25 @@ class WeaviateVectorSearchTool(BaseTool):
                     model="gpt-4o",
                 )
             )
+        else:
+            import click
+
+            if click.confirm(
+                "You are missing the 'weaviate-client' package. Would you like to install it? (y/N)"
+            ):
+                import subprocess
+
+                subprocess.run(["uv", "pip", "install", "weaviate-client"], check=True)
+
+            else:
+                raise ImportError(
+                    "You are missing the 'weaviate-client' package. Would you like to install it? (y/N)"
+                )
 
     def _run(self, query: str) -> str:
         if not WEAVIATE_AVAILABLE:
             raise ImportError(
-                "The 'weaviate-client' package is required to use the WeaviateVectorSearchTool. "
-                "Please install it with: uv add weaviate-client"
+                "You are missing the 'weaviate-client' package. Would you like to install it? (y/N)"
             )
 
         if not self.weaviate_cluster_url or not self.weaviate_api_key:

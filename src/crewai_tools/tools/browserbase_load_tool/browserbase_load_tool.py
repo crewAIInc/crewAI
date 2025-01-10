@@ -11,12 +11,10 @@ class BrowserbaseLoadToolSchema(BaseModel):
 
 class BrowserbaseLoadTool(BaseTool):
     name: str = "Browserbase web load tool"
-    description: str = (
-        "Load webpages url in a headless browser using Browserbase and return the contents"
-    )
+    description: str = "Load webpages url in a headless browser using Browserbase and return the contents"
     args_schema: Type[BaseModel] = BrowserbaseLoadToolSchema
-    api_key: Optional[str] = os.getenv('BROWSERBASE_API_KEY')
-    project_id: Optional[str] = os.getenv('BROWSERBASE_PROJECT_ID')
+    api_key: Optional[str] = os.getenv("BROWSERBASE_API_KEY")
+    project_id: Optional[str] = os.getenv("BROWSERBASE_PROJECT_ID")
     text_content: Optional[bool] = False
     session_id: Optional[str] = None
     proxy: Optional[bool] = None
@@ -33,13 +31,24 @@ class BrowserbaseLoadTool(BaseTool):
     ):
         super().__init__(**kwargs)
         if not self.api_key:
-            raise EnvironmentError("BROWSERBASE_API_KEY environment variable is required for initialization")
+            raise EnvironmentError(
+                "BROWSERBASE_API_KEY environment variable is required for initialization"
+            )
         try:
             from browserbase import Browserbase  # type: ignore
         except ImportError:
-            raise ImportError(
-                "`browserbase` package not found, please run `pip install browserbase`"
-            )
+            import click
+
+            if click.confirm(
+                "`browserbase` package not found, would you like to install it?"
+            ):
+                import subprocess
+
+                subprocess.run(["uv", "add", "browserbase"], check=True)
+            else:
+                raise ImportError(
+                    "`browserbase` package not found, please run `uv add browserbase`"
+                )
 
         self.browserbase = Browserbase(api_key=self.api_key)
         self.text_content = text_content

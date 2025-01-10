@@ -4,6 +4,7 @@ from typing import Optional, Any, Union
 
 from crewai.tools import BaseTool
 
+
 class SerpApiBaseTool(BaseTool):
     """Base class for SerpApi functionality with shared capabilities."""
 
@@ -15,9 +16,18 @@ class SerpApiBaseTool(BaseTool):
         try:
             from serpapi import Client
         except ImportError:
-            raise ImportError(
-                "`serpapi` package not found, please install with `pip install serpapi`"
-            )
+            import click
+
+            if click.confirm(
+                "You are missing the 'serpapi' package. Would you like to install it? (y/N)"
+            ):
+                import subprocess
+
+                subprocess.run(["uv", "add", "serpapi"], check=True)
+            else:
+                raise ImportError(
+                    "`serpapi` package not found, please install with `uv add serpapi`"
+                )
         api_key = os.getenv("SERPAPI_API_KEY")
         if not api_key:
             raise ValueError(

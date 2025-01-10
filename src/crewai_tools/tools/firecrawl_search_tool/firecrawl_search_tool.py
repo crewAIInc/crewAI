@@ -41,9 +41,21 @@ class FirecrawlSearchTool(BaseTool):
         try:
             from firecrawl import FirecrawlApp  # type: ignore
         except ImportError:
-            raise ImportError(
-                "`firecrawl` package not found, please run `pip install firecrawl-py`"
-            )
+            import click
+
+            if click.confirm(
+                "You are missing the 'firecrawl-py' package. Would you like to install it? (y/N)"
+            ):
+                import subprocess
+
+                subprocess.run(["uv", "add", "firecrawl-py"], check=True)
+                from firecrawl import (
+                    FirecrawlApp,
+                )
+            else:
+                raise ImportError(
+                    "`firecrawl-py` package not found, please run `uv add firecrawl-py`"
+                )
 
         self.firecrawl = FirecrawlApp(api_key=api_key)
 
