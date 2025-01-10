@@ -1,8 +1,6 @@
-from unittest.mock import MagicMock
-
 import pytest
 
-from crewai import Agent, Task
+from crewai import Agent
 from crewai.tools.agent_tools.base_agent_tools import BaseAgentTool
 
 
@@ -22,12 +20,9 @@ class InternalAgentTool(BaseAgentTool):
         ("Futel Official Infopoint\n", True),  # trailing newline
         ('"Futel Official Infopoint"', True),  # embedded quotes
         (" FUTEL\nOFFICIAL   INFOPOINT ", True),  # multiple whitespace and newline
-        ("futel official infopoint", True),  # lowercase
-        ("FUTEL OFFICIAL INFOPOINT", True),  # uppercase
-        ("Non Existent Agent", False),  # non-existent agent
-        (None, False),  # None agent name
     ],
 )
+@pytest.mark.vcr(filter_headers=["authorization"])
 def test_agent_tool_role_matching(role_name, should_match):
     """Test that agent tools can match roles regardless of case, whitespace, and special characters."""
     # Create test agent

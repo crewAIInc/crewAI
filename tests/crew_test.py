@@ -1464,39 +1464,35 @@ def test_dont_set_agents_step_callback_if_already_set():
 
 @pytest.mark.vcr(filter_headers=["authorization"])
 def test_crew_function_calling_llm():
-    from unittest.mock import patch
 
+    from crewai import LLM
     from crewai.tools import tool
 
-    llm = "gpt-4o"
+    llm = LLM(model="gpt-4o-mini")
 
     @tool
-    def learn_about_AI() -> str:
-        """Useful for when you need to learn about AI to write an paragraph about it."""
-        return "AI is a very broad field."
+    def look_up_greeting() -> str:
+        """Tool used to retrieve a greeting."""
+        return "Howdy!"
 
     agent1 = Agent(
-        role="test role",
-        goal="test goal",
-        backstory="test backstory",
-        tools=[learn_about_AI],
+        role="Greeter",
+        goal="Say hello.",
+        backstory="You are a friendly greeter.",
+        tools=[look_up_greeting],
         llm="gpt-4o-mini",
         function_calling_llm=llm,
     )
 
     essay = Task(
-        description="Write and then review an small paragraph on AI until it's AMAZING",
-        expected_output="The final paragraph.",
+        description="Look up the greeting and say it.",
+        expected_output="A greeting.",
         agent=agent1,
     )
-    tasks = [essay]
-    crew = Crew(agents=[agent1], tasks=tasks)
 
-    with patch.object(
-        instructor, "from_litellm", wraps=instructor.from_litellm
-    ) as mock_from_litellm:
-        crew.kickoff()
-        mock_from_litellm.assert_called()
+    crew = Crew(agents=[agent1], tasks=[essay])
+    result = crew.kickoff()
+    assert result.raw == "Howdy!"
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
