@@ -1,12 +1,13 @@
-import os
-from typing import TYPE_CHECKING, Any, Dict, Optional, Type
+from typing import Any, Dict, Optional, Type
 
 from crewai.tools import BaseTool
 from pydantic import BaseModel, ConfigDict, Field
 
-# Type checking import
-if TYPE_CHECKING:
+
+try:
     from firecrawl import FirecrawlApp
+except ImportError:
+    FirecrawlApp = Any
 
 
 class FirecrawlCrawlWebsiteToolSchema(BaseModel):
@@ -32,33 +33,33 @@ class FirecrawlCrawlWebsiteTool(BaseTool):
 
     def __init__(self, api_key: Optional[str] = None, **kwargs):
         super().__init__(**kwargs)
+        self.api_key = api_key
+        self._initialize_firecrawl()
+
+    def _initialize_firecrawl(self) -> None:
         try:
             from firecrawl import FirecrawlApp  # type: ignore
+
+            self.firecrawl = FirecrawlApp(api_key=self.api_key)
         except ImportError:
             import click
 
             if click.confirm(
-                "You are missing the 'firecrawl-py' package. Would you like to install it? (y/N)"
+                "You are missing the 'firecrawl-py' package. Would you like to install it?"
             ):
                 import subprocess
 
-                subprocess.run(["uv", "add", "firecrawl-py"], check=True)
-                from firecrawl import (
-                    FirecrawlApp,
-                )
+                try:
+                    subprocess.run(["uv", "add", "firecrawl-py"], check=True)
+                    from firecrawl import FirecrawlApp
+
+                    self.firecrawl = FirecrawlApp(api_key=self.api_key)
+                except subprocess.CalledProcessError:
+                    raise ImportError("Failed to install firecrawl-py package")
             else:
                 raise ImportError(
                     "`firecrawl-py` package not found, please run `uv add firecrawl-py`"
                 )
-
-        if not self.firecrawl:
-            client_api_key = api_key or os.getenv("FIRECRAWL_API_KEY")
-            if not client_api_key:
-                raise ValueError(
-                    "FIRECRAWL_API_KEY is not set. Please provide it either via the constructor "
-                    "with the `api_key` argument or by setting the FIRECRAWL_API_KEY environment variable."
-                )
-            self.firecrawl = FirecrawlApp(api_key=client_api_key)
 
     def _run(
         self,
@@ -79,8 +80,10 @@ class FirecrawlCrawlWebsiteTool(BaseTool):
 try:
     from firecrawl import FirecrawlApp
 
-    # Must rebuild model after class is defined
-    FirecrawlCrawlWebsiteTool.model_rebuild()
+    # Only rebuild if the class hasn't been initialized yet
+    if not hasattr(FirecrawlCrawlWebsiteTool, "_model_rebuilt"):
+        FirecrawlCrawlWebsiteTool.model_rebuild()
+        FirecrawlCrawlWebsiteTool._model_rebuilt = True
 except ImportError:
     """
     When this tool is not used, then exception can be ignored.

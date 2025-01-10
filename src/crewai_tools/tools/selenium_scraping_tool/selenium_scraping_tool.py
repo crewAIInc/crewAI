@@ -57,6 +57,8 @@ class SeleniumScrapingTool(BaseTool):
     wait_time: Optional[int] = 3
     css_element: Optional[str] = None
     return_html: Optional[bool] = False
+    _options: Optional[dict] = None
+    _by: Optional[Any] = None
 
     def __init__(
         self,
@@ -74,7 +76,7 @@ class SeleniumScrapingTool(BaseTool):
             import click
 
             if click.confirm(
-                "You are missing the 'selenium' and 'webdriver-manager' packages. Would you like to install it? (y/N)"
+                "You are missing the 'selenium' and 'webdriver-manager' packages. Would you like to install it?"
             ):
                 import subprocess
 
@@ -90,6 +92,8 @@ class SeleniumScrapingTool(BaseTool):
                     "`selenium` and `webdriver-manager` package not found, please run `uv add selenium webdriver-manager`"
                 )
         self.driver = webdriver.Chrome()
+        self._options = Options()
+        self._by = By
         if cookie is not None:
             self.cookie = cookie
 
@@ -133,7 +137,7 @@ class SeleniumScrapingTool(BaseTool):
         return css_element is None or css_element.strip() == ""
 
     def _get_body_content(self, driver, return_html):
-        body_element = driver.find_element(By.TAG_NAME, "body")
+        body_element = driver.find_element(self._by.TAG_NAME, "body")
 
         return (
             body_element.get_attribute("outerHTML")
@@ -144,7 +148,7 @@ class SeleniumScrapingTool(BaseTool):
     def _get_elements_content(self, driver, css_element, return_html):
         elements_content = []
 
-        for element in driver.find_elements(By.CSS_SELECTOR, css_element):
+        for element in driver.find_elements(self._by.CSS_SELECTOR, css_element):
             elements_content.append(
                 element.get_attribute("outerHTML") if return_html else element.text
             )
@@ -159,7 +163,7 @@ class SeleniumScrapingTool(BaseTool):
         if not re.match(r"^https?://", url):
             raise ValueError("URL must start with http:// or https://")
 
-        options = Options()
+        options = self._options()
         options.add_argument("--headless")
         driver = self.driver(options=options)
         driver.get(url)

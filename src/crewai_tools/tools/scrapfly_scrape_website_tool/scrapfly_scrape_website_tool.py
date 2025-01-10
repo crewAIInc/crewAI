@@ -37,7 +37,7 @@ class ScrapflyScrapeWebsiteTool(BaseTool):
             import click
 
             if click.confirm(
-                "You are missing the 'scrapfly-sdk' package. Would you like to install it? (y/N)"
+                "You are missing the 'scrapfly-sdk' package. Would you like to install it?"
             ):
                 import subprocess
 

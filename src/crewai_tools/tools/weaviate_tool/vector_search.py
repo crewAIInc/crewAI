@@ -72,7 +72,7 @@ class WeaviateVectorSearchTool(BaseTool):
             import click
 
             if click.confirm(
-                "You are missing the 'weaviate-client' package. Would you like to install it? (y/N)"
+                "You are missing the 'weaviate-client' package. Would you like to install it?"
             ):
                 import subprocess
 
@@ -80,13 +80,13 @@ class WeaviateVectorSearchTool(BaseTool):
 
             else:
                 raise ImportError(
-                    "You are missing the 'weaviate-client' package. Would you like to install it? (y/N)"
+                    "You are missing the 'weaviate-client' package. Would you like to install it?"
                 )
 
     def _run(self, query: str) -> str:
         if not WEAVIATE_AVAILABLE:
             raise ImportError(
-                "You are missing the 'weaviate-client' package. Would you like to install it? (y/N)"
+                "You are missing the 'weaviate-client' package. Would you like to install it?"
             )
 
         if not self.weaviate_cluster_url or not self.weaviate_api_key:
