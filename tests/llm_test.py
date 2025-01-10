@@ -20,18 +20,14 @@ def test_llm_callback_replacement():
         messages=[{"role": "user", "content": "Hello, world!"}],
         callbacks=[calc_handler_1],
     )
-    print("result1:", result1)
     usage_metrics_1 = calc_handler_1.token_cost_process.get_summary()
-    print("usage_metrics_1:", usage_metrics_1)
 
     result2 = llm2.call(
         messages=[{"role": "user", "content": "Hello, world from another agent!"}],
         callbacks=[calc_handler_2],
     )
     sleep(5)
-    print("result2:", result2)
     usage_metrics_2 = calc_handler_2.token_cost_process.get_summary()
-    print("usage_metrics_2:", usage_metrics_2)
 
     # The first handler should not have been updated
     assert usage_metrics_1.successful_requests == 1
