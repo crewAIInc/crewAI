@@ -167,7 +167,7 @@ class ScrapegraphScrapeTool(BaseTool):
 
         try:
             # Make the SmartScraper request
-            response = self.client.smartscraper(
+            response = self._client.smartscraper(
                 website_url=website_url,
                 user_prompt=user_prompt,
             )
