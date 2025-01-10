@@ -1,4 +1,3 @@
-import threading
 import warnings
 from typing import Any, Dict, Optional
 
@@ -11,7 +10,6 @@ from crewai.agents.agent_builder.utilities.base_token_process import TokenProces
 class TokenCalcHandler(CustomLogger):
     def __init__(self, token_cost_process: Optional[TokenProcess]):
         self.token_cost_process = token_cost_process
-        self.event = threading.Event()
 
     def log_success_event(
         self,
@@ -33,8 +31,3 @@ class TokenCalcHandler(CustomLogger):
                 self.token_cost_process.sum_cached_prompt_tokens(
                     usage.prompt_tokens_details.cached_tokens
                 )
-
-    def on_llm_end(self, response):
-        # Process the response
-        self.token_cost_process.update(response)
-        self.event.set()
