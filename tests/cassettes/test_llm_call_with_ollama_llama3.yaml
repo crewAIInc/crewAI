@@ -19,16 +19,16 @@ interactions:
     method: POST
     uri: http://localhost:11434/api/generate
   response:
-    content: '{"model":"llama3.2:3b","created_at":"2025-01-10T18:38:15.765105Z","response":"I''m
-      an AI trained to assist, using a combination of natural language processing
-      and machine learning algorithms for accuracy.","done":true,"done_reason":"stop","context":[128006,9125,128007,271,38766,1303,33025,2696,25,6790,220,2366,18,271,128009,128006,882,128007,271,14711,2724,512,66454,304,220,508,4339,13,16299,1646,527,499,1980,128009,128006,78191,128007,271,40,2846,459,15592,16572,311,7945,11,1701,264,10824,315,5933,4221,8863,323,5780,6975,26249,369,13708,13],"total_duration":1419190959,"load_duration":41192875,"prompt_eval_count":39,"prompt_eval_duration":940000000,"eval_count":23,"eval_duration":436000000}'
+    content: '{"model":"llama3.2:3b","created_at":"2025-01-10T22:34:56.01157Z","response":"I''m
+      an artificial intelligence model, specifically a transformer-based language
+      model, designed to provide helpful and informative responses.","done":true,"done_reason":"stop","context":[128006,9125,128007,271,38766,1303,33025,2696,25,6790,220,2366,18,271,128009,128006,882,128007,271,14711,2724,512,66454,304,220,508,4339,13,16299,1646,527,499,1980,128009,128006,78191,128007,271,40,2846,459,21075,11478,1646,11,11951,264,43678,6108,4221,1646,11,6319,311,3493,11190,323,39319,14847,13],"total_duration":579515000,"load_duration":35352208,"prompt_eval_count":39,"prompt_eval_duration":126000000,"eval_count":23,"eval_duration":417000000}'
     headers:
       Content-Length:
-      - '698'
+      - '714'
       Content-Type:
       - application/json; charset=utf-8
       Date:
-      - Fri, 10 Jan 2025 18:38:15 GMT
+      - Fri, 10 Jan 2025 22:34:56 GMT
     http_version: HTTP/1.1
     status_code: 200
 - request:
@@ -441,7 +441,7 @@ interactions:
       Content-Type:
       - application/json; charset=utf-8
       Date:
-      - Fri, 10 Jan 2025 18:38:15 GMT
+      - Fri, 10 Jan 2025 22:34:56 GMT
       Transfer-Encoding:
       - chunked
     http_version: HTTP/1.1
@@ -856,7 +856,7 @@ interactions:
       Content-Type:
       - application/json; charset=utf-8
       Date:
-      - Fri, 10 Jan 2025 18:38:15 GMT
+      - Fri, 10 Jan 2025 22:34:56 GMT
       Transfer-Encoding:
       - chunked
     http_version: HTTP/1.1
