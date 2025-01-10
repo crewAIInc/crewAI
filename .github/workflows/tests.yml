@@ -1,26 +1,29 @@
 name: Run Tests
 
-on: [pull_request]
+on:
+  pull_request:
+  push:
+    branches:
+      - main
 
 permissions:
   contents: write
-
-env:
-  OPENAI_API_KEY: fake-api-key
 
 jobs:
   tests:
     runs-on: ubuntu-latest
     timeout-minutes: 15
+    env:
+      OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+      MODEL: gpt-4o-mini
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Install uv
+      - name: Install UV
         uses: astral-sh/setup-uv@v3
         with:
           enable-cache: true
-
 
       - name: Set up Python
         run: uv python install 3.12.8
@@ -28,5 +31,30 @@ jobs:
       - name: Install the project
         run: uv sync --dev --all-extras
 
-      - name: Run tests
-        run: uv run pytest tests -vv
+      - name: Run General Tests
+        run: uv run pytest tests -k "not main_branch_tests" -vv
+
+  main_branch_tests:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    needs: tests
+    timeout-minutes: 15
+    env:
+      OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install UV
+        uses: astral-sh/setup-uv@v3
+        with:
+          enable-cache: true
+
+      - name: Set up Python
+        run: uv python install 3.12.8
+
+      - name: Install the project
+        run: uv sync --dev --all-extras
+
+      - name: Run Main Branch Specific Tests
+        run: uv run pytest tests/main_branch_tests -vv
