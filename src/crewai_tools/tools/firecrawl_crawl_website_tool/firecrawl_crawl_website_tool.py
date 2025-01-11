@@ -2,7 +2,7 @@ import os
 from typing import TYPE_CHECKING, Any, Dict, Optional, Type
 
 from crewai.tools import BaseTool
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, PrivateAttr
 
 # Type checking import
 if TYPE_CHECKING:
@@ -28,7 +28,7 @@ class FirecrawlCrawlWebsiteTool(BaseTool):
     description: str = "Crawl webpages using Firecrawl and return the contents"
     args_schema: Type[BaseModel] = FirecrawlCrawlWebsiteToolSchema
     api_key: Optional[str] = None
-    firecrawl: Optional["FirecrawlApp"] = None
+    _firecrawl: Optional["FirecrawlApp"] = PrivateAttr(None)
 
     def __init__(self, api_key: Optional[str] = None, **kwargs):
         super().__init__(**kwargs)
@@ -39,14 +39,13 @@ class FirecrawlCrawlWebsiteTool(BaseTool):
                 "`firecrawl` package not found, please run `pip install firecrawl-py`"
             )
 
-        if not self.firecrawl:
-            client_api_key = api_key or os.getenv("FIRECRAWL_API_KEY")
-            if not client_api_key:
-                raise ValueError(
-                    "FIRECRAWL_API_KEY is not set. Please provide it either via the constructor "
-                    "with the `api_key` argument or by setting the FIRECRAWL_API_KEY environment variable."
-                )
-            self.firecrawl = FirecrawlApp(api_key=client_api_key)
+        client_api_key = api_key or os.getenv("FIRECRAWL_API_KEY")
+        if not client_api_key:
+            raise ValueError(
+                "FIRECRAWL_API_KEY is not set. Please provide it either via the constructor "
+                "with the `api_key` argument or by setting the FIRECRAWL_API_KEY environment variable."
+            )
+        self._firecrawl = FirecrawlApp(api_key=client_api_key)
 
     def _run(
         self,
@@ -61,7 +60,7 @@ class FirecrawlCrawlWebsiteTool(BaseTool):
             "crawlerOptions": crawler_options,
             "timeout": timeout,
         }
-        return self.firecrawl.crawl_url(url, options)
+        return self._firecrawl.crawl_url(url, options)
 
 
 try:

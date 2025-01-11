@@ -1,7 +1,7 @@
 from typing import TYPE_CHECKING, Optional, Type
 
 from crewai.tools import BaseTool
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, PrivateAttr
 
 # Type checking import
 if TYPE_CHECKING:
@@ -21,10 +21,10 @@ class FirecrawlScrapeWebsiteTool(BaseTool):
         arbitrary_types_allowed=True, validate_assignment=True, frozen=False
     )
     name: str = "Firecrawl web scrape tool"
-    description: str = "Scrape webpages url using Firecrawl and return the contents"
+    description: str = "Scrape webpages using Firecrawl and return the contents"
     args_schema: Type[BaseModel] = FirecrawlScrapeWebsiteToolSchema
     api_key: Optional[str] = None
-    firecrawl: Optional["FirecrawlApp"] = None  # Updated to use TYPE_CHECKING
+    _firecrawl: Optional["FirecrawlApp"] = PrivateAttr(None)
 
     def __init__(self, api_key: Optional[str] = None, **kwargs):
         super().__init__(**kwargs)
@@ -35,7 +35,7 @@ class FirecrawlScrapeWebsiteTool(BaseTool):
                 "`firecrawl` package not found, please run `pip install firecrawl-py`"
             )
 
-        self.firecrawl = FirecrawlApp(api_key=api_key)
+        self._firecrawl = FirecrawlApp(api_key=api_key)
 
     def _run(
         self,
@@ -51,7 +51,7 @@ class FirecrawlScrapeWebsiteTool(BaseTool):
             "waitFor": 0,
             "timeout": timeout,
         }
-        return self.firecrawl.scrape_url(url, options)
+        return self._firecrawl.scrape_url(url, options)
 
 
 try:
