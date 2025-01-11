@@ -36,6 +36,7 @@ class MultiOnTool(BaseTool):
                 import subprocess
 
                 subprocess.run(["uv", "add", "multion"], check=True)
+                from multion.client import MultiOn
             else:
                 raise ImportError(
                     "`multion` package not found, please run `uv add multion`"
