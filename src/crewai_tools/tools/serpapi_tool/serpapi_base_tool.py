@@ -14,7 +14,7 @@ class SerpApiBaseTool(BaseTool):
         super().__init__(**kwargs)
 
         try:
-            from serpapi import Client
+            from serpapi import Client  # type: ignore
         except ImportError:
             import click
 
@@ -24,6 +24,7 @@ class SerpApiBaseTool(BaseTool):
                 import subprocess
 
                 subprocess.run(["uv", "add", "serpapi"], check=True)
+                from serpapi import Client
             else:
                 raise ImportError(
                     "`serpapi` package not found, please install with `uv add serpapi`"
