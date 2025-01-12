@@ -512,6 +512,7 @@ class Crew(BaseModel):
         self,
         inputs: Optional[Dict[str, Any]] = None,
     ) -> CrewOutput:
+        inputs = inputs or {}
         for before_callback in self.before_kickoff_callbacks:
             inputs = before_callback(inputs)
 
