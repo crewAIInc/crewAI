@@ -14,7 +14,6 @@ from typing import (
     cast,
 )
 from uuid import uuid4
-
 from blinker import Signal
 from pydantic import BaseModel, Field, ValidationError
 
