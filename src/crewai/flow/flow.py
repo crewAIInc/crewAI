@@ -424,10 +424,17 @@ class Flow(Generic[T], metaclass=FlowMeta):
         return self._method_outputs
 
     def _initialize_state(self, inputs: Dict[str, Any]) -> None:
-        if isinstance(self._state, BaseModel):
+        if isinstance(self._state, dict):
+            # Preserve the ID when updating unstructured state
+            current_id = self._state.get("id")
+            self._state.update(inputs)
+            if current_id:
+                self._state["id"] = current_id
+            elif "id" not in self._state:
+                self._state["id"] = str(uuid4())
+        elif isinstance(self._state, BaseModel):
             # Structured state
             try:
-
                 def create_model_with_extra_forbid(
                     base_model: Type[BaseModel],
                 ) -> Type[BaseModel]:
@@ -437,16 +444,28 @@ class Flow(Generic[T], metaclass=FlowMeta):
 
                     return ModelWithExtraForbid
 
+                # Get current state as dict, preserving the ID if it exists
+                state_model = cast(BaseModel, self._state)
+                current_state = (
+                    state_model.model_dump()
+                    if hasattr(state_model, "model_dump")
+                    else state_model.dict()
+                    if hasattr(state_model, "dict")
+                    else {
+                        k: v
+                        for k, v in state_model.__dict__.items()
+                        if not k.startswith("_")
+                    }
+                )
+
                 ModelWithExtraForbid = create_model_with_extra_forbid(
                     self._state.__class__
                 )
                 self._state = cast(
-                    T, ModelWithExtraForbid(**{**self._state.model_dump(), **inputs})
+                    T, ModelWithExtraForbid(**{**current_state, **inputs})
                 )
             except ValidationError as e:
                 raise ValueError(f"Invalid inputs for structured state: {e}") from e
-        elif isinstance(self._state, dict):
-            self._state.update(inputs)
         else:
             raise TypeError("State must be a BaseModel instance or a dictionary.")
 
