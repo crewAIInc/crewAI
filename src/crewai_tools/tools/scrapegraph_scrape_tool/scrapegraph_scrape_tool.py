@@ -181,4 +181,4 @@ class ScrapegraphScrapeTool(BaseTool):
             raise RuntimeError(f"Scraping failed: {str(e)}")
         finally:
             # Always close the client
-            self.client.close()
+            self._client.close()
