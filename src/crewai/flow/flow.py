@@ -28,6 +28,7 @@ from crewai.flow.flow_visualizer import plot_flow
 from crewai.flow.utils import get_possible_return_constants
 from crewai.telemetry import Telemetry
 
+
 class FlowState(BaseModel):
     """Base model for all flow states, ensuring each state has a unique ID."""
     id: str = Field(default_factory=lambda: str(uuid4()), description="Unique identifier for the flow state")
