@@ -11,6 +11,15 @@ class HyperbrowserLoadToolSchema(BaseModel):
     params: Optional[Dict] = Field(description="Optional params for scrape or crawl. For more information on the supported params, visit https://docs.hyperbrowser.ai/reference/sdks/python/scrape#start-scrape-job-and-wait or https://docs.hyperbrowser.ai/reference/sdks/python/crawl#start-crawl-job-and-wait")
 
 class HyperbrowserLoadTool(BaseTool):
+    """HyperbrowserLoadTool.
+
+    Scrape or crawl web pages and load the contents with optional parameters for configuring content extraction.
+    Requires the `hyperbrowser` package.
+    Get your API Key from https://app.hyperbrowser.ai/
+
+    Args:
+        api_key: The Hyperbrowser API key, can be set as an environment variable `HYPERBROWSER_API_KEY` or passed directly
+    """
     name: str = "Hyperbrowser web load tool"
     description: str = "Scrape or crawl a website using Hyperbrowser and return the contents in properly formatted markdown or html"
     args_schema: Type[BaseModel] = HyperbrowserLoadToolSchema
