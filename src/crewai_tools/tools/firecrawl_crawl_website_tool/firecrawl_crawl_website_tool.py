@@ -1,7 +1,7 @@
 from typing import Any, Dict, Optional, Type
 
 from crewai.tools import BaseTool
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, PrivateAttr
 
 
 try:
@@ -29,7 +29,7 @@ class FirecrawlCrawlWebsiteTool(BaseTool):
     description: str = "Crawl webpages using Firecrawl and return the contents"
     args_schema: Type[BaseModel] = FirecrawlCrawlWebsiteToolSchema
     api_key: Optional[str] = None
-    firecrawl: Optional["FirecrawlApp"] = None
+    _firecrawl: Optional["FirecrawlApp"] = PrivateAttr(None)
 
     def __init__(self, api_key: Optional[str] = None, **kwargs):
         super().__init__(**kwargs)
@@ -74,7 +74,7 @@ class FirecrawlCrawlWebsiteTool(BaseTool):
             "crawlerOptions": crawler_options,
             "timeout": timeout,
         }
-        return self.firecrawl.crawl_url(url, options)
+        return self._firecrawl.crawl_url(url, options)
 
 
 try:

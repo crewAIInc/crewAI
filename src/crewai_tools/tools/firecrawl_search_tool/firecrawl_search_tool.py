@@ -1,7 +1,7 @@
 from typing import Any, Dict, Optional, Type
 
 from crewai.tools import BaseTool
-from pydantic import BaseModel, Field, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field, PrivateAttr
 
 # Type checking import
 try:
@@ -35,11 +35,14 @@ class FirecrawlSearchTool(BaseTool):
     model_config = ConfigDict(
         arbitrary_types_allowed=True, validate_assignment=True, frozen=False
     )
+    model_config = ConfigDict(
+        arbitrary_types_allowed=True, validate_assignment=True, frozen=False
+    )
     name: str = "Firecrawl web search tool"
     description: str = "Search webpages using Firecrawl and return the results"
     args_schema: Type[BaseModel] = FirecrawlSearchToolSchema
     api_key: Optional[str] = None
-    firecrawl: Optional["FirecrawlApp"] = None
+    _firecrawl: Optional["FirecrawlApp"] = PrivateAttr(None)
 
     def __init__(self, api_key: Optional[str] = None, **kwargs):
         super().__init__(**kwargs)
@@ -86,7 +89,6 @@ class FirecrawlSearchTool(BaseTool):
             raise RuntimeError("FirecrawlApp not properly initialized")
 
         options = {
-            "query": query,
             "limit": limit,
             "tbs": tbs,
             "lang": lang,
