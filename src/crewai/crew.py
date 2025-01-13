@@ -19,8 +19,6 @@ from pydantic import (
 )
 from pydantic_core import PydanticCustomError
 
-from chromadb.utils.embedding_functions.openai_embedding_function import OpenAIEmbeddingFunction
-
 from crewai.agent import Agent
 from crewai.agents.agent_builder.base_agent import BaseAgent
 from crewai.agents.cache import CacheHandler
@@ -138,7 +136,7 @@ class Crew(BaseModel):
         default=None,
         description="An instance of the UserMemory to be used by the Crew to store/fetch memories of a specific user.",
     )
-    embedder: Optional[Union[dict, OpenAIEmbeddingFunction]] = Field(
+    embedder: Optional[dict] = Field(
         default=None,
         description="Configuration for the embedder to be used for the crew.",
     )
