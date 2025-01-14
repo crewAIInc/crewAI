@@ -31,7 +31,43 @@ def CrewBase(cls: T) -> T:
 
         def __init__(self, *args, **kwargs):
             super().__init__(*args, **kwargs)
+            self.load_configurations()
+            self.map_all_agent_variables()
+            self.map_all_task_variables()
+            # Preserve all decorated functions
+            self._original_functions = {
+                name: method
+                for name, method in cls.__dict__.items()
+                if any(
+                    hasattr(method, attr)
+                    for attr in [
+                        "is_task",
+                        "is_agent",
+                        "is_before_kickoff",
+                        "is_after_kickoff",
+                        "is_kickoff",
+                    ]
+                )
+            }
+            # Store specific function types
+            self._original_tasks = self._filter_functions(
+                self._original_functions, "is_task"
+            )
+            self._original_agents = self._filter_functions(
+                self._original_functions, "is_agent"
+            )
+            self._before_kickoff = self._filter_functions(
+                self._original_functions, "is_before_kickoff"
+            )
+            self._after_kickoff = self._filter_functions(
+                self._original_functions, "is_after_kickoff"
+            )
+            self._kickoff = self._filter_functions(
+                self._original_functions, "is_kickoff"
+            )
 
+        def load_configurations(self):
+            """Load agent and task configurations from YAML files."""
             if isinstance(self.original_agents_config_path, str):
                 agents_config_path = (
                     self.base_directory / self.original_agents_config_path
@@ -67,42 +103,6 @@ def CrewBase(cls: T) -> T:
                     "No task configuration path provided. Proceeding with empty task configurations."
                 )
                 self.tasks_config = {}
-
-            self.map_all_agent_variables()
-            self.map_all_task_variables()
-
-            # Preserve all decorated functions
-            self._original_functions = {
-                name: method
-                for name, method in cls.__dict__.items()
-                if any(
-                    hasattr(method, attr)
-                    for attr in [
-                        "is_task",
-                        "is_agent",
-                        "is_before_kickoff",
-                        "is_after_kickoff",
-                        "is_kickoff",
-                    ]
-                )
-            }
-
-            # Store specific function types
-            self._original_tasks = self._filter_functions(
-                self._original_functions, "is_task"
-            )
-            self._original_agents = self._filter_functions(
-                self._original_functions, "is_agent"
-            )
-            self._before_kickoff = self._filter_functions(
-                self._original_functions, "is_before_kickoff"
-            )
-            self._after_kickoff = self._filter_functions(
-                self._original_functions, "is_after_kickoff"
-            )
-            self._kickoff = self._filter_functions(
-                self._original_functions, "is_kickoff"
-            )
 
         @staticmethod
         def load_yaml(config_path: Path):
