@@ -14,9 +14,10 @@ from typing import (
     Union,
     cast,
 )
+from uuid import uuid4
 
 from blinker import Signal
-from pydantic import BaseModel, ValidationError
+from pydantic import BaseModel, Field, ValidationError
 
 from crewai.flow.flow_events import (
     FlowFinishedEvent,
@@ -26,13 +27,59 @@ from crewai.flow.flow_events import (
 )
 from crewai.flow.flow_visualizer import plot_flow
 from crewai.flow.persistence import FlowPersistence
+from crewai.flow.persistence.base import FlowPersistence
 from crewai.flow.utils import get_possible_return_constants
 from crewai.telemetry import Telemetry
 
-T = TypeVar("T", bound=Union[BaseModel, Dict[str, Any]])
+
+class FlowState(BaseModel):
+    """Base model for all flow states, ensuring each state has a unique ID."""
+    id: str = Field(default_factory=lambda: str(uuid4()), description="Unique identifier for the flow state")
+
+T = TypeVar("T", bound=Union[FlowState, Dict[str, Any]])
 
 
-def start(condition=None):
+def start(condition: Optional[Union[str, dict, Callable]] = None) -> Callable:
+    """
+    Marks a method as a flow's starting point.
+
+    This decorator designates a method as an entry point for the flow execution.
+    It can optionally specify conditions that trigger the start based on other
+    method executions.
+
+    Parameters
+    ----------
+    condition : Optional[Union[str, dict, Callable]], optional
+        Defines when the start method should execute. Can be:
+        - str: Name of a method that triggers this start
+        - dict: Contains "type" ("AND"/"OR") and "methods" (list of triggers)
+        - Callable: A method reference that triggers this start
+        Default is None, meaning unconditional start.
+
+    Returns
+    -------
+    Callable
+        A decorator function that marks the method as a flow start point.
+
+    Raises
+    ------
+    ValueError
+        If the condition format is invalid.
+
+    Examples
+    --------
+    >>> @start()  # Unconditional start
+    >>> def begin_flow(self):
+    ...     pass
+
+    >>> @start("method_name")  # Start after specific method
+    >>> def conditional_start(self):
+    ...     pass
+
+    >>> @start(and_("method1", "method2"))  # Start after multiple methods
+    >>> def complex_start(self):
+    ...     pass
+    """
     def decorator(func):
         func.__is_start_method__ = True
         if condition is not None:
@@ -57,8 +104,42 @@ def start(condition=None):
 
     return decorator
 
+def listen(condition: Union[str, dict, Callable]) -> Callable:
+    """
+    Creates a listener that executes when specified conditions are met.
 
-def listen(condition):
+    This decorator sets up a method to execute in response to other method
+    executions in the flow. It supports both simple and complex triggering
+    conditions.
+
+    Parameters
+    ----------
+    condition : Union[str, dict, Callable]
+        Specifies when the listener should execute. Can be:
+        - str: Name of a method that triggers this listener
+        - dict: Contains "type" ("AND"/"OR") and "methods" (list of triggers)
+        - Callable: A method reference that triggers this listener
+
+    Returns
+    -------
+    Callable
+        A decorator function that sets up the method as a listener.
+
+    Raises
+    ------
+    ValueError
+        If the condition format is invalid.
+
+    Examples
+    --------
+    >>> @listen("process_data")  # Listen to single method
+    >>> def handle_processed_data(self):
+    ...     pass
+
+    >>> @listen(or_("success", "failure"))  # Listen to multiple methods
+    >>> def handle_completion(self):
+    ...     pass
+    """
     def decorator(func):
         if isinstance(condition, str):
             func.__trigger_methods__ = [condition]
@@ -82,10 +163,49 @@ def listen(condition):
     return decorator
 
 
-def router(condition):
+def router(condition: Union[str, dict, Callable]) -> Callable:
+    """
+    Creates a routing method that directs flow execution based on conditions.
+
+    This decorator marks a method as a router, which can dynamically determine
+    the next steps in the flow based on its return value. Routers are triggered
+    by specified conditions and can return constants that determine which path
+    the flow should take.
+
+    Parameters
+    ----------
+    condition : Union[str, dict, Callable]
+        Specifies when the router should execute. Can be:
+        - str: Name of a method that triggers this router
+        - dict: Contains "type" ("AND"/"OR") and "methods" (list of triggers)
+        - Callable: A method reference that triggers this router
+
+    Returns
+    -------
+    Callable
+        A decorator function that sets up the method as a router.
+
+    Raises
+    ------
+    ValueError
+        If the condition format is invalid.
+
+    Examples
+    --------
+    >>> @router("check_status")
+    >>> def route_based_on_status(self):
+    ...     if self.state.status == "success":
+    ...         return SUCCESS
+    ...     return FAILURE
+
+    >>> @router(and_("validate", "process"))
+    >>> def complex_routing(self):
+    ...     if all([self.state.valid, self.state.processed]):
+    ...         return CONTINUE
+    ...     return STOP
+    """
     def decorator(func):
         func.__is_router__ = True
-        # Handle conditions like listen/start
         if isinstance(condition, str):
             func.__trigger_methods__ = [condition]
             func.__condition_type__ = "OR"
@@ -107,8 +227,39 @@ def router(condition):
 
     return decorator
 
+def or_(*conditions: Union[str, dict, Callable]) -> dict:
+    """
+    Combines multiple conditions with OR logic for flow control.
 
-def or_(*conditions):
+    Creates a condition that is satisfied when any of the specified conditions
+    are met. This is used with @start, @listen, or @router decorators to create
+    complex triggering conditions.
+
+    Parameters
+    ----------
+    *conditions : Union[str, dict, Callable]
+        Variable number of conditions that can be:
+        - str: Method names
+        - dict: Existing condition dictionaries
+        - Callable: Method references
+
+    Returns
+    -------
+    dict
+        A condition dictionary with format:
+        {"type": "OR", "methods": list_of_method_names}
+
+    Raises
+    ------
+    ValueError
+        If any condition is invalid.
+
+    Examples
+    --------
+    >>> @listen(or_("success", "timeout"))
+    >>> def handle_completion(self):
+    ...     pass
+    """
     methods = []
     for condition in conditions:
         if isinstance(condition, dict) and "methods" in condition:
@@ -122,7 +273,39 @@ def or_(*conditions):
     return {"type": "OR", "methods": methods}
 
 
-def and_(*conditions):
+def and_(*conditions: Union[str, dict, Callable]) -> dict:
+    """
+    Combines multiple conditions with AND logic for flow control.
+
+    Creates a condition that is satisfied only when all specified conditions
+    are met. This is used with @start, @listen, or @router decorators to create
+    complex triggering conditions.
+
+    Parameters
+    ----------
+    *conditions : Union[str, dict, Callable]
+        Variable number of conditions that can be:
+        - str: Method names
+        - dict: Existing condition dictionaries
+        - Callable: Method references
+
+    Returns
+    -------
+    dict
+        A condition dictionary with format:
+        {"type": "AND", "methods": list_of_method_names}
+
+    Raises
+    ------
+    ValueError
+        If any condition is invalid.
+
+    Examples
+    --------
+    >>> @listen(and_("validated", "processed"))
+    >>> def handle_complete_data(self):
+    ...     pass
+    """
     methods = []
     for condition in conditions:
         if isinstance(condition, dict) and "methods" in condition:
@@ -219,9 +402,10 @@ class Flow(Generic[T], metaclass=FlowMeta):
 
         self._telemetry.flow_creation_span(self.__class__.__name__)
 
+        # Register all methods decorated with @start, @listen, or @router
         for method_name in dir(self):
-            if callable(getattr(self, method_name)) and not method_name.startswith(
-                "__"
+            if not method_name.startswith("_") and hasattr(
+                getattr(self, method_name), "__is_flow_method__"
             ):
                 self._methods[method_name] = getattr(self, method_name)
 
@@ -235,35 +419,37 @@ class Flow(Generic[T], metaclass=FlowMeta):
             ValueError: If structured state model lacks 'id' field
             TypeError: If state is neither BaseModel nor dictionary
         """
-        # Create base state
+        # Handle case where initial_state is None but we have a type parameter
         if self.initial_state is None and hasattr(self, "_initial_state_T"):
-            state = self._initial_state_T()  # type: ignore
-        elif self.initial_state is None:
-            state = cast(T, {})  # Cast empty dict to T
-        elif isinstance(self.initial_state, type):
-            state = cast(T, self.initial_state())
-        else:
-            state = cast(T, self.initial_state)
-            
-        # Ensure state has UUID
-        flow_uuid = str(uuid.uuid4())
-        
-        # Handle both state types with proper type casting
-        if isinstance(state, dict):
-            if 'id' not in state:
-                state['id'] = flow_uuid
-            return cast(T, state)
-        elif isinstance(state, BaseModel):
-            if not hasattr(state, 'id'):
-                raise ValueError(
-                    "Flow state model must have an 'id' field for persistence"
-                )
-            setattr(state, 'id', flow_uuid)
-            return cast(T, state)
-        else:
-            raise TypeError(
-                "State must be either a BaseModel instance or a dictionary"
-            )
+            state_type = getattr(self, "_initial_state_T")
+            if isinstance(state_type, type):
+                if issubclass(state_type, FlowState):
+                    return state_type()  # type: ignore
+                elif issubclass(state_type, BaseModel):
+                    # Create a new type that includes the ID field
+                    class StateWithId(state_type, FlowState):  # type: ignore
+                        pass
+                    return StateWithId()  # type: ignore
+
+        # Handle case where no initial state is provided
+        if self.initial_state is None:
+            return {"id": str(uuid4())}  # type: ignore
+
+        # Handle case where initial_state is a type (class)
+        if isinstance(self.initial_state, type):
+            if issubclass(self.initial_state, FlowState):
+                return self.initial_state()  # type: ignore
+            elif issubclass(self.initial_state, BaseModel):
+                # Create a new type that includes the ID field
+                class StateWithId(self.initial_state, FlowState):  # type: ignore
+                    pass
+                return StateWithId()  # type: ignore
+
+        # Handle dictionary case
+        if isinstance(self.initial_state, dict) and "id" not in self.initial_state:
+            self.initial_state["id"] = str(uuid4())
+
+        return self.initial_state  # type: ignore
 
     @property
     def state(self) -> T:
@@ -284,7 +470,15 @@ class Flow(Generic[T], metaclass=FlowMeta):
             ValueError: If validation fails for structured state
             TypeError: If state is neither BaseModel nor dictionary
         """
-        if isinstance(self._state, BaseModel):
+        if isinstance(self._state, dict):
+            # Preserve the ID when updating unstructured state
+            current_id = self._state.get("id")
+            self._state.update(inputs)
+            if current_id:
+                self._state["id"] = current_id
+            elif "id" not in self._state:
+                self._state["id"] = str(uuid4())
+        elif isinstance(self._state, BaseModel):
             # Structured state
             try:
                 def create_model_with_extra_forbid(
@@ -296,16 +490,28 @@ class Flow(Generic[T], metaclass=FlowMeta):
 
                     return ModelWithExtraForbid
 
+                # Get current state as dict, preserving the ID if it exists
+                state_model = cast(BaseModel, self._state)
+                current_state = (
+                    state_model.model_dump()
+                    if hasattr(state_model, "model_dump")
+                    else state_model.dict()
+                    if hasattr(state_model, "dict")
+                    else {
+                        k: v
+                        for k, v in state_model.__dict__.items()
+                        if not k.startswith("_")
+                    }
+                )
+
                 ModelWithExtraForbid = create_model_with_extra_forbid(
                     self._state.__class__
                 )
                 self._state = cast(
-                    T, ModelWithExtraForbid(**{**self._state.model_dump(), **inputs})
+                    T, ModelWithExtraForbid(**{**current_state, **inputs})
                 )
             except ValidationError as e:
                 raise ValueError(f"Invalid inputs for structured state: {e}") from e
-        elif isinstance(self._state, dict):
-            self._state.update(inputs)
         else:
             raise TypeError("State must be a BaseModel instance or a dictionary.")
             
@@ -319,6 +525,16 @@ class Flow(Generic[T], metaclass=FlowMeta):
             ValueError: If validation fails for structured state
             TypeError: If state is neither BaseModel nor dictionary
         """
+        # Ensure we preserve the ID when restoring state
+        if isinstance(self._state, dict):
+            current_id = self._state.get("id")
+            if current_id:
+                stored_state["id"] = current_id
+        elif isinstance(self._state, BaseModel) and hasattr(self._state, "id"):
+            current_id = getattr(self._state, "id")
+            if current_id:
+                stored_state["id"] = current_id
+                
         self._initialize_state(stored_state)
 
     def kickoff(self, inputs: Optional[Dict[str, Any]] = None) -> Any:
@@ -361,6 +577,23 @@ class Flow(Generic[T], metaclass=FlowMeta):
         return final_output
 
     async def _execute_start_method(self, start_method_name: str) -> None:
+        """
+        Executes a flow's start method and its triggered listeners.
+
+        This internal method handles the execution of methods marked with @start
+        decorator and manages the subsequent chain of listener executions.
+
+        Parameters
+        ----------
+        start_method_name : str
+            The name of the start method to execute.
+
+        Notes
+        -----
+        - Executes the start method and captures its result
+        - Triggers execution of any listeners waiting on this start method
+        - Part of the flow's initialization sequence
+        """
         result = await self._execute_method(
             start_method_name, self._methods[start_method_name]
         )
@@ -381,6 +614,28 @@ class Flow(Generic[T], metaclass=FlowMeta):
         return result
 
     async def _execute_listeners(self, trigger_method: str, result: Any) -> None:
+        """
+        Executes all listeners and routers triggered by a method completion.
+
+        This internal method manages the execution flow by:
+        1. First executing all triggered routers sequentially
+        2. Then executing all triggered listeners in parallel
+
+        Parameters
+        ----------
+        trigger_method : str
+            The name of the method that triggered these listeners.
+        result : Any
+            The result from the triggering method, passed to listeners
+            that accept parameters.
+
+        Notes
+        -----
+        - Routers are executed sequentially to maintain flow control
+        - Each router's result becomes the new trigger_method
+        - Normal listeners are executed in parallel for efficiency
+        - Listeners can receive the trigger method's result as a parameter
+        """
         # First, handle routers repeatedly until no router triggers anymore
         while True:
             routers_triggered = self._find_triggered_methods(
@@ -410,6 +665,33 @@ class Flow(Generic[T], metaclass=FlowMeta):
     def _find_triggered_methods(
         self, trigger_method: str, router_only: bool
     ) -> List[str]:
+        """
+        Finds all methods that should be triggered based on conditions.
+
+        This internal method evaluates both OR and AND conditions to determine
+        which methods should be executed next in the flow.
+
+        Parameters
+        ----------
+        trigger_method : str
+            The name of the method that just completed execution.
+        router_only : bool
+            If True, only consider router methods.
+            If False, only consider non-router methods.
+
+        Returns
+        -------
+        List[str]
+            Names of methods that should be triggered.
+
+        Notes
+        -----
+        - Handles both OR and AND conditions:
+          * OR: Triggers if any condition is met
+          * AND: Triggers only when all conditions are met
+        - Maintains state for AND conditions using _pending_and_listeners
+        - Separates router and normal listener evaluation
+        """
         triggered = []
         for listener_name, (condition_type, methods) in self._listeners.items():
             is_router = listener_name in self._routers
@@ -438,6 +720,33 @@ class Flow(Generic[T], metaclass=FlowMeta):
         return triggered
 
     async def _execute_single_listener(self, listener_name: str, result: Any) -> None:
+        """
+        Executes a single listener method with proper event handling.
+
+        This internal method manages the execution of an individual listener,
+        including parameter inspection, event emission, and error handling.
+
+        Parameters
+        ----------
+        listener_name : str
+            The name of the listener method to execute.
+        result : Any
+            The result from the triggering method, which may be passed
+            to the listener if it accepts parameters.
+
+        Notes
+        -----
+        - Inspects method signature to determine if it accepts the trigger result
+        - Emits events for method execution start and finish
+        - Handles errors gracefully with detailed logging
+        - Recursively triggers listeners of this listener
+        - Supports both parameterized and parameter-less listeners
+
+        Error Handling
+        -------------
+        Catches and logs any exceptions during execution, preventing
+        individual listener failures from breaking the entire flow.
+        """
         try:
             method = self._methods[listener_name]
 
