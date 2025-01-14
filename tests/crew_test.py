@@ -3477,6 +3477,7 @@ def test_crew_guardrail_feedback_in_context():
     assert task.retry_count == 1, "Task should have been retried once"
 
 
+@pytest.mark.vcr(filter_headers=["authorization"])
 def test_before_kickoff_callback():
     from crewai.project import CrewBase, agent, before_kickoff, crew, task
 
@@ -3516,7 +3517,9 @@ def test_before_kickoff_callback():
         def crew(self):
             return Crew(agents=self.agents, tasks=self.tasks)
 
-    test_crew_instance = TestCrewClass().crew()
+    test_crew_instance = TestCrewClass()
+
+    crew = test_crew_instance.crew()
 
     # Verify that the before_kickoff_callbacks are set
     assert len(crew.before_kickoff_callbacks) == 1
@@ -3525,13 +3528,14 @@ def test_before_kickoff_callback():
     inputs = {"initial": True}
 
     # Call kickoff
-    test_crew_instance.kickoff(inputs=inputs)
+    crew.kickoff(inputs=inputs)
 
     # Check that the before_kickoff function was called and modified inputs
     assert test_crew_instance.inputs_modified
     assert inputs.get("modified") == True
 
 
+@pytest.mark.vcr(filter_headers=["authorization"])
 def test_before_kickoff_without_inputs():
     from crewai.project import CrewBase, agent, before_kickoff, crew, task
 
