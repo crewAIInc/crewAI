@@ -1495,7 +1495,7 @@ def test_agent_execute_task_basic():
         role="test role",
         goal="test goal",
         backstory="test backstory",
-        llm=LLM(model="gpt-3.5-turbo"),
+        llm="gpt-4o-mini",
     )
 
     task = Task(
