@@ -1,0 +1,111 @@
+interactions:
+- request:
+    body: '{"messages": [{"role": "system", "content": "You are Test Agent. Test agent
+      backstory\nYour personal goal is: Test agent goal\nTo give my best complete
+      final answer to the task respond using the exact following format:\n\nThought:
+      I now can give a great answer\nFinal Answer: Your final answer must be the great
+      and the most complete as possible, it must be outcome described.\n\nI MUST use
+      these formats, my job depends on it!"}, {"role": "user", "content": "\nCurrent
+      Task: Test task description\n\nThis is the expect criteria for your final answer:
+      Test expected output\nyou MUST return the actual complete content as the final
+      answer, not a summary.\n\nBegin! This is VERY important to you, use the tools
+      available and give your best Final Answer, your job depends on it!\n\nThought:"}],
+      "model": "gpt-4o", "stop": ["\nObservation:"]}'
+    headers:
+      accept:
+      - application/json
+      accept-encoding:
+      - gzip, deflate
+      connection:
+      - keep-alive
+      content-length:
+      - '838'
+      content-type:
+      - application/json
+      cookie:
+      - _cfuvid=kERLxnulwhkdPi_RxnQLZV8G2Zbub8n_KYkKSL6uke8-1736877388108-0.0.1.1-604800000;
+        __cf_bm=A.PJUaUHPGyIr2pwNz44ei0seKXMH7czqXc5dA_MzD0-1736877388-1.0.1.1-jC2Lo7dl92z6qdY8mxRekSqg68TqMNsvyjPoNVXBfKNO6hHwL5BKWSBeA2i9hYWN2DBBLvHWeFXq1nXCKNcnlQ
+      host:
+      - api.openai.com
+      user-agent:
+      - OpenAI/Python 1.59.6
+      x-stainless-arch:
+      - arm64
+      x-stainless-async:
+      - 'false'
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - MacOS
+      x-stainless-package-version:
+      - 1.59.6
+      x-stainless-raw-response:
+      - 'true'
+      x-stainless-retry-count:
+      - '0'
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.12.7
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    content: "{\n  \"id\": \"chatcmpl-ApfRMtnfMV4SCUJwrE5p1tu8fmAUB\",\n  \"object\":
+      \"chat.completion\",\n  \"created\": 1736877388,\n  \"model\": \"gpt-4o-2024-08-06\",\n
+      \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
+      \"assistant\",\n        \"content\": \"I now can give a great answer  \\nFinal
+      Answer: Test expected output\",\n        \"refusal\": null\n      },\n      \"logprobs\":
+      null,\n      \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\":
+      158,\n    \"completion_tokens\": 14,\n    \"total_tokens\": 172,\n    \"prompt_tokens_details\":
+      {\n      \"cached_tokens\": 0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\":
+      {\n      \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\":
+      0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\":
+      \"default\",\n  \"system_fingerprint\": \"fp_50cad350e4\"\n}\n"
+    headers:
+      CF-Cache-Status:
+      - DYNAMIC
+      CF-RAY:
+      - 901f80bbff04bd25-ATL
+      Connection:
+      - keep-alive
+      Content-Encoding:
+      - gzip
+      Content-Type:
+      - application/json
+      Date:
+      - Tue, 14 Jan 2025 17:56:28 GMT
+      Server:
+      - cloudflare
+      Transfer-Encoding:
+      - chunked
+      X-Content-Type-Options:
+      - nosniff
+      access-control-expose-headers:
+      - X-Request-ID
+      alt-svc:
+      - h3=":443"; ma=86400
+      openai-organization:
+      - crewai-iuxna1
+      openai-processing-ms:
+      - '393'
+      openai-version:
+      - '2020-10-01'
+      strict-transport-security:
+      - max-age=31536000; includeSubDomains; preload
+      x-ratelimit-limit-requests:
+      - '10000'
+      x-ratelimit-limit-tokens:
+      - '30000000'
+      x-ratelimit-remaining-requests:
+      - '9999'
+      x-ratelimit-remaining-tokens:
+      - '29999807'
+      x-ratelimit-reset-requests:
+      - 6ms
+      x-ratelimit-reset-tokens:
+      - 0s
+      x-request-id:
+      - req_c68d3a1100516d5cc5b4aff80a8b1ff8
+    http_version: HTTP/1.1
+    status_code: 200
+version: 1
