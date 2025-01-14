@@ -676,6 +676,7 @@ class Crew(BaseModel):
         else:
             self.manager_llm = (
                 getattr(self.manager_llm, "model_name", None)
+                or getattr(self.manager_llm, "model", None)
                 or getattr(self.manager_llm, "deployment_name", None)
                 or self.manager_llm
             )
