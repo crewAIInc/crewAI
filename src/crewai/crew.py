@@ -510,9 +510,11 @@ class Crew(BaseModel):
 
     def kickoff(
         self,
-        inputs: Dict[str, Any] = {},
+        inputs: Optional[Dict[str, Any]] = None,
     ) -> CrewOutput:
         for before_callback in self.before_kickoff_callbacks:
+            if inputs is None:
+                inputs = {}
             inputs = before_callback(inputs)
 
         """Starts the crew to work on its assigned tasks."""
