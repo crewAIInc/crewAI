@@ -49,6 +49,7 @@ class FileReadTool(BaseTool):
         if file_path is not None:
             self.file_path = file_path
             self.description = f"A tool that reads file content. The default file is {file_path}, but you can provide a different 'file_path' parameter to read another file."
+            self._generate_description()
 
     def _run(
         self,
@@ -68,14 +69,3 @@ class FileReadTool(BaseTool):
         except Exception as e:
             return f"Error: Failed to read file {file_path}. {str(e)}"
 
-    def _generate_description(self) -> None:
-        """Generate the tool description based on file path.
-
-        This method updates the tool's description to include information about
-        the default file path while maintaining the ability to specify a different
-        file at runtime.
-
-        Returns:
-            None
-        """
-        self.description = f"A tool that can be used to read {self.file_path}'s content."
