@@ -35,6 +35,8 @@ class ExampleFlow(Flow):
     @start()
     def generate_city(self):
         print("Starting flow")
+        # Each flow state automatically gets a unique ID
+        print(f"Flow State ID: {self.state['id']}")
 
         response = completion(
             model=self.model,
@@ -47,6 +49,8 @@ class ExampleFlow(Flow):
         )
 
         random_city = response["choices"][0]["message"]["content"]
+        # Store the city in our state
+        self.state["city"] = random_city
         print(f"Random City: {random_city}")
 
         return random_city
@@ -64,6 +68,8 @@ class ExampleFlow(Flow):
         )
 
         fun_fact = response["choices"][0]["message"]["content"]
+        # Store the fun fact in our state
+        self.state["fun_fact"] = fun_fact
         return fun_fact
 
 
@@ -76,7 +82,15 @@ print(f"Generated fun fact: {result}")
 
 In the above example, we have created a simple Flow that generates a random city using OpenAI and then generates a fun fact about that city. The Flow consists of two tasks: `generate_city` and `generate_fun_fact`. The `generate_city` task is the starting point of the Flow, and the `generate_fun_fact` task listens for the output of the `generate_city` task.
 
-When you run the Flow, it will generate a random city and then generate a fun fact about that city. The output will be printed to the console.
+Each Flow instance automatically receives a unique identifier (UUID) in its state, which helps track and manage flow executions. The state can also store additional data (like the generated city and fun fact) that persists throughout the flow's execution.
+
+When you run the Flow, it will:
+1. Generate a unique ID for the flow state
+2. Generate a random city and store it in the state
+3. Generate a fun fact about that city and store it in the state
+4. Print the results to the console
+
+The state's unique ID and stored data can be useful for tracking flow executions and maintaining context between tasks.
 
 **Note:** Ensure you have set up your `.env` file to store your `OPENAI_API_KEY`. This key is necessary for authenticating requests to the OpenAI API.
 
@@ -207,14 +221,17 @@ allowing developers to choose the approach that best fits their application's ne
 
 In unstructured state management, all state is stored in the `state` attribute of the `Flow` class.
 This approach offers flexibility, enabling developers to add or modify state attributes on the fly without defining a strict schema.
+Even with unstructured states, CrewAI Flows automatically generates and maintains a unique identifier (UUID) for each state instance.
 
 ```python Code
 from crewai.flow.flow import Flow, listen, start
 
-class UntructuredExampleFlow(Flow):
+class UnstructuredExampleFlow(Flow):
 
     @start()
     def first_method(self):
+        # The state automatically includes an 'id' field
+        print(f"State ID: {self.state['id']}")
         self.state.message = "Hello from structured flow"
         self.state.counter = 0
 
@@ -231,9 +248,11 @@ class UntructuredExampleFlow(Flow):
         print(f"State after third_method: {self.state}")
 
 
-flow = UntructuredExampleFlow()
+flow = UnstructuredExampleFlow()
 flow.kickoff()
 ```
+
+**Note:** The `id` field is automatically generated and preserved throughout the flow's execution. You don't need to manage or set it manually, and it will be maintained even when updating the state with new data.
 
 **Key Points:**
 
@@ -245,12 +264,15 @@ flow.kickoff()
 Structured state management leverages predefined schemas to ensure consistency and type safety across the workflow.
 By using models like Pydantic's `BaseModel`, developers can define the exact shape of the state, enabling better validation and auto-completion in development environments.
 
+Each state in CrewAI Flows automatically receives a unique identifier (UUID) to help track and manage state instances. This ID is automatically generated and managed by the Flow system.
+
 ```python Code
 from crewai.flow.flow import Flow, listen, start
 from pydantic import BaseModel
 
 
 class ExampleState(BaseModel):
+    # Note: 'id' field is automatically added to all states
     counter: int = 0
     message: str = ""
 
@@ -259,6 +281,8 @@ class StructuredExampleFlow(Flow[ExampleState]):
 
     @start()
     def first_method(self):
+        # Access the auto-generated ID if needed
+        print(f"State ID: {self.state.id}")
         self.state.message = "Hello from structured flow"
 
     @listen(first_method)
