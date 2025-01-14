@@ -13,6 +13,7 @@ from typing import (
     TypeVar,
     Union,
     cast,
+    overload,
 )
 from uuid import uuid4
 
@@ -37,30 +38,28 @@ class FlowState(BaseModel):
     id: str = Field(default_factory=lambda: str(uuid4()), description="Unique identifier for the flow state")
 
 # Type variables with explicit bounds
-T = TypeVar("T", bound=Union[FlowState, Dict[str, Any]])
-DictStateType = Dict[str, Any]
-ModelStateType = TypeVar('ModelStateType', bound=BaseModel)
+T = TypeVar("T", bound=Union[Dict[str, Any], BaseModel])  # Generic flow state type parameter
+StateT = TypeVar("StateT", bound=Union[Dict[str, Any], BaseModel])  # State validation type parameter
 
-def validate_state_type(state: Any, expected_type: Type[Union[dict, BaseModel]]) -> bool:
-    """Validate that state matches expected type.
+def ensure_state_type(state: Any, expected_type: Type[StateT]) -> StateT:
+    """Ensure state matches expected type with proper validation.
     
     Args:
         state: State instance to validate
         expected_type: Expected type for the state
         
     Returns:
-        True if state matches expected type, False otherwise
+        Validated state instance
+        
+    Raises:
+        TypeError: If state doesn't match expected type
+        ValueError: If state validation fails
     """
-    if expected_type == dict:
-        return isinstance(state, dict)
-    return isinstance(state, expected_type)
-
-def ensure_state_type(state: Any, expected_type: Union[Type[dict], Type[BaseModel]]) -> T:
     """Ensure state matches expected type with proper validation.
     
     Args:
         state: State instance to validate
-        expected_type: Expected type for the state (dict or BaseModel)
+        expected_type: Expected type for the state
         
     Returns:
         Validated state instance
@@ -71,13 +70,13 @@ def ensure_state_type(state: Any, expected_type: Union[Type[dict], Type[BaseMode
     """
     if expected_type == dict:
         if not isinstance(state, dict):
-            raise TypeError("State must be a dictionary")
-        return cast(T, state)
-    elif issubclass(expected_type, BaseModel):
+            raise TypeError(f"Expected dict, got {type(state).__name__}")
+        return cast(StateT, state)
+    if isinstance(expected_type, type) and issubclass(expected_type, BaseModel):
         if not isinstance(state, expected_type):
-            raise TypeError(f"State must be instance of {expected_type.__name__}")
-        return cast(T, state)
-    raise TypeError("Expected type must be dict or BaseModel subclass")
+            raise TypeError(f"Expected {expected_type.__name__}, got {type(state).__name__}")
+        return cast(StateT, state)
+    raise TypeError(f"Invalid expected_type: {expected_type}")
 
 
 def start(condition: Optional[Union[str, dict, Callable]] = None) -> Callable:
@@ -401,6 +400,9 @@ class FlowMeta(type):
 
 
 class Flow(Generic[T], metaclass=FlowMeta):
+    """Base class for all flows.
+    
+    Type parameter T must be either Dict[str, Any] or a subclass of BaseModel."""
     _telemetry = Telemetry()
 
     _start_methods: List[str] = []
@@ -471,14 +473,6 @@ class Flow(Generic[T], metaclass=FlowMeta):
                         method = method.__get__(self, self.__class__)
                     self._methods[method_name] = method
 
-    @overload
-    def _create_initial_state(self: "Flow[DictStateType]") -> DictStateType:
-        ...
-        
-    @overload
-    def _create_initial_state(self: "Flow[ModelStateType]") -> ModelStateType:
-        ...
-    
     def _create_initial_state(self) -> T:
         """Create and initialize flow state with UUID.
         
@@ -494,45 +488,43 @@ class Flow(Generic[T], metaclass=FlowMeta):
             state_type = getattr(self, "_initial_state_T")
             if isinstance(state_type, type):
                 if issubclass(state_type, FlowState):
-                    return ensure_state_type(state_type(), state_type)
+                    return cast(T, state_type())
                 elif issubclass(state_type, BaseModel):
                     # Create a new type that includes the ID field
                     class StateWithId(state_type, FlowState):  # type: ignore
                         pass
-                    return ensure_state_type(StateWithId(), BaseModel)
+                    return cast(T, StateWithId())
                 elif state_type == dict:
-                    return ensure_state_type({"id": str(uuid4())}, dict)
+                    return cast(T, {"id": str(uuid4())})
 
         # Handle case where no initial state is provided
         if self.initial_state is None:
-            return ensure_state_type({"id": str(uuid4())}, dict)
+            return cast(T, {"id": str(uuid4())})
 
         # Handle case where initial_state is a type (class)
         if isinstance(self.initial_state, type):
             if issubclass(self.initial_state, FlowState):
-                state = self.initial_state()
-                return ensure_state_type(state, self.initial_state)
+                return cast(T, self.initial_state())
             elif issubclass(self.initial_state, BaseModel):
                 # Validate that the model has an id field
                 model_fields = getattr(self.initial_state, "model_fields", None)
                 if not model_fields or "id" not in model_fields:
                     raise ValueError("Flow state model must have an 'id' field")
-                state = self.initial_state()
-                return ensure_state_type(state, self.initial_state)
+                return cast(T, self.initial_state())
             elif self.initial_state == dict:
-                return ensure_state_type({"id": str(uuid4())}, dict)
+                return cast(T, {"id": str(uuid4())})
 
         # Handle dictionary instance case
         if isinstance(self.initial_state, dict):
             if "id" not in self.initial_state:
                 self.initial_state["id"] = str(uuid4())
-            return ensure_state_type(dict(self.initial_state), dict)  # Create new dict to avoid mutations
+            return cast(T, dict(self.initial_state))  # Create new dict to avoid mutations
 
         # Handle BaseModel instance case
         if isinstance(self.initial_state, BaseModel):
             if not hasattr(self.initial_state, "id"):
                 raise ValueError("Flow state model must have an 'id' field")
-            return ensure_state_type(self.initial_state, type(self.initial_state))
+            return cast(T, self.initial_state)
             
         raise TypeError(
             f"Initial state must be dict or BaseModel, got {type(self.initial_state)}"
