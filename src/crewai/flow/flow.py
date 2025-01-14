@@ -1,5 +1,6 @@
 import asyncio
 import inspect
+import uuid
 from typing import (
     Any,
     Callable,
@@ -24,6 +25,7 @@ from crewai.flow.flow_events import (
     MethodExecutionStartedEvent,
 )
 from crewai.flow.flow_visualizer import plot_flow
+from crewai.flow.persistence import FlowPersistence
 from crewai.flow.utils import get_possible_return_constants
 from crewai.telemetry import Telemetry
 
@@ -185,12 +187,35 @@ class Flow(Generic[T], metaclass=FlowMeta):
         _FlowGeneric.__name__ = f"{cls.__name__}[{item.__name__}]"
         return _FlowGeneric
 
-    def __init__(self) -> None:
+    def __init__(
+        self,
+        persistence: Optional[FlowPersistence] = None,
+        restore_uuid: Optional[str] = None,
+        **kwargs: Any,
+    ) -> None:
+        """Initialize a new Flow instance.
+        
+        Args:
+            persistence: Optional persistence backend for storing flow states
+            restore_uuid: Optional UUID to restore state from persistence
+            **kwargs: Additional state values to initialize or override
+        """
         self._methods: Dict[str, Callable] = {}
         self._state: T = self._create_initial_state()
         self._method_execution_counts: Dict[str, int] = {}
         self._pending_and_listeners: Dict[str, Set[str]] = {}
         self._method_outputs: List[Any] = []  # List to store all method outputs
+        self._persistence: Optional[FlowPersistence] = persistence
+
+        # First restore from persistence if requested
+        if restore_uuid and self._persistence is not None:
+            stored_state = self._persistence.load_state(restore_uuid)
+            if stored_state:
+                self._restore_state(stored_state)
+        
+        # Then apply any additional kwargs to override/update state
+        if kwargs:
+            self._initialize_state(kwargs)
 
         self._telemetry.flow_creation_span(self.__class__.__name__)
 
@@ -201,14 +226,44 @@ class Flow(Generic[T], metaclass=FlowMeta):
                 self._methods[method_name] = getattr(self, method_name)
 
     def _create_initial_state(self) -> T:
+        """Create and initialize flow state with UUID.
+        
+        Returns:
+            New state instance with UUID initialized
+            
+        Raises:
+            ValueError: If structured state model lacks 'id' field
+            TypeError: If state is neither BaseModel nor dictionary
+        """
+        # Create base state
         if self.initial_state is None and hasattr(self, "_initial_state_T"):
-            return self._initial_state_T()  # type: ignore
-        if self.initial_state is None:
-            return {}  # type: ignore
+            state = self._initial_state_T()  # type: ignore
+        elif self.initial_state is None:
+            state = cast(T, {})  # Cast empty dict to T
         elif isinstance(self.initial_state, type):
-            return self.initial_state()
+            state = cast(T, self.initial_state())
         else:
-            return self.initial_state
+            state = cast(T, self.initial_state)
+            
+        # Ensure state has UUID
+        flow_uuid = str(uuid.uuid4())
+        
+        # Handle both state types with proper type casting
+        if isinstance(state, dict):
+            if 'id' not in state:
+                state['id'] = flow_uuid
+            return cast(T, state)
+        elif isinstance(state, BaseModel):
+            if not hasattr(state, 'id'):
+                raise ValueError(
+                    "Flow state model must have an 'id' field for persistence"
+                )
+            setattr(state, 'id', flow_uuid)
+            return cast(T, state)
+        else:
+            raise TypeError(
+                "State must be either a BaseModel instance or a dictionary"
+            )
 
     @property
     def state(self) -> T:
@@ -220,10 +275,18 @@ class Flow(Generic[T], metaclass=FlowMeta):
         return self._method_outputs
 
     def _initialize_state(self, inputs: Dict[str, Any]) -> None:
+        """Initialize or update flow state with new inputs.
+        
+        Args:
+            inputs: Dictionary of state values to set/update
+            
+        Raises:
+            ValueError: If validation fails for structured state
+            TypeError: If state is neither BaseModel nor dictionary
+        """
         if isinstance(self._state, BaseModel):
             # Structured state
             try:
-
                 def create_model_with_extra_forbid(
                     base_model: Type[BaseModel],
                 ) -> Type[BaseModel]:
@@ -245,6 +308,18 @@ class Flow(Generic[T], metaclass=FlowMeta):
             self._state.update(inputs)
         else:
             raise TypeError("State must be a BaseModel instance or a dictionary.")
+            
+    def _restore_state(self, stored_state: Dict[str, Any]) -> None:
+        """Restore flow state from persistence.
+        
+        Args:
+            stored_state: Previously stored state to restore
+            
+        Raises:
+            ValueError: If validation fails for structured state
+            TypeError: If state is neither BaseModel nor dictionary
+        """
+        self._initialize_state(stored_state)
 
     def kickoff(self, inputs: Optional[Dict[str, Any]] = None) -> Any:
         self.event_emitter.send(
