@@ -1,5 +1,5 @@
 import inspect
-import logging  # Import logging module
+import logging
 from pathlib import Path
 from typing import Any, Callable, Dict, TypeVar, cast
 
@@ -8,7 +8,6 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-# Configure logging to display warnings
 logging.basicConfig(level=logging.WARNING)
 
 T = TypeVar("T", bound=type)
