@@ -3475,4 +3475,3 @@ def test_crew_guardrail_feedback_in_context():
 
     # Verify task retry count
     assert task.retry_count == 1, "Task should have been retried once"
->>>>>>> origin/main
