@@ -3360,11 +3360,6 @@ def test_multimodal_agent_live_image_analysis():
     # Verify we got a meaningful response
     assert isinstance(result.raw, str)
     assert len(result.raw) > 100  # Expecting a detailed analysis
-<<<<<<< HEAD
-    assert "error" not in result.raw.lower()  # No error messages in response
-||||||| 409892d6
-    assert "error" not in result.raw.lower()  # No error messages in response
-=======
     assert "error" not in result.raw.lower()  # No error messages in response
 
 
