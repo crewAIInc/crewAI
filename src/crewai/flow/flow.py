@@ -452,32 +452,32 @@ class Flow(Generic[T], metaclass=FlowMeta):
                         pass
                     return StateWithId()  # type: ignore
                 elif state_type == dict:
-                    return {"id": str(uuid4())}  # type: ignore
+                    return cast(T, {"id": str(uuid4())})
 
         # Handle case where no initial state is provided
         if self.initial_state is None:
-            return {"id": str(uuid4())}  # type: ignore
+            return cast(T, {"id": str(uuid4())})
 
         # Handle case where initial_state is a type (class)
         if isinstance(self.initial_state, type):
             if issubclass(self.initial_state, FlowState):
-                return self.initial_state()  # type: ignore
+                return cast(T, self.initial_state())
             elif issubclass(self.initial_state, BaseModel):
                 # Validate that the model has an id field
                 model_fields = getattr(self.initial_state, "model_fields", None)
                 if not model_fields or "id" not in model_fields:
                     raise ValueError("Flow state model must have an 'id' field")
-                return self.initial_state()  # type: ignore
+                return cast(T, self.initial_state())
             elif self.initial_state == dict:
-                return {"id": str(uuid4())}  # type: ignore
+                return cast(T, {"id": str(uuid4())})
 
         # Handle dictionary instance case
         if isinstance(self.initial_state, dict):
             if "id" not in self.initial_state:
                 self.initial_state["id"] = str(uuid4())
-            return self.initial_state
+            return cast(T, self.initial_state)
 
-        return self.initial_state  # type: ignore
+        return cast(T, self.initial_state)
 
     @property
     def state(self) -> T:
