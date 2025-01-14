@@ -40,7 +40,7 @@ class FirecrawlCrawlWebsiteTool(BaseTool):
         try:
             from firecrawl import FirecrawlApp  # type: ignore
 
-            self.firecrawl = FirecrawlApp(api_key=self.api_key)
+            self._firecrawl = FirecrawlApp(api_key=self.api_key)
         except ImportError:
             import click
 
@@ -53,7 +53,7 @@ class FirecrawlCrawlWebsiteTool(BaseTool):
                     subprocess.run(["uv", "add", "firecrawl-py"], check=True)
                     from firecrawl import FirecrawlApp
 
-                    self.firecrawl = FirecrawlApp(api_key=self.api_key)
+                    self._firecrawl = FirecrawlApp(api_key=self.api_key)
                 except subprocess.CalledProcessError:
                     raise ImportError("Failed to install firecrawl-py package")
             else:
