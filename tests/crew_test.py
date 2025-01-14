@@ -16,6 +16,7 @@ from crewai.crew import Crew
 from crewai.crews.crew_output import CrewOutput
 from crewai.memory.contextual.contextual_memory import ContextualMemory
 from crewai.process import Process
+from crewai.project import crew
 from crewai.task import Task
 from crewai.tasks.conditional_task import ConditionalTask
 from crewai.tasks.output_format import OutputFormat
@@ -1464,39 +1465,35 @@ def test_dont_set_agents_step_callback_if_already_set():
 
 @pytest.mark.vcr(filter_headers=["authorization"])
 def test_crew_function_calling_llm():
-    from unittest.mock import patch
 
+    from crewai import LLM
     from crewai.tools import tool
 
-    llm = "gpt-4o"
+    llm = LLM(model="gpt-4o-mini")
 
     @tool
-    def learn_about_AI() -> str:
-        """Useful for when you need to learn about AI to write an paragraph about it."""
-        return "AI is a very broad field."
+    def look_up_greeting() -> str:
+        """Tool used to retrieve a greeting."""
+        return "Howdy!"
 
     agent1 = Agent(
-        role="test role",
-        goal="test goal",
-        backstory="test backstory",
-        tools=[learn_about_AI],
+        role="Greeter",
+        goal="Say hello.",
+        backstory="You are a friendly greeter.",
+        tools=[look_up_greeting],
         llm="gpt-4o-mini",
         function_calling_llm=llm,
     )
 
     essay = Task(
-        description="Write and then review an small paragraph on AI until it's AMAZING",
-        expected_output="The final paragraph.",
+        description="Look up the greeting and say it.",
+        expected_output="A greeting.",
         agent=agent1,
     )
-    tasks = [essay]
-    crew = Crew(agents=[agent1], tasks=tasks)
 
-    with patch.object(
-        instructor, "from_litellm", wraps=instructor.from_litellm
-    ) as mock_from_litellm:
-        crew.kickoff()
-        mock_from_litellm.assert_called()
+    crew = Crew(agents=[agent1], tasks=[essay])
+    result = crew.kickoff()
+    assert result.raw == "Howdy!"
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
@@ -3478,3 +3475,119 @@ def test_crew_guardrail_feedback_in_context():
 
     # Verify task retry count
     assert task.retry_count == 1, "Task should have been retried once"
+
+
+@pytest.mark.vcr(filter_headers=["authorization"])
+def test_before_kickoff_callback():
+    from crewai.project import CrewBase, agent, before_kickoff, crew, task
+
+    @CrewBase
+    class TestCrewClass:
+        agents_config = None
+        tasks_config = None
+
+        def __init__(self):
+            self.inputs_modified = False
+
+        @before_kickoff
+        def modify_inputs(self, inputs):
+
+            self.inputs_modified = True
+            inputs["modified"] = True
+            return inputs
+
+        @agent
+        def my_agent(self):
+            return Agent(
+                role="Test Agent",
+                goal="Test agent goal",
+                backstory="Test agent backstory",
+            )
+
+        @task
+        def my_task(self):
+            task = Task(
+                description="Test task description",
+                expected_output="Test expected output",
+                agent=self.my_agent(),  # Use the agent instance
+            )
+            return task
+
+        @crew
+        def crew(self):
+            return Crew(agents=self.agents, tasks=self.tasks)
+
+    test_crew_instance = TestCrewClass()
+
+    crew = test_crew_instance.crew()
+
+    # Verify that the before_kickoff_callbacks are set
+    assert len(crew.before_kickoff_callbacks) == 1
+
+    # Prepare inputs
+    inputs = {"initial": True}
+
+    # Call kickoff
+    crew.kickoff(inputs=inputs)
+
+    # Check that the before_kickoff function was called and modified inputs
+    assert test_crew_instance.inputs_modified
+    assert inputs.get("modified") == True
+
+
+@pytest.mark.vcr(filter_headers=["authorization"])
+def test_before_kickoff_without_inputs():
+    from crewai.project import CrewBase, agent, before_kickoff, crew, task
+
+    @CrewBase
+    class TestCrewClass:
+        agents_config = None
+        tasks_config = None
+
+        def __init__(self):
+            self.inputs_modified = False
+            self.received_inputs = None
+
+        @before_kickoff
+        def modify_inputs(self, inputs):
+            self.inputs_modified = True
+            inputs["modified"] = True
+            self.received_inputs = inputs
+            return inputs
+
+        @agent
+        def my_agent(self):
+            return Agent(
+                role="Test Agent",
+                goal="Test agent goal",
+                backstory="Test agent backstory",
+            )
+
+        @task
+        def my_task(self):
+            return Task(
+                description="Test task description",
+                expected_output="Test expected output",
+                agent=self.my_agent(),
+            )
+
+        @crew
+        def crew(self):
+            return Crew(agents=self.agents, tasks=self.tasks)
+
+    # Instantiate the class
+    test_crew_instance = TestCrewClass()
+    # Build the crew
+    crew = test_crew_instance.crew()
+    # Verify that the before_kickoff_callback is registered
+    assert len(crew.before_kickoff_callbacks) == 1
+
+    # Call kickoff without passing inputs
+    output = crew.kickoff()
+
+    # Check that the before_kickoff function was called
+    assert test_crew_instance.inputs_modified
+
+    # Verify that the inputs were initialized and modified inside the before_kickoff method
+    assert test_crew_instance.received_inputs is not None
+    assert test_crew_instance.received_inputs.get("modified") is True

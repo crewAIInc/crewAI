@@ -47,6 +47,7 @@ from crewai.utilities.formatter import (
     aggregate_raw_outputs_from_task_outputs,
     aggregate_raw_outputs_from_tasks,
 )
+from crewai.utilities.llm_utils import create_llm
 from crewai.utilities.planning_handler import CrewPlanner
 from crewai.utilities.task_output_storage_handler import TaskOutputStorageHandler
 from crewai.utilities.training_handler import CrewTrainingHandler
@@ -149,7 +150,7 @@ class Crew(BaseModel):
     manager_agent: Optional[BaseAgent] = Field(
         description="Custom agent that will be used as manager.", default=None
     )
-    function_calling_llm: Optional[Any] = Field(
+    function_calling_llm: Optional[Union[str, InstanceOf[LLM], Any]] = Field(
         description="Language model that will run the agent.", default=None
     )
     config: Optional[Union[Json, Dict[str, Any]]] = Field(default=None)
@@ -245,15 +246,9 @@ class Crew(BaseModel):
         if self.output_log_file:
             self._file_handler = FileHandler(self.output_log_file)
         self._rpm_controller = RPMController(max_rpm=self.max_rpm, logger=self._logger)
-        if self.function_calling_llm:
-            if isinstance(self.function_calling_llm, str):
-                self.function_calling_llm = LLM(model=self.function_calling_llm)
-            elif not isinstance(self.function_calling_llm, LLM):
-                self.function_calling_llm = LLM(
-                    model=getattr(self.function_calling_llm, "model_name", None)
-                    or getattr(self.function_calling_llm, "deployment_name", None)
-                    or str(self.function_calling_llm)
-                )
+        if self.function_calling_llm and not isinstance(self.function_calling_llm, LLM):
+            self.function_calling_llm = create_llm(self.function_calling_llm)
+
         self._telemetry = Telemetry()
         self._telemetry.set_tracer()
         return self
@@ -518,6 +513,8 @@ class Crew(BaseModel):
         inputs: Optional[Dict[str, Any]] = None,
     ) -> CrewOutput:
         for before_callback in self.before_kickoff_callbacks:
+            if inputs is None:
+                inputs = {}
             inputs = before_callback(inputs)
 
         """Starts the crew to work on its assigned tasks."""
@@ -679,6 +676,7 @@ class Crew(BaseModel):
         else:
             self.manager_llm = (
                 getattr(self.manager_llm, "model_name", None)
+                or getattr(self.manager_llm, "model", None)
                 or getattr(self.manager_llm, "deployment_name", None)
                 or self.manager_llm
             )

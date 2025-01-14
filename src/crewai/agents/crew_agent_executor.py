@@ -145,8 +145,6 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
                 if self._is_context_length_exceeded(e):
                     self._handle_context_length()
                     continue
-                else:
-                    raise e
 
         self._show_logs(formatted_answer)
         return formatted_answer
@@ -316,7 +314,7 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
             agent=self.agent,
             action=agent_action,
         )
-        tool_calling = tool_usage.parse(agent_action.text)
+        tool_calling = tool_usage.parse_tool_calling(agent_action.text)
 
         if isinstance(tool_calling, ToolUsageErrorException):
             tool_result = tool_calling.message
