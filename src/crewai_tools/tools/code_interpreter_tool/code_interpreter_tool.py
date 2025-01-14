@@ -3,6 +3,7 @@ import os
 from typing import List, Optional, Type
 
 from docker import from_env as docker_from_env
+from docker import DockerClient
 from docker.models.containers import Container
 from docker.errors import ImageNotFound, NotFound
 from crewai.tools import BaseTool
@@ -43,7 +44,7 @@ class CodeInterpreterTool(BaseTool):
         Verify if the Docker image is available. Optionally use a user-provided Dockerfile.
         """
 
-        client = docker_from_env() if self.user_docker_base_url == None else docker.DockerClient(base_url=self.user_docker_base_url)
+        client = docker_from_env() if self.user_docker_base_url == None else DockerClient(base_url=self.user_docker_base_url)
 
         try:
             client.images.get(self.default_image_tag)
