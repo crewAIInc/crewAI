@@ -329,21 +329,27 @@ class FlowMeta(type):
         routers = set()
 
         for attr_name, attr_value in dct.items():
-            if hasattr(attr_value, "__is_start_method__"):
-                start_methods.append(attr_name)
+            # Check for any flow-related attributes
+            if (hasattr(attr_value, "__is_flow_method__") or
+                hasattr(attr_value, "__is_start_method__") or
+                hasattr(attr_value, "__trigger_methods__") or
+                hasattr(attr_value, "__is_router__")):
+                
+                # Register start methods
+                if hasattr(attr_value, "__is_start_method__"):
+                    start_methods.append(attr_name)
+                
+                # Register listeners and routers
                 if hasattr(attr_value, "__trigger_methods__"):
                     methods = attr_value.__trigger_methods__
                     condition_type = getattr(attr_value, "__condition_type__", "OR")
                     listeners[attr_name] = (condition_type, methods)
-            elif hasattr(attr_value, "__trigger_methods__"):
-                methods = attr_value.__trigger_methods__
-                condition_type = getattr(attr_value, "__condition_type__", "OR")
-                listeners[attr_name] = (condition_type, methods)
-                if hasattr(attr_value, "__is_router__") and attr_value.__is_router__:
-                    routers.add(attr_name)
-                    possible_returns = get_possible_return_constants(attr_value)
-                    if possible_returns:
-                        router_paths[attr_name] = possible_returns
+                    
+                    if hasattr(attr_value, "__is_router__") and attr_value.__is_router__:
+                        routers.add(attr_name)
+                        possible_returns = get_possible_return_constants(attr_value)
+                        if possible_returns:
+                            router_paths[attr_name] = possible_returns
 
         setattr(cls, "_start_methods", start_methods)
         setattr(cls, "_listeners", listeners)
@@ -383,6 +389,14 @@ class Flow(Generic[T], metaclass=FlowMeta):
             restore_uuid: Optional UUID to restore state from persistence
             **kwargs: Additional state values to initialize or override
         """
+        # Validate state model before initialization
+        if isinstance(self.initial_state, type):
+            if issubclass(self.initial_state, BaseModel) and not issubclass(self.initial_state, FlowState):
+                # Check if model has id field
+                model_fields = getattr(self.initial_state, "model_fields", None)
+                if not model_fields or "id" not in model_fields:
+                    raise ValueError("Flow state model must have an 'id' field")
+
         self._methods: Dict[str, Callable] = {}
         self._state: T = self._create_initial_state()
         self._method_execution_counts: Dict[str, int] = {}
@@ -402,12 +416,19 @@ class Flow(Generic[T], metaclass=FlowMeta):
 
         self._telemetry.flow_creation_span(self.__class__.__name__)
 
-        # Register all methods decorated with @start, @listen, or @router
+        # Register all flow-related methods
         for method_name in dir(self):
-            if not method_name.startswith("_") and hasattr(
-                getattr(self, method_name), "__is_flow_method__"
-            ):
-                self._methods[method_name] = getattr(self, method_name)
+            if not method_name.startswith("_"):
+                method = getattr(self, method_name)
+                # Check for any flow-related attributes
+                if (hasattr(method, "__is_flow_method__") or
+                    hasattr(method, "__is_start_method__") or
+                    hasattr(method, "__trigger_methods__") or
+                    hasattr(method, "__is_router__")):
+                    # Ensure method is bound to this instance
+                    if not hasattr(method, "__self__"):
+                        method = method.__get__(self, self.__class__)
+                    self._methods[method_name] = method
 
     def _create_initial_state(self) -> T:
         """Create and initialize flow state with UUID.
@@ -430,6 +451,8 @@ class Flow(Generic[T], metaclass=FlowMeta):
                     class StateWithId(state_type, FlowState):  # type: ignore
                         pass
                     return StateWithId()  # type: ignore
+                elif state_type == dict:
+                    return {"id": str(uuid4())}  # type: ignore
 
         # Handle case where no initial state is provided
         if self.initial_state is None:
@@ -440,14 +463,19 @@ class Flow(Generic[T], metaclass=FlowMeta):
             if issubclass(self.initial_state, FlowState):
                 return self.initial_state()  # type: ignore
             elif issubclass(self.initial_state, BaseModel):
-                # Create a new type that includes the ID field
-                class StateWithId(self.initial_state, FlowState):  # type: ignore
-                    pass
-                return StateWithId()  # type: ignore
+                # Validate that the model has an id field
+                model_fields = getattr(self.initial_state, "model_fields", None)
+                if not model_fields or "id" not in model_fields:
+                    raise ValueError("Flow state model must have an 'id' field")
+                return self.initial_state()  # type: ignore
+            elif self.initial_state == dict:
+                return {"id": str(uuid4())}  # type: ignore
 
-        # Handle dictionary case
-        if isinstance(self.initial_state, dict) and "id" not in self.initial_state:
-            self.initial_state["id"] = str(uuid4())
+        # Handle dictionary instance case
+        if isinstance(self.initial_state, dict):
+            if "id" not in self.initial_state:
+                self.initial_state["id"] = str(uuid4())
+            return self.initial_state
 
         return self.initial_state  # type: ignore
 
@@ -471,13 +499,20 @@ class Flow(Generic[T], metaclass=FlowMeta):
             TypeError: If state is neither BaseModel nor dictionary
         """
         if isinstance(self._state, dict):
-            # Preserve the ID when updating unstructured state
-            current_id = self._state.get("id")
-            self._state.update(inputs)
-            if current_id:
-                self._state["id"] = current_id
-            elif "id" not in self._state:
-                self._state["id"] = str(uuid4())
+            # For dict states, preserve existing ID or use provided one
+            if "id" in inputs:
+                # Create new state dict with provided ID
+                new_state = dict(inputs)
+                self._state.clear()
+                self._state.update(new_state)
+            else:
+                # Preserve existing ID if any
+                current_id = self._state.get("id")
+                self._state.update(inputs)
+                if current_id:
+                    self._state["id"] = current_id
+                elif "id" not in self._state:
+                    self._state["id"] = str(uuid4())
         elif isinstance(self._state, BaseModel):
             # Structured state
             try:
@@ -525,17 +560,16 @@ class Flow(Generic[T], metaclass=FlowMeta):
             ValueError: If validation fails for structured state
             TypeError: If state is neither BaseModel nor dictionary
         """
-        # Ensure we preserve the ID when restoring state
-        if isinstance(self._state, dict):
-            current_id = self._state.get("id")
-            if current_id:
-                stored_state["id"] = current_id
-        elif isinstance(self._state, BaseModel) and hasattr(self._state, "id"):
-            current_id = getattr(self._state, "id")
-            if current_id:
-                stored_state["id"] = current_id
-                
-        self._initialize_state(stored_state)
+        # When restoring from persistence, use the stored ID
+        stored_id = stored_state.get("id")
+        if not stored_id:
+            raise ValueError("Stored state must have an 'id' field")
+        
+        # Create a new state dict with the stored ID
+        new_state = dict(stored_state)
+        
+        # Initialize state with stored values
+        self._initialize_state(new_state)
 
     def kickoff(self, inputs: Optional[Dict[str, Any]] = None) -> Any:
         self.event_emitter.send(

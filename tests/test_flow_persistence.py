@@ -6,14 +6,13 @@ from typing import Dict, Optional
 import pytest
 from pydantic import BaseModel
 
-from crewai.flow.flow import Flow, start
+from crewai.flow.flow import Flow, FlowState, start
 from crewai.flow.persistence import FlowPersistence, persist
 from crewai.flow.persistence.sqlite import SQLiteFlowPersistence
 
 
-class TestState(BaseModel):
+class TestState(FlowState):
     """Test state model with required id field."""
-    id: Optional[str] = None
     counter: int = 0
     message: str = ""
 
@@ -24,7 +23,7 @@ def test_persist_decorator_saves_state(tmp_path):
     persistence = SQLiteFlowPersistence(db_path)
     
     class TestFlow(Flow[Dict[str, str]]):
-        initial_state = dict  # Use dict as initial state type
+        initial_state = dict()  # Use dict instance as initial state
         
         @start()
         @persist(persistence)
@@ -148,6 +147,5 @@ def test_persistence_error_handling(tmp_path):
     
     with pytest.raises(ValueError) as exc_info:
         flow = InvalidFlow(persistence=persistence)
-        flow.kickoff()
     
     assert "must have an 'id' field" in str(exc_info.value)

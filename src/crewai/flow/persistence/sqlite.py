@@ -22,6 +22,8 @@ class SQLiteFlowPersistence(FlowPersistence):
     moderate performance requirements.
     """
     
+    db_path: str  # Type annotation for instance variable
+    
     def __init__(self, db_path: Optional[str] = None):
         """Initialize SQLite persistence.
         
@@ -29,11 +31,20 @@ class SQLiteFlowPersistence(FlowPersistence):
             db_path: Path to the SQLite database file. If not provided, uses
                     CREWAI_FLOW_DB_PATH environment variable or falls back to
                     a temporary database.
+                    
+        Raises:
+            ValueError: If neither db_path nor CREWAI_FLOW_DB_PATH is provided
         """
-        self.db_path = db_path or os.getenv(
+        # Get path from argument, env var, or default
+        path = db_path or os.getenv(
             "CREWAI_FLOW_DB_PATH",
             os.path.join(tempfile.gettempdir(), "crewai_flows.db")
         )
+        
+        if not path:
+            raise ValueError("Database path must be provided")
+            
+        self.db_path = path  # Now mypy knows this is str
         self.init_db()
     
     def init_db(self) -> None:

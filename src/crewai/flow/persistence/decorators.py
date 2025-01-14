@@ -84,6 +84,9 @@ def persist(persistence: FlowPersistence):
     
     def decorator(method: Callable[..., T]) -> Callable[..., T]:
         """Decorator that handles both sync and async methods."""
+        # Mark as a flow method and preserve existing attributes
+        setattr(method, "__is_flow_method__", True)
+        
         if asyncio.iscoroutinefunction(method):
             @functools.wraps(method)
             async def async_wrapper(flow_instance: Any, *args: Any, **kwargs: Any) -> T:
@@ -92,6 +95,11 @@ def persist(persistence: FlowPersistence):
                 # Persist state after method completion
                 _persist_state(flow_instance, method.__name__)
                 return result
+            # Preserve flow-specific attributes
+            for attr in ["__is_start_method__", "__trigger_methods__", "__condition_type__", "__is_router__"]:
+                if hasattr(method, attr):
+                    setattr(async_wrapper, attr, getattr(method, attr))
+            setattr(async_wrapper, "__is_flow_method__", True)
             return cast(Callable[..., T], async_wrapper)
         else:
             @functools.wraps(method)
@@ -101,6 +109,11 @@ def persist(persistence: FlowPersistence):
                 # Persist state after method completion
                 _persist_state(flow_instance, method.__name__)
                 return result
+            # Preserve flow-specific attributes
+            for attr in ["__is_start_method__", "__trigger_methods__", "__condition_type__", "__is_router__"]:
+                if hasattr(method, attr):
+                    setattr(sync_wrapper, attr, getattr(method, attr))
+            setattr(sync_wrapper, "__is_flow_method__", True)
             return cast(Callable[..., T], sync_wrapper)
             
     return decorator
