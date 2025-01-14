@@ -45,6 +45,7 @@ class BrowserbaseLoadTool(BaseTool):
                 import subprocess
 
                 subprocess.run(["uv", "add", "browserbase"], check=True)
+                from browserbase import Browserbase  # type: ignore
             else:
                 raise ImportError(
                     "`browserbase` package not found, please run `uv add browserbase`"
