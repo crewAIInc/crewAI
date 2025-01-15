@@ -91,6 +91,7 @@
         "how-to/custom-manager-agent",
         "how-to/llm-connections",
         "how-to/customizing-agents",
+        "how-to/multimodal-agents.mdx",
         "how-to/coding-agents",
         "how-to/force-tool-output-as-result",
         "how-to/human-input-on-execution",
