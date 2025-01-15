@@ -324,7 +324,7 @@ def test_generate_model_description_dict_field():
     assert description == expected_description
 
 
-@pytest.mark.vcr(filter_headers=["authorization"])
+@pytest.mark.vcr(filter_headers=["authorization"], record_mode="new_episodes")
 def test_convert_with_instructions():
     llm = LLM(model="gpt-4o-mini")
     sample_text = "Name: Alice, Age: 30"
@@ -346,7 +346,7 @@ def test_convert_with_instructions():
     assert output.age == 30
 
 
-@pytest.mark.vcr(filter_headers=["authorization"])
+@pytest.mark.vcr(filter_headers=["authorization"], record_mode="new_episodes")
 def test_converter_with_llama3_2_model():
     llm = LLM(model="ollama/llama3.2:3b", base_url="http://localhost:11434")
 
@@ -367,7 +367,7 @@ def test_converter_with_llama3_2_model():
     assert output.age == 30
 
 
-@pytest.mark.vcr(filter_headers=["authorization"])
+@pytest.mark.vcr(filter_headers=["authorization"], record_mode="new_episodes")
 def test_converter_with_llama3_1_model():
     llm = LLM(model="ollama/llama3.1", base_url="http://localhost:11434")
     sample_text = "Name: Alice Llama, Age: 30"
@@ -387,7 +387,7 @@ def test_converter_with_llama3_1_model():
     assert output.age == 30
 
 
-@pytest.mark.vcr(filter_headers=["authorization"])
+@pytest.mark.vcr(filter_headers=["authorization"], record_mode="new_episodes")
 def test_converter_with_nested_model():
     llm = LLM(model="gpt-4o-mini")
     sample_text = "Name: John Doe\nAge: 30\nAddress: 123 Main St, Anytown, 12345"
