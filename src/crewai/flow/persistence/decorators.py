@@ -27,10 +27,9 @@ import inspect
 import logging
 from typing import Any, Callable, Dict, Optional, Type, TypeVar, Union, cast, get_type_hints
 
-from pydantic import BaseModel
-
 from crewai.flow.persistence.base import FlowPersistence
 from crewai.flow.persistence.sqlite import SQLiteFlowPersistence
+from pydantic import BaseModel
 
 logger = logging.getLogger(__name__)
 T = TypeVar("T")
