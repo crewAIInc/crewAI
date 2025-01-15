@@ -1,11 +1,7 @@
 import os
 from typing import Any, Dict, List, Optional, Union
 
-from packaging import version
-
 from crewai.cli.constants import DEFAULT_LLM_MODEL, ENV_VARS, LITELLM_PARAMS
-from crewai.cli.utils import read_toml
-from crewai.cli.version import get_crewai_version
 from crewai.llm import LLM
 
 
