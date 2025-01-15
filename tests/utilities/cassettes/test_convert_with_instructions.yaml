@@ -43,11 +43,11 @@ interactions:
     method: POST
     uri: https://api.openai.com/v1/chat/completions
   response:
-    content: "{\n  \"id\": \"chatcmpl-Aq4Nc00REwaihVvQJvmsWqCkoBiFE\",\n  \"object\":
-      \"chat.completion\",\n  \"created\": 1736973256,\n  \"model\": \"gpt-4o-mini-2024-07-18\",\n
+    content: "{\n  \"id\": \"chatcmpl-Aq4a4xDv8G0i4fbTtPJEI2B8UNBup\",\n  \"object\":
+      \"chat.completion\",\n  \"created\": 1736974028,\n  \"model\": \"gpt-4o-mini-2024-07-18\",\n
       \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
       \"assistant\",\n        \"content\": null,\n        \"tool_calls\": [\n          {\n
-      \           \"id\": \"call_ztZbQYIBZhAg7cymmyuDYTEw\",\n            \"type\":
+      \           \"id\": \"call_uO5nec8hTk1fpYINM8TUafhe\",\n            \"type\":
       \"function\",\n            \"function\": {\n              \"name\": \"SimpleModel\",\n
       \             \"arguments\": \"{\\\"name\\\":\\\"Alice\\\",\\\"age\\\":30}\"\n
       \           }\n          }\n        ],\n        \"refusal\": null\n      },\n
@@ -57,12 +57,12 @@ interactions:
       0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\": {\n
       \     \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\":
       0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\":
-      \"default\",\n  \"system_fingerprint\": \"fp_81274e7ad2\"\n}\n"
+      \"default\",\n  \"system_fingerprint\": \"fp_72ed7ab54c\"\n}\n"
     headers:
       CF-Cache-Status:
       - DYNAMIC
       CF-RAY:
-      - 9028a5463fc453b9-ATL
+      - 9028b81aeb1cb05f-ATL
       Connection:
       - keep-alive
       Content-Encoding:
@@ -70,14 +70,14 @@ interactions:
       Content-Type:
       - application/json
       Date:
-      - Wed, 15 Jan 2025 20:34:18 GMT
+      - Wed, 15 Jan 2025 20:47:08 GMT
       Server:
       - cloudflare
       Set-Cookie:
-      - __cf_bm=uSIWh8Jg4b2tBYf.jaBCB6ThRzx2SW..tEamEq3gcCw-1736973258-1.0.1.1-dv0wzzSlT9r7a5FLAkY5jUeGv7L3R_antq6dwp.PBSb.Ksvm6aHZE6In349ILXjsLUUKampjlS.WvCWcpfYxsg;
-        path=/; expires=Wed, 15-Jan-25 21:04:18 GMT; domain=.api.openai.com; HttpOnly;
+      - __cf_bm=PzayZLF04c14veGc.0ocVg3VHBbpzKRW8Hqox8L9U7c-1736974028-1.0.1.1-mZpK8.SH9l7K2z8Tvt6z.dURiVPjFqEz7zYEITfRwdr5z0razsSebZGN9IRPmI5XC_w5rbZW2Kg6hh5cenXinQ;
+        path=/; expires=Wed, 15-Jan-25 21:17:08 GMT; domain=.api.openai.com; HttpOnly;
         Secure; SameSite=None
-      - _cfuvid=fZYlufN0dvSGPKSAgyu.0581SaS5uTBcVOZNV15R8Y0-1736973258109-0.0.1.1-604800000;
+      - _cfuvid=ciwC3n2Srn20xx4JhEUeN6Ap0tNBaE44S95nIilboQ0-1736974028496-0.0.1.1-604800000;
         path=/; domain=.api.openai.com; HttpOnly; Secure; SameSite=None
       Transfer-Encoding:
       - chunked
@@ -90,7 +90,7 @@ interactions:
       openai-organization:
       - crewai-iuxna1
       openai-processing-ms:
-      - '1332'
+      - '439'
       openai-version:
       - '2020-10-01'
       strict-transport-security:
@@ -108,7 +108,7 @@ interactions:
       x-ratelimit-reset-tokens:
       - 0s
       x-request-id:
-      - req_ad6a2b36005d2c9e22f81a9c941b68b3
+      - req_a468000458b9d2848b7497b2e3d485a3
     http_version: HTTP/1.1
     status_code: 200
 version: 1

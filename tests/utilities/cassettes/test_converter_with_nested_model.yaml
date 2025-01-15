@@ -23,8 +23,8 @@ interactions:
       content-type:
       - application/json
       cookie:
-      - __cf_bm=uSIWh8Jg4b2tBYf.jaBCB6ThRzx2SW..tEamEq3gcCw-1736973258-1.0.1.1-dv0wzzSlT9r7a5FLAkY5jUeGv7L3R_antq6dwp.PBSb.Ksvm6aHZE6In349ILXjsLUUKampjlS.WvCWcpfYxsg;
-        _cfuvid=fZYlufN0dvSGPKSAgyu.0581SaS5uTBcVOZNV15R8Y0-1736973258109-0.0.1.1-604800000
+      - __cf_bm=PzayZLF04c14veGc.0ocVg3VHBbpzKRW8Hqox8L9U7c-1736974028-1.0.1.1-mZpK8.SH9l7K2z8Tvt6z.dURiVPjFqEz7zYEITfRwdr5z0razsSebZGN9IRPmI5XC_w5rbZW2Kg6hh5cenXinQ;
+        _cfuvid=ciwC3n2Srn20xx4JhEUeN6Ap0tNBaE44S95nIilboQ0-1736974028496-0.0.1.1-604800000
       host:
       - api.openai.com
       user-agent:
@@ -50,18 +50,18 @@ interactions:
     method: POST
     uri: https://api.openai.com/v1/chat/completions
   response:
-    content: "{\n  \"id\": \"chatcmpl-Aq4NrJMJbEdEZw8Mhd1ZbxMSONRiG\",\n  \"object\":
-      \"chat.completion\",\n  \"created\": 1736973271,\n  \"model\": \"gpt-4o-mini-2024-07-18\",\n
+    content: "{\n  \"id\": \"chatcmpl-Aq4aFpbhU10QK0e6Jlkxy8AUxCZCf\",\n  \"object\":
+      \"chat.completion\",\n  \"created\": 1736974039,\n  \"model\": \"gpt-4o-mini-2024-07-18\",\n
       \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
       \"assistant\",\n        \"content\": null,\n        \"tool_calls\": [\n          {\n
-      \           \"id\": \"call_vkkC5sUwbJeCIUKDkmIlOrcV\",\n            \"type\":
+      \           \"id\": \"call_N29aoGL9tN0qL2O7HI8Op2so\",\n            \"type\":
       \"function\",\n            \"function\": {\n              \"name\": \"Person\",\n
       \             \"arguments\": \"{\\\"name\\\":\\\"John Doe\\\",\\\"age\\\":30,\\\"address\\\":{\\\"street\\\":\\\"123
       Main St\\\",\\\"city\\\":\\\"Anytown\\\",\\\"zip_code\\\":\\\"12345\\\"}}\"\n
       \           }\n          }\n        ],\n        \"refusal\": null\n      },\n
       \     \"logprobs\": null,\n      \"finish_reason\": \"stop\"\n    }\n  ],\n
-      \ \"usage\": {\n    \"prompt_tokens\": 118,\n    \"completion_tokens\": 31,\n
-      \   \"total_tokens\": 149,\n    \"prompt_tokens_details\": {\n      \"cached_tokens\":
+      \ \"usage\": {\n    \"prompt_tokens\": 118,\n    \"completion_tokens\": 30,\n
+      \   \"total_tokens\": 148,\n    \"prompt_tokens_details\": {\n      \"cached_tokens\":
       0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\": {\n
       \     \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\":
       0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\":
@@ -70,7 +70,7 @@ interactions:
       CF-Cache-Status:
       - DYNAMIC
       CF-RAY:
-      - 9028a5a13e107ba0-ATL
+      - 9028b863dbaa672f-ATL
       Connection:
       - keep-alive
       Content-Encoding:
@@ -78,7 +78,7 @@ interactions:
       Content-Type:
       - application/json
       Date:
-      - Wed, 15 Jan 2025 20:34:32 GMT
+      - Wed, 15 Jan 2025 20:47:20 GMT
       Server:
       - cloudflare
       Transfer-Encoding:
@@ -92,7 +92,7 @@ interactions:
       openai-organization:
       - crewai-iuxna1
       openai-processing-ms:
-      - '880'
+      - '840'
       openai-version:
       - '2020-10-01'
       strict-transport-security:
@@ -110,7 +110,7 @@ interactions:
       x-ratelimit-reset-tokens:
       - 0s
       x-request-id:
-      - req_fe4e31d68ab25330a5ba6ae553b33b99
+      - req_2f9d1e3f0ace4944891dde05093486aa
     http_version: HTTP/1.1
     status_code: 200
 version: 1
