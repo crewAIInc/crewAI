@@ -24,8 +24,6 @@ class InternalInstructor:
         if self.agent and not self.llm:
             self.llm = self.agent.function_calling_llm or self.agent.llm
 
-        print("LLM:", self.llm)
-
         with warnings.catch_warnings():
             warnings.simplefilter("ignore", UserWarning)
             import instructor
@@ -39,10 +37,7 @@ class InternalInstructor:
 
     def to_pydantic(self):
         messages = [{"role": "user", "content": self.content}]
-
-        print("Sending messages to instructor:", messages)
         model = self._client.chat.completions.create(
             model=self.llm.model, response_model=self.model, messages=messages
         )
-        print("Model:", model)
         return model

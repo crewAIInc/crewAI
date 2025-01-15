@@ -24,10 +24,8 @@ class Converter(OutputConverter):
         """Convert text to pydantic."""
         try:
             if self.llm.supports_function_calling():
-                print("SUPPORTS FUNCTION CALLING")
                 return self._create_instructor().to_pydantic()
             else:
-                print("DOES NOT SUPPORT FUNCTION CALLING")
                 response = self.llm.call(
                     [
                         {"role": "system", "content": self.instructions},
@@ -70,11 +68,6 @@ class Converter(OutputConverter):
     def _create_instructor(self):
         """Create an instructor."""
         from crewai.utilities import InternalInstructor
-
-        print("Creating instructor")
-        print("Instructor llm:", self.llm)
-        print("Instructor model:", self.model)
-        print("Instructor text:", self.text)
 
         inst = InternalInstructor(
             llm=self.llm,
