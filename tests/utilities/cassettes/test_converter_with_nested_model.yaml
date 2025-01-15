@@ -22,6 +22,9 @@ interactions:
       - '853'
       content-type:
       - application/json
+      cookie:
+      - __cf_bm=uSIWh8Jg4b2tBYf.jaBCB6ThRzx2SW..tEamEq3gcCw-1736973258-1.0.1.1-dv0wzzSlT9r7a5FLAkY5jUeGv7L3R_antq6dwp.PBSb.Ksvm6aHZE6In349ILXjsLUUKampjlS.WvCWcpfYxsg;
+        _cfuvid=fZYlufN0dvSGPKSAgyu.0581SaS5uTBcVOZNV15R8Y0-1736973258109-0.0.1.1-604800000
       host:
       - api.openai.com
       user-agent:
@@ -47,11 +50,11 @@ interactions:
     method: POST
     uri: https://api.openai.com/v1/chat/completions
   response:
-    content: "{\n  \"id\": \"chatcmpl-Aq3eTXgo9PnYxLVZNBaCMn2eYDSaJ\",\n  \"object\":
-      \"chat.completion\",\n  \"created\": 1736970457,\n  \"model\": \"gpt-4o-mini-2024-07-18\",\n
+    content: "{\n  \"id\": \"chatcmpl-Aq4NrJMJbEdEZw8Mhd1ZbxMSONRiG\",\n  \"object\":
+      \"chat.completion\",\n  \"created\": 1736973271,\n  \"model\": \"gpt-4o-mini-2024-07-18\",\n
       \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
       \"assistant\",\n        \"content\": null,\n        \"tool_calls\": [\n          {\n
-      \           \"id\": \"call_RpWkoLm6beGRJ0dRGPuAnRan\",\n            \"type\":
+      \           \"id\": \"call_vkkC5sUwbJeCIUKDkmIlOrcV\",\n            \"type\":
       \"function\",\n            \"function\": {\n              \"name\": \"Person\",\n
       \             \"arguments\": \"{\\\"name\\\":\\\"John Doe\\\",\\\"age\\\":30,\\\"address\\\":{\\\"street\\\":\\\"123
       Main St\\\",\\\"city\\\":\\\"Anytown\\\",\\\"zip_code\\\":\\\"12345\\\"}}\"\n
@@ -67,7 +70,7 @@ interactions:
       CF-Cache-Status:
       - DYNAMIC
       CF-RAY:
-      - 902860ebfc62b07f-ATL
+      - 9028a5a13e107ba0-ATL
       Connection:
       - keep-alive
       Content-Encoding:
@@ -75,25 +78,21 @@ interactions:
       Content-Type:
       - application/json
       Date:
-      - Wed, 15 Jan 2025 19:47:37 GMT
+      - Wed, 15 Jan 2025 20:34:32 GMT
       Server:
       - cloudflare
-      Set-Cookie:
-      - __cf_bm=jtcghyWZwb3y6TRdpG.UpK2mXWkTO6U_8_9hwGSNCKk-1736970457-1.0.1.1-Ijq9zwHnMZS9Jo_d9gtYpq4Ps34oYAYgLIIgdcwt8ZQBfaf9joA4_K9gdeKJmNvFRbq6BE78V5zzUVdnWegxFQ;
-        path=/; expires=Wed, 15-Jan-25 20:17:37 GMT; domain=.api.openai.com; HttpOnly;
-        Secure; SameSite=None
-      - _cfuvid=di7sPK9Ti5_wTnwTVlDCJkC.o2RzLmElG5fE2eMxQHE-1736970457816-0.0.1.1-604800000;
-        path=/; domain=.api.openai.com; HttpOnly; Secure; SameSite=None
       Transfer-Encoding:
       - chunked
       X-Content-Type-Options:
       - nosniff
       access-control-expose-headers:
       - X-Request-ID
+      alt-svc:
+      - h3=":443"; ma=86400
       openai-organization:
       - crewai-iuxna1
       openai-processing-ms:
-      - '775'
+      - '880'
       openai-version:
       - '2020-10-01'
       strict-transport-security:
@@ -111,7 +110,7 @@ interactions:
       x-ratelimit-reset-tokens:
       - 0s
       x-request-id:
-      - req_285192ae441145eb8bf296818287e830
+      - req_fe4e31d68ab25330a5ba6ae553b33b99
     http_version: HTTP/1.1
     status_code: 200
 version: 1

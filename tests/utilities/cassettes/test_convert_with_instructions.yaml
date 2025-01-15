@@ -43,11 +43,11 @@ interactions:
     method: POST
     uri: https://api.openai.com/v1/chat/completions
   response:
-    content: "{\n  \"id\": \"chatcmpl-Aq3egXdT4xiwXgCsYQ6N0nkUDHbFC\",\n  \"object\":
-      \"chat.completion\",\n  \"created\": 1736970470,\n  \"model\": \"gpt-4o-mini-2024-07-18\",\n
+    content: "{\n  \"id\": \"chatcmpl-Aq4Nc00REwaihVvQJvmsWqCkoBiFE\",\n  \"object\":
+      \"chat.completion\",\n  \"created\": 1736973256,\n  \"model\": \"gpt-4o-mini-2024-07-18\",\n
       \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
       \"assistant\",\n        \"content\": null,\n        \"tool_calls\": [\n          {\n
-      \           \"id\": \"call_O7sGToiWaNK4ajCLfIQ06t7e\",\n            \"type\":
+      \           \"id\": \"call_ztZbQYIBZhAg7cymmyuDYTEw\",\n            \"type\":
       \"function\",\n            \"function\": {\n              \"name\": \"SimpleModel\",\n
       \             \"arguments\": \"{\\\"name\\\":\\\"Alice\\\",\\\"age\\\":30}\"\n
       \           }\n          }\n        ],\n        \"refusal\": null\n      },\n
@@ -57,12 +57,12 @@ interactions:
       0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\": {\n
       \     \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\":
       0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\":
-      \"default\",\n  \"system_fingerprint\": \"fp_bd83329f63\"\n}\n"
+      \"default\",\n  \"system_fingerprint\": \"fp_81274e7ad2\"\n}\n"
     headers:
       CF-Cache-Status:
       - DYNAMIC
       CF-RAY:
-      - 9028613d5c696768-ATL
+      - 9028a5463fc453b9-ATL
       Connection:
       - keep-alive
       Content-Encoding:
@@ -70,14 +70,14 @@ interactions:
       Content-Type:
       - application/json
       Date:
-      - Wed, 15 Jan 2025 19:47:50 GMT
+      - Wed, 15 Jan 2025 20:34:18 GMT
       Server:
       - cloudflare
       Set-Cookie:
-      - __cf_bm=iUW9E8OmkKZ2nhAjW.ziX119ocQUwzrTJnhoBaor9bc-1736970470-1.0.1.1-lfjOTfd_J.D_c6jXtYbr5cjteE24ZVWTZetAyB_UakxO10fvb6vdmdr8I5VBwzsRPOFNCokweMI5OOkcZv13.A;
-        path=/; expires=Wed, 15-Jan-25 20:17:50 GMT; domain=.api.openai.com; HttpOnly;
+      - __cf_bm=uSIWh8Jg4b2tBYf.jaBCB6ThRzx2SW..tEamEq3gcCw-1736973258-1.0.1.1-dv0wzzSlT9r7a5FLAkY5jUeGv7L3R_antq6dwp.PBSb.Ksvm6aHZE6In349ILXjsLUUKampjlS.WvCWcpfYxsg;
+        path=/; expires=Wed, 15-Jan-25 21:04:18 GMT; domain=.api.openai.com; HttpOnly;
         Secure; SameSite=None
-      - _cfuvid=v5UoY27cu_inHKOe8kFZcJ354xnY2tWMBIq2lNaLlsM-1736970470409-0.0.1.1-604800000;
+      - _cfuvid=fZYlufN0dvSGPKSAgyu.0581SaS5uTBcVOZNV15R8Y0-1736973258109-0.0.1.1-604800000;
         path=/; domain=.api.openai.com; HttpOnly; Secure; SameSite=None
       Transfer-Encoding:
       - chunked
@@ -85,10 +85,12 @@ interactions:
       - nosniff
       access-control-expose-headers:
       - X-Request-ID
+      alt-svc:
+      - h3=":443"; ma=86400
       openai-organization:
       - crewai-iuxna1
       openai-processing-ms:
-      - '349'
+      - '1332'
       openai-version:
       - '2020-10-01'
       strict-transport-security:
@@ -106,7 +108,7 @@ interactions:
       x-ratelimit-reset-tokens:
       - 0s
       x-request-id:
-      - req_79991c86e6dbde27fea42cec0d153179
+      - req_ad6a2b36005d2c9e22f81a9c941b68b3
     http_version: HTTP/1.1
     status_code: 200
 version: 1
