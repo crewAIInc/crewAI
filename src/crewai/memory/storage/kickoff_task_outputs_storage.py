@@ -43,10 +43,9 @@ class KickoffTaskOutputsSQLiteStorage:
 
                 conn.commit()
         except sqlite3.Error as e:
-            self._printer.print(
-                content=f"SAVING KICKOFF TASK OUTPUTS ERROR: An error occurred during database initialization: {e}",
-                color="red",
-            )
+            error_msg = f"Database initialization error: {e}"
+            self._printer.print(content=error_msg, color="red")
+            raise RuntimeError(error_msg)
 
     def add(
         self,
@@ -76,10 +75,9 @@ class KickoffTaskOutputsSQLiteStorage:
                 )
                 conn.commit()
         except sqlite3.Error as e:
-            self._printer.print(
-                content=f"SAVING KICKOFF TASK OUTPUTS ERROR: An error occurred during database initialization: {e}",
-                color="red",
-            )
+            error_msg = f"Error saving task outputs: {e}"
+            self._printer.print(content=error_msg, color="red")
+            raise RuntimeError(error_msg)
 
     def update(
         self,
@@ -115,7 +113,9 @@ class KickoffTaskOutputsSQLiteStorage:
                         color="red",
                     )
         except sqlite3.Error as e:
-            self._printer.print(f"UPDATE KICKOFF TASK OUTPUTS ERROR: {e}", color="red")
+            error_msg = f"Error updating task outputs: {e}"
+            self._printer.print(content=error_msg, color="red")
+            raise RuntimeError(error_msg)
 
     def load(self) -> Optional[List[Dict[str, Any]]]:
         try:
@@ -144,11 +144,9 @@ class KickoffTaskOutputsSQLiteStorage:
                 return results
 
         except sqlite3.Error as e:
-            self._printer.print(
-                content=f"LOADING KICKOFF TASK OUTPUTS ERROR: An error occurred while querying kickoff task outputs: {e}",
-                color="red",
-            )
-            return None
+            error_msg = f"Error loading task outputs: {e}"
+            self._printer.print(content=error_msg, color="red")
+            raise RuntimeError(error_msg)
 
     def delete_all(self):
         """
@@ -160,7 +158,6 @@ class KickoffTaskOutputsSQLiteStorage:
                 cursor.execute("DELETE FROM latest_kickoff_task_outputs")
                 conn.commit()
         except sqlite3.Error as e:
-            self._printer.print(
-                content=f"ERROR: Failed to delete all kickoff task outputs: {e}",
-                color="red",
-            )
+            error_msg = f"Error deleting task outputs: {e}"
+            self._printer.print(content=error_msg, color="red")
+            raise RuntimeError(error_msg)
