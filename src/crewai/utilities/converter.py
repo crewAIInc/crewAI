@@ -24,19 +24,28 @@ class Converter(OutputConverter):
         """Convert text to pydantic."""
         try:
             if self.llm.supports_function_calling():
+                print("SUPPORTS FUNCTION CALLING")
                 return self._create_instructor().to_pydantic()
             else:
-                return self.llm.call(
+                print("DOES NOT SUPPORT FUNCTION CALLING")
+                response = self.llm.call(
                     [
                         {"role": "system", "content": self.instructions},
                         {"role": "user", "content": self.text},
                     ]
                 )
+                return self.model.model_validate_json(response)
+        except ValidationError as e:
+            if current_attempt < self.max_attempts:
+                return self.to_pydantic(current_attempt + 1)
+            raise ConverterError(
+                f"Failed to convert text into a Pydantic model due to the following validation error: {e}"
+            )
         except Exception as e:
             if current_attempt < self.max_attempts:
                 return self.to_pydantic(current_attempt + 1)
-            return ConverterError(
-                f"Failed to convert text into a pydantic model due to the following error: {e}"
+            raise ConverterError(
+                f"Failed to convert text into a Pydantic model due to the following error: {e}"
             )
 
     def to_json(self, current_attempt=1):
@@ -62,11 +71,15 @@ class Converter(OutputConverter):
         """Create an instructor."""
         from crewai.utilities import InternalInstructor
 
+        print("Creating instructor")
+        print("Instructor llm:", self.llm)
+        print("Instructor model:", self.model)
+        print("Instructor text:", self.text)
+
         inst = InternalInstructor(
             llm=self.llm,
             model=self.model,
             content=self.text,
-            instructions=self.instructions,
         )
         return inst
 
@@ -187,10 +200,15 @@ def convert_with_instructions(
 
 
 def get_conversion_instructions(model: Type[BaseModel], llm: Any) -> str:
-    instructions = "I'm gonna convert this raw text into valid JSON."
+    instructions = "Please convert the following text into valid JSON."
     if llm.supports_function_calling():
         model_schema = PydanticSchemaParser(model=model).get_schema()
-        instructions = f"{instructions}\n\nThe json should have the following structure, with the following keys:\n{model_schema}"
+        instructions += (
+            f"\n\nThe JSON should follow this schema:\n```json\n{model_schema}\n```"
+        )
+    else:
+        model_description = generate_model_description(model)
+        instructions += f"\n\nThe JSON should follow this format:\n{model_description}"
     return instructions
 
 
