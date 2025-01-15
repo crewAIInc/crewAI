@@ -513,6 +513,8 @@ class Crew(BaseModel):
         inputs: Optional[Dict[str, Any]] = None,
     ) -> CrewOutput:
         for before_callback in self.before_kickoff_callbacks:
+            if inputs is None:
+                inputs = {}
             inputs = before_callback(inputs)
 
         """Starts the crew to work on its assigned tasks."""
@@ -674,6 +676,7 @@ class Crew(BaseModel):
         else:
             self.manager_llm = (
                 getattr(self.manager_llm, "model_name", None)
+                or getattr(self.manager_llm, "model", None)
                 or getattr(self.manager_llm, "deployment_name", None)
                 or self.manager_llm
             )
