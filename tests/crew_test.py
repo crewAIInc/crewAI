@@ -16,6 +16,7 @@ from crewai.crew import Crew
 from crewai.crews.crew_output import CrewOutput
 from crewai.memory.contextual.contextual_memory import ContextualMemory
 from crewai.process import Process
+from crewai.project import crew
 from crewai.task import Task
 from crewai.tasks.conditional_task import ConditionalTask
 from crewai.tasks.output_format import OutputFormat
@@ -3475,3 +3476,119 @@ def test_crew_guardrail_feedback_in_context():
 
     # Verify task retry count
     assert task.retry_count == 1, "Task should have been retried once"
+
+
+@pytest.mark.vcr(filter_headers=["authorization"])
+def test_before_kickoff_callback():
+    from crewai.project import CrewBase, agent, before_kickoff, crew, task
+
+    @CrewBase
+    class TestCrewClass:
+        agents_config = None
+        tasks_config = None
+
+        def __init__(self):
+            self.inputs_modified = False
+
+        @before_kickoff
+        def modify_inputs(self, inputs):
+
+            self.inputs_modified = True
+            inputs["modified"] = True
+            return inputs
+
+        @agent
+        def my_agent(self):
+            return Agent(
+                role="Test Agent",
+                goal="Test agent goal",
+                backstory="Test agent backstory",
+            )
+
+        @task
+        def my_task(self):
+            task = Task(
+                description="Test task description",
+                expected_output="Test expected output",
+                agent=self.my_agent(),  # Use the agent instance
+            )
+            return task
+
+        @crew
+        def crew(self):
+            return Crew(agents=self.agents, tasks=self.tasks)
+
+    test_crew_instance = TestCrewClass()
+
+    crew = test_crew_instance.crew()
+
+    # Verify that the before_kickoff_callbacks are set
+    assert len(crew.before_kickoff_callbacks) == 1
+
+    # Prepare inputs
+    inputs = {"initial": True}
+
+    # Call kickoff
+    crew.kickoff(inputs=inputs)
+
+    # Check that the before_kickoff function was called and modified inputs
+    assert test_crew_instance.inputs_modified
+    assert inputs.get("modified") == True
+
+
+@pytest.mark.vcr(filter_headers=["authorization"])
+def test_before_kickoff_without_inputs():
+    from crewai.project import CrewBase, agent, before_kickoff, crew, task
+
+    @CrewBase
+    class TestCrewClass:
+        agents_config = None
+        tasks_config = None
+
+        def __init__(self):
+            self.inputs_modified = False
+            self.received_inputs = None
+
+        @before_kickoff
+        def modify_inputs(self, inputs):
+            self.inputs_modified = True
+            inputs["modified"] = True
+            self.received_inputs = inputs
+            return inputs
+
+        @agent
+        def my_agent(self):
+            return Agent(
+                role="Test Agent",
+                goal="Test agent goal",
+                backstory="Test agent backstory",
+            )
+
+        @task
+        def my_task(self):
+            return Task(
+                description="Test task description",
+                expected_output="Test expected output",
+                agent=self.my_agent(),
+            )
+
+        @crew
+        def crew(self):
+            return Crew(agents=self.agents, tasks=self.tasks)
+
+    # Instantiate the class
+    test_crew_instance = TestCrewClass()
+    # Build the crew
+    crew = test_crew_instance.crew()
+    # Verify that the before_kickoff_callback is registered
+    assert len(crew.before_kickoff_callbacks) == 1
+
+    # Call kickoff without passing inputs
+    output = crew.kickoff()
+
+    # Check that the before_kickoff function was called
+    assert test_crew_instance.inputs_modified
+
+    # Verify that the inputs were initialized and modified inside the before_kickoff method
+    assert test_crew_instance.received_inputs is not None
+    assert test_crew_instance.received_inputs.get("modified") is True
