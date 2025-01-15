@@ -472,8 +472,8 @@ class Flow(Generic[T], metaclass=FlowMeta):
         
         # Initialize state based on persistence and kwargs
         if stored_state:
-            # Create minimal state and restore from persistence
-            self._state = self._create_empty_state()
+            # Create initial state and restore from persistence
+            self._state = self._create_initial_state()
             self._restore_state(stored_state)
             # Apply any additional kwargs to override specific fields
             if kwargs:
@@ -503,47 +503,7 @@ class Flow(Generic[T], metaclass=FlowMeta):
                         method = method.__get__(self, self.__class__)
                     self._methods[method_name] = method
 
-    def _create_empty_state(self) -> T:
-        """Create a minimal state instance with only required fields.
-        
-        Returns:
-            New minimal state instance with only required fields (like id)
-            
-        Raises:
-            ValueError: If state model validation fails
-            TypeError: If state type is not supported
-        """
-        # Handle case where initial_state is None but we have a type parameter
-        if self.initial_state is None and hasattr(self, "_initial_state_T"):
-            state_type = getattr(self, "_initial_state_T")
-            if isinstance(state_type, type):
-                if issubclass(state_type, FlowState):
-                    return cast(T, state_type(id=str(uuid4())))
-                elif issubclass(state_type, BaseModel):
-                    class StateWithId(state_type, FlowState):  # type: ignore
-                        pass
-                    return cast(T, StateWithId(id=str(uuid4())))
-                elif state_type == dict:
-                    return cast(T, {"id": str(uuid4())})
-        
-        # Handle case where no initial state is provided
-        if self.initial_state is None:
-            return cast(T, {"id": str(uuid4())})
-            
-        # Handle case where initial_state is a type
-        if isinstance(self.initial_state, type):
-            if issubclass(self.initial_state, FlowState):
-                return cast(T, self.initial_state(id=str(uuid4())))
-            elif issubclass(self.initial_state, BaseModel):
-                if not hasattr(self.initial_state, "id"):
-                    raise ValueError("Flow state model must have an 'id' field")
-                return cast(T, self.initial_state(id=str(uuid4())))
-            elif self.initial_state == dict:
-                return cast(T, {"id": str(uuid4())})
-                
-        raise TypeError(
-            f"Initial state must be dict or BaseModel, got {type(self.initial_state)}"
-        )
+
     
     def _create_initial_state(self) -> T:
         """Create and initialize flow state with UUID and default values.
@@ -560,12 +520,19 @@ class Flow(Generic[T], metaclass=FlowMeta):
             state_type = getattr(self, "_initial_state_T")
             if isinstance(state_type, type):
                 if issubclass(state_type, FlowState):
-                    return cast(T, state_type())  # Uses default values from model
+                    # Create instance without id, then set it
+                    instance = state_type()
+                    if not hasattr(instance, 'id'):
+                        setattr(instance, 'id', str(uuid4()))
+                    return cast(T, instance)
                 elif issubclass(state_type, BaseModel):
                     # Create a new type that includes the ID field
                     class StateWithId(state_type, FlowState):  # type: ignore
                         pass
-                    return cast(T, StateWithId())  # Uses default values from both models
+                    instance = StateWithId()
+                    if not hasattr(instance, 'id'):
+                        setattr(instance, 'id', str(uuid4()))
+                    return cast(T, instance)
                 elif state_type == dict:
                     return cast(T, {"id": str(uuid4())})  # Minimal dict state
         
