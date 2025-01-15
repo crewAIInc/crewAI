@@ -29,17 +29,14 @@ class SQLiteFlowPersistence(FlowPersistence):
         
         Args:
             db_path: Path to the SQLite database file. If not provided, uses
-                    CREWAI_FLOW_DB_PATH environment variable or falls back to
-                    a temporary database.
+                    db_storage_path() from utilities.paths.
                     
         Raises:
-            ValueError: If neither db_path nor CREWAI_FLOW_DB_PATH is provided
+            ValueError: If db_path is invalid
         """
-        # Get path from argument, env var, or default
-        path = db_path or os.getenv(
-            "CREWAI_FLOW_DB_PATH",
-            os.path.join(tempfile.gettempdir(), "crewai_flows.db")
-        )
+        from crewai.utilities.paths import db_storage_path
+        # Get path from argument or default location
+        path = db_path or db_storage_path()
         
         if not path:
             raise ValueError("Database path must be provided")
