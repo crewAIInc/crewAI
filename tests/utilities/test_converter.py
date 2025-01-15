@@ -353,7 +353,6 @@ def test_converter_with_llama3_2_model():
     sample_text = "Name: Alice Llama, Age: 30"
 
     instructions = get_conversion_instructions(SimpleModel, llm)
-    print("instructions:", instructions)
     converter = Converter(
         llm=llm,
         text=sample_text,
@@ -362,7 +361,6 @@ def test_converter_with_llama3_2_model():
     )
 
     output = converter.to_pydantic()
-    print("output:", output)
 
     assert isinstance(output, SimpleModel)
     assert output.name == "Alice Llama"
@@ -430,7 +428,6 @@ def test_converter_error_handling():
 
     with pytest.raises(ConverterError) as exc_info:
         output = converter.to_pydantic()
-        print("output", output)
 
     assert "Failed to convert text into a Pydantic model" in str(exc_info.value)
 
