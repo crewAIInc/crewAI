@@ -25,7 +25,17 @@ import asyncio
 import functools
 import inspect
 import logging
-from typing import Any, Callable, Dict, Optional, Type, TypeVar, Union, cast, get_type_hints
+from typing import (
+    Any,
+    Callable,
+    Dict,
+    Optional,
+    Type,
+    TypeVar,
+    Union,
+    cast,
+    get_type_hints,
+)
 
 from pydantic import BaseModel
 
