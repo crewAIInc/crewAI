@@ -67,7 +67,7 @@ def test_structured_state_persistence(tmp_path):
 
 
 def test_flow_state_restoration(tmp_path):
-    """Test restoring flow state from persistence."""
+    """Test restoring flow state from persistence with various restoration methods."""
     db_path = os.path.join(tmp_path, "test_flows.db")
     persistence = SQLiteFlowPersistence(db_path)
     
@@ -81,21 +81,65 @@ def test_flow_state_restoration(tmp_path):
             self.state.message = "Original message"
             self.state.counter = 42
     
+    # Create and persist initial state
     flow1 = RestorableFlow(persistence=persistence)
     flow1.kickoff()
     original_uuid = flow1.state.id
     
-    # Create new flow instance with restored state
+    # Test case 1: Restore using restore_uuid with field override
     flow2 = RestorableFlow(
         persistence=persistence,
         restore_uuid=original_uuid,
         counter=43,  # Override counter
     )
     
-    # Verify state restoration and merging
+    # Verify state restoration and selective field override
     assert flow2.state.id == original_uuid
-    assert flow2.state.message == "Original message"
-    assert flow2.state.counter == 43  # Verify override worked
+    assert flow2.state.message == "Original message"  # Preserved
+    assert flow2.state.counter == 43  # Overridden
+    
+    # Test case 2: Restore using kwargs['id']
+    flow3 = RestorableFlow(
+        persistence=persistence,
+        id=original_uuid,
+        message="Updated message",  # Override message
+    )
+    
+    # Verify state restoration and selective field override
+    assert flow3.state.id == original_uuid
+    assert flow3.state.counter == 42  # Preserved
+    assert flow3.state.message == "Updated message"  # Overridden
+    
+    # Test case 3: Verify error on conflicting IDs
+    with pytest.raises(ValueError) as exc_info:
+        RestorableFlow(
+            persistence=persistence,
+            restore_uuid=original_uuid,
+            id="different-id",  # Conflict with restore_uuid
+        )
+    assert "Conflicting IDs provided" in str(exc_info.value)
+    
+    # Test case 4: Verify error on non-existent restore_uuid
+    with pytest.raises(ValueError) as exc_info:
+        RestorableFlow(
+            persistence=persistence,
+            restore_uuid="non-existent-uuid",
+        )
+    assert "No state found" in str(exc_info.value)
+    
+    # Test case 5: Allow new state creation with kwargs['id']
+    new_uuid = "new-flow-id"
+    flow4 = RestorableFlow(
+        persistence=persistence,
+        id=new_uuid,
+        message="New message",
+        counter=100,
+    )
+    
+    # Verify new state creation with provided ID
+    assert flow4.state.id == new_uuid
+    assert flow4.state.message == "New message"
+    assert flow4.state.counter == 100
 
 
 def test_multiple_method_persistence(tmp_path):
