@@ -1,29 +1,23 @@
-from crewai import Agent, Crew, Task
-from patronus_eval_tool import (
-    PatronusEvalTool,
-)
-from patronus_local_evaluator_tool import (
-    PatronusLocalEvaluatorTool,
-)
-from patronus_predefined_criteria_eval_tool import (
-    PatronusPredefinedCriteriaEvalTool,
-)
-from patronus import Client, EvaluationResult
 import random
 
+from crewai import Agent, Crew, Task
+from patronus import Client, EvaluationResult
+from patronus_local_evaluator_tool import PatronusLocalEvaluatorTool
 
 # Test the PatronusLocalEvaluatorTool where agent uses the local evaluator
 client = Client()
+
 
 # Example of an evaluator that returns a random pass/fail result
 @client.register_local_evaluator("random_evaluator")
 def random_evaluator(**kwargs):
     score = random.random()
     return EvaluationResult(
-      score_raw=score,
-      pass_=score >= 0.5,
-      explanation="example explanation" # Optional justification for LLM judges
+        score_raw=score,
+        pass_=score >= 0.5,
+        explanation="example explanation",  # Optional justification for LLM judges
     )
+
 
 # 1. Uses PatronusEvalTool: agent can pick the best evaluator and criteria
 # patronus_eval_tool = PatronusEvalTool()
@@ -35,7 +29,9 @@ def random_evaluator(**kwargs):
 
 # 3. Uses PatronusLocalEvaluatorTool: agent uses user defined evaluator
 patronus_eval_tool = PatronusLocalEvaluatorTool(
-    patronus_client=client, evaluator="random_evaluator", evaluated_model_gold_answer="example label"
+    patronus_client=client,
+    evaluator="random_evaluator",
+    evaluated_model_gold_answer="example label",
 )
 
 # Create a new agent

@@ -72,4 +72,3 @@ except ImportError:
     """
     When this tool is not used, then exception can be ignored.
     """
-    pass

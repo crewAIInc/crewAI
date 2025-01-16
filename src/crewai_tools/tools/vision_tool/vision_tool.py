@@ -1,29 +1,35 @@
 import base64
-from typing import Type, Optional
 from pathlib import Path
+from typing import Optional, Type
+
 from crewai.tools import BaseTool
 from openai import OpenAI
 from pydantic import BaseModel, validator
 
+
 class ImagePromptSchema(BaseModel):
     """Input for Vision Tool."""
+
     image_path_url: str = "The image path or URL."
 
     @validator("image_path_url")
     def validate_image_path_url(cls, v: str) -> str:
         if v.startswith("http"):
             return v
-        
+
         path = Path(v)
         if not path.exists():
             raise ValueError(f"Image file does not exist: {v}")
-        
+
         # Validate supported formats
         valid_extensions = {".jpg", ".jpeg", ".png", ".gif", ".webp"}
         if path.suffix.lower() not in valid_extensions:
-            raise ValueError(f"Unsupported image format. Supported formats: {valid_extensions}")
-        
+            raise ValueError(
+                f"Unsupported image format. Supported formats: {valid_extensions}"
+            )
+
         return v
+
 
 class VisionTool(BaseTool):
     name: str = "Vision Tool"
@@ -45,10 +51,10 @@ class VisionTool(BaseTool):
             image_path_url = kwargs.get("image_path_url")
             if not image_path_url:
                 return "Image Path or URL is required."
-            
+
             # Validate input using Pydantic
             ImagePromptSchema(image_path_url=image_path_url)
-            
+
             if image_path_url.startswith("http"):
                 image_data = image_path_url
             else:
@@ -68,12 +74,12 @@ class VisionTool(BaseTool):
                             {
                                 "type": "image_url",
                                 "image_url": {"url": image_data},
-                            }
+                            },
                         ],
                     }
                 ],
                 max_tokens=300,
-            )        
+            )
 
             return response.choices[0].message.content
 
