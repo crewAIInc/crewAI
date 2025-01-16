@@ -241,9 +241,13 @@ def generate_model_description(model: Type[BaseModel]) -> str:
         origin = get_origin(field_type)
         args = get_args(field_type)
 
-        if origin is Union and type(None) in args:
+        if origin is Union or (origin is None and len(args) > 0):
+            # Handle both Union and the new '|' syntax
             non_none_args = [arg for arg in args if arg is not type(None)]
-            return f"Optional[{describe_field(non_none_args[0])}]"
+            if len(non_none_args) == 1:
+                return f"Optional[{describe_field(non_none_args[0])}]"
+            else:
+                return f"Optional[Union[{', '.join(describe_field(arg) for arg in non_none_args)}]]"
         elif origin is list:
             return f"List[{describe_field(args[0])}]"
         elif origin is dict:
@@ -252,8 +256,10 @@ def generate_model_description(model: Type[BaseModel]) -> str:
             return f"Dict[{key_type}, {value_type}]"
         elif isinstance(field_type, type) and issubclass(field_type, BaseModel):
             return generate_model_description(field_type)
-        else:
+        elif hasattr(field_type, "__name__"):
             return field_type.__name__
+        else:
+            return str(field_type)
 
     fields = model.__annotations__
     field_descriptions = [
