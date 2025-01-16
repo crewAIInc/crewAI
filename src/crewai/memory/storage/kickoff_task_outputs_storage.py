@@ -1,6 +1,7 @@
 import json
 import logging
 import sqlite3
+from pathlib import Path
 from typing import Any, Dict, List, Optional
 
 from crewai.task import Task
@@ -18,8 +19,11 @@ class KickoffTaskOutputsSQLiteStorage:
     """
 
     def __init__(
-        self, db_path: str = f"{db_storage_path()}/latest_kickoff_task_outputs.db"
+        self, db_path: Optional[str] = None
     ) -> None:
+        if db_path is None:
+            # Get the parent directory of the default db path and create our db file there
+            db_path = str(Path(db_storage_path()).parent / "latest_kickoff_task_outputs.db")
         self.db_path = db_path
         self._printer: Printer = Printer()
         self._initialize_db()
