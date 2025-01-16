@@ -1,11 +1,16 @@
 import json
+import logging
 import sqlite3
+from pathlib import Path
 from typing import Any, Dict, List, Optional
 
 from crewai.task import Task
 from crewai.utilities import Printer
 from crewai.utilities.crew_json_encoder import CrewJSONEncoder
+from crewai.utilities.errors import DatabaseError, DatabaseOperationError
 from crewai.utilities.paths import db_storage_path
+
+logger = logging.getLogger(__name__)
 
 
 class KickoffTaskOutputsSQLiteStorage:
@@ -14,15 +19,24 @@ class KickoffTaskOutputsSQLiteStorage:
     """
 
     def __init__(
-        self, db_path: str = f"{db_storage_path()}/latest_kickoff_task_outputs.db"
+        self, db_path: Optional[str] = None
     ) -> None:
+        if db_path is None:
+            # Get the parent directory of the default db path and create our db file there
+            db_path = str(Path(db_storage_path()).parent / "latest_kickoff_task_outputs.db")
         self.db_path = db_path
         self._printer: Printer = Printer()
         self._initialize_db()
 
-    def _initialize_db(self):
-        """
-        Initializes the SQLite database and creates LTM table
+    def _initialize_db(self) -> None:
+        """Initialize the SQLite database and create the latest_kickoff_task_outputs table.
+
+        This method sets up the database schema for storing task outputs. It creates
+        a table with columns for task_id, expected_output, output (as JSON),
+        task_index, inputs (as JSON), was_replayed flag, and timestamp.
+
+        Raises:
+            DatabaseOperationError: If database initialization fails due to SQLite errors.
         """
         try:
             with sqlite3.connect(self.db_path) as conn:
@@ -43,10 +57,9 @@ class KickoffTaskOutputsSQLiteStorage:
 
                 conn.commit()
         except sqlite3.Error as e:
-            self._printer.print(
-                content=f"SAVING KICKOFF TASK OUTPUTS ERROR: An error occurred during database initialization: {e}",
-                color="red",
-            )
+            error_msg = DatabaseError.format_error(DatabaseError.INIT_ERROR, e)
+            logger.error(error_msg)
+            raise DatabaseOperationError(error_msg, e)
 
     def add(
         self,
@@ -55,9 +68,22 @@ class KickoffTaskOutputsSQLiteStorage:
         task_index: int,
         was_replayed: bool = False,
         inputs: Dict[str, Any] = {},
-    ):
+    ) -> None:
+        """Add a new task output record to the database.
+
+        Args:
+            task: The Task object containing task details.
+            output: Dictionary containing the task's output data.
+            task_index: Integer index of the task in the sequence.
+            was_replayed: Boolean indicating if this was a replay execution.
+            inputs: Dictionary of input parameters used for the task.
+
+        Raises:
+            DatabaseOperationError: If saving the task output fails due to SQLite errors.
+        """
         try:
             with sqlite3.connect(self.db_path) as conn:
+                conn.execute("BEGIN TRANSACTION")
                 cursor = conn.cursor()
                 cursor.execute(
                     """
@@ -76,21 +102,31 @@ class KickoffTaskOutputsSQLiteStorage:
                 )
                 conn.commit()
         except sqlite3.Error as e:
-            self._printer.print(
-                content=f"SAVING KICKOFF TASK OUTPUTS ERROR: An error occurred during database initialization: {e}",
-                color="red",
-            )
+            error_msg = DatabaseError.format_error(DatabaseError.SAVE_ERROR, e)
+            logger.error(error_msg)
+            raise DatabaseOperationError(error_msg, e)
 
     def update(
         self,
         task_index: int,
-        **kwargs,
-    ):
-        """
-        Updates an existing row in the latest_kickoff_task_outputs table based on task_index.
+        **kwargs: Any,
+    ) -> None:
+        """Update an existing task output record in the database.
+
+        Updates fields of a task output record identified by task_index. The fields
+        to update are provided as keyword arguments.
+
+        Args:
+            task_index: Integer index of the task to update.
+            **kwargs: Arbitrary keyword arguments representing fields to update.
+                     Values that are dictionaries will be JSON encoded.
+
+        Raises:
+            DatabaseOperationError: If updating the task output fails due to SQLite errors.
         """
         try:
             with sqlite3.connect(self.db_path) as conn:
+                conn.execute("BEGIN TRANSACTION")
                 cursor = conn.cursor()
 
                 fields = []
@@ -110,14 +146,23 @@ class KickoffTaskOutputsSQLiteStorage:
                 conn.commit()
 
                 if cursor.rowcount == 0:
-                    self._printer.print(
-                        f"No row found with task_index {task_index}. No update performed.",
-                        color="red",
-                    )
+                    logger.warning(f"No row found with task_index {task_index}. No update performed.")
         except sqlite3.Error as e:
-            self._printer.print(f"UPDATE KICKOFF TASK OUTPUTS ERROR: {e}", color="red")
+            error_msg = DatabaseError.format_error(DatabaseError.UPDATE_ERROR, e)
+            logger.error(error_msg)
+            raise DatabaseOperationError(error_msg, e)
 
-    def load(self) -> Optional[List[Dict[str, Any]]]:
+    def load(self) -> List[Dict[str, Any]]:
+        """Load all task output records from the database.
+
+        Returns:
+            List of dictionaries containing task output records, ordered by task_index.
+            Each dictionary contains: task_id, expected_output, output, task_index,
+            inputs, was_replayed, and timestamp.
+
+        Raises:
+            DatabaseOperationError: If loading task outputs fails due to SQLite errors.
+        """
         try:
             with sqlite3.connect(self.db_path) as conn:
                 cursor = conn.cursor()
@@ -144,23 +189,26 @@ class KickoffTaskOutputsSQLiteStorage:
                 return results
 
         except sqlite3.Error as e:
-            self._printer.print(
-                content=f"LOADING KICKOFF TASK OUTPUTS ERROR: An error occurred while querying kickoff task outputs: {e}",
-                color="red",
-            )
-            return None
+            error_msg = DatabaseError.format_error(DatabaseError.LOAD_ERROR, e)
+            logger.error(error_msg)
+            raise DatabaseOperationError(error_msg, e)
 
-    def delete_all(self):
-        """
-        Deletes all rows from the latest_kickoff_task_outputs table.
+    def delete_all(self) -> None:
+        """Delete all task output records from the database.
+
+        This method removes all records from the latest_kickoff_task_outputs table.
+        Use with caution as this operation cannot be undone.
+
+        Raises:
+            DatabaseOperationError: If deleting task outputs fails due to SQLite errors.
         """
         try:
             with sqlite3.connect(self.db_path) as conn:
+                conn.execute("BEGIN TRANSACTION")
                 cursor = conn.cursor()
                 cursor.execute("DELETE FROM latest_kickoff_task_outputs")
                 conn.commit()
         except sqlite3.Error as e:
-            self._printer.print(
-                content=f"ERROR: Failed to delete all kickoff task outputs: {e}",
-                color="red",
-            )
+            error_msg = DatabaseError.format_error(DatabaseError.DELETE_ERROR, e)
+            logger.error(error_msg)
+            raise DatabaseOperationError(error_msg, e)
