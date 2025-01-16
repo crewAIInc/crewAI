@@ -588,3 +588,12 @@ def test_converter_with_function_calling():
     assert output.name == "Eve"
     assert output.age == 35
     instructor.to_pydantic.assert_called_once()
+
+
+def test_generate_model_description_union_field():
+    class UnionModel(BaseModel):
+        field: int | str | None
+
+    description = generate_model_description(UnionModel)
+    expected_description = '{\n  "field": int | str | None\n}'
+    assert description == expected_description
