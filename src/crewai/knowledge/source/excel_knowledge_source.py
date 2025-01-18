@@ -30,39 +30,6 @@ class ExcelKnowledgeSource(BaseFileKnowledgeSource):
             content_dict[file_path] = sheet_dict
         return content_dict
 
-    def load_content(self) -> Dict[Path, str]:
-        """Load and preprocess Excel file content. Updated to account for .xlsx workbooks with multiple tabs/sheets"""
-        pd, openpyxl, load_workbook = self._import_dependencies()
-
-        # Initialize the content dictionary
-        content_dict = {}
-        for file_path in self.safe_file_paths:
-            # Convert the file path to a Path object
-            file_path = self.convert_to_path(file_path)
-            # Load the Excel file
-            wb = load_workbook(file_path)
-            # Get the sheet names
-            sheet_names = wb.sheetnames
-            # Iterate over the sheets
-            # Initialize the file sheet dictionary
-            sheet_dict = {}
-            for sheet_name in sheet_names:
-                # Get the sheet
-                ws = wb[sheet_name]
-                # Convert the sheet to a CSV string
-                sheet_str = """"""
-                for row in ws.values:
-                    for cell in row:
-                        sheet_str += str(cell) + ","
-                    sheet_str += "\n"
-
-                # Add the sheet content to the file sheet dictionary
-                sheet_dict[sheet_name] = sheet_str
-            # Add the file sheet dictionary to the content dictionary
-            content_dict[file_path] = sheet_dict
-
-        return content_dict
-
     def _import_dependencies(self):
         """Dynamically import dependencies."""
         try:
