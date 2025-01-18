@@ -3480,10 +3480,12 @@ def test_crew_guardrail_feedback_in_context():
 
 @pytest.mark.vcr(filter_headers=["authorization"])
 def test_before_kickoff_callback():
-    from crewai.project import CrewBase, agent, before_kickoff, crew, task
+    from crewai.project import CrewBase, agent, before_kickoff, task
 
     @CrewBase
     class TestCrewClass:
+        from crewai.project import crew
+
         agents_config = None
         tasks_config = None
 
@@ -3510,7 +3512,7 @@ def test_before_kickoff_callback():
             task = Task(
                 description="Test task description",
                 expected_output="Test expected output",
-                agent=self.my_agent(),  # Use the agent instance
+                agent=self.my_agent(),
             )
             return task
 
@@ -3520,28 +3522,30 @@ def test_before_kickoff_callback():
 
     test_crew_instance = TestCrewClass()
 
-    crew = test_crew_instance.crew()
+    test_crew = test_crew_instance.crew()
 
     # Verify that the before_kickoff_callbacks are set
-    assert len(crew.before_kickoff_callbacks) == 1
+    assert len(test_crew.before_kickoff_callbacks) == 1
 
     # Prepare inputs
     inputs = {"initial": True}
 
     # Call kickoff
-    crew.kickoff(inputs=inputs)
+    test_crew.kickoff(inputs=inputs)
 
     # Check that the before_kickoff function was called and modified inputs
     assert test_crew_instance.inputs_modified
-    assert inputs.get("modified") == True
+    assert inputs.get("modified")
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
 def test_before_kickoff_without_inputs():
-    from crewai.project import CrewBase, agent, before_kickoff, crew, task
+    from crewai.project import CrewBase, agent, before_kickoff, task
 
     @CrewBase
     class TestCrewClass:
+        from crewai.project import crew
+
         agents_config = None
         tasks_config = None
 
@@ -3579,12 +3583,12 @@ def test_before_kickoff_without_inputs():
     # Instantiate the class
     test_crew_instance = TestCrewClass()
     # Build the crew
-    crew = test_crew_instance.crew()
+    test_crew = test_crew_instance.crew()
     # Verify that the before_kickoff_callback is registered
-    assert len(crew.before_kickoff_callbacks) == 1
+    assert len(test_crew.before_kickoff_callbacks) == 1
 
     # Call kickoff without passing inputs
-    output = crew.kickoff()
+    test_crew.kickoff()
 
     # Check that the before_kickoff function was called
     assert test_crew_instance.inputs_modified
