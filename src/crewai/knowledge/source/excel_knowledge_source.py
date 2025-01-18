@@ -8,24 +8,47 @@ class ExcelKnowledgeSource(BaseFileKnowledgeSource):
     """A knowledge source that stores and queries Excel file content using embeddings."""
 
     def load_content(self) -> Dict[Path, str]:
-        """Load and preprocess Excel file content."""
-        pd = self._import_dependencies()
+        """Load and preprocess Excel file content. Updated to account for .xlsx workbooks with multiple tabs/sheets"""
+        pd, openpyxl, load_workbook = self._import_dependencies()
 
+        # Initialize the content dictionary
         content_dict = {}
         for file_path in self.safe_file_paths:
+            # Convert the file path to a Path object
             file_path = self.convert_to_path(file_path)
-            df = pd.read_excel(file_path)
-            content = df.to_csv(index=False)
-            content_dict[file_path] = content
+            # Load the Excel file
+            wb = load_workbook(file_path)
+            # Get the sheet names
+            sheet_names = wb.sheetnames
+            # Iterate over the sheets
+            # Initialize the file sheet dictionary
+            sheet_dict = {}
+            for sheet_name in sheet_names:
+                # Get the sheet
+                ws = wb[sheet_name]
+                # Convert the sheet to a CSV string
+                sheet_str = """"""
+                for row in ws.values:
+                    for cell in row:
+                        sheet_str += str(cell) + ","
+                    sheet_str += "\n"
+
+                print(sheet_str)
+                # Add the sheet content to the file sheet dictionary
+                sheet_dict[sheet_name] = sheet_str
+            # Add the file sheet dictionary to the content dictionary
+            content_dict[file_path] = sheet_dict
+
         return content_dict
 
     def _import_dependencies(self):
         """Dynamically import dependencies."""
         try:
             import openpyxl  # noqa
+            from openpyxl import load_workbook
             import pandas as pd
 
-            return pd
+            return pd, openpyxl, load_workbook
         except ImportError as e:
             missing_package = str(e).split()[-1]
             raise ImportError(
@@ -38,10 +61,14 @@ class ExcelKnowledgeSource(BaseFileKnowledgeSource):
         and save the embeddings.
         """
         # Convert dictionary values to a single string if content is a dictionary
-        if isinstance(self.content, dict):
-            content_str = "\n".join(str(value) for value in self.content.values())
-        else:
-            content_str = str(self.content)
+        # Updated to account for .xlsx workbooks with multiple tabs/sheets
+        content_str = ""
+        for value in self.content.values():
+            if isinstance(value, dict):
+                for sheet_value in value.values():
+                    content_str += str(sheet_value) + "\n"
+            else:
+                content_str += str(value) + "\n"
 
         new_chunks = self._chunk_text(content_str)
         self.chunks.extend(new_chunks)
