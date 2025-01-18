@@ -125,7 +125,7 @@ class CrewAgentParser:
 
     def _clean_action(self, text: str) -> str:
         """Clean action string by removing non-essential formatting characters."""
-        return re.sub(r"^\s*\*+\s*|\s*\*+\s*$", "", text).strip()
+        return text.strip().strip("*").strip()
 
     def _safe_repair_json(self, tool_input: str) -> str:
         UNABLE_TO_REPAIR_JSON_RESULTS = ['""', "{}"]
