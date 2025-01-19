@@ -16,7 +16,6 @@ from typing import (
 from uuid import uuid4
 
 from blinker import Signal
-from crewai.utilities.printer import Printer
 from pydantic import BaseModel, Field, ValidationError
 
 from crewai.flow.flow_events import (
@@ -29,6 +28,7 @@ from crewai.flow.flow_visualizer import plot_flow
 from crewai.flow.persistence.base import FlowPersistence
 from crewai.flow.utils import get_possible_return_constants
 from crewai.telemetry import Telemetry
+from crewai.utilities.printer import Printer
 
 
 class FlowState(BaseModel):
