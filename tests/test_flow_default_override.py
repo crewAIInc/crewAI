@@ -28,9 +28,10 @@ def test_default_value_override(tmp_path):
         
         @start()
         def set_sentence_count(self):
-            # First run will set a custom value
-            if not self.state.sentence_count or self.state.sentence_count == 1000:
+            # Only set sentence_count on first run, not when loading from persistence
+            if not self.state.has_set_count:
                 self.state.sentence_count = 2
+                self.state.has_set_count = True
     
     # First run - should set sentence_count to 2
     # First run - should set sentence_count to 2
