@@ -4,6 +4,8 @@ from typing import List, Optional, Type
 
 from crewai.tools import BaseTool
 from docker import from_env as docker_from_env
+from docker import DockerClient
+from docker.models.containers import Container
 from docker.errors import ImageNotFound, NotFound
 from docker.models.containers import Container
 from pydantic import BaseModel, Field
@@ -46,7 +48,7 @@ class CodeInterpreterTool(BaseTool):
         client = (
             docker_from_env()
             if self.user_docker_base_url == None
-            else docker.DockerClient(base_url=self.user_docker_base_url)
+            else DockerClient(base_url=self.user_docker_base_url)
         )
 
         try:
