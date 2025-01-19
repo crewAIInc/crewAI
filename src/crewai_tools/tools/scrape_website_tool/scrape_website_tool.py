@@ -11,8 +11,6 @@ from pydantic import BaseModel, Field
 class FixedScrapeWebsiteToolSchema(BaseModel):
     """Input for ScrapeWebsiteTool."""
 
-    pass
-
 
 class ScrapeWebsiteToolSchema(FixedScrapeWebsiteToolSchema):
     """Input for ScrapeWebsiteTool."""

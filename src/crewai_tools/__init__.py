@@ -44,6 +44,8 @@ from .tools import (
     SerplyScholarSearchTool,
     SerplyWebpageToMarkdownTool,
     SerplyWebSearchTool,
+    SnowflakeConfig,
+    SnowflakeSearchTool,
     SpiderTool,
     TXTSearchTool,
     VisionTool,
