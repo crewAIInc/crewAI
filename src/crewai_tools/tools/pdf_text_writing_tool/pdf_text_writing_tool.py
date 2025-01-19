@@ -1,7 +1,9 @@
-from typing import Optional, Type
-from pydantic import BaseModel, Field
-from pypdf import PdfReader, PdfWriter, PageObject, ContentStream, NameObject, Font
 from pathlib import Path
+from typing import Optional, Type
+
+from pydantic import BaseModel, Field
+from pypdf import ContentStream, Font, NameObject, PageObject, PdfReader, PdfWriter
+
 from crewai_tools.tools.rag.rag_tool import RagTool
 
 

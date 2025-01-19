@@ -1,7 +1,8 @@
-import os
 import json
+import os
+from typing import Any, Dict, List, Type
+
 import requests
-from typing import Any, List, Dict, Type
 from crewai.tools import BaseTool
 from pydantic import BaseModel, Field
 
@@ -33,9 +34,7 @@ class PatronusPredefinedCriteriaEvalTool(BaseTool):
     """
 
     name: str = "Call Patronus API tool for evaluation of model inputs and outputs"
-    description: str = (
-        """This tool calls the Patronus Evaluation API that takes the following arguments:"""
-    )
+    description: str = """This tool calls the Patronus Evaluation API that takes the following arguments:"""
     evaluate_url: str = "https://api.patronus.ai/v1/evaluate"
     args_schema: Type[BaseModel] = FixedBaseToolSchema
     evaluators: List[Dict[str, str]] = []
@@ -52,7 +51,6 @@ class PatronusPredefinedCriteriaEvalTool(BaseTool):
         self,
         **kwargs: Any,
     ) -> Any:
-
         evaluated_model_input = kwargs.get("evaluated_model_input")
         evaluated_model_output = kwargs.get("evaluated_model_output")
         evaluated_model_retrieved_context = kwargs.get(

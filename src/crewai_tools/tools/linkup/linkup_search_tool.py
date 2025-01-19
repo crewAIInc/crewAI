@@ -2,6 +2,7 @@ from typing import Any
 
 try:
     from linkup import LinkupClient
+
     LINKUP_AVAILABLE = True
 except ImportError:
     LINKUP_AVAILABLE = False
@@ -9,10 +10,13 @@ except ImportError:
 
 from pydantic import PrivateAttr
 
+
 class LinkupSearchTool:
     name: str = "Linkup Search Tool"
-    description: str = "Performs an API call to Linkup to retrieve contextual information."
-    _client: LinkupClient = PrivateAttr() # type: ignore
+    description: str = (
+        "Performs an API call to Linkup to retrieve contextual information."
+    )
+    _client: LinkupClient = PrivateAttr()  # type: ignore
 
     def __init__(self, api_key: str):
         """
@@ -25,7 +29,9 @@ class LinkupSearchTool:
             )
         self._client = LinkupClient(api_key=api_key)
 
-    def _run(self, query: str, depth: str = "standard", output_type: str = "searchResults") -> dict:
+    def _run(
+        self, query: str, depth: str = "standard", output_type: str = "searchResults"
+    ) -> dict:
         """
         Executes a search using the Linkup API.
 
@@ -36,9 +42,7 @@ class LinkupSearchTool:
         """
         try:
             response = self._client.search(
-                query=query,
-                depth=depth,
-                output_type=output_type
+                query=query, depth=depth, output_type=output_type
             )
             results = [
                 {"name": result.name, "url": result.url, "content": result.content}

@@ -1,8 +1,9 @@
 import os
 import re
-from typing import Optional, Any, Union
+from typing import Any, Optional, Union
 
 from crewai.tools import BaseTool
+
 
 class SerpApiBaseTool(BaseTool):
     """Base class for SerpApi functionality with shared capabilities."""

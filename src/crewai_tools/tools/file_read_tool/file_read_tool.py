@@ -32,6 +32,7 @@ class FileReadTool(BaseTool):
         >>> content = tool.run()  # Reads /path/to/file.txt
         >>> content = tool.run(file_path="/path/to/other.txt")  # Reads other.txt
     """
+
     name: str = "Read a file's content"
     description: str = "A tool that reads the content of a file. To use this tool, provide a 'file_path' parameter with the path to the file you want to read."
     args_schema: Type[BaseModel] = FileReadToolSchema
@@ -45,10 +46,11 @@ class FileReadTool(BaseTool):
                 this becomes the default file path for the tool.
             **kwargs: Additional keyword arguments passed to BaseTool.
         """
-        super().__init__(**kwargs)
         if file_path is not None:
-            self.file_path = file_path
-            self.description = f"A tool that reads file content. The default file is {file_path}, but you can provide a different 'file_path' parameter to read another file."
+            kwargs['description'] = f"A tool that reads file content. The default file is {file_path}, but you can provide a different 'file_path' parameter to read another file."
+        
+        super().__init__(**kwargs)
+        self.file_path = file_path
 
     def _run(
         self,
@@ -57,7 +59,7 @@ class FileReadTool(BaseTool):
         file_path = kwargs.get("file_path", self.file_path)
         if file_path is None:
             return "Error: No file path provided. Please provide a file path either in the constructor or as an argument."
-        
+
         try:
             with open(file_path, "r") as file:
                 return file.read()
@@ -67,15 +69,3 @@ class FileReadTool(BaseTool):
             return f"Error: Permission denied when trying to read file: {file_path}"
         except Exception as e:
             return f"Error: Failed to read file {file_path}. {str(e)}"
-
-    def _generate_description(self) -> None:
-        """Generate the tool description based on file path.
-
-        This method updates the tool's description to include information about
-        the default file path while maintaining the ability to specify a different
-        file at runtime.
-
-        Returns:
-            None
-        """
-        self.description = f"A tool that can be used to read {self.file_path}'s content."

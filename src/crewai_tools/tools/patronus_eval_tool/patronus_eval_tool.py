@@ -1,8 +1,9 @@
-import os
 import json
-import requests
+import os
 import warnings
-from typing import Any, List, Dict, Optional
+from typing import Any, Dict, List, Optional
+
+import requests
 from crewai.tools import BaseTool
 
 
@@ -19,7 +20,9 @@ class PatronusEvalTool(BaseTool):
         self.evaluators = temp_evaluators
         self.criteria = temp_criteria
         self.description = self._generate_description()
-        warnings.warn("You are allowing the agent to select the best evaluator and criteria when you use the `PatronusEvalTool`. If this is not intended then please use `PatronusPredefinedCriteriaEvalTool` instead.")
+        warnings.warn(
+            "You are allowing the agent to select the best evaluator and criteria when you use the `PatronusEvalTool`. If this is not intended then please use `PatronusPredefinedCriteriaEvalTool` instead."
+        )
 
     def _init_run(self):
         evaluators_set = json.loads(
@@ -104,7 +107,6 @@ class PatronusEvalTool(BaseTool):
         evaluated_model_retrieved_context: Optional[str],
         evaluators: List[Dict[str, str]],
     ) -> Any:
-
         # Assert correct format of evaluators
         evals = []
         for ev in evaluators:
