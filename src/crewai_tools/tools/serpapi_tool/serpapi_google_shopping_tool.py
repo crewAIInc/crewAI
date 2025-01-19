@@ -3,7 +3,7 @@ from typing import Any, Type, Optional
 import re
 from pydantic import BaseModel, Field
 from .serpapi_base_tool import SerpApiBaseTool
-from serpapi import HTTPError
+from urllib.error import HTTPError
 
 class SerpApiGoogleShoppingToolSchema(BaseModel):
     """Input for Google Shopping."""
