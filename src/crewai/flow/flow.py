@@ -63,14 +63,14 @@ def ensure_state_type(state: Any, expected_type: Type[StateT]) -> StateT:
         ValueError: If state validation fails
     """
     """Ensure state matches expected type with proper validation.
-    
+
     Args:
         state: State instance to validate
         expected_type: Expected type for the state
-        
+
     Returns:
         Validated state instance
-        
+
     Raises:
         TypeError: If state doesn't match expected type
         ValueError: If state validation fails
@@ -608,7 +608,6 @@ class Flow(Generic[T], metaclass=FlowMeta):
             # Create new instance of the same class
             model_class = type(model)
             return cast(T, model_class(**state_dict))
-
         raise TypeError(
             f"Initial state must be dict or BaseModel, got {type(self.initial_state)}"
         )
