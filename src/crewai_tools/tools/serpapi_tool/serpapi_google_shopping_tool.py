@@ -1,7 +1,8 @@
 from typing import Any, Optional, Type
 
 from pydantic import BaseModel, Field
-from serpapi import HTTPError
+from .serpapi_base_tool import SerpApiBaseTool
+from urllib.error import HTTPError
 
 from .serpapi_base_tool import SerpApiBaseTool
 
