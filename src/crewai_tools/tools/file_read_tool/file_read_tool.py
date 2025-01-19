@@ -32,6 +32,7 @@ class FileReadTool(BaseTool):
         >>> content = tool.run()  # Reads /path/to/file.txt
         >>> content = tool.run(file_path="/path/to/other.txt")  # Reads other.txt
     """
+
     name: str = "Read a file's content"
     description: str = "A tool that reads the content of a file. To use this tool, provide a 'file_path' parameter with the path to the file you want to read."
     args_schema: Type[BaseModel] = FileReadToolSchema
@@ -58,7 +59,7 @@ class FileReadTool(BaseTool):
         file_path = kwargs.get("file_path", self.file_path)
         if file_path is None:
             return "Error: No file path provided. Please provide a file path either in the constructor or as an argument."
-        
+
         try:
             with open(file_path, "r") as file:
                 return file.read()
@@ -68,4 +69,3 @@ class FileReadTool(BaseTool):
             return f"Error: Permission denied when trying to read file: {file_path}"
         except Exception as e:
             return f"Error: Failed to read file {file_path}. {str(e)}"
-

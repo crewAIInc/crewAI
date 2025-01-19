@@ -10,8 +10,6 @@ from pydantic import BaseModel, Field
 class FixedScrapeElementFromWebsiteToolSchema(BaseModel):
     """Input for ScrapeElementFromWebsiteTool."""
 
-    pass
-
 
 class ScrapeElementFromWebsiteToolSchema(FixedScrapeElementFromWebsiteToolSchema):
     """Input for ScrapeElementFromWebsiteTool."""
