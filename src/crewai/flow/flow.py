@@ -1,5 +1,6 @@
 import asyncio
 import inspect
+import logging
 from typing import (
     Any,
     Callable,
@@ -13,12 +14,9 @@ from typing import (
     Union,
     cast,
 )
-import logging
 from uuid import uuid4
 
 from blinker import Signal
-
-logger = logging.getLogger(__name__)
 from pydantic import BaseModel, Field, ValidationError
 
 from crewai.flow.flow_events import (
@@ -32,6 +30,8 @@ from crewai.flow.persistence.base import FlowPersistence
 from crewai.flow.utils import get_possible_return_constants
 from crewai.telemetry import Telemetry
 from crewai.utilities.printer import Printer
+
+logger = logging.getLogger(__name__)
 
 
 class FlowState(BaseModel):
@@ -637,6 +637,9 @@ class Flow(Generic[T], metaclass=FlowMeta):
     def flow_id(self) -> str:
         """Returns the unique identifier of this flow instance.
         
+        This property provides a consistent way to access the flow's unique identifier
+        regardless of the underlying state implementation (dict or BaseModel).
+        
         Returns:
             str: The flow's unique identifier, or an empty string if not found
             
@@ -644,6 +647,12 @@ class Flow(Generic[T], metaclass=FlowMeta):
             This property safely handles both dictionary and BaseModel state types,
             returning an empty string if the ID cannot be retrieved rather than raising
             an exception.
+            
+        Example:
+            ```python
+            flow = MyFlow()
+            print(f"Current flow ID: {flow.flow_id}")  # Safely get flow ID
+            ```
         """
         try:
             if not hasattr(self, '_state'):
@@ -1003,10 +1012,20 @@ class Flow(Generic[T], metaclass=FlowMeta):
     def _log_flow_event(self, message: str, color: str = "yellow", level: str = "info") -> None:
         """Centralized logging method for flow events.
         
+        This method provides a consistent interface for logging flow-related events,
+        combining both console output with colors and proper logging levels.
+        
         Args:
             message: The message to log
             color: Color to use for console output (default: yellow)
+                  Available colors: purple, red, bold_green, bold_purple,
+                  bold_blue, yellow, bold_yellow
             level: Log level to use (default: info)
+                  Supported levels: info, warning
+                  
+        Note:
+            This method uses the Printer utility for colored console output
+            and the standard logging module for log level support.
         """
         self._printer.print(message, color=color)
         if level == "info":

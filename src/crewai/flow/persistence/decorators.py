@@ -64,14 +64,31 @@ class PersistenceDecorator:
     def persist_state(cls, flow_instance: Any, method_name: str, persistence_instance: FlowPersistence) -> None:
         """Persist flow state with proper error handling and logging.
         
+        This method handles the persistence of flow state data, including proper
+        error handling and colored console output for status updates.
+        
         Args:
             flow_instance: The flow instance whose state to persist
             method_name: Name of the method that triggered persistence
             persistence_instance: The persistence backend to use
-        
+            
         Raises:
             ValueError: If flow has no state or state lacks an ID
             RuntimeError: If state persistence fails
+            AttributeError: If flow instance lacks required state attributes
+            
+        Note:
+            Uses bold_yellow color for success messages and red for errors.
+            All operations are logged at appropriate levels (info/error).
+            
+        Example:
+            ```python
+            @persist
+            def my_flow_method(self):
+                # Method implementation
+                pass
+            # State will be automatically persisted after method execution
+            ```
         """
         try:
             state = getattr(flow_instance, 'state', None)
