@@ -5,14 +5,14 @@ Example:
     ```python
     from crewai.flow.flow import Flow, start
     from crewai.flow.persistence import persist, SQLiteFlowPersistence
-    
+
     class MyFlow(Flow):
         @start()
         @persist(SQLiteFlowPersistence())
         def sync_method(self):
             # Synchronous method implementation
             pass
-            
+
         @start()
         @persist(SQLiteFlowPersistence())
         async def async_method(self):
@@ -23,18 +23,15 @@ Example:
 
 import asyncio
 import functools
-import inspect
 import logging
 from typing import (
     Any,
     Callable,
-    Dict,
     Optional,
     Type,
     TypeVar,
     Union,
     cast,
-    get_type_hints,
 )
 
 from pydantic import BaseModel
@@ -133,23 +130,23 @@ class PersistenceDecorator:
 
 def persist(persistence: Optional[FlowPersistence] = None):
     """Decorator to persist flow state.
-    
+
     This decorator can be applied at either the class level or method level.
     When applied at the class level, it automatically persists all flow method
     states. When applied at the method level, it persists only that method's
     state.
-    
+
     Args:
         persistence: Optional FlowPersistence implementation to use.
                     If not provided, uses SQLiteFlowPersistence.
-    
+
     Returns:
         A decorator that can be applied to either a class or method
-    
+
     Raises:
         ValueError: If the flow state doesn't have an 'id' field
         RuntimeError: If state persistence fails
-        
+
     Example:
         @persist  # Class-level persistence with default SQLite
         class MyFlow(Flow[MyState]):
@@ -157,12 +154,10 @@ def persist(persistence: Optional[FlowPersistence] = None):
             def begin(self):
                 pass
     """
-    # Helper function moved to PersistenceDecorator class
-    
     def decorator(target: Union[Type, Callable[..., T]]) -> Union[Type, Callable[..., T]]:
         """Decorator that handles both class and method decoration."""
         actual_persistence = persistence or SQLiteFlowPersistence()
-        
+
         if isinstance(target, type):
             # Class decoration
             class_methods = {}
@@ -187,13 +182,13 @@ def persist(persistence: Optional[FlowPersistence] = None):
                             PersistenceDecorator.persist_state(self, method.__name__, actual_persistence)
                             return result
                         class_methods[name] = class_sync_wrapper
-                    
+
                     # Preserve flow-specific attributes
                     for attr in ["__is_start_method__", "__trigger_methods__", "__condition_type__", "__is_router__"]:
                         if hasattr(method, attr):
                             setattr(class_methods[name], attr, getattr(method, attr))
                     setattr(class_methods[name], "__is_flow_method__", True)
-            
+
             # Update class with wrapped methods
             for name, method in class_methods.items():
                 setattr(target, name, method)
@@ -202,7 +197,7 @@ def persist(persistence: Optional[FlowPersistence] = None):
             # Method decoration
             method = target
             setattr(method, "__is_flow_method__", True)
-            
+
             if asyncio.iscoroutinefunction(method):
                 @functools.wraps(method)
                 async def method_async_wrapper(flow_instance: Any, *args: Any, **kwargs: Any) -> T:
@@ -229,5 +224,5 @@ def persist(persistence: Optional[FlowPersistence] = None):
                         setattr(method_sync_wrapper, attr, getattr(method, attr))
                 setattr(method_sync_wrapper, "__is_flow_method__", True)
                 return cast(Callable[..., T], method_sync_wrapper)
-            
+
     return decorator
