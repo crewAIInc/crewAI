@@ -16,6 +16,7 @@ from typing import (
 from uuid import uuid4
 
 from blinker import Signal
+from crewai.utilities.printer import Printer
 from pydantic import BaseModel, Field, ValidationError
 
 from crewai.flow.flow_events import (
@@ -424,6 +425,7 @@ class Flow(Generic[T], metaclass=FlowMeta):
     Type parameter T must be either Dict[str, Any] or a subclass of BaseModel."""
 
     _telemetry = Telemetry()
+    _printer = Printer()
 
     _start_methods: List[str] = []
     _listeners: Dict[str, tuple[str, List[str]]] = {}
@@ -485,12 +487,14 @@ class Flow(Generic[T], metaclass=FlowMeta):
 
             # Attempt to load state, prioritizing restore_uuid
             if restore_uuid:
+                self._printer.print(f"Loading flow state from memory for UUID: {restore_uuid}", color="bold_yellow")
                 stored_state = self._persistence.load_state(restore_uuid)
                 if not stored_state:
                     raise ValueError(
                         f"No state found for restore_uuid='{restore_uuid}'"
                     )
             elif kwargs and "id" in kwargs:
+                self._printer.print(f"Loading flow state from memory for ID: {kwargs['id']}", color="bold_yellow")
                 stored_state = self._persistence.load_state(kwargs["id"])
                 if not stored_state:
                     # For kwargs["id"], we allow creating new state if not found
@@ -626,6 +630,13 @@ class Flow(Generic[T], metaclass=FlowMeta):
         """Returns the list of all outputs from executed methods."""
         return self._method_outputs
 
+    @property
+    def flow_id(self) -> str:
+        """Returns the unique identifier of this flow instance."""
+        if isinstance(self._state, dict):
+            return str(self._state.get("id", ""))
+        return str(getattr(self._state, "id", ""))
+
     def _initialize_state(self, inputs: Dict[str, Any]) -> None:
         """Initialize or update flow state with new inputs.
 
@@ -692,6 +703,7 @@ class Flow(Generic[T], metaclass=FlowMeta):
         """
         # When restoring from persistence, use the stored ID
         stored_id = stored_state.get("id")
+        self._printer.print(f"Restoring flow state from memory for ID: {stored_id}", color="bold_yellow")
         if not stored_id:
             raise ValueError("Stored state must have an 'id' field")
 
@@ -722,6 +734,7 @@ class Flow(Generic[T], metaclass=FlowMeta):
                 flow_name=self.__class__.__name__,
             ),
         )
+        self._printer.print(f"Flow started with ID: {self.flow_id}", color="yellow")
 
         if inputs is not None:
             self._initialize_state(inputs)

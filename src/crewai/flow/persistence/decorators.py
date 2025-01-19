@@ -41,8 +41,10 @@ from pydantic import BaseModel
 
 from crewai.flow.persistence.base import FlowPersistence
 from crewai.flow.persistence.sqlite import SQLiteFlowPersistence
+from crewai.utilities.printer import Printer
 
 logger = logging.getLogger(__name__)
+printer = Printer()
 T = TypeVar("T")
 
 
@@ -91,7 +93,8 @@ def persist(persistence: Optional[FlowPersistence] = None):
                     "Flow state must have an 'id' field for persistence"
                 )
                 
-            # Persist the state
+            # Log and persist the state
+            printer.print(f"Saving flow state to memory for ID: {flow_uuid}", color="bold_yellow")
             persistence_instance.save_state(
                 flow_uuid=flow_uuid,
                 method_name=method_name,
