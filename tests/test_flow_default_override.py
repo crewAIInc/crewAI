@@ -15,6 +15,7 @@ class PoemState(FlowState):
     """Test state model with default values that should be overridden."""
     sentence_count: int = 1000  # Default that should be overridden
     poem: str = ""
+    has_set_count: bool = False  # Track whether we've set the count
 
 
 def test_default_value_override(tmp_path):
