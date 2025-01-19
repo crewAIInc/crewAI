@@ -17,33 +17,36 @@ class FixedSeleniumScrapingToolSchema(BaseModel):
 class SeleniumScrapingToolSchema(FixedSeleniumScrapingToolSchema):
     """Input for SeleniumScrapingTool."""
 
-    website_url: str = Field(..., description="Mandatory website url to read the file. Must start with http:// or https://")
+    website_url: str = Field(
+        ...,
+        description="Mandatory website url to read the file. Must start with http:// or https://",
+    )
     css_element: str = Field(
         ...,
         description="Mandatory css reference for element to scrape from the website",
     )
 
-    @validator('website_url')
+    @validator("website_url")
     def validate_website_url(cls, v):
         if not v:
             raise ValueError("Website URL cannot be empty")
-        
+
         if len(v) > 2048:  # Common maximum URL length
             raise ValueError("URL is too long (max 2048 characters)")
-            
-        if not re.match(r'^https?://', v):
+
+        if not re.match(r"^https?://", v):
             raise ValueError("URL must start with http:// or https://")
-            
+
         try:
             result = urlparse(v)
             if not all([result.scheme, result.netloc]):
                 raise ValueError("Invalid URL format")
         except Exception as e:
             raise ValueError(f"Invalid URL: {str(e)}")
-            
-        if re.search(r'\s', v):
+
+        if re.search(r"\s", v):
             raise ValueError("URL cannot contain whitespace")
-            
+
         return v
 
 
@@ -130,11 +133,11 @@ class SeleniumScrapingTool(BaseTool):
     def _create_driver(self, url, cookie, wait_time):
         if not url:
             raise ValueError("URL cannot be empty")
-            
+
         # Validate URL format
-        if not re.match(r'^https?://', url):
+        if not re.match(r"^https?://", url):
             raise ValueError("URL must start with http:// or https://")
-            
+
         options = Options()
         options.add_argument("--headless")
         driver = self.driver(options=options)

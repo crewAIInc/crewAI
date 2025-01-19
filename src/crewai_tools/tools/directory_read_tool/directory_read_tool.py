@@ -8,8 +8,6 @@ from pydantic import BaseModel, Field
 class FixedDirectoryReadToolSchema(BaseModel):
     """Input for DirectoryReadTool."""
 
-    pass
-
 
 class DirectoryReadToolSchema(FixedDirectoryReadToolSchema):
     """Input for DirectoryReadTool."""

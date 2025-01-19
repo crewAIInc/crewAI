@@ -15,9 +15,8 @@ except ImportError:
     Vectorizers = Any
     Auth = Any
 
-from pydantic import BaseModel, Field
-
 from crewai.tools import BaseTool
+from pydantic import BaseModel, Field
 
 
 class WeaviateToolSchema(BaseModel):

@@ -13,9 +13,7 @@ class JinaScrapeWebsiteToolInput(BaseModel):
 
 class JinaScrapeWebsiteTool(BaseTool):
     name: str = "JinaScrapeWebsiteTool"
-    description: str = (
-        "A tool that can be used to read a website content using Jina.ai reader and return markdown content."
-    )
+    description: str = "A tool that can be used to read a website content using Jina.ai reader and return markdown content."
     args_schema: Type[BaseModel] = JinaScrapeWebsiteToolInput
     website_url: Optional[str] = None
     api_key: Optional[str] = None
