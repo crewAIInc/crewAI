@@ -18,6 +18,7 @@ from pydantic_core import PydanticCustomError
 from crewai.agents.agent_builder.utilities.base_token_process import TokenProcess
 from crewai.agents.cache.cache_handler import CacheHandler
 from crewai.agents.tools_handler import ToolsHandler
+from crewai.knowledge.source.base_knowledge_source import BaseKnowledgeSource
 from crewai.tools import BaseTool
 from crewai.tools.base_tool import Tool
 from crewai.utilities import I18N, Logger, RPMController
@@ -129,6 +130,10 @@ class BaseAgent(ABC, BaseModel):
     )
     max_tokens: Optional[int] = Field(
         default=None, description="Maximum number of tokens for the agent's execution."
+    )
+    knowledge_sources: Optional[List[BaseKnowledgeSource]] = Field(
+        default=None,
+        description="Knowledge sources for the agent.",
     )
 
     @model_validator(mode="before")
@@ -256,13 +261,21 @@ class BaseAgent(ABC, BaseModel):
             "tools_handler",
             "cache_handler",
             "llm",
+            "knowledge_sources",
         }
 
         # Copy llm and clear callbacks
         existing_llm = shallow_copy(self.llm)
         copied_data = self.model_dump(exclude=exclude)
         copied_data = {k: v for k, v in copied_data.items() if v is not None}
-        copied_agent = type(self)(**copied_data, llm=existing_llm, tools=self.tools)
+        copied_agent = type(self)(
+            **copied_data,
+            llm=existing_llm,
+            tools=self.tools,
+            knowledge_sources=self.knowledge_sources
+            if hasattr(self, "knowledge_sources")
+            else None,
+        )
 
         return copied_agent
 

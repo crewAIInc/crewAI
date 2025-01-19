@@ -1036,6 +1036,7 @@ class Crew(BaseModel):
             "_telemetry",
             "agents",
             "tasks",
+            "knowledge_source",
         }
 
         cloned_agents = [agent.copy() for agent in self.agents]
@@ -1062,7 +1063,14 @@ class Crew(BaseModel):
         copied_data.pop("agents", None)
         copied_data.pop("tasks", None)
 
-        copied_crew = Crew(**copied_data, agents=cloned_agents, tasks=cloned_tasks)
+        copied_crew = Crew(
+            **copied_data,
+            agents=cloned_agents,
+            tasks=cloned_tasks,
+            knowledge_sources=self.knowledge_sources
+            if hasattr(self, "knowledge_sources")
+            else None,
+        )
 
         return copied_crew
 
