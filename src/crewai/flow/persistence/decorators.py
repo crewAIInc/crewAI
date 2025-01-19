@@ -38,9 +38,94 @@ from pydantic import BaseModel
 
 from crewai.flow.persistence.base import FlowPersistence
 from crewai.flow.persistence.sqlite import SQLiteFlowPersistence
+from crewai.utilities.printer import Printer
 
 logger = logging.getLogger(__name__)
 T = TypeVar("T")
+
+# Constants for log messages
+LOG_MESSAGES = {
+    "save_state": "Saving flow state to memory for ID: {}",
+    "save_error": "Failed to persist state for method {}: {}",
+    "state_missing": "Flow instance has no state",
+    "id_missing": "Flow state must have an 'id' field for persistence"
+}
+
+
+class PersistenceDecorator:
+    """Class to handle flow state persistence with consistent logging."""
+    
+    _printer = Printer()  # Class-level printer instance
+    
+    @classmethod
+    def persist_state(cls, flow_instance: Any, method_name: str, persistence_instance: FlowPersistence) -> None:
+        """Persist flow state with proper error handling and logging.
+        
+        This method handles the persistence of flow state data, including proper
+        error handling and colored console output for status updates.
+        
+        Args:
+            flow_instance: The flow instance whose state to persist
+            method_name: Name of the method that triggered persistence
+            persistence_instance: The persistence backend to use
+            
+        Raises:
+            ValueError: If flow has no state or state lacks an ID
+            RuntimeError: If state persistence fails
+            AttributeError: If flow instance lacks required state attributes
+            
+        Note:
+            Uses bold_yellow color for success messages and red for errors.
+            All operations are logged at appropriate levels (info/error).
+            
+        Example:
+            ```python
+            @persist
+            def my_flow_method(self):
+                # Method implementation
+                pass
+            # State will be automatically persisted after method execution
+            ```
+        """
+        try:
+            state = getattr(flow_instance, 'state', None)
+            if state is None:
+                raise ValueError("Flow instance has no state")
+                
+            flow_uuid: Optional[str] = None
+            if isinstance(state, dict):
+                flow_uuid = state.get('id')
+            elif isinstance(state, BaseModel):
+                flow_uuid = getattr(state, 'id', None)
+                
+            if not flow_uuid:
+                raise ValueError("Flow state must have an 'id' field for persistence")
+                
+            # Log state saving with consistent message
+            cls._printer.print(LOG_MESSAGES["save_state"].format(flow_uuid), color="bold_yellow")
+            logger.info(LOG_MESSAGES["save_state"].format(flow_uuid))
+            
+            try:
+                persistence_instance.save_state(
+                    flow_uuid=flow_uuid,
+                    method_name=method_name,
+                    state_data=state,
+                )
+            except Exception as e:
+                error_msg = LOG_MESSAGES["save_error"].format(method_name, str(e))
+                cls._printer.print(error_msg, color="red")
+                logger.error(error_msg)
+                raise RuntimeError(f"State persistence failed: {str(e)}") from e
+        except AttributeError:
+            error_msg = LOG_MESSAGES["state_missing"]
+            cls._printer.print(error_msg, color="red")
+            logger.error(error_msg)
+            raise ValueError(error_msg)
+        except (TypeError, ValueError) as e:
+            error_msg = LOG_MESSAGES["id_missing"]
+            cls._printer.print(error_msg, color="red")
+            logger.error(error_msg)
+            raise ValueError(error_msg) from e
 
 
 def persist(persistence: Optional[FlowPersistence] = None):
@@ -69,37 +154,6 @@ def persist(persistence: Optional[FlowPersistence] = None):
             def begin(self):
                 pass
     """
-    def _persist_state(flow_instance: Any, method_name: str, persistence_instance: FlowPersistence) -> None:
-        """Helper to persist state with error handling."""
-        try:
-            # Get flow UUID from state
-            state = getattr(flow_instance, 'state', None)
-            if state is None:
-                raise ValueError("Flow instance has no state")
-
-            flow_uuid: Optional[str] = None
-            if isinstance(state, dict):
-                flow_uuid = state.get('id')
-            elif isinstance(state, BaseModel):
-                flow_uuid = getattr(state, 'id', None)
-
-            if not flow_uuid:
-                raise ValueError(
-                    "Flow state must have an 'id' field for persistence"
-                )
-
-            # Persist the state
-            persistence_instance.save_state(
-                flow_uuid=flow_uuid,
-                method_name=method_name,
-                state_data=state,
-            )
-        except Exception as e:
-            logger.error(
-                f"Failed to persist state for method {method_name}: {str(e)}"
-            )
-            raise RuntimeError(f"State persistence failed: {str(e)}") from e
-
     def decorator(target: Union[Type, Callable[..., T]]) -> Union[Type, Callable[..., T]]:
         """Decorator that handles both class and method decoration."""
         actual_persistence = persistence or SQLiteFlowPersistence()
@@ -118,14 +172,14 @@ def persist(persistence: Optional[FlowPersistence] = None):
                                 result = await method_coro
                             else:
                                 result = method_coro
-                            _persist_state(self, method.__name__, actual_persistence)
+                            PersistenceDecorator.persist_state(self, method.__name__, actual_persistence)
                             return result
                         class_methods[name] = class_async_wrapper
                     else:
                         @functools.wraps(method)
                         def class_sync_wrapper(self: Any, *args: Any, **kwargs: Any) -> Any:
                             result = method(self, *args, **kwargs)
-                            _persist_state(self, method.__name__, actual_persistence)
+                            PersistenceDecorator.persist_state(self, method.__name__, actual_persistence)
                             return result
                         class_methods[name] = class_sync_wrapper
 
@@ -152,7 +206,7 @@ def persist(persistence: Optional[FlowPersistence] = None):
                         result = await method_coro
                     else:
                         result = method_coro
-                    _persist_state(flow_instance, method.__name__, actual_persistence)
+                    PersistenceDecorator.persist_state(flow_instance, method.__name__, actual_persistence)
                     return result
                 for attr in ["__is_start_method__", "__trigger_methods__", "__condition_type__", "__is_router__"]:
                     if hasattr(method, attr):
@@ -163,7 +217,7 @@ def persist(persistence: Optional[FlowPersistence] = None):
                 @functools.wraps(method)
                 def method_sync_wrapper(flow_instance: Any, *args: Any, **kwargs: Any) -> T:
                     result = method(flow_instance, *args, **kwargs)
-                    _persist_state(flow_instance, method.__name__, actual_persistence)
+                    PersistenceDecorator.persist_state(flow_instance, method.__name__, actual_persistence)
                     return result
                 for attr in ["__is_start_method__", "__trigger_methods__", "__condition_type__", "__is_router__"]:
                     if hasattr(method, attr):
