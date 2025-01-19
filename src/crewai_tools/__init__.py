@@ -16,6 +16,7 @@ from .tools import (
     FirecrawlScrapeWebsiteTool,
     FirecrawlSearchTool,
     GithubSearchTool,
+    HyperbrowserLoadTool,
     JSONSearchTool,
     LinkupSearchTool,
     LlamaIndexTool,
