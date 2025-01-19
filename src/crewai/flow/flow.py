@@ -1,5 +1,6 @@
 import asyncio
 import inspect
+import logging
 from typing import (
     Any,
     Callable,
@@ -28,6 +29,9 @@ from crewai.flow.flow_visualizer import plot_flow
 from crewai.flow.persistence.base import FlowPersistence
 from crewai.flow.utils import get_possible_return_constants
 from crewai.telemetry import Telemetry
+from crewai.utilities.printer import Printer
+
+logger = logging.getLogger(__name__)
 
 
 class FlowState(BaseModel):
@@ -63,14 +67,14 @@ def ensure_state_type(state: Any, expected_type: Type[StateT]) -> StateT:
         ValueError: If state validation fails
     """
     """Ensure state matches expected type with proper validation.
-    
+
     Args:
         state: State instance to validate
         expected_type: Expected type for the state
-        
+
     Returns:
         Validated state instance
-        
+
     Raises:
         TypeError: If state doesn't match expected type
         ValueError: If state validation fails
@@ -424,6 +428,7 @@ class Flow(Generic[T], metaclass=FlowMeta):
     Type parameter T must be either Dict[str, Any] or a subclass of BaseModel."""
 
     _telemetry = Telemetry()
+    _printer = Printer()
 
     _start_methods: List[str] = []
     _listeners: Dict[str, tuple[str, List[str]]] = {}
@@ -485,12 +490,14 @@ class Flow(Generic[T], metaclass=FlowMeta):
 
             # Attempt to load state, prioritizing restore_uuid
             if restore_uuid:
+                self._log_flow_event(f"Loading flow state from memory for UUID: {restore_uuid}", color="bold_yellow")
                 stored_state = self._persistence.load_state(restore_uuid)
                 if not stored_state:
                     raise ValueError(
                         f"No state found for restore_uuid='{restore_uuid}'"
                     )
             elif kwargs and "id" in kwargs:
+                self._log_flow_event(f"Loading flow state from memory for ID: {kwargs['id']}", color="bold_yellow")
                 stored_state = self._persistence.load_state(kwargs["id"])
                 if not stored_state:
                     # For kwargs["id"], we allow creating new state if not found
@@ -612,7 +619,6 @@ class Flow(Generic[T], metaclass=FlowMeta):
             # Create new instance of the same class
             model_class = type(model)
             return cast(T, model_class(**state_dict))
-
         raise TypeError(
             f"Initial state must be dict or BaseModel, got {type(self.initial_state)}"
         )
@@ -625,6 +631,39 @@ class Flow(Generic[T], metaclass=FlowMeta):
     def method_outputs(self) -> List[Any]:
         """Returns the list of all outputs from executed methods."""
         return self._method_outputs
+
+    @property
+    def flow_id(self) -> str:
+        """Returns the unique identifier of this flow instance.
+        
+        This property provides a consistent way to access the flow's unique identifier
+        regardless of the underlying state implementation (dict or BaseModel).
+        
+        Returns:
+            str: The flow's unique identifier, or an empty string if not found
+            
+        Note:
+            This property safely handles both dictionary and BaseModel state types,
+            returning an empty string if the ID cannot be retrieved rather than raising
+            an exception.
+            
+        Example:
+            ```python
+            flow = MyFlow()
+            print(f"Current flow ID: {flow.flow_id}")  # Safely get flow ID
+            ```
+        """
+        try:
+            if not hasattr(self, '_state'):
+                return ""
+                
+            if isinstance(self._state, dict):
+                return str(self._state.get("id", ""))
+            elif isinstance(self._state, BaseModel):
+                return str(getattr(self._state, "id", ""))
+            return ""
+        except (AttributeError, TypeError):
+            return ""  # Safely handle any unexpected attribute access issues
 
     def _initialize_state(self, inputs: Dict[str, Any]) -> None:
         """Initialize or update flow state with new inputs.
@@ -692,6 +731,7 @@ class Flow(Generic[T], metaclass=FlowMeta):
         """
         # When restoring from persistence, use the stored ID
         stored_id = stored_state.get("id")
+        self._log_flow_event(f"Restoring flow state from memory for ID: {stored_id}", color="bold_yellow")
         if not stored_id:
             raise ValueError("Stored state must have an 'id' field")
 
@@ -722,6 +762,7 @@ class Flow(Generic[T], metaclass=FlowMeta):
                 flow_name=self.__class__.__name__,
             ),
         )
+        self._log_flow_event(f"Flow started with ID: {self.flow_id}", color="yellow")
 
         if inputs is not None:
             self._initialize_state(inputs)
@@ -967,6 +1008,30 @@ class Flow(Generic[T], metaclass=FlowMeta):
 
             traceback.print_exc()
 
+    def _log_flow_event(self, message: str, color: str = "yellow", level: str = "info") -> None:
+        """Centralized logging method for flow events.
+        
+        This method provides a consistent interface for logging flow-related events,
+        combining both console output with colors and proper logging levels.
+        
+        Args:
+            message: The message to log
+            color: Color to use for console output (default: yellow)
+                  Available colors: purple, red, bold_green, bold_purple,
+                  bold_blue, yellow, bold_yellow
+            level: Log level to use (default: info)
+                  Supported levels: info, warning
+                  
+        Note:
+            This method uses the Printer utility for colored console output
+            and the standard logging module for log level support.
+        """
+        self._printer.print(message, color=color)
+        if level == "info":
+            logger.info(message)
+        elif level == "warning":
+            logger.warning(message)
+    
     def plot(self, filename: str = "crewai_flow") -> None:
         self._telemetry.flow_plotting_span(
             self.__class__.__name__, list(self._methods.keys())
