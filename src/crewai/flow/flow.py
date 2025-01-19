@@ -13,9 +13,12 @@ from typing import (
     Union,
     cast,
 )
+import logging
 from uuid import uuid4
 
 from blinker import Signal
+
+logger = logging.getLogger(__name__)
 from pydantic import BaseModel, Field, ValidationError
 
 from crewai.flow.flow_events import (
@@ -487,14 +490,14 @@ class Flow(Generic[T], metaclass=FlowMeta):
 
             # Attempt to load state, prioritizing restore_uuid
             if restore_uuid:
-                self._printer.print(f"Loading flow state from memory for UUID: {restore_uuid}", color="bold_yellow")
+                self._log_flow_event(f"Loading flow state from memory for UUID: {restore_uuid}", color="bold_yellow")
                 stored_state = self._persistence.load_state(restore_uuid)
                 if not stored_state:
                     raise ValueError(
                         f"No state found for restore_uuid='{restore_uuid}'"
                     )
             elif kwargs and "id" in kwargs:
-                self._printer.print(f"Loading flow state from memory for ID: {kwargs['id']}", color="bold_yellow")
+                self._log_flow_event(f"Loading flow state from memory for ID: {kwargs['id']}", color="bold_yellow")
                 stored_state = self._persistence.load_state(kwargs["id"])
                 if not stored_state:
                     # For kwargs["id"], we allow creating new state if not found
@@ -632,10 +635,27 @@ class Flow(Generic[T], metaclass=FlowMeta):
 
     @property
     def flow_id(self) -> str:
-        """Returns the unique identifier of this flow instance."""
-        if isinstance(self._state, dict):
-            return str(self._state.get("id", ""))
-        return str(getattr(self._state, "id", ""))
+        """Returns the unique identifier of this flow instance.
+        
+        Returns:
+            str: The flow's unique identifier, or an empty string if not found
+            
+        Note:
+            This property safely handles both dictionary and BaseModel state types,
+            returning an empty string if the ID cannot be retrieved rather than raising
+            an exception.
+        """
+        try:
+            if not hasattr(self, '_state'):
+                return ""
+                
+            if isinstance(self._state, dict):
+                return str(self._state.get("id", ""))
+            elif isinstance(self._state, BaseModel):
+                return str(getattr(self._state, "id", ""))
+            return ""
+        except (AttributeError, TypeError):
+            return ""  # Safely handle any unexpected attribute access issues
 
     def _initialize_state(self, inputs: Dict[str, Any]) -> None:
         """Initialize or update flow state with new inputs.
@@ -703,7 +723,7 @@ class Flow(Generic[T], metaclass=FlowMeta):
         """
         # When restoring from persistence, use the stored ID
         stored_id = stored_state.get("id")
-        self._printer.print(f"Restoring flow state from memory for ID: {stored_id}", color="bold_yellow")
+        self._log_flow_event(f"Restoring flow state from memory for ID: {stored_id}", color="bold_yellow")
         if not stored_id:
             raise ValueError("Stored state must have an 'id' field")
 
@@ -734,7 +754,7 @@ class Flow(Generic[T], metaclass=FlowMeta):
                 flow_name=self.__class__.__name__,
             ),
         )
-        self._printer.print(f"Flow started with ID: {self.flow_id}", color="yellow")
+        self._log_flow_event(f"Flow started with ID: {self.flow_id}", color="yellow")
 
         if inputs is not None:
             self._initialize_state(inputs)
@@ -980,6 +1000,20 @@ class Flow(Generic[T], metaclass=FlowMeta):
 
             traceback.print_exc()
 
+    def _log_flow_event(self, message: str, color: str = "yellow", level: str = "info") -> None:
+        """Centralized logging method for flow events.
+        
+        Args:
+            message: The message to log
+            color: Color to use for console output (default: yellow)
+            level: Log level to use (default: info)
+        """
+        self._printer.print(message, color=color)
+        if level == "info":
+            logger.info(message)
+        elif level == "warning":
+            logger.warning(message)
+    
     def plot(self, filename: str = "crewai_flow") -> None:
         self._telemetry.flow_plotting_span(
             self.__class__.__name__, list(self._methods.keys())
