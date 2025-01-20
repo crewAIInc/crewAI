@@ -148,7 +148,7 @@ def persist(persistence: Optional[FlowPersistence] = None):
 
         if isinstance(target, type):
             # Class decoration
-            original_init = target.__init__
+            original_init = getattr(target, "__init__")
 
             @functools.wraps(original_init)
             def new_init(self: Any, *args: Any, **kwargs: Any) -> None:
@@ -156,7 +156,7 @@ def persist(persistence: Optional[FlowPersistence] = None):
                     kwargs['persistence'] = actual_persistence
                 original_init(self, *args, **kwargs)
 
-            target.__init__ = new_init
+            setattr(target, "__init__", new_init)
 
             # Store original methods to preserve their decorators
             original_methods = {}
