@@ -2,7 +2,7 @@ import uuid
 from abc import ABC, abstractmethod
 from copy import copy as shallow_copy
 from hashlib import md5
-from typing import Any, Dict, List, Optional, TypeVar
+from typing import Any, Dict, List, Optional, TypeVar, Union
 
 from pydantic import (
     UUID4,
@@ -106,6 +106,10 @@ class BaseAgent(ABC, BaseModel):
     allow_delegation: bool = Field(
         default=False,
         description="Enable agent to delegate and ask questions among each other.",
+    )
+    allowed_agents: Optional[List[Union[str, 'BaseAgent']]] = Field(
+        default=None,
+        description="List of agent roles or agent instances that this agent can delegate tasks to",
     )
     tools: Optional[List[Any]] = Field(
         default_factory=list, description="Tools at agents' disposal"
@@ -236,6 +240,12 @@ class BaseAgent(ABC, BaseModel):
         """Set the task tools that init BaseAgenTools class."""
         pass
 
+    @field_validator('allowed_agents')
+    def validate_allowed_agents(cls, v):
+        if v is None:
+            return v
+        return [agent.role if isinstance(agent, BaseAgent) else agent for agent in v]
+    
     @abstractmethod
     def get_output_converter(
         self, llm: Any, text: str, model: type[BaseModel] | None, instructions: str

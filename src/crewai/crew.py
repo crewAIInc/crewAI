@@ -860,8 +860,24 @@ class Crew(BaseModel):
         return self._merge_tools(tools, code_tools)
 
     def _add_delegation_tools(self, task: Task, tools: List[Tool]):
-        agents_for_delegation = [agent for agent in self.agents if agent != task.agent]
-        if len(self.agents) > 1 and len(agents_for_delegation) > 0 and task.agent:
+        # agents_for_delegation = [agent for agent in self.agents if agent != task.agent]
+        # if len(self.agents) > 1 and len(agents_for_delegation) > 0 and task.agent:
+        #     if not tools:
+        #         tools = []
+        #     tools = self._inject_delegation_tools(
+        #         tools, task.agent, agents_for_delegation
+        #     )
+        # return tools
+        if not task.agent or not task.agent.allow_delegation:
+            return tools
+        
+        agents_for_delegation = []
+        for agent in self.agents:
+            if agent == task.agent:
+                continue
+            if task.agent.allowed_agents is None or agent.role in task.agent.allowed_agents:
+                agents_for_delegation.append(agent)
+        if agents_for_delegation:
             if not tools:
                 tools = []
             tools = self._inject_delegation_tools(
