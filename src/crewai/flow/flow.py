@@ -721,6 +721,8 @@ class Flow(Generic[T], metaclass=FlowMeta):
                 self._log_flow_event(f"Loading flow state from memory for UUID: {restore_uuid}", color="yellow")
                 # Restore the state
                 self._restore_state(stored_state)
+            else:
+                self._log_flow_event(f"No flow state found for UUID: {restore_uuid}", color="red")
 
             # Apply any additional inputs after restoration
             filtered_inputs = {k: v for k, v in inputs.items() if k != 'id'}
