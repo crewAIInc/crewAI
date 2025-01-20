@@ -6,7 +6,7 @@ from typing import Dict
 import pytest
 from pydantic import BaseModel
 
-from crewai.flow.flow import Flow, FlowState, start, listen
+from crewai.flow.flow import Flow, FlowState, listen, start
 from crewai.flow.persistence import persist
 from crewai.flow.persistence.sqlite import SQLiteFlowPersistence
 

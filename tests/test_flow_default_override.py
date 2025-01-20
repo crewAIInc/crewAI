@@ -1,7 +1,8 @@
 """Test that persisted state properly overrides default values."""
 
-from crewai.flow.flow import Flow, FlowState, start, listen
+from crewai.flow.flow import Flow, FlowState, listen, start
 from crewai.flow.persistence import persist
+
 
 class PoemState(FlowState):
     """Test state model with default values that should be overridden."""
