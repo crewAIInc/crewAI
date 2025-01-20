@@ -7,7 +7,7 @@ import appdirs
 
 def db_storage_path() -> str:
     """Returns the path for SQLite database storage.
-    
+
     Returns:
         str: Full path to the SQLite database file
     """
@@ -16,7 +16,7 @@ def db_storage_path() -> str:
 
     data_dir = Path(appdirs.user_data_dir(app_name, app_author))
     data_dir.mkdir(parents=True, exist_ok=True)
-    return str(data_dir / "crewai_flows.db")
+    return str(data_dir)
 
 
 def get_project_directory_name():
