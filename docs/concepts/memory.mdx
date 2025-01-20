@@ -369,8 +369,8 @@ from crewai import Crew, Agent, Task, Process
 
 boto3_session = boto3.Session(
     region_name=os.environ.get("AWS_REGION_NAME"),
-	aws_access_key_id=os.environ.get("AWS_ACCESS_KEY_ID"),
-	aws_secret_access_key=os.environ.get("AWS_SECRET_ACCESS_KEY")
+    aws_access_key_id=os.environ.get("AWS_ACCESS_KEY_ID"),
+    aws_secret_access_key=os.environ.get("AWS_SECRET_ACCESS_KEY")
 )
 
 my_crew = Crew(
@@ -379,13 +379,13 @@ my_crew = Crew(
     process=Process.sequential,
     memory=True,
     embedder={
-	    "provider": "bedrock",
-		"config":{
-			"session": boto3_session,
-			"model": "amazon.titan-embed-text-v2:0",
-			"vector_dimension": 1024
-		}
-	}
+    "provider": "bedrock",
+        "config":{
+            "session": boto3_session,
+            "model": "amazon.titan-embed-text-v2:0",
+            "vector_dimension": 1024
+        }
+    }
     verbose=True
 )
 ```
