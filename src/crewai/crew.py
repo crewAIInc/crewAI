@@ -1036,7 +1036,7 @@ class Crew(BaseModel):
             "_telemetry",
             "agents",
             "tasks",
-            "knowledge_source",
+            "knowledge_sources",
         }
 
         cloned_agents = [agent.copy() for agent in self.agents]
