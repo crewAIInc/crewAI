@@ -108,14 +108,42 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
         self._create_long_term_memory(formatted_answer)
         return {"output": formatted_answer.output}
 
+    def _has_reached_max_iterations(self) -> bool:
+        """Check if the maximum number of iterations has been reached."""
+        return self.iterations >= self.max_iter
+
+    def _handle_max_iterations_exceeded(self, formatted_answer) -> AgentFinish:
+        """Handle the case when maximum iterations have been exceeded."""
+        error_msg = f"Agent has exceeded maximum iterations ({self.max_iter}). This could be due to repeated failures or infinite loops."
+        self._printer.print(content=error_msg, color="red")
+        return AgentFinish(
+            thought="Maximum iterations exceeded",
+            output=error_msg,
+            text=formatted_answer.text if formatted_answer else error_msg
+        )
+
     def _invoke_loop(self, formatted_answer=None):
         try:
             while not isinstance(formatted_answer, AgentFinish):
                 if not self.request_within_rpm_limit or self.request_within_rpm_limit():
-                    answer = self.llm.call(
-                        self.messages,
-                        callbacks=self.callbacks,
-                    )
+                    # Increment iteration counter before LLM call to prevent hanging
+                    self.iterations += 1
+                    
+                    try:
+                        answer = self.llm.call(
+                            self.messages,
+                            callbacks=self.callbacks,
+                        )
+                    except Exception as llm_error:
+                        self._printer.print(
+                            content=f"LLM call failed: {str(llm_error)}",
+                            color="red",
+                        )
+                        # Check if we've reached max iterations to avoid infinite loops
+                        if self._has_reached_max_iterations():
+                            return self._handle_max_iterations_exceeded(formatted_answer)
+                        # Re-raise authentication and other critical errors
+                        raise
 
                     if answer is None or answer == "":
                         self._printer.print(
@@ -136,7 +164,6 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
                             ):
                                 answer = answer.split("Observation:")[0].strip()
 
-                    self.iterations += 1
                     formatted_answer = self._format_answer(answer)
 
                     if isinstance(formatted_answer, AgentAction):
