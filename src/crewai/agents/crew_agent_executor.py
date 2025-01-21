@@ -3,6 +3,7 @@ import re
 from dataclasses import dataclass
 from typing import Any, Dict, List, Union
 
+from litellm import AuthenticationError as LiteLLMAuthenticationError
 from crewai.agents.agent_builder.base_agent import BaseAgent
 from crewai.agents.agent_builder.base_agent_executor_mixin import CrewAgentExecutorMixin
 from crewai.agents.parser import (
@@ -197,7 +198,19 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
             return self._invoke_loop(formatted_answer)
 
         except Exception as e:
-            if LLMContextLengthExceededException(str(e))._is_context_limit_error(
+            if isinstance(e, LiteLLMAuthenticationError):
+                self._logger.log(
+                    level="error",
+                    message="Authentication error with litellm occurred. Please check your API key and configuration.",
+                    color="red",
+                )
+                self._logger.log(
+                    level="error",
+                    message=f"Error details: {str(e)}",
+                    color="red",
+                )
+                raise e
+            elif LLMContextLengthExceededException(str(e))._is_context_limit_error(
                 str(e)
             ):
                 self._handle_context_length()
