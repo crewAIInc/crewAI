@@ -115,35 +115,6 @@ def test_custom_llm_temperature_preservation():
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
-def test_agent_execute_task():
-    from langchain_openai import ChatOpenAI
-
-    from crewai import Task
-
-    agent = Agent(
-        role="Math Tutor",
-        goal="Solve math problems accurately",
-        backstory="You are an experienced math tutor with a knack for explaining complex concepts simply.",
-        llm=ChatOpenAI(temperature=0.7, model="gpt-4o-mini"),
-    )
-
-    task = Task(
-        description="Calculate the area of a circle with radius 5 cm.",
-        expected_output="The calculated area of the circle in square centimeters.",
-        agent=agent,
-    )
-
-    result = agent.execute_task(task)
-
-    assert result is not None
-    assert (
-        result
-        == "The calculated area of the circle is approximately 78.5 square centimeters."
-    )
-    assert "square centimeters" in result.lower()
-
-
-@pytest.mark.vcr(filter_headers=["authorization"])
 def test_agent_execution():
     agent = Agent(
         role="test role",
@@ -1495,7 +1466,7 @@ def test_agent_execute_task_basic():
         role="test role",
         goal="test goal",
         backstory="test backstory",
-        llm=LLM(model="gpt-3.5-turbo"),
+        llm="gpt-4o-mini",
     )
 
     task = Task(

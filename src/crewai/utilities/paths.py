@@ -5,14 +5,18 @@ import appdirs
 
 """Path management utilities for CrewAI storage and configuration."""
 
-def db_storage_path():
-    """Returns the path for database storage."""
+def db_storage_path() -> str:
+    """Returns the path for SQLite database storage.
+
+    Returns:
+        str: Full path to the SQLite database file
+    """
     app_name = get_project_directory_name()
     app_author = "CrewAI"
 
     data_dir = Path(appdirs.user_data_dir(app_name, app_author))
     data_dir.mkdir(parents=True, exist_ok=True)
-    return data_dir
+    return str(data_dir)
 
 
 def get_project_directory_name():

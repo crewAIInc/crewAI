@@ -1,16 +1,12 @@
 interactions:
 - request:
-    body: '{"messages": [{"role": "system", "content": "You are test role. test backstory\nYour
-      personal goal is: test goal\nTo give my best complete final answer to the task
-      respond using the exact following format:\n\nThought: I now can give a great
-      answer\nFinal Answer: Your final answer must be the great and the most complete
-      as possible, it must be outcome described.\n\nI MUST use these formats, my job
-      depends on it!"}, {"role": "user", "content": "\nCurrent Task: Calculate 2 +
-      2\n\nThis is the expect criteria for your final answer: The result of the calculation\nyou
-      MUST return the actual complete content as the final answer, not a summary.\n\nBegin!
-      This is VERY important to you, use the tools available and give your best Final
-      Answer, your job depends on it!\n\nThought:"}], "model": "gpt-4o-mini", "stop":
-      ["\nObservation:"]}'
+    body: '{"messages": [{"role": "user", "content": "Name: Alice, Age: 30"}], "model":
+      "gpt-4o-mini", "tool_choice": {"type": "function", "function": {"name": "SimpleModel"}},
+      "tools": [{"type": "function", "function": {"name": "SimpleModel", "description":
+      "Correctly extracted `SimpleModel` with all the required parameters with correct
+      types", "parameters": {"properties": {"name": {"title": "Name", "type": "string"},
+      "age": {"title": "Age", "type": "integer"}}, "required": ["age", "name"], "type":
+      "object"}}}]}'
     headers:
       accept:
       - application/json
@@ -19,7 +15,7 @@ interactions:
       connection:
       - keep-alive
       content-length:
-      - '833'
+      - '507'
       content-type:
       - application/json
       host:
@@ -47,23 +43,26 @@ interactions:
     method: POST
     uri: https://api.openai.com/v1/chat/completions
   response:
-    content: "{\n  \"id\": \"chatcmpl-AoJqi2nPubKHXLut6gkvISe0PizvR\",\n  \"object\":
-      \"chat.completion\",\n  \"created\": 1736556064,\n  \"model\": \"gpt-4o-mini-2024-07-18\",\n
+    content: "{\n  \"id\": \"chatcmpl-Aq4a4xDv8G0i4fbTtPJEI2B8UNBup\",\n  \"object\":
+      \"chat.completion\",\n  \"created\": 1736974028,\n  \"model\": \"gpt-4o-mini-2024-07-18\",\n
       \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
-      \"assistant\",\n        \"content\": \"I now can give a great answer  \\nFinal
-      Answer: The result of the calculation 2 + 2 is 4.\",\n        \"refusal\": null\n
-      \     },\n      \"logprobs\": null,\n      \"finish_reason\": \"stop\"\n    }\n
-      \ ],\n  \"usage\": {\n    \"prompt_tokens\": 161,\n    \"completion_tokens\":
-      25,\n    \"total_tokens\": 186,\n    \"prompt_tokens_details\": {\n      \"cached_tokens\":
+      \"assistant\",\n        \"content\": null,\n        \"tool_calls\": [\n          {\n
+      \           \"id\": \"call_uO5nec8hTk1fpYINM8TUafhe\",\n            \"type\":
+      \"function\",\n            \"function\": {\n              \"name\": \"SimpleModel\",\n
+      \             \"arguments\": \"{\\\"name\\\":\\\"Alice\\\",\\\"age\\\":30}\"\n
+      \           }\n          }\n        ],\n        \"refusal\": null\n      },\n
+      \     \"logprobs\": null,\n      \"finish_reason\": \"stop\"\n    }\n  ],\n
+      \ \"usage\": {\n    \"prompt_tokens\": 79,\n    \"completion_tokens\": 10,\n
+      \   \"total_tokens\": 89,\n    \"prompt_tokens_details\": {\n      \"cached_tokens\":
       0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\": {\n
       \     \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\":
       0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\":
-      \"default\",\n  \"system_fingerprint\": \"fp_bd83329f63\"\n}\n"
+      \"default\",\n  \"system_fingerprint\": \"fp_72ed7ab54c\"\n}\n"
     headers:
       CF-Cache-Status:
       - DYNAMIC
       CF-RAY:
-      - 9000dbe81c55bf7f-ATL
+      - 9028b81aeb1cb05f-ATL
       Connection:
       - keep-alive
       Content-Encoding:
@@ -71,14 +70,14 @@ interactions:
       Content-Type:
       - application/json
       Date:
-      - Sat, 11 Jan 2025 00:41:05 GMT
+      - Wed, 15 Jan 2025 20:47:08 GMT
       Server:
       - cloudflare
       Set-Cookie:
-      - __cf_bm=LCNQO7gfz6xDjDqEOZ7ha3jDwPnDlsjsmJyScVf4UUw-1736556065-1.0.1.1-2ZcyBDpLvmxy7UOdCrLd6falFapRDuAu6WcVrlOXN0QIgZiDVYD0bCFWGCKeeE.6UjPHoPY6QdlEZZx8.0Pggw;
-        path=/; expires=Sat, 11-Jan-25 01:11:05 GMT; domain=.api.openai.com; HttpOnly;
+      - __cf_bm=PzayZLF04c14veGc.0ocVg3VHBbpzKRW8Hqox8L9U7c-1736974028-1.0.1.1-mZpK8.SH9l7K2z8Tvt6z.dURiVPjFqEz7zYEITfRwdr5z0razsSebZGN9IRPmI5XC_w5rbZW2Kg6hh5cenXinQ;
+        path=/; expires=Wed, 15-Jan-25 21:17:08 GMT; domain=.api.openai.com; HttpOnly;
         Secure; SameSite=None
-      - _cfuvid=cRATWhxkeoeSGFg3z7_5BrHO3JDsmDX2Ior2i7bNF4M-1736556065175-0.0.1.1-604800000;
+      - _cfuvid=ciwC3n2Srn20xx4JhEUeN6Ap0tNBaE44S95nIilboQ0-1736974028496-0.0.1.1-604800000;
         path=/; domain=.api.openai.com; HttpOnly; Secure; SameSite=None
       Transfer-Encoding:
       - chunked
@@ -91,7 +90,7 @@ interactions:
       openai-organization:
       - crewai-iuxna1
       openai-processing-ms:
-      - '1060'
+      - '439'
       openai-version:
       - '2020-10-01'
       strict-transport-security:
@@ -103,13 +102,13 @@ interactions:
       x-ratelimit-remaining-requests:
       - '29999'
       x-ratelimit-remaining-tokens:
-      - '149999810'
+      - '149999978'
       x-ratelimit-reset-requests:
       - 2ms
       x-ratelimit-reset-tokens:
       - 0s
       x-request-id:
-      - req_463fbd324e01320dc253008f919713bd
+      - req_a468000458b9d2848b7497b2e3d485a3
     http_version: HTTP/1.1
     status_code: 200
 version: 1

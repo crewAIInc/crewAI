@@ -1,8 +1,14 @@
 interactions:
 - request:
-    body: '{"model": "llama3.2:3b", "prompt": "### User:\nRespond in 20 words. Which
-      model are you?\n\n", "options": {"temperature": 0.7, "num_predict": 30}, "stream":
-      false}'
+    body: '{"model": "llama3.2:3b", "prompt": "### User:\nName: Alice Llama, Age:
+      30\n\n### System:\nProduce JSON OUTPUT ONLY! Adhere to this format {\"name\":
+      \"function_name\", \"arguments\":{\"argument_name\": \"argument_value\"}} The
+      following functions are available to you:\n{''type'': ''function'', ''function'':
+      {''name'': ''SimpleModel'', ''description'': ''Correctly extracted `SimpleModel`
+      with all the required parameters with correct types'', ''parameters'': {''properties'':
+      {''name'': {''title'': ''Name'', ''type'': ''string''}, ''age'': {''title'':
+      ''Age'', ''type'': ''integer''}}, ''required'': [''age'', ''name''], ''type'':
+      ''object''}}}\n\n\n", "options": {}, "stream": false, "format": "json"}'
     headers:
       accept:
       - '*/*'
@@ -11,7 +17,7 @@ interactions:
       connection:
       - keep-alive
       content-length:
-      - '163'
+      - '657'
       host:
       - localhost:11434
       user-agent:
@@ -19,16 +25,15 @@ interactions:
     method: POST
     uri: http://localhost:11434/api/generate
   response:
-    content: '{"model":"llama3.2:3b","created_at":"2025-01-10T22:34:56.01157Z","response":"I''m
-      an artificial intelligence model, specifically a transformer-based language
-      model, designed to provide helpful and informative responses.","done":true,"done_reason":"stop","context":[128006,9125,128007,271,38766,1303,33025,2696,25,6790,220,2366,18,271,128009,128006,882,128007,271,14711,2724,512,66454,304,220,508,4339,13,16299,1646,527,499,1980,128009,128006,78191,128007,271,40,2846,459,21075,11478,1646,11,11951,264,43678,6108,4221,1646,11,6319,311,3493,11190,323,39319,14847,13],"total_duration":579515000,"load_duration":35352208,"prompt_eval_count":39,"prompt_eval_duration":126000000,"eval_count":23,"eval_duration":417000000}'
+    content: '{"model":"llama3.2:3b","created_at":"2025-01-15T20:47:11.926411Z","response":"{\"name\":
+      \"SimpleModel\", \"arguments\":{\"name\": \"Alice Llama\", \"age\": 30}}","done":true,"done_reason":"stop","context":[128006,9125,128007,271,38766,1303,33025,2696,25,6790,220,2366,18,271,128009,128006,882,128007,271,14711,2724,512,678,25,30505,445,81101,11,13381,25,220,966,271,14711,744,512,1360,13677,4823,32090,27785,0,2467,6881,311,420,3645,5324,609,794,330,1723,1292,498,330,16774,23118,14819,1292,794,330,14819,3220,32075,578,2768,5865,527,2561,311,499,512,13922,1337,1232,364,1723,518,364,1723,1232,5473,609,1232,364,16778,1747,518,364,4789,1232,364,34192,398,28532,1595,16778,1747,63,449,682,279,2631,5137,449,4495,4595,518,364,14105,1232,5473,13495,1232,5473,609,1232,5473,2150,1232,364,678,518,364,1337,1232,364,928,25762,364,425,1232,5473,2150,1232,364,17166,518,364,1337,1232,364,11924,8439,2186,364,6413,1232,2570,425,518,364,609,4181,364,1337,1232,364,1735,23742,3818,128009,128006,78191,128007,271,5018,609,794,330,16778,1747,498,330,16774,23118,609,794,330,62786,445,81101,498,330,425,794,220,966,3500],"total_duration":3374470708,"load_duration":1075750500,"prompt_eval_count":167,"prompt_eval_duration":1871000000,"eval_count":24,"eval_duration":426000000}'
     headers:
       Content-Length:
-      - '714'
+      - '1263'
       Content-Type:
       - application/json; charset=utf-8
       Date:
-      - Fri, 10 Jan 2025 22:34:56 GMT
+      - Wed, 15 Jan 2025 20:47:12 GMT
     http_version: HTTP/1.1
     status_code: 200
 - request:
@@ -441,7 +446,7 @@ interactions:
       Content-Type:
       - application/json; charset=utf-8
       Date:
-      - Fri, 10 Jan 2025 22:34:56 GMT
+      - Wed, 15 Jan 2025 20:47:12 GMT
       Transfer-Encoding:
       - chunked
     http_version: HTTP/1.1
@@ -856,7 +861,7 @@ interactions:
       Content-Type:
       - application/json; charset=utf-8
       Date:
-      - Fri, 10 Jan 2025 22:34:56 GMT
+      - Wed, 15 Jan 2025 20:47:12 GMT
       Transfer-Encoding:
       - chunked
     http_version: HTTP/1.1
