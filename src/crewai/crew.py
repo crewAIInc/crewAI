@@ -437,6 +437,23 @@ class Crew(BaseModel):
                         )
         return self
 
+    @model_validator(mode="after")
+    def validate_must_have_non_conditional_task(self) -> "Crew":
+        """Ensure that a crew has at least one non-conditional task."""
+        if not self.tasks:
+            return self  # Empty task list is handled by other validators
+            
+        non_conditional_count = sum(
+            1 for task in self.tasks if not isinstance(task, ConditionalTask)
+        )
+        if non_conditional_count == 0:
+            raise PydanticCustomError(
+                "only_conditional_tasks",
+                "Crew must include at least one non-conditional task.",
+                {},
+            )
+        return self
+
     @property
     def key(self) -> str:
         source = [agent.key for agent in self.agents] + [
@@ -905,10 +922,13 @@ class Crew(BaseModel):
             )
 
     def _create_crew_output(self, task_outputs: List[TaskOutput]) -> CrewOutput:
-        # Use the last task output as the final output
-        final_task_output = task_outputs[-1] if task_outputs else None
+        # Filter out empty task outputs
+        valid_task_outputs = [t for t in task_outputs if t.raw]
+        
+        # Use the last valid task output as the final output
+        final_task_output = valid_task_outputs[-1] if valid_task_outputs else None
         if not final_task_output:
-            raise ValueError("No task outputs available to create crew output.")
+            raise ValueError("No valid task outputs available to create crew output.")
             
         final_string_output = final_task_output.raw
         self._finish_execution(final_string_output)
@@ -918,7 +938,7 @@ class Crew(BaseModel):
             raw=final_task_output.raw,
             pydantic=final_task_output.pydantic,
             json_dict=final_task_output.json_dict,
-            tasks_output=task_outputs,  # Use all task outputs directly
+            tasks_output=valid_task_outputs,  # Only include valid task outputs
             token_usage=token_usage,
         )
 
