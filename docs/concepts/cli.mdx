@@ -147,7 +147,36 @@ Some commands may require additional configuration or setup within your project 
 </Note>
 
 
-### 9. API Keys
+### 9. Chat
+
+Starting in version `0.98.0`, when you run the `crewai chat` command, you start an interactive session with your crew. The AI assistant will guide you by asking for necessary inputs to execute the crew. Once all inputs are provided, the crew will execute its tasks.
+
+After receiving the results, you can continue interacting with the assistant for further instructions or questions.
+
+```shell
+crewai chat
+```
+<Note>
+Ensure you execute these commands from your CrewAI project's root directory.
+</Note>
+<Note>
+IMPORTANT: Set the `chat_llm` property in your `crew.py` file to enable this command.
+
+```python
+@crew
+def crew(self) -> Crew:
+    return Crew(
+        agents=self.agents,
+        tasks=self.tasks,
+        process=Process.sequential,
+        verbose=True,
+        chat_llm="gpt-4o",  # LLM for chat orchestration
+    )
+```
+</Note>
+
+
+### 10. API Keys
 
 When running ```crewai create crew``` command, the CLI will first show you the top 5 most common LLM providers and ask you to select one.
 
