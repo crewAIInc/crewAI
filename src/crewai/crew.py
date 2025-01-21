@@ -440,9 +440,6 @@ class Crew(BaseModel):
     @model_validator(mode="after")
     def validate_must_have_non_conditional_task(self) -> "Crew":
         """Ensure that a crew has at least one non-conditional task."""
-        if not self.tasks:
-            return self  # Empty task list is handled by other validators
-            
         non_conditional_count = sum(
             1 for task in self.tasks if not isinstance(task, ConditionalTask)
         )
@@ -922,13 +919,14 @@ class Crew(BaseModel):
             )
 
     def _create_crew_output(self, task_outputs: List[TaskOutput]) -> CrewOutput:
-        # Filter out empty task outputs
-        valid_task_outputs = [t for t in task_outputs if t.raw]
-        
-        # Use the last valid task output as the final output
-        final_task_output = valid_task_outputs[-1] if valid_task_outputs else None
-        if not final_task_output:
+        if not task_outputs:
+            raise ValueError("No task outputs available to create crew output.")
+            
+        # Filter out empty outputs and get the last valid one as the main output
+        valid_outputs = [t for t in task_outputs if t.raw]
+        if not valid_outputs:
             raise ValueError("No valid task outputs available to create crew output.")
+        final_task_output = valid_outputs[-1]
             
         final_string_output = final_task_output.raw
         self._finish_execution(final_string_output)
@@ -938,7 +936,7 @@ class Crew(BaseModel):
             raw=final_task_output.raw,
             pydantic=final_task_output.pydantic,
             json_dict=final_task_output.json_dict,
-            tasks_output=valid_task_outputs,  # Only include valid task outputs
+            tasks_output=task_outputs,  # Keep all task outputs
             token_usage=token_usage,
         )
 
