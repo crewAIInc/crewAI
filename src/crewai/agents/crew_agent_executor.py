@@ -100,7 +100,11 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
         self._show_start_logs()
 
         self.ask_for_human_input = bool(inputs.get("ask_for_human_input", False))
-        formatted_answer = self._invoke_loop()
+
+        try:
+            formatted_answer = self._invoke_loop()
+        except Exception as e:
+            raise e
 
         if self.ask_for_human_input:
             formatted_answer = self._handle_human_feedback(formatted_answer)
@@ -153,7 +157,7 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
                     continue
                 elif self._is_litellm_authentication_error(e):
                     self._handle_litellm_auth_error(e)
-                    break
+                    raise e
                 else:
                     self._printer.print(
                         content=f"Unhandled exception: {e}",
