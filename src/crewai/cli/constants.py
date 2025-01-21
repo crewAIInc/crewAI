@@ -63,20 +63,6 @@ ENV_VARS = {
             "key_name": "AWS_REGION_NAME",
         },
     ],
-    "sagemaker": [
-        {
-            "prompt": "Enter your AWS Access Key ID (press Enter to skip)",
-            "key_name": "AWS_ACCESS_KEY_ID",
-        },
-        {
-            "prompt": "Enter your AWS Secret Access Key (press Enter to skip)",
-            "key_name": "AWS_SECRET_ACCESS_KEY",
-        },
-        {
-            "prompt": "Enter your AWS Region Name (press Enter to skip)",
-            "key_name": "AWS_REGION_NAME",
-        },
-    ],
     "azure": [
         {
             "prompt": "Enter your Azure deployment name (must start with 'azure/')",
@@ -123,7 +109,6 @@ PROVIDERS = [
     "ollama",
     "watson",
     "bedrock",
-    "sagemaker",
     "azure",
     "cerebras",
     "sambanova",
@@ -254,7 +239,6 @@ MODELS = {
         "bedrock/mistral.mistral-7b-instruct-v0:2",
         "bedrock/mistral.mixtral-8x7b-instruct-v0:1",
     ],
-    "sagemaker": ["sagemaker/<your-sagemaker-endpoint>"],
     "sambanova": [
         "sambanova/Meta-Llama-3.3-70B-Instruct",
         "sambanova/QwQ-32B-Preview",
