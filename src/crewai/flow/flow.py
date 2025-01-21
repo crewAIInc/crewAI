@@ -1,5 +1,6 @@
 import asyncio
 import inspect
+import logging
 from typing import (
     Any,
     Callable,
@@ -25,15 +26,70 @@ from crewai.flow.flow_events import (
     MethodExecutionStartedEvent,
 )
 from crewai.flow.flow_visualizer import plot_flow
+from crewai.flow.persistence.base import FlowPersistence
 from crewai.flow.utils import get_possible_return_constants
 from crewai.telemetry import Telemetry
+from crewai.utilities.printer import Printer
+
+logger = logging.getLogger(__name__)
 
 
 class FlowState(BaseModel):
     """Base model for all flow states, ensuring each state has a unique ID."""
-    id: str = Field(default_factory=lambda: str(uuid4()), description="Unique identifier for the flow state")
 
-T = TypeVar("T", bound=Union[FlowState, Dict[str, Any]])
+    id: str = Field(
+        default_factory=lambda: str(uuid4()),
+        description="Unique identifier for the flow state",
+    )
+
+
+# Type variables with explicit bounds
+T = TypeVar(
+    "T", bound=Union[Dict[str, Any], BaseModel]
+)  # Generic flow state type parameter
+StateT = TypeVar(
+    "StateT", bound=Union[Dict[str, Any], BaseModel]
+)  # State validation type parameter
+
+
+def ensure_state_type(state: Any, expected_type: Type[StateT]) -> StateT:
+    """Ensure state matches expected type with proper validation.
+
+    Args:
+        state: State instance to validate
+        expected_type: Expected type for the state
+
+    Returns:
+        Validated state instance
+
+    Raises:
+        TypeError: If state doesn't match expected type
+        ValueError: If state validation fails
+    """
+    """Ensure state matches expected type with proper validation.
+
+    Args:
+        state: State instance to validate
+        expected_type: Expected type for the state
+
+    Returns:
+        Validated state instance
+
+    Raises:
+        TypeError: If state doesn't match expected type
+        ValueError: If state validation fails
+    """
+    if expected_type is dict:
+        if not isinstance(state, dict):
+            raise TypeError(f"Expected dict, got {type(state).__name__}")
+        return cast(StateT, state)
+    if isinstance(expected_type, type) and issubclass(expected_type, BaseModel):
+        if not isinstance(state, expected_type):
+            raise TypeError(
+                f"Expected {expected_type.__name__}, got {type(state).__name__}"
+            )
+        return cast(StateT, state)
+    raise TypeError(f"Invalid expected_type: {expected_type}")
 
 
 def start(condition: Optional[Union[str, dict, Callable]] = None) -> Callable:
@@ -77,6 +133,7 @@ def start(condition: Optional[Union[str, dict, Callable]] = None) -> Callable:
     >>> def complex_start(self):
     ...     pass
     """
+
     def decorator(func):
         func.__is_start_method__ = True
         if condition is not None:
@@ -100,6 +157,7 @@ def start(condition: Optional[Union[str, dict, Callable]] = None) -> Callable:
         return func
 
     return decorator
+
 
 def listen(condition: Union[str, dict, Callable]) -> Callable:
     """
@@ -137,6 +195,7 @@ def listen(condition: Union[str, dict, Callable]) -> Callable:
     >>> def handle_completion(self):
     ...     pass
     """
+
     def decorator(func):
         if isinstance(condition, str):
             func.__trigger_methods__ = [condition]
@@ -201,6 +260,7 @@ def router(condition: Union[str, dict, Callable]) -> Callable:
     ...         return CONTINUE
     ...     return STOP
     """
+
     def decorator(func):
         func.__is_router__ = True
         if isinstance(condition, str):
@@ -223,6 +283,7 @@ def router(condition: Union[str, dict, Callable]) -> Callable:
         return func
 
     return decorator
+
 
 def or_(*conditions: Union[str, dict, Callable]) -> dict:
     """
@@ -326,21 +387,32 @@ class FlowMeta(type):
         routers = set()
 
         for attr_name, attr_value in dct.items():
-            if hasattr(attr_value, "__is_start_method__"):
-                start_methods.append(attr_name)
+            # Check for any flow-related attributes
+            if (
+                hasattr(attr_value, "__is_flow_method__")
+                or hasattr(attr_value, "__is_start_method__")
+                or hasattr(attr_value, "__trigger_methods__")
+                or hasattr(attr_value, "__is_router__")
+            ):
+
+                # Register start methods
+                if hasattr(attr_value, "__is_start_method__"):
+                    start_methods.append(attr_name)
+
+                # Register listeners and routers
                 if hasattr(attr_value, "__trigger_methods__"):
                     methods = attr_value.__trigger_methods__
                     condition_type = getattr(attr_value, "__condition_type__", "OR")
                     listeners[attr_name] = (condition_type, methods)
-            elif hasattr(attr_value, "__trigger_methods__"):
-                methods = attr_value.__trigger_methods__
-                condition_type = getattr(attr_value, "__condition_type__", "OR")
-                listeners[attr_name] = (condition_type, methods)
-                if hasattr(attr_value, "__is_router__") and attr_value.__is_router__:
-                    routers.add(attr_name)
-                    possible_returns = get_possible_return_constants(attr_value)
-                    if possible_returns:
-                        router_paths[attr_name] = possible_returns
+
+                    if (
+                        hasattr(attr_value, "__is_router__")
+                        and attr_value.__is_router__
+                    ):
+                        routers.add(attr_name)
+                        possible_returns = get_possible_return_constants(attr_value)
+                        if possible_returns:
+                            router_paths[attr_name] = possible_returns
 
         setattr(cls, "_start_methods", start_methods)
         setattr(cls, "_listeners", listeners)
@@ -351,7 +423,12 @@ class FlowMeta(type):
 
 
 class Flow(Generic[T], metaclass=FlowMeta):
+    """Base class for all flows.
+
+    Type parameter T must be either Dict[str, Any] or a subclass of BaseModel."""
+
     _telemetry = Telemetry()
+    _printer = Printer()
 
     _start_methods: List[str] = []
     _listeners: Dict[str, tuple[str, List[str]]] = {}
@@ -367,53 +444,130 @@ class Flow(Generic[T], metaclass=FlowMeta):
         _FlowGeneric.__name__ = f"{cls.__name__}[{item.__name__}]"
         return _FlowGeneric
 
-    def __init__(self) -> None:
+    def __init__(
+        self,
+        persistence: Optional[FlowPersistence] = None,
+        **kwargs: Any,
+    ) -> None:
+        """Initialize a new Flow instance.
+
+        Args:
+            persistence: Optional persistence backend for storing flow states
+            **kwargs: Additional state values to initialize or override
+        """
+        # Initialize basic instance attributes
         self._methods: Dict[str, Callable] = {}
-        self._state: T = self._create_initial_state()
         self._method_execution_counts: Dict[str, int] = {}
         self._pending_and_listeners: Dict[str, Set[str]] = {}
         self._method_outputs: List[Any] = []  # List to store all method outputs
+        self._persistence: Optional[FlowPersistence] = persistence
+
+        # Initialize state with initial values
+        self._state = self._create_initial_state()
+
+        # Apply any additional kwargs
+        if kwargs:
+            self._initialize_state(kwargs)
 
         self._telemetry.flow_creation_span(self.__class__.__name__)
 
+        # Register all flow-related methods
         for method_name in dir(self):
-            if callable(getattr(self, method_name)) and not method_name.startswith(
-                "__"
-            ):
-                self._methods[method_name] = getattr(self, method_name)
+            if not method_name.startswith("_"):
+                method = getattr(self, method_name)
+                # Check for any flow-related attributes
+                if (
+                    hasattr(method, "__is_flow_method__")
+                    or hasattr(method, "__is_start_method__")
+                    or hasattr(method, "__trigger_methods__")
+                    or hasattr(method, "__is_router__")
+                ):
+                    # Ensure method is bound to this instance
+                    if not hasattr(method, "__self__"):
+                        method = method.__get__(self, self.__class__)
+                    self._methods[method_name] = method
 
     def _create_initial_state(self) -> T:
+        """Create and initialize flow state with UUID and default values.
+
+        Returns:
+            New state instance with UUID and default values initialized
+
+        Raises:
+            ValueError: If structured state model lacks 'id' field
+            TypeError: If state is neither BaseModel nor dictionary
+        """
         # Handle case where initial_state is None but we have a type parameter
         if self.initial_state is None and hasattr(self, "_initial_state_T"):
             state_type = getattr(self, "_initial_state_T")
             if isinstance(state_type, type):
                 if issubclass(state_type, FlowState):
-                    return state_type()  # type: ignore
+                    # Create instance without id, then set it
+                    instance = state_type()
+                    if not hasattr(instance, "id"):
+                        setattr(instance, "id", str(uuid4()))
+                    return cast(T, instance)
                 elif issubclass(state_type, BaseModel):
                     # Create a new type that includes the ID field
                     class StateWithId(state_type, FlowState):  # type: ignore
                         pass
-                    return StateWithId()  # type: ignore
+
+                    instance = StateWithId()
+                    if not hasattr(instance, "id"):
+                        setattr(instance, "id", str(uuid4()))
+                    return cast(T, instance)
+                elif state_type is dict:
+                    return cast(T, {"id": str(uuid4())})
 
         # Handle case where no initial state is provided
         if self.initial_state is None:
-            return {"id": str(uuid4())}  # type: ignore
+            return cast(T, {"id": str(uuid4())})
 
         # Handle case where initial_state is a type (class)
         if isinstance(self.initial_state, type):
             if issubclass(self.initial_state, FlowState):
-                return self.initial_state()  # type: ignore
+                return cast(T, self.initial_state())  # Uses model defaults
             elif issubclass(self.initial_state, BaseModel):
-                # Create a new type that includes the ID field
-                class StateWithId(self.initial_state, FlowState):  # type: ignore
-                    pass
-                return StateWithId()  # type: ignore
+                # Validate that the model has an id field
+                model_fields = getattr(self.initial_state, "model_fields", None)
+                if not model_fields or "id" not in model_fields:
+                    raise ValueError("Flow state model must have an 'id' field")
+                return cast(T, self.initial_state())  # Uses model defaults
+            elif self.initial_state is dict:
+                return cast(T, {"id": str(uuid4())})
 
-        # Handle dictionary case
-        if isinstance(self.initial_state, dict) and "id" not in self.initial_state:
-            self.initial_state["id"] = str(uuid4())
+        # Handle dictionary instance case
+        if isinstance(self.initial_state, dict):
+            new_state = dict(self.initial_state)  # Copy to avoid mutations
+            if "id" not in new_state:
+                new_state["id"] = str(uuid4())
+            return cast(T, new_state)
 
-        return self.initial_state  # type: ignore
+        # Handle BaseModel instance case
+        if isinstance(self.initial_state, BaseModel):
+            model = cast(BaseModel, self.initial_state)
+            if not hasattr(model, "id"):
+                raise ValueError("Flow state model must have an 'id' field")
+
+            # Create new instance with same values to avoid mutations
+            if hasattr(model, "model_dump"):
+                # Pydantic v2
+                state_dict = model.model_dump()
+            elif hasattr(model, "dict"):
+                # Pydantic v1
+                state_dict = model.dict()
+            else:
+                # Fallback for other BaseModel implementations
+                state_dict = {
+                    k: v for k, v in model.__dict__.items() if not k.startswith("_")
+                }
+
+            # Create new instance of the same class
+            model_class = type(model)
+            return cast(T, model_class(**state_dict))
+        raise TypeError(
+            f"Initial state must be dict or BaseModel, got {type(self.initial_state)}"
+        )
 
     @property
     def state(self) -> T:
@@ -424,53 +578,158 @@ class Flow(Generic[T], metaclass=FlowMeta):
         """Returns the list of all outputs from executed methods."""
         return self._method_outputs
 
+    @property
+    def flow_id(self) -> str:
+        """Returns the unique identifier of this flow instance.
+
+        This property provides a consistent way to access the flow's unique identifier
+        regardless of the underlying state implementation (dict or BaseModel).
+
+        Returns:
+            str: The flow's unique identifier, or an empty string if not found
+
+        Note:
+            This property safely handles both dictionary and BaseModel state types,
+            returning an empty string if the ID cannot be retrieved rather than raising
+            an exception.
+
+        Example:
+            ```python
+            flow = MyFlow()
+            print(f"Current flow ID: {flow.flow_id}")  # Safely get flow ID
+            ```
+        """
+        try:
+            if not hasattr(self, '_state'):
+                return ""
+
+            if isinstance(self._state, dict):
+                return str(self._state.get("id", ""))
+            elif isinstance(self._state, BaseModel):
+                return str(getattr(self._state, "id", ""))
+            return ""
+        except (AttributeError, TypeError):
+            return ""  # Safely handle any unexpected attribute access issues
+
     def _initialize_state(self, inputs: Dict[str, Any]) -> None:
+        """Initialize or update flow state with new inputs.
+
+        Args:
+            inputs: Dictionary of state values to set/update
+
+        Raises:
+            ValueError: If validation fails for structured state
+            TypeError: If state is neither BaseModel nor dictionary
+        """
         if isinstance(self._state, dict):
-            # Preserve the ID when updating unstructured state
+            # For dict states, preserve existing fields unless overridden
             current_id = self._state.get("id")
-            self._state.update(inputs)
+            # Only update specified fields
+            for k, v in inputs.items():
+                self._state[k] = v
+            # Ensure ID is preserved or generated
             if current_id:
                 self._state["id"] = current_id
             elif "id" not in self._state:
                 self._state["id"] = str(uuid4())
         elif isinstance(self._state, BaseModel):
-            # Structured state
+            # For BaseModel states, preserve existing fields unless overridden
             try:
-                def create_model_with_extra_forbid(
-                    base_model: Type[BaseModel],
-                ) -> Type[BaseModel]:
-                    class ModelWithExtraForbid(base_model):  # type: ignore
-                        model_config = base_model.model_config.copy()
-                        model_config["extra"] = "forbid"
-
-                    return ModelWithExtraForbid
-
-                # Get current state as dict, preserving the ID if it exists
-                state_model = cast(BaseModel, self._state)
-                current_state = (
-                    state_model.model_dump()
-                    if hasattr(state_model, "model_dump")
-                    else state_model.dict()
-                    if hasattr(state_model, "dict")
-                    else {
-                        k: v
-                        for k, v in state_model.__dict__.items()
-                        if not k.startswith("_")
+                model = cast(BaseModel, self._state)
+                # Get current state as dict
+                if hasattr(model, "model_dump"):
+                    current_state = model.model_dump()
+                elif hasattr(model, "dict"):
+                    current_state = model.dict()
+                else:
+                    current_state = {
+                        k: v for k, v in model.__dict__.items() if not k.startswith("_")
                     }
-                )
 
-                ModelWithExtraForbid = create_model_with_extra_forbid(
-                    self._state.__class__
-                )
-                self._state = cast(
-                    T, ModelWithExtraForbid(**{**current_state, **inputs})
-                )
+                # Create new state with preserved fields and updates
+                new_state = {**current_state, **inputs}
+
+                # Create new instance with merged state
+                model_class = type(model)
+                if hasattr(model_class, "model_validate"):
+                    # Pydantic v2
+                    self._state = cast(T, model_class.model_validate(new_state))
+                elif hasattr(model_class, "parse_obj"):
+                    # Pydantic v1
+                    self._state = cast(T, model_class.parse_obj(new_state))
+                else:
+                    # Fallback for other BaseModel implementations
+                    self._state = cast(T, model_class(**new_state))
             except ValidationError as e:
                 raise ValueError(f"Invalid inputs for structured state: {e}") from e
         else:
             raise TypeError("State must be a BaseModel instance or a dictionary.")
 
+    def _restore_state(self, stored_state: Dict[str, Any]) -> None:
+        """Restore flow state from persistence.
+
+        Args:
+            stored_state: Previously stored state to restore
+
+        Raises:
+            ValueError: If validation fails for structured state
+            TypeError: If state is neither BaseModel nor dictionary
+        """
+        # When restoring from persistence, use the stored ID
+        stored_id = stored_state.get("id")
+        if not stored_id:
+            raise ValueError("Stored state must have an 'id' field")
+
+        if isinstance(self._state, dict):
+            # For dict states, update all fields from stored state
+            self._state.clear()
+            self._state.update(stored_state)
+        elif isinstance(self._state, BaseModel):
+            # For BaseModel states, create new instance with stored values
+            model = cast(BaseModel, self._state)
+            if hasattr(model, "model_validate"):
+                # Pydantic v2
+                self._state = cast(T, type(model).model_validate(stored_state))
+            elif hasattr(model, "parse_obj"):
+                # Pydantic v1
+                self._state = cast(T, type(model).parse_obj(stored_state))
+            else:
+                # Fallback for other BaseModel implementations
+                self._state = cast(T, type(model)(**stored_state))
+        else:
+            raise TypeError(f"State must be dict or BaseModel, got {type(self._state)}")
+
     def kickoff(self, inputs: Optional[Dict[str, Any]] = None) -> Any:
+        """Start the flow execution.
+
+        Args:
+            inputs: Optional dictionary containing input values and potentially a state ID to restore
+        """
+        # Handle state restoration if ID is provided in inputs
+        if inputs and 'id' in inputs and self._persistence is not None:
+            restore_uuid = inputs['id']
+            stored_state = self._persistence.load_state(restore_uuid)
+
+            # Override the id in the state if it exists in inputs
+            if 'id' in inputs:
+                if isinstance(self._state, dict):
+                    self._state['id'] = inputs['id']
+                elif isinstance(self._state, BaseModel):
+                    setattr(self._state, 'id', inputs['id'])
+
+            if stored_state:
+                self._log_flow_event(f"Loading flow state from memory for UUID: {restore_uuid}", color="yellow")
+                # Restore the state
+                self._restore_state(stored_state)
+            else:
+                self._log_flow_event(f"No flow state found for UUID: {restore_uuid}", color="red")
+
+            # Apply any additional inputs after restoration
+            filtered_inputs = {k: v for k, v in inputs.items() if k != 'id'}
+            if filtered_inputs:
+                self._initialize_state(filtered_inputs)
+
+        # Start flow execution
         self.event_emitter.send(
             self,
             event=FlowStartedEvent(
@@ -478,9 +737,11 @@ class Flow(Generic[T], metaclass=FlowMeta):
                 flow_name=self.__class__.__name__,
             ),
         )
+        self._log_flow_event(f"Flow started with ID: {self.flow_id}", color="bold_magenta")
 
-        if inputs is not None:
+        if inputs is not None and 'id' not in inputs:
             self._initialize_state(inputs)
+
         return asyncio.run(self.kickoff_async())
 
     async def kickoff_async(self, inputs: Optional[Dict[str, Any]] = None) -> Any:
@@ -722,6 +983,30 @@ class Flow(Generic[T], metaclass=FlowMeta):
             import traceback
 
             traceback.print_exc()
+
+    def _log_flow_event(self, message: str, color: str = "yellow", level: str = "info") -> None:
+        """Centralized logging method for flow events.
+
+        This method provides a consistent interface for logging flow-related events,
+        combining both console output with colors and proper logging levels.
+
+        Args:
+            message: The message to log
+            color: Color to use for console output (default: yellow)
+                  Available colors: purple, red, bold_green, bold_purple,
+                  bold_blue, yellow, yellow
+            level: Log level to use (default: info)
+                  Supported levels: info, warning
+
+        Note:
+            This method uses the Printer utility for colored console output
+            and the standard logging module for log level support.
+        """
+        self._printer.print(message, color=color)
+        if level == "info":
+            logger.info(message)
+        elif level == "warning":
+            logger.warning(message)
 
     def plot(self, filename: str = "crewai_flow") -> None:
         self._telemetry.flow_plotting_span(

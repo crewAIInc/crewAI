@@ -43,7 +43,7 @@
     "ask_question": "Ask a specific question to one of the following coworkers: {coworkers}\nThe input to this tool should be the coworker, the question you have for them, and ALL necessary context to ask the question properly, they know nothing about the question, so share absolute everything you know, don't reference things but instead explain them.",
     "add_image": {
       "name": "Add image to content",
-      "description": "See image to understand it's content, you can optionally ask a question about the image",
+      "description": "See image to understand its content, you can optionally ask a question about the image",
       "default_action": "Please provide a detailed description of this image, including all visual elements, context, and any notable details you can observe."
     }
   }
