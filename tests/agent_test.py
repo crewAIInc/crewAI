@@ -1600,3 +1600,107 @@ def test_agent_with_knowledge_sources():
 
         # Assert that the agent provides the correct information
         assert "red" in result.raw.lower()
+
+
+@pytest.mark.vcr(filter_headers=["authorization"])
+def test_litellm_auth_error_handling():
+    """Test that LiteLLM authentication errors are handled correctly and not retried."""
+    from litellm import AuthenticationError as LiteLLMAuthenticationError
+
+    # Create an agent with a mocked LLM and max_retry_limit=0
+    agent = Agent(
+        role="test role",
+        goal="test goal",
+        backstory="test backstory",
+        llm=LLM(model="gpt-4"),
+        max_retry_limit=0,  # Disable retries for authentication errors
+    )
+
+    # Create a task
+    task = Task(
+        description="Test task",
+        expected_output="Test output",
+        agent=agent,
+    )
+
+    # Mock the LLM call to raise LiteLLMAuthenticationError
+    with (
+        patch.object(LLM, "call") as mock_llm_call,
+        pytest.raises(LiteLLMAuthenticationError, match="Invalid API key"),
+    ):
+        mock_llm_call.side_effect = LiteLLMAuthenticationError(
+            message="Invalid API key", llm_provider="openai", model="gpt-4"
+        )
+        agent.execute_task(task)
+
+    # Verify the call was only made once (no retries)
+    mock_llm_call.assert_called_once()
+
+
+@pytest.mark.vcr(filter_headers=["authorization"])
+def test_crew_agent_executor_litellm_auth_error():
+    """Test that CrewAgentExecutor properly identifies and handles LiteLLM authentication errors."""
+    from litellm import AuthenticationError as LiteLLMAuthenticationError
+
+    from crewai.agents.tools_handler import ToolsHandler
+    from crewai.utilities import Logger
+
+    # Create an agent and executor with max_retry_limit=0
+    agent = Agent(
+        role="test role",
+        goal="test goal",
+        backstory="test backstory",
+        llm=LLM(model="gpt-4"),
+        max_retry_limit=0,  # Disable retries for authentication errors
+    )
+    task = Task(
+        description="Test task",
+        expected_output="Test output",
+        agent=agent,
+    )
+
+    # Create executor with all required parameters
+    executor = CrewAgentExecutor(
+        agent=agent,
+        task=task,
+        llm=agent.llm,
+        crew=None,
+        prompt={"system": "You are a test agent", "user": "Execute the task: {input}"},
+        max_iter=5,
+        tools=[],
+        tools_names="",
+        stop_words=[],
+        tools_description="",
+        tools_handler=ToolsHandler(),
+    )
+
+    # Mock the LLM call to raise LiteLLMAuthenticationError
+    with (
+        patch.object(LLM, "call") as mock_llm_call,
+        patch.object(Logger, "log") as mock_logger,
+        pytest.raises(LiteLLMAuthenticationError, match="Invalid API key"),
+    ):
+        mock_llm_call.side_effect = LiteLLMAuthenticationError(
+            message="Invalid API key", llm_provider="openai", model="gpt-4"
+        )
+        executor.invoke(
+            {
+                "input": "test input",
+                "tool_names": "",  # Required template variable
+                "tools": "",  # Required template variable
+            }
+        )
+
+    # Verify error handling
+    mock_logger.assert_any_call(
+        level="error",
+        message="Authentication error with litellm occurred. Please check your API key and configuration.",
+        color="red",
+    )
+    mock_logger.assert_any_call(
+        level="error",
+        message="Error details: litellm.AuthenticationError: Invalid API key",
+        color="red",
+    )
+    # Verify the call was only made once (no retries)
+    mock_llm_call.assert_called_once()
