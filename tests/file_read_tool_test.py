@@ -1,6 +1,7 @@
 import os
-import pytest
+
 from crewai_tools import FileReadTool
+
 
 def test_file_read_tool_constructor():
     """Test FileReadTool initialization with file_path."""
@@ -18,6 +19,7 @@ def test_file_read_tool_constructor():
     # Clean up
     os.remove(test_file)
 
+
 def test_file_read_tool_run():
     """Test FileReadTool _run method with file_path at runtime."""
     # Create a temporary test file
@@ -33,6 +35,7 @@ def test_file_read_tool_run():
 
     # Clean up
     os.remove(test_file)
+
 
 def test_file_read_tool_error_handling():
     """Test FileReadTool error handling."""
@@ -57,6 +60,7 @@ def test_file_read_tool_error_handling():
     # Clean up
     os.chmod(test_file, 0o666)  # Restore permissions to delete
     os.remove(test_file)
+
 
 def test_file_read_tool_constructor_and_run():
     """Test FileReadTool using both constructor and runtime file paths."""

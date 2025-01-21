@@ -13,19 +13,13 @@ if TYPE_CHECKING:
 class ScrapegraphError(Exception):
     """Base exception for Scrapegraph-related errors"""
 
-    pass
-
 
 class RateLimitError(ScrapegraphError):
     """Raised when API rate limits are exceeded"""
 
-    pass
-
 
 class FixedScrapegraphScrapeToolSchema(BaseModel):
     """Input for ScrapegraphScrapeTool when website_url is fixed."""
-
-    pass
 
 
 class ScrapegraphScrapeToolSchema(FixedScrapegraphScrapeToolSchema):
@@ -71,6 +65,7 @@ class ScrapegraphScrapeTool(BaseTool):
     website_url: Optional[str] = None
     user_prompt: Optional[str] = None
     api_key: Optional[str] = None
+    enable_logging: bool = False
     _client: Optional["Client"] = None
 
     def __init__(
@@ -78,6 +73,7 @@ class ScrapegraphScrapeTool(BaseTool):
         website_url: Optional[str] = None,
         user_prompt: Optional[str] = None,
         api_key: Optional[str] = None,
+        enable_logging: bool = False,
         **kwargs,
     ):
         super().__init__(**kwargs)
@@ -118,8 +114,9 @@ class ScrapegraphScrapeTool(BaseTool):
         if user_prompt is not None:
             self.user_prompt = user_prompt
 
-        # Configure logging
-        sgai_logger.set_logging(level="INFO")
+        # Configure logging only if enabled
+        if self.enable_logging:
+            sgai_logger.set_logging(level="INFO")
 
     @staticmethod
     def _validate_url(url: str) -> None:
@@ -172,8 +169,7 @@ class ScrapegraphScrapeTool(BaseTool):
                 user_prompt=user_prompt,
             )
 
-            # Handle and validate the response
-            return self._handle_api_response(response)
+            return response
 
         except RateLimitError:
             raise  # Re-raise rate limit errors

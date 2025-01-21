@@ -1,6 +1,5 @@
-from typing import Any, Type, Optional
+from typing import Any, Optional, Type
 
-import re
 from pydantic import BaseModel, Field
 from .serpapi_base_tool import SerpApiBaseTool
 from pydantic import ConfigDict

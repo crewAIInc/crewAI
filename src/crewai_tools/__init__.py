@@ -1,4 +1,5 @@
 from .tools import (
+    AIMindTool,
     BraveSearchTool,
     BrowserbaseLoadTool,
     CodeDocsSearchTool,
@@ -16,6 +17,7 @@ from .tools import (
     FirecrawlScrapeWebsiteTool,
     FirecrawlSearchTool,
     GithubSearchTool,
+    HyperbrowserLoadTool,
     JSONSearchTool,
     LinkupSearchTool,
     LlamaIndexTool,
@@ -43,6 +45,8 @@ from .tools import (
     SerplyScholarSearchTool,
     SerplyWebpageToMarkdownTool,
     SerplyWebSearchTool,
+    SnowflakeConfig,
+    SnowflakeSearchTool,
     SpiderTool,
     TXTSearchTool,
     VisionTool,

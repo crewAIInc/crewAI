@@ -15,9 +15,7 @@ class FileWriterToolInput(BaseModel):
 
 class FileWriterTool(BaseTool):
     name: str = "File Writer Tool"
-    description: str = (
-        "A tool to write content to a specified file. Accepts filename, content, and optionally a directory path and overwrite flag as input."
-    )
+    description: str = "A tool to write content to a specified file. Accepts filename, content, and optionally a directory path and overwrite flag as input."
     args_schema: Type[BaseModel] = FileWriterToolInput
 
     def _run(self, **kwargs: Any) -> str:

@@ -19,6 +19,10 @@ class LinkupSearchTool(BaseTool):
         "Performs an API call to Linkup to retrieve contextual information."
     )
     _client: LinkupClient = PrivateAttr()  # type: ignore
+    description: str = (
+        "Performs an API call to Linkup to retrieve contextual information."
+    )
+    _client: LinkupClient = PrivateAttr()  # type: ignore
 
     def __init__(self, api_key: str):
         """

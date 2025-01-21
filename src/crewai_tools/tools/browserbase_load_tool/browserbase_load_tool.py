@@ -1,8 +1,8 @@
 import os
 from typing import Any, Optional, Type
-from pydantic import BaseModel, Field
 
 from crewai.tools import BaseTool
+from pydantic import BaseModel, Field
 
 
 class BrowserbaseLoadToolSchema(BaseModel):

@@ -1,5 +1,7 @@
 from typing import Any, Type
+
 from crewai.tools import BaseTool
+from patronus import Client
 from pydantic import BaseModel, Field
 
 try:
@@ -32,12 +34,20 @@ class PatronusLocalEvaluatorTool(BaseTool):
     evaluator: str = "The registered local evaluator"
     evaluated_model_gold_answer: str = "The agent's gold answer"
     description: str = "This tool is used to evaluate the model input and output using custom function evaluators."
+    description: str = "This tool is used to evaluate the model input and output using custom function evaluators."
     client: Any = None
     args_schema: Type[BaseModel] = FixedLocalEvaluatorToolSchema
 
     class Config:
         arbitrary_types_allowed = True
 
+    def __init__(
+        self,
+        patronus_client: Client,
+        evaluator: str,
+        evaluated_model_gold_answer: str,
+        **kwargs: Any,
+    ):
     def __init__(
         self,
         patronus_client: Client,
@@ -104,6 +114,7 @@ class PatronusLocalEvaluatorTool(BaseTool):
                 if isinstance(evaluated_model_gold_answer, str)
                 else evaluated_model_gold_answer.get("description")
             ),
+            tags={},  # Optional metadata, supports arbitrary kv pairs
             tags={},  # Optional metadata, supports arbitrary kv pairs
         )
         output = f"Evaluation result: {result.pass_}, Explanation: {result.explanation}"

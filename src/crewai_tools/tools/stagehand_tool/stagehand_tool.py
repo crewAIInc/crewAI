@@ -14,9 +14,8 @@ import os
 from functools import lru_cache
 from typing import Any, Dict, List, Optional, Type, Union
 
-from pydantic import BaseModel, Field
-
 from crewai.tools.base_tool import BaseTool
+from pydantic import BaseModel, Field
 
 # Set up logging
 logger = logging.getLogger(__name__)
